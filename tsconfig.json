@@ -1,0 +1,20 @@
+{
+  "_comment": "AUDIT §10-C RUNG S2 (20 Aug 2026) — THE TYPE GATE. TIER 0 of LAW T: free, deterministic, and better than any model at one job — telling you a symbol does not exist BEFORE the organ runs. The class it exists for is the readJsonl() ReferenceError: a name that was never defined, sitting on a path nothing exercised until 03:00. `checkJs` is DELIBERATELY false here and the file's own `// @ts-check` pragma is what opts an organ in — so THE CHECKED LIST LIVES IN THE SOURCE, not in a list in this file that would drift (S3's jugad rule, honoured early). The list may only GROW: scripts/gates.mjs freezes the count and npm test refuses a shrink. `strict` stays off on purpose — this rung buys the undefined-symbol class, not a TypeScript rewrite (the rung's own FORBIDDEN line). @types/node is pinned to 22.x to MATCH THE RUNTIME (Node 22.14), never to `latest`: types ahead of the runtime would bless APIs this machine does not have, and Node 24 lands at S8 step 0 with its types in the same version commit (§10-G).",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "es2023",
+    "lib": ["es2023"],
+    "types": ["node"],
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["scripts/**/*.mjs", "hooks/**/*.mjs"],
+  "exclude": ["node_modules", "scripts/legacy", "dressing-room", "docs"]
+}

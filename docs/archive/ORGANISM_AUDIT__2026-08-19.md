@@ -40,8 +40,11 @@ STATUS (update this block before any session stops — this is the handoff)
   S1  RAILS .................... ☑ DONE 20 Aug 2026 · the his-session spend METER + three
                                    PreToolUse RAILS (all proven live) + the order-checker
                                    as a COMMIT GATE + CLAUDE.md confirmed.
-  ▶ NEXT SESSION ............... S2 · TYPE + LINT GATES (§10-C, first ☐).
-                                   MODEL: Opus 5 · effort max · CEILING 40 (re-baselined).
+  S2  TYPE + LINT GATES ........ ☑ DONE 20 Aug 2026 · tsc --checkJs + eslint, frozen at
+                                   their measured baseline and tightening only; both ride
+                                   npm test. Toolchain pinned EXACT, lockfile committed.
+  ▶ NEXT SESSION ............... S3 · THE LAW PACK (§10-C, first ☐).
+                                   MODEL: Opus 5 · effort max · CEILING 40.
 
   ✔ THE CEILINGS ARE RE-BASELINED — HIS RULING, 20 Aug 2026, taken the same hour the meter
     first read them. Every standard rung 40 · S10 60 · ladder total 500 (was ≈81, guessed).
@@ -1041,7 +1044,7 @@ ruling, 20 Aug 2026. Check the number, never guess it: `node scripts/session_met
       FORBIDDEN: OTel infra beyond env vars this rung · refactors · new organs.
       DONE-PROOF: spend line at a session stop · a ceiling-less fleet call refused
       live · suite green, gates stricter only.                         CEILING: 40
-☐ S2  TYPE + LINT GATES.                                    MODEL: Opus · effort max
+☑ S2  TYPE + LINT GATES — DONE 20 Aug 2026. Tier 0 has teeth.
       tsc --checkJs via @ts-check on the ~12 hottest organs first; eslint +
       typescript-eslint (no-empty · no-undef · no-unused-vars) over all 103 with a
       FROZEN BASELINE: existing counts may only FALL. Both ride npm test. Pin every
@@ -1523,3 +1526,98 @@ activity will trip hermeticity. The gate is not being loosened to hide that (§1
 the suite between turns, or expect the check to tell the truth about a moving file.
 
 **NEXT: S2 · TYPE + LINT GATES — MODEL: Opus 5 · effort max · CEILING 40.**
+
+### PROGRESS 2026-08-20 ~08:10 IST — RUNG S2 · TYPE + LINT GATES
+
+**THE OVERRIDE, RECORDED FIRST because it is a broken rule and it stays visible.** §10-D rule 1
+says one rung per session, never two, and this session had already executed S1. He was told that
+in one line — including that the session was already past its own ceiling — and he said *"do it
+please"*. The rung is his; the rule is his; the override is his and it is written here rather
+than quietly enjoyed. Nothing else about the rung was relaxed: the micro-order was written first,
+every FORBIDDEN line held, and every DONE-proof was run.
+
+**WHAT LANDED.**
+
+- **THE TOOLCHAIN, PINNED EXACT, IN ITS OWN COMMIT** (§10-D rule 11 — versions move alone):
+  typescript **6.0.3** · eslint **10.8.1** · typescript-eslint **8.67.0** · globals **17.11.0** ·
+  @types/node **22.20.1**, lockfile committed, suite gated on both sides. **Two deliberate
+  non-latest pins, and both are §10-G's policy working rather than a reflex:** typescript 7.0.2
+  IS latest, but typescript-eslint 8.67.0 declares `typescript >=4.8.4 <6.1.0`, so latest would
+  have broken the exact pair the rung asks for — 6.0.3 is the highest stable version inside the
+  range. And @types/node is pinned to the RUNTIME's major (Node 22.14), not to 26.x: types ahead
+  of the runtime bless APIs this machine does not have. Node 24 lands at S8 step 0 and its types
+  move in that same version commit.
+
+- **`tsconfig.json` — AND THE CHECKED LIST LIVES IN THE SOURCE, NOT IN A LIST.** `checkJs` is
+  deliberately false and a file's own `// @ts-check` pragma is what opts it in, so there is no
+  second list to drift out of date (S3's jugad rule, honoured a rung early). Seeded with the 12
+  HOTTEST organs — hottest MEASURED by git churn over 120 days, not chosen by opinion: dugout,
+  brain, watchman, organism_test, nightshift, thalamus, learnstate, viz, cortex, capture, dmn,
+  hippocampus — plus the gate itself, which type-checks its own source. 13 today, and the number
+  may only grow.
+
+- **`eslint.config.mjs` — three rules and only three:** `no-undef` (the same class from the other
+  side, across all 105 organs, not just the checked 13) · `no-unused-vars` · `no-empty` (the
+  `catch {}` swallow class). A linter at full volume over this codebase produces a number nobody
+  drives to zero, and a gate nobody can satisfy gets deleted.
+
+- **`scripts/gates.mjs` — the ratchet, and it writes NOTHING.** The baselines live inside the gate
+  (the rung's own words). The law is DIRECTION, not a target: the undefined-symbol families stay
+  **0** · every frozen count may only **FALL** · the checked list may only **GROW** · and a rule
+  that is not in the baseline may not arrive with its findings already forgiven. When a count
+  falls the gate SAYS so and asks a session to tighten the constant — it never edits itself,
+  because a self-lowering baseline is a gate that quietly stopped guarding. A bare checkout with
+  no node_modules answers NOT MEASURABLE HERE and exits 0, which is pulse.mjs's established shape.
+
+- **BOTH GATES RIDE `npm test`** — a new `gates` mode in the suite runner. That was the rung's
+  requirement and it is the difference between a gate and a hypothesis.
+
+**THE MEASURED BASELINES, frozen 20 Aug 2026:** undefined-symbol family **0** on BOTH sides ·
+303 other checkJs diagnostics across the 13 · 354 lint errors across all organs, of which
+**267 are `no-empty`** — the silent-swallow class swallow.mjs already counts — and 87
+`no-unused-vars` · 2 warnings. **Not one of the 445 swallows was hand-fixed** (the rung's FORBIDDEN
+line): they are FROZEN, and from today the number can only fall.
+
+**THE DONE-PROOF, AND IT IS THE WHOLE ARGUMENT FOR TIER 0 IN ONE EXPERIMENT.** A `readJsonl()`
+call — a name that exists nowhere in this repo — was planted in `scripts/watchman.mjs`. Then both
+nets were asked the same question:
+
+```
+node scripts/watchman.mjs selftest   →  ALL CHECKS PASSED (107 passed, 0 failed)
+node scripts/gates.mjs types         →  RED, exit 1
+    scripts/watchman.mjs:2391 TS2552 Cannot find name 'readJsonl'. Did you mean 'readJson'?
+    LINT HARD — no-undef at scripts/watchman.mjs:2391 — 'readJsonl' is not defined.
+```
+
+**The organ's own 107-check selftest was green on a file that could only throw.** The gate named
+the file, the line and the symbol — and it never ran the organ. The plant was removed and the
+gate returned to exit 0 with the plant gone from the source.
+
+**THE INSTRUMENT NARROWED ITSELF AGAIN, BEFORE IT WAS TRUSTED (§4 binds every new tool).** The
+first hard-code list included TS2551 and TS2561, and the first live run produced three immediate
+"undefined symbol" errors in dugout.mjs. Reading the callee killed them: `loadSessionHandle({ model, … })`
+— the callee's very FIRST destructured parameter is `model`; TypeScript simply could not infer it
+(no default, no annotation) and called the object literal excess. Both codes are property checks
+on a literal, not symbol lookups, so they moved into the frozen soft count. Verified by reading
+the code before the list was cut, not after.
+
+**THE SUITE.** `npm test` came back **108 passed / 1 failed** — the +1 is the new GATES check,
+green. The failing line is the same aggregate as the baseline, but it named a THIRD red member,
+archivist, which the baseline did not have. That was chased down rather than waved through:
+archivist alone is **116/0, four times running**, and **116/0 again after replaying all 50 suite
+members that precede it in the same order**. It is not reproducible from S2's change or from
+ordering. What it IS, is the second instance of the interaction the S1 entry already recorded:
+this suite was running while a live session's Stop hooks were firing, and archivist is precisely
+the organ that watches the afferent tail. Recorded, not patched away, and not used as an excuse
+either — if it recurs on a quiet machine it is a real finding and belongs to whichever rung sees it.
+
+**COST OF THE GATES, said plainly:** `npm test` now spawns tsc and eslint once each and crossed the
+ten-minute mark on this machine. That is the price of the net; the alternative was finding
+`readJsonl()` at 03:00.
+
+**THE LAW.** `xray report`: **Q2 = 0, Q5 = 0**, 106/106 organs parsed. The §3-C order gate is green
+on the open order. No gate was weakened; two more were added, and both can only tighten.
+
+**NEXT: S3 · THE LAW PACK — MODEL: Opus 5 · effort max · CEILING 40.** It inherits a working
+ratchet shape: ast-grep rules join the same gate, prove each rule BITES on a planted violation,
+and the superseded hand-rolled scans NARROW rather than get deleted (L9).

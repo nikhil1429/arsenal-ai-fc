@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-check
 // ============================================================================
 // hippocampus.mjs · ARSENAL AI FC — THE HIPPOCAMPUS (the durable memory organ)
 // ----------------------------------------------------------------------------

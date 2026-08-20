@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-check
 // ============================================================================
 // organism_test.mjs · ARSENAL AI FC — THE CROSS-ORGAN TEST SUITE (6 Aug 2026)
 // ----------------------------------------------------------------------------
@@ -1285,8 +1286,30 @@ function alive() {
     reds.join("\n         ") || r.out.split(/\r?\n/).slice(-4).join(" | "));
 }
 
+// ── GATES — TIER 0, AS A RATCHET (AUDIT §10-C rung S2, 20 Aug 2026) ──────────
+// The two free instruments the organism never had: `tsc --checkJs` over the organs that
+// carry a `@ts-check` pragma, and eslint's three named rules over all of them. They ride
+// HERE because the rung says "both ride npm test" — a gate nobody runs is a hypothesis.
+// PROVEN THE DAY IT LANDED: a planted `readJsonl()` in watchman.mjs left watchman's own
+// selftest at 107/0 GREEN, and this gate went RED naming `watchman.mjs:2391 TS2552 Cannot
+// find name 'readJsonl'. Did you mean 'readJson'?` — before the organ was ever run. That
+// is the whole argument for Tier 0 in one experiment.
+// The baselines live inside gates.mjs, and the only law is DIRECTION: the undefined-symbol
+// families stay 0, frozen counts may only fall, the checked list may only grow.
+function gates() {
+  section("GATES — tsc --checkJs + eslint, frozen at their measured baseline, tightening only");
+  const r = run([join(ROOT, "scripts", "gates.mjs"), "report"], { timeout: 600000 });
+  if (/NOT MEASURABLE HERE/.test(r.out)) {
+    assert("GATES — bare checkout: the gate answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));
+    return;
+  }
+  const reds = r.out.split(/\r?\n/).filter((l) => /^\s*RED\s/.test(l));
+  assert("GATES — undefined-symbol families 0 on both sides, and no frozen count rose (a gate may only get stricter)",
+    r.code === 0, reds.join("\n         ") || r.out.split(/\r?\n/).slice(-3).join(" | "));
+}
+
 // ── MAIN ─────────────────────────────────────────────────────────────────────
-const MODES = { coverage, integrity, laws, hermetic, path, suites, alive };
+const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, alive };
 async function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }

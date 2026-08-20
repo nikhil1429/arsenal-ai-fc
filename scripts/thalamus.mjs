@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-check
 // ============================================================================
 // thalamus.mjs · ARSENAL AI FC — THE THALAMUS (the relay nucleus + reticular gate)
 // ----------------------------------------------------------------------------

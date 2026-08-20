@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-check
 // ============================================================================
 // learnstate.mjs · ARSENAL AI FC — THE SESSION-AGNOSTIC KICKOFF (working-memory)
 // ----------------------------------------------------------------------------

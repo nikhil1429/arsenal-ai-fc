@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-20T00:25:10.554Z",
- "organs_parsed": 105,
- "organs_expected": 105,
+ "built_at": "2026-08-20T02:02:02.305Z",
+ "organs_parsed": 106,
+ "organs_expected": 106,
  "parse_errors": [],
- "unresolved_sinks": 1339,
+ "unresolved_sinks": 1344,
  "organs": {
   "acts.mjs": {
    "loc": 482,
@@ -1118,422 +1118,422 @@
    "unresolved": 5
   },
   "brain.mjs": {
-   "loc": 7006,
+   "loc": 7007,
    "reads": [
     {
      "path": "dressing-room/manager/system.md",
      "lines": [
-      3413,
-      3413,
-      3413,
-      3413,
-      3413,
-      3413,
-      3413,
-      3413
+      3414,
+      3414,
+      3414,
+      3414,
+      3414,
+      3414,
+      3414,
+      3414
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      3856,
-      216,
-      216,
-      3856,
-      216,
-      216,
-      3856,
-      216,
-      216,
-      3856
+      3857,
+      217,
+      217,
+      3857,
+      217,
+      217,
+      3857,
+      217,
+      217,
+      3857
      ],
      "fixture": false
     },
     {
      "path": "scripts/nightshift.mjs",
      "lines": [
-      5339,
-      5339,
-      5339,
-      5339
+      5340,
+      5340,
+      5340,
+      5340
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      5413,
-      216,
-      216,
-      5413,
-      216,
-      216,
-      279,
-      5413,
-      216,
-      216,
-      245,
-      279,
-      5413
+      5414,
+      217,
+      217,
+      5414,
+      217,
+      217,
+      280,
+      5414,
+      217,
+      217,
+      246,
+      280,
+      5414
      ],
      "fixture": false
     },
     {
      "path": "scripts/brain.mjs",
      "lines": [
-      5489,
-      5799,
-      6034,
-      5489,
-      5799,
-      6034,
-      5489,
-      5799,
-      6034,
-      5489,
-      5799,
-      6034
+      5490,
+      5800,
+      6035,
+      5490,
+      5800,
+      6035,
+      5490,
+      5800,
+      6035,
+      5490,
+      5800,
+      6035
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/brain_config.json",
      "lines": [
-      164,
       165,
-      164,
+      166,
       165,
-      164,
-      165
+      166,
+      165,
+      166
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_queue.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/pulse_session.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/captains_call.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/lexicon.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/doubt_grammar.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/calibration.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/learning_state.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/nikhil_model.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/weaknesses.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/token_vitals.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/teaching_contract.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/watchman_last.json",
      "lines": [
-      213,
-      213,
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/consumption.jsonl",
      "lines": [
-      216,
-      216,
-      216,
-      216,
-      216,
-      216
+      217,
+      217,
+      217,
+      217,
+      217,
+      217
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/mouth_log.jsonl",
      "lines": [
-      216,
-      216,
-      216,
-      216,
-      216,
-      216
+      217,
+      217,
+      217,
+      217,
+      217,
+      217
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_out/gate.jsonl",
      "lines": [
-      216,
-      216,
-      216,
-      216,
-      216,
-      216
+      217,
+      217,
+      217,
+      217,
+      217,
+      217
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl.1",
      "lines": [
-      216,
-      216,
-      216,
-      216,
-      216,
-      216
+      217,
+      217,
+      217,
+      217,
+      217,
+      217
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/sitting_reviews.jsonl",
      "lines": [
-      279,
-      245,
-      279,
-      245,
-      279
+      280,
+      246,
+      280,
+      246,
+      280
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/nikhil_model_grid.jsonl",
      "lines": [
-      279,
-      245,
-      279,
-      245,
-      279
+      280,
+      246,
+      280,
+      246,
+      280
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_out/lexicon",
      "lines": [
-      2464,
-      2464,
-      2464
+      2465,
+      2465,
+      2465
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_outcomes.jsonl",
      "lines": [
-      3323,
-      279,
-      3323,
-      245,
-      279,
-      3323
+      3324,
+      280,
+      3324,
+      246,
+      280,
+      3324
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/concepts.json",
      "lines": [
-      213,
-      213,
-      213,
-      213
+      214,
+      214,
+      214,
+      214
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dugout_ledger.jsonl",
      "lines": [
-      216,
-      216,
-      216,
-      216
+      217,
+      217,
+      217,
+      217
      ],
      "fixture": false
     },
     {
      "path": "no-such-ledger-xyz.jsonl",
      "lines": [
-      216,
-      216,
-      216,
-      216
+      217,
+      217,
+      217,
+      217
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/presence_log.jsonl",
      "lines": [
-      279,
-      245,
-      279
+      280,
+      246,
+      280
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dugout_stamps.jsonl",
      "lines": [
-      279,
-      245,
-      279
+      280,
+      246,
+      280
      ],
      "fixture": false
     },
     {
      "path": "no-such-dir-xyz/afferent.jsonl",
      "lines": [
-      279,
-      245,
-      279
+      280,
+      246,
+      280
      ],
      "fixture": false
     },
     {
      "path": "no-such-dir-xyz/presence_log.jsonl",
      "lines": [
-      279,
-      245,
-      279
+      280,
+      246,
+      280
      ],
      "fixture": false
     },
     {
      "path": "no-such-dir-xyz/dugout_stamps.jsonl",
      "lines": [
-      279,
-      245,
-      279
+      280,
+      246,
+      280
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/rejirah_log.jsonl",
      "lines": [
-      279,
-      245,
-      279
+      280,
+      246,
+      280
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      279,
-      245,
-      279
+      280,
+      246,
+      280
      ],
      "fixture": false
     }
@@ -1542,13 +1542,13 @@
     {
      "path": "dressing-room/state/mouth_log.jsonl",
      "lines": [
-      100,
-      100,
-      100,
-      100,
-      100,
-      100,
-      100
+      101,
+      101,
+      101,
+      101,
+      101,
+      101,
+      101
      ],
      "verbs": [
       "appendFileSync"
@@ -1558,14 +1558,14 @@
     {
      "path": "dressing-room/state/pulse_session.json",
      "lines": [
-      119,
       120,
-      119,
+      121,
       120,
-      119,
+      121,
       120,
-      119,
-      120
+      121,
+      120,
+      121
      ],
      "verbs": [
       "writeFileSync",
@@ -1576,26 +1576,26 @@
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      905,
-      3942,
-      3972,
-      4034,
-      6817,
-      905,
-      3942,
-      3972,
-      4034,
-      6817,
-      905,
-      3942,
-      3972,
-      4034,
-      6817,
-      905,
-      3942,
-      3972,
-      4034,
-      6817
+      906,
+      3943,
+      3973,
+      4035,
+      6818,
+      906,
+      3943,
+      3973,
+      4035,
+      6818,
+      906,
+      3943,
+      3973,
+      4035,
+      6818,
+      906,
+      3943,
+      3973,
+      4035,
+      6818
      ],
      "verbs": [
       "appendFileSync"
@@ -1605,10 +1605,10 @@
     {
      "path": "dressing-room/state/consumption.jsonl",
      "lines": [
-      1446,
-      1446,
-      1446,
-      1446
+      1447,
+      1447,
+      1447,
+      1447
      ],
      "verbs": [
       "appendFileSync"
@@ -1618,13 +1618,13 @@
     {
      "path": "dressing-room/state/brain_out/gate.jsonl",
      "lines": [
-      1785,
-      1785,
-      1785,
-      1785,
-      1785,
-      1785,
-      1785
+      1786,
+      1786,
+      1786,
+      1786,
+      1786,
+      1786,
+      1786
      ],
      "verbs": [
       "appendFileSync"
@@ -1634,14 +1634,14 @@
     {
      "path": "dressing-room/state/brain_ledger.jsonl.1",
      "lines": [
-      3856,
-      3856,
-      3856,
-      3856,
-      3856,
-      3856,
-      3856,
-      3856
+      3857,
+      3857,
+      3857,
+      3857,
+      3857,
+      3857,
+      3857,
+      3857
      ],
      "verbs": [
       "rmSync",
@@ -1652,9 +1652,9 @@
     {
      "path": "dressing-room/state/brain_queue.json",
      "lines": [
-      211,
-      211,
-      211
+      212,
+      212,
+      212
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -1664,9 +1664,9 @@
     {
      "path": "dressing-room/state/token_vitals.json",
      "lines": [
-      211,
-      211,
-      211
+      212,
+      212,
+      212
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -1679,100 +1679,100 @@
      "kind": "organ",
      "script": "captains_call.mjs",
      "verb": null,
-     "line": 1759,
+     "line": 1760,
      "ctx": "defaultFileCard"
     },
     {
      "kind": "llm",
      "bin": "claude",
-     "line": 2085
+     "line": 2086
     },
     {
      "kind": "organ",
      "script": "tasks.mjs",
      "verb": null,
-     "line": 6807,
+     "line": 6808,
      "ctx": "main"
     }
    ],
    "swallows": [
     {
-     "line": 716,
+     "line": 717,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 2084,
+     "line": 2085,
      "try_stmts": 7,
      "catch_stmts": 2
     },
     {
-     "line": 2147,
+     "line": 2148,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2463,
+     "line": 2464,
      "try_stmts": 8,
      "catch_stmts": 2
     },
     {
-     "line": 716,
+     "line": 717,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 2084,
+     "line": 2085,
      "try_stmts": 7,
      "catch_stmts": 2
     },
     {
-     "line": 2147,
+     "line": 2148,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2463,
+     "line": 2464,
      "try_stmts": 8,
      "catch_stmts": 2
     },
     {
-     "line": 716,
+     "line": 717,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 2084,
+     "line": 2085,
      "try_stmts": 7,
      "catch_stmts": 2
     },
     {
-     "line": 2147,
+     "line": 2148,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2463,
+     "line": 2464,
      "try_stmts": 8,
      "catch_stmts": 2
     },
     {
-     "line": 716,
+     "line": 717,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 2084,
+     "line": 2085,
      "try_stmts": 7,
      "catch_stmts": 2
     },
     {
-     "line": 2147,
+     "line": 2148,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2463,
+     "line": 2464,
      "try_stmts": 8,
      "catch_stmts": 2
     }
@@ -2630,100 +2630,100 @@
    "unresolved": 6
   },
   "capture.mjs": {
-   "loc": 2646,
+   "loc": 2647,
    "reads": [
     {
      "path": "dressing-room/state/capture_config.json",
      "lines": [
-      98,
       99,
-      98,
+      100,
       99,
-      98,
+      100,
       99,
-      98,
-      99
+      100,
+      99,
+      100
      ],
      "fixture": false
     },
     {
      "path": "scripts/capture.mjs",
      "lines": [
-      1850,
-      1883,
-      2101,
-      2236,
-      1850,
-      1883,
-      2101,
-      2236,
-      1850,
-      1883,
-      2101,
-      2236,
-      1850,
-      1883,
-      2101,
-      2236
+      1851,
+      1884,
+      2102,
+      2237,
+      1851,
+      1884,
+      2102,
+      2237,
+      1851,
+      1884,
+      2102,
+      2237,
+      1851,
+      1884,
+      2102,
+      2237
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/concepts.json",
      "lines": [
-      133,
       134,
-      133,
+      135,
       134,
-      133,
-      134
+      135,
+      134,
+      135
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      450,
-      452,
-      450,
-      452,
-      635,
-      450,
-      452,
-      635
+      451,
+      453,
+      451,
+      453,
+      636,
+      451,
+      453,
+      636
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gemini_quality.jsonl",
      "lines": [
-      1213,
-      1215,
-      1213,
-      1215,
-      806,
-      806,
-      1213,
-      1215,
-      806,
-      806
+      1214,
+      1216,
+      1214,
+      1216,
+      807,
+      807,
+      1214,
+      1216,
+      807,
+      807
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/heartbeat_config.json",
      "lines": [
-      1492,
-      1492,
-      1492
+      1493,
+      1493,
+      1493
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/reps_log.jsonl.quarantine.jsonl",
      "lines": [
-      806,
-      806
+      807,
+      807
      ],
      "fixture": false
     }
@@ -2732,9 +2732,9 @@
     {
      "path": "dressing-room/state/gemini_quality.jsonl",
      "lines": [
-      814,
-      814,
-      814
+      815,
+      815,
+      815
      ],
      "verbs": [
       "appendFileSync"
@@ -2744,8 +2744,8 @@
     {
      "path": "dressing-room/state/reps_log.jsonl.quarantine.jsonl",
      "lines": [
-      610,
-      610
+      611,
+      611
      ],
      "verbs": [
       "appendFileSync"
@@ -2755,9 +2755,9 @@
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      636,
-      492,
-      636
+      637,
+      493,
+      637
      ],
      "verbs": [
       "appendFileSync",
@@ -2771,68 +2771,68 @@
      "kind": "organ",
      "script": "captains_call.mjs",
      "verb": "file",
-     "line": 1012,
+     "line": 1013,
      "ctx": "cardRejectedReps"
     }
    ],
    "swallows": [
     {
-     "line": 132,
+     "line": 133,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 920,
+     "line": 921,
      "try_stmts": 19,
      "catch_stmts": 3
     },
     {
-     "line": 1491,
+     "line": 1492,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 132,
+     "line": 133,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 920,
+     "line": 921,
      "try_stmts": 19,
      "catch_stmts": 3
     },
     {
-     "line": 1491,
+     "line": 1492,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 132,
+     "line": 133,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 920,
+     "line": 921,
      "try_stmts": 19,
      "catch_stmts": 3
     },
     {
-     "line": 1491,
+     "line": 1492,
      "try_stmts": 4,
      "catch_stmts": 0
     },
     {
-     "line": 132,
+     "line": 133,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 920,
+     "line": 921,
      "try_stmts": 19,
      "catch_stmts": 3
     },
     {
-     "line": 1491,
+     "line": 1492,
      "try_stmts": 4,
      "catch_stmts": 0
     }
@@ -3304,171 +3304,171 @@
    "unresolved": 8
   },
   "cortex.mjs": {
-   "loc": 2182,
+   "loc": 2183,
    "reads": [
     {
      "path": "dressing-room/state/cortex_unsent.jsonl",
      "lines": [
-      937,
-      174,
-      174,
-      937,
-      174,
-      174,
-      937
+      938,
+      175,
+      175,
+      938,
+      175,
+      175,
+      938
      ],
      "fixture": false
     },
     {
      "path": "scripts/cortex.mjs",
      "lines": [
-      1696,
-      1724,
-      1696,
-      1724,
-      1696,
-      1724
+      1697,
+      1725,
+      1697,
+      1725,
+      1697,
+      1725
      ],
      "fixture": true
     },
     {
      "path": "scripts/captains_call.mjs",
      "lines": [
-      1739,
-      1739,
-      1739
+      1740,
+      1740,
+      1740
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/sitting.json",
      "lines": [
-      173,
-      173,
-      173,
-      173
+      174,
+      174,
+      174,
+      174
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/twin.json",
      "lines": [
-      173,
-      173,
-      173,
-      173
+      174,
+      174,
+      174,
+      174
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/calibration.json",
      "lines": [
-      173,
-      173,
-      173,
-      173
+      174,
+      174,
+      174,
+      174
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/learning_state.json",
      "lines": [
-      173,
-      173,
-      173,
-      173
+      174,
+      174,
+      174,
+      174
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/cortex_runtime.json",
      "lines": [
-      173,
-      173,
-      173,
-      173
+      174,
+      174,
+      174,
+      174
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_queue.json",
      "lines": [
-      173,
-      173,
-      173,
-      173
+      174,
+      174,
+      174,
+      174
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/cortex_session.json",
      "lines": [
-      173,
-      173,
-      173,
-      173
+      174,
+      174,
+      174,
+      174
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/wake.json",
      "lines": [
-      173,
-      173,
-      173,
-      173
+      174,
+      174,
+      174,
+      174
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/concepts.json",
      "lines": [
-      173,
-      173,
-      173,
-      173
+      174,
+      174,
+      174,
+      174
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/concept_graph.json",
      "lines": [
-      173,
-      173,
-      173,
-      173
+      174,
+      174,
+      174,
+      174
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      174,
-      174,
-      174,
-      174
+      175,
+      175,
+      175,
+      175
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/wake_queue.jsonl",
      "lines": [
-      174,
-      174,
-      174,
-      174
+      175,
+      175,
+      175,
+      175
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/capsules",
      "lines": [
-      233,
-      277,
-      332,
-      233,
-      277,
-      332
+      234,
+      278,
+      333,
+      234,
+      278,
+      333
      ],
      "fixture": false
     }
@@ -3477,12 +3477,12 @@
     {
      "path": "dressing-room/state/cortex_session.json",
      "lines": [
-      148,
       149,
-      148,
+      150,
       149,
-      148,
-      149
+      150,
+      149,
+      150
      ],
      "verbs": [
       "writeFileSync",
@@ -3493,12 +3493,12 @@
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      685,
-      1854,
-      685,
-      1854,
-      685,
-      1854
+      686,
+      1855,
+      686,
+      1855,
+      686,
+      1855
      ],
      "verbs": [
       "appendFileSync"
@@ -3508,15 +3508,15 @@
     {
      "path": "dressing-room/state/cortex_unsent.jsonl",
      "lines": [
-      917,
-      937,
-      937,
-      917,
-      937,
-      937,
-      917,
-      937,
-      937
+      918,
+      938,
+      938,
+      918,
+      938,
+      938,
+      918,
+      938,
+      938
      ],
      "verbs": [
       "appendFileSync",
@@ -3527,8 +3527,8 @@
     {
      "path": "dressing-room/state/cortex_runtime.json",
      "lines": [
-      179,
-      179
+      180,
+      180
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -3538,8 +3538,8 @@
     {
      "path": "dressing-room/state/concept_graph.json",
      "lines": [
-      179,
-      179
+      180,
+      180
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -3551,22 +3551,22 @@
     {
      "kind": "llm",
      "bin": "claude",
-     "line": 568
+     "line": 569
     }
    ],
    "swallows": [
     {
-     "line": 276,
+     "line": 277,
      "try_stmts": 11,
      "catch_stmts": 1
     },
     {
-     "line": 276,
+     "line": 277,
      "try_stmts": 11,
      "catch_stmts": 1
     },
     {
-     "line": 276,
+     "line": 277,
      "try_stmts": 11,
      "catch_stmts": 1
     }
@@ -4250,130 +4250,130 @@
    "unresolved": 3
   },
   "dmn.mjs": {
-   "loc": 1568,
+   "loc": 1569,
    "reads": [
     {
      "path": "scripts/dmn.mjs",
      "lines": [
-      991,
-      1266,
-      991,
-      1266,
-      991,
-      1266,
-      991,
-      1266
+      992,
+      1267,
+      992,
+      1267,
+      992,
+      1267,
+      992,
+      1267
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/calibration.json",
      "lines": [
-      135,
-      135,
-      135,
-      135,
-      135,
-      135
+      136,
+      136,
+      136,
+      136,
+      136,
+      136
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/learning_state.json",
      "lines": [
-      135,
-      135,
-      135,
-      135,
-      135,
-      135
+      136,
+      136,
+      136,
+      136,
+      136,
+      136
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/twin.json",
      "lines": [
-      135,
-      135,
-      135,
-      135,
-      135,
-      135
+      136,
+      136,
+      136,
+      136,
+      136,
+      136
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_queue.json",
      "lines": [
-      135,
-      135,
-      135,
-      135,
-      135,
-      135
+      136,
+      136,
+      136,
+      136,
+      136,
+      136
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dmn_precache.json",
      "lines": [
-      135,
-      135,
-      135,
-      135,
-      135,
-      135
+      136,
+      136,
+      136,
+      136,
+      136,
+      136
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/bg_queue.jsonl",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gaffer_grade_queue.jsonl",
      "lines": [
-      204,
-      204,
-      204
+      205,
+      205,
+      205
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/rejirah_log.jsonl",
      "lines": [
-      204,
-      204,
-      204
+      205,
+      205,
+      205
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      204,
-      204,
-      204
+      205,
+      205,
+      205
      ],
      "fixture": false
     }
@@ -4382,10 +4382,10 @@
     {
      "path": "dressing-room/state/dmn_weak_vector.jsonl",
      "lines": [
-      318,
-      318,
-      318,
-      318
+      319,
+      319,
+      319,
+      319
      ],
      "verbs": [
       "appendFileSync"
@@ -4395,14 +4395,14 @@
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      637,
-      827,
-      637,
-      827,
-      637,
-      827,
-      637,
-      827
+      638,
+      828,
+      638,
+      828,
+      638,
+      828,
+      638,
+      828
      ],
      "verbs": [
       "appendFileSync"
@@ -4412,9 +4412,9 @@
     {
      "path": "dressing-room/state/dmn_precache.json",
      "lines": [
-      141,
-      141,
-      141
+      142,
+      142,
+      142
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -4593,1456 +4593,1456 @@
    "unresolved": 4
   },
   "dugout.mjs": {
-   "loc": 6859,
+   "loc": 6860,
    "reads": [
     {
      "path": "dressing-room/club/media/ack",
      "lines": [
-      432,
-      6648,
-      432,
-      6648,
-      432,
-      6648,
-      432,
-      6648
+      433,
+      6649,
+      433,
+      6649,
+      433,
+      6649,
+      433,
+      6649
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_out/dugout",
      "lines": [
-      797,
-      4444,
-      797,
-      4444,
-      797,
-      4444,
-      797,
-      4444
+      798,
+      4445,
+      798,
+      4445,
+      798,
+      4445,
+      798,
+      4445
      ],
      "fixture": false
     },
     {
      "path": "docs/archive/THE_MERGE_MANUAL.md",
      "lines": [
-      972,
-      972,
-      972,
-      972
+      973,
+      973,
+      973,
+      973
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/recital_audit.jsonl",
      "lines": [
-      1342,
       1343,
-      1342,
+      1344,
       1343,
-      1342,
+      1344,
       1343,
-      1342,
-      1343
+      1344,
+      1343,
+      1344
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      1419,
-      1426,
-      1438,
-      3644,
-      510,
-      510,
-      1419,
-      1426,
-      1438,
-      3644,
-      510,
-      510,
-      1419,
-      1426,
-      1438,
-      3644,
-      510,
-      510,
-      1419,
-      1426,
-      1438,
-      3644
+      1420,
+      1427,
+      1439,
+      3645,
+      511,
+      511,
+      1420,
+      1427,
+      1439,
+      3645,
+      511,
+      511,
+      1420,
+      1427,
+      1439,
+      3645,
+      511,
+      511,
+      1420,
+      1427,
+      1439,
+      3645
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/capsules",
      "lines": [
-      1420,
-      1427,
-      2096,
-      2637,
-      4605,
-      1132,
-      1136,
-      1420,
-      1427,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      4605,
-      1132,
-      1136,
-      1420,
-      1427,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      4605,
-      1132,
-      1136,
-      1420,
-      1427,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      2096,
-      2637,
-      4605
+      1421,
+      1428,
+      2097,
+      2638,
+      4606,
+      1133,
+      1137,
+      1421,
+      1428,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      4606,
+      1133,
+      1137,
+      1421,
+      1428,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      4606,
+      1133,
+      1137,
+      1421,
+      1428,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      2097,
+      2638,
+      4606
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gaffer_brain.jsonl",
      "lines": [
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621,
-      2621
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622,
+      2622
      ],
      "fixture": false
     },
     {
      "path": "scripts",
      "lines": [
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636,
-      2636
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637,
+      2637
      ],
      "fixture": false
     },
     {
      "path": ".claude/skills",
      "lines": [
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638,
-      2638
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639,
+      2639
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/organism_self.md",
      "lines": [
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656,
-      2656
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657,
+      2657
      ],
      "fixture": false
     },
     {
      "path": "scripts/dugout.mjs",
      "lines": [
-      3337,
-      3427,
-      3615,
-      3670,
-      3776,
-      3869,
-      3886,
-      4327,
-      4495,
-      4563,
-      4661,
-      4920,
-      5108,
-      5165,
-      5165,
-      5165,
-      5170,
-      3337,
-      3427,
-      3615,
-      3670,
-      3776,
-      3869,
-      3886,
-      4327,
-      4495,
-      4563,
-      4661,
-      4920,
-      5108,
-      5165,
-      5165,
-      5165,
-      5170,
-      3337,
-      3427,
-      3615,
-      3670,
-      3776,
-      3869,
-      3886,
-      4327,
-      4495,
-      4563,
-      4661,
-      4920,
-      5108,
-      5165,
-      5165,
-      5165,
-      5170,
-      3337,
-      3427,
-      3615,
-      3670,
-      3776,
-      3869,
-      3886,
-      4327,
-      4495,
-      4563,
-      4661,
-      4920,
-      5108,
-      5165,
-      5165,
-      5165,
-      5170
+      3338,
+      3428,
+      3616,
+      3671,
+      3777,
+      3870,
+      3887,
+      4328,
+      4496,
+      4564,
+      4662,
+      4921,
+      5109,
+      5166,
+      5166,
+      5166,
+      5171,
+      3338,
+      3428,
+      3616,
+      3671,
+      3777,
+      3870,
+      3887,
+      4328,
+      4496,
+      4564,
+      4662,
+      4921,
+      5109,
+      5166,
+      5166,
+      5166,
+      5171,
+      3338,
+      3428,
+      3616,
+      3671,
+      3777,
+      3870,
+      3887,
+      4328,
+      4496,
+      4564,
+      4662,
+      4921,
+      5109,
+      5166,
+      5166,
+      5166,
+      5171,
+      3338,
+      3428,
+      3616,
+      3671,
+      3777,
+      3870,
+      3887,
+      4328,
+      4496,
+      4564,
+      4662,
+      4921,
+      5109,
+      5166,
+      5166,
+      5166,
+      5171
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/capsules/tokenization.json",
      "lines": [
-      4628,
-      4628,
-      4628,
-      4628
+      4629,
+      4629,
+      4629,
+      4629
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/dugout_reminders.jsonl",
      "lines": [
-      6467,
-      510,
-      510,
-      6467,
-      510,
-      510,
-      6467,
-      510,
-      510,
-      6467
+      6468,
+      511,
+      511,
+      6468,
+      511,
+      511,
+      6468,
+      511,
+      511,
+      6468
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/readiness.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/workspace.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/wake.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/loop_vitals.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/scout.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/drills.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/twin.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/proactivity_ledger.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dugout_prefs.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dossier_weights.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/doubt_grammar.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/calibration.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/learning_state.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/notebook.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/sprint.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gaffer_state.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gaffer_standing.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gaffer_blocks.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/capsule_map.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/weaknesses.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/captains_call.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/watchman_last.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/fsrs_store.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/missions.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dugout_opening_latch.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/lexicon.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/season.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/tape_room.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/cards.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_out/nightshift/field_probes.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/twin_config.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/calibration_config.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/thalamus_config.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/token_vitals.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/nikhil_model.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dugout_session.json",
      "lines": [
-      504,
-      504,
-      504,
-      504,
-      504,
-      504
+      505,
+      505,
+      505,
+      505,
+      505,
+      505
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/wake_queue.jsonl",
      "lines": [
-      510,
-      510,
-      510,
-      510,
-      510,
-      510
+      511,
+      511,
+      511,
+      511,
+      511,
+      511
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dugout_notes.jsonl",
      "lines": [
-      510,
-      510,
-      510,
-      510,
-      510,
-      510
+      511,
+      511,
+      511,
+      511,
+      511,
+      511
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/loose_balls.jsonl",
      "lines": [
-      510,
-      510,
-      510,
-      510,
-      510,
-      510
+      511,
+      511,
+      511,
+      511,
+      511,
+      511
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      510,
-      510,
-      539,
-      541,
-      510,
-      510,
-      539,
-      541,
-      510,
-      510,
-      539,
-      541
+      511,
+      511,
+      540,
+      542,
+      511,
+      511,
+      540,
+      542,
+      511,
+      511,
+      540,
+      542
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/recall_index.jsonl",
      "lines": [
-      510,
-      510,
-      510,
-      510,
-      510,
-      510
+      511,
+      511,
+      511,
+      511,
+      511,
+      511
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dugout_stamps.jsonl",
      "lines": [
-      510,
-      510,
-      510,
-      510,
-      510,
-      510
+      511,
+      511,
+      511,
+      511,
+      511,
+      511
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/salience_ledger.jsonl",
      "lines": [
-      510,
-      510,
-      510,
-      510,
-      510,
-      510
+      511,
+      511,
+      511,
+      511,
+      511,
+      511
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      510,
-      510,
-      510,
-      510,
-      510,
-      510
+      511,
+      511,
+      511,
+      511,
+      511,
+      511
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dugout_scrimmage.jsonl",
      "lines": [
-      510,
-      510,
-      510,
-      510,
-      510,
-      510
+      511,
+      511,
+      511,
+      511,
+      511,
+      511
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dugout_ledger.jsonl",
      "lines": [
-      510,
-      510,
-      510,
-      510,
-      510,
-      510
+      511,
+      511,
+      511,
+      511,
+      511,
+      511
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/__no_such_presence_log__.jsonl",
      "lines": [
-      539,
-      541,
-      539,
-      541,
-      539,
-      541
+      540,
+      542,
+      540,
+      542,
+      540,
+      542
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state",
      "lines": [
-      574,
-      574,
-      574
+      575,
+      575,
+      575
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/recall_index.jsonl.lock",
      "lines": [
-      870
+      871
      ],
      "fixture": false
     }
@@ -6051,10 +6051,10 @@
     {
      "path": "dressing-room/state/dugout_reminders.jsonl",
      "lines": [
-      406,
-      406,
-      406,
-      406
+      407,
+      407,
+      407,
+      407
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -6064,10 +6064,10 @@
     {
      "path": "dressing-room/state/dugout_opening_latch.json",
      "lines": [
-      1699,
-      1699,
-      1699,
-      1699
+      1700,
+      1700,
+      1700,
+      1700
      ],
      "verbs": [
       "writeFileSync"
@@ -6077,10 +6077,10 @@
     {
      "path": "dressing-room/state/dugout_scrimmage.jsonl",
      "lines": [
-      6717,
-      6717,
-      6717,
-      6717
+      6718,
+      6718,
+      6718,
+      6718
      ],
      "verbs": [
       "appendFileSync"
@@ -6090,18 +6090,18 @@
     {
      "path": "dressing-room/state/dugout_ledger.jsonl",
      "lines": [
-      6725,
-      6735,
-      6758,
-      6725,
-      6735,
-      6758,
-      6725,
-      6735,
-      6758,
-      6725,
-      6735,
-      6758
+      6726,
+      6736,
+      6759,
+      6726,
+      6736,
+      6759,
+      6726,
+      6736,
+      6759,
+      6726,
+      6736,
+      6759
      ],
      "verbs": [
       "appendFileSync"
@@ -6111,10 +6111,10 @@
     {
      "path": "dressing-room/state/recital_audit.jsonl",
      "lines": [
-      6771,
-      6771,
-      6771,
-      6771
+      6772,
+      6772,
+      6772,
+      6772
      ],
      "verbs": [
       "appendFileSync"
@@ -6124,10 +6124,10 @@
     {
      "path": "dressing-room/state/dugout_stamps.jsonl",
      "lines": [
-      6814,
-      6814,
-      6814,
-      6814
+      6815,
+      6815,
+      6815,
+      6815
      ],
      "verbs": [
       "appendFileSync"
@@ -6137,9 +6137,9 @@
     {
      "path": "dressing-room/state/recall_index.jsonl",
      "lines": [
-      910,
-      910,
-      910
+      911,
+      911,
+      911
      ],
      "verbs": [
       "appendFileSync"
@@ -6149,8 +6149,8 @@
     {
      "path": "dressing-room/state/recall_index.jsonl.lock",
      "lines": [
-      867,
-      870
+      868,
+      871
      ],
      "verbs": [
       "writeFileSync",
@@ -6164,1171 +6164,1171 @@
      "kind": "organ",
      "script": "shadow.mjs",
      "verb": null,
-     "line": 6417,
+     "line": 6418,
      "ctx": "detectShadows"
     },
     {
      "kind": "organ",
      "script": "sitting.mjs",
      "verb": "daemon",
-     "line": 6508,
+     "line": 6509,
      "ctx": "main"
     },
     {
      "kind": "organ",
      "script": "fuelboard.mjs",
      "verb": "use",
-     "line": 6727,
+     "line": 6728,
      "ctx": "main"
     },
     {
      "kind": "organ",
      "script": "fuelboard.mjs",
      "verb": "use",
-     "line": 6733,
+     "line": 6734,
      "ctx": "main"
     },
     {
      "kind": "organ",
      "script": "fuelboard.mjs",
      "verb": "fault",
-     "line": 6752,
+     "line": 6753,
      "ctx": "main"
     },
     {
      "kind": "bin",
      "bin": "cmd",
-     "line": 6828
+     "line": 6829
     },
     {
      "kind": "bin",
      "bin": "cmd",
-     "line": 6845
+     "line": 6846
     }
    ],
    "swallows": [
     {
-     "line": 146,
+     "line": 147,
      "try_stmts": 4,
      "catch_stmts": 2
     },
     {
-     "line": 538,
+     "line": 539,
      "try_stmts": 13,
      "catch_stmts": 1
     },
     {
-     "line": 662,
+     "line": 663,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1135,
+     "line": 1136,
      "try_stmts": 6,
      "catch_stmts": 2
     },
     {
-     "line": 1140,
+     "line": 1141,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 1341,
+     "line": 1342,
      "try_stmts": 12,
      "catch_stmts": 2
     },
     {
-     "line": 1369,
+     "line": 1370,
      "try_stmts": 8,
      "catch_stmts": 2
     },
     {
-     "line": 1408,
+     "line": 1409,
      "try_stmts": 5,
      "catch_stmts": 2
     },
     {
-     "line": 1504,
+     "line": 1505,
      "try_stmts": 20,
      "catch_stmts": 2
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 6541,
+     "line": 6542,
      "try_stmts": 12,
      "catch_stmts": 1
     },
     {
-     "line": 146,
+     "line": 147,
      "try_stmts": 4,
      "catch_stmts": 2
     },
     {
-     "line": 538,
+     "line": 539,
      "try_stmts": 13,
      "catch_stmts": 1
     },
     {
-     "line": 538,
+     "line": 539,
      "try_stmts": 13,
      "catch_stmts": 1
     },
     {
-     "line": 662,
+     "line": 663,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1135,
+     "line": 1136,
      "try_stmts": 6,
      "catch_stmts": 2
     },
     {
-     "line": 1140,
+     "line": 1141,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 1341,
+     "line": 1342,
      "try_stmts": 12,
      "catch_stmts": 2
     },
     {
-     "line": 1369,
+     "line": 1370,
      "try_stmts": 8,
      "catch_stmts": 2
     },
     {
-     "line": 1408,
+     "line": 1409,
      "try_stmts": 5,
      "catch_stmts": 2
     },
     {
-     "line": 1504,
+     "line": 1505,
      "try_stmts": 20,
      "catch_stmts": 2
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 6541,
+     "line": 6542,
      "try_stmts": 12,
      "catch_stmts": 1
     },
     {
-     "line": 146,
+     "line": 147,
      "try_stmts": 4,
      "catch_stmts": 2
     },
     {
-     "line": 538,
+     "line": 539,
      "try_stmts": 13,
      "catch_stmts": 1
     },
     {
-     "line": 538,
+     "line": 539,
      "try_stmts": 13,
      "catch_stmts": 1
     },
     {
-     "line": 662,
+     "line": 663,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1135,
+     "line": 1136,
      "try_stmts": 6,
      "catch_stmts": 2
     },
     {
-     "line": 1140,
+     "line": 1141,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 1341,
+     "line": 1342,
      "try_stmts": 12,
      "catch_stmts": 2
     },
     {
-     "line": 1369,
+     "line": 1370,
      "try_stmts": 8,
      "catch_stmts": 2
     },
     {
-     "line": 1408,
+     "line": 1409,
      "try_stmts": 5,
      "catch_stmts": 2
     },
     {
-     "line": 1504,
+     "line": 1505,
      "try_stmts": 20,
      "catch_stmts": 2
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 6541,
+     "line": 6542,
      "try_stmts": 12,
      "catch_stmts": 1
     },
     {
-     "line": 146,
+     "line": 147,
      "try_stmts": 4,
      "catch_stmts": 2
     },
     {
-     "line": 538,
+     "line": 539,
      "try_stmts": 13,
      "catch_stmts": 1
     },
     {
-     "line": 538,
+     "line": 539,
      "try_stmts": 13,
      "catch_stmts": 1
     },
     {
-     "line": 662,
+     "line": 663,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1135,
+     "line": 1136,
      "try_stmts": 6,
      "catch_stmts": 2
     },
     {
-     "line": 1140,
+     "line": 1141,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 1341,
+     "line": 1342,
      "try_stmts": 12,
      "catch_stmts": 2
     },
     {
-     "line": 1369,
+     "line": 1370,
      "try_stmts": 8,
      "catch_stmts": 2
     },
     {
-     "line": 1408,
+     "line": 1409,
      "try_stmts": 5,
      "catch_stmts": 2
     },
     {
-     "line": 1504,
+     "line": 1505,
      "try_stmts": 20,
      "catch_stmts": 2
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2060,
+     "line": 2061,
      "try_stmts": 36,
      "catch_stmts": 1
     },
     {
-     "line": 2655,
+     "line": 2656,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 6541,
+     "line": 6542,
      "try_stmts": 12,
      "catch_stmts": 1
     }
@@ -8628,6 +8628,57 @@
    ],
    "unresolved": 4
   },
+  "gates.mjs": {
+   "loc": 265,
+   "reads": [
+    {
+     "path": "node_modules/typescript/bin/tsc",
+     "lines": [
+      80,
+      80,
+      80
+     ],
+     "fixture": false
+    },
+    {
+     "path": "node_modules/eslint/bin/eslint.js",
+     "lines": [
+      80,
+      80,
+      80
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [],
+   "spawns": [],
+   "swallows": [],
+   "verbs": [
+    "lint",
+    "report",
+    "selftest",
+    "types"
+   ],
+   "header_verbs": [
+    "lint",
+    "report",
+    "selftest",
+    "types"
+   ],
+   "exports": [
+    "HARD_LINT_RULES",
+    "HARD_TYPE_CODES",
+    "LINT_BASELINE",
+    "TYPE_BASELINE",
+    "available",
+    "checkedOrgans",
+    "judge",
+    "measure",
+    "parseEslint",
+    "parseTsc"
+   ],
+   "unresolved": 5
+  },
   "groundsman.mjs": {
    "loc": 449,
    "reads": [
@@ -8986,110 +9037,110 @@
    "unresolved": 1
   },
   "hippocampus.mjs": {
-   "loc": 1818,
+   "loc": 1819,
    "reads": [
     {
      "path": "dressing-room/hippocampus/identity_facts.json",
      "lines": [
-      119,
-      119,
-      119,
-      119,
-      119,
-      119
+      120,
+      120,
+      120,
+      120,
+      120,
+      120
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/calibration.json",
      "lines": [
-      119,
-      119,
-      119,
-      119,
-      119,
-      119
+      120,
+      120,
+      120,
+      120,
+      120,
+      120
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/concepts.json",
      "lines": [
-      119,
-      119,
-      119,
-      119,
-      119,
-      119
+      120,
+      120,
+      120,
+      120,
+      120,
+      120
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/sprint.json",
      "lines": [
-      119,
-      119,
-      119,
-      119,
-      119,
-      119
+      120,
+      120,
+      120,
+      120,
+      120,
+      120
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/hippocampus/who_he_is.json",
      "lines": [
-      119,
-      119,
-      119,
-      119,
-      119,
-      119
+      120,
+      120,
+      120,
+      120,
+      120,
+      120
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/hippocampus/episodes.jsonl",
      "lines": [
-      120,
-      120,
-      120,
-      120,
-      120,
-      120
+      121,
+      121,
+      121,
+      121,
+      121,
+      121
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      120,
-      120,
-      120,
-      120,
-      120,
-      120
+      121,
+      121,
+      121,
+      121,
+      121,
+      121
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/hippocampus/recall_bumps.jsonl",
      "lines": [
-      120,
-      120,
-      120,
-      120,
-      120,
-      120
+      121,
+      121,
+      121,
+      121,
+      121,
+      121
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/hippocampus/identity_facts.pending.jsonl",
      "lines": [
-      328,
-      328,
-      328
+      329,
+      329,
+      329
      ],
      "fixture": false
     }
@@ -9098,54 +9149,54 @@
     {
      "path": "dressing-room/hippocampus/episodes.jsonl",
      "lines": [
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      125,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      125,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209,
-      209
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      126,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      126,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210,
+      210
      ],
      "verbs": [
       "appendFileSync",
@@ -9156,22 +9207,22 @@
     {
      "path": "dressing-room/hippocampus/recall_bumps.jsonl",
      "lines": [
-      277,
-      277,
-      1036,
-      1036,
-      1036,
-      1036,
-      277,
-      1036,
-      1036,
-      1036,
-      1036,
-      277,
-      1036,
-      1036,
-      1036,
-      1036
+      278,
+      278,
+      1037,
+      1037,
+      1037,
+      1037,
+      278,
+      1037,
+      1037,
+      1037,
+      1037,
+      278,
+      1037,
+      1037,
+      1037,
+      1037
      ],
      "verbs": [
       "writeFileSync",
@@ -9182,10 +9233,10 @@
     {
      "path": "dressing-room/hippocampus/cold/who_he_is_layers.jsonl",
      "lines": [
-      688,
-      688,
-      688,
-      688
+      689,
+      689,
+      689,
+      689
      ],
      "verbs": [
       "appendFileSync"
@@ -9195,9 +9246,9 @@
     {
      "path": "dressing-room/hippocampus/identity_facts.json",
      "lines": [
-      125,
-      125,
-      125
+      126,
+      126,
+      126
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -9207,9 +9258,9 @@
     {
      "path": "dressing-room/hippocampus/who_he_is.json",
      "lines": [
-      125,
-      125,
-      125
+      126,
+      126,
+      126
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -9219,23 +9270,23 @@
     {
      "path": "dressing-room/hippocampus/identity_facts.pending.jsonl",
      "lines": [
-      364,
-      364,
-      364,
-      364,
-      364,
-      125,
-      364,
-      364,
-      364,
-      364,
-      364,
-      125,
-      364,
-      364,
-      364,
-      364,
-      364
+      365,
+      365,
+      365,
+      365,
+      365,
+      126,
+      365,
+      365,
+      365,
+      365,
+      365,
+      126,
+      365,
+      365,
+      365,
+      365,
+      365
      ],
      "verbs": [
       "appendFileSync",
@@ -9246,9 +9297,9 @@
     {
      "path": "dressing-room/hippocampus/recall_hints.jsonl",
      "lines": [
-      1024,
-      1024,
-      1024
+      1025,
+      1025,
+      1025
      ],
      "verbs": [
       "appendFileSync"
@@ -9259,67 +9310,67 @@
    "spawns": [],
    "swallows": [
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1033,
+     "line": 1034,
      "try_stmts": 4,
      "catch_stmts": 1
     }
@@ -9639,109 +9690,109 @@
    "unresolved": 3
   },
   "learnstate.mjs": {
-   "loc": 1439,
+   "loc": 1440,
    "reads": [
     {
      "path": "learning-layer/HOW_HE_LEARNS.md",
      "lines": [
-      422,
       423,
-      422,
+      424,
       423,
-      422,
-      423
+      424,
+      423,
+      424
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/capsule_map.json",
      "lines": [
-      86,
       87,
-      86,
-      87
+      88,
+      87,
+      88
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/sprint.json",
      "lines": [
-      134,
-      134,
-      134,
-      134
+      135,
+      135,
+      135,
+      135
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/working_set.json",
      "lines": [
-      134,
-      134,
-      134,
-      134
+      135,
+      135,
+      135,
+      135
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/weaknesses.json",
      "lines": [
-      134,
-      134,
-      134,
-      134
+      135,
+      135,
+      135,
+      135
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/forge_session.json",
      "lines": [
-      134,
-      134,
-      134,
-      134
+      135,
+      135,
+      135,
+      135
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/examiner_drill.json",
      "lines": [
-      134,
-      134,
-      134,
-      134
+      135,
+      135,
+      135,
+      135
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/missions.json",
      "lines": [
-      134,
-      134
+      135,
+      135
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/benchmark.json",
      "lines": [
-      134,
-      134
+      135,
+      135
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/token_vitals.json",
      "lines": [
-      134,
-      134
+      135,
+      135
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/season.json",
      "lines": [
-      134,
-      134
+      135,
+      135
      ],
      "fixture": false
     }
@@ -9750,22 +9801,22 @@
    "spawns": [],
    "swallows": [
     {
-     "line": 421,
+     "line": 422,
      "try_stmts": 11,
      "catch_stmts": 1
     },
     {
-     "line": 421,
+     "line": 422,
      "try_stmts": 11,
      "catch_stmts": 1
     },
     {
-     "line": 421,
+     "line": 422,
      "try_stmts": 11,
      "catch_stmts": 1
     },
     {
-     "line": 421,
+     "line": 422,
      "try_stmts": 11,
      "catch_stmts": 1
     }
@@ -10703,235 +10754,235 @@
    "unresolved": 3
   },
   "nightshift.mjs": {
-   "loc": 2033,
+   "loc": 2034,
    "reads": [
     {
      "path": "dressing-room/state/capsules",
      "lines": [
-      266,
-      598,
-      266,
-      598,
-      266,
-      598,
-      266,
-      598
+      267,
+      599,
+      267,
+      599,
+      267,
+      599,
+      267,
+      599
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_out/nightshift",
      "lines": [
-      1141,
-      1141,
-      1141,
-      1141
+      1142,
+      1142,
+      1142,
+      1142
      ],
      "fixture": false
     },
     {
      "path": "scripts/nightshift.mjs",
      "lines": [
-      1421,
-      1561,
-      1421,
-      1561,
-      1421,
-      1561,
-      1421,
-      1561
+      1422,
+      1562,
+      1422,
+      1562,
+      1422,
+      1562,
+      1422,
+      1562
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/brain_queue.json",
      "lines": [
-      128,
-      128,
-      128,
-      128,
-      128,
-      128
+      129,
+      129,
+      129,
+      129,
+      129,
+      129
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/calibration.json",
      "lines": [
-      128,
-      128,
-      128,
-      128,
-      128,
-      128
+      129,
+      129,
+      129,
+      129,
+      129,
+      129
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/learning_state.json",
      "lines": [
-      128,
-      128,
-      128,
-      128,
-      128,
-      128
+      129,
+      129,
+      129,
+      129,
+      129,
+      129
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_out/nightshift/field_probes.json",
      "lines": [
-      128,
-      128,
-      128,
-      128,
-      128,
-      128
+      129,
+      129,
+      129,
+      129,
+      129,
+      129
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dossier_weights.json",
      "lines": [
-      128,
-      128,
-      128,
-      128,
-      128,
-      128
+      129,
+      129,
+      129,
+      129,
+      129,
+      129
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/doubt_grammar.json",
      "lines": [
-      128,
-      128,
-      128,
-      128,
-      128,
-      128
+      129,
+      129,
+      129,
+      129,
+      129,
+      129
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/hippocampus/who_he_is.json",
      "lines": [
-      128,
-      128,
-      128,
-      128,
-      128,
-      128
+      129,
+      129,
+      129,
+      129,
+      129,
+      129
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/cards.json",
      "lines": [
-      128,
-      128,
-      128,
-      128,
-      128,
-      128
+      129,
+      129,
+      129,
+      129,
+      129,
+      129
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/mirror_manifest.json",
      "lines": [
-      128,
-      128,
-      128,
-      128,
-      128,
-      128
+      129,
+      129,
+      129,
+      129,
+      129,
+      129
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      129,
-      129,
-      129,
-      129,
-      129,
-      129
+      130,
+      130,
+      130,
+      130,
+      130,
+      130
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/rejirah_log.jsonl",
      "lines": [
-      129,
-      129,
-      129,
-      129,
-      129,
-      129
+      130,
+      130,
+      130,
+      130,
+      130,
+      130
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      129,
-      129,
-      129,
-      129,
-      129,
-      129
+      130,
+      130,
+      130,
+      130,
+      130,
+      130
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/hippocampus/episodes.jsonl",
      "lines": [
-      129,
-      129,
-      129,
-      129,
-      129,
-      129
+      130,
+      130,
+      130,
+      130,
+      130,
+      130
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/loose_balls.jsonl",
      "lines": [
-      129,
-      129,
-      129,
-      129,
-      129,
-      129
+      130,
+      130,
+      130,
+      130,
+      130,
+      130
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/salience_ledger.jsonl.1",
      "lines": [
-      129,
-      129,
-      129,
-      129,
-      129,
-      129
+      130,
+      130,
+      130,
+      130,
+      130,
+      130
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/salience_ledger.jsonl",
      "lines": [
-      129,
-      129,
-      129,
-      129,
-      129,
-      129
+      130,
+      130,
+      130,
+      130,
+      130,
+      130
      ],
      "fixture": false
     }
@@ -10940,9 +10991,9 @@
     {
      "path": "dressing-room/state/answer_cache.jsonl",
      "lines": [
-      134,
-      134,
-      134
+      135,
+      135,
+      135
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -10952,9 +11003,9 @@
     {
      "path": "dressing-room/state/season_read.json",
      "lines": [
-      134,
-      134,
-      134
+      135,
+      135,
+      135
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -10964,9 +11015,9 @@
     {
      "path": "dressing-room/state/brain_out/nightshift/field_probes.json",
      "lines": [
-      134,
-      134,
-      134
+      135,
+      135,
+      135
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -10979,28 +11030,28 @@
      "kind": "organ",
      "script": "gate_tune.mjs",
      "verb": "score",
-     "line": 1319,
+     "line": 1320,
      "ctx": "runShift"
     }
    ],
    "swallows": [
     {
-     "line": 1038,
+     "line": 1039,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1038,
+     "line": 1039,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1038,
+     "line": 1039,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1038,
+     "line": 1039,
      "try_stmts": 5,
      "catch_stmts": 1
     }
@@ -11183,163 +11234,163 @@
    "unresolved": 3
   },
   "organism_test.mjs": {
-   "loc": 1305,
+   "loc": 1328,
    "reads": [
     {
      "path": "scripts",
      "lines": [
-      68,
-      442,
-      594,
-      68,
-      442,
-      594,
-      68,
-      442,
-      594
+      69,
+      443,
+      595,
+      69,
+      443,
+      595,
+      69,
+      443,
+      595
      ],
      "fixture": false
     },
     {
      "path": "package.json",
      "lines": [
-      84,
-      138,
-      780,
-      84,
-      138,
-      780,
-      84,
-      138,
-      780
+      85,
+      139,
+      781,
+      85,
+      139,
+      781,
+      85,
+      139,
+      781
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state",
      "lines": [
-      160,
-      160,
-      160,
-      369
+      161,
+      161,
+      161,
+      370
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_config.json",
      "lines": [
-      216,
-      299,
-      737,
-      216,
-      299,
-      737,
-      216,
-      299,
-      737
+      217,
+      300,
+      738,
+      217,
+      300,
+      738,
+      217,
+      300,
+      738
      ],
      "fixture": false
     },
     {
      "path": ".",
      "lines": [
-      371,
-      371,
-      371
+      372,
+      372,
+      372
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      741,
-      741,
-      741
+      742,
+      742,
+      742
      ],
      "fixture": false
     },
     {
      "path": "node_modules",
      "lines": [
-      1236,
-      1236,
-      1236,
-      1236,
-      1236,
-      1236
+      1237,
+      1237,
+      1237,
+      1237,
+      1237,
+      1237
      ],
      "fixture": false
     },
     {
      "path": "scripts/acts.mjs",
      "lines": [
-      77,
-      77
+      78,
+      78
      ],
      "fixture": false
     },
     {
      "path": "scripts/brain.mjs",
      "lines": [
-      77,
-      77
+      78,
+      78
      ],
      "fixture": false
     },
     {
      "path": "scripts/turn_hook.mjs",
      "lines": [
-      77,
-      77
+      78,
+      78
      ],
      "fixture": false
     },
     {
      "path": "scripts/outbox.mjs",
      "lines": [
-      77,
-      77
+      78,
+      78
      ],
      "fixture": false
     },
     {
      "path": "scripts/captains_call.mjs",
      "lines": [
-      77,
-      77
+      78,
+      78
      ],
      "fixture": false
     },
     {
      "path": "scripts/models.mjs",
      "lines": [
-      77,
-      77
+      78,
+      78
      ],
      "fixture": false
     },
     {
      "path": "scripts/watchman.mjs",
      "lines": [
-      77,
-      77
+      78,
+      78
      ],
      "fixture": false
     },
     {
      "path": ".claude/skills",
      "lines": [
-      370,
-      370,
-      369
+      371,
+      371,
+      370
      ],
      "fixture": false
     },
     {
      "path": "scripts/thalamus.log",
      "lines": [
-      1081,
-      1081
+      1082,
+      1082
      ],
      "fixture": false
     }
@@ -11349,7 +11400,7 @@
     {
      "kind": "bin",
      "bin": "git",
-     "line": 824
+     "line": 825
     }
    ],
    "swallows": [],
@@ -11357,6 +11408,7 @@
     "alive",
     "all",
     "coverage",
+    "gates",
     "hermetic",
     "integrity",
     "laws",
@@ -12666,29 +12718,29 @@
    "unresolved": 6
   },
   "rails.mjs": {
-   "loc": 374,
+   "loc": 391,
    "reads": [
     {
      "path": "docs/archive",
      "lines": [
-      154,
-      154
+      163,
+      163
      ],
      "fixture": false
     },
     {
      "path": "package.json",
      "lines": [
-      194,
-      194
+      203,
+      203
      ],
      "fixture": false
     },
     {
      "path": "CLAUDE.md",
      "lines": [
-      233,
-      233
+      242,
+      242
      ],
      "fixture": false
     }
@@ -12698,7 +12750,7 @@
     {
      "kind": "bin",
      "bin": "git",
-     "line": 186
+     "line": 195
     }
    ],
    "swallows": [],
@@ -12717,10 +12769,12 @@
    "exports": [
     "CEILING_RE",
     "CLAUDE_P_RE",
+    "CMD_POS",
     "EDIT_TOOLS",
     "FLEET_TOOLS",
     "ORDER_DIR",
     "STATE_DIR_RE",
+    "STATE_WRITE_RE",
     "checkOrder",
     "checkOrders",
     "decide",
@@ -16200,297 +16254,297 @@
    "unresolved": 0
   },
   "thalamus.mjs": {
-   "loc": 2412,
+   "loc": 2413,
    "reads": [
     {
      "path": "scripts/thalamus.mjs",
      "lines": [
-      115
+      116
      ],
      "fixture": false
     },
     {
      "path": "scripts/thalamus.log",
      "lines": [
-      259,
       260,
-      2250,
-      2250,
-      259,
+      261,
+      2251,
+      2251,
       260,
-      2250,
-      2250,
-      259,
+      261,
+      2251,
+      2251,
       260,
-      2250,
-      2250,
-      259,
+      261,
+      2251,
+      2251,
       260,
-      2250,
-      2250,
-      259,
+      261,
+      2251,
+      2251,
       260,
-      2250,
-      2250
+      261,
+      2251,
+      2251
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/concepts.json",
      "lines": [
-      611,
-      611,
-      611,
-      611,
-      611
+      612,
+      612,
+      612,
+      612,
+      612
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/salience_ledger.jsonl",
      "lines": [
-      642,
-      137,
-      137,
-      642,
-      137,
-      137,
-      642,
-      137,
-      137,
-      642,
-      137,
-      137,
-      642
+      643,
+      138,
+      138,
+      643,
+      138,
+      138,
+      643,
+      138,
+      138,
+      643,
+      138,
+      138,
+      643
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      2280,
-      137,
-      137,
-      2280,
-      137,
-      137,
-      2280,
-      137,
-      137,
-      2280,
-      137,
-      137,
-      2280
+      2281,
+      138,
+      138,
+      2281,
+      138,
+      138,
+      2281,
+      138,
+      138,
+      2281,
+      138,
+      138,
+      2281
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/thalamus_config.json",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/twin.json",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/tone.json",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dmn_precache.json",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/sprint.json",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/wake.json",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/workspace.json",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/dossier.json",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_queue.json",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/readiness.json",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/cards.json",
      "lines": [
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136,
-      136
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137,
+      137
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/answer_cache.jsonl",
      "lines": [
-      137,
-      137,
-      137,
-      137,
-      137,
-      137,
-      137,
-      137
+      138,
+      138,
+      138,
+      138,
+      138,
+      138,
+      138,
+      138
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      137,
-      137,
-      137,
-      137,
-      137,
-      137,
-      137,
-      137
+      138,
+      138,
+      138,
+      138,
+      138,
+      138,
+      138,
+      138
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      137,
-      137,
-      137,
-      137,
-      137,
-      137,
-      137,
-      137
+      138,
+      138,
+      138,
+      138,
+      138,
+      138,
+      138,
+      138
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/slip.jsonl",
      "lines": [
-      137,
-      137,
-      137,
-      137,
-      137,
-      137,
-      137,
-      137
+      138,
+      138,
+      138,
+      138,
+      138,
+      138,
+      138,
+      138
      ],
      "fixture": false
     }
@@ -16499,11 +16553,11 @@
     {
      "path": "scripts/thalamus.log.1",
      "lines": [
-      261,
-      261,
-      261,
-      261,
-      261
+      262,
+      262,
+      262,
+      262,
+      262
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -16513,11 +16567,11 @@
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      637,
-      637,
-      637,
-      637,
-      637
+      638,
+      638,
+      638,
+      638,
+      638
      ],
      "verbs": [
       "appendFileSync"
@@ -16527,16 +16581,16 @@
     {
      "path": "dressing-room/state/salience_ledger.jsonl.1",
      "lines": [
-      642,
-      642,
-      642,
-      642,
-      642,
-      642,
-      642,
-      642,
-      642,
-      642
+      643,
+      643,
+      643,
+      643,
+      643,
+      643,
+      643,
+      643,
+      643,
+      643
      ],
      "verbs": [
       "rmSync",
@@ -16547,11 +16601,11 @@
     {
      "path": "dressing-room/state/salience_ledger.jsonl",
      "lines": [
-      643,
-      643,
-      643,
-      643,
-      643
+      644,
+      644,
+      644,
+      644,
+      644
      ],
      "verbs": [
       "appendFileSync"
@@ -16561,11 +16615,11 @@
     {
      "path": "dressing-room/state/wake_queue.jsonl",
      "lines": [
-      649,
-      649,
-      649,
-      649,
-      649
+      650,
+      650,
+      650,
+      650,
+      650
      ],
      "verbs": [
       "appendFileSync"
@@ -16575,11 +16629,11 @@
     {
      "path": "dressing-room/state/bg_queue.jsonl",
      "lines": [
-      651,
-      651,
-      651,
-      651,
-      651
+      652,
+      652,
+      652,
+      652,
+      652
      ],
      "verbs": [
       "appendFileSync"
@@ -16589,11 +16643,11 @@
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      1259,
-      1259,
-      1259,
-      1259,
-      1259
+      1260,
+      1260,
+      1260,
+      1260,
+      1260
      ],
      "verbs": [
       "appendFileSync"
@@ -16603,10 +16657,10 @@
     {
      "path": "dressing-room/state/workspace.json",
      "lines": [
-      142,
-      142,
-      142,
-      142
+      143,
+      143,
+      143,
+      143
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -16616,10 +16670,10 @@
     {
      "path": "dressing-room/state/wake.json",
      "lines": [
-      142,
-      142,
-      142,
-      142
+      143,
+      143,
+      143,
+      143
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -16629,10 +16683,10 @@
     {
      "path": "dressing-room/state/dossier.json",
      "lines": [
-      142,
-      142,
-      142,
-      142
+      143,
+      143,
+      143,
+      143
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -16642,75 +16696,75 @@
     {
      "path": "scripts/thalamus.log",
      "lines": [
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281,
-      281
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282,
+      282
      ],
      "verbs": [
       "appendFileSync"
@@ -16723,33 +16777,33 @@
      "kind": "organ",
      "script": "brain.mjs",
      "verb": "consumed",
-     "line": 1139,
+     "line": 1140,
      "ctx": "defaultConsumed"
     }
    ],
    "swallows": [
     {
-     "line": 257,
+     "line": 258,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 257,
+     "line": 258,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 257,
+     "line": 258,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 257,
+     "line": 258,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 257,
+     "line": 258,
      "try_stmts": 4,
      "catch_stmts": 1
     }
@@ -17770,315 +17824,315 @@
    "unresolved": 0
   },
   "viz.mjs": {
-   "loc": 1760,
+   "loc": 1761,
    "reads": [
     {
      "path": "dressing-room/state/consumption.jsonl",
      "lines": [
-      1537,
-      1537,
-      1537,
-      1537
+      1538,
+      1538,
+      1538,
+      1538
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/club/wall.html",
      "lines": [
-      1541,
-      1541,
-      1541,
-      1541
+      1542,
+      1542,
+      1542,
+      1542
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_config.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/calibration_config.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/learning_state.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/season.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/calibration.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/tape_room.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/readiness.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/loop_vitals.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/drills.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/twin.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/pitch_read.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/timeaudit.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/missions.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/benchmark.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/notebook.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/club/poster.svg.prov.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/club/wall_gemini.html.prov.json",
      "lines": [
-      67,
-      67,
-      67,
-      67,
-      67,
-      67
+      68,
+      68,
+      68,
+      68,
+      68,
+      68
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/pitch_read_history.jsonl",
      "lines": [
-      77,
-      77,
-      77,
-      77,
-      77,
-      77
+      78,
+      78,
+      78,
+      78,
+      78,
+      78
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/__no_such_ledger__.jsonl",
      "lines": [
-      132,
-      136,
-      143,
-      98,
+      133,
+      137,
+      144,
       99,
-      132,
-      136,
-      143,
-      98,
+      100,
+      133,
+      137,
+      144,
       99,
-      132,
-      136,
-      143
+      100,
+      133,
+      137,
+      144
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      132,
-      136,
-      143,
-      1458,
-      98,
+      133,
+      137,
+      144,
+      1459,
       99,
-      132,
-      136,
-      143,
-      1458,
-      98,
+      100,
+      133,
+      137,
+      144,
+      1459,
       99,
-      132,
-      136,
-      143,
-      1458
+      100,
+      133,
+      137,
+      144,
+      1459
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      132,
-      136,
-      143,
-      98,
+      133,
+      137,
+      144,
       99,
-      132,
-      136,
-      143,
-      98,
+      100,
+      133,
+      137,
+      144,
       99,
-      132,
-      136,
-      143
+      100,
+      133,
+      137,
+      144
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state",
      "lines": [
-      120
+      121
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/archive",
      "lines": [
-      120
+      121
      ],
      "fixture": false
     }
@@ -18087,9 +18141,9 @@
     {
      "path": "dressing-room/club/poster.svg",
      "lines": [
-      168,
-      168,
-      168
+      169,
+      169,
+      169
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -18099,9 +18153,9 @@
     {
      "path": "dressing-room/club/wall_gemini.html",
      "lines": [
-      168,
-      168,
-      168
+      169,
+      169,
+      169
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -18111,9 +18165,9 @@
     {
      "path": "dressing-room/state/wall_data.json",
      "lines": [
-      168,
-      168,
-      168
+      169,
+      169,
+      169
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -18123,9 +18177,9 @@
     {
      "path": "dressing-room/club/wall.html",
      "lines": [
-      168,
-      168,
-      168
+      169,
+      169,
+      169
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -18136,52 +18190,52 @@
    "spawns": [],
    "swallows": [
     {
-     "line": 135,
+     "line": 136,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 135,
+     "line": 136,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 135,
+     "line": 136,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 135,
+     "line": 136,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 135,
+     "line": 136,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 135,
+     "line": 136,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 135,
+     "line": 136,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 135,
+     "line": 136,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 135,
+     "line": 136,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 135,
+     "line": 136,
      "try_stmts": 10,
      "catch_stmts": 1
     }
@@ -18220,68 +18274,59 @@
    "unresolved": 20
   },
   "watchman.mjs": {
-   "loc": 2389,
+   "loc": 2390,
    "reads": [
     {
      "path": "dressing-room/state/forge_session.json",
      "lines": [
-      178,
-      160,
-      178,
-      160,
-      178
+      179,
+      161,
+      179,
+      161,
+      179
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/teaching_contract.json",
      "lines": [
-      179,
-      160,
-      179,
-      160,
-      179
+      180,
+      161,
+      180,
+      161,
+      180
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      181,
-      227,
-      656,
-      181,
-      227,
-      656,
-      181,
-      227,
-      656
+      182,
+      228,
+      657,
+      182,
+      228,
+      657,
+      182,
+      228,
+      657
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/teaching_audit.jsonl",
      "lines": [
-      183,
-      245,
-      183,
-      245,
-      183,
-      245
+      184,
+      246,
+      184,
+      246,
+      184,
+      246
      ],
      "fixture": false
     },
     {
      "path": "learning-layer/OPPONENT_SCOUT.md",
-     "lines": [
-      190,
-      190,
-      190
-     ],
-     "fixture": false
-    },
-    {
-     "path": "dressing-room/state/dossier_weights.json",
      "lines": [
       191,
       191,
@@ -18290,263 +18335,272 @@
      "fixture": false
     },
     {
+     "path": "dressing-room/state/dossier_weights.json",
+     "lines": [
+      192,
+      192,
+      192
+     ],
+     "fixture": false
+    },
+    {
      "path": "dressing-room/state/watchman_repair.log",
      "lines": [
-      200,
       201,
-      200,
+      202,
       201,
-      200,
-      201
+      202,
+      201,
+      202
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/watchman_repairs.jsonl",
      "lines": [
-      207,
       208,
-      207,
+      209,
       208,
-      207,
-      208
+      209,
+      208,
+      209
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gemini_quality.jsonl",
      "lines": [
-      255,
-      255,
-      255,
-      255,
-      255,
-      255
+      256,
+      256,
+      256,
+      256,
+      256,
+      256
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/mouth_log.jsonl",
      "lines": [
-      266,
       267,
-      266,
+      268,
       267,
-      266,
-      267
+      268,
+      267,
+      268
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gaffer_brain.jsonl",
      "lines": [
-      326,
       327,
-      326,
+      328,
       327,
-      326,
-      327
+      328,
+      327,
+      328
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/archive_audit.jsonl",
      "lines": [
-      359,
-      361,
-      359,
-      361,
-      359,
-      361
+      360,
+      362,
+      360,
+      362,
+      360,
+      362
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/missions.json",
      "lines": [
-      370,
-      160,
-      370,
-      160,
-      370
+      371,
+      161,
+      371,
+      161,
+      371
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/sitting_reviews.jsonl",
      "lines": [
-      1188,
-      1188,
-      1188
+      1189,
+      1189,
+      1189
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      1241,
-      1460,
-      1241,
-      1460,
-      1241,
-      1460
+      1242,
+      1461,
+      1242,
+      1461,
+      1242,
+      1461
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/throwin_topic.txt",
      "lines": [
-      1392,
-      1392,
-      1392
+      1393,
+      1393,
+      1393
      ],
      "fixture": true
     },
     {
      "path": "setup/CLOUD_SENTINEL.md",
      "lines": [
-      1432,
-      1432,
-      1432
+      1433,
+      1433,
+      1433
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/brain_outcomes.jsonl",
      "lines": [
-      1542,
-      1542,
-      1542
+      1543,
+      1543,
+      1543
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/recital_audit.jsonl",
      "lines": [
-      1614,
-      1614,
-      1614
+      1615,
+      1615,
+      1615
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state",
      "lines": [
-      1765,
-      1765,
-      1765
+      1766,
+      1766,
+      1766
      ],
      "fixture": false
     },
     {
      "path": "scripts/watchman.mjs",
      "lines": [
-      1897,
-      1897,
-      1897
+      1898,
+      1898,
+      1898
      ],
      "fixture": true
     },
     {
      "path": "package.json",
      "lines": [
-      2100,
-      2100,
-      2100
+      2101,
+      2101,
+      2101
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/teaching_audit_last.json",
      "lines": [
-      160,
-      160
+      161,
+      161
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/token_vitals.json",
      "lines": [
-      160,
-      160
+      161,
+      161
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_config.json",
      "lines": [
-      160,
-      160
+      161,
+      161
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gaffer_state.json",
      "lines": [
-      160,
-      160
+      161,
+      161
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/tasks_expected.json",
      "lines": [
-      160,
-      160
+      161,
+      161
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/benchmark.json",
      "lines": [
-      160,
-      160
+      161,
+      161
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/sitting.json",
      "lines": [
-      160,
-      160
+      161,
+      161
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/unleash_baseline.json",
      "lines": [
-      160,
-      160
+      161,
+      161
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/conductor_evening.json",
      "lines": [
-      160,
-      160
+      161,
+      161
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/watchman_last.json",
      "lines": [
-      160,
-      160
+      161,
+      161
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_out/night_coach/2026-08-06.md",
      "lines": [
-      1565
+      1566
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/brain_out/night_coach/2026-08-06.json",
      "lines": [
-      1565
+      1566
      ],
      "fixture": true
     }
@@ -18555,9 +18609,9 @@
     {
      "path": "dressing-room/state/watchman_tier2_prompt.txt",
      "lines": [
-      1073,
-      1073,
-      1073
+      1074,
+      1074,
+      1074
      ],
      "verbs": [
       "writeFileSync"
@@ -18567,12 +18621,12 @@
     {
      "path": "dressing-room/state/watchman_repair.log",
      "lines": [
-      1074,
-      1088,
-      1074,
-      1088,
-      1074,
-      1088
+      1075,
+      1089,
+      1075,
+      1089,
+      1075,
+      1089
      ],
      "verbs": [
       "appendFileSync"
@@ -18582,9 +18636,9 @@
     {
      "path": "dressing-room/state/watchman.jsonl",
      "lines": [
-      1707,
-      1707,
-      1707
+      1708,
+      1708,
+      1708
      ],
      "verbs": [
       "appendFileSync"
@@ -18594,9 +18648,9 @@
     {
      "path": "dressing-room/state/watchman_last.json",
      "lines": [
-      1718,
-      1718,
-      1718
+      1719,
+      1719,
+      1719
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -18609,167 +18663,167 @@
      "kind": "organ",
      "script": "organism_test.mjs",
      "verb": "all",
-     "line": 738,
+     "line": 739,
      "ctx": "probeSuite"
     },
     {
      "kind": "bin",
      "bin": "powershell",
-     "line": 785
+     "line": 786
     },
     {
      "kind": "organ",
      "script": "outwork_audit.mjs",
      "verb": "run",
-     "line": 820,
+     "line": 821,
      "ctx": "probeOutwork"
     },
     {
      "kind": "organ",
      "script": "reconcile.mjs",
      "verb": "json",
-     "line": 841,
+     "line": 842,
      "ctx": "probeReconcile"
     },
     {
      "kind": "organ",
      "script": "pulse.mjs",
      "verb": "json",
-     "line": 916,
+     "line": 917,
      "ctx": "probePulse"
     },
     {
      "kind": "bin",
      "bin": "cmd",
-     "line": 1083
+     "line": 1084
     },
     {
      "kind": "organ",
      "script": "unleash_verdict.mjs",
      "verb": "json",
-     "line": 1262,
+     "line": 1263,
      "ctx": "probeUnleashVerdict"
     },
     {
      "kind": "bin",
      "bin": "git",
-     "line": 1291
+     "line": 1292
     },
     {
      "kind": "organ",
      "script": "captains_call.mjs",
      "verb": "file",
-     "line": 1296,
+     "line": 1297,
      "ctx": "probeCanon"
     },
     {
      "kind": "bin",
      "bin": "powershell",
-     "line": 1336
+     "line": 1337
     },
     {
      "kind": "organ",
      "script": "models.mjs",
      "verb": "probe",
-     "line": 1673,
+     "line": 1674,
      "ctx": "run"
     },
     {
      "kind": "organ",
      "script": "watchman.mjs",
      "verb": "__unknown_mode__",
-     "line": 2351,
+     "line": 2352,
      "ctx": "selftest"
     }
    ],
    "swallows": [
     {
-     "line": 729,
+     "line": 730,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 784,
+     "line": 785,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 819,
+     "line": 820,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 840,
+     "line": 841,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 915,
+     "line": 916,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1072,
+     "line": 1073,
      "try_stmts": 5,
      "catch_stmts": 2
     },
     {
-     "line": 729,
+     "line": 730,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 784,
+     "line": 785,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 819,
+     "line": 820,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 840,
+     "line": 841,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 915,
+     "line": 916,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1072,
+     "line": 1073,
      "try_stmts": 5,
      "catch_stmts": 2
     },
     {
-     "line": 729,
+     "line": 730,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 784,
+     "line": 785,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 819,
+     "line": 820,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 840,
+     "line": 841,
      "try_stmts": 10,
      "catch_stmts": 1
     },
     {
-     "line": 915,
+     "line": 916,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 1072,
+     "line": 1073,
      "try_stmts": 5,
      "catch_stmts": 2
     }
@@ -22587,9 +22641,31 @@
    "is_dir": false
   },
   {
+   "path": "node_modules/eslint/bin/eslint.js",
+   "readers": [
+    "gates.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
    "path": "node_modules/ts-fsrs/package.json",
    "readers": [
     "fsrs.mjs"
+   ],
+   "writers": [],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": false,
+   "is_dir": false
+  },
+  {
+   "path": "node_modules/typescript/bin/tsc",
+   "readers": [
+    "gates.mjs"
    ],
    "writers": [],
    "fixture_readers": [],
@@ -27472,6 +27548,11 @@
     "source": "package.json"
    },
    {
+    "script": "gates.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
     "script": "capture.mjs",
     "verb": "selftest",
     "source": "package.json"
@@ -28518,6 +28599,12 @@
    {
     "script": "understand.mjs",
     "verbs": []
+   },
+   {
+    "script": "session_meter.mjs",
+    "verbs": [
+     "status"
+    ]
    },
    {
     "script": "ghost.mjs",
