@@ -100,6 +100,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                      Hinglish quote in the sweep.
                                    ☑ `npm test` 108/2 — both reds pre-existing or another
                                      organ's; session_meter's own selftest 31/0.
+  ⚠ SIX ROUNDS OF RE-CHECKING, ON HIS WORD — 20 defects, ALL TWENTY IN INSTRUMENTS.
+    Each round asked something the one before it could not see: does the ruling EXIST ·
+    does the mechanism WORK · does the assembled prompt READ right · does an answer
+    SURVIVE the pipeline · can the next session RUN it on this machine · does anything
+    ROUTE to what was built. Not one of the twenty would have thrown an error; every one
+    would have produced confident output. The largest: the D2 probe had stored expected
+    answers and NOTHING that read them — a gate whose verdict was a human squinting at
+    two lines. Closed by `probecheck.mjs` (PASS / NEAR=invention / MISS=truncation) and
+    `preflight.mjs` (18 checks, run before step A01).
   ▶ NEXT SESSION ............... **S5's SWEEP — execution only.** Open the folder's
                                    `README_FOR_ANY_SESSION.md`, then drive `DO_THIS.md`
                                    (39 steps, one paste-file each in `steps/`). Diff every probe
@@ -2777,3 +2786,69 @@ to verify other instruments.
 **COST: ~9 more lakh. Rung total ~137 against a ceiling of 40.** Recorded, not excused. The handoff
 is unchanged and the next rung is still **S5's own sweep, not S6** — S6 does not open until these
 returns are verified into §9.
+
+### PROGRESS 2026-08-20 ~15:00 IST — S5 · ROUNDS FIVE AND SIX. THE GATE HAD NO COMPARATOR, AND THE TOOLS HAD NO CONSUMER
+
+Two more rounds on his word, each asking something the four before it had not.
+
+**ROUND FIVE — "can the next session actually RUN this, on this machine, today?"** Not "is it
+written" (round 1), "does it work alone" (round 2), "does it read right" (round 3) or "does an
+answer survive the pipeline" (round 4). The operational question. It found the largest hole in the
+whole rung:
+
+⛔ **THE PROBE HAD EXPECTED ANSWERS AND NOTHING TO COMPARE THEM WITH.** `probe_gen.mjs` writes
+`probe_expected.json`; a grep for anything that READS it returned `probe_gen.mjs` itself and
+nothing else. The architect's D2 ruling is explicit — *"the check is a diff, never a judgement"* —
+and the only available verdict was a human squinting at two lines. **A gate whose verdict is a
+judgement is not a gate, it is a habit**, and this one guards the single premise the whole canon
+sweep rests on. `DO_THIS.md` did not contain the word "probe" at all.
+Closed: `probecheck.mjs`. It resolves which probe each step carried, diffs the reply against the
+stored answer with whitespace as the only forgiveness, and returns three verdicts, all proven on
+planted fixtures:
+- **PASS** — both lines verbatim.
+- **NEAR** — *"the head matches and the rest does not. That is INVENTION, not retrieval."* This is
+  the dangerous case and it is now named rather than counted as a miss: a model that starts a line
+  correctly and finishes it from imagination looks like a partial success and is not one.
+- **MISS** — not present at all: the text never reached the model. An honest `ANCHOR NOT FOUND`
+  routes here too, because it is a failure of the ATTACHMENT, not of the model.
+Exit code is the verdict, and a failure prints where to go instead of leaving it to be remembered.
+
+Also built in round five: **`preflight.mjs`**, 18 checks the next session runs before step A01 —
+every step file present and non-stub · every chat-opener has a stored probe AND carries its text ·
+every anchor still unique · the canon manifest still matches the repo · the corpus manifests match
+what is on disk · no batch over the 800k budget · **the largest step round-trips through the
+clipboard byte for byte with its special characters intact** · every tool present · the fallback
+pre-written · `answers/` empty. It reports **PREFLIGHT GO**.
+
+**ROUND SIX — "does anything ROUTE to what was just built?"** This is the audit's own SHAPE 3
+turned on my own work, and it caught it:
+
+⛔ **`preflight.mjs`, `probecheck.mjs` and `simulate.mjs` had ZERO references in either instruction
+file.** Built, proven, and unreachable — produced with no consumer, which is precisely the shape
+§9 SHAPE 3 describes. `capture.mjs` was named nowhere in his file either. A tool nobody is told to
+run is a tool that does not exist.
+Closed: the README's stale "HOW TO CONTINUE" (its first two steps — get the architect's ruling, get
+his word on the ceiling — were both already done) is replaced by a **RUNBOOK** that names every
+tool in the order it is used, with the four-move loop for every step and the exact recovery path
+for a failed probe, canon and corpus separately.
+
+**And three stale numbers that would have misled the next session**, found by diffing the documents
+against what is actually on disk rather than against each other: the README's file table still said
+*"his 27 keystrokes"* (39 now, once probes, the replication chat and the critic passes were added)
+and *"live_batch1..6"* (9 now, after the batches were re-cut to the architect's 800k budget).
+`FOR_FABLE_REVIEW.md` carries the same two, **and was deliberately NOT edited** — it is the request
+as it was sent and as it was ruled on, so changing it would change what was reviewed. It is stamped
+at the top instead: read it for what was asked and why, read the README for what is true now.
+
+**THE TALLY OVER SIX ROUNDS: 20 defects, and 20 of 20 were in instruments** — never in the material
+the instruments measure. A meter reading 2.01× · a verifier manufacturing two findings · a capture
+path destroying every non-ASCII character · a probe that could not fail · a coverage check crying
+wolf seventeen times per answer · two prompts arguing with themselves · a gate with no comparator ·
+three tools nothing pointed at. **Not one would have thrown an error. Every one would have produced
+confident, plausible output.** If this rung produces nothing else, that sentence is worth the
+ceiling it cost.
+
+**COST: ~11 more lakh. Rung total ~148 against a ceiling of 40.** Recorded, not excused, and the
+ceiling does not move — §10-C: only a proven instrument fault re-derives a ceiling, never variance.
+Handoff unchanged: a fresh session, **Opus 5 · effort HIGH · execution budget 20 corrected lakh**,
+starting with `node preflight.mjs`. The next rung is **S5's sweep, not S6.**
