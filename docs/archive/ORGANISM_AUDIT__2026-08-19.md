@@ -1697,6 +1697,10 @@ cost tracks TURNS IN CONTEXT, not which rung it is. Schedule the heavy rungs aft
     **THE FORMAT (S5's review request is the model, and it worked):** a paste-ready block —
     context in two lines · the fork · the options with costs · YOUR OWN recommendation and why ·
     exactly what you need back. Never send a question you have not first tried to answer.
+    **DELIVERY (his order, 20 Aug): put the finished block ON HIS CLIPBOARD yourself**
+    (`Set-Clipboard` from a file — never inline through the shell), then tell him in ONE line:
+    "escalation clipboard pe hai — architect ko paste karo, main HALTED hoon." He ferries it;
+    the session stays halted on that thread until the ruling returns.
     The architect's ruling comes back through him, gets recorded in PROGRESS verbatim, and
     binds the rung.
 13. **THE ESCALATION RULE — his order, 20 Aug 2026: never take a lower-quality decision alone.**
