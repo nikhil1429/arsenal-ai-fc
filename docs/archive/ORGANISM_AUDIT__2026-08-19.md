@@ -33,7 +33,7 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ONE head, no agent. Output folded in as §9-B.
   PASS 2B read the CHAT CORPUS . ◐ filter done (1.38 GB → 9.0 MB) · extraction = rung S5
   PASS 3  targeted deep read ... ◐ 7 reports kept · remainder rides S5–S6
-  PASS 4  classify BY SHAPE .... ◐ five shapes in §9 + SHAPE 6 in §9-B · finalized at rung S6
+  PASS 4  classify BY SHAPE .... ◐ SIX shapes, all in §9 (S4 added SHAPE 6) · final at rung S6
   THE EXECUTION PLAN ........... ☑ WRITTEN — §10 (20 Aug 2026). THE LADDER IS THE HANDOFF.
                                    Hardened same day to the junior bar: §10-F model routing ·
                                    §10-G versions+models policy · the FLOW ATLAS (S6a) ·
@@ -50,13 +50,23 @@ STATUS (update this block before any session stops — this is the handoff)
                                    tightening only; rides npm test. Every rule proven to
                                    BITE on a planted violation on EVERY run, not once.
   S4  PASS 2 · THE EIGHT DOCS .. ☑ DONE 20 Aug 2026 · one head, 465,760 bytes, no agent.
-                                   §9-B carries five findings + SHAPE 6 + seven stale-doc
-                                   corrections, every code claim verified by running or grep.
+                                   §9-B carries five findings + seven stale-doc corrections,
+                                   every code claim verified by running or grep. Its sixth
+                                   output is a SHAPE, and it lives in §9 with SHAPES 1–5 —
+                                   **SHAPE 6 · EVERY WRITE INTO THE LEARNING RECORD IS AN ACT
+                                   OF HIS THAT NOTHING FIRES**, owner S6.
                                    ⛔ ITS HEADLINE IS THE BIGGEST THING THIS ORDER HAS FOUND:
                                    the LEARNING RECORD has no writer. reps_log = 21 rows, last
                                    2026-08-10, all 21 from the `gem` paste lane; the Re-Jirah
                                    log has NEVER been born and 15 organs read it. That is
                                    SYSTEM_BLUEPRINT's F-3, named 11 Jul, open 40 days.
+  ✔ HIS RULING ON IT, 20 Aug .... **THE LADDER RUNS AS WRITTEN. SHAPE 6 IS NOT PULLED
+                                   FORWARD.** His words: *"pulling SHAPE 6 forward is exactly
+                                   the §2 disease, and S6 must see the whole flow atlas before
+                                   anything gets wired."* So the shape is DESIGNED at S6 (its
+                                   rung row now names the atlas edges and the emit-contract row
+                                   shape) and BUILT no earlier than the registry says. A session
+                                   that patches it early is refused — this is a decided thing.
   ▶ NEXT SESSION ............... S5 · THE GEMINI SWEEPS — re-check the keys live FIRST (one
                                    command), whole-canon in ≤200k chunks + corpus extraction
                                    from the RESCUED artifacts (never re-filter, never re-fan).
@@ -959,6 +969,67 @@ Mark prompt-bound strings at definition (`/** @prompt */`) so they cannot be edi
 
 ---
 
+### SHAPE 6 · EVERY WRITE INTO THE LEARNING RECORD IS AN ACT OF HIS THAT NOTHING FIRES
+> **The afferent nerve is fully built and fully automatic — capture-pull, throw-in, mirror, harvest,
+> thalamus. The LEARNING RECORD's writers are all HIM: a paste, a CLI verb typed by hand, a gist
+> edit, a harvest he must say the word for. So the one lane the whole body is fitted on is the one
+> lane with no machine producer — and canon describes that arrangement as "zero capture tax".**
+
+Found at rung S4 (PASS 2, §9-B) and **promoted here on his ruling, 20 Aug 2026** — *"fold SHAPE 6's
+emit contract into §9 as a named shape with its evidence, so S6 designs it into the registry spec
+rather than anyone patching it early."* The same ruling kept the ladder as written: **this shape is
+NOT pulled forward. It is designed at S6 and built no earlier than the rung the registry says.**
+Pulling it forward would be §2's disease — a mechanism built before the map that would place it.
+
+**THE EVIDENCE — four surfaces, measured 20 Aug 2026, every one by running or grep:**
+
+| surface | what canon says it produces | measured | witness |
+|---|---|---|---|
+| `capture.mjs` reps | the blood; every fitted gate is calibrated on 10–40/day | **21 rows · newest 2026-08-10 · 21 of 21 from surface `gem`** | `wc -l dressing-room/state/reps_log.jsonl` + parse of ts/surface |
+| `rejirah.mjs grade` | the per-axis cold verdict + seven derived controller fields | **its append-only log has NEVER been born**; all nine axes read `rounds 0 · ungraded · unmeasured abcdefghi` | `node scripts/rejirah.mjs state tokenization` |
+| `forge_session.mjs` | THE METHOD's 12 steps, paced | writes no rep **by declared design** — "never touches reps_log — capture.mjs owns reps" | its own header |
+| the gist capsules | the master record | his paste is the only write; tokenization's `reJirahDone` says R1 + R3 were served | the rounds line of the same run |
+
+**Two consequences the other shapes do not cover.**
+**(a) One command's output contradicts itself.** The capsule says two Re-Jirah rounds happened; the
+controller that owns *which axes and how hard* says zero rounds, zero grades, nine unmeasured axes.
+Neither record can fail, so the disagreement is invisible.
+**(b) Fifteen organs read a lane that has never had a row** — archivist · audit · benchmark · brain ·
+captains_call · deep · dmn · dugout · forge_session · fsrs · gaffer_brain · learnstate · nightshift ·
+rejirah · shipped. Each is reasoning from an empty set and none of them is wrong to: **absence is
+indistinguishable from silence.**
+
+**WHY NO GATE CAUGHT IT.** The speak-gates, the cold-start gag and the Physio's NEVER-BORN ≠
+BLEEDING clamp were authored for a **bloodless** organism (`learning-layer/THE_ORGANISM.md` §XI),
+where a never-born file is correctly status quo. On an organism with 4 locked capsules and a
+59-day-overdue Re-Jirah it is a wound. *(Which clamp covers the Re-Jirah lane today is a LEAD, not a
+verified fact — S6 resolves it against the atlas.)*
+
+**THIS IS SHAPE 3'S CONVERSE, AND THAT IS WHY IT NEEDS ITS OWN NAME.** Shape 3 says nothing eats
+what is produced. Shape 6 says the richest lane is **never produced at all**, because its producer is
+a human verb — and *his memory is a design failure* is this repo's own law (11 Aug 2026). `/forge`'s
+own skill description promises "at session end the reps are captured automatically (no copy, no
+paste)"; eleven recorded FORGE runs have produced **zero** rows, and the 21 rows that do exist came
+from the paste lane that stopped ten days ago.
+
+**THE FIX (one, not four) — AN EMIT CONTRACT, DESIGNED AT S6 AS REGISTRY ROWS.** Every surface that
+can write into the learning record declares `{surface, writes_to, fired_by, cadence}` in the same
+registry S6 specs, with **`fired_by: "him"` a first-class value** the reach-side meter can hold —
+instead of a gap that reads as health. Declare-or-die applies: a surface with no row may not write,
+and a lane with no declared writer is a finding at spec time, not at 3 a.m.
+
+**THE RATCHET:** a declared surface whose `writes_to` lane has `first_real_row_at === null`, or whose
+newest row is older than that surface's own declared cadence, is a defect — **the same xray-class
+query Shape 3's ratchet already needs, pointed at the INPUT side.** The form is already proven in
+this repo: `rejirah.mjs close` refuses to claim a round landed until the paste comes back through the
+mirror, and reports PENDING until it does.
+
+**S6 OWNS THIS.** The atlas (S6a) must show these four edges as him→organ arrows with liveness and
+consumption stamps like every other edge, and the registry spec (S6b) carries the row shape above.
+**Nothing about this shape is built before S6 approves the atlas — his ruling, 20 Aug 2026.**
+
+---
+
 ## §9-B · PASS 2 — THE EIGHT INTENT DOCS, ONE HEAD (rung S4, 20 Aug 2026)
 
 **Method: §5's PASS-2 row verbatim — one coherent reader, NO fan-out, no agent, and none of the
@@ -1136,28 +1207,19 @@ raised the ten-day silence on the day it started.
 
 ---
 
-### SHAPE 6 · EVERY WRITE INTO THE LEARNING RECORD IS AN ACT OF HIS THAT NOTHING FIRES
-> **The afferent nerve is fully built and fully automatic — capture-pull, throw-in, mirror, harvest,
-> thalamus. The LEARNING RECORD's four writers are all HIM: a paste, a CLI verb typed by hand, a
-> gist edit, a harvest he must say the word for. So the one lane the whole body is fitted on is the
-> one lane with no machine producer — and the docs describe that arrangement as "zero capture tax".**
+### SHAPE 6 — NAMED HERE, THEN PROMOTED INTO §9 ON HIS RULING (20 Aug 2026)
 
-This is the converse of Shape 3, and it is how FINDING 1 happened with every gate green. Shape 3
-says nothing eats what is produced; Shape 6 says the richest lane is never produced at all, because
-its producer is a human verb — and **his memory is a design failure** is this repo's own law
-(11 Aug 2026). The `/forge` skill's own description promises "at session end the reps are captured
-automatically (no copy, no paste)", and eleven recorded FORGE runs have produced **zero** rows in
-`reps_log.jsonl`; all 21 rows came from the `gem` paste lane instead, and that lane stopped 10 days
-ago.
+This pass found a sixth shape and it does **not** live in this section. **His ruling the same day:**
+*"fold SHAPE 6's emit contract into §9 as a named shape with its evidence, so S6 designs it into the
+registry spec rather than anyone patching it early."* So it sits with SHAPES 1–5, in §9, in their
+house style, carrying its own evidence table — **read it there, and never re-state it here.** One
+copy, one place; a shape written down twice drifts exactly the way FINDING 3 above describes.
 
-**THE FIX (one, not four):** the four surfaces get a DECLARED emit contract as an S6 registry row —
-`{surface, writes_to, fired_by}` — with `fired_by: "him"` a first-class value the reach-side meter
-can hold, instead of a gap that looks like health.
-**THE RATCHET:** a surface whose `writes_to` lane has `first_real_row_at === null`, or whose newest
-row is older than the surface's own cadence, is a defect — the same query Shape 3's ratchet already
-needs, pointed at the INPUT side. The pattern is already proven in this repo: `rejirah.mjs close`
-refuses to claim a round landed until the paste comes back through the mirror, and reports PENDING
-until it does.
+**SHAPE 6 · EVERY WRITE INTO THE LEARNING RECORD IS AN ACT OF HIS THAT NOTHING FIRES** — the
+converse of SHAPE 3, and the reason FINDING 1 could happen with every gate green. Its FIX is an
+emit contract as registry rows (`{surface, writes_to, fired_by, cadence}`); its RATCHET is SHAPE 3's
+xray-class query pointed at the INPUT side. **Owner: S6.** The same ruling kept the ladder as
+written — **nothing about SHAPE 6 is built before S6 approves the atlas.**
 
 ---
 
@@ -1362,12 +1424,26 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
           ONE visual page for him (his 1 Aug visuals ruling). The atlas is DERIVED
           by code, never hand-written — hand-written maps rot (§4-B). This is his
           20 Aug ask made real: see the WHOLE organism's data flow before designing.
+          ⛔ SHAPE 6 (S4's finding, promoted to §9 on his ruling): the atlas MUST
+          render the four him→learning-record edges — capture paste · rejirah grade ·
+          forge close · the gist — as first-class arrows with the same liveness and
+          consumption stamps as every machine edge. A him→organ edge drawn thinner
+          than an organ→organ edge is how this shape stayed invisible for 40 days.
       (b) THE REGISTRY SPEC on top of the atlas: {owner · right_consumer · slot ·
           spend_class · trust_tier · subjects[]} · migration map for all 12 Shape-1
           instances · the rulings lane (design disposition on acts — Shape 2) · the
           MEMORY-index ratchet · the witness-validation spec for agent findings.
           A witness the IR cannot resolve validates NOTHING — the finding stays a
           LEAD, and the IR gap itself becomes a finding.
+          ⛔ AND SHAPE 6's EMIT CONTRACT, designed here, built no earlier than the
+          rung the registry says: every surface that may write the learning record
+          declares {surface · writes_to · fired_by · cadence}, with fired_by:"him" a
+          FIRST-CLASS value the reach-side meter can hold — never a gap that reads
+          as health. Its ratchet is Shape 3's xray-class query pointed at the INPUT
+          side (first_real_row_at === null, or newest row older than the declared
+          cadence). Also spec the FOURTH EDGE CLASS S4 found — spec→derived-copy
+          {source_file · source_version · derived_file · declared_version} — the
+          THE_GAFFER.md v2.2 vs manager/system.md v2.1 drift is its live instance.
       INPUTS, all on disk already: the ~38 unindexed memory files (the approved A–H
       ladder above all — classify each via §4-B: built/missing/superseded) · the
       seven rescued agent reports · pass4 raw evidence (rescued-artifacts path).
@@ -2233,3 +2309,56 @@ pulled forward — S6 must see the whole flow atlas before anything is wired, an
 out of order is the disease §2 names. **Recommendation: keep the ladder. Do not pull it forward.**
 The finding is now written down where S6 and S7 cannot miss it, and the organism is switched off, so
 nothing is being lost today that was not already lost on 10 August.
+
+---
+
+### PROGRESS 2026-08-20 ~10:40 IST — RUNG S4, CONTINUED ON HIS RULING (same rung, no second rung opened)
+
+**HIS RULING, verbatim:** *"Keep the ladder as written — pulling SHAPE 6 forward is exactly the §2
+disease, and S6 must see the whole flow atlas before anything gets wired. Fold SHAPE 6's emit
+contract into §9 as a named shape with its evidence, so S6 designs it into the registry spec rather
+than anyone patching it early."*
+
+**That closes the one decision the previous entry raised, and it is now a decided thing** — recorded
+in the RESUME block, not left in a chat log. A later session that proposes building the emit
+contract before S6 approves the atlas is refused on this line.
+
+**WHAT CHANGED IN THE ORDER, three edits and nothing else:**
+1. **SHAPE 6 promoted out of §9-B into §9**, seated with SHAPES 1–5 in their house style, carrying
+   its own four-surface evidence table, the two consequences the other shapes do not cover (one
+   command's output contradicting itself · fifteen organs reading a lane that has never had a row),
+   why no gate caught it, THE FIX, THE RATCHET, and an explicit **owner: S6**.
+2. **§9-B's copy replaced by a pointer, not a duplicate.** One shape, one place. A shape written
+   down twice drifts exactly the way §9-B's own FINDING 3 describes — which would have been a
+   comic way to violate a finding while recording it.
+3. **S6's rung row in §10-C now carries the design work**, so this does not depend on a future
+   session reading §9 carefully:
+   - **(a) the ATLAS** must render the four him→learning-record edges — capture paste · rejirah
+     grade · forge close · the gist — as first-class arrows with the same liveness and consumption
+     stamps as every machine edge. *A him→organ edge drawn thinner than an organ→organ edge is how
+     this shape stayed invisible for 40 days.*
+   - **(b) the REGISTRY SPEC** must carry the emit contract
+     `{surface · writes_to · fired_by · cadence}` with `fired_by:"him"` a FIRST-CLASS value, plus
+     the **fourth edge class** S4 found — spec→derived-copy
+     `{source_file · source_version · derived_file · declared_version}` — whose live instance is the
+     `THE_GAFFER.md` v2.2 vs `dressing-room/manager/system.md` v2.1 drift.
+
+**NOTHING WAS BUILT.** No organ touched, no state file written, no gate changed. This rung reads and
+folds; §10-C's S4 row says so and it held both times.
+
+**GATES, re-run after every edit above:** §3-C's checker → `document structurally clean` ·
+`node scripts/rails.mjs orders` → the open order clean (the 7 leads it prints are all in CLOSED
+records, never blockers, §10-H) · committed through `hooks/pre-commit` unmodified, tripwire green,
+freeze dormant · **pushed**.
+
+**COST FOR THE WHOLE RUNG, both halves: ~34 of 40 corrected lakh** — today's meter moved
+343.31 → ~377 while S4 ran (`node scripts/session_meter.mjs status 7`). No ceiling event, and the
+ceiling was never close enough to shape a decision.
+
+**NEXT SESSION — S5 · THE GEMINI SWEEPS · MODEL: Opus 5 · effort HIGH (§10-F: mechanical
+orchestration, not judgement) · CEILING 40.** First act after the micro-order: **re-check the keys
+LIVE, in one command, before planning a single call** — 19 Aug's lesson was all ten keys returning
+429 while a ten-hour-old probe reported healthy, and S11's freshness gate does not exist yet. Then
+the whole canon in ≤200k chunks (6–8 calls, thinking ON, schema'd output) and the corpus extraction
+from the RESCUED artifacts — **never re-filter, never re-fan.** Every return is a LEAD until one
+command verifies it; API pool dry ⇒ his Gemini WEB lane instead.
