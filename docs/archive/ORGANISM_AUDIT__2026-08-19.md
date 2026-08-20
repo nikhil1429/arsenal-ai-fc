@@ -100,7 +100,17 @@ STATUS (update this block before any session stops — this is the handoff)
                                      Hinglish quote in the sweep.
                                    ☑ `npm test` 108/2 — both reds pre-existing or another
                                      organ's; session_meter's own selftest 31/0.
-  ⚠ SIX ROUNDS OF RE-CHECKING, ON HIS WORD — 20 defects, ALL TWENTY IN INSTRUMENTS.
+  ⚠ EIGHT ROUNDS OF RE-CHECKING, ON HIS WORD — 22 defects, ALL TWENTY-TWO IN INSTRUMENTS.
+    He asked why the mistakes kept coming, and the answer changed the method: I was
+    building and checking in one pass, so each round found the previous round's new
+    work. Rounds 7-8 stopped that — `checkall.mjs` runs every assertion from all six
+    manual rounds as ONE command (and is proven to bite on four planted regressions),
+    `buildsteps.mjs` gives `steps/` the code path it never had, and a DOCS-vs-DISK
+    check ends the hand-restated numbers that kept drifting. The cold rebuild then
+    found the hazard nothing else could: THE CORPUS IS LIVE — this session's own turns
+    land in it — so a mid-sweep rebuild moves the haystack under answers already
+    collected and discards true findings as unverifiable. Inputs now freeze on the
+    first answer and the verifier refuses a run whose inputs moved.
     Each round asked something the one before it could not see: does the ruling EXIST ·
     does the mechanism WORK · does the assembled prompt READ right · does an answer
     SURVIVE the pipeline · can the next session RUN it on this machine · does anything
@@ -2852,3 +2862,67 @@ ceiling it cost.
 ceiling does not move — §10-C: only a proven instrument fault re-derives a ceiling, never variance.
 Handoff unchanged: a fresh session, **Opus 5 · effort HIGH · execution budget 20 corrected lakh**,
 starting with `node preflight.mjs`. The next rung is **S5's sweep, not S6.**
+
+### PROGRESS 2026-08-20 ~15:45 IST — S5 · ROUNDS SEVEN AND EIGHT, AND THE HONEST ANSWER TO "WHY SO MANY MISTAKES"
+
+**He asked it directly and it deserves a direct answer, because the answer changes the method.**
+Six rounds of re-checking found twenty defects. That is not thoroughness; it is a manual check
+racing its own construction. Three causes, all mine:
+
+1. **I was building and checking in the same pass.** Rounds 5 and 6 found defects in what rounds 3
+   and 4 had just built. Most of the twenty were not lying in wait — I made a good share of them,
+   and the next round found them.
+2. **I checked in the cheapest order instead of the strongest.** "Is it written" first, "does it
+   work end to end" last. Reversed, round four's simulation would have surfaced most of what
+   rounds one through three each found separately.
+3. **Every number was hand-restated in three documents.** So they drifted — 27 keystrokes against
+   39, `live_batch1..6` against nine. That is §9 SHAPE 1 in prose: one truth, three copies.
+
+**So the fix is not a seventh manual round. It is L4 — a law is a code path or it does not exist.**
+
+**ROUND SEVEN — `checkall.mjs`.** Every assertion from all six manual rounds, as one command:
+preflight · the capture path · the whole pipeline on synthetic answers built from REAL quotes ·
+the probe comparator on a planted pass and a planted invention · **and DOCS vs DISK**, which
+asserts every number the instruction files state against what is actually there. That last check is
+the one that ends cause (3) permanently: a document that restates a number is a copy, and now every
+copy is checked against its source on every run.
+**It was then proven to BITE, because a checker green on its first run is worth nothing** — the
+exact trap the probe fell into. Four planted regressions, four reds, green again on restore:
+delete a step file · mis-state a count in a doc · rename a section the verifier knows (the
+silent-discard class) · loosen the probe so a reconstruction passes.
+
+**ROUND EIGHT — the cold rebuild.** Every derived artefact deleted and regenerated from source:
+canon chunks, corpus batches, probes, steps. This asks a property none of the earlier rounds did —
+not "is it right now" but **"is it reproducible"** — and it immediately found the missing tool:
+
+⛔ **NOTHING BUILT `steps/`.** All 39 files had been assembled by hand, every time, and the runbook
+tells the next session to *"rebuild that batch's steps"* after a failed corpus probe. There was no
+tool. **Identical class to the probe that had expected answers and no comparator: an instruction
+with no code path behind it.** Closed by `buildsteps.mjs` — deterministic, idempotent, floors
+computed from each batch's real day count and never typed, stale files removed, and it refuses to
+finish on an unresolved placeholder.
+
+**AND THE COLD REBUILD SURFACED A HAZARD NOTHING ELSE WOULD HAVE.** 26 files came back different,
+and the differences are correct: `chunk04` holds this very order, which has been committed to all
+day; `live_batch9` is today, and **this session's own turns keep landing in the corpus** — one hour
+moved HIM from 2,339 to 2,356 turns. Which means:
+
+⛔ **THE CORPUS IS A MOVING TARGET, AND `verify.mjs` GREPS QUOTES AGAINST IT.** A rebuild mid-sweep
+changes the haystack under answers already collected, every quote from a changed file stops
+matching, and **a true finding is discarded as unverifiable — indistinguishable from a model that
+found nothing.** It would have been blamed on Gemini.
+Closed: `capture.mjs` fingerprints every canon chunk and corpus batch the moment the first answer
+lands (`inputs_frozen.json`), and `verify.mjs` refuses to be trusted if any of them moved, naming
+the files. Proven by moving one byte of `live_batch9.txt` and watching it fire. The runbook now
+carries the law: **once the first answer is saved, nothing is rebuilt until the sweep closes** —
+with the single named exception of re-cutting a batch whose probe failed.
+
+**THE TALLY: 22 defects over eight rounds, and 22 of 22 were in INSTRUMENTS** — never once in the
+material the instruments measure. The last two are the sharpest of the set, because both were
+*missing code paths behind written instructions*, which is the same shape as the D2 comparator and
+the same shape §9 SHAPE 1 describes. **Not one of the twenty-two would have thrown an error.**
+
+**COST: ~13 more lakh. Rung total ~161 against a ceiling of 40.** The ceiling does not move —
+§10-C, variance is not an instrument fault. Handoff unchanged: a fresh session, **Opus 5 · effort
+HIGH · execution budget 20 corrected lakh**, whose first command is now `node checkall.mjs`.
+The next rung is **S5's sweep, not S6.**
