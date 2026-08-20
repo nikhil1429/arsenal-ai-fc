@@ -50,6 +50,11 @@ STATUS (update this block before any session stops — this is the handoff)
                                    tightening only; rides npm test. Every rule proven to
                                    BITE on a planted violation on EVERY run, not once.
   S4  PASS 2 · THE EIGHT DOCS .. ☑ DONE 20 Aug 2026 · one head, 465,760 bytes, no agent.
+                                   ⚠ COST 48.31 vs CEILING 40 — OVER, and recorded as over.
+                                   31.39 at the handoff; the rest was the continuation HE
+                                   ordered after reading the report. Ceiling NOT re-derived
+                                   (§10-C: unit faults only). The scope question — does a
+                                   ceiling cover his follow-ups? — is one line for HIM.
                                    §9-B carries five findings + seven stale-doc corrections,
                                    every code claim verified by running or grep. Its sixth
                                    output is a SHAPE, and it lives in §9 with SHAPES 1–5 —
@@ -2351,9 +2356,28 @@ folds; §10-C's S4 row says so and it held both times.
 records, never blockers, §10-H) · committed through `hooks/pre-commit` unmodified, tripwire green,
 freeze dormant · **pushed**.
 
-**COST FOR THE WHOLE RUNG, both halves: ~34 of 40 corrected lakh** — today's meter moved
-343.31 → ~377 while S4 ran (`node scripts/session_meter.mjs status 7`). No ceiling event, and the
-ceiling was never close enough to shape a decision.
+**⛔ COST — THE RUNG WENT OVER ITS CEILING. Say it plainly: 48.31 against 40.** Measured on the
+same instrument and the same way S1/S2/S3 were measured, today's meter moved **343.31 → 391.62
+corrected lakh** between the rung's first command and its last
+(`node scripts/session_meter.mjs status 7`). **This is an upper bound, not a clean per-rung figure:
+the meter is per-DAY across all of his sessions and the session count did not change (17) while the
+turn count moved 745 → 868, so nearly all of it is this rung — but "nearly all" is the honest word,
+not "all".**
+
+**What actually happened, because the shape matters more than the number.** The rung reached its
+PROGRESS entry and its first commit at **31.39** — inside the ceiling, with the handoff already
+written. The remaining ~17 lakh was the CONTINUATION he ordered after reading the report: promoting
+SHAPE 6 into §9, wiring it into S6's rung row, and re-running the gates. So this was not a rung that
+ran away; it was a rung that had cleanly stopped and was then correctly re-opened by his word.
+**§10-D rule 2 has no exception for that, and this entry does not invent one.**
+
+**THE HONEST LESSON, for the ceiling and not for this rung:** the ceiling as written measures a
+SESSION, and a session can be legitimately re-opened by him after it has handed off. Either the
+ceiling covers "the rung including his follow-ups" — in which case a rung must budget for the
+conversation its own findings will cause — or it covers "up to the handoff", in which case it needs
+saying. **This is NOT a licence to re-derive the number** (§10-C: ceilings re-derive only when the
+meter's UNIT is proven faulty, never on variance, and the unit is fine here). It is a scope question
+for HIM, carried as one line, not settled by a session.
 
 **NEXT SESSION — S5 · THE GEMINI SWEEPS · MODEL: Opus 5 · effort HIGH (§10-F: mechanical
 orchestration, not judgement) · CEILING 40.** First act after the micro-order: **re-check the keys
