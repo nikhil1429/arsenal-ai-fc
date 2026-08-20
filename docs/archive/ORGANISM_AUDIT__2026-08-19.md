@@ -41,15 +41,13 @@ STATUS (update this block before any session stops — this is the handoff)
                                    PreToolUse RAILS (all proven live) + the order-checker
                                    as a COMMIT GATE + CLAUDE.md confirmed.
   ▶ NEXT SESSION ............... S2 · TYPE + LINT GATES (§10-C, first ☐).
-                                   MODEL: Opus 5 · effort max · CEILING 8.
+                                   MODEL: Opus 5 · effort max · CEILING 40 (re-baselined).
 
-  ⚠ THE CEILINGS ARE NOW MEASURED — AND S1's WAS WRONG BY 6×. The meter S1 built read
-    THIS rung at 31.03 lakh weighted against a ceiling of 5. In brain.mjs's own units a
-    ~100-turn Opus session costs ~30 lakh (cache_read ×0.1 and cache_write ×1.25 dominate;
-    output is the small part). The ladder's ≈81-lakh total was set with NO meter, so every
-    ceiling on it is a guess. HIS RULING BEFORE S2: re-baseline them against measurement,
-    or keep them and accept that every rung breaches around turn 15.
-    His one line: `node scripts/session_meter.mjs status 7`.
+  ✔ THE CEILINGS ARE RE-BASELINED — HIS RULING, 20 Aug 2026, taken the same hour the meter
+    first read them. Every standard rung 40 · S10 60 · ladder total 500 (was ≈81, guessed).
+    S1 itself measured 46.51 against its old ceiling of 5. The numbers are now MEASURED, and
+    they stay hard stops against runaway — not budgets for ordinary deep work.
+    His one line, any time: `node scripts/session_meter.mjs status 7`.
 
   ⚠ THE READING SESSION OF 19 Aug COST 505.02 LAKH WEIGHTED — ~2× the organism's whole
     week (254.97 lakh). Cause: subagents on the chat corpus, which is PASS 2B's job and
@@ -1011,8 +1009,17 @@ Mark prompt-bound strings at definition (`/** @prompt */`) so they cannot be edi
 
 ### §10-C · THE SESSION LADDER — one rung per session, ceilings are HARD STOPS
 
-Ceilings are weighted lakh. At the ceiling the session STOPS and hands off cleanly — that is
-§10-D rule 2, and the meter built in S1 is what makes it enforceable.
+Ceilings are weighted lakh, **re-baselined 20 Aug from the live meter (§3-B's own rule — a
+class-B number lost to a measurement); ceilings remain HARD STOPS against runaway, sized so
+normal single-threaded deep work never trips them.** At the ceiling the session STOPS and hands
+off cleanly — that is §10-D rule 2, and the meter built in S1 is what makes it enforceable.
+
+The first numbers on this ladder were written before anything could measure a session, and S1
+proved them wrong on its first read: it spent 46.51 lakh against a ceiling of 5. In brain.mjs's
+own weights a focused Opus session runs ~30–47 lakh, because cache_read (×0.1) and cache_write
+(×1.25) dominate and output is the small part. So the sizing rule is now one sentence: **one
+focused session's measured cost plus small headroom = 40; S10, the biggest build, 60.** His
+ruling, 20 Aug 2026. Check the number, never guess it: `node scripts/session_meter.mjs status 7`.
 
 ```
 ☑ S1  RAILS — DONE 20 Aug 2026. The factory now HAS the organism's discipline.
@@ -1033,7 +1040,7 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
       canary runs must never be blocked by S1's own rules.
       FORBIDDEN: OTel infra beyond env vars this rung · refactors · new organs.
       DONE-PROOF: spend line at a session stop · a ceiling-less fleet call refused
-      live · suite green, gates stricter only.                          CEILING: 5
+      live · suite green, gates stricter only.                         CEILING: 40
 ☐ S2  TYPE + LINT GATES.                                    MODEL: Opus · effort max
       tsc --checkJs via @ts-check on the ~12 hottest organs first; eslint +
       typescript-eslint (no-empty · no-undef · no-unused-vars) over all 103 with a
@@ -1042,7 +1049,7 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
       FORBIDDEN: hand-fixing all 445 swallows this rung (the baseline freezes them) ·
       any TypeScript rewrite · touching organ logic beyond what a type error names.
       DONE-PROOF: a planted readJsonl()-class ReferenceError goes RED before runtime,
-      then is removed; baseline counts recorded inside the gate.        CEILING: 8
+      then is removed; baseline counts recorded inside the gate.       CEILING: 40
 ☐ S3  THE LAW PACK.                                         MODEL: Opus · effort max
       The organism's own laws as ast-grep YAML rules: owners-only · LAW M
       no-literal-model-names · THE JUGAD RULE (an order with a universal quantifier
@@ -1054,12 +1061,12 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
       FORBIDDEN: deleting any hand-rolled scan outright (L9 — narrow, never delete) ·
       believing any new tool's findings unverified (§4 binds tools too).
       DONE-PROOF: every rule proven to BITE on a planted violation, then green.
-                                                                        CEILING: 8
+                                                                       CEILING: 40
 ☐ S4  PASS 2 — the eight intent docs, ONE head, no agents (§5 verbatim).
                                                             MODEL: Opus · effort max
       Output: contradictions + missing-implementation list, folded into §9.
       FORBIDDEN: fan-out · reading the other ~108 .md here (that is S5's sweep).
-                                                                        CEILING: 6
+                                                                       CEILING: 40
 ☐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       Re-check the keys live first (one command). Canon in ≤200k chunks (6–8 calls,
       thinking ON, schema'd output) + corpus extraction in chunks (decisions ·
@@ -1070,7 +1077,7 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
       pool dry → his Gemini WEB lane instead.
       FORBIDDEN: any agent touching a raw transcript · believing an unverified
       return · extra calls without a PROGRESS line saying why.
-                                                           CEILING: 2 (Claude side)
+                                                                       CEILING: 40
 ☐ S6  PASS 4 FINAL + THE FLOW ATLAS + THE REGISTRY SPEC.
                     MODEL: FABLE · effort max (fallback: Opus max + self-review pass)
       (a) GENERATE THE FLOW ATLAS FIRST — free code over xray's IR + the declared
@@ -1091,14 +1098,14 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
       MAY spawn at most 4 concern-agents over the graph — ceilinged, witnesses
       mandatory — the ONLY rung with agents.
       ⛔ APPROVAL GATE: HE reads atlas + spec and says haan before S7 exists.
-                                                                        CEILING: 8
+                                                                       CEILING: 40
 ☐ S7  BUILD · GATE C.                                       MODEL: Opus · effort max
       His §1 correction lands: the consumer map becomes a DECLARED consumers table in
       the S6 row-shape, owned by the gate — S10 folds it into the registry proper, so
       S7 never waits on S10. The lane verdict judges by DECLARED consumer. PROOF:
       re-run the six gate-card class and show the verdicts change for the right
       reason. Ratchet: no lane runs without a declared consumer.
-      FORBIDDEN: waking anything (S12 wakes; S7 only corrects the judge). CEILING: 8
+      FORBIDDEN: waking anything (S12 wakes; S7 only corrects the judge). CEILING: 40
 ☐ S8  BUILD · THE SPOOL.                                    MODEL: Opus · effort max
       STEP 0 (§10-G, own commit): Node 22.14 → Node 24 LTS, suite green before AND
       after; better-sqlite3 is the fallback if node:sqlite misbehaves.
@@ -1107,7 +1114,7 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
       consumer. PROOF (sandbox): kill thalamus → prompt → spool row → revive →
       exactly one bus row. Daemon death becomes latency, never loss.
       FORBIDDEN: migrating ANY existing state file to sqlite (L9 — new lanes only).
-                                                                        CEILING: 6
+                                                                       CEILING: 40
 ☐ S9  BUILD · OWNERSHIP.                                    MODEL: Opus · effort max
       WinSW services for the headless five (run as HIS account — the install asks
       for HIS credential at HIS console: one card, his hands; a session never touches
@@ -1119,7 +1126,7 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
       HIS call, one card, never a blocker.
       ⚠ SPEND RISES HERE BY DESIGN — S7's corrected gate is already holding the purse.
       FORBIDDEN: services for turnstile/dugout (session-0 cannot see his desktop).
-                                                                        CEILING: 8
+                                                                       CEILING: 40
 ☐ S10 BUILD · THE REGISTRY.   MODEL: FABLE · effort max (fallback: Opus max + review)
       Un-nail all twelve Shape-1 instances (shadow · bootroom · gate_tune ·
       trust_tiers · tasks · isFixture · slot-awareness · wall_review · docClaims ·
@@ -1128,26 +1135,29 @@ Ceilings are weighted lakh. At the ceiling the session STOPS and hands off clean
       teeth everywhere. His live pain lands here too: note-generation idempotency
       (the "notes created 7 times" class) rides the same tasks substrate.
       FORBIDDEN: any NEW mechanism (§2's lesson — new subjects, never new machines).
-                                                                        CEILING: 12
+                                                                       CEILING: 60
 ☐ S11 BUILD · STALENESS / KEYS / CRASH.                     MODEL: Opus · effort max
       sha256(inputs) folded into cache keys · recency gates on trailing-N reads ·
       rotated cards record expired_unanswered · tmp-file replay on boot (the
       torn-write class) · ajv JSON-Schema per state file (owners-only says WHO
       writes; the schema says WHAT) · the model-roster probe gains a freshness gate
       (a 10-hour-old "keys ok" may never answer for NOW — the 19 Aug 429 lesson).
-                                                                        CEILING: 6
+                                                                       CEILING: 40
 ☐ S12 STAGED REBOOT.                                        MODEL: Opus · effort max
       Dependency-ordered wake: capture → deterministic organs → his surfaces → LLM
       lanes LAST, each behind the corrected gate AND first_real_row_at (no lane
       spends until its input class holds real data — §0's headline finding, finally
       a code path). Watchdog-reporter live. The 7-day measure window restarts.
-      ⛔ APPROVAL GATE: HIS word flips each stage, stage by stage.       CEILING: 4
+      ⛔ APPROVAL GATE: HIS word flips each stage, stage by stage.      CEILING: 40
 ```
 
-**The whole ladder's ceiling ≈ 81 lakh weighted across ~12 sessions — the one unguarded session
-of 19 Aug burned 505 by itself.** S1–S3 are cheap and mostly deterministic — they fit before
-Monday's quota reset. S6–S11 are judgement-heavy — schedule after Monday 23:30 IST unless the
-week leaves room. His study never waits on any of this; the organism stays off throughout.
+**The whole ladder's ceiling is now 500 lakh weighted across 12 sessions (11 × 40 + S10's 60) —
+and the one unguarded session of 19 Aug burned 505 by ITSELF, i.e. that single session cost
+more than the entire disciplined ladder is allowed to.** That is the whole argument for the
+rails in one line. S1–S3 stay the cheap deterministic end and S6–S11 the judgement-heavy end;
+the ceilings no longer pretend to encode that difference, because the meter says a session's
+cost tracks TURNS IN CONTEXT, not which rung it is. Schedule the heavy rungs after Monday
+23:30 IST unless the week leaves room. His study never waits on any of this; the organism stays off throughout.
 
 ### §10-D · THE STANDING RULES — every session, no exceptions
 
@@ -1465,3 +1475,51 @@ after.
 
 **THE NEXT SESSION DOES S2 · TYPE + LINT GATES — MODEL: Opus 5 · effort max · CEILING 8**, and it
 opens with his ruling on the ceilings, because under measurement 8 lakh is roughly 25 turns.
+[SUPERSEDED the same hour — he ruled, and S2's ceiling is now **40**. See the entry below.]
+
+### PROGRESS 2026-08-20 ~06:45 IST — S1's TWO OPEN ITEMS, CLOSED ON HIS WORD
+
+**1 · HIS RULING: RE-BASELINE (option 1).** *"Rewrite every §10-C ceiling FROM THE METER, not from
+guesses: standard rungs = one focused session's measured cost with small headroom (~40), S10 = 60
+(biggest build)."* Done, and the legend now carries his sentence verbatim. Old → new, every rung:
+
+| rung | S1 | S2 | S3 | S4 | S5 | S6 | S7 | S8 | S9 | S10 | S11 | S12 | TOTAL |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **old (guessed, no meter)** | 5 | 8 | 8 | 6 | 2 | 8 | 8 | 6 | 8 | 12 | 6 | 4 | ≈81 |
+| **new (from the meter)** | 40 | 40 | 40 | 40 | 40 | 40 | 40 | 40 | 40 | **60** | 40 | 40 | **500** |
+
+The old S5 was "2 (Claude side)" — the split is gone, because the meter says a session's cost
+tracks TURNS IN CONTEXT, not which rung it is: cache_read (×0.1) and cache_write (×1.25) dominate
+every turn and output is the small part. **S1's own measured actual: 46.51 lakh** — the read that
+forced this. And the reframe that matters: the 19-Aug session's 505 lakh is now visibly **more than
+the entire disciplined ladder's 500**, one session against twelve.
+
+**2 · THE FLEET DENY IS NOW PROVEN LIVE.** On his word, one throwaway ceiling-less Agent call was
+fired in this session. It never spawned — the rail refused it before the tool ran. Verbatim:
+
+```
+RAIL fleet — a fan-out was spawned with NO ceiling in its prompt — that is exactly the shape
+of the 16-agent fleet and of the 19-Aug corpus agents (505.02 lakh weighted, ~2× the organism's week)
+   FIX: say the ceiling in the prompt, e.g. `ceiling: 2 lakh weighted` or `ceiling 4 agents`,
+   or do the work in this session (LAW T: the cheapest tier that gives the same quality)
+   (override, only if the rung's micro-order declares it: put ARSENAL_RAILS_OVERRIDE=<rung>:fleet
+   in the call itself)
+```
+
+**ALL THREE RAILS ARE NOW LIVE-PROVEN** — fleet (Agent, above) · state (Write) · claude-p (Bash) —
+across three different tool families, plus the override proven live on two of them. S1 has no
+unproven claim left in it.
+
+**ONE RED APPEARED AND IT WAS MINE, NOT THE CODE'S — said out loud rather than quietly re-run.**
+The verification run came back `106/2` with a NEW red: *"running all 101 selftests leaves live
+state untouched — MODIFIED session_meter.json"*. Cause: I ran `session_meter.mjs line` by hand
+WHILE the suite was running, so I moved the file the hermeticity check was watching. Proven by
+running each candidate selftest against a hash of the live cache (all three untouched) and then
+`organism_test.mjs hermetic` alone (3/0 green), then a clean foreground suite: **107 passed / 1
+failed — exactly the baseline, same two pre-existing red members.** The gate was RIGHT and I was
+the contamination. **The real interaction it exposed, recorded and NOT patched away:** the meter's
+cache is rewritten by the Stop hook and by `state.mjs week`, so any suite run that overlaps meter
+activity will trip hermeticity. The gate is not being loosened to hide that (§10-D rule 6) — run
+the suite between turns, or expect the check to tell the truth about a moving file.
+
+**NEXT: S2 · TYPE + LINT GATES — MODEL: Opus 5 · effort max · CEILING 40.**
