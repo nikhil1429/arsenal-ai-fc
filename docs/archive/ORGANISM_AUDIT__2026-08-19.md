@@ -72,9 +72,13 @@ STATUS (update this block before any session stops — this is the handoff)
                                    rung row now names the atlas edges and the emit-contract row
                                    shape) and BUILT no earlier than the registry says. A session
                                    that patches it early is refused — this is a decided thing.
-  ▶ NEXT SESSION ............... S5 · THE GEMINI SWEEPS — re-check the keys live FIRST (one
-                                   command), whole-canon in ≤200k chunks + corpus extraction
-                                   from the RESCUED artifacts (never re-filter, never re-fan).
+  ▶ NEXT SESSION ............... S5 · THE GEMINI SWEEPS. **STEP 0 FIRST, before any Gemini
+                                   call: fix the stop-hook stdin guard** (rail maintenance,
+                                   his order 20 Aug — the defect is on S1's DONE-PROOF; it
+                                   hangs an agent shell forever and it hung S4's). THEN
+                                   re-check the keys live (one command), whole-canon in ≤200k
+                                   chunks + corpus extraction from the RESCUED artifacts
+                                   (never re-filter, never re-fan).
                                    (§10-C, first ☐). MODEL: Opus 5 · effort HIGH (mechanical
                                    orchestration, §10-F) · CEILING 40.
 
@@ -1372,6 +1376,15 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       FORBIDDEN: OTel infra beyond env vars this rung · refactors · new organs.
       DONE-PROOF: spend line at a session stop · a ceiling-less fleet call refused
       live · suite green, gates stricter only.                         CEILING: 40
+      ⛔ KNOWN DEFECT in S1's rail organ, found by S4 (20 Aug 2026), his word to
+      record it: `session_meter.mjs stop` BLOCKS FOREVER when stdin is a non-closing
+      pipe and `!isTTY` (`readFileSync(0)` at ~line 350) — and an agent session's
+      shell is EXACTLY that case. The guard is silent instead of refusing, which
+      this order calls worse than an error. Found the way it will always be found:
+      S4's first command chained it, it hung, and it sat in the background for the
+      whole rung producing nothing. Every meter number in this order came from
+      `status`, never from `stop`, so nothing recorded here is affected.
+      FIX RIDES S5 STEP 0 — rail maintenance, inside that rung's ceiling.
 ☑ S2  TYPE + LINT GATES — DONE 20 Aug 2026. Tier 0 has teeth.
       tsc --checkJs via @ts-check on the ~12 hottest organs first; eslint +
       typescript-eslint (no-empty · no-undef · no-unused-vars) over all 103 with a
@@ -1411,6 +1424,13 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       FORBIDDEN: fan-out · reading the other ~108 .md here (that is S5's sweep).  — both held.
                                                                        CEILING: 40
 ☐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      ⛔ STEP 0 (rail maintenance, inside this ceiling — his order, 20 Aug 2026):
+      fix the stop-hook stdin guard — non-TTY + no payload must REFUSE FAST (a
+      timeout or an availability check), NEVER block; prove it in a NON-INTERACTIVE
+      shell; do not chain it in the background. The defect is recorded on S1's
+      DONE-PROOF above. This is a rail getting STRICTER, not looser (§10-D rule 6),
+      and it is the one exception to "S5 builds nothing" — it is maintenance on the
+      organ that measures this rung, so it comes before the first Gemini call.
       Re-check the keys live first (one command). Canon in ≤200k chunks (6–8 calls,
       thinking ON, schema'd output) + corpus extraction in chunks (decisions ·
       rulings · promises · alternatives-rejected). INPUT for the corpus half = the
@@ -2386,3 +2406,17 @@ LIVE, in one command, before planning a single call** — 19 Aug's lesson was al
 the whole canon in ≤200k chunks (6–8 calls, thinking ON, schema'd output) and the corpus extraction
 from the RESCUED artifacts — **never re-filter, never re-fan.** Every return is a LEAD until one
 command verifies it; API pool dry ⇒ his Gemini WEB lane instead.
+
+**ADDENDUM, same rung, on his word (20 Aug ~10:55 IST) — one defect recorded in two places.**
+He asked how a background task was still running after the rung closed. It was S4's own first
+command: the micro-order write (which succeeded) chained to `node scripts/session_meter.mjs stop`,
+which hung for the entire rung and produced nothing. Killed. **The cause, verified before it was
+written down, not assumed:** `hookPayload()` returns safely when there is no handed payload AND
+`process.stdin.isTTY` — but otherwise it calls `readFileSync(0, "utf8")`, a blocking read of fd 0.
+An agent session's shell is non-TTY with an open pipe that never closes, so it blocks forever. The
+guard is right for a human at a terminal and blind to the only other caller there is.
+**Recorded on S1's DONE-PROOF** (the proof this defect undercuts is literally "spend line at a
+session stop") **and scheduled as S5 STEP 0** (refuse fast, prove it in a non-interactive shell,
+never chain it in the background). Nothing in this order is affected: every meter number here came
+from `status`. The two dirty state files (`sitting.json`, the `gaffer_blocks.json.tmp` corpse) were
+dirty at S4's start, are the known S8/S11 class, and were deliberately left untouched.
