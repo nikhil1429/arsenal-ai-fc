@@ -29,10 +29,11 @@ STATUS (update this block before any session stops — this is the handoff)
 
   WRITING THE ORDER ............ ☑ DONE (19 Aug 2026)
   PASS 1  compress with code ... ☑ DONE (19 Aug · BASH ONLY, 0 model tokens)
-  PASS 2  read INTENT (.md) .... ☐ scheduled as rung S4 of §10-C
+  PASS 2  read INTENT (.md) .... ☑ DONE 20 Aug 2026 at rung S4 — all eight read end to end by
+                                   ONE head, no agent. Output folded in as §9-B.
   PASS 2B read the CHAT CORPUS . ◐ filter done (1.38 GB → 9.0 MB) · extraction = rung S5
-  PASS 3  targeted deep read ... ◐ 7 reports kept · remainder rides S4–S6
-  PASS 4  classify BY SHAPE .... ◐ five shapes in §9 · finalized at rung S6
+  PASS 3  targeted deep read ... ◐ 7 reports kept · remainder rides S5–S6
+  PASS 4  classify BY SHAPE .... ◐ five shapes in §9 + SHAPE 6 in §9-B · finalized at rung S6
   THE EXECUTION PLAN ........... ☑ WRITTEN — §10 (20 Aug 2026). THE LADDER IS THE HANDOFF.
                                    Hardened same day to the junior bar: §10-F model routing ·
                                    §10-G versions+models policy · the FLOW ATLAS (S6a) ·
@@ -48,8 +49,19 @@ STATUS (update this block before any session stops — this is the handoff)
                                    dependency-cruiser. Frozen at the measured baseline,
                                    tightening only; rides npm test. Every rule proven to
                                    BITE on a planted violation on EVERY run, not once.
-  ▶ NEXT SESSION ............... S4 · PASS 2 — the eight intent docs, ONE head, no agents
-                                   (§10-C, first ☐). MODEL: Opus 5 · effort max · CEILING 40.
+  S4  PASS 2 · THE EIGHT DOCS .. ☑ DONE 20 Aug 2026 · one head, 465,760 bytes, no agent.
+                                   §9-B carries five findings + SHAPE 6 + seven stale-doc
+                                   corrections, every code claim verified by running or grep.
+                                   ⛔ ITS HEADLINE IS THE BIGGEST THING THIS ORDER HAS FOUND:
+                                   the LEARNING RECORD has no writer. reps_log = 21 rows, last
+                                   2026-08-10, all 21 from the `gem` paste lane; the Re-Jirah
+                                   log has NEVER been born and 15 organs read it. That is
+                                   SYSTEM_BLUEPRINT's F-3, named 11 Jul, open 40 days.
+  ▶ NEXT SESSION ............... S5 · THE GEMINI SWEEPS — re-check the keys live FIRST (one
+                                   command), whole-canon in ≤200k chunks + corpus extraction
+                                   from the RESCUED artifacts (never re-filter, never re-fan).
+                                   (§10-C, first ☐). MODEL: Opus 5 · effort HIGH (mechanical
+                                   orchestration, §10-F) · CEILING 40.
 
   ✔ THE CEILINGS ARE RE-BASELINED TWICE, AND THE SECOND TIME FROM A CORRECTED METER.
     HIS RULING, 20 Aug 2026: standard rung 40 · S10 60 · ladder total 500 — but now in
@@ -592,10 +604,12 @@ here, closely, by one head. **The other ~108 are covered by TIER 1 — Gemini's 
 (§6-C job 1), which holds all 116 in ONE context and reports where intent is stated, which documents
 contradict each other, and what is declared but never referenced.** Those returns are LEADS (§4);
 anything load-bearing comes back here to be read properly.
-Read these eight in this order:
-`learning-layer/PROJECT_OS.md` (THE METHOD) · `HOW_HE_LEARNS.md` (the 17 rules) ·
-`FORGE_SPEC.md` · `THE_ORGANISM.md` (the organ map) · `THE_GAFFER.md` · `CLAUDE.md` ·
-`SYSTEM_BLUEPRINT.md` · `ARCHIVE__DAY_ONE_SPEC.md`.
+Read these eight in this order *(paths RESOLVED 20 Aug 2026 at rung S4 — four of the eight were
+written here as bare filenames and two of those are NOT at the repo root; §3-C's path check cannot
+catch a bare name because it only validates backticked paths containing a `/`)*:
+`learning-layer/PROJECT_OS.md` (THE METHOD) · `learning-layer/HOW_HE_LEARNS.md` (the 17 rules) ·
+`learning-layer/FORGE_SPEC.md` · `learning-layer/THE_ORGANISM.md` (the organ map) ·
+`THE_GAFFER.md` · `CLAUDE.md` · `learning-layer/SYSTEM_BLUEPRINT.md` · `ARCHIVE__DAY_ONE_SPEC.md`.
 **`docs/archive/` is records, not orders — with ONE exception: `LOAD_ZERO__2026-08-19.md`.**
 
 **PASS 3 — TARGETED DEEP READ, and only here spend on agents.**
@@ -945,6 +959,226 @@ Mark prompt-bound strings at definition (`/** @prompt */`) so they cannot be edi
 
 ---
 
+## §9-B · PASS 2 — THE EIGHT INTENT DOCS, ONE HEAD (rung S4, 20 Aug 2026)
+
+**Method: §5's PASS-2 row verbatim — one coherent reader, NO fan-out, no agent, and none of the
+other ~108 `.md` (that is S5's sweep).** 465,760 bytes across the eight, read end to end in one
+context, which is the only way a contradiction BETWEEN documents is visible at all. Every code-side
+claim below was VERIFIED BY RUNNING or by grep in this session (§4: every instrument is a LEAD);
+anything unverified is marked and stays marked.
+
+**Two of the eight are named in §5 without their directory** — `THE_ORGANISM.md` and
+`SYSTEM_BLUEPRINT.md` both live in `learning-layer/`, and §3-C's path check cannot catch it because
+it only validates backticked paths containing a `/`. Resolved paths are in the table below; §5's
+list is corrected in place.
+
+### Provenance stamp (§4-B's unrecorded-era rule, applied before anything was believed)
+
+| # | doc (resolved path) | first → last commit | era |
+|---|---|---|---|
+| 1 | `learning-layer/PROJECT_OS.md` | 2026-07-11 → 2026-08-18 | UNRECORDED at birth |
+| 2 | `learning-layer/HOW_HE_LEARNS.md` | 2026-07-31 → 2026-08-10 | LOCAL-ERA |
+| 3 | `learning-layer/FORGE_SPEC.md` | 2026-07-11 → 2026-08-11 | UNRECORDED at birth |
+| 4 | `learning-layer/THE_ORGANISM.md` | 2026-07-11 → 2026-08-19 | UNRECORDED at birth |
+| 5 | `THE_GAFFER.md` | 2026-07-10 → 2026-08-18 | UNRECORDED at birth |
+| 6 | `CLAUDE.md` | 2026-07-10 → 2026-08-20 | UNRECORDED at birth |
+| 7 | `learning-layer/SYSTEM_BLUEPRINT.md` | 2026-07-11 → **2026-07-11** | UNRECORDED, and **never edited since** |
+| 8 | `ARCHIVE__DAY_ONE_SPEC.md` | 2026-08-14 → 2026-08-19 | LOCAL-ERA |
+
+The boundary used: the repo's first commit is **2026-07-08**; the earliest file in the local
+transcript store is **2026-07-12**. **Six of the eight were authored before any local transcript
+exists**, so for those six the document IS the WHY and no corpus silence may ever be read as
+evidence against them. File mtime is a FLOOR, not a join — the real join against the corpus index
+is S5's job and is not claimed here.
+
+---
+
+### FINDING 1 — THE LEARNING RECORD HAS NO WRITER, AND NOTHING IN THE BODY SAYS SO
+
+This is the headline of the pass and it outranks everything below it. All four docs that define how
+he learns assume a graded record exists. **Measured today, all four surfaces:**
+
+| surface | what canon says it produces | measured 20 Aug 2026 | witness |
+|---|---|---|---|
+| `capture.mjs` reps | the blood; every fitted gate is calibrated on 10–40/day (THE_ORGANISM Pass-2 §5) | **21 rows, first 2026-07-17, last 2026-08-10 — TEN DAYS COLD. 21 of 21 from surface `gem`.** | `wc -l dressing-room/state/reps_log.jsonl` + parse of ts/surface |
+| `rejirah.mjs grade` | the per-axis cold verdict; the seven derived controller fields (FORGE_SPEC §6) | its append-only log **HAS NEVER BEEN BORN**. `rejirah.mjs state tokenization` prints all nine axes as `rounds 0 · ungraded · unmeasured abcdefghi` | ran it, this session |
+| `forge_session.mjs` | THE METHOD's 12 steps, paced | writes no rep **by declared design** — "never touches reps_log — capture.mjs owns reps" (its own header) | `grep -n reps_log scripts/forge_session.mjs` |
+| the gist capsules | the master record; his paste is the only write | unchanged; tokenization's `reJirahDone` says **R1 (18 Jun) and R3 (29 Jun) were served** | the rounds line of the same run |
+
+**The contradiction sits inside one command's output.** The capsule says two Re-Jirah rounds
+happened. The controller that owns "which axes and how hard" says zero rounds, zero grades, nine
+unmeasured axes. **Two records of the same event, disagreeing, and neither can fail.**
+
+**Fifteen organs read the log that was never born** — archivist · audit · benchmark · brain ·
+captains_call · deep · dmn · dugout · forge_session · fsrs · gaffer_brain · learnstate · nightshift ·
+rejirah · shipped. Every one is reasoning from an empty set and none of them is wrong to: absence is
+indistinguishable from silence.
+
+<!-- order-check:absent-ok dressing-room/state/rejirah_log.jsonl -->
+<!-- order-check:absent-ok dressing-room/state/pull_receipt.json -->
+The two paths this block names on purpose and which do not exist —
+`dressing-room/state/rejirah_log.jsonl` and `dressing-room/state/pull_receipt.json` — are FINDINGS,
+not paths, and are declared to the order-checker above in the convention §3-C established.
+
+**THIS IS `SYSTEM_BLUEPRINT`'s F-3 / L-E2, NAMED ON 11 JULY AND STILL OPEN 40 DAYS LATER.** Its
+words: *"the richest artifact in the whole system … produces zero agent-readable signal by
+construction"*, ranked there as *"the single biggest silent loss."* What the 40 days added was a
+SECOND lane of the same shape (`rejirah_log`), not a fix. `capsule_bridge.mjs` — built 30 Jul —
+closed the READ half honestly and says so in its own header ("It is a READER, not a CONTROLLER …
+Rep counts do not multiply by nine"); the EMIT half was never built.
+
+**Why no gate caught it:** the speak-gates, the cold-start gag and the Physio's NEVER-BORN ≠
+BLEEDING clamp were all authored for a **bloodless** organism (THE_ORGANISM §XI), where a never-born
+file is correctly status quo. On an organism with 4 locked capsules and a 59-day-overdue Re-Jirah it
+is a wound. **That the clamps are the reason is a LEAD, not a verified fact** — which clamp covers
+`rejirah_log.jsonl` today was not traced this rung and belongs to S6.
+
+---
+
+### FINDING 2 — THE WELD'S THREE HALVES ALL FAIL AT THE CONSUMER END (Shape 3, its purest form)
+
+`PROJECT_OS`'s LEARNING↔OUTWORK weld and `THE_MANAGER §7`'s control loop are the same three halves.
+Each was checked separately, and **not one of the three fails for lack of a producer:**
+
+- **Feedback, learning side (SEAM 2, BOLO→GRADER, "bar-cleared" not "held").** There is no grader
+  organ, and the repo says so out loud: `outwork_audit.mjs:305` prints, verbatim, that this
+  enforcement *"lives in /forge + /scrimmage skill behaviour (dossier rubric), not in any organ this
+  file can read."* A canon SEAM whose enforcement is a model's good behaviour is not a seam.
+- **Feedforward (O-E4 / W-E2).** The blueprint named its exact input: the Goalkeeper's own
+  `week_mean_readiness`. It EXISTS — and a repo-wide grep for it returns **`oura_coach.mjs` and
+  nothing else**. The producer writes it; no organ has ever read it. Feedforward is still
+  structurally impossible, for precisely the reason written on 11 July.
+- **Flywheel (W-E3).** `buildHook` — "the Flywheel's one real hook" — appears in exactly **one**
+  script, `deep.mjs`, the renderer. It is still display text; ship → DEFEND-capsule auto-spawn was
+  never built.
+
+Same shape, and these are the load-bearing instances: the two-layer architecture is *defined* as the
+weld between them, so a weld with three unconsumed halves is two layers standing side by side.
+
+---
+
+### FINDING 3 — A SPEC→RUNTIME COPY EDGE WITH NO CHECKER, AND IT HAS ALREADY DRIFTED
+
+`THE_GAFFER.md`'s own status block names the defect and then becomes it. The soul reaches runtime as
+a DISTILLATION, not as the file: `dressing-room/manager/system.md` declares its source at line 15 as
+*"THE_MANAGER v2.1 + THE_GAFFER v2.1 (distilled, not concat)"*, and `brain.mjs` reads that file into
+the `manager_m3` system prompt. The status block's own words: *"a copy drifts silently, which is the
+real defect here."*
+
+**It drifted.** `THE_GAFFER.md`'s first line reads **v2.2** (12 Aug 2026 — §9 THE DELIVERY LAWS, the
+five laws he had to teach the Gaffer by hand after saying "you forgot" nine times in one sitting).
+The distillation still declares **v2.1**. Eight days, and nothing in the repo compares them: only
+`dugout.mjs` and `gaffer_brain.mjs` mention "distilled", and neither asserts version parity.
+
+This is a **fourth edge class** for the S6 registry, beside producer→consumer, order→implementation
+and measurement→decision: **spec→derived-copy**. One row —
+`{source_file, source_version, derived_file, declared_version}` — plus a suite check that reddens
+when a source version moves and its copy's declared version does not. The asymmetry is what makes it
+dangerous: the drift is invisible from BOTH sides — the spec does not know it has a copy, and the
+copy names a version that no longer exists.
+
+---
+
+### FINDING 4 — FIVE OF HIS OPEN DECISIONS LIVE IN `.md` PROSE AND HAVE NO CARD (Shape 2, fresh)
+
+Each was found in the eight docs, each is explicitly reserved to HIM, each is still open:
+
+| # | the decision | where it sits | opened |
+|---|---|---|---|
+| 1 | the teacher-ban for THE MANAGER on the morning SHEET — *"deliberately left standing until he rules on them by name"* | `THE_GAFFER.md` §7; live at `dressing-room/manager/system.md:138` | 10 Aug (10 days) |
+| 2 | the capsule `forged_with: v1.x` stamp — the genome cannot tell which method version forged a capsule | `learning-layer/THE_ORGANISM.md` §VI | 10 Aug |
+| 3 | THE TWELFTH PLAYER — *"a decision for two humans, not one document"* | `learning-layer/THE_ORGANISM.md` §VII.4 | 11 Jul |
+| 4 | do Gate-2-flagged **bridges** enter the rematch queue — *"uska faisla, machine ka nahi"* | `learning-layer/FORGE_SPEC.md` §5 | 11 Aug |
+| 5 | 3-2-1 (the archive is copy 1, alone) + a fourth test vector | `ARCHIVE__DAY_ONE_SPEC.md`, its PHYSICAL LAYER and WHAT-WAS-BUILT sections *(section numbers deliberately not written with the § sigil — §3-C resolves every `§n` against THIS document's own headings, so a cross-document citation would read as a broken reference)* | 14–15 Aug |
+
+**Verified live today for #1 and #2:** the ban is still the standing instruction in `system.md`, and
+`forged_with` is absent from all four locked capsules and from every script. Of the first fifteen
+rows of `node scripts/captains_call.mjs list`, **none carries any of the five** — that lane is
+teaching-contract drift, market proposals and gem-sync. Shape 2 exactly: a ruling about HOW THE
+ORGANISM SHOULD WORK has no disposition, so it stays in the document that raised it and ages there.
+**#5 is deliberately not-carded on his word** (*"record pe rakho, nagging nahi"*) and must stay that
+way — which is the proof that the other four are a lane problem, not a nagging problem.
+
+---
+
+### FINDING 5 — WEEKLY-CONSISTENCY IS COMPUTED, AND NOT WHERE CANON PUT IT
+
+`PROJECT_OS` makes it canonical (*"WEEKLY CONSISTENCY, NEVER FRAGILE STREAKS"*) and the blueprint's
+O-E5 named its two consumers: the team-sheet and the Governor's slide-detection. It IS computed —
+`weeklyConsistency()` in `viz.mjs` → `wall_data.json` — and the implementation is careful and honest
+(null rather than an unearned 0 %, no-row days stay in the denominator, `wall_minutes > 0` chosen
+deliberately as the club's own "showed up, not won" test rather than as a presence metric). **But a
+repo-wide grep for `weekly_consistency` returns `viz.mjs` alone.** It reaches the wall and neither
+named consumer. Producer built, consumer edge missing — Shape 3 again, smaller.
+
+---
+
+### THE STALE-DOC HALF — seven claims the eight docs still make that are FALSE TODAY
+
+§10-H: no document is left lying when the ladder closes. These are corrections, not work.
+`SYSTEM_BLUEPRINT.md` carries six of the seven because **it has not been edited since the day it was
+written** — its whole "Current (cited)" column is 11 July.
+
+| claim, as the doc states it | measured 20 Aug 2026 | witness |
+|---|---|---|
+| BLUEPRINT L-E3: registry is "6 concepts + 5 skills, `core:true` on all 11 (dead partition)" | **26 concepts, 23 core, 3 light — and the three are `neuralnet · rlhf · jagged`, exactly canon's three "light" ones.** BUILT, correctly | parse of `concepts.json` |
+| BLUEPRINT F-2: warming-up gate incoherence, 12 vs 20 vs 20 | resolved 18 Aug, differently and better — **all opened to 1** under the OVERHAUL's "a guessed number may be a GUARD or a WINDOW, never a BUDGET" | the `_opened_2026_08_18` blocks in the three configs |
+| BLUEPRINT F-6: `timeaudit.mjs` and `oura_coach.mjs` skip the atomic temp→rename | both atomic now — `renameSync` twice in each | `grep -c renameSync` |
+| BLUEPRINT O-E8: `personal_sleep_need` ~4.45 h, below the locked 6–7 h band | **floored at 6.5 h in code, with a selftest**: *"5 weeks at 5.6h cannot redefine 'normal'"* | `oura_coach.mjs` |
+| BLUEPRINT O-E2 / F-4: "nothing reads commits/PRs/tests/deploys" | `shipped.mjs` exists and its header states the blueprint's own argument back | `scripts/shipped.mjs` header |
+| BLUEPRINT O-E3: `season.json` absent, `matches_played` frozen → "Introduction forever" | `dressing-room/state/season.json` exists | `ls` |
+| THE_ORGANISM §VI: `mutations.jsonl` and `SEASON_CHANGELOG.md` "not yet born (no gene approved)" | **both exist** — the genome has approved at least one gene | `ls` |
+
+**One blueprint item stands open that it could not have closed:** S5's `pull_receipt.json` — the
+emit→ingest reconciliation receipt that tells "no studying" apart from "the pull silently broke". No
+organ mentions it and the file does not exist. Given FINDING 1, that is the check that would have
+raised the ten-day silence on the day it started.
+
+---
+
+### SHAPE 6 · EVERY WRITE INTO THE LEARNING RECORD IS AN ACT OF HIS THAT NOTHING FIRES
+> **The afferent nerve is fully built and fully automatic — capture-pull, throw-in, mirror, harvest,
+> thalamus. The LEARNING RECORD's four writers are all HIM: a paste, a CLI verb typed by hand, a
+> gist edit, a harvest he must say the word for. So the one lane the whole body is fitted on is the
+> one lane with no machine producer — and the docs describe that arrangement as "zero capture tax".**
+
+This is the converse of Shape 3, and it is how FINDING 1 happened with every gate green. Shape 3
+says nothing eats what is produced; Shape 6 says the richest lane is never produced at all, because
+its producer is a human verb — and **his memory is a design failure** is this repo's own law
+(11 Aug 2026). The `/forge` skill's own description promises "at session end the reps are captured
+automatically (no copy, no paste)", and eleven recorded FORGE runs have produced **zero** rows in
+`reps_log.jsonl`; all 21 rows came from the `gem` paste lane instead, and that lane stopped 10 days
+ago.
+
+**THE FIX (one, not four):** the four surfaces get a DECLARED emit contract as an S6 registry row —
+`{surface, writes_to, fired_by}` — with `fired_by: "him"` a first-class value the reach-side meter
+can hold, instead of a gap that looks like health.
+**THE RATCHET:** a surface whose `writes_to` lane has `first_real_row_at === null`, or whose newest
+row is older than the surface's own cadence, is a defect — the same query Shape 3's ratchet already
+needs, pointed at the INPUT side. The pattern is already proven in this repo: `rejirah.mjs close`
+refuses to claim a round landed until the paste comes back through the mirror, and reports PENDING
+until it does.
+
+---
+
+### WHAT THIS RUNG DID NOT DO — said out loud, per §5
+
+- **The other ~108 `.md` were not opened.** That is S5's whole-canon sweep and the rung's FORBIDDEN
+  line names it.
+- **No agent, no fan-out, no subagent** — §5's PASS-2 row and §10-D rule 3.
+- **Not verified this rung, each named so it is not mistaken for cleared:** which speak-gate or Physio
+  clamp covers `rejirah_log.jsonl` (S6) · whether the Manager holds any trend history beyond
+  calibration's own string (partially checked, inconclusive) · the shipping-side Feedback scoreboard,
+  blocked out-of-repo on the FinOps eval harness (F-8) and unmeasurable from here · the INTERLEAVING
+  and TRANSFER later-phases, which have partial code (`setpiece.mjs`, `forge_profile`'s
+  `interleave_confusables`, `examiner.mjs`) that was not traced to canon's specific triggers.
+- **A rail fired twice and was obeyed, not overridden:** `RAIL state` denies a compound shell command
+  that combines a write-capable verb (`sed -n`, `node -e`) with a path under `dressing-room/state`,
+  even when every operation is a read. Those reads were redone with `grep`/`cat`. Recorded as
+  behaviour, not as a defect — S1's rail is deliberately conservative and §10-D rule 6 forbids
+  loosening a gate.
+
+---
 ## §10 · THE EXECUTION PLAN — his order, 20 Aug 2026. THE LADDER IS THE HANDOFF.
 
 > His words, 20 Aug: *"this product now demands FANG level work of discipline, intensity and
@@ -1099,10 +1333,15 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       believing any new tool's findings unverified (§4 binds tools too).
       DONE-PROOF: every rule proven to BITE on a planted violation, then green.
                                                                        CEILING: 40
-☐ S4  PASS 2 — the eight intent docs, ONE head, no agents (§5 verbatim).
+☑ S4  PASS 2 — DONE 20 Aug 2026. The eight intent docs, ONE head, no agents (§5 verbatim).
                                                             MODEL: Opus · effort max
-      Output: contradictions + missing-implementation list, folded into §9.
-      FORBIDDEN: fan-out · reading the other ~108 .md here (that is S5's sweep).
+      Output: contradictions + missing-implementation list, folded into §9 as **§9-B** —
+      5 findings (the learning record has no writer · the weld's three halves all fail at
+      the CONSUMER end · a spec→derived-copy edge that has already drifted v2.1→v2.2 with no
+      checker · 5 of his decisions sitting in .md prose with no card · weekly-consistency
+      computed but reaching neither named consumer), **SHAPE 6**, and 7 stale-doc
+      corrections. Two of the eight were named in §5 without their directory; §5 corrected.
+      FORBIDDEN: fan-out · reading the other ~108 .md here (that is S5's sweep).  — both held.
                                                                        CEILING: 40
 ☐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       Re-check the keys live first (one command). Canon in ≤200k chunks (6–8 calls,
@@ -1911,3 +2150,86 @@ then a meter reading 2.01×). A third re-baseline needs a third instrument fault
 **NEXT: S4 · PASS 2 — the eight intent docs, ONE head, NO agents (§5 verbatim) — MODEL: Opus 5 ·
 effort max · CEILING 40 (corrected units).** It reads and folds contradictions into §9; it builds
 nothing.
+
+---
+
+### PROGRESS 2026-08-20 ~10:15 IST — RUNG S4 · PASS 2 · THE EIGHT INTENT DOCS
+
+**Rung executed exactly as written, and only this rung.** One head, 465,760 bytes across the eight
+docs read end to end, **no agent, no fan-out, none of the other ~108 `.md`** — the rung's two
+FORBIDDEN lines and §10-D rule 3 held all the way through. The micro-order (rule 9) was written to
+the session scratchpad before any edit and checked against §10-C/§10-D. Output is folded in as
+**§9-B**, immediately before §10.
+
+**COST: 26.92 corrected lakh against a ceiling of 40** — today's meter moved 343.31 → 370.23 while
+this rung ran (`node scripts/session_meter.mjs status 7`). No ceiling event. Reading is cheap;
+verifying is what cost, and it was worth every unit — see below.
+
+**WHAT LANDED, in one line each:**
+1. **FINDING 1 — the learning record has no writer.** `reps_log.jsonl` = 21 rows, newest
+   **2026-08-10** (ten days cold), **21 of 21 from the `gem` paste lane**. The Re-Jirah log has
+   **never been born** and fifteen organs read it. `rejirah.mjs state tokenization` prints all nine
+   axes as `rounds 0 · ungraded · unmeasured abcdefghi` — while the same output's rounds line says
+   the capsule's `reJirahDone` recorded R1 and R3 as served. Two records of one event, disagreeing,
+   neither able to fail. This is `SYSTEM_BLUEPRINT`'s F-3 / L-E2, named 11 July as *"the single
+   biggest silent loss"*, open forty days later, and the interval added a second lane of the same
+   shape rather than a fix.
+2. **FINDING 2 — the weld's three halves all fail at the CONSUMER end**, not for want of a producer:
+   no grader organ exists and `outwork_audit.mjs:305` says so in print · `week_mean_readiness` is
+   produced by `oura_coach.mjs` and read by **nothing** · `buildHook` appears in exactly one script,
+   the renderer.
+3. **FINDING 3 — a spec→derived-copy edge with no checker, already drifted.** `THE_GAFFER.md` is
+   **v2.2**; `dressing-room/manager/system.md` still declares its source as **v2.1**, and that file
+   is what `brain.mjs` feeds the `manager_m3` prompt. The Gaffer's own status block predicted this
+   exact defect. Nothing in the repo compares the two. Proposed as a fourth registry edge class.
+4. **FINDING 4 — five of his open decisions live in `.md` prose and none is carded** (the MANAGER
+   teacher-ban, still the live instruction at `system.md:138`, ten days open · the `forged_with`
+   capsule stamp, 0 of 4 capsules · the twelfth player · flagged bridges into the rematch queue ·
+   3-2-1, which is deliberately un-carded on his word and proves the other four are a lane problem).
+5. **FINDING 5 — weekly-consistency is computed and reaches neither named consumer** (only the wall).
+6. **SHAPE 6 named — every write into the learning record is an act of HIS that nothing fires.** The
+   converse of Shape 3, and the reason Finding 1 could happen with every gate green.
+7. **Seven stale-doc corrections**, six of them in `SYSTEM_BLUEPRINT.md` — the one doc of the eight
+   **never edited since the day it was written** (2026-07-11). Its registry, gate-coherence,
+   atomic-write, sleep-need-floor, output-measurement and loop-closer items are all BUILT now;
+   THE_ORGANISM's "`mutations.jsonl` and `SEASON_CHANGELOG.md` not yet born" is false — both exist.
+
+**ONE CORRECTION TO §5 ITSELF, made in place:** four of the eight docs were listed as bare
+filenames and two of those (`THE_ORGANISM.md`, `SYSTEM_BLUEPRINT.md`) are **not at the repo root** —
+they are in `learning-layer/`. §3-C's path check cannot catch that class, because it only validates
+backticked paths containing a `/`. Paths are resolved in §5 now, and the gap in the checker is
+recorded rather than patched (a checker change is a gate change; §10-D rule 6 says stricter only,
+and widening it to bare filenames would fire on every prose mention of a document — that is S6's
+call with the registry, not a session's).
+
+**WHAT WAS LEFT UNDONE, deliberately, and why:** the other ~108 `.md` (S5's sweep, forbidden here) ·
+which speak-gate or Physio clamp currently covers `rejirah_log.jsonl` (a LEAD, S6's) · whether the
+Manager holds trend history beyond calibration's own string (checked, inconclusive) · the
+shipping-side Feedback scoreboard (blocked out-of-repo on the FinOps eval harness, F-8, unmeasurable
+from here) · the INTERLEAVING and TRANSFER later-phases, which have partial code that was not traced
+to canon's specific triggers. Each is named in §9-B so none reads as cleared.
+
+**A RAIL FIRED TWICE AND WAS OBEYED.** `RAIL state` denies a compound shell command that combines a
+write-capable verb (`sed -n`, `node -e`) with a path under `dressing-room/state`, even when every
+operation in it is a read. The reads were redone with `grep`/`cat`; **no override was used** and the
+micro-order declared none. Recorded as behaviour, not as a defect — S1's rail is deliberately
+conservative and §10-D rule 6 forbids loosening a gate. If it ever costs a rung real time, the fix
+is a read-only allowance proven by a selftest, never an override habit.
+
+**WHAT THE NEXT SESSION DOES FIRST — S5 · THE GEMINI SWEEPS. MODEL: Opus 5 · effort HIGH
+(mechanical orchestration, §10-F). CEILING 40.** Re-check the keys LIVE first, in one command,
+before planning any call — the 19 Aug lesson was all ten keys returning 429 while a ten-hour-old
+probe said healthy, and S11's freshness gate does not exist yet. Then the whole canon in ≤200k
+chunks (6–8 calls, thinking ON, schema'd output) and the corpus extraction from the **rescued**
+artifacts at `C:\Users\nikhi\arsenal-audit-artifacts\s2-2026-08-19\` — **never re-filter, never
+re-fan.** Every return is a LEAD until one command verifies it. API pool dry ⇒ his Gemini WEB lane.
+
+**ONE LINE FOR HIM, AND IT IS THE ONLY THING IN THIS ENTRY THAT NEEDS HIS WORD:** §9-B's FINDING 1
+says the organism has not recorded a single graded rep in ten days and has never recorded a Re-Jirah
+grade at all. Nothing in the ladder before **S7** touches that, and S7 only corrects the judge. The
+question that is his and not a session's: **does the ladder run as written, or does the emit
+contract (SHAPE 6's fix) get pulled forward?** The order's own answer is that it should NOT be
+pulled forward — S6 must see the whole flow atlas before anything is wired, and pulling work forward
+out of order is the disease §2 names. **Recommendation: keep the ladder. Do not pull it forward.**
+The finding is now written down where S6 and S7 cannot miss it, and the organism is switched off, so
+nothing is being lost today that was not already lost on 10 August.
