@@ -92,10 +92,17 @@ Read `learning-layer/LEARNING_LAYER_MAP.md` first (a map; canon wins). Canon in 
 - `OPS_STATE.md` — a pointer to `state.mjs`. Old bodies: `docs/archive/`.
 - `THE_GAFFER.md` — the Gaffer's spec. `ARCHIVE__DAY_ONE_SPEC.md` — law-referenced. the MODELS + ACTS record: `docs/archive/MODELS_AND_ACTS__2026-08-18.md` (LAW M + LAW A, built 18 Aug 2026) · **LAW T: `docs/archive/TOOLING_LAW__2026-08-19.md`**.
 - `docs/archive/` — every record (the OVERHAUL plan + BUILD LOG `ORGANISM_OVERHAUL__2026-08-18.md`, MASTERPLAN, THE_MANAGER__Master_Prompt — canon for the gated sheet lane — the old CLAUDE.md).Records, not work orders.
-- **THE OPEN WORK ORDER: `docs/archive/ORGANISM_AUDIT__2026-08-19.md`** — the audit + plan order.
-  It carries HIS INTENT (§0), HIS GATE CORRECTION (§1 — C is "did it reach its RIGHT consumer"),
-  what is measured, what is known FALSE, and **§10 (20 Aug) — THE EXECUTION PLAN: the session
-  ladder S1–S12.** **A NEXT SESSION OPENS THIS FIRST**, pastes its version-3 prompt, and executes
-  exactly ONE rung under §10-D's rules. This is the ONLY open work order.
+- **TWO WORK ORDERS ARE OPEN (his word, 20 Aug 2026). Read the one your session is for; never mix them.**
+  A session does ENGINEERING or LEARNING, not both — no system/notes/tool work mid-concept (HOW_HE_LEARNS #12).
+- **① ENGINEERING — `docs/archive/ORGANISM_AUDIT__2026-08-19.md`** — the audit + plan order, **running in
+  parallel and expected to close by end of next week (~27 Aug)**. It carries HIS INTENT (§0), HIS GATE
+  CORRECTION (§1 — C is "did it reach its RIGHT consumer"), what is measured, what is known FALSE, and
+  **§10 (20 Aug) — THE EXECUTION PLAN: the session ladder S1–S12.** An engineering session **OPENS THIS
+  FIRST**, pastes its version-3 prompt, and executes exactly ONE rung under §10-D's rules.
+- **② LEARNING — `docs/archive/SAMJHAO_ORDER__2026-08-20.md`** — samjhao of the four closed fundamentals
+  (tokenization → embeddings → inference → context), then Re-Jirah on all four. Multi-session; **§0 is the
+  resume pointer and the ONLY place progress lives.** Method, notes law (what gets captured and where),
+  scope, both research lanes, the 2026 patch list and the career picture are all settled there — do not
+  re-derive them. Also carries §9: the **design lane is this lane's job now** (Claude Design retired).
 - Its predecessor, **closed 19 Aug 2026 (all ten blocks ☑)**: `docs/archive/LOAD_ZERO__2026-08-19.md` — a record now, not a work order.
 - Repo: `nikhil1429/arsenal-ai-fc`, branch `main`.
