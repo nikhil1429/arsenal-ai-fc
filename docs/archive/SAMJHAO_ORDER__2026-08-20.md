@@ -225,6 +225,29 @@ one confusion RICHLY elaborated, not terse) · no near-duplicate · genuine know
 > Every knowledge artifact must be reconstructable by the **cold-reader = future-Nikhil, 6–12 months later,
 > with ZERO memory of this session.** Understanding it in the moment is NOT enough.
 
+### ⚠ THE NARRATIVE GATE — or we rebuild the same problem in two months
+
+His June `deep` was captured under this same rule, from his own Bolo — and it still came out as
+**disconnected bullets** that could not re-teach him (§2 CAUSE 2, confirmed live 21 Aug). Verbatim-faithful
+capture does not by itself produce a re-learnable note. **If today's block is captured the same way, in two
+months it fails the same way.**
+
+So the SAMJHAO BLOCK has a shape gate, checked **at capture time**, before it goes near the gist:
+
+| Must be | Must not be |
+|---|---|
+| **Narrative** — full sentences that carry the why | a bullet list of arrows and fragments |
+| A **worked trace** with real numbers he ran | a claim that a trace exists |
+| A **stuck-story** — *"maine socha X, phir Y ne todha"* | a summary of the conclusion |
+| Readable **alone**, cold, with zero memory | readable only by someone who already knows |
+
+**The test, applied to every block:** *would this rebuild the idea for someone who has never seen it — or
+does it only remind someone who already has?* **If it only reminds, it is a trigger, and it is not done.**
+
+This does not license rewording his meaning (§4 LEVER 1 still holds). If a Bolo comes back as fragments,
+that is a **teaching signal** — ask the one question that makes him say it in full (§4 LEVER 2). Never fill
+the gap yourself.
+
 ---
 
 ## §4 · THE BOLO PROTOCOL — his words, without the approval tax
@@ -522,14 +545,17 @@ simply reach reflex sooner.
 TOPIC OPEN
   1  DARAAR-MAP — show the 9 axes as a visible finish line
   2  PEHLE-GUESS — 2–3 cold questions. Wrong is fine. No gut-word, no reps
-  ·  capsule-level: hook · why · mechanism · capsule `deep`
+  ·  capsule-level: hook · why · mechanism
+  ·  THE CONTRACT — say this ONCE, before any June note is opened all campaign:
+       "yeh notes tumhare hain aur poore hain — <N> words. Par woh RECALL-TRIGGER hain,
+        lesson nahi. Abhi padhoge toh disconnected lagenge, aur woh SAHI hai —
+        woh us aadmi ne likhe the jise yeh pehle se aata tha. Main zero se padhaunga.
+        Trigger ko uske baad kholenge, aur tab woh chalega."
   ·  build the DOUBT MAP (§6) for this topic
 
 PER AXIS
-  0  open his own June `deep` for this axis
-       ⚠ rule #10: never "yeh toh tumhe pata hai". Only:
-         "yeh tumne likha tha, aur screen ne ise chhupa rakha tha"
   R  REFUTATION — cut this axis's calibration errors before the model rebuilds
+       ⚠ do NOT open his June `deep` here. See "THE KEY AND THE LOCK" below
   3  SAMJHAO — explain, one idea per turn, opened all the way down.
        doubts placed at their own beat (§6), never as a later list
   4  DIKHAO — concrete example + the EXISTING widget (AFTER understanding, HOW_HE_LEARNS #3)
@@ -542,6 +568,11 @@ PER AXIS
   9  JIRAH — skeptical interviewer: traps · "what's your take?" · "reinvent it from scratch"
   7  BOLO — he answers the axis's strike, by voice → the SAMJHAO BLOCK (§3)
        written to the scratchpad file immediately
+  8  NOW open his June `deep` for this axis — LAST, never first
+       "yeh tumne June mein likha tha. Ab padho — ab yeh kaam karega."
+       it should CLICK. That click is the proof the axis landed
+       ⚠ rule #10: never "yeh toh tumhe pata hai"
+       ⚠ after the Bolo, never before — otherwise his words echo June's
 
   ⚠ during 3–6: at any moment MAX ONE sharp check-question. Never a quiz dump.
   ⚠ "samajh nahi aaya" is literal — stop, restart from zero, do not advance (#9)
@@ -554,6 +585,41 @@ TOPIC CLOSE
   ·  `node scripts/mirror.mjs`
   ·  update §0 (this is the KAL-line)
 ```
+
+### 🔑 THE KEY AND THE LOCK — why the June note comes LAST
+
+**This corrects a real design error in v3, caught on the first live session (21 Aug).** v3's axis loop
+opened with *"open his own June `deep` for this axis."* He read it and said: *"this deep is not stored in a
+well explanatory way… feels too disconnected wordings."*
+
+**He was right, and §2 CAUSE 2 had already predicted it** — `deep` is a recall-trigger written in bullets,
+and *"bullets compress; cold re-learning needs narrative."* The order diagnosed the problem and then put
+him in front of it anyway, 36 times over, with no warning about what he was reading.
+
+> **A recall-trigger is a KEY. Right now there is no LOCK. Teaching installs the lock. Then the key turns.**
+>
+> Handing him the key first is not a small friction — it is a **guaranteed failure with his name on it**,
+> repeated once per axis, in a system whose own psych lens names **shame-spiral-avoidance** as a design
+> constraint (`FORGE_DESIGN` §5).
+
+**The fix, in three parts:**
+
+1. **The contract is spoken ONCE, at topic open** (§8, above) — before any June note is opened all
+   campaign. He must know, in advance, that it will feel disconnected and that this is **correct**, not a
+   failure of his memory.
+2. **The June `deep` is never opened at the start of an axis.** Teach from zero. The note is not the lesson
+   and must never be used as one.
+3. **It is opened at step 8 — after his Bolo — as the closing check.** By then the lock exists, and the key
+   turns. That click is *evidence the axis landed*. **After the Bolo, never before**, or his own words echo
+   June's and the capture rule (§3) is quietly broken.
+
+### THE GENERAL LAW this comes from
+> **Never hand him a COMPRESSION before the thing it compresses exists in his head.**
+
+Everything in the capsule is a compression of prior understanding — `weld` · `deep` · `bolo` ·
+`interviewLines` · `threeWays` · the widget. Each is a key. **None of them teaches; all of them trigger.**
+Serve every one of them *after* the understanding, never as a route to it. When one is opened, say which it
+is, so he is never made to fail at reading something that was not built to be read that way.
 
 **Expected size:** recall axes ≈ 4 turns, judgement axes ≈ 7. Per topic ≈ 55 turns including open/close;
 four topics ≈ **220 turns**. This is not one sitting — and per §5-④ that is fine, because pace is never cut
@@ -889,9 +955,10 @@ Do NOT re-derive anything. The scope, both research lanes, the 2026 patch list a
 picture are already settled in that file. No new research, no widgets, no design work, no system
 work. If something needs it: name it, park it in the file, and hand me back the micro-question.
 
-Then teach ONE axis at full depth using §8's loop — and start by showing me my own June `deep` for
-that axis. Take my Bolo at the axis close and write the block to the scratchpad. Batch the review
-and the gist paste at topic or session close.
+Then teach ONE axis at full depth using §8's loop. Do NOT open my June `deep` first — teach from
+zero, and open it only AFTER my Bolo, as the closing check (§8, "the key and the lock"). Take my
+Bolo at the axis close and write the block to the scratchpad. Batch the review and the gist paste
+at topic or session close.
 
 Update §0 before we finish. That is the only handoff.
 ```
