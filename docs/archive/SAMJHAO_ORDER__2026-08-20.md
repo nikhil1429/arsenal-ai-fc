@@ -34,10 +34,17 @@ LIVE LANES   : ← A SESSION READS THIS LINE TO KNOW WHAT IT IS. His priority, t
                               asked for it REFUSES and says why. He must never have to remember this.
 
 STATUS       : TEACHING STARTED 21 Aug 2026. tokenization axis a — content ✅ · hand-work ✅ ·
-               3/3 of its doubts closed · Jirah pulled back mid-axis (my density caused an overload;
-               it re-fires later, it is not dropped).
-               ⏳ AXIS a IS NOT CLOSED — his Bolo + the timed English line are still pending.
-DONE         : 1 of 36 axes (content only, not closed)
+               3/3 of its doubts closed · HIS BOLO ✅ (spoken, verbatim in the ledger) ·
+               HIS STUCK-STORY ✅ (the vocab-order crack, in his own words) ·
+               Jirah pulled back mid-axis (my density caused an overload; it re-fires, not dropped).
+               ⏳ AXIS a IS NOT CLOSED — ONE thing left: the timed English cold line (§G-4).
+                  Next session takes it in sixty seconds, then axis a closes and axis b opens.
+DONE         : 1 of 36 axes (content + Bolo; the acceptance checklist is 2 of 3)
+⚠ METHOD FIX : ASK FOR THE STUCK-STORY AT THE MOMENT THE CRACK FIRES, never at axis close.
+               21 Aug: the crack fired hours before the Bolo; by close the FEELING of being wrong
+               was gone and only the corrected fact remained, so he could not find it — and then
+               produced it perfectly while asking me HOW to produce it. Ten seconds, while hot:
+               "us waqt tum kya soch rahe the?" This is a teacher error, not a gap in him.
 AXIS-CLOSE   : an axis does NOT close without all three (architect ruling §G-4, 21 Aug —
 CHECKLIST      this is an ACCEPTANCE TEST, not a habit):
                (1) his Bolo + ONE timed English cold line, seconds recorded
@@ -1163,8 +1170,22 @@ batao main kahan hoon aur aaj ka pehla move kya hai, phir shuru karo. Koi system
 kaam nahi — escalation architect ko clipboard se.
 ```
 
-**NEXT SESSION'S FIRST MOVE (the KAL-line):** take axis a's Bolo + its timed English line, close axis a
-against the §G-4 checklist, then open **axis b** — *"why subword, against word-level and char-level"* —
-the question he answered *"no idea"* to at the topic's Pehle-Guess. Its four mapped doubts are D13, D21,
-D25, D26, and its refutation target is on record: he believes char-level's pain is memory or slow lookup;
-**both are inverted.**
+**NEXT SESSION'S FIRST MOVE (the KAL-line):** axis a's Bolo and stuck-story are BOTH TAKEN and in the
+ledger. **One thing remains: the timed English cold line** — *"What is a token, and where does
+tokenization end?"*, cold, no prep, seconds recorded. That closes axis a against §G-4. Then open
+**axis b** — *"why subword, against word-level and char-level"* — the question he answered *"no idea"* to
+at the topic's Pehle-Guess. Its four mapped doubts are D13, D21, D25, D26, and its refutation target is on
+record: he believes char-level's pain is memory or slow lookup; **both are inverted.**
+
+**TWO THINGS THE NEXT SESSION MUST CARRY (his asks, 21 Aug, at the close):**
+1. **The opening line of his Bolo needs work, and only that.** Asked *"what IS a token"*, he opened with
+   what tokenization DOES. He owns the right answer — he says it later in the same breath — it simply has
+   to come FIRST. The first five seconds are the expensive ones. Drill the opening, not the content.
+2. **He never said "the tokenizer is not the LLM."** It is implied by his pipeline and never stated.
+
+**THE VOICE PATH, settled 21 Aug after a full evening lost to tooling:** he speaks straight into Claude
+Code's own mic. Nothing else. A browser rig with real latency measurement was built, proven lossy at the
+speech-API layer, then rebuilt on local whisper — and he called it: *"chuck everything."* All of it was
+removed and uninstalled. **PARKED FOR THE ARCHITECT, his idea and a good one: Gemini Live takes audio
+natively, so the same thing that ASKS the question also HEARS the answer — which dissolves the T0/T1
+problem that killed every other instrument.** Do not build a voice tool in a learning session again.
