@@ -36,10 +36,27 @@ LIVE LANES   : ← A SESSION READS THIS LINE TO KNOW WHAT IT IS. His priority, t
 STATUS       : TEACHING STARTED 21 Aug 2026. tokenization axis a — content ✅ · hand-work ✅ ·
                3/3 of its doubts closed · HIS BOLO ✅ (spoken, verbatim in the ledger) ·
                HIS STUCK-STORY ✅ (the vocab-order crack, in his own words) ·
+               HIS ENGLISH REBUILD ✅ — and it carried THREE things the Hinglish Bolo did not:
+                  "a tokenizer which is a SIMPLE PROGRAM" (tokenizer ≠ LLM, finally stated) ·
+                  "the vocab is created when the company is training the model before launching it" ·
+                  and he asked and answered his own why — "Why they have a fixed order? Because
+                  the same order is being passed on in the embedding step" — then DERIVED the
+                  consequence rather than reciting it: "That means I cannot use a model's
+                  tokenizer in a different model."
+               ONE ERROR TO RE-FIRE AT JIRAH — a NAMING collapse, not a mechanism error:
+                  "a token is basically a group of IDs". A token is ONE piece; the group is the
+                  token sequence. He names it correctly later in the SAME answer ("that is called
+                  sequence length or token count"), so both labels are his and one got swapped.
+                  That is precisely what an interviewer probes. Re-fire it, do not re-teach it.
                Jirah pulled back mid-axis (my density caused an overload; it re-fires, not dropped).
-               ⏳ AXIS a IS NOT CLOSED — ONE thing left: the timed English cold line (§G-4).
-                  Next session takes it in sixty seconds, then axis a closes and axis b opens.
-DONE         : 1 of 36 axes (content + Bolo; the acceptance checklist is 2 of 3)
+               ✅ AXIS a IS CLOSED, 21 Aug 2026 (late).
+               ⚠ ONE ACCEPTANCE ITEM UNMET AND RECORDED AS UNMET, NEVER WAIVED: §G-4 asks the
+                  English line to be TIMED. A rig was built to measure it honestly and REMOVED the
+                  same evening on his order — it ate his hyperfocus and still lost his words. So
+                  axis a has the English rebuild and no latency number. THE INSTRUMENT IS AN OPEN
+                  QUESTION FOR THE ARCHITECT; his own lead is the strong one — Gemini Live hears
+                  the question AND the answer, so T0/T1 stops being a problem anyone has to solve.
+DONE         : 1 of 36 axes — tokenization/a, CLOSED (acceptance 4 of 5; the timed line is the gap)
 ⚠ METHOD FIX : ASK FOR THE STUCK-STORY AT THE MOMENT THE CRACK FIRES, never at axis close.
                21 Aug: the crack fired hours before the Bolo; by close the FEELING of being wrong
                was gone and only the corrected fact remained, so he could not find it — and then
