@@ -1673,6 +1673,16 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       INPUTS, all on disk already: the ~38 unindexed memory files (the approved A–H
       ladder above all — classify each via §4-B: built/missing/superseded) · the
       seven rescued agent reports · pass4 raw evidence (rescued-artifacts path).
+      ⚠ FROM THE LEARNING LANE, 21 Aug (architect-recorded — the lane itself never writes here):
+      (1) THE COLDNESS HOLE, verified with witness: deep.mjs:68 guards cold strikes via
+      burnedAxes(), but samjhao.mjs:349 counts a burn ONLY from a "guess" event and the
+      in-force samjhao design writes none — so every samjhao'd axis's stored strike is served
+      WARM-CALLED-COLD, silently. SHAPE 6 consumer-side instance #1; S6 OWNS IT (the "taught"
+      event is part of the emit contract). INTERIM RULE IN FORCE: samjhao'd concepts get FRESH
+      hand-written Re-Jirah questions; stored strikes are not used. (2) THE BACK-FILL IS NAMED:
+      the switch-off week's raw study facts (out-of-repo, append-only, not-a-schema) are a
+      DELIVERABLE — the rung that BUILDS the SHAPE-6 contract executes the back-fill as its
+      DONE-proof (real data through the new contract = the acceptance test).
       ⚠ THE STORE MOVES UNDER THE SWEEP (S5's own finding + his note, 20 Aug): S5
       sweeps a FROZEN snapshot; everything after the freeze — the ladder sessions'
       own rulings AND his live samjhao/Re-Jirah — is NOT in it. At S6 open: re-run
