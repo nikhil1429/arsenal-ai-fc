@@ -177,24 +177,68 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ✔ HIS RULING, verbatim: *"budget ka issue mat lagao for this...
                                      getting an incomplete corpus is of no use, i do not care about
                                      my data either."* Ceiling REPORT-ONLY for this rung only.
-  ▶ NEXT SESSION ............... **S5's SWEEP — still execution, but the inputs must be re-cut
-                                   FIRST.** MODEL: Opus 5 · effort HIGH. Ceiling: back to the
-                                   standard 40 unless he says otherwise (his override was for the
-                                   corpus-completeness work, not a standing change).
-                                   ⛔ **DO NOT re-run `refilter2.mjs`** — the corpus is built and
-                                   the store is LIVE; rebuilding moves the haystack under it.
-                                   ⛔ **DO NOT "fix" `preflight.mjs`/`checkall.mjs` when they go
-                                   red** — they assert `answers/` is empty, which is a pre-START
-                                   gate, and a sweep is in progress. They are telling the truth.
-                                   ORDER: (1) re-cut the CANON to <=194,000 B per file — it is
-                                   still at ~650 KB, 1.7x over the measured cap. (2) `probe_gen.mjs`
-                                   (canon batches declared at line 83; its corpus loop still reads
-                                   `corpus_live/` and must be pointed at `corpus_live2/`), then
-                                   `buildsteps.mjs`. (3) **Settle Gemini web's max attachment COUNT
-                                   with ONE probe chat before spending 40 of his pastes** — four
-                                   files are proven to work; ~10 per chat turns 140 batches into
-                                   ~14 chats. (4) Then the sweep, every chat gated by its own probe.
-                                   **NO ATTACHMENT IS TRUSTED UNTIL ITS OWN PROBE PASSES.**
+  S5 CLOSURE LIST .............. ☑ DONE 21 Aug 2026 ~01:30 — the architect's post-report verdict,
+                                   executed in full. FREE, TIER-0, zero pastes. `f1c87c3` PUSHED
+                                   on his order. Challenges 1–5 all answered; see the PROGRESS
+                                   entry of 21 Aug ~01:30 for the evidence.
+                                   ☑ ch.3 — the last-prompt ledger STANDS: residue 3,364 rows is
+                                     only 289 distinct signatures and every sampled singleton is an
+                                     organism template with a date interpolated. His words appear
+                                     inside them QUOTED — mirrors, not sources; the originals are
+                                     already swept. 20-row sample stored as the evidence.
+                                   ☑ ch.4 — the 20% length guard KEPT 1,106 rows the unbounded
+                                     signature match would have discarded silently.
+                                   ☑ ch.2 — one instruction line into C1_extract, no new list.
+                                   ☑ canon re-cut: 117 files → 27 chunks, largest 193,466 B, none
+                                     over. pack.mjs now SPLITS an over-cap file (this order is one
+                                     of the two) and refuses to leave an over-cap chunk on disk.
+                                   ☑ probes + steps regenerated: 23 probes · 46 anchors ALL truly
+                                     unique · 65 step files · DO_THIS + README rewritten, every
+                                     number read from disk.
+                                   ⚠ **A GATE PREDICATE CHANGED and S5-R2 MUST REVIEW IT BY NAME:**
+                                     probe_gen's "occurs exactly once" test is unsatisfiable on the
+                                     rebuilt corpus (147 usable lines in one batch tail, ZERO
+                                     unique). Fixed properly — every batch now ends with a
+                                     content-hashed END-OF marker, so a tail anchor is unique BY
+                                     CONSTRUCTION — but the predicate itself also moved and the
+                                     first version of that move accepted a 276-occurrence tail
+                                     anchor, which is unambiguous and useless. Read the entry.
+                                   ⚠ checkall's section 5 was pointed at the SUPERSEDED corpus and
+                                     was green while describing a corpus nothing would sweep.
+                                     Repointed. A docs-vs-disk check aimed at the wrong disk is
+                                     worse than none, because it passes.
+                                   ⚠ ONE RED REMAINS AND IT IS THE MACHINE: `Set-Clipboard` fails
+                                     machine-wide right now (child shell AND direct, 3 attempts
+                                     each) though it passed 20,176/20,176 earlier the same day —
+                                     something is holding the clipboard open. checkall refusing on
+                                     it is CORRECT. LEAD: the sweep travels through the clipboard
+                                     and nothing retries or explains.
+  ▶ NEXT SESSION ............... **S5-R2 · THE FABLE REVIEW OF THE REBUILT INSTRUMENTS.**
+                                   MODEL: **Fable 5 · effort max** (fresh weekly pool, Monday
+                                   post-reset). HIS CALL, RATIFIED BY THE ARCHITECT: the week
+                                   stops after the closure list; nothing more is spent until one
+                                   stronger, fresh head has re-proved the rebuild ADVERSARIALLY,
+                                   **before any of his ~42 pastes.** The S5-R pattern already paid
+                                   for itself once.
+                                   SCOPE — every claim a LEAD until re-proven by RUNNING:
+                                   (a) `refilter2.mjs` — the declare-or-die table, the raising
+                                       default (plant an undeclared type), the totality check, the
+                                       cross-kind dedup and its 20% length guard.
+                                   (b) the probe machinery — **the changed predicate above by
+                                       name**, the END-OF markers, tail-vs-middle rules, and
+                                       whether 46/46 uniqueness survives a fresh generation.
+                                   (c) the re-cut canon — especially the two SPLIT documents and
+                                       whether coverage receipts still match a repeated header.
+                                   (d) preflight/checkall/buildsteps after the repointing, and the
+                                       clipboard LEAD.
+                                   THEN, in order, on his word: **the sweep** (Opus 5 · effort
+                                   HIGH) — its FIRST paste is the ATTACHMENT-COUNT probe, which
+                                   decides 42 pastes versus 420 — then **S6** (Fable · max).
+                                   ⛔ **NO ATTACHMENT IS TRUSTED UNTIL ITS OWN PROBE PASSES**
+                                   (architect, standing, canon AND corpus).
+                                   ⛔ **DO NOT re-run `refilter2.mjs` once the sweep starts** — the
+                                   store is LIVE and rebuilding moves the haystack under answers
+                                   already collected.
 
   ✔ THE CEILINGS ARE RE-BASELINED TWICE, AND THE SECOND TIME FROM A CORRECTED METER.
     HIS RULING, 20 Aug 2026: standard rung 40 · S10 60 · ladder total 500 — but now in
@@ -3333,3 +3377,126 @@ does not fault a path that lives OUTSIDE the repo by the 14 Aug privacy law
 its own successor** — §4-B's exact class, in the section that exists to catch that class. Not
 fixed here: editing §3-C's prose is not this rung's work, and the gate is the authority either way.
 Owner: whichever rung next touches §3-C.
+
+### PROGRESS 2026-08-21 ~01:30 IST — RUNG S5 · THE ARCHITECT'S CLOSURE LIST, EXECUTED
+
+**Same rung, same session, continued on HIS word and the architect's verdict on the S5 report.**
+The verdict ratified the report ("I ran your §9 commands myself… the report is truthful"), ordered
+`f1c87c3` pushed — **done, `633b65a..f1c87c3`** — answered all five challenges, and set a closure
+list of FREE, TIER-0 items with **no pastes**. This entry records that list, executed.
+
+**HIS RULING, verbatim, recorded as the architect required:** *"budget ka issue mat lagao for
+this... getting an incomplete corpus is of no use, i do not care about my data either."* Ceiling
+REPORT-ONLY for this rung only — the captain's override, not a repeal of §10-D rule 2.
+
+#### CHALLENGE 1 — RATIFIED, with a procedure correction I am recording against myself
+The architect's own note: *"my three-branch table was itself an enumeration, and reality produced a
+fourth world."* Ratified because the rebuild was TIER-0, kept, reversible and nothing was swept —
+but **the fork deserved a two-line escalation BEFORE the rebuild, not after.** The general rule now
+stands with the ratchet: **when the observed MECHANISM falls outside every enumerated branch,
+measure it, then escalate — never force the nearest branch.** The decision table's own miss is part
+of the record, not just my handling of it.
+
+#### CHALLENGE 3 — RESOLVED: THE LEDGER STANDS, and here is the evidence
+`challenge3_lastprompt.mjs` (new): 13,993 `last-prompt` rows carrying text (2.40 MB) → **10,629
+already in the dialogue** → residue **3,364 rows / 0.64 MB**, and that residue holds only **289
+distinct signatures**, of which **203 occur once**. Machine-structured was decided STRUCTURALLY,
+never by vocabulary: a program emits the same opening every run, a typed message is unique. The
+five most-repeated residue signatures are emitted 276, 545, 545, 532 and 525 times — interview
+probes and reviewer prompts. **And every one of the 20 sampled singletons is also organism-composed**
+(`COMPOSE THE PLAN for this sitting…`, `Answer this learner's doubt… (his voice)`, `## INPUT
+salience day-summary…`, `New moments since your last check…`); they are singletons only because a
+date or a doubt is interpolated into a fixed template.
+
+**The nuance worth more than the verdict:** his words DO appear inside some of them — quoted. But
+those are MIRRORS, not sources: the originals live in the capsule doubts (canon) and in prior turns
+(dialogue), both already swept. **The ledger standing loses no original.** 20-row sample stored in
+`challenge3_lastprompt.json` as the architect required.
+
+#### CHALLENGE 4 — BOUND, and the guard SAVED 1,106 ROWS
+A signature match may now drop a non-`said` row only if the normalised LENGTHS are within 20%;
+otherwise the row is KEPT and marked `near-dup`. **Flips: 1,106 rows** that the unbounded signature
+match would have discarded silently. Only non-`said` rows are ever dropped, so no real turn can be
+collapsed by this pass.
+
+#### CHALLENGE 2 — ACCEPTED AS BUILT, one instruction line added
+`prompts/C1_extract.txt` now carries, at instruction level and with no new list:
+*"Each turn header carries a KIND after the timestamp. Rows marked `queued` may be MACHINE-COMPOSED
+prompts rather than something he typed; weigh them as CONTEXT unless the text reads as his own
+typing. Do not exclude them — a machine prompt still evidences what the system was told to do."*
+
+#### CHALLENGE 5 — BRACKETED STANDS. The count probe is ruled in as the next window's first paste.
+
+#### THE RE-CUT, AND FIVE MORE DEFECTS FOUND BY RUNNING
+- **Canon re-cut to ≤194,000 B: 117 files → 27 chunks, largest 193,466 B, none over.**
+  `pack.mjs`'s *"never splitting a file"* rule had to yield: two tracked `.md` are themselves
+  bigger than the pack size — `ORGANISM_REPAIR_PLAN.md` (497,598 B, over the HARD cap too) and
+  **this order** (254,855 B). They are now split into labelled parts, the `===== FILE:` header
+  repeated verbatim so coverage receipts still match. pack.mjs also **refuses (exit 4)** rather
+  than leave an over-cap chunk on disk — proven to bite at `CHUNK_BYTES=100`.
+- **`probe_gen.mjs` rebuilt for the measured world:** probes per CHAT GROUP, `canon_full` for the
+  ideal one-chat case, `FILES_PER_CHAT` as the single provisional knob, and the corpus loop
+  repointed at `corpus_live2`. **23 probes · 46 anchors · all truly unique · zero structural
+  violations** (every tail anchor in its group's last file, every middle elsewhere).
+- ⚠ **A GATE PREDICATE CHANGED — S5-R2 must review this by name.** The old anchor test was
+  "occurs exactly once in the haystack". Measured on the rebuilt corpus it is **unsatisfiable**: in
+  the last half of `live2_batch10`, **147 lines were usable and ZERO were unique.** Three things
+  happened, in this order, and the middle one was WRONG: (1) the test was relaxed to the
+  necessary-and-sufficient form (every occurrence has the SAME follower); (2) that accepted a tail
+  anchor occurring **276 times** — unambiguous and USELESS, because a line appearing 275 times
+  earlier can be answered without reading the tail at all, which is the only thing a tail anchor is
+  for; (3) so tails were given a HARDER rule than middles (every occurrence must lie inside the
+  tail window), and then the real fix: **every batch now ends with a deterministic,
+  content-hashed END-OF marker**, making the tail anchor unique by construction rather than by
+  luck. All 46 anchors are truly unique again. The substring test `preflight` uses was also folded
+  back in, because two instruments disagreeing on what "unique" means is how a gate quietly stops
+  gating.
+- **`probecheck.probeFor` is now EXPORTED and its CLI guarded**; `preflight.mjs` had a SECOND copy
+  of that mapping and it drifted the instant the shape changed. One rule, one code path (L4).
+  preflight's canon step list is now DERIVED from disk instead of a hand-written array (it still
+  demanded `A10` after the canon collapsed to one load step — SHAPE 1 in miniature), its haystacks
+  are read from each probe's own recorded `files`, its token-budget check is replaced by the
+  MEASURED cap (a token check passed every one of the old 2.3 MB batches), and it now asserts the
+  accounting identity.
+- **`checkall.mjs` section 5 was pointed at the SUPERSEDED corpus.** It was cheerfully reporting
+  "9 batches / 30 days" while 172 batches over 33 days sat on disk — a docs-vs-disk check aimed at
+  the wrong disk is worse than no check, because it is green. Repointed; its planted invention now
+  rides a CORPUS opener so it covers both halves of the sweep.
+- **`buildsteps.mjs` rebuilt:** one canon load step, corpus by chat GROUP, and it now prints the
+  exact ATTACHMENT MAP per chat. **65 step files.** `DO_THIS.md` rewritten for the new shape;
+  README carries a superseding block whose every number is read from disk.
+
+#### THE STATE THE NEXT SESSION INHERITS
+```
+canon    117 files -> 27 chunks   largest 193,466 B   none over cap
+corpus   172 batches              largest 193,926 B   none over cap
+identity 233,120 raw = 233,120 classified            REMAINDER 0
+turns    13,331 after dedup (him 7,491 · claude 5,840) across 33 days
+steps    65   probes 23 (46 anchors, all unique)
+preflight  GO
+checkall   RED on ONE thing only, and it is not ours — see below
+```
+
+⚠ **THE ONE RED, AND IT IS THE MACHINE, NOT THE CODE.** `Set-Clipboard` is currently failing
+machine-wide — *"Requested Clipboard operation did not succeed"* — from a child PowerShell AND
+directly, three attempts each. **It passed earlier the same day (20,176/20,176 round trip), and
+every clipboard load this session worked**, so some process is holding the clipboard open right
+now. `checkall` refusing on it is CORRECT behaviour. **LEAD for S5-R2:** the entire sweep travels
+through the clipboard and neither `capture.mjs` nor `preflight.mjs` retries or explains — a locked
+clipboard reads as a corrupted-transport failure. A retry with a plain diagnosis is a small change
+and it is the difference between "the gate is broken" and "close whatever is holding the clipboard".
+
+#### WHAT IS STILL NOT DONE
+- **No Gemini question has been asked. Nothing verified. Nothing in §9.** Unchanged.
+- **The attachment COUNT is still unmeasured** — four proven, ten assumed. It is one paste and it
+  decides 42 pastes versus 420. Ruled to be the FIRST paste of the next execution window.
+- The two failed 20-Aug probe answers are archived as evidence in
+  `.bak/failed_probes_2026-08-20/` and `answers/` is empty, so the next window freezes fresh inputs.
+
+#### THE WEEK PLAN — HIS CALL, RATIFIED BY THE ARCHITECT
+**This week stops here.** MONDAY, post-reset, in order: **S5-R2 · THE FABLE REVIEW OF THE REBUILT
+INSTRUMENTS** (Fable 5 · effort max, fresh pool) — cold adversarial review of `refilter2`, the new
+batches, the re-cut canon and the regenerated probes/steps **before any of his ~42 pastes are
+spent**; the S5-R pattern already paid for itself once. **Then** the sweep (Opus 5 · effort HIGH,
+count-probe first), **then** S6 (Fable · max). The boosted limit runs to 31 Aug, the organism is
+off, and waiting costs zero while buying a stronger gate.
