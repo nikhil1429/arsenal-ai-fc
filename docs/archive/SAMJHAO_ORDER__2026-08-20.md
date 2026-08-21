@@ -23,10 +23,31 @@
 ```
 CAMPAIGN     : samjhao of the 4 closed fundamentals, then Re-Jirah on all four
 TOPIC ORDER  : tokenization → embeddings → inference → context   (his order, 18 Aug, act amsyyr66dqy)
-STATUS       : DESIGN COMPLETE 20 Aug. Teaching has NOT started.
-NEXT SESSION : tokenization TOPIC OPEN (§8), then axis a. No design, no research.
-NOT STARTED  : all 36 axes
-RE-JIRAH     : blocked until all four samjhao close (his ruling, 19 Aug)
+
+LIVE LANES   : ← A SESSION READS THIS LINE TO KNOW WHAT IT IS. His priority, top first.
+               1. SAMJHAO   — tokenization, IN PROGRESS. Next move: axis a's Bolo, then axis b.
+               2. FORGE     — 1-04 Hallucinations, NOT STARTED. It is the P6/P7 PILOT: `deep`
+                              written in RE-LEARN SHAPE at lock (analogy + worked example +
+                              why-chain + STUCK-STORY) plus a manual cold-read gate before lock.
+                              Pilot rules + predicate: ARCHITECT_HANDOFF.md, architect 21 Aug.
+               3. RE-JIRAH  — BLOCKED until all four samjhao close (his ruling, 19 Aug). A session
+                              asked for it REFUSES and says why. He must never have to remember this.
+
+STATUS       : TEACHING STARTED 21 Aug 2026. tokenization axis a — content ✅ · hand-work ✅ ·
+               3/3 of its doubts closed · Jirah pulled back mid-axis (my density caused an overload;
+               it re-fires later, it is not dropped).
+               ⏳ AXIS a IS NOT CLOSED — his Bolo + the timed English line are still pending.
+DONE         : 1 of 36 axes (content only, not closed)
+AXIS-CLOSE   : an axis does NOT close without all three (architect ruling §G-4, 21 Aug —
+CHECKLIST      this is an ACCEPTANCE TEST, not a habit):
+               (1) his Bolo + ONE timed English cold line, seconds recorded
+               (2) a raw-facts ledger row
+               (3) his rulings receipted via acts.mjs
+OUT-OF-REPO  : C:\Users\nikhi\arsenal-samjhao\ — RAW_FACTS.jsonl (FOUR fields only: ts · kind ·
+               topic_axis · text; routing fields FORBIDDEN until S6) · TOKENIZATION_BLOCKS.md ·
+               clock.mjs (ActivityWatch join, read-only, zero LLM) · the two escalations + addendum.
+RULINGS      : §16 below carries the architect's 21 Aug rulings and his own R1–R5, verbatim.
+               They BIND every learning session until the reboot. Read §16 before changing method.
 AFTER THAT   : when all 4 samjhao AND all 4 Re-Jirah are closed →
                BRAINSTORM §14 with him (interleaving / transfer / mock). Do NOT start them.
 PARKED       : the render fix (§13) — a separate sitting, not learning time
@@ -999,6 +1020,151 @@ Update §0 before we finish. That is the only handoff.
 - **`CLAUDE.md` is 11.9 KB against its own "≤ 8 KB" header.** It loads into every session's context. A
   cleanup is worth doing — separately, on his word.
 
+### THE PROGRESS BLOCK — the learning lane's recording home (architect ruling C6, 21 Aug 2026)
+Escalations and their rulings are recorded HERE, verbatim, never in the audit order. The architect
+mirrors organism defects into the audit order's PROGRESS; this lane never writes that file.
+See **§16** at the bottom of this file.
+
 ### The shareable summary
 A reader-facing version of this plan (no salary or personal data) is published as an artifact —
 **The Samjhao Plan** — for showing people outside the system.
+
+---
+
+## §16 · PROGRESS + RULINGS — the learning lane's record (C6). Newest last. Verbatim.
+
+### PROGRESS 2026-08-21 — SESSION 1. Teaching started. Two escalations sent, all twelve forks ruled.
+
+**WHAT LANDED.** tokenization TOPIC OPEN (finish line · 26/26 doubt map · Pehle-Guess) + **axis a
+taught end to end**: token · tokenizer · the tokenizer-vs-sampling boundary · where tokenization ends ·
+vocab size vs token count · the 2026 vocab-size patch. Hand-work done (10-token shelf, 3/3 first try).
+All 3 of axis a's mapped doubts closed, plus 4 NEW doubts he raised. **Axis a is NOT closed** — the
+Bolo and the timed English line are pending. **Measured:** 07:30 → 10:21 IST · wall 172m · ACTIVE 119m
+(AFK removed) · claude.exe 113m · checks 9, first-try 8 · reset events 1.
+
+**TWO METHOD DEFECTS FOUND BY HIM, BOTH FIXED IN THIS FILE THE SAME DAY.**
+1. **THE KEY AND THE LOCK.** v3's axis loop opened with his June `deep`. He read it and said *"this
+   deep is not stored in a well explainatory way… feels too disconnected wordings."* §2 CAUSE 2 had
+   predicted it and the loop put him in front of it anyway. §8 corrected: the June note moves to
+   **step 8, after his Bolo**, and the general law is recorded there — *never hand him a COMPRESSION
+   before the thing it compresses exists in his head.*
+2. **DENSITY.** I put seven ideas in one message; he replied *"i understood mostly nothing"* and
+   *"am i underprepared?"* — while sitting at 8-of-9 checks correct first try. His comprehension was
+   never the limiter. See §G-7's rule and the C7 method fix below.
+
+**HIS RULINGS THIS SESSION (verbatim, binding on all samjhao / Re-Jirah / FORGE sessions).**
+- **R1 · THREE-LAYER DELIVERY** — *"i think when you teach me through an analogy always give the real
+  defination or real AI language answer as well so it sticks to my brain because just understanding and
+  remembering by analogy is difficult for me."* → every idea lands as **DUKAAN (analogy) → ASLI NAAM
+  (the term) → TECHNICAL LINE (how it is actually said).** Reason it matters beyond comfort: the analogy
+  is un-sayable in an interview; two encodings give two routes back.
+- **R2 · JIRAH VOLUME** — *"i want to give as many jirah and re jirah possible for every topics which i
+  am covering with maximum number of questions being asked but should be done when i fully understand
+  the concept."* → volume is WANTED, not rationed. The gate is READINESS, never count.
+- **R3 · NO RATTA** — *"my adhd pi brain will never remember the exact definations, i can not mug up
+  answers (ratta nahi maar sakta mera dimag) isko bi dimag mein rakhna for all future sessions of
+  samjhao as well and re jirah."* → **this changes what a CORRECT answer is.** An answer is correct when
+  the MECHANISM is rebuilt, in whatever words arrive. Different words + right mechanism = **BETTER**.
+  The technical line is a target SHAPE and a vocabulary supply — never a memorisation target.
+  Grading consequence: Re-Jirah scores rebuild-from-understanding, never phrase-match.
+- **R4 · FREE FLOW** — *"doc one axis per day or one topic per day rule is stupid… do not try to control
+  my adhd gifts, let it free flow."* CHECKED: **no such rule exists.** §5-④ TIME-BOX is a CEILING with a
+  DEFER, and §9 already says *"Do not underestimate his throughput."* Nothing changes; recorded because
+  it is live. **I underestimated his throughput twice in this session and it is logged as my error.**
+- **R5 · SCOPE** — *"i want god tier 10x level on steriods level for the entire field so for all topics
+  whatever we will forever study from now onwards, i am here to dominate the market."* + *"i can go
+  tunnel visioned in and can grind my ass off for 10 hours daily minimum."* + everything must work
+  **SESSION-AGNOSTIC**, always.
+
+**THE ARCHITECT'S RULINGS, 21 Aug 2026 — all twelve forks. These bind every learning session.**
+- **C1 · RECORDING** — RAW FACTS ONLY, out of repo, with **exactly four fixed fields: `ts` · `kind` ·
+  `topic_axis` · `text`.** Routing fields (`surface`, `writes_to`, `fired_by`, `cadence`) are DESIGN and
+  stay FORBIDDEN until S6. Recorded reason: committing to a shape would ANCHOR S6's design, and anchoring
+  costs more than a transform.
+- **C2 · `acts.mjs` PERMITTED** during the switch-off — deterministic owner CLI, zero tokens, receipts
+  not promises. **NEVER mid-concept:** same-turn scratch capture is the floor, the acts receipt fires at
+  the **AXIS BOUNDARY** or session close, batched. His learning-method rulings go to the **same** rulings
+  lane as architecture rulings with **scope as a FIELD** (`architecture | learning-method`) — never a
+  second lane, which would be Shape 1. Until S6 builds it, this file at topic close is their canon home.
+- **C3 · THE COLDNESS HOLE → S6 OWNS IT.** The `taught` event belongs to the emit contract; S7 or S11
+  would patch it out of context. The architect recorded it in the audit order with its witness
+  (commit `d903e5f`) — **this lane never writes that file.** **THE INTERIM RULE IS RATIFIED AND BINDING:**
+  a samjhao'd concept gets FRESH hand-written Re-Jirah questions; `deep.mjs due`'s stored strikes are not
+  used for it, and the guard will stay silent, so nothing will warn you.
+- **C4 · BACK-FILL, OWNER NAMED.** The rung that BUILDS the SHAPE-6 emit contract executes the back-fill
+  of this week's raw facts **as its DONE-PROOF** — real data through the new contract IS the acceptance
+  test. No "we will back-fill later".
+- **C5 · TOKENS.** No ceiling on teaching, ever — teaching is TIER 2 by definition and refusing to spend
+  there is the expensive mistake. **THE LINE:** meta/system work inside a learning session is capped at
+  **PARK + POINTER** — name it, one line to the out-of-repo file, hand back the micro-question. Anything
+  needing more than ~10 minutes of non-teaching work becomes an escalation or a rung note, never a detour.
+  Session close reports the teaching-vs-meta split. `clock.mjs` RATIFIED as a personal read-only instrument.
+- **C6 · ESCALATION PROTOCOL FOR THIS LANE.** ONLY these four escalate: (1) anything changing this order's
+  method · (2) any organism defect found while teaching · (3) any standing ruling of his touching more
+  than the current topic · (4) anything that would write into an audit-owned lane. **Pedagogy, pacing and
+  teaching errors NEVER escalate** — the teacher fixes and reports those. Recording home: **this §16**,
+  ruling pasted back verbatim. The architect mirrors organism defects into the audit order.
+- **C7 · TEACHING DENSITY — METHOD FIX NOW, CODE GATE LATER.** The gate for prose is **STRUCTURE, not a
+  text metric**: at axis open, privately list that axis's ideas; serve **EXACTLY ONE per turn** with its
+  check-question; the turn carries **"idea k of n"**. Enforcement by construction — the loop paces, not
+  the teacher's judgement — and it costs zero code. A code gate is an S6 LEAD for `teaching_audit`, with
+  *new-named-terms-per-message* as the candidate predicate; **do not build the counter now** — an unproven
+  proxy that could punish coverage is worse than the drift counter.
+- **§G-1 · THE COLD-READ FALSIFICATION — APPROVED, predicate corrected.** My predicate was CONFOUNDED:
+  any model already knows tokenization, so it can answer a strike WITHOUT the `deep`, and a PASS would
+  prove nothing. **Corrected predicate:** *"answer the strike using ONLY sentences quotable from this
+  axis's `deep` — every claim carries its quote; an unquotable claim means the `deep` lacks it."* This
+  makes the test **model-independent by construction.** MODEL: **Gemini Flash** (his word, 21 Aug) —
+  and Flash is the RIGHT tier here, because a stronger model with extended thinking papers over exactly
+  the gaps the test is looking for. Fabricated quotes are caught by a deterministic substring check.
+  Results are logged as raw facts.
+- **§G-2 · SCHEDULING GRANULARITY** — the hybrid (concept SCHEDULES, the axis record SELECTS which probes
+  fire inside a returned concept) is ratified as **S6/S10 design input** and banked. This lane stops
+  reasoning about it — it is owned.
+- **§G-3 · THE ADVERSARY LADDER — PARTIAL.** Lock's bar does not jump to 45 questions on day one: the
+  ladder climbs over ROUNDS (negative-space reached by round 3), and a NEW status — **`interview_ready`,
+  above `locked`** — exists only when all five rungs have passed. That is S6 input. **IMMEDIATE piece:
+  at LOCK, ONE negative-space probe per concept, piloted in 1-04.** Budget: generation TIER 1, judging
+  stays the ONE Opus judge at round close — no new judge lanes.
+- **§G-4 · THE AXIS-CLOSE CHECKLIST — ACCEPTANCE CONDITION, EFFECTIVE NOW.** An axis does NOT close
+  without: **(1) one timed English cold line** (seconds to first correct sentence, recorded) ·
+  **(2) a raw-facts ledger row** · **(3) his rulings receipted.** This checklist is what converts three
+  session-agnostically-WEAK rulings into a single acceptance test. Code version = S6.
+- **§G-5 · THE BUILD SPEC** — hand-compose the four existing `buildHook`s into one out-of-repo file at the
+  next topic close (free, useful to him now); the derived read-only composition is S6's. The machine must
+  stop discarding it.
+- **§G-6 · TIER-1 RESOURCE SPLIT** — the external probe bank runs on **his SECOND Gemini web account**.
+  The S5 sweep owns **account #1 + the API pool** until it closes. Named lanes, no competition.
+- **§G-7 · THE META-RULE — RATIFIED AND WRITTEN INTO THE ARCHITECT HANDOFF, binding on every future
+  learning session:** *"every learning-lane rule must name WHAT FIRES IT. A rule that cannot name its
+  trigger is an intention, and intentions are this project's named failure mode."*
+- **ADDENDUM G1 · WHAT MAY RUN DURING THE SWITCH-OFF — a PREDICATE, never a list (a list would be
+  Shape 1):** *any deterministic, ZERO-TOKEN owner CLI writing only its own declared state.* So
+  `forge_session.mjs` ✅ · `acts.mjs` ✅ (axis boundaries) · `mirror.mjs` ✅ (pull-only) · `samjhao.mjs`
+  read-only ✅ · `clock.mjs` ✅. **FORBIDDEN:** enabling tasks or daemons, and anything that spawns an
+  LLM outside architect-ruled lanes. A real FORGE of 1-04 therefore runs **with its pacer**, inside its
+  own laws — the SessionStart hook was right about that and this lane was wrong to ignore it all session.
+- **ADDENDUM G2 · 1-04 HALLUCINATIONS IS THE PILOT.** Forge it with P7's discipline applied BY HAND —
+  `deep` written at lock in re-learn shape (analogy + worked example + why-chain + **STUCK-STORY**, which
+  all four June capsules lack entirely) — plus the manual cold-read gate before lock using §G-1's quote
+  predicate. **Log the cold read as raw facts.** S6 then inherits a before/after with the 36 June axes as
+  the control group. **If 1-04 also fails its cold read, the root diagnosis is wrong and we learn that for
+  the price of one read. Either result is evidence.**
+- **ADDENDUM G3 · THE ROUTER** — the architect wrote the `learning-lane-router` memory entry; it loads
+  automatically at every session start. He never has to say *"brief nahi — §0 padho"* again.
+- **ADDENDUM G4 · §0 gains the LIVE LANES line** (done, this entry). **G5 · `mirror.mjs` PERMITTED** —
+  topic close proceeds as designed.
+
+**HIS ONE PASTE LINE, for every learning session until the reboot:**
+```
+LEARNING SESSION. Router = memory `learning-lane-router` → docs/archive/SAMJHAO_ORDER__2026-08-20.md
+§0 LIVE LANES. SessionStart brief switch-off mein GALAT hai — ignore karo. Router padho, 3 line mein
+batao main kahan hoon aur aaj ka pehla move kya hai, phir shuru karo. Koi system/design/research
+kaam nahi — escalation architect ko clipboard se.
+```
+
+**NEXT SESSION'S FIRST MOVE (the KAL-line):** take axis a's Bolo + its timed English line, close axis a
+against the §G-4 checklist, then open **axis b** — *"why subword, against word-level and char-level"* —
+the question he answered *"no idea"* to at the topic's Pehle-Guess. Its four mapped doubts are D13, D21,
+D25, D26, and its refutation target is on record: he believes char-level's pain is memory or slow lookup;
+**both are inverted.**
