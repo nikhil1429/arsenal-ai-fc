@@ -493,33 +493,90 @@ STATUS (update this block before any session stops — this is the handoff)
                                      of the driver card** — no sweep has run once, and rewriting a
                                      card for a lane nobody has driven is the guess S5-W refused;
                                      declaring the drift is not the same as guessing the fix.
-  ▶ NEXT SESSION ............... **S5-Y · THE GATE RE-AIM — a micro-rung, RULED 25 Aug ~11:25
-                                   (queue\RULING__2026-08-25_1100-s5x-1.md = the work order;
-                                   OPTION A ratified).** MODEL: Opus 5 · effort HIGH. **CEILING
-                                   WRITTEN: 8 corrected lakh.** Scope: preflight's `--from-file`
-                                   round trip becomes HARD/blocking (the sweep's real path gains
-                                   its FIRST blocking assert); the clipboard round trip runs and
-                                   PRINTS, blocking nothing; capture selftest + checkall §1/§2
-                                   follow; bite-proofs BOTH directions (broken file path → RED;
-                                   dead clipboard alone → NOT red); full checkall + preflight
-                                   GREEN; snapshot.mjs before every instrument edit; commit
-                                   through the live gate. FORBIDDEN: frozen corpus/canon bytes ·
-                                   any Gemini call · any sweep question · instruments beyond
-                                   preflight/capture-selftest/checkall §1-§2 wiring.
-                                   STANDING (ruled ~11:25, S6 onward): **a gate's strictness is
-                                   measured against the property it PROTECTS, not the count of
-                                   its blocking checks.** The clipboard is ADVISORY everywhere;
-                                   the human fallback = save page text to a FILE + `capture.mjs
-                                   save <step> --from-file`. Clipboard fault (4 occurrences,
-                                   no owner, reads+writes both fail) → S11 family, post-reboot.
-                                   Once green: **S5 · THE SWEEP — its own session.** MODEL:
+  S5-Y THE GATE RE-AIM ......... ☑ DONE 25 Aug 2026 ~12:05 IST · Opus 5 · effort HIGH · TIER-0,
+                                   ZERO Gemini calls, ZERO sweep questions, inputs NEVER frozen
+                                   (proven at close: `inputs_frozen.json` still absent, answers/
+                                   still empty). Work order: queue\RULING__2026-08-25_1100-s5x-1.md
+                                   (OPTION A ratified). Full account in the PROGRESS entry of
+                                   25 Aug ~12:05 — read that, not this summary.
+                                   ⚠ **CEILING BREACHED AND RECORDED, NOT PATCHED AROUND: 8
+                                   written, ~10.6 measured at the commit (the S1 live-read lead
+                                   says today reads ~+16% hot ⇒ ~9.2 true).** Ceiling NOT
+                                   re-derived — unit faults only, and this was normal variance on
+                                   a rung whose 8 was an estimate plus margin. The scope work
+                                   itself is COMPLETE; nothing was cut to fit and nothing new was
+                                   started after the breach was seen.
+                                   ☑ (a) preflight §4 is no longer "THE CLIPBOARD" — it is **THE
+                                     ANSWER PATH**: 4A runs capture's selftest and BLOCKS on it,
+                                     4B round-trips the largest REAL step file through a file
+                                     byte for byte (the hard-character assert MOVED here, onto
+                                     the path the bytes actually travel), 4C is the clipboard —
+                                     it runs, it PRINTS the real reason, it blocks nothing.
+                                   ☑ (b) capture's selftest re-aimed: LEG 1 exercises
+                                     `save --from-file` through the **REAL CLI** (four refusals +
+                                     the success path + the input freeze), LEG 2 clipboard is
+                                     ADVISORY, LEG 3 disk stays blocking. Guarded exactly as
+                                     `diag/proofs_s5x.mjs` is: a successful save FREEZES THE
+                                     INPUTS, so the success sub-leg runs only while the freeze is
+                                     absent, resets precisely what it created, and ASSERTS the
+                                     reset held. While a sweep is live it SKIPS and says so out
+                                     loud — it never deletes a freeze it did not create.
+                                   ☑ (c) checkall §2 reads the FILE leg **by name**. Its old
+                                     matcher took the first line containing "round trip", which
+                                     after the re-aim is the ADVISORY clipboard leg — it would
+                                     have gone green or red on the transport the sweep abandoned
+                                     at S5-X while asserting nothing about --from-file. Same
+                                     class as S5-R2's "a green that certifies the wrong world".
+                                   ☑ (d) BITE-PROOFS 22/22, BOTH DIRECTIONS, re-runnable:
+                                     `node diag/proofs_s5y.mjs`. RED on a mangled --from-file
+                                     (selftest + preflight + full checkall §1 AND §2) · RED on a
+                                     removed refusal · **NOT red on a dead clipboard alone**
+                                     (planted dead, not waited for) · and preflight's AND is
+                                     planted in BOTH halves separately — a child that crashes
+                                     before printing, and a child that exits 0 while printing
+                                     FAILED. Every plant restored and verified by sha256.
+                                   ☑ (e) **checkall GREEN, all 7 sections · preflight GO**, both
+                                     RUN IN THIS SESSION. Snapshots taken before the first edit
+                                     and at close (S5-X's gate).
+                                   ⚠ **AND THE CLIPBOARD FAULT REPRODUCED LIVE, MID-RUNG — 5th
+                                     occurrence.** It went down during the very first run of the
+                                     re-aimed preflight and stayed down through checkall. That is
+                                     the ruling proving itself on real weather: the same minute
+                                     that would have been a hard REFUSE this morning printed one
+                                     warning line and said **GO**, with --from-file proven OK end
+                                     to end. Still no owner, reads and writes both failing → S11.
+                                   ⚠ **NEW LEAD, MEASURED, NOT THIS RUNG'S TO FIX** (snapshot.mjs
+                                     is outside this rung's FORBIDDEN boundary — §10-D rule 10
+                                     obeyed): **`diag/` is invisible to the rollback gate.** The
+                                     roster predicate takes top-level `.mjs/.json/.md` +
+                                     `prompts/*.txt`; `diag/` is neither covered NOR declared in
+                                     NOT_AN_INSTRUMENT, so it is a silent third category. Proven
+                                     by reading the store: 0 diag members in the latest snapshot,
+                                     so `proofs_s5x.mjs` and `proofs_s5y.mjs` — the two harnesses
+                                     that certify the sweep's gates — have no restorable copy.
+                                     Blast radius is bounded (harnesses, not sweep inputs), but
+                                     the SHAPE is the jugad rule's own: a universal quantifier
+                                     that excludes a subject without declaring it. Owner's call:
+                                     one line in the predicate, or one declared exception.
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — RESUMED, its own session.** MODEL:
                                    Opus 5 · effort HIGH. **EXECUTION BUDGET: fresh 30 corrected
-                                   lakh.** Read `diag\COUNT_PROBE_RESULT.md` BEFORE touching the
+                                   lakh.** Its gates are GREEN and were run at 25 Aug ~12:00 — but
+                                   run them again IN YOUR OWN SESSION, never inherited:
+                                   `node checkall.mjs` must say GREEN and `node preflight.mjs` GO.
+                                   A clipboard warning in either is EXPECTED and is not a blocker
+                                   (S5-Y); a red ANSWER PATH is. Read `diag\COUNT_PROBE_RESULT.md` BEFORE touching the
                                    browser — the two silent transport traps are named there.
                                    **Answers are captured with `node capture.mjs save <step>
                                    --from-file <path>`, never the clipboard** (built + proven at
                                    S5-X; write what `get_page_text` returned to a temp file and
                                    hand capture the path).
+                                   STANDING (ruled ~11:25, S6 onward, BUILT at S5-Y): **a gate's
+                                   strictness is measured against the property it PROTECTS, not
+                                   the count of its blocking checks.** The clipboard is ADVISORY
+                                   everywhere; the human fallback = save page text to a FILE +
+                                   `capture.mjs save <step> --from-file <path>`. Clipboard fault
+                                   (5 occurrences now, no owner, reads+writes both fail) → S11
+                                   family, post-reboot. Nobody chases it before S6.
                                    ⛔ AND EVERY RUNG FROM HERE: run `node snapshot.mjs take --why
                                    "..."` BEFORE editing any instrument in that folder. checkall
                                    section 7 refuses otherwise. It is not a habit any more.
@@ -2007,6 +2064,28 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       a gate (rule 6 refuses it) in a file this rung may not touch. ESCALATED.  CEILING: 15
                                                                        (spent 14.52)
                                                         + 4.96 (his follow-up, 25 Aug — ITEM 3)
+☑ S5-Y THE GATE RE-AIM — 25 Aug 2026. Inserted by the architect's ruling of 25 Aug ~11:25
+      (queue\RULING__2026-08-25_1100-s5x-1.md), which IS this rung's work order. It closes S5-X's
+      RED scope-(d) without loosening anything, under the standing law that ruling established:
+      **a gate's strictness is measured against the property it PROTECTS, not the count of its
+      blocking checks.** Property = "the sweep can capture answers." preflight §4 stopped being
+      THE CLIPBOARD and became THE ANSWER PATH: `--from-file` is now the gate's FIRST hard assert
+      on that property, and the clipboard — off the critical path since S5-X, and measured down
+      machine-wide for minutes at a time — runs, PRINTS its real reason, and blocks nothing.
+      capture's selftest exercises `save --from-file` through the REAL CLI (refusals + success +
+      the input freeze) and is guarded like `diag/proofs_s5x.mjs` so it can never write into a
+      live sweep's state. checkall §2 reads the FILE leg BY NAME instead of the first line saying
+      "round trip", which after the re-aim was the advisory leg. 22/22 bite-proofs, BOTH
+      directions, re-runnable as `node diag/proofs_s5y.mjs`.
+      FORBIDDEN: frozen corpus/canon bytes · any Gemini call · any sweep question · any instrument
+      beyond preflight.mjs / capture.mjs's selftest / checkall §1-§2 wiring. — all four held; the
+      one finding that fell outside them (`diag/` is invisible to the snapshot roster) was
+      RECORDED and left for its owner, §10-D rule 10, not patched from inside this rung.
+      DONE-PROOF: checkall GREEN all 7 sections + preflight GO, both run in-session, WITH the
+      clipboard dead at the time — which is the proof the re-aim is real.        CEILING: 8
+                                                                       (spent ~10.6 — BREACHED,
+                                                       recorded, ceiling NOT re-derived: §10-C's
+                                                       rule says unit faults only, never variance)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
       sent. The preparation breached the ceiling (40 allowed, ~104 spent) and §10-D rule 2 was
@@ -4610,3 +4689,158 @@ edits are themselves under the gate they installed) · `node checkall.mjs` → *
 
 **THE FORK IS UNCHANGED AND STILL THE ARCHITECT'S.** Nothing here touches it: the runbooks were
 prose, and the red is a gate. `queue\2026-08-25_1100-s5x-1.md` stands as written.
+
+### PROGRESS 2026-08-25 ~12:05 IST — S5-Y · THE GATE RE-AIM · the sweep's real path gains its first hard assert
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐ — and this time the two
+genuinely disagreed, which is worth naming). The version-3 prompt says "the first ☐ in §10-C". The
+first ☐ in §10-C was **S6**, the Fable summit two rungs away. The router said **S5-Y**, a micro-rung
+ruled at ~11:25 that had no §10-C row at all because the ruling post-dated the ladder's last edit.
+Rule 1 settles it — the router is authoritative, "first ☐" is its fallback — so S5-Y ran. **And the
+disagreement itself was closed rather than merely stepped over: S5-Y now HAS a §10-C row.** A router
+whose fallback points somewhere else is a trap armed for whichever session reads the two in the
+wrong order.
+
+**Micro-order written first** (rule 9), to the session scratchpad, checked against §10-C/§10-D
+before a single edit — files-I-may-touch, steps, DONE-proof commands, and the FORBIDDEN list copied
+out of the ruling. Two lines of it earned their place later: *"preflight must NOT call `capture.mjs
+save` on a real step"* and *"do NOT delete an inputs_frozen.json this run did not create."*
+
+**Work order:** `queue\RULING__2026-08-25_1100-s5x-1.md` (OPTION A ratified). Opus 5 · effort HIGH ·
+TIER-0. **Zero Gemini calls, zero sweep questions, and the inputs were never frozen** — proven at
+close, not assumed: `inputs_frozen.json` absent and `answers/` empty, both re-read after every plant.
+
+---
+
+#### THE DEFECT, stated as the gate's own behaviour rather than as an opinion
+
+S5-X left scope (d) RED: preflight and checkall §2 blocked on `Set-Clipboard`, which is down
+machine-wide for minutes at a time. The obvious reading is "the machine is broken and the gate is
+right." **Measured across one morning, the gate was wrong in BOTH directions on the same day:**
+
+- at **~11:00** it REFUSED a sweep whose real capture path was perfectly healthy, because the
+  clipboard was down;
+- at **~11:50**, this session's baseline read, it said **GO** — 7/7 green — while `--from-file`,
+  the transport all 42 pastes will travel, **had never been exercised by any gate at all.**
+
+Same gate, same folder, opposite verdicts, and neither of them was about the property that matters.
+That is the gate-side twin of S5-R2's headline ("a green that certifies the wrong world"), and it is
+why the architect's standing law is the right frame: **a gate's strictness is measured against the
+property it PROTECTS, not the count of its blocking checks.** Property here = *the sweep can capture
+answers*. Blocking checks on that property before this rung: **zero.**
+
+#### WHAT LANDED
+
+- **(a) `preflight.mjs` §4 is no longer "THE CLIPBOARD — the path every step and every answer
+  travels". It is "THE ANSWER PATH".** That heading had been false since S5-X.
+  - **4A · BLOCKING** — runs `capture.mjs selftest` and blocks on it, judging `exit === 0` **AND**
+    the `file input path : OK` verdict line. Both halves, deliberately: an exit code catches a crash
+    before the verdict prints, and the verdict line catches an exit code that has stopped telling
+    the truth. A `SKIP` in the child (a sweep already in flight) is surfaced as a warning here
+    rather than left buried in the child's output — the operator has to know which of the two
+    things they got.
+  - **4B · BLOCKING** — the largest **real** step file round-trips through a real file, byte for
+    byte, through the same `stripBom` read `capture.mjs` performs. **The hard-character assert moved
+    here from the clipboard**, which is where it always belonged: the UTF-8 class of defect
+    (`capture.mjs`'s own header records ॐ → `?`, § → a control character) does not throw. It fails
+    to match hours later and a true finding is discarded as invented.
+  - **4C · ADVISORY** — the clipboard runs and **prints**, and cannot fail the gate. It also now
+    names the actual reason (`Set-Clipboard : Requested Clipboard operation did not succeed`)
+    instead of `Command failed: powershell.exe -NoProfile …`, which said nothing. An advisory that
+    cannot say what went wrong teaches people to skip advisories. **Not deleted (L9)** — it is still
+    the fastest way to watch this fault come and go.
+
+- **(b) `capture.mjs`'s selftest re-aimed.** LEG 1 exercises `save --from-file` **through the real
+  CLI** — spawning `import.meta.url`, never a second copy, so what is proven is the code that will
+  actually run: four refusals (missing path · empty file · pathless flag · a directory), then the
+  success path, then the assert that the file path **reaches the input freeze** (one code path, not
+  a second copy of it). LEG 2, the clipboard, is advisory. LEG 3, the disk, stays blocking.
+  **Guarded exactly as `diag/proofs_s5x.mjs` is guarded, for the same reason:** a successful save
+  FREEZES THE INPUTS, and the freeze is sweep state the first *real* answer owns. So the success
+  sub-leg runs only while the freeze is absent, resets precisely what it created, and **asserts the
+  reset held** — a reset that silently failed would leave the sweep reading a false freeze time.
+  While a sweep IS live it SKIPS, out loud, and this file never deletes a freeze it did not create.
+  The sentinel step id `_CAPTURE_SELFTEST` cannot collide with a real step.
+
+- **(c) `checkall.mjs` §2 reads the FILE leg BY NAME.** Its old verdict took *the first line
+  containing "round trip"* — which after the re-aim is the **advisory clipboard leg**. Left alone,
+  §2 would have gone green or red on the transport the sweep abandoned at S5-X while asserting
+  nothing about `--from-file`: the misaim re-created one layer up, inside the fix for it. The
+  clipboard is printed as a `note`, never judged. §2's label stopped saying `page -> clipboard ->
+  disk`, and preflight's own docstring stopped calling the clipboard the path every answer travels —
+  the same prose-describing-a-dead-world class S5-W fixed in the step prompts.
+
+- **(d) BITE-PROOFS 22/22, BOTH DIRECTIONS, re-runnable: `node diag/proofs_s5y.mjs`.** The two
+  directions are not symmetrical and both had to be proven, or this rung would have been a swap
+  dressed as a hardening:
+  | plant | expected | got |
+  |---|---|---|
+  | `--from-file` silently mangles non-ASCII | **RED** | selftest RED and *names* the mangling · preflight `the ANSWER PATH is broken` · **full checkall §1 AND §2 RED** |
+  | the missing-path refusal removed | **RED** | selftest RED · preflight REFUSES |
+  | the clipboard planted DEAD, nothing else | **NOT RED** | selftest exit **0** · reported `FAILED` · says ADVISORY · **preflight GO** · warning still printed |
+  | child crashes before printing a verdict | **RED** | preflight refuses, naming `exit 3` |
+  | child exits 0 while printing `FAILED` | **RED** | preflight AND checkall §2 both refuse |
+  The dead clipboard was **planted, not waited for** — the fault is intermittent, so "it happened to
+  be down and we were green" is an anecdote, not a proof; planted, it reproduces on a healthy
+  machine. Every plant restored and **verified by sha256**, and the harness re-checks at the end
+  that `answers/` is unchanged, the inputs are still unfrozen, and preflight is green again.
+  It also refuses to run at all if a sweep has started.
+
+- **(e) DONE-PROOF, run in THIS session, not inherited:** `node checkall.mjs` → **GREEN, all 7
+  sections** · `node preflight.mjs` → **GO** · `node snapshot.mjs check` → OK 65/65 (snapshots taken
+  before the first edit and again at close, S5-X's gate) · `node scripts/rails.mjs orders` → open
+  order structurally clean, 0 blocking.
+
+#### THE CLIPBOARD FAULT REPRODUCED LIVE, MID-RUNG — 5th occurrence, and it proved the ruling
+
+It went down during the **very first run of the re-aimed preflight** and stayed down through the
+full checkall. Nothing was arranged; the fault simply arrived while the fix for it was being
+measured. **The same minute that would have been a hard REFUSE this morning printed one warning line
+and said GO, with `--from-file` proven OK end to end.** Still no owner, reads and writes both
+failing. Routed unchanged to the **S11 family, post-reboot** — nobody chases it before S6.
+
+#### NEW LEAD — MEASURED, AND DELIBERATELY NOT FIXED HERE
+
+**`diag/` is invisible to the rollback gate.** `snapshot.mjs`'s roster predicate takes top-level
+`.mjs/.json/.md` plus `prompts/*.txt`. `diag/` is **neither covered nor declared** in
+`NOT_AN_INSTRUMENT` — a silent third category. Proven by reading the store rather than the code:
+**0 diag members in the latest snapshot**, so `proofs_s5x.mjs` and `proofs_s5y.mjs` — the two
+harnesses that certify the sweep's gates — have no restorable copy. Blast radius is bounded (proof
+harnesses, not sweep inputs, and the inputs have their own stronger guard). But the SHAPE is S3's
+JUGAD RULE turned on the audit's own instrument: *a universal quantifier — "every instrument" — that
+excludes a subject without declaring it.*
+
+**NOT PATCHED, and that is §10-D rule 10, not laziness.** `snapshot.mjs` is outside this rung's
+FORBIDDEN boundary by name. The fix is one line either way — widen the predicate, or declare `diag/`
+an exception with its reason — but *which* is a decision about what counts as an instrument, and
+this rung had no authority to make it. Left for its owner with the measurement attached.
+
+#### ⚠ THE CEILING WAS BREACHED — RECORDED, NOT PATCHED AROUND
+
+**8 written · ~10.6 measured at the commit** (day line 290.91 → ~301.5+; the S1 live-read lead says
+today's figure reads ~+16% hot, so the true number is nearer **~9.2**). Over either way.
+**Ceiling NOT re-derived** — §10-C's rule is explicit that ceilings move only when the meter's UNIT
+is proven faulty, never on variance, and this was variance on a rung whose 8 was "the ~5 estimate +
+gate re-runs + margin". Where it went is not mysterious and is worth recording so the next estimate
+is better: the ruling's 5-lakh estimate priced the *edits*, and the edits were the cheap half. The
+expensive half was **proving them** — 22 asserts, each spawning real gates, plus one full `checkall`
+run inside a plant (deliberately: sections 1 and 2 are what the operator actually runs, and a
+section that goes red only in theory is not a gate). **Nothing was cut to fit the number, and
+nothing new was started once the breach was visible** — the only work after that point was the
+handoff §10-D rule 7 requires.
+
+**The scope question this raises is the same one S4 and S5-R2 raised and it is still HIS:** a
+micro-rung's ceiling is written before anyone knows how many proofs the property will need. That is
+one line for him, below.
+
+#### FOR THE NEXT SESSION — S5 · THE SWEEP, RESUMED. Opus 5 · effort HIGH · fresh 30 corrected lakh
+
+1. `node checkall.mjs` → GREEN and `node preflight.mjs` → GO **in your own session**, never
+   inherited. **A clipboard warning in either is EXPECTED and is not a blocker** (that is this
+   rung's whole point); a red **ANSWER PATH** is.
+2. Read `diag\COUNT_PROBE_RESULT.md` **before** touching the browser — Ctrl+V is dead to a driving
+   session and `computer type` silently eats newlines.
+3. Capture every answer with `node capture.mjs save <step> --from-file <path>` — write what
+   `get_page_text` returned to a temp file and hand capture the path. **Never the clipboard.**
+4. `node snapshot.mjs take --why "…"` before editing any instrument. Not a habit any more — §7 refuses.
+5. No attachment is trusted until its own probe passes — three probes for the canon, not one.
