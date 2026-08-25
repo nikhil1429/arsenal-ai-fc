@@ -413,7 +413,16 @@ STATUS (update this block before any session stops — this is the handoff)
                                      both RUN IN THIS SESSION · rails orders 0 blocking.
   S5-X PRE-SWEEP HARDENING ..... ◐ 25 Aug 2026 ~11:00 IST · Opus 5 · effort high · TIER-0, ZERO
                                    Gemini calls, ZERO sweep questions, inputs still UNFROZEN.
-                                   Cost 14.52 of the 15-lakh ceiling (97%) — read from the meter AT the commit, not mid-flight. **SCOPE (a)(b)(c) DONE AND
+                                   Cost 14.52 of the 15-lakh ceiling (97%) — read from the meter
+                                   AT the commit, not mid-flight.
+                                   **+3.1 (HIS FOLLOW-UP, 25 Aug ~11:15) — its OWN named line, the
+                                   first use of the architect's ITEM 3 ruling of 25 Aug ~10:45:
+                                   "his follow-up, ordered after reading a rung's report, opens its
+                                   OWN NAMED LINE on the row."** He read the report and ordered the
+                                   loose ends closed. What it bought: the two runbooks no longer
+                                   describe the dead capture path (below), and checkall section 5
+                                   now covers snapshot.mjs (9 tools → 10). Not a breach; the rung's
+                                   own 14.52 stands separately. **SCOPE (a)(b)(c) DONE AND
                                    BITE-PROVEN. SCOPE (d) IS RED AND STAYS RED — §10-D rule 10
                                    obeyed: recorded, not patched around.** Full account in the
                                    PROGRESS entry of 25 Aug ~11:00 — read that, not this summary.
@@ -472,6 +481,18 @@ STATUS (update this block before any session stops — this is the handoff)
                                      first now, and both legs witness the source `dummy` rather
                                      than each other's output — the architect's own standing line
                                      (item 2, 25 Aug): a fixture may not be its own witness.
+                                   ☑ FOLLOW-UP · THE RUNBOOKS STOPPED DESCRIBING THE DEAD PATH.
+                                     S5-X's own close named this gap and left it; he ordered it
+                                     closed in the same sitting. `README_FOR_ANY_SESSION.md`: the
+                                     capture move in the per-step loop is now `--from-file`, the
+                                     tool table says so, and `snapshot.mjs` is a row with the
+                                     BEFORE-you-edit instruction. `DO_THIS.md` + the README loop
+                                     carry a SUPERSEDED banner naming both rulings (transport =
+                                     the session drives Chrome; capture = --from-file) and pointing
+                                     at this router as the authority. **DELIBERATELY NOT a rewrite
+                                     of the driver card** — no sweep has run once, and rewriting a
+                                     card for a lane nobody has driven is the guess S5-W refused;
+                                     declaring the drift is not the same as guessing the fix.
   ▶ NEXT SESSION ............... **THE SWEEP IS BLOCKED ON ONE RULING — the escalation on his
                                    clipboard... which is itself down, so it is on disk instead:
                                    `queue\2026-08-25_1100-s5x-1.md`. ONE question: preflight §1
@@ -1971,6 +1992,7 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       checkall §2 block on `Set-Clipboard`, which is down machine-wide, and the only fix loosens
       a gate (rule 6 refuses it) in a file this rung may not touch. ESCALATED.  CEILING: 15
                                                                        (spent 14.52)
+                                                        + 3.1 (his follow-up, 25 Aug — ITEM 3)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
       sent. The preparation breached the ceiling (40 allowed, ~104 spent) and §10-D rule 2 was
@@ -4541,3 +4563,36 @@ is a copy that drifts. Inside the ceiling, no breach.
 `node checkall.mjs` → **5 of 7 sections green, §1 and §2 RED on the clipboard** ·
 `node preflight.mjs` → **REFUSES** · `node scripts/rails.mjs orders` → see the commit; the commit
 went through the live §3-C gate.
+
+### ADDENDUM · 25 Aug 2026 ~11:15 IST — HIS FOLLOW-UP, on its own budget line (+3.1)
+He read the report and ordered everything loose closed and pushed. **This is the first use of the
+architect's ITEM 3 ruling** (25 Aug ~10:45): his follow-up after a rung's report opens its OWN
+named line on the row rather than counting against the rung's ceiling — so a session obeying him
+can no longer be in breach for obeying him. The rung's own 14.52 stands separately, unchanged.
+
+**WHAT WAS CLOSED.** S5-X's close named one gap out loud and left it: the runbooks still described
+the clipboard capture path. That is doc-truth drift of exactly the class checkall §6 exists for —
+a document describing a mechanism is a copy of it, and this copy was two rulings behind.
+- `README_FOR_ANY_SESSION.md` — the per-step loop's capture move is now
+  `node capture.mjs save <STEP> --from-file <path>`, with the clipboard named as the human
+  fallback that dies during a fault window; the tool table says the same; **`snapshot.mjs` is now
+  a row carrying the run-it-BEFORE-you-edit instruction**, which is the thing every rung after this
+  one has to know or checkall §7 will refuse it.
+- `DO_THIS.md` and the README loop carry a **SUPERSEDED banner** naming both rulings — transport
+  (the session drives his Chrome; he is fallback for login walls only) and capture (`--from-file`)
+  — and pointing at ▶ RESUME HERE as the authority over the page.
+- `checkall` §5's tool scan matches `node <name>.mjs`, so the README now names snapshot.mjs in
+  that exact form: **9 tools → 10.** The gate covers the new instrument instead of ignoring it.
+
+**WHAT WAS DELIBERATELY NOT DONE, and why it is not laziness.** The driver card was NOT rewritten.
+No sweep has run once; rewriting a keystroke card for a lane nobody has driven is a guess, and
+S5-W refused the same rewrite for the same reason. **Declaring drift and guessing its fix are
+different acts** — this addendum does the first.
+
+**GATES, re-run after every edit above:** `node snapshot.mjs take --why "..."` twice (the follow-up
+edits are themselves under the gate they installed) · `node checkall.mjs` → **§3 §4 §5 §6 §7 green,
+§1 §2 still RED on the clipboard, unchanged** · `node snapshot.mjs check` → OK 65/65, 5 snapshots ·
+`node scripts/rails.mjs orders` → open order clean, 0 blocking.
+
+**THE FORK IS UNCHANGED AND STILL THE ARCHITECT'S.** Nothing here touches it: the runbooks were
+prose, and the red is a gate. `queue\2026-08-25_1100-s5x-1.md` stands as written.
