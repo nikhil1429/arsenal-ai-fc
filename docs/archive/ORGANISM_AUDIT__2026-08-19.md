@@ -923,11 +923,28 @@ STATUS (update this block before any session stops — this is the handoff)
                                    outright · Q-E = sweep proceeds either way, the close REPORTS
                                    the raw/lossy split (>50% lossy ⇒ flagged + a named S6 input).
                                    **THE SWEEP'S OWN LINE, restated here so nothing is looked
-                                   up.** MODEL: Opus 5 · effort HIGH. **EXECUTION BUDGET:
-                                   FRESH 30 corrected lakh, written by the ruler ~13:10** (the
-                                   22.29 bought the rendered-vs-raw trap class, the substitution
+                                   up.** MODEL: Opus 5 · effort HIGH. **BUDGET RULED 26 Aug
+                                   ~00:40 (RULING__2026-08-26_0015-s5z2-1.md): 30 BUILD/
+                                   EXECUTION + 10 HANDOFF, both ruler-written** (the 22.29
+                                   bought the rendered-vs-raw trap class, the substitution
                                    discovery and a correct halt — spent, not wasted; no stub is
-                                   inherited). Gates re-run IN YOUR OWN SESSION, never inherited:
+                                   inherited). STANDING FROM THAT RULING: every ceiling now
+                                   carries a HANDOFF line (5 flat for micro-rungs — rule 7's
+                                   mandatory work, finally priced; model = BUILD · PROOF ·
+                                   HANDOFF · HIS-FOLLOW-UP · FINDINGS, findings opening
+                                   PROVISIONALLY on a bite-proof and ratified at the next
+                                   drain) · a bite-proof must be IDEMPOTENT (run twice, bites
+                                   twice) · every FORBIDDEN line implicitly permits the rung's
+                                   own diag/proofs_<rung>.mjs harness · SWEEP WARNING: a
+                                   contradiction whose BOTH sides live in THIS order or in
+                                   queue\RULING__* is staleness-suspect FIRST, finding second
+                                   (the cut's copy of this order is five rungs stale by
+                                   construction — declared, correct, and not a defect).
+                                   S5-POST's backlog (row written when the sweep closes):
+                                   local-git+archivist test · roster declare-or-die flip ·
+                                   sha-algorithm self-description (the freeze is sha1/16 by
+                                   design at capture.mjs:435 — checkers read the algorithm off
+                                   the file, never re-hash a live freeze). Gates re-run IN YOUR OWN SESSION, never inherited:
                                    `node checkall.mjs` GREEN and `node preflight.mjs` GO.
                                    **checkall is 8 sections since S5-Z2: section 8 RED means
                                    something WROTE into sweep state during that very run, and it
