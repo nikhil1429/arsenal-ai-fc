@@ -1113,11 +1113,25 @@ STATUS (update this block before any session stops — this is the handoff)
                                    firing"). Reads and file edits survived; PowerShell, Bash writes
                                    and even `node scripts/rails.mjs orders` did not. Default
                                    permission mode, or a fresh session.
-                                   ⛔ **AND ITS COMMIT WAS NEVER MADE** — the ~04:00 PROGRESS entry
-                                   and these ticks are written but UNCOMMITTED and UNPUSHED, and
-                                   §3-C's check never ran. **First act of the next session: run
-                                   `node scripts/rails.mjs orders`, then commit and push what is
-                                   already in the working tree.** Nothing else is owed first.
+                                   ✅ THAT COMMIT WAS MADE BY THE ARCHITECT ~04:15 (`bfd7f0d`,
+                                   §3-C clean, pushed) — the hand-forward pattern worked first
+                                   use. RULED ~04:15 (RULING__2026-08-26_0400-s5corpus-1.md),
+                                   all three on the row now: **(1) the outbound transport is
+                                   RATIFIED** — clip SHA → in-page SHA → box SHA → SENT-turn
+                                   SHA; the sent-turn read-back is STANDING OUTBOUND LAW, every
+                                   lane, S6 onward · **(2) the corpus half is MULTI-SESSION**,
+                                   resumed chat-by-chat off answers/; sequence unchanged;
+                                   S5-Z4 NEVER interleaves a half-driven corpus (runs only
+                                   after B18) · **(3) sweep sessions run in DEFAULT permission
+                                   mode, never auto**; a shell-less session writes the record
+                                   with file tools and hands the commit forward in the open ·
+                                   **(4) the rendered read's standing route is the object-URL
+                                   download** (in-page digest, disk re-check, full 32 bytes —
+                                   no clipboard); the clipboard survives ONLY in the raw leg's
+                                   Copy button, dead = the declared --lossy fallback · the
+                                   clipboard fault now has TWO measured faces (handle-0 windows
+                                   AND lock-held ExternalException windows) — S11's lead
+                                   RE-OPENED with a holder-identification step, post-reboot.
                                    STATE OF CHAT B01 (`gemini.google.com/app/680faea2165843fe`,
                                    account nikhil.panwar2914, Pro Extended, 10 attachments):
                                    **OPEN AND CLEAN, two turns in.** B01_1 captured RAW, probe
