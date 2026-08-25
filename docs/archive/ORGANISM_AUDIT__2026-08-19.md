@@ -842,6 +842,40 @@ STATUS (update this block before any session stops — this is the handoff)
                                      two snapshots it creates, so it leaves no trap in the store.
                                    ☑ checkall GREEN all 8 sections · preflight GO, both RUN IN THIS
                                      SESSION, never inherited. Snapshots taken before every edit.
+  ⛑ S5-Z2 RAISED SIX, NONE BLOCKING ... **`queue\2026-08-26_0015-s5z2-1.md` — open. THE SWEEP
+                                   DOES NOT WAIT ON IT; if only Q-1 is ruled, the sweep starts on
+                                   that answer alone.** Written to the queue directory, not to his
+                                   clipboard — his ~14:10 ruling, first rung to apply it end to end.
+                                   THREE DECLARED DEPARTURES for ratification: the effect-gate
+                                   covers MORE subject than the ruling's words (the freeze's whole
+                                   declared set + .checkall.preserved/, because a manifest stays
+                                   byte-identical while its chunk is rewritten underneath it) · a
+                                   third file was created (the proofs harness, on the S5-X/Y/Z
+                                   precedent) · **and NO findings line was opened though Q-A would
+                                   have allowed one — the one bite-proven defect was in this rung's
+                                   own new code, and an executor who opens its own line has no
+                                   ceiling at all.**
+                                   ⛔ **Q-1 IS THE ONE THAT MATTERS BEFORE THE SWEEP SPENDS A
+                                   PASTE: the ceiling model still is not pricing these rungs, and
+                                   S5-Z2 is the FIRST rung ruled under the completed Q-A model —
+                                   BUILD 3 + PROOF 3, both ruler-written — and it went +234%,
+                                   the worst of the five.** Measured split of its 20.05: ~15 build
+                                   and proofs, **~5 the HANDOFF ITSELF** (RESUME + §10-C + PROGRESS
+                                   + addenda + five commits), which §10-D rule 7 makes mandatory on
+                                   every rung and which NO ceiling on this ladder has ever priced.
+                                   Rec: **A + D** — every ceiling gains a written HANDOFF line
+                                   (~5, ruler-written), and the sweep specifically gets 30 + a named
+                                   handoff line, because a mid-corpus halt costs paid answers and a
+                                   re-orientation tax that a micro-rung's halt does not. Explicitly
+                                   NOT recommended: re-basing the ladder off the five samples this
+                                   executor produced — those estimates are the thing under suspicion.
+                                   The other five (all "later, by the rung that owns the class"):
+                                   a bite-proof must be proven IDEMPOTENT or it passes once and
+                                   lies after · the un-owned-check class rides S6's registry ·
+                                   the stale-order contradiction class stays a written warning now
+                                   and a re-cut exclusion later · the sha1/sha256 split is
+                                   post-sweep and the fix is to READ the algorithm off the file,
+                                   never to re-hash a live freeze.
   ⚠ THE S5-PRE PIN HAS MOVED, MEASURED AT S5-Z2's CLOSE — recorded, NOT acted on, and the
                                    sweep does NOT wait on it. S5-PRE pinned the two dirty .md files
                                    whose WORKING-TREE bytes went into the canon cut:
