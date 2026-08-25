@@ -902,7 +902,111 @@ STATUS (update this block before any session stops — this is the handoff)
                                    "whichever session remembers" is his design-failure law exactly.
                                    One line in checkall §5 would end it; it is out of this rung's
                                    FORBIDDEN boundary, so it is written here and not built.
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — RESUMED. Its own session, and it needs NO
+  S5 THE SWEEP · RESUMED, THEN HALTED AGAIN ... **26 Aug 2026 ~01:12 IST · Opus 5 · effort HIGH ·
+                                   30 execution + 10 handoff ruled. TWO LOADS FIRED, ONE PASS, ONE
+                                   FAIL. ZERO audit questions asked.** Full account in the PROGRESS
+                                   entry of 26 Aug ~01:12 — read that, not this summary.
+                                   ☑ gates RUN IN THIS SESSION, never inherited: checkall GREEN all
+                                     8 sections · preflight GO, 18 checks. **The clipboard was ALIVE
+                                     at open** (preflight 4C), so Q-C's free live probe RAN.
+                                   ☑ **A01 RE-CAPTURED THROUGH THE RAW PATH AND ITS PROBE PASSED
+                                     2/2** — copy-gate 55/55 content lines, 2602 raw chars against a
+                                     2522-char rendered read. **S5-Z's open item (C) is CLOSED: the
+                                     raw path has now touched a live Gemini answer.** And it settles
+                                     the 25-Aug halt as a CAPTURE fault, not a model fault — the same
+                                     answer, the same chat, byte-strict PASS once captured RAW.
+                                   ☑ A02 fired clean and the outbound law held harder than asked: the
+                                     compose box's own SHA256 came back `46df15ed…`, byte-identical
+                                     to the step file (43 blocks, 2657 chars), 10/10 chips confirmed
+                                     BY NAME, Pro Extended read before the attach.
+                                   ⛔ **AND THE PROBE FAILED FOR THE WRONG REASON AGAIN — ONE LAYER
+                                     DEEPER THAN S5-Z. THE *RAW* PATH IS NOT THE SOURCE'S ALPHABET
+                                     EITHER.** Anchor 1 came back **233 of 234 characters identical**
+                                     and diverged at char 0: the source's `- **where:**` returned as
+                                     `* **where:**`. **Gemini re-emits a `-` bullet as `*`.** Because
+                                     the divergence is at char 0 the head-match cannot fire, so
+                                     probecheck calls it MISS — *"not present in the reply at all —
+                                     the text did not reach the model"* — the most alarming verdict
+                                     available, on a line that plainly reached the model.
+                                   ⛔ **AND ANCHOR 2 IS A GENUINE RECONSTRUCTION, which no marker fix
+                                     rescues:** `**` dropped, a space removed inside the code span,
+                                     `first-class` → `FIRST-CLASS` (the emphasis survived, re-encoded
+                                     as CAPS), and the wrapped line merged with the next. Content
+                                     right, characters wrong. That is the invention outcome the probe
+                                     exists to catch — and it is still not a retrieval failure.
+                                   ⛔ **BLAST RADIUS, MEASURED ACROSS ALL 46 STORED ANCHORS: 13/46
+                                     (28%) are `-`-bullet-led · 21/46 (46%) carry `**` · 23/46 (50%)
+                                     are markdown-BEARING at all · and 20 of 23 CHAT GROUPS (87%)
+                                     hold at least one.** The same shape and almost the same number
+                                     as the 25-Aug halt (86%), one layer down. Numbered lists are NOT
+                                     affected — A01's `1. **THE MISSIONS DESK**…` passed RAW today, so
+                                     `1. ` survives the Copy button while `- ` does not.
+                                   ☑ THE INSTRUMENT IS NOT AT FAULT — verified, never assumed: both
+                                     anchors and both expected `next` lines are byte-identical to the
+                                     frozen chunks (`anchor==file[i]` and `next==file[i+1]`, both).
+                                   ⛔ **NOT PATCHED, DELIBERATELY — §10-D rule 10 + rule 6, and S5
+                                     BUILDS NOTHING.** Teaching the comparator to forgive markers is
+                                     the lazy fix S5-Z already BITE-PROVED as refused: it loosens the
+                                     byte-strict gate that catches truncation. And the written
+                                     fallback is premised on "the text did not reach the model",
+                                     which the evidence contradicts — entering it would spend pastes
+                                     re-cutting canon to cure a disease it does not have.
+                                   ⛑ **ESCALATED AND HALTED:** `queue\2026-08-26_0112-s5sweep-2.md`,
+                                     written to the queue directory (his ~14:10 ruling — the clipboard
+                                     is retired as a sync channel). Options A–D with costs;
+                                     **recommendation A + C(c3)** — a micro-rung that fixes the
+                                     ALPHABET rather than the strictness (the S5-Z move one layer
+                                     down), plus a fenced-answer prompt that suppresses Gemini's
+                                     markdown serializer at the source. FOUR THINGS NEEDED BACK, and
+                                     the second is the big one: **what a FIDELITY-fail means when the
+                                     model demonstrably holds the text** (c1 byte-strict and rewrite
+                                     the fallback · c2 two-tier receipt, split reported at close ·
+                                     c3 fence the answer). Anchor 2 fails under every marker fix.
+                                   ✅ NOTHING IS SPOILED: zero audit questions asked · no attachment
+                                     trusted · nothing re-asked, nudged or hinted · no instrument
+                                     edited · no gate weakened · frozen inputs untouched (201 files,
+                                     unchanged). A02's answer is on disk, uncontaminated, and can be
+                                     re-checked for FREE once the comparator is ruled on.
+                                   ⚠ **ONE DECLARED DEPARTURE, FOR RATIFICATION — the rendered read's
+                                     transport.** The ruling names `get_page_text`, which pulls the
+                                     WHOLE page into the driving session's context, against
+                                     capture.mjs's own stated law: *"the payload must never enter a
+                                     Claude context at all"*. A01 was hand-transcribed (~700 tokens,
+                                     and the design's own warning about ~40 answers makes that
+                                     unrunnable at scale). **A02 took a page→clipboard→disk hop made
+                                     STRONGER than the ruled path:** the page computes SHA-256 of the
+                                     answer element's own `innerText`, the shell reads the clipboard
+                                     back, normalises the 79 CRs Windows adds, and REFUSES to write
+                                     the file unless the digest matches the page's (it did —
+                                     `4df0f4f1…`, 2923 chars). The rendered read is *cryptographically*
+                                     this answer rather than *asserted to be*, at zero context cost.
+                                     ⚠ The hazard it creates and closes: rendered read and raw payload
+                                     now share the clipboard, so a stale clipboard could make them
+                                     equal and the copy-gate would compare an answer against itself
+                                     and pass vacuously. **The in-page digest assert is what forbids
+                                     that**, and the order — rendered first, hash-checked, THEN Copy
+                                     for raw — is load-bearing.
+                                   ⚠ **A TRANSPORT TRAP THE RUNBOOK DOES NOT NAME, measured today:**
+                                     a COORDINATE click never focuses Gemini's compose box (activeElement
+                                     stays BODY and the typing goes nowhere — silently, one whole
+                                     43-line composition lost to it). **Only a `ref` click focuses it.**
+                                     Same silent-failure family as the newline and Ctrl+V traps in
+                                     `diag\COUNT_PROBE_RESULT.md`. Assert `isContentEditable` on the
+                                     active element BEFORE composing; the SHA gate caught it after.
+  ▶ NEXT SESSION ............... **A RULING IS OWED FIRST — `queue\2026-08-26_0112-s5sweep-2.md`.
+                                   THE SWEEP IS HALTED AND MAY NOT RESUME ON THIS SESSION'S OWN
+                                   JUDGEMENT** (§10-D rule 13: the fork is real — three written laws
+                                   point three ways, and 87% of the sweep is exposed). Once ruled:
+                                   if A, it is **MICRO-RUNG S5-Z3 · THE ALPHABET FIX — Opus 5 ·
+                                   effort HIGH**, ceiling BUILD + PROOF + HANDOFF written by the
+                                   RULER at ruling time (the 26-Aug standing model), and its §10-C
+                                   row written in the same act. **THEN the sweep resumes from A02**
+                                   — its answer is already on disk and re-checks for free, so a
+                                   comparator fix costs zero pastes to validate. Everything else on
+                                   this row still stands unchanged: the transport laws, the capture
+                                   commands, the gates-in-your-own-session rule, and the budget model.
+                                   (The row below is the sweep's own line, kept verbatim.)
+                                 **S5 · THE SWEEP — RESUMED. Its own session, and it needs NO
                                    further word from anyone** (his GO of 25 Aug ~09:15 stands; the
                                    architect's ruling of ~14:20 closed the last pre-condition when
                                    S5-Z2 landed). The pre-sweep ladder is finished: S5-Z built the
@@ -2570,6 +2674,25 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       obeyed: STOPPED, recorded, handed off. See the RESUME block and the PROGRESS entry of
       20 Aug ~12:30. The execution half runs from the working folder's DO_THIS.md on a fresh
       session at an EXECUTION BUDGET of 20 corrected lakh (the architect's number, 20 Aug).
+      ⛔ **26 Aug ~01:12 — RESUMED, AND HALTED AGAIN AT A02. TWO LOADS FIRED, ONE PASS, ONE FAIL,
+      ZERO AUDIT QUESTIONS ASKED.** A01 was re-captured through S5-Z's RAW path and **ITS PROBE
+      PASSED 2/2** — which closes S5-Z's open item (C) and settles the 25-Aug halt as a CAPTURE
+      fault, not a model fault. A02 then fired clean (box SHA256 byte-identical to the step file,
+      10/10 chips by name, Pro Extended) and its probe FAILED for a NEW reason one layer below
+      S5-Z's: **the RAW path is not the source's alphabet either.** Anchor 1 returned 233 of 234
+      characters identical, diverging at char 0 — Gemini re-emits a `-` bullet as `*` — and because
+      the head cannot match, probecheck reports the friendliest possible case as "the text did not
+      reach the model". Anchor 2 is a genuine RECONSTRUCTION (`**` dropped, `first-class` →
+      `FIRST-CLASS`, the wrapped line merged) that no marker fix rescues. Measured across all 46
+      stored anchors: **23/46 (50%) are markdown-BEARING and 20 of 23 chat groups (87%) hold at
+      least one** — the 25-Aug shape (86%) repeating one layer down. Both anchors verified
+      byte-identical to the frozen chunks first, so the instrument is not at fault. NOT patched —
+      the comparator fix loosens a byte-strict gate (rule 6, bite-proven refused at S5-Z) and S5
+      builds nothing. ESCALATED: `queue\2026-08-26_0112-s5sweep-2.md`, recommendation A + C(c3).
+      ONE DECLARED DEPARTURE for ratification: the rendered read now travels page→clipboard→disk
+      under an in-page SHA-256 assert instead of `get_page_text`, because the ruled path pulls every
+      answer through the driving session's context — against capture.mjs's own stated law. Frozen
+      inputs untouched; A02's answer is on disk and re-checks for free.
       ⛔ **25 Aug ~12:50 — THE EXECUTION HALF OPENED AND HALTED AT ITS FIRST PROBE.** A01 fired
       (prompt proven byte-exact into the box by sha256; 10/10 chips; Pro Extended). The probe
       FAILED FOR THE WRONG REASON: `get_page_text` returns markdown-CONSUMED text while probecheck
@@ -5866,3 +5989,115 @@ exactly what S5-R2 certified.** Two hash algorithms in one folder with nothing d
 which is a five-minute panic for every session that verifies the freeze by hand. NOT changed —
 re-hashing a LIVE freeze mid-sweep is unthinkable — but named here, and the one-line fix (declare
 it, or read the algorithm off the file) belongs to whoever touches `capture.mjs` next.
+
+---
+
+## PROGRESS · 26 Aug 2026 ~01:12 IST · RUNG S5 — THE SWEEP, RESUMED AND HALTED AGAIN
+
+**MODEL: Opus 5 · effort HIGH. BUDGET: 30 execution + 10 handoff, both ruler-written
+(RULING__2026-08-26_0015-s5z2-1.md). COST: **24.15 lakh MEASURED AT THE CLOSE** — day line 25.71 -> 49.86 (87 turns; the same 4 sessions
+open and close, so no other session moved it). The S1 live-read lead says today reads ~+16% hot =>
+**~20.8 true. UNDER CEILING, and it is the first rung in six that did not breach** — because the
+rung halted where its law said halt rather than building past the red. Read from the meter at the
+commit, never estimated mid-flight (S5-X precedent, sixth application).**
+
+Router obeyed (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐). Micro-order written to the
+session scratchpad BEFORE any action (rule 9) and checked against §10-C's S5 row and §10-D 1–13.
+
+**TWO LOADS FIRED. ONE PASS, ONE FAIL. ZERO AUDIT QUESTIONS ASKED.** No instrument was edited, no
+gate weakened, nothing re-asked or nudged, and the frozen inputs are byte-identical at open and
+close (201/201, verified with the freeze's own sha1/16 — the algorithm read off the file, per the
+S5-Z2 addendum, never re-hashed).
+
+### THE HEADLINE — S5-Z's FIX IS PROVEN, AND THE PREMISE UNDER IT IS MEASURED FALSE
+
+**A01 re-captured through the RAW path and ITS PROBE PASSED, 2/2 anchors.** Copy-gate 55/55 content
+lines, 2602 raw chars gated against a 2522-char rendered read. That closes **S5-Z's open item (C)**
+— the raw path had never touched a live Gemini answer, only fixtures — and it settles the 25-Aug
+halt: same answer, same chat, byte-strict PASS once captured RAW. The 25-Aug diagnosis was right.
+
+**A02 then failed its probe for a NEW reason, one layer below S5-Z's.** S5-Z's finding was
+*rendered-vs-source* (innerText consumes markdown). This one is *the model's markdown dialect vs the
+source's*, and **the RAW path does not escape it**:
+
+| anchor | what came back |
+|---|---|
+| ANCHOR 1 (chunk20.txt:1461) | **233 of 234 characters identical.** Source `- **where:** scripts/shadow.mjs:214-236 …` came back `* **where:** scripts/shadow.mjs:214-236 …`. **Gemini re-emits a `-` bullet as `*`.** |
+| ANCHOR 2 (chunk16.txt:1229) | A genuine RECONSTRUCTION: `**` dropped, a space removed inside the code span, `first-class` became `FIRST-CLASS` (emphasis re-encoded as CAPS), and the wrapped line merged with the next. |
+
+Anchor 1's divergence is at **char 0**, so probecheck's head-match test cannot fire and it reports
+MISS — *"not present in the reply at all — the text did not reach the model"*. **The friendliest
+possible case produces the most alarming possible verdict.** Anchor 2 is a real fidelity failure and
+no marker fix rescues it: the model demonstrably HELD the text and would not quote it verbatim.
+
+**THE INSTRUMENT WAS CLEARED FIRST, BY RUNNING, NOT ASSUMED:** both anchors and both expected `next`
+lines are byte-identical to the frozen chunks (`anchor == file[i]` and `next == file[i+1]`, all four).
+
+### BLAST RADIUS — MEASURED ACROSS ALL 46 STORED ANCHORS, NOT ESTIMATED
+`-`-bullet-led **13/46 (28%)** · carrying `**` **21/46 (46%)** · **markdown-BEARING at all 23/46
+(50%)** · **chat groups holding at least one such anchor: 20 of 23 (87%)**. Numbered lists are NOT
+affected — A01's `1. **THE MISSIONS DESK**…` passed RAW today, so `1. ` survives the Copy button and
+`- ` does not. **The 25-Aug halt measured 86% on the layer above. This is the same shape, one layer
+down.**
+
+### NOT PATCHED — DELIBERATELY, AND THREE WRITTEN LAWS SAY SO
+`S5 BUILDS NOTHING` (the row) · a comparator that forgives markers LOOSENS the byte-strict gate that
+catches truncation, which is the lazy fix S5-Z already BITE-PROVED as refused (rule 6) · and rule 10
+forbids pushing past a red proof. The written fallback (`FALLBACK_canon_split.txt`) is premised on
+"the text did not reach the model", which this evidence contradicts, so entering it would spend
+pastes re-cutting canon to cure a disease it does not have. **ESCALATED, not improvised:**
+`queue\2026-08-26_0112-s5sweep-2.md`, written to the queue directory (his ~14:10 ruling — the
+clipboard is retired as a sync channel between sessions). Options A–D with costs, recommendation
+**A + C(c3)**: a micro-rung that fixes the ALPHABET rather than the strictness, plus a fenced-answer
+prompt that suppresses Gemini's serializer at the source. **Four things needed back, and the second
+is the big one: what a FIDELITY-fail means when the model demonstrably holds the text.**
+
+### A FIFTH FINDING, FOUND BY RUNNING THE GATES AT CLOSE — IT BITES THE NEXT SESSION
+**The router orders every sweep session to run `checkall.mjs` GREEN before touching the browser.
+After the first answer lands it can never be green again:** section 3 refuses — correctly — to
+simulate over real answers (`answers/ is not empty (2 file(s))`), and its remedy line ("clear them")
+would delete paid answers. `preflight.mjs` handles the identical condition properly: it WARNS
+"unless this is a resume" and still says GO. Two written laws, opposite directions, met before the
+next session's first paste. Not patched (a gate's behaviour is a ruling, not an executor's call);
+recommendation (i) — section 3 SKIPS loudly in resume mode so the two gates agree on one condition.
+**What this session can honestly claim: checkall GREEN 8/8 AT OPEN, and at CLOSE 7 green with
+section 3 refusing on the resume condition. preflight GO both times.**
+
+### AND THE FIRST LIVE PROOF OF S5-Z's ANSWER-PRESERVE FIX, ON A REAL PAID ANSWER
+checkall section 4 plants fixtures directly onto `answers/A01.txt` — the class that silently ate the
+paid A01 on 25 Aug. It has never run with a real answer on disk since S5-Z fixed it. It ran today
+with two: **A01 `bd5b8c1c953707d4` and A02 `1af4858df4c7b03f`, byte-identical before and after**,
+and **section 8, the effect gate, green over 206 tracked files at all 7 section boundaries**. The
+gate that would have caught the theft, and the fix that prevents it, both proven on live evidence.
+
+### DECLARED DEPARTURE, FOR RATIFICATION — THE RENDERED READ'S TRANSPORT
+The ruling names `get_page_text` for the rendered read. It returns the WHOLE page into the driving
+session's context, against `capture.mjs`'s own stated law: *"the payload must never enter a Claude
+context at all"* — written because ~40 answers at tens of thousands of tokens each is exactly what
+breaks this rung's ceiling. A01 was hand-transcribed (~700 tokens) and verified by hash. **For A02 I
+took a page-to-clipboard-to-disk hop and made it STRONGER than the ruled path:** the page computes
+SHA-256 of the answer element's own `innerText`, the shell reads the clipboard back, normalises the
+79 CRs Windows adds, and **REFUSES to write the file unless the digest matches the page's** — it did,
+`4df0f4f1…`, 2923 chars. The rendered read is now *cryptographically* this answer instead of
+*asserted to be*, at zero context cost.
+⚠ **The hazard it creates and closes, and why it needs ratifying:** rendered read and raw payload now
+share the clipboard, so a stale clipboard could make them equal and the copy-gate would compare an
+answer against itself and pass vacuously. **The in-page digest assert forbids exactly that**, and the
+ORDER is load-bearing: rendered first, hash-checked, THEN Copy for raw.
+
+### A TRANSPORT TRAP THE RUNBOOK DOES NOT NAME — MEASURED, AND IT COST A WHOLE COMPOSITION
+**A coordinate click never focuses Gemini's compose box.** `document.activeElement` stayed `BODY`,
+and a full 43-line composition typed into nothing — silently, no error, no visible change. **Only a
+`ref` click focuses it.** Same silent-failure family as the Ctrl+V and eaten-newline traps in
+`diag\COUNT_PROBE_RESULT.md`, and it is the outbound SHA gate that caught it (box hash of an empty
+string). **Assert `isContentEditable` on the active element BEFORE composing.** The ruled outbound
+law then held perfectly on the retry: box SHA256 `46df15ed…`, 43 blocks, 2657 chars, byte-identical
+to the step file, with 10/10 chips confirmed by name and Pro Extended read before the attach.
+
+### STATE THE NEXT SESSION INHERITS
+`answers/` holds A01 (RAW, probe PASS 2/2) and A02 (RAW, probe FAIL) with their stamps; both are
+uncontaminated and **A02 re-checks for FREE once the comparator is ruled on — a fix costs zero
+pastes to validate.** Inputs frozen and unmoved (201 files, frozen 25 Aug 12:47). The canon chat is
+`0890cd7ebfcd1ff6` with parts 1 and 2 loaded; part 3 (A03) was NOT fired. Clipboard ALIVE all
+session — the first sweep session in which it never faulted. **THE SWEEP MAY NOT RESUME ON A
+SESSION'S OWN JUDGEMENT: the ruling is owed first.**
