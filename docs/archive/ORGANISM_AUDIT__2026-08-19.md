@@ -373,7 +373,7 @@ STATUS (update this block before any session stops — this is the handoff)
   S5-W THE CANON WIRING ........ ☑ DONE 25 Aug 2026 ~10:40 IST · Opus 5 · effort high · TIER-0,
                                    ZERO Gemini calls, ZERO sweep questions, frozen inputs PROVABLY
                                    untouched (218/218 fingerprints identical, before vs after).
-                                   Cost 15.4 of the 25-lakh ceiling. Full account in the PROGRESS
+                                   Cost 16.47 of the 25-lakh ceiling. Full account in the PROGRESS
                                    entry of 25 Aug ~10:40 — read that, not this summary.
                                    ☑ OPTION A WIRED: the canon path reads `PER` like the corpus
                                      path always did. **A01/A02/A03 = 10+10+7 in ONE chat**, each
@@ -4249,7 +4249,8 @@ them has passed — but it must be said rather than discovered: **the canon chun
 class as S5-PRE's pin, and it recurs for every rung until the sweep closes. Do NOT re-cut to "fix"
 it; a mid-sweep rebuild moves the haystack under answers already collected.
 
-**COST: 15.4 corrected lakh of the 25 ceiling** (meter 234.43 → 249.8 on the day's line; the S1
+**COST: 16.47 corrected lakh of the 25 ceiling** — measured at the commit, not estimated:
+the day's line moved 234.43 → 250.90 (the S1
 live-read lead says today's figure reads ~+16% hot, so the true number is lower). Inside budget.
 
 **NEXT SESSION: S5 · THE SWEEP, RESUMED — MODEL: Opus 5 · effort HIGH, budget 30 corrected lakh.**
