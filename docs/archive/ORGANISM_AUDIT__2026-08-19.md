@@ -213,7 +213,33 @@ STATUS (update this block before any session stops — this is the handoff)
                                      something is holding the clipboard open. checkall refusing on
                                      it is CORRECT. LEAD: the sweep travels through the clipboard
                                      and nothing retries or explains.
-  ▶ NEXT SESSION ............... **S5-R2 · THE FABLE REVIEW OF THE REBUILT INSTRUMENTS.**
+  ⚑ 25 Aug RULING · THE CORPUS QUESTION (his catch — nothing in this order forced this decision
+    BEFORE S5-R2, and deciding it after would have VOIDED the review):
+    **THE CHAT CORPUS STAYS FROZEN AT ITS 20-AUG CUT. THE CANON IS RE-CUT ONCE, NOW, BEFORE
+    S5-R2. THEN BOTH FREEZE UNTIL THE SWEEP IS DONE.**
+    WHY the chat corpus does NOT refresh: (1) the 21–25 Aug delta is mostly his SAMJHAO study
+    dialogue — his standing ruling: STUDY data, never archaeology; (2) the rest is the audit
+    talking about itself, already distilled into the queue's RULING rows + the handoff — zero
+    archaeological value; (3) Q-9 measured that exactly these sessions fork transcripts
+    pathologically (31 forks / 67 MB for ONE conversation) — a rebuild right before spending
+    his pastes maximizes instrument risk for ~zero evidence gain. S6 gets the 21–25 Aug delta
+    as an INPUT instead (already on its line), where study data is handled AS study data.
+    WHY the canon IS re-cut: since the 21-Aug cut, ~3 canon files changed in ways that RESOLVE
+    the very contradictions the sweep hunts (SAMJHAO_ORDER §16 rulings · HOW_HE_LEARNS #2
+    superseded layer · this order's PROGRESS). A sweep over the stale cut would spend pastes
+    reporting already-fixed drift. The re-cut is deterministic TIER-0 (pack → probe_gen →
+    buildsteps → checkall), zero Gemini calls.
+    THE ORDERING LAW that falls out, standing: **any input refresh happens BEFORE the review
+    rung that certifies it; after the review, inputs are IMMUTABLE until the consuming run
+    ends** (the verifier already enforces the second half by refusing moved inputs).
+  ▶ NEXT SESSION ............... ☐ **S5-PRE · THE CANON RE-CUT** — a 10-minute TIER-0
+                                   micro-step, its OWN session (build and review never share
+                                   one head — the one-pass disease is documented above).
+                                   Follow the S5 folder's DO_THIS re-cut path: re-cut canon
+                                   from today's repo state → regenerate canon probes + steps
+                                   → checkall + preflight GREEN → commit. ZERO pastes, zero
+                                   model calls. Chat corpus is NOT touched (ruling above).
+  ▶ THEN ....................... **S5-R2 · THE FABLE REVIEW OF THE REBUILT INSTRUMENTS.**
                                    MODEL: **Fable 5 · effort max** (fresh weekly pool, Monday
                                    post-reset). HIS CALL, RATIFIED BY THE ARCHITECT: the week
                                    stops after the closure list; nothing more is spent until one
