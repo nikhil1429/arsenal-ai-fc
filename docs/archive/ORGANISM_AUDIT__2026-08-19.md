@@ -5804,3 +5804,14 @@ are both inside `ORGANISM_AUDIT__2026-08-19.md`, or between it and a `queue\RULI
 staleness artefact until proven otherwise: check it against the working tree before it is believed,
 and do not spend a re-ask on it. Nothing to fix — a document cannot contain the account of its own
 next rung — but a lead spent on this is a lead not spent on the organism.
+
+⚠ **AND ONE SMALL TRAP FOUND BY WALKING INTO IT, recorded so the next session does not.** The final
+check of this rung was "do all 201 frozen inputs still match the freeze" — and it came back
+**0/201**, which reads exactly like total corruption of the haystack. It was the checker, not the
+files: **`inputs_frozen.json` fingerprints with sha1/16 (`capture.mjs:435`), while everything else
+in that folder — capture's own answer stamp, `snapshot.mjs`, and this rung's effect gate — uses
+sha256/16.** Re-run with the freeze's own algorithm: **201/201, nothing moved, the haystack is
+exactly what S5-R2 certified.** Two hash algorithms in one folder with nothing declaring which is
+which is a five-minute panic for every session that verifies the freeze by hand. NOT changed —
+re-hashing a LIVE freeze mid-sweep is unthinkable — but named here, and the one-line fix (declare
+it, or read the algorithm off the file) belongs to whoever touches `capture.mjs` next.
