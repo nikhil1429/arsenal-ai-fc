@@ -368,14 +368,26 @@ STATUS (update this block before any session stops — this is the handoff)
                                    still free (the count probe was recorded BY HAND in `diag\`,
                                    never through `capture.mjs`, precisely to avoid tripping the
                                    freeze) · corpus half needs no change under any option.
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — EXECUTION, RESUMED ON THE ARCHITECT'S RULING.**
-                                   Paste the ruling in, apply it, then drive. MODEL: Opus 5 ·
-                                   effort HIGH. Execution budget 20 corrected lakh (architect's
-                                   number) — this session spent 19.60 of it on the count probe, the
-                                   transport proof and the handoff, so **the resumed session needs
-                                   its own budget line from the architect** (question 3 of the
-                                   escalation). Read `diag\COUNT_PROBE_RESULT.md` BEFORE touching
-                                   the browser — the two silent transport traps are named there.
+  ▶ NEXT SESSION ............... **S5-W · THE CANON WIRING — a micro-rung, RULED 25 Aug ~09:55
+                                   (queue\RULING__2026-08-25_0945-s5canon-1.md = the work order;
+                                   OPTION A ratified + the checkall NARRATIVE-vs-WIRING section).**
+                                   MODEL: Opus 5 · effort HIGH. **CEILING WRITTEN: 25 corrected
+                                   lakh.** Scope: wire the canon path to PER (3 loads 10+10+7,
+                                   each gated by its OWN certified probe canon_g01/g02/g03) ·
+                                   T1/T2 prose → "part N of 3" (T2's coverage language spans all
+                                   three parts) · steps 65→69 · checkall gains narrative-vs-wiring
+                                   (every "part N of M" step attaches exactly its wired files;
+                                   bite-proven plant/unplant) · re-run checkall/preflight/simulate/
+                                   verify to green · commit through the live gate. FORBIDDEN:
+                                   frozen corpus/canon bytes · any Gemini call · any sweep
+                                   question · probe regeneration unless byte-identity re-proven
+                                   (a probe that would CHANGE = STOP + escalate).
+                                   **THEN S5 · THE SWEEP — RESUMED, its own session.** MODEL:
+                                   Opus 5 · effort HIGH. **EXECUTION BUDGET WRITTEN: fresh 30
+                                   corrected lakh** (the original 20 bought the cap measurement +
+                                   transport proof; neither repeats). Read
+                                   `diag\COUNT_PROBE_RESULT.md` BEFORE touching the browser —
+                                   the two silent transport traps are named there.
                                    HIS GO STANDS, 25 Aug ~09:15, architect-recorded verbatim: "ok
                                    let's go … i am counting on you and you are the CTO from now
                                    onwards driving the entire organism." No further word is needed
