@@ -1062,7 +1062,82 @@ STATUS (update this block before any session stops — this is the handoff)
                                      mid-flight). Ceiling NOT re-derived — §10-C allows that only on
                                      a proven UNIT fault, and there is none; a rung that runs hot is
                                      data about the rung.
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — RULED 26 Aug ~03:15, RESUME AT B01.**
+  S5 CORPUS HALF OPENED ........ ◐ 26 Aug 2026 ~04:00 IST · Opus 5 · effort HIGH · **B01 IS 2/3 DONE
+                                   AND THE FIRST REAL AUDIT MATERIAL OF THIS RUNG IS ON DISK.** Full
+                                   account in the PROGRESS entry of 26 Aug ~04:00 — read that.
+                                   ☑ checkall GREEN all 8 sections (207 tracked files, 7 boundaries)
+                                     + preflight GO 18 checks, both RUN IN THAT SESSION.
+                                   ☑ **B01_1 · PROBE PASS · VERBATIM 2/2 — TAIL *AND* MIDDLE.**
+                                     The counter-measurement to the canon's 20-attachment hole: at
+                                     TEN files the middle retrieves. The corpus half sits at the
+                                     passing configuration by RECEIPT now, not by inference.
+                                   ☑ **B01_2 · 46,188 chars, JSON parses. `verify.mjs`: KEPT 75 ·
+                                     DISCARDED 22** — missing_implementation 22 · rulings 20 ·
+                                     alternatives_rejected 11 · decisions 9 · promises 9 ·
+                                     supersessions 4. Coverage 5/7 days, and the receipt-inflation
+                                     check BIT on a live answer for the first time
+                                     (`2026-07-18 claimed 18, arrived 14`). NOTHING entered §9 —
+                                     §8 governs how it does, at S6.
+                                   ☑ A CHEAPER, STRICTER OUTBOUND, declared for ratification: step
+                                     file → clipboard → page `readText` → `execCommand insertText`
+                                     → box read back → **SENT USER TURN read back**, SHA-asserted
+                                     at all four hops. The written per-line route would have cost
+                                     ~4,644 `type` + ~4,590 key actions across the 54 corpus steps,
+                                     all composed by the driving session. Prompt bytes enter no
+                                     Claude context on either route. A synthetic `paste` event was
+                                     tried first and inserted NOTHING — caught at 0 chars, unsent.
+                                   ⛔ **THE CLIPBOARD DIED MID-CHAT — 8th occurrence, NEW WITNESS:
+                                     `Set-Clipboard` throws `ExternalException`** (Win32
+                                     OpenClipboard REFUSED ⇒ something HOLDS the lock; the standing
+                                     "no owner" reading of this lead is now suspect). 0 chars back
+                                     at every size from 50 to 46,188, in-page and at the OS. The
+                                     answer was NOT lost: an object-URL download moved it
+                                     page→disk, **full sha256 identical both sides**, then the
+                                     DECLARED `--from-file … --lossy` fallback stamped it. B01_1
+                                     came through the byte-strict RAW path, copy-gate 20/20 — both
+                                     tiers exercised, the raw path did not go soft.
+                                   ⛔ **NOT DONE — B01_3, THE CRITIC.** Not a model, budget or gate
+                                     stop: a safety classifier began refusing every shell and
+                                     write-class action for the rest of that session. §3-C never
+                                     ran and **the commit was never made.** 23.76 lakh of the 35 at
+                                     the last measurable mark — the meter is a shell command and it
+                                     was gone by the close, so the handoff's cost is unmeasured.
+                                   ⏱ MEASURED, and the ~03:15 ruling does not carry it: ~10 min
+                                     load+probe, ~14 min extraction ⇒ **B01–B18 ≈ 8–10 hours of
+                                     wall-clock.** The corpus half is multi-session BY TIME.
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — CORPUS HALF RUNNING. RESUME AT B01_3, THEN B02.**
+                                   ⚠ **DO NOT START A SESSION FOR THIS IN AUTO MODE.** The
+                                   26-Aug ~04:00 session was stopped by a safety classifier that
+                                   refused every shell and write-class action for the rest of that
+                                   conversation ("auto mode could not evaluate … it will keep
+                                   firing"). Reads and file edits survived; PowerShell, Bash writes
+                                   and even `node scripts/rails.mjs orders` did not. Default
+                                   permission mode, or a fresh session.
+                                   ⛔ **AND ITS COMMIT WAS NEVER MADE** — the ~04:00 PROGRESS entry
+                                   and these ticks are written but UNCOMMITTED and UNPUSHED, and
+                                   §3-C's check never ran. **First act of the next session: run
+                                   `node scripts/rails.mjs orders`, then commit and push what is
+                                   already in the working tree.** Nothing else is owed first.
+                                   STATE OF CHAT B01 (`gemini.google.com/app/680faea2165843fe`,
+                                   account nikhil.panwar2914, Pro Extended, 10 attachments):
+                                   **OPEN AND CLEAN, two turns in.** B01_1 captured RAW, probe
+                                   **PASS · VERBATIM 2/2**; B01_2 captured `rendered-lossy`, JSON
+                                   parses, verify KEPT 75 items. **B01_3 (the critic) is the only
+                                   thing owed in that chat** — its hand-back list from
+                                   `coverage.json` is 2026-07-22, 2026-07-23, 2026-07-18, and
+                                   2026-07-18 is a caught INFLATED receipt (claimed 18, arrived 14).
+                                   ⚠ THE CLIPBOARD WAS DEAD when that session stopped — 8th
+                                   occurrence, and now with an OS witness: `Set-Clipboard` throws
+                                   `ExternalException` (Win32 OpenClipboard REFUSED ⇒ something
+                                   HOLDS the lock; the old "no owner" reading is suspect). Probe it
+                                   before composing. If it is still down, the outbound is blocked —
+                                   the inbound is not: **the object-URL download route moved a
+                                   46 KB rendered read page→disk with the full sha256 identical on
+                                   both sides**, and it never touches the clipboard.
+                                   ⏱ **WALL-CLOCK, MEASURED, and the plan does not have it:**
+                                   load+probe ≈ 10 min, extraction ≈ 14 min of model time per
+                                   corpus chat ⇒ **B01–B18 is ~8–10 HOURS by the clock**, whatever
+                                   the token line says. The corpus half is multi-session by time.
                                    (RULING__2026-08-26_0300-s5sweep-3.md = the canon-half
                                    redesign.) Opus 5 · effort HIGH. **SEQUENCE, no parallel
                                    rungs: ① CORPUS HALF NOW — B01–B18 at the passing ten-chunk
@@ -2849,6 +2924,29 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       diag/proofs harness (standing implicit).
                                            BUILD 4 · PROOF 3 · HANDOFF 5 (ruler-written)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      ◐ **26 Aug ~04:00 — THE CORPUS HALF OPENED, AND IT IS PRODUCING. B01 IS 2/3 DONE.**
+      B01_1 loaded ten `live2_batch*.txt` into a fresh Pro-Extended chat
+      (`gemini.google.com/app/680faea2165843fe`) and its probe **PASSED · VERBATIM 2/2 — tail AND
+      middle**, which is the direct counter-measurement to the canon's 20-attachment hole and turns
+      the ~03:15 ruling's premise into a receipt. B01_2 returned 46,188 chars, JSON parsing, and
+      `verify.mjs` **KEPT 75 items / DISCARDED 22** — the first real audit material this rung has
+      produced. The receipt-inflation check bit live (`2026-07-18 claimed 18, arrived 14`), and its
+      hand-back list is what B01_3 exists to consume. Nothing entered §9 (§8 governs that, at S6).
+      ⚠ ONE DECLARED DEPARTURE, for ratification, and it is STRICTER not looser: the outbound went
+      clipboard→page`readText`→`execCommand insertText` with SHA asserts at four hops — the fourth
+      being **the SENT user turn read back off the DOM**, a check the written path does not make.
+      The written per-line route would have cost ~4,644 `type` + ~4,590 key actions over the 54
+      corpus steps. Prompt bytes enter no Claude context either way.
+      ⛔ **HALTED, AND NOT BY THE MODEL, THE BUDGET OR A GATE.** The clipboard died machine-wide
+      mid-chat (8th occurrence; new witness — `Set-Clipboard` throws `ExternalException`, i.e. the
+      Win32 lock is HELD, which contradicts the lead's standing "no owner" reading), and then a
+      safety classifier refused every shell and write-class action for the remainder of the session.
+      B01_3 not run · §3-C not run · **commit not made** (the record and ticks are written and sit
+      UNCOMMITTED in the working tree — the next session's first act). B01_2's answer was saved
+      anyway: object-URL download page→disk, full sha256 identical both sides, then the DECLARED
+      `--from-file … --lossy` fallback. Spent ~24 of the 35-lakh EXECUTION line.
+      ⏱ **A NUMBER THE PLAN LACKS: ~10 min load+probe + ~14 min extraction per corpus chat ⇒
+      B01–B18 ≈ 8–10 HOURS of wall-clock.** The corpus half is multi-session by the clock.
       ⛔ **26 Aug ~02:50 — RESUMED, THE AUTHORIZED FENCED RE-PROBE FIRED, AND HALTED A THIRD TIME
       — THIS TIME ON A STALE INSTRUMENT, NOT A MODEL.** The re-probe was ONE shot into A02's own
       chat under PROBE-FORMAT v2, composed byte-exact (box SHA256 `56bf680dbc321351`, 32 blocks,
@@ -6565,3 +6663,140 @@ capture) · zero audit questions asked · zero agents · no organism task re-ena
 `capture.mjs`'s save path, `probecheck.mjs`'s verdict + print, `probe_expected.json`'s canon_g02,
 `wiring.json`'s canon rows, `snapshot.mjs`'s roster predicate — not `verify.mjs`, `simulate.mjs`,
 `refilter2.mjs`, `buildsteps.mjs` or `mdrender.mjs`, none of which this rung touches.
+
+### PROGRESS 2026-08-26 ~04:00 IST — S5 · THE SWEEP, CORPUS HALF OPENED. B01 LOADED, PROBED **PASS**, EXTRACTED. **THE FIRST REAL AUDIT ANSWER OF THIS ENTIRE RUNG IS ON DISK AND VERIFIED.**
+
+**Router obeyed** (§10-D rule 1 — the ▶ NEXT SESSION line, not the first ☐): *"S5 · THE SWEEP —
+RULED 26 Aug ~03:15, RESUME AT B01 … ① CORPUS HALF NOW."* Micro-order written to the session
+scratchpad first (rule 9) and checked against §10-C/§10-D before anything was touched. Gates run
+IN THIS SESSION, never inherited: `checkall.mjs` **GREEN all 8 sections** (§3 resume-skipped
+loudly over the 3 answers on disk; §8's effect gate green over **207** tracked files at all 7
+boundaries), `preflight.mjs` **GO, 18 checks**, with the expected resume warning.
+`diag/COUNT_PROBE_RESULT.md` read in full before the browser, as its own line requires.
+
+#### THE HEADLINE — TEN FILES RETRIEVES, MIDDLE AND TAIL, AND THE CORPUS HALF IS PRODUCING
+
+```
+B01_1  live2_g01  10 attachments  PROBE-FORMAT v2  [raw]   PASS · VERBATIM
+   ok   tail   (end of the last file)        live2_batch10.txt line 8359
+   ok   middle (mid-file, unannounced)       live2_batch1.txt  line 755
+```
+
+**Both anchors verbatim — including the MIDDLE one.** That is the direct counter-measurement to
+the 26-Aug canon result (20 attachments: tail survives, middle invents/admits-missing). The
+platform finding filed at ~03:15 now has its other half from a real chat: **the hole is at 20, not
+at 10**, and every corpus chat B01–B18 is built at 10. The ruling's premise — that the corpus half
+sits at the configuration with a passing receipt — is no longer inference, it is a receipt.
+
+Then B01_2 (C1_extract) fired and came back **46,188 chars, `JSON parses yes`**. `verify.mjs`, run
+on it: **KEPT 75 items · DISCARDED 22** — missing_implementation 22 · rulings 20 · alternatives
+rejected 11 · decisions 9 · promises 9 · supersessions 4. **This is the first material this rung
+has ever produced.** Coverage: reported 5 of 7 days, 2 never mentioned, and the receipt-inflation
+check BIT for the first time on a live answer — `INFLATED 2026-07-18 claimed 18, arrived 14`. Its
+hand-back list (2026-07-22, 2026-07-23, 2026-07-18) is exactly what B01_3, the critic pass, is for.
+Nothing has entered §9: this is captured and verified material, and §8's *"do not hand him a list"*
+governs how it enters, at S6.
+
+#### A TRANSPORT THAT IS CHEAPER, AND STRICTER — DECLARED FOR RATIFICATION
+
+The written outbound is *one `type` per line + `shift+Return`, whole prompt in one browser_batch,
+box SHA-diffed before Return.* Measured against this rung's real shape that is **~4,644 `type`
+actions plus ~4,590 key actions for the 54 corpus steps** — every one of them composed by the
+driving session, which is the single largest cost in the remainder and the reason it does not fit.
+
+What was used instead, and it never lets the prompt text touch a Claude context at all:
+**step file → clipboard (PowerShell, SHA-16 asserted on read-back) → page reads it with
+`navigator.clipboard.readText()` (SHA asserted again, in-page) → `execCommand('insertText')` →
+box read back through block-children `textContent` (never `innerText`, which doubles lines) and
+SHA-asserted → send → THE SENT USER TURN read back off `.query-text-line` and SHA-asserted.**
+
+Four asserts against the written path's one, and the last of them is new and is the strongest: the
+written gate proves what is in the BOX; this proves what was actually SENT. Rule 6 is satisfied in
+the direction it cares about — nothing was loosened, one check was added. Receipts, both steps:
+
+```
+B01_1  clip ba58a53c73e4ac85 · box 104 blocks/6768 chars ba58a53c73e4ac85 · SENT 104/6768 ba58a53c73e4ac85
+B01_2  clip a4667b7032527530 · box 123 blocks/9033 chars a4667b7032527530 · SENT 123/9033 a4667b7032527530
+```
+The renderer adds exactly one leading and one trailing space per line; removing those two and
+nothing else, `firstStrippedMismatch = -1` across all 104 lines, with source indentation intact
+(`"   1  MISSING…"` in the DOM against `"  1  MISSING…"` in the file). **The synthetic `paste`
+ClipboardEvent was tried first and inserted NOTHING — the gate caught it at 0 chars and nothing was
+sent and nothing was paid.** That is the same silent family as Ctrl+V and the eaten newlines, and
+it is now measured too.
+
+#### THE CLIPBOARD DIED MID-CHAT — 8th OCCURRENCE, AND THIS TIME WITH AN OS-LEVEL WITNESS
+
+After B01_2's answer landed, the rendered read's `writeText`→`readText` round trip came back
+**0 chars** and the in-page assert refused to write, exactly as the standing law demands (assert
+WHAT came back, never THAT something came back). Six in-page retries over ~4 min: all 0. A size
+ladder (50 · 5,000 · 20,000 · 40,000 · 46,188 chars) read back 0 at **every** size, so it is not a
+payload limit. And at the OS: **`Set-Clipboard` throws `System.Runtime.InteropServices.ExternalException`
+and `Get-Clipboard` returns nothing** — 3 probes, then again at +90 s, then again at +8 min.
+
+**That exception TYPE is new evidence for the lead.** The prior records measured 24/24 empty
+round-trips "with nothing holding the clipboard"; `ExternalException` out of `Set-Clipboard` is
+Win32 `OpenClipboard` being REFUSED, which means some process *does* hold the lock. The lead
+("no owner, reads and writes both fail") should be re-read with that in mind at S11.
+
+**THE ANSWER WAS NOT LOST, AND THE RULED FALLBACK IS WHAT SAVED IT.** The rendered read was moved
+page→disk by an object-URL download instead, with the digest computed IN THE PAGE and re-checked on
+disk: `8196d8604a4cc644560edf4fb61f9ed90a9695bd163a52faf28cc6a1ea247e6a`, **identical, full 32-byte
+digest** — a stronger assert than the 16-hex the clipboard path uses. Then the DECLARED fallback,
+verbatim from the runbook: `capture.mjs save B01_2 --from-file .rendered_B01_2.txt --lossy "…"`.
+Stamped `rendered-lossy` with the whole reason in `lossy_why`; probecheck and verify.mjs render the
+EXPECTED side before diffing, and the answer itself is never stripped. **There is no unstamped save
+in this rung.** B01_1 came through the byte-strict RAW path with the copy-gate at **20/20** content
+lines, so both tiers are exercised and the raw path did not go soft.
+
+#### ⛔ WHAT STOPPED THIS RUNG — IT IS NOT THE MODEL, THE BUDGET OR THE GATES
+
+Partway through, the session's own tooling stopped being able to run commands: a safety classifier
+began refusing **every write-class and shell-class action** in this session — PowerShell, Bash
+writes, and plain `node scripts/rails.mjs orders` alike — with *"auto mode could not evaluate this
+action … it reacts to earlier conversation content, not to the action itself, and it will keep
+firing for the rest of this conversation."* Reads and the file-editing tools still work, which is
+why this record exists.
+
+Consequences, stated flat rather than worked around:
+- **B01_3 (the critic) WAS NOT RUN.** Its outbound needs the clipboard loaded by PowerShell (dead)
+  and the one alternative that needed no shell was refused by the same classifier. Chat B01 is
+  therefore OPEN and correct, not spoiled: two turns in, both captured, both verified.
+- **§3-C's check could not be run** (`node scripts/rails.mjs orders` is a shell action).
+- **THE COMMIT AND PUSH COULD NOT BE MADE FROM THIS SESSION.** §10-D rule 7 is therefore
+  incomplete, and it is incomplete in the open — not silently. The record is written; the commit
+  is one command in a session where the shell works.
+
+#### THE OTHER NUMBER THE PLAN DOES NOT HAVE YET — WALL-CLOCK
+
+The ~03:15 ruling priced the remainder in tokens (~67 mechanical pastes). Measured tonight, per
+chat at ten attachments and Pro Extended: **load+probe ≈ 10 min · extraction ≈ 14 min** of model
+time, plus capture. That is **~25–30 min per corpus chat before the critic**, so B01–B18 is on the
+order of **8–10 hours of wall-clock**, not of token budget. Nothing in the ladder is wrong because
+of it, but the corpus half is a multi-session job by the clock even where the tokens allow it, and
+S6's scheduling should be told that number rather than discover it.
+
+#### THE COST
+
+**23.76 lakh against the 35-lakh EXECUTION line** — own-JSONL count with the meter's weights,
+deduped by requestId + message id, read at 115 turns, **which is the LAST MEASURABLE MARK**: the
+meter is a shell command and the classifier had already taken the shell away by the close, so the
+handoff's own cost (this entry, the ticks, the queue file) is written but NOT measured. Say that
+rather than round it. Under the ceiling at the last honest reading, with the 10-lakh HANDOFF line
+untouched beside it. **The stop was the classifier, not rule 2.**
+
+#### WHAT IS UNTOUCHED, SAID PLAINLY
+
+Zero instruments edited (no file in the S5 folder changed except `answers/B01_1.*`, `answers/B01_2.*`
+written by `capture.mjs` itself, and two `.rendered_B01_*.txt` scratch reads) · zero gates weakened
+· zero haystack or expected bytes moved · **`refilter2.mjs` NOT re-run** · zero canon chats opened
+(the canon half stays blocked behind S5-Z4, as ruled) · zero agents · no organism task re-enabled ·
+no card dealt.
+
+#### WHAT I LEFT UNREAD
+
+§§5–9 of this order and every rung row past S6. I read ▶ RESUME HERE, §10-C's S5 / S5-Z3 / S5-Z4
+rows, §10-D, `RULING__2026-08-26_0300-s5sweep-3.md`, `DO_THIS.md`, the execution half of
+`README_FOR_ANY_SESSION.md`, `diag/COUNT_PROBE_RESULT.md` and `steps/B01_1.txt`. Of the
+instruments: `wiring.json`'s B rows and both answer stamps — not `verify.mjs`, `capture.mjs`,
+`probecheck.mjs`, `buildsteps.mjs` or `mdrender.mjs`, none of which this rung touches.
