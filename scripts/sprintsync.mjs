@@ -7,13 +7,19 @@
 //   `progress` block of sprint.json: what's Done, what's In Progress (his current
 //   task), and what's next. So the session-agnostic kickoff always shows his TRUE
 //   position without any manual mirroring. Automates the FRICTION, not the baking.
-// SINGLE WRITER of sprint.json's `progress` block (preserves the rest of the file).
+// SOLE WRITER of sprint.json — the WHOLE file (ownership widened from the
+//   `progress` block by the architect's Q-8 ruling, 25 Aug 2026: the file had a
+//   declared writer for `progress` and NO legal writer for anything else, so his
+//   order "reset all of the dates" had no path that wasn't a hand edit).
+//   `sync` still touches only `progress`; `set-start` is the owner's path to the
+//   one other movable value. Everything still goes through writeAtomic.
 // CONFIG: dressing-room/state/sprint_config.json (gitignored) → { sheet_id, gid }
 //   or env ARSENAL_SPRINT_SHEET / ARSENAL_SPRINT_GID. Absent → graceful no-op.
-// MODES: sync (default) · selftest
+// MODES: sync (default) · set-start <YYYY-MM-DD> · selftest
 // ============================================================================
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -112,6 +118,27 @@ async function sync({ fetchFn = fetch, now = new Date() } = {}) {
   return { ok: true, progress };
 }
 
+// set-start — the owner's path for moving sprint.json's `start`, HIS order only.
+// (23 Aug 2026: "see at the sprint file, reset all of the dates in it. i am
+// starting now." · confirmed 25 Aug: "let's start from today" — Q-8.) Moving
+// `start` re-bases what "week N" resolves to in every consumer, so the old value
+// is LAYERED into start_history (Law 9), never lost. sprints[].dates stay as the
+// xlsx parse wrote them — they are the June plan's record, not live arithmetic.
+function setStart(dateStr, { now = new Date(), path = SPRINT } = {}) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "") || isNaN(Date.parse(dateStr))) {
+    console.log(`sprintsync: set-start needs a real YYYY-MM-DD (got "${dateStr}") — nothing written.`);
+    return { ok: false, why: "bad-date" };
+  }
+  const sprint = readJson(path);
+  if (!sprint || !sprint.start) { console.log("sprintsync: sprint.json missing or has no start — nothing written."); return { ok: false, why: "no-file" }; }
+  if (sprint.start === dateStr) { console.log(`sprintsync: start already ${dateStr} — nothing to do.`); return { ok: true, why: "noop" }; }
+  sprint.start_history = [...(sprint.start_history || []), { start: sprint.start, superseded: now.toISOString(), by: "captain's order (Q-8, architect-ruled 25 Aug 2026)" }];
+  sprint.start = dateStr;
+  writeAtomic(path, sprint);
+  console.log(`sprintsync: start → ${dateStr} (was ${sprint.start_history[sprint.start_history.length - 1].start}; old value layered into start_history)`);
+  return { ok: true, start: dateStr };
+}
+
 function selftest() {
   const checks = [];
   const assert = (n, c) => { checks.push(!!c); console.log(`  ${c ? "✓" : "✗"} ${n}`); };
@@ -133,6 +160,22 @@ function selftest() {
   assert("no In-Progress → first not-done row is current", p2.current.id === "1-02" && p2.current.status === "to_do");
   // graceful: junk CSV → null (never a crash / never wipes sprint.json)
   assert("unparseable board → null (keeps existing file)", boardToProgress("garbage\nno,headers,here", "x") === null || boardToProgress("", "x") === null);
+  // set-start (Q-8): on a TEMP file, never the live one — moves start, layers the
+  // old value (Law 9), refuses junk, and a no-op leaves the file byte-identical.
+  {
+    const dir = mkdtempSync(join(tmpdir(), "sprintsync-"));
+    const tf = join(dir, "sprint.json");
+    writeFileSync(tf, JSON.stringify({ start: "2026-06-20", progress: {} }));
+    const r1 = setStart("2026-08-25", { path: tf, now: new Date("2026-08-25T05:00:00Z") });
+    const after = JSON.parse(readFileSync(tf, "utf8"));
+    assert("set-start moves start and layers the old value into start_history",
+      r1.ok && after.start === "2026-08-25" && after.start_history.length === 1 && after.start_history[0].start === "2026-06-20");
+    const before = readFileSync(tf, "utf8");
+    assert("set-start to the same date is a no-op (file untouched)",
+      setStart("2026-08-25", { path: tf }).why === "noop" && readFileSync(tf, "utf8") === before);
+    assert("set-start refuses a junk date and writes nothing",
+      setStart("25-08-2026", { path: tf }).ok === false && readFileSync(tf, "utf8") === before);
+  }
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -141,6 +184,7 @@ function selftest() {
 async function main() {
   const mode = (process.argv[2] || "sync").toLowerCase();
   if (mode === "selftest") { process.exit(selftest() ? 0 : 1); }
+  if (mode === "set-start") { process.exit(setStart(process.argv[3]).ok ? 0 : 1); }
   await sync();
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
