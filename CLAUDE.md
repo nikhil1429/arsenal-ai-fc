@@ -94,6 +94,11 @@ Read `learning-layer/LEARNING_LAYER_MAP.md` first (a map; canon wins). Canon in 
 - `docs/archive/` — every record (the OVERHAUL plan + BUILD LOG `ORGANISM_OVERHAUL__2026-08-18.md`, MASTERPLAN, THE_MANAGER__Master_Prompt — canon for the gated sheet lane — the old CLAUDE.md).Records, not work orders.
 - **TWO WORK ORDERS ARE OPEN (his word, 20 Aug 2026). Read the one your session is for; never mix them.**
   A session does ENGINEERING or LEARNING, not both — no system/notes/tool work mid-concept (HOW_HE_LEARNS #12).
+
+ORDER-GATE: docs/archive/ORGANISM_AUDIT__2026-08-19.md
+
+  ↑ a CONTRACT LINE, not prose — `rails.mjs orders` (the §3-C commit gate) resolves the blocking
+  order from it and REFUSES to run if it is missing (ruled 25 Aug 2026; S10's registry absorbs it).
 - **① ENGINEERING — `docs/archive/ORGANISM_AUDIT__2026-08-19.md`** — the audit + plan order, **running in
   parallel and expected to close by end of next week (~27 Aug)**. It carries HIS INTENT (§0), HIS GATE
   CORRECTION (§1 — C is "did it reach its RIGHT consumer"), what is measured, what is known FALSE, and

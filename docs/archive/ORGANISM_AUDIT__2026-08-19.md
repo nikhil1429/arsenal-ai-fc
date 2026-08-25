@@ -605,30 +605,15 @@ the world it counted* (it added itself and LAW T to the `.md` corpus, and the co
 being written).
 
 ```bash
-node -e "
-const fs=require('fs');const F='docs/archive/ORGANISM_AUDIT__2026-08-19.md';
-const s=fs.readFileSync(F,'utf8');let bad=0;const fail=m=>{bad++;console.log('  X',m)};
-// integrity
-if(Buffer.compare(Buffer.from(s,'utf8'),fs.readFileSync(F))!==0) fail('not valid UTF-8');
-if((s.match(/\uFFFD/g)||[]).length) fail('replacement chars — an edit corrupted bytes');
-if((s.match(/^\`\`\`/gm)||[]).length%2) fail('unbalanced code fence');
-// every section reference resolves
-const H=new Set([...s.matchAll(/^##+\s+§([0-9A-Za-z-]+)/gm)].map(m=>m[1]));
-for(const r of new Set([...s.matchAll(/§([0-9]+(?:-[0-9A-Za-z]+)?)/g)].map(m=>m[1])))
-  if(!H.has(r)) fail('references §'+r+' — no such section');
-// every named repo file exists (ghost.mjs is a FINDING, not a path)
-for(const m of s.matchAll(/\`([A-Za-z0-9_\/.-]+\.(?:mjs|md|json|jsonl|vbs|bat))\`/g))
-  if(m[1].includes('/') && m[1]!=='scripts/ghost.mjs' && !fs.existsSync(m[1])) fail('names missing file '+m[1]);
-// every 'node scripts/X.mjs <verb>' exists AND the organ has that verb
-for(const [,o,v] of s.matchAll(/node scripts\/([a-z_]+)\.mjs ([a-z-]+)/g)){
-  const f='scripts/'+o+'.mjs';
-  if(!fs.existsSync(f)){fail('command names '+f+' — absent');continue}
-  const src=fs.readFileSync(f,'utf8');
-  if(!src.includes(JSON.stringify(v))&&!src.includes(\"'\"+v+\"'\")) fail(o+'.mjs has no verb '+v);
-}
-console.log(bad?bad+' PROBLEM(S)':'document structurally clean');
-"
+node scripts/rails.mjs orders
 ```
+
+**One gate, one truth (S5-R2, 25 Aug 2026, ruled).** This section used to carry its own inline
+`node -e` copy of these checks. The copy knew one hardcoded exception and none of the
+`order-check:absent-ok` declarations the real checker honours, so a session obeying rule 7
+literally saw NINE problems where the gate saw one — a second, weaker copy of a checker trains
+sessions to ignore the real one. The snippet lives in git history; the command above runs the
+same checks, over EVERY order file, with the open order blocking.
 
 **AS OF RUNG S1 (20 Aug 2026) THIS CHECK IS A COMMIT GATE**, not a thing a session must
 remember: `hooks/pre-commit` runs the archive tripwire and then `node scripts/rails.mjs orders`,

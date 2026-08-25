@@ -257,11 +257,20 @@ export function checkOrder(path, { root = ROOT } = {}) {
 // WHICH ORDER THE COMMIT GATE BLOCKS ON. Every order file is CHECKED; the gate BLOCKS
 // on the OPEN one. §10-H: "a closed record is never edited" — so a record's legacy
 // findings may never hold his commits hostage, and they are reported as LEADS instead.
-// The open order is not a list in this file either: CLAUDE.md names it, in one line,
-// and CLAUDE.md is canon (`THE OPEN WORK ORDER: \`docs/archive/X.md\``).
+// 25 Aug 2026 (S5-R2 · architect ruling RULING__2026-08-25_0805-s5pre-1): the resolver reads
+// a DECLARED contract line first — `ORDER-GATE: docs/archive/<name>.md` on its own line in
+// CLAUDE.md. The legacy phrase match below was a load-bearing match on REWRITABLE PROSE and
+// it died SILENTLY the day CLAUDE.md was reworded (dead 20-25 Aug: open null, blocking
+// permanently 0, the pre-commit hook ran and could never say no — it let a real violation
+// land). The legacy phrase STAYS as a fallback (L9 — layered, never replaced). The gate
+// blocks on the ENGINEERING order only; other orders on-board via S10's registry row,
+// never by a surprise blocking gate. S10 later absorbs this line as a registry pointer.
 export function openOrder(root = ROOT) {
   try {
-    const m = /THE OPEN WORK ORDER:?\*{0,2}:?\s*`([^`]+\.md)`/.exec(readFileSync(join(root, "CLAUDE.md"), "utf8"));
+    const s = readFileSync(join(root, "CLAUDE.md"), "utf8");
+    const g = /^ORDER-GATE:\s*(\S+\.md)\s*$/m.exec(s);
+    if (g) return join(root, g[1]);
+    const m = /THE OPEN WORK ORDER:?\*{0,2}:?\s*`([^`]+\.md)`/.exec(s);
     return m ? join(root, m[1]) : null;
   } catch { return null; }
 }
@@ -381,6 +390,22 @@ function selftest() {
   assert("ORDERS — the predicate finds the planted order in its own dir", orderFiles(tmp).length === 1);
   try { rmSync(tmp, { recursive: true, force: true }); } catch { /* temp */ }
 
+  // THE ORDER-GATE CONTRACT LINE (S5-R2, 25 Aug 2026 — the ruled repair, pinned). The old
+  // resolver matched rewritable prose and died silently when CLAUDE.md was reworded; these
+  // three hold the repaired shape: contract line wins, legacy phrase survives as fallback,
+  // and nothing-resolves is NULL so the orders CLI can refuse loudly instead of passing.
+  const gtmp = mkdtempSync(join(process.getBuiltinModule("node:os").tmpdir(), "ordergate-"));
+  writeFileSync(join(gtmp, "CLAUDE.md"), "prose above\nORDER-GATE: docs/archive/REAL.md\nand THE OPEN WORK ORDER: `docs/archive/WRONG.md` still in prose\n");
+  assert("ORDER-GATE — the declared contract line wins over the legacy phrase",
+    openOrder(gtmp) === join(gtmp, "docs/archive/REAL.md"), String(openOrder(gtmp)));
+  writeFileSync(join(gtmp, "CLAUDE.md"), "THE OPEN WORK ORDER: `docs/archive/LEGACY.md`\n");
+  assert("ORDER-GATE — the legacy phrase still resolves when no contract line exists (L9 fallback)",
+    openOrder(gtmp) === join(gtmp, "docs/archive/LEGACY.md"), String(openOrder(gtmp)));
+  writeFileSync(join(gtmp, "CLAUDE.md"), "TWO WORK ORDERS ARE OPEN - prose only, the 20 Aug rewording, no contract line\n");
+  assert("ORDER-GATE — a CLAUDE.md with neither resolves to NULL (the CLI refuses on it, never shrugs)",
+    openOrder(gtmp) === null, String(openOrder(gtmp)));
+  try { rmSync(gtmp, { recursive: true, force: true }); } catch { /* temp */ }
+
   // THE HANG, PINNED (rung S5-R, 20 Aug 2026 — session_meter selftest #16's shape, on the
   // rail organ). `pretooluse` on a non-TTY fd 0 that never closes must REFUSE fast, never
   // block: the un-guarded read blocked the full timeout window when proven live at S5-R.
@@ -412,6 +437,17 @@ function main() {
     const quiet = process.argv.includes("--quiet");
     const c = checkOrders();
     if (!c.files) { console.log("rails: no order file found in docs/archive (a docs/archive/*.md with a RESUME HERE head)"); return; }
+    // THE RATCHET (same 25 Aug ruling, part iii): an open order that resolves to NOTHING —
+    // or resolves to a file this checker never saw — is a REFUSAL, never a shrug. Five days
+    // of "I found nothing" read as "everything is fine" and let a violation through.
+    if (!c.results.some((r) => r.open)) {
+      console.log("rails: ✗ NO OPEN ORDER RESOLVES — the commit gate refuses to run blind.");
+      console.log(`       looked for: an \`ORDER-GATE: docs/archive/<name>.md\` line in CLAUDE.md (the contract),`);
+      console.log("       then the legacy phrase THE OPEN WORK ORDER: `docs/archive/<name>.md` — and the resolved");
+      console.log(`       file must be among the ${c.files} order file(s) checked. resolved: ${c.open || "null"}`);
+      console.log("       Restore the ORDER-GATE line in CLAUDE.md; do not delete this check.");
+      process.exit(1);
+    }
     for (const r of c.results) {
       const name = r.path.replace(ROOT + sep, "");
       if (r.problems.length) {
