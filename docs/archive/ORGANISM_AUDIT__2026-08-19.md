@@ -747,10 +747,16 @@ survive in §5, which rungs S4 and S5 still obey verbatim.)
 
 ```
 Open docs/archive/ORGANISM_AUDIT__2026-08-19.md. Read ▶ RESUME HERE, §10-C and §10-D.
-Execute exactly ONE rung — the first ☐ in §10-C — under its ceiling and §10-D's rules.
+Execute exactly ONE rung — the one named by ▶ NEXT SESSION in ▶ RESUME HERE (fallback, if
+that line is stale: the first ☐ in §10-C) — under its ceiling and §10-D's rules.
 Before stopping: update the ticks honestly, append a PROGRESS entry, run §3-C's check,
 commit. Then tell me: what landed, what it cost, and the one line I must decide (if any).
 ```
+*(Card v4 — ruled 25 Aug ~12:25, RULING 2026-08-25_1215-s5y-1: the router named at the point
+of use; the v3 "first ☐" wording sent a session two rungs wrong when the ladder lagged a
+ruling. TWO STANDING LAWS from the same ruling, S6 onward: a ruling that creates a rung
+writes its §10-C row in the same act · a written ceiling prices the BUILD, the PROOF carries
+its own named line, both written by the ruler at ruling time, never the executor.)*
 
 **THE HANDOFF RULE — every session that touches this file obeys it.**
 Before you stop, or when context fills: update the STATUS block above (tick what is really done,
