@@ -788,12 +788,16 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ZERO Gemini calls, ZERO sweep questions. The live sweep's freeze
                                    and both frozen input sets are BYTE-IDENTICAL at open and close,
                                    proven by the harness's own hand-back check, not by assertion.
-                                   **Cost 15.02 lakh by an own-JSONL count (63 dedup rows, meter
+                                   **Cost 20.05 lakh by an own-JSONL count (79 dedup rows, meter
                                    weights) against the written BUILD 3 + PROOF 3 — BREACHED by
-                                   9.02. The day line moved 412.15 -> 432.35 (20.20), which
-                                   over-attributes: other sessions ran in the same window, and the
-                                   own-count is the honest number. The S1 live-read lead says today
-                                   reads ~+16% hot => ~12.9 true. FIFTH straight breach; ceiling NOT
+                                   14.05. Read AT THE CLOSE, and the first draft of this line said
+                                   15.02 because it was read at the BUILD's close, before the order
+                                   edits, the pin measurement and three commits: FIFTH occurrence of
+                                   the same discipline, S5-X's precedent. The day line is no longer
+                                   usable as a cross-check — IST midnight passed mid-handoff and it
+                                   reset — which is itself why the own-count is the honest
+                                   instrument here. The S1 live-read lead says ~+16% hot => ~17.3
+                                   true. FIFTH straight breach; ceiling NOT
                                    re-derived (unit faults only, never variance) and NO line opened
                                    by me — Q-A's line is the ruler's to write, and the one defect I
                                    bite-proved was in this rung's own new code, not in a standing
@@ -2502,11 +2506,12 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       (both written by the ruler at ruling time; a FINDINGS line opens per Q-A's law only on a
       bite-proof — and none was opened here: the one bite-proven defect was in this rung's OWN new
       code, and an executor who opens its own line has no ceiling at all.)
-                                                 (spent 15.02 by an own-JSONL count with the
-                                                 meter's weights — BREACHED by 9.02, recorded, not
-                                                 patched around. The day line moved 20.20 and
-                                                 over-attributes: other sessions ran in the same
-                                                 window. Ceiling NOT re-derived: unit faults only.)
+                                                 (spent 20.05 by an own-JSONL count with the
+                                                 meter's weights, read AT THE CLOSE — BREACHED by
+                                                 14.05, recorded, not patched around. The first
+                                                 draft said 15.02 off the build's close; the meter
+                                                 said otherwise at the real one. Ceiling NOT
+                                                 re-derived: unit faults only, never variance.)
       THEN THE SWEEP NEEDS NO FURTHER WORD FROM ANYONE.
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
@@ -5642,12 +5647,16 @@ after breaking it once). **Micro-order written to the session scratchpad BEFORE 
 (rule 9): files, steps, DONE-proof commands, the FORBIDDEN list, checked against §10-C and §10-D.
 Opus 5 · effort HIGH, as the row names. Work order: `queue\RULING__2026-08-25_1410-s5z-1.md`.
 
-**COST: 15.02 corrected lakh against a written BUILD 3 + PROOF 3 — BREACHED by 9.02, recorded, not
-patched around.** Two numbers, and the difference matters: the DAY LINE moved 412.15 → 432.35
-(20.20), but twenty of his sessions ran today and the window is shared, so an **own-JSONL count**
-was taken instead — this session's transcript, deduped by the meter's own `rowKey`, weighted by the
-meter's own `W`: 63 rows, **15.02 lakh**. The S1 live-read lead (today reads ~+16% hot) puts the
-true figure near **12.9**. Ceiling NOT re-derived — §10-C's rule is unit faults only, never
+**COST: 20.05 corrected lakh against a written BUILD 3 + PROOF 3 — BREACHED by 14.05, recorded, not
+patched around.** Read at the CLOSE, and the first draft of this paragraph said 15.02 — that was the
+BUILD's close, before the order edits, the pin measurement and three commits. Fifth time a cost line
+has been corrected upward by reading the meter at the commit instead of estimating mid-flight
+(S5-X's precedent). The instrument matters here: the DAY LINE is unusable as a cross-check because
+IST midnight passed during the handoff and it reset, so the number is an **own-JSONL count** — this
+session's transcript, deduped by the meter's own `rowKey`, weighted by its own `W`: 79 rows,
+**20.05 lakh**. The S1 live-read lead (~+16% hot) puts the true figure near **17.3**. At the build's
+close it was 15.02, so roughly a quarter of this rung went on writing the record and proving the
+pin — which is the honest shape of it, not an overrun hidden in the tail. Ceiling NOT re-derived — §10-C's rule is unit faults only, never
 variance. **Fifth straight breach**, and Q-A's new law does NOT get used to excuse it: the one
 bite-proven defect found here was in this rung's OWN new code, and an executor who can open its own
 budget line has no ceiling at all. The line, if there is one, is the ruler's to write.
