@@ -239,6 +239,19 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⛔ **DO NOT re-run `refilter2.mjs` once the sweep starts** — the
                                    store is LIVE and rebuilding moves the haystack under answers
                                    already collected.
+  ⚑ 25 Aug ARCHITECT DRAIN ..... The escalation queue (Q-1..Q-23) is RULED — RULING rows at the
+                                   END of arsenal-audit-artifacts\ESCALATION_QUEUE.md. THREE
+                                   things enter THIS lane: (1) ☐ NEW MICRO-RUNG, HIS WORD —
+                                   FULL REMOVAL of the no-countdown law; the spec IS RULING Q-7
+                                   in the queue file; its own session AFTER S5-R2, never mixed
+                                   in. (2) ⛔ BINDING S12 CONSTRAINT — the capture fix (S8
+                                   spool, or minimum ONLOGON trigger + Stop-timeout ≥2000ms in
+                                   hooks/afferent-post.mjs) lands BEFORE or WITH any stage that
+                                   re-enables voice/Gaffer/Gemini. (3) sprint.json `start` →
+                                   2026-08-25 by its OWNER (sprintsync widened + `set-start`,
+                                   selftest 9/9, commit c1f41a8) — week-N re-based; his week-7
+                                   ≈ 12 Oct. S6's INPUTS line additionally inherits the queue's
+                                   TRIAGE INDEX row + ARCHITECT OS layers 3-4.
 
   ✔ THE CEILINGS ARE RE-BASELINED TWICE, AND THE SECOND TIME FROM A CORRECTED METER.
     HIS RULING, 20 Aug 2026: standard rung 40 · S10 60 · ladder total 500 — but now in
@@ -3510,3 +3523,32 @@ batches, the re-cut canon and the regenerated probes/steps **before any of his ~
 spent**; the S5-R pattern already paid for itself once. **Then** the sweep (Opus 5 · effort HIGH,
 count-probe first), **then** S6 (Fable · max). The boosted limit runs to 31 Aug, the organism is
 off, and waiting costs zero while buying a stronger gate.
+
+### PROGRESS 2026-08-25 ~08:00 IST — THE ARCHITECT DRAIN (architect-recorded; NO rung executed)
+The escalation queue Q-1..Q-23 is DRAINED — rulings live as RULING rows at the end of
+`C:\Users\nikhi\arsenal-audit-artifacts\ESCALATION_QUEUE.md`; the one-line index is in the
+handoff's 25-Aug LOG entry. Every RULE-FIRST claim was re-verified by RUNNING before ruling;
+his three words were taken in-session. What touches THIS lane:
+1. **Q-7, HIS WORD (verbatim: "remove it, make it full mental athelete level for complete
+   domination"):** FULL REMOVAL of the no-countdown law. Spec = RULING Q-7 in the queue file —
+   5 code sites (benchmark 1062 · brain 2913 · cortex 548 · dugout 1395/1780 · manager ELAPSED)
+   + the benchmark selftest assertion out WITH his word in the comment + 4 canon files layered
+   SUPERSEDED (L9). brain selftest #59 (invented-deadline bounce) STAYS. Depth laws untouched.
+   A micro-rung in its OWN session after S5-R2 — the RESUME block carries its ☐.
+2. **Q-11 ruled — no interim now; a BINDING S12 sequencing constraint instead** (capture fix
+   before/with any voice/Gaffer/Gemini re-enable). His read held: under switch-off the
+   permanent-loss mouths are shut and Claude-Code loss is transcript-recoverable.
+3. **Q-8 EXECUTED by its owner:** sprintsync.mjs widened to whole-file SOLE WRITER of
+   sprint.json + `set-start` built (selftest 9/9, temp-dir only); live `start` 2026-06-20 →
+   2026-08-25 on his word, June layered into `start_history`. Commit `c1f41a8` pushed —
+   tripwire clean, the lane's dirty files untouched. **FACT FOR S10:** the queue's "no owner"
+   claim was FALSE — sprintsync.mjs:10 declared "SINGLE WRITER" and CLAUDE.md's owners-grep
+   case-enumeration missed it. The owners law's own check is a Shape-1 instance.
+4. **S6 INPUTS folded** (the queue's TRIAGE INDEX row): Q-2/Q-15 ceiling read · Q-4 carrier ·
+   Q-5 bounded-risk + test list · Q-14 evidence-led notes law · Q-16 Fable-tier question ·
+   Q-21 output-signal (sequenced ahead of sensors) · Q-18/19 priors-not-verdicts · ARCHITECT OS
+   layers 3-4 (intake directory + ruling-compliance checker) as the rulings-lane organ.
+5. **The architect role now boots by command:** `/architect` skill (in-repo, this commit's
+   sibling). New escalations = one file each in `arsenal-audit-artifacts\queue\` (README there);
+   the Q-number lane is retired for new intake.
+LADDER UNCHANGED. ▶ NEXT = S5-R2, exactly as the router above says.
