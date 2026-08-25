@@ -1144,7 +1144,16 @@ STATUS (update this block before any session stops — this is the handoff)
                                    local-git+archivist test · roster declare-or-die flip ·
                                    sha-algorithm self-description (the freeze is sha1/16 by
                                    design at capture.mjs:435 — checkers read the algorithm off
-                                   the file, never re-hash a live freeze). Gates re-run IN YOUR OWN SESSION, never inherited:
+                                   the file, never re-hash a live freeze) · the checkall §5
+                                   pin-assert (named twice, 26 Aug — granted its row at the
+                                   ~02:55 ruling; there will not be a fourth naming).
+                                   RULED ~02:55 (RULING__2026-08-26_0240-s5z3-1.md): the one
+                                   authorized fenced re-probe = the resumed sweep's FIRST ACT,
+                                   on the sweep's budget (c3 = hypothesis until it returns) ·
+                                   SAMJHAO_ORDER pin-break treatment CONFIRMED, NO re-cut —
+                                   "the samjhao order does not say X" = staleness-suspect
+                                   FIRST, finding second (the +79/−7 delta is HIS study
+                                   progress; chunk07+chunk23 carry the 25-Aug copy). Gates re-run IN YOUR OWN SESSION, never inherited:
                                    `node checkall.mjs` GREEN and `node preflight.mjs` GO.
                                    **checkall is 8 sections since S5-Z2: section 8 RED means
                                    something WROTE into sweep state during that very run, and it
