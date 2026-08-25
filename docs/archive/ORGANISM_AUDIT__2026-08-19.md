@@ -1062,11 +1062,24 @@ STATUS (update this block before any session stops — this is the handoff)
                                      mid-flight). Ceiling NOT re-derived — §10-C allows that only on
                                      a proven UNIT fault, and there is none; a rung that runs hot is
                                      data about the rung.
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — HALTED ON A RULING. The re-probe FIRED and the
-                                   FALLBACK IT ROUTES TO IS UNRUNNABLE.** Escalation on disk:
-                                   `queue\2026-08-26_0300-s5sweep-3.md` (options A–D + costs,
-                                   recommendation **B**). The next session's first act is the
-                                   architect's ruling, not the browser. Opus 5 · effort HIGH.
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — RULED 26 Aug ~03:15, RESUME AT B01.**
+                                   (RULING__2026-08-26_0300-s5sweep-3.md = the canon-half
+                                   redesign.) Opus 5 · effort HIGH. **SEQUENCE, no parallel
+                                   rungs: ① CORPUS HALF NOW — B01–B18 at the passing ten-chunk
+                                   shape, 54 pastes, steps already certified · ② S5-Z4 (its
+                                   §10-C row below — regenerates the CANON-B steps through
+                                   buildsteps, retires the stale fallback as SUPERSEDED) ·
+                                   ③ CANON-B chats (~13 pastes, same S5 rung): one chat per
+                                   group, load+probe → Q1 contradictions → Q4 declared-unbuilt
+                                   → critic, then F3 generalised 2→3 as the cross-group pass.
+                                   S6 may order the A-upgrade fired into the SAME chats
+                                   post-sweep, no re-load.** BUDGET FOR THE REMAINDER,
+                                   ruler-written ~03:15: **EXECUTION fresh 35 + HANDOFF 10**
+                                   (replaces the ~11.6 stub; ~67 mechanical pastes + margin —
+                                   a knowingly-thin number manufactures a breach). c3 =
+                                   VALIDATED; PROBE-FORMAT v2 is the standing elicitation; the
+                                   20-attachment middle-retrieval hole is a FILED S6-bearing
+                                   platform finding with receipts.
                                    **THE RE-PROBE'S RESULT, 26 Aug ~02:50 — c3 IS NO LONGER A
                                    HYPOTHESIS, AND IT WORKED ON BOTH THINGS IT WAS BUILT FOR:**
                                    the tail anchor went SERIALIZED → **VERBATIM** (the fence killed
@@ -1093,8 +1106,10 @@ STATUS (update this block before any session stops — this is the handoff)
                                    corpus half sits at the configuration that PASSED — which is why
                                    B01 was NOT opened: if the ruling moves the per-chat load, an
                                    opened chat is a paid chat thrown away under a live input freeze.
-                                   **FRESH 30 EXECUTION + 10 HANDOFF (ruler-written 26 Aug ~01:30)
-                                   — 18.43 EXECUTION SPENT, ~11.6 LEFT ON THAT LINE.**
+                                   **BUDGET SUPERSEDED ~03:15: the remainder runs on EXECUTION
+                                   fresh 35 + HANDOFF 10 (the ~01:30 line closed at 18.43 spent
+                                   — it bought c3's validation + the platform-limit
+                                   measurement; spent, not wasted).**
                                    TRANSPORT, standing and measured — get these wrong and the
                                    prompt arrives mangled and still gets a plausible answer:
                                    **REF click only, never a coordinate click** (a coordinate click
@@ -2821,6 +2836,18 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       probecheck/verify/checkall §3 + the rung's own diag/proofs_s5z3.mjs (standing implicit).
       TRANSPORT NOTE, standing: Gemini's compose box focuses on REF click only, never
       coordinate click.                    BUILD 6 · PROOF 5 · HANDOFF 5 (ruler-written)
+☐ S5-Z4 THE CANON-B REGEN — a micro-rung, RULED by the architect 26 Aug ~03:15
+      (queue\RULING__2026-08-26_0300-s5sweep-3.md answer 3 IS the work order). MODEL: Opus 5 ·
+      effort HIGH. RUNS AFTER the corpus half, BEFORE the canon-B chats. SCOPE: regenerate the
+      canon question steps for the B design THROUGH buildsteps (one chat per group at the
+      ten-chunk shape: load+probe → Q1 contradictions → Q4 declared-unbuilt → critic) + the F3
+      cross-group pass generalised 2→3 · RETIRE prompts/FALLBACK_canon_split.txt as SUPERSEDED
+      (L9 — a layer, never a deletion; the B design IS the split now) · checkall
+      narrative-vs-wiring re-run + bites where applicable · steps stay derived artifacts, never
+      hand-authored by a sweep session. FORBIDDEN: haystack/expected bytes · any Gemini call ·
+      any audit question · instruments beyond buildsteps/prompts/checkall + the rung's own
+      diag/proofs harness (standing implicit).
+                                           BUILD 4 · PROOF 3 · HANDOFF 5 (ruler-written)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ⛔ **26 Aug ~02:50 — RESUMED, THE AUTHORIZED FENCED RE-PROBE FIRED, AND HALTED A THIRD TIME
       — THIS TIME ON A STALE INSTRUMENT, NOT A MODEL.** The re-probe was ONE shot into A02's own
