@@ -86,6 +86,36 @@ Five minutes earlier he had been asking whether he was fit for this profile at a
 > numbered trace**, and make him run it himself. When he asks for a better visual, that
 > request is for novelty, not for understanding — do not fulfil it mid-concept.
 
+### ⚠ SUPERSEDED, 24 Aug 2026 — by the captain, and only he could have caught it (Law 9: layered, never deleted)
+
+**The last clause above — *"that request is for novelty, not for understanding"* — is WRONG and is
+withdrawn.** His ruling, verbatim:
+
+> *"this is wrong, delete it, it is entirely for understanding, why tf i crave novelity?? i seek
+> internal validation, not outside… I don't care what anybody thinks of me. I don't crave anybody's
+> attention. What I want from myself is what matters for me."*
+
+**Checked against this finding's own evidence, and he is right.** Every quote it rests on states
+comprehension, not appetite: *"ye viz se kuch clear hi nahi hua hain"* (nothing became clear),
+*"god tier visualization se **smjhao** yar"* (**samjhao** = teach me), *"this was so basic bro"* (the
+content was too shallow). The finding took words that give a reason and substituted an inferred
+motive. That is an analytic error, and it is the error class filed as **Q-19** — behavioural priors
+being read as live diagnosis.
+
+**WHAT STILL STANDS, on different evidence.** The RULE itself survives — mechanism in text plus a
+numbered trace, run by hand — but *not* because he is chasing novelty. It survives because of two
+things already documented about him: **working-memory ≈ 4 chunks** and **deep-text-need**
+(`FORGE_DESIGN` §5). A visual is a **compression**, and compression is precisely what his June notes
+already failed at (`SAMJHAO_ORDER` §2, CAUSE 2). So: keep the rule, drop the motive.
+
+**HOW TO READ THIS FINDING FROM NOW ON.** When a visual fails and he asks for a better one, that is a
+**report that the teaching did not land** — treat it as a teaching signal, never as an appetite to be
+denied. Rule #9 (*"samajh nahi aaya" is literal*) applies to it in full.
+
+*(Filed: `ESCALATION_QUEUE.md` Q-17. Form of the correction — layer rather than delete — is his
+ruling, 24 Aug: the original quotes are evidence and a deleted finding gets silently re-derived by a
+future session that never learns it was considered and rejected.)*
+
 ---
 
 ## #3 · [PAKKA] · The moment a concept gets hard, he turns to building a system / notes / tool

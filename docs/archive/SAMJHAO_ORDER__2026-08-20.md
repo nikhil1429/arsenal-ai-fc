@@ -33,48 +33,124 @@ LIVE LANES   : ← A SESSION READS THIS LINE TO KNOW WHAT IT IS. His priority, t
                3. RE-JIRAH  — BLOCKED until all four samjhao close (his ruling, 19 Aug). A session
                               asked for it REFUSES and says why. He must never have to remember this.
 
-STATUS       : TEACHING STARTED 21 Aug 2026. tokenization axis a — content ✅ · hand-work ✅ ·
-               3/3 of its doubts closed · HIS BOLO ✅ (spoken, verbatim in the ledger) ·
-               HIS STUCK-STORY ✅ (the vocab-order crack, in his own words) ·
-               HIS ENGLISH REBUILD ✅ — and it carried THREE things the Hinglish Bolo did not:
-                  "a tokenizer which is a SIMPLE PROGRAM" (tokenizer ≠ LLM, finally stated) ·
-                  "the vocab is created when the company is training the model before launching it" ·
-                  and he asked and answered his own why — "Why they have a fixed order? Because
-                  the same order is being passed on in the embedding step" — then DERIVED the
-                  consequence rather than reciting it: "That means I cannot use a model's
-                  tokenizer in a different model."
-               ONE ERROR TO RE-FIRE AT JIRAH — a NAMING collapse, not a mechanism error:
-                  "a token is basically a group of IDs". A token is ONE piece; the group is the
-                  token sequence. He names it correctly later in the SAME answer ("that is called
-                  sequence length or token count"), so both labels are his and one got swapped.
-                  That is precisely what an interviewer probes. Re-fire it, do not re-teach it.
-               Jirah pulled back mid-axis (my density caused an overload; it re-fires, not dropped).
-               ✅ AXIS a IS CLOSED, 21 Aug 2026 (late).
-               ⚠ ONE ACCEPTANCE ITEM UNMET AND RECORDED AS UNMET, NEVER WAIVED: §G-4 asks the
-                  English line to be TIMED. A rig was built to measure it honestly and REMOVED the
-                  same evening on his order — it ate his hyperfocus and still lost his words. So
-                  axis a has the English rebuild and no latency number. THE INSTRUMENT IS AN OPEN
-                  QUESTION FOR THE ARCHITECT; his own lead is the strong one — Gemini Live hears
-                  the question AND the answer, so T0/T1 stops being a problem anyone has to solve.
-DONE         : 1 of 36 axes — tokenization/a, CLOSED (acceptance 4 of 5; the timed line is the gap)
+STATUS       : SESSION 2 ran 22 Aug 03:06 → 23 Aug 07:50 IST. MEASURED: teaching 188 min ·
+               meta 265 min (59% meta). That meta was NOT waste — it rewrote the notes
+               architecture for all 234 axes and produced 8 escalation forks. It will not repeat.
+               ✅ AXIS a — fully CLOSED. Its last carry (the Bolo OPENING drill) is done: asked
+                  "what IS a token", he now opens with a DEFINITION, and his line finally states
+                  the tokenizer is not the LLM. Verbatim in the ledger.
+               ⚠ The naming collapse fired a THIRD time before closing ("a token is basically an
+                  ID"). Now separated in his own words. STILL FIRE IT AT JIRAH.
+               🔵 AXIS b — IN PROGRESS, 5.5 of 8 concepts done. It is NOT closed.
+                  DONE : ① the dial (tukda ka size; he hand-counted "invoice total" = 13 char /
+                         2 word) · ② VOCABULARY EXPLOSION (exact-string lookup; invoices/Invoice/
+                         invoice. = 3 new entries) · ③ OOV → <unk> → information dies · ④ lookup
+                         is O(1) hash-table, FREE — the D25 refutation, which HE walked into
+                         unprompted · ⑤ SEQUENCE LENGTH + QUADRATIC ATTENTION (he hand-counted
+                         3×3=9, 4×4=16, then 2 vs 13 → 4 vs 169, 42×) · ⑥ POOR DOWNSTREAM
+                         REPRESENTATIONS (D26 — a token appearing everywhere averages to nothing).
+                  LEFT : ⑦ SUBWORD — why the middle path wins · ⑧ WHY TOKENIZATION CANNOT BE
+                         SKIPPED. Plus ONE OWED DEBT: "is a space a SCISSORS or a PIECE" — he
+                         answered 3 instead of 2 on the word-level count and the reasoning was
+                         good; it was deferred to its own beat and is not yet paid.
+                  PENDING QUESTION he has not answered yet: "invoice vs zzq — whose vector is
+                         more useful, and why?" (one line).
+               THEN : axes c, d, e, f, g, h, i — 7 untouched. Then topic close.
+DONE         : 1 of 36 axes CLOSED (tokenization/a) + tokenization/b at ~70%.
+⚠ 23 AUG     : THE NOTES ARCHITECTURE CHANGED FOR ALL 234 AXES. Escalation 4 ruled N1–N7 (§16,
+NOTES LAW      verbatim). What binds every session from now:
+               · every note block carries an AUTHOR MARK — [T] = teacher-authored mechanism/fact,
+                 [N] = his words. NEVER mixed inside one block.
+               · a NEW per-axis field `lesson` holds the narrative re-teach, written by HIS paste
+                 at topic close. June `deep` is NEVER touched.
+               · DEPTH PARITY IS AN ACCEPTANCE TEST: tokenization's `lesson` fields must reach
+                 ~2,500+ chars per axis, MEASURED at topic close.
+               · doubts are enriched at their own beat, in his words, into the confusion-journey
+                 shape. Topic close asserts unplaced = 0.
+               · CRACK_REPAIR.jsonl is born and live: ts · concept_axis · what_broke ·
+                 error_shape · repaired_mechanism. THREE rows already, all error_shape
+                 "label-misassignment" — the same slip three times (token vs token-ID ·
+                 vocab-lookup vs attention-cost · embedding vs self-attention). FIRE AT JIRAH.
+               · scope = ALL 234 axes, FORGE included, starting with 1-04 on Monday.
+⚠ HIS NEW    : (1) NO TABLES, EVER — prose and simple lists only, every surface.
+STANDING       (2) NO abstract progress counters ("idea 5 of 8") — name the CONCEPT inside its
+RULES          named axis inside its named topic. C7's one-idea-per-turn pacing still stands.
+(23 Aug)       (3) The TECHNICAL LAYER is not optional — DUKAAN + ASLI NAAM + TECHNICAL LINE,
+                   all three, every idea. When he says "samajh nahi aaya", OPEN the term slowly;
+                   never REMOVE it.
+               (4) ROCK-BOTTOM ONLY — no surface-level talk, in any Claude Code session.
+               (5) BRAINSTORM WITH HIM FIRST, FILE SECOND — never write for the architect before
+                   the thought is taken to rock bottom with him. Binds all sessions.
+               All five are in RAW_FACTS.jsonl with his verbatim words.
 ⚠ METHOD FIX : ASK FOR THE STUCK-STORY AT THE MOMENT THE CRACK FIRES, never at axis close.
-               21 Aug: the crack fired hours before the Bolo; by close the FEELING of being wrong
-               was gone and only the corrected fact remained, so he could not find it — and then
-               produced it perfectly while asking me HOW to produce it. Ten seconds, while hot:
-               "us waqt tum kya soch rahe the?" This is a teacher error, not a gap in him.
+               (Applied 22 Aug and it worked — his special-token stuck-story was taken hot.)
 AXIS-CLOSE   : an axis does NOT close without all three (architect ruling §G-4, 21 Aug —
 CHECKLIST      this is an ACCEPTANCE TEST, not a habit):
-               (1) his Bolo + ONE timed English cold line, seconds recorded
+               (1) his Bolo — FULL, every axis (architect Q2-a, 22 Aug; the short-Bolo proposal
+                   was rejected) + ONE timed English cold line
                (2) a raw-facts ledger row
                (3) his rulings receipted via acts.mjs
-OUT-OF-REPO  : C:\Users\nikhi\arsenal-samjhao\ — RAW_FACTS.jsonl (FOUR fields only: ts · kind ·
-               topic_axis · text; routing fields FORBIDDEN until S6) · TOKENIZATION_BLOCKS.md ·
-               clock.mjs (ActivityWatch join, read-only, zero LLM) · the two escalations + addendum.
-RULINGS      : §16 below carries the architect's 21 Aug rulings and his own R1–R5, verbatim.
-               They BIND every learning session until the reboot. Read §16 before changing method.
+               (4) NEW 23 Aug: §0 updated AT EVERY AXIS CLOSE, not only at session close.
+TIMED LINE   : §G-4's timed English line now has an APPROVED interim instrument (architect Q9,
+               22 Aug): latency ≈ (gap between my message ending and his arriving) − (words ÷
+               1.96 words-per-sec, his own measured rate). Label every value ESTIMATOR and store
+               its known bias beside it. Real measurement = S6. turnclock.mjs RATIFIED.
+⛔ EVERY       : node C:/Users/nikhi/arsenal-samjhao/build_exchanges.mjs
+SESSION MUST   Run it at EVERY AXIS CLOSE and at session close. His ruling 23 Aug: capture EVERY
+RUN THIS       block of EVERY learning session, verbatim, and CLASSIFY NOTHING — because he cannot
+               name in advance what should be captured ("baaki sab kuch bi jo merko pata hii nahi").
+               Sessions are DISCOVERED by paste-prompt anchor; there is no config to edit, ever.
+               Idempotent. Output: arsenal-samjhao/EXCHANGES/<date>__session.jsonl. As of 23 Aug it
+               holds all three switch-off-era learning sessions (20 Aug 84 exchanges · 22 Aug 90 ·
+               23 Aug 10). NOTHING in it is labelled — no axis, no correct/incorrect, no error
+               shape. Any judgement layer goes in a SEPARATE file so the architect can overrule it
+               without touching the raw. Transcripts are durable on disk so a late run loses
+               nothing — but run it anyway; a paused day is a day nobody re-derives.
+OUT-OF-REPO  : C:\Users\nikhi\arsenal-samjhao\ — RAW_FACTS.jsonl (60 rows, FOUR fields only:
+               ts · kind · topic_axis · text) · CRACK_REPAIR.jsonl (3 rows) ·
+               TOKENIZATION_BLOCKS.md · clock.mjs · five escalation files.
+               C:\Users\nikhi\arsenal-audit-artifacts\ — ARCHITECT_HANDOFF.md ·
+               ESCALATION_QUEUE.md (8 forks, created 22 Aug by the architect) ·
+               SESSION_TRANSCRIPT__2026-08-22_23__for-architect.md ·
+               build_transcript.mjs (RE-RUN IT — the live transcript lags the running session).
+⛔ ARCHITECT : Fable was at ~1% weekly on 23 Aug; resets Mon 24 Aug 23:30 IST. UNTIL THEN the
+UNREACHABLE    Q0 fallback is in force: take the conservative branch (writes no state, spends no
+               LLM, reversible), log it in ESCALATION_QUEUE.md, KEEP TEACHING. Stop only the one
+               thread that cannot move without writing state or spending.
+⛔ WAITING   : 8 forks in ESCALATION_QUEUE.md — Q-1 (N2 vs §3) · Q-2 (.md corpus never read whole,
+FOR HIM        + addendum: it overlaps S5's canon half, already cut and prepared, ZERO calls
+               sent) · Q-3 (self-attention absent from concepts.json) · Q-4 (cross-topic threads
+               have no carrier) · Q-5 (architect decorrelated on judgement, correlated on
+               framing) · Q-6 (SessionStart brief misattributes) · Q-7 (the no-date-countdown law
+               — and it turned out to be canon-vs-canon, see below) · Q-8 (sprint.json has no
+               owner). PLUS the raw session transcript, which is the primary deliverable.
+⚠ BIG FIND   : MASTERPLAN §12 recalibrated the Governor on 10 Jul 2026 — "metric = engagement-
+23 AUG         quality + baseline-deviation, NEVER hours", "the grind is HONORED by default",
+               "8–12h grind is psychiatrist-validated harmonious passion, not pathology". The
+               NO-DATE-COUNTDOWN prose law in DAILY_CADENCE / PROJECT_OS / About.md was never
+               updated to match and still says "consistency > intensity-spike, non-negotiable".
+               His own sprint sheet ALSO already says "Dates are TARGETS Nikhil owns — not
+               deadlines... the plan bends, the topic never gets skimmed." So the Governor, the
+               cited research (Vallerand / Billieux — compulsion and functional harm, never
+               hours), the sheet, and HE all agree. Only the prose law is the outlier.
+               THIS IS A NEW DEFECT CLASS: not "declared and never built", but "superseded and
+               never propagated". Q-2 as filed does NOT name it.
+HIS PACE     : his own input, 23 Aug — 8–12 hours a day, 7 days a week. NEVER convert work-size
+               into a calendar without that as the input (R4; the executor broke this a third
+               time on 22 Aug and it is logged as a teacher error).
+SCOPE SIZE   : the sprint sheet holds 55 tasks / 438 est hours, 3 done / 20 hours. The samjhao +
+               Re-Jirah campaign is NOT on that sheet, and neither is the cyborg organism itself.
+               Honest total ≈ 480 hours of work remaining.
+RULINGS      : §16 carries the architect's 21 Aug rulings, escalation 3 (18 forks + Q0), and
+               escalation 4 (the notes audit, N1–N7) — all verbatim. Read §16 before changing
+               method. His own R1–R5 are there too.
 AFTER THAT   : when all 4 samjhao AND all 4 Re-Jirah are closed →
                BRAINSTORM §14 with him (interleaving / transfer / mock). Do NOT start them.
-PARKED       : the render fix (§13) — a separate sitting, not learning time
+PARKED       : the render fix (§13) — architect ruled N6: this lane owns it, but only at a TOPIC
+               CLOSE boundary, never mid-axis, suite green after. Confirmed in code:
+               build_forge_html.mjs:99 wraps markdown `deep` inside <pre>.
+NEXT MOVE    : axis b, concept ⑦ SUBWORD — why the middle path wins. His pending answer first:
+(THE KAL-LINE) "invoice vs zzq — whose vector is more useful, and why?"
 ```
 
 **Update this block at the end of every session. It is the only place progress lives.**
@@ -1206,3 +1282,220 @@ speech-API layer, then rebuilt on local whisper — and he called it: *"chuck ev
 removed and uninstalled. **PARKED FOR THE ARCHITECT, his idea and a good one: Gemini Live takes audio
 natively, so the same thing that ASKS the question also HEARS the answer — which dissolves the T0/T1
 problem that killed every other instrument.** Do not build a voice tool in a learning session again.
+
+### PROGRESS 2026-08-22 — SESSION 2. Axis a's carry CLOSED · the special-token hole found and filled · ESCALATION 3 SENT AND RULED (the pre-authorization ticket for the three architect-less days).
+
+**WHAT LANDED, TEACHING-SIDE.** Axis a's one remaining carry — the Bolo OPENING drill — is CLOSED.
+Asked *"what IS a token"*, he opened with a definition, not with what tokenization does. His line,
+unprompted and in his own words: *"a token is basically a character, subword, or a word from the
+vocab that is being fetched by the tokenizer, which is basically a program, and that runs before an
+LLM call. And a token ID is a numerical index associated against that token in the vocab."* That
+also finally states **the tokenizer is not the LLM** — §16's carry item 2 from 21 Aug, now his.
+⚠ The naming collapse fired ONE more time before it closed (*"Token is basically an ID"*) — the
+THIRD variant of the same slip. It is now separated in his own words, but **still fire it at Jirah**:
+a slip that recurs three times under no pressure will recur under pressure.
+
+**A REAL HOLE IN THE JUNE CAPSULE, found by him, verified by command.** He asked what a special
+token is. `"special"` appears **0 times** in the entire tokenization capsule; so do `EOS`,
+`endoftext`, `<unk>`. His words: *"the first time when I read it, when you taught it, it was not
+taught to me."* Correct — it is a gap in the notes, not in his memory. Taught in full this session:
+special tokens as vocabulary entries that carry structure not text · EOS as the model's OWN stopping
+decision (vs `max_tokens`, an outside brake with a different owner) · chat templates flattening
+`messages[]` into one line with role boundaries · who applies the template (provider vs
+`apply_chat_template`) · **a wrong template raises NO error and degrades silently** · prompt
+injection as the direct consequence of the model being unable to tell a real system line from a fake
+one · `<pad>` + attention mask, with the counting exercise SKIPPED on his call (correctly — padding
+arithmetic only matters if you fine-tune or self-host).
+**HIS STUCK-STORY, taken the moment the crack fired** (the §0 METHOD FIX, applied and it worked):
+*"I thought special tokens are just used at the output generation step because I had no idea that
+the user's input is being flattened before reaching the model. I thought the API just sends the
+payload."*
+
+**A MEASUREMENT FINDING — the instrument was already there and nobody had used it.**
+Claude Code writes **exact per-message timestamps** for every message into the session transcript
+(`.claude/projects/<slug>/<sessionId>.jsonl`), and it does so **retroactively for every past
+session**. Nothing needs stamping. Cross-checked live against `clock.mjs`/ActivityWatch on this
+session: transcript said 63 min contact, AW said 66 min claude.exe — two independent instruments,
+same answer. **This kills the limitation recorded on 21 Aug** (*"ActivityWatch cannot attribute time
+to an AXIS"*): attribution never needed to come from AW — the TURN knows its axis and the turn
+carries an exact time.
+
+**TWO TEACHER ERRORS, both his catch, both logged and NOT escalated (C6).**
+1. I converted work-size into a ~50-day calendar from a 2-day sample, then built a
+   scope-vs-shipping question on top of it. His words: *"bruh i have adhd gifts, i can grind 10
+   hours daily, i do not need to keep on repeating this, i said the same for previous escalation
+   tickets."* **THIRD instance of R4's named error.** Withdrawn — the question was manufactured by
+   my own bad number. **STANDING FIX: never convert work-size into a calendar unless HIS pace is
+   the input.**
+2. I then wrote a *"my default if no ruling arrives"* column across all 18 forks — pre-deciding
+   method, timing and predicate questions that C6 reserves for the architect. His words: *"bruh do
+   not decide anything by yourself, what is the purpose of architect session then?? have you read
+   the escalation ruling??"* He was right. **Only pedagogy and pacing belong to the teacher.** The
+   column was replaced with OPTIONS and the ticket re-sent.
+
+**THE TICKET.** `arsenal-samjhao\ESCALATION_3_TO_ARCHITECT__2026-08-22.md` — 18 named forks + Q0
+(the unknown fork), each with options and no teacher default, plus seven facts verified by command
+so the architect never ruled on a guess.
+
+**THE ARCHITECT'S DECISION TABLE, 22 Aug 2026 — VERBATIM. Binds every learning session until Monday 23:30 IST.**
+
+```
+ARCHITECT DECISION TABLE — binds every learning session until Monday 23:30 IST.
+
+Q0   (b)+(a): apply the UNKNOWN-FORK FALLBACK = the conservative branch (writes no
+     state, spends no LLM outside the session, reversible) -> log it in the queue ->
+     continue teaching. STOP only the one thread that cannot proceed without writing
+     state or spending. Never (c).
+Q0-b (a) — CREATED by the architect just now:
+     C:\Users\nikhi\arsenal-audit-artifacts\ESCALATION_QUEUE.md (format + fallback inside).
+Q1   (a) — teaching has absolute priority this week. No collision exists: the ladder
+     (S5-R2 · sweep · S6) is scheduled AFTER the reset on fresh pools; his samjhao /
+     Re-Jirah / 1-04 run on this week's remainder.
+Q1-b drop order if the wall hits Sunday night: (1) meta work + reports · (2) Re-Jirah
+     rounds (they IMPROVE by waiting — colder) · (3) samjhao runs to the wall · the 1-04
+     forge moves to Tuesday post-reset rather than forging rushed on a capped budget —
+     a fifth bullet-shaped capsule is the one outcome that must not happen.
+Q2   (a) — full Bolo every axis. 36 × ~3 min ≈ 2 hours inside 30; it is not the
+     bottleneck and it IS the product (§3: notes only from his words). (b) only on HIS
+     word.
+Q3   (b) — contradiction-kind doubts mapped at topic open; all others placed live at
+     their beat; topic-close check: unplaced doubts = 0.
+Q4   (d) = (b) applied to the SAMJHAO OUTPUT layer, never the capsule: a
+     samjhao_additions block in the rendered samjhao artifact, each item tagged with
+     its nearest axis. The June capsule stays immutable (his ruling) — and "special
+     tokens never taught" is recorded there as a real hole, not a memory failure.
+Q5   (a) — his 19 Aug ruling stands, and it is also better science: by Sunday
+     tokenization is ~2 days cold.
+Q5-b (a) — cold = >=3 days since that topic's samjhao close; a sooner round is marked
+     not_cold and excluded from retention stats (still valuable as practice + grading
+     data). No deferral.
+Q6-a rejirah.mjs grade: YES (owner CLI, zero tokens, writes its own log).
+     deep.mjs due: NO for samjhao'd concepts — it serves stored strikes, which is
+     exactly the coldness hole; fresh questions only (interim rule in force).
+Q6-b judge_round = LLM spawn -> FORBIDDEN during the switch-off. The in-session teacher
+     grades under R3 (mechanism rebuilt, never phrase-match); the row is a normal grade
+     row carrying judge:"session". S6 decides whether such rows get re-judged later.
+Q7-a account #2 (learning's Gemini lane per §G-6). If unavailable: one throwaway
+     ZERO-context Claude turn is an acceptable cold reader for the pilot — log which.
+Q7-b NO spec touch needed: FORGE_SPEC already demands analogy + worked example +
+     why-chain + stuck-story. The pilot is spec ENFORCED by hand; declare it so.
+Q7-c YES — the in-session teacher generates the negative-space probe (TIER 2 already
+     present, zero extra spend); mark it session-generated.
+Q8   (a) — paste at every topic close as designed (his hands = master write;
+     mirror.mjs permitted). The /gist-patch skill nailed to reJirahDone = a Shape-1
+     instance -> recorded as S10's un-nailing lead. Blocks also stay out-of-repo as backup.
+Q9   (a) — accepted as the INTERIM §G-4 instrument, labelled ESTIMATOR with its formula
+     (gap − words ÷ 1.96) and its known bias (reading + typing time inside the gap)
+     stored beside every value. Real measurement = S6.
+Q9-b turnclock.mjs RATIFIED (read-only, out-of-repo). Inherits: S6 — it is the
+     per-axis reach/time meter, Shape 3's family.
+D1–D5: NO VETOES. All five stand. D2 (§0 at every axis close) is the right
+     session-death insurance; D3's kind:"check" rows are exactly C1's shape.
+
+Teach. The queue catches everything else until Tuesday. — the architect
+```
+
+**WHAT CHANGED FOR THE TEACHER, IMMEDIATELY.** Full Bolo every axis (Q2-a — my shorter-Bolo
+proposal is dead). Contradiction-kind doubts mapped at topic open, the rest live, and topic close
+asserts **unplaced = 0** (Q3-b). Re-Jirah stays blocked until all four samjhao close (Q5-a), and
+when it runs **the teacher grades**, `judge:"session"` — `judge_round` is forbidden and
+`deep.mjs due` is forbidden for samjhao'd concepts (Q6). Paste at every topic close (Q8-a). All
+five D-items stand, so §0 now updates at **every axis close** and every check-question outcome gets
+a `kind:"check"` raw-fact row.
+
+**ONE AMBIGUITY QUEUED, NOT ASSUMED (Q-1 in the escalation queue):** Q4 says the samjhao_additions
+block lives in the *rendered samjhao artifact*, "never the capsule", and that the June capsule
+"stays immutable" — while §3's Option A (his own choice, 20 Aug) puts each axis's SAMJHAO BLOCK
+*inside* `faultLines[i].deep`, appended below the untouched June prose. Read narrowly these agree
+(Q4 governs ORPHAN facts only; §3 governs per-axis blocks). Read broadly they do not. It cannot
+fire before topic close, so teaching continues and the queue holds it.
+
+
+### RULING 2026-08-22 · ESCALATION 4 — THE NOTES AUDIT. Binds FORGE, SAMJHAO and RE-JIRAH, all 234 axes.
+
+**WHY IT WAS RAISED.** His words: *"learning without notes is pathetic, notes should be god tier 10x level
+on steriods matching level"* and *"my goal is not to participate, compete in the market — it's pure
+domination."* He ordered every stone turned before the last Fable window was spent.
+
+**THE SEVEN MEASURED FINDINGS (all by command, 22 Aug — none of these were claimed or recalled).**
+1. **The rule the SAMJHAO order enforced had never been the practice.** 29 of 36 June `deep` fields are in
+   TEACHER VOICE — second person, *tu / tera / tujhe*. Only 3 of 36 carry his own first-person voice.
+   Per capsule: tokenization 4/9, embeddings 9/9, inference 7/9, context 9/9. And `FORGE_SPEC.md:54` reads
+   *"`deep` content sirf Nikhil ke Bolo / **TEACHING-THREADS** se aata... Claude **INVENT** kabhi nahi karta
+   ... Lock pe Claude threads/Bolo se **RECOVER** karta."* Source = Bolo OR teaching-threads; the forbidden
+   act = INVENT. §3's table had compressed this into *"The teaching prose · mine · NOWHERE"* — a sentence
+   that is not in the spec and that the whole existing corpus contradicts. The spec corroborates itself:
+   it calls `traps`, `threeWays`, `interviewLines`, `mechanism` **AUTHORED-PROSE**, and says of `bolo` that
+   *"Claude sirf TIGHTEN karta"*.
+2. **Depth is uneven and capsule #1 is the worst.** Average per-axis `deep`: tokenization **1,037** chars ·
+   context 2,043 · embeddings 2,596 · inference **3,270**. Lock order 15 → 21 → 24 → 28 Jun. The method
+   improved with every capsule; the first was never back-filled — and it is the one he is re-learning.
+3. **4 of 112 doubts meet the spec's own bar.** Only 4 carry the RICH confusion-journey shape; average `q`
+   is 42–90 chars. The cold-reader standard landed 2–3 Jul, AFTER all four locks, and its own clause says
+   *"APPLIES TO: going-forward CAPTURE + RE-JIRAH + **BACKFILL**"*. The back-fill never ran. Card c72 is
+   its live symptom.
+4. **A Re-Jirah round writes no text at all.** Grade row = `{ts, concept, axis, result, gut, cold, round,
+   source}`; `RESULTS = ["held","cracked"]`. No free-text field exists anywhere in the row. The single most
+   valuable moment in the system — he fails and is corrected — produces ONE WORD.
+5. **The re-learn layer renders as source code.** `build_forge_html.mjs:99` wraps the markdown `deep` in
+   `<pre>`: asterisks visible, no wrapping, and `doubts` dumped as a raw `{q,a}` object.
+6. **The shape was already written down and left unfixed.** SYSTEM_METACOGNITION: *"The richest studying
+   produces zero repo signal — by construction."* `reps_log` newest row = 10 Aug.
+7. **Scale.** `concepts.json` = 26 concepts × 9 axes = **234 axes**; 4 locked, **198 ahead**, ~730 doubts.
+
+**DIAGNOSIS.** The system keeps the RECORD of a session — his words, his verdicts, the dates — and discards
+the LESSON, the mechanism as it was actually built. Two months later it asks the record to do the lesson's
+job. June's `deep` failed even though it came from his own mouth, so authorship was never the cause:
+**COMPRESSION was.**
+
+**THE ARCHITECT'S RULING, 22 Aug 2026 — VERBATIM.**
+
+```
+ARCHITECT RULING — ESCALATION 4 · THE NOTES AUDIT. Letters, with one clause each.
+
+N1  (c). Compression was the cause, not authorship — your M1 proves it. MECHANISM /
+    FACTS may be teacher-authored, marked [T]; UNDERSTANDING / FRAMING (stuck-story,
+    Bolo, his analogies, his derivations) are his words only, marked [N]. Never mixed.
+    This also IS his R1 (analogy + real definition): the definition layer is [T] by nature.
+N2  (b). A NEW per-axis field (name it `lesson`), written by HIS paste at topic close —
+    June `deep` stays untouched (capsule immutability + L9 + your D5), the walker renders
+    it for free. (c) = two documents per concept = the drift disease. No.
+N3  (c) now + (b) as an S6/S10 lead. The out-of-repo crack-repair log starts today:
+    ts · concept_axis · what_broke · error_shape · repaired_mechanism (his words).
+N3-b YES — `error_shape` is first-class from the first row (free-text TAG, e.g.
+    "label-misassignment"); S6 formalizes the vocabulary. Three slips, one shape = the
+    exact signal the whole audit exists to count.
+N4  (a). Each doubt is re-met at its beat anyway (Q3-b); enrich it THERE, in his words,
+    into the confusion-journey shape. doubts[] is one of his two permitted paste-writes.
+    A separate cold pass re-opens 108 doubts twice for nothing.
+N5  (a) + a DEPTH-PARITY CHECK: tokenization's `lesson` fields must reach capsule #3's
+    bar (~2.5k+ chars/axis) — measured at topic close, not hoped. Never rewrite June
+    prose; a wrong June line gets the ⚠ SUPERSEDED layer (D5).
+N6  (a) — his 20 Aug ruling gave THIS lane the design job and named this exact bug as
+    its first. But at a BOUNDARY (topic close), never mid-axis (C5 park rule), suite
+    green after, deterministic renderer only — it is the screen he re-learns from, so
+    it serves the 36 notes being built right now.
+N7  (a). The defect is structural, so the rule is forward: all 234 axes, FORGE included,
+    starting with 1-04 on Monday (the pilot already carries the re-learn-shape deep —
+    N1-N3 ride with it). FORGE_SPEC gets a LAYERED amendment at topic close (L9), and
+    S6 inherits the whole ruling set through the samjhao order + the queue.
+
+Keep teaching. The conservative branch was the right call — nothing was foreclosed.
+— the architect
+```
+
+**WHAT CHANGES FOR EVERY LEARNING SESSION, FROM THIS MOMENT.**
+- **Every note block carries author marks.** `[T]` = teacher-authored mechanism or fact. `[N]` = his words.
+  **Never mixed inside one block.** This is also R1 made structural: the analogy and the real definition are
+  `[T]` by nature; the stuck-story, the Bolo, his own analogies and his own derivations are `[N]`.
+- **A new per-axis field `lesson`** holds the narrative re-teach. **His paste at topic close writes it.**
+  June `deep` is never touched. The build's walker renders any unknown field for free.
+- **The crack-repair log starts today**, out of repo: `ts · concept_axis · what_broke · error_shape ·
+  repaired_mechanism (his words)`. `error_shape` is a first-class free-text tag from row one.
+- **Doubts are enriched at their own beat**, in his words, into the confusion-journey shape — never in a
+  separate cold pass.
+- **DEPTH PARITY IS AN ACCEPTANCE TEST:** tokenization's `lesson` fields must reach ~2.5k+ chars per axis,
+  **measured at topic close, not hoped.**
+- **The render fix is this lane's job**, at a topic-close BOUNDARY, never mid-axis, suite green after.
+- **The scope is all 234 axes**, FORGE included, starting with 1-04 on Monday. `FORGE_SPEC` gets a LAYERED
+  amendment at topic close.

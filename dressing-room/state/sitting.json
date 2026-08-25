@@ -14,8 +14,8 @@
   "transport": "stream",
   "opened_at": "2026-08-19T21:59:00.725Z",
   "last_turn_at": "2026-08-19T22:02:48.935Z",
-  "closed_at": null,
-  "close_reason": null,
+  "closed_at": "2026-08-19T22:22:50.288Z",
+  "close_reason": "idle",
   "plan": [
     {
       "i": 0,
@@ -52,13 +52,7 @@
   "plan_map": "Aaj hallucinations — THE METHOD ke 12 kadam, step 1 se. Har kadam ek idea, ek chhota check-question, tumhara gut-word pehle. Map yeh raha: pehle-guess → mechanism → axes a se i → traps → bridges → lock. Shuru?",
   "cursor": 2,
   "unit_seq": 6,
-  "pending_question": {
-    "unit_id": "u_sit_20260820_2159_fa80_4",
-    "text": "Pehle-Guess: bina padhe, hallucinations kya hai — apne shabdon mein ek line? Gut-word pehle.",
-    "axis": "a",
-    "asked_at": "2026-08-19T22:01:55.636Z",
-    "bankable": true
-  },
+  "pending_question": null,
   "forge_step": 1,
   "forge_axis": "a",
   "effort": {
@@ -107,7 +101,7 @@
     "units_composed": 6,
     "units_delivered": 0,
     "banked": 0,
-    "owner_calls": 1,
+    "owner_calls": 2,
     "head_tokens": 8024
   },
   "agenda_ids": [
