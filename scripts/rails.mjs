@@ -265,13 +265,20 @@ export function checkOrder(path, { root = ROOT } = {}) {
 // land). The legacy phrase STAYS as a fallback (L9 — layered, never replaced). The gate
 // blocks on the ENGINEERING order only; other orders on-board via S10's registry row,
 // never by a surprise blocking gate. S10 later absorbs this line as a registry pointer.
+// The resolver is a PURE CORE (text in, relative path or null out) with a thin fs shell —
+// the Q-8 precedent, same day: the selftest then proves the core on plain strings and adds
+// no fs sinks for xray to lose track of. The LIVE wiring (file → core → gate → hook) was
+// bite-proven end to end at S5-R2 and is recorded in the order's PROGRESS.
+export function resolveOrderGate(s) {
+  const g = /^ORDER-GATE:\s*(\S+\.md)\s*$/m.exec(s);
+  if (g) return g[1];
+  const m = /THE OPEN WORK ORDER:?\*{0,2}:?\s*`([^`]+\.md)`/.exec(s);
+  return m ? m[1] : null;
+}
 export function openOrder(root = ROOT) {
   try {
-    const s = readFileSync(join(root, "CLAUDE.md"), "utf8");
-    const g = /^ORDER-GATE:\s*(\S+\.md)\s*$/m.exec(s);
-    if (g) return join(root, g[1]);
-    const m = /THE OPEN WORK ORDER:?\*{0,2}:?\s*`([^`]+\.md)`/.exec(s);
-    return m ? join(root, m[1]) : null;
+    const rel = resolveOrderGate(readFileSync(join(root, "CLAUDE.md"), "utf8"));
+    return rel ? join(root, rel) : null;
   } catch { return null; }
 }
 
@@ -392,19 +399,15 @@ function selftest() {
 
   // THE ORDER-GATE CONTRACT LINE (S5-R2, 25 Aug 2026 — the ruled repair, pinned). The old
   // resolver matched rewritable prose and died silently when CLAUDE.md was reworded; these
-  // three hold the repaired shape: contract line wins, legacy phrase survives as fallback,
-  // and nothing-resolves is NULL so the orders CLI can refuse loudly instead of passing.
-  const gtmp = mkdtempSync(join(process.getBuiltinModule("node:os").tmpdir(), "ordergate-"));
-  writeFileSync(join(gtmp, "CLAUDE.md"), "prose above\nORDER-GATE: docs/archive/REAL.md\nand THE OPEN WORK ORDER: `docs/archive/WRONG.md` still in prose\n");
+  // three hold the repaired shape on the PURE core (no fs — the xray ratchet stays flat):
+  // contract line wins, legacy phrase survives as fallback, and nothing-resolves is NULL
+  // so the orders CLI can refuse loudly instead of passing.
   assert("ORDER-GATE — the declared contract line wins over the legacy phrase",
-    openOrder(gtmp) === join(gtmp, "docs/archive/REAL.md"), String(openOrder(gtmp)));
-  writeFileSync(join(gtmp, "CLAUDE.md"), "THE OPEN WORK ORDER: `docs/archive/LEGACY.md`\n");
+    resolveOrderGate("prose above\nORDER-GATE: docs/archive/REAL.md\nand THE OPEN WORK ORDER: `docs/archive/WRONG.md` still in prose\n") === "docs/archive/REAL.md");
   assert("ORDER-GATE — the legacy phrase still resolves when no contract line exists (L9 fallback)",
-    openOrder(gtmp) === join(gtmp, "docs/archive/LEGACY.md"), String(openOrder(gtmp)));
-  writeFileSync(join(gtmp, "CLAUDE.md"), "TWO WORK ORDERS ARE OPEN - prose only, the 20 Aug rewording, no contract line\n");
+    resolveOrderGate("THE OPEN WORK ORDER: `docs/archive/LEGACY.md`\n") === "docs/archive/LEGACY.md");
   assert("ORDER-GATE — a CLAUDE.md with neither resolves to NULL (the CLI refuses on it, never shrugs)",
-    openOrder(gtmp) === null, String(openOrder(gtmp)));
-  try { rmSync(gtmp, { recursive: true, force: true }); } catch { /* temp */ }
+    resolveOrderGate("TWO WORK ORDERS ARE OPEN - prose only, the 20 Aug rewording, no contract line\n") === null);
 
   // THE HANG, PINNED (rung S5-R, 20 Aug 2026 — session_meter selftest #16's shape, on the
   // rail organ). `pretooluse` on a non-TTY fd 0 that never closes must REFUSE fast, never

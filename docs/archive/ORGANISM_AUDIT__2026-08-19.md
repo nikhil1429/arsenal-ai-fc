@@ -262,36 +262,66 @@ STATUS (update this block before any session stops — this is the handoff)
                                      (SAMJHAO_ORDER) and `f55e17240a761c5f` (HOW_HE_LEARNS).
                                      If either moves before the sweep, the cut and the repo have
                                      silently diverged. S5-R2 owns this as a scope-(c) item.
-  ▶ NEXT SESSION ............... **S5-R2 · THE FABLE REVIEW OF THE REBUILT INSTRUMENTS.**
-                                   MODEL: **Fable 5 · effort max** (fresh weekly pool, Monday
-                                   post-reset). HIS CALL, RATIFIED BY THE ARCHITECT: the week
-                                   stops after the closure list; nothing more is spent until one
-                                   stronger, fresh head has re-proved the rebuild ADVERSARIALLY,
-                                   **before any of his ~42 pastes.** The S5-R pattern already paid
-                                   for itself once.
-                                   SCOPE — every claim a LEAD until re-proven by RUNNING:
-                                   (a) `refilter2.mjs` — the declare-or-die table, the raising
-                                       default (plant an undeclared type), the totality check, the
-                                       cross-kind dedup and its 20% length guard.
-                                   (b) the probe machinery — **the changed predicate above by
-                                       name**, the END-OF markers, tail-vs-middle rules, and
-                                       whether 46/46 uniqueness survives a fresh generation.
-                                   (c) the re-cut canon — especially the two SPLIT documents and
-                                       whether coverage receipts still match a repeated header.
-                                   (d) preflight/checkall/buildsteps after the repointing, and the
-                                       clipboard LEAD.
-                                   (e) **THE §3-C GATE REPAIR — RULED 25 Aug, option B, spec is
-                                       binding:** `arsenal-audit-artifacts\queue\
-                                       RULING__2026-08-25_0805-s5pre-1.md`. One atomic commit:
-                                       CLAUDE.md `ORDER-GATE:` contract line + resolver reads it
-                                       first (legacy regex stays as fallback, L9) + refuse-on-null
-                                       ratchet. Bite-proof BOTH directions (planted violation
-                                       blocks · removed line refuses loudly). Blocks on the
-                                       ENGINEERING order only. Same commit: §3-C's inline snippet
-                                       in this file is replaced by `node scripts/rails.mjs orders`.
-                                   THEN, in order, on his word: **the sweep** (Opus 5 · effort
-                                   HIGH) — its FIRST paste is the ATTACHMENT-COUNT probe, which
-                                   decides 42 pastes versus 420 — then **S6** (Fable · max).
+  S5-R2 THE FABLE REVIEW 2 ..... ☑ DONE 25 Aug 2026 · Fable 5 · effort max · every scope item
+                                   re-proven BY RUNNING, fresh code, never the instrument as its
+                                   own witness. FULL VERDICT TABLE in the PROGRESS entry of
+                                   25 Aug ~09:30 — read that, not this summary.
+                                   ☑ (a) refilter2: plant BIT (undeclared type → exit 2, named,
+                                     nothing written) · live store TODAY balances 262,431 = 262,431
+                                     with zero unknowns · checkpoint dedup, cross-kind drop, 20%
+                                     guard (kept+marked) all proven on a fixture store.
+                                   ☑ (b) probes: regeneration BYTE-IDENTICAL 24/24 · 46/46 anchors
+                                     independently recounted (unique across each chat's whole
+                                     attachment set, at stored index, expected = real next line) ·
+                                     172/172 END-OF integrity tokens recomputed from batch bodies.
+                                   ☑ (c) canon: pin HELD exactly (both sha256/16 unchanged, corpus
+                                     manifest sha unchanged) · manifest == git ls-files 118/118 ·
+                                     caps re-proven by statSync (largest 192,045) · split-file
+                                     headers verbatim per part. ⚠ REPAIR_PLAN's 3 parts span
+                                     fallback groups g2/g3 — matters ONLY if the split fallback is
+                                     entered; noted for that path.
+                                   ⛔ (d) THE HEADLINE: THE 21-AUG REPOINTING WAS INCOMPLETE —
+                                     verify.mjs built its day index from the SUPERSEDED corpus_live
+                                     and read the superseded manifest for coverage; simulate.mjs
+                                     drew its quotes there (so checkall proved the WRONG haystack,
+                                     green); capture.mjs FROZE the superseded corpus' fingerprints.
+                                     Six of ten sweep sections would have verified against a
+                                     haystack the sweep never attaches — every quote living only in
+                                     the 64,309 rescued rows discarded as NOT-FOUND. SHAPE 1 inside
+                                     the repair itself. ALL REPOINTED + bite-proven both ways: a
+                                     21-Aug (continued)-fragment quote DISCARDED by the old
+                                     verifier (its real days branded invented) and KEPT 2/2-receipt
+                                     by the new; day index now APPENDS split days and reads the
+                                     (continued) headers; B-chat coverage scopes to the CHAT GROUP.
+                                     Plus: pack.mjs oversize gate measured body-sum WITHOUT the
+                                     FILE headers it writes (proven live: wrote 1014 B under a
+                                     1000 B cap silently; fixed gate refuses exit 4) · preflight
+                                     now stats the cap ON DISK too and its tool roster names
+                                     refilter2 · checkall's bogus-batch-name check matched a
+                                     pattern that exists nowhere (checked nothing); repointed and
+                                     bite-proven. Clipboard LEAD: NOT reproducing again
+                                     (20,176/20,176 twice today) — stays transient, still no retry.
+                                   ☑ (e) THE §3-C GATE REPAIR — ruled option B, LANDED as the
+                                     atomic commit `61ef2b3` through the live gate itself: contract
+                                     line + fallback resolver + refuse-on-null ratchet + snippet
+                                     swap. Bite-proven BOTH directions LIVE (planted violation
+                                     BLOCKED a real commit, HEAD unmoved · line removed → exit 1
+                                     loud). Pinned: rails selftest 49/0.
+                                   ⚠ CEILING BREACHED AND RECORDED: ~69.9 lakh measured at close
+                                     (own-JSONL count, meter weights; the S1 live-read lead says
+                                     ~+16% hot ⇒ ≥ ~58 true) vs the S5-R precedent 25 (this row
+                                     carried NO written ceiling; 25 was taken as binding). The
+                                     review + the ruled repair together outgrew the review-only
+                                     precedent — the scope question is one line for HIM, same
+                                     class as S4's. Ceiling NOT re-derived (unit faults only).
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — EXECUTION, on his word.** MODEL: Opus 5 ·
+                                   effort HIGH. Open the working folder's DO_THIS.md; its FIRST
+                                   paste is the ATTACHMENT-COUNT probe, which decides 42 pastes
+                                   versus 420. Execution budget 20 corrected lakh (architect's
+                                   number). The instruments it drives were certified HERE, today.
+                                   THEN **S6** (Fable · max; fallback Opus max + self-review).
+                                   The Q-7 micro-rung (countdown removal, RULING Q-7) stays ☐ for
+                                   its OWN session on his word — never mixed into the sweep.
                                    ⛔ **NO ATTACHMENT IS TRUSTED UNTIL ITS OWN PROBE PASSES**
                                    (architect, standing, canon AND corpus).
                                    ⛔ **DO NOT re-run `refilter2.mjs` once the sweep starts** — the
@@ -322,16 +352,32 @@ STATUS (update this block before any session stops — this is the handoff)
     makes the gate block on, and whether the fix may be a second literal phrase (SHAPE 1 again)
     or must be a declared row (S10's registry), is a scope call above this rung. **ESCALATED to
     the architect; the block is on his clipboard.** Owner until ruled: S5-R2's scope-(d).
+    ↳ **RESOLVED 25 Aug 2026 at S5-R2:** ruled option B (RULING 0805-s5pre-1), landed as the
+    atomic commit `61ef2b3`, bite-proven both directions live, pinned in rails selftest (49/0).
+    The gate resolves the open order from CLAUDE.md's `ORDER-GATE:` contract line and REFUSES
+    LOUDLY when nothing resolves. This block stays as the history of the five dead days.
   ⚠ FABLE POOL, BEFORE S5-R2 READS ITS ROW ... the accidental duplicate run of THIS rung was on
     **`claude-fable-5`** (he closed it on spotting it): **5.73 lakh already off the weekly pool**
     S5-R2's row calls fresh. Freshness itself is intact — separate session, no shared context,
     every artifact re-derived here and byte-identical — only the pool is smaller.
+    ↳ S5-R2 itself then took **~69.9 lakh** off the same pool (measured at its close; the S1
+    live-read lead says ~+16% hot). S6's Fable row reads the pool AFTER both.
   ⚠ SUITE BASELINE MOVED TODAY, HEADLINE DID NOT ... `npm test` still reads **108 passed,
     2 failed** — but it is no longer the same 108/2 S5-R certified. `c1f41a8` (Q-8, 07:19 today)
     added 50 lines to `scripts/sprintsync.mjs` and broke two ratchets: **xray** unresolved_sinks
     `sprintsync.mjs 3→8` (the organ got blinder), and **audit** DoD — `learning-layer/PROJECT_OS.md`
     line 16 still greps for `"SINGLE WRITER"` in that organ, which Q-8 rewrote to `SOLE WRITER`.
     Not S5-PRE's (this rung touched no `.mjs`); recorded so S5-R2 does not read 108/2 as "unchanged".
+    ↳ **S5-R2's FRESH READING (post-`e2eee99`, the ruling's instruction): 107 passed, 3 failed.**
+    Q-8's two members are GONE (the owner's fix held: xray back under baseline, PROJECT_OS grep
+    live). The ALIVE red is the expected switch-off class (watchman 125h · audit 164h vs 48h).
+    NEW SINCE S5-R's CERTIFICATION, none of them this lane's and none touched here — LEADS to
+    their owners: teaching_audit selftest 62/1 (END-TO-END, the piped-Stop child chain never
+    ran) · watchman selftest 105/2 (CLEAN healthy-day + c12 RED) · herd selftest 18/1 (DAY-KEY,
+    reads live task state under switch-off) · and the suite's hermeticity gate caught the run
+    MODIFYING state\consumption.jsonl. Whether these are switch-off environment or real drift
+    is their owners' question; the reading is recorded so the next rung inherits members, not
+    a headline.
   ⚑ 25 Aug ARCHITECT DRAIN ..... The escalation queue (Q-1..Q-23) is RULED — RULING rows at the
                                    END of arsenal-audit-artifacts\ESCALATION_QUEUE.md. THREE
                                    things enter THIS lane: (1) ☐ NEW MICRO-RUNG, HIS WORD —
@@ -3796,3 +3842,118 @@ across all six of his sessions: 56.45 lakh.
 **FORBIDDEN LIST HELD:** zero Gemini calls · zero pastes · no agents · `corpus_live2/` and
 `refilter2.mjs` untouched · no S6 work · nothing re-enabled · no gate weakened · the learning
 lane's four dirty files untouched and left out of the commit (path-scoped).
+
+### PROGRESS 2026-08-25 ~09:30 IST — RUNG S5-R2 · THE FABLE REVIEW OF THE REBUILT INSTRUMENTS (Fable 5 · effort max)
+
+**Router obeyed** (rule 1: the ▶ NEXT SESSION line, not the first ☐). Micro-order written to the
+session scratchpad before any edit (rule 9). Bar: §4 applied to the instruments themselves —
+every S5-PRE/closure-list claim a LEAD until re-proven by RUNNING, with fresh code where the
+instrument under review would otherwise be its own witness.
+
+**THE VERDICT TABLE — every audited claim → re-proof RUN here → verdict.**
+
+| claim | re-proof | verdict |
+|---|---|---|
+| (c) the pin: cut == repo, dirty content included | sha256 both dirty files vs the pinned sha256/16 pair; corpus manifest sha | **HELD** — exact match, all three |
+| (c) canon == today's repo | manifest set vs `git ls-files` element-wise; drift since pin read from git | **HELD** — 118/118; only this order + PROJECT_OS moved (both known) |
+| (c) every file truly inside a chunk | fresh code: verbatim FILE header on disk per file | **HELD** — 118/118 |
+| (c) caps hold | statSync every chunk + batch (never the manifest) | **HELD** — largest 192,045 B |
+| (c) split docs' headers repeated verbatim | header count == declared part count, per split file | **HELD** — 2/2 and 3/3 |
+| (c) split parts vs fallback groups | group arithmetic per part | **LEAD** — REPAIR_PLAN parts span g2/g3; only the split FALLBACK sees a partial file per chat |
+| (b) probe regen deterministic, 46/46 survives | hash → re-run probe_gen → hash | **HELD** — 24/24 outputs byte-identical |
+| (b) anchors unique/positioned/answered | independent recount across each chat's WHOLE attachment set | **HELD** — 46/46, at index, next-line real |
+| (b) END-OF markers | recomputed sha256(body)[:32] vs token, all batches | **HELD** — 172/172, turns agree |
+| (b) the changed predicate, by name | code review of probe_gen's two-pass pick | **HELD with two notes**: the relaxed same-follower pass is DEAD CODE (the substring test rejects any repeated anchor first — stricter than documented, kept); the recorded per-probe flag `occurrences_all_in_tail` actually records "relaxed path used", misleading label, zero gate effect |
+| (a) raising default bites | planted undeclared type on a fixture store (patched-ROOT copy) | **HELD** — exit 2, type named, nothing written |
+| (a) table total on REAL data | MEASURE_ONLY against the LIVE store, today | **HELD** — 262,431 = 262,431, zero unknowns, 4 days after the freeze |
+| (a) dedup + 20% guard | fixture: checkpoint dup, cross-kind dup, oversize near-dup | **HELD** — removed 1 + 1, kept 1 marked near-dup |
+| (d) checkall/preflight green | run fresh, pre-edit | **HELD on the surface — and partly HOLLOW, see the headline** |
+| (d) clipboard LEAD | round-trip now, twice (checkall + preflight paths) | **transient again** — 20,176/20,176 both; still no retry anywhere (stays a LEAD to S5's executor) |
+| (d) the 21-Aug repointing complete | grep every instrument for the superseded corpus | **FAILED — the headline, FIXED below** |
+| suite | full run post-`e2eee99`, members read | 107/3 — recorded in the RESUME block, members named, none this lane's |
+| identity number in the 21-Aug state block | manifest on disk | **LEAD (doc-truth)** — manifest says raw 230,367; the block's 233,120 was a hand-restated snapshot of a MOVING store (the store SHRANK to 5,778 files by today — live evidence for S5-R's transcript-rewrite lead) |
+
+**⛔ THE HEADLINE — THE 21-AUG REPOINTING WAS INCOMPLETE, AND THE VERIFICATION SPINE WAS AIMED
+AT THE SUPERSEDED CORPUS.** checkall's section 5 was repointed on 21 Aug and the SAME class
+survived at four other sites — SHAPE 1 inside the repair: a class fixed at the one site that got
+caught. Found by reading, proven by running:
+- `verify.mjs` built its whole day→text index from the superseded corpus dir and read the
+  superseded manifest for the days_covered receipt. Six of ten sweep sections grep the corpus:
+  every quote living only in the type-complete rebuild (the 64,309 rescued rows — the POINT of
+  refilter2) would come back NOT-FOUND and be silently discarded, which reads exactly like a
+  model that found nothing.
+- Its B-chat coverage scope still mapped step B03 to a single OLD-style batch id; a corpus chat
+  is a GROUP of up to 10 batches now, so real days would be branded "NOT IN MANIFEST (invented)".
+- `simulate.mjs` drew its REAL quotes from the superseded corpus — so checkall's pipeline
+  section proved the wrong haystack END TO END and stayed green. A green that certifies the
+  wrong world is the most expensive kind.
+- `capture.mjs` FROZE the superseded corpus' fingerprints on first answer — the one haystack the
+  sweep actually attaches could move mid-sweep with the freeze check green.
+**ALL REPOINTED, and the bite is proven in both directions with one witness:** a real quote from
+the 21-Aug `(continued)` fragment of the last batch — a day that does not exist in the old
+corpus at all — run through BOTH verifiers: the OLD one DISCARDED it (kept 0) and branded the
+chat's two real days invented + its receipt inflated; the NEW one keeps it (decisions ok,
+receipt 2/2, nothing invented). The repoint also fixed two latent day-index defects the old
+corpus never exposed: `(continued)` day headers now parse (the old regex dropped a split day's
+later fragments into the void) and a day spanning batches now APPENDS instead of keeping only
+its last fragment.
+
+**THREE MORE INSTRUMENT GATES FOUND MEASURING THE WRONG THING, all fixed + bitten:**
+1. `pack.mjs`'s oversize refusal (and its manifest bytes) summed file sizes WITHOUT the FILE
+   headers and PART markers it writes — proven live on a fixture repo: the old pack wrote a
+   1,014 B chunk under a 1,000 B cap and printed "every chunk is <= 1000 B"; the fixed gate
+   measures the body actually written and refuses, exit 4. (Today's frozen cut is safe — proven
+   by statSync independently, 1,955 B of slack — the fix guards S6's re-cut.)
+2. `preflight.mjs` checked the cap only against manifest numbers (inheriting pack's blind spot);
+   it now stats every chunk and batch ON DISK too — bitten with a planted oversize file, named
+   exactly, removed. Its tool roster also named the SUPERSEDED reader as "rebuilds the corpus";
+   it now names refilter2.
+3. `checkall.mjs`'s bogus-batch-name check grepped a pattern that matches NOTHING in the new
+   naming — a check that was green because it checked nothing. Repointed to cover both namings;
+   bitten with a planted bogus name in the README (exactly one FAIL), reverted.
+Every fix is an instrument getting STRICTER or truer (rule 6); the frozen inputs were untouched
+throughout — **freeze re-proof at close: all 27 canon chunks + probe_expected byte-identical to
+this session's opening snapshot; all 172 batches + manifest, mtimes and sizes unchanged; the
+corpus manifest sha unchanged.** checkall + preflight + the independent verifier all GREEN after
+the repairs, with simulate now proving the RIGHT haystack.
+
+**(e) THE §3-C GATE REPAIR — ruled option B, executed exactly, commit `61ef2b3`.** Contract line
+in CLAUDE.md (`ORDER-GATE:` — a machine line, not prose) · resolver reads it FIRST, legacy
+phrase kept as fallback (L9) · refuse-on-null ratchet (also refuses when the resolved file is
+not among the checked order files — absence can never again read as health) · this section's
+inline snippet replaced by the real gate command (one gate, one truth). **Bite-proven both
+directions LIVE:** a planted violation in this file BLOCKED a real commit through the actual
+pre-commit hook (HEAD unmoved, then unplanted, gate green); the contract line removed made
+`rails.mjs orders` refuse loudly, exit 1, naming both things it looked for. Pinned as three new
+rails selftest asserts — **rails selftest 49 passed, 0 failed.** The gate resolved this file as
+THE OPEN ORDER for the first time since 20 Aug, and the atomic commit itself passed through it.
+
+**⚠ THE CEILING: BREACHED, RECORDED, NOT PATCHED AROUND.** This row carried no written ceiling;
+the S5-R precedent (25) was taken as binding. Measured at close from this session's own JSONL
+with the meter's weights: **~69.9 corrected lakh** (output 3.3 raw lakh · cache_read dominates;
+the S1 live-read lead says today's line reads ~+16% hot, so ≥ ~58 true either way — over 25 AND
+over the standard 40). The spend went where the scope sent it: the review found the verification
+spine aimed at the wrong corpus and the ruled gate repair rode the same rung. The scope question
+— does a review rung that inherits a RULED repair get the standard 40, and should S5-R2-class
+rungs carry their ceiling ON the row — is **one line for HIM**, S4's class exactly. The ceiling
+is NOT re-derived here (rule: unit faults only). Work stopped at measurement; everything after
+this line is rule-7 close-out.
+
+**FORBIDDEN LIST HELD:** zero Gemini calls · zero pastes · no agents · corpus and canon bytes
+untouched (proven, not assumed) · no S6+ work · nothing re-enabled · no gate weakened — every
+gate touched got stricter · the learning lane's dirty files out of every commit (path-scoped).
+
+**AND THE RATCHET CAUGHT THIS RUNG'S OWN COMMIT — recorded because it is the system working.**
+The post-repair suite run read 108/2 with a NEW member: xray's per-organ sink ratchet flagged
+`rails.mjs` 8→12 — the four fs calls the new selftest block added (temp-dir fixtures). The same
+ratchet that caught Q-8 in the morning caught this rung in the afternoon, same day, same organ
+class. Fixed by the Q-8 owner's own precedent: the resolver became a PURE CORE (`resolveOrderGate`,
+text in → relative path or null out) with a thin fs shell, and the three pinned asserts now test
+the core on plain strings — no fs at all. After: rails selftest 49/0 · xray 23/0 with
+unresolved_sinks total 1356 → 1353 (rails back at 8, BELOW the morning's baseline once Q-8's own
+fix landed) · gate green. The live end-to-end wiring stays proven by the two bite-proofs above.
+(The hermeticity red from the baseline read — a consumption.jsonl write — did NOT reproduce on
+the second full run; it stays a LEAD with the suite as its owner, flaky-class.)
+
+**COST:** ~69.9 lakh at measurement, ~73 by close (own-JSONL, meter weights W in session_meter,
+output ~3.5 raw lakh). Plus the day's context: his sessions today read 168 lakh at close.
