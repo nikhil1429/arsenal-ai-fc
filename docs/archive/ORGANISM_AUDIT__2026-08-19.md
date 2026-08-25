@@ -1114,7 +1114,7 @@ STATUS (update this block before any session stops — this is the handoff)
                                    and even `node scripts/rails.mjs orders` did not. Default
                                    permission mode, or a fresh session.
                                    ⚠ **IT BIT AGAIN AT ~05:25 — a session opened in AUTO and HALTED
-                                   HERE, before the browser, under 1 lakh spent** (PROGRESS
+                                   HERE, before the browser, 5.27 lakh spent on the HANDOFF line** (PROGRESS
                                    2026-08-26 ~05:25). The router caught it, which is the mechanism
                                    working — but the CAUSE is this order's own §1 class: **the
                                    version-3 card carries no mode line, so the requirement can only
@@ -6873,9 +6873,13 @@ no tick changed, because nothing became true.
 
 #### THE COST
 
-**Under 1 lakh** — five shell reads and this entry, against the 35-lakh EXECUTION line, which is
-therefore **still fresh at ~35 for the session that actually opens B01_3**. The 10-lakh HANDOFF line
-is likewise untouched.
+**5.27 lakh weighted · 30 turns · out 0.16** — own-JSONL count with the meter's weights, deduped
+by requestId + message id, read at the close. **My first draft of this line said "under 1 lakh" and
+the meter said otherwise** — the reads are small but this order is ~6,900 lines and every turn
+re-sends it, so cache_read is the whole bill. Recording the measured number, not the felt one.
+ATTRIBUTION, stated rather than assumed: **it comes off the 10-lakh HANDOFF line, not EXECUTION** —
+the rung was never opened, and every turn here was router-reading, the record and the gate.
+**The 35-lakh EXECUTION line is untouched and fresh for the session that actually opens B01_3.**
 
 #### WHAT THE NEXT SESSION DOES
 
