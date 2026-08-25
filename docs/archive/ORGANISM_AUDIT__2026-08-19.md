@@ -1056,10 +1056,12 @@ STATUS (update this block before any session stops — this is the handoff)
                                      finding second — the same treatment the SWEEP WARNING already
                                      gives this order. Raised for the architect.
                                    ⚠ CEILING BREACHED AND RECORDED: **13.87 lakh at the close of the
-                                     build+proof half, against BUILD 6 · PROOF 5 = 11** (own-JSONL
-                                     count, meter weights, dedup by requestId+message id). The
-                                     HANDOFF 5 is on top of that. Ceiling NOT re-derived — §10-C
-                                     allows that only on a proven UNIT fault, and there is none.
+                                     build+proof half against BUILD 6 · PROOF 5 = 11, and 19.40 at
+                                     the push against the full 16** (own-JSONL count, meter weights,
+                                     dedup by requestId+message id — read AT the commit, not
+                                     mid-flight). Ceiling NOT re-derived — §10-C allows that only on
+                                     a proven UNIT fault, and there is none; a rung that runs hot is
+                                     data about the rung.
   ▶ NEXT SESSION ............... **S5 · THE SWEEP, RESUMED FROM A02 — and its FIRST ACT is the
                                    ONE AUTHORIZED FENCED RE-PROBE in A02's existing chat**, which
                                    S5-Z3 built the format for and could not fire inside its
@@ -6361,9 +6363,11 @@ of this rung's boundary too. It is now named twice; the third time it should be 
 
 #### THE COST
 
-**13.87 lakh at the close of the build+proof half, against BUILD 6 · PROOF 5 = 11 — OVER, and
-recorded as over.** Own-JSONL count with the meter's weights, deduped by requestId + message id.
-The HANDOFF 5 is on top of that. **The ceiling is NOT re-derived** — §10-C allows that only on a
+**13.87 lakh at the close of the build+proof half against BUILD 6 · PROOF 5 = 11, and 19.40 lakh
+at the push against the full 16 — OVER at both marks, and recorded as over.** Own-JSONL count with
+the meter's weights, deduped by requestId + message id, read AT the commit rather than mid-flight.
+The handoff itself was 5.53 against a written 5, which is the one number that came in near true.
+**The ceiling is NOT re-derived** — §10-C allows that only on a
 proven fault in the meter's UNIT, and there is none; a rung that runs hot is data about the rung.
 
 #### WHAT I LEFT UNREAD
