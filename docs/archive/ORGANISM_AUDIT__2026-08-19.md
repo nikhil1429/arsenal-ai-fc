@@ -353,7 +353,7 @@ STATUS (update this block before any session stops — this is the handoff)
                                    remedy does not reach it (the corpus path reads `PER`; the canon
                                    path hardcodes one step), so the fix is a CODE change. Block on
                                    his clipboard + on disk:
-                                   `queue\ESCALATION__2026-08-25_S5-canon-window.md`.
+                                   `queue\2026-08-25_0945-s5canon-1.md`.
                                    Options A–D with costs; **recommendation A** — wire the canon
                                    path to `PER` (3 loads: 10+10+7, one chat, each probe-gated).
                                    That is WIRING, not design: `probe_expected.json` ALREADY carries
@@ -4086,7 +4086,7 @@ does not reach this: the corpus path reads `PER`, the canon path hardcodes one s
 a **CODE change to `buildsteps.mjs`**, and S5's row says *"S5 builds nothing"* with STEP 0 as its
 only declared exception, while the router says drive the sweep. Two laws pointing opposite ways is
 the escalation trigger by name. Block written, and put on his clipboard from a file per the
-delivery rule: `arsenal-audit-artifacts\queue\ESCALATION__2026-08-25_S5-canon-window.md`.
+delivery rule: `arsenal-audit-artifacts\queue\2026-08-25_0945-s5canon-1.md`.
 Options A–D with costs; **recommendation A** — wire the canon path to `PER`: 3 load messages
 (10 + 10 + 7) in ONE chat, each gated by its own probe, Q1–Q4 unchanged, steps 65 → 69.
 **A is wiring, not design:** `probe_expected.json` ALREADY carries `canon_g01` = chunk01..10,
