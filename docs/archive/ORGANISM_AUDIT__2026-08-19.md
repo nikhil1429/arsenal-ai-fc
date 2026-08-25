@@ -347,7 +347,9 @@ STATUS (update this block before any session stops — this is the handoff)
                                      else drives clean: navigate · Pro Extended · `file_upload` ·
                                      send · read. `file_upload` needs the out-of-repo folder granted
                                      once (`request_directory`); it refuses by path, loudly.
-  ⛔ HALTED · ESCALATED ......... **THE CANON WINDOW IS A REAL FORK AND THE SESSION DID NOT DECIDE
+  ⛔ HALTED · ESCALATED ......... **RULED 25 Aug ~09:55 AND EXECUTED AT S5-W (row below) — kept
+                                   here as the history of the fork, not as an open block.**
+                                   **THE CANON WINDOW IS A REAL FORK AND THE SESSION DID NOT DECIDE
                                    IT.** "S5 builds nothing" (the row) and "drive the sweep" (the
                                    router) point opposite ways, and the anticipated one-command
                                    remedy does not reach it (the corpus path reads `PER`; the canon
@@ -368,21 +370,41 @@ STATUS (update this block before any session stops — this is the handoff)
                                    still free (the count probe was recorded BY HAND in `diag\`,
                                    never through `capture.mjs`, precisely to avoid tripping the
                                    freeze) · corpus half needs no change under any option.
-  ▶ NEXT SESSION ............... **S5-W · THE CANON WIRING — a micro-rung, RULED 25 Aug ~09:55
-                                   (queue\RULING__2026-08-25_0945-s5canon-1.md = the work order;
-                                   OPTION A ratified + the checkall NARRATIVE-vs-WIRING section).**
-                                   MODEL: Opus 5 · effort HIGH. **CEILING WRITTEN: 25 corrected
-                                   lakh.** Scope: wire the canon path to PER (3 loads 10+10+7,
-                                   each gated by its OWN certified probe canon_g01/g02/g03) ·
-                                   T1/T2 prose → "part N of 3" (T2's coverage language spans all
-                                   three parts) · steps 65→69 · checkall gains narrative-vs-wiring
-                                   (every "part N of M" step attaches exactly its wired files;
-                                   bite-proven plant/unplant) · re-run checkall/preflight/simulate/
-                                   verify to green · commit through the live gate. FORBIDDEN:
-                                   frozen corpus/canon bytes · any Gemini call · any sweep
-                                   question · probe regeneration unless byte-identity re-proven
-                                   (a probe that would CHANGE = STOP + escalate).
-                                   **THEN S5 · THE SWEEP — RESUMED, its own session.** MODEL:
+  S5-W THE CANON WIRING ........ ☑ DONE 25 Aug 2026 ~10:40 IST · Opus 5 · effort high · TIER-0,
+                                   ZERO Gemini calls, ZERO sweep questions, frozen inputs PROVABLY
+                                   untouched (218/218 fingerprints identical, before vs after).
+                                   Cost 15.4 of the 25-lakh ceiling. Full account in the PROGRESS
+                                   entry of 25 Aug ~10:40 — read that, not this summary.
+                                   ☑ OPTION A WIRED: the canon path reads `PER` like the corpus
+                                     path always did. **A01/A02/A03 = 10+10+7 in ONE chat**, each
+                                     carrying its OWN certified probe (canon_g01/g02/g03), then
+                                     Q1–Q4 + critics at A04–A11; replication R01–R03 loads + R04.
+                                     **69 step files** (canon 11 · replication 4 · corpus 54,
+                                     unchanged), byte-identical on an independent re-run: 70/70.
+                                   ☑ PROBES REUSED AS-IS, NEVER REGENERATED — probe_expected.json
+                                     and all three PROBE_canon_g0*.txt byte-identical at close
+                                     (sha256/16 pinned in the PROGRESS entry). Nothing to escalate.
+                                   ☑ THE PROSE STOPPED LYING: T1 is "part @PART@ of @OF@" (derived,
+                                     never typed), new T1b_part.txt carries parts 2..N, and T2 no
+                                     longer claims a batch arrived with it — it attaches NOTHING,
+                                     and its coverage receipt now spans every part.
+                                   ☑ THE RULING'S ADDITION IS BUILT AND BITES — checkall section 6,
+                                     NARRATIVE vs WIRING, off a DERIVED `wiring.json` that
+                                     buildsteps writes (what each step really attaches). **Five
+                                     plants, five bites, exit 1 each, green again unplanted** —
+                                     including the original defect verbatim ("announces batch 2 of
+                                     2 and attaches NOTHING").
+                                   ⛔ AND IT FOUND A LIVE ONE THE ORDER DID NOT KNOW ABOUT: the
+                                     replication diff was DEAD. `verify.mjs`'s Q1 matchers were
+                                     hardcoded A03/R02 — the shape from BEFORE the 21-Aug re-cut —
+                                     so on a real sweep they matched the CRITIC step and the
+                                     architect's ruling-(i) measurement would have printed "not
+                                     measurable" while checkall stayed green, because simulate.mjs
+                                     fed it a fixture literally named `_SIM_A03`. A test agreeing
+                                     with its fixture's own mistake. Both now read the wiring.
+                                   ☑ checkall GREEN (all 6 sections) · preflight GO (18 checks),
+                                     both RUN IN THIS SESSION · rails orders 0 blocking.
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — RESUMED, its own session.** MODEL:
                                    Opus 5 · effort HIGH. **EXECUTION BUDGET WRITTEN: fresh 30
                                    corrected lakh** (the original 20 bought the cap measurement +
                                    transport proof; neither repeats). Read
@@ -4140,3 +4162,98 @@ architect** — that is question 3 of the escalation.
 **NEXT SESSION FIRST ACTS:** paste the architect's ruling into the order verbatim → apply it →
 read `diag\COUNT_PROBE_RESULT.md` **before** touching the browser → re-run `checkall.mjs` after
 any regeneration → then drive. **S5 · MODEL: Opus 5 · effort HIGH.**
+
+---
+
+### PROGRESS 2026-08-25 ~10:40 IST — RUNG S5-W · THE CANON WIRING (Opus 5 · effort high · TIER-0, zero Gemini calls)
+
+**Executed exactly one rung, exactly as ruled.** The architect's ruling of ~09:55
+(`queue\RULING__2026-08-25_0945-s5canon-1.md`) ratified OPTION A and added the class fix; this rung
+is that ruling and nothing else. Micro-order written to the session scratchpad BEFORE the first
+edit (§10-D rule 9) and checked against §10-C/§10-D.
+
+**WHAT WAS WRONG.** The count probe measured Gemini web's attachment cap at TEN per message. The
+corpus path had always read `FILES_PER_CHAT`; the canon path hardcoded ONE load step carrying all
+27 chunks. One order, two answers to the same question — SHAPE 1 inside the audit's own instrument,
+for the third time. And the prompt prose still described a two-batch world that had not existed
+since 21 Aug, so `A02` would have opened with *"Here is batch 2 of 2"* while attaching nothing.
+
+**WHAT LANDED.**
+
+| # | change | proof |
+|---|---|---|
+| 1 | `buildsteps.mjs`: the canon reads `PER`. **A01/A02/A03 = 10+10+7 in ONE chat**, each carrying its OWN certified probe (`canon_g01/g02/g03`); Q1–Q4 + critics move to A04–A11; replication becomes R01–R03 loads + R04 cold-Q1 | `node buildsteps.mjs` → **69 step files** (canon 11 · replication 4 · corpus 54 unchanged), exactly the 65→69 the ruling predicted |
+| 2 | **`wiring.json` — the wiring became DATA.** Every step records what it really attaches, its part/of, its probe, its role. Derived by `buildsteps`, authored nowhere | 69 steps recorded, 24 of them attaching; buildsteps REFUSES if a written step is unwired or a wired step unwritten |
+| 3 | `prompts/T1_load.txt` → "part `@PART@` of `@OF@`" (interpolated, never typed) · **new `T1b_part.txt`** for parts 2..N, each with its own probe · `T2_contradictions.txt` no longer claims a batch arrived with it and its coverage receipt spans EVERY part | read back off disk: A01 "in 3 parts", A02/A03 "part N of 3", A04 "Every part is now in… Nothing is attached to this message" |
+| 4 | **checkall §6 · NARRATIVE vs WIRING** — the ruling's addition. A step announcing "part N of M" (or the legacy "batch N of M") must attach a non-empty set with part=N, of=M, and M = that chat's real load count; a multi-part load that announces nothing is a *silent fragment*; what a step attaches must equal what its probe was certified against; and a chat's parts must add up to the canon exactly once | **5 plants, 5 bites** — table below |
+| 5 | `probecheck.probeFor()` reads `wiring.json` instead of pattern-matching step names, and REFUSES loudly if the wiring is absent (a null there means "no gate at all") | checkall §4 now plants on the real opener: `A01 → canon_g01` |
+| 6 | `buildsteps`' placeholder refusal widened from the two families it knew (`@DAYS@`, `@F_XX@`) to ANY `@UPPER@` token | `@PART@`/`@OF@` were invisible to the old pattern — a refusal that knows only the placeholders alive when it was written is a list pretending to be a rule |
+
+**THE BITE-PROOF, both directions, every branch** (`scratchpad/biteproof.mjs`, five plants each
+followed by an unplant):
+
+```
+BIT  the original defect      A04 announces "batch 2 of 2" and attaches NOTHING          exit 1
+BIT  a wrong total            A02 announces "of 2" but is wired as one of 3              exit 1
+BIT  a wrong index            A03 announces part 2 but is wired as part 3                exit 1
+BIT  a silent fragment        R02 attaches 10 file(s) as part 2 of 3 and never says so   exit 1
+BIT  wiring vs probe          A03: what it attaches and what canon_g03 certified differ  exit 1
+UNPLANTED                     CHECKALL GREEN                                             exit 0
+```
+
+**⛔ AND THE RUNG FOUND A LIVE DEFECT NOBODY HAD NAMED — THE REPLICATION DIFF WAS DEAD.**
+`verify.mjs` matched the two Q1 answers with hardcoded regexes for **A03** and **R02**. That was
+the shape from BEFORE the 21-Aug re-cut: from 21 Aug the in-chat Q1 was really **A02** and A03 was
+the CRITIC. So on a real sweep the matcher would have looked in the critic's answer, found no
+contradictions, printed *"REPLICATION — not measurable yet"*, and the architect's ruling-(i)
+measurement — the entire reason the cold chat exists — would have produced nothing, quietly.
+It survived S5-R and S5-R2 for one reason: `simulate.mjs` fed the pipeline a fixture literally
+named `_SIM_A03`, so the checker and its own fixture shared the mistake and agreed with each
+other. **A test that inherits its fixture's error proves nothing.** Both now derive the step names
+from `wiring.json`; checkall §3 reports *"the replication diff is measured, not skipped"* against
+the real layout. This is the same class as S5-R2's headline (a verifier aimed at the wrong corpus):
+a checker pointed at the wrong thing is worse than no checker, because it is green.
+
+**DONE-PROOF, all RUN IN THIS SESSION, none inherited:**
+- `node buildsteps.mjs` → 69 steps · `wiring.json` written · 0 stale left
+- `node checkall.mjs` → **GREEN, all six sections** (was 5)
+- `node preflight.mjs` → **GO**, 18 checks
+- determinism: **70/70 outputs byte-identical** on an independent re-run — the step set is a
+  function of the manifests and the prompts, not of who ran it
+- `node scripts/rails.mjs orders` → §3-C, open order resolves, **0 blocking**
+
+**THE FORBIDDEN LIST HELD, and it was proven rather than promised:**
+- **Frozen bytes: 218 canon + corpus files fingerprinted before the first edit and re-fingerprinted
+  at close — 0 moved, 0 added, 0 removed.** `refilter2.mjs` and `pack.mjs` were never run.
+- **Probes REUSED, never regenerated:** `probe_expected.json` `f31f1635465032eb`,
+  `PROBE_canon_g01` `354ac975d19e3767`, `g02` `d60bf5d681ce1c16`, `g03` `ff5de11e23e852a4` —
+  identical at open and at close. Nothing would have changed, so nothing was escalated.
+- Zero Gemini calls · zero sweep questions · the browser was never opened · `inputs_frozen.json`
+  still does not exist, so the inputs remain free for the sweep session.
+- No gate was weakened: §6 is new, §4 got stricter (real opener instead of a probe no step carries),
+  and the placeholder refusal widened.
+
+**WHAT THIS RUNG DID NOT DO — said out loud, per §5.** No audit question was asked and no §9
+material was produced; that is the sweep's job, not this one's. The prompt PROSE was read back off
+disk but no model has read it — a prompt that reads correctly to a session is still a lead until a
+probe returns. `DO_THIS.md` keeps its Ctrl+V framing for the human-paste fallback even though the
+sweep now drives Chrome itself (the transport ruling lives in the RESUME block); rewriting the
+driver card for a lane that has not run once was out of scope and would have been a guess.
+
+**⚠ DECLARED, and it is a consequence of the freeze rather than a defect:** THIS FILE is itself
+inside the frozen canon cut (it is one of the two over-cap files `pack.mjs` splits). Writing this
+PROGRESS entry therefore moves the repo's copy one entry ahead of the copy the sweep will attach.
+That is CORRECT under the 25-Aug ordering law — inputs are immutable once the review that certified
+them has passed — but it must be said rather than discovered: **the canon chunks are a snapshot of
+25 Aug ~08:00, and the sweep will read this order as it stood then, without the S5-W rows.** Same
+class as S5-PRE's pin, and it recurs for every rung until the sweep closes. Do NOT re-cut to "fix"
+it; a mid-sweep rebuild moves the haystack under answers already collected.
+
+**COST: 15.4 corrected lakh of the 25 ceiling** (meter 234.43 → 249.8 on the day's line; the S1
+live-read lead says today's figure reads ~+16% hot, so the true number is lower). Inside budget.
+
+**NEXT SESSION: S5 · THE SWEEP, RESUMED — MODEL: Opus 5 · effort HIGH, budget 30 corrected lakh.**
+First acts, in order: read `diag\COUNT_PROBE_RESULT.md` **before** touching the browser (Ctrl+V is
+dead to a driving session and `computer type` eats newlines) → `node checkall.mjs` must say GREEN
+and `preflight.mjs` GO in that session, not inherited from this one → then A01, and **no attachment
+is trusted until its own probe passes** — which now means three probes for the canon, not one.
