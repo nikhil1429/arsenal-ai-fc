@@ -561,6 +561,34 @@ STATUS (update this block before any session stops — this is the handoff)
                                      the SHAPE is the jugad rule's own: a universal quantifier
                                      that excludes a subject without declaring it. Owner's call:
                                      one line in the predicate, or one declared exception.
+  ⛑ S5-Y RAISED THREE, NONE BLOCKING ... **`queue\2026-08-25_1215-s5y-1.md` — open, and the
+                                   sweep does NOT wait on it.** Two are policy that will recur
+                                   every rung; one is a live trap in the card he pastes.
+                                   (1) THE CEILING QUESTION, THIRD OCCURRENCE (S4 · S5-R2 · S5-Y):
+                                   does a written ceiling price the BUILD, or the BUILD + THE
+                                   PROOF? S5-Y's edits were about the estimate; the 22 asserts
+                                   were the overrun. Rec: the ITEM-3 policy extended — the proof
+                                   gets its OWN named line, written BY THE ARCHITECT at ruling
+                                   time, never by the executor after the fact (an executor who
+                                   can open its own budget line has no ceiling at all).
+                                   (2) `diag/` IS INVISIBLE TO THE ROLLBACK GATE — measured, 0
+                                   members in the store; both proof harnesses have no restorable
+                                   copy, and that folder is outside git besides. Rec: flip the
+                                   predicate to declare-or-die, AFTER the sweep — exposure during
+                                   the sweep is zero and instruments are not edited beside pastes.
+                                   (3) **THE VERSION-3 CARD CONTRADICTS §10-D RULE 1** — it says
+                                   "the first ☐ in §10-C", rule 1 says the router line wins. TODAY
+                                   THEY POINTED AT DIFFERENT RUNGS (S5-Y vs S6, 8 lakh vs 40). The
+                                   §10-C row is written now so they agree again; the CARD is his
+                                   (§10-E) and was not touched. Rec: one line in the card + the
+                                   standing rule that a ruling writes its §10-C row in the same act.
+  ⚠ THE CLIPBOARD, 6th OCCURRENCE .. and the longest yet: **≥ 30 minutes continuous, 4 samples**
+                                   (preflight ~11:50 · checkall ~12:00 · proofs ~12:05 · the
+                                   escalation delivery ~12:20, all failing). The prior record was
+                                   ~7 minutes. So "minutes at a time" is the floor, not the shape.
+                                   Delivery fell back to the queue file — which is the fallback
+                                   S5-Y itself built, working as ruled. Still S11, still nobody
+                                   chases it before S6.
   ▶ NEXT SESSION ............... **S5 · THE SWEEP — RESUMED, its own session.** MODEL:
                                    Opus 5 · effort HIGH. **EXECUTION BUDGET: fresh 30 corrected
                                    lakh.** Its gates are GREEN and were run at 25 Aug ~12:00 — but
@@ -4851,3 +4879,45 @@ one line for him, below.
    `get_page_text` returned to a temp file and hand capture the path. **Never the clipboard.**
 4. `node snapshot.mjs take --why "…"` before editing any instrument. Not a habit any more — §7 refuses.
 5. No attachment is trusted until its own probe passes — three probes for the canon, not one.
+
+### PROGRESS 2026-08-25 ~12:20 IST — S5-Y ADDENDUM · pushed, and three things raised that do NOT block the sweep
+
+**The rung is closed and pushed** (`b4f91b8` + `c71ca3e`, origin/main at `cb259fb..c71ca3e`). The
+repo is clean. **The instruments themselves are NOT in git and must not be** — the whole
+`arsenal-audit-artifacts\` folder is outside the work tree by the PRIVACY ruling of 14 Aug (*"archive
+HAMESHA repo ke bahar rahega"*), because its corpus half is his dialogue. `snapshot.mjs` is their
+only cover, which is exactly why item 2 below is worth a line rather than a shrug.
+
+**THREE THINGS RAISED, batched into ONE block (rule 13), and none of them gates the sweep:**
+`queue\2026-08-25_1215-s5y-1.md`. Two are policy — they will recur on every rung until ruled — and
+one is a live trap in the card he pastes at the start of every session.
+
+1. **THE CEILING QUESTION, THIRD OCCURRENCE.** S4 (48.31 vs 40), S5-R2 (~69.9 vs 25), S5-Y (13.95
+   vs 8). Each was recorded honestly; each left the same question open. The block states the
+   conflict of interest out loud — I am the session that breached it — and recommends the option
+   that is hardest on the executor: the proof gets its own named budget line, **written by the
+   architect at ruling time**. An executor that may open a budget line for itself has no ceiling,
+   so the recommendation explicitly says B-without-that-constraint is worse than the status quo.
+2. **`diag/` is invisible to the rollback gate**, measured (0 members in the store). Recommended
+   fix is the declare-or-die predicate rather than one more whitelist entry, and recommended
+   timing is AFTER the sweep — exposure during the sweep is zero.
+3. **The version-3 card contradicts §10-D rule 1**, and today the two pointed at different rungs:
+   the card's "first ☐" resolved to **S6** (Fable, 40) while the router said **S5-Y** (8). Any
+   session that reads the card literally — and the card is read first and read most — spends five
+   times the budget on the wrong rung. Fixed the half that was mine (the §10-C row now exists, so
+   router and fallback agree); the card is his by §10-E and was not touched.
+
+**THE CLIPBOARD, 6th OCCURRENCE, AND A NEW MEASUREMENT: ≥ 30 MINUTES CONTINUOUS.** Four samples
+across the rung — preflight ~11:50, checkall ~12:00, the proof harness ~12:05, the escalation
+delivery ~12:20 — every one failing. The previous longest observed window was about seven minutes
+(05:26→05:33), and the standing description "minutes at a time" came from a 60-second sample. So
+the fault is longer-lived than anything recorded so far, and §10-D rule 13's `Set-Clipboard`
+delivery is simply unavailable for stretches of half an hour. **The escalation went by file
+instead — the same fallback S5-Y built for answers, working exactly as ruled.** That is worth
+saying plainly: the rung's own fix carried the rung's own handoff on the day the transport died.
+
+**GATES, re-run after the addendum edits:** `node scripts/rails.mjs orders` → open order clean, 0
+blocking · working tree clean apart from one untracked torn-write tmp
+(`dressing-room/state/gaffer_blocks.json.tmp6756`) that belongs to another organ and to S11's
+tmp-file-replay class — not touched, not committed, recorded here so it is not mistaken for this
+rung's leftover.
