@@ -314,15 +314,72 @@ STATUS (update this block before any session stops — this is the handoff)
                                      review + the ruled repair together outgrew the review-only
                                      precedent — the scope question is one line for HIM, same
                                      class as S4's. Ceiling NOT re-derived (unit faults only).
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — EXECUTION. ✅ HIS GO IS GIVEN, 25 Aug 2026
-                                   ~09:15 IST, architect-recorded verbatim: "ok let's go … i am
-                                   counting on you and you are the CTO from now onwards driving
-                                   the entire organism." No further word needed — open DO_THIS.md
-                                   and drive.** MODEL: Opus 5 ·
-                                   effort HIGH. Open the working folder's DO_THIS.md; its FIRST
-                                   paste is the ATTACHMENT-COUNT probe, which decides 42 pastes
-                                   versus 420. Execution budget 20 corrected lakh (architect's
-                                   number). The instruments it drives were certified HERE, today.
+  S5 COUNT PROBE ............... ☑ ANSWERED 25 Aug 2026 ~09:40 · the mandated FIRST paste, fired
+                                   and returned. **THE CAP IS 10 AND GEMINI SAID IT ITSELF** — a
+                                   client-side toast, verbatim: "you can only upload 10 attachments
+                                   at a time." Stronger than a model self-report: the uploader
+                                   refusing, not the model claiming. And all ten REACH the model —
+                                   10 sent, 10 listed by name, in order, `TOTAL RECEIVED = 10`,
+                                   nothing invented, nothing padded. The 20-Aug gap (95 attached →
+                                   57 listed) does NOT reproduce at n=10. Record + the transport
+                                   findings: `s5-2026-08-20\diag\COUNT_PROBE_RESULT.md`.
+                                   ⇒ **CORPUS HALF CORRECT AS BUILT** (FILES_PER_CHAT already 10 ·
+                                     172 batches → 18 groups · 54 steps stand). 42 pastes, not 420.
+                                   ⇒ ⛔ **CANON HALF UNRUNNABLE AS BUILT**: `buildsteps.mjs:38`
+                                     loads all **27** chunks in ONE message. 27 > 10. The written
+                                     first step of this rung cannot execute. Deliberately NOT
+                                     patched — see the escalation below.
+                                   ⚠ AND A THIRD SHAPE, found BEFORE any real paste: the prompts
+                                     still describe a TWO-batch world (`T1_load.txt:1` "batch 1 of
+                                     2" · `T2_contradictions.txt:1` "Here is batch 2 of 2") while
+                                     buildsteps wires ONE and reality needs THREE. Fired as
+                                     written, A02 announces "batch 2 of 2" while attaching nothing.
+                                   ⚠ TRANSPORT PROVEN, AND IT HAS TWO SILENT TRAPS — the next
+                                     executor needs these or every prompt arrives mangled and still
+                                     gets a plausible answer: **Ctrl+V does not work at all** (a
+                                     synthetic key event never triggers a real paste — the runbook's
+                                     clipboard leg is unavailable to a driving session) and
+                                     **`computer type` silently eats newlines** ("A\nB" → `AB`, no
+                                     break, no error — same class as the UTF-8 defect capture.mjs
+                                     caught). WORKING PATH: one `type` per line + `shift+Return`
+                                     between lines, whole prompt in ONE browser_batch, box read
+                                     back and diffed against the step file BEFORE Return. Everything
+                                     else drives clean: navigate · Pro Extended · `file_upload` ·
+                                     send · read. `file_upload` needs the out-of-repo folder granted
+                                     once (`request_directory`); it refuses by path, loudly.
+  ⛔ HALTED · ESCALATED ......... **THE CANON WINDOW IS A REAL FORK AND THE SESSION DID NOT DECIDE
+                                   IT.** "S5 builds nothing" (the row) and "drive the sweep" (the
+                                   router) point opposite ways, and the anticipated one-command
+                                   remedy does not reach it (the corpus path reads `PER`; the canon
+                                   path hardcodes one step), so the fix is a CODE change. Block on
+                                   his clipboard + on disk:
+                                   `queue\ESCALATION__2026-08-25_S5-canon-window.md`.
+                                   Options A–D with costs; **recommendation A** — wire the canon
+                                   path to `PER` (3 loads: 10+10+7, one chat, each probe-gated).
+                                   That is WIRING, not design: `probe_expected.json` ALREADY carries
+                                   `canon_g01`=chunk01..10, `canon_g02`=11..20, `canon_g03`=21..27
+                                   with their prompt files on disk, regenerated at S5-PRE and
+                                   anchor-certified at S5-R2. D (re-pack to ≤10 files) is
+                                   MEASUREMENT-REFUTED: 4.19 MB / 10 ≈ 419 KB/file, above the
+                                   measured ~384 KiB per-file truncation cap — it would trade a loud
+                                   failure for the silent one this rung exists to prevent.
+                                   ✅ NOTHING IS SPOILED: zero audit questions asked · zero answers
+                                   captured · `inputs_frozen.json` does NOT exist, so the inputs are
+                                   still free (the count probe was recorded BY HAND in `diag\`,
+                                   never through `capture.mjs`, precisely to avoid tripping the
+                                   freeze) · corpus half needs no change under any option.
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — EXECUTION, RESUMED ON THE ARCHITECT'S RULING.**
+                                   Paste the ruling in, apply it, then drive. MODEL: Opus 5 ·
+                                   effort HIGH. Execution budget 20 corrected lakh (architect's
+                                   number) — this session spent 19.60 of it on the count probe, the
+                                   transport proof and the handoff, so **the resumed session needs
+                                   its own budget line from the architect** (question 3 of the
+                                   escalation). Read `diag\COUNT_PROBE_RESULT.md` BEFORE touching
+                                   the browser — the two silent transport traps are named there.
+                                   HIS GO STANDS, 25 Aug ~09:15, architect-recorded verbatim: "ok
+                                   let's go … i am counting on you and you are the CTO from now
+                                   onwards driving the entire organism." No further word is needed
+                                   to resume once the fork is ruled.
                                    CEILING POLICY, RULED BY THE ARCHITECT 25 Aug (S5-R2's open
                                    line, closed under his CTO delegation; standing S6 onward):
                                    every review-class rung carries a WRITTEN ceiling ON its row —
@@ -3977,3 +4034,97 @@ the second full run; it stays a LEAD with the suite as its owner, flaky-class.)
 
 **COST:** ~69.9 lakh at measurement, ~73 by close (own-JSONL, meter weights W in session_meter,
 output ~3.5 raw lakh). Plus the day's context: his sessions today read 168 lakh at close.
+
+### PROGRESS 2026-08-25 ~09:45 IST — RUNG S5 · THE SWEEP OPENED. THE COUNT PROBE ANSWERED, THE CANON WINDOW FOUND UNRUNNABLE, HALTED AND ESCALATED.
+
+**Router obeyed** (rule 1: the ▶ NEXT SESSION line, not the first ☐) — S5's execution half.
+Micro-order written FIRST (rule 9) to the session scratchpad before any edit, checked against
+§10-C's S5 row and §10-D 1–13. MODEL Opus 5 · effort high, as the row names.
+
+**GATE BEFORE ANYTHING.** `node checkall.mjs` run IN THIS SESSION, not inherited: **GREEN, all
+five sections** — preflight GO · clipboard round trip 20,176/20,176 · all 10 schemas parsed,
+verified and kept, with the invented quote, invented filename, inflated receipt and truncated
+answer all refused · probecheck bit on a planted pass AND a planted invention · docs-vs-disk
+10/10 (13,331 deduped turns · 7,491 his · 172 batches · 118 canon · 33 days · 65 steps).
+The clipboard RED of 21 Aug did not reproduce.
+
+**THE FIRST PASTE — THE ATTACHMENT-COUNT PROBE — IS ANSWERED, AND IT ANSWERED TWICE OVER.**
+Chat: account 1, throwaway thread (its id + the full return live out-of-repo in
+`s5-2026-08-20\diag\COUNT_PROBE_RESULT.md`, privacy law). Mode confirmed **Pro Extended**
+before the first attach (his standing extended-thinking ruling, verified not assumed).
+1. **THE CAP IS 10, STATED BY THE PLATFORM.** chunk01–09 uploaded; a second upload of chunk10–18
+   produced Gemini's own toast, verbatim: *"Some of your files could not be uploaded because you
+   can only upload 10 attachments at a time."* The chip row stopped at chunk10. This is a better
+   witness than the probe I had written: **the uploader refusing, not a model claiming.**
+2. **ALL TEN REACH THE MODEL.** Asked for names only, it returned `chunk01.txt … chunk10.txt`,
+   in order, correctly named, then `TOTAL RECEIVED = 10`. Nothing invented, nothing padded.
+   The 20-Aug gap (95 attached → 57 listed → 38 never mentioned) does **not** reproduce at n=10.
+Recorded by hand in `s5-2026-08-20\diag\COUNT_PROBE_RESULT.md` — **deliberately NOT through
+`capture.mjs`**, because the first `save` writes `inputs_frozen.json` (`capture.mjs:116-127`) and
+freezes the inputs. A diagnostic must not spend the freeze. Nothing is frozen.
+
+**WHAT IT DECIDES — and it is a split verdict, not a green light.**
+- ✅ **THE CORPUS HALF IS CORRECT AS BUILT.** `FILES_PER_CHAT` already defaults to 10; 172 batches
+  → 18 groups of ≤10; its 54 steps stand unchanged. **42 pastes, not 420** — the question the
+  probe existed to settle is settled, in the cheap direction.
+- ⛔ **THE CANON HALF CANNOT RUN.** `buildsteps.mjs:38` writes ONE canon load step (A01) carrying
+  all **27** chunks. 27 > 10. The written FIRST STEP of this rung is impossible to execute.
+
+**AND A THIRD SHAPE, found by reading A01/A02 against the mechanics BEFORE firing them.**
+Three mutually inconsistent shapes live in one instrument: `prompts/T1_load.txt:1-2` says
+*"in two batches. This is batch 1 of 2. Batch 2 arrives in my next message"* · `T2_contradictions.txt:1-2`
+says *"Here is batch 2 of 2. You now hold the COMPLETE canon"* · `buildsteps.mjs:29-30,38` wires
+ONE message · the measured world needs THREE. Fired as written, A01 tells the model more is
+coming while handing it everything, and **A02 announces "batch 2 of 2" while attaching nothing** —
+against Q1, the most valuable question in the rung. SHAPE 1 again, inside the audit's own
+instrument, and the same class as S5-R2's headline: a mechanics half repointed, a prose half not.
+checkall could not see it — its docs-vs-disk section checks NUMBERS, never narrative-vs-wiring.
+
+**HALTED AND ESCALATED (§10-D 13). This session did NOT decide it.**
+The remedy the plan anticipated — `FILES_PER_CHAT=<n> node probe_gen.mjs && node buildsteps.mjs` —
+does not reach this: the corpus path reads `PER`, the canon path hardcodes one step. So the fix is
+a **CODE change to `buildsteps.mjs`**, and S5's row says *"S5 builds nothing"* with STEP 0 as its
+only declared exception, while the router says drive the sweep. Two laws pointing opposite ways is
+the escalation trigger by name. Block written, and put on his clipboard from a file per the
+delivery rule: `arsenal-audit-artifacts\queue\ESCALATION__2026-08-25_S5-canon-window.md`.
+Options A–D with costs; **recommendation A** — wire the canon path to `PER`: 3 load messages
+(10 + 10 + 7) in ONE chat, each gated by its own probe, Q1–Q4 unchanged, steps 65 → 69.
+**A is wiring, not design:** `probe_expected.json` ALREADY carries `canon_g01` = chunk01..10,
+`canon_g02` = chunk11..20, `canon_g03` = chunk21..27, with `PROBE_canon_g01..g03.txt` on disk —
+regenerated at S5-PRE and anchor-certified at S5-R2 (46/46 unique). Only buildsteps never consumed
+them. **D (re-pack into ≤10 bigger files) is MEASUREMENT-REFUTED and is written down so nobody
+re-proposes it:** 4.19 MB over 10 files ≈ 419 KB/file, above the measured ~384 KiB per-FILE
+truncation cap — it would trade today's loud, countable failure for exactly the silent one this
+rung exists to prevent.
+
+**TRANSPORT — THE ARCHITECT'S 25-AUG RULING WORKS, AND IT HAS TWO SILENT TRAPS.**
+The session drove his Chrome itself end to end; he was never fallback. Proven live: navigate ·
+mode set to **Pro Extended** · attach via `file_upload` · send · read the return. Two defects
+found, and both are the silent kind this order keeps meeting:
+- **`Ctrl+V` DOES NOT WORK.** A synthetic key event never triggers a real paste — the box stays
+  empty and nothing warns. The runbook's whole clipboard leg (`Set-Clipboard` → he presses Ctrl+V)
+  is unavailable to a *driving* session. It remains correct for the human-paste fallback.
+- ⛔ **`computer type` SILENTLY EATS NEWLINES.** Typing `A\nB` put `AB` in the box — no break, no
+  space, no error. Every step prompt here is structure-bearing; typed that way it arrives as a
+  run-together wall and the model still answers, plausibly. Same class as the UTF-8 defect
+  `capture.mjs` caught before the sweep, and it would have looked like a thin result, not a fault.
+- ✅ **THE WORKING PATH, proven on a 13-line prompt:** one `type` per line with `shift+Return`
+  between lines, the whole prompt composed in ONE `browser_batch`, then the box read back and
+  diffed against the step file **before** Return. Also: `file_upload` is sandboxed to
+  session-readable paths, so this out-of-repo folder (privacy law) must be granted once via
+  `request_directory` — it refuses by path, loudly, never half-uploads.
+
+**WHAT THIS RUNG DID NOT DO — said out loud, per §5.** Zero audit questions asked. Zero answers
+captured. No §9 material produced. `inputs_frozen.json` does not exist, so the inputs are still
+free and the corpus was never touched (`refilter2.mjs` not re-run, per the standing ⛔).
+Nothing was patched around the fork.
+
+**COST:** 19.60 corrected lakh of the 20-lakh execution budget, measured at close (own-JSONL count, meter weights;
+the S1 live-read lead says today's line reads ~+16% hot, so the true figure is lower). Inside
+budget, but with too little left to also execute a canon window, which is the second reason this
+hands off here rather than pressing on. **The resumed session needs its own budget line from the
+architect** — that is question 3 of the escalation.
+
+**NEXT SESSION FIRST ACTS:** paste the architect's ruling into the order verbatim → apply it →
+read `diag\COUNT_PROBE_RESULT.md` **before** touching the browser → re-run `checkall.mjs` after
+any regeneration → then drive. **S5 · MODEL: Opus 5 · effort HIGH.**
