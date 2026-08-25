@@ -1062,25 +1062,39 @@ STATUS (update this block before any session stops — this is the handoff)
                                      mid-flight). Ceiling NOT re-derived — §10-C allows that only on
                                      a proven UNIT fault, and there is none; a rung that runs hot is
                                      data about the rung.
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP, RESUMED FROM A02 — and its FIRST ACT is the
-                                   ONE AUTHORIZED FENCED RE-PROBE in A02's existing chat**, which
-                                   S5-Z3 built the format for and could not fire inside its
-                                   ceiling. Opus 5 · effort HIGH. **FRESH 30 EXECUTION + 10
-                                   HANDOFF, ruler-written 26 Aug ~01:30.**
-                                   WHAT IS ALREADY TRUE, so nothing is re-derived: the comparator
-                                   fix is IN and bite-proven 39/0 twice · A01 = VERBATIM, A02's
-                                   anchor 1 = SERIALIZED, A02's anchor 2 = FAIL (a reconstruction,
-                                   named as one) · every probe step carries `PROBE-FORMAT v2` with
-                                   the fenced instruction · capture stamps the eliciting version ·
-                                   checkall is green on a RESUME (§3 skips loudly).
-                                   **c3 IS STILL A HYPOTHESIS.** The re-probe is its only test:
-                                   paste `steps/A02.txt`'s probe block into the SAME A02 chat (new
-                                   RULED rules, ONE shot, recorded — not the forbidden re-ask),
-                                   then `node capture.mjs save A02 ...` and `node probecheck.mjs
-                                   A02`. **Pass in EITHER tier => A02 continues and c3 is validated.
-                                   Fail => the fallback fires with the corrected premise** ("this
-                                   chat cannot produce a trustworthy receipt"), and c1-vs-c2 is
-                                   already answered — do not improvise a third path.
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — HALTED ON A RULING. The re-probe FIRED and the
+                                   FALLBACK IT ROUTES TO IS UNRUNNABLE.** Escalation on disk:
+                                   `queue\2026-08-26_0300-s5sweep-3.md` (options A–D + costs,
+                                   recommendation **B**). The next session's first act is the
+                                   architect's ruling, not the browser. Opus 5 · effort HIGH.
+                                   **THE RE-PROBE'S RESULT, 26 Aug ~02:50 — c3 IS NO LONGER A
+                                   HYPOTHESIS, AND IT WORKED ON BOTH THINGS IT WAS BUILT FOR:**
+                                   the tail anchor went SERIALIZED → **VERBATIM** (the fence killed
+                                   the serializer dialect) and the middle anchor went
+                                   RECONSTRUCTION → **"ANCHOR 2 NOT FOUND"** (the fence killed the
+                                   invention). probecheck's verdict is still **FAIL** — an admitted
+                                   miss routes to the fallback exactly as a wrong line does — but
+                                   what is left, once both instrument-side lies are gone, is a REAL
+                                   retrieval hole and it is D2's named hazard: **a web attachment is
+                                   partially retrieved — tail survives, middle does not.**
+                                   Fixtures re-derived against disk first: both anchors byte-identical
+                                   to the frozen chunks (chunk16 idx 1229 = 48% of 2562 lines ·
+                                   chunk20 idx 1461 = 97% of 1513). The instrument is clean.
+                                   ⛔ **AND THE FALLBACK IS STALE:** `prompts/FALLBACK_canon_split.txt`
+                                   attaches `chunk01-04` / `chunk05-07` (the pre-21-Aug SEVEN-chunk
+                                   canon; it is 27 chunks now) and pastes `steps/A03.txt` as "Q1
+                                   contradictions" when the live wiring makes A03 a LOAD step. Fired
+                                   as written it shows the model a quarter of the canon. NOT
+                                   REWRITTEN — S5 builds nothing, and which shape replaces the one-
+                                   context canon read is a scope-and-spend call above this rung.
+                                   **THE ONE CONFIGURATION WITH A PASSING RECEIPT IS TEN CHUNKS**
+                                   (A01: 10 in context ⇒ VERBATIM 2/2; A02: 20 in context ⇒ FAIL).
+                                   Every corpus chat B01–B18 is built at that same A01 shape, so the
+                                   corpus half sits at the configuration that PASSED — which is why
+                                   B01 was NOT opened: if the ruling moves the per-chat load, an
+                                   opened chat is a paid chat thrown away under a live input freeze.
+                                   **FRESH 30 EXECUTION + 10 HANDOFF (ruler-written 26 Aug ~01:30)
+                                   — 18.43 EXECUTION SPENT, ~11.6 LEFT ON THAT LINE.**
                                    TRANSPORT, standing and measured — get these wrong and the
                                    prompt arrives mangled and still gets a plausible answer:
                                    **REF click only, never a coordinate click** (a coordinate click
@@ -2777,10 +2791,18 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                                  said otherwise at the real one. Ceiling NOT
                                                  re-derived: unit faults only, never variance.)
       THEN THE SWEEP NEEDS NO FURTHER WORD FROM ANYONE.
-◐ S5-Z3 THE ALPHABET FIX — a micro-rung, RULED by the architect 26 Aug ~01:30
-      **BUILT + PROVEN 26 Aug ~02:40 · scope items 1-4 and the FREE half of 5 are DONE and
-      bite-proven (39/0, twice). THE ONE AUTHORIZED RE-PROBE (the paid half of item 5) IS NOT
-      RUN — the ceiling stopped it, §10-D rule 2. It is the resumed sweep's first act.**
+☑ S5-Z3 THE ALPHABET FIX — a micro-rung, RULED by the architect 26 Aug ~01:30
+      **BUILT + PROVEN 26 Aug ~02:40 · scope items 1-4 and the FREE half of 5 DONE and
+      bite-proven (39/0, twice). THE ONE AUTHORIZED RE-PROBE (the paid half of item 5) was
+      deferred at the ceiling (§10-D rule 2) and FIRED 26 Aug ~02:50 by the resumed sweep, on
+      the sweep's budget, exactly as the ~02:55 ruling placed it.**
+      ⚑ **ITS RESULT CLOSES c3 AS A HYPOTHESIS — the fence worked on BOTH things it was built
+      for.** Tail anchor SERIALIZED → **VERBATIM** (serializer dialect gone); middle anchor
+      RECONSTRUCTION → **"ANCHOR 2 NOT FOUND"** (invention gone, honest admission instead — which
+      the probe's own text calls a correct answer). Step verdict still **FAIL**, because an
+      admitted miss routes to the fallback the same as a wrong line — and that is the ruling
+      working, not a defect. What survives the two instrument-side lies is a REAL retrieval hole.
+      The A's comparator fix stands either way, as designed.
       (queue\RULING__2026-08-26_0112-s5sweep-2.md IS the work order; A + c3 + c2 as one rung).
       MODEL: Opus 5 · effort HIGH. SCOPE: (1) the raw comparator normalises ONLY the two
       MEASURED serializer freedoms — leading `- `↔`* ` and emphasis markers — never whitespace,
@@ -2800,6 +2822,24 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       TRANSPORT NOTE, standing: Gemini's compose box focuses on REF click only, never
       coordinate click.                    BUILD 6 · PROOF 5 · HANDOFF 5 (ruler-written)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      ⛔ **26 Aug ~02:50 — RESUMED, THE AUTHORIZED FENCED RE-PROBE FIRED, AND HALTED A THIRD TIME
+      — THIS TIME ON A STALE INSTRUMENT, NOT A MODEL.** The re-probe was ONE shot into A02's own
+      chat under PROBE-FORMAT v2, composed byte-exact (box SHA256 `56bf680dbc321351`, 32 blocks,
+      1878 chars) and captured RAW through the copy-gate (68/68 content lines, `fenced yes`,
+      stamped `elicited by PROBE-FORMAT v2`; the old answer kept as `answers/A02.prev-3010.txt`).
+      **c3 WORKED ON BOTH ITS TARGETS — tail SERIALIZED → VERBATIM, middle RECONSTRUCTION →
+      admitted "ANCHOR 2 NOT FOUND" — and the step is still FAIL, so the fallback fires as ruled.**
+      ⛔ AND THE FALLBACK CANNOT BE FIRED: `prompts/FALLBACK_canon_split.txt` is written for the
+      pre-21-Aug SEVEN-chunk canon (`chunk01-04` / `chunk05-07`) and pastes `steps/A03.txt` as "Q1
+      contradictions" while the live wiring makes A03 a LOAD step. NOT REWRITTEN — S5 builds
+      nothing and the replacement shape is a scope-and-spend call. ESCALATED:
+      `queue\2026-08-26_0300-s5sweep-3.md`, options A–D with costs, recommendation **B** (one chat
+      per canon GROUP at the ten-chunk configuration that is the only one with a passing receipt,
+      the two S6-bearing questions + critic each, then F3 generalised from two halves to three).
+      **B01 was deliberately NOT opened** — the corpus half sits at the A01 shape that PASSED, but
+      if the ruling moves the per-chat load an opened chat is a paid chat thrown away.
+      Spent 18.43 of the 30-lakh EXECUTION line; zero instruments edited, zero gates weakened,
+      zero audit questions asked, frozen inputs untouched.
       ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
       sent. The preparation breached the ceiling (40 allowed, ~104 spent) and §10-D rule 2 was
       obeyed: STOPPED, recorded, handed off. See the RESUME block and the PROGRESS entry of
@@ -6386,3 +6426,115 @@ Sections 5 through 9 of this order, and every rung row past S6. I read ▶ RESUM
 `probe_gen.mjs`, `checkall.mjs` sections 3-4 and 7-8, `capture.mjs`'s save path and `verify.mjs`'s
 close — not `simulate.mjs`, `refilter2.mjs`, `snapshot.mjs` or `mdrender.mjs`, none of which this
 rung touches.
+
+### PROGRESS 2026-08-26 ~03:00 IST — S5 · THE SWEEP, RESUMED (Opus 5 · effort HIGH · fresh 30+10)
+
+**Router obeyed** (§10-D rule 1 — the ▶ NEXT SESSION line, not the first ☐): S5 · the sweep
+resumed from A02, whose FIRST ACT the ~02:55 ruling fixes as the one authorized fenced re-probe.
+Micro-order written to the session scratchpad first (rule 9) and checked against §10-C/§10-D
+before anything was touched. Gates run IN THIS SESSION, never inherited: `checkall.mjs` GREEN all
+8 sections (§3 resume-skipped loudly, §8's effect gate green over 206 tracked files at all 7
+boundaries), `preflight.mjs` GO 18 checks with the expected resume warning.
+
+#### THE RE-PROBE FIRED — ONE SHOT, AS AUTHORIZED
+
+Chat `0890cd7ebfcd1ff6`, Pro Extended verified before composing, parts 1+2 in context. The probe
+block of `steps/A02.txt` (`PROBE-FORMAT v2`, 32 lines, 1878 chars) was composed one `type` per
+line with `shift+Return` between, whole prompt in ONE `browser_batch`, and the box read back
+through block-children `textContent` (never `innerText`, which doubles lines): **32 blocks, 1878
+chars, SHA256 `56bf680dbc321351` — byte-identical to the step file.** Then Return. No re-ask, no
+nudge, no hint, no second attempt. Zero audit questions.
+
+Captured in the ratified ORDER — rendered FIRST, page→clipboard→disk under an in-page SHA-256
+assert that refuses to write on mismatch (`f8ecdf50…`, 3106 chars), and the digest re-asserted
+against the page after generation closed; THEN Gemini's Copy button for raw. `capture.mjs save
+A02 --rendered .rendered_A02b.txt` → **3207 chars, copy-gate PASSED 68/68 content lines, `fenced
+yes`, stamped `elicited by PROBE-FORMAT v2`.** The old answer was kept, not overwritten:
+`answers/A02.prev-3010.txt` (L9, the tool's own path).
+
+#### THE RESULT — c3 IS NO LONGER A HYPOTHESIS, AND IT WORKED ON BOTH ITS TARGETS
+
+```
+                          PROBE-FORMAT v1 (25 Aug)        PROBE-FORMAT v2, fenced (tonight)
+anchor 1 · tail   @97%    SERIALIZED (bullet re-spelled)  VERBATIM — byte-exact
+anchor 2 · middle @48%    a RECONSTRUCTION (invented)     "ANCHOR 2 NOT FOUND" — admitted
+verdict                   FAIL                            FAIL  (an admitted miss routes the same)
+V/S split                                                 canon VERBATIM 1 · SERIALIZED 0 · FAIL 1
+```
+
+The fence killed the serializer dialect AND it killed the invention — the two things c3 was built
+to attack, both gone, measured on the same anchors in the same chat. **The step is still FAIL,
+and that is the ruling working rather than a defect:** an admitted miss proves the property failed
+just as a wrong line does. What survives, once both instrument-side lies are removed, is a REAL
+retrieval hole, and it is D2's named hazard — **a web attachment is partially retrieved: the tail
+survives, the middle does not.**
+
+**The fixtures were re-derived against disk before any of this was believed** (the review-class
+rule — name what you re-derived): both anchors byte-identical to the frozen chunks, middle at
+`chunk16.txt` idx 1229 = 48% of a 2562-line file, tail at `chunk20.txt` idx 1461 = 97% of 1513.
+The instrument is not at fault. (My first pass at that check was off by one and read `p.i-1`;
+corrected in the same breath — the stored index IS the anchor's own line.)
+
+#### THE HALT — AND IT IS A STALE INSTRUMENT, NOT A MODEL
+
+A FAIL routes to `prompts/FALLBACK_canon_split.txt`. **That file is written for the pre-21-Aug
+SEVEN-chunk canon**: it attaches `chunk01-04` / `chunk05-07` (canon has been 27 chunks since the
+384 KB cap was measured) and it pastes `steps/A03.txt` as "Q1 contradictions" while the live
+`wiring.json` makes A03 a LOAD step (canon part 3/3, chunk21-27). Fired as written it shows the
+model a quarter of the canon and pastes load-prompts as question-prompts. It is the same class the
+25-Aug count probe already found ("THE CANON HALF IS UNRUNNABLE AS BUILT"), one layer on.
+
+**NOT REWRITTEN, DELIBERATELY.** S5 builds nothing; which shape replaces the one-context canon
+read is a scope-and-spend decision, and §10-D rule 13 calls that a fork. ESCALATED as a FILE per
+his ~14:10 standing ruling: `queue\2026-08-26_0300-s5sweep-3.md` — options A–D with costs,
+recommendation **B**, and four things needed back.
+
+**THE EVIDENCE THE RECOMMENDATION RESTS ON: ten chunks is the only configuration with a passing
+receipt.** A01 probed VERBATIM 2/2 with ten in context; A02 failed with twenty. Every corpus chat
+B01–B18 is built at that same ten-file shape — so the corpus half sits at the configuration that
+PASSED, not the one that failed. **B01 was therefore NOT opened**: if the ruling moves the
+per-chat load, an opened chat is a paid chat thrown away under a live input freeze.
+
+#### A TRANSPORT TRAP THAT WOULD HAVE SENT A MANGLED PROMPT — CAUGHT BY THE SHA LAW
+
+The first composition arrived in the box as **10 characters**: exactly the ten NON-ASCII ones, in
+order, with every ASCII character and every `shift+Return` dropped. The REF click had focused the
+box and `isContentEditable` was TRUE — the gate the 26-Aug entry added passed, and proved nothing.
+Cause, measured in the same batch: **`document.hasFocus()` was false and `visibilityState` was
+`hidden`.** A backgrounded tab still takes the `insertText` path (non-ASCII) and silently discards
+the synthetic key path (ASCII and Return); the first `type` is what wakes the tab, so everything
+before the wake is lost. Same silent family as Ctrl+V, the eaten newlines and the coordinate
+click. **Nothing was sent and nothing was paid** — the outbound SHA read 10 chars against 1878
+expected. The pre-compose assert is now `hasFocus() && isContentEditable && box empty`, thrown
+from inside the batch so it STOPS it. Recorded in `diag/COUNT_PROBE_RESULT.md` as TRAP 4, with a
+snapshot taken before AND after the edit (checkall §7 caught the after, correctly).
+
+**And `find` mis-attributes the per-answer Copy button.** It returned a ref described as the last
+response's Copy; the clipboard came back with 3,010 chars — the PREVIOUS answer, byte-for-byte the
+one already on disk. **The copy-gate refused it** (7 of 68 content lines missing, each named).
+The newest response has no `message-actions` bar at all until the stream formally closes, so no
+correct ref existed to find. Take the button from inside the last `model-response` element, and
+only once `message-actions` exists; `button[aria-label*="Stop"]` disappearing is the completion
+signal and it lagged the last character by ~3 minutes tonight.
+
+#### THE COST
+
+**18.43 lakh against the 30-lakh EXECUTION line** (own-JSONL count with the meter's weights,
+deduped by requestId + message id, read at the handoff), leaving ~11.6 on that line plus the 10
+written for HANDOFF. Under the ceiling at both marks.
+
+#### WHAT IS UNTOUCHED, SAID PLAINLY
+
+Zero instruments edited (the only write in that folder is a diagnostic .md, snapshotted both
+sides) · zero gates weakened · zero haystack or expected bytes moved (inputs frozen 25 Aug 12:47,
+201 files, unmoved; checkall §8 green over 207 tracked files at all 7 boundaries after the
+capture) · zero audit questions asked · zero agents · no organism task re-enabled.
+
+#### WHAT I LEFT UNREAD
+
+§§5–9 of this order and every rung row past S6. I read ▶ RESUME HERE, §10-C's S5/S5-Z2/S5-Z3 rows,
+§10-D, §3-C, both 26-Aug rulings, `DO_THIS.md`, `README_FOR_ANY_SESSION.md`,
+`diag/COUNT_PROBE_RESULT.md` and `prompts/FALLBACK_canon_split.txt` in full. Of the instruments:
+`capture.mjs`'s save path, `probecheck.mjs`'s verdict + print, `probe_expected.json`'s canon_g02,
+`wiring.json`'s canon rows, `snapshot.mjs`'s roster predicate — not `verify.mjs`, `simulate.mjs`,
+`refilter2.mjs`, `buildsteps.mjs` or `mdrender.mjs`, none of which this rung touches.
