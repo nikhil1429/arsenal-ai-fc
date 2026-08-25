@@ -493,12 +493,26 @@ STATUS (update this block before any session stops — this is the handoff)
                                      of the driver card** — no sweep has run once, and rewriting a
                                      card for a lane nobody has driven is the guess S5-W refused;
                                      declaring the drift is not the same as guessing the fix.
-  ▶ NEXT SESSION ............... **THE SWEEP IS BLOCKED ON ONE RULING — the escalation on his
-                                   clipboard... which is itself down, so it is on disk instead:
-                                   `queue\2026-08-25_1100-s5x-1.md`. ONE question: preflight §1
-                                   and checkall §2 block the sweep on a transport the sweep no
-                                   longer uses. Options + recommendation are in the block.**
-                                   Once ruled: **S5 · THE SWEEP — its own session.** MODEL:
+  ▶ NEXT SESSION ............... **S5-Y · THE GATE RE-AIM — a micro-rung, RULED 25 Aug ~11:25
+                                   (queue\RULING__2026-08-25_1100-s5x-1.md = the work order;
+                                   OPTION A ratified).** MODEL: Opus 5 · effort HIGH. **CEILING
+                                   WRITTEN: 8 corrected lakh.** Scope: preflight's `--from-file`
+                                   round trip becomes HARD/blocking (the sweep's real path gains
+                                   its FIRST blocking assert); the clipboard round trip runs and
+                                   PRINTS, blocking nothing; capture selftest + checkall §1/§2
+                                   follow; bite-proofs BOTH directions (broken file path → RED;
+                                   dead clipboard alone → NOT red); full checkall + preflight
+                                   GREEN; snapshot.mjs before every instrument edit; commit
+                                   through the live gate. FORBIDDEN: frozen corpus/canon bytes ·
+                                   any Gemini call · any sweep question · instruments beyond
+                                   preflight/capture-selftest/checkall §1-§2 wiring.
+                                   STANDING (ruled ~11:25, S6 onward): **a gate's strictness is
+                                   measured against the property it PROTECTS, not the count of
+                                   its blocking checks.** The clipboard is ADVISORY everywhere;
+                                   the human fallback = save page text to a FILE + `capture.mjs
+                                   save <step> --from-file`. Clipboard fault (4 occurrences,
+                                   no owner, reads+writes both fail) → S11 family, post-reboot.
+                                   Once green: **S5 · THE SWEEP — its own session.** MODEL:
                                    Opus 5 · effort HIGH. **EXECUTION BUDGET: fresh 30 corrected
                                    lakh.** Read `diag\COUNT_PROBE_RESULT.md` BEFORE touching the
                                    browser — the two silent transport traps are named there.
