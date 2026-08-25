@@ -993,18 +993,26 @@ STATUS (update this block before any session stops — this is the handoff)
                                      Same silent-failure family as the newline and Ctrl+V traps in
                                      `diag\COUNT_PROBE_RESULT.md`. Assert `isContentEditable` on the
                                      active element BEFORE composing; the SHA gate caught it after.
-  ▶ NEXT SESSION ............... **A RULING IS OWED FIRST — `queue\2026-08-26_0112-s5sweep-2.md`.
-                                   THE SWEEP IS HALTED AND MAY NOT RESUME ON THIS SESSION'S OWN
-                                   JUDGEMENT** (§10-D rule 13: the fork is real — three written laws
-                                   point three ways, and 87% of the sweep is exposed). Once ruled:
-                                   if A, it is **MICRO-RUNG S5-Z3 · THE ALPHABET FIX — Opus 5 ·
-                                   effort HIGH**, ceiling BUILD + PROOF + HANDOFF written by the
-                                   RULER at ruling time (the 26-Aug standing model), and its §10-C
-                                   row written in the same act. **THEN the sweep resumes from A02**
-                                   — its answer is already on disk and re-checks for free, so a
-                                   comparator fix costs zero pastes to validate. Everything else on
-                                   this row still stands unchanged: the transport laws, the capture
-                                   commands, the gates-in-your-own-session rule, and the budget model.
+  ▶ NEXT SESSION ............... **S5-Z3 · THE ALPHABET FIX — RULED 26 Aug ~01:30, its §10-C row
+                                   is the work order** (queue\RULING__2026-08-26_0112-s5sweep-2.md;
+                                   A + c3 + c2 as one rung; BUILD 6 · PROOF 5 · HANDOFF 5, all
+                                   ruler-written). Opus 5 · effort HIGH. Headline the halt must
+                                   not bury: **A01 PASSED RAW 2/2 — S5-Z's path is live-proven**,
+                                   and checkall §8 held green over a real paid answer. The
+                                   departure is RATIFIED AS LAW: the rendered read travels
+                                   page→clipboard→disk with the IN-PAGE SHA-256 assert, and the
+                                   ORDER is load-bearing and standing — rendered FIRST
+                                   (hash-checked), THEN Copy for raw. checkall §3 gains the loud
+                                   resume-skip (ruled (i): the two gates agree; nothing weakens).
+                                   HE IS AVAILABLE for manual Gemini paste/upload as FALLBACK
+                                   ONLY — the session asks him with exact steps when transport
+                                   fails; his labor stays minimal, never the plan. CARD IS v5
+                                   (push + what-to-say baked in — he repeats nothing).
+                                   **THEN the sweep resumes from A02** — stored answer re-checks
+                                   FREE, one authorized fenced re-probe validates c3, and the
+                                   resumed sweep runs on **FRESH 30 EXECUTION + 10 HANDOFF,
+                                   ruler-written ~01:30** (the 24.15 bought the raw path's live
+                                   proof + the serializer-dialect class + a correct halt).
                                    (The row below is the sweep's own line, kept verbatim.)
                                  **S5 · THE SWEEP — RESUMED. Its own session, and it needs NO
                                    further word from anyone** (his GO of 25 Aug ~09:15 stands; the
@@ -1226,9 +1234,13 @@ Open docs/archive/ORGANISM_AUDIT__2026-08-19.md. Read ▶ RESUME HERE, §10-C an
 Execute exactly ONE rung — the one named by ▶ NEXT SESSION in ▶ RESUME HERE (fallback, if
 that line is stale: the first ☐ in §10-C) — under its ceiling and §10-D's rules.
 Before stopping: update the ticks honestly, append a PROGRESS entry, run §3-C's check,
-commit. Then tell me: what landed, what it cost, and the one line I must decide (if any).
+commit AND PUSH. Any escalation goes to the queue\ directory as a file (the clipboard is
+retired). Then tell me: what landed, what it cost, and EXACTLY what to paste in the
+architect session — or the words "architect not needed".
 ```
-*(Card v4 — ruled 25 Aug ~12:25, RULING 2026-08-25_1215-s5y-1: the router named at the point
+*(Card v5 — ruled 26 Aug ~01:30, RULING 2026-08-26_0112-s5sweep-2: push and the
+what-to-say line are the card's own closing instructions now, on HIS ask — he repeats
+nothing per session. Card v4 — ruled 25 Aug ~12:25, RULING 2026-08-25_1215-s5y-1: the router named at the point
 of use; the v3 "first ☐" wording sent a session two rungs wrong when the ladder lagged a
 ruling. TWO STANDING LAWS from the same ruling, S6 onward: a ruling that creates a rung
 writes its §10-C row in the same act · a written ceiling prices the BUILD, the PROOF carries
@@ -2668,6 +2680,25 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                                  said otherwise at the real one. Ceiling NOT
                                                  re-derived: unit faults only, never variance.)
       THEN THE SWEEP NEEDS NO FURTHER WORD FROM ANYONE.
+☐ S5-Z3 THE ALPHABET FIX — a micro-rung, RULED by the architect 26 Aug ~01:30
+      (queue\RULING__2026-08-26_0112-s5sweep-2.md IS the work order; A + c3 + c2 as one rung).
+      MODEL: Opus 5 · effort HIGH. SCOPE: (1) the raw comparator normalises ONLY the two
+      MEASURED serializer freedoms — leading `- `↔`* ` and emphasis markers — never whitespace,
+      case, content or length; truncation/substitution still bite; proofs both directions and
+      IDEMPOTENT · (2) c3: probe-prompt templates gain the fenced-answer instruction and become
+      VERSIONED — every answer records its eliciting version (the freeze protects the haystack
+      and expected values, NOT the elicitation — ruled) · (3) c2: probe verdicts become
+      two-tier, VERBATIM · SERIALIZED (both prove retrieval; anything else = FAIL and the
+      fallback fires with the corrected premise "this chat cannot produce a trustworthy
+      receipt") — the sweep's close reports the V/S split per chat · (4) checkall §3 gains the
+      loud resume-skip ("resume mode — N answers on disk, not simulating") and stays green ·
+      (5) A02's stored answer re-checked FREE under the fixed comparator + ONE authorized
+      re-probe in A02's chat under the fenced format (not the forbidden re-ask: new RULED
+      rules, one shot, recorded) — pass either tier ⇒ A02 continues, c3 validated.
+      FORBIDDEN: haystack/expected bytes · any audit question · any instrument beyond
+      probecheck/verify/checkall §3 + the rung's own diag/proofs_s5z3.mjs (standing implicit).
+      TRANSPORT NOTE, standing: Gemini's compose box focuses on REF click only, never
+      coordinate click.                    BUILD 6 · PROOF 5 · HANDOFF 5 (ruler-written)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
       sent. The preparation breached the ceiling (40 allowed, ~104 spent) and §10-D rule 2 was
