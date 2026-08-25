@@ -415,7 +415,7 @@ STATUS (update this block before any session stops — this is the handoff)
                                    Gemini calls, ZERO sweep questions, inputs still UNFROZEN.
                                    Cost 14.52 of the 15-lakh ceiling (97%) — read from the meter
                                    AT the commit, not mid-flight.
-                                   **+3.1 (HIS FOLLOW-UP, 25 Aug ~11:15) — its OWN named line, the
+                                   **+4.96 (HIS FOLLOW-UP, 25 Aug ~11:15) — its OWN named line, the
                                    first use of the architect's ITEM 3 ruling of 25 Aug ~10:45:
                                    "his follow-up, ordered after reading a rung's report, opens its
                                    OWN NAMED LINE on the row."** He read the report and ordered the
@@ -1992,7 +1992,7 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       checkall §2 block on `Set-Clipboard`, which is down machine-wide, and the only fix loosens
       a gate (rule 6 refuses it) in a file this rung may not touch. ESCALATED.  CEILING: 15
                                                                        (spent 14.52)
-                                                        + 3.1 (his follow-up, 25 Aug — ITEM 3)
+                                                        + 4.96 (his follow-up, 25 Aug — ITEM 3)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
       sent. The preparation breached the ceiling (40 allowed, ~104 spent) and §10-D rule 2 was
@@ -4564,7 +4564,7 @@ is a copy that drifts. Inside the ceiling, no breach.
 `node preflight.mjs` → **REFUSES** · `node scripts/rails.mjs orders` → see the commit; the commit
 went through the live §3-C gate.
 
-### ADDENDUM · 25 Aug 2026 ~11:15 IST — HIS FOLLOW-UP, on its own budget line (+3.1)
+### ADDENDUM · 25 Aug 2026 ~11:15 IST — HIS FOLLOW-UP, on its own budget line (+4.96, measured at ITS commit — the 3.1 written mid-follow-up was again a number about the middle of the work, not its close)
 He read the report and ordered everything loose closed and pushed. **This is the first use of the
 architect's ITEM 3 ruling** (25 Aug ~10:45): his follow-up after a rung's report opens its OWN
 named line on the row rather than counting against the rung's ceiling — so a session obeying him
