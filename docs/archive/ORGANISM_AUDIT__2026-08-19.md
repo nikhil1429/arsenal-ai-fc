@@ -301,6 +301,13 @@ STATUS (update this block before any session stops — this is the handoff)
                                      pattern that exists nowhere (checked nothing); repointed and
                                      bite-proven. Clipboard LEAD: NOT reproducing again
                                      (20,176/20,176 twice today) — stays transient, still no retry.
+                                     ↳ **SUPERSEDED SAME DAY — IT REPRODUCED, 6/6, at ~10:32**
+                                       (S5-W, while loading his clipboard). It had PASSED inside
+                                       S5-W's own preflight ~15 min earlier. So it comes and goes
+                                       within the hour: not fixed, not gone, and `capture.mjs:54`
+                                       reads the clipboard and nothing else. Raised as item 6 of
+                                       queue\2026-08-25_1030-s5w-1.md — **the only open item that
+                                       GATES the sweep.**
                                    ☑ (e) THE §3-C GATE REPAIR — ruled option B, LANDED as the
                                      atomic commit `61ef2b3` through the live gate itself: contract
                                      line + fallback resolver + refuse-on-null ratchet + snippet
@@ -4258,3 +4265,45 @@ First acts, in order: read `diag\COUNT_PROBE_RESULT.md` **before** touching the 
 dead to a driving session and `computer type` eats newlines) → `node checkall.mjs` must say GREEN
 and `preflight.mjs` GO in that session, not inherited from this one → then A01, and **no attachment
 is trusted until its own probe passes** — which now means three probes for the canon, not one.
+
+### PROGRESS 2026-08-25 ~10:35 IST — S5-W ADDENDUM · pushed, and the clipboard LEAD reproduced on the way out
+
+**PUSHED on his order:** `7eae185..4cb8dbc main -> main`. Working tree clean, 0 ahead. The archive
+tripwire passed on both commits (`0 staged path(s), nothing that may not be published`) and the
+privacy glance found one file touched — this order — with no secret, no token, no other person named.
+
+**⛔ THE CLIPBOARD LEAD IS NOT TRANSIENT-AND-GONE. IT REPRODUCED, 6/6.** Found the way these things
+are always found: while trying to obey §10-D rule 13's delivery law and put the escalation block on
+his clipboard. `Set-Clipboard` returned *"Requested Clipboard operation did not succeed"* six times
+over four seconds. The timeline on ONE machine, ONE day:
+
+```
+21 Aug        failed machine-wide, child shell AND direct, 3 attempts each
+25 Aug 08:50  passed 20,176/20,176 twice  -> S5-R2 recorded "NOT reproducing again"
+25 Aug 10:15  passed 20,176/20,176 inside S5-W's own preflight
+25 Aug 10:32  FAILED 6/6
+```
+
+**WHY IT MATTERS MORE THAN A FAILED PASTE:** `capture.mjs save <step>` reads the clipboard and
+nothing else (`capture.mjs:54`). It is the SOLE WRITER of `answers/` and the thing that writes
+`inputs_frozen.json` on the first answer. On a bad minute the sweep cannot save a returned answer,
+and the documented fallback — "he saves each answer by hand" — bypasses both the sole-writer rule
+and the input freeze, mid-sweep. And under the transport ruling the driving session has already
+READ the answer off the page, so the clipboard is now a detour the text does not need to take.
+Raised as **item 6** of `queue\2026-08-25_1030-s5w-1.md`, with a recommendation (`--from-file`, a
+second INPUT path, capture stays sole writer) — **the only open item that gates the sweep.**
+
+**FIVE OTHER THINGS WENT TO THE ARCHITECT IN THE SAME BLOCK**, none of them blocking: (1) the
+audit's own instruments have NO version control — `git rev-parse` says the artifacts folder is not
+a repository, so L9's `git log -S` cannot run on any of them, and today's rollback existed only
+because a `.bak` copy was made by hand; (2) a review that runs the instruments proves they AGREE,
+not that they are right — the dead replication diff survived two Fable·max reviews because the
+fixture carried the checker's own stale assumption; (3) the ceiling-scope question, open since S4;
+(4) a confirmation, not a decision — the frozen canon cut is one PROGRESS entry behind the repo by
+design; (5) a lead for S11 — `dressing-room/state/gaffer_blocks.json.tmp6756`, an orphan torn
+write sitting untracked in the state directory, a live instance of its declared class.
+
+**THE DELIVERY LAW COULD NOT BE OBEYED, and that is recorded rather than worked around.** The block
+is not on his clipboard because the clipboard is the thing that is broken. It is in the queue
+directory instead — which is where the architect drains from by convention (queue README), so
+nothing is lost but the one-paste convenience.
