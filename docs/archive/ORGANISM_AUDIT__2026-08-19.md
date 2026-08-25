@@ -658,31 +658,44 @@ STATUS (update this block before any session stops — this is the handoff)
                                    Delivery fell back to the queue file — which is the fallback
                                    S5-Y itself built, working as ruled. Still S11, still nobody
                                    chases it before S6.
-  ▶ NEXT SESSION ............... ⛔ **BLOCKED ON A RULING — DO NOT DRIVE THE SWEEP YET.**
-                                   `queue6-08-25_1250-s5sweep-1.md` is open on his clipboard:
-                                   the prescribed capture path (`get_page_text`) is markdown-LOSSY
-                                   and would false-fail 86% of the chats and silently discard most
-                                   verbatim quotes. **RECOMMENDED: rule option A and run it as
-                                   micro-rung S5-Z** (raw-markdown capture off the Copy button,
-                                   gated by a length/sha assert — the clipboard is CONTENDED, proven
-                                   today). S5-Z needs a WRITTEN ceiling plus its own named
-                                   proof-budget line, both written by the ruler (25-Aug standing
-                                   law), and its §10-C row written in the same act (card-v4 law).
-                                   ONCE S5-Z IS DONE, this router returns to:
-                                   **S5 · THE SWEEP — RESUMED, its own session.** MODEL:
-                                   Opus 5 · effort HIGH. **EXECUTION BUDGET: 30 corrected lakh
-                                   less the 22.29 already spent ⇒ ~7.7 remaining, so the sweep almost
-                                   certainly needs a FRESH number from the ruler, not the remainder.** Its gates are GREEN and were run at 25 Aug
-                                   ~12:35 (checkall 7/7, preflight GO) — but
-                                   run them again IN YOUR OWN SESSION, never inherited:
-                                   `node checkall.mjs` must say GREEN and `node preflight.mjs` GO.
+  S5-Z THE RAW CAPTURE ......... ☐ RULED 25 Aug ~13:10 (queue\RULING__2026-08-25_1300-s5sweep-1.md
+                                   = the work order; D-as-vehicle, A-as-content). MODEL: Opus 5 ·
+                                   effort HIGH. **BUILD CEILING 8 · PROOF LINE 8 corrected lakh —
+                                   both written by the ruler.** Scope: capture goes RAW via
+                                   Gemini's Copy button, gated by a this-answer assert (not
+                                   empty · not stale · not SUBSTITUTED — cross-check against the
+                                   rendered read; refuse LOUDLY on mismatch; substitution is the
+                                   failure mode, 216-char proof on record) · get_page_text
+                                   survives ONLY as a declared rendered-lossy fallback stamped on
+                                   the answer, and lossy-stamped answers get the
+                                   rendered-EXPECTED comparator (B's mechanism, fallback-scoped;
+                                   the answer is never stripped; the RAW path stays byte-strict)
+                                   · re-capture A01 first (free, still on screen) · named proofs:
+                                   substitution/empty/stale plants refused · lossy comparator
+                                   bites both directions · truncation plant still fails raw ·
+                                   checkall + preflight GREEN · snapshot before every edit.
+  ▶ NEXT SESSION ............... **S5-Z (above). THEN S5 · THE SWEEP — RESUMED, its own
+                                   session.** MODEL: Opus 5 · effort HIGH. **EXECUTION BUDGET:
+                                   FRESH 30 corrected lakh, written by the ruler ~13:10** (the
+                                   22.29 bought the rendered-vs-raw trap class, the substitution
+                                   discovery and a correct halt — spent, not wasted; no stub is
+                                   inherited). Gates re-run IN YOUR OWN SESSION, never inherited:
+                                   `node checkall.mjs` GREEN and `node preflight.mjs` GO.
                                    A clipboard warning in either is EXPECTED and is not a blocker
-                                   (S5-Y); a red ANSWER PATH is. Read `diag\COUNT_PROBE_RESULT.md` BEFORE touching the
-                                   browser — the two silent transport traps are named there.
-                                   **Answers are captured with `node capture.mjs save <step>
-                                   --from-file <path>`, never the clipboard** (built + proven at
-                                   S5-X; write what `get_page_text` returned to a temp file and
-                                   hand capture the path).
+                                   (S5-Y); a red ANSWER PATH is. Read `diag\COUNT_PROBE_RESULT.md`
+                                   BEFORE touching the browser — the transport traps are named
+                                   there. **Answers are captured via S5-Z's Copy-gated RAW path
+                                   through `capture.mjs --from-file`; get_page_text only as the
+                                   stamped lossy fallback.** OUTBOUND STANDING LAW (~13:10,
+                                   stricter, rule 6): the compose box is verified by SHA256
+                                   against the step file before Return — never an eyeball diff;
+                                   ⚠ innerText on the Quill box DOUBLES lines (one <p> per line)
+                                   — read block children's textContent joined by newlines.
+                                   CLIPBOARD STANDING LAW (~13:10, S6 onward): every clipboard
+                                   hand-off asserts WHAT came back, never merely THAT something
+                                   came back. HIS OPERATIONAL RULE: during a sweep session's
+                                   paste/capture windows he does NOT copy/paste anything on this
+                                   machine — his clipboard IS the transport.
                                    STANDING (ruled ~11:25, S6 onward, BUILT at S5-Y): **a gate's
                                    strictness is measured against the property it PROTECTS, not
                                    the count of its blocking checks.** The clipboard is ADVISORY
