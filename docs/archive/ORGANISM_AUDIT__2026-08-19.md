@@ -338,6 +338,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⛔ **DO NOT re-run `refilter2.mjs` once the sweep starts** — the
                                    store is LIVE and rebuilding moves the haystack under answers
                                    already collected.
+                                   TRANSPORT, RULED BY THE ARCHITECT 25 Aug (his zero-tax fire
+                                   law — the OVERHAUL plan's section 17-B, 13+18 Aug words —
+                                   applied to the sweep): the sweep session drives HIS Chrome
+                                   itself via the claude-in-chrome extension — navigate to Gemini,
+                                   paste, attach (file_upload), send, read the return, verify.
+                                   HE is fallback ONLY for login walls / CAPTCHAs / a stubborn
+                                   attach dialog. His pastes are plan-B, not the plan. Extended
+                                   thinking ON (his standing ruling, both accounts) — the session
+                                   verifies the toggle before the first probe.
   ⛔ S5-PRE'S OTHER FINDING ..... **THE §3-C COMMIT GATE HAS BEEN DEAD SINCE 20 AUG — IT
     REPORTS AND IT NEVER BLOCKS.** Found by running it, with the witness:
     `rails.mjs:264` resolves the open order by matching the literal phrase
