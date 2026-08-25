@@ -280,6 +280,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                        whether coverage receipts still match a repeated header.
                                    (d) preflight/checkall/buildsteps after the repointing, and the
                                        clipboard LEAD.
+                                   (e) **THE §3-C GATE REPAIR — RULED 25 Aug, option B, spec is
+                                       binding:** `arsenal-audit-artifacts\queue\
+                                       RULING__2026-08-25_0805-s5pre-1.md`. One atomic commit:
+                                       CLAUDE.md `ORDER-GATE:` contract line + resolver reads it
+                                       first (legacy regex stays as fallback, L9) + refuse-on-null
+                                       ratchet. Bite-proof BOTH directions (planted violation
+                                       blocks · removed line refuses loudly). Blocks on the
+                                       ENGINEERING order only. Same commit: §3-C's inline snippet
+                                       in this file is replaced by `node scripts/rails.mjs orders`.
                                    THEN, in order, on his word: **the sweep** (Opus 5 · effort
                                    HIGH) — its FIRST paste is the ATTACHMENT-COUNT probe, which
                                    decides 42 pastes versus 420 — then **S6** (Fable · max).

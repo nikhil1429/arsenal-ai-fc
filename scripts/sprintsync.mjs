@@ -17,9 +17,8 @@
 //   or env ARSENAL_SPRINT_SHEET / ARSENAL_SPRINT_GID. Absent → graceful no-op.
 // MODES: sync (default) · set-start <YYYY-MM-DD> · selftest
 // ============================================================================
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, mkdtempSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -124,19 +123,27 @@ async function sync({ fetchFn = fetch, now = new Date() } = {}) {
 // `start` re-bases what "week N" resolves to in every consumer, so the old value
 // is LAYERED into start_history (Law 9), never lost. sprints[].dates stay as the
 // xlsx parse wrote them — they are the June plan's record, not live arithmetic.
-function setStart(dateStr, { now = new Date(), path = SPRINT } = {}) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "") || isNaN(Date.parse(dateStr))) {
-    console.log(`sprintsync: set-start needs a real YYYY-MM-DD (got "${dateStr}") — nothing written.`);
-    return { ok: false, why: "bad-date" };
-  }
-  const sprint = readJson(path);
-  if (!sprint || !sprint.start) { console.log("sprintsync: sprint.json missing or has no start — nothing written."); return { ok: false, why: "no-file" }; }
-  if (sprint.start === dateStr) { console.log(`sprintsync: start already ${dateStr} — nothing to do.`); return { ok: true, why: "noop" }; }
-  sprint.start_history = [...(sprint.start_history || []), { start: sprint.start, superseded: now.toISOString(), by: "captain's order (Q-8, architect-ruled 25 Aug 2026)" }];
-  sprint.start = dateStr;
-  writeAtomic(path, sprint);
-  console.log(`sprintsync: start → ${dateStr} (was ${sprint.start_history[sprint.start_history.length - 1].start}; old value layered into start_history)`);
-  return { ok: true, start: dateStr };
+// applyStart — the PURE core: object in, verdict out, NO fs. The shell below keeps
+// sprint.json's path a LITERAL const, so xray can resolve every sink (the first
+// version passed a path parameter and made this organ 5 sites blinder — the
+// suite's non-increasing ratchet caught it in S5-PRE's reading, 25 Aug 2026).
+function applyStart(sprint, dateStr, now = new Date()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr || "") || isNaN(Date.parse(dateStr))) return { ok: false, why: "bad-date" };
+  if (!sprint || !sprint.start) return { ok: false, why: "no-file" };
+  if (sprint.start === dateStr) return { ok: true, why: "noop" };
+  return {
+    ok: true, why: "moved", prev: sprint.start,
+    sprint: { ...sprint, start: dateStr, start_history: [...(sprint.start_history || []), { start: sprint.start, superseded: now.toISOString(), by: "captain's order (Q-8, architect-ruled 25 Aug 2026)" }] },
+  };
+}
+
+function setStart(dateStr) {
+  const r = applyStart(readJson(SPRINT), dateStr);
+  if (r.why === "bad-date") console.log(`sprintsync: set-start needs a real YYYY-MM-DD (got "${dateStr}") — nothing written.`);
+  else if (r.why === "no-file") console.log("sprintsync: sprint.json missing or has no start — nothing written.");
+  else if (r.why === "noop") console.log(`sprintsync: start already ${dateStr} — nothing to do.`);
+  else { writeAtomic(SPRINT, r.sprint); console.log(`sprintsync: start → ${dateStr} (was ${r.prev}; old value layered into start_history)`); }
+  return r;
 }
 
 function selftest() {
@@ -160,21 +167,16 @@ function selftest() {
   assert("no In-Progress → first not-done row is current", p2.current.id === "1-02" && p2.current.status === "to_do");
   // graceful: junk CSV → null (never a crash / never wipes sprint.json)
   assert("unparseable board → null (keeps existing file)", boardToProgress("garbage\nno,headers,here", "x") === null || boardToProgress("", "x") === null);
-  // set-start (Q-8): on a TEMP file, never the live one — moves start, layers the
-  // old value (Law 9), refuses junk, and a no-op leaves the file byte-identical.
+  // set-start (Q-8): the PURE core on plain objects — no fs, no temp files, and
+  // the live file provably untouchable from here (applyStart cannot write).
   {
-    const dir = mkdtempSync(join(tmpdir(), "sprintsync-"));
-    const tf = join(dir, "sprint.json");
-    writeFileSync(tf, JSON.stringify({ start: "2026-06-20", progress: {} }));
-    const r1 = setStart("2026-08-25", { path: tf, now: new Date("2026-08-25T05:00:00Z") });
-    const after = JSON.parse(readFileSync(tf, "utf8"));
+    const r1 = applyStart({ start: "2026-06-20", progress: {} }, "2026-08-25", new Date("2026-08-25T05:00:00Z"));
     assert("set-start moves start and layers the old value into start_history",
-      r1.ok && after.start === "2026-08-25" && after.start_history.length === 1 && after.start_history[0].start === "2026-06-20");
-    const before = readFileSync(tf, "utf8");
-    assert("set-start to the same date is a no-op (file untouched)",
-      setStart("2026-08-25", { path: tf }).why === "noop" && readFileSync(tf, "utf8") === before);
+      r1.ok && r1.sprint.start === "2026-08-25" && r1.sprint.start_history.length === 1 && r1.sprint.start_history[0].start === "2026-06-20");
+    assert("set-start to the same date is a no-op (nothing to write)",
+      applyStart({ start: "2026-08-25" }, "2026-08-25").why === "noop");
     assert("set-start refuses a junk date and writes nothing",
-      setStart("25-08-2026", { path: tf }).ok === false && readFileSync(tf, "utf8") === before);
+      applyStart({ start: "2026-06-20" }, "25-08-2026").ok === false && applyStart(null, "2026-08-25").why === "no-file");
   }
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");

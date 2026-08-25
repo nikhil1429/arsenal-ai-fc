@@ -11,9 +11,10 @@
 #     where he now works. The workbook is already PARSED into the machine-readable spine —
 #     `dressing-room/state/sprint.json`, whose own `_comment` reads "Parsed from
 #     learning-layer/Nikhil_AI_Sprint_Plan.xlsx (Sprint Board + Sprint Plan)" — and his LIVE position is synced
-#     from his Google Sheet by `scripts/sprintsync.mjs` ("SINGLE WRITER of sprint.json's `progress` block").
+#     from his Google Sheet by `scripts/sprintsync.mjs` ("SOLE WRITER of sprint.json" — ownership widened
+#     from the `progress` block to the whole file 25 Aug 2026, Q-8; `sync` still touches only `progress`).
 #     Kickoff therefore reads STATE, not the workbook: `node scripts/learnstate.mjs brief`. Evidence:
-#     `grep -n "Parsed from" dressing-room/state/sprint.json` · `grep -n "SINGLE WRITER" scripts/sprintsync.mjs`.)*
+#     `grep -n "Parsed from" dressing-room/state/sprint.json` · `grep -n "SOLE WRITER" scripts/sprintsync.mjs`.)*
 # VERSION HISTORY: OS_CHANGELOG.md (project files) — v3.4→v3.13 poora record. Turn-1 pe zaroori nahi.
 #   *(corrected 10 Aug 2026: the record now runs v3.4→**v3.14**. AND — this applies to EVERY "(project files)"
 #     pointer in this whole document — "project files" was the old claude.ai Project surface. Every canon file
