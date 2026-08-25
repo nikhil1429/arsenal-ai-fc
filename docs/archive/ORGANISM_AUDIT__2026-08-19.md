@@ -784,8 +784,27 @@ STATUS (update this block before any session stops — this is the handoff)
                                    time. Still no owner, reads and writes both failing while down
                                    → S11 family. Recorded here because "minutes at a time" is now
                                    twice measured as "tens of minutes".
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — RESUMED, its own session.** (S5-Z is ☑ DONE,
-                                   the row above.) MODEL: Opus 5 · effort HIGH. **EXECUTION BUDGET:
+  ▶ NEXT SESSION ............... **S5-Z2 · THE PRE-SWEEP STATE-GUARD — its §10-C row is the work
+                                   order** (RULED 25 Aug ~14:20, queue\RULING__2026-08-25_1410-
+                                   s5z-1.md; BUILD 3 · PROOF 3, both ruler-written). Opus 5 ·
+                                   effort HIGH, one small rung: the effect-gate ("running a gate
+                                   cannot change sweep state") + diag/ into the snapshot roster.
+                                   HIS STANDING RULING ~14:10, RECORDED: **the clipboard is
+                                   RETIRED as a sync channel between sessions — the queue\
+                                   directory IS the channel, both directions.** Executors write
+                                   the escalation FILE and tell him one line; no Set-Clipboard
+                                   rituals; his ferry is dead as a requirement. The clipboard
+                                   survives ONLY as the data path behind Gemini's Copy button.
+                                   FIVE RULINGS OF ~14:20 STANDING: Q-A = a bite-proven finding
+                                   opens its own budget line (no bite-proof, no line) · Q-B =
+                                   effect-gate now, {owner·consumer} class rides S6's registry ·
+                                   Q-C = live capture probe OPPORTUNISTIC WITH TEETH (clipboard
+                                   tested once at open; alive ⇒ the free probe RUNS) · Q-D =
+                                   diag-into-roster now, local-git after the sweep, B REFUSED
+                                   outright · Q-E = sweep proceeds either way, the close REPORTS
+                                   the raw/lossy split (>50% lossy ⇒ flagged + a named S6 input).
+                                   **THEN S5 · THE SWEEP — RESUMED, its own session, no further
+                                   word from anyone.** MODEL: Opus 5 · effort HIGH. **EXECUTION BUDGET:
                                    FRESH 30 corrected lakh, written by the ruler ~13:10** (the
                                    22.29 bought the rendered-vs-raw trap class, the substitution
                                    discovery and a correct halt — spent, not wasted; no stub is
@@ -2366,6 +2385,20 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                                 (spent 24.69 combined — BREACHED by 8.69, measured
                                                 at the commit, recorded; ceiling NOT re-derived:
                                                 unit faults only, never variance)
+☐ S5-Z2 THE PRE-SWEEP STATE-GUARD — a micro-rung, RULED by the architect 25 Aug ~14:20
+      (queue\RULING__2026-08-25_1410-s5z-1.md IS the work order; Q-B ruled C-then-B, Q-D ruled
+      C-now). MODEL: Opus 5 · effort HIGH. SCOPE, tiny and closed: (1) the EFFECT-GATE inside
+      checkall — answers/ + inputs_frozen.json + the frozen corpus/canon manifests must be
+      BYTE-IDENTICAL before and after EVERY gate run ("running a gate cannot change sweep
+      state" becomes a gate of its own — the class that ate the paid A01, caught by its effect
+      at sites nobody predicted) · (2) diag/ enters the snapshot roster (one line; the full
+      declare-or-die flip stays post-sweep per the ~12:25 ruling) · (3) bite-proofs both
+      directions (a mutating gate → RED naming the file; clean → GREEN; a diag file restorable
+      from snapshot) · (4) checkall + preflight GREEN at close.
+      FORBIDDEN: frozen corpus/canon bytes · any Gemini call · any sweep question · anything
+      beyond checkall.mjs / snapshot.mjs.        BUILD CEILING: 3 · PROOF LINE: 3
+      (both written by the ruler at ruling time; a FINDINGS line opens per Q-A's law only on a
+      bite-proof). THEN THE SWEEP NEEDS NO FURTHER WORD FROM ANYONE.
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
       sent. The preparation breached the ceiling (40 allowed, ~104 spent) and §10-D rule 2 was
