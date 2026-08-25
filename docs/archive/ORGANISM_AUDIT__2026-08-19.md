@@ -838,6 +838,32 @@ STATUS (update this block before any session stops — this is the handoff)
                                      two snapshots it creates, so it leaves no trap in the store.
                                    ☑ checkall GREEN all 8 sections · preflight GO, both RUN IN THIS
                                      SESSION, never inherited. Snapshots taken before every edit.
+  ⚠ THE S5-PRE PIN HAS MOVED, MEASURED AT S5-Z2's CLOSE — recorded, NOT acted on, and the
+                                   sweep does NOT wait on it. S5-PRE pinned the two dirty .md files
+                                   whose WORKING-TREE bytes went into the canon cut:
+                                   `b332c5289a3a858f` (SAMJHAO_ORDER) · `f55e17240a761c5f`
+                                   (HOW_HE_LEARNS), with the standing warning "if either moves
+                                   before the sweep, the cut and the repo have silently diverged".
+                                   **HOW_HE_LEARNS still holds exactly. SAMJHAO_ORDER is now
+                                   `f718e5e69a70409c`.** Measured, not guessed: the cut holds a
+                                   1,503-line copy (canon/chunk23.txt), the working tree has 1,531
+                                   — **28 lines, and the first divergence is at line 27, inside §0's
+                                   resume pointer** (the learning lane closed tokenization axis a and
+                                   moved axis b to ~85% today). **NOT FIXED, deliberately, and it is
+                                   the standing law that says so:** those 28 lines are STUDY
+                                   PROGRESS, which his 25-Aug ruling routes to S6 as an input rather
+                                   than to archaeology; the inputs are FROZEN (`inputs_frozen.json`
+                                   exists since 12:47) and the ordering law makes them immutable
+                                   until the consuming run ends; and a re-cut now would move the
+                                   haystack under a live sweep and void S5-R2's certification. The
+                                   sweep attaches the certified cut and reads one file 28 lines
+                                   stale, all of it study state. **THE REAL SHAPE UNDERNEATH, for
+                                   S6:** the pin was a SENTENCE with an owner (S5-R2's scope-(c))
+                                   and that owner closed — after which nothing on this machine was
+                                   checking it, and it moved. A check whose only executor is
+                                   "whichever session remembers" is his design-failure law exactly.
+                                   One line in checkall §5 would end it; it is out of this rung's
+                                   FORBIDDEN boundary, so it is written here and not built.
   ▶ NEXT SESSION ............... **S5 · THE SWEEP — RESUMED. Its own session, and it needs NO
                                    further word from anyone** (his GO of 25 Aug ~09:15 stands; the
                                    architect's ruling of ~14:20 closed the last pre-condition when
@@ -5735,3 +5761,27 @@ before every edit, per the standing rule.
 
 **NEXT: S5 · THE SWEEP — RESUMED. Opus 5 · effort HIGH. FRESH 30 corrected lakh.** No further word
 from anyone: his GO of ~09:15 stands and the last pre-condition closed here.
+
+#### ADDENDUM, same rung — THE S5-PRE PIN MOVED, AND NOTHING WAS WATCHING IT
+
+Checked at the close because S5-PRE wrote the warning and S5-R2 owned it as scope-(c) — and S5-R2
+has closed, so after ~09:30 today nobody on this machine was checking it. It moved.
+`HOW_HE_LEARNS.md` still hashes to `f55e17240a761c5f` exactly. `SAMJHAO_ORDER__2026-08-20.md` is
+now `f718e5e69a70409c`, pinned at `b332c5289a3a858f`. **Measured rather than assumed:** the canon
+cut holds a 1,503-line copy (`canon/chunk23.txt`); the working tree has 1,531; the first difference
+is at line 27, in §0's resume pointer — the learning lane closed tokenization axis a and moved axis
+b to ~85% during the day.
+
+**NOT FIXED, and three standing laws say not to.** Those 28 lines are STUDY PROGRESS, which his
+25-Aug ruling routes to S6 as an input rather than to archaeology. The inputs are FROZEN
+(`inputs_frozen.json` has existed since 12:47) and the ordering law makes them immutable until the
+consuming run ends. And a re-cut now would move the haystack under a live sweep and void S5-R2's
+certification of the cut. So the sweep attaches the certified cut and reads one canon file 28 lines
+stale, all of it study state, and that is the right trade.
+
+**THE SHAPE UNDERNEATH IS THE INTERESTING PART, and it belongs to S6:** the pin was a SENTENCE with
+an owner, the owner closed, and the sentence kept being true-sounding while nothing evaluated it.
+That is his design-failure law in its purest form — a check whose only executor is "whichever
+session remembers". One line in checkall §5 (assert the two pinned hashes against disk while the
+freeze exists) would end it permanently. It is outside this rung's FORBIDDEN boundary, so it is
+recorded here and deliberately not built — §10-D rule 10.
