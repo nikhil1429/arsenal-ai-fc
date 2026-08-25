@@ -413,7 +413,7 @@ STATUS (update this block before any session stops — this is the handoff)
                                      both RUN IN THIS SESSION · rails orders 0 blocking.
   S5-X PRE-SWEEP HARDENING ..... ◐ 25 Aug 2026 ~11:00 IST · Opus 5 · effort high · TIER-0, ZERO
                                    Gemini calls, ZERO sweep questions, inputs still UNFROZEN.
-                                   Cost 12.09 of the 15-lakh ceiling. **SCOPE (a)(b)(c) DONE AND
+                                   Cost 14.52 of the 15-lakh ceiling (97%) — read from the meter AT the commit, not mid-flight. **SCOPE (a)(b)(c) DONE AND
                                    BITE-PROVEN. SCOPE (d) IS RED AND STAYS RED — §10-D rule 10
                                    obeyed: recorded, not patched around.** Full account in the
                                    PROGRESS entry of 25 Aug ~11:00 — read that, not this summary.
@@ -1970,7 +1970,7 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       ⛔ ITS SCOPE-(d) PROOF IS RED AND WAS NOT PATCHED AROUND (§10-D rule 10): preflight and
       checkall §2 block on `Set-Clipboard`, which is down machine-wide, and the only fix loosens
       a gate (rule 6 refuses it) in a file this rung may not touch. ESCALATED.  CEILING: 15
-                                                                       (spent 12.09)
+                                                                       (spent 14.52)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
       sent. The preparation breached the ceiling (40 allowed, ~104 spent) and §10-D rule 2 was
@@ -4415,7 +4415,7 @@ nothing is lost but the one-paste convenience.
 ---
 
 ## PROGRESS · 25 Aug 2026 ~11:00 IST · RUNG S5-X — PRE-SWEEP INSTRUMENT HARDENING
-**Opus 5 · effort high · ceiling 15 corrected lakh · spent 12.09 (81%). TIER-0: zero Gemini calls,
+**Opus 5 · effort high · ceiling 15 corrected lakh · **spent 14.52 (97%) — measured at the commit**. TIER-0: zero Gemini calls,
 zero sweep questions, zero browser. `inputs_frozen.json` still does not exist, so the sweep's
 inputs remain free.** Work order: `queue\RULING__2026-08-25_1030-s5w-1.md` (the architect's
 ruling on S5-W's six items — item 1 = B now, item 6 = A and it lands FIRST).
@@ -4530,6 +4530,12 @@ clipboard capture path in its runbook prose; the RESUME router now carries the `
 instruction, and rewriting the driver card was outside this rung's boundary. **The next session
 must read the router line, not DO_THIS.md's capture paragraph** — that gap is named here rather
 than left to be discovered, and it belongs to whichever rung the ruling below assigns.
+
+**⚠ THE COST FIGURE IN THIS ENTRY WAS WRITTEN TWICE.** 12.09 was the reading when the record was
+drafted; **14.52 (97%) is what the meter read at the commit**, and the record carries the second
+one everywhere. The same correction S5-W had to make (`4cb8dbc`) — a cost read before the close is
+a number about the middle of a rung, and this order's whole §3-B lesson is that a restated number
+is a copy that drifts. Inside the ceiling, no breach.
 
 **GATES AT CLOSE:** `node snapshot.mjs check` → OK, 65/65, 3 snapshots stored ·
 `node checkall.mjs` → **5 of 7 sections green, §1 and §2 RED on the clipboard** ·
