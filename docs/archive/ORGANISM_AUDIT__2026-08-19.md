@@ -225,21 +225,44 @@ STATUS (update this block before any session stops — this is the handoff)
     his pastes maximizes instrument risk for ~zero evidence gain. S6 gets the 21–25 Aug delta
     as an INPUT instead (already on its line), where study data is handled AS study data.
     WHY the canon IS re-cut: since the 21-Aug cut, ~3 canon files changed in ways that RESOLVE
-    the very contradictions the sweep hunts (SAMJHAO_ORDER §16 rulings · HOW_HE_LEARNS #2
+    the very contradictions the sweep hunts (SAMJHAO_ORDER section 16 rulings · HOW_HE_LEARNS #2
     superseded layer · this order's PROGRESS). A sweep over the stale cut would spend pastes
     reporting already-fixed drift. The re-cut is deterministic TIER-0 (pack → probe_gen →
     buildsteps → checkall), zero Gemini calls.
     THE ORDERING LAW that falls out, standing: **any input refresh happens BEFORE the review
     rung that certifies it; after the review, inputs are IMMUTABLE until the consuming run
     ends** (the verifier already enforces the second half by refusing moved inputs).
-  ▶ NEXT SESSION ............... ☐ **S5-PRE · THE CANON RE-CUT** — a 10-minute TIER-0
-                                   micro-step, its OWN session (build and review never share
-                                   one head — the one-pass disease is documented above).
-                                   Follow the S5 folder's DO_THIS re-cut path: re-cut canon
-                                   from today's repo state → regenerate canon probes + steps
-                                   → checkall + preflight GREEN → commit. ZERO pastes, zero
-                                   model calls. Chat corpus is NOT touched (ruling above).
-  ▶ THEN ....................... **S5-R2 · THE FABLE REVIEW OF THE REBUILT INSTRUMENTS.**
+  S5-PRE THE CANON RE-CUT ...... ☑ DONE 25 Aug 2026 ~08:00 IST · TIER-0, ZERO pastes, ZERO
+                                   model calls, corpus PROVABLY untouched. Cost 8.57 lakh of 40.
+                                   ☑ canon re-cut from today's repo state: **118 tracked .md →
+                                     27 chunks**, 5 parts from the two over-cap files, largest
+                                     chunk 192,045 B — **0 over the 194,000 B measured cap.**
+                                   ☑ probes + steps regenerated: 23 probes · 46 anchors · 65 step
+                                     files · 20 chat-opening steps all carry their probe text.
+                                   ☑ checkall GREEN (all 5 sections) · preflight GO (18 checks),
+                                     both RUN IN THIS SESSION, not inherited.
+                                   ☑ INDEPENDENTLY RE-PROVED, not read off the instruments:
+                                     manifest set == `git ls-files *.md` exactly · all 118 carry a
+                                     FILE header inside a chunk on disk · 46/46 anchors unique
+                                     ACROSS THE WHOLE CHAT ATTACHMENT SET (the strong predicate,
+                                     not per-file) · every anchor at its stored index · every
+                                     stored expected answer really is the following line.
+                                   ☑ THE PACK IS DETERMINISTIC: 28/28 outputs byte-identical on
+                                     an independent re-run — so the cut is a function of the repo,
+                                     not of who ran it.
+                                   ☑ the re-cut is NOT a no-op — the five post-21-Aug things the
+                                     ruling named are all in the cut and located by chunk.
+                                   ⚠ DECLARED, and it is new: pack.mjs takes the FILE LIST from
+                                     `git ls-files` but the CONTENT from the WORKING TREE. Two
+                                     tracked .md are dirty right now and **303 uncommitted lines
+                                     are inside this cut** (SAMJHAO_ORDER 282 · HOW_HE_LEARNS 21).
+                                     That is the content the 25-Aug ruling WANTED, so the cut is
+                                     right — but its provenance is not a commit. PINNED HERE:
+                                     HEAD `615eabc` + sha256/16 `b332c5289a3a858f`
+                                     (SAMJHAO_ORDER) and `f55e17240a761c5f` (HOW_HE_LEARNS).
+                                     If either moves before the sweep, the cut and the repo have
+                                     silently diverged. S5-R2 owns this as a scope-(c) item.
+  ▶ NEXT SESSION ............... **S5-R2 · THE FABLE REVIEW OF THE REBUILT INSTRUMENTS.**
                                    MODEL: **Fable 5 · effort max** (fresh weekly pool, Monday
                                    post-reset). HIS CALL, RATIFIED BY THE ARCHITECT: the week
                                    stops after the closure list; nothing more is spent until one
@@ -265,6 +288,37 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⛔ **DO NOT re-run `refilter2.mjs` once the sweep starts** — the
                                    store is LIVE and rebuilding moves the haystack under answers
                                    already collected.
+  ⛔ S5-PRE'S OTHER FINDING ..... **THE §3-C COMMIT GATE HAS BEEN DEAD SINCE 20 AUG — IT
+    REPORTS AND IT NEVER BLOCKS.** Found by running it, with the witness:
+    `rails.mjs:264` resolves the open order by matching the literal phrase
+    "THE OPEN WORK ORDER: docs/archive/<name>.md" in CLAUDE.md. **CLAUDE.md no longer contains
+    that phrase** — it was rewritten to *"TWO WORK ORDERS ARE OPEN … ① ENGINEERING"*.
+    `openOrder()` therefore returns **null**, every order file is classified *"a closed record:
+    LEADS only, never a blocker"*, `blocking` is always 0, and `hooks/pre-commit:35`
+    (`rails.mjs orders --quiet || exit 1`) can never fail. The hook IS installed and IS running;
+    it simply cannot say no. Measured live: `open = null · blocking = 0 · total problems = 8`.
+    ⚠ IT ALREADY LET ONE THROUGH: the 07:34 commit `615eabc` introduced a real §3-C violation
+    (a cross-document section-16 citation, which §3-C resolves against THIS file's own headings) and
+    the dead gate printed it as a lead in a closed record. **FIXED THIS RUNG** — de-sigiled per
+    the convention this order set for exactly that class; the open order is now
+    `structurally clean` by the real gate.
+    ⚠ AND THE DOC'S OWN SNIPPET NO LONGER MATCHES THE GATE: §3-C's inline `node -e` block
+    hardcodes one exception (`scripts/ghost.mjs`) and knows nothing of the
+    `<!-- order-check:absent-ok … -->` convention the real checker honours, so a session that
+    obeys rule 7 literally sees **9 problems** where the gate sees **1**. The gate is the
+    authority; the snippet is stale. Both are one-line fixes and neither was made here.
+    ↳ **NOT PATCHED THIS RUNG, DELIBERATELY.** `rails.mjs` is S1's organ, S1 is ☑ and was
+    certified by S5-R (which proved the DENY rails, never this predicate). The repair is
+    strictly-stricter (rule 6) so it is allowed — but *which* order(s) a two-order CLAUDE.md
+    makes the gate block on, and whether the fix may be a second literal phrase (SHAPE 1 again)
+    or must be a declared row (S10's registry), is a scope call above this rung. **ESCALATED to
+    the architect; the block is on his clipboard.** Owner until ruled: S5-R2's scope-(d).
+  ⚠ SUITE BASELINE MOVED TODAY, HEADLINE DID NOT ... `npm test` still reads **108 passed,
+    2 failed** — but it is no longer the same 108/2 S5-R certified. `c1f41a8` (Q-8, 07:19 today)
+    added 50 lines to `scripts/sprintsync.mjs` and broke two ratchets: **xray** unresolved_sinks
+    `sprintsync.mjs 3→8` (the organ got blinder), and **audit** DoD — `learning-layer/PROJECT_OS.md`
+    line 16 still greps for `"SINGLE WRITER"` in that organ, which Q-8 rewrote to `SOLE WRITER`.
+    Not S5-PRE's (this rung touched no `.mjs`); recorded so S5-R2 does not read 108/2 as "unchanged".
   ⚑ 25 Aug ARCHITECT DRAIN ..... The escalation queue (Q-1..Q-23) is RULED — RULING rows at the
                                    END of arsenal-audit-artifacts\ESCALATION_QUEUE.md. THREE
                                    things enter THIS lane: (1) ☐ NEW MICRO-RUNG, HIS WORD —
@@ -3578,3 +3632,160 @@ his three words were taken in-session. What touches THIS lane:
    sibling). New escalations = one file each in `arsenal-audit-artifacts\queue\` (README there);
    the Q-number lane is retired for new intake.
 LADDER UNCHANGED. ▶ NEXT = S5-R2, exactly as the router above says.
+
+### PROGRESS 2026-08-25 ~08:05 IST — RUNG S5-PRE · THE CANON RE-CUT (TIER-0 · zero pastes · zero model calls)
+
+**Router obeyed, not the fallback.** §10-D rule 1 says the ▶ NEXT SESSION line is the router and
+"the first ☐ in §10-C" is only its fallback when that line is stale. The router was written today
+(`615eabc`, 07:34) and named S5-PRE; the first ☐ in §10-C is S6, which the router explicitly
+defers behind S5-PRE and S5-R2. So: **S5-PRE, one rung, not two.** Micro-order written to the
+session scratchpad before any edit (rule 9).
+
+**WHAT I FOUND AT OPEN, AND IT CHANGED HOW THIS RUNG WAS RUN.** The artifacts were already
+re-cut when I arrived — canon mtimes 07:45, steps 07:45, README 07:46 — and nothing was ticked,
+recorded or committed. Peer session `b24662cf` ran the mechanical pipeline (`pack` → `probe_gen`
+→ `buildsteps` → `checkall` → `preflight`) between 07:45 and 07:47 and **he interrupted it at
+07:47:22** before it wrote anything down. Witness: that session's own transcript tool-use log.
+This is not a §10-E parallel-rung violation — that head is halted and he moved here deliberately
+— but §10-D rule 5 binds regardless: **every one of those outputs was a LEAD until I re-proved
+it by running.** So I re-ran the entire chain myself and verified the outputs independently
+rather than inheriting a green light I did not watch print.
+
+**THE RE-CUT, RE-RUN AND RE-PROVED IN THIS SESSION**
+- `CHUNK_BYTES=194000 node pack.mjs` → **118 tracked .md → 27 chunks**, 5 parts from the two
+  over-cap files, "every chunk is <= 194000 B".
+- **THE PACK IS DETERMINISTIC.** Hashed all 29 outputs before my re-run, re-ran, re-hashed:
+  **28/28 canon outputs byte-identical**, and `probe_expected.json` byte-identical after
+  `probe_gen` too. The cut is a function of the repo, not of who ran it — which is the only
+  reason inheriting the peer's work is safe rather than merely convenient.
+- `node checkall.mjs` → **CHECKALL GREEN**, all five sections, including section 5's DOCS-vs-DISK
+  ("canon file count = 118, and every doc that mentions it agrees").
+- `node preflight.mjs` → **PREFLIGHT GO**, 18 checks.
+
+**AND THEN CHECKED WITHOUT THE INSTRUMENTS** — §4 binds the instruments too, and preflight's
+anchor check is one of the things S5-R2 is being convened to doubt, so it does not get to be its
+own witness. Written fresh against the files on disk:
+
+| claim | how it was re-proved here | result |
+|---|---|---|
+| the cut is TODAY's repo state | manifest file set vs `git ls-files *.md`, element by element | 118 == 118, exact |
+| nothing is merely listed | every one of the 118 must carry a `===== FILE: … =====` header inside a chunk **on disk** | 118/118 |
+| the measured cap holds | `statSync` every chunk, not the manifest's own numbers | largest **192,045 B**, 0 over |
+| anchors are unique | counted each anchor across **every file that chat attaches**, not just its own file — the strong form of the predicate that moved on 21 Aug | **46/46 unique** |
+| anchors are where they claim | line at the stored index must equal the anchor | 46/46 |
+| expected answers are real | the stored `next` must be the actual following non-empty line | 46/46 |
+| the instrument's own claim | `unique_occurrences` recounted against my count | agrees |
+
+**THE RE-CUT IS NOT A NO-OP** — that is the whole justification for the rung, so it was measured,
+not assumed. All five post-21-Aug things the ruling named are in the cut and locatable:
+the 25-Aug corpus ruling → `chunk16`, the 25-Aug architect-drain PROGRESS → `chunk17`,
+SAMJHAO_ORDER section 16 → `chunk23`, HOW_HE_LEARNS's SUPERSEDED layer → `chunk01`,
+Q-7's no-countdown removal → `chunk16`.
+
+**THE CHAT CORPUS DID NOT MOVE**, as the 25-Aug ruling requires: `corpus_live2/` is 172 batches +
+manifest, every mtime still **21 Aug 06:29**, manifest sha256 `62a1b2c7a1b94f24…`, and
+`refilter2.mjs` was not run (mtime 21 Aug 06:28). The freeze half of the ruling is observed, not
+merely intended.
+
+**⚠ ONE NEW, DECLARED PROPERTY OF THE CUT — it is right, and its provenance is not a commit.**
+`pack.mjs` takes the file LIST from `git ls-files` but the CONTENT from the WORKING TREE. Two
+tracked .md are dirty right now, and **303 uncommitted lines are inside this cut**: 282 in
+SAMJHAO_ORDER, 21 in HOW_HE_LEARNS (measured — worktree-only lines, then located in the chunks:
+282/282 and 21/21 present). That content is exactly what the ruling wanted swept, so the cut is
+correct — but "the canon as of commit X" is not reproducible from a commit. Pinned in the RESUME
+block instead: HEAD `615eabc` plus both file hashes. **If either file moves before the sweep, the
+cut and the repo have silently diverged**, and nothing currently notices. S5-R2 scope-(c).
+
+**⛔ THE FINDING THAT MATTERS MORE THAN THE RUNG: THE §3-C COMMIT GATE HAS BEEN DEAD SINCE 20 AUG.**
+Rule 7 says run §3-C's check before committing. I ran it and it came back **9 problems**. Running
+the real gate — `node scripts/rails.mjs orders` — gave a different story, and the difference is
+the defect:
+
+```
+rails: · docs\archive\ORGANISM_AUDIT__2026-08-19.md  — a closed record: LEADS only, never a blocker (§10-H)
+         · references §NN — no such section        <- the number is elided ON PURPOSE:
+                                                       quoting it verbatim re-fires the very
+                                                       check this receipt is about. It was 16.
+rails: 5 order file(s) checked · open order clean · 8 lead(s) in closed records     EXIT=0
+```
+
+**It called the OPEN order a closed record.** The witness is `scripts/rails.mjs:264`: `openOrder()`
+finds the open order by matching the literal phrase "THE OPEN WORK ORDER: docs/archive/<name>.md"
+in CLAUDE.md. CLAUDE.md no longer contains that phrase — it was rewritten to *"TWO WORK ORDERS ARE
+OPEN … ① ENGINEERING"*. So `openOrder()` returns **null**, nothing is ever `open`, `blocking` is
+permanently 0, and `hooks/pre-commit:35` (`node scripts/rails.mjs orders --quiet || exit 1`) cannot
+fail. Measured live: `open = null · blocking = 0 · total problems = 8`. The hook is installed and
+runs; it just cannot say no. **This is SHAPE 1 wearing a new coat** — a universal law implemented
+against one literal subject — and this time it is inside the rail S1 built to enforce the laws.
+
+**It had already let one through.** Today's 07:34 commit `615eabc` introduced a genuine §3-C
+violation: a cross-document section-16 citation, and §3-C resolves every section reference against *this* document's
+own headings — the exact class §9's table warns about in its own parenthesis. The dead gate printed
+it as a lead in a closed record. **Fixed this rung** (de-sigiled to "section 16", the convention
+this order already set); `rails.mjs orders` now prints `✓ … structurally clean` and
+`open order clean`. So the gate's verdict is correct today whether or not the predicate is repaired.
+
+**A second, smaller doc-truth defect fell out of the same command:** §3-C's inline `node -e`
+snippet — the one the version-3 prompt tells every session to run — hardcodes a single exception
+(`scripts/ghost.mjs`) and knows nothing of the `<!-- order-check:absent-ok … -->` declarations the
+real checker honours (7 of them live in this file). A session obeying rule 7 literally sees **9
+problems** where the gate sees **1**, which trains sessions to ignore their own gate. The gate is
+the authority; the snippet is stale.
+**And a third of the same family, found by writing this entry:** the section-reference check cannot
+quote its own error message — pasting the gate's output verbatim into the order re-fires the very
+rule the receipt is about, and there is no `order-check:` marker for section refs the way there is
+for paths. The receipt above therefore elides one number and says so out loud. A checker that
+punishes its own findings for being written down is a small thing, but it is the same shape:
+the rule has no way to be told "this occurrence is a QUOTE, not a claim".
+
+**NEITHER WAS PATCHED HERE, AND THAT IS A DECISION, NOT AN OMISSION.** Restoring the predicate is
+strictly-stricter and rule 6 permits it. But `rails.mjs` is S1's organ, S1 is ☑ and was certified
+by S5-R — which proved the *deny* rails and never touched this predicate — and the actual question
+underneath is a scope call: with CLAUDE.md now naming **two** open orders, which does the gate block
+on (the learning order is not even discovered by the RESUME-HERE predicate), and may the fix be a
+second literal phrase — SHAPE 1 again — or must it be a declared registry row, which is S10's job?
+Rule 13: a decision that changes scope and that another rung depends on is escalated, not resolved
+in my own favour inside a rung whose brief is "re-cut the canon". **Escalation block written and
+placed on his clipboard; this thread is halted pending the ruling.** Interim owner: S5-R2 scope-(d).
+
+**A 21-AUG LEAD CLOSES ITSELF, and it should be recorded before it is forgotten:** the clipboard
+RED — *"`Set-Clipboard` fails machine-wide right now"* — **does not reproduce.** checkall's capture
+section round-tripped 20,176 chars out and 20,176 back, and preflight round-tripped the largest
+step file byte for byte including `⛔` and `—`. Nothing was changed to achieve that, so the honest
+verdict is *transient, cause unknown, not reproducing* — a LEAD downgraded, never a LEAD closed.
+The sweep still travels through the clipboard and still has no retry.
+
+**THE SUITE: `npm test` = 108 passed, 2 failed** — the same AGGREGATE as the S1 and S5-R baseline,
+and this rung changed no code in the repo, only this document. But the aggregate hides a change,
+so the members were read rather than the headline:
+
+- **RED 2 is the switch-off, exactly as the RESUME block says to expect:** ALIVE names watchman
+  (124.4h, cadence 48h) and audit (163h, cadence 48h). Two organs that are deliberately Disabled
+  being reported dead is the gate working, not a defect.
+- **RED 1 has TWO NEW MEMBERS SINCE THIS MORNING, and they trace to `c1f41a8` (Q-8, 07:19 today):**
+  - `xray`: *"unresolved_sinks is NON-INCREASING PER ORGAN (total 1356 → 1358) … sprintsync.mjs
+    3→8"*. Q-8 added 50 lines to that organ; five of the new sinks are unanalysable to the IR, so
+    the organ got BLINDER. That ratchet exists to catch exactly this and it caught it.
+  - `audit`: *"ROOT CANON cites 0 stale grep claims"* fails on
+    `learning-layer/PROJECT_OS.md:16 → grep -n "SINGLE WRITER" scripts/sprintsync.mjs`. Q-8
+    rewrote that organ's header from **SINGLE WRITER** to **SOLE WRITER** (`sprintsync.mjs:10`),
+    so a live absence-proof in root canon now greps for a string that no longer exists.
+    The drain's own PROGRESS entry records *"sprintsync.mjs:10 declared 'SINGLE WRITER'"* as its
+    FACT FOR S10 — and then its edit changed that very string. The finding and the breakage are
+    the same line.
+
+Neither belongs to S5-PRE and neither is patched here (this rung touched no `.mjs`), but both were
+introduced today by commits that recorded no suite reading, which is how a baseline quietly drifts
+while the headline number stays at 108/2. **Recorded so the next rung inherits a true baseline:
+108/2 is no longer the same 108/2 that S5-R certified.** Owner: whoever carries Q-8's lane — the
+xray sink count is a ratchet that must be brought back or re-baselined deliberately, and the
+PROJECT_OS grep claim is a one-word fix.
+
+**COST: 8.57 lakh of a 40 ceiling** (`session_meter` per-session, corrected units), 46 turns,
+output 0.32 lakh. The interrupted peer that ran the same pipeline first cost 5.73 lakh, so the
+rung cost **~14.3 lakh all-in across both heads** — still about a third of the ceiling. Today
+across all six of his sessions: 56.45 lakh.
+
+**FORBIDDEN LIST HELD:** zero Gemini calls · zero pastes · no agents · `corpus_live2/` and
+`refilter2.mjs` untouched · no S6 work · nothing re-enabled · no gate weakened · the learning
+lane's four dirty files untouched and left out of the commit (path-scoped).
