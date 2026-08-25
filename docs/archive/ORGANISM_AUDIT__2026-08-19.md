@@ -411,12 +411,33 @@ STATUS (update this block before any session stops — this is the handoff)
                                      with its fixture's own mistake. Both now read the wiring.
                                    ☑ checkall GREEN (all 6 sections) · preflight GO (18 checks),
                                      both RUN IN THIS SESSION · rails orders 0 blocking.
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — RESUMED, its own session.** MODEL:
+  ▶ NEXT SESSION ............... **S5-X · PRE-SWEEP INSTRUMENT HARDENING — a micro-rung, RULED
+                                   25 Aug ~10:45 (queue\RULING__2026-08-25_1030-s5w-1.md = the
+                                   work order).** MODEL: Opus 5 · effort HIGH. **CEILING WRITTEN:
+                                   15 corrected lakh.** Scope: (a) capture.mjs gains
+                                   `--from-file <path>` — additive, sole-writer preserved, freeze
+                                   fires IDENTICALLY on both paths, missing/empty file refused
+                                   loudly (the clipboard fault is machine-wide and reproduced in
+                                   the ARCHITECT's own session; clipboard path survives as human
+                                   fallback only) · (b) snapshot.mjs + checkall's
+                                   newer-than-last-snapshot assertion (gate stricter) · (c) all
+                                   three bite-proofs plant/unplant · (d) checkall + preflight
+                                   green · commit through the live gate. FORBIDDEN: frozen
+                                   corpus/canon bytes · any Gemini call · any sweep question ·
+                                   any instrument beyond capture.mjs/snapshot.mjs/checkall's
+                                   new assertion.
+                                   **THEN S5 · THE SWEEP — RESUMED, its own session.** MODEL:
                                    Opus 5 · effort HIGH. **EXECUTION BUDGET WRITTEN: fresh 30
                                    corrected lakh** (the original 20 bought the cap measurement +
                                    transport proof; neither repeats). Read
                                    `diag\COUNT_PROBE_RESULT.md` BEFORE touching the browser —
-                                   the two silent transport traps are named there.
+                                   the two silent transport traps are named there. Answers are
+                                   captured via `--from-file`, never the clipboard.
+                                   STANDING (ruled ~10:45, S6 onward): HIS follow-up after a
+                                   rung's report = its OWN named budget line on the row · every
+                                   review-class row carries the line "a green pipeline is not
+                                   evidence unless the fixture's own assumptions were checked
+                                   against disk; name the fixtures re-derived."
                                    HIS GO STANDS, 25 Aug ~09:15, architect-recorded verbatim: "ok
                                    let's go … i am counting on you and you are the CTO from now
                                    onwards driving the entire organism." No further word is needed
