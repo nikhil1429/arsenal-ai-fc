@@ -314,11 +314,22 @@ STATUS (update this block before any session stops — this is the handoff)
                                      review + the ruled repair together outgrew the review-only
                                      precedent — the scope question is one line for HIM, same
                                      class as S4's. Ceiling NOT re-derived (unit faults only).
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — EXECUTION, on his word.** MODEL: Opus 5 ·
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — EXECUTION. ✅ HIS GO IS GIVEN, 25 Aug 2026
+                                   ~09:15 IST, architect-recorded verbatim: "ok let's go … i am
+                                   counting on you and you are the CTO from now onwards driving
+                                   the entire organism." No further word needed — open DO_THIS.md
+                                   and drive.** MODEL: Opus 5 ·
                                    effort HIGH. Open the working folder's DO_THIS.md; its FIRST
                                    paste is the ATTACHMENT-COUNT probe, which decides 42 pastes
                                    versus 420. Execution budget 20 corrected lakh (architect's
                                    number). The instruments it drives were certified HERE, today.
+                                   CEILING POLICY, RULED BY THE ARCHITECT 25 Aug (S5-R2's open
+                                   line, closed under his CTO delegation; standing S6 onward):
+                                   every review-class rung carries a WRITTEN ceiling ON its row —
+                                   standard 40 corrected lakh; a RULED repair riding the rung adds
+                                   its own named budget to the row; breach = stop-and-record,
+                                   never patch-around. Ruling file:
+                                   queue\RULING__2026-08-25_0915-ceiling-policy.md.
                                    THEN **S6** (Fable · max; fallback Opus max + self-review).
                                    The Q-7 micro-rung (countdown removal, RULING Q-7) stays ☐ for
                                    its OWN session on his word — never mixed into the sweep.
