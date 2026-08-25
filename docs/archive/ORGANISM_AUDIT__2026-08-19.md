@@ -5785,3 +5785,13 @@ That is his design-failure law in its purest form — a check whose only executo
 session remembers". One line in checkall §5 (assert the two pinned hashes against disk while the
 freeze exists) would end it permanently. It is outside this rung's FORBIDDEN boundary, so it is
 recorded here and deliberately not built — §10-D rule 10.
+
+⚠ **AND THE SAME STALENESS APPLIES TO THIS FILE, BY CONSTRUCTION — the sweep session needs it in
+advance.** The canon cut was taken at ~08:00 today; five rungs have appended PROGRESS to this order
+since (S5-W · S5-X · S5-Y · S5-Z · S5-Z2). So `canon/`'s copy of THIS order is real but old, and
+**the sweep hunts contradictions in canon** — a stale copy of a live document manufactures false
+positives that look exactly like real drift. Any "contradiction" the sweep reports whose two sides
+are both inside `ORGANISM_AUDIT__2026-08-19.md`, or between it and a `queue\RULING__*` file, is a
+staleness artefact until proven otherwise: check it against the working tree before it is believed,
+and do not spend a re-ask on it. Nothing to fix — a document cannot contain the account of its own
+next rung — but a lead spent on this is a lead not spent on the organism.
