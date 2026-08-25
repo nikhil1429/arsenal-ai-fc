@@ -313,6 +313,10 @@ STATUS (update this block before any session stops — this is the handoff)
     makes the gate block on, and whether the fix may be a second literal phrase (SHAPE 1 again)
     or must be a declared row (S10's registry), is a scope call above this rung. **ESCALATED to
     the architect; the block is on his clipboard.** Owner until ruled: S5-R2's scope-(d).
+  ⚠ FABLE POOL, BEFORE S5-R2 READS ITS ROW ... the accidental duplicate run of THIS rung was on
+    **`claude-fable-5`** (he closed it on spotting it): **5.73 lakh already off the weekly pool**
+    S5-R2's row calls fresh. Freshness itself is intact — separate session, no shared context,
+    every artifact re-derived here and byte-identical — only the pool is smaller.
   ⚠ SUITE BASELINE MOVED TODAY, HEADLINE DID NOT ... `npm test` still reads **108 passed,
     2 failed** — but it is no longer the same 108/2 S5-R certified. `c1f41a8` (Q-8, 07:19 today)
     added 50 lines to `scripts/sprintsync.mjs` and broke two ratchets: **xray** unresolved_sinks
@@ -3646,6 +3650,15 @@ re-cut when I arrived — canon mtimes 07:45, steps 07:45, README 07:46 — and 
 recorded or committed. Peer session `b24662cf` ran the mechanical pipeline (`pack` → `probe_gen`
 → `buildsteps` → `checkall` → `preflight`) between 07:45 and 07:47 and **he interrupted it at
 07:47:22** before it wrote anything down. Witness: that session's own transcript tool-use log.
+**It was running `claude-fable-5`** — his word afterwards, and the transcript agrees: he had
+started S5-PRE there by accident, spotted the duplicate and closed it before coming here.
+So **5.73 lakh came off the Fable weekly pool that S5-R2 is waiting for.** Small, and worth
+saying out loud rather than letting S5-R2 discover a pool smaller than its row assumes.
+**S5-R2's FRESHNESS IS NOT COMPROMISED, and that is a judgement with a reason, not a hope:**
+sessions do not share context, that head is closed, and everything it produced was discarded
+and re-derived here from scratch — the pack proved byte-identical, so nothing of its
+reasoning survives in the artifacts either. The "build and review never share one head" law
+is about a head grading its own work inside one context; that never happened.
 This is not a §10-E parallel-rung violation — that head is halted and he moved here deliberately
 — but §10-D rule 5 binds regardless: **every one of those outputs was a LEAD until I re-proved
 it by running.** So I re-ran the entire chain myself and verified the outputs independently
