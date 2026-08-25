@@ -562,7 +562,7 @@ STATUS (update this block before any session stops — this is the handoff)
                                      that excludes a subject without declaring it. Owner's call:
                                      one line in the predicate, or one declared exception.
   ⛔ S5 THE SWEEP · OPENED, THEN HALTED ... **25 Aug 2026 ~12:50 IST · Opus 5 · effort HIGH ·
-                                   budget 30 corrected lakh, 16.97 spent. ONE load message fired.
+                                   budget 30 corrected lakh, 22.29 spent. ONE load message fired.
                                    ZERO audit questions asked. Full account in the PROGRESS entry
                                    of 25 Aug ~12:50 — read that, not this summary.**
                                    ☑ gates RUN IN THIS SESSION, never inherited: checkall GREEN
@@ -671,8 +671,8 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ONCE S5-Z IS DONE, this router returns to:
                                    **S5 · THE SWEEP — RESUMED, its own session.** MODEL:
                                    Opus 5 · effort HIGH. **EXECUTION BUDGET: 30 corrected lakh
-                                   less the 16.97 already spent ⇒ ~13 remaining, or a fresh number
-                                   from the ruler.** Its gates are GREEN and were run at 25 Aug
+                                   less the 22.29 already spent ⇒ ~7.7 remaining, so the sweep almost
+                                   certainly needs a FRESH number from the ruler, not the remainder.** Its gates are GREEN and were run at 25 Aug
                                    ~12:35 (checkall 7/7, preflight GO) — but
                                    run them again IN YOUR OWN SESSION, never inherited:
                                    `node checkall.mjs` must say GREEN and `node preflight.mjs` GO.
@@ -5020,8 +5020,8 @@ rung's leftover.
 ### PROGRESS 2026-08-25 ~12:50 IST — RUNG S5 · THE SWEEP OPENED, AND HALTED AT ITS FIRST PROBE
 
 **Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — S5 · THE SWEEP,
-RESUMED. Opus 5 · effort HIGH. Budget 30 corrected lakh; **16.97 spent, read off the meter at the
-commit** (day line 316.33 → 333.30), never estimated mid-flight. Micro-order written to the session
+RESUMED. Opus 5 · effort HIGH. Budget 30 corrected lakh; **22.29 spent, read off the meter at the
+commit** (day line 316.33 → 338.62), never estimated mid-flight. Micro-order written to the session
 scratchpad before any action (rule 9). **NOT BREACHED — this rung stopped on a ruling, not on a
 ceiling.**
 
@@ -5126,6 +5126,10 @@ the clipboard was up for that write, and the queue file stands either way (S5-Y'
   rung; the only repo change is this order file.
 
 #### COST
-`node scripts/session_meter.mjs status 7` at the commit: day line **316.33 → 333.30 = 16.97
+`node scripts/session_meter.mjs status 7` at the commit: day line **316.33 → 338.62 = 22.29
 corrected lakh** of the 30 written. Under ceiling. The S1 live-read lead still says today reads
-~+16% hot, so the true figure is nearer ~14.6.
+~+16% hot, so the true figure is nearer ~19.2.
+⚠ THE FIRST DRAFT OF THIS LINE SAID 16.97 — read mid-flight, before the write-up turns. Corrected
+from the meter AT the commit. That is S5-X's precedent and S5-Y's, now on its third occurrence:
+**a cost line drafted before the close is always low, so the number is taken at the commit or it is
+not taken at all.**
