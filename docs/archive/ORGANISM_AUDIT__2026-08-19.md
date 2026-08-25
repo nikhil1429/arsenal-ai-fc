@@ -561,6 +561,75 @@ STATUS (update this block before any session stops — this is the handoff)
                                      the SHAPE is the jugad rule's own: a universal quantifier
                                      that excludes a subject without declaring it. Owner's call:
                                      one line in the predicate, or one declared exception.
+  ⛔ S5 THE SWEEP · OPENED, THEN HALTED ... **25 Aug 2026 ~12:50 IST · Opus 5 · effort HIGH ·
+                                   budget 30 corrected lakh, 16.97 spent. ONE load message fired.
+                                   ZERO audit questions asked. Full account in the PROGRESS entry
+                                   of 25 Aug ~12:50 — read that, not this summary.**
+                                   ☑ gates RUN IN THIS SESSION, never inherited: checkall GREEN
+                                     all 7 sections · preflight GO, 18 checks. Snapshot taken
+                                     before anything (65 instruments).
+                                   ☑ TRANSPORT PROVEN HARDER THAN THE RULING ASKED: the ruling
+                                     says read the box back and diff before Return. This session
+                                     hashed it instead — A01 composed line-by-line with
+                                     `shift+Return` and the box's own sha256 came back
+                                     `a993804a70435d7c…`, byte-identical to the step file
+                                     (3772 B, 57 blocks, zero nbsp, only U+2014). A cryptographic
+                                     identity, not an eyeball. Mode read **Pro Extended** BEFORE
+                                     the first attach. 10/10 chips confirmed by name.
+                                   ⛔ **AND THE PROBE FAILED FOR THE WRONG REASON — THE PRESCRIBED
+                                     CAPTURE PATH IS WHAT FAILED IT.** canon_g01's tail wanted
+                                     `1. **THE MISSIONS DESK** (scout.mjs — missions.json sole
+                                     writer): M01–M04 full-syllabus-audit`; the model returned that
+                                     line correctly to the character, en-dash included — MINUS the
+                                     `1. ` and the `**`. Gemini rendered it as a bold list item and
+                                     `get_page_text`/`innerText` returns markdown-CONSUMED text,
+                                     while probecheck and verify.mjs compare against
+                                     markdown-BEARING raw source. **The two are not the same
+                                     alphabet.** Byte proof it is the path and not the model: the
+                                     same answer off Gemini's own Copy button is 2603 chars, through
+                                     `get_page_text` 2522 — the 81-char delta is exactly 73 CRs plus
+                                     the 7 markdown characters.
+                                   ⛔ **BLAST RADIUS, MEASURED ACROSS ALL STORED PROBES: 27 of 46
+                                     anchors (59%) carry markdown innerText strips; 18 of 21 chat
+                                     groups (86%) have at least one.** Under this rung's own law
+                                     (no attachment trusted until its probe passes · probe fail ⇒
+                                     fallback, never re-ask) **86% of the sweep would have entered
+                                     the fallback on a false negative**, and the corpus remedy is a
+                                     `refilter` REBUILD — forbidden mid-sweep, and it would move the
+                                     haystack under frozen inputs.
+                                   ⛔ **AND IT IS BIGGER THAN THE PROBES:** verify.mjs greps every
+                                     verbatim quote back against raw source. Every quote inside a
+                                     bolded / listed / headed / backticked line fails that grep and
+                                     is DISCARDED AS UNVERIFIABLE — a true finding thrown away,
+                                     looking exactly like a model that found nothing. That is the
+                                     precise failure class this rung exists to prevent.
+                                   ⚠ **THE CLIPBOARD IS CONTENDED, NOT ONLY FAULTY — NEW, MEASURED.**
+                                     Between the Copy click and the read it was OVERWRITTEN by
+                                     another writer (216 chars of unrelated text). A length/hash
+                                     assert caught it; `capture.mjs` alone would NOT have — it
+                                     refuses only on EMPTY. Any Copy-button capture path needs that
+                                     assert as a gate, not as a nicety. (7th occurrence class.)
+                                   ⛔ **NOT PATCHED, DELIBERATELY — §10-D rule 10 + rule 6.** Every
+                                     real fix is a code change to the capture path / probecheck, and
+                                     **S5 BUILDS NOTHING** (STEP 0 was its one exception, closed).
+                                     The lazy fix — normalising markdown away inside the comparator
+                                     — LOOSENS the gate that catches truncation; rule 6 refuses it
+                                     and this row records that it must not be done that way.
+                                   ⛑ **ESCALATED AND HALTED:** `queue6-08-25_1250-s5sweep-1.md`,
+                                     on his clipboard, verified byte-for-byte (6800 chars).
+                                     Options A–D with costs; **recommendation = A executed as its own
+                                     micro-rung S5-Z** (capture the RAW markdown off the Copy button,
+                                     gated by a length/sha assert against what the page reports,
+                                     `get_page_text` surviving only as a declared `rendered-lossy`
+                                     fallback). Fixes the INPUT, touches no gate's strictness.
+                                   ✅ NOTHING IS SPOILED: zero questions asked · no attachment
+                                     trusted · nothing re-asked or nudged · A01's answer is still on
+                                     screen so re-capturing it costs nothing.
+                                   ⚠ DECLARED: `inputs_frozen.json` NOW EXISTS (201 files) — the
+                                     first capture wrote it, exactly as designed. `answers/A01.txt`
+                                     is the RENDERED (lossy) capture and is marked as such; it is
+                                     the only file in `answers/`.
+
   ⛑ S5-Y RAISED THREE, NONE BLOCKING ... **`queue\2026-08-25_1215-s5y-1.md` — open, and the
                                    sweep does NOT wait on it.** Two are policy that will recur
                                    every rung; one is a live trap in the card he pastes.
@@ -589,9 +658,22 @@ STATUS (update this block before any session stops — this is the handoff)
                                    Delivery fell back to the queue file — which is the fallback
                                    S5-Y itself built, working as ruled. Still S11, still nobody
                                    chases it before S6.
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — RESUMED, its own session.** MODEL:
-                                   Opus 5 · effort HIGH. **EXECUTION BUDGET: fresh 30 corrected
-                                   lakh.** Its gates are GREEN and were run at 25 Aug ~12:00 — but
+  ▶ NEXT SESSION ............... ⛔ **BLOCKED ON A RULING — DO NOT DRIVE THE SWEEP YET.**
+                                   `queue6-08-25_1250-s5sweep-1.md` is open on his clipboard:
+                                   the prescribed capture path (`get_page_text`) is markdown-LOSSY
+                                   and would false-fail 86% of the chats and silently discard most
+                                   verbatim quotes. **RECOMMENDED: rule option A and run it as
+                                   micro-rung S5-Z** (raw-markdown capture off the Copy button,
+                                   gated by a length/sha assert — the clipboard is CONTENDED, proven
+                                   today). S5-Z needs a WRITTEN ceiling plus its own named
+                                   proof-budget line, both written by the ruler (25-Aug standing
+                                   law), and its §10-C row written in the same act (card-v4 law).
+                                   ONCE S5-Z IS DONE, this router returns to:
+                                   **S5 · THE SWEEP — RESUMED, its own session.** MODEL:
+                                   Opus 5 · effort HIGH. **EXECUTION BUDGET: 30 corrected lakh
+                                   less the 16.97 already spent ⇒ ~13 remaining, or a fresh number
+                                   from the ruler.** Its gates are GREEN and were run at 25 Aug
+                                   ~12:35 (checkall 7/7, preflight GO) — but
                                    run them again IN YOUR OWN SESSION, never inherited:
                                    `node checkall.mjs` must say GREEN and `node preflight.mjs` GO.
                                    A clipboard warning in either is EXPECTED and is not a blocker
@@ -2129,6 +2211,13 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       obeyed: STOPPED, recorded, handed off. See the RESUME block and the PROGRESS entry of
       20 Aug ~12:30. The execution half runs from the working folder's DO_THIS.md on a fresh
       session at an EXECUTION BUDGET of 20 corrected lakh (the architect's number, 20 Aug).
+      ⛔ **25 Aug ~12:50 — THE EXECUTION HALF OPENED AND HALTED AT ITS FIRST PROBE.** A01 fired
+      (prompt proven byte-exact into the box by sha256; 10/10 chips; Pro Extended). The probe
+      FAILED FOR THE WRONG REASON: `get_page_text` returns markdown-CONSUMED text while probecheck
+      and verify.mjs compare against markdown-BEARING source. Measured: 27/46 anchors (59%) and
+      18/21 chat groups (86%) would false-fail, and verify.mjs's quote check would discard most
+      verbatim quotes as unverifiable. NOT patched — S5 builds nothing, and the lazy fix loosens a
+      gate (rule 6). ESCALATED: `queue6-08-25_1250-s5sweep-1.md`. ZERO audit questions asked.
       Six departures from this row were reviewed and RULED ON before any call: the web lane
       instead of the API (his ruling — flash banned by name) · the whole canon in ONE context
       instead of ≤200k chunks (the chunk limit is an API-tier constraint, absent on web) ·
@@ -4927,3 +5016,116 @@ blocking · working tree clean apart from one untracked torn-write tmp
 (`dressing-room/state/gaffer_blocks.json.tmp6756`) that belongs to another organ and to S11's
 tmp-file-replay class — not touched, not committed, recorded here so it is not mistaken for this
 rung's leftover.
+
+### PROGRESS 2026-08-25 ~12:50 IST — RUNG S5 · THE SWEEP OPENED, AND HALTED AT ITS FIRST PROBE
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — S5 · THE SWEEP,
+RESUMED. Opus 5 · effort HIGH. Budget 30 corrected lakh; **16.97 spent, read off the meter at the
+commit** (day line 316.33 → 333.30), never estimated mid-flight. Micro-order written to the session
+scratchpad before any action (rule 9). **NOT BREACHED — this rung stopped on a ruling, not on a
+ceiling.**
+
+#### WHAT RAN, IN ORDER
+- `node checkall.mjs` → **GREEN, all 7 sections.** `node preflight.mjs` → **GO, 18 checks.** Both
+  RUN IN THIS SESSION, never inherited. The clipboard's advisory leg was UP at that moment — which
+  matters later, and not in the way anyone expected.
+- `node snapshot.mjs take` → 65 instruments, 424,707 bytes, before anything was touched.
+- `request_directory C:\Users\nikhi\arsenal-audit-artifacts` granted (file_upload is path-sandboxed).
+- Gemini, account 1 (`nikhil.panwar2914@gmail.com`), fresh chat, **mode read `Pro Extended` BEFORE
+  the first attach** — verified off the DOM, not off a screenshot.
+- **A01 fired**: chunk01–chunk10 via `file_upload`, all ten chips confirmed by name off the page.
+  Chat `0890cd7ebfcd1ff6`.
+
+#### THE TRANSPORT WAS PROVEN HARDER THAN THE RULING ASKED, AND IT IS WORTH KEEPING
+The 25-Aug ruling says: compose one `type` per line with `shift+Return`, then **read the box back
+and diff it against the step file before Return**. A diff read by a model is an eyeball. This
+session hashed instead: the composed box's own `sha256` came back
+`a993804a70435d7ccf26ec617a7f8c2a9502c3bd69808ff667d3b586621f9203` — **byte-identical to
+`steps/A01.txt` minus its trailing newline** (3772 B, 57 `<p>` blocks = 57 lines, zero
+non-breaking spaces, only U+2014 outside ASCII). Two known traps were confirmed live and neither
+bit: `computer type` eats newlines (hence one type per line), and a synthetic Ctrl+V does nothing.
+
+⚠ ONE CORRECTION TO THE COUNT-PROBE NOTE, for the next executor: `innerText` on the compose box
+reports DOUBLE the line count (Quill renders each line as its own `<p>`). Read the block children's
+`textContent` joined by newlines, never `innerText`, or the read-back lies about the shape of a
+prompt that is in fact correct. **That is the same defect class as the finding below, met first on
+the OUTBOUND leg — and it is why the hash, not the eyeball, is what caught the truth both times.**
+
+#### ⛔ THE FINDING — THE PROBE FAILED, AND THE PRESCRIBED CAPTURE PATH IS WHAT FAILED IT
+`probecheck A01` → **FAIL**, tail anchor, *"not present in the reply at all — the text did not
+reach the model."* It had reached the model. Measured, side by side:
+
+```
+wanted (canon/chunk10.txt:867) : 1. **THE MISSIONS DESK** (scout.mjs — missions.json sole writer): M01–M04 full-syllabus-audit
+returned by the model          :    THE MISSIONS DESK (scout.mjs — missions.json sole writer): M01–M04 full-syllabus-audit
+```
+
+The model reproduced the line **to the character**, en-dash in `M01–M04` included. What is absent
+is `1. ` and `**` — MARKDOWN SYNTAX. Gemini rendered the line as a bold list item;
+`get_page_text`/`innerText` hands back markdown-**consumed** text, while `probecheck.mjs` and
+`verify.mjs` both compare against markdown-**bearing** raw source. **They are not the same
+alphabet, and nothing anywhere said so.**
+
+Byte-level proof that this is the path and not the model: the same answer taken off Gemini's own
+**Copy** button is **2603** chars; through `get_page_text` it is **2522**. The 81-char delta is
+exactly 73 CRs + the 7 markdown characters (the list marker plus the two bold pairs). Copy
+preserves precisely what innerText destroys.
+
+#### THE BLAST RADIUS — measured across every stored probe, not estimated
+```
+anchors with a stored expected line ............................ 46
+  ... whose expected line carries markdown innerText strips ..... 27   (59%)
+chat groups with at least one such anchor ...................... 18 of 21   (86%)
+```
+Under this rung's own binding law — *"NO ATTACHMENT IS TRUSTED UNTIL ITS OWN PROBE PASSES"* and
+*"probe fail ⇒ open the fallback, do not re-ask, do not nudge"* — **86% of the sweep's chats would
+have been driven into the fallback on a false negative.** The canon would have been split for
+nothing; the corpus remedy the runbook prescribes is a `refilter` **REBUILD**, which is forbidden
+mid-sweep and would move the haystack under already-frozen inputs. The rung would then have
+reported *"Gemini's retrieval is broken"* — confident, and false.
+
+**AND IT IS BIGGER THAN THE PROBES.** `verify.mjs`'s quote check greps every returned verbatim
+quote back against raw canon/corpus. Every quote living inside a bolded, listed, headed or
+backticked line fails that grep and is **discarded as unverifiable** — a true finding thrown away,
+looking exactly like a model that found nothing. The README names that as the worst failure mode
+this rung has; the prescribed capture path commits it on every single answer.
+
+#### ⚠ AND A SECOND MEASUREMENT: THE CLIPBOARD IS CONTENDED, NOT MERELY FAULTY
+The six prior occurrences all read as *availability* — it is down for minutes, nobody owns it.
+This is a different shape and it is new: while testing the Copy-button path, the clipboard was
+**OVERWRITTEN between the copy and the read** — 216 chars of unrelated text, first line
+`"commit and push everything you did so ar"`. A length/sha assert caught it instantly.
+**`capture.mjs` alone would NOT have** — it refuses only on EMPTY, so it would have written another
+turn's text into `answers/A01.txt` and frozen the inputs behind it. Any Copy-button capture path
+therefore needs that assert as a GATE, not as a nicety. Recorded for the S11 clipboard family too:
+the fault has two shapes, not one.
+
+#### WHY THIS WAS NOT PATCHED HERE — §10-D rules 6 and 10, both
+- **S5 BUILDS NOTHING.** STEP 0 was its single declared exception and it is closed. Every real fix
+  is a code change to the capture path and/or `probecheck.mjs`.
+- **A gate may only get stricter (rule 6).** The cheap fix — normalise markdown away inside the
+  comparator — LOOSENS the very gate that catches truncation, and would let a genuinely truncated
+  answer pass more easily. It is recorded here as the thing that must NOT be done, so that no later
+  session reaches for it.
+- The fix direction is the INPUT, not the check: capture the raw markdown the model actually emitted.
+
+#### ESCALATED, AND THIS THREAD IS HALTED
+`queue\2026-08-25_1250-s5sweep-1.md` — options A–D with costs. **Recommendation: option A, executed
+as its own micro-rung S5-Z** — Copy-button capture of raw markdown, gated by a length/sha assert
+against what the page reports, with `get_page_text` surviving only as an explicitly
+`rendered-lossy` fallback. Delivered to his clipboard and **verified byte-for-byte** (6800 chars) —
+the clipboard was up for that write, and the queue file stands either way (S5-Y's fallback).
+
+#### STATE AT CLOSE — nothing guessed
+- **ZERO audit questions asked. No attachment trusted. Nothing re-asked, nudged or hinted.**
+- `answers/A01.txt` = 2522 chars, the RENDERED (lossy) capture, marked as such and the only file in
+  `answers/`. A01's answer is still on screen, so re-capturing it costs nothing and asks nothing.
+- ⚠ **`inputs_frozen.json` NOW EXISTS — 201 files fingerprinted.** The first capture wrote it,
+  exactly as designed. Canon and corpus may not be rebuilt until the sweep closes.
+- checkall GREEN 7/7 · preflight GO · snapshot taken at open. No `.mjs` in the repo was edited this
+  rung; the only repo change is this order file.
+
+#### COST
+`node scripts/session_meter.mjs status 7` at the commit: day line **316.33 → 333.30 = 16.97
+corrected lakh** of the 30 written. Under ceiling. The S1 live-read lead still says today reads
+~+16% hot, so the true figure is nearer ~14.6.
