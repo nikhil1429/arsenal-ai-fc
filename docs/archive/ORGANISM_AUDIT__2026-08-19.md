@@ -993,26 +993,112 @@ STATUS (update this block before any session stops — this is the handoff)
                                      Same silent-failure family as the newline and Ctrl+V traps in
                                      `diag\COUNT_PROBE_RESULT.md`. Assert `isContentEditable` on the
                                      active element BEFORE composing; the SHA gate caught it after.
-  ▶ NEXT SESSION ............... **S5-Z3 · THE ALPHABET FIX — RULED 26 Aug ~01:30, its §10-C row
-                                   is the work order** (queue\RULING__2026-08-26_0112-s5sweep-2.md;
-                                   A + c3 + c2 as one rung; BUILD 6 · PROOF 5 · HANDOFF 5, all
-                                   ruler-written). Opus 5 · effort HIGH. Headline the halt must
-                                   not bury: **A01 PASSED RAW 2/2 — S5-Z's path is live-proven**,
-                                   and checkall §8 held green over a real paid answer. The
-                                   departure is RATIFIED AS LAW: the rendered read travels
-                                   page→clipboard→disk with the IN-PAGE SHA-256 assert, and the
-                                   ORDER is load-bearing and standing — rendered FIRST
-                                   (hash-checked), THEN Copy for raw. checkall §3 gains the loud
-                                   resume-skip (ruled (i): the two gates agree; nothing weakens).
+  S5-Z3 THE ALPHABET FIX ....... ◐ 26 Aug 2026 ~02:40 IST · Opus 5 · effort HIGH · TIER-0, ZERO
+                                   Gemini calls, ZERO audit questions, frozen inputs PROVABLY
+                                   untouched (checkall §8: 206 tracked files byte-identical at
+                                   every section boundary). Full account in the PROGRESS entry of
+                                   26 Aug ~02:40 — read that, not this summary.
+                                   ☑ (A) THE COMPARATOR NORMALISES THE ALPHABET, NOT THE
+                                     STRICTNESS. `serializedNorm` forgives exactly the two MEASURED
+                                     serializer freedoms — a leading bullet marker `- `<->`* ` and
+                                     emphasis markers — applied to BOTH sides, never to the answer
+                                     alone. Whitespace, case, content and length are untouched.
+                                   ☑ (c2) VERDICTS ARE TWO-TIER: VERBATIM · SERIALIZED, both
+                                     proving the property the probe protects (the attachment
+                                     reached the model, complete); anything else FAILS and the
+                                     fallback fires. `probecheck --split` and verify.mjs's close
+                                     report the V/S split PER CHAT off ONE code path.
+                                   ☑ (c3) TEMPLATES ARE FENCED AND VERSIONED — `PROBE-FORMAT v2`
+                                     instructs a fenced code block per anchor and forbids the four
+                                     measured re-spellings by name. **probe_expected.json is
+                                     BYTE-IDENTICAL across the regeneration (f31f1635465032eb before
+                                     and after) and wiring.json too — no expected value moved, which
+                                     is the freeze's actual property.** capture.mjs now stamps the
+                                     eliciting version into every sidecar, READ OUT OF THE STEP FILE
+                                     that was pasted, never typed. 24/24 probe steps carry it.
+                                   ☑ (4) checkall §3 SKIPS LOUDLY on the resume condition and stays
+                                     green; the refusal to simulate over paid answers is unchanged.
+                                     **checkall GREEN all 8 sections · preflight GO 18 checks, both
+                                     RUN IN THIS SESSION.**
+                                   ☑ (5, FREE HALF) A02 RE-CHECKED FOR FREE AND THE RULING'S
+                                     PREDICTION HELD EXACTLY: anchor 1 is now **SERIALIZED** (it was
+                                     the lying MISS), anchor 2 stays **FAIL**. A01 is untouched and
+                                     still **VERBATIM** — the raw path did not go soft (rule 6).
+                                   ☑ 39 BITE-PROOFS, 0 FAILED, IDEMPOTENT — `diag/proofs_s5z3.mjs`
+                                     runs its whole end-to-end suite TWICE inside one invocation and
+                                     compares the verdicts, and the command was run twice from the
+                                     shell. Both directions on both freedoms; truncation,
+                                     substitution, a case re-encoding, a space eaten inside a code
+                                     span and A02's whole reconstruction class all STILL BITE.
+                                   ⛔ **NOT DONE — THE ONE AUTHORIZED FENCED RE-PROBE IN A02'S CHAT.**
+                                     It is the paid half of scope item 5 and it needs the browser.
+                                     Measured at 13.87 lakh spent against BUILD 6 + PROOF 5 = 11
+                                     before the handoff had started, so §10-D rule 2 stopped it. The
+                                     router's own words put it on the resumed sweep's fresh 30+10
+                                     ("THEN the sweep resumes from A02 ... one authorized fenced
+                                     re-probe validates c3"), and that is where it now sits. **c3 is
+                                     therefore still a HYPOTHESIS — the ruling said so, and nothing
+                                     in this rung tested it against a live model.** A's comparator
+                                     fix stands whether c3 works or not; that was the design.
+                                   ⚠ **A REAL FINDING, FOUND BY RUNNING THE CHECK NOBODY OWNS:
+                                     S5-PRE's CANON PIN HAS BROKEN.** `SAMJHAO_ORDER__2026-08-20.md`
+                                     is `40f98d210ac9a5c9` in the repo today against the pinned
+                                     `b332c5289a3a858f`; the learning lane committed the cut's
+                                     content as `50de00c` and has since added **+79/-7 lines** the
+                                     cut does not have. It rides canon chunk07 + chunk23.
+                                     HOW_HE_LEARNS still holds (`f55e17240a761c5f`).
+                                     **NOT FIXED, AND DELIBERATELY: re-cutting canon mid-sweep moves
+                                     the haystack under A01's collected answer — the exact hazard the
+                                     freeze exists to prevent, and the 25-Aug ORDERING LAW forbids it
+                                     until the consuming run ends.** So it is DECLARED: the sweep
+                                     reads a 25-Aug SAMJHAO_ORDER, and any finding of the form "the
+                                     samjhao order does not say X" is staleness-suspect FIRST,
+                                     finding second — the same treatment the SWEEP WARNING already
+                                     gives this order. Raised for the architect.
+                                   ⚠ CEILING BREACHED AND RECORDED: **13.87 lakh at the close of the
+                                     build+proof half, against BUILD 6 · PROOF 5 = 11** (own-JSONL
+                                     count, meter weights, dedup by requestId+message id). The
+                                     HANDOFF 5 is on top of that. Ceiling NOT re-derived — §10-C
+                                     allows that only on a proven UNIT fault, and there is none.
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP, RESUMED FROM A02 — and its FIRST ACT is the
+                                   ONE AUTHORIZED FENCED RE-PROBE in A02's existing chat**, which
+                                   S5-Z3 built the format for and could not fire inside its
+                                   ceiling. Opus 5 · effort HIGH. **FRESH 30 EXECUTION + 10
+                                   HANDOFF, ruler-written 26 Aug ~01:30.**
+                                   WHAT IS ALREADY TRUE, so nothing is re-derived: the comparator
+                                   fix is IN and bite-proven 39/0 twice · A01 = VERBATIM, A02's
+                                   anchor 1 = SERIALIZED, A02's anchor 2 = FAIL (a reconstruction,
+                                   named as one) · every probe step carries `PROBE-FORMAT v2` with
+                                   the fenced instruction · capture stamps the eliciting version ·
+                                   checkall is green on a RESUME (§3 skips loudly).
+                                   **c3 IS STILL A HYPOTHESIS.** The re-probe is its only test:
+                                   paste `steps/A02.txt`'s probe block into the SAME A02 chat (new
+                                   RULED rules, ONE shot, recorded — not the forbidden re-ask),
+                                   then `node capture.mjs save A02 ...` and `node probecheck.mjs
+                                   A02`. **Pass in EITHER tier => A02 continues and c3 is validated.
+                                   Fail => the fallback fires with the corrected premise** ("this
+                                   chat cannot produce a trustworthy receipt"), and c1-vs-c2 is
+                                   already answered — do not improvise a third path.
+                                   TRANSPORT, standing and measured — get these wrong and the
+                                   prompt arrives mangled and still gets a plausible answer:
+                                   **REF click only, never a coordinate click** (a coordinate click
+                                   leaves activeElement on BODY and the typing goes nowhere) ·
+                                   Ctrl+V does not work at all · `computer type` silently eats
+                                   newlines, so one `type` per line + `shift+Return` between them,
+                                   whole prompt in ONE browser_batch, box read back and SHA-diffed
+                                   against the step file BEFORE Return.
+                                   CAPTURE, ratified as LAW and the ORDER is load-bearing:
+                                   **rendered FIRST — page->clipboard->disk with the IN-PAGE SHA-256
+                                   assert — THEN Copy for raw.** That ordering is what stops a
+                                   stale clipboard passing the copy-gate vacuously.
                                    HE IS AVAILABLE for manual Gemini paste/upload as FALLBACK
                                    ONLY — the session asks him with exact steps when transport
                                    fails; his labor stays minimal, never the plan. CARD IS v5
                                    (push + what-to-say baked in — he repeats nothing).
-                                   **THEN the sweep resumes from A02** — stored answer re-checks
-                                   FREE, one authorized fenced re-probe validates c3, and the
-                                   resumed sweep runs on **FRESH 30 EXECUTION + 10 HANDOFF,
-                                   ruler-written ~01:30** (the 24.15 bought the raw path's live
-                                   proof + the serializer-dialect class + a correct halt).
+                                   ⚠ CARRY THIS FORWARD: **S5-PRE's canon pin on SAMJHAO_ORDER is
+                                   BROKEN** (+79/-7 lines since the cut; chunk07 + chunk23). NOT to
+                                   be fixed mid-sweep — declared, and any "the samjhao order does
+                                   not say X" finding is staleness-suspect first.
                                    (The row below is the sweep's own line, kept verbatim.)
                                  **S5 · THE SWEEP — RESUMED. Its own session, and it needs NO
                                    further word from anyone** (his GO of 25 Aug ~09:15 stands; the
@@ -2680,7 +2766,10 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                                  said otherwise at the real one. Ceiling NOT
                                                  re-derived: unit faults only, never variance.)
       THEN THE SWEEP NEEDS NO FURTHER WORD FROM ANYONE.
-☐ S5-Z3 THE ALPHABET FIX — a micro-rung, RULED by the architect 26 Aug ~01:30
+◐ S5-Z3 THE ALPHABET FIX — a micro-rung, RULED by the architect 26 Aug ~01:30
+      **BUILT + PROVEN 26 Aug ~02:40 · scope items 1-4 and the FREE half of 5 are DONE and
+      bite-proven (39/0, twice). THE ONE AUTHORIZED RE-PROBE (the paid half of item 5) IS NOT
+      RUN — the ceiling stopped it, §10-D rule 2. It is the resumed sweep's first act.**
       (queue\RULING__2026-08-26_0112-s5sweep-2.md IS the work order; A + c3 + c2 as one rung).
       MODEL: Opus 5 · effort HIGH. SCOPE: (1) the raw comparator normalises ONLY the two
       MEASURED serializer freedoms — leading `- `↔`* ` and emphasis markers — never whitespace,
@@ -6132,3 +6221,155 @@ pastes to validate.** Inputs frozen and unmoved (201 files, frozen 25 Aug 12:47)
 `0890cd7ebfcd1ff6` with parts 1 and 2 loaded; part 3 (A03) was NOT fired. Clipboard ALIVE all
 session — the first sweep session in which it never faulted. **THE SWEEP MAY NOT RESUME ON A
 SESSION'S OWN JUDGEMENT: the ruling is owed first.**
+
+### PROGRESS 2026-08-26 ~02:40 IST — S5-Z3 · THE ALPHABET FIX (Opus 5 · effort HIGH)
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — S5-Z3, whose §10-C row
+and `queue\RULING__2026-08-26_0112-s5sweep-2.md` are together the work order. Micro-order written
+first (rule 9) into the session scratchpad and checked against §10-C/§10-D before a single edit.
+
+**TIER-0 THROUGHOUT: zero Gemini calls, zero audit questions, zero pastes.** The frozen inputs are
+provably untouched — checkall §8 re-fingerprints 206 files at every one of seven section boundaries
+and all seven were byte-identical.
+
+#### WHAT LANDED
+
+**(A) THE COMPARATOR NOW NORMALISES THE ALPHABET, NEVER THE STRICTNESS.** `probecheck.mjs` gained
+`serializedNorm`, which forgives exactly the two freedoms measured on A02 and nothing else:
+
+1. the LEADING bullet marker, `- ` <-> `* ` — the marker only, never the indentation
+2. EMPHASIS markers — `**`, `__`, and a single `*`/`_` when it really wraps text
+
+It is applied to **both sides**, symmetrically. The answer is never stripped down to the expected
+line — that is the lazy fix S5-Z bite-proved as refused, because it blinds the gate to truncation.
+Whitespace is not touched here (`norm` already owns it), and case, content and length are not
+touched at all.
+
+**(c2) VERDICTS ARE TWO-TIER.** `VERBATIM` = byte-exact in the answer's own alphabet. `SERIALIZED`
+= exact once both sides are in one alphabet, i.e. the only difference is the model's own markdown
+serializer. Both prove the property the probe protects — *the attachment reached the model,
+complete* — which is the ruling's answer 2, and neither is silently equated with the other:
+`node probecheck.mjs --split` and verify.mjs's close both report the **V/S split per chat**, off
+one exported function so a second copy of that arithmetic cannot drift.
+
+**AND ONE DIAGNOSIS LINE THAT WAS STILL LYING, FIXED.** The ruling corrects the *fallback premise*
+from "the text did not reach the model" to "this chat cannot produce a trustworthy receipt", and I
+did that — but the PER-ANCHOR line underneath it made the same false claim, and on A02's anchor 2
+it kept making it after the tier fix, because the near-miss test was a HEAD test and that
+reconstruction diverges inside a code span early in the line. A head test asks "did this line
+survive from its first character"; the honest question is "does ANY substantial run of this line
+appear". It is now a 25-character sliding-run test in the serialized alphabet, so A02's anchor 2
+reads `NEAR` / *"a RECONSTRUCTION — runs of this line ARE in the reply… FIDELITY failed, not
+retrieval"*, which is what actually happened.
+
+**(c3) TEMPLATES ARE FENCED AND VERSIONED.** `probe_gen.mjs`'s prompt is now `PROBE-FORMAT v2`: it
+instructs one fenced code block per anchor and forbids, by name, each of the four re-spellings A02
+demonstrated (bullet re-spelled, `**` dropped, case re-encoded, wrapped line merged). The ruling's
+CONDITION is met and is the reason the version exists at all — a receipt collected under the old
+prompt and one collected under this one would otherwise be indistinguishable, and then nobody can
+say what a V/S split is a split *of*.
+
+**THE FREEZE'S ACTUAL PROPERTY WAS ASSERTED, NOT ASSUMED.** c3 is inside the freeze's letter and
+outside its property only if no expected value moves, so that was checked rather than argued:
+`probe_expected.json` is **byte-identical across the regeneration — `f31f1635465032eb` before and
+after** — and `wiring.json` too. `inputs_frozen.json` covers 201 files and every one is a haystack
+file; prompts and steps were never in it. `capture.mjs` now stamps `probe_format` into every
+sidecar, **read out of the step file that was actually pasted** — derived, never typed, so it
+cannot drift from what the model was shown. An answer captured before versioning existed reads as
+*unrecorded*; stamping it "v1" would have invented a receipt, which is the one thing this rung
+exists to stop. 24/24 probe-carrying steps carry v2.
+
+**(4) checkall §3 SKIPS LOUDLY ON A RESUME.** The guard does not move — this section may never
+simulate over paid-for answers, because simulate.mjs writes into `answers/`. What moved is the
+verdict: a resumed sweep by definition has answers on disk, so until now the one gate the router
+REQUIRES before touching the browser could not be green on any run after the first. Two gates that
+cannot both be satisfied is not strictness; it is a gate the executor learns to read past. It now
+names the answers it did not check and why, and stays green.
+
+**(5, FREE HALF) A02 RE-CHECKED FOR FREE — AND THE RULING'S PREDICTION HELD EXACTLY.**
+
+```
+A01  (canon_g01)  [raw]  PASS · VERBATIM          <- untouched; the raw path did not go soft
+A02  (canon_g02)  [raw]  FAIL
+     ser   tail    (serializer dialect only)      <- was the lying "did not reach the model"
+     NEAR  middle  a RECONSTRUCTION               <- stays a FAIL, as ruled
+```
+
+#### THE PROOFS
+
+`diag/proofs_s5z3.mjs` — **39 passed, 0 failed**, and it is idempotent by construction: it plants
+only into a step with no paid answer (`A03`), REFUSES to run if one appears there, cleans up in a
+`finally`, and runs its whole end-to-end suite **twice inside one invocation** comparing the two
+rounds' verdicts. The command was then run twice from the shell; identical, exit 0 both times.
+
+Both directions on both freedoms are proven (`- `->`* ` and `* `->`- `; `**` dropped and `**`
+added). What must STILL BITE, and does: truncation · substitution · a case re-encoding · a space
+eaten inside a code span · nested indentation · **A02's whole reconstruction class at once** · an
+unstamped answer (still exit 2, refused outright, never guessed at). A bare `*` in prose survives
+as content. `A01` is asserted to still pass VERBATIM inside the harness, so rule 6 is a test and
+not a promise.
+
+`node checkall.mjs` **GREEN, all 8 sections** · `node preflight.mjs` **GO, 18 checks** — both run in
+this session, never inherited. Instruments snapshotted before the gates (section 7's rollback
+property).
+
+#### WHAT IS NOT DONE, AND WHY — read this before assuming c3 works
+
+**THE ONE AUTHORIZED FENCED RE-PROBE IN A02'S CHAT WAS NOT FIRED.** It is the paid half of scope
+item 5, it needs the browser, and the meter read **13.87 lakh against BUILD 6 + PROOF 5 = 11**
+before the handoff had begun. §10-D rule 2 is a hard stop, not a suggestion, so it stopped.
+
+I did not have to invent a home for it: the router's own words already place it on the resumed
+sweep — *"THEN the sweep resumes from A02 — stored answer re-checks FREE, one authorized fenced
+re-probe validates c3, and the resumed sweep runs on FRESH 30 EXECUTION + 10 HANDOFF"*. The §10-C
+row puts it inside S5-Z3; the router puts it in the sweep. The ceiling settles which reading gets
+executed tonight, and the deferral is recorded here rather than quietly absorbed.
+
+**SO c3 IS STILL A HYPOTHESIS — the ruling said so, and nothing in this rung tested it against a
+live model.** Every artefact it needs exists and is proven consistent on disk; what is unproven is
+whether Gemini honours a fence. **A's comparator fix stands whether c3 works or not** — that was
+the design, and it is why the rung is still worth what it cost.
+
+#### A REAL FINDING, FOUND BY RUNNING THE CHECK NOBODY OWNS
+
+**S5-PRE's canon pin has BROKEN.** The pin exists because `pack.mjs` takes its file list from
+`git ls-files` and its CONTENT from the working tree, so the 25-Aug cut swallowed 303 uncommitted
+lines and S5-PRE pinned the two dirty files by sha256/16 with the warning *"if either moves before
+the sweep, the cut and the repo have silently diverged."*
+
+Measured today:
+
+```
+SAMJHAO_ORDER   40f98d210ac9a5c9   pinned b332c5289a3a858f   <- MOVED
+HOW_HE_LEARNS   f55e17240a761c5f   pinned f55e17240a761c5f   <- holds
+```
+
+The learning lane committed the cut's content as `50de00c` and has since added **+79/-7 lines** the
+cut does not have. SAMJHAO_ORDER rides canon **chunk07 and chunk23**.
+
+**NOT FIXED, AND DELIBERATELY.** Re-cutting canon now would move the haystack under A01's already
+collected answer — precisely the hazard the input freeze exists to prevent, and the 25-Aug ORDERING
+LAW forbids it until the consuming run ends. So it is DECLARED instead: **the sweep reads a 25-Aug
+SAMJHAO_ORDER**, and any finding of the form *"the samjhao order does not say X"* is
+staleness-suspect FIRST and a finding second — the same treatment the SWEEP WARNING already gives
+this order. Raised for the architect in `queue\2026-08-26_0240-s5z3-1.md`.
+
+This is also the second time the same shape has been recorded: **a check whose only executor is
+"whichever session remembers"** is his design-failure law exactly. The 26 Aug ~01:12 entry already
+wrote that one line in checkall §5 would end it and left it unbuilt as out of boundary. It is out
+of this rung's boundary too. It is now named twice; the third time it should be built.
+
+#### THE COST
+
+**13.87 lakh at the close of the build+proof half, against BUILD 6 · PROOF 5 = 11 — OVER, and
+recorded as over.** Own-JSONL count with the meter's weights, deduped by requestId + message id.
+The HANDOFF 5 is on top of that. **The ceiling is NOT re-derived** — §10-C allows that only on a
+proven fault in the meter's UNIT, and there is none; a rung that runs hot is data about the rung.
+
+#### WHAT I LEFT UNREAD
+
+Sections 5 through 9 of this order, and every rung row past S6. I read ▶ RESUME HERE, §10-C's S5-Z3 and S5 rows,
+§10-D, §10-E-H, §3-C, and the ruling in full. Of the instruments I read `probecheck.mjs`,
+`probe_gen.mjs`, `checkall.mjs` sections 3-4 and 7-8, `capture.mjs`'s save path and `verify.mjs`'s
+close — not `simulate.mjs`, `refilter2.mjs`, `snapshot.mjs` or `mdrender.mjs`, none of which this
+rung touches.
