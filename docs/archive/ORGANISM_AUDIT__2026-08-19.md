@@ -658,7 +658,71 @@ STATUS (update this block before any session stops — this is the handoff)
                                    Delivery fell back to the queue file — which is the fallback
                                    S5-Y itself built, working as ruled. Still S11, still nobody
                                    chases it before S6.
-  S5-Z THE RAW CAPTURE ......... ☐ RULED 25 Aug ~13:10 (queue\RULING__2026-08-25_1300-s5sweep-1.md
+  S5-Z THE RAW CAPTURE ......... ☑ DONE 25 Aug 2026 ~13:50 IST · Opus 5 · effort HIGH · TIER-0,
+                                   ZERO Gemini calls, ZERO sweep questions, the live sweep's freeze
+                                   BYTE-IDENTICAL at open and close. **Cost 24.69 against the 8+8
+                                   written lines — BREACHED by 8.69, read from the meter AT the
+                                   commit (day line 353.05 -> 377.74). The S1 live-read lead says
+                                   today reads ~+16% hot => ~21.3 true. The first draft of this
+                                   line said 18.22 and the meter said otherwise at the close:
+                                   fourth occurrence of the same discipline, S5-X's precedent.** Full account in the
+                                   PROGRESS entry of 25 Aug ~13:50 — read that, not this summary.
+                                   ☑ (a) THE COPY-GATE. `capture.mjs save <step> --rendered <f>`
+                                     takes the RAW markdown off Gemini's Copy button and proves it
+                                     IS THIS ANSWER: EVERY content line of the rendered read must
+                                     appear in the payload. **A universal, not a threshold.** One
+                                     assert covers substituted (the measured 216-char shape), stale,
+                                     truncated and empty, and it refuses LOUDLY with the missing
+                                     lines printed. The vacuous-truth hole — "0 of 0 matched, so
+                                     everything matched" — is itself a refusal.
+                                   ☑ (b) THE STAMP + A SOUND FALLBACK. **There is no unstamped
+                                     save.** A `rendered-lossy` answer gets the EXPECTED side
+                                     rendered through the same markdown rules before diffing, in
+                                     BOTH probecheck and verify.mjs; **the answer is never
+                                     stripped** and the RAW path stays byte-strict. The lazy fix
+                                     (normalise markdown away for everything) is BITE-PROVEN to be
+                                     refused — rule 6 is a code path now, not a memory.
+                                   ☑ ONE function, `mdrender.mjs`, imported by capture · probecheck
+                                     · verify · checkall · preflight. Never a second copy (SHAPE 1).
+                                     It reproduces the MEASURED A01 case exactly, and the copy-gate
+                                     accepts a true pair on a real 9 KB step file, 104/104 lines.
+                                   ☑ 33/33 BITE-PROOFS, both directions, every plant restored and
+                                     sha256-verified: `node diag/proofs_s5z.mjs`. One of them found
+                                     a real bug in this rung's own fix — rendering a
+                                     whitespace-FLATTENED haystack mis-pairs `**` across lines, so
+                                     verify.mjs now renders from the RAW file and normalises after.
+                                   ☑ checkall GREEN all 7 sections · preflight GO, both RUN IN THIS
+                                     SESSION, with the clipboard dead at the time.
+                                   ⛔ **AND RUNNING THE PRESCRIBED GATE DESTROYED A PAID-FOR
+                                     ANSWER.** checkall section 4 plants its fixtures straight onto
+                                     `answers/A01.txt` and `answers/B01_1.txt` and then unlinks
+                                     them, with NO guard — section 3 has exactly that guard
+                                     ("refusing to simulate over real answers") and section 4 never
+                                     got one. So the gate the router REQUIRES every sweep session to
+                                     run before touching the browser silently deleted the real A01
+                                     at ~13:23 today, bypassing capture.mjs — the SOLE WRITER, whose
+                                     own law is never to overwrite an answer without a backup — so
+                                     not even the `.prev` copy fired. It would have done it again on
+                                     EVERY run of the resumed sweep. FIXED: move aside → restore →
+                                     sha256-verified, and a leftover preserve file is a LOUD refusal
+                                     rather than something to overwrite. Bite-proven both ways: with
+                                     the restore removed the answer IS destroyed, and it is still
+                                     recoverable from `.checkall.preserved`.
+                                   ⚠ **SCOPE (c) IS NOT DONE, AND IT IS NOT FAKED** (§10-D rule 10).
+                                     The ruling's "re-capture A01 first (free, still on screen)" is
+                                     unreachable today: A01.txt is gone (above), this session has no
+                                     tab group carrying that chat, and **the clipboard is DOWN
+                                     machine-wide right now** — so the RAW path cannot be exercised
+                                     against a real Gemini answer at all. Driving it anyway would
+                                     have produced another LOSSY answer, which is the thing this
+                                     rung exists to stop depending on. It rides the resumed sweep's
+                                     own opening step; the chat is `0890cd7ebfcd1ff6`.
+                                   ⚠ THE CLIPBOARD, 7th OCCURRENCE — down through this entire rung
+                                     (capture selftest · preflight 4C · checkall §2 · a direct probe
+                                     at the close, all failing). Advisory everywhere, blocking
+                                     nothing: S5-Y's re-aim proving itself again on real weather.
+                                   HISTORY OF THIS ROW — as RULED 25 Aug ~13:10
+                                   (queue\RULING__2026-08-25_1300-s5sweep-1.md
                                    = the work order; D-as-vehicle, A-as-content). MODEL: Opus 5 ·
                                    effort HIGH. **BUILD CEILING 8 · PROOF LINE 8 corrected lakh —
                                    both written by the ruler.** Scope: capture goes RAW via
@@ -674,8 +738,8 @@ STATUS (update this block before any session stops — this is the handoff)
                                    substitution/empty/stale plants refused · lossy comparator
                                    bites both directions · truncation plant still fails raw ·
                                    checkall + preflight GREEN · snapshot before every edit.
-  ▶ NEXT SESSION ............... **S5-Z (above). THEN S5 · THE SWEEP — RESUMED, its own
-                                   session.** MODEL: Opus 5 · effort HIGH. **EXECUTION BUDGET:
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — RESUMED, its own session.** (S5-Z is ☑ DONE,
+                                   the row above.) MODEL: Opus 5 · effort HIGH. **EXECUTION BUDGET:
                                    FRESH 30 corrected lakh, written by the ruler ~13:10** (the
                                    22.29 bought the rendered-vs-raw trap class, the substitution
                                    discovery and a correct halt — spent, not wasted; no stub is
@@ -684,9 +748,17 @@ STATUS (update this block before any session stops — this is the handoff)
                                    A clipboard warning in either is EXPECTED and is not a blocker
                                    (S5-Y); a red ANSWER PATH is. Read `diag\COUNT_PROBE_RESULT.md`
                                    BEFORE touching the browser — the transport traps are named
-                                   there. **Answers are captured via S5-Z's Copy-gated RAW path
-                                   through `capture.mjs --from-file`; get_page_text only as the
-                                   stamped lossy fallback.** OUTBOUND STANDING LAW (~13:10,
+                                   there. **Answers are captured via S5-Z's Copy-gated RAW path —
+                                   BUILT AND PROVEN, and the exact command is now in the runbook's
+                                   four-move loop: read the page to `<rendered>.txt`, click Gemini's
+                                   Copy button, then `node capture.mjs save <STEP> --rendered
+                                   <rendered>.txt`. If the clipboard is down (it is a recurring
+                                   machine-wide fault, 7 occurrences), take the DECLARED fallback
+                                   `--from-file <rendered>.txt --lossy "<why>"` — it is stamped, and
+                                   its comparators render the EXPECTED side. THERE IS NO UNSTAMPED
+                                   SAVE. ⚠ A01 was never re-captured (the clipboard was down and
+                                   checkall had eaten the old file) — the sweep's opening step does
+                                   it, chat `0890cd7ebfcd1ff6`.** OUTBOUND STANDING LAW (~13:10,
                                    stricter, rule 6): the compose box is verified by SHA256
                                    against the step file before Return — never an eyeball diff;
                                    ⚠ innerText on the Quill box DOUBLES lines (one <p> per line)
@@ -2218,6 +2290,36 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                                                       (spent 13.95 — BREACHED,
                                                        recorded, ceiling NOT re-derived: §10-C's
                                                        rule says unit faults only, never variance)
+☑ S5-Z THE RAW CAPTURE — 25 Aug 2026. Inserted by the architect's ruling of 25 Aug ~13:10
+      (queue\RULING__2026-08-25_1300-s5sweep-1.md), which IS this rung's work order: D as the
+      vehicle, A as the content. It closes the defect that halted the sweep — `get_page_text`
+      returns markdown-CONSUMED text while probecheck and verify.mjs compare against markdown-
+      BEARING source, so 27/46 anchors and 18/21 chat groups would have false-failed and every
+      verbatim quote inside a formatted line would have been discarded as unverifiable.
+      (a) THE COPY-GATE: answers arrive as RAW markdown off Gemini's Copy button, and capture.mjs
+      proves the payload IS THIS ANSWER — not empty, not stale, not SUBSTITUTED (the measured
+      216-char shape) — by requiring EVERY content line of the rendered read to appear in it. A
+      universal, not a threshold, with the vacuous-truth hole closed by a loud refusal.
+      (b) THE STAMP + A SOUND FALLBACK: there is no unstamped save; a `rendered-lossy` answer gets
+      the EXPECTED side rendered before diffing and THE ANSWER IS NEVER STRIPPED, so the raw path
+      stays byte-strict — the lazy fix is bite-proven to be REFUSED. ONE markdown-consumption
+      function (`mdrender.mjs`) imported by all five consumers; never a second copy (SHAPE 1).
+      33/33 bite-proofs, both directions, re-runnable as `node diag/proofs_s5z.mjs`.
+      ⛔ AND IT FOUND A LIVE ONE BY RUNNING THE GATE: checkall section 4 planted its fixtures
+      straight onto `answers/A01.txt` with no guard and DESTROYED the real A01 in this session.
+      Fixed (move aside → restore → sha256-verified) and bite-proven both ways.
+      FORBIDDEN: frozen corpus/canon bytes · any Gemini call · any sweep question · any instrument
+      beyond mdrender / capture / probecheck / verify / checkall / preflight + the proofs harness
+      — all four held, and the live freeze was byte-identical at open and at close.
+      DONE-PROOF: checkall GREEN all 7 sections + preflight GO, both run in-session with the
+      clipboard dead · proofs 33/0 · the runbook repointed at the command that actually works.
+      ⚠ SCOPE (c) NOT DONE AND NOT FAKED (§10-D rule 10): re-capture A01 through the raw path.
+      A01.txt no longer exists (checkall ate it, above) AND the clipboard is down machine-wide, so
+      the RAW path cannot be exercised against a real answer today. It rides the sweep's own
+      opening step.                             BUILD CEILING: 8 · PROOF LINE: 8
+                                                (spent 24.69 combined — BREACHED by 8.69, measured
+                                                at the commit, recorded; ceiling NOT re-derived:
+                                                unit faults only, never variance)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
       sent. The preparation breached the ceiling (40 allowed, ~104 spent) and §10-D rule 2 was
@@ -5146,3 +5248,170 @@ corrected lakh** of the 30 written. Under ceiling. The S1 live-read lead still s
 from the meter AT the commit. That is S5-X's precedent and S5-Y's, now on its third occurrence:
 **a cost line drafted before the close is always low, so the number is taken at the commit or it is
 not taken at all.**
+
+---
+
+## PROGRESS · 25 Aug 2026 ~13:50 IST · RUNG S5-Z — THE RAW CAPTURE
+
+**Opus 5 · effort HIGH. TIER-0: zero Gemini calls, zero sweep questions, zero pastes.**
+Work order: `queue\RULING__2026-08-25_1300-s5sweep-1.md` (architect, ~13:10 — D as the vehicle,
+A as the content). Written ceilings, both by the ruler: **BUILD 8 · PROOF 8 corrected lakh.**
+**MEASURED AT THE COMMIT: day line 353.05 → 377.74 = 24.69. BREACHED by 8.69.** The S1 live-read
+lead says today reads ~+16% hot ⇒ ~21.3 true. Read from the meter at the close, never estimated
+mid-flight — and the discipline earned its keep again: the first draft of this line said **18.22**,
+taken two write-up turns earlier, and the meter said otherwise. Fourth occurrence. The ceiling is NOT re-derived: §10-C's rule says a re-baseline
+needs a proven fault in the INSTRUMENT, and this was ordinary variance on a rung whose 8+8 were
+estimates. Nothing was cut to fit and nothing new was started after the breach was visible.
+
+### THE DEFECT THIS RUNG CLOSES
+
+The sweep halted at ~12:50 because `get_page_text` / `innerText` returns markdown-CONSUMED text
+while `probecheck` and `verify.mjs` compare against markdown-BEARING source. The two are not the
+same alphabet. Measured then: **27 of 46 anchors (59%) and 18 of 21 chat groups (86%)** would have
+false-failed, and `verify.mjs` would have discarded every verbatim quote living inside a bolded,
+listed, headed or backticked line as unverifiable — a true finding thrown away, looking exactly
+like a model that found nothing.
+
+### WHAT LANDED
+
+**`mdrender.mjs` — NEW, and it is ONE function, not five.** The markdown-consumption rules live in
+a single file imported by `capture.mjs`, `probecheck.mjs`, `verify.mjs`, `checkall.mjs` and
+`preflight.mjs`. A second copy of this rule is §9 SHAPE 1 exactly, which is the shape this audit
+exists to remove. It reproduces the MEASURED A01 case to the character:
+
+```
+source   : 1. **THE MISSIONS DESK** (scout.mjs — missions.json sole writer): M01–M04 …
+rendered : THE MISSIONS DESK (scout.mjs — missions.json sole writer): M01–M04 …
+renderMarkdown(source) === rendered   →  true
+```
+
+**(a) THE COPY-GATE — `capture.mjs save <step> --rendered <path>`.** The answer now arrives as RAW
+markdown off Gemini's own Copy button. The gate proves the payload IS THIS ANSWER, and the assert
+is a **universal, not a threshold**: every line of the rendered read long enough to be content
+rather than UI chrome must appear in the payload's skeleton. One assert covers all four shapes —
+
+| shape | what it looks like | why it is caught |
+|---|---|---|
+| SUBSTITUTED | 216 chars of unrelated text, measured 25 Aug | none of the lines appear |
+| STALE | the Copy click never landed; the previous answer is still there | different answer, none appear |
+| EMPTY | nothing on the clipboard | nothing appears |
+| TRUNCATED | Copy grabbed half | the tail lines are missing — the one a length check cannot see |
+
+The load-bearing idea is the **skeleton**: render the markdown away, then keep only `[a-z0-9]`.
+Every markdown inline construct is built out of PUNCTUATION, so any rule the renderer gets wrong
+vanishes from BOTH sides and cannot cause a false refusal; what cannot vanish is content. The one
+markdown construct carrying alphanumerics — the `1. ` list marker — is removed structurally, which
+is precisely the construct that failed A01. And "every content line matched" is trivially true of
+ZERO lines, so a rendered read too thin to certify anything is a LOUD refusal, never a pass.
+
+**(b) THE STAMP, AND A FALLBACK THAT IS SOUND RATHER THAN DEAD WEIGHT.** There is **no unstamped
+save**: every answer declares how it travelled, in `answers/<step>.meta.json`, with a sha256 of the
+bytes actually written and the copy-gate's own receipt. Declare-or-die, the same shape `refilter2`
+used to close the 64,309-row hole — because the silent default here was worse than a crash: a
+comparator confidently reading the wrong alphabet and calling a correct answer a failure.
+
+- `raw` → byte-strict, unchanged. **The strict path stays strict (rule 6).**
+- `rendered-lossy` → the EXPECTED side is rendered through the same rules before diffing, in BOTH
+  `probecheck` and `verify.mjs`. **The answer is never stripped.** Stripping the answer is the lazy
+  fix the escalation refused by name, because it blinds the gate to truncation — and that refusal
+  is now a bite-proof, not a comment.
+- no stamp → `probecheck` REFUSES outright (its verdict routes a chat into the fallback);
+  `verify.mjs` keeps the STRICT comparator, which is the status quo and cannot be a loosening, and
+  names the unstamped answers out loud.
+
+### ⛔ AND RUNNING THE PRESCRIBED GATE DESTROYED A PAID-FOR ANSWER
+
+This was not planned work. It was found by obeying the router — "gates re-run IN YOUR OWN SESSION"
+— and reading what happened.
+
+`checkall.mjs` section 4 plants its probe fixtures **straight onto `answers/A01.txt` and
+`answers/B01_1.txt`** with `writeFileSync`, then `unlinkSync`s them. Section 3 has exactly the
+guard this needs (`answers/ is not empty … refusing to simulate over real answers`); section 4
+never got one. So the first `node checkall.mjs` of this session, at **13:23:54**, silently deleted
+the real A01 — the rendered-lossy capture from ~12:50 — bypassing `capture.mjs`, the SOLE WRITER of
+`answers/`, whose own law is *never silently overwrite a paid-for answer*, so not even the `.prev`
+backup fired. Timestamp evidence: `answers/` mtime `13:23:54`, this session's snapshot `13:23:12`.
+
+It would have done it again on **every** run of the resumed sweep, which is required to run this
+gate before every browser session.
+
+**FIXED, and strictly stricter:** anything real is moved aside into `.checkall.preserved/` first,
+restored at the end, and the restore is verified by sha256 and PRINTED. A leftover preserve file
+from a crashed run is a loud refusal, never something to overwrite. Bite-proven both directions:
+with the restore removed the answer IS destroyed, and it is still recoverable from the preserve
+folder — the proof recovers from the net rather than asserting the net exists.
+
+### THE PROOF LINE — 33/33, both directions, `node diag/proofs_s5z.mjs`
+
+Every gate plants the exact defect it exists to catch, runs the REAL gate, requires RED, restores
+the file, requires GREEN, and verifies the restore by sha256. The plant helper **refuses to plant
+if its anchor does not match exactly once** — a plant that silently no-ops produces a green "the
+gate held" and proves the opposite of what it claims.
+
+| # | plant | what must go RED |
+|---|---|---|
+| 1 | the copy-gate blinded | capture selftest names the substituted payload · preflight 4D names the accepted bad payloads |
+| 2 | the stamp requirement removed | capture selftest · checkall §4 (unstamped answer accepted) |
+| 3 | the lossy branch disabled | checkall names the exact 25-Aug defect |
+| 4 | **the LAZY FIX** — markdown normalised away for everything | checkall REFUSES it: rule 6 is a code path, not a memory |
+| 5 | the too-thin guard removed | a 14-char rendered read would certify a whole answer |
+| 6 | checkall's restore removed | the real answer IS destroyed — the defect above, reproduced on demand |
+
+**AND A PROOF CAUGHT A REAL BUG IN THIS RUNG'S OWN FIX**, which is the entire argument for the
+harness. `verify.mjs` renders the haystack for a lossy answer — and it was rendering the
+*whitespace-normalised* copy, which flattens the whole document onto one line. Markdown is
+LINE-STRUCTURED: render a flattened document and the non-greedy `**…**` matcher pairs the opening
+marker of one line with the closing marker of a line thirty paragraphs away, so every emphasis span
+lands on the wrong text and a correct quote still fails to match. Invisible to inspection, obvious
+to a fixture. Now: **render FIRST, on the real line structure; normalise SECOND** — for the canon
+files and, lazily per day, for the corpus.
+
+Fixture discipline, the architect's standing line (25 Aug item 2): the "rendered" side of that
+proof is built by ONE independent transformation — deleting the `**` pairs — never by calling
+`renderMarkdown`, which is the code under test. The line is selected to carry bold and nothing else,
+so a divergence can only mean the comparator.
+
+### THE GATES, RUN IN THIS SESSION
+
+- `node checkall.mjs` → **GREEN, all 7 sections.**
+- `node preflight.mjs` → **GO**, 18 checks, with 1 warning (the clipboard).
+- `node diag/proofs_s5z.mjs` → **33 passed · 0 failed.**
+- `node capture.mjs selftest` → 21 blocking asserts on LEG 1, all ok.
+- Preflight gained **4D · THE COPY-GATE**, BLOCKING: on the largest REAL step file (9,108 bytes) it
+  accepts a true pair **104/104 content lines** and refuses all three failure shapes. That is the
+  measurement that says the renderer is good enough on real audit prose, not just on fixtures.
+- Snapshots taken **before every edit round** (5 in this rung), as S5-X's gate requires.
+- **The live sweep is untouched:** `inputs_frozen.json` byte-identical at open and close, and
+  `answers/` holds exactly what the harness found.
+
+### ⚠ SCOPE (c) IS NOT DONE, AND IT IS NOT FAKED — §10-D rule 10
+
+The ruling says *"Re-capture A01 via the new path first (free, on screen, chat named)."* It is
+unreachable today, for three independent reasons, and none of them is the build:
+
+1. **`answers/A01.txt` no longer exists** — checkall ate it at 13:23, above.
+2. **This session has no tab group carrying that chat.** The transport is per-session; the ~12:50
+   session's tab is not addressable from here. The chat id is recorded: `0890cd7ebfcd1ff6`.
+3. **The clipboard is DOWN machine-wide right now** — 7th occurrence, and it was down through this
+   entire rung (capture selftest, preflight 4C, checkall §2, and a direct `Set-Clipboard` probe at
+   the close, all failing). **The RAW path travels through the clipboard by construction** —
+   Gemini's Copy button is the only source of raw markdown — so the thing scope (c) exists to prove
+   cannot be exercised at all until the clipboard comes back.
+
+Driving the browser anyway would have spent budget past a breached ceiling to produce **another
+LOSSY answer**, which is precisely what this rung exists to stop depending on. It rides the resumed
+sweep's own opening step, where A01 is fired again regardless.
+
+### LEADS, RECORDED NOT PATCHED
+
+- **The clipboard, 7th occurrence.** Down for the whole rung. Advisory everywhere and blocking
+  nothing — S5-Y's re-aim proving itself on real weather for the second time. Still no owner,
+  reads and writes both failing → S11 family, post-reboot.
+- **`diag/` is still invisible to the snapshot roster** (S5-Y's lead, unchanged): `proofs_s5z.mjs`
+  joins `proofs_s5x.mjs` and `proofs_s5y.mjs` as harnesses with no restorable copy. Owner's call,
+  after the sweep.
+- **The §10-C row law was not honoured by the ruling that created it.** The ~12:25 rule says a
+  ruling writes its §10-C row in the same act, and the S5-Z ruling's item 3 says it was done —
+  the row was in ▶ RESUME HERE, but §10-C had no S5-Z row at all. Written now. The general point
+  is the one S5-Y raised: two places holding the same fact drift, and the router won the tie only
+  because rule 1 says so.
