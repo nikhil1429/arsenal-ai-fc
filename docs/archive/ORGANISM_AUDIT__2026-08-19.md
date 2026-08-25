@@ -738,6 +738,52 @@ STATUS (update this block before any session stops — this is the handoff)
                                    substitution/empty/stale plants refused · lossy comparator
                                    bites both directions · truncation plant still fails raw ·
                                    checkall + preflight GREEN · snapshot before every edit.
+  ⛑ S5-Z RAISED FIVE, NONE BLOCKING ... **`queue\2026-08-25_1410-s5z-1.md` — open, delivered to his
+                                   clipboard (14,466 of 14,466 chars asserted back, the ~13:10
+                                   clipboard law applied to the hand-off itself). THE SWEEP DOES
+                                   NOT WAIT ON IT.** Four of the five are patterns, not incidents.
+                                   (A) **DISCOVERY HAS NO BUDGET LINE — and that is what the four
+                                   straight breaches are measuring.** S4 +21% · S5-R2 +180% ·
+                                   S5-Y +74% · S5-Z +54%. The ~12:25 fix (a separate PROOF line)
+                                   was applied here BY THE RULER for the first time and the rung
+                                   still went 54% over, so the missing line was not the proof. A
+                                   ceiling can only price what the ruler could SEE; on this ladder
+                                   the findings are the product. Rec: extend the ITEM-3 precedent
+                                   by symmetry — a defect found by running a PRESCRIBED gate opens
+                                   its OWN named line, admission test = a bite-proof (no
+                                   reproduction, no line).
+                                   (B) **THE ANSWER-EATING CLASS IS UNAUDITED.** One instance fixed
+                                   (checkall §4); the class — an instrument that writes into the
+                                   state it is checking — is unchecked across 66 instruments, and
+                                   HIS global-not-patch law says the class is the unit. Rec: make
+                                   the PROPERTY a gate (answers/ + the freeze byte-identical before
+                                   and after every gate run, ~2) rather than enumerate sites, which
+                                   is S6's job off the atlas.
+                                   (C) **THE RAW PATH HAS NEVER TOUCHED A LIVE GEMINI ANSWER** —
+                                   fixtures and a real step file only. Rec: the sweep's opening step
+                                   IS the probe (it asks nothing, so a failure costs a load, not an
+                                   answer); a free live probe first if the clipboard happens to be
+                                   up. Mandatory or opportunistic is his call.
+                                   (D) **66 INSTRUMENTS, NO VERSION HISTORY.** No `.git` in the
+                                   artifacts folder — and this is NOT the privacy question, which
+                                   is FINAL and not reopened. The consequence nobody ruled on: no
+                                   diff, no blame, no bisect on the files that decide what this
+                                   audit believes, while the last five rungs each turned on exactly
+                                   that question. Rec: widen the snapshot roster to cover `diag/`
+                                   now (~1, closes S5-Y's lead), a LOCAL-ONLY repo inside the
+                                   folder after the sweep. **Recommended AGAINST: moving
+                                   instruments into the repo** — it trades a settled safety
+                                   property for convenience.
+                                   (E) **IF THE CLIPBOARD STAYS DEAD, ALL 42 ANSWERS ARE LOSSY.**
+                                   Sound but measurably weaker. Rec: proceed per-answer as designed,
+                                   and the sweep's close must STATE the split (N raw / M lossy) so
+                                   the strength of the evidence is on the record, not inferred.
+  ⚠ THE CLIPBOARD CAME BACK ~14:15 .. after ~55 minutes down (7th occurrence spanned the whole of
+                                   S5-Z: capture selftest · preflight 4C · checkall §2 · a direct
+                                   probe at the close). It recovered on its own, as it has every
+                                   time. Still no owner, reads and writes both failing while down
+                                   → S11 family. Recorded here because "minutes at a time" is now
+                                   twice measured as "tens of minutes".
   ▶ NEXT SESSION ............... **S5 · THE SWEEP — RESUMED, its own session.** (S5-Z is ☑ DONE,
                                    the row above.) MODEL: Opus 5 · effort HIGH. **EXECUTION BUDGET:
                                    FRESH 30 corrected lakh, written by the ruler ~13:10** (the
@@ -5415,3 +5461,31 @@ sweep's own opening step, where A01 is fired again regardless.
   the row was in ▶ RESUME HERE, but §10-C had no S5-Z row at all. Written now. The general point
   is the one S5-Y raised: two places holding the same fact drift, and the router won the tie only
   because rule 1 says so.
+
+### ADDENDUM · 25 Aug 2026 ~14:15 IST — S5-Z's five escalations, and the clipboard came back
+
+`queue\2026-08-25_1410-s5z-1.md`, delivered to his clipboard and **asserted back at 14,466 of
+14,466 chars** — the ~13:10 clipboard law ("assert WHAT came back, never merely THAT something
+came back") applied to the hand-off that carries it. Summarised on the RESUME row above; five
+questions, none blocking the sweep, four of them patterns rather than incidents.
+
+The one worth restating here because it is about this ORDER and not about a rung: **four
+consecutive breaches are not four instances of variance.** S4 +21%, S5-R2 +180%, S5-Y +74%,
+S5-Z +54%. The ~12:25 remedy — a separate written PROOF line — was applied at S5-Z by the ruler,
+exactly as designed, and the rung still went 54% over. The overrun was not the build and not the
+proof: it was a live defect found by obeying the router, that defect's fix, its bite-proofs, and a
+bug inside this rung's own fix caught by a fixture. **A ceiling can only price what the ruler could
+see, and on this ladder the findings are the product.** Recommendation on the block: extend the
+ITEM-3 precedent by symmetry, with a hard admission test — a found defect opens its own named line
+only if it comes with a bite-proof. No reproduction, no line.
+
+**AND THE CLIPBOARD RECOVERED AT ~14:15**, after roughly 55 minutes continuously down — it spanned
+the whole of S5-Z (capture selftest, preflight 4C, checkall §2, and a direct `Set-Clipboard` probe
+at the close, all failing) and then worked first try. Second time it has been measured at tens of
+minutes rather than minutes. Still no owner; reads and writes both fail while it is down; it comes
+back by itself every time. S11 family, post-reboot, and nothing before S6 chases it.
+
+⚠ **The window is open right now for the free live capture probe (Q-C option A) and this session did
+NOT take it** — §10-D rule 2: the ceiling is a stop, and starting new work after a recorded breach
+is the exact habit the last four rungs are being criticised for. It is named here so the next
+session can take it in the first minute if the clipboard is still up.
