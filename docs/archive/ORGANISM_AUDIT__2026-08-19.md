@@ -1113,6 +1113,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                    firing"). Reads and file edits survived; PowerShell, Bash writes
                                    and even `node scripts/rails.mjs orders` did not. Default
                                    permission mode, or a fresh session.
+                                   ⚠ **IT BIT AGAIN AT ~05:25 — a session opened in AUTO and HALTED
+                                   HERE, before the browser, under 1 lakh spent** (PROGRESS
+                                   2026-08-26 ~05:25). The router caught it, which is the mechanism
+                                   working — but the CAUSE is this order's own §1 class: **the
+                                   version-3 card carries no mode line, so the requirement can only
+                                   be read AFTER the mode is already set.** Card v6 candidate filed
+                                   at `queue\2026-08-26_0525-cardmode-1.md` (ruler's act — card
+                                   versions are ruled, never executor-written). It does NOT block
+                                   B01_3. **The EXECUTION line is therefore still fresh at 35.**
                                    ✅ THAT COMMIT WAS MADE BY THE ARCHITECT ~04:15 (`bfd7f0d`,
                                    §3-C clean, pushed) — the hand-forward pattern worked first
                                    use. RULED ~04:15 (RULING__2026-08-26_0400-s5corpus-1.md),
@@ -6814,3 +6823,65 @@ rows, §10-D, `RULING__2026-08-26_0300-s5sweep-3.md`, `DO_THIS.md`, the executio
 `README_FOR_ANY_SESSION.md`, `diag/COUNT_PROBE_RESULT.md` and `steps/B01_1.txt`. Of the
 instruments: `wiring.json`'s B rows and both answer stamps — not `verify.mjs`, `capture.mjs`,
 `probecheck.mjs`, `buildsteps.mjs` or `mdrender.mjs`, none of which this rung touches.
+
+---
+
+### PROGRESS 2026-08-26 ~05:25 IST — S5 · THE RUNG WAS NOT OPENED. HALTED AT ITS MODE PRECONDITION, BEFORE ANY SPEND.
+
+**This session was started in AUTO permission mode. `RULING__2026-08-26_0400-s5corpus-1.md` Q3
+forbids exactly that, in words that are three hours old and ratified:** *"sweep sessions run in
+**DEFAULT permission mode, never auto mode**"*, and its closing line — *"Next session: default
+mode, Opus 5 · effort HIGH"*. The ▶ NEXT SESSION row carries the same warning with its reason (the
+~04:00 session lost its shell to a safety classifier mid-chat). **So B01_3 was not run, chat B01
+was not touched, and nothing was pasted into Gemini.**
+
+This is §10-D rule 13 applied to itself, not caution: proceeding would have been a departure from a
+written, ruled precondition of the rung, taken unilaterally, with an expensive failure mode — B01 is
+the one chat holding this rung's only real audit material, and a classifier firing mid-critic buys a
+paid turn with no capture and a second uncommitted record. The cost of obeying is one restart.
+
+**WHAT WAS DONE, all free and all read-only:** ▶ RESUME HERE, §10-C's S5 / S5-Z4 rows and §10-D read
+end to end · the ~04:15 ruling read at source, not off the summary · repo state confirmed (`707f1b2`,
+**ahead 0 — the ~04:00 record and the architect's hand-forward commit are both pushed**, so nothing
+was left dangling by the classifier session) · §3-C's real gate run: `node scripts/rails.mjs orders`
+→ **`open order clean`**, 5 order files checked, 7 leads all in closed records.
+
+#### THE ONE FINDING — AND IT IS THIS ORDER'S OWN §1 CLASS
+
+**The mode requirement cannot reach the person who sets the mode.** The version-3 card he pastes
+every session (top of this file, card v5) says nothing about permission mode; the requirement lives
+in the ▶ NEXT SESSION row and in the ruling — both of which a session can only read *after* the mode
+is already fixed and the conversation is already running. He pasted the card correctly and still
+landed in the forbidden mode, which is the definition of a control that does not reach its consumer:
+**§1's gate correction — "did it reach its RIGHT consumer" — committed inside the sweep's own
+operating rule.** Second time this class has cost a session start (once as the cause at ~04:00,
+once as the catch here).
+
+NOT FIXED HERE, and deliberately: card versions are ruled, never executor-written (v5 is stamped
+*"ruled 26 Aug ~01:30"*), and S5 builds nothing. Recorded as a card-v6 candidate — one line, e.g.
+*"Start this session in DEFAULT permission mode, not auto."* — in
+`queue\2026-08-26_0525-cardmode-1.md` for the next architect drain. **It is not a fork and it does
+not block: it needs no ruling before B01_3 runs.**
+
+#### WHAT IS UNTOUCHED, SAID PLAINLY
+
+Zero Gemini calls · zero pastes · chat B01 not opened · zero instruments edited · zero gates run that
+write (checkall/preflight deliberately NOT run — they belong to the session that actually drives the
+sweep, and this order's own law is that gates are re-run in the session that uses them, never
+inherited) · zero snapshots · zero haystack/expected bytes moved · `refilter2.mjs` not re-run ·
+no tick changed, because nothing became true.
+
+#### THE COST
+
+**Under 1 lakh** — five shell reads and this entry, against the 35-lakh EXECUTION line, which is
+therefore **still fresh at ~35 for the session that actually opens B01_3**. The 10-lakh HANDOFF line
+is likewise untouched.
+
+#### WHAT THE NEXT SESSION DOES
+
+**Exactly what the ▶ NEXT SESSION row already says — it is not stale and it was not re-written:
+S5 · the corpus half, RESUME AT B01_3, THEN B02. Opus 5 · effort HIGH, EXECUTION 35 + HANDOFF 10.
+DEFAULT permission mode.** Chat B01 (`gemini.google.com/app/680faea2165843fe`) is open and clean,
+two turns in; B01_3's hand-back list is 2026-07-22, 2026-07-23, 2026-07-18 (that last one the caught
+inflated receipt, claimed 18 / arrived 14). Probe the clipboard once at open — dead is expected and
+is not a blocker; the inbound route is the object-URL download.
