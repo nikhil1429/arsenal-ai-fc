@@ -784,11 +784,66 @@ STATUS (update this block before any session stops — this is the handoff)
                                    time. Still no owner, reads and writes both failing while down
                                    → S11 family. Recorded here because "minutes at a time" is now
                                    twice measured as "tens of minutes".
-  ▶ NEXT SESSION ............... **S5-Z2 · THE PRE-SWEEP STATE-GUARD — its §10-C row is the work
-                                   order** (RULED 25 Aug ~14:20, queue\RULING__2026-08-25_1410-
-                                   s5z-1.md; BUILD 3 · PROOF 3, both ruler-written). Opus 5 ·
-                                   effort HIGH, one small rung: the effect-gate ("running a gate
-                                   cannot change sweep state") + diag/ into the snapshot roster.
+  S5-Z2 THE STATE-GUARD ........ ☑ DONE 25 Aug 2026 ~18:25 IST · Opus 5 · effort HIGH · TIER-0,
+                                   ZERO Gemini calls, ZERO sweep questions. The live sweep's freeze
+                                   and both frozen input sets are BYTE-IDENTICAL at open and close,
+                                   proven by the harness's own hand-back check, not by assertion.
+                                   **Cost 15.02 lakh by an own-JSONL count (63 dedup rows, meter
+                                   weights) against the written BUILD 3 + PROOF 3 — BREACHED by
+                                   9.02. The day line moved 412.15 -> 432.35 (20.20), which
+                                   over-attributes: other sessions ran in the same window, and the
+                                   own-count is the honest number. The S1 live-read lead says today
+                                   reads ~+16% hot => ~12.9 true. FIFTH straight breach; ceiling NOT
+                                   re-derived (unit faults only, never variance) and NO line opened
+                                   by me — Q-A's line is the ruler's to write, and the one defect I
+                                   bite-proved was in this rung's own new code, not in a standing
+                                   gate.** Full account in the PROGRESS entry of 25 Aug ~18:25.
+                                   ☑ (1) THE EFFECT-GATE — checkall section 8. Sweep state is
+                                     fingerprinted before section 1 and again at EVERY section
+                                     boundary; a section that changes it goes RED **naming the
+                                     SECTION and every file**. 202 tracked files today: answers/
+                                     and .checkall.preserved/ by DIRECTORY SCAN (so a file that
+                                     APPEARS or VANISHES is as visible as one that changes),
+                                     inputs_frozen.json, both manifests, and every input the freeze
+                                     DECLARES — that last is the freeze's own set, not a new
+                                     subject, and it closes the hole the manifests alone leave: a
+                                     manifest stays byte-identical while the chunk it describes is
+                                     rewritten underneath it. ~0.6 s per pass, measured.
+                                   ☑ THE PROPERTY IS THE EFFECT, NOT THE TOUCH — and its witness is
+                                     the REAL mechanism, not a fixture: sections 3 and 4 write into
+                                     answers/ mid-section and put it back, and a clean run is GREEN.
+                                     The vacuous-truth hole is closed too — "nothing changed" only
+                                     counts as a proof if something actually WROTE, so the harness
+                                     asserts one of those two sections really ran.
+                                   ☑ (2) diag/ ENTERS THE SNAPSHOT ROSTER under the SAME extension
+                                     predicate as the root, not a new one — 66 -> 70 instruments,
+                                     71 with the new harness. S5-Y's measured hole is closed: the
+                                     three harnesses that CERTIFY this sweep's gates had no
+                                     restorable copy of any version. An independent recount off the
+                                     directory agrees with the roster exactly.
+                                   ☑ (3) 24/24 BITE-PROOFS, BOTH DIRECTIONS, IDEMPOTENT:
+                                     `node diag/proofs_s5z2.mjs`. A planted section-6 mutation turns
+                                     checkall RED naming the section and all four subjects · **THE
+                                     A01 SHAPE ITSELF** — an answer that existed is ABSENT after a
+                                     section ran, attributed to the section that deleted it · a
+                                     clean run GREEN · a new diag/ instrument caught (the roster is
+                                     derived) · an EDITED one caught as edited · restore REFUSES
+                                     over unsaved bytes, then rolls back sha256-identical.
+                                   ⚠ AND RUNNING IT TWICE FOUND A DEFECT IN THIS RUNG'S OWN PROOF:
+                                     the store is content-addressed, so a FIXED damage string is
+                                     stored by run 1 and run 2's identical plant is legitimately
+                                     "already restorable" — the gate goes green and the proof
+                                     silently stops proving. One run would never have shown it.
+                                     Fixed (unique damage per run) and the harness now removes the
+                                     two snapshots it creates, so it leaves no trap in the store.
+                                   ☑ checkall GREEN all 8 sections · preflight GO, both RUN IN THIS
+                                     SESSION, never inherited. Snapshots taken before every edit.
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — RESUMED. Its own session, and it needs NO
+                                   further word from anyone** (his GO of 25 Aug ~09:15 stands; the
+                                   architect's ruling of ~14:20 closed the last pre-condition when
+                                   S5-Z2 landed). The pre-sweep ladder is finished: S5-Z built the
+                                   raw capture path, S5-Z2 made "running a gate cannot change sweep
+                                   state" a gate of its own. Nothing else is owed before the browser.
                                    HIS STANDING RULING ~14:10, RECORDED: **the clipboard is
                                    RETIRED as a sync channel between sessions — the queue\
                                    directory IS the channel, both directions.** Executors write
@@ -803,13 +858,17 @@ STATUS (update this block before any session stops — this is the handoff)
                                    diag-into-roster now, local-git after the sweep, B REFUSED
                                    outright · Q-E = sweep proceeds either way, the close REPORTS
                                    the raw/lossy split (>50% lossy ⇒ flagged + a named S6 input).
-                                   **THEN S5 · THE SWEEP — RESUMED, its own session, no further
-                                   word from anyone.** MODEL: Opus 5 · effort HIGH. **EXECUTION BUDGET:
+                                   **THE SWEEP'S OWN LINE, restated here so nothing is looked
+                                   up.** MODEL: Opus 5 · effort HIGH. **EXECUTION BUDGET:
                                    FRESH 30 corrected lakh, written by the ruler ~13:10** (the
                                    22.29 bought the rendered-vs-raw trap class, the substitution
                                    discovery and a correct halt — spent, not wasted; no stub is
                                    inherited). Gates re-run IN YOUR OWN SESSION, never inherited:
                                    `node checkall.mjs` GREEN and `node preflight.mjs` GO.
+                                   **checkall is 8 sections since S5-Z2: section 8 RED means
+                                   something WROTE into sweep state during that very run, and it
+                                   names the section and the file. Treat it as an answer at risk,
+                                   never as noise — it is the gate that would have caught A01.**
                                    A clipboard warning in either is EXPECTED and is not a blocker
                                    (S5-Y); a red ANSWER PATH is. Read `diag\COUNT_PROBE_RESULT.md`
                                    BEFORE touching the browser — the transport traps are named
@@ -2385,7 +2444,7 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                                 (spent 24.69 combined — BREACHED by 8.69, measured
                                                 at the commit, recorded; ceiling NOT re-derived:
                                                 unit faults only, never variance)
-☐ S5-Z2 THE PRE-SWEEP STATE-GUARD — a micro-rung, RULED by the architect 25 Aug ~14:20
+☑ S5-Z2 THE PRE-SWEEP STATE-GUARD — DONE 25 Aug 2026 ~18:25. A micro-rung, RULED by the architect 25 Aug ~14:20
       (queue\RULING__2026-08-25_1410-s5z-1.md IS the work order; Q-B ruled C-then-B, Q-D ruled
       C-now). MODEL: Opus 5 · effort HIGH. SCOPE, tiny and closed: (1) the EFFECT-GATE inside
       checkall — answers/ + inputs_frozen.json + the frozen corpus/canon manifests must be
@@ -2396,9 +2455,33 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       directions (a mutating gate → RED naming the file; clean → GREEN; a diag file restorable
       from snapshot) · (4) checkall + preflight GREEN at close.
       FORBIDDEN: frozen corpus/canon bytes · any Gemini call · any sweep question · anything
-      beyond checkall.mjs / snapshot.mjs.        BUILD CEILING: 3 · PROOF LINE: 3
+      beyond checkall.mjs / snapshot.mjs — all four held; the proofs harness diag/proofs_s5z2.mjs
+      is this rung's PROOF line made re-runnable, the same standing as proofs_s5x/y/z.mjs.
+      WHAT LANDED: checkall section 8 fingerprints sweep state before section 1 and at EVERY
+      section boundary — 202 files today (answers/ and .checkall.preserved/ by directory scan, the
+      freeze, both manifests, and every input the freeze DECLARES) — and a section that changes it
+      goes RED naming the SECTION and the file. The property is the EFFECT, not the touch, so
+      sections 3 and 4's legitimate write-and-restore still passes, and that real mechanism (never
+      a fixture) is what proves the clean direction. diag/ joined the snapshot roster under the
+      SAME predicate as the root, closing S5-Y's measured hole: the three harnesses that certify
+      this sweep's gates had no restorable copy of any version.
+      DONE-PROOF: checkall GREEN all 8 sections + preflight GO, both run in-session · 24/24
+      bite-proofs both directions, IDEMPOTENT (`node diag/proofs_s5z2.mjs`), including the A01
+      shape itself — an answer that existed reported ABSENT against the section that deleted it.
+      ⚠ Running the harness TWICE found a defect in this rung's own proof: the store is
+      content-addressed, so a fixed damage string is stored by run 1 and run 2's identical plant
+      is legitimately "already restorable" — the gate goes green and the proof stops proving.
+      Fixed; the harness also removes the two snapshots it takes, so it leaves no trap behind.
+                                                 BUILD CEILING: 3 · PROOF LINE: 3
       (both written by the ruler at ruling time; a FINDINGS line opens per Q-A's law only on a
-      bite-proof). THEN THE SWEEP NEEDS NO FURTHER WORD FROM ANYONE.
+      bite-proof — and none was opened here: the one bite-proven defect was in this rung's OWN new
+      code, and an executor who opens its own line has no ceiling at all.)
+                                                 (spent 15.02 by an own-JSONL count with the
+                                                 meter's weights — BREACHED by 9.02, recorded, not
+                                                 patched around. The day line moved 20.20 and
+                                                 over-attributes: other sessions ran in the same
+                                                 window. Ceiling NOT re-derived: unit faults only.)
+      THEN THE SWEEP NEEDS NO FURTHER WORD FROM ANYONE.
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ⚠ STEP 0 ☑ DONE + PROVEN. THE SWEEP ITSELF IS PREPARED AND NOT RUN — zero Gemini calls
       sent. The preparation breached the ceiling (40 allowed, ~104 spent) and §10-D rule 2 was
@@ -5522,3 +5605,133 @@ back by itself every time. S11 family, post-reboot, and nothing before S6 chases
 NOT take it** — §10-D rule 2: the ceiling is a stop, and starting new work after a recorded breach
 is the exact habit the last four rungs are being criticised for. It is named here so the next
 session can take it in the first minute if the clipboard is still up.
+
+---
+
+### PROGRESS 2026-08-25 ~18:25 IST — RUNG S5-Z2 · THE PRE-SWEEP STATE-GUARD (executed)
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐ — they agreed today,
+because the ~14:20 ruling wrote its §10-C row in the same act, which is the law that ruling made
+after breaking it once). **Micro-order written to the session scratchpad BEFORE the first edit**
+(rule 9): files, steps, DONE-proof commands, the FORBIDDEN list, checked against §10-C and §10-D.
+Opus 5 · effort HIGH, as the row names. Work order: `queue\RULING__2026-08-25_1410-s5z-1.md`.
+
+**COST: 15.02 corrected lakh against a written BUILD 3 + PROOF 3 — BREACHED by 9.02, recorded, not
+patched around.** Two numbers, and the difference matters: the DAY LINE moved 412.15 → 432.35
+(20.20), but twenty of his sessions ran today and the window is shared, so an **own-JSONL count**
+was taken instead — this session's transcript, deduped by the meter's own `rowKey`, weighted by the
+meter's own `W`: 63 rows, **15.02 lakh**. The S1 live-read lead (today reads ~+16% hot) puts the
+true figure near **12.9**. Ceiling NOT re-derived — §10-C's rule is unit faults only, never
+variance. **Fifth straight breach**, and Q-A's new law does NOT get used to excuse it: the one
+bite-proven defect found here was in this rung's OWN new code, and an executor who can open its own
+budget line has no ceiling at all. The line, if there is one, is the ruler's to write.
+
+---
+
+#### WHAT LANDED — (1) THE EFFECT-GATE, checkall section 8
+
+The class, stated once: **an instrument that writes into the state it is checking.** The instance
+is on the record — at ~13:23 today checkall section 4 planted fixtures onto `answers/A01.txt` and
+unlinked them, so the gate the router REQUIRES before touching a browser destroyed the sweep's own
+paid-for answer, bypassing `capture.mjs` (the sole writer) so not even `.prev` fired. That instance
+was fixed inside section 4. His global-not-patch law says the class is the unit, and enumerating 66
+instruments' owners by hand is S6's atlas work — so **the class is caught by its EFFECT**, which is
+the only way to catch a site nobody predicted.
+
+Sweep state is fingerprinted before section 1 and again at **every section boundary**. A section
+that changes it turns checkall RED **naming the section and every file**, with the shas both ways.
+**202 files tracked today:**
+
+- `answers/` and `.checkall.preserved/` — **by directory scan, never by a list of names** (S3's
+  JUGAD RULE), so a file that APPEARS or VANISHES is exactly as visible as one that changes bytes.
+  The preserve directory is in the set because while it holds anything, a real answer is sitting
+  outside `answers/`.
+- `inputs_frozen.json` — present, absent, or changed.
+- `canon/manifest.json` + `corpus_live2/manifest_live2.json` — the declarations of the input set.
+- **every input the freeze DECLARES**, while a freeze exists. That is the freeze's own set, not a
+  new subject, and it closes the hole the manifests alone leave: **a manifest stays byte-identical
+  while the chunk it describes is rewritten underneath it.** Measured cost: 201 files, 35.4 MB,
+  ~0.6 s per pass — about 5 s across a run that already takes 62.
+
+**THE PROPERTY IS THE EFFECT, NOT THE TOUCH.** Sections 3 and 4 legitimately write into `answers/`
+mid-section and put it back; asserting "never opened for writing" would forbid the very mechanism
+that makes them safe, and a gate that forbids its own safe mechanism gets deleted by the next
+session in a hurry. So the comparison is at boundaries. **PER-SECTION and not merely end-to-end,
+because naming the site is the product** — end-to-end would have said "A01 is gone" and left a
+human to work out which of seven sections ate it, and a human working it out is the thing this rung
+exists to stop needing.
+
+#### (2) `diag/` ENTERS THE SNAPSHOT ROSTER
+
+S5-Y measured the hole by reading the store: `diag/` was neither matched by the roster predicate
+NOR declared in `NOT_AN_INSTRUMENT`, so it was a silent **third category** — a universal quantifier
+excluding a subject without declaring it, which is the jugad rule's own shape. The cost was real:
+`proofs_s5x.mjs`, `proofs_s5y.mjs` and `proofs_s5z.mjs` — the three harnesses that CERTIFY this
+sweep's gates — had **no restorable copy of any version**, in a folder with no git. It joins under
+the **same extension predicate as the root**, not a new one, so nothing here is excluded by a rule
+that does not already exist elsewhere: `.txt` inside `diag/` is captured Gemini output — data,
+exactly as a root `.txt` would be — and `prompts/*.txt` stays the one declared `.txt` lane.
+Roster 66 → 70, and 71 with this rung's own harness. The full declare-or-die flip stays post-sweep,
+as ruled at ~12:25.
+
+#### (3) 24/24 BITE-PROOFS — `node diag/proofs_s5z2.mjs`, both directions, IDEMPOTENT
+
+Every proof plants the defect, runs the REAL gate (never a copy of it), requires RED, restores, and
+requires GREEN again. The headline ones:
+
+| what is planted | what must happen |
+|---|---|
+| a section-6 mutation of four subjects at once | checkall RED, **naming the section**, 4 files at that one boundary |
+| a NEW answer appearing | caught: `answers/… ABSENT -> <sha>` |
+| a real answer stranded in `.checkall.preserved/` | caught by path, not by a generic match |
+| the FREEZE itself changing | caught |
+| a frozen input rewritten under its own manifest | caught — the subject the manifests alone miss |
+| **an answer that existed, deleted mid-run** | **caught as `<sha> -> ABSENT`, attributed to the section that deleted it — the A01 shape itself** |
+| nothing planted | GREEN, and **not vacuously**: the harness asserts a REAL section wrote into `answers/` and put it back in that same run |
+| a new `diag/` instrument | `snapshot check` RED by name — the roster really is derived |
+| an EDITED `diag/` instrument | caught as edited, not as missing |
+| a rollback while unsaved bytes exist | REFUSED — it cannot destroy work to undo work |
+| the rollback proper | sha256-identical to the original |
+
+**⚠ AND RUNNING IT TWICE FOUND A DEFECT IN THIS RUNG'S OWN PROOF.** The snapshot store is
+content-addressed, so a FIXED damage string is stored by run 1 — and run 2's identical plant is
+then legitimately "already restorable", the gate goes green, and the proof **silently stops
+proving anything**. One run would never have shown it; it is the same family as rounds 7–8's
+lesson (a check written in the same pass as the thing it checks agrees with its own mistakes).
+Fixed by making the damage unique per run, and the harness now removes the two snapshots it takes
+so it leaves no planted-damage restore target behind for a future session to trip over. Both runs
+after the fix: 24/24, and the store ends at 18 snapshots either way.
+
+Also tightened, before the harness was believed: two of my own assertions were weaker than their
+words — one regex would have matched almost any output, another named `.checkall.preserved/` while
+checking only a filename. The roster count is now an **independent recount off the directory**
+rather than a glance at the number `snapshot.mjs` printed.
+
+#### THE DONE-PROOF, run in this session, never inherited
+
+```
+node checkall.mjs      -> GREEN, 8 sections   (exit 0; section 8: 7 boundaries, 202 files each)
+node preflight.mjs     -> GO, 18 checks       (exit 0)
+node diag/proofs_s5z2.mjs -> 24/24, twice     (exit 0)
+node snapshot.mjs check -> all 71 instruments have a restorable copy
+```
+
+**FORBIDDEN held, all four:** zero Gemini calls · zero sweep questions · no frozen corpus/canon
+bytes changed (the harness's own hand-back check re-verifies `inputs_frozen.json`, the sampled
+frozen batch, both directory listings and the edited harness against how it found them) · nothing
+touched beyond `checkall.mjs`, `snapshot.mjs` and this rung's own proofs harness. Snapshots taken
+before every edit, per the standing rule.
+
+#### WHAT THIS RUNG DID NOT DO — said out loud, per §5
+
+- **Did not take the free live capture probe** (Q-C option A), even though the clipboard is UP
+  right now — preflight 4C passed without a warning at ~18:24. It is not this rung's scope, and
+  starting new work after a recorded breach is the exact habit the last four rungs are criticised
+  for. **The sweep session should test the clipboard once at open and, if it responds, take it in
+  the first minute.**
+- **Did not touch the {owner · consumer} class**, which Q-B routed to S6's registry. This gate
+  catches the effect; the registry is what will say who was ALLOWED to write.
+- **Did not re-capture A01.** It rides the sweep's opening step, chat `0890cd7ebfcd1ff6`.
+
+**NEXT: S5 · THE SWEEP — RESUMED. Opus 5 · effort HIGH. FRESH 30 corrected lakh.** No further word
+from anyone: his GO of ~09:15 stands and the last pre-condition closed here.
