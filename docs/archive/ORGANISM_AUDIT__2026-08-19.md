@@ -500,8 +500,11 @@ STATUS (update this block before any session stops — this is the handoff)
                                    (OPTION A ratified). Full account in the PROGRESS entry of
                                    25 Aug ~12:05 — read that, not this summary.
                                    ⚠ **CEILING BREACHED AND RECORDED, NOT PATCHED AROUND: 8
-                                   written, ~10.6 measured at the commit (the S1 live-read lead
-                                   says today reads ~+16% hot ⇒ ~9.2 true).** Ceiling NOT
+                                   written, 13.95 MEASURED AT THE COMMIT — day line 290.91 →
+                                   304.86 (the S1 live-read lead says today reads ~+16% hot ⇒
+                                   ~12.0 true). Read from the meter at the commit, never
+                                   estimated mid-flight: the first draft of this row said ~10.6
+                                   and the meter said otherwise — S5-X's precedent, applied.** Ceiling NOT
                                    re-derived — unit faults only, and this was normal variance on
                                    a rung whose 8 was an estimate plus margin. The scope work
                                    itself is COMPLETE; nothing was cut to fit and nothing new was
@@ -2083,7 +2086,7 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       RECORDED and left for its owner, §10-D rule 10, not patched from inside this rung.
       DONE-PROOF: checkall GREEN all 7 sections + preflight GO, both run in-session, WITH the
       clipboard dead at the time — which is the proof the re-aim is real.        CEILING: 8
-                                                                       (spent ~10.6 — BREACHED,
+                                                                      (spent 13.95 — BREACHED,
                                                        recorded, ceiling NOT re-derived: §10-C's
                                                        rule says unit faults only, never variance)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
@@ -4817,8 +4820,12 @@ this rung had no authority to make it. Left for its owner with the measurement a
 
 #### ⚠ THE CEILING WAS BREACHED — RECORDED, NOT PATCHED AROUND
 
-**8 written · ~10.6 measured at the commit** (day line 290.91 → ~301.5+; the S1 live-read lead says
-today's figure reads ~+16% hot, so the true number is nearer **~9.2**). Over either way.
+**8 written · 13.95 measured AT THE COMMIT** — day line **290.91 → 304.86**; the S1 live-read lead
+says today's figure reads ~+16% hot, so the true number is nearer **~12.0**. Over either way, and
+over by more than the mid-flight estimate said: this entry first carried **~10.6**, taken from a
+meter read while the last proofs were still running, and the meter at the commit said otherwise.
+Corrected here rather than left standing — S5-X's own precedent, and the reason the rule is
+"read it AT the commit": a cost estimated from a run in progress is always the low one.
 **Ceiling NOT re-derived** — §10-C's rule is explicit that ceilings move only when the meter's UNIT
 is proven faulty, never on variance, and this was variance on a rung whose 8 was "the ~5 estimate +
 gate re-runs + margin". Where it went is not mysterious and is worth recording so the next estimate
