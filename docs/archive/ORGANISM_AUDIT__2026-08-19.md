@@ -1643,7 +1643,152 @@ STATUS (update this block before any session stops — this is the handoff)
                                    NAMED for S6 beside A02's ~48% signature, **architect miss #10
                                    owned** (the 0855 contract encoded only the passing shape), and
                                    all three transport facts become STANDING NOTES.
-  ▶ NEXT SESSION ............... **S5 · B06, RE-OPENED AS A FRESH CHAT — THE SITTING'S FIRST ACT.**
+  S5 · B06 REBORN — PROBE      ◐ 26 Aug 2026 ~13:10 · **OPTION A WAS RIGHT AND THE CEILING QUESTION
+     PASSED, EXTRACTION ECHOED    IS CLOSED: the fresh chat's probe PASSED VERBATIM 2/2, so the
+                                   first B06 was VARIANCE, not a ten-file ceiling.** New chat
+                                   `gemini.google.com/app/f902f4c0dc244efc`; the failed
+                                   `e133eba84683ae63` was NEVER re-asked and stays the record.
+                                   Full account in the PROGRESS entry of 26 Aug ~13:10.
+                                   ☑ `checkall` 8/8 · `preflight` GO. ⚠ **THE CLIPBOARD IS DEAD FOR
+                                     THE 11th TIME** — advisory only, and the point is that it is
+                                     now off BOTH the outbound path (file-input branch) and the
+                                     answer path (blob). The design took the hit for us.
+                                   ☑ Pro Extended before the attach · account 1 · **10/10 by name
+                                     off `innerHTML`, and 10/10 again on EACH sent turn.**
+                                   ☑ **B06_1 four hops:** `6fb98e5c202d5289` disk == in-page == box
+                                     (105 blocks, `composed === source`) == SENT (104 lines,
+                                     `firstStrippedMismatch = -1`).
+                                   ☑ **`probecheck B06_1` → PASS · VERBATIM, exit 0** — both anchors
+                                     byte-strict (tail `live2_batch60.txt:1286` · middle
+                                     `live2_batch56.txt:1607`) and **all 12 ground-truth `===== `
+                                     headers, against 7 the first time.**
+                                   ☑ **CAPTURED, BLOB-GATE PASSED** — transit `0feb0691d3038858`
+                                     in-page == on-disk (912 B) · identity 2 fences for 2 anchors.
+                                     `answers/B06_1.txt`, 908 chars.
+                                   ☑ **B06_2 four hops:** `fa86d296b4ee16a6` disk == in-page == box
+                                     (124 blocks) == SENT (**123 lines, mismatch −1**). The
+                                     extraction prompt reached the model WHOLE — not in doubt.
+                                   ⛔ **B06_2's ANSWER IS B06_1's ANSWER, BYTE-FOR-BYTE** — the
+                                     extraction turn's Copy blob sha'd IN-PAGE to
+                                     **`0feb0691d3038858`**, the identical sha already on disk. 908
+                                     chars, no JSON, no `missing_implementation` key, the same
+                                     12-header list and the same two fences. Two independent
+                                     witnesses (DOM textContent · `get_page_text`) and **it survived
+                                     TWO FULL RELOADS**, so it is server-side, not a render stall.
+                                   ⛔ **NOT the pre-authorized shape** (item 2 fires on a RETRIEVAL
+                                     miss; retrieval is what did NOT fail), and the standing *"do
+                                     not re-ask"* sentence's own stated reason — a dead context — is
+                                     refuted here by a passing probe. **Not read in my own favour.**
+                                   ✔ **NOTHING captured for B06_2, NO download spent, NO false
+                                     stamp** — identity measured in-page against the sha already on
+                                     disk. `capture.mjs` would have refused it anyway.
+                                   ⚠ ~18.1 of the 35-lakh EXECUTION line (day 578.55 → 596.66).
+                                     INSIDE, ~17 left. Records ride HANDOFF 13.
+  ⚡ THE BIG TRANSPORT FINDING . **THE PAINT-FORCING SCREENSHOT DOES NOT JUST PAINT — IT COMMITS THE
+                                   SEND.** A JS `.click()` on Send did **nothing, three times
+                                   running**: no chat id, `user-query` 0, box still holding 105
+                                   blocks, 10 chips still attached, Send enabled, **no console
+                                   error**. The SAME click **followed immediately by a CDP
+                                   screenshot committed the turn** — and again for B06_2. In a
+                                   throttled tab the handler runs but the state change never commits
+                                   until a frame is produced.
+                                   ⛔ **THE FOCUS THEORY IS DEAD BEFORE IT WAS EVER WRITTEN IN:**
+                                   `document.hasFocus()` was FALSE on every one of those sends,
+                                   **including the two that succeeded.**
+                                   ⚑ **AND IT RE-READS THE ~11:20 HALT** — *"both sends failed to
+                                   commit"* is very likely THIS, not occlusion and not a dead
+                                   renderer. The 1125 physical act was right on what was known then
+                                   and is not needed now.
+  ✔ RULED + EXECUTED IN THE     `RULING__2026-08-26_1315-s5corpus-12.md` (8th direct-channel use;
+     SAME SITTING                the ruler re-hashed `answers/B06_1.txt` to `0feb0691d3038858`
+                                   fresh before ruling). **A RATIFIED — B06_2 re-sent EXACTLY ONCE,
+                                   identical step file, full outbound law + the amended send law.**
+                                   ☑ **NO SECOND ECHO. THE REAL EXTRACTION CAME BACK** — 21,798
+                                     chars, in-page sha **`c4b4c430d62be103`**, parseable JSON with
+                                     `missing_implementation`, closing validly on
+                                     `"coverage_note":""}`. **The echo was a one-off generation
+                                     artifact and the 2-of-2 branch never fired.**
+                                   ☑ Render stall on the way, **reload recovered it free — SEVENTH
+                                     confirmation**; the answer was never re-asked.
+                                   ⛔ **THE CAPTURE IS BLOCKED — the page→disk delivery FAILED TWICE
+                                     (plain `a.click()` and a dispatched `MouseEvent`).**
+                                   ⚑ **AND THAT CONFIRMS THE ONE-SHOT RULE INSTEAD OF SOFTENING IT.
+                                     Measured: 11:58 OK (previous browser session) · 12:24 OK (this
+                                     one) · 13:5x REFUSED ×2 (this one). ONE PER BROWSER SESSION,
+                                     exactly as written.** The earlier success was a NEW browser
+                                     session, not a counter-example — filing it as "one
+                                     observation, the rule stands" was the right call.
+                                   ✔ **NOTHING IS LOST AND NOTHING IS OWED TO GEMINI.** The
+                                     extraction is complete and persisted server-side in the OPEN
+                                     chat `f902f4c0dc244efc`, its in-page sha is on record, and the
+                                     ten inputs are frozen. **`answers/` holds ONE new file (B06_1)
+                                     and NO false stamp for B06_2.**
+                                   ⚠ 28.85 of the 35-lakh EXECUTION line (day 578.55 → 607.40).
+                                     INSIDE. Records ride HANDOFF 13.
+  ▶ NEXT SESSION ............... ⛔ **HIS ONE PHYSICAL ACT, AND IT IS THE CHEAPEST ONE YET: CLOSE
+                                   CHROME COMPLETELY AND REOPEN IT** before the sitting. That resets
+                                   the one-shot download budget, which is the ONLY thing standing
+                                   between us and B06's close. It is HIS act by design — browsers
+                                   are tier "read" and `open_application` is a standing negative.
+                                   **① FIRST ACT — FINISH B06, AND IT COSTS ZERO GEMINI TOKENS.**
+                                   Open `gemini.google.com/app/f902f4c0dc244efc`, JS-click the LAST
+                                   answer's Copy, read the `ClipboardItem` Blob in the SAME call,
+                                   sha it IN-PAGE — **it must be `c4b4c430d62be103`, 21,798 chars**
+                                   — deliver page→disk, then
+                                   `node capture.mjs save B06_2 --from-blob <file> --blob-sha <hex>`,
+                                   then `node verify.mjs` (record the false-drop AND de-escape
+                                   counts). **DO NOT RE-ASK ANYTHING IN THAT CHAT** — B06_1 PASSED
+                                   and is captured, B06_2's answer already exists. This is pure
+                                   transport. **If the download is blocked again even after a fresh
+                                   browser: halt B06's capture only, record, and go to ② — never an
+                                   open wait.**
+                                   **② THEN B07** — a fresh Pro-Extended chat, ten attachments
+                                   `live2_batch61-70`, `steps/B07_1.txt` then `steps/B07_2.txt`.
+                                   **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
+                                   ✔ **THE TEN-FILE CEILING QUESTION IS CLOSED** — B06's fresh probe
+                                   passed VERBATIM 2/2 with all 12 headers, so the first B06 was
+                                   VARIANCE. The B-split is NOT needed and ruling 1205 item 2's
+                                   failure branch never fired.
+                                   ✔ **NO-RE-ASK, NARROWED IN WRITING (ruling 1315 item 3):** the ban
+                                   binds a SUSPECT-CONTEXT chat (failed probe). **A passed-probe chat
+                                   with a server-side non-answer gets ONE identical re-send,
+                                   recorded — never a third.**
+                                   ✔ **THE ON-DEMAND LEDGER EXISTS NOW (item 2):** a step that dies
+                                   twice does not block the sweep — chat open, batches frozen, fired
+                                   later on demand, the retro-critic pattern. B06_2 did NOT need it.
+                                   ✔ **THE TEN-FILE CEILING QUESTION IS CLOSED — B06's fresh probe
+                                   passed 2/2 with all 12 headers. The B-split is NOT needed and
+                                   ruling 1205 item 2's failure branch never fired.**
+                                   ⚡ **STANDING, AND USE IT ON EVERY SEND FROM NOW ON: `click` +
+                                   a forced CDP paint IN THE SAME BATCH.** Three sends were lost to
+                                   its absence in this sitting alone, and two more at ~11:20.
+                                   ⚠ **THE RENDERER'S PAD CHARACTER IS NOT STABLE** — plain spaces
+                                   one sitting, **nbsp** the next. The documented single-leading /
+                                   single-trailing strip covers both and the sha matched exactly,
+                                   **but a session that hard-codes only `" "` reads a FALSE
+                                   mismatch.** Strip both, always.
+                                   ⚠ **`Page.captureScreenshot` timed out ONCE while
+                                   `Runtime.evaluate` kept answering instantly, and the very next
+                                   screenshot returned** — *"the renderer may be frozen"* is a
+                                   SCREENSHOT-PATH signal, transient, **not proof the renderer is
+                                   dead.** Retry it before calling a halt.
+                                   ✔ **THE ONE-SHOT DOWNLOAD RULE IS CONFIRMED — ONE PER BROWSER
+                                   SESSION.** Measured end to end this sitting: 11:58 OK (previous
+                                   browser session) · 12:24 OK (this one) · 13:5x **REFUSED twice**
+                                   (this one). Mid-sitting I filed the 12:24 success as "one
+                                   observation, the rule stands" rather than rewriting the law off
+                                   it — and that hedge was right. **Budget your ONE download per
+                                   browser session and spend it on the RAW payload.**
+                                   ⛔ **MY MISS, OWNED — AND NOW A STANDING NEGATIVE (ruling 1315
+                                   item 6): NO ENVIRONMENT SURGERY AS A PROBE. Measure, never
+                                   mutate his tabs or windows.** Closing the other MCP tab to force
+                                   tab-selection **dissolved the session's tab group**. The chat
+                                   survived (server-side) and the staged tab kept working, but the
+                                   theory it was testing was wrong anyway.
+                                   **B01–B05 CLOSED, 5 of 18.** The critic is not fired (the ~07:50
+                                   ruling); every chat stays OPEN.
+  ▶ SUPERSEDED ROUTER (26 Aug ~12:05, kept for the archaeology — option A was taken and it WORKED):
+                                 **S5 · B06, RE-OPENED AS A FRESH CHAT — THE SITTING'S FIRST ACT.**
                                    A NEW Pro-Extended chat, the SAME ten attachments
                                    `live2_batch51-60`, `steps/B06_1.txt` (load + probe). **This is a
                                    first run in a new context, NEVER a re-ask in the failed chat** —
@@ -9285,3 +9430,172 @@ HANDOFF line.
 untouched · `answers/` unchanged · ONE paid Gemini turn, and it is on disk with its transit proven.**
 
 **B01-B05 remain CLOSED — 5 of 18. B06 is OPEN, loaded, and HALTED on its own probe.**
+
+---
+
+### PROGRESS 2026-08-26 ~13:10 IST — S5 · B06 REBORN, ITS PROBE PASSED VERBATIM — AND B06_2 RETURNED THE PROBE ANSWER BYTE-FOR-BYTE
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — S5's corpus sweep,
+**B06 re-opened as a FRESH chat**, one rung, nothing else. Micro-order written to the session
+scratchpad before any edit and checked against §10-C/§10-D (rule 9).
+
+**THE RULING'S OPTION A WAS RIGHT, AND THAT IS THE HEADLINE.** New chat
+`gemini.google.com/app/f902f4c0dc244efc`, the SAME ten files, and the probe came back
+**PASS · VERBATIM 2/2** — `probecheck B06_1` exit 0, both anchors byte-strict (tail
+`live2_batch60.txt:1286` · middle `live2_batch56.txt:1607`), and **all 12 ground-truth `===== `
+headers reported against 7 the first time.** So the first B06 was **VARIANCE, not a ceiling**:
+the ten-file shape stands, the B-split is not needed, and no third-attempt question arises. The
+failed chat `e133eba84683ae63` was never re-asked and remains the record.
+
+#### WHAT WAS GREEN
+
+- `checkall` **8/8**, `preflight` **GO** — two warnings, both recorded: the expected resume
+  `answers/`-holds-15, and **THE CLIPBOARD IS DEAD FOR THE 11th TIME** (`Set-Clipboard` refused at
+  preflight). Advisory only: the clipboard is off the outbound path (file-input branch) AND off the
+  answer path (blob), so the sitting was never exposed to it. That is the design working.
+- Pro Extended read BEFORE the attach · account 1 · **10/10 attachments by name off `innerHTML`,
+  and 10/10 again on EACH sent turn.**
+- **B06_1 outbound, four hops:** disk `6fb98e5c202d5289` == in-page == box (105 blocks, 6,738
+  chars, `composed === source`) == SENT turn (104 lines, `firstStrippedMismatch = -1`).
+- **B06_1 captured on the blob path, BLOB-GATE PASSED** — transit sha `0feb0691d3038858` in-page ==
+  on-disk (912 B), identity: 2 fenced blocks for 2 anchors. `answers/B06_1.txt`, 908 chars.
+- **B06_2 outbound, four hops:** disk `fa86d296b4ee16a6` == in-page == box (124 blocks, 9,030
+  chars, `composed === source`) == SENT turn (**123 lines, `firstStrippedMismatch = -1`**).
+  **The extraction prompt reached the model WHOLE. That is not in doubt.**
+
+#### THE FAILURE — A NEW SHAPE, AND IT IS NOT RETRIEVAL
+
+**B06_2's answer is B06_1's answer, character for character.** The extraction turn's Copy blob
+sha'd IN-PAGE to **`0feb0691d3038858`** — the identical sha already on disk from B06_1 — 908 chars,
+no `missing_implementation` key, no JSON at all, the same 12-header list and the same two anchor
+fences. Two independent witnesses agree: the DOM (`model-response` textContent identical in both
+conversation containers) and `get_page_text` (the rendered page). **It survived two full reloads**,
+so it is server-side state, not a render stall and not a virtualisation artifact.
+
+**Nothing was captured into `answers/` for B06_2 and NO DOWNLOAD WAS SPENT** — the identity was
+measured in-page against the sha already on disk. `capture.mjs` would have refused it anyway
+(the extraction shape assert wants the JSON skeleton's top-level keys). **The gate works and I did
+not spend the one-shot to prove it.**
+
+**Why this is not the pre-authorized branch:** ruling 1205 item 2 fires on *"any retrieval miss"*.
+Retrieval is exactly what did NOT fail here. And the standing *"do not re-ask"* sentence lives in
+`FALLBACK_canon_split.txt`, whose own stated reason is *"A failed probe means the attachment did
+not fully reach the model — so the one-context premise is dead for that chat."* **A passing probe
+refutes that premise here.** Rather than read the sentence in my own favour, I stopped.
+
+#### ⚡ THE BIG TRANSPORT FINDING — THE PAINT-FORCING SCREENSHOT COMMITS THE SEND
+
+A JS `.click()` on Send **did nothing, three times running**: no chat id, `user-query` 0, the box
+still holding all 105 blocks, all 10 chips still attached, the Send button visible and enabled, and
+**no console error**. The *same* click **followed immediately by a CDP screenshot committed the
+turn** — and it did it again for B06_2. In a throttled tab the click's handler runs, but the app's
+state change never commits until a frame is produced.
+
+⛔ **THIS RETIRES THE FOCUS THEORY BEFORE IT WAS EVER WRITTEN IN.** `document.hasFocus()` was
+**FALSE for every one of those sends, including the two that succeeded.** It also re-reads the
+~11:20 halt: *"both sends failed to commit"* is very likely THIS, not occlusion and not a dead
+renderer — which would make the physical act ruled at 1125 unnecessary in hindsight, though the
+ruling was right on what was known then.
+**Standing law proposed at the escalation: every send is `click` + a forced paint, in the SAME batch.**
+
+**THREE SMALLER FACTS, all measured here:**
+1. **The renderer's pad character is NOT STABLE** — plain spaces last sitting, **nbsp** this one.
+   The documented single-leading/single-trailing strip covers both and the sha matched exactly, but
+   **a session that hard-codes only `" "` will read a false mismatch.**
+2. **`Page.captureScreenshot` timed out ONCE mid-sitting while `Runtime.evaluate` kept answering
+   instantly, and the very next screenshot returned.** So *"the renderer may be frozen"* is a
+   SCREENSHOT-PATH signal, transient, and not proof the renderer is dead.
+3. Recorded as DATA, not as a new law: **a second page→disk download succeeded in the same browser
+   session.** One observation. The one-shot rule stands until someone measures it properly — the
+   clipboard is the standing lesson on concluding off two readings.
+
+#### MY OWN MISS, OWNED
+
+Chasing the focus theory I closed the other MCP tab to force tab-selection. That **dissolved the
+session's tab group** and closed the tab viewing the failed chat. The chat itself is untouched and
+permanent (`e133eba84683ae63`, in Recents) so the record survives, and the staged tab kept working
+— but **tab surgery as a probe was careless, and the theory it was testing was wrong anyway.**
+Recorded, not excused.
+
+#### ESCALATED, NOT IMPROVISED
+
+**`queue\2026-08-26_1310-s5corpus-12.md`** — direct channel, `arsenal-ai-fc-e8` confirmed live by
+`ListAgents` before messaging. Options A–D costed. **Recommendation A: re-ask B06_2 ONCE in this
+chat**, because the ban on re-asking exists for a dead context and this context is proven alive; if
+it echoes again that is a measured 2-of-2 and the right move is C — file the echo for S6 as a
+**model-behaviour** finding, never as a retrieval ceiling. Also asked: should *"do not re-ask"* be
+narrowed IN WRITING to a failed probe, since its own stated reason already limits it there.
+
+#### THE NUMBERS
+
+**~18.1 of the 35-lakh EXECUTION line** — day line **578.55 → 596.66**, read from
+`session_meter.mjs status 1`, not estimated. **INSIDE**, ~17 left at the halt. Records ride the
+13-lakh HANDOFF line.
+
+**Zero instruments edited · zero gates weakened · zero verdicts self-passed · frozen inputs
+untouched · `answers/` holds exactly ONE new file (B06_1) and no false stamp · one download spent ·
+two paid Gemini turns, one of them a PASS on disk.**
+
+**B01–B05 CLOSED, 5 of 18. B06 is OPEN with its probe PASSED and its extraction owed.**
+
+#### THE RULING CAME BACK IN THE SAME SITTING, AND THE RE-SEND WORKED
+
+**`queue\RULING__2026-08-26_1315-s5corpus-12.md`, 8th direct-channel use** — and again the ruler
+**verified by running first**: `answers/B06_1.txt` re-hashed to `0feb0691d3038858` fresh, so the
+echo claim was checked, not taken. Recorded verbatim:
+
+> RULED — queue\RULING__2026-08-26_1315-s5corpus-12.md (file = record). Verified: answers/B06_1.txt hashes to 0feb0691d3038858 fresh — the echo claim holds.
+>
+> (1) A RATIFIED: re-send B06_2 EXACTLY ONCE, same chat, identical step file, full outbound law — and USE THE AMENDED SEND LAW (below). (2) PRE-AUTHORIZED: second echo = STOP at 2-of-2, file as S6 model-behaviour finding, B06_2 extraction joins the ON-DEMAND ledger (chat open, batches frozen, fired later only on demand — retro-critic pattern); close the sitting either way after. (3) NO-RE-ASK NARROWED IN WRITING: binds suspect-context chats (failed probe); a passed-probe chat with a server-side non-answer gets ONE identical re-send, recorded; never a third. (4) SEND LAW AMENDED STANDING: every send = JS click + forced CDP screenshot in the SAME batch; focus theory dead; the ~11:20 occlusion attribution DOWNGRADED to unconfirmed — both measurements stand as data; the pre-attach gate stays. (5) Pad-char note standing (strip covers space+nbsp, no hard-coded literal). (6) Your tab-surgery miss recorded + standing negative: no environment surgery as a probe — measure, never mutate his tabs/windows.
+>
+> Fold 3-6 to the router at close. B07 next sitting on 35+13.
+
+**EXECUTED: B06_2 re-sent ONCE, identical step file, full outbound law.** Four hops again —
+`fa86d296b4ee16a6` disk == in-page == box (124 blocks, `composed === source`) == SENT turn
+(123 lines, `firstStrippedMismatch = -1`). **The amended send law worked first try, third
+confirmation in one sitting.**
+
+⛔ **NO SECOND ECHO — THE RE-SEND PRODUCED THE REAL EXTRACTION.** 21,798 chars, in-page sha
+**`c4b4c430d62be103`** (≠ the echo's `0feb0691d3038858`), a parseable JSON body carrying
+`missing_implementation` and ending validly on `"coverage_note":""}`. **So the echo was a one-off
+generation artifact, and the 2-of-2 branch never fired.** The render stall hit again on the way
+(textContent frozen at 21,801 with the stop button live) and **a reload recovered it free —
+SEVENTH confirmation; the answer was never re-asked.**
+
+#### ⛔ AND THEN THE CAPTURE WAS BLOCKED — THE ONE-SHOT DOWNLOAD RULE IS NOW CONFIRMED, NOT SOFTENED
+
+The page→disk delivery of B06_2 **failed twice** (a plain `a.click()` and a dispatched
+`MouseEvent`); nothing reached `Downloads`. **This CORRECTS the note I filed at the escalation an
+hour ago.** The sequence, measured:
+
+| download | when | result |
+|---|---|---|
+| `B06_1_raw.txt` | 11:58, previous browser session | OK |
+| `B06_1_raw_v2.txt` | 12:24, THIS browser session | OK |
+| `B06_2_raw.txt` ×2 | 13:5x, THIS browser session | **REFUSED, twice** |
+
+**One per BROWSER SESSION — exactly as the standing rule says.** The earlier success was a new
+browser session, not a counter-example, and I was right to file it as one observation rather than
+rewrite the law off it. It is now measured properly and the law stands, strengthened.
+
+**The pre-authorized remedy is a browser RESTART — and that is HIS act, not mine** (browsers are
+tier "read"; `open_application` is a standing negative that spawns a second Chrome). Per the
+router's own words the alternative is *"halt THAT chat only, record, move on. Never an open wait."*
+
+**NOTHING IS LOST AND NOTHING IS OWED TO GEMINI.** The extraction is complete and persisted
+server-side in an OPEN chat (`f902f4c0dc244efc`), its in-page sha is recorded here, and the ten
+input batches are frozen. **The capture is a pure transport step that costs ZERO Gemini tokens
+next sitting** — one Copy, one download, one `capture.mjs save B06_2 --from-blob`.
+**`answers/` holds exactly one new file (B06_1) and NO false stamp for B06_2.**
+
+#### THE NUMBERS, FINAL
+
+**28.85 of the 35-lakh EXECUTION line** — day line **578.55 → 607.40**, read from
+`session_meter.mjs status 1`. **INSIDE.** Records ride the 13-lakh HANDOFF line.
+
+**Zero instruments edited · zero gates weakened · zero verdicts self-passed · frozen inputs
+untouched · one download spent · THREE paid Gemini turns, two of them good (a PASS on disk and a
+complete extraction awaiting transport), one echo.**
+
+**B01–B05 CLOSED, 5 of 18. B06 is OPEN: probe PASSED and captured, extraction PRODUCED and
+awaiting one free transport step.**
