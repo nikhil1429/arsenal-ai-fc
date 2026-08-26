@@ -1294,14 +1294,143 @@ STATUS (update this block before any session stops — this is the handoff)
                                      meter weights, read AT the close) — INSIDE. B04 needs a whole chat
                                      and would have breached mid-chat, so this sitting STOPPED (§10-D
                                      rule 2). Records ride the 10-lakh HANDOFF line.
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — CORPUS HALF RUNNING. RESUME AT B04_1, A FRESH
-                                   CHAT.** B01, B02 and B03 are all CLOSED — **3 of 18 corpus chats
-                                   complete.** Nothing is owed in any of their chats. B03's chat stays
-                                   OPEN by ruling (retro-critic on demand); do not re-open it to work.
-                                   The next act is a NEW Pro-Extended chat, ten attachments
-                                   `live2_batch31-40` (`node buildsteps.mjs` ends with the full
-                                   attachment map), `steps/B04_1.txt` to load + probe,
-                                   then `steps/B04_2.txt` — and THEN STOP: the critic step is not fired (ruling below).
+  S5 CORPUS · B04 HALTED ...... ◐ 26 Aug 2026 ~09:00 IST · Opus 5 · effort HIGH · AUTO mode, fourth
+                                   clean session with no classifier event. **B04_1 IS CLOSED AND PASSED.
+                                   B04_2's ANSWER IS COMPLETE, BYTE-VERIFIED AND ON DISK — AND NOT
+                                   CAPTURED.** Full account in the PROGRESS entry of 26 Aug ~09:00.
+                                   ☑ gates RUN IN THIS SESSION: checkall RED at open on section 7 for the
+                                     **FOURTH consecutive open**, the same condition every time (the previous
+                                     sitting's verify.mjs run leaves coverage.json/dropped.json with no
+                                     restorable copy) — closed by the gate's own remedy `snapshot.mjs take`,
+                                     then GREEN all 8 · preflight GO, 18 checks. Clipboard ALIVE at open.
+                                   ☑ B04_1 into a fresh Pro-Extended chat
+                                     (`gemini.google.com/app/227096fc78a39e96`, nikhil.panwar2914), 10/10
+                                     chips `live2_batch31-40` by name; **four-hop outbound MATCHED**
+                                     (`d4536a1a9b5caf57` at clip / in-page / box / SENT-turn, pad delta
+                                     exactly 166 = 83 non-empty × 2, trailing newline restored).
+                                   ☑ captured RAW (copy-gate PASSED 13/13, fenced yes) and
+                                     **`probecheck B04_1` = PASS · VERBATIM 2/2, tail AND middle** — the
+                                     FOURTH independent receipt for the ten-attachment shape.
+                                   ☑ B04_2 fired, four-hop outbound MATCHED again (`adbad9a2d355c69e`, pad
+                                     delta 216 = 108 × 2). The answer returned COMPLETE: 23,215 chars, JSON
+                                     parses, 44 items (missing_implementation 12 · rulings 6 · decisions 6 ·
+                                     alternatives_rejected 8 · promises 8 · supersessions 4). On disk at
+                                     `diag\B04_2_raw.txt`, sha256/16 `8d089bd0333667b4` — **identical to
+                                     the sha computed IN-PAGE before it ever left the browser.**
+                                   ⛔ **THE COPY-GATE CANNOT BE FED, AND BOTH TRANSPORTS DIED AT ONCE.**
+                                     `capture.mjs --from-file` requires `--rendered <path>`, an INDEPENDENT
+                                     rendered read ON DISK. **(a) the clipboard died mid-chat — 10th
+                                     occurrence**, `ExternalException` in both directions, and the bounded
+                                     retry the 0805 ruling allows measured **24/24 dead over 60 s**.
+                                     **(b) NEW AND MEASURED: the page→disk download route is ONE-SHOT PER
+                                     ORIGIN per browser session.** The first Blob download landed — that is
+                                     how the raw payload reached disk — and every later one is blocked by
+                                     Chrome's automatic-downloads policy, whose permission lives in the
+                                     omnibox chip: browser chrome, unreachable at computer-use tier "read".
+                                     Five attempts, all silent no-ops, including a `<button>` whose own
+                                     handler creates and clicks the anchor SYNCHRONOUSLY, and the whole
+                                     thing again after a full page reload.
+                                   ⛔ **ROOT CAUSE, AND IT IS BIGGER THAN DOWNLOADS:
+                                     `navigator.userActivation.isActive` is FALSE immediately after an
+                                     extension `computer left_click` (`hasBeenActive` true).** Each tool
+                                     call is its own round-trip, so the transient activation window has
+                                     always already expired — **a driving session has NO
+                                     user-activation-gated capability at all.**
+                                   ☑ NOT PATCHED, NOT STAMPED, NOT RE-ASKED: `--lossy` REFUSED (the payload
+                                     is RAW markdown; a false stamp would be the three-site alphabet class at
+                                     a FOURTH site) · no instrument touched (S5 builds nothing, §10-D rule 6) ·
+                                     the extraction NOT re-fired (the bytes are held and verified) · and every
+                                     remaining route puts the answer through the driving session's OWN
+                                     context, which would make the gate's witness something I transcribed —
+                                     the architect's own *a fixture may not be its own witness*, inverted.
+                                   ⛔ ESCALATED, direct channel: `queue\2026-08-26_0900-s5corpus-8.md`.
+                                     THE QUESTION: a RAW payload read straight out of the `ClipboardItem`
+                                     Blob in the same call that clicked Copy, sha-verified in-page, and
+                                     delivered to disk BY THE PAGE — is the copy-gate's rendered witness
+                                     still required, and by what transport? Options A–D with costs;
+                                     recommendation **A — ratify a third capture path `--from-blob`** on
+                                     S5-Z4's line (in-page sha vs on-disk sha; STRICTER than the
+                                     line-containment universal, and it takes the OS clipboard off the answer
+                                     path for B05–B18). **B** is a one-off byte-identity override for B04_2
+                                     alone, zero cost, but leaves B05–B18 exposed to the next fault window.
+                                   ✔ **RULED ~08:55 machine-clock, IN THIS SITTING
+                                     (`queue\RULING__2026-08-26_0855-s5corpus-8.md`, direct channel 4th
+                                     use) — and the ruler VERIFIED BY RUNNING before ratifying:** the
+                                     on-disk sha re-checked, the clipboard probed dead by an independent
+                                     process, capture.mjs's refusal contract read from source.
+                                     **THE ANSWER: the rendered witness is not required on this path — but
+                                     only because BOTH of its jobs are re-assigned, not because the gate
+                                     "does not apply".** It did (i) transit integrity and (ii) THIS-ANSWER
+                                     identity; the sha does (i) STRICTER, and (ii) SURVIVES as a
+                                     requirement. **(1) OPTION A RATIFIED with one correction —
+                                     `--from-blob` is its OWN micro-rung S5-Z5 and RUNS BEFORE B05, not on
+                                     S5-Z4's line** (Z4 is after B18 by the never-interleave law; parking
+                                     it there would strand B04_2 and leave B05–B18 exposed).
+                                     **(2)** same-call Blob read + content assert; the three capture flags
+                                     stay mutually exclusive; all bites IDEMPOTENT. **(3) CEILING
+                                     RULER-WRITTEN: BUILD 8 · PROOF 7 · HANDOFF 5** — this session's ~2–3
+                                     estimate REFUSED as knowingly thin (micro-rung floor ~15; thin numbers
+                                     manufacture breaches). **(4) NO OVERRIDE for B04_2** — B refused as
+                                     unnecessary, not wrong: it becomes **Z5's FIRST LIVE CAPTURE through
+                                     the real CLI at Z5's close.** **(5)** the one-shot download binds Z5's
+                                     design, with a pre-authorized branch: blocked second delivery ⇒
+                                     RESTART the browser + reload the chat, continue; still blocked ⇒ halt
+                                     THAT chat only, record, move on — never an open wait.
+                                     **(6) SEQUENCE: next session is S5-Z5, then B05 on 35+13.** The row
+                                     is written into §10-C in this same act (rung-row-in-same-act).
+                                   ⚠ THREE SMALLER ITEMS ON THE SAME FILE: the critic-shape class at its
+                                     **THIRD** instance (bucket 2 came back as TWO keys, `rulings` and
+                                     `decisions`) — same home, S5-Z4's declared-unknown bucket ·
+                                     `days_covered` = 4 while B04_1 listed 10 day headers, NOT yet checkable
+                                     because verify cannot run until the answer is captured · and checkall
+                                     §7's fourth identical RED open, which is a SHAPE, not an incident.
+                                   ⚠ TRANSPORT, and it SUPERSEDES a note on the B02 row: **the
+                                     response-level Copy button needs a JS `.click()`, not a `computer`
+                                     click** — the activation measurement above is why; hover-then-click left
+                                     the planted sentinel untouched twice, `btn.click()` landed 885 chars.
+                                     And **Gemini's Copy uses `navigator.clipboard.write` with a
+                                     `ClipboardItem` (text/html + text/plain), never `writeText` and never
+                                     `execCommand`** — which is what makes option A possible at all.
+                                   ⚠ The render stall hit BOTH steps and a RELOAD recovered both for free
+                                     (774 chars, then 23,207) — third and fourth confirmations of the norm.
+                                   ⚠ 25.91 spent of the fresh 35-lakh EXECUTION line (day-line delta at the
+                                     halt, 393.56 → 419.47) — INSIDE. B05 not opened. Records ride the
+                                     13-lakh HANDOFF line.
+  ▶ NEXT SESSION ............... **S5-Z5 · THE BLOB CAPTURE PATH — a micro-rung, and it is the WHOLE
+                                   session. Its row is in §10-C; its work order is
+                                   `queue\RULING__2026-08-26_0855-s5corpus-8.md`. MODEL: Opus 5 ·
+                                   effort HIGH · BUILD 8 · PROOF 7 · HANDOFF 5 (ruler-written).**
+                                   The corpus half is PAUSED, not stuck: B01, B02, B03 CLOSED and
+                                   **B04 is 1.5 of 2** — B04_1 closed and probe-PASSED, B04_2's answer
+                                   complete, byte-verified and ON DISK at `diag\B04_2_raw.txt`
+                                   (sha256/16 `8d089bd0333667b4`, 23,215 chars, JSON parses, 44 items),
+                                   uncaptured only because the copy-gate's rendered witness could not
+                                   be transported out of the browser. **Nothing is lost, nothing is
+                                   owed to Gemini — do NOT re-fire B04_2 and do NOT `--lossy` it.**
+                                   **B04_2 IS Z5's OWN DONE-PROOF: its first live capture through the
+                                   real CLI, then `verify.mjs`, and B04 closes 2/2.** Its chat
+                                   (`gemini.google.com/app/227096fc78a39e96`) stays OPEN, like B03's.
+                                   ⇒ **THEN, and only then, the corpus resumes at B05** on the standing
+                                   per-sitting EXECUTION 35 + HANDOFF 13.
+                                   ⚠ **TWO TRANSPORT LAWS MEASURED AT B04, BOTH NEW, BOTH BINDING:**
+                                   **(1) the page→disk download route is ONE-SHOT PER ORIGIN per browser
+                                   session** — budget your ONE download per chat and take the RAW payload
+                                   with it, because **(2) `navigator.userActivation.isActive` is FALSE
+                                   right after an extension `computer` click**, so a driving session
+                                   cannot satisfy ANY user-activation gate: not the downloads permission,
+                                   not anything else that asks for a real gesture.
+                                   ⚠ **THE RESPONSE-LEVEL COPY BUTTON NEEDS A JS `.click()`, NOT A
+                                   `computer` CLICK** (the same activation fact; it supersedes the B02
+                                   row's "hover before the click" as the CAUSE, though hovering costs
+                                   nothing). Gemini's Copy writes a `ClipboardItem` through
+                                   `navigator.clipboard.write` — hooking `writeText` sees NOTHING.
+                                   ⚠ **THE CLIPBOARD DIED FOR THE 10th TIME, MID-CHAT, AFTER PASSING AT
+                                   OPEN** — 24/24 dead over a 60 s bounded retry. Assume it will die
+                                   between two steps of the same chat, because that is what it did here.
+                                   The next act after B04 closes is a NEW Pro-Extended chat, ten attachments
+                                   `live2_batch41-50` (`node buildsteps.mjs` ends with the full
+                                   attachment map), `steps/B05_1.txt` to load + probe,
+                                   then `steps/B05_2.txt` — and THEN STOP: the critic step is not fired (ruling below).
                                    ⚠ **READ THE THREE TRANSPORT NOTES ON THE B03 ROW BEFORE TOUCHING THE
                                    BROWSER** — reload on a stall (textContent>0 & innerText==0 is the
                                    tell), `Return` not the send button after any reload, and the
@@ -3255,7 +3384,110 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       took it — which is the escalation rule working, not a ceiling being negotiated.**
                                     BUILD 8 · PROOF 6 · HANDOFF 5 (ruler-written, re-derived 26 Aug —
                                     supersedes BUILD 5 · PROOF 3 · HANDOFF 5)
+☐ S5-Z5 THE BLOB CAPTURE PATH — a micro-rung, RULED by the architect 26 Aug ~08:55 machine-clock
+      (queue\RULING__2026-08-26_0855-s5corpus-8.md IS this rung's work order; it ratified option A of
+      queue\2026-08-26_0900-s5corpus-8.md and CORRECTED where it lands). MODEL: Opus 5 · effort HIGH.
+      ⛔ RUNS BEFORE B05, NOT AFTER B18 — that correction is the whole point: S5-Z4 runs only after
+      the corpus half (never-interleave), so parking this there would strand B04_2 uncaptured and
+      leave B05–B18 exposed to the next dead-clipboard window. Z/Z2/Z3 are the precedent for a
+      mid-sweep instrument micro-rung.
+      WHY IT EXISTS, measured at B04: the copy-gate's rendered witness could not be transported out
+      of the browser at all — the clipboard was dead (10th occurrence, 24/24 over 60 s) AND the
+      page→disk download route turned out to be ONE-SHOT PER ORIGIN per browser session, whose
+      permission chip is browser chrome and unreachable to a driving session. Root cause of the
+      second: `navigator.userActivation.isActive` is FALSE after every extension click.
+      SCOPE — capture.mjs's THIRD DECLARED PATH, `--from-blob`, and nothing else:
+      (a) it asserts BOTH of the witness's jobs, never one — (i) WHOLE-PAYLOAD INTEGRITY: the
+          in-page sha256 of the ClipboardItem `text/plain` Blob against the sha of the file on disk
+          (stricter than the line-containment universal, and no OS clipboard in the path at all) and
+          (ii) THIS-ANSWER IDENTITY: the Blob read in the SAME call that clicked THIS answer's Copy
+          button, plus a content assert against the step's expected shape. SUBSTITUTION STAYS THE
+          NAMED FAILURE MODE — the sha alone does not do job (ii) and may never be read as if it did.
+      (b) `--from-blob` / `--rendered` / `--lossy` stay MUTUALLY EXCLUSIVE — an answer travelled ONE
+          path — and every new refusal is loud, writes nothing, and freezes nothing.
+      (c) the one-shot-download constraint binds the DESIGN, with the ruler's pre-authorized branch:
+          a blocked second page→disk delivery in one browser session ⇒ RESTART the browser and reload
+          the chat (answers persist server-side; recovery is free), continue. Still blocked ⇒ halt
+          THAT chat only, record, move to the next. NEVER an open wait.
+      (d) THE CLOSE IS A LIVE CAPTURE, not a fixture: B04_2 is captured through the REAL CLI —
+          `diag\B04_2_raw.txt`, sha256/16 `8d089bd0333667b4`, recorded at answer time and
+          independently re-verified on disk by the ruler — then `verify.mjs` runs on it and B04
+          closes 2/2. The `days_covered` 4-vs-10 flag is checked there.
+      FORBIDDEN: any step, corpus or verify change (Z5 is capture.mjs's path and its proofs) ·
+      frozen corpus/canon bytes · any Gemini call beyond B04_2's already-paid answer · any audit
+      question · loosening either existing capture path.
+      DONE-PROOF: bite-proofs both directions and IDEMPOTENT, re-runnable as diag/proofs_s5z5.mjs ·
+      checkall GREEN all 8 + preflight GO, both run in-session · B04_2 captured and verified live.
+                                    BUILD 8 · PROOF 7 · HANDOFF 5 (ruler-written; the escalation's
+                                    ~2–3 estimate was REFUSED as knowingly thin — the micro-rung
+                                    floor is ~15, because thin numbers manufacture breaches)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      ◐ **26 Aug ~09:00 — B04 IS 1.5 OF 2 AND HALTED ON A RULING. B04_1 CLOSED AND PROBE-PASSED;
+      B04_2's ANSWER IS COMPLETE, BYTE-VERIFIED AND ON DISK — AND NOT CAPTURED.** Fresh Pro-Extended
+      chat `gemini.google.com/app/227096fc78a39e96`, 10/10 chips, four-hop outbound matched on BOTH
+      steps (`d4536a1a9b5caf57` pad delta 166 = 83×2 · `adbad9a2d355c69e` pad delta 216 = 108×2).
+      `probecheck B04_1` = **PASS · VERBATIM 2/2, tail AND middle** — the FOURTH independent receipt
+      for the ten-attachment shape. B04_2 returned 23,215 chars, JSON parses, 44 items
+      (missing_implementation 12 · rulings 6 · decisions 6 · alternatives_rejected 8 · promises 8 ·
+      supersessions 4), on disk at `diag\B04_2_raw.txt` sha256/16 `8d089bd0333667b4` — **identical to
+      the sha computed in-page before it left the browser.**
+      ⛔ **THE COPY-GATE CANNOT BE FED: BOTH TRANSPORTS OUT OF THE BROWSER DIED AT THE SAME MOMENT.**
+      `--from-file` requires `--rendered`, an INDEPENDENT rendered read on disk. **(a) the clipboard
+      died mid-chat, 10th occurrence** (`ExternalException` both directions; the bounded retry the 0805
+      ruling allows measured 24/24 dead over 60 s) — it had PASSED at this sitting's open.
+      **(b) NEW AND MEASURED — THE PAGE→DISK DOWNLOAD ROUTE IS ONE-SHOT PER ORIGIN per browser
+      session:** the first Blob download landed (that is how the raw payload reached disk) and every
+      later one is blocked by Chrome's automatic-downloads policy, whose permission chip is browser
+      chrome and therefore unreachable at computer-use tier "read". Five attempts, all silent no-ops.
+      ⛔ **ROOT CAUSE, AND IT REACHES PAST DOWNLOADS: `navigator.userActivation.isActive` is FALSE
+      immediately after an extension `computer left_click`** (`hasBeenActive` true) — each tool call is
+      its own round-trip, so the transient window has always already expired. **A driving session has
+      NO user-activation-gated capability at all.**
+      ☑ NOT PATCHED, NOT STAMPED, NOT RE-ASKED — `--lossy` refused (RAW markdown; a false stamp is the
+      alphabet class at a FOURTH site), no instrument touched (S5 builds nothing), the extraction not
+      re-fired, and the one route left (through this session's own context) refused because it would
+      make the gate's witness something the executor transcribed.
+      ✔ ESCALATED, direct channel: `queue\2026-08-26_0900-s5corpus-8.md`. Recommendation **A — a third
+      capture path `--from-blob`** on S5-Z4's line (in-page Blob sha vs on-disk sha; STRICTER than the
+      line-containment universal and it takes the OS clipboard off the answer path for B05–B18); **B**
+      is a one-off byte-identity override for B04_2 alone, zero cost, exposure unchanged.
+      ⚠ THREE SMALLER, all filed to S5-Z4's line: the critic-shape class at its **THIRD** instance
+      (bucket 2 returned as TWO keys, `rulings` + `decisions`) · `days_covered` 4 vs 10 day headers,
+      NOT yet checkable · and checkall §7 RED at open for the **fourth consecutive sitting**, same cause
+      each time (the previous sitting's verify outputs unsnapshotted) — a SHAPE, not an incident.
+      ⚠ Transport, and one of them SUPERSEDES a B02 note: **the Copy button needs a JS `.click()`, not a
+      `computer` click** — the activation fact above is the cause, and hover-then-click is not it ·
+      **Gemini's Copy writes a `ClipboardItem` via `navigator.clipboard.write`**, never `writeText`,
+      which is why hooking `writeText` sees nothing — and is what makes option A possible · the render
+      stall hit BOTH steps and a RELOAD recovered both free (774 then 23,207 chars), third and fourth
+      confirmations that it is the norm.
+      ✔ **RULED ~08:55 machine-clock, direct channel 4th use
+      (`queue\\RULING__2026-08-26_0855-s5corpus-8.md`) — and the ruler VERIFIED BY RUNNING before
+      ratifying:** the on-disk sha re-checked (8d089bd0333667b4, 23,251 B), the clipboard probed dead
+      to an independent process, capture.mjs's refusal contract read from source.
+      **(1) OPTION A RATIFIED, with one correction — `--from-blob` is its OWN micro-rung S5-Z5 and
+      does NOT ride S5-Z4's line**, because Z4 runs only after B18 (never-interleave) and parking it
+      there would strand B04_2 and leave B05–B18 exposed for the whole corpus; Z/Z2/Z3 is the
+      precedent for a mid-sweep instrument micro-rung. **(2) THE RECEIPT CONTRACT IS BOTH JOBS, NOT
+      ONE:** the rendered witness did (i) transit integrity and (ii) THIS-ANSWER identity; the sha
+      does (i) STRICTER, and (ii) SURVIVES as a requirement — same-call Blob read plus a content
+      assert, substitution still the named failure mode; the three capture flags stay mutually
+      exclusive; every new refusal and both asserts bite-proven IDEMPOTENT.
+      **(3) CEILING RULER-WRITTEN: BUILD 8 · PROOF 7 · HANDOFF 5** — this row's ~2–3 estimate REFUSED
+      as knowingly thin (the micro-rung floor is ~15; thin numbers manufacture breaches).
+      **(4) NO OVERRIDE for B04_2** — option B refused as unnecessary, not wrong: **B04_2 becomes
+      S5-Z5's FIRST LIVE CAPTURE through the real CLI at Z5's close.** **(5) THE ONE-SHOT DOWNLOAD
+      BINDS Z5's DESIGN, with a pre-authorized branch:** a blocked second delivery ⇒ RESTART the
+      browser and reload the chat, continue; still blocked ⇒ halt THAT chat only, record, move on —
+      never an open wait. **(6) SEQUENCE: next session is S5-Z5, then B05 on the standing 35+13.**
+      ✔ §6 items: critic-shape 3rd instance → S5-Z4's declared-unknown bucket (existing home) ·
+      days_covered stands as a flag, checked at Z5's close · **checkall §7's fourth identical RED is
+      ruled a CLASS** and its one-line fix rides S5-Z4's verify scope INSIDE its existing 8/6/5
+      (doesn't fit ⇒ escalate, never stretch) · the JS `.click()` finding becomes a STANDING
+      transport note · and **the userActivation finding is FILED AS AN S6-BEARING PLATFORM FINDING**
+      beside the 20-attachment middle-retrieval hole — it is bigger than downloads.
+      ⚠ 25.91 of the 35-lakh EXECUTION line at the halt (day line 393.56 → 419.47) — INSIDE; B05 not
+      opened. Records ride the 13-lakh HANDOFF line, which prices the second cycle this ruling bought.
       ◐ **26 Aug ~07:50 — B03 IS CLOSED 2/2 at the new extraction-only shape. 3 of 18 corpus chats
       complete**, and B03's chat is LEFT OPEN for an on-demand retro-critic. Fresh Pro-Extended chat
       `gemini.google.com/app/e6ddce87fc2e8377`, 10/10 chips, four-hop outbound matched on both steps.
@@ -7775,3 +8007,187 @@ quiet. **That is a sizing question for the RULER, raised here for the third time
 nobody** — and by this order's own standing, a thing that needs a decision and rides only on
 "whichever session remembers" is a design failure, not a note.
 
+
+---
+
+### PROGRESS 2026-08-26 ~09:00 IST — S5 · THE SWEEP, CORPUS HALF. **B04_1 CLOSED AND PROBE-PASSED. B04_2's ANSWER IS COMPLETE, BYTE-VERIFIED AND ON DISK — AND DELIBERATELY NOT CAPTURED.** (Opus 5 · effort HIGH · fresh 35+13)
+
+**MODE.** AUTO, on his standing word since 26 Aug. Fourth consecutive sitting with no classifier
+event. Router obeyed (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐).
+
+**MICRO-ORDER FIRST (§10-D rule 9)**, written to the session scratchpad before any edit, checked
+against §10-C's S5 row and §10-D: two steps, no critic, ceiling 35+13, files to touch, the
+FORBIDDEN list, the DONE-proof commands, and the three transport notes off the B03 row.
+
+---
+
+#### WHAT LANDED
+
+**Gates, run in this session, not inherited.** `checkall` RED at open on section 7 — **the FOURTH
+consecutive open with the same condition**: the previous sitting's `verify.mjs` run leaves
+`coverage.json` and `dropped.json` with no restorable copy. Closed by the gate's own prescribed
+remedy (`snapshot.mjs take`), then GREEN all 8. `preflight` GO, 18 checks. **The clipboard was
+ALIVE at open** — preflight §4 round-tripped the largest real step file through a file and through
+the clipboard both.
+
+**B04_1 — load + probe.** Fresh Pro-Extended chat `gemini.google.com/app/227096fc78a39e96`
+(nikhil.panwar2914), ten `live2_batch31-40` chips attached and asserted **10/10 by name**.
+
+The outbound travelled the standing law's four hops and **matched at every one**:
+`d4536a1a9b5caf57` at the clipboard, at the page's `readText`, at the composer box, and at the
+**SENT user turn read back off the DOM** — 104 `p.query-text-line` nodes, **pad delta exactly 166 =
+83 non-empty lines × 2**, and the one trailing newline restored per the clause B03 added. The
+composer, incidentally, is the one place the payload's final newline DOES survive as a block: 105
+blocks in, 104 lines out.
+
+Captured RAW off the response-level Copy button — **copy-gate PASSED 13/13 content lines, fenced
+yes** — and then:
+
+> **`node probecheck.mjs B04_1` → PASS · VERBATIM 2/2 — tail AND middle.**
+
+That is the **fourth independent receipt** for the ten-attachment shape, and the first clean probe
+since B02 (B03's had to be settled by measurement under a ruling).
+
+**B04_2 — the extraction.** Four hops matched again (`adbad9a2d355c69e`, pad delta 216 = 108 × 2).
+The answer came back **complete: 23,215 chars, JSON parses**, buckets `missing_implementation` 12 ·
+`rulings` 6 · `decisions` 6 · `alternatives_rejected` 8 · `promises` 8 · `supersessions` 4 — 44
+items. It is on disk at `diag\B04_2_raw.txt`, sha256/16 **`8d089bd0333667b4`**, and that sha was
+computed **in-page, off the ClipboardItem Blob, before the bytes ever left the browser** — the
+file on disk and the payload in the page are the same bytes, proven, not assumed.
+
+---
+
+#### AND THEN BOTH WAYS OUT OF THE BROWSER CLOSED AT THE SAME MOMENT
+
+`capture.mjs save <step> --from-file <raw>` requires `--rendered <path>`: an **independent**
+rendered read of the same answer, on disk, for the copy-gate. It could not be produced.
+
+**(a) The clipboard died mid-chat — 10th occurrence.** `Set-Clipboard` and `Get-Clipboard` both
+`ExternalException`. It had passed at this sitting's open, ~25 minutes earlier. The bounded retry
+the 26 Aug ~08:20 ruling allows (never an open wait) measured **24/24 failures over 60 s**, one
+attempt every 2.5 s — consistent with the "lasts minutes" measurement, inconsistent with a blip.
+
+**(b) NEW, AND IT IS A TRANSPORT LAW, NOT AN INCIDENT — the page→disk download route is ONE-SHOT
+PER ORIGIN per browser session.** The first Blob download from `gemini.google.com` landed; that is
+how the raw payload reached disk at all. **Every subsequent download from that origin is blocked by
+Chrome's automatic-downloads policy**, and a driving session cannot lift it: the permission lives
+in the omnibox chip, which is browser chrome, and computer-use holds browsers at tier "read".
+
+Five attempts, every one a silent no-op — no error, no dialog, no file:
+1. programmatic `a.click()` immediately after the raw download,
+2. the same after a full page reload,
+3. a visible anchor clicked by ref,
+4. the same anchor clicked by coordinate,
+5. a `<button>` whose own click handler creates and clicks the anchor **synchronously**, clicked
+   by ref — the shape designed specifically to sit inside a user-activation window.
+
+**(c) THE ROOT CAUSE, and it reaches a long way past downloads.** Measured directly:
+
+> **`navigator.userActivation.isActive` is `false` immediately after an extension
+> `computer left_click`** (`hasBeenActive` is `true`).
+
+Each tool call is its own round-trip, so the five-second transient activation window has always
+already expired by the time the next call runs. **A driving session therefore holds NO
+user-activation-gated capability at all** — not the downloads permission, not anything else that
+asks for a real human gesture. This is filed as an S6-bearing platform finding, beside the
+20-attachment middle-retrieval hole; it is a property of the whole driving lane, not of this chat.
+
+---
+
+#### WHAT WAS REFUSED, AND WHY EACH REFUSAL WAS THE POINT
+
+- **`--lossy` REFUSED.** The payload is RAW markdown off the Copy button. Stamping it
+  `rendered-lossy` would make `probecheck` and `verify` read it in the wrong alphabet — the exact
+  class this rung has already found at three sites (S5-Z3's raw comparator · S5-R2's day-index
+  parse · B03_1's fenced anchors). A false stamp is worse than no capture, because it passes.
+- **No instrument touched.** S5 builds nothing, and §10-D rule 6 refuses a rung that weakens a gate.
+- **The extraction NOT re-fired.** The bytes are held and sha-verified; re-asking spends a paste for
+  something already owned.
+- **The one remaining route — carrying the rendered read through this session's own context —
+  REFUSED.** It would make the gate's witness *something the executor transcribed*, which inverts
+  the architect's own standing line that a fixture may not be its own witness. The extension also
+  refuses to return base64 (`[BLOCKED: Base64 encoded data]`), which closed the tidiest version of
+  that route before I had to decide against it.
+- **B05 NOT opened.** 25.91 of the 35-lakh EXECUTION line spent; a chat needs ~30 (§10-D rule 2).
+
+---
+
+#### ESCALATED, AND RULED INSIDE THE SAME SITTING
+
+`queue\2026-08-26_0900-s5corpus-8.md` — the fork stated flat, options A–D with costs, and the
+question I would not answer for myself: *given a RAW payload read straight out of the
+`ClipboardItem` Blob in the same call that clicked Copy, sha-verified in-page and delivered to disk
+by the page, is the copy-gate's rendered witness still required?* My reading was that the gate is
+defending a hazard structurally absent on that path — and "the gate does not apply to my case" is
+precisely the argument a session must never make about itself.
+
+**RULED ~08:55 machine-clock — `queue\RULING__2026-08-26_0855-s5corpus-8.md`, direct channel, 4th
+use — and the ruler VERIFIED BY RUNNING before ratifying:** re-checked the on-disk sha
+(`8d089bd0333667b4`, 23,251 bytes), probed the clipboard dead from an independent process, and read
+capture.mjs's refusal contract from source. Its verdict on the question:
+
+> the rendered witness is NOT required on this path — **but only because BOTH of its jobs are
+> re-assigned, not because the gate "does not apply".** It did (i) transit integrity and (ii)
+> THIS-ANSWER identity. The sha does (i) STRICTER. **(ii) survives as a requirement.**
+
+1. **OPTION A RATIFIED, with one correction that matters: `--from-blob` is its OWN micro-rung,
+   S5-Z5, and it RUNS BEFORE B05 — not on S5-Z4's line.** Z4 runs only after B18 (never-interleave),
+   so parking it there would strand B04_2 and leave B05–B18 exposed for the whole corpus. The
+   recommendation's own benefit requires landing first. Z/Z2/Z3 is the precedent.
+2. **The receipt contract is both jobs**: whole-payload in-page sha vs on-disk sha, AND
+   this-answer identity (same-call Blob read + a content assert). The three capture flags stay
+   mutually exclusive. Every bite IDEMPOTENT.
+3. **Ceiling ruler-written: BUILD 8 · PROOF 7 · HANDOFF 5.** My ~2–3 estimate was **refused as
+   knowingly thin** — the micro-rung floor is ~15, because thin numbers manufacture breaches.
+4. **No override for B04_2.** Option B refused as unnecessary, not wrong: **B04_2 is S5-Z5's first
+   live capture through the real CLI at its close**, then `verify.mjs`, then B04 closes 2/2.
+5. **The one-shot download binds Z5's design**, with a pre-authorized branch: blocked second
+   delivery ⇒ restart the browser and reload the chat, continue; still blocked ⇒ halt THAT chat
+   only, record, move on. Never an open wait.
+6. **Sequence: next session is S5-Z5, then B05 on the standing 35+13.** The S5-Z5 row is written
+   into §10-C and the router points at it, in this same act (rung-row-in-same-act, miss-#4's law) —
+   the architect deliberately did not edit the order while this session was mid-commit, which is the
+   Q-12 torn-write class being avoided rather than re-learned.
+
+---
+
+#### THREE SMALLER THINGS, ALL FILED, NONE PATCHED
+
+1. **The critic-shape class at its THIRD instance.** B04_2 returned bucket 2 as **two keys** —
+   `rulings` and `decisions` — where the schema names one ("RULINGS AND DECISIONS"). Same home as
+   the 26 Aug ~06:55 and ~08:15 instances: S5-Z4's declared-unknown bucket. Nothing lost.
+2. **`days_covered` = 4 while B04_1 listed 10 day headers.** Not checkable yet — `verify.mjs`
+   cannot run until the answer is captured. It is a FLAG, recorded so nobody later reads it as
+   recall. It gets checked at S5-Z5's close.
+3. **checkall §7's fourth identical RED at open is a CLASS, and the ruler took it as one.** The
+   one-line fix — snapshot verify.mjs's outputs at sitting close — rides **S5-Z4's verify scope
+   inside its existing 8/6/5**; if its builder measures it not fitting, escalate, never stretch.
+
+#### TRANSPORT — WHAT THE NEXT EXECUTOR SHOULD NOT RE-PAY
+
+- **The response-level Copy button needs a JS `.click()`, not a `computer` click.** Two
+  hover-then-click attempts left the planted sentinel untouched; `btn.click()` from page script
+  landed 885 chars. The activation measurement above is the CAUSE — this **supersedes** the B02
+  row's "hover before the click", which was a correlation. Hovering is harmless; keep it if you like.
+  Prove the page's own clipboard permission with a `writeText` probe before blaming the machine —
+  it was fine both times.
+- **Gemini's Copy writes a `ClipboardItem` through `navigator.clipboard.write`** (text/html +
+  text/plain), never `writeText` and never `execCommand`. Hooking `writeText` observes nothing and
+  reads as "the button did nothing". This is also what makes `--from-blob` possible at all.
+- **Budget ONE page→disk download per chat**, and spend it on the RAW payload.
+- **The render stall is the norm and it hit BOTH steps.** `textContent > 0` while `innerText === 0`
+  with the stop button live ⇒ reload, never re-fire. Recovered 774 and 23,207 chars free — the third
+  and fourth confirmations.
+- The uploader's hidden `<input type=file>` lives in the DOM but not in the accessibility tree; give
+  it an `aria-label` and un-hide it to get a ref for `file_upload`. `request_directory` on the
+  out-of-repo folder is still needed once per session.
+
+#### THE NUMBERS
+
+**25.91 of the fresh 35-lakh EXECUTION line** — day line 393.56 → 419.47 at the halt, read from the
+meter, not estimated. INSIDE. B05 not opened (§10-D rule 2). The records and this second
+record-and-commit cycle — the one the ruling itself bought — ride the **13-lakh HANDOFF line**, which
+exists at 13 rather than 10 precisely because the last two sittings measured this exact pattern.
+
+**Zero instruments edited · zero gates weakened · zero audit questions beyond the two paid steps ·
+frozen inputs untouched · answers/ holds exactly one new file (B04_1) and no false stamp.**
