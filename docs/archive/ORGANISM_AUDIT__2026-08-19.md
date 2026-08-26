@@ -2761,8 +2761,11 @@ STATUS (update this block before any session stops — this is the handoff)
                                    It is also the first ☐ in §10-C, so **router and fallback agree for the
                                    first time in this sweep.** Read the row before anything: its scope was
                                    narrowed at B15 to **ONE LINE, `verify.mjs:84`**, and its ceiling was
-                                   re-sized by a RULING (**BUILD 8 · PROOF 8 · HANDOFF 5**), never by an
-                                   executor. **MODEL: Opus 5 · effort HIGH.** ⛔ FORBIDDEN there: any
+                                   re-sized by a RULING (**BUILD 9 · PROOF 6 · HANDOFF 5**), never by an
+                                   executor. ⛔ **I WROTE "BUILD 8 · PROOF 8" HERE AT B18'S CLOSE AND IT WAS
+                                   WRONG** — the row says 9/6/5 and the ROW is the work order. Caught on the
+                                   first read of the rung, corrected in the same act. Prose-vs-source drift,
+                                   committed by me, inside the handoff of the order that exists to stop it. **MODEL: Opus 5 · effort HIGH.** ⛔ FORBIDDEN there: any
                                    Gemini call · any audit question · haystack/expected bytes.
                                    ⚠ **THE SWEEP'S REMAINING LANE IS NOT THAT RUNG'S JOB:** S5-POST's two
                                    backlog rows and the fold into §9 each wait for their own rung. The
@@ -5163,7 +5166,72 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       probecheck/verify/checkall §3 + the rung's own diag/proofs_s5z3.mjs (standing implicit).
       TRANSPORT NOTE, standing: Gemini's compose box focuses on REF click only, never
       coordinate click.                    BUILD 6 · PROOF 5 · HANDOFF 5 (ruler-written)
-☐ S5-Z4 THE CANON-B REGEN — a micro-rung, RULED by the architect 26 Aug ~03:15
+◐ S5-Z4 THE CANON-B REGEN — a micro-rung, RULED by the architect 26 Aug ~03:15
+      ◐ **PARTIAL, 27 Aug 2026 ~06:40 series (true clock 27 Aug ~01:20). FOUR OF THE SIX ITEMS ARE
+      BUILT AND PROVEN; THE CORE (C1-C3, the canon-B step regen) IS NOT STARTED, AND THE RUNG
+      STOPPED AT ITS CEILING (§10-D rule 2) RATHER THAN CONTINUE.**
+      ☑ R2 · THE DAY-LABEL NORMALISATION — `dayKey()` in `verify.mjs`, ONE site, and BOTH consumers
+        now ask it: the quote index AND the coverage receipt, whose second copy of the same
+        disagreement had been branding real days "NOT IN MANIFEST (invented)" for four chats.
+        ⚡ **LIVE RESULT, and it is the biggest single number this order has produced:
+        `source-missing` drops 374 → 0 · verified items 217 → 448 · 231 RESURRECTED across 13
+        answers.** B15's independent hand-count of 23 is reproduced EXACTLY by the code (0 → 23) —
+        a cross-check by a different method, not a restatement. B16 1 → 25 · B18 0 → 14.
+      ☑ R3 · THE EITHER-ALPHABET JOIN — `alphabetsOf` + `inEitherAlphabet` in `mdrender.mjs`, the
+        ONE answer site the ruling ordered; probecheck asks it instead of assuming.
+        ⛔ **MY FIRST VERSION APPLIED IT TO EVERY CAPTURE PATH AND `checkall` §3 WENT RED**, with
+        the exact sentence it was written to say — *"the byte-strict comparator now PASSES a
+        markdown-consumed answer — the raw gate has been loosened, which is exactly what the
+        escalation refused."* It was right; the ruling's own title says FOR THE LOSSY PATH. Now
+        confined twice — to the SERIALIZED tier, and to `lossy`. **The gate stayed strict and the
+        code moved, which is the only direction rule 6 allows.**
+      ☑ R1 · THE DECLARED-UNKNOWN BUCKET — declare-or-die, through the SAME checkCanon/checkCorpus,
+        never a second verifier. Architect MISS #8 closed. **LIVE: 9 items across FOUR kinds the
+        critic invented — `unresolved_anomalies` · `manual_workarounds` · `architectural_invariants`
+        · `defined_anti_patterns` — were being silently discarded from answers already paid for**;
+        4 more now receive a real NOT-FOUND verdict. AMBIGUOUS / UNROUTABLE / NO-QUOTE are loud
+        refusals, never a pick.
+      ☑ R4 · `capture.mjs --probe-not-found` — STRICTER, never looser: the literal `ANCHOR n NOT
+        FOUND` line is asserted for EVERY anchor the step names; a MIXED payload satisfies neither
+        assert and stays REFUSED; the flag without `--from-blob` is a loud refusal, never a quiet
+        no-op. The INTERIM LAW (a not-found payload parks at `diag/`) is retired by it.
+      ◐ C1-C3 · THE CANON-B REGEN ITSELF — **BOTH FORKS RULED, 27 Aug ~06:45 series (true clock
+        27 Aug ~01:25), `queue\RULING__2026-08-27_0645-s5z4-1.md`; escalated rather than guessed,
+        and the ruler VERIFIED BY RUNNING — `proofs_s5z4.mjs` re-run GREEN under the ruler's own
+        shell before a word of it was written.**
+        ✔ **FORK 1 RULED: B — LAYER.** The A steps are NOT deleted. `legacy: true,
+          superseded_by: "canon-B"` is wired, and the ruler's reason is sharper than mine was:
+          Option A *"would turn my own promise that the A-chats stay open into a lie"*, and one of
+          the two answers it would have made unreadable is **the recorded FAILURE that caused the
+          B design — audit evidence of the first order**. C stays rejected (a second resolver path).
+          ⚑ **TWO NEW `checkall` ASSERTS ARE PART OF THE RULING, not optional:** (a) EXACTLY ONE
+          canon design is live, and (b) BOTH legacy answers stay readable by probecheck AND by
+          capture's shape assert. The legacy flag is machine-checked, so SHAPE 1's silhouette
+          carries a gate instead of a sentence. The 69-step count assertions update honestly in
+          the same act.
+        ✔ **FORK 2 RULED: THE ASSERTED SPLICE.** ONE copy of Q1's body, never a second — *"a second
+          prompt copy is SHAPE 1 waiting to happen, and the 0620 refusal was about an UNASSERTED
+          edit of frozen text, not about mechanical composition FROM it."* Conditions: the frozen
+          body's hash is asserted at splice time, the splice REFUSES LOUDLY on any movement (Z6's
+          hash-before-edit law), the spliced group framing is VERSIONED like c3's templates, and a
+          BITE proves the refusal.
+        ✔ **REMAINDER CEILING, RULER-WRITTEN off the 10.13 / 19.4 / ~26 / 18.39 record:
+          BUILD 12 · PROOF 8 · HANDOFF 5.** *"The core regenerates ~69 steps' wiring, four template
+          classes, the fallback retirement and section-5 doc numbers — it is the row's largest half
+          and a thin line would manufacture the third breach in a row."* The 18.39 already spent
+          stays recorded as over against the old 15 — **not re-derived, not blessed.**
+        ✔ **AND THE OVER-APPLICATION CATCH IS RECORDED WITH CREDIT** (ruling item 4): checkall §3
+          going RED with its own written sentence, and the correction costing real tokens, is *"the
+          gate system working as designed"*.
+      DONE-PROOF THAT RAN: `node diag/proofs_s5z4.mjs` → **GREEN, 44 assertions, 4 legs**, every
+      bite planted and refused, idempotent across two fresh shell runs, and `steps/` + `answers/`
+      byte-identical afterwards — checkall §8's property, asserted by the harness about itself.
+      `checkall` GREEN 8/8 · `preflight` GO, both run in-session.
+      ⚠ **COST 18.39 vs BUILD 9 + PROOF 6 = 15 — OVER, AND RECORDED AS OVER.** No instrument fault,
+      so NOT re-derived (§10-C: unit faults only). Honest causes: the row carries SIX items, four of
+      them separate instruments each needing its own bite-proof; and one implementation was wrong
+      and its correction cost real tokens. Unlike B18 this figure is the near-whole bill —
+      orientation happened AFTER the baseline was taken, not before.
       (queue\RULING__2026-08-26_0300-s5sweep-3.md answer 3 IS the work order). MODEL: Opus 5 ·
       effort HIGH. RUNS AFTER the corpus half, BEFORE the canon-B chats. SCOPE: regenerate the
       canon question steps for the B design THROUGH buildsteps (one chat per group at the
