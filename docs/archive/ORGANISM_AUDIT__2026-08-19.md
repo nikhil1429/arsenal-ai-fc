@@ -2755,13 +2755,33 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⚠ **~20.5 of the 35-lakh EXECUTION line** (day 3.40 → 23.85).
                                    **INSIDE** — and declared a FLOOR: the orientation read happened
                                    BEFORE that baseline was taken.
-  ▶ NEXT SESSION ............... **③ THE CANON-B CHATS — ~13 pastes, SAME S5 rung, on the standing
-                                   EXECUTION 35 + HANDOFF 13** (the 0300 sequence: corpus half →
-                                   S5-Z4 → canon-B chats). **S5-Z4 IS CLOSED — all six items, ruled,
-                                   built and proven; the steps you will fire are already on disk.**
+  ▶ NEXT SESSION ............... **③ THE CANON-B CHATS, CONTINUED AT `G02` — SAME S5 rung, on the
+                                   standing EXECUTION 35 + HANDOFF 13.**
+                                   ✅ **`G01` IS CLOSED 4/4 (27 Aug ~02:45 TRUE machine-clock), chat
+                                   `gemini.google.com/app/5ad12c0b45dd0ddb`, LEFT OPEN.** Its probe
+                                   passed **VERBATIM 2/2**, all 70 file paths came back exact and in
+                                   order, header count 70 = ground truth 70 — **the canon-B ten-file
+                                   design is PROVEN on the material A02 died on.** Full account: the
+                                   PROGRESS entry of 27 Aug ~02:45.
+                                   ⛔ **BEFORE YOU READ ANY `verify.mjs` NUMBER ON A CANON ANSWER:
+                                   they are PRE-Z9 BOUNDS, not verdicts.** G01_2 kept 2 of 50 and
+                                   **73 of 100 quote-sides are real evidence at their correctly-named
+                                   source** — the gate discards a quote that dropped the source's
+                                   `**` markers. **S5-Z9 is RULED and fixes it AFTER this drive**
+                                   (`RULING__2026-08-27_0750-s5canonb-1.md`); every stored answer
+                                   re-verifies FREE at its close. Record the bounds, fold nothing.
+                                   ⚑ **THE ORDER FROM HERE: `G02` → `G03` → `F3` (gated) → S5-Z9 →
+                                   S5-POST.** Z9 runs AFTER the drive, never interleaved (Z4's rule).
+                                   ⚠ **A CRITIC STEP CANNOT BE CAPTURED ON THE BLOB PATH** — its
+                                   schema is defined BY REFERENCE ("the SAME schema as the previous
+                                   answer"), so `--from-blob`'s declare-or-die identity assert
+                                   refuses it, CORRECTLY. Take the declared independent-witness path
+                                   instead: `--from-file <raw> --rendered <rendered>` (G01_4:
+                                   copy-gate 482/482). `G02_4`, `G03_4` and `F3` will do the same.
+                                   **Never edit a step file to get past it** — steps are derived.
                                    THREE SEPARATE CHATS, one per canon group, then a FOURTH for the
                                    cross-group pass:
-                                   `G01_1..G01_4` — chunk01-10 · probe `canon_g01`
+                                   `G01_1..G01_4` — chunk01-10 · probe `canon_g01`  ✅ CLOSED 4/4
                                    `G02_1..G02_4` — chunk11-20 · probe `canon_g02`
                                    `G03_1..G03_4` — chunk21-27 · probe `canon_g03`
                                    `F3`           — the cross-group pass, its own chat
@@ -5585,7 +5605,57 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       payload and B13 closes 2/2 there** (item 4 — NO re-send; the B04_2/B10_2 precedent, third use).
                                     BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written off the
                                     10.13/19.4/26 record (RULING__2026-08-27_0150 item 3).
+☐ S5-Z9 THE DEMARK JOIN — a micro-rung, RULED by the architect 27 Aug ~02:35 TRUE machine-clock
+      (`queue\RULING__2026-08-27_0750-s5canonb-1.md`), off G01_2. **Escalated, not decided by the
+      executor: accepting a demarked match is a LOOSENING, and §10-D rule 6 forbids one on an
+      executor's own word.** MODEL: Opus 5 · effort HIGH. **RUNS AFTER the canon-B drive, NEVER
+      interleaved (the Z4 precedent), and BEFORE S5-POST.**
+      WHY: `verify.mjs` greps each quote byte-strict at the document the item named. Measured on
+      G01_2's 100 quote-sides (`diag/g01_2_named_source.mjs`): **11 byte-exact at the named source ·
+      62 exact there once markdown decoration is stripped · 4 real-quote/wrong-doc · 23 absent ·
+      0 invented filenames.** So **73 of 100 are real evidence at their correctly-named source and
+      the gate discards ~62 of them for carrying no asterisks**, and `verify` kept **2 of 50**.
+      ⚡ **THE MECHANISM IS NAMED, WHICH IS WHY THIS IS NOT A RUN:** the corpus is his dialogue and
+      is barely decorated; the canon is 118 `.md` in which his binding sentences ARE the bolded
+      ones. It cost ~nothing across B01–B18 and costs ~62% here — a property of the MATERIAL, so it
+      hits G02, G03 and F3 identically.
+      ⛔ **FOURTH SITE of "which decoration/alphabet is this text in"** after S5-Z3's raw comparator,
+      S5-R2's day-index parse and S5-Z4's either-alphabet join. **The ruler recorded the count
+      AGAINST THE CLASS, not the executor** (item 5): the class instruction consolidated the
+      question into `mdrender.mjs` precisely so that site N+1 costs one line — and this rung spends
+      that consolidation.
+      SCOPE: the demark join at the **ONE site the class law already owns — `mdrender.mjs`** — with
+      **TIERED RECEIPTS: byte-exact and demarked-exact are NEVER the same tier**, reported
+      separately (the c2 VERBATIM/SERIALIZED pattern at its fourth application). **NOT a loosening,
+      and the ruling says why: the top tier stays byte-strict, absence still fails closed (the 23
+      absent stay absent), and a MEASURED tier replaces a SILENT DISCARD.** The declared decoration
+      set is exactly `**`, backtick, and a leading `- `. **ALL stored answers re-verify FREE at this
+      rung's close** (the A02 pattern, fifth use).
+      +SCOPE, FLAGGED BY THE EXECUTOR AT G01_4 AND LEFT FOR THE RULER TO TAKE OR REFUSE: **a step
+      whose schema is defined BY REFERENCE cannot be captured on the blob path at all.**
+      `capture.mjs --from-blob` refused G01_4 — *"NEITHER a JSON skeleton nor an ANCHOR line, so its
+      expected shape is UNDECLARED"* — because the critic prompt says *"the SAME schema as the
+      previous answer"*. It is CORRECT declare-or-die behaviour and no gate was touched; the
+      DECLARED independent-witness path took it (`--from-file --rendered`, copy-gate 482/482).
+      **`G02_4`, `G03_4` and `F3` will hit it identically.** Nothing is blocked either way — the
+      cost is one extra download per critic — so this is a fits-or-doesn't question for the ruler,
+      never an executor's edit of a derived step file.
+      FORBIDDEN: any second copy of the normalization anywhere (Z7's lesson, asserted mechanically)
+      · any decoration outside the declared set · any change to the byte-strict top tier · any
+      step, prompt, wiring or frozen-byte change · any Gemini call · any audit question.
+      DONE-PROOF: idempotent bite-proofs — **a demarked match may NEVER stamp byte-exact** (the tier
+      split itself) · the join REFUSES anything beyond the declared decoration set · **no second
+      live copy** of the normalization · the stored-answer regression · all answers re-verified at
+      close with the tier split visible per answer · checkall GREEN 8/8 + preflight GO, in-session.
+                                    BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written
+                                    (RULING__2026-08-27_0750 item 4).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      ▸ **THE CANON-B HALF IS OPEN AND `G01` IS CLOSED 4/4 (27 Aug ~02:45 TRUE machine-clock).**
+      Probe **VERBATIM 2/2** · 70/70 file paths exact and in order · header count 70 = ground truth
+      70. **The ten-file canon-B design is proven on the material A02 died on.** Next is `G02`, then
+      `G03`, then `F3` (its deferred probe still uncertified), then **S5-Z9**, then S5-POST.
+      ⛔ **EVERY `verify.mjs` NUMBER ON A CANON ANSWER IS A PRE-Z9 BOUND** — see the S5-Z9 row
+      directly above and the PROGRESS entry of 27 Aug ~02:45. Fold none of them into §9.
       ▸ **WHERE THE SWEEP STANDS, 27 Aug ~08:40 — read ▶ RESUME HERE and the PROGRESS entries for
       B05–B18; only B01–B04 are written out below.** **B01–B18 ALL CLOSED 2/2 — 18 of 18: THE CORPUS
       SWEEP IS CLOSED.** What remains in the S5 lane is S5-POST's two backlog rows and the fold into
@@ -13728,3 +13798,181 @@ Two rulings, and both correct a real weakness in how I left things:
 Proofs re-run after the fold: **GREEN, 65 assertions, 5 legs** (two new bites: the DO-NOT-FIRE flag
 on every replication step, and F3's deferral carrying its ruled condition). checkall GREEN 8/8,
 preflight GO.
+
+---
+
+### PROGRESS 2026-08-27 ~09:45 series / **27 Aug ~02:45 TRUE machine-clock** — **G01 IS CLOSED 4/4: THE CANON-B DESIGN IS PROVEN ON THE MATERIAL A02 DIED ON — and its first audit answer made the verifier discard 48 of 50 items that are 73% real, which is now S5-Z9**
+
+Rung S5, the canon-B chats, sitting 1. Opus 5 · effort HIGH · DEFAULT mode · **EXECUTION 35 + HANDOFF 13**
+(the standing per-sitting line). Micro-order written into the session scratchpad before any act
+(§10-D rule 9), checked against §10-C/§10-D. Wiring read from `wiring.json`, never from the router's
+convenience list — and it matched. **All four `R01-R04` carry the DO-NOT-FIRE flag and were not touched.
+F3 was not fired: its deferred probe has not been certified.**
+
+**STEP 0.** `checkall` **GREEN 8/8** and `preflight` **GO**, both run in-session before the browser
+opened. checkall §7 was GREEN at open for the first time in five sittings — S5-Z4's fix holding.
+
+#### ✔ G01 — ALL FOUR STEPS CAPTURED. Chat `gemini.google.com/app/5ad12c0b45dd0ddb`, LEFT OPEN.
+
+Fresh Pro-Extended chat, account `nikhil.panwar2914` (the canon account). Mode read BACK off the page
+after selection — `"Open mode picker, currently Pro Extended"` — never assumed. Pre-attach gate:
+**10/10 names in `innerHTML` + ten `close chunkNN` chips + a screenshot arbitrating**, after a first
+read of 0 that the standing note predicts.
+
+The four-hop outbound ran with **B18's corrected hop 4** and worked first time and every time:
+injected file input → `file_upload` → in-page `FileReader` → **`.ql-container.__quill.setText(src,'user')`**,
+then `getText()` sha-asserted. Four payloads, four exact matches, disk == in-page == box:
+`2b3b8aa1b53b463d` · `aff7e5f9fded0b48` · `65983090d407ae2d` · `e86d17ca7b3cd104`.
+The OS clipboard was never on the path.
+
+**G01_1 — `probecheck` = PASS · VERBATIM 2/2** (tail chunk10:865 · middle chunk06:910).
+**The ten-file canon group retrieves verbatim.** This is the first live receipt for the canon-B
+design itself, on exactly the material A02 failed to retrieve. Two more receipts came with it:
+
+- **All 70 `===== FILE:` paths listed — EXACT SET AND EXACT ORDER, 0 missed, 0 invented.**
+- **Header count claimed 70, ground truth 70 — and NOT vacuous.** The "one header per FILE"
+  deflation that ran for three corpus chats would have said 10; chunk09 alone carries 21. Counted
+  file by file, never by glob. **Written as a run: the header claim still has no rule.**
+
+#### ⛔ THE VERIFIER KEPT 2 OF 50 ON Q1. ESCALATED, NOT SELF-PASSED. → **S5-Z9**
+
+G01_2 (Q1 contradictions) returned 45,249 chars, JSON parsed, blob-gate passed, **50 items** — and
+`verify.mjs` discarded 48. Measured before anything was concluded (`diag/g01_2_named_source.mjs`,
+**measurement only, no instrument touched**), every quote grepped at **the document the item itself
+named** — which is the question the first cut of that diagnostic conflated with "present in the group":
+
+| G01_2, over 100 quote-sides | |
+|---|---|
+| at the NAMED source, byte-exact | 11 |
+| at the NAMED source, exact once markdown decoration (`**`, backtick, leading `- `) is stripped | **62** |
+| real quote, wrong document named | 4 |
+| absent from the group under the loosest honest match | 23 |
+| documents named that are NOT in this group's manifest | **0** |
+
+**73 of 100 quote-sides are real evidence at their correctly-named source, and the gate threw ~62 of
+them away for carrying no asterisks.** Word for word, decoration the only difference:
+
+```
+MODEL : Backend language — RESOLVED (20 Jun): NODE FULLY DROPPED. M1 ka pura backend Python/FastAPI from Day 1
+SOURCE: - **Backend language — RESOLVED (20 Jun): NODE FULLY DROPPED.** M1 ka pura backend **Python/FastAPI from Day 1** (...)
+```
+
+⚡ **THE MECHANISM IS NAMED, WHICH IS WHY THIS IS NOT A RUN:** the corpus is his dialogue and is
+barely decorated; the canon is 118 `.md` in which his most binding sentences are exactly the bolded
+ones. The gate's byte-strictness cost almost nothing across B01–B18 and costs ~62% here. It is a
+property of the MATERIAL, not of the chat, and it will hit G02, G03 and F3 identically.
+
+⚡ **AND THE 2-OF-50 HAS A SECOND, STRUCTURAL HALF THAT Q4 EXPOSED:** a `contradictions` row carries
+**two** quotes and dies if either fails, so its yield is roughly the SQUARE of the per-quote pass
+rate; an `edges` row carries one. Same chat, same session, same gate: **Q1 kept 2 of 50 · Q4 kept 27
+of 52 · the critic kept 26 of 51.** The two-sided schema is an amplifier, and S6 must not read Q1's
+yield as a statement about Q1's material.
+
+⛔ **THIS IS THE FOURTH SITE OF "WHICH DECORATION/ALPHABET IS THIS TEXT IN"** after S5-Z3's raw
+comparator, S5-R2's day-index parse and S5-Z4's either-alphabet join. **NOT PATCHED, DELIBERATELY:**
+S5 builds nothing, and accepting a demarked match is a **LOOSENING**, which §10-D rule 6 forbids an
+executor to take on its own word. Escalated on the direct channel — `queue\2026-08-27_0745-s5canonb-1.md`
+→ `arsenal-ai-fc-e8` (ListAgents confirmed live and matching `ARCHITECT_SESSION.txt`).
+
+✔ **RULED ~02:35 TRUE machine-clock, `queue\RULING__2026-08-27_0750-s5canonb-1.md`, and THE RULER
+VERIFIED BY RUNNING** — re-ran the named-source diagnostic on their own shell before ratifying;
+the 23/100 upper bound reproduced. **Verbatim:**
+
+> **1. A — S5-Z9 RATIFIED, AFTER the canon-B drive, never interleaved** (the Z4 precedent): a
+> demark join at the ONE site the class law already owns (`mdrender.mjs`), with **TIERED
+> receipts — byte-exact and demarked-exact are never the same tier**, reported separately (the
+> c2 VERBATIM/SERIALIZED pattern at its fourth application). This is not a loosening: the top
+> tier stays byte-strict, absence still fails closed (the 23 absent stay absent), and a new
+> MEASURED tier replaces a silent discard. All answers re-verify FREE at Z9's close.
+> **2. B REFUSED** — asking the model to reproduce decoration fights measured model behaviour
+> (the de-escape and serializer-dialect record); it would spend pastes to avoid a one-site
+> TIER-0 join. **C REFUSED** — discarding 62 real evidence-sides for missing asterisks is the
+> gate failing its purpose, not protecting it.
+> **3. CONTINUE DRIVING: YES — G01_3, G01_4, G02, G03 now** (the B03 continue-on-measurement
+> precedent). The fix is VERIFY-side; the elicitation does NOT change; no paste you fire is
+> spent on a prompt about to move. Capture is sound; verdicts recompute free.
+> **4. Z9 CEILING ruler-written off the record: BUILD 8 · PROOF 8 · HANDOFF 5.** Bites: the tier
+> split itself (a demarked match may never stamp byte-exact), the join's refusal on anything
+> beyond the declared decoration set (`**`, backtick, leading `- `), no-second-copy (Z7's lesson),
+> and the stored-answer regression.
+> **5.** The fourth-site count is recorded AGAINST the class, not the executor — the class instruction
+> consolidated the question into mdrender precisely so site N+1 is one line, and this ruling
+> uses that consolidation. Escalating rather than self-loosening was correct (rule 6 held).
+
+#### THE THREE AUDIT ANSWERS — EVERY VERDICT BELOW IS A **PRE-Z9 BOUND** (the B15 pattern)
+
+Nothing here is folded into §9 and no yield is claimed as a finished number. Invention figures are
+**UPPER BOUNDS, never point values** (the standing rule) — this matcher is stricter than `verify.mjs`'s.
+
+| step | items | verify kept | real at named source | invention UPPER BOUND |
+|---|---|---|---|---|
+| G01_2 Q1 contradictions | 50 | 2 | 73/100 sides (73.0%) | 23.0% |
+| G01_3 Q4 declared edges | 52 | 27 | 25/52 (48.1%) | 48.1% |
+| G01_4 critic (2nd pass)  | 51 | 26 | 24/51 (47.1%) | 35.3% |
+
+The critic **did what it was asked**: 51 NEW items, and it proposed kinds outside the given list.
+Its `files_covered` reports 70 — the whole group — against Q4's 11.
+
+#### ⛔ A REFUSAL THAT IS THE GATE WORKING, AND A CLASS THAT NEEDS A DECISION BEFORE G02_4
+
+**`capture.mjs --from-blob` REFUSED G01_4**, exactly and correctly:
+
+```
+REFUSED — G01_4's step file has NEITHER a JSON skeleton nor an ANCHOR line, so its expected
+shape is UNDECLARED and identity cannot be asserted.
+```
+
+**G01_4 is the FIRST critic step ever captured in this sweep** (the corpus critics were never fired
+— the ~07:50 ruling; the canon-A critics never ran), so the blob path had never met one. The critic
+step file defines its schema BY REFERENCE — *"in the SAME schema as the previous answer"* — so
+declare-or-die has nothing to read. **The step file was NOT edited** (steps are derived artifacts,
+never hand-authored by a sweep session) **and no gate was loosened.** The instrument names its own
+remedy in the refusal, and that is the branch taken: the DECLARED independent-witness path.
+
+`capture.mjs save G01_4 --from-file <raw> --rendered <rendered>` → **copy-gate PASSED, 482/482
+content lines** of the rendered read found in the raw payload. Both legs' transit shas were verified
+in-page == on-disk independently anyway: raw `ffc4ed58823f6f4a` · rendered `a2a41c14d1c0e69a`.
+
+⚑ **THE CLASS, FLAGGED NOT FIXED: `G02_4`, `G03_4` AND `F3` WILL HIT THE SAME REFUSAL.** Whether
+`buildsteps` should emit a declared shape for by-reference steps is an instrument question that
+belongs to a rung, not to a drive. It does not block anything — the rendered path captures them
+lawfully today, at the cost of ONE extra download per critic. Raised to the ruler in the close
+message; **if it is to be fixed, it fits S5-Z9's scope, and if it is not, the rendered path is the
+standing answer for critic steps.**
+
+#### TRANSPORT — one genuinely new fact, three confirmations
+
+- ⛔ **NEW, AND IT WOULD HAVE STAMPED THE WRONG ANSWER: A COMPLETED TURN HAS NO COPY BUTTON WHILE
+  THE BUSY FLAG IS STALE.** B17's stalled-busy flag has a consequence nobody had written down. With
+  bytes frozen at 45,241 and a well-formed JSON close, turn 2's response footer had still not
+  rendered — so the page held **one** Copy button, the PREVIOUS turn's. A blind click returned
+  **G01_1's payload with G01_1's sha**. It was caught by **asserting WHAT came back, not that
+  something did** — the standing rule doing precisely its job, on the shape (`a STALE payload`)
+  `capture.mjs` already refuses. **Count the Copy buttons against the turn count before clicking.**
+- ✔ **ROUTE ③ IS NOW THE ROUTINE MOVE FOR THIS LANE, AND IT DID THREE JOBS AT ONCE** — a fresh tab
+  on the same chat rendered the missing footer, returned `textContent` **UNCHANGED** (45,241 ·
+  26,377 · 32,300, which is what proves each answer was whole), and restored the download budget.
+  **Four downloads landed in one browser session, each from its own fresh tab.** No mechanism
+  claimed beyond B16's ruled one; these are instances, written as instances.
+- ⚠ **A SEND LANDED AND DID NOT COMMIT ON G01_3 AND G01_4 — instances 4 and 5**, and in this lane it
+  was the FIRST click after a fresh-tab load, both times. The composed sha was re-asserted and the
+  button clicked again; **never re-composed blind.** Two sittings, five instances: a RUN, not a law.
+- ⚠ `Page.captureScreenshot` timed out once while `Runtime.evaluate` answered instantly and the very
+  next screenshot returned — the standing "retry before calling a halt" note, third confirmation.
+- ⚠ **AN IN-PAGE POLL THAT READS `documentElement.innerHTML` BLOWS THE 45 s `Runtime.evaluate`
+  CEILING AT ~10 ITERATIONS HERE** (1.8 MB of DOM). The corpus-half note gave the ~35 s budget
+  without saying that the HAYSTACK is what spends it. **Canon-half polls: ≤5 reads.**
+
+#### TWO SMALLER FLAGS, RECORDED NOT RESOLVED
+
+- **The coverage check measures a GROUP answer against the WHOLE-canon manifest.** G01_2 reads
+  *"reported 70/118 · never mentioned 48"* — those 48 are groups 2 and 3, by design. The receipt is
+  correct and the check's denominator is not. It is not a defect in the answer and it will misreport
+  every group chat; it belongs beside Z9.
+- **`item_count.contradictions` said 49; the array held 50.** The JSON parsed and closed well-formed,
+  so this is a model MISCOUNT, not a cut payload — the verifier's message for it (*"the answer was
+  cut mid-flight"*) is wrong in this case and the wording is worth a look at S5-POST. Nothing lost.
+
+⚠ **31.81 of the 35-lakh EXECUTION line when the drive stopped** (day line 98.19 → 130.00) —
+**INSIDE, and the drive was stopped BY the line, not by the work**: G02 was not opened. Records ride
+the 13-lakh HANDOFF line, which prices the two record-and-commit cycles this sitting used.
