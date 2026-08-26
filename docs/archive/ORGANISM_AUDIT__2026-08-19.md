@@ -1454,6 +1454,7 @@ the ladder is the handoff. Version 2 — the full READ prompt — lives in git h
 survive in §5, which rungs S4 and S5 still obey verbatim.)
 
 ```
+Start this session in DEFAULT permission mode, not auto.
 Open docs/archive/ORGANISM_AUDIT__2026-08-19.md. Read ▶ RESUME HERE, §10-C and §10-D.
 Execute exactly ONE rung — the one named by ▶ NEXT SESSION in ▶ RESUME HERE (fallback, if
 that line is stale: the first ☐ in §10-C) — under its ceiling and §10-D's rules.
@@ -1462,7 +1463,10 @@ commit AND PUSH. Any escalation goes to the queue\ directory as a file (the clip
 retired). Then tell me: what landed, what it cost, and EXACTLY what to paste in the
 architect session — or the words "architect not needed".
 ```
-*(Card v5 — ruled 26 Aug ~01:30, RULING 2026-08-26_0112-s5sweep-2: push and the
+*(Card v6 — ruled 26 Aug ~05:35, RULING 2026-08-26_0525-cardmode-1: the mode line moved INTO
+the card because the requirement's only prior homes were readable AFTER the mode was fixed —
+the order's own §1 class, caught by the executor after it cost two session starts. Card v5 —
+ruled 26 Aug ~01:30, RULING 2026-08-26_0112-s5sweep-2: push and the
 what-to-say line are the card's own closing instructions now, on HIS ask — he repeats
 nothing per session. Card v4 — ruled 25 Aug ~12:25, RULING 2026-08-25_1215-s5y-1: the router named at the point
 of use; the v3 "first ☐" wording sent a session two rungs wrong when the ladder lagged a
