@@ -1452,6 +1452,14 @@ STATUS (update this block before any session stops — this is the handoff)
                                    probe) then `steps/B05_2.txt` (extraction), then STOP and leave
                                    the chat OPEN. MODEL: Opus 5 · effort HIGH · EXECUTION 35 +
                                    HANDOFF 13 (the standing per-sitting line).**
+                                   ✔ **Z5's two-line registry departure is RATIFIED and its scope
+                                   call was RIGHT (RULING__2026-08-26_0935-s5z5-1.md; architect
+                                   miss #9 owned there — the 0855 scope line omitted the
+                                   one-site alphabet visit its own class instruction implied).
+                                   checkall §7's 6th RED was remedied by the architect at
+                                   ratification (`snapshot.mjs take`) — B05 OPENS GREEN; if §7
+                                   is RED again at YOUR open, the class is still live (fix rides
+                                   S5-Z4): run the remedy with a --why and continue.**
                                    **CAPTURE B05 ON THE NEW PATH:** read the ClipboardItem Blob in
                                    the SAME call that clicks THIS answer's Copy button, sha it
                                    IN-PAGE, deliver it page→disk, then
