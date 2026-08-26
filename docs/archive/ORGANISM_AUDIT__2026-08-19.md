@@ -1725,11 +1725,94 @@ STATUS (update this block before any session stops — this is the handoff)
                                      and NO false stamp for B06_2.**
                                    ⚠ 28.85 of the 35-lakh EXECUTION line (day 578.55 → 607.40).
                                      INSIDE. Records ride HANDOFF 13.
-  ▶ NEXT SESSION ............... ⛔ **HIS ONE PHYSICAL ACT, AND IT IS THE CHEAPEST ONE YET: CLOSE
+  ☑ S5 · B06 CLOSED 2/2 ....... 26 Aug 2026 ~14:20 · **HE RESTARTED CHROME AND B06 CLOSED CLEAN.**
+                                   ☑ **IDENTITY HELD ACROSS THE BROWSER RESTART** — the Copy blob
+                                     re-sha'd IN-PAGE to **`c4b4c430d62be103`**, the identical sha
+                                     recorded a process-lifetime earlier. Same answer, PROVEN.
+                                   ☑ **BLOB-GATE PASSED** — transit in-page == on-disk (21,928 B) ·
+                                     all 9 top-level keys · fenced yes · **JSON parses yes**.
+                                   ☑ **VERIFIER, both required counts:** `B06_2 : 44 items → KEPT 11
+                                     · DROPPED 33` · drops: source-missing 24 · NOT-FOUND 8 ·
+                                     item-count-cut 1 · **MEASURED FALSE DROPS 24** ·
+                                     **DE-ESCAPE 0** · genuinely absent 8.
+                                     **⇒ B06's true content is ≥ 35 of 44, not 11** (the 24 are the
+                                     S5-Z4 `(continued)` class, re-verifying free at its close).
+                                     **⇒ DE-ESCAPE READS ZERO A SECOND CONSECUTIVE TIME.**
+                                   ⚑ **ONE DROP EARNED A CHECK ITS KEEP:** *"declared 7, array holds
+                                     6 — cut mid-flight"*. The JSON closed VALIDLY, so no parse
+                                     check could see it — **only `item_count` could.** That is the
+                                     invisible-truncation case, caught.
+  ◐ S5 · B07 OPENED, PROBE      `gemini.google.com/app/00cd8dc2b6bcfed4` · Pro Extended before the
+     ANSWERED, CAPTURE OWED      attach · **10/10 chips off `innerHTML` and 10/10 on the SENT turn**
+                                   · four hops exact (`bc8035232c5d0261`, 104 lines, mismatch −1) ·
+                                   **the send committed FIRST TRY under the amended law — FOURTH
+                                   consecutive success.**
+                                   ☑ **Its probe answered and BY MEASUREMENT IT IS RIGHT** — 2
+                                     fences, no NOT-FOUND, **both anchors BYTE-EXACT**: in-page shas
+                                     **`3bd8d864318e4591`** and **`da8e8ea610f54ee8`** == 
+                                     `probe_expected.json`'s `live2_g07`, once the fence's own
+                                     trailing newline is removed.
+                                   ⚠ **RECORDED AS A LEAD, NOT A VERDICT (rule 5)** — the verdict is
+                                     `probecheck`'s and it needs the file. **Nothing is stamped.**
+                                   ⚠ **FOR S6, NOT A GATE:** B07_1 reported **9 of 12** ground-truth
+                                     headers while both anchors were byte-exact; B06's PASSING probe
+                                     reported all 12. **The header count and the anchors disagree,
+                                     so the count is not a retrieval measure.** Data, not a verdict.
+                                   ⛔ **THE DOWNLOAD WAS REFUSED — B06_2's capture had spent this
+                                     browser session's ONE — so `probecheck` could not run and
+                                     B07_2 was NOT FIRED.** A gate order, not a preference.
+                                     B07_1's answer persists server-side, in-page sha
+                                     **`2a21cb66595516d2`** (1,140 chars) — recoverable free.
+                                   ⚑ **ONE-SHOT CONFIRMED THREE TIMES ACROSS FOUR BROWSER SESSIONS:**
+                                     11:58 OK (A) · 12:24 OK (B) · 13:5x REFUSED ×2 (B) · 14:0x OK
+                                     (C, post-restart) · 14:1x REFUSED (C). **No ambiguity left.**
+                                   ⚠ 21.12 of the 35-lakh EXECUTION line (day 611.92 → 633.04).
+                                     INSIDE. Records ride HANDOFF 13.
+  ⚠ ESCALATED (NON-BLOCKING) ... **`queue\2026-08-26_1420-s5corpus-13.md`** — a chat needs TWO
+                                   deliveries and a browser session gives ONE, so **B07–B18 costs
+                                   HIM ~11 physical restarts. That is L7's exact prohibition.**
+                                   Recommendation A: declare a SECOND inbound transport (Copy → OS
+                                   clipboard → file → `capture.mjs --from-file`, the pre-S5-X path,
+                                   already built, copy-gate intact, clipboard ALIVE this session),
+                                   **strictly ORDERED BELOW the blob-download**, firing only on a
+                                   refusal, every hop sha-asserted, and STAMPED. Rule 6 holds.
+                                   Not taken alone: `preflight` says *"the sweep does not use this
+                                   path"*. **If a `RULING__…-13.md` is on disk, IT governs.**
+  ▶ NEXT SESSION ............... ⛔ **HIS ONE PHYSICAL ACT, UNCHANGED AND STILL THE CHEAPEST: CLOSE
                                    CHROME COMPLETELY AND REOPEN IT** before the sitting. That resets
-                                   the one-shot download budget, which is the ONLY thing standing
-                                   between us and B06's close. It is HIS act by design — browsers
+                                   the one-shot download budget. It is HIS act by design — browsers
                                    are tier "read" and `open_application` is a standing negative.
+                                   **① FIRST ACT — CAPTURE B07_1, FREE, NO RE-ASK.** Open
+                                   `gemini.google.com/app/00cd8dc2b6bcfed4`, JS-click the LAST
+                                   answer's Copy, sha the Blob IN-PAGE — **it must be
+                                   `2a21cb66595516d2`, 1,140 chars** — deliver page→disk, then
+                                   `node capture.mjs save B07_1 --from-blob <file> --blob-sha <hex>`
+                                   and **`node probecheck.mjs B07_1` for the VERDICT.** Expect PASS
+                                   (both anchors already measured byte-exact) — but the gate decides,
+                                   not that measurement.
+                                   **② THEN `steps/B07_2.txt`** in the same chat, captured on the
+                                   **ORDERED TRANSPORTS** below — **no second restart is owed.**
+                                   **③ THEN B08** — fresh chat, `live2_batch71-80`, and onward.
+                                   **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
+                                   ✔ **THE TRANSPORT ORDER IS NOW LAW (RULING 1425 item 1):**
+                                   **① blob-download (PRIMARY, strictest, no OS clipboard) → ② the
+                                   CLIPBOARD ROUTE (Copy → OS clipboard → file →
+                                   `capture.mjs --from-file`, copy-gate intact), which fires ONLY
+                                   on a REFUSED download.** Never the other order.
+                                   ⚠ **ITS CONDITIONS ARE PART OF IT (item 2):** every hop
+                                   **sha-asserted in-page vs disk** — assert WHAT came back, because
+                                   this is the CONTENDED transport that has died 11 times; the
+                                   existing `raw` stamp covers it, **no registry change**; and if
+                                   **BOTH** transports are down, **halt THAT chat only** — his
+                                   restart is the LAST resort, delivered on the report line, **never
+                                   mid-sitting by default.**
+                                   ⚡ **SO B07–B18 COSTS HIM ONE RESTART AT OPEN, NOT ELEVEN.**
+                                   ⚠ **`checkall` §7 will go RED whenever you run `verify.mjs`** —
+                                   three of its five complaints last sitting were the VERIFIER'S OWN
+                                   OUTPUTS (`verified/dropped/coverage.json`). 7th RED, same class,
+                                   fix rides S5-Z4. Remedy and continue:
+                                   `node snapshot.mjs take --why "…"`, then re-run checkall GREEN
+                                   BEFORE committing.
                                    **① FIRST ACT — FINISH B06, AND IT COSTS ZERO GEMINI TOKENS.**
                                    Open `gemini.google.com/app/f902f4c0dc244efc`, JS-click the LAST
                                    answer's Copy, read the `ClipboardItem` Blob in the SAME call,
@@ -9599,3 +9682,138 @@ complete extraction awaiting transport), one echo.**
 
 **B01–B05 CLOSED, 5 of 18. B06 is OPEN: probe PASSED and captured, extraction PRODUCED and
 awaiting one free transport step.**
+
+---
+
+### PROGRESS 2026-08-26 ~14:20 IST — S5 · B06 CLOSED 2/2, B07 OPENED AND ITS PROBE ANSWERED — then the ONE-SHOT DOWNLOAD stopped it
+
+**Router obeyed** (§10-D rule 1) — ① finish B06's capture, ② then B07. Both attempted, in that
+order. Micro-order written to the session scratchpad before any edit and checked against
+§10-C/§10-D (rule 9). `checkall` **8/8** · `preflight` **GO** (one expected resume warning; **the
+clipboard round-trip PASSED this session — no clipboard warning at all**, the first clean read
+in three sittings).
+
+#### ① B06 IS CLOSED — 2 of 2, AND THE RESTART DID EXACTLY WHAT WAS PREDICTED
+
+He closed and reopened Chrome. The download budget reset, and the capture then proved something
+better than "it worked":
+
+- **IDENTITY HELD ACROSS THE BROWSER RESTART.** The Copy blob re-sha'd IN-PAGE to
+  **`c4b4c430d62be103`** — the identical sha recorded before he closed the browser, an hour and a
+  process-lifetime earlier. **Same answer, proven, not assumed.** 21,798 chars.
+- `capture.mjs save B06_2 --from-blob … --blob-sha c4b4c430d62be103` → **BLOB-GATE PASSED** —
+  transit sha in-page == on-disk (21,928 B) · identity: **all 9 top-level keys of the step's shape
+  present** · fenced yes · **JSON parses yes**.
+- **THE VERIFIER, with both counts the ruling requires:**
+
+```
+B06_2 : 44 items -> KEPT 11 · DROPPED 33
+        drop reasons : source-missing 24 · NOT-FOUND 8 · item-count-cut 1
+        MEASURED FALSE DROPS (verbatim in the ten frozen batches) : 24
+        DE-ESCAPE COUNT (matches only after collapsing doubles)   :  0
+        genuinely absent by this measure                          :  8
+        (false-drop figure is a LOWER BOUND - whitespace-normalised containment)
+```
+
+**⇒ B06's true content is at least 35 of 44, not 11.** The 24 are the S5-Z4 `(continued)` day-key
+class, exactly as at B05, and they re-verify free at its close.
+**⇒ AND THE DE-ESCAPE COUNT READS ZERO A SECOND CONSECUTIVE TIME.** The model behaviour that failed
+B05's probe still is not reaching the product — measured twice now, not assumed once.
+**⇒ ONE DROP IS WORTH NAMING:** *"declared 7, array holds 6 — the answer was cut mid-flight"*. The
+JSON closed **validly**, so no parse check could have seen it — **only the `item_count` check
+could**, which is precisely the invisible-truncation case that check was added for.
+The verifier's own probe ledger independently agrees on the other half: `live2_g06 · B06_1:VERBATIM(v2)`.
+
+#### ② B07 OPENED CLEAN, ITS PROBE LOOKS RIGHT — AND THE CAPTURE HIT THE WALL
+
+`gemini.google.com/app/00cd8dc2b6bcfed4` · Pro Extended read BEFORE the attach · account 1 ·
+**10/10 chips off `innerHTML` and 10/10 again on the SENT turn** · four hops exact
+(`bc8035232c5d0261`, 105 blocks, `composed === source`, sent turn 104 lines,
+`firstStrippedMismatch = -1`) · **the send committed FIRST TRY under the amended law — fourth
+consecutive success, and the law is now the reason this rung stopped losing sends.**
+
+**Its probe answered, and by measurement it is RIGHT:** 2 fenced blocks, no NOT-FOUND, and **both
+anchors BYTE-EXACT** — in-page shas **`3bd8d864318e4591`** and **`da8e8ea610f54ee8`**, identical to
+`probe_expected.json`'s `live2_g07` once the fence's own trailing newline is removed.
+⚠ **RECORDED AS A LEAD, NOT A VERDICT (§10-D rule 5).** The verdict belongs to `probecheck`, and
+`probecheck` needs the file on disk. Nothing here is stamped as a pass.
+⚠ **An observation for S6, and it is NOT a gate:** B07_1 reported **9 of 12** ground-truth
+`===== ` headers while both anchors were byte-exact; B06's passing probe reported all 12.
+**The header count and the anchors disagree, so the count is not a retrieval measure.** Data.
+
+**⛔ THE DOWNLOAD WAS REFUSED — B06_2's capture had spent this browser session's ONE.** So
+`probecheck` could not run, so **B07_2 was NOT fired.** That is a gate order, not a preference.
+B07_1's answer persists server-side with its in-page sha **`2a21cb66595516d2`** (1,140 chars)
+recorded here — recoverable free next sitting, exactly as B06_2 was.
+
+**THE ONE-SHOT RULE IS NOW CONFIRMED THREE TIMES, ACROSS FOUR BROWSER SESSIONS:**
+11:58 OK (A) · 12:24 OK (B) · 13:5x **REFUSED ×2** (B) · 14:0x OK (C, after his restart) ·
+14:1x **REFUSED** (C). **Exactly one page→disk delivery per browser session.** No ambiguity left.
+
+#### TWO SMALLER TRANSPORT CONFIRMATIONS
+
+1. **The screenshot-timeout is transient, twice more.** `Page.captureScreenshot` timed out on two
+   consecutive calls while `Runtime.evaluate` answered instantly through both; the next screenshot
+   returned normally. **Reading it as a dead renderer would have halted a healthy sitting.**
+2. **A menu CAN paint without a screenshot** — polling with a `resize` nudge got Extended thinking
+   selected while screenshots were timing out. But **the `input[type=file]` still did not exist
+   until a screenshot actually painted the upload menu** (third confirmation), so the
+   paint-forcing screenshot remains the reliable move, not the only one.
+
+#### ESCALATED, NOT IMPROVISED — AND IT IS ABOUT THE REMAINING ELEVEN CHATS
+
+**`queue\2026-08-26_1420-s5corpus-13.md`**, direct channel, `arsenal-ai-fc-e8` confirmed live by
+`ListAgents` first. **NON-BLOCKING** — the next sitting works after one restart regardless.
+
+**The fork:** a chat needs **TWO** deliveries to close (probe answer, then extraction) and a
+browser session gives **ONE**. B07–B18 is eleven chats ⇒ **~11 physical restarts by him.**
+**That is L7's exact prohibition** — a thing he must remember and chase.
+**Recommendation A:** declare a SECOND inbound transport — Copy → OS clipboard → file →
+`capture.mjs --from-file` (the pre-S5-X path, already built, copy-gate intact, and **the clipboard
+is ALIVE this session**) — strictly **ORDERED BELOW** the blob-download, firing only when the
+download is refused, every hop still sha-asserted, and **stamped** so provenance is never
+ambiguous. Rule 6 holds: nothing loosens; a route is added beneath the strictest one.
+**I did not take it myself** — `preflight` says in its own words *"the sweep does not use this
+path"*, so using it would be introducing an inbound transport the sweep has never declared.
+
+#### THE NUMBERS
+
+**21.12 of the 35-lakh EXECUTION line** — day line **611.92 → 633.04**, read from
+`session_meter.mjs status 1`, not estimated. **INSIDE.** Records ride the 13-lakh HANDOFF line.
+
+**Zero instruments edited · zero gates weakened · zero verdicts self-passed · frozen inputs
+untouched · `answers/` +1 (B06_2, BLOB-GATE passed) · B07_2 NOT fired · one download spent · three
+paid Gemini turns this sitting, all three good.**
+
+**B01–B06 CLOSED — 6 of 18. B07 is OPEN with its probe answered and its capture owed.**
+
+#### THE RULING CAME BACK IN THE SAME SITTING — A RATIFIED, AND THE ELEVEN RESTARTS COLLAPSE TO ONE
+
+**`queue\RULING__2026-08-26_1425-s5corpus-13.md`, 9th direct-channel use** — and the ruler verified
+by running AGAIN before ruling: `answers/B06_2.txt` fresh-hashed to `c4b4c430d62be103` (so
+cross-restart identity holds on disk, not just in my report) and **the clipboard was probed ALIVE
+by the ruler independently.** Recorded verbatim:
+
+> RULED — queue\RULING__2026-08-26_1425-s5corpus-13.md (file = record). Verified: B06_2.txt fresh-hashed c4b4c430d62be103 (cross-restart identity holds on disk) and the clipboard is ALIVE to my own probe. B06 CLOSED 2/2 ratified; your B07 lead-not-verdict discipline was correct.
+>
+> (1) A RATIFIED: the clipboard route (Copy → OS clipboard → file → --from-file, intact copy-gate) is the DECLARED SECOND inbound transport, strictly ORDERED below the blob-download — fires only on a refused download. Rule 6 holds. (2) CONDITIONS standing: every hop sha-asserted in-page vs disk (assert-WHAT — this is the contended transport); existing `raw` stamp, no registry change; BOTH transports down → halt that chat only, his restart = last resort via the report line, never mid-sitting by default. (3) Preflight's descriptive sentence may be amended one line in the same fold, named in the close. (4) item_count catch filed as S6 receipt-inflation evidence.
+>
+> Close the sitting. Next sitting: ONE restart by him at open → capture B07_1 + probecheck → B07_2 on the ordered transports → B08 onward, zero further restarts owed by him.
+
+**FOLDED IN THIS SAME ACT (rung-row-in-same-act):**
+- **`preflight.mjs:167` amended, ONE line, exactly as item 3 permits and named here:** its advisory
+  now reads *"the DECLARED SECOND inbound transport since RULING__2026-08-26_1425-s5corpus-13 —
+  strictly BELOW the blob-download, fires only on a refused download"*. It was the last line in the
+  repo still calling the clipboard a path *"the sweep does not use"*.
+- **`checkall` §7 went RED on that edit** — its **7th RED**, and the class is unchanged and still
+  the one S5-Z4 owns: five instruments had no restorable copy (my one-line edit, the new
+  `diag/b06_2_counts.mjs`, and the three JSONs `verify.mjs` rewrote on its own run). Remedied with
+  the named remedy, `snapshot.mjs take --why`, and **`checkall` re-run GREEN 8/8 before the commit.**
+  ⚑ Worth naming for S5-Z4: **three of the five were the VERIFIER'S OWN OUTPUTS**, so §7 goes RED
+  simply for running the verifier. That is a gate firing on its own instrument's normal work.
+- **`diag/b06_2_counts.mjs`** is the B05 precedent instrument re-pointed at batches 51–60 — the
+  counts above came from it, not from a hand-rolled recount (§4: the instrument is the authority).
+- Item 4 noted: the `item_count` catch is filed as **S6 receipt-inflation evidence**.
+
+**⇒ THE PRACTICAL RESULT, AND IT IS THE POINT: B07–B18 NO LONGER COSTS HIM ELEVEN RESTARTS.**
+One restart at the next sitting's open, then the two ordered transports carry every chat.
