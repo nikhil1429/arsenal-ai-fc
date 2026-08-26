@@ -1225,13 +1225,92 @@ STATUS (update this block before any session stops — this is the handoff)
                                      also holds a visually-hidden "You said …" H5 and, when collapsed, a
                                      truncated preview line; `innerText` doubles lines AND trims the ruled
                                      padding away, so it can never match.
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — CORPUS HALF RUNNING. RESUME AT B03_1, A FRESH
-                                   CHAT.** B01 and B02 are both CLOSED 3/3 — 2 of 18 corpus chats
-                                   complete. Nothing is owed in either of their chats; do not
-                                   re-open them. The next act is a NEW Pro-Extended chat, ten
-                                   attachments `live2_batch21-30` (`node buildsteps.mjs` ends with
-                                   the full attachment map), `steps/B03_1.txt` to load + probe,
-                                   then `steps/B03_2.txt` — and THEN STOP: the critic step is not fired (ruling below).
+  S5 CORPUS · B03 CLOSED ....... ☑ 26 Aug 2026 ~07:50 IST · Opus 5 · effort HIGH · AUTO mode, third
+                                   clean session with no classifier event. **B03 IS COMPLETE 2/2 at
+                                   the new extraction-only shape** and its chat is LEFT OPEN for an
+                                   on-demand retro-critic. Full account in the PROGRESS entry of
+                                   26 Aug ~07:50 — read that, not this summary.
+                                   ☑ gates RUN IN THIS SESSION: checkall RED at open on section 7 for
+                                     the THIRD consecutive open (the previous sitting's verify outputs
+                                     had no restorable copy) — closed by the gate's own remedy
+                                     `snapshot.mjs take`, then GREEN all 8 · preflight GO, 18 checks.
+                                   ☑ B03_1 fired into a fresh Pro-Extended chat
+                                     (`gemini.google.com/app/e6ddce87fc2e8377`, nikhil.panwar2914),
+                                     10/10 chips by name; four-hop outbound matched (`1838d8eb…`,
+                                     pad delta exactly 166 = 83 non-empty × 2).
+                                   ⚠ **ONE ADDITION TO THE STANDING OUTBOUND LAW:** the renderer emits
+                                     NO empty block for the payload's final newline — the 4th hop must
+                                     RESTORE one trailing newline after stripping the padding, or a
+                                     perfectly-delivered prompt reads as a 1-character mismatch.
+                                   ⛔ **A GATE SAID THE TEXT NEVER REACHED THE MODEL, AND THE MODEL HAD
+                                     IT PERFECT.** `probecheck B03_1` = FAIL on the middle anchor; the
+                                     answer's line is byte-identical to the stored expected — 100/100
+                                     chars, both anchors VERBATIM. Cause: the clipboard died mid-chat ⇒
+                                     the DECLARED lossy capture ⇒ probecheck renders the EXPECTED side
+                                     while PROBE-FORMAT v2's anchors live INSIDE A FENCE, which a
+                                     rendered read never consumes. **The two sides were compared in
+                                     OPPOSITE ALPHABETS — the S5-Z3 class at its THIRD wrong site**,
+                                     exposure 23/46 anchors across 20/23 groups. NOT PATCHED.
+                                   ✔ RULED ~08:20 (`queue\RULING__2026-08-26_0805-s5corpus-5.md`, direct
+                                     channel, second use): **A first, bounded — one raw re-capture now,
+                                     one at sitting-close, never an open wait; both found the clipboard
+                                     dead ⇒ B: B03 CONTINUES on the byte-identity measurement.** The
+                                     EITHER-ALPHABET lossy fix **rides S5-Z4** with the class
+                                     instruction "which alphabet is this text in = ONE question, ONE
+                                     answer site (join it to mdrender.mjs)". **NEW STANDING RULE: a
+                                     proven-false gate verdict is NEVER self-passed — always escalated;
+                                     byte-identity-exact cases take the direct-channel fast path and the
+                                     override is recorded with its ruling id.**
+                                   📌 **B03's OVERRIDE LINE: probe FAIL overridden by ruling
+                                     0805-s5corpus-5 — byte-identity exact (2/2 anchors), comparator
+                                     alphabet-mismatch lossy/fence.**
+                                   📊 **B03's RECORD — verify pre-Z4: extraction 0 kept / 30 dropped, all
+                                     `source-missing`; 25 of 30 dropped quotes MEASURED PRESENT, 5
+                                     genuinely absent (condensed list fragments). TRUE content ~25 of 30
+                                     items real, not 0.** Running totals: KEPT 91 · DISCARDED 130 — KEPT
+                                     has not moved since B02 for this reason alone.
+                                   ⛔ **THE CLIPBOARD LEAD IS REFUTED BY MEASUREMENT.** Alive at open,
+                                     dead ~20 min later, 28 consecutive failures. While the fault was
+                                     LIVE: `GetOpenClipboardWindow()` = NULL and `GetClipboardOwner()`
+                                     = NULL, sampled 7×. **Nothing holds it, and `Set-Clipboard` throws
+                                     `ExternalException` anyway** — that kills the 26 Aug ~04:00
+                                     "the Win32 lock IS held" reading; the two recorded faces are ONE.
+                                   ⚠ Transport, three costs the next executor should not re-pay:
+                                     **(a) the render stall is now the NORM and has a CHEAP DETECTOR** —
+                                     `message-content.textContent` > 0 while `.innerText` === 0 means the
+                                     answer is finished and only the paint is stuck; reload, never
+                                     re-fire (recovered 848 and 15,455 chars, free, twice).
+                                     **(b) a CLIPBOARD-FREE OUTBOUND that keeps prompt bytes out of the
+                                     session's context** — an injected `<input type=file>` + `file_upload`
+                                     + `FileReader`, four hops still asserted; STRICTER than the written
+                                     per-line `type` fallback. DECLARED for ratification. A page-side
+                                     `fetch('http://127.0.0.1:…')` is REFUSED by gemini.google.com with
+                                     and without the private-network header, so **serve.mjs's premise
+                                     does not hold for a driving session.**
+                                     **(c) after a page RELOAD the send button is INERT** — ref, hover
+                                     and coordinate clicks all no-op with it enabled; `Return` in the
+                                     ref-focused box sends immediately.
+                                   ⚠ 30.38 spent of the fresh 35-lakh EXECUTION line (own-JSONL count,
+                                     meter weights, read AT the close) — INSIDE. B04 needs a whole chat
+                                     and would have breached mid-chat, so this sitting STOPPED (§10-D
+                                     rule 2). Records ride the 10-lakh HANDOFF line.
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — CORPUS HALF RUNNING. RESUME AT B04_1, A FRESH
+                                   CHAT.** B01, B02 and B03 are all CLOSED — **3 of 18 corpus chats
+                                   complete.** Nothing is owed in any of their chats. B03's chat stays
+                                   OPEN by ruling (retro-critic on demand); do not re-open it to work.
+                                   The next act is a NEW Pro-Extended chat, ten attachments
+                                   `live2_batch31-40` (`node buildsteps.mjs` ends with the full
+                                   attachment map), `steps/B04_1.txt` to load + probe,
+                                   then `steps/B04_2.txt` — and THEN STOP: the critic step is not fired (ruling below).
+                                   ⚠ **READ THE THREE TRANSPORT NOTES ON THE B03 ROW BEFORE TOUCHING THE
+                                   BROWSER** — reload on a stall (textContent>0 & innerText==0 is the
+                                   tell), `Return` not the send button after any reload, and the
+                                   injected-file-input outbound for as long as the clipboard is down.
+                                   ⚠ **A PROVEN-FALSE GATE VERDICT IS NEVER SELF-PASSED** (ruling
+                                   0805-s5corpus-5, item 3). If a probe FAILs, measure the byte-identity
+                                   first, then escalate on the direct channel — do NOT fire the corpus
+                                   fallback on a chat whose anchors are exact, and do NOT pass it
+                                   yourself. Expect this on every lossy-captured chat until S5-Z4.
                                    ✔ **RULED ~07:50, AND IT CHANGES THE SHAPE OF B03–B18**
                                    (`queue\RULING__2026-08-26_0745-s5corpus-4.md`, off this
                                    session's measured ~1-hour-per-chat number):
@@ -3143,8 +3222,52 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       read as model recall). The standing
       outbound law's 4th hop strips Gemini's per-line 1-leading+1-trailing space padding
       before hashing (measured; the padding is the renderer's, never the payload's).
+      +SCOPE RULED 26 Aug ~08:20 (RULING__2026-08-26_0805-s5corpus-5.md, direct channel, 2nd use):
+      the **EITHER-ALPHABET FIX FOR THE LOSSY PATH** — a `rendered-lossy` answer may legitimately
+      carry RAW markdown inside a fence, so the comparator must accept a match in EITHER alphabet
+      instead of rendering only the EXPECTED side. Measured at B03_1: both anchors byte-identical
+      (100/100 chars) and the gate still said "the text did not reach the model". ⛔ **CLASS
+      INSTRUCTION FROM THE RULER, not a site fix: "which alphabet is this text in" is ONE question
+      with ONE answer site — JOIN IT TO `mdrender.mjs`.** This is the THIRD wrong site (S5-Z3's raw
+      comparator · S5-R2's day-index parse · this); his global-not-patch law says the next one is
+      the builder's fault, not the finder's. All stored answers re-verify FREE at this rung's close
+      (fourth use of the A02 pattern). ⚠ Three scope additions now ride the ruler-written BUILD 5 /
+      PROOF 3 line and it has NOT been re-derived — that is the ruler's call, flagged not taken.
                                            BUILD 5 · PROOF 3 · HANDOFF 5 (ruler-written)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      ◐ **26 Aug ~07:50 — B03 IS CLOSED 2/2 at the new extraction-only shape. 3 of 18 corpus chats
+      complete**, and B03's chat is LEFT OPEN for an on-demand retro-critic. Fresh Pro-Extended chat
+      `gemini.google.com/app/e6ddce87fc2e8377`, 10/10 chips, four-hop outbound matched on both steps.
+      ⚠ **THE STANDING OUTBOUND LAW GAINS ONE MEASURED CLAUSE:** the renderer emits NO empty block
+      for the payload's final newline, so the 4th hop must RESTORE one trailing newline after
+      stripping the padding — otherwise a perfectly-delivered prompt reads as a 1-char mismatch.
+      ⛔ **A GATE SAID THE TEXT NEVER REACHED THE MODEL, AND THE MODEL HAD IT PERFECT.** probecheck
+      B03_1 = FAIL on the middle anchor; measured byte-identity **100/100 chars, both anchors
+      VERBATIM.** The clipboard died mid-chat ⇒ DECLARED lossy capture ⇒ probecheck renders the
+      EXPECTED side, while PROBE-FORMAT v2's anchors sit INSIDE A FENCE that a rendered read never
+      consumes: **the two sides compared in OPPOSITE ALPHABETS — the S5-Z3 class at its THIRD wrong
+      site**, exposure 23/46 anchors across 20/23 groups. NOT PATCHED — S5 builds nothing.
+      ✔ RULED ~08:20 (`RULING__2026-08-26_0805-s5corpus-5.md`, direct channel, 2nd use): **A first,
+      bounded (one raw re-capture now, one at sitting-close — both found the clipboard dead) ⇒ B:
+      B03 CONTINUES on the measurement**, override recorded with its ruling id; the EITHER-ALPHABET
+      lossy fix **rides S5-Z4** under the class instruction *"which alphabet is this text in = ONE
+      question, ONE answer site (join it to mdrender.mjs)"*; and a **NEW STANDING RULE — a
+      proven-false gate verdict is NEVER self-passed, always escalated**, byte-identity-exact cases
+      on the direct-channel fast path.
+      📊 B03 pre-Z4: extraction 0 kept / 30 dropped, all `source-missing` · **25 of 30 dropped quotes
+      MEASURED PRESENT, 5 genuinely absent** ⇒ TRUE ~25 of 30 items real. Running totals as the
+      instrument stands: KEPT 91 · DISCARDED 130 (KEPT has not moved since B02 for this reason alone).
+      ⛔ **THE CLIPBOARD LEAD IS REFUTED:** with the fault LIVE, `GetOpenClipboardWindow()` and
+      `GetClipboardOwner()` are both **NULL**, sampled 7× across 28 consecutive `ExternalException`
+      failures. **Nothing holds it.** The 26 Aug ~04:00 "the Win32 lock IS held" reading is dead and
+      the two recorded faces are ONE face; cause still open, S11.
+      ⚠ Transport, three free lessons: **the render stall is the NORM and has a cheap detector**
+      (`textContent` > 0 while `innerText` === 0 ⇒ reload, never re-fire — recovered 848 and 15,455
+      chars free) · **a clipboard-free outbound exists that keeps prompt bytes OUT of the session's
+      context** (injected file input + `file_upload` + `FileReader`, four hops still asserted;
+      a page-side `fetch('http://127.0.0.1:…')` is REFUSED, so serve.mjs's premise fails for a
+      driving session) · **after a reload the send button is INERT — use `Return`.**
+      ⚠ 30.38 of the fresh 35-lakh EXECUTION line, INSIDE; STOPPED rather than open B04 (§10-D rule 2).
       ◐ **26 Aug ~08:15 — B02 IS CLOSED 3/3. 2 of 18 corpus chats complete.** Both steps captured
       RAW (copy-gate 8/8 and 13/13, fenced, JSON parses, no lossy stamp), four-hop outbound matched
       on both, AUTO mode on his word with no classifier event.
@@ -7414,3 +7537,162 @@ rung row, addendum, memory, commit). Ceiling NOT re-derived — §10-C allows th
 fault and there is none. If this repeats across the remaining sittings it is a sizing question for
 the ruler, since the per-sitting model just made 35+10 standing: **a ruling that lands after a close
 costs a second handoff, and the 5-flat/10-line model does not price that.**
+
+### PROGRESS 2026-08-26 ~07:50 IST — S5 · THE SWEEP, CORPUS HALF. **B03 CLOSED 2/2 (extraction-only) · A PROVEN-FALSE GATE VERDICT · AND THE CLIPBOARD LEAD IS REFUTED BY MEASUREMENT.**
+
+**Opus 5 · effort HIGH · AUTO permission mode on HIS word.** No classifier event — the third clean
+session in a row. Router obeyed (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐ — the first
+☐ is S5-Z4, which may never interleave a half-driven corpus). Micro-order written to the session
+scratchpad before the first edit (rule 9).
+
+⏱ **A CLOCK NOTE, because it affects archaeology and nothing else.** The machine clock at this
+close reads **07:49 IST** (confirmed against `capture.mjs`'s own `captured_at` stamps and the
+download mtimes). The previous entry is labelled ~08:15/~08:30 and its rulings 0700/0745. So the
+hand-written IST labels in this order have drifted **~30 minutes AHEAD of the machine**. This
+session's queue filenames (`..._0805-...`) follow the document's series, not the clock, because they
+were already cited in a ruling and in the direct-channel message before the drift was noticed.
+Entries are ordered by append position; only the labels are unreliable.
+
+#### WHAT LANDED
+
+**1. The gates, run in this session.** `checkall.mjs` RED at open on section 7 — the same condition
+as the last two opens, the previous sitting's `verify.mjs` outputs (`coverage/dropped/verified.json`)
+having no restorable copy. Closed by the gate's own prescribed remedy (`snapshot.mjs take`, 75
+instruments, 654,105 bytes), never by loosening it. Re-run: **GREEN all 8 sections · preflight GO,
+18 checks.** Clipboard was **ALIVE at open** and round-tripped the whole 6,736-char step file.
+
+**2. B03_1 (load + probe) — fired, four hops matched, answer recovered free after a render stall.**
+Fresh Pro-Extended chat `gemini.google.com/app/e6ddce87fc2e8377`, account nikhil.panwar2914, ten
+attachments `live2_batch21-30`, **10/10 chips by name in order.** Outbound: file sha
+`1838d8eb4089c3b3...` → OS clipboard (6,736 chars, identical) → in-page `readText` (identical) →
+compose box **105 blocks, identical** → the SENT user turn, 104 `p.query-text-line`, pad delta
+**exactly 166 = 83 non-empty lines × 2**, stripped and re-hashed → `1838d8eb...` byte-identical.
+
+⚠ **ONE SMALL ADDITION TO THE STANDING OUTBOUND LAW, measured here:** the renderer emits **no empty
+block for the payload's final newline**, so the fourth hop must **restore one trailing newline**
+after stripping the padding or it reads a 1-character mismatch on a perfectly-delivered prompt.
+Before that correction the stripped sha was `e8a0e564...`; after it, exact. Same class as the
+padding rule itself — a renderer freedom, not a payload change.
+
+**3. B03_2 (the five-bucket extraction) — fired and captured.** Per the ~07:50 ruling this chat is
+**EXTRACTION-ONLY**: `B03_3` was not fired, and the chat is **left OPEN** for an on-demand
+retro-critic. Free cross-check worth having: **`steps/B03_2.txt` is BYTE-IDENTICAL to `steps/B02_2.txt`**
+(sha `fa0ba6ff2a330971...`) — the extraction prompt is one file for all eighteen corpus chats, and that
+sha, its 9,030 chars, its 124 compose blocks, its 123 sent lines and its pad delta of **216 = 108
+non-empty × 2** all reproduce the ~08:15 session's independently-recorded numbers exactly.
+
+#### THE FINDING — A GATE SAID THE TEXT NEVER REACHED THE MODEL, AND THE MODEL HAD IT PERFECT
+
+`probecheck B03_1` returned **FAIL** on the middle anchor: *"no run of this line appears in the
+reply, in either alphabet — the text did not reach the model."* Measured read-only, no instrument
+touched:
+
+```
+expected RAW  : "1. **Dead LLM lane** — `claudegen` binary path, the two `.catch()` TypeErrors, `limit_hit` detection"
+answer   LINE : "1. **Dead LLM lane** — `claudegen` binary path, the two `.catch()` TypeErrors, `limit_hit` detection"
+exact raw match : true · substring match : true · len 100 == len 100
+```
+
+Both anchors are **VERBATIM**. The FAIL is entirely the instrument's, and the chain is nameable:
+the OS clipboard died mid-chat, so the answer was saved through the **DECLARED lossy fallback**;
+that stamp makes probecheck **render the EXPECTED side into markdown-CONSUMED form** — but
+PROBE-FORMAT v2 requires each anchor **inside a fenced code block**, and a rendered read of a fence
+is **not** markdown-consumed. The two sides were compared **in opposite alphabets**.
+
+**This is the S5-Z3 alphabet class one layer down — its third wrong site.** The lossy stamp is TRUE
+for an answer's prose and FALSE for its fenced regions, and the fence is exactly where every anchor
+lives by design. Exposure: 23/46 stored anchors are markdown-BEARING across 20 of 23 chat groups,
+so any chat captured lossy can false-FAIL. **NOT PATCHED — S5 BUILDS NOTHING.** Escalated over the
+direct channel (`queue\2026-08-26_0805-s5corpus-5.md` written first as the RECORD, then one line by
+SendMessage to `arsenal-ai-fc-5d`, confirmed live by ListAgents first).
+
+#### THE RULING, RECORDED VERBATIM (`queue\RULING__2026-08-26_0805-s5corpus-5.md`)
+
+> ARCHITECT → EXECUTOR · RULING (record: queue\RULING__2026-08-26_0805-s5corpus-5.md, treat this as its content):
+> 1. A FIRST, BOUNDED — one raw re-capture attempt now + one at sitting-close, never an open wait. If clipboard dead both times: B — B03 CONTINUES IN THIS CHAT on your byte-identity measurement; the chat's record carries the override line (probe FAIL overridden by ruling 0805-s5corpus-5, byte-identity exact, comparator alphabet-mismatch lossy/fence). C is measurement-refuted on record; D refused.
+> 2. CONFIRMED: EITHER-ALPHABET lossy fix rides S5-Z4; all stored answers re-verify free at its close. Class instruction for S5-Z4: "which alphabet is this text in" = ONE question, ONE answer site (join it to mdrender.mjs) — third wrong-site instance.
+> 3. NEW STANDING RULE: a proven-false gate verdict is NEVER self-passed — always escalated; byte-identity-exact cases get the fast path (direct channel, one-line confirmation, override recorded with ruling id). No live architect = halt that chat only, other chats continue.
+> B03_2 fire karo. No further word needed.
+
+Both bounded attempts were made and **both found the clipboard dead**, so branch **B** applies.
+**B03's OVERRIDE LINE, as the ruling requires: probe FAIL overridden by ruling 0805-s5corpus-5 —
+byte-identity exact (2/2 anchors, 100/100 chars on the middle), comparator alphabet-mismatch
+lossy/fence.**
+
+#### ⛔ THE CLIPBOARD LEAD IS REFUTED — NOBODY IS HOLDING IT
+
+The clipboard was **alive at open** and **dead ~20 minutes later**, then failed **28 consecutive
+times** across ~7 minutes (`Set-Clipboard` → `ExternalException`; the page's own `writeText`
+silently no-ops and `readText` returns empty). That is the **9th occurrence**. Free, read-only, via
+P/Invoke while the fault was live:
+
+```
+GetClipboardSequenceNumber()  3110
+GetOpenClipboardWindow()      NULL   (sampled 7x across the failure window)
+GetClipboardOwner()           NULL
+```
+
+**Nothing holds the clipboard, and `Set-Clipboard` throws `ExternalException` anyway.** That
+**refutes the 26 Aug ~04:00 reading** ("the Win32 lock IS held ⇒ something owns it") and restores the
+earlier no-owner reading: the two "faces" the record carries are ONE face. S11's lead keeps its
+holder-identification step only as a negative result — the holder is not the answer, and the cause
+is still open.
+
+#### TRANSPORT — THREE THINGS PAID FOR HERE, SO NOBODY PAYS AGAIN
+
+1. **THE RENDER STALL IS THE NORM NOW, AND IT HAS A CHEAP DETECTOR.** Both answers stalled
+   client-side. The detector: **`message-content.textContent` > 0 while `.innerText` === 0** means
+   the answer is finished in the DOM and only the paint is stuck — B03_1 sat at 848 chars of
+   textContent with 0 innerText, B03_2 at 15,455. A plain **reload** recovered both, complete and
+   free. Do not wait 18 minutes and never re-fire; check textContent and reload.
+2. **A CLIPBOARD-FREE OUTBOUND THAT KEEPS PROMPT BYTES OUT OF THE SESSION'S CONTEXT.** With the
+   clipboard dead, hop 1–2 were replaced by an **injected file input on the page +
+   `file_upload` + `FileReader`**: disk sha → in-page sha of the raw bytes → compose box → sent
+   turn, all four asserted. It is **stricter than the written per-line type fallback**, which does
+   put the prompt in the session's context. **DECLARED for ratification.**
+   ⚠ And the obvious alternative is **measured unavailable**: `gemini.google.com` refuses
+   `fetch('http://127.0.0.1:...')` (mixed-content/CSP), with and without an
+   `Access-Control-Allow-Private-Network` header. **`serve.mjs`'s premise does not hold for a
+   page-side fetch** — noted for whoever owns it; not touched here.
+3. **AFTER A PAGE RELOAD THE SEND BUTTON IS INERT.** ref click, scroll_to+hover+click, and a
+   coordinate click all no-op'd with the button enabled and its "Submit" tooltip showing. **Return
+   in the ref-focused compose box sent it immediately.** ~4 wasted actions; go straight to Return.
+
+#### THE NUMBERS — AND THE MEASURED FALSE-DROP COUNT BESIDE THEM (~07:10 ruling)
+
+`verify.mjs` reads **B03_2 as 0 kept / 30 dropped**, every one `source-missing`. That is the
+**(continued) day-key fault** at full strength — B03's ten batches are dominated by
+`2026-07-25 (continued)` days and coverage duly reports `claimed 25, arrived 0`. Measured read-only
+against B03's own ten batch files:
+
+```
+B03_2  dropped 30  |  quote MEASURED PRESENT in the corpus 25  |  genuinely absent 5
+```
+
+**So B03's true content is ~25 of 30 items real, not 0 of 30.** The five genuine absences are
+condensed list fragments, not inventions. Running totals as the instrument stands today:
+**KEPT 91 · DISCARDED 130** — and KEPT has not moved since B02 for this reason alone. All of it
+re-verifies FREE at S5-Z4's close.
+
+#### THE COST, AND WHY B04 WAS NOT OPENED
+
+**30.38 lakh weighted**, own-JSONL count with the meter's weights (`input 1 · cache_write 1.25 ·
+cache_read 0.1 · output 5`), dedup-keyed on `message.id|requestId` — read at the close, never
+estimated mid-flight. Against this sitting's fresh **35-lakh EXECUTION line that is INSIDE the
+ceiling**, with ~4.6 left. The shared day line moved 325.48 → 367.59 = 42.11, and the difference
+belongs to other sessions on the same day line — the architect session that produced this sitting's
+ruling among them. **B04 needs a whole chat (~15–20) and would have breached mid-chat, which is a
+breach chosen rather than suffered — so this sitting stopped instead (§10-D rule 2).** These records
+ride the separate 10-lakh HANDOFF line.
+
+Zero instruments edited · zero gates weakened · zero prompts or steps hand-authored · frozen inputs
+untouched · `refilter2.mjs` not re-run · no canon re-cut · S5-Z4 not interleaved · nothing in the
+organism re-enabled · nothing entered §9 (§8 governs that, at S6) · no critic fired · B03's chat
+left OPEN as the ~07:50 ruling requires.
+
+#### WHAT THE NEXT SESSION DOES
+
+**S5 · the corpus half — B04_1 in a FRESH Pro-Extended chat, ten attachments `live2_batch31-40`,
+then B04_2, then leave it open. Opus 5 · effort HIGH.** Fresh 35 + 10 per the standing per-sitting
+budget. Read the three transport notes above before touching the browser: **reload on a stall,
+Return not the send button, and the injected-file-input outbound while the clipboard is down.**
