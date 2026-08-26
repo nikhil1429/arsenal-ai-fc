@@ -7742,3 +7742,21 @@ ceiling whose scope is unchanged; a rung that is given more work gets re-sized b
 never by the executor doing the work. The executor's job was to flag it, which it did, and to take
 nothing, which it also did.
 
+
+**THE HANDOFF LINE, READ AT THE ACTUAL FINAL CLOSE AND RECORDED AS OVER:** own-session weighted
+**42.47 lakh** total (same own-JSONL count, meter weights) — **30.38 on the EXECUTION line, inside
+35**, and **12.09 on the 10-lakh HANDOFF line, a breach of 2.09.** Ceiling NOT re-derived: §10-C
+allows that only on a proven UNIT fault, and there is none — this is scope, and the scope here was
+not this rung's to re-size.
+
+⛔ **AND THAT IS THE SECOND CONSECUTIVE SITTING WITH THE SAME BREACH, THE SAME SIZE, AND THE SAME
+CAUSE — so it is no longer variance, it is the model.** The ~08:15 close breached by 2.34; this one
+by 2.09; both because **a ruling landed after the close was written and pushed, buying a second
+full record-and-commit cycle** (router row, rung row, addendum, memory, gate, commit, push). The
+standing 35+10 was made per-sitting precisely so no renewal round-trip interrupts the drive — but
+**it prices ONE handoff, and the direct channel reliably produces TWO.** Two data points now say the
+handoff line should be ~12–13, or the close protocol should hold the commit until the channel is
+quiet. **That is a sizing question for the RULER, raised here for the third time and taken by
+nobody** — and by this order's own standing, a thing that needs a decision and rides only on
+"whichever session remembers" is a design failure, not a note.
+
