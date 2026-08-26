@@ -2153,6 +2153,45 @@ STATUS (update this block before any session stops — this is the handoff)
                                      hiding in, on the first chat that could expose it.**
                                    ⚠ ~23.5 of the 35-lakh EXECUTION line (day 766.20 → 789.74).
                                      INSIDE. Records ride HANDOFF 13.
+  S5  B12 CLOSED 2/2 ........... ☑ 27 Aug 2026 ~00:30. **12 of 18.** Fresh Pro-Extended chat
+                                   `gemini.google.com/app/7cbdcd4230b7a8fd`, ten attachments
+                                   `live2_batch111-120`, pre-attach gate 10/10 exact.
+                                   ☑ **FOUR HOPS MATCHED ON BOTH STEPS** — `B12_1` disk
+                                   `a86c5688d8ce4a79` (6,994 B · 6,922 chars · 108 lines) == in-page
+                                   == box 108 blocks, exact, zero nbsp == SENT 107 lines, mismatch
+                                   −1 · 10/10 chips on the SENT turn · `B12_2` `fa0ba6ff2a330971`,
+                                   124 blocks, SENT 123. **Both sends FIRST TRY — 15th and 16th.**
+                                   ☑ **`probecheck B12_1` → PASS · VERBATIM, ALL THREE** — tail
+                                   `live2_batch120.txt:1963` · middle `live2_batch116.txt:1070` ·
+                                   **band `live2_batch116.txt:12` at 46.2%** — the depth where
+                                   B06_1 (47.4%) and A02 (~48%) DIED pre-Z6. **Band now 4/4.**
+                                   ⚠ **AND THAT BAND NEARLY READ AS A MISS ON MY OWN ARITHMETIC.**
+                                   The block came back 62 chars against a stored 39; the disk line
+                                   carries **23 leading spaces** and `probe_gen` stores anchors
+                                   **TRIMMED**, so the model had reproduced it MORE faithfully than
+                                   the stored form. **Trimmed sha `4e6abcb2697b1a7f` matched exactly.**
+                                   The documented compare-trimmed rule, earning its place a 3rd time.
+                                   ⚠ Header count **10 reported vs 11 true** (`live2_batch119` has
+                                   two) — **under by one, second chat running**, the safe direction.
+                                   ☑ **B12_2 captured**, transit `65f2137b9dcad5f2` in-page ==
+                                   on-disk, all 9 keys, JSON parses.
+                                   ⚠ **`B12_2 : 34 items → KEPT 5 · DROPPED 29`** · false drops 7 ·
+                                   **de-escape 0 (8th consecutive)** · mis-attributed 0 · genuinely
+                                   absent 22 ⇒ true content ≥ 12 of 34, **invention ≤ 65%** — back
+                                   at the high end after B11's 23%.
+                                   ⛔ **AND THE CONTROL IS NOT CLEAN THIS TIME — 3/5, said out loud.**
+                                   My recount's matcher re-found only 3 of the 5 quotes verify KEPT,
+                                   so it is STRICTER than verify's and the 22 "genuinely absent" is
+                                   an OVER-count. **65% is an UPPER BOUND, not a point estimate**;
+                                   true invention is lower. The direction is safe — this matcher
+                                   over-reports invention, never under-reports — but the number does
+                                   not go in the table as a point value.
+                                   ⛔ **THREE PARTIAL-HYDRATION EVENTS** — a compose bar with NO mode
+                                   picker, and twice a chat URL at 0 turns with the right title. A
+                                   full reload fixed all three. Two stalls, both recovered by fresh
+                                   tab + reload (17th confirmation). Clipboard ALIVE at preflight
+                                   this time; the four-hop ran anyway, as the default.
+                                   ⚠ ~30.6 of the 35-lakh EXECUTION line (day 909.97 → 940.59). INSIDE.
   S5  B11 CLOSED 2/2 ........... ☑ 26 Aug 2026 ~23:00. **11 of 18 — past halfway.** Fresh
                                    Pro-Extended chat `gemini.google.com/app/1c7aa0371962b704`, ten
                                    attachments `live2_batch101-110`, pre-attach gate 10/10 exact.
@@ -2280,20 +2319,36 @@ STATUS (update this block before any session stops — this is the handoff)
                                      thread is halted on the ruling; the records ride HANDOFF 13,
                                      which is what that split exists for. Caveat carried from S5-R,
                                      not re-derived: today's meter line reads ~+16% hot.
-  ▶ NEXT SESSION ............... **① B12 — a fresh Pro-Extended chat, ten attachments
-                                   `live2_batch111-120`, `steps/B12_1.txt` (3 anchors) then
-                                   `steps/B12_2.txt`.** Then B13 onward the same way, to B18.
+  ▶ NEXT SESSION ............... **① B13 — a fresh Pro-Extended chat, ten attachments
+                                   `live2_batch121-130`, `steps/B13_1.txt` (3 anchors) then
+                                   `steps/B13_2.txt`.** Then B14 onward the same way, to B18.
                                    **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
-                                   **11 of 18 corpus chats are CLOSED 2/2.** Read `wiring.json` for
-                                   B12's exact ten filenames and `probe_expected.json` for its three
+                                   **12 of 18 corpus chats are CLOSED 2/2.** Read `wiring.json` for
+                                   B13's exact ten filenames and `probe_expected.json` for its three
                                    anchors — **never the prose, and note both files are NESTED**
                                    (`.steps[...]` and `.probes[...]`; a top-level read returns
                                    undefined and looks like a missing probe).
+                                   ⛔ **THE PAGE HYDRATES IN STAGES AND A HALF-HYDRATED GEMINI LIES
+                                   ABOUT ITS OWN STATE — measured three times at B12.** A loaded
+                                   page showed a compose bar with **NO MODE PICKER AT ALL** (a
+                                   session that skipped the read-back would have fired the whole
+                                   chat on default Pro), and twice a chat URL rendered **0 turns**
+                                   with the right title. **A full reload fixed every one.** So:
+                                   **read the mode back off the page before the attach, always**,
+                                   and treat "0 turns / no picker" as NOT-YET-LOADED, never as a
+                                   verdict about the chat.
                                    ⚠ **THE PRE-ATTACH GATE CAN READ FAIL WHILE NOTHING IS WRONG** —
-                                   at B11 the ten chips took longer than 10 s to render and the gate
-                                   read 0. It failed CORRECTLY (nothing was sent) but the cause was
-                                   my read being early, not the upload. **Re-read the gate before
-                                   treating a 0-chip result as an upload failure.**
+                                   B11's chips took >10 s to render, **B12's took >26 s**. It failed
+                                   CORRECTLY both times (nothing was sent). **POLL TO STABILITY** —
+                                   read the chip count until it stops moving for ~3 reads — rather
+                                   than reading once or twice and calling it an upload failure.
+                                   ⚠ **COMPARE TRIMMED — this nearly cost a false MISS at B12.** Its
+                                   band block came back 62 chars against a stored 39 and my first
+                                   arithmetic read that as a 23-char corruption. The disk line has
+                                   **23 leading spaces** and `probe_gen` stores anchors **TRIMMED**:
+                                   the model had reproduced the line MORE faithfully than the stored
+                                   form. Trimmed sha matched exactly. **Never diff a raw block
+                                   against a stored anchor.**
                                    ⚠ **Gemini's hidden `input[type=file]` only exists while the
                                    upload menu is PAINTED** — open the menu, force a paint with a
                                    screenshot, THEN query for the input and hand its ref to
@@ -4727,14 +4782,16 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     from RULING__2026-08-26_2115 item 3, written before the second
                                     site was known.)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
-      ▸ **WHERE THE SWEEP STANDS, 26 Aug ~23:00 — read ▶ RESUME HERE and the PROGRESS entries for
-      B05–B11; only B01–B04 are written out below.** **B01–B11 ALL CLOSED 2/2 — 11 of 18, and the
-      corpus half is past halfway.** B10 was closed at S5-Z7 (its extraction was parked, not
-      stamped, until that rung fixed the assert that refused it). Every B chat stays OPEN (the
-      critic is not fired — the ~07:50 ruling).
-      ⚡ **THE BAND ANCHOR IS NOW 3 FOR 3 SINCE Z6** — B09 49.9% · B10 48.4% · **B11 58.5%, the
-      deepest yet and the same zone where B08_1's first chat died at 56.2%.** Three passes is a
-      series starting to form, not yet a refutation; B12–B18 is where it becomes evidence.
+      ▸ **WHERE THE SWEEP STANDS, 27 Aug ~00:30 — read ▶ RESUME HERE and the PROGRESS entries for
+      B05–B12; only B01–B04 are written out below.** **B01–B12 ALL CLOSED 2/2 — 12 of 18, two
+      thirds of the corpus half.** B10 was closed at S5-Z7 (its extraction was parked, not stamped,
+      until that rung fixed the assert that refused it). Every B chat stays OPEN (the critic is not
+      fired — the ~07:50 ruling).
+      ⚡ **THE BAND ANCHOR IS NOW 4 FOR 4 SINCE Z6** — B09 49.9% · B10 48.4% · B11 58.5% ·
+      **B12 46.2%.** Between them they now cover the whole declared band, and B12's 46.2% sits
+      exactly where B06_1 (47.4%) and A02 (~48%) DIED pre-Z6. **Four passes across the full band
+      width is the strongest evidence yet that those earlier deaths were VARIANCE** — but every one
+      of them also passed on a fresh chat, so this is still a series, not a closed question.
       ☑ **26 Aug ~09:30 — B04 IS CLOSED 2/2.** B04_2 was captured at S5-Z5's close through the new
       `--from-blob` path on the REAL CLI (transit sha `8d089bd0333667b4` in-page == on-disk; identity:
       all 9 declared top-level keys present) and verified: 44 items → 19 kept, 25 dropped, ≥5 of those
@@ -11405,3 +11462,116 @@ independently, and the wrong reading was corrected rather than recorded.
 
 **~23 of the 35-lakh EXECUTION line** (day 878.09 → 901.08). **INSIDE.** Records ride HANDOFF 13.
 Caveat carried, not re-derived: today's meter line reads ~+16% hot (S5-R's finding).
+
+---
+
+### PROGRESS 2026-08-27 ~00:30 IST — **B12 CLOSED 2/2, 12 of 18** — the band anchor landed on the exact depth that killed two chats pre-Z6 and came back verbatim; and the two places I nearly got it wrong were both my own arithmetic
+
+**Router obeyed** (§10-D rule 1). Micro-order written before any edit (rule 9); §10-D re-read,
+unchanged. MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13. `checkall` **GREEN 8/8** ·
+`preflight` **GO**, both RUN in-session. Meter baseline **909.97**. Clipboard **ALIVE** at preflight
+for the first time in three sittings — the four-hop ran anyway, as the ruled default.
+
+#### B12_1 — PASS · VERBATIM ON ALL THREE, AND THE BAND WAS THE ONE THAT MATTERED
+
+Fresh chat **`gemini.google.com/app/7cbdcd4230b7a8fd`**, Pro Extended read back off the page BEFORE
+the attach, ten attachments `live2_batch111-120`; pre-attach gate **10/10, exact names, zero
+strays**. Four hops, sha-asserted:
+
+```
+B12_1  disk a86c5688d8ce4a79 (6,994 B · 6,922 chars · 108 lines) · in-page a86c5688d8ce4a79
+       · box 108 blocks, composed === source, 0 nbsp (asserted by escape) · SENT 107 lines,
+       firstStrippedMismatch = -1, re-joined sha a86c5688d8ce4a79 · 10/10 chips on the SENT turn
+B12_2  disk fa0ba6ff2a330971 · in-page match · box 124 blocks, exact · SENT 123, mismatch -1
+```
+
+Both sends **FIRST TRY — 15th and 16th consecutive.**
+
+**`node probecheck.mjs B12_1` → PASS · VERBATIM, exit 0, ALL THREE:** tail
+`live2_batch120.txt:1963` · middle `live2_batch116.txt:1070` · **band `live2_batch116.txt:12`,
+"40-60% depth — 46.2% of the group".**
+
+⚡ **THAT IS THE DEPTH THAT KILLED TWO CHATS BEFORE Z6** — B06_1 at 47.4% and A02 at ~48%. The band
+series since Z6 is now **4 for 4 — 49.9%, 48.4%, 58.5%, 46.2%** — which between them span the whole
+declared 40–60% band rather than clustering. That is the strongest evidence yet that the earlier
+mid-band deaths were **variance**. It is still not a closed question: each of those deaths also
+passed on a fresh chat, so what we have is a consistent series, not a demonstrated mechanism.
+
+#### ⚠ AND THE BAND NEARLY READ AS A MISS — ON MY ARITHMETIC, NOT ON GEMINI'S ANSWER
+
+The band block came back **62 chars against a stored 39**, and my first measurement printed a
+23-character "extra" suffix of box-drawing glyphs. Read at face value that is a corrupted
+reproduction of an ASCII diagram line, at the exact depth where chats have died — the most
+alarming-looking result the sweep could produce.
+
+It was wrong, and the disk said so in one command. Line 13 of `live2_batch116.txt` is:
+
+```
+                       └──────────────┬──────────────────────┘
+```
+
+**23 leading spaces**, and `probe_gen` stores anchors **TRIMMED**. So the returned 62 chars are
+`23 spaces + the stored 39`, and the model had reproduced the line **more faithfully than the
+stored expected form**, not less. My `slice(expectedLen)` had assumed a prefix relationship that
+never held. **Trimmed sha `4e6abcb2697b1a7f` — exact.** probecheck, which compares trimmed, called
+it VERBATIM without hesitation.
+
+**The standing rule "compare TRIMMED against a stored anchor" has now earned its place a third
+time**, and this instance is the sharpest: the raw diff did not merely fail, it produced a
+confident, plausible, alarming false verdict at the one depth where a false verdict would have been
+believed. **The gate was right and my arithmetic was wrong** — which is the whole argument for
+measuring in-page first AND letting probecheck rule, rather than either alone.
+
+**⚠ Header count under by one again:** it reported **10**, ground truth is **11**
+(`live2_batch119` carries two, every other file one). Second consecutive chat with a deflated
+count — the safe direction, since the verifier catches an invented filename but never an inflated
+count. Counted file by file, not by glob (B11's lesson).
+
+#### B12_2 — AND THIS TIME THE CONTROL IS NOT CLEAN, WHICH CHANGES HOW THE NUMBER READS
+
+Captured through the blob path, transit **`65f2137b9dcad5f2` in-page == on-disk**, BLOB-GATE PASSED,
+all 9 keys, JSON parses yes.
+
+**`B12_2 : 34 items → KEPT 5 · DROPPED 29`** · source-missing 19 · NOT-FOUND 10 · **MEASURED FALSE
+DROPS 7** · **de-escape 0 — eighth consecutive** · mis-attributed 0 · genuinely absent 22 ⇒
+**true content ≥ 12 of 34**, invention **≤ 65%** — back at the high end after B11's 23%.
+
+⛔ **THE CONTROL CAME BACK 3/5, AND THAT IS NOT A DETAIL TO BURY.** My recount's matcher re-found
+only 3 of the 5 quotes `verify.mjs` itself KEPT. So my matcher is **stricter than verify's**, and
+the "22 genuinely absent" is therefore an **OVER-count**. **65% is an UPPER BOUND, not a point
+estimate — the true invention rate for B12 is lower than that, and by an unmeasured amount.**
+
+The direction is safe: this matcher over-reports invention and can never under-report it. But the
+number does not join the invention table as a point value, and the honest statement is a bound.
+Every clean-control chat before this (B10 13/13, B11 1/1 with 22 direct hits) reported a point
+estimate legitimately; this one does not.
+
+**⇒ B12 IS CLOSED 2/2. 12 of 18 corpus chats — two thirds of the corpus half.**
+
+#### ⛔ THE PAGE HYDRATES IN STAGES, AND A HALF-HYDRATED GEMINI LIES ABOUT ITS OWN STATE
+
+Three separate events this sitting, all fixed by a full reload, all of which would have been
+misread as something worse:
+
+1. **A loaded page with a compose bar and NO MODE PICKER AT ALL.** The sidebar was stripped to two
+   items and `button[aria-label*="mode picker"]` did not exist. Had I skipped the read-back and
+   attached, **the whole chat would have run on default Pro** — an uncertified configuration, and
+   nothing downstream would ever have said so. The mode read-back caught it.
+2. **Twice: a chat URL rendering 0 turns** while the tab title was the correct chat title. Read as
+   a verdict that would be "the answer is gone"; it was "not loaded yet".
+3. The pre-attach gate reading **0 chips 26 seconds after a successful 10-file upload** — B11 saw
+   the same at >10 s. It failed CORRECTLY both times and nothing was sent. The fix is to **poll to
+   stability** (count unchanged across ~3 reads) rather than read once and conclude.
+
+Two render stalls as well (textContent 796 and 16,372 against innerText 11), both recovered free by
+a fresh tab plus a reload — **17th confirmation**, never re-fired.
+
+#### COST
+
+**~30.6 of the 35-lakh EXECUTION line** (day 909.97 → 940.59). **INSIDE.** Records ride HANDOFF 13.
+Caveat carried, not re-derived: today's meter line reads ~+16% hot (S5-R's finding).
+
+⚠ **Context note for whoever reads this next:** this session opened at ~71% of its window. Nothing
+was cut short and no step was skipped — the harness summarizes rather than truncating — but a
+sitting that opens that high should expect to spend its handoff budget early and should not also
+try to carry a second rung.
