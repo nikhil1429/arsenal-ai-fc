@@ -74,7 +74,13 @@ STATUS (update this block before any session stops — this is the handoff)
                                    rung row now names the atlas edges and the emit-contract row
                                    shape) and BUILT no earlier than the registry says. A session
                                    that patches it early is refused — this is a decided thing.
-  S5  THE GEMINI SWEEPS ........ ◐ PREPARED, NOT RUN. Its STEP 0 is ☑ DONE and proven; the
+  S5  THE GEMINI SWEEPS ........ ◐ **STALE AS WRITTEN BELOW — corrected here, not rewritten (L9).
+                                   AS OF 27 Aug ~05:30: the CORPUS half is CLOSED 18/18, and the
+                                   CANON-B half is `G01` ☑ 4/4 · `G02` ☑ 4/4 · `G03` ◐ 3 of 4
+                                   (`G03_4` owed, one paste). Then `F3` → S5-Z9 → S5-POST. The
+                                   "ZERO Gemini calls" sentence below was true on 20 Aug and is
+                                   FALSE now; the ▶ NEXT SESSION router is the authority.**
+                                   ◐ PREPARED, NOT RUN. Its STEP 0 is ☑ DONE and proven; the
                                    sweep itself has sent ZERO Gemini calls. **The rung breached
                                    its ceiling during preparation — 40 allowed, ~104 spent —
                                    and §10-D rule 2 was obeyed: it STOPPED and handed off.**
@@ -2755,11 +2761,47 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⚠ **~20.5 of the 35-lakh EXECUTION line** (day 3.40 → 23.85).
                                    **INSIDE** — and declared a FLOOR: the orientation read happened
                                    BEFORE that baseline was taken.
-  ▶ NEXT SESSION ............... **③ THE CANON-B CHATS, CONTINUED AT `G03` — SAME S5 rung, on the
-                                   standing EXECUTION 35 + HANDOFF 13.**
+  ▶ NEXT SESSION ............... **③ THE CANON-B CHATS — FIRE `G03_4` (THE CRITIC) FIRST, IN THE
+                                   ALREADY-OPEN CHAT `gemini.google.com/app/dc1dc51874d75412`.
+                                   IT IS ONE PASTE AND IT CLOSES THE CANON HALF'S LAST GROUP.**
+                                   SAME S5 rung, fresh EXECUTION 35 + HANDOFF 13.
+                                   ⛔ **G03 IS 3 of 4, NOT CLOSED. `G03_1/2/3` ARE CAPTURED AND
+                                   VERIFIED; `G03_4` WAS NOT FIRED — the sitting hit 33.58 of the
+                                   35-lakh EXECUTION line and STOPPED (§10-D rule 2). That is a
+                                   clean stop at the ceiling, not a failure.**
+                                   ⛔ **G03 RUNS ON A RECORDED OVERRIDE — its probe FAILED TWICE
+                                   and the FAIL is INSTRUMENT-SIDE** (`RULING__2026-08-27_1150-
+                                   s5canonb-4.md`, B03 branch-B, 2nd use). **DO NOT re-probe, do
+                                   not re-open the probe question, do not fire a third probe.**
+                                   The cause is a PARAPHRASE TWIN of the tail anchor inside
+                                   `chunk27.txt` (two `**No pixel sight**` bullets, 24.2 % and
+                                   96.1 %, each followed by a `*(corrected 10 Aug 2026 …)*` note);
+                                   the middle anchor passed VERBATIM in both chats. Full account
+                                   in the §10-C S5 row and the PROGRESS entry of 27 Aug ~05:30.
+                                   ⚠ **`G03_4` TAKES THE DECLARED CRITIC PATH — `--from-file <raw>
+                                   --rendered <rendered>`, TWO downloads.** Budget route ③ (a
+                                   fresh tab on the same chat) for the second one; G02's critic
+                                   needed exactly that.
+                                   ⛔ **THE COPY BUTTON HANGS THE RENDERER IF YOU FORWARD TO THE OS
+                                   CLIPBOARD — MEASURED TWICE THIS SITTING, AND THE FIX IS ONE
+                                   LINE.** Two `Runtime.evaluate` calls died at 45 s on a live,
+                                   responsive tab; `window.__ARSENAL_RAW` proved the copy never
+                                   completed. **Intercept `navigator.clipboard.write` and DO NOT
+                                   call the original** — the `ClipboardItem` is still fully built
+                                   and its `text/plain` Blob reads clean (42,574 B, sha
+                                   `255f6ea67d0f37cc`, in-page == on-disk). This is the 11th
+                                   clipboard occurrence and the FIRST with a mechanism: **it is
+                                   the OS write that hangs, not Gemini's ClipboardItem.** It also
+                                   makes the router's own "OS clipboard stays off the answer path"
+                                   literally true for the first time. Declared departure, recorded.
+                                   ⚠ **READ THE ANSWER OFF `message-content`, NOT `model-response`.**
+                                   Mid-stream `model-response.textContent` read **11** ("Gemini
+                                   said") while `message-content` held **31,624** — the same
+                                   under-reporting shape as the innerText stall, at a NEW node.
                                    ✅ **`G01` CLOSED 4/4** (27 Aug ~02:45, chat `5ad12c0b45dd0ddb`)
                                    **and `G02` CLOSED 4/4** (27 Aug ~04:05, chat
-                                   `affec29d12d93935`) — both LEFT OPEN.
+                                   `affec29d12d93935`) — both LEFT OPEN. **`G03`'s TWO chats
+                                   (`0045daf910685899` · `dc1dc51874d75412`) ARE ALSO OPEN.**
                                    ⚡ **G02 IS THE CONTROLLED A/B, AND IT PAID: the SAME probe
                                    `canon_g02` that KILLED A02 at twenty files passed VERBATIM 2/2
                                    at ten** — tail chunk20:1461 AND middle chunk16:1229, the exact
@@ -2786,7 +2828,7 @@ STATUS (update this block before any session stops — this is the handoff)
                                    `**` markers. **S5-Z9 is RULED and fixes it AFTER this drive**
                                    (`RULING__2026-08-27_0750-s5canonb-1.md`); every stored answer
                                    re-verifies FREE at its close. Record the bounds, fold nothing.
-                                   ⚑ **THE ORDER FROM HERE: `G02` → `G03` → `F3` (gated) → S5-Z9 →
+                                   ⚑ **THE ORDER FROM HERE: `G03_4` → `F3` (gated) → S5-Z9 →
                                    S5-POST.** Z9 runs AFTER the drive, never interleaved (Z4's rule).
                                    ⚑ **THE DECLARED CRITIC PATH — RULED 27 Aug ~03:05
                                    (`RULING__2026-08-27_0830-s5canonb-2.md` item 1), not a
@@ -2804,8 +2846,16 @@ STATUS (update this block before any session stops — this is the handoff)
                                    cross-group pass:
                                    `G01_1..G01_4` — chunk01-10 · probe `canon_g01`  ✅ CLOSED 4/4
                                    `G02_1..G02_4` — chunk11-20 · probe `canon_g02`  ✅ CLOSED 4/4
-                                   `G03_1..G03_4` — chunk21-27 · probe `canon_g03`  ◀ NEXT
+                                   `G03_1..G03_3` — chunk21-27 (SEVEN files, not ten) · probe
+                                                    `canon_g03` FAILED ×2, OVERRIDE  ◐ 3 of 4
+                                   `G03_4`        — the critic, in chat `dc1dc51874d75412`  ◀ NEXT
                                    `F3`           — the cross-group pass, its own chat
+                                   ⛔ **F3's WIRING ROW GAINED `probe_deferred_twin_scan` ON
+                                   27 Aug** (RULING 1150 item 3a): before F3's paste fires, run a
+                                   MEASURED twin-scan of its haystack as a diag measurement —
+                                   **neither the anchor NOR its following line may have a
+                                   paraphrase near-duplicate.** Exact-line uniqueness is NOT
+                                   enough; `canon_g03`'s anchor met that bar and failed twice.
                                    Each group chat is load+probe → Q1 contradictions → Q4 declared
                                    edges → critic. **READ `wiring.json`, never this list** — it is a
                                    convenience, and the last time a router listed attachments from
@@ -3570,7 +3620,29 @@ STATUS (update this block before any session stops — this is the handoff)
                                    recount matcher's sibling: reporting INTEGRITY, not gate
                                    correctness — which is why it is S5-POST and not a
                                    Z-rung.** It stays filed for S6 as well, which reads it
-                                   beside the receipt-inflation evidence.
+                                   beside the receipt-inflation evidence.  ·
+                                   **THE PROBE CERTIFIER v2 — THE PARAPHRASE-TWIN BAR** —
+                                   granted its row by `RULING__2026-08-27_1150-s5canonb-4.md`
+                                   item 3(b), off the G03 measurement. `probe_gen.mjs`
+                                   certifies an anchor on EXACT-LINE uniqueness. **That bar
+                                   was MET by `canon_g03`'s tail anchor — 1 occurrence,
+                                   exactly unique — and the probe still FAILED TWICE**, because
+                                   `chunk27.txt` carries a PARAPHRASE TWIN of it 72 % earlier
+                                   (two `**No pixel sight**` bullets, each followed by a
+                                   `*(corrected 10 Aug 2026 — …)*` note) and the model blended
+                                   them: chat A returned the WRONG twin's next line verbatim,
+                                   chat B returned the RIGHT line with the ONE disambiguating
+                                   clause elided. **Uniqueness of the LINE is not uniqueness of
+                                   the RETRIEVAL CUE.** v2 certifies on near-duplicate distance,
+                                   for the anchor AND its following line. **Its consumers are
+                                   POST-SWEEP regens — building it mid-drive is the no-consumer
+                                   class**, which is why the live need (F3) took a measured
+                                   twin-scan LINE on its wiring row instead, and why S5 built
+                                   nothing. ⚠ A crude "is the anchor's bolded head unique"
+                                   heuristic was tried at G03 and **it OVER-FLAGS — it flags
+                                   `canon_g02`'s tail, which PASSED VERBATIM.** v2 must not
+                                   inherit it; the shape that actually bit is a *semantic*
+                                   twin whose FOLLOWING line is of the same kind.
                                    RULED ~02:55 (RULING__2026-08-26_0240-s5z3-1.md): the one
                                    authorized fenced re-probe = the resumed sweep's FIRST ACT,
                                    on the sweep's budget (c3 = hypothesis until it returns) ·
@@ -5673,13 +5745,42 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written
                                     (RULING__2026-08-27_0750 item 4).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
-      ▸ **THE CANON-B HALF IS OPEN — `G01` AND `G02` ARE BOTH CLOSED 4/4** (27 Aug ~02:45 and
-      ~04:05 TRUE machine-clock). **2 of 3 groups done.** Next is `G03`, then `F3` (its deferred
-      probe still uncertified), then **S5-Z9**, then S5-POST.
-      ⚡ **G02 SETTLED THE DESIGN QUESTION BY CONTROLLED A/B: probe `canon_g02` FAILED at twenty
+      ▸ **THE CANON-B HALF IS OPEN — `G01` AND `G02` CLOSED 4/4; `G03` IS 3 of 4 AND STOPPED AT
+      ITS CEILING** (27 Aug ~02:45 · ~04:05 · ~05:30 TRUE machine-clock). **`G03_4` (the critic)
+      IS THE ONLY THING OWED IN THE CANON HALF.** Then `F3` (its deferred probe still
+      uncertified), then **S5-Z9**, then S5-POST.
+      ⛔ **G03's PROBE FAILED IN TWO FRESH CHATS AND THE GROUP CONTINUED ON A RECORDED OVERRIDE —
+      `RULING__2026-08-27_1150-s5canonb-4.md`, the B03 branch-B precedent at its SECOND use.**
+      The tail FAIL is **INSTRUMENT-SIDE**: `chunk27.txt` carries a PARAPHRASE TWIN of the anchor
+      72 % earlier — two `**No pixel sight**` bullets, each followed by a `*(corrected 10 Aug
+      2026 — …)*` note — and the model blended them. **CHAT A returned the WRONG twin's next line
+      VERBATIM; CHAT B returned the RIGHT line with EXACTLY ONE 39-char clause elided —
+      `"same qualifier as THE CEILING wall #4: "` — 374 of 413 characters byte-identical, and
+      that clause is the DISAMBIGUATOR.** As a RETRIEVAL claim the verdict is proven-false: **the
+      middle anchor (chunk24:434, 49.7 % into a 183 KB file) passed VERBATIM in BOTH chats**, and
+      chunk27 is the group's SMALLEST file (56 KB). **A ceiling does not produce a 374/413 match
+      twice on the smallest attachment.** A five-chunk split cannot reach it — both twins are in
+      ONE file — which is why option B was refused. ⚠ **THE TWO SPENT PROBE PASTES ARE RECORDED
+      AS THE INSTRUMENT DEFECT'S COST**, not as driving error. **NO third probe attempt was made.**
+      Re-certification was REFUSED AS COSTED; the bar-widening landed by consumer instead —
+      **F3's wiring row gained a measured TWIN-SCAN line NOW** (`probe_deferred_twin_scan`, no
+      instrument build) and **the certifier's paraphrase-twin bar is an S5-POST row (probe
+      certifier v2)**. Both failed chats stay OPEN as the record
+      (`0045daf910685899` · `dc1dc51874d75412`).
+      ⚡ **G02 SETTLED THE DESIGN QUESTION BY CONTROLLED A/B — AND `RULING__2026-08-27_1050-s5canonb-3.md`
+      item 1 RULES IT SETTLED, NOT MERELY FLAGGED: probe `canon_g02` FAILED at twenty
       attachments (A02) and passed VERBATIM 2/2 at ten (G02_1)** — same probe, same anchors
-      (chunk20:1461 tail · chunk16:1229 middle), one variable moved. G01: probe VERBATIM 2/2 ·
+      (chunk20:1461 tail · chunk16:1229 middle), same model, same account, **one named variable,
+      which is exactly the epistemics note's bar for promotion. THE 10-FILE SHAPE IS THE PROVEN
+      CONFIGURATION; THE REDESIGN'S BET IS PAID.** G01: probe VERBATIM 2/2 ·
       70/70 paths exact and in order · header count 70 = ground truth 70.
+      ⛔ **AND G03 IS THE COUNTERWEIGHT S6 MUST READ BESIDE IT: a PASSING probe says nothing about
+      fabrication OR completeness — and now a FAILING probe says nothing about retrieval either.**
+      Seven attachments, and the two chats listed **13 / 18 and 15 / 18** distinct documents,
+      **0 invented**; three documents were missed by BOTH (`THE_ORGANISM__EVERYTHING.md` ·
+      `THE_ORGANISM_AUDIOBOOK.md` · `THE_PEAK_PROTOCOL.md`), and CHAT A additionally missed all of
+      chunk25 plus chunk26's first 36 % as a **contiguous block**. **Group 3 reads 72–83 %
+      coverage against G02's ~90 %.** PRE-Z9 bound, folded nowhere.
       ⛔ **COVERAGE IS NOT WHAT THE PROBE MEASURES: G02_1 listed 29 of 32 documents** (0 invented;
       all three misses mid-file, and not truncation). **Canon coverage reads ~90%, never 100%.**
       ⛔ **EVERY `verify.mjs` NUMBER ON A CANON ANSWER IS A PRE-Z9 BOUND** — see the S5-Z9 row
@@ -14152,3 +14253,197 @@ Read KEPT from `verified.json`, never by subtracting `dropped.json`'s row count.
 
 ⚠ **~31.6 of the 35-lakh EXECUTION line when the drive stopped** (day line 147.15 → 178.78) —
 **INSIDE.** G03 not opened. Records ride the 13-lakh HANDOFF line.
+
+### PROGRESS 2026-08-27 ~11:45 series / **27 Aug ~05:30 TRUE machine-clock** — **G03 IS 3 of 4 AND STOPPED AT ITS CEILING. ITS PROBE FAILED TWICE, THE FAILURE IS INSTRUMENT-SIDE, AND THE MEASUREMENT REFUTED THE WRITTEN REMEDY BEFORE IT WAS SPENT**
+
+Rung S5, the canon-B chats, sitting 3. Opus 5 · effort HIGH · **AUTO mode** (his standing line;
+one classifier event, absorbed — see TRANSPORT) · fresh **EXECUTION 35 + HANDOFF 13**.
+Micro-order written before any act (§10-D rule 9) and amended in writing when the ruling landed.
+Wiring read from `wiring.json`, never from prose. `R01-R04` untouched. `F3` not fired.
+**STEP 0: `checkall` GREEN 8/8 · `preflight` GO**, both in-session — **and §7 was GREEN AT OPEN
+for the first time in six sittings**, because the previous close snapshotted before it committed.
+
+#### THE HEADLINE — a gate said "retrieval failed" and the material said otherwise, twice
+
+`canon_g03`'s tail anchor sits at `chunk27.txt:222`. **`chunk27.txt` carries a PARAPHRASE TWIN of
+it at line 56** — the phrase `**No pixel sight**` occurs exactly twice in the whole group, both in
+this one 56 KB file, and **each occurrence is followed by a `*(corrected 10 Aug 2026 — …)*` note**:
+
+```
+idx  56 (24.2%)  4. **No pixel sight** — ActivityWatch is metadata, not pixels; anything he reads silently …
+idx  57          - *(corrected 10 Aug 2026 — true of the AMBIENT layer only, and that qualifier is load-bearing. …
+idx 222 (96.1%)  - **No pixel sight** — AW is metadata only; silent on-screen reading stays invisible. …   <-- ANCHOR
+idx 223          - *(corrected 10 Aug 2026 — same qualifier as THE CEILING wall #4: true of the **ambient/passive** …   <-- WANTED
+```
+
+- **CHAT A** (`0045daf910685899`) returned **line 57 VERBATIM** — a real line, exactly reproduced,
+  from the WRONG twin.
+- **CHAT B** (`dc1dc51874d75412`, the fresh chat the written remedy orders) returned **line 223
+  with EXACTLY ONE 39-character clause elided** — `"same qualifier as THE CEILING wall #4: "` —
+  and **every one of the other 374 characters byte-identical**: `want.replace(clause,"") === got`
+  is TRUE. **The elided clause is the one that distinguishes the note from its twin.**
+- **The MIDDLE anchor passed VERBATIM in BOTH chats** (`chunk24.txt:434`, 49.7 % into a 183 KB file).
+- `chunk27.txt` is the group's **smallest** attachment (56 KB, 231 lines) and both twins came out
+  of it, so the file reached the model whole, twice.
+
+**A context ceiling does not produce a 374-of-413-character match, twice, on the smallest
+attachment, while a 183 KB file's mid-file anchor comes back verbatim.** Both twins live in ONE
+file, so the written remedy's step 3 — split the group into two five-chunk chats — **cannot
+separate them**, and would have spent two more chats proving that.
+
+#### WHAT I DID WITH THAT, AND THE ORDER OF IT MATTERS
+
+1. Probe FAILED in CHAT A. **I did not self-pass it** — the never-self-pass law binds, and the
+   escape-only bound does not cover a dropped clause.
+2. **I executed the written remedy's step 1 exactly** — a fresh chat, same seven chunks, same
+   step — *before* escalating, because that IS the pre-authorized branch and it is the experiment
+   that discriminates variance from structure. It cost one chat and it settled the question.
+3. Only then, with both runs in hand, did I escalate — `queue\2026-08-27_1145-s5canonb-3.md`,
+   with the twin measured, the 374/413 diff computed, **and my own heuristic's over-flagging
+   disclosed in the same block** so the ruler would not inherit it as measured.
+4. **Ruling back in minutes** (`RULING__2026-08-27_1150-s5canonb-4.md`, direct channel, verified
+   by running before ratifying). Recorded verbatim below. G03 continued on an OVERRIDE.
+
+#### THE RULING, VERBATIM (`RULING__2026-08-27_1150-s5canonb-4.md`)
+
+> 1. **The tail FAIL is INSTRUMENT-SIDE.** The anchor was certified under a bar that cannot see
+>    paraphrase twins; as a RETRIEVAL claim the verdict is proven-false — middle anchor VERBATIM
+>    in BOTH chats, and the tail miss is twin-confusion (wrong twin's next line VERBATIM in A;
+>    374/413 byte-identical with the disambiguating clause elided in B). Escalating instead of
+>    self-passing was correct — the never-self-pass law's cleanest application yet.
+> 2. **G03 CONTINUES on a RECORDED OVERRIDE — the B03 branch-B precedent, second use.** Fire
+>    G03_2/3/4 in chat B (the closer one); the override + twin measurement ride G03's row; NO
+>    third probe attempt; the two spent probe pastes are recorded as the instrument defect's cost.
+>    Option A's re-certification half is REFUSED as costed: a third paste to re-prove what the
+>    override already proves.
+> 3. **Option A's bar-widening half lands in two places, sized to their consumers:**
+>    (a) **F3's deferred-probe condition WIDENED NOW (one line on its wiring row):** before the
+>    paste fires, a measured TWIN-SCAN of the haystack — no near-duplicate of the anchor or its
+>    next line at a declared normalized-similarity bound — run as a diag MEASUREMENT (the B03
+>    pattern), recorded with the probe. No instrument build.
+>    (b) **The certifier's paraphrase-twin bar = an S5-POST named row (probe certifier v2)** —
+>    its consumers are post-sweep regens; building it mid-drive is the no-consumer class.
+> 4. R01–R04 stays DO-NOT-FIRE; F3 stays gated; sequence unchanged: G03 (override) → F3 → Z9 →
+>    S5-POST.
+
+**Both halves of item 3 are DONE in this close:** `wiring.json`'s F3 row gained
+`probe_deferred_twin_scan` (pre-edit sha `1fe991dac151d3ed` → post `f305a3a657cbf4bc`, hashed
+before the first edit per RULING 1900 item 2; `checkall` §6 re-read all 82 steps GREEN), and the
+S5-POST backlog gained **THE PROBE CERTIFIER v2 — THE PARAPHRASE-TWIN BAR**, carrying the
+over-flagging warning so v2 does not inherit my heuristic.
+
+#### THE OWED FOLD FROM G02's CLOSE, DISCHARGED (`RULING__2026-08-27_1050-s5canonb-3.md`)
+
+> 1. **G02 CLOSED 4/4 RATIFIED — and the headline is RULED SETTLED, not just flagged:** A02(20
+>    files)=FAIL vs G02_1(10 files)=PASS VERBATIM 2/2 on the SAME probe, bytes, model, account is
+>    a CONTROLLED COMPARISON — one named variable, which is exactly the epistemics note's bar for
+>    promotion. **The 10-file shape is the proven configuration; the redesign's bet is paid.**
+> 2. **All three S6 inputs ratified as filed:** canon coverage reads ~90% never 100% (the
+>    completeness half of the probe lesson) · G02_3's 71.9% bound stands two-instances-no-
+>    conclusion (Q4-on-canon weakness = an S6 question about the QUESTION) · item_count unreliable
+>    both directions, verify catches all.
+> 3. **The open correction is ratified with credit** — and its rule is STANDING: **KEPT is read
+>    from `verified.json`, never derived by subtracting `dropped.json` rows** (an answer-level
+>    mismatch row sits among item rows). All six answers reconcile exactly under it.
+> 4. The send-commit discriminator (first-computer-click-on-a-fresh-tab) **stays a RUN, named for
+>    S11** — correctly not promoted; it has a candidate mechanism but no instrument yet.
+> 5. Transport: the critic path's clean two-file run + route ③ ratified as recorded.
+
+Item 1's SETTLED wording is now on the §10-C canon-B row, as the fold list required.
+
+#### THE TWO AUDIT ANSWERS — **PRE-Z9 BOUNDS**, and G03_2 is the worst Z9 case yet
+
+Nothing folded into §9. Method: every quote grepped at **the document the item itself named**
+(`diag/g03_named_source.mjs`, measurement only, no instrument touched).
+
+| step | items | declared | verify KEPT | real at named source | invention UPPER BOUND | docs outside group |
+|---|---|---|---|---|---|---|
+| G03_2 Q1 contradictions | 46 | 46 exact | **0** | 61/92 sides (66.3%) | 27.2% | 0 |
+| G03_3 Q4 declared edges | 102 | 102 exact | **0** | 76/102 (74.5%) | 24.5% | 0 |
+
+⛔ **G03_2 IS THE STRONGEST SINGLE DEMONSTRATION OF S5-Z9 THE SWEEP HAS PRODUCED: verify kept
+ZERO of 46 items, and 51 of the 92 quote-sides are present at their correctly-named document once
+the `**` markers are collapsed.** That is Z9's exact defect — 51 demarked matches plus 10
+byte-exact = 61 real sides discarded as `source-missing`. G01_2 was 2-of-50 kept with 73 % real;
+this is 0-of-46 with 66 % real. **Every number in that table re-verifies FREE at Z9's close.**
+
+⚡ **`item_count` WAS EXACT IN BOTH ANSWERS** (46/46 · 102/102) — the first canon chat where it
+was. The standing "unreliable in both directions" warning stands on G01/G02's four instances; this
+is a counter-instance, recorded as one, not a retirement.
+
+⚠ **`coverage_note` CAME BACK EMPTY IN BOTH** — the third and fourth instances after G02_3. High
+volume, empty honesty field. S6 should read that as a property of the Q1/Q4-on-canon prompts.
+
+⛔ **AND A SECOND WAY `dropped.json`'s ROW COUNT MISLEADS — THE OPPOSITE DIRECTION FROM G01's.**
+G01's correction was that the file carries an ANSWER-LEVEL row *among* the item rows, so the count
+**over**-reports. Here it **under**-reports: G03_2 = 46 items, 0 kept, **45 rows**; G03_3 = 102
+items, 0 kept, **68 rows** (44 of G03_2's 45 rows carry distinct quote text, so it appears to
+collapse duplicates). **The rule is unchanged and now doubly earned: read KEPT from
+`verified.json`, never derive it from `dropped.json` at all — in either direction.**
+
+#### COVERAGE — the counterweight to G02's ~90 %
+
+Ground truth: **19 header lines, 18 distinct documents** (`ORGANISM_REPAIR_PLAN.md` spans
+chunk21+chunk22) — `diag/g03_ground_truth_headers.json`.
+
+| | listed | real | invented | claimed count |
+|---|---|---|---|---|
+| CHAT A | 13 | **13 / 18** (72.2%) | 0 | 13 |
+| CHAT B | 15 | **15 / 18** (83.3%) | 0 | 15 |
+
+Both counts agree with their own list — internally consistent, externally incomplete, G02's shape
+again. **Three documents were missed by BOTH** (`THE_ORGANISM__EVERYTHING.md` chunk25:2 ·
+`THE_ORGANISM_AUDIOBOOK.md` chunk26:327 · `THE_PEAK_PROTOCOL.md` chunk26:578). **CHAT A
+additionally missed ALL of chunk25 and chunk26's first 36 % as a CONTIGUOUS BLOCK** — a
+whole-attachment blind zone, qualitatively different from G02's three scattered mid-file misses.
+**Read group 3's canon coverage as 72–83 %, not ~90 %.**
+
+#### TRANSPORT — one new mechanism, one new DOM lie, one counter-instance
+
+- ⛔ **THE COPY BUTTON HANGS THE RENDERER WHEN THE INTERCEPT FORWARDS TO THE OS CLIPBOARD — AND
+  THIS IS THE 11th CLIPBOARD OCCURRENCE, THE FIRST WITH A MECHANISM.** Two consecutive
+  `Runtime.evaluate` calls died at the 45 s CDP limit on a tab that answered other probes
+  instantly; `window.__ARSENAL_RAW` still held the PREVIOUS step's payload, which is what proved
+  the copy never completed rather than the page being dead. **Intercepting
+  `navigator.clipboard.write` and NOT calling the original returns the `ClipboardItem` fully
+  built** — 42,574 B, sha `255f6ea67d0f37cc`, in-page == on-disk. **So it is the OS write that
+  hangs, not Gemini's ClipboardItem construction.** It also makes the router's own standing claim
+  — *"the OS clipboard stays off the answer path"* — literally true for the first time. **A
+  declared departure from the written hop, recorded, not silent.** For S11: this is the first
+  clipboard instance with a named failing component instead of a tally mark.
+- ⛔ **A NEW DOM LIE, SAME FAMILY AS THE innerText STALL, AT A NEW NODE: read the answer off
+  `message-content`, NEVER off `model-response`.** Mid-stream `model-response.textContent` read
+  **11** (`"Gemini said"`) while `message-content.textContent` held **31,624** and `innerHTML`
+  held 3,455. A session polling `model-response` reads a stalled-looking zero on a live stream.
+- ⚡ **THE ONE-SHOT DOWNLOAD RULE TOOK ITS THIRD COUNTER-INSTANCE, AND THE CLEANEST ONE: two blob
+  downloads landed in the SAME TAB with NO reload between them** (`447accf77548c3db` then
+  `01387ccd441dce3d`, both in-page == on-disk). B16/B17's counter-instances both had an in-place
+  reload; this one has nothing. **The measured law still STANDS** (B06: two occurrences do not
+  retire a measured law; no mechanism named) and the chain is unchanged — but the run is now
+  three and S11 should test it rather than re-derive it. Route ③ was still needed once, for the
+  clipboard hang, and it worked exactly as written.
+- ⚠ **THE HALF-HYDRATION HAZARD BIT AGAIN, 2nd instance:** CHAT B's fresh tab loaded with **NO
+  MODE PICKER AT ALL**. A full reload restored it, and the mode then read back **Pro Extended**.
+  **A session that skipped the read-back would have fired the whole chat on default Pro.**
+- ⚠ **THE SEND-COMMIT DISCRIMINATOR TOOK A COUNTER-INSTANCE.** G02 proposed *"every failure was
+  the first `computer` click on that tab since it loaded"*. **All four sends this sitting
+  committed first try, and CHAT B's G03_1 send WAS the first `computer` click on that tab since
+  load.** It stays a RUN (ruling 1050 item 4 already declined to promote it); the counter-instance
+  is recorded so S11 tests the mechanism instead of inheriting the pattern.
+- ✔ `Page.captureScreenshot` timed out once and **returned on the very next call** — 3rd
+  confirmation that it is a screenshot-path signal, not a dead renderer.
+- ✔ Pre-attach gate 7/7 names + 7/7 dotted + 7 `close chunkNN` chips, stable across 8 reads,
+  screenshot-arbitrated, on BOTH chats. Four-hop outbound sha-matched at every hop on all four
+  payloads: `d74c59635af4d761` twice · `5182dfebbd262599` · `730d5185b53ab2ee`.
+- ⚠ **ONE CLASSIFIER EVENT, ABSORBED.** A `checkall` piped through `grep` was refused mid-close.
+  His standing move worked exactly as written: the run was redirected to a file and read with the
+  file tools. Nothing was lost and nothing was worked around.
+
+#### CEILING — and why `G03_4` is not in this entry
+
+⛔ **33.58 of the 35-lakh EXECUTION line when the drive stopped** (day line 207.27 → 240.85).
+**`G03_4` (the critic) WAS NOT FIRED. §10-D rule 2 is a STOP, not a suggestion, and the honest
+call was to stop one paste short rather than breach for the sake of a round number.** The two
+probe pastes the instrument defect cost are what put this sitting at the line — that is the price
+of the defect, and it is recorded as the defect's, not as driving error. G03 is **3 of 4**; one
+paste in an already-open chat closes it. Records ride the 13-lakh HANDOFF line.
