@@ -1905,38 +1905,130 @@ STATUS (update this block before any session stops — this is the handoff)
                                    closes HERE; fresh-B08 is the NEXT sitting's first act with its
                                    branch already pre-authorized, so nothing re-escalates.**
                                    Records ride HANDOFF 13.
-  ▶ NEXT SESSION ............... **① FIRST ACT — FRESH-B08, RULED AND PRE-AUTHORIZED
-                                   (`RULING__2026-08-26_1610-s5corpus-14.md`, read it first).**
-                                   A brand-new Pro-Extended chat, the SAME ten files
-                                   `live2_batch71-80`, `steps/B08_1.txt`. **Probe PASSES → B08_2 in
-                                   that chat, sweep unchanged. MIDDLE MISSES AGAIN → branch B, for
-                                   B08 ONLY** — two five-file chats, batch→chat map amended in the
-                                   SAME act, probe each half, 2-of-2 filed for S6. **Never a third
-                                   ten-file attempt, and never a re-ask in `791d70e448da63ce`** —
-                                   that chat stays OPEN as the record, its payload parked at
-                                   `diag/B08_1_raw.txt` (`bc66970dc72caf19`).
-                                   **② THEN S5-Z6 — its OWN session** (the third mid-band anchor,
-                                   versioned-additive, ceiling **BUILD 7 · PROOF 8 · HANDOFF 5**),
-                                   which runs AFTER B08 resolves and BEFORE B09 touches a chat.
-                                   **③ THEN B09 onward** — `live2_batch81-90` and on, on
+  ☑ S5 · B08 CLOSED 2/2 ....... 26 Aug 2026 ~17:50 · **OPTION A WAS RIGHT AGAIN — the 56.2% miss
+                                   was VARIANCE.** 8 of 18 corpus chats complete. Full account in
+                                   the PROGRESS entry of 26 Aug ~17:50.
+                                   ☑ `checkall` 8/8 · `preflight` GO. ⚠ **THE CLIPBOARD WAS ALREADY
+                                     DEAD AT SESSION OPEN — 12th occurrence** — so BOTH steps went
+                                     out on the ratified clipboard-dead branch (injected file input
+                                     → `file_upload` → in-page `FileReader` → `insertText`).
+                                   ☑ Fresh chat `gemini.google.com/app/0982eeb906fcb07e` · Pro
+                                     Extended before the attach · **10 chips, the ten expected
+                                     names, zero strays** · **10/10 on the SENT turn.**
+                                   ☑ **B08_1 four hops:** `5a22d9f4cf14a018` disk == in-page == box
+                                     (104 blocks) == SENT (104 lines, mismatch −1). Send committed
+                                     **FIRST TRY — 7th consecutive**; stall, **reload recovered it
+                                     free — 10th confirmation.**
+                                   ☑ **MEASURED BEFORE THE VERDICT:** both fenced blocks sha'd
+                                     IN-PAGE — tail `26b7e25cf9357ec5` · **middle
+                                     `cf31111aee18516a`, the very anchor at 56.2% depth the first
+                                     B08 chat called NOT FOUND.** Captured `--from-blob`
+                                     (`544b9e30e162aecd`, 843 chars), **BLOB-GATE PASSED.**
+                                   ☑ **`probecheck B08_1` → PASS · VERBATIM, exit 0.** Branch B
+                                     never fired · the batch→chat map is UNTOUCHED · no third
+                                     ten-file attempt · `791d70e448da63ce` stays OPEN, never
+                                     re-asked.
+                                   ☑ **B08_2 four hops:** `e7baf101f69dbb4d` (123 lines, mismatch
+                                     −1), send **FIRST TRY — 8th consecutive**, stall, fresh load
+                                     recovered it — **11th**. Captured `--from-blob`
+                                     (`8a125e298f61f8c0`, 15,573 chars), **BLOB-GATE PASSED**, all
+                                     9 top-level keys, **JSON parses yes**.
+                                   ☑ **VERIFIER, both required counts:** `B08_2 : 35 items → KEPT 9
+                                     · DROPPED 26` · NOT-FOUND 26 · source-missing 0 ·
+                                     **MEASURED FALSE DROPS 0** · **DE-ESCAPE 0 (fourth
+                                     consecutive)** · genuinely absent 26.
+                                   ⚠ ~22.3 of the 35-lakh EXECUTION line (day 687.32 → 709.57).
+                                     INSIDE. Records ride HANDOFF 13.
+  ⚡ THE FRESH TAB IS THE        **BOTH TRANSPORTS WENT DOWN MID-CHAT AND THE HALT WAS ONE STEP
+     REMEDY — ORDERED NOW       AWAY.** The download REFUSED four times (plain · after a reload ·
+                                   after a real `computer` click · click+reload) and the OS
+                                   clipboard threw `ExternalException` **6 of 6 across ~48 s**,
+                                   while the page's own `clipboard.write` had resolved
+                                   `wrote=true`. **OPENING A NEW TAB ON THE SAME ORIGIN DELIVERED
+                                   THE PAYLOAD IMMEDIATELY — twice, independently** (B08_1's
+                                   capture, then B08_2's). Same declared transport ①, same in-page
+                                   sha, same gate; only the tab is new.
+                                   ✔ **RULED 1750 item 6, SPLIT CLEANLY: (a) as a REMEDY it is
+                                   ORDERED INTO THE TRANSPORT CHAIN NOW** — a refused/dead
+                                   transport ⇒ **open a FRESH TAB, same origin, and retry the
+                                   ORDERED transports BEFORE the 1425 2(c) halt** (free, asserts
+                                   unchanged). **(b) as a CAUSAL LAW** — "the tab was always the
+                                   mechanism; a browser restart only ever worked through the fresh
+                                   tab inside it" — **it stays a LEAD until a third instance.**
+  ⛔ AND THE NUMBER THAT MATTERS **26 OF 35 QUOTES EXIST NOWHERE IN THE CORPUS — in the chat whose
+     MORE THAN B08 DOES         probe PASSED VERBATIM on both anchors.** Measured four ways, all
+                                   TIER-0, all explicit-UTF-8: **not** the `(continued)` class
+                                   (zero source-missing) · **not** truncation (17 sit exactly on
+                                   the step's 90-char cap; re-tested prefix-tolerant, 0 hits) ·
+                                   **not** a wrong batch (searched **all 172 batches**, 0 found) ·
+                                   **and NOT a matcher failure — the CONTROL that makes the other
+                                   three mean anything: the 9 KEPT quotes were independently
+                                   re-found, 9 of 9, by the same matcher.**
+                                   ⚠ **THE COMPILED TABLE CORRECTED MY OWN FIRST READING**, and I
+                                   sent the correction before any ruling: B01_2 18% · B01_3 63% ·
+                                   B02_2 6% · B02_3 0% · B03_2 17% · B04_2 45% · B05_2 46% ·
+                                   B06_2 19% · B07_2 15% · **B08_2 74%**. So 74% is the **TOP OF A
+                                   RANGE, not a break in kind** — four of ten already ≥45%, median
+                                   ~18%. ("Genuinely absent" is an UPPER bound on invention; the
+                                   containment test is a LOWER bound.)
+  ✔ RULED IN THE SAME SITTING .. `RULING__2026-08-26_1750-s5corpus-15.md` (10th direct-channel use;
+                                   the ruler's own spot-check was **INCONCLUSIVE on artifact
+                                   schema, not a contradiction**, and the numbers stand on the
+                                   claimant's four-way measurement + its CONTROL — recorded as
+                                   claimant-measured).
+                                   ☑ **(1) B08 CLOSED 2/2 RATIFIED** — the depth table gains its
+                                     fourth row and branch B correctly never fired.
+                                   ☑ **(2) THE INVENTION TABLE IS FILED AS S6 EVIDENCE** beside the
+                                     depth table. **STANDING FINDING: fabrication at ~18% median
+                                     (≥45% in four of ten) is the sweep's STEADY STATE, and
+                                     `verify.mjs` failing closed is the LOAD-BEARING INSTRUMENT of
+                                     the whole corpus half.**
+                                   ☑ **(3) S5-Z6's row gains one line: it hardens RETRIEVAL and
+                                     CANNOT catch generation-side fabrication** — at B08 the probe
+                                     was not the binding constraint. Scope otherwise unchanged.
+                                   ☑ **(4) NOTHING CHANGES IN THE SWEEP** — no invention checkpoint;
+                                     a threshold would re-litigate a steady state every second
+                                     chat, and the per-chat close record already carries the counts.
+                                     **B09–B18 run as written.**
+                                   ⚠ **(5) THE YIELD NUMBER IS HIS CALL, AND IT IS ON THE REPORT
+                                     LINE: ten extractions → 157 verified items.** Default and the
+                                     architect's recommendation: **CONTINUE** (the corpus is a
+                                     PRIMARY source, 10 of 18 batch-groups are still unaudited, and
+                                     the finding-stream has S6 value beyond the items). **Trimming
+                                     the sweep is HIS decision alone.**
+  ▶ NEXT SESSION ............... **① S5-Z6 — THE THIRD ANCHOR, ITS OWN SESSION, AND NOTHING ELSE.**
+                                   A third probe anchor in the **40–60% depth band**, B09 onward.
+                                   **Versioned-additive on the c3 precedent:** the freeze protects
+                                   haystack + expected, so both existing anchors stay UNTOUCHED,
+                                   the probe template is versioned, uniqueness is certified by the
+                                   same TIER-0 certifier, and every new refusal/assert is
+                                   bite-proven **IDEMPOTENT**. **CEILING, ruler-written: BUILD 7 ·
+                                   PROOF 8 · HANDOFF 5.**
+                                   ⚠ **ITS ROW CARRIES A LIMIT, RULED: Z6 hardens RETRIEVAL and
+                                   CANNOT catch generation-side fabrication.** B08 is the proof —
+                                   its probe passed VERBATIM on both anchors while the extraction
+                                   invented 26 of 35 quotes. `verify.mjs` failing closed is the
+                                   gate that catches THAT class, and it is load-bearing.
+                                   **② THEN B09 onward** — `live2_batch81-90` and on, on
                                    three-anchor probes. **MODEL: Opus 5 · effort HIGH · EXECUTION 35
                                    + HANDOFF 13.**
-                                   ✔ **NO RESTART IS OWED BY HIM AT OPEN — the pre-emptive act is
-                                   DROPPED by ruling (4).** The two ordered transports carry a chat
-                                   on their own: **① blob-download (PRIMARY, strictest, no OS
-                                   clipboard) → ② the CLIPBOARD ROUTE, firing ONLY on a REFUSED
-                                   download.** Never the other order. If BOTH are down, **halt THAT
-                                   chat only**, record, move on — his restart is summoned on the
-                                   report line, never mid-sitting by default.
-                                   ⚠ **THE FOCUS STEP IS PART OF TRANSPORT ②:** click the page with
-                                   `computer` first or `clipboard.write` throws `NotAllowedError`
-                                   and the late toast makes it look like it worked. **And the CRLF
-                                   strip is part of it too** — 227 raw → 216 after CRLF→LF, then the
-                                   sha matches in-page exactly.
-                                   ⚠ **EVERY READ OF THIS CORPUS IS EXPLICIT UTF-8** — the ruler's
-                                   own ANSI-default read produced a confident wrong recount today.
+                                   ✔ **NO RESTART IS OWED BY HIM, AND NOW THERE IS A REMEDY BEFORE
+                                   THE HALT.** The transport chain reads: **① blob-download
+                                   (PRIMARY) → ② the CLIPBOARD ROUTE, only on a refused download →
+                                   ⑶ if either is refused or dead, OPEN A FRESH TAB, same origin,
+                                   and retry the ordered transports — BEFORE taking 1425 2(c)'s
+                                   halt.** Only if that also fails does the chat halt, recorded,
+                                   with his restart summoned on the report line.
+                                   ⚠ **THE FOCUS STEP IS PART OF TRANSPORT ②** (a real `computer`
+                                   click, or `clipboard.write` throws `NotAllowedError` while the
+                                   late toast reads as success) **and so is the CRLF strip.**
+                                   ⚠ **THE CLIPBOARD-DEAD OUTBOUND BRANCH IS THE ONE THAT WORKS
+                                   WHEN preflight WARNS** — injected file input → `file_upload` →
+                                   in-page `FileReader` → `execCommand('insertText')`, four hops
+                                   still asserted. It carried both B08 steps.
+                                   ⚠ **EVERY READ OF THIS CORPUS IS EXPLICIT UTF-8.**
                                    ⚠ **`checkall` §7 goes RED whenever you run `verify.mjs`** —
-                                   its own outputs move. 8th RED, same class, fix rides S5-Z4.
+                                   its own outputs move. 9th RED, same class, fix rides S5-Z4.
                                    Remedy and continue: `node snapshot.mjs take --why "…"`, then
                                    re-run checkall GREEN BEFORE committing.
                                    ✔ **THE TEN-FILE CEILING QUESTION IS CLOSED** — B06's fresh probe
@@ -10086,3 +10178,149 @@ session executes it without asking anyone.
 one dead rule (one-shot downloads) killed by measurement rather than argument; the second inbound
 transport proven live with its one normalization written down; and B08's mid-band miss caught,
 measured, verified sound, escalated and ruled — with **nothing stamped that was not proven**.
+
+---
+
+### PROGRESS 2026-08-26 ~17:50 IST — S5 CORPUS · **B08 CLOSED 2/2 — OPTION A WAS RIGHT AGAIN** — and the extraction inside the probe-passing chat invented 26 of its 35 quotes
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line). Micro-order written to the session
+scratchpad before any edit (rule 9). MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.
+`checkall` GREEN 8/8 · `preflight` GO — both RUN in this session. Meter baseline: **687.32**.
+⚠ preflight's second warning was live and it mattered: **the OS clipboard was already dead at
+session open — 12th occurrence** — so the outbound rode the ratified clipboard-dead branch
+(injected file input → `file_upload` → in-page `FileReader` → `execCommand('insertText')`) for
+both steps, and transport ② was never available for the answer path.
+
+#### ① FRESH-B08 — RULING 1610's OPTION A, EXECUTED, AND ITS PROBE PASSED
+
+Fresh chat **`gemini.google.com/app/0982eeb906fcb07e`**. Pro Extended set BEFORE the attach, read
+back off the picker's own `aria-label`. Ten attachments `live2_batch71-80`; pre-attach gate:
+**`uploader-file-preview` = 10, exactly the ten expected names, zero strays.** Pre-compose gate
+asserted as worded (viewport 1920×878, real 612×24 editor, empty box, chips 10). Outbound four
+hops, every one sha-asserted:
+
+```
+B08_1  step file (joined) 5a22d9f4cf14a018 · in-page FileReader 5a22d9f4cf14a018 (104 lines)
+       · box 104 blocks / 6,839 chars 5a22d9f4cf14a018 · SENT 104 lines 5a22d9f4cf14a018,
+       firstStrippedMismatch = -1 · 10/10 chips on the SENT turn
+```
+
+Send committed **FIRST TRY — 7th consecutive**. Render stall, **reload recovered it free — 10th
+confirmation**, never re-fired.
+
+**MEASURED BEFORE THE VERDICT, as the standing rule demands.** The answer's two fenced blocks were
+sha'd IN-PAGE against `probe_expected.json`'s live2_g08: tail trimmed = **`26b7e25cf9357ec5`** (85
+chars) and middle trimmed = **`cf31111aee18516a`** (96 chars). **BOTH byte-exact — including the
+MIDDLE anchor at `live2_batch76.txt:1015`, 56.2% depth, that the first B08 chat answered "ANCHOR 2
+NOT FOUND".** Captured `--from-blob` (`544b9e30e162aecd`, 843 chars), **BLOB-GATE PASSED**, 2 fences
+for 2 anchors. **`node probecheck.mjs B08_1` → PASS · VERBATIM, exit 0.**
+
+**⇒ THE 56.2% MISS WAS VARIANCE, exactly as at B06.** Branch B never fired, the batch→chat map is
+untouched, there is no third ten-file attempt, and the failed chat `791d70e448da63ce` stays OPEN as
+the record — never re-asked.
+
+#### ⚡ BOTH TRANSPORTS WENT DOWN — AND THE REPLACEMENT RULE IS A FRESH TAB
+
+Between the probe and its capture the sending tab lost both routes. The page→disk download was
+**REFUSED four times** — plainly, after a reload, after a real `computer` click, and after
+click+reload — and the OS clipboard threw `ExternalException` on **6 of 6 attempts across ~48
+seconds**, while the page's own `clipboard.write` had resolved `wrote=true`. That is RULING 1425
+item 2(c)'s halt condition, and I was one step from taking it.
+
+**OPENING A NEW TAB ON THE SAME ORIGIN DELIVERED THE PAYLOAD IMMEDIATELY.** Same declared transport
+①, same in-page sha, same gate — only the tab is new. **Confirmed TWICE, independently: B08_1's
+capture and then B08_2's.** It is consistent with a per-tab download limiter that sticks once it
+blocks, and it retires the last mystery in the dead one-shot rule: **a browser restart was never
+the mechanism — the fresh tab inside it always was.**
+**⇒ nothing is owed by him, and "both transports down" now has a cheap third thing to try first.**
+Filed as a LEAD with two instances; a third at B09 makes it standing.
+
+#### ② B08_2 — CAPTURED CLEAN, AND THEN THE NUMBER
+
+Four hops exact again (`e7baf101f69dbb4d`, 123 lines, `firstStrippedMismatch = -1`), send **FIRST
+TRY — 8th consecutive**, stall, fresh load recovered it — **11th confirmation**. Captured
+`--from-blob` (`8a125e298f61f8c0`, 15,573 chars), **BLOB-GATE PASSED**, all 9 top-level keys,
+fenced yes, **JSON parses yes**. **⇒ B08 IS CLOSED 2/2. 8 of 18 corpus chats complete.**
+
+`node verify.mjs`, both required counts: **`B08_2 : 35 items → KEPT 9 · DROPPED 26`** · drops:
+**NOT-FOUND 26, source-missing 0** · **MEASURED FALSE DROPS 0** · **DE-ESCAPE 0** (fourth
+consecutive zero) · **genuinely absent 26.**
+
+#### ⛔ 26 OF 35 QUOTES EXIST NOWHERE IN THE CORPUS — IN THE CHAT WHOSE PROBE PASSED VERBATIM
+
+Measured four ways, all TIER-0, all explicit-UTF-8 (the 1610 standing note obeyed):
+- **Not the `(continued)` class** — zero `source-missing` drops here, so S5-Z4's day-key bug is not
+  involved at all.
+- **Not truncation** — 17 of the 26 are exactly 90 chars, the step's own quote cap, so every drop
+  was re-tested with its last partial word removed. **Prefix hits: 0.**
+- **Not a wrong batch** — every drop was searched against **all 172 corpus batches**,
+  whitespace-normalised and prefix-tolerant. **Found elsewhere: 0. Found nowhere: 26.**
+- **NOT A MATCHER FAILURE — the control that makes the other three mean anything:** the 9 KEPT
+  quotes were independently re-found in the ten frozen batches, **9 of 9, by the same matcher.**
+
+They read exactly like him — Hinglish, his cadence, his vocabulary — and he never wrote them.
+
+#### ⚠ THE COMPILED TABLE, AND IT CORRECTS MY OWN FIRST READING
+
+I escalated this as a 4× jump off the three chats I had measured. Then I compiled all ten captured
+extractions (free, from `dropped.json`), and the honest picture is different:
+
+```
+B01_2 18% · B01_3 63% · B02_2  6% · B02_3  0% · B03_2 17%
+B04_2 45% · B05_2 46% · B06_2 19% · B07_2 15% · B08_2 74%
+```
+(genuinely-absent ÷ total items. It is an UPPER bound on invention, because the false-drop test is
+whitespace-normalised containment and therefore a LOWER bound.)
+
+**B08_2's 74% is the TOP OF A RANGE, not a break in kind** — four of ten are already ≥45%, median
+~18%. That makes it a weaker "something changed" signal and a much stronger standing one:
+**fabrication at this rate is the sweep's steady state, and `verify.mjs` failing closed is what has
+been carrying the corpus half all along.** RULING 1610 item 3 is doing more work than it looked
+like when it was written. I sent the correction to the architect before any ruling, on my own read.
+
+#### ⚠ ESCALATED (NON-BLOCKING) — `queue\2026-08-26_1740-s5corpus-15.md` (10th direct-channel use)
+
+Nothing is blocked: B08 is closed and captured. What the escalation asks is what the number means.
+Two things the ladder has not priced: **S5-Z6 hardens the PROBE, and here the probe was NOT the
+binding constraint** — it passed VERBATIM on both anchors while the extraction was 74% fabricated,
+so Z6 cannot catch this class and its row should say so; and **the yield question is now real** —
+ten chats have produced 157 verified items in total. My recommendation, sent: file the table as S6
+evidence beside the depth table, add the one line to Z6's row, **change nothing in the sweep**
+(rule 6 and the 0750 ruling both point the same way, and I did not act on it alone).
+
+⚠ **~22.3 of the 35-lakh EXECUTION line** (day 687.32 → 709.57 at the escalation). INSIDE.
+Records ride HANDOFF 13.
+
+#### ✔ RULED INSIDE THE SAME SITTING — `RULING__2026-08-26_1750-s5corpus-15.md`
+
+It covers the escalation **and** the correction, and it accepted the correction as the record: an
+executor re-basing its own escalation against its own framing is "the honesty norm working". The
+ruler also declared his own verification **INCONCLUSIVE** — his `dropped.json` spot-check assumed a
+per-quote schema where the artifact is answer-level, so it found no contradiction and could not
+confirm either. **The numbers therefore stand on the claimant's four-way measurement and its
+CONTROL, and are recorded as claimant-measured.** That is the right way to record a check that did
+not check.
+
+**(1)** B08 CLOSED 2/2 ratified — the depth table gains its fourth row, branch B correctly never
+fired. **(2)** the invention table is **FILED as S6 evidence** beside the depth table, with the
+standing finding worded as the correction earned it: **fabrication at ~18% median (≥45% in four of
+ten) is the sweep's STEADY STATE, and `verify.mjs` failing closed is the load-bearing instrument of
+the whole corpus half.** **(3)** S5-Z6's row gains the one line — it hardens retrieval and cannot
+catch generation-side fabrication. **(4) NOTHING changes in the sweep** — no invention checkpoint,
+because a threshold would re-litigate a steady state every second chat and the per-chat close
+record already carries the counts; **B09–B18 run as written.** **(5)** the yield number is HIS call
+and rides the report line. **(6)** the fresh-tab finding is **split**: as a REMEDY it is ordered
+into the transport chain NOW (refused/dead ⇒ fresh tab, same origin, retry the ordered transports
+BEFORE the 1425 2(c) halt); as a CAUSAL LAW it stays a LEAD until a third instance, exactly as
+proposed.
+
+**THE FILING IS DONE, NOT PROMISED:** `diag/S6_EVIDENCE_TABLES.json` — 10 extraction rows (kept ·
+dropped · measured false drops · genuinely absent · invention rate) and 16 anchor-depth rows, with
+the bound direction stated inside the artifact so S6 cannot misread it, and the four observed probe
+outcomes (A02 ~48% · B06_1 47.4% · B08_1-first 56.2% · B08_1-fresh PASS) recorded beside them.
+**Total verified items across all ten extractions: 157.**
+
+**WHAT THIS SITTING PRODUCED:** B08 closed 2/2 with Option A vindicated a second time; the last
+restart risk retired by a remedy that costs one new tab; and the corpus half's real character
+measured and filed — not a scandal, a steady state, caught every time by the one gate that fails
+closed.
