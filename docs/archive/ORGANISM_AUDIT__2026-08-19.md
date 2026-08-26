@@ -1454,8 +1454,50 @@ STATUS (update this block before any session stops — this is the handoff)
                                      NOT-FOUND). 5 is a LOWER BOUND — the measure is
                                      whitespace-normalised containment, so an emphasis-only difference
                                      still counts as absent. All of it re-verifies free at S5-Z4.
-  S5 · B05 OPENED, PROBE RED ... ◐ 26 Aug 2026 ~10:05 · the chat is OPEN, loaded, ONE turn in, and
+  S5 · B05 ................... ☑ **CLOSED 2/2, 26 Aug 2026 ~10:45** — the halt below was RULED
+                                   the same sitting (`queue\RULING__2026-08-26_1010-s5corpus-9.md`,
+                                   **OPTION A RATIFIED**, ruler verified by running: identity diag
+                                   re-run fresh, blast radius INDEPENDENTLY re-counted at 1 of 31).
+                                   Full account in the PROGRESS entry of 26 Aug ~10:45.
+                                   ☑ B05_2 fired, captured `--from-blob` (third live use) — in-page
+                                     Blob sha `b07474e22235f08d` == on-disk, 34,050 B, BLOB-GATE
+                                     PASSED, all 9 declared keys present, **JSON parses**.
+                                   ☑ four-hop outbound `a4667b7032527530` at EVERY hop, 123/123 lines.
+                                   ☑ verify: **KEPT 9 · DROPPED 70 · 34 MEASURED FALSE DROPS**
+                                     (S5-Z4's `(continued)` class) ⇒ true content ≥ 43 of 79.
+                                   ✔ **DE-ESCAPE COUNT = 0** — the ruling's new standing per-chat
+                                     measurement, first reading: the behaviour that failed the probe
+                                     did NOT reach the product. Measured, not assumed.
+                                   ✔ **THE BOUND IS STANDING for B06–B18:** accept an escape-only
+                                     probe deviation ONLY when (a) it is escape-collapse alone,
+                                     proven by equality-after-single-transform, (b) every other
+                                     anchor is VERBATIM, (c) the close records the count. Anything
+                                     else = FAIL as written, escalate. The miss is a NAMED S6-bearing
+                                     model-behaviour finding. Option D → a design item on S5-Z4's row.
+                                   ⛔ **TRAP 4 COST A WHOLE COMPOSITION AND IT WAS AVOIDABLE:** after
+                                     the browser restarted, the chat's new tab was HIDDEN (0×0
+                                     viewport) and **a hidden tab discards the synthetic key path** —
+                                     123 typed lines landed nowhere with `activeElement` on the box
+                                     and `hasFocus()` true. **The pre-compose gate that exists for
+                                     exactly this was not run first; that is the session's own miss
+                                     and it is what the sitting ran hot on.** Nothing sent, nothing
+                                     paid to Gemini.
+                                   ☑ RECOVERED ON THE RATIFIED CLIPBOARD-DEAD BRANCH (0750-s5corpus-6):
+                                     `file_upload` → in-page read → `execCommand('insertText')`. A DOM
+                                     path survives a hidden tab. **Two new transport facts:** a `ref`
+                                     click does NOT focus the box there (use `box.focus()` + an
+                                     explicit collapsed Range), and **the send must be a JS `.click()`
+                                     on Send — mouse events reach a hidden tab, `Return` does not.**
+                                   ☑ render stall + free reload recovery, **SIXTH** confirmation.
+                                   ⚠ checkall §7 RED an EIGHTH time, remedied with `snapshot.mjs take`
+                                     as pre-authorised, then GREEN 8/8 + preflight GO.
+                                   ⛔ **CEILING BREACHED AND RECORDED AS OVER: 48.90 vs 35+13 = 48**
+                                     (day line 469.09 → 517.99), and over by more once this record is
+                                     counted. Cause named, not explained away: the composition was
+                                     paid for twice. Ceiling NOT re-derived — unit faults only.
+  S5 · B05's HALT (history) .. ◐ 26 Aug 2026 ~10:05 · the chat was OPEN, loaded, ONE turn in, and
                                    the session HALTED on its probe rather than pass or re-run it.
+                                   **Superseded by the row above — kept as the history of the fork.**
                                    Full account in the PROGRESS entry of 26 Aug ~10:05 — read that.
                                    `gemini.google.com/app/f23185de2a94ec84` · Pro Extended · ten
                                    attachments `live2_batch41-50`, all ten confirmed by name.
@@ -1500,19 +1542,46 @@ STATUS (update this block before any session stops — this is the handoff)
                                      budget binds even on a 1 KB answer.
                                    ⚠ 18.04 spent of the fresh 35-lakh EXECUTION line (day line
                                      469.09 → 487.13 at the halt) — INSIDE. Records ride HANDOFF 13.
-  ▶ NEXT SESSION ............... **S5 · CORPUS · B05 IS HALTED ON A RULING. Do NOT re-fire, re-probe,
-                                   split or pass it — read `queue\2026-08-26_1000-s5corpus-9.md`
-                                   and its `RULING__` partner FIRST.** With the ruling: **A** ⇒ fire
-                                   `steps/B05_2.txt` into the still-open chat `f23185de2a94ec84`
-                                   (extraction, attaches NOTHING), capture `--from-blob`, verify,
-                                   record the de-escape count, then a FRESH chat for B06 with ten
-                                   attachments `live2_batch51-60`. **B/C** ⇒ as the ruling writes it.
-                                   **D** ⇒ its own micro-rung; it must not block B05.
-                                   If no ruling has returned, the escalation is still the first act:
-                                   the conservative branch (Q0) is to stay halted on that thread and
-                                   say so — never to spend a paste to get past it.
-                                   MODEL: Opus 5 · effort HIGH · EXECUTION 35 +
+  ▶ NEXT SESSION ............... **S5 · THE CORPUS SWEEP RESUMES AT B06 — a FRESH Pro-Extended chat,
+                                   ten attachments `live2_batch51-60`, `steps/B06_1.txt` (load +
+                                   probe) then `steps/B06_2.txt` (extraction), then STOP and leave
+                                   the chat OPEN. MODEL: Opus 5 · effort HIGH · EXECUTION 35 +
                                    HANDOFF 13 (the standing per-sitting line).**
+                                   **B01–B05 CLOSED, 5 of 18.** Nothing is owed in any closed chat;
+                                   the critic is not fired (the ~07:50 ruling) and every chat stays
+                                   OPEN for a retro-critic S6 or the architect may order.
+                                   ⛔ **RUN THE PRE-COMPOSE GATE BEFORE THE FIRST `type`, ALWAYS —
+                                   B05 paid for a whole 123-line composition by skipping it.** A tab
+                                   can come back HIDDEN (`visibilityState==='hidden'`, 0×0 viewport)
+                                   after a browser restart, and **a hidden tab silently discards every
+                                   synthetic keystroke** while `activeElement` is the box and
+                                   `hasFocus()` is true — so it looks fine and lands nothing. Assert
+                                   `hasFocus() && visibilityState==='visible' && isContentEditable &&
+                                   box empty`, THROWN from inside the batch. If the tab is hidden,
+                                   do NOT type: use the ratified clipboard-dead branch instead
+                                   (`file_upload` → in-page read → `execCommand('insertText')`,
+                                   `RULING__2026-08-26_0750-s5corpus-6.md`) — a DOM path survives a
+                                   hidden tab and that ruling already calls it the stricter route.
+                                   With it: **`box.focus()` + an explicit collapsed Range** (a `ref`
+                                   click does not focus the box in a hidden tab) and **send with a JS
+                                   `.click()` on the Send button — `Return` does not reach a hidden
+                                   tab, mouse events do.**
+                                   ✔ **THE ESCAPE-ONLY BOUND IS STANDING (RULING 1010-s5corpus-9):**
+                                   a probe deviation may be accepted ONLY when (a) it is
+                                   escape-collapse alone, proven by equality-after-single-transform
+                                   (`diag/b05_1_identity.mjs` is the method), (b) every other anchor
+                                   of that probe is VERBATIM, and (c) the close records the count.
+                                   **Anything else is FAIL as written and escalates.** By measurement
+                                   no remaining anchor carries the trigger, so expected recurrence is
+                                   ZERO — the bound exists so a surprise still halts.
+                                   ✔ **THE DE-ESCAPE COUNT NOW JOINS EVERY CHAT'S CLOSE RECORD**,
+                                   beside the false-drop count. B05_2's first reading was **0**.
+                                   ⚠ **CHANNEL PROTOCOL AMENDED — a session's name can ROTATE
+                                   MID-LIFE** (the architect booted as `arsenal-ai-fc-0f` and is now
+                                   `arsenal-ai-fc-59`; the pointer file went stale with the session
+                                   still alive). **Always `ListAgents` first; if the named session is
+                                   absent, the fallback IS the design — tell HIM.** The `queue\` file
+                                   is the record either way.
                                    ✔ **Z5's two-line registry departure is RATIFIED and its scope
                                    call was RIGHT (RULING__2026-08-26_0935-s5z5-1.md; architect
                                    miss #9 owned there — the 0855 scope line omitted the
@@ -8620,3 +8689,117 @@ B01–B04 closed, **B05 loaded and probe-red: 4 of 18 closed.**
 - **D** ⇒ its own micro-rung; it must not block B05.
 
 **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13** (the standing per-sitting line).
+
+---
+
+### PROGRESS 2026-08-26 ~10:45 IST — S5 · CORPUS · THE RULING CAME BACK AND **B05 IS CLOSED 2/2**
+
+**The ruling arrived on the direct channel** (`queue\RULING__2026-08-26_1010-s5corpus-9.md`, read as
+the RECORD; the SendMessage was transport). **OPTION A RATIFIED** — the ruler verified by running
+first: `b05_1_identity.mjs` re-run fresh, and the blast radius **independently re-counted** (exactly
+1 of 31 probe entries carries the trigger, `live2_g05`). The three additions are folded below.
+
+#### WHAT THE RULING ADDED, AND IT IS NOW STANDING
+
+1. **B05 ACCEPTED.** The probe verdict is true about fidelity and silent about retrieval; retrieval
+   is the property the gate protects and it is proven. The miss is a **NAMED, S6-BEARING
+   MODEL-BEHAVIOUR FINDING** — *Gemini de-escapes `\\`→`\` inside fenced reproduction against
+   explicit instruction.*
+2. **THE BOUND, so B06–B18 never re-escalate this shape** — acceptance applies ONLY when all three
+   hold: (a) escape-collapse ONLY, proven by the equality-after-single-transform method; (b) every
+   other anchor of that probe VERBATIM; (c) the close records the deviation with its count.
+   **Anything else is FAIL as written, and escalates.**
+3. **THE DE-ESCAPE COUNT JOINS THE STANDING PER-CHAT CLOSE RECORD**, beside the false-drop count.
+   Option D refused as a rung (zero remaining consumers) — ESCAPE-NORM becomes a named design item
+   on S5-Z4's row. B and C refused.
+
+#### B05_2 — FIRED, CAPTURED, VERIFIED
+
+**The four-hop outbound matched end to end: `a4667b7032527530` at every hop** — step file on disk →
+the file read IN THE PAGE → the composed box (123/123 `<p>` children, 9,033 chars, zero nbsp) → the
+**SENT turn**, de-artefacted by the ruled one-leading/one-trailing-space strip.
+
+**⛔ AND THE COMPOSITION HAD TO CHANGE ROUTE MID-STEP — the reason is a measured platform fact and
+the first attempt was lost to it.** After the ruling returned, the browser had restarted: the old
+tab was gone and the chat's new tab came back **hidden, with a 0×0 viewport**. A full 123-line
+per-line composition was typed into it and **landed nowhere** — `activeElement` was the box and
+`document.hasFocus()` was true, but `visibilityState` was `hidden`, and **a hidden tab discards the
+synthetic key path**. That is TRAP 4, already measured and already in the memory, and **the
+pre-compose gate that exists precisely for it (`hasFocus() && isContentEditable && box empty`,
+thrown from inside the batch) was not applied before the first attempt. That is this session's
+miss, and it is what the sitting ran hot on.** Nothing was sent and nothing was paid to Gemini —
+the box was empty and the turn count never moved.
+
+Recovery, and it is NOT an improvisation: the **ratified clipboard-dead branch of the outbound law**
+(`RULING__2026-08-26_0750-s5corpus-6.md`) — inject an `<input type=file>`, `file_upload` the step
+file to it, read it in-page, and insert with **`document.execCommand('insertText')`**. That is a DOM
+path, and the same measurement that condemns the key path says the DOM path survives a hidden tab.
+It is also the route that ruling calls **stricter** than the per-line fallback, and it keeps the
+prompt bytes out of the session's context. **Every SHA hop was still asserted and no gate went
+softer.** Two smaller facts fell out: `box.focus()` + an explicit collapsed Range is needed (a `ref`
+click did not focus the box in the hidden tab), and **the send had to be a JS `.click()` on the Send
+button** — mouse events reach a hidden tab, `Return` does not.
+
+**The render stall hit again and a reload recovered it free — SIXTH confirmation.** `textContent`
+33,985 frozen across four polls with `innerText` at 11 and the stop button live; the JSON was
+already complete server-side (it ended on `"coverage_note":"…"}`), so the answer was never re-asked.
+
+**CAPTURED `--from-blob`, third live use:** `navigator.clipboard.write` hooked, THIS answer's Copy
+button taken from inside the LAST `model-response` and fired with a JS `.click()`, the
+`ClipboardItem`'s `text/plain` Blob read in the same call and sha'd IN-PAGE —
+**`b07474e22235f08d`, 34,050 bytes — identical on disk.** `capture.mjs save B05_2 --from-blob …`
+→ 33,982 chars, `capture_path raw-blob`, **BLOB-GATE PASSED** (transit sha in-page == on-disk ·
+identity: all 9 declared top-level keys present · fenced yes · **JSON parses yes**).
+The page→disk download worked first try — the browser restart had reset the one-shot budget.
+
+#### THE VERIFIER — WITH BOTH COUNTS THE RULING NOW REQUIRES
+
+```
+B05_2 : 79 items -> KEPT 9 · DROPPED 70
+        drop reasons : source-missing 48 · NOT-FOUND 17 · quote-too-short 5
+        MEASURED FALSE DROPS (quote present verbatim in the ten frozen batches) : 34
+        DE-ESCAPE COUNT (matches only after collapsing doubled backslashes)      :  0
+        genuinely absent by this measure                                         : 36
+        (false-drop figure is a LOWER BOUND - whitespace-normalised containment)
+```
+
+**⇒ B05's true content is at least 43 of 79 real, not 9.** The 34 are the S5-Z4 `(continued)`
+day-key class, exactly as predicted, and they re-verify free at its close.
+
+**⇒ AND THE NEW STANDING MEASUREMENT'S FIRST READING IS ZERO.** Not one extraction quote in B05_2
+was de-escaped. The behaviour that failed the probe **did not reach the product** — measured, not
+assumed, which is the whole reason the ruling asked for the count.
+
+Coverage receipt: B05_2 reported 12 day-keys against 7 real, **8 inflated counts and 6 not in the
+manifest** — all of them `(continued)` variants and bare dates the same S5-Z4 fault mangles. The
+critic hand-back list stands at 25 days; **no critic is fired** (the ~07:50 ruling), the chat STAYS
+OPEN, and S6 or the architect may order a retro-critic into it.
+
+#### GATES — RUN IN THIS SESSION, AT CLOSE, AFTER THE LAST WRITE
+
+`node checkall.mjs` → **§7 RED, the EIGHTH identical instance**, same cause (new diag instrument +
+regenerated verify outputs). Remedied with `snapshot.mjs take --why` as pre-authorised — 82
+instruments, 775,254 bytes — then **GREEN 8/8**, and `preflight` **GO**. Clipboard still dead
+(11th occurrence), advisory only since S5-Z5 took it off the answer path.
+
+#### THE NUMBERS — AND THE SITTING IS **OVER**, RECORDED AS OVER
+
+**48.90 spent against EXECUTION 35 + HANDOFF 13 = 48.** Day line 469.09 at open → 517.99 at close,
+read from the meter, not estimated. **BREACHED BY ~0.90 before this record was written, so the true
+close is over by more, and it is recorded rather than explained away.** The cause is named above and
+it is not the model or the plan: **the 123-line composition was paid for twice** because the hidden-tab
+gate that already existed was not run first. The shape was the priced one (two record-and-commit
+cycles, exactly what the ~08:10 sizing ruling bought); the driving ran hot. Ceiling NOT re-derived —
+§10-C's rule is unit faults only, and this is not one.
+
+**Zero instruments edited · zero gates weakened · zero audit questions beyond the two paid steps ·
+frozen inputs untouched · `answers/` holds exactly two new files (B05_1, B05_2), both stamped
+`raw-blob`, no false stamp.**
+
+**B01–B05 CLOSED — 5 of 18 corpus chats.**
+
+#### WHAT THE NEXT SESSION DOES
+
+**B06 — a FRESH Pro-Extended chat, ten attachments `live2_batch51-60`, `steps/B06_1.txt` (load +
+probe) then `steps/B06_2.txt` (extraction), then STOP and leave the chat OPEN.**
+**MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
