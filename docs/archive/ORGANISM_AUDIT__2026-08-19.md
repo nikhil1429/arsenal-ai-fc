@@ -1542,11 +1542,195 @@ STATUS (update this block before any session stops — this is the handoff)
                                      budget binds even on a 1 KB answer.
                                    ⚠ 18.04 spent of the fresh 35-lakh EXECUTION line (day line
                                      469.09 → 487.13 at the halt) — INSIDE. Records ride HANDOFF 13.
-  ▶ NEXT SESSION ............... **S5 · THE CORPUS SWEEP RESUMES AT B06 — a FRESH Pro-Extended chat,
+  S5 · B06's FIRST SITTING .... ◐ 26 Aug 2026 ~11:20 · **HALTED ON A PHYSICAL BLOCKER BEFORE ANY
+                                   SPEND REACHED GEMINI.** Two full attempts; **BOTH SENDS FAILED TO
+                                   COMMIT.** No chat was created, so B06 is un-opened, not owed.
+                                   ☑ GATES GREEN AT OPEN: `checkall` **8/8 first try** — **§7 was
+                                     GREEN for the first time in FIVE opens**; the architect's
+                                     `snapshot.mjs take` at the S5-Z5 ratification held. `preflight`
+                                     GO, one expected resume warning (answers/ holds 15).
+                                   ☑ THE OUTBOUND LAW HELD AT EVERY HOP IT COULD REACH, TWICE:
+                                     disk sha256/16 `6fb98e5c202d5289` (6,789 B) == the file read
+                                     IN THE PAGE == the composed box, and the box was **EXACT** —
+                                     6,738 chars, 105 `<p>`, **zero nbsp**, `composed === source`
+                                     character for character INCLUDING the trailing newline.
+                                     Attachments **10/10 by name** off the DOM, both times.
+                                   ⛔ **THE SENT TURN NEVER EXISTED.** Three independent receipts:
+                                     `location.href` never gained a chat id · `read_page`
+                                     (**Chrome's OWN accessibility tree, not page JS**) shows the
+                                     landing composer and **Recents unchanged** (top is still B05's
+                                     `/app/f23185de2a94ec84`) · `user-query`/`model-response`/
+                                     `p.query-text-line` all 0.
+                                   ⛔ **THE RENDERER FROZE, TWICE, MEASURED BY CDP** — *"Page.capture
+                                     Screenshot timed out after 30000ms … the renderer may be frozen
+                                     or unresponsive."* Once ~1 min after attempt 1's send (the page
+                                     then returned as a FRESH landing page with the draft restored
+                                     and the ten attachments GONE — a renderer kill + reload), once
+                                     while merely settling the attachments, **before any send**.
+                                   ⚑ **THE TAB IS `visibilityState:'hidden'` AND SO IS A FRESHLY
+                                     CREATED ONE** ⇒ the whole Chrome window is minimised/occluded,
+                                     not one stale tab. **BUT B05 SENT FINE FROM A HIDDEN TAB ONE
+                                     HOUR EARLIER**, so "hidden cannot send" is NOT written in off
+                                     two occurrences — the thing that actually CHANGED is the
+                                     renderer freeze, and that is the escalated question.
+                                   ⛔ **ESCALATED, NOT IMPROVISED — `queue\2026-08-26_1120-s5corpus-10.md`**,
+                                     direct channel (`arsenal-ai-fc-59` confirmed live by ListAgents
+                                     first, per the amended protocol). Options A–D costed,
+                                     recommendation A + a standing PRE-ATTACH VISIBILITY GATE.
+                                   ⚠ **MY OWN MISS, OWNED:** computer-use `open_application("Google
+                                     Chrome")` does **NOT** front an already-running window — it
+                                     launched a SECOND Chrome and left a *"Who's using Chrome?"*
+                                     profile picker on his screen. Nothing was clicked in it. **There
+                                     is NO code path from a driving session to a fronted window**
+                                     (browsers are tier "read"; the extension has no tab-activate).
+                                   ⚠ **20.04 of the 35-lakh EXECUTION line** (day line 525.10 →
+                                     545.14, read from the meter). INSIDE. Records ride HANDOFF 13.
+                                   ✔ **ZERO instruments edited · ZERO gates weakened · ZERO audit
+                                     questions sent · frozen inputs untouched · `answers/` holds
+                                     exactly the 15 files it held at open, no new file, NO STAMP.**
+  S5 · B06 OPENED, SENT, AND ◐ 26 Aug 2026 ~12:05 · **THE PHYSICAL BLOCKER IS GONE — B06 IS A REAL
+     HALTED ON ITS PROBE          CHAT** (`gemini.google.com/app/e133eba84683ae63`) with a real turn
+                                   in it. **The whole outbound half is GREEN and the probe FAILED for
+                                   a NEW reason.** Full account in the PROGRESS entry of 26 Aug
+                                   ~12:05 — read it, not this summary.
+                                   ☑ `checkall` **8/8 first try** (§7 green, 2nd consecutive open) ·
+                                     `preflight` GO.
+                                   ☑ **PRE-ATTACH GATE ASSERTED AS WORDED:** renderer RESPONSIVE
+                                     (live CDP screenshot returned, twice, before the attach);
+                                     `visibilityState` **RECORDED as DATA: "hidden"**, viewport
+                                     1920×878 (NOT the 0×0 B05 shape).
+                                   ⚑ **HIDDEN-AND-FINE, THIRD OCCURRENCE — so HIDDEN IS NOT THE
+                                     VARIABLE.** The tally S6/S11 inherit is hidden-and-fine ×3
+                                     against hidden-and-frozen ×2. The occlusion theory is not dead
+                                     by ruling, it is dying by measurement.
+                                   ☑ Pro Extended read BEFORE the attach · account 1 · **10/10
+                                     attachments by name off `innerHTML`, and 10/10 again on the
+                                     SENT turn** — two independent reads.
+                                   ☑ **ALL FOUR OUTBOUND HOPS IDENTICAL**, clipboard-dead branch:
+                                     disk `6fb98e5c202d5289` == in-page == composed box (105 blocks,
+                                     6,738 chars, `composed === source`, zero nbsp) == **SENT TURN**
+                                     (104 lines, `firstStrippedMismatch = -1`). Send receipt = the
+                                     **chat id in the URL**, `user-query` 1.
+                                   ⛔ **PROBE FAILED — A REAL PARTIAL RETRIEVAL, A NEW CLASS.** Both
+                                     anchors `NOT FOUND`; **7 of the 12 ground-truth `===== ` headers**
+                                     reported; ANCHOR 1 = the tail of batch60 (file 10/10), ANCHOR 2
+                                     = **47.4% into batch56** (file 6/10). Every file is UNDER the
+                                     384 KiB cap (largest 192,895 B) and the shape is the one that
+                                     PASSED at B01–B05. **It verifiably read SOME of them** — its
+                                     `(13 commits)` annotation is real, from batch54's own header.
+                                     Not the B03 comparator class, not the S5-Z3 alphabet class, not
+                                     B05's escape-collapse class.
+                                   ⛔ **THE PRE-WRITTEN FALLBACK DOES NOT FIT A CORPUS CHAT** —
+                                     `FALLBACK_canon_split.txt` is canon-shaped end to end (A01/A03/
+                                     A04, chunk01-04). Its one general sentence WAS obeyed: nothing
+                                     re-fired, B06_2 NOT sent, the chat left OPEN.
+                                   ⛔ **AND capture.mjs CANNOT STORE A LEGITIMATE "NOT FOUND"** —
+                                     the blob path's identity assert (`capture.mjs:632-637`) demands
+                                     fences ≥ anchors, so the ONE answer the gate exists to catch is
+                                     the one it refuses. **NOT weakened, NOT gate-shopped onto
+                                     `--from-file`.** Payload parked at `diag/B06_1_raw.txt` (452 B,
+                                     transit sha `f893e6fd8509164e` in-page == on-disk);
+                                     **`answers/` unchanged, no false stamp.**
+                                   ⚠ ~13.5 of the remaining ~15 EXECUTION line (day line 555.76 →
+                                     568.24, from the meter). INSIDE. Records ride HANDOFF 13.
+  ✔ RULED IN THE SAME SITTING .. `RULING__2026-08-26_1205-s5corpus-11.md` (7th direct-channel use).
+                                   **The ruler VERIFIED BY RUNNING before ruling** — re-computed the
+                                   452 B payload's sha (MATCH) and independently recounted the 12
+                                   ground-truth headers (MATCH). **A RATIFIED but NEXT SITTING**
+                                   (~1.5 left; rule 2 forbids the breach), **the B-branch is
+                                   PRE-AUTHORIZED so no third escalation rides this shape**, the
+                                   failed chat stays OPEN as a record with its 47.4%-depth miss
+                                   NAMED for S6 beside A02's ~48% signature, **architect miss #10
+                                   owned** (the 0855 contract encoded only the passing shape), and
+                                   all three transport facts become STANDING NOTES.
+  ▶ NEXT SESSION ............... **S5 · B06, RE-OPENED AS A FRESH CHAT — THE SITTING'S FIRST ACT.**
+                                   A NEW Pro-Extended chat, the SAME ten attachments
+                                   `live2_batch51-60`, `steps/B06_1.txt` (load + probe). **This is a
+                                   first run in a new context, NEVER a re-ask in the failed chat** —
+                                   that chat stays open and untouched as the record.
+                                   **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
+                                   ✔ **THE BRANCH IS PRE-AUTHORIZED — DO NOT ESCALATE THIS SHAPE A
+                                   THIRD TIME (ruling 1205 item 2):** probe PASSES ⇒ fire
+                                   `steps/B06_2.txt`, capture, close B06, continue at B07. Probe
+                                   FAILS on any retrieval miss ⇒ **switch to B for B06 ONLY** — two
+                                   chats of FIVE files each (51-55 · 56-60), each probed on its own,
+                                   **and amend the batch→chat map in the SAME act**. That 2-of-2 is
+                                   a MEASURED CEILING: file it for S6 beside the 20-attachment hole
+                                   and **never make a third ten-file attempt.**
+                                   ⚡ **THE HEADLINE TRANSPORT NOTE, AND IT BINDS EVERY LANE: A CDP
+                                   SCREENSHOT FORCES A PAINT IN A THROTTLED TAB.** The Angular upload
+                                   menu read back with an EMPTY action list for **>25 s across 8
+                                   polls** with `aria-expanded="true"` already set; ONE `computer`
+                                   screenshot and the identical query returned all 11 items. **This
+                                   supersedes the resize/mousemove nudge as the reliable move.**
+                                   ⚠ **Its corollary: `input[type=file]` DOES NOT EXIST until the
+                                   upload menu has actually PAINTED** — 0 before the forcing
+                                   screenshot, 2 after. Then `aria-label` + un-hide for the `ref`.
+                                   ⚠ **AND: a CDP `Runtime.evaluate` times out at 45 s** — keep any
+                                   in-page poll loop under ~35 s, or the tool says *"the renderer may
+                                   be frozen"* when nothing is wrong. **Read that message twice
+                                   before calling a freeze.**
+                                   ✔ **INTERIM LAW (ruling 1205 item 4), until S5-Z4 lands the
+                                   `--probe-not-found` branch: a NOT-FOUND payload PARKS AT `diag/`
+                                   with its transit sha in the chat's record — never a stamp in
+                                   `answers/`, never a loosened gate.** S5-Z4's ceiling is re-derived
+                                   by the ruler to **BUILD 9 · PROOF 6 · HANDOFF 5**.
+                                   ⛔ **HIS PHYSICAL ACT IS NO LONGER BLOCKING** — B06 sent from a
+                                   hidden tab with the window unfronted. The `open_application`
+                                   negative still stands: **never re-probe it** (it spawns a second
+                                   Chrome + a profile picker; browsers are tier "read").
+                                   **B01–B05 CLOSED, 5 of 18.** Nothing owed in any closed chat; the
+                                   critic is not fired (the ~07:50 ruling); every chat stays OPEN.
+  ▶ SUPERSEDED ROUTER (26 Aug ~11:25, kept for the archaeology — its physical act is DONE WITH):
+                                 ⛔ **HIS ONE PHYSICAL ACT COMES FIRST: bring the Chrome window that
+                                   holds the MCP tab group TO THE FRONT and leave it there for the
+                                   sitting.** Ruled a legitimate summon —
+                                   `RULING__2026-08-26_1125-s5corpus-10.md`, item 3: a physical act
+                                   only HE can perform rides the ESCALATION as its anchor, so L7 is
+                                   satisfied; a `captains_call` card is the fallback when no
+                                   architect is live.
+                                   ✔ **THE PRE-ATTACH GATE IS STANDING FOR B06–B18 (same ruling,
+                                   item 2), AND ITS WORDING IS DELIBERATE:** before attaching
+                                   anything, **ASSERT RENDERER RESPONSIVE — a live CDP screenshot
+                                   RETURNS** — and **RECORD `document.visibilityState` as DATA
+                                   beside it, never assert it.** **HIDDEN STAYS PERMITTED**: B05
+                                   sent from a hidden tab an hour earlier, and two occurrences do
+                                   not retire a measured law. Recording it either kills the
+                                   occlusion theory (a freeze with the window VISIBLE) or hands
+                                   S6/S11 real correlation instead of an assumption.
+                                   ⛔ **A STANDING NEGATIVE — DO NOT RE-PROBE THIS (same ruling,
+                                   item 5):** computer-use `open_application` CANNOT front an
+                                   already-running Chrome; it spawns a SECOND instance and a
+                                   profile picker. Browsers are tier "read" and the extension has
+                                   no tab-activate — **there is NO code path from a driving session
+                                   to a fronted window. The fronting act is HIS, by design.**
+                                   ✔ **Options B/C/D refusals RATIFIED** (item 4) — B contradicts
+                                   B05's measurement, C is environmental so B07 meets the same
+                                   window, D breaks the account split. Then:
+                                   **S5 · THE CORPUS SWEEP RESUMES AT B06 — a FRESH Pro-Extended chat,
                                    ten attachments `live2_batch51-60`, `steps/B06_1.txt` (load +
                                    probe) then `steps/B06_2.txt` (extraction), then STOP and leave
                                    the chat OPEN. MODEL: Opus 5 · effort HIGH · EXECUTION 35 +
                                    HANDOFF 13 (the standing per-sitting line).**
+                                   ⚠ **THREE TRANSPORT FACTS MEASURED AT B06'S HALT, ALL NEW:**
+                                   **(1) IN A THROTTLED TAB THE DOM ANSWERS LATE, NOT WRONG** — a
+                                   freshly opened Angular menu reads back with **zero `[role=menuitem]`
+                                   and an empty overlay container** for seconds. Do NOT conclude "the
+                                   menu did not open": nudge (`dispatchEvent(new Event('resize'))` +
+                                   a synthetic `mousemove`), wait, re-query. It renders.
+                                   **(2) `document.body.innerText` GOES STALE THERE WHILE
+                                   `documentElement.innerHTML` STAYS TRUE** — innerText read 991
+                                   chars with ten attachment chips already in the DOM. **Assert
+                                   attachments off `innerHTML`, never off innerText.**
+                                   **(3) `read_page` IS AN INDEPENDENT WITNESS AND IT SETTLED THIS
+                                   HALT** — it is Chrome's accessibility tree, not page script, so
+                                   when the page's own DOM and a screenshot disagree, IT is the
+                                   tie-breaker. Use it before believing either.
+                                   ⚠ **AND A FOURTH, ABOUT THE SCREENSHOT ITSELF:** a `computer`
+                                   screenshot of a frozen tab can show a turn as SENT that never
+                                   committed — that is the app's optimistic local render, and it
+                                   rolled back both times. **A screenshot is not a send receipt.
+                                   The chat id in the URL is.**
                                    **B01–B05 CLOSED, 5 of 18.** Nothing is owed in any closed chat;
                                    the critic is not fired (the ~07:50 ruling) and every chat stays
                                    OPEN for a retro-critic S6 or the architect may order.
@@ -3581,8 +3765,18 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       additions + the one-site alphabet consolidation + the full free re-verify at close were added
       to this rung AFTER its line was written, so the RULER re-sized it. Executor flagged, ruler
       took it — which is the escalation rule working, not a ceiling being negotiated.**
-                                    BUILD 8 · PROOF 6 · HANDOFF 5 (ruler-written, re-derived 26 Aug —
-                                    supersedes BUILD 5 · PROOF 3 · HANDOFF 5)
+                                    BUILD 9 · PROOF 6 · HANDOFF 5 (ruler-written, re-derived AGAIN
+                                    26 Aug ~12:05 — supersedes BUILD 8 · PROOF 6 · HANDOFF 5, which
+                                    superseded BUILD 5 · PROOF 3 · HANDOFF 5)
+      ⛔ **A SIXTH RULED ADDITION, 26 Aug ~12:05 — `capture.mjs --probe-not-found`
+      (`RULING__2026-08-26_1205-s5corpus-11.md` item 4, architect miss #10 owned).** The blob path's
+      probe identity assert (`capture.mjs:632-637`) demands `fences >= anchors`, so a LEGITIMATE
+      `ANCHOR n NOT FOUND` — the exact answer the step file itself calls *"a useful, correct
+      answer"* — can never be recorded. Measured live at B06_1. **The branch must be STRICTER, never
+      looser: it asserts the literal `ANCHOR n NOT FOUND` line for EVERY anchor the step names, and
+      a payload that is neither fenced-complete nor not-found-complete stays REFUSED.**
+      **INTERIM LAW until it lands: a NOT-FOUND payload PARKS AT `diag/` with its transit sha in the
+      chat's record — never a stamp in `answers/`, never a loosened gate.**
 ☑ S5-Z5 THE BLOB CAPTURE PATH — DONE 26 Aug 2026 ~09:30. `--from-blob` built, bite-proven both
       directions and IDEMPOTENT (`diag/proofs_s5z5.mjs`, 64 assertions × 2 in one invocation, and it
       bites again on a fresh shell run) · checkall GREEN all 8 + preflight GO, both in-session ·
@@ -8803,3 +8997,291 @@ frozen inputs untouched · `answers/` holds exactly two new files (B05_1, B05_2)
 **B06 — a FRESH Pro-Extended chat, ten attachments `live2_batch51-60`, `steps/B06_1.txt` (load +
 probe) then `steps/B06_2.txt` (extraction), then STOP and leave the chat OPEN.**
 **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
+
+---
+
+### PROGRESS 2026-08-26 ~11:20 IST — S5 · CORPUS · **B06 HALTED ON A PHYSICAL BLOCKER. THE OUTBOUND WAS EXACT AND THE SEND STILL NEVER COMMITTED — RULED IN THE SAME SITTING.**
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — S5 · the corpus sweep,
+chat B06. Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13, the standing per-sitting line.
+
+**MICRO-ORDER FIRST (§10-D rule 9)**, written to the session scratchpad before any edit and checked
+against §10-C's S5 row and §10-D: the two paid steps, no critic, the ceiling and its stop line
+computed from the meter at open, the files I may touch, the FORBIDDEN list, the DONE-proof commands,
+and every transport note the B03/B04/B05 rows had already paid for.
+
+---
+
+#### GATES — RUN IN THIS SESSION, AT OPEN
+
+`node checkall.mjs` → **GREEN 8/8 on the first try.** **§7 was GREEN for the first time in five
+consecutive opens** — the architect's `snapshot.mjs take` at the S5-Z5 ratification held, and the
+class did not recur. `preflight` **GO**, one warning and it is the expected one (`answers/` holds
+15 files; this is a resume).
+
+#### THE OUTBOUND LAW HELD AT EVERY HOP IT COULD REACH — TWICE
+
+Both attempts, identical and exact:
+
+```
+step file on disk         sha256/16  6fb98e5c202d5289   6,789 bytes   105 lines / 83 non-empty
+the file read IN THE PAGE sha256/16  6fb98e5c202d5289   6,789 bytes
+the composed box                     6,738 chars - 105 <p> - 0 nbsp
+                                     composed === source, CHARACTER FOR CHARACTER,
+                                     including the trailing newline as its own block
+attachments                          10/10 by name, asserted off documentElement.innerHTML
+```
+
+Composition took the **ratified clipboard-dead branch** (`RULING__2026-08-26_0750-s5corpus-6.md`) —
+inject an `<input type=file>`, `file_upload` the step file to it, read it in-page, `box.focus()` +
+an explicit collapsed Range, `document.execCommand('insertText')`. The **pre-compose gate was run
+first, both times, thrown from inside the call** — the thing B05 paid a whole 123-line composition
+for by skipping. It is the stricter route and it landed the payload perfectly.
+
+#### AND THE SENT TURN NEVER EXISTED
+
+`Send message` was fired with a JS `.click()` — the standing law, because
+`navigator.userActivation.isActive` is false after any extension click. Both times:
+
+> **no chat id was ever assigned, and the Recents list never moved.**
+
+Three independent receipts, deliberately not one:
+1. `location.href` stayed `gemini.google.com/app` — B01–B05 all gained `/app/<id>` on send.
+2. **`read_page` — Chrome's OWN accessibility tree, not page script** — shows the landing composer,
+   the Send button, and Recents topped by **B05's chat** `/app/f23185de2a94ec84`.
+3. `user-query`, `model-response` and `p.query-text-line` all count 0.
+
+**Nothing reached Gemini. Nothing is owed in B06. B06 is un-opened, not half-open.**
+
+#### WHAT ACTUALLY BROKE, MEASURED — AND WHAT I REFUSED TO CONCLUDE FROM IT
+
+**The renderer froze, twice, and CDP said so in its own words:**
+
+> `Page.captureScreenshot timed out after 30000ms on tab ... The renderer may be frozen or unresponsive.`
+
+The first freeze came about a minute after attempt 1's send; the page then came back as a **fresh
+landing page with the draft text restored and the ten attachments gone** — the signature of a
+renderer kill and reload. The second came while merely settling the ten attachments, **before any
+send at all**, which is what rules out "the send request was malformed".
+
+The tab reports `document.visibilityState === 'hidden'`, and **a freshly created tab, navigated
+fresh, also came up `hidden`** — so this is not one stale tab, it is the whole Chrome window
+minimised or fully occluded. Chrome freezes such tabs: script still runs when the extension pokes
+it, but the app's own timers and in-flight network never drain, which is exactly what a
+composed-but-never-committed send looks like.
+
+**⛔ AND HERE IS THE THING I WOULD NOT WRITE INTO THE ORDER.** B05 sent successfully from a tab that
+was ALSO hidden — one hour earlier — and its close made *"the send must be a JS `.click()`; mouse
+events reach a hidden tab"* a standing transport law. **So "a hidden tab cannot send" is contradicted
+by this order's own most recent measurement.** Two occurrences do not retire a ruled law that was
+built on a live success. What is genuinely NEW, and never seen at B01–B05, is the **renderer freeze**
+— and *that* is the question that went to the architect, not a conclusion I reached alone.
+
+#### ESCALATED, AND RULED INSIDE THE SAME SITTING
+
+`queue\2026-08-26_1120-s5corpus-10.md` — the fork stated flat, options A–D with costs, my own
+recommendation (**A: card him, resume the same sitting, and make a PRE-ATTACH VISIBILITY GATE
+standing for B06–B18**), and the two questions I would not answer for myself: is the corpus lane's
+precondition now *hidden*, or *renderer-responsive*; and may a driving session summon HIM mid-sitting
+for a physical act, which §10-E does not list among his decision moments.
+
+Delivered on the direct channel, **`ListAgents` FIRST** per the protocol amended at B05 — the
+pointer file's `arsenal-ai-fc-59` was confirmed live before the message went. **The `queue\` file is
+the RECORD; the message was transport.** Seventh use of the channel.
+
+**RULED ~11:25 machine-clock — `queue\RULING__2026-08-26_1125-s5corpus-10.md`, eighth use of the
+channel and the fastest turnaround yet.** The ruler recorded WHY it did not re-drive the browser to
+re-prove the halt: the claim carries three independent receipts, nothing was paid, and **the
+operative branch self-verifies at resume** — the new gate must pass before anything is attached.
+
+1. **OPTION A RATIFIED** — resume the SAME sitting after ONE physical act by HIM. Nothing is owed to
+   Gemini, so the re-run is a first run on the remaining ~15 of the EXECUTION line.
+2. **THE PRE-ATTACH GATE IS STANDING FOR B06–B18, AND THE RULER RE-WORDED IT ONTO THE PROPERTY THAT
+   ACTUALLY CHANGED — that correction matters.** My draft asserted `visibilityState === 'visible'`.
+   The ruling asserts **RENDERER RESPONSIVE (a live CDP screenshot RETURNS)** and **RECORDS
+   `visibilityState` as DATA beside it — recorded, never asserted. HIDDEN STAYS PERMITTED.** Its
+   reason is the one this order has already paid for once: *"the clipboard taught us what concluding
+   off contradicting measurements costs."* Recording it either kills the occlusion theory (a freeze
+   with the window VISIBLE) or hands S6/S11 real correlation data instead of an assumption.
+3. **Q3 — may a driving session summon HIM for a physical act: YES, NARROWLY.** Its anchor is the
+   ESCALATION itself; a `captains_call` card is the fallback when no architect is live. L7 satisfied,
+   no new machinery.
+4. **B/C/D refusals RATIFIED**, including the ruler's explicit endorsement of my refusal to write
+   "hidden cannot send" off two occurrences.
+5. **The owned miss is now a STANDING NEGATIVE, so the next session does not re-walk it.**
+
+#### MY OWN MISS, OWNED — NOW A STANDING NEGATIVE
+
+Trying to un-hide the window I called computer-use `open_application("Google Chrome")`. It did not
+front the running window: **it launched a SECOND Chrome and left a "Who's using Chrome?" profile
+picker on his screen.** I clicked nothing in it; it is closable clutter I put there. The general
+fact, and it is why the halt is real: **there is no code path from a driving session to a fronted
+browser window** — computer-use holds browsers at tier "read" (no clicks, no keystrokes), and the
+Chrome extension has no tab-activate tool. **The fronting act is HIS, by design, not a gap to
+re-probe.**
+
+#### FOUR TRANSPORT FACTS, ALL NEW, ALL FOLDED INTO THE ▶ NEXT SESSION ROW
+
+1. **In a throttled tab the DOM answers LATE, not wrong.** A freshly opened Angular menu reads back
+   with zero `[role=menuitem]` and an empty `.cdk-overlay-container` for seconds. Nudge with a
+   `resize` event plus a synthetic `mousemove`, wait, re-query — it renders. Do not conclude the
+   click failed.
+2. **`document.body.innerText` goes stale there while `documentElement.innerHTML` stays true.**
+   innerText read 991 chars with ten attachment chips already in the DOM. **Assert attachments off
+   `innerHTML`.**
+3. **`read_page` is an independent witness and it is what settled this halt** — Chrome's
+   accessibility tree, not page script. When the page's DOM and a screenshot disagree, it breaks
+   the tie.
+4. **A screenshot is not a send receipt.** A `computer` screenshot of the frozen tab showed the turn
+   rendered and the composer cleared — the app's optimistic local render, rolled back both times.
+   **The chat id in the URL is the receipt.**
+
+#### THE NUMBERS
+
+**20.04 of the 35-lakh EXECUTION line** — day line **525.10 → 545.14**, read from
+`session_meter.mjs status 7`, not estimated. **INSIDE**, with ~15 left for the ratified resume. This
+record and the commit ride the 13-lakh HANDOFF line. B07 not opened; the blocker is environmental,
+so a different chat would meet it too.
+
+**Zero instruments edited · zero gates weakened · zero audit questions sent · frozen inputs
+untouched · `answers/` holds exactly the 15 files it held at open — no new file, and NO STAMP.**
+
+**B01–B05 remain CLOSED — 5 of 18 corpus chats. B06 is un-opened.**
+
+#### WHAT THE NEXT SESSION DOES
+
+**FIRST: the ratified PRE-ATTACH GATE — assert a live CDP screenshot RETURNS, and RECORD
+`visibilityState` beside it as data — before attaching 1.9 MB.** Then **B06 as written: a FRESH
+Pro-Extended chat, ten attachments `live2_batch51-60`, `steps/B06_1.txt` (load + probe) then
+`steps/B06_2.txt` (extraction), then STOP and leave the chat OPEN.**
+**MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
+
+---
+
+### PROGRESS 2026-08-26 ~12:05 IST — S5 · B06 OPENED AND SENT, AND ITS PROBE FAILED FOR A NEW REASON
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — S5's corpus sweep at
+**B06**, one rung, nothing else. Micro-order written to the session scratchpad before any edit and
+checked against §10-C/§10-D (rule 9).
+
+⚠ **THE PREVIOUS SITTING'S RECORD WAS HANDED FORWARD UNCOMMITTED** — its ~11:20 halt entry and
+RESUME rows were in the working tree at this session's open (`M`, +249/−1, on `d682828`). They are
+committed here, with this record, in one act. Nothing of theirs was altered.
+
+**THE 1125 RULING WORKED — THE PHYSICAL BLOCKER IS GONE.** B06 is a real chat with a real turn in
+it: `gemini.google.com/app/e133eba84683ae63`. Two sittings ago the send never committed; this time
+the chat id appeared in the URL on poll 4 and `user-query` counted 1. **Nothing was owed and
+nothing was re-asked.**
+
+#### WHAT WAS GREEN, AND IT IS THE WHOLE OUTBOUND HALF
+
+- `checkall` **8/8 FIRST TRY** — §7 green on its second consecutive open, so the architect's
+  `snapshot.mjs take` at the S5-Z5 ratification is holding. `preflight` **GO**, one expected resume
+  warning (`answers/` holds 15).
+- **THE PRE-ATTACH GATE (ruling item 2) ASSERTED, AS WORDED.** Renderer **RESPONSIVE** — a live CDP
+  screenshot RETURNED, twice, before anything was attached. `document.visibilityState` **RECORDED as
+  DATA, never asserted: "hidden"**, the whole sitting, viewport **1920x878** — NOT the 0x0 B05 shape.
+  **THE OCCLUSION THEORY TAKES ITS THIRD HIT: a hidden tab sent, attached and captured cleanly from
+  end to end.** Two occurrences did not retire the measured law and this one does not reinstate it
+  either — the correlation S6/S11 inherit is now hidden-and-fine x3 against hidden-and-frozen x2,
+  which means **hidden is not the variable.**
+- Account 1 (`nikhil.panwar2914`), mode read **Pro Extended BEFORE the attach**.
+- **10/10 attachments by name off `innerHTML`** (never innerText), and **10/10 again on the SENT
+  turn** — the attach side is proven twice, from two independent reads.
+- **THE OUTBOUND LAW HELD AT ALL FOUR HOPS** on the ratified clipboard-dead branch (injected
+  `<input type=file>` -> `file_upload` -> in-page read -> `box.focus()` + explicit collapsed Range
+  -> `execCommand('insertText')` -> JS `.click()` on Send). Disk sha16 **`6fb98e5c202d5289`**
+  (6,789 B · 6,738 chars · 105 lines) == the file read IN THE PAGE == the composed box (**105
+  blocks, 6,738 chars, `composed === source` character for character, zero nbsp**) == **THE SENT
+  TURN** — 104 `p.query-text-line`, `firstStrippedMismatch = -1` after the documented single-leading
+  / single-trailing-space strip and nothing else, re-joined sha `6fb98e5c202d5289`.
+
+#### THE PROBE FAILED — AND IT IS A REAL RETRIEVAL MISS, NOT A COMPARATOR CLASS
+
+The answer is 452 bytes, complete, and it is: seven numbered `===== DAY:` headers ·
+`ANCHOR 1 NOT FOUND` · `ANCHOR 2 NOT FOUND` · `Total "===== " section headers: 7`.
+
+| measured, free, against the files on disk | value |
+|---|---|
+| ground-truth `^===== ` headers in `live2_batch51-60` | **12** (4x 08-06c · 1x 08-07 · 6x 08-07c · 1x 08-08) |
+| headers the model reported | **7** — the **08-08** header, which lives in batch60, is absent |
+| ANCHOR 1 | the last block of **batch60**, file 10 of 10 — NOT FOUND |
+| ANCHOR 2 | **batch56**, byte offset 91,246 of 192,406 = **47.4% in**, file 6 of 10 — NOT FOUND |
+| largest file attached | **192,895 B** — all ten UNDER the measured ~384 KiB per-file cap |
+| total | 1,865 KB across ten files — **the exact shape that passed at B01-B05** |
+
+**IT DID READ SOME OF THEM, VERIFIABLY.** Its `(7 commits)` / `(13 commits)` annotations are not
+invented: batch54 literally carries `----- COMMITS THAT LANDED ON 2026-08-07 (13) -----`. So this is
+a **PARTIAL** delivery/retrieval — not a total miss, not the B03 comparator class, not the S5-Z3
+alphabet class, and not the B05 escape-collapse class. **It is new.**
+
+**THE PRE-WRITTEN FALLBACK DOES NOT COVER IT.** `prompts/FALLBACK_canon_split.txt` is CANON-shaped
+end to end (chunk01-04 / chunk05-07, steps A01/A03/A04/A05/A06); there is no corpus-chat branch —
+the same structural gap that made it unenterable at A01, met from the other side. Its one general
+sentence does bind, and it was obeyed to the letter: *"Do not argue with it, do not re-ask, do not
+'try once more with a nudge'."* **B06_2 NOT sent · nothing re-fired · the chat left OPEN.**
+
+#### A SECOND FINDING, SEPARATE — capture.mjs CANNOT STORE A LEGITIMATE "NOT FOUND"
+
+`capture.mjs save B06_1 --from-blob … --blob-sha f893e6fd8509164e` **REFUSED**:
+`B06_1 is a PROBE step with 2 anchor(s), so it asks for 2 fenced block(s); the payload has 0.`
+
+The blob path's identity assert (`capture.mjs:632-637`) encodes the **passing** shape as the ONLY
+shape. But the probe prompt itself instructs *"If you cannot find one of these lines, SAY SO
+PLAINLY — 'ANCHOR 1 NOT FOUND'"* and calls that *"a useful, correct answer."* **So the one answer
+the gate exists to catch is the one answer it cannot record.** SHAPE 1 class, inside the audit's own
+instrument again.
+
+**The gate was NOT weakened and NOT gate-shopped onto `--from-file`** — reaching for a second
+transport because the first one refused is exactly the move rule 6 forbids. Transit is fully proven
+(in-page sha == on-disk sha, 452 B) and the payload is preserved at **`diag/B06_1_raw.txt`**.
+**`answers/` still holds exactly the 15 files it held at open — no new file, NO FALSE STAMP.**
+
+#### THREE TRANSPORT FACTS MEASURED HERE, ALL NEW — ALL THREE NOW STANDING NOTES (ruling item 5)
+
+1. **A CDP SCREENSHOT FORCES A PAINT IN A THROTTLED TAB — this is the remedy, not nudge-and-wait.
+   THE HEADLINE, AND IT BINDS EVERY LANE.** The Angular upload menu read back with an EMPTY
+   `mat-action-list` for **>25 s across 8 polls** while `aria-expanded` was already `"true"`; one
+   `computer` screenshot and the identical query returned all 11 items immediately. It supersedes
+   the resize/mousemove nudge as the reliable move and costs one cheap call.
+2. **The `input[type=file]` does not exist until the upload menu has actually PAINTED** — 0 inputs
+   before the forcing screenshot, 2 after. Then `aria-label` + un-hide to get a `ref` for
+   `file_upload`, as before.
+3. **A CDP `Runtime.evaluate` times out at 45 s.** An in-page poll loop must stay under ~35 s or the
+   tool returns *"the renderer may be frozen or unresponsive"* when nothing is wrong. **Worth
+   knowing before the next halt is called a freeze** — the ~11:20 halt was diagnosed partly off
+   exactly this message.
+
+#### ESCALATED, NOT IMPROVISED — AND RULED INSIDE THE SAME SITTING
+
+**`queue\2026-08-26_1200-s5corpus-11.md`** — direct channel, `arsenal-ai-fc-e8` confirmed live by
+`ListAgents` BEFORE messaging (the amended protocol; the pointer file was correct this time, its
+third name this life). Options A-D costed, recommendation A. **THE RULING CAME BACK IN MINUTES —
+`queue\RULING__2026-08-26_1205-s5corpus-11.md`, 7th use of the direct channel — and the ruler
+VERIFIED BY RUNNING before ruling: the 452 B payload's sha re-computed and MATCHED, and the
+ground-truth header count of 12 independently recounted and MATCHED.** Recorded verbatim:
+
+> RULED — queue\RULING__2026-08-26_1205-s5corpus-11.md (file = record). Verified by running: payload 452 B sha f893e6fd8509164e MATCHES, ground-truth headers independently counted 12 MATCHES.
+>
+> (1) A RATIFIED but NEXT SITTING — you have ~1.5 left and a re-open costs more; rule 2 forbids the breach. CLOSE THIS SITTING NOW; next sitting's FIRST act = B06 as a FRESH chat, same ten files.
+> (2) BRANCH PRE-AUTHORIZED, no third escalation on this shape: fresh probe PASSES → B06_2, continue. FAILS on any retrieval miss → B for B06 only (two five-file chats, batch→chat map amended in the same act, probe each half) — that 2-of-2 = a measured ceiling, S6-filed beside the 20-attachment hole; no third ten-file attempt.
+> (3) The failed chat stays OPEN as a record; its 47.4%-depth miss is NAMED for S6 beside A02's ~48% signature — a data point, not a conclusion.
+> (4) NOT-FOUND capture gap: MISS #10 is MINE — my 0855 contract encoded only the passing shape while the step file it derives from declares NOT FOUND a correct answer. Fix = --probe-not-found declared branch, stricter exactly as you specified, riding S5-Z4; Z4 BUILD re-derived 8 → 9 (ruler-written). INTERIM LAW ratified off your own conduct: NOT-FOUND payloads park at diag/ with transit sha in the chat record. Your gate discipline was exemplary.
+> (5) All three transport facts = STANDING NOTES (CDP-screenshot-forces-paint is the headline — every lane). Hidden 3rd occurrence joins the visibility data.
+>
+> Fold ruling + Z4 9/6/5 + notes at your close. B07 after fresh-B06.
+
+**Obeyed in full: the sitting CLOSES here, B06 is NOT re-opened in it, and the ruling's five items
+are folded into ▶ RESUME HERE and into S5-Z4's ceiling in this same act (rung-row-in-same-act).**
+
+#### THE NUMBERS
+
+**~13.5 of the remaining ~15 EXECUTION line** — day line **555.76 → 568.24**, read from
+`session_meter.mjs status 1`, not estimated. **INSIDE**, and the ruler's own arithmetic (~1.5 left)
+is why this sitting closes rather than re-opening B06. This record and the commit ride the 13-lakh
+HANDOFF line.
+
+**Zero instruments edited · zero gates weakened · zero gate verdicts self-passed · frozen inputs
+untouched · `answers/` unchanged · ONE paid Gemini turn, and it is on disk with its transit proven.**
+
+**B01-B05 remain CLOSED — 5 of 18. B06 is OPEN, loaded, and HALTED on its own probe.**
