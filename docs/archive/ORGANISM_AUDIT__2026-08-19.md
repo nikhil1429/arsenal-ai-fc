@@ -3197,6 +3197,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                    selftest 9/9, commit c1f41a8) — week-N re-based; his week-7
                                    ≈ 12 Oct. S6's INPUTS line additionally inherits the queue's
                                    TRIAGE INDEX row + ARCHITECT OS layers 3-4.
+                                   ✔ S6's INPUTS also inherit **THE ECOSYSTEM MAP** (26 Aug, HIS
+                                   ask, research-backed): `arsenal-audit-artifacts\
+                                   ECOSYSTEM_MAP__2026-08-26.md` — Claude/Anthropic skills·
+                                   plugins·MCP·routines·artifacts mapped onto Q-1..Q-23's vision;
+                                   three buckets (NOW lane-infra · S6-decides · post-S12) + a
+                                   do-not-adopt list (headline: Agent SDK is API-key-only ⇒ no
+                                   lawful Max path, LAW M holds; archived SQLite MCP vulnerable).
+                                   Adoption law: every MCP = a potential third writer — enters
+                                   like any organ, through the S10 registry's contract.
 
   ✔ THE CEILINGS ARE RE-BASELINED TWICE, AND THE SECOND TIME FROM A CORRECTED METER.
     HIS RULING, 20 Aug 2026: standard rung 40 · S10 60 · ladder total 500 — but now in
