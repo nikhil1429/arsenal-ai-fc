@@ -2515,7 +2515,12 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⚠ **~15.7 of the 35-lakh EXECUTION line** (day 1004.69 →
                                    1020.36). **INSIDE.**
   B15 CLOSED 2/2 ............... ☑ 27 Aug 2026 ~04:40 series (true clock 26 Aug ~21:30).
-                                   **15 of 18.** Fresh chat
+                                   **15 of 18. RATIFIED** by
+                                   `RULING__2026-08-26_2140-s5corpus-19.md` item 1 — the KEPT-0
+                                   discard stands as recorded and **re-verifies FREE at Z4**, and
+                                   the vacuous control being labelled undefined rather than clean
+                                   was called the right call. Its item 2 amended Z4's scope; its
+                                   item 3 adopted the run-vs-law note into the router. Fresh chat
                                    `gemini.google.com/app/800939088571b20f`, Pro Extended read
                                    back off the page, ten attachments `live2_batch141-150`.
                                    Four hops sha-asserted both steps (`6bc6cfef2f3001fd` ·
@@ -2585,6 +2590,19 @@ STATUS (update this block before any session stops — this is the handoff)
                                    (`batch150`) carries five headers. Four deflations then one
                                    exact count: **there is no rule here yet.** Keep RECORDING the
                                    claim against a file-by-file ground truth; do not predict it.
+                                   ⚑ **STANDING EPISTEMICS NOTE, RULED AND BINDING ON EVERY RUNG
+                                   FROM HERE (`RULING__2026-08-26_2140-s5corpus-19.md` item 3):**
+                                   **a run of N instances is a RUN, not a LAW — promotion needs
+                                   either a MECHANISM or a RULED THRESHOLD.** It exists because
+                                   this executor upgraded two runs to laws in the same breath as
+                                   recording them (the chip-`.txt` rule and the header-count
+                                   rule) and **both died on the very next chat.** Its purpose is
+                                   forward-looking: **S6 must not inherit run-shaped "facts" as
+                                   measured ones.** Existing kin already in this order: the
+                                   2-occurrence refusal at B06 ("two occurrences do not retire a
+                                   measured law") and lead-until-third-instance at the fresh-tab
+                                   remedy. **Write runs as runs. If you promote one, name the
+                                   mechanism.**
                                    **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
                                    ✔ **S5-Z8 IS DONE and the de-escape lane is open, bounded and
                                    MEASURED.** A payload carrying raw 0x00–0x1F **inside a string
@@ -4884,6 +4902,18 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       direct channel — its first live use): the DAY-LABEL normalisation — verify's quote index
       keys bare dates while corpus headers carry "(continued)"; 27/28 of B02's dropped quotes
       measured PRESENT. Sibling site of the (continued) class S5-R2 fixed once — fix the CLASS.
+      ⚑ **SCOPE AMENDED AT B15, 26 Aug ~21:40 (`RULING__2026-08-26_2140-s5corpus-19.md` item 2):
+      THIS ITEM IS NO LONGER "A CLASS" — IT IS ONE LINE, ONE SITE, PROVEN BY RUNNING.**
+      **`verify.mjs:84`** builds the corpus index with
+      `/^===== DAY: (\d{4}-\d{2}-\d{2})(?: \(continued\))? =====$/m`, which **strips
+      ` (continued)` on the INDEX side only**; `dayHay()` then looks up the ANSWER's raw key.
+      Measured at B15, three ways: index has `2026-08-18` **TRUE** · has
+      `2026-08-18 (continued)` **FALSE** · strip-the-suffix **resolves TRUE**.
+      **Its worst measured cost: B15_2 lost ALL 36 items to it — every drop `source-missing`,
+      no other reason — while 23 of those 36 are present VERBATIM in the ten files.**
+      (B04 cost ≥5, B02 27/28; B15 is the whole answer.) The ruler's reason for writing the
+      scope down this precisely: *"a build rung that opens on a one-line proven scope spends
+      proof, not diagnosis."*
       Each chat's record carries its measured false-drop count (pre-Z4 verify numbers are never
       read as model recall). The standing
       outbound law's 4th hop strips Gemini's per-line 1-leading+1-trailing space padding
@@ -12539,3 +12569,57 @@ The critic was not fired; every B chat stays OPEN. B16 was not opened.
 
 **~17.6 of the 35-lakh EXECUTION line** (day 1034.47 → 1052.04). **INSIDE.** Records ride HANDOFF
 13. Caveat carried, not re-derived: today's meter line reads ~+16% hot (S5-R's finding).
+
+### ADDENDUM 2026-08-26 ~21:40 TRUE machine-clock — **THE RULER'S CLOSE ON B15: Z4's scope drops from a CLASS to ONE LINE, and the run-vs-law correction becomes a standing epistemics note**
+
+Ratified after `f75a421` was pushed, so it is folded here rather than rewritten into the entry
+above. **The ruling has its file, written as the ruler's first act this time** — the 2110 gap did
+not repeat.
+
+**THE RULING, VERBATIM — `queue\RULING__2026-08-26_2140-s5corpus-19.md`:**
+
+> # RULING — 26 Aug 2026 ~21:40 machine-clock · B15's close: Z4 scope amendment + the run-vs-law note
+> ORIGINAL: the B15 close message on the channel (`f75a421`). A close-with-lead, no halt.
+>
+> 1. **B15 CLOSED 2/2 RATIFIED — 15 of 18.** The KEPT-0 discard (all 36 "source-missing", 23
+>    measured VERBATIM present) stands as recorded; everything re-verifies free at Z4. The vacuous
+>    control honestly labeled (0/0 is undefined, not clean) — correct.
+> 2. **Z4 ROW AMENDMENT: YES — write it** (executor's act, cite this file): the day-key item's
+>    scope is no longer "a class", it is **verify.mjs:84's index-side missing " (continued)"
+>    normalisation — one line, one site, proven by running** (index TRUE on bare date, FALSE on
+>    suffixed, strip-resolves TRUE). A build rung that opens on a one-line proven scope spends
+>    proof, not diagnosis.
+> 3. **The run-vs-law correction is ADOPTED as a STANDING EPISTEMICS NOTE (router + S6 hand-off):**
+>    *a run of N instances is a RUN, not a LAW — promotion needs either a mechanism or a ruled
+>    threshold.* The executor upgraded two runs to laws in the same breath as recording them, both
+>    died on the next chat, and it corrected BOTH in the router unprompted — that correction
+>    pattern is the norm; the note exists so S6 does not inherit run-shaped "facts" as measured.
+>    (Existing kin: the 2-occurrence refusal at B06, lead-until-3rd-instance at fresh-tab.)
+> 4. In-place reload now 21/21 free recoveries — the stall remedy is settled practice.
+
+#### WHAT WAS FOLDED, IN THIS SAME ACT
+
+- **Item 2 → the S5-Z4 row's day-label item is REWRITTEN in place**, citing this file: no longer
+  *"a class"* but **`verify.mjs:84`, one line, one site**, with all three measurements written into
+  the row (index TRUE on the bare date · FALSE on the suffixed one · strip-resolves TRUE) and the
+  cost ladder beside it — **B02 27/28 · B04 ≥5 · B15 the WHOLE answer, 36 of 36.** The ruler's
+  reason is quoted in the row so a future session understands why the precision was demanded:
+  *"a build rung that opens on a one-line proven scope spends proof, not diagnosis."*
+- **Item 3 → the STANDING EPISTEMICS NOTE is in the ROUTER**, binding every rung from here: **a run
+  of N instances is a RUN, not a LAW — promotion needs a MECHANISM or a RULED THRESHOLD.** It names
+  its own origin (my two dead rules) and its purpose (**S6 must not inherit run-shaped "facts" as
+  measured ones**), and it points at the two kin already in this order — B06's *"two occurrences do
+  not retire a measured law"* and the fresh-tab lead-until-third-instance.
+- **Item 1 → the B15 tick** records the ratification, that the KEPT-0 discard **re-verifies free at
+  Z4**, and that labelling the control undefined rather than clean was the right call.
+
+#### THE THING WORTH NOTICING ABOUT ITEM 3
+
+It is the first rule in this order that constrains **how a session may write down what it noticed**,
+rather than what it may build or spend. Every other standing rule here governs code paths, ceilings
+or transports. This one governs inference — and it exists because the failure it prevents is
+invisible at the time it happens: **a run promoted to a law reads exactly like a measured fact, and
+S6 would have inherited two of them from me without the next chat happening to refute both.**
+
+**Nothing else moved. No rung was executed by this fold; every instrument, answer and proof is
+byte-identical to `f75a421`.**
