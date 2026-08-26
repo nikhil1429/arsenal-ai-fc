@@ -1996,37 +1996,97 @@ STATUS (update this block before any session stops — this is the handoff)
                                      PRIMARY source, 10 of 18 batch-groups are still unaudited, and
                                      the finding-stream has S6 value beyond the items). **Trimming
                                      the sweep is HIS decision alone.**
-  ▶ NEXT SESSION ............... **① S5-Z6 — THE THIRD ANCHOR, ITS OWN SESSION, AND NOTHING ELSE.**
-                                   A third probe anchor in the **40–60% depth band**, B09 onward.
-                                   **Versioned-additive on the c3 precedent:** the freeze protects
-                                   haystack + expected, so both existing anchors stay UNTOUCHED,
-                                   the probe template is versioned, uniqueness is certified by the
-                                   same TIER-0 certifier, and every new refusal/assert is
-                                   bite-proven **IDEMPOTENT**. **CEILING, ruler-written: BUILD 7 ·
-                                   PROOF 8 · HANDOFF 5.**
-                                   ⚠ **ITS ROW CARRIES A LIMIT, RULED: Z6 hardens RETRIEVAL and
-                                   CANNOT catch generation-side fabrication.** B08 is the proof —
-                                   its probe passed VERBATIM on both anchors while the extraction
-                                   invented 26 of 35 quotes. `verify.mjs` failing closed is the
-                                   gate that catches THAT class, and it is load-bearing.
-                                   **② THEN B09 onward** — `live2_batch81-90` and on, on
-                                   three-anchor probes. **MODEL: Opus 5 · effort HIGH · EXECUTION 35
-                                   + HANDOFF 13.**
-                                   ✔ **NO RESTART IS OWED BY HIM, AND NOW THERE IS A REMEDY BEFORE
-                                   THE HALT.** The transport chain reads: **① blob-download
-                                   (PRIMARY) → ② the CLIPBOARD ROUTE, only on a refused download →
-                                   ⑶ if either is refused or dead, OPEN A FRESH TAB, same origin,
-                                   and retry the ordered transports — BEFORE taking 1425 2(c)'s
-                                   halt.** Only if that also fails does the chat halt, recorded,
-                                   with his restart summoned on the report line.
+  ☑ S5-Z6 THE THIRD ANCHOR ..... ☑ DONE 26 Aug 2026 ~19:15 · **THE PROBE NOW SAMPLES THE BAND THAT
+                                   KEEPS FAILING.** TIER-0, **ZERO Gemini calls.** Full account in
+                                   the PROGRESS entry of 26 Aug ~19:15; its §10-C row is written.
+                                   ⚠ **THE RUNG HAD NO §10-C ROW WHEN IT STARTED** — ruling 1610
+                                     created it and wrote its ceiling, but the standing law *a
+                                     ruling that creates a rung writes its §10-C row in the same
+                                     act* was not executed, so rule 1's FALLBACK router pointed at
+                                     nothing. Written as the rung's first act from the ruler's own
+                                     words; not escalated (rule 13), and recorded as missing.
+                                   ☑ **A THIRD ANCHOR CHOSEN BY GLOBAL DEPTH** across the group's
+                                     whole attachment set, required inside a declared **40–60%
+                                     band**, for **live2_g09 onward**. The old two cannot see that
+                                     band BY CONSTRUCTION (tail = end of the LAST file; middle =
+                                     48–62% of ONE middle FILE) — live2_g08's 56.2% was luck.
+                                   ☑ **THE FREEZE HELD, AND IT BROKE TWICE FIRST** — an additive
+                                     `probe_format` key, then a stray blank line the conditional
+                                     ANCHOR 3 block left in every v2 prompt. **21 frozen artifacts
+                                     moved and no existing gate could see it.** Caught only because
+                                     all 115 artifacts were hashed BEFORE the first edit. **Final:
+                                     13 probe entries + 13 prompts + 39 step files byte-identical,
+                                     0 moved**; 20 v3 artifacts changed as intended.
+                                   ☑ **`diag/proofs_s5z6.mjs` — 20 assertions, EVERY ONE TWICE in
+                                     one invocation**, sentinel step id, `wiring.json` restored
+                                     byte-identical, everything removed in a `finally` with the
+                                     removal asserted. **BITE-PROVEN on a planted regression**
+                                     (revert probecheck ⇒ 6 RED; restore ⇒ GREEN).
+                                   ☑ **46 anchors certified against the CORPUS, not the generator:**
+                                     10 band anchors all inside 40–60%, 3 distinct anchors per v3
+                                     group, each at its stored index, each answer really the
+                                     following line, **every anchor AND answer substring-unique
+                                     across the whole group.**
+                                   ☑ **probecheck BITES:** both old anchors perfect + band missing
+                                     ⇒ REFUSED. An admitted **ANCHOR 3 NOT FOUND** reads AS
+                                     admitted (the 1205 distinction survives a third anchor).
+                                   ☑ **`capture.mjs` NOT EDITED** — it counts `^ANCHOR \d+ —` from
+                                     the step text, so a v3 step makes it demand three fences on
+                                     its own. Proven through the REAL CLI: a two-fence payload for
+                                     B09_1 is refused and nothing is written.
+                                   ☑ **checkall §2 TIGHTENED to RUN the harness** and fail if a leg
+                                     stops being proven — a proof nothing runs is not a gate (rule
+                                     6: added, never relaxed). checkall GREEN 8/8 · preflight GO.
+                                   ⛔ **ITS LIMIT IS PART OF IT, RULED: Z6 hardens RETRIEVAL and
+                                     CANNOT catch generation-side FABRICATION.** B08 is the proof.
+                                     `verify.mjs` failing closed is that gate, and it is
+                                     load-bearing for the whole corpus half.
+                                   ⚠ **COST 19.4 of BUILD 7 + PROOF 8 = 15 at the handoff — OVER,
+                                     AND RECORDED AS OVER** (S4's precedent; day 727.91 → 747.27).
+                                     No scope change and no instrument fault ⇒ §10-C's "unit faults
+                                     only" rule forbids re-deriving it, and I am not asking. Where
+                                     it went: the two silent freeze breaks, plus a self-inflicted
+                                     measurement bug (a certification pass compared untrimmed
+                                     corpus lines to trimmed stored anchors and reported 19 defects
+                                     that did not exist — the ruler's own ANSI-read class, caught
+                                     the same way, by checking the checker).
+                                   ⚡ **THE LINE WORTH CARRYING FORWARD: hash every artifact BEFORE
+                                     the first edit.** Cheapest step in the rung, and the only
+                                     reason the freeze is intact.
+  ▶ NEXT SESSION ............... **① B09 — AND IT IS THE FIRST CHAT EVER GATED ON THREE ANCHORS.**
+                                   A fresh Pro-Extended chat, ten attachments `live2_batch81-90`,
+                                   `steps/B09_1.txt` (**3 anchors — tail · middle · band at 49.9%
+                                   depth**) then `steps/B09_2.txt`. Then B10 onward the same way.
+                                   **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
+                                   ⚠ **A v3 PROBE MAY LEGITIMATELY FAIL ON THE BAND ANCHOR AND THAT
+                                   IS THE POINT** — it samples the depth where A02, B06_1 and
+                                   B08_1-first all died. A band miss is a REAL retrieval verdict,
+                                   not an instrument fault: measure the byte-identity, then follow
+                                   the ruled branch (fresh chat, same ten files — Option A has now
+                                   worked TWICE; a second miss in the fresh chat is the B-split for
+                                   that chat only). **Never self-pass a proven-false verdict.**
+                                   ⚠ **AND ITS LIMIT IS RULED: a PASSING v3 probe still says
+                                   nothing about FABRICATION.** B08 passed VERBATIM on both anchors
+                                   and then invented 26 of 35 quotes. Run `verify.mjs` on every
+                                   extraction and record the false-drop AND de-escape counts — that
+                                   gate is the load-bearing one.
+                                   ✔ **NO RESTART IS OWED BY HIM.** Transport chain: **① blob-
+                                   download (PRIMARY) → ② the CLIPBOARD ROUTE, only on a refused
+                                   download → ⑶ if either is refused or dead, OPEN A FRESH TAB,
+                                   same origin, and retry the ordered transports — BEFORE taking
+                                   1425 2(c)'s halt** (ruled 1750 item 6a; measured twice). Only if
+                                   that also fails does the chat halt, recorded, his restart asked
+                                   on the report line.
                                    ⚠ **THE FOCUS STEP IS PART OF TRANSPORT ②** (a real `computer`
                                    click, or `clipboard.write` throws `NotAllowedError` while the
                                    late toast reads as success) **and so is the CRLF strip.**
-                                   ⚠ **THE CLIPBOARD-DEAD OUTBOUND BRANCH IS THE ONE THAT WORKS
-                                   WHEN preflight WARNS** — injected file input → `file_upload` →
+                                   ⚠ **CLIPBOARD DEAD AT preflight ⇒ the outbound is the
+                                   clipboard-dead branch** — injected file input → `file_upload` →
                                    in-page `FileReader` → `execCommand('insertText')`, four hops
                                    still asserted. It carried both B08 steps.
-                                   ⚠ **EVERY READ OF THIS CORPUS IS EXPLICIT UTF-8.**
+                                   ⚠ **EVERY READ OF THIS CORPUS IS EXPLICIT UTF-8** — and compare
+                                   TRIMMED against a stored anchor, which is how probe_gen stores
+                                   it. Both classes have now produced a confident wrong answer.
                                    ⚠ **`checkall` §7 goes RED whenever you run `verify.mjs`** —
                                    its own outputs move. 9th RED, same class, fix rides S5-Z4.
                                    Remedy and continue: `node snapshot.mjs take --why "…"`, then
@@ -4260,6 +4320,58 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     BUILD 8 · PROOF 7 · HANDOFF 5 (ruler-written; the escalation's
                                     ~2–3 estimate was REFUSED as knowingly thin — the micro-rung
                                     floor is ~15, because thin numbers manufacture breaches)
+☑ S5-Z6 THE THIRD ANCHOR — DONE 26 Aug 2026 ~19:15. A THIRD probe anchor, chosen by GLOBAL depth
+      across the chat group's whole attachment set and required to land inside the declared 40–60%
+      band, for **live2_g09 onward (B09–B18)**. ZERO Gemini calls; TIER-0 end to end.
+      MODEL: Opus 5 · effort HIGH.
+      ⚠ **THIS ROW DID NOT EXIST WHEN THE RUNG STARTED, AND THAT IS ITSELF A FINDING.**
+      `RULING__2026-08-26_1610-s5corpus-14.md` item 2 created S5-Z6 and wrote its ceiling, but the
+      standing law from `RULING__2026-08-25_1215-s5y-1` — *a ruling that creates a rung writes its
+      §10-C row in the same act* — was not executed, so the ladder had a rung with no row and the
+      §10-D rule-1 FALLBACK router would have landed a session somewhere else entirely. Written
+      here by the executor as the rung's first act, from the ruler's own words and the ruler's own
+      ceiling; NOT re-derived, NOT re-scoped (§10-D rule 13: the micro-order already answered it).
+      WHY IT EXISTS, measured and not supposed: every retrieval miss this sweep has recorded sits
+      MID-CORPUS — A02 (20 attachments) ~48% · B06_1 47.4% · B08_1's first chat 56.2% — while the
+      TAIL has never once failed. The two existing anchors cannot see that band by construction:
+      the tail anchor is the END of the LAST file, and the "middle" anchor is 48–62% of ONE MIDDLE
+      FILE, a different quantity that only landed at group-depth 56.2% for live2_g08 by luck. So
+      the probe had been passing chats on evidence it never collected.
+      ⛔ **AND THE LIMIT IS PART OF THE ROW, RULED (`RULING__2026-08-26_1750-s5corpus-15.md` item 3):
+      Z6 HARDENS RETRIEVAL AND CANNOT CATCH GENERATION-SIDE FABRICATION.** B08 is the proof — its
+      probe passed VERBATIM on BOTH anchors while the extraction that followed invented 26 of its
+      35 quotes. `verify.mjs` failing closed is the gate for THAT class and it is load-bearing.
+      SCOPE — versioned-additive on the c3 precedent, and nothing else:
+      (a) the freeze protects haystack + expected, so **every already-collected artifact must come
+          out BYTE-IDENTICAL** — proven by hashing all 115 artifacts BEFORE the first edit and
+          re-hashing after. Both existing anchors and both existing answers are untouched.
+      (b) the probe TEMPLATE is versioned: a three-anchor probe says **PROBE-FORMAT v3**, so a v2
+          receipt and a v3 receipt can never be confused for one another.
+      (c) uniqueness is certified by the SAME TIER-0 certifier — the band anchor passes
+          `pickAnchor`'s full predicate (usable shape · exactly one possible follower ·
+          substring-unique in the group haystack) and additionally may not coincide with either
+          existing anchor or either existing answer. **DECLARE OR DIE: a v3 group that cannot seat
+          a band anchor THROWS — never a silent downgrade to two anchors.**
+      (d) `capture.mjs` is NOT EDITED. It counts `^ANCHOR \d+ —` out of the step text, so a v3 step
+          makes it demand three fences on its own — proven through the real CLI, not asserted.
+      FORBIDDEN: touching B01–B08's probes, expected values or steps · loosening any predicate ·
+      editing capture.mjs or verify.mjs · any Gemini call · starting B09.
+      DONE-PROOF: `diag/proofs_s5z6.mjs` — **20 assertions, every one twice inside one invocation**,
+      sentinel step id that cannot collide, wiring.json restored byte-identical, everything removed
+      in a `finally` with the removal asserted; **bite-proven on a planted regression** (revert
+      probecheck to its pre-Z6 copy ⇒ 6 FAILs, restore ⇒ GREEN). checkall §2 TIGHTENED to RUN the
+      harness and fail if any leg stops being proven — a proof nothing runs is not a gate.
+                                    BUILD 7 · PROOF 8 · HANDOFF 5 (ruler-written,
+                                    RULING__2026-08-26_1610 item 2 — NOT re-derived)
+      ⚠ **COST 19.4 of BUILD+PROOF 15 at the handoff, and it is recorded as OVER** (S4's precedent).
+      No scope change and no instrument fault, so §10-C's "unit faults only" rule forbids
+      re-deriving the number: a rung that runs hot is data about the rung, not about the ceiling.
+      Where it went is measured and worth the next builder's attention — **the freeze broke TWICE
+      before it held**: an additive `probe_format` key on frozen entries, then a stray blank line
+      the conditional ANCHOR 3 block left in every v2 prompt. Both were invisible to every existing
+      gate and both were caught only because the artifacts were hashed BEFORE the first edit. That
+      hash-first step is now the cheapest thing in this rung and it should be the first act of any
+      future versioned-additive change.
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ☑ **26 Aug ~09:30 — B04 IS CLOSED 2/2.** B04_2 was captured at S5-Z5's close through the new
       `--from-blob` path on the REAL CLI (transit sha `8d089bd0333667b4` in-page == on-disk; identity:
@@ -10324,3 +10436,99 @@ outcomes (A02 ~48% · B06_1 47.4% · B08_1-first 56.2% · B08_1-fresh PASS) reco
 restart risk retired by a remedy that costs one new tab; and the corpus half's real character
 measured and filed — not a scandal, a steady state, caught every time by the one gate that fails
 closed.
+
+---
+
+### PROGRESS 2026-08-26 ~19:15 IST — **S5-Z6 DONE: the probe now samples the band that keeps failing** — and the rung's first act was writing the §10-C row that its own ruling forgot
+
+**Router obeyed** (§10-D rule 1). Micro-order written to the session scratchpad before any edit
+(rule 9). MODEL: Opus 5 · effort HIGH. CEILING, ruler-written: **BUILD 7 · PROOF 8 · HANDOFF 5.**
+`checkall` GREEN 8/8 · `preflight` GO, both RUN in-session before and after. Meter baseline:
+**727.91**. **ZERO Gemini calls — TIER-0 end to end.**
+
+#### ⚠ FIRST FINDING, BEFORE ANY EDIT: THE RUNG HAD NO §10-C ROW
+
+`RULING__2026-08-26_1610-s5corpus-14.md` item 2 created S5-Z6 and wrote its ceiling, but the
+standing law from `RULING__2026-08-25_1215-s5y-1` — *a ruling that creates a rung writes its §10-C
+row in the same act* — was not executed. The ladder therefore carried a rung with no row, and
+§10-D rule 1's FALLBACK router ("the first ☐ in §10-C") would have sent a session somewhere else
+entirely if the ▶ NEXT SESSION line had ever gone stale. **Not escalated** (rule 13: the ruler had
+already written both the scope and the ceiling, so this is transcription, not authorship) —
+written as the rung's first act, from the ruler's own words, and recorded as having been missing.
+
+#### WHAT WAS BUILT
+
+A **third probe anchor chosen by GLOBAL depth** across the chat group's whole attachment set,
+required to land inside a declared **40–60% band**, for **live2_g09 onward (B09–B18)**.
+
+The reason it exists is measured, not supposed: every retrieval miss this sweep has recorded sits
+mid-corpus — **A02 (20 attachments) ~48% · B06_1 47.4% · B08_1's first chat 56.2%** — while the
+tail has never once failed. And the two existing anchors cannot see that band **by construction**:
+the tail anchor is the END of the LAST file, and the "middle" anchor is 48–62% of ONE MIDDLE FILE,
+a different quantity that only landed at group-depth 56.2% for live2_g08 by luck. **So the probe
+had been passing chats on evidence it never collected.** Now it collects it.
+
+Four files, and `capture.mjs` deliberately not among them:
+- `probe_gen.mjs` — `V3_FROM_GROUP = 9`, `BAND = [0.40, 0.60]`, `pickBand()`, per-probe format.
+- `probecheck.mjs` — the anchor list is built FROM the probe entry instead of a hardcoded pair, and
+  the admitted-miss regex widened from `[12]` to any anchor number.
+- `checkall.mjs` §2 — TIGHTENED to run Z6's harness and fail if a leg stops being proven.
+- `diag/proofs_s5z6.mjs` — new.
+- **`capture.mjs` UNTOUCHED**: it counts `^ANCHOR \d+ —` out of the step text, so a v3 step makes
+  it demand three fences on its own. Proven through the real CLI rather than assumed.
+
+#### THE PROPERTY THAT MATTERED MOST, AND IT BROKE TWICE BEFORE IT HELD
+
+The c3 precedent's real property is **byte-identity of everything already collected**. All 115
+artifacts were hashed BEFORE the first edit, and that step earned its place immediately:
+
+1. **First break — an additive key.** `probe_format` was written onto every probe entry, including
+   frozen ones. Nothing was *edited*; a field was *added*; and all 13 frozen probe entries moved.
+2. **Second break — a blank line.** The conditional ANCHOR 3 block sat on its own template line, so
+   every v2 prompt gained one empty line. All 8 frozen corpus prompts moved.
+
+**21 frozen artifacts moved, and not one existing gate could see it.** Both are now fixed and the
+harness asserts the property directly. **Final state: every already-collected artifact byte-identical
+— 13 probe entries + 13 prompts + 39 step files, 0 moved** — while 20 v3 artifacts changed exactly
+as intended.
+
+#### THE PROOFS
+
+`node diag/proofs_s5z6.mjs` → **GREEN, 20 assertions, every one of them twice inside one
+invocation.** Sentinel step id that cannot collide with a sweep step; `wiring.json` restored
+byte-identical; everything removed in a `finally` with the removal itself asserted.
+
+- **THE FREEZE HELD** — measured against the pre-edit baseline, and the threshold is the *measured*
+  count of frozen keys, not a guessed number (the first draft said `>= 55` and went RED at 45 while
+  nothing was wrong — a guessed threshold is a gate that lies in both directions).
+- **46 anchors certified against the corpus itself**, not against the generator: 10 band anchors,
+  every one inside 40–60% depth, three distinct anchors per v3 group, each at its stored index,
+  each stored answer really the following line, and **every anchor AND every answer substring-unique
+  across the whole group the model will hold.**
+- **probecheck BITES:** a v3 answer with **both old anchors perfect** and the band missing is
+  REFUSED — the case where a gate would have got looser while looking stricter.
+- an admitted **"ANCHOR 3 NOT FOUND"** is read AS admitted, so the 1205 ruling's distinction
+  survives a third anchor.
+- **capture.mjs refuses a two-fence payload for B09_1 through the real CLI** and writes nothing.
+- **probe_gen is deterministic** — a re-run reproduces all 46 anchors byte-identically.
+
+**BITE-PROVEN ON A PLANTED REGRESSION**, not merely green: reverting `probecheck.mjs` to its
+pre-Z6 copy turns 6 assertions RED; restoring it turns them green again.
+
+**AND THE HARNESS IS NOW A GATE.** `checkall` §2 runs it and fails if any leg stops being proven —
+because a proof that runs only when somebody remembers it is exactly the shape S5-Z5 refused.
+`checkall` GREEN all 8 · `preflight` GO, both re-run after the edits.
+
+#### ⚠ COST — OVER, AND RECORDED AS OVER
+
+**19.4 of BUILD 7 + PROOF 8 = 15 at the handoff** (day 727.91 → 747.27), and the handoff itself
+pushes past the 20 total. **No scope change and no instrument fault**, so §10-C's "unit faults
+only" rule forbids re-deriving the number and I am not asking for a re-derivation: a rung that
+runs hot is data about the rung, not about the ceiling (S4's precedent, recorded the same way).
+Where it went is measured and is the useful part: **the two silent freeze breaks above, plus one
+self-inflicted measurement bug** (a certification pass compared untrimmed corpus lines against
+trimmed stored anchors and reported 19 defects that did not exist — the same class the ruler owned
+this morning with his ANSI-default read, found the same way, by checking the checker).
+
+**THE ONE LINE WORTH CARRYING FORWARD: hash every artifact BEFORE the first edit.** It is the
+cheapest step in this rung and it is the only reason the freeze is intact.
