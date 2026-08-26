@@ -1102,10 +1102,80 @@ STATUS (update this block before any session stops — this is the handoff)
                                      ran and **the commit was never made.** 23.76 lakh of the 35 at
                                      the last measurable mark — the meter is a shell command and it
                                      was gone by the close, so the handoff's cost is unmeasured.
+                                     ↳ **CLOSED 26 Aug ~06:45 — see the row below.**
                                    ⏱ MEASURED, and the ~03:15 ruling does not carry it: ~10 min
                                      load+probe, ~14 min extraction ⇒ **B01–B18 ≈ 8–10 hours of
                                      wall-clock.** The corpus half is multi-session BY TIME.
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — CORPUS HALF RUNNING. RESUME AT B01_3, THEN B02.**
+  S5 CORPUS · B01 CLOSED ....... ☑ 26 Aug 2026 ~06:45 IST · Opus 5 · effort HIGH · DEFAULT mode.
+                                   **B01 IS COMPLETE 3/3 AND B02 IS LOADED AND PROBED.** Full
+                                   account in the PROGRESS entry of 26 Aug ~06:45 — read that.
+                                   ☑ gates RUN IN THIS SESSION: checkall GREEN all 8 sections ·
+                                     preflight GO 18 checks. §7 was RED at open on exactly the
+                                     condition it exists for — verify.mjs's three outputs from the
+                                     ~04:00 session had no restorable copy — and was closed by the
+                                     gate's OWN prescribed remedy (`snapshot.mjs take`), not by
+                                     weakening it. Clipboard ALIVE at open (Q-C probe).
+                                   ☑ **B01_3 CAPTURED RAW** — copy-gate PASSED 15/15, fenced yes,
+                                     JSON parses. The raw path did not go soft; no lossy stamp.
+                                   ☑ **B02_1 · PROBE PASS · VERBATIM 2/2 — TAIL *AND* MIDDLE**, on a
+                                     SECOND independent group (live2_batch11-20, 1.9 MB, 10 chips
+                                     confirmed by name). **The ten-attachment shape now has TWO
+                                     receipts, not one** — B01_1 and B02_1 — so the corpus half's
+                                     passing configuration is measured, not inferred.
+                                   ⚠ **verify.mjs: KEPT 75 → 84 · DISCARDED 22 → 44.** B01_3 the
+                                     critic contributed **9 kept / 22 dropped** (21 NOT-FOUND + 1
+                                     ITEM-COUNT-MISMATCH, "declared 5, array holds 4 — the answer was
+                                     cut mid-flight"). ~29% survival against the extraction's ~77%,
+                                     and **5 inflated days of 7** (two claimed 5 and 10 items,
+                                     delivered 0). Every one caught by a gate.
+                                   ⛔ **A REAL FINDING, AND IT IS SHAPE 6 INSIDE THIS RUNG'S OWN
+                                     INSTRUMENT: the critic's REWARDED new kinds reach no consumer.**
+                                     B01_3 obeyed the architect's shape-list ruling exactly and
+                                     returned two kinds outside the five buckets —
+                                     `unresolved_anomalies` and `manual_workarounds`. `verify.mjs`
+                                     knows only its six buckets, so those items are **not
+                                     quote-checked, not kept, and not dropped** — absent from
+                                     verified.json and from the KEPT/DISCARDED headline entirely.
+                                     The ruling created a reward with nothing to receive it.
+                                     NOT PATCHED — the fix is a verify.mjs code change and **S5
+                                     BUILDS NOTHING** (rule 10). Nothing is lost: the items sit in
+                                     `answers/B01_3.txt` and re-verify free once there is a home.
+                                     ESCALATED: `queue\2026-08-26_0620-s5corpus-2.md`,
+                                     recommendation **A** (a declared-unknown bucket, same code path).
+                                   ⚠ **THE SENT-TURN READ-BACK CANNOT MATCH RAW, EVER — measured, and
+                                     the standing outbound law does not carry it.** Gemini's
+                                     user-turn renderer wraps every non-empty line in one leading and
+                                     one trailing U+0020. B01_3: box 2151 chars, sent turn 2201,
+                                     delta exactly 50 = 25 non-empty lines × 2; 31/31 lines
+                                     character-identical once stripped, and stripped the sha256 is
+                                     byte-identical to the step file. **The law's fourth hop must
+                                     strip one leading + one trailing space per line before hashing**
+                                     or it reads a mismatch on a perfectly-delivered prompt.
+                                     Applied on both B01_3 and B02_1; both matched exactly.
+                                   ⚠ CEILING BREACHED AND RECORDED, NOT PATCHED AROUND: **36.19 lakh
+                                     measured at the close of the execution half against the 35-lakh
+                                     EXECUTION line** (day line 236.81 → 273.00, read from the meter
+                                     AT the close, never estimated mid-flight). Ceiling NOT
+                                     re-derived — §10-C allows that only on a proven UNIT fault and
+                                     there is none. The handoff runs on the separate 10-lakh line.
+                                   ⚠ TRANSPORT, two costs the next executor should not re-pay: the
+                                     out-of-repo folder needs `request_directory` ONCE per session
+                                     before `file_upload` (it refuses by path, loudly) · and the
+                                     response-level **Copy button must be scoped to the LAST
+                                     `response-container`** — a `find`-chosen "Copy" returned the
+                                     PREVIOUS answer's button and put B01_2's 46,196 chars on the
+                                     clipboard. Caught by asserting WHAT came back, before capture.
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — CORPUS HALF RUNNING. RESUME AT B02_2, THEN B02_3,
+                                   THEN B03.** B01 is CLOSED 3/3. **B02 is LOADED AND PROBE-PASSED
+                                   (VERBATIM 2/2) — its chat is
+                                   `gemini.google.com/app/83db0daf5b7722a4`, account
+                                   nikhil.panwar2914, Pro Extended, 10 attachments
+                                   (live2_batch11-20), ONE turn in. Do NOT re-load it and do NOT
+                                   re-probe it — the attachments are already trusted by receipt.**
+                                   The next act is `steps/B02_2.txt` (the five-bucket extraction)
+                                   into that open chat, then `steps/B02_3.txt` (the critic), then a
+                                   fresh chat for B03_1. ~14 min of model time for the extraction;
+                                   budget the wall-clock, not just the tokens.
                                    ⚠ **DO NOT START A SESSION FOR THIS IN AUTO MODE.** The
                                    26-Aug ~04:00 session was stopped by a safety classifier that
                                    refused every shell and write-class action for the rest of that
@@ -2960,6 +3030,20 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       diag/proofs harness (standing implicit).
                                            BUILD 4 · PROOF 3 · HANDOFF 5 (ruler-written)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      ◐ **26 Aug ~06:45 — B01 IS CLOSED 3/3 AND B02 IS LOADED + PROBE-PASSED. 1 of 18 corpus
+      chats complete.** B01_3 (the critic) captured RAW (copy-gate 15/15) and verified: KEPT
+      75 → 84, DISCARDED 22 → 44 — the critic's own share is 9 kept / 22 dropped, ~29% survival
+      against the extraction's ~77%, with 5 inflated days of 7 and one caught mid-flight
+      truncation. B02_1 then loaded live2_batch11-20 into a fresh Pro-Extended chat
+      (`gemini.google.com/app/83db0daf5b7722a4`) and **its probe PASSED · VERBATIM 2/2, tail AND
+      middle — the second independent receipt for the ten-attachment shape.**
+      ⛔ ONE FINDING, ESCALATED NOT PATCHED (`queue\2026-08-26_0620-s5corpus-2.md`): the critic
+      obeyed the architect's shape-list ruling and returned two kinds outside the five buckets
+      (`unresolved_anomalies`, `manual_workarounds`), and **verify.mjs has no home for an unlisted
+      kind — those items are neither quote-checked, kept, nor dropped.** SHAPE 6 inside the audit's
+      own instrument, third time this rung has found one there. S5 builds nothing, so it is filed.
+      ⚠ 36.19 spent of the 35-lakh EXECUTION line — breached by 1.19, recorded, ceiling NOT
+      re-derived (no unit fault). Wall-clock, re-confirmed: ~10 min load+probe.
       ◐ **26 Aug ~04:00 — THE CORPUS HALF OPENED, AND IT IS PRODUCING. B01 IS 2/3 DONE.**
       B01_1 loaded ten `live2_batch*.txt` into a fresh Pro-Extended chat
       (`gemini.google.com/app/680faea2165843fe`) and its probe **PASSED · VERBATIM 2/2 — tail AND
@@ -6902,3 +6986,129 @@ DEFAULT permission mode.** Chat B01 (`gemini.google.com/app/680faea2165843fe`) i
 two turns in; B01_3's hand-back list is 2026-07-22, 2026-07-23, 2026-07-18 (that last one the caught
 inflated receipt, claimed 18 / arrived 14). Probe the clipboard once at open — dead is expected and
 is not a blocker; the inbound route is the object-URL download.
+
+---
+
+### PROGRESS 2026-08-26 ~06:45 IST — S5 · THE SWEEP, CORPUS HALF. **B01 CLOSED 3/3 · B02 LOADED AND PROBE-PASSED.**
+
+**Opus 5 · effort HIGH · DEFAULT permission mode** (the ~04:15 ruling's precondition, obeyed — and
+the classifier that killed the ~04:00 session did not fire once this session).
+Router obeyed (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐). Micro-order written to the
+session scratchpad before the first edit (rule 9).
+
+#### WHAT LANDED
+
+**1. The gates, RUN IN THIS SESSION, never inherited.**
+`checkall.mjs` came back **RED on section 7** at open — and on exactly the condition section 7
+exists for: `coverage.json`, `dropped.json` and `verified.json`, all written by `verify.mjs` in the
+~04:00 session, had **no restorable copy**. That session lost its shell before it could snapshot.
+Closed by the gate's own prescribed remedy — `snapshot.mjs take` (75 instruments, 629,684 bytes) —
+never by loosening it. Re-run: **checkall GREEN all 8 sections · preflight GO, 18 checks.**
+Section 3 skipped loudly on the resume condition, as S5-Z3 built it to.
+**The clipboard was ALIVE at open** (Q-C's opportunistic probe): preflight §4C round-tripped the
+largest real step file. A ninth occurrence did not happen; it stayed up for the whole session.
+
+**2. B01_3, the critic — fired and captured RAW.**
+Outbound went the ratified four-hop route, every hop a SHA-256 assert, not an eyeball:
+clipboard (2151 chars, `9f3c3323…`) → in-page `readText` → `execCommand insertText` → compose box
+(31 blocks, sha identical) → **the SENT user turn read back off the DOM**. Captured through
+`capture.mjs save B01_3 --rendered` — **copy-gate PASSED 15/15 content lines, `capture_path raw`,
+fenced yes, JSON parses yes.** No lossy stamp was needed; the byte-strict path held.
+
+**3. B02_1 — a fresh chat, ten attachments, and the probe PASSED.**
+`gemini.google.com/app/83db0daf5b7722a4`, account nikhil.panwar2914, **Pro Extended verified BEFORE
+the first attach** (his standing ruling). `file_upload` put live2_batch11–20 in (1,858 KB); all ten
+chips confirmed **by name**, none missing, none duplicated. Prompt composed byte-exact again
+(6815 chars, 104 blocks, all four hops matching). Then:
+
+```
+B02_1  (live2_g02)  [raw]  [elicited by PROBE-FORMAT v2]  PASS · VERBATIM
+   ok    tail (end of the last file)      [live2_batch20.txt line 7211]
+   ok    middle (mid-file, unannounced)   [live2_batch16.txt line 6994]
+```
+
+**This is the second independent receipt for the ten-attachment shape.** B01_1 passed VERBATIM 2/2
+and now B02_1 does too, on a different group of ten files. The corpus half's configuration is
+measured twice over, not inferred from one lucky chat — and the canon's 20-attachment middle hole
+stays a property of *twenty*, not of attachment loading in general.
+
+#### WHAT THE VERIFIER SAYS
+
+`verify.mjs`: **KEPT 75 → 84 · DISCARDED 22 → 44.** So B01_3's own share is **9 kept / 22 dropped**
+— 21 NOT-FOUND quotes plus one **ITEM-COUNT-MISMATCH** (`declared 5, array holds 4 — the answer was
+cut mid-flight`). Coverage: it reported 7/7 days but carries **5 INFLATED counts of 7**, including
+2026-07-12 (claimed 5, arrived 0) and 2026-07-13 (claimed 10, arrived 0).
+
+**The measurement that matters for the remaining 17 critics:** the extraction survives at ~77%
+(75/97), the critic at **~29%** (9/31). If that ratio holds, the critic pass buys about one kept
+item per 3.4 returned. Every inflation and the truncation were caught by a gate — the system
+working exactly as designed — but the cost/benefit of 17 more critic passes is a real number S6
+should see before it budgets them. Recorded, not decided here.
+
+#### THE FINDING — SHAPE 6, AGAIN, INSIDE THIS RUNG'S OWN INSTRUMENT
+
+B01_3 obeyed the architect's shape-list ruling **exactly**: it proposed two kinds that were not in
+the original five buckets and hunted for them — `unresolved_anomalies` and `manual_workarounds`.
+Both are present as top-level arrays in `answers/B01_3.txt`.
+
+**`verify.mjs` has no home for an unlisted kind.** Its buckets are the six known ones. Measured
+against the live answer: `verified.json` carries neither new key. Those items are **not
+quote-checked, not kept, and not dropped** — they are silently absent from the verified record and
+from the KEPT/DISCARDED headline both. The ruling that called an unlisted kind *"worth MORE than
+another instance of a listed kind"* created a reward with nothing to receive it.
+
+That is **§9 SHAPE 6 — an output that reaches no consumer — committed inside the audit's own
+tooling, the third time this rung has found one there** (refilter.mjs at S5, verify.mjs's day index
+at S5-R2, this). **NOT PATCHED:** the fix is a `verify.mjs` code change and **S5 BUILDS NOTHING**
+(§10-D rule 10 + the rung's FORBIDDEN line). Nothing is lost — the items are on disk and re-verify
+for free once the instrument has a home for them. **ESCALATED:**
+`queue\2026-08-26_0620-s5corpus-2.md`, options A–C, recommendation **A** (a declared-unknown bucket
+run through the SAME code path — declare-or-die, the shape S5-X used for the snapshot roster; a
+universal quantifier that excludes a subject without declaring it is the JUGAD RULE's own violation).
+
+#### THREE TRANSPORT MEASUREMENTS THE NEXT EXECUTOR SHOULD NOT RE-PAY
+
+1. **The sent-turn read-back cannot match raw, ever.** Gemini's user-turn renderer wraps every
+   non-empty line in one leading and one trailing U+0020. B01_3: box 2151 chars, sent turn 2201 —
+   delta **exactly 50 = 25 non-empty lines × 2**, with 31/31 lines character-identical once
+   stripped, and the stripped sha256 byte-identical to the step file. **The standing outbound law's
+   fourth hop must strip one leading + one trailing space per line before hashing**, or it reads a
+   mismatch on a perfectly-delivered prompt and halts for nothing. Applied to both B01_3 and B02_1;
+   both matched exactly. This is a note for whoever writes that law into code — not a fork.
+2. **The response-level Copy button must be scoped to the LAST `response-container`.** A
+   `find`-chosen "Copy" returned the *previous* answer's button and put B01_2's 46,196 chars on the
+   clipboard. Caught before capture by asserting WHAT came back — the standing clipboard law
+   earning itself again. A sentinel was planted before each Copy so a stale payload could not pass
+   vacuously.
+3. **`file_upload` needs `request_directory` once per session** for the out-of-repo folder. It
+   refuses by path, loudly — exactly as `diag\COUNT_PROBE_RESULT.md` said it would.
+
+#### WHAT WAS *NOT* DONE, AND WHY
+
+**B02_2 (the extraction) and B02_3 (the critic) were not fired.** The meter read 36.19 lakh against
+the 35-lakh EXECUTION line at the close of B02_1 — **the ceiling is a STOP, not a suggestion**
+(§10-D rule 2). Starting a ~14-minute extraction on a spent line would have been a breach chosen
+rather than suffered. B02's chat is open, clean, one turn in, and its attachments are **already
+trusted by receipt**, so the next session resumes into it without re-loading or re-probing —
+the multi-session pattern the ~04:15 ruling ratified, working a second time.
+
+#### THE COST
+
+**36.19 lakh weighted** — day line 236.81 → 273.00, read from the meter **at the close**, never
+estimated mid-flight (S5-X's precedent, and S5-Y's reminder that the felt number and the measured
+number disagree). **Against the 35-lakh EXECUTION line that is a breach of 1.19, recorded and not
+patched around.** Ceiling **NOT** re-derived — §10-C permits that only on a proven UNIT fault in
+the meter, and there is none; a rung that runs hot is data about the rung. The handoff below runs
+on the separate 10-lakh HANDOFF line.
+
+Zero instruments edited · zero gates weakened · zero prompts or steps hand-authored · frozen inputs
+untouched · `refilter2.mjs` not re-run · no canon re-cut · S5-Z4 not interleaved · nothing in the
+organism re-enabled · nothing entered §9 (§8 governs that, at S6).
+
+#### WHAT THE NEXT SESSION DOES
+
+**S5 · the corpus half — RESUME AT B02_2, THEN B02_3, THEN B03. Opus 5 · effort HIGH. DEFAULT
+permission mode.** Chat B02 is `gemini.google.com/app/83db0daf5b7722a4` — open, Pro Extended, ten
+attachments already loaded and probe-passed. Fire `steps/B02_2.txt` into it; do **not** re-load and
+do **not** re-probe. Budget the clock as well as the tokens: ~14 min of model time for an
+extraction, and B03–B18 is still ~7–9 hours of wall-clock ahead.
