@@ -2769,6 +2769,12 @@ STATUS (update this block before any session stops — this is the handoff)
                                    edges → critic. **READ `wiring.json`, never this list** — it is a
                                    convenience, and the last time a router listed attachments from
                                    memory it was wrong (B18).
+                                   ⛔ **F3's DEFERRED PROBE IS GATED, NOT EXEMPT — RULED 27 Aug ~07:15**
+                                   (item 2): the probe you generate at fire time must pass the **SAME
+                                   TIER-0 certification** the pre-generated ones did — anchor
+                                   UNIQUENESS within its own haystack, a stored expected answer, and a
+                                   bite proving the refusal on a non-unique anchor — **BEFORE the paste
+                                   fires.** The condition rides F3's wiring row.
                                    ⛔ **F3 IS DIFFERENT AND ITS DIFFERENCE IS DECLARED IN THE WIRING.**
                                    Its inputs are the sweep's OWN answers (`answers/G0n_2.txt`), which
                                    is why they sit in `attaches_answers` and not `attaches`, and why it
@@ -2785,10 +2791,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                    THAT GROUP into two five-chunk chats and amend the map in the same
                                    act. Never a third ten-chunk attempt. One group's failure costs one
                                    group; the others are separate conversations by design.
-                                   ⚠ **OPEN QUESTION THIS RUNG DID NOT DECIDE, AND DID NOT QUIETLY
-                                   ANSWER EITHER: the `replication` chat (R01-R04) still loads all 27
-                                   chunks in ONE chat across three parts — the configuration A02 FAILED
-                                   in.** It is named as its own lane in the wiring and excluded from
+                                   ⛔ **`R01-R04` — DO NOT FIRE. RULED 27 Aug ~07:15**
+                                   (`RULING__2026-08-27_0715-s5z4-2.md` item 1), and the ruler's reason
+                                   is that *"an open question can be misread as fire-able by a fresh
+                                   session; this line cannot."* The `replication` chat still loads all
+                                   27 chunks in ONE chat across three parts — **the exact configuration
+                                   A02 FAILED in** — so firing it as-is spends paid pastes on a
+                                   known-bad shape. **DO NOT FIRE until re-designed by S6 or by a
+                                   ruling.** The flag rides the WIRING on all four steps, not just this
+                                   sentence. It is named as its own lane in the wiring and excluded from
                                    the one-live-design assert, so it cannot be mistaken for a canon
                                    design; whether it should also move to the group shape is left for
                                    S6 with its lane named. **Do not fire R01-R04 on the old assumption
@@ -13689,3 +13700,31 @@ and both are recorded as over, neither re-derived:** 18.39 vs 15 before the esca
 24.59 vs 20 on the remainder. Records ride the two HANDOFF lines. The honest cause is the same
 both times — this row is six items, four of them separate instruments each needing its own
 bite-proof, and one of them I had to build twice.
+
+### ADDENDUM 2026-08-27 ~07:15 series / **27 Aug ~01:50 TRUE machine-clock** — **THE RULER'S CLOSE ON S5-Z4: ratified whole, plus two rulings that put TEETH on the two things I left as prose**
+
+`queue\RULING__2026-08-27_0715-s5z4-2.md`. **Close RATIFIED whole** — all six items, both forks
+built to their ruled conditions, both new checkall asserts GREEN, 63×5 proofs idempotent,
+82 = 69+13 exactly. **Both breaches stand recorded, neither re-derived.**
+
+Two rulings, and both correct a real weakness in how I left things:
+
+1. **`R01-R04` IS EXPLICITLY DO-NOT-FIRE**, not "an open question". The ruler's reason is the whole
+   lesson: *"an open question can be misread as fire-able by a fresh session; this line cannot."*
+   I had isolated the lane correctly — excluded from the one-live-design assert, named in the
+   router — but isolation is not a prohibition, and a fresh session reading "left for S6" could
+   reasonably fire it and spend paid pastes on the configuration **A02 already failed in**.
+   FOLDED: the router's R-lane line, and `do_not_fire` on **all four wiring rows**, so the teeth
+   are machine-readable and not a sentence.
+2. **F3's fire-time probe generation is ACCEPTED, with a gate condition: a DEFERRAL IS NOT AN
+   EXEMPTION.** The generated probe must pass the SAME TIER-0 certification the pre-generated ones
+   did — anchor uniqueness within its own haystack, a stored expected answer, and a bite proving
+   the refusal on a non-unique anchor — **before the paste fires.** `probe_deferred` with a reason
+   was the honest record; this makes the deferral as gated as everything around it.
+   FOLDED: `probe_deferred_condition` on F3's wiring row, asserted by the harness.
+3. preflight's stricter retirement assert (the live remedy must exist AND the retired one must
+   still be on disk) is **recorded with credit** — *"the strictly-stricter reflex is now habit."*
+
+Proofs re-run after the fold: **GREEN, 65 assertions, 5 legs** (two new bites: the DO-NOT-FIRE flag
+on every replication step, and F3's deferral carrying its ruled condition). checkall GREEN 8/8,
+preflight GO.
