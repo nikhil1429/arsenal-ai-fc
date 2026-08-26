@@ -3107,9 +3107,10 @@ STATUS (update this block before any session stops — this is the handoff)
                                    is backlog and not a mid-sweep rung, and why S5-Z4 does
                                    NOT grow a fourth time.**  ·
                                    **THE RECEIPT-vs-OWN-ANSWER SELF-CONSISTENCY CHECK** —
-                                   granted its row by the architect's channel ruling of
-                                   26 Aug ~21:15 true clock (recorded verbatim in the
-                                   addendum below; **no queue file was written for it**).
+                                   granted its row by
+                                   `RULING__2026-08-26_2110-s5corpus-18.md` item 1 (issued
+                                   first over the channel, then written to disk by the ruler
+                                   — see the addendum below).
                                    Verify-side, **TIER-0 and FREE**: it compares the model's
                                    self-report against **the model's own items**, which is
                                    the class `verify.mjs` structurally cannot see today —
@@ -12323,14 +12324,22 @@ stays OPEN. B15 was not opened.
 Ratified after `2af61bf` was pushed, so it is folded here rather than rewritten into the entry
 above. **Clock per the standing reconciliation rule** (`RULING__2026-08-26_2045-s5z8-1.md` item 4).
 
-⚠ **SAID PLAINLY, BECAUSE THE ARCHAEOLOGY DEPENDS ON IT: this ruling arrived over the channel and
-NO `queue\RULING__*` file was written for it.** The order's own law is *"message = transport, the
-file = the record"*, and the executor's standing instruction is to treat a channel ruling *"exactly
-as a RULING__ file's content"* — so it binds, and it is recorded verbatim below. But the record
-lives ONLY here. **The executor did not write the file itself**: a `RULING__` file is the
+⚠ **THIS RULING ARRIVED OVER THE CHANNEL WITH NO `queue\RULING__*` FILE — AND THAT GAP IS NOW
+CLOSED, BY ITS OWNER.** The order's law is *"message = transport, the file = the record"*, and the
+executor's standing instruction is to treat a channel ruling *"exactly as a RULING__ file's
+content"* — so it bound immediately and was folded on that basis. But for a few minutes the record
+lived ONLY here. **The executor did not write the file itself**: a `RULING__` file is the
 architect's record in the architect's voice, and manufacturing one would put words in his file. The
-gap is named instead of papered over, and the architect was told so he can drop the file if he wants
-his own copy.
+gap was named rather than papered over, and the architect was told.
+
+✔ **He wrote it: `queue\RULING__2026-08-26_2110-s5corpus-18.md`, in his own voice, and the file
+itself records why it was late** — *"the executor correctly refused to manufacture it and asked for
+it; written now, gap owned: a channel ruling is transport, and the ruler writes his own record in
+the same act."* **That is the authoritative copy; the verbatim text below is the message it was
+issued as, kept because the fold happened before the file existed.** Its item 2 ratifies B14's close
+whole, and its **item 3 ADOPTS the provenance observation below into the S6 hand-off as a NAMED
+FACT** — S6 must read the sweep's green gates knowing both S5-POST rows were born from a passing
+gate disagreeing with a by-hand measurement.
 
 **THE RULING, VERBATIM (channel, `arsenal-ai-fc-e8` → `arsenal-ai-fc-bb`):**
 
