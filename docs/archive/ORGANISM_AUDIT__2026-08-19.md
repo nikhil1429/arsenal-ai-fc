@@ -2153,6 +2153,27 @@ STATUS (update this block before any session stops — this is the handoff)
                                      hiding in, on the first chat that could expose it.**
                                    ⚠ ~23.5 of the 35-lakh EXECUTION line (day 766.20 → 789.74).
                                      INSIDE. Records ride HANDOFF 13.
+  S5-Z7 + B10 CLOSED 2/2 ....... ☑ 26 Aug 2026 ~22:00. **S5-Z7 DONE — and it turned out to be a
+                                   THREE-SITE class, not the one site the escalation named.**
+                                   `payloadfence.mjs` is now the single answer site for *"WHICH
+                                   fence is the payload"*, imported by `capture.mjs` AND
+                                   `verify.mjs`; a second correct copy was refused by ruling.
+                                   ⛔ **THE THIRD SITE WAS FOUND BY THE HARNESS, NOT BY A HUMAN** —
+                                   `capture.mjs:748`'s receipt line printed *"JSON parses NO"* about
+                                   B10_2 seconds after its own gate PASSED. Caught only because the
+                                   proof asserts **no live second copy of the regex ANYWHERE**,
+                                   instead of asserting the two known sites are fixed.
+                                   ☑ `diag/proofs_s5z7.mjs` **GREEN — 86 assertions, twice**, and
+                                   proven **RED against the unmodified instrument first**.
+                                   ☑ **All NINE stored extractions still accepted AND still
+                                   readable** — the rule-6 evidence, run through the real paths.
+                                   ☑ **`B10_2 : 32 items → KEPT 13 · DROPPED 19`** · false drops 1 ·
+                                   **de-escape 0 (6th consecutive)** · genuinely absent 18 ⇒ true
+                                   content **≥ 14 of 32**, invention **56%** · **CONTROL 13/13**.
+                                   **⇒ B10 IS CLOSED 2/2. 10 of 18.**
+                                   ⚠ ~26 of the re-derived 25-lakh line (BUILD 10 · PROOF 10 ·
+                                   HANDOFF 5) — marginally over, recorded as over.
+                                   The B10 sitting's own record, unedited:
   S5  B10 — 1.5 OF 2, HALTED ... ◐ 26 Aug 2026. **B10_1 CLOSED AND PROBE-PASSED ON ALL THREE
                                    ANCHORS; B10_2's ANSWER IS COMPLETE, BYTE-VERIFIED AND ON DISK —
                                    AND capture.mjs REFUSED IT.** Full account in the PROGRESS entry
@@ -2218,22 +2239,20 @@ STATUS (update this block before any session stops — this is the handoff)
                                      thread is halted on the ruling; the records ride HANDOFF 13,
                                      which is what that split exists for. Caveat carried from S5-R,
                                      not re-derived: today's meter line reads ~+16% hot.
-  ▶ NEXT SESSION ............... **① S5-Z7 — THE EXACTLY-ONE-FENCE ASSERT.** Its own micro-rung,
-                                   ruled 26 Aug ~21:15 (`queue\RULING__2026-08-26_2115-s5corpus-16.md`,
-                                   ratified after the ruler re-verified by RUNNING). Its §10-C row is
-                                   written and carries the whole contract — **read the row, not this
-                                   line.** **MODEL: Opus 5 · effort HIGH · CEILING BUILD 8 · PROOF 8
-                                   · HANDOFF 5** (ruler-written; the executor never re-derives it).
-                                   **B10_2 IS Z7's FIRST LIVE CAPTURE AT ITS CLOSE** — its payload is
-                                   parked at `diag/B10_2_raw.txt`, transit sha `2531012280d882b0`
-                                   in-page == on-disk, **NOT stamped and NOT in `answers/`** (the
-                                   B04_2 pattern). **B10 closes 2/2 there, not before.**
-                                   ⛔ **DO NOT RE-FIRE B10_2 AND DO NOT PATCH AROUND THE GATE.** The
-                                   answer is complete and byte-proven; only the assert is wrong. The
-                                   chat `gemini.google.com/app/357cd4d8aaf3e6a4` stays OPEN.
-                                   **② THEN B11 onward, the same way, to B18 — EXECUTION 35 +
-                                   HANDOFF 13**, ten attachments per chat, `steps/B<n>_1.txt`
-                                   (3 anchors) then `steps/B<n>_2.txt`. 9 of 18 closed; B10 is 1.5.
+  ▶ NEXT SESSION ............... **① B11 — a fresh Pro-Extended chat, ten attachments
+                                   `live2_batch101-110`, `steps/B11_1.txt` (3 anchors) then
+                                   `steps/B11_2.txt`.** Then B12 onward the same way, to B18.
+                                   **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
+                                   **10 of 18 corpus chats are CLOSED 2/2** — B10 closed at S5-Z7.
+                                   Read `wiring.json` for B11's exact ten filenames; never the prose.
+                                   ✔ **S5-Z7 IS DONE and the capture/verify gates now agree.** Both
+                                   sites read the payload through **`payloadfence.mjs`** — one
+                                   module, one question: **"WHICH fence is the payload"**. A payload
+                                   whose JSON is not the first fence now captures AND verifies. Two
+                                   NEW refusal classes exist: **AMBIGUOUS** (more than one complete
+                                   answer in one payload ⇒ **ESCALATE, never pick**) and
+                                   shape-with-reason. If a chat ever hits AMBIGUOUS, that is the
+                                   substitution family — escalate it, do not choose a fence.
                                    ⚡ **THE FOUR-HOP OUTBOUND IS NOW THE DEFAULT, NOT THE FALLBACK.**
                                    B10 ran it with the clipboard ALIVE at preflight and both sends
                                    committed first try (11th, 12th consecutive). It is sha-asserted at
@@ -4563,7 +4582,46 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       gate and both were caught only because the artifacts were hashed BEFORE the first edit. That
       hash-first step is now the cheapest thing in this rung and it should be the first act of any
       future versioned-additive change.
-☐ S5-Z7 THE EXACTLY-ONE-FENCE ASSERT — a micro-rung, RULED by the architect 26 Aug ~21:15
+☑ S5-Z7 THE EXACTLY-ONE-FENCE ASSERT — **DONE 26 Aug 2026 ~22:00. AND B10 IS CLOSED 2/2.**
+      Full account in the PROGRESS entry of 26 Aug ~22:00 — read that, not this summary.
+      ⚑ **SCOPE EXTENDED MID-RUNG BY RULING (`queue\RULING__2026-08-26_2150-s5z7-1.md`), because the
+      SAME first-fence class turned out to live at a SECOND site — `verify.mjs:182-189`.** The fork
+      was INSIDE this row: scope (d) said verify runs and B10 closes 2/2 here, while FORBIDDEN said
+      *"any step, corpus or verify change"*. NOT taken alone; escalated as
+      `queue\2026-08-26_2145-s5z7-1.md`, ruled inside the sitting.
+      ⛔ **AND THE HARNESS THEN FOUND A THIRD SITE THAT NOBODY HAD ESCALATED — `capture.mjs:748`,
+      the receipt line.** It carried a live third copy of the same predicate, so on B10_2 — whose
+      JSON is perfect and whose gate had just PASSED — the receipt printed *"JSON parses NO — run
+      verify.mjs, it will say why"*. **A receipt that contradicts the gate beside it is worse than
+      no receipt**, and it was found only because part 3c asserts there is no second live copy of
+      the regex ANYWHERE, rather than asserting the two known sites are fixed.
+      ☑ **`payloadfence.mjs` — ONE module, imported by BOTH callers** (ruling item 2; a second
+      correct copy was REFUSED on this folder's own probeFor-drift precedent). The class line,
+      generalising the 0805 alphabet rule: **"WHICH fence is the payload" is ONE question answered
+      at ONE site.** `declaredKeys()` reads the skeleton off the step file that was pasted —
+      derived, never typed, so it cannot drift from what the model was shown.
+      ☑ **`verify.mjs` binds the FULL exactly-one-qualifying contract, same as capture** (item 3);
+      zero/many on a stored answer is reported UNREADABLE-WITH-REASON, never guessed.
+      ☑ **`diag/proofs_s5z7.mjs` GREEN — 86 assertions, every one twice**, and **proven RED against
+      the unmodified instrument FIRST** (5 classes × 2 rounds) so the harness can demonstrably fail.
+      Sentinel-only, answers/ LISTING DIFF (B09's lesson), idempotent, nothing left behind.
+      ☑ **THE REGRESSION, which is the rule-6 evidence: all NINE stored extractions B01_2…B09_2 are
+      still ACCEPTED at the capture site AND still READABLE at the verify site**, plus B10_2 at
+      both. Two new refusal classes exist that did not: AMBIGUOUS, and shape-with-reason.
+      ☑ **B10_2 CAPTURED AND VERIFIED. `B10_2 : 32 items → KEPT 13 · DROPPED 19`** · all 19
+      NOT-FOUND · **MEASURED FALSE DROPS 1** · **DE-ESCAPE 0 (sixth consecutive)** · mis-attributed
+      to another batch 0 · genuinely absent 18 ⇒ **true content ≥ 14 of 32**, invention rate **56%**
+      — inside the ruled steady state, and the sweep changes nothing for it. **CONTROL 13/13** — the
+      same matcher re-finds every kept quote, so the 18 absences are real and not a broken matcher.
+      ☑ `capture.mjs selftest` exit 0 · `checkall` GREEN 8/8 · `preflight` GO, all run in-session.
+      ⚠ Instruments hashed BEFORE the first edit (`diag/z7_baseline_hashes.json`, RULING 1900
+      item 2). Moved, and only these: `capture.mjs` `cc734603918ce9ed → …` · `verify.mjs`
+      `2f77fd2a6516b371 → …` (authorized by the amended FORBIDDEN line, and provably UNMOVED for
+      the whole first half of the rung) · `payloadfence.mjs` new · two new `diag/` files.
+      ⚠ Clipboard dead at preflight — **14th occurrence**, ADVISORY only since Z5 took it off the
+      answer path, and this rung sent nothing.
+      The original row, as ruled and unedited, with item 4's amendment marked:
+      ☐ S5-Z7 THE EXACTLY-ONE-FENCE ASSERT — a micro-rung, RULED by the architect 26 Aug ~21:15
       (`queue\RULING__2026-08-26_2115-s5corpus-16.md`, off escalation
       `queue\2026-08-26_2110-s5corpus-16.md`). Row written by the EXECUTOR in the same fold as the
       ruling — the rung-row-in-same-act law (`RULING__2026-08-25_1215-s5y-1`), which Z6's row
@@ -4598,13 +4656,23 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       FORBIDDEN: any step, corpus or verify change · frozen corpus/canon bytes · any Gemini call
       beyond B10_2's already-paid answer · any audit question · re-firing B10_2 · loosening any of
       the three capture paths · B11 (that is the rung after).
+      ⚑ **AMENDED IN THE SAME ACT BY `RULING__2026-08-26_2150-s5z7-1.md` item 4, precisely:** *"any
+      verify change"* gains **ONE** exception — **the fence-payload predicate, via the shared helper
+      ONLY**. Everything else in `verify.mjs` stays forbidden to this rung. The ruling amends the
+      line rather than letting a session quietly violate it: **a row silently broken is worse than a
+      row amended by the ruling that authorizes it**, because the next session reads the row.
       DONE-PROOF: bite-proofs in BOTH directions and IDEMPOTENT, re-runnable as
       `diag/proofs_s5z7.mjs` — a pre-JSON-fence payload now CAPTURES · a payload with NO qualifying
       fence still refused · a payload missing a declared key still refused · **TWO qualifying fences
       refused as AMBIGUOUS** · the probe branch unchanged; checkall GREEN all 8 + preflight GO, both
       run in-session; B10_2 captured and verified live.
-                                    BUILD 8 · PROOF 8 · HANDOFF 5 (ruler-written off the 10.13/19.4
-                                    datum, RULING__2026-08-26_2115 item 3 — NOT re-derived)
+                                    BUILD 10 · PROOF 10 · HANDOFF 5 — **RE-DERIVED FOR THE SCOPE
+                                    CHANGE, not a breach** (RULING__2026-08-26_2150 item 5; the
+                                    ladder's "unit faults only" rule governs a ceiling whose SCOPE
+                                    is unchanged — a rung given more work is re-sized by the RULER,
+                                    never by the executor. Superseded: BUILD 8 · PROOF 8 · HANDOFF 5
+                                    from RULING__2026-08-26_2115 item 3, written before the second
+                                    site was known.)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ▸ **WHERE THE SWEEP STANDS, 26 Aug ~21:10 — read ▶ RESUME HERE and the PROGRESS entries for
       B05–B10; only B01–B04 are written out below.** **B01–B09 CLOSED 2/2 (9 of 18). B10 is 1.5 of
@@ -11054,3 +11122,127 @@ The records ride the 13-lakh HANDOFF line, which is precisely the split that exi
 ceiling is re-derived — §10-C's rule is unit faults only, and a rung that runs hot is data about the
 rung. Caveat carried, not re-derived: S5-R measured today's meter line reading **~+16% hot** (the
 claude-desktop transcripts get rewritten in place with re-issued ids); settled days are exact.
+
+---
+
+### PROGRESS 2026-08-26 ~22:00 IST — **S5-Z7 DONE AND B10 CLOSED 2/2** — a one-site fix that turned out to be a THREE-site class, and the third site was found by the proof, not by a person
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — *"① S5-Z7 — THE
+EXACTLY-ONE-FENCE ASSERT … read the row, not this line."* Row read; micro-order written to the
+scratchpad before any edit (rule 9). MODEL: Opus 5 · effort HIGH. `checkall` **GREEN 8/8** and
+`preflight` **GO**, both RUN in-session. Meter baseline **837.90**. Instruments hashed BEFORE the
+first edit — `diag/z7_baseline_hashes.json` — per RULING 1900 item 2, and `snapshot.mjs take` before
+touching anything.
+
+#### THE BUILD, AND THE HARNESS WAS PROVEN ABLE TO FAIL FIRST
+
+`diag/proofs_s5z7.mjs` was written and run against the **unmodified** `capture.mjs` before a line of
+it changed. It went **RED on exactly five classes, twice** — B10_2's parked raw refused, the
+pre-JSON-fence shape refused, and the three AMBIGUOUS assertions — while every existing behaviour
+stayed green. A harness that cannot be shown to fail proves nothing, and this one now has its
+failing state on the record.
+
+⚠ **And that first RED run measured something worth keeping: today's code did not merely mishandle
+two competing answers — it ACCEPTED one silently, by position, and wrote it.** The exposure was
+never theoretical.
+
+#### THE FIRST SITE, THEN THE SECOND — ESCALATED, NOT IMPROVISED
+
+`capture.mjs`'s assert was rewritten to the ruled contract and B10_2 captured clean (`BLOB-GATE
+PASSED`, all 9 keys). **Then `verify.mjs` could not read it:** `verify.mjs:182-189` carried the
+**identical first-fence regex**. Measured before escalating — `verify.mjs` reads B01_2…B09_2 fine,
+**9 of 9**, and B10_2 was the only one it could not: **right by luck for exactly the same nine
+chats, at both sites.** (`x … no JSON object found` on every `_1` step is NORMAL — probes carry no
+JSON — and was checked, not assumed.)
+
+**The fork was INSIDE the rung's own row:** scope (d) said verify runs and B10 closes 2/2 here,
+while FORBIDDEN said *"any step, corpus or verify change"*. Escalated as
+`queue\2026-08-26_2145-s5z7-1.md` and **halted on that thread** — `verify.mjs` was left provably
+untouched at `2f77fd2a6516b371`, which the pre-edit hash set proves rather than asserts.
+
+**THE RULING, VERBATIM (`queue\RULING__2026-08-26_2150-s5z7-1.md`):**
+
+> ## RULED
+> 1. **A RATIFIED — Z7 EXTENDS by exactly this one site.** The class instruction generalises the
+>    0805 alphabet rule: **"WHICH fence is the payload" is ONE question answered at ONE site.**
+> 2. **ONE SHARED HELPER, its own small module in the s5 folder, imported by BOTH capture.mjs and
+>    verify.mjs** — a second correct copy is REFUSED (the probeFor-drift precedent the README
+>    already records; two copies of a fact + tests that consult only the copies is this ledger's
+>    most-repeated shape). Executor names the file; the export enforces the ruled contract.
+> 3. **verify.mjs binds to the FULL exactly-one-qualifying contract — same as capture** (your
+>    lean, confirmed): all nine stored extractions measured passing it; first-object-that-parses
+>    would reintroduce position, the axis already ruled wrong. Zero/many-qualifying on a stored
+>    answer = that answer reported unreadable-with-reason, never guessed.
+> 4. **The row's FORBIDDEN line is AMENDED IN THE SAME ACT, precisely:** "any verify change" gains
+>    the ruled exception — the fence-payload predicate via the shared helper ONLY; everything
+>    else in verify.mjs stays forbidden. A row silently violated is worse than a row amended by
+>    the ruling that authorizes it.
+> 5. **CEILING re-derived for the scope change (not a breach): S5-Z7 = BUILD 10 · PROOF 10 ·
+>    HANDOFF 5.** Proofs: both sites bite-proven idempotent; the nine stored extractions re-read
+>    through the REAL verify path; B10_2 reads clean; a two-qualifying plant refused at BOTH sites.
+
+The earlier ruling that created the rung (`RULING__2026-08-26_2115-s5corpus-16.md`) is quoted
+verbatim in the PROGRESS entry of ~21:10 and is not repeated here.
+
+#### ⛔ THEN THE HARNESS FOUND A THIRD SITE THAT NOBODY HAD ESCALATED
+
+Part 3c does not assert *"the two known sites are fixed"*. It asserts **there is no live second copy
+of that regex anywhere in either caller** — and it went RED on `capture.mjs:748`, the receipt line:
+
+```js
+try { const m = t.match(/```(?:json)?\s*([\s\S]*?)```/); … parses = true; } catch { }
+```
+
+So on B10_2 — whose JSON is perfect and whose identity gate had **just passed** — the capture
+receipt printed *"…BLOB-GATE PASSED … · JSON parses **NO** — run verify.mjs, it will say why"*.
+**I read that line myself an hour earlier and moved past it.** A receipt that contradicts the gate
+sitting beside it is worse than no receipt: it teaches the next session to distrust a passing gate,
+or to go hunting a defect that is not there.
+
+**The lesson is about how the assertion was phrased, and it is the same shape as B09's:** an
+assertion aimed at *the sites you already know about* can only confirm what you already believe.
+Aimed at *the property* — "this predicate exists once" — it finds the site you did not know about.
+
+#### THE FIX — ONE MODULE, AND THE REGRESSION IS THE RULE-6 EVIDENCE
+
+**`payloadfence.mjs`** (executor-named, per item 2) exports `payloadObject(text, wantKeys)` and
+`declaredKeys(stepText)`; `capture.mjs` and `verify.mjs` both import it and each phrases its own
+operator-facing message, because one is refusing to WRITE and the other is reporting a stored answer
+UNREADABLE. `declaredKeys` reads the skeleton off the step file that was actually pasted — derived,
+never typed, so it cannot drift from what the model was shown. `wantKeys` may be null for a step
+that declares no skeleton (every probe step), which preserves those callers' existing behaviour
+exactly.
+
+**`node diag/proofs_s5z7.mjs` → GREEN, 86 assertions, every one of them twice.** The load-bearing
+part: **all NINE stored extractions B01_2…B09_2 are still ACCEPTED at the capture site (replayed
+through the REAL CLI) and still READABLE at the verify site**, plus B10_2 at both. Nothing that
+passed before is refused now, and two refusal classes exist that did not: **AMBIGUOUS** and
+shape-with-reason. Sentinel-only throughout — B09's lesson — and the "nothing was written" claim is
+an **answers/ listing diff**, never `!existsSync(<a live step>)`.
+
+#### B10 IS CLOSED 2/2
+
+`node verify.mjs` reads B10_2 now. Both counts, as every chat owes:
+
+**`B10_2 : 32 items → KEPT 13 · DROPPED 19`** · all 19 NOT-FOUND · **MEASURED FALSE DROPS 1** ·
+**DE-ESCAPE 0 — sixth consecutive** · mis-attributed to another batch **0** · genuinely absent
+**18** ⇒ **true content ≥ 14 of 32**, invention rate **56%**. Inside the ruled steady state
+(B08_2 74%, B09_2 66%), and **nothing in the sweep changes for it**, as ruled.
+
+**CONTROL 13/13** — the same matcher re-finds every kept quote in the same haystack, so the 18
+absences are the model's, not a broken comparator. `diag/b10_2_counts.mjs` is the re-runnable method.
+
+**⇒ 10 of 18 corpus chats closed 2/2.**
+
+#### COST — MARGINALLY OVER, AND RECORDED AS OVER
+
+**~26 of the re-derived 25-lakh line** (BUILD 10 · PROOF 10 · HANDOFF 5; day 837.90 → ~864). The
+re-derivation itself was the RULER's, for a scope change, and is not a breach — the ladder's "unit
+faults only" rule governs a ceiling whose scope is unchanged, and this rung's scope changed twice.
+The overage is mine and it is recorded as mine. Caveat carried, not re-derived: today's meter line
+reads ~+16% hot (S5-R's finding).
+
+**All five fold items executed in this commit:** ① the Z7 row carries the scope extension, the
+10/10/5 ceiling and the one-site-one-question class line · ② the FORBIDDEN line is amended in the
+same act, precisely as item 4 words it · ③ the ruling is verbatim above · ④ the router points at
+B11 · ⑤ B10's record reads 2/2 with the verify counts and the invention rate.
