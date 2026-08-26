@@ -2456,9 +2456,77 @@ STATUS (update this block before any session stops — this is the handoff)
                                    the drift is recorded rather than harmonised. One line for S6.
                                    ⚠ **~8.7 of the 21-lakh line (BUILD 8 · PROOF 8 · HANDOFF 5)**
                                    (day 977.89 → 986.61 at the proofs' close). **INSIDE.**
-  ▶ NEXT SESSION ............... **① B14 — a fresh Pro-Extended chat, ten attachments
-                                   `live2_batch131-140`, `steps/B14_1.txt` then `steps/B14_2.txt`.**
-                                   Then B15 onward the same way, to B18.
+  B14 CLOSED 2/2 ............... ☑ 27 Aug 2026 ~03:35 series (true clock 26 Aug ~21:05).
+                                   **14 of 18.** Fresh chat
+                                   `gemini.google.com/app/594f3de022389c55`, Pro Extended read
+                                   back off the page BEFORE the attach, ten attachments
+                                   `live2_batch131-140`. Four hops sha-asserted on both steps
+                                   (`39697b1621baf234` · `adbad9a2d355c69e`, composed === source,
+                                   firstMismatch −1, 108 and 124 blocks). **Both sends FIRST TRY —
+                                   19th and 20th consecutive**, 10/10 chips on the SENT turn.
+                                   ✔ **`probecheck B14_1` = PASS · VERBATIM, exit 0, ALL THREE:**
+                                   tail `live2_batch140.txt:1846` · middle
+                                   `live2_batch136.txt:2207` · **band `live2_batch136.txt:671`,
+                                   "40-60% depth — 51.6% of the group".**
+                                   ⚡ **THE BAND IS NOW 6 FOR 6 SINCE Z6** — 49.9 · 48.4 · 58.5 ·
+                                   46.2 · 40.4 · 51.6%. Six passes spanning the whole declared
+                                   band. Still a series, not a demonstrated mechanism.
+                                   ✔ **`control_chars_escaped: 0`** — Z8's receipt read and
+                                   recorded, as the router asks. Clean payload, straight parse.
+                                   ⚠ **THE PRE-ATTACH GATE READ 0 CHIPS FOR OVER 60 SECONDS after a
+                                   good 10-file upload — a NEW MAXIMUM** (B11 >10 s, B12 >26 s).
+                                   It then came back **10/10 exact, zero strays**. Poll to
+                                   stability; do not conclude.
+                                   ⛔ **AND MY FIRST READ OF THAT GATE WAS WRONG IN A NEW WAY:** the
+                                   chip labels render **without the `.txt` extension**, so a regex
+                                   requiring `\.txt` read 0 while ten chips were visible on screen.
+                                   The screenshot is what caught it. **Assert the chip names on the
+                                   BARE basename, and let the screenshot arbitrate a zero.**
+                                   ⚠ **TWO RENDER STALLS, ONE PER STEP, BOTH RECOVERED FREE by a
+                                   fresh tab + reload — 18th and 19th confirmations.** Signature
+                                   both times: `textContent` full (898 · 25,444) while `innerText`
+                                   read 11, with the Stop button still showing. **`innerText` is
+                                   the thing that lies; `textContent` was right both times.**
+                                   ⚠ **`B14_2 : 49 items → KEPT 17 · DROPPED 32`** · **MEASURED
+                                   FALSE DROPS 1** · **de-escape 0 — TENTH consecutive** ⇒ **true
+                                   content ≥ 18 of 49**, invention **≤ 63.3%** (an UPPER BOUND —
+                                   the control came back **16/17, DIRTY**, third chat running,
+                                   though far cleaner in proportion than B12's 3/5 or B13's 3/4).
+                                   **KEPT 17 is the highest since B01.**
+                                   ✔ **THE CLEANEST COVERAGE RECEIPT OF THE SWEEP: reported 4/4 ·
+                                   never mentioned 0 · zero 0 · NO invented filename.**
+                                   ⛔ **AND YET THE RECEIPT CONTRADICTS THE ANSWER IT SITS ON — the
+                                   sharpest instance of the coverage check's KNOWN HOLE yet, caught
+                                   inside a single payload.** `days_covered` claims FOUR days with
+                                   a breakdown — 15→34, 16→4, 17→8, 18→1 — but **the items
+                                   themselves only ever cite TWO**: `2026-08-15` (39) and
+                                   `2026-08-17` (10). **`2026-08-16` and `2026-08-18` have ZERO
+                                   items**, and no per-day number matches. `coverage_note` reads
+                                   *"Extraction completed successfully hitting all requested
+                                   floors."* `verify.mjs` flagged 4 INFLATED COUNTS and was right;
+                                   what it cannot say is that **the model's own self-report
+                                   disagrees with the model's own items** — a free, internal,
+                                   per-payload check nothing currently runs. Filed for S6.
+                                   ⚠ **Header count claimed 10, ground truth 13 — a deficit of
+                                   THREE, and three files carry a second header** (136 · 138 ·
+                                   140). Fourth consecutive deflation, and this one makes the shape
+                                   **predictive rather than coincidental: claimed == the number of
+                                   FILES, every time.** Counted file by file, never by glob.
+                                   ⚠ **~15.7 of the 35-lakh EXECUTION line** (day 1004.69 →
+                                   1020.36). **INSIDE.**
+  ▶ NEXT SESSION ............... **① B15 — a fresh Pro-Extended chat, ten attachments
+                                   `live2_batch141-150`, `steps/B15_1.txt` then `steps/B15_2.txt`.**
+                                   Then B16 onward the same way, to B18.
+                                   ⛔ **THE CHIP NAMES RENDER WITHOUT `.txt`** — measured at B14: a
+                                   pre-attach regex requiring the extension read **0 while ten
+                                   chips were on screen**. Assert the BARE basename. And the gate
+                                   read 0 for **over 60 s** after a good upload (a new maximum;
+                                   B12's was 26 s) — **poll to stability, and let a screenshot
+                                   arbitrate a zero before you believe it.**
+                                   ⛔ **`innerText` IS THE THING THAT LIES IN A RENDER STALL** —
+                                   twice at B14, `textContent` held the full answer (898 · 25,444)
+                                   while `innerText` read 11. Read `textContent`; recover with a
+                                   fresh tab + reload, which is free and has now worked 19 times.
                                    **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
                                    ✔ **S5-Z8 IS DONE and the de-escape lane is open, bounded and
                                    MEASURED.** A payload carrying raw 0x00–0x1F **inside a string
@@ -5016,8 +5084,8 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written off the
                                     10.13/19.4/26 record (RULING__2026-08-27_0150 item 3).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
-      ▸ **WHERE THE SWEEP STANDS, 27 Aug ~02:40 — read ▶ RESUME HERE and the PROGRESS entries for
-      B05–B13; only B01–B04 are written out below.** **B01–B13 ALL CLOSED 2/2 — 13 of 18.** B13 was
+      ▸ **WHERE THE SWEEP STANDS, 27 Aug ~03:35 — read ▶ RESUME HERE and the PROGRESS entries for
+      B05–B14; only B01–B04 are written out below.** **B01–B14 ALL CLOSED 2/2 — 14 of 18.** B13 was
       closed at S5-Z8 (its extraction was parked, not stamped, until that rung fixed the assert that
       refused it) — the SECOND time a micro-rung has been the thing that closed a chat, after B10/Z7. B10 was closed at S5-Z7 (its extraction was parked, not stamped,
       until that rung fixed the assert that refused it). Every B chat stays OPEN (the critic is not
@@ -12127,3 +12195,106 @@ timestamps rather than to its measurements.
 
 **Nothing else moved. No rung was executed by this fold; `payloadfence.mjs`, `capture.mjs`, the
 proofs and every answer are byte-identical to `c17f9c7`.**
+
+### PROGRESS 2026-08-27 ~03:35 series / **26 Aug ~21:05 TRUE machine-clock** — **B14 CLOSED 2/2, 14 of 18** — the band went 6 for 6, and the cleanest coverage receipt of the whole sweep turned out to contradict the answer it was sitting on
+
+*(Both clocks in the heading, per `RULING__2026-08-26_2045-s5z8-1.md` item 4: the series label is
+an ID, the true `Get-Date` is the fact.)*
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — *"① B14 — a fresh
+Pro-Extended chat, ten attachments `live2_batch131-140`."* Micro-order written before any edit
+(rule 9), carrying the three standing rules that were new since B13. §10-D re-read, unchanged.
+MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13. `checkall` **GREEN 8/8** · `preflight`
+**GO**, both RUN in-session. Meter baseline **1004.69**. The ten filenames read out of
+`wiring.json` and the three anchors out of `probe_expected.json` keyed by CHAT (`live2_g14`) —
+never the prose.
+
+#### B14_1 — PASS · VERBATIM ON ALL THREE, AND THE BAND IS NOW 6 FOR 6
+
+Fresh chat **`gemini.google.com/app/594f3de022389c55`**, Pro Extended read back off the page before
+the attach. Four hops, sha-asserted:
+
+```
+B14_1  disk 39697b1621baf234 (7,007 B · 6,954 chars · 108 lines) · in-page 39697b1621baf234
+       · box 108 blocks, composed === source, firstMismatch −1 · SENT, chat id in the URL, 10/10 chips
+B14_2  disk adbad9a2d355c69e (9,106 B · 9,032 chars · 124 lines) · in-page adbad9a2d355c69e
+       · box 124 blocks, exact
+```
+
+Both sends **FIRST TRY — 19th and 20th consecutive.**
+
+**`node probecheck.mjs B14_1` → PASS · VERBATIM, exit 0, ALL THREE:** tail
+`live2_batch140.txt:1846` · middle `live2_batch136.txt:2207` · **band `live2_batch136.txt:671`,
+"40-60% depth — 51.6% of the group".**
+
+⚡ **The band series since Z6 is 6 for 6 — 49.9 · 48.4 · 58.5 · 46.2 · 40.4 · 51.6%.** Same caveat
+as every entry before it, and it does not weaken with repetition: a consistent series across the
+full band width, not a demonstrated mechanism.
+
+✔ **`control_chars_escaped: 0`** on B14_2 — Z8's receipt read and stated, as the router asks. The
+payload parsed straight off; the de-escape lane was not used and said so.
+
+#### ⛔ TWO INSTRUMENT LESSONS, BOTH OF WHICH FIRST LOOKED LIKE A FAILED UPLOAD OR A DEAD CHAT
+
+**1. The pre-attach gate read 0 chips for over 60 seconds after a good upload — a new maximum**
+(B11 >10 s, B12 >26 s), then came back **10/10 exact, zero strays**. The standing "poll to
+stability" rule is what stopped this becoming a false upload failure for the third time.
+
+**2. And my first read of that gate was wrong in a NEW way, which is the part worth keeping.** The
+chip labels render **without the `.txt` extension** — `live2_batch131`, not `live2_batch131.txt` —
+so my regex, which required the extension, returned **0 while ten chips were plainly visible in the
+screenshot**. I only caught it because the screenshot disagreed with the DOM read. **Assert chip
+names on the BARE basename, and let a screenshot arbitrate a zero before believing it.** This is the
+B12 lesson generalised: the page was not lying this time; my predicate was too narrow, and a
+too-narrow predicate reads exactly like a broken upload.
+
+**3. Two render stalls, one per step, both recovered free by a fresh tab + reload — 18th and 19th
+confirmations.** The signature was identical both times and it is now unmistakable: `textContent`
+holds the whole answer (898, then 25,444) while **`innerText` reads 11**, with the Stop button still
+showing. **`innerText` is the thing that lies.** The second recovery also had to re-create the tab
+group, which had been dissolved externally mid-sitting — the chat is server-side, so nothing was
+lost, exactly as the record has said since B06.
+
+#### B14_2 — THE NUMBERS, AND THE FINDING THAT MATTERS MORE THAN THE NUMBERS
+
+Captured through the blob path, transit **`1207b9a3deb5045c` in-page == on-disk**, BLOB-GATE PASSED,
+all 9 keys, JSON parses.
+
+**`B14_2 : 49 items → KEPT 17 · DROPPED 32`** · **MEASURED FALSE DROPS 1** · **de-escape 0 — tenth
+consecutive** ⇒ **true content ≥ 18 of 49**, invention **≤ 63.3%**. Reported as a **BOUND**, per the
+standing rule: the control came back **16/17 — DIRTY**, third chat running, though far cleaner in
+proportion than B12's 3/5 or B13's 3/4. **KEPT 17 is the highest since B01.**
+
+✔ On its face this is **the cleanest coverage receipt of the sweep**: *reported 4/4 · never
+mentioned 0 · zero 0 ·* **no invented filename at all**, where B13 had one.
+
+⛔ **AND THAT RECEIPT CONTRADICTS THE ANSWER IT IS SITTING ON.** `days_covered` claims four days
+with a per-day breakdown — **15→34, 16→4, 17→8, 18→1** — but the items themselves only ever cite
+**two**: `2026-08-15` (39) and `2026-08-17` (10). **`2026-08-16` and `2026-08-18` carry ZERO items**,
+and not one per-day number matches the items' own dates. `coverage_note` reads *"Extraction
+completed successfully hitting all requested floors."*
+
+`verify.mjs` flagged **4 INFLATED COUNTS** and was right to. But the sharper statement is the one
+the verifier's own documented hole prevents it from making: **the model's self-report disagrees with
+the model's own items, inside a single payload, and that is checkable for free without any
+manifest.** The verifier compares the receipt against the REAL corpus; nothing compares the receipt
+against the ANSWER. **Filed for S6** — it is the cheapest unclaimed check in this rung, and this is
+the first payload where it would have fired loudly.
+
+**⇒ B14 IS CLOSED 2/2. 14 of 18 corpus chats.**
+
+⚠ **Header count claimed 10, ground truth 13 — a deficit of THREE**, with three files carrying a
+second header (136, 138, 140). Fourth consecutive deflation, and this instance is what makes the
+shape **predictive rather than coincidental: the claim equals the number of FILES, every time.**
+Counted file by file, never by glob.
+
+#### WHAT THIS RUNG DID NOT DO — said out loud, per §5
+
+No instrument touched (S5 builds nothing) — the coverage-vs-items check is FILED, not built. No
+step, corpus or wiring change. Nothing re-asked. The critic (`B14_3`) was not fired and every B chat
+stays OPEN. B15 was not opened.
+
+#### COST
+
+**~15.7 of the 35-lakh EXECUTION line** (day 1004.69 → 1020.36). **INSIDE.** Records ride HANDOFF
+13. Caveat carried, not re-derived: today's meter line reads ~+16% hot (S5-R's finding).
