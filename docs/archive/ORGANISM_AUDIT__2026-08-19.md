@@ -2589,6 +2589,14 @@ STATUS (update this block before any session stops — this is the handoff)
                                    arbitrate a zero.** Any single DOM witness is a lead.
                                    ⚠ Gate read 0 for **~70 s** before the names appeared — third
                                    chat running past 60 s.
+                                   ✔ **AND IT PRODUCED THE SWEEP'S FIRST LAWFUL PROMOTION:** the
+                                   fresh-tab CAUSAL claim, held as a LEAD by
+                                   `RULING__2026-08-26_1750-s5corpus-15.md` item 6(b) *"until the
+                                   third instance"*, hit that pre-ruled bar here **with a mechanism
+                                   receipt** — no restart involved, refused download → landed on a
+                                   fresh tab alone, independent Copy read returning the identical
+                                   sha. **STANDING as transport route ③** (ratified in the B16
+                                   close ruling). A bar set before the evidence, then met.
                                    ⛔ **THE ONE-SHOT DOWNLOAD RULE BIT FOR THE FIRST TIME SINCE
                                    B04, AND THE RULED CHAIN HANDLED IT WITHOUT A HALT.** B16_2's
                                    blob download was silently refused (B16_1 had spent the
@@ -2630,8 +2638,25 @@ STATUS (update this block before any session stops — this is the handoff)
                                    for the first time since B04. If a blob download silently
                                    no-ops, **do not retry in place**: open a FRESH TAB on the same
                                    chat, which restores the budget AND doubles as the stall
-                                   remedy. Proven again at B16, and the fresh tab's independent
-                                   Copy read returned the identical sha.
+                                   remedy.
+                                   ⚑ **PROMOTED AT B16 — AND IT CROSSED A PRE-RULED BAR, WHICH IS
+                                   WHY THIS IS NOT RUN-INFLATION.** `RULING__2026-08-26_1750-
+                                   s5corpus-15.md` **item 6(b)** split the fresh-tab lead in two:
+                                   (a) as a REMEDY it was ordered into the transport chain then and
+                                   there, while (b) the CAUSAL claim — *"the tab is the mechanism;
+                                   restarts only ever worked via their fresh tab"* — was written as
+                                   *"stays a LEAD until the third instance, per the executor's own
+                                   proposal."* **B16 is that third live instance, and it arrived
+                                   with a MECHANISM RECEIPT rather than another tally mark:** no
+                                   browser restart was involved at all, a refused download became a
+                                   landed one on a fresh tab alone, and that tab's **independent**
+                                   Copy read returned the **identical sha `253a5055ce680e10`**.
+                                   ⇒ **THE FRESH TAB IS NOW STANDING as transport route ③** — the
+                                   thing that restores the download budget, not a symptom of the
+                                   restart that used to accompany it. **The bar was set BEFORE the
+                                   evidence, by a ruling, and the evidence met it** — that is the
+                                   distinction the epistemics note exists to protect, seen from the
+                                   lawful side for the first time.
                                    ⛔ **CORRECTED AT B15 — THE B14 NOTE BELOW WAS MINE AND IT WAS
                                    WRONG. The chip DOM is not missing the extension; it is simply
                                    LATE.** At B15 the DOM held BOTH forms once populated
@@ -12783,3 +12808,64 @@ The critic was not fired; every B chat stays OPEN. B17 was not opened.
 
 **~18.2 of the 35-lakh EXECUTION line** (day 1065.52 → 1083.70). **INSIDE.** Records ride HANDOFF
 13. Caveat carried, not re-derived: today's meter line reads ~+16% hot (S5-R's finding).
+
+### ADDENDUM 2026-08-26 ~22:20 TRUE machine-clock — **THE RULER'S CLOSE ON B16: the sweep's FIRST LAWFUL PROMOTION, and why it is not the thing the epistemics note bans**
+
+Ratified after `3205435` was pushed. Folded here rather than rewritten into the entry above.
+
+**THE RULING (channel, verbatim):**
+
+> B16 close ratified — 16 of 18. One promotion to record in your fold, and it is lawful, not
+> run-inflation: the FRESH-TAB-RESTORES-DOWNLOAD-BUDGET lead just hit its RULED threshold (third
+> live instance, per 1750 item 6b) AND carried a mechanism receipt (independent Copy read from the
+> second tab, identical sha) — it is now STANDING as transport route 3, exactly as you ran it.
+> Write that promotion into the router citing the 1750 ruling's own threshold, so the record shows
+> a lead crossing a pre-ruled bar, not a run becoming a law. Your aria-label save under the
+> epistemics note is the note working; the durable witness version you wrote is right. Clipboard
+> 16th noted. Nothing else owed. B17 on 35+13, two left.
+
+#### I CHECKED THE CITED CLAUSE BEFORE CITING IT, AND IT SAYS WHAT THE PROMOTION NEEDS
+
+`queue\RULING__2026-08-26_1750-s5corpus-15.md` **item 6**, read at the source rather than taken
+second-hand:
+
+> **THE FRESH-TAB LEAD, split cleanly:** (a) as a REMEDY it is ORDERED NOW into the transport
+> chain — on a refused/dead transport, open a FRESH TAB same origin and retry the ordered
+> transports BEFORE the 1425 2(c) halt (free, asserts unchanged, measured twice); (b) as a
+> CAUSAL LAW ("the tab is the mechanism; restarts only ever worked via their fresh tab") it
+> stays a LEAD until the third instance, per the executor's own proposal.
+
+So the bar — **"stays a LEAD until the third instance"** — was written down on 26 Aug ~17:50,
+**before** the evidence that would meet it existed. **B16 is that third live instance**, and it
+brought more than a tally mark: **no browser restart was involved at all** (the old confound), a
+**refused** download became a **landed** one on a fresh tab alone, and that tab's **independent**
+Copy read returned the **identical sha `253a5055ce680e10`**.
+
+⇒ **The fresh tab is STANDING as transport route ③** — the thing that restores the download budget,
+rather than a symptom of the restart that used to travel with it.
+
+#### WHY THIS IS THE OPPOSITE OF WHAT ITEM 3 BANS, AND WHY THAT IS WORTH ONE PARAGRAPH
+
+Two sittings ago I turned two runs into laws in the same breath as recording them, and both died on
+the next chat; that produced the standing epistemics note — *a run of N instances is a RUN, not a
+LAW; promotion needs a MECHANISM or a RULED THRESHOLD.* **This promotion has BOTH of the things
+that note demands**, and it is the first time the record shows the lawful path rather than the
+failure it was written against:
+
+| | my two dead rules (B14) | this promotion (B16) |
+|---|---|---|
+| bar | invented after the evidence, by me | **written 26 Aug ~17:50, before it** |
+| mechanism | none — a pattern in a tally | **restart ruled out; refused → landed on the tab alone** |
+| receipt | none | **independent second-tab Copy read, identical sha** |
+| outcome | falsified by the next chat | **ratified** |
+
+**The difference is not confidence, it is provenance** — and the note's real value is that it makes
+that difference legible in the record instead of leaving both to read as "measured".
+
+Also ratified in the same message: the `aria-label` save is **the note working** — I had recorded
+that witness as *preferable*, never as a law, and the sitting where it vanished cost nothing. The
+durable witness version now in the router stands. **Clipboard 16th occurrence noted in the fault
+series.**
+
+**Nothing else moved. No rung was executed by this fold; every instrument, answer and proof is
+byte-identical to `3205435`.**
