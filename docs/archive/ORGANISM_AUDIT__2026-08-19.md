@@ -7405,3 +7405,12 @@ One thing worth naming for whoever reads this later: **the decision was only ava
 clock was measured and reported.** The plan had carried "~14 min extraction" since 26 Aug ~04:15 and
 nothing in it would ever have contradicted itself — a fixed critic pass on all eighteen chats would
 have cost ~13 hours of wall-clock before anyone asked whether it was worth ~29% yield.
+
+**THE HANDOFF LINE, READ AT THE ACTUAL CLOSE AND RECORDED AS OVER:** day line 286.44 → 325.48 =
+**39.04 total** — 26.70 on the EXECUTION line (inside 35) and **12.34 on the 10-lakh HANDOFF line, a
+breach of 2.34.** The cause is nameable, not mysterious: the ~07:50 ruling arrived *after* the close
+was written and pushed, so the handoff paid for a second full record-and-commit cycle (router row,
+rung row, addendum, memory, commit). Ceiling NOT re-derived — §10-C allows that only on a proven UNIT
+fault and there is none. If this repeats across the remaining sittings it is a sizing question for
+the ruler, since the per-sitting model just made 35+10 standing: **a ruling that lands after a close
+costs a second handoff, and the 5-flat/10-line model does not price that.**
