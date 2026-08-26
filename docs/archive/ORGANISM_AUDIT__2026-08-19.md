@@ -2755,21 +2755,48 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⚠ **~20.5 of the 35-lakh EXECUTION line** (day 3.40 → 23.85).
                                    **INSIDE** — and declared a FLOOR: the orientation read happened
                                    BEFORE that baseline was taken.
-  ▶ NEXT SESSION ............... **② S5-Z4 — THE CANON-B REGEN.** Its §10-C row IS the work order,
-                                   and that row says *"RUNS AFTER the corpus half, BEFORE the canon-B
-                                   chats"* — **the corpus half closed at B18, so this is now that rung.**
-                                   It is also the first ☐ in §10-C, so **router and fallback agree for the
-                                   first time in this sweep.** Read the row before anything: its scope was
-                                   narrowed at B15 to **ONE LINE, `verify.mjs:84`**, and its ceiling was
-                                   re-sized by a RULING (**BUILD 9 · PROOF 6 · HANDOFF 5**), never by an
-                                   executor. ⛔ **I WROTE "BUILD 8 · PROOF 8" HERE AT B18'S CLOSE AND IT WAS
-                                   WRONG** — the row says 9/6/5 and the ROW is the work order. Caught on the
-                                   first read of the rung, corrected in the same act. Prose-vs-source drift,
-                                   committed by me, inside the handoff of the order that exists to stop it. **MODEL: Opus 5 · effort HIGH.** ⛔ FORBIDDEN there: any
-                                   Gemini call · any audit question · haystack/expected bytes.
-                                   ⚠ **THE SWEEP'S REMAINING LANE IS NOT THAT RUNG'S JOB:** S5-POST's two
-                                   backlog rows and the fold into §9 each wait for their own rung. The
-                                   critic was never fired — **all 18 B chats stay OPEN.**
+  ▶ NEXT SESSION ............... **③ THE CANON-B CHATS — ~13 pastes, SAME S5 rung, on the standing
+                                   EXECUTION 35 + HANDOFF 13** (the 0300 sequence: corpus half →
+                                   S5-Z4 → canon-B chats). **S5-Z4 IS CLOSED — all six items, ruled,
+                                   built and proven; the steps you will fire are already on disk.**
+                                   THREE SEPARATE CHATS, one per canon group, then a FOURTH for the
+                                   cross-group pass:
+                                   `G01_1..G01_4` — chunk01-10 · probe `canon_g01`
+                                   `G02_1..G02_4` — chunk11-20 · probe `canon_g02`
+                                   `G03_1..G03_4` — chunk21-27 · probe `canon_g03`
+                                   `F3`           — the cross-group pass, its own chat
+                                   Each group chat is load+probe → Q1 contradictions → Q4 declared
+                                   edges → critic. **READ `wiring.json`, never this list** — it is a
+                                   convenience, and the last time a router listed attachments from
+                                   memory it was wrong (B18).
+                                   ⛔ **F3 IS DIFFERENT AND ITS DIFFERENCE IS DECLARED IN THE WIRING.**
+                                   Its inputs are the sweep's OWN answers (`answers/G0n_2.txt`), which
+                                   is why they sit in `attaches_answers` and not `attaches`, and why it
+                                   carries `probe_deferred` instead of `probe`: no probe can be
+                                   generated in advance for bytes that do not exist yet. **Generate F3's
+                                   probe at fire time from the stored group answers.** A null `probe`
+                                   on an attaching step means NO GATE — the field says so out loud
+                                   rather than leaving you to notice.
+                                   ⚠ **A CANON GROUP'S PROBE FAILING IS NOT THE OLD TWO-HALF FALLBACK
+                                   ANY MORE** — that prompt is RETIRED to `prompts/superseded/` (L9:
+                                   moved, never deleted) because the B design IS the split now. The
+                                   live remedy is `prompts/CANON_PROBE_FAILURE.txt`: fresh chat for
+                                   that group only → if it passes, continue → if it fails again, split
+                                   THAT GROUP into two five-chunk chats and amend the map in the same
+                                   act. Never a third ten-chunk attempt. One group's failure costs one
+                                   group; the others are separate conversations by design.
+                                   ⚠ **OPEN QUESTION THIS RUNG DID NOT DECIDE, AND DID NOT QUIETLY
+                                   ANSWER EITHER: the `replication` chat (R01-R04) still loads all 27
+                                   chunks in ONE chat across three parts — the configuration A02 FAILED
+                                   in.** It is named as its own lane in the wiring and excluded from
+                                   the one-live-design assert, so it cannot be mistaken for a canon
+                                   design; whether it should also move to the group shape is left for
+                                   S6 with its lane named. **Do not fire R01-R04 on the old assumption
+                                   without deciding that first.**
+                                   ⚡ **EVERY TRANSPORT NOTE BELOW STILL BINDS** — the canon-B chats
+                                   drive the same browser as the eighteen corpus chats did, and the
+                                   Quill fact immediately below is the one that will silently cost you
+                                   a payload if you skip it.
                                    ⚑ **EVERYTHING BELOW THIS LINE IS STANDING TRANSPORT KNOWLEDGE** from
                                    the eighteen corpus chats. The corpus sweep is closed; every one of
                                    these notes still binds any lane that drives his Chrome. The three
@@ -2883,6 +2910,14 @@ STATUS (update this block before any session stops — this is the handoff)
                                    measured law") and lead-until-third-instance at the fresh-tab
                                    remedy. **Write runs as runs. If you promote one, name the
                                    mechanism.**
+                                   ⚑ **WORKED EXAMPLE — read it before you promote anything: the B16
+                                   ADDENDUM's provenance table** (`### ADDENDUM 2026-08-26 ~22:20 TRUE
+                                   machine-clock`). It is the sweep's FIRST LAWFUL PROMOTION and it shows
+                                   the distinction from the inside: the bar was written down by a RULING
+                                   *before* the evidence existed, and the evidence then met it. That is
+                                   what separates a promotion from run-inflation, and it is easier to copy
+                                   than to re-derive. (Ruled at B16, parked when that session closed;
+                                   carried here at S5-Z4 on the ruler's fold list, item ⑤.)
                                    **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
                                    ✔ **S5-Z8 IS DONE and the de-escape lane is open, bounded and
                                    MEASURED.** A payload carrying raw 0x00–0x1F **inside a string
@@ -5166,10 +5201,11 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       probecheck/verify/checkall §3 + the rung's own diag/proofs_s5z3.mjs (standing implicit).
       TRANSPORT NOTE, standing: Gemini's compose box focuses on REF click only, never
       coordinate click.                    BUILD 6 · PROOF 5 · HANDOFF 5 (ruler-written)
-◐ S5-Z4 THE CANON-B REGEN — a micro-rung, RULED by the architect 26 Aug ~03:15
-      ◐ **PARTIAL, 27 Aug 2026 ~06:40 series (true clock 27 Aug ~01:20). FOUR OF THE SIX ITEMS ARE
-      BUILT AND PROVEN; THE CORE (C1-C3, the canon-B step regen) IS NOT STARTED, AND THE RUNG
-      STOPPED AT ITS CEILING (§10-D rule 2) RATHER THAN CONTINUE.**
+☑ S5-Z4 THE CANON-B REGEN — **DONE 27 Aug 2026 ~07:20 series (true clock 27 Aug ~02:00).**
+      **ALL SIX ITEMS LANDED: the four ruled additions AND the core regen.** The rung ran in TWO
+      halves with an escalation between them — it stopped at its first ceiling with the core
+      untouched (§10-D rule 2), escalated the two real forks rather than guessing, and continued on
+      a ruler-written remainder. `queue\RULING__2026-08-27_0645-s5z4-1.md` is the ruling.
       ☑ R2 · THE DAY-LABEL NORMALISATION — `dayKey()` in `verify.mjs`, ONE site, and BOTH consumers
         now ask it: the quote index AND the coverage receipt, whose second copy of the same
         disagreement had been branding real days "NOT IN MANIFEST (invented)" for four chats.
@@ -13472,3 +13508,184 @@ with `snapshot.mjs take` and re-run **GREEN before committing**.
 runbook, `wiring.json`, `probe_expected.json`, B17's PROGRESS — happened **before** that baseline was
 taken, so **20.5 is a FLOOR on this session's true cost, not the whole bill.** Records ride
 HANDOFF 13. Caveat carried, not re-derived: today's meter line reads ~+16% hot (S5-R's finding).
+
+---
+
+### PROGRESS 2026-08-27 ~07:20 series / **27 Aug ~02:00 TRUE machine-clock** — **S5-Z4 DONE, all six items** — one line that had been silently discarding a third of every corpus answer turned 374 drops into 0 and brought back 231 verified items; and the two places I got it wrong were both caught by gates, not by me
+
+**Router obeyed** (§10-D rule 1) — and for the first time in this sweep the router and the fallback
+agreed. Micro-order written BEFORE any edit (rule 9). MODEL: Opus 5 · effort HIGH.
+
+⛔ **THE FIRST THING THIS RUNG FOUND WAS AN ERROR IN ITS OWN HANDOFF.** The router line I wrote at
+B18's close said the ceiling was **BUILD 8 · PROOF 8 · HANDOFF 5**. The §10-C row says **BUILD 9 ·
+PROOF 6 · HANDOFF 5**, ruler-written and re-derived twice. **The ROW is the work order and the ROW
+wins.** Caught by reading the row instead of my own sentence, corrected in the same act — the same
+prose-vs-source drift B18 committed, in the same handoff, one rung later. It keeps happening in
+exactly one place: the sentence a session writes about a number it did not re-read.
+
+#### ⚡ R2 · THE DAY KEY — ONE LINE, AND THE BIGGEST SINGLE NUMBER THIS ORDER HAS PRODUCED
+
+`verify.mjs`'s index regex captures the BARE date (its ` (continued)` suffix sits outside the
+capture group), while every CONSUMER looked up the ANSWER's raw key. A model that emitted the
+header in the form it was actually shown resolved to nothing.
+
+It never looked like a bug: `dayHay` returned null, the item dropped `source-missing`, and
+`source-missing` reads exactly like a model quoting a day it was never given.
+
+```
+BEFORE   kept 217 · dropped 618   (source-missing 374 · NOT-FOUND 216)
+AFTER    kept 448 · dropped 387   (source-missing   0 · NOT-FOUND 359)
+         ⇒ 231 RESURRECTED across 13 answers · every source-missing drop was this one question
+```
+
+**B15_2 goes 0 → 23 — and 23 is exactly the number that session counted BY HAND, months of
+tokens ago, with no code involved.** An independent method reproducing the code's answer to the
+item is the strongest evidence available here, and it was available only because that session
+wrote its hand-count down. B16_2 1 → 25 · B18_2 0 → 14 (my own B18 recount had bracketed it at
+≥11 strict / 19 loose — the code landed between them).
+
+⛔ **AND IT WAS DELIBERATELY NOT A PATCH AT `dayHay`.** The same question is asked again by the
+coverage receipt, where the same disagreement had been branding REAL days *"NOT IN MANIFEST
+(invented)"* — recorded as a known false positive at B14, B15, B16 and B18 and never fixed. So
+`dayKey()` is ONE function and both consumers ask it. **All "NOT IN MANIFEST (invented)" flags are
+now GONE from the whole sweep**, and the critic hand-back list dropped 49 → 31 days.
+
+#### ⛔ R3 · THE EITHER-ALPHABET JOIN — AND `checkall` CAUGHT ME LOOSENING A GATE
+
+`alphabetsOf` + `inEitherAlphabet` in `mdrender.mjs` — the ONE answer site the ruling ordered for
+*"which alphabet is this text in"*, after three local re-answers of it.
+
+My first version applied the join to **every capture path**. `checkall` §3 went RED with the exact
+sentence it was written to say:
+
+> *"the byte-strict comparator now PASSES a markdown-consumed answer — the raw gate has been
+> loosened, which is exactly what the escalation refused."*
+
+It was right, and the ruling's own title says **FOR THE LOSSY PATH**. A `raw` answer is
+markdown-BEARING *by declaration*, so a consumed payload under a `raw` stamp is a real failure. Now
+confined twice — to the SERIALIZED tier and to `lossy`. **The gate stayed strict and the code
+moved.** All 18 corpus probe verdicts are byte-identical before and after; VERBATIM never moved.
+
+#### ✔ R1 · THE DECLARED-UNKNOWN BUCKET — MISS #8 CLOSED, WITH ITEMS ALREADY ON DISK
+
+`T_critic` step 5 tells the model, in the prompt it is actually pasted: *"PROPOSE AT LEAST TWO
+KINDS THAT WERE NOT IN THE ORIGINAL LIST."* `verify.mjs` walked a fixed `SECTIONS` list, so every
+item of every such kind fell through `continue` — not dropped, not counted, not named.
+
+**LIVE: 9 items across FOUR kinds the critic actually invented** — `unresolved_anomalies` ·
+`manual_workarounds` · `architectural_invariants` · `defined_anti_patterns` — were being discarded
+from answers already paid for; 4 more now get a real NOT-FOUND verdict. Routing is READ OFF THE
+ITEM and **declare-or-die**: names a date ⇒ corpus, names a document ⇒ canon, names BOTH ⇒
+AMBIGUOUS, names NEITHER ⇒ UNROUTABLE — both refused loudly, because picking a haystack for an item
+whose own shape does not say which one it came from is how a fabrication passes.
+
+#### ✔ R4 · `--probe-not-found` — STRICTER, NEVER LOOSER
+
+The blob path demanded `fences >= anchors`, so a LEGITIMATE `ANCHOR n NOT FOUND` — the answer the
+step file itself calls *"a useful, correct answer"* — could never be recorded. The flag does not
+relax that assert; it **replaces it with a harder one**: the literal not-found line for EVERY
+anchor the step names. A MIXED payload satisfies neither and stays REFUSED. The flag without
+`--from-blob` is a loud refusal, never a quiet no-op. The INTERIM LAW (park at `diag/`) is retired.
+
+#### ⛔ THE CEILING STOPPED THE RUNG HALFWAY, AND THE FORKS WENT TO THE RULER
+
+At **18.39 against BUILD 9 + PROOF 6 = 15** the four additions were built and proven and the CORE
+was untouched. Rule 2 says the ceiling is a STOP. Two genuine forks had also surfaced, and neither
+was mine to settle:
+
+1. `buildsteps.mjs` deletes any step it does not regenerate, so a pure canon-B regen would delete
+   `A01-A11`/`R01-R04` — whose stored, PAID answers would then be unreadable by probecheck and by
+   capture's shape assert.
+2. `T2_contradictions.txt` opens *"You hold the COMPLETE canon"*, false in a group chat — and the
+   0620 ruling had refused an option partly for editing a frozen prompt.
+
+Escalated as `queue\SAY_TO_ARCHITECT__2026-08-27_0640.txt`. ⚠ **Rule 13's `Set-Clipboard` delivery
+was unavailable — the clipboard is DEAD on this machine this sitting (measured at preflight, the
+10th occurrence)** — so the file was the record and a direct message was the transport.
+
+**THE RULING, VERBATIM** (`queue\RULING__2026-08-27_0645-s5z4-1.md`, true clock 27 Aug ~01:25):
+
+> **VERIFIED BY RUNNING:** `diag/proofs_s5z4.mjs` re-run fresh by the ruler — GREEN, 44 assertions,
+> 4 legs, every bite planted and refused, steps/ and answers/ restored byte-identical.
+>
+> 1. **FORK 1: B — LAYER.** L9 is a standing law; the deletion is not required by the row; and my
+>    own rulings promise the A-chats stay open for S6's A-upgrade — Option A would turn that
+>    promise into a lie by making both paid answers unreadable (the state-eater class, and one of
+>    the two answers is the recorded FAILURE that caused the B design — audit evidence of the first
+>    order). **Conditions:** `legacy: true, superseded_by: "canon-B"` wired; **checkall asserts
+>    EXACTLY ONE canon design live AND that both legacy answers remain readable by probecheck and
+>    capture**; the 69-step count assertions updated honestly in the same act. C stays rejected.
+> 2. **FORK 2: THE ASSERTED SPLICE.** One copy of Q1's body, drift-proof — a second prompt copy is
+>    SHAPE 1 waiting to happen, and the 0620 refusal was about an UNASSERTED edit of frozen text,
+>    not about mechanical composition FROM it. Conditions: the frozen body's hash asserted at splice
+>    time and a LOUD refusal on any movement; the spliced group-framing VERSIONED like c3's
+>    templates; a bite proves the refusal.
+> 3. **CEILING for the remaining C1-C3: REMAINDER = BUILD 12 · PROOF 8 · HANDOFF 5.** The 18.39
+>    already spent stays recorded as over against the old 15; not re-derived, not blessed.
+> 4. The either-alphabet over-application catch is the gate system working as designed — recorded
+>    with credit.
+
+#### ✔ C1-C3 · THE CANON-B REGEN, ON THE REMAINDER LINE
+
+**82 steps now (69 + 13), which is exactly the ~13 pastes the 0300 ruling predicted.** Three group
+chats — `G01_*`, `G02_*`, `G03_*`, each load+probe → Q1 → Q4 → critic — plus `F3`, the cross-group
+pass generalised 2 → 3.
+
+- **THE ASSERTED SPLICE.** `buildsteps` reads each frozen prompt through `frozen()`, which asserts
+  its sha256/16 and REFUSES loudly if it moved, then replaces named paragraphs through `splice()`,
+  which refuses if the text it looks for is absent. **Q1's body exists in exactly ONE file on
+  disk** — asserted by the harness, not claimed. Every canon-B step is stamped `GROUP-FRAMING v1`.
+- **THE LAYERING.** `A01-A11`/`R01-R04` are still generated and wired `legacy: true,
+  superseded_by: "canon-B"`. `checkall` gained the ruler's two asserts: exactly ONE canon design is
+  live, and **both legacy answers stay readable — A01 still reads PASS and A02 still reads FAIL,
+  the recorded failure preserved as the evidence it is.**
+- **F3's TWO DECLARED DIFFERENCES.** Its inputs are the sweep's own answers, so they sit in
+  `attaches_answers`, not `attaches` (which every gate reads as "resolvable on disk now"); and it
+  carries `probe_deferred` with a reason instead of a bare `probe: null`, because a silent null on
+  an attaching step means NO GATE AT ALL.
+- **THE FALLBACK IS RETIRED, NOT DELETED.** `prompts/FALLBACK_canon_split.txt` →
+  `prompts/superseded/` (L9), with `prompts/CANON_PROBE_FAILURE.txt` as its successor. The three
+  live gates that named it were repointed, and **preflight's assert got STRICTER rather than
+  moving**: the live remedy must exist AND the retired one must still be on disk, because a
+  retirement that quietly loses its predecessor is a deletion wearing a nicer word.
+- **Docs 69 → 82**, caught by checkall §5 rather than remembered.
+
+#### DONE-PROOFS — ALL GREEN, AND ONE OF THEM WENT RED FIRST
+
+```
+node diag/proofs_s5z4.mjs   GREEN · 63 assertions · 5 legs · every bite planted and refused
+                            idempotent across fresh shell runs · steps/ and answers/ byte-identical
+node checkall.mjs           GREEN 8/8   (RED twice on the way: the loosened raw gate, then §7)
+node preflight.mjs          GO
+node buildsteps.mjs         82 steps, wiring matches, no unresolved placeholder, nothing phantom
+node scripts/rails.mjs orders   open order clean
+```
+
+The splice's refusal is **bite-proven**: a one-line change to a frozen prompt makes `buildsteps`
+stop, name the file and both hashes, and say what would have gone wrong — then the harness restores
+the file and asserts `steps/` and `wiring.json` are byte-identical again.
+
+#### ⚠ ONE THING THIS RUNG DELIBERATELY DID NOT DECIDE
+
+The `replication` chat still loads all 27 chunks in ONE chat across three parts — **the exact
+configuration A02 failed in.** The row did not ask about it and I did not quietly answer it with a
+filter: it is named as its own lane in the wiring, excluded from the one-live-design assert so it
+cannot be mistaken for a canon design, and written into the router as an open question for S6.
+Firing R01-R04 on the old assumption without deciding it first would be the mistake.
+
+#### WHAT THIS RUNG DID NOT DO — said out loud, per §5
+
+No Gemini call, no audit question, no haystack or expected bytes touched, no probe regenerated, no
+chat opened, no answer re-asked. No deletion anywhere — the one retirement is a move. No subagents.
+No gate weakened; two gates got stricter (preflight's retirement assert, checkall's two new ones)
+and one caught me trying. S5-POST's backlog and the fold into §9 are untouched. All 18 B chats
+stay OPEN.
+
+#### COST
+
+**42.98 across the whole rung** (37.13 → 80.11) against a total allowance of **45** (the original
+9+6+5 plus the ruled remainder 12+8+5). **Inside on the total; over on both build+proof lines,
+and both are recorded as over, neither re-derived:** 18.39 vs 15 before the escalation, then
+24.59 vs 20 on the remainder. Records ride the two HANDOFF lines. The honest cause is the same
+both times — this row is six items, four of them separate instruments each needing its own
+bite-proof, and one of them I had to build twice.
