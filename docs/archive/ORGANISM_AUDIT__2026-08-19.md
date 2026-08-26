@@ -1454,10 +1454,64 @@ STATUS (update this block before any session stops — this is the handoff)
                                      NOT-FOUND). 5 is a LOWER BOUND — the measure is
                                      whitespace-normalised containment, so an emphasis-only difference
                                      still counts as absent. All of it re-verifies free at S5-Z4.
-  ▶ NEXT SESSION ............... **S5 · THE CORPUS SWEEP RESUMES AT B05 — a FRESH Pro-Extended chat,
-                                   ten attachments `live2_batch41-50`, `steps/B05_1.txt` (load +
-                                   probe) then `steps/B05_2.txt` (extraction), then STOP and leave
-                                   the chat OPEN. MODEL: Opus 5 · effort HIGH · EXECUTION 35 +
+  S5 · B05 OPENED, PROBE RED ... ◐ 26 Aug 2026 ~10:05 · the chat is OPEN, loaded, ONE turn in, and
+                                   the session HALTED on its probe rather than pass or re-run it.
+                                   Full account in the PROGRESS entry of 26 Aug ~10:05 — read that.
+                                   `gemini.google.com/app/f23185de2a94ec84` · Pro Extended · ten
+                                   attachments `live2_batch41-50`, all ten confirmed by name.
+                                   ☑ OUTBOUND PROVEN AT EVERY HOP: step file == composed box ==
+                                     SENT turn, sha256/16 `3eafe62028c5ba02` all three, 104/104
+                                     lines. The sent-turn read-back law held.
+                                   ☑ B05_1 CAPTURED `--from-blob`, second live use — in-page Blob
+                                     sha `e9d9fee462611216` == on-disk, 1,117 B, BLOB-GATE PASSED
+                                     (identity: 2 fenced blocks for 2 declared anchors).
+                                   ☑ render stall + free reload recovery, FIFTH confirmation.
+                                   ⛔ `probecheck B05_1` → **FAIL**. Tail anchor VERBATIM; middle
+                                     anchor differs by **exactly 26 characters and nothing else** —
+                                     every doubled backslash came back single. Collapse the doubles
+                                     on the disk side and the two strings are equal character for
+                                     character. **NOT the B03 class: the verdict is NOT measurably
+                                     false.** The line really did come back different.
+                                   ☑ WHERE THE COLLAPSE HAPPENED, MEASURED: the rendered DOM's own
+                                     `<code>` block carries the same 26 single backslashes as the
+                                     copied payload ⇒ the collapse is UPSTREAM of Copy. **The
+                                     raw-blob path is CLEAN — S5-Z5 is not implicated, and neither
+                                     is the S5-Z3 alphabet class.** The MODEL de-escaped inside a
+                                     fenced block.
+                                   ⚑ **BLAST RADIUS BOUNDED: of all 46 stored anchors across 23
+                                     probes, EXACTLY ONE carries the trigger — this one.** No other
+                                     chat's probe can fail this way. Corpus-wide the sequence is on
+                                     101 of 584,674 lines (0.017%), 12 of 18 groups; on the
+                                     EXTRACTION side it degrades to a verify FALSE DROP (S5-Z4's
+                                     class, already counted) and can never make a false FINDING.
+                                   ⛔ **ESCALATED, NOT IMPROVISED — `queue\2026-08-26_1000-s5corpus-9.md`.**
+                                     B05_2 NOT fired · fallback NOT fired · no instrument touched ·
+                                     no gate weakened · the verdict NOT self-passed. Options A–D
+                                     costed, recommendation A.
+                                   ⚠ **THE DIRECT CHANNEL WAS DOWN FOR THE FIRST TIME** —
+                                     `ARCHITECT_SESSION.txt` names `arsenal-ai-fc-0f [9e87a2]` and
+                                     `ListAgents` does not list it; the session that ruled at ~09:35
+                                     has closed. Pointer's own fallback obeyed: TELL HIM. Sixth use
+                                     of the channel, first miss.
+                                   ⚠ NEW TRANSPORT FACT: the javascript tool's RESULT cannot carry a
+                                     payload — a content filter blocked both the 64-hex digest and
+                                     the answer string. **The page→disk download is the ONLY route
+                                     out for a driving session, at any size**, so the one-shot
+                                     budget binds even on a 1 KB answer.
+                                   ⚠ 18.04 spent of the fresh 35-lakh EXECUTION line (day line
+                                     469.09 → 487.13 at the halt) — INSIDE. Records ride HANDOFF 13.
+  ▶ NEXT SESSION ............... **S5 · CORPUS · B05 IS HALTED ON A RULING. Do NOT re-fire, re-probe,
+                                   split or pass it — read `queue\2026-08-26_1000-s5corpus-9.md`
+                                   and its `RULING__` partner FIRST.** With the ruling: **A** ⇒ fire
+                                   `steps/B05_2.txt` into the still-open chat `f23185de2a94ec84`
+                                   (extraction, attaches NOTHING), capture `--from-blob`, verify,
+                                   record the de-escape count, then a FRESH chat for B06 with ten
+                                   attachments `live2_batch51-60`. **B/C** ⇒ as the ruling writes it.
+                                   **D** ⇒ its own micro-rung; it must not block B05.
+                                   If no ruling has returned, the escalation is still the first act:
+                                   the conservative branch (Q0) is to stay halted on that thread and
+                                   say so — never to spend a paste to get past it.
+                                   MODEL: Opus 5 · effort HIGH · EXECUTION 35 +
                                    HANDOFF 13 (the standing per-sitting line).**
                                    ✔ **Z5's two-line registry departure is RATIFIED and its scope
                                    call was RIGHT (RULING__2026-08-26_0935-s5z5-1.md; architect
@@ -8426,3 +8480,143 @@ re-run by this session afterwards: CHECKALL GREEN 8/8.** B05 opens clean.
 **Cost of this second record-and-commit cycle rides the HANDOFF 5 line** — the cycle the ruling
 itself bought, exactly the pattern the ~08:10 sizing ruling priced. Next session is unchanged:
 **B05 on EXECUTION 35 + HANDOFF 13, capturing `--from-blob`.**
+
+---
+
+### PROGRESS 2026-08-26 ~10:05 IST — S5 · CORPUS · B05 OPENED AND LOADED; ITS PROBE IS RED AND THE SESSION IS HALTED ON IT
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — *"S5 · THE CORPUS
+SWEEP RESUMES AT B05."* Micro-order written to the session scratchpad BEFORE any browser action
+(rule 9) and checked against §10-C/§10-D: the two steps, the FORBIDDEN list copied off the row, the
+capture path, the DONE-proof commands. MODEL Opus 5 · effort HIGH, as the row says. **AUTO mode, his
+call — it held clean again, no classifier event.**
+
+#### WHAT LANDED
+
+**B05 is OPEN, loaded and one turn in.** `gemini.google.com/app/f23185de2a94ec84`, account
+nikhil.panwar2914, Pro Extended, ten attachments `live2_batch41-50` — all ten confirmed attached by
+name in the DOM before a single character was typed.
+
+**The outbound was proven at every hop, and the chain matched byte for byte:**
+step file (joined sha256/16 `3eafe62028c5ba02`) → composed box, read back by joining the editor's
+104 `<p>` children (`3eafe62028c5ba02`, 104/104 lines, 6,733 chars, zero nbsp) → **SENT turn**, read
+back out of `user-query` and de-artefacted by stripping the renderer's one leading and one trailing
+space per non-empty paragraph — 166 characters, and 83 non-empty lines × 2 accounts for exactly 166
+— giving `3eafe62028c5ba02` again. The sent-turn read-back is the standing outbound law and it held.
+
+**B05_1 CAPTURED ON THE NEW `--from-blob` PATH, second live use.** `navigator.clipboard.write` hooked,
+the response-level Copy button fired with a JS `.click()`, the `ClipboardItem`'s `text/plain` Blob
+read in the SAME call and sha'd IN-PAGE: `e9d9fee462611216`, 1,117 bytes. Delivered page→disk,
+re-hashed on disk: **identical**. `capture.mjs save B05_1 --from-blob … --blob-sha e9d9fee462611216`
+→ 1,114 chars, `capture_path raw-blob`, **BLOB-GATE PASSED** (transit sha in-page == on-disk ·
+identity 2 fenced blocks for 2 declared anchors). The OS clipboard was never on the answer path.
+
+⚠ **AND ONE NEW TRANSPORT FACT, MEASURED HERE:** the small payload could NOT be returned through the
+javascript tool's own result — a content filter blocked both the 64-hex digest and the payload string
+(`[BLOCKED: Cookie/query string data]`). So **the page→disk download is not merely the preferred
+route, it is the only one available to a driving session for a real payload**, whatever its size.
+The one-shot-per-origin budget therefore binds even on a 1 KB answer. Recorded so the next executor
+does not plan around a route that will be blocked.
+
+**The render stall hit again and a reload recovered it free** — fifth confirmation of the norm.
+`textContent` 1,025 while `innerText` read only "Gemini said", stop button live, frozen across four
+consecutive 30-second polls. Reloaded, never re-fired: back in 5 s, complete, stop cleared.
+
+#### ⛔ THE PROBE IS RED — AND THIS ONE IS NOT THE B03 CLASS
+
+`node probecheck.mjs B05_1` → **FAIL**. Tail anchor `ok`; middle anchor `NEAR` — "a RECONSTRUCTION".
+
+**Measured first, never self-passed** (the ~08:05 standing rule). `diag/b05_1_identity.mjs`,
+re-runnable, read-only:
+
+```
+ANCHOR 1 (tail, live2_batch50 i=2643)   IDENTICAL : true    len 129 == 129   VERBATIM
+ANCHOR 2 (middle, live2_batch46 i=899)  IDENTICAL : false   len disk 307 vs model 281
+   disk backslashes 52  ·  model backslashes 26
+   identical if DISK doubles collapsed : TRUE
+   identical if MODEL singles doubled  : TRUE
+```
+
+**The two lines differ by exactly 26 characters and by nothing else: every doubled backslash came
+back single.** No re-wording, no truncation, no invention — collapse the doubles on the disk side and
+the strings are equal character for character. The line is a Windows-path line
+(`**where:** C:\\Users\\nikhi\\GitHub\\...`).
+
+**⛔ UNLIKE B03, THE VERDICT IS NOT MEASURABLY FALSE.** The line really did come back different.
+That is why this was escalated rather than argued.
+
+**WHERE THE COLLAPSE HAPPENED — measured, not assumed, because the last two of these were instrument
+faults.** The rendered DOM's own `<code>` block carries the same 26 single backslashes as the copied
+payload. So the collapse is **upstream of Copy**: **the raw-blob path is CLEAN and S5-Z5's work is not
+implicated**, and neither is the S5-Z3/B03 alphabet class (stamp is `raw-blob`, the right alphabet,
+and the tail anchor came back VERBATIM through it). **The model de-escaped inside a fenced code
+block**, against an explicit instruction not to alter a character. A real fidelity miss.
+
+**THE BLAST RADIUS, AND IT IS THE NUMBER THAT MATTERS** (`diag/b05_1_prevalence.mjs`):
+
+```
+frozen corpus : 172 batches · 584,674 lines · 101 lines carry a doubled backslash (0.017%),
+                spread over 12 of 18 groups
+stored probe anchors + expected lines carrying one, across all 23 probes / 46 anchors : 1
+                                                                       -> live2_g05/middle
+```
+
+**Exactly one of the sweep's 46 anchors contains the trigger, and it is the one that just failed.**
+No other chat's probe can fail this way — not because the model is expected to behave, but because
+the character sequence is not present in any other anchor. On the EXTRACTION side the class degrades
+to a **FALSE DROP in `verify.mjs`** — the S5-Z4 class already owned and already counted per chat — and
+it cannot produce a false FINDING, because a de-escaped quote is strictly less locatable, never more.
+
+#### THE HALT
+
+The fork: `probecheck` FAIL is prescriptive (*split the batch across two chats and re-probe*), but the
+gate's stated purpose is to detect that **the attachment did not reach the model** — and here it
+demonstrably did. The rung has no written rule for a verdict that is **true about fidelity and silent
+about retrieval**. That is above this rung's grade (§10-D rule 13), so:
+
+**ESCALATED, NOT IMPROVISED — `queue\2026-08-26_1000-s5corpus-9.md`** (the RECORD), with options
+A–D costed and recommendation **A**: accept B05 and continue, with the miss recorded as a named
+finding and a de-escape count joining the standing per-chat close record. **B05_2 IS NOT FIRED. The
+chat is OPEN and costs nothing while it waits.** The fallback was NOT fired, no instrument was
+touched, no gate was weakened and the verdict was not passed by this session.
+
+⚠ **THE DIRECT CHANNEL WAS UNAVAILABLE FOR THE FIRST TIME.** `ARCHITECT_SESSION.txt` names
+`arsenal-ai-fc-0f [9e87a2]`, and `ListAgents` does not list it — the architect session that ruled at
+~09:35 has closed. The pointer file's own instruction was obeyed: **fall back to telling HIM.** The
+queue file is the record either way; a message is transport. Sixth use of the channel, first miss.
+
+#### GATES — ALL RUN IN THIS SESSION, NEVER INHERITED
+
+`node checkall.mjs` → **GREEN, all 8 sections** at open, §7 included (the ruler's ratification remedy
+held, exactly as the row promised). `node preflight.mjs` → **GO**, 1 expected resume warning.
+
+**Re-run at CLOSE, obeying the ~09:40 lesson that the gate must be the last thing a sitting runs:**
+checkall came back **§7 RED — the SEVENTH identical instance**, cause unchanged (this sitting created
+two read-only diag instruments and they were not yet snapshotted). Remedied exactly as the ▶ NEXT
+SESSION row pre-authorises, with a `--why`: `snapshot.mjs take` → 80 instruments, 746,377 bytes.
+**Then GREEN 8/8 and preflight GO, both re-run after the remedy.** The class is still live and still
+rides S5-Z4; recording the seventh instance is the point, not patching around it.
+
+⚠ **THE CLIPBOARD IS DEAD AGAIN — 11th occurrence**, caught by checkall §2's advisory note
+(`Set-Clipboard`, 20,176 chars out, 0 back). It is a `note`, not a FAIL, and correctly so: **the
+sweep's answer path no longer touches the OS clipboard at all** since S5-Z5. Recorded as another
+data point for S11's instrumentation window, nothing more.
+
+#### THE NUMBERS
+
+**18.04 of the 35-lakh EXECUTION line** — day line 469.09 → 487.13 at the halt, read from the meter,
+not estimated. INSIDE. The record and commit ride the 13-lakh HANDOFF line.
+
+**Zero instruments edited · zero gates weakened · zero audit questions beyond the one paid step ·
+frozen inputs untouched · `answers/` holds exactly one new file (B05_1) and no false stamp.**
+B01–B04 closed, **B05 loaded and probe-red: 4 of 18 closed.**
+
+#### WHAT THE NEXT SESSION DOES
+
+**Nothing on B05 until the ruling on `queue\2026-08-26_1000-s5corpus-9.md` returns.** With it:
+- **A** ⇒ fire `steps/B05_2.txt` into the still-open chat `f23185de2a94ec84`, capture `--from-blob`,
+  verify, record the de-escape count, then move to B06 (`live2_batch51-60`).
+- **B/C** ⇒ as the ruling writes it; both spend pastes and both re-open the per-chat load shape.
+- **D** ⇒ its own micro-rung; it must not block B05.
+
+**MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13** (the standing per-sitting line).
