@@ -1165,17 +1165,100 @@ STATUS (update this block before any session stops — this is the handoff)
                                      `response-container`** — a `find`-chosen "Copy" returned the
                                      PREVIOUS answer's button and put B01_2's 46,196 chars on the
                                      clipboard. Caught by asserting WHAT came back, before capture.
-  ▶ NEXT SESSION ............... **S5 · THE SWEEP — CORPUS HALF RUNNING. RESUME AT B02_2, THEN B02_3,
-                                   THEN B03.** B01 is CLOSED 3/3. **B02 is LOADED AND PROBE-PASSED
-                                   (VERBATIM 2/2) — its chat is
-                                   `gemini.google.com/app/83db0daf5b7722a4`, account
-                                   nikhil.panwar2914, Pro Extended, 10 attachments
-                                   (live2_batch11-20), ONE turn in. Do NOT re-load it and do NOT
-                                   re-probe it — the attachments are already trusted by receipt.**
-                                   The next act is `steps/B02_2.txt` (the five-bucket extraction)
-                                   into that open chat, then `steps/B02_3.txt` (the critic), then a
-                                   fresh chat for B03_1. ~14 min of model time for the extraction;
-                                   budget the wall-clock, not just the tokens.
+  S5 CORPUS · B02 CLOSED ....... ☑ 26 Aug 2026 ~08:15 IST · Opus 5 · effort HIGH · **AUTO mode on
+                                   HIS word this session** — no classifier fired, a second clean data
+                                   point after the ~04:00 kill. **B02 IS COMPLETE 3/3.** Full account
+                                   in the PROGRESS entry of 26 Aug ~08:15 — read that.
+                                   ☑ gates RUN IN THIS SESSION: checkall RED at open on section 7, the
+                                     SAME condition as the last open (verify.mjs's three outputs had no
+                                     restorable copy) — closed by the gate's OWN prescribed remedy
+                                     `snapshot.mjs take`, then GREEN all 8 · preflight GO, 18 checks.
+                                     Clipboard ALIVE at open (round-tripped the largest step file).
+                                   ☑ B02_2 (extraction) and B02_3 (critic) both CAPTURED RAW — copy-gate
+                                     PASSED 8/8 and 13/13, fenced yes, JSON parses yes, no lossy stamp
+                                     on either. The four-hop outbound matched on both.
+                                   ⛔ **THE VERIFIER DISCARDED 53 TRUE FINDINGS AND THE MODEL WAS NOT AT
+                                     FAULT.** `verify.mjs` keys its corpus day index by the BARE date (its
+                                     own regex drops the suffix) while the corpus files print
+                                     `===== DAY: 2026-07-25 (continued) =====` — and the model, quoting the
+                                     only day label it can see, returned `"date":"2026-07-25 (continued)"`.
+                                     `dayHay()` returns null ⇒ verdict `source-missing` ⇒ the item is
+                                     dropped unread; the same key mismatch makes coverage call a real day
+                                     **"NOT IN MANIFEST (invented)"**. MEASURED read-only, no instrument
+                                     touched: **B02_2 — 27 of 28 dropped quotes PRESENT in the corpus, 1
+                                     genuinely absent · B02_3 — 26 of 26 PRESENT, 0 absent.** Exposure:
+                                     **171 of 172 batch files carry a (continued) header — all 18 groups**,
+                                     and whether a chat is hit depends only on whether that model copies the
+                                     header verbatim. **B01 is CLEAN** (0 continued-dates across its 132
+                                     dated items) so its KEPT 75 / 9 numbers stand. NOT PATCHED — S5 BUILDS
+                                     NOTHING. ESCALATED over the DIRECT CHANNEL (first use):
+                                     `queue\2026-08-26_0700-s5corpus-3.md`.
+                                   ✔ RULED ~07:10 (`queue\RULING__2026-08-26_0700-s5corpus-3.md`):
+                                     **(1) A — the day-label normalisation RIDES S5-Z4**, beside the
+                                     declared-unknown bucket, same code path, declare-or-die, after B18;
+                                     every stored answer re-verifies FREE at its close (third use of the A02
+                                     pattern). NOTE FOR ITS BUILDER: **this is a SIBLING SITE of the
+                                     (continued) class S5-R2 already fixed once — fix the CLASS in one
+                                     place**, his global-not-patch law. **(2) YES — the measured false-drop
+                                     count joins each chat's record**, so nobody later reads 4/33 as recall.
+                                   📊 **B02's RECORD, per that ruling — verify pre-Z4: extraction 4 kept /
+                                     29 dropped (27 of 28 dropped quotes MEASURED present) · critic 3 kept /
+                                     26 dropped (26 of 26 MEASURED present). TRUE content: ~60 of 61 items
+                                     real, ONE genuinely absent quote.** Running totals as the instrument
+                                     stands today: KEPT 91 · DISCARDED 99.
+                                   ⚠ The critic returned unlisted kinds AGAIN (`architectural_invariants`,
+                                     `defined_anti_patterns`) — the SECOND instance of the class ruled on
+                                     26 Aug ~06:55. Same home, same rung, nothing lost.
+                                   ⏱ **WALL-CLOCK, and it is WORSE than the plan carries: the critic alone
+                                     took ~50 MINUTES** (the extraction ~12). B03–B18 at this shape is ~16
+                                     chats × ~1 h ⇒ **the corpus half is a MULTI-DAY job, not 7–9 hours.**
+                                   ⚠ TRANSPORT, three costs the next executor should not re-pay:
+                                     **(a) a stalled stream can be a CLIENT-SIDE RENDER STALL** — B02_3's
+                                     DOM sat byte-identical for ~18 min with the stop button live, and a
+                                     plain page RELOAD brought back the completed 15,215-char answer for
+                                     FREE. Reload before you ever re-fire a paste. **(b) the response-level
+                                     Copy button needs a `hover` BEFORE the click** — two bare ref-clicks
+                                     left the sentinel untouched, hover-then-click landed 15,227 chars; the
+                                     page's own clipboard permission was proven fine by a `writeText` probe
+                                     first, so this is Gemini's handler, not the OS fault. **(c) the
+                                     SENT-turn read must select `p.query-text-line` ONLY** — `user-query`
+                                     also holds a visually-hidden "You said …" H5 and, when collapsed, a
+                                     truncated preview line; `innerText` doubles lines AND trims the ruled
+                                     padding away, so it can never match.
+  ▶ NEXT SESSION ............... **S5 · THE SWEEP — CORPUS HALF RUNNING. RESUME AT B03_1, A FRESH
+                                   CHAT.** B01 and B02 are both CLOSED 3/3 — 2 of 18 corpus chats
+                                   complete. Nothing is owed in either of their chats; do not
+                                   re-open them. The next act is a NEW Pro-Extended chat, ten
+                                   attachments `live2_batch21-30` (`node buildsteps.mjs` ends with
+                                   the full attachment map), `steps/B03_1.txt` to load + probe,
+                                   then `steps/B03_2.txt`, then `steps/B03_3.txt`.
+                                   ⏱ **BUDGET THE CLOCK BEFORE THE TOKENS: one corpus chat is
+                                   ~1 HOUR of model time at the measured shape** (B02: load+probe
+                                   ~10 min · extraction ~12 · critic ~50). B03–B18 is sixteen of
+                                   those. **The corpus half is a MULTI-DAY job** — the "7–9 hours"
+                                   on the earlier rows is measured-false and is corrected here.
+                                   ⚠ **BEFORE YOU RE-FIRE ANYTHING THAT LOOKS HUNG: RELOAD THE
+                                   PAGE.** A Gemini stream can stall CLIENT-side with the stop
+                                   button still live and the DOM frozen; the answer is finished
+                                   server-side and a reload brings it back for free. Measured on
+                                   B02_3 (~18 min frozen, 15,215 chars recovered, zero cost).
+                                   ⚠ **The response-level Copy button needs a `hover` before the
+                                   click.** Two bare ref-clicks left the planted sentinel
+                                   untouched; hover-then-click landed the payload. Prove the
+                                   page's own clipboard permission with a `writeText` probe before
+                                   blaming the machine-wide fault — it was fine both times.
+                                   ⚠ **`verify.mjs`'s KEPT/DISCARDED headline UNDER-REPORTS until
+                                   S5-Z4** — the (continued) day-key fault drops true findings
+                                   silently. Per the ~07:10 ruling, every chat's record now carries
+                                   the MEASURED false-drop count beside the raw numbers. Nothing
+                                   is lost; all answers re-verify free at S5-Z4's close.
+                                   MODE: **AUTO is HIS call as of 26 Aug and it held clean twice** —
+                                   this session ran the whole of B02 in auto with no classifier
+                                   event. The older DO-NOT-AUTO line below is kept as history, not
+                                   as a live instruction; if a classifier does take the shell, the
+                                   standing move is his: write the record with the file tools and
+                                   hand the commit forward in the open.
+                                   (HISTORY — superseded by the MODE line above:)
                                    ⚠ **DO NOT START A SESSION FOR THIS IN AUTO MODE.** The
                                    26-Aug ~04:00 session was stopped by a safety classifier that
                                    refused every shell and write-class action for the rest of that
@@ -3041,6 +3124,26 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       before hashing (measured; the padding is the renderer's, never the payload's).
                                            BUILD 5 · PROOF 3 · HANDOFF 5 (ruler-written)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      ◐ **26 Aug ~08:15 — B02 IS CLOSED 3/3. 2 of 18 corpus chats complete.** Both steps captured
+      RAW (copy-gate 8/8 and 13/13, fenced, JSON parses, no lossy stamp), four-hop outbound matched
+      on both, AUTO mode on his word with no classifier event.
+      ⛔ **THE VERIFIER DISCARDED 53 TRUE FINDINGS AND THE MODEL WAS NOT AT FAULT.** `verify.mjs`
+      keys its day index by the bare date while the corpus prints `===== DAY: 2026-07-25 (continued)
+      =====`; the model quoted the header verbatim, `dayHay()` returned null, and every such item
+      read as `source-missing`. MEASURED: B02_2 27 of 28 dropped quotes PRESENT (1 truly absent) ·
+      B02_3 26 of 26 PRESENT (0 absent). Exposure 171/172 batch files, all 18 groups; B01 clean, its
+      numbers stand. NOT PATCHED — S5 builds nothing. RULED ~07:10: **A, riding S5-Z4** beside the
+      declared-unknown bucket (a sibling site of the class S5-R2 fixed once — fix the CLASS), and
+      **the measured false-drop count now joins every chat's record.** Answers re-verify free there.
+      📊 B02 pre-Z4: extraction 4 kept / 29 dropped · critic 3 kept / 26 dropped · TRUE ~60 of 61
+      items real. Running totals as the instrument stands: KEPT 91 · DISCARDED 99.
+      ⏱ **THE PLAN'S WALL-CLOCK IS MEASURED-FALSE:** the critic alone took ~50 min (extraction ~12),
+      so a corpus chat is ~1 HOUR and B03–B18 is a MULTI-DAY job, not the 7–9 hours on the rows above.
+      ⚠ Transport, three free lessons: a stalled stream can be a CLIENT-side render stall and a
+      RELOAD recovers the finished answer at zero cost · the response-level Copy needs a `hover`
+      before the click · the sent-turn read must select `p.query-text-line` only.
+      ⚠ 26.70 spent of the 35-lakh EXECUTION line; STOPPED rather than open B03, which needs ~30
+      more and would have breached mid-chat (§10-D rule 2). Records ride the 10-lakh HANDOFF line.
       ◐ **26 Aug ~06:45 — B01 IS CLOSED 3/3 AND B02 IS LOADED + PROBE-PASSED. 1 of 18 corpus
       chats complete.** B01_3 (the critic) captured RAW (copy-gate 15/15) and verified: KEPT
       75 → 84, DISCARDED 22 → 44 — the critic's own share is 9 kept / 22 dropped, ~29% survival
@@ -7123,3 +7226,124 @@ permission mode.** Chat B02 is `gemini.google.com/app/83db0daf5b7722a4` — open
 attachments already loaded and probe-passed. Fire `steps/B02_2.txt` into it; do **not** re-load and
 do **not** re-probe. Budget the clock as well as the tokens: ~14 min of model time for an
 extraction, and B03–B18 is still ~7–9 hours of wall-clock ahead.
+
+### PROGRESS 2026-08-26 ~08:15 IST — S5 · THE SWEEP, CORPUS HALF. **B02 CLOSED 3/3 · A VERIFIER FAULT THAT WAS DISCARDING TRUE FINDINGS.**
+
+**Opus 5 · effort HIGH · AUTO permission mode on HIS word** ("Auto mode is fine (his call, 26 Aug)").
+No classifier event fired — the second clean session in a row after the ~04:00 kill.
+Router obeyed (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐). Micro-order written to the
+session scratchpad before the first edit (rule 9).
+
+#### WHAT LANDED
+
+**1. The gates, run in this session.** `checkall.mjs` came back RED on section 7 at open — the same
+condition as the previous open, and for the same reason: the ~06:45 session's `verify.mjs` outputs
+had no restorable copy. Closed by the gate's own prescribed remedy (`snapshot.mjs take`, 75
+instruments, 639,424 bytes), never by loosening it. Re-run: **GREEN all 8 sections · preflight GO,
+18 checks.** The clipboard was ALIVE at open (Q-C's opportunistic probe round-tripped the largest
+step file, sha-identical).
+
+**2. B02_2, the five-bucket extraction — fired and captured RAW.** Four hops, every one a SHA-256
+assert: clipboard (9,030 chars, `fa0ba6ff…`) → in-page `readText` → compose box (124 blocks, sha
+identical) → the SENT user turn read off the DOM (123 lines, delta **exactly 216 = 108 non-empty
+lines × 2**, the ruled padding, stripped sha `ba93372238c1e43f` byte-identical to the step file).
+Captured `--rendered` through the copy-gate: **PASSED 8/8 content lines, `capture_path raw`, fenced
+yes, JSON parses yes.** No lossy stamp.
+
+**3. B02_3, the critic — fired, stalled, RECOVERED FOR FREE, captured RAW.** Prompt sha
+`9f3c3323a8615e73` — **byte-identical to the sha the ~06:45 session recorded for the same step
+file**, an independent cross-session confirmation of the outbound law. Copy-gate **PASSED 13/13**,
+fenced yes, JSON parses yes. B02 is complete 3/3.
+
+#### THE FINDING — THE VERIFIER WAS THROWING AWAY TRUE FINDINGS, AND IT LOOKED LIKE A BAD MODEL
+
+`verify.mjs` read B02_2 as **KEPT 4 / DISCARDED 29** — ~12% survival against B01_2's ~77%. That
+number is wrong, and the model is not what is wrong.
+
+`verify.mjs`'s corpus day index (line ~81) splits the batches on a regex that drops a
+` (continued)` suffix and keys the index by the **bare date**. The corpus files themselves print
+`===== DAY: 2026-07-25 (continued) =====`, and the model — quoting the only day label it can see —
+returned `"date":"2026-07-25 (continued)"` on 28 of its 32 dated items. `dayHay()` returns `null`,
+`verdict()` returns **`source-missing`**, and the item is dropped unread. The same key mismatch
+makes `coverage.json` report a real day as **"NOT IN MANIFEST (invented)"**.
+
+**MEASURED, read-only, outside the S5 folder, no instrument touched:**
+
+```
+B02_2  dropped 28  |  quote MEASURED PRESENT in the corpus 27  |  genuinely absent 1
+B02_3  dropped 26  |  quote MEASURED PRESENT in the corpus 26  |  genuinely absent 0
+exposure: 171 of 172 batch files carry a (continued) header — ALL 18 GROUPS
+B01: 0 continued-dates across 132 dated items — CLEAN, its KEPT 75 / 9 numbers stand
+```
+
+So B02's true content is **~60 of 61 items real, one genuinely absent quote** — not 7 of 61. Whether
+a chat is hit depends only on whether that model copies the header verbatim, which makes it
+unpredictable per chat and invisible without this measurement.
+
+**NOT PATCHED** — the fix is a `verify.mjs` code change and **S5 BUILDS NOTHING** (§10-D rule 10 +
+the rung's FORBIDDEN line). Nothing is lost: the answers are on disk and re-verify free.
+**ESCALATED over the DIRECT CHANNEL — its first use** (`queue\2026-08-26_0700-s5corpus-3.md` written
+first as the RECORD, then one line by SendMessage to `arsenal-ai-fc-5d`, confirmed live by
+ListAgents first). The ruling came back the same way in ~10 minutes.
+
+#### THE RULING, RECORDED VERBATIM (`queue\RULING__2026-08-26_0700-s5corpus-3.md`, ~07:10)
+
+> **1. A — RIDING S5-Z4, beside the declared-unknown bucket.** The day-label normalisation
+> ("(continued)" suffix keyed vs bare-date index) goes through the same code path, declare-or-die,
+> built at S5-Z4 after B18 — never under the half-driven corpus. ALL stored answers re-verify FREE
+> at its close (third use of the A02 pattern). Verified here by running: continued-headers present
+> across corpus_live2 batches — the exposure claim's shape confirmed. NOTE FOR S5-Z4's builder: this
+> is a SIBLING SITE of the class S5-R2 already fixed once (the day-index (continued) parse in the
+> repointing) — fix the CLASS in one place if the code allows, per his global-not-patch law.
+>
+> **2. YES — the measured false-drop count joins each chat's record.** Same principle as the V/S
+> split and raw/lossy split: the close reports what its receipts are worth. B02's record carries
+> "verify pre-Z4: 4 kept / 29 dropped, 27 of 28 dropped quotes MEASURED present (continued-day
+> false-drop)" so nobody later reads 4/33 as the model's recall.
+>
+> B02_3 and onward continue — no further word. B01's numbers stand (0 continued-dates there).
+
+Applied in this entry and on the rung row. The critic ALSO returned unlisted kinds again
+(`architectural_invariants`, `defined_anti_patterns`) — the second instance of the class ruled at
+~06:55, same home at S5-Z4, nothing lost.
+
+#### THREE TRANSPORT MEASUREMENTS THE NEXT EXECUTOR SHOULD NOT RE-PAY
+
+1. **A stalled stream can be a CLIENT-SIDE RENDER STALL — reload before you ever re-fire a paste.**
+   B02_3's response DOM sat byte-identical (39,768 bytes of HTML, 11 chars of text) for ~18 minutes
+   with the stop button live and the thinking header frozen. A plain page reload brought back the
+   **completed 15,215-char answer**. A re-fire would have spent a paste on an answer that already
+   existed.
+2. **The response-level Copy button needs a `hover` BEFORE the click.** Two bare ref-clicks left the
+   planted sentinel untouched; hover-then-click landed 15,227 chars. The page's own clipboard
+   permission was proven fine first by a `writeText` probe that reached the OS clipboard — so this
+   is Gemini's handler, not the machine-wide fault. The sentinel is what made the difference between
+   knowing and guessing, twice.
+3. **The SENT-turn read must select `p.query-text-line` only.** `user-query` also carries a
+   visually-hidden "You said …" H5 label and, when collapsed, a truncated preview line; `innerText`
+   both doubles lines and trims the ruled padding away, so it can never match. With the right
+   selector the padding law held exactly on both steps.
+
+#### THE WALL-CLOCK, AND IT IS WORSE THAN THE PLAN CARRIES
+
+Load+probe ~10 min · extraction ~12 min · **critic ~50 min**. A corpus chat is **~1 hour of model
+time**, so B03–B18 is sixteen more hours-long chats: **the corpus half is a MULTI-DAY job, not the
+7–9 hours the earlier rows carry.** That correction is on the router row.
+
+#### THE COST, AND WHY B03 WAS NOT OPENED
+
+**26.70 lakh weighted** — day line 286.44 → 313.14, read from the meter at the close, never
+estimated mid-flight. Against the 35-lakh EXECUTION line that is **inside the ceiling**. B03 needs a
+full load+probe+extraction+critic (~30 lakh, ~1 h) and would have breached mid-chat, which is a
+breach chosen rather than suffered — so the session stopped instead (§10-D rule 2). These records
+ride the separate 10-lakh HANDOFF line.
+
+Zero instruments edited · zero gates weakened · zero prompts or steps hand-authored · frozen inputs
+untouched · `refilter2.mjs` not re-run · no canon re-cut · S5-Z4 not interleaved · nothing in the
+organism re-enabled · nothing entered §9 (§8 governs that, at S6).
+
+#### WHAT THE NEXT SESSION DOES
+
+**S5 · the corpus half — B03_1 in a FRESH Pro-Extended chat, ten attachments `live2_batch21-30`,
+then B03_2 and B03_3. Opus 5 · effort HIGH.** Budget one hour of wall-clock for that chat alone, and
+read the three transport notes above before touching the browser.
