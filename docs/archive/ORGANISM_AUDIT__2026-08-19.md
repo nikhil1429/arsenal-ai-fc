@@ -2772,13 +2772,18 @@ STATUS (update this block before any session stops — this is the handoff)
                                    re-verifies FREE at its close. Record the bounds, fold nothing.
                                    ⚑ **THE ORDER FROM HERE: `G02` → `G03` → `F3` (gated) → S5-Z9 →
                                    S5-POST.** Z9 runs AFTER the drive, never interleaved (Z4's rule).
-                                   ⚠ **A CRITIC STEP CANNOT BE CAPTURED ON THE BLOB PATH** — its
-                                   schema is defined BY REFERENCE ("the SAME schema as the previous
-                                   answer"), so `--from-blob`'s declare-or-die identity assert
-                                   refuses it, CORRECTLY. Take the declared independent-witness path
-                                   instead: `--from-file <raw> --rendered <rendered>` (G01_4:
-                                   copy-gate 482/482). `G02_4`, `G03_4` and `F3` will do the same.
-                                   **Never edit a step file to get past it** — steps are derived.
+                                   ⚑ **THE DECLARED CRITIC PATH — RULED 27 Aug ~03:05
+                                   (`RULING__2026-08-27_0830-s5canonb-2.md` item 1), not a
+                                   workaround.** A critic step's schema is defined BY REFERENCE
+                                   ("the SAME schema as the previous answer"), so `--from-blob`'s
+                                   declare-or-die identity assert REFUSES it — correctly. **Capture
+                                   every critic through `--from-file <raw> --rendered <rendered>`,
+                                   the intact copy-gate** (G01_4: 482/482, both transit shas
+                                   verified in-page == on-disk anyway). `G02_4`, `G03_4` and `F3`
+                                   all take this path; it costs ONE extra download each. The ruler
+                                   REFUSED to build blob-side schema resolution for three remaining
+                                   consumers — that is the miss-#8 class. **Never edit a step file
+                                   to get past it** — steps are derived artifacts.
                                    THREE SEPARATE CHATS, one per canon group, then a FOURTH for the
                                    cross-group pass:
                                    `G01_1..G01_4` — chunk01-10 · probe `canon_g01`  ✅ CLOSED 4/4
@@ -5631,15 +5636,17 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       absent stay absent), and a MEASURED tier replaces a SILENT DISCARD.** The declared decoration
       set is exactly `**`, backtick, and a leading `- `. **ALL stored answers re-verify FREE at this
       rung's close** (the A02 pattern, fifth use).
-      +SCOPE, FLAGGED BY THE EXECUTOR AT G01_4 AND LEFT FOR THE RULER TO TAKE OR REFUSE: **a step
-      whose schema is defined BY REFERENCE cannot be captured on the blob path at all.**
-      `capture.mjs --from-blob` refused G01_4 — *"NEITHER a JSON skeleton nor an ANCHOR line, so its
-      expected shape is UNDECLARED"* — because the critic prompt says *"the SAME schema as the
-      previous answer"*. It is CORRECT declare-or-die behaviour and no gate was touched; the
-      DECLARED independent-witness path took it (`--from-file --rendered`, copy-gate 482/482).
-      **`G02_4`, `G03_4` and `F3` will hit it identically.** Nothing is blocked either way — the
-      cost is one extra download per critic — so this is a fits-or-doesn't question for the ruler,
-      never an executor's edit of a derived step file.
+      ⛔ **+SCOPE ASKED FOR AND REFUSED INTO THIS RUNG, 27 Aug ~03:05
+      (`RULING__2026-08-27_0830-s5canonb-2.md` item 1) — Z9'S SCOPE STAYS EXACTLY AS RULED ABOVE.**
+      The executor flagged that a step whose schema is defined BY REFERENCE cannot be captured on
+      the blob path at all (`--from-blob` refused G01_4: *"NEITHER a JSON skeleton nor an ANCHOR
+      line, so its expected shape is UNDECLARED"*, because the critic prompt says *"the SAME schema
+      as the previous answer"*). **The ruler refused to build for it, and named the reason: three
+      remaining consumers ever (`G02_4`, `G03_4`, `F3`), a working gate-intact path already in
+      hand, and the sweep ENDS — blob-side schema resolution would be "a reward with three
+      consumers ever", the miss-#8 class.** ⇒ **THE STANDING ANSWER IS THE RULING: critic steps
+      capture through `--from-file <raw> --rendered <rendered>`, the intact copy-gate, and it is
+      recorded as THE DECLARED CRITIC PATH on the router.** Not a gap — a decided thing.
       FORBIDDEN: any second copy of the normalization anywhere (Z7's lesson, asserted mechanically)
       · any decoration outside the declared set · any change to the byte-strict top tier · any
       step, prompt, wiring or frozen-byte change · any Gemini call · any audit question.
@@ -13976,3 +13983,35 @@ standing answer for critic steps.**
 ⚠ **31.81 of the 35-lakh EXECUTION line when the drive stopped** (day line 98.19 → 130.00) —
 **INSIDE, and the drive was stopped BY the line, not by the work**: G02 was not opened. Records ride
 the 13-lakh HANDOFF line, which prices the two record-and-commit cycles this sitting used.
+
+### ADDENDUM 2026-08-27 ~03:05 TRUE machine-clock — **THE RULER'S CLOSE ON G01: the close ratified whole, and the one +scope I asked for was REFUSED with its reason named**
+
+`queue\RULING__2026-08-27_0830-s5canonb-2.md`, arriving after the push of `048b0c3`, which is the
+second record-and-commit cycle the 13-lakh HANDOFF line prices. **Verbatim:**
+
+> ORIGINAL: the G01 close message (`048b0c3`). Close RATIFIED — G01 4/4, canon-B proven on the
+> material A02 died on, fold list complete, stopped by the line not the work.
+>
+> **1. The critic +scope is REFUSED into Z9 — the standing answer IS the ruling:** critic steps
+> (schema-by-reference) capture via `--from-file <raw> --rendered <rendered>` through the
+> intact copy-gate, exactly as G01_4 ran (482/482, both transit shas verified anyway). Three
+> remaining consumers (G02_4, G03_4, F3), a working gate-intact path, and the sweep ends —
+> building blob-side schema-resolution would be a reward with three consumers ever (the miss-#8
+> class). RECORDED as the DECLARED CRITIC PATH on the router; Z9's scope stays exactly as ruled.
+> **2. The two-sided-schema amplifier is RATIFIED as an S6 INPUT** exactly as filed (yield ≈
+> square of per-quote pass rate; Q1 2/50 · Q4 27/52 · critic 26/51 in one chat, one gate) —
+> a structural fact about the SCHEMA, never a statement about Q1's material. Correctly left
+> conclusion-free; S6 reads it beside the pre-Z9 bounds.
+> **3.** The stale-busy-flag lesson (a blind Copy returns the PREVIOUS turn's payload, caught by
+> assert-WHAT) joins the transport notes — the 7th law's cleanest live save yet.
+
+**WHY ITEM 1 IS WORTH READING TWICE, and it is a refusal to BUILD, not a refusal to fix:** the
+executor found a real hole, offered it to a rung, and the ruler measured the hole's LIFETIME instead
+of its shape — *three remaining consumers ever, and then the sweep ends.* An instrument built for
+that is the miss-#8 class. **The path already in hand became the declared answer, and the flag
+became a router line instead of a build.** That is the same judgement the ceiling rules make about
+tokens, applied to code.
+
+⚑ Folded in the same act: Z9's row now records the +scope as REFUSED with the reason (its scope is
+untouched) · the router carries **THE DECLARED CRITIC PATH** as a ruled line, not a workaround ·
+the amplifier stands in the PROGRESS entry above, conclusion-free, as an S6 input.
