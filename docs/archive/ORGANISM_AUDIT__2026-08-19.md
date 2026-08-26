@@ -3105,7 +3105,26 @@ STATUS (update this block before any session stops — this is the handoff)
                                    figure it produces is a BOUND. **It affects reporting
                                    PRECISION, not gate correctness — which is exactly why it
                                    is backlog and not a mid-sweep rung, and why S5-Z4 does
-                                   NOT grow a fourth time.**
+                                   NOT grow a fourth time.**  ·
+                                   **THE RECEIPT-vs-OWN-ANSWER SELF-CONSISTENCY CHECK** —
+                                   granted its row by the architect's channel ruling of
+                                   26 Aug ~21:15 true clock (recorded verbatim in the
+                                   addendum below; **no queue file was written for it**).
+                                   Verify-side, **TIER-0 and FREE**: it compares the model's
+                                   self-report against **the model's own items**, which is
+                                   the class `verify.mjs` structurally cannot see today —
+                                   verify checks the receipt against the REAL corpus, and
+                                   nothing checks the receipt against the ANSWER. **Its
+                                   measured live case is B14_2:** a 4/4 coverage receipt with
+                                   no invented filename, `coverage_note` claiming *"completed
+                                   successfully hitting all requested floors"*, and
+                                   `days_covered` claiming FOUR days (15→34 · 16→4 · 17→8 ·
+                                   18→1) over an item set that cites only **TWO** —
+                                   `2026-08-16` and `2026-08-18` carry ZERO items. **The
+                                   recount matcher's sibling: reporting INTEGRITY, not gate
+                                   correctness — which is why it is S5-POST and not a
+                                   Z-rung.** It stays filed for S6 as well, which reads it
+                                   beside the receipt-inflation evidence.
                                    RULED ~02:55 (RULING__2026-08-26_0240-s5z3-1.md): the one
                                    authorized fenced re-probe = the resumed sweep's FIRST ACT,
                                    on the sweep's budget (c3 = hypothesis until it returns) ·
@@ -12298,3 +12317,55 @@ stays OPEN. B15 was not opened.
 
 **~15.7 of the 35-lakh EXECUTION line** (day 1004.69 → 1020.36). **INSIDE.** Records ride HANDOFF
 13. Caveat carried, not re-derived: today's meter line reads ~+16% hot (S5-R's finding).
+
+### ADDENDUM 2026-08-26 ~21:15 TRUE machine-clock — **THE RULER'S CLOSE ON B14: the free check gets its own S5-POST row, and this ruling arrived with NO queue file**
+
+Ratified after `2af61bf` was pushed, so it is folded here rather than rewritten into the entry
+above. **Clock per the standing reconciliation rule** (`RULING__2026-08-26_2045-s5z8-1.md` item 4).
+
+⚠ **SAID PLAINLY, BECAUSE THE ARCHAEOLOGY DEPENDS ON IT: this ruling arrived over the channel and
+NO `queue\RULING__*` file was written for it.** The order's own law is *"message = transport, the
+file = the record"*, and the executor's standing instruction is to treat a channel ruling *"exactly
+as a RULING__ file's content"* — so it binds, and it is recorded verbatim below. But the record
+lives ONLY here. **The executor did not write the file itself**: a `RULING__` file is the
+architect's record in the architect's voice, and manufacturing one would put words in his file. The
+gap is named instead of papered over, and the architect was told so he can drop the file if he wants
+his own copy.
+
+**THE RULING, VERBATIM (channel, `arsenal-ai-fc-e8` → `arsenal-ai-fc-bb`):**
+
+> B14 close ratified — 14 of 18, band series 6/6 across the declared width, clean record. RULED on
+> the lead (treat this message as RULING content, fold with the row): YES — write the S5-POST
+> backlog row: RECEIPT-vs-OWN-ANSWER SELF-CONSISTENCY CHECK (verify-side, TIER-0, free — compares
+> the model's self-report against the model's own items; the class verify structurally cannot see
+> today). It is the recount matcher's sibling: reporting integrity, not gate correctness, which is
+> why it is S5-POST and not a Z-rung. Name B14_2 as its measured live case (4/4 coverage_note
+> contradicted by a two-day item set) and keep the S6 filing too — S6 reads it beside the
+> receipt-inflation evidence. Nothing else owed. B15 on 35+13.
+
+#### WHAT WAS FOLDED, IN THIS SAME ACT
+
+**The S5-POST backlog now carries TWO named rows, and they are siblings by design:**
+
+| row | what it fixes | why it is backlog, not a Z-rung |
+|---|---|---|
+| the recount matcher as an instrument | reporting **precision** — a matcher stricter than verify's, so invention reads as a bound | it does not affect gate correctness |
+| **the receipt-vs-own-answer self-consistency check** | reporting **integrity** — the model's self-report vs the model's own items | same reason, same class |
+
+The second row names **B14_2 as its measured live case** and states the check's whole argument in
+one line: **`verify.mjs` compares the receipt against the REAL corpus; nothing compares the receipt
+against the ANSWER.** That second comparison needs no manifest, costs nothing, and on B14_2 it would
+have fired loudly against a receipt that otherwise scored 4/4 with no invented filename. **The S6
+filing is kept as well** — S6 reads it beside the receipt-inflation evidence rather than instead of it.
+
+#### THE PATTERN NOW WORTH NAMING, SINCE IT HAS HAPPENED TWICE IN THREE CHATS
+
+Both S5-POST rows were found the same way: **not by a gate failing, but by a gate PASSING and a
+by-hand measurement disagreeing with it.** B12/B13's controls passed verify and failed my recount;
+B14_2's coverage receipt passed verify and failed its own items. **A gate that passes is evidence
+about the gate, not proof about the answer** — which is §4's rule ("every instrument is a LEAD until
+one run verifies it") pointed back at the instruments this rung built. Both rows exist because
+somebody measured a green light.
+
+**Nothing else moved. No rung was executed by this fold; every instrument, answer and proof is
+byte-identical to `2af61bf`.**
