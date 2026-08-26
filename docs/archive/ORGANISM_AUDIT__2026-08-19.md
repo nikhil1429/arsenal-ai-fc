@@ -2755,14 +2755,30 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⚠ **~20.5 of the 35-lakh EXECUTION line** (day 3.40 → 23.85).
                                    **INSIDE** — and declared a FLOOR: the orientation read happened
                                    BEFORE that baseline was taken.
-  ▶ NEXT SESSION ............... **③ THE CANON-B CHATS, CONTINUED AT `G02` — SAME S5 rung, on the
+  ▶ NEXT SESSION ............... **③ THE CANON-B CHATS, CONTINUED AT `G03` — SAME S5 rung, on the
                                    standing EXECUTION 35 + HANDOFF 13.**
-                                   ✅ **`G01` IS CLOSED 4/4 (27 Aug ~02:45 TRUE machine-clock), chat
-                                   `gemini.google.com/app/5ad12c0b45dd0ddb`, LEFT OPEN.** Its probe
-                                   passed **VERBATIM 2/2**, all 70 file paths came back exact and in
-                                   order, header count 70 = ground truth 70 — **the canon-B ten-file
-                                   design is PROVEN on the material A02 died on.** Full account: the
-                                   PROGRESS entry of 27 Aug ~02:45.
+                                   ✅ **`G01` CLOSED 4/4** (27 Aug ~02:45, chat `5ad12c0b45dd0ddb`)
+                                   **and `G02` CLOSED 4/4** (27 Aug ~04:05, chat
+                                   `affec29d12d93935`) — both LEFT OPEN.
+                                   ⚡ **G02 IS THE CONTROLLED A/B, AND IT PAID: the SAME probe
+                                   `canon_g02` that KILLED A02 at twenty files passed VERBATIM 2/2
+                                   at ten** — tail chunk20:1461 AND middle chunk16:1229, the exact
+                                   anchors the 20-file config could not return. One variable moved.
+                                   Not a run.
+                                   ⛔ **BUT A PASSING PROBE SAYS NOTHING ABOUT COVERAGE, AND G02
+                                   MEASURED IT: 29 of 32 documents listed, 0 invented.** All three
+                                   misses are MID-FILE headers, and chunk15's LATER header was
+                                   reported, so it is not truncation. **Read canon coverage as ~90%,
+                                   never 100%.**
+                                   ⚠ **`item_count` IS UNRELIABLE IN BOTH DIRECTIONS — 3 of 6 audit
+                                   answers miscount their OWN array** (declared 49/50 · 31/51 ·
+                                   103/96). verify catches every one.
+                                   ⚠ **READ `KEPT` FROM `verified.json`, NEVER BY SUBTRACTING
+                                   `dropped.json`'s ROW COUNT** — that file carries ONE ANSWER-LEVEL
+                                   row per `item_count` mismatch beside its per-item rows. Counting
+                                   it as an item drop is what put a wrong "26" in the G01 entry
+                                   (true: 27); the correction and the reconciliation are in the
+                                   PROGRESS entry of 27 Aug ~04:05.
                                    ⛔ **BEFORE YOU READ ANY `verify.mjs` NUMBER ON A CANON ANSWER:
                                    they are PRE-Z9 BOUNDS, not verdicts.** G01_2 kept 2 of 50 and
                                    **73 of 100 quote-sides are real evidence at their correctly-named
@@ -2787,8 +2803,8 @@ STATUS (update this block before any session stops — this is the handoff)
                                    THREE SEPARATE CHATS, one per canon group, then a FOURTH for the
                                    cross-group pass:
                                    `G01_1..G01_4` — chunk01-10 · probe `canon_g01`  ✅ CLOSED 4/4
-                                   `G02_1..G02_4` — chunk11-20 · probe `canon_g02`
-                                   `G03_1..G03_4` — chunk21-27 · probe `canon_g03`
+                                   `G02_1..G02_4` — chunk11-20 · probe `canon_g02`  ✅ CLOSED 4/4
+                                   `G03_1..G03_4` — chunk21-27 · probe `canon_g03`  ◀ NEXT
                                    `F3`           — the cross-group pass, its own chat
                                    Each group chat is load+probe → Q1 contradictions → Q4 declared
                                    edges → critic. **READ `wiring.json`, never this list** — it is a
@@ -5657,10 +5673,15 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written
                                     (RULING__2026-08-27_0750 item 4).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
-      ▸ **THE CANON-B HALF IS OPEN AND `G01` IS CLOSED 4/4 (27 Aug ~02:45 TRUE machine-clock).**
-      Probe **VERBATIM 2/2** · 70/70 file paths exact and in order · header count 70 = ground truth
-      70. **The ten-file canon-B design is proven on the material A02 died on.** Next is `G02`, then
-      `G03`, then `F3` (its deferred probe still uncertified), then **S5-Z9**, then S5-POST.
+      ▸ **THE CANON-B HALF IS OPEN — `G01` AND `G02` ARE BOTH CLOSED 4/4** (27 Aug ~02:45 and
+      ~04:05 TRUE machine-clock). **2 of 3 groups done.** Next is `G03`, then `F3` (its deferred
+      probe still uncertified), then **S5-Z9**, then S5-POST.
+      ⚡ **G02 SETTLED THE DESIGN QUESTION BY CONTROLLED A/B: probe `canon_g02` FAILED at twenty
+      attachments (A02) and passed VERBATIM 2/2 at ten (G02_1)** — same probe, same anchors
+      (chunk20:1461 tail · chunk16:1229 middle), one variable moved. G01: probe VERBATIM 2/2 ·
+      70/70 paths exact and in order · header count 70 = ground truth 70.
+      ⛔ **COVERAGE IS NOT WHAT THE PROBE MEASURES: G02_1 listed 29 of 32 documents** (0 invented;
+      all three misses mid-file, and not truncation). **Canon coverage reads ~90%, never 100%.**
       ⛔ **EVERY `verify.mjs` NUMBER ON A CANON ANSWER IS A PRE-Z9 BOUND** — see the S5-Z9 row
       directly above and the PROGRESS entry of 27 Aug ~02:45. Fold none of them into §9.
       ▸ **WHERE THE SWEEP STANDS, 27 Aug ~08:40 — read ▶ RESUME HERE and the PROGRESS entries for
@@ -14015,3 +14036,119 @@ tokens, applied to code.
 ⚑ Folded in the same act: Z9's row now records the +scope as REFUSED with the reason (its scope is
 untouched) · the router carries **THE DECLARED CRITIC PATH** as a ruled line, not a workaround ·
 the amplifier stands in the PROGRESS entry above, conclusion-free, as an S6 input.
+
+---
+
+### PROGRESS 2026-08-27 ~10:45 series / **27 Aug ~04:05 TRUE machine-clock** — **G02 IS CLOSED 4/4, AND IT IS THE CONTROLLED A/B THE WHOLE CANON-B REDESIGN WAS BUILT ON: the SAME probe that KILLED A02 passed VERBATIM 2/2 at ten files**
+
+Rung S5, the canon-B chats, sitting 2. Opus 5 · effort HIGH · DEFAULT mode · fresh **EXECUTION 35 +
+HANDOFF 13**. Micro-order written before any act (§10-D rule 9). Wiring read from `wiring.json` and
+verified against the probe before firing. `R01-R04` untouched; `F3` not fired (deferred probe still
+uncertified). **STEP 0: `checkall` GREEN 8/8 · `preflight` GO**, both in-session.
+
+Chat `gemini.google.com/app/affec29d12d93935`, account `nikhil.panwar2914`, Pro Extended (mode read
+BACK off the page, and re-read before the second send). Pre-attach gate 10/10 names + ten
+`close chunkNN` chips + screenshot. Four-hop outbound sha-matched at every hop on all four payloads:
+`e6c786b6ff945e15` · `c1f22c2f7519f1f2` · `88408ff01e24bce3` · `e86d17ca7b3cd104`.
+
+#### ⚡ THE A/B — one variable changed, opposite result, and it is not a run
+
+`canon_g02` is the probe A02 was fired with. Its two anchors are the ones the 20-attachment
+configuration could not return: **chunk20:1461 (tail, 97% into the file) and chunk16:1229 (middle,
+48% in)**. Same probe label, same anchor bytes, same model, same account. Only the attachment count
+changed — 20 → 10.
+
+```
+A02    (canon_g02)  20 files  →  FAIL   ("the one-context premise is dead for that chat")
+G02_1  (canon_g02)  10 files  →  PASS · VERBATIM 2/2   (tail AND middle)
+```
+
+**This is the measurement the canon-B redesign was a bet on, and the bet is paid.** It is a
+controlled comparison with one variable moved, not a tally — the epistemics note's bar for reading
+a result as more than a run. Both canon groups fired so far now pass their probes verbatim
+(`canon_g01` V 1 · `canon_g02` V 1 · FAIL 0).
+
+#### ⛔ AND A PASSING PROBE STILL SAYS NOTHING ABOUT COVERAGE — measured, on this very chat
+
+G02_1 listed **29 of 32 documents** and stated the header count as **29**. Ground truth is **32**.
+Zero invented filenames; the list and the count agree with each other, so the answer is internally
+consistent and externally incomplete. Per chunk:
+
+```
+chunk11 4/4 · chunk12 5/5 · chunk13 5/5 · chunk14 5/6 · chunk15 2/4
+chunk16 1/1 · chunk17 3/3 · chunk18 2/2 · chunk19 1/1 · chunk20 1/1
+```
+
+All three misses are **mid-file headers** — `LOAD_ZERO__2026-08-19.md` (chunk14 line 721 of 2223),
+`NEXT_SESSION__GAFFER_REALTIME_AND_TOKEN_ARCHITECTURE.md` and `OPS_STATE_2026-08-18.md` (chunk15
+lines 251 and 737 of 1790). **Not truncation:** chunk15's FOURTH header at line 1006 was reported,
+so the model read past both misses. The order already carries *"a PASSING probe says NOTHING about
+FABRICATION"*; **this adds the other half — it says nothing about COMPLETENESS either.** 9.4% of
+group 2's documents went unreported by a chat whose probe passed verbatim on both anchors.
+**S6 must read canon coverage as ~90%, not 100%, and the coverage check is what found it.**
+
+#### THE THREE AUDIT ANSWERS — **PRE-Z9 BOUNDS**, never verdicts
+
+Nothing folded into §9. Invention figures are UPPER BOUNDS (standing rule); this matcher is stricter
+than `verify.mjs`'s. Method: every quote grepped at **the document the item itself named**
+(`diag/g02_named_source.mjs`, measurement only, no instrument touched).
+
+| step | items | verify KEPT | real at named source | invention UPPER BOUND | docs named outside the group |
+|---|---|---|---|---|---|
+| G02_2 Q1 contradictions | 40 | 6 | 48/80 sides (60.0%) | 33.8% | 0 |
+| G02_3 Q4 declared edges | 96 | 8 | 21/96 (21.9%) | **71.9%** | 0 |
+| G02_4 critic (2nd pass) | 50 | 14 | 24/50 (48.0%) | 18.0% | 0 |
+
+⛔ **G02_3 IS THE WORST ANSWER THIS SWEEP HAS PRODUCED AND IT IS SAID PLAINLY: 69 of 96 quote-sides
+are absent from the group under the loosest honest match.** It also returned the most items of any
+answer (96), declared 103, and left `coverage_note` **EMPTY** where the step asks for it. High
+volume, low grounding, and an empty honesty field, in the same answer — the shape S6 should treat as
+a warning about Q4-on-canon, not as 96 findings. G01_3's bound was 48.1%; this is 71.9%.
+
+⚑ **A SECOND STRUCTURAL FACT ABOUT THE RECEIPT, and it now has four instances: THE MODEL'S OWN
+`item_count` IS UNRELIABLE IN BOTH DIRECTIONS.** G01_2 declared 49 for 50 · **G01_4 declared 31 for
+51** · G02_3 declared 103 for 96 · G02_2 and G02_4 exact. `verify.mjs` catches every one. This is
+the same family as the coverage receipt's known hole (*"it catches an invented FILENAME but cannot
+catch an inflated COUNT"*) — here the count is wrong about the answer's OWN array, which the code
+can check and does.
+
+#### ✔ A CORRECTION TO THE G01 ENTRY, MADE HERE RATHER THAN QUIETLY
+
+The 27 Aug ~02:45 entry recorded **G01_4 as "kept 26"**. The verifier's own output says **27**, and
+that is the number S6 should read. The cause is now fully understood and it is worth writing down
+because it will bite the next reader of `dropped.json`: **that file carries ONE ANSWER-LEVEL row per
+`item_count` mismatch alongside its per-item rows**, and I had subtracted that row as if it were a
+dropped item. With the row classed correctly, every answer reconciles exactly:
+
+```
+G01_2  50 items = 48 item-drops + 2 kept      G02_2  40 = 34 + 6
+G01_3  52 items = 25 item-drops + 27 kept     G02_3  96 = 88 + 8
+G01_4  51 items = 24 item-drops + 27 kept     G02_4  50 = 36 + 14
+```
+
+Read KEPT from `verified.json`, never by subtracting `dropped.json`'s row count.
+
+#### TRANSPORT — the one-shot download rule bit cleanly, and the non-committing send got a discriminator
+
+- ✔ **THE ONE-SHOT DOWNLOAD RULE BIT EXACTLY AS WRITTEN, in its cleanest instance yet.** G02_4 needs
+  TWO files on disk (the declared critic path). Fired back-to-back in ONE tab: **the raw landed
+  (`0e706410762c603d` in-page == on-disk) and the rendered was SILENTLY refused.** No retry in
+  place — route ③, a fresh tab, and the rendered landed with its sha intact
+  (`6b3172f0a855ee51`, identical to the read taken in the other tab, which also proves the answer
+  whole). The measured law stands and the ordered chain absorbed it without a halt.
+- ⚠ **THE NON-COMMITTING SEND IS NOW AT SEVEN INSTANCES — AND THIS SITTING PRODUCED A
+  DISCRIMINATOR, WHICH IS WHAT THE EPISTEMICS NOTE ASKS FOR BEFORE ANYONE PROMOTES IT.** Every
+  failure was a send that was the **first `computer` click on that tab since it loaded**. The two
+  sends that committed first try (`G01_1`, `G02_4`) were both on tabs where an earlier `computer`
+  click had already landed — G02_4's tab had taken a Copy click for G02_3's capture minutes before.
+  **That is a candidate mechanism (the first click after a load is consumed), NOT a measurement:
+  nothing was instrumented and no threshold was ruled in advance.** It stays a RUN, written as a
+  run, with its discriminator named so S11 can test it instead of re-deriving it. The operative
+  rule is unchanged: **read `turns` back after every send; re-assert the composed sha and click
+  again; never re-compose blind.**
+- ⚠ The stale-busy-flag class held on all four turns — `copyBtns` lagged `modelTurns` every time,
+  and the copy/turn parity assert (added after G01's near-miss) refused to click on a mismatch.
+  It fired for real once here and cost nothing.
+
+⚠ **~31.6 of the 35-lakh EXECUTION line when the drive stopped** (day line 147.15 → 178.78) —
+**INSIDE.** G03 not opened. Records ride the 13-lakh HANDOFF line.
