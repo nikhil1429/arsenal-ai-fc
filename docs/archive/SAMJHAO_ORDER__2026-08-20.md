@@ -25,7 +25,9 @@ CAMPAIGN     : samjhao of the 4 closed fundamentals, then Re-Jirah on all four
 TOPIC ORDER  : tokenization → embeddings → inference → context   (his order, 18 Aug, act amsyyr66dqy)
 
 LIVE LANES   : ← A SESSION READS THIS LINE TO KNOW WHAT IT IS. His priority, top first.
-               1. SAMJHAO   — tokenization, IN PROGRESS. Next move: axis a's Bolo, then axis b.
+               1. SAMJHAO   — tokenization, IN PROGRESS. Axis a CLOSED. Axis b ~85%: next move is
+                              SUBWORD's last beat (see STATUS), then "why tokenization cannot be
+                              skipped", then the SPACE debt, then his Bolo + timed line = close.
                2. FORGE     — 1-04 Hallucinations, NOT STARTED. It is the P6/P7 PILOT: `deep`
                               written in RE-LEARN SHAPE at lock (analogy + worked example +
                               why-chain + STUCK-STORY) plus a manual cold-read gate before lock.
@@ -49,12 +51,39 @@ STATUS       : SESSION 2 ran 22 Aug 03:06 → 23 Aug 07:50 IST. MEASURED: teachi
                          unprompted · ⑤ SEQUENCE LENGTH + QUADRATIC ATTENTION (he hand-counted
                          3×3=9, 4×4=16, then 2 vs 13 → 4 vs 169, 42×) · ⑥ POOR DOWNSTREAM
                          REPRESENTATIONS (D26 — a token appearing everywhere averages to nothing).
-                  LEFT : ⑦ SUBWORD — why the middle path wins · ⑧ WHY TOKENIZATION CANNOT BE
-                         SKIPPED. Plus ONE OWED DEBT: "is a space a SCISSORS or a PIECE" — he
-                         answered 3 instead of 2 on the word-level count and the reasoning was
-                         good; it was deferred to its own beat and is not yet paid.
-                  PENDING QUESTION he has not answered yet: "invoice vs zzq — whose vector is
-                         more useful, and why?" (one line).
+               🔵 UPDATED 24 Aug (SESSION 3, 08:22 → 23:30 IST). AXIS b now ~85%. Supersedes the
+                  "5.5 of 8" line above; the DONE list above still stands and grew:
+                  ⑥ POOR DOWNSTREAM REPRESENTATIONS is now CLOSED at BOTH ends — the everywhere-
+                    token (`e` tells you nothing about the document) and the rare token. His
+                    closing answer, correct: "invoice ... that will be present in a lot of vocab
+                    entries and it will make no sense". ⚠ One residue, taught as prose, NOT
+                    re-tested: he located the everywhere-ness in the VOCAB, not in the TEXT.
+                  ⑦ SUBWORD — HALF DONE. The FLOOR half landed: every single-character/byte piece
+                    is always in the vocab, so OOV is impossible BY CONSTRUCTION, not by coverage.
+                    Byte-level BPE opened (256 byte values; a character is not the atom). He
+                    restated the whole pipeline correctly, unprompted, and D25's O(n²) crack was
+                    REPAIRED in his own words (it now sits on attention over sequence length —
+                    CRACK_REPAIR row written; still fire it once at Jirah).
+                  LEFT : ⑦-B SUBWORD's SECOND half — why sequences stay SHORT. The frame that
+                         works is already set and he answered it correctly: a tokenizer needs TWO
+                         things, (1) nothing may fall through, (2) the list must stay short; word-
+                         level breaks (1), char-level breaks (2), and subword holds BOTH because
+                         one flat vocab carries the byte floor AND the frequent whole pieces. The
+                         un-served beat is the FREQUENCY argument, measured live on a real 6,784-
+                         word English doc: top-10 words = 20.8% of text, top-200 = 64.6%, and 718
+                         words appeared ONCE — 49% of distinct words but only 10.6% of the text.
+                         ▶ THE EXACT OPEN QUESTION, ask this first: "those 718 once-only words —
+                           what does word-level do with them, and what does subword do?"
+                         ⑧ WHY TOKENIZATION CANNOT BE SKIPPED — untouched.
+                         OWED DEBT, still unpaid: "is a space a SCISSORS or a PIECE" — he answered
+                         3 instead of 2 on the word-level count; the reasoning was good.
+                  TEACHER NOTES FROM SESSION 3, read before teaching him again:
+                    · DEPTH CEILING (PROJECT_OS SYSTEM RULES) governs and was BREACHED here —
+                      UTF-8 internals were opened and are derive-from-scratch. Park, don't teach.
+                    · He stopped the lesson twice. Both times the cause was MY message carrying
+                      more than one idea, never his attention. Six teacher-error rows this session.
+                    · Asking the same point three times in three shapes does not work. Change the
+                      instrument instead — the two-conditions frame is what finally landed.
                THEN : axes c, d, e, f, g, h, i — 7 untouched. Then topic close.
 DONE         : 1 of 36 axes CLOSED (tokenization/a) + tokenization/b at ~70%.
 ⚠ 23 AUG     : THE NOTES ARCHITECTURE CHANGED FOR ALL 234 AXES. Escalation 4 ruled N1–N7 (§16,
@@ -1499,3 +1528,46 @@ Keep teaching. The conservative branch was the right call — nothing was forecl
 - **The render fix is this lane's job**, at a topic-close BOUNDARY, never mid-axis, suite green after.
 - **The scope is all 234 axes**, FORGE included, starting with 1-04 on Monday. `FORGE_SPEC` gets a LAYERED
   amendment at topic close.
+
+
+### RULING 2026-08-25 · Q-1 — THE SAMJHAO BLOCK'S PLACEMENT. Verbatim. Recorded 26 Aug by the learning lane.
+
+Raised 22 Aug (§16, escalation 3's ONE AMBIGUITY QUEUED): escalation 3's Q4 put orphan facts in the
+rendered artifact "never the capsule", while §3 Option A — **his own choice, 20 Aug** — puts each axis's
+SAMJHAO BLOCK inside `faultLines[i].deep`. It could not fire before topic close, so teaching continued
+and the queue held it. **Ruled 25 Aug. Topic close is UNBLOCKED.**
+
+```
+## RULING Q-1 · 25 Aug 2026 · architect
+NARROW, with N2's placement. Q4 governs ORPHAN facts only (→ the rendered artifact's
+samjhao_additions). The per-axis SAMJHAO BLOCK is the `lesson` field's CONTENT — N2(b), the LATER
+ruling (22 Aug), verified verbatim: "A NEW per-axis field (name it `lesson`) … June `deep` stays
+untouched." In the capsule, rendered below June's deep, June's deep byte-untouched, written ONLY
+by HIS paste at topic close. §3 Option A's SUBSTANCE (per-axis, in-capsule, below June, June
+untouched) survives in full; only the mechanical placement moved from "append inside the deep
+string" to "the `lesson` sibling field" — which protects June prose MORE, not less. Neither of
+his choices is reversed. Topic close is unblocked.
+```
+
+**WHAT CHANGES FOR THE TEACHER.** The SAMJHAO BLOCK's shape (§3) is unchanged — stuck-story, his Bolo,
+his worked trace, the marked 2026 patch, the interview line. Only its **destination** changed: it is the
+content of a new per-axis **`lesson`** field, a sibling of `deep`, not text appended inside the `deep`
+string. June's `deep` stays byte-untouched; the build's walker renders any unknown field for free, below
+it. Orphan facts (things no axis owns) still go to the rendered artifact's `samjhao_additions`, never the
+capsule. His paste at topic close remains the only write.
+
+**ALSO IN FORCE FROM 25 AUG, ruled the same day, affecting every learning session:**
+- **Q-12 + its addendum — raw facts go per-session.** Each session appends to its OWN
+  `RAW_FACTS.<session-stamp>.jsonl`; readers merge by glob + `ts` sort and must **COUNT AND REPORT**
+  unparseable lines, never skip them silently. New escalations are **one file each** in
+  `arsenal-audit-artifacts\queue\` (README there) — they take no Q number; `ESCALATION_QUEUE.md` is now
+  the closed record of Q-1..Q-23 plus its RULING rows.
+- **Q-10.1 — capture never pauses.** A lossless, unclassified, out-of-repo extract commits to no shape
+  and is therefore outside C1. *"do not commit to a shape" and "do not capture" are different rules.*
+- **Q-18 + Q-19 interim ruling — behavioural claims are PRIORS, not verdicts.** No session applies one to
+  him live without checking it against **his own words that day**. It broke three times in one evening,
+  24 Aug.
+- **Q-7 — the no-date-countdown prose law is REMOVED** on his word (*"remove it, make it full mental
+  athelete level for complete domination"*). The execution rides the ENGINEERING lane, including §5's
+  dated SUPERSEDED layer here. **Every DEPTH law is untouched** — the countdown ban went, the depth bar
+  did not.
