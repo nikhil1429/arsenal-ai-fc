@@ -2624,21 +2624,146 @@ STATUS (update this block before any session stops — this is the handoff)
                                    run, not a law, per the standing epistemics note.
                                    ⚠ **~18.2 of the 35-lakh EXECUTION line** (day 1065.52 →
                                    1083.70). **INSIDE.**
-  ▶ NEXT SESSION ............... **① B17 — a fresh Pro-Extended chat, ten attachments
-                                   `live2_batch161-170`, `steps/B17_1.txt` then `steps/B17_2.txt`.**
-                                   Then B18, the last one. **TWO CHATS LEFT.**
+  B17 CLOSED 2/2 ............... ☑ 27 Aug 2026 ~07:10 series (true clock 26 Aug ~23:40).
+                                   **17 of 18 — ONE CHAT LEFT.** Fresh chat
+                                   `gemini.google.com/app/66ace7909d03c149`, Pro Extended read back
+                                   off the page BEFORE the attach. Ten attachments
+                                   `live2_batch161-170`. Four hops sha-asserted both steps
+                                   (`0e2e1c1090f5ca25` · `79bdf08e3cbb1dc8`, composed === source,
+                                   108 and 124 blocks). 10/10 chips on the SENT turn.
+                                   ✔ **`probecheck B17_1` = PASS · VERBATIM, exit 0, ALL THREE:**
+                                   tail `live2_batch170.txt:2657` · middle
+                                   `live2_batch166.txt:2142` · **band `live2_batch166.txt:41`,
+                                   49.7%.** ⚡ **THE BAND IS 9 FOR 9 SINCE Z6** — 49.9 · 48.4 ·
+                                   58.5 · 46.2 · 40.4 · 51.6 · 43.7 · 45.3 · 49.7%.
+                                   ⛔ **HIS WIFI DIED MID-RUNG, between the composed payload and the
+                                   send.** Nothing was assumed on the way back: turns · mode · chips ·
+                                   composed sha were ALL re-read off the page before touching
+                                   anything. `turns: 0` proved no send had fired, so there was no
+                                   double-send risk, and the composed payload was still byte-identical.
+                                   **The recovery cost nothing because every gate was re-asserted
+                                   rather than remembered** — worth recording as the shape, since an
+                                   outage mid-outbound is the one place a resumed session could
+                                   silently send twice.
+                                   ⚠ **B17_2 DID NOT COMMIT ON THE FIRST CLICK** — the click landed
+                                   (Submit tooltip painted) and the payload stayed in the compose
+                                   box, turns unchanged. **The first-try streak ends at 25.** The
+                                   payload was RE-ASSERTED identical (`79bdf08e3cbb1dc8`, 124 blocks)
+                                   before the second click, and turns went 1→2 exactly once. The
+                                   click+forced-paint rule was obeyed on BOTH clicks, so this is not
+                                   that class. ONE instance — recorded as a run, not a law.
+                                   ⚑ **THE ONE-SHOT DOWNLOAD RULE DID NOT BITE — AND THAT IS A LEAD,
+                                   NOT A REPEAL.** BOTH blob downloads landed in the same browser
+                                   session (1,143 B and 18,676 B, each == its in-page byte count).
+                                   An IN-PLACE RELOAD had occurred between them. That is ONE
+                                   observation against a rule measured end-to-end at B04 and seen to
+                                   bite at B16, so **the transport chain is UNCHANGED**: still ① blob
+                                   → ② clipboard → ③ fresh tab. Under the standing epistemics note a
+                                   single counter-instance with no mechanism is a LEAD. **If a later
+                                   chat also downloads twice after a reload, THAT is the second
+                                   instance — do not act on this one alone.**
+                                   ⚠ **TWO RENDER STALLS, one per step, both fixed by an IN-PLACE
+                                   RELOAD** (22nd and 23rd free recoveries, 0 failures). Same
+                                   signature both times: `innerText` read **11** while `textContent`
+                                   held 603 / 18,604. On B17_2 the stalled UI ALSO kept showing
+                                   "Stop response" while the bytes had been stable for ~105 s and
+                                   ended on a well-formed JSON close — **the busy flag is part of
+                                   what stalls, so it is not a completion signal.** Byte-stability +
+                                   a well-formed close is; the reload then left textContent
+                                   UNCHANGED at 18,604, which proves the answer had been complete.
+                                   ⛔ **THE PRE-ATTACH GATE READ 0 FOR ~90 s AND THE SCREENSHOT
+                                   ARBITRATED IT — fourth sitting running.** I very nearly diagnosed
+                                   a shadow-DOM; a deep pierce measured `shadowCount: 0`, so it was
+                                   pure LAG, not structure. Then all ten names appeared at once, in
+                                   BOTH forms, and the `aria-label` chips were **present (10)** — the
+                                   witness that was absent at B16. **Four sittings, four different
+                                   pictures.** The durable gate held exactly as written.
+                                   ⚠ **`B17_2 : 33 items → verify KEPT 14 · DROPPED 19` — and every
+                                   drop is `NOT-FOUND`, not `source-missing`.** **MEASURED FALSE
+                                   DROPS 0** · `control_chars_escaped: 0` (13th consecutive) ⇒
+                                   **true content ≥ 14 of 33, invention ≤ 57.6%** — the HIGHEST bound
+                                   of the recent chats (B11 23% · B16 26.5% · B15 36.1%).
+                                   ⛔ **THE CONTROL WAS DIRTY AND I SAY SO: my raw recount re-found
+                                   only 7 of the 14 verify KEPT (50%).** Normalising whitespace in MY
+                                   recount only — `verify.mjs` untouched — moved it to 11 of 14
+                                   (79%), and false drops stayed 0 under BOTH matchers. So two
+                                   independent matchers agree the 19 are absent, but the instrument
+                                   is still not clean ⇒ **the figure stays a BOUND**, per the
+                                   standing rule.
+                                   ✔ **AND S5-Z4's DIAGNOSIS IS CONFIRMED FROM THE OTHER SIDE — a
+                                   MECHANISM, not a tally.** All ten of this chat's batches are ONE
+                                   day, `2026-08-20 (continued)`. The model reported it under the
+                                   **BARE** key `2026-08-20`, which is the form the index holds ⇒
+                                   `reported 1/1 · never mentioned 0 · zero 0`, and the
+                                   source-missing class **vanished entirely** after dominating B15
+                                   (36/36) and B16 (32/33). **Same line, opposite key-form, opposite
+                                   outcome** — that is Z4's one missing normalisation demonstrated,
+                                   not merely counted. Still NOT PATCHED: S5 builds nothing.
+                                   ⚠ **Header count claimed 10, ground truth 10 — EXACT, but the
+                                   test is VACUOUS here and I will not bank it:** this group is ten
+                                   files carrying exactly ONE header each, so the "one header per
+                                   FILE" deflation shape and a true count give the SAME answer.
+                                   **It discriminates nothing.** Third exact count, and the least
+                                   informative of the three.
+                                   ⚠ **THE YIELD IS LOW AND THE REASON IS STRUCTURAL, NOT A DEFECT:**
+                                   this ten-file group is entirely 2026-08-20 — the switch-off and
+                                   the ladder — i.e. **the audit talking about itself**, which the
+                                   25-Aug corpus ruling already called "zero archaeological value".
+                                   A thin harvest here was PREDICTED by that ruling.
+                                   ⚠ **~17.8 of the 35-lakh EXECUTION line** (day 1104.38 →
+                                   1122.21). **INSIDE** — but declared: the session's ORIENTATION
+                                   reading happened BEFORE that baseline was taken, so the true
+                                   session cost is higher than 17.8 by that amount and the delta is
+                                   a FLOOR, not the whole bill.
+  ▶ NEXT SESSION ............... **① B18 — a fresh Pro-Extended chat, `steps/B18_1.txt` then
+                                   `steps/B18_2.txt`. THIS IS THE LAST CORPUS CHAT.** After it
+                                   closes, 18 of 18, and the sweep's remaining lane is S5-POST's
+                                   backlog + the fold into §9 — neither is this rung's job to start.
+                                   ⛔ **B18 IS NOT A TEN-FILE CHAT. IT ATTACHES **TWO**:
+                                   `live2_batch171.txt` (191,933 B) and `live2_batch172.txt`
+                                   (35,088 B).** The corpus is 172 batches, so B18 is the remainder,
+                                   and `batch172` is a third the size of every other file in the
+                                   sweep. **I wrote "ten attachments, 171-180" into this router from
+                                   the pattern of the previous sixteen chats and it was WRONG** —
+                                   caught only by reading `wiring.json` before committing the line.
+                                   That is the prose-vs-wiring drift this order was opened about,
+                                   committed inside its own handoff. **READ `wiring.json` AND
+                                   `probe_expected.json`, never a sentence — including this one.**
+                                   Both are NESTED (`.steps[...]` and `.probes[...]`) and
+                                   `probe_expected` is keyed by CHAT (`live2_g18`), not by STEP.
+                                   ⚠ **B18's three anchors are already stored and they are unusual:**
+                                   tail `live2_batch172.txt:464` · middle `live2_batch172.txt:148` ·
+                                   **band `live2_batch171.txt:1152`, 40.4%** — tail AND middle both
+                                   fall in the SHORT file. **Two attachments is a materially easier
+                                   retrieval than ten, so a B18 pass says LESS about the ten-file
+                                   shape than any chat since B06.** Record its band result in the
+                                   series, but do not let it carry weight the others earned.
                                    ⛔ **DO NOT TRUST ANY SINGLE DOM WITNESS FOR THE PRE-ATTACH
-                                   GATE.** Three sittings, three different pictures: B14's `.txt`
-                                   names, B15's ten `aria-label="close live2_batchNNN"` chips, and
-                                   B16 where those aria-labels were **entirely absent** while the
-                                   names sat in `innerHTML`. **The durable gate: assert the ten
-                                   NAMES in innerHTML, poll to stability (0 for 60–70 s is normal
-                                   in all three), and let a SCREENSHOT arbitrate a zero.**
-                                   ⚡ **THE ONE-SHOT DOWNLOAD RULE IS LIVE AGAIN** — it bit at B16
-                                   for the first time since B04. If a blob download silently
-                                   no-ops, **do not retry in place**: open a FRESH TAB on the same
-                                   chat, which restores the budget AND doubles as the stall
-                                   remedy.
+                                   GATE.** FOUR sittings, four different pictures: B14's `.txt`
+                                   names, B15's ten `aria-label="close live2_batchNNN"` chips, B16
+                                   where those aria-labels were **entirely absent**, and B17 where
+                                   they were **back (10)** — and where a 90 s read of zero nearly got
+                                   diagnosed as a shadow-DOM before a deep pierce measured
+                                   `shadowCount: 0`. **The durable gate: assert the ten NAMES in
+                                   innerHTML, poll to stability (0 for 60–90 s is normal in all
+                                   four), and let a SCREENSHOT arbitrate a zero.**
+                                   ⛔ **A STALLED PAGE ALSO STALLS ITS BUSY FLAG — B17's new one.**
+                                   "Stop response" stayed painted for ~105 s after the bytes stopped
+                                   moving. **Completion = byte-stability + a well-formed close, never
+                                   the absence of a stop button.** Reload only after both; the
+                                   reload then left textContent UNCHANGED, which is what proved the
+                                   answer had been whole.
+                                   ⚡ **THE ONE-SHOT DOWNLOAD RULE IS STILL THE RULE.** B17 got TWO
+                                   downloads in one browser session with an in-place reload between
+                                   them — ONE counter-instance, no mechanism, so it is a LEAD and the
+                                   chain is unchanged: ① blob → ② clipboard → ③ fresh tab. If a blob
+                                   download silently no-ops, **do not retry in place**: open a FRESH
+                                   TAB on the same chat, which restores the budget AND doubles as the
+                                   stall remedy.
+                                   ⚠ **A SEND CAN LAND AND NOT COMMIT.** B17_2's first click painted
+                                   the Submit tooltip and left the payload in the box. **Always read
+                                   `turns` back after a send**; if it did not move, RE-ASSERT the
+                                   composed sha and click again — never re-compose blind.
                                    ⚑ **PROMOTED AT B16 — AND IT CROSSED A PRE-RULED BAR, WHICH IS
                                    WHY THIS IS NOT RUN-INFLATION.** `RULING__2026-08-26_1750-
                                    s5corpus-15.md` **item 6(b)** split the fresh-tab lead in two:
@@ -2720,13 +2845,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                    RUNNING**, and the shape is legible: the model reports one
                                    header PER FILE, so it misses the SECOND header inside a file,
                                    never a file. Count file by file, never by glob.
-                                   **13 of 18 corpus chats are CLOSED 2/2.** Read
-                                   `wiring.json` for each chat's exact ten filenames and
-                                   `probe_expected.json` for its anchors — **never the prose, and
-                                   note both files are NESTED** (`.steps[...]` and `.probes[...]`;
-                                   a top-level read returns undefined and looks like a missing
-                                   probe — and `probe_expected` is keyed by CHAT, `live2_g14`, not
-                                   by STEP, which is a second way that read comes back undefined).
+                                   **17 of 18 corpus chats are CLOSED 2/2** (this count is restated
+                                   in prose and has drifted stale twice — the ticks above are the
+                                   authority). Read `wiring.json` for each chat's exact ten
+                                   filenames and `probe_expected.json` for its anchors — **never the
+                                   prose, and note both files are NESTED** (`.steps[...]` and
+                                   `.probes[...]`; a top-level read returns undefined and looks like
+                                   a missing probe — and `probe_expected` is keyed by CHAT,
+                                   `live2_g18`, not by STEP, which is a second way that read comes
+                                   back undefined).
                                    ⛔ **THE PAGE HYDRATES IN STAGES AND A HALF-HYDRATED GEMINI LIES
                                    ABOUT ITS OWN STATE — measured three times at B12.** A loaded
                                    page showed a compose bar with **NO MODE PICKER AT ALL** (a
@@ -5281,17 +5408,21 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written off the
                                     10.13/19.4/26 record (RULING__2026-08-27_0150 item 3).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
-      ▸ **WHERE THE SWEEP STANDS, 27 Aug ~05:40 — read ▶ RESUME HERE and the PROGRESS entries for
-      B05–B16; only B01–B04 are written out below.** **B01–B16 ALL CLOSED 2/2 — 16 of 18.** B13 was
+      ▸ **WHERE THE SWEEP STANDS, 27 Aug ~07:10 — read ▶ RESUME HERE and the PROGRESS entries for
+      B05–B17; only B01–B04 are written out below.** **B01–B17 ALL CLOSED 2/2 — 17 of 18, B18 is the
+      last one.** B13 was
       closed at S5-Z8 (its extraction was parked, not stamped, until that rung fixed the assert that
       refused it) — the SECOND time a micro-rung has been the thing that closed a chat, after B10/Z7. B10 was closed at S5-Z7 (its extraction was parked, not stamped,
       until that rung fixed the assert that refused it). Every B chat stays OPEN (the critic is not
       fired — the ~07:50 ruling).
-      ⚡ **THE BAND ANCHOR IS NOW 4 FOR 4 SINCE Z6** — B09 49.9% · B10 48.4% · B11 58.5% ·
-      **B12 46.2%.** Between them they now cover the whole declared band, and B12's 46.2% sits
-      exactly where B06_1 (47.4%) and A02 (~48%) DIED pre-Z6. **Four passes across the full band
-      width is the strongest evidence yet that those earlier deaths were VARIANCE** — but every one
-      of them also passed on a fresh chat, so this is still a series, not a closed question.
+      ⚡ **THE BAND ANCHOR IS NOW 9 FOR 9 SINCE Z6** — B09 49.9% · B10 48.4% · B11 58.5% ·
+      B12 46.2% · B13 40.4% · B14 51.6% · B15 43.7% · B16 45.3% · **B17 49.7%.** Between them they
+      cover the whole declared 40–60% band, and B12's 46.2% sits exactly where B06_1 (47.4%) and
+      A02 (~48%) DIED pre-Z6. **Nine passes across the full band width is the strongest evidence yet
+      that those earlier deaths were VARIANCE** — but every one of them also passed on a fresh chat,
+      and under the standing epistemics note **a run of nine is still a RUN, not a law**: no
+      mechanism has been named and no threshold was ruled in advance. It is a series, not a closed
+      question, and S6 must not inherit it as a measured fact.
       ☑ **26 Aug ~09:30 — B04 IS CLOSED 2/2.** B04_2 was captured at S5-Z5's close through the new
       `--from-blob` path on the REAL CLI (transit sha `8d089bd0333667b4` in-page == on-disk; identity:
       all 9 declared top-level keys present) and verified: 44 items → 19 kept, 25 dropped, ≥5 of those
@@ -12869,3 +13000,178 @@ series.**
 
 **Nothing else moved. No rung was executed by this fold; every instrument, answer and proof is
 byte-identical to `3205435`.**
+
+### PROGRESS 2026-08-27 ~07:10 series / **26 Aug ~23:40 TRUE machine-clock** — **B17 CLOSED 2/2, 17 of 18** — his wifi died between the composed payload and the send, and the only reason that cost nothing is that every gate was re-asserted instead of remembered; and the chat that lost the fewest items to S5-Z4 is the one that proves Z4's mechanism
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐). Micro-order written
+before any edit (rule 9), carrying the two standing rules that bind from B14: *a run is a run, not
+a law* and *every invention figure is an UPPER BOUND*. MODEL: Opus 5 · effort HIGH · EXECUTION 35 +
+HANDOFF 13. `checkall` **GREEN 8/8** · `preflight` **GO**, both RUN in-session, neither inherited.
+Meter baseline **1104.38**.
+
+⚠ **Preflight's one warning was the expected resume warning** (`answers/` already holds 37 files).
+And a difference from B16 worth recording because it changes which transports are available:
+**the clipboard was ALIVE this sitting** — the largest step round-tripped through it inside
+preflight. It was never needed: the blob path is primary and the four-hop keeps the OS clipboard
+off the answer path either way.
+
+#### ⛔ THE INTERRUPTION — HIS WIFI DIED MID-RUNG, AND IT LANDED ON THE ONE STEP WHERE THAT IS DANGEROUS
+
+The outage fell **between the composed payload and the send** — the single window in which a
+resumed session can silently send twice, or send something it only believes is intact.
+
+Nothing was carried on trust. On the way back I re-read, off the page:
+
+```
+turns 0 · responses 0          ⇒ NO send had fired. No double-send risk.
+mode  "currently Pro Extended" ⇒ re-read, not remembered
+chips 10/10 · aria 10          ⇒ attachments survived
+composed 108 blocks · 6,816 chars · sha 0e2e1c1090f5ca25 == source on disk
+```
+
+**The recovery cost nothing, and the reason is method rather than luck:** every one of those four
+facts is cheap to re-measure and none of them was assumed. Recorded as the shape, because the next
+session may lose a connection in the same place and the temptation there is to re-compose blind.
+
+#### B17_1 — PASS · VERBATIM 3/3, AND THE BAND IS 9 FOR 9
+
+Fresh chat **`gemini.google.com/app/66ace7909d03c149`**, Pro Extended read back off the page
+BEFORE the attach — and it had to be *set* first: the fresh compose bar opened on plain **Pro**.
+
+```
+B17_1  source 0e2e1c1090f5ca25 (6,816 chars · 108 lines) · composed === source, 108 blocks
+B17_2  source 79bdf08e3cbb1dc8 (9,030 chars · 124 lines) · composed === source, 124 blocks
+```
+
+**`probecheck B17_1` → PASS · VERBATIM, exit 0, ALL THREE:** tail `live2_batch170.txt:2657` ·
+middle `live2_batch166.txt:2142` · **band `live2_batch166.txt:41`, 49.7%.**
+⚡ **The band series since Z6 is 9 for 9** — 49.9 · 48.4 · 58.5 · 46.2 · 40.4 · 51.6 · 43.7 · 45.3 ·
+49.7%. **Still a RUN.** No mechanism has been named for it and no threshold was ruled before the
+evidence, so it does not get promoted — that is the epistemics note applied to the sweep's most
+tempting number rather than to a small one.
+
+#### ⛔ THE PRE-ATTACH GATE READ 0 FOR ~90 s — AND I NEARLY DIAGNOSED THE WRONG THING
+
+The screenshot showed chips on screen while `innerHTML` matched **zero** of the ten names. The
+obvious reading was a shadow DOM. I checked instead of concluding: a deep pierce measured
+**`shadowCount: 0`** and three iframes unrelated to the chips. It was **pure LAG** — moments later
+all ten names appeared at once, in BOTH forms, stable across four reads, with the ten
+`aria-label="close live2_batchNNN"` chips **present again** after being entirely absent at B16.
+
+**Four sittings, four different pictures of the same upload** (B14 `.txt` names · B15 aria-labels ·
+B16 none · B17 both). The durable gate — **names in `innerHTML`, poll to stability, screenshot
+arbitrates a zero** — held exactly as written, and the near-miss is worth recording: a structural
+explanation for a timing symptom would have sent the next session hunting a DOM that does not
+exist.
+
+#### ⚠ B17_2 DID NOT COMMIT ON THE FIRST CLICK — THE FIRST-TRY STREAK ENDS AT 25
+
+The click landed (the **Submit** tooltip painted) and the payload stayed in the compose box with
+`turns` unchanged. The click+forced-paint rule was obeyed on both clicks, so this is **not** the
+class that rule exists for.
+
+What made it safe: the composed payload was **RE-ASSERTED identical** (`79bdf08e3cbb1dc8`, 124
+blocks, 9,030 chars) before the second click, and `turns` moved 1→2 exactly once. **Never
+re-compose blind after a failed send — re-assert, then click.** ONE instance; written as a run.
+
+#### ⚡ THE ONE-SHOT DOWNLOAD RULE DID NOT BITE — AND THAT IS A LEAD, NOT A REPEAL
+
+**Both** blob downloads landed in the same browser session (1,143 B and 18,676 B, each equal to its
+in-page byte count, each sha-asserted in-page == on-disk). An **in-place reload** had occurred
+between them.
+
+That rule was measured end to end at B04 and **bit at B16**. One counter-instance, with no
+mechanism named, is exactly what the standing epistemics note says must stay a **LEAD** — so
+**the transport chain is unchanged** (① blob → ② clipboard → ③ fresh tab) and the router now says
+so explicitly. If a later chat also downloads twice after a reload, that is the second instance.
+**I am not rewriting a measured law off one convenient observation** — which is the same discipline
+that cost me two false rules at B14, seen from the other side.
+
+#### ⚠ TWO RENDER STALLS — AND A NEW FACT: THE BUSY FLAG STALLS TOO
+
+Both steps stalled, both recovered on an **in-place reload** (22nd and 23rd free recoveries, 0
+failures). Same signature both times: `innerText` read **11** while `textContent` held 603 and
+18,604.
+
+**The new one, and it is a trap:** on B17_2 the stalled UI kept **"Stop response" painted for
+~105 s after the bytes stopped moving**. A session that waits for the stop button to disappear
+waits forever; a session that reloads on the button alone can truncate a paid-for answer.
+**Completion = byte-stability + a well-formed close.** Both held here, and the reload then left
+`textContent` **unchanged at 18,604** — which is what proved the answer had been complete rather
+than merely stalled.
+
+#### B17_2 — THE HIGHEST INVENTION BOUND OF THE RECENT CHATS, ON A CONTROL I WILL NOT DRESS UP
+
+Captured clean: transit **`2e206db8f9f5416d` in-page == on-disk**, all 9 top-level keys, JSON
+parses, `control_chars_escaped: 0` (13th consecutive).
+
+**`B17_2 : 33 items → verify KEPT 14 · DROPPED 19` — and every drop is `NOT-FOUND`, not
+`source-missing`.** **MEASURED FALSE DROPS 0** ⇒ **true content ≥ 14 of 33, invention ≤ 57.6%** —
+the highest bound of the recent chats (B11 23% · B16 26.5% · B15 36.1%).
+
+⛔ **THE CONTROL CAME BACK DIRTY AND THE FIRST NUMBER WAS BAD.** My raw recount re-found only
+**7 of the 14** verify KEPT — a 50% control, which makes an "absent" verdict close to worthless.
+Normalising whitespace **in my recount only** (`verify.mjs` untouched — it is the load-bearing gate
+and S5 builds nothing) moved the control to **11 of 14 (79%)**, and false drops stayed **0** under
+both matchers. So two independent matchers agree the 19 are absent, but **the instrument is still
+not clean**, and the figure stays a **BOUND** under the standing rule. Said plainly rather than
+reported as a point value.
+
+#### ✔ AND THIS IS THE CHAT THAT PROVES S5-Z4's MECHANISM — FROM THE OTHER SIDE
+
+All ten of B17's batches are **ONE day**: `2026-08-20 (continued)`.
+
+The model reported that day under the **BARE** key `2026-08-20` — which is the form the index
+holds — and the result was `reported 1/1 · never mentioned 0 · zero 0`. **The source-missing class
+vanished entirely**, in the chat immediately after it took 36 of 36 at B15 and 32 of 33 at B16.
+
+**Same line, opposite key-form, opposite outcome.** That is not another tally mark on a run: it is
+Z4's *one missing normalisation* demonstrated by its own contrapositive. The index strips
+` (continued)`; when the model happens to emit the stripped form, the entire class disappears.
+**Still NOT PATCHED** — S5 builds nothing and Z4's scope is already written to the line.
+
+#### ⚠ TWO NUMBERS THIS CHAT PRODUCED THAT I AM REFUSING TO BANK
+
+1. **Header count claimed 10, ground truth 10 — EXACT, and VACUOUS.** This group is ten files with
+   exactly **one** header each, so the "one header per FILE" deflation shape and a true count give
+   the *same* answer. It discriminates nothing. Third exact count and the least informative of them.
+2. **The low yield is structural, not a defect.** This ten-file group is entirely 2026-08-20 — the
+   switch-off and the ladder — i.e. **the audit talking about itself**, which the 25-Aug corpus
+   ruling already called *"zero archaeological value"*. A thin harvest here was **predicted**. It
+   would be easy and wrong to write this up as a retrieval finding.
+
+**⇒ B17 IS CLOSED 2/2. 17 of 18 — ONE CHAT LEFT.**
+
+#### WHAT THIS RUNG DID NOT DO — said out loud, per §5
+
+No instrument touched (the whitespace normalisation was in an ad-hoc recount, never in
+`verify.mjs`). Nothing re-asked — the two reloads re-read stored answers, no second Gemini call was
+made anywhere in this rung. No `--lossy`, no gate-shopping, no fresh tab needed. `checkall` §7 went
+RED at close on the known class (verify's own outputs moved — **11th occurrence**), remedied with
+`snapshot.mjs take` and re-run **GREEN before committing**. The critic was not fired; every B chat
+stays OPEN. B18 was not opened. No environment surgery.
+
+#### COST
+
+**~17.8 of the 35-lakh EXECUTION line** (day 1104.38 → 1122.21). **INSIDE.**
+⚠ **Declared, because the delta flatters me:** the session's ORIENTATION reading — the order, the
+runbook, the wiring — happened **before** that baseline was taken, so **17.8 is a FLOOR on this
+session's true cost, not the whole bill.** Records ride HANDOFF 13. Caveat carried, not re-derived:
+today's meter line reads ~+16% hot (S5-R's finding).
+
+#### ⛔ ONE MORE, AND I COMMITTED IT MYSELF: THE HANDOFF LINE I WROTE FOR B18 WAS WRONG
+
+Writing the router I typed **"ten attachments, `live2_batch171-180`"** — straight off the pattern of
+the previous sixteen chats, without reading anything. Then I read `wiring.json` before committing
+the line, and **B18 attaches TWO files**: `live2_batch171.txt` (191,933 B) and `live2_batch172.txt`
+(35,088 B). The corpus is 172 batches; B18 is the remainder.
+
+**That is §2's drift disease committed inside this order's own handoff**, by the session whose whole
+job is to stop it — and the only thing that caught it was the rule already written three lines
+below it (*read `wiring.json`, never the prose*) being obeyed against my own sentence rather than
+against someone else's. The router now names the two files, their sizes, and the correction.
+
+**And it has a consequence the next session must not miss:** two attachments is a materially easier
+retrieval than ten, and B18's stored tail AND middle anchors BOTH fall inside the 35 KB file.
+**A B18 pass therefore says less about the ten-file shape than any chat since B06** — its band
+result belongs in the series, but it does not carry the weight the other sixteen earned.
