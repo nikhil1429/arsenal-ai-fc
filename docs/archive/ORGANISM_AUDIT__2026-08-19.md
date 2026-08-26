@@ -2393,6 +2393,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                    re-derived: today's meter line reads ~+16% hot (S5-R's finding).
   S5-Z8 + B13 CLOSED 2/2 ....... ☑ 27 Aug 2026 ~02:40. **S5-Z8 DONE — the de-escape lane is open,
                                    bounded, and measured — AND B13 IS CLOSED 2/2. 13 of 18.**
+                                   ✔ **ACCEPTED WHOLE BY THE RULER**
+                                   (`RULING__2026-08-26_2045-s5z8-1.md` item 5): 26 checks ×2,
+                                   the bound biting outward, the receipt correct, twelve answers
+                                   unmoved, no-second-copy asserted mechanically. **The scope
+                                   reading was RATIFIED (item 1)** — normalization one-site,
+                                   `capture.mjs` CARRIES the number; the alternative reading made
+                                   the row's own DONE-PROOF unreachable. No correction owed.
+                                   **All three leads were ruled and are folded** — see the
+                                   addendum below.
                                    `escapeControlsInStrings` is in **`payloadfence.mjs` and nowhere
                                    else**: 0x00–0x1F **inside string literals only**, escape-aware,
                                    run ONLY after a straight parse has already failed, and every
@@ -2458,10 +2467,22 @@ STATUS (update this block before any session stops — this is the handoff)
                                    still refuses; every other predicate is unchanged. **If a chat
                                    ever reports a NON-ZERO count, say so in its record** — that is
                                    the measurement the bound exists to produce.
-                                   ⚠ **THE CONTROL HAS NOW COME BACK DIRTY TWICE RUNNING** (B12
-                                   3/5, B13 3/4). When the recount cannot re-find every quote
-                                   `verify.mjs` itself KEPT, the invention figure is an **UPPER
-                                   BOUND and must be reported as one** — never a point value.
+                                   ⚠ **STANDING FROM B14 TO B18, RULED — EVERY INVENTION FIGURE
+                                   IS REPORTED AS AN UPPER BOUND, never a point value**
+                                   (`RULING__2026-08-26_2045-s5z8-1.md` item 2). The control has
+                                   come back dirty twice running (B12 3/5, B13 3/4): the recount
+                                   matcher is stricter than `verify.mjs`'s, so "genuinely absent"
+                                   over-counts. **Honest labelling costs nothing**, and the
+                                   matcher-as-instrument sits on S5-POST's backlog with a row of
+                                   its own — do NOT fix it mid-sweep.
+                                   ⚑ **STANDING, AND IT BINDS EVERY ESCALATION AND RULING FROM
+                                   NOW ON (same ruling, item 4): a RULING's FILENAME matches its
+                                   escalation's SERIES LABEL; its BODY carries the TRUE
+                                   `Get-Date`.** The series labels are IDs that other files point
+                                   at, so continuity wins over correctness in the filename — and
+                                   the true clock is never lost, because the body carries it. The
+                                   series ran ~5h20m fast through 26–27 Aug; that is RECORDED,
+                                   not harmonised.
                                    ⚠ **HEADER COUNT HAS BEEN DEFLATED BY ONE FOR THREE CHATS
                                    RUNNING**, and the shape is legible: the model reports one
                                    header PER FILE, so it misses the SECOND header inside a file,
@@ -3007,7 +3028,16 @@ STATUS (update this block before any session stops — this is the handoff)
                                    design at capture.mjs:435 — checkers read the algorithm off
                                    the file, never re-hash a live freeze) · the checkall §5
                                    pin-assert (named twice, 26 Aug — granted its row at the
-                                   ~02:55 ruling; there will not be a fourth naming).
+                                   ~02:55 ruling; there will not be a fourth naming) ·
+                                   **THE RECOUNT MATCHER AS AN INSTRUMENT** — granted its row
+                                   by `RULING__2026-08-26_2045-s5z8-1.md` item 2, off TWO
+                                   consecutive dirty controls (B12 3/5, B13 3/4). The
+                                   per-chat recount matcher is STRICTER than `verify.mjs`'s,
+                                   so "genuinely absent" over-counts and every invention
+                                   figure it produces is a BOUND. **It affects reporting
+                                   PRECISION, not gate correctness — which is exactly why it
+                                   is backlog and not a mid-sweep rung, and why S5-Z4 does
+                                   NOT grow a fourth time.**
                                    RULED ~02:55 (RULING__2026-08-26_0240-s5z3-1.md): the one
                                    authorized fenced re-probe = the resumed sweep's FIRST ACT,
                                    on the sweep's budget (c3 = hypothesis until it returns) ·
@@ -12028,3 +12058,63 @@ B14 was not opened. The critic was not fired and every B chat stays OPEN.
 **~8.7 of the 21-lakh line** (day 977.89 → 986.61 at the proofs' close). **INSIDE**, and the
 BUILD half came in under its 8. Records ride HANDOFF 5. Caveat carried, not re-derived: today's
 meter line reads ~+16% hot (S5-R's finding).
+
+### ADDENDUM 2026-08-26 ~20:45 TRUE machine-clock — **THE RULER'S CLOSE ON S5-Z8: the scope reading RATIFIED, all three leads ruled, and the timestamp rule repaired at BOTH ends**
+
+The ruling arrived after `c17f9c7` was pushed, so it is folded here rather than rewritten into the
+entry above — the record shows the order things actually happened in. **Note the heading's clock:
+this addendum is the FIRST entry written under the new reconciliation rule (item 4), which is why
+it reads 26 Aug ~20:45 while the entry immediately above it reads 27 Aug ~02:40. That is not a
+contradiction; it is the repair landing.**
+
+**THE RULING, VERBATIM — `queue\RULING__2026-08-26_2045-s5z8-1.md`:**
+
+> # RULING — 26 Aug 2026 ~20:45 TRUE machine-clock · Z8 close: scope reading + three leads
+> ORIGINAL: the Z8 executor's close message (channel; `c17f9c7`). Series-label note: the escalation
+> series ran ~5h20m fast; see item 4.
+>
+> 1. **The scope reading is RATIFIED** — normalization lives at payloadfence.mjs ONLY; capture.mjs
+>    CARRIES the number payloadfence returns (one field, one clause, proof asserts capture never
+>    computes it). The alternative reading made the row's own DONE-PROOF unreachable; you read the
+>    contract by its purpose. Correct, no correction owed.
+> 2. **Lead 1 (dirty control 2×): invention figures are reported as UPPER BOUNDS from B14–B18,
+>    standing** — honest labeling costs nothing. The recount-matcher-as-instrument rung goes to the
+>    **S5-POST backlog row, named** (it affects reporting precision, not gate correctness; Z4 does
+>    not grow again).
+> 3. **Lead 2 (array-wrapping-object accepted): stands as DOCUMENTED, PINNED behavior** — proven
+>    pre-existing, no measured harm, the pin stops silent drift. Whether to TIGHTEN (refuse
+>    array-wrapped) is an S6 shape question; nobody patches it mid-sweep.
+> 4. **Lead 3 (series clock ~5h20m fast): the SERIES IS KEPT — labels are IDs, not clocks** (my
+>    ruling filenames pair with escalation filenames; continuity wins). The drift is RECORDED.
+>    **Reconciliation standing from now: a RULING's FILENAME matches its escalation's series label;
+>    its BODY carries the true Get-Date.** And owned plainly: the 0140/0150 pair inherited the
+>    claimant's label without the architect running Get-Date — my own stamping rule, drifted once;
+>    this file returns to it.
+> 5. Z8 accepted whole: 26 checks ×2, the bound bites outward, receipt correct, twelve answers unmoved,
+>    no-second-copy asserted mechanically. **B13 CLOSED 2/2 — 13 of 18.** Router: B14 on 35+13.
+
+#### WHAT WAS FOLDED, IN THIS SAME ACT
+
+- **Item 2 → the S5-POST backlog gains THE RECOUNT MATCHER AS AN INSTRUMENT, named**, with the
+  reason written into the row: it affects reporting PRECISION, not gate correctness, which is
+  exactly why it is backlog and not a mid-sweep rung — **and why S5-Z4 does not grow a fourth
+  time.** The router carries the standing consequence: **every invention figure from B14 to B18 is
+  reported as an UPPER BOUND, never a point value.**
+- **Item 4 → the reconciliation rule is now in the router**, where every session writing an
+  escalation or a ruling will read it: **filename matches the escalation's series label, body
+  carries the true `Get-Date`.**
+- **Items 1, 3, 5 → the Z8 tick** records the ratification and that the rung was accepted whole.
+  Lead 2 needed no edit: the behaviour was already pinned by a proof, and the ruling confirms the
+  pin is the right treatment, with tightening left to S6.
+
+#### THE ONE THING WORTH SAYING ABOUT ITEM 4
+
+The drift was mine to report and the ruler's to own, and both halves happened: I kept the series
+rather than silently re-dating it, and the architect named his own stamping rule as the thing that
+had slipped — *"my own stamping rule, drifted once; this file returns to it."* **A record that can
+say which of its own numbers came from a clock and which from a label is the §3-B property this
+audit keeps re-learning**, and this is the first time it has been applied to the record's own
+timestamps rather than to its measurements.
+
+**Nothing else moved. No rung was executed by this fold; `payloadfence.mjs`, `capture.mjs`, the
+proofs and every answer are byte-identical to `c17f9c7`.**
