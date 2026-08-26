@@ -2514,19 +2514,77 @@ STATUS (update this block before any session stops — this is the handoff)
                                    FILES, every time.** Counted file by file, never by glob.
                                    ⚠ **~15.7 of the 35-lakh EXECUTION line** (day 1004.69 →
                                    1020.36). **INSIDE.**
-  ▶ NEXT SESSION ............... **① B15 — a fresh Pro-Extended chat, ten attachments
-                                   `live2_batch141-150`, `steps/B15_1.txt` then `steps/B15_2.txt`.**
-                                   Then B16 onward the same way, to B18.
-                                   ⛔ **THE CHIP NAMES RENDER WITHOUT `.txt`** — measured at B14: a
-                                   pre-attach regex requiring the extension read **0 while ten
-                                   chips were on screen**. Assert the BARE basename. And the gate
-                                   read 0 for **over 60 s** after a good upload (a new maximum;
-                                   B12's was 26 s) — **poll to stability, and let a screenshot
-                                   arbitrate a zero before you believe it.**
+  B15 CLOSED 2/2 ............... ☑ 27 Aug 2026 ~04:40 series (true clock 26 Aug ~21:30).
+                                   **15 of 18.** Fresh chat
+                                   `gemini.google.com/app/800939088571b20f`, Pro Extended read
+                                   back off the page, ten attachments `live2_batch141-150`.
+                                   Four hops sha-asserted both steps (`6bc6cfef2f3001fd` ·
+                                   `79bdf08e3cbb1dc8`, composed === source, 108 and 124 blocks).
+                                   **Both sends FIRST TRY — 21st and 22nd consecutive**, 10/10
+                                   chips on the SENT turn. `control_chars_escaped: 0`.
+                                   ✔ **`probecheck B15_1` = PASS · VERBATIM, exit 0, ALL THREE:**
+                                   tail `live2_batch150.txt:3234` · middle
+                                   `live2_batch146.txt:1096` · **band `live2_batch145.txt:1193`,
+                                   43.7%.** ⚡ **THE BAND IS 7 FOR 7 SINCE Z6** — 49.9 · 48.4 ·
+                                   58.5 · 46.2 · 40.4 · 51.6 · 43.7%.
+                                   ⛔ **`B15_2 : 36 items → verify KEPT 0 · DROPPED 36, ALL for the
+                                   SAME reason — AND 23 OF THEM ARE PRESENT VERBATIM.** The most
+                                   expensive instance of the S5-Z4 `(continued)` day-key class yet,
+                                   and this rung PINPOINTED IT TO ONE LINE, mechanically:
+                                   `verify.mjs:84` builds the corpus index with a regex that
+                                   STRIPS ` (continued)`, so the index holds `2026-08-18`; the
+                                   answer keys every item `2026-08-18 (continued)`; `dayHay` looks
+                                   the raw key up, misses, and returns `source-missing` — 36 times.
+                                   **Proven by running:** index has `2026-08-18` TRUE, has
+                                   `2026-08-18 (continued)` FALSE, strip-the-suffix resolves TRUE.
+                                   **One side normalises, the other does not.**
+                                   ⇒ **MEASURED FALSE DROPS 23 of 36** · de-escape 0 (11th
+                                   consecutive) ⇒ **true content ≥ 23 of 36, invention ≤ 36.1%** —
+                                   the second-lowest of the sweep after B11's 23%.
+                                   ⚠ **THE CONTROL IS VACUOUS HERE, NOT CLEAN — said out loud.**
+                                   With verify KEPT 0 there is nothing to re-find, so my recount
+                                   printed "0/0 CLEAN". **That is an undefined control reported as
+                                   a pass, and it is exactly the kind of green light this sitting
+                                   has twice been caught by.** The ≤ 36.1% stands as a BOUND on the
+                                   false-drop evidence alone (23 found verbatim), not on a control.
+                                   ☑ NOT PATCHED — S5 builds nothing; the fix rides **S5-Z4**, whose
+                                   scope this rung sharpens from "a day-key class" to **one line
+                                   and one missing normalisation**.
+                                   ⛔ **TWO CORRECTIONS I OWE FROM B14, BOTH MINE, BOTH FALSIFIED BY
+                                   THIS CHAT — see the PROGRESS entry.** The chip-`.txt` note and
+                                   the "header count == number of FILES" shape are both WRONG as
+                                   written in the previous router; corrected there and here.
+                                   ⚠ Two render stalls again, one per step, **both fixed by an
+                                   IN-PLACE RELOAD — no fresh tab needed** (20th and 21st
+                                   confirmations). Same signature: textContent full (833 · 16,776)
+                                   while innerText read 11.
+                                   ⚠ **~17.6 of the 35-lakh EXECUTION line** (day 1034.47 →
+                                   1052.04). **INSIDE.**
+  ▶ NEXT SESSION ............... **① B16 — a fresh Pro-Extended chat, ten attachments
+                                   `live2_batch151-160`, `steps/B16_1.txt` then `steps/B16_2.txt`.**
+                                   Then B17, B18 the same way. **THREE CHATS LEFT.**
+                                   ⛔ **CORRECTED AT B15 — THE B14 NOTE BELOW WAS MINE AND IT WAS
+                                   WRONG. The chip DOM is not missing the extension; it is simply
+                                   LATE.** At B15 the DOM held BOTH forms once populated
+                                   (`live2_batch141` and `live2_batch141.txt`, 10 each) plus ten
+                                   `aria-label="close live2_batchNNN"` chips — an independent,
+                                   structured witness worth preferring. **The operative fact is the
+                                   LAG: the gate read 0 for over 60 s after a good upload at BOTH
+                                   B14 and B15.** So: poll to stability, prefer the `aria-label`
+                                   witness, and **let a screenshot arbitrate a zero before you
+                                   believe it** — that is what caught it both times.
                                    ⛔ **`innerText` IS THE THING THAT LIES IN A RENDER STALL** —
-                                   twice at B14, `textContent` held the full answer (898 · 25,444)
-                                   while `innerText` read 11. Read `textContent`; recover with a
-                                   fresh tab + reload, which is free and has now worked 19 times.
+                                   five stalls across B14 and B15, every one with `textContent`
+                                   holding the full answer (898 · 25,444 · 833 · 16,776) while
+                                   `innerText` read 11. Read `textContent`. **At B15 an IN-PLACE
+                                   RELOAD was enough — a fresh tab is not always required**; 21
+                                   free recoveries now, 0 failures.
+                                   ⛔ **AND THE OTHER B14 NOTE IS ALSO DEAD: "header count ==
+                                   the number of FILES" was FALSIFIED at B15**, which claimed
+                                   **14 and was EXACTLY RIGHT** over ten files where one file
+                                   (`batch150`) carries five headers. Four deflations then one
+                                   exact count: **there is no rule here yet.** Keep RECORDING the
+                                   claim against a file-by-file ground truth; do not predict it.
                                    **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
                                    ✔ **S5-Z8 IS DONE and the de-escape lane is open, bounded and
                                    MEASURED.** A payload carrying raw 0x00–0x1F **inside a string
@@ -5104,8 +5162,8 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written off the
                                     10.13/19.4/26 record (RULING__2026-08-27_0150 item 3).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
-      ▸ **WHERE THE SWEEP STANDS, 27 Aug ~03:35 — read ▶ RESUME HERE and the PROGRESS entries for
-      B05–B14; only B01–B04 are written out below.** **B01–B14 ALL CLOSED 2/2 — 14 of 18.** B13 was
+      ▸ **WHERE THE SWEEP STANDS, 27 Aug ~04:40 — read ▶ RESUME HERE and the PROGRESS entries for
+      B05–B15; only B01–B04 are written out below.** **B01–B15 ALL CLOSED 2/2 — 15 of 18.** B13 was
       closed at S5-Z8 (its extraction was parked, not stamped, until that rung fixed the assert that
       refused it) — the SECOND time a micro-rung has been the thing that closed a chat, after B10/Z7. B10 was closed at S5-Z7 (its extraction was parked, not stamped,
       until that rung fixed the assert that refused it). Every B chat stays OPEN (the critic is not
@@ -12378,3 +12436,106 @@ somebody measured a green light.
 
 **Nothing else moved. No rung was executed by this fold; every instrument, answer and proof is
 byte-identical to `2af61bf`.**
+
+### PROGRESS 2026-08-27 ~04:40 series / **26 Aug ~21:30 TRUE machine-clock** — **B15 CLOSED 2/2, 15 of 18** — the verifier discarded all 36 items for one missing normalisation, 23 of them verifiably real; and TWO shapes I called findings at B14 died on the very next chat
+
+**Router obeyed** (§10-D rule 1). Micro-order written before any edit (rule 9). MODEL: Opus 5 ·
+effort HIGH · EXECUTION 35 + HANDOFF 13. `checkall` **GREEN 8/8** · `preflight` **GO**, both RUN
+in-session. Meter baseline **1034.47**. Ten filenames from `wiring.json`, three anchors from
+`probe_expected.json` keyed by CHAT (`live2_g15`).
+
+#### B15_1 — PASS · VERBATIM 3/3, AND THE BAND IS 7 FOR 7
+
+Fresh chat **`gemini.google.com/app/800939088571b20f`**, Pro Extended read back off the page before
+the attach — and it was needed: the first load came up **half-hydrated with no mode picker at all**
+(5th occurrence), fixed by a full reload.
+
+```
+B15_1  disk 6bc6cfef2f3001fd (6,947 chars · 108 lines) · in-page identical · 108 blocks, exact
+B15_2  disk 79bdf08e3cbb1dc8 (9,030 chars · 124 lines) · in-page identical · 124 blocks, exact
+```
+
+**Both sends FIRST TRY — 21st and 22nd consecutive**, 10/10 chips on the sent turn.
+`control_chars_escaped: 0` on B15_2 — Z8's receipt read and stated.
+
+**`probecheck B15_1` → PASS · VERBATIM, exit 0, ALL THREE:** tail `live2_batch150.txt:3234` ·
+middle `live2_batch146.txt:1096` · **band `live2_batch145.txt:1193`, 43.7%.**
+⚡ **The band series since Z6 is 7 for 7 — 49.9 · 48.4 · 58.5 · 46.2 · 40.4 · 51.6 · 43.7%.**
+
+#### ⛔ B15_2 — VERIFY KEPT **ZERO** OF 36, ALL FOR ONE REASON, AND 23 OF THEM ARE VERIFIABLY REAL
+
+Captured clean: transit **`ab703810697cc41b` in-page == on-disk**, BLOB-GATE PASSED, all 9 keys,
+JSON parses. Then `verify.mjs` discarded **every single item**: 36 dropped, **36 of them
+`source-missing`** — not one other reason.
+
+**This rung pinpointed it to ONE LINE, and proved it by running rather than by reading:**
+
+```
+verify.mjs:84  splits the corpus on /^===== DAY: (\d{4}-\d{2}-\d{2})(?: \(continued\))? =====$/m
+               -> the INDEX key is the bare date:            "2026-08-18"
+the ANSWER keys every one of its 36 items by:                "2026-08-18 (continued)"
+dayHay() looks the RAW key up, misses, returns null -> "source-missing", 36 times
+
+MEASURED:  index has "2026-08-18"              TRUE
+           index has "2026-08-18 (continued)"  FALSE
+           strip " (continued)" and it resolves TRUE
+```
+
+**One side of the join normalises `(continued)` away and the other does not.** This is the S5-Z4
+day-key class — named since B04, where it cost "≥5" items — arriving at its most expensive
+instance: **a whole chat's extraction discarded.** And the content was not the problem: **23 of the
+36 dropped items are present VERBATIM in the ten files.** de-escape 0, eleventh consecutive.
+
+⇒ **true content ≥ 23 of 36, invention ≤ 36.1%** — second-lowest of the sweep after B11's 23%.
+
+⚠ **AND THE CONTROL HERE IS VACUOUS, NOT CLEAN — I am saying so rather than banking it.** With
+verify KEPT 0 there is nothing to re-find, so my recount dutifully printed **"0/0 CLEAN"**. That is
+an **undefined control reported as a pass**, and after two sittings of being caught by exactly this
+shape — a green light that measured nothing — it would be absurd to bank it. **The ≤ 36.1% rests on
+the false-drop evidence alone** (23 found verbatim by direct search), not on any control.
+
+☑ **NOT PATCHED — S5 builds nothing.** The fix rides **S5-Z4**, and this rung hands it a sharper
+scope than it had: not "a day-key class" but **one line and one missing normalisation**, with the
+failing and passing keys both measured.
+
+#### ⛔ TWO THINGS I CALLED FINDINGS AT B14 DIED ON THE VERY NEXT CHAT. BOTH WERE MINE.
+
+**1. "The chip names render without `.txt`" — WRONG.** At B15 the DOM held **both** forms once
+populated (10 bare, 10 with `.txt`), plus ten `aria-label="close live2_batchNNN"` chips — a
+structured witness better than either regex. What actually happened at B14, and again here, is that
+**the chip DOM populates more than 60 seconds after a successful upload**. I read a zero during the
+lag, saw truncated labels in the screenshot, and inferred a rendering rule that does not exist.
+**The lag is the fact; the extension never was.**
+
+**2. "Header count == the number of FILES, every time" — FALSIFIED.** I wrote at B14 that four
+consecutive deflations made the shape *"predictive rather than coincidental."* **B15 claimed 14 and
+was EXACTLY RIGHT**, over ten files where `live2_batch150` alone carries **five** headers. A rule
+that predicts 10 predicted wrong on its first real test.
+
+Both corrections are written into the router, not just here, because the router is what the next
+session actually reads. The honest generalisation: **four instances is a run, not a law** — and both
+times I upgraded a run to a law in the same breath as recording it. §4's rule ("every instrument is
+a LEAD until one run verifies it") applies to my own inferences, and neither of these had been
+tested against a chat that could refute them.
+
+#### THE SMALLER MEASUREMENTS
+
+⚠ Two render stalls again, one per step — **both fixed by an IN-PLACE RELOAD; no fresh tab was
+needed** (20th and 21st free recoveries, 0 failures). Same signature every time: `textContent` full
+(833, then 16,776) while `innerText` read 11.
+⚠ The pre-attach gate read 0 for **over 60 s** for the second chat running; the screenshot arbitrated
+it both times.
+⚠ Coverage: *reported 1/1 · never mentioned 1 · 1 NOT IN MANIFEST* — the same `(continued)` key,
+flagged as "invented" by a check that is right about the string and wrong about the meaning. Same
+false-positive class recorded at B13; it is the day-key defect wearing a second mask.
+
+#### WHAT THIS RUNG DID NOT DO — said out loud, per §5
+
+`verify.mjs` untouched despite a one-line fix being in plain sight — S5 builds nothing, and the
+FORBIDDEN list names instrument changes first. Nothing re-asked, no `--lossy`, no gate-shopping.
+The critic was not fired; every B chat stays OPEN. B16 was not opened.
+
+#### COST
+
+**~17.6 of the 35-lakh EXECUTION line** (day 1034.47 → 1052.04). **INSIDE.** Records ride HANDOFF
+13. Caveat carried, not re-derived: today's meter line reads ~+16% hot (S5-R's finding).
