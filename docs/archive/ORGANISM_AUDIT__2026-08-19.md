@@ -2565,9 +2565,73 @@ STATUS (update this block before any session stops — this is the handoff)
                                    while innerText read 11.
                                    ⚠ **~17.6 of the 35-lakh EXECUTION line** (day 1034.47 →
                                    1052.04). **INSIDE.**
-  ▶ NEXT SESSION ............... **① B16 — a fresh Pro-Extended chat, ten attachments
-                                   `live2_batch151-160`, `steps/B16_1.txt` then `steps/B16_2.txt`.**
-                                   Then B17, B18 the same way. **THREE CHATS LEFT.**
+  B16 CLOSED 2/2 ............... ☑ 27 Aug 2026 ~05:40 series (true clock 26 Aug ~22:10).
+                                   **16 of 18 — TWO CHATS LEFT.** Fresh chat
+                                   `gemini.google.com/app/ec6918fe863038bb`, Pro Extended read
+                                   back off the page, ten attachments `live2_batch151-160`.
+                                   Four hops sha-asserted both steps (`e3eadade5f0c0e3d` ·
+                                   `fa86d296b4ee16a6`, composed === source, 108 and 124 blocks).
+                                   **Both sends FIRST TRY — 23rd and 24th consecutive**, 10/10
+                                   chips on the SENT turn. `control_chars_escaped: 0`.
+                                   ✔ **`probecheck B16_1` = PASS · VERBATIM, exit 0, ALL THREE:**
+                                   tail `live2_batch160.txt:3274` · middle
+                                   `live2_batch156.txt:1705` · **band `live2_batch155.txt:1087`,
+                                   45.3%.** ⚡ **THE BAND IS 8 FOR 8 SINCE Z6** — 49.9 · 48.4 ·
+                                   58.5 · 46.2 · 40.4 · 51.6 · 43.7 · 45.3%.
+                                   ⛔ **THE `aria-label` CHIP WITNESS I PREFERRED AT B15 WAS NOT
+                                   PRESENT AT ALL THIS SITTING — 0 of them, while the ten names
+                                   WERE in `innerHTML`.** Caught by checking rather than trusting.
+                                   **That is the third witness-shaped thing in three chats to vary
+                                   between sittings**, and it is exactly what the new epistemics
+                                   note is for: I recorded the B15 witness as preferable, not as a
+                                   law, and this sitting is why. **The durable gate is: assert the
+                                   ten NAMES in innerHTML, poll to stability, and let a screenshot
+                                   arbitrate a zero.** Any single DOM witness is a lead.
+                                   ⚠ Gate read 0 for **~70 s** before the names appeared — third
+                                   chat running past 60 s.
+                                   ⛔ **THE ONE-SHOT DOWNLOAD RULE BIT FOR THE FIRST TIME SINCE
+                                   B04, AND THE RULED CHAIN HANDLED IT WITHOUT A HALT.** B16_2's
+                                   blob download was silently refused (B16_1 had spent the
+                                   session's one). Route ② was unavailable — **the clipboard was
+                                   measured DEAD at preflight, 16th occurrence, advisory only** —
+                                   so route ③ ran: **a fresh tab restored the download budget and
+                                   the payload landed**, exactly as the chain says. **Bonus proof:
+                                   the fresh tab's independent Copy read returned the SAME sha
+                                   `253a5055ce680e10`** — two independent reads agreeing.
+                                   ⚠ **`B16_2 : 34 items → verify KEPT 1 · DROPPED 33` — and 32 of
+                                   those 33 are `source-missing`.** **MEASURED FALSE DROPS 24** ·
+                                   de-escape 0 (12th consecutive) ⇒ **true content ≥ 25 of 34,
+                                   invention ≤ 26.5%** — the lowest bound of the sweep after B11.
+                                   ⚠ **The control is DEFINED but n=1** (1/1). Not vacuous like
+                                   B15's 0/0, but one quote is not a control; the figure stays a
+                                   **BOUND** under the standing rule either way.
+                                   ⛔ **SECOND CONSECUTIVE CHAT DOMINATED BY S5-Z4's ONE LINE** —
+                                   B15 lost 36/36 to it, B16 loses 32/33. The 3 "NOT IN MANIFEST
+                                   (invented)" flags are all `(continued)` keys
+                                   (`2026-08-18/19/20 (continued)`) and the 2 "never mentioned"
+                                   are the same days under their bare keys — **the known false
+                                   positive, not fabrication.** Recorded, not fixed.
+                                   ✔ **Header count claimed 13, ground truth 13 — EXACT, second
+                                   consecutive** (and `batch151` alone carries four). Written as a
+                                   run, not a law, per the standing epistemics note.
+                                   ⚠ **~18.2 of the 35-lakh EXECUTION line** (day 1065.52 →
+                                   1083.70). **INSIDE.**
+  ▶ NEXT SESSION ............... **① B17 — a fresh Pro-Extended chat, ten attachments
+                                   `live2_batch161-170`, `steps/B17_1.txt` then `steps/B17_2.txt`.**
+                                   Then B18, the last one. **TWO CHATS LEFT.**
+                                   ⛔ **DO NOT TRUST ANY SINGLE DOM WITNESS FOR THE PRE-ATTACH
+                                   GATE.** Three sittings, three different pictures: B14's `.txt`
+                                   names, B15's ten `aria-label="close live2_batchNNN"` chips, and
+                                   B16 where those aria-labels were **entirely absent** while the
+                                   names sat in `innerHTML`. **The durable gate: assert the ten
+                                   NAMES in innerHTML, poll to stability (0 for 60–70 s is normal
+                                   in all three), and let a SCREENSHOT arbitrate a zero.**
+                                   ⚡ **THE ONE-SHOT DOWNLOAD RULE IS LIVE AGAIN** — it bit at B16
+                                   for the first time since B04. If a blob download silently
+                                   no-ops, **do not retry in place**: open a FRESH TAB on the same
+                                   chat, which restores the budget AND doubles as the stall
+                                   remedy. Proven again at B16, and the fresh tab's independent
+                                   Copy read returned the identical sha.
                                    ⛔ **CORRECTED AT B15 — THE B14 NOTE BELOW WAS MINE AND IT WAS
                                    WRONG. The chip DOM is not missing the extension; it is simply
                                    LATE.** At B15 the DOM held BOTH forms once populated
@@ -5192,8 +5256,8 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written off the
                                     10.13/19.4/26 record (RULING__2026-08-27_0150 item 3).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
-      ▸ **WHERE THE SWEEP STANDS, 27 Aug ~04:40 — read ▶ RESUME HERE and the PROGRESS entries for
-      B05–B15; only B01–B04 are written out below.** **B01–B15 ALL CLOSED 2/2 — 15 of 18.** B13 was
+      ▸ **WHERE THE SWEEP STANDS, 27 Aug ~05:40 — read ▶ RESUME HERE and the PROGRESS entries for
+      B05–B16; only B01–B04 are written out below.** **B01–B16 ALL CLOSED 2/2 — 16 of 18.** B13 was
       closed at S5-Z8 (its extraction was parked, not stamped, until that rung fixed the assert that
       refused it) — the SECOND time a micro-rung has been the thing that closed a chat, after B10/Z7. B10 was closed at S5-Z7 (its extraction was parked, not stamped,
       until that rung fixed the assert that refused it). Every B chat stays OPEN (the critic is not
@@ -12623,3 +12687,99 @@ S6 would have inherited two of them from me without the next chat happening to r
 
 **Nothing else moved. No rung was executed by this fold; every instrument, answer and proof is
 byte-identical to `f75a421`.**
+
+### PROGRESS 2026-08-27 ~05:40 series / **26 Aug ~22:10 TRUE machine-clock** — **B16 CLOSED 2/2, 16 of 18** — the one-shot download rule bit for the first time since B04 and the ruled chain absorbed it without a halt; and the DOM witness I preferred last chat had vanished entirely
+
+**Router obeyed** (§10-D rule 1). Micro-order written before any edit (rule 9), carrying the two
+rules that were new since B15 — *a run is a run, not a law* and *invention is an upper bound*.
+MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13. `checkall` **GREEN 8/8** · `preflight`
+**GO**, both RUN in-session. Meter baseline **1065.52**.
+
+⚠ **Preflight came back with TWO warnings where every prior sitting had one, so I read them before
+moving:** the clipboard is **dead on this machine right now** — *"Set-Clipboard : Requested
+Clipboard operation did not succeed"* — **16th occurrence, ADVISORY ONLY.** It cost nothing, which
+is the whole point of the four-hop outbound and the in-page blob hook: neither touches the OS
+clipboard on the answer path. Worth stating plainly because it later mattered (see the download).
+
+#### B16_1 — PASS · VERBATIM 3/3, AND THE BAND IS 8 FOR 8
+
+Fresh chat **`gemini.google.com/app/ec6918fe863038bb`**, Pro Extended read back off the page before
+the attach.
+
+```
+B16_1  disk e3eadade5f0c0e3d (6,803 chars · 108 lines) · in-page identical · 108 blocks, exact
+B16_2  disk fa86d296b4ee16a6 (9,030 chars · 124 lines) · in-page identical · 124 blocks, exact
+```
+
+**Both sends FIRST TRY — 23rd and 24th consecutive**, 10/10 chips on the sent turn.
+`control_chars_escaped: 0` on B16_2.
+
+**`probecheck B16_1` → PASS · VERBATIM, exit 0, ALL THREE:** tail `live2_batch160.txt:3274` ·
+middle `live2_batch156.txt:1705` · **band `live2_batch155.txt:1087`, 45.3%.**
+⚡ **The band series since Z6 is 8 for 8 — 49.9 · 48.4 · 58.5 · 46.2 · 40.4 · 51.6 · 43.7 · 45.3%.**
+
+✔ **Header count claimed 13, ground truth 13 — EXACT, and the second exact count running** (with
+`batch151` alone carrying four headers). Four deflations, then two exact. **Written as a run, not a
+law** — which is the new standing note doing its job on the very first chat after it landed.
+
+#### ⛔ THE WITNESS I PREFERRED LAST CHAT HAD VANISHED — AND I ONLY KNOW THAT BECAUSE I CHECKED
+
+At B15 I found ten `aria-label="close live2_batchNNN"` chips and wrote them into the router as a
+**structured witness worth preferring**. **This sitting there were ZERO of them**, while the ten
+names sat plainly in `innerHTML`. Had I asserted only on the witness, the pre-attach gate would have
+failed a perfectly good upload.
+
+**That is the third witness-shaped thing to vary across three consecutive chats** — B14's `.txt`
+names, B15's aria-labels, B16's absence of them — and it is precisely what
+`RULING__2026-08-26_2140-s5corpus-19.md` item 3 exists to prevent. I recorded the B15 witness as
+*preferable*, never as a law, and this chat is the reason that distinction was worth making.
+
+**The durable gate, stated for the remaining two chats:** assert the ten **NAMES in `innerHTML`**,
+**poll to stability** (a 60–70 s read of zero is normal — three chats running), and **let a
+SCREENSHOT arbitrate a zero.** Any single DOM witness is a lead.
+
+#### ⛔ THE ONE-SHOT DOWNLOAD RULE BIT FOR THE FIRST TIME SINCE B04 — AND NOTHING HALTED
+
+B16_2's blob download was **silently refused**: B16_1 had already spent this browser session's one
+download. Route ② was **unavailable by measurement** — the clipboard was dead at preflight — so the
+chain went straight to route ③, and it worked exactly as written: **a fresh tab on the same chat
+restored the download budget and the payload landed.**
+
+**And it produced a receipt nobody asked for:** the fresh tab's **independent** Copy read returned
+the **identical sha `253a5055ce680e10`**. Two separate reads, two separate tabs, one hash — which is
+a stronger statement about the payload than either read alone.
+
+**This is the first sitting where two of the three transports were down at once and the rung still
+closed without a halt.** The chain was designed for exactly that and had never had to prove it.
+
+#### B16_2 — THE LOWEST INVENTION BOUND OF THE SWEEP, AND S5-Z4 AGAIN
+
+Captured clean: transit **`253a5055ce680e10` in-page == on-disk**, all 9 keys, JSON parses.
+
+**`B16_2 : 34 items → verify KEPT 1 · DROPPED 33` — and 32 of those 33 are `source-missing`.**
+**MEASURED FALSE DROPS 24** · de-escape 0, twelfth consecutive ⇒ **true content ≥ 25 of 34,
+invention ≤ 26.5%** — the lowest bound of the sweep after B11's 23%.
+
+⚠ **The control is DEFINED but n=1** (my matcher re-found the single quote verify kept). That is not
+vacuous the way B15's 0/0 was, but **one quote is not a control**, and the figure stays a **BOUND**
+under the standing rule regardless. Said rather than dressed up.
+
+⛔ **Second consecutive chat dominated by S5-Z4's one line.** B15 lost 36 of 36 to it; B16 loses 32
+of 33. The claimed dates are `2026-08-19`, `2026-08-19 (continued)`, `2026-08-20 (continued)`; the
+three **"NOT IN MANIFEST (invented)"** flags are all `(continued)` keys and the two **"never
+mentioned"** are those same days under their bare keys. **The known false positive, not
+fabrication** — recorded so no later reader counts it as invention. Not fixed: S5 builds nothing,
+and Z4's scope is already written down to the line.
+
+**⇒ B16 IS CLOSED 2/2. 16 of 18 — two chats left.**
+
+#### WHAT THIS RUNG DID NOT DO — said out loud, per §5
+
+No instrument touched. Nothing re-asked — the fresh tab re-read a stored answer, it did not re-ask
+Gemini, and no second Gemini call was made anywhere in this rung. No `--lossy`, no gate-shopping.
+The critic was not fired; every B chat stays OPEN. B17 was not opened.
+
+#### COST
+
+**~18.2 of the 35-lakh EXECUTION line** (day 1065.52 → 1083.70). **INSIDE.** Records ride HANDOFF
+13. Caveat carried, not re-derived: today's meter line reads ~+16% hot (S5-R's finding).
