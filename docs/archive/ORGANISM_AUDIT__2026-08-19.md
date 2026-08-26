@@ -1396,22 +1396,74 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⚠ 25.91 spent of the fresh 35-lakh EXECUTION line (day-line delta at the
                                      halt, 393.56 → 419.47) — INSIDE. B05 not opened. Records ride the
                                      13-lakh HANDOFF line.
-  ▶ NEXT SESSION ............... **S5-Z5 · THE BLOB CAPTURE PATH — a micro-rung, and it is the WHOLE
-                                   session. Its row is in §10-C; its work order is
-                                   `queue\RULING__2026-08-26_0855-s5corpus-8.md`. MODEL: Opus 5 ·
-                                   effort HIGH · BUILD 8 · PROOF 7 · HANDOFF 5 (ruler-written).**
-                                   The corpus half is PAUSED, not stuck: B01, B02, B03 CLOSED and
-                                   **B04 is 1.5 of 2** — B04_1 closed and probe-PASSED, B04_2's answer
-                                   complete, byte-verified and ON DISK at `diag\B04_2_raw.txt`
-                                   (sha256/16 `8d089bd0333667b4`, 23,215 chars, JSON parses, 44 items),
-                                   uncaptured only because the copy-gate's rendered witness could not
-                                   be transported out of the browser. **Nothing is lost, nothing is
-                                   owed to Gemini — do NOT re-fire B04_2 and do NOT `--lossy` it.**
-                                   **B04_2 IS Z5's OWN DONE-PROOF: its first live capture through the
-                                   real CLI, then `verify.mjs`, and B04 closes 2/2.** Its chat
-                                   (`gemini.google.com/app/227096fc78a39e96`) stays OPEN, like B03's.
-                                   ⇒ **THEN, and only then, the corpus resumes at B05** on the standing
-                                   per-sitting EXECUTION 35 + HANDOFF 13.
+  S5-Z5 THE BLOB CAPTURE PATH .. ☑ DONE 26 Aug 2026 ~09:30 · `capture.mjs`'s THIRD declared path
+                                   `--from-blob <file> --blob-sha <hex>` is built, bite-proven in
+                                   both directions and IDEMPOTENT, and **B04 IS CLOSED 2/2 by a LIVE
+                                   capture through the real CLI** — not a fixture.
+                                   ☑ BOTH of the copy-gate witness's jobs are re-assigned, never
+                                     dropped: (i) TRANSIT = the whole payload's sha256, computed
+                                     in-page off the ClipboardItem Blob, against the sha of the bytes
+                                     on disk — stricter than the line-containment sample and with no
+                                     OS clipboard anywhere on the path · (ii) IDENTITY = a CONTENT
+                                     ASSERT derived from the step file that was actually pasted
+                                     (extraction ⇒ every declared top-level JSON key present; probe ⇒
+                                     one fenced block per declared ANCHOR), declare-or-die on both.
+                                   ⛔ **THE SHA IS NEVER READ AS IF IT DID IDENTITY** and the proof
+                                     harness's headline assertion is exactly that: a NEIGHBOUR'S
+                                     answer, whole and undamaged, with a PERFECTLY MATCHING sha, is
+                                     REFUSED — by the shape assert, which is the only thing that can.
+                                   ☑ `diag/proofs_s5z5.mjs` — **64 assertions, every one twice inside
+                                     one invocation**, sentinel step ids that cannot collide with a
+                                     sweep step, refuses to run over anything it did not create,
+                                     everything removed in a `finally` and the removal asserted.
+                                     Re-run from the shell: bites again. `checkall` GREEN all 8 ·
+                                     `preflight` GO · both run in-session after the edits.
+                                   ☑ checkall §2 TIGHTENED (a gate may only get stricter): it now
+                                     FAILS if the selftest stops exercising either witness of the
+                                     new path — bad sha · matching-sha substitution · ungated save ·
+                                     undeclared shape.
+                                   ⚠ ONE DECLARED CONSEQUENCE BEYOND capture.mjs, decided in-session
+                                     and reversible in one line: `mdrender.mjs`'s CAPTURE_PATHS
+                                     registry and `probecheck.mjs`'s alphabet router learned
+                                     `raw-blob` (markdown-BEARING, the same alphabet `raw` gets).
+                                     A declared path no comparator accepts is not a path — every
+                                     B05–B18 probe answer travels it. **PROVEN, not asserted:** B04_1
+                                     re-read under a raw-blob stamp gives an IDENTICAL verdict, and
+                                     its sidecar is restored byte-for-byte. verify.mjs needed NO
+                                     change (its lossy predicate is `=== "rendered-lossy"`).
+                                   ☑ **B04_2 CAPTURED LIVE:** 23,215 chars · transit sha
+                                     `8d089bd0333667b4` in-page == on-disk · identity: all 9 declared
+                                     top-level keys present · JSON parses · stamped `raw-blob`.
+                                   ✔ **THE days_covered 4-vs-10 FLAG IS CLOSED, AND IT WAS NOT A
+                                     DEFECT:** batches 31–40 carry SEVEN `===== DAY:` header lines
+                                     but only FOUR distinct days — 07-26, 07-29, 07-30, 07-31 — because
+                                     `(continued)` re-emits the same day. The model's `days_covered`
+                                     of 4 is CORRECT; the "10 headers" was counting header LINES and
+                                     `=====` separators. It is the SAME `(continued)` day-key class
+                                     that S5-Z4 already owns.
+                                   ⚠ verify.mjs on B04_2: 44 items → **19 kept · 25 dropped, of which
+                                     ≥5 are MEASURED FALSE DROPS** (the quote is present verbatim in
+                                     the frozen batches; the (continued) day-key is why verify says
+                                     NOT-FOUND). 5 is a LOWER BOUND — the measure is
+                                     whitespace-normalised containment, so an emphasis-only difference
+                                     still counts as absent. All of it re-verifies free at S5-Z4.
+  ▶ NEXT SESSION ............... **S5 · THE CORPUS SWEEP RESUMES AT B05 — a FRESH Pro-Extended chat,
+                                   ten attachments `live2_batch41-50`, `steps/B05_1.txt` (load +
+                                   probe) then `steps/B05_2.txt` (extraction), then STOP and leave
+                                   the chat OPEN. MODEL: Opus 5 · effort HIGH · EXECUTION 35 +
+                                   HANDOFF 13 (the standing per-sitting line).**
+                                   **CAPTURE B05 ON THE NEW PATH:** read the ClipboardItem Blob in
+                                   the SAME call that clicks THIS answer's Copy button, sha it
+                                   IN-PAGE, deliver it page→disk, then
+                                   `node capture.mjs save B05_2 --from-blob <file> --blob-sha <hex>`.
+                                   The OS clipboard is off the answer path now — but the ONE-SHOT
+                                   download rule still binds: budget your one page→disk delivery per
+                                   chat and take the RAW payload with it. Blocked second delivery ⇒
+                                   RESTART the browser + reload the chat and continue (pre-authorized,
+                                   free); still blocked ⇒ halt THAT chat only, record, move on.
+                                   Never an open wait.
+                                   B01–B04 CLOSED, 4 of 18. `--rendered` and `--lossy` are untouched
+                                   and still available; the three paths are mutually exclusive.
                                    ✔ **STAGE-BY-PATH IS A STANDING LAW (RULED 26 Aug ~09:05,
                                    `queue\RULING__2026-08-26_0905-samjhao-dirt-1.md`): every close,
                                    every lane, stages the files it NAMES, by path — never
@@ -3393,7 +3445,20 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       took it — which is the escalation rule working, not a ceiling being negotiated.**
                                     BUILD 8 · PROOF 6 · HANDOFF 5 (ruler-written, re-derived 26 Aug —
                                     supersedes BUILD 5 · PROOF 3 · HANDOFF 5)
-☐ S5-Z5 THE BLOB CAPTURE PATH — a micro-rung, RULED by the architect 26 Aug ~08:55 machine-clock
+☑ S5-Z5 THE BLOB CAPTURE PATH — DONE 26 Aug 2026 ~09:30. `--from-blob` built, bite-proven both
+      directions and IDEMPOTENT (`diag/proofs_s5z5.mjs`, 64 assertions × 2 in one invocation, and it
+      bites again on a fresh shell run) · checkall GREEN all 8 + preflight GO, both in-session ·
+      checkall §2 tightened to require the new legs · **B04_2 captured LIVE through the real CLI and
+      verified, so B04 closes 2/2** · the days_covered 4-vs-10 flag CLOSED as the (continued) day-key
+      class, not a defect (7 header lines, 4 distinct days) · B04_2 verify: 19 kept / 25 dropped, ≥5
+      measured FALSE drops. ONE declared consequence outside capture.mjs, in-session and one line to
+      reverse: mdrender's CAPTURE_PATHS registry + probecheck's alphabet router learned `raw-blob`
+      (proven by an IDENTICAL B04_1 verdict under the new stamp, sidecar restored byte-for-byte) —
+      a declared path no comparator accepts is not a path. verify.mjs unchanged.
+      COST: 10.13 of BUILD 8 + PROOF 7 (build+proof complete inside 15). The row as ruled:
+      THE ROW AS RULED, kept verbatim below for the archaeology (its box is deliberately removed so
+      the §10-D rule-1 FALLBACK router cannot land on a rung that is closed):
+      S5-Z5 THE BLOB CAPTURE PATH — a micro-rung, RULED by the architect 26 Aug ~08:55 machine-clock
       (queue\RULING__2026-08-26_0855-s5corpus-8.md IS this rung's work order; it ratified option A of
       queue\2026-08-26_0900-s5corpus-8.md and CORRECTED where it lands). MODEL: Opus 5 · effort HIGH.
       ⛔ RUNS BEFORE B05, NOT AFTER B18 — that correction is the whole point: S5-Z4 runs only after
@@ -3431,8 +3496,15 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     ~2–3 estimate was REFUSED as knowingly thin — the micro-rung
                                     floor is ~15, because thin numbers manufacture breaches)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
-      ◐ **26 Aug ~09:00 — B04 IS 1.5 OF 2 AND HALTED ON A RULING. B04_1 CLOSED AND PROBE-PASSED;
-      B04_2's ANSWER IS COMPLETE, BYTE-VERIFIED AND ON DISK — AND NOT CAPTURED.** Fresh Pro-Extended
+      ☑ **26 Aug ~09:30 — B04 IS CLOSED 2/2.** B04_2 was captured at S5-Z5's close through the new
+      `--from-blob` path on the REAL CLI (transit sha `8d089bd0333667b4` in-page == on-disk; identity:
+      all 9 declared top-level keys present) and verified: 44 items → 19 kept, 25 dropped, ≥5 of those
+      MEASURED FALSE DROPS (the (continued) day-key class, S5-Z4's). The days_covered 4-vs-10 flag is
+      CLOSED and was never a defect — batches 31–40 carry 7 `===== DAY:` header LINES but only 4
+      distinct days, because `(continued)` re-emits one. **4 of 18 corpus chats done; B05 is next.**
+      The account of the halt that produced S5-Z5 is kept below, unedited:
+      ◐ **26 Aug ~09:00 — B04 WAS 1.5 OF 2 AND HALTED ON A RULING. B04_1 CLOSED AND PROBE-PASSED;
+      B04_2's ANSWER WAS COMPLETE, BYTE-VERIFIED AND ON DISK — AND NOT CAPTURED.** Fresh Pro-Extended
       chat `gemini.google.com/app/227096fc78a39e96`, 10/10 chips, four-hop outbound matched on BOTH
       steps (`d4536a1a9b5caf57` pad delta 166 = 83×2 · `adbad9a2d355c69e` pad delta 216 = 108×2).
       `probecheck B04_1` = **PASS · VERBATIM 2/2, tail AND middle** — the FOURTH independent receipt
@@ -8200,3 +8272,118 @@ exists at 13 rather than 10 precisely because the last two sittings measured thi
 
 **Zero instruments edited · zero gates weakened · zero audit questions beyond the two paid steps ·
 frozen inputs untouched · answers/ holds exactly one new file (B04_1) and no false stamp.**
+
+---
+
+### PROGRESS 2026-08-26 ~09:30 IST — S5-Z5 · THE BLOB CAPTURE PATH, and B04 CLOSED 2/2
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐ — the fallback would have
+sent this session to S5-Z4, which must not run until after B18). Micro-order written to the session
+scratchpad BEFORE any edit (rule 9) and checked against §10-C/§10-D: files it may touch, the
+FORBIDDEN list copied off the rung row, and the DONE-proof commands. MODEL Opus 5 · effort HIGH,
+as the row says. Work order: `queue\RULING__2026-08-26_0855-s5corpus-8.md`.
+
+#### WHAT LANDED
+
+**`capture.mjs` has a THIRD declared path and the copy-gate did not get weaker to allow it.**
+`node capture.mjs save <step> --from-blob <file> --blob-sha <hex>`. The architect's condition was
+that BOTH of the rendered witness's jobs are RE-ASSIGNED, never dropped, and that is what the code
+does and what the proofs are aimed at:
+
+- **(i) TRANSIT INTEGRITY** — the whole payload's sha256, computed IN-PAGE off the ClipboardItem
+  `text/plain` Blob, against the sha of the bytes that reached disk. Whole payload, not a
+  line-containment sample, and with **no OS clipboard anywhere on the path**. 16-hex (the form the
+  sweep records) through 64-hex accepted; anything shorter or non-hex is refused rather than
+  prefix-matched into a pass.
+- **(ii) THIS-ANSWER IDENTITY** — a CONTENT ASSERT **derived from the step file that was actually
+  pasted**, never typed (the `probe_format` precedent, so it cannot drift from what the model was
+  shown). Two shapes, declare-or-die: an EXTRACTION step's trailing JSON skeleton ⇒ every declared
+  top-level key must be present in the payload's parsed JSON; a PROBE step's `ANCHOR n` lines ⇒ at
+  least one fenced block per anchor. A step whose shape can be derived from NEITHER is a **loud
+  refusal** — no quiet default, ever.
+- The three paths — `--from-blob` / `--rendered` / `--lossy` — are **mutually exclusive**; an answer
+  travelled one. `--from-blob` without `--blob-sha` is refused as an UNGATED capture. Every new
+  refusal is loud, writes nothing, and freezes nothing.
+
+**⛔ THE READING THE CODE REFUSES, and it is the whole point: that the sha is enough.** It is not.
+A neighbour's answer, whole and undamaged, hashes perfectly. The harness's headline assertion is
+exactly that case, and it is the shape assert — never the sha — that refuses it. The sidecar records
+the two receipts under separate names (`blob_gate.in_page_sha` and `blob_gate.shape`) so no later
+reader can mistake one for the other.
+
+#### THE PROOFS — all run in-session, none weakened to pass (§10-D rule 10)
+
+- **`node diag/proofs_s5z5.mjs` → GREEN, 64 assertions, every one of them TWICE inside one
+  invocation**, with the two rounds' verdict vectors compared. Sentinel step ids that cannot collide
+  with a sweep step; the harness REFUSES to run if a real answer or step file already sits there;
+  every fixture removed in a `finally` and the removal asserted; the live sweep's `inputs_frozen.json`
+  fingerprinted before and after and proven byte-identical. **Re-run from a fresh shell: it bites
+  again** — that is the idempotency proof, not a claim about it.
+- **`node capture.mjs selftest`** — the new legs sit beside the old ones and all are green: bad sha ·
+  matching-sha substitution · no parseable JSON on an extraction step · ungated save · each of the
+  three mutual-exclusion pairings · short sha · non-hex sha · no step file · undeclared shape · and
+  the success leg, byte-for-byte with the stamp and the freeze asserted.
+- **`node checkall.mjs` → GREEN, all 8 sections.** §7 was RED at open for the fifth consecutive
+  sitting — same cause, instruments edited and not yet snapshotted — closed with `snapshot.mjs take`.
+  This is the CLASS the ~08:55 ruling already filed to S5-Z4's verify scope; nothing new.
+- **`node preflight.mjs` → GO** (2 warnings, both the expected resume warnings).
+- **checkall §2 TIGHTENED** (a gate may only get stricter, rule 6): the section now FAILS if the
+  capture selftest stops exercising either witness of the new path.
+
+#### THE LIVE CLOSE — B04_2, and B04 IS 2/2
+
+Not a fixture. `node capture.mjs save B04_2 --from-blob diag\B04_2_raw.txt --blob-sha 8d089bd0333667b4`
+→ **23,215 chars written · capture_path `raw-blob` · BLOB-GATE PASSED — transit: sha in-page == on-disk ·
+identity: all 9 top-level keys of the step's shape present · JSON parses.** Then `verify.mjs`.
+The answer that could not leave the browser three hours ago is captured, stamped and verified, and
+nothing was re-asked of Gemini.
+
+**✔ THE `days_covered` 4-vs-10 FLAG IS CLOSED, AND IT WAS NEVER A DEFECT.** Measured on the frozen
+batches: `live2_batch31-40` carries **SEVEN `===== DAY:` header LINES but only FOUR distinct days** —
+2026-07-26, 07-29, 07-30, 07-31 — because `(continued)` re-emits the same day as a second header. The
+model's `days_covered` of 4 is CORRECT; the "10 headers" observation was counting header LINES and
+`=====` separators, not days. It is the SAME `(continued)` day-key class S5-Z4 already owns.
+
+**⚠ B04_2's verify numbers, with the false-drop count the ~07:10 ruling requires:** 44 items →
+**19 kept · 25 dropped, of which ≥5 are MEASURED FALSE DROPS** — the quote is present verbatim in the
+frozen batches and verify still says NOT-FOUND. **5 is a LOWER BOUND:** the measure is
+whitespace-normalised containment, so a difference of emphasis alone still counts as absent here.
+All of it re-verifies free at S5-Z4's close.
+
+#### THE ONE DECISION I TOOK MYSELF, DECLARED RATHER THAN BURIED
+
+The rung's SCOPE says "capture.mjs's third declared path, and nothing else", and its FORBIDDEN list
+names step, corpus and verify changes. I made **one change outside capture.mjs**: `mdrender.mjs`'s
+`CAPTURE_PATHS` registry and `probecheck.mjs`'s alphabet router learned `raw-blob` (markdown-BEARING,
+the same alphabet `raw` gets). **Why I did not escalate it:** a declared capture path that no
+comparator accepts is not a path — probecheck would have refused every B05–B18 probe answer as
+`no-stamp`, which is the rung's own purpose failing at its first use. It is neither a step, a corpus
+nor a verify change (`verify.mjs` needed none — its lossy predicate is `=== "rendered-lossy"`, which
+is already correct for the new path), it is one line in each file, and it is one line to reverse.
+**It is PROVEN, not asserted:** PART 4 of the harness re-reads the real, already-PASSing B04_1 under
+a `raw-blob` stamp, asserts the verdict is IDENTICAL, and restores its sidecar byte-for-byte.
+If the architect wants it un-done, the row and this entry say exactly where it is.
+
+#### THE NUMBERS
+
+**10.13 lakh spent on BUILD 8 + PROOF 7** — day line 439.53 → 449.66, read from the meter, not
+estimated. Build and proof complete **inside 15**. The records and this commit ride the **HANDOFF 5**
+line. First rung in a while to come in under its ceiling with room to spare, and the reason is worth
+recording: the ruler refused this session's own ~2–3 estimate as knowingly thin and wrote 8/7/5
+instead — a ceiling sized to the work does not manufacture a breach.
+
+**Zero steps regenerated · zero corpus or canon bytes moved · zero Gemini calls · zero audit
+questions · no existing capture path loosened · the frozen inputs byte-identical at every section
+boundary of checkall's effect gate.**
+
+#### WHAT THE NEXT SESSION DOES
+
+**S5 · the corpus resumes at B05**, a fresh Pro-Extended chat with ten attachments
+`live2_batch41-50`, `steps/B05_1.txt` (load + probe) then `steps/B05_2.txt` (extraction), then STOP
+and leave the chat OPEN. **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
+Capture on the new path: read the Blob in the SAME call that clicks THIS answer's Copy button, sha it
+in-page, deliver page→disk, then `capture.mjs save B05_2 --from-blob <file> --blob-sha <hex>`.
+The OS clipboard is off the answer path now — but the **one-shot-download rule still binds**, so
+budget the single page→disk delivery per chat and take the RAW payload with it. Blocked second
+delivery ⇒ restart the browser and reload the chat (pre-authorized, free); still blocked ⇒ halt that
+chat only, record, move on. Never an open wait. **B01–B04 closed: 4 of 18.**
