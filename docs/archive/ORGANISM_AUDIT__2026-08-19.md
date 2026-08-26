@@ -2793,7 +2793,20 @@ STATUS (update this block before any session stops — this is the handoff)
                                    clipboard occurrence and the FIRST with a mechanism: **it is
                                    the OS write that hangs, not Gemini's ClipboardItem.** It also
                                    makes the router's own "OS clipboard stays off the answer path"
-                                   literally true for the first time. Declared departure, recorded.
+                                   literally true for the first time.
+                                   ✅ **RATIFIED — THE INTERCEPT IS NOW THE STANDING FIRST HOP OF
+                                   `--from-blob`** (`RULING__2026-08-27_1220-s5canonb-5.md` item 1):
+                                   same bytes at source, the 0855 same-call binding + sha contract
+                                   unchanged, and the measured hang site leaves the path entirely.
+                                   Nothing loosened. **USE IT ON `G03_4`.** The mechanism is FILED
+                                   to S11's instrumentation lead as its FIRST mechanism evidence.
+                                   ⛔ **FOLD OWED AT THE NEXT CLOSE, ordered by the ruler:**
+                                   `RULING__2026-08-27_1220-s5canonb-5.md` VERBATIM into PROGRESS ·
+                                   item 1 onto the transport block · item 2's wording onto the KEPT
+                                   rule (**"both directions measured"** — over-reports at G01 via
+                                   the answer-level row, under-reports at G03 via duplicate-quote
+                                   collapse). Deferred to the next close BY THE RULER, not skipped:
+                                   this sitting closed at 47.19 of the 35+13 line.
                                    ⚠ **READ THE ANSWER OFF `message-content`, NOT `model-response`.**
                                    Mid-stream `model-response.textContent` read **11** ("Gemini
                                    said") while `message-content` held **31,624** — the same
