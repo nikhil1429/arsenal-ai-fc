@@ -2391,22 +2391,82 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⚠ **~16.4 of the 35-lakh EXECUTION line** (day 950.04 → 966.43).
                                    **INSIDE.** Records ride HANDOFF 13. Caveat carried, not
                                    re-derived: today's meter line reads ~+16% hot (S5-R's finding).
-  ▶ NEXT SESSION ............... **① S5-Z8 — THE RAW-CONTROL-CHAR DE-ESCAPE, its own session.**
-                                   Its §10-C row is written and its ruling is
-                                   `queue\RULING__2026-08-27_0150-s5corpus-17.md` — read BOTH
-                                   before touching `payloadfence.mjs`. **MODEL: Opus 5 · effort
-                                   HIGH · BUILD 8 · PROOF 8 · HANDOFF 5.** Scope is ONE site and the
-                                   bound is STRICT (0x00–0x1F **inside string literals only**,
-                                   escape-aware, never structural, never outside strings, count
-                                   RECORDED as `control_chars_escaped: N`). **Its close is a LIVE
-                                   capture: B13_2 from the parked `diag/B13_2_raw.txt` (sha
-                                   `7e7cb2db85d622a5`) — NO re-send — then `verify.mjs`, and B13
-                                   closes 2/2 there.** Assert the Z7 lesson mechanically: **no
-                                   second live copy of the normalization anywhere.**
-                                   **② THEN B14** — a fresh Pro-Extended chat, ten attachments
-                                   `live2_batch131-140`, `steps/B14_1.txt` then `steps/B14_2.txt`,
-                                   on **EXECUTION 35 + HANDOFF 13**. Then B15–B18 the same way.
-                                   **12 of 18 corpus chats are CLOSED 2/2; B13 is 1.5 of 2.** Read
+  S5-Z8 + B13 CLOSED 2/2 ....... ☑ 27 Aug 2026 ~02:40. **S5-Z8 DONE — the de-escape lane is open,
+                                   bounded, and measured — AND B13 IS CLOSED 2/2. 13 of 18.**
+                                   `escapeControlsInStrings` is in **`payloadfence.mjs` and nowhere
+                                   else**: 0x00–0x1F **inside string literals only**, escape-aware,
+                                   run ONLY after a straight parse has already failed, and every
+                                   other predicate untouched. `capture.mjs` gained ONE field —
+                                   it CARRIES the count, never computes it.
+                                   ✔ **`diag/proofs_s5z8.mjs` — 26 checks, GREEN TWICE
+                                   (idempotent), and MOST OF THEM BITE OUTWARD:** a control char
+                                   **OUTSIDE** a string still REFUSES · structural bytes never
+                                   altered · an escaped quote does not flip string state · trailing
+                                   comma / single quotes / unquoted key / truncated object ALL still
+                                   refused · AMBIGUOUS-on-two, `shape`, `none` and Z7's
+                                   not-the-first-fence all unchanged · the twelve pre-Z8 stored
+                                   answers resolve exactly as before with count 0.
+                                   ⛔ **THE OUTWARD BITE HAD TO BE WRITTEN WITH 0x07, NOT A TAB** —
+                                   tab/LF/CR outside a string are LEGAL JSON whitespace, so the
+                                   obvious version of that proof would have passed while proving
+                                   nothing. A false bite is worse than no bite.
+                                   ⚠ **TWO PROOFS CAME BACK RED ON FIRST RUN AND BOTH WERE MY
+                                   PROOFS' FAULT, NOT THE CODE'S — and I proved that rather than
+                                   assuming it.** The array case was re-run against the PRE-EDIT
+                                   module restored from the snapshot (sha `08ac72b0a6e028cb` — the
+                                   hash taken before the first edit) and behaved IDENTICALLY, so
+                                   the rung did not cause it. It is now **PINNED** in the proof as
+                                   a lead: a candidate body is brace-sliced (first `{` .. last
+                                   `}`), so an ARRAY WRAPPING a qualifying object is reached and
+                                   accepted. **Not fixed here — changing a predicate that is not
+                                   this rung's is FORBIDDEN.** For a later rung.
+                                   ✔ **B13_2 CAPTURED LIVE, NO RE-SEND** (ruling item 4, the
+                                   B04_2/B10_2 precedent at its THIRD use): transit
+                                   `7e7cb2db85d622a5` in-page == on-disk, all 9 keys, receipt
+                                   **`control_chars_escaped: 2`**.
+                                   ⚠ **`B13_2 : 37 items → KEPT 4 · DROPPED 33`** · source-missing
+                                   25 · NOT-FOUND 8 · **MEASURED FALSE DROPS 8** · **de-escape 0 —
+                                   NINTH consecutive** · genuinely absent 25 ⇒ **true content ≥ 12
+                                   of 37, invention ≤ 67.6%.**
+                                   ⛔ **THE CONTROL CAME BACK 3/4 — DIRTY, SECOND CHAT RUNNING.**
+                                   My matcher re-found only 3 of the 4 quotes `verify.mjs` itself
+                                   KEPT, so it is stricter than verify's and "genuinely absent"
+                                   OVER-counts. **67.6% is an UPPER BOUND, not a point value**, and
+                                   it does not join the invention table as one. B12 was 3/5; two
+                                   dirty controls in a row is now a shape worth a rung, not an
+                                   incident.
+                                   ⚠ **`verify.mjs` flagged `2026-08-14 (continued)` as "NOT IN
+                                   MANIFEST (invented)" — it is a FALSE POSITIVE of the known
+                                   S5-Z4 `(continued)` day-key class, not invention.** The string
+                                   is a REAL `===== DAY:` header in the ten files (11 header lines,
+                                   2 distinct days). Recorded so nobody reads it as fabrication.
+                                   ⚠ **THE RECORD'S CLOCK RUNS ~5h20m AHEAD OF THE MACHINE'S.**
+                                   Measured this sitting: local == IST == **26 Aug 20:34** while the
+                                   series labels this entry 27 Aug ~02:40. The series is KEPT (its
+                                   labels are IDs — `RULING__2026-08-27_0150` is a filename), but
+                                   the drift is recorded rather than harmonised. One line for S6.
+                                   ⚠ **~8.7 of the 21-lakh line (BUILD 8 · PROOF 8 · HANDOFF 5)**
+                                   (day 977.89 → 986.61 at the proofs' close). **INSIDE.**
+  ▶ NEXT SESSION ............... **① B14 — a fresh Pro-Extended chat, ten attachments
+                                   `live2_batch131-140`, `steps/B14_1.txt` then `steps/B14_2.txt`.**
+                                   Then B15 onward the same way, to B18.
+                                   **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
+                                   ✔ **S5-Z8 IS DONE and the de-escape lane is open, bounded and
+                                   MEASURED.** A payload carrying raw 0x00–0x1F **inside a string
+                                   literal** now captures, and the receipt records
+                                   `control_chars_escaped: N`. A control char OUTSIDE a string
+                                   still refuses; every other predicate is unchanged. **If a chat
+                                   ever reports a NON-ZERO count, say so in its record** — that is
+                                   the measurement the bound exists to produce.
+                                   ⚠ **THE CONTROL HAS NOW COME BACK DIRTY TWICE RUNNING** (B12
+                                   3/5, B13 3/4). When the recount cannot re-find every quote
+                                   `verify.mjs` itself KEPT, the invention figure is an **UPPER
+                                   BOUND and must be reported as one** — never a point value.
+                                   ⚠ **HEADER COUNT HAS BEEN DEFLATED BY ONE FOR THREE CHATS
+                                   RUNNING**, and the shape is legible: the model reports one
+                                   header PER FILE, so it misses the SECOND header inside a file,
+                                   never a file. Count file by file, never by glob.
+                                   **13 of 18 corpus chats are CLOSED 2/2.** Read
                                    `wiring.json` for each chat's exact ten filenames and
                                    `probe_expected.json` for its anchors — **never the prose, and
                                    note both files are NESTED** (`.steps[...]` and `.probes[...]`;
@@ -4866,7 +4926,19 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     never by the executor. Superseded: BUILD 8 · PROOF 8 · HANDOFF 5
                                     from RULING__2026-08-26_2115 item 3, written before the second
                                     site was known.)
-☐ S5-Z8 THE RAW-CONTROL-CHAR DE-ESCAPE — a micro-rung, RULED by the architect 27 Aug ~01:50
+☑ S5-Z8 THE RAW-CONTROL-CHAR DE-ESCAPE — **DONE 27 Aug 2026 ~02:40. AND B13 IS CLOSED 2/2.**
+      Full account in the PROGRESS entry of 27 Aug ~02:40 — read that, not this summary.
+      ✔ **THE NEW LANE OPENED AND EVERY BOUND BITES — `diag/proofs_s5z8.mjs`, 26 checks, GREEN
+      TWICE (idempotent).** `escapeControlsInStrings` lives in `payloadfence.mjs` and nowhere else;
+      `capture.mjs` CARRIES the count and never computes it, asserted mechanically.
+      ✔ **B13_2 CAPTURED LIVE from the parked payload — NO re-send** (item 4): transit sha
+      `7e7cb2db85d622a5` in-page == on-disk, all 9 keys, and the receipt reads
+      **`control_chars_escaped: 2`** — measured, never silent. `verify.mjs` then ran on it.
+      ⚠ **TWO OF THIS RUNG'S OWN PROOFS CAME BACK RED FIRST, AND BOTH WERE FAULTS IN THE PROOFS,
+      NOT THE CODE** — proven, not asserted: the array case was re-run against the PRE-EDIT module
+      restored from the snapshot (sha `08ac72b0a6e028cb`, the hash taken before the first edit) and
+      behaved identically, so the rung did not cause it. It is PINNED as a lead, not fixed here.
+      (the original row, kept unedited:) a micro-rung, RULED by the architect 27 Aug ~01:50
       (`queue\RULING__2026-08-27_0150-s5corpus-17.md`), off B13_2. **Escalated, not decided by the
       executor: it converts a REFUSAL into a PASS, and that is exactly what §10-D rule 6 protects.**
       WHY: B13_2 returned COMPLETE — 20,760 chars, transit sha `7e7cb2db85d622a5` in-page ==
@@ -4905,9 +4977,10 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written off the
                                     10.13/19.4/26 record (RULING__2026-08-27_0150 item 3).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
-      ▸ **WHERE THE SWEEP STANDS, 27 Aug ~00:30 — read ▶ RESUME HERE and the PROGRESS entries for
-      B05–B12; only B01–B04 are written out below.** **B01–B12 ALL CLOSED 2/2 — 12 of 18, two
-      thirds of the corpus half.** B10 was closed at S5-Z7 (its extraction was parked, not stamped,
+      ▸ **WHERE THE SWEEP STANDS, 27 Aug ~02:40 — read ▶ RESUME HERE and the PROGRESS entries for
+      B05–B13; only B01–B04 are written out below.** **B01–B13 ALL CLOSED 2/2 — 13 of 18.** B13 was
+      closed at S5-Z8 (its extraction was parked, not stamped, until that rung fixed the assert that
+      refused it) — the SECOND time a micro-rung has been the thing that closed a chat, after B10/Z7. B10 was closed at S5-Z7 (its extraction was parked, not stamped,
       until that rung fixed the assert that refused it). Every B chat stays OPEN (the critic is not
       fired — the ~07:50 ruling).
       ⚡ **THE BAND ANCHOR IS NOW 4 FOR 4 SINCE Z6** — B09 49.9% · B10 48.4% · B11 58.5% ·
@@ -11837,3 +11910,121 @@ and every B chat stays OPEN.
 **~16.4 of the 35-lakh EXECUTION line** (day 950.04 → 966.43). **INSIDE**, and comfortably so —
 the refusal stopped the sitting well before the ceiling did. Records ride HANDOFF 13. Caveat
 carried, not re-derived: today's meter line reads ~+16% hot (S5-R's finding).
+
+### PROGRESS 2026-08-27 ~02:40 IST — **S5-Z8 DONE AND B13 CLOSED 2/2, 13 of 18** — the de-escape lane opened bounded and measured, and the two proofs that came back RED were my own, which I proved against the pre-edit module instead of assuming
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — *"① S5-Z8 — THE
+RAW-CONTROL-CHAR DE-ESCAPE, its own session."* Micro-order written to the session scratchpad before
+any edit (rule 9), and it carried the scope reading below. §10-C row and
+`queue\RULING__2026-08-27_0150-s5corpus-17.md` both read end to end before `payloadfence.mjs` was
+opened, as the row demands. MODEL: Opus 5 · effort HIGH · **BUILD 8 · PROOF 8 · HANDOFF 5**.
+`checkall` **GREEN 8/8** · `preflight` **GO**, both RUN in-session. Meter baseline **977.89**.
+Every instrument hashed BEFORE the first edit (standing law, RULING 1900 item 2) and
+`snapshot.mjs take` run first, because this folder sits outside any git work tree.
+
+#### THE SCOPE READING, SAID OUT LOUD — the row has two sentences and both had to stay true
+
+SCOPE says `payloadfence.mjs` **ONLY**. DONE-PROOF requires *"the `control_chars_escaped: N`
+receipt present and correct"* — and the receipt is written by `capture.mjs`. The only reading under
+which both are true: **the NORMALIZATION lives at one site; `capture.mjs` gains only the plumbing
+that carries the number `payloadfence` returns.** That is what was built — one field, one printed
+clause — and `capture.mjs` is not in the FORBIDDEN list. The alternative reading (touch nothing but
+payloadfence) makes the row's own DONE-PROOF unreachable. Written into the micro-order before the
+first edit, and there is now a proof asserting `capture.mjs` CARRIES the count and never computes it.
+
+#### WHAT LANDED
+
+`escapeControlsInStrings` in **`payloadfence.mjs` and nowhere else**. It runs **only after a
+straight `JSON.parse` has already failed**, so everything that parsed before still parses by the
+same path with the count at 0. The bound is the whole point and it is strict: **0x00–0x1F inside
+string literals only**, escape-aware (a backslash escape is consumed, so an escaped quote never
+flips string state), never structural, never outside a string, and a payload needing **any other
+repair is still refused** — this is not a JSON-fixer.
+
+**`diag/proofs_s5z8.mjs` — 26 checks, GREEN, and green again on a second run (idempotent).** Most
+of them bite OUTWARD, because what the change still REFUSES is the load-bearing half:
+
+```
+a raw TAB inside a string now QUALIFIES · count EXACT (1, and 2 for two) · the tab comes back unchanged
+a control char OUTSIDE a string is STILL REFUSED          <- the bound itself
+structural bytes NEVER altered · an ESCAPED quote does not flip string state
+trailing comma / single quotes / unquoted key / truncated object — ALL still refused
+AMBIGUOUS-on-two · reason "shape" · reason "none" · Z7's not-the-first-fence — all unchanged
+the 12 pre-Z8 stored answers resolve exactly as before, count 0 everywhere
+payloadfence.mjs is the ONLY live file implementing it; capture.mjs CARRIES the count
+```
+
+⛔ **THE OUTWARD BITE HAD TO BE WRITTEN WITH 0x07, NOT A TAB.** Tab, LF and CR outside a string are
+**legal JSON whitespace**, so the obvious version of that proof — "put a tab outside a string, it
+should still refuse" — would have passed while proving nothing at all. A false bite is worse than no
+bite: it reads as coverage forever. The proof uses BEL (0x07), which is invalid outside a string.
+
+#### ⚠ TWO PROOFS CAME BACK RED ON THE FIRST RUN, AND BOTH WERE MINE
+
+Neither was weakened to pass (§10-D rule 10), and neither was assumed away.
+
+1. **"a top-level ARRAY still does not qualify" → ok=true.** The candidate body is brace-sliced
+   (`indexOf("{")` .. `lastIndexOf("}")`), so an array WRAPPING a qualifying object is reached and
+   accepted. **I did not take my own word for it being pre-existing:** the pre-edit
+   `payloadfence.mjs` was restored out of the snapshot, its sha checked against the hash taken
+   before the first edit (`08ac72b0a6e028cb`, identical), and it was run on the same input — **it
+   returned `ok=true` too.** So the rung did not cause it. The assertion was corrected to the
+   module's real contract (a payload that PARSES to an array does not qualify — `[1,2]` is refused,
+   and still is), and the brace-slice behaviour is now **PINNED** by a proof so a later rung cannot
+   change it silently. **Not fixed here: changing a predicate that is not this rung's is FORBIDDEN.**
+2. **"nothing else calls the scanner" → payloadfence.mjs.** My filter did not exclude the defining
+   file from its own caller list. A one-word fault in the proof.
+
+#### B13_2 — CAPTURED LIVE FROM THE PARKED PAYLOAD, NO RE-SEND
+
+Ruling item 4, the B04_2 / B10_2 precedent at its **third** use. `capture.mjs save B13_2
+--from-blob diag/B13_2_raw.txt --blob-sha 7e7cb2db85d622a5`:
+
+```
+BLOB-GATE PASSED — transit sha 7e7cb2db85d622a5 in-page == on-disk · all 9 top-level keys present
+S5-Z8: 2 raw control char(s) escaped INSIDE string literals to parse it — recorded, not silent
+meta.blob_gate.control_chars_escaped = 2
+```
+
+**`B13_2 : 37 items → KEPT 4 · DROPPED 33`** · source-missing 25 · NOT-FOUND 8 · **MEASURED FALSE
+DROPS 8** · **de-escape 0 — ninth consecutive** · genuinely absent 25 ⇒ **true content ≥ 12 of 37**,
+invention **≤ 67.6%**.
+
+⛔ **THE CONTROL CAME BACK 3/4 — DIRTY, AND THIS IS THE SECOND CHAT RUNNING.** My recount's matcher
+re-found only 3 of the 4 quotes `verify.mjs` itself KEPT, so it is stricter than verify's and the
+"25 genuinely absent" is an OVER-count. **67.6% is an UPPER BOUND, not a point estimate**, and it
+does not join the invention table as one. B12 was 3/5. **Two dirty controls in a row is a shape, not
+an incident** — the recount matcher is now the instrument that needs a rung, and it is filed here
+rather than fixed, because it is not this rung's.
+
+⚠ **`verify.mjs` flagged `2026-08-14 (continued)` as "NOT IN MANIFEST (invented)". It is a FALSE
+POSITIVE of the known S5-Z4 `(continued)` day-key class, not fabrication** — the string is a real
+`===== DAY:` header in the ten files (11 header lines, 2 distinct days). Recorded explicitly so a
+later reader does not count it as invention. The two "INFLATED COUNT" flags ride the same key
+mismatch.
+
+**⇒ B13 IS CLOSED 2/2. 13 of 18 corpus chats.** And this is the **second** time a micro-rung has
+been the thing that closed a chat, after B10/Z7 — both times because a gate refused a complete,
+byte-verified answer for a reason that had nothing to do with the property it protects.
+
+#### ⚠ ONE THING I MEASURED THAT NOBODY ASKED FOR — THE RECORD'S CLOCK IS ~5h20m FAST
+
+This sitting's machine clock reads **local == IST == 26 Aug 20:34** while the series labels this
+entry 27 Aug ~02:40; the previous entry was labelled 01:50 at a true 20:11. The series is **KEPT**
+— its labels are IDs, and `RULING__2026-08-27_0150-s5corpus-17.md` is a filename that other
+documents point at — but the drift is **recorded rather than harmonised**, because silently
+re-dating a series is exactly the §2 disease. One line for S6 to decide.
+
+#### WHAT THIS RUNG DID NOT DO — said out loud, per §5
+
+No step, corpus, prompt or wiring change. Zero Gemini calls — B13_2's bytes were already paid and
+it was **not** re-sent. No other predicate in `payloadfence.mjs` touched: exactly-one-qualifying-
+fence, AMBIGUOUS-on-two, all-declared-keys-or-refuse and the transit sha all stand, each with a
+proof. The brace-slice lead is pinned, not fixed. The recount-matcher lead is filed, not fixed.
+B14 was not opened. The critic was not fired and every B chat stays OPEN.
+
+#### COST
+
+**~8.7 of the 21-lakh line** (day 977.89 → 986.61 at the proofs' close). **INSIDE**, and the
+BUILD half came in under its 8. Records ride HANDOFF 5. Caveat carried, not re-derived: today's
+meter line reads ~+16% hot (S5-R's finding).
