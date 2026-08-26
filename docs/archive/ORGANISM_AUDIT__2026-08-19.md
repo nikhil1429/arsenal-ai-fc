@@ -2053,6 +2053,36 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⚡ **THE LINE WORTH CARRYING FORWARD: hash every artifact BEFORE
                                      the first edit.** Cheapest step in the rung, and the only
                                      reason the freeze is intact.
+  ✔ RULED AFTER THE COMMIT ..... `RULING__2026-08-26_1900-s5z6-1.md` — no fork was open; it records
+                                   the two items that needed the ruler's word and one owned miss.
+                                   **It arrived AFTER `eb79c5a` was pushed, so it cost a SECOND
+                                   HANDOFF CYCLE** — the same pattern the 0750 close named, and the
+                                   reason it is folded here rather than carried: a ratified standing
+                                   rule that crosses a session boundary unwritten is exactly the
+                                   bookkeeping half-execution this ruling exists to stop.
+                                   ☑ **(1) MISS #12, OWNED BY THE RULER** — 1610 created S5-Z6 and
+                                     never wrote its §10-C row, breaking the rung-row-in-same-act
+                                     law by its own author, the second bookkeeping half-execution.
+                                     **CLASS FIX, STANDING for every future ruling: a ruling that
+                                     CREATES or RE-DERIVES a rung ends with an explicit numbered
+                                     FOLD LIST naming every record write it expects (row · router ·
+                                     card), so the bookkeeping half is an instruction with a
+                                     consumer, never an assumption.** The executor's
+                                     transcribe-without-rescoping is confirmed the correct move.
+                                   ☑ **(2) "HASH BEFORE THE FIRST EDIT" IS NOW STANDING LAW** for
+                                     any versioned-additive change to FROZEN or CERTIFIED artifacts:
+                                     hash the full set before touching anything, re-verify after.
+                                     TIER-0, nearly free, strictly stricter — **and it was the ONLY
+                                     thing that saw either freeze break** (an additive key + a stray
+                                     blank line, 21 artifacts moved, invisible to every other gate).
+                                   ☑ **(3) THE 19.4-vs-15 BREACH STANDS RECORDED, NOT RE-DERIVED** —
+                                     unit-faults-only honoured and the executor did not ask.
+                                     **PRICING DATUM for the ruler's ledger: the micro-rung floor of
+                                     ~15 has now measured 10.13 (under) and 19.4 (over)** — future
+                                     micro-rung lines are priced off this record; **existing rows
+                                     never move.**
+                                   ☑ **(4) Z6 ACCEPTED** — proofs 20×2, bite-proven, and checkall §2
+                                     RUNNING the harness. B09 opens the first three-anchor chat.
   ▶ NEXT SESSION ............... **① B09 — AND IT IS THE FIRST CHAT EVER GATED ON THREE ANCHORS.**
                                    A fresh Pro-Extended chat, ten attachments `live2_batch81-90`,
                                    `steps/B09_1.txt` (**3 anchors — tail · middle · band at 49.9%
@@ -10532,3 +10562,30 @@ this morning with his ANSI-default read, found the same way, by checking the che
 
 **THE ONE LINE WORTH CARRYING FORWARD: hash every artifact BEFORE the first edit.** It is the
 cheapest step in this rung and it is the only reason the freeze is intact.
+
+#### ✔ RULED AFTER THE COMMIT — `RULING__2026-08-26_1900-s5z6-1.md`, folded here rather than carried
+
+No fork was open; the file records the two items that needed the ruler's word and one owned miss.
+**It arrived after `eb79c5a` was already pushed, so it cost a SECOND HANDOFF CYCLE** — the same
+pattern the 0750 close named. Folding it now instead of carrying it to B09 is the whole point of
+its own item 1: a ratified standing rule that crosses a session boundary unwritten is precisely the
+bookkeeping half-execution the ruling exists to stop.
+
+**(1) MISS #12, owned by the ruler** — 1610 created S5-Z6 and never wrote its §10-C row, breaking
+the rung-row-in-same-act law by its own author, and it is the second bookkeeping half-execution.
+**The class fix is standing for every future ruling: a ruling that creates or re-derives a rung
+ends with an explicit numbered FOLD LIST naming every record write it expects (row · router · card)
+— so the bookkeeping half is an instruction with a consumer, never an assumption.** The
+transcribe-without-rescoping call is confirmed correct.
+
+**(2) "HASH BEFORE THE FIRST EDIT" IS STANDING LAW** for any versioned-additive change to frozen or
+certified artifacts: hash the full set before touching anything, re-verify after. TIER-0, nearly
+free, strictly stricter — and it was the only thing that saw either freeze break.
+
+**(3) The 19.4-vs-15 breach stands recorded, not re-derived** — unit-faults-only honoured, and the
+ruler noted the executor did not ask. **Pricing datum for his ledger: the micro-rung floor of ~15
+has now measured 10.13 (under) and 19.4 (over); future micro-rung lines are priced off this record
+and existing rows never move.**
+
+**(4) Z6 accepted** — proofs 20×2, bite-proven, checkall §2 running the harness. B09 opens the
+first three-anchor chat, 35 + 13. Band misses are the point.
