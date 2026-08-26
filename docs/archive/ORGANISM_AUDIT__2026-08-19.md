@@ -3231,9 +3231,15 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       with ONE answer site — JOIN IT TO `mdrender.mjs`.** This is the THIRD wrong site (S5-Z3's raw
       comparator · S5-R2's day-index parse · this); his global-not-patch law says the next one is
       the builder's fault, not the finder's. All stored answers re-verify FREE at this rung's close
-      (fourth use of the A02 pattern). ⚠ Three scope additions now ride the ruler-written BUILD 5 /
-      PROOF 3 line and it has NOT been re-derived — that is the ruler's call, flagged not taken.
-                                           BUILD 5 · PROOF 3 · HANDOFF 5 (ruler-written)
+      (fourth use of the A02 pattern).
+      ✔ **CEILING RE-DERIVED 26 Aug (`RULING__2026-08-26_0750-s5corpus-6.md` item 3) — A SCOPE
+      CHANGE, NOT A BREACH, and the first re-derivation on this ladder that is not a meter-unit
+      fault. §10-C's "unit faults only" rule governs a ceiling whose SCOPE is unchanged; three ruled
+      additions + the one-site alphabet consolidation + the full free re-verify at close were added
+      to this rung AFTER its line was written, so the RULER re-sized it. Executor flagged, ruler
+      took it — which is the escalation rule working, not a ceiling being negotiated.**
+                                    BUILD 8 · PROOF 6 · HANDOFF 5 (ruler-written, re-derived 26 Aug —
+                                    supersedes BUILD 5 · PROOF 3 · HANDOFF 5)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ◐ **26 Aug ~07:50 — B03 IS CLOSED 2/2 at the new extraction-only shape. 3 of 18 corpus chats
       complete**, and B03's chat is LEFT OPEN for an on-demand retro-critic. Fresh Pro-Extended chat
@@ -3268,6 +3274,18 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       a page-side `fetch('http://127.0.0.1:…')` is REFUSED, so serve.mjs's premise fails for a
       driving session) · **after a reload the send button is INERT — use `Return`.**
       ⚠ 30.38 of the fresh 35-lakh EXECUTION line, INSIDE; STOPPED rather than open B04 (§10-D rule 2).
+      ✔ **CLOSE RATIFIED + FOUR ITEMS RULED (`RULING__2026-08-26_0750-s5corpus-6.md`, direct channel,
+      3rd use — and it arrived AFTER the commit, so it cost a second handoff cycle, the exact pattern
+      the ~08:15 close named when 35+10 was made standing):
+      (1) THE INJECTED FILE-INPUT OUTBOUND IS RATIFIED and JOINS THE STANDING OUTBOUND LAW as its
+      DECLARED CLIPBOARD-DEAD BRANCH** (stricter, four hops asserted, prompt bytes out of context);
+      **serve.mjs's premise is recorded REFUTED for driving sessions.
+      (2) THE CLIPBOARD CONCLUSION DIES, BOTH MEASUREMENTS STAND AS DATA** — the standing summary is
+      now **"cause UNKNOWN, measurements contradict across occurrences"**, and **S11 starts with
+      INSTRUMENTATION ACROSS A FAULT WINDOW, never a holder-hunt.**
+      **(3) S5-Z4's ceiling RE-DERIVED to BUILD 8 · PROOF 6 · HANDOFF 5** (scope change, not breach —
+      on its row above). **(4) the clock drift is accepted as archaeology, this sitting's filenames
+      stand, and the architect stamps machine-clock from now on.**
       ◐ **26 Aug ~08:15 — B02 IS CLOSED 3/3. 2 of 18 corpus chats complete.** Both steps captured
       RAW (copy-gate 8/8 and 13/13, fenced, JSON parses, no lossy stamp), four-hop outbound matched
       on both, AUTO mode on his word with no classifier event.
@@ -7696,3 +7714,31 @@ left OPEN as the ~07:50 ruling requires.
 then B04_2, then leave it open. Opus 5 · effort HIGH.** Fresh 35 + 10 per the standing per-sitting
 budget. Read the three transport notes above before touching the browser: **reload on a stall,
 Return not the send button, and the injected-file-input outbound while the clipboard is down.**
+
+#### ADDENDUM — A SECOND RULING CAME BACK AFTER THIS CLOSE WAS COMMITTED AND PUSHED
+
+The four items above were reported to the architect on the direct channel at the close. The ruling
+returned after `bd4fabf` was already pushed, so this sitting — like the one before it — paid a
+**second record-and-commit cycle on the HANDOFF line.** That is now the second consecutive
+occurrence of the same shape, and the ~08:15 close already named it as a sizing question the
+5-flat/10-line model does not price. Recorded verbatim
+(`queue\RULING__2026-08-26_0750-s5corpus-6.md`):
+
+> ARCHITECT → EXECUTOR · RULING (record: queue\RULING__2026-08-26_0750-s5corpus-6.md):
+> 1. Transport substitution RATIFIED — the file-input injected outbound joins the standing law as the DECLARED clipboard-dead branch (stricter, 4 hops asserted). serve.mjs premise recorded refuted for driving sessions.
+> 2. Clipboard lead: both measurements stand as DATA, conclusion dies — S11 starts with INSTRUMENTATION across a fault window, never a holder-hunt. Summary line now "cause UNKNOWN, measurements contradict across occurrences."
+> 3. S5-Z4 RE-DERIVED (scope change, not breach): BUILD 8 · PROOF 6 · HANDOFF 5 — covers the three ruled additions + the one-site alphabet consolidation + the full free re-verify at close.
+> 4. Clock drift accepted as archaeology; filenames stand; architect stamps machine-clock from now.
+> B03 close ratified. B04 next sitting, standing fresh 35+10. Nothing owed.
+
+**All four applied** — item 1 and 2 on the S5 rung row, item 3 on the S5-Z4 row (its line now reads
+BUILD 8 · PROOF 6 · HANDOFF 5), item 4 here.
+
+⚑ **ITEM 3 IS WORTH READING TWICE, because it settles something §10-C did not say.** The ladder's
+standing rule is *"ceilings re-derive ONLY when the meter's UNIT is corrected — never on normal
+variance"*, and every re-derivation until now was an instrument fault. This one is neither: the
+rung's **SCOPE** grew by three ruled additions after its ceiling was written. The rule governs a
+ceiling whose scope is unchanged; a rung that is given more work gets re-sized by the **RULER**,
+never by the executor doing the work. The executor's job was to flag it, which it did, and to take
+nothing, which it also did.
+
