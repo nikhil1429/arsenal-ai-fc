@@ -2153,11 +2153,102 @@ STATUS (update this block before any session stops — this is the handoff)
                                      hiding in, on the first chat that could expose it.**
                                    ⚠ ~23.5 of the 35-lakh EXECUTION line (day 766.20 → 789.74).
                                      INSIDE. Records ride HANDOFF 13.
-  ▶ NEXT SESSION ............... **① B10 — a fresh Pro-Extended chat, ten attachments
-                                   `live2_batch91-100`, `steps/B10_1.txt` (3 anchors — its band
-                                   sits at 48.4% depth) then `steps/B10_2.txt`.** Then B11 onward
-                                   the same way, to B18.
-                                   **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
+  S5  B10 — 1.5 OF 2, HALTED ... ◐ 26 Aug 2026. **B10_1 CLOSED AND PROBE-PASSED ON ALL THREE
+                                   ANCHORS; B10_2's ANSWER IS COMPLETE, BYTE-VERIFIED AND ON DISK —
+                                   AND capture.mjs REFUSED IT.** Full account in the PROGRESS entry
+                                   of 26 Aug ~21:10 — read that, not this summary.
+                                   Fresh Pro-Extended chat `gemini.google.com/app/357cd4d8aaf3e6a4`,
+                                   ten attachments `live2_batch91-100`, pre-attach gate 10 chips /
+                                   exactly the ten expected names / zero strays.
+                                   ☑ **THE OUTBOUND LAW HELD AT ALL FOUR HOPS, BOTH STEPS**, on the
+                                     clipboard-dead branch even though the clipboard was ALIVE at
+                                     preflight (the four-hop is sha-asserted at every hop; the
+                                     clipboard is contended and is off this sweep's answer path):
+                                     `B10_1` disk `d42ee8857f1f93e3` (6,904 B · 6,853 chars · 108
+                                     lines) == in-page FileReader == box 108 blocks / 6,853 chars,
+                                     `composed === source` char for char, zero nbsp == **SENT 107
+                                     `p.query-text-line`, firstStrippedMismatch = -1**, re-joined
+                                     sha `d42ee8857f1f93e3` · **10/10 chips on the SENT turn**
+                                     (off `innerHTML`, never innerText) ·
+                                     `B10_2` `fa0ba6ff2a330971` (9,104 B · 9,030 chars · 124 lines),
+                                     124 blocks, SENT 123 lines, mismatch −1, same sha.
+                                     **Both sends committed FIRST TRY — 11th and 12th consecutive.**
+                                   ☑ **`probecheck B10_1` → PASS · VERBATIM, exit 0, ALL THREE** —
+                                     tail `live2_batch100.txt:2865` · middle `live2_batch96.txt:935`
+                                     · **band `live2_batch96.txt:20`, named in the verdict as
+                                     "40-60% depth — 48.4% of the group".** Measured IN-PAGE first,
+                                     never self-passed: three sha's against `probe_expected.json`,
+                                     all three exact, **no `[source: N]` leak this time.**
+                                   ✔ **AND ITS HEADER COUNT IS GROUND-TRUTH EXACT — a free coverage
+                                     receipt nothing asked for.** It reported **10** `===== ` section
+                                     headers; `grep -c '^===== '` over the ten files returns **10,
+                                     exactly one per file** ⇒ it reached a header in every one of the
+                                     ten attachments. (2 distinct days — the `(continued)` re-emission,
+                                     the known S5-Z4 class.)
+                                   ⛔ **B10_2 RETURNED COMPLETE AND capture.mjs COULD NOT STORE IT.**
+                                     17,178 chars, transit clean (**in-page sha `2531012280d882b0`
+                                     == on-disk**), the ```json fence parses and carries **all 9
+                                     declared top-level keys, 0 missing**. REFUSED because
+                                     `capture.mjs:620-622`'s EXTRACTION assert takes the **FIRST**
+                                     fenced block only, so the predicate it really enforces is *"the
+                                     JSON must be the first fence"* — and this answer opened with a
+                                     volunteered probe-style recap (ten `===== DAY:` lines + three
+                                     ANCHOR fences) before the JSON.
+                                   ⛔ **AND THE PREVALENCE IS THE REAL FINDING: THIS GATE HAS BEEN
+                                     PASSING BY LUCK, NOT BY CONTRACT.** B01_2…B09_2 all carry their
+                                     JSON in the first (and only) fence — 0 or 1 fence each. B10_2 is
+                                     the FIRST payload with any fence before the JSON, and the
+                                     predicate broke the moment one appeared. It will break again on
+                                     B11–B18 at random.
+                                   ☑ NOT PATCHED, NOT STAMPED, NOT RE-ASKED — S5 builds nothing, so
+                                     `capture.mjs` was left untouched; no gate-shopping onto
+                                     `--from-file`/`--rendered` (rule 6); the extraction NOT re-fired.
+                                     Payload preserved at `diag/B10_2_raw.txt`. **`answers/` holds
+                                     B10_1 and NO B10_2 — no false stamp.** The chat stays OPEN.
+                                   ✔ ESCALATED, direct channel: `queue\2026-08-26_2110-s5corpus-16.md`,
+                                     delivered to `arsenal-ai-fc-e8` (confirmed live by ListAgents).
+                                     Recommendation **A — a micro-rung S5-Z7** that scans EVERY fence
+                                     with the contract unchanged (strictly not weaker); the S5-Z5
+                                     precedent is on all fours. Asked for by name: the §10-C row in
+                                     the same act, a ruler-written BUILD/PROOF/HANDOFF ceiling, and
+                                     an explicit **FIRST-vs-LAST parsing fence** ruling — the two
+                                     differ on this very payload.
+                                   ⚠ **~35.9 of the 35-lakh EXECUTION line** (day 789.74 → 825.64) —
+                                     **AT/marginally OVER, and recorded as over.** The execution
+                                     thread is halted on the ruling; the records ride HANDOFF 13,
+                                     which is what that split exists for. Caveat carried from S5-R,
+                                     not re-derived: today's meter line reads ~+16% hot.
+  ▶ NEXT SESSION ............... **① S5-Z7 — THE EXACTLY-ONE-FENCE ASSERT.** Its own micro-rung,
+                                   ruled 26 Aug ~21:15 (`queue\RULING__2026-08-26_2115-s5corpus-16.md`,
+                                   ratified after the ruler re-verified by RUNNING). Its §10-C row is
+                                   written and carries the whole contract — **read the row, not this
+                                   line.** **MODEL: Opus 5 · effort HIGH · CEILING BUILD 8 · PROOF 8
+                                   · HANDOFF 5** (ruler-written; the executor never re-derives it).
+                                   **B10_2 IS Z7's FIRST LIVE CAPTURE AT ITS CLOSE** — its payload is
+                                   parked at `diag/B10_2_raw.txt`, transit sha `2531012280d882b0`
+                                   in-page == on-disk, **NOT stamped and NOT in `answers/`** (the
+                                   B04_2 pattern). **B10 closes 2/2 there, not before.**
+                                   ⛔ **DO NOT RE-FIRE B10_2 AND DO NOT PATCH AROUND THE GATE.** The
+                                   answer is complete and byte-proven; only the assert is wrong. The
+                                   chat `gemini.google.com/app/357cd4d8aaf3e6a4` stays OPEN.
+                                   **② THEN B11 onward, the same way, to B18 — EXECUTION 35 +
+                                   HANDOFF 13**, ten attachments per chat, `steps/B<n>_1.txt`
+                                   (3 anchors) then `steps/B<n>_2.txt`. 9 of 18 closed; B10 is 1.5.
+                                   ⚡ **THE FOUR-HOP OUTBOUND IS NOW THE DEFAULT, NOT THE FALLBACK.**
+                                   B10 ran it with the clipboard ALIVE at preflight and both sends
+                                   committed first try (11th, 12th consecutive). It is sha-asserted at
+                                   every hop and it keeps the contended clipboard off the answer path;
+                                   the clipboard-alive reading buys nothing that the hops do not.
+                                   ⚡ **`request_directory C:\Users\nikhi\arsenal-audit-artifacts` ONCE
+                                   PER SESSION before any `file_upload`** — it refuses by path, loudly,
+                                   and it is the first thing that will stop a fresh session dead.
+                                   ⚠ **DO NOT ASSERT AN nbsp BY PASTING THE CHARACTER INTO A JS
+                                   PROBE — assert it as `\u00a0`.** Measured here: the same literal
+                                   read `false` in one call and `true` in the next on payloads whose
+                                   sha's were identical; the character does not survive the tool
+                                   transport reliably. A padding check written that way reads a FALSE
+                                   nbsp and would send a session hunting a renderer bug that is not
+                                   there. The sha is the receipt; the character class never was.
                                    ⚠ **A BAND MISS IS A REAL RETRIEVAL VERDICT, NOT AN INSTRUMENT
                                    FAULT** — measure the byte-identity in-page first, never
                                    self-pass, then the ruled branch: **fresh chat, same ten files**
@@ -4472,7 +4563,55 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       gate and both were caught only because the artifacts were hashed BEFORE the first edit. That
       hash-first step is now the cheapest thing in this rung and it should be the first act of any
       future versioned-additive change.
+☐ S5-Z7 THE EXACTLY-ONE-FENCE ASSERT — a micro-rung, RULED by the architect 26 Aug ~21:15
+      (`queue\RULING__2026-08-26_2115-s5corpus-16.md`, off escalation
+      `queue\2026-08-26_2110-s5corpus-16.md`). Row written by the EXECUTOR in the same fold as the
+      ruling — the rung-row-in-same-act law (`RULING__2026-08-25_1215-s5y-1`), which Z6's row
+      records being missed once already. Scope, ceiling and contract transcribed from the ruler's
+      own words; NOT re-derived, NOT re-scoped.
+      MODEL: Opus 5 · effort HIGH.
+      WHY IT EXISTS, measured and not supposed: `capture.mjs:620-622`'s EXTRACTION identity assert
+      matches ONE fenced block — non-greedy, unanchored, first match — so the predicate it actually
+      enforces is *"the JSON must be the FIRST fence"*, while its own refusal text states the
+      contract as *"the payload carries a parseable JSON object with every declared top-level key"*.
+      B10_2 returned COMPLETE (17,178 chars, in-page sha `2531012280d882b0` == on-disk, the ```json
+      fence parsing with **all 9 declared keys, 0 missing**) and was REFUSED, because the model had
+      volunteered a probe-style recap — ten `===== DAY:` lines and three ANCHOR fences — ahead of
+      the JSON. ⛔ **AND THE PREVALENCE IS THE FINDING: B01_2…B09_2 ALL carry their JSON in the
+      first (and only) fence, 0 or 1 fence each — this gate has been passing BY LUCK, NOT BY
+      CONTRACT, for nine chats, and it breaks at random for the remaining eight.**
+      SCOPE — rewrite the extraction identity assert to enforce its own STATED contract:
+      (a) ⛔ **THE CONTRACT IS EXACTLY-ONE-QUALIFYING-FENCE, AND POSITION IS NOT THE AXIS** (ruling
+          item 2, and the executor's own FIRST-vs-LAST question was answered NEITHER — position is
+          *what just broke*). Scan EVERY fence; a fence QUALIFIES iff it parses to a JSON object
+          carrying ALL declared top-level keys. **Zero qualifying ⇒ refuse, as today. MORE than one
+          qualifying ⇒ refuse LOUDLY as AMBIGUOUS** — two payloads each claiming to be the answer is
+          the substitution family, and a session ESCALATES it, never picks between them.
+      (b) **STRICTLY STRICTER, which is what rule 6 requires:** everything that passed before still
+          passes (exactly one qualifying fence), and TWO NEW refusal classes exist that did not.
+      (c) every refusal stays LOUD, writes nothing and freezes nothing; the three capture flags stay
+          mutually exclusive; the PROBE branch is untouched; bites proven IDEMPOTENT.
+      (d) THE CLOSE IS A LIVE CAPTURE, not a fixture (the B04_2 / Z5 pattern): **B10_2 is Z7's FIRST
+          LIVE CAPTURE at its close** — payload parked at `diag\B10_2_raw.txt`, transit sha
+          `2531012280d882b0` recorded at answer time — then `verify.mjs` runs on it and **B10 closes
+          2/2 there.** Record BOTH counts, as every chat does.
+      FORBIDDEN: any step, corpus or verify change · frozen corpus/canon bytes · any Gemini call
+      beyond B10_2's already-paid answer · any audit question · re-firing B10_2 · loosening any of
+      the three capture paths · B11 (that is the rung after).
+      DONE-PROOF: bite-proofs in BOTH directions and IDEMPOTENT, re-runnable as
+      `diag/proofs_s5z7.mjs` — a pre-JSON-fence payload now CAPTURES · a payload with NO qualifying
+      fence still refused · a payload missing a declared key still refused · **TWO qualifying fences
+      refused as AMBIGUOUS** · the probe branch unchanged; checkall GREEN all 8 + preflight GO, both
+      run in-session; B10_2 captured and verified live.
+                                    BUILD 8 · PROOF 8 · HANDOFF 5 (ruler-written off the 10.13/19.4
+                                    datum, RULING__2026-08-26_2115 item 3 — NOT re-derived)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      ▸ **WHERE THE SWEEP STANDS, 26 Aug ~21:10 — read ▶ RESUME HERE and the PROGRESS entries for
+      B05–B10; only B01–B04 are written out below.** **B01–B09 CLOSED 2/2 (9 of 18). B10 is 1.5 of
+      2:** its probe PASSED · VERBATIM on all THREE anchors (band at 48.4% depth) and its extraction
+      is COMPLETE and byte-verified but **PARKED, NOT STAMPED** — `capture.mjs`'s first-fence-only
+      assert refused it, and that is now micro-rung **S5-Z7**, which captures B10_2 at its close and
+      takes B10 to 2/2. Every B chat stays OPEN (the critic is not fired — the ~07:50 ruling).
       ☑ **26 Aug ~09:30 — B04 IS CLOSED 2/2.** B04_2 was captured at S5-Z5's close through the new
       `--from-blob` path on the REAL CLI (transit sha `8d089bd0333667b4` in-page == on-disk; identity:
       all 9 declared top-level keys present) and verified: 44 items → 19 kept, 25 dropped, ≥5 of those
@@ -10759,3 +10898,159 @@ Re-proven after the fix: harness **GREEN, 20 assertions × 2**; **bite-proof re-
 `probecheck.mjs` still turns 6 assertions RED**; `checkall` **GREEN all 8**. The defect was caught
 by the gate it was hiding in, on the first chat that could expose it, which is the whole argument
 for having made the harness a gate yesterday.
+
+---
+
+### PROGRESS 2026-08-26 ~21:10 IST — **B10's PROBE PASSED 3/3 AND ITS EXTRACTION IS PARKED, NOT STAMPED** — the gate that has been passing by luck for nine chats
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — *"① B10 — a fresh
+Pro-Extended chat, ten attachments `live2_batch91-100`, `steps/B10_1.txt` (3 anchors) then
+`steps/B10_2.txt`."* Micro-order written to the scratchpad before any edit (rule 9). MODEL: Opus 5 ·
+effort HIGH · EXECUTION 35 + HANDOFF 13. `checkall` **GREEN 8/8 FIRST TRY** — §7 green on its third
+consecutive open, so last sitting's `snapshot take` is holding — and `preflight` **GO** (18 checks,
+one expected resume warning: `answers/` held 23). Both RUN in-session. Meter baseline **789.74**.
+
+⚑ **The clipboard was ALIVE at preflight this time, and the sweep went out on the four-hop anyway.**
+That is a deliberate reading of the router, not a departure: the clipboard-dead branch is
+sha-asserted at every hop, the clipboard is measured-contended (it has been silently overwritten
+mid-hand-off once), and a live clipboard buys nothing the hops do not already prove. **Both sends
+committed first try.** Recording it because it makes the four-hop the DEFAULT from here, not the
+fallback, and the ▶ NEXT SESSION row now says so.
+
+#### B10_1 — PASS · VERBATIM ON ALL THREE ANCHORS, BAND INCLUDED
+
+Fresh chat **`gemini.google.com/app/357cd4d8aaf3e6a4`**, Pro Extended set BEFORE the attach, ten
+attachments `live2_batch91-100`; pre-attach gate **10 chips, exactly the ten expected names, zero
+strays**. Four hops, every one sha-asserted:
+
+```
+B10_1  disk d42ee8857f1f93e3 (6,904 B · 6,853 chars · 108 lines) · in-page FileReader
+       d42ee8857f1f93e3 (108 lines) · box 108 blocks / 6,853 chars, composed === source
+       character for character, zero nbsp · SENT 107 p.query-text-line,
+       firstStrippedMismatch = -1, re-joined sha d42ee8857f1f93e3 · 10/10 chips on the
+       SENT turn, read off innerHTML
+B10_2  disk fa0ba6ff2a330971 (9,104 B · 9,030 chars · 124 lines) · in-page fa0ba6ff2a330971
+       · box 124 blocks / 9,030 chars, exact · SENT 123 lines, mismatch -1, same sha
+```
+
+Send committed **FIRST TRY on both — 11th and 12th consecutive.** B10_1 stalled at 1,139 chars with
+the Stop button still up; **a fresh tab returned the complete answer — 14th confirmation**, never
+re-fired.
+
+**MEASURED IN-PAGE FIRST, never self-passed.** The three fenced blocks were sha'd in the page
+against `probe_expected.json`'s live2_g10 — tail `a76478aece599875` (130) ✓ · middle
+`62a9dba9bd16bcb7` (171) ✓ · **band `a2eec9f97851edd2` (171) ✓ — all three EXACT, no suffix, and no
+`[source: N]` leak this time** (B09's citation-inside-a-fence did not recur). Captured `--from-blob`
+(`2575b6d5df17a459`, 1,175 chars), **BLOB-GATE PASSED — 3 fenced blocks for 3 anchors.**
+
+**`node probecheck.mjs B10_1` → PASS · VERBATIM, exit 0, ALL THREE:** tail
+`live2_batch100.txt:2865` · middle `live2_batch96.txt:935` · **band `live2_batch96.txt:20`, named in
+the verdict as "40-60% depth — 48.4% of the group".**
+
+**A free coverage receipt nobody asked for, and it is exact.** The answer volunteered *"Total number
+of `===== ` section headers: 10"*. Ground truth, measured on disk: `grep -c '^===== '` returns
+**exactly 1 in each of the ten files, 10 total** — so it reached a header in **every one of the ten
+attachments**. (Two distinct days; `(continued)` re-emits the header — the known S5-Z4 class.)
+
+**THE DEPTH SERIES IS NOW 2 FOR 2 SINCE Z6, AND THAT IS STILL NOT A REFUTATION.** B09 (49.9%) and
+B10 (48.4%) both came back byte-exact, against A02 ~48%, B06_1 47.4% and B08_1-first 56.2% which all
+died in this band. Two passes is two data points. **B11–B18 is where the series becomes evidence** —
+the value Z6 bought is that the question is asked every chat instead of answered by luck.
+
+#### ⛔ B10_2 RETURNED COMPLETE AND capture.mjs COULD NOT STORE IT
+
+17,178 chars, transit clean — **in-page sha `2531012280d882b0` == on-disk** — the json fence parses
+and carries **all 9 declared top-level keys, 0 missing**, days_covered 2026-08-11/12 which is
+exactly the two days batches 91–100 hold. `node capture.mjs save B10_2 --from-blob … --blob-sha …`:
+
+```
+REFUSED — B10_2 is an EXTRACTION step and the payload carries no parseable JSON object,
+so it cannot be this step's answer. Nothing written.
+```
+
+The cause is `capture.mjs:620-622` — non-greedy, unanchored, **first match only**: it matches ONE
+fenced block, slices from its first `{` to its last `}`, and `JSON.parse`s that. So the predicate it
+*enforces* is **"the JSON must be the FIRST fence"**, while the contract it *states* — in its own
+refusal text — is "the payload carries a parseable JSON object with every declared key". B10_2's
+answer opened with a volunteered probe-style recap: ten `===== DAY:` lines then `ANCHOR 1/2/3`, each
+in its own fence. First fence body = the integrity-token line, `indexOf("{") = -1`, the parse throws,
+`got = null`, refuse.
+
+**AND THE PREVALENCE IS THE REAL FINDING — THIS GATE HAS BEEN PASSING BY LUCK, NOT BY CONTRACT.**
+
+| stored extraction | fenced blocks | JSON in the first fence? |
+|---|---|---|
+| B01_2 · B03_2 | 0 | n/a — bare body |
+| B02_2 · B04_2 · B05_2 · B06_2 · B07_2 · B08_2 · B09_2 | 1 | yes |
+| **B10_2** | **4** | **NO** |
+
+Nine chats never put a fence before the JSON. The tenth did, and the predicate broke the moment one
+appeared. It would break again on B11–B18 at random.
+
+**NOT PATCHED, NOT STAMPED, NOT RE-ASKED.** S5 builds nothing, so `capture.mjs` was left untouched;
+no gate-shopping onto `--from-file`/`--rendered` (reaching for a second transport because the first
+refused is exactly what rule 6 forbids, and it was named as forbidden at B06_1); the extraction was
+NOT re-fired. Payload preserved at `diag\B10_2_raw.txt`. **`answers/` holds B10_1 and no B10_2** —
+47 entries, verified after the refusal. `answers/B10_1.txt` re-verified byte-identical to its raw
+(`2575b6d5df17a459`) with `probecheck` still PASS.
+
+#### ESCALATED, NOT IMPROVISED — AND RULED INSIDE THE SAME SITTING
+
+**`queue\2026-08-26_2110-s5corpus-16.md`** — direct channel, `arsenal-ai-fc-e8` confirmed live by
+`ListAgents` first. Recommendation **A**, with the one thing I could not settle asked by name:
+FIRST-vs-LAST parsing fence, since B10_2's own JSON is the LAST fence and the two readings differ on
+this very payload. **The ruler verified by RUNNING before ratifying** — re-checked the sha, measured
+the json fence at offset 735 against the first at 462, and read `capture.mjs:620` in source.
+
+**THE RULING, VERBATIM (`queue\RULING__2026-08-26_2115-s5corpus-16.md`):**
+
+> ## RULED
+> 1. **A RATIFIED — S5-Z7, its own micro-rung, the Z5 precedent on all fours.** Scope: rewrite the
+>    extraction identity assert to enforce its own STATED contract; zero step/corpus/verify
+>    changes; every refusal loud, writes nothing, freezes nothing; bites IDEMPOTENT; B10_2 is
+>    Z7's FIRST LIVE CAPTURE at its close (payload parked, transit sha recorded — the B04_2
+>    pattern), and B10 closes 2/2 there.
+> 2. **FIRST-vs-LAST: NEITHER — position is the wrong axis, and it is what just broke.** The
+>    assert scans EVERY fence and requires **EXACTLY ONE qualifying fence**: parseable JSON object
+>    carrying ALL declared top-level keys. Zero qualifying → refuse (as today). MORE than one
+>    qualifying → refuse loudly as AMBIGUOUS (two payloads claiming to be the answer = the
+>    substitution family; a session escalates, never picks). Strictly stricter than first-fence:
+>    everything that passed before still passes (one qualifying fence), and two new refusal
+>    classes exist.
+> 3. **CEILING, ruler-written off the 10.13/19.4 datum: S5-Z7 = BUILD 8 · PROOF 8 · HANDOFF 5.**
+> 4. **§10-C ROW: written by the EXECUTOR in the same fold as this ruling** (rung-row-in-same-act;
+>    transcribe scope, ceiling and the exactly-one-fence contract from items 1–3 verbatim).
+>
+> ## Sequence
+> Close the B10 sitting on HANDOFF 13 → **S5-Z7** (own session, 8/8/5) → B10_2 captures at Z7's
+> close, B10 → 2/2 → **B11 onward, 35+13.**
+
+**Item 2 is better than what I proposed and it is worth saying why.** I asked which POSITION to
+take; the answer is that position is the axis that just failed, and asking about it at all was
+carrying the bug forward one level. Exactly-one-qualifying-fence is strictly stricter — every prior
+pass still passes, and it adds a refusal class (two qualifying fences = two things claiming to be
+the answer) that neither first nor last would ever have caught.
+
+**All four fold items are executed in this commit:** ① the S5-Z7 row is in §10-C proper with the
+ruler's scope, the 8/8/5 ceiling and the exactly-one-fence contract · ② the ▶ NEXT SESSION router
+points at Z7, then B11 · ③ the ruling is verbatim above · ④ B10's record says probe 3/3 PASS,
+extraction parked-not-stamped.
+
+#### ONE SMALL TRANSPORT FACT, MEASURED HERE, AND IT WOULD HAVE COST A LATER SESSION AN HOUR
+
+**A literal nbsp pasted into a JS probe string does not survive the tool transport reliably.** The
+same hand-written nbsp-class check read `false` on B10_1 and `true` on B10_2 — on payloads whose
+sha's were byte-identical to their disk files, so both readings cannot be true. Re-run with the
+` ` escape it is **0 on both sides, both steps**. Written as a standing note in the ▶ NEXT
+SESSION row: **assert padding characters by escape, never by pasting the character** — a check
+written the other way reads a FALSE nbsp and sends a session hunting a renderer bug that is not
+there. The sha is the receipt; the character class never was.
+
+#### COST — OVER, AND RECORDED AS OVER
+
+**~35.9 of the 35-lakh EXECUTION line** (day 789.74 → 825.64). §10-D rule 2's stop is what the
+escalation halt already is: the execution thread stopped on the fork and nothing was spent past it.
+The records ride the 13-lakh HANDOFF line, which is precisely the split that exists for this. No
+ceiling is re-derived — §10-C's rule is unit faults only, and a rung that runs hot is data about the
+rung. Caveat carried, not re-derived: S5-R measured today's meter line reading **~+16% hot** (the
+claude-desktop transcripts get rewritten in place with re-issued ids); settled days are exact.
