@@ -2319,15 +2319,100 @@ STATUS (update this block before any session stops — this is the handoff)
                                      thread is halted on the ruling; the records ride HANDOFF 13,
                                      which is what that split exists for. Caveat carried from S5-R,
                                      not re-derived: today's meter line reads ~+16% hot.
-  ▶ NEXT SESSION ............... **① B13 — a fresh Pro-Extended chat, ten attachments
-                                   `live2_batch121-130`, `steps/B13_1.txt` (3 anchors) then
-                                   `steps/B13_2.txt`.** Then B14 onward the same way, to B18.
-                                   **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
-                                   **12 of 18 corpus chats are CLOSED 2/2.** Read `wiring.json` for
-                                   B13's exact ten filenames and `probe_expected.json` for its three
-                                   anchors — **never the prose, and note both files are NESTED**
-                                   (`.steps[...]` and `.probes[...]`; a top-level read returns
-                                   undefined and looks like a missing probe).
+  B13 1.5 of 2 · Z8 RULED ...... ◐ 27 Aug 2026 ~01:50. **B13_1 PASSED · VERBATIM 3/3 AND B13_2's
+                                   EXTRACTION IS PARKED, NOT STAMPED** — the SECOND time a complete,
+                                   byte-verified answer has been refused by a gate whose stated
+                                   contract it actually satisfies, and the second time the
+                                   PREVALENCE was the real finding.
+                                   Fresh chat `gemini.google.com/app/b52a0e02f33a8b3e`, **Pro
+                                   Extended read back off the page BEFORE the attach** (the
+                                   half-hydrated page had NO mode picker at all on first load —
+                                   the B12 class, 4th occurrence, fixed by a full reload).
+                                   Pre-attach gate **10/10, exact names, zero strays**, polled to
+                                   stability off `innerHTML`. Four hops sha-asserted on both steps:
+                                   `B13_1` disk `69f5ae60e60e5dd9` == in-page, box 108 blocks,
+                                   composed === source, firstMismatch −1 · `B13_2` disk
+                                   `fa0ba6ff2a330971` == in-page, 124 blocks, exact. **Both sends
+                                   FIRST TRY — 17th and 18th consecutive.**
+                                   ✔ **`probecheck B13_1` = PASS · VERBATIM, exit 0, ALL THREE:**
+                                   tail `live2_batch130.txt:2481` · middle `live2_batch126.txt:1397`
+                                   · **band `live2_batch125.txt:47`, "40-60% depth — 40.4% of the
+                                   group".**
+                                   ⚡ **THE BAND IS NOW 5 FOR 5 SINCE Z6 — 49.9 · 48.4 · 58.5 · 46.2
+                                   · 40.4%** — and 40.4% is the SHALLOWEST of the series, so the
+                                   passes now touch the bottom edge of the declared band as well as
+                                   the top. Still a series, not a mechanism.
+                                   ⚠ **Header count deflated by one AGAIN — claimed 10, ground truth
+                                   11** (`live2_batch126` carries two; every other file one).
+                                   **THIRD consecutive chat, and the SHAPE is now visible: the model
+                                   reports one header PER FILE, so it misses the SECOND header
+                                   inside a file, never a file.** Safe direction — the verifier
+                                   catches an invented filename, never a deflated count. Counted
+                                   file by file, not by glob (B11's lesson).
+                                   ⛔ **B13_2 RETURNED COMPLETE AND `capture.mjs` COULD NOT STORE IT
+                                   — AND THE GATE WAS RIGHT.** 20,760 chars, transit sha
+                                   `7e7cb2db85d622a5` **in-page == on-disk**, ONE `json` fence,
+                                   braces 41/41, all 9 declared keys present. REFUSED as *"carries
+                                   no parseable JSON object"*. Measured cause: **exactly TWO RAW TAB
+                                   CHARACTERS (0x09) inside string literals** — the model quoted a
+                                   markdown TABLE ROW from his own transcript verbatim and copied
+                                   its literal tabs into the JSON, which is invalid per RFC 8259, so
+                                   `JSON.parse` throws at position 11066. Escaping control chars
+                                   inside strings ALONE makes it parse: 9 keys, **37 items**
+                                   (missing_implementation 8 · rulings 11 · decisions 4 ·
+                                   alternatives_rejected 5 · promises 5 · supersessions 4) with
+                                   `item_count` SELF-CONSISTENT at 37.
+                                   ⛔ **PREVALENCE, and it is the Z7 sentence one level down:
+                                   B01_2…B12_2 are ALL CLEAN — zero raw control characters across
+                                   256,853 chars of stored answers.** B13_2 is the FIRST in thirteen
+                                   chats and the trigger is CONTENT, so it recurs at random over
+                                   B14–B18. Twelve chats passed by luck of what they happened to
+                                   quote, not by contract.
+                                   ☑ NOT PATCHED, NOT STAMPED, NOT RE-ASKED — no instrument touched
+                                   (S5 builds nothing), no `--lossy`, no gate-shopping onto another
+                                   capture flag, extraction NOT re-fired. Payload parked at
+                                   `diag/B13_2_raw.txt`. **`answers/` holds B13_1 and NO B13_2 — no
+                                   false stamp.** The chat stays OPEN.
+                                   ✔ ESCALATED, direct channel:
+                                   `queue\2026-08-27_0140-s5corpus-17.md` → `arsenal-ai-fc-e8`
+                                   (confirmed live by ListAgents). **The executor refused to make
+                                   the §10-D rule-6 call itself** — the fix converts a refusal into
+                                   a pass, which is precisely what rule 6 protects. **RULED INSIDE
+                                   THE SITTING, and the ruler VERIFIED BY RUNNING an independent
+                                   script before ratifying** (sha match, 2 tabs, parse failure at
+                                   11066, in-string escape alone parses):
+                                   `queue\RULING__2026-08-27_0150-s5corpus-17.md` — **B ratified as
+                                   micro-rung S5-Z8, NOT a weakening (a false negative on a
+                                   serialization defect), bound STRICT to 0x00–0x1F inside string
+                                   literals only with a `control_chars_escaped: N` receipt, ceiling
+                                   BUILD 8 · PROOF 8 · HANDOFF 5, and B13_2 is Z8's FIRST LIVE
+                                   CAPTURE from the parked payload — NO re-send.** B13 closes 2/2
+                                   at Z8's close.
+                                   ⚠ **~16.4 of the 35-lakh EXECUTION line** (day 950.04 → 966.43).
+                                   **INSIDE.** Records ride HANDOFF 13. Caveat carried, not
+                                   re-derived: today's meter line reads ~+16% hot (S5-R's finding).
+  ▶ NEXT SESSION ............... **① S5-Z8 — THE RAW-CONTROL-CHAR DE-ESCAPE, its own session.**
+                                   Its §10-C row is written and its ruling is
+                                   `queue\RULING__2026-08-27_0150-s5corpus-17.md` — read BOTH
+                                   before touching `payloadfence.mjs`. **MODEL: Opus 5 · effort
+                                   HIGH · BUILD 8 · PROOF 8 · HANDOFF 5.** Scope is ONE site and the
+                                   bound is STRICT (0x00–0x1F **inside string literals only**,
+                                   escape-aware, never structural, never outside strings, count
+                                   RECORDED as `control_chars_escaped: N`). **Its close is a LIVE
+                                   capture: B13_2 from the parked `diag/B13_2_raw.txt` (sha
+                                   `7e7cb2db85d622a5`) — NO re-send — then `verify.mjs`, and B13
+                                   closes 2/2 there.** Assert the Z7 lesson mechanically: **no
+                                   second live copy of the normalization anywhere.**
+                                   **② THEN B14** — a fresh Pro-Extended chat, ten attachments
+                                   `live2_batch131-140`, `steps/B14_1.txt` then `steps/B14_2.txt`,
+                                   on **EXECUTION 35 + HANDOFF 13**. Then B15–B18 the same way.
+                                   **12 of 18 corpus chats are CLOSED 2/2; B13 is 1.5 of 2.** Read
+                                   `wiring.json` for each chat's exact ten filenames and
+                                   `probe_expected.json` for its anchors — **never the prose, and
+                                   note both files are NESTED** (`.steps[...]` and `.probes[...]`;
+                                   a top-level read returns undefined and looks like a missing
+                                   probe — and `probe_expected` is keyed by CHAT, `live2_g14`, not
+                                   by STEP, which is a second way that read comes back undefined).
                                    ⛔ **THE PAGE HYDRATES IN STAGES AND A HALF-HYDRATED GEMINI LIES
                                    ABOUT ITS OWN STATE — measured three times at B12.** A loaded
                                    page showed a compose bar with **NO MODE PICKER AT ALL** (a
@@ -4781,6 +4866,44 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     never by the executor. Superseded: BUILD 8 · PROOF 8 · HANDOFF 5
                                     from RULING__2026-08-26_2115 item 3, written before the second
                                     site was known.)
+☐ S5-Z8 THE RAW-CONTROL-CHAR DE-ESCAPE — a micro-rung, RULED by the architect 27 Aug ~01:50
+      (`queue\RULING__2026-08-27_0150-s5corpus-17.md`), off B13_2. **Escalated, not decided by the
+      executor: it converts a REFUSAL into a PASS, and that is exactly what §10-D rule 6 protects.**
+      WHY: B13_2 returned COMPLETE — 20,760 chars, transit sha `7e7cb2db85d622a5` in-page ==
+      on-disk, ONE `json` fence, braces 41/41, all 9 declared top-level keys — and was REFUSED as
+      *"carries no parseable JSON object"*. The whole defect is **TWO RAW TAB CHARACTERS (0x09)
+      inside string literals**: the model quoted a markdown TABLE ROW out of his own transcript
+      verbatim and copied its literal tabs into the JSON. Raw control characters in a string
+      literal are invalid JSON (RFC 8259), so `JSON.parse` throws at position 11066.
+      ⚡ **AND THE PREVALENCE IS AGAIN THE REAL FINDING, exactly as at Z7: B01_2…B12_2 are ALL
+      CLEAN — zero raw control characters across 256,853 chars of stored answers.** B13_2 is the
+      FIRST occurrence in thirteen chats, and the trigger is CONTENT (a quoted table row), so it
+      recurs at random across B14–B18. Twelve chats passed by luck of what they happened to quote,
+      not by contract — the Z7 sentence, one level down.
+      ⛔ NOT the Z7 fence class: there is ONE fence and position plays no part.
+      SCOPE: `payloadfence.mjs` **ONLY** — the one site, both callers inherit (the ruled class).
+      Zero step/corpus changes.
+      ⚑ **THE RULE-6 RULING IS THE ARCHITECT'S, explicit (item 2): this is NOT a weakening** — the
+      gate's protected property is *"THIS step's answer with the declared shape"*, and a raw 0x09
+      inside a quoted string is a SERIALIZATION defect of the model's JSON emission: content
+      intact, shape present, the refusal a FALSE NEGATIVE.
+      **THE BOUND, STRICT:** de-escape applies to **0x00–0x1F INSIDE string literals ONLY**
+      (escape-aware scanning) · never structural characters · never outside strings · **the count
+      is RECORDED in the capture receipt per use (`control_chars_escaped: N`)** so it is measured,
+      never silent · a payload needing ANY other repair is still refused.
+      FORBIDDEN: any step, corpus, prompt or wiring change · frozen corpus/canon bytes · any Gemini
+      call (B13_2's bytes are already paid) · re-sending B13_2 · loosening any other predicate in
+      `payloadfence.mjs` (exactly-one-qualifying-fence, AMBIGUOUS on two, all-declared-keys-or-
+      refuse and the transit sha all stand unchanged) · B14 (that is the rung after).
+      DONE-PROOF: idempotent, re-runnable bite-proofs in BOTH directions — a payload with a raw
+      control char INSIDE a string now captures · **a control char OUTSIDE a string still
+      REFUSES** (the bound itself bites) · the `control_chars_escaped: N` receipt present and
+      correct · the twelve stored answers UNMOVED (regression) · **plus the Z7 lesson asserted
+      mechanically: NO second live copy of this normalization anywhere** · checkall GREEN 8/8 +
+      preflight GO, both run in-session · **B13_2 captured and verified LIVE from the parked
+      payload and B13 closes 2/2 there** (item 4 — NO re-send; the B04_2/B10_2 precedent, third use).
+                                    BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written off the
+                                    10.13/19.4/26 record (RULING__2026-08-27_0150 item 3).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ▸ **WHERE THE SWEEP STANDS, 27 Aug ~00:30 — read ▶ RESUME HERE and the PROGRESS entries for
       B05–B12; only B01–B04 are written out below.** **B01–B12 ALL CLOSED 2/2 — 12 of 18, two
@@ -11575,3 +11698,142 @@ Caveat carried, not re-derived: today's meter line reads ~+16% hot (S5-R's findi
 was cut short and no step was skipped — the harness summarizes rather than truncating — but a
 sitting that opens that high should expect to spend its handoff budget early and should not also
 try to carry a second rung.
+
+### PROGRESS 2026-08-27 ~01:50 IST — **B13_1 PASSED 3/3 AND B13_2 WAS REFUSED BY A GATE THAT WAS RIGHT** — two raw TAB characters, twelve chats clean by luck of content, and the rule-6 call handed to the ruler rather than taken
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — *"① B13 — a fresh
+Pro-Extended chat, ten attachments `live2_batch121-130`, `steps/B13_1.txt` (3 anchors) then
+`steps/B13_2.txt`."* Micro-order written to the session scratchpad before any edit (rule 9); §10-D
+re-read, unchanged. MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13. `checkall` **GREEN
+8/8** · `preflight` **GO**, both RUN in-session, and §7 was GREEN at open for the first time in
+five sittings (the previous session snapshotted on its way out). Meter baseline **950.04**.
+
+#### B13_1 — PASS · VERBATIM ON ALL THREE, AND THE BAND IS NOW 5 FOR 5
+
+Fresh chat **`gemini.google.com/app/b52a0e02f33a8b3e`**. **Pro Extended read back off the page
+before the attach** — and it earned its place immediately: the first load rendered a compose bar
+with **no mode picker at all**, the exact B12 class at its 4th occurrence, and a full reload fixed
+it. A session that skipped the read-back would have run the whole chat on default Pro.
+
+Pre-attach gate **10/10, exact names, zero strays**, asserted off `innerHTML` and **polled to
+stability** (three unchanged reads ~10 s apart). Four hops, sha-asserted on both steps:
+
+```
+B13_1  disk 69f5ae60e60e5dd9 (7,027 B · 6,977 chars · 108 lines) · in-page 69f5ae60e60e5dd9
+       · box 108 blocks, composed === source, firstMismatch −1 · SENT, chat id in the URL
+B13_2  disk fa0ba6ff2a330971 (9,104 B · 9,030 chars · 124 lines) · in-page fa0ba6ff2a330971
+       · box 124 blocks, exact, firstMismatch −1
+```
+
+Both sends **FIRST TRY — 17th and 18th consecutive.**
+
+**`node probecheck.mjs B13_1` → PASS · VERBATIM, exit 0, ALL THREE:** tail
+`live2_batch130.txt:2481` · middle `live2_batch126.txt:1397` · **band `live2_batch125.txt:47`,
+"40-60% depth — 40.4% of the group".**
+
+⚡ **The band series since Z6 is now 5 for 5 — 49.9 · 48.4 · 58.5 · 46.2 · 40.4%.** 40.4% is the
+shallowest yet, so the passes now touch the BOTTOM edge of the declared band as well as the top and
+the middle. Same caveat as every entry before it: a consistent series, not a demonstrated mechanism.
+
+⚠ **Header count deflated by one again — claimed 10, ground truth 11** (`live2_batch126` carries
+two, every other file one). **Third consecutive chat**, and three instances make the shape legible:
+the model is reporting **one header per FILE**, so what it misses is the SECOND header inside a
+file, never a file. Direction is safe — the verifier catches an invented filename, never a deflated
+count. Counted file by file, not by glob (B11's lesson).
+
+⚠ Two transport notes, both recorded as data. The OS clipboard write failed on **both** Copy clicks
+with `NotAllowedError: Document is not focused` — a **hidden-tab focus refusal, NOT the
+`ExternalException` clipboard fault**, and it cost nothing because the Z5 hook reads the
+`ClipboardItem` Blob *before* the OS write. That is the blob route doing exactly what it was built
+for. And `Runtime.evaluate` timed out once at 45 s on a poll loop the renderer was too busy to
+service; the very next short call answered instantly — the documented transient, not a freeze.
+
+#### ⛔ B13_2 RETURNED COMPLETE AND `capture.mjs` REFUSED IT — AND THIS TIME THE GATE WAS RIGHT
+
+20,760 chars, transit **`7e7cb2db85d622a5` in-page == on-disk**, ONE ```json fence, braces 41/41,
+all nine declared top-level keys present. `capture.mjs` refused it: *"carries no parseable JSON
+object"*.
+
+**The whole defect is TWO RAW TAB CHARACTERS (0x09) inside string literals.** The model quoted a
+markdown TABLE ROW out of his own transcript verbatim — `"quote":"Cloud STT
+(Google/OpenAI/Deepgram)<TAB>🔴 poora — ...<TAB>LOCAL whisper..."` — and copied its literal tabs
+straight into the JSON. A raw control character in a string literal is invalid JSON (RFC 8259), so
+`JSON.parse` throws at position 11066 and no candidate block qualifies. **The refusal is correct and
+the fault is Gemini's, not the gate's.**
+
+Escaping control characters inside string literals ALONE makes it parse: **9 keys, 37 items**
+(missing_implementation 8 · rulings 11 · decisions 4 · alternatives_rejected 5 · promises 5 ·
+supersessions 4), `item_count` self-consistent at 37. Nothing else in the payload moves.
+
+⛔ **AND THE PREVALENCE IS THE REAL FINDING — the Z7 sentence one level down.** `B01_2…B12_2` are
+**all clean: zero raw control characters across 256,853 chars of stored answers.** B13_2 is the
+FIRST in thirteen chats, and the trigger is **CONTENT** — a quoted table row — so it recurs at
+random across B14–B18. Twelve chats passed by luck of what they happened to quote, not by contract.
+This is NOT the Z7 fence class: there is one fence and position plays no part.
+
+☑ **NOT PATCHED, NOT STAMPED, NOT RE-ASKED.** No instrument touched (S5 builds nothing), no
+`--lossy`, no gate-shopping onto another capture flag, the extraction not re-fired. Payload parked
+at `diag/B13_2_raw.txt`. **`answers/` holds B13_1 and no B13_2 — no false stamp.** The chat stays
+OPEN.
+
+#### THE ESCALATION — and the one call this session deliberately did NOT make
+
+The fix converts a REFUSAL into a PASS, which is precisely what §10-D rule 6 exists to protect. So
+the executor wrote the measurement, stated its own recommendation, and **explicitly refused to rule
+on its own gate change**: `queue\2026-08-27_0140-s5corpus-17.md`, delivered to `arsenal-ai-fc-e8`
+(confirmed live by ListAgents first; message = transport, the file = the record). It was ruled
+inside the sitting, and **the ruler verified by running an independent implementation before
+ratifying** — sha match, exactly 2 tabs, parse failure at 11066, in-string escape alone parses.
+
+**THE RULING, VERBATIM — `queue\RULING__2026-08-27_0150-s5corpus-17.md`:**
+
+> # RULING — 27 Aug 2026 ~01:50 machine-clock · raw control chars inside JSON strings (B13)
+> ORIGINAL: `queue\2026-08-27_0140-s5corpus-17.md` (executor arsenal-ai-fc-bb).
+> VERIFIED BY RUNNING (ruler's own script, independent implementation): 20,760 ch, sha
+> `7e7cb2db85d622a5` MATCHES · exactly 2 raw tabs inside the json · JSON.parse fails at pos 11066 ·
+> escaping control chars INSIDE STRING LITERALS ONLY makes it parse with all 9 keys. Claim exact.
+>
+> ## RULED
+> 1. **B RATIFIED — micro-rung S5-Z8**: control-char handling at `payloadfence.mjs` ONLY (the one
+>    site, both callers inherit — the ruled class). Zero step/corpus changes.
+> 2. **THE RULE-6 RULING, explicit, since the executor rightly refused to make it:** this is NOT a
+>    weakening. The gate's protected property is "THIS step's answer with the declared shape";
+>    a raw 0x09 inside a quoted string is a SERIALIZATION defect of the model's JSON emission —
+>    the content is intact and the shape is present; the refusal was a false negative. **THE
+>    BOUND, strict:** de-escape applies to **0x00–0x1F INSIDE string literals ONLY** (escape-aware
+>    scanning), never to structural characters, never outside strings; **the count is RECORDED in
+>    the capture receipt per use** (`control_chars_escaped: N`) so it is measured, never silent;
+>    a payload needing ANY other repair is still refused. Everything that parsed before still
+>    parses; a new measured lane opens for exactly the defect class proven live. Idempotent bites
+>    on: the bound (a control char OUTSIDE a string still refuses), the count receipt, and the
+>    nine+three stored answers unmoved (regression), **plus the Z7 lesson: assert the ABSENCE of
+>    any second live copy of this normalization anywhere.**
+> 3. **§10-C ROW in the same fold · CEILING ruler-written off the 10.13/19.4/26 record:
+>    S5-Z8 = BUILD 8 · PROOF 8 · HANDOFF 5.**
+> 4. **B13_2 = Z8's FIRST LIVE CAPTURE from the parked payload — NO re-send** (bytes paid, transit
+>    sha proven; the B04_2/B10_2 precedent, third use). B13 closes 2/2 at Z8's close.
+>
+> ## Sequence
+> Close the B13 sitting on HANDOFF 13 → **S5-Z8** (own session, 8/8/5) → B13 → 2/2 → **B14 onward,
+> 35+13.**
+>
+> ## FOLD LIST
+> ① Z8 row in §10-C (scope + bound + 8/8/5) · ② router → Z8 then B14 · ③ this ruling verbatim in
+> PROGRESS · ④ B13 record: probe 3/3 (band 40.4%, 5th consecutive) + extraction parked-not-stamped.
+
+**All four fold items are executed in this commit:** the S5-Z8 row is in §10-C proper with its
+scope, its strict bound and its 8/8/5 ceiling; the ▶ NEXT SESSION router now reads **S5-Z8 then
+B14**; the ruling is above, verbatim; and the B13 tick is written honestly as **1.5 of 2**.
+
+#### WHAT THIS RUNG DID NOT DO — said out loud, per §5
+
+`payloadfence.mjs` is **untouched** — S5 builds nothing, and the rung that fixes this is a separate
+session with its own ceiling. B13_2 was **not** re-sent, **not** stamped, and **not** captured on
+any other path. B14 was not opened. The critic (`B13_3`) was not fired — the ~07:50 ruling stands
+and every B chat stays OPEN.
+
+#### COST
+
+**~16.4 of the 35-lakh EXECUTION line** (day 950.04 → 966.43). **INSIDE**, and comfortably so —
+the refusal stopped the sitting well before the ceiling did. Records ride HANDOFF 13. Caveat
+carried, not re-derived: today's meter line reads ~+16% hot (S5-R's finding).
