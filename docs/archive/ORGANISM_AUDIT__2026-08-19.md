@@ -1412,6 +1412,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                    (`gemini.google.com/app/227096fc78a39e96`) stays OPEN, like B03's.
                                    ⇒ **THEN, and only then, the corpus resumes at B05** on the standing
                                    per-sitting EXECUTION 35 + HANDOFF 13.
+                                   ✔ **STAGE-BY-PATH IS A STANDING LAW (RULED 26 Aug ~09:05,
+                                   `queue\RULING__2026-08-26_0905-samjhao-dirt-1.md`): every close,
+                                   every lane, stages the files it NAMES, by path — never
+                                   `git add -A` / `git add .` / `commit -a`.** And by name: the
+                                   working-tree dirt on `docs/archive/SAMJHAO_ORDER__2026-08-20.md`
+                                   (+79/−7, HIS study progress, pinned `b332c5289a3a858f`) is the
+                                   LEARNING lane's — **no audit session stages it, ever**; its
+                                   commit rides HIS word only (the `50de00c` precedent). The
+                                   checkall §5 pin-assert stays at S5-POST, row granted.
                                    ⚠ **TWO TRANSPORT LAWS MEASURED AT B04, BOTH NEW, BOTH BINDING:**
                                    **(1) the page→disk download route is ONE-SHOT PER ORIGIN per browser
                                    session** — budget your ONE download per chat and take the RAW payload
