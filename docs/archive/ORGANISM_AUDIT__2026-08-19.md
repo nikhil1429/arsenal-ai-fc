@@ -6180,6 +6180,13 @@ cost tracks TURNS IN CONTEXT, not which rung it is. Schedule the heavy rungs aft
    agent finding — is a LEAD until one run verifies it; agent findings must carry their WITNESS.
 6. A gate may only get stricter. A rung that weakens any gate is refused, whole.
 7. Before stopping: RESUME + ticks (only what is TRUE) · PROGRESS entry · §3-C check · commit.
+   **OUTPUT DISCIPLINE — HIS WORD, 27 Aug 2026, standing on every executor session and every lane
+   (`queue\RULING__2026-08-27_1115-hisword-outputs.md`): a CLEAN close is TERSE — what landed ·
+   the numbers · the commit hash · the next rung, and nothing else. An ISSUE (a fork, a halt, a
+   defect, a correction) LIFTS THE CAP, because that is what the detail is for. The PROGRESS entry
+   and the queue files stay the detailed RECORD; the channel message and the report to HIM carry
+   the VERDICT only.** His words: *"always keep executor sessions' output as least as possible
+   unless there is some issue, to save tokens, after their work is done."*
 8. Speak to him in one short block: what landed · what it cost · the one decision, if any —
    **and ALWAYS end by naming the NEXT rung + its MODEL·effort line**, so he selects the right
    model before pasting the prompt and never has to look anything up.
