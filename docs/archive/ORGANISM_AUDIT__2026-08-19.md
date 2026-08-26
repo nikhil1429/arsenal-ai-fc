@@ -3030,7 +3030,13 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       diag/proofs harness (standing implicit).
       +SCOPE RULED 26 Aug ~06:55 (RULING__2026-08-26_0620-s5corpus-2.md): verify.mjs gains a
       DECLARED-UNKNOWN bucket through the same code path, declare-or-die — then ALL stored
-      critic answers re-verify FREE at this rung's close (the A02 pattern). The standing
+      critic answers re-verify FREE at this rung's close (the A02 pattern).
+      +SCOPE RULED 26 Aug ~07:10 (RULING__2026-08-26_0700-s5corpus-3.md, delivered over the
+      direct channel — its first live use): the DAY-LABEL normalisation — verify's quote index
+      keys bare dates while corpus headers carry "(continued)"; 27/28 of B02's dropped quotes
+      measured PRESENT. Sibling site of the (continued) class S5-R2 fixed once — fix the CLASS.
+      Each chat's record carries its measured false-drop count (pre-Z4 verify numbers are never
+      read as model recall). The standing
       outbound law's 4th hop strips Gemini's per-line 1-leading+1-trailing space padding
       before hashing (measured; the padding is the renderer's, never the payload's).
                                            BUILD 5 · PROOF 3 · HANDOFF 5 (ruler-written)
