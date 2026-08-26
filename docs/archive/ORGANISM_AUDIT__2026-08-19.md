@@ -3028,7 +3028,12 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       hand-authored by a sweep session. FORBIDDEN: haystack/expected bytes · any Gemini call ·
       any audit question · instruments beyond buildsteps/prompts/checkall + the rung's own
       diag/proofs harness (standing implicit).
-                                           BUILD 4 · PROOF 3 · HANDOFF 5 (ruler-written)
+      +SCOPE RULED 26 Aug ~06:55 (RULING__2026-08-26_0620-s5corpus-2.md): verify.mjs gains a
+      DECLARED-UNKNOWN bucket through the same code path, declare-or-die — then ALL stored
+      critic answers re-verify FREE at this rung's close (the A02 pattern). The standing
+      outbound law's 4th hop strips Gemini's per-line 1-leading+1-trailing space padding
+      before hashing (measured; the padding is the renderer's, never the payload's).
+                                           BUILD 5 · PROOF 3 · HANDOFF 5 (ruler-written)
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
       ◐ **26 Aug ~06:45 — B01 IS CLOSED 3/3 AND B02 IS LOADED + PROBE-PASSED. 1 of 18 corpus
       chats complete.** B01_3 (the critic) captured RAW (copy-gate 15/15) and verified: KEPT

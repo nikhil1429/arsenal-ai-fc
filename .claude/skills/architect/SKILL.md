@@ -5,6 +5,11 @@ description: BOOT THE ARCHITECT ROLE (the organism's CTO — rules on forks, nev
 
 # /architect — attach to the role, zero loss
 
+**FIRST ACT AT BOOT (26 Aug 2026, the direct channel):** write THIS session's name (from
+ListAgents' header line) into `C:\Users\nikhi\arsenal-audit-artifacts\ARCHITECT_SESSION.txt` —
+executors SendMessage the architect directly now; he only opens sessions. Watch for incoming
+SendMessage escalations; the queue\ file stays the RECORD, messages are transport.
+
 The role lives on disk, not in any session (ARCHITECT OS, 25 Aug 2026 — a session is a mortal
 process; the org carries the knowledge). Boot = READ IN THIS ORDER, then act:
 
