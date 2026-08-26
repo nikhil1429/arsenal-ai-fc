@@ -1422,8 +1422,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                      FAILS if the selftest stops exercising either witness of the
                                      new path — bad sha · matching-sha substitution · ungated save ·
                                      undeclared shape.
-                                   ⚠ ONE DECLARED CONSEQUENCE BEYOND capture.mjs, decided in-session
-                                     and reversible in one line: `mdrender.mjs`'s CAPTURE_PATHS
+                                   ✔ **RATIFIED ~09:35, direct channel 5th use
+                                     (`queue\RULING__2026-08-26_0935-s5z5-1.md`), and the ruler
+                                     VERIFIED BY RUNNING before ratifying — proofs 64×2 GREEN on a
+                                     fresh run, both changed lines read in source, the
+                                     matching-sha-neighbour refusal proven live. THE SCOPE CALL WAS
+                                     RIGHT AND THE GAP WAS THE RULER'S** (miss #9, owned in the
+                                     ruling: the 0855 scope line omitted the one-site alphabet visit
+                                     that the 0805 class instruction had already made inevitable).
+                                     Nothing owed. The declared consequence, now ratified: `mdrender.mjs`'s CAPTURE_PATHS
                                      registry and `probecheck.mjs`'s alphabet router learned
                                      `raw-blob` (markdown-BEARING, the same alphabet `raw` gets).
                                      A declared path no comparator accepts is not a path — every
@@ -3460,7 +3467,9 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       verified, so B04 closes 2/2** · the days_covered 4-vs-10 flag CLOSED as the (continued) day-key
       class, not a defect (7 header lines, 4 distinct days) · B04_2 verify: 19 kept / 25 dropped, ≥5
       measured FALSE drops. ONE declared consequence outside capture.mjs, in-session and one line to
-      reverse: mdrender's CAPTURE_PATHS registry + probecheck's alphabet router learned `raw-blob`
+      reverse (**RATIFIED ~09:35, `queue\RULING__2026-08-26_0935-s5z5-1.md`, the ruler verifying by
+      running first; the scope gap was the RULER'S, miss #9**): mdrender's CAPTURE_PATHS registry +
+      probecheck's alphabet router learned `raw-blob`
       (proven by an IDENTICAL B04_1 verdict under the new stamp, sidecar restored byte-for-byte) —
       a declared path no comparator accepts is not a path. verify.mjs unchanged.
       COST: 10.13 of BUILD 8 + PROOF 7 (build+proof complete inside 15). The row as ruled:
@@ -8395,3 +8404,25 @@ The OS clipboard is off the answer path now — but the **one-shot-download rule
 budget the single page→disk delivery per chat and take the RAW payload with it. Blocked second
 delivery ⇒ restart the browser and reload the chat (pre-authorized, free); still blocked ⇒ halt that
 chat only, record, move on. Never an open wait. **B01–B04 closed: 4 of 18.**
+
+#### ADDENDUM — 26 Aug ~09:40, THE RULING CAME BACK IN THIS SAME SITTING (direct channel, 5th use)
+
+`queue\RULING__2026-08-26_0935-s5z5-1.md`, treated as a RULING file's content per the card.
+**RATIFIED, and the ruler verified by RUNNING before ratifying:** the proof harness re-run fresh
+(64×2 GREEN), both changed lines read in source, and the matching-sha-neighbour refusal proven live.
+**The scope call was RIGHT and the gap was the RULER'S — miss #9, owned in the ruling:** the 0855
+scope line omitted the one-site alphabet visit that the ~08:05 class instruction (*"which alphabet
+is this text in = ONE question, ONE answer site"*) had already made inevitable. The days_covered
+closure is accepted. **Nothing owed.**
+
+⚠ **AND THE RULER'S RE-RUN CAUGHT SOMETHING THIS SESSION'S CLOSE DID NOT: checkall §7 had gone RED
+AGAIN — the SIXTH instance — because this close ran `verify.mjs` AFTER its checkall pass**, so the
+verify outputs were unsnapshotted at the moment the session called the gate green. That is the same
+CLASS already filed to S5-Z4's verify scope (snapshot the verify outputs at sitting close, one line),
+now with its mechanism named exactly: **the gate must be the LAST thing a sitting runs, or the last
+thing it runs must be snapshotted.** Remedied by the ruler with `snapshot.mjs take`; **independently
+re-run by this session afterwards: CHECKALL GREEN 8/8.** B05 opens clean.
+
+**Cost of this second record-and-commit cycle rides the HANDOFF 5 line** — the cycle the ruling
+itself bought, exactly the pattern the ~08:10 sizing ruling priced. Next session is unchanged:
+**B05 on EXECUTION 35 + HANDOFF 13, capturing `--from-blob`.**
