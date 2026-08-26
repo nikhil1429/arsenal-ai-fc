@@ -2083,42 +2083,112 @@ STATUS (update this block before any session stops — this is the handoff)
                                      never move.**
                                    ☑ **(4) Z6 ACCEPTED** — proofs 20×2, bite-proven, and checkall §2
                                      RUNNING the harness. B09 opens the first three-anchor chat.
-  ▶ NEXT SESSION ............... **① B09 — AND IT IS THE FIRST CHAT EVER GATED ON THREE ANCHORS.**
-                                   A fresh Pro-Extended chat, ten attachments `live2_batch81-90`,
-                                   `steps/B09_1.txt` (**3 anchors — tail · middle · band at 49.9%
-                                   depth**) then `steps/B09_2.txt`. Then B10 onward the same way.
+  ☑ S5 · B09 CLOSED 2/2 ....... 26 Aug 2026 ~20:40 · **THE FIRST THREE-ANCHOR CHAT, AND THE BAND
+                                   ANCHOR PASSED. 9 of 18 — the corpus half is HALFWAY.** Full
+                                   account in the PROGRESS entry of 26 Aug ~20:40.
+                                   ☑ `checkall` 8/8 (now including Z6's own legs) · `preflight` GO.
+                                     ⚠ **clipboard dead again — 13th** — so both steps rode the
+                                     clipboard-dead branch, which is simply how this sweep composes
+                                     now.
+                                   ☑ Fresh chat `gemini.google.com/app/e97ecf9697c9605a` · Pro
+                                     Extended before the attach · **10 chips, the ten expected
+                                     names, zero strays** · **10/10 on the SENT turn.**
+                                   ☑ **B09_1 four hops:** `eeefd56e1bcfa6f2` disk == in-page == box
+                                     (107 blocks) == SENT (107 lines, mismatch −1). Send **FIRST
+                                     TRY — 9th consecutive**; stall, **a FRESH TAB recovered the
+                                     complete answer — 12th confirmation.**
+                                   ☑ **BLOB-GATE PASSED with Z6's new assert doing its job on its
+                                     first live answer — 3 fenced blocks for 3 anchors**
+                                     (`d28ca5418c3906ac`, 1,167 chars).
+                                   ☑ **`probecheck B09_1` → PASS · VERBATIM, exit 0, ALL THREE** —
+                                     tail `live2_batch90.txt:1356` · middle `live2_batch86.txt:693`
+                                     · **band `live2_batch85.txt:1237`, named in the verdict as
+                                     "40-60% depth — 49.9% of the group".**
+                                   ⚡ **THE BAND BLOCK'S 11 EXTRA CHARS HAVE A NAME:** the in-page
+                                     sha mismatched (139 vs an expected 128) and it resolved
+                                     cleanly — the expected line is there BYTE-EXACT as a prefix,
+                                     plus an 11-char suffix measured by codepoint to be
+                                     **`[source: 6]`, Gemini's own grounding citation leaked INSIDE
+                                     the fence.** probecheck's containment predicate accepted it
+                                     and that is CORRECT: the line arrived verbatim.
+                                   ✔ **AND IT DID NOT INFLATE THE FABRICATION NUMBERS** — the
+                                     obvious follow-on, asked and killed in one free measurement:
+                                     **0 of 298 dropped quotes and 0 of 157 kept quotes carry a
+                                     `[source: N]` marker, and only 1 of 22 stored answer files
+                                     contains one anywhere — B09_1 itself.** Last sitting's
+                                     invention table stands untouched.
+                                   ☑ **B09_2 four hops:** `ba93372238c1e43f` (123 lines, mismatch
+                                     −1), send **FIRST TRY — 10th consecutive**, stall, fresh tab
+                                     recovered it — **13th**. Captured `--from-blob`
+                                     (`cca08e10ea7fc56b`, 17,155 chars), **BLOB-GATE PASSED**, all
+                                     9 top-level keys, **JSON parses yes**.
+                                   ☑ **VERIFIER, both required counts:** `B09_2 : 35 items → KEPT 5
+                                     · DROPPED 30` · source-missing 23 · NOT-FOUND 7 · **MEASURED
+                                     FALSE DROPS 7** · **DE-ESCAPE 0 (fifth consecutive)** ·
+                                     genuinely absent 23. **⇒ true content ≥ 12 of 35**, invention
+                                     rate **66%** — second high reading in a row (B08_2 74%) and
+                                     exactly the steady state RULING 1750 named. **Nothing in the
+                                     sweep changes for it, as ruled;** the number joins the table
+                                     at the next compile.
+                                   ⚠ **ONE DATA POINT, STATED AS ONE:** a band anchor passing at
+                                     49.9% does NOT refute the depth pattern — A02 ~48%, B06_1
+                                     47.4% and B08_1-first 56.2% all died there and each was also
+                                     followed by a passing fresh chat. What Z6 bought is that the
+                                     question is now ASKED every chat instead of answered by luck.
+                                     **B10–B18 is where the series becomes evidence.**
+                                   ⛔ **AND B09 BROKE Z6’S OWN HARNESS AT THE COMMIT GATE — the
+                                     good kind of break.** `captureCountsThree()` aimed its bite at
+                                     the LIVE step B09_1 and proved “nothing was written” with
+                                     `!existsSync(answers/B09_1.txt)` — true only until B09 was
+                                     captured. It went RED **while nothing was wrong** and would
+                                     have done so for every remaining chat. **Two lessons: “the file
+                                     is absent” ≠ “this run wrote nothing” (it now diffs the answers/
+                                     listing), and a harness naming a LIVE step is ONE refusal away
+                                     from eating a paid-for answer** — it now writes its OWN
+                                     three-anchor sentinel step. Capture refused correctly and
+                                     `answers/B09_1.txt` was verified byte-identical to its raw
+                                     (`d28ca5418c3906ac`), probecheck still PASS. Re-proven after
+                                     the fix: harness GREEN 20×2 · the planted regression still
+                                     turns 6 RED · checkall GREEN 8/8. **Caught by the gate it was
+                                     hiding in, on the first chat that could expose it.**
+                                   ⚠ ~23.5 of the 35-lakh EXECUTION line (day 766.20 → 789.74).
+                                     INSIDE. Records ride HANDOFF 13.
+  ▶ NEXT SESSION ............... **① B10 — a fresh Pro-Extended chat, ten attachments
+                                   `live2_batch91-100`, `steps/B10_1.txt` (3 anchors — its band
+                                   sits at 48.4% depth) then `steps/B10_2.txt`.** Then B11 onward
+                                   the same way, to B18.
                                    **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
-                                   ⚠ **A v3 PROBE MAY LEGITIMATELY FAIL ON THE BAND ANCHOR AND THAT
-                                   IS THE POINT** — it samples the depth where A02, B06_1 and
-                                   B08_1-first all died. A band miss is a REAL retrieval verdict,
-                                   not an instrument fault: measure the byte-identity, then follow
-                                   the ruled branch (fresh chat, same ten files — Option A has now
-                                   worked TWICE; a second miss in the fresh chat is the B-split for
-                                   that chat only). **Never self-pass a proven-false verdict.**
-                                   ⚠ **AND ITS LIMIT IS RULED: a PASSING v3 probe still says
-                                   nothing about FABRICATION.** B08 passed VERBATIM on both anchors
-                                   and then invented 26 of 35 quotes. Run `verify.mjs` on every
-                                   extraction and record the false-drop AND de-escape counts — that
-                                   gate is the load-bearing one.
+                                   ⚠ **A BAND MISS IS A REAL RETRIEVAL VERDICT, NOT AN INSTRUMENT
+                                   FAULT** — measure the byte-identity in-page first, never
+                                   self-pass, then the ruled branch: **fresh chat, same ten files**
+                                   (Option A has worked TWICE); a second miss in the FRESH chat is
+                                   the B-split for that chat only, map amended in the same act, and
+                                   never a third ten-file attempt.
+                                   ⚠ **A PASSING probe still says NOTHING about FABRICATION** —
+                                   B08 passed VERBATIM and invented 26 of 35; B09 passed on three
+                                   anchors and invented 23 of 35. **`verify.mjs` failing closed is
+                                   the load-bearing gate.** Record BOTH counts every chat.
+                                   ⚡ **`[source: N]` CAN APPEAR INSIDE A FENCE** — Gemini's own
+                                   citation. It is NOT corruption and NOT invention: probecheck's
+                                   containment predicate handles it. Measured clean across every
+                                   stored artifact; if it ever appears in an EXTRACTION's quotes,
+                                   re-run that measurement before drawing any conclusion.
                                    ✔ **NO RESTART IS OWED BY HIM.** Transport chain: **① blob-
                                    download (PRIMARY) → ② the CLIPBOARD ROUTE, only on a refused
-                                   download → ⑶ if either is refused or dead, OPEN A FRESH TAB,
-                                   same origin, and retry the ordered transports — BEFORE taking
-                                   1425 2(c)'s halt** (ruled 1750 item 6a; measured twice). Only if
-                                   that also fails does the chat halt, recorded, his restart asked
-                                   on the report line.
-                                   ⚠ **THE FOCUS STEP IS PART OF TRANSPORT ②** (a real `computer`
-                                   click, or `clipboard.write` throws `NotAllowedError` while the
-                                   late toast reads as success) **and so is the CRLF strip.**
-                                   ⚠ **CLIPBOARD DEAD AT preflight ⇒ the outbound is the
-                                   clipboard-dead branch** — injected file input → `file_upload` →
-                                   in-page `FileReader` → `execCommand('insertText')`, four hops
-                                   still asserted. It carried both B08 steps.
-                                   ⚠ **EVERY READ OF THIS CORPUS IS EXPLICIT UTF-8** — and compare
-                                   TRIMMED against a stored anchor, which is how probe_gen stores
-                                   it. Both classes have now produced a confident wrong answer.
+                                   download → ⑶ OPEN A FRESH TAB, same origin, and retry the
+                                   ordered transports — BEFORE taking 1425 2(c)'s halt.** The fresh
+                                   tab now has FOUR confirmations and it doubles as the stall
+                                   remedy: a fresh load returns the complete answer AND a clean
+                                   download budget in one move.
+                                   ⚠ **CLIPBOARD DEAD AT preflight ⇒ outbound is the clipboard-dead
+                                   branch** — injected file input → `file_upload` → in-page
+                                   `FileReader` → `execCommand('insertText')`, four hops asserted.
+                                   ⚠ **EVERY READ OF THIS CORPUS IS EXPLICIT UTF-8**, and compare
+                                   TRIMMED against a stored anchor.
+                                   ⚡ **HASH EVERY ARTIFACT BEFORE THE FIRST EDIT** — standing law
+                                   (RULING 1900 item 2) for any versioned-additive change.
                                    ⚠ **`checkall` §7 goes RED whenever you run `verify.mjs`** —
-                                   its own outputs move. 9th RED, same class, fix rides S5-Z4.
+                                   its own outputs move. 10th RED, same class, fix rides S5-Z4.
                                    Remedy and continue: `node snapshot.mjs take --why "…"`, then
                                    re-run checkall GREEN BEFORE committing.
                                    ✔ **THE TEN-FILE CEILING QUESTION IS CLOSED** — B06's fresh probe
@@ -10589,3 +10659,103 @@ and existing rows never move.**
 
 **(4) Z6 accepted** — proofs 20×2, bite-proven, checkall §2 running the harness. B09 opens the
 first three-anchor chat, 35 + 13. Band misses are the point.
+
+---
+
+### PROGRESS 2026-08-26 ~20:40 IST — **B09 CLOSED 2/2 — the first three-anchor chat, and the band anchor PASSED**. 9 of 18: the corpus half is halfway
+
+**Router obeyed** (§10-D rule 1). Micro-order written before any edit (rule 9). MODEL: Opus 5 ·
+effort HIGH · EXECUTION 35 + HANDOFF 13. `checkall` GREEN 8/8 (now including Z6's own legs) ·
+`preflight` GO, both RUN in-session. Meter baseline **766.20**.
+⚠ **The clipboard was dead again at preflight — 13th occurrence** — so both steps went out on the
+ratified clipboard-dead branch, which is now simply how this sweep composes.
+
+#### B09_1 — THE FIRST PROBE EVER GATED ON THREE ANCHORS, AND IT PASSED ON ALL THREE
+
+Fresh chat **`gemini.google.com/app/e97ecf9697c9605a`**, Pro Extended set before the attach, ten
+attachments `live2_batch81-90`; pre-attach gate **10 chips, exactly the ten expected names, zero
+strays**. Pre-compose gate asserted. Four hops, every one sha-asserted:
+
+```
+B09_1  step file (joined) eeefd56e1bcfa6f2 · in-page FileReader eeefd56e1bcfa6f2 (107 lines)
+       · box 107 blocks / 6,907 chars eeefd56e1bcfa6f2 · SENT 107 lines eeefd56e1bcfa6f2,
+       firstStrippedMismatch = -1 · 10/10 chips on the SENT turn
+```
+
+Send committed **FIRST TRY — 9th consecutive**. Stall, and a **fresh tab recovered the complete
+answer — 12th confirmation**, never re-fired.
+
+**MEASURED FIRST, as always.** The three fenced blocks were sha'd IN-PAGE against
+`probe_expected.json`'s live2_g09: tail `1183b32b52d411d9` (129) ✓ · middle `33585bbaf1a854cb`
+(239) ✓ · **band — 139 chars against an expected 128, sha MISMATCH.** Captured `--from-blob`
+(`d28ca5418c3906ac`, 1,167 chars), **BLOB-GATE PASSED — 3 fenced blocks for 3 anchors**, which is
+the Z6 identity assert doing its job on its first live answer.
+
+**`node probecheck.mjs B09_1` → PASS · VERBATIM, exit 0 — all three:**
+tail `live2_batch90.txt:1356` · middle `live2_batch86.txt:693` · **band
+`live2_batch85.txt:1237`, named in the verdict as "40-60% depth — 49.9% of the group".**
+
+#### ⚡ AND THE BAND BLOCK'S 11 EXTRA CHARACTERS HAVE A NAME
+
+The mismatch was real and it resolved cleanly: the block is the expected line **byte-exact as a
+prefix**, plus an 11-character suffix, measured by codepoint to be **`[source: 6]`** — Gemini's own
+grounding citation, leaked INSIDE the fence. probecheck's containment predicate accepted it and
+that is correct: the expected line arrived verbatim.
+
+**The obvious follow-on question was worth asking and the answer is clean: it did NOT inflate the
+fabrication numbers.** Measured across every stored artifact — **0 of 298 dropped quotes and 0 of
+157 kept quotes carry a `[source: N]` marker, and only 1 of 22 stored answer files contains one
+anywhere: B09_1, this one.** So the marker is new to this chat, it is confined to a probe answer,
+and last sitting's invention table stands untouched by it. A hypothesis raised and killed in one
+free measurement rather than carried as a doubt.
+
+#### B09_2 — CAPTURED CLEAN
+
+Four hops exact (`ba93372238c1e43f`, 123 lines, `firstStrippedMismatch = -1`), send **FIRST TRY —
+10th consecutive**, stall, fresh tab recovered it — **13th**. Captured `--from-blob`
+(`cca08e10ea7fc56b`, 17,155 chars), **BLOB-GATE PASSED**, all 9 top-level keys, **JSON parses yes**.
+
+**⇒ B09 IS CLOSED 2/2. 9 of 18 corpus chats — the corpus half is halfway.**
+
+`node verify.mjs`, both required counts: **`B09_2 : 35 items → KEPT 5 · DROPPED 30`** ·
+source-missing 23 · NOT-FOUND 7 · **MEASURED FALSE DROPS 7** · **DE-ESCAPE 0 (fifth consecutive)** ·
+genuinely absent 23. **⇒ B09's true content is ≥ 12 of 35**, and its invention rate reads **66%** —
+the second high reading in a row (B08_2 74%), and exactly the steady state RULING 1750 named. The
+sweep changes nothing for it, as ruled; the number joins the table at the next compile.
+
+#### WHAT THE FIRST v3 CHAT ACTUALLY TELLS US — one data point, stated as one
+
+The band anchor at 49.9% depth came back **byte-exact**. That is **one** passing observation, not a
+refutation of the depth pattern: A02 (~48%), B06_1 (47.4%) and B08_1-first (56.2%) all died in this
+band, and each of those was also followed by a passing fresh chat. What Z6 bought is that the
+question is now **asked on every chat** instead of being answered by luck. B10–B18 are where the
+series becomes evidence.
+
+⚠ **~23.5 of the 35-lakh EXECUTION line** (day 766.20 → 789.74). INSIDE. Records ride HANDOFF 13.
+
+#### ⛔ AND B09 BROKE Z6'S OWN HARNESS — THE GOOD KIND OF BREAK, CAUGHT AT THE COMMIT GATE
+
+`checkall` went RED at the close, on the leg Z6 added yesterday. Not the sweep, not the answers —
+**the proof harness itself**, and the fault was mine.
+
+`captureCountsThree()` aimed its bite at the LIVE step `B09_1` and then proved "nothing was
+written" by asserting **`!existsSync(answers/B09_1.txt)`**. That holds for exactly as long as B09
+has not been captured. The moment B09_1's real answer landed on disk — this sitting, an hour
+earlier — the assertion went RED **while nothing was actually wrong**, and it took `checkall` down
+with it. Left alone it would have gone RED for every remaining chat, i.e. a gate failing for a
+reason unrelated to what it gates, which is the fastest way to teach a session to ignore it.
+
+**Two lessons, and the second is the serious one:**
+1. *"The file does not exist"* is not the same claim as *"this run wrote nothing"*. The assertion
+   now compares the **answers/ directory listing before and after**, which is the claim it meant.
+2. **A harness that names a LIVE step is one refusal away from overwriting a paid-for answer.**
+   Capture refused correctly (2 fences < 3 anchors) and `answers/B09_1.txt` was verified
+   **byte-identical to `diag/B09_1_raw.txt`, sha `d28ca5418c3906ac`**, with `probecheck B09_1` still
+   PASS · VERBATIM afterwards — so nothing was lost. But the harness's own stated rule is
+   sentinel-only, and I broke it. It now writes its **own three-anchor sentinel step**, wires it,
+   bites against that, and removes it in the `finally`.
+
+Re-proven after the fix: harness **GREEN, 20 assertions × 2**; **bite-proof re-run — reverting
+`probecheck.mjs` still turns 6 assertions RED**; `checkall` **GREEN all 8**. The defect was caught
+by the gate it was hiding in, on the first chat that could expose it, which is the whole argument
+for having made the harness a gate yesterday.
