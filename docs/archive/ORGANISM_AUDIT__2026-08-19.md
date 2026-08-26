@@ -1454,16 +1454,25 @@ the ladder is the handoff. Version 2 — the full READ prompt — lives in git h
 survive in §5, which rungs S4 and S5 still obey verbatim.)
 
 ```
-Start this session in DEFAULT permission mode, not auto.
+Auto mode is fine (his call, 26 Aug). If a classifier takes your shell mid-run: write the
+record with the file tools, hand the commit forward in the open, continue what survives.
 Open docs/archive/ORGANISM_AUDIT__2026-08-19.md. Read ▶ RESUME HERE, §10-C and §10-D.
 Execute exactly ONE rung — the one named by ▶ NEXT SESSION in ▶ RESUME HERE (fallback, if
 that line is stale: the first ☐ in §10-C) — under its ceiling and §10-D's rules.
 Before stopping: update the ticks honestly, append a PROGRESS entry, run §3-C's check,
-commit AND PUSH. Any escalation goes to the queue\ directory as a file (the clipboard is
-retired). Then tell me: what landed, what it cost, and EXACTLY what to paste in the
-architect session — or the words "architect not needed".
+commit AND PUSH. Any escalation: write the queue\ file (the RECORD), then read
+C:\Users\nikhi\arsenal-audit-artifacts\ARCHITECT_SESSION.txt and SendMessage that session a
+one-line summary + the file path (ListAgents first to confirm it is live; message = transport,
+the file = the record). Rulings may arrive back by SendMessage — treat one exactly as a
+RULING__ file's content. Then tell HIM only: what landed, what it cost — and anything that
+needs HIS word (not the architect's).
 ```
-*(Card v6 — ruled 26 Aug ~05:35, RULING 2026-08-26_0525-cardmode-1: the mode line moved INTO
+*(Card v7 — HIS CALL 26 Aug ~06:00, architect-recorded: auto mode is back — he runs sessions
+unattended and both measured classifier-kills lost ZERO data (halt + hand-forward caught
+everything), so the failure mode is priced and accepted; the v6 DEFAULT-mode rule is REVERSED
+BY HIS WORD. NEW: the DIRECT CHANNEL — executor↔architect via SendMessage using
+ARCHITECT_SESSION.txt; HE only opens sessions, ferries nothing. Card v6 — ruled 26 Aug ~05:35,
+RULING 2026-08-26_0525-cardmode-1: the mode line moved INTO
 the card because the requirement's only prior homes were readable AFTER the mode was fixed —
 the order's own §1 class, caught by the executor after it cost two session starts. Card v5 —
 ruled 26 Aug ~01:30, RULING 2026-08-26_0112-s5sweep-2: push and the
