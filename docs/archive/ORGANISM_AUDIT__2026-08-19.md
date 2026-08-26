@@ -1328,6 +1328,21 @@ STATUS (update this block before any session stops — this is the handoff)
                                    renewal round-trip interrupts the drive. Stop-and-record within
                                    a sitting is unchanged. **(3) B02's close record RATIFIED** as
                                    written, false-drop split included.
+                                   ✔ **HANDOFF LINE RE-DERIVED 10 → 13, RULED 26 Aug ~08:10
+                                   machine-clock (`queue\RULING__2026-08-26_0810-s5corpus-7.md`)**
+                                   — the sizing question the last two closes raised three times,
+                                   taken now: two consecutive sittings measured **12.34** and
+                                   **12.09** on the 10-lakh line, same cause both times (a ruling
+                                   landing after the push buys a SECOND record-and-commit cycle),
+                                   so the MODEL was wrong, not the driving. **The standing
+                                   per-sitting line is now EXECUTION 35 + HANDOFF 13** for every
+                                   remaining S5 sweep sitting — corpus B04–B18 AND the canon-B
+                                   chats — and it prices TWO record-and-commit cycles. A THIRD
+                                   cycle in one sitting is a NEW shape: escalate, never stretch.
+                                   Hold-the-commit-until-quiet REFUSED (unbounded wait; the close
+                                   lands the moment the work does). The two recorded breaches stay
+                                   recorded as over — explained, never retro-blessed. Wherever an
+                                   older line on this page says "35+10", THIS line supersedes it.
                                    ⇒ **SO A B03–B18 CHAT IS TWO STEPS, NOT THREE: `B03_1` (load +
                                    probe) then `B03_2` (extraction), then LEAVE THE CHAT OPEN and
                                    move to a fresh one for B04.** `steps/B0n_3.txt` is not fired
