@@ -1231,7 +1231,28 @@ STATUS (update this block before any session stops — this is the handoff)
                                    re-open them. The next act is a NEW Pro-Extended chat, ten
                                    attachments `live2_batch21-30` (`node buildsteps.mjs` ends with
                                    the full attachment map), `steps/B03_1.txt` to load + probe,
-                                   then `steps/B03_2.txt`, then `steps/B03_3.txt`.
+                                   then `steps/B03_2.txt` — and THEN STOP: the critic step is not fired (ruling below).
+                                   ✔ **RULED ~07:50, AND IT CHANGES THE SHAPE OF B03–B18**
+                                   (`queue\RULING__2026-08-26_0745-s5corpus-4.md`, off this
+                                   session's measured ~1-hour-per-chat number):
+                                   **(1) B03–B18 RUN EXTRACTION-ONLY — load+probe → extraction,
+                                   NO critic.** The critic converts from a fixed cost to an
+                                   ON-DEMAND tool: **the chats STAY OPEN**, and S6 or the architect
+                                   orders a retro-critic into any chat whose extraction warrants it
+                                   (the stays-open pattern already ruled for the canon A-upgrade).
+                                   ~50 min × 16 chats saved now, spent later only where the
+                                   material earns it. verify's receipt-inflation and coverage
+                                   checks are TIER-0 and continue on every chat regardless.
+                                   **(2) MULTI-DAY ACCEPTED and the budget model is now PER
+                                   SITTING, pre-authorized and standing: every corpus sitting opens
+                                   on a FRESH EXECUTION 35 + HANDOFF 10** — written once so no
+                                   renewal round-trip interrupts the drive. Stop-and-record within
+                                   a sitting is unchanged. **(3) B02's close record RATIFIED** as
+                                   written, false-drop split included.
+                                   ⇒ **SO A B03–B18 CHAT IS TWO STEPS, NOT THREE: `B03_1` (load +
+                                   probe) then `B03_2` (extraction), then LEAVE THE CHAT OPEN and
+                                   move to a fresh one for B04.** `steps/B0n_3.txt` is not fired
+                                   unless someone orders it; the step files stay on disk untouched.
                                    ⏱ **BUDGET THE CLOCK BEFORE THE TOKENS: one corpus chat is
                                    ~1 HOUR of model time at the measured shape** (B02: load+probe
                                    ~10 min · extraction ~12 · critic ~50). B03–B18 is sixteen of
@@ -3139,6 +3160,9 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       items real. Running totals as the instrument stands: KEPT 91 · DISCARDED 99.
       ⏱ **THE PLAN'S WALL-CLOCK IS MEASURED-FALSE:** the critic alone took ~50 min (extraction ~12),
       so a corpus chat is ~1 HOUR and B03–B18 is a MULTI-DAY job, not the 7–9 hours on the rows above.
+      ✔ RULED ~07:50 on that number: **B03–B18 run EXTRACTION-ONLY, chats stay OPEN, the critic is
+      ON-DEMAND** (S6 or the architect orders a retro-critic where the extraction earns it), and every
+      corpus sitting opens on a FRESH EXECUTION 35 + HANDOFF 10, standing. B02s record ratified.
       ⚠ Transport, three free lessons: a stalled stream can be a CLIENT-side render stall and a
       RELOAD recovers the finished answer at zero cost · the response-level Copy needs a `hover`
       before the click · the sent-turn read must select `p.query-text-line` only.
@@ -7347,3 +7371,37 @@ organism re-enabled · nothing entered §9 (§8 governs that, at S6).
 **S5 · the corpus half — B03_1 in a FRESH Pro-Extended chat, ten attachments `live2_batch21-30`,
 then B03_2 and B03_3. Opus 5 · effort HIGH.** Budget one hour of wall-clock for that chat alone, and
 read the three transport notes above before touching the browser.
+
+#### ADDENDUM ~08:30 — A SECOND RULING CAME BACK ON THIS SESSION'S WALL-CLOCK NUMBER
+
+The ~1-hour-per-chat measurement was reported to the architect on the direct channel at the close,
+with the observation that it may change how the remaining sixteen chats should be shaped. It did.
+Recorded verbatim (`queue\RULING__2026-08-26_0745-s5corpus-4.md`, ~07:50):
+
+> THE MEASURED FACT: a full corpus chat ≈ 1 HOUR (critic alone ~50 min at ~29% yield); B03–B18 as
+> built = multi-day, not 7–9 hours. The shape changes on that number:
+>
+> **1. B03–B18 RUN EXTRACTION-ONLY** — load+probe → extraction. The critic converts from a FIXED
+> COST to an ON-DEMAND TOOL: the chats STAY OPEN, and S6 (or the architect at a drain) orders a
+> retro-critic into any chat whose extraction warrants it — the same stays-open pattern already
+> ruled for the canon A-upgrade. Nothing is lost permanently; ~50 min × 16 chats of model time is
+> saved now, spent later only where the material earns it. The receipt-inflation and coverage
+> checks live in verify (TIER-0) and continue on every chat regardless.
+>
+> **2. MULTI-DAY ACCEPTED, and the budget model goes PER SITTING, pre-authorized:** every corpus
+> sitting opens on a FRESH EXECUTION 35 + HANDOFF 10, standing for ALL remaining corpus sittings —
+> written here once so no renewal round-trip interrupts the drive. Stop-and-record within a sitting
+> unchanged. (The 26.70 of the current line stands; next sitting starts fresh.)
+>
+> **3. B02's honest record RATIFIED** — "TRUE ~60 of 61 items real" with the pre-Z4 false-drop
+> split is exactly what the close must say; ruling applied verbatim, nothing further owed.
+
+Applied to the router row before this session stopped, which is what that ruling asked for. **A
+B03–B18 chat is now TWO steps, not three:** load+probe, extraction, leave the chat open, move on.
+The `B0n_3.txt` critic step files stay on disk untouched — they are the on-demand tool now, not a
+skipped step, and nothing about the corpus half's evidence is thrown away by the change.
+
+One thing worth naming for whoever reads this later: **the decision was only available because the
+clock was measured and reported.** The plan had carried "~14 min extraction" since 26 Aug ~04:15 and
+nothing in it would ever have contradicted itself — a fixed critic pass on all eighteen chats would
+have cost ~13 hours of wall-clock before anyone asked whether it was worth ~29% yield.
