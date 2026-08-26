@@ -1778,56 +1778,167 @@ STATUS (update this block before any session stops — this is the handoff)
                                    refusal, every hop sha-asserted, and STAMPED. Rule 6 holds.
                                    Not taken alone: `preflight` says *"the sweep does not use this
                                    path"*. **If a `RULING__…-13.md` is on disk, IT governs.**
-  ▶ NEXT SESSION ............... ⛔ **HIS ONE PHYSICAL ACT, UNCHANGED AND STILL THE CHEAPEST: CLOSE
-                                   CHROME COMPLETELY AND REOPEN IT** before the sitting. That resets
-                                   the one-shot download budget. It is HIS act by design — browsers
-                                   are tier "read" and `open_application` is a standing negative.
-                                   **① FIRST ACT — CAPTURE B07_1, FREE, NO RE-ASK.** Open
-                                   `gemini.google.com/app/00cd8dc2b6bcfed4`, JS-click the LAST
-                                   answer's Copy, sha the Blob IN-PAGE — **it must be
-                                   `2a21cb66595516d2`, 1,140 chars** — deliver page→disk, then
-                                   `node capture.mjs save B07_1 --from-blob <file> --blob-sha <hex>`
-                                   and **`node probecheck.mjs B07_1` for the VERDICT.** Expect PASS
-                                   (both anchors already measured byte-exact) — but the gate decides,
-                                   not that measurement.
-                                   **② THEN `steps/B07_2.txt`** in the same chat, captured on the
-                                   **ORDERED TRANSPORTS** below — **no second restart is owed.**
-                                   **③ THEN B08** — fresh chat, `live2_batch71-80`, and onward.
-                                   **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
-                                   ✔ **THE TRANSPORT ORDER IS NOW LAW (RULING 1425 item 1):**
-                                   **① blob-download (PRIMARY, strictest, no OS clipboard) → ② the
-                                   CLIPBOARD ROUTE (Copy → OS clipboard → file →
-                                   `capture.mjs --from-file`, copy-gate intact), which fires ONLY
-                                   on a REFUSED download.** Never the other order.
-                                   ⚠ **ITS CONDITIONS ARE PART OF IT (item 2):** every hop
-                                   **sha-asserted in-page vs disk** — assert WHAT came back, because
-                                   this is the CONTENDED transport that has died 11 times; the
-                                   existing `raw` stamp covers it, **no registry change**; and if
-                                   **BOTH** transports are down, **halt THAT chat only** — his
-                                   restart is the LAST resort, delivered on the report line, **never
-                                   mid-sitting by default.**
-                                   ⚡ **SO B07–B18 COSTS HIM ONE RESTART AT OPEN, NOT ELEVEN.**
-                                   ⚠ **`checkall` §7 will go RED whenever you run `verify.mjs`** —
-                                   three of its five complaints last sitting were the VERIFIER'S OWN
-                                   OUTPUTS (`verified/dropped/coverage.json`). 7th RED, same class,
-                                   fix rides S5-Z4. Remedy and continue:
-                                   `node snapshot.mjs take --why "…"`, then re-run checkall GREEN
-                                   BEFORE committing.
-                                   **① FIRST ACT — FINISH B06, AND IT COSTS ZERO GEMINI TOKENS.**
-                                   Open `gemini.google.com/app/f902f4c0dc244efc`, JS-click the LAST
-                                   answer's Copy, read the `ClipboardItem` Blob in the SAME call,
-                                   sha it IN-PAGE — **it must be `c4b4c430d62be103`, 21,798 chars**
-                                   — deliver page→disk, then
-                                   `node capture.mjs save B06_2 --from-blob <file> --blob-sha <hex>`,
-                                   then `node verify.mjs` (record the false-drop AND de-escape
-                                   counts). **DO NOT RE-ASK ANYTHING IN THAT CHAT** — B06_1 PASSED
-                                   and is captured, B06_2's answer already exists. This is pure
-                                   transport. **If the download is blocked again even after a fresh
-                                   browser: halt B06's capture only, record, and go to ② — never an
-                                   open wait.**
-                                   **② THEN B07** — a fresh Pro-Extended chat, ten attachments
-                                   `live2_batch61-70`, `steps/B07_1.txt` then `steps/B07_2.txt`.
-                                   **MODEL: Opus 5 · effort HIGH · EXECUTION 35 + HANDOFF 13.**
+  ☑ S5 · B07 CLOSED 2/2 ....... 26 Aug 2026 ~14:5x–15:4x · **AND IT COST HIM ZERO RESTARTS.**
+                                   6 of 18 corpus chats complete. Full account in the PROGRESS
+                                   entry of 26 Aug ~16:10.
+                                   ☑ `checkall` GREEN 8/8 · `preflight` GO, both RUN this session.
+                                   ☑ **B07_1 captured FREE, identity held across the browser
+                                     restart** — Copy blob re-sha'd IN-PAGE to `2a21cb66595516d2`
+                                     (1,140 chars), page→disk, on-disk sha identical.
+                                     **BLOB-GATE PASSED** · 2 fences for 2 anchors.
+                                   ☑ **`probecheck B07_1` → PASS · VERBATIM, exit 0** — tail
+                                     `live2_batch70.txt:1064` · middle `live2_batch66.txt:395`.
+                                     **The last sitting's LEAD became the gate's VERDICT.**
+                                   ☑ **B07_2 four hops exact** (`a3aad906850e31d8`, 123 lines,
+                                     `firstStrippedMismatch = -1`), send committed **FIRST TRY —
+                                     5th consecutive**; render stall, **reload recovered it free,
+                                     8th confirmation**; captured `--from-blob`
+                                     (`12e2ef039f40802c`, 21,396 chars), **BLOB-GATE PASSED**, all
+                                     9 top-level keys, **JSON parses yes**.
+                                   ☑ **VERIFIER, both required counts:** `B07_2 : 40 items → KEPT
+                                     18 · DROPPED 22` · source-missing 19 · NOT-FOUND 3 ·
+                                     **MEASURED FALSE DROPS 16** · **DE-ESCAPE 0** · genuinely
+                                     absent 6. **⇒ B07's true content is ≥ 34 of 40.**
+                                     **⇒ DE-ESCAPE READS ZERO A THIRD CONSECUTIVE TIME.**
+  ⛔ THE ONE-SHOT DOWNLOAD RULE **IS REFUTED — and nothing replaces it yet.** TWO page→disk
+     IS DEAD, CAUSE UNKNOWN      downloads SUCCEEDED in ONE browser session (13:27 B07_1 · 13:35
+                                   B07_2, no restart between them). The obvious replacement, ONE
+                                   PER DOCUMENT, was tested and **also refuted**: reload alone
+                                   REFUSED · real `computer` click alone REFUSED · click+reload
+                                   REFUSED · a brand-new document REFUSED. Four free negative
+                                   probes. `userActivation.isActive` reads **false** right after a
+                                   real extension click, so the gesture theory does not explain it.
+                                   **Recorded like the clipboard conclusion: the measurements
+                                   stand, the conclusion dies.** What survives is operational and
+                                   is enough — **always try ①; when it refuses, ② carries it.**
+  ⚡ TRANSPORT ② HAD ITS FIRST  RULING 1425's clipboard route carried B08_1's parked payload after
+     LIVE USE AND IT WORKED      ① refused, in the declared order, every hop sha-asserted.
+                                   ⚠ **ONE NORMALIZATION IS PART OF IT, now written down so nobody
+                                   re-derives it: the OS clipboard returns CRLF — 227 chars raw —
+                                   and after CRLF→LF it is 216 chars and its sha matches the
+                                   in-page sha EXACTLY.**
+                                   ⚠ `navigator.clipboard.write`/`readText` need document FOCUS; a
+                                   real `computer` click gives it; the JS-only path fails silently
+                                   with `NotAllowedError` while the "Copied to clipboard" toast
+                                   paints LATE — which reads as success. Checked against the OS
+                                   clipboard: the payload was intact, **no contention here.**
+  ⛔ S5 · B08 OPENED, PROBE     `gemini.google.com/app/791d70e448da63ce` · Pro Extended before the
+     ADMITTED A MISS, HALTED     attach · **10 chips, exactly the ten expected names, zero strays**
+                                   · four hops exact (`5a22d9f4cf14a018`, 104 lines, mismatch −1) ·
+                                   **10/10 chips on the SENT turn** · send committed **FIRST TRY —
+                                   6th consecutive** · render stall, **reload recovered free, 9th**.
+                                   ⛔ **216 chars, ZERO fences: ANCHOR 1 answered, ANCHOR 2 "NOT
+                                     FOUND".** MEASURED before any verdict, never self-judged:
+                                   ☑ **TAIL BYTE-EXACT** — in-page trimmed sha `26b7e25cf9357ec5`
+                                     == `probe_expected.json` live2_g08 tail `next` (85 chars).
+                                     Depth **99.7%**.
+                                   ⛔ **MIDDLE is a REAL miss at depth 56.2%** (byte offset
+                                     1,018,353 of 1,811,246 across the ten attached files).
+                                   ☑ **THE INSTRUMENT IS SOUND** — that anchor sits at its stored
+                                     line `live2_batch76.txt:1015`, its stored `next` really is the
+                                     following line, and it occurs **exactly once** across all ten
+                                     (declared 1, independently re-counted 1). A MODEL miss.
+                                   ☑ **AND THE MODEL ADMITTED IT** rather than inventing — not the
+                                     B03 comparator class, not B05's escape class, not B06_2's echo.
+                                   ✔ **NOTHING STAMPED, NO GATE-SHOPPING, B08_2 NOT FIRED.**
+                                     `capture.mjs` refuses a legitimate NOT-FOUND (0 fences for 2
+                                     anchors) exactly as it refused B06_1; `--probe-not-found`
+                                     rides S5-Z4 and is not built. RULING 1205 item 4's INTERIM LAW
+                                     obeyed: parked at **`diag/B08_1_raw.txt`, 216 chars, transit
+                                     sha `bc66970dc72caf19` in-page == on-disk**, `answers/`
+                                     untouched for B08. The chat stays OPEN as the record.
+                                   ⚠ ~26 of the 35-lakh EXECUTION line (day 645.51 → ~671.1).
+                                     INSIDE. Records ride HANDOFF 13.
+  ⚠ ESCALATED (BLOCKING B08) ... **`queue\2026-08-26_1600-s5corpus-14.md`** (9th direct-channel
+                                   use). RULING 1205's branch B was scoped **"for B06 only"**, so
+                                   nothing pre-authorizes this shape here — and the fork is bigger
+                                   than B08: **this is the THIRD partial retrieval at a mid-corpus
+                                   depth — A02 (20 attachments) ~48% · B06_1 (10) 47.4% · B08_1
+                                   (10) 56.2% — while the TAIL has NEVER once failed.** One was
+                                   variance; three at the same signature means **the two-anchor
+                                   probe samples neither point in the band that keeps dying, so a
+                                   PASSING probe never proved B01–B07's middle 40–60% was read.**
+                                   Recommendation sent: **A** (fresh-chat retry, same ten files —
+                                   the B06 precedent) **+ D standing from B09**: a THIRD anchor in
+                                   the 40–60% band, strictly STRICTER (rule 6 satisfied), TIER-0.
+                                   Also asked whether B01–B07 need retro-treatment in the S6 ledger.
+                                   **If a `RULING__…-14.md` is on disk, IT governs.**
+  ✔ RULED IN THE SAME SITTING .. `RULING__2026-08-26_1610-s5corpus-14.md` (9th direct-channel use).
+                                   **The ruler VERIFIED BY RUNNING and OWNED A MISS doing it** — his
+                                   first re-count CONTRADICTED this report, and the fault was HIS:
+                                   PowerShell 5.1's ANSI-default reads mangling UTF-8. Explicit-UTF-8
+                                   reads confirmed the executor exactly. **STANDING NOTE for every
+                                   verifier on this corpus: reads are explicit UTF-8 or they lie.**
+                                   ☑ **(1) B08: A RATIFIED — fresh chat, same ten files.** BRANCH
+                                     PRE-AUTHORIZED, no fourth escalation of this shape: probe
+                                     PASSES → continue B08_2, the miss joins the S6 ledger as
+                                     variance data · **MIDDLE MISSES AGAIN → B for B08 only** (two
+                                     five-file chats, batch→chat map amended in the SAME act, probe
+                                     each half); that 2-of-2 is MEASURED and S6-filed, and there is
+                                     **never a third ten-file attempt.**
+                                   ☑ **(2) D: YES — the THIRD anchor in the 40–60% band is micro-rung
+                                     S5-Z6**, versioned-additive on the c3 precedent (freeze protects
+                                     haystack+expected; both existing anchors untouched; uniqueness by
+                                     the same TIER-0 certifier; every new refusal bite-proven
+                                     IDEMPOTENT). **Ceiling ruler-written: BUILD 7 · PROOF 8 ·
+                                     HANDOFF 5.** Z6 runs AFTER B08 resolves and BEFORE B09.
+                                   ☑ **(3) B01–B07: NO retro-treatment, no re-opening** — their probes
+                                     passed as certified and **extraction truth never rode the probe**
+                                     (`verify.mjs` locates quotes against the frozen batches, failing
+                                     closed). **The S6 LEDGER gets a compiled DEPTH TABLE instead** —
+                                     every middle anchor's depth + outcome, TIER-0 from stored data,
+                                     filed beside A02 ~48% · B06_1 47.4% · B08_1 56.2%.
+                                   ☑ **(4) THE ONE-SHOT DOWNLOAD RULE IS REFUTED AND DIES** —
+                                     twice-ruled by the ruler, now measured false; the clipboard
+                                     lesson applied to his own rule: **all measurements stand as
+                                     DATA, the conclusion is withdrawn, cause UNKNOWN.** The transport
+                                     ORDER is UNCHANGED (it never depended on one-shot being
+                                     deterministic). **HIS PRE-EMPTIVE RESTART AT SITTING OPEN IS
+                                     DROPPED — nothing is owed by him**; a restart is summoned only
+                                     when BOTH transports are down, via the report line.
+                                   ☑ **(5) The CRLF normalization is RATIFIED as declared.**
+  ⛔ AND THE CEILING STOPPED IT **A RATIFIED, BUT NEXT SITTING — §10-D rule 2, and it is the ruler's
+     BEFORE IT COULD RUN         own 1205 precedent applied to his own "now".** At the ruling's
+                                   arrival the day line read **678.97 vs the 645.51 baseline = 33.46
+                                   of the 35-lakh EXECUTION line: ~1.5 left**, and a fresh ten-file
+                                   chat cannot be opened, probed and closed inside 1.5. **The sitting
+                                   closes HERE; fresh-B08 is the NEXT sitting's first act with its
+                                   branch already pre-authorized, so nothing re-escalates.**
+                                   Records ride HANDOFF 13.
+  ▶ NEXT SESSION ............... **① FIRST ACT — FRESH-B08, RULED AND PRE-AUTHORIZED
+                                   (`RULING__2026-08-26_1610-s5corpus-14.md`, read it first).**
+                                   A brand-new Pro-Extended chat, the SAME ten files
+                                   `live2_batch71-80`, `steps/B08_1.txt`. **Probe PASSES → B08_2 in
+                                   that chat, sweep unchanged. MIDDLE MISSES AGAIN → branch B, for
+                                   B08 ONLY** — two five-file chats, batch→chat map amended in the
+                                   SAME act, probe each half, 2-of-2 filed for S6. **Never a third
+                                   ten-file attempt, and never a re-ask in `791d70e448da63ce`** —
+                                   that chat stays OPEN as the record, its payload parked at
+                                   `diag/B08_1_raw.txt` (`bc66970dc72caf19`).
+                                   **② THEN S5-Z6 — its OWN session** (the third mid-band anchor,
+                                   versioned-additive, ceiling **BUILD 7 · PROOF 8 · HANDOFF 5**),
+                                   which runs AFTER B08 resolves and BEFORE B09 touches a chat.
+                                   **③ THEN B09 onward** — `live2_batch81-90` and on, on
+                                   three-anchor probes. **MODEL: Opus 5 · effort HIGH · EXECUTION 35
+                                   + HANDOFF 13.**
+                                   ✔ **NO RESTART IS OWED BY HIM AT OPEN — the pre-emptive act is
+                                   DROPPED by ruling (4).** The two ordered transports carry a chat
+                                   on their own: **① blob-download (PRIMARY, strictest, no OS
+                                   clipboard) → ② the CLIPBOARD ROUTE, firing ONLY on a REFUSED
+                                   download.** Never the other order. If BOTH are down, **halt THAT
+                                   chat only**, record, move on — his restart is summoned on the
+                                   report line, never mid-sitting by default.
+                                   ⚠ **THE FOCUS STEP IS PART OF TRANSPORT ②:** click the page with
+                                   `computer` first or `clipboard.write` throws `NotAllowedError`
+                                   and the late toast makes it look like it worked. **And the CRLF
+                                   strip is part of it too** — 227 raw → 216 after CRLF→LF, then the
+                                   sha matches in-page exactly.
+                                   ⚠ **EVERY READ OF THIS CORPUS IS EXPLICIT UTF-8** — the ruler's
+                                   own ANSI-default read produced a confident wrong recount today.
+                                   ⚠ **`checkall` §7 goes RED whenever you run `verify.mjs`** —
+                                   its own outputs move. 8th RED, same class, fix rides S5-Z4.
+                                   Remedy and continue: `node snapshot.mjs take --why "…"`, then
+                                   re-run checkall GREEN BEFORE committing.
                                    ✔ **THE TEN-FILE CEILING QUESTION IS CLOSED** — B06's fresh probe
                                    passed VERBATIM 2/2 with all 12 headers, so the first B06 was
                                    VARIANCE. The B-split is NOT needed and ruling 1205 item 2's
@@ -9817,3 +9928,161 @@ by the ruler independently.** Recorded verbatim:
 
 **⇒ THE PRACTICAL RESULT, AND IT IS THE POINT: B07–B18 NO LONGER COSTS HIM ELEVEN RESTARTS.**
 One restart at the next sitting's open, then the two ordered transports carry every chat.
+
+---
+
+### PROGRESS 2026-08-26 ~16:10 IST — S5 CORPUS · **B07 CLOSED 2/2 WITH ZERO RESTARTS**, and B08's probe found the THIRD mid-corpus hole
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐). Micro-order written to
+the session scratchpad before any edit (rule 9). MODEL: Opus 5 · effort HIGH · EXECUTION 35 +
+HANDOFF 13. `checkall` GREEN all 8 sections and `preflight` GO (18 checks), both RUN in this
+session, not inherited. Meter baseline at open: day line **645.51 lakh**.
+
+#### ① B07_1 — CAPTURED FREE, AND THE IDENTITY HELD ACROSS THE BROWSER RESTART
+
+The router's first act ran exactly as written and it cost ZERO Gemini tokens. The last answer's
+Copy fired with a JS `.click()`, the `ClipboardItem`'s `text/plain` Blob was read in the SAME call
+and sha'd **IN-PAGE: `2a21cb66595516d2`, 1,140 chars** — the identical sha recorded a browser
+lifetime earlier. Delivered page→disk, re-hashed on disk: **identical** (1,145 bytes; the 5-byte
+gap is UTF-8, not corruption). `capture.mjs save B07_1 --from-blob … --blob-sha 2a21cb66595516d2`
+→ **BLOB-GATE PASSED**, transit in-page == on-disk, identity 2 fenced blocks for 2 declared anchors.
+
+**`node probecheck.mjs B07_1` → PASS · VERBATIM, exit 0.** Both anchors ok — tail
+`live2_batch70.txt:1064`, middle `live2_batch66.txt:395`. **The lead of the last sitting became a
+verdict, and the gate said so, not the measurement.**
+
+#### ② B07_2 — FOUR HOPS EXACT, SENT FIRST TRY, AND THE DOWNLOAD DID NOT REFUSE
+
+Pre-compose gate asserted as worded: viewport 1920×878, the editor found with a real
+377×24 box — not the 0×0 hidden-tab class. Outbound, four hops, every one sha-asserted:
+
+```
+B07_2  step file (joined) a3aad906850e31d8 · clipboard read-back 9,029 chars a3aad906850e31d8
+       · in-page readText a3aad906850e31d8 (123 lines) · box 123 blocks / 9,029 chars / 0 nbsp
+       a3aad906850e31d8 · SENT 123 lines a3aad906850e31d8, firstStrippedMismatch = -1
+```
+
+The send committed **FIRST TRY** under the amended law (JS `.click()` + an immediate CDP
+screenshot) — **FIFTH consecutive success**. The stream then froze at `textContent` 21,399 with
+`innerText` 11 across four polls; **reloaded, never re-fired, recovered free — EIGHTH confirmation
+of the norm.**
+
+**THE CAPTURE, AND THIS IS THE SITTING'S TRANSPORT HEADLINE.** The response Copy's Blob sha'd
+in-page to **`12e2ef039f40802c`, 21,396 chars** — but `navigator.clipboard.write` threw
+`NotAllowedError` (document not focused), so the OS clipboard never received it. Transport ① was
+tried first as the law requires, and **it was ALLOWED — a SECOND page→disk download inside the SAME
+browser session.** On disk: 21,442 bytes, sha **`12e2ef039f40802c`**, identical.
+`capture.mjs save B07_2 --from-blob … --blob-sha 12e2ef039f40802c` → **BLOB-GATE PASSED**, all 9
+top-level keys of the step's shape, fenced yes, **JSON parses yes**.
+
+**⇒ B07 IS CLOSED 2/2. 6 of 18 corpus chats complete. AND IT COST HIM ZERO RESTARTS.**
+
+`node verify.mjs`, both required counts:
+`B07_2 : 40 items → KEPT 18 · DROPPED 22` · drops: source-missing 19 · NOT-FOUND 3 ·
+**MEASURED FALSE DROPS 16** · **DE-ESCAPE 0** · genuinely absent 6.
+**⇒ B07's true content is ≥ 34 of 40** (the 16 are the S5-Z4 `(continued)` class, re-verifying free
+at its close). **⇒ DE-ESCAPE READS ZERO A THIRD CONSECUTIVE TIME.**
+
+#### ⛔ THE ONE-SHOT DOWNLOAD RULE IS REFUTED, AND I COULD NOT REPLACE IT
+
+"ONE download per origin per browser session, confirmed three times" is **measured false**: 13:27
+B07_1 OK and 13:35 B07_2 OK, same browser session, no restart. The obvious replacement — one per
+DOCUMENT — was tested and **also refuted**: after a reload, a sentinel download was REFUSED (probe
+3); a real `computer` click alone, REFUSED (probe 4); click + reload, REFUSED (probe 5); and
+B08_1's payload on a brand-new document, REFUSED. Four negative probes, all free, all TIER-0.
+
+**So the rule as written is dead and no rule replaces it yet — cause UNKNOWN.** What survives is
+operational and it is enough: **try transport ① always; when it refuses, ② carries the payload.**
+Recorded the way the clipboard conclusion was recorded — the measurements stand, the conclusion
+dies. `userActivation.isActive` read **false** immediately after a real extension click, so the
+gesture theory does not explain it either.
+
+#### ⚡ THE SECOND INBOUND TRANSPORT HAD ITS FIRST LIVE USE, AND IT WORKED
+
+RULING 1425's clipboard route carried B08_1's parked payload after ① refused, in the declared
+order, every hop asserted. **One normalization is needed and is now named so nobody re-derives it:
+the OS clipboard returns CRLF — 227 chars raw — and after CRLF→LF it is 216 chars and its sha
+matches the in-page sha exactly.** Also standing: `navigator.clipboard.write`/`readText` need
+document FOCUS, a real `computer` click gives it, and the JS-only path fails silently with
+`NotAllowedError` while the "Copied to clipboard" toast paints late — which reads as success.
+**The toast was checked against the OS clipboard and the payload was intact: no contention here.**
+
+#### ③ B08 OPENED CLEAN — AND ITS PROBE ADMITTED A MISS AT 56.2% DEPTH
+
+Fresh chat `gemini.google.com/app/791d70e448da63ce`. Pro Extended set BEFORE the attach (verified
+off the picker's own `aria-label`). Ten attachments `live2_batch71-80` via the injected-file-input
+branch, then the pre-attach gate: **`uploader-file-preview` = 10, exactly the ten expected names,
+zero strays.** Outbound four hops identical (`5a22d9f4cf14a018`, 104 lines,
+`firstStrippedMismatch = -1`), **10/10 chips on the SENT turn**, send committed **FIRST TRY —
+SIXTH consecutive**. Render stall again, reload recovered it free — **NINTH confirmation**.
+
+**The answer is 216 chars, ZERO fences: ANCHOR 1 answered, ANCHOR 2 "NOT FOUND".**
+
+**MEASURED BEFORE ANY VERDICT, never self-judged:**
+- **TAIL is BYTE-EXACT** — the in-page trimmed line sha'd to **`26b7e25cf9357ec5`**, identical to
+  `probe_expected.json`'s live2_g08 tail `next` (85 chars). Depth **99.7%**.
+- **MIDDLE is a REAL miss** at depth **56.2%** (byte offset 1,018,353 of 1,811,246 across the ten).
+- **THE INSTRUMENT IS SOUND** — the middle anchor sits at its stored line `live2_batch76.txt:1015`,
+  its stored `next` really is the following line, and it occurs **exactly once** across all ten
+  attached files (declared 1, independently re-counted 1). A model miss, not a probe fault.
+- **AND THE MODEL ADMITTED IT** rather than inventing — not the B03 comparator class, not the
+  B05 escape class, not the B06_2 echo class.
+
+**NOTHING STAMPED, NO GATE-SHOPPING.** `capture.mjs` refuses a legitimate NOT-FOUND (0 fences for
+2 anchors) exactly as it refused B06_1; the `--probe-not-found` branch that would accept it rides
+S5-Z4 and is not built. RULING 1205 item 4's INTERIM LAW obeyed to the letter: the payload is
+parked at **`diag/B08_1_raw.txt`, 216 chars, transit sha `bc66970dc72caf19` in-page == on-disk**,
+`answers/` untouched for B08, **and B08_2 was NOT FIRED** — "no attachment is trusted until its own
+probe passes" is a gate, and rule 6 forbids weakening it.
+
+#### ⚠ ESCALATED, NOT IMPROVISED — `queue\2026-08-26_1600-s5corpus-14.md` (9th direct-channel use)
+
+RULING 1205's branch B was scoped **"for B06 only"**, so nothing pre-authorizes this shape at B08.
+And the reason it is a real fork rather than mechanics: **this is the THIRD partial retrieval at a
+mid-corpus depth — A02 (20 attachments) ~48% · B06_1 (10) 47.4% · B08_1 (10) 56.2% — while the TAIL
+has never once failed.** One was variance. Three at the same signature bears on something larger
+than B08: **the probe samples two points and neither of them is in the band that keeps dying, so a
+PASSING two-anchor probe never proved B01–B07's middle 40–60% was read at all.**
+Recommendation sent: **A** (fresh-chat retry, same ten files — the B06 precedent the ruler already
+blessed on this shape) **plus D as a standing amendment from B09** — a THIRD anchor placed in the
+40–60% band, which makes the gate strictly STRICTER (rule 6 satisfied) and is TIER-0.
+Also asked: whether B01–B07's passing probes need retro-treatment in the S6 ledger.
+
+⚠ **`checkall` §7 goes RED after this sitting's `verify.mjs` run** — same class as the last
+seven; remedy is `node snapshot.mjs take --why "…"` then re-run before committing.
+
+⚠ **~26 of the 35-lakh EXECUTION line** (day line 645.51 → ~671.1 at the escalation). INSIDE.
+Records ride HANDOFF 13.
+
+#### ✔ RULED INSIDE THE SAME SITTING — AND THE CEILING STOPPED THE EXECUTION HALF
+
+`RULING__2026-08-26_1610-s5corpus-14.md` came back on the direct channel and is folded into the
+RESUME block above. **The ruler verified by running and OWNED A MISS doing it:** his first re-count
+of the middle anchor CONTRADICTED this report, and the fault was his — PowerShell 5.1's ANSI-default
+reads mangling UTF-8. Explicit-UTF-8 reads confirmed the executor exactly. That is now a **standing
+note for every verifier on this corpus: reads are explicit UTF-8 or they lie**, and it is worth more
+than the ruling it rode in on, because a confident wrong recount is precisely the shape §4 exists for.
+
+What it ruled: **(1)** B08 gets A NOW — fresh chat, same ten files — with the failure branch
+**pre-authorized** (middle misses again ⇒ B for B08 only, two five-file chats, map amended in the
+same act; never a third ten-file attempt), so no fourth escalation rides this shape. **(2)** D is
+**YES**, as its own micro-rung **S5-Z6**, versioned-additive on the c3 precedent, ceiling
+ruler-written **BUILD 7 · PROOF 8 · HANDOFF 5**, running after B08 resolves and before B09.
+**(3)** B01–B07 get **no retro-treatment** — their probes passed as certified and extraction truth
+never rode the probe, since `verify.mjs` locates quotes against the frozen batches and fails closed;
+the S6 ledger gets a compiled **depth table** instead. **(4)** the one-shot download rule is
+**refuted and dies** — the ruler withdrew his own twice-made rule, measurements stand as data, cause
+unknown, transport order unchanged, and **HIS pre-emptive restart at sitting open is DROPPED.**
+**(5)** the CRLF normalization is ratified as declared.
+
+**AND THEN THE CEILING SAID NO.** The ruling's sequence says "fresh-B08 now"; at its arrival the
+meter read **678.97 against the 645.51 baseline — 33.46 of the 35-lakh EXECUTION line, ~1.5 left**,
+and a fresh ten-file chat cannot be opened, probed and closed inside 1.5. **§10-D rule 2 wins, and
+it is the ruler's own 1205 precedent applied to his own word: A ratified, but NEXT SITTING.** The
+sitting closes here on HANDOFF 13, and because the branch is already pre-authorized, the next
+session executes it without asking anyone.
+
+**WHAT THIS SITTING PRODUCED, PLAINLY:** B07 closed 2/2 and captured with **zero restarts by him**;
+one dead rule (one-shot downloads) killed by measurement rather than argument; the second inbound
+transport proven live with its one normalization written down; and B08's mid-band miss caught,
+measured, verified sound, escalated and ruled — with **nothing stamped that was not proven**.
