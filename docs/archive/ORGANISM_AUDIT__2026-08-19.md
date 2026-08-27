@@ -2795,8 +2795,52 @@ STATUS (update this block before any session stops — this is the handoff)
                                      ESCALATES, it is never re-tuned.**
                                    ⚠ **COST 32.7 lakh vs 14+12+5 = 31 — OVER, recorded as over.**
 
-  ▶ NEXT SESSION ............... **`S5-POST-A`, ITS THIRD AND LAST SITTING — ROW 7's BUILD ONLY, which
-                                   is already RULED AND SCOPED. MODEL: Opus 5 · effort HIGH.**
+  ▶ NEXT SESSION ............... **`S5-POST-B` — THREE ITEMS, RULED
+                                   (`RULING__2026-08-27_1600-s5post-2.md` item 4): ROW 7's build
+                                   (advisory-only) · THE DIAGNOSIS ROW · THE FOLD INTO §9.
+                                   MODEL: Opus 5 · effort HIGH.**
+                                   ✅ **`S5-POST-A` IS COMPLETE — rows 1-6 landed and row 7 MOVED to
+                                   POST-B by the same ruling.** Rows 5-6 accepted as landed.
+                                   ① **ROW 7's BUILD, already scoped — DO NOT RE-DERIVE IT**
+                                   (`RULING__2026-08-27_1505-s5post-1.md`): v2 certifies PER MATERIAL
+                                   CLASS · **0.35 stays the ANSWERS-class measured constant, untouched**
+                                   · the canon/corpus bound is a HYPOTHESIS WITH A RECEIPT (n=1), stamped
+                                   as such in the certifier's own output · and the pre-authorized branch
+                                   is LIVE because the labels do NOT separate (FAIL **0.3944** below the
+                                   lowest PASS **0.4435**) ⇒ **ADVISORY-REPORT-ONLY: it records twin
+                                   candidates for S6 and NEVER refuses.** The measurement is on disk at
+                                   `diag/measure_twinbar_v2.mjs` — read it, do not redo the thinking.
+                                   ② **THE DIAGNOSIS ROW — RULER-PRICED BUILD 6 · PROOF 5.** The 151-drop
+                                   finding *"is a reproducible defect with unknown mechanism — diagnose
+                                   FROM THE WITNESS first; mechanism found → fix + free re-verify (the Z4
+                                   pattern); not found inside the line → record + S6 reads bounds as
+                                   bounds."* The witness is pinned in `diag/proofs_s5post.mjs` §5:
+                                   `B03_2` / `missing_implementation` / day `2026-07-25` — byte-exact in
+                                   the corpus, found by verify's OWN byte-exact predicate today, recorded
+                                   `NOT-FOUND`. ⛔ **NOT promoting the lossy-path mechanism was RULED
+                                   CORRECT: 0.444/0.328/0.25 is a GRADIENT, not a mechanism.**
+                                   ③ **THE FOLD INTO §9** — 947 verified items, nine categories, 55
+                                   answers. ⛔ **The receipt check's 71-problem table FOLDS AS S6 EVIDENCE
+                                   AS-IS — no build** (item 2): the receipt-inflation class is GENERAL
+                                   (28 of 29 answers · B14_2 reproduced · 8 row-repeating receipts), and
+                                   it joins S6_EVIDENCE_TABLES.
+                                   ⛑ **ACCEPTED ON THE RECORD (item 3), and it corrects the 2045 wording:
+                                   the recount matcher is DIFFERENT, not stricter** — it misses 66 of
+                                   verify's keeps AND finds 151 of its drops. **The UPPER-BOUND conclusion
+                                   stands, on a broader basis.** Calibration is mechanical now:
+                                   kept re-found **930/996 ⇒ DIRTY ⇒ every invention figure is a BOUND.**
+                                   ⛔ **THE ARTIFACTS FOLDER IS A GIT REPO — commit what you change there,
+                                   and NEVER add a remote** (the pre-push hook refuses; a proof asserts it).
+                                   ⚠ **AN ASSERT AIMED AT CODE KEEPS HITTING THE COMMENT THAT EXPLAINS THE
+                                   CODE** — three instances, now tooled: `codeOf()` strips comments and
+                                   every source-text assert goes through it.
+                                   ⚠ **CHECK YOUR OWN MEASUREMENT BEFORE YOU BELIEVE IT.** Row 6 shipped
+                                   two self-inflicted bugs first, one erring in the FRIENDLY direction.
+
+  ~~▶ NEXT SESSION ............... **`S5-POST-A`, ITS THIRD AND LAST SITTING — ROW 7's BUILD ONLY, which
+                                   is already RULED AND SCOPED. MODEL: Opus 5 · effort HIGH.**~~ **—
+                                   SUPERSEDED THE SAME HOUR by `RULING__2026-08-27_1600-s5post-2.md`
+                                   item 4, which moves row 7 into `S5-POST-B`. Kept struck (L9).**
                                    ⛔ **DO NOT RE-DERIVE THE RULING** (`RULING__2026-08-27_1505-s5post-1.md`,
                                    folded in the §10-C row and verbatim below). v2 certifies **PER
                                    MATERIAL CLASS**; **0.35 stays the ANSWERS-class measured constant,
@@ -6554,7 +6598,9 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       FORBIDDEN: any agent touching a raw transcript · believing an unverified
       return · extra calls without a PROGRESS line saying why.
                                                                        CEILING: 40
-◐ S5-POST-A  THE POST-SWEEP INSTRUMENTS.   MODEL: Opus 5 · effort HIGH
+☑ S5-POST-A  THE POST-SWEEP INSTRUMENTS — **COMPLETE.** MODEL: Opus 5 · effort HIGH
+      **Rows 1-6 landed across two sittings; ROW 7 MOVED to `S5-POST-B`** by
+      `RULING__2026-08-27_1600-s5post-2.md` item 4, which also accepted rows 5-6 as landed.
       **SITTING 2, 27 Aug ~10:00: ROWS 5 AND 6 LANDED.** Fresh **BUILD 16 · PROOF 12 · HANDOFF 5
       = 33** for the sitting, under S5's own multi-sitting precedent (*"SAME S5 rung, fresh
       EXECUTION 35 + HANDOFF 13"*, 4 uses) — declared, not assumed. **SPENT 20.14 — inside.**
@@ -6662,7 +6708,27 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       · firing `R01-R04` · re-tuning 0.35 · hand-editing a derived artefact · any remote on the
       artifacts git · staging the LEARNING lane's `SAMJHAO_ORDER` dirt.
 
-☐ S5-POST-B  THE FOLD INTO §9.            MODEL: Opus 5 · effort HIGH · CEILING NOT YET WRITTEN
+☐ S5-POST-B  ROW 7 + THE DIAGNOSIS ROW + THE FOLD INTO §9.   MODEL: Opus 5 · effort HIGH
+      **THREE ITEMS, RULED 27 Aug (`RULING__2026-08-27_1600-s5post-2.md` item 4).**
+      ① **ROW 7's BUILD** — the probe certifier v2, ADVISORY-REPORT-ONLY, fully scoped by the
+        1505 ruling. Per material class · 0.35 untouched on its own material · the canon/corpus
+        bound stamped a HYPOTHESIS WITH A RECEIPT (n=1) · it records twin candidates and NEVER
+        refuses, because the labels do not separate. Do not re-derive any of that.
+      ② **THE DIAGNOSIS ROW — RULER-PRICED BUILD 6 · PROOF 5.** 151 of 475 quotes `verify.mjs`
+        dropped are found by an independent matcher, and the pinned witness is *"a reproducible
+        defect with unknown mechanism"*. **Diagnose FROM THE WITNESS first** — mechanism found
+        ⇒ fix + free re-verify (the Z4 pattern); **not found inside the line ⇒ RECORD IT and S6
+        reads bounds as bounds.** ⛔ Not promoting the lossy-path mechanism was RULED CORRECT:
+        **0.444 / 0.328 / 0.25 is a GRADIENT, not a mechanism.**
+      ③ **THE FOLD INTO §9** — and the receipt check's 71-problem table folds as **S6 EVIDENCE
+        AS-IS, no build** (item 2), joining S6_EVIDENCE_TABLES: 28 of 29 answers, B14_2
+        reproduced, 8 row-repeating receipts. The receipt-inflation class is GENERAL.
+      ⛑ **AND ITEM 3 CORRECTS THE 2045 WORDING ON THE RECORD: the recount matcher is DIFFERENT,
+        not stricter** — 66 keeps missed, 151 drops found. The UPPER-BOUND conclusion stands on
+        the broader basis. Calibration: kept re-found **930/996 ⇒ DIRTY**.
+      ⛔ **ITS OWN CEILING (for ① and ③) IS STILL NOT WRITTEN** — only ② is ruler-priced. A rung
+        this large is priced when its scope is cut, and cutting it is the first act of whoever
+        opens it.
       The sweep's product folded into §9 as SHAPES, beside SHAPES 1-6. **947 verified items across
       nine categories** (`verified.json`: decisions 77 · rulings 138 · promises 95 ·
       alternatives_rejected 86 · missing_implementation 171 · supersessions 45 · declared_unknown
@@ -15993,3 +16059,34 @@ material class, 0.35 untouched on its own material, canon/corpus **ADVISORY-REPO
 the labels do not separate. Then **`S5-POST-B`, the fold into §9 — and it now has two numbers it
 must price before it folds anything: the 151 candidate true drops, and the 28-of-29 inconsistent
 receipts.**
+
+### ADDENDUM 2026-08-27 ~16:00 series / **27 Aug ~10:20 TRUE machine-clock** — the ruling on the two widened classes, folded in the same act
+
+It arrived by channel while the sitting-2 close was being written, and it MOVES ROW 7 out of
+`S5-POST-A` into `S5-POST-B`, so `S5-POST-A` is **COMPLETE** at rows 1-6. The router, both §10-C rows
+and the record above are updated in this same commit; the file is kept verbatim below.
+
+<details><summary><code>queue\RULING__2026-08-27_1600-s5post-2.md</code> — verbatim</summary>
+
+```
+# RULING — series 2026-08-27_1600 (pairs with the POST-A sitting-2 close, `94ee8a2`) · pricing the two widened classes
+1. **The 151-drop finding gets a BOUNDED DIAGNOSIS ROW in S5-POST-B, ruler-priced: BUILD 6 ·
+   PROOF 5.** The pinned witness (byte-exact present, dropped by the same predicate that finds
+   it today) is a reproducible defect with unknown mechanism — diagnose FROM THE WITNESS first;
+   mechanism found → fix + free re-verify (the Z4 pattern); not found inside the line → record
+   + S6 reads bounds as bounds. NOT promoting the lossy-path mechanism was correct (0.444/
+   0.328/0.25 is a gradient, not a mechanism).
+2. **The receipt check's 71-problems table FOLDS AS S6 EVIDENCE as-is** — the receipt-inflation
+   class is GENERAL (28 of 29 answers, B14_2 reproduced, 8 row-repeating receipts). No build;
+   it joins S6_EVIDENCE_TABLES.
+3. **The 2045 refinement is ACCEPTED on the record:** the recount matcher is DIFFERENT, not
+   stricter (misses 66 keeps, finds 151 drops); the UPPER-BOUND conclusion stands on a broader
+   basis. My 2045 wording is corrected by this line.
+4. Rows 5–6 accepted as landed; POST-B = row 7 (advisory-only, per 1505) + the diagnosis row
+   above + the fold.
+
+FOLD: ① POST-B row list + the 6/5 line · ② items 2–3 into the evidence/record · ③ this file
+verbatim.
+```
+
+</details>
