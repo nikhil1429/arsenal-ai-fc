@@ -2796,9 +2796,13 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⚠ **COST 32.7 lakh vs 14+12+5 = 31 — OVER, recorded as over.**
 
   ▶ NEXT SESSION ............... **`S5-POST-B`'s SECOND SITTING — ③ THE FOLD INTO §9, AND NOTHING
-                                   ELSE. MODEL: Opus 5 · effort HIGH. ⛔ ITS CEILING IS NOT WRITTEN —
-                                   cutting its scope and pricing it is your first act**, the same rule
-                                   this sitting followed.
+                                   ELSE. MODEL: Opus 5 · effort HIGH. CEILING **6 FLAT, RULER-WRITTEN**
+                                   (`RULING__2026-08-27_1700`, by channel): *"one record-and-commit cycle
+                                   with margin."* ⛔ **IT IS A RECORD-AND-COMMIT, NOT A BUILD** — the 6
+                                   says so. Nothing is constructed at the fold; the numbers already exist.
+                                   ⛔ **THE 28-ITEM MISSING-TIER GAP STAYS OPEN AND NAMED FOR S6 — NOT
+                                   BUILT**, ruled in the same message. **Close after the fold; then the
+                                   ladder reads S6.**
                                    ✅ **① ROW 7 AND ② THE DIAGNOSIS ROW ARE DONE, 27 Aug ~11:00.**
                                    ⛑ **FOLD THESE NUMBERS, NOT THE OLD ONES — the sweep's yield MOVED:**
                                    **KEPT is 956, not 947** (`ok` 530 · `ok-partial` 62 · `ok-demarked`
@@ -6805,9 +6809,18 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
         refuses anything** — `probe_expected.json` is byte-identical after the run, asserted.
         And it is a separate command, not part of `probe_gen`, because `checkall` re-runs `probe_gen`
         TWICE and this measurement takes minutes.
-      ☐ **③ THE FOLD INTO §9 — CARRIES, and it now has BETTER numbers to fold**: 956 verified items
-        (not 947), the corrected false-drop decomposition above, and the 71-problem receipt table
-        that folds as S6 evidence as-is.
+      ☐ **③ THE FOLD INTO §9 — CARRIES, CEILING 6 FLAT, RULER-WRITTEN** (`RULING__2026-08-27_1700`,
+        by channel: *"one record-and-commit cycle with margin"*). ⛔ **It is a RECORD-AND-COMMIT, not
+        a build — the 6 says so.** It now has BETTER numbers to fold: **956** verified items (not
+        947), the corrected false-drop decomposition above, and the 71-problem receipt table that
+        folds as S6 evidence as-is. ⛔ **The 28-item MISSING-TIER GAP stays OPEN and NAMED for S6 —
+        not built**, ruled in the same message. **Close after the fold; then the ladder reads S6.**
+      ✔ **① AND ② RATIFIED** by the same ruling: the mechanism (*"a transport fact read as a content
+        fact"*) accepted as a clean diagnosis · the fix's **prediction-exactness** — 9 predicted, 9
+        recovered, tiers unmoved, the recount agreeing independently — named *"the Z4 pattern at its
+        best"* · and the **151 → 9 decomposition CREDITED as a correction**, with the pair-sides
+        reading, the 38 looser-matcher artefacts and the 28-item gap all confirmed correctly placed
+        outside the ruled line.
       **PROOF:** `diag/proofs_s5post.mjs` — **61 → 87 assertions, GREEN TWICE, every bound bites**,
       pinned legs extended in `checkall`. `checkall` **GREEN 8/8** · `preflight` **GO**, in-session.
       ⛑ **ONE ASSERTION WENT RED THE MOMENT THE FIX LANDED** — section 5's witness line asserted
@@ -16300,11 +16313,33 @@ stale green there would have been the worse outcome.
 
 #### COST
 
-**17.64 lakh against 25 — inside the line.** Day line 463.57 at open → 481.21 at the gates' close
-(`node scripts/session_meter.mjs status 7`). Artifacts repo: `ddd8b57` (local only, zero remotes).
+**17.64 lakh at the gates' close** (463.57 → 481.21), and **25.82 AT THE TRUE CLOSE against 25 —
+OVER BY 0.82, AND RECORDED AS OVER** (the S4 precedent). Day line 463.57 → **489.39**
+(`node scripts/session_meter.mjs status 7`). **Where it went, exactly: a ruling arrived by channel
+after the close was written — ratifying ① and ② and setting ③'s ceiling at 6 — and folding it in
+the same act is work no ceiling had priced, because the ruling did not exist when the sitting
+opened.** Second sitting running hot for the same reason; **that pattern is now worth naming: a
+mid-close ruling costs a fold the HANDOFF line does not carry.** Ceiling NOT re-derived — §10-C:
+unit faults only, and this is a rung running hot, which is data about the rung.
+Artifacts repo: `ddd8b57` (local only, zero remotes).
+
+⛔ **③ WAS NOT STARTED, AND THAT IS §10-D RULE 2, NOT A SCOPE CHANGE.** The fold's own ceiling is 6
+and this sitting was already past 25 when the ruling landed. It carries whole, with its price now
+written by the ruler rather than by me.
 
 #### WHAT THE NEXT SESSION DOES
 
 **`S5-POST-B`'s second sitting — ③ THE FOLD INTO §9, and nothing else.** Its ceiling is not written;
 cutting its scope and pricing it is the first act. **Fold 956, not 947**, and fold the corrected
 decomposition — never "151 lost findings".
+
+### ADDENDUM 2026-08-27 ~17:00 series / **27 Aug ~11:15 TRUE machine-clock** — the ruling on this sitting, folded in the same act
+
+It arrived by channel after the close was written. **① and ② RATIFIED** — the mechanism accepted as a
+clean diagnosis, the fix's prediction-exactness named *"the Z4 pattern at its best"*, and the 151 → 9
+decomposition **credited as a correction**. **③ THE FOLD'S CEILING IS RULER-WRITTEN: 6 FLAT** — *"one
+record-and-commit cycle with margin"*. **The 28-item missing-tier gap stays OPEN and NAMED for S6,
+not built.** *"Close after the fold; then the ladder reads S6."*
+
+⛔ **③ WAS NOT STARTED HERE** — the sitting was already past its 25 when the ruling landed. §10-D
+rule 2, not a scope change.
