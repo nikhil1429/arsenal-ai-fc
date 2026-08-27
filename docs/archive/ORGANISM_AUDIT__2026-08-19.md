@@ -75,9 +75,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                    shape) and BUILT no earlier than the registry says. A session
                                    that patches it early is refused — this is a decided thing.
   S5  THE GEMINI SWEEPS ........ ◐ **STALE AS WRITTEN BELOW — corrected here, not rewritten (L9).
-                                   AS OF 27 Aug ~05:30: the CORPUS half is CLOSED 18/18, and the
-                                   CANON-B half is `G01` ☑ 4/4 · `G02` ☑ 4/4 · `G03` ◐ 3 of 4
-                                   (`G03_4` owed, one paste). Then `F3` → S5-Z9 → S5-POST. The
+                                   AS OF 27 Aug ~06:20: the CORPUS half is CLOSED 18/18, and the
+                                   CANON-B half is `G01` ☑ 4/4 · `G02` ☑ 4/4 · `G03` ◐ **3.5 of 4
+                                   — `G03_4` FIRED, RETURNED and PARKED sha-pinned at `diag/`
+                                   (minified JSON; the copy-gate's <3-line vacuity guard cannot be
+                                   satisfied), it captures at Z9's close and G03 closes there.**
+                                   **THE SEQUENCE REORDERED 27 Aug ~06:20: S5-Z9 → `F3` → S5-POST**
+                                   (`RULING__2026-08-27_1315-s5canonb-7.md` reverses the 1255
+                                   ruling's item 4 — F3's probe cannot be certified until Z9
+                                   lands `probe_gen`'s `attaches_answers` branch). The
                                    "ZERO Gemini calls" sentence below was true on 20 Aug and is
                                    FALSE now; the ▶ NEXT SESSION router is the authority.**
                                    ◐ PREPARED, NOT RUN. Its STEP 0 is ☑ DONE and proven; the
@@ -2761,9 +2767,69 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⚠ **~20.5 of the 35-lakh EXECUTION line** (day 3.40 → 23.85).
                                    **INSIDE** — and declared a FLOOR: the orientation read happened
                                    BEFORE that baseline was taken.
-  ▶ NEXT SESSION ............... **③ THE CANON-B CHATS — FIRE `G03_4` (THE CRITIC) FIRST, IN THE
-                                   ALREADY-OPEN CHAT `gemini.google.com/app/dc1dc51874d75412`.
-                                   IT IS ONE PASTE AND IT CLOSES THE CANON HALF'S LAST GROUP.**
+  ▶ NEXT SESSION ............... **S5-Z9 · THE DEMARK JOIN — ITS OWN SESSION, AND IT NOW RUNS
+                                   *BEFORE* `F3`. MODEL: Opus 5 · effort HIGH ·
+                                   BUILD 11 · PROOF 10 · HANDOFF 5.**
+                                   **THE SEQUENCE: S5-Z9 → `F3` → S5-POST.** Reordered 27 Aug
+                                   ~06:20 by `RULING__2026-08-27_1315-s5canonb-7.md`, which
+                                   REVERSES the 1255 ruling's item 4 on its own record: F3's
+                                   deferred probe cannot be certified until `probe_gen` learns
+                                   an `attaches_answers` branch, and that branch is Z9's fourth
+                                   scope item. **Read the §10-C S5-Z9 row — it carries the full
+                                   four-item plate; do not work from this summary.**
+                                   ⛔ **`F3` IS NOT FIRE-ABLE YET AND THE REASON IS MECHANICAL,
+                                   NOT CAUTION:** `probecheck` reads `probe_expected.json` keyed
+                                   by CHAT, that file is `probe_gen`'s OUTPUT, and F3's haystack
+                                   is three ANSWER files — so until Z9 lands the branch there is
+                                   NOWHERE CERTIFIED for F3's probe to live. Firing it probe-less
+                                   or judging it with a diag script are BOTH forbidden by
+                                   `RULING__2026-08-27_0715-s5z4-2.md` item 2: *"a deferral is
+                                   not an exemption."*
+                                   ⚑ **THE 1150 MANUAL TWIN-SCAN IS SUPERSEDED INTO THAT BRANCH,
+                                   MECHANICALLY** — the certification runs the paraphrase-twin bar
+                                   itself, and it now binds EVERY future deferred probe, not just
+                                   F3's. F3's wiring row keeps `probe_deferred_twin_scan` as the
+                                   RECORD of why the bar exists; the RUNNING of it moved to Z9.
+                                   ✅ **`G03` IS 3.5 of 4 — `G03_4` FIRED, RETURNED AND IS PARKED,
+                                   NOT OWED.** 57 edges, valid JSON, `item_count` returned as an
+                                   OBJECT (`{"edges":51}`) against a real array of 57.
+                                   `capture.mjs` REFUSED it and the refusal is STRUCTURAL, not a
+                                   fault: **the model emitted MINIFIED JSON, so the copy-gate's
+                                   `< 3 rendered content lines` VACUITY GUARD cannot be satisfied
+                                   at all.** Its SUBSTANCE passed 1/1. Payload parked sha-pinned
+                                   at `diag/G03_4_raw.txt` `6c4cb2b598c4e159` +
+                                   `diag/G03_4_rendered.txt` `02ff0bfdbfa6d4a0`; **it captures at
+                                   Z9's close as the minified branch's first live case, and G03
+                                   closes there.** ⛔ **DO NOT re-fire it, do not re-ask, and do
+                                   NOT `--lossy` it** — the payload is markdown-BEARING RAW and a
+                                   `rendered-lossy` stamp would be a FALSE stamp, the alphabet
+                                   class at a new site.
+                                   ⚑ **`F3`'s CRITIC IS PRE-AUTHORIZED THE SAME PARKING** if it
+                                   returns minified — park, sha-pin, **no re-escalation**
+                                   (`RULING__2026-08-27_1255-s5canonb-6.md` item 3).
+                                   ⛔ **THE WRITTEN FOUR-HOP'S SEND STEP FAILED THREE TIMES AND A
+                                   KEYBOARD COMMIT SUCCEEDED INSTANTLY — USE IT.** Three
+                                   consecutive `computer` clicks on Send left the payload in the
+                                   box with `turns` unmoved (the click+forced-paint rule obeyed
+                                   every time, the composed sha `e86d17ca7b3cd104` re-asserted
+                                   before each, never re-composed blind). **Clicking into the
+                                   editor and pressing `Return` committed on the first try.**
+                                   ⇒ **the G02 discriminator — *"every failure was the first
+                                   `computer` click on that tab since it loaded"* — is REFUTED:**
+                                   clicks 2 and 3 were not first, and click 3 was made with the
+                                   editor verified focused. Instances 8-10; a RUN with a NEW
+                                   candidate remedy, promoted to nothing.
+                                   ⚠ **THE ONE-SHOT DOWNLOAD RULE BIT AGAIN, AND ROUTE ③ ABSORBED
+                                   IT** — the critic path needs TWO files; the raw landed and the
+                                   rendered was silently refused in the same tab. A FRESH TAB on
+                                   the same chat delivered it, **and that tab's independent read
+                                   returned the IDENTICAL sha `02ff0bfdbfa6d4a0`** — two
+                                   independent reads agreeing, which is also what proves the
+                                   answer whole.
+                                   ✅ **THE CLIPBOARD-WRITE INTERCEPT WORKED FIRST TIME AND DID
+                                   NOT HANG** — `navigator.clipboard.write` intercepted, original
+                                   NOT called, `ClipboardItem` fully built, `text/plain` Blob read
+                                   clean (23,560 B). Second live use, zero hangs.
                                    SAME S5 rung, fresh EXECUTION 35 + HANDOFF 13.
                                    ⛔ **G03 IS 3 of 4, NOT CLOSED. `G03_1/2/3` ARE CAPTURED AND
                                    VERIFIED; `G03_4` WAS NOT FIRED — the sitting hit 33.58 of the
@@ -2829,7 +2895,13 @@ STATUS (update this block before any session stops — this is the handoff)
                                    answers miscount their OWN array** (declared 49/50 · 31/51 ·
                                    103/96). verify catches every one.
                                    ⚠ **READ `KEPT` FROM `verified.json`, NEVER BY SUBTRACTING
-                                   `dropped.json`'s ROW COUNT** — that file carries ONE ANSWER-LEVEL
+                                   `dropped.json`'s ROW COUNT — AND THIS IS NOW PROVEN IN *BOTH
+                                   DIRECTIONS MEASURED*** (`RULING__2026-08-27_1220-s5canonb-5.md`
+                                   item 2): the row count **OVER**-reports at G01 (an ANSWER-LEVEL
+                                   row sits among the item rows) and **UNDER**-reports at G03
+                                   (duplicate quotes collapse — G03_2 = 46 items, 0 kept, 45 rows;
+                                   G03_3 = 102 items, 0 kept, 68 rows). **Do not derive KEPT from
+                                   that file at all, in either direction.** — that file carries ONE ANSWER-LEVEL
                                    row per `item_count` mismatch beside its per-item rows. Counting
                                    it as an item drop is what put a wrong "26" in the G01 entry
                                    (true: 27); the correction and the reconciliation are in the
@@ -2917,6 +2989,32 @@ STATUS (update this block before any session stops — this is the handoff)
                                    these notes still binds any lane that drives his Chrome. The three
                                    directly below are B18's own, and the first one BREAKS what was
                                    written.
+                                   ✅ **STANDING, RATIFIED 27 Aug (`RULING__2026-08-27_1220-s5canonb-5.md`
+                                   item 1) — THE CLIPBOARD-WRITE INTERCEPT IS THE FIRST HOP OF THE COPY
+                                   READ, ON EVERY PATH THAT USES THE COPY BUTTON.** Hook
+                                   `navigator.clipboard.write`, keep the `ClipboardItem`, and **DO NOT
+                                   call the original**: the `ClipboardItem` is fully built and its
+                                   `text/plain` Blob reads clean, while forwarding to the OS clipboard
+                                   is the MEASURED HANG SITE (two `Runtime.evaluate` deaths at the 45 s
+                                   CDP limit on a live, responsive tab). Same bytes at source, the 0855
+                                   same-call binding + sha contract unchanged, **nothing loosened** —
+                                   and it makes the router's own claim *"the OS clipboard stays off the
+                                   answer path"* literally true. **Occurrence 11 is the FIRST clipboard
+                                   instance with a named failing component instead of a tally mark, and
+                                   it is FILED to S11's instrumentation lead as its first mechanism
+                                   evidence.** Second live use at `G03_4`: worked first time, no hang,
+                                   23,560 B read out of the Blob.
+                                   ⛔ **AND THE SEND STEP HAS A KEYBOARD COMMIT NOW — MEASURED AT
+                                   `G03_4`.** THREE consecutive `computer` clicks on Send failed to
+                                   commit (payload in the box, `turns` unmoved, click+forced-paint
+                                   obeyed each time, composed sha re-asserted before every attempt);
+                                   **clicking into the editor and pressing `Return` committed on the
+                                   first try.** ⇒ **the G02 discriminator is REFUTED** — clicks 2 and 3
+                                   were not the first `computer` click on that tab, and click 3 was made
+                                   with the editor verified focused. Instances 8-10 of the
+                                   non-committing send. A RUN with a new candidate remedy; no mechanism
+                                   named, so nothing is promoted. **Read `turns` back after every send,
+                                   always; re-assert the composed sha; never re-compose blind.**
                                    ⛔ **THE WRITTEN FOUR-HOP'S HOP 4 IS DEAD: `execCommand('insertText')`
                                    DOES NOT SURVIVE IN GEMINI'S COMPOSE BAR.** It is a **Quill** editor.
                                    `insertText` put the text in the DOM and `innerText` read **7,001** —
@@ -5714,8 +5812,12 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
 ☐ S5-Z9 THE DEMARK JOIN — a micro-rung, RULED by the architect 27 Aug ~02:35 TRUE machine-clock
       (`queue\RULING__2026-08-27_0750-s5canonb-1.md`), off G01_2. **Escalated, not decided by the
       executor: accepting a demarked match is a LOOSENING, and §10-D rule 6 forbids one on an
-      executor's own word.** MODEL: Opus 5 · effort HIGH. **RUNS AFTER the canon-B drive, NEVER
-      interleaved (the Z4 precedent), and BEFORE S5-POST.**
+      executor's own word.** MODEL: Opus 5 · effort HIGH. ~~**RUNS AFTER the canon-B drive, NEVER
+      interleaved (the Z4 precedent), and BEFORE S5-POST.**~~ ⛔ **CORRECTED 27 Aug ~06:20 by
+      `RULING__2026-08-27_1315-s5canonb-7.md` item 1 — THIS RUNG NOW RUNS *BEFORE* `F3`, IN ITS OWN
+      SESSION.** The line above is kept, struck, not deleted (L9). The ruler's reason, in his words:
+      *"mid-drive Z-rungs are the settled precedent (Z…Z8); 'after the drive' was convenience, not
+      law"* — and F3's gate now has three Z9 dependencies. It still runs BEFORE S5-POST.
       WHY: `verify.mjs` greps each quote byte-strict at the document the item named. Measured on
       G01_2's 100 quote-sides (`diag/g01_2_named_source.mjs`): **11 byte-exact at the named source ·
       62 exact there once markdown decoration is stripped · 4 real-quote/wrong-doc · 23 absent ·
@@ -5751,17 +5853,77 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       FORBIDDEN: any second copy of the normalization anywhere (Z7's lesson, asserted mechanically)
       · any decoration outside the declared set · any change to the byte-strict top tier · any
       step, prompt, wiring or frozen-byte change · any Gemini call · any audit question.
+      ⚑ **+SCOPE GRANTED 27 Aug ~06:10 TRUE machine-clock — ONE narrow item, ruler-written
+      (`RULING__2026-08-27_1255-s5canonb-6.md` item 1): A DECLARED *MINIFIED* BRANCH OF THE
+      COPY-GATE.** `mdrender.isThisAnswer` requires **>= 3 rendered content lines of >= 25 chars**
+      — a VACUITY GUARD, correct in general and **structurally unsatisfiable when the model emits
+      MINIFIED JSON**, because the whole answer is then ONE line. Measured live at `G03_4`
+      (`diag/g03_4_gate_measure.mjs`): 1 rendered content line, **contained 1/1, allContained TRUE
+      — the gate's SUBSTANCE passes and only its arity clause refuses.** ⇒ **for a single-line
+      payload the 3-line sampling clause is REPLACED by a STRICTER whole-payload containment check
+      plus the existing substance clause**, stamped so a minified capture is **its own tier**, and
+      bite-proven IDEMPOTENT. **The gate gets STRICTER on this branch, never looser — §10-D rule 6
+      is satisfied by construction.** A dedicated micro-rung was REFUSED as the no-consumer class:
+      remaining consumers ~1 (F3's critic).
+      ⇒ **`G03_4` IS THIS BRANCH'S FIRST LIVE CAPTURE at Z9's close** — the B04_2/S5-Z5 precedent
+      at its FOURTH use; the payload is parked at `diag/G03_4_raw.txt` + `diag/G03_4_rendered.txt`
+      with its transit shas in the record (the 1205 interim law, 2nd use). **G03 closes at Z9.**
+      ⚑ **+SCOPE, FOURTH ITEM, GRANTED 27 Aug ~06:20 TRUE machine-clock — AND IT REORDERS THE
+      LADDER: `RULING__2026-08-27_1315-s5canonb-7.md` items 1-2. `probe_gen.mjs` LEARNS AN
+      `attaches_answers` HAYSTACK BRANCH, emitting a `canon_cross` row into `probe_expected.json`
+      THROUGH ITS OWN WRITER** — so determinism (24/24 byte-identical, re-proven at S5-R2),
+      ownership and `probecheck`'s read path are ALL unchanged. **⇒ `S5-Z9` NOW RUNS *BEFORE* `F3`,
+      and the ruler REVERSED HIS OWN 1255 item 4 on the record to say so:** that sequence assumed
+      F3 had no Z9 dependency, and F3's own gate now has three. **Mid-drive Z-rungs are the settled
+      precedent (Z … Z8); "after the drive" was convenience, not law.**
+      ⇒ **AND THE 1150 MANUAL TWIN-SCAN IS SUPERSEDED INTO THIS BRANCH, MECHANICALLY** (item 2):
+      the certification runs the paraphrase-twin bar ITSELF instead of a hand-run diag — strictly
+      better, and it binds **every future deferred probe**, not only F3's. F3's wiring row keeps
+      `probe_deferred_twin_scan` as the RECORD of why the bar exists; the RUNNING of it moves here.
+      WHY IT WAS ESCALATED, NOT TAKEN: `probecheck` reads `probe_expected.json` keyed by CHAT and
+      that file is `probe_gen`'s OUTPUT; F3's haystack is three ANSWER files, so every route the
+      executor could see collided with a standing law — teach probe_gen (**S5 builds nothing**) ·
+      point probecheck elsewhere (same wall) · hand-write the row (**owners-only**, and it kills the
+      proven determinism) · judge with a diag script or fire probe-less (**0715 item 2: "a deferral
+      is not an exemption"**). Asked BEFORE spending, at ~14.6 of 35.
+      **Z9'S FULL PLATE, restated by the ruler so nothing is lost:** ① the demark join + tiers ·
+      ② the minified branch + `G03_4`'s live capture · ③ `probe_gen`'s answers-branch carrying the
+      twin bar · ④ the FREE re-verify of every stored answer.
       DONE-PROOF: idempotent bite-proofs — **a demarked match may NEVER stamp byte-exact** (the tier
       split itself) · the join REFUSES anything beyond the declared decoration set · **no second
       live copy** of the normalization · the stored-answer regression · all answers re-verified at
-      close with the tier split visible per answer · checkall GREEN 8/8 + preflight GO, in-session.
-                                    BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written
-                                    (RULING__2026-08-27_0750 item 4).
+      close with the tier split visible per answer · **the minified branch bites BOTH ways (a true
+      single-line pair captures; a genuine FRAGMENT is still refused)** and `G03_4` captures live ·
+      **the `canon_cross` probe certifies through probe_gen's own writer, its anchor passes the
+      uniqueness AND paraphrase-twin bars, its expected answer is STORED, and a non-unique anchor
+      is proven to be REFUSED** · checkall GREEN 8/8 + preflight GO, in-session.
+                                    BUILD 11 · PROOF 10 · HANDOFF 5 — ruler-written, RE-DERIVED
+                                    TWICE for the +scope: 8/8/5 (`RULING__2026-08-27_0750` item 4)
+                                    → 9/9/5 (`RULING__2026-08-27_1255-s5canonb-6.md` item 1, the
+                                    minified branch) → **11/10/5**
+                                    (`RULING__2026-08-27_1315-s5canonb-7.md` item 3).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
-      ▸ **THE CANON-B HALF IS OPEN — `G01` AND `G02` CLOSED 4/4; `G03` IS 3 of 4 AND STOPPED AT
-      ITS CEILING** (27 Aug ~02:45 · ~04:05 · ~05:30 TRUE machine-clock). **`G03_4` (the critic)
-      IS THE ONLY THING OWED IN THE CANON HALF.** Then `F3` (its deferred probe still
-      uncertified), then **S5-Z9**, then S5-POST.
+      ▸ **THE CANON-B HALF IS OPEN — `G01` AND `G02` CLOSED 4/4; `G03` IS 3.5 of 4** (27 Aug
+      ~02:45 · ~04:05 · ~05:30 · ~06:00 TRUE machine-clock). **`G03_4` HAS BEEN FIRED, RETURNED,
+      MEASURED AND *PARKED* — 57 edges, valid JSON, two independent witnesses, and `capture.mjs`
+      REFUSED it for a structural reason that is not a fault: the model emitted MINIFIED JSON, so
+      the copy-gate's `< 3 rendered lines` VACUITY GUARD is unsatisfiable.** Payload parked at
+      `diag/G03_4_raw.txt` (`6c4cb2b598c4e159`) + `diag/G03_4_rendered.txt` (`02ff0bfdbfa6d4a0`),
+      both in-page == on-disk, the rendered sha reproduced IDENTICALLY on an independent fresh-tab
+      read. **It captures at S5-Z9's close as the minified branch's FIRST LIVE CASE and G03 closes
+      there** (`RULING__2026-08-27_1255-s5canonb-6.md` item 2 — the B04_2/Z5 precedent, 4th use;
+      the 1205 interim law, 2nd use).
+      ⚑ **THE SEQUENCE REORDERED 27 Aug ~06:20 — `S5-Z9` NOW RUNS *BEFORE* `F3`**
+      (`RULING__2026-08-27_1315-s5canonb-7.md`), because F3's deferred probe cannot be certified
+      until `probe_gen` learns an `attaches_answers` branch, which is Z9's fourth scope item.
+      **⇒ close this sitting → S5-Z9 (own session, BUILD 11 · PROOF 10 · HANDOFF 5) → F3 → S5-POST.**
+      ⚑ **`F3`'s CRITIC IS PRE-AUTHORIZED THE SAME PARKING** if it also returns minified — park at
+      `diag/`, sha-pinned, **no re-escalation** (`RULING__2026-08-27_1255-s5canonb-6.md` item 3).
+      ⛔ **AND THE MINIFIED REFUSAL IS A FIFTH SITE OF THE SAME FAMILY, WORTH NAMING: a gate whose
+      predicate assumes a SHAPE the material is free to change.** The `< 3` clause is a vacuity
+      guard — right in general, unsatisfiable here — and it refused a payload whose SUBSTANCE it
+      passed **1/1** (`diag/g03_4_gate_measure.mjs`: `allContained TRUE`, `refusedBy "the <3-lines
+      vacuity guard"`). Not a loosening question: Z9's branch makes the gate STRICTER.
       ⛔ **G03's PROBE FAILED IN TWO FRESH CHATS AND THE GROUP CONTINUED ON A RECORDED OVERRIDE —
       `RULING__2026-08-27_1150-s5canonb-4.md`, the B03 branch-B precedent at its SECOND use.**
       The tail FAIL is **INSTRUMENT-SIDE**: `chunk27.txt` carries a PARAPHRASE TWIN of the anchor
@@ -14467,3 +14629,181 @@ call was to stop one paste short rather than breach for the sake of a round numb
 probe pastes the instrument defect cost are what put this sitting at the line — that is the price
 of the defect, and it is recorded as the defect's, not as driving error. G03 is **3 of 4**; one
 paste in an already-open chat closes it. Records ride the 13-lakh HANDOFF line.
+
+### PROGRESS 2026-08-27 ~12:20 series / **27 Aug ~06:25 TRUE machine-clock** — **`G03_4` FIRED, RETURNED AND IS PARKED: the sweep's first MINIFIED answer made a correct gate structurally unsatisfiable, and the send that had never failed twice failed three times before a keyboard commit took it first try**
+
+Rung S5, the canon-B chats, sitting 4. Opus 5 · effort HIGH · **AUTO mode** · fresh **EXECUTION 35 +
+HANDOFF 13**. Micro-order written before any act (§10-D rule 9). Router obeyed (rule 1), not the
+fallback. Wiring read from `wiring.json` (nested), never from prose. `R01-R04` untouched. `F3` not
+fired. **STEP 0: `checkall` GREEN 8/8 · `preflight` GO**, both in-session, both redirected to a file
+and read with the file tools (the 27-Aug classifier lesson) — **and §7 was GREEN AT OPEN for the
+second sitting running.**
+
+#### THE HEADLINE — a gate refused a paid answer, and the gate was right about everything except its own arity
+
+`G03_4` (the critic) went into the already-open chat `dc1dc51874d75412` — Pro Extended, **read BACK
+off the page after a full reload** — and came back **complete: valid JSON, 57 edges, 23,491 chars.**
+Then `capture.mjs` **REFUSED to save it.**
+
+The reason is structural and it is not a fault. `mdrender.isThisAnswer` requires **at least 3
+rendered content lines of >= 25 chars**, and that every one of them appear in the raw payload. That
+`< 3` clause is a **vacuity guard** — it exists so a FRAGMENT cannot pass as *"0 of 0 matched,
+therefore fine"*. **The model emitted MINIFIED JSON. The whole answer is ONE line.** So the clause is
+not merely unmet; on this shape of answer it is **unsatisfiable**.
+
+Measured, no instrument touched (`diag/g03_4_gate_measure.mjs`):
+
+```
+rawChars 23491 · renderedChars 23483
+rawSha      6c4cb2b598c4e159   in-page == on-disk
+renderedSha 02ff0bfdbfa6d4a0   in-page == on-disk, AND identical on an independent FRESH-TAB read
+renderedLinesGE25 1 · containedCount 1 · allContained TRUE
+refusedBy "the <3-lines vacuity guard"
+rawParsesAsJson true · keys [edges, files_covered, item_count, coverage_note] · edgeCount 57
+```
+
+**The gate's SUBSTANCE passes 1/1. Only its arity clause refuses.** And the payload carries TWO
+independent witnesses — the whole-payload sha in-page == on-disk, and a second read of the answer
+element taken in a *different tab* returning the identical sha — which is exactly the corroboration
+the rendered witness exists to provide.
+
+**What I did NOT do, and each refusal has a reason:** no `--lossy` (the payload is markdown-BEARING
+RAW; a `rendered-lossy` stamp is a FALSE STAMP — the alphabet class at a new site) · no re-ask (this
+is the probe-FAILED override chat; the no-re-ask ban binds a suspect-context chat) · no instrument
+edit (**S5 builds nothing**) · no step-file edit (derived artifact) · no gate weakened. The answer
+was left on disk, sha-pinned, and the fork was escalated **with the measurement already in hand.**
+
+#### THE TWO RULINGS, VERBATIM
+
+**`RULING__2026-08-27_1255-s5canonb-6.md`** (pairs with `queue\2026-08-27_1250-s5canonb-5.md`):
+
+> The verdict is proven-false in the ruled sense (substance 1/1 passes; only the line-arity clause is
+> structurally unsatisfiable on minified output; the payload carries TWO independent witnesses —
+> in-page==on-disk sha AND an identical fresh-tab read, which is exactly the corroboration the
+> rendered witness exists to give).
+>
+> 1. **B-with-A ACCEPTED IN SUBSTANCE — but it RIDES S5-Z9 (+scope), not a new rung.** Remaining
+>    consumers ~= 1 (F3's critic); a dedicated micro-rung is the no-consumer class. Z9 gains one
+>    narrow item: **a declared MINIFIED branch of the copy-gate — the 3-line sampling clause is
+>    REPLACED for single-line payloads by a STRICTER whole-payload containment check + the
+>    existing substance clause**; stamped so a minified capture is its own tier, bites idempotent.
+>    **Z9 re-derived 8/8/5 -> 9/9/5** (scope, ruler-written).
+> 2. **G03_4 PARKS NOW at diag/ with its transit sha in the record** (the 1205 interim law, 2nd
+>    use) and **captures at Z9's close as the branch's first live case** (the B04_2/Z5 precedent,
+>    4th use). G03 ticks 3.5 of 4, closes at Z9.
+> 3. **F3's critic is PRE-AUTHORIZED the same parking** if it returns minified — no re-escalation.
+> 4. Sequence unchanged otherwise: **F3 next (G03_4 does not block it) -> Z9 -> S5-POST.**
+
+**`RULING__2026-08-27_1315-s5canonb-7.md`** (pairs with `queue\2026-08-27_1310-s5canonb-6.md`):
+
+> ORIGINAL: `queue\2026-08-27_1310-s5canonb-6.md`. Asked before spending — correct.
+>
+> 1. **RIDE IT ON Z9, AND THE SEQUENCE REORDERS: Z9 RUNS BEFORE F3.** My 1255 item 4 is REVERSED
+>    by me, on the record: that sequence assumed F3 had no Z9 dependency; F3's own gate now has
+>    three (the probe_gen branch, and Z9's demark/minified work feeding the same verify pass).
+>    Mid-drive Z-rungs are the settled precedent (Z…Z8); "after the drive" was convenience, not
+>    law.
+> 2. **Z9 gains the narrow item as recommended:** `probe_gen` learns an `attaches_answers`
+>    haystack branch, emitting `canon_cross` through its OWN writer — determinism preserved,
+>    owners-law intact. **The 1150 manual twin-scan line is SUPERSEDED into this branch
+>    mechanically** (the certification runs the twin bar itself — strictly better than a
+>    hand-run diag, and it binds every future deferred probe, not just F3's).
+> 3. **Z9 re-derived 9/9/5 -> BUILD 11 · PROOF 10 · HANDOFF 5** (ruler-written; fourth scope item).
+>    Z9's full plate, restated so nothing is lost: demark join + tiers · minified branch +
+>    G03_4 capture · probe_gen answers-branch with twin bar · free re-verify of all answers.
+> 4. **Sequence now: close this sitting -> S5-Z9 (own session, 11/10/5) -> F3 (certified probe,
+>    twin bar mechanical) -> S5-POST.**
+
+**The second escalation is the one worth reading twice, because it was asked BEFORE anything was
+spent.** With `G03_4` parked, the router said F3 next — and F3's deferred probe has **nowhere
+certified to live**: `probecheck` reads `probe_expected.json` keyed by CHAT, that file is
+`probe_gen`'s OUTPUT, and F3's haystack is three ANSWER files. Every route collided with a standing
+law (teach probe_gen = **S5 builds nothing** · point probecheck elsewhere = same · hand-write the row
+= **owners-only**, and it kills probe_gen's proven 24/24 determinism · judge with a diag script or
+fire probe-less = **0715 item 2, "a deferral is not an exemption"**). **Both folds owed from the
+previous close are also discharged here** (`RULING__2026-08-27_1220-s5canonb-5.md`: the intercept
+onto the transport block · KEPT-from-`verified.json` gaining *"both directions measured"*).
+
+#### THE ANSWER ITSELF — a PRE-Z9 BOUND, and the best-grounded canon answer of the drive
+
+Method unchanged: every quote grepped at **the document the item itself named**
+(`diag/g03_4_measure.mjs`, measurement only, no instrument touched). `verify.mjs` has NOT run on it —
+it cannot, until the answer is captured — so this is a raw grounding measurement, not a verdict.
+
+| step | items | declared | real at named source | wrong-doc | invention UPPER BOUND | docs outside group |
+|---|---|---|---|---|---|---|
+| G03_2 Q1 contradictions | 46 | 46 exact | 61/92 sides (66.3%) | — | 27.2% | 0 |
+| G03_3 Q4 declared edges | 102 | 102 exact | 76/102 (74.5%) | — | 24.5% | 0 |
+| **G03_4 critic (2nd pass)** | **57** | **`{"edges":51}`** | **39/57 (68.4%)** | **10** | **14.0%** | **0** |
+
+⚡ **14.0% is the LOWEST invention bound of any canon answer in the drive** (G02_4's critic was 18.0%;
+G03_2/G03_3 were 27.2% / 24.5%). The critic pass is the best-grounded answer group 3 produced.
+
+⛔ **AND `item_count` FAILED IN A NEW WAY — IT IS NOT A NUMBER.** It came back as an **OBJECT**,
+`{"edges":51}`, against a real array of **57**. Every prior instance of this family was a wrong
+INTEGER (49-for-50, 31-for-51, 103-for-96); this is a wrong TYPE. **Fifth instance of "the model's
+own `item_count` is unreliable", first of the type-shaped kind** — and it is worth naming because a
+consumer that reads `item_count` as a number gets `NaN` here, not a wrong number.
+
+✔ **THE STEP'S HARDEST INSTRUCTION WAS OBEYED, WHICH IS NOT NOTHING.** `G03_4.txt` demands *"AT LEAST
+TWO KINDS THAT WERE NOT IN THE ORIGINAL LIST"*. G03_3 returned four kinds; **G03_4 returned those
+four plus exactly two new ones — `event_trigger` and `guard_enforcement`.** Measured, not claimed.
+
+✔ **`coverage_note` CAME BACK NON-EMPTY — 831 chars, and SPECIFIC** (it names `SPRINT.md`,
+`THE_GAFFER_PITCH.md`, `THE_GAFFER_STORY.md` as the quiet files it went back to, and
+`WORKING_MEMORY_ARCHITECTURE.md` + `UNLEASH_PLAN__2026-08-14` as where it still believes findings
+hide). **This is the FIRST non-empty `coverage_note` of the canon drive** — G02_3, G03_2 and G03_3
+were all empty. One instance, recorded as one: **the CRITIC prompt asks the honesty question in a
+different place than the Q1/Q4 prompts do, and that is an S6 observation, not a law.**
+
+⚠ `files_covered` reported **14** against the group's ground truth of **18 distinct documents**
+(77.8%) — inside the 72-83% band group 3 already measured, and below G02's ~90%.
+
+#### TRANSPORT — a send failure the written remedy could not fix, and the remedy that did
+
+- ⛔ **THREE CONSECUTIVE `computer` CLICKS ON SEND DID NOT COMMIT. A `Return` KEYPRESS DID, FIRST
+  TRY.** Every click obeyed the standing rule (click + a forced CDP paint in the same batch); after
+  each, `turns` was read back unmoved and the composed sha **re-asserted `e86d17ca7b3cd104` before
+  the next attempt — never re-composed blind.** Click 3 was made with `document.activeElement`
+  verified to BE the Quill editor. Then: click into the editor, press `Return` -> `userTurns` 3->4,
+  box emptied, committed. **Instances 8, 9 and 10 of the non-committing send.**
+  ⇒ **THE G02 DISCRIMINATOR IS REFUTED.** It proposed *"every failure was the first `computer` click
+  on that tab since it loaded"*; clicks 2 and 3 were not first. Under the standing epistemics note
+  this is a **RUN with a new candidate REMEDY**, not a law — no mechanism named — but the remedy is
+  cheap, immediate and now on the router.
+- ⚠ **A STRAY CLICK OF MINE OPENED THE MODE PICKER, AND I SAY SO.** Reaching for the editor I used a
+  guessed coordinate instead of a `getBoundingClientRect` one and hit the mode button. **The menu
+  OPENED; nothing was selected; `Escape` closed it; the mode was re-read as `Pro Extended` before
+  anything else happened.** Cost: zero. Recorded because the standing negative is *"measure, never
+  mutate his environment"*, and a click I did not intend is exactly that class. **Rect-derived
+  coordinates only, from here.**
+- ⚠ **THE ONE-SHOT DOWNLOAD RULE BIT — 4th time, and 2nd time on a critic.** The declared critic path
+  needs TWO files: the raw landed (`6c4cb2b598c4e159`, in-page == on-disk) and the rendered was
+  **silently refused** in the same tab. **No retry in place** — route ③, a fresh tab on the same
+  chat, and it landed. **That tab's INDEPENDENT read returned the identical sha `02ff0bfdbfa6d4a0`**,
+  which is simultaneously the delivery and the proof the answer was whole.
+- ✅ **THE CLIPBOARD-WRITE INTERCEPT, SECOND LIVE USE: NO HANG.** `navigator.clipboard.write` hooked,
+  original NOT called, `ClipboardItem` fully built, `types` `[text/html, text/plain]`, the
+  `text/plain` Blob read clean at 23,560 B. Ratified at the last close as the standing first hop; it
+  behaved exactly as ruled.
+- ⚠ **`Page.captureScreenshot` timed out once and the page kept answering `Runtime.evaluate`
+  instantly — 4th confirmation** that it is a screenshot-path signal, not a dead renderer.
+- ⚠ **A `Runtime.evaluate` THAT AWAITS LONGER THAN ~45 s DIES ON THE CDP LIMIT — my own mistake,
+  recorded as transport knowledge:** a 60 s in-page sleep killed the call on a healthy page. **Long
+  waits belong in `computer wait` (max 10 s each, batched), never inside the evaluated script.**
+- ✔ **COMPLETION WAS READ THE RULED WAY:** byte-stability (23,483 chars across three reads ~50 s
+  apart) **plus a well-formed close** (the fenced block `JSON.parse`d in-page), while the busy flag
+  still said "Stop response" — the stale-busy-flag class, holding exactly as B17 wrote it.
+- ✔ **Read off `message-content`, never `model-response`** (the last close's finding), and the mode
+  read BACK off the page after a full reload.
+
+#### CEILING
+
+⚠ **23.78 of the 35-lakh EXECUTION line at the close** (day line 260.97 -> 284.75). **INSIDE**, and
+declared a FLOOR: the session's ORIENTATION read happened before that baseline was taken. `F3` was
+deliberately NOT started — it needs a certified probe that does not yet have a home, and starting it
+with ~11 left would have risked stranding a paid paste one paste short, which is the exact failure
+the last sitting stopped to avoid. Records ride the 13-lakh HANDOFF line.
+
+**NEXT SESSION — S5-Z9 · THE DEMARK JOIN, ITS OWN SESSION. MODEL: Opus 5 · effort HIGH ·
+BUILD 11 · PROOF 10 · HANDOFF 5.** Four items on its plate; the §10-C row carries them.
