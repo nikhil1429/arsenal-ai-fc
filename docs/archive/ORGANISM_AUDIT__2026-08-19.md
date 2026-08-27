@@ -2795,8 +2795,65 @@ STATUS (update this block before any session stops — this is the handoff)
                                      ESCALATES, it is never re-tuned.**
                                    ⚠ **COST 32.7 lakh vs 14+12+5 = 31 — OVER, recorded as over.**
 
-  ▶ NEXT SESSION ............... **`S5-POST-A`, ITS SECOND SITTING — ROWS 5 AND 6 ONLY. MODEL: Opus 5
-                                   · effort HIGH.** ⛔ **NOT the fold into §9** — that is `S5-POST-B`
+  ▶ NEXT SESSION ............... **`S5-POST-A`, ITS THIRD AND LAST SITTING — ROW 7's BUILD ONLY, which
+                                   is already RULED AND SCOPED. MODEL: Opus 5 · effort HIGH.**
+                                   ⛔ **DO NOT RE-DERIVE THE RULING** (`RULING__2026-08-27_1505-s5post-1.md`,
+                                   folded in the §10-C row and verbatim below). v2 certifies **PER
+                                   MATERIAL CLASS**; **0.35 stays the ANSWERS-class measured constant,
+                                   untouched**; the canon/corpus bound is a **HYPOTHESIS WITH A RECEIPT
+                                   (n=1)** and must be STAMPED as such in the certifier's own output.
+                                   **The pre-authorized branch is the LIVE one — the labels do NOT
+                                   separate** (the one FAIL scores **0.3944**, BELOW the lowest PASS at
+                                   **0.4435**; paraphrase twins are SEMANTIC, template repeats LEXICAL)
+                                   ⇒ the canon/corpus check is **ADVISORY-REPORT-ONLY**: it records twin
+                                   candidates beside the probe for S6 and **NEVER refuses.** *An
+                                   instrument that cannot measure does not gate.* The measurement is on
+                                   disk at `diag/measure_twinbar_v2.mjs` — read it, do not re-run the
+                                   thinking.
+                                   ⛔ **THEN `S5-POST-B`, THE FOLD INTO §9 — and it now has TWO NUMBERS
+                                   IT MUST PRICE BEFORE IT FOLDS ANYTHING**, both produced by this
+                                   sitting and neither of them small:
+                                   ⚠ **(1) 151 of 475 quotes `verify.mjs` DROPPED are FOUND by an
+                                   independent matcher** (`node recount.mjs`). One is hand-verified and
+                                   pinned in the harness as THE WITNESS: byte-exact in the corpus,
+                                   found by verify's OWN byte-exact predicate today, recorded
+                                   `NOT-FOUND`. By capture path: rendered-lossy **0.444** · raw-blob
+                                   **0.328** · raw **0.25** — **elevated on the lossy path, NOT confined
+                                   to it**, so nothing is promoted to "the lossy path is the mechanism".
+                                   **The fold cannot report a KEPT count as the sweep's yield while a
+                                   third of the drops are candidate true findings.**
+                                   ⚠ **(2) 28 of 29 answers carry an internally inconsistent coverage
+                                   receipt**, 71 findings (`node selfcheck.mjs`) — including **8 receipts
+                                   that REPEAT a row**, a kind nobody had looked for. **Every coverage
+                                   number the fold quotes has to say which side of that it is on.**
+                                   ⚑ **AND THE CALIBRATION IS NOW MECHANICAL: kept re-found 930/996 ⇒
+                                   DIRTY ⇒ every invention figure is an UPPER BOUND.** The ruling's
+                                   framing is REFINED by the measurement: the recount matcher is not
+                                   simply *stricter* — it misses 66 verify keeps AND finds 151 verify
+                                   drops. The BOUND conclusion is unchanged; its basis is broader.
+                                   ✅ **SITTING 2 LANDED ROWS 5 AND 6, 27 Aug ~10:00** — `recount.mjs`
+                                   and `selfcheck.mjs`, both REPORTING instruments that refuse nothing
+                                   and write nothing. `diag/proofs_s5post.mjs` **36 → 61 assertions,
+                                   GREEN twice, pinned legs extended in `checkall`.** `checkall` 8/8 ·
+                                   `preflight` GO. **COST 20.14 vs a fresh 33.**
+                                   ⛔ **THE ARTIFACTS FOLDER IS A GIT REPO — commit what you change
+                                   there, and NEVER add a remote** (the pre-push hook refuses; a proof
+                                   asserts both).
+                                   ⚠ **THIRD INSTANCE, AND IT IS NOW TOOLED: an assert aimed at CODE
+                                   kept hitting the COMMENT that explains the code.** Three with one
+                                   mechanism is a missing tool, not a run — `codeOf()` strips comments
+                                   and every source-text assert goes through it.
+                                   ⚠ **CHECK YOUR OWN MEASUREMENT BEFORE YOU BELIEVE IT.** Row 6 shipped
+                                   two self-inflicted bugs first: a total summed off a DEDUPED map (it
+                                   swallowed a repeated receipt row, erring in the FRIENDLY direction),
+                                   and a denominator of ALL items where only day-bearing ones can be
+                                   accounted for. Both were found by asking what the number would look
+                                   like if it were wrong.
+
+  ~~▶ NEXT SESSION ............... **`S5-POST-A`, ITS SECOND SITTING — ROWS 5 AND 6 ONLY. MODEL: Opus 5
+                                   · effort HIGH.**~~ **— DONE 27 Aug ~10:00; rows 5 and 6 both
+                                   landed and both found their class far wider than the case that
+                                   granted them. Kept struck, not deleted (L9).** ⛔ **NOT the fold into §9** — that is `S5-POST-B`
                                    and it runs AFTER these two, because both change what the sweep's
                                    NUMBERS MEAN (reporting PRECISION and reporting INTEGRITY), and
                                    folding 947 verified items while they are known to be bounds would
@@ -6498,6 +6555,11 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       return · extra calls without a PROGRESS line saying why.
                                                                        CEILING: 40
 ◐ S5-POST-A  THE POST-SWEEP INSTRUMENTS.   MODEL: Opus 5 · effort HIGH
+      **SITTING 2, 27 Aug ~10:00: ROWS 5 AND 6 LANDED.** Fresh **BUILD 16 · PROOF 12 · HANDOFF 5
+      = 33** for the sitting, under S5's own multi-sitting precedent (*"SAME S5 rung, fresh
+      EXECUTION 35 + HANDOFF 13"*, 4 uses) — declared, not assumed. **SPENT 20.14 — inside.**
+      **WHAT REMAINS ON THIS ROW: row 7's build alone**, already RULED and scoped
+      (per material class · 0.35 untouched · canon/corpus ADVISORY-REPORT-ONLY).
       **BUILD 16 · PROOF 12 · HANDOFF 5 = 33.** ⚠ **WRITTEN BY THE EXECUTOR, THEN ADOPTED AS
       RULER-WRITTEN** by `RULING__2026-08-27_1505-s5post-1.md` item 4 — authorship converted, the
       numbers stand, breach rules unchanged. **SPENT 30.54 — inside the line.**
@@ -6554,9 +6616,41 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
         it records twin candidates for S6 and NEVER refuses. **THEY DO NOT SEPARATE: the one FAIL
         scores 0.3944, BELOW the lowest PASS at 0.4435** — paraphrase twins are SEMANTIC, template
         repeats are LEXICAL. **So the advisory branch is the live one, and the build is scoped.**
-      ☐ **ROW 5 · THE RECOUNT MATCHER AS AN INSTRUMENT** — NOT STARTED, carries.
-      ☐ **ROW 6 · THE RECEIPT-vs-OWN-ANSWER SELF-CONSISTENCY CHECK** — NOT STARTED, carries.
-      **PROOF:** `diag/proofs_s5post.mjs` — **36 assertions, GREEN TWICE (idempotent), every bound
+      ☑ **ROW 5 · THE RECOUNT MATCHER AS AN INSTRUMENT** — DONE, SITTING 2 (`recount.mjs`).
+        The control the executor ran BY HAND at every corpus close is a code path now, and the
+        **BOUND-vs-POINT label is DERIVED from the measurement** instead of remembered.
+        ⛔ **THE INDEPENDENCE IS THE PRODUCT, AND THIS IS THE ONE PLACE THE "no second copy of a
+        predicate" LAW IS DELIBERATELY INVERTED** — a control that shares code with the matcher it
+        controls measures nothing, and a future tidy-up would leave it printing a perfect
+        calibration forever. Asserted mechanically, not left to a comment.
+        **MEASURED: kept re-found 930/996 ⇒ DIRTY ⇒ every invention figure is an UPPER BOUND**, now
+        at corpus scale rather than per chat by hand (the ruling had 3/5 and 3/4).
+        ⚠ **AND THE BIGGER HALF, WHICH THE ROW WAS NOT GRANTED FOR: 151 of 475 quotes `verify.mjs`
+        DROPPED are FOUND by the independent matcher.** One is hand-verified end to end and pinned
+        in the harness as THE WITNESS — it is in the corpus **byte-exact**, verify's OWN byte-exact
+        predicate finds it today, and verify recorded `NOT-FOUND`. Split by capture path:
+        rendered-lossy **0.444** · raw-blob **0.328** · raw **0.25** — **elevated on the lossy path
+        but NOT confined to it**, so "the lossy path is the mechanism" is REFUSED as a promotion;
+        the class is general and it is S5-POST-B's to price before the fold.
+        ⚠ **THE RULING'S OWN FRAMING IS REFINED BY THE MEASUREMENT:** the recount matcher is not
+        simply *stricter* than verify's — at scale it misses 66 that verify keeps AND finds 151 that
+        verify drops. **The BOUND conclusion is unchanged and its basis is now broader:** both
+        matchers discard true content, so invention over-counts either way.
+      ☑ **ROW 6 · THE RECEIPT-vs-OWN-ANSWER SELF-CONSISTENCY CHECK** — DONE, SITTING 2
+        (`selfcheck.mjs`). `verify.mjs` checks the receipt against the REAL corpus; **nothing had
+        ever checked it against the ANSWER.** The ruled live case reproduces exactly: **B14_2
+        declares FOUR days over an item set citing TWO**, and both uncited days are NAMED.
+        **71 findings across 28 of 29 answers** — count mismatches 18+8, total mismatches 15+7,
+        declared-but-uncited 7+8, and a kind nobody had looked for: **8 receipts REPEAT a row**.
+        It REFUSES NOTHING (reporting integrity, never gate correctness) and deliberately does NOT
+        re-check `item_count` — verify owns that (D3) — **but it REFUSES TO RUN if that check ever
+        leaves verify**, so its silence can never quietly become coverage. Bite-proven by planting
+        on `verify.mjs` and restoring it byte-identical.
+        ⚠ Two self-inflicted measurement bugs were caught and fixed before the numbers were
+        believed: the total was summed off a DEDUPED map (which swallowed a repeated receipt row and
+        erred in the friendly direction), and the denominator was ALL items rather than the items a
+        day receipt can account for.
+      **PROOF:** `diag/proofs_s5post.mjs` — **61 assertions after sitting 2 (was 36), GREEN TWICE (idempotent), every bound
       proven to bite**, and **PINNED INTO `checkall` as a gate** (the Z6 law, third use: a proof
       that only runs when somebody remembers it is not a gate). `checkall` **GREEN 8/8** ·
       `preflight` **GO**, both run in-session.
@@ -15784,3 +15878,118 @@ FOLD: ① the v2 row: per-class + hypothesis stamp + the advisory branch · ② 
 ```
 
 </details>
+
+---
+
+### PROGRESS 2026-08-27 ~16:05 series / **27 Aug ~10:00 TRUE machine-clock** — **S5-POST-A rows 5 and 6: both instruments found their class FAR wider than the case that granted them — 151 of 475 drops are candidate TRUE findings, and 28 of 29 coverage receipts are internally impossible**
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — *"`S5-POST-A`, ITS
+SECOND SITTING — ROWS 5 AND 6 ONLY. MODEL: Opus 5 · effort HIGH."* Micro-order written to the
+session scratchpad before any edit (rule 9). Opus 5 · effort HIGH · AUTO mode. **A fresh
+BUILD 16 · PROOF 12 · HANDOFF 5 = 33 for this sitting**, under S5's own multi-sitting precedent
+(*"SAME S5 rung, fresh EXECUTION 35 + HANDOFF 13"*, four uses) — declared here, not assumed.
+
+#### ROW 5 · THE RECOUNT MATCHER, AS AN INSTRUMENT
+
+The control every corpus close ran BY HAND: *of the quotes `verify.mjs` KEPT, how many does an
+independent matcher re-find?* Fewer ⇒ stricter ⇒ "genuinely absent" over-counts ⇒ **the invention
+figure is an UPPER BOUND**. That rule was standing from B14 to B18 and it was enforced by an
+executor remembering it. `recount.mjs` is that question with a code path behind it, and **it derives
+the BOUND-vs-POINT label from the measurement** rather than printing whatever it is told.
+
+⛔ **THE ONE PLACE THIS FOLDER'S "no second copy of a predicate" LAW IS DELIBERATELY INVERTED, and
+it is written as the loudest thing in the file.** Everywhere else a duplicated predicate is a defect
+— `probeFor` drifted between two files, `twinbar.mjs` and `payloadfence.mjs` exist so a rule lives
+once. **A control is the exception: a second matcher that shares code with the matcher it controls
+measures nothing.** A future session tidying them together would leave this instrument running,
+printing, and reporting a perfect 1.000 calibration forever. So the independence is **asserted
+mechanically** — no import of `verify.mjs`, none of its tiers, no shared line — not left to prose.
+
+What is shared and what is not, so the number means something: the MATCHER is independent (verify
+works on `norm`-ed text through byte-exact → head-prefix → demark → demarked-head; this works on a
+contiguous TOKEN SEQUENCE with all punctuation and markdown discarded). The corpus day partition and
+a canon doc's repo path are re-derived independently and **cross-checked against the manifest**, so a
+drift shows up as a refusal instead of a quiet agreement.
+
+**THE CALIBRATION, MEASURED AT CORPUS SCALE: kept re-found 930/996 ⇒ DIRTY ⇒ every invention figure
+is an UPPER BOUND.** The ruling had two per-chat data points (3/5, 3/4); this is 29 answers.
+
+⚠ **AND THE BIGGER HALF, WHICH THE ROW WAS NOT GRANTED FOR: 151 of 475 quotes `verify.mjs` DROPPED
+ARE FOUND by the independent matcher.** Not a claim — **one is hand-verified end to end and pinned
+into the harness as THE WITNESS.** `B03_2`, `missing_implementation`, day `2026-07-25 (continued)`:
+
+```
+"Confirmed: `defaultPost` has no error handling, so a failed report-back throws and the paid
+ answer is discarded — then re-bought."
+```
+
+It is in the corpus **byte-exact** (`--- CLAUDE - 2026-07-25T22:02:01.003Z - said ---` immediately
+precedes it), **verify's OWN byte-exact predicate finds it in the strict haystack today**, and
+`verify.mjs` recorded it `NOT-FOUND`. Split by capture path: **rendered-lossy 0.444 · raw-blob 0.328
+· raw 0.25**.
+
+⛔ **AND THE SPLIT IS WHY NOTHING IS PROMOTED.** The witness happened to be a `rendered-lossy`
+answer, and for one step "the lossy path is the mechanism" looked like the finding. **The rates say
+otherwise: the class exists on every capture path and is merely elevated on the lossy one.** That is
+the standing epistemics note working from the inside — a run of one, with a mechanism that fit,
+caught by measuring the other classes before writing it down.
+
+⚑ **THE RULING'S OWN FRAMING IS REFINED BY THE MEASUREMENT, and this is recorded rather than
+smoothed over:** the recount matcher is **not simply "stricter"** than verify's. At scale it misses
+**66** that verify keeps AND finds **151** that verify drops. **The BOUND conclusion is unchanged and
+its basis is now broader** — both matchers discard true content, so invention over-counts either way.
+
+#### ROW 6 · THE RECEIPT-vs-OWN-ANSWER SELF-CONSISTENCY CHECK
+
+The blind spot, stated exactly: `verify.mjs` checks the receipt against the **REAL CORPUS** — does a
+claimed day exist, is a quote really there. **Nothing has ever checked the receipt against the
+ANSWER'S OWN ITEMS.** A model can therefore hand back a coverage receipt that is internally
+impossible and every gate on this machine passes it, because each is looking somewhere else.
+
+**THE RULED LIVE CASE REPRODUCES EXACTLY.** `B14_2` declares `days_covered` = 15:34 · 16:4 · 17:8 ·
+18:1 — **FOUR days, 47 items** — over an item set that cites **TWO**; the check names both uncited
+days (`2026-08-16`, `2026-08-18`) rather than only counting them.
+
+**AND THE CLASS IS EVERYWHERE: 71 findings across 28 of 29 answers.** Count mismatches 18+8, total
+mismatches 15+7, declared-but-uncited 7+8 — and **8 receipts REPEAT a row**, a kind nobody had
+looked for. B05_2 declares 21 items across its days while holding 79; B11_2 claims 58 on one day
+while citing 14.
+
+It **REFUSES NOTHING** — reporting integrity, never gate correctness, which is why the row is
+S5-POST and never a Z-rung. And it deliberately does **not** re-check `item_count` against the real
+array lengths, because `verify.mjs` owns that (D3's hardening); duplicating a live rule is the
+defect this folder keeps closing. **But it REFUSES TO RUN if that check ever leaves verify**, so its
+silence can never quietly become coverage — bite-proven by planting on `verify.mjs` and restoring it
+byte-identical.
+
+⚠ **TWO SELF-INFLICTED MEASUREMENT BUGS WERE CAUGHT BEFORE THE NUMBERS WERE BELIEVED**, both found
+by asking what the number would look like if it were wrong: the receipt total was summed off a
+**DEDUPED map**, which swallowed a repeated row and erred in the **friendly** direction; and the
+denominator was ALL items where only day-bearing items can be accounted for by a day receipt (on
+this corpus every item is date-bearing, so it changed nothing today — the distinction is there so it
+stays true tomorrow).
+
+#### THE PROOFS
+
+`diag/proofs_s5post.mjs` — **36 → 61 assertions, GREEN on two consecutive runs, every bound proven
+to bite**, and its pinned legs in `checkall` extended to the new rows. `checkall` **GREEN 8/8** ·
+`preflight` **GO**, both run in-session.
+
+⚠ **THIRD INSTANCE OF AN ASSERT AIMED AT CODE HITTING THE COMMENT THAT EXPLAINS THE CODE.** Sitting
+1 did it twice in one line; row 5 did it again on its own file, which names verify's tiers in prose
+precisely in order to say it does not use them. **Three instances with one mechanism is not a run —
+it is a missing tool.** `codeOf()` strips comments and every source-text assert goes through it now.
+
+#### COST
+
+**20.14 lakh against a fresh BUILD 16 · PROOF 12 · HANDOFF 5 = 33 — INSIDE the line.** Day line
+428.48 at open → 448.62 at the gates' close (`node scripts/session_meter.mjs status 7`).
+Artifacts repo: `4210de2` (local only, still zero remotes).
+
+#### WHAT THE NEXT SESSION DOES
+
+**`S5-POST-A`'s third and last sitting — ROW 7's BUILD ONLY**, already ruled and scoped: v2 per
+material class, 0.35 untouched on its own material, canon/corpus **ADVISORY-REPORT-ONLY** because
+the labels do not separate. Then **`S5-POST-B`, the fold into §9 — and it now has two numbers it
+must price before it folds anything: the 151 candidate true drops, and the 28-of-29 inconsistent
+receipts.**
