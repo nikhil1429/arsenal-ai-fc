@@ -2795,10 +2795,54 @@ STATUS (update this block before any session stops — this is the handoff)
                                      ESCALATES, it is never re-tuned.**
                                    ⚠ **COST 32.7 lakh vs 14+12+5 = 31 — OVER, recorded as over.**
 
-  ▶ NEXT SESSION ............... **`S5-POST-B` — THREE ITEMS, RULED
+  ▶ NEXT SESSION ............... **`S5-POST-B`'s SECOND SITTING — ③ THE FOLD INTO §9, AND NOTHING
+                                   ELSE. MODEL: Opus 5 · effort HIGH. ⛔ ITS CEILING IS NOT WRITTEN —
+                                   cutting its scope and pricing it is your first act**, the same rule
+                                   this sitting followed.
+                                   ✅ **① ROW 7 AND ② THE DIAGNOSIS ROW ARE DONE, 27 Aug ~11:00.**
+                                   ⛑ **FOLD THESE NUMBERS, NOT THE OLD ONES — the sweep's yield MOVED:**
+                                   **KEPT is 956, not 947** (`ok` 530 · `ok-partial` 62 · `ok-demarked`
+                                   298 · `ok-demarked-partial` 66). Nine items were recovered by a fix
+                                   whose mechanism is named, and **zero pre-existing items changed
+                                   tier.** Re-read `verified.json`; do not carry any earlier count.
+                                   ⛔ **AND THE "151 FALSE DROPS" HEADLINE IN THIS ORDER WAS WRONG — it
+                                   was mine, and the decomposition corrects it.** All 151 are now
+                                   classified (`node diag/diagnose_false_drops.mjs`): **76 (50%) are
+                                   PAIR SIDES** — a pair is ONE item and verify keeps it only if BOTH
+                                   sides match, which is the rule working as designed · **38** are found
+                                   only by the deliberately looser TOKEN matcher (candidates, not verify
+                                   defects) · **28** are *"RENDERED would match"* on a NON-lossy answer,
+                                   a **NAMED GAP** left unfixed on purpose (a missing tier, not the
+                                   diagnosed defect, and outside the ruled line) · and **9** were the
+                                   genuine defect, now fixed. **The fold must say 9 defects + 28 gap +
+                                   38 candidates + 76 correct behaviour — never "151 lost findings".**
+                                   ⛑ **THE RECEIPT TABLE FOLDS AS S6 EVIDENCE AS-IS, no build** (RULING
+                                   1600 item 2): 71 problems across 28 of 29 answers, B14_2 reproduced,
+                                   8 row-repeating receipts. `node selfcheck.mjs`.
+                                   ⛑ **AND EVERY INVENTION FIGURE IS AN UPPER BOUND, mechanically:**
+                                   `node recount.mjs` — kept re-found **930/996 ⇒ DIRTY**; false drops
+                                   **151 → 142** after the fix, rendered-lossy rate **0.444 → 0.167**.
+                                   The matcher is **DIFFERENT, not stricter** (ruled onto the record).
+                                   ⛔ **THE NAMED GAP, for whoever prices the fold:** 28 quotes match a
+                                   RENDERED haystack on answers that are NOT lossy, and verify has no
+                                   rendered tier on that path. It is diagnosed, it is written down, and
+                                   it is deliberately NOT fixed — fixing it is a new tier on a path that
+                                   never had one, which is a rung, not a footnote.
+                                   ⛔ **THE ARTIFACTS FOLDER IS A GIT REPO — commit what you change there,
+                                   and NEVER add a remote** (the pre-push hook refuses; a proof asserts it).
+                                   ⚠ **A PREDICATE ASSUMING A SHAPE THE MATERIAL IS FREE TO CHANGE is now
+                                   at its SIXTH site** — this time a TRANSPORT stamp (`rendered-lossy`)
+                                   read as a fact about CONTENT. When a stamp describes how something
+                                   TRAVELLED, it says nothing about what it CONTAINS.
+                                   ⚠ **AN ASSERTION THAT GOES RED WHEN YOUR FIX LANDS IS THE HARNESS
+                                   WORKING** — re-point it and write down that it moved; a stale green is
+                                   the worse outcome.
+
+  ~~▶ NEXT SESSION ............... **`S5-POST-B` — THREE ITEMS, RULED
                                    (`RULING__2026-08-27_1600-s5post-2.md` item 4): ROW 7's build
                                    (advisory-only) · THE DIAGNOSIS ROW · THE FOLD INTO §9.
-                                   MODEL: Opus 5 · effort HIGH.**
+                                   MODEL: Opus 5 · effort HIGH.**~~ **— ① and ② DONE 27 Aug ~11:00;
+                                   only ③ remains. Kept struck, not deleted (L9).**
                                    ✅ **`S5-POST-A` IS COMPLETE — rows 1-6 landed and row 7 MOVED to
                                    POST-B by the same ruling.** Rows 5-6 accepted as landed.
                                    ① **ROW 7's BUILD, already scoped — DO NOT RE-DERIVE IT**
@@ -6711,7 +6755,65 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       · firing `R01-R04` · re-tuning 0.35 · hand-editing a derived artefact · any remote on the
       artifacts git · staging the LEARNING lane's `SAMJHAO_ORDER` dirt.
 
-☐ S5-POST-B  ROW 7 + THE DIAGNOSIS ROW + THE FOLD INTO §9.   MODEL: Opus 5 · effort HIGH
+◐ S5-POST-B  ROW 7 + THE DIAGNOSIS ROW + THE FOLD INTO §9.   MODEL: Opus 5 · effort HIGH
+      **SITTING 1, 27 Aug ~11:00 — ① AND ② ARE DONE; ③ THE FOLD CARRIES.** The scope cut was this
+      sitting's first act, as the row required, and **the order was FORCED, not chosen:** the ruling
+      on ② says *"mechanism found → fix + free re-verify"* — a re-verify **changes the very numbers
+      the fold reports**, so folding first would have put superseded counts into §9 as findings.
+      **CEILING: ② ruler-priced BUILD 6 · PROOF 5 = 11 · ① executor-priced BUILD 5 · PROOF 4 = 9 ·
+      HANDOFF 5 ⇒ 25.** ⚠ The ① and HANDOFF halves are EXECUTOR-WRITTEN and declared as such.
+      **SPENT 17.64 at the gates' close — inside.**
+      ☑ **② THE DIAGNOSIS ROW — THE WITNESS NAMED ITS MECHANISM ON THE FIRST RUN.**
+        `B03_2` / `missing_implementation` / day `2026-07-25`. The STRICT haystack holds the quote
+        **byte-exact**; the RENDERED haystack does not — **longest matching prefix 11 of 129
+        characters**, `"Confirmed: "`, and there the quote says `` `defaultPost` `` while the
+        rendered haystack says `defaultPost`. And `checkCorpus`/`checkCanon` passed
+        `lossy ? null : …`, so for a `rendered-lossy` answer **the DEMARK tier — which strips
+        markdown from BOTH sides and matches this immediately — was EXPLICITLY DISABLED.**
+        ⛔ **THE PREMISE WAS FALSE, AND NAMING IT IS THE FINDING: `rendered-lossy` is a fact about
+        TRANSPORT — how the answer travelled from page to disk — and it was read as a fact about
+        CONTENT.** The model was shown RAW markdown and copied it verbatim, so its QUOTE kept the
+        backticks while the HAYSTACK lost them. One side rendered, the other not, no fallback left.
+        Same family as the copy-gate's `<3 rendered lines` guard: **a predicate assuming a SHAPE the
+        material is free to change** — that class at its sixth site.
+        ☑ **THE FIX + FREE RE-VERIFY (the Z4 pattern), and it is MEASURED, not argued.** The demark
+        haystack is passed on BOTH paths, built from the STRICT source, and reached only after
+        TIER 1 and TIER 1b have failed. **KEPT 947 → 956 (+9, EXACTLY the 9 the diagnosis
+        predicted) · `ok` 530 UNCHANGED · `ok-partial` 62 UNCHANGED · `ok-demarked` 289 → 298 ·
+        ZERO pre-existing items changed tier.** Strictly additive, proven by the artifact. The
+        recount control agrees INDEPENDENTLY: false drops **151 → 142**, rendered-lossy rate
+        **0.444 → 0.167**.
+        ⚠ **AND THE DECOMPOSITION CORRECTS THE HEADLINE THIS ORDER CARRIED — mine, from the last
+        sitting.** `diag/diagnose_false_drops.mjs` classifies all 151 by the tier that COULD have
+        matched them: **76 (50%) are PAIR SIDES** — a pair is ONE item and verify keeps it only if
+        **both** sides match, which is `canon-pair`'s rule working as designed, not a drop · **38
+        are found only by the looser TOKEN matcher** (candidates, not verify defects) · **28 are
+        "RENDERED would match" on a NON-lossy answer** — a **NAMED GAP**, diagnosed and deliberately
+        NOT fixed here (it is a missing tier, not the diagnosed defect, and it is outside the ruled
+        line) · and **9 are the genuine defect above.** ⇒ **"151 candidate TRUE findings" was
+        WRONG. It is 9 defects, 28 a gap, 38 looser-matcher candidates, and 76 correct behaviour.**
+      ☑ **① ROW 7 — THE PROBE CERTIFIER v2, PER MATERIAL CLASS** (`RULING__2026-08-27_1505-s5post-1.md`).
+        `twinbar.mjs` gains `TWIN_CLASSES`, the ONE site: the **answers** class keeps **0.35** as a
+        MEASURED constant and **GATES**; the **canon/corpus** class is stamped a **HYPOTHESIS WITH A
+        RECEIPT (n=1)** and **does NOT gate**, with the stamp carrying WHY — its one labelled
+        failure (**0.3944**) sits BELOW its lowest labelled pass (**0.4435**), so the labels do not
+        separate and a lexical statistic cannot rank semantic twins. *An instrument that cannot
+        measure does not gate.* `twinadvise.mjs` records the twin candidates and their NEAREST TWIN
+        text **BESIDE the probe** in `probe_twin_advisory.json` — **23 probes, every row
+        `gates:false`**, and `--check` REFUSES any row that claims otherwise.
+        ⛔ **A SIDECAR PRECISELY SO THE S5-Z6 FREEZE IS NOT BROKEN to carry a number that never
+        refuses anything** — `probe_expected.json` is byte-identical after the run, asserted.
+        And it is a separate command, not part of `probe_gen`, because `checkall` re-runs `probe_gen`
+        TWICE and this measurement takes minutes.
+      ☐ **③ THE FOLD INTO §9 — CARRIES, and it now has BETTER numbers to fold**: 956 verified items
+        (not 947), the corrected false-drop decomposition above, and the 71-problem receipt table
+        that folds as S6 evidence as-is.
+      **PROOF:** `diag/proofs_s5post.mjs` — **61 → 87 assertions, GREEN TWICE, every bound bites**,
+      pinned legs extended in `checkall`. `checkall` **GREEN 8/8** · `preflight` **GO**, in-session.
+      ⛑ **ONE ASSERTION WENT RED THE MOMENT THE FIX LANDED** — section 5's witness line asserted
+      *"verify did NOT keep it"*, which was what made the false-drop class real. It was **RE-POINTED,
+      not deleted**, and the fact is written down: a stale green there would have been the worse
+      outcome, and the harness catching its own premise moving is the harness working.
       **THREE ITEMS, RULED 27 Aug (`RULING__2026-08-27_1600-s5post-2.md` item 4).**
       ① **ROW 7's BUILD** — the probe certifier v2, ADVISORY-REPORT-ONLY, fully scoped by the
         1505 ruling. Per material class · 0.35 untouched on its own material · the canon/corpus
@@ -16099,3 +16201,110 @@ verbatim.
 ```
 
 </details>
+
+---
+
+### PROGRESS 2026-08-27 ~17:00 series / **27 Aug ~11:00 TRUE machine-clock** — **S5-POST-B ① and ②: the witness named its mechanism on the first run, the fix recovered EXACTLY the nine it predicted — and the "151 false drops" this order was carrying turns out to be 9 defects, not 151**
+
+**Router obeyed** (§10-D rule 1). Micro-order first (rule 9). Opus 5 · effort HIGH · AUTO mode.
+**The scope cut was this sitting's first act, as the row required**, and the order was **forced, not
+chosen**: the ruling on ② says *"mechanism found → fix + free re-verify"*, and a re-verify **changes
+the very numbers the fold reports** — folding first would have put superseded counts into §9 as
+findings. So ① and ② here; ③ carries. **CEILING: ② ruler-priced 6+5=11 · ① executor-priced 5+4=9 ·
+HANDOFF 5 ⇒ 25**, the ① and HANDOFF halves declared executor-written.
+
+#### ② THE DIAGNOSIS — ONE RUN FROM THE WITNESS, AND THE PREMISE WAS THE DEFECT
+
+`B03_2` / `missing_implementation` / day `2026-07-25`:
+
+```
+STRICT   haystack ⊇ quote  TRUE
+RENDERED haystack ⊇ quote  FALSE      <- the ONLY tier a rendered-lossy answer is given
+longest matching prefix: 11 of 129 chars — "Confirmed: "
+  quote next : "`defaultPost` has no error handling, so a fai"
+  hay next   : "defaultPost has no error handling, so a faile"
+```
+
+`checkCorpus`/`checkCanon` passed `lossy ? null : …`, so for a `rendered-lossy` answer **the DEMARK
+tier — which strips markdown from BOTH sides and matches this immediately — was explicitly
+disabled.** Z9's stated reason is kept in the file because it is the thing being corrected: *"a
+`rendered-lossy` answer is already markdown-CONSUMED … so consulting it there would be a second,
+weaker copy of the same test."*
+
+⛔ **THE PREMISE IS FALSE, AND NAMING IT IS THE FINDING: `rendered-lossy` is a fact about TRANSPORT
+— how the answer travelled from the page to disk — and it was read as a fact about CONTENT.** The
+model was shown RAW markdown and copied it verbatim into a JSON string, so its QUOTE kept the
+backticks while the HAYSTACK lost them. One side rendered, the other not, and the fallback switched
+off. **Same family as the copy-gate's `<3 rendered lines` guard: a predicate assuming a SHAPE the
+material is free to change — that class at its sixth site.**
+
+**THE FIX + FREE RE-VERIFY (the Z4 pattern), measured rather than argued.** The demark haystack is
+passed on BOTH paths, built from the STRICT source — not "a weaker copy of renderMarkdown" but a
+DIFFERENT alphabet over untouched text — and it is reached only after TIER 1 and TIER 1b fail:
+
+```
+KEPT            947 -> 956   (+9, exactly the nine the diagnosis predicted)
+ok              530 -> 530   UNCHANGED
+ok-partial       62 ->  62   UNCHANGED
+ok-demarked     289 -> 298
+pre-existing items whose tier moved: 0
+```
+
+The recount control agrees **independently**: false drops **151 → 142**, and the rendered-lossy
+false-drop rate **0.444 → 0.167**. Two instruments, one conclusion.
+
+#### ⚠ AND THE DECOMPOSITION CORRECTS THE HEADLINE THIS ORDER WAS CARRYING — MINE
+
+`diag/diagnose_false_drops.mjs` classifies **all 151** by the tier that COULD have matched each:
+
+| n | share | what it really is |
+|---|---|---|
+| **76** | 50% | **PAIR SIDES** — a pair is ONE item and verify keeps it only if **both** sides match. `canon-pair`'s rule, working as designed. **Not drops at all.** |
+| **38** | 25% | found only by the deliberately looser TOKEN matcher — **candidates, not verify defects** |
+| **28** | 19% | *"RENDERED would match"* on a **non-lossy** answer — a **NAMED GAP**, diagnosed and deliberately NOT fixed |
+| **9** | 6% | **the genuine defect above — now fixed** |
+
+⇒ **"151 candidate TRUE findings" was WRONG, and it was in this order because I put it there last
+sitting.** The honest statement is **9 defects + 28 gap + 38 looser-matcher candidates + 76 correct
+behaviour.** The pair split is the one that mattered most: without it, a rule doing its job reads as
+half the defect.
+
+⛔ **THE NAMED GAP IS LEFT OPEN ON PURPOSE.** The 28 are a MISSING TIER on a path that never had one
+— not the diagnosed defect, and outside the ruled BUILD 6 · PROOF 5 line. Building it is a rung, not
+a footnote, and whoever prices the fold inherits it written down rather than discovered.
+
+#### ① ROW 7 — THE PROBE CERTIFIER v2, PER MATERIAL CLASS
+
+`twinbar.mjs` gains `TWIN_CLASSES`, the one site. The **answers** class keeps **0.35** as a MEASURED
+constant and **GATES**. The **canon/corpus** class is stamped a **HYPOTHESIS WITH A RECEIPT (n=1)**
+and **does NOT gate** — the stamp itself carries why: its one labelled failure (**0.3944**) sits
+BELOW its lowest labelled pass (**0.4435**), so the labels do not separate and a lexical statistic
+cannot rank semantic twins. *An instrument that cannot measure does not gate.*
+
+`twinadvise.mjs` records the twin candidates **and the nearest twin's actual text** beside the probe
+in `probe_twin_advisory.json` — **23 probes, every row `gates:false`**, and `--check` REFUSES any row
+claiming otherwise (bite-proven). ⛔ **A sidecar precisely so the S5-Z6 freeze is not broken to carry
+a number that never refuses anything** — `probe_expected.json` is byte-identical after the run, and
+that is asserted. It is a separate command rather than part of `probe_gen`, because `checkall`
+re-runs `probe_gen` twice and this measurement takes minutes.
+
+#### THE PROOFS
+
+`diag/proofs_s5post.mjs` — **61 → 87 assertions, GREEN on two consecutive runs, every bound bites**,
+pinned legs extended in `checkall`. `checkall` **GREEN 8/8** · `preflight` **GO**, both in-session.
+
+⚑ **ONE ASSERTION WENT RED THE MOMENT THE FIX LANDED, and that is the harness working.** Section 5's
+witness line asserted *"verify did NOT keep it"* — the very thing that made the false-drop class real
+rather than an artefact. It was **RE-POINTED, not deleted**, with the move written into the file: a
+stale green there would have been the worse outcome.
+
+#### COST
+
+**17.64 lakh against 25 — inside the line.** Day line 463.57 at open → 481.21 at the gates' close
+(`node scripts/session_meter.mjs status 7`). Artifacts repo: `ddd8b57` (local only, zero remotes).
+
+#### WHAT THE NEXT SESSION DOES
+
+**`S5-POST-B`'s second sitting — ③ THE FOLD INTO §9, and nothing else.** Its ceiling is not written;
+cutting its scope and pricing it is the first act. **Fold 956, not 947**, and fold the corrected
+decomposition — never "151 lost findings".
