@@ -80,8 +80,12 @@ STATUS (update this block before any session stops — this is the handoff)
                                    `G03_4` CAPTURED LIVE at S5-Z9's close through the ruled MINIFIED
                                    branch, sha `6c4cb2b598c4e159` IDENTICAL to the parked pin. The
                                    ruler accepted it: the drive's answers are COMPLETE.**
-                                   **⇒ ONLY `F3` REMAINS IN THE CANON-B LANE, and its probe
-                                   `canon_cross` is CERTIFIED (PROBE-FORMAT v4, span tail).**
+                                   ~~**⇒ ONLY `F3` REMAINS IN THE CANON-B LANE, and its probe
+                                   `canon_cross` is CERTIFIED (PROBE-FORMAT v4, span tail).**~~
+                                   ✅ **`F3` FIRED 27 Aug ~07:55 AND THE CANON-B LANE IS CLOSED — probe
+                                   `canon_cross` PASS · VERBATIM on BOTH anchors (the SPAN tier's first
+                                   live firing), capture `raw`, copy-gate 145/145, 16 of 16 items
+                                   genuinely cross-group. NOTHING IN THIS LANE IS LEFT TO FIRE.**
                                    ~~THE SEQUENCE REORDERED 27 Aug ~06:20: S5-Z9 → `F3` → S5-POST~~
                                    (`RULING__2026-08-27_1315-s5canonb-7.md` reverses the 1255
                                    ruling's item 4 — F3's probe cannot be certified until Z9
@@ -2791,8 +2795,52 @@ STATUS (update this block before any session stops — this is the handoff)
                                      ESCALATES, it is never re-tuned.**
                                    ⚠ **COST 32.7 lakh vs 14+12+5 = 31 — OVER, recorded as over.**
 
-  ▶ NEXT SESSION ............... **`F3` · THE CROSS-GROUP PASS — the LAST canon-B step, and the last
-                                   paste of the S5 sweep. MODEL: Opus 5 · effort HIGH.**
+  ▶ NEXT SESSION ............... **`S5-POST` — the two backlog rows and THE FOLD INTO §9. MODEL: Opus 5
+                                   · effort HIGH.** ⛔ **THE CANON-B LANE HAS NOTHING LEFT TO FIRE:**
+                                   `G01` `G02` `G03` all 4/4 and **`F3` FIRED, GATED, CAPTURED AND
+                                   VERIFIED 27 Aug ~07:55** — probe `canon_cross` **PASS · VERBATIM on
+                                   BOTH anchors**, which is the SPAN tier's first live firing and the
+                                   proof that a MINIFIED haystack file can gate a real paste. The
+                                   answer: 7 contradictions + 9 joined edges, valid JSON, `item_count`
+                                   agreeing with the real arrays, 19 files covered, and **16 of 16
+                                   items genuinely cross-group** (`group_a !== group_b` on every one).
+                                   Capture `raw`, copy-gate **145/145**, sha `8c4e03af8915870e`
+                                   in-page == on-disk. **It did NOT come back minified**, so the
+                                   pre-authorized parking went unused. `checkall` 8/8 · `preflight` GO
+                                   · `proofs_s5z9` 9/9, all run in-session. **COST 31.8 vs 35+13 —
+                                   inside the line.** Read the PROGRESS entry of 27 Aug ~07:55.
+                                   ⛔ **WHAT F3 CHANGED THAT BINDS EVERY LATER RUNG — four defects, all
+                                   real, and the fourth was found by a gate one minute after the third
+                                   was fixed:** `buildsteps.mjs` now writes F3's `probe` field (keyed
+                                   off `w.chat`, never a typed literal) · it AUTHORS
+                                   `probe_deferred_twin_scan` so the derived file stops carrying a hand
+                                   edit (regeneration moved **exactly ONE field of 82 steps**) · it
+                                   SPLICES the probe prompt into `steps/F3.txt`, because a step wired
+                                   to a probe whose question its own text never asks is **a gate on
+                                   paper** · and `checkall` section 6 gained the `attaches_answers`
+                                   asserts it never had — F3 fell straight through the `w.attaches`
+                                   guard, which is exactly how it reached fire-time ungated. **All five
+                                   branches bite on a plant; the sixth was measured VACUOUS and written
+                                   as a comment instead** (checkall re-runs `probe_gen`, so a
+                                   wiring-derived comparison compares one source to itself).
+                                   ⚠ **THE SEND READBACK LIED FOR SECONDS — `turns: 0` with the payload
+                                   still in the box, while the message had ALREADY LANDED.** A session
+                                   that trusted that single read would have re-sent a paid paste.
+                                   **Poll `turns` to settle; never re-send on one read.** Which of the
+                                   keyboard commit and the click committed cannot be told apart, so
+                                   nothing is promoted — keyboard first, click behind it.
+                                   ⚠ **`innerText` LIED AT TWO NEW SITES** (the upload menu, and the
+                                   response-level **Copy** button, which does not exist in the DOM at
+                                   all until the response footer is scrolled into view — that is NOT a
+                                   UI change, which is what it looked like twice).
+                                   ⚠ **`file_upload` REFUSES the artifacts folder** — copy the
+                                   attachments into the session scratchpad under their OWN names and
+                                   **sha-assert every copy against the certified pin before uploading**.
+
+  ~~▶ NEXT SESSION ............... **`F3` · THE CROSS-GROUP PASS — the LAST canon-B step, and the last
+                                   paste of the S5 sweep. MODEL: Opus 5 · effort HIGH.**~~ **— DONE
+                                   27 Aug ~07:55. The block below is kept struck, not deleted (L9);
+                                   its three ⛔ "before the paste" items are all CLOSED.**
                                    **ITS PROBE IS CERTIFIED. S5-Z9 LANDED 27 Aug ~07:10 and the three
                                    gates F3 was waiting on are all closed:** `probe_gen` learned the
                                    `attaches_answers` branch · the paraphrase-twin bar runs mechanically
@@ -6033,10 +6081,39 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
                                     PROOF 12 · HANDOFF 5** (`RULING__2026-08-27_1340-s5z9-1.md`
                                     item 2, the span +scope).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
+      ✅ **THE WHOLE CANON-B LANE IS CLOSED — `F3` FIRED, GATED, CAPTURED AND VERIFIED 27 Aug ~07:55
+      TRUE machine-clock.** Chat `0fb34740d94a5f05`, Pro Extended, three sha-asserted attachments,
+      composed sha `b83f5c5ec8eb9740` re-asserted before the send. **Probe `canon_cross` PASS ·
+      VERBATIM on BOTH anchors — the SPAN tier's first live firing, and the evidence (not merely the
+      proof) that a MINIFIED haystack file can gate a real paste.** Capture `raw` through the declared
+      critic path, copy-gate **145/145**, sha `8c4e03af8915870e` in-page == on-disk on both files; it
+      did NOT return minified, so the pre-authorized parking went unused. Answer: **7 contradictions +
+      9 joined edges, 16 of 16 genuinely cross-group**, `item_count` agreeing with the real arrays,
+      19 files covered, valid JSON. `verify.mjs`: canon_cross **V 1 · S 0 · FAIL 0**; F3's own quote
+      sides **exact 2 · head 0 · DEMARKED 5 · dem-head 2 · dropped 7** — Z9's demark tiers carrying
+      most of it, as measured. `checkall` 8/8 · `preflight` GO · `proofs_s5z9` 9/9, all run in-session.
+      **COST 31.8 vs EXECUTION 35 + HANDOFF 13 — inside the line.**
+      ⛔ **FOUR INHERITED DEFECTS CLOSED AT THEIR OWNERS, AND THE FOURTH WAS FOUND BY A GATE ONE
+      MINUTE AFTER THE THIRD WAS FIXED:** `buildsteps.mjs` writes F3's `probe` (off `w.chat`, never a
+      typed literal) · AUTHORS `probe_deferred_twin_scan` so a derived file stops carrying a hand edit
+      (regeneration moved **exactly ONE field across 82 steps**, the record byte-identical) · SPLICES
+      the probe prompt into `steps/F3.txt` under a **bytes-not-calendar** condition (deferral stands
+      while the haystack is absent; a DUE-but-missing probe is a loud refusal, proven) · and `checkall`
+      section 6 gained the `attaches_answers` asserts it never had — **F3 fell straight through the
+      `w.attaches` guard, which is exactly how it reached its own fire-time ungated.** Five branches,
+      all proven to bite on a plant.
+      ⛔ **AND ONE ASSERT WAS REFUSED AS VACUOUS, MEASURED NOT ASSUMED:** the haystack-set comparison
+      is a TAUTOLOGY here because `checkall` re-runs `probe_gen`, which reads `attaches_answers` out of
+      the same `wiring.json` — planted live, and the comparison still said "equal". A gate that cannot
+      fail is worse than no gate, so it is a comment naming why. The row is protected by
+      `proofs_s5z9` section 7 instead (fingerprints vs disk, stored expected vs the real text).
+      ⚠ **THE SEND READBACK LIED FOR SECONDS** — `turns: 0` with the payload still in the box while the
+      message had already landed. Poll to settle; **never re-send on one read.** Nothing promoted.
       ▸ **THE CANON-B DRIVE IS COMPLETE — `G01`, `G02` AND `G03` ALL CLOSED 4/4** (`G03_4` captured
       at S5-Z9's close through the minified branch, sha `6c4cb2b598c4e159` == the parked pin; the
       ruler accepted it 27 Aug ~06:50: *"G03 4/4 accepted — the drive's answers are complete"*).
-      **WHAT REMAINS IN THE CANON-B LANE IS `F3` ALONE, and its probe is now CERTIFIED.**
+      ~~**WHAT REMAINS IN THE CANON-B LANE IS `F3` ALONE, and its probe is now CERTIFIED.**~~ **—
+      F3 FIRED AND CLOSED 27 Aug ~07:55; NOTHING REMAINS IN THIS LANE. See the ✅ row above.**
       ~~THE CANON-B HALF IS OPEN — `G01` AND `G02` CLOSED 4/4; `G03` IS 3.5 of 4~~ (27 Aug
       ~02:45 · ~04:05 · ~05:30 · ~06:00 TRUE machine-clock). **`G03_4` HAS BEEN FIRED, RETURNED,
       MEASURED AND *PARKED* — 57 edges, valid JSON, two independent witnesses, and `capture.mjs`
@@ -15243,3 +15320,145 @@ answers are complete.**
 FOLD: ① Z9 row (span item + 14/12/5) · ② the v4 + envelope + 0.35 constants on the row ·
 ③ the 0750 correction in PROGRESS · ④ this file verbatim. Then F3 fires on the certified probe.
 ```
+
+---
+
+### PROGRESS 2026-08-27 ~14:25 series / **27 Aug ~07:55 TRUE machine-clock** — **`F3` FIRED, GATED, CAPTURED AND VERIFIED: THE CANON-B LANE IS CLOSED. 16 of 16 items are genuinely cross-group — and the three inherited wiring defects were all real, with a fourth found by the gate itself**
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — *"`F3` · THE CROSS-GROUP
+PASS — the LAST canon-B step, and the last paste of the S5 sweep. MODEL: Opus 5 · effort HIGH."*
+Micro-order written to the session scratchpad before any edit (rule 9). Opus 5 · effort HIGH · AUTO
+mode · fresh **EXECUTION 35 + HANDOFF 13**, the standing per-sitting canon-B line.
+
+#### THE THREE INHERITED DEFECTS — ALL THREE WERE REAL, AND A FOURTH CAME OUT OF THE GATE
+
+**(1) `probeFor("F3")` RETURNED `null`.** Fixed at its owner: `buildsteps.mjs` now writes F3's
+`probe` field. The label is **NOT typed** — `probe_gen` keys the row it emits off `w.chat`, so
+buildsteps writes the same variable (`F3_CHAT`). A literal would have been a second copy of the
+same rule, which is section 6's own class.
+
+**(2) `wiring.json` CARRIED A HAND EDIT THAT THE GENERATOR WOULD HAVE DELETED.**
+`probe_deferred_twin_scan` (RULING 1150 item 3a) existed only in the derived file. It is authored in
+`buildsteps.mjs` now, and the regeneration proves the record survived: **exactly ONE field changed
+across all 82 wired steps** (`F3.probe: null -> "canon_cross"`), and the twin-scan text came back
+**byte-identical**. `probe_deferred` and `probe_deferred_condition` were KEPT (L9) — they record why
+the gate could not exist in advance; the `probe` field records that it now does.
+
+**(3) RE-CERTIFY, DO NOT TRUST — RUN, AND GREEN.** `diag/proofs_s5z9.mjs` section 7:
+*"every fingerprint still matches the bytes on disk"* — the three answer-file sha pins are unmoved,
+so `probe_gen` did not need re-running. **All nine sections green.**
+
+**(4) THE ONE NOBODY HAD WRITTEN DOWN, AND THE GATE FOUND IT IN THE SAME MINUTE.** The moment the
+`probe` field went live, `preflight` refused: **`step(s) whose text has no probe: F3`.** Every other
+chat-opening step ends in its own probe; F3's step text asked nothing. A step wired to a probe whose
+question it never asks is **a gate on paper**. `buildsteps.mjs` now splices
+`prompts/PROBE_canon_cross.txt` into `steps/F3.txt` — and **the discharge is conditioned on the
+BYTES, not on the calendar**: if F3's haystack answers are not on disk the deferral still stands (no
+probe field, no probe text, said out loud); if they ARE on disk and the probe prompt is missing, it
+**REFUSES** the way `loadText` refuses for a canon part. Proven live by removing the probe prompt:
+loud refusal, exit 1.
+
+#### THE GATE THAT SHOULD HAVE CAUGHT (1) — IT DID NOT CONSIDER F3 AN ATTACHING STEP
+
+`checkall` section 6's probe assert is guarded by `w.attaches.length`. F3 attaches
+`attaches_answers` instead, so **it fell straight through and was checked by nothing at all** — that
+is how it reached its own fire-time with `probe: null`. A second field needed a second assert.
+Written, and **every branch proven to bite on a plant**:
+
+| plant | verdict |
+|---|---|
+| haystack on disk, `probe` null | FAIL — *"the deferral is over — and it still carries NO probe. That is an UNGATED paste."* |
+| wired to a probe, step text never asks it | FAIL — *"a gate on paper"* |
+| a haystack file missing, still wired to a probe | FAIL — *"while 1 of its own haystack file(s) are not on disk"* |
+| a haystack file missing, no probe, no `probe_deferred` | FAIL — *"carries no probe_deferred field to say so"* |
+| a haystack file missing, no probe, `probe_deferred` present | **ok** — the legal deferral is ACCEPTED |
+
+⛔ **AND ONE ASSERT WAS DELIBERATELY NOT WRITTEN, BECAUSE IT MEASURED VACUOUS.** The obvious
+companion — *does the probe row's haystack equal what the step hands the model?* — is a real
+cross-check for `attaches` (probe_gen reads the manifest, buildsteps reads the manifest: two paths,
+one truth). For `attaches_answers` it is a **TAUTOLOGY**: `probe_gen`'s branch reads
+`attaches_answers` out of `wiring.json`, and checkall section 1 re-runs `probe_gen`, so both sides
+come from one source in one run. **Planted live: shortening the list to two files regenerated the
+probe against two files and the comparison still said "equal".** A gate that cannot fail is worse
+than no gate — preflight says exactly that about a non-unique anchor — so it is a comment naming why,
+not a green tick. What really protects the row is proofs section 7 (fingerprints vs disk, stored
+expected vs the real following text). ⚠ **The plant regenerated `probe_expected.json`'s
+`canon_cross` row against the wrong haystack; restoring the wiring and re-running `probe_gen`
+reproduced the certification IDENTICALLY** (offset 30224 · span 128 · 95.5% · G02_2:300 · all three
+sha pins · all four twin scores). Recorded because a gate that rewrites sweep state is worth knowing.
+
+#### THE PASTE
+
+Chat **`canon_cross`** = `0fb34740d94a5f05`, fresh, **Pro Extended verified before the send**.
+Three attachments (`G01_2.txt` · `G02_2.txt` · `G03_2.txt`), each **sha-asserted byte-identical to
+the certified haystack pin before upload**. Composed sha **`b83f5c5ec8eb9740`** == `steps/F3.txt` on
+disk, re-asserted after focusing the editor and never re-composed. Pre-attach gate: three
+`aria-label="close G0n_2"` chips, polled to stability — **the chip DOM read 0 for ~22 s after a good
+upload**, the fifth sitting in a row that lag has appeared.
+
+⛔ **THE SEND READBACK LIED FOR SECONDS, AND IT IS A NEW INSTANCE OF A KNOWN CLASS.** `Return` in
+the focused editor and then a Send click BOTH read back `turns: 0` with the payload still 6,398
+chars in the box — **and the message had in fact landed**: `read_page` showed the URL already at
+`/app/0fb34740d94a5f05` with *Stop response* painted, and `user-query` count settled at **1**, not 2.
+=> **"read `turns` back after every send" is necessary and NOT sufficient — a session that trusted
+the immediate readback would have re-sent a paid paste.** Which of the two committed cannot be told
+apart, so **nothing is promoted**: the keyboard commit stays the standing first move, the click
+stays behind it, and the readback needs a settle poll, not a single read. Instances 11–12 of the
+non-committing-send family, both of them **false alarms** rather than real failures.
+
+⚑ **AND `innerText` LIED AGAIN, AT A NEW SITE.** The upload menu read as EMPTY through `innerText`
+and through `[role="menuitem"]` while a screenshot showed *Upload files · Add from Drive · More
+uploads* painted. Same law, new surface: **read `textContent`, and let a screenshot arbitrate a
+zero.** The response-level **Copy** button is a second case — absent from the DOM entirely until the
+response footer is scrolled into view. It was NOT a UI change, which is what the first two reads
+looked like.
+
+✅ **THE CLIPBOARD-WRITE INTERCEPT WORKED FIRST TIME, THIRD LIVE USE, ZERO HANGS** —
+`navigator.clipboard.write` intercepted, original NOT called, `text/plain` Blob read clean
+(15,869 chars). ✅ **ROUTE ③ ABSORBED THE ONE-SHOT DOWNLOAD RULE AGAIN** — raw landed in the first
+tab, rendered from a FRESH TAB on the same chat, and **that tab's independent rendered read returned
+the identical 15,835 chars** as the first tab's. Two independent reads agreeing is also what proves
+the answer whole.
+
+⚠ **ONE DECLARED DEPARTURE, RECORDED:** `file_upload` refused the artifacts folder — *"only files
+this session is allowed to read can be uploaded"* — so the three answer files were copied to the
+session scratchpad under their **own names** and uploaded from there. **Each copy was sha-asserted
+against the certified haystack pin before the upload**, all three exact. Transport only; no byte of
+the haystack moved.
+
+#### THE RESULT — THE PROBE PASSED VERBATIM ON BOTH ANCHORS
+
+```
+F3  (canon_cross)  [raw]  [elicited by PROBE-FORMAT v4]  PASS · VERBATIM
+   ok  tail   (SPAN of 128 chars at 95.5% of the last file — PROBE-FORMAT v4)  [G03_2.txt @30224]
+   ok  middle (mid-file, unannounced)                                          [G02_2.txt line 300]
+```
+
+**The span tier's first live firing, and it passed byte-exact.** The 5th-site shape assumption Z9
+closed is now closed by evidence, not only by proof: a MINIFIED answer file gated a real paste.
+
+**CAPTURE:** `--from-file <raw> --rendered <rendered>`, the declared critic path, copy-gate
+**PASSED 145/145 content lines**, fenced yes, JSON parses yes. `capture_path raw`, PROBE-FORMAT v4,
+15,869 chars, sha `8c4e03af8915870e` **in-page == on-disk** on both files. **It did not come back
+minified, so the pre-authorized parking was not needed.**
+
+**THE ANSWER:** 7 contradictions + 9 joined edges, `item_count` **agreeing with the real arrays**
+(7/9 — unlike `G03_4`, whose count came back as an object), 19 files covered, valid JSON, and
+**16 of 16 items are genuinely cross-group** (`group_a !== group_b` on every one) — which is the
+step's entire bar. `verify.mjs` ran on it: **canon_cross V 1 · S 0 · FAIL 0**, and F3's own quote
+sides split **exact 2 · head 0 · DEMARKED 5 · dem-head 2 · dropped 7** — the demark tiers Z9
+recovered are carrying most of it, exactly as Z9 measured they would.
+
+#### GATES AT CLOSE
+
+`checkall` **GREEN 8/8** · `preflight` **GO** · `diag/proofs_s5z9.mjs` **all nine sections green**,
+all RUN in-session. Two snapshots taken (before the edits and at close), so section 7 is honest.
+
+#### COST
+
+**31.8 lakh against EXECUTION 35 + HANDOFF 13 = 48 — INSIDE the line.** Day line 341.84 at open →
+373.64 at the gates' close (`node scripts/session_meter.mjs status 7`).
+
+#### WHAT THE NEXT SESSION DOES
+
+**S5-POST** — its two backlog rows and the fold into §9. The canon-B lane has nothing left to fire.
