@@ -2795,6 +2795,24 @@ STATUS (update this block before any session stops — this is the handoff)
                                      ESCALATES, it is never re-tuned.**
                                    ⚠ **COST 32.7 lakh vs 14+12+5 = 31 — OVER, recorded as over.**
 
+  ⛑ CARRIED IN, FOLD IT FIRST ... **`queue\RULING__2026-08-27_1700-foldcarry.md` — THE FOLD-CARRY LAW.**
+                                   It landed AFTER the POST-B ①② sitting had closed and gone over its
+                                   line, so **by its own terms it did not bill that sitting and its fold
+                                   CARRIES HERE.** Its own fold line: *"one line into the router's close
+                                   instructions citing this file — by the next session that folds
+                                   anything."* **Do that first, then ③.**
+                                   ⛑ **WHAT IT SAYS, so nothing is re-derived: a ruling that lands
+                                   mid-close does NOT bill the sitting it interrupts. Its fold CARRIES
+                                   WHOLE to the next sitting as that sitting's FIRST act, priced by the
+                                   RULING's own fold line (default 6 flat). Carrying is the DEFAULT and
+                                   is NOT a breach** — §10-D rule 2 already produced exactly this twice;
+                                   the law makes it a written path instead of a recorded overrun. A
+                                   sitting that CAN fit a fold inside its line may still take it at once.
+                                   ⚠ **THIS BLOCK IS A POINTER, NOT THE FOLD.** The fold belongs in the
+                                   CLOSE INSTRUCTIONS (§10-D rule 7), and it is the carried work. It is
+                                   written here only so the carry cannot be lost — a handoff nobody can
+                                   read is his design-failure law at a new site.
+
   ▶ NEXT SESSION ............... **`S5-POST-B`'s SECOND SITTING — ③ THE FOLD INTO §9, AND NOTHING
                                    ELSE. MODEL: Opus 5 · effort HIGH. CEILING **6 FLAT, RULER-WRITTEN**
                                    (`RULING__2026-08-27_1700`, by channel): *"one record-and-commit cycle
