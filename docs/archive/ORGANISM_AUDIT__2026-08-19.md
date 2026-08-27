@@ -6603,7 +6603,10 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       `RULING__2026-08-27_1600-s5post-2.md` item 4, which also accepted rows 5-6 as landed.
       **SITTING 2, 27 Aug ~10:00: ROWS 5 AND 6 LANDED.** Fresh **BUILD 16 · PROOF 12 · HANDOFF 5
       = 33** for the sitting, under S5's own multi-sitting precedent (*"SAME S5 rung, fresh
-      EXECUTION 35 + HANDOFF 13"*, 4 uses) — declared, not assumed. **SPENT 20.14 — inside.**
+      EXECUTION 35 + HANDOFF 13"*, 4 uses) — declared, not assumed. ⚠ **SPENT 33.19 — OVER BY
+      0.19 AND RECORDED AS OVER**; 20.14 of it at the gates' close, the rest the ~16:00 ruling's
+      round-trip and same-act fold, which no ceiling had priced because the ruling did not exist
+      when the sitting opened. Ceiling NOT re-derived — §10-C: unit faults only.
       **WHAT REMAINS ON THIS ROW: row 7's build alone**, already RULED and scoped
       (per material class · 0.35 untouched · canon/corpus ADVISORY-REPORT-ONLY).
       **BUILD 16 · PROOF 12 · HANDOFF 5 = 33.** ⚠ **WRITTEN BY THE EXECUTOR, THEN ADOPTED AS
@@ -16048,9 +16051,15 @@ it is a missing tool.** `codeOf()` strips comments and every source-text assert 
 
 #### COST
 
-**20.14 lakh against a fresh BUILD 16 · PROOF 12 · HANDOFF 5 = 33 — INSIDE the line.** Day line
-428.48 at open → 448.62 at the gates' close (`node scripts/session_meter.mjs status 7`).
-Artifacts repo: `4210de2` (local only, still zero remotes).
+**20.14 lakh at the gates' close** (428.48 → 448.62), and **33.19 AT THE TRUE CLOSE against the
+fresh 33 — OVER BY 0.19, AND RECORDED AS OVER** (the S4 precedent). Day line 428.48 → **461.67**
+(`node scripts/session_meter.mjs status 7`). **Where the overage went, exactly: the ruling of
+~16:00 arrived by channel WHILE this close was being written, and folding it in the same act —
+router, both §10-C rows, the verbatim record — is work the HANDOFF line did not price because
+the ruling did not exist when the sitting opened.** Ceiling NOT re-derived: §10-C allows that
+only on a proven UNIT fault, and this is neither a unit fault nor a scope change — it is a rung
+that ran hot, which is data about the rung. Artifacts repo: `4210de2` + the queue commit (local
+only, still zero remotes).
 
 #### WHAT THE NEXT SESSION DOES
 
