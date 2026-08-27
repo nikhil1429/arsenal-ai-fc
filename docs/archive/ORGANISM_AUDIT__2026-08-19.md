@@ -75,12 +75,14 @@ STATUS (update this block before any session stops — this is the handoff)
                                    shape) and BUILT no earlier than the registry says. A session
                                    that patches it early is refused — this is a decided thing.
   S5  THE GEMINI SWEEPS ........ ◐ **STALE AS WRITTEN BELOW — corrected here, not rewritten (L9).
-                                   AS OF 27 Aug ~06:20: the CORPUS half is CLOSED 18/18, and the
-                                   CANON-B half is `G01` ☑ 4/4 · `G02` ☑ 4/4 · `G03` ◐ **3.5 of 4
-                                   — `G03_4` FIRED, RETURNED and PARKED sha-pinned at `diag/`
-                                   (minified JSON; the copy-gate's <3-line vacuity guard cannot be
-                                   satisfied), it captures at Z9's close and G03 closes there.**
-                                   **THE SEQUENCE REORDERED 27 Aug ~06:20: S5-Z9 → `F3` → S5-POST**
+                                   AS OF 27 Aug ~07:10: the CORPUS half is CLOSED 18/18, and the
+                                   CANON-B half is `G01` ☑ 4/4 · `G02` ☑ 4/4 · `G03` ☑ **4/4 —
+                                   `G03_4` CAPTURED LIVE at S5-Z9's close through the ruled MINIFIED
+                                   branch, sha `6c4cb2b598c4e159` IDENTICAL to the parked pin. The
+                                   ruler accepted it: the drive's answers are COMPLETE.**
+                                   **⇒ ONLY `F3` REMAINS IN THE CANON-B LANE, and its probe
+                                   `canon_cross` is CERTIFIED (PROBE-FORMAT v4, span tail).**
+                                   ~~THE SEQUENCE REORDERED 27 Aug ~06:20: S5-Z9 → `F3` → S5-POST~~
                                    (`RULING__2026-08-27_1315-s5canonb-7.md` reverses the 1255
                                    ruling's item 4 — F3's probe cannot be certified until Z9
                                    lands `probe_gen`'s `attaches_answers` branch). The
@@ -2767,29 +2769,91 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⚠ **~20.5 of the 35-lakh EXECUTION line** (day 3.40 → 23.85).
                                    **INSIDE** — and declared a FLOOR: the orientation read happened
                                    BEFORE that baseline was taken.
-  ▶ NEXT SESSION ............... **S5-Z9 · THE DEMARK JOIN — ITS OWN SESSION, AND IT NOW RUNS
-                                   *BEFORE* `F3`. MODEL: Opus 5 · effort HIGH ·
-                                   BUILD 11 · PROOF 10 · HANDOFF 5.**
-                                   **THE SEQUENCE: S5-Z9 → `F3` → S5-POST.** Reordered 27 Aug
-                                   ~06:20 by `RULING__2026-08-27_1315-s5canonb-7.md`, which
-                                   REVERSES the 1255 ruling's item 4 on its own record: F3's
-                                   deferred probe cannot be certified until `probe_gen` learns
-                                   an `attaches_answers` branch, and that branch is Z9's fourth
-                                   scope item. **Read the §10-C S5-Z9 row — it carries the full
-                                   four-item plate; do not work from this summary.**
-                                   ⛔ **`F3` IS NOT FIRE-ABLE YET AND THE REASON IS MECHANICAL,
-                                   NOT CAUTION:** `probecheck` reads `probe_expected.json` keyed
-                                   by CHAT, that file is `probe_gen`'s OUTPUT, and F3's haystack
-                                   is three ANSWER files — so until Z9 lands the branch there is
-                                   NOWHERE CERTIFIED for F3's probe to live. Firing it probe-less
-                                   or judging it with a diag script are BOTH forbidden by
-                                   `RULING__2026-08-27_0715-s5z4-2.md` item 2: *"a deferral is
-                                   not an exemption."*
-                                   ⚑ **THE 1150 MANUAL TWIN-SCAN IS SUPERSEDED INTO THAT BRANCH,
-                                   MECHANICALLY** — the certification runs the paraphrase-twin bar
-                                   itself, and it now binds EVERY future deferred probe, not just
-                                   F3's. F3's wiring row keeps `probe_deferred_twin_scan` as the
-                                   RECORD of why the bar exists; the RUNNING of it moved to Z9.
+  S5-Z9 THE DEMARK JOIN ........ ☑ **DONE 27 Aug 2026 ~07:10 TRUE machine-clock — FIVE items, every
+                                   DONE-proof green, checkall 8/8 + preflight GO in-session.**
+                                   ① the demark join with TIERED receipts: **KEPT 576 → 938 ·
+                                     discarded 766 → 462 rows** · G01_2 alone 2 → 34 · tiers at close
+                                     **byte-exact 528 · byte-head 62 · DEMARKED 284 · dem-head 64**.
+                                   ② the declared MINIFIED copy-gate branch — **`G03_4` CAPTURED
+                                     LIVE, sha `6c4cb2b598c4e159` == the parked pin. G03 IS 4/4.**
+                                   ③ `probe_gen`'s `attaches_answers` branch + the paraphrase-twin
+                                     bar — **`canon_cross` CERTIFIED, PROBE-FORMAT v4.**
+                                   ④ the FREE re-verify of every stored answer, tier split per answer.
+                                   ⑤ **+SCOPE, the DECLARED SPAN ANCHOR** (`RULING__2026-08-27_1340-
+                                     s5z9-1.md`): F3's last attachment is MINIFIED — 4 lines, zero
+                                     usable — so no line anchor can exist there. The UNIT changed,
+                                     not the bar. Span 128 chars, ruled envelope 100-160.
+                                   ⛔ **THE OBVIOUS TWIN METRIC WAS MEASURED WRONG:** whole-line word
+                                     Dice puts the twin that FOOLED the model at 0.3913 and the best
+                                     legitimate candidate at 0.4444 — inverted. **IDF-weighted Dice
+                                     separates them (0.3944 vs 0.3053) and 0.35 is now a RULED
+                                     CONSTANT for every future deferred probe; margin collapse
+                                     ESCALATES, it is never re-tuned.**
+                                   ⚠ **COST 32.7 lakh vs 14+12+5 = 31 — OVER, recorded as over.**
+
+  ▶ NEXT SESSION ............... **`F3` · THE CROSS-GROUP PASS — the LAST canon-B step, and the last
+                                   paste of the S5 sweep. MODEL: Opus 5 · effort HIGH.**
+                                   **ITS PROBE IS CERTIFIED. S5-Z9 LANDED 27 Aug ~07:10 and the three
+                                   gates F3 was waiting on are all closed:** `probe_gen` learned the
+                                   `attaches_answers` branch · the paraphrase-twin bar runs mechanically
+                                   inside the certification · the demark join + minified branch are live
+                                   in the same verify pass F3 will land in.
+                                   ⛔ **DO THESE THREE THINGS BEFORE THE PASTE, IN THIS ORDER —
+                                   they are inherited defects, not optional hygiene:**
+                                   **(1) `probeFor("F3")` STILL RETURNS `null`.** Its wiring `probe`
+                                   field is null, so `probecheck` cannot resolve the certified
+                                   `canon_cross` row to the step and the paste would fire UNGATED —
+                                   which is the one thing `RULING__2026-08-27_0715-s5z4-2.md` item 2
+                                   forbids by name. The fix is F3's OWN wiring line, written by
+                                   `buildsteps.mjs` (its owner), never by hand: Z9 was forbidden to
+                                   touch wiring and left it deliberately.
+                                   **(2) `wiring.json` IS HAND-EDITED AND `buildsteps.mjs` WILL DELETE
+                                   THAT EDIT.** The file (06:13) is NEWER than `buildsteps.mjs` (01:40)
+                                   and carries `probe_deferred_twin_scan`, which exists NOWHERE in the
+                                   generator. So the moment you run buildsteps for (1), that record is
+                                   gone. Teach `buildsteps.mjs` the line FIRST, then regenerate — the
+                                   record survives because it becomes DERIVED, which is what it should
+                                   have been. **Re-run `checkall` after: it proves the wiring narrative.**
+                                   **(3) RE-CERTIFY, DO NOT TRUST.** `canon_cross` carries a sha-pinned
+                                   `haystack` of the three answer files. `diag/proofs_s5z9.mjs` section 7
+                                   checks those fingerprints against disk — **run it, and if any moved,
+                                   re-run `probe_gen.mjs` before pasting.** A probe certified against
+                                   bytes that later moved is a receipt for a haystack nobody attached.
+                                   ⚑ **WHAT THE CERTIFIED PROBE IS, so nothing is re-derived:**
+                                   `canon_cross` · **PROBE-FORMAT v4** · prompt at
+                                   `prompts/PROBE_canon_cross.txt`. **ANCHOR 1 is a SPAN, not a line** —
+                                   128 chars at 95.5% of `answers/G03_2.txt`, because that answer came
+                                   back MINIFIED (4 lines, longest 31,619) and no line anchor can exist
+                                   in it. ANCHOR 2 is a normal line at `answers/G02_2.txt:300`. Both
+                                   anchors and both stored answers are UNIQUE across the whole
+                                   attachment set; twin scores 0.3248/0.2410 (span windows) and
+                                   0.3401/0.3035 (lines), all under the ruled bound **0.35**.
+                                   ⛔ **THE TWIN BOUND IS A RULED CONSTANT — 0.35 on IDF-WEIGHTED Dice
+                                   (`twinbar.mjs`, the ONE site). If future material collapses its
+                                   ~0.045 margin, ESCALATE. It is never re-tuned silently**
+                                   (`RULING__2026-08-27_1340-s5z9-1.md` item 3).
+                                   ⚑ **F3 TAKES THE DECLARED CRITIC PATH** — `--from-file <raw>
+                                   --rendered <rendered>`, two downloads, budget route ③ (a fresh tab on
+                                   the same chat) for the second. **AND IF IT RETURNS MINIFIED, IT NOW
+                                   CAPTURES DIRECTLY** — the branch is live and G03_4 was its first case;
+                                   the pre-authorized parking is no longer needed, though it stands.
+                                   ⛔ **THE SEND STEP: a `computer` CLICK ON SEND FAILED THREE TIMES AND
+                                   A `Return` KEYPRESS IN THE FOCUSED EDITOR COMMITTED FIRST TRY.** Use
+                                   the keyboard commit. The "first click since the tab loaded"
+                                   discriminator is REFUTED — clicks 2 and 3 were not first.
+                                   ✅ **THE CLIPBOARD-WRITE INTERCEPT IS THE STANDING FIRST HOP of
+                                   `--from-blob`** — intercept `navigator.clipboard.write`, do NOT call
+                                   the original. Two live uses, zero hangs. **It is the OS write that
+                                   hangs, not Gemini's ClipboardItem.**
+                                   ⛔ **READ THE ANSWER OFF `message-content`, NOT `model-response`.**
+                                   ⛔ **AFTER F3: S5-POST.** Its two backlog rows and the fold into §9.
+                                   **EVERY canon AND corpus verify number in this file is a bound of one
+                                   kind or another — read the tier split, never a bare "kept N".**
+
+                                   ~~S5-Z9 · THE DEMARK JOIN — ITS OWN SESSION, AND IT NOW RUNS *BEFORE*
+                                   `F3`~~ **— DONE 27 Aug ~07:10, all five items. The block below is kept
+                                   struck, not deleted (L9); its ⛔ lines about G03_4 being parked and F3
+                                   being un-fire-able are SUPERSEDED by the two blocks above.**
                                    ✅ **`G03` IS 3.5 of 4 — `G03_4` FIRED, RETURNED AND IS PARKED,
                                    NOT OWED.** 57 edges, valid JSON, `item_count` returned as an
                                    OBJECT (`{"edges":51}`) against a real array of 57.
@@ -5809,7 +5873,9 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       payload and B13 closes 2/2 there** (item 4 — NO re-send; the B04_2/B10_2 precedent, third use).
                                     BUILD 8 · PROOF 8 · HANDOFF 5 — ruler-written off the
                                     10.13/19.4/26 record (RULING__2026-08-27_0150 item 3).
-☐ S5-Z9 THE DEMARK JOIN — a micro-rung, RULED by the architect 27 Aug ~02:35 TRUE machine-clock
+☑ S5-Z9 THE DEMARK JOIN — **DONE 27 Aug 2026 ~07:10 TRUE machine-clock. ALL FIVE ITEMS LANDED,
+      every DONE-proof green, checkall 8/8 and preflight GO in-session.** RULED by the architect
+      27 Aug ~02:35 TRUE machine-clock
       (`queue\RULING__2026-08-27_0750-s5canonb-1.md`), off G01_2. **Escalated, not decided by the
       executor: accepting a demarked match is a LOOSENING, and §10-D rule 6 forbids one on an
       executor's own word.** MODEL: Opus 5 · effort HIGH. ~~**RUNS AFTER the canon-B drive, NEVER
@@ -5897,13 +5963,81 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       **the `canon_cross` probe certifies through probe_gen's own writer, its anchor passes the
       uniqueness AND paraphrase-twin bars, its expected answer is STORED, and a non-unique anchor
       is proven to be REFUSED** · checkall GREEN 8/8 + preflight GO, in-session.
+      ⚑ **+SCOPE, FIFTH ITEM, GRANTED 27 Aug ~06:50 TRUE machine-clock — THE DECLARED SPAN ANCHOR**
+      (`RULING__2026-08-27_1340-s5z9-1.md` item 1), off the executor's escalation
+      `queue\2026-08-27_1336-s5z9-1.md`. **THE FORK, MEASURED:** `probesFor` requires the TAIL anchor
+      to sit in the group's LAST file, and F3's last attachment `answers/G03_2.txt` is **MINIFIED —
+      4 lines, longest 31,619 chars, ZERO lines inside `usable()`'s 45-170 band** — so no line-shaped
+      anchor can exist there and the generator REFUSED. ⛔ **IT IS THE SAME SHAPE ASSUMPTION AS THE
+      COPY-GATE'S `< 3 rendered lines` CLAUSE, AT A SECOND INSTRUMENT — the fifth site of the class.**
+      ⇒ **the UNIT changes, never the bar:** for a file with no usable line the anchor is a declared
+      SPAN — a distinctive substring near the end, expected = the characters immediately after it,
+      same generator, same STORED expected answer, same diff-not-judgement, same twin bar.
+      **PROBE-FORMAT v4**, so a span receipt can never read as a line receipt. **Span length is the
+      EXECUTOR'S inside a ruled envelope of 100-160, declared and stored per probe** (the ruler:
+      *"your calibration record has earned parameter authority; the ruler sets envelopes, not knobs"*)
+      — **128 chosen and stored.** B and C REFUSED; D (re-ordering the attachments to dodge the gate)
+      was refused by the executor BEFORE asking, and that refusal is ratified.
+      ⚑ **THE TWIN METRIC IS A RULED CONSTANT NOW, AND THE OBVIOUS METRIC WAS MEASURED WRONG.**
+      Whole-line word Dice INVERTS on this material: the twin that actually fooled the model scores
+      **0.3913** and the best legitimate F3 candidate **0.4444**, so a bound catching the failure would
+      have refused every honest anchor — a JSON answer file is made of lines that all read
+      `"quote_a": "…"` and boilerplate swamps the signal. **IDF-WEIGHTED Dice separates them:**
+      failure **0.3944** (its following line 0.6000) · best legitimate candidate **0.3053** ⇒
+      **BOUND 0.35, ~0.045 of margin each side, RULED as the bar for every future deferred probe.
+      A future material that collapses that margin ESCALATES; it is never re-tuned silently**
+      (`RULING__2026-08-27_1340-s5z9-1.md` item 3).
+      ⚑ **THE METRIC LIVES AT ONE SITE — `twinbar.mjs`**, extracted the moment a second consumer
+      appeared (the proof harness), because the alternative was a second copy: the exact drift S5-Z7
+      refused when `probeFor` had drifted between `probecheck` and `preflight` on this same folder.
+      ✅ **WHAT LANDED, MEASURED:**
+      ① the demark join — **KEPT 576 → 938 · discarded 766 → 462 rows.** G01_2 alone went 2 → 34.
+      Tiers at close: **byte-exact 528 · byte-head 62 · DEMARKED 284 · demarked-head 64.**
+      ② the minified branch — **`G03_4` CAPTURED LIVE through `capture.mjs`, sha `6c4cb2b598c4e159`
+      IDENTICAL to the parked pin, stamped its own tier `minified-whole-payload`, 4 chars of renderer
+      chrome measured and named. G03 IS 4/4 AND THE CANON-B DRIVE'S ANSWERS ARE COMPLETE.**
+      ③ `probe_gen`'s `attaches_answers` branch — **`canon_cross` CERTIFIED through probe_gen's own
+      writer**: span tail at 95.5% of `G03_2.txt` (twin 0.3248/0.2410) · line middle at `G02_2.txt:300`
+      (twin 0.3401/0.3035) · both anchors and both stored answers UNIQUE across the whole attachment
+      set · haystack sha-pinned in the row. **THE FREEZE HELD: 23/23 pre-existing probe rows and 39/39
+      pre-existing prompts BYTE-IDENTICAL**, one new file added.
+      ④ the free re-verify — every stored answer re-verified with the tier split visible per answer.
+      ⛔ **AND IT CORRECTS THE 0750 MECHANISM, ON THE RULER'S OWN RECORD (item 4):** *"cost ~nothing
+      across B01-B18"* is **WRONG — the corpus recovered 166 items to the canon's 182.** ~166 real
+      corpus findings were being discarded silently across eighteen chats that are marked CLOSED.
+      Nothing is folded into §9 yet, so no §9 number is wrong — but **every B-chat kept/dropped number
+      in the record is a PRE-Z9 BOUND too, not only the canon ones.**
+      ⛔ **TWO DEFECTS FOUND AT READ TIME, BOTH RECORDED:** (a) `diag/g03_4_gate_measure.mjs` carried
+      its OWN skeleton, not `mdrender.skeleton` — it did not drop the ```` ```json ```` fence line, so
+      it reported `allContained TRUE`. Under the gate's real skeleton the sampled clause **also**
+      fails, because the page glues its `JSON` language badge onto the single line. **So "substance
+      passed 1/1, only the arity clause refused" was true only of the diag's comparator — the refusal
+      was never one clause.** A second copy of the normalization, at a diag site, producing the
+      friendlier verdict: the class again. (b) `wiring.json` (06:13) is NEWER than `buildsteps.mjs`
+      (01:40) and carries `probe_deferred_twin_scan`, which exists NOWHERE in `buildsteps.mjs` — the
+      row was hand-added to a DERIVED artefact, so **the next `node buildsteps.mjs` silently deletes
+      that record.** Not fixed here (wiring is Z9-forbidden); it rides F3.
+      ⛔ **ONE THING F3 INHERITS AND MUST DO FIRST: `probeFor("F3")` STILL RETURNS `null`** — its
+      wiring `probe` field is null, so `probecheck` cannot yet resolve the certified `canon_cross`
+      row to the step. That wiring line is F3's own; Z9 was forbidden to write it.
+      ⚠ **COST 32.7 lakh against 14+12+5 = 31 — OVER BY ~1.7, AND RECORDED AS OVER** (the S4
+      precedent). The overage is the escalation round-trip plus two instrument defects found and
+      fixed mid-rung (the coordinate-system bug in the span picker, which silently refused every
+      candidate, and the header edit that briefly broke the prompt freeze and was caught by the
+      determinism proof). Ceiling NOT re-derived — §10-C: unit faults only.
                                     BUILD 11 · PROOF 10 · HANDOFF 5 — ruler-written, RE-DERIVED
                                     TWICE for the +scope: 8/8/5 (`RULING__2026-08-27_0750` item 4)
                                     → 9/9/5 (`RULING__2026-08-27_1255-s5canonb-6.md` item 1, the
                                     minified branch) → **11/10/5**
-                                    (`RULING__2026-08-27_1315-s5canonb-7.md` item 3).
+                                    (`RULING__2026-08-27_1315-s5canonb-7.md` item 3) → **BUILD 14 ·
+                                    PROOF 12 · HANDOFF 5** (`RULING__2026-08-27_1340-s5z9-1.md`
+                                    item 2, the span +scope).
 ◐ S5  THE GEMINI SWEEPS.              MODEL: Opus · effort high (mechanical driving)
-      ▸ **THE CANON-B HALF IS OPEN — `G01` AND `G02` CLOSED 4/4; `G03` IS 3.5 of 4** (27 Aug
+      ▸ **THE CANON-B DRIVE IS COMPLETE — `G01`, `G02` AND `G03` ALL CLOSED 4/4** (`G03_4` captured
+      at S5-Z9's close through the minified branch, sha `6c4cb2b598c4e159` == the parked pin; the
+      ruler accepted it 27 Aug ~06:50: *"G03 4/4 accepted — the drive's answers are complete"*).
+      **WHAT REMAINS IN THE CANON-B LANE IS `F3` ALONE, and its probe is now CERTIFIED.**
+      ~~THE CANON-B HALF IS OPEN — `G01` AND `G02` CLOSED 4/4; `G03` IS 3.5 of 4~~ (27 Aug
       ~02:45 · ~04:05 · ~05:30 · ~06:00 TRUE machine-clock). **`G03_4` HAS BEEN FIRED, RETURNED,
       MEASURED AND *PARKED* — 57 edges, valid JSON, two independent witnesses, and `capture.mjs`
       REFUSED it for a structural reason that is not a fault: the model emitted MINIFIED JSON, so
@@ -14807,3 +14941,305 @@ the last sitting stopped to avoid. Records ride the 13-lakh HANDOFF line.
 
 **NEXT SESSION — S5-Z9 · THE DEMARK JOIN, ITS OWN SESSION. MODEL: Opus 5 · effort HIGH ·
 BUILD 11 · PROOF 10 · HANDOFF 5.** Four items on its plate; the §10-C row carries them.
+
+---
+
+### PROGRESS 2026-08-27 ~13:45 series / **27 Aug ~07:10 TRUE machine-clock** — **S5-Z9 DONE, ALL FIVE ITEMS: the demark join recovered 362 findings the verifier had been discarding SILENTLY, G03_4 captured and G03 closed 4/4, and F3's probe is certified — after the obvious twin metric turned out to be measured wrong-way-round**
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — *"S5-Z9 · THE DEMARK JOIN —
+ITS OWN SESSION, AND IT NOW RUNS **BEFORE** `F3`. Opus 5 · effort HIGH · BUILD 11 · PROOF 10 · HANDOFF 5."*
+Micro-order written to the session scratchpad BEFORE any edit (rule 9), checked against the §10-C row and
+its FORBIDDEN list. **MODE: auto (card v7).**
+
+#### WHAT LANDED — five items, every DONE-proof green
+
+**① THE DEMARK JOIN + TIERED RECEIPTS.** `demark()` lives in `mdrender.mjs`, the ONE site the class law
+already owns, and strips exactly the declared set — `**`, a backtick, a LEADING `- `. Nothing else:
+italics, `_`, `#`, `>`, `~~`, links, `* ` bullets and `1. ` markers all survive it, one assert each.
+`verify.mjs` consumes it as a SECOND TIER that is unreachable until both strict tests have already failed.
+
+| | pre-Z9 | post-Z9 |
+|---|---|---|
+| KEPT items | 576 | **938** |
+| dropped rows | 766 | **462** |
+| `G01_2` alone | 2 of 50 | **34 of 50** |
+
+Tier split at close: **byte-exact 528 · byte-head 62 · DEMARKED 284 · demarked-head 64.** Every one of the
+576 pre-Z9 kept items is STILL kept and **not one was re-stamped into the demarked tier** — the strict path
+did not move a millimetre. A second site of the same tier-flattening was found and fixed while wiring it: a
+`canon-pair` verdict stamped plain `"ok"` whenever both sides passed, so a demarked pair — and a
+head-partial one — would have been reported as byte-exact. `pairTier()` now reports the WEAKER side.
+
+**② THE DECLARED MINIFIED BRANCH — and `G03_4` IS CAPTURED, so G03 IS 4/4.**
+The branch is entered by the SHAPE OF THE PAYLOAD, never by the thinness of the read: a payload that is one
+content line, read as one content line. Then the line-sampling clause is REPLACED by a strictly stronger
+one — the rendered read must END WITH the whole payload's skeleton, forgiving at most one CHROME_MAX-sized
+badge of renderer chrome. Truncation, substitution, staleness and a genuine FRAGMENT are all still refused,
+and a multi-line payload read thinly still hits the untouched `<3` refusal.
+`G03_4` captured live through `capture.mjs --from-file --rendered`: **23,491 chars, sha `6c4cb2b598c4e159`
+IDENTICAL to the parked pin**, stamped `minified-whole-payload`, 4 chars of chrome measured and named in
+the sidecar. It then verified: 10 byte-exact · 4 head · 19 demarked.
+
+⛔ **AND THE PARKED MEASUREMENT WAS FRIENDLIER THAN THE GATE, FOR A REASON THAT IS THIS RUNG'S OWN CLASS.**
+`diag/g03_4_gate_measure.mjs` carried its OWN skeleton — not `mdrender.skeleton` — so it did not drop
+the opening json fence line. Under the gate's real skeleton the sampled clause **also** fails, because the
+page glues its `JSON` language badge onto the single line while `renderMarkdown` drops the fence. **So
+*"substance passed 1/1, only the arity clause refused"* was true only of the diag's comparator: the refusal
+was never one clause.** A second copy of the normalization, at a diag site, producing the kinder verdict.
+
+**③ `probe_gen` LEARNED THE `attaches_answers` BRANCH, AND THE TWIN BAR IS MECHANICAL NOW.**
+`canon_cross` is emitted through probe_gen's OWN writer, so determinism, ownership and probecheck's read
+path are unchanged. **THE FREEZE HELD: 23/23 pre-existing probe rows and 39/39 pre-existing prompts are
+BYTE-IDENTICAL after the branch**, with exactly one new file added.
+
+⛔ **THE OBVIOUS TWIN METRIC IS MEASURED WRONG-WAY-ROUND, AND THAT IS THE FINDING.** Whole-line word Dice
+puts the twin that ACTUALLY FOOLED THE MODEL at **0.3913** and the best legitimate F3 candidate at
+**0.4444** — inverted, so a bound catching the failure would have refused every honest anchor. The cause is
+structural: a JSON answer file is made of lines that all read `"quote_a": "…"`, and boilerplate overlap
+swamps the signal. Weighting each shared token by its INVERSE DOCUMENT FREQUENCY inverts it back — shared
+RARE words (`pixel`, `sight`) dominate, shared scaffolding counts for nothing — and the populations
+separate: **failure 0.3944** (its following line 0.6000) vs **best legitimate candidate 0.3053**.
+**BOUND 0.35, ~0.045 of margin each side.** The ruler made it a constant for every future deferred probe.
+The metric lives in `twinbar.mjs` — extracted the moment a second consumer appeared, because the
+alternative was the drift S5-Z7 refused when `probeFor` split between `probecheck` and `preflight`.
+
+**④ THE FREE RE-VERIFY** — every stored answer re-verified at close, with the tier split printed PER ANSWER.
+
+**⑤ +SCOPE: THE DECLARED SPAN ANCHOR — escalated, ruled, built.** See the escalation below.
+
+#### THE ESCALATION, AND WHY IT WAS ONE
+
+`probesFor` requires the TAIL anchor to sit in the group's LAST file, because that is where truncation
+shows first. **F3's last attachment `answers/G03_2.txt` is MINIFIED: 4 lines, longest 31,619 chars, ZERO
+lines inside `usable()`'s 45-170 band.** No line-shaped anchor can exist there, and the generator refused —
+correctly, declare-or-die. ⛔ **It is the SAME shape assumption as the copy-gate's `< 3 rendered lines`
+clause, at a SECOND instrument: the fifth site of "a gate whose predicate assumes a SHAPE the material is
+free to change".** Not taken alone: seating the tail elsewhere would leave F3's last attachment ungated,
+which is `0715` item 2 verbatim. Asked at 13.4 lakh, before spending anything else.
+
+**RULED: the UNIT changes, never the bar.** A span anchor — 128 chars (ruled envelope 100-160, declared and
+stored per probe), near the end of the file, expected = the characters immediately after it, same generator,
+same stored expected answer, same diff-not-judgement, same twin bar, **PROBE-FORMAT v4** so a span receipt
+can never read as a line receipt. Seated at **95.5% of `G03_2.txt`**, twin 0.3248/0.2410; the middle anchor
+is an ordinary line at `answers/G02_2.txt:300`, twin 0.3401/0.3035. All four under the bound.
+
+#### THE 0750 MECHANISM IS CORRECTED, ON THE RULER'S OWN RECORD
+
+The 0750 ruling said the demark loss *"cost ~nothing across B01-B18 and costs ~62% here"*. **Measured over
+every stored answer: the canon recovered 182 items and the CORPUS recovered 166.** So ~166 real corpus
+findings were being discarded silently across eighteen chats that are marked CLOSED 18/18. Nothing is folded
+into §9 yet, so no §9 number is wrong — but **every B-chat kept/dropped number in this file is a PRE-Z9
+BOUND too, not only the canon ones.** The ruler recorded the correction rather than defending the line.
+
+#### TWO INSTRUMENT DEFECTS FOUND *BY* BUILDING, BOTH CAUGHT BY A PROOF AND NOT BY INSPECTION
+
+**(a) THE COORDINATE-SYSTEM BUG, and it failed SILENTLY IN THE SHAPE OF A HONEST REFUSAL.** The span twin
+bar slides over the WHOLE haystack, so its indices are haystack offsets; the candidate offsets are offsets
+INSIDE the last file. Excluding `[i, i+spanLen]` of the wrong space left every candidate window comparing
+**against itself** — score ~1, rejected — and the refusal read exactly like *"this material has no twin-free
+span"*. It is the alphabet class in numbers. Found only because the refusal was one line too confident.
+The refusal now NAMES which anchor could not be seated; *"could not pick an anchor"* had already sent this
+rung looking at the wrong half of the pick.
+
+**(b) THE PROMPT FREEZE BROKE FOR ONE RUN.** A header edit meant for span probes applied to every probe, and
+all 23 pre-existing prompts changed. **The determinism check caught it in the same minute** — the header
+clause is now branched so a line probe emits the original bytes, and 39/39 are identical again. That check
+exists because S5-Z6 pinned it; without it this would have shipped.
+
+#### WHAT F3 INHERITS — read the router row, it carries all three
+
+1. ⛔ **`probeFor("F3")` STILL RETURNS `null`.** The wiring `probe` field is null, so `probecheck` cannot
+   resolve the certified `canon_cross` row to the step and a paste would fire UNGATED. The fix is F3's own
+   wiring line, written by `buildsteps.mjs`; Z9 was forbidden to touch wiring and left it deliberately.
+2. ⛔ **`wiring.json` IS HAND-EDITED AND `buildsteps.mjs` WILL DELETE THAT EDIT.** The file (06:13) is newer
+   than `buildsteps.mjs` (01:40) and carries `probe_deferred_twin_scan`, which exists nowhere in the
+   generator — the 1150 ruling said "no instrument build", so the row was hand-added to a DERIVED artefact.
+   Teach the generator the line BEFORE regenerating, or the record dies the moment (1) is fixed.
+3. ⚑ **RE-CERTIFY, DO NOT TRUST.** The `canon_cross` row sha-pins its three answer files; section 7 of the
+   proof harness checks those against disk. If any moved, re-run `probe_gen.mjs` before pasting.
+
+#### THE PROOFS
+
+`diag/proofs_s5z9.mjs` — **nine sections, all green, idempotent, and PINNED INTO `checkall` as a gate** (the
+Z6 precedent: a proof that only runs when somebody remembers it is not a gate). The bites that matter:
+a demarked match may never stamp byte-exact · the join refuses everything outside the declared set, one
+assert per construct · every pre-Z9 verdict survives unmoved · no second live copy of either normalization ·
+the minified branch refuses a truncated, substituted, fragmentary or too-short payload while capturing
+`G03_4` · a DUPLICATED haystack seats no span · a tail that PARAPHRASES an earlier passage is refused ·
+the bar refuses `canon_g03`'s real anchor and ACCEPTS a twin-free pair · 23/23 probes byte-identical.
+
+**`checkall` GREEN 8/8 and `preflight` GO, both run in-session.** One consumer needed teaching on the way:
+`preflight` resolved a probe's haystack by LABEL PREFIX, and `"canon_cross".startsWith("canon")` sent it
+looking for `answers/G01_2.txt` inside `canon/`. It reads the row's own `haystack` paths now — the same law
+the comment above it already stated.
+
+#### COST
+
+**32.7 lakh against BUILD 14 · PROOF 12 · HANDOFF 5 = 31 — OVER BY ~1.7, AND RECORDED AS OVER** (the S4
+precedent). Baseline 294.42 → 327.16 (`node scripts/session_meter.mjs status 7`). The overage is the
+escalation round-trip plus the two instrument defects above, both found and fixed inside the rung. **Ceiling
+NOT re-derived** — §10-C: unit faults only.
+
+#### THE ESCALATION AND BOTH RULINGS, VERBATIM
+
+<details><summary><code>queue\2026-08-27_1336-s5z9-1.md</code> — the escalation</summary>
+
+```
+# ESCALATION — S5-Z9 · the `attaches_answers` probe cannot seat a TAIL anchor
+series 2026-08-27_1336-s5z9-1 · **true machine clock 27 Aug 2026 ~06:41 IST** · executor, canon-B lane
+(filename keeps the +6:55 shifted-clock convention of the 1255/1315 files so the queue stays sortable)
+
+## CONTEXT (two lines)
+S5-Z9 items ①②④ are BUILT, PROVEN and GREEN — the demark join with tiered receipts (576 → 938 kept,
+329 findings recovered), the minified copy-gate branch (**G03_4 CAPTURED LIVE, sha `6c4cb2b598c4e159`
+== the parked pin — G03 IS 4/4**), and the free re-verify of every stored answer.
+Item ③ — `probe_gen`'s `attaches_answers` branch — is built, the twin bar is built and calibrated,
+and the generator **REFUSES**, loudly and correctly. Asked before spending anything else.
+
+## THE FORK
+`probesFor()` requires the TAIL anchor to sit in the group's **LAST file**, because that is where
+truncation shows first. F3's last attachment is `answers/G03_2.txt`, and **that answer is MINIFIED**:
+
+    answers/G01_2.txt   793 lines · 213 usable · longest line   272
+    answers/G02_2.txt   525 lines · 203 usable · longest line   207
+    answers/G03_2.txt     4 lines ·   0 usable · longest line 31,619   <-- the tail file
+
+`usable()` requires 45–170 chars, so **G03_2 offers ZERO candidate lines** and `probe_gen` throws:
+`could not pick a UNIQUE anchor for canon_cross`. That is declare-or-die working as designed —
+it refused rather than silently downgrading to a two-anchor or middle-only probe.
+
+**It is the SAME material property as item ②.** The model emitted minified JSON at `G03_2` and at
+`G03_4`; ② fixed the copy-gate's shape assumption, and this is that assumption at a second
+instrument. A gate whose predicate assumes a SHAPE the material is free to change — the fifth site.
+
+## WHAT IS ALREADY SETTLED, so it does not need re-deciding
+**The twin bar is BUILT and CALIBRATED, and the obvious metric is measured WRONG.** Whole-line word
+Dice inverts on this material: the twin that actually fooled the model scores **0.3913**, the best
+legitimate F3 candidate **0.4444** — a bound catching the failure would refuse every honest anchor,
+because a JSON answer file is made of lines that all read `"quote_a": "…"` and boilerplate swamps
+the signal. Weighting shared tokens by **inverse document frequency** separates them cleanly:
+
+    the canon_g03 twin that fooled the model ....... 0.3944   (its following line: 0.6000)
+    the best legitimate F3 candidate pair .......... 0.3053
+    DECLARED BOUND ................................. 0.35     (~0.045 margin each side)
+
+34 candidate pairs survive at that bound — **all of them in G01_2/G02_2, none in G03_2.** So the
+twin bar is not the blocker; the tail-file shape is.
+
+Determinism is intact: with `reject` undefined every pre-existing probe takes the identical code
+path — **39/39 prompt files byte-identical and `probe_expected.json` unchanged** after the patch.
+
+## THE OPTIONS, with costs
+**A · A DECLARED SPAN ANCHOR for a single-line file (my recommendation).** When a haystack file has
+no usable LINE, the tail anchor becomes a distinctive ~120-char SUBSTRING near the file's end and the
+expected answer is the ~120 characters immediately following it — same generator, same stored
+expected answer, same diff-not-judgement check, same twin bar. It needs a probe TEMPLATE variant
+(`PROBE-FORMAT v4`, so a span receipt can never be misread as a line receipt) and a `probecheck`
+comparator that reads a span row. **Cost ~3 lakh build + ~2 proof.** It keeps the tail covered, which
+is the only reason the tail anchor exists.
+
+**B · Seat the tail in the last file that CAN hold one (`G02_2`), record `G03_2` as UNPROBED.**
+Cost 0. But F3's LAST attachment — 31 KB, the position truncation hits first — goes ungated, and
+that is `0715 item 2` again: *"a deferral is not an exemption."* I do not recommend it.
+
+**C · Refuse to certify `canon_cross`; F3 cannot fire.** Halts the ladder on an instrument gap.
+
+**D · Re-cut the haystack so the minified answer is not last** — refused before asking: the
+attachment ORDER lives in `wiring.json`, Z9 is forbidden to touch wiring, and re-ordering to dodge
+a gate is picking the reading that passes.
+
+## WHAT I NEED BACK
+1. **A, B or C** — and if A, whether the span length (~120 chars) and `PROBE-FORMAT v4` are yours to
+   set or mine.
+2. Whether A rides **Z9** (+scope, as ② did) or becomes its own micro-rung — and its ceiling.
+3. Confirmation the **twin bound 0.35 on IDF-weighted Dice** stands as the declared bar for every
+   future deferred probe, or a different number.
+
+## TWO THINGS FOUND AT READ TIME — RECORD, no ruling needed unless you disagree
+1. ⛔ **`diag/g03_4_gate_measure.mjs` carried its OWN skeleton, not `mdrender.skeleton`** — it did
+   not drop the ```` ```json ```` fence line, so it reported `allContained TRUE`. Under the gate's
+   real skeleton the sampled clause **also** fails (the page glues its `JSON` language badge onto the
+   single line). So *"substance passed 1/1, only the arity clause refused"* is true only of the diag's
+   comparator. **The refusal was never one clause** — the new branch handles both, and the 4 chars of
+   badge are now measured and named in the receipt rather than assumed away. Second copy of the
+   normalization, at a diag site, producing the friendlier verdict. The class, again.
+2. ⛔ **`wiring.json` (06:13) is NEWER than `buildsteps.mjs` (01:40) and carries
+   `probe_deferred_twin_scan`, which exists nowhere in `buildsteps.mjs`.** The 1150 ruling said "no
+   instrument build", so the row was hand-added to the DERIVED artefact — **the next
+   `node buildsteps.mjs` silently deletes that record.** I did not run buildsteps and did not fix it
+   (wiring is Z9-forbidden). F3's rung inherits it, and it also inherits that `probeFor("F3")` still
+   returns **null** (`wiring.probe` is null), so a certified `canon_cross` row is not yet resolvable
+   by `probecheck` — F3's own wiring line, not Z9's.
+
+## ONE MORE MEASUREMENT THE RULING MAY WANT — the demark join is NOT canon-only
+Your 0750 mechanism said it *"cost ~nothing across B01–B18 and costs ~62% here"*. Measured over every
+stored answer at Z9's close: **canon (G) recovered 163 items · corpus (B) recovered 166.** The corpus
+half is CLOSED 18/18, so ~166 real corpus findings were being discarded silently across those
+eighteen chats. Nothing is folded into §9 yet, so no §9 number is wrong — but every B-chat kept/dropped
+number in the record is a PRE-Z9 bound too, not only the canon ones.
+
+## WHERE I STAND
+HALTED on item ③ only. ①②④ are green and will be committed with the ticks as they stand.
+Spend at the time of asking: **13.4 lakh** of BUILD 11 · PROOF 10 · HANDOFF 5.
+```
+
+</details>
+
+**`queue\RULING__2026-08-27_1315-s5canonb-7.md`** (folded here as the 1315 ruling owed from the previous
+close — it created this rung's fourth item and reordered the ladder):
+
+```
+# RULING — series 2026-08-27_1315 (pairs with 2026-08-27_1310-s5canonb-6) · F3's probe needs Z9 first
+ORIGINAL: `queue\2026-08-27_1310-s5canonb-6.md`. Asked before spending — correct.
+
+1. **RIDE IT ON Z9, AND THE SEQUENCE REORDERS: Z9 RUNS BEFORE F3.** My 1255 item 4 is REVERSED
+   by me, on the record: that sequence assumed F3 had no Z9 dependency; F3's own gate now has
+   three (the probe_gen branch, and Z9's demark/minified work feeding the same verify pass).
+   Mid-drive Z-rungs are the settled precedent (Z…Z8); "after the drive" was convenience, not
+   law.
+2. **Z9 gains the narrow item as recommended:** `probe_gen` learns an `attaches_answers`
+   haystack branch, emitting `canon_cross` through its OWN writer — determinism preserved,
+   owners-law intact. **The 1150 manual twin-scan line is SUPERSEDED into this branch
+   mechanically** (the certification runs the twin bar itself — strictly better than a
+   hand-run diag, and it binds every future deferred probe, not just F3's).
+3. **Z9 re-derived 9/9/5 → BUILD 11 · PROOF 10 · HANDOFF 5** (ruler-written; fourth scope item).
+   Z9's full plate, restated so nothing is lost: demark join + tiers · minified branch +
+   G03_4 capture · probe_gen answers-branch with twin bar · free re-verify of all answers.
+4. **Sequence now: close this sitting → S5-Z9 (own session, 11/10/5) → F3 (certified probe,
+   twin bar mechanical) → S5-POST.**
+
+FOLD: ① Z9 row (full plate + 11/10/5) · ② router sequence line · ③ F3 row: probe waits on Z9,
+1150's manual line marked superseded · ④ this file verbatim.
+```
+
+**`queue\RULING__2026-08-27_1340-s5z9-1.md`** (the span ruling, this rung's fifth item):
+
+```
+# RULING — series 2026-08-27_1340 (pairs with 2026-08-27_1336-s5z9-1) · the span anchor
+ORIGINAL: `queue\2026-08-27_1336-s5z9-1.md`. VERIFIED: G03_2 is 4 lines, longest 31,619 — the
+refusal is real and correct. Items ①②④ accepted GREEN; **G03 IS 4/4 — the canon-B drive's
+answers are complete.**
+
+1. **A RATIFIED — the DECLARED SPAN ANCHOR** for a haystack file with no usable line: ~120-char
+   distinctive substring near the file's end, expected = the following ~120 chars, same
+   generator/stored-expected/diff-not-judgement/twin bar. **PROBE-FORMAT v4** (a span receipt
+   never reads as a line receipt). **The span length is YOURS within a ruled envelope: 100–160
+   chars, declared and stored per probe** — your calibration record (the Dice inversion catch)
+   has earned parameter authority; the ruler sets envelopes, not knobs.
+2. **RIDES Z9 +scope, the ② precedent — the same shape-assumption class at its 5th site.**
+   **Z9 re-derived 11/10/5 → BUILD 14 · PROOF 12 · HANDOFF 5** (your ~3+2 estimate padded
+   against the thin-line record). Bites: span-vs-line tier separation, the envelope refusal,
+   v4 versioning, and the existing plate unchanged.
+3. **The TWIN BOUND 0.35 on IDF-WEIGHTED DICE STANDS as the declared bar for every future
+   deferred probe** — the calibration evidence (whole-line Dice measured WRONG-WAY-ROUND,
+   boilerplate swamping signal) is exactly why the metric is now a ruled constant with its
+   margin recorded (~0.045). If any future material collapses that margin: escalate, never
+   re-tune silently.
+4. **My 0750 mechanism line is CORRECTED on your measurement:** the demark join recovered
+   **166 corpus items** — "cost ~nothing on B01-B18" was wrong. Recorded, not defended.
+5. B refused (your own 0715 citation is the reason), C refused (halts on an instrument gap the
+   span closes), D's refusal-before-asking ratified.
+
+FOLD: ① Z9 row (span item + 14/12/5) · ② the v4 + envelope + 0.35 constants on the row ·
+③ the 0750 correction in PROGRESS · ④ this file verbatim. Then F3 fires on the certified probe.
+```
