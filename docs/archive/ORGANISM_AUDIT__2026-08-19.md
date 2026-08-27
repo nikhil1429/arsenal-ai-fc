@@ -2795,8 +2795,64 @@ STATUS (update this block before any session stops — this is the handoff)
                                      ESCALATES, it is never re-tuned.**
                                    ⚠ **COST 32.7 lakh vs 14+12+5 = 31 — OVER, recorded as over.**
 
-  ▶ NEXT SESSION ............... **`S5-POST` — the two backlog rows and THE FOLD INTO §9. MODEL: Opus 5
-                                   · effort HIGH.** ⛔ **THE CANON-B LANE HAS NOTHING LEFT TO FIRE:**
+  ▶ NEXT SESSION ............... **`S5-POST-A`, ITS SECOND SITTING — ROWS 5 AND 6 ONLY. MODEL: Opus 5
+                                   · effort HIGH.** ⛔ **NOT the fold into §9** — that is `S5-POST-B`
+                                   and it runs AFTER these two, because both change what the sweep's
+                                   NUMBERS MEAN (reporting PRECISION and reporting INTEGRITY), and
+                                   folding 947 verified items while they are known to be bounds would
+                                   put bounds into §9 as findings.
+                                   ⚑ **ROW 5 · THE RECOUNT MATCHER AS AN INSTRUMENT**
+                                   (`RULING__2026-08-26_2045-s5z8-1.md` item 2, off TWO consecutive
+                                   dirty controls — B12 3/5, B13 3/4). The per-chat recount matcher is
+                                   STRICTER than `verify.mjs`'s, so "genuinely absent" over-counts and
+                                   **every invention figure it produced is a BOUND.**
+                                   ⚑ **ROW 6 · THE RECEIPT-vs-OWN-ANSWER SELF-CONSISTENCY CHECK**
+                                   (`RULING__2026-08-26_2110-s5corpus-18.md` item 1). TIER-0 and FREE:
+                                   it compares the model's self-report against **the model's own
+                                   items** — the class `verify.mjs` structurally cannot see, because
+                                   verify checks the receipt against the REAL corpus and nothing checks
+                                   it against the ANSWER. **Live case B14_2:** a 4/4 coverage receipt,
+                                   0 invented filenames, `days_covered` claiming FOUR days over an item
+                                   set that cites only TWO.
+                                   ⛔ **ROW 7 IS RULED AND SCOPED — DO NOT RE-DERIVE IT**
+                                   (`RULING__2026-08-27_1505-s5post-1.md`, folded below and in the
+                                   §10-C row). v2 certifies **PER MATERIAL CLASS**; 0.35 stays the
+                                   ANSWERS-class measured constant, untouched; the canon/corpus bound
+                                   is a **HYPOTHESIS WITH A RECEIPT (n=1)** and must be STAMPED as such
+                                   in the certifier's own output. **The pre-authorized branch is the
+                                   LIVE one: the labels do NOT separate** — the one FAIL scores
+                                   **0.3944**, BELOW the lowest PASS at **0.4435** — so the
+                                   canon/corpus check is **ADVISORY-REPORT-ONLY**: it records twin
+                                   candidates beside the probe for S6 and **NEVER refuses**. *An
+                                   instrument that cannot measure does not gate.*
+                                   ✅ **S5-POST-A's FIRST SITTING LANDED FOUR ROWS, 27 Aug ~09:00** —
+                                   local git (zero remotes, a pre-push that refuses with no bypass,
+                                   `* -text` before the first commit) · the roster's declare-or-die flip
+                                   (the silent third category is gone and the exclusions are DATA, not a
+                                   comment) · the freeze's algorithm self-described at ONE site · the
+                                   §5 pin-assert, checked against the CUT. `diag/proofs_s5post.mjs`
+                                   **36 assertions, GREEN twice, every bound bites, PINNED into
+                                   `checkall`.** `checkall` 8/8 · `preflight` GO. **COST 30.54 vs 33.**
+                                   ⛔ **THE ARTIFACTS FOLDER IS A GIT REPO NOW, AND IT IS LOCAL FOREVER.**
+                                   Commit what you change there; **never add a remote** — the pre-push
+                                   hook refuses and the proof asserts both.
+                                   ⚠ **AN ASSERT AIMED AT CODE KEPT HITTING THE COMMENT THAT EXPLAINS
+                                   THE CODE — twice in one line, and both times it read as a real
+                                   finding.** Strip comments before testing source text.
+                                   ⚠ **THE ROUTER'S SCOPE LINE WAS STALE LAST TIME** ("the two backlog
+                                   rows" when SEVEN were granted) and **`S5-POST` had no §10-C row at
+                                   all.** Both are fixed; the lesson is the standing one — read the
+                                   backlog block and the §10-C row, never the router's summary alone.
+
+  ~~▶ NEXT SESSION ............... **`S5-POST` — the two backlog rows and THE FOLD INTO §9. MODEL: Opus 5
+                                   · effort HIGH.**~~ **— SUPERSEDED 27 Aug ~09:00: the scope line was
+                                   stale (SEVEN granted rows, not two), the rung had no §10-C row, and
+                                   `S5-POST` is a LANE whose parts "each wait for their own rung" by
+                                   this order's own words. Split into `S5-POST-A` (instruments) and
+                                   `S5-POST-B` (the fold), RATIFIED by
+                                   `RULING__2026-08-27_1505-s5post-1.md` item 4, which also ADOPTED the
+                                   executor-written ceiling as ruler-written. The block below is kept
+                                   struck, not deleted (L9).** ⛔ **THE CANON-B LANE HAS NOTHING LEFT TO FIRE:**
                                    `G01` `G02` `G03` all 4/4 and **`F3` FIRED, GATED, CAPTURED AND
                                    VERIFIED 27 Aug ~07:55** — probe `canon_cross` **PASS · VERBATIM on
                                    BOTH anchors**, which is the SPAN tier's first live firing and the
@@ -6441,6 +6497,91 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       FORBIDDEN: any agent touching a raw transcript · believing an unverified
       return · extra calls without a PROGRESS line saying why.
                                                                        CEILING: 40
+◐ S5-POST-A  THE POST-SWEEP INSTRUMENTS.   MODEL: Opus 5 · effort HIGH
+      **BUILD 16 · PROOF 12 · HANDOFF 5 = 33.** ⚠ **WRITTEN BY THE EXECUTOR, THEN ADOPTED AS
+      RULER-WRITTEN** by `RULING__2026-08-27_1505-s5post-1.md` item 4 — authorship converted, the
+      numbers stand, breach rules unchanged. **SPENT 30.54 — inside the line.**
+      ⚠ **THIS ROW DID NOT EXIST WHEN THE RUNG STARTED.** The backlog block says it is *"written
+      when the sweep closes"*; the sweep closed at F3 and nobody wrote it. **Z6's precedent
+      governs and was followed: written as the rung's FIRST ACT from the order's own words, not
+      escalated (rule 13), and recorded as missing.** Second instance of the rung-row-in-same-act
+      law failing at the moment a rung became reachable.
+      ⚠ **AND THE ROUTER'S SCOPE LINE WAS STALE — "the two backlog rows" IS SEVEN**, each named
+      with its granting ruling. The §10-C S5 row already said these *"each wait for its own
+      rung"*, so `S5-POST` is a LANE, not a rung. **SPLIT RATIFIED** (same ruling, item 4).
+      ☑ **ROW 1 · LOCAL GIT + THE ARCHIVIST TEST** (ruled Q-D ~14:20, *"local-git after the
+        sweep"*). The folder had NO git — which is why `proofs_s5x/y/z.mjs`, the harnesses that
+        CERTIFY this sweep's gates, had no restorable copy of any version. Now: a real first
+        commit, **ZERO remotes**, a `pre-push` hook that refuses with **no bypass** (RUN in the
+        proof, exit non-zero), and `.gitattributes` `* -text` written BEFORE the first commit
+        because CRLF-on-checkout would break every byte-strict receipt in the folder.
+        `snapshots/` is the ONE declared exclusion (it IS the copy-history mechanism). The
+        archivist half: **selftest 116/0**, and the repo guard is untouched — the archive root
+        (`~/CyborgArchive`) is a SIBLING of the new work tree, never below it.
+      ☑ **ROW 2 · THE ROSTER DECLARE-OR-DIE FLIP** (deferred at S5-Z2 by the ~12:25 ruling).
+        The roster walked THREE hardcoded locations and matched on extension, so `answers/`,
+        `corpus/`, `corpus_live/`, `snapshots/` and the root's `sweep.log` were a **SILENT THIRD
+        CATEGORY** — neither matched nor declared. That is the shape that kept `diag/` invisible.
+        The directory exclusions did exist — **as a PROSE COMMENT (L4)**. Now they are DATA with
+        reasons, `assertTotality()` refuses anything claimed by no rule, and **`roster()` calls it
+        itself so no consumer can forget**. Roster unchanged at 116: the flip made the exclusions
+        CHECKABLE, it did not change them.
+      ☑ **ROW 3 · THE FREEZE SELF-DESCRIBES ITS ALGORITHM** — `freezealgo.mjs`, the ONE site
+        (the `twinbar.mjs` / `payloadfence.mjs` precedent). `capture.mjs` wrote the fingerprints
+        with sha1/16 and `verify.mjs` re-checked them with a **SECOND hardcoded sha1/16**: two
+        copies of one algorithm at the gate that protects the whole haystack. **The sidecar beside
+        every answer already uses sha256**, so a session tidying "why is this one sha1?" moves the
+        writer and verify then reports EVERY INPUT AS MOVED — which prints as *"do NOT trust this
+        run's verdicts"*. An absent `algo` resolves to a **DECLARED** legacy default and SAYS so;
+        an unknown one is REFUSED, never guessed. The live 201-file freeze verifies unmoved.
+      ☑ **ROW 4 · THE §5 PIN-ASSERT** (granted ~02:55; *"there will not be a fourth naming"*).
+        **What is asserted is the CUT, not the repo file, and that is the whole design:** the repo
+        copy of SAMJHAO_ORDER moves whenever he studies, and a gate that reddens when he learns is
+        noise. The certified cut still hashes to **`b332c5289a3a858f`** (SAMJHAO_ORDER, in
+        chunk23) and **`f55e17240a761c5f`** (HOW_HE_LEARNS, chunk03); the repo side is REPORTED
+        beside it. **It has moved TWICE and nothing was watching** — pin → `f718e5e69a70409c`
+        → now **`40f98d210ac9a5c9`**. ⚠ **AND THIS ORDER'S OWN PROSE IS WRONG: "chunk07+chunk23"
+        — chunk07 carries NEITHER.** The assert finds the chunk BY SEARCH for exactly that reason.
+      ☑ **ROW 7 · MEASURED, NOT BUILT — and the measurement stopped the build.**
+        `diag/measure_twinbar_v2.mjs` (read-only): **the ruled 0.35 IDF-Dice bar would REFUSE 23
+        of 24 probes**, including `canon_g01` and `canon_g02`, which passed **VERBATIM 2/2**. 0.35
+        was fitted on ANSWER-file JSON; canon and corpus are prose and day-partitioned transcripts,
+        dense with genuine near-duplicates, and the statistic saturates (eight probes above 0.87,
+        one at 1.0000). **RULED `RULING__2026-08-27_1505-s5post-1.md`:** v2 certifies **PER
+        MATERIAL CLASS**; 0.35 stays the answers-class MEASURED constant; the canon/corpus bound
+        is a **HYPOTHESIS WITH A RECEIPT (n=1)**, stamped as such in the certifier's own output;
+        and if the labels do not separate, the canon/corpus check is **ADVISORY-REPORT-ONLY** —
+        it records twin candidates for S6 and NEVER refuses. **THEY DO NOT SEPARATE: the one FAIL
+        scores 0.3944, BELOW the lowest PASS at 0.4435** — paraphrase twins are SEMANTIC, template
+        repeats are LEXICAL. **So the advisory branch is the live one, and the build is scoped.**
+      ☐ **ROW 5 · THE RECOUNT MATCHER AS AN INSTRUMENT** — NOT STARTED, carries.
+      ☐ **ROW 6 · THE RECEIPT-vs-OWN-ANSWER SELF-CONSISTENCY CHECK** — NOT STARTED, carries.
+      **PROOF:** `diag/proofs_s5post.mjs` — **36 assertions, GREEN TWICE (idempotent), every bound
+      proven to bite**, and **PINNED INTO `checkall` as a gate** (the Z6 law, third use: a proof
+      that only runs when somebody remembers it is not a gate). `checkall` **GREEN 8/8** ·
+      `preflight` **GO**, both run in-session.
+      ⚠ **ONE ASSERT WAS WRITTEN WRONG TWICE, THE SAME WAY, ONE LAYER APART** — it aimed at the
+      code and kept hitting the COMMENT that explains the code (first the bare word `chunk07`,
+      then the quoted `"chunk07+chunk23"`). Both times it looked like a real finding. Comments are
+      stripped before the test now. Kin of the S5-R2 plant that hid behind a legitimate mention.
+      FORBIDDEN and held: any Gemini call · any paste · the fold into §9 · re-running `refilter2`
+      · firing `R01-R04` · re-tuning 0.35 · hand-editing a derived artefact · any remote on the
+      artifacts git · staging the LEARNING lane's `SAMJHAO_ORDER` dirt.
+
+☐ S5-POST-B  THE FOLD INTO §9.            MODEL: Opus 5 · effort HIGH · CEILING NOT YET WRITTEN
+      The sweep's product folded into §9 as SHAPES, beside SHAPES 1-6. **947 verified items across
+      nine categories** (`verified.json`: decisions 77 · rulings 138 · promises 95 ·
+      alternatives_rejected 86 · missing_implementation 171 · supersessions 45 · declared_unknown
+      17 · contradictions 84 · edges 234) from 55 answers.
+      ⛔ **IT RUNS AFTER ROWS 5 AND 6, NOT BEFORE.** Both change what the numbers MEAN — the order
+      calls them reporting PRECISION and reporting INTEGRITY — and folding 947 items while they are
+      known to be bounds would put bounds into §9 as findings. That ordering is the reason
+      S5-POST-A ran first and it is ratified.
+      ⛔ **EVERY canon verify number is a BOUND** · KEPT from `verified.json` only (`dropped.json`
+      is wrong in BOTH directions) · canon coverage ~90% for group 2, **72-83% for group 3**.
+      ⛔ **ITS CEILING IS NOT WRITTEN.** A rung this large is not priced off a guess; it is priced
+      when its scope is cut, and cutting it is the first act of whoever opens it.
+
 ☐ S6  PASS 4 FINAL + THE FLOW ATLAS + THE REGISTRY SPEC.
                     MODEL: FABLE · effort max (fallback: Opus max + self-review pass)
       (a) GENERATE THE FLOW ATLAS FIRST — free code over xray's IR + the declared
@@ -15462,3 +15603,184 @@ all RUN in-session. Two snapshots taken (before the edits and at close), so sect
 #### WHAT THE NEXT SESSION DOES
 
 **S5-POST** — its two backlog rows and the fold into §9. The canon-B lane has nothing left to fire.
+
+---
+
+### PROGRESS 2026-08-27 ~15:10 series / **27 Aug ~09:00 TRUE machine-clock** — **S5-POST-A: four backlog rows landed and bite-proven — and the FIFTH was MEASURED before being built, which is the only reason the ruled twin bar did not refuse 23 of the 24 probes that worked**
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐) — *"`S5-POST` — the
+backlog rows and THE FOLD INTO §9. MODEL: Opus 5 · effort HIGH."* Micro-order written to the session
+scratchpad before any edit (rule 9). Opus 5 · effort HIGH · AUTO mode.
+
+#### THE RUNG HAD NO §10-C ROW, AND THE ROUTER'S SCOPE LINE WAS WRONG
+
+Two bookkeeping facts, found by reading before building:
+
+1. **`S5-POST` HAD NO §10-C ROW.** The backlog block says the row is *"written when the sweep
+   closes"*. It closed at F3 and nobody wrote it. **Z6's precedent is exact and was followed:**
+   *"written as the rung's first act from the ruler's own words; not escalated (rule 13), and
+   recorded as missing."* **Second instance of the rung-row-in-same-act law failing at the moment a
+   rung became reachable** — the first was ruling 1610 and S5-Z6.
+2. **THE ROUTER SAID "the two backlog rows". THERE ARE SEVEN**, each named with its granting ruling
+   in the backlog block. And the §10-C S5 row already said these *"each wait for its own rung"* —
+   so `S5-POST` is a **LANE**, not a rung. Split into `S5-POST-A` (the instrument rows) and
+   `S5-POST-B` (the fold into §9), and the ordering was taken as **forced, not chosen**: rows 5 and
+   6 change what the sweep's numbers MEAN, so folding 947 verified items before they land would put
+   known bounds into §9 as findings.
+
+Both were carried to the architect for ratification rather than assumed — but the rung did NOT halt
+on them, because Z6's precedent already answers the first and the order's own words answer the
+second. **`RULING__2026-08-27_1505-s5post-1.md` item 4 ratified the split and ADOPTED the
+executor-written ceiling as RULER-WRITTEN** — authorship converted, numbers stand.
+
+#### THE FOUR ROWS THAT LANDED
+
+**ROW 1 · LOCAL GIT + THE ARCHIVIST TEST.** Ruled Q-D (*"local-git after the sweep"*). The folder
+had no git at all — which is precisely why `proofs_s5x/y/z.mjs`, the three harnesses that CERTIFY
+this sweep's gates, had no restorable copy of any version. Now: a real first commit of **898 tracked
+files**, **ZERO remotes**, and a `pre-push` hook that refuses **with no bypass** — proven by running
+it (exit non-zero, "REFUSED") and by an actual push at a local bare remote, which transferred
+nothing. `.gitattributes` carries `* -text` and was written **before** the first commit: every gate
+here is byte-strict, and git's default CRLF-on-checkout would have broken every receipt silently.
+`snapshots/` is the ONE declared exclusion — it IS the copy-history mechanism, and versioning a
+backup store is history of history. The archivist half: **selftest 116/0**, and the repo guard is
+untouched because the archive root (`~/CyborgArchive`) is a **sibling** of the new work tree, never
+a descendant.
+
+**ROW 2 · THE ROSTER DECLARE-OR-DIE FLIP.** The roster walked THREE hardcoded locations and matched
+on extension. Everything else — `answers/`, `corpus/`, `corpus_live/`, `snapshots/`, and the root's
+`sweep.log` — was a **SILENT THIRD CATEGORY**: neither matched by the predicate nor declared as
+excluded. That is this repo's SHAPE 1 in miniature and it is exactly how `diag/` stayed invisible.
+Worse, the directory exclusions **did** exist — **as a prose comment**, which L4 says is not a law
+at all. They are DATA with reasons now, `assertTotality()` refuses anything claimed by no rule, and
+**`roster()` calls the guard itself so no consumer can forget it**. ⚑ **The roster did not change:
+116 before, 116 after.** The flip made the exclusions checkable; it did not move them.
+
+**ROW 3 · THE FREEZE SELF-DESCRIBES ITS ALGORITHM.** `inputs_frozen.json` carried 201 fingerprints
+and not one word about what produced them. `capture.mjs` wrote them with sha1/16; `verify.mjs`
+re-checked them with a **second, independent, hardcoded sha1/16**. Two copies of one algorithm at
+the gate that protects the entire sweep's haystack — and the drift would not be quiet: **the sidecar
+beside every answer already uses SHA-256**, so a session tidying "why is this one sha1?" moves the
+writer and `verify.mjs` then reports EVERY INPUT AS MOVED, which prints as *"do NOT trust this run's
+verdicts"*. Move the reader instead and the check passes nothing while still printing green.
+`freezealgo.mjs` is the one site now (the `twinbar.mjs` / `payloadfence.mjs` precedent). An absent
+`algo` key resolves to a **DECLARED** legacy default and says so in the output; an unknown one is
+**refused**, never guessed. ⛔ **The algorithm itself was deliberately NOT "upgraded":** the live
+freeze is sweep state this rung may not touch, its owner is `capture.mjs`, and the algorithm was
+never the defect — the silence about it was.
+
+**ROW 4 · THE §5 PIN-ASSERT.** The order names the shape better than I could: *"the pin was a
+SENTENCE with an owner, the owner closed, and the sentence kept being true-sounding while nothing
+evaluated it."* ⛔ **What is asserted is the CUT, not the repo file, and that is the whole design.**
+The repo copy of SAMJHAO_ORDER moves whenever he studies — a gate that reddens when he learns is
+noise, not a gate. The invariant that matters is that the certified cut still carries the vintage
+the sweep read, because every finding about those documents is a finding about **those** bytes. The
+pin is recomputed out of the canon chunk: **`b332c5289a3a858f`** (SAMJHAO_ORDER in chunk23) and
+**`f55e17240a761c5f`** (HOW_HE_LEARNS in chunk03), both exact. The repo side is REPORTED beside it,
+and it has now moved **twice** with nothing watching: pin → `f718e5e69a70409c` → **`40f98d210ac9a5c9`**.
+⚠ **AND THIS ORDER'S OWN PROSE IS WRONG:** it says the copy lives in *"chunk07+chunk23"* — **chunk07
+carries neither of them.** A hand-restated pair of ids that drifted is what section 5 exists to
+catch, so the assert finds the chunk **by search**, never by a typed id.
+
+#### ROW 7 · THE MEASUREMENT THAT STOPPED A BUILD
+
+The PROBE CERTIFIER v2 row was granted off the `canon_g03` failure: exact-line uniqueness was MET
+and the probe still failed twice on a paraphrase twin, so v2 should certify on near-duplicate
+distance — the ruled bar, IDF-weighted Dice, bound **0.35**. Before building it,
+`diag/measure_twinbar_v2.mjs` (read-only, writes nothing) applied that bar to every probe on disk
+against its own haystack:
+
+```
+canon_g01   tail 0.4435 / 0.4315    REFUSE   — it PASSED VERBATIM 2/2
+canon_g02   tail 0.8781 / 1.0000    REFUSE   — it PASSED VERBATIM 2/2, and it is the controlled
+                                               A/B that settled the ten-file design
+canon_g03   tail 0.3944 / 0.6000    REFUSE   — correct: this one really failed
+live2_g01   tail 0.8995 / 0.8602    REFUSE   — it passed  (…and g02–g18, all of them)
+canon_cross tail 0.3248 / 0.2410    accept   — the only probe the bar was ever calibrated on
+```
+
+**23 of 24 refused.** 0.35 was fitted on ANSWER-file JSON, where boilerplate swamps signal and IDF
+weighting is exactly what lifts the twin out. Canon and corpus are prose and day-partitioned
+transcripts, dense with genuine near-duplicates by construction, and the same statistic saturates —
+eight probes above 0.87, one at **1.0000**, all of them passes. The ruling that set the constant had
+already warned that a crude heuristic OVER-FLAGS `canon_g02`; **the measurement says the RULED bar
+over-flags the same probe harder, and 22 others with it.**
+
+Escalated rather than resolved (queue file written first, as the record). **RULED, verbatim in the
+queue as `RULING__2026-08-27_1505-s5post-1.md`:** v2 certifies **PER MATERIAL CLASS**; the
+answers-class keeps 0.35 as a MEASURED constant; the canon/corpus bound is a **HYPOTHESIS WITH A
+RECEIPT (n=1)** and must be STAMPED as such in the certifier's own output; A and C refused, D's
+refusal-before-asking ratified. And a **pre-authorized branch**: if the labels do not separate, the
+canon/corpus check becomes **ADVISORY-REPORT-ONLY** — it records twin candidates for S6 and never
+refuses — *"an instrument that cannot measure does not gate."*
+
+⛔ **THE LABELS DO NOT SEPARATE, AND THE NUMBERS ARE ALREADY IN: the one FAIL scores 0.3944, BELOW
+the lowest PASS at 0.4435.** Paraphrase twins are SEMANTIC; template repeats are LEXICAL; a lexical
+statistic cannot rank them. **So the advisory branch is the live one and row 7's build is scoped
+before it starts.**
+
+#### THE PROOFS
+
+`diag/proofs_s5post.mjs` — **36 assertions, GREEN on two consecutive runs (idempotent), every bound
+proven to bite on a plant, and PINNED INTO `checkall` as a gate** (the Z6 law at its third use: a
+proof that only runs when somebody remembers it is not a gate). It plants and restores in a
+`finally`, and it **never touches sweep state** — the plants are temp files at the root and in
+`diag/`, and the one test needing a corrupted canon body corrupts an **in-memory** copy.
+
+⚠ **ONE ASSERT WAS WRITTEN WRONG TWICE, THE SAME WAY, ONE LAYER APART.** It aimed at the CODE and
+kept hitting the COMMENT that explains the code — first the bare word `chunk07`, then the quoted
+`"chunk07+chunk23"` inside the comment that names the order's own mistake. Both times it printed as
+a real finding. Comments are stripped before the test now. Kin of the S5-R2 plant that hid behind a
+legitimate historical mention, and worth carrying: **an assert on source text must be told what is
+code and what is prose about the code.**
+
+One consumer needed teaching on the way: `snapshot.mjs` had no CLI guard, so importing
+`assertTotality()` RAN the whole CLI and called `process.exit` — the importer would have died while
+printing a plausible snapshot report. Guarded exactly the way `probecheck.mjs` was on 21 Aug, in
+this same folder, for this same reason. Second use of that pattern, not a second invention.
+
+#### GATES AT CLOSE
+
+`checkall` **GREEN 8/8** · `preflight` **GO** · `diag/proofs_s5post.mjs` **36/36 twice**, all run
+in-session. Two snapshots taken (before the first edit and at close). The artifacts folder now has
+its own git history: `8e9f2e1` (the folder enters local git) and `0a3f64a` (this rung's work).
+
+#### COST
+
+**30.54 lakh against BUILD 16 · PROOF 12 · HANDOFF 5 = 33 — INSIDE the line.** Day line 386.47 at
+open → 417.01 at the gates' close (`node scripts/session_meter.mjs status 7`).
+
+#### WHAT THE NEXT SESSION DOES
+
+**`S5-POST-A`, its second sitting — ROWS 5 AND 6 ONLY** (the recount matcher; the
+receipt-vs-own-answer self-consistency check). Opus 5 · effort HIGH. **Not the fold into §9** — that
+is `S5-POST-B` and it runs after these two. Row 7 is ruled and scoped; do not re-derive it.
+
+<details><summary><code>queue\RULING__2026-08-27_1505-s5post-1.md</code> — the ruling, verbatim</summary>
+
+```
+# RULING — series 2026-08-27_1505 (pairs with 2026-08-27_1500-s5post-1) · the twin bar does not cross material classes
+ORIGINAL: `queue\2026-08-27_1500-s5post-1.md`. Measure-before-build was exactly right, and the
+escalation's own framing is adopted: the 1340 constant was ruled for ONE material class; applying
+it across classes is the alphabet class at a new site.
+
+1. **B RATIFIED — v2 certifies PER MATERIAL CLASS — with the honesty condition made mechanical:**
+   the answers-class keeps 0.35 (a MEASURED constant). The canon/corpus-class bound is a
+   **HYPOTHESIS WITH A RECEIPT (n=1 failure)** and is STAMPED as such in the certifier's output —
+   the prior-vs-measured discipline (Q-18/Q-19) applied to our own instrument.
+2. **PRE-AUTHORIZED BRANCH, because the labels may not separate** (the one FAIL scored 0.3944,
+   BELOW the lowest PASS at 0.4435 — paraphrase twins are semantic, template repeats are
+   lexical): if the fit cannot separate the classes, **the canon/corpus-class check becomes
+   ADVISORY-REPORT-ONLY** — it records twin candidates beside the probe for S6's eye and NEVER
+   refuses — until more labeled outcomes exist. An instrument that cannot measure does not gate
+   (the vacuous-control honesty, made law).
+3. **A and C refused** (A leaves the granted failure class uncaught; C discards it), **D's
+   refusal-before-asking ratified** — 0.35 stays untouched on its own material.
+4. **The S5-POST split is RATIFIED, and its ceiling as written in your record is ADOPTED AS
+   RULER-WRITTEN by this ruling** — authorship converted, numbers stand; breach rules unchanged.
+
+FOLD: ① the v2 row: per-class + hypothesis stamp + the advisory branch · ② this file verbatim ·
+③ the 1340 item-3 wording gains "per material class" beside its constant.
+```
+
+</details>
