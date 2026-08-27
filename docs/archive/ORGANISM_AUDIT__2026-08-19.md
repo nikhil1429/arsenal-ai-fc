@@ -2859,12 +2859,13 @@ STATUS (update this block before any session stops — this is the handoff)
                                    sentence in it may be cited as a finding.**
                                    THEN read its §10-C row in full — (a) the atlas FIRST, generated
                                    by code over xray's IR, (b) the registry spec on top of it.
-                                   ⛔ **ITS CEILING IS NOT WRITTEN IN §10-C** — the standing law
-                                   from `RULING__2026-08-25_1215` says
-                                   a written ceiling prices the BUILD and the PROOF carries its own
-                                   named line, **both written by the RULER at ruling time, never the
-                                   executor**. So S6's first act is to get its scope cut and priced,
-                                   not to start building. **HIS decision moment lives inside S6
+                                   ✔ **ITS CEILING IS NOW RULER-WRITTEN (27 Aug, post-PREP, the
+                                   1215 law honoured): EXECUTION 50** (atlas by code · the design
+                                   read over the manifest's ORIGINALS · PASS 4 final · the
+                                   registry + SHAPE-6 spec) **· PROOF 8** (the atlas's own checks
+                                   + the spec's acceptance list) **· HANDOFF 10 · HIS-FOLLOW-UP
+                                   its own named line.** Scope = this row as written; scope
+                                   GROWTH mid-rung escalates, never stretches. **HIS decision moment lives inside S6
                                    (§10-E): the atlas + registry spec, haan/na.**
                                    ⛑ **WHAT S6 INHERITS FROM THE FOLD — it is all in `§9-C`, one
                                    place, six subsections; read it and do not re-derive it:** 956
