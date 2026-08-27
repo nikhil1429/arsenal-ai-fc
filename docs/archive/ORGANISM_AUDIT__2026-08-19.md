@@ -31,11 +31,29 @@ STATUS (update this block before any session stops — this is the handoff)
   PASS 1  compress with code ... ☑ DONE (19 Aug · BASH ONLY, 0 model tokens)
   PASS 2  read INTENT (.md) .... ☑ DONE 20 Aug 2026 at rung S4 — all eight read end to end by
                                    ONE head, no agent. Output folded in as §9-B.
-  PASS 2B read the CHAT CORPUS . ◐ re-filtered LIVE at S5 (7,673 files → 8,022 turns · 13.6 MB ·
+  PASS 2B read the CHAT CORPUS . ☑ re-filtered LIVE at S5 (7,673 files → 8,022 turns · 13.6 MB ·
                                    NOTHING clipped — supersedes the 19-Aug "9.0 MB" filter) ·
-                                   extraction = S5's sweep
-  PASS 3  targeted deep read ... ◐ 7 reports kept · remainder rides S5–S6
-  PASS 4  classify BY SHAPE .... ◐ SIX shapes, all in §9 (S4 added SHAPE 6) · final at rung S6
+                                   extraction = S5's sweep (18/18 + canon-B closed) · **the
+                                   POST-FREEZE DELTA captured at S6 open (27 Aug, the row's own
+                                   duty): `arsenal-audit-artifacts/s6-2026-08-27/` — 9,200
+                                   dialogue turns (him 3,605) · 7 days · 71 batches · totality
+                                   proven · run twice byte-identical · study-vs-design separable
+                                   BY SESSION via the manifest's index (vocab-agnostic law)**
+  PASS 3  targeted deep read ... ☑ 7 reports kept (fed §9's shapes) · the S6 originals read
+                                   closed the remainder — all 13 manifest inputs read end to end
+  PASS 4  classify BY SHAPE .... ☑ **FINAL AT S6 (27 Aug) — §9-D.** Eight shapes: 1–6 confirmed
+                                   with the sweep's evidence mapped; **SHAPE 7 (a predicate
+                                   assuming a material shape, 7 measured sites)** and **SHAPE 8
+                                   (a receipt is testimony, not measurement)** named from the
+                                   sweep's own classes. The 38 memory files §4-B-classified and
+                                   ALL indexed (SHAPE-2 ratchet GREEN).
+  S6  ATLAS + REGISTRY SPEC .... ☑ **DONE 27 Aug 2026 (Fable 5 · max) — §10-C row + PROGRESS
+                                   carry the record. `scripts/flow_atlas.mjs` (535 witnessed
+                                   edges · SHAPE-6 four first-class · selftest 5/5 · lawpack/
+                                   eslint GREEN) → `FLOW_ATLAS.html` ONE page ·
+                                   `docs/archive/REGISTRY_SPEC__2026-08-27.md` (row shapes ·
+                                   12 migrations · emit contract · S6-DECIDES all ten answered).
+                                   ⛔ AWAITING HIS HAAN/NA — S7 does not exist before it.**
   THE EXECUTION PLAN ........... ☑ WRITTEN — §10 (20 Aug 2026). THE LADDER IS THE HANDOFF.
                                    Hardened same day to the junior bar: §10-F model routing ·
                                    §10-G versions+models policy · the FLOW ATLAS (S6a) ·
@@ -2847,9 +2865,24 @@ STATUS (update this block before any session stops — this is the handoff)
                                    receipts move when an architect writes. That is declared in the
                                    packet, not hidden: S6 re-runs the checker at open.
 
-  ▶ NEXT SESSION ............... **`S6` — PASS 4 FINAL + THE FLOW ATLAS + THE REGISTRY SPEC.
+  ▶ NEXT SESSION ............... **HIS DECISION MOMENT (§10-E) — S6 IS DONE AND THE GATE IS HIS:
+                                   he reads `FLOW_ATLAS.html` + `docs/archive/REGISTRY_SPEC__2026-08-27.md`
+                                   and says haan/na. ⛔ S7 DOES NOT EXIST BEFORE HIS HAAN (the S6
+                                   row's approval gate). On haan: next rung = `S7 · BUILD · GATE C`
+                                   (MODEL: Opus 5 · effort max), and the RULER prices S7's
+                                   BUILD/PROOF/HANDOFF at that ruling (the 1215 law) — no executor
+                                   opens S7 on an unpriced row. On na: his word routes.**
+                                   ⛑ carried one-liners for HIM at this close: ①
+                                   `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
+                                   "resume 28 Aug 2026" (kal) and nothing fires it — his call
+                                   what to do with it; ② the samjhao-lane §0 pointer still names
+                                   the learning resume (unchanged by this rung).
+
+  ~~▶ NEXT SESSION ............... **`S6` — PASS 4 FINAL + THE FLOW ATLAS + THE REGISTRY SPEC.
                                    MODEL: FABLE 5 · effort MAX (fallback per §10-F: Opus 5 max +
-                                   a MANDATORY self-review pass before commit).**
+                                   a MANDATORY self-review pass before commit).**~~ ✅ **DONE 27 Aug
+                                   2026 — see the S6 ☑ block in §10-C and the PROGRESS entry of
+                                   27 Aug. Kept struck, not deleted (L9).**
                                    ▶ **FIRST ACT, BEFORE ANYTHING ELSE: open
                                    `C:\Users\nikhi\arsenal-audit-artifacts\S6_INPUTS_MANIFEST.md`
                                    and run `node manifest_check.mjs` from `s6-prep\` beside it.**
@@ -5630,6 +5663,61 @@ written down. **An assertion that goes red the moment your fix lands is the harn
 
 ---
 
+## §9-D · PASS 4 FINAL — the classification closed BY SHAPE (rung S6, 27 Aug 2026)
+
+**PASS 4 is CLOSED here.** §9 named SHAPES 1–5 (19 Aug), S4 added SHAPE 6 (20 Aug). This section
+maps the WHOLE evidence base onto the shapes — §9-B's five findings, §9-C's 956-item product,
+the receipt tables, the platform findings, the 38 unindexed memory files, and the FLOW ATLAS's
+fresh mechanical numbers — and names the TWO new shapes the sweep's own measured classes earned.
+Layered (L9): nothing above is rewritten; where §9 said "final at rung S6", this is that final.
+
+### The mechanical baseline the atlas adds (all derived, none hand-counted)
+
+`node scripts/flow_atlas.mjs build` over the fresh IR (27 Aug): **535 witnessed edges** — him→
+16 · organ↔organ 509 (through 102 state files) · organ→him 10 · SHAPE-6 4 first-class. Negative
+space: **11 orphan writes** (written, never read) · **57 ghost reads** (read, never born —
+`rejirah_log.jsonl` with 9 waiting readers is the largest). Consumption is MEASURED on exactly
+ONE him-surface (cards: 29 of 83 ever answered); every other mouth is UNMEASURED — Shape 3's
+number, now on one page. Outbox: 52 rows, **0 acked ever**, kinds {material 22 · finding 18 ·
+∅ 12} against 5 declared kinds — 12 rows carry NO kind, a Shape-4 key-omission inside the road
+organ itself.
+
+### The final map — evidence class → shape
+
+| evidence (with its §) | shape it lands in |
+|---|---|
+| 12 enumeration instances (§9 table) + `refilter2`'s own two-type switch + the ruler's miss-#10 receipt contract | **SHAPE 1** (universal order as enumeration) — the class caught its own auditors twice |
+| the A–H ladder + KILLED list + 5 never-cross lines living unindexed in `memory/` · his design rulings filed as teaching rules (`act-mszfck3c`) · the 38 unindexed memory files (§4-B classification below) · Q-2/Q-15 (the .md corpus read by nobody with authority) | **SHAPE 2** (his design rulings have no lane) |
+| outbox 0-acked · 59 findings/0 repairs · reach unmeasured on 9 of 10 mouths · `benchmark` gated on `ingested_at` · critic yield ~29% vs extraction ~77% recorded with no consumer for the number · Q-21 (output quality unmeasured) | **SHAPE 3** (production measured, consumption never) — Q-21 and SHAPE 6 are ruled ONE candidate hole until the registry's meter proves otherwise |
+| session-handle cache without instruction fingerprint · trailing-N reads (7 live sites, lawpack) · cards that retire unanswered · `models.mjs` 10-hour-stale "ok" · outbox rows with no `kind` | **SHAPE 4** (a key that omits the thing that changes) |
+| the tier-0 void (now part-filled: tsc/eslint/lawpack/knip/depcruise ride npm test) · prose-is-executable (`ROUND_MODE[]`) · **this rung's own live case: a half-applied edit left `TS_KEYS` undefined inside try/catch — every liveness probe silently degraded to null, the atlas selftest stayed 5/5 GREEN, and eslint `no-undef` (TIER 0) caught it.** The swallow class, reproduced inside the audit's own instrument, killed by the gate S2 built | **SHAPE 5** (the untyped half is the English half) |
+| reps_log 21 rows all-`gem` newest 10 Aug · rejirah_log NEVER BORN, 9 readers · forge 11 closes every `jirah:0` · gist = his paste · the coldness hole (deep.mjs:68 vs samjhao.mjs:349 — served WARM-CALLED-COLD) | **SHAPE 6** (every learning-record write is an act of HIS that nothing fires) |
+| rendered-lossy read as content (§9-C.2, 6th site) · the copy-gate `<3 rendered lines` guard · either-alphabet · day-key `(continued)` · escape-collapse · minified single-line · array-wrapping-object | **SHAPE 7 · A PREDICATE ASSUMING A SHAPE THE MATERIAL IS FREE TO CHANGE** — new, named from seven measured sites. Shape 4's sibling: not a KEY omitting a moving input, a PREDICATE hard-coding a material property. **When a stamp describes how something TRAVELLED, it says nothing about what it CONTAINS.** Ratchet: every material-shape predicate declares the property it assumes and is versioned + bitten BOTH directions (the payloadfence/mdrender pattern, already live at 2 sites) |
+| receipt-inflation GENERAL: 71 findings / 28 of 29 answers · 8 row-repeating receipts · claimed-18-arrived-14 · declared-7-array-6 · counts-sum-51-holds-57 · item_count unreliable BOTH directions | **SHAPE 8 · A RECEIPT IS TESTIMONY, NOT MEASUREMENT** — new. A payload's self-description (its count, its coverage note, its file list) is a CLAIM by the producer; every consumer that gates on it re-derives it or inherits the producer's lie. Ratchet: any check that reads a `*_count`/coverage field without recomputing it from the payload in the same expression is a finding (the verify/recount/selfcheck pattern, generalized) |
+
+**The 28-item missing-tier gap (§9-C.3) stays OPEN** — it is SHAPE 7's live instance-set on
+`verify`'s rendered path, dispositioned in the registry spec (its own priced rung, post-haan),
+not patched here.
+
+### §4-B classification of the 38 unindexed memory files — Shape 2's instance set, CLOSED
+
+Read all 38 (27 Aug). Verdicts, one line each, now LINKED from `MEMORY.md` (the SHAPE-2 ratchet
+"every memory file appears in the index" is GREEN from today; the registry spec carries it as a
+standing check): **24 RECORDS of completed work** (ladder A–G+H, launch/unleash/truth-layer/
+gaffer builds, the three audits — each executed pre-overhaul; the ladder's KILLED list + 5
+never-cross lines remain STANDING LAW) · **6 career-research references** (11 Aug set) · **2
+standing feedback/laws** (`finalize-before-executing` · the ladder's constraint blocks) · **2
+stale-state snapshots** superseded by live organs (`hallucinations-forge-state`, `e2e-audit-state`)
+· **1 PARKED-WITH-DATE: `artifact-organ-diagnosis` — HIS parking, resume date 28 Aug 2026
+(tomorrow), and NOTHING fires it** (Shape 6's consumer-side kin; named to him at this close) ·
+**1 live input for S8**: `token-plan-audit-14aug` (two PROVEN levers: system-prompt cache split ·
+`--resume` full-context reads — S8's spool reads it) · **1 unverified-completion**
+(`merge-manual-plan`; its output lives out-of-repo by design) · the A–H ladder file itself:
+**EXECUTED** (A–G 9 Aug, H 10 Aug, receipts in `ladder-progress`/`phase-h-progress`), then
+partially superseded by the 18-Aug overhaul (LAW M/LAW A), now dormant under the switch-off.
+
+---
+
 ## §10 · THE EXECUTION PLAN — his order, 20 Aug 2026. THE LADDER IS THE HANDOFF.
 
 > His words, 20 Aug: *"this product now demands FANG level work of discipline, intensity and
@@ -7125,7 +7213,7 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
      the ruled figure EXACTLY, on a directory now holding 57.
      FORBIDDEN LIST HELD: zero design/atlas/registry work · zero instrument edits (`s5-2026-08-20`
      read-only; `selfcheck.mjs` was RUN, never touched) · zero Gemini calls · one rung only.
-☐ S6  PASS 4 FINAL + THE FLOW ATLAS + THE REGISTRY SPEC.
+☑ S6  PASS 4 FINAL + THE FLOW ATLAS + THE REGISTRY SPEC. — **DONE 27 Aug 2026, awaiting HIS haan.**
                     MODEL: FABLE · effort max (fallback: Opus max + self-review pass)
       (a) GENERATE THE FLOW ATLAS FIRST — free code over xray's IR + the declared
           tables (AFFERENT_SOURCES · LANES_NOT_IN_CONFIG · outbox kinds): EVERY edge
@@ -7178,6 +7266,43 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       mandatory — the ONLY rung with agents.
       ⛔ APPROVAL GATE: HE reads atlas + spec and says haan before S7 exists.
                                                                        CEILING: 40
+      ~~CEILING: 40~~ **superseded — RULER-PRICED post-PREP (27 Aug, the 1215 law): EXECUTION 50
+      · PROOF 8 · HANDOFF 10 · HIS-FOLLOW-UP its own named line (the router carried it).**
+   ☑ **DONE 27 Aug 2026 — all four scope items, inside the line:**
+     (open) manifest checker run FIRST: 55/56 receipts match; the ONE mismatch = I11
+       `ARCHITECT_HANDOFF.md`, a DECLARED LIVE FILE (packet's own law: not a defect) — pinned
+       at open sha16 `2499fee160d30120` · 77536 B, current file read. ORIGINALS read in the
+       manifest's order, all thirteen. The post-freeze DELTA captured (S6-open duty):
+       `s6-2026-08-27/delta_filter.mjs`, 9,200 turns/7d/71 batches, totality proven, idempotent.
+     (a) THE FLOW ATLAS — `scripts/flow_atlas.mjs` (build|check|selftest) over the FRESH IR
+       (rebuilt first: 7 organs had changed under the 20-Aug IR) + the three declared tables.
+       **535 edges, EVERY one witnessed (ir | table | ruling) — an unwitnessed edge kills the
+       build. SHAPE 6's four him→learning-record edges FIRST-CLASS** (reps 21 rows all-gem
+       newest 10 Aug · rejirah NEVER BORN/9 readers · forge 11 closes jirah:0 · gist his-paste),
+       liveness from payload rows never mtime, negative space visible (11 orphan writes · 57
+       ghost reads), consumption measured on cards alone (29/83) — Shape 3 on one page.
+       ONE visual page: `FLOW_ATLAS.html` (his 1-Aug visuals ruling), switch-off banner up top.
+       selftest 5/5 with idempotent bites · `check` re-derives byte-identical · eslint clean ·
+       lawpack GREEN at baseline (its jugad rule BIT this generator's first draft — TS_KEYS
+       name-list → predicate; the session-surface literal → a source-field predicate; the law
+       working on its own auditor).
+     (PASS 4) FINAL — layered as **§9-D**: eight shapes (7 · material-shape predicates, 8 ·
+       receipt-is-testimony named from the sweep's measured classes), the whole evidence base
+       mapped, the 38 memory files §4-B-classified AND indexed (SHAPE-2 ratchet GREEN at 0
+       unindexed).
+     (b) THE REGISTRY SPEC — `docs/archive/REGISTRY_SPEC__2026-08-27.md`: core row shape
+       {owner · right_consumer · slot · spend_class · trust_tier · subjects[]} + check/doc
+       extensions · all 12 SHAPE-1 migrations mapped with a per-commit lawpack-falls ratchet ·
+       rulings lane + DERIVED standing-laws register · reach-side meter (Q-21 collapsed into
+       SHAPE 6's build) · the emit contract with `taught` event (the coldness hole = consumer
+       instance #1) + the back-fill as the build-rung's DONE-proof · witness validation bounded
+       by the amplifier law · spec→derived-copy rows (v2.2/v2.1 drift live-verified) · SHAPE
+       7/8 ratchets · S7–S12 consumption map · S6-DECIDES all ten answered · ecosystem
+       decisions (DuckDB at S10 · Playwright post-S12 · Q-16 closed: no lawful Max SDK path).
+     ⛔ FORBIDDEN LIST HELD: 28-item gap NOT patched (dispositioned: own rung, post-haan) ·
+       SHAPE 6 NOT built · s5-2026-08-20/ untouched (read-only; selfcheck RUN fresh = 71/28) ·
+       zero Gemini calls · zero agents (the ≤4 right expired unused) · nothing re-enabled ·
+       no gate weakened — the only gate deltas are MINE GOING GREEN.
 ☐ S7  BUILD · GATE C.                                       MODEL: Opus · effort max
       His §1 correction lands: the consumer map becomes a DECLARED consumers table in
       the S6 row-shape, owned by the gate — S10 folds it into the registry proper, so
@@ -16756,3 +16881,112 @@ edits. **COST 13.28 lakh vs the 20 ruled (BUILD 10 · PROOF 5 · HANDOFF 5) — 
 **Its ceiling is still NOT written** — the 25 Aug standing law has the RULER price BUILD and PROOF
 at ruling time, so S6's first act after the packet is to get its scope cut and priced, not to build.
 **HIS decision moment lives inside it: the atlas + registry spec, haan/na.**
+
+### PROGRESS 2026-08-27 ~evening IST — RUNG S6 · PASS 4 FINAL + THE FLOW ATLAS + THE REGISTRY SPEC (Fable 5 · effort max · 50/8/10)
+
+**WHAT LANDED, in the row's own order.**
+
+**(open) The packet held.** `manifest_check.mjs` at open: REFUSED exit 2 on exactly ONE of 56
+receipts — I11 `ARCHITECT_HANDOFF.md`, one of the two DECLARED live files (the packet's own law:
+a moved receipt there is not a defect). Pinned at open: sha16 `2499fee160d30120` · 77,536 B; the
+drift is the architect's post-packet STATE-NOW rewrite, uncommitted in the artifacts repo — read
+current, their file left untouched. Other 55 receipts matched disk. All THIRTEEN originals then
+read in the manifest's order — §9-C whole · the evidence tables · `verified.json` summarized by
+code under the §9-C.4 bounds law (956/9/30 and all four verdict tiers reproduced EXACTLY) ·
+`selfcheck.mjs` re-run fresh (71 findings / 28 answers, = §9-C.5) · both I05/I06 rulings · all
+nine I07 platform rulings · the ecosystem map · ALL 32 I09 rulings end to end (the DECIDES-#7
+read: ~20 carry live S6 work/evidence — the platform classes, the evidence tables, the
+registry-bound classes {check·owner·evaluator} and order-as-context, the on-demand rights; the
+other ~12 are standing laws that bind every session but add no S6 task) · the nine I10 Q-sections
+PLUS the queue's routing block (DECIDES #5: the fuller set governs — it is the architect's later
+word) · the standing-laws needles · the A–H ladder + ALL 38 unindexed memory files · R01–R04.
+
+**(open) THE POST-FREEZE DELTA** (the row's S6-open duty): `s6-2026-08-27/delta_filter.mjs` in
+the artifacts repo — a LAYER beside `refilter2.mjs` (the frozen folder stayed read-only; lane
+tables copied verbatim; cutoff READ from the frozen manifest, never typed). **9,200 dialogue
+turns (him 3,605 · claude 5,595) · 7 days · 71 batches · 185 sessions · totality identity proven
+· run twice byte-identical (sha16 204cc5543c3f061a).** The declare-or-die ratchet BIT on its
+first run (attachment subtype at `j.attachment.type`, not `j.subtype`) — fixed, recorded. Study
+rows are NOT row-classified (vocab-agnostic law): the manifest's per-session index is the
+separator; arsenal-samjhao/EXCHANGES stays the authoritative study record. One fact worth a line:
+the audit ladder generated MORE dialogue in 7 days than the whole prior month the sweep read
+(9,200 vs 8,022 turns).
+
+**(a) THE FLOW ATLAS.** IR rebuilt FIRST (7 organs had changed under the 20-Aug build; fresh:
+107/107 parsed, unresolved 1356→1353, Q5=0). `scripts/flow_atlas.mjs` (build | check | selftest):
+**535 edges — him→ 16 · organ↔organ 509 through 102 state files · organ→him 10 · SHAPE-6 four
+FIRST-CLASS — and EVERY edge carries a witness (ir | table | ruling); an unwitnessed edge kills
+the build at exit 2.** Liveness from payload rows (466/509 machine edges carry a payload ts),
+never mtime. Negative space rendered, not hidden: 11 orphan writes · 57 ghost reads
+(`rejirah_log.jsonl` the largest: never born, 9 readers). Consumption measured on ONE surface
+(cards 29/83 answered) — Shape 3 on one page. Outbox truth: 52 rows · **0 acked ever** · 12
+rows with NO kind. `FLOW_ATLAS.html` is the one visual page (switch-off banner first, the four
+HIS-HAND lanes bold at the top, Hinglish), verified rendering in the browser.
+
+**(PASS 4) FINAL = §9-D**, layered. Eight shapes: 1–6 confirmed with the whole evidence base
+mapped; **SHAPE 7 · A PREDICATE ASSUMING A SHAPE THE MATERIAL IS FREE TO CHANGE** (seven
+measured sites, §9-C.2's sixth-site class generalized) and **SHAPE 8 · A RECEIPT IS TESTIMONY,
+NOT MEASUREMENT** (the receipt-inflation class made structural) named from the sweep's own
+classes. The 38 memory files §4-B-classified one line each AND indexed — **the SHAPE-2 ratchet
+is GREEN at 0 unindexed** (was 38). Two live finds for HIM carried on the router: the
+`artifact-organ-diagnosis` parking dated 28 Aug (KAL) that nothing fires, and
+`token-plan-audit-14aug` named as S8's input (two proven cache levers).
+
+**(b) THE REGISTRY SPEC** — `docs/archive/REGISTRY_SPEC__2026-08-27.md`. Core row
+{owner · right_consumer · slot · spend_class · trust_tier · subjects[]} + check rows
+({check·owner·evaluator} lands by name, as ruled) + doc rows (vintage: spec|order|record —
+Q-2's classifier field). All 12 SHAPE-1 migrations mapped with a falling-lawpack ratchet
+(102 → ≤90 by S10's close). The rulings lane (`design` disposition on LAW A) + the
+standing-laws register DERIVED from queue/RULING files (DECIDES #1: hand-consolidation refused —
+a second copy drifts; miss-#4's lesson). The reach-side meter (Shape 3) with Q-21 collapsed
+into SHAPE 6's build as routed. THE EMIT CONTRACT {surface · writes_to · fired_by · cadence}
+with `fired_by:"him"` first-class, the input-side ratchet, **the `taught` event as the coldness
+hole's fix (consumer-side instance #1, S6-owned, designed not built)**, and the back-fill as
+the build-rung's acceptance test. Witness validation bounded by the amplifier law (ONE
+resolvable anchor per claim; corroboration welcome, never required). spec→derived-copy rows —
+the v2.2/v2.1 Gaffer drift is live-verified at every atlas build. SHAPE 7/8 ratchets. The
+S7–S12 consumption map. S6-DECIDES: **all ten answered** (§10 of the spec). Ecosystem: DuckDB
+adopt-at-S10 · Playwright post-S12 · project-artifact plugin refused on L7 · Anki-vs-Re-Jirah
+blocked on the meter's data · Q-16 closed (no lawful Max SDK path; Fable stays the role).
+
+**THE GATES BIT THIS RUNG'S OWN CODE, TWICE — recorded with credit to S2/S3, not to me.**
+(1) lawpack's `jugad-literal-subject-list` rose 102→103 on the atlas generator's first draft
+(a TS_KEYS name-list + a two-organ literal): both rewritten to their GENERAL forms (an ISO-value
+predicate over the row's own values; a source-field predicate over ir.roots.hooks — which also
+exposed that roots.hooks mixes settings.json hooks with 106 package.json suite rows). Gate back
+at baseline, stricter code. (2) A half-applied edit left `TS_KEYS` undefined INSIDE try/catch:
+every liveness probe silently degraded to null while the atlas selftest stayed 5/5 GREEN —
+**the swallow class reproduced inside the audit's own instrument, and eslint `no-undef` (TIER 0,
+S2's gate) caught what my own harness could not.** §9-D carries it as SHAPE 5's live case.
+
+**PROOFS, all run:** flow_atlas selftest 5/5 (three planted bites, each proven idempotent —
+8th law) · `check` re-derives byte-identical (sha16 `a8b2e1ddb361417c`) · delta run-twice
+identical · selfcheck fresh = 71/28 · eslint clean · lawpack GREEN at every frozen baseline ·
+`npm test` re-run at close: my additions contribute ZERO reds (the suite's standing reds are
+the pre-existing switch-off set: ALIVE-stale watchman/audit + the teaching_audit/watchman/herd
+sub-selftest items + no-unused-vars 87 baseline — none newer than this rung, none mine).
+
+**COST (day-delta method, stated as a method):** meter day-line 543.04 lakh at open → ~573.40
+at PROGRESS-write, other sessions idle ⇒ **≈30–34 lakh vs EXECUTION 50 + PROOF 8 — INSIDE.**
+HANDOFF spend rides its own 10; HIS-FOLLOW-UP line opens only if he asks.
+
+**NEXT: HIS DECISION MOMENT (§10-E) — haan/na on `FLOW_ATLAS.html` + the registry spec.
+S7 (Opus 5 · effort max) does not exist before his haan, and the RULER prices it at that ruling.**
+
+**POST-EDIT PACKET CHECK, recorded (the §9-C.6 class — a refusal earned by the work landing):**
+`manifest_check.mjs` after this rung's edits refuses on exactly THREE receipts, all explained:
+I11 (the declared live handoff, pinned at open) · I12 `MEMORY.md` (S6's ordered indexing grew
+it) · I12 "38 unindexed files" now reads **0** — the SHAPE-2 ratchet going green, recorded by
+the old receipt's refusal. **I01's §9-C heading-slice receipt SURVIVED the §9-D insert
+byte-identical** — the "no line number is a receipt" law working exactly as built. §3-C
+`rails.mjs orders`: open order clean.
+
+**FINAL SUITE VERDICT (clean re-run at close): `npm test` = 108 passed / 2 failed — the recorded
+pre-existing baseline EXACTLY, at 105 members (was 104: `flow_atlas` joined the audit suite under
+the coverage law, green).** The two standing fails, neither this rung's: ALIVE-stale
+watchman/audit (the switch-off — EXPECTED RED until S12) · the members line's pre-existing
+teaching_audit 62/1 · watchman 105/2 · herd 18/1 sub-items. Two earlier same-day reds were MINE
+and died before commit: the coverage law's `orphaned: flow_atlas` (wired into `audit:selftest`,
+selftest made suite-deterministic — the freshness gate skips ONLY in the selftest's clean case
+and is still proven by its January-plant bite) · a hermeticity `MODIFIED session_meter.json`
+(my own meter call running parallel to the suite — contamination, not code; clean run clean).

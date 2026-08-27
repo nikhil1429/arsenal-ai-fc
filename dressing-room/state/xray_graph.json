@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-20T03:04:18.491Z",
+ "built_at": "2026-08-27T05:16:12.987Z",
  "organs_parsed": 107,
  "organs_expected": 107,
  "parse_errors": [],
- "unresolved_sinks": 1356,
+ "unresolved_sinks": 1353,
  "organs": {
   "acts.mjs": {
    "loc": 482,
@@ -12888,29 +12888,29 @@
    "unresolved": 6
   },
   "rails.mjs": {
-   "loc": 391,
+   "loc": 469,
    "reads": [
     {
      "path": "docs/archive",
      "lines": [
-      163,
-      163
+      185,
+      185
      ],
      "fixture": false
     },
     {
      "path": "package.json",
      "lines": [
-      203,
-      203
+      225,
+      225
      ],
      "fixture": false
     },
     {
      "path": "CLAUDE.md",
      "lines": [
-      242,
-      242
+      280,
+      280
      ],
      "fixture": false
     }
@@ -12920,7 +12920,7 @@
     {
      "kind": "bin",
      "bin": "git",
-     "line": 195
+     "line": 217
     }
    ],
    "swallows": [],
@@ -12952,6 +12952,7 @@
     "openOrder",
     "orderFiles",
     "pretooluse",
+    "resolveOrderGate",
     "tracksTop"
    ],
    "unresolved": 8
@@ -14194,26 +14195,26 @@
    "unresolved": 8
   },
   "session_meter.mjs": {
-   "loc": 517,
+   "loc": 635,
    "reads": [
     {
      "path": "dressing-room/state/session_meter.json",
      "lines": [
-      148,
-      148,
-      148
+      172,
+      172,
+      172
      ],
      "fixture": false
     },
     {
      "path": ".",
      "lines": [
-      350,
-      184,
-      350,
-      169,
-      184,
-      350
+      420,
+      208,
+      420,
+      193,
+      208,
+      420
      ],
      "fixture": false
     }
@@ -14222,9 +14223,9 @@
     {
      "path": "dressing-room/state/session_meter.json",
      "lines": [
-      160,
-      160,
-      160
+      184,
+      184,
+      184
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -14233,28 +14234,7 @@
     }
    ],
    "spawns": [],
-   "swallows": [
-    {
-     "line": 325,
-     "try_stmts": 6,
-     "catch_stmts": 1
-    },
-    {
-     "line": 325,
-     "try_stmts": 6,
-     "catch_stmts": 1
-    },
-    {
-     "line": 325,
-     "try_stmts": 6,
-     "catch_stmts": 1
-    },
-    {
-     "line": 325,
-     "try_stmts": 6,
-     "catch_stmts": 1
-    }
-   ],
+   "swallows": [],
    "verbs": [
     "json",
     "line",
@@ -14287,8 +14267,10 @@
     "laneOf",
     "live",
     "loadCache",
+    "payloadRefusal",
     "projectsDir",
     "prune",
+    "readStdinWithDeadline",
     "rowKey",
     "saveCache",
     "scanChunk",
@@ -14299,7 +14281,7 @@
     "usageOf",
     "weighted"
    ],
-   "unresolved": 20
+   "unresolved": 17
   },
   "setpiece.mjs": {
    "loc": 1592,
@@ -15450,29 +15432,29 @@
    "unresolved": 5
   },
   "sprintsync.mjs": {
-   "loc": 148,
+   "loc": 194,
    "reads": [
     {
      "path": "dressing-room/state/sprint_config.json",
      "lines": [
-      24,
-      24,
-      24,
-      24,
-      24,
-      24
+      29,
+      29,
+      29,
+      29,
+      29,
+      29
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/sprint.json",
      "lines": [
-      24,
-      24,
-      24,
-      24,
-      24,
-      24
+      29,
+      29,
+      29,
+      29,
+      29,
+      29
      ],
      "fixture": false
     }
@@ -15481,9 +15463,9 @@
     {
      "path": "dressing-room/state/sprint.json",
      "lines": [
-      29,
-      29,
-      29
+      34,
+      34,
+      34
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -15495,10 +15477,12 @@
    "swallows": [],
    "verbs": [
     "selftest",
+    "set-start",
     "sync"
    ],
    "header_verbs": [
     "selftest",
+    "set-start",
     "sync"
    ],
    "exports": [
@@ -28828,8 +28812,7 @@
    {
     "script": "treasury.mjs",
     "verbs": [
-     "meter",
-     "report"
+     "meter"
     ]
    },
    {
@@ -28884,7 +28867,9 @@
    },
    {
     "script": "samjhao.mjs",
-    "verbs": []
+    "verbs": [
+     "plan"
+    ]
    },
    {
     "script": "outbox.mjs",
@@ -28901,9 +28886,9 @@
     "verbs": []
    },
    {
-    "script": "session_meter.mjs",
+    "script": "rails.mjs",
     "verbs": [
-     "status"
+     "orders"
     ]
    },
    {
@@ -28911,15 +28896,22 @@
     "verbs": []
    },
    {
-    "script": "rails.mjs",
+    "script": "session_meter.mjs",
     "verbs": [
-     "orders"
+     "status",
+     "stop"
     ]
    },
    {
     "script": "gates.mjs",
     "verbs": [
-     "types"
+     "report"
+    ]
+   },
+   {
+    "script": "lawpack.mjs",
+    "verbs": [
+     "leads"
     ]
    },
    {
@@ -28953,6 +28945,6 @@
     "verbs": []
    }
   ],
-  "md_files": 218
+  "md_files": 221
  }
 }
