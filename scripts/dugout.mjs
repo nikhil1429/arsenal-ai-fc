@@ -4641,6 +4641,16 @@ async function selftest() {
           typeof cap.fault_lines[0].weld === "undefined" && typeof page.deep === "undefined" && typeof cap.whole_sweep_seconds === "number");
         const d1 = execTool("get_capsule", { id: "tokenization", open: "doubt", seg: 1 }, { sh });
         assert("VERBATIM: one doubt opens whole — q AND a, uncut", d1.ok && d1.q === String((rsrc.doubts || [])[0].q || "") && d1.a === String((rsrc.doubts || [])[0].a || ""));
+        // S10 · R4(b) — the pre-open ruling's bite, completing byte-coverage over
+        // EVERY layer the legacy engine cut (its 220-char knives took traps and
+        // interview lines too, and its count-slices dropped entries past 6/5).
+        const tr = execTool("get_capsule", { id: "tokenization", open: "traps" }, { sh });
+        const li = execTool("get_capsule", { id: "tokenization", open: "lines" }, { sh });
+        assert("S10 R4(b): traps and interview lines come WHOLE — every entry served, each byte-equal to disk (his notes reach his own organs whole)",
+          tr.ok && Array.isArray(tr.traps) && tr.traps.length === (rsrc.traps || []).length && tr.traps.every((x, i) => JSON.stringify(x) === JSON.stringify((rsrc.traps || [])[i]))
+          && li.ok && Array.isArray(li.interview_lines) && li.interview_lines.length === (rsrc.interviewLines || []).length && li.interview_lines.every((x, i) => String(x) === String((rsrc.interviewLines || [])[i])));
+        assert("S10 R4(b): the map's capsule-level prose (bolo · hook · mechanism) is byte-equal to disk (legacy cut them at 1200/500/1500)",
+          cap.bolo === String(rsrc.bolo || "") && cap.hook === String(rsrc.hook || "") && cap.mechanism === String(rsrc.mechanism || ""));
         assert("LAYERING: the truncating engine is FROZEN in the file, not deleted (its 220-cut stays auditable)",
           typeof capsuleProjectionLegacy === "function" && capsuleProjectionLegacy(rsrc, raw, "tokenization").fault_lines.every(x => x.length <= 220));
         // THE VERBATIM PANEL — the only channel on this surface where he can CHECK
