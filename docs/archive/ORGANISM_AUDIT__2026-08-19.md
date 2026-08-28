@@ -54,6 +54,16 @@ STATUS (update this block before any session stops — this is the handoff)
                                    `docs/archive/REGISTRY_SPEC__2026-08-27.md` (row shapes ·
                                    12 migrations · emit contract · S6-DECIDES all ten answered).
                                    ⛔ AWAITING HIS HAAN/NA — S7 does not exist before it.**
+  S6-R INDEPENDENT CHECK ....... ☑ **DONE 28 Aug 2026 (Opus 5 · max, family-decorrelated from the
+                                   Fable author). VERDICT: S6's work is SOUND — P1 A1/A2/A5/A6
+                                   PASS, A7/A8 BOUNDED, A3/A4 one shared cause · P2 12/12 · P3
+                                   PASS on sites (12/12, the #12 twin confirmed in both organs),
+                                   on lawpack (102 = 102 = 102) and on contradictions (53 ruling
+                                   files, ZERO) · P4 3/3, `npm test` 108/2 = the baseline exactly.
+                                   SEVEN FINDINGS, NONE BLOCKING HIS HAAN, all routed to S6-F —
+                                   and EVERY gap runs one way: the atlas is a LOWER BOUND, so the
+                                   535 edges are real and there are more than 535.** Deliverables
+                                   in `arsenal-audit-artifacts\s6r-2026-08-28\`.
   THE EXECUTION PLAN ........... ☑ WRITTEN — §10 (20 Aug 2026). THE LADDER IS THE HANDOFF.
                                    Hardened same day to the junior bar: §10-F model routing ·
                                    §10-G versions+models policy · the FLOW ATLAS (S6a) ·
@@ -2865,7 +2875,29 @@ STATUS (update this block before any session stops — this is the handoff)
                                    receipts move when an architect writes. That is declared in the
                                    packet, not hidden: S6 re-runs the checker at open.
 
-  ▶ NEXT SESSION ............... **`S6-R` — THE INDEPENDENT S6 VERIFICATION (ruled 28 Aug on HIS
+  ▶ NEXT SESSION ............... **HIS §10-E DECISION MOMENT — haan/na on `FLOW_ATLAS.html` +
+                                   the registry spec, NOW FIRING ON S6-R's VERDICT (his agreed
+                                   re-sequencing, 28 Aug). THERE IS NO EXECUTOR RUNG UNTIL HE
+                                   RULES.** The page written for him is
+                                   `arsenal-audit-artifacts\s6r-2026-08-28\VERDICT_FOR_HIM.md`
+                                   (plain Hinglish, his word); the machine-face record beside it
+                                   is `VERDICT.md` + `FINDINGS.md`.
+                                   ⇒ **ON HAAN:** `S7 · BUILD · GATE C` (Opus 5 · effort max) —
+                                   and **the RULER PRICES IT FIRST** (the 1215 law); S7 does not
+                                   open on the manifest with no pricing round-trip.
+                                   ⇒ **ON NA, or to close the findings first:** `S6-F` — the
+                                   patch rung for S6-R's seven, ruler-priced. **F-03 SHOULD LAND
+                                   BEFORE S10 EITHER WAY**: acceptance (a)'s "≤90 (102−12)" will
+                                   mis-grade S10 in both directions (four of the twelve
+                                   migrations remove ZERO lawpack sites, #12 removes two), so
+                                   S10's own pass/fail is wrong before it starts.
+                                   ⛑ carried one-liners for HIM at this close, unchanged and
+                                   still nobody's: ① `memory/artifact-organ-diagnosis.md` is HIS
+                                   OWN PARKING dated "resume 28 Aug 2026" — that is TODAY — and
+                                   nothing fires it; ② the samjhao-lane §0 pointer still names
+                                   the learning resume (untouched by this rung).
+
+  ~~▶ NEXT SESSION ............... **`S6-R` — THE INDEPENDENT S6 VERIFICATION (ruled 28 Aug on HIS
                                    word: "independent entire S6 work check karvao — the entire
                                    cyborg organism depends upon it"). MODEL: Opus 5 · effort MAX
                                    (family-decorrelated from S6's Fable author, the Q-5 finding;
@@ -2913,7 +2945,8 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⇒ **THEN his §10-E haan/na fires on S6-R's VERDICT** (his
                                    agreed re-sequencing, 28 Aug). On haan: S7 · BUILD · GATE C
                                    (Opus 5 · max; the RULER prices it first — the 1215 law). On
-                                   na or on S6-R findings: the ruler routes (S6-F).**
+                                   na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
+                                   and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
                                    ⛑ carried one-liners for HIM at this close: ①
                                    `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
                                    "resume 28 Aug 2026" (kal) and nothing fires it — his call
@@ -7345,6 +7378,71 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
        SHAPE 6 NOT built · s5-2026-08-20/ untouched (read-only; selfcheck RUN fresh = 71/28) ·
        zero Gemini calls · zero agents (the ≤4 right expired unused) · nothing re-enabled ·
        no gate weakened — the only gate deltas are MINE GOING GREEN.
+☑ S6-R THE INDEPENDENT S6 VERIFICATION — **DONE 28 Aug 2026 (Opus 5 · effort max).**
+     RULED 28 Aug on HIS word — *"independent entire S6 work check karvao — the entire cyborg
+     organism depends upon it"* (`queue\RULING__2026-08-28_selfheal-law+s6r.md`). ⚠ THE ROW ITSELF
+     WAS THE RUNG'S FIRST ACT: the ruling's fold item ① says the §10-C row was written "same act"
+     and it was NOT on disk — precedent S5-Z6, whose first act was the same repair. Written here
+     from the ▶ NEXT SESSION router's own text, transcription only, nothing invented.
+     MODEL: Opus 5 · effort MAX — family-decorrelated from S6's Fable author (the Q-5 finding).
+     CEILING ruler-written: BUILD 15 · PROOF 10 · HANDOFF 5.
+     ⛔ VERIFY-ONLY — S6-R PATCHES NOTHING. Findings route to an S6-F patch rung, ruler-priced.
+     METHOD: `s6r_check.mjs` beside the s5 artifacts (TIER-0, bite-proven, idempotent)
+     mechanizing every criterion; model judgement spent ONLY on the schema dry-run, witness
+     reading and the contradiction sweep. **THE INDEPENDENCE LAW: the atlas is DERIVED from
+     xray's IR, so a check that reads the IR re-asks the same witness — every edge is
+     re-derived from THE SOURCE FILES AND THE DISK, and a disagreement IS the finding.**
+     PASS CRITERIA (ruler-written BEFORE the run — pass is never self-declared):
+       P1 ATLAS · 30 seeded edges + ALL 4 him-edges + ALL 11 orphan-writes + 10 sampled
+         ghost-reads END-TO-END on disk · any miss ⇒ a NAMED, BOUNDED IR-gap class ·
+         NEGATIVE SWEEP over dressing-room/state/ · DETERMINISM byte-identical or the diff
+         explained to zero · the 1353 unresolved-sinks exposure BOUNDED in writing.
+       P2 SHAPES · all 8 §9-D witnesses resolve on disk as cited.
+       P3 SPEC · 12/12 migrations by grep · lawpack 102 reconciles + a 13th-class hunt ·
+         SCHEMA DRY-RUN on 5 REAL subjects INCLUDING brain_ledger.jsonl (9 writers vs "ONE
+         owner" — cannot-express = a FINDING, never a patch) · acceptance (a)-(e) each mapped
+         to a runnable check or flagged prose · ZERO contradictions vs queue\RULING__*.md.
+       P4 PROCESS · both suite reds pre-existing by git age · S6's meter reconciles · the
+         S6-open pin verified.
+     RESULT — **P1 A1/A2/A5/A6 PASS · A7/A8 BOUNDED · A3/A4 FINDINGS (one cause) · P2 PASS
+     12/12 · P3 PASS on sites+lawpack+contradictions, FINDINGS on acceptance-(a) and the
+     dry-run · P4 PASS 3/3.** `npm test` clean solo run = **108/2, the recorded baseline
+     EXACTLY**; every failing member's last code change is 18-20 Aug (pre-S6, not mine).
+     **SEVEN FINDINGS, NONE BLOCKING HIS HAAN — and every gap runs ONE WAY: the atlas is a
+     LOWER BOUND, its misses ADD missing edges and cannot invent a false one.**
+       F-01 the IR's `on_disk` walks only STATE_DIR ⇒ "57 ghost reads" is really 33 (24 are on
+         disk) and 4 of 11 orphan on_disk flags are wrong; it is a FILTER, not just a display.
+       F-02 CROSS-ORGAN HELPER SINK — `rejirah_log.jsonl` has TEN readers, not 9; the tenth is
+         `learnstate.mjs:62/:525` (the KICKOFF BRIEF) reading through rejirah.mjs's `readLog`.
+       F-03 acceptance (a)'s "≤90 (102−12)" models 1 migration = 1 lawpack site; FOUR of the
+         twelve remove ZERO and #12 removes TWO ⇒ it will mis-grade S10 both ways.
+       F-04 the 13th class exists (lawpack's own header said so); three named for S6-F.
+       F-05 `brain_ledger.jsonl` CANNOT be expressed in the core row shape — 9 declared writers
+         vs a field defined as "the ONE organ". Reported, never patched, as ruled.
+       F-06 importing `flow_atlas.mjs` REBUILT and overwrote both S6 deliverables (no import
+         guard); restored from git same minute, sha16 back to `a8b2e1ddb361417c`.
+       F-07 S1's PreToolUse state rail refuses READ-ONLY commands (two live reproductions).
+       L-01 (LEAD, not a finding) a suite run appends to `gate_tune_ledger.jsonl` while the
+         hermeticity check named a different file — settle by running, not by reading.
+     ⚠ THE CHECKER'S OWN MISSES ARE IN THE RECORD: it reproduced SHAPE 5 twice (a scanner that
+       silently returned [], a probe that read comments as code and invented three readers —
+       the IR was right and the checker was wrong) and SHAPE 7 once (a hand-written primitive
+       list missing writeJsonAtomic/readLog/renameSync). All three fixed and written down.
+     DELIVERABLES (in `arsenal-audit-artifacts/s6r-2026-08-28/`): `s6r_check.mjs` (7/7 bites,
+     each proven twice; two runs byte-identical at 194,999 B) · `report.json` · `FINDINGS.md` ·
+     `VERDICT.md` (PASS/FAIL per criterion + the schema dry-run + the acceptance map) ·
+     **`VERDICT_FOR_HIM.md` — plain Hinglish, his word** · `derived_2026-08-28.json` (the
+     static re-derive snapshot, so no later run can write by reading).
+     ⛑ THE POINTER IT WAS TOLD TO CARRY: **THE SELF-HEALING LAW binds S10's build posture** —
+     fix-and-tell-me, reversible+test-proven repairs report at his anchors and never raise a
+     card; cards only for irreversible acts and design changes; full self-REWRITE stays
+     REFUSED. The spec predates the ruling by a day and says nothing against it; §2 row #8's
+     `self_repair` subjects table is the substrate the ruling names. S10 folds it in.
+     FORBIDDEN LIST HELD: atlas/spec/instruments NOT patched · zero Gemini calls · zero agents ·
+     nothing re-enabled · no gate weakened · s5-2026-08-20/ untouched.
+     DONE-PROOF: `node s6r_check.mjs` twice byte-identical · `--selftest` 7/7 bites ·
+     `npm test` 108/2 solo · `rails.mjs orders` clean.                  CEILING: 15 / 10 / 5
+
 ☐ S7  BUILD · GATE C.                                       MODEL: Opus · effort max
       His §1 correction lands: the consumer map becomes a DECLARED consumers table in
       the S6 row-shape, owned by the gate — S10 folds it into the registry proper, so
@@ -17032,3 +17130,120 @@ and died before commit: the coverage law's `orphaned: flow_atlas` (wired into `a
 selftest made suite-deterministic — the freshness gate skips ONLY in the selftest's clean case
 and is still proven by its January-plant bite) · a hermeticity `MODIFIED session_meter.json`
 (my own meter call running parallel to the suite — contamination, not code; clean run clean).
+
+### PROGRESS 2026-08-28 ~07:45 IST — RUNG `S6-R` · THE INDEPENDENT S6 VERIFICATION (Opus 5 · effort max · 15/10/5) — **S6 IS SOUND; SEVEN FINDINGS, NONE BLOCKING HIS HAAN, AND EVERY GAP RUNS ONE WAY**
+
+**Router obeyed** (§10-D rule 1: the ▶ NEXT SESSION line, not the first ☐). Micro-order written
+to the scratchpad before any edit (rule 9).
+
+**FIRST ACT — the ruling's own fold item was missing from disk.** `RULING__2026-08-28_selfheal-law+s6r.md`
+fold item ① says the §10-C S6-R row was written "this act"; `grep -n "S6-R"` returned four hits,
+ALL inside the RESUME block. The row did not exist. Precedent: S5-Z6's first act was the identical
+repair. Written from the ▶ NEXT SESSION router's own text — transcription, nothing invented.
+
+**THE INDEPENDENCE LAW THIS RUNG RAN ON.** S6's atlas is DERIVED from xray's IR, so an atlas check
+that reads the IR proves nothing — it re-asks the same witness. Every edge was re-derived from THE
+SOURCE FILES AND THE DISK, by this rung's own probe. Where the checker and the IR disagreed, the
+disagreement was the finding — and **twice the checker was the one that was wrong**, which is in
+the record too.
+
+**THE VERDICT.** P1: A1 30/30 · A2 4/4 · A5 0 unexplained of 730 · A6 PASS · A7/A8 BOUNDED ·
+A3/A4 FINDINGS with ONE shared cause. P2: **12/12 witnesses, all eight shapes.** P3: sites 12/12
+by grep (the #12 hand-mirrored twin confirmed in BOTH organs), lawpack **102 = 102 = 102**,
+contradictions **ZERO across 53 ruling files**; FINDINGS on acceptance-(a) and the dry-run.
+P4: 3/3. **`npm test` clean solo = 108/2, the recorded baseline EXACTLY** — every failing member's
+last code change is 18–20 Aug, none from S6 and none mine.
+
+**THE STRUCTURAL FACT THAT DECIDES HIS HAAN: every gap runs in ONE direction.** The atlas is a
+LOWER BOUND — the misses ADD missing edges and cannot invent a false one. The 535 edges he is
+asked to rule on are 535 real edges; there are more than 535.
+
+**THE SEVEN.** F-01 the IR's `on_disk` walks only `STATE_DIR`, so "57 ghost reads" is really 33
+(24 are on disk) and 4 of 11 orphan flags are wrong — and it is a FILTER, not just a display ·
+F-02 CROSS-ORGAN HELPER SINK: `rejirah_log.jsonl` has TEN readers, not 9, and the tenth is
+`learnstate.mjs:62/:525` — **the kickoff brief, the surface he sees every session** · F-03
+acceptance (a)'s "≤90 (102−12)" models 1 migration = 1 lawpack site, and FOUR of the twelve remove
+ZERO while #12 removes two ⇒ **it will mis-grade S10 in both directions** · F-04 the 13th class
+exists and lawpack's own header already said so; three named · F-05 `brain_ledger.jsonl` CANNOT be
+expressed in the core row shape (9 declared writers vs "the ONE organ") — reported, never patched,
+exactly as ruled · F-06 importing `flow_atlas.mjs` REBUILT and overwrote both S6 deliverables (no
+import guard), restored from git in the same minute, sha16 back to `a8b2e1ddb361417c` · F-07 S1's
+state rail refuses READ-ONLY commands, two live reproductions. Plus **L-01, a LEAD not a finding**:
+a suite run appended to `gate_tune_ledger.jsonl` while the hermeticity check named a different
+file — settle by running, not by reading. Not restored: an append-only measurement row written by
+its owner, and L9 forbids replacing it.
+
+**THE CHECKER'S OWN MISSES, RECORDED — a verifier that hides its misses is worth nothing.** It
+reproduced **SHAPE 5 twice**: a hand-rolled quote-pairing scanner silently returned `[]` for
+`organism_test.mjs` (one regex literal containing a quote knocked its pairing out of phase) and
+the check reported `MENTION_ONLY` with total confidence; and the first probe read COMMENTS as code
+and claimed three organs "read" `dressing-room/SEASON.md` and that watchman "reads"
+`reconcile.json` — **every one a comment or a display string; the IR was right and the checker was
+wrong.** It reproduced **SHAPE 7 once**: a hand-written list of fs primitives that missed
+`writeJsonAtomic`, `readLog`, `logRecallHint` and the second-argument `renameSync(tmp, LAST)`.
+All three fixed (stateless regex · comment strip + whole-literal-is-path · a predicate over the
+call's VERB in any argument position) — and it was the third fix that found F-02.
+
+**A NUMBER THIS RUNG REFUSED TO SHIP.** The raw IR-vs-probe diff reads 286 missed reads / 187
+missed writes. It is not quoted as the IR's error count and must not be: two contamination
+mechanisms were found by reading the hits — BASENAME COLLISION (`join(BAG,"afferent.jsonl")`
+matching the state file) and PAREN-IN-STRING in the checker's own verb resolver (it labelled
+`brain.mjs:804`'s `readLines` a WRITE). What is proven is the ONE hand-read instance and the
+DIRECTION of the bias. The precise re-derivation is S6-F's, not this rung's.
+
+**PROOFS, all run:** `s6r_check.mjs` twice byte-identical (194,999 B) · `--selftest` **7/7 bites,
+every one proven twice** (the 8th standing law) · `npm test` 108/2 solo · `manifest_check.mjs`
+refuses on 4 of 56 receipts, every one explained (I09 grew by THIS rung's own ruling files; I11 is
+a DECLARED live file the architect wrote to at 07:03; I12 ×2 are the SHAPE-2 ratchet going green,
+recorded by its old receipt refusing) · `rails.mjs orders` clean.
+
+**A PROCESS RED THAT WAS MINE, named.** A first `npm test` showed 107/3 with a hermeticity red —
+I had a background suite still running when I started a second. Two suites, one working tree.
+Re-run alone: 108/2. S6 hit the same class two days ago; the pattern is now twice-measured and
+belongs in S10's build posture.
+
+**COST (day-delta method, stated as a method):** meter day-line **119.41 lakh at open →
+149.58 at close ⇒ ≈30 lakh against BUILD 15 + PROOF 10 + HANDOFF 5 = 30.** AT the ceiling, and
+the number is an UPPER bound — the day-delta charges this rung with every session's spend today.
+§10-D rule 2 was obeyed: at the ceiling the rung stopped exploring and spent the remainder on a
+clean close.
+
+**FORBIDDEN LIST HELD:** atlas/spec/instruments NOT patched (F-06's accidental rebuild was
+restored inside the minute and is reported, not hidden) · zero Gemini calls · zero agents ·
+nothing re-enabled · no gate weakened · `s5-2026-08-20/` untouched.
+
+**THE RULING THIS RUNG RAN UNDER — VERBATIM (its own fold item ③):**
+
+```
+# RULING — 28 Aug 2026 · HIS SELF-HEALING LAW + S6-R (the independent S6 verification rung)
+HIS WORDS, this morning (the four answers): (1) token tension dropped — quality never drops, waste
+never allowed; (2) his §10-E haan/na moves to AFTER S6-R, agreed; (3) the S6-R verdict ships as a
+him-readable page too; (4) **"the entire cyborg organism should be self healing and tell me just
+what got fixed and why."**
+
+## 1 · THE SELF-HEALING POLICY LAW (his word, standing, binds S10's build posture)
+**FIX-AND-TELL-ME is the organism's repair policy.** Anything REVERSIBLE whose fix is
+TEST-VERIFIED (the gates recompute and pass) the machine fixes ITSELF and REPORTS — one line at
+his anchors: *what got fixed, and why* — never a permission card. A card exists ONLY for
+irreversible acts and design changes. The Boot-Room proposal lane and the 4-condition auto-fix
+gate generalize under this policy at S10 (the self_repair subjects table is its substrate).
+Full self-REWRITE (machine edits its own code unsupervised) stays REFUSED — measured dead
+(Tier-2 arm: 5 starts/0 exits) and the CTO holds that refusal.
+
+## 2 · S6-R — ruled, ceiling BUILD 15 · PROOF 10 · HANDOFF 5, MODEL Opus 5 · effort MAX
+(family-decorrelated from the Fable author per Q-5; the architect re-runs its checker and signs)
+Scope + pass criteria are in the §10-C row (written this ruling, same act). VERIFY-ONLY: it
+patches NOTHING — findings route to an S6-F patch rung, ruler-priced. Deliverables: the checker
+(bite-proven, idempotent) · findings list · PASS/FAIL per criterion · **a him-readable verdict
+page in plain Hinglish**. His haan/na on atlas+spec fires only on S6-R's verdict.
+
+FOLD LIST: ① S6-R row in §10-C (this act) · ② router → S6-R (this act) · ③ this file verbatim in
+PROGRESS at S6-R's close · ④ the self-healing law lands in the registry spec's build posture at
+S10 (S6-R carries the pointer).
+```
+
+**NEXT: HIS §10-E DECISION MOMENT — haan/na on the atlas + the registry spec, now firing on this
+verdict (his agreed re-sequencing, 28 Aug). The page written for him is
+`arsenal-audit-artifacts\s6r-2026-08-28\VERDICT_FOR_HIM.md`. On haan: S7 · BUILD · GATE C
+(Opus 5 · effort max) — and the RULER PRICES IT FIRST, the 1215 law. On na, or to clear the
+findings first: S6-F, ruler-priced. F-03 should land before S10 either way.**
