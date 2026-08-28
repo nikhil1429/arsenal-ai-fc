@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:47:55.608Z",
+ "updated_at": "2026-08-28T19:49:42.402Z",
  "tables": {
   "mechanisms": [
    {
@@ -57,6 +57,17 @@
     "notes": "durable idempotent execution generalizes BY ROW; a kind exists only with a RUNNER in tasks.mjs (bite at tasks.mjs selftest) or as declared INTERACTIVE. The note-generation idempotency class (his notes-created-7-times pain) rides THIS substrate: every kind keys its ask (idempotencyKey + TTL window) so the same ask REPLAYS instead of re-running",
     "updated_at": "2026-08-28T19:47:55.605Z",
     "added_at": "2026-08-28T19:47:55.605Z"
+   },
+   {
+    "subject": "team_sheet",
+    "schema_owner": "conductor.mjs",
+    "witness": "setup/INSTALL_CONDUCTOR.ps1:51 — ArsenalFC-Morning-Conductor trigger 09:15 (was 08:45 until 7 Aug 2026)",
+    "slot": {
+     "after": "09:15"
+    },
+    "notes": "S10 migration #6 — slot-awareness: the sheet's producer fires at 09:15; before that a missing team_sheet.md is EXPECTED, not a weld-broken RED (outwork_audit reads slotPassed, never re-implements)",
+    "updated_at": "2026-08-28T19:49:42.399Z",
+    "added_at": "2026-08-28T19:49:42.399Z"
    }
   ]
  }

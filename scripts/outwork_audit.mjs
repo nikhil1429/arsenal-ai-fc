@@ -76,6 +76,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
+import { slotPassed } from "./registry.mjs";   // S10 #6 — "has the producer's slot passed?" is a registry lookup, never re-implemented
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -112,6 +113,10 @@ export function gather(now = new Date()) {
     post_match_files: [],
     result_line_missing: [],
     team_sheet_today: false,
+    // S10 migration #6: "has the producer's slot passed?" is a REGISTRY lookup,
+    // never this organ's re-implementation. true|false|null (null = no row
+    // declares the slot; checks() then keeps the old always-on behaviour).
+    team_sheet_slot_passed: slotPassed("team_sheet", now),
     timeaudit: readJson(join(STATE_DIR, "timeaudit.json")),
     season_last_date: null,
   };
@@ -185,8 +190,11 @@ export function checks(w) {
   }
 
   // o2 — the KAL→KICKOFF weld's carrier: yesterday committed a first move, and the
-  // sheet that must resume him today never got written.
-  if (w.post_match_yesterday_kal && !w.team_sheet_today) {
+  // sheet that must resume him today never got written. S10 #6: BEFORE the
+  // producer's declared slot (registry row team_sheet, conductor 09:15) a missing
+  // sheet is EXPECTED, not a RED — the false pre-slot weld-broken dies here.
+  // An undeclared slot (null) keeps the old always-on behaviour, honestly.
+  if (w.post_match_yesterday_kal && !w.team_sheet_today && w.team_sheet_slot_passed !== false) {
     F.push({
       id: "weld-broken", level: "RED",
       finding: "kal raat KAL-LINE commit hui thi aur aaj ki team_sheet.md nahi bani — the weld's carrier is missing, so the pre-decided first move never reached the morning",
@@ -335,6 +343,10 @@ function selftest() {
   assert("o2 — yesterday's KAL-line + no today team_sheet = weld-broken RED; no KAL owes no weld",
     checks({ ...base, team_sheet_today: false }).some((x) => x.id === "weld-broken" && x.level === "RED")
     && !checks({ ...base, team_sheet_today: false, post_match_yesterday_kal: null }).some((x) => x.id === "weld-broken"));
+  assert("o2 SLOT-AWARE (S10 #6) — BEFORE the producer's registry-declared slot a missing sheet is EXPECTED (no RED); after it the RED stands; an UNDECLARED slot keeps the old always-on behaviour",
+    !checks({ ...base, team_sheet_today: false, team_sheet_slot_passed: false }).some((x) => x.id === "weld-broken")
+    && checks({ ...base, team_sheet_today: false, team_sheet_slot_passed: true }).some((x) => x.id === "weld-broken")
+    && checks({ ...base, team_sheet_today: false, team_sheet_slot_passed: null }).some((x) => x.id === "weld-broken"));
   assert("o3 — a post_match file without RESULT: is review-shapeless RED, with the files named",
     (() => { const f = checks({ ...base, result_line_missing: [`${YDAY}.md`] }).find((x) => x.id === "review-shapeless");
       return f && f.level === "RED" && f.evidence.includes(`${YDAY}.md`); })());
