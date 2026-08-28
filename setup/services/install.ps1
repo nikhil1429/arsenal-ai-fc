@@ -62,31 +62,167 @@ $cred = Get-Credential -UserName "$env:USERDOMAIN\$env:USERNAME" `
 # of at this line. Caught by re-reading the generated file before he ran it elevated.
 $plainPw = $cred.GetNetworkCredential().Password
 
+# ── HOW WinSW v2 ACTUALLY WORKS, learned by running it and being wrong first ──
+# WinSW v2 (the current STABLE line, and what he downloaded) finds its config by its
+# OWN EXECUTABLE NAME: <exe-basename>.xml sitting beside it. It does NOT accept a
+# config path as an argument - that is the v3 form, and assuming it produced this on
+# every one of five services:
+#   FATAL - System.IO.FileNotFoundException: Unable to locate WinSW.exe.[xml|yml]
+#           file within executable directory
+# So the exe is COPIED ONCE PER SERVICE to <ServiceId>.exe, beside the <ServiceId>.xml
+# that is already generated here. That is the documented v2 pattern, not a workaround.
+# The copies are gitignored; they cost disk, and disk is the cheap resource here.
+$failed = @()
+
 # --- cortex ---
-& $winsw install (Join-Path $here "ArsenalFC-Cortex.xml") --username $cred.UserName --password $plainPw
-& $winsw stop    (Join-Path $here "ArsenalFC-Cortex.xml")  2>$null   # belt: install must never leave it running
-sc.exe config "ArsenalFC-Cortex" start= demand | Out-Null            # S12 flips these to auto, on his word
-Write-Host "  ~ ArsenalFC-Cortex installed as a SERVICE (start=demand, not running)"
+$id  = "ArsenalFC-Cortex"
+$exe = Join-Path $here "$id.exe"
+Copy-Item -LiteralPath $winsw -Destination $exe -Force
+# v2 takes NO config argument - it reads "$id.xml" because the exe is named "$id.exe".
+& $exe install 2>&1 | ForEach-Object { if ($_ -match "FATAL|Exception") { Write-Host "      winsw: $_" } }
+# THE CLAIM IS READ OFF THE OUTCOME, NEVER OFF THE CALL. The previous build printed
+# "installed as a SERVICE" unconditionally and said it five times while installing
+# NOTHING - the exact defect this whole rung exists to remove, committed inside the
+# organ that removes it. Ask the SCM instead.
+$svc = Get-Service -Name $id -ErrorAction SilentlyContinue
+if (-not $svc) {
+  Write-Host "  X $id FAILED to install - see the winsw line(s) above"
+  $failed += $id
+} else {
+  # The account is set through sc.exe, NOT through the XML: WinSW would take a
+  # <password> element, and a password persisted in a repo file is the one thing
+  # this generator refuses to do.
+  sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
+  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
+  if ($acct -and ($acct -replace '^\.\\', "$env:COMPUTERNAME\\") -ieq ($cred.UserName -replace '^\.\\', "$env:COMPUTERNAME\\")) {
+    Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
+  } else {
+    Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    $failed += "$id (account)"
+  }
+}
+
 # --- thalamus ---
-& $winsw install (Join-Path $here "ArsenalFC-Thalamus.xml") --username $cred.UserName --password $plainPw
-& $winsw stop    (Join-Path $here "ArsenalFC-Thalamus.xml")  2>$null   # belt: install must never leave it running
-sc.exe config "ArsenalFC-Thalamus" start= demand | Out-Null            # S12 flips these to auto, on his word
-Write-Host "  ~ ArsenalFC-Thalamus installed as a SERVICE (start=demand, not running)"
+$id  = "ArsenalFC-Thalamus"
+$exe = Join-Path $here "$id.exe"
+Copy-Item -LiteralPath $winsw -Destination $exe -Force
+# v2 takes NO config argument - it reads "$id.xml" because the exe is named "$id.exe".
+& $exe install 2>&1 | ForEach-Object { if ($_ -match "FATAL|Exception") { Write-Host "      winsw: $_" } }
+# THE CLAIM IS READ OFF THE OUTCOME, NEVER OFF THE CALL. The previous build printed
+# "installed as a SERVICE" unconditionally and said it five times while installing
+# NOTHING - the exact defect this whole rung exists to remove, committed inside the
+# organ that removes it. Ask the SCM instead.
+$svc = Get-Service -Name $id -ErrorAction SilentlyContinue
+if (-not $svc) {
+  Write-Host "  X $id FAILED to install - see the winsw line(s) above"
+  $failed += $id
+} else {
+  # The account is set through sc.exe, NOT through the XML: WinSW would take a
+  # <password> element, and a password persisted in a repo file is the one thing
+  # this generator refuses to do.
+  sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
+  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
+  if ($acct -and ($acct -replace '^\.\\', "$env:COMPUTERNAME\\") -ieq ($cred.UserName -replace '^\.\\', "$env:COMPUTERNAME\\")) {
+    Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
+  } else {
+    Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    $failed += "$id (account)"
+  }
+}
+
 # --- brain ---
-& $winsw install (Join-Path $here "ArsenalFC-Brain.xml") --username $cred.UserName --password $plainPw
-& $winsw stop    (Join-Path $here "ArsenalFC-Brain.xml")  2>$null   # belt: install must never leave it running
-sc.exe config "ArsenalFC-Brain" start= demand | Out-Null            # S12 flips these to auto, on his word
-Write-Host "  ~ ArsenalFC-Brain installed as a SERVICE (start=demand, not running)"
+$id  = "ArsenalFC-Brain"
+$exe = Join-Path $here "$id.exe"
+Copy-Item -LiteralPath $winsw -Destination $exe -Force
+# v2 takes NO config argument - it reads "$id.xml" because the exe is named "$id.exe".
+& $exe install 2>&1 | ForEach-Object { if ($_ -match "FATAL|Exception") { Write-Host "      winsw: $_" } }
+# THE CLAIM IS READ OFF THE OUTCOME, NEVER OFF THE CALL. The previous build printed
+# "installed as a SERVICE" unconditionally and said it five times while installing
+# NOTHING - the exact defect this whole rung exists to remove, committed inside the
+# organ that removes it. Ask the SCM instead.
+$svc = Get-Service -Name $id -ErrorAction SilentlyContinue
+if (-not $svc) {
+  Write-Host "  X $id FAILED to install - see the winsw line(s) above"
+  $failed += $id
+} else {
+  # The account is set through sc.exe, NOT through the XML: WinSW would take a
+  # <password> element, and a password persisted in a repo file is the one thing
+  # this generator refuses to do.
+  sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
+  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
+  if ($acct -and ($acct -replace '^\.\\', "$env:COMPUTERNAME\\") -ieq ($cred.UserName -replace '^\.\\', "$env:COMPUTERNAME\\")) {
+    Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
+  } else {
+    Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    $failed += "$id (account)"
+  }
+}
+
 # --- sitting ---
-& $winsw install (Join-Path $here "ArsenalFC-Sitting.xml") --username $cred.UserName --password $plainPw
-& $winsw stop    (Join-Path $here "ArsenalFC-Sitting.xml")  2>$null   # belt: install must never leave it running
-sc.exe config "ArsenalFC-Sitting" start= demand | Out-Null            # S12 flips these to auto, on his word
-Write-Host "  ~ ArsenalFC-Sitting installed as a SERVICE (start=demand, not running)"
+$id  = "ArsenalFC-Sitting"
+$exe = Join-Path $here "$id.exe"
+Copy-Item -LiteralPath $winsw -Destination $exe -Force
+# v2 takes NO config argument - it reads "$id.xml" because the exe is named "$id.exe".
+& $exe install 2>&1 | ForEach-Object { if ($_ -match "FATAL|Exception") { Write-Host "      winsw: $_" } }
+# THE CLAIM IS READ OFF THE OUTCOME, NEVER OFF THE CALL. The previous build printed
+# "installed as a SERVICE" unconditionally and said it five times while installing
+# NOTHING - the exact defect this whole rung exists to remove, committed inside the
+# organ that removes it. Ask the SCM instead.
+$svc = Get-Service -Name $id -ErrorAction SilentlyContinue
+if (-not $svc) {
+  Write-Host "  X $id FAILED to install - see the winsw line(s) above"
+  $failed += $id
+} else {
+  # The account is set through sc.exe, NOT through the XML: WinSW would take a
+  # <password> element, and a password persisted in a repo file is the one thing
+  # this generator refuses to do.
+  sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
+  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
+  if ($acct -and ($acct -replace '^\.\\', "$env:COMPUTERNAME\\") -ieq ($cred.UserName -replace '^\.\\', "$env:COMPUTERNAME\\")) {
+    Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
+  } else {
+    Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    $failed += "$id (account)"
+  }
+}
+
 # --- context ---
-& $winsw install (Join-Path $here "ArsenalFC-Context.xml") --username $cred.UserName --password $plainPw
-& $winsw stop    (Join-Path $here "ArsenalFC-Context.xml")  2>$null   # belt: install must never leave it running
-sc.exe config "ArsenalFC-Context" start= demand | Out-Null            # S12 flips these to auto, on his word
-Write-Host "  ~ ArsenalFC-Context installed as a SERVICE (start=demand, not running)"
+$id  = "ArsenalFC-Context"
+$exe = Join-Path $here "$id.exe"
+Copy-Item -LiteralPath $winsw -Destination $exe -Force
+# v2 takes NO config argument - it reads "$id.xml" because the exe is named "$id.exe".
+& $exe install 2>&1 | ForEach-Object { if ($_ -match "FATAL|Exception") { Write-Host "      winsw: $_" } }
+# THE CLAIM IS READ OFF THE OUTCOME, NEVER OFF THE CALL. The previous build printed
+# "installed as a SERVICE" unconditionally and said it five times while installing
+# NOTHING - the exact defect this whole rung exists to remove, committed inside the
+# organ that removes it. Ask the SCM instead.
+$svc = Get-Service -Name $id -ErrorAction SilentlyContinue
+if (-not $svc) {
+  Write-Host "  X $id FAILED to install - see the winsw line(s) above"
+  $failed += $id
+} else {
+  # The account is set through sc.exe, NOT through the XML: WinSW would take a
+  # <password> element, and a password persisted in a repo file is the one thing
+  # this generator refuses to do.
+  sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
+  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
+  if ($acct -and ($acct -replace '^\.\\', "$env:COMPUTERNAME\\") -ieq ($cred.UserName -replace '^\.\\', "$env:COMPUTERNAME\\")) {
+    Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
+  } else {
+    Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    $failed += "$id (account)"
+  }
+}
 
 & powershell -ExecutionPolicy Bypass -File (Join-Path $here "ArsenalFC-Turnstile.logon.ps1")
 & powershell -ExecutionPolicy Bypass -File (Join-Path $here "ArsenalFC-Dugout.logon.ps1")
@@ -94,5 +230,12 @@ Write-Host "  ~ ArsenalFC-Context installed as a SERVICE (start=demand, not runn
 Remove-Variable cred, plainPw -ErrorAction SilentlyContinue   # neither outlives this script
 
 Write-Host ""
+if ($failed.Count -gt 0) {
+  # A non-zero exit, because a summary nobody can act on is how the first version of
+  # this script reported five failures as five successes.
+  Write-Host "  INCOMPLETE - $($failed.Count) problem(s): $($failed -join ', ')"
+  Write-Host "  Nothing is running. Re-run this file after fixing, it is safe to repeat."
+  exit 1
+}
 Write-Host "  DONE - and NOTHING IS RUNNING. Verify:  node scripts/services.mjs status"
 Write-Host "  S12 is what turns the organism back on, stage by stage, on your word."

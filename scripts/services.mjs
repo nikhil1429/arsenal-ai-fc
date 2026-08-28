@@ -278,17 +278,60 @@ $cred = Get-Credential -UserName "$env:USERDOMAIN\\$env:USERNAME" \`
 # of at this line. Caught by re-reading the generated file before he ran it elevated.
 $plainPw = $cred.GetNetworkCredential().Password
 
+# ── HOW WinSW v2 ACTUALLY WORKS, learned by running it and being wrong first ──
+# WinSW v2 (the current STABLE line, and what he downloaded) finds its config by its
+# OWN EXECUTABLE NAME: <exe-basename>.xml sitting beside it. It does NOT accept a
+# config path as an argument - that is the v3 form, and assuming it produced this on
+# every one of five services:
+#   FATAL - System.IO.FileNotFoundException: Unable to locate WinSW.exe.[xml|yml]
+#           file within executable directory
+# So the exe is COPIED ONCE PER SERVICE to <ServiceId>.exe, beside the <ServiceId>.xml
+# that is already generated here. That is the documented v2 pattern, not a workaround.
+# The copies are gitignored; they cost disk, and disk is the cheap resource here.
+$failed = @()
+
 ${h.map((r) => `# --- ${r.name} ---
-& $winsw install (Join-Path $here "${idOf(r)}.xml") --username $cred.UserName --password $plainPw
-& $winsw stop    (Join-Path $here "${idOf(r)}.xml")  2>$null   # belt: install must never leave it running
-sc.exe config "${idOf(r)}" start= demand | Out-Null            # S12 flips these to auto, on his word
-Write-Host "  ~ ${idOf(r)} installed as a SERVICE (start=demand, not running)"`).join("\n")}
+$id  = "${idOf(r)}"
+$exe = Join-Path $here "$id.exe"
+Copy-Item -LiteralPath $winsw -Destination $exe -Force
+# v2 takes NO config argument - it reads "$id.xml" because the exe is named "$id.exe".
+& $exe install 2>&1 | ForEach-Object { if ($_ -match "FATAL|Exception") { Write-Host "      winsw: $_" } }
+# THE CLAIM IS READ OFF THE OUTCOME, NEVER OFF THE CALL. The previous build printed
+# "installed as a SERVICE" unconditionally and said it five times while installing
+# NOTHING - the exact defect this whole rung exists to remove, committed inside the
+# organ that removes it. Ask the SCM instead.
+$svc = Get-Service -Name $id -ErrorAction SilentlyContinue
+if (-not $svc) {
+  Write-Host "  X $id FAILED to install - see the winsw line(s) above"
+  $failed += $id
+} else {
+  # The account is set through sc.exe, NOT through the XML: WinSW would take a
+  # <password> element, and a password persisted in a repo file is the one thing
+  # this generator refuses to do.
+  sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
+  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
+  if ($acct -and ($acct -replace '^\\.\\\\', "$env:COMPUTERNAME\\\\") -ieq ($cred.UserName -replace '^\\.\\\\', "$env:COMPUTERNAME\\\\")) {
+    Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
+  } else {
+    Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    $failed += "$id (account)"
+  }
+}`).join("\n\n")}
 
 ${d.map((r) => `& powershell -ExecutionPolicy Bypass -File (Join-Path $here "${idOf(r)}.logon.ps1")`).join("\n")}
 
 Remove-Variable cred, plainPw -ErrorAction SilentlyContinue   # neither outlives this script
 
 Write-Host ""
+if ($failed.Count -gt 0) {
+  # A non-zero exit, because a summary nobody can act on is how the first version of
+  # this script reported five failures as five successes.
+  Write-Host "  INCOMPLETE - $($failed.Count) problem(s): $($failed -join ', ')"
+  Write-Host "  Nothing is running. Re-run this file after fixing, it is safe to repeat."
+  exit 1
+}
 Write-Host "  DONE - and NOTHING IS RUNNING. Verify:  node scripts/services.mjs status"
 Write-Host "  S12 is what turns the organism back on, stage by stage, on your word."
 `;
@@ -427,10 +470,20 @@ async function selftest() {
     headless().length === 5 && desktop().length === 2
     && desktop().map((r) => r.name).sort().join(",") === "dugout,turnstile");
 
-  // ⛔ THE CREDENTIAL LAW. The single most important assertion in this file.
   const emitted = emit({ write: false });
-  assert("NO CREDENTIAL, ANYWHERE — no emitted file contains a <password> element or an assigned password literal",
-    emitted.every((f) => !/<password>/i.test(f.body))
+
+  // EVERY SOURCE-TRUTH CHECK BELOW RUNS OVER CODE, NEVER OVER COMMENTS — and this
+  // helper exists because the same trap bit THREE times in one rung: the comment that
+  // explains a defect necessarily QUOTES the defect, and a naive scan then reads the
+  // warning as the crime. Strip `#` (PowerShell) and `<!-- -->` (XML) first, once,
+  // in one place, so the next assertion cannot re-learn this.
+  const codeOf = (f) => (f.path.endsWith(".xml")
+    ? f.body.replace(/<!--[\s\S]*?-->/g, "")
+    : f.body.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n"));
+
+  // ⛔ THE CREDENTIAL LAW. The single most important assertion in this file.
+  assert("NO CREDENTIAL, ANYWHERE — no emitted file contains a password element or an assigned password literal",
+    emitted.every((f) => !/<password>/i.test(codeOf(f)))
     && emitted.filter((f) => f.path.endsWith(".xml")).every((f) => /<username>/.test(f.body)));
 
   // The install prompts; it does not embed. Proven off the installer's own text.
@@ -442,14 +495,15 @@ async function selftest() {
   // evaluate a method-call chain in a native command's arguments, so the password
   // must be a plain variable by the time it reaches WinSW — never `.GetNetworkCredential()`
   // inline. This shipped wrong once and was caught by re-reading the generated file.
-  // Tested over CODE ONLY — the comment above the fix QUOTES the broken form verbatim
-  // so the next reader knows what not to write, and a naive scan reads its own warning
-  // as the defect. (Second time this exact trap has bitten in this rung; the watchdog's
-  // launchDetached proof needed the same treatment.)
-  const instCode = !inst ? "" : inst.body.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
-  assert("NO METHOD-CALL CHAIN IN A NATIVE ARGUMENT — the password reaches WinSW as a resolved variable, never as an inline .GetNetworkCredential() expression",
-    /--password \$plainPw/.test(instCode)
-    && !/--password \$cred\.GetNetworkCredential/.test(instCode));
+  const instCode = !inst ? "" : codeOf(inst);
+  // The password reaches sc.exe as a RESOLVED VARIABLE. A method-call chain in a
+  // native command's arguments is parsed in argument mode and is not reliably
+  // evaluated — it would reach the SCM as literal text, and the service would then
+  // fail to start with a logon error pointing at HIS account instead of at this line.
+  assert("NO METHOD-CALL CHAIN IN A NATIVE ARGUMENT — the password reaches the SCM as a resolved variable, never as an inline .GetNetworkCredential() expression",
+    /password= \$plainPw/.test(instCode)
+    && /^\$plainPw = \$cred\.GetNetworkCredential\(\)\.Password$/m.test(instCode)
+    && !/(--password|password=) \$cred\.GetNetworkCredential/.test(instCode));
 
   // ⛔ THE SWITCH-OFF. A rung that leaves something running has broken it, and the
   // generated files are where that would happen silently.
@@ -478,6 +532,29 @@ async function selftest() {
   // swept the 18 MB exe into a commit that was caught before it reached the public remote.
   assert("WinSW IS RESOLVED BY PATTERN, NEVER BY ONE EXACT NAME — a WinSW.exe.exe from a hidden-extension rename still installs",
     !!inst && /Filter "WinSW\*\.exe"/.test(inst.body) && !/Join-Path \$here "WinSW\.exe"/.test(inst.body));
+
+  // ⛔ THE CLAIM IS READ OFF THE OUTCOME. This is the assertion I owe him.
+  // The first shipped installer printed "installed as a SERVICE" unconditionally,
+  // once per row, and said it FIVE TIMES on a run that installed NOTHING — WinSW v2
+  // had thrown FileNotFoundException on every call. That is the 11-Aug "dispatch is
+  // not the outcome" law broken inside the very rung whose subject is that law.
+  // A success line may now only appear inside a branch that asked the SCM first.
+  assert("A SUCCESS LINE IS GATED ON A REAL READING — the installer asks Get-Service/StartName before it claims anything, and exits non-zero when any row failed",
+    /Get-Service -Name \$id/.test(instCode)
+    && /if \(-not \$svc\)/.test(instCode)
+    && /Win32_Service -Filter/.test(instCode)
+    && /\$failed \+= \$id/.test(instCode)
+    && /exit 1/.test(instCode)
+    // …and the success sentence lives INSIDE the else-branch, never at statement level.
+    && /\} else \{[\s\S]*?installed, runs as \$acct/.test(instCode));
+
+  // WinSW v2 IS THE STABLE LINE AND IT TAKES NO CONFIG ARGUMENT. Pinned because the
+  // v3 form (`install <config.xml>`) parses fine, runs fine, and fails at RUNTIME with
+  // a stack trace that names a file nobody wrote — the most expensive kind of wrong.
+  assert("WinSW v2's REAL CONTRACT — the exe is copied per service so it finds <id>.xml by its own name; no config path is ever passed as an argument",
+    !!inst && /Copy-Item -LiteralPath \$winsw -Destination \$exe/.test(inst.body)
+    && /& \$exe install/.test(inst.body)
+    && !/\$winsw install \(Join-Path/.test(inst.body));
 
   // The two settings the audit named, by name, on every desktop row.
   assert("THE AUDIT'S TWO SETTINGS — RestartOnFailure and StartWhenAvailable are on every logon task",

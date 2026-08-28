@@ -486,3 +486,7 @@ dressing-room/state/session_meter.json
 # was caught before the push. Any name, because Windows hides extensions and the
 # download lands as WinSW.exe.exe as often as WinSW.exe.
 setup/services/WinSW*.exe
+
+# S9: WinSW is copied once per service (v2 finds <id>.xml by its own exe name).
+# These copies are generated, ~17 MB each, and never belong in the repo.
+setup/services/ArsenalFC-*.exe
