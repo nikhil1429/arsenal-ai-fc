@@ -3039,7 +3039,28 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`S10-R` · VERIFY-ONLY — the pre-committed independent check
+  ▶ NEXT SESSION ............... **THE RULER'S CALL — S10-R's seven findings need routing before
+                                   any rung opens. `S10-F` (the repair rung) does NOT exist until
+                                   the architect prices it; if he waives it, the router goes to
+                                   `S11` · BUILD · STALENESS / KEYS / CRASH (Opus 5 · effort max,
+                                   ceiling 40). NOTHING in S10-R is blocking — the verdict is
+                                   SOUND-WITH-FINDINGS and the registry stands.
+                                   ⛑ TWO THINGS A NEXT SESSION MUST NOT RE-DERIVE:
+                                   (1) the close's `npm test 119/2` is REPRODUCIBLE BUT NOT
+                                   STABLE — S10-R measured 118/3 twice-differently at the SAME
+                                   commit (finding F-6, HERMETICITY); treat 119/2 as a best case,
+                                   not a baseline, until F-6 has a cause.
+                                   (2) F-5: the atlas stale-proof keys on mtime, so a `git
+                                   checkout`/branch switch/clone reds `flow_atlas check` even
+                                   with byte-identical files — clear it with `xray.mjs build` +
+                                   `flow_atlas.mjs build`, do NOT read it as a regression.
+                                   ⛑ carried for HIM, unchanged: c86 is DONE (R3, re-verified
+                                   here — Node v24.19.0 live) but its CARD still sits in the
+                                   queue; his anchor clears it, nothing else may. The interim
+                                   fresh-questions law STILL BINDS the four already-samjhao'd
+                                   topics (no taught rows predate the taught event).**
+
+  ~~▶ NEXT SESSION ............... **`S10-R` · VERIFY-ONLY — the pre-committed independent check
                                    (quality-strategy ruling, 28 Aug): a decorrelated model
                                    re-runs EVERY S10 proof. MODEL: Opus 5 · effort max (the
                                    S6-R precedent — family-decorrelated from the Fable author).
@@ -3068,7 +3089,10 @@ STATUS (update this block before any session stops — this is the handoff)
                                    29 Aug) but its CARD still sits in the queue — his anchor
                                    clears it, nothing else may; the interim fresh-questions law
                                    STILL BINDS the four already-samjhao'd topics (their taught
-                                   axes predate the taught event — no taught rows exist for them).**
+                                   axes predate the taught event — no taught rows exist for them).**~~
+                                   ✅ **DONE 29 Aug 2026 (Opus 5 · max) — see the `S10-R` ☑ row in
+                                   §10-C and the PROGRESS entry of 29 Aug. Kept struck, not
+                                   deleted (L9).**
 
   ~~▶ NEXT SESSION ............... **`S10` · BUILD · THE REGISTRY. MODEL: FABLE 5 · effort max~~
                                    ✅ **DONE 29 Aug 2026 (Fable 5 · max) — see the S10 ☑ row in
@@ -8057,6 +8081,46 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       (consumer SETS + reach policy · law-as-on-disk on gist writes · c86 IS DONE ·
       two canon-ruled defect-fixes ride · the Book spine = registry's derived render).
                                                                        CEILING: 60
+☑ S10-R INDEPENDENT CHECK — **DONE 29 Aug 2026 (Opus 5 · max, family-decorrelated from the
+      Fable author). VERDICT: S10's work is SOUND-WITH-FINDINGS.** P1 PASS (witnesses all
+      resolve; each migrated site now calls `subjectsOf(row)`; four him-lanes metered live;
+      born-red law correct where it reaches) · P2 PASS 12/12 + the 3 deep-verified (gate
+      lane-consumers · acts doors · calibration targets), baselines recomputed and the jugad
+      arithmetic checkable at lawpack.mjs:115 (102 −1 −1 −2 −3 −2 −2 = 91), **detector
+      untouched, rules 5→6 = STRICTER** · P3 PASS on every clause, recomputed from RAW_FACTS
+      before reading any S10 output: 88 = 16 reps + 51 named skips + 21 rulings, the ONE
+      graded row traced to HIS quoted "no idea" at RAW_FACTS:48, all four verdict-computers
+      SAY the skip live · P4 3/4 (registry 31/0 · the coldness hole BITES on live data,
+      before/after shown · atlas stale-proof BITES on a comment-only touch — the mtime/IR
+      guard sits in FRONT of the sha, which is why judgement (2) is sound; the 4th is F-4) ·
+      P5 PASS every leg (58 Disabled + exactly ONE Ready = thalamus · newest task registration
+      18 Aug ⇒ zero new schedules · brain_ledger window 32 rows / ok:0 / **0 tokens in, 0 out**
+      · gates one-way) · P6 PASS (**59 of 59** ruling-scoped laws BYTE-IDENTICAL to source, 0
+      mismatches, 0 invented; no row contradicts a standing ruling).
+      **SEVEN FINDINGS, NONE BLOCKING, and every one runs the same way — the registry
+      UNDER-delivers on its own claims and never over-claims a wrong behaviour.**
+      F-1 `spool_vacuum` "born-red by design" is a claim no code path makes (`redRows()` skips
+      the mechanisms table; `registry check` says GREEN · 0 born-red) · F-2 R1's many-one shape
+      (`brain_ledger` + `appenders[]`) did not land — 0 occurrences in registry.json, no table
+      accepts the field · F-3 per-consumer read-stamps are inert on ALL 15 lanes (0 carry
+      `writes_to`, so `meter()` stamps only the 4 emit rows) and the proof's TITLE claims more
+      than its predicate checks · F-4 a well-formed FIFTH emit row is ACCEPTED, not refused
+      (both readings left to the ruler — R2 expects new surfaces next week) · F-5 the atlas
+      stale-proof is an **mtime** tripwire: a byte-identical `git checkout` stays RED until
+      `xray build` + `flow_atlas build` · **F-6 the suite's HERMETICITY check went green then
+      RED at the same commit — CAUSE NOT ESTABLISHED, recorded as measurement; it is the whole
+      delta between the close's 119/2 and the measured 118/3** · F-7 "73 standing laws" is 14
+      laws + 59 file titles (the DATA is honest — `scope` separates them — the WORD is not).
+      ⛔ VERIFY-ONLY HELD: nothing fixed, nothing woken, nothing enabled, no LLM lane fired.
+      Every sandbox probe restored (`scripts/shadow.mjs` byte-identical to HEAD, atlas sha back
+      to `29b85f931adc588e`); two shell attempts on state were REFUSED by the S1 rail, correctly.
+      Declared footprint: the four ordered verdict-computers rewrote `learning_state.json`'s
+      `generated_at` and nothing else — left uncommitted rather than written by a non-owner.
+      Escalation channel measured UNREACHABLE (`ARCHITECT_SESSION.txt` names `arsenal-ai-fc-5a`;
+      ListAgents shows no such peer) — the file's own fallback taken: tell HIM, queue is the record.
+      Deliverables: `arsenal-audit-artifacts\s10r-2026-08-29\` (VERDICT_FOR_HIM.md ·
+      FINDINGS.md · VERDICT.md · work\).                                   CEILING: 28 (ruler)
+
 ☐ S11 BUILD · STALENESS / KEYS / CRASH.                     MODEL: Opus · effort max
       sha256(inputs) folded into cache keys · recency gates on trailing-N reads ·
       rotated cards record expired_unanswered · tmp-file replay on boot (the
@@ -18646,3 +18710,106 @@ NAMED backlog for a rung after S12, by the spec's own scope law; ③ the two car
 for HIM stand unchanged (artifact-organ parking · samjhao §0 pointer); ④ the eslint no-unused
 `existsSync` in state.mjs:26 predates this rung (verified against HEAD~) and stays inside
 eslint's frozen count — a one-word cleanup for any owner pass.
+
+---
+
+### PROGRESS 2026-08-29 — RUNG `S10-R` · VERIFY-ONLY · THE INDEPENDENT CHECK OF THE REGISTRY — **SOUND-WITH-FINDINGS** (Opus 5 · effort max)
+
+**THE RUNG.** The pre-committed decorrelated check (quality-strategy ruling, 28 Aug). Pass
+criteria were ruler-written BEFORE the run — `queue\RULING__2026-08-29_s10r-criteria.md`, P1–P6,
+priced VERIFY 15 · PROOF 8 · HANDOFF 5, **ceiling 28**. Priced ⇒ the 1215 "ask the ruler" branch
+did not fire. Micro-order written first (§10-D rule 9), scratchpad, before any edit.
+
+**VERDICT: SOUND-WITH-FINDINGS.** Every number in the close re-derived here, none taken on trust:
+proofs_s10 **32/32** · registry selftest **31/0** · gate **49/0** · rails **52/0** · flow_atlas
+**7/7** · xray Q2 **0** Q5 **0** (111/111 organs) · lawpack **GREEN**, jugad **91**, law-m **0**,
+receipt-testimony-read **5**, frozen == measured on all six rules. Registry as found: **74 rows**
+across 10 tables.
+
+**P1 · PASS (with F-1/F-2/F-3).** Every `file:line` witness resolved against disk; every migrated
+site now calls `subjectsOf(row)` where a literal sat (`shadow.mjs:47`, `teaching_audit.mjs:440`,
+`calibration.mjs:127-129`, …). Four rows had no direct reader and all four resolved honestly —
+`core_axes_default` (reader is `registry.mjs coreAxes()`, ONE reader / two callers),
+`team_sheet` (`outwork_audit.mjs:119 slotPassed`), `course_container` (documentary, O-3),
+`spool_vacuum` (F-1). Him-lanes metered live: reps_log **37** newest **2026-08-23T19:21:36.605Z**
+· rejirah_log **0 rows, NEVER BORN and SPOKEN** · forge_sessions 11 · capsules 4. The born-red law
+is correct and bitten (selftest 529-531); `haiku_pulse`'s empty set is legitimately exempt via
+`consumer_retired:true` and its witness commit `4f94805` resolves.
+
+**P2 · PASS.** The jugad arithmetic is checkable at `lawpack.mjs:115` and closes to 91. Each delta
+is its OWN commit naming file:line with "declared delta / measured / ratcheted" — per-commit, not
+an end-of-rung lowering. **The detector was NOT narrowed:** diffing lawpack across the whole rung
+shows only baseline numbers plus a NEW sixth rule. Rules **5 → 6 = STRICTER**. Deep-verified 3/3:
+gate lane-consumers (`LANE_CONSUMERS` derived from the registry, outbox a derived view of THAT,
+the literal frozen as the S7 layer and doubling as the drift-lock — honest L9 layering, not a
+leftover twin) · acts doors · calibration targets.
+
+**P3 · PASS, cleanly, on every clause.** Recomputed from `RAW_FACTS.jsonl` BEFORE reading any S10
+output: 88 rows / 0 malformed / 21 `his_ruling` / **`confidence` present in 0 rows**. Result:
+**16 + 51 + 21 = 88**, exact. 15 nulls ALL marked `unrecorded-samjhao-era`; **one** graded row,
+traced to his own quoted words at `RAW_FACTS.jsonl:48` — *"He opened with 'no idea'"* — same ts,
+same axis. **Zero fabricated confidence.** The 51 skips were REPRODUCED, not trusted:
+`registry.mjs backfill --receipt` prints 51 individual `skip:` lines, each with its own reason.
+All four verdict-computers ran live and each SAID it (fsrs · learning-state · nemesis ·
+calibration), 37 − 15 = 22 in all four, from one shared counter.
+
+**P4 · 3 of 4.** Registry selftest fresh 31/0. **The coldness hole BITES on live data** — the
+strongest result of the rung: before, `deep.mjs due` served tokenization axis-b's stored strike
+as cold; after a synthetic `markTaught` into a SANDBOXED ledger it says *"is axis ka strike
+SAMJHAO mein khul chuka … FRESH sawaal chahiye"*; live `samjhao.jsonl` untouched. **The atlas
+stale-proof bites harder than asked** — a comment-only append reddened `check` at once, and
+restore returned `OK 29b85f931adc588e`, the same sha. That also settles the rung's recorded
+judgement (2): narrowing the sha to STRUCTURAL is safe precisely because the mtime/IR guard sits
+in FRONT of it. The fourth is F-4.
+
+**P5 · PASS every leg.** 59 ArsenalFC tasks: **58 Disabled, exactly ONE Ready** (thalamus, the
+declared exception) · newest registration across all 59 is **18 Aug** ⇒ zero new schedules ·
+`brain_ledger` 28-29 Aug window: 32 rows, **ok 0 / not-ok 32, 0 input tokens, 0 output tokens**,
+newest row `21:06:13Z` predating this session's first command · no new mechanism beyond row scope
+· gates one-way stricter.
+
+**P6 · PASS.** Sampled 10, then checked all 73 because it was cheap: **59 of 59 ruling-scoped
+statements BYTE-IDENTICAL to their source file's first line, 0 mismatches, 0 invented, 0
+unreadable sources.** Scope tally `ruling|check_site=null 59 · standing|check_site=set 14`. No
+registry row contradicts a standing ruling (R2's four surfaces are exactly the four; R3
+re-verified — **Node v24.19.0 live**; R5's spine derives with live counts).
+
+**THE SEVEN FINDINGS** are in `arsenal-audit-artifacts\s10r-2026-08-29\FINDINGS.md` with witnesses
+(F-1 spool_vacuum's born-red is a claim no code path makes · F-2 `brain_ledger`+`appenders[]`
+never landed · F-3 per-consumer read-stamps inert on all 15 lanes and the proof's title
+overstates its predicate · F-4 a fifth emit row is accepted, not refused · F-5 the atlas
+stale-proof is an mtime tripwire · F-6 HERMETICITY is not deterministic · F-7 "73 laws" is 14 +
+59 titles). **They all run one way: the registry under-delivers on its claims and never
+over-claims a wrong behaviour.** Nothing blocking. Routing is the ruler's.
+
+**⚠ ONE NUMBER DOES NOT MATCH THE CLOSE, AND IT IS NOT A REGRESSION — IT IS AN INSTABILITY.**
+`npm test` measured **118 passed / 3 failed**, not 119/2. The whole delta is the HERMETICITY
+assertion (`running all 107 selftests leaves live state untouched`), which I saw **pass in run 1
+and FAIL in run 2 at the same commit**, nothing edited between but a fully-reverted sandbox probe
+(118+3 = 119+2 = 121, so the arithmetic is consistent). `snap()` keys on `size:mtimeMs`, not
+content, so an idempotent rewrite counts as MODIFIED; isolated re-runs of both organs that name
+`tasks.jsonl` did NOT reproduce it by the suite's own metric. **Two measurements disagree, so the
+conclusion dies and only the data stands** — no cause is named here. `119/2` is reproducible but
+**not stable**; it must not be carried as a baseline until F-6 has a cause.
+
+**⛔ VERIFY-ONLY HELD, AND THE FORBIDDEN LINE WITH IT.** Nothing fixed, nothing woken, nothing
+enabled, no LLM lane fired, no gist write. Every sandbox probe restored — `scripts/shadow.mjs` is
+byte-identical to HEAD, the atlas sha is back to its pre-probe value, the 5th-emit-row probe ran
+on a temp copy and the live registry was never written. **Two shell attempts to touch
+`dressing-room/state` were REFUSED by the S1 rail** — the rail working, recorded as evidence.
+**Declared footprint:** the four verdict-computers that P3 ORDERED me to run rewrote
+`learning_state.json`'s `generated_at` and nothing else; left uncommitted rather than written
+back by a non-owner (the rails had just demonstrated why).
+
+**ESCALATION CHANNEL MEASURED UNREACHABLE, AND THE FILE'S OWN FALLBACK TAKEN.**
+`ARCHITECT_SESSION.txt` names the live architect `arsenal-ai-fc-5a [582757]`; `ListAgents` lists
+no such peer (this session is `arsenal-ai-fc-a5 [04e5ba]`; live interactive peers are
+`-75 -fe -08 -1d -8c`). Its own instruction — *"if absent, fallback IS the design — tell HIM"* —
+was followed. Nothing needed a mid-run ruling: every fork here is a ROUTING question, which is
+the ruler's at close, not a blocker. F-4 in particular is left UNCHOSEN between its two readings
+on purpose.
+
+**⛑ LEFT OPEN BY NAME:** ① the seven findings, unrouted — `S10-F` does not exist until the ruler
+prices it; ② F-6 needs instrumentation across a red window, never a writer-hunt; ③ c86 is DONE
+but its CARD still sits in his queue and only his anchor clears it; ④ the 28-item gap, the
+13th-class backlog and `s5-2026-08-20\` are all untouched, by design.
