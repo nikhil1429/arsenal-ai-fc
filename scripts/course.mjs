@@ -38,7 +38,10 @@
 //   paste does not mention are CARRIED OVER untouched, because the realistic action is
 //   pasting the first 40 chapters today and a partial list next week; a strict
 //   "the paste is the truth" merge would silently delete progress he actually earned.
-//   A DIFFERENT course id is a different course: it replaces, and the CLI says so loudly.
+//   A DIFFERENT course id is a different course: it ADDS (S10 migration #11) — the
+//   active course swaps, the previous one is SHELVED in `courses` with its progress
+//   intact, and re-ingesting a shelved id RESUMES it. The pre-S10 replace-and-lose
+//   singleton was §9 SHAPE 1's nailing; nothing is destroyed by a paste any more.
 //
 // TOPIC-AGNOSTIC ON PURPOSE: nothing here knows the word "Python". The state shape
 //   carries any course — the Anthropic Prompt-Engineering course (sprint 1-06, 9 ch)
@@ -282,6 +285,11 @@ function normalize(j) {
     current,
     current_at: current !== null && typeof j.current_at === "string" ? j.current_at : null,
     updated_at: typeof (j && j.updated_at) === "string" ? j.updated_at : null,
+    // S10 migration #11: the SHELF. The container is no longer a singleton — a
+    // different course id ADDS (the active course swaps, the old one is shelved
+    // with its progress intact). `course`/`chapters` stay the ACTIVE mirror so
+    // every existing reader keeps working (layering, not replace).
+    courses: j && j.courses && typeof j.courses === "object" && !Array.isArray(j.courses) ? j.courses : {},
   };
 }
 
@@ -292,8 +300,17 @@ function mergeCourse(prev, parsed, now = new Date()) {
   const had = !!(prev && prev.course && prev.course.id);
   const same = had && prev.course.id === parsed.course.id;
 
+  // S10 migration #11: a NEW id ADDS. The previous course is SHELVED whole
+  // (progress intact, resumable); ingesting a shelved id RESUMES it. Nothing
+  // is destroyed by a paste ever again — the singleton was the nailing.
+  const shelf = { ...((prev && prev.courses) || {}) };
+  if (had && !same) shelf[prev.course.id] = { course: prev.course, chapters: prev.chapters, current: prev.current, current_at: prev.current_at, updated_at: prev.updated_at };
+  const resumed = !same && shelf[parsed.course.id] && typeof shelf[parsed.course.id] === "object" ? shelf[parsed.course.id] : null;
+  delete shelf[parsed.course.id];   // the active course never also sits on the shelf (one copy)
+
   const byN = new Map();
-  if (same) for (const c of prev.chapters) byN.set(c.n, { ...c });
+  const base = same ? prev.chapters : resumed ? (Array.isArray(resumed.chapters) ? resumed.chapters : []) : [];
+  for (const c of base) byN.set(c.n, { ...c });
   const carried = [], added = [], updated = [];
   const fresh = new Set(parsed.chapters.map((c) => c.n));
   for (const n of byN.keys()) if (!fresh.has(n)) carried.push(n);
@@ -311,11 +328,14 @@ function mergeCourse(prev, parsed, now = new Date()) {
     });
   }
   const chapters = [...byN.values()].sort((a, b) => a.n - b.n);
-  const current = same && prev.current !== null && chapters.some((c) => c.n === prev.current) ? prev.current : null;
+  const keptCurrent = same ? prev.current : resumed ? resumed.current : null;
+  const current = keptCurrent !== null && chapters.some((c) => c.n === keptCurrent) ? keptCurrent : null;
 
   return {
     ok: true,
-    replaced: had && !same,
+    replaced: had && !same,   // kept for callers: the ACTIVE course swapped…
+    shelved: had && !same ? prev.course.id : null,   // …but its progress lives on the shelf (S10 #11)
+    resumed: !!resumed,
     same_course: same,
     added, updated, carried,
     state: {
@@ -324,13 +344,14 @@ function mergeCourse(prev, parsed, now = new Date()) {
         id: parsed.course.id,
         title: parsed.course.title,
         // an update that omits the URL keeps the one he already gave us
-        source_url: parsed.course.source_url !== null ? parsed.course.source_url : (same ? prev.course.source_url : null),
-        ingested_at: same && prev.course.ingested_at ? prev.course.ingested_at : ts,
+        source_url: parsed.course.source_url !== null ? parsed.course.source_url : (same ? prev.course.source_url : resumed ? (resumed.course && resumed.course.source_url) || null : null),
+        ingested_at: same && prev.course.ingested_at ? prev.course.ingested_at : resumed && resumed.course && resumed.course.ingested_at ? resumed.course.ingested_at : ts,
       },
       chapters,
       current,
-      current_at: current !== null ? (prev.current_at || null) : null,
+      current_at: current !== null ? (same ? prev.current_at || null : resumed ? resumed.current_at || null : null) : null,
       updated_at: ts,
+      courses: shelf,
     },
   };
 }
@@ -619,9 +640,9 @@ function selftest() {
   const s0 = m0.state;
   assert("fresh merge: 4 chapters, nothing covered, nothing current",
     m0.ok && s0.chapters.length === 4 && s0.current === null && s0.chapters.every((c) => c.covered === false && c.covered_at === null));
-  assert("state shape is the agreed envelope (version/course/chapters/current/updated_at)",
+  assert("state shape is the agreed envelope (version/course/chapters/current/updated_at + the S10 #11 courses shelf)",
     s0.version === 1 && s0.course.ingested_at === T0.toISOString() && s0.updated_at === T0.toISOString()
-    && eq(Object.keys(s0), ["version", "course", "chapters", "current", "current_at", "updated_at"]));
+    && eq(Object.keys(s0), ["version", "course", "chapters", "current", "current_at", "updated_at", "courses"]));
 
   // ---- at / done transitions ----
   const a1 = markCurrent(s0, 2, T1);
@@ -669,11 +690,22 @@ function selftest() {
   assert("a chapter listed twice in one paste folds into ONE, and the later occurrence may FILL a missing stamp",
     dup.chapters.length === 2 && dup.stats.duplicate_headers === 1 && dup.chapters[0].start_seconds === 60);
 
-  // a DIFFERENT course is a different course — replaces, and says so
+  // S10 migration #11 — a DIFFERENT course id ADDS: the active swaps, the old
+  // course is SHELVED whole, and re-ingesting the shelved id RESUMES it.
   const other = mergeCourse(r1.state, parseCourse("Title: Anthropic Prompt Engineering\nChapter 1: Basic prompt structure"), T2);
-  assert("a DIFFERENT course id replaces (progress not carried across) and the swap is reported",
-    other.replaced === true && other.same_course === false && other.state.chapters.length === 1
-    && other.state.chapters.every((c) => c.covered === false) && other.state.current === null);
+  assert("a DIFFERENT course id ADDS (S10 #11) — the active swaps clean, and the previous course is SHELVED with its progress intact, never destroyed",
+    other.replaced === true && other.shelved === r1.state.course.id && other.same_course === false
+    && other.state.chapters.length === 1 && other.state.chapters.every((c) => c.covered === false)
+    && other.state.current === null
+    && other.state.courses[r1.state.course.id] && other.state.courses[r1.state.course.id].chapters.length === r1.state.chapters.length);
+  assert("...and re-ingesting the SHELVED id RESUMES it — covered chapters and his place carry back, and the shelf entry folds back into the active slot (one copy)",
+    (() => {
+      const back = mergeCourse(other.state, parseCourse("Title: " + r1.state.course.title + "\nChapter 1: " + r1.state.chapters[0].title), T2);
+      return back.resumed === true && back.state.course.id === r1.state.course.id
+        && back.state.chapters.some((c) => c.covered === true) === r1.state.chapters.some((c) => c.covered === true)
+        && !back.state.courses[r1.state.course.id]
+        && back.state.courses["anthropic-prompt-engineering"];
+    })());
   assert("TOPIC-AGNOSTIC — nothing in the engine knows the word 'python'",
     other.state.course.id === "anthropic-prompt-engineering");
 
@@ -908,7 +940,8 @@ function main() {
       process.exit(1);
     }
     console.log(`course: ingested "${m.state.course.title}" · ${m.state.chapters.length} chapters (${m.added.length} new, ${m.updated.length} updated, ${m.carried.length} carried over) → ${STATE}`);
-    if (m.replaced) console.log("course: ⚠ this is a DIFFERENT course than the one stored — the previous course's progress is gone from this file.");
+    if (m.replaced) console.log(`course: this is a DIFFERENT course — the previous one ("${m.shelved}") is SHELVED with its progress intact; re-ingest any paste of it to resume (S10 #11: a new id ADDS, nothing is destroyed).`);
+    if (m.resumed) console.log("course: RESUMED from the shelf — covered chapters and your place carried back in.");
     if (parsed.stats.no_timestamp) console.log(`course: ⚠ ${parsed.stats.no_timestamp} chapter(s) have no start timestamp in your paste (stored as null, never guessed).`);
     if (parsed.stats.duplicate_headers) console.log(`course: ${parsed.stats.duplicate_headers} duplicate header(s) folded (a table of contents plus the body reads as one chapter).`);
     console.log(`  ${statusLine(m.state)}`);

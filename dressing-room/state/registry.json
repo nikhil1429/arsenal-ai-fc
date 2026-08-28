@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:52:52.858Z",
+ "updated_at": "2026-08-28T19:56:07.091Z",
  "tables": {
   "mechanisms": [
    {
@@ -90,6 +90,14 @@
     "notes": "measure every turn against his 17 rules — the mechanism was nailed to ONE source and only inside an open FORGE session (695 prompts/6d produced 0 audit rows). A new teaching source (gemini-study-teaching, gaffer) joins BY ROW; the FORGE-session gate is its own lead, not this row",
     "updated_at": "2026-08-28T19:52:52.855Z",
     "added_at": "2026-08-28T19:52:52.855Z"
+   },
+   {
+    "subject": "course_container",
+    "schema_owner": "course.mjs",
+    "witness": "course.mjs mergeCourse — the replace-and-lose singleton (S10 migration #11)",
+    "notes": "TOPIC-AGNOSTIC container generalized: a new course id ADDS (active swaps, old shelved with progress, shelved id resumes). The active course + chapters keys stay mirrored so every reader keeps working",
+    "updated_at": "2026-08-28T19:56:07.089Z",
+    "added_at": "2026-08-28T19:56:07.089Z"
    }
   ],
   "sandbox_subjects": [
