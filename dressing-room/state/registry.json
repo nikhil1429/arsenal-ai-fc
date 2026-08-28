@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:49:42.402Z",
+ "updated_at": "2026-08-28T19:50:18.898Z",
  "tables": {
   "mechanisms": [
    {
@@ -68,6 +68,62 @@
     "notes": "S10 migration #6 — slot-awareness: the sheet's producer fires at 09:15; before that a missing team_sheet.md is EXPECTED, not a weld-broken RED (outwork_audit reads slotPassed, never re-implements)",
     "updated_at": "2026-08-28T19:49:42.399Z",
     "added_at": "2026-08-28T19:49:42.399Z"
+   }
+  ],
+  "sandbox_subjects": [
+   {
+    "subject": "samjhao_ledger",
+    "env_pin": "ARSENAL_SAMJHAO_LEDGER",
+    "schema_owner": "samjhao.mjs",
+    "witness": "samjhao.mjs:103 — the live-write refusal (S10 migration #7, instance #1)",
+    "live": "dressing-room/state/samjhao.jsonl",
+    "updated_at": "2026-08-28T19:50:17.894Z",
+    "added_at": "2026-08-28T19:50:17.894Z"
+   },
+   {
+    "subject": "tasks_ledger",
+    "env_pin": "ARSENAL_TASKS_LEDGER",
+    "schema_owner": "tasks.mjs",
+    "witness": "tasks.mjs:60",
+    "live": "dressing-room/state/tasks.jsonl",
+    "updated_at": "2026-08-28T19:50:18.082Z",
+    "added_at": "2026-08-28T19:50:18.082Z"
+   },
+   {
+    "subject": "acts_ledger",
+    "env_pin": "ARSENAL_ACTS_LEDGER",
+    "schema_owner": "acts.mjs",
+    "witness": "acts.mjs:60",
+    "live": "dressing-room/state/acts.jsonl",
+    "updated_at": "2026-08-28T19:50:18.281Z",
+    "added_at": "2026-08-28T19:50:18.281Z"
+   },
+   {
+    "subject": "spool_db",
+    "env_pin": "ARSENAL_SPOOL_DB",
+    "schema_owner": "spool.mjs",
+    "witness": "spool.mjs:59",
+    "live": "dressing-room/state/spool.db",
+    "updated_at": "2026-08-28T19:50:18.495Z",
+    "added_at": "2026-08-28T19:50:18.495Z"
+   },
+   {
+    "subject": "registry",
+    "env_pin": "ARSENAL_REGISTRY",
+    "schema_owner": "registry.mjs",
+    "witness": "registry.mjs REGISTRY_PATH",
+    "live": "dressing-room/state/registry.json",
+    "updated_at": "2026-08-28T19:50:18.701Z",
+    "added_at": "2026-08-28T19:50:18.701Z"
+   },
+   {
+    "subject": "gatetune_state",
+    "env_pin": "ARSENAL_GATETUNE_STATE_DIR",
+    "schema_owner": "gate_tune.mjs",
+    "witness": "gate_tune.mjs:55",
+    "live": "dressing-room/state/ (dir pin)",
+    "updated_at": "2026-08-28T19:50:18.894Z",
+    "added_at": "2026-08-28T19:50:18.894Z"
    }
   ]
  }

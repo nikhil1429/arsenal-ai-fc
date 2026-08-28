@@ -68,6 +68,7 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { fixturePin } from "./registry.mjs";   // S10 #7 — sandbox pinning is a TABLE (sandbox_subjects); this organ is instance #1
 import { noNewNumbers, quotesOnly } from "./validators.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
@@ -100,7 +101,10 @@ export const isAgent = () => AGENT_MARKERS.some((k) => !!process.env[k]);
 export const isLiveLedger = (deps = {}) => !deps.append && !deps.rows && (deps.ledger || SAMJHAO_LEDGER) === join(STATE_DIR, "samjhao.jsonl");
 export function mayWriteHisAnswer(deps = {}, hisWords = false) {
   if (!isLiveLedger(deps)) return { ok: true, by: hisWords ? "captain-via-agent" : "captain" };
-  if (isFixture()) return { ok: false, why: "a FIXTURE (selftest / audit collar) may never write his LIVE samjhao — point ARSENAL_SAMJHAO_LEDGER at a sandbox file and prove it there" };
+  // S10 #7: the sandbox pin is a REGISTRY ROW (sandbox_subjects/samjhao_ledger) —
+  // every pinnable ledger is DECLARED in one table; a new organ's pin is a row add.
+  // The guard itself stays failsafe: an unreadable row still refuses, generically.
+  if (isFixture()) return { ok: false, why: `a FIXTURE (selftest / audit collar) may never write his LIVE samjhao — point ${((fixturePin("samjhao_ledger") || {}).env_pin) || "its sandbox_subjects env pin"} at a sandbox file and prove it there` };
   if (isAgent() && !hisWords) return { ok: false, why: "an AGENT process may not write a guess/answer in his name. This is his prediction and he only gets one. If you are RELAYING his actual words, pass --his-words (the row is stamped captain-via-agent and stays abandonable); if you are PROVING something, use a sandbox ledger (ARSENAL_SAMJHAO_LEDGER)" };
   return { ok: true, by: isAgent() ? "captain-via-agent" : "captain" };
 }
