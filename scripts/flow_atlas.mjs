@@ -118,7 +118,15 @@ export function derive(deps = {}) {
   for (const f of ir.files) {
     if (!f.writers.length || !f.readers.length) continue;
     if (!interesting(f.path)) continue;
-    const lv = live(join(REPO, f.path));
+    // S10: the atlas's OWN artifacts never stamp liveness — the day organism_test
+    // became flow_atlas.json's first reader (acceptance (d)), a self-stamp made
+    // every `check` chase its own tail (build writes built_at → next derive reads
+    // it → sha moves, forever off-by-one). The EDGE stays (it is real and
+    // witnessed); its liveness is BY DEFINITION: the artifact exists iff built.
+    const selfArtifact = f.path === "dressing-room/state/flow_atlas.json" || f.path === "FLOW_ATLAS.html";
+    const lv = selfArtifact
+      ? { exists: existsSync(join(REPO, f.path)), size: null, payload_ts: null, note: "the atlas's own artifact — stamped at every build by definition; a self-stamp would unfix the sha" }
+      : live(join(REPO, f.path));
     for (const w of f.writers) for (const r of f.readers) {
       if (w === r) continue;
       push({ cls: "organ→organ", from: w, to: r, via: f.path, liveness: lv, consumption: { measured: false, note: "reach unmeasured — Shape 3; the registry's reach-side meter is the build" }, witness: { kind: "ir", path: f.path, writers: f.writers, readers_n: f.readers.length } });
@@ -207,7 +215,16 @@ export function derive(deps = {}) {
     counts: { edges: edges.length, organ_organ: edges.filter((e) => e.cls === "organ→organ").length, him_in: edges.filter((e) => e.cls === "him→organ").length, him_out: edges.filter((e) => e.cls === "organ→him").length, shape6: s6e.length, orphan_writes: orphanWrites.length, ghost_reads: ghostReads.length },
     edges, orphan_writes: orphanWrites, ghost_reads: ghostReads, outbox, off_road: offRoad, spec_copy: specCopy,
   };
-  const hash = createHash("sha256").update(JSON.stringify(atlas)).digest("hex").slice(0, 16);
+  // S10 · THE SHA IS STRUCTURAL. Under total switch-off a full-content sha held;
+  // the day the check joined npm test with the capture-only thalamus ALIVE, the
+  // liveness stamps became moving targets (his every turn appends afferent.jsonl
+  // → payload_ts/size move → a sha over them is stale by breakfast, forever).
+  // So the sha covers what CODE moves — edges, endpoints, witnesses, counts,
+  // exists — and deliberately not what HIS LIFE moves (payload_ts, size). The
+  // stamps stay ON the page, un-hashed; a code change still moves the sha
+  // through the IR's edges. Same class as the self-artifact stamp above.
+  const structural = JSON.stringify(atlas, (k, v) => (k === "payload_ts" || k === "size" ? undefined : v));
+  const hash = createHash("sha256").update(structural).digest("hex").slice(0, 16);
   return { atlas: { built_at: new Date(now).toISOString(), content_sha16: hash, ...atlas }, hash };
 }
 

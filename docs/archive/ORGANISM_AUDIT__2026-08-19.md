@@ -3039,8 +3039,43 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`S10` · BUILD · THE REGISTRY. MODEL: FABLE 5 · effort max
-                                   (fallback: Opus max + a mandatory self-review pass before
+  ▶ NEXT SESSION ............... **`S10-R` · VERIFY-ONLY — the pre-committed independent check
+                                   (quality-strategy ruling, 28 Aug): a decorrelated model
+                                   re-runs EVERY S10 proof. MODEL: Opus 5 · effort max (the
+                                   S6-R precedent — family-decorrelated from the Fable author).
+                                   ⛔ CEILING: ruler-priced at S10's close; if unpriced when the
+                                   session opens, FIRST act = ask the ruler (1215 law), work to
+                                   40 only if unreachable, recording that it did so.
+                                   THE PROOF PACK IS ON DISK, RE-RUNNABLE, 32/32 at close:
+                                   `node C:\Users\nikhi\arsenal-audit-artifacts\s10-2026-08-29\proofs_s10.mjs`
+                                   PASS CRITERIA include R1's consumer-SET cardinality + R4's
+                                   two bites (the pre-open ruling's own fold list).
+                                   VERIFY-ONLY: patches NOTHING; findings route to an S10-F
+                                   rung, ruler-priced. CLOSE BASELINES: npm test **119/2** (the
+                                   same two switch-off classes as open — member-organ leads +
+                                   ALIVE staleness) · lawpack jugad **102→91** · law-m **1→0** ·
+                                   receipt-testimony-read **5 NEW, frozen, sites named** · gate
+                                   **49/0** · xray 23/0 (Q2/Q5 = 0) · registry selftest 31/0 ·
+                                   flow_atlas check OK and IN npm test.
+                                   ⚠ TWO S10 JUDGEMENTS TO RE-CHECK, recorded + reversible:
+                                   (1) every seeded lane reach policy = "any" (today's measured
+                                   semantics; any flip to all/quorum-N is a RULING, not a build);
+                                   (2) the atlas sha went STRUCTURAL (payload_ts/size un-hashed
+                                   — with the capture-only thalamus ALIVE, his every turn moved
+                                   afferent.jsonl and a full-content sha was stale by breakfast;
+                                   edges/witnesses/counts still move it).
+                                   ⛑ carried for HIM: c86 is DONE (pre-open R3, architect-verified
+                                   29 Aug) but its CARD still sits in the queue — his anchor
+                                   clears it, nothing else may; the interim fresh-questions law
+                                   STILL BINDS the four already-samjhao'd topics (their taught
+                                   axes predate the taught event — no taught rows exist for them).**
+
+  ~~▶ NEXT SESSION ............... **`S10` · BUILD · THE REGISTRY. MODEL: FABLE 5 · effort max~~
+                                   ✅ **DONE 29 Aug 2026 (Fable 5 · max) — see the S10 ☑ row in
+                                   §10-C and the PROGRESS entry of 29 Aug. Old router text kept
+                                   below, struck-in-place only at its head (L9; the block carries
+                                   its own internal strikes).**
+                                   **(fallback: Opus max + a mandatory self-review pass before
                                    commit — never a silent downgrade). CEILING 60, the ladder's
                                    biggest. §10-F puts this and S6 on Fable BY NAME: it is one of
                                    the two judgement summits, and the registry is the thing every
@@ -7978,7 +8013,31 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       ⚠ SPEND RISES HERE BY DESIGN — S7's corrected gate is already holding the purse.
       FORBIDDEN: services for turnstile/dugout (session-0 cannot see his desktop).
                                                                        CEILING: 40~~
-☐ S10 BUILD · THE REGISTRY.   MODEL: FABLE · effort max (fallback: Opus max + review)
+☑ S10 BUILD · THE REGISTRY — **DONE 29 Aug 2026 (Fable 5 · max), inside the 60.**
+      registry.mjs (SOLE WRITER of registry.json + laws_register.json, selftest 31/0, in
+      the suite same commit) · ALL TWELVE un-nailed, EACH its own commit naming file:line,
+      EVERY declared jugad delta = measured (a1+a2; 102→91, baseline ratcheted per commit)
+      + map rows 13–15 landed · gate C's 15 lane rows FOLDED into the registry (consumers
+      as a SET + reach policy per R1, all seeded "any" = measured semantics, why-prose
+      byte-preserved, gate 48→49/0, ZERO verdicts moved) · rulings lane LIVE (acts verb
+      `design` → dated row + ONE card; teaching_contract refuses build-shaped adds, verb
+      set itself a row; standing-laws register DERIVED, 73 laws) · memory-index +
+      derived-copy + orphan-writes checks as rows, every check row names its evaluator ·
+      reach meter stamps from PAYLOAD rows (reps 21→37 newest 10→23 Aug · rejirah NEVER
+      BORN visible on the STATE line · capsules 4) · emit contract EXACTLY 4 rows (R2) ·
+      taught event live (R4a: samjhao emits, burnedAxes counts, bites) · get_capsule
+      byte-coverage completed (R4b bites: traps/lines/bolo/hook/mechanism) · Claude-side
+      role rows (§10-G: watchman literal → models.mjs CLAUDE_ROLES, law-m 1→0) · SHAPE-8
+      lawpack rule frozen at 5 (sites named) · BOOK SPINE derived (R5) · both open orders
+      as rows (rails untouched) · spool_vacuum row born-red by design · DuckDB mcp row
+      DECLARED-not-installed (adoption contract home) · C4 BACK-FILL EXECUTED per the
+      29-Aug ruling: 16 reps (1 guessed from HIS words · 15 confidence:null marked), 51
+      skips NAMED, 21 rulings rows zero-card, all four verdict-computers SAY the skip ·
+      flow_atlas check JOINS npm test (structural sha — see PROGRESS for the two recorded
+      judgements) · npm test 118/2 → **119/2** (same two switch-off classes) · proofs_s10
+      **32/32** re-runnable for S10-R. Records: queue\RULING__2026-08-29_s10-backfill.md ·
+      queue\RECEIPT__2026-08-29_s10-backfill.md · s10-2026-08-29\proofs_s10.mjs.
+      ~~☐ S10 BUILD · THE REGISTRY.   MODEL: FABLE · effort max (fallback: Opus max + review)~~
       Un-nail all twelve Shape-1 instances (shadow · bootroom · gate_tune ·
       trust_tiers · tasks · isFixture · slot-awareness · wall_review · docClaims ·
       teaching_audit · course · CORE_AXES) onto registry rows; the rulings lane goes
@@ -18498,3 +18557,92 @@ measuring — an installer claiming five successes it never earned, an account c
 failing five correct services, a right-check contradicting a successful write, plus two
 source-scans reading their own explanatory comments as the defect. **The code was right
 more often than the thing measuring it.** Every one is now pinned by an assertion.
+
+### PROGRESS 2026-08-29 — RUNG S10 · BUILD · THE REGISTRY — DONE (Fable 5 · effort max)
+
+**Router obeyed** (▶ NEXT SESSION named S10). First act per rule 9: micro-order written to the
+session scratchpad and checked against §10-C/§10-D before any edit. The pre-open ruling
+(`queue\RULING__2026-08-29_s10-preopen.md`, R1–R6) was read before the first edit and bound the
+build; R3's two facts re-verified FRESH at open AND close (node v24.19.0 · 5 ArsenalFC services
+OS-owned · both desktop logon tasks present = 7/7).
+
+**WHAT LANDED, in commit order (each migration atomic, sites in the commit messages):**
+C0 `registry.mjs` — the owner organ (SOLE WRITER of `registry.json` + `laws_register.json`),
+selftest 31/0, suite membership in the same commit. Row law: subject/schema_owner/witness
+mandatory; consumers as a DECLARED SET with per-consumer read-stamps + reach `any|all|quorum-N`
+(R1); born-red on missing consumers; L9 retire-never-delete; spec-section-13 self-repair
+eligibility enforced. Then the twelve (#1 shadow TYPES −1 · #2 bootroom · #3 gate_tune (twin dies) ·
+#4 scorer trust · #5 tasks KINDS −1 (STATES stays: a state enum is not a jugad, the rule's own
+note) · #6 slot rows + outwork_audit's false pre-slot weld-broken dies (slot 09:15, witness
+INSTALL_CONDUCTOR.ps1:51) · #7 sandbox_subjects ×6 · #8 wall_review self_repair row ·
+#9 docClaims extensions · #10 audit_sources · #11 course shelf (a new id ADDS; replace-and-lose
+died; resume from shelf bitten) · #12 CORE_AXES twins −2 → concepts.json's own lane through ONE
+reader) + rows 13–15 (calibration −3 · acts DOORS→row + VERBS→derived-from-OWNERS −2 ·
+distiller −2, INTERACTIVE_LEGACY stays frozen AND counted). **Jugad 102 → 91, every delta
+DECLARED before landing and equal to measured, baseline ratcheted in the same commit (a1+a2).**
+
+Then: the gate-C fold (15 rows moved, gate 48→49/0 with a registry↔S7-layer drift-lock, zero
+verdicts moved — the FORBIDDEN line held) · emit contract EXACTLY four rows (R2) · the reach
+meter (stamps from payload rows, never mtime; per-consumer read-stamps; the STATE line carries
+the wound: "rejirah_log NEVER BORN") · R4(a) taught event (samjhao emits + CLI verb, burnedAxes
+counts beside guess, bitten; **the interim fresh-questions law STILL BINDS the four
+already-samjhao'd topics** — their axes predate the event) · R4(b) get_capsule byte-coverage
+completed (the door has served uncut since 10 Aug — measured first; the missing bites landed:
+traps/interview-lines whole, map bolo/hook/mechanism byte-equal) · §10-G Claude roles
+(watchman:1067's literal → models.mjs CLAUDE_ROLES; SAME resolved string, law-m 1→0) · the
+rulings lane (acts `design` verb; the build-verb ratchet REFUSED a live probe naming the right
+lane; 73 laws collected into the DERIVED register) · SHAPE-8 lawpack rule frozen at 5, sites
+named · §7 derived-copy row live (2.2 vs 2.1 at baseline 1) · book spine (R5, derived) · orders
+table absorbs BOTH open orders (rails.mjs untouched — its gate unchanged) · spool_vacuum row
+born-red by design (S12 wires) · DuckDB mcp row DECLARED-not-installed.
+
+**THE ESCALATION AND ITS RULING (recorded verbatim by pointer, §10-D rule 13):** the back-fill
+had two real forks (confidence ontology — the raw facts carry NO gut-word by samjhao's own
+design, capture requires one and never fabricates; and the 21 his_ruling rows' destination).
+Block: `queue\ESCALATION__2026-08-29_s10-backfill.md`. The architect (live session, name
+rotated to arsenal-ai-fc-5a — ARCHITECT_SESSION.txt's warning about rotation held) ruled the
+same hour: `queue\RULING__2026-08-29_s10-backfill.md` — Q1(c) YES (confidence:null =
+"unrecorded (samjhao-era)", additive, skips behind bitten guards, and the ADDENDUM: a skipping
+consumer SAYS SO); Q2(a) YES (21 dated rulings rows, batched, ZERO cards). Ingestion un-held.
+
+**C4 BACK-FILL EXECUTED** (receipt: `queue\RECEIPT__2026-08-29_s10-backfill.md`): 16 reps
+through capture's own paste door (1 confidence from HIS OWN words — "no idea" → guessed;
+15 null-marked), **51 skips each NAMED with its reason, nothing invented**; 21 rulings rows
+zero-card source-marked; rejirah 0 rows — the wound stays visible. reps_log 21 → 37, newest
+stamp 10 Aug → 23 Aug — real data through the new contract, measured by the meter. All four
+verdict-computers (fsrs · calibration · nemesis · learning-state) skip behind their own bitten
+guards and SAY "15 samjhao-era row(s) skipped — ungraded by design" live.
+
+**TWO JUDGEMENTS, recorded and reversible (the S7 consumerSatisfied pattern):**
+1. Every seeded reach policy = "any" — today's MEASURED semantics; flipping any row to
+   all/quorum-N is a ruling, never this build's quiet choice. Nothing woke, nothing slept.
+2. The atlas sha is STRUCTURAL (payload_ts/size un-hashed): acceptance (d) put `check` into
+   npm test, and two real defects surfaced the same hour — the atlas stamped its OWN artifact
+   (organism_test became flow_atlas.json's first reader → the sha chased its tail), and the
+   LIVE capture-only thalamus moves afferent.jsonl with his every turn (a full-content sha was
+   stale by breakfast, permanently). Fixed at the atlas: self-artifacts stamp by definition;
+   the sha covers what CODE moves (edges·witnesses·counts·exists), never what HIS LIFE moves.
+   Both are the check becoming REAL, not weaker — it now bites on graph drift and holds
+   under a living bus (proven idempotent twice, and green inside the final full suite).
+
+**CORRECTIONS ON CONTACT (R3 + R6):** c86 is DONE (architect-verified fresh 29 Aug) — the
+stale console-visit lines in the struck S10 router stand corrected by this entry; the CARD
+still sits in his queue and only his anchor clears it. A pre-existing 13-Jul stash
+(orb-UI experiment) was accidentally popped mid-rung by a bare `git stash` probe; restored to
+HEAD immediately, the stash entry preserved untouched in the stash list, dugout selftest green.
+
+**THE NUMBERS:** npm test **118/2 open → 119/2 close** — the same two red classes both ends
+(three member-organs' recorded selftest leads: teaching_audit 62/1 END-TO-END · watchman 105/2
+· herd 18/1 DAY-KEY; and ALIVE's switch-off staleness) plus ONE new PASSING section (FLOW
+ATLAS). Gates stricter only: jugad 102→91 · law-m 1→0 · receipt-testimony-read NEW at 5 ·
+gate 29→48 (S7) →49/0 · samjhao 45→47/0 · course 64/0 · registry 31/0 NEW · xray 23/0 with
+Q2/Q5 = 0 · rails orders clean · tripwire clean · atlas 538 edges check-OK IN the suite.
+Nothing re-enabled, nothing woken, no gist writes, no new notes surface, the 28-item gap
+untouched, s5-2026-08-20\ untouched.
+
+**⛑ LEFT OPEN BY NAME:** ① S10-R (pre-committed) — ruler prices it; proof pack 32/32 on disk;
+② the 13th-class backlog (gaffer_brain 6 · dugout 5 · lawpack 5 · archivist 4 · dmn 4) stays a
+NAMED backlog for a rung after S12, by the spec's own scope law; ③ the two carried one-liners
+for HIM stand unchanged (artifact-organ parking · samjhao §0 pointer); ④ the eslint no-unused
+`existsSync` in state.mjs:26 predates this rung (verified against HEAD~) and stays inside
+eslint's frozen count — a one-word cleanup for any owner pass.
