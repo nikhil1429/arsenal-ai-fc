@@ -48,11 +48,20 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dayKey } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: the Sunday 20:00 Boot Room keys its SLOT's day when the laptop wakes it on Monday
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
+import { rowOf } from "./registry.mjs";          // S10 — the mutation target is a ROW, never this organ's own literal
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..");
 const STATE_DIR = join(REPO_ROOT, "dressing-room", "state");
-const PROFILE   = join(STATE_DIR, "forge_profile.json");
+// S10 migration #2 (mutation_subject row #1): this owner mutates ONLY what its
+// registry row declares. A second mutation target is a ROW ADD naming its owner —
+// never a second organ whose header cites this one's allowlist (the #2/#3 twin
+// disease §9 SHAPE 1 names). Absent row = refuse loudly, never a silent default.
+const MUTATION_ROW = rowOf("mechanisms", "mutation:forge_profile.json");
+if (!MUTATION_ROW || MUTATION_ROW.schema_owner !== "bootroom.mjs" || !MUTATION_ROW.target_file) {
+  throw new Error("bootroom: registry row mutation:forge_profile.json is absent/foreign/target-less — seed it (`node scripts/registry.mjs set --table mechanisms ...`) before this organ mutates anything");
+}
+const PROFILE   = join(STATE_DIR, MUTATION_ROW.target_file);
 const MUTS      = join(STATE_DIR, "mutations.jsonl");
 const CHANGELOG = join(REPO_ROOT, "SEASON_CHANGELOG.md");
 // ORGANISM AUDIT #98 — the Boot Room's entire weekly output was a console.log

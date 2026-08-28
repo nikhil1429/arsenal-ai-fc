@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:44:18.294Z",
+ "updated_at": "2026-08-28T19:45:29.515Z",
  "tables": {
   "mechanisms": [
    {
@@ -16,6 +16,24 @@
     "notes": "earn-the-right-to-act, his 11 Aug 14:36 order was fully general — a new interruption type is a ROW ADD with a receipt, never a code change",
     "updated_at": "2026-08-28T19:44:18.289Z",
     "added_at": "2026-08-28T19:44:18.289Z"
+   },
+   {
+    "subject": "mutation:forge_profile.json",
+    "schema_owner": "bootroom.mjs",
+    "witness": "bootroom.mjs:55 + :147 — the mutation lane nailed to one file (S10 migration #2)",
+    "target_file": "forge_profile.json",
+    "notes": "propose->validate->auto-revert->his word; mutation_subject row #1 — a second mutation target is a ROW ADD naming its owner, never a second organ copy (the #2/#3 twin disease)",
+    "updated_at": "2026-08-28T19:45:29.372Z",
+    "added_at": "2026-08-28T19:45:29.372Z"
+   },
+   {
+    "subject": "mutation:thalamus_config.tiers",
+    "schema_owner": "gate_tune.mjs",
+    "witness": "gate_tune.mjs:81 — the target literal (S10 migration #3)",
+    "target": "thalamus_config.json → tiers",
+    "notes": "mutation_subject row #2 — same mechanism as row #1, second instance; the twin-copy signature dies here",
+    "updated_at": "2026-08-28T19:45:29.512Z",
+    "added_at": "2026-08-28T19:45:29.512Z"
    }
   ]
  }
