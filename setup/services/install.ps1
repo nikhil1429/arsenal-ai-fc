@@ -62,6 +62,51 @@ $cred = Get-Credential -UserName "$env:USERDOMAIN\$env:USERNAME" `
 # of at this line. Caught by re-reading the generated file before he ran it elevated.
 $plainPw = $cred.GetNetworkCredential().Password
 
+# ── COMPARING TWO WINDOWS ACCOUNT NAMES IS NOT STRING EQUALITY ────────────────
+# Windows NORMALISES a local service account to the dot form. A service installed as
+# "LAPTOP-XYZ\nikhi" reads back as ".\nikhi", and both are the SAME account.
+# The first version tried to normalise the dot form into the computer-name form using a
+# -replace whose replacement string was written "$env:COMPUTERNAME\\". PowerShell does
+# not escape backslashes inside double quotes, so that produced TWO literal backslashes
+# and the comparison could never match. It then printed five "wrong account" warnings on
+# an install that was entirely CORRECT. A false alarm is a lie in the other direction,
+# and it cost him a round trip. Compare the PARTS, never the spelling.
+function Test-SameAccount([string]$a, [string]$b) {
+  if (-not $a -or -not $b) { return $false }
+  $ua = ($a -split '\\')[-1]; $ub = ($b -split '\\')[-1]
+  if ($ua -ine $ub) { return $false }
+  $ha = if ($a -match '\\') { ($a -split '\\')[0] } else { '.' }
+  $hb = if ($b -match '\\') { ($b -split '\\')[0] } else { '.' }
+  $local = @('.', $env:COMPUTERNAME, $env:USERDOMAIN)
+  return ($ha -ieq $hb) -or (($local -contains $ha) -and ($local -contains $hb))
+}
+
+# ── LOG ON AS A SERVICE ───────────────────────────────────────────────────────
+# sc.exe sets the account but does NOT grant SeServiceLogonRight; WinSW's own
+# <allowservicelogonright> only applies when WinSW sets the account, which it does not
+# here (the credential goes through sc.exe so it never touches a file). Without the
+# right, every service installs cleanly and then fails to START - and it would surface
+# at S12 as a confusing "logon failure", far from its cause. Granted here, where the
+# script is already elevated, and REPORTED either way.
+function Grant-ServiceLogonRight([string]$account) {
+  try {
+    $sid = (New-Object System.Security.Principal.NTAccount($account)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+    $inf = Join-Path $env:TEMP "arsenal_sec.inf"; $db = Join-Path $env:TEMP "arsenal_sec.sdb"
+    secedit /export /cfg $inf /areas USER_RIGHTS | Out-Null
+    $txt = Get-Content $inf
+    $line = $txt | Where-Object { $_ -match '^SeServiceLogonRight' }
+    if ($line -and $line -match [regex]::Escape($sid)) { Remove-Item $inf -Force -EA SilentlyContinue; return "already" }
+    $new = if ($line) { "$line,*$sid" } else { "SeServiceLogonRight = *$sid" }
+    $out = if ($line) { $txt -replace [regex]::Escape($line), $new } else { $txt -replace '^\[Privilege Rights\]', "[Privilege Rights]`r`n$new" }
+    Set-Content -Path $inf -Value $out -Encoding Unicode
+    secedit /configure /db $db /cfg $inf /areas USER_RIGHTS | Out-Null
+    Remove-Item $inf, $db -Force -EA SilentlyContinue
+    return "granted"
+  } catch { return "FAILED: $($_.Exception.Message)" }
+}
+$rightState = Grant-ServiceLogonRight $cred.UserName
+Write-Host "  log-on-as-a-service right: $rightState"
+
 # ── HOW WinSW v2 ACTUALLY WORKS, learned by running it and being wrong first ──
 # WinSW v2 (the current STABLE line, and what he downloaded) finds its config by its
 # OWN EXECUTABLE NAME: <exe-basename>.xml sitting beside it. It does NOT accept a
@@ -95,7 +140,7 @@ if (-not $svc) {
   sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
   sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
   $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
-  if ($acct -and ($acct -replace '^\.\\', "$env:COMPUTERNAME\\") -ieq ($cred.UserName -replace '^\.\\', "$env:COMPUTERNAME\\")) {
+  if (Test-SameAccount $acct $cred.UserName) {
     Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
   } else {
     Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
@@ -125,7 +170,7 @@ if (-not $svc) {
   sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
   sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
   $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
-  if ($acct -and ($acct -replace '^\.\\', "$env:COMPUTERNAME\\") -ieq ($cred.UserName -replace '^\.\\', "$env:COMPUTERNAME\\")) {
+  if (Test-SameAccount $acct $cred.UserName) {
     Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
   } else {
     Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
@@ -155,7 +200,7 @@ if (-not $svc) {
   sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
   sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
   $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
-  if ($acct -and ($acct -replace '^\.\\', "$env:COMPUTERNAME\\") -ieq ($cred.UserName -replace '^\.\\', "$env:COMPUTERNAME\\")) {
+  if (Test-SameAccount $acct $cred.UserName) {
     Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
   } else {
     Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
@@ -185,7 +230,7 @@ if (-not $svc) {
   sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
   sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
   $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
-  if ($acct -and ($acct -replace '^\.\\', "$env:COMPUTERNAME\\") -ieq ($cred.UserName -replace '^\.\\', "$env:COMPUTERNAME\\")) {
+  if (Test-SameAccount $acct $cred.UserName) {
     Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
   } else {
     Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
@@ -215,7 +260,7 @@ if (-not $svc) {
   sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
   sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
   $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
-  if ($acct -and ($acct -replace '^\.\\', "$env:COMPUTERNAME\\") -ieq ($cred.UserName -replace '^\.\\', "$env:COMPUTERNAME\\")) {
+  if (Test-SameAccount $acct $cred.UserName) {
     Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
   } else {
     Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
