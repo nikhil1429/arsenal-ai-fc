@@ -3003,7 +3003,14 @@ STATUS (update this block before any session stops — this is the handoff)
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
   ▶ NEXT SESSION ............... **`S8` · BUILD · THE SPOOL. MODEL: Opus 5 · effort max.
-                                   CEILING 40 as §10-C writes it. ⛑ **THE SPLIT IS NOT PRICED** —
+                                   ✔ PRICED BY THE RULER 28 Aug (the 1215 law): BUILD 25 ·
+                                   PROOF 10 · HANDOFF 5 — inside the row's 40. STEP 0 (the Node
+                                   22→24 move, suite green before AND after) rides INSIDE the
+                                   BUILD line as its own commit; if STEP 0 alone threatens the
+                                   line, STOP at its commit and escalate — never squeeze the
+                                   spool into what remains. Scope growth escalates, never
+                                   stretches. (The stale ask-the-architect text below is
+                                   SUPERSEDED by this pricing.)** ⛑ superseded: —
                                    the 1215 law says the RULER writes BUILD/PROOF/HANDOFF at ruling
                                    time and never the executor, and no ruling has priced S8. The
                                    S8 session's FIRST act is to ask the architect for the split
