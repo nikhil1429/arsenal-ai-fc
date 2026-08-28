@@ -18465,3 +18465,24 @@ re-run the installer (idempotent) at any time.
 
 **Node 24 is in** (`v24.19.0`, his hands) and the full suite re-run on it is **118/2 =
 baseline** — §10-G's "suite green before AND after" is satisfied for the runtime move.
+
+**S9 · LOGON RIGHT — CLOSED 28 Aug ~16:05 IST.** The addendum above said the grant "has
+NOT been exercised on this machine". **It has now, and it reads GRANTED** — his elevated
+run reports `before: SeServiceLogonRight` → `ALREADY GRANTED`. **S12 inherits nothing
+here.**
+
+It took three runs, and all three failures were VERIFIERS, not the work:
+`secedit /configure` changed nothing and said nothing · then `LsaAddAccountRights`
+**succeeded** while the secedit read-back called it a failure — the tell was the ABSENCE
+of an error line, because the script printed the return code only when it was non-zero.
+Fixed by reading through the same API family the write uses, printing the code always,
+and reporting `ACCESS_DENIED` as CANNOT-READ rather than NOT-GRANTED — *a permission
+failure is not a measurement.* Also corrected: the failure text sent him to `secpol.msc`,
+**which does not exist on Windows Home**, the edition this order already recorded.
+
+**THE SHAPE, and it is S9's own, turned on its author.** The rung removed an arm that
+acted without reading. In building it I shipped **five** verifiers that reported without
+measuring — an installer claiming five successes it never earned, an account check
+failing five correct services, a right-check contradicting a successful write, plus two
+source-scans reading their own explanatory comments as the defect. **The code was right
+more often than the thing measuring it.** Every one is now pinned by an assertion.
