@@ -53,13 +53,16 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { subjectsOf } from "./registry.mjs";   // S10 row 14 — the doors are rows
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const STATE_DIR = join(ROOT, "dressing-room", "state");
 export const ACTS_LEDGER = process.env.ARSENAL_ACTS_LEDGER || join(STATE_DIR, "acts.jsonl");
-export const DOORS = ["gaffer", "sitting", "code", "ball", "cli"];
-export const VERBS = ["note", "fact", "pref", "rule", "agenda", "job", "card", "reminder", "mission", "rep"];
+// S10 map row 14 (F-04): DOORS is a REGISTRY ROW (a new door ADDS by row);
+// VERBS derives from the OWNER table's own keys below — one copy, structure-derived,
+// so a verb cannot exist without its owner row (the old literal could drift).
+export const DOORS = subjectsOf("act_doors");
 export const ACT_TAIL_RE = /<<ACT\s*(\{[\s\S]*?\})\s*>>\s*$/;   // door 3 — a Claude Code turn's tail (schema, not keywords)
 const isFixture = () => (process.argv[2] || "") === "selftest" || !!process.env.ARSENAL_AUDIT_COLLAR;
 
@@ -101,6 +104,9 @@ export const OWNERS = {
   rep:      { organ: "gaffer_brain.mjs",      argv: (a) => ["capture", a.kind || "voice_rep", a.id || "act", "--gut", a.gut || "shaky", ...(a.asked ? ["--asked", a.asked] : [])], stdin: (a) => a.text,
               reverse: () => ({ argv: null, why: "a rep is graded by the judge round; supersession rides capture.mjs, not this lane" }) },
 };
+// VERBS = the OWNER table's keys (S10 row 14) — a verb IS an owner's CLI; deriving
+// the list from the table makes "a verb without an owner" unrepresentable.
+export const VERBS = Object.freeze(Object.keys(OWNERS));
 function jobIds() { try { const c = JSON.parse(readFileSync(join(STATE_DIR, "brain_config.json"), "utf8")); return (c.jobs || []).map((j) => j.id); } catch { return []; } }
 
 // ── the child runner (deps.exec injectable — the selftest never spawns an organ) ──

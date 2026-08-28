@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:59:14.222Z",
+ "updated_at": "2026-08-28T19:59:48.158Z",
  "tables": {
   "mechanisms": [
    {
@@ -150,6 +150,21 @@
     "notes": "what is dangerous",
     "updated_at": "2026-08-28T19:59:14.219Z",
     "added_at": "2026-08-28T19:59:14.219Z"
+   },
+   {
+    "subject": "act_doors",
+    "schema_owner": "acts.mjs",
+    "witness": "acts.mjs:61 (S10 map row 14, F-04)",
+    "subjects": [
+     "gaffer",
+     "sitting",
+     "code",
+     "ball",
+     "cli"
+    ],
+    "notes": "LAW A's doors — where his word can arrive; a new door ADDS by row. VERBS is not a row: it derives from the OWNER table's own keys (one copy, structure-derived)",
+    "updated_at": "2026-08-28T19:59:48.155Z",
+    "added_at": "2026-08-28T19:59:48.155Z"
    }
   ],
   "sandbox_subjects": [
