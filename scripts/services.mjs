@@ -413,27 +413,8 @@ $account = if ($args.Count -ge 1) { $args[0] } else { "$env:USERNAME" }
 try { $sid = (New-Object System.Security.Principal.NTAccount($account)).Translate([System.Security.Principal.SecurityIdentifier]).Value }
 catch { Write-Host "  cannot resolve account '$account': $($_.Exception.Message)"; exit 1 }
 
-$inf = Join-Path $env:TEMP "arsenal_right.inf"
-$db  = Join-Path $env:TEMP "arsenal_right.sdb"
-Remove-Item $inf, $db -Force -ErrorAction SilentlyContinue
-
-$export = secedit /export /cfg $inf /areas USER_RIGHTS 2>&1
-if (-not (Test-Path $inf)) {
-  Write-Host "  COULD NOT READ the policy — this needs an ELEVATED PowerShell."
-  Write-Host "  $export"
-  exit 1
-}
-
-$txt  = Get-Content $inf
-$line = $txt | Where-Object { $_ -match '^SeServiceLogonRight' }
 Write-Host "  account : $account"
 Write-Host "  sid     : $sid"
-
-if ($line -and $line -match [regex]::Escape($sid)) {
-  Write-Host "  RESULT  : ALREADY GRANTED — nothing to do."
-  Remove-Item $inf, $db -Force -ErrorAction SilentlyContinue
-  exit 0
-}
 
 # ── THE WRITE GOES THROUGH THE LSA API, NOT THROUGH secedit ───────────────────
 # The first version edited the exported .inf and fed it back with
@@ -456,6 +437,9 @@ public static class ArsenalLsa {
   static extern uint LsaOpenPolicy(IntPtr SystemName, ref LSA_OBJECT_ATTRIBUTES oa, int access, out IntPtr handle);
   [DllImport("advapi32.dll", SetLastError=true)]
   static extern uint LsaAddAccountRights(IntPtr policy, byte[] sid, LSA_UNICODE_STRING[] rights, int count);
+  [DllImport("advapi32.dll", SetLastError=true)]
+  static extern uint LsaEnumerateAccountRights(IntPtr policy, byte[] sid, out IntPtr rights, out uint count);
+  [DllImport("advapi32.dll")] static extern uint LsaFreeMemory(IntPtr p);
   [DllImport("advapi32.dll")] static extern uint LsaClose(IntPtr h);
   [DllImport("advapi32.dll")] static extern int LsaNtStatusToWinError(uint status);
   public static int Grant(byte[] sid, string right) {
@@ -472,29 +456,70 @@ public static class ArsenalLsa {
     Marshal.FreeHGlobal(r[0].Buffer);
     return LsaNtStatusToWinError(st);
   }
+  // THE READ, through the SAME API as the write. secedit's export was the first
+  // verifier and it disagreed with a write that had returned SUCCESS — so it was
+  // measuring something other than live LSA. Two mechanisms that disagree is one
+  // mechanism too many; this reads back from where the write landed.
+  public static string[] Rights(byte[] sid, out int err) {
+    err = 0; var oa = new LSA_OBJECT_ATTRIBUTES(); oa.Length = Marshal.SizeOf(oa); IntPtr h;
+    uint st = LsaOpenPolicy(IntPtr.Zero, ref oa, 0x20 | 0x00000800, out h);
+    if (st != 0) { err = LsaNtStatusToWinError(st); return new string[0]; }
+    IntPtr buf; uint cnt;
+    st = LsaEnumerateAccountRights(h, sid, out buf, out cnt);
+    if (st != 0) { err = LsaNtStatusToWinError(st); LsaClose(h); return new string[0]; }
+    var list = new System.Collections.Generic.List<string>();
+    int sz = Marshal.SizeOf(typeof(LSA_UNICODE_STRING));
+    for (int i = 0; i < cnt; i++) {
+      var u = (LSA_UNICODE_STRING)Marshal.PtrToStructure(new IntPtr(buf.ToInt64() + i * sz), typeof(LSA_UNICODE_STRING));
+      list.Add(Marshal.PtrToStringUni(u.Buffer, u.Length / 2));
+    }
+    LsaFreeMemory(buf); LsaClose(h);
+    return list.ToArray();
+  }
 }
 '@
 try { Add-Type -TypeDefinition $sig -ErrorAction Stop } catch { }
 $sidObj = New-Object System.Security.Principal.SecurityIdentifier($sid)
 $bytes  = New-Object byte[] ($sidObj.BinaryLength)
 $sidObj.GetBinaryForm($bytes, 0)
+
+# READ FIRST — through the same API the write uses. Error 5 here means this window is
+# not elevated (the read needs rights too), and that is reported as UNKNOWN, never as
+# "not granted": a permission failure is not a measurement.
+$e = 0
+$before = [ArsenalLsa]::Rights($bytes, [ref]$e)
+if ($e -eq 5) {
+  Write-Host "  RESULT  : CANNOT READ — this window is not ELEVATED (access denied)."
+  Write-Host "            Re-run from an Administrator PowerShell. Nothing was changed."
+  exit 1
+}
+if ($e -ne 0) { Write-Host "  note    : reading rights returned Win32 error $e" }
+Write-Host "  before  : $(if ($before.Count) { $before -join ', ' } else { '(none)' })"
+
+if ($before -contains "SeServiceLogonRight") {
+  Write-Host "  RESULT  : ALREADY GRANTED — nothing to do."
+  exit 0
+}
+
 $rc = [ArsenalLsa]::Grant($bytes, "SeServiceLogonRight")
-if ($rc -ne 0) { Write-Host "  LsaAddAccountRights returned Win32 error $rc" }
+# PRINTED ALWAYS, not only on failure. The previous build printed this only when it was
+# non-zero, so a SUCCESSFUL grant that a broken verifier then called a failure looked
+# like silence — and silence is where a wrong diagnosis hides.
+Write-Host "  grant rc: $rc$(if ($rc -eq 0) { ' (success)' } else { ' (Win32 error)' })"
 
 # READ IT BACK. A claim is read off the outcome, never off the call — the law this
 # whole rung exists to enforce, and the one I broke three times building it.
-Remove-Item $inf -Force -ErrorAction SilentlyContinue
-secedit /export /cfg $inf /areas USER_RIGHTS | Out-Null
-$after = (Get-Content $inf | Where-Object { $_ -match '^SeServiceLogonRight' })
-Remove-Item $inf, $db -Force -ErrorAction SilentlyContinue
+$e2 = 0
+$after = [ArsenalLsa]::Rights($bytes, [ref]$e2)
+Write-Host "  after   : $(if ($after.Count) { $after -join ', ' } else { '(none)' })"
 
-if ($after -and $after -match [regex]::Escape($sid)) {
-  Write-Host "  RESULT  : GRANTED, and read back from the policy to prove it."
+if ($after -contains "SeServiceLogonRight") {
+  Write-Host "  RESULT  : GRANTED — read back from live LSA, not inferred from the call."
   exit 0
 }
-Write-Host "  RESULT  : FAILED — the right is still not present after the change."
+Write-Host "  RESULT  : FAILED — the grant returned $rc and the right is still absent."
 Write-Host "            (secpol.msc does NOT exist on Windows Home, so that is not the fallback.)"
-Write-Host "            Report this line; S12's pre-flight must not turn anything on until it reads GRANTED."
+Write-Host "            Report the whole block above; S12 must not turn anything on until this reads GRANTED."
 exit 1
 `;
 }
