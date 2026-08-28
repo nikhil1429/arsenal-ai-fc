@@ -224,10 +224,24 @@ function enrichConcept(o, reg) {
 // validation — accept ONLY well-typed reps; enrich concept + unregistered.
 // Strictly additive over v1 (all prior checks retained).
 // ---------------------------------------------------------------------------
-const SURFACES   = new Set(["gem", "colab"]);
+const SURFACES   = new Set(["gem", "colab", "samjhao"]);         // "samjhao" ADDED at S10 (the C4 back-fill's him-fired sitting; gem-only quality stats stay gem-only)
 const TRACKS     = new Set(["concept", "skill"]);
 const CONFIDENCE = new Set(["knew", "shaky", "guessed"]);        // gut-word, committed BEFORE the answer
 const AXES       = new Set("abcdefghi".split(""));               // 9 axes a–i (canon; FORGE faultLines a–i)
+// S10 · RULING__2026-08-29_s10-backfill Q1(c): samjhao-era rows carry NO gut-word
+// BY DESIGN (samjhao has no gut-word law; that is Re-Jirah's instrument), and
+// capture NEVER fabricates — so confidence:null is lawful IFF the rep declares
+// this exact source. Everything else still rejects exactly as before (additive).
+// Every confidence-keyed consumer SKIPS null rows behind its own bitten guard
+// and SAYS SO (the ruling's silence-beats-guess addendum) — ungradedSplit below
+// is the ONE counter they share, so the sentence can never drift per organ.
+const UNGRADED_SOURCE = "unrecorded-samjhao-era";
+export const ungradedSplit = (rows) => {
+  const graded = [], ungraded = [];
+  for (const r of rows || []) (r && r.confidence === null && r.confidence_source === UNGRADED_SOURCE ? ungraded : graded).push(r);
+  return { graded, ungraded };
+};
+export const ungradedLine = (n) => n > 0 ? `${n} samjhao-era row(s) skipped — ungraded by design` : null;
 
 // ---------------------------------------------------------------------------
 // THE THREE CLOCKS (organism audit #24, 4 Aug 2026)
@@ -315,7 +329,7 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
   if (!TRACKS.has(o.track)) return { ok: false, error: `track not concept|skill (${o.track})` };
   if (typeof o.concept !== "string" || o.concept.trim() === "") return { ok: false, error: "concept missing/empty" };
   if (typeof o.question !== "string" || o.question.trim() === "") return { ok: false, error: "question missing/empty" };
-  if (!CONFIDENCE.has(o.confidence)) return { ok: false, error: `confidence not knew|shaky|guessed (${o.confidence})` };
+  if (!CONFIDENCE.has(o.confidence) && !(o.confidence === null && o.confidence_source === UNGRADED_SOURCE)) return { ok: false, error: `confidence not knew|shaky|guessed (${o.confidence}) — null is lawful ONLY with confidence_source "${UNGRADED_SOURCE}" (the S10 back-fill ruling; nothing else may be ungraded)` };
   if (typeof o.correct !== "boolean") return { ok: false, error: "correct not boolean" };
   // axis: field required (null allowed). Non-null ⇒ track=concept AND a..i. skill ⇒ null.
   if (o.axis === undefined) return { ok: false, error: "axis missing (use null)" };
@@ -398,6 +412,7 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
     ts_claimed: clocks.ts_claimed, observed_at: clocks.observed_at, ts_source: clocks.ts_source,
   };
   if (o.note !== undefined) rep.note = o.note;
+  if (o.confidence === null && o.confidence_source === UNGRADED_SOURCE) rep.confidence_source = UNGRADED_SOURCE;
   if (register) rep.register = register;
   if (corrects) { rep.corrects = corrects; rep.why = String(o.why).slice(0, 300); }
   return { ok: true, rep };
@@ -1668,6 +1683,14 @@ function selftest() {
   // 3b/3c) confidence enum
   assert("enum-reject: confidence outside {knew,shaky,guessed} rejected", ingest(p, [rep({ ts: "2026-07-11T09:12:00Z", question: "ec", confidence: "sorta" })], reg).rejected === 1);
   assert("enum-accept: knew/shaky/guessed all valid", ["knew", "shaky", "guessed"].every((c, i) => ingest(p, [rep({ ts: `2026-07-11T10:0${i}:00Z`, question: `enumok${i}`, confidence: c })], reg).appended === 1));
+
+  // S10 · THE BACK-FILL RULING (RULING__2026-08-29_s10-backfill Q1(c)) — three bites:
+  assert("S10 ungraded: confidence:null WITH the samjhao-era source lands, marked on the row (additive — capture still never fabricates a grade)",
+    (() => { const r2 = ingest(p, [rep({ ts: "2026-07-11T11:00:00Z", question: "ug1", surface: "samjhao", confidence: null, confidence_source: "unrecorded-samjhao-era" })], reg); const row = loadReps(p, reg).find((x) => x.question === "ug1"); return r2.appended === 1 && row && row.confidence === null && row.confidence_source === "unrecorded-samjhao-era"; })());
+  assert("S10 ungraded: confidence:null WITHOUT the declared source is still REJECTED (null is lawful only as the ruled samjhao-era shape)",
+    ingest(p, [rep({ ts: "2026-07-11T11:01:00Z", question: "ug2", confidence: null })], reg).rejected === 1);
+  assert("S10 ungraded: ungradedSplit is the ONE shared counter — consumers skip the null rows behind it and SAY so (silence-beats-guess)",
+    (() => { const rows = loadReps(p, reg); const { graded, ungraded } = ungradedSplit(rows); return ungraded.length === 1 && ungraded[0].question === "ug1" && graded.length === rows.length - 1 && ungradedLine(1) === "1 samjhao-era row(s) skipped — ungraded by design" && ungradedLine(0) === null; })());
 
   // --- v2: track / axis / latency / aided / registry ---
   assert("axis-accept: a..i valid on concept", ingest(p, [rep({ ts: "2026-07-11T11:00:00Z", question: "ax_a", axis: "a" }), rep({ ts: "2026-07-11T11:01:00Z", question: "ax_i", axis: "i" })], reg).appended === 2);

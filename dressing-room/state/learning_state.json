@@ -1,14 +1,14 @@
 {
-  "date": "2026-08-19",
-  "generated_at": "2026-08-19T03:45:12.605Z",
-  "total_reps": 21,
+  "date": "2026-08-29",
+  "generated_at": "2026-08-28T20:32:19.634Z",
+  "total_reps": 22,
   "status": "ok",
   "low_confidence": false,
   "gate": {
-    "have": 21,
+    "have": 22,
     "need": 1,
     "unit": "reps",
-    "line": "21/1 reps",
+    "line": "22/1 reps",
     "open": true,
     "withheld": [],
     "emitted_regardless": [
@@ -22,18 +22,18 @@
     "sub": [
       {
         "name": "weak_connection",
-        "have": 21,
+        "have": 22,
         "need": 1,
         "unit": "reps",
-        "line": "21/1 reps",
+        "line": "22/1 reps",
         "open": true
       },
       {
         "name": "maidan_stage_focus",
-        "have": 21,
+        "have": 22,
         "need": 1,
         "unit": "reps",
-        "line": "21/1 reps",
+        "line": "22/1 reps",
         "open": true
       },
       {
@@ -61,26 +61,26 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 48
+      "overdue_days": 57
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 44
+      "overdue_days": 53
     },
     {
       "concept": "embeddings",
       "axis": "a (kya+analogy)",
-      "overdue_days": 32
+      "overdue_days": 42
     },
     {
       "concept": "hallucinations",
       "axis": "a (kya+analogy)",
-      "overdue_days": 8
+      "overdue_days": 18
     }
   ],
   "core_vs_light": {
-    "core": "spine: 0/2 fluent",
+    "core": "spine: 0/3 fluent",
     "light": "no light concepts drilled"
   },
   "edge_map": {},
@@ -117,6 +117,22 @@
       },
       "edge": null,
       "confusions": []
+    },
+    {
+      "id": "tokenization",
+      "track": "concept",
+      "axis": "b",
+      "fluency": "🔴 learning",
+      "core": true,
+      "reps": 1,
+      "last_seen": "2026-08-22",
+      "velocity": {
+        "slope": "holding",
+        "reps_to_state": 1,
+        "stalled": false
+      },
+      "edge": null,
+      "confusions": []
     }
   ],
   "axes": [
@@ -136,7 +152,7 @@
       "label": "kyun/first-principles",
       "fluent_frac": 0,
       "counts": {
-        "learning": 1,
+        "learning": 2,
         "held": 0,
         "fluent": 0
       },
@@ -185,7 +201,7 @@
           "tokenization"
         ],
         "runnable_frac": 0,
-        "status": "awaiting_data"
+        "status": "building"
       },
       {
         "id": "rag_pipeline",
@@ -237,37 +253,27 @@
     ]
   },
   "position": {
-    "session_open": true,
-    "concept": "hallucinations",
-    "step": 3,
-    "step_name": "SAMJHAO",
+    "session_open": false,
+    "concept": null,
+    "step": null,
+    "step_name": null,
     "axes_done": [],
     "axes_deferred": [],
-    "axes_left": [
-      "a",
-      "b",
-      "c",
-      "d",
-      "e",
-      "f",
-      "g",
-      "h",
-      "i"
-    ],
+    "axes_left": [],
     "axes_ungraded": [],
-    "started_at": "2026-08-19T01:35:21.331Z",
+    "started_at": null,
     "stale": false,
-    "stale_as_of": "2026-08-19T03:45:12.605Z",
+    "stale_as_of": null,
     "last_closed": {
       "concept": "hallucinations",
-      "ended_at": "2026-08-12T07:35:01.174Z",
+      "ended_at": "2026-08-19T22:52:07.206Z",
       "steps_ran": [
         0,
-        1,
-        2,
-        3
+        1
       ],
       "steps_missed": [
+        2,
+        3,
         4,
         5,
         6,
@@ -290,7 +296,7 @@
         "h",
         "i"
       ],
-      "elapsed_min": 2707.3,
+      "elapsed_min": 656.2,
       "axis_marks_span_min": null,
       "check_q_refused": 0,
       "core_missing": [

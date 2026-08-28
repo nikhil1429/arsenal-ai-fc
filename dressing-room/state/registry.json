@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T20:22:53.421Z",
+ "updated_at": "2026-08-28T20:30:54.352Z",
  "tables": {
   "mechanisms": [
    {
@@ -560,10 +560,10 @@
     "updated_at": "2026-08-28T20:04:08.658Z",
     "added_at": "2026-08-28T20:04:08.658Z",
     "first_real_row_at": "2026-07-17T19:00:29.304Z",
-    "newest_row_at": "2026-08-10T12:00:47.096Z",
-    "payload_rows": 21,
+    "newest_row_at": "2026-08-23T19:21:36.605Z",
+    "payload_rows": 37,
     "consumer_reads": {},
-    "metered_at": "2026-08-28T20:06:32.598Z"
+    "metered_at": "2026-08-28T20:30:54.337Z"
    },
    {
     "subject": "rejirah_log",
@@ -579,7 +579,7 @@
     "newest_row_at": null,
     "payload_rows": 0,
     "consumer_reads": {},
-    "metered_at": "2026-08-28T20:06:32.598Z"
+    "metered_at": "2026-08-28T20:30:54.337Z"
    },
    {
     "subject": "forge_sessions",
@@ -595,7 +595,7 @@
     "newest_row_at": "2026-08-19T11:55:53.719Z",
     "payload_rows": 11,
     "consumer_reads": {},
-    "metered_at": "2026-08-28T20:06:32.598Z"
+    "metered_at": "2026-08-28T20:30:54.337Z"
    },
    {
     "subject": "capsules",
@@ -611,7 +611,7 @@
     "newest_row_at": "2026-06-28",
     "payload_rows": 4,
     "consumer_reads": {},
-    "metered_at": "2026-08-28T20:06:32.598Z"
+    "metered_at": "2026-08-28T20:30:54.337Z"
    }
   ],
   "checks": [
@@ -703,6 +703,218 @@
     "notes": "DECLARED, NOT INSTALLED — recorded judgement (reversible): the evidence leg is empty because every current meter query is a trivial JSONL scan Node already serves (LAW T: same quality, cheaper tier). The row is the contract home; installing without a query that needs it would fail the contract own first leg",
     "updated_at": "2026-08-28T20:22:53.419Z",
     "added_at": "2026-08-28T20:22:53.419Z"
+   }
+  ],
+  "rulings": [
+   {
+    "id": "rul-mtdeozdxyi",
+    "at": "2026-08-21T03:50:00Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "R1 THREE-LAYER DELIVERY, verbatim: 'i think when you teach me through an analogy always give the real defination or real AI language answer as well so it sticks to my brain because just understanding and remembering by analogy is difficult for me ... after finishing the tokenization samjhao we will make this point in the document as well where all samjhao process contract and rules are written'",
+    "updated_at": "2026-08-28T20:30:38.373Z",
+    "added_at": "2026-08-28T20:30:38.373Z"
+   },
+   {
+    "id": "rul-mtdeozhth8",
+    "at": "2026-08-21T04:40:00Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "R2 JIRAH VOLUME, verbatim: 'i want to give as many jirah and re jirah possible for every topics which i am covering with maximum number of questions being asked but should be done when i fully understand the concept'",
+    "updated_at": "2026-08-28T20:30:38.513Z",
+    "added_at": "2026-08-28T20:30:38.513Z"
+   },
+   {
+    "id": "rul-mtdeozm2a5",
+    "at": "2026-08-21T04:40:30Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "R3 NO RATTA, verbatim: 'my adhd pi brain will never remember the exact definations, i can not mug up answers (ratta nahi maar sakta mera dimag) isko bi dimag mein rakhna for all future sessions of samjhao as well and re jirah'. CONSEQUENCE: a correct answer is one where the MECHANISM is rebuilt, in whatever words arrive. Different words + right mechanism = BETTER, not worse. The technical line is a target shape, never a memorisation target.",
+    "updated_at": "2026-08-28T20:30:38.666Z",
+    "added_at": "2026-08-28T20:30:38.666Z"
+   },
+   {
+    "id": "rul-mtdeozq5zo",
+    "at": "2026-08-21T04:45:00Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "R4 FREE FLOW, verbatim: 'doc one axis per day or one topic per day rule is stupid, it should be free flowing, do not try to control my adhd gifts, let it free flow.' CHECKED: no such rule exists. §5-4 TIME-BOX is a ceiling with a DEFER; §9 already says 'Do not underestimate his throughput ... Size turns to his pace.' Nothing changes; recorded because it is a live ruling.",
+    "updated_at": "2026-08-28T20:30:38.813Z",
+    "added_at": "2026-08-28T20:30:38.813Z"
+   },
+   {
+    "id": "rul-mtdeozv0a5",
+    "at": "2026-08-21T05:55:00Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "R5 SCOPE, verbatim: 'i want god tier 10x level on steriods level for the entire field so for all topics whatever we will forever study from now onwards, i am here to dominate the market, not participate or compete in it.' Plus: 'do not underestimate my adhd gifts, i can go tunnel visioned in and can grind my ass off for 10 hours daily minimum.' Plus, standing and repeated: everything must work SESSION-AGNOSTIC.",
+    "updated_at": "2026-08-28T20:30:38.988Z",
+    "added_at": "2026-08-28T20:30:38.988Z"
+   },
+   {
+    "id": "rul-mtdep00r3q",
+    "at": "2026-08-21T06:35:00Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "GEMINI FLASH APPROVED for the cold-read falsification run (his word: flash is ok theek hain). Reasoning recorded: the quote-discipline predicate makes the test model-independent, so a WEAKER and more literal reader is more honest here — Pro with extended thinking would paper over the very gaps the test hunts for. Fabricated quotes are caught deterministically by a literal-substring check against the deep. LAW T extended-thinking-ON stays untouched because the predicate does the work, not the model.",
+    "updated_at": "2026-08-28T20:30:39.195Z",
+    "added_at": "2026-08-28T20:30:39.195Z"
+   },
+   {
+    "id": "rul-mtdep06gy4",
+    "at": "2026-08-22T04:47:07.878Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS RULING, 22 Aug — NO TABLES, EVER. Verbatim: \"never never use tables. Tables are very annoying for me. Like, I cannot understand things. Just just write it simply. You know? I don't know. Like table is something which which irritates my mind, to be honest.\" APPLIES TO: every teaching surface — samjhao, Re-Jirah, FORGE, session reports, and anything rendered for him. Prose and simple lists only. This is pedagogy/format, so under C6 the teacher owns it and it does not escalate; it is recorded here and receipted via acts.mjs at the axis boundary (C2).",
+    "updated_at": "2026-08-28T20:30:39.401Z",
+    "added_at": "2026-08-28T20:30:39.401Z"
+   },
+   {
+    "id": "rul-mtdep0iye1",
+    "at": "2026-08-22T04:47:07.879Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS RULING, 22 Aug — NO ABSTRACT PROGRESS COUNTERS. Verbatim: \"please drop this vague things like idea x out of y, i want to see the real terms and concept names that ok i am reading and learning this right now which is a part of this. i have adhd pi bro, don't forget it. my mind works differently.\" REPLACEMENT IN FORCE: position is shown as a NAMED CONCEPT inside its named axis inside its named topic (e.g. TOKENIZATION > AXIS b > SEQUENCE LENGTH + QUADRATIC ATTENTION COST), never as \"idea 5 of 8\". Note this does NOT weaken C7 (declare-then-serve-ONE-idea-per-turn) — the pacing law stands, only its LABEL changes.",
+    "updated_at": "2026-08-28T20:30:39.850Z",
+    "added_at": "2026-08-28T20:30:39.850Z"
+   },
+   {
+    "id": "rul-mtdep0q22d",
+    "at": "2026-08-22T04:47:07.879Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS RULING, 22 Aug — THE TECHNICAL LAYER IS NOT OPTIONAL, restated by him as a complaint. Verbatim: \"you are not giving me exact definitions as well. Right? To make it stick with the real words... I am getting the analogy I am understanding the hinglish which you are speaking, but I am not getting the real techy AI tech world languages.\" This is R1 (21 Aug) being enforced by him a second time: DUKAAN + ASLI NAAM + TECHNICAL LINE, all three, every idea. TEACHER ERROR THAT CAUSED IT: when he said \"I understood nothing\", I removed the term O(n squared) instead of opening it slowly — an over-correction. Names are never removed; they are opened.",
+    "updated_at": "2026-08-28T20:30:40.106Z",
+    "added_at": "2026-08-28T20:30:40.106Z"
+   },
+   {
+    "id": "rul-mtdep0win9",
+    "at": "2026-08-23T00:28:48.353Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS RULING, 23 Aug ~06:00 IST — REMOVE THE NO-DATE-COUNTDOWN LAW (§5 / DAILY_CADENCE HARD RULES). VERBATIM: \"time has come now to remove this rule - §5, the no-date-countdown law. now its god tier 10x level on steriods level execution just like my clout people for the dominance level.\" WITH ITS CONTEXT, VERBATIM: \"i have 6-8 weeks to prepare for everything at the level i dominate the entire market i mean at the end of week 7 i should be ready to apply in the market which is organsim s job anyways\" and \"see at the sprint file, reset all of the dates in it. i am starting now.\" RECORDED AS BINDING — his word outranks the architect s. NOT EXECUTED BY THIS LANE: the law is enforced in code in five places (brain, cortex, dugout prompt LAWS; manager s elapsed-not-countdown render; benchmark s selftest asserting no days-left string reaches a report) plus canon prose in four files, and §10-D rule 6 says a gate may only get stricter — so the mechanics are filed as Q-7 for the audit lane. SURFACED TO HIM BEFORE HE CONFIRMED, so the decision was made with the reason in hand: the law s own stated reason is \"Burnout = #1 documented failure mode. Consistency > intensity-spike, non-negotiable.\" Also surfaced: the law bans what the SYSTEM SHOWS him, never his own target; and an APPLY-TRIGGER already exists that is milestone-based and explicitly says do not wait for the full curriculum (\"M1 demo-able -> PARALLEL apply, curriculum 17/17 NAHI\").",
+    "updated_at": "2026-08-28T20:30:40.339Z",
+    "added_at": "2026-08-28T20:30:40.339Z"
+   },
+   {
+    "id": "rul-mtdep12flb",
+    "at": "2026-08-23T02:02:09.060Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS STANDING RULE, 23 Aug — ROCK-BOTTOM ONLY, EVERY CLAUDE SESSION. VERBATIM: \"always talk with me on rock bottom brainstorming level. No surface level talks. When you talk to me, you need to understand that I have a special brain... I always want you to keep on thinking, keep on thinking, exhaust your thinking, think, think, rethink, metacognit on that, then rethink, imagine, visualize, and then finally give me the answer. I do not care about how much time you always take.\" SCOPE: all Claude Code sessions, not just learning. NOTE RECORDED WITH IT: this ruling is itself a live instance of the problem it was given during — his standing rules today live in four scattered places (SAMJHAO_ORDER R1-R5, this ledger, the teaching_contract, and the sprint sheet) and none of those is a place EVERY session is guaranteed to read. CLAUDE.md is the only file every session reads and it carries none of them.",
+    "updated_at": "2026-08-28T20:30:40.552Z",
+    "added_at": "2026-08-28T20:30:40.552Z"
+   },
+   {
+    "id": "rul-mtdep1888y",
+    "at": "2026-08-23T02:02:09.062Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS STANDING RULE, 23 Aug — BRAINSTORM FIRST, FILE SECOND. VERBATIM: \"always brainstorm with me first and let us together make the finalized conversation first after talking and taking the entire thought process to absolute rock bottom (no surface level thinking anywhere anytime) and then note down things for architect, this is for all of sessions inside claude code remember that.\" CAUSE: the executor filed four escalation forks (Q-5 to Q-8) without brainstorming them with him first, and he named the consequence — the architect would then rule on an under-thought characterization. PROVEN CORRECT the same session: Q-2 as filed named only ONE defect shape (declared-but-never-built); the second shape (superseded-but-not-propagated, i.e. MASTERPLAN S12 vs the cadence law) was found two hours later by accident.",
+    "updated_at": "2026-08-28T20:30:40.760Z",
+    "added_at": "2026-08-28T20:30:40.760Z"
+   },
+   {
+    "id": "rul-mtdep1dx76",
+    "at": "2026-08-23T02:02:09.063Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS RULING, 23 Aug — THE ARCHITECT READS THE RAW CONVERSATION, NOT THE SUMMARY. VERBATIM: \"let architect decide now what should be done. Let us give architect the thoughts we have, my thoughts, your thoughts, turn by turn... Let the architect see everything, and then let it decide how should we approach it.\" And: \"the responsibility of architect is not to just take a decision based on our findings. One of its jobs is to DESIGN the findings as well.\" And the image he used: \"we all three are having coffee, you and me are talking, he is just listening — and at the end he says: okay guys, I have listened to your conversation, and this is how it should be approached and solved.\" STRUCTURAL EFFECT: this removes the executor from the framing position entirely, which is the direct fix for fork Q-5 failure modes F2 (framing capture), F3 (evidence selection) and F4 (compression loss) — all three exist only because a summary sits between the source and the ruler. THIS IS THE SAME PRINCIPLE HE RULED ON 19 AUG for the audit lane (audit order S4-D-0: THE CONVERSATION CORPUS IS A PRIMARY SOURCE — READ IT).",
+    "updated_at": "2026-08-28T20:30:40.966Z",
+    "added_at": "2026-08-28T20:30:40.966Z"
+   },
+   {
+    "id": "rul-mtdep1k587",
+    "at": "2026-08-23T05:32:07.837Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS RULING, 23 Aug 2026 — CAPTURE EVERYTHING, CLASSIFY NOTHING. VERBATIM: \"bruh i want my every data to be noted down starting from your session onwards for every session till we can not reach the architect so architect can decide what where when how to do it inside the organism ... everything should be noted down without classify, i am amazed you and architect did not thought of this thing that he wants to dominate the market then his 100% data should be noted down and analyzed with maximum level of intensity.\" AND, when the executor said the raw transcript already held the data: \"what are you doing, nobody is going to re read the transcript to find out these things?? ... why are we even wasting 0.00001% of data without it being analyzed?? dimag laga ke socho mere sath pehle, muh utha ke likh dia jaake.\" HE IS RIGHT ON BOTH COUNTS AND BOTH ARE RECORDED AGAINST THE EXECUTOR: (1) \"it is all in the transcript\" was a dodge with the exact shape of \"it is all in the .md files\" — a haystack is not data; (2) the executor then hand-picked five more fumble rows, which is MORE of the same defect, because hand-picking IS the bug, not the volume. WHY THIS WAS MISSED BY BOTH THE EXECUTOR AND THE ARCHITECT, named honestly: architect ruling C1 forbade routing fields because \"committing to a shape would ANCHOR S6-s design\". That reasoning is about SCHEMA. It was applied as CAPTURE LESS. A lossless dump commits to no shape at all, so it anchors nothing — \"do not commit to a shape\" and \"do not capture\" are different rules and both parties collapsed them into one.",
+    "updated_at": "2026-08-28T20:30:41.190Z",
+    "added_at": "2026-08-28T20:30:41.190Z"
+   },
+   {
+    "id": "rul-mtdep1qag9",
+    "at": "2026-08-23T15:22:06.816Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS DECISION, 23 Aug — STARTER PROMPT v2 IS IN USE. The v1 paste line was the architect-s (SAMJHAO_ORDER §16, 21 Aug: \"HIS ONE PASTE LINE, for every learning session until the reboot\"), so v2 supersedes an architect ruling and needs ratification. Running from today under Q0-s conservative branch — no state written, no LLM spent, reversible in one paste. v2 adds: the mandatory reading list (order §0/§16/§3/§8/§15 · FORGE_SPEC §2.5+§3 with SPEC-WINS precedence · the escalation queue · the ledger tail, crack log and blocks file), the CAPTURE command at every axis close, and the VERIFY rule — the only line that changes behaviour rather than input. Full file and its reasoning: arsenal-audit-artifacts/STARTER_PROMPT__learning-session.md. HIS THREE CORRECTIONS IN THE SAME BREATH, all upheld: (1) do not file a summary of the executor-s own analysis — the raw transcript already carries it, and a summary is the compression path that was just removed; (2) \"consumption is the next constraint\" is not a new finding, it IS the audit-s own thesis (FLOW ATLAS liveness+consumption stamps, registry right_consumer, Gate C, SHAPE 3 \"production-measured-consumption-never\") and the executor restated it as new; (3) the five improvement moves the executor proposed are the ARCHITECT-s job — third drift into design in one day. He excepted only one: that the cyborg organism is itself a shipped LLM product and therefore evidence, which is a §12/§14 career item, not a design item.",
+    "updated_at": "2026-08-28T20:30:41.410Z",
+    "added_at": "2026-08-28T20:30:41.410Z"
+   },
+   {
+    "id": "rul-mtdep1vpcy",
+    "at": "2026-08-24T16:59:39.922Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS RULING, 24 Aug — HOW_HE_LEARNS #3 IS WRONG. VERBATIM: \"this is wrong, delete it, it is entirely for understanding, why tf i crave novelity?? i seek internal validation, not outside. ... I do not care what anybody thinks of me. I do not crave anybody s attention. what I want from myself is what matters for me.\" VERIFIED: the finding s own quotes all state comprehension (\"ye viz se kuch clear hi nahi hua hain\" / \"god tier visualization se SMJHAO yar\" / \"this was so basic bro\"); the document substituted an inferred motive for his stated one. Filed as Q-14. FORM still open: he said delete, executor argued for a dated SUPERSEDED layer under Law 9. His call.",
+    "updated_at": "2026-08-28T20:30:41.606Z",
+    "added_at": "2026-08-28T20:30:41.606Z"
+   },
+   {
+    "id": "rul-mtdep2146o",
+    "at": "2026-08-24T16:59:39.922Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS RULING, 24 Aug — ORTHOSOMNIA DOES NOT APPLY TO HIM, AND OBSESSIVENESS IS NOT A PATHOLOGY. VERBATIM: \"Obsessive metric chasing creates the anxiety it means to fix, not really I do not get anxiety a lot. Not really. Obsessivity, it is in my DNA. and there is nothing harm in it. It is a gift. I am harnessing it. You know, I am diverting the obsessiveness into something meaningful. That is how that great people work.\" MASTERPLAN §12 already agreed before he said it (harmonious passion, grind honored, marker is compulsion not volume) and §12f itself instructs that every principle is a prior to be updated with his n-of-1 data. Prior updated by his own report. Filed inside Q-16.",
+    "updated_at": "2026-08-28T20:30:41.801Z",
+    "added_at": "2026-08-28T20:30:41.801Z"
+   },
+   {
+    "id": "rul-mtdep26mow",
+    "at": "2026-08-24T16:59:39.922Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS RULING, 24 Aug — THE ROLE SPLIT, STATED BY HIM TWICE AND SHARPENED. VERBATIM: \"designing, connecting and closing it is for architect right, my job is to provide 100% honest data right from every angles of my life possible\" and, when the executor drifted into solutioning again: \"tier 1 and tier 2 is architect work not mine ... koi nai likh raha, koi nahi pad raha vo architect ki job hain not mine. i am just sharing what needs to be done, how when where is architect s job no?\" EXECUTOR NOTE ADDED AND ACCEPTED BY NEITHER SIDE AS A CORRECTION BUT AS AN ADDITION: FORGE_DESIGN §5 also makes him final AUTHORITY (approve/reject/override + pace) — so he DECIDES and supplies data, the architect DESIGNS, the executor brainstorms the problem and gathers evidence.",
+    "updated_at": "2026-08-28T20:30:41.999Z",
+    "added_at": "2026-08-28T20:30:41.999Z"
+   },
+   {
+    "id": "rul-mtdep2brdz",
+    "at": "2026-08-24T16:59:39.922Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS OBSERVATION, 24 Aug, and he asked for it to reach the architect — THE DUAL-TASK CONDITION IS ENDING. VERBATIM: \"a lot of oberservations you did about me was when i was actively creating the organism with studying together. now i am actively fixing the organism with studying but from now on its the architect s job so my brain has resolved this problem at last.\" Filed as Q-15. Strongest supporting evidence found by the executor: HOW_HE_LEARNS rule #12 (no system/notes/tool work mid-concept) only becomes necessary when system work is continuously available, so the rule s existence is evidence of the condition.",
+    "updated_at": "2026-08-28T20:30:42.183Z",
+    "added_at": "2026-08-28T20:30:42.183Z"
+   },
+   {
+    "id": "rul-mtdep2ijkw",
+    "at": "2026-08-24T17:06:29.585Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS DECISION, 24 Aug — SUPERSEDED LAYER, NOT DELETE. VERBATIM: \"superseded layer banado\". EXECUTED SAME TURN: a dated SUPERSEDED block now sits under the RULE in learning-layer/HOW_HE_LEARNS.md finding #2 (NOT #3 - the queue named the wrong number and a correction row was appended). It carries his verbatim ruling, the check against the finding s own three quotes, what still stands and on what different evidence (working-memory ~4 chunks + deep-text-need; a visual is a compression, and compression is what his June notes already failed at), and the forward reading: a request for a better visual is a TEACHING SIGNAL and rule #9 applies to it in full. Original text untouched above it, Law 9 satisfied.",
+    "updated_at": "2026-08-28T20:30:42.428Z",
+    "added_at": "2026-08-28T20:30:42.428Z"
+   },
+   {
+    "id": "rul-mtdep2o8ke",
+    "at": "2026-08-24T17:06:29.585Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "RAW_FACTS backfill 2026-08-29",
+    "text": "HIS DECISION + HIS VISION, 24 Aug — PERISHABLE LIST AND THE FITNESS ORGAN. VERBATIM: \"i think youtube skip karo but movement should be there?? gemini live on my phone can become a fitness coach right?? ... kaise hoga ab ye nahi pata, that s not my job right? i have this vision that organism should use his brain on gemini live app which i have to direct it daily and it should be a closed loop bascially gemini live on my phone becomes an organ of fitness coach because i think body movement is important, it will give me more energy to work for domination job\". YouTube confirmed NOT perishable, waits. EXECUTOR REFINEMENT HIS INSTINCT FORCED: Oura records THAT he moved, nothing records WHAT HE TRAINED - session, load, reps, how it felt, whether form held. So the TRAINING RECORD is a distinct perishable stream that begins existing the day he starts training. TWO PROBLEMS ADDED TO Q-19 SO THE FORK IS NOT UNDER-READ: (1) the OUTBOUND leg has a pattern (day_cartridge writes another model s system instruction) but the INBOUND leg has NONE - every existing organ writes its own state to a file; a Gemini Live session on his phone writes nothing the organism can read, so the loop is open at the return end and that is where the engineering actually sits; (2) his own clause \"which i have to direct it daily\" makes HIM the transport, and his standing law says anything he must remember or chase is a bug in the organism - acceptable perhaps, but it should be deliberate.",
+    "updated_at": "2026-08-28T20:30:42.633Z",
+    "added_at": "2026-08-28T20:30:42.633Z"
    }
   ]
  }

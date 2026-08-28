@@ -50,7 +50,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
+import { supersedeReps, ungradedSplit, ungradedLine } from "./capture.mjs";   // BLOCK 4 supersession + S10: the samjhao-era skip is SAID, from the owner's one counter
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -928,6 +928,8 @@ function selftest() {
     assert("WIRE · a real 0 is preserved as 0 and never collapsed into the absent case",
       projectLastClosed({ ...row, check_q_refused: 0, core_missing: [] }).check_q_refused === 0
       && projectLastClosed({ ...row, check_q_refused: 0, core_missing: [] }).core_missing.length === 0);
+    assert("S10 ungraded: a confidence:null samjhao-era rep is skipped by this organ's own validRep — fluency and axes never count testimony",
+      validRep({ ts: "2026-08-22T03:00:00Z", surface: "samjhao", track: "concept", concept: "tokenization", axis: "a", question: "q", confidence: null, confidence_source: "unrecorded-samjhao-era", correct: true }) === false);
     assert("WIRE · the FROZEN pre-repair projection is the witness: it still drops all four",
       projectLastClosedLegacy(paced).elapsed_min === undefined && projectLastClosedLegacy(paced).check_q_refused === undefined
       && projectLastClosedLegacy(paced).core_missing === undefined && projectLastClosedLegacy(paced).concept === "qqx_prior_concept");
@@ -959,7 +961,10 @@ function main() {
   // #106 — lead with the counter. `${have}/${need} reps` beats `warming_up` because
   // it tells him how many more, and the withheld list tells him what he is buying.
   const gateBit = out.gate.open ? out.gate.line : `${out.gate.line} (withholding ${out.gate.withheld.join(", ")})`;
-  console.log(`learning-state: ${gateBit} — concepts ${out.concepts.length} · skills ${Object.keys(out.python_fluency).length} · due ${out.rejirah_due.length} · focus ${out.maidan_stage_focus || "-"}${posBit}  →  ${OUT}`);
+  // S10 back-fill ruling: the samjhao-era skip is SAID, never silent — counted
+  // from the RAW ledger (loadReps has already validRep-filtered `reps`).
+  const ungradedN = existsSync(REPS_LOG) ? ungradedSplit(readFileSync(REPS_LOG, "utf8").split(/\r?\n/).filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean)).ungraded.length : 0;
+  console.log(`learning-state: ${gateBit} — concepts ${out.concepts.length} · skills ${Object.keys(out.python_fluency).length} · due ${out.rejirah_due.length} · focus ${out.maidan_stage_focus || "-"}${posBit}${ungradedN ? ` · ${ungradedLine(ungradedN)}` : ""}  →  ${OUT}`);
   process.exit(0);
 }
 

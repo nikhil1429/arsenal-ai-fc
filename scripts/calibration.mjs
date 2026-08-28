@@ -270,6 +270,9 @@ function validRep(r) {
 function whyInvalid(r) {
   if (!r || typeof r !== "object" || Array.isArray(r)) return "not an object";
   if (typeof r.ts !== "string" || Number.isNaN(Date.parse(r.ts))) return "ts missing/unparseable";
+  // S10 back-fill ruling: a samjhao-era row is LAWFUL and ungraded — its skip is
+  // NAMED as design, never mislabelled malformed (silence-beats-guess addendum).
+  if (r.confidence === null && r.confidence_source === "unrecorded-samjhao-era") return "samjhao-era — ungraded by design";
   if (!CONF.has(r.confidence)) return "confidence not knew|shaky|guessed";
   if (typeof r.correct !== "boolean") return "correct not boolean";
   if (typeof r.concept !== "string" || r.concept.trim() === "") return "concept missing/empty";
@@ -680,6 +683,8 @@ function selftest() {
 
   // 13) config missing ⇒ defaults used
   assert("config missing ⇒ defaults", loadConfig("__nope__").targets.knew === 0.95 && loadConfig("__nope__").min_reps === 20);
+  assert("S10 ungraded: a confidence:null samjhao-era rep never reaches the gap arithmetic, and its skip reason NAMES the design (never 'malformed')",
+    whyInvalid({ ts: "2026-08-22T03:00:00Z", track: "concept", concept: "tokenization", question: "q", confidence: null, confidence_source: "unrecorded-samjhao-era", correct: true }) === "samjhao-era — ungraded by design");
 
   // 14) concepts.json missing ⇒ topic = raw id
   const raw = [...rep(2, "Brand New Topic", "knew", false), ...rep(1, "Brand New Topic", "knew", false), ...rep(20, "filler", "shaky", true)];

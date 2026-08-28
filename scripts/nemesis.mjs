@@ -56,7 +56,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
+import { supersedeReps, ungradedSplit, ungradedLine } from "./capture.mjs";   // BLOCK 4 supersession + S10: the samjhao-era skip is SAID, from the owner's one counter
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -625,6 +625,8 @@ function selftest() {
     && /most missed: "grounding"×2/.test(r20.register.line));
   assert("register: a CORRECT rep with a missing term is a register miss and NOT a weakness — a missing word is not a broken mechanism, so it never enters the axis clustering",
     r20.weaknesses.length === 0 && r20.headline === null);
+  assert("S10 ungraded: a confidence:null samjhao-era rep is skipped by this organ's own validRep — never a knew-wrong/shaky-wrong verdict",
+    validRep({ ts: "2026-08-22T03:00:00Z", surface: "samjhao", track: "concept", concept: "tokenization", axis: "b", question: "q", confidence: null, confidence_source: "unrecorded-samjhao-era", correct: false }) === false);
   assert("register: no register on any rep ⇒ present:false and nothing invented",
     compute([mk({ concept: "x", confidence: "knew", correct: true, day: 0 })], cfg, REG, now).register.present === false);
 
@@ -648,7 +650,10 @@ function main() {
   const ap = out.axis_pattern
     ? `axis ${out.axis_pattern.axis}×${out.axis_pattern.strength}`
     : `- (needs ${out.gate.reps_have}/${out.gate.reps_need} reps)`;   // audit #106: have/need, never a bare gate word
-  console.log(`nemesis: ${out.status_line} — weaknesses ${out.weaknesses.length} · headline ${hl} · axis_pattern ${ap}  →  ${WEAK}`);
+  // S10 back-fill ruling: the samjhao-era skip is SAID, never silent — counted
+  // from the RAW ledger (loadReps has already validRep-filtered `reps`).
+  const ungradedN = existsSync(REPS_LOG) ? ungradedSplit(readFileSync(REPS_LOG, "utf8").split(/\r?\n/).filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean)).ungraded.length : 0;
+  console.log(`nemesis: ${out.status_line} — weaknesses ${out.weaknesses.length} · headline ${hl} · axis_pattern ${ap}${ungradedN ? ` · ${ungradedLine(ungradedN)}` : ""}  →  ${WEAK}`);
   if (out.register) console.log(`  ${out.register.line}`);
   process.exit(0);
 }

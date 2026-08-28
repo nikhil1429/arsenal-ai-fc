@@ -493,8 +493,8 @@ export function backfillPlan({ rawPath = RAW_FACTS_PATH } = {}) {
     const correct = /\bALL THREE CORRECT\b|\bCORRECT\b(?!\s*ANSWER:)/i.test(t) && !/\bWRONG\b/.test(t) ? true : /\bWRONG\b/.test(t) ? false : null;
     if (/\bSKIPPED\b/.test(t)) { out.skipped.push({ ts: r.ts, kind: r.kind, why: "SKIPPED on his own call (the session's marker)" }); continue; }
     if (correct === null) { out.skipped.push({ ts: r.ts, kind: r.kind, why: "no verdict marker in the row — grading it would be invention" }); continue; }
-    const confidence = /\bno idea\b/i.test(t) ? "guessed" : null;   // his words, or nothing
-    out.reps.push({ ts: r.ts, surface: "samjhao-backfill", track: "concept", concept: concept || "unknown", axis: axis && /^[a-i]$/.test(axis) ? axis : null, question: clip(t, 160), confidence, correct, note: "back-fill 2026-08-29 from RAW_FACTS.jsonl (C4)" });
+    const confidence = /\bno idea\b/i.test(t) ? "guessed" : null;   // his words, or nothing (Q1(c): null = unrecorded, marked)
+    out.reps.push({ ts: r.ts, surface: "samjhao", track: "concept", concept: concept || "unknown", axis: axis && /^[a-i]$/.test(axis) ? axis : null, question: clip(t, 160), confidence, ...(confidence === null ? { confidence_source: "unrecorded-samjhao-era" } : {}), correct, note: "back-fill 2026-08-29 from RAW_FACTS.jsonl (C4, RULING__2026-08-29_s10-backfill)" });
   }
   return out;
 }

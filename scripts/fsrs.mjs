@@ -66,6 +66,7 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { fsrs, generatorParameters, createEmptyCard, Rating } from "ts-fsrs";
+import { ungradedSplit, ungradedLine } from "./capture.mjs";   // S10 — the samjhao-era skip is SAID, from the owner's one counter
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
@@ -117,13 +118,17 @@ function ratingOf(r) {
 }
 
 // read reps_log (missing/empty = [] ; skip corrupt lines defensively)
-function loadReps(path) {
+function rawLedgerRows(path) {
   if (!existsSync(path)) return [];
   const out = [];
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
     const s = line.trim(); if (!s) continue;
-    try { const o = JSON.parse(s); if (validRep(o)) out.push(o); } catch { /* skip */ }
+    try { out.push(JSON.parse(s)); } catch { /* skip */ }
   }
+  return out;
+}
+function loadReps(path) {
+  const out = rawLedgerRows(path).filter(validRep);
   // BLOCK 4 (17 Aug 2026) — a corrected verdict must stop counting here too, or a
   // wrong "incorrect" keeps scheduling him to re-drill something he already knows.
   // capture.mjs is the SOLE WRITER of reps_log, so supersession is its definition,
@@ -981,6 +986,13 @@ function selftest() {
       g1.gate.have === 1 && g1.gate.open === true && g1.gate.line === "1/1 cards" && g1.gate.withheld.length === 0);
   }
 
+  // S10 back-fill ruling: this organ's OWN guard skips a samjhao-era ungraded row
+  // (confidence:null never becomes a Rating), and the skip is COUNTED by the
+  // owner's shared counter so the recompute line can say it.
+  assert("S10 ungraded: a confidence:null samjhao-era rep never enters scheduling (validRep skips it) and ungradedSplit counts it",
+    (() => { const ug = { ts: "2026-08-22T03:00:00Z", surface: "samjhao", track: "concept", concept: "tokenization", axis: "a", question: "q", confidence: null, confidence_source: "unrecorded-samjhao-era", correct: true };
+      return validRep(ug) === false && ungradedSplit([ug]).ungraded.length === 1 && compute([ug], new Date(2026, 7, 22), CFG, f).cards.total_cards === 0; })());
+
   const passed = checks.every(([, ok]) => ok);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -994,11 +1006,16 @@ function main() {
   if (mode === "selftest") { process.exit(selftest() ? 0 : 1); }
 
   const reps = [...capsuleSeedReps(), ...loadReps(REPS_LOG)];   // the capsule floor + his live reps, one card per concept
+  // S10 back-fill ruling: samjhao-era rows carry confidence:null BY DESIGN; this
+  // organ's own validRep already skips them (loadReps filters BEFORE this line,
+  // which is why the count must come from the RAW ledger) — the ruling's addendum
+  // is that the skip is SAID, never silent, via capture's ONE shared counter.
+  const ungradedN = ungradedSplit(rawLedgerRows(REPS_LOG)).ungraded.length;
   const f = fsrs(generatorParameters({ request_retention: CFG.request_retention, enable_fuzz: false }));
   const { cards, fsrsStore } = compute(reps, new Date(), CFG, f);
   writeAtomic(CARDS, cards);
   writeAtomic(STORE, fsrsStore);
-  console.log(`fsrs: ${cards.status} (${cards.gate.line}) — ${cards.total_cards} cards · due_today ${cards.due_today} · overdue ${cards.overdue} · hardest [${cards.hardest_due.join(", ") || "-"}] · ${cards.collapse.line} · ${cards.evidence.line}  →  ${CARDS}`);
+  console.log(`fsrs: ${cards.status} (${cards.gate.line}) — ${cards.total_cards} cards · due_today ${cards.due_today} · overdue ${cards.overdue} · hardest [${cards.hardest_due.join(", ") || "-"}] · ${cards.collapse.line} · ${cards.evidence.line}${ungradedN ? ` · ${ungradedLine(ungradedN)}` : ""}  →  ${CARDS}`);
   process.exit(0);
 }
 
