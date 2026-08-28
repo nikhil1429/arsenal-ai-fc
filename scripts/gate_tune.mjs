@@ -50,9 +50,20 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync, mkdirSync, appendFileSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { rowOf } from "./registry.mjs";   // S10 — the mutation target is a ROW, never this organ's own literal
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = process.env.ARSENAL_GATETUNE_STATE_DIR || join(__dirname, "..", "dressing-room", "state");
+// S10 migration #3 (mutation_subject row #2): same mechanism as bootroom's row #1,
+// second instance — the twin-copy signature (two files citing each other's
+// allowlist) dies here. Absent row = refuse loudly, never a silent default.
+const MUTATION_TARGET = (() => {
+  const r = rowOf("mechanisms", "mutation:thalamus_config.tiers");
+  if (!r || r.schema_owner !== "gate_tune.mjs" || !r.target) {
+    throw new Error("gate_tune: registry row mutation:thalamus_config.tiers is absent/foreign/target-less — seed it before this owner applies anything");
+  }
+  return r.target;
+})();
 const CONFIG = () => join(STATE_DIR, "thalamus_config.json");
 const LEDGER = () => join(STATE_DIR, "gate_tune_ledger.jsonl");
 const SALIENCE = () => join(STATE_DIR, "salience_ledger.jsonl");
@@ -78,7 +89,7 @@ export function validateProposal(p) {
   for (const k of ["id", "target", "diff", "evidence", "predicted_effect", "metric", "review_after_days", "revert_diff"]) {
     if (p[k] == null) errs.push(`missing ${k}`);
   }
-  if (p.target && p.target !== "thalamus_config.json → tiers") errs.push(`target must be "thalamus_config.json → tiers" (got "${p.target}") — this owner applies NOTHING else`);
+  if (p.target && p.target !== MUTATION_TARGET) errs.push(`target must be "${MUTATION_TARGET}" (got "${p.target}") — this owner applies NOTHING else`);
   if (p.diff && (!p.diff.old || !p.diff.new)) errs.push("diff needs old AND new");
   if (p.revert_diff && !p.revert_diff.new) errs.push("revert_diff needs new");
   if (p.metric && (!p.metric.name || !Number.isFinite(p.metric.min_events) || !Number.isFinite(p.metric.window_days) || !Array.isArray(p.metric.band))) {
