@@ -2964,10 +2964,19 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`S7` · BUILD · GATE C — and THE RULER PRICES IT FIRST (the
-                                   1215 law; the sign-off ruling says S7 is priced at S6-F's
-                                   close, which is now). MODEL: Opus 5 · effort max.
-                                   S7 does not open on the manifest with no pricing round-trip.**
+  ▶ NEXT SESSION ............... **`S7` · BUILD · GATE C. MODEL: Opus 5 · effort max.
+                                   ✔ PRICED BY THE RULER at S6-F's close (28 Aug, the 1215 law):
+                                   BUILD 25 · PROOF 10 · HANDOFF 5 — inside the row's ruled 40.
+                                   Scope = the row as written (the DECLARED consumers table in
+                                   the S6 row-shape, owned by the gate; verdicts judge by
+                                   declared consumer; PROOF = the six gate-card class re-run
+                                   with verdicts changing for the RIGHT reason; ratchet: no
+                                   lane runs without a declared consumer). Scope growth
+                                   escalates, never stretches.
+                                   ✔ F-02's class-size question is RULED OUT of S7 — it needs
+                                   real dataflow, which is S11-family instrumentation; the
+                                   atlas stays a LOWER BOUND, the direction that keeps every
+                                   drawn edge true.**
                                    ⭐ **THE BRAINSTORM-FIRST LAW binds from here** (his word,
                                    28 Aug, standing, session-agnostic): a rung grown from a
                                    brainstorm-class escalation may not open its build before the
