@@ -35,6 +35,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { ece } from "./calibration.mjs";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
+import { subjectsOf } from "./registry.mjs";      // S10 — trust subjects are ROWS now, never this organ's implied scope
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -616,6 +617,14 @@ async function main() {
   const dateArg = argv.map(a => (/^--date=(\d{4}-\d{2}-\d{2})$/.exec(a) || [])[1]).find(Boolean) || null;
   const today = dateArg || ledgerDate(now);
   const slip = readLines(SLIP);
+  // S10 migration #4 (trust_subject rows): this mechanism earns trust ONLY for
+  // subject classes its registry row declares. A new class (an organ's verdicts,
+  // a sensor's claims) is a ROW ADD — hit_rate→no_look then generalizes by row,
+  // never by copying this organ. Undeclared source = refuse loudly.
+  const TRUST_SUBJECTS = subjectsOf("trust_subjects");
+  if (!TRUST_SUBJECTS.includes("predictions.jsonl")) {
+    throw new Error(`scorer: predictions.jsonl is not a declared trust subject (registry row "trust_subjects" carries: ${TRUST_SUBJECTS.join(", ") || "nothing"}) — a mechanism may not process an undeclared subject`);
+  }
   const preds = readLines(join(STATE_DIR, "predictions.jsonl"));
   const reps = supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl")));
   const repsByDate = {};

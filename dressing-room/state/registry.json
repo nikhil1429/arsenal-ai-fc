@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:45:29.515Z",
+ "updated_at": "2026-08-28T19:46:43.997Z",
  "tables": {
   "mechanisms": [
    {
@@ -34,6 +34,17 @@
     "notes": "mutation_subject row #2 — same mechanism as row #1, second instance; the twin-copy signature dies here",
     "updated_at": "2026-08-28T19:45:29.512Z",
     "added_at": "2026-08-28T19:45:29.512Z"
+   },
+   {
+    "subject": "trust_subjects",
+    "schema_owner": "scorer.mjs",
+    "witness": "scorer.mjs — the mechanism serves markets/predictions only (S10 migration #4; §9 SHAPE 1 row 4)",
+    "subjects": [
+     "predictions.jsonl"
+    ],
+    "notes": "hit_rate -> no_look generalizes BY ROW: a new trust-earning subject class is a ROW ADD; the no-look thresholds stay the owner's config",
+    "updated_at": "2026-08-28T19:46:43.992Z",
+    "added_at": "2026-08-28T19:46:43.992Z"
    }
   ]
  }
