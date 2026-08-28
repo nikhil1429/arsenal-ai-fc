@@ -3039,12 +3039,22 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **THE RULER'S CALL — S10-R's seven findings need routing before
-                                   any rung opens. `S10-F` (the repair rung) does NOT exist until
-                                   the architect prices it; if he waives it, the router goes to
-                                   `S11` · BUILD · STALENESS / KEYS / CRASH (Opus 5 · effort max,
-                                   ceiling 40). NOTHING in S10-R is blocking — the verdict is
-                                   SOUND-WITH-FINDINGS and the registry stands.
+  ▶ NEXT SESSION ............... **`S10-F` · REPAIR (ruled + priced 29 Aug): Opus 5 · effort max ·
+                                   BUILD 10 · PROOF 6 · HANDOFF 5 (ceiling 21). SCOPE = exactly four
+                                   fixes + one fold, RULED in
+                                   arsenal-audit-artifacts\queue\RULING__2026-08-29_s10r-signoff.md:
+                                   F-1 redRows covers EVERY table · F-2 brain_ledger row
+                                   (schema_owner+appenders[], many-one) + night_coach eaters as a
+                                   SET · F-4 emit-contract RATCHET (adding a row REQUIRES a `ruling`
+                                   field naming its queue RULING file, else upsert REFUSES) · F-7
+                                   collector labels 14 laws vs 59 ruling-pointers, "73 laws" wording
+                                   dies · O-1 fold (RESUME's task count → live-read command).
+                                   FORBIDDEN: anything beyond these; F-3→S12, F-5 accepted cost,
+                                   F-6→S11 (its row gains the line). Each fix re-runs the S10-R
+                                   probe that found it — RED first, GREEN after. Suite baseline is
+                                   spoken as "119/2 reproducible, not stable (F-6)".
+                                   Then S11 · Opus max · ceiling 40.
+                                   S10-R itself: ☑ SIGNED (verdict SOUND-WITH-FINDINGS accepted).
                                    ⛑ TWO THINGS A NEXT SESSION MUST NOT RE-DERIVE:
                                    (1) the close's `npm test 119/2` is REPRODUCIBLE BUT NOT
                                    STABLE — S10-R measured 118/3 twice-differently at the SAME
