@@ -62,6 +62,7 @@ import { join, dirname, basename, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { subjectsOf } from "./registry.mjs";   // S10 #9 — the claim-carrying file kinds are ROWS now
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -339,6 +340,11 @@ export function measure(opts = {}) {
 // reports false GREEN on 3 of 79 organs.
 export function docClaims() {
   const docs = [];
+  // S10 migration #9: WHICH file kinds carry checkable claims is a REGISTRY ROW
+  // (doc_claim_extensions) — .ps1/.cmd/skills join by ROW ADD, never by editing
+  // this walker (the shape: "does this cited path / command still exist?" is
+  // general; the .md-only nailing was the ceiling).
+  const DOC_EXTS = subjectsOf("doc_claim_extensions");
   const walk = (d, depth) => {
     if (depth > 3) return;
     for (const e of readdirSync(d, { withFileTypes: true })) {
@@ -349,7 +355,7 @@ export function docClaims() {
       if (["node_modules", ".git", "brain_out", "worktrees"].includes(e.name)) continue;
       const p = join(d, e.name);
       if (e.isDirectory()) walk(p, depth + 1);
-      else if (e.name.endsWith(".md") && e.name !== "ARSENAL_FC_FULL_REPO_BUNDLE.md") docs.push(p);
+      else if (DOC_EXTS.some((x) => e.name.endsWith(x)) && e.name !== "ARSENAL_FC_FULL_REPO_BUNDLE.md") docs.push(p);
     }
   };
   walk(ROOT, 0);

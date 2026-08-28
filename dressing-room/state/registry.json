@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:51:59.287Z",
+ "updated_at": "2026-08-28T19:52:22.951Z",
  "tables": {
   "mechanisms": [
    {
@@ -68,6 +68,17 @@
     "notes": "S10 migration #6 — slot-awareness: the sheet's producer fires at 09:15; before that a missing team_sheet.md is EXPECTED, not a weld-broken RED (outwork_audit reads slotPassed, never re-implements)",
     "updated_at": "2026-08-28T19:49:42.399Z",
     "added_at": "2026-08-28T19:49:42.399Z"
+   },
+   {
+    "subject": "doc_claim_extensions",
+    "schema_owner": "audit.mjs",
+    "witness": "audit.mjs:352 — the .md-only nailing (S10 migration #9)",
+    "subjects": [
+     ".md"
+    ],
+    "notes": "docClaims asks: does this cited path / command still exist? — general shape; .ps1/.cmd/skills join BY ROW when their claim grammar is defined (grep audit.mjs for the .md claim regexes first)",
+    "updated_at": "2026-08-28T19:52:22.948Z",
+    "added_at": "2026-08-28T19:52:22.948Z"
    }
   ],
   "sandbox_subjects": [
