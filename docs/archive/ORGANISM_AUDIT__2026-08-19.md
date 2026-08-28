@@ -2947,6 +2947,32 @@ STATUS (update this block before any session stops — this is the handoff)
                                    (Opus 5 · max; the RULER prices it first — the 1215 law). On
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
+
+  ▶ NEXT SESSION ............... **`S6-F` — THE EIGHT REPAIRS. HIS HAAN IS GIVEN (28 Aug —
+                                   "yes, let's implement it"; queue\RULING__2026-08-28_his-haan+
+                                   brainstorm-law.md): the verified S6 + this amendment list is
+                                   APPROVED; the BUILD PHASE IS LIVE. MODEL: Opus 5 · effort
+                                   max · BUILD 10 · PROOF 6 · HANDOFF 5 (ruler-written,
+                                   sign-off ruling). SCOPE = exactly the eight items the S6-R
+                                   verdict's inheritance list names (F-01..F-07 + L-01), every
+                                   fix already specified — no design freedom; spec edits are
+                                   VERSIONED v1.1 under the hash-before-edit law; the
+                                   SELF-HEALING POSTURE block (his fix-and-tell-me law) joins
+                                   the spec in the same act. FORBIDDEN: anything beyond the
+                                   eight · any re-enable · Gemini. THEN S7 · BUILD · GATE C
+                                   (the ruler prices it at S6-F's close).**
+                                   ⭐ **THE BRAINSTORM-FIRST LAW (his word, 28 Aug, standing,
+                                   session-agnostic):** a rung grown from a brainstorm-class
+                                   escalation may not open its build before the architect holds
+                                   that brainstorm WITH HIM. The flag lives on the rung's row.
+                                   The set (carried in the handoff): note-taking/Q-14 ·
+                                   floor→ceiling remainder Q-2/Q-15 · behavioural retest Q-18 ·
+                                   cross-topic carrier Q-4 · sensors/fitness Q-20/22/23 · the
+                                   after-freeze ceiling list (its home: the OVERHAUL plan doc,
+                                   docs/archive/ORGANISM_OVERHAUL__2026-08-18.md, section 19
+                                   there — not a section of THIS order).
+                                   **S10's SHAPE-6/notes surface is
+                                   BRAINSTORM-GATED: note-taking** — S10 stops there for him.
                                    ⛑ carried one-liners for HIM at this close: ①
                                    `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
                                    "resume 28 Aug 2026" (kal) and nothing fires it — his call
