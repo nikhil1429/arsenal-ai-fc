@@ -112,7 +112,7 @@ export const WAIVER = (rule) => new RegExp("law-waiver:" + rule + "\\b");
 export const BASELINE = {
   "owners-only-state-write": 0,
   "law-m-literal-model": 1,
-  "jugad-literal-subject-list": 101,   // S10 ratchet (a2): 102 −1 = shadow.mjs:47 TYPES → registry row (#1)
+  "jugad-literal-subject-list": 100,   // S10 ratchet (a2): 102 −1 shadow TYPES (#1) −1 tasks KINDS (#5; STATES stays — a plain state enum is not a jugad, the rule's own note)
   "trailing-n-slice": 7,
   "bare-catch": 38,
   depcruise_errors: 7,

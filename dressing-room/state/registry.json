@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:46:43.997Z",
+ "updated_at": "2026-08-28T19:47:55.608Z",
  "tables": {
   "mechanisms": [
    {
@@ -45,6 +45,18 @@
     "notes": "hit_rate -> no_look generalizes BY ROW: a new trust-earning subject class is a ROW ADD; the no-look thresholds stay the owner's config",
     "updated_at": "2026-08-28T19:46:43.992Z",
     "added_at": "2026-08-28T19:46:43.992Z"
+   },
+   {
+    "subject": "task_kinds",
+    "schema_owner": "tasks.mjs",
+    "witness": "tasks.mjs:62 — the KINDS literal (S10 migration #5)",
+    "subjects": [
+     "job",
+     "samjhao"
+    ],
+    "notes": "durable idempotent execution generalizes BY ROW; a kind exists only with a RUNNER in tasks.mjs (bite at tasks.mjs selftest) or as declared INTERACTIVE. The note-generation idempotency class (his notes-created-7-times pain) rides THIS substrate: every kind keys its ask (idempotencyKey + TTL window) so the same ask REPLAYS instead of re-running",
+    "updated_at": "2026-08-28T19:47:55.605Z",
+    "added_at": "2026-08-28T19:47:55.605Z"
    }
   ]
  }

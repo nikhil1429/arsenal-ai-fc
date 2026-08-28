@@ -52,6 +52,7 @@ import { tmpdir } from "node:os";
 import { spawnSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { subjectsOf } from "./registry.mjs";   // S10 — task kinds are ROWS now, never literals
 
 const SELF = fileURLToPath(import.meta.url);
 const __dirname = dirname(SELF);
@@ -59,7 +60,10 @@ const ROOT = join(__dirname, "..");
 const STATE_DIR = join(ROOT, "dressing-room", "state");
 export const TASKS_LEDGER = process.env.ARSENAL_TASKS_LEDGER || join(STATE_DIR, "tasks.jsonl");
 
-export const KINDS = ["job", "samjhao"];                        // a kind exists only with a RUNNER, or as a declared INTERACTIVE kind
+// S10 migration #5: the kind list is a REGISTRY ROW (task_kinds) — a new durable-
+// execution kind is a ROW ADD + a RUNNER below, never a copy of this organ. The
+// selftest bites the invariant both ways: every declared kind has a runner.
+export const KINDS = subjectsOf("task_kinds");                  // a kind exists only with a RUNNER, or as a declared INTERACTIVE kind
 export const STATES = ["queued", "running", "done", "failed"];
 export const LEGAL = { claim: ["queued"], progress: ["running"], finish: ["running"], fail: ["queued", "running"] };
 const DEFAULT_TTL_H = 24;                                       // the idempotency window: the same ask inside it is a replay
@@ -176,6 +180,7 @@ export function create(spec = {}, deps = {}) {
   const kind = String(spec.kind || "").trim().toLowerCase();
   const subject = clip(spec.subject, 300);
   if (!KINDS.includes(kind)) return { ok: false, why: `unknown kind "${spec.kind}" (${KINDS.join("|")}) — a kind exists only with a runner` };
+  if (!RUNNERS[kind] || (!RUNNERS[kind].organ && RUNNERS[kind].interactive !== true)) return { ok: false, why: `kind "${kind}" is DECLARED in the registry row task_kinds but has NO RUNNER here — build the runner before adding the row (a declared-but-unbuilt kind must refuse, never crash)` };
   if (!subject) return { ok: false, why: `${kind} needs --subject (what the work is on)` };
   const args = spec.args && typeof spec.args === "object" ? spec.args : {};
   const ttlH = Number.isFinite(Number(spec.ttlH)) && Number(spec.ttlH) > 0 ? Number(spec.ttlH) : DEFAULT_TTL_H;
