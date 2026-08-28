@@ -177,7 +177,9 @@ export function redRows(path = REGISTRY_PATH) {
   const reds = [];
   for (const r of laneRows(path)) {
     const declared = Array.isArray(r.consumers) ? r.consumers : [];
-    if (!declared.length && !r.retired) reds.push({ table: "lanes", subject: r.subject, why: "consumers UNKNOWN — a missing consumer is a RED row demanding create-or-fix (R1), never a silent absence" });
+    // consumer_retired = the lane DECLARES nobody may eat it (gate's haiku_pulse
+    // shape) — that is a declaration, not an absence, so it is not born-red.
+    if (!declared.length && !r.retired && !r.consumer_retired) reds.push({ table: "lanes", subject: r.subject, why: "consumers UNKNOWN — a missing consumer is a RED row demanding create-or-fix (R1), never a silent absence" });
   }
   for (const r of tableRows("self_repair", path)) {
     if (r && !r.retired && (r.reversible !== true || !r.report_anchor)) reds.push({ table: "self_repair", subject: r.subject, why: "not auto-repair-eligible: reversibility and a report anchor he already hits must be DECLARED (spec §13)" });

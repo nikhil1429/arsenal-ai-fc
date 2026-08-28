@@ -46,6 +46,7 @@
 // ============================================================================
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { laneRows as registryLaneRows } from "./registry.mjs";   // S10 FOLD — the consumer map's rows live in the registry proper
 
 // ── DEFAULTS — three optional fields per job; absent = these (§5.3: no config
 // edit is required to start) ─────────────────────────────────────────────────
@@ -125,10 +126,29 @@ export const CONSUMPTION_KINDS = Object.freeze(["spoken", "sat", "briefed", "car
 //   copied. S10 folds these rows into the registry proper as `right_consumer`; S7 never waits.
 export const CONSUMER_KINDS = Object.freeze(["him", "organ", "job"]);
 
-// Rows in the S6 core-row shape (docs/archive/REGISTRY_SPEC__2026-08-27.md §1), carrying the
-// fields a consumer declaration needs. `why` is the prose that lived in outbox.LANES_NOT_IN_CONFIG
-// and is preserved to the byte; the selftest asserts `names` and `why` can never drift apart.
-export const LANE_CONSUMERS = Object.freeze({
+// S10 FOLD: the rows below MOVED to the registry proper (registry.json `lanes`
+// table — consumers as a SET, each with its own read-stamp, and a reach policy,
+// per the pre-open ruling R1; every policy seeded "any" = the measured semantics,
+// so no verdict moved). This export is now a DERIVED view over the registry —
+// same shape, same keys, why-prose byte-preserved — exactly as this table itself
+// was outbox's list moved here at S7. The literal object below is FROZEN as the
+// S7 layer (L9) and doubles as the drift-lock fixture: the selftest asserts the
+// registry-derived view and this frozen layer can never disagree.
+function laneConsumersFromRegistry() {
+  const rows = registryLaneRows();
+  if (!rows.length) throw new Error("gate: the registry lanes table is EMPTY/unreachable — the consumer map cannot be derived; seed registry.json (S10) before any lane is judged");
+  return Object.freeze(Object.fromEntries(rows.map((r) => [r.subject, Object.freeze({
+    subject: r.subject, schema_owner: r.schema_owner,
+    right_consumer: Object.freeze({
+      kind: r.consumer_kind || ((r.consumers || []).some((c) => c && c.kind === "him") ? "him" : "organ"),
+      names: Object.freeze((r.consumers || []).filter((c) => c && c.name).map((c) => c.name)),
+      ...(r.consumer_retired ? { retired: true } : {}),
+    }),
+    witness: r.witness, why: r.why,
+  })])));
+}
+export const LANE_CONSUMERS = laneConsumersFromRegistry();
+export const LANE_CONSUMERS_S7_LAYER = Object.freeze({
   dmn_rollout:          { subject: "dmn_rollout",          schema_owner: "dmn.mjs",           right_consumer: { kind: "organ", names: ["dmn.mjs", "physio.mjs", "council.mjs"] }, witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds dmn.mjs / physio.mjs / council.mjs — the default-mode rollout, never a file he opens" },
   dmn_counter:          { subject: "dmn_counter",          schema_owner: "dmn.mjs",           right_consumer: { kind: "organ", names: ["dmn.mjs", "council.mjs"] },               witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds dmn.mjs / council.mjs — the counter behind the rollout" },
   ns_probe_bank:        { subject: "ns_probe_bank",        schema_owner: "nightshift.mjs",    right_consumer: { kind: "organ", names: ["nightshift.mjs", "dugout.mjs"] },          witness: "scripts/nightshift.mjs NS_GATE.ns_probe_bank.surface",      why: "feeds nightshift.mjs / dugout.mjs — he meets it AS a scrimmage, and dugout stamps its consumption" },
@@ -587,6 +607,8 @@ function selftest() {
     }));
   assert("S7 TABLE — it holds ONLY lanes that declare no surface of their own (it is outbox's off-road CONSUMER MAP, moved — never a second copy of brain_config's 34 surfaces)",
     Object.keys(LANE_CONSUMERS).length === 15 && !Object.keys(LANE_CONSUMERS).includes("diary") && !Object.keys(LANE_CONSUMERS).includes("night_coach"));
+  assert("S10 FOLD — the registry-derived view and the frozen S7 layer CANNOT DISAGREE (one copy: the rows moved to registry.json, this table derives, the layer is the drift-lock fixture)",
+    JSON.stringify(LANE_CONSUMERS) === JSON.stringify(LANE_CONSUMERS_S7_LAYER));
 
   // the derivation — a lane's OWN declaration answers first
   assert("S7 DERIVE — human_file / sheet / media ⇒ HIM; job_input ⇒ its downstream JOBS; code ⇒ the ORGAN the surface itself points at",

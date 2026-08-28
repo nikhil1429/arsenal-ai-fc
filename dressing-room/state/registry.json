@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T20:00:59.786Z",
+ "updated_at": "2026-08-28T20:02:36.968Z",
  "tables": {
   "mechanisms": [
    {
@@ -270,6 +270,257 @@
     "notes": "S10 migration #8 — INTENT #4 real build: critique-own-output -> rewrite next prompt, now ROW #1 of the self_repair table; the fix-and-tell-me policy (spec 13) generalizes across THIS table, and eligibility (reversible + report_anchor declared) is enforced by registry redRows",
     "updated_at": "2026-08-28T19:51:59.285Z",
     "added_at": "2026-08-28T19:51:59.285Z"
+   }
+  ],
+  "lanes": [
+   {
+    "subject": "dmn_rollout",
+    "schema_owner": "dmn.mjs",
+    "witness": "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)",
+    "why": "feeds dmn.mjs / physio.mjs / council.mjs — the default-mode rollout, never a file he opens",
+    "consumers": [
+     {
+      "name": "dmn.mjs"
+     },
+     {
+      "name": "physio.mjs"
+     },
+     {
+      "name": "council.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.886Z",
+    "added_at": "2026-08-28T20:02:36.886Z"
+   },
+   {
+    "subject": "dmn_counter",
+    "schema_owner": "dmn.mjs",
+    "witness": "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)",
+    "why": "feeds dmn.mjs / council.mjs — the counter behind the rollout",
+    "consumers": [
+     {
+      "name": "dmn.mjs"
+     },
+     {
+      "name": "council.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.893Z",
+    "added_at": "2026-08-28T20:02:36.893Z"
+   },
+   {
+    "subject": "ns_probe_bank",
+    "schema_owner": "nightshift.mjs",
+    "witness": "scripts/nightshift.mjs NS_GATE.ns_probe_bank.surface",
+    "why": "feeds nightshift.mjs / dugout.mjs — he meets it AS a scrimmage, and dugout stamps its consumption",
+    "consumers": [
+     {
+      "name": "nightshift.mjs"
+     },
+     {
+      "name": "dugout.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.899Z",
+    "added_at": "2026-08-28T20:02:36.899Z"
+   },
+   {
+    "subject": "ns_distractors",
+    "schema_owner": "nightshift.mjs",
+    "witness": "scripts/nightshift.mjs NS_GATE.ns_distractors.surface",
+    "why": "feeds nightshift.mjs / dugout.mjs — he meets it inside get_rejirah, which stamps its consumption",
+    "consumers": [
+     {
+      "name": "nightshift.mjs"
+     },
+     {
+      "name": "dugout.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.904Z",
+    "added_at": "2026-08-28T20:02:36.904Z"
+   },
+   {
+    "subject": "ns_pre_answers",
+    "schema_owner": "nightshift.mjs",
+    "witness": "consumption.jsonl — 4 rows stamped by thalamus, newest 2026-08-26",
+    "why": "feeds thalamus.mjs / dugout.mjs — pre-answers for the mouth, never read as a file",
+    "consumers": [
+     {
+      "name": "thalamus.mjs"
+     },
+     {
+      "name": "dugout.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.909Z",
+    "added_at": "2026-08-28T20:02:36.909Z"
+   },
+   {
+    "subject": "ns_grade_probes",
+    "schema_owner": "nightshift.mjs",
+    "witness": "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)",
+    "why": "feeds nightshift.mjs — the shift grades its own probes",
+    "consumers": [
+     {
+      "name": "nightshift.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.913Z",
+    "added_at": "2026-08-28T20:02:36.913Z"
+   },
+   {
+    "subject": "cortex_wake",
+    "schema_owner": "cortex.mjs",
+    "witness": "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)",
+    "why": "feeds cortex.mjs / council.mjs — a wake is machinery, not a message",
+    "consumers": [
+     {
+      "name": "cortex.mjs"
+     },
+     {
+      "name": "council.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.919Z",
+    "added_at": "2026-08-28T20:02:36.919Z"
+   },
+   {
+    "subject": "cortex_consolidate",
+    "schema_owner": "cortex.mjs",
+    "witness": "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)",
+    "why": "feeds cortex.mjs / nightshift.mjs — consolidation is internal",
+    "consumers": [
+     {
+      "name": "cortex.mjs"
+     },
+     {
+      "name": "nightshift.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.929Z",
+    "added_at": "2026-08-28T20:02:36.929Z"
+   },
+   {
+    "subject": "thalamus_adjudicator",
+    "schema_owner": "thalamus.mjs",
+    "witness": "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)",
+    "why": "feeds thalamus.mjs — the bus adjudicates its own signals",
+    "consumers": [
+     {
+      "name": "thalamus.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.937Z",
+    "added_at": "2026-08-28T20:02:36.937Z"
+   },
+   {
+    "subject": "council_chair",
+    "schema_owner": "council.mjs",
+    "witness": "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)",
+    "why": "feeds council.mjs — the council's own chair turn",
+    "consumers": [
+     {
+      "name": "council.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.942Z",
+    "added_at": "2026-08-28T20:02:36.942Z"
+   },
+   {
+    "subject": "gaffer_judge",
+    "schema_owner": "gaffer_brain.mjs",
+    "witness": "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)",
+    "why": "feeds gaffer_brain.mjs — it reaches him AS the conversation, which is a surface the relay does not own",
+    "consumers": [
+     {
+      "name": "gaffer_brain.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.948Z",
+    "added_at": "2026-08-28T20:02:36.948Z"
+   },
+   {
+    "subject": "gaffer_verify",
+    "schema_owner": "gaffer_brain.mjs",
+    "witness": "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)",
+    "why": "feeds gaffer_brain.mjs / scout.mjs — same: the Gaffer's own reasoning inside a sitting",
+    "consumers": [
+     {
+      "name": "gaffer_brain.mjs"
+     },
+     {
+      "name": "scout.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.952Z",
+    "added_at": "2026-08-28T20:02:36.952Z"
+   },
+   {
+    "subject": "mission_m03",
+    "schema_owner": "scout.mjs",
+    "witness": "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)",
+    "why": "feeds scout.mjs — the mission lane carries its own returns and its own cards",
+    "consumers": [
+     {
+      "name": "scout.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.958Z",
+    "added_at": "2026-08-28T20:02:36.958Z"
+   },
+   {
+    "subject": "haiku_pulse",
+    "schema_owner": "brain.mjs",
+    "witness": "commit 4f94805",
+    "why": "RETIRED on purpose (commit 4f94805) — 98% of 32,480 tok/pulse was boot tax",
+    "consumers": [],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "consumer_retired": true,
+    "updated_at": "2026-08-28T20:02:36.963Z",
+    "added_at": "2026-08-28T20:02:36.963Z"
+   },
+   {
+    "subject": "selfknowledge",
+    "schema_owner": "selfknowledge.mjs",
+    "witness": "scripts/selfknowledge.mjs regenIfChanged surface",
+    "why": "feeds dugout.mjs get_organism, which stamps its consumption directly",
+    "consumers": [
+     {
+      "name": "dugout.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-28T20:02:36.967Z",
+    "added_at": "2026-08-28T20:02:36.967Z"
    }
   ]
  }
