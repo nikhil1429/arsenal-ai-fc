@@ -1470,6 +1470,58 @@ async function selftest() {
       (() => { const e = stripDayKeyEnv({ ...process.env, ARSENAL_DAY_KEY: "2026-08-11|x", ARSENAL_SCHEDULED: "1" }); return !("ARSENAL_DAY_KEY" in e) && !("ARSENAL_SCHEDULED" in e); })());
   }
 
+  // ---- S9 · THE FOLD OPENS BY ITSELF (28 Aug 2026) --------------------------
+  // The audit's finding, in one line: this chain is a single point of failure for
+  // 16 organs and had no fallback, while the brain's identical `folded_into`
+  // pattern has one. These checks pin the missing half.
+  {
+    const CH = [{ id: "a", at: "07:00", args: ["scripts/a.mjs"] }, { id: "b", at: "07:02", args: ["scripts/b.mjs", "recompute"] }, { id: "c", at: "07:04", arm: "sig" }];
+    const DAY = "2026-08-28";
+
+    // (1) NO REPORT ⇒ everything is OPEN. The chain has never run; nothing is covered.
+    const none = foldVerdicts(CH, null, { day: DAY });
+    ok("S9 · FOLD — no conductor report at all ⇒ EVERY step is OPEN, and the reason says so rather than reporting health",
+      none.every((v) => v.state === "OPEN") && /never run here/.test(none[0].why));
+
+    // (2) A STALE REPORT IS NOT A PASS. This is the recency compare Shape 4 exists to
+    // force — yesterday's green chain does not cover today, and collapsing "missing"
+    // and "stale" into "fine" is precisely how a dead chain looks healthy for days.
+    const stale = foldVerdicts(CH, { day_key: "2026-08-19", steps: CH.map((s) => ({ id: s.id, ok: true })) }, { day: DAY });
+    ok("S9 · FOLD — a report for ANOTHER day covers nothing: stale ⇒ OPEN, and the line names both days",
+      stale.every((v) => v.state === "OPEN") && /2026-08-19, not 2026-08-28/.test(stale[0].why));
+
+    // (3) THE MIXED CASE — the real one. A chain that ran, did one step, failed one,
+    // and died before the third. Each step gets its OWN verdict; that is the entire
+    // point of a per-step fallback over a per-chain one.
+    const mixed = foldVerdicts(CH, { day_key: DAY, steps: [{ id: "a", ok: true }, { id: "b", ok: false, error: "oura token expired" }] }, { day: DAY });
+    ok("S9 · FOLD — per-STEP verdicts: ok ⇒ COVERED · failed ⇒ OPEN with its error · never-reached ⇒ OPEN and says it died upstream",
+      mixed[0].state === "COVERED"
+      && mixed[1].state === "OPEN" && /RAN and FAILED — oura token expired/.test(mixed[1].why)
+      && mixed[2].state === "OPEN" && /died upstream/.test(mixed[2].why));
+
+    // (4) THE OWED COMMAND IS THE STEP'S OWN. A fallback that runs something other
+    // than what the fold runs is a second implementation waiting to drift, so it is
+    // DERIVED from the step — including the arm form, which is not a node command.
+    ok("S9 · FOLD — the owed command is derived from the step itself (args, extra argv, and the arm form), never typed twice",
+      stepCmd(CH[0]) === "node scripts/a.mjs"
+      && stepCmd(CH[1]) === "node scripts/b.mjs recompute"
+      && stepCmd(CH[2]) === "node scripts/conductor.mjs --arm sig");
+
+    // (5) A FULLY COVERED DAY IS SILENT — it does not ask him for anything.
+    const allOk = foldVerdicts(CH, { day_key: DAY, steps: CH.map((s) => ({ id: s.id, ok: true })) }, { day: DAY });
+    ok("S9 · FOLD — a chain that ran clean leaves NOTHING owed, and the line says so without listing steps",
+      allOk.every((v) => v.state === "COVERED") && /all 3 step\(s\) COVERED/.test(foldLine(allOk))
+      && /2\/3 step\(s\) OPEN/.test(foldLine(mixed)));
+
+    // (6) ⛔ IT REPORTS, IT DOES NOT RUN. The whole rung's FORBIDDEN line, asserted
+    // off the source: `fallback` must reach no runner, no arm, no launcher.
+    const src = readFileSync(join(REPO, "scripts", "conductor.mjs"), "utf8");
+    const fb = src.slice(src.indexOf('if (mode === "fallback")'), src.indexOf("if (mode === \"plan\")"));
+    ok("S9 · FOLD — the fallback mode RUNS NOTHING: no conduct(), no runStep, no launchDetached, no arm in its whole branch",
+      fb.length > 0 && !/await conduct\(/.test(fb) && !/launchDetached\(/.test(fb) && !/armTrigger\(/.test(fb)
+      && /NOTHING WAS RUN/.test(fb));
+  }
+
   console.log(fail === 0 ? `\nALL CHECKS PASSED (${pass} passed, 0 failed)` : `\n${fail} FAILED (${pass} passed)`);
   return fail === 0;
 }
@@ -1512,9 +1564,92 @@ export function stepLine(s) {
   return `  ${mark} ${s.id.padEnd(14)} ${String(s.ms).padStart(6)}ms${s.skipped ? "  " + s.skipped : ""}${s.error ? "  " + s.error : ""}${reason ? "  " + reason : ""}${s.degraded ? "  ⚠ " + s.degraded : ""}${!s.ok && s.log ? "  → " + s.log : ""}`;
 }
 
+// ---- S9 · THE FOLD OPENS BY ITSELF (28 Aug 2026) ---------------------------
+// THE DEFECT, measured in the audit (§3-A): "ArsenalFC-Morning-Conductor is a
+// single point of failure for 16 organs and has no fallback. lastResult = 1. The
+// brain's own `folded_into` has a fallback — the fold opens by itself the night
+// the target fails — the conductor's fold does not. Same pattern, one has the
+// safety net."
+//
+// That is exactly right, and this is the missing half. Every step in MORNING and
+// EVENING is a RETIRED SCHEDULED TASK: the chain swallowed ~16 standalone rows
+// (verified — the disabled set matches the chains exactly, disabled in chain order
+// at their old five-minute stagger). Folding them was correct: the stagger WAS the
+// order, and one overslept morning collapsed into an unordered catch-up burst. But
+// a fold without a fallback converts 16 independent failures into one total one.
+//
+// NO NEW MECHANISM (§2's lesson — new subjects, never new machines). This is
+// brain.mjs's fold law, generalized, with the same two words and the same shape:
+//   COVERED ⇐ the chain ran for the day this asks about, and this step reported ok.
+//   OPEN    ⇐ the chain never ran that day (no report / stale report), or the step
+//             ran and FAILED, or the step is missing from a report that exists
+//             (it never got that far — the chain died upstream of it).
+// An OPEN step is one the fold no longer covers, so its own lane is owed a run.
+//
+// ⛔ IT REPORTS. IT RUNS NOTHING. S9 installs ownership; S12 turns things on, his
+// word per stage. `fallback` prints the owed commands; arming it to fire them is
+// S12's, and the FORBIDDEN line on this rung is explicit about waking lanes.
+export function foldVerdicts(chain, report, { day = null } = {}) {
+  const askedFor = day || (report && report.day_key) || null;
+  // A report for ANOTHER day cannot cover today — this is the recency compare the
+  // trailing-N law (Shape 4) exists to force. A missing report and a stale one are
+  // the same fact here and must not be collapsed into "fine".
+  const ranThatDay = !!report && !!report.day_key && (!askedFor || report.day_key === askedFor);
+  const byId = new Map(((report && report.steps) || []).map((s) => [s.id, s]));
+  return chain.map((step) => {
+    if (!ranThatDay) {
+      return { id: step.id, state: "OPEN", why: report ? `the chain's last report is for ${report.day_key}, not ${askedFor} — it did not run that day` : "no conductor report on disk at all — the chain has never run here", cmd: stepCmd(step) };
+    }
+    const s = byId.get(step.id);
+    if (!s) return { id: step.id, state: "OPEN", why: "the chain ran that day but never reached this step — it died upstream", cmd: stepCmd(step) };
+    if (s.ok === false) return { id: step.id, state: "OPEN", why: `the step RAN and FAILED${s.error ? ` — ${String(s.error).slice(0, 120)}` : s.skipped ? ` — ${s.skipped}` : ""}`, cmd: stepCmd(step) };
+    return { id: step.id, state: "COVERED", why: "the fold covered it — the chain ran it ok that day", cmd: stepCmd(step) };
+  });
+}
+
+// The command the step's OWN retired task used to run. Derived from the step, never
+// typed twice — a fallback that runs something different from the fold is not a
+// fallback, it is a second implementation waiting to drift.
+export function stepCmd(step) {
+  if (step.arm) return `node scripts/conductor.mjs --arm ${step.arm}`;
+  if (step.exec) return `${step.exec.cmd} ${step.exec.args.join(" ")}`;
+  return `node ${step.args.join(" ")}`;
+}
+
+export function foldLine(verdicts) {
+  const open = verdicts.filter((v) => v.state === "OPEN");
+  if (!open.length) return `conductor fallback: all ${verdicts.length} step(s) COVERED by the fold — nothing is owed`;
+  return `conductor fallback: ${open.length}/${verdicts.length} step(s) OPEN — the fold does not cover them, so their own lanes are owed a run: ${open.map((v) => v.id).join(", ")}`;
+}
+
 async function main() {
   const mode = (process.argv[2] || "morning").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
+  // S9 — the fold's fallback, READ-ONLY. `fallback` / `fallback evening`.
+  if (mode === "fallback") {
+    const which = process.argv[3] === "evening" ? "evening" : "morning";
+    const chain = which === "evening" ? EVENING : MORNING;
+    // Each report is read through its OWN statically-resolvable path. Written first
+    // as one `readFileSync(ternary)`, which made xray BLINDER by exactly one sink
+    // (conductor.mjs 42→43) — the walker could no longer say WHICH state file this
+    // organ reads, and "a gate may only get stricter" covers the analysability gates
+    // too. Two named reads cost two lines and keep the file↔organ edge visible.
+    let report = null;
+    if (which === "evening") {
+      try { report = JSON.parse(readFileSync(join(STATE_DIR, "conductor_evening.json"), "utf8")); } catch { report = null; }
+    } else {
+      try { report = JSON.parse(readFileSync(REPORT, "utf8")); } catch { report = null; }
+    }
+    // The day is resolved by the chain's OWN resolver (token → slot → clock), never
+    // by a fresh `new Date()` here: Block 6's law is that a catch-up names the day it
+    // is FOR, and a second date function is exactly how the fold and the fallback
+    // would come to disagree about which morning they are talking about.
+    const v = foldVerdicts(chain, report, { day: chainDay(which).day });
+    console.log(foldLine(v));
+    for (const row of v.filter((x) => x.state === "OPEN")) console.log(`  OPEN  ${row.id.padEnd(14)} ${row.why}\n        ↳ ${row.cmd}`);
+    console.log("conductor: NOTHING WAS RUN — this reports what the fold no longer covers. S12 arms the firing, on his word.");
+    return;
+  }
   // `--dry` USED TO LIE: it suppressed only the report while every organ ran for real
   // and the trigger was genuinely armed. A flag whose name promises "nothing happens"
   // must mean it — that is the same class of mistake as a task returning 0 after

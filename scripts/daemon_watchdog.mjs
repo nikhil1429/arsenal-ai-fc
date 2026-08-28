@@ -22,21 +22,39 @@
 //   his own hands. Its lanes already run headless via ArsenalFC-DugoutReminders
 //   and ArsenalFC-ShadowDetect (fixed in LADDER A2).
 //
-// LAWS: sole writer of daemon_watchdog.json · never kills anything (relaunch
-//   only — EADDRINUSE singletons make a double-start harmless) · resync is
+// ⛔ S9 · OWNERSHIP (28 Aug 2026) — THE ARM IS GONE. THIS ORGAN IS A REPORTER.
+//   Everything above describes what it was for nineteen days. It no longer
+//   relaunches ANYTHING. `decidePass` still decides — that decision is now read as
+//   a FINDING, and each finding carries the READING that produced it. Restarting a
+//   dead daemon belongs to the substrate S9 installs: WinSW services for the
+//   headless five, logon tasks + RestartOnFailure for the desktop two. Why it was
+//   taken away is in the findings loop in pass(), and it is not a theory — this
+//   file relaunched four daemons into a SWITCHED-OFF organism the morning it was
+//   rewritten, off a command that was trying to print usage.
+//
+// LAWS: sole writer of daemon_watchdog.json · NEVER LAUNCHES AND NEVER KILLS —
+//   it reports, and the report names the owner · resync is
 //   dispatched at most once per recovery · every decision is recorded ·
 //   every ACTION is reported off its OUTCOME, never off the decision that asked
 //   for it (11 Aug 2026 — see THE DISPATCH IS NOT THE OUTCOME below) ·
+//   every FINDING carries its WITNESS, never a bare verdict ·
 //   conductor.json is READ-ONLY here and the only cross-organ write is through
 //   an owner's own CLI (captains_call.mjs file), never into its file.
-// MODES: pass (default) · status · selftest
+// MODES: pass (default) · status · selftest · help. AN UNKNOWN MODE REFUSES —
+//   it does NOT fall through to `pass`. That fall-through is what woke four
+//   daemons on 28 Aug 2026; a supervisory organ's most destructive verb may not
+//   be what a typo selects.
 // ============================================================================
 
 import { readFileSync, writeFileSync, renameSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
-import { portOpen, launchDetached, processStartMs, processStartRead, clipStderr } from "./conductor.mjs";
+// `launchDetached` is DELIBERATELY NOT IMPORTED (S9, 28 Aug 2026). This organ is a
+// REPORTER — see the findings loop in pass(). The import's absence is the guard: a
+// future session cannot re-grow the arm by typing one line, it has to reach for the
+// door on purpose, and the lint gate names it the moment it is imported unused.
+import { portOpen, processStartMs, processStartRead, clipStderr } from "./conductor.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = join(__dirname, "..");
@@ -69,13 +87,27 @@ const localDayOf = (ts) => { const d = new Date(String(ts || "")); return Number
 // exported probe this file already uses for the STALE-BUILD read below. `match` is
 // the FULL command tail, never the bare filename, so a `context.mjs once|status`
 // invocation can never be mistaken for the resident.
+// S9 · OWNERSHIP (28 Aug 2026) — EVERY ROW DECLARES ITS OWN `surface`, and that
+// declaration is what decides how the OS owns it. This is S3's JUGAD RULE applied
+// to this rung: the order says "WinSW services for the headless five · logon tasks
+// for the desktop two", and a universal quantifier may never ship as a literal
+// subject list. So no file anywhere types out those five names — `services.mjs`
+// DERIVES both sets from this column, and its selftest refuses a row that declares
+// nothing (declare-or-die, the S7 ratchet shape).
+//
+//   surface: "headless" — session 0 can run it ⇒ it may be a WinSW SERVICE.
+//   surface: "desktop"  — it needs HIS logged-in session and dies without it ⇒ a
+//                         LOGON TASK, never a service. Session-0 isolation is not a
+//                         preference here, it is why the thing cannot work at all.
 export const DAEMONS = [
-  { name: "turnstile", port: 4111, args: ["scripts/turnstile.mjs"] },
-  { name: "cortex",    port: 4112, args: ["scripts/cortex.mjs"] },
-  { name: "thalamus",  port: 4113, args: ["scripts/thalamus.mjs"] },
-  { name: "brain",     port: 4116, args: ["scripts/brain.mjs", "daemon"] },   // :4115 is the tick LOCK; :4116 is the daemon singleton
-  { name: "sitting",   port: 4117, args: ["scripts/sitting.mjs", "daemon"] },   // Block 3 (18 Aug 2026): THE SITTING BRAIN — one mind behind every mouth; NOT excluded like the Dugout, because it is the being, not the mouth
-  { name: "context",   port: null, match: "context.mjs daemon", args: ["scripts/context.mjs", "daemon"] },
+  // turnstile READS HIS CLIPBOARD. A service in session 0 has no clipboard to read,
+  // so this can never be a service — it would install cleanly and do nothing.
+  { name: "turnstile", port: 4111, args: ["scripts/turnstile.mjs"], surface: "desktop" },
+  { name: "cortex",    port: 4112, args: ["scripts/cortex.mjs"], surface: "headless" },
+  { name: "thalamus",  port: 4113, args: ["scripts/thalamus.mjs"], surface: "headless" },
+  { name: "brain",     port: 4116, args: ["scripts/brain.mjs", "daemon"], surface: "headless" },   // :4115 is the tick LOCK; :4116 is the daemon singleton
+  { name: "sitting",   port: 4117, args: ["scripts/sitting.mjs", "daemon"], surface: "headless" },   // Block 3 (18 Aug 2026): THE SITTING BRAIN — one mind behind every mouth; NOT excluded like the Dugout, because it is the being, not the mouth
+  { name: "context",   port: null, match: "context.mjs daemon", args: ["scripts/context.mjs", "daemon"], surface: "headless" },
 ];
 
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
@@ -177,7 +209,22 @@ export function decidePass(prev, probes, nowIso) {
   // hand on setup/START_DAEMONS.vbs, which is the same lane watchman.mjs points
   // him at). No new number is invented: the window is one pass, the file's own
   // next-pass shape, already used by the resync rule and the portless confirm.
-  const attempted = (p.launched || []).map((x) => x && x.name).filter(Boolean);
+  // ⚠ S9 (28 Aug 2026) — THE STUCK LANE SURVIVES THE ARM'S REMOVAL, AND IT HAD TO.
+  // This read used to be `p.launched`, i.e. "what the previous pass DISPATCHED".
+  // With the launcher gone, `launched` is empty forever, and keying off it would
+  // have silently killed the STUCK verdict — the ONLY path in this organ that
+  // reaches HIM when a daemon stays dark. Removing the arm must not remove the
+  // escalation; under S9 the escalation matters MORE, because nothing auto-restarts
+  // any more. Caught by the 11-Aug assertions going red, which is what they are for.
+  //
+  // The predicate is the same shape, one word different — reported down last pass,
+  // still down this pass ⇒ STUCK ⇒ ONE card. `launched` is still read beside it so a
+  // PRE-S9 state file on disk (written by yesterday's build, mid-upgrade) still
+  // produces the verdict it earned, and the two lanes can never double-count a name.
+  const attempted = [...new Set([
+    ...(p.findings || []).map((x) => x && x.name),
+    ...(p.launched || []).map((x) => x && x.name),
+  ].filter(Boolean))];
   for (const name of attempted) {
     if (ports[name] === true) continue;                      // it came back — nothing to say
     if (unknown.includes(name)) continue;                    // a probe we could not take is never a verdict
@@ -251,7 +298,15 @@ export function decidePass(prev, probes, nowIso) {
       // `launched` is THIS pass's dispatch receipts — filled by pass() once the
       // launches have actually been attempted, never by the decision. `stuck` is
       // last pass's dispatches that did not take.
-      launched: [], stuck: actions.stuck.map((name) => ({ name })),
+      // S9 (28 Aug 2026): `launched` now stays EMPTY FOREVER — this organ reports and
+      // never launches. The key is kept, not deleted (L9), so every existing reader
+      // survives and reads the truth: nothing was dispatched.
+      launched: [],
+      // S9: the reporter's lane. One row per DOWN daemon, each carrying the READING
+      // that produced it (§10-D rule 5 turned on the organism's own instrument).
+      // Filled by pass(), like `launched` was — the DECISION never writes it.
+      findings: [],
+      stuck: actions.stuck.map((name) => ({ name })),
     },
     actions,
   };
@@ -668,19 +723,53 @@ async function pass(deps = {}) {
   const { state, actions } = decidePass(prev, probes, nowIso);
   const shell = deps.exec || ((a) => execFileSync(process.execPath, [join(__dirname, a[0]), ...a.slice(1)], { encoding: "utf8", timeout: 60000 }));
   const today = deps.today || localDate(deps.now || new Date());
+  // ── S9 · OWNERSHIP (28 Aug 2026) — THIS ORGAN REPORTS. IT DOES NOT LAUNCH. ──
+  //
+  // WHAT THIS LOOP USED TO BE: `launchDetached(d.args)` per DOWN daemon, with a
+  // receipt in `state.launched`. The arm is GONE. `decidePass` still decides —
+  // every assertion about `actions.launch` still holds, and the decision is now
+  // read as what it always actually was: A FINDING, i.e. "this daemon is down and
+  // something owns restarting it". The ownership itself moved to the substrate
+  // S9 installs (WinSW services for the headless five, logon tasks +
+  // RestartOnFailure for the desktop two). A supervisor that both decides AND
+  // acts is the thing that had no supervisor.
+  //
+  // WHY IT WAS TAKEN AWAY, measured the same day, in this rung's own session:
+  // an orientation `node scripts/daemon_watchdog.mjs --help` had no --help branch,
+  // fell through to this default pass, and DISPATCHED four relaunches into an
+  // organism his standing order says is SWITCHED OFF (cortex · turnstile · brain ·
+  // sitting, 14:12:21 IST). Spend was ~0 only because his OAuth happened to be
+  // expired — 17 jobs died on "Failed to authenticate". That is luck, not a guard.
+  // Record: queue/2026-08-28_s9-accidental-daemon-wake.md.
+  // The lesson is not "add a --help branch" (that is done below too, and it is the
+  // smaller half). It is that a READ-SHAPED COMMAND REACHED A LAUNCHER, and the
+  // launcher had no idea the organism was off, because its whole decision is
+  // "port closed ⇒ relaunch". A reporter cannot make that mistake in any mode.
+  //
+  // EVERY FINDING CARRIES ITS WITNESS — §10-D rule 5 ("agent findings must carry
+  // their WITNESS") applied to the organism's own instruments, not just to agents.
+  // The witness is the READING that produced the finding, stated so he can check
+  // it by hand: a port he can telnet, or the command tail he can grep the process
+  // table for. A finding without one is testimony (§9-D SHAPE 8), and this organ
+  // has already been wrong about liveness once — the timed-out probe that would
+  // have minted a second context bridge.
   for (const name of actions.launch) {
     const d = DAEMONS.find((x) => x.name === name);
-    // THE RECEIPT (11 Aug 2026 wire repair — see decidePass' header). Was:
-    //   `try { launchDetached(d.args); state.ports[`${name}_relaunched`] = true; } catch { }`
-    // Two defects in one line. The empty catch dropped every failure on the
-    // floor. And the receipt was written INTO `ports`, the liveness map — a key
-    // no organ has ever read (`grep -rn "_relaunched"` returned this line and
-    // nothing else) sitting in the one map that means "is it up", where any
-    // future reader iterating it would count `thalamus_relaunched` as a daemon.
-    // It now lands in its own lane, with the reason when it fails.
-    try { (deps.launch || launchDetached)(d.args); state.launched.push({ name, ok: true }); }
-    catch (e) { state.launched.push({ name, ok: false, error: String((e && e.message) || e).slice(0, 200) }); }
+    state.findings.push({
+      name,
+      finding: `${name} is DOWN and nothing here restarts it`,
+      witness: d.port != null
+        ? `port ${d.port} refused a TCP connect on this pass (${nowIso})`
+        : `the process table held no "${d.match}" on this pass and the previous one (${nowIso})`,
+      owner: d.port != null && d.name !== "turnstile"
+        ? "its WinSW service (S9) — if it is dead too, that is the finding to act on"
+        : "a logon task (S9) — it needs HIS desktop session, so it cannot be a service",
+      remedy_is_his: true,
+    });
   }
+  // `launched` stays on the row and stays EMPTY — L9, layering never replacing.
+  // Readers (launchLine, the state surface) keep their key; it now means what it
+  // says, which is that this organ launched nothing, because it never will again.
   // The stuck verdict is the one thing here that needs HIS hands — it rides an
   // anchor and nothing else happens. This file never kills, never escalates.
   for (const row of state.stuck) {
@@ -802,14 +891,23 @@ async function pass(deps = {}) {
 // attempted and nothing is stuck, which is the honest way to say "quiet".
 // The word is DISPATCHED, not "relaunched": a detached spawn is a dispatch, and
 // the up/down word for that daemon on the NEXT line of the log is the outcome.
+// S9 (28 Aug 2026) — THE REPORTER'S LINE. It used to announce dispatches; there are
+// none any more, so it announces FINDINGS, each with the reading behind it. The name
+// `launchLine` is kept (L9: layering, never replacing) because five surfaces call it.
+//
+// The old `launched` branch is kept too, and it is not dead weight: a state file
+// written by a PRE-S9 build can still be on disk when this reads it, and the honest
+// thing to print for that row is what that build actually did. It can never be
+// written again by this build.
 export function launchLine(s) {
-  const tried = (s && s.launched) || [], stuck = (s && s.stuck) || [];
+  const tried = (s && s.launched) || [], stuck = (s && s.stuck) || [], found = (s && s.findings) || [];
   const ok = tried.filter((x) => x.ok).map((x) => x.name);
   const threw = tried.filter((x) => !x.ok);
   const bits = [];
-  if (ok.length) bits.push(`relaunch DISPATCHED: ${ok.join(", ")} (detached via the VBS cloak — a dispatch is not an UP; the next pass's probe is the proof)`);
-  if (threw.length) bits.push(`RELAUNCH THREW: ${threw.map((x) => `${x.name} — ${x.error}`).join(" · ")}`);
-  if (stuck.length) bits.push(`STILL DOWN after last pass's relaunch: ${stuck.map((x) => x.name + (x.card_error ? " (card FAILED to file)" : "")).join(", ")} — card filed, HIS hands needed (setup/START_DAEMONS.vbs)`);
+  if (found.length) bits.push(`FINDING: ${found.map((f) => `${f.name} DOWN (witness: ${f.witness})`).join(" · ")} — this organ REPORTS, it does not relaunch; the owner is ${found.map((f) => f.owner).join(" / ")}`);
+  if (ok.length) bits.push(`relaunch DISPATCHED by a PRE-S9 build: ${ok.join(", ")} (this build dispatches nothing)`);
+  if (threw.length) bits.push(`RELAUNCH THREW (pre-S9 build): ${threw.map((x) => `${x.name} — ${x.error}`).join(" · ")}`);
+  if (stuck.length) bits.push(`STILL DOWN across two passes: ${stuck.map((x) => x.name + (x.card_error ? " (card FAILED to file)" : "")).join(", ")} — card filed, HIS hands needed (setup/START_DAEMONS.vbs)`);
   return bits.join(" · ");
 }
 
@@ -862,8 +960,50 @@ export function morningLine(mc) {
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
+// S9 (28 Aug 2026) — THE MODES ARE A CLOSED SET, AND AN UNKNOWN ONE REFUSES.
+//
+// This organ used to read `process.argv[2] || "pass"` and then test for the two
+// modes it knew. Anything else — a typo, a flag, `--help` — fell through to `pass`,
+// the most consequential verb it has. On 28 Aug 2026 an orientation `--help`
+// did exactly that and dispatched four relaunches into a switched-off organism
+// (queue/2026-08-28_s9-accidental-daemon-wake.md).
+//
+// The deeper repair is that `pass` no longer launches anything at all, so the same
+// typo today writes a state file and prints findings. This guard is the second belt:
+// A DEFAULT MAY NOT BE THE MOST DESTRUCTIVE OPTION. A bare invocation still means
+// `pass` — that is the scheduled lane's contract and every task XML depends on it —
+// but a WORD THIS FILE DOES NOT KNOW is now an error with an exit code, never a
+// guess at what was meant.
+// ONE SOURCE FOR THE MODES — the valid set and the help text are the same object.
+// Written first as a `MODES` array beside a hand-typed usage block; THE JUGAD RULE
+// (S3) flagged it, correctly: two lists of the same thing drift, and a help text
+// that lies about which verbs exist is how the `--help` fall-through stayed
+// invisible for nineteen days in the first place.
+const MODE_DOC = {
+  pass: "(default) probe → decide → REPORT findings. It does not launch.",
+  status: "read the last pass off disk, spends nothing",
+  selftest: "the organ's own proofs",
+  help: "this",
+};
+const MODES = Object.keys(MODE_DOC);
+function usage() {
+  return [
+    "daemon_watchdog — the resident daemons' REPORTER (it does not launch; S9, 28 Aug 2026)",
+    "",
+    ...MODES.map((m) => `  node scripts/daemon_watchdog.mjs ${m.padEnd(9)} # ${MODE_DOC[m]}`),
+    "",
+    "A DOWN daemon produces a FINDING with the reading behind it. Restarting it belongs",
+    "to its WinSW service (headless five) or its logon task (desktop two) — never to this file.",
+  ].join("\n");
+}
+
 async function main() {
   const mode = process.argv[2] || "pass";
+  if (!MODES.includes(mode)) {
+    console.error(`daemon_watchdog: unknown mode "${mode}" — REFUSING rather than falling through to \`pass\`.\n\n${usage()}`);
+    process.exit(2);
+  }
+  if (mode === "help") { console.log(usage()); return; }
   if (mode === "selftest") process.exit((await selftest()) ? 0 : 1);
   if (mode === "status") {
     const s = readJson(STATE());
@@ -1206,15 +1346,27 @@ async function selftest() {
     const boom = await pass({
       dry: true, cortexRow: null, prev: null, now: new Date(`${DAY}T10:00:00Z`), today: DAY, report: null,
       probe: thalDark, procProbe: () => true,
-      launch: () => { throw new Error("wscript.exe not found"); },
-      exec: () => { throw new Error("nothing may be filed on the FIRST failed dispatch — one reading is not proof"); },
+      launch: () => { throw new Error("S9 VIOLATION — the arm was reached for"); },
+      exec: () => { throw new Error("nothing may be filed on the FIRST down reading — one reading is not proof"); },
     });
-    assert("DISPATCH ≠ OUTCOME — a relaunch that THROWS is recorded WITH its reason, never swallowed by an empty catch",
-      boom.state.launched.length === 1 && boom.state.launched[0].name === "thalamus"
-      && boom.state.launched[0].ok === false && /wscript\.exe not found/.test(boom.state.launched[0].error));
-    assert("DISPATCH ≠ OUTCOME — …and the operator line says THREW; it can no longer print 'relaunched' for a launch that failed",
-      /RELAUNCH THREW: thalamus — wscript/.test(launchLine(boom.state))
-      && !/DISPATCHED: thalamus/.test(launchLine(boom.state)));
+    // ⚠ S9 (28 Aug 2026) — THE FIRST TWO ASSERTIONS OF THIS BLOCK ARE RETIRED WITH
+    // THE ARM THEY GUARDED, and they are REPLACED here rather than deleted, because
+    // a silently shorter selftest is exactly how a gate gets weaker (§10-D rule 6).
+    // They read: "a relaunch that THROWS is recorded WITH its reason" and "…the
+    // operator line says THREW". Both described `launchDetached` failing. There is
+    // no relaunch to throw any more — the `launch` dep above is a TRIPWIRE now, and
+    // the whole block's fixture proves the arm is unreachable on the same path that
+    // used to exercise it. THE LAW THE TWO ENFORCED IS UNCHANGED AND STILL ENFORCED
+    // BELOW: a claim is read off the OUTCOME, never off the decision that asked for
+    // it. Its subject moved from a dispatch receipt to a finding.
+    assert("S9 · THE ARM IS UNREACHABLE — a pass over a DOWN daemon calls the launcher ZERO times and records a FINDING with its witness instead",
+      (boom.state.launched || []).length === 0
+      && (boom.state.findings || []).length === 1 && boom.state.findings[0].name === "thalamus"
+      && /port 4113 refused/.test(boom.state.findings[0].witness));
+    assert("S9 · THE LINE READS OFF THE OUTCOME — it reports the FINDING and can never print a dispatch or a relaunch-threw for this build",
+      /FINDING: thalamus DOWN/.test(launchLine(boom.state))
+      && !/DISPATCHED: thalamus/.test(launchLine(boom.state))
+      && !/RELAUNCH THREW/.test(launchLine(boom.state)));
     assert("DISPATCH ≠ OUTCOME — the receipt is out of the LIVENESS map: `ports` holds the six daemons and nothing else",
       Object.keys(boom.state.ports).join(",") === DAEMONS.map((d) => d.name).join(","));
 
@@ -1224,9 +1376,13 @@ async function selftest() {
       probe: thalDark, procProbe: () => true, launch: () => {},
       exec: (a) => { calls.push(a.join(" ")); return "captains_call: filed c99"; },
     });
-    assert("DISPATCH ≠ OUTCOME — the NEXT pass is the proof: dispatched-then-still-dark ⇒ STUCK, and the line says so",
+    // S9: the SUBJECT changed (reported-down last pass, not dispatched last pass) and
+    // so did the sentence; the LAW — the next pass's probe is the proof, and a daemon
+    // still dark then needs HIS hand — is untouched, and is now the only escalation
+    // this organ has. The wording is asserted so the line cannot quietly go vague.
+    assert("DISPATCH ≠ OUTCOME (S9 shape) — the NEXT pass is the proof: reported-down-then-still-dark ⇒ STUCK, and the line says so",
       stuck.state.stuck.map((s) => s.name).join(",") === "thalamus"
-      && /STILL DOWN after last pass's relaunch: thalamus/.test(launchLine(stuck.state))
+      && /STILL DOWN across two passes: thalamus/.test(launchLine(stuck.state))
       && /START_DAEMONS\.vbs/.test(launchLine(stuck.state)));
     assert("DISPATCH ≠ OUTCOME — the stuck verdict rides an anchor: ONE card, rolling day-key, through captains_call's OWN cli (never its file, never a kill)",
       calls.length === 1 && calls[0].startsWith("captains_call.mjs file --line ")
@@ -1484,6 +1640,63 @@ async function selftest() {
     assert("BUILD WITNESS — both witnesses agreeing is still ONE ask: the morning lane cards it, the ledger lane stands down and says so",
       calls.length === 1 && calls[0].endsWith(`--key daemon:stale:cortex:${localDayOf(bothRep.started)}`)
       && /already carded this name on this pass/.test(both.state.ledger_build.card));
+  }
+
+  // ---- S9 · THE ARM IS GONE (28 Aug 2026) ------------------------------------
+  // These are BITE proofs, not decoration: each one fails if the launcher grows
+  // back. The organ relaunched four daemons into a switched-off organism the
+  // morning it was rewritten, so "it does not launch" is a claim that has to be
+  // re-proven on every run, from the source itself.
+  {
+    const self9 = readFileSync(join(__dirname, "daemon_watchdog.mjs"), "utf8");
+    const body9 = self9.slice(self9.indexOf("async function pass("), self9.indexOf("// ── SELFTEST"));
+    // (1) SOURCE TRUTH — no CALL to the launcher anywhere in pass(). The comments
+    // explaining WHY the arm was removed quote the old call verbatim, so the test is
+    // run over CODE ONLY: `//` lines are stripped first. Written the naive way at
+    // first and it went red on its own prose — the check was right, the corpus wrong.
+    const code9 = body9.split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+    assert("S9 · REPORTER — pass() contains no launchDetached() CALL SITE in CODE, and the import is gone from the module",
+      code9.length > 0 && !/launchDetached\(/.test(code9)
+      && !/import \{[^}]*launchDetached[^}]*\} from "\.\/conductor\.mjs"/.test(self9));
+
+    // (2) THE LIVE BITE — a DOWN daemon must produce a FINDING and spawn NOTHING.
+    // `deps.launch` was the injection door the old arm used; passing a spy that
+    // THROWS proves the door is never reached, rather than proving it politely.
+    const T9 = (m) => `2026-08-28T14:${String(m).padStart(2, "0")}:00.000Z`;
+    let spawned = 0;
+    const r9 = await pass({
+      prev: { ports: { turnstile: true, cortex: true, thalamus: true, brain: true, sitting: true, context: true }, unknown: [], thalamus_down_since: null, resync_pending: false, resyncs: [], launched: [], findings: [] },
+      probe: (port) => port !== 4116,          // the BRAIN is dark — the very daemon this session woke
+      procProbe: () => true,
+      launch: () => { spawned++; throw new Error("S9 VIOLATION — something reached for the launcher"); },
+      now: new Date(Date.parse(T9(12))),
+      exec: () => "captains_call: filed c99",
+      // `dry` is THE flag pass() actually reads (`if (!deps.dry) writeAtomic(...)`).
+      // Written as `write: false` first, which pass() ignores — it would have let this
+      // selftest write the LIVE daemon_watchdog.json, breaking the owners-only law with
+      // a fixture. Caught by reading the writer instead of trusting the deps name.
+      dry: true,
+    });
+    const f9 = (r9.state.findings || []).find((f) => f.name === "brain");
+    assert("S9 · REPORTER — a DOWN daemon yields a FINDING carrying its WITNESS, launches NOTHING, and leaves `launched` empty",
+      spawned === 0
+      && r9.actions.launch.includes("brain")          // it still DECIDES — the decision is the finding
+      && !!f9 && /port 4116 refused/.test(f9.witness) && f9.remedy_is_his === true
+      && (r9.state.launched || []).length === 0);
+
+    // (3) THE OPERATOR LINE must SAY it reported rather than dispatched — the
+    // 11-Aug law (a claim is read off the outcome) applied to the new lane.
+    assert("S9 · REPORTER — the operator line announces the FINDING + witness and never claims a dispatch",
+      /FINDING: brain DOWN \(witness: port 4116 refused/.test(launchLine(r9.state))
+      && !/relaunch DISPATCHED: brain/.test(launchLine(r9.state)));
+
+    // (4) THE FALL-THROUGH THAT CAUSED THE INCIDENT — an unknown mode must refuse.
+    // Asserted off the source, because main() calls process.exit and cannot be run
+    // inside the selftest that is trying to survive it.
+    const mainSrc9 = self9.slice(self9.indexOf("async function main()"), self9.indexOf("// ── SELFTEST"));
+    assert("S9 · NO SILENT DEFAULT — an unknown mode REFUSES with a non-zero exit instead of falling through to `pass`",
+      /MODES\.includes\(mode\)/.test(mainSrc9) && /process\.exit\(2\)/.test(mainSrc9)
+      && MODES.includes("help") && !MODES.includes("--help"));
   }
 
   console.log(`\ndaemon_watchdog selftest: ${pass2} passed, ${fail} failed`);

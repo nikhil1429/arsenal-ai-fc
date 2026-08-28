@@ -142,7 +142,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                    `nvm16` holds only 16/19, so it is an ADMIN MSI INSTALL,
                                    which S9's row already rules is *"his hands, one card"*.
                                    The spool did not wait: `node:sqlite` loads flag-free on
-                                   22.14. Record: `queue\2026-08-28_s8-step0-blocked.md`.
+                                   22.14. Record: **`arsenal-audit-artifacts\queue\2026-08-28_s8-step0-blocked.md`**
+                                   (the path was first written here as a bare `queue\…`, which
+                                   reads as the REPO's decoy folder — corrected at S9, and the
+                                   decoy now carries a README pointing at the real channel).
+                                   ✅ **FOLDED INTO S9 AND CARDED, 28 Aug 2026** — the ruler's
+                                   fold: S9 already stands at his console for the WinSW
+                                   credential, so the MSI rides the SAME visit. It is card
+                                   **`c86`**, one card, his hands. STEP 0 is no longer S8's to
+                                   carry; it is open on HIM, not on a rung.
                                    ⛔ the LIVE thalamus was NOT restarted — the drain code is
                                    inert until something restarts it, and that is S12's or his.
   THE EXECUTION PLAN ........... ☑ WRITTEN — §10 (20 Aug 2026). THE LADDER IS THE HANDOFF.
@@ -3031,7 +3039,39 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`S9` · BUILD · OWNERSHIP. MODEL: Opus 5 · effort max.
+  ▶ NEXT SESSION ............... **`S10` · BUILD · THE REGISTRY. MODEL: FABLE 5 · effort max
+                                   (fallback: Opus max + a mandatory self-review pass before
+                                   commit — never a silent downgrade). CEILING 60, the ladder's
+                                   biggest. §10-F puts this and S6 on Fable BY NAME: it is one of
+                                   the two judgement summits, and the registry is the thing every
+                                   later rung reads.
+                                   SCOPE = the row as written: un-nail all twelve Shape-1
+                                   instances onto registry rows · the rulings lane goes live ·
+                                   every memory file indexed or the suite is red · his live pain
+                                   (note-generation idempotency, the "notes created 7 times"
+                                   class) rides the same tasks substrate.
+                                   FORBIDDEN: any NEW mechanism (§2's lesson — new subjects,
+                                   never new machines) · waking anything.
+                                   ⛔ **S10 INHERITS TWO THINGS THAT ARE HIS, NOT ITS OWN:**
+                                   ① **FOUR DAEMONS ARE STILL RESIDENT AND STILL TICKING** —
+                                   cortex 13244 · turnstile 15324 · brain-daemon 4284 ·
+                                   sitting-daemon 9052, woken by S9's orientation typo.
+                                   Spend is 0 ONLY while his OAuth is dead; a refresh makes it
+                                   live spend inside a switched-off organism. A session cannot
+                                   kill them (classifier + Access-denied). **S9's close is not
+                                   verified until a post-kill read shows zero** — S10 opens by
+                                   taking that reading and recording it.
+                                   ② **card `c86`** = the ONE console visit (Node 24 MSI +
+                                   the WinSW credential). Until he runs
+                                   `setup\services\install.ps1`, the five services and two logon
+                                   tasks exist as DEFINITIONS ONLY. That is not a blocker for
+                                   S10 — nothing in the registry needs them installed.
+                                   ⛑ carried one-liners for HIM, still nobody's: ①
+                                   `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
+                                   "resume 28 Aug 2026" — that is TODAY — and nothing fires it;
+                                   ② the samjhao-lane §0 pointer still names the learning resume.**
+
+  ~~▶ NEXT SESSION ............... **`S9` · BUILD · OWNERSHIP. MODEL: Opus 5 · effort max.
                                    ✔ PRICED BY THE RULER 28 Aug (the 1215 law): BUILD 25 ·
                                    PROOF 10 · HANDOFF 5 — inside the row's 40.
                                    ✔ S8's STEP 0 (Node 22→24, the admin MSI) IS FOLDED INTO S9
@@ -3069,7 +3109,9 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⛑ carried one-liners for HIM, still nobody's: ①
                                    `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
                                    "resume 28 Aug 2026" — that is TODAY — and nothing fires it;
-                                   ② the samjhao-lane §0 pointer still names the learning resume.**
+                                   ② the samjhao-lane §0 pointer still names the learning resume.**~~
+                                   ✅ **DONE 28 Aug 2026 — see the `S9` ☑ row in §10-C and the
+                                   PROGRESS entry of 28 Aug ~19:15. Kept struck (L9).**
 
   ~~▶ NEXT SESSION ............... **`S8` · BUILD · THE SPOOL. MODEL: Opus 5 · effort max.
                                    ✔ PRICED BY THE RULER 28 Aug (the 1215 law): BUILD 25 ·
@@ -7873,7 +7915,30 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       where his words are unheard, and "waking anything" is this rung's own FORBIDDEN
       line. The spool makes that window lossless, which is the point.
       Deliverables: `arsenal-audit-artifacts\s8-2026-08-28\`.
-☐ S9  BUILD · OWNERSHIP.                                    MODEL: Opus · effort max
+☑ S9  BUILD · OWNERSHIP — DONE 28 Aug 2026 (Opus 5 · effort max). Ownership left the
+      watchdog and went to the OS. `scripts/services.mjs` (new organ) EMITS WinSW
+      definitions for the headless five + logon tasks (RestartOnFailure ·
+      StartWhenAvailable) for the desktop two, and REFUSES to hold a credential:
+      username only in the XML, `install.ps1` prompts HIM, the secret goes to the
+      SCM and never to a file. Both sets are DERIVED from a `surface` column each
+      DAEMONS row declares — the jugad rule held, and a 7th daemon is owned or red.
+      The WATCHDOG IS A REPORTER: the launch loop AND the import are gone, and
+      every finding carries its witness. The CONDUCTOR'S FOLD OPENS BY ITSELF —
+      brain.mjs's `folded_into` law generalized per step (COVERED/OPEN), closing
+      the "single point of failure for 16 organs, no fallback" finding.
+      ⛔ **I BREACHED THIS RUNG'S OWN FORBIDDEN LINE IN ORIENTATION** — a
+      `daemon_watchdog.mjs --help` fell through to the default pass and woke four
+      daemons into the switched-off organism (spend ~0: OAuth expired; but they
+      STILL TICK — the "self-stopped" reading was refuted by the architect).
+      It is the rung's own best evidence: a read-shaped command reached a launcher.
+      Kill = HIS hands (classifier + Access-denied both refuse a session).
+      ⛑ OPEN: the four PIDs are still resident (13244 · 15324 · 4284 · 9052) — the
+      close is not verified until a post-kill read shows zero · card `c86` = the ONE
+      console visit (Node 24 MSI + the service credential), S8's STEP 0 folded in.
+      GATES STRICTER: watchdog 77→81 · conductor 98→104 · services 12/0 (new) ·
+      lawpack GREEN (jugad 102 = baseline) · eslint 87 = baseline · xray 23/0.
+      NOTHING INSTALLED, NOTHING STARTED — S12 turns things on, his word per stage.
+~~☐ S9  BUILD · OWNERSHIP.                                    MODEL: Opus · effort max
       WinSW services for the headless five (run as HIS account — the install asks
       for HIS credential at HIS console: one card, his hands; a session never touches
       a password) · logon tasks + RestartOnFailure + StartWhenAvailable for the
@@ -7884,7 +7949,7 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       HIS call, one card, never a blocker.
       ⚠ SPEND RISES HERE BY DESIGN — S7's corrected gate is already holding the purse.
       FORBIDDEN: services for turnstile/dugout (session-0 cannot see his desktop).
-                                                                       CEILING: 40
+                                                                       CEILING: 40~~
 ☐ S10 BUILD · THE REGISTRY.   MODEL: FABLE · effort max (fallback: Opus max + review)
       Un-nail all twelve Shape-1 instances (shadow · bootroom · gate_tune ·
       trust_tiers · tasks · isFixture · slot-awareness · wall_review · docClaims ·
@@ -18165,3 +18230,170 @@ comes up — S12's ordered wake, or his word.
 the row's CEILING 40 stands if the ruler is silent. And put S8's STEP 0 in front of the ruler at
 the same time: S9 already needs his console, so folding the Node 24 MSI into that one visit is the
 L7 answer. **Nothing S9 builds may be STARTED** — S9 installs ownership, S12 turns things on.
+
+---
+
+### PROGRESS 2026-08-28 ~19:15 IST — **RUNG S9 · BUILD · OWNERSHIP — CLOSED. THE WATCHDOG'S ARM IS GONE, AND IT PROVED WHY ITSELF, AN HOUR BEFORE IT WAS REMOVED.**
+
+**MODEL:** Opus 5 · effort max. **PRICED BY THE RULER (the 1215 law):** BUILD 25 · PROOF 10 ·
+HANDOFF 5, inside the row's 40.
+
+---
+
+#### ⛔ FIRST, THE THING THAT WENT WRONG — AND IT WAS MINE
+
+The rung's own FORBIDDEN line is *"waking anything"*. **I breached it in my second command, during
+orientation, before a single edit.** `node scripts/daemon_watchdog.mjs --help` — meant to print
+usage — found no `--help` branch, **fell through to the organ's default `pass()`, and dispatched
+relaunches.** Four daemons woke into a switched-off organism at 14:12:21 IST: `cortex` (PID 13244) ·
+`turnstile` (15324) · `brain daemon` (4284) · `sitting daemon` (9052). The thalamus (12972) predates
+the command and is the one sanctioned exception; it was not touched.
+
+**COST, measured, not assumed: real spend is ~0.** 17 ledger rows fired in the 08:40-08:44 UTC
+window and every one died on `"Failed to authenticate: OAuth session expired and could not be
+refreshed"`, with `input/output/cache` all `0`.
+
+**AND MY FIRST READING OF THAT WAS WRONG, CORRECTED BY THE ARCHITECT BY RUNNING.** This entry first
+said the burst *"stopped on its own - the fail streak is THE GATE doing its job."* **REFUTED:**
+`midday_cartridge` fired again at 14:20:07 / 14:20:23 / 14:20:38 IST. The daemons never stopped
+ticking; I had only stopped looking. **The gate is holding the SPEND, not the TICK - and the spend
+is zero only because his OAuth is dead. His next normal login turns this into real spend inside an
+organism his order says is OFF.** That is why the kill is urgent, and why it is HIS hands: the
+classifier refused both kill paths, and `setup/restart_surfaces.ps1:3` already records that a
+session shell cannot kill his processes (Access denied). The organ's own law agreed all along -
+`daemon_watchdog.mjs:550` / `:608`: *"live daemon kill sirf aapke word se."*
+
+**IT IS ALSO THIS RUNG'S BEST EVIDENCE, and that is not a consolation prize.** S9's third scope item
+is *"the watchdog becomes a REPORTER (finding + witness, never a launcher)"*. An hour before that
+was built, the launcher-watchdog **woke a switched-off organism off a command trying to print
+usage**. The blast radius of a launcher is not bounded by intent - a typo reaches it. Its own
+dispatch line concedes the flaw: *"a dispatch is not an UP; the next pass's probe is the proof."*
+An arm that cannot confirm its own effect should not be an arm.
+
+RECORD: `arsenal-audit-artifacts\queue\2026-08-28_s9-accidental-daemon-wake.md`
+RULING: `arsenal-audit-artifacts\queue\RULING__2026-08-28_s9-accidental-daemon-wake.md`
+
+---
+
+#### WHAT LANDED - the row as written, all five items
+
+**(1) + (2) OWNERSHIP MOVES TO THE OS - `scripts/services.mjs` (new organ, sole writer of
+`setup/services/*`).** WinSW service definitions for the headless five, logon tasks for the desktop
+two, one installer HE runs. **It generates and reports; it installs nothing and starts nothing.**
+
+- **THE JUGAD RULE (S3) HELD.** The order says *"the headless five"* and *"the desktop two"* - those
+  are quantifiers, and **no file types them as a list.** Each `DAEMONS` row now declares its own
+  `surface: "headless" | "desktop"`, and both sets are DERIVED from that column. A seventh daemon
+  added tomorrow is owned or the suite is red (**declare-or-die**, the S7 ratchet shape).
+- **THE DUGOUT IS OWNED WITHOUT DISTURBING ITS EXCLUSION.** It is deliberately absent from `DAEMONS`
+  (a watchdog relaunching HIS voice surface would override his hands). That made it invisible to the
+  *watchdog*, not unowned - so it is declared at the **ownership** layer, with its own reason, and
+  its logon task registers **disabled**: *"it opens when he opens it"* is a ruling, not an oversight.
+- **NO CREDENTIAL, ANYWHERE - the assertion I care most about.** WinSW accepts a password in its XML;
+  a password in a repo file is exactly the class his 14-Aug ruling forbids. The emitted XML carries
+  the **username only**, `install.ps1` prompts him with the OS's own dialog, the secret goes
+  keyboard -> Service Control Manager, and `Remove-Variable cred` drops it. Proven: no emitted file
+  can contain a `<password>` element.
+- **SESSION-0 IS WRITTEN INTO THE FILES THEMSELVES**, so a future session cannot "fix" the desktop
+  two into services: a service in session 0 has no clipboard, no mic, no browser - it would install
+  cleanly **and do nothing**, which is worse than failing, because it is silent.
+- **THE AUDIT'S TWO SETTINGS BY NAME** on every logon task: `StartWhenAvailable` (the sleeping-laptop
+  catch-up) + `RestartCount 3`. Services carry a three-stage `onfailure restart` backoff - that is
+  what replaces the watchdog's arm.
+
+**(3) THE WATCHDOG IS A REPORTER.** The `launchDetached` loop in `pass()` is gone and **the import is
+gone from the module** - the absence is the guard: re-growing the arm now takes a deliberate reach,
+and the lint gate names it. `decidePass` still DECIDES; that decision is now read as what it always
+was - **a FINDING, and every finding carries its WITNESS** (the port that refused, or the
+process-table tail he can grep), because Sec 10-D rule 5 binds the organism's own instruments, not
+just agents.
+
+**AND REMOVING THE ARM QUIETLY BROKE THE ESCALATION - CAUGHT BY THE 11-AUG ASSERTIONS GOING RED,
+WHICH IS WHAT THEY ARE FOR.** The STUCK verdict - the *only* path in this organ that reaches HIM when
+a daemon stays dark - was keyed off `p.launched`, i.e. what the previous pass DISPATCHED. With the
+arm gone that list is empty forever, so **nothing could ever be STUCK again.** Repaired by keying it
+off the previous pass's **findings**: reported-down last pass, still down this pass => STUCK => one
+card. `launched` is still read beside it so a **pre-S9 state file** mid-upgrade still earns its
+verdict. **Removing an arm must not remove the escalation - under S9 the escalation matters MORE,
+because nothing auto-restarts any more.**
+
+**THE FALL-THROUGH IS CLOSED TOO** (the smaller half, but the one that bit): modes are a closed set
+and **an unknown mode REFUSES with exit 2** instead of guessing. A bare invocation still means `pass`
+- every task XML depends on that - but **a default may not be the most destructive option.** Proven
+live: `node scripts/daemon_watchdog.mjs --help` now exits **2**, prints usage, and **leaves the state
+file untouched.** That is the exact command that started this incident.
+
+**(4) THE CONDUCTOR'S FOLD OPENS BY ITSELF.** The audit's finding: *"a single point of failure for 16
+organs and no fallback - the brain's own `folded_into` has one, the conductor's fold does not."*
+Built as **brain.mjs's law generalized, no new mechanism** (Sec 2: new subjects, never new machines):
+per-step `COVERED` / `OPEN`, where OPEN = the chain never ran that day, or the step ran and failed,
+or the chain died upstream of it. A **stale report is not a pass** (the Shape-4 recency compare -
+yesterday's green chain covers nothing today). The owed command is **derived from the step**, never
+typed twice. Live on the real report: **16/16 OPEN, because the chain last ran 2026-08-19** - which
+is the switch-off, stated correctly rather than reported as health.
+**It REPORTS; it runs nothing** - asserted off its own source (no `conduct()`, no arm, no launcher in
+the whole branch). Arming it to fire is S12's.
+
+**(5) S8's STEP 0 (Node 22->24) FOLDED IN - ONE CARD, `c86`.** The ruler's fold stands: S9 already
+needs his console for the service credential, and the MSI needs the same visit. **One visit, one
+card, his hands.** S8's own record is forwarded by POINTER, not rewritten:
+`arsenal-audit-artifacts\queue\2026-08-28_s8-step0-blocked.md`.
+
+---
+
+#### A FINDING THAT IS A CLASS - AND MY OWN CLAIM ABOUT IT DIED FIRST
+
+I reported that S8's STEP 0 record *"is claimed by S8's RESUME entry and does not exist on disk"*,
+and called it a SHAPE-8 instance. **The architect refuted it by having read the file at boot. It
+exists.** I ran `git ls-files queue/` against the REPO's `queue/` and concluded from one directory
+that a file written to another had never been written - Sec 4's own rule (an instrument is a LEAD
+until a run verifies it), skipped on my own instrument. **The SHAPE-8 claim is withdrawn.**
+
+**The real finding is worse, and it is a class:** per his 25-Aug ruling the channel is the `queue\`
+beside `ARCHITECT_HANDOFF.md` in `arsenal-audit-artifacts`; **the repo's `queue/` is a decoy of it,
+and it took two victims in one day** - S8's record was hunted in the wrong one, and **this rung's own
+incident record was written into the wrong one** (the architect copied it across). A directory that
+looks exactly like the channel, in the repo an executor already has open, will keep collecting
+records the architect never sees. **Fold item, this commit:** `queue/README.md` signposts the real
+channel. Nothing deleted, nothing moved (L9) - the decoy stays and now says what it is.
+
+---
+
+#### GATES - STRICTER, NEVER WEAKER (Sec 10-D rule 6)
+
+- `daemon_watchdog selftest` **77 -> 81/0**. Four new S9 bite-proofs. **Two obsolete assertions were
+  REPLACED, never deleted**: they guarded a relaunch that can no longer throw, and a silently shorter
+  selftest is how a gate gets weaker. The law they enforced - *a claim is read off the OUTCOME, never
+  the decision* - is unchanged and still asserted; only its subject moved from a dispatch receipt to
+  a finding. The `launch` dep is now a **tripwire** that throws if anything reaches for it.
+- `services selftest` **12/0** (new organ, registered in the suite chain - the coverage law).
+- `conductor selftest` **98 -> 104/0**, six fold proofs.
+- `lawpack` **GREEN**, jugad **102 = baseline** · `eslint` **87 = baseline** · `xray` **23/0**.
+
+**THREE DEFECTS I CAUGHT IN MY OWN WORK BEFORE THEY SHIPPED**, all recorded because Sec 4 binds the
+audit's own instruments:
+1. My first selftest passed `write: false` to `pass()`, which reads `deps.dry` - **it would have let
+   a fixture write the LIVE `daemon_watchdog.json`**, breaking the owners-only law with a test.
+   Caught by reading the writer instead of trusting the deps name.
+2. `services status` first said *"nothing running"* while **four bare node processes were alive** -
+   `sc query` cannot see a hand-started daemon. That is Sec 9-D **SHAPE 7** (a predicate assuming a
+   material shape) in a line I had just written. It now scopes its claim to OS units and names the
+   instrument that reads the other half.
+3. The first suite run went **116/4 against a 118/2 baseline** - I had raised two gates: `no-unused-vars`
+   87->89 and `jugad-literal-subject-list` 102->104, plus xray's `conductor.mjs 42->43`. All three
+   were real and all three were fixed, not waived: two dead imports removed; the `MODES` array and
+   the hand-typed `usage()` block (two lists of the same thing - exactly what the jugad rule is for)
+   collapsed into one `MODE_DOC` object in **both** organs; and the fallback's ternary-derived
+   `readFileSync` split into two statically-resolvable reads, because analysability is a gate too.
+
+---
+
+#### WHAT S9 LEAVES OPEN, BY NAME
+
+1. **THE FOUR WOKEN DAEMONS ARE STILL RESIDENT AND STILL TICKING.** HIS hands; the architect has also
+   put the ask to him directly. **The S9 close is not verified until a post-kill read shows zero
+   woken daemons** (the ruler's added line).
+2. **`c86` - the one console visit** (Node 24 MSI + the service credential). Nothing installs until he
+   runs it; every definition is on disk and waiting.
+3. **NOTHING WAS STARTED AND NOTHING WAS INSTALLED.** Services would install `start=demand`, tasks
+   register disabled. **S12 turns things on, stage by stage, on his word.**
