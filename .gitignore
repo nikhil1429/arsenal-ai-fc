@@ -207,6 +207,16 @@ dressing-room/hippocampus/
 # the thalamus + cortex (M1) — his moments, words, frame-hashes: LOCAL ONLY.
 # the public repo holds the machinery, never the moments (CYBORG_BRAIN.md §11)
 dressing-room/state/afferent.jsonl
+# THE WRITE-AHEAD SPOOL (rung S8, 28 Aug 2026) — the SAME CONTENT as afferent.jsonl, one step
+# earlier in the pipe: it holds his verbatim turns BEFORE they reach the bus, which is the whole
+# point of it. It arrives here in the commit that creates it, deliberately: a new lane that
+# carries his words and ships without its ignore rule is the hole, not a follow-up. His ruling,
+# 14 Aug 2026, admits no exception — "archive HAMESHA repo ke bahar rahega. Code public, data
+# private. Koi apwaad nahi, kabhi nahi." The -wal/-shm siblings are SQLite's own journal files
+# and hold the same rows mid-transaction, so they are named too rather than assumed transient.
+dressing-room/state/spool.db
+dressing-room/state/spool.db-wal
+dressing-room/state/spool.db-shm
 dressing-room/state/workspace.json
 dressing-room/state/salience_ledger.jsonl
 dressing-room/state/wake.json

@@ -116,6 +116,35 @@ STATUS (update this block before any session stops — this is the handoff)
                                    intent_digest), which is the c74 false-negative class re-created
                                    on purpose.
                                    Deliverables: `arsenal-audit-artifacts\s7-2026-08-28\`.
+  S8  BUILD · THE SPOOL ........ ◐ **THE SPOOL IS DONE 28 Aug 2026 (Opus 5 · max); STEP 0 IS
+                                   OPEN AND NEEDS HIS CONSOLE.** `scripts/spool.mjs` — the
+                                   write-ahead on `node:sqlite`, sole writer of `spool.db`, a
+                                   NEW LANE (nothing migrated, L9). The capture nerve writes
+                                   the row BEFORE it POSTs; the thalamus drains after
+                                   `listen()` and REFUSES an `event_id` it already wrote, with
+                                   the set seeded from the whole afferent file. **Q-11's loss
+                                   half is closed**: the 250ms abort is unchanged, but a
+                                   timeout now means LATE, not GONE — and turns taken before
+                                   the 07:00 start are held instead of dropped.
+                                   PROOF **16/16** in a sandbox, headline *EXACTLY ONE BUS
+                                   ROW* (the writer replays, the consumer refuses). Nerve
+                                   156ms dead-bus / 165ms happy-path; an unopenable spool
+                                   DEGRADES to the pre-S8 behaviour rather than biting.
+                                   ⚠ the FIRST harness lied (a stand-in bus inside the
+                                   `spawnSync` process could never answer) and was caught
+                                   against the live afferent file — §4 on the audit's own tool.
+                                   🔒 a PRIVACY HOLE closed in the same commit: `spool.db`
+                                   holds his verbatim turns and was NOT gitignored.
+                                   `npm test` **110/2 → 118/2**, members 105 → 106, every
+                                   other gate at or above its floor.
+                                   ⛔ **STEP 0 (Node 22→24) IS NOT DONE AND NOT FAKED** —
+                                   measured: `C:\Program Files\nodejs` is a REAL directory and
+                                   `nvm16` holds only 16/19, so it is an ADMIN MSI INSTALL,
+                                   which S9's row already rules is *"his hands, one card"*.
+                                   The spool did not wait: `node:sqlite` loads flag-free on
+                                   22.14. Record: `queue\2026-08-28_s8-step0-blocked.md`.
+                                   ⛔ the LIVE thalamus was NOT restarted — the drain code is
+                                   inert until something restarts it, and that is S12's or his.
   THE EXECUTION PLAN ........... ☑ WRITTEN — §10 (20 Aug 2026). THE LADDER IS THE HANDOFF.
                                    Hardened same day to the junior bar: §10-F model routing ·
                                    §10-G versions+models policy · the FLOW ATLAS (S6a) ·
@@ -3002,7 +3031,42 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`S8` · BUILD · THE SPOOL. MODEL: Opus 5 · effort max.
+  ▶ NEXT SESSION ............... **`S9` · BUILD · OWNERSHIP. MODEL: Opus 5 · effort max.
+                                   ⛑ **NOT PRICED** — the 1215 law gives BUILD/PROOF/HANDOFF to
+                                   the RULER at ruling time, never the executor. Ask for the
+                                   split; the row's CEILING 40 stands if the ruler is silent.
+                                   SCOPE = the row as written: WinSW services for the headless
+                                   five · logon tasks + RestartOnFailure + StartWhenAvailable
+                                   for the desktop two · the watchdog becomes a REPORTER
+                                   (a finding + its witness, never a launcher) · the conductor
+                                   gets per-step fallback. FORBIDDEN: services for
+                                   turnstile/dugout (session-0 cannot see his desktop) · waking
+                                   anything.
+                                   ⭐ **S8's STEP 0 SHOULD PROBABLY RIDE THIS RUNG** — the
+                                   architect was asked and has not ruled. S9 already has to
+                                   stand at HIS console for a credential; the Node 24 MSI needs
+                                   the same visit, and making him do it twice is two
+                                   interruptions where L7 wants one. If the ruler folds it in,
+                                   S9's row gains a line and S8's STEP 0 is struck as folded.
+                                   ⛔ **NEITHER S9 NOR ANY RUNG MAY START A SERVICE OR WAKE A
+                                   LANE.** S9 INSTALLS ownership; S12 turns things on, his word
+                                   per stage. A rung that leaves something running has broken
+                                   the switch-off.
+                                   ⛑ WHAT S8 LEAVES OPEN BY NAME:
+                                   ① STEP 0 (Node 22→24) — an admin MSI at HIS console, so it is
+                                   HIS word; record: `queue\2026-08-28_s8-step0-blocked.md`;
+                                   ② the drain-on-boot code is INERT until the live thalamus
+                                   restarts, and restarting it is S12's or his — the spool makes
+                                   that window lossless either way;
+                                   ③ `spool vacuum` has no owner firing it (retention is a
+                                   7-day window; nothing calls it yet) — that is a registry row
+                                   at S10, not a cron nobody asked for.
+                                   ⛑ carried one-liners for HIM, still nobody's: ①
+                                   `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
+                                   "resume 28 Aug 2026" — that is TODAY — and nothing fires it;
+                                   ② the samjhao-lane §0 pointer still names the learning resume.**
+
+  ~~▶ NEXT SESSION ............... **`S8` · BUILD · THE SPOOL. MODEL: Opus 5 · effort max.
                                    ✔ PRICED BY THE RULER 28 Aug (the 1215 law): BUILD 25 ·
                                    PROOF 10 · HANDOFF 5 — inside the row's 40. STEP 0 (the Node
                                    22→24 move, suite green before AND after) rides INSIDE the
@@ -3053,7 +3117,10 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⛑ carried one-liners for HIM, still nobody's: ①
                                    `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
                                    "resume 28 Aug 2026" — that is TODAY — and nothing fires it;
-                                   ② the samjhao-lane §0 pointer still names the learning resume.**
+                                   ② the samjhao-lane §0 pointer still names the learning resume.**~~
+                                   ✅ **THE SPOOL DONE 28 Aug 2026; STEP 0 CARRIED — see the
+                                   `S8` ◐ row above and in §10-C, and the PROGRESS entry of
+                                   28 Aug. Kept struck, not deleted (L9).**
 
   ~~▶ NEXT SESSION ............... **`S7` · BUILD · GATE C. MODEL: Opus 5 · effort max.
                                    ✔ PRICED BY THE RULER at S6-F's close (28 Aug, the 1215 law):
@@ -7743,7 +7810,8 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       machines) · it woke nothing, enabled nothing, spent no Gemini, used no agents.
       Deliverables: `arsenal-audit-artifacts\s7-2026-08-28\` (S7_VERDICT.md ·
       PROOF_BEFORE.txt · PROOF_AFTER.txt · proofs_s7.mjs).
-☐ S8  BUILD · THE SPOOL.                                    MODEL: Opus · effort max
+◐ S8  BUILD · THE SPOOL.     THE SPOOL DONE 28 Aug · MODEL: Opus 5 · effort max
+      ⛔ STEP 0 IS THE OPEN HALF — UNTICKED ON PURPOSE, AND IT NEEDS HIS CONSOLE.
       STEP 0 (§10-G, own commit): Node 22.14 → Node 24 LTS, suite green before AND
       after; better-sqlite3 is the fallback if node:sqlite misbehaves.
       Then: write-ahead in the capture nerve on node:sqlite — local row FIRST, then
@@ -7752,6 +7820,54 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       exactly one bus row. Daemon death becomes latency, never loss.
       FORBIDDEN: migrating ANY existing state file to sqlite (L9 — new lanes only).
                                                                        CEILING: 40
+      ── WHAT LANDED, 28 Aug 2026 (priced BUILD 25 · PROOF 10 · HANDOFF 5) ────────────
+      **`scripts/spool.mjs` — THE WRITE-AHEAD SPOOL, sole writer of `spool.db`, a NEW
+      LANE on `node:sqlite`.** The nerve now writes the event BEFORE it touches the
+      network; a POST that fails, times out, or finds nothing listening leaves the row
+      PENDING and the thalamus drains it on boot. **`hooks/afferent-post.mjs`** spools
+      first and marks its own row delivered on a 2xx. **`thalamus.mjs`** drains after
+      `listen()` and is now an IDEMPOTENT CONSUMER — an `event_id` already in
+      afferent.jsonl is refused, with the set seeded from the WHOLE file at boot (the
+      spool can hold a row for as many days as the daemon was down, so a 500-row tail
+      would let an old replay through as fresh).
+      **Q-11's LOSS HALF IS CLOSED.** The 250ms abort is UNCHANGED and still tight — it
+      runs on his keystroke — but what a timeout MEANS changed: the turn is on disk and
+      arrives late instead of never existing. The 07:00-start half is closed the same
+      way: turns taken before the daemon starts are held, not dropped.
+      PROOF — the row's own words, run in a sandbox (a tmp db, a tmp afferent file, a
+      stand-in bus in ITS OWN PROCESS): **16/16**, headline `3c EXACTLY ONE BUS ROW`
+      (the writer delivers a replay, the consumer refuses it). The nerve measured
+      **156ms dead-bus / 165ms happy-path**, and DEGRADES to the pre-S8 POST-and-hope on
+      an unopenable spool rather than throwing into his editor.
+      ⚠ **THE FIRST HARNESS LIED AND WAS CAUGHT** — it ran the stand-in bus inside the
+      process that drives the hook with `spawnSync`, which BLOCKS the event loop, so the
+      child's POST could never be answered. It reported "the nerve cannot reach a live
+      bus" for pre-S8 code too. Caught by checking the LIVE afferent.jsonl, which holds
+      this very session's prompts. §4's law, turned on the audit's own instrument.
+      🔒 **A PRIVACY HOLE FOUND AND CLOSED IN THE SAME COMMIT:** `spool.db` holds his
+      verbatim turns — the same content as `afferent.jsonl`, one step earlier in the
+      pipe — and was NOT gitignored, in a repo with 48 tracked state files. `.gitignore`
+      now names it and its `-wal`/`-shm` siblings. His 14-Aug ruling admits no exception.
+      GATES STRICTER, NEVER WEAKER: `npm test` **110/2 → 118/2** (+8 S8 assertions, the
+      SAME two reds) · suite members **105 → 106** (the spool registered; the
+      coverage law caught it orphaned) · gate 48/0 · xray 23/0 Q2 0 Q5 0 · rails 52/0 ·
+      flow_atlas 7/7 · lawpack GREEN · `rails orders` open order clean. The LINT gate
+      caught an unused import at 88 vs baseline 87 and it was fixed, not waived.
+      ⛔ **STEP 0 NOT DONE, AND NOT FAKED.** Measured before any edit: `C:\Program
+      Files\nodejs` is a REAL DIRECTORY (not a symlink) and `nvm16` holds only
+      v16.16.0/v19.5.0 — it does not manage the live v22.14.0. So the Node 24 move here
+      is an **admin MSI install into Program Files**, which is the class S9's own row
+      already rules on: *"the install asks for HIS credential at HIS console: one card,
+      his hands; a session never touches a password."* It is HIS word, not the
+      architect's. The spool did not wait for it: `node:sqlite` loads flag-free on
+      22.14 (measured), so the two halves were REORDERED, not rescoped — recorded as a
+      declared departure in `queue\2026-08-28_s8-step0-blocked.md`.
+      ⛔ **THE LIVE THALAMUS WAS NOT RESTARTED.** It is the one organ his switch-off
+      left running, it is capturing right now, and Node caches a module at load — so the
+      drain-on-boot code is INERT until something restarts it. Restarting it is a window
+      where his words are unheard, and "waking anything" is this rung's own FORBIDDEN
+      line. The spool makes that window lossless, which is the point.
+      Deliverables: `arsenal-audit-artifacts\s8-2026-08-28\`.
 ☐ S9  BUILD · OWNERSHIP.                                    MODEL: Opus · effort max
       WinSW services for the headless five (run as HIS account — the install asks
       for HIS credential at HIS console: one card, his hands; a session never touches
@@ -17890,3 +18006,157 @@ and the reach-side meter live in the same row.
 
 **This is also the sharper version of the escalation's item ②:** under the exclusive reading of §1,
 FOUR currently-awake lanes sleep, not two.
+
+
+---
+
+### PROGRESS 2026-08-28 ~17:10 IST — **RUNG S8 · THE SPOOL IS BUILT AND PROVEN. STEP 0 IS OPEN AND IT IS HIS CONSOLE.**
+
+**Opus 5 · effort max, solo, no agents, zero Gemini.** Priced by the ruler this morning
+(`216d0c7`): BUILD 25 · PROOF 10 · HANDOFF 5, STEP 0 riding INSIDE the BUILD line as its own
+commit, *"and if STEP 0 alone threatens the line, STOP at its commit and escalate — never squeeze
+the spool into what remains."* **STEP 0 did threaten the line, for a reason no ruling could have
+priced, and the rider was honoured: the spool got the whole BUILD line.**
+
+#### THE DEFECT, in the capture nerve's own words
+
+```js
+const t = setTimeout(() => ctrl.abort(), 250);
+await fetch(THALAMUS + "/afferent", { … signal: ctrl.signal });
+} catch { /* thalamus down or slow → the session never notices */ }
+```
+
+The session never notices — **and neither did anything else.** Nothing was written anywhere first,
+so a POST that timed out, or found nothing on :4113, DESTROYED the turn. And the thalamus task does
+not start until 07:00, so every turn he took before then had no listener at all: not "arrived
+late", never existed. That is Q-11, and the second half is the worse one.
+
+#### WHAT LANDED
+
+**`scripts/spool.mjs` — the write-ahead, sole writer of `spool.db`, a NEW LANE on `node:sqlite`.**
+Nothing was migrated; every existing state file is still exactly the `.json`/`.jsonl` it was (the
+rung's FORBIDDEN line, and L9). `node:sqlite` was measured on the live runtime BEFORE the design
+was fixed: `DatabaseSync`/`StatementSync`/`constants`, flag-free on 22.14, open+create 19ms and
+~2.25ms per row — inside a hook that already budgets 250ms for the network.
+
+**Why sqlite and not another `.jsonl`:** a hook is a process that can be killed mid-write at any
+instant, and two share this nerve (UserPromptSubmit and Stop). An append has no atomicity across a
+crash — a torn line is the exact class S11 already owns. WAL + `busy_timeout` so a draining reader
+and a mid-turn writer never block each other.
+
+**`hooks/afferent-post.mjs` — local row FIRST, then POST**, marking its own row delivered on a
+2xx. The 250ms abort is UNCHANGED and stays tight, because it runs on his keystroke; what changed
+is what a timeout MEANS. **`scripts/thalamus.mjs` — drains after `listen()`** (the port must be
+open first, or a slow drain is itself a window where a live turn finds nothing listening) and is
+now an **idempotent consumer**: an `event_id` already in `afferent.jsonl` is refused, with the set
+seeded from the WHOLE file at boot rather than the 500-row tail — the spool can hold a row for as
+many days as the daemon was down, and a tail-sized memory would let an old replay through as fresh.
+
+**The contract, stated once:** the writer promises AT LEAST once; the consumer makes it exactly
+once. Making the writer exactly-once needs a distributed transaction it cannot have; making the
+consumer idempotent needs one field the event already carried.
+
+#### THE PROOF THE ROW ASKED FOR — 16/16
+
+Its own words: *"kill thalamus → prompt → spool row → revive → exactly one bus row."* Run in a
+sandbox — a tmp db, a tmp afferent file, a stand-in bus in its own process — driving the REAL hook
+in a REAL child process. Nothing re-implements the nerve.
+
+| step | result |
+|---|---|
+| bus dead → hook fires | exits 0, **writes nothing to stdout** (a UserPromptSubmit hook's stdout is injected into his prompt), **156ms** |
+| ⭐ the spool row | **exists** — his turn is on disk though the bus never heard it. Before this rung it was gone, and nothing recorded that it had been |
+| two dead-bus turns | a backlog, oldest first — not an overwrite |
+| revive → drain | **both replayed, in the order he took them.** Daemon death was LATENCY |
+| ⭐⭐ replay a row the bus ALREADY has | **EXACTLY ONE BUS ROW** — the writer delivers, the consumer refuses. The rung's headline |
+| bus up, normal turn | reaches it first attempt, nerve marks its own row, **165ms** |
+| spool that cannot open | degrades to the pre-S8 POST-and-hope, still exits 0 — a nerve that cannot spool must never be a nerve that throws |
+
+#### ⚠ THE FIRST HARNESS LIED, AND I AM RECORDING IT AGAINST MYSELF
+
+The stand-in bus first lived INSIDE the process that drives the hook with `spawnSync` — **which
+blocks the event loop**. The child POSTed, the parent could not answer while blocked, the child's
+250ms abort fired, and the proof reported *"the nerve cannot reach a live bus"* — for the pre-S8
+code too. I had a five-failure result that read like a major discovery about the 250ms budget.
+
+**It was measuring its own frozen event loop.** Caught by checking the LIVE `afferent.jsonl`, which
+contains this very session's prompts at 02:49, 03:30 and 04:42 — the nerve had been delivering the
+whole time. §4's law applied to the audit's own instrument: a measurement is a LEAD until something
+independent agrees with it. The bus is a separate process now (`bus_stub.mjs`) and that class of
+lie cannot recur. **Had I trusted the first run, this entry would have shipped a false defect and a
+"fix" for it.**
+
+#### 🔒 A PRIVACY HOLE FOUND BEFORE THE FIRST COMMIT, AND CLOSED IN IT
+
+`spool.db` holds his verbatim turns — the same content as `afferent.jsonl`, one step earlier in the
+pipe — and `git check-ignore` returned **nothing** for it, while `afferent.jsonl` is ignored at
+`.gitignore:209`. 48 files under `dressing-room/state` are tracked. A new lane carrying his words,
+shipping without its ignore rule, in a public repo. `.gitignore` now names `spool.db` and its
+`-wal`/`-shm` siblings, with the reason written beside them. His 14-Aug ruling admits no exception:
+*"Code public, data private. Koi apwaad nahi, kabhi nahi."*
+
+#### THE GATES — every one RUN, none inherited
+
+| gate | before | after |
+|---|---|---|
+| `npm test` (SOLO) | **110 / 2** | **118 / 2** — +8 S8 assertions, the SAME two reds (watchman 199h · audit 238h = the switch-off) |
+| suite members | 105 | **106** — and the `_selftest_coverage_law` caught the spool ORPHANED before I registered it |
+| `spool.mjs selftest` | — | **14 / 0** (new) |
+| `thalamus.mjs selftest` | ALL PASSED | ALL PASSED, +2 idempotence assertions |
+| the S8 DONE-proof | — | **16 / 0** |
+| `gate.mjs selftest` | 48 / 0 | 48 / 0 (S7's floor held) |
+| `xray report` | Q2 0 · Q5 0 | Q2 **0** · Q5 **0** · selftest 23/0 |
+| `rails selftest` · `flow_atlas` | 52/0 · 7/7 | 52/0 · 7/7 |
+| `lawpack check` | GREEN | **GREEN** — no law's count rose |
+| `rails orders` (§3-C) | clean | **open order clean** |
+
+**Two gates caught real mistakes of mine and both were FIXED, not waived:** the LINT gate went to
+88 vs baseline 87 (an unused import in the new organ), and the coverage law named `spool` orphaned.
+
+#### ⛔ STEP 0 IS NOT DONE, AND IT IS NOT FAKED
+
+Measured before any edit:
+
+| the row assumed | what this machine is |
+|---|---|
+| a runtime swap | `C:\Program Files\nodejs` is a **REAL DIRECTORY**, not a symlink |
+| nvm manages Node | **`nvm16` holds only v16.16.0 / v19.5.0** — it does not know about the live v22.14.0, and its `settings.txt path` points at that same real directory |
+
+So the Node 24 move here is an **admin MSI install into Program Files**, reversible only by another
+MSI. That is the class **S9's own row already rules on**, one rung later: *"the install asks for HIS
+credential at HIS console: one card, his hands; a session never touches a password."* **It is his
+word, not the architect's**, and no part of the ladder authorises a session to run an elevated
+installer on his machine.
+
+The spool did not wait for it, because it does not need it: `node:sqlite` is flag-free on 22.14.
+The two halves were **REORDERED, not rescoped** — recorded as a declared departure in
+`queue\2026-08-28_s8-step0-blocked.md`, with a recommendation that STEP 0 **fold into S9**, which
+already has to stand at his console for a credential. Making him do that twice, days apart, is two
+interruptions where L7 wants one.
+
+#### ⛔ THE LIVE THALAMUS WAS NOT RESTARTED — said plainly, because it bounds what today buys
+
+It is the one organ his switch-off left running (capture-only), it is capturing right now, and
+**Node caches a module at load** — so the drain-on-boot code shipped today is INERT until something
+restarts it. Restarting it means a window where his words are unheard, and *"waking anything"* is
+this rung's own FORBIDDEN line. **What is live from this commit is the half that matters most: the
+nerve now writes every turn to disk before it posts.** The drain arrives the first time the daemon
+comes up — S12's ordered wake, or his word.
+
+#### WHAT THIS RUNG DID **NOT** DO
+
+- **No STEP 0**, as above. Its tick is empty and the ladder says so.
+- **No schedule change.** Q-11's other half is written as "the 07:00 task start"; the spool closes
+  the LOSS it caused without touching Task Scheduler, and touching Task Scheduler is the
+  switch-off's business, not a build rung's.
+- **`spool vacuum` has no owner firing it.** Retention is a 7-day window and the CLI exists;
+  nothing calls it. That is a registry row at S10, not a cron nobody asked for.
+- **No migration of any existing state file to sqlite**, no gate weakened, no state file
+  hand-edited, no agent, no Gemini. `git status` at close: five tracked files + the new organ.
+
+#### WHAT THE NEXT SESSION DOES
+
+**`S9` · BUILD · OWNERSHIP — Opus 5 · effort max.** ⛑ **Not priced** — ask the ruler for the split;
+the row's CEILING 40 stands if the ruler is silent. And put S8's STEP 0 in front of the ruler at
+the same time: S9 already needs his console, so folding the Node 24 MSI into that one visit is the
+L7 answer. **Nothing S9 builds may be STARTED** — S9 installs ownership, S12 turns things on.

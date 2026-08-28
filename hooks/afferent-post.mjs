@@ -9,6 +9,10 @@
 // LAWS (each one keeps the live editor safe — a capture nerve must never bite):
 //   · NEVER blocks the session: hard ~250ms timeout on the POST, and if the
 //     thalamus is down the failure is swallowed silently.
+//   · SINCE RUNG S8 (28 Aug 2026), SWALLOWED NO LONGER MEANS LOST: the event is
+//     written to the WRITE-AHEAD SPOOL (scripts/spool.mjs, node:sqlite) BEFORE
+//     the POST is attempted, and the thalamus drains what it missed when it
+//     boots. See THE WRITE-AHEAD at the bottom of main(). Q-11's fix lives here.
 //   · ALWAYS exits 0 and writes NOTHING to stdout — a UserPromptSubmit hook's
 //     stdout would be injected into his prompt, so we emit nothing, ever.
 //   · SCRUB secrets before anything leaves the editor — since v3 by REDACTING
@@ -247,15 +251,43 @@ async function main() {
     ts_local: clock.ts_local,
     tz: clock.tz,
   };
+  // ── THE WRITE-AHEAD (rung S8, 28 Aug 2026) — LOCAL ROW FIRST, THEN POST ───────────────
+  // Until today the line below this was the ONLY thing that happened to his words, and its
+  // own comment said the quiet part: "thalamus down or slow → the session never notices".
+  // Nothing else noticed either. A POST that timed out at 250ms, or found nothing on :4113,
+  // DESTROYED the turn — and the thalamus task does not start until 07:00, so every turn he
+  // took before then had no listener at all. That is Q-11 (ruled 25 Aug 2026), and it is why
+  // this nerve now writes the event to the spool BEFORE it touches the network.
+  //   spooled  ⇒ a failed POST is LATENCY. The thalamus drains the row when it boots.
+  //   not spooled ⇒ we are exactly where we were before this rung: POST and hope. Degrading
+  //     to the old behaviour is the correct failure mode for a nerve that must never bite;
+  //     `spool status` says so out loud rather than pretending the guarantee still holds.
+  // The cost is one sqlite open + one row: ~19ms + ~2.25ms measured on this machine, inside
+  // a hook that already budgets 250ms for the network. The import is INSIDE main() and
+  // guarded, so a runtime without node:sqlite costs this nerve nothing at all.
+  let spooled = null;
+  try {
+    const spool = await import("../scripts/spool.mjs");
+    if (spool.write(evt).ok) spooled = spool;
+  } catch { /* no spool on this runtime → the old POST-and-hope path, unchanged */ }
+
+  // THE POST. Its 250ms abort is UNCHANGED and stays deliberately tight — this nerve runs on
+  // his keystroke and a slow bus must never be something he can feel. What changed is what a
+  // timeout MEANS: before, it meant the turn was gone; now it means the turn is on disk and
+  // arrives late. That is the whole of "daemon death becomes latency, never loss".
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 250);
-    await fetch(THALAMUS + "/afferent", {
+    const res = await fetch(THALAMUS + "/afferent", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(evt), signal: ctrl.signal,
     });
     clearTimeout(t);
-  } catch { /* thalamus down or slow → the session never notices */ }
+    // AT-LEAST-ONCE, ON PURPOSE: if this process dies between the 200 and the mark, the row
+    // replays on the next drain — and thalamus.ingest() refuses an event_id it already wrote.
+    // The consumer is where exactly-once lives; the writer only promises never to lose.
+    if (res && res.ok && spooled) spooled.markDelivered(evt.event_id);
+  } catch { /* thalamus down or slow → the row stays pending and the drain will carry it */ }
   die();
 }
 main().catch(die);

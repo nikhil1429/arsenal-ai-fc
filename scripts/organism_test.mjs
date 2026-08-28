@@ -782,6 +782,39 @@ async function laws() {
       }
     }
 
+    // ── RUNG S8 · THE WRITE-AHEAD IS WIRED, AND STAYS WIRED (28 Aug 2026) ──────────────────
+    // The spool is only worth anything if the NERVE actually writes to it before it posts, and
+    // if the CONSUMER actually refuses a replay. Both are one line each in a big file, and both
+    // are exactly the kind of line a later edit removes without noticing. So both are pinned
+    // here, statically, against the real sources — the same shape nightshift's GATE assertion
+    // uses for its own wire.
+    {
+      const nerve = readOrgan("../hooks/afferent-post.mjs");
+      const thal = readOrgan("thalamus.mjs");
+      assert("S8 · THE NERVE WRITES AHEAD — hooks/afferent-post.mjs spools the event BEFORE it awaits the POST (this is Q-11's fix; without it a 250ms timeout or a bus that has not started yet DESTROYS his turn)",
+        /await import\("\.\.\/scripts\/spool\.mjs"\)/.test(nerve)
+        && nerve.indexOf("spool.write(evt)") > 0
+        && nerve.indexOf("spool.write(evt)") < nerve.indexOf("await fetch(THALAMUS"),
+        "the spool import/write must appear, and must appear BEFORE the fetch — a write-ahead that runs after the POST is not a write-ahead");
+      assert("S8 · ...and it marks its own row delivered on a 2xx, so a healthy bus never leaves work for a future drain",
+        /res && res\.ok && spooled/.test(nerve) && /markDelivered\(evt\.event_id\)/.test(nerve));
+      assert("S8 · ...and a spool that cannot open DEGRADES rather than throws — the nerve's first law is that it never bites the live editor",
+        /catch \{ \/\* no spool on this runtime/.test(nerve));
+      assert("S8 · THE CONSUMER IS IDEMPOTENT — thalamus.ingest() refuses an event_id it has already written, which is the half of at-least-once that keeps ONE turn of his from becoming two rows",
+        /if \(N\.seenEvents\.has\(evt\.event_id\)\) return \{ duplicate: true/.test(thal)
+        && thal.indexOf("N.seenEvents.has(evt.event_id)") < thal.indexOf("D.appendAfferent(evt)"),
+        "the guard must sit BEFORE appendAfferent, or the duplicate is already written by the time it is noticed");
+      assert("S8 · ...and the idempotence set is seeded from the WHOLE afferent file at boot, not the 500-row tail (the spool can hold a row for as many days as the daemon was down)",
+        /for \(const row of bootRows\) if \(row && row\.event_id\) nucleus\.state\.seenEvents\.add/.test(thal));
+      assert("S8 · THE THALAMUS DRAINS ON BOOT, AFTER listen() — the port must be open first, or a drain that takes seconds is a window in which a LIVE turn finds nothing listening",
+        /const drainSpool = async \(\)/.test(thal) && /server\.listen\(PORT, "127\.0\.0\.1", \(\) => \{ drainSpool\(\)/.test(thal));
+      const SP = await import(pathToFileURL(join(ROOT, "scripts", "spool.mjs")).href);
+      assert("S8 · NEW LANE ONLY — the spool names spool.db and NO existing state file (the rung's FORBIDDEN line, and L9: nothing is migrated to sqlite)",
+        /spool\.db$/.test(SP.SPOOL_DB) && !/afferent|reps_log|brain_ledger|workspace|readiness/.test(SP.SPOOL_DB));
+      assert("S8 · node:sqlite IS AVAILABLE on this runtime, so the write-ahead is REAL and not silently degraded (if this ever goes red the nerve is back to POST-and-hope and `node scripts/spool.mjs status` says why)",
+        SP.available() === true, SP.unavailableWhy() || "node:sqlite did not open");
+    }
+
     // ── LAW T · THE TOOLING LAW (19 Aug 2026) — record: docs/archive/TOOLING_LAW__2026-08-19.md ──
     // His standing order: FANG-level optimisation, universally, from now on — and his definition of
     // waste, which is a ROUTING rule and not an austerity one: never pay a model for what a
@@ -1082,7 +1115,18 @@ function hermetic() {
   // its own selftest asserts the live ledger's size:mtime is unchanged across a flush AND
   // across the scratch-pointed child that does write. So no selftest in this sweep can
   // touch it (they all run with verb `selftest`); only live organs racing the sweep can.
-const LIVE_WRITERS = /swallow_ledger\.jsonl|session_intent\.jsonl|afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl|pulse_session\.json|cortex_session\.json|captains_call\.json|sitting\.json|sitting_out\.jsonl|sitting_log\.jsonl|sitting_reviews\.jsonl/;
+// spool.db added 28 Aug 2026 (RUNG S8 — THE WRITE-AHEAD SPOOL). Its writer is
+  // hooks/afferent-post.mjs, which .claude/settings.json fires on EVERY UserPromptSubmit and
+  // Stop — so ANY session of his running during a multi-minute suite window writes it. That is
+  // the identical signature to teaching_contract.json and session_intent.jsonl above, and the
+  // reason is stronger here, not weaker: the whole point of the rung is that this file is
+  // written BEFORE the network is touched, on his keystroke, whether or not anything is
+  // listening. PRICE PAID rather than waved: `spool.mjs selftest` runs entirely in a tmp db
+  // (its own `clean()`/`_reset()`) and its last assertion pins that the module names only
+  // spool.db and no existing state file; the S8 DONE-proof drives the REAL hook with
+  // ARSENAL_SPOOL_DB pointed at a sandbox and asserts the live db is untouched (check 6a).
+  // The -wal/-shm siblings are covered by the same pattern (it matches the prefix).
+  const LIVE_WRITERS = /swallow_ledger\.jsonl|session_intent\.jsonl|afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl|pulse_session\.json|cortex_session\.json|captains_call\.json|sitting\.json|sitting_out\.jsonl|sitting_log\.jsonl|sitting_reviews\.jsonl|spool\.db/;
   const before = snap();
   const targets = scripts().filter(hasSelftest);
   for (const f of targets) run([join(ROOT, "scripts", f), "selftest"]);

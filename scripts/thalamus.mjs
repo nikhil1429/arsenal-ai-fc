@@ -695,6 +695,14 @@ function createNucleus(cfg, deps = {}) {
   const N = {
     buffer: [], flushTimer: null,
     seen: new Set(), hab: new Map(), wakeKeys: new Map(), lastPhash: new Map(),
+    // RUNG S8 (28 Aug 2026) — THE IDEMPOTENT CONSUMER. The write-ahead spool
+    // (scripts/spool.mjs) delivers AT LEAST once by design: a nerve that dies between a
+    // successful POST and marking the row replays that row on the next drain. Making the
+    // WRITER exactly-once needs a distributed transaction it cannot have; making THIS side
+    // idempotent needs one field the event already carries. So: an `event_id` this nucleus
+    // has already written to afferent.jsonl is refused, and the duplicate costs one Set
+    // lookup instead of a second row, a second scoring and a second moment.
+    seenEvents: new Set(),
     wakesToday: 0, wakeDate: localDate(new Date(D.now())),
     workspace: readJson(WORKSPACE) || { version: 0, moment: null, deep: null },
     dossier: readJson(DOSSIER) || { date: null, concepts: {}, stalls_today: 0, capacity_nudge: null },
@@ -729,6 +737,14 @@ function createNucleus(cfg, deps = {}) {
     }
     // vision static-frame gate: distance ~0 = filtered at the door, free
     if (evt.modality === "vision" && Number.isFinite(evt.hamming) && evt.hamming <= 1) return { filtered: true };
+    // S8 — THE IDEMPOTENT CONSUMER (see N.seenEvents). This is the half of "at-least-once"
+    // that makes the spool safe: a replayed delivery is a no-op here, never a second row of
+    // his in the record. Events with no event_id (the bus/market lanes) are unaffected —
+    // they were never spooled, so they have nothing to replay.
+    if (evt.event_id) {
+      if (N.seenEvents.has(evt.event_id)) return { duplicate: true, event_id: evt.event_id };
+      N.seenEvents.add(evt.event_id);
+    }
     D.appendAfferent(evt);
     const comps = computeComponents(evt, { cfg, markets: D.markets(), seen: N.seen, hab: N.hab, now });
     // habituation charges AFTER scoring; novelty burns AFTER scoring
@@ -1418,6 +1434,25 @@ async function selftest() {
     const predicted = await n.ingest({ modality: "bus", event_key: "k1", market_id: "m1", observed: true });
     const against = await n.ingest({ modality: "bus", event_key: "k2", market_id: "m1", observed: false });
     assert("PE: the event the Twin bet AGAINST outscores the predicted one", against.S > predicted.S && predicted.S < 0.1);
+  }
+
+  // (1b) RUNG S8 — THE IDEMPOTENT CONSUMER. The write-ahead spool delivers AT LEAST once by
+  // design, so a replayed event_id WILL arrive. It must cost a Set lookup, not a second row of
+  // his in the record — and an event with no event_id (the bus/market lanes) must be untouched
+  // by the guard, because nothing ever spooled it.
+  {
+    const { n, wr } = rig({});
+    const one = await n.ingest({ modality: "code", source: "claude-code", event_id: "e-dup-1", text: "the thing he actually said" });
+    const two = await n.ingest({ modality: "code", source: "claude-code", event_id: "e-dup-1", text: "the thing he actually said" });
+    const other = await n.ingest({ modality: "code", source: "claude-code", event_id: "e-dup-2", text: "a different thing he said" });
+    const written = wr.afferents.filter((r) => String(r.event_id || "").startsWith("e-dup"));
+    assert("S8 IDEMPOTENT CONSUMER — a replayed event_id is refused and never written twice; a NEW one still lands (at-least-once delivery, exactly-once record)",
+      one.ok === true && two.duplicate === true && other.ok === true && written.length === 2
+      && written.map((r) => r.event_id).join() === "e-dup-1,e-dup-2");
+    const a = await n.ingest({ modality: "bus", event_key: "k9", market_id: "m1", observed: true });
+    const b = await n.ingest({ modality: "bus", event_key: "k9", market_id: "m1", observed: true });
+    assert("S8 IDEMPOTENT CONSUMER — a lane with NO event_id is untouched by the guard (it was never spooled, so it has nothing to replay)",
+      a.ok === true && b.ok === true && !b.duplicate);
   }
 
   // (2) a repeated event is refractory-suppressed — no double-wake
@@ -2290,9 +2325,15 @@ async function main() {
   } catch (e) { swallow("a failed roll never blocks the nerve", e); }
   const nucleus = createNucleus(cfg, { log });
   // boot re-seed: yesterday's tail keeps NOV/HAB honest across restarts
-  for (const row of readLines(AFFERENT).slice(-500)) {
+  const bootRows = readLines(AFFERENT);
+  for (const row of bootRows.slice(-500)) {
     for (const t of row.concept_tokens || []) nucleus.state.seen.add(String(t).toLowerCase());
   }
+  // S8 — SEED THE IDEMPOTENCE SET FROM THE WHOLE FILE, not the 500-row tail. The spool can
+  // hold a row for as long as this daemon was down, and "down" is measured in days here (the
+  // switch-off), so a tail-sized memory would let an old replay through as a fresh row. The
+  // file is already fully read on the line above; this costs one string per row, no I/O.
+  for (const row of bootRows) if (row && row.event_id) nucleus.state.seenEvents.add(row.event_id);
   nucleus.state.wakesToday = readLines(SLEDGER).filter(r => (r.day || String(r.ts || "").slice(0, 10)) === localDate() && r.tier === 2).length;
   createBusWatcher(nucleus);
   const server = createServer(async (req, res) => {
@@ -2326,7 +2367,28 @@ async function main() {
     if (e && e.code === "EADDRINUSE") { console.log(`thalamus: nucleus already live on :${PORT} — standing down.`); process.exit(0); }
     throw e;
   });
-  server.listen(PORT, "127.0.0.1", () => log(`thalamus: relay nucleus LIVE on http://127.0.0.1:${PORT} — τ0=${cfg.tiers.tau0} τ1=${cfg.tiers.tau1_base}+${cfg.tiers.budget_k}·(1−headroom) ε=${cfg.tiers.epsilon} · B=${cfg.binding_ms}ms · wake cap ${cfg.wake_cap_per_day}/day · SELF on provenance [${(cfg.self_sources || []).join(", ")}], never [${(cfg.self_deny_sources || []).join(", ")}]`));
+  // ── S8 · THE DRAIN ON BOOT (28 Aug 2026) ──────────────────────────────────────────────
+  // The other half of the write-ahead. While this daemon was down — a crash, a reboot, or
+  // simply the hours before its 07:00 start — the capture nerve kept writing his turns to
+  // the spool and nobody read them. This is the read. It runs AFTER listen() on purpose: the
+  // port must already be open, because a drain that takes seconds must not be a window in
+  // which a live turn finds nothing listening.
+  //   · straight into ingest(), not over HTTP — same organ, no round trip, and the
+  //     idempotence set is the same object, so a row already in afferent.jsonl is refused.
+  //   · never blocks the boot and never crashes it: the drain is fire-and-forget and its
+  //     failure is a log line. A sense that cannot replay is worse than one that says so.
+  const drainSpool = async () => {
+    try {
+      const spool = await import("./spool.mjs");
+      const s = spool.stats();
+      if (!s.available) return log(`thalamus: spool unavailable (${s.why}) — capture is POST-and-hope until it opens`);
+      if (!s.pending) return;
+      log(`thalamus: draining ${s.pending} spooled event(s) the nerve wrote while nothing was listening…`);
+      const r = await spool.drain({ post: async (evt) => { await nucleus.ingest(evt); return true; } });
+      log(`thalamus: spool drained — ${r.delivered} replayed${r.failed ? ` · ${r.failed} failed (kept pending)` : ""}`);
+    } catch (e) { log(`thalamus: spool drain failed — ${(e && e.message) || e} (rows stay pending; the next boot retries)`); }
+  };
+  server.listen(PORT, "127.0.0.1", () => { drainSpool(); return log(`thalamus: relay nucleus LIVE on http://127.0.0.1:${PORT} — τ0=${cfg.tiers.tau0} τ1=${cfg.tiers.tau1_base}+${cfg.tiers.budget_k}·(1−headroom) ε=${cfg.tiers.epsilon} · B=${cfg.binding_ms}ms · wake cap ${cfg.wake_cap_per_day}/day · SELF on provenance [${(cfg.self_sources || []).join(", ")}], never [${(cfg.self_deny_sources || []).join(", ")}]`); });
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
