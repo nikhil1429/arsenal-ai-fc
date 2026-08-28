@@ -3052,8 +3052,31 @@ STATUS (update this block before any session stops — this is the handoff)
                                    class) rides the same tasks substrate.
                                    FORBIDDEN: any NEW mechanism (§2's lesson — new subjects,
                                    never new machines) · waking anything.
-                                   ⛔ **S10 INHERITS TWO THINGS THAT ARE HIS, NOT ITS OWN:**
-                                   ① **FOUR DAEMONS ARE STILL RESIDENT AND STILL TICKING** —
+                                   ✔ **PRICED BY THE RULER 28 Aug (the 1215 law): BUILD 40 ·
+                                   PROOF 12 · HANDOFF 8 — inside the row's 60.**
+                                   ⭐ **S10-R IS PRE-COMMITTED (the quality-strategy ruling,
+                                   RULING__2026-08-28_quality-strategy.md): the registry build
+                                   gets the S6-R treatment — an independent VERIFY-ONLY rung on
+                                   a decorrelated model follows S10; the ruler prices it at
+                                   S10's close. Plan the handoff knowing a verifier will re-run
+                                   every proof.**
+                                   ⛔ **BRAINSTORM GATE ON THE ROW (his brainstorm-first law,
+                                   28 Aug): S10's SHAPE-6/notes surface — note-taking/Q-14 —
+                                   is BRAINSTORM-GATED. The build may open, but S10 STOPS at
+                                   that surface until the architect has held the note-taking
+                                   brainstorm WITH HIM and its ruling is on the row. Sequence
+                                   the twelve Shape-1 instances so the notes/tasks surface
+                                   comes LAST if the brainstorm has not yet happened.**
+                                   ✔ **INHERITED ITEM ① RESOLVED 28 Aug ~15:01 IST (architect
+                                   verified by running): HE killed the four woken daemons at
+                                   his console 14:54; process table at 15:01 = ZERO woken
+                                   daemons, thalamus 12972 untouched. S9's post-kill verify
+                                   line is SATISFIED — S10 does NOT owe this reading. The
+                                   executor's "still alive at ~19:20" line was a stale-table
+                                   read (that hour had not occurred); corrected in
+                                   queue\RULING partner. Struck below, kept (L9):**
+                                   ⛔ ~~**S10 INHERITS TWO THINGS THAT ARE HIS, NOT ITS OWN:**~~
+                                   ① ~~**FOUR DAEMONS ARE STILL RESIDENT AND STILL TICKING**~~ —
                                    cortex 13244 · turnstile 15324 · brain-daemon 4284 ·
                                    sitting-daemon 9052, woken by S9's orientation typo.
                                    Spend is 0 ONLY while his OAuth is dead; a refresh makes it
@@ -7958,6 +7981,10 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       teeth everywhere. His live pain lands here too: note-generation idempotency
       (the "notes created 7 times" class) rides the same tasks substrate.
       FORBIDDEN: any NEW mechanism (§2's lesson — new subjects, never new machines).
+      PRICED (ruler, 28 Aug): BUILD 40 · PROOF 12 · HANDOFF 8. S10-R PRE-COMMITTED
+      (quality-strategy ruling): independent verify rung follows, priced at S10's close.
+      BRAINSTORM-GATED: note-taking (his law, 28 Aug) — the SHAPE-6/notes surface stops
+      for the with-him brainstorm; sequence it LAST until that ruling lands on this row.
                                                                        CEILING: 60
 ☐ S11 BUILD · STALENESS / KEYS / CRASH.                     MODEL: Opus · effort max
       sha256(inputs) folded into cache keys · recency gates on trailing-N reads ·
@@ -7971,7 +7998,10 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       lanes LAST, each behind the corrected gate AND first_real_row_at (no lane
       spends until its input class holds real data — §0's headline finding, finally
       a code path). Watchdog-reporter live. The 7-day measure window restarts.
-      ⛔ APPROVAL GATE: HIS word flips each stage, stage by stage.      CEILING: 40
+      ⛔ APPROVAL GATE: HIS word flips each stage, stage by stage.
+      ⭐ REBOOT PRE-FLIGHT FIRST (quality-strategy ruling, 28 Aug): before S12's FIRST
+      stage, a full-ladder acceptance pass — every rung's proofs re-run GREEN in one
+      sitting, signed by the architect — or no stage flips.               CEILING: 40
 ```
 
 **The whole ladder's ceiling is 500 CORRECTED lakh across 12 sessions (11 × 40 + S10's 60) —
