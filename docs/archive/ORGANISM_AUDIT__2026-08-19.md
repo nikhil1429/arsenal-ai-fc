@@ -3032,9 +3032,14 @@ STATUS (update this block before any session stops — this is the handoff)
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
   ▶ NEXT SESSION ............... **`S9` · BUILD · OWNERSHIP. MODEL: Opus 5 · effort max.
-                                   ⛑ **NOT PRICED** — the 1215 law gives BUILD/PROOF/HANDOFF to
-                                   the RULER at ruling time, never the executor. Ask for the
-                                   split; the row's CEILING 40 stands if the ruler is silent.
+                                   ✔ PRICED BY THE RULER 28 Aug (the 1215 law): BUILD 25 ·
+                                   PROOF 10 · HANDOFF 5 — inside the row's 40.
+                                   ✔ S8's STEP 0 (Node 22→24, the admin MSI) IS FOLDED INTO S9
+                                   — RULED: S9 already stands at HIS console for the service
+                                   credential; two visits where L7 wants one is the executor's
+                                   argument and it is correct. S9's row gains the line; S8's
+                                   STEP 0 is struck as folded. The MSI + the credential are ONE
+                                   console visit, ONE card, his hands.
                                    SCOPE = the row as written: WinSW services for the headless
                                    five · logon tasks + RestartOnFailure + StartWhenAvailable
                                    for the desktop two · the watchdog becomes a REPORTER
