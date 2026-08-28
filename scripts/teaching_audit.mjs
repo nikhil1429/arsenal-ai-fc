@@ -93,6 +93,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
+import { subjectsOf } from "./registry.mjs";   // S10 #10 — WHICH sources this auditor measures is a ROW, never one literal
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // ARSENAL_AUDIT_STATE_DIR is the selftest's seam and NOTHING else's: it lets the
@@ -433,11 +434,15 @@ export function seedTerms({ concept = null, sinceSession = null } = {}) {
   const closed = closedDerive();
   const startISO = sinceSession || (fs.session && fs.session.started_at) || null;
   const lines = readFileSync(afferents, "utf8").split("\n");
+  // S10 migration #10: the audited-source set is the registry row `audit_sources`
+  // (695 of his prompts over 6 days produced 0 audit rows because ONE source was
+  // nailed here). A new teaching source joins by ROW ADD, never by editing this line.
+  const AUDIT_SOURCES = subjectsOf("audit_sources");
   for (const l of lines) {
     if (!l.trim()) continue;
     let r; try { r = JSON.parse(l); } catch { continue; }
     rows++;
-    if (r.source !== "claude-code-teaching" || typeof r.text !== "string") continue;
+    if (!AUDIT_SOURCES.includes(r.source) || typeof r.text !== "string") continue;
     teachRows++;
     for (const t of TERMS_OF_ART) {
       if (!termUsed(r.text, t)) continue;

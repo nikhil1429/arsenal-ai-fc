@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:52:22.951Z",
+ "updated_at": "2026-08-28T19:52:52.858Z",
  "tables": {
   "mechanisms": [
    {
@@ -79,6 +79,17 @@
     "notes": "docClaims asks: does this cited path / command still exist? — general shape; .ps1/.cmd/skills join BY ROW when their claim grammar is defined (grep audit.mjs for the .md claim regexes first)",
     "updated_at": "2026-08-28T19:52:22.948Z",
     "added_at": "2026-08-28T19:52:22.948Z"
+   },
+   {
+    "subject": "audit_sources",
+    "schema_owner": "teaching_audit.mjs",
+    "witness": "teaching_audit.mjs:440 — source === claude-code-teaching (S10 migration #10)",
+    "subjects": [
+     "claude-code-teaching"
+    ],
+    "notes": "measure every turn against his 17 rules — the mechanism was nailed to ONE source and only inside an open FORGE session (695 prompts/6d produced 0 audit rows). A new teaching source (gemini-study-teaching, gaffer) joins BY ROW; the FORGE-session gate is its own lead, not this row",
+    "updated_at": "2026-08-28T19:52:52.855Z",
+    "added_at": "2026-08-28T19:52:52.855Z"
    }
   ],
   "sandbox_subjects": [
