@@ -1,0 +1,22 @@
+{
+ "version": 1,
+ "updated_at": "2026-08-28T19:44:18.294Z",
+ "tables": {
+  "mechanisms": [
+   {
+    "subject": "interruption_types",
+    "schema_owner": "shadow.mjs",
+    "witness": "shadow.mjs:47 — the un-nailed literal (S10 migration #1)",
+    "subjects": [
+     "stoppage_next_drill",
+     "wall_breaker",
+     "due_at_kickoff",
+     "scrimmage_door"
+    ],
+    "notes": "earn-the-right-to-act, his 11 Aug 14:36 order was fully general — a new interruption type is a ROW ADD with a receipt, never a code change",
+    "updated_at": "2026-08-28T19:44:18.289Z",
+    "added_at": "2026-08-28T19:44:18.289Z"
+   }
+  ]
+ }
+}

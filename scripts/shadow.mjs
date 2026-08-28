@@ -33,6 +33,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendF
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
+import { subjectsOf } from "./registry.mjs";     // S10 — subjects are ROWS now, never literals
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -43,8 +44,10 @@ const PITCH_HIST = join(STATE_DIR, "pitch_read_history.jsonl");
 const SCRIM_LOG = join(STATE_DIR, "dugout_scrimmage.jsonl");
 
 // the candidate interruption-types being shadow-trained (from the captain's
-// approved brainstorm; his own timed reminders are exempt and NOT here)
-const TYPES = ["stoppage_next_drill", "wall_breaker", "due_at_kickoff", "scrimmage_door"];
+// approved brainstorm; his own timed reminders are exempt and NOT here).
+// S10 migration #1: the list is a REGISTRY ROW — adding a type is a row edit
+// with a receipt (`registry.mjs set --table mechanisms ...`), never a code change.
+const TYPES = subjectsOf("interruption_types");
 const VOICE_GATE = { min_shadows: 10, min_hit_rate: 0.7 };   // proven, not vibes
 
 // SCORING WINDOWS — every one of these is the value that was ALREADY hard-coded
