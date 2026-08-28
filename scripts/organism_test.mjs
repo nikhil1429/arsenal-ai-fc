@@ -735,6 +735,8 @@ async function laws() {
     // in the ledger, in neither brain_config nor the declared list, is NAMED rather than dropped.
     {
       const OB = await import(pathToFileURL(join(ROOT, "scripts", "outbox.mjs")).href);
+      const G = await import(pathToFileURL(join(ROOT, "scripts", "gate.mjs")).href);      // S7 — the declared-consumers table and its resolver
+      const B = await import(pathToFileURL(join(ROOT, "scripts", "brain.mjs")).href);     // S7 — jobConsumers: who a job_input lane's downstream jobs actually are
       const cfg = (() => { try { return JSON.parse(readFileSync(join(ROOT, "dressing-room", "state", "brain_config.json"), "utf8")); } catch { return null; } })();
       const ledgerLanes = (() => {
         try {
@@ -754,6 +756,29 @@ async function laws() {
           `${undeclared.join(", ")} run(s) and reach the road NOWHERE, and nothing says whether that is right. Declare each in outbox.mjs LANES_NOT_IN_CONFIG with the organ it feeds, or give it a surface in brain_config.`);
         assert("LOAD ZERO · ...and every off-road declaration NAMES the organ it feeds (a lane excluded with no reason is a shrug, not a decision)",
           Object.values(OB.LANES_NOT_IN_CONFIG).every((w) => typeof w === "string" && w.trim().length >= 25));
+
+        // ── RUNG S7 · THE RATCHET: NO LANE RUNS WITHOUT A DECLARED CONSUMER (audit §1) ──────────
+        // The check above asks whether a lane is DECLARED SOMEWHERE. This one asks the harder
+        // question his correction actually poses: does the gate know WHO must eat this lane's
+        // output? A lane nobody is declared to consume cannot pass C, so a lane that reaches this
+        // list is a lane that will silently sleep forever — better found here, by name, than by
+        // him wondering months later why an organ went quiet.
+        const noConsumer = [];
+        for (const j of (cfg.jobs || [])) {
+          const down = [...new Set([...B.jobConsumers(cfg, j).map((d) => d.id), ...(j.gate && Array.isArray(j.gate.consumers) ? j.gate.consumers : [])])];
+          const c = G.declaredConsumer(j.id, { surface: j.surface, downstream: down });
+          if (!c || (c.kind !== "him" && !c.retired && !(c.names || []).length)) noConsumer.push(`${j.id} (surface.kind ${(j.surface && j.surface.kind) || "MISSING"})`);
+        }
+        for (const lane of ledgerLanes) {
+          if (known.has(lane)) continue;
+          if (!G.declaredConsumer(lane)) noConsumer.push(`${lane} (off-road, no LANE_CONSUMERS row)`);
+        }
+        assert(`S7 RATCHET · every gated lane has a DECLARED RIGHT CONSUMER — him, or the organ it was actually for (${(cfg.jobs || []).length} config jobs + ${ledgerLanes.filter((l) => !known.has(l)).length} off-road lanes, all resolved)`,
+          noConsumer.length === 0,
+          `${noConsumer.join(", ")} — nothing declares who must eat these, so THE GATE can only ever judge them by whether they reached HIM, which for an internal lane is the wrong question and a permanent sleep. Give the job a surface, or the lane a row in gate.mjs LANE_CONSUMERS.`);
+        assert("S7 RATCHET · ...and the gate's table is the ONE copy: outbox.LANES_NOT_IN_CONFIG is a derived view of it, key for key (two lists allowed to diverge is the twin-copy signature §2 names)",
+          Object.keys(OB.LANES_NOT_IN_CONFIG).length === Object.keys(G.LANE_CONSUMERS).length
+          && Object.entries(OB.LANES_NOT_IN_CONFIG).every(([k, w]) => G.LANE_CONSUMERS[k] && G.LANE_CONSUMERS[k].why === w));
       }
     }
 

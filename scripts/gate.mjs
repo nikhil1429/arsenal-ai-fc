@@ -81,6 +81,154 @@ export const GATE_DEFAULTS = Object.freeze({
 //   surface — not this list — is the defect.
 export const CONSUMPTION_KINDS = Object.freeze(["spoken", "sat", "briefed", "carded", "opened", "pushed", "delivered", "acked"]);
 
+// ── THE DECLARED CONSUMERS TABLE (rung S7, 28 Aug 2026 — HIS §1 CORRECTION, built) ──────────
+// HIS WORDS, 19 Aug 2026: "the test shouldn't be 'did it reach HIM' but 'did it reach its right
+// consumer, wherever that is in the organism' — useful things reach him usefully, everything else
+// reaches whatever organ needs it."
+//
+// WHAT WAS ACTUALLY WRONG, measured before this was built (28 Aug 2026, not inherited):
+//   `decide()` printed ONE sentence for every C failure — "never consumed by him since the lane
+//   began (it has run, and nothing of it reached his ear, brief, card or eye)". For `dmn`, whose
+//   material is eaten by thalamus.mjs and never by him, that sentence is FALSE ABOUT THE RIGHT
+//   PARTY: it accuses him of not reading a thing that was never for him. And nothing anywhere
+//   DECLARED who the right party was, so no verdict could name which consumer went quiet.
+//   The audit order's §1 also predicted "the lanes whose right consumer IS another organ have no
+//   way to pass C". Re-measured live at this rung, that half is TOO STRONG and is corrected here:
+//   `ns_pre_answers` PASSES C today (4 thalamus rows, newest 1.5d) because `consumptionOf` folds
+//   any row for the lane regardless of who stamped it. The defect was never the arithmetic — it
+//   was that the arithmetic had no declaration to check itself against, and so lied in words.
+//
+// THE LAW THIS BUILDS (§1 of the audit order, verbatim):
+//   Every lane declares its RIGHT CONSUMER — him, or a named organ. C holds when THAT consumer
+//   consumed it. A lane whose consumer is an organ is never judged by whether it reached him.
+//   RATCHET: no lane may run without a declared consumer; a lane whose declared consumer has not
+//   consumed inside the window sleeps, and the card names WHICH consumer went quiet.
+//
+// ONE JUDGEMENT MADE HERE, RECORDED SO IT CAN BE REVERSED IN ONE PREDICATE (`consumerSatisfied`):
+//   for an ORGAN-declared lane, a him-side consumption row STILL satisfies C. §1's last sentence
+//   removes the him-TEST from organ lanes; it does not make reaching him a disqualification.
+//   Reading it as exclusive was tried against the live data first and REFUSED: `night_coach`
+//   (surface names setpiece.mjs) and `intent_digest` (surface names intent.mjs) are both stamped
+//   `briefed` by learnstate's SessionStart brief — they demonstrably reach him — and an exclusive
+//   reading puts both to sleep for "setpiece.mjs has not consumed it". That is the c74
+//   false-negative class this organism already reversed once (see outboxConsumption in brain.mjs),
+//   re-created on purpose. Reaching him is the terminal purpose of every chain; it is never worth
+//   less than reaching the organ in the middle of it.
+//
+// WHY THE TABLE IS SMALL, AND WHY THAT IS THE POINT (§2's disease — the twin copy):
+//   every lane the gate judges ALREADY declares its consumer, in its own row, as `surface`
+//   (brain_config's 34 jobs; nightshift's NS_GATE; dmn's and selfknowledge's call sites). Copying
+//   those declarations into a second table here would BE the disease this order exists to kill.
+//   So the table holds rows ONLY for lanes that declare no surface anywhere — which is exactly
+//   `outbox.LANES_NOT_IN_CONFIG`, the list §1 identified as "really a CONSUMER MAP". It MOVES
+//   here (outbox re-exports a derived view; the prose is preserved to the byte) rather than being
+//   copied. S10 folds these rows into the registry proper as `right_consumer`; S7 never waits.
+export const CONSUMER_KINDS = Object.freeze(["him", "organ", "job"]);
+
+// Rows in the S6 core-row shape (docs/archive/REGISTRY_SPEC__2026-08-27.md §1), carrying the
+// fields a consumer declaration needs. `why` is the prose that lived in outbox.LANES_NOT_IN_CONFIG
+// and is preserved to the byte; the selftest asserts `names` and `why` can never drift apart.
+export const LANE_CONSUMERS = Object.freeze({
+  dmn_rollout:          { subject: "dmn_rollout",          schema_owner: "dmn.mjs",           right_consumer: { kind: "organ", names: ["dmn.mjs", "physio.mjs", "council.mjs"] }, witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds dmn.mjs / physio.mjs / council.mjs — the default-mode rollout, never a file he opens" },
+  dmn_counter:          { subject: "dmn_counter",          schema_owner: "dmn.mjs",           right_consumer: { kind: "organ", names: ["dmn.mjs", "council.mjs"] },               witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds dmn.mjs / council.mjs — the counter behind the rollout" },
+  ns_probe_bank:        { subject: "ns_probe_bank",        schema_owner: "nightshift.mjs",    right_consumer: { kind: "organ", names: ["nightshift.mjs", "dugout.mjs"] },          witness: "scripts/nightshift.mjs NS_GATE.ns_probe_bank.surface",      why: "feeds nightshift.mjs / dugout.mjs — he meets it AS a scrimmage, and dugout stamps its consumption" },
+  ns_distractors:       { subject: "ns_distractors",       schema_owner: "nightshift.mjs",    right_consumer: { kind: "organ", names: ["nightshift.mjs", "dugout.mjs"] },          witness: "scripts/nightshift.mjs NS_GATE.ns_distractors.surface",     why: "feeds nightshift.mjs / dugout.mjs — he meets it inside get_rejirah, which stamps its consumption" },
+  ns_pre_answers:       { subject: "ns_pre_answers",       schema_owner: "nightshift.mjs",    right_consumer: { kind: "organ", names: ["thalamus.mjs", "dugout.mjs"] },            witness: "consumption.jsonl — 4 rows stamped by thalamus, newest 2026-08-26", why: "feeds thalamus.mjs / dugout.mjs — pre-answers for the mouth, never read as a file" },
+  ns_grade_probes:      { subject: "ns_grade_probes",      schema_owner: "nightshift.mjs",    right_consumer: { kind: "organ", names: ["nightshift.mjs"] },                        witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds nightshift.mjs — the shift grades its own probes" },
+  cortex_wake:          { subject: "cortex_wake",          schema_owner: "cortex.mjs",        right_consumer: { kind: "organ", names: ["cortex.mjs", "council.mjs"] },             witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds cortex.mjs / council.mjs — a wake is machinery, not a message" },
+  cortex_consolidate:   { subject: "cortex_consolidate",   schema_owner: "cortex.mjs",        right_consumer: { kind: "organ", names: ["cortex.mjs", "nightshift.mjs"] },          witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds cortex.mjs / nightshift.mjs — consolidation is internal" },
+  thalamus_adjudicator: { subject: "thalamus_adjudicator", schema_owner: "thalamus.mjs",      right_consumer: { kind: "organ", names: ["thalamus.mjs"] },                          witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds thalamus.mjs — the bus adjudicates its own signals" },
+  council_chair:        { subject: "council_chair",        schema_owner: "council.mjs",       right_consumer: { kind: "organ", names: ["council.mjs"] },                           witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds council.mjs — the council's own chair turn" },
+  gaffer_judge:         { subject: "gaffer_judge",         schema_owner: "gaffer_brain.mjs",  right_consumer: { kind: "organ", names: ["gaffer_brain.mjs"] },                      witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds gaffer_brain.mjs — it reaches him AS the conversation, which is a surface the relay does not own" },
+  gaffer_verify:        { subject: "gaffer_verify",        schema_owner: "gaffer_brain.mjs",  right_consumer: { kind: "organ", names: ["gaffer_brain.mjs", "scout.mjs"] },         witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds gaffer_brain.mjs / scout.mjs — same: the Gaffer's own reasoning inside a sitting" },
+  mission_m03:          { subject: "mission_m03",          schema_owner: "scout.mjs",         right_consumer: { kind: "organ", names: ["scout.mjs"] },                             witness: "scripts/outbox.mjs LANES_NOT_IN_CONFIG (moved here at S7)", why: "feeds scout.mjs — the mission lane carries its own returns and its own cards" },
+  haiku_pulse:          { subject: "haiku_pulse",          schema_owner: "brain.mjs",         right_consumer: { kind: "organ", names: [], retired: true },                         witness: "commit 4f94805",                                            why: "RETIRED on purpose (commit 4f94805) — 98% of 32,480 tok/pulse was boot tax" },
+  selfknowledge:        { subject: "selfknowledge",        schema_owner: "selfknowledge.mjs", right_consumer: { kind: "organ", names: ["dugout.mjs"] },                            witness: "scripts/selfknowledge.mjs regenIfChanged surface",          why: "feeds dugout.mjs get_organism, which stamps its consumption directly" },
+});
+
+// Every `<name>.mjs` named in a declaration, deduped, in the order written. The ONE place the
+// organism turns a declaration's prose into organ names — SHAPE 7 (a predicate assuming a
+// material shape), so it is MEASURED, never assumed: the selftest proves it over every row of
+// the table AND over every live consumption `by` string.
+export function organsNamedIn(text) {
+  return [...new Set((String(text || "").match(/[a-z][a-z0-9_]*\.mjs/gi) || []).map((x) => x.toLowerCase()))];
+}
+
+// declaredConsumer(subject, {surface, downstream}) → the lane's `right_consumer`, or null.
+// RESOLUTION ORDER, and it is deliberate: a lane's OWN declaration at its call site (`surface`)
+// outranks the gate's table, because that is where the lane's author writes it and where it can
+// never fall out of step with the lane. The table is the FALLBACK for lanes that declare nothing
+// anywhere — the off-road ledger lanes. Where both exist they must AGREE, and the selftest
+// asserts it (two declarations allowed to diverge is the twin-copy signature §2 names).
+//   surface.kind human_file | sheet | media  → him
+//   surface.kind job_input                   → job   (names = the downstream jobs the runner resolved)
+//   surface.kind code                        → organ (names = the .mjs the surface itself points at)
+// A `code` surface written without the `scripts/` prefix (`agenda`, `dreams` — "brain.mjs tick …")
+// is caught by the same pattern; one that names no organ at all falls through to the table, and
+// then to null, and then the ratchet sleeps the lane.
+export function declaredConsumer(subject, { surface = null, downstream = null, table = LANE_CONSUMERS } = {}) {
+  const s = surface && typeof surface === "object" ? surface : null;
+  if (s && s.kind) {
+    if (s.kind === "human_file" || s.kind === "sheet" || s.kind === "media") return { kind: "him", names: [], via: `surface.${s.kind}` };
+    if (s.kind === "job_input") return { kind: "job", names: Array.isArray(downstream) ? downstream.filter((x) => typeof x === "string" && x) : [], via: "surface.job_input" };
+    if (s.kind === "code") {
+      const names = organsNamedIn(s.where);
+      if (names.length) return { kind: "organ", names, via: "surface.code" };
+    }
+  }
+  const row = table && Object.prototype.hasOwnProperty.call(table, subject) ? table[subject] : null;
+  if (row && row.right_consumer) return { ...row.right_consumer, via: "gate.LANE_CONSUMERS", why: row.why };
+  return null;
+}
+
+// consumerMatches(by, names) — did one of the named organs stamp this row? The consumption lane's
+// `by` is the stamper's own sentence ("thalamus pre-answer hit (cosine)", "dugout get_organism",
+// "learnstate brief (SessionStart)"): it opens with the organ's basename. Word-bounded on purpose
+// — `dmn` must not match `dmn_rollout`, because a lane is not its own consumer.
+export function consumerMatches(by, names) {
+  const b = String(by || "").toLowerCase();
+  if (!b) return false;
+  return (names || []).some((n) => {
+    const base = String(n || "").toLowerCase().replace(/\.mjs$/, "");
+    return base ? new RegExp(`(^|[^a-z0-9_])${base}([^a-z0-9_]|$)`).test(b) : false;
+  });
+}
+
+// consumerLabel(c) — the words the verdict, the journal and the card use for a declared consumer.
+export function consumerLabel(c) {
+  if (!c) return "nobody (no consumer declared)";
+  if (c.retired) return "nobody — the lane is RETIRED";
+  if (c.kind === "him") return "him";
+  const n = (c.names || []).join(" / ");
+  return n || (c.kind === "job" ? "its downstream job(s) — none declared" : "an organ — none named");
+}
+
+// consumerSatisfied(consumer, cons, {ageDays, windowDays}) → {ok, detail}. THE ONE PREDICATE the
+// judgement recorded in the header lives in; reverse it here and nowhere else.
+export function consumerSatisfied(consumer, cons, { ageDays = null, windowDays = GATE_DEFAULTS.window_days } = {}) {
+  const c = cons || {};
+  const who = consumerLabel(consumer);
+  // A declaration that NAMES NOBODY is not a declaration — it is the shrug the ratchet exists to
+  // refuse. `him` needs no names (he is the name); a retired lane declares that nobody may eat it.
+  if (!consumer || (consumer.kind !== "him" && !consumer.retired && !(consumer.names || []).length)) {
+    return { ok: false, detail: "NO CONSUMER DECLARED — the ratchet: a lane may not run until something names who must eat its output (its own surface.kind, or a gate.LANE_CONSUMERS row)" };
+  }
+  if (consumer.retired) return { ok: false, detail: `the lane is RETIRED (${consumer.why || "declared retired"}) — nothing may consume it, and nothing may spend on it` };
+  // A him-lane keeps the sentence he already knows, word for word — the correction was never about
+  // his lanes, and changing familiar words for no reason is its own small cost (L7).
+  if (ageDays === null) return { ok: false, detail: consumer.kind === "him"
+    ? "never consumed by him since the lane began (it has run, and nothing of it reached his ear, brief, card or eye)"
+    : `nothing has consumed it since the lane began — its declared consumer is ${who}` };
+  if (ageDays > windowDays) return { ok: false, detail: consumer.kind === "him"
+    ? `last consumed by him ${ageDays.toFixed(1)}d ago (${c.kind || "?"}) — outside the ${windowDays}d window`
+    : `its declared consumer ${who} last consumed it ${ageDays.toFixed(1)}d ago (${c.kind || "?"}) — outside the ${windowDays}d window` };
+  if (consumer.kind === "him") return { ok: true, detail: `consumed by him ${ageDays.toFixed(1)}d ago (${c.kind || "?"}${c.by ? " via " + c.by : ""}) — inside the ${windowDays}d window` };
+  return { ok: true, detail: consumerMatches(c.by, consumer.names)
+    ? `its declared consumer ${who} consumed it ${ageDays.toFixed(1)}d ago (${c.kind || "?"} via ${c.by}) — inside the ${windowDays}d window`
+    : `reached him ${ageDays.toFixed(1)}d ago (${c.kind || "?"}${c.by ? " via " + c.by : ""}) — its declared consumer is ${who}, and reaching him is never worth less than reaching the organ in the middle` };
+}
+
+
 export function gateConfig(job) {
   const g = (job && job.gate && typeof job.gate === "object") ? job.gate : {};
   const n = (v, d) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : d);
@@ -129,15 +277,23 @@ export function foldOf(job) {
 //               absences are reported, never a verdict (finding #64's trap: no ratio).
 //   consumption { last_at?: ISO|null, kind?: string, by?: string, never_ran?: boolean,
 //                 event_armed?: boolean }
-//               C holds iff event-driven (cfg.event set) · OR never_ran (a lane must
-//               run ONCE to be consumable — the first-run grace) · OR last_at inside
-//               window_days · OR forced.until > now (his `na` on the card, or
-//               `brain gate wake`).
+//               C holds iff forced.until > now (his `na` on the card, or `brain gate
+//               wake` — his door opens before every other clause, reversibility first)
+//               · OR event-driven (cfg.event set) · OR never_ran (a lane must run ONCE
+//               to be consumable — the first-run grace) · OR THE LANE'S DECLARED RIGHT
+//               CONSUMER consumed it inside window_days (rung S7 — his §1 correction;
+//               see consumerSatisfied). A lane with NO declared consumer FAILS C: the
+//               ratchet, "no lane runs without a declared consumer".
+//   consumer    { kind, names[] } | null | undefined — the lane's declared right
+//               consumer. `undefined` ⇒ resolved here from the job's own `surface`
+//               and the LANE_CONSUMERS table; `null` ⇒ the runner resolved nothing,
+//               which is the ratchet. Only a runner that knows a job_input lane's
+//               downstream jobs needs to pass this explicitly.
 //   failures    { streak?: number } — F blocks iff streak >= fail_streak. `forced.once`
 //               (a wake) overrides F for exactly one run; a success then clears the
 //               streak on the ledger by itself, which is the only clear there is.
 //   forced      { until?: ISO|null, once?: boolean } — the two wake mechanisms.
-export function decide({ job, evidence, consumption, failures, now = new Date(), forced = null, fold = null } = {}) {
+export function decide({ job, evidence, consumption, failures, now = new Date(), forced = null, fold = null, consumer = undefined } = {}) {
   const cfg = gateConfig(job);
   const nowMs = now instanceof Date ? now.getTime() : ms(now);
   const ev = evidence || {};
@@ -155,23 +311,31 @@ export function decide({ job, evidence, consumption, failures, now = new Date(),
     ? (ev.detail || (reqAbsent.length === 0 && Array.isArray(ev.absent) && ev.absent.length ? `evidence present (optional absent: ${ev.absent.join(", ")})` : "evidence present"))
     : (ev.detail || (reqAbsent.length ? `REQUIRED evidence absent: ${reqAbsent.join(", ")}` : "evidence declared absent by the organ"));
 
-  // C — consumed by him (or event-driven / first run / forced)
+  // C — consumed by ITS DECLARED RIGHT CONSUMER (or event-driven / first run / forced)
   const lastMs = ms(cons.last_at);
   const ageDays = Number.isFinite(lastMs) ? (nowMs - lastMs) / DAY : null;
+  // `consumer` undefined ⇒ resolve it from what the lane itself declares. A runner that knows a
+  // job_input lane's downstream jobs passes its own; `null` from a runner IS the ratchet firing.
+  const who = consumer === undefined ? declaredConsumer(job && job.id, { surface: job && job.surface }) : consumer;
   let C, Cdetail;
   // EVENT lanes: the event opens the lane. `event_armed` undefined ⇒ the runner's own
   // trigger arms it (brain's trigger gate) and C holds by construction; `false` ⇒ the
   // runner measured that the event has NOT fired since the last run — then only a
   // consumption inside the window or a force opens it (a lock-driven probe bank that
   // a scrimmage keeps drawing from is still useful between locks).
-  if (cfg.event && cons.event_armed !== false) { C = true; Cdetail = `event-driven (${cfg.event}) — the event opens it, consumption is not the gate`; }
-  else if (forcedLive) { C = true; Cdetail = `forced awake until ${new Date(forcedUntilMs).toISOString().slice(0, 16)}Z (his na / gate wake)`; }
+  // RUNG S7 — HIS §1 CORRECTION. The order of these clauses is the law, and it changed here:
+  //   HIS DOOR FIRST. `forced` used to sit behind the event clause; it now opens before every
+  //   other C clause, because the ratchet below can refuse a lane on a DECLARATION and his hand
+  //   must be able to open even that ("reversibility beats every letter" — the D branch already
+  //   says so in as many words). Nothing else about the event clauses moved.
+  //   THEN THE RATCHET: a lane with no declared consumer may not run at all.
+  if (forcedLive) { C = true; Cdetail = `forced awake until ${new Date(forcedUntilMs).toISOString().slice(0, 16)}Z (his na / gate wake)`; }
+  else if (!who || who.retired || (who.kind !== "him" && !(who.names || []).length)) { C = false; Cdetail = consumerSatisfied(who, cons, { ageDays, windowDays: cfg.window_days }).detail; }
+  else if (cfg.event && cons.event_armed !== false) { C = true; Cdetail = `event-driven (${cfg.event}) — the event opens it, consumption is not the gate`; }
   else if (cfg.event && ageDays !== null && ageDays <= cfg.window_days) { C = true; Cdetail = `event ${cfg.event} has not fired since the last run, but the output was consumed ${ageDays.toFixed(1)}d ago (${cons.kind || "?"}) — inside the ${cfg.window_days}d window`; }
   else if (cfg.event) { C = false; Cdetail = `event ${cfg.event} has not fired since the last run${ageDays !== null ? `, and the last consumption was ${ageDays.toFixed(1)}d ago (outside ${cfg.window_days}d)` : ", and nothing of it was ever consumed"}`; }
   else if (cons.never_ran === true) { C = true; Cdetail = "first run — a lane must run once before anything of it can reach him"; }
-  else if (ageDays !== null && ageDays <= cfg.window_days) { C = true; Cdetail = `consumed by him ${ageDays.toFixed(1)}d ago (${cons.kind || "?"}${cons.by ? " via " + cons.by : ""}) — inside the ${cfg.window_days}d window`; }
-  else if (ageDays !== null) { C = false; Cdetail = `last consumed by him ${ageDays.toFixed(1)}d ago (${cons.kind || "?"}) — outside the ${cfg.window_days}d window`; }
-  else { C = false; Cdetail = `never consumed by him since the lane began (it has run, and nothing of it reached his ear, brief, card or eye)`; }
+  else { const r = consumerSatisfied(who, cons, { ageDays, windowDays: cfg.window_days }); C = r.ok; Cdetail = r.detail; }
 
   // F — failure streak
   const streak = typeof fl.streak === "number" && fl.streak > 0 ? fl.streak : 0;
@@ -194,17 +358,25 @@ export function decide({ job, evidence, consumption, failures, now = new Date(),
     run, state, cfg,
     why: { E: { ok: E, detail: Edetail }, C: { ok: C, detail: Cdetail }, F: { ok: F, detail: Fdetail }, D: { ok: D, detail: Ddetail } },
     fold: foldTarget ? { target: foldTarget, covered: !D } : null,
-    wakes_when: run ? null : wakesWhen({ job, E, C, F, D, reqAbsent, cfg, foldTarget }),
+    consumer: who,                                                   // S7: the verdict CARRIES its declared consumer — the journal, the card and `gate json` all name WHICH consumer went quiet
+    wakes_when: run ? null : wakesWhen({ job, E, C, F, D, reqAbsent, cfg, foldTarget, consumer: who }),
   };
 }
 
 // The sentence on the card and in `brain status`: what has to happen for this lane
 // to wake ITSELF. Derived from the job's own declarations, never a hand-written per-
 // job string (a per-job table is the list this file exists to abolish).
-export function wakesWhen({ job, E, C, F, D = true, reqAbsent = [], cfg = gateConfig(job), foldTarget = foldOf(job) } = {}) {
+export function wakesWhen({ job, E, C, F, D = true, reqAbsent = [], cfg = gateConfig(job), foldTarget = foldOf(job), consumer = undefined } = {}) {
+  const who = consumer === undefined ? declaredConsumer(job && job.id, { surface: job && job.surface }) : consumer;
   const parts = [];
   if (!E) parts.push(reqAbsent.length ? `${reqAbsent.join(", ")} exists again` : "its evidence exists again");
-  if (!C) parts.push(`its output reaches him (${consumptionHint(job)}) — or his 'na' on the card / \`brain gate wake ${job && job.id ? job.id : "<job>"}\` opens it for ${cfg.window_days}d`);
+  // S7 — the C clause names WHOSE reading opens the lane, because "its output reaches him" is the
+  // wrong instruction for a lane that was never for him. An undeclared lane's clause is a
+  // DECLARATION, not a reading: nothing he does opens it until its row names a consumer.
+  if (!C && !who) parts.push(`something DECLARES its right consumer (its own surface.kind, or a row in gate.mjs LANE_CONSUMERS) — until then no reading of it can open this lane`);
+  else if (!C && who && who.retired) parts.push(`nothing — the lane is RETIRED and is not meant to wake`);
+  else if (!C && who && who.kind !== "him") parts.push(`its declared consumer ${consumerLabel(who)} consumes it (${consumptionHint(job)}) — or his 'na' on the card / \`brain gate wake ${job && job.id ? job.id : "<job>"}\` opens it for ${cfg.window_days}d`);
+  else if (!C) parts.push(`its output reaches him (${consumptionHint(job)}) — or his 'na' on the card / \`brain gate wake ${job && job.id ? job.id : "<job>"}\` opens it for ${cfg.window_days}d`);
   if (!F) parts.push(`\`brain gate wake ${job && job.id ? job.id : "<job>"}\` runs it once (a success clears the ${cfg.fail_streak}-fail streak)`);
   if (!D) parts.push(`the fold opens by itself the night ${foldTarget || "its fold target"} fails or misses (this lane is the fallback) — or \`brain gate wake ${job && job.id ? job.id : "<job>"}\` runs it beside the fold for ${cfg.window_days}d`);
   return parts.join(" · ") || "n/a";
@@ -401,6 +573,85 @@ function selftest() {
     (() => { const w = wakesWhen({ job: J("x"), E: true, C: false, F: false }); return /gate wake x/.test(w) && !/exists again/.test(w) && w.split(" · ").length === 2; })());
   assert("PURITY — decide() with a string `now` and no failures/consumption objects still returns a total verdict (never throws)",
     (() => { try { const r = decide({ job: J("z"), now: "2026-08-18T00:00:00Z" }); return typeof r.run === "boolean" && r.why && r.why.C; } catch { return false; } })());
+
+  // ── RUNG S7 · THE DECLARED CONSUMER (his §1 correction). Every check can fail. ──────────────
+  const HIM = { kind: "code", where: "scripts/learnstate.mjs diaryLine()" };
+  assert("S7 TABLE — every row is in the S6 core-row shape, and its key IS its subject (a row that cannot be found by its own name is a row S10 cannot migrate)",
+    Object.entries(LANE_CONSUMERS).every(([k, r]) => r && r.subject === k && typeof r.schema_owner === "string" && /\.mjs$/.test(r.schema_owner)
+      && r.right_consumer && CONSUMER_KINDS.includes(r.right_consumer.kind) && Array.isArray(r.right_consumer.names)
+      && typeof r.witness === "string" && r.witness.length >= 10 && typeof r.why === "string" && r.why.length >= 25));
+  assert("S7 TABLE — `names` and `why` CANNOT DRIFT APART: every organ the prose names is in names, and every name is in the prose (the twin-copy signature §2 names, made impossible)",
+    Object.values(LANE_CONSUMERS).every((r) => {
+      const inProse = organsNamedIn(r.why), declared = r.right_consumer.names;
+      return inProse.length === declared.length && inProse.every((o) => declared.includes(o));
+    }));
+  assert("S7 TABLE — it holds ONLY lanes that declare no surface of their own (it is outbox's off-road CONSUMER MAP, moved — never a second copy of brain_config's 34 surfaces)",
+    Object.keys(LANE_CONSUMERS).length === 15 && !Object.keys(LANE_CONSUMERS).includes("diary") && !Object.keys(LANE_CONSUMERS).includes("night_coach"));
+
+  // the derivation — a lane's OWN declaration answers first
+  assert("S7 DERIVE — human_file / sheet / media ⇒ HIM; job_input ⇒ its downstream JOBS; code ⇒ the ORGAN the surface itself points at",
+    declaredConsumer("x", { surface: { kind: "human_file", where: "brain_out/doubts/<d>.md" } }).kind === "him"
+    && declaredConsumer("x", { surface: { kind: "sheet" } }).kind === "him"
+    && declaredConsumer("x", { surface: { kind: "media" } }).kind === "him"
+    && declaredConsumer("x", { surface: { kind: "job_input" }, downstream: ["day_cartridge", 7] }).names.join() === "day_cartridge"
+    && declaredConsumer("x", { surface: HIM }).names.join() === "learnstate.mjs");
+  assert("S7 DERIVE — a `code` surface written WITHOUT the scripts/ prefix still names its organ (the live `agenda` / `dreams` shape: \"brain.mjs tick …\")",
+    declaredConsumer("agenda", { surface: { kind: "code", where: "brain.mjs tick agendaAllocationFor() → per-job lean/skip" } }).names.join() === "brain.mjs");
+  assert("S7 DERIVE — no surface ⇒ the gate's own table answers; a lane in neither ⇒ NULL, and null is what the ratchet sleeps",
+    declaredConsumer("cortex_wake").names.join() === "cortex.mjs,council.mjs"
+    && declaredConsumer("cortex_wake").via === "gate.LANE_CONSUMERS"
+    && declaredConsumer("a_lane_nobody_declared") === null);
+
+  // the ratchet — the strictness this rung ADDS
+  const undeclared = { id: "unowned_lane" };
+  assert("S7 RATCHET — a lane with NO declared consumer FAILS C even with a consumption row minutes old, and the sentence asks for a DECLARATION, not a reading",
+    (() => { const v = decide({ job: undeclared, evidence: {}, consumption: { last_at: iso(0.01), kind: "briefed", by: "learnstate" }, now: NOW });
+      return v.run === false && v.why.C.ok === false && /NO CONSUMER DECLARED/.test(v.why.C.detail) && /DECLARES its right consumer/.test(v.wakes_when); })());
+  assert("S7 RATCHET — it BITES BOTH WAYS: declare a consumer for that same lane and the same row opens it (the ratchet refuses undeclared lanes, never live ones)",
+    decide({ job: { ...undeclared, surface: HIM }, evidence: {}, consumption: { last_at: iso(0.01), kind: "briefed", by: "learnstate" }, now: NOW }).run === true);
+  assert("S7 RATCHET — a declaration that NAMES NOBODY is not a declaration: kind organ/job with an empty names[] is refused exactly like a missing row (the shrug the ratchet exists to catch), while `him` needs no name because he IS the name",
+    decide({ job: { id: "shrug" }, evidence: {}, consumption: { last_at: iso(1), kind: "briefed", by: "learnstate" }, now: NOW, consumer: { kind: "organ", names: [] } }).why.C.ok === false
+    && decide({ job: { id: "shrug" }, evidence: {}, consumption: { last_at: iso(1), kind: "briefed", by: "learnstate" }, now: NOW, consumer: { kind: "job", names: [] } }).why.C.ok === false
+    && decide({ job: { id: "hisown" }, evidence: {}, consumption: { last_at: iso(1), kind: "briefed", by: "learnstate" }, now: NOW, consumer: { kind: "him", names: [] } }).why.C.ok === true);
+  assert("S7 RATCHET — HIS DOOR still opens an undeclared lane (reversibility beats every letter, D's own rule); an EXPIRED force does not",
+    decide({ job: undeclared, evidence: {}, consumption: { last_at: null }, now: NOW, forced: { until: iso(-14) } }).why.C.ok === true
+    && decide({ job: undeclared, evidence: {}, consumption: { last_at: null }, now: NOW, forced: { until: iso(1) } }).why.C.ok === false);
+  assert("S7 RATCHET — an EVENT lane is not exempt: no declared consumer ⇒ asleep, even event-armed (the event opens a lane, it does not excuse one)",
+    decide({ job: { id: "unowned_event", gate: { event: "lock" } }, evidence: {}, consumption: {}, now: NOW }).why.C.ok === false);
+  assert("S7 RETIRED — a lane declared RETIRED fails C on a fresh row and says nothing may spend on it (haiku_pulse: 98% of its tokens were boot tax)",
+    (() => { const v = decide({ job: { id: "haiku_pulse" }, evidence: {}, consumption: { last_at: iso(0.5), kind: "briefed", by: "brain" }, now: NOW });
+      return v.why.C.ok === false && /RETIRED/.test(v.why.C.detail) && /RETIRED/.test(v.wakes_when); })());
+
+  // the verdict now judges — and SPEAKS — by the declared consumer
+  const organLane = { id: "ns_pre_answers" };
+  assert("S7 ORGAN C — a lane whose right consumer is an ORGAN passes C on a row that ORGAN stamped, and the detail names the organ instead of accusing him",
+    (() => { const v = decide({ job: organLane, evidence: {}, consumption: { last_at: iso(1.5), kind: "sat", by: "thalamus pre-answer hit (cosine)" }, now: NOW });
+      return v.why.C.ok === true && /declared consumer thalamus\.mjs/.test(v.why.C.detail) && !/consumed by him/.test(v.why.C.detail); })());
+  assert("S7 ORGAN C — quiet consumer: outside the window the verdict names WHICH consumer went quiet, and never says 'nothing reached his ear' about a lane that was never for him",
+    (() => { const v = decide({ job: organLane, evidence: {}, consumption: { last_at: iso(30), kind: "sat", by: "thalamus" }, now: NOW });
+      return v.why.C.ok === false && /thalamus\.mjs/.test(v.why.C.detail) && !/his ear/.test(v.why.C.detail)
+        && /declared consumer thalamus\.mjs \/ dugout\.mjs consumes it/.test(v.wakes_when); })());
+  assert("S7 ORGAN C — never run and nobody has eaten it: the sentence still names the declared consumer, not him",
+    (() => { const v = decide({ job: organLane, evidence: {}, consumption: { last_at: null, never_ran: false }, now: NOW });
+      return v.why.C.ok === false && /nothing has consumed it since the lane began — its declared consumer is thalamus\.mjs \/ dugout\.mjs/.test(v.why.C.detail); })());
+  assert("S7 THE JUDGEMENT (reversible in consumerSatisfied alone) — reaching HIM still satisfies an ORGAN-declared lane, and the detail says so out loud; this is what keeps night_coach and intent_digest awake on learnstate's brief",
+    (() => { const v = decide({ job: { id: "night_coach", surface: { kind: "code", where: "scripts/setpiece.mjs readNightCoach()" } }, evidence: {}, consumption: { last_at: iso(2), kind: "briefed", by: "learnstate brief (SessionStart)" }, now: NOW });
+      return v.why.C.ok === true && /reached him/.test(v.why.C.detail) && /declared consumer is setpiece\.mjs/.test(v.why.C.detail); })());
+  assert("S7 — the verdict CARRIES its declared consumer, so the journal and the card can name it without re-deriving anything",
+    decide({ job: organLane, evidence: {}, consumption: {}, now: NOW }).consumer.names.join() === "thalamus.mjs,dugout.mjs"
+    && decide({ job: undeclared, evidence: {}, consumption: {}, now: NOW }).consumer === null);
+
+  // the prose predicate — SHAPE 7, so it is measured, not assumed
+  assert("S7 consumerMatches — word-bounded on purpose: `dmn` does not match `dmn_rollout` (a lane is not its own consumer); the real live `by` sentences DO match their organ",
+    consumerMatches("dmn_rollout wrote it", ["dmn.mjs"]) === false
+    && consumerMatches("dugout get_organism", ["dugout.mjs"]) === true
+    && consumerMatches("thalamus pre-answer hit (cosine)", ["thalamus.mjs", "dugout.mjs"]) === true
+    && consumerMatches("learnstate brief (SessionStart)", ["setpiece.mjs"]) === false
+    && consumerMatches("", ["dugout.mjs"]) === false && consumerMatches("dugout", []) === false);
+  assert("S7 consumerLabel — him · the organs by name · the retired lane · and the undeclared lane, each said in words a card can carry",
+    consumerLabel({ kind: "him" }) === "him" && consumerLabel({ kind: "organ", names: ["a.mjs", "b.mjs"] }) === "a.mjs / b.mjs"
+    && /RETIRED/.test(consumerLabel({ kind: "organ", names: [], retired: true })) && /no consumer declared/.test(consumerLabel(null)));
+
   assert("THIS ORGAN WRITES NOTHING — its source has no write call (the journal, the lane and the card belong to their owners)",
     !/writeFileSync|appendFileSync|renameSync|mkdirSync|unlinkSync/.test(readFileSync(new URL(import.meta.url), "utf8").replace(/^\/\/.*$/gm, "").replace(/assert\("THIS ORGAN WRITES NOTHING[^\n]*\n[^\n]*/m, "")));
 

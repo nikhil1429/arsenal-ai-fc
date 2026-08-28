@@ -81,7 +81,7 @@ import { classifyLimit } from "./claudegen.mjs";
 // THE GATE (ORGANISM_OVERHAUL 18 Aug 2026 §5, LAW L5). One pure verdict function,
 // shared with nightshift.mjs and dmn.mjs, so "asleep" means one thing everywhere.
 // gate.mjs writes nothing; the journal, the consumption lane and the card are OURS.
-import { decide as gateDecide, gateConfig, consumptionOf, failStreakOf, everRan as gateEverRan, CONSUMPTION_KINDS } from "./gate.mjs";
+import { decide as gateDecide, gateConfig, consumptionOf, failStreakOf, everRan as gateEverRan, CONSUMPTION_KINDS, declaredConsumer, consumerLabel } from "./gate.mjs";   // declaredConsumer/consumerLabel: rung S7 (28 Aug 2026) — THE GATE judges C by the lane's DECLARED right consumer (§1)
 import { readRows as outboxRows, fold as outboxFold } from "./outbox.mjs";   // LOAD ZERO BLOCK 6 (19 Aug 2026): THE ROAD, READ — a delivered row is consumption (outboxConsumption below). READ ONLY: outbox.mjs stays the sole writer of outbox.jsonl, and it imports nothing of ours, so there is no cycle.
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: a chain child (the morning sheet tick) keys the CHAIN's day; overnight jobs keep their wall-clock shift (shiftDay/serveDate untouched)
 import { digestInput as intentDigestInput, validateDigest as intentValidateDigest } from "./intent.mjs";   // Block 2 §7.2 (18 Aug 2026): the intent_digest job's food + its validator — brain never writes the intent lane
@@ -1683,7 +1683,12 @@ export function gateVerdictFor(job, cfg, ctx, visited = new Set()) {
   const never_ran = !gateEverRan(ctx.ledger || [], job.id);
   const forced = gateForce(ctx.queueState, job.id);
   const fold = ctx.foldFor ? ctx.foldFor(job) : foldStatus(job, cfg, ctx, visited);
-  const v = gateDecide({ job, evidence, consumption: { ...consumption, never_ran }, failures: { streak: failStreakOf(ctx.ledger || [], job.id) }, now: ctx.now, forced, fold });
+  // RUNG S7 — the DECLARED right consumer (§1). A brain job declares its own in `surface`; only a
+  // `job_input` lane needs help, because the jobs that eat it are named by the CONFIG's `inputs`
+  // declarations (jobConsumers) and by `gate.consumers`, not by the surface's prose. Passing them
+  // is what lets a verdict say "day_cartridge went quiet" instead of "he never read it".
+  const consumer = declaredConsumer(job.id, { surface: job.surface, downstream: [...new Set([...jobConsumers(cfg, job).map((j) => j.id), ...gateConfig(job).consumers])] });
+  const v = gateDecide({ job, evidence, consumption: { ...consumption, never_ran }, failures: { streak: failStreakOf(ctx.ledger || [], job.id) }, now: ctx.now, forced, fold, consumer });
   return { ...v, evidence, consumption, never_ran, forced, fold_status: fold };
 }
 // ---- the verdict for a NON-brain lane (nightshift, DMN) — same law, same journal ----
@@ -1748,12 +1753,24 @@ export function gateJournalRows() { return readLines(GATE_JOURNAL); }
 // Block 5.2. One list, so the printer, the journal, the card and `gate json` agree.
 const GATE_LETTERS = ["E", "C", "F", "D"];
 const failedLetters = (why) => GATE_LETTERS.filter((k) => why && why[k] && why[k].ok === false);
+// RUNG S7 — the card NAMES WHICH CONSUMER WENT QUIET (§1's ratchet sentence, in his language).
+// Before this, every C card said the same thing — "output kabhi tum tak nahi pahuncha" — which for
+// a lane whose material was never for him is an accusation aimed at the wrong party, and gives him
+// nothing to act on. A card only ever earns a word by telling him something he could not already
+// guess, so the wording changes ONLY where the consumer is not him.
 function gateCardArgs(lane, verdict, now, cfg = null) {
   const failed = failedLetters(verdict.why);
   const short = (s) => String(s || "").replace(/\s+/g, " ").slice(0, 46);
   const w = verdict.wakes_when ? String(verdict.wakes_when).split(" · ")[0].replace(/\s+—.*$/, "") : "";
   const days = gateConfig((cfg && (cfg.jobs || []).find((j) => j.id === lane)) || {}).window_days;
-  const line = `${lane} SO GAYA (${failed.join("")}: ${short(verdict.why[failed[0]].detail)}) · jaagega: ${short(w)} · haan=sone do · na=${days}d jagao`;
+  const c = verdict.consumer;
+  let why = short(verdict.why[failed[0]].detail);
+  if (failed[0] === "C" && c !== undefined) {
+    if (c === null) why = "iska consumer kahin declare hi nahi hai";
+    else if (c.retired) why = "lane RETIRED hai — ise koi nahi khata";
+    else if (c.kind !== "him") why = `${consumerLabel(c)} ne window mein nahi khaya`;
+  }
+  const line = `${lane} SO GAYA (${failed.join("")}: ${why}) · jaagega: ${short(w)} · haan=sone do · na=${days}d jagao`;
   return ["file", "--line", line, "--key", `gate:${lane}:${dayKey(now)}`, "--gate-wake", lane];
 }
 function defaultFileCard(args) {
@@ -1780,6 +1797,9 @@ export function gateTransition(lane, verdict, deps = {}) {
     card: state === "asleep" ? (cardable ? "filed" : "none (fold — his approved design, journal only)") : null,
     wakes_when: verdict.wakes_when || null,
     consumption: verdict.consumption || null,
+    // S7 — the ROAD ROW names which consumer went quiet (§1's ratchet). `undefined` on a pre-S7
+    // verdict shape reads as "this row predates the declaration", never as "nobody is declared".
+    consumer: verdict.consumer !== undefined ? verdict.consumer : null,
   };
   if (!deps.dry) {
     if (deps.appendJournal) deps.appendJournal(JSON.stringify(row) + "\n");
@@ -1828,7 +1848,7 @@ export function gateReport(cfg, ctx) {
 export function printGate(rep, { verbose = false } = {}) {
   const asleep = rep.asleep, awake = rep.awake;
   const folded = rep.rows.filter((r) => r.fold && r.fold.target);
-  console.log(`brain: THE GATE — ${awake.length} lane(s) awake · ${asleep.length} asleep (E=evidence · C=consumed-by-him ≤window · F=fail streak · D=displaced by a fold; asleep is health, not disease — it wakes itself)`);
+  console.log(`brain: THE GATE — ${awake.length} lane(s) awake · ${asleep.length} asleep (E=evidence · C=its DECLARED consumer ate it ≤window — him, or the organ it was actually for (S7 · §1) · F=fail streak · D=displaced by a fold; asleep is health, not disease — it wakes itself)`);
   for (const r of asleep) {
     const failed = failedLetters(r.why);
     const foldTag = r.fold && r.fold.target ? ` · folded → ${r.fold.target}${r.fold.covered ? "" : " (fold OPEN — fallback)"}` : "";
@@ -4237,9 +4257,14 @@ async function selftest() {
       const ev = cfg.jobs.find((j) => j.id === "evening_voice"), tp = cfg.jobs.find((j) => j.id === "teamtalk_pm");
       assert("FULL-TIME EVENT — evening_voice + teamtalk_pm declare trigger `fulltime` AND gate.event `fulltime` in canon config (they run only after his close; the arm belongs to that shift)",
         ev && tp && ev.trigger === "fulltime" && tp.trigger === "fulltime" && ev.gate && ev.gate.event === "fulltime" && tp.gate && tp.gate.event === "fulltime");
+      // S7 — these two carry a `surface` because every real lane does, and the S7 ratchet refuses a
+      // lane whose right consumer nothing declares. Both real full-time lanes end AT HIM (a voice
+      // note he plays), so `media` is the fixture's honest stand-in; the mechanism under test is
+      // the SHARED ARM, and the declaration is what makes them well-formed lanes to test it with.
+      const FT_SURFACE = { kind: "media", where: "dressing-room/club/media/teamtalk_<date>_pm.mp3 (fixture: the full-time voice lanes)" };
       const ftCfg = { ...cfg, paused: false, jobs: [
-        { id: "ev_fx", engine: "claude", window: "any", priority: 90, trigger: "fulltime", inputs: [] },
-        { id: "tp_fx", engine: "claude", window: "any", priority: 45, trigger: "fulltime", inputs: [], at: "23:50" },
+        { id: "ev_fx", engine: "claude", window: "any", priority: 90, trigger: "fulltime", inputs: [], surface: FT_SURFACE },
+        { id: "tp_fx", engine: "claude", window: "any", priority: 45, trigger: "fulltime", inputs: [], at: "23:50", surface: FT_SURFACE },
       ] };
       const T21 = new Date(2026, 7, 18, 21, 30);
       const qsFT = { observed_window_ceiling: null, jobs_run: {}, triggers: { fulltime: { ts: new Date(2026, 7, 18, 21, 25).toISOString(), reason: "full-time" } } };
@@ -6529,7 +6554,9 @@ async function main() {
       const rep = gateReport(cfg, gateContext({}, now, ledger, q));
       console.log(JSON.stringify({
         at: now.toISOString(),
-        lanes: rep.rows.map((r) => ({ lane: r.lane, state: r.state, why: { E: r.why.E.ok, C: r.why.C.ok, F: r.why.F.ok, D: r.why.D ? r.why.D.ok : true }, detail: { E: r.why.E.detail, C: r.why.C.detail, F: r.why.F.detail, D: r.why.D ? r.why.D.detail : null }, fold: r.fold || null, wakes_when: r.wakes_when, never_ran: r.never_ran, forced: r.forced || null, journaled: r.journaled ? { state: r.journaled.state, ts: r.journaled.ts } : null })),
+        // `consumer` (S7) — the machine face names WHO must eat each lane, so a reader never has to
+        // re-derive the one fact the C verdict now turns on.
+        lanes: rep.rows.map((r) => ({ lane: r.lane, state: r.state, why: { E: r.why.E.ok, C: r.why.C.ok, F: r.why.F.ok, D: r.why.D ? r.why.D.ok : true }, detail: { E: r.why.E.detail, C: r.why.C.detail, F: r.why.F.detail, D: r.why.D ? r.why.D.detail : null }, consumer: r.consumer !== undefined ? r.consumer : null, fold: r.fold || null, wakes_when: r.wakes_when, never_ran: r.never_ran, forced: r.forced || null, journaled: r.journaled ? { state: r.journaled.state, ts: r.journaled.ts } : null })),
         others: rep.others.map((r) => ({ lane: r.lane, state: r.state, ts: r.ts, why: r.why || null, detail: r.detail || null, wakes_when: r.wakes_when || null })),
       }));
       return;

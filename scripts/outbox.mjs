@@ -58,6 +58,7 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { LANE_CONSUMERS } from "./gate.mjs";   // S7: the off-road CONSUMER MAP lives in the gate now (§1) — this file re-exports the view it always published
 
 const SELF = fileURLToPath(import.meta.url);
 const __dirname = dirname(SELF);
@@ -93,23 +94,18 @@ export const NOT_FOR_HIM = ["job_input"];
 // only what he needs — the opposite of L7. They stay out, BY DECLARATION rather than by accident,
 // and the suite names any ledger lane that is neither in brain_config nor here: a new lane may not
 // slip past the road unexamined, which is the one thing this list cannot notice about itself.
-export const LANES_NOT_IN_CONFIG = Object.freeze({
-  dmn_rollout: "feeds dmn.mjs / physio.mjs / council.mjs — the default-mode rollout, never a file he opens",
-  dmn_counter: "feeds dmn.mjs / council.mjs — the counter behind the rollout",
-  ns_probe_bank: "feeds nightshift.mjs / dugout.mjs — he meets it AS a scrimmage, and dugout stamps its consumption",
-  ns_distractors: "feeds nightshift.mjs / dugout.mjs — he meets it inside get_rejirah, which stamps its consumption",
-  ns_pre_answers: "feeds thalamus.mjs / dugout.mjs — pre-answers for the mouth, never read as a file",
-  ns_grade_probes: "feeds nightshift.mjs — the shift grades its own probes",
-  cortex_wake: "feeds cortex.mjs / council.mjs — a wake is machinery, not a message",
-  cortex_consolidate: "feeds cortex.mjs / nightshift.mjs — consolidation is internal",
-  thalamus_adjudicator: "feeds thalamus.mjs — the bus adjudicates its own signals",
-  council_chair: "feeds council.mjs — the council's own chair turn",
-  gaffer_judge: "feeds gaffer_brain.mjs — it reaches him AS the conversation, which is a surface the relay does not own",
-  gaffer_verify: "feeds gaffer_brain.mjs / scout.mjs — same: the Gaffer's own reasoning inside a sitting",
-  mission_m03: "feeds scout.mjs — the mission lane carries its own returns and its own cards",
-  haiku_pulse: "RETIRED on purpose (commit 4f94805) — 98% of 32,480 tok/pulse was boot tax",
-  selfknowledge: "feeds dugout.mjs get_organism, which stamps its consumption directly",
-});
+//
+// ── RUNG S7 (28 Aug 2026) — THE ROWS MOVED TO THE GATE, AND THIS IS NOW A DERIVED VIEW ─────────
+// The audit order's §1 read this list correctly: *"It was written as an EXCLUSION list. Under his
+// correction it is really a CONSUMER MAP, and the gate should use it."* So it moved to
+// `gate.mjs LANE_CONSUMERS`, where each entry is a row in the S6 core-row shape carrying
+// `right_consumer` as a FIELD the verdict can check, not prose only a human can read. Nothing was
+// copied: the fifteen `why` strings below are the SAME strings, read out of those rows, and the
+// gate's own selftest asserts a row's `right_consumer.names` can never drift from its `why`.
+// Every consumer of this export (organism_test's off-road check, flow_atlas's declared tables)
+// sees exactly what it saw before. S10 folds the rows into the registry proper.
+export const LANES_NOT_IN_CONFIG = Object.freeze(
+  Object.fromEntries(Object.entries(LANE_CONSUMERS).map(([lane, row]) => [lane, row.why])));
 const DEFAULT_DEADLINE_H = 12;
 const DEFAULT_MAX_PER_SWEEP = 3;                                 // L7: he is never handed a list
 

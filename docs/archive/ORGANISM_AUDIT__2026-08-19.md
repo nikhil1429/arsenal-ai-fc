@@ -78,6 +78,42 @@ STATUS (update this block before any session stops — this is the handoff)
                                    and EVERY gap runs one way: the atlas is a LOWER BOUND, so the
                                    535 edges are real and there are more than 535.** Deliverables
                                    in `arsenal-audit-artifacts\s6r-2026-08-28\`.
+  S7  BUILD · GATE C ........... ☑ **DONE 28 Aug 2026 (Opus 5 · max) — HIS §1 CORRECTION IS A CODE
+                                   PATH.** `gate.mjs LANE_CONSUMERS` — 15 rows in the S6 core-row
+                                   shape (`subject · schema_owner · right_consumer · witness · why`),
+                                   the list §1 called *"really a CONSUMER MAP"* MOVED out of
+                                   `outbox.LANES_NOT_IN_CONFIG`, which is now a DERIVED view of it
+                                   (one copy, and a suite check that they can never drift) ·
+                                   ONE resolver `declaredConsumer()` (a lane's own `surface`
+                                   answers first, the table is the fallback — so brain_config's 34
+                                   declarations were never copied) · C now judges AND SPEAKS by the
+                                   declared consumer · THE RATCHET in the law file AND the suite
+                                   (34 config jobs + 15 off-road lanes, all resolved; a declaration
+                                   naming nobody is refused like a missing one) · the card and the
+                                   road row NAME WHICH CONSUMER WENT QUIET, in his Hinglish, and
+                                   ONLY where the consumer is not him.
+                                   ⚠ **§1's OTHER HALF IS TOO STRONG AND IS CORRECTED, NOT REPEATED:**
+                                   "the lanes whose right consumer IS another organ have no way to
+                                   pass C" — measured live, `ns_pre_answers` PASSES C today on four
+                                   thalamus rows. The arithmetic was never the defect; the missing
+                                   DECLARATION was, and the verdict lied in words for want of it.
+                                   PROOF (the rung's own, both runs through the organism's own
+                                   doors, HEAD stashed in for the BEFORE): the six-card class
+                                   re-verdicted — **STATE lines BEFORE vs AFTER IDENTICAL · C
+                                   booleans IDENTICAL · only the SENTENCES changed.** Nothing woken,
+                                   nothing newly slept: the FORBIDDEN line held exactly.
+                                   GATES STRICTER, NEVER WEAKER: gate selftest **29 → 48/0** ·
+                                   `npm test` **108/2 → 110/2** (the same two reds, both the
+                                   switch-off's staleness) · xray 23/0 Q2 0 Q5 0 · rails 52/0 ·
+                                   flow_atlas 7/7 · lawpack GREEN (jugad still 102 — S7 migrated no
+                                   site, by design) · `rails orders` open order clean ·
+                                   **`proofs_s7.mjs` 11/11 bite-proofs, planted and restored.**
+                                   ONE JUDGEMENT, recorded and reversible in ONE predicate
+                                   (`consumerSatisfied`): a him-side row still satisfies an
+                                   ORGAN-declared lane. The exclusive reading was tried on live data
+                                   first and REFUSED — it sleeps `night_coach` + `intent_digest`,
+                                   which is the c74 false-negative class, re-created on purpose.
+                                   Deliverables: `arsenal-audit-artifacts\s7-2026-08-28\`.
   THE EXECUTION PLAN ........... ☑ WRITTEN — §10 (20 Aug 2026). THE LADDER IS THE HANDOFF.
                                    Hardened same day to the junior bar: §10-F model routing ·
                                    §10-G versions+models policy · the FLOW ATLAS (S6a) ·
@@ -2964,7 +3000,44 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`S7` · BUILD · GATE C. MODEL: Opus 5 · effort max.
+  ▶ NEXT SESSION ............... **`S8` · BUILD · THE SPOOL. MODEL: Opus 5 · effort max.
+                                   CEILING 40 as §10-C writes it. ⛑ **THE SPLIT IS NOT PRICED** —
+                                   the 1215 law says the RULER writes BUILD/PROOF/HANDOFF at ruling
+                                   time and never the executor, and no ruling has priced S8. The
+                                   S8 session's FIRST act is to ask the architect for the split
+                                   (one line), and to work to the row's 40 only if the ruler is
+                                   unreachable — recording that it did so.
+                                   SCOPE = the row as written, in its own order: **STEP 0 is a
+                                   VERSION RUNG and moves ALONE** (§10-G + rule 11) — Node 22.14 →
+                                   Node 24 LTS, suite green BEFORE and AFTER, its own commit,
+                                   better-sqlite3 the fallback if `node:sqlite` misbehaves. THEN the
+                                   spool: write-ahead in the capture nerve on `node:sqlite` — local
+                                   row FIRST, then POST; thalamus drains on boot; `event_key` dedup
+                                   = at-least-once + idempotent consumer. PROOF (sandbox): kill
+                                   thalamus → prompt → spool row → revive → EXACTLY ONE bus row.
+                                   FORBIDDEN: migrating ANY existing state file to sqlite (L9 — new
+                                   lanes only) · waking anything · Gemini · agents.
+                                   ⛑ **Q-11 RIDES HERE** (ruled 25 Aug): the capture-loss fix (250ms
+                                   hook timeout + the 07:00 task start) is S8's, and it must land
+                                   before/with any S12 stage that re-enables voice/Gaffer/Gemini.
+                                   ⭐ THE BRAINSTORM-FIRST LAW does not gate S8 — S7–S9 and S11–S12
+                                   as scoped touch none of the brainstorm set (S10's notes surface
+                                   carries the first flag).
+                                   ⛑ TWO THINGS S7 LEAVES OPEN BY NAME, neither scoped into S8:
+                                   ① the silent lanes now say WHICH consumer is quiet, but nothing
+                                   yet WRITES a consumption row for `dmn` / `cortex_wake` /
+                                   `council_chair` — giving them a stamper is S12's ordered wake,
+                                   not a patch; ② `night_coach` and `intent_digest` declare
+                                   consumers (setpiece.mjs, intent.mjs) that their live stampers
+                                   contradict (learnstate's brief) — a §4-B stale-declaration in
+                                   `brain_config.json`, and correcting it is its OWNER's write,
+                                   never a session's.
+                                   ⛑ carried one-liners for HIM, still nobody's: ①
+                                   `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
+                                   "resume 28 Aug 2026" — that is TODAY — and nothing fires it;
+                                   ② the samjhao-lane §0 pointer still names the learning resume.**
+
+  ~~▶ NEXT SESSION ............... **`S7` · BUILD · GATE C. MODEL: Opus 5 · effort max.
                                    ✔ PRICED BY THE RULER at S6-F's close (28 Aug, the 1215 law):
                                    BUILD 25 · PROOF 10 · HANDOFF 5 — inside the row's ruled 40.
                                    Scope = the row as written (the DECLARED consumers table in
@@ -2995,7 +3068,9 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⛑ carried one-liners for HIM, still nobody's: ①
                                    `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
                                    "resume 28 Aug 2026" — that is TODAY — and nothing fires it;
-                                   ② the samjhao-lane §0 pointer still names the learning resume.
+                                   ② the samjhao-lane §0 pointer still names the learning resume.**~~
+                                   ✅ **DONE 28 Aug 2026 — see the `S7` ☑ row above and in §10-C,
+                                   and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
   ~~▶ NEXT SESSION ............... **`S6-F` — THE EIGHT REPAIRS. HIS HAAN IS GIVEN (28 Aug —
                                    "yes, let's implement it"; queue\RULING__2026-08-28_his-haan+
@@ -7578,13 +7653,74 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
      no gate weakened (the two that moved got STRICTER) · s5-2026-08-20/ untouched · no
      migration landed (S10's, under the new (a1)/(a2)).          CEILING: 10 / 6 / 5
 
-☐ S7  BUILD · GATE C.                                       MODEL: Opus · effort max
+☑ S7  BUILD · GATE C.        DONE 28 Aug 2026 ·      MODEL: Opus 5 · effort max
       His §1 correction lands: the consumer map becomes a DECLARED consumers table in
       the S6 row-shape, owned by the gate — S10 folds it into the registry proper, so
       S7 never waits on S10. The lane verdict judges by DECLARED consumer. PROOF:
       re-run the six gate-card class and show the verdicts change for the right
       reason. Ratchet: no lane runs without a declared consumer.
       FORBIDDEN: waking anything (S12 wakes; S7 only corrects the judge). CEILING: 40
+      ── WHAT LANDED (priced by the ruler at S6-F's close: BUILD 25 · PROOF 10 · HANDOFF 5) ──
+      **THE TABLE — `gate.mjs LANE_CONSUMERS`, 15 rows in the S6 core-row shape**
+      (`subject · schema_owner · right_consumer{kind,names} · witness · why`). It is the
+      list §1 named — *"written as an EXCLUSION list … really a CONSUMER MAP"* — MOVED
+      out of `outbox.LANES_NOT_IN_CONFIG`, which is now a DERIVED view of it, key for
+      key and string for string. **Moved, never copied:** a suite assertion makes a
+      second drifting copy impossible, and the gate's own selftest makes a row's
+      `names` unable to drift from its `why`.
+      **WHY ONLY 15 ROWS, AND WHY THAT IS THE POINT (§2's twin-copy disease).** Every
+      lane the gate judges ALREADY declares its consumer in its own row, as `surface` —
+      brain_config's 34 jobs, nightshift's NS_GATE, dmn's and selfknowledge's call
+      sites. Copying those 34 into a second table would BE the disease. The table holds
+      rows only for lanes that declare nothing anywhere.
+      **ONE RESOLVER, `declaredConsumer()`** — the lane's own declaration answers first,
+      the table is the fallback, nothing else is consulted: human_file/sheet/media ⇒
+      HIM · job_input ⇒ the downstream JOBS the config's own `inputs` name · code ⇒ the
+      ORGAN(s) the surface points at · nothing anywhere ⇒ null, and null is what the
+      ratchet sleeps.
+      **C JUDGES AND SPEAKS BY IT.** One clause moved: HIS FORCE now opens the lane
+      BEFORE every other C clause, because the ratchet can refuse a lane on a
+      DECLARATION and his hand must open even that (D's branch already said reversibility
+      beats every letter).
+      **THE RATCHET, in the law file AND the suite** — 34 config jobs + 15 off-road
+      lanes, all resolved; and a declaration that NAMES NOBODY (organ/job with an empty
+      `names[]`) is refused exactly like a missing row, while `him` needs no name.
+      **THE CARD AND THE ROAD ROW NAME WHICH CONSUMER WENT QUIET** (§1's own sentence),
+      in his Hinglish, and ONLY where the consumer is not him — a him-lane's card is
+      unchanged word for word, because the correction was never about his lanes.
+      ⚠ **§1's OTHER HALF IS MEASURABLY TOO STRONG, and is corrected here rather than
+      repeated:** *"the lanes whose right consumer IS another organ … have no way to
+      pass C"* — measured live 28 Aug, `ns_pre_answers` PASSES C today on four thalamus
+      rows (newest 1.5d), because `consumptionOf` folds any row for the lane regardless
+      of who stamped it. The arithmetic was never the defect. The defect was that it had
+      no declaration to check itself against, and so lied in words.
+      **THE PROOF THE ROW ASKED FOR** — the six-card class re-verdicted through the
+      organism's own doors (`gate json` + `gateVerdictForLane` with each lane's real
+      call-site surface), HEAD stashed in for the BEFORE, same live state both runs:
+      **STATE lines BEFORE vs AFTER IDENTICAL · C booleans IDENTICAL · only the SENTENCES
+      changed.** c65 `dmn`'s accusation moved to the right party; c74's road fix survived
+      untouched; c68 did NOT move, and that is correct — it was an E card and S7 touches
+      C only. **Nothing woken, nothing newly slept: the FORBIDDEN line held exactly.**
+      **GATES STRICTER, NEVER WEAKER:** gate selftest **29 → 48/0** · `npm test`
+      **108/2 → 110/2** (the same two reds, both the switch-off's staleness) · xray 23/0,
+      Q2 0, Q5 0, unresolved_sinks 1359 → 1359 · rails 52/0 · flow_atlas 7/7 · lawpack
+      GREEN (jugad still 102 — S7 migrated no site, by design: the table MOVED, it did
+      not migrate a subject list) · `rails orders` open order clean ·
+      **`proofs_s7.mjs` 11/11 bite-proofs, every one planted AND restored.**
+      **ONE JUDGEMENT, recorded and reversible in ONE predicate (`consumerSatisfied`):**
+      a him-side row still satisfies an ORGAN-declared lane. §1's last sentence removes
+      the him-TEST from organ lanes; it does not make reaching him a disqualification.
+      The exclusive reading was tried against live data FIRST and REFUSED — it sleeps
+      `night_coach` and `intent_digest`, both demonstrably reaching him through
+      learnstate's brief, which is the c74 false-negative class re-created on purpose.
+      **WHAT IT DID NOT DO, said out loud:** it gave the silent lanes no STAMPER (S12's
+      ordered wake owns that) · it did not touch `brain_config.json`, so the two stale
+      declarations it found (`night_coach`→setpiece.mjs, `intent_digest`→intent.mjs, both
+      actually stamped by learnstate) are RECORDED, not corrected — that write belongs to
+      the file's owner · it shipped no registry mechanism (§2: new subjects, never new
+      machines) · it woke nothing, enabled nothing, spent no Gemini, used no agents.
+      Deliverables: `arsenal-audit-artifacts\s7-2026-08-28\` (S7_VERDICT.md ·
+      PROOF_BEFORE.txt · PROOF_AFTER.txt · proofs_s7.mjs).
 ☐ S8  BUILD · THE SPOOL.                                    MODEL: Opus · effort max
       STEP 0 (§10-G, own commit): Node 22.14 → Node 24 LTS, suite green before AND
       after; better-sqlite3 is the fallback if node:sqlite misbehaves.
@@ -17519,3 +17655,186 @@ eight, 10/6/5) — written by the ruler in the router THIS act · ③ spec v1.1 
 law; the sign-off says S7 is priced at S6-F's close, which is now). THE BRAINSTORM-FIRST LAW binds
 from here: S10's SHAPE-6/notes surface is BRAINSTORM-GATED on note-taking, and S7-S9/S11-S12 as
 scoped touch none of the set.**
+
+
+---
+
+### PROGRESS 2026-08-28 ~15:30 IST — **RUNG S7 · BUILD · GATE C — CLOSED. HIS §1 CORRECTION IS A CODE PATH.**
+
+**Opus 5 · effort max, solo, no agents, zero Gemini.** Priced by the ruler at S6-F's close:
+BUILD 25 · PROOF 10 · HANDOFF 5, inside the row's ruled 40. Scope = the row as written; F-02's
+class-size question stayed ruled OUT.
+
+#### THE DEFECT, stated as the gate's own behaviour rather than as an opinion
+
+`gate.mjs decide()` printed ONE sentence for every C failure, for every lane:
+
+> *"never consumed by him since the lane began (it has run, and nothing of it reached his ear,
+> brief, card or eye)"*
+
+For `dmn` — whose material `thalamus.mjs` eats and which was never meant for him — that sentence is
+**false about the right party.** It accuses HIM of not reading a thing that was never his. And
+nothing anywhere DECLARED who the right party was, so no verdict could name which consumer had gone
+quiet, and no card could tell him anything he could act on.
+
+#### ⚠ §1's OTHER HALF IS TOO STRONG — MEASURED, AND CORRECTED RATHER THAN REPEATED
+
+§1 predicts: *"the lanes whose right consumer IS another organ (`ns_pre_answers` → thalamus,
+`dmn_rollout` → dmn/physio/council …) have **no way to pass C**."* Measured live on 28 Aug before a
+line was written: **`ns_pre_answers` passes C today.** Four consumption rows stamped `by: "thalamus
+pre-answer hit (cosine|overlap)"`, newest 1.5d, and `consumptionOf` folds any row for the lane
+regardless of who stamped it. Same for `selfknowledge` (15 rows by `dugout get_organism`).
+
+So the arithmetic was never the defect — the missing DECLARATION was, and the verdict lied in words
+for want of it. What §1 got exactly right is the LAW; what it got too strong is the diagnosis of the
+mechanism. This is recorded here because the order's own §4 rule binds its own text too: a claim is
+a LEAD until one run verifies it. `gate show`'s "other lanes journaled here: … ns_pre_answers=asleep"
+is the JOURNAL's last recorded state (18–20 Aug), not a live verdict — reading it as one is how the
+too-strong claim survived.
+
+#### WHAT LANDED
+
+**1 · THE DECLARED CONSUMERS TABLE — `gate.mjs LANE_CONSUMERS`, 15 rows in the S6 core-row shape**
+(`subject · schema_owner · right_consumer{kind,names} · witness · why`). It is the list §1 identified
+by name: *"It was written as an EXCLUSION list. Under his correction it is really a CONSUMER MAP, and
+the gate should use it."* It **MOVED** out of `outbox.mjs LANES_NOT_IN_CONFIG`, which is now a
+**derived view** of it — key for key, string for string, so `organism_test` and `flow_atlas` see
+exactly what they always saw. Two assertions make a second, drifting copy impossible: the suite
+checks the two views are equal, and the gate's selftest checks a row's `right_consumer.names` can
+never drift from the organs its own `why` prose names.
+
+**2 · WHY THE TABLE IS ONLY 15 ROWS — and why that is the whole point (§2's disease).** Every lane the
+gate judges ALREADY declares its consumer, in its own row, as `surface`: brain_config's 34 jobs,
+nightshift's `NS_GATE`, dmn's and selfknowledge's call sites. Copying those 34 declarations into a
+second table here would BE the twin-copy disease this order exists to kill. So the table holds rows
+ONLY for lanes that declare nothing anywhere — which is exactly the off-road list.
+
+**3 · ONE RESOLVER, `declaredConsumer()`** — the lane's own declaration answers first (that is where
+its author writes it and where it cannot fall out of step with the lane), the gate's table is the
+fallback, and nothing else is consulted:
+
+| a lane declares | its right consumer is | measured coverage |
+|---|---|---|
+| `surface.kind` human_file / sheet / media | **him** | 11 of 34 jobs |
+| `surface.kind` job_input | the **downstream jobs** the config's own `inputs` name (`jobConsumers`) | 6 of 34 |
+| `surface.kind` code | the **organ(s)** the surface itself points at | 17 of 34 |
+| nothing anywhere | the `LANE_CONSUMERS` row — and if none, **null** | the 15 off-road lanes |
+
+The `code` match is deliberately wider than the old `consumptionHint` regex (`([a-z_]+)\.mjs`, not
+`scripts/([a-z_]+)\.mjs`) because `agenda` and `dreams` write theirs as `"brain.mjs tick …"` — the
+two the narrower pattern would have silently failed to resolve, and the ratchet would then have slept.
+
+**4 · C JUDGES — AND SPEAKS — BY THE DECLARATION.** One clause order changed, once: **his force now
+opens the lane BEFORE every other C clause.** The ratchet can refuse a lane on a DECLARATION, and his
+hand must be able to open even that; D's branch already says reversibility beats every letter, so
+this makes C agree with D rather than inventing anything.
+
+**5 · THE RATCHET — no lane runs without a declared consumer.** In the law file (`decide()` fails C
+with a sentence that asks for a DECLARATION, not a reading) and in the suite (`S7 RATCHET`, 34 config
+jobs + 15 off-road lanes, all resolved, each named if it were not). A declaration that NAMES NOBODY —
+`kind organ/job` with an empty `names[]` — is refused exactly like a missing row; `him` needs no name
+because he *is* the name.
+
+**6 · THE CARD AND THE ROAD ROW NAME WHICH CONSUMER WENT QUIET** — §1's ratchet sentence, in his
+Hinglish, and ONLY where the consumer is not him:
+
+| when | the card now says |
+|---|---|
+| an organ | `<lane> SO GAYA (C: thalamus.mjs ne window mein nahi khaya) · …` |
+| nothing declared | `<lane> SO GAYA (C: iska consumer kahin declare hi nahi hai) · …` |
+| retired | `<lane> SO GAYA (C: lane RETIRED hai — ise koi nahi khata) · …` |
+| **him** | **unchanged, word for word** — his lanes were never what was wrong |
+
+`gate json` and the journal row both carry `consumer` now, so a reader never re-derives the one fact
+the verdict turns on.
+
+#### THE PROOF THE ROW ASKED FOR — the six-card class, and it is not a re-read
+
+Both runs went through the organism's OWN doors (`node scripts/brain.mjs gate json` for config jobs;
+`gateVerdictForLane` with each lane's real call-site surface for the off-road four), against the same
+live state, with HEAD's `gate/brain/outbox/organism_test` stashed in for the BEFORE and popped back.
+Transcripts: `arsenal-audit-artifacts\s7-2026-08-28\PROOF_BEFORE.txt` / `PROOF_AFTER.txt`.
+
+| card | lane(s) | what changed |
+|---|---|---|
+| **c59** | `intent_digest` | awake → awake. Sentence: *"consumed by him 1.3d ago"* → *"reached him 1.3d ago … its declared consumer is intent.mjs"* — the mismatch between its declaration and its actual stamper is now VISIBLE instead of hidden behind "him". |
+| **c65** | `dmn` | asleep → asleep. *"nothing of it reached his ear, brief, card or eye"* → *"nothing has consumed it since the lane began — its declared consumer is thalamus.mjs"*. **The accusation moved to the right party.** This is the card the whole rung exists for. |
+| **c68** | `prepare_on_request` | **unchanged, and that is the right answer.** c68 was an **E** card; S7 touches C only. A C-fix that moved an E verdict would be luck, not law. |
+| **c69** | the batch card said 12; the 18-Aug journal names **19** lanes that slept that day, so all 19 were re-verdicted | **8 awake / 11 asleep, before and after, identical.** Eleven identical sentences became eleven different true ones, across **10 distinct declared consumers**. |
+| **c73** | `ns_probe_bank` · `ns_distractors` · `ns_pre_answers` | states identical (awake / asleep / awake); each names its consumer. `ns_pre_answers` — §1's own example of a lane that "cannot pass C" — passes, and now passes BY NAME. |
+| **c74** | `gaffer_claim_audit` | awake → awake, *"reached him 9.1d ago (delivered via outbox omsz5p4c87w → dugout)"*. **LOAD ZERO Block 6's road fix survived S7 untouched** — the regression this rung most had to avoid. |
+
+**The two checks that matter, run mechanically rather than by eye:**
+
+```
+STATE lines BEFORE vs AFTER : IDENTICAL — no lane changed awake/asleep
+C booleans  BEFORE vs AFTER : IDENTICAL — same boolean everywhere; only the SENTENCE changed
+```
+
+**Nothing was woken. Nothing newly slept.** The rung's FORBIDDEN line — *"waking anything (S12 wakes;
+S7 only corrects the judge)"* — held exactly, and is now measured rather than asserted.
+
+#### ONE JUDGEMENT MADE, RECORDED SO THE ARCHITECT CAN REVERSE IT IN ONE PREDICATE
+
+**For an ORGAN-declared lane, a him-side consumption row STILL satisfies C.** §1's last sentence —
+*"A lane whose consumer is an organ is never judged by whether it reached him"* — removes the
+him-TEST from organ lanes; it does not make reaching him a disqualification.
+
+The exclusive reading was tried against the live data BEFORE choosing: `night_coach` (surface names
+setpiece.mjs) and `intent_digest` (surface names intent.mjs) are both stamped `briefed` by
+learnstate's SessionStart brief at `learnstate.mjs:1418-1423`. They demonstrably reach him. An
+exclusive reading sleeps both for *"setpiece.mjs has not consumed it"* — which is the **c74
+false-negative class this organism already reversed once**, re-created on purpose. Reaching him is
+the terminal purpose of every chain; it is never worth less than reaching the organ in the middle.
+
+Not escalated, on §10-D rule 13's own bound — the order's recorded history answers it (the c74
+reversal is on all fours), and escalating what the order already answers is offloading, not quality.
+It lives in **`consumerSatisfied()` and nowhere else**; the six-card proof re-runs in one command.
+
+#### THE GATES — every one RUN at this rung, none inherited
+
+| gate | before | after |
+|---|---|---|
+| `node scripts/gate.mjs selftest` | 29 / 0 | **48 / 0** (+19) |
+| `npm test` (SOLO) | **108 / 2** | **110 / 2** — the SAME two reds (watchman 198h · audit 237h staleness = the switch-off) |
+| `node scripts/xray.mjs report` | Q2 0 · Q5 0 | Q2 **0** · Q5 **0** · selftest 23/0 · unresolved_sinks 1359 → 1359 |
+| `node scripts/rails.mjs selftest` | 52 / 0 | 52 / 0 |
+| `node scripts/flow_atlas.mjs selftest` | 7 / 7 | 7 / 7 |
+| `node scripts/lawpack.mjs check` | GREEN | **GREEN** — no law's count rose; jugad still 102 |
+| `node scripts/rails.mjs orders` (§3-C) | clean | **open order clean**, 7 leads in closed records |
+| bite-proofs | — | **`proofs_s7.mjs` 11 / 11**, planted AND restored, both directions |
+
+**A gate may only get stricter, and two did.** None weakened.
+
+#### A FIXTURE THE RATCHET CAUGHT, AND WHY IT WAS FIXED RATHER THAN EXEMPTED
+
+`brain.mjs`'s FULL-TIME EVENT fixture (`ev_fx` / `tp_fx`) declared no `surface` — so the ratchet slept
+it and two brain assertions went red. Every REAL lane declares one (the assertion directly above that
+fixture proves `evening_voice` and `teamtalk_pm` do), so the fixture was under-specified relative to
+the world it stands for. It was given the `media` surface its real counterparts carry, with a comment
+saying why. **The alternative — exempting fixtures from the ratchet — would have put the first hole in
+the law on the day it was written.**
+
+#### WHAT THIS RUNG DID **NOT** DO — said plainly, per §5
+
+- **It gave the silent lanes no STAMPER.** `dmn`, `cortex_wake`, `council_chair` and the rest now say
+  *which* consumer is quiet; nothing yet writes a consumption row for them. Building those stamps is
+  **S12's dependency-ordered wake**, not a patch S7 may make.
+- **It did not touch `brain_config.json`.** Two stale declarations were found and are RECORDED, not
+  corrected: `night_coach` declares setpiece.mjs and `intent_digest` declares intent.mjs, while both
+  are actually stamped by learnstate's brief. That is a §4-B stale-declaration, and the write belongs
+  to the file's owner, never to a session (owners-only).
+- **It shipped no registry mechanism.** The 15 rows are in the S6 row-shape *so that* S10 can fold
+  them — §2's lesson: new subjects, never new machines.
+- **It read no `s5-2026-08-20/`, woke nothing, enabled nothing, spent no Gemini, used no agents, and
+  hand-edited no state file** (`git status` at close: four scripts + this order, nothing else).
+
+#### WHAT THE NEXT SESSION DOES
+
+**`S8` · BUILD · THE SPOOL — Opus 5 · effort max.** ⛑ **Its BUILD/PROOF/HANDOFF split is NOT priced**
+— the 1215 law gives that to the RULER at ruling time and forbids the executor from writing it, and
+no ruling has priced S8. S8's first act is to ask the architect for the split; the row's CEILING 40
+stands either way. **STEP 0 moves ALONE** (§10-G + rule 11): Node 22.14 → Node 24 LTS, suite green
+before AND after, its own commit. Then the write-ahead spool on `node:sqlite`, and **Q-11's
+capture-loss fix rides here** (ruled 25 Aug) — it must land before or with any S12 stage that
+re-enables voice / Gaffer / Gemini.
