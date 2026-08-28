@@ -1,0 +1,23 @@
+id: receipt-testimony-read
+language: JavaScript
+severity: warning
+message: a self-declared count read straight off a parsed receipt — SHAPE 8 says a receipt is TESTIMONY until the consumer recomputes it
+note: |
+  §9-D SHAPE 8 (named at S6 from the sweep's own classes; the rule landed at S10):
+  any gate reading a self-declared count/coverage field without recomputing it in
+  the same expression treats testimony as measurement — "12 lanes healthy" is a
+  sentence, not a number. verify's recompute pattern is the reference
+  implementation. THIS RULE finds the SHAPE — a count-word member read directly
+  off freshly-parsed JSON; scripts/lawpack.mjs judges it (a display-only read may
+  declare itself with `receipt-ok` on or near the line). The baseline freezes the
+  shape's measured size and may only FALL.
+rule:
+  pattern: JSON.parse($A).$B
+constraints:
+  B:
+    regex: '^(count|counts|total|totals|coverage|passed|failed|ok|n)$'
+files:
+  - "scripts/**/*.mjs"
+  - "hooks/**/*.mjs"
+ignores:
+  - "scripts/legacy/**"

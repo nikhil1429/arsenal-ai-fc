@@ -72,7 +72,7 @@ const SGCONFIG = join(ROOT, "sgconfig.yml");
 const NM = join(ROOT, "node_modules");
 
 /** The five rule ids that must exist in laws/ — the pack IS the law, so a missing rule is a RED. */
-export const RULE_IDS = ["owners-only-state-write", "law-m-literal-model", "jugad-literal-subject-list", "trailing-n-slice", "bare-catch"];
+export const RULE_IDS = ["owners-only-state-write", "law-m-literal-model", "jugad-literal-subject-list", "trailing-n-slice", "bare-catch", "receipt-testimony-read"];
 
 /** THE EIGHT PRODUCTION LANES — §14.2's own list, and it is swallow.mjs's, not a new one.
  *  (That this list is itself a literal is recorded on purpose: it is a §9 Shape-1 instance
@@ -115,6 +115,12 @@ export const BASELINE = {
   "jugad-literal-subject-list": 91,    // S10 ratchet (a2): 102 −1 shadow(#1) −1 tasks KINDS(#5) −2 CORE_AXES twins(#12) −3 calibration(r13) −2 acts(r14) −2 distiller INTERACTIVE+AMBIENT(r15; LEGACY stays frozen AND counted — honesty over score)
   "trailing-n-slice": 7,
   "bare-catch": 38,
+  // SHAPE 8, frozen at S10 (29 Aug 2026), every one READ before freezing:
+  //   archive_audit:808 (.ok off a lane receipt) · capture:1618/:1640 (.n off saved
+  //   rows — both inside selftest blocks) · timeaudit:588 (.ok off its own tmp) ·
+  //   outwork_audit:403 (.counts off its own last-run file). May only FALL; a
+  //   display-only read declares itself `receipt-ok`.
+  "receipt-testimony-read": 5,
   depcruise_errors: 7,
 };
 
@@ -244,6 +250,19 @@ export function judgeJugad(matches, { read = srcOf } = {}) {
   return { findings };
 }
 
+/** SHAPE 8 (S10): a self-declared count read straight off a parsed receipt — testimony,
+ *  not measurement, until the consumer recomputes it. A display-only read declares
+ *  itself with `receipt-ok` near the line; everything else is the frozen shape. */
+export function judgeReceiptTestimony(matches, { read = srcOf } = {}) {
+  const findings = [];
+  for (const m of matches.filter((x) => x.rule === "receipt-testimony-read")) {
+    const src = read(m.file);
+    if (waived(src, m.line, "receipt")) continue;
+    findings.push({ ...m, why: "a count-word read directly off parsed JSON — SHAPE 8: a receipt is testimony until recomputed (declare display-only reads with receipt-ok)" });
+  }
+  return { findings };
+}
+
 /** SHAPE 4: a trailing-N read with nothing in its neighbourhood that asks how OLD the window is. */
 export function judgeTrailingN(matches, { read = srcOf } = {}) {
   const findings = [];
@@ -347,6 +366,7 @@ export async function measure({ withDepcruise = true } = {}) {
   const j = judgeJugad(matches);
   const t = judgeTrailingN(matches);
   const c = judgeBareCatch(matches);
+  const rt = judgeReceiptTestimony(matches);
   const dc = withDepcruise ? depcruise() : { available: false, errors: [], leads: [] };
   const counts = {
     "owners-only-state-write": o.findings.length,
@@ -354,9 +374,10 @@ export async function measure({ withDepcruise = true } = {}) {
     "jugad-literal-subject-list": j.findings.length,
     "trailing-n-slice": t.findings.length,
     "bare-catch": c.findings.length,
+    "receipt-testimony-read": rt.findings.length,
     depcruise_errors: dc.available ? dc.errors.length : 0,
   };
-  return { matches, counts, o, m, j, t, c, dc, raw, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
+  return { matches, counts, o, m, j, t, c, rt, dc, raw, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
 }
 
 // ── THE PLANT — the rung's DONE-PROOF, and it runs on EVERY selftest ────────
@@ -372,6 +393,7 @@ export const PLANTS = {
   "jugad-literal-subject-list": 'const TYPES = ["alpha", "beta", "gamma"];\nexport default TYPES;\n',
   "trailing-n-slice": "export const tail = (rows) => rows.slice(-50);\n",
   "bare-catch": "export const p = (f) => { try { f(); } catch {} };\n",
+  "receipt-testimony-read": 'import { readFileSync } from "node:fs";\nexport const gate = () => JSON.parse(readFileSync("receipt.json", "utf8")).count;\n',
 };
 
 export function plantAndScan({ bin = sgBin() } = {}) {
