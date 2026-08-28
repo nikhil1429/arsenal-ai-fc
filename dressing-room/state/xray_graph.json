@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-28T20:48:50.267Z",
+ "built_at": "2026-08-28T23:15:47.299Z",
  "organs_parsed": 111,
  "organs_expected": 111,
  "parse_errors": [],
- "unresolved_sinks": 1409,
+ "unresolved_sinks": 1413,
  "organs": {
   "acts.mjs": {
    "loc": 496,
@@ -8683,7 +8683,7 @@
    "unresolved": 2
   },
   "gate.mjs": {
-   "loc": 689,
+   "loc": 705,
    "reads": [],
    "writes": [],
    "spawns": [],
@@ -13396,14 +13396,14 @@
    "unresolved": 0
   },
   "registry.mjs": {
-   "loc": 709,
+   "loc": 906,
    "reads": [
     {
      "path": "CLAUDE.md",
      "lines": [
-      434,
-      434,
-      434
+      564,
+      564,
+      564
      ],
      "fixture": false
     },
@@ -13414,6 +13414,14 @@
       94,
       93,
       94
+     ],
+     "fixture": false
+    },
+    {
+     "path": "scripts",
+     "lines": [
+      246,
+      246
      ],
      "fixture": false
     }
@@ -13436,7 +13444,7 @@
      "kind": "organ",
      "script": "captains_call.mjs",
      "verb": null,
-     "line": 448,
+     "line": 578,
      "ctx": "addRuling"
     }
    ],
@@ -13447,27 +13455,27 @@
      "catch_stmts": 1
     },
     {
-     "line": 226,
+     "line": 338,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 240,
+     "line": 352,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 245,
+     "line": 357,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 344,
+     "line": 456,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 355,
+     "line": 467,
      "try_stmts": 4,
      "catch_stmts": 1
     },
@@ -13477,27 +13485,27 @@
      "catch_stmts": 1
     },
     {
-     "line": 226,
+     "line": 338,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 240,
+     "line": 352,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 245,
+     "line": 357,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 344,
+     "line": 456,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 355,
+     "line": 467,
      "try_stmts": 4,
      "catch_stmts": 1
     },
@@ -13507,27 +13515,27 @@
      "catch_stmts": 1
     },
     {
-     "line": 226,
+     "line": 338,
      "try_stmts": 5,
      "catch_stmts": 1
     },
     {
-     "line": 240,
+     "line": 352,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 245,
+     "line": 357,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 344,
+     "line": 456,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 355,
+     "line": 467,
      "try_stmts": 4,
      "catch_stmts": 1
     }
@@ -13562,6 +13570,7 @@
     "collectLaws",
     "coreAxes",
     "derivedCopyCheck",
+    "emitDeclaredSet",
     "emitRows",
     "emitWounds",
     "fixturePin",
@@ -13572,7 +13581,9 @@
     "meter",
     "neverFedLines",
     "orphanWritesCheck",
+    "redLawCoverage",
     "redRows",
+    "resolveRuling",
     "retireRow",
     "rowOf",
     "runChecks",
@@ -13582,7 +13593,7 @@
     "upsertRow",
     "validateRow"
    ],
-   "unresolved": 45
+   "unresolved": 49
   },
   "rejirah.mjs": {
    "loc": 1216,
@@ -23560,6 +23571,7 @@
     "limits.mjs",
     "organism_test.mjs",
     "reconcile.mjs",
+    "registry.mjs",
     "selfknowledge.mjs",
     "teaching_contract.mjs",
     "xray.mjs"

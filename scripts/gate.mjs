@@ -134,9 +134,17 @@ export const CONSUMER_KINDS = Object.freeze(["him", "organ", "job"]);
 // was outbox's list moved here at S7. The literal object below is FROZEN as the
 // S7 layer (L9) and doubles as the drift-lock fixture: the selftest asserts the
 // registry-derived view and this frozen layer can never disagree.
+// S10-F (29 Aug 2026): the registry's `lanes` table is WIDER than this map now. It also
+// holds lanes whose consumer is declared SOMEWHERE ELSE — night_coach at its own call site
+// (brain_config surface.where), brain_ledger in the IR as a shared append ledger. This table
+// is, by its own definition above, the FALLBACK for lanes that declare nothing anywhere, so
+// the derived view SELECTS: a row that names WHERE it is declared is not an off-road row.
+// The selection is the row's own field, never a list kept here — a second list is exactly
+// the twin-copy disease this fold exists to end.
 function laneConsumersFromRegistry() {
-  const rows = registryLaneRows();
-  if (!rows.length) throw new Error("gate: the registry lanes table is EMPTY/unreachable — the consumer map cannot be derived; seed registry.json (S10) before any lane is judged");
+  const all = registryLaneRows();
+  if (!all.length) throw new Error("gate: the registry lanes table is EMPTY/unreachable — the consumer map cannot be derived; seed registry.json (S10) before any lane is judged");
+  const rows = all.filter((r) => !r.declared_elsewhere);
   return Object.freeze(Object.fromEntries(rows.map((r) => [r.subject, Object.freeze({
     subject: r.subject, schema_owner: r.schema_owner,
     right_consumer: Object.freeze({
@@ -609,6 +617,14 @@ function selftest() {
     Object.keys(LANE_CONSUMERS).length === 15 && !Object.keys(LANE_CONSUMERS).includes("diary") && !Object.keys(LANE_CONSUMERS).includes("night_coach"));
   assert("S10 FOLD — the registry-derived view and the frozen S7 layer CANNOT DISAGREE (one copy: the rows moved to registry.json, this table derives, the layer is the drift-lock fixture)",
     JSON.stringify(LANE_CONSUMERS) === JSON.stringify(LANE_CONSUMERS_S7_LAYER));
+  assert("S10-F — a lanes row that says WHERE it is declared stays OUT of this map, and the exclusion is the ROW'S OWN FIELD: night_coach and brain_ledger live in the registry now, and neither may leak into a table whose whole definition is \"declares nothing anywhere\"",
+    (() => {
+      const all = registryLaneRows();
+      const elsewhere = all.filter((r) => r.declared_elsewhere);
+      return elsewhere.length >= 2
+        && elsewhere.every((r) => typeof r.declared_elsewhere === "string" && r.declared_elsewhere.trim() && !(r.subject in LANE_CONSUMERS))
+        && all.filter((r) => !r.declared_elsewhere).length === Object.keys(LANE_CONSUMERS).length;
+    })(), `${registryLaneRows().length} lanes rows, ${Object.keys(LANE_CONSUMERS).length} off-road`);
 
   // the derivation — a lane's OWN declaration answers first
   assert("S7 DERIVE — human_file / sheet / media ⇒ HIM; job_input ⇒ its downstream JOBS; code ⇒ the ORGAN the surface itself points at",

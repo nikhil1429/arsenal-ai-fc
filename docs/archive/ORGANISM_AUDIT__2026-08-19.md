@@ -21,7 +21,9 @@
 STATUS (update this block before any session stops — this is the handoff)
 
   ⛔ THE ORGANISM IS SWITCHED OFF — HIS ORDER, 20 Aug 2026 ("nothing burns tokens anywhere").
-     All 56 ArsenalFC-* tasks Disabled · all daemons killed · the Startup launcher renamed
+     EVERY ArsenalFC-* task Disabled · all daemons killed · the Startup launcher renamed
+     (the count is LIVE-READ, never written here — S10-R's O-1 caught the frozen "56" while
+     the machine held 59:  schtasks /Query /TN "\ArsenalFC-*" /FO LIST | findstr /C:"Status:")
      ArsenalFC-Brain.bat.disabled-2026-08-20 (restore = rename back). ONE exception on his
      word: ArsenalFC-Thalamus re-enabled + running (capture only, zero tokens) so nothing of
      his is lost while we fix. DO NOT re-enable anything else before S12. RED state lines
@@ -3039,7 +3041,36 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`S10-F` · REPAIR (ruled + priced 29 Aug): Opus 5 · effort max ·
+  ▶ NEXT SESSION ............... **`S11` · BUILD · STALENESS / KEYS / CRASH. MODEL: Opus 5 ·
+                                   effort max. CEILING: 40. Its §10-C row is the scope, and it now
+                                   carries F-6 as well (routed there by the S10-R signoff ruling):
+                                   the suite's HERMETICITY assert is NON-DETERMINISTIC — green then
+                                   red at the same commit — so S11 opens by INSTRUMENTING across a
+                                   red window, never by hunting a writer. `snap()` keys on
+                                   `size:mtimeMs`, not content (organism_test.mjs:992).
+                                   ⛑ THREE THINGS S11 MUST NOT RE-DERIVE:
+                                   (1) `npm test 119/2` is spoken as "reproducible, not stable"
+                                   until F-6 closes — S10-F re-measured 119/2 exactly, with the
+                                   same two reds and the same three member selftests as S10-R's
+                                   recorded run, and HERMETICITY happened to pass. That is a best
+                                   case that reproduced, not a stable baseline.
+                                   (2) F-5 is an ACCEPTED COST, not a defect: the atlas stale-proof
+                                   keys on mtime, so any checkout/branch switch/clone reds
+                                   `flow_atlas check` with byte-identical files. Clear it with
+                                   `node scripts/xray.mjs build` + `node scripts/flow_atlas.mjs
+                                   build`. NEVER weaken the guard — S10-F paid this cost twice.
+                                   (3) F-3 belongs to S12, not S11: per-consumer read-stamps go
+                                   live when the consuming organs wake. S10-F's `brain_ledger` row
+                                   is the first lanes row the meter can actually read (2,063
+                                   payload rows) and it reports **20 declared consumers, 0 with a
+                                   read-stamp** — that is the switch-off, stated honestly, not a
+                                   regression and not a claim that F-3 closed.
+                                   ⛑ carried for HIM, unchanged: c86 is DONE (Node v24.19.0 live)
+                                   but its CARD still sits in the queue; his anchor clears it,
+                                   nothing else may. The interim fresh-questions law STILL BINDS
+                                   the four already-samjhao'd topics.**
+
+  ~~▶ NEXT SESSION ............... **`S10-F` · REPAIR (ruled + priced 29 Aug): Opus 5 · effort max ·
                                    BUILD 10 · PROOF 6 · HANDOFF 5 (ceiling 21). SCOPE = exactly four
                                    fixes + one fold, RULED in
                                    arsenal-audit-artifacts\queue\RULING__2026-08-29_s10r-signoff.md:
@@ -3053,7 +3084,11 @@ STATUS (update this block before any session stops — this is the handoff)
                                    F-6→S11 (its row gains the line). Each fix re-runs the S10-R
                                    probe that found it — RED first, GREEN after. Suite baseline is
                                    spoken as "119/2 reproducible, not stable (F-6)".
-                                   Then S11 · Opus max · ceiling 40.
+                                   Then S11 · Opus max · ceiling 40.**~~
+                                   ☑ **S10-F IS DONE — all four fixes + the fold landed, gates
+                                   stricter only, `npm test` 119/2 = baseline. §10-C carries
+                                   the record; receipt in
+                                   `arsenal-audit-artifacts\queue\RECEIPT__2026-08-29_s10f.md`.**
                                    S10-R itself: ☑ SIGNED (verdict SOUND-WITH-FINDINGS accepted).
                                    ⛑ TWO THINGS A NEXT SESSION MUST NOT RE-DERIVE:
                                    (1) the close's `npm test 119/2` is REPRODUCIBLE BUT NOT
@@ -8055,7 +8090,10 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       as a SET + reach policy per R1, all seeded "any" = measured semantics, why-prose
       byte-preserved, gate 48→49/0, ZERO verdicts moved) · rulings lane LIVE (acts verb
       `design` → dated row + ONE card; teaching_contract refuses build-shaped adds, verb
-      set itself a row; standing-laws register DERIVED, 73 laws) · memory-index +
+      set itself a row; standing-laws register DERIVED — **14 standing laws with a check site +
+      59 ruling POINTERS with check_site null**, never summed [the close said "73 laws"; S10-R's
+      F-7 showed a ruling row carries a document's H1 title, not a law. Corrected at S10-F,
+      where the register itself became two sections with no total field]) · memory-index +
       derived-copy + orphan-writes checks as rows, every check row names its evaluator ·
       reach meter stamps from PAYLOAD rows (reps 21→37 newest 10→23 Aug · rejirah NEVER
       BORN visible on the STATE line · capsules 4) · emit contract EXACTLY 4 rows (R2) ·
@@ -8131,12 +8169,55 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       Deliverables: `arsenal-audit-artifacts\s10r-2026-08-29\` (VERDICT_FOR_HIM.md ·
       FINDINGS.md · VERDICT.md · work\).                                   CEILING: 28 (ruler)
 
+☑ S10-F REPAIR — **DONE 29 Aug 2026 (Opus 5 · effort max · 10/6/5). ALL FOUR FIXES + THE FOLD
+      LANDED, each re-running the S10-R probe that found it: RED first, GREEN after.**
+      F-1 the born-red law now covers **12 tables of 12** — two halves, both code: a DECLARED
+      `born_red:{why,unblocked_by}` readable on ANY table, and one STRUCTURAL predicate per
+      table keyed by TABLES itself, so a thirteenth table cannot escape the law by omission
+      (`redLawCoverage()`, bitten). `spool_vacuum` is GENUINELY red: `registry check` 0 → 1
+      born-red, and it reads on HIS state line · F-2 both R1 shapes landed as ROWS —
+      `brain_ledger` many-one (schema_owner brain.mjs + `appenders[]` = the 9 IR-measured
+      writers, consumers[] = the 20 IR-measured readers; metered live: 2,063 payload rows,
+      fed since 12 Aug) and `night_coach` one-many (its four eaters, each resolved to a live
+      `file:line`, were a `surface.where` SENTENCE) · F-4 the emit contract is a RATCHET WITH
+      A NAMED UNLOCK: the declared set is itself a **registry row** (the lawpack refused the
+      literal list the moment it was written — jugad 91→92 — and it was right), a subject
+      outside it is REFUSED unless the row names a queue RULING file that RESOLVES, and a
+      hand-smuggled fifth row is born-red · F-7 the register is TWO SECTIONS with **no total
+      field anywhere** (14 standing laws with a check site + 61 ruling pointers today), and
+      every "73 laws" sentence in this order is corrected in place · O-1 the RESUME task count
+      is gone, replaced by the live-read `schtasks` line.
+      **TWO THINGS THE RULING DID NOT NAME, FOUND BY RUNNING, FIXED FORWARD (§10-D rule 13:
+      a DONE-proof settles it, so it is not a fork):** ① the organism's own lawpack REFUSED
+      F-4's subject list as a code literal, so the set became a row — strictly better, and it
+      is this registry's own opening law; ② F-2's two new `lanes` rows LEAKED into gate.mjs's
+      off-road consumer map and broke the S10 fold's drift-lock (gate 46/3). The rows now
+      carry `declared_elsewhere` — a POINTER to where their consumer is declared, never a
+      boolean — and gate's derived view selects on it. gate 46/3 → **50/0**, the frozen S7
+      layer untouched, ZERO verdicts moved.
+      GATES, STRICTER ONLY: registry selftest 31→**45**/0 · gate 49→**50**/0 · rails **52**/0 ·
+      flow_atlas **7**/7 · lawpack GREEN (jugad back to the frozen 91) · xray Q2/Q5 **0/0** ·
+      `proofs_s10.mjs` 32→**34**/0 (its two stale numbers corrected: the emit proof asserts the
+      LAW instead of `length === 4`, and R1's lanes cardinality 15→17) · `npm test` **119/2 =
+      the baseline exactly**, the same two reds and the same three member selftests as S10-R's
+      recorded run, byte-for-byte. HERMETICITY passed this run — F-6 did not fire, which is
+      exactly why it is spoken as reproducible-not-stable.
+      NOTHING WOKEN: no task enabled, no daemon started, no LLM lane fired, 0 tokens spent by
+      any organ. F-3/F-5/F-6 untouched by design. Receipt:
+      `arsenal-audit-artifacts\queue\RECEIPT__2026-08-29_s10f.md`
+                                                                       CEILING: 21
 ☐ S11 BUILD · STALENESS / KEYS / CRASH.                     MODEL: Opus · effort max
       sha256(inputs) folded into cache keys · recency gates on trailing-N reads ·
       rotated cards record expired_unanswered · tmp-file replay on boot (the
       torn-write class) · ajv JSON-Schema per state file (owners-only says WHO
       writes; the schema says WHAT) · the model-roster probe gains a freshness gate
       (a 10-hour-old "keys ok" may never answer for NOW — the 19 Aug 429 lesson).
+      **+ F-6 (routed here 29 Aug by the S10-R signoff ruling): the suite's HERMETICITY check
+      is NON-DETERMINISTIC — green then red at the same commit, nothing edited between runs.
+      `snap()` (organism_test.mjs:992) keys on `size:mtimeMs`, not content, so an idempotent
+      rewrite counts as MODIFIED; isolated re-runs did not reproduce it. CAUSE NOT ESTABLISHED
+      — instrument across a red window, never hunt a writer. Until it closes, the suite
+      baseline is spoken as "119/2 reproducible, not stable", never as a flat fact.**
                                                                        CEILING: 40
 ☐ S12 STAGED REBOOT.                                        MODEL: Opus · effort max
       Dependency-ordered wake: capture → deterministic organs → his surfaces → LLM
@@ -8350,7 +8431,10 @@ into the five shapes above. **It does not re-read the corpus and does not re-run
 
 ### PROGRESS 2026-08-20 ~05:30 IST
 
-- **HIS ORDER EXECUTED: the entire organism is SWITCHED OFF.** 56 tasks Disabled · 7 daemons + 3
+- **HIS ORDER EXECUTED: the entire organism is SWITCHED OFF.** 56 tasks Disabled [~~56~~ — the
+  count was already wrong when written: S10-R measured **59** on 29 Aug with the newest task
+  registered 18 Aug, so nothing was woken; corrected at S10-F's O-1 fold, and the RESUME block
+  now carries the live-read command instead of any number] · 7 daemons + 3
   cmd wrappers killed · the Startup launcher neutralized by rename · no cloud crons existed.
   One exception on his word: **thalamus re-enabled + running** (capture only, zero tokens) —
   because capture WAS being silently lost while everything was down (~03:56–04:55 IST window is
@@ -18665,10 +18749,13 @@ completed (the door has served uncut since 10 Aug — measured first; the missin
 traps/interview-lines whole, map bolo/hook/mechanism byte-equal) · §10-G Claude roles
 (watchman:1067's literal → models.mjs CLAUDE_ROLES; SAME resolved string, law-m 1→0) · the
 rulings lane (acts `design` verb; the build-verb ratchet REFUSED a live probe naming the right
-lane; 73 laws collected into the DERIVED register) · SHAPE-8 lawpack rule frozen at 5, sites
+lane; the DERIVED register collected **14 standing laws with a check site + 59 ruling pointers**
+— written at the time as "73 laws", corrected at S10-F per F-7) · SHAPE-8 lawpack rule frozen at 5, sites
 named · §7 derived-copy row live (2.2 vs 2.1 at baseline 1) · book spine (R5, derived) · orders
 table absorbs BOTH open orders (rails.mjs untouched — its gate unchanged) · spool_vacuum row
-born-red by design (S12 wires) · DuckDB mcp row DECLARED-not-installed.
+born-red by design (S12 wires) [the CLAIM had no code path until S10-F's F-1: `redRows()` read
+3 tables of 12 and never `mechanisms`, so the row was born-red only in a `notes` sentence] ·
+DuckDB mcp row DECLARED-not-installed.
 
 **THE ESCALATION AND ITS RULING (recorded verbatim by pointer, §10-D rule 13):** the back-fill
 had two real forks (confidence ontology — the raw facts carry NO gut-word by samjhao's own
@@ -18823,3 +18910,138 @@ on purpose.
 prices it; ② F-6 needs instrumentation across a red window, never a writer-hunt; ③ c86 is DONE
 but its CARD still sits in his queue and only his anchor clears it; ④ the 28-item gap, the
 13th-class backlog and `s5-2026-08-20\` are all untouched, by design.
+
+---
+
+### PROGRESS 2026-08-29 — RUNG `S10-F` · REPAIR — **ALL FOUR FIXES + THE FOLD LANDED; THE TWO THINGS THE RULING DID NOT NAME WERE FOUND BY RUNNING** (Opus 5 · effort max · 10/6/5)
+
+Scope was the ruling's, exactly: `queue\RULING__2026-08-29_s10r-signoff.md` — F-1, F-2, F-4
+(ratchet reading), F-7, + the O-1 fold. F-3 (→S12), F-5 (accepted cost) and F-6 (→S11) were not
+touched. Nothing was woken: no task enabled, no daemon started, no LLM lane fired, zero tokens
+spent by any organ. Every fix re-ran the S10-R probe that found it — RED first, GREEN after.
+
+**F-1 · the born-red law now covers 12 tables of 12.**
+RED: `registry check` → *GREEN · 0 born-red row(s)*; `redRows()` → `[]`. `redRows()` iterated
+`lanes`, `self_repair`, `mcp` — three of twelve — so *"spool_vacuum is born-red by design"* lived
+only in a `notes` string. SHAPE 8 in our own house.
+The law is two halves now, both code. **(a) DECLARED** — any row of any table may carry
+`born_red:{why, unblocked_by}`, and it is red until that field is removed; a `born_red` with no
+`why` is REFUSED, because a red with no reason is a mood, not a measurement. **(b) STRUCTURAL** —
+one predicate per table, the map keyed by `TABLES` **itself**, so a thirteenth table cannot escape
+the law by omission: `redLawCoverage()` is bitten in the selftest and a table with no entry FAILS
+it. Where nothing is structurally computable the entry is an explicit `NO_STRUCTURAL_RED(why)` —
+an explicit no-op is a code path; silence is not. The new structural predicates are all
+file-resolution or source-reading, and all were verified against every live row before shipping:
+an OPEN order whose path is gone · a `checks` row whose owner organ is gone (a check that cannot
+run reads GREEN by absence) · a `derived_copies` row whose source or derived file is gone (how a
+drifted copy hides) · a `sandbox_subjects` pin its own owner never reads (an inert pin means a
+fixture writes LIVE state) · a `predicates` row whose site moved · a `mechanisms` row whose
+enumeration shrank to zero.
+GREEN: `registry check` → *GREEN · 1 born-red row(s): spool_vacuum*, and the un-fired duty is
+**on his state line**, beside the rejirah wound, where it can no longer be remembered instead of
+seen. `runChecks().born_red` 0 → 1. `unblocked_by` names S12: removing the field is that stage's
+own receipt.
+
+**F-2 · both of R1's named shapes landed as rows, and one of them is now MEASURED.**
+RED: `grep -c brain_ledger registry.json` → 0 · `grep -o appenders` → 0 · `night_coach` → 0.
+`appenders[]` existed only in a header comment at `registry.mjs:16`; nothing read it.
+`appenders[]` is a validated shape now: ≥ 2 unique organ names, and only on a lane that names the
+FILE they append to (appenders append to a file — one appender is a one-one lane and declares
+nothing). Both refusals are bitten.
+The `brain_ledger` row is the MANY-ONE instance and every name in it is measured, not asserted:
+`appenders[]` = the 9 writers in the live xray IR, `consumers[]` = its 20 readers, witnessed at
+`xray.mjs:1017` (`MULTI_WRITER_ALLOWLIST`) and `xray.mjs:1243` (the bite that keeps it multi-writer
+AND allowlisted). The meter then read it: **2,063 payload rows, first 12 Aug, newest 28 Aug** —
+the first `lanes` row the reach-side meter has ever been able to resolve. It reports **20 declared
+consumers and 0 with a read-stamp**, which is the switch-off stated honestly; F-3 is S12's and this
+does not close it.
+The `night_coach` row is the ONE-MANY instance: its four eaters, which were a `surface.where`
+SENTENCE in brain_config.json, are a declared SET with each site resolved to a live line
+(`setpiece.mjs:156` · `examiner.mjs:365` · `learnstate.mjs:201` · `dugout.mjs:659`). Its
+`writes_to` is **null BY MEASUREMENT, not by omission** — the output path is date-templated
+(`brain_out/night_coach/<serve-date>.json`), so the meter can never resolve it, and declaring one
+would have manufactured a never-fed line that no wake could ever clear. Written into the row.
+
+**F-4 · the emit contract is a RATCHET WITH A NAMED UNLOCK, per the ruler's reading.**
+RED: `validateRow("emit_contract", {well-formed 5th})` → `{"ok":true}`.
+A subject outside the declared set is REFUSED unless the row carries `ruling:` naming a queue
+`RULING__…` file that RESOLVES on disk — a ruling id nobody can open is testimony again. Not a
+hard refusal, because R2 itself expects new surfaces to arrive as decision-packet rulings; this is
+the door, and it is narrow. A hand-smuggled fifth row (one that bypassed validation entirely) is
+born-red through F-1's emit predicate — the ratchet also reads the file it did not gate.
+GREEN: no ruling → refused · unresolvable ruling → refused · malformed id → refused · a real
+ruling file → accepted · the declared four still validate untouched.
+
+**F-7 · the register is two sections and there is no total anywhere.**
+RED: `laws check` → *75 collectable* (one number for two kinds).
+The derived file now carries `counts:{standing_laws, ruling_pointers}` and two arrays. The flat
+`laws` array and the `count` field are GONE **on purpose**, so no consumer can re-derive "N laws"
+by accident, and the file says so in its own `_two_kinds_law` field. Nothing read them (grepped).
+GREEN: *14 standing law(s) with a check site + 61 ruling pointer(s)*. The count moved from S10-R's
+59 to 61 because two ruling files landed since — which is the finding's own point: the sum was
+never a stable fact about anything. Every `"73 laws"` sentence in this order is corrected in
+place, with what the close said kept beside it.
+
+**O-1 · the RESUME block no longer carries a task count in prose** — the live-read `schtasks`
+line replaces it. The same stale "56" in the 20-Aug PROGRESS record is annotated rather than
+rewritten (L9): it was already wrong when written — 59 on the machine, newest task registered
+18 Aug, so nothing was ever woken.
+
+#### THE TWO THINGS THE RULING DID NOT NAME — found by running, fixed forward, NOT escalated
+§10-D rule 13 draws the line at *"anything a DONE-proof can settle by running"*. Both of these
+were settled by running, both made the result stricter, and neither changes the rung's scope. They
+are written here in full because the next rung inherits them.
+
+**① The organism's own lawpack REFUSED F-4's subject list as a code literal.**
+`EMIT_DECLARED_SET = ["reps_log", …]` pushed `jugad-literal-subject-list` **91 → 92**, and §10-D
+rule 6 refuses a rung that weakens a gate. The lawpack was right and the fix is the registry's own
+opening law: *a mechanism reads its subjects from rows; adding a subject is a ROW EDIT with a
+receipt, never a code change*. The declared set is now the `mechanisms/emit_declared_set` row.
+A missing row is not an open door — with nothing declared there is no ratchet, so every emit write
+is REFUSED and the seeding step is named. jugad back to the frozen **91**.
+
+**② F-2's two new rows LEAKED into gate.mjs's off-road consumer map and broke the S10 fold.**
+`gate.mjs` derives `LANE_CONSUMERS` from the registry's `lanes` table and drift-locks it against
+the frozen S7 layer. Adding two rows took gate to **46 passed, 3 failed** — including the fold-lock
+itself. The map's own definition (three lines above it) is *the FALLBACK for lanes that declare
+nothing anywhere*; both new rows DO declare their consumer elsewhere — `night_coach` at its own
+call site, `brain_ledger` in the IR as a shared append ledger that no lane gate ever judges. So the
+rows carry `declared_elsewhere`, a **pointer to where** (never a boolean — a flag would be
+testimony, a place is checkable), and the derived view selects on the row's own field rather than
+on a second list kept in gate.mjs, which would be the twin-copy disease this fold exists to end.
+gate **46/3 → 50/0**, the frozen S7 layer byte-untouched, 15 off-road rows still 15, **zero
+verdicts moved**. The new bite proves the exclusion is the field and not a coincidence.
+
+#### GATES — STRICTER, NEVER WEAKER (§10-D rule 6)
+`registry selftest` 31 → **45**/0 · `gate selftest` 49 → **50**/0 · `rails` **52**/0 ·
+`flow_atlas selftest` **7**/7 · `flow_atlas check` OK (`33adfa3058d985c5`) · `lawpack` GREEN, every
+frozen count equal · `xray report` **Q2 0 · Q5 0** · `proofs_s10.mjs` 32 → **34**/0.
+`npm test` → **119 passed, 2 failed = the baseline exactly**: the same two organism_test reds and
+the same three member selftests (`teaching_audit` · `watchman` · `herd`) as S10-R's recorded run,
+compared line by line against `s10r-2026-08-29\work\npmtest_clean.txt`. HERMETICITY PASSED this
+run — F-6 simply did not fire, which is precisely why the baseline is spoken as *reproducible, not
+stable* and never as a flat fact.
+
+Two proof lines in `proofs_s10.mjs` were corrected rather than baselined: the emit proof asserted
+`emitRows().length === 4`, the observation S10-R showed was not a gate — it now asserts the LAW
+(the set is a row, the row IS the live table, the ratchet refuses and the door opens); and R1's
+lanes cardinality moved 15 → 17 because F-2 landed the two rows the pre-open ruling named. That
+line's TITLE also dropped its claim about read-stamps, which it never checked (F-3's own point).
+
+**F-5 was paid twice, never weakened:** editing `registry.mjs` and then `gate.mjs` reddened
+`flow_atlas check` both times via the STALE-IR guard, and both times the answer was
+`xray.mjs build` + `flow_atlas.mjs build`. Atlas: 538 edges · orphan writes 11 (baseline holds) ·
+ghost reads 33 (unchanged).
+
+**ESCALATION CHANNEL: REACHABLE this time.** `ARCHITECT_SESSION.txt` names `arsenal-ai-fc-08
+[916631]` and `ListAgents` confirms it live — S10-R's "unreachable" reading was a NAME ROTATION,
+exactly as that file warns. Nothing needed a mid-run ruling (see the two items above); the
+architect was notified of both departures after the commit, to overturn at S11's open if it
+disagrees.
+
+**⛑ LEFT OPEN BY NAME:** ① F-3 → S12, and `brain_ledger`'s 0-of-20 read-stamps is the honest
+measure of that, not a regression; ② F-6 → S11, whose row now carries it; ③ F-5 stays an accepted
+cost with a documented clearing command; ④ c86 is DONE but its CARD still sits in his queue and
+only his anchor clears it; ⑤ `dressing-room\state\gaffer_blocks.json.tmp6756` is still in the tree
+— S10-R's O-6, a live instance of S11's tmp-file replay class, deliberately left for the rung that
+owns it.

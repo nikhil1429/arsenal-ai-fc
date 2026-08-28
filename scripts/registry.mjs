@@ -155,8 +155,34 @@ export function fixturePin(subject, path = REGISTRY_PATH) {
   return row && !row.retired ? { env_pin: row.env_pin, live: row.live || null } : null;
 }
 
-// ── validation: the row law + R1's consumer-set law ──────────────────────────
-export function validateRow(table, row) {
+// ── F-4 · THE EMIT-CONTRACT RATCHET, WITH A NAMED UNLOCK (S10-F, 29 Aug 2026) ─
+// R2 said "the emit contract covers exactly the four existing him-fired surfaces".
+// S10-R measured that as an OBSERVATION of today's file, not a gate: a well-formed
+// fifth row validated ok:true and landed. Under L4 that constraint was not a law.
+// It is one now — and deliberately NOT a hard refusal, because R2 itself expects new
+// surfaces ("new-surface rows arrive as decision-packet rulings next week"). So: a
+// DECLARED SET plus ONE door. A subject outside the set must name the queue RULING
+// file that authorises it, and that file must RESOLVE on disk — a ruling id nobody
+// can open is testimony again, which is the SHAPE-8 class this rung exists to kill.
+// The set itself is a ROW, never a literal here: the lawpack refused the literal list the
+// moment it was written (jugad-literal-subject-list 91 -> 92), and it was right — "a mechanism
+// reads its subjects from rows; adding a subject is a ROW EDIT with a receipt" is this file's
+// own opening law. A missing row is not an open door: with no declared set there is no ratchet,
+// so the write is REFUSED and the seeding command is named.
+export function emitDeclaredSet(path = REGISTRY_PATH) {
+  const row = rowOf("mechanisms", "emit_declared_set", path);
+  return row && !row.retired && Array.isArray(row.subjects) && row.subjects.length ? [...row.subjects] : null;
+}
+export function resolveRuling(ruling, { queueDir = QUEUE_DIR } = {}) {
+  const name = String(ruling || "").trim();
+  if (!name) return { ok: false, why: "no ruling named" };
+  if (!/^RULING__[0-9]{4}-[0-9]{2}-[0-9]{2}[^\\/]*$/.test(name)) return { ok: false, why: `"${clip(name, 80)}" is not a queue ruling id (RULING__YYYY-MM-DD_slug[.md])` };
+  const file = join(queueDir, name.endsWith(".md") ? name : name + ".md");
+  return existsSync(file) ? { ok: true, file } : { ok: false, why: `ruling "${clip(name, 80)}" does not resolve in the queue dir` };
+}
+
+// ── validation: the row law + R1's consumer-set law + the F-4 ratchet ────────
+export function validateRow(table, row, { queueDir = QUEUE_DIR, path = REGISTRY_PATH } = {}) {
   const spec = TABLES[table];
   if (!spec) return { ok: false, why: `unknown table "${table}" — the closed set: ${Object.keys(TABLES).join(" | ")}` };
   if (!row || typeof row !== "object" || Array.isArray(row)) return { ok: false, why: "a row is an object" };
@@ -169,25 +195,111 @@ export function validateRow(table, row) {
     for (const c of row.consumers) {
       if (!c || typeof c !== "object" || (c.kind !== "him" && !c.name)) return { ok: false, why: "each consumer is {name:\"organ.mjs\"} or {kind:\"him\"}" };
     }
+    // R1's MANY-ONE shape (S10-F · F-2): brain_ledger is ONE schema owner and MANY
+    // appenders. Declaring it is optional (a one-one lane declares nothing), but a
+    // declaration that does not describe a many-one lane is refused, never kept.
+    if (row.appenders !== undefined) {
+      const a = row.appenders;
+      if (!Array.isArray(a) || a.length < 2 || a.some((x) => typeof x !== "string" || !x.trim()) || new Set(a).size !== a.length) {
+        return { ok: false, why: "appenders[] is R1's MANY-ONE shape — >= 2 unique organ names appending to a lane whose SCHEMA belongs to schema_owner; one appender is a one-one lane and declares nothing" };
+      }
+      if (!row.writes_to) return { ok: false, why: "appenders[] without writes_to — appenders append to a FILE; name it (a shared append lane is many organs writing ONE file)" };
+    }
+    // S10-F: a lane whose consumer is declared ELSEWHERE — at its own call site, or in the
+    // IR for a shared append ledger — says WHERE. gate.mjs's off-road consumer map is the
+    // FALLBACK for lanes that declare nothing anywhere, and it must not absorb these rows.
+    // A pointer, never a boolean: a flag is testimony, a place is checkable.
+    if (row.declared_elsewhere !== undefined && (typeof row.declared_elsewhere !== "string" || !clip(row.declared_elsewhere))) {
+      return { ok: false, why: "declared_elsewhere names WHERE this lane declares its consumer (a file, a site) — never true/false; a flag would be testimony again" };
+    }
+  }
+  // the DECLARED red (F-1): a red with no reason is a mood, not a measurement.
+  if (row.born_red !== undefined && (!row.born_red || typeof row.born_red !== "object" || Array.isArray(row.born_red) || !clip(row.born_red.why))) {
+    return { ok: false, why: 'born_red is {why:"…", unblocked_by:"…"} — a row may not claim it is red without saying why in the row itself' };
+  }
+  if (table === "emit_contract") {
+    const set = emitDeclaredSet(path);
+    if (!set) return { ok: false, why: "the emit contract has no DECLARED SET — seed the mechanisms row `emit_declared_set` first (a ratchet with nothing declared is not a ratchet)" };
+    if (!set.includes(row.subject)) {
+      const rr = resolveRuling(row.ruling, { queueDir });
+      if (!rr.ok) return { ok: false, why: `emit_contract is a DECLARED SET of ${set.length} him-fired surfaces (R2). A new surface enters by the named door: add "ruling":"RULING__YYYY-MM-DD_slug" naming the queue file that authorises it — ${rr.why}` };
+    }
   }
   return { ok: true };
 }
-/** redRows — the born-red law (R1) + §13's eligibility law, computed live. */
-export function redRows(path = REGISTRY_PATH) {
+
+// ── F-1 · THE BORN-RED LAW, COVERING EVERY TABLE (S10-F, 29 Aug 2026) ────────
+// S10-R's F-1: redRows() read THREE tables of twelve, so "spool_vacuum's row is
+// born-red by design" was a claim with NO CODE PATH — SHAPE 8 inside our own house,
+// the very class this rung shipped a lawpack rule for. The law now has two halves,
+// both of them code:
+//   (a) DECLARED — a row of ANY table may carry born_red:{why, unblocked_by}. It is
+//       red until that field is removed. A `notes` sentence is TESTIMONY; this field
+//       is MEASUREMENT, and check, book and the state line all read it.
+//   (b) STRUCTURAL — one predicate per table, keyed by TABLES ITSELF. A table with
+//       no entry is a SELFTEST FAILURE, so the closed set can never grow a thirteenth
+//       table whose rows escape the law by omission — coverage stops being a habit.
+// A predicate returns the WHY (red) or null (clean). Where nothing is structurally
+// computable today the entry is NO_STRUCTURAL_RED with the reason written down: an
+// explicit no-op is a code path, silence is not.
+const NO_STRUCTURAL_RED = (why) => Object.assign(() => null, { declared_no_op: why });
+const onDisk = (rel) => { try { return !!rel && existsSync(isAbsolute(String(rel)) ? String(rel) : join(ROOT, String(rel))); } catch { return false; } };
+const organReads = (organ, needle) => { try { return readFileSync(join(ROOT, "scripts", String(organ)), "utf8").includes(String(needle)); } catch { return false; } };
+
+const RED_PREDICATES = {
+  mechanisms: (r) => Array.isArray(r.subjects) && r.subjects.length === 0
+    ? "the enumeration this mechanism holds is EMPTY — a subject list that quietly shrank to zero is the exact silence the registry exists to kill" : null,
+  lanes: (r) => !(Array.isArray(r.consumers) && r.consumers.length) && !r.consumer_retired
+    ? "consumers UNKNOWN — a missing consumer is a RED row demanding create-or-fix (R1), never a silent absence" : null,
+  emit_contract: (r, { queueDir, path } = {}) => {
+    const set = emitDeclaredSet(path);
+    if (!set) return "the emit contract has no DECLARED SET row — every emit row is unratcheted until it is seeded";
+    return !set.includes(r.subject) && !resolveRuling(r.ruling, { queueDir }).ok
+      ? `a surface outside the declared set of ${set.length} with no resolvable ruling — it opens only by the named door (F-4)` : null;
+  },
+  checks: (r) => !onDisk(join("scripts", String(r.owner || "")))
+    ? `owner organ "${r.owner}" is not on disk — a check nobody owns cannot run, and an unrunnable check reads GREEN by absence` : null,
+  docs: NO_STRUCTURAL_RED("a docs row is a VINTAGE claim about a document; its staleness is derived_copies' and the doc-claim mechanism's job, so nothing here is red by structure"),
+  derived_copies: (r) => !onDisk(r.source_file) || !onDisk(r.derived_file)
+    ? "source or derived file is not on disk — the drift check would read GREEN by absence, which is exactly how a drifted copy hides" : null,
+  orders: (r) => r.status === "open" && !onDisk(r.path)
+    ? "an OPEN order whose path is not on disk — the ORDER-GATE contract line would resolve nothing and the commit gate would refuse blind" : null,
+  self_repair: (r) => r.reversible !== true || !r.report_anchor
+    ? "not auto-repair-eligible: reversibility and a report anchor he already hits must be DECLARED (spec §13)" : null,
+  predicates: (r) => !onDisk(String(r.site || "").split(":")[0])
+    ? `the site "${clip(r.site, 80)}" is not on disk — a predicate whose check site moved is a SHAPE-7 assumption again` : null,
+  sandbox_subjects: (r) => !organReads(r.schema_owner, r.env_pin)
+    ? `"${r.env_pin}" is never read by its declared owner ${r.schema_owner} — an inert pin means a fixture writes LIVE state` : null,
+  mcp: (r) => r.status === "installed" && !r.evidence
+    ? "installed with no evidence — the adoption contract runs evidence → owner → gates → window" : null,
+  rulings: NO_STRUCTURAL_RED("a ruling row is HIS WORD on the record, never a duty the organism owes — it cannot be born-red"),
+};
+
+/** redRows — the born-red law (R1) + §13's eligibility law, over EVERY table (F-1). */
+export function redRows(path = REGISTRY_PATH, { queueDir = QUEUE_DIR } = {}) {
+  const reg = loadRegistry(path);
   const reds = [];
-  for (const r of laneRows(path)) {
-    const declared = Array.isArray(r.consumers) ? r.consumers : [];
-    // consumer_retired = the lane DECLARES nobody may eat it (gate's haiku_pulse
-    // shape) — that is a declaration, not an absence, so it is not born-red.
-    if (!declared.length && !r.retired && !r.consumer_retired) reds.push({ table: "lanes", subject: r.subject, why: "consumers UNKNOWN — a missing consumer is a RED row demanding create-or-fix (R1), never a silent absence" });
-  }
-  for (const r of tableRows("self_repair", path)) {
-    if (r && !r.retired && (r.reversible !== true || !r.report_anchor)) reds.push({ table: "self_repair", subject: r.subject, why: "not auto-repair-eligible: reversibility and a report anchor he already hits must be DECLARED (spec §13)" });
-  }
-  for (const r of tableRows("mcp", path)) {
-    if (r && !r.retired && r.status === "installed" && !r.evidence) reds.push({ table: "mcp", subject: r.subject, why: "installed with no evidence — the adoption contract runs evidence → owner → gates → window" });
+  for (const table of Object.keys(TABLES)) {
+    const pred = RED_PREDICATES[table];
+    const rows = Array.isArray((reg.tables || {})[table]) ? reg.tables[table] : [];
+    for (const r of rows) {
+      if (!r || r.retired) continue;
+      const subject = r.subject || r.id;
+      if (r.born_red && typeof r.born_red === "object" && clip(r.born_red.why)) {
+        reds.push({ table, subject, declared: true, why: `${clip(r.born_red.why, 200)}${r.born_red.unblocked_by ? ` — unblocked by: ${clip(r.born_red.unblocked_by, 140)}` : ""}` });
+        continue;
+      }
+      const why = pred ? pred(r, { queueDir, path }) : null;
+      if (why) reds.push({ table, subject, declared: false, why });
+    }
   }
   return reds;
+}
+/** redLawCoverage — the gate on the gate: every table in the closed set declares
+ *  how its rows go red. Bitten in the selftest; a new table cannot skip the law. */
+export function redLawCoverage() {
+  const missing = Object.keys(TABLES).filter((t) => typeof RED_PREDICATES[t] !== "function");
+  return { ok: missing.length === 0, tables: Object.keys(TABLES).length, covered: Object.keys(TABLES).length - missing.length, missing };
 }
 
 // ── mutations (CLI-only paths; the fixture guard keeps selftests off the live file) ──
@@ -197,9 +309,9 @@ function guardLive(path) {
   }
   return { ok: true };
 }
-export function upsertRow(table, row, { path = REGISTRY_PATH, at = nowISO() } = {}) {
+export function upsertRow(table, row, { path = REGISTRY_PATH, at = nowISO(), queueDir = QUEUE_DIR } = {}) {
   const g = guardLive(path); if (!g.ok) return g;
-  const v = validateRow(table, row); if (!v.ok) return v;
+  const v = validateRow(table, row, { queueDir, path }); if (!v.ok) return v;
   const reg = loadRegistry(path);
   if (reg.corrupt) return { ok: false, why: `refusing to write over a corrupt registry (${reg.why || "unparseable"}) — fix ${path} first` };
   reg.tables[table] = reg.tables[table] || [];
@@ -388,9 +500,18 @@ export function runChecks({ path = REGISTRY_PATH, memoryDir = MEMORY_DIR } = {})
 }
 
 // ── THE STANDING-LAWS REGISTER (spec §3) — DERIVED, never hand-written ───────
+// F-7 (S10-R, 29 Aug 2026): the collector's DATA was honest — 59 of 59 ruling rows
+// byte-identical to their source file's first line, 0 invented — but the S10 close
+// summed the two kinds into "73 laws". A ruling row carries a document's H1 TITLE and
+// check_site:null; that is a POINTER TO A DOCUMENT, not a law, and calling it one is
+// the same testimony-as-measurement class (SHAPE 8) this rung is repairing elsewhere.
+// So the register is built in TWO SECTIONS in ONE derived file, and there is no field
+// anywhere that adds them up — a consumer that wants a total must choose which kind
+// it means and say so. `count` and the flat `laws` array are GONE for that reason.
 export function collectLaws({ queueDir = QUEUE_DIR, orderPath = null, out = LAWS_REGISTER_PATH, save = true } = {}) {
-  const laws = [];
-  // 1) every ruling file in the queue: one row, first heading line = statement.
+  const ruling_pointers = [];   // check_site null — a pointer to a ruling DOCUMENT
+  const standing_laws = [];     // check_site set  — law text with a place it is checked
+  // 1) every ruling file in the queue: one POINTER row, first heading line = its title.
   let queueReachable = false;
   try {
     if (existsSync(queueDir)) {
@@ -399,12 +520,12 @@ export function collectLaws({ queueDir = QUEUE_DIR, orderPath = null, out = LAWS
         try {
           const txt = readFileSync(join(queueDir, f), "utf8");
           const head = (txt.split("\n").find((l) => l.trim()) || f).replace(/^#+\s*/, "");
-          laws.push({ law_id: f.replace(/\.md$/i, ""), statement: clip(head, 200), source_file: join(queueDir, f), scope: "ruling", check_site: null });
+          ruling_pointers.push({ law_id: f.replace(/\.md$/i, ""), title: clip(head, 200), statement: clip(head, 200), source_file: join(queueDir, f), scope: "ruling", check_site: null });
         } catch { continue; }
       }
     }
   } catch { queueReachable = false; }
-  // 2) §10-D of the open engineering order: one row per numbered rule.
+  // 2) §10-D of the open engineering order: one LAW row per numbered rule, check-sited.
   const order = orderPath || resolveOpenOrder();
   if (order && existsSync(order)) {
     try {
@@ -412,12 +533,21 @@ export function collectLaws({ queueDir = QUEUE_DIR, orderPath = null, out = LAWS
       const m = /### §10-D[^\n]*\n([\s\S]*?)\n### §10-E/.exec(txt);
       if (m) {
         for (const rm of m[1].matchAll(/^(\d+)\.\s+([^\n]+)/gm)) {
-          laws.push({ law_id: `10D-${rm[1]}${laws.some((l) => l.law_id === `10D-${rm[1]}`) ? "b" : ""}`, statement: clip(rm[2].replace(/\*\*/g, ""), 200), source_file: order, scope: "standing", check_site: "§10-D" });
+          standing_laws.push({ law_id: `10D-${rm[1]}${standing_laws.some((l) => l.law_id === `10D-${rm[1]}`) ? "b" : ""}`, statement: clip(rm[2].replace(/\*\*/g, ""), 200), source_file: order, scope: "standing", check_site: "§10-D" });
         }
       }
     } catch { /* the order stays the record; the register just misses it this run */ }
   }
-  const register = { generated_at: nowISO(), generated_by: "registry.mjs laws collect (DERIVED — hand edits are the drift disease)", queue_dir: queueDir, queue_reachable: queueReachable, count: laws.length, laws };
+  const register = {
+    generated_at: nowISO(),
+    generated_by: "registry.mjs laws collect (DERIVED — hand edits are the drift disease)",
+    _two_kinds_law: "F-7: standing_laws carry law text AND a check_site; ruling_pointers carry a ruling document's title and check_site:null. They are NEVER summed — there is no total in this file, and 'N laws' may not be written of the pair.",
+    queue_dir: queueDir,
+    queue_reachable: queueReachable,
+    counts: { standing_laws: standing_laws.length, ruling_pointers: ruling_pointers.length },
+    standing_laws,
+    ruling_pointers,
+  };
   if (save) {
     if (isFixture() && out === join(STATE_DIR, "laws_register.json") && !process.env.ARSENAL_LAWS_REGISTER) return { ok: false, why: "a FIXTURE may never write the LIVE laws register" };
     mkdirSync(dirname(out), { recursive: true });
@@ -425,7 +555,7 @@ export function collectLaws({ queueDir = QUEUE_DIR, orderPath = null, out = LAWS
     writeFileSync(tmp, JSON.stringify(register, null, 1));
     renameSync(tmp, out);
   }
-  return { ok: true, count: laws.length, queue_reachable: queueReachable, out };
+  return { ok: true, standing_laws: standing_laws.length, ruling_pointers: ruling_pointers.length, queue_reachable: queueReachable, out };
 }
 function resolveOpenOrder() {
   // The ORDER-GATE contract line is rails.mjs's law (S5-R2 ruling); the registry
@@ -582,8 +712,13 @@ function selftest() {
   writeFileSync(orderFx, "### §10-D · THE STANDING RULES\n\n1. Open THIS file first.\n2. The ceiling is a STOP.\n### §10-E · x\n");
   const lc = collectLaws({ queueDir: qDir, orderPath: orderFx, out: join(tmp, "laws_register.json") });
   const lr = JSON.parse(readFileSync(join(tmp, "laws_register.json"), "utf8"));
-  assert("STANDING-LAWS REGISTER — DERIVED from the ruling files + §10-D; 1 ruling + 2 rules collected",
-    lc.ok === true && lr.count === 3 && lr.laws[0].law_id === "RULING__2026-08-29_x" && lr.laws.some((l) => l.law_id === "10D-1"));
+  assert("STANDING-LAWS REGISTER — DERIVED from the ruling files + §10-D, in TWO SECTIONS (F-7): 2 standing laws with a check site, 1 ruling POINTER with check_site null",
+    lc.ok === true && lc.standing_laws === 2 && lc.ruling_pointers === 1
+    && lr.counts.standing_laws === 2 && lr.counts.ruling_pointers === 1
+    && lr.ruling_pointers[0].law_id === "RULING__2026-08-29_x" && lr.ruling_pointers[0].check_site === null
+    && lr.standing_laws.some((l) => l.law_id === "10D-1" && l.check_site === "§10-D"));
+  assert("F-7 · THE TWO KINDS ARE NEVER SUMMED — the derived file carries NO total field, so \"N laws\" cannot be re-derived from it by accident",
+    lr.count === undefined && lr.laws === undefined && !Object.keys(lr).some((k) => /^(count|total|laws)$/.test(k)));
   assert("...and an unreachable queue is NAMED, never invented around",
     collectLaws({ queueDir: join(tmp, "no-queue"), orderPath: orderFx, out: join(tmp, "laws2.json") }).queue_reachable === false);
 
@@ -635,6 +770,67 @@ function selftest() {
   assert("C4 · HIS RULINGS ROUTE TO THE RULINGS LANE, never to reps", bf.rulings.length === 1 && /verbatim/.test(bf.rulings[0].text));
   assert("C4 · AN UNREACHABLE SOURCE IS NAMED, NOT GUESSED AROUND", backfillPlan({ rawPath: join(tmp, "nope.jsonl") }).reachable === false);
 
+  // ── S10-F · the four S10-R findings, each bitten where it was found ────────
+  // F-1 · THE BORN-RED LAW COVERS EVERY TABLE — coverage is now a gate on itself.
+  assert("F-1 · RED-LAW COVERAGE — every table in the closed set declares how its rows go red (a thirteenth table cannot escape the law by omission)",
+    redLawCoverage().ok === true && redLawCoverage().covered === Object.keys(TABLES).length, JSON.stringify(redLawCoverage().missing));
+  assert("F-1 · DECLARED RED ON ANY TABLE — a row that says it is red IS red, in a table redRows never used to read (spool_vacuum's class: a notes sentence was testimony, this field is measurement)",
+    (() => {
+      upsertRow("docs", { subject: "d1", vintage: "2026-08", witness: "w", born_red: { why: "the duty is declared and nothing fires it", unblocked_by: "S12" } }, { path: P, queueDir: qDir });
+      const red = redRows(P, { queueDir: qDir }).some((r) => r.table === "docs" && r.subject === "d1" && r.declared === true);
+      upsertRow("docs", { subject: "d1", vintage: "2026-08", witness: "w", born_red: undefined }, { path: P, queueDir: qDir });
+      return red;
+    })());
+  assert("F-1 · A RED WITH NO REASON IS REFUSED — born_red must carry its own why (a mood is not a measurement)",
+    upsertRow("docs", { subject: "d2", vintage: "2026-08", witness: "w", born_red: { unblocked_by: "someday" } }, { path: P, queueDir: qDir }).ok === false);
+  assert("F-1 · STRUCTURAL RED — an OPEN order whose path is not on disk, and a check whose owner organ is gone, both go red (a check that cannot run reads GREEN by absence)",
+    (() => {
+      upsertRow("orders", { subject: "o_ghost", path: "docs/archive/NO_SUCH_ORDER.md", status: "open", witness: "w" }, { path: P, queueDir: qDir });
+      upsertRow("checks", { subject: "c_ghost", owner: "no_such_organ.mjs", evaluator: "nothing", witness: "w" }, { path: P, queueDir: qDir });
+      const reds = redRows(P, { queueDir: qDir });
+      const both = reds.some((r) => r.subject === "o_ghost") && reds.some((r) => r.subject === "c_ghost");
+      upsertRow("orders", { subject: "o_ghost", path: "docs/archive/NO_SUCH_ORDER.md", status: "closed", witness: "w" }, { path: P, queueDir: qDir });
+      return both && !redRows(P, { queueDir: qDir }).some((r) => r.subject === "o_ghost");   // closed ⇒ not a live duty
+    })());
+  assert("F-1 · A RETIRED ROW IS NEVER RED (L9: retirement is the answer to a red, not a way of hiding one)",
+    (() => { retireRow("checks", "c_ghost", "selftest", { path: P }); return !redRows(P, { queueDir: qDir }).some((r) => r.subject === "c_ghost"); })());
+
+  // F-2 · R1's MANY-ONE shape is a validated shape, not a header comment.
+  assert("F-2 · MANY-ONE (appenders[]) — >= 2 unique organ names, and only on a lane that names the FILE they append to; one appender or a duplicate is refused",
+    upsertRow("lanes", { subject: "ml", schema_owner: "a.mjs", witness: "w", consumers: [{ name: "b.mjs" }], reach: "any", writes_to: "ml.jsonl", appenders: ["a.mjs"] }, { path: P }).ok === false
+    && upsertRow("lanes", { subject: "ml", schema_owner: "a.mjs", witness: "w", consumers: [{ name: "b.mjs" }], reach: "any", writes_to: "ml.jsonl", appenders: ["a.mjs", "a.mjs"] }, { path: P }).ok === false
+    && upsertRow("lanes", { subject: "ml", schema_owner: "a.mjs", witness: "w", consumers: [{ name: "b.mjs" }], reach: "any", appenders: ["a.mjs", "b.mjs"] }, { path: P }).ok === false
+    && upsertRow("lanes", { subject: "ml", schema_owner: "a.mjs", witness: "w", consumers: [{ name: "b.mjs" }], reach: "any", writes_to: "ml.jsonl", appenders: ["a.mjs", "b.mjs"] }, { path: P }).ok === true);
+
+  assert("F-2 · DECLARED-ELSEWHERE IS A PLACE, NOT A FLAG — a lane whose consumer is declared at its own call site names WHERE, so gate.mjs's off-road map (the fallback for lanes that declare nothing anywhere) can exclude it without guessing",
+    upsertRow("lanes", { subject: "de", schema_owner: "a.mjs", witness: "w", consumers: [{ name: "b.mjs" }], reach: "any", declared_elsewhere: true }, { path: P }).ok === false
+    && upsertRow("lanes", { subject: "de", schema_owner: "a.mjs", witness: "w", consumers: [{ name: "b.mjs" }], reach: "any", declared_elsewhere: "brain_config.json de.surface.where" }, { path: P }).ok === true);
+
+  // F-4 · the emit contract is a DECLARED SET with ONE named door, not an observation.
+  const emitProbe = (extra = {}) => validateRow("emit_contract", { subject: "fifth", surface: "x.mjs", writes_to: "x.jsonl", fired_by: "him", witness: "w", ...extra }, { queueDir: qDir, path: P });
+  assert("F-4 · NO DECLARED SET, NO WRITES — before the mechanisms row exists the ratchet REFUSES every emit row and names the seeding step (an absent declaration is not an open door)",
+    emitDeclaredSet(P) === null && emitProbe().ok === false && /no DECLARED SET/.test(emitProbe().why));
+  upsertRow("mechanisms", { subject: "emit_declared_set", schema_owner: "registry.mjs", witness: "selftest fixture", subjects: ["reps_log", "rejirah_log", "forge_sessions", "capsules"] }, { path: P });
+  assert("F-4 · THE SET IS A ROW, NOT A LITERAL — adding a surface is a ROW EDIT with a receipt (the lawpack refused the literal list the moment it was written)",
+    emitDeclaredSet(P).length === 4 && emitDeclaredSet(P).includes("capsules"));
+  assert("F-4 · EMIT RATCHET — a fifth surface with no ruling is REFUSED, and a ruling nobody can open is refused too (a ruling id that does not resolve is testimony again)",
+    emitProbe().ok === false
+    && emitProbe({ ruling: "RULING__2026-01-01_invented" }).ok === false
+    && emitProbe({ ruling: "not-a-ruling-id" }).ok === false);
+  assert("F-4 · ...AND THE DOOR OPENS — a fifth surface naming a ruling file that RESOLVES is accepted, because R2 expects new surfaces to arrive as decision-packet rulings",
+    emitProbe({ ruling: "RULING__2026-08-29_x" }).ok === true
+    && upsertRow("emit_contract", { subject: "fifth", surface: "x.mjs", writes_to: "x.jsonl", fired_by: "him", witness: "w", ruling: "RULING__2026-08-29_x" }, { path: P, queueDir: qDir }).ok === true
+    && !redRows(P, { queueDir: qDir }).some((r) => r.subject === "fifth"));
+  assert("F-4 · THE DECLARED FOUR NEVER NEED A DOOR — the live emit subjects still validate untouched (a ratchet may not break what it protects)",
+    emitDeclaredSet(P).every((sub) => validateRow("emit_contract", { subject: sub, surface: "s.mjs", writes_to: "s.jsonl", fired_by: "him", witness: "w" }, { queueDir: qDir, path: P }).ok === true));
+  assert("F-4 · A HAND-EDITED FIFTH ROW IS BORN-RED — the ratchet also reads the file it did not gate (the emit table's structural red)",
+    (() => {
+      const reg = JSON.parse(readFileSync(P, "utf8"));
+      reg.tables.emit_contract.push({ subject: "smuggled", surface: "x.mjs", writes_to: "x.jsonl", fired_by: "him", witness: "w" });
+      writeFileSync(P, JSON.stringify(reg, null, 1));
+      return redRows(P, { queueDir: qDir }).some((r) => r.table === "emit_contract" && r.subject === "smuggled");
+    })());
+
   assert("ATOMIC WRITE — the registry file is whole JSON after every op (temp→rename, no torn state)",
     (() => { try { return !!JSON.parse(readFileSync(P, "utf8")).tables; } catch { return false; } })());
   assert("CORRUPT REGISTRY REFUSES WRITES — never silently rebuilt over",
@@ -676,8 +872,9 @@ else if (verb === "get") {
   process.exit(r.ok ? 0 : 1);
 } else if (verb === "laws") {
   const sub = process.argv[3] || "collect";
-  if (sub === "collect") { const r = collectLaws({}); console.log(`laws register: ${r.count} law(s) → ${r.out}${r.queue_reachable ? "" : " (QUEUE UNREACHABLE — collected from the order alone)"}`); process.exit(r.ok ? 0 : 1); }
-  else { const r = collectLaws({ save: false }); console.log(`laws check: ${r.count} collectable · queue ${r.queue_reachable ? "reachable" : "UNREACHABLE"}`); }
+  // F-7: two counts, never their sum — a ruling pointer is a document, not a law.
+  if (sub === "collect") { const r = collectLaws({}); console.log(`laws register: ${r.standing_laws} standing law(s) with a check site + ${r.ruling_pointers} ruling pointer(s) → ${r.out}${r.queue_reachable ? "" : " (QUEUE UNREACHABLE — collected from the order alone)"}`); process.exit(r.ok ? 0 : 1); }
+  else { const r = collectLaws({ save: false }); console.log(`laws check: ${r.standing_laws} standing law(s) with a check site + ${r.ruling_pointers} ruling pointer(s) collectable · queue ${r.queue_reachable ? "reachable" : "UNREACHABLE"}`); }
 } else if (verb === "rulings") {
   if (process.argv[3] !== "add") { console.log(JSON.stringify(tableRows("rulings"), null, 1)); }
   else {
