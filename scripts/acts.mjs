@@ -103,6 +103,14 @@ export const OWNERS = {
               reverse: () => ({ argv: null, why: "a staged mission is fired or left staged by his word (`fire`), never unstaged here" }) },
   rep:      { organ: "gaffer_brain.mjs",      argv: (a) => ["capture", a.kind || "voice_rep", a.id || "act", "--gut", a.gut || "shaky", ...(a.asked ? ["--asked", a.asked] : [])], stdin: (a) => a.text,
               reverse: () => ({ argv: null, why: "a rep is graded by the judge round; supersession rides capture.mjs, not this lane" }) },
+  // S10 · THE RULINGS LANE (spec §3, SHAPE 2's fix): his build/architecture word
+  // finally has its OWN disposition — a dated registry rulings row (+ ONE card,
+  // filed by the owner) instead of being filed into the nearest wrong bucket
+  // (act-mszfck3c, a pipeline order graded as a teaching rule, is the witness).
+  // C2 (21 Aug): scope is a FIELD — architecture | learning-method — never a
+  // second lane.
+  design:   { organ: "registry.mjs",          argv: (a) => ["rulings", "add", "--scope", a.scope === "learning-method" ? "learning-method" : "architecture", "--source", "acts.design", "--by", "captain"], stdin: (a) => a.text,
+              reverse: () => ({ argv: null, why: "his word is on the record — a later ruling SUPERSEDES it with a new row; nothing unsays a ruling" }) },
 };
 // VERBS = the OWNER table's keys (S10 row 14) — a verb IS an owner's CLI; deriving
 // the list from the table makes "a verb without an owner" unrepresentable.
@@ -205,7 +213,7 @@ export function findings(s = stats(7), now = Date.now()) {
 // ── DOOR 4 — a ball → acts, by a `lite` model under a strict schema; unparseable = note verbatim ──
 export const BALL_SCHEMA = { type: "OBJECT", properties: { acts: { type: "ARRAY", items: { type: "OBJECT", properties: { verb: { type: "STRING", enum: VERBS }, args: { type: "OBJECT", properties: { text: { type: "STRING" }, kind: { type: "STRING" }, axis: { type: "STRING" }, job: { type: "STRING" }, id: { type: "STRING" } }, required: ["text"] } }, required: ["verb", "args"] } } }, required: ["acts"] };
 export function ballPrompt(text) {
-  return `You route ONE message the captain sent himself (an ntfy "ball") into acts the organism executes. VERBS: note (a thought/doubt/win to keep verbatim — the DEFAULT), fact (a durable fact ABOUT HIM to stage for his confirmation), pref (a standing preference for how the coach speaks/behaves), rule (a teaching rule to add), agenda (something the NEXT sitting must do first), card (a decision only he can make later), reminder (a timed nudge), mission (research to run), rep (a spoken answer of his to grade), job (ONLY when he names an existing brain job id). Keep his words VERBATIM in args.text (never paraphrase, never translate). Split ONLY when the message clearly carries two different asks. When unsure: ONE note. Reply with JSON only.\n\nBALL:\n${text}`;
+  return `You route ONE message the captain sent himself (an ntfy "ball") into acts the organism executes. VERBS: note (a thought/doubt/win to keep verbatim — the DEFAULT), fact (a durable fact ABOUT HIM to stage for his confirmation), pref (a standing preference for how the coach speaks/behaves), rule (a teaching rule to add), agenda (something the NEXT sitting must do first), card (a decision only he can make later), reminder (a timed nudge), mission (research to run), rep (a spoken answer of his to grade), job (ONLY when he names an existing brain job id), design (a ruling about HOW THE ORGANISM SHOULD WORK — build/architecture word, goes to the registry rulings lane). Keep his words VERBATIM in args.text (never paraphrase, never translate). Split ONLY when the message clearly carries two different asks. When unsure: ONE note. Reply with JSON only.\n\nBALL:\n${text}`;
 }
 export function parseBallText(raw, fallbackText) {
   let parsed = null;

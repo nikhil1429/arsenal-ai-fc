@@ -1,0 +1,520 @@
+{
+ "generated_at": "2026-08-28T20:18:36.902Z",
+ "generated_by": "registry.mjs laws collect (DERIVED — hand edits are the drift disease)",
+ "queue_dir": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue",
+ "queue_reachable": true,
+ "count": 73,
+ "laws": [
+  {
+   "law_id": "RULING__2026-08-25_0805-s5pre-1",
+   "statement": "RULING · 2026-08-25 ~08:40 IST · architect — the dead §3-C commit gate",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-25_0805-s5pre-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-25_0915-ceiling-policy",
+   "statement": "RULING · review-rung ceiling policy · 25 Aug 2026 ~09:15 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-25_0915-ceiling-policy.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-25_0945-s5canon-1",
+   "statement": "RULING · S5 canon window unrunnable (10-attachment cap) · 25 Aug 2026 ~09:55 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-25_0945-s5canon-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-25_1030-s5w-1",
+   "statement": "RULING · S5-W's six items · 25 Aug 2026 ~10:45 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-25_1030-s5w-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-25_1100-s5x-1",
+   "statement": "RULING · preflight/checkall clipboard gate vs the sweep's real path · 25 Aug 2026 ~11:25 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-25_1100-s5x-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-25_1215-s5y-1",
+   "statement": "RULING · S5-Y's three items · 25 Aug 2026 ~12:25 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-25_1215-s5y-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-25_1250-s5sweep-1",
+   "statement": "RULING · the markdown-lossy capture path · 25 Aug 2026 ~13:10 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-25_1250-s5sweep-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-25_1410-s5z-1",
+   "statement": "RULING · S5-Z's five questions + HIS sync ruling · 25 Aug 2026 ~14:20 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-25_1410-s5z-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0015-s5z2-1",
+   "statement": "RULING · answers 2026-08-26_0015-s5z2-1.md (S5-Z2's six) · 26 Aug 2026 ~00:40 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0015-s5z2-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0112-s5sweep-2",
+   "statement": "RULING · answers 2026-08-26_0112-s5sweep-2.md (A02 halt: the serializer dialect) · 26 Aug 2026 ~01:30 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0112-s5sweep-2.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0240-s5z3-1",
+   "statement": "RULING · answers 2026-08-26_0240-s5z3-1.md (S5-Z3 close: two items) · 26 Aug 2026 ~02:55 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0240-s5z3-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0300-s5sweep-3",
+   "statement": "RULING · answers 2026-08-26_0300-s5sweep-3.md (canon half redesign) · 26 Aug 2026 ~03:15 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0300-s5sweep-3.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0400-s5corpus-1",
+   "statement": "RULING · answers 2026-08-26_0400-s5corpus-1.md (B01's three + the clipboard witness) · 26 Aug 2026 ~04:15 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0400-s5corpus-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0525-cardmode-1",
+   "statement": "RULING · answers 2026-08-26_0525-cardmode-1.md · 26 Aug 2026 ~05:35 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0525-cardmode-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0620-s5corpus-2",
+   "statement": "RULING · answers 2026-08-26_0620-s5corpus-2.md · 26 Aug 2026 ~06:55 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0620-s5corpus-2.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0700-s5corpus-3",
+   "statement": "RULING · answers 2026-08-26_0700-s5corpus-3.md · 26 Aug 2026 ~07:10 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0700-s5corpus-3.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0745-s5corpus-4",
+   "statement": "RULING · the ~1-hour-per-chat correction (B02 close message, direct channel) · 26 Aug 2026 ~07:50 IST · architect (Fable·max)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0745-s5corpus-4.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0750-s5corpus-6",
+   "statement": "RULING — 26 Aug 2026 · on the B03 CLOSE REPORT (four items sent on the direct channel at close)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0750-s5corpus-6.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0805-s5corpus-5",
+   "statement": "RULING — 26 Aug 2026 ~08:20 IST · on escalation `2026-08-26_0805-s5corpus-5.md`",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0805-s5corpus-5.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0810-s5corpus-7",
+   "statement": "RULING — 26 Aug 2026 ~08:10 machine-clock · the HANDOFF sizing question (raised 3×, taken now)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0810-s5corpus-7.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0855-s5corpus-8",
+   "statement": "RULING — 26 Aug 2026 ~08:55 machine-clock · the copy-gate cannot be fed (B04_2)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0855-s5corpus-8.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0905-samjhao-dirt-1",
+   "statement": "RULING — 26 Aug 2026 ~09:05 machine-clock · the SAMJHAO_ORDER working-tree dirt (4th-sitting flag)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0905-samjhao-dirt-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_0935-s5z5-1",
+   "statement": "RULING — 26 Aug 2026 ~09:35 machine-clock · S5-Z5's declared scope departure: RATIFIED",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_0935-s5z5-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_1010-s5corpus-9",
+   "statement": "RULING — 26 Aug 2026 ~10:10 machine-clock · B05_1's escape-only probe FAIL",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_1010-s5corpus-9.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_1125-s5corpus-10",
+   "statement": "RULING — 26 Aug 2026 ~11:25 machine-clock · B06's physical blocker (send never commits)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_1125-s5corpus-10.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_1205-s5corpus-11",
+   "statement": "RULING — 26 Aug 2026 ~12:05 machine-clock · B06's real partial-retrieval FAIL + the NOT-FOUND capture gap",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_1205-s5corpus-11.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_1315-s5corpus-12",
+   "statement": "RULING — 26 Aug 2026 ~13:15 machine-clock · B06_2's byte-identical echo + the send-commit law",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_1315-s5corpus-12.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_1425-s5corpus-13",
+   "statement": "RULING — 26 Aug 2026 ~14:25 machine-clock · the second inbound transport (11-restart fork)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_1425-s5corpus-13.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_1610-s5corpus-14",
+   "statement": "RULING — 26 Aug 2026 ~16:10 machine-clock · B08's mid-band miss + the third anchor + the one-shot refutation",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_1610-s5corpus-14.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_1750-s5corpus-15",
+   "statement": "RULING — 26 Aug 2026 ~17:50 machine-clock · the invention-rate finding (as CORRECTED) + the fresh-tab lead",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_1750-s5corpus-15.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_1900-s5z6-1",
+   "statement": "RULING — 26 Aug 2026 ~19:00 machine-clock · Z6 close: two ratifications + architect miss #12",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_1900-s5z6-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_2045-s5z8-1",
+   "statement": "RULING — 26 Aug 2026 ~20:45 TRUE machine-clock · Z8 close: scope reading + three leads",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_2045-s5z8-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_2110-s5corpus-18",
+   "statement": "RULING — 26 Aug 2026 ~21:10 TRUE machine-clock · B14's lead: the self-consistency check",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_2110-s5corpus-18.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_2115-s5corpus-16",
+   "statement": "RULING — 26 Aug 2026 ~21:15 machine-clock · the first-fence-only extraction assert (B10)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_2115-s5corpus-16.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_2140-s5corpus-19",
+   "statement": "RULING — 26 Aug 2026 ~21:40 machine-clock · B15's close: Z4 scope amendment + the run-vs-law note",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_2140-s5corpus-19.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-26_2150-s5z7-1",
+   "statement": "RULING — 26 Aug 2026 ~21:50 machine-clock · Z7's second site (verify.mjs) + the shared helper",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-26_2150-s5z7-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_0150-s5corpus-17",
+   "statement": "RULING — 27 Aug 2026 ~01:50 machine-clock · raw control chars inside JSON strings (B13)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_0150-s5corpus-17.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_0645-s5z4-1",
+   "statement": "RULING — series 2026-08-27_0645 (pairs with SAY_TO_ARCHITECT__2026-08-27_0640) · true clock 27 Aug ~01:25 IST",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_0645-s5z4-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_0715-s5z4-2",
+   "statement": "RULING — series 2026-08-27_0715 · true clock 27 Aug ~01:50 IST · Z4's close: two non-blocking items",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_0715-s5z4-2.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_0750-s5canonb-1",
+   "statement": "RULING — series 2026-08-27_0750 (pairs with 2026-08-27_0745-s5canonb-1) · true clock 27 Aug ~02:35 IST",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_0750-s5canonb-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_0830-s5canonb-2",
+   "statement": "RULING — series 2026-08-27_0830 · true clock 27 Aug ~03:05 IST · G01's close: the critic path + the amplifier",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_0830-s5canonb-2.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_1050-s5canonb-3",
+   "statement": "RULING — series 2026-08-27_1050 (pairs with 2026-08-27_1045-s5canonb-2) · ratification of G02's close",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_1050-s5canonb-3.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_1115-hisword-outputs",
+   "statement": "RULING — HIS WORD, 27 Aug 2026 (~05:00 IST true clock) · executor output discipline, standing",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_1115-hisword-outputs.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_1150-s5canonb-4",
+   "statement": "RULING — series 2026-08-27_1150 (pairs with 2026-08-27_1145-s5canonb-3) · G03's paraphrase-twin FAIL",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_1150-s5canonb-4.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_1220-s5canonb-5",
+   "statement": "RULING — series 2026-08-27_1220 (pairs with 2026-08-27_1215-s5canonb-4) · G03 3/4 close",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_1220-s5canonb-5.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_1255-s5canonb-6",
+   "statement": "RULING — series 2026-08-27_1255 (pairs with 2026-08-27_1250-s5canonb-5) · the minified-payload refusal",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_1255-s5canonb-6.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_1315-s5canonb-7",
+   "statement": "RULING — series 2026-08-27_1315 (pairs with 2026-08-27_1310-s5canonb-6) · F3's probe needs Z9 first",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_1315-s5canonb-7.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_1340-s5z9-1",
+   "statement": "RULING — series 2026-08-27_1340 (pairs with 2026-08-27_1336-s5z9-1) · the span anchor",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_1340-s5z9-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_1505-s5post-1",
+   "statement": "RULING — series 2026-08-27_1505 (pairs with 2026-08-27_1500-s5post-1) · the twin bar does not cross material classes",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_1505-s5post-1.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_1600-s5post-2",
+   "statement": "RULING — series 2026-08-27_1600 (pairs with the POST-A sitting-2 close, `94ee8a2`) · pricing the two widened classes",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_1600-s5post-2.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-27_1700-foldcarry",
+   "statement": "RULING — 27 Aug 2026 · THE FOLD-CARRY LAW (standing, every lane)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-27_1700-foldcarry.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-28_his-haan+brainstorm-law",
+   "statement": "RULING — 28 Aug 2026 · HIS HAAN (the S6 approval gate) + THE BRAINSTORM-FIRST LAW",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-28_his-haan+brainstorm-law.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-28_quality-strategy",
+   "statement": "RULING — 28 Aug 2026 · THE QUALITY STRATEGY, S7 → S12 (standing, on his ask)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-28_quality-strategy.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-28_s6r-signoff",
+   "statement": "RULING — 28 Aug 2026 · THE ARCHITECT'S S6-R SIGN-OFF (Fable layer)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-28_s6r-signoff.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-28_s9-accidental-daemon-wake",
+   "statement": "RULING — S9 accidental daemon wake (28 Aug 2026, ~14:25 IST, Architect-5)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-28_s9-accidental-daemon-wake.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-28_selfheal-hisword",
+   "statement": "RULING — 28 Aug 2026 · THE FIX-AND-TELL-ME LAW (HIS WORD, standing, organism-wide)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-28_selfheal-hisword.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-28_selfheal-law+s6r",
+   "statement": "RULING — 28 Aug 2026 · HIS SELF-HEALING LAW + S6-R (the independent S6 verification rung)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-28_selfheal-law+s6r.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_s10-backfill",
+   "statement": "RULING — S10 back-fill's two forks (29 Aug 2026, Architect-5 · session arsenal-ai-fc-5a)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_s10-backfill.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_s10-preopen",
+   "statement": "RULING — S10 PRE-OPEN PACKET (29 Aug 2026, Architect-5, on his \"all approved\")",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_s10-preopen.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "10D-1",
+   "statement": "Open THIS file first. Execute exactly ONE unticked rung. Never two. The ▶ NEXT SESSION",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-2",
+   "statement": "The rung's ceiling is a STOP, not a suggestion — hand off cleanly at it.",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-3",
+   "statement": "No subagents/fleets anywhere except where a rung names them, never without a ceiling.",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-4",
+   "statement": "State files are written by their owner CLIs only — never by a session's editor.",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-5",
+   "statement": "§4's rule binds everything new too: every instrument — S3's tools, every Gemini return, every",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-6",
+   "statement": "A gate may only get stricter. A rung that weakens any gate is refused, whole.",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-7",
+   "statement": "Before stopping: RESUME + ticks (only what is TRUE) · PROGRESS entry · §3-C check · commit.",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-8",
+   "statement": "Speak to him in one short block: what landed · what it cost · the one decision, if any —",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-9",
+   "statement": "THE MICRO-ORDER RULE (first act, before any edit): write the rung's micro-order into the",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-10",
+   "statement": "THE FAILURE PROTOCOL: a DONE-proof that stays red = STOP. Record in PROGRESS what failed",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-11",
+   "statement": "VERSIONS MOVE ALONE (§10-G): a runtime/dependency/model-roster bump is its OWN commit,",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-12",
+   "statement": "MODEL ROUTING BINDS (§10-F): the rung's MODEL line is part of the rung. Fable-pool dry ⇒",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-13",
+   "statement": "THE ESCALATION RULE — his order, 20 Aug 2026: never take a lower-quality decision alone.",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  },
+  {
+   "law_id": "10D-13b",
+   "statement": "THE ESCALATION RULE — his order, 20 Aug 2026: never take a lower-quality decision alone.",
+   "source_file": "C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\docs\\archive\\ORGANISM_AUDIT__2026-08-19.md",
+   "scope": "standing",
+   "check_site": "§10-D"
+  }
+ ]
+}

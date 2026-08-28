@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T20:07:55.696Z",
+ "updated_at": "2026-08-28T20:17:58.995Z",
  "tables": {
   "mechanisms": [
    {
@@ -192,6 +192,20 @@
     "notes": "sensed, carried, never a his-words slot",
     "updated_at": "2026-08-28T20:00:59.782Z",
     "added_at": "2026-08-28T20:00:59.782Z"
+   },
+   {
+    "subject": "teaching_contract_build_verbs",
+    "schema_owner": "teaching_contract.mjs",
+    "witness": "order 5604 — THE RATCHET, ruled: refuses build-shaped verbs (create/build/pipeline/wire) without --force-teaching + why; witness act act-mszfck3c (a pipeline order graded as a teaching rule)",
+    "subjects": [
+     "create",
+     "build",
+     "pipeline",
+     "wire"
+    ],
+    "notes": "the verb set is RULED in the order, held as a row (a literal here would be SHAPE 1 inside the fix for SHAPE 1)",
+    "updated_at": "2026-08-28T20:17:58.991Z",
+    "added_at": "2026-08-28T20:17:58.991Z"
    }
   ],
   "sandbox_subjects": [

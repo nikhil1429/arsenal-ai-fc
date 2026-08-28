@@ -54,6 +54,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { subjectsOf } from "./registry.mjs";   // S10 — the build-verb ratchet's verb set is a ROW
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -1310,7 +1311,31 @@ switch (cmd) {
     break;
   }
   case "add": {
-    const line = process.argv.slice(4).join(" ");
+    // S10 · THE RATCHET (order §3/SHAPE-2, ruled at :5604): a BUILD-SHAPED ask is
+    // not a teaching rule — act-mszfck3c (his pipeline order graded as a teaching
+    // rule) is the witness. The verb set is a REGISTRY ROW (never this file's
+    // literal); `--force-teaching` + a `--why` is the deliberate override, and the
+    // refusal names the right lane (`acts.mjs design` → the registry rulings row).
+    const argv4 = process.argv.slice(4), parts = [];
+    let forced = false, why = null;
+    for (let i = 0; i < argv4.length; i++) {
+      if (argv4[i] === "--force-teaching") { forced = true; continue; }
+      if (argv4[i] === "--why") { why = argv4[i + 1] || ""; i++; continue; }
+      parts.push(argv4[i]);
+    }
+    const line = parts.join(" ");
+    let buildHit = null;
+    try {
+      buildHit = subjectsOf("teaching_contract_build_verbs").find((v) => new RegExp(`(^|[^a-z])${v}([^a-z]|$)`, "i").test(line)) || null;
+    } catch { console.error("teaching_contract: ⚠ build-verb registry row unreadable — the ratchet cannot judge this add; adding as-is"); }
+    if (buildHit && !forced) {
+      console.error(`teaching_contract: REFUSED — "${arg}" reads BUILD-SHAPED ("${buildHit}"), and a design/build order is not a teaching rule (the act-mszfck3c class). Route it through acts verb \`design\` → the registry rulings lane. If it truly IS a teaching rule, re-run with --force-teaching --why "..."`);
+      process.exit(1);
+    }
+    if (buildHit && forced && !why) {
+      console.error("teaching_contract: --force-teaching needs a --why \"...\" — the override is deliberate or it is nothing");
+      process.exit(1);
+    }
     const res = addRule(load(), arg, line);
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
     save(res.state);
