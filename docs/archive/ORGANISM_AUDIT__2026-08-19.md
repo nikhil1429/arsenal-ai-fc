@@ -2865,13 +2865,55 @@ STATUS (update this block before any session stops — this is the handoff)
                                    receipts move when an architect writes. That is declared in the
                                    packet, not hidden: S6 re-runs the checker at open.
 
-  ▶ NEXT SESSION ............... **HIS DECISION MOMENT (§10-E) — S6 IS DONE AND THE GATE IS HIS:
-                                   he reads `FLOW_ATLAS.html` + `docs/archive/REGISTRY_SPEC__2026-08-27.md`
-                                   and says haan/na. ⛔ S7 DOES NOT EXIST BEFORE HIS HAAN (the S6
-                                   row's approval gate). On haan: next rung = `S7 · BUILD · GATE C`
-                                   (MODEL: Opus 5 · effort max), and the RULER prices S7's
-                                   BUILD/PROOF/HANDOFF at that ruling (the 1215 law) — no executor
-                                   opens S7 on an unpriced row. On na: his word routes.**
+  ▶ NEXT SESSION ............... **`S6-R` — THE INDEPENDENT S6 VERIFICATION (ruled 28 Aug on HIS
+                                   word: "independent entire S6 work check karvao — the entire
+                                   cyborg organism depends upon it"). MODEL: Opus 5 · effort MAX
+                                   (family-decorrelated from S6's Fable author, the Q-5 finding;
+                                   the ARCHITECT re-runs its checker at close and SIGNS).
+                                   CEILING ruler-written: BUILD 15 · PROOF 10 · HANDOFF 5.
+                                   VERIFY-ONLY — S6-R PATCHES NOTHING; findings route to an S6-F
+                                   patch rung, ruler-priced. HIS quality law binds: quality never
+                                   drops, waste never allowed.
+                                   METHOD: build `s6r_check.mjs` beside the s5 artifacts (TIER-0,
+                                   bite-proven, idempotent) mechanizing every criterion; model
+                                   judgement is spent ONLY on the schema dry-run, witness reading
+                                   and the contradiction sweep.
+                                   PASS CRITERIA (ruler-written BEFORE the run — pass is never
+                                   self-declared):
+                                   **P1 ATLAS** · 30 seeded-random edges + ALL 4 him-edges + ALL
+                                   11 orphan-writes + 10 sampled ghost-reads verified END-TO-END
+                                   on disk (writer writes in source · readers read · newest
+                                   payload ts == the file's actual last row); any miss resolves
+                                   to a NAMED, BOUNDED IR-gap class · NEGATIVE SWEEP: every
+                                   dressing-room/state/ file absent from the atlas found and
+                                   explained · DETERMINISM: a fresh rebuild byte-identical or the
+                                   diff explained to zero · the 1353 unresolved-sinks exposure
+                                   BOUNDED in writing.
+                                   **P2 SHAPES** · all 8 §9-D witnesses resolve on disk as cited.
+                                   **P3 SPEC** · 12/12 migration sites proven real by grep · the
+                                   lawpack 102-count reconciles + a 13th-class hunt documented ·
+                                   SCHEMA DRY-RUN: rows hand-written for 5 REAL subjects
+                                   INCLUDING brain_ledger.jsonl (9 declared writers vs "ONE
+                                   owner" — cannot-express = a FINDING, never a patch) ·
+                                   acceptance (a)–(e) each mapped to a runnable check or flagged
+                                   prose · ZERO contradictions vs queue\RULING__*.md (mechanical
+                                   sweep).
+                                   **P4 PROCESS** · both suite reds proven pre-existing by git
+                                   age · S6's meter accounting reconciles · the S6-open pin
+                                   verified.
+                                   DELIVERABLES: the checker · findings list · PASS/FAIL per
+                                   criterion · **a HIM-READABLE verdict page, plain Hinglish**
+                                   (his word) · the pointer that THE SELF-HEALING LAW
+                                   (queue\RULING__2026-08-28_selfheal-law+s6r.md — HIS word:
+                                   fix-and-tell-me, reversible+test-proven auto-fixes report at
+                                   his anchors, cards only for irreversible/design) BINDS S10's
+                                   build posture.
+                                   FORBIDDEN: patching atlas/spec/instruments · Gemini · any
+                                   re-enable.
+                                   ⇒ **THEN his §10-E haan/na fires on S6-R's VERDICT** (his
+                                   agreed re-sequencing, 28 Aug). On haan: S7 · BUILD · GATE C
+                                   (Opus 5 · max; the RULER prices it first — the 1215 law). On
+                                   na or on S6-R findings: the ruler routes (S6-F).**
                                    ⛑ carried one-liners for HIM at this close: ①
                                    `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
                                    "resume 28 Aug 2026" (kal) and nothing fires it — his call
