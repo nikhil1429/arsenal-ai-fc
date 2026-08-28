@@ -41,11 +41,51 @@ if ($line -and $line -match [regex]::Escape($sid)) {
   exit 0
 }
 
-$new = if ($line) { "$line,*$sid" } else { "SeServiceLogonRight = *$sid" }
-$out = if ($line) { $txt -replace [regex]::Escape($line), $new }
-       else       { $txt -replace '^\[Privilege Rights\]', "[Privilege Rights]`r`n$new" }
-Set-Content -Path $inf -Value $out -Encoding Unicode
-secedit /configure /db $db /cfg $inf /areas USER_RIGHTS | Out-Null
+# ── THE WRITE GOES THROUGH THE LSA API, NOT THROUGH secedit ───────────────────
+# The first version edited the exported .inf and fed it back with
+# `secedit /configure`. It ran without complaint and changed NOTHING — the read-back
+# proved the right still absent, which is the only reason we know. secedit's INF
+# round-trip is fragile (it silently drops a section it does not fully parse) and this
+# is Windows 11 HOME, where there is no secpol.msc to fall back to either.
+#
+# LsaAddAccountRights is the API the policy editor itself calls. It works on Home, it
+# is idempotent, and it returns a real error code instead of a shrug.
+$sig = @'
+using System;
+using System.Runtime.InteropServices;
+public static class ArsenalLsa {
+  [StructLayout(LayoutKind.Sequential)]
+  struct LSA_UNICODE_STRING { public ushort Length; public ushort MaximumLength; public IntPtr Buffer; }
+  [StructLayout(LayoutKind.Sequential)]
+  struct LSA_OBJECT_ATTRIBUTES { public int Length; public IntPtr RootDirectory; public IntPtr ObjectName; public int Attributes; public IntPtr SecurityDescriptor; public IntPtr SecurityQualityOfService; }
+  [DllImport("advapi32.dll", SetLastError=true)]
+  static extern uint LsaOpenPolicy(IntPtr SystemName, ref LSA_OBJECT_ATTRIBUTES oa, int access, out IntPtr handle);
+  [DllImport("advapi32.dll", SetLastError=true)]
+  static extern uint LsaAddAccountRights(IntPtr policy, byte[] sid, LSA_UNICODE_STRING[] rights, int count);
+  [DllImport("advapi32.dll")] static extern uint LsaClose(IntPtr h);
+  [DllImport("advapi32.dll")] static extern int LsaNtStatusToWinError(uint status);
+  public static int Grant(byte[] sid, string right) {
+    var oa = new LSA_OBJECT_ATTRIBUTES(); oa.Length = Marshal.SizeOf(oa);
+    IntPtr h;
+    uint st = LsaOpenPolicy(IntPtr.Zero, ref oa, 0x10 | 0x20 | 0x00000800, out h);
+    if (st != 0) return LsaNtStatusToWinError(st);
+    var r = new LSA_UNICODE_STRING[1];
+    r[0].Buffer = Marshal.StringToHGlobalUni(right);
+    r[0].Length = (ushort)(right.Length * 2);
+    r[0].MaximumLength = (ushort)((right.Length + 1) * 2);
+    st = LsaAddAccountRights(h, sid, r, 1);
+    LsaClose(h);
+    Marshal.FreeHGlobal(r[0].Buffer);
+    return LsaNtStatusToWinError(st);
+  }
+}
+'@
+try { Add-Type -TypeDefinition $sig -ErrorAction Stop } catch { }
+$sidObj = New-Object System.Security.Principal.SecurityIdentifier($sid)
+$bytes  = New-Object byte[] ($sidObj.BinaryLength)
+$sidObj.GetBinaryForm($bytes, 0)
+$rc = [ArsenalLsa]::Grant($bytes, "SeServiceLogonRight")
+if ($rc -ne 0) { Write-Host "  LsaAddAccountRights returned Win32 error $rc" }
 
 # READ IT BACK. A claim is read off the outcome, never off the call — the law this
 # whole rung exists to enforce, and the one I broke three times building it.
@@ -59,6 +99,6 @@ if ($after -and $after -match [regex]::Escape($sid)) {
   exit 0
 }
 Write-Host "  RESULT  : FAILED — the right is still not present after the change."
-Write-Host "            Do it by hand: secpol.msc -> Local Policies -> User Rights Assignment"
-Write-Host "            -> Log on as a service -> add $account"
+Write-Host "            (secpol.msc does NOT exist on Windows Home, so that is not the fallback.)"
+Write-Host "            Report this line; S12's pre-flight must not turn anything on until it reads GRANTED."
 exit 1
