@@ -110,9 +110,11 @@ STATUS (update this block before any session stops — this is the handoff)
                                    **`proofs_s7.mjs` 11/11 bite-proofs, planted and restored.**
                                    ONE JUDGEMENT, recorded and reversible in ONE predicate
                                    (`consumerSatisfied`): a him-side row still satisfies an
-                                   ORGAN-declared lane. The exclusive reading was tried on live data
-                                   first and REFUSED — it sleeps `night_coach` + `intent_digest`,
-                                   which is the c74 false-negative class, re-created on purpose.
+                                   ORGAN-declared lane. The exclusive reading was MEASURED on live
+                                   data first and REFUSED — it sleeps FOUR currently-awake,
+                                   him-reaching lanes (agenda · day_cartridge · midday_cartridge ·
+                                   intent_digest), which is the c74 false-negative class re-created
+                                   on purpose.
                                    Deliverables: `arsenal-audit-artifacts\s7-2026-08-28\`.
   THE EXECUTION PLAN ........... ☑ WRITTEN — §10 (20 Aug 2026). THE LADDER IS THE HANDOFF.
                                    Hardened same day to the junior bar: §10-F model routing ·
@@ -3027,11 +3029,20 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ① the silent lanes now say WHICH consumer is quiet, but nothing
                                    yet WRITES a consumption row for `dmn` / `cortex_wake` /
                                    `council_chair` — giving them a stamper is S12's ordered wake,
-                                   not a patch; ② `night_coach` and `intent_digest` declare
-                                   consumers (setpiece.mjs, intent.mjs) that their live stampers
-                                   contradict (learnstate's brief) — a §4-B stale-declaration in
-                                   `brain_config.json`, and correcting it is its OWNER's write,
-                                   never a session's.
+                                   not a patch; ② FOUR lanes pass C on the him-fallback because
+                                   their stamp's `by` names the TERMINAL ROUTE, not the declared
+                                   middle organ — `agenda` (declares brain.mjs, stamped
+                                   "learnstate brief ← diary") · `day_cartridge` +
+                                   `midday_cartridge` (declare dugout.mjs, stamped "outbox … →
+                                   code", i.e. the road names a SURFACE where the declaration
+                                   names an ORGAN) · `intent_digest` (declares intent.mjs,
+                                   stamped by learnstate's brief). It is a VOCABULARY GAP between
+                                   the road's surface names and organ filenames, not a stale
+                                   declaration — `night_coach` looked like the same class and is
+                                   NOT: its surface names all four of its readers including
+                                   learnstate.mjs, so it passes BY NAME. Closing the gap means
+                                   writing `brain_config.json` or teaching the road to stamp the
+                                   organ; both are an OWNER's write, never a session's.
                                    ⛑ carried one-liners for HIM, still nobody's: ①
                                    `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
                                    "resume 28 Aug 2026" — that is TODAY — and nothing fires it;
@@ -7710,14 +7721,18 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       **ONE JUDGEMENT, recorded and reversible in ONE predicate (`consumerSatisfied`):**
       a him-side row still satisfies an ORGAN-declared lane. §1's last sentence removes
       the him-TEST from organ lanes; it does not make reaching him a disqualification.
-      The exclusive reading was tried against live data FIRST and REFUSED — it sleeps
-      `night_coach` and `intent_digest`, both demonstrably reaching him through
-      learnstate's brief, which is the c74 false-negative class re-created on purpose.
+      The exclusive reading was tried against live data FIRST and REFUSED — measured, it
+      sleeps **FOUR currently-awake lanes** (`agenda` · `day_cartridge` ·
+      `midday_cartridge` · `intent_digest`), every one of which demonstrably reaches him
+      (learnstate's SessionStart brief, or the outbox road) and none of whose stamps
+      happen to spell its declared organ's filename. That is the c74 false-negative class
+      re-created on purpose.
       **WHAT IT DID NOT DO, said out loud:** it gave the silent lanes no STAMPER (S12's
-      ordered wake owns that) · it did not touch `brain_config.json`, so the two stale
-      declarations it found (`night_coach`→setpiece.mjs, `intent_digest`→intent.mjs, both
-      actually stamped by learnstate) are RECORDED, not corrected — that write belongs to
-      the file's owner · it shipped no registry mechanism (§2: new subjects, never new
+      ordered wake owns that) · it did not touch `brain_config.json`, and the FOUR lanes
+      whose stamps do not NAME their declared consumer (`agenda` · `day_cartridge` ·
+      `midday_cartridge` · `intent_digest` — a VOCABULARY GAP, the stamp naming the
+      terminal route where the declaration names the middle organ) are RECORDED, not
+      corrected; that write belongs to the file's owner · it shipped no registry mechanism (§2: new subjects, never new
       machines) · it woke nothing, enabled nothing, spent no Gemini, used no agents.
       Deliverables: `arsenal-audit-artifacts\s7-2026-08-28\` (S7_VERDICT.md ·
       PROOF_BEFORE.txt · PROOF_AFTER.txt · proofs_s7.mjs).
@@ -17780,12 +17795,13 @@ S7 only corrects the judge)"* — held exactly, and is now measured rather than 
 *"A lane whose consumer is an organ is never judged by whether it reached him"* — removes the
 him-TEST from organ lanes; it does not make reaching him a disqualification.
 
-The exclusive reading was tried against the live data BEFORE choosing: `night_coach` (surface names
-setpiece.mjs) and `intent_digest` (surface names intent.mjs) are both stamped `briefed` by
-learnstate's SessionStart brief at `learnstate.mjs:1418-1423`. They demonstrably reach him. An
-exclusive reading sleeps both for *"setpiece.mjs has not consumed it"* — which is the **c74
-false-negative class this organism already reversed once**, re-created on purpose. Reaching him is
-the terminal purpose of every chain; it is never worth less than reaching the organ in the middle.
+The exclusive reading was tried against the live data BEFORE choosing, and MEASURED: it sleeps
+**four currently-awake lanes** — `agenda`, `day_cartridge`, `midday_cartridge` and `intent_digest`.
+Every one of them demonstrably reaches him (learnstate's SessionStart brief at
+`learnstate.mjs:1418-1423`, or the outbox road); none of their stamps happens to spell the declared
+organ's filename. That is the **c74 false-negative class this organism already reversed once**,
+re-created on purpose. Reaching him is the terminal purpose of every chain; it is never worth less
+than reaching the organ in the middle.
 
 Not escalated, on §10-D rule 13's own bound — the order's recorded history answers it (the c74
 reversal is on all fours), and escalating what the order already answers is offloading, not quality.
@@ -17820,10 +17836,9 @@ the law on the day it was written.**
 - **It gave the silent lanes no STAMPER.** `dmn`, `cortex_wake`, `council_chair` and the rest now say
   *which* consumer is quiet; nothing yet writes a consumption row for them. Building those stamps is
   **S12's dependency-ordered wake**, not a patch S7 may make.
-- **It did not touch `brain_config.json`.** Two stale declarations were found and are RECORDED, not
-  corrected: `night_coach` declares setpiece.mjs and `intent_digest` declares intent.mjs, while both
-  are actually stamped by learnstate's brief. That is a §4-B stale-declaration, and the write belongs
-  to the file's owner, never to a session (owners-only).
+- **It did not touch `brain_config.json`.** FOUR lanes were found whose stamps do not NAME their
+  declared consumer, and they are RECORDED, not corrected — see the correction below. The write
+  belongs to the file's owner, never to a session (owners-only).
 - **It shipped no registry mechanism.** The 15 rows are in the S6 row-shape *so that* S10 can fold
   them — §2's lesson: new subjects, never new machines.
 - **It read no `s5-2026-08-20/`, woke nothing, enabled nothing, spent no Gemini, used no agents, and
@@ -17838,3 +17853,33 @@ stands either way. **STEP 0 moves ALONE** (§10-G + rule 11): Node 22.14 → Nod
 before AND after, its own commit. Then the write-ahead spool on `node:sqlite`, and **Q-11's
 capture-loss fix rides here** (ruled 25 Aug) — it must land before or with any S12 stage that
 re-enables voice / Gaffer / Gemini.
+
+#### ⚠ A CORRECTION I AM RECORDING AGAINST MYSELF, CAUGHT AT CLOSE BY RE-READING MY OWN PROOF
+
+The first draft of this entry claimed **two stale declarations** — `night_coach`→setpiece.mjs and
+`intent_digest`→intent.mjs — "contradicted by learnstate's brief". **Both halves were wrong**, and
+the AFTER transcript I had already produced said so:
+
+- **`night_coach` is NOT that class.** Its `surface.where` names all FOUR of its readers —
+  `setpiece.mjs · examiner.mjs · learnstate.mjs · dugout.mjs` — so learnstate IS a declared consumer
+  and the lane passes C **by name**, not on the fallback. I read a truncated console line and
+  generalised from it, which is §9's SHAPE-8 in miniature: a receipt standing in for a measurement.
+- **The real set is FOUR lanes, and the cause is different.** Measured off `PROOF_AFTER.txt` (the
+  lanes whose C detail begins *"reached him"*, i.e. the him-fallback rather than a named match):
+
+| lane | declares | its stamp's `by` says |
+|---|---|---|
+| `agenda` | brain.mjs | `briefed via learnstate brief (SessionStart) ← diary` |
+| `day_cartridge` | dugout.mjs | `delivered via outbox omsz5p4d9ps → code` |
+| `midday_cartridge` | dugout.mjs | `delivered via outbox omsz5p4d9ps → code` |
+| `intent_digest` | intent.mjs | `briefed via learnstate brief (SessionStart)` |
+
+It is **a VOCABULARY GAP, not a stale declaration.** A declaration names an ORGAN (`dugout.mjs`); the
+road stamps a SURFACE (`→ code`), and the brief stamps the LAST organ in the chain rather than the
+middle one the declaration names. Both are correct about different things and neither is wrong.
+Closing it means either the declarations move to the road's vocabulary, or the road learns to stamp
+the organ — **both are an owner's write, and both are S10's registry job**, where `right_consumer`
+and the reach-side meter live in the same row.
+
+**This is also the sharper version of the escalation's item ②:** under the exclusive reading of §1,
+FOUR currently-awake lanes sleep, not two.
