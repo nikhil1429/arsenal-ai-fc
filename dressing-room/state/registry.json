@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:50:18.898Z",
+ "updated_at": "2026-08-28T19:51:59.287Z",
  "tables": {
   "mechanisms": [
    {
@@ -124,6 +124,28 @@
     "live": "dressing-room/state/ (dir pin)",
     "updated_at": "2026-08-28T19:50:18.894Z",
     "added_at": "2026-08-28T19:50:18.894Z"
+   }
+  ],
+  "self_repair": [
+   {
+    "subject": "wall_review",
+    "artifact": "club/wall_gemini.html (the nightly Gemini wall render)",
+    "laws": [
+     "one glance = one story",
+     "<=4 working-memory slots",
+     "no walls of text",
+     "cold-steel-warm-core palette",
+     "no hype/streaks/biometrics"
+    ],
+    "prompt_file": "club/prompts/wall_painter.md",
+    "reversible": true,
+    "revert_path": "delete brain_out/wall_review/<day>.md — the next night regenerates without notes; the deterministic wall always stands",
+    "verified_by": "viz.mjs sanitizeGemini — a rejected render leaves the deterministic wall standing (never a broken page)",
+    "report_anchor": "the wall (club/wall.html) — an anchor he already opens",
+    "witness": "brain_config.json job wall_review (in: wall_data.json + ../club/wall_gemini.html · out: wall_review) + viz.mjs:1689 (<=2-day lookback consumer)",
+    "notes": "S10 migration #8 — INTENT #4 real build: critique-own-output -> rewrite next prompt, now ROW #1 of the self_repair table; the fix-and-tell-me policy (spec 13) generalizes across THIS table, and eligibility (reversible + report_anchor declared) is enforced by registry redRows",
+    "updated_at": "2026-08-28T19:51:59.285Z",
+    "added_at": "2026-08-28T19:51:59.285Z"
    }
   ]
  }
