@@ -112,7 +112,7 @@ export const WAIVER = (rule) => new RegExp("law-waiver:" + rule + "\\b");
 export const BASELINE = {
   "owners-only-state-write": 0,
   "law-m-literal-model": 1,
-  "jugad-literal-subject-list": 93,    // S10 ratchet (a2): 102 −1 shadow (#1) −1 tasks KINDS (#5) −2 CORE_AXES twins (#12) −3 calibration (row 13) −2 acts DOORS+VERBS (row 14: door row + verbs derived from OWNERS keys)
+  "jugad-literal-subject-list": 91,    // S10 ratchet (a2): 102 −1 shadow(#1) −1 tasks KINDS(#5) −2 CORE_AXES twins(#12) −3 calibration(r13) −2 acts(r14) −2 distiller INTERACTIVE+AMBIENT(r15; LEGACY stays frozen AND counted — honesty over score)
   "trailing-n-slice": 7,
   "bare-catch": 38,
   depcruise_errors: 7,

@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:59:48.158Z",
+ "updated_at": "2026-08-28T20:00:59.786Z",
  "tables": {
   "mechanisms": [
    {
@@ -165,6 +165,33 @@
     "notes": "LAW A's doors — where his word can arrive; a new door ADDS by row. VERBS is not a row: it derives from the OWNER table's own keys (one copy, structure-derived)",
     "updated_at": "2026-08-28T19:59:48.155Z",
     "added_at": "2026-08-28T19:59:48.155Z"
+   },
+   {
+    "subject": "modalities_interactive",
+    "schema_owner": "distiller.mjs",
+    "witness": "distiller.mjs:74 (S10 map row 15, F-04)",
+    "subjects": [
+     "voice",
+     "code",
+     "desktop-study",
+     "note",
+     "throwin",
+     "gemini"
+    ],
+    "notes": "which afferent modalities are HIS interactive words (his-words slots). INTERACTIVE_LEGACY stays FROZEN in code (layering) and stays COUNTED by the jugad rule — honesty over score",
+    "updated_at": "2026-08-28T20:00:59.609Z",
+    "added_at": "2026-08-28T20:00:59.609Z"
+   },
+   {
+    "subject": "modalities_ambient",
+    "schema_owner": "distiller.mjs",
+    "witness": "distiller.mjs:75 (S10 map row 15, F-04)",
+    "subjects": [
+     "context"
+    ],
+    "notes": "sensed, carried, never a his-words slot",
+    "updated_at": "2026-08-28T20:00:59.782Z",
+    "added_at": "2026-08-28T20:00:59.782Z"
    }
   ],
   "sandbox_subjects": [
