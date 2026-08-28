@@ -7880,8 +7880,13 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       machines) · it woke nothing, enabled nothing, spent no Gemini, used no agents.
       Deliverables: `arsenal-audit-artifacts\s7-2026-08-28\` (S7_VERDICT.md ·
       PROOF_BEFORE.txt · PROOF_AFTER.txt · proofs_s7.mjs).
-◐ S8  BUILD · THE SPOOL.     THE SPOOL DONE 28 Aug · MODEL: Opus 5 · effort max
-      ⛔ STEP 0 IS THE OPEN HALF — UNTICKED ON PURPOSE, AND IT NEEDS HIS CONSOLE.
+☑ S8  BUILD · THE SPOOL.     THE SPOOL DONE 28 Aug · MODEL: Opus 5 · effort max
+      ✔ STEP 0 CLOSED 28-29 Aug AT HIS CONSOLE (folded via S9/c86): Node v24.19.0
+      live, suite green, 7/7 services OS-owned — architect-verified fresh 29 Aug
+      (`node --version` · `services.mjs status`). The spool proved itself LIVE twice
+      on 28 Aug (two thalamus deaths, zero loss, both drains verified).
+      (The banner below is the historical record of the halt, kept per L9:)
+      ⛔ STEP 0 WAS THE OPEN HALF — UNTICKED ON PURPOSE, AND IT NEEDED HIS CONSOLE.
       STEP 0 (§10-G, own commit): Node 22.14 → Node 24 LTS, suite green before AND
       after; better-sqlite3 is the fallback if node:sqlite misbehaves.
       Then: write-ahead in the capture nerve on node:sqlite — local row FIRST, then
@@ -7983,8 +7988,15 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       FORBIDDEN: any NEW mechanism (§2's lesson — new subjects, never new machines).
       PRICED (ruler, 28 Aug): BUILD 40 · PROOF 12 · HANDOFF 8. S10-R PRE-COMMITTED
       (quality-strategy ruling): independent verify rung follows, priced at S10's close.
-      BRAINSTORM-GATED: note-taking (his law, 28 Aug) — the SHAPE-6/notes surface stops
-      for the with-him brainstorm; sequence it LAST until that ruling lands on this row.
+      ✔ BRAINSTORM GATE SATISFIED 28 Aug (the with-him sitting was held; record:
+      arsenal-audit-artifacts\BRAINSTORM__2026-08-28.md) — BUT nothing in the notes
+      SYSTEM is approved (his word): S10 builds NO new notes surface; SHAPE-6 emit
+      contract covers the four EXISTING him-fired surfaces only; new-surface rows
+      arrive next week from decision packets.
+      ⭐ PRE-OPEN RULING — READ BEFORE ANY EDIT:
+      arsenal-audit-artifacts\queue\RULING__2026-08-29_s10-preopen.md
+      (consumer SETS + reach policy · law-as-on-disk on gist writes · c86 IS DONE ·
+      two canon-ruled defect-fixes ride · the Book spine = registry's derived render).
                                                                        CEILING: 60
 ☐ S11 BUILD · STALENESS / KEYS / CRASH.                     MODEL: Opus · effort max
       sha256(inputs) folded into cache keys · recency gates on trailing-N reads ·

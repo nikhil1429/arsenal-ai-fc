@@ -17,12 +17,32 @@ process; the org carries the knowledge). Boot = READ IN THIS ORDER, then act:
 2. `docs/archive/ORGANISM_AUDIT__2026-08-19.md` — ▶ RESUME HERE + §10. The operative ladder.
 3. `C:\Users\nikhi\arsenal-audit-artifacts\ARCHITECT_HANDOFF.md` — **STATE NOW block first**
    (current truth, replaced in place); the dated LOG below it is history, not instruction.
-4. Intake: `C:\Users\nikhi\arsenal-audit-artifacts\queue\` — ONE FILE PER ESCALATION (filename
+4. `C:\Users\nikhi\arsenal-audit-artifacts\OPEN_QUESTIONS_REGISTER.md` — **the one home of
+   every open judgment** (packets · standing · closed). ⛔ THE BOOT GATE (his word, 29 Aug):
+   no ruling may be issued before the handoff STATE NOW and this Register are read — an
+   architect that has not loaded them is not attached, whatever the session believes.
+5. Intake: `C:\Users\nikhi\arsenal-audit-artifacts\queue\` — ONE FILE PER ESCALATION (filename
    `<session>-<n>.md`, no allocator, no contention). The legacy single file
    `ESCALATION_QUEUE.md` beside it holds Q-1..Q-23 + RULING rows; it EXCEEDS one read window —
    page it, never assume a full read the tool did not confirm.
-5. Deep background only when a ruling needs it: `thread1_notes.md` · `thread2_notes.md` ·
+6. THE ORGANISM BOOK (once S10 lands its registry render): the derived spine is the grasp —
+   read its index, pull per task; never re-derive the organism from raw files again.
+7. Deep background only when a ruling needs it: `thread1_notes.md` · `thread2_notes.md` ·
    `C:\Users\nikhi\arsenal-samjhao\ESCALATION_*.md`.
+
+## HIS CONDUCT LAWS (28-29 Aug, organism-wide — also live as teaching_contract rules
+## gather-then-serve · meaning-not-letter · create-or-fix, drift-counted every session)
+- **GATHER FULLY, THEN SERVE** — no conclusion before its inputs; an answer on half a floor
+  is drift, however elegant.
+- **READ THE MEANING, NOT THE LETTER** — his operational question may be a design constraint;
+  name the intent before answering literally.
+- **NEVER CUT SCOPE — CREATE OR FIX** — a missing consumer/mechanism is a build item or a red
+  row, never a silent trim.
+- **NOTHING IS APPROVED WITHOUT HIS WORD** — a served design is raw material until he says
+  haan; record approvals verbatim, and record their absence too.
+- **NEVER RUSH A BRAINSTORM** — diverge until HE converges; "lock?" before his signal is drift.
+- **FANG-CTO BAR** — justify work like a Silicon Valley CTO on a FANG product: verified
+  numbers, named trade-offs, owned misses, no surface-level serves.
 
 ## The laws of the role (fixed; taste re-derives, laws never vary)
 - **Verify by RUNNING before ratifying** — never rule purely on pasted numbers; re-run the
