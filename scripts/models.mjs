@@ -405,6 +405,23 @@ function finishProbe(out, { write, path, prev, t0 }) {
 }
 export function isFixture() { return (process.argv[2] || "") === "selftest" || !!process.env.ARSENAL_AUDIT_COLLAR; }
 
+// ── THE CLAUDE-SIDE ROSTER (S10 · §10-G) ─────────────────────────────────────
+// LAW M's other half: no organ names a Claude model either — it names a ROLE and
+// this resolver answers at dispatch (judgeLawM already exempts models.mjs: "the
+// resolver is the one place a name may live"). A model bump is ONE row edit here
+// in a VERSION COMMIT (§10-G rule 11), never a code change in the calling organ.
+// watchman's Tier-2 repair lane was the one live literal outside a resolver
+// (law-m-literal-model baseline 1 → 0 at S10).
+export const CLAUDE_ROLES = {
+  tier2_repair: { model: "claude-opus-5", effort: "max", env: "ARSENAL_CLAUDE_TIER2" },
+};
+export function resolveClaudeRole(role) {
+  const r = CLAUDE_ROLES[role];
+  if (!r) return null;
+  const envv = r.env && process.env[r.env] ? String(process.env[r.env]).trim() : null;
+  return { role, model: envv || r.model, effort: r.effort || null, via: envv ? `env:${r.env}` : "roster" };
+}
+
 // ── the board line (state week · watchman) ──
 export function boardLine(b = board()) {
   if (!b) return "gemini: never probed — `node scripts/models.mjs probe`";

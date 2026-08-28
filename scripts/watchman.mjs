@@ -95,7 +95,7 @@ import { EVENING } from "./conductor.mjs";
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 import { swallow, ledger as swallowLedger } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared; the ledger feeds caught-silent
 import { status as freezeStatus } from "./freeze.mjs";   // Block 8 — THE FREEZE: commits since FREEZE.md that touched a guarded path without a card ⇒ RED freeze-broken
-import { board as modelsBoard, findings as modelsFindings, MODELS_JSON } from "./models.mjs";
+import { board as modelsBoard, findings as modelsFindings, MODELS_JSON, resolveClaudeRole } from "./models.mjs";
 import { stats as actsStats, findings as actsFindings } from "./acts.mjs";
 import { stats as tasksStats, findings as tasksFindings } from "./tasks.mjs";
 import { stats as outboxStats, findings as outboxFindings } from "./outbox.mjs";
@@ -1064,7 +1064,12 @@ export const TIER2_ALLOWED_TOOLS =
 // child (the maiden run's other lesson: minutes of work, zero bytes of output)
 // distinguishable from one still running — c9 reads it the next night.
 export function tier2CmdLine() {
-  return `claude -p --model claude-opus-5 --effort max --allowedTools ${TIER2_ALLOWED_TOOLS}`
+  // S10 · §10-G: the model is a ROLE resolved at dispatch (LAW M's Claude half) —
+  // this line was the ONE live literal outside the resolver, found by LAW T's AST
+  // rule on day one (law-m-literal-model, frozen 1, now 0). Same resolved string
+  // today (claude-opus-5 · max): no model changed, only the literal moved home.
+  const role = resolveClaudeRole("tier2_repair");
+  return `claude -p --model ${role.model} --effort ${role.effort} --allowedTools ${TIER2_ALLOWED_TOOLS}`
     + ` < "${TIER2_PROMPT_FILE}" >> "${REPAIR_LOG}" 2>&1`
     + ` & echo TIER2 EXIT !ERRORLEVEL! >> "${REPAIR_LOG}"`;
 }

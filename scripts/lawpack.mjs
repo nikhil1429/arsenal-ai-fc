@@ -111,7 +111,7 @@ export const WAIVER = (rule) => new RegExp("law-waiver:" + rule + "\\b");
 //   depcruise 7 — import cycles: brain↔sitting↔state and context_manifest↔learnstate↔brain.
 export const BASELINE = {
   "owners-only-state-write": 0,
-  "law-m-literal-model": 1,
+  "law-m-literal-model": 0,   // S10 §10-G: watchman.mjs:1067's live literal moved into models.mjs CLAUDE_ROLES (the resolver, where a name may live) — same resolved string, no model change
   "jugad-literal-subject-list": 91,    // S10 ratchet (a2): 102 −1 shadow(#1) −1 tasks KINDS(#5) −2 CORE_AXES twins(#12) −3 calibration(r13) −2 acts(r14) −2 distiller INTERACTIVE+AMBIENT(r15; LEGACY stays frozen AND counted — honesty over score)
   "trailing-n-slice": 7,
   "bare-catch": 38,
