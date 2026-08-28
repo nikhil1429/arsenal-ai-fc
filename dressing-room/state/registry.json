@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T20:17:58.995Z",
+ "updated_at": "2026-08-28T20:22:53.421Z",
  "tables": {
   "mechanisms": [
    {
@@ -206,6 +206,17 @@
     "notes": "the verb set is RULED in the order, held as a row (a literal here would be SHAPE 1 inside the fix for SHAPE 1)",
     "updated_at": "2026-08-28T20:17:58.991Z",
     "added_at": "2026-08-28T20:17:58.991Z"
+   },
+   {
+    "subject": "spool_vacuum",
+    "schema_owner": "spool.mjs",
+    "witness": "spool.mjs:166 vacuum() + S8 close: retention is a 7-day window and NOTHING calls it yet — a registry row at S10, not a cron nobody asked for",
+    "slot": {
+     "after": "09:15"
+    },
+    "notes": "BORN-RED BY DESIGN: fired_by NOBODY today; S12 wires the firing into a staged wake (delivered rows only, pending never touched). The row exists so the un-fired duty is VISIBLE, not remembered",
+    "updated_at": "2026-08-28T20:22:53.267Z",
+    "added_at": "2026-08-28T20:22:53.267Z"
    }
   ],
   "sandbox_subjects": [
@@ -658,6 +669,40 @@
     "notes": "spec 7 fourth edge class: versions equal or the row is RED. Baseline 1 known drift (checks/derived_copy_drift), may only fall. Next candidates: every *Legacy frozen twin (named backlog, not scoped into S10)",
     "updated_at": "2026-08-28T20:07:55.692Z",
     "added_at": "2026-08-28T20:07:21.811Z"
+   }
+  ],
+  "orders": [
+   {
+    "subject": "engineering",
+    "path": "docs/archive/ORGANISM_AUDIT__2026-08-19.md",
+    "status": "open",
+    "witness": "CLAUDE.md ORDER-GATE contract line (rails.mjs orders resolves + REFUSES on absence — S5-R2 ruling; rails.mjs:274 names THIS row as where other orders on-board)",
+    "notes": "the audit + plan order; 10-C ladder S1-S12; the 3-C commit gate blocks on THIS order only",
+    "updated_at": "2026-08-28T20:22:52.973Z",
+    "added_at": "2026-08-28T20:22:52.973Z"
+   },
+   {
+    "subject": "learning",
+    "path": "docs/archive/SAMJHAO_ORDER__2026-08-20.md",
+    "status": "open",
+    "witness": "CLAUDE.md TWO WORK ORDERS block — the learning order; its 0 is the ONLY resume pointer",
+    "notes": "on-boarded via this registry row per rails.mjs:274 (the gate itself stays nailed to the engineering order, unchanged — no gate weakened)",
+    "updated_at": "2026-08-28T20:22:53.111Z",
+    "added_at": "2026-08-28T20:22:53.111Z"
+   }
+  ],
+  "mcp": [
+   {
+    "subject": "duckdb-readonly",
+    "mode": "read-only",
+    "status": "declared",
+    "evidence": "",
+    "declared_owner": "registry.mjs (the meter query surface)",
+    "gates": "adoption contract 0: evidence -> declared owner -> gates that bite -> L5 window; install rides the first meter query that exceeds plain Node",
+    "witness": "spec 11 — ADOPT AT S10 through the adoption contract; rails 4750: every MCP = a potential third writer, enters like any organ through THIS table",
+    "notes": "DECLARED, NOT INSTALLED — recorded judgement (reversible): the evidence leg is empty because every current meter query is a trivial JSONL scan Node already serves (LAW T: same quality, cheaper tier). The row is the contract home; installing without a query that needs it would fail the contract own first leg",
+    "updated_at": "2026-08-28T20:22:53.419Z",
+    "added_at": "2026-08-28T20:22:53.419Z"
    }
   ]
  }

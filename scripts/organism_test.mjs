@@ -1399,8 +1399,27 @@ function lawpack() {
     r.code === 0, reds.join("\n         ") || r.out.split(/\r?\n/).slice(-3).join(" | "));
 }
 
+// ── THE FLOW ATLAS (AUDIT §10-C rung S10 · acceptance (d)) ───────────────────
+// "flow_atlas check joins npm test — the atlas goes stale-proof the day the
+// registry exists." check re-derives the atlas from the live IR and compares
+// sha-identical: an organ edit that shifts the flow graph without a rebuilt
+// atlas is a RED here, never a silently-wrong map. A bare checkout (no built
+// IR/atlas) answers NOT-MEASURABLE like the law pack does.
+function atlas() {
+  section("FLOW ATLAS — the witnessed flow graph must match the code it maps (stale-proof, S10)");
+  const irPath = join(ROOT, "dressing-room", "state", "xray_graph.json");
+  const atlasPath = join(ROOT, "dressing-room", "state", "flow_atlas.json");
+  if (!existsSync(irPath) || !existsSync(atlasPath)) {
+    assert("FLOW ATLAS — bare checkout: no IR/atlas built here; NOT MEASURABLE is the honest answer", true);
+    return;
+  }
+  const r = run([join(ROOT, "scripts", "flow_atlas.mjs"), "check"], { timeout: 600000 });
+  assert("FLOW ATLAS — `check` re-derives the atlas from the live IR sha-identical (a code change that moves the graph demands `xray.mjs build` + `flow_atlas.mjs build` in the same commit)",
+    r.code === 0, r.out.split(/\r?\n/).slice(-3).join(" | "));
+}
+
 // ── MAIN ─────────────────────────────────────────────────────────────────────
-const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive };
+const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive, atlas };
 async function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }
