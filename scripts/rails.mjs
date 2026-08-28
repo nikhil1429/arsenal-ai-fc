@@ -85,7 +85,15 @@ export const CEILING_RE = /ceiling[^\n]{0,40}?\d/i;
 export const CMD_POS = "(?:^|[\\n;|&(]|\\|\\||&&)\\s*(?:[A-Za-z_][A-Za-z0-9_]*=[^\\s]*\\s+)*";
 export const CLAUDE_P_RE = new RegExp(`${CMD_POS}claude(?:\\.exe|\\.cmd)?\\s+(?:[^\\n;|&]*\\s)?(?:-p\\b|--print\\b)`, "i");
 // the same rule for a shell write into state: the VERB must be in command position too
-export const STATE_WRITE_RE = new RegExp(`(?:${CMD_POS}(?:rm|mv|cp|tee|truncate|sed)\\s|>>?\\s*[^\\s|]*dressing-room|Set-Content|Add-Content|Out-File)`, "i");
+// `sed` IS NOT A WRITE UNLESS IT IS `-i` (S6-F · F-07, 28 Aug 2026). Every other verb here
+// mutates by definition; sed does not — `sed -n '258p' file` is a pager, and it was the ONE
+// proven false refusal: this rail denied THREE read-only commands during S6-R, and re-measuring
+// them against this predicate showed two were never denied by it at all (their cause is NOT
+// established and is recorded as open, not guessed). The rail's own message promises "reads are
+// always fine"; that promise now holds for the case that broke it. In-place sed still REFUSES,
+// and the selftest proves both directions — a rail that stopped biting is a weakened gate.
+export const SED_IN_PLACE = `sed\\s+(?:-[^\\s-][^\\s]*\\s+)*-i`;
+export const STATE_WRITE_RE = new RegExp(`(?:${CMD_POS}(?:rm|mv|cp|tee|truncate)\\s|${CMD_POS}${SED_IN_PLACE}|>>?\\s*[^\\s|]*dressing-room|Set-Content|Add-Content|Out-File)`, "i");
 const OVERRIDE_RE = /ARSENAL_RAILS_OVERRIDE=([A-Za-z0-9_.-]+):([a-z-]+)/;
 
 const textOf = (v) => { try { return typeof v === "string" ? v : JSON.stringify(v ?? ""); } catch { return String(v); } };
@@ -327,6 +335,14 @@ function selftest() {
     D("Bash", { command: "cat dressing-room/state/cards.json | head -5" }).decision === "allow");
   assert("STATE — a document that merely TALKS about removing a state file is prose, not a write",
     D("Bash", { command: 'echo "the owner, not a session, may rm dressing-room/state/x.json"' }).decision === "allow");
+  // S6-F · F-07 — PINNED BOTH WAYS. `sed` counted as a write regardless of its flags, so a
+  // pager over a state path was refused with "reads are always fine" in the refusal text.
+  assert("STATE — `sed -n` over a state path is a PAGER, not a write (F-07, 28 Aug 2026)",
+    D("Bash", { command: "sed -n '258p' dressing-room/state/cards.json" }).decision === "allow");
+  assert("STATE — …and `sed -i` on the same path still REFUSES (the fix narrows, it does not blunt)",
+    D("Bash", { command: "sed -i 's/a/b/' dressing-room/state/cards.json" }).decision === "deny");
+  assert("STATE — `sed -n` mid-chain, the shape that actually bit S6-R, is allowed",
+    D("Bash", { command: "node x.mjs --probe dressing-room/state/afferent.jsonl write && sed -n '1,5p' scripts/learnstate.mjs" }).decision === "allow");
   assert("STATE — an owner CLI that writes its own state file is fine (it IS the owner)",
     D("Bash", { command: "node scripts/captains_call.mjs file --line 'x'" }).decision === "allow");
 

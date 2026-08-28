@@ -1,4 +1,12 @@
-# THE REGISTRY SPEC — rung S6, 27 Aug 2026 (Fable 5 · effort max)
+# THE REGISTRY SPEC — rung S6, 27 Aug 2026 (Fable 5 · effort max) · **v1.1**
+
+> **v1.1 — 28 Aug 2026, rung S6-F (Opus 5 · max), under the hash-before-edit law.** The v1.0 body
+> was asserted at sha256 `d7c0b25c91e6184e1cee1b4cfac2b27d1890e153db30d82a4fa022c6801f73f0`
+> (17,220 B) before a byte was touched; had it moved, this edit would have refused. Four amendments,
+> all ruled: **F-05** the core row's `owner` splits into `schema_owner` + `appenders[]` (§1) ·
+> **F-03** acceptance (a) splits into (a1)/(a2) (§9) · **F-04** three named 13th-class subject
+> tables join the migration map (§2) · **THE SELF-HEALING POSTURE** block (§13), HIS law, so S10
+> opens on a spec that already carries it. Nothing else in this file was rewritten (L9).
 
 > The audit order §10-C S6(b): "THE REGISTRY SPEC on top of the atlas." This file is the DESIGN
 > S10 builds from and the second half of HIS S6 decision (§10-E: the atlas + registry spec,
@@ -24,7 +32,21 @@ Every registered subject carries, minimum:
 
 ```
 { subject          — what this row governs (a file, a lane, a job, a doc, a check)
-  owner            — the ONE organ that writes/serves it (owners-only law, mechanical)
+  schema_owner     — the ONE organ that owns the ROW SHAPE and serves it (owners-only law,
+                     mechanical). v1.0 called this `owner` and defined it as "the ONE organ that
+                     writes/serves it" — and S6-R's schema dry-run proved that shape cannot
+                     express the organism's own declared exception: `brain_ledger.jsonl` has
+                     NINE writers by design (brain · cortex · council · dmn · gaffer_brain ·
+                     scout · selfknowledge · talk · thalamus), CLAUDE.md declares it a shared
+                     append lane, and `gaffer_brain.mjs:1719` already says it exactly right —
+                     "a shared append lane whose SCHEMA belongs to brain.mjs and to no appender."
+                     Writing one owner would have been false; writing nine would have broken the
+                     law the field exists to mechanize. So the field says what the organism
+                     already means. (F-05, S6-R → S6-F, 28 Aug 2026.)
+  appenders[]      — every OTHER organ lawfully allowed to append, empty for all but the declared
+                     shared lanes. `owners-only` is then a MECHANICAL check with two clauses:
+                     a writer is either the schema_owner or a declared appender, or it is a
+                     breach. xray's Q2 allowlist becomes this field and stops being a second copy.
   right_consumer   — who must EAT its output for it to count as reached (§1's gate correction:
                      "did it reach its RIGHT consumer", never "did it run")
   slot             — when/where it fires (anchor · cadence · event), so slot-awareness is a
@@ -62,6 +84,20 @@ Two row EXTENSIONS carry classes the core shape cannot:
 | 10 | `teaching_audit` — one source, only inside FORGE | `audit_source` rows (695 unaudited prompts/6d was this literal) |
 | 11 | `course.mjs` — singleton container | `course` rows (a new id ADDS) |
 | 12 | `CORE_AXES = ["d"]` global + hand-mirrored twin | per-concept row in `concepts.json`'s own lane; the second copy dies |
+
+| **13** | `calibration.mjs:127-129` — `KNOWN_ROOT` / `KNOWN_TARGETS` / `KNOWN_DANGER` | `environment_subject` rows — what roots exist, what targets exist, what is dangerous |
+| **14** | `acts.mjs:61-62` — `DOORS` / `VERBS` | LAW A's door and verb sets become rows; a new door ADDS |
+| **15** | `distiller.mjs:59-75` — `INTERACTIVE_LEGACY` / `INTERACTIVE` / `AMBIENT` | lane classification the core row's own `slot` + `spend_class` already own — this is a duplicate table, not a new one |
+
+**THE 13TH CLASS, NAMED (F-04, added at v1.1).** The twelve above were picked by hand at §9 and
+`lawpack.mjs:100-102` said so before this rung did: *"§9 SHAPE 1 named twelve by hand; the shape is
+ten times bigger."* The three rows above are the ones S6-F could name with certainty — each is a
+subject table by any reading. The heaviest carriers still unnamed, measured 28 Aug:
+`gaffer_brain.mjs` (6 sites) · `dugout.mjs` (5) · `lawpack.mjs` itself (5, deliberately unwaived —
+the law pack is not exempt from the law pack) · `archivist.mjs` (4) · `dmn.mjs` (4). **They are NOT
+scoped into S10** — naming them is not the same as pricing them, and a migration map that quietly
+grows from 12 to 90 is the scope disease this order exists to kill. Rows 13-15 carry declared jugad
+deltas under (a2) like every other row; the remainder is a NAMED backlog for a rung after S12.
 
 Migration LAW: each instance moves in its own commit, gate-covered (lawpack's
 `jugad-literal-subject-list` count must FALL by at least the migrated site — the baseline
@@ -176,7 +212,21 @@ own band; the registry makes it a checked row.
 - **S9 · OWNERSHIP** — `owner` field mechanizes the header grep; Q5 stays 0 by construction.
 - **S10 · THE REGISTRY BUILD** (Fable · max) — everything above, in the §2 order, each
   migration its own commit; plus the standing-laws collector (§3) and the SHAPE-8 lawpack rule.
-  Acceptance list: (a) all 12 migrations landed, lawpack jugad count ≤ 90 (102 − 12); (b) the
+  Acceptance list — **(a) REPLACED AT v1.1 (F-03).** v1.0 read "(a) all 12 migrations landed,
+  lawpack jugad count ≤ 90 (102 − 12)", which models ONE migration = ONE lawpack site. S6-F
+  measured that model false in both directions: **#2 `bootroom.mjs`, #3 `gate_tune.mjs`, #8
+  `viz.mjs` and #11 `course.mjs` carry no const-array jugad site at all** (they move a
+  singleton/scope literal, so they remove ZERO), while **#12 kills TWO copies**
+  (`forge_session.mjs:121` + `teaching_audit.mjs:135`) and **#5 carries two arrays**
+  (`tasks.mjs:62 KINDS` + `:63 STATES`). A rung landing all twelve correctly could still miss
+  ≤90; a rung migrating unrelated easy sites could hit ≤90 having landed none. That is SHAPE 8 —
+  a receipt standing in for the measurement — inside the spec that named SHAPE 8. So:
+  **(a1) the CHECKLIST is the acceptance** — each of the twelve lands in its OWN commit that
+  names its site(s) by `file:line`, and all twelve are ticked; and
+  **(a2) the RATCHET may only FALL** — each migration DECLARES its expected jugad delta before
+  it lands (zero for #2/#3/#8/#11, two for #12, up to two for #5), and the measured delta must
+  equal the declared one. The gate keeps "stricter only" without pretending twelve equals twelve.
+  Then: (b) the
   reach meter stamps `first_real_row_at` on every registered lane; (c) the emit contract's four
   rows live with the back-fill ingested as §5's DONE-proof; (d) `flow_atlas check` joins
   `npm test` (the atlas goes stale-proof the day the registry exists); (e) every check row
@@ -236,3 +286,31 @@ own band; the registry makes it a checked row.
 No code beyond the atlas was written at S6. The 28-item gap is not patched. SHAPE 6 is not
 built. No organ was re-enabled. The registry itself is S10's — this file is its contract, and
 HIS haan/na on (atlas + this spec) is the gate S7 waits behind (§10-E).
+
+## §13 · THE SELF-HEALING POSTURE — HIS LAW, and it binds how S10 builds
+*(added at v1.1, rung S6-F, 28 Aug 2026. Record: `queue\RULING__2026-08-28_selfheal-law+s6r.md`,
+from HIS words: "the entire cyborg organism should be self healing and tell me just what got fixed
+and why." This spec was written 27 Aug, one day before the ruling, so v1.0 could not carry it;
+S6-R was told to carry the pointer and S6-F folds it in, so S10 opens on a spec that already has it.)*
+
+**FIX-AND-TELL-ME IS THE REPAIR POLICY.** Anything **reversible** whose fix is **test-verified**
+(the gates recompute and pass), the machine fixes ITSELF and **reports** — one line at an anchor he
+already hits: *what got fixed, and why*. **Never a permission card.** A card exists ONLY for
+irreversible acts and for design changes. **Full self-REWRITE — the machine editing its own code
+unsupervised — stays REFUSED**, measured dead (Tier-2 arm: 5 starts / 0 exits), and the CTO holds
+that refusal.
+
+What this changes in the rows above, concretely:
+- **§2 row #8's `self_repair` subjects table is this policy's substrate** — the ruling names it by
+  name. Each `self_repair` row therefore carries `{reversible, verified_by, report_anchor}`, and
+  the 4-condition auto-fix gate generalizes across the table instead of living inside `wall_review`.
+- **`report_anchor` is a first-class field, not a log line.** L7 binds: nothing he must remember or
+  chase. A repair that cannot name an anchor he already hits is a repair that must raise a card
+  instead — which makes the anchor requirement the policy's own enforcement.
+- **A repair reports what it FIXED, never what it CHECKED.** SHAPE 8 applies to the organism's own
+  repair receipts before anything else: "12 lanes healthy" is testimony; "gate_tune's 14-day review
+  fired and kept tau1_base at 0.2 — 4.69 wakes/day, inside [1,8]" is a measurement.
+- **Reversibility is a declared property of the subject, not a judgement made at repair time.**
+  A subject whose reversal path is not written down is not eligible for auto-repair.
+
+**S10 builds against this posture, not against a later interpretation of it.**

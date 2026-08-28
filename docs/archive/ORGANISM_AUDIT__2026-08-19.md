@@ -54,6 +54,20 @@ STATUS (update this block before any session stops — this is the handoff)
                                    `docs/archive/REGISTRY_SPEC__2026-08-27.md` (row shapes ·
                                    12 migrations · emit contract · S6-DECIDES all ten answered).
                                    ⛔ AWAITING HIS HAAN/NA — S7 does not exist before it.**
+  S6-F THE EIGHT REPAIRS ....... ☑ **DONE 28 Aug 2026 (Opus 5 · max) on HIS HAAN. All eight
+                                   landed: F-01 ghost reads 57 → 33 (= S6-R's predicted true
+                                   count, to the unit) · F-03/F-04/F-05 + the SELF-HEALING
+                                   POSTURE in spec **v1.1** (hash-before-edit honoured both
+                                   ends) · F-06 the entrypoint guard, bite-proven · F-07 fixed
+                                   AND the finding corrected (only ONE of its three cases was
+                                   ever this rail; the other two are recorded as CAUSE NOT
+                                   ESTABLISHED) · L-01 settled by running, NOT a defect.
+                                   **F-02 is the honest exception: both named mechanisms killed,
+                                   the class SIZE deliberately NOT shipped** — a third mechanism
+                                   (parameterised directory roots) needs real dataflow, and
+                                   shipping 12/17 would have been a new wrong number.
+                                   Gates got STRICTER, never weaker: flow_atlas 5→7, rails
+                                   49→52. `npm test` **108/2 = baseline exactly**, solo.
   S6-R INDEPENDENT CHECK ....... ☑ **DONE 28 Aug 2026 (Opus 5 · max, family-decorrelated from the
                                    Fable author). VERDICT: S6's work is SOUND — P1 A1/A2/A5/A6
                                    PASS, A7/A8 BOUNDED, A3/A4 one shared cause · P2 12/12 · P3
@@ -2875,7 +2889,7 @@ STATUS (update this block before any session stops — this is the handoff)
                                    receipts move when an architect writes. That is declared in the
                                    packet, not hidden: S6 re-runs the checker at open.
 
-  ▶ NEXT SESSION ............... **HIS §10-E DECISION MOMENT — haan/na on `FLOW_ATLAS.html` +
+  ~~▶ NEXT SESSION ............... **HIS §10-E DECISION MOMENT — haan/na on `FLOW_ATLAS.html` +
                                    the registry spec, NOW FIRING ON S6-R's VERDICT (his agreed
                                    re-sequencing, 28 Aug). THERE IS NO EXECUTOR RUNG UNTIL HE
                                    RULES.** The page written for him is
@@ -2895,7 +2909,9 @@ STATUS (update this block before any session stops — this is the handoff)
                                    still nobody's: ① `memory/artifact-organ-diagnosis.md` is HIS
                                    OWN PARKING dated "resume 28 Aug 2026" — that is TODAY — and
                                    nothing fires it; ② the samjhao-lane §0 pointer still names
-                                   the learning resume (untouched by this rung).
+                                   the learning resume (untouched by this rung).~~
+                                   ✅ **SATISFIED 28 Aug 2026 — HE SAID HAAN** (*"yes, let's
+                                   implement it"*). Kept struck, not deleted (L9).
 
   ~~▶ NEXT SESSION ............... **`S6-R` — THE INDEPENDENT S6 VERIFICATION (ruled 28 Aug on HIS
                                    word: "independent entire S6 work check karvao — the entire
@@ -2948,7 +2964,31 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`S6-F` — THE EIGHT REPAIRS. HIS HAAN IS GIVEN (28 Aug —
+  ▶ NEXT SESSION ............... **`S7` · BUILD · GATE C — and THE RULER PRICES IT FIRST (the
+                                   1215 law; the sign-off ruling says S7 is priced at S6-F's
+                                   close, which is now). MODEL: Opus 5 · effort max.
+                                   S7 does not open on the manifest with no pricing round-trip.**
+                                   ⭐ **THE BRAINSTORM-FIRST LAW binds from here** (his word,
+                                   28 Aug, standing, session-agnostic): a rung grown from a
+                                   brainstorm-class escalation may not open its build before the
+                                   architect holds that brainstorm WITH HIM. **S10's SHAPE-6/notes
+                                   surface is BRAINSTORM-GATED: note-taking.** S7-S9 and S11-S12
+                                   as scoped touch none of the set.
+                                   ⛑ ONE THING S6-F LEAVES OPEN BY NAME, for whoever prices S7:
+                                   **F-02's class SIZE is still unshipped.** Both named
+                                   contamination mechanisms are fixed, but a third — a
+                                   PARAMETERISED directory root (`f(dir = STATE_DIR)` +
+                                   `join(dir,"x.jsonl")`, this repo's dominant idiom) — cannot be
+                                   followed by any textual probe. A precise count needs real
+                                   dataflow. It is NOT scoped into S7 unless the ruler puts it
+                                   there; the atlas stays a LOWER BOUND either way, which is the
+                                   direction that keeps every drawn edge true.
+                                   ⛑ carried one-liners for HIM, still nobody's: ①
+                                   `memory/artifact-organ-diagnosis.md` is HIS OWN PARKING dated
+                                   "resume 28 Aug 2026" — that is TODAY — and nothing fires it;
+                                   ② the samjhao-lane §0 pointer still names the learning resume.
+
+  ~~▶ NEXT SESSION ............... **`S6-F` — THE EIGHT REPAIRS. HIS HAAN IS GIVEN (28 Aug —
                                    "yes, let's implement it"; queue\RULING__2026-08-28_his-haan+
                                    brainstorm-law.md): the verified S6 + this amendment list is
                                    APPROVED; the BUILD PHASE IS LIVE. MODEL: Opus 5 · effort
@@ -2960,7 +3000,8 @@ STATUS (update this block before any session stops — this is the handoff)
                                    SELF-HEALING POSTURE block (his fix-and-tell-me law) joins
                                    the spec in the same act. FORBIDDEN: anything beyond the
                                    eight · any re-enable · Gemini. THEN S7 · BUILD · GATE C
-                                   (the ruler prices it at S6-F's close).**
+                                   (the ruler prices it at S6-F's close).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-F` ☑ row in
+                                   §10-C and the PROGRESS entry of 28 Aug. Kept struck (L9).**
                                    ⭐ **THE BRAINSTORM-FIRST LAW (his word, 28 Aug, standing,
                                    session-agnostic):** a rung grown from a brainstorm-class
                                    escalation may not open its build before the architect holds
@@ -7468,6 +7509,65 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
      nothing re-enabled · no gate weakened · s5-2026-08-20/ untouched.
      DONE-PROOF: `node s6r_check.mjs` twice byte-identical · `--selftest` 7/7 bites ·
      `npm test` 108/2 solo · `rails.mjs orders` clean.                  CEILING: 15 / 10 / 5
+
+☑ S6-F THE EIGHT REPAIRS — **DONE 28 Aug 2026 (Opus 5 · effort max).**
+     HIS HAAN, 28 Aug: *"yes, let's implement it"* — the verified S6 + the amendment list is
+     APPROVED and the BUILD PHASE IS LIVE (`queue\RULING__2026-08-28_his-haan+brainstorm-law.md`);
+     priced by the architect's sign-off (`queue\RULING__2026-08-28_s6r-signoff.md`):
+     BUILD 10 · PROOF 6 · HANDOFF 5. ⚠ THE ROW ITSELF WAS THE RUNG'S FIRST ACT — the sign-off's
+     fold ② says the §10-C row was "written by the ruler in the router THIS act" and it was in
+     the ROUTER only. Third rung in a row to open by writing its own missing row (S5-Z6, S6-R,
+     this); transcription from the router's text, nothing invented. The now-satisfied "HIS
+     §10-E DECISION MOMENT" router line was struck in the same act — he ruled, and two live
+     ▶ NEXT SESSION lines is an ambiguity, not a record.
+     SCOPE = exactly the eight the S6-R verdict named (F-01..F-07 + L-01), every fix already
+     specified: transcription-grade repairs, NO design freedom. Spec edits VERSIONED v1.1 under
+     the hash-before-edit law; the SELF-HEALING POSTURE block joins the spec in the same act.
+     **F-01 ✅ `on_disk` now means EXISTS** (xray.mjs). The obvious repair — `existsSync(join(
+     ROOT,p))` — was written first and xray's OWN ratchet bit it (unresolved sinks 8→9 on
+     xray); a gate may only get stricter, so the WALKER WAS REUSED (one `walkInto` called
+     twice) instead of a call site added. A skip-list residual (`node_modules/ts-fsrs/
+     package.json` still drawn as a ghost) was then measured out too — a skip list is SHAPE 7,
+     and not skipping costs 6,169 files / 154 ms. **ghost reads 57 → 33 = S6-R's independently
+     predicted true count to the unit · orphan on_disk flags 4 wrong → 0 · Q2/Q5 still 0/0.**
+     **F-02 ⚠ both named mechanisms KILLED, the class SIZE deliberately NOT SHIPPED.**
+     Paren-in-string fixed by an index-aligned mask; basename-collision fixed by a real constant
+     resolver (`__dirname` = scripts/ for all 108 organs, so join-chains fold with no name list).
+     Both demonstrated on their exact witnesses. But tightening exposed a THIRD mechanism S6-R
+     never saw — `f(dir = STATE_DIR)` + `join(dir,"x.jsonl")`, a PARAMETERISED ROOT no textual
+     resolver can follow: gating on it cut rejirah_log's readers 10 → 3, deleting seven true
+     ones. So `tier` (verb strength) and `resolved` (path identity) were separated, and the
+     precise size is left to real dataflow rather than a better regex. **Shipping 12/17 would
+     have been a new wrong number pointing the other way.** What IS proven stands and is now
+     pinned AS A FACT, not a count: `learnstate.mjs:62/:525` reads the never-born lane.
+     **F-03 ✅ acceptance (a) → (a1) per-migration checklist + (a2) declared-delta ratchet**
+     (spec v1.1 §9). **F-04 ✅ rows 13-15 named** (calibration/acts/distiller), the wider
+     population recorded as a NAMED BACKLOG explicitly NOT scoped into S10 — a map that grows
+     12→90 quietly is the scope disease. **F-05 ✅ `owner` → `schema_owner` + `appenders[]`**
+     (spec v1.1 §1); `gaffer_brain.mjs:1719` had already said it exactly right.
+     **F-06 ✅ the entrypoint guard** (flow_atlas.mjs, watchman's idiom so there is ONE shape) —
+     import silent + sha unchanged · CLI still dispatches · **and the assertion BITES** (guard
+     out → 6/6+1 FAIL, guard back → 7/7).
+     **F-07 ✅ fixed AND the finding CORRECTED — the honest half.** S6-R named three refused
+     read-only commands; re-measured, **only ONE was ever denied by this predicate** (`sed`
+     counted as a write regardless of flags). The other two are NOT denied by it and their
+     cause is **not established — recorded as open, not guessed.** Fixed by requiring `-i`;
+     proven BOTH ways (15/15 probe table) and pinned (rails 49 → **52/0**).
+     **L-01 ✅ SETTLED BY RUNNING, and it is NOT a defect.** `gate_tune_ledger.jsonl` IS inside
+     the guarded set (absent from `LIVE_WRITERS`), and `gate_tune.mjs selftest` leaves it at
+     `1637:1787882325568` before and after. The 01:58Z row came from a live path racing the
+     suite window — the case organism_test's own comment already names.
+     PROOFS: xray 23/0 · flow_atlas **7/7** (was 5/5) · rails **52/0** (was 49) · s6r_check
+     7/7 bites each twice + two runs byte-identical (195,167 B) · lawpack GREEN at every frozen
+     baseline (jugad still 102 — S6-F migrated nothing, by design) · **`npm test` 108/2 = the
+     recorded baseline EXACTLY, hermeticity clean, run SOLO.** The checker now reads P1 A1-A6
+     PASS · A7/A8 BOUNDED · P2 12/12 · **P3 PASS**, the five v1.1 amendments asserted in the
+     spec's own bytes — so this rung's own work is gate-covered.
+     HASH-BEFORE-EDIT HONOURED: spec asserted at `d7c0b25c91e6184e…` (17,220 B) before a byte
+     moved; after, `557422b0c2578e43…` (23,955 B).
+     FORBIDDEN LIST HELD: nothing beyond the eight · no re-enable · zero Gemini · zero agents ·
+     no gate weakened (the two that moved got STRICTER) · s5-2026-08-20/ untouched · no
+     migration landed (S10's, under the new (a1)/(a2)).          CEILING: 10 / 6 / 5
 
 ☐ S7  BUILD · GATE C.                                       MODEL: Opus · effort max
       His §1 correction lands: the consumer map becomes a DECLARED consumers table in
@@ -17273,3 +17373,140 @@ verdict (his agreed re-sequencing, 28 Aug). The page written for him is
 `arsenal-audit-artifacts\s6r-2026-08-28\VERDICT_FOR_HIM.md`. On haan: S7 · BUILD · GATE C
 (Opus 5 · effort max) — and the RULER PRICES IT FIRST, the 1215 law. On na, or to clear the
 findings first: S6-F, ruler-priced. F-03 should land before S10 either way.**
+
+### PROGRESS 2026-08-28 ~08:40 IST — RUNG `S6-F` · THE EIGHT REPAIRS (Opus 5 · effort max · 10/6/5) — **ALL EIGHT LANDED, AND THE ONE THAT REFUSED TO CLOSE IS THE MOST USEFUL LINE IN THE RUNG**
+
+**Router obeyed** (§10-D rule 1). Micro-order written to the scratchpad before any edit (rule 9).
+
+**FIRST ACT — the third rung in a row to open by writing its own missing row.** The sign-off's
+fold ② says the §10-C S6-F row was "written by the ruler in the router THIS act"; it was in the
+ROUTER only. Written from the router's own text, transcription, nothing invented. The satisfied
+"HIS §10-E DECISION MOMENT" router line was struck in the same act — he ruled, and two live
+▶ NEXT SESSION lines is an ambiguity, not a record.
+
+**F-01 — and the gate bit ME first.** The obvious repair, `existsSync(join(ROOT,p))` in the file
+mapping, is a variable-path fs call: xray's own per-organ unresolved-sinks ratchet went **8→9 on
+xray itself**. §10-D rule 6 says a gate may only get stricter, so the WALKER WAS REUSED — one
+`walkInto(dir,fileSet,dirSet)` called twice — adding a traversal and no call site. Then the skip
+list left ONE residual (`node_modules/ts-fsrs/package.json` still drawn as a ghost); a skip list is
+SHAPE 7, and not skipping costs 6,169 files / 154 ms, so only `.git` is skipped now.
+**ghost reads 57 → 33, which is S6-R's independently predicted true count TO THE UNIT** · orphan
+`on_disk` flags 4 wrong → 0 · checker A3/A4 FINDINGS → **PASS** · Q2/Q5 still 0/0.
+
+**F-02 — THE HONEST EXCEPTION, and it is the line worth reading.** Both mechanisms S6-R named are
+killed and demonstrated on their exact witnesses: paren-in-string by an **index-aligned mask**,
+basename-collision by a **real constant resolver** (`__dirname` is `scripts/` for all 108 organs, so
+join-chains fold with no name list; `brain.mjs`'s false *write* on `afferent.jsonl` is now demoted
+and its true *read* at `:804` is tier 1, resolved). **But tightening exposed a THIRD mechanism S6-R
+never saw** — `f(dir = STATE_DIR)` then `join(dir,"x.jsonl")`, this repo's dominant idiom, a
+PARAMETERISED root no textual resolver can follow. Gating on resolution cut `rejirah_log.jsonl`'s
+reader count from 10 to **3**, deleting seven true readers. So the two axes were separated (`tier` =
+verb strength, `resolved` = path identity) and **the precise class size is left unshipped.**
+Shipping "12 reads / 17 writes" would have been a new wrong number pointing the other way — the same
+mistake as the 286/187 S6-R already refused, one iteration later. What is proven stands and is now
+pinned **as the fact, not as a count**: `learnstate.mjs:62/:525` reads the never-born lane.
+
+**F-03 · F-04 · F-05 + THE SELF-HEALING POSTURE — spec v1.1, hash-before-edit honoured both ends.**
+Asserted at `d7c0b25c91e6184e…` (17,220 B) before a byte moved; after, `557422b0c2578e43…`
+(23,955 B). (a) split into **(a1)** a per-migration checklist and **(a2)** a declared-delta ratchet ·
+rows **13-15** named with the wider population recorded as a **NAMED BACKLOG explicitly NOT scoped
+into S10** · `owner` → **`schema_owner` + `appenders[]`**, which is what `gaffer_brain.mjs:1719`
+already said in prose · and **the registry spec's own section 13, HIS fix-and-tell-me law**, so S10 opens on a spec that carries it.
+
+**F-06 — the guard, and the assertion proven to BITE.** watchman's idiom, so there is one shape here
+and not two. Guard removed → flow_atlas selftest `6/6+1 FAIL`; restored → `7/7`.
+
+**F-07 — FIXED, AND THE FINDING CORRECTED. This is the half I owe the record.** S6-R named three
+refused read-only commands. Re-measured against the predicate itself, **only ONE was ever denied by
+it**: `sed` counted as a write regardless of flags, so a pager was refused with *"reads are always
+fine"* in the refusal text. **The other two are not denied by this predicate at all, and their cause
+is NOT ESTABLISHED — recorded as open, not guessed.** Fixed by requiring `-i`, proven both ways on a
+15/15 probe table, pinned (rails 49 → **52/0**).
+
+**L-01 — settled BY RUNNING, as ruled, and it is NOT a defect.** `gate_tune_ledger.jsonl` is absent
+from `LIVE_WRITERS`, so it IS guarded; and `gate_tune.mjs selftest` leaves it at
+`1637:1787882325568` before and after. The 01:58Z row came from a live path racing the suite window
+— the case `organism_test.mjs`'s own comment already names.
+
+**PROOFS, all run:** xray **23/0** · flow_atlas **7/7** (was 5/5) · rails **52/0** (was 49) ·
+`s6r_check --selftest` **7/7 bites, each twice** · two checker runs **byte-identical** (195,167 B) ·
+lawpack **GREEN at every frozen baseline** (jugad still 102 — S6-F migrated nothing, by design) ·
+**`npm test` = 108 passed / 2 failed, the recorded baseline EXACTLY, hermeticity clean, run SOLO.**
+The checker now reads **P1 A1-A6 PASS · A7/A8 BOUNDED · P2 12/12 · P3 PASS** — the five v1.1
+amendments asserted in the spec's own bytes, so this rung's own work is gate-covered.
+
+**COST (day-delta, stated as a method):** meter day-line **179.58 lakh at open → 204.14 at the
+proofs' close ⇒ ≈25 lakh against BUILD 10 + PROOF 6 + HANDOFF 5 = 21.** **OVER by ~4, and recorded
+as over** (§10-C: unit faults only re-derive a ceiling; a rung running hot is data about the rung).
+The number is an UPPER bound — the day-delta charges this rung with every session's spend today —
+and the overrun bought F-01's second repair (the ratchet bite) and F-02's third mechanism, neither
+of which was in the priced scope because neither was known when the price was written.
+
+**FORBIDDEN LIST HELD:** nothing beyond the eight · no re-enable · zero Gemini · zero agents · no
+gate weakened (the two that moved got STRICTER) · `s5-2026-08-20/` untouched · no migration landed.
+
+**THE TWO RULINGS THIS RUNG RAN UNDER — VERBATIM (fold item ① of each):**
+
+```
+# RULING — 28 Aug 2026 · HIS HAAN (the S6 approval gate) + THE BRAINSTORM-FIRST LAW
+HIS WORDS: "yes, let's implement it" — **the verified S6 (atlas + registry spec + the S6-F
+amendment list) is APPROVED. The build phase is live.** And: "stop everytime in the architect
+session when the time comes to ask things from me… a lot of escalation issues were supposed to
+be a little brainstorm with you… we should brainstorm first when the time of implementing them
+arrives. session agnostically always."
+
+## 1 · THE BRAINSTORM-FIRST LAW (standing, session-agnostic, binds every future rung)
+A rung whose subject grew out of a BRAINSTORM-CLASS escalation may not open its build until the
+architect has held that brainstorm WITH HIM and recorded its outcome. The flag lives ON the
+rung's row ("BRAINSTORM-GATED: <topic>"), so any session — any model, any day — hits the stop.
+The brainstorm-class set, from the queue's own wording (his "no solutions, just the problem"
+orders): **note-taking for the whole syllabus (Q-14) · the floor→ceiling raw thought (Q-2/Q-15,
+the parts S6 did not consume) · the behavioural-corpus retest (Q-18) · the cross-topic carrier
+(Q-4) · sensors/phone/fitness (Q-20/Q-22/Q-23) · the [the OVERHAUL plan's section 19] after-freeze ceiling list.** The
+architect carries this list forward in the handoff; new brainstorm-class items join it by name.
+Rungs S7–S12 as currently scoped touch NONE of these except S10's SHAPE-6/notes surface — so
+**S10's row gains the flag for the note-taking brainstorm** (the record shape of what auto-writes
+is exactly Q-14's question); everything else on the list sits post-S12 or in the learning lane.
+
+## 2 · S6-F IS LIVE NOW (his "patch kardete hain pehle") — scope/ceiling per the sign-off ruling:
+the eight named repairs, BUILD 10 · PROOF 6 · HANDOFF 5, Opus 5 · effort max, spec edits
+versioned v1.1 under the hash-before-edit law, the self-healing posture block included. Then S7
+(the ruler prices it at S6-F's close).
+```
+
+```
+# RULING — 28 Aug 2026 · THE ARCHITECT'S S6-R SIGN-OFF (Fable layer)
+VERIFIED BY RUNNING: the ruler re-ran `s6r_check.mjs` fresh under his own shell — output matches
+the verdict (ghost 24/33 recount, negative sweep 0 unexplained, P3 lines identical). The verdict's
+own discipline held: criteria pre-written, seed pinned, 7/7 bites proven twice, two runs
+byte-identical, verify-only honoured.
+
+## SIGNED: S6 IS VERIFIED SOUND.
+The structural argument that carries it: **every gap runs ONE direction — the atlas is a LOWER
+bound; a miss ADDS an edge, it can never invent one.** So the 535 edges are 535 real edges.
+The Fable-layer review of the judgement sections finds them NOT thin — the dry-run's outbox
+testimony row and the one-direction argument are exactly the reasoning the ruler would have
+demanded; no Fable re-run of any section is needed.
+
+## The findings, ruled:
+1. **My two flagged doubts both CONFIRMED with mechanisms** — reader-count (10, not 9; the
+   helper-sink class F-02) and the brain_ledger inexpressibility (F-05: `owner` →
+   `schema_owner` + `appenders[]`). S6-R existed for exactly these; it earned its keep.
+2. **S6-F IS PRICED: BUILD 10 · PROOF 6 · HANDOFF 5 · MODEL Opus 5 · effort max.** Scope =
+   exactly the eight items the verdict's inheritance list names (F-01..F-07 + L-01), every fix
+   already fully specified by S6-R — transcription-grade repairs, no design freedom. The spec's
+   F-05/F-03 amendments are VERSIONED edits (v1.1) with the hash-before-edit law.
+3. **The self-healing-law fold into the spec's build posture rides S6-F** (one §-block, citing
+   RULING__2026-08-28_selfheal-law+s6r.md), so S10 opens on a spec that already carries HIS law.
+4. **HIS §10-E GATE FIRES NOW** — on the VERIFIED S6, with the S6-F amendment list named as part
+   of what he approves. On haan: S6-F → S7 (S7 priced at that ruling). On na: his word routes.
+
+FOLD LIST (S6-F's open): ① this ruling verbatim in PROGRESS · ② S6-F row in §10-C (scope = the
+eight, 10/6/5) — written by the ruler in the router THIS act · ③ spec v1.1 versioned edits ·
+④ the self-healing posture block.
+```
+
+**NEXT: `S7` · BUILD · GATE C — MODEL Opus 5 · effort max, and THE RULER PRICES IT FIRST (the 1215
+law; the sign-off says S7 is priced at S6-F's close, which is now). THE BRAINSTORM-FIRST LAW binds
+from here: S10's SHAPE-6/notes surface is BRAINSTORM-GATED on note-taking, and S7-S9/S11-S12 as
+scoped touch none of the set.**

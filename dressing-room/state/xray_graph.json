@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-27T05:16:12.987Z",
- "organs_parsed": 107,
- "organs_expected": 107,
+ "built_at": "2026-08-28T02:59:32.190Z",
+ "organs_parsed": 108,
+ "organs_expected": 108,
  "parse_errors": [],
- "unresolved_sinks": 1353,
+ "unresolved_sinks": 1359,
  "organs": {
   "acts.mjs": {
    "loc": 482,
@@ -7481,6 +7481,186 @@
    ],
    "unresolved": 5
   },
+  "flow_atlas.mjs": {
+   "loc": 362,
+   "reads": [
+    {
+     "path": "dressing-room/state/xray_graph.json",
+     "lines": [
+      92,
+      294,
+      92,
+      294,
+      92,
+      294,
+      92,
+      294
+     ],
+     "fixture": false
+    },
+    {
+     "path": "scripts",
+     "lines": [
+      106,
+      106,
+      106,
+      106
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/forge_sessions.jsonl",
+     "lines": [
+      150,
+      151,
+      150,
+      151,
+      150,
+      151,
+      150,
+      151
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/captains_call.json",
+     "lines": [
+      169,
+      169,
+      169,
+      169
+     ],
+     "fixture": false
+    },
+    {
+     "path": "THE_GAFFER.md",
+     "lines": [
+      191,
+      191,
+      191,
+      191
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/manager/system.md",
+     "lines": [
+      192,
+      192,
+      192,
+      192
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/flow_atlas.json",
+     "lines": [
+      351,
+      351
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/reps_log.jsonl",
+     "lines": [
+      142,
+      143,
+      142,
+      143,
+      142,
+      143
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [
+    {
+     "path": "dressing-room/state/flow_atlas.json",
+     "lines": [
+      356
+     ],
+     "verbs": [
+      "writeFileSync"
+     ],
+     "fixture": false
+    },
+    {
+     "path": "FLOW_ATLAS.html",
+     "lines": [
+      357
+     ],
+     "verbs": [
+      "writeFileSync"
+     ],
+     "fixture": false
+    }
+   ],
+   "spawns": [
+    {
+     "kind": "organ",
+     "script": "flow_atlas.mjs",
+     "verb": "__unknown_verb__",
+     "line": 328,
+     "ctx": "selftest"
+    }
+   ],
+   "swallows": [
+    {
+     "line": 55,
+     "try_stmts": 7,
+     "catch_stmts": 1
+    },
+    {
+     "line": 190,
+     "try_stmts": 5,
+     "catch_stmts": 1
+    },
+    {
+     "line": 55,
+     "try_stmts": 7,
+     "catch_stmts": 1
+    },
+    {
+     "line": 190,
+     "try_stmts": 5,
+     "catch_stmts": 1
+    },
+    {
+     "line": 55,
+     "try_stmts": 7,
+     "catch_stmts": 1
+    },
+    {
+     "line": 190,
+     "try_stmts": 5,
+     "catch_stmts": 1
+    },
+    {
+     "line": 55,
+     "try_stmts": 7,
+     "catch_stmts": 1
+    },
+    {
+     "line": 190,
+     "try_stmts": 5,
+     "catch_stmts": 1
+    }
+   ],
+   "verbs": [
+    "build",
+    "check",
+    "selftest"
+   ],
+   "header_verbs": [
+    "build",
+    "check",
+    "selftest"
+   ],
+   "exports": [
+    "derive"
+   ],
+   "unresolved": 6
+  },
   "forge_session.mjs": {
    "loc": 2016,
    "reads": [
@@ -12888,29 +13068,29 @@
    "unresolved": 6
   },
   "rails.mjs": {
-   "loc": 469,
+   "loc": 485,
    "reads": [
     {
      "path": "docs/archive",
      "lines": [
-      185,
-      185
+      193,
+      193
      ],
      "fixture": false
     },
     {
      "path": "package.json",
      "lines": [
-      225,
-      225
+      233,
+      233
      ],
      "fixture": false
     },
     {
      "path": "CLAUDE.md",
      "lines": [
-      280,
-      280
+      288,
+      288
      ],
      "fixture": false
     }
@@ -12920,7 +13100,7 @@
     {
      "kind": "bin",
      "bin": "git",
-     "line": 217
+     "line": 225
     }
    ],
    "swallows": [],
@@ -12943,6 +13123,7 @@
     "EDIT_TOOLS",
     "FLEET_TOOLS",
     "ORDER_DIR",
+    "SED_IN_PLACE",
     "STATE_DIR_RE",
     "STATE_WRITE_RE",
     "checkOrder",
@@ -19106,96 +19287,100 @@
    "unresolved": 4
   },
   "xray.mjs": {
-   "loc": 1344,
+   "loc": 1369,
    "reads": [
     {
      "path": "package.json",
      "lines": [
-      803,
-      803,
-      803,
-      803
+      809,
+      809,
+      809,
+      809
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      983,
-      1161,
-      1286,
-      1330,
-      1331,
-      1333,
-      983,
-      1161,
-      1286,
-      1330,
-      1331,
-      1333,
-      983,
-      1161,
-      1286,
-      1330,
-      1331,
-      1333,
-      983,
-      1161,
-      1286,
-      1330,
-      1331,
-      1333
+      1008,
+      1186,
+      1311,
+      1355,
+      1356,
+      1358,
+      1008,
+      1186,
+      1311,
+      1355,
+      1356,
+      1358,
+      1008,
+      1186,
+      1311,
+      1355,
+      1356,
+      1358,
+      1008,
+      1186,
+      1311,
+      1355,
+      1356,
+      1358
      ],
      "fixture": false
     },
     {
      "path": ".claude/skills",
      "lines": [
-      781,
-      782,
-      781,
-      782,
-      781,
-      782
+      787,
+      788,
+      787,
+      788,
+      787,
+      788
      ],
      "fixture": false
     },
     {
      "path": ".claude/settings.json",
      "lines": [
-      794,
-      795,
-      794,
-      795,
-      794,
-      795
+      800,
+      801,
+      800,
+      801,
+      800,
+      801
      ],
      "fixture": false
     },
     {
      "path": "scripts",
      "lines": [
-      854,
-      854,
-      854
+      860,
+      860,
+      860
      ],
      "fixture": false
     },
     {
      "path": ".",
      "lines": [
-      818,
-      818
+      824,
+      933,
+      934,
+      824,
+      933,
+      934
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state",
      "lines": [
-      922,
-      923,
-      922,
-      923
+      933,
+      934,
+      933,
+      934
      ],
      "fixture": false
     }
@@ -19204,13 +19389,13 @@
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      980,
-      979,
-      980,
-      979,
-      980,
-      979,
-      980
+      1005,
+      1004,
+      1005,
+      1004,
+      1005,
+      1004,
+      1005
      ],
      "verbs": [
       "renameSync→WRITE(dst)",
@@ -19428,7 +19613,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19441,7 +19626,7 @@
     "turn_hook.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19456,7 +19641,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19467,7 +19652,7 @@
     "context.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19489,7 +19674,7 @@
     "awayday.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19500,7 +19685,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19533,7 +19718,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19544,7 +19729,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19588,7 +19773,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19599,7 +19784,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19610,7 +19795,7 @@
     "selfknowledge.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19623,7 +19808,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19634,7 +19819,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19645,7 +19830,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19656,7 +19841,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19667,7 +19852,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19678,7 +19863,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19689,7 +19874,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19702,7 +19887,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19713,7 +19898,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19739,7 +19924,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19753,7 +19938,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19770,7 +19955,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19783,7 +19968,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19794,7 +19979,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19807,7 +19992,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19822,19 +20007,20 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
    "path": "dressing-room/manager/system.md",
    "readers": [
     "brain.mjs",
-    "captains_call.mjs"
+    "captains_call.mjs",
+    "flow_atlas.mjs"
    ],
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19845,7 +20031,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -19867,7 +20053,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": true
   },
   {
@@ -20156,7 +20342,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": true
   },
   {
@@ -20167,7 +20353,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": true
   },
   {
@@ -20193,7 +20379,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": true
   },
   {
@@ -20204,7 +20390,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": true
   },
   {
@@ -20238,7 +20424,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": true
   },
   {
@@ -20411,7 +20597,7 @@
     "gaffer_brain.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": true
   },
   {
@@ -20442,6 +20628,7 @@
     "brain.mjs",
     "captains_call.mjs",
     "dugout.mjs",
+    "flow_atlas.mjs",
     "pulse.mjs"
    ],
    "writers": [
@@ -20921,6 +21108,19 @@
    "is_dir": false
   },
   {
+   "path": "dressing-room/state/flow_atlas.json",
+   "readers": [
+    "flow_atlas.mjs"
+   ],
+   "writers": [
+    "flow_atlas.mjs"
+   ],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": true,
+   "is_dir": false
+  },
+  {
    "path": "dressing-room/state/forge_profile.json",
    "readers": [
     "bootroom.mjs",
@@ -20961,6 +21161,7 @@
   {
    "path": "dressing-room/state/forge_sessions.jsonl",
    "readers": [
+    "flow_atlas.mjs",
     "forge_session.mjs",
     "learning_state.mjs",
     "rejirah.mjs"
@@ -21559,7 +21760,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": true
   },
   {
@@ -21765,6 +21966,7 @@
     "capture.mjs",
     "dmn.mjs",
     "dugout.mjs",
+    "flow_atlas.mjs",
     "forge_session.mjs",
     "fsrs.mjs",
     "learning_state.mjs",
@@ -22602,6 +22804,7 @@
    "readers": [
     "audit.mjs",
     "blackbox.mjs",
+    "flow_atlas.mjs",
     "herd.mjs",
     "mutagen.mjs",
     "treasury.mjs",
@@ -22609,6 +22812,17 @@
    ],
    "writers": [
     "xray.mjs"
+   ],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": true,
+   "is_dir": false
+  },
+  {
+   "path": "FLOW_ATLAS.html",
+   "readers": [],
+   "writers": [
+    "flow_atlas.mjs"
    ],
    "fixture_readers": [],
    "fixture_writers": [],
@@ -22634,7 +22848,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22646,7 +22860,7 @@
     "gaffer_brain.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22657,7 +22871,7 @@
     "freeze.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22679,7 +22893,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22690,7 +22904,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22701,7 +22915,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22712,7 +22926,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22723,7 +22937,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22734,7 +22948,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22745,7 +22959,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22756,7 +22970,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22768,7 +22982,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22779,7 +22993,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22857,7 +23071,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22868,7 +23082,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22879,7 +23093,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22890,7 +23104,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22901,7 +23115,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22912,7 +23126,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22923,7 +23137,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22934,7 +23148,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22951,7 +23165,7 @@
     "watchman.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -22959,6 +23173,7 @@
    "readers": [
     "audit.mjs",
     "dugout.mjs",
+    "flow_atlas.mjs",
     "herd.mjs",
     "limits.mjs",
     "organism_test.mjs",
@@ -22974,7 +23189,7 @@
     "mutagen.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23029,7 +23244,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23052,7 +23267,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23074,7 +23289,7 @@
     "audit.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23085,7 +23300,7 @@
     "awayday.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23096,7 +23311,7 @@
     "benchmark.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23120,7 +23335,7 @@
     "brain.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23144,7 +23359,7 @@
     "limits.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23169,7 +23384,7 @@
     "cortex.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23180,7 +23395,7 @@
     "capture.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23203,7 +23418,7 @@
     "limits.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23214,7 +23429,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23225,7 +23440,7 @@
     "context_manifest.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23236,7 +23451,7 @@
     "context.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23248,7 +23463,7 @@
     "daemon_watchdog.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23259,7 +23474,7 @@
     "daemon_watchdog.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23281,7 +23496,7 @@
     "limits.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23292,7 +23507,7 @@
     "dmn.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23338,7 +23553,7 @@
     "gaffer_brain.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23349,7 +23564,7 @@
     "examiner.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23360,7 +23575,7 @@
     "forge_session.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23382,7 +23597,7 @@
     "limits.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23394,7 +23609,7 @@
     "groundsman.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23405,7 +23620,7 @@
     "intent.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23439,7 +23654,7 @@
     "limits.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23461,7 +23676,7 @@
     "capsule_bridge.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23472,7 +23687,7 @@
     "mcp-memory.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23483,7 +23698,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23494,7 +23709,7 @@
     "mutagen.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23519,7 +23734,7 @@
     "nightshift.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23533,7 +23748,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23547,7 +23762,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23558,7 +23773,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23569,7 +23784,7 @@
     "outwork_audit.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23592,7 +23807,7 @@
     "physio.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23603,7 +23818,7 @@
     "postmatch.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23614,7 +23829,7 @@
     "rejirah.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23671,7 +23886,7 @@
     "scoreboard.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23682,7 +23897,7 @@
     "scout.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23695,7 +23910,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23717,7 +23932,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23739,7 +23954,7 @@
     "speak.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23750,7 +23965,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23764,7 +23979,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23787,7 +24002,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23798,7 +24013,7 @@
     "throwin.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23809,7 +24024,7 @@
     "timeaudit.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23822,7 +24037,7 @@
     "tone.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23833,7 +24048,7 @@
     "touchline.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23844,7 +24059,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23890,7 +24105,7 @@
     "watchman.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23901,7 +24116,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23912,7 +24127,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23923,7 +24138,7 @@
     "watchman.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23934,7 +24149,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23958,7 +24173,7 @@
     "daemon_watchdog.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23969,7 +24184,7 @@
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -23980,18 +24195,19 @@
     "selfknowledge.mjs"
    ],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
    "path": "THE_GAFFER.md",
    "readers": [
-    "context_manifest.mjs"
+    "context_manifest.mjs",
+    "flow_atlas.mjs"
    ],
    "writers": [],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -24616,6 +24832,7 @@
   "dressing-room/state/dugout_session.json",
   "dressing-room/state/dugout_stamps.jsonl",
   "dressing-room/state/examiner_drill.json",
+  "dressing-room/state/flow_atlas.json",
   "dressing-room/state/forge_profile.json",
   "dressing-room/state/forge_session.json",
   "dressing-room/state/forge_sessions.jsonl",
@@ -24832,6 +25049,10 @@
   {
    "organ": "distiller.mjs",
    "file": "presence_log.json"
+  },
+  {
+   "organ": "flow_atlas.mjs",
+   "file": "flow_atlas.json"
   },
   {
    "organ": "forge_session.mjs",
@@ -28022,6 +28243,11 @@
     "source": "package.json"
    },
    {
+    "script": "flow_atlas.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
     "script": "organism_test.mjs",
     "verb": "all",
     "source": "package.json"
@@ -28886,6 +29112,12 @@
     "verbs": []
    },
    {
+    "script": "flow_atlas.mjs",
+    "verbs": [
+     "build"
+    ]
+   },
+   {
     "script": "rails.mjs",
     "verbs": [
      "orders"
@@ -28945,6 +29177,6 @@
     "verbs": []
    }
   ],
-  "md_files": 221
+  "md_files": 222
  }
 }

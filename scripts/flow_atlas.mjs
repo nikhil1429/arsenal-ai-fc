@@ -33,8 +33,9 @@
 // ============================================================================
 import { readFileSync, writeFileSync, existsSync, statSync, readdirSync, openSync, readSync, closeSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { AFFERENT_SOURCES } from "./thalamus.mjs";
 import { LANES_NOT_IN_CONFIG, KINDS as OUTBOX_KINDS, readRows as readOutboxRows } from "./outbox.mjs";
 
@@ -311,12 +312,40 @@ function selftest() {
   bite("BITE: an AFFERENT row that derives no edge refuses", () => ({ ir, skipFreshness: true, afferent: { ...AFFERENT_SOURCES, planted_source_nobody_derives: null } }));
   bite("BITE: an empty IR derivation refuses", () => ({ ir: { ...ir, files: ir.files.filter((f) => !(f.writers.length && f.readers.length)) }, skipFreshness: true }));
   bite("BITE: a stale IR refuses", () => ({ ir: { ...ir, built_at: "2026-01-01T00:00:00.000Z" } }));
+  // ENTRYPOINT GUARD (S6-F · F-06) — driven through a REAL child process, never restated
+  // here. Both halves matter, exactly as watchman.mjs argues: an import must be SILENT, and
+  // the CLI must still REACH its dispatch, or the guard is satisfied by an organ that simply
+  // stopped working. `check` is used for the second half because it writes nothing.
+  {
+    const self = fileURLToPath(import.meta.url);
+    const child = spawnSync(process.execPath,
+      ["--input-type=module", "-e", `await import(${JSON.stringify(pathToFileURL(self).href)});`],
+      { encoding: "utf8", timeout: 60000 });
+    t("ENTRYPOINT · importing this module runs NOTHING — a bare import used to BUILD the atlas and overwrite FLOW_ATLAS.html (S6-R hit it doing a verify-only read)",
+      () => { if (!(child.status === 0 && String(child.stdout).trim() === "")) throw new Error(`import was not silent: status ${child.status}, stdout ${JSON.stringify(String(child.stdout).slice(0, 200))}`); });
+    // join(__dirname, …) rather than `self`: identical path, and it is the idiom xray can
+    // constant-fold, so this spawn stays visible in the static graph.
+    const cli = spawnSync(process.execPath, [join(__dirname, "flow_atlas.mjs"), "__unknown_verb__"], { encoding: "utf8", timeout: 60000 });
+    t("ENTRYPOINT · …and the CLI still REACHES its dispatch, so the guard cannot be met by an organ that stopped running",
+      () => { if (!(cli.status === 2 && /unknown verb/.test(String(cli.stderr) + String(cli.stdout)))) throw new Error(`the CLI no longer dispatches: status ${cli.status}`); });
+  }
+
   console.log(`flow_atlas selftest: ${pass}/${fail === 0 ? pass : pass + "+" + fail + " FAIL"}`);
   process.exit(fail ? 1 : 0);
 }
 
+// ── THE ENTRYPOINT GUARD (S6-F · F-06, 28 Aug 2026) ─────────────────────────
+// This organ EXPORTS derive() so other code can call it — and until today it also RAN its
+// CLI at import, with the default verb. S6-R imported it to call derive() for a determinism
+// diff and the import BUILT the atlas, overwriting both of this rung's own deliverables
+// (FLOW_ATLAS.html + flow_atlas.json). A verify-only pass must not be able to write by
+// reading. watchman.mjs already carries this guard and its ENTRYPOINT assertion, for exactly
+// the same accident — the lesson existed in the organism and this organ did not inherit it.
+// Same idiom, so there is one shape here and not two.
+const INVOKED_DIRECTLY = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 const verb = process.argv[2] || "build";
-if (verb === "selftest") selftest();
+if (!INVOKED_DIRECTLY) { /* imported for its exports — run NOTHING */ }
+else if (verb === "selftest") selftest();
 else if (verb === "check") {
   const { hash } = derive();
   const onDisk = existsSync(OUT_JSON) ? JSON.parse(readFileSync(OUT_JSON, "utf8")).content_sha16 : null;

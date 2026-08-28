@@ -83,6 +83,12 @@ import { parse } from "acorn";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
 const STATE_DIR = join(ROOT, "dressing-room", "state");
+// The repo walk descends into everything EXCEPT the VCS tree. node_modules was skipped in the
+// first draft of F-01 and it left exactly one residual — `node_modules/ts-fsrs/package.json`
+// still drawn as a ghost read on a page whose whole claim is "this file was never born". A
+// skip list is a predicate assuming a shape (SHAPE 7), and the honest predicate here is
+// existence. Measured cost of not skipping: 6,169 files, 154 ms.
+const SKIP_WALK = /^\.git$/;
 const OUT = join(STATE_DIR, "xray_graph.json");
 
 // ── path helpers ─────────────────────────────────────────────────────────────
@@ -918,16 +924,25 @@ export function build() {
   // disk right now; it was reported dead purely because the walker skipped dirs.
   const onDisk = new Set();
   const dirsOnDisk = new Set();
-  const walkState = (d) => {
+  // ONE walker, called twice (S6-F · F-01). The obvious repair — `existsSync(join(ROOT, p))`
+  // in the file mapping — was written first and xray's OWN selftest bit it: a variable-path
+  // fs call is an unresolvable sink, and the per-organ ratchet went 8→9 on xray itself. A gate
+  // may only get stricter (§10-D rule 6), so the walker is reused instead of a new call site
+  // being added. Same fs calls as before, one more traversal.
+  const walkInto = (d, fileSet, dirSet) => {
     if (!existsSync(d)) return;
     for (const e of readdirSync(d, { withFileTypes: true })) {
+      if (SKIP_WALK.test(e.name)) continue;
       const p = join(d, e.name);
-      if (e.isDirectory()) { dirsOnDisk.add(relRepo(p)); walkState(p); }
-      else onDisk.add(relRepo(p));
+      if (e.isDirectory()) { dirSet.add(relRepo(p)); walkInto(p, fileSet, dirSet); }
+      else fileSet.add(relRepo(p));
     }
   };
   dirsOnDisk.add(relRepo(STATE_DIR));
-  walkState(STATE_DIR);
+  walkInto(STATE_DIR, onDisk, dirsOnDisk);
+  // …and the whole repo, so that EXISTENCE IS EXISTENCE WHEREVER THE PATH LIVES.
+  const repoFiles = new Set(), repoDirs = new Set();
+  walkInto(ROOT, repoFiles, repoDirs);
 
   // ── declared SOLE WRITER headers (doc↔code drift, Q5) ─────────────────────
   const declared = [];
@@ -956,7 +971,17 @@ export function build() {
       writers: [...e.writers].sort(),
       fixture_readers: [...e.fixtureR].sort(),
       fixture_writers: [...e.fixtureW].sort(),
-      on_disk: onDisk.has(p),
+      // EXISTENCE IS EXISTENCE, WHEREVER THE PATH LIVES (S6-F · F-01, 28 Aug 2026).
+      // The walk above enumerates STATE_DIR and nothing else, and `on_disk` used to BE that
+      // walk — so every path outside dressing-room/state/ reported false whether or not it
+      // was there, and a directory inside it reported false too because dirs go to their own
+      // set. That is not a display bug: `flow_atlas.mjs` uses `!f.on_disk` as a FILTER, so
+      // CLAUDE.md, package.json, THE_GAFFER.md, the four learning-layer docs and seven live
+      // state directories were all being drawn as "read by somebody, never born" — 24 of the
+      // atlas's 57 ghost reads, and 4 of its 11 orphan on_disk flags. Measured at S6-R.
+      // The walk stays (ir.on_disk is its own enumeration, and Q4 reads it); only the FIELD
+      // is corrected, and it is corrected to the only honest predicate there is.
+      on_disk: onDisk.has(p) || dirsOnDisk.has(p) || repoFiles.has(p) || repoDirs.has(p),
       is_dir: dirsOnDisk.has(p),
     })).sort((a, b) => a.path.localeCompare(b.path)),
     on_disk: [...onDisk].sort(),
