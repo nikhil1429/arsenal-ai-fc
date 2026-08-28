@@ -479,3 +479,10 @@ dressing-room/state/intent_cache.json
 # names the paths of his private session files, and it is rewritten on every Stop hook
 # — a ~2 MB file churning per turn belongs nowhere near git history.
 dressing-room/state/session_meter.json
+
+# S9 (28 Aug 2026) — WinSW is a THIRD-PARTY BINARY he downloads himself. It is never
+# vendored: an 18 MB exe in a public repo is a supply-chain and licensing question
+# nobody asked. It reached a commit once (swept in by a `git add setup/services`) and
+# was caught before the push. Any name, because Windows hides extensions and the
+# download lands as WinSW.exe.exe as often as WinSW.exe.
+setup/services/WinSW*.exe

@@ -187,14 +187,30 @@ Write-Host "  ~ $id registered as a LOGON TASK (disabled — S12 enables it on h
 
 // ---- emit -------------------------------------------------------------------
 export function emit({ write = true } = {}) {
-  const files = [];
-  for (const row of headless()) files.push({ path: join(OUT, `${idOf(row)}.xml`), body: winswXml(row) });
-  for (const row of desktop()) files.push({ path: join(OUT, `${idOf(row)}.logon.ps1`), body: logonTaskPs1(row) });
-  files.push({ path: join(OUT, "install.ps1"), body: installerPs1() });
-  files.push({ path: join(OUT, "README.md"), body: readme() });
+  const raw = [];
+  for (const row of headless()) raw.push({ path: join(OUT, `${idOf(row)}.xml`), body: winswXml(row) });
+  for (const row of desktop()) raw.push({ path: join(OUT, `${idOf(row)}.logon.ps1`), body: logonTaskPs1(row) });
+  raw.push({ path: join(OUT, "install.ps1"), body: installerPs1() });
+  raw.push({ path: join(OUT, "README.md"), body: readme() });
+  // The BOM is applied HERE, in the one place every file passes through, so a new
+  // .ps1 added later cannot miss it. See withBom's header for why it is mandatory.
+  const files = raw.map(withBom);
   if (write) { mkdirSync(OUT, { recursive: true }); for (const f of files) writeFileSync(f.path, f.body); }
   return files;
 }
+
+// ⛔ EVERY .ps1 GETS A UTF-8 BOM, AND IT IS NOT COSMETIC — IT IS A PARSE BUG.
+// Windows PowerShell 5.1 (which is what is on this box) decodes a BOM-less .ps1 as the
+// system ANSI codepage, NOT as UTF-8. An em-dash is UTF-8 `E2 80 94`; read as CP1252
+// that is `â` `€` `"` — and that third character is a STRAIGHT DOUBLE QUOTE, which
+// terminates the enclosing PowerShell string early. Measured, not theorised: both
+// generated logon tasks failed to parse with
+//   line 41 col 88: Unexpected token ')' … The string is missing the terminator: "
+// on a `Write-Host "… (disabled — S12 enables it …)"` line. He was one command away
+// from running these elevated, and they would have died at PARSE time.
+// The repo already knew this — setup/INSTALL_TASKS.ps1 carries a BOM. Matching it.
+const BOM = "﻿";
+const withBom = (f) => (f.path.endsWith(".ps1") && !f.body.startsWith(BOM) ? { ...f, body: BOM + f.body } : f);
 
 function installerPs1() {
   const h = headless(), d = desktop();
@@ -222,16 +238,27 @@ $here = Join-Path $repo "setup\\services"
 # WinSW is a single .exe. It is NOT vendored into the repo — it is a binary, and a
 # binary in a git repo is a supply-chain question nobody asked. Point this at the
 # copy he downloads, or set ARSENAL_WINSW.
+# ANY WinSW*.exe IN THIS FOLDER WILL DO, and that is deliberate. Windows hides known
+# extensions in Explorer, so renaming the downloaded "WinSW-x64.exe" to "WinSW.exe"
+# produces "WinSW.exe.exe" on disk - which is exactly what happened here on the first
+# try. Demanding one exact filename would have stopped him with a "not found" for a
+# file he could plainly see. Pattern-matched instead, newest first.
 $winsw = $env:ARSENAL_WINSW
-if (-not $winsw) { $winsw = Join-Path $here "WinSW.exe" }
-if (-not (Test-Path $winsw)) {
+if (-not $winsw) {
+  $found = Get-ChildItem -Path $here -Filter "WinSW*.exe" -File -ErrorAction SilentlyContinue |
+           Sort-Object LastWriteTime -Descending | Select-Object -First 1
+  if ($found) { $winsw = $found.FullName }
+}
+if (-not $winsw -or -not (Test-Path $winsw)) {
   Write-Host ""
-  Write-Host "  WinSW.exe not found at: $winsw"
+  Write-Host "  No WinSW*.exe found in: $here"
   Write-Host "  Download the x64 release from https://github.com/winsw/winsw/releases,"
-  Write-Host "  drop it in setup\\services\\, and re-run. (Or set ARSENAL_WINSW to its path.)"
+  Write-Host "  drop it in setup\\services\\ under any WinSW* name, and re-run."
+  Write-Host "  (Or set ARSENAL_WINSW to its full path.)"
   Write-Host "  Nothing has been changed."
   exit 1
 }
+Write-Host "  using WinSW: $winsw"
 
 Write-Host ""
 Write-Host "  Arsenal AI FC - OWNERSHIP INSTALL (S9)"
@@ -242,15 +269,24 @@ Write-Host ""
 $cred = Get-Credential -UserName "$env:USERDOMAIN\\$env:USERNAME" \`
         -Message "Arsenal AI FC: the account the daemons run as. This goes straight to Windows - it is not stored anywhere."
 
+# ⚠ THE PASSWORD IS PULLED OUT INTO A VARIABLE ON PURPOSE, and this is a real bug fix,
+# not a style choice. Written first as \`--password $cred.GetNetworkCredential().Password\`
+# INLINE in the native call. PowerShell parses native-command arguments in ARGUMENT
+# MODE, where a method-call chain like .GetNetworkCredential().Password is NOT reliably
+# evaluated — it can reach WinSW as literal text. The service would then install with a
+# junk password and fail to start with a logon error that points at his account instead
+# of at this line. Caught by re-reading the generated file before he ran it elevated.
+$plainPw = $cred.GetNetworkCredential().Password
+
 ${h.map((r) => `# --- ${r.name} ---
-& $winsw install (Join-Path $here "${idOf(r)}.xml") --username $cred.UserName --password $cred.GetNetworkCredential().Password
+& $winsw install (Join-Path $here "${idOf(r)}.xml") --username $cred.UserName --password $plainPw
 & $winsw stop    (Join-Path $here "${idOf(r)}.xml")  2>$null   # belt: install must never leave it running
 sc.exe config "${idOf(r)}" start= demand | Out-Null            # S12 flips these to auto, on his word
 Write-Host "  ~ ${idOf(r)} installed as a SERVICE (start=demand, not running)"`).join("\n")}
 
 ${d.map((r) => `& powershell -ExecutionPolicy Bypass -File (Join-Path $here "${idOf(r)}.logon.ps1")`).join("\n")}
 
-Remove-Variable cred -ErrorAction SilentlyContinue   # it does not outlive this script
+Remove-Variable cred, plainPw -ErrorAction SilentlyContinue   # neither outlives this script
 
 Write-Host ""
 Write-Host "  DONE - and NOTHING IS RUNNING. Verify:  node scripts/services.mjs status"
@@ -399,8 +435,21 @@ async function selftest() {
 
   // The install prompts; it does not embed. Proven off the installer's own text.
   const inst = emitted.find((f) => f.path.endsWith("install.ps1"));
-  assert("THE CREDENTIAL COMES FROM HIS KEYBOARD — the installer uses Get-Credential and drops the variable afterwards",
-    !!inst && /Get-Credential/.test(inst.body) && /Remove-Variable cred/.test(inst.body));
+  assert("THE CREDENTIAL COMES FROM HIS KEYBOARD — the installer uses Get-Credential and drops BOTH variables afterwards",
+    !!inst && /Get-Credential/.test(inst.body) && /Remove-Variable cred, plainPw/.test(inst.body));
+
+  // ARGUMENT-MODE BUG, pinned so it cannot come back. PowerShell does not reliably
+  // evaluate a method-call chain in a native command's arguments, so the password
+  // must be a plain variable by the time it reaches WinSW — never `.GetNetworkCredential()`
+  // inline. This shipped wrong once and was caught by re-reading the generated file.
+  // Tested over CODE ONLY — the comment above the fix QUOTES the broken form verbatim
+  // so the next reader knows what not to write, and a naive scan reads its own warning
+  // as the defect. (Second time this exact trap has bitten in this rung; the watchdog's
+  // launchDetached proof needed the same treatment.)
+  const instCode = !inst ? "" : inst.body.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
+  assert("NO METHOD-CALL CHAIN IN A NATIVE ARGUMENT — the password reaches WinSW as a resolved variable, never as an inline .GetNetworkCredential() expression",
+    /--password \$plainPw/.test(instCode)
+    && !/--password \$cred\.GetNetworkCredential/.test(instCode));
 
   // ⛔ THE SWITCH-OFF. A rung that leaves something running has broken it, and the
   // generated files are where that would happen silently.
@@ -413,6 +462,22 @@ async function selftest() {
   assert("SESSION-0 IS WRITTEN DOWN — each desktop task's own file says why it can never be a service",
     emitted.filter((f) => f.path.endsWith(".logon.ps1")).every((f) => /session 0/i.test(f.body))
     && emitted.filter((f) => f.path.endsWith(".logon.ps1")).length === 2);
+
+  // ⛔ THE BOM. This is the assertion that stops a generated script from dying at PARSE
+  // time on his elevated console. Both logon tasks shipped BOM-less once and BOTH failed
+  // to parse — an em-dash read as CP1252 ends with a straight quote that closes the
+  // string early. Asserted on EVERY .ps1, so a new one cannot be added without it.
+  assert("EVERY GENERATED .ps1 CARRIES A UTF-8 BOM — without it Windows PowerShell 5.1 reads it as ANSI and a single em-dash breaks the parse",
+    emitted.filter((f) => f.path.endsWith(".ps1")).length === 3
+    && emitted.filter((f) => f.path.endsWith(".ps1")).every((f) => f.body.charCodeAt(0) === 0xFEFF)
+    && emitted.filter((f) => !f.path.endsWith(".ps1")).every((f) => f.body.charCodeAt(0) !== 0xFEFF));
+
+  // WinSW IS NEVER VENDORED, and the installer must not demand one exact filename.
+  // Both halves were learned the hard way in one minute: the downloaded binary landed
+  // as `WinSW.exe.exe` (Explorer hides known extensions), and a `git add setup/services`
+  // swept the 18 MB exe into a commit that was caught before it reached the public remote.
+  assert("WinSW IS RESOLVED BY PATTERN, NEVER BY ONE EXACT NAME — a WinSW.exe.exe from a hidden-extension rename still installs",
+    !!inst && /Filter "WinSW\*\.exe"/.test(inst.body) && !/Join-Path \$here "WinSW\.exe"/.test(inst.body));
 
   // The two settings the audit named, by name, on every desktop row.
   assert("THE AUDIT'S TWO SETTINGS — RestartOnFailure and StartWhenAvailable are on every logon task",
