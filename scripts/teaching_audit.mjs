@@ -93,7 +93,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { subjectsOf } from "./registry.mjs";   // S10 #10 — WHICH sources this auditor measures is a ROW, never one literal
+import { subjectsOf, coreAxes } from "./registry.mjs";   // S10 #10 sources + #12 core axes — rows, never literals
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // ARSENAL_AUDIT_STATE_DIR is the selftest's seam and NOTHING else's: it lets the
@@ -133,7 +133,9 @@ export const RULE_NOTES = {
 // dependency-light and fail-silent, and the owner's constant is one letter that
 // has never moved. If it ever grows, the parity selftest here and the owner's
 // close report will disagree out loud.
-const CORE_AXES = ["d"];
+// S10 migration #12: the hand-mirrored CORE_AXES twin died — per-concept core
+// axes come from registry.mjs coreAxes(concept) (concepts.json's own lane first,
+// the registry default row second). ONE reader, two callers.
 
 // ---------------------------------------------------------------------------
 // THE RULES. Each one is (a) a rule-id that already exists in the teaching
@@ -694,6 +696,7 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
   // deferred (CORE-NEVER-DEFERRED, PROJECT_OS.md:316). Same new-mark-only shape
   // as check 6, so a standing deferral is one drift, not one per turn forever.
   if (Array.isArray(prevAxesDeferred) && Array.isArray(session.axes_deferred)) {
+    const CORE_AXES = coreAxes(session.concept);   // S10 #12 — per-concept, one reader
     for (const ax of session.axes_deferred) {
       if (prevAxesDeferred.includes(ax)) continue;
       if (CORE_AXES.includes(ax)) {

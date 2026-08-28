@@ -69,6 +69,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";   // LOCK-chain + topic-open spawns (outward loop, 8 Aug 2026)
+import { coreAxes } from "./registry.mjs";   // S10 #12 — per-concept core axes, ONE reader (twin literal died)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -112,13 +113,12 @@ const AXES = "abcdefghi".split("");
 // Before today `grep -rn CORE-NEVER-DEFERRED scripts hooks` returned ZERO hits —
 // canon's one hard axis rule had no representation anywhere in the machine, so a
 // concept could close with its measure never taught and nothing could object.
-// ONE global rule about ONE axis; canon has no per-concept core table and this
-// file will not invent one. If per-concept overrides are ever wanted, the correct
-// home is a hand-curated `core_axes` array under each concept in concepts.json
-// (provably invisible to capture.mjs loadRegistry, which reads only
-// .concepts/.skills/.aliases) — NOT forge_profile.json, whose own _comment names
-// bootroom.mjs sole writer through the mutation pipeline.
-const CORE_AXES = ["d"];
+// S10 migration #12: the global CORE_AXES literal and its hand-mirrored twin
+// (teaching_audit.mjs:135) died together. The per-concept home this comment
+// always named — a hand-curated `core_axes` array under the concept's entry in
+// concepts.json — is now REAL, read through registry.mjs coreAxes(concept)
+// (ONE reader, two callers), with the registry row `core_axes_default` as the
+// default for every concept without an override.
 // Visualization Contract: "2-3 guess-gates" (.claude/skills/forge/SKILL.md:57).
 // Counted, never asserted as a boolean — a built widget is not a driven one.
 const WIDGET_GATES_MIN = 2;
@@ -323,6 +323,7 @@ function contractLines(s, now = new Date()) {
   const marks = s.axes_marked_at || {};
   const jbc = (a) => { const m = marks[a]; return m && Number.isInteger(m.jirah_before) ? m.jirah_before : 0; };
   const ungraded = s.axes_done.filter((a) => !(jbc(a) >= 1 && !s.axes_done.some((b) => b !== a && jbc(b) === jbc(a))));
+  const CORE_AXES = coreAxes(s.concept);   // S10 #12 — per-concept, one reader
   const coreDeferred = CORE_AXES.filter((a) => s.axes_deferred.includes(a));
   const coreOpen = CORE_AXES.filter((a) => !s.axes_done.includes(a) && !s.axes_deferred.includes(a));
   const gates = (s.question_moments && s.question_moments.widget_gate) || 0;
@@ -370,6 +371,7 @@ function coverage(s, now = new Date()) {
   // nine axes marked after one `moment jirah` are nine ungraded claims, not nine grades.
   const graded = s.axes_done.filter((a) => jb(a) >= 1 && !s.axes_done.some((b) => b !== a && jb(b) === jb(a)));
   const ungraded = s.axes_done.filter((a) => !graded.includes(a));
+  const CORE_AXES = coreAxes(s.concept);   // S10 #12 — per-concept, one reader
   const coreMissing = CORE_AXES.filter((a) => !s.axes_done.includes(a));
   const gates = (s.question_moments && s.question_moments.widget_gate) || 0;
   const t0 = Date.parse(s.started_at || "");

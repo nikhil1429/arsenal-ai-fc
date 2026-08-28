@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:56:07.091Z",
+ "updated_at": "2026-08-28T19:57:14.613Z",
  "tables": {
   "mechanisms": [
    {
@@ -98,6 +98,17 @@
     "notes": "TOPIC-AGNOSTIC container generalized: a new course id ADDS (active swaps, old shelved with progress, shelved id resumes). The active course + chapters keys stay mirrored so every reader keeps working",
     "updated_at": "2026-08-28T19:56:07.089Z",
     "added_at": "2026-08-28T19:56:07.089Z"
+   },
+   {
+    "subject": "core_axes_default",
+    "schema_owner": "concepts.json (canon) via registry.mjs coreAxes",
+    "witness": "forge_session.mjs:121 + teaching_audit.mjs:135 — the global literal and its hand-mirrored twin (S10 migration #12)",
+    "subjects": [
+     "d"
+    ],
+    "notes": "per-concept override = a hand-curated core_axes array under the concept entry in concepts.json (its own lane, the home forge_session:115-120 named); this row is the default for every concept without one",
+    "updated_at": "2026-08-28T19:57:14.610Z",
+    "added_at": "2026-08-28T19:57:14.610Z"
    }
   ],
   "sandbox_subjects": [

@@ -134,6 +134,20 @@ export function slotPassed(subject, now = new Date(), path = REGISTRY_PATH) {
   const hm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   return hm >= String(after);
 }
+/** coreAxes — per-concept core axes (S10 migration #12): the hand-curated
+ *  `core_axes` array under the concept's own entry in concepts.json answers
+ *  first (the canon lane forge_session.mjs:115-120 already named as the correct
+ *  home, provably invisible to capture's loadRegistry); the registry row
+ *  `core_axes_default` answers for every concept without one. The old global
+ *  literal and its hand-mirrored twin die together — ONE reader, two callers. */
+export function coreAxes(concept, { conceptsPath = join(STATE_DIR, "concepts.json"), path = REGISTRY_PATH } = {}) {
+  try {
+    const j = JSON.parse(readFileSync(conceptsPath, "utf8"));
+    const e = j && j.concepts && typeof j.concepts === "object" && !Array.isArray(j.concepts) ? j.concepts[String(concept || "").toLowerCase()] : null;
+    if (e && Array.isArray(e.core_axes) && e.core_axes.length && e.core_axes.every((a) => typeof a === "string")) return [...e.core_axes];
+  } catch { /* canon unreadable → the default row still answers */ }
+  return subjectsOf("core_axes_default", path);
+}
 /** fixturePin — sandbox_subjects reader: which env var pins this ledger to a
  *  sandbox (migration #7's general form; samjhao's guard is instance #1). */
 export function fixturePin(subject, path = REGISTRY_PATH) {
