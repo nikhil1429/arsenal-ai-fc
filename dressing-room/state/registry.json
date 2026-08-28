@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T19:57:14.613Z",
+ "updated_at": "2026-08-28T19:59:14.222Z",
  "tables": {
   "mechanisms": [
    {
@@ -109,6 +109,47 @@
     "notes": "per-concept override = a hand-curated core_axes array under the concept entry in concepts.json (its own lane, the home forge_session:115-120 named); this row is the default for every concept without one",
     "updated_at": "2026-08-28T19:57:14.610Z",
     "added_at": "2026-08-28T19:57:14.610Z"
+   },
+   {
+    "subject": "calibration_known_root",
+    "schema_owner": "calibration.mjs",
+    "witness": "calibration.mjs:127 (S10 map row 13, F-04)",
+    "subjects": [
+     "targets",
+     "window_size",
+     "min_reps",
+     "trend_delta",
+     "danger"
+    ],
+    "notes": "the config schema's root keys — what exists; an unknown key is REPORTED, never silently dropped",
+    "updated_at": "2026-08-28T19:59:13.967Z",
+    "added_at": "2026-08-28T19:59:13.967Z"
+   },
+   {
+    "subject": "calibration_known_targets",
+    "schema_owner": "calibration.mjs",
+    "witness": "calibration.mjs:128 (S10 map row 13, F-04)",
+    "subjects": [
+     "knew",
+     "shaky",
+     "guessed"
+    ],
+    "notes": "what targets exist",
+    "updated_at": "2026-08-28T19:59:14.091Z",
+    "added_at": "2026-08-28T19:59:14.091Z"
+   },
+   {
+    "subject": "calibration_known_danger",
+    "schema_owner": "calibration.mjs",
+    "witness": "calibration.mjs:129 (S10 map row 13, F-04)",
+    "subjects": [
+     "min_knew_reps",
+     "accuracy_low",
+     "accuracy_mid"
+    ],
+    "notes": "what is dangerous",
+    "updated_at": "2026-08-28T19:59:14.219Z",
+    "added_at": "2026-08-28T19:59:14.219Z"
    }
   ],
   "sandbox_subjects": [
