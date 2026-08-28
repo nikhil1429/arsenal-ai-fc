@@ -18427,3 +18427,41 @@ audit's own instruments:
    runs it; every definition is on disk and waiting.
 3. **NOTHING WAS STARTED AND NOTHING WAS INSTALLED.** Services would install `start=demand`, tasks
    register disabled. **S12 turns things on, stage by stage, on his word.**
+
+### ADDENDUM to S9 — 2026-08-28 ~15:45 IST · **THE INSTALL ACTUALLY HAPPENED. THE ROW'S "DEFINITIONS ONLY" LINE IS NOW FALSE AND IS CORRECTED HERE.**
+
+**HE RAN IT, AND IT IS DONE.** Measured off the SCM, not off the installer's own words:
+all five headless services exist — `ArsenalFC-Cortex · -Thalamus · -Brain · -Sitting ·
+-Context` — each `StartName .\nikhi`, `StartMode Manual`, `State Stopped`. Both logon
+tasks registered and **Disabled**. `services.mjs status` = **7/7 owned by the OS · no OS
+unit running**. **Card `c86` is satisfied**, and the switch-off is intact: nothing runs.
+
+**IT TOOK THREE ATTEMPTS, AND ALL THREE FAILURES WERE MINE, NOT HIS.**
+1. **The installers could not parse.** BOM-less `.ps1` + an em-dash = a stray straight
+   quote under CP1252. Fixed by emitting a UTF-8 BOM, which this repo already used.
+2. **The installer installed NOTHING and reported five successes.** I assumed WinSW v3's
+   `install <config>`; he has **v2**, which finds its config by its own exe name. Every
+   call threw `FileNotFoundException` and every row still printed "installed as a
+   SERVICE" — **the 11-Aug outcome-not-decision law broken inside the rung built to
+   enforce it.** Fixed to v2's real contract (exe copied per service) and every success
+   line is now gated on a `Get-Service` / `StartName` read, with a non-zero exit.
+3. **Then it cried wolf the other way** — five *correct* services reported as five
+   account failures, because Windows normalises a local account to `.\user` and my
+   normaliser emitted two backslashes (PowerShell does not escape `\` in double quotes).
+
+**THE SHAPE, AND IT IS THE RUNG'S OWN:** all three are ONE defect — *a claim not read off
+the real state*. Twice it over-claimed, once it under-claimed. The rung removed that arm
+from the watchdog and I rebuilt it in the installer, in the same session, three times.
+Each is now pinned by an assertion rather than by my care.
+
+⛑ **ONE LATENT ITEM CLOSED BEFORE S12 COULD INHERIT IT:** `sc.exe` sets a service account
+but does **not** grant `SeServiceLogonRight`, and WinSW's `<allowservicelogonright>` never
+applied because the credential deliberately never touches a file. Without it, every
+service installs cleanly and then **fails to start** — which would have surfaced at S12
+as a logon error far from its cause. The installer now grants it via `secedit` while
+already elevated and reports the outcome. **It was added AFTER his successful run, so it
+has NOT been exercised on this machine** — S12's pre-flight should read it, or he can
+re-run the installer (idempotent) at any time.
+
+**Node 24 is in** (`v24.19.0`, his hands) and the full suite re-run on it is **118/2 =
+baseline** — §10-G's "suite green before AND after" is satisfied for the runtime move.
