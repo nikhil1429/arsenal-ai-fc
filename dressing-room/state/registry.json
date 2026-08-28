@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-28T20:02:36.968Z",
+ "updated_at": "2026-08-28T20:07:55.696Z",
  "tables": {
   "mechanisms": [
    {
@@ -521,6 +521,129 @@
     "consumer_kind": "organ",
     "updated_at": "2026-08-28T20:02:36.967Z",
     "added_at": "2026-08-28T20:02:36.967Z"
+   }
+  ],
+  "emit_contract": [
+   {
+    "subject": "reps_log",
+    "surface": "capture.mjs",
+    "writes_to": "reps_log.jsonl",
+    "fired_by": "him",
+    "cadence": "per-sitting (his study reps; paste/pull/rep doors)",
+    "taught_event": false,
+    "witness": "capture.mjs:6 — sole writer of reps_log.jsonl; spec 5 him-edge: 21 rows all-gem newest 10 Aug (frozen stamp, atlas 27 Aug)",
+    "updated_at": "2026-08-28T20:04:08.658Z",
+    "added_at": "2026-08-28T20:04:08.658Z",
+    "first_real_row_at": "2026-07-17T19:00:29.304Z",
+    "newest_row_at": "2026-08-10T12:00:47.096Z",
+    "payload_rows": 21,
+    "consumer_reads": {},
+    "metered_at": "2026-08-28T20:06:32.598Z"
+   },
+   {
+    "subject": "rejirah_log",
+    "surface": "rejirah.mjs",
+    "writes_to": "rejirah_log.jsonl",
+    "fired_by": "him",
+    "cadence": "on-due (FSRS-ripe rounds; deep.mjs due is the queue)",
+    "taught_event": false,
+    "witness": "rejirah.mjs — the Re-Jirah controller; spec 5 him-edge: NEVER BORN, 9 readers (frozen stamp, atlas 27 Aug)",
+    "updated_at": "2026-08-28T20:04:09.179Z",
+    "added_at": "2026-08-28T20:04:09.179Z",
+    "first_real_row_at": null,
+    "newest_row_at": null,
+    "payload_rows": 0,
+    "consumer_reads": {},
+    "metered_at": "2026-08-28T20:06:32.598Z"
+   },
+   {
+    "subject": "forge_sessions",
+    "surface": "forge_session.mjs",
+    "writes_to": "forge_sessions.jsonl",
+    "fired_by": "him",
+    "cadence": "per-forge-sitting (THE METHOD 12 steps)",
+    "taught_event": false,
+    "witness": "forge_session.mjs — spec 5 him-edge: 11 closes, every jirah:0 (frozen stamp, atlas 27 Aug)",
+    "updated_at": "2026-08-28T20:04:09.572Z",
+    "added_at": "2026-08-28T20:04:09.572Z",
+    "first_real_row_at": "2026-07-30T15:33:55.165Z",
+    "newest_row_at": "2026-08-19T11:55:53.719Z",
+    "payload_rows": 11,
+    "consumer_reads": {},
+    "metered_at": "2026-08-28T20:06:32.598Z"
+   },
+   {
+    "subject": "capsules",
+    "surface": "gist (mirror.mjs)",
+    "writes_to": "capsules",
+    "fired_by": "him",
+    "cadence": "on-lock + morning mirror refetch (06:55)",
+    "taught_event": false,
+    "witness": "mirror.mjs — read-only mirror, HIS paste is the only master write (spec 5 + R2: the law as-on-disk governs gist writes)",
+    "updated_at": "2026-08-28T20:04:10.154Z",
+    "added_at": "2026-08-28T20:04:10.154Z",
+    "first_real_row_at": "2026-06-15",
+    "newest_row_at": "2026-06-28",
+    "payload_rows": 4,
+    "consumer_reads": {},
+    "metered_at": "2026-08-28T20:06:32.598Z"
+   }
+  ],
+  "checks": [
+   {
+    "subject": "orphan_writes",
+    "owner": "registry.mjs",
+    "evaluator": "registry.mjs check (orphanWritesCheck over flow_atlas.json)",
+    "baseline": 11,
+    "witness": "flow_atlas.json negative space — 11 orphan writes at the 27 Aug build (spec 4 check #1 seed list); a RATCHET: may only FALL",
+    "updated_at": "2026-08-28T20:06:33.047Z",
+    "added_at": "2026-08-28T20:06:33.047Z"
+   },
+   {
+    "subject": "never_fed_lanes",
+    "owner": "registry.mjs",
+    "evaluator": "registry.mjs check (neverFedLines, 7-day window) -> ONE line in state.mjs",
+    "witness": "spec 4 check #2 — selftest-green with first_real_row_at null > 7 days is the heartbeat-that-proves-only-the-heartbeat class",
+    "updated_at": "2026-08-28T20:06:33.425Z",
+    "added_at": "2026-08-28T20:06:33.425Z"
+   },
+   {
+    "subject": "memory_index",
+    "owner": "registry.mjs",
+    "evaluator": "registry.mjs check (memoryIndexCheck) — suite-gated via registry selftest + check",
+    "witness": "spec 3 MEMORY-INDEX RATCHET, landed GREEN 27 Aug; an unindexed memory is a fact the organism has and cannot reach",
+    "updated_at": "2026-08-28T20:06:33.906Z",
+    "added_at": "2026-08-28T20:06:33.906Z"
+   },
+   {
+    "subject": "derived_copy_drift",
+    "owner": "registry.mjs",
+    "evaluator": "registry.mjs check (derivedCopyCheck over derived_copies rows)",
+    "baseline": 1,
+    "witness": "spec 7 — THE_GAFFER.md v2.2 vs manager/system.md v2.1 is the LIVE drifted instance (atlas-verified); baseline 1 may only FALL",
+    "updated_at": "2026-08-28T20:06:34.374Z",
+    "added_at": "2026-08-28T20:06:34.374Z"
+   },
+   {
+    "subject": "laws_register_fresh",
+    "owner": "registry.mjs",
+    "evaluator": "registry.mjs laws check (collect --save vs queue dir reachability, named when unreachable)",
+    "witness": "spec 3 — the standing-laws register is DERIVED; hand-consolidation is the drift disease",
+    "updated_at": "2026-08-28T20:06:34.732Z",
+    "added_at": "2026-08-28T20:06:34.732Z"
+   }
+  ],
+  "derived_copies": [
+   {
+    "subject": "THE_GAFFER->manager_system",
+    "source_file": "THE_GAFFER.md",
+    "source_version_re": "# THE GAFFER.*[(]v([0-9]+[.][0-9]+)[)]",
+    "derived_file": "dressing-room/manager/system.md",
+    "declared_version_re": "THE_GAFFER v([0-9]+[.][0-9]+)",
+    "witness": "THE_GAFFER.md:1 (v2.2) vs manager/system.md:15 (declares v2.1) — the LIVE drift the atlas verifies at every build; brain.mjs:1292 reads the derived copy into manager_m3 system prompt",
+    "notes": "spec 7 fourth edge class: versions equal or the row is RED. Baseline 1 known drift (checks/derived_copy_drift), may only fall. Next candidates: every *Legacy frozen twin (named backlog, not scoped into S10)",
+    "updated_at": "2026-08-28T20:07:55.692Z",
+    "added_at": "2026-08-28T20:07:21.811Z"
    }
   ]
  }

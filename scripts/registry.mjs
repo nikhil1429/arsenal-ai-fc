@@ -230,7 +230,7 @@ function firstLastTs(file) {
     for (const l of lines) {
       let r; try { r = JSON.parse(l); } catch { continue; }
       rows++;
-      const ts = r && (r.ts || r.observed_at || r.at || r.ts_claimed);
+      const ts = r && (r.ts || r.observed_at || r.at || r.ts_claimed || r.started_at || r.opened_at);
       if (typeof ts === "string") { if (!first || ts < first) first = ts; if (!last || ts > last) last = ts; }
     }
     return { first, last, rows };
@@ -300,6 +300,16 @@ export function meter({ path = REGISTRY_PATH, stateDir = STATE_DIR, consumptionP
   }
   if (save) saveRegistry(reg, path);
   return { ok: true, metered: report.length, report };
+}
+/** emitWounds — §5's input-side ratchet, IMMEDIATE (no grace): a declared
+ *  him-fired surface whose lane has first_real_row_at === null is THE WOUND,
+ *  and a him-lane's silence must read as the wound, never as health. */
+export function emitWounds({ path = REGISTRY_PATH } = {}) {
+  const out = [];
+  for (const r of emitRows(path)) {
+    if (r.writes_to && r.metered_at && !r.first_real_row_at) out.push(`${r.subject} NEVER BORN (${r.fired_by}-fired surface ${r.surface}, 0 real rows)`);
+  }
+  return out;
 }
 /** neverFedLines — check #2 (spec §4): a lane registered > windowDays ago whose
  *  first_real_row_at is still null earns ONE line for state.mjs. */

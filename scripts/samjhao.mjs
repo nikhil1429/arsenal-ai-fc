@@ -323,6 +323,28 @@ export function closeDoubt(id, doubtN, text, gut, deps = {}) {
   return { ok: true, doubt: n, session: sessionOf(id, rowsOf(deps)) };
 }
 
+/** THE TAUGHT EVENT (S10 · pre-open ruling R4(a) — THE COLDNESS HOLE's fix).
+ *  The 21-Aug lead, verbatim: burnedAxes counted a burn ONLY from a "guess"
+ *  event and the in-force samjhao design writes none — so every samjhao'd
+ *  axis's stored strike was served WARM-CALLED-COLD, silently. This emitter is
+ *  the teacher's OWN act (teaching an axis opens its weld), so it carries no
+ *  his-words gate — only the fixture guard. deep.mjs consumes it through
+ *  burnedAxes below (SHAPE-6 consumer-side instance #1, spec §5).
+ *  ⚠ Axes taught BEFORE this event exists carry no taught row: the interim law
+ *  (FRESH hand-written Re-Jirah questions for already-samjhao'd concepts)
+ *  STAYS BINDING for them — this emitter only makes the future honest. */
+export function markTaught(id, axis, deps = {}) {
+  if (isLiveLedger(deps) && isFixture()) return { ok: false, why: "a FIXTURE may never write his LIVE samjhao — sandbox the ledger" };
+  const now = deps.now || new Date();
+  const s = sessionOf(id, rowsOf(deps));
+  if (!s) return { ok: false, why: `no samjhao session ${id}` };
+  if (s.closed_at) return { ok: false, why: `samjhao ${id} is closed` };
+  const ax = String(axis || "").toLowerCase();
+  if (!/^[a-i]$/.test(ax)) return { ok: false, why: "taught needs an axis a-i — the burn is per (concept, axis)" };
+  appendRow({ ev: "taught", of: id, ts: now.toISOString(), axis: ax, concept: s.concept }, deps);
+  return { ok: true, axis: ax, session: sessionOf(id, rowsOf(deps)) };
+}
+
 /**
  * BURNED AXES — the coldness guarantee, as a CODE PATH (19 Aug 2026).
  *
@@ -350,8 +372,11 @@ export function burnedAxes(concept, rows = readRows(), capsuleDir = CAPSULE_DIR)
   const mine = new Set([...foldSessions(rows).values()].filter((s) => s.concept === p.concept && !s.abandoned_at).map((s) => s.id));
   const out = new Map();
   for (const r of rows || []) {
-    if (!r || r.ev !== "guess" || !mine.has(r.of)) continue;
-    const axis = byUnit.get(Number(r.unit));
+    // S10 R4(a): a burn is EITHER his guess on a unit OR the teacher's explicit
+    // `taught` event — both mean the weld opened, so the stored strike can never
+    // again be served as a COLD question.
+    if (!r || (r.ev !== "guess" && r.ev !== "taught") || !mine.has(r.of)) continue;
+    const axis = r.ev === "taught" ? (/^[a-i]$/.test(String(r.axis)) ? String(r.axis) : null) : byUnit.get(Number(r.unit));
     if (axis && !out.has(axis)) out.set(axis, { axis, at: r.ts });
   }
   return [...out.values()];
@@ -559,6 +584,12 @@ function structuralSet(FIX, now, junk) {
   assert("a guessed unit BURNS its axis — the fact is stated with a date, so a cold server can refuse to reuse that strike (§4: the Re-Jirah after is FRESH and COLD)",
     burnedNow.length === 1 && burnedNow[0].axis === "a" && !!burnedNow[0].at, JSON.stringify(burnedNow));
   assert("...and an axis he has NOT reached is not burned — only what was actually opened", !burnedNow.some((b) => b.axis === "b"));
+  // S10 R4(a) — THE TAUGHT EVENT (the coldness hole's other half): the in-force
+  // samjhao design writes no guess event, so TEACHING an axis must burn it too.
+  assert("TAUGHT BURNS (S10 R4a) — the teacher's own `taught` event opens the weld: axis b burns with a date, WITHOUT any guess of his",
+    (() => { const t = markTaught("tSAMJ01", "b", deps); const after = burnedAxes("tokenization", rowsOf(deps), FIX); return t.ok === true && after.some((x) => x.axis === "b" && !!x.at); })());
+  assert("...a taught event needs a real axis (a-i) and a real open session — refused otherwise",
+    markTaught("tSAMJ01", "z", deps).ok === false && markTaught("no-such", "a", deps).ok === false);
 
   // ABANDON — the way back, on his word (19 Aug) after a proof-run wrote a guess in HIS name.
   const ab = abandon("tSAMJ01", "the guess was a proof-run's, not his", deps);
@@ -694,6 +725,13 @@ if (process.argv[1] && process.argv[1].endsWith("samjhao.mjs")) {
   else if (mode === "doubt") {
     const r = closeDoubt(resolveId(arg), flag("n"), flag("text"), flag("gut"), { hisWords: has("his-words") });
     console.log(r.ok ? `samjhao: ok doubt ${r.doubt} band` : `samjhao: ${r.why}`);
+    process.exit(r.ok ? 0 : 1);
+  }
+  else if (mode === "taught") {
+    // S10 R4(a): the teacher marks an axis OPENED — its stored strike may never
+    // again be served cold. `node scripts/samjhao.mjs taught <id> --axis a`
+    const r = markTaught(resolveId(arg), flag("axis"), {});
+    console.log(r.ok ? `samjhao: taught — axis ${r.axis} ka weld khula darj hua; iska stored strike ab kabhi COLD serve nahi hoga (deep.mjs isse burnedAxes se padhta hai)` : `samjhao: ${r.why}`);
     process.exit(r.ok ? 0 : 1);
   }
   else if (mode === "abandon") {

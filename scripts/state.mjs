@@ -155,7 +155,7 @@ export function loadNumber({ cards = null, hippoPending = HIPPO_PENDING, capsule
   out.his = (Number.isFinite(out.cards) ? out.cards : 0) + (Number.isFinite(out.facts) ? out.facts : 0) + (Number.isFinite(out.rejirah) ? out.rejirah : 0);
   return out;
 }
-export function stateFrom({ git, daemons, suite, sitting, next, cards, load } = {}, now = new Date()) {
+export function stateFrom({ git, daemons, suite, sitting, next, cards, load, registry } = {}, now = new Date()) {
   const g = git || { known: false }, d = daemons || { known: false }, s = suite || { known: false }, si = sitting || { open: false }, n = next || { known: false }, c = cards || { known: false };
   const pushed = !g.known ? "pushed ? (git unreadable)"
     : (g.ahead === 0 && g.dirty === 0) ? "pushed ✓"
@@ -174,8 +174,14 @@ export function stateFrom({ git, daemons, suite, sitting, next, cards, load } = 
   // order assertion intact, and the `(N tumhare)` tail is the part no code can ever drain.
   const l = load || { known: false };
   const ld = !l.known ? "" : ` · load ${l.total}${l.his ? ` (${l.his} sirf tum)` : ""}${l.why && l.why.length ? ` [${l.why.join(" ")}]` : ""}`;
-  const line = `STATE · ${pushed} · ${dm} · ${su} · ${st} · ${nx} · ${cd}${ld}`;
-  return { line, json: { at: now.toISOString(), git: g, daemons: d, suite: s, sitting: si, next: n, cards: c, load: l } };
+  // S10 · THE REGISTRY LINE — appended ONLY when the registry carries a wound
+  // (a him-fired lane never born · a born-red row · a never-fed lane), so the
+  // base line's field order never moves and a healthy registry costs him zero
+  // characters (L7). One wound named, the rest counted.
+  const r = registry || { known: false };
+  const rg = r.known && r.wounds && r.wounds.length ? ` · registry: ${clip(r.wounds[0], 60)}${r.wounds.length > 1 ? ` (+${r.wounds.length - 1})` : ""}` : "";
+  const line = `STATE · ${pushed} · ${dm} · ${su} · ${st} · ${nx} · ${cd}${ld}${rg}`;
+  return { line, json: { at: now.toISOString(), git: g, daemons: d, suite: s, sitting: si, next: n, cards: c, load: l, registry: r } };
 }
 export async function liveState({ stateDir = STATE_DIR, now = new Date(), cwd = ROOT } = {}) {
   const cards = cardFacts({ stateDir, now });
@@ -186,9 +192,17 @@ export async function liveState({ stateDir = STATE_DIR, now = new Date(), cwd = 
   try { const s = await import("./sitting.mjs"); if (typeof s.openAgenda === "function") load.agenda = s.openAgenda().length; }
   catch { load.why.push("agenda ?"); }
   if (Number.isFinite(load.agenda)) { load.total = (load.total || 0) + load.agenda; load.known = true; }
+  // S10 — the registry's wounds (him-lane never born · born-red rows · never-fed
+  // lanes), read through the owner's own readers; an unreadable registry blanks
+  // this component and says so, it never blanks the line.
+  let registry = { known: false };
+  try {
+    const rg = await import("./registry.mjs");
+    registry = { known: true, wounds: [...rg.emitWounds({}), ...rg.neverFedLines({ now }), ...rg.redRows().map((x) => `${x.table}/${x.subject} born-red (create-or-fix)`)] };
+  } catch { registry = { known: false } }
   return stateFrom({
     git: gitFacts({ cwd }), daemons: daemonFacts({ stateDir, now }), suite: suiteFacts({ stateDir, now }),
-    sitting: sittingFacts({ stateDir }), next: await nextFacts({ stateDir, now }), cards, load,
+    sitting: sittingFacts({ stateDir }), next: await nextFacts({ stateDir, now }), cards, load, registry,
   }, now);
 }
 
