@@ -3,7 +3,7 @@
 #
 # Grants "Log on as a service" (SeServiceLogonRight) to the account the daemons run as.
 # Run ELEVATED:
-#     powershell -ExecutionPolicy Bypass -File setup\services\grant-logon-right.ps1
+#     powershell -ExecutionPolicy Bypass -File "C:\Users\nikhi\GitHub\arsenal-ai-fc\setup\services\grant-logon-right.ps1"
 #
 # WHY IT IS NEEDED: sc.exe sets a service's logon account but does NOT grant this right,
 # and WinSW's own <allowservicelogonright> never applied here because the credential

@@ -20,14 +20,25 @@
 ```
 STATUS (update this block before any session stops — this is the handoff)
 
-  ⛔ THE ORGANISM IS SWITCHED OFF — HIS ORDER, 20 Aug 2026 ("nothing burns tokens anywhere").
+  🟢 **THE ORGANISM IS BACK ON — 30 Aug 2026, on his one haan and his one console visit.**
+     8/8 LLM-group tasks Ready · 5/5 WinSW daemons Running under a DEDICATED LOCAL ACCOUNT
+     (`.\arsenal-svc` — his own is a Microsoft account with a PIN, which cannot be a service
+     logon; that is what error 1326 was) · thalamus moved from its task to its service in a
+     5.8-second measured gap with zero loss. Activation is AUTOMATIC from here: S13's input
+     guard is the flip, and no lane-switch returns to him. **STILL OFF, deliberately, and each
+     for a named reason:** `ArsenalFC-DMN` + `ArsenalFC-NightShift` (uncovered lanes, stage-gated
+     until RUNG A) · `ArsenalFC-Dugout` + `ArsenalFC-Turnstile` (HIS desktop, never services).
+     Read the board live, never from here: `node scripts/state.mjs` · `brain.mjs gate show`.
+
+  ~~⛔ THE ORGANISM IS SWITCHED OFF — HIS ORDER, 20 Aug 2026 ("nothing burns tokens anywhere").
      EVERY ArsenalFC-* task Disabled · all daemons killed · the Startup launcher renamed
      (the count is LIVE-READ, never written here — S10-R's O-1 caught the frozen "56" while
      the machine held 59:  schtasks /Query /TN "\ArsenalFC-*" /FO LIST | findstr /C:"Status:")
      ArsenalFC-Brain.bat.disabled-2026-08-20 (restore = rename back). ONE exception on his
      word: ArsenalFC-Thalamus re-enabled + running (capture only, zero tokens) so nothing of
      his is lost while we fix. DO NOT re-enable anything else before S12. RED state lines
-     are EXPECTED until then — they are the switch-off, not a defect.
+     are EXPECTED until then — they are the switch-off, not a defect.~~ ✅ **SUPERSEDED 30 Aug 2026
+     by the block above. Kept struck, not deleted (L9) — it is the record of the ten days.**
 
   WRITING THE ORDER ............ ☑ DONE (19 Aug 2026)
   PASS 1  compress with code ... ☑ DONE (19 Aug · BASH ONLY, 0 model tokens)
@@ -3041,7 +3052,48 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **HIS ONE HAAN ON THE LLM GROUP + ONE ELEVATED CONSOLE — then THE
+  ▶ NEXT SESSION ............... **`RUNG A` · THE GUARD EXTENSION. MODEL: Opus 5 · effort max.
+                                   BUILD 8 · PROOF 5 · HANDOFF 4 · CEILING 17 (architect-priced,
+                                   `queue\RULING__2026-08-29_dmn-bleed+msa.md`). Then THE FLOOR
+                                   AUDIT (verify-only, Opus 5 · max, 4 passes,
+                                   `queue\RULING__2026-08-29_floor-audit+organ.md`).**
+                                   ⭐ **ITS FIRST EVIDENCE IS TWO REDS THAT ARE ALREADY IN THE
+                                   SUITE, and its close is judged on turning them GREEN** — both
+                                   name `dmn_bg_drain`, both quoted verbatim in the 30-Aug
+                                   PROGRESS entry. They are NOT regressions: the lane had zero
+                                   ledger rows until DMN was enabled on 29 Aug, so `LOAD ZERO`
+                                   and `S7 RATCHET` had been passing VACUOUSLY for as long as it
+                                   never ran.
+                                   ⛑ WHAT THE WAKE RUNG HANDS IT, all measured:
+                                   (1) **THE NAMED REMAINDER UNDERCOUNTED ITSELF.** S13 said "the
+                                   DMN's TWO"; `dmn.mjs:112` declares THREE
+                                   (`dmn_rollout`, `dmn_counter`, `dmn_bg_drain`) and the third
+                                   is in no gate registry and no `brain_config`. It spent
+                                   **134,948 tokens in one hour** — the S12 adjudicator shape
+                                   (143,124) repeating one rung later in another organ.
+                                   (2) THE CLASS IS CONTAINED, NOT FIXED: `ArsenalFC-DMN` and
+                                   `ArsenalFC-NightShift` are DISABLED (his hand · the
+                                   architect's), and `selfknowledge` has no live carrier —
+                                   `ArsenalFC-Dugout` being Disabled is the only thing holding
+                                   it, which is a task, not a guard.
+                                   (3) THE COMPLETENESS BITE MUST CROSS SPAWN EDGES, not only
+                                   `*_JOBS` tables: `selfknowledge`'s spend is a DETACHED CHILD
+                                   SPAWN at `dugout.mjs:2664`, which no table-shaped check can see.
+                                   (4) The whole non-brain remainder is stage-gated OFF until this
+                                   rung covers it.
+                                   ⛑ THREE THINGS IT MUST NOT RE-DERIVE:
+                                   (1) The suite baseline is **119/4**; the wake rung closed at
+                                   **118/5** with the delta named line-by-line. F-6/`timeaudit`
+                                   went GREEN that run — that is the known
+                                   REPRODUCIBLE-NOT-STABLE instability, **never "fixed"**.
+                                   (2) F-5 is an ACCEPTED COST — `xray build` + `flow_atlas build`
+                                   in the SAME commit.
+                                   (3) `jugad-literal-subject-list` 92-vs-91 is PRE-EXISTING.
+                                   ⛑ ONE STALE-PROSE DEFECT FOUND AND LEFT (outside that rung's
+                                   scope, take it or route it): `services.mjs status` still prints
+                                   *"the organism is supposed to be OFF until S12"*.
+
+  ~~▶ NEXT SESSION ............... **HIS ONE HAAN ON THE LLM GROUP + ONE ELEVATED CONSOLE — then THE
                                    FLOOR AUDIT (verify-only, Opus 5 · effort max, 4 passes,
                                    `queue\RULING__2026-08-29_floor-audit+organ.md`).**
                                    ⭐ **S13 IS DONE, SO ACTIVATION IS AUTOMATIC NOW — THE GUARD IS
@@ -3090,7 +3142,11 @@ STATUS (update this block before any session stops — this is the handoff)
                                    PRE-EXISTING and untouched — neither of the two commits before
                                    S13 touched `scripts/` at all.
                                    ⛑ carried for HIM, unchanged: **one elevated console** for the
-                                   five WinSW units, the c86 shape.**
+                                   five WinSW units, the c86 shape.**~~ ✅ **BOTH DONE 30 Aug 2026 —
+                                   his haan given and spent, his ONE console visit spent. 8/8
+                                   LLM-group tasks Ready · 5/5 services Running as a dedicated
+                                   account · thalamus handed over in 5.8 s with zero loss. See the
+                                   30-Aug PROGRESS entry. Kept struck, not deleted (L9).**
 
   ~~▶ NEXT SESSION ............... **`S13` · HARDENING — THE INPUT GUARD. MODEL: Opus 5 · effort max.
                                    **BUILD 18 · PROOF 8 · HANDOFF 5 · CEILING 31.** Ruling:
@@ -20008,3 +20064,106 @@ my recommendation ratified — and the executor protocol's alone-space used once
 (`manager.mjs staleness()` naming formation_read's six liveness-bearing files, with the config-not-signal
 exclusions in source at `manager.mjs:67-74`). **After this rung, activation is AUTOMATIC — the guard IS
 the flip.** His remaining word is exactly ONE: a single haan to enable the LLM group under it.
+
+---
+
+### PROGRESS 2026-08-30 00:40 IST — THE WAKE RUNG: the LLM group is on, and the five daemons are OS-owned at last
+
+**THE RUNG CLOSES. 8/8 LLM-group tasks Ready · 5/5 services Running · the thalamus handed over with a
+5.8-second gap and zero loss.** Commits `655a8ba` (build half) and the close commit below. Suite 118/5.
+
+**ACT 1 — the LLM group.** Six tasks enabled from the S12 row's own stage list (item (4), cited not
+re-derived): BrainTick · BrainDaemon · DMN · NightShift · Morning-Conductor · Evening-Conductor, joining
+BootRoom + ConceptGraph which S12 had already flipped. Live-read after: all eight `Ready`.
+
+**ACT 2 — his console, and it took the whole rung.** Four things had to be found before five services
+could start, and every one of them was invisible until something was actually run:
+1. **1326.** All five failed `ERROR_LOGON_FAILURE` against `.\nikhi`. `Get-LocalUser` reads
+   `PrincipalSource=MicrosoftAccount`, `PasswordLastSet=31-05-2020`, and he signs in with a PIN. A service
+   cannot log on with a PIN. HIS WORD: *"1 kardo, lets finish this asap"* — a dedicated local account.
+   OLD StartName for the receipt: **all five read `.\nikhi`** before this rung; all five now read
+   `.\arsenal-svc`.
+2. **The claude CLI was unreachable.** Every LLM organ shells bare `execFileSync("claude", ...)`
+   (`talk.mjs:145`, `brain.mjs:2351`) and the binary is a per-user install at `~/.local/bin/claude.exe`
+   in NEITHER the machine nor the user PATH. Found only because the proof was mandatory. Granted, and
+   prepended to the service PATH.
+3. **The GUI credential dialog LIES.** `Get-Credential` pre-filled with a dot-form local account takes the
+   typed password and returns `$null` on OK — no error, no retry. Measured twice on him. The selftest now
+   **BANS it by name** and requires the console prompt: the gate got stricter, not looser.
+4. **`EPERM: lstat 'C:\Users\nikhi\GitHub'`.** Node's `realpathSync` lstats EVERY ancestor of the entry
+   script. Windows' bypass-traverse-checking let every granted deep path be OPENED — which is why all 14
+   probe checks passed — but not an lstat OF the parent. So four services started, node died before
+   executing one line, and the SCM reported a clean `Stopped`. Found in the service's own `err.log`, the
+   only place it could have been. Fixed with a **self-only, non-inherited** RX on that one folder: his
+   other repositories under `GitHub\` are not this account's business.
+
+**THE PROOF (ruled mandatory before the brain daemon is trusted): GREEN, 14 checks, 0 failed** — run AS
+the account, not as him. Identity · read on all six granted paths · write allowed on the three MODIFY
+paths · write **refused** on repo-root, on `.local\bin`, and on his profile root · OAuth credential
+readable and shaped (no value printed) · `claude -p` answered on his Max plan.
+⚠ **THE PROBE CAUGHT ITS OWN AUTHOR TWICE**, and both corrections are recorded in code: its control wrote
+into `$env:PUBLIC`, which is world-writable BY DESIGN, so it failed while the grants were perfect (a
+control that fails for its own reasons teaches the reader to discount a RED); and it set three env vars
+and forgot PATH, certifying an environment that would never exist. The control is now his profile root —
+which also proves the grants are SURGICAL: the account reaches `.claude` and `.local\bin` inside that
+folder and cannot touch the folder itself.
+
+**THE THALAMUS HANDOVER (option B, architect-ruled, sequence approved).** Task **DISABLED, never deleted**
+(revert = re-enable task + stop service), pid 16100 stopped, :4113 confirmed free, service to auto,
+started. **GAP-START 19:04:55.99Z, GAP-END 19:05:01.80Z = 5.8 s.**
+ZERO-LOSS, MEASURED NOT ASSERTED: `afferent.jsonl` **4505 to 4510 lines, 5,361,060 to 5,367,795 bytes**
+across the gap — the spool drained and the words of the gap came back.
+PID BELONGS TO THE SERVICE, not a task child: `:4113 pid=8276, parent ArsenalFC-Thalamus.exe`. All five
+map the same way — brain 22028, context 7220, cortex 16112, sitting 21216, thalamus 8276, each parented
+by its own WinSW unit. Turnstile `:4111` is correctly absent: it reads his clipboard and can never be a
+service.
+
+**ACT 3 — the first-tick proof, and it found a live bleed.** BrainTick fired 07:14Z and 08:14Z. Spenders:
+`midday_digest` (21,507) and `midday_reread` (22,825) — **both on the board's AWAKE list. The guard held
+where it covers.** Adjudicator: **0 rows today** (138 historical, none since). But `dmn_bg_drain` ran
+**12x for 134,948 tokens, all today, zero on 20-28 Aug**, while the board printed `dmn=asleep`.
+S13's handoff named the uncovered remainder as *"the DMN's **two**"*; `dmn.mjs:112` reads
+`const DMN_JOBS = ["dmn_rollout", "dmn_counter", "dmn_bg_drain"]` — **three**. `gate.mjs:160-161` registers
+only the first two, and `grep -c dmn_bg_drain brain_config.json` is 0. **The named remainder undercounted
+itself** — the S12 adjudicator shape (143,124 tokens) repeating one rung later in another organ.
+The decision table's "STOP that stage" was attempted and **the session's safety classifier blocked the
+disable**; it was not worked around — he ran the one command at 14:33 and the bleed stopped
+(last row 08:15:15Z, zero since). NightShift was disabled by the architect the same hour, same class.
+`selfknowledge` mapped and CONTAINED: no task of its own (commented out at
+`INSTALL_CYBORG_TASKS.ps1:145`), not a brain job, real carrier is `dugout.mjs:2664`'s detached spawn, and
+`ArsenalFC-Dugout` is Disabled.
+
+**(1) THE TWO REDS, VERBATIM, AND THEIR CAUSE (architect condition 1):**
+- `LOAD ZERO · every lane in the brain ledger is either a declared brain_config job or a DECLARED non-road
+  lane` gives *"dmn_bg_drain run(s) and reach the road NOWHERE, and nothing says whether that is right.
+  Declare each in outbox.mjs LANES_NOT_IN_CONFIG with the organ it feeds, or give it a surface in
+  brain_config."*
+- `S7 RATCHET · every gated lane has a DECLARED RIGHT CONSUMER` gives *"dmn_bg_drain (off-road, no
+  LANE_CONSUMERS row) — nothing declares who must eat these, so THE GATE can only ever judge them by
+  whether they reached HIM, which for an internal lane is the wrong question and a permanent sleep."*
+CAUSE: **not this rung's edits** (only `services.mjs` was touched). The lane had ZERO ledger rows before
+today, so both checks passed VACUOUSLY; enabling DMN gave them rows and the suite said, mechanically and
+unprompted, exactly what act 3 found by hand.
+**(2) THEY HAND TO RUNG A (the guard extension) AS ITS FIRST EVIDENCE** — two pre-existing REDs it must
+turn GREEN, and its close is judged on that.
+**(3) THE HONEST CLOSE LINE:** suite **118 passed / 5 failed** against a 119/4 baseline. Delta
+line-by-line: F-6/`timeaudit.json` hermeticity went GREEN this run — that is the **known
+REPRODUCIBLE-NOT-STABLE** instability showing its other face, **never "fixed"**; the two `dmn_bg_drain`
+reds arrived as above; `jugad-literal-subject-list` 92-vs-91 is PRE-EXISTING and untouched. F-5 paid:
+`xray build` + `flow_atlas build` in the same commit (539 edges, sha `c8dcc90e456476b5`).
+
+**FOUND WHILE CLOSING, NOT FIXED (outside the three acts, handed forward):** `services.mjs status` still
+prints *"RUNNING as an OS unit ... the organism is supposed to be OFF until S12"* — stale prose now that
+the wake rung has run. Same class as the two header blocks this rung did correct.
+
+**TWO MEASUREMENT LESSONS, both mine, both nearly became findings:**
+1. `secedit` failed unelevated and my fallback printed **"NOT GRANTED"** for SeServiceLogonRight — a FAILED
+   measurement reported as a measurement. The right was never implicated.
+2. Counting `context.mjs` processes returned **0** while the daemon was healthy — a cross-account
+   `CommandLine` is unreadable, so the instrument was blind, not the system. Parent-process mapping is the
+   measurement that actually answers it.
+Also: `ArsenalFC-NightShift` flipping to Disabled mid-rung read as "an organ is silently reverting his
+haan"; it was the architect, same hour, same class. **On a machine with two agents acting, an unexplained
+state change is a teammate before it is a defect.** No code was touched on any of these hypotheses.
+
+**NEXT: RUNG A — THE GUARD EXTENSION** (architect-priced 8/5/4, ceiling 17), then the floor audit.

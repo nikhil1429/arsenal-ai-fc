@@ -3,7 +3,11 @@
 #
 # THIS IS THE ONE THING THAT NEEDS HIS HANDS. Everything else in S9 is on disk.
 # Run it from an ELEVATED PowerShell (services need admin to register):
-#     powershell -ExecutionPolicy Bypass -File setup\services\install.ps1
+#     powershell -ExecutionPolicy Bypass -File "C:\Users\nikhi\GitHub\arsenal-ai-fc\setup\services\install.ps1"
+#
+# ⚠ ABSOLUTE ON PURPOSE — an elevated console opens in C:\WINDOWS\system32, never in
+# the repo, so a relative path here fails with "the argument does not exist" for a file
+# that is plainly there. Measured on him, 29 Aug 2026.
 #
 # IT ASKS FOR ONE PASSWORD, ONCE — AND IT IS **NOT HIS**. It is the password of the
 # dedicated local service account (.\arsenal-svc), which he creates in the same
@@ -60,8 +64,15 @@ Write-Host "  5 headless daemon(s) as services, 2 desktop surface(s) as logon ta
 Write-Host "  Windows will ask ONCE for the SERVICE ACCOUNT's password (.\arsenal-svc) - NOT yours."
 Write-Host ""
 
-$cred = Get-Credential -UserName ".\arsenal-svc" `
-        -Message "Arsenal AI FC: the DEDICATED SERVICE ACCOUNT's password - not your own login. It goes straight to Windows and is stored nowhere. Losing it is harmless: an admin resets it in one step."
+# ⚠ CONSOLE PROMPT, NOT THE GUI CREDENTIAL DIALOG — measured 30 Aug 2026, twice, on him.
+# That dialog, pre-filled with a dot-form local account, takes the typed password and hands
+# back $null on OK, with no error; every caller then dies on "argument is null or empty"
+# nowhere near the cause. Read-Host is the same keyboard and the same SecureString, and it
+# cannot silently return nothing. The selftest now BANS the dialog by name, so this cannot
+# be undone by accident.
+$sec = Read-Host -AsSecureString "  .\arsenal-svc's password (NOT your own login)"
+if (-not $sec -or $sec.Length -eq 0) { Write-Host "  X no password entered - nothing installed."; exit 1 }
+$cred = New-Object System.Management.Automation.PSCredential("$env:COMPUTERNAME\arsenal-svc", $sec)
 
 # ⚠ THE PASSWORD IS PULLED OUT INTO A VARIABLE ON PURPOSE, and this is a real bug fix,
 # not a style choice. Written first as `--password $cred.GetNetworkCredential().Password`

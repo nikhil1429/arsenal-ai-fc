@@ -6,7 +6,12 @@
 # AS that account, and runs every check from inside that identity - because a check
 # run as him proves nothing about what the service can do.
 #
-#     powershell -ExecutionPolicy Bypass -File setup\services\probe.ps1
+#     powershell -ExecutionPolicy Bypass -File "C:\Users\nikhi\GitHub\arsenal-ai-fc\setup\services\probe.ps1"
+#
+# ⚠ THE PATH IS ABSOLUTE ON PURPOSE. An elevated console always opens in
+# C:\WINDOWS\system32, never in the repo — a relative path here is a trap that
+# reports "the argument does not exist" for a file that plainly does. Measured
+# 29 Aug 2026, on him, mid-rung.
 # ============================================================================
 param([switch]$AsAccount, [string]$Out)
 $ErrorActionPreference = "Continue"
@@ -16,16 +21,38 @@ $cfgdir  = "C:\Users\nikhi\.claude"
 
 if (-not $AsAccount) {
   $tmp = Join-Path $env:TEMP ("arsenal_probe_" + [guid]::NewGuid().ToString("N") + ".txt")
+  # ⚠ THE HAND-BACK FILE NEEDS ITS OWN GRANT — measured 30 Aug 2026, on him. The child runs
+  # as the service account, and this path lives under HIS AppData\Local\Temp, which that
+  # account cannot write to and MUST NOT be given wholesale. So the parent (already
+  # elevated) creates the one file and grants modify on THAT FILE ALONE, by SID. Without
+  # it the child starts, runs every check, and dies unable to report — which reads exactly
+  # like "the account could not start a process" and sends the reader hunting logon rights
+  # that were never the problem.
+  New-Item -ItemType File -Path $tmp -Force | Out-Null
+  try { $psid = (New-Object System.Security.Principal.NTAccount("arsenal-svc")).Translate([System.Security.Principal.SecurityIdentifier]).Value }
+  catch { Write-Host "  X cannot resolve arsenal-svc - create the account first."; exit 1 }
+  & icacls $tmp /grant "*${psid}:(M)" | Out-Null
   Write-Host ""
   Write-Host "  Arsenal AI FC - SERVICE ACCOUNT PROOF"
   Write-Host "  Enter ${account}'s password (the one you set when you created it)."
   Write-Host ""
-  $c = Get-Credential -UserName $account -Message "Arsenal AI FC: run the proof AS the service account."
+  # ⚠ NOT Get-Credential — MEASURED 30 Aug 2026, on him, twice. The GUI credential dialog
+  # pre-filled with a dot-form local account takes the typed password and returns $null on
+  # OK, with no error and no second chance; the caller then dies on "Cannot validate
+  # argument on parameter 'Credential'". Read-Host is the same keyboard, the same
+  # SecureString and the same never-written-down guarantee, minus a dialog that can lie.
+  $sec = Read-Host -AsSecureString "  ${account}'s password"
+  if (-not $sec -or $sec.Length -eq 0) { Write-Host "  X no password entered - nothing is proven."; exit 1 }
+  $c = New-Object System.Management.Automation.PSCredential("$env:COMPUTERNAME\arsenal-svc", $sec)
   $self = $MyInvocation.MyCommand.Path
   Start-Process -FilePath "powershell.exe" -Credential $c -WindowStyle Hidden -Wait `
     -ArgumentList @("-ExecutionPolicy","Bypass","-File",$self,"-AsAccount","-Out",$tmp)
-  if (Test-Path $tmp) { Get-Content $tmp | ForEach-Object { Write-Host $_ }; Remove-Item $tmp -Force -EA SilentlyContinue }
-  else { Write-Host "  X the child produced no output - the account could not start a process. Nothing is proven." ; exit 1 }
+  # THE FILE EXISTING PROVES NOTHING — the parent created it. Only CONTENT proves the child
+  # ran and reported. Asserting existence here would turn a dead child into a silent pass,
+  # which is the exact shape this whole proof exists to refuse.
+  $back = if (Test-Path $tmp) { (Get-Content $tmp -Raw) } else { $null }
+  if ($back -and $back.Trim()) { $back.TrimEnd() -split "`r?`n" | ForEach-Object { Write-Host $_ }; Remove-Item $tmp -Force -EA SilentlyContinue }
+  else { Write-Host "  X the child produced no output. Either the account could not start a process (logon right), or it could not write the hand-back file. Nothing is proven." ; exit 1 }
   return
 }
 
@@ -48,7 +75,14 @@ function ProbeWrite([string]$path, [bool]$shouldSucceed, [string]$why) {
   $f = Join-Path $path (".arsenal_probe_" + [guid]::NewGuid().ToString("N"))
   $wrote = $false
   try { Set-Content -Path $f -Value "probe" -ErrorAction Stop; $wrote = $true } catch { $wrote = $false }
-  if ($wrote) { Remove-Item $f -Force -EA SilentlyContinue }
+  # ⚠ THE CLEANUP IS ASSERTED, NOT ASSUMED — measured 30 Aug 2026: the first version fired
+  # Remove-Item with -EA SilentlyContinue and left SIX probe files behind in the repo working
+  # tree, which the next "git status" picked up as untracked litter. A proof that dirties the
+  # thing it is proving is a defect, and a silent cleanup is how it hides.
+  if ($wrote) {
+    Remove-Item $f -Force -EA SilentlyContinue
+    if (Test-Path $f) { No "probe litter LEFT BEHIND at $f - a proof may not dirty the repo"; return }
+  }
   if ($wrote -eq $shouldSucceed) { Ok "write $path -> $(if($wrote){'allowed'}else{'refused'})  ($why)" }
   else { No "write $path -> $(if($wrote){'ALLOWED'}else{'REFUSED'}) but expected the opposite  ($why)" }
 }
@@ -59,6 +93,7 @@ ProbeRead "C:\Users\nikhi\GitHub\arsenal-ai-fc\scripts"
 ProbeRead "C:\Users\nikhi\GitHub\arsenal-ai-fc"
 ProbeRead "C:\Users\nikhi\.claude"
 ProbeRead "C:\Users\nikhi\.local\bin"
+ProbeRead "C:\Users\nikhi\GitHub"
 
 # ---- 3. WRITES, each asserted against what it was GRANTED (two of these are RED-first)
 ProbeWrite "C:\Users\nikhi\GitHub\arsenal-ai-fc\dressing-room" $true  "granted MODIFY - a write here MUST succeed"
@@ -66,9 +101,17 @@ ProbeWrite "C:\Users\nikhi\GitHub\arsenal-ai-fc\scripts" $true  "granted MODIFY 
 ProbeWrite "C:\Users\nikhi\GitHub\arsenal-ai-fc" $false "granted READ-ONLY - a write here MUST be refused"
 ProbeWrite "C:\Users\nikhi\.claude" $true  "granted MODIFY - a write here MUST succeed"
 ProbeWrite "C:\Users\nikhi\.local\bin" $false "granted READ-ONLY - a write here MUST be refused"
+ProbeWrite "C:\Users\nikhi\GitHub" $false "granted READ-ONLY (this folder only) - a write here MUST be refused"
 
 # ---- 4. THE UNGRANTED CONTROL. If this passes, the probe cannot tell green from red.
-ProbeWrite "$env:PUBLIC" $false "never granted - a write here MUST be refused, or every green above is vacuous"
+# ⚠ THE CONTROL WAS WRONG FIRST, AND THE PROBE CAUGHT ITS OWN AUTHOR — 30 Aug 2026.
+# It used to write into $env:PUBLIC, which is WORLD-WRITABLE BY DESIGN on Windows, so it
+# failed while the grants were perfectly correct. A control that fails for a reason that
+# has nothing to do with what it controls is worse than no control: it teaches the reader
+# to discount a RED. The control is now HIS PROFILE ROOT, which is both genuinely ungranted
+# and the thing we actually care about — it proves the grants are SURGICAL: the account
+# reaches .claude and .local\bin INSIDE this folder and cannot touch the folder itself.
+ProbeWrite "C:\Users\nikhi" $false "his profile root - never granted; a write here MUST be refused, or every green above is vacuous"
 
 # ---- 5. THE CREDENTIAL IS REACHABLE AND IS A TOKEN, not merely a file that exists
 $credFile = Join-Path $cfgdir ".credentials.json"
@@ -82,6 +125,12 @@ try {
 $env:CLAUDE_CONFIG_DIR = $cfgdir
 $env:HOME = "C:\Users\nikhi"
 $env:USERPROFILE = "C:\Users\nikhi"
+# ⚠ AND THE PATH, WHICH THIS PROBE FORGOT ON ITS FIRST RUN — 30 Aug 2026, caught live.
+# The service XML prepends this directory to PATH; the probe set the other three env vars
+# and not this one, so it reported "The term 'claude' is not recognized" — a RED that was
+# the PROBE's defect, not the account's. A proof must mirror the environment it is
+# certifying, or it certifies something that will never exist. Same list, same order.
+$env:PATH = "C:\Users\nikhi\.local\bin;" + $env:PATH
 try {
   $r = & claude -p "Reply with exactly one word: pong" 2>&1 | Out-String
   if ($r -match "pong") { Ok "headless round-trip: claude -p answered as him" }

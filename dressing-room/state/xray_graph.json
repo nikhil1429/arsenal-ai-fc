@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-29T09:42:00.747Z",
+ "built_at": "2026-08-29T19:23:52.764Z",
  "organs_parsed": 111,
  "organs_expected": 111,
  "parse_errors": [],
@@ -14758,14 +14758,14 @@
    "unresolved": 8
   },
   "services.mjs": {
-   "loc": 1046,
+   "loc": 1151,
    "reads": [
     {
      "path": "setup/START_DAEMONS.vbs",
      "lines": [
-      1018,
-      1018,
-      1018
+      1123,
+      1123,
+      1123
      ],
      "fixture": true
     }
@@ -14792,6 +14792,7 @@
     "GRANT_SET",
     "PS1_HELPERS",
     "SERVICE_ACCOUNT",
+    "SERVICE_ACCOUNT_NAME",
     "desktop",
     "emit",
     "headless",
@@ -24773,6 +24774,8 @@
   "dressing-room/state/brain_out/agenda/2026-08-18.md",
   "dressing-room/state/brain_out/agenda/2026-08-19.json",
   "dressing-room/state/brain_out/agenda/2026-08-19.md",
+  "dressing-room/state/brain_out/agenda/2026-08-29.json",
+  "dressing-room/state/brain_out/agenda/2026-08-29.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-17.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-18.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-21.md",
@@ -24806,6 +24809,8 @@
   "dressing-room/state/brain_out/day_cartridge/2026-08-18.md",
   "dressing-room/state/brain_out/day_cartridge/2026-08-19.allowed.json",
   "dressing-room/state/brain_out/day_cartridge/2026-08-19.md",
+  "dressing-room/state/brain_out/day_cartridge/2026-08-29.allowed.json",
+  "dressing-room/state/brain_out/day_cartridge/2026-08-29.md",
   "dressing-room/state/brain_out/diary/2026-08-13.json",
   "dressing-room/state/brain_out/diary/2026-08-13.md",
   "dressing-room/state/brain_out/diary/2026-08-14.json",
@@ -25142,6 +25147,7 @@
   "dressing-room/state/brain_out/reanalysis/2026-08-17.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-18.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-19.md",
+  "dressing-room/state/brain_out/reanalysis/2026-08-29.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-18.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-21.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-29.md",

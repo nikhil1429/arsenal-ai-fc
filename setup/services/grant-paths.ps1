@@ -13,15 +13,29 @@ $account = ".\arsenal-svc"
 # FAIL LOUDLY IF THE ACCOUNT IS NOT THERE. icacls will happily "succeed" against a
 # name it cannot resolve in some shells, and a silent no-op here surfaces days later
 # as an access-denied nobody can trace.
-try { $null = (New-Object System.Security.Principal.NTAccount($account.TrimStart('.','\'))).Translate([System.Security.Principal.SecurityIdentifier]) }
+try { $sid = (New-Object System.Security.Principal.NTAccount($account.TrimStart('.','\'))).Translate([System.Security.Principal.SecurityIdentifier]).Value }
 catch { Write-Host "  X cannot resolve $account - create the account first. Nothing changed."; exit 1 }
+Write-Host "  account : $account"
+Write-Host "  sid     : $sid"
+
+# ⚠ icacls IS GIVEN THE SID, NEVER THE NAME — measured 29 Aug 2026, on him, mid-run.
+# The first version passed "${account}" through, and `.\arsenal-svc` (the same spelling
+# WinSW and Get-Credential both accept) made icacls fail on EVERY path with
+#     .\arsenal-svc: No mapping between account names and security IDs was done.
+# icacls does not understand the .\ prefix, and the account resolved perfectly one line
+# above — so a name that four other tools accept is still the wrong argument here. The SID
+# form (*S-1-5-...) has no spelling to get wrong and no locale to translate.
+$principal = "*$sid"
 
 $bad = 0
-function Grant([string]$path, [string]$level, [string]$why) {
+function Grant([string]$path, [string]$level, [bool]$recurse, [string]$why) {
   if (-not (Test-Path $path)) { Write-Host "  X missing path: $path"; $script:bad++; return }
   # THE CLAIM IS READ OFF THE OUTCOME. icacls prints "Successfully processed" even for
   # partial failures, so the exit code is what is believed, not the words.
-  $out = & icacls $path /grant "${account}:${level}" /T /C 2>&1
+  # $recurse is FALSE only for an ancestor we must let node lstat without opening what is
+  # inside it — /T there would walk his other repositories, which is not ours to grant.
+  $out = if ($recurse) { & icacls $path /grant "${principal}:${level}" /T /C 2>&1 }
+         else           { & icacls $path /grant "${principal}:${level}" 2>&1 }
   if ($LASTEXITCODE -ne 0) { Write-Host "  X FAILED $level on $path"; $out | Select-Object -Last 3 | ForEach-Object { Write-Host "      $_" }; $script:bad++ }
   else { Write-Host "  ~ $level  $path" ; Write-Host "        ($why)" }
 }
@@ -29,11 +43,12 @@ function Grant([string]$path, [string]$level, [string]$why) {
 Write-Host ""
 Write-Host "  Granting least-privilege paths to $account"
 Write-Host ""
-Grant "C:\Users\nikhi\GitHub\arsenal-ai-fc\dressing-room" "(OI)(CI)M" "the state bus — 16 witnessed writes by the five (atlas)"
-Grant "C:\Users\nikhi\GitHub\arsenal-ai-fc\scripts" "(OI)(CI)M" "the WinSW logpath and each organ's rolling .log"
-Grant "C:\Users\nikhi\GitHub\arsenal-ai-fc" "(OI)(CI)RX" "source + node_modules + the root docs the five read (12 atlas reads); READ-ONLY on purpose"
-Grant "C:\Users\nikhi\.claude" "(OI)(CI)M" "the CLI config dir — the OAuth file is rewritten on refresh, so read-only dies at token expiry"
-Grant "C:\Users\nikhi\.local\bin" "(OI)(CI)RX" "the claude CLI binary itself — per-user install, absent from every machine-wide PATH"
+Grant "C:\Users\nikhi\GitHub\arsenal-ai-fc\dressing-room" "(OI)(CI)M" $true "the state bus — 16 witnessed writes by the five (atlas)"
+Grant "C:\Users\nikhi\GitHub\arsenal-ai-fc\scripts" "(OI)(CI)M" $true "the WinSW logpath and each organ's rolling .log"
+Grant "C:\Users\nikhi\GitHub\arsenal-ai-fc" "(OI)(CI)RX" $true "source + node_modules + the root docs the five read (12 atlas reads); READ-ONLY on purpose"
+Grant "C:\Users\nikhi\.claude" "(OI)(CI)M" $true "the CLI config dir — the OAuth file is rewritten on refresh, so read-only dies at token expiry"
+Grant "C:\Users\nikhi\.local\bin" "(OI)(CI)RX" $true "the claude CLI binary itself — per-user install, absent from every machine-wide PATH"
+Grant "C:\Users\nikhi\GitHub" "(RX)" $false "node's realpathSync lstats every ancestor of the entry script — this folder ONLY, never its contents"
 Write-Host ""
 if ($bad -gt 0) { Write-Host "  INCOMPLETE - $bad path(s) failed. Fix and re-run; it is safe to repeat."; exit 1 }
 Write-Host "  DONE - paths granted. Nothing is running. Next: install.ps1, then probe.ps1."

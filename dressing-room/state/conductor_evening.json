@@ -1,11 +1,11 @@
 {
-  "started": "2026-08-19T16:30:39.273Z",
-  "finished": "2026-08-19T16:30:59.883Z",
-  "day_key": "2026-08-19",
+  "started": "2026-08-29T18:34:25.126Z",
+  "finished": "2026-08-29T18:34:46.985Z",
+  "day_key": "2026-08-29",
   "day_source": "slot",
   "slot": "22:00",
-  "late_min": 1,
-  "total_ms": 20544,
+  "late_min": 124,
+  "total_ms": 21793,
   "ran": 11,
   "ok": 11,
   "failed": 0,
@@ -26,12 +26,12 @@
     {
       "id": "bell",
       "ok": true,
-      "ms": 2280,
+      "ms": 1080,
       "exit": 0,
       "wrote": null,
       "produced": null,
       "stale": null,
-      "log": null,
+      "log": "scripts/brain.log",
       "error": null,
       "stderr": null,
       "stderr_bytes": null,
@@ -40,7 +40,7 @@
     {
       "id": "scorer",
       "ok": true,
-      "ms": 1595,
+      "ms": 534,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -54,7 +54,7 @@
     {
       "id": "scoreboard",
       "ok": true,
-      "ms": 1332,
+      "ms": 822,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -68,7 +68,7 @@
     {
       "id": "nikhil-model",
       "ok": true,
-      "ms": 490,
+      "ms": 342,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -82,7 +82,7 @@
     {
       "id": "setpiece",
       "ok": true,
-      "ms": 3378,
+      "ms": 899,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -96,7 +96,7 @@
     {
       "id": "doubtminer",
       "ok": true,
-      "ms": 2587,
+      "ms": 887,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -110,7 +110,7 @@
     {
       "id": "physio-pm",
       "ok": true,
-      "ms": 527,
+      "ms": 839,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -124,7 +124,7 @@
     {
       "id": "examiner",
       "ok": true,
-      "ms": 229,
+      "ms": 361,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -138,7 +138,7 @@
     {
       "id": "wall-pm",
       "ok": true,
-      "ms": 1045,
+      "ms": 598,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -152,7 +152,7 @@
     {
       "id": "scout",
       "ok": true,
-      "ms": 282,
+      "ms": 294,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -166,7 +166,7 @@
     {
       "id": "wallpaper",
       "ok": true,
-      "ms": 6799,
+      "ms": 15137,
       "exit": 0,
       "wrote": null,
       "produced": null,
