@@ -20309,3 +20309,46 @@ through the owner's writer and re-applied — but the lesson is the rung's own: 
 a file, not to a change, is a restore that takes your work with it.** The organism's `RAIL state`
 then refused a `cp` over a state file on the next attempt, correctly, and the last two plants ran
 without touching state at all.
+
+**ADDENDUM, measured minutes after the push — THE BRAIN DAEMON RETIRED ITSELF, BY DESIGN, AND
+CANNOT RESTART ITSELF.** The state line went `daemons 4/6 → 3/6` during this rung and the cause is
+in the daemon's own words, in its own log:
+
+```
+brain: --daemon RETIRING — booted 2026-08-29T19:01:47.896Z, and 1 of its own source file(s)
+changed AFTER that: brain.mjs @ 2026-08-29T19:59:18.315Z. An ESM process cannot reload its code,
+so staying up means running the OLD brain. Releasing :4116 — daemon_watchdog.mjs relaunches this
+daemon on the new code within its next pass (≤10 min), and ArsenalFC-BrainTick covers the 30-min
+lane meanwhile.
+brain: --daemon stopped after 219 beat(s).
+```
+
+That half is the organism being RIGHT: it refuses to serve stale code after its own source moves.
+**The half that is not right is the sentence's promise.** `daemon_watchdog.mjs` did not relaunch it
+and by its own status line does not claim to — *"this organ REPORTS, it does not relaunch"* — and
+the WinSW wrapper cannot either, because under the dedicated service account it is refused by the
+OS at the layer below:
+
+```
+WinSW.CommandException: Failed to open the service control manager database. Access is denied.
+   at WinSW.WrapperService.SignalStopped()
+```
+
+`Restart-Service ArsenalFC-Brain` from this session was refused the same way (*"Cannot open
+ArsenalFC-Brain service on computer '.'"*), so it is HIS elevated console — the third command below.
+
+**BOUNDED, and measured rather than assumed:** the other three port daemons are untouched and
+listening (cortex 4112 · thalamus 4113 · sitting 4117); the five WinSW services all report Running;
+`ArsenalFC-BrainTick` is Ready with its next run at 03:14, so the 30-minute lane is covered exactly
+as the retiring message says. What is lost until he runs one command is the long-lived socket on
+:4116, not the brain's work.
+
+**TWO FINDINGS ROUTED TO RUNG B, both of the same family this rung has been reading all night —
+a sentence that promises what no code performs:**
+- **F-A5 · the retirement message names a rescuer that does not exist.** `brain.mjs` tells the
+  reader `daemon_watchdog.mjs relaunches this daemon … within ≤10 min`; `daemon_watchdog.mjs`
+  says in its own status line that it only reports. One of the two sentences has to change, and
+  which one is a design call, not an executor's.
+- **F-A6 · a service account that cannot restart its own service is a self-healing hole.** The
+  WinSW SCM refusal means every future source edit under `scripts/` retires a daemon that then
+  waits for HIM. The wake rung bought OS ownership; this is the bill that came with it.
