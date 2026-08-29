@@ -1679,8 +1679,21 @@ async function selftest() {
     // and the knob must be READABLE — a live knob nobody can see is how the last
     // three weeks happened
     const st = buildStatus([], [{ day: "d", tier: 2, S: 0.5, key: "voice:x", comps: { self: 1 }, adjudicated: true, outcome: "adjudicated_up" }], {}, loadConfig());
-    assert("KNOB: `status` prints the adjudicator's REAL engine + any refused config value (1/1 verdicts bought)",
-      /adjudicator\s+: on · spends /.test(st) && /1\/1 ε-band verdict/.test(st));
+    // S12 (29 Aug 2026): this assert pinned the literal `on`, which made it a check on the
+    // knob's CURRENT VALUE rather than on the status line's honesty — the exact thing the
+    // comment eight lines above says these asserts must not be ("stated as an invariant, not
+    // a value, so it survives him legitimately turning the knob tomorrow"). It went red the
+    // moment the knob legitimately turned off, which is a false red, and a false red is how a
+    // real one gets ignored. Now it pins BOTH branches against the live config — stricter, not
+    // kinder: the line must report whichever state the knob is actually in, and never the other.
+    const knobOn = (loadConfig().adjudicator || {}).enabled !== false;
+    const stOff = buildStatus([], [{ day: "d", tier: 2, S: 0.5, key: "voice:x", comps: { self: 1 }, adjudicated: true, outcome: "adjudicated_up" }], {}, { ...loadConfig(), adjudicator: { ...(loadConfig().adjudicator || {}), enabled: false } });
+    const stOn = buildStatus([], [{ day: "d", tier: 2, S: 0.5, key: "voice:x", comps: { self: 1 }, adjudicated: true, outcome: "adjudicated_up" }], {}, { ...loadConfig(), adjudicator: { ...(loadConfig().adjudicator || {}), enabled: true } });
+    assert("KNOB: `status` reports the adjudicator's REAL state — OFF when off, on when on, never the other — plus its engine and any refused config value (1/1 verdicts bought)",
+      /adjudicator\s+: OFF · spends /.test(stOff) && !/adjudicator\s+: on · /.test(stOff)
+      && /adjudicator\s+: on · spends /.test(stOn) && !/adjudicator\s+: OFF · /.test(stOn)
+      && new RegExp(`adjudicator\\s+: ${knobOn ? "on" : "OFF"} · spends `).test(st)
+      && /1\/1 ε-band verdict/.test(st));
   }
 
   // the door + the gates
