@@ -16,6 +16,30 @@
   <arguments>scripts/context.mjs daemon</arguments>
   <workingdirectory>C:\Users\nikhi\GitHub\arsenal-ai-fc</workingdirectory>
 
+  <!-- THE SERVICE RUNS AS SOMEBODY ELSE, BUT "claude -p" MUST RIDE HIS LOGIN.
+       MEASURED 29 Aug 2026: the Max OAuth credential is a PLAIN JSON FILE at
+       <his profile>\.claude\.credentials.json (509 bytes, rewritten at his 09:37
+       /login) — "cmdkey /list" shows NO Claude entry, so it is not DPAPI-wrapped and
+       not bound to his user. That is the only reason a different account can use it.
+       The CLI locates it through CLAUDE_CONFIG_DIR, and falls back to HOME/USERPROFILE.
+       Point all three at HIS profile or every LLM lane authenticates as nobody and the
+       whole brain group is dark for a reason no log would explain.
+       ⚠ MODIFY, not read: a token refresh REWRITES that file. Read-only here buys a
+       working organism until the access token expires and then a silent death.
+       ⚠ SAY IT PLAINLY: this grants the service account the power to act as him on
+       Claude. That is inherent to running his LLM lanes headlessly, not a slip. -->
+  <env name="CLAUDE_CONFIG_DIR" value="C:\Users\nikhi\.claude"/>
+  <env name="HOME" value="C:\Users\nikhi"/>
+  <env name="USERPROFILE" value="C:\Users\nikhi"/>
+
+  <!-- AND THE BINARY MUST BE FINDABLE. Every LLM organ calls bare "claude" through
+       execFileSync (talk.mjs:145, brain.mjs:2351), and on this box the CLI is a
+       PER-USER install at C:\Users\nikhi\.local\bin that appears in
+       NEITHER the machine PATH nor the user PATH (measured 29 Aug 2026). Without this
+       line the service starts fine, runs fine, and every model call dies with a
+       spawn-ENOENT that reads like a refusal rather than a missing binary. -->
+  <env name="PATH" value="C:\Users\nikhi\.local\bin;%PATH%"/>
+
   <!-- RestartOnFailure, the honest version: the OS restarts it, forever, with a
        backoff. This is what replaces the watchdog's arm. -->
   <onfailure action="restart" delay="10 sec"/>
@@ -31,7 +55,7 @@
   <delayedAutoStart/>
 
   <serviceaccount>
-    <username>.\%USERNAME%</username>
+    <username>.\arsenal-svc</username>
     <allowservicelogonright>true</allowservicelogonright>
   </serviceaccount>
 

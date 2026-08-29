@@ -5,12 +5,22 @@
 # Run it from an ELEVATED PowerShell (services need admin to register):
 #     powershell -ExecutionPolicy Bypass -File setup\services\install.ps1
 #
-# IT WILL ASK FOR HIS WINDOWS PASSWORD, ONCE. That is not avoidable and it is not
-# a smell: the headless daemons must run AS HIM (they read his state, his tokens,
-# his study), and Windows will not let a service log on as a user without the
-# user's own credential. The password goes from his keyboard into the Service
-# Control Manager. It is never written to a file, never echoed, and no Claude
-# session ever sees it — that is a standing law, not a courtesy.
+# IT ASKS FOR ONE PASSWORD, ONCE — AND IT IS **NOT HIS**. It is the password of the
+# dedicated local service account (.\arsenal-svc), which he creates in the same
+# console visit. Windows will not let a service log on without a credential, and it
+# cannot use his: his own account is a MICROSOFT account signed into with a PIN, and on
+# 29 Aug 2026 all five services proved it by failing to start with SCM error 1326
+# (ERROR_LOGON_FAILURE) against a six-year-old MSA password nobody has. The earlier
+# version of this comment said the daemons "must run AS HIM" — that was true as a wish
+# and false as a mechanism, and it cost one console visit before it was measured.
+#
+# LOSING THIS PASSWORD IS HARMLESS, FOREVER. It is a fresh account that owns nothing:
+# no DPAPI secrets, no browser profile, no files of his. An administrator resets it in
+# one step. Nothing of his is ever behind it.
+#
+# The password goes from his keyboard into the Service Control Manager. It is never
+# written to a file, never echoed, and no Claude session ever sees it — a standing law,
+# not a courtesy.
 #
 # ⛔ NOTHING IS STARTED. Every service is installed with start=demand and every
 # task is registered disabled. S12 turns things on, stage by stage, on his word.
@@ -47,11 +57,11 @@ Write-Host "  using WinSW: $winsw"
 Write-Host ""
 Write-Host "  Arsenal AI FC - OWNERSHIP INSTALL (S9)"
 Write-Host "  5 headless daemon(s) as services, 2 desktop surface(s) as logon tasks."
-Write-Host "  Windows will ask for your password once, for the services only."
+Write-Host "  Windows will ask ONCE for the SERVICE ACCOUNT's password (.\arsenal-svc) - NOT yours."
 Write-Host ""
 
-$cred = Get-Credential -UserName "$env:USERDOMAIN\$env:USERNAME" `
-        -Message "Arsenal AI FC: the account the daemons run as. This goes straight to Windows - it is not stored anywhere."
+$cred = Get-Credential -UserName ".\arsenal-svc" `
+        -Message "Arsenal AI FC: the DEDICATED SERVICE ACCOUNT's password - not your own login. It goes straight to Windows and is stored nowhere. Losing it is harmless: an admin resets it in one step."
 
 # ⚠ THE PASSWORD IS PULLED OUT INTO A VARIABLE ON PURPOSE, and this is a real bug fix,
 # not a style choice. Written first as `--password $cred.GetNetworkCredential().Password`

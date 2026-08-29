@@ -26,14 +26,20 @@
 //   daemon_watchdog.mjs's DAEMONS table, and `selftest` REFUSES a row that
 //   declares nothing. Add a seventh daemon tomorrow and it is owned or it is red.
 //
-// ⛔ THIS FILE MAY NEVER HOLD A CREDENTIAL. The headless five must run as HIS
-//   account (they read his state, his tokens, his study). WinSW takes a username
-//   and password in its XML — and a password in a definition file in a git repo
-//   is exactly the class his 14-Aug privacy ruling exists to stop. So the XML
-//   this emits carries the USERNAME ONLY, `install.ps1` prompts HIM at HIS console
-//   with the OS's own credential dialog, and the secret goes from his keyboard to
-//   the SCM. A session never sees it, and neither does the repo. `selftest` proves
-//   no emitted file can contain a password element.
+// ⛔ THIS FILE MAY NEVER HOLD A CREDENTIAL. WinSW takes a username and password in
+//   its XML — and a password in a definition file in a git repo is exactly the class
+//   his 14-Aug privacy ruling exists to stop. So the XML this emits carries the
+//   USERNAME ONLY, `install.ps1` prompts at HIS console with the OS's own credential
+//   dialog, and the secret goes from his keyboard to the SCM. A session never sees it,
+//   and neither does the repo. `selftest` proves no emitted file can contain a
+//   password element.
+//
+// ⚠ CORRECTED 29 Aug 2026 — this block used to read "the headless five must run as HIS
+//   account". That was a WISH stated as a MECHANISM, and the machine refused it: his
+//   account is a Microsoft account signed into with a PIN, so the SCM has no password
+//   to log on with and all five failed 1326 on the first start ever attempted. They now
+//   run as a dedicated local account (see SERVICE_ACCOUNT) and reach his study through
+//   granted paths and the <env> block, not through his identity.
 //
 // MODES: emit · status · selftest · help  (an unknown mode REFUSES — the S9 law)
 // SOLE WRITER of setup/services/* — nothing else generates those files.
@@ -43,11 +49,35 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
+import { homedir } from "node:os";
 import { DAEMONS } from "./daemon_watchdog.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = join(__dirname, "..");
 const OUT = join(REPO, "setup", "services");
+
+// ---- THE SERVICE IDENTITY (29 Aug 2026 — HIS WORD "1 kardo", option 1) -------
+// WHY THIS EXISTS AT ALL, measured not guessed: on 29 Aug all five services failed to
+// start with SCM error 1326 (ERROR_LOGON_FAILURE) — "unable to log on as .\nikhi with
+// the currently configured password". `Get-LocalUser nikhi` reads
+// PrincipalSource=MicrosoftAccount, PasswordLastSet=31-05-2020, and he signs in with a
+// PIN. A service cannot log on with a PIN, and the six-year-old MSA password is not
+// recoverable by anyone here. So the HEADLESS five move to a DEDICATED LOCAL account.
+//
+// ONE CONSTANT, THREE CONSUMERS — his standing law (a class is fixed at one code path,
+// never at the three sites that show it): the XML's <username>, install.ps1's credential
+// prompt, and the log-on-as-a-service grant that install.ps1 performs from that same
+// credential. Change it here and all three move together.
+//
+// ⛔ THE DESKTOP TWO ARE NOT AFFECTED AND MUST NEVER BE. Dugout and Turnstile read his
+// clipboard and paint his screen — they need HIS interactive session, so their logon
+// tasks keep $env:USERNAME. `emit` derives the two sets from the DAEMONS table's
+// `surface` column, so this constant can only ever reach the headless set.
+export const SERVICE_ACCOUNT = ".\\arsenal-svc";
+
+// HIS profile, DERIVED — the services run as someone else but `claude -p` must ride HIS
+// login (see the <env> block's own comment for why this is not optional).
+const HIS_HOME = homedir();
 
 // ---- THE OWNERSHIP TABLE ----------------------------------------------------
 // DAEMONS is the source of truth for the residents. The DUGOUT is not in it —
@@ -86,7 +116,7 @@ const xmlEscape = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").
 // `username` is a NAME, never a secret. WinSW resolves ".\<user>" against the
 // local machine; the password is supplied interactively by install.ps1 and lands
 // in the Service Control Manager, never here. See the header's ⛔ block.
-export function winswXml(row, { username = ".\\%USERNAME%" } = {}) {
+export function winswXml(row, { username = SERVICE_ACCOUNT } = {}) {
   const id = idOf(row);
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!--
@@ -105,6 +135,30 @@ export function winswXml(row, { username = ".\\%USERNAME%" } = {}) {
   <executable>node</executable>
   <arguments>${xmlEscape(row.args.join(" "))}</arguments>
   <workingdirectory>${xmlEscape(REPO)}</workingdirectory>
+
+  <!-- THE SERVICE RUNS AS SOMEBODY ELSE, BUT "claude -p" MUST RIDE HIS LOGIN.
+       MEASURED 29 Aug 2026: the Max OAuth credential is a PLAIN JSON FILE at
+       <his profile>\\.claude\\.credentials.json (509 bytes, rewritten at his 09:37
+       /login) — "cmdkey /list" shows NO Claude entry, so it is not DPAPI-wrapped and
+       not bound to his user. That is the only reason a different account can use it.
+       The CLI locates it through CLAUDE_CONFIG_DIR, and falls back to HOME/USERPROFILE.
+       Point all three at HIS profile or every LLM lane authenticates as nobody and the
+       whole brain group is dark for a reason no log would explain.
+       ⚠ MODIFY, not read: a token refresh REWRITES that file. Read-only here buys a
+       working organism until the access token expires and then a silent death.
+       ⚠ SAY IT PLAINLY: this grants the service account the power to act as him on
+       Claude. That is inherent to running his LLM lanes headlessly, not a slip. -->
+  <env name="CLAUDE_CONFIG_DIR" value="${xmlEscape(join(HIS_HOME, ".claude"))}"/>
+  <env name="HOME" value="${xmlEscape(HIS_HOME)}"/>
+  <env name="USERPROFILE" value="${xmlEscape(HIS_HOME)}"/>
+
+  <!-- AND THE BINARY MUST BE FINDABLE. Every LLM organ calls bare "claude" through
+       execFileSync (talk.mjs:145, brain.mjs:2351), and on this box the CLI is a
+       PER-USER install at ${xmlEscape(join(HIS_HOME, ".local", "bin"))} that appears in
+       NEITHER the machine PATH nor the user PATH (measured 29 Aug 2026). Without this
+       line the service starts fine, runs fine, and every model call dies with a
+       spawn-ENOENT that reads like a refusal rather than a missing binary. -->
+  <env name="PATH" value="${xmlEscape(join(HIS_HOME, ".local", "bin"))};%PATH%"/>
 
   <!-- RestartOnFailure, the honest version: the OS restarts it, forever, with a
        backoff. This is what replaces the watchdog's arm. -->
@@ -185,13 +239,206 @@ Write-Host "  ~ $id registered as a LOGON TASK (disabled — S12 enables it on h
 `;
 }
 
+// ---- grant-paths.ps1 --------------------------------------------------------
+// Generated from GRANT_SET so the ACLs and the probe can never drift apart: one list,
+// two consumers. Run elevated, AFTER the account exists.
+function grantPathsPs1() {
+  const lines = GRANT_SET.map((g) => {
+    const lvl = g.level === "M" ? "(OI)(CI)M" : "(OI)(CI)RX";
+    return `Grant "${g.path()}" "${lvl}" "${g.why.replace(/"/g, "'")}"`;
+  }).join("\n");
+  return `# ============================================================================
+# grant-paths.ps1 — GENERATED by scripts/services.mjs. Do not hand-edit.
+#
+# Gives ${SERVICE_ACCOUNT} the LEAST privilege that lets the headless five actually
+# run. The path list is derived (see GRANT_SET's comment in services.mjs for the
+# atlas query that produced it). Run ELEVATED, after the account exists.
+#
+# It grants and never revokes: re-running is safe and idempotent.
+# ============================================================================
+$ErrorActionPreference = "Stop"
+$account = "${SERVICE_ACCOUNT}"
+
+# FAIL LOUDLY IF THE ACCOUNT IS NOT THERE. icacls will happily "succeed" against a
+# name it cannot resolve in some shells, and a silent no-op here surfaces days later
+# as an access-denied nobody can trace.
+try { $null = (New-Object System.Security.Principal.NTAccount($account.TrimStart('.','\\'))).Translate([System.Security.Principal.SecurityIdentifier]) }
+catch { Write-Host "  X cannot resolve $account - create the account first. Nothing changed."; exit 1 }
+
+$bad = 0
+function Grant([string]$path, [string]$level, [string]$why) {
+  if (-not (Test-Path $path)) { Write-Host "  X missing path: $path"; $script:bad++; return }
+  # THE CLAIM IS READ OFF THE OUTCOME. icacls prints "Successfully processed" even for
+  # partial failures, so the exit code is what is believed, not the words.
+  $out = & icacls $path /grant "\${account}:\${level}" /T /C 2>&1
+  if ($LASTEXITCODE -ne 0) { Write-Host "  X FAILED $level on $path"; $out | Select-Object -Last 3 | ForEach-Object { Write-Host "      $_" }; $script:bad++ }
+  else { Write-Host "  ~ $level  $path" ; Write-Host "        ($why)" }
+}
+
+Write-Host ""
+Write-Host "  Granting least-privilege paths to $account"
+Write-Host ""
+${lines}
+Write-Host ""
+if ($bad -gt 0) { Write-Host "  INCOMPLETE - $bad path(s) failed. Fix and re-run; it is safe to repeat."; exit 1 }
+Write-Host "  DONE - paths granted. Nothing is running. Next: install.ps1, then probe.ps1."
+`;
+}
+
+// ---- probe.ps1 — THE MANDATORY PROOF ----------------------------------------
+// Ruled 29 Aug 2026: the brain daemon is not trusted until ONE headless round-trip and
+// a read/write probe on every granted path have PASSED **as the service account**.
+//
+// ⚠ IT IS RED-FIRST WHERE IT CAN BE. A probe that only ever proves greens is worthless:
+// if the harness itself were broken, every check would "pass". So two checks are
+// designed to FAIL and are only green when they DO fail — a write into an ungranted
+// path, and a write into the read-only repo-root grant. If either of those succeeds,
+// the grants are wider than they were ruled to be, and that is a finding, not a pass.
+function probePs1() {
+  const probes = GRANT_SET.map((g) => {
+    const p = g.path();
+    return g.level === "M"
+      ? `ProbeWrite "${p}" $true  "granted MODIFY - a write here MUST succeed"`
+      : `ProbeWrite "${p}" $false "granted READ-ONLY - a write here MUST be refused"`;
+  }).join("\n");
+  const reads = GRANT_SET.map((g) => `ProbeRead "${g.path()}"`).join("\n");
+  return `# ============================================================================
+# probe.ps1 — GENERATED by scripts/services.mjs. Do not hand-edit.
+#
+# THE PROOF THAT MUST PASS BEFORE THE BRAIN DAEMON IS TRUSTED (ruled 29 Aug 2026).
+# Run it ELEVATED. It asks for ${SERVICE_ACCOUNT}'s password once, relaunches itself
+# AS that account, and runs every check from inside that identity - because a check
+# run as him proves nothing about what the service can do.
+#
+#     powershell -ExecutionPolicy Bypass -File setup\\services\\probe.ps1
+# ============================================================================
+param([switch]$AsAccount, [string]$Out)
+$ErrorActionPreference = "Continue"
+$account = "${SERVICE_ACCOUNT}"
+$repo    = "${REPO}"
+$cfgdir  = "${join(HIS_HOME, ".claude")}"
+
+if (-not $AsAccount) {
+  $tmp = Join-Path $env:TEMP ("arsenal_probe_" + [guid]::NewGuid().ToString("N") + ".txt")
+  Write-Host ""
+  Write-Host "  Arsenal AI FC - SERVICE ACCOUNT PROOF"
+  Write-Host "  Enter \${account}'s password (the one you set when you created it)."
+  Write-Host ""
+  $c = Get-Credential -UserName $account -Message "Arsenal AI FC: run the proof AS the service account."
+  $self = $MyInvocation.MyCommand.Path
+  Start-Process -FilePath "powershell.exe" -Credential $c -WindowStyle Hidden -Wait \`
+    -ArgumentList @("-ExecutionPolicy","Bypass","-File",$self,"-AsAccount","-Out",$tmp)
+  if (Test-Path $tmp) { Get-Content $tmp | ForEach-Object { Write-Host $_ }; Remove-Item $tmp -Force -EA SilentlyContinue }
+  else { Write-Host "  X the child produced no output - the account could not start a process. Nothing is proven." ; exit 1 }
+  return
+}
+
+$L = New-Object System.Collections.ArrayList
+function Say([string]$s) { [void]$L.Add($s) }
+$fail = 0
+function Ok([string]$what)   { Say ("  PASS  " + $what) }
+function No([string]$what)   { Say ("  FAIL  " + $what); $script:fail++ }
+
+# ---- 1. IDENTITY. Everything below is meaningless if this is not the service account.
+$me = (whoami)
+if ($me -match [regex]::Escape($account.TrimStart('.','\\'))) { Ok "running as $me" }
+else { No "expected \${account}, got $me - NOTHING BELOW IS TRUSTWORTHY"; Say "----"; Set-Content -Path $Out -Value $L -Encoding utf8; exit 1 }
+
+function ProbeRead([string]$path) {
+  try { $null = Get-ChildItem -Path $path -ErrorAction Stop | Select-Object -First 1; Ok "read  $path" }
+  catch { No "read  $path - $($_.Exception.Message)" }
+}
+function ProbeWrite([string]$path, [bool]$shouldSucceed, [string]$why) {
+  $f = Join-Path $path (".arsenal_probe_" + [guid]::NewGuid().ToString("N"))
+  $wrote = $false
+  try { Set-Content -Path $f -Value "probe" -ErrorAction Stop; $wrote = $true } catch { $wrote = $false }
+  if ($wrote) { Remove-Item $f -Force -EA SilentlyContinue }
+  if ($wrote -eq $shouldSucceed) { Ok "write $path -> $(if($wrote){'allowed'}else{'refused'})  ($why)" }
+  else { No "write $path -> $(if($wrote){'ALLOWED'}else{'REFUSED'}) but expected the opposite  ($why)" }
+}
+
+# ---- 2. READS on every granted path
+${reads}
+
+# ---- 3. WRITES, each asserted against what it was GRANTED (two of these are RED-first)
+${probes}
+
+# ---- 4. THE UNGRANTED CONTROL. If this passes, the probe cannot tell green from red.
+ProbeWrite "$env:PUBLIC" $false "never granted - a write here MUST be refused, or every green above is vacuous"
+
+# ---- 5. THE CREDENTIAL IS REACHABLE AND IS A TOKEN, not merely a file that exists
+$credFile = Join-Path $cfgdir ".credentials.json"
+try {
+  $j = Get-Content $credFile -Raw -ErrorAction Stop | ConvertFrom-Json
+  if ($j.claudeAiOauth -and $j.claudeAiOauth.accessToken) { Ok "oauth credential readable and shaped (no value printed)" }
+  else { No "credential file read but carries no claudeAiOauth.accessToken" }
+} catch { No "cannot read $credFile - $($_.Exception.Message)" }
+
+# ---- 6. THE ROUND TRIP. The whole point: can this account actually spend on HIS Max plan?
+$env:CLAUDE_CONFIG_DIR = $cfgdir
+$env:HOME = "${HIS_HOME}"
+$env:USERPROFILE = "${HIS_HOME}"
+try {
+  $r = & claude -p "Reply with exactly one word: pong" 2>&1 | Out-String
+  if ($r -match "pong") { Ok "headless round-trip: claude -p answered as him" }
+  else { No "claude -p did not answer 'pong'. First 200 chars: " + ($r.Trim() -replace "\\s+"," ").Substring(0,[Math]::Min(200,$r.Trim().Length)) }
+} catch { No "claude -p could not run - $($_.Exception.Message)" }
+
+Say "----"
+if ($fail -eq 0) { Say "  PROOF GREEN - $($L.Count - 1) check(s), 0 failed. The brain daemon may be trusted." }
+else { Say "  PROOF RED - $fail check(s) failed. DO NOT start the brain daemon." }
+Set-Content -Path $Out -Value $L -Encoding utf8
+`;
+}
+
+// ---- THE GRANT SET — least privilege, ONE list, TWO consumers ---------------
+// DERIVED, not typed from memory. `flow_atlas.json` was queried over the five headless
+// rows on 29 Aug 2026: every witnessed data edge touching brain/context/cortex/sitting/
+// thalamus resolves inside the repo — 15 writes + 33 reads under dressing-room/state,
+// 1 write under dressing-room/state/brain_out, 12 reads at the repo root, and ZERO paths
+// outside the repo. Two runtime paths the atlas cannot see are added with their own
+// reason, because the atlas maps DATA edges and a process needs more than data:
+//   · scripts/  — the WinSW <logpath> for all five, plus the .log each organ rolls
+//   · ~/.claude — the CLI's config dir (see the XML <env> block for the whole argument)
+// ⚠ THE PRIVACY COST, SAID OUT LOUD rather than buried: `modify` on ~/.claude gives this
+// account his session transcripts under projects/ and his history.jsonl, not merely the
+// token. That is the price of running HIS Claude login headlessly and it was ruled with
+// eyes open (29 Aug, option 1). It is NOT a slip, and a future reader may narrow it —
+// but only with a measurement showing the CLI survives the narrowing.
+// ⚠ read_only is REAL: the repo root grant is ReadAndExecute so a daemon cannot rewrite
+// its own source or the laws. Writes are confined to the two buses.
+export const GRANT_SET = [
+  { path: () => join(REPO, "dressing-room"), level: "M",  why: "the state bus — 16 witnessed writes by the five (atlas)" },
+  { path: () => join(REPO, "scripts"),       level: "M",  why: "the WinSW logpath and each organ's rolling .log" },
+  { path: () => REPO,                        level: "RX", why: "source + node_modules + the root docs the five read (12 atlas reads); READ-ONLY on purpose" },
+  { path: () => join(HIS_HOME, ".claude"),   level: "M",  why: "the CLI config dir — the OAuth file is rewritten on refresh, so read-only dies at token expiry" },
+  // ⚠ FOUND BY MEASURING, 29 Aug 2026, and it would have been a silent organism-wide
+  // death: every LLM organ shells out as bare `execFileSync("claude", …)` (talk.mjs:145,
+  // brain.mjs:2351), and `Get-Command claude` resolves to ${join(HIS_HOME, ".local", "bin", "claude.exe")}
+  // — a PER-USER install that is in NEITHER the machine PATH nor the user PATH. A
+  // different account would find no `claude` at all, every LLM lane would fail, and the
+  // failure would read as "the model refused", never as "the binary was not on PATH".
+  // So the directory is granted here AND prepended to the service PATH in the XML.
+  { path: () => join(HIS_HOME, ".local", "bin"), level: "RX", why: "the claude CLI binary itself — per-user install, absent from every machine-wide PATH" },
+];
+
+// The fixed .ps1 helpers this file generates, held as DATA so `emit` and the BOM assert
+// count ONE set. The assert used to carry a literal `+2`; adding two helpers turned a
+// green gate red for exactly the right reason, and the fix is to delete the literal, not
+// to bump it — the S3 jugad rule again: a quantifier is derived or it rots.
+export const PS1_HELPERS = [
+  { name: "install.ps1", body: () => installerPs1() },
+  { name: "grant-logon-right.ps1", body: () => grantRightPs1() },
+  { name: "grant-paths.ps1", body: () => grantPathsPs1() },
+  { name: "probe.ps1", body: () => probePs1() },
+];
+
 // ---- emit -------------------------------------------------------------------
 export function emit({ write = true } = {}) {
   const raw = [];
   for (const row of headless()) raw.push({ path: join(OUT, `${idOf(row)}.xml`), body: winswXml(row) });
   for (const row of desktop()) raw.push({ path: join(OUT, `${idOf(row)}.logon.ps1`), body: logonTaskPs1(row) });
-  raw.push({ path: join(OUT, "install.ps1"), body: installerPs1() });
-  raw.push({ path: join(OUT, "grant-logon-right.ps1"), body: grantRightPs1() });
+  for (const h of PS1_HELPERS) raw.push({ path: join(OUT, h.name), body: h.body() });
   raw.push({ path: join(OUT, "README.md"), body: readme() });
   // The BOM is applied HERE, in the one place every file passes through, so a new
   // .ps1 added later cannot miss it. See withBom's header for why it is mandatory.
@@ -222,12 +469,22 @@ function installerPs1() {
 # Run it from an ELEVATED PowerShell (services need admin to register):
 #     powershell -ExecutionPolicy Bypass -File setup\\services\\install.ps1
 #
-# IT WILL ASK FOR HIS WINDOWS PASSWORD, ONCE. That is not avoidable and it is not
-# a smell: the headless daemons must run AS HIM (they read his state, his tokens,
-# his study), and Windows will not let a service log on as a user without the
-# user's own credential. The password goes from his keyboard into the Service
-# Control Manager. It is never written to a file, never echoed, and no Claude
-# session ever sees it — that is a standing law, not a courtesy.
+# IT ASKS FOR ONE PASSWORD, ONCE — AND IT IS **NOT HIS**. It is the password of the
+# dedicated local service account (${SERVICE_ACCOUNT}), which he creates in the same
+# console visit. Windows will not let a service log on without a credential, and it
+# cannot use his: his own account is a MICROSOFT account signed into with a PIN, and on
+# 29 Aug 2026 all five services proved it by failing to start with SCM error 1326
+# (ERROR_LOGON_FAILURE) against a six-year-old MSA password nobody has. The earlier
+# version of this comment said the daemons "must run AS HIM" — that was true as a wish
+# and false as a mechanism, and it cost one console visit before it was measured.
+#
+# LOSING THIS PASSWORD IS HARMLESS, FOREVER. It is a fresh account that owns nothing:
+# no DPAPI secrets, no browser profile, no files of his. An administrator resets it in
+# one step. Nothing of his is ever behind it.
+#
+# The password goes from his keyboard into the Service Control Manager. It is never
+# written to a file, never echoed, and no Claude session ever sees it — a standing law,
+# not a courtesy.
 #
 # ⛔ NOTHING IS STARTED. Every service is installed with start=demand and every
 # task is registered disabled. S12 turns things on, stage by stage, on his word.
@@ -264,11 +521,11 @@ Write-Host "  using WinSW: $winsw"
 Write-Host ""
 Write-Host "  Arsenal AI FC - OWNERSHIP INSTALL (S9)"
 Write-Host "  ${h.length} headless daemon(s) as services, ${d.length} desktop surface(s) as logon tasks."
-Write-Host "  Windows will ask for your password once, for the services only."
+Write-Host "  Windows will ask ONCE for the SERVICE ACCOUNT's password (${SERVICE_ACCOUNT}) - NOT yours."
 Write-Host ""
 
-$cred = Get-Credential -UserName "$env:USERDOMAIN\\$env:USERNAME" \`
-        -Message "Arsenal AI FC: the account the daemons run as. This goes straight to Windows - it is not stored anywhere."
+$cred = Get-Credential -UserName "${SERVICE_ACCOUNT}" \`
+        -Message "Arsenal AI FC: the DEDICATED SERVICE ACCOUNT's password - not your own login. It goes straight to Windows and is stored nowhere. Losing it is harmless: an admin resets it in one step."
 
 # ⚠ THE PASSWORD IS PULLED OUT INTO A VARIABLE ON PURPOSE, and this is a real bug fix,
 # not a style choice. Written first as \`--password $cred.GetNetworkCredential().Password\`
@@ -713,7 +970,7 @@ async function selftest() {
   // a magic number in a test is the same disease as a magic number in an organ.
   const ps1 = emitted.filter((f) => f.path.endsWith(".ps1"));
   assert("EVERY GENERATED .ps1 CARRIES A UTF-8 BOM — without it Windows PowerShell 5.1 reads it as ANSI and a single em-dash breaks the parse",
-    ps1.length === desktop().length + 2
+    ps1.length === desktop().length + PS1_HELPERS.length
     && ps1.every((f) => f.body.charCodeAt(0) === 0xFEFF)
     && emitted.filter((f) => !f.path.endsWith(".ps1")).every((f) => f.body.charCodeAt(0) !== 0xFEFF));
 

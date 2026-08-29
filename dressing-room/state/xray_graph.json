@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-29T06:28:33.690Z",
+ "built_at": "2026-08-29T09:42:00.747Z",
  "organs_parsed": 111,
  "organs_expected": 111,
  "parse_errors": [],
@@ -14758,14 +14758,14 @@
    "unresolved": 8
   },
   "services.mjs": {
-   "loc": 789,
+   "loc": 1046,
    "reads": [
     {
      "path": "setup/START_DAEMONS.vbs",
      "lines": [
-      761,
-      761,
-      761
+      1018,
+      1018,
+      1018
      ],
      "fixture": true
     }
@@ -14789,6 +14789,9 @@
     "unknown"
    ],
    "exports": [
+    "GRANT_SET",
+    "PS1_HELPERS",
+    "SERVICE_ACCOUNT",
     "desktop",
     "emit",
     "headless",
@@ -24895,6 +24898,7 @@
   "dressing-room/state/brain_out/dugout_digest/2026-08-17.md",
   "dressing-room/state/brain_out/dugout_digest/2026-08-18.md",
   "dressing-room/state/brain_out/dugout_digest/2026-08-19.md",
+  "dressing-room/state/brain_out/dugout_digest/2026-08-29.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-18.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-29.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-30.md",
@@ -24971,6 +24975,7 @@
   "dressing-room/state/brain_out/midday/2026-08-15.md",
   "dressing-room/state/brain_out/midday/2026-08-18.md",
   "dressing-room/state/brain_out/midday/2026-08-19.md",
+  "dressing-room/state/brain_out/midday/2026-08-29.md",
   "dressing-room/state/brain_out/model_mine/2026-08-09.md",
   "dressing-room/state/brain_out/model_mine/2026-08-10.json",
   "dressing-room/state/brain_out/model_mine/2026-08-10.md",
@@ -29711,6 +29716,12 @@
     ]
    },
    {
+    "script": "registry.mjs",
+    "verbs": [
+     "book"
+    ]
+   },
+   {
     "script": "turn_hook.mjs",
     "verbs": [
      "prompt",
@@ -29729,12 +29740,6 @@
    {
     "script": "unleash_verdict.mjs",
     "verbs": []
-   },
-   {
-    "script": "registry.mjs",
-    "verbs": [
-     "book"
-    ]
    }
   ],
   "md_files": 228
