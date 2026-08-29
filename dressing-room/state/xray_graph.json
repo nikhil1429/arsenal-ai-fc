@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-29T00:32:41.945Z",
+ "built_at": "2026-08-29T04:10:05.832Z",
  "organs_parsed": 111,
  "organs_expected": 111,
  "parse_errors": [],
@@ -3873,35 +3873,35 @@
    "unresolved": 13
   },
   "daemon_watchdog.mjs": {
-   "loc": 1707,
+   "loc": 1749,
    "reads": [
     {
      "path": "setup/START_DAEMONS.vbs",
      "lines": [
-      1071,
-      1071,
-      1071
+      1098,
+      1098,
+      1098
      ],
      "fixture": true
     },
     {
      "path": "scripts/daemon_watchdog.mjs",
      "lines": [
-      1327,
-      1651,
-      1327,
-      1651,
-      1327,
-      1651
+      1354,
+      1693,
+      1354,
+      1693,
+      1354,
+      1693
      ],
      "fixture": true
     },
     {
      "path": "scripts/cortex.mjs",
      "lines": [
-      1566,
-      1566,
-      1566
+      1608,
+      1608,
+      1608
      ],
      "fixture": true
     },
@@ -3979,8 +3979,10 @@
     "resyncLine",
     "resyncStuck",
     "resyncVerdicts",
+    "serviceUnit",
     "staleCardArgs",
     "stuckCardArgs",
+    "stuckRemedy",
     "upWord",
     "voidedByRestart"
    ],
@@ -16983,7 +16985,7 @@
    "unresolved": 0
   },
   "thalamus.mjs": {
-   "loc": 2475,
+   "loc": 2488,
    "reads": [
     {
      "path": "scripts/thalamus.mjs",
@@ -16997,24 +16999,24 @@
      "lines": [
       260,
       261,
-      2286,
-      2286,
+      2299,
+      2299,
       260,
       261,
-      2286,
-      2286,
+      2299,
+      2299,
       260,
       261,
-      2286,
-      2286,
+      2299,
+      2299,
       260,
       261,
-      2286,
-      2286,
+      2299,
+      2299,
       260,
       261,
-      2286,
-      2286
+      2299,
+      2299
      ],
      "fixture": false
     },
@@ -17051,19 +17053,19 @@
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      2316,
+      2329,
       138,
       138,
-      2316,
+      2329,
       138,
       138,
-      2316,
+      2329,
       138,
       138,
-      2316,
+      2329,
       138,
       138,
-      2316
+      2329
      ],
      "fixture": false
     },
@@ -24050,7 +24052,7 @@
    ],
    "fixture_readers": [],
    "fixture_writers": [],
-   "on_disk": false,
+   "on_disk": true,
    "is_dir": false
   },
   {
@@ -25282,7 +25284,7 @@
   "dressing-room/state/fsrs_store.json",
   "dressing-room/state/fuelboard_config.json",
   "dressing-room/state/gaffer_blocks.json",
-  "dressing-room/state/gaffer_blocks.json.tmp6756",
+  "dressing-room/state/gaffer_blocks.json.tmp6756.torn-2026-08-29T013933767Z",
   "dressing-room/state/gaffer_brain.jsonl",
   "dressing-room/state/gaffer_grade_queue.jsonl",
   "dressing-room/state/gaffer_standing.json",
@@ -29156,7 +29158,8 @@
      "brief",
      "report",
      "run",
-     "selftest"
+     "selftest",
+     "tmpsweep"
     ]
    },
    {
@@ -29666,6 +29669,6 @@
     ]
    }
   ],
-  "md_files": 227
+  "md_files": 228
  }
 }

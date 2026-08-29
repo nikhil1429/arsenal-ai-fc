@@ -3041,7 +3041,68 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`S12` · THE STAGED REBOOT. MODEL: Opus 5 · effort max.
+  ▶ NEXT SESSION ............... **`S12` · THE REBOOT'S LAST STAGE — THE LLM GROUP. MODEL:
+                                   Opus 5 · effort max. CEILING: 40 (the rung's first sitting,
+                                   29 Aug, spent stages 0–4 of it).
+                                   ⛔ **IT CANNOT START UNTIL HE HAS DONE ONE THING:** open a
+                                   terminal, run `claude`, then `/login`. The OAuth session has
+                                   been expired since ~23 Aug (measured: every LLM job since
+                                   2026-08-23T19:28Z failed "OAuth session expired and could not
+                                   be refreshed"; newest 28 Aug 22:57). Nothing in the LLM group
+                                   can run before it returns, and it is HIS hands, not a card.
+                                   ⛑ WHAT THE FIRST SITTING HANDS IT, all verified by running:
+                                   (1) STAGES 0–4 ARE LANDED — the O-6 orphan quarantined (and
+                                   its whole CLASS gitignored: shape C `<target>.tmp<pid>` was
+                                   never covered, which is why it hid for 9 days) · capture ·
+                                   the eyes · memory+archive · his surfaces. **26 of 57 tasks
+                                   Ready, live-read; ZERO model tokens across all four stages.**
+                                   (2) ⛔ **AN LLM LANE WAS AWAKE INSIDE THE SWITCH-OFF** —
+                                   `thalamus_adjudicator`, 89 fires / 20 ok / **143,124 tokens
+                                   SINCE** his 20 Aug "capture only, ZERO TOKENS" order, silent
+                                   only because the OAuth token broke. RULED and CLOSED
+                                   (`queue\RULING__2026-08-29_s12-adjudicator.md`):
+                                   `adjudicator.enabled=false` written, thalamus restarted on his
+                                   stage word, verified OFF live with 0 rows since boot. **The
+                                   login restore is therefore SAFE to do now — but it was not
+                                   safe this morning, and that is the whole reason this rung
+                                   split into two sittings.**
+                                   (3) THE ADJUDICATOR HAS ITS OWN NAMED STAGE now — it wakes
+                                   only through that stage, and only after the carded micro-rung
+                                   "the adjudicator's gate-wiring" lands (ruler-priced, post-S12:
+                                   route `adjudicateLive` through `gate.mjs`, and reconcile the
+                                   knob — config declares `gemini-flash-lite-latest`, all 138
+                                   ledger rows spent `haiku`; the status line already declares
+                                   that refusal out loud, so it is open, not hidden).
+                                   (4) THE REST OF THE LLM GROUP, on his word, one stage at a
+                                   time: BrainTick · BrainDaemon · DMN · ConceptGraph ·
+                                   NightShift · BootRoom · Morning-Conductor · Evening-Conductor.
+                                   **RE-PROBE `models.mjs` before any of it** — the keys reading
+                                   is guarded at 6h and a stale "keys ok" is the 19 Aug 429 lesson.
+                                   (5) ONE ELEVATED CONSOLE, his hands, the c86 shape: the five
+                                   WinSW units are installed but `Stopped`/`Manual` and a session
+                                   shell is not elevated. The two logon lanes (Dugout · Turnstile)
+                                   need his desktop and can never be services — and bare
+                                   `dugout.mjs` is itself an un-gated wake path (it demands
+                                   `GEMINI_API_KEY` and spawns thalamus+cortex+turnstile detached).
+                                   ⛑ THREE THINGS IT MUST NOT RE-DERIVE:
+                                   (1) THE PRE-FLIGHT IS SIGNED — cite
+                                   `queue\RULING__2026-08-29_s11-signoff+preflight.md`, never re-run it.
+                                   (2) F-5 is an ACCEPTED COST — the atlas stale-proof keys on
+                                   mtime, so any checkout reds `flow_atlas check` on byte-identical
+                                   files. Clear with `xray.mjs build` + `flow_atlas.mjs build`.
+                                   NEVER weaken the guard.
+                                   (3) F-6 is INSTRUMENTED, NOT CLOSED — the suite is spoken as
+                                   REPRODUCIBLE, NOT STABLE, and `scripts/hermeticity_forensics.log`
+                                   is read BEFORE anyone theorises (it did not exist on 29 Aug).
+                                   ⛑ carried for HIM, unchanged: c86 is DONE (Node v24.19.0 live)
+                                   but its CARD still sits in the queue; his anchor clears it,
+                                   nothing else may. FOUR daemon cards carry the OLD pre-S9
+                                   sentence — `captains_call` has no `retire` verb, only `answer`,
+                                   and answering for him would be a lie about his word, so they
+                                   stand; every FUTURE filing carries the corrected text. The
+                                   interim fresh-questions law STILL BINDS the four samjhao'd topics.**
+
+  ~~▶ NEXT SESSION ............... **`S12` · THE STAGED REBOOT. MODEL: Opus 5 · effort max.
                                    CEILING: 40. ⛔ **THIS RUNG IS THE ONE WITH HIS GATE ON IT: his
                                    word flips EACH stage, one at a time, and no stage flips without
                                    it.** ⭐ AND ITS PRE-FLIGHT COMES FIRST (quality-strategy ruling,
@@ -3077,7 +3138,17 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⛑ carried for HIM, unchanged: c86 is DONE (Node v24.19.0 live)
                                    but its CARD still sits in the queue; his anchor clears it,
                                    nothing else may. The interim fresh-questions law STILL BINDS
-                                   the four already-samjhao'd topics.**
+                                   the four already-samjhao'd topics.**~~
+                                   ◐ **SUPERSEDED 29 Aug — its stages 0–4 ARE DONE** (first act +
+                                   capture + the eyes + memory/archive + his surfaces, all on his
+                                   word, zero tokens). Kept struck, not deleted (L9). Two of its
+                                   own carried lines were found FALSE by running: the tmpsweep's
+                                   orphan needed its whole CLASS gitignored as well, and "the LIVE
+                                   thalamus was NOT restarted" was already untrue at open (the
+                                   drain had been live since 28 Aug 20:24). Its **(2) F-3 still
+                                   stands and is still S12's** — per-consumer read-stamps go live
+                                   when the consuming organs wake, and the LLM stage is what wakes
+                                   them. Its **(3) RE-PROBE `models.mjs`** stands unchanged.
 
   ~~▶ NEXT SESSION ............... **`S11` · BUILD · STALENESS / KEYS / CRASH. MODEL: Opus 5 ·
                                    effort max. CEILING: 40. Its §10-C row is the scope, and it now
@@ -8328,6 +8399,39 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       ⭐ REBOOT PRE-FLIGHT FIRST (quality-strategy ruling, 28 Aug): before S12's FIRST
       stage, a full-ladder acceptance pass — every rung's proofs re-run GREEN in one
       sitting, signed by the architect — or no stage flips.               CEILING: 40
+   ◐ **29 Aug 2026 — STAGES 0–4 DONE ON HIS WORD, THE LLM STAGE IS OPEN AND IT IS ON HIM.**
+      PRE-FLIGHT: run + SIGNED by the architect ~06:19 (`queue\RULING__2026-08-29_
+      s11-signoff+preflight.md`) — CITED, not re-run.
+      FIRST ACT ☑ O-6 quarantined (target healthy, pid dead), kept as `.torn-<stamp>` with
+      its `mv` revert path journaled; **and the CLASS closed** — `.gitignore` never covered
+      orphan shape C (`<target>.tmp<pid>`), which is why that file sat untracked for 9 days.
+      STAGES ☑ 1 capture · 2 the eyes · 3 memory+archive · 4 his surfaces — **26 of 57 tasks
+      Ready (live-read), ZERO model tokens across all four.** Model-freedom checked PER VERB;
+      watchman's Tier-2 Opus arm stays refused by his 11 Aug ruling, untouched.
+      ⛔ **THE FIND, and it is §0's headline re-measured: an LLM lane was AWAKE INSIDE THE
+      SWITCH-OFF.** `thalamus_adjudicator` fired 89× / 20 ok / **143,124 tokens SINCE** his
+      20 Aug "capture only, ZERO TOKENS" order. It spent nothing only because the claude CLI's
+      OAuth expired ~23 Aug — the declared state was held up by a broken token, not by code,
+      and stage 5's login restore would have un-darkened it with no stage and no gate between.
+      `adjudicateLive` (thalamus.mjs:1281) gates on `cfg.adjudicator.enabled` alone, never
+      `gate.mjs`, though the lane IS declared at `gate.mjs LANE_CONSUMERS:168`.
+      RULED (`queue\RULING__2026-08-29_s12-adjudicator.md`): **enabled=false written** — not a
+      new choice of his, his existing one made a code path (L4). S1's owners-only rail refused
+      the write and it went through only as `ARSENAL_RAILS_OVERRIDE=S12:state`, declared in the
+      micro-order first; the absence the rail names is a FINDING — `thalamus_config.json` has
+      no owner CLI at all. Thalamus restarted on his stage word: **new pid booted AFTER the
+      write, `adjudicator : OFF` live, 0 rows since, bus + spool writing again.**
+      GATES STRICTER: thalamus selftest GREEN after a FALSE red was killed (an assert pinned
+      the knob's VALUE, not its invariant) · daemon_watchdog **81/0 → 82/0** — running the
+      row's own "Watchdog-reporter live" requirement filed 4 cards saying "watchdog ne start
+      kiya" and pointing at `START_DAEMONS.vbs`, **both false since S9**; card, operator line
+      and `owner` now all read the `surface` column `services.mjs` generates from.
+      ⛔ OPEN ON HIM: **(1) `claude` → `/login`** (expired since ~23 Aug — the live blocker of
+      the last stage) · **(2) his word on the LLM stage** (BrainTick · BrainDaemon · DMN ·
+      ConceptGraph · NightShift · BootRoom · both Conductors, + **the adjudicator's OWN named
+      stage**, after the carded gate-wiring rung) — RE-PROBE `models.mjs` first, never trust
+      the 6h-guarded board · **(3) one elevated console** for the five WinSW units (installed,
+      Stopped, Manual; this session's shell is not elevated) — the c86 shape.
 ```
 
 **The whole ladder's ceiling is 500 CORRECTED lakh across 12 sessions (11 × 40 + S10's 60) —
@@ -19292,3 +19396,184 @@ and there is a real orphan waiting for it. It belongs to S12's first stage, behi
 measured honestly, and a waking organ is what changes it.
 ④ The `schemas/` set is FOUR of many; the ratchet is the invitation to grow it.
 ⑤ c86 is DONE but its CARD still sits in his queue and only his anchor clears it.
+
+---
+
+### PROGRESS 2026-08-29 — RUNG `S12` · THE STAGED REBOOT — **FOUR STAGES FLIPPED ON HIS WORD, ZERO TOKENS, AND AN LLM LANE FOUND AWAKE INSIDE THE SWITCH-OFF** (Opus 5 · effort max · ceiling 40) — ◐ OPEN AT THE LLM STAGE, ON HIM
+
+**THE PRE-FLIGHT WAS NOT RE-RUN.** It was run and SIGNED by the architect at ~06:19 IST —
+`arsenal-audit-artifacts\queue\RULING__2026-08-29_s11-signoff+preflight.md`: suite 121/2 with the
+two reds reconciled, proofs_s10 34/0, registry 45/0, gate 50/0, rails 52/0, daemon_watchdog 81/0,
+services 17/0, flow_atlas OK, xray Q2 0 · Q5 0, capture-spool proven live, exactly ONE task Ready.
+This rung cites it. Re-running a signed acceptance pass would have burned a third of the ceiling
+to learn nothing.
+
+#### FIRST ACT — the orphan, and then the CLASS
+`watchman.mjs tmpsweep --apply` quarantined `gaffer_blocks.json.tmp6756` (S10-R's O-6): the target
+is present and parses, pid 6756 is dead, so the orphan is a dead writer's leftover and not the
+newest truth. Kept as `.torn-2026-08-29T013933767Z` — L9, evidence outlives the sweep — and
+journaled into `watchman_repairs.jsonl` with its exact `mv` revert path. Re-run: no orphan.
+
+**And the class, not the instance (his global-not-patch law).** `.gitignore` covered orphan shapes
+A (`<target>.tmp`) and B (`<target>.<pid>.tmp`) but never shape C (`<target>.tmp<pid>`) — which is
+exactly why that file sat untracked for nine days until O-6 found it. Shape C and the sweep's own
+`.torn-<stamp>` class are now ignored under `dressing-room/state/`, so a dead writer's leftover can
+never commit as if it were his state and a healthy tree never reads as dirty.
+
+#### THE STAGES, each on his own haan, each proven by running
+| stage | what woke | proof |
+|---|---|---|
+| 1 · CAPTURE | CapturePull · Presence · PresenceFit | presence wrote a live row; bus took today's rows including this session's own prompt |
+| 2 · THE EYES | Watchman · Audit · Daemon-Watchdog · TimeAuditor x2 · WakeProbe · Tone · Touchline · Throwin | watchman ran (Tier 2 **not** fired), audit ran to HEALTH 32/100; pulse violations 2 -> 1 |
+| 3 · MEMORY + ARCHIVE | Archivist x5 · Consolidate · HippoIndex · HippoStore · Distiller · Groundsman-Push | archive 53,575 records, checkpoint today; push ran, tripwire clean |
+| 4 · HIS SURFACES | DugoutReminders · ShadowDetect · Wall-Live | all three fired; wall rendered GREEN |
+
+Live at close: **26 of 57 ArsenalFC tasks Ready** (`Get-ScheduledTask -TaskName 'ArsenalFC-*'`;
+never a written count — O-1's law). **Stages 1-4 cost ZERO model tokens end to end.** Model-freedom
+was verified PER VERB, not per file: `dugout.mjs shadow-detect` returns before `loadKeys()` and
+before the daemon boot, `fire-reminders` is the measured 182 ms path, `viz.mjs` has no model call
+site at all — and `watchman.mjs` DOES carry a `claude -p --model claude-opus-5 --effort max` arm
+which is refused by his 11 Aug ruling behind `ARSENAL_TIER2=1`, unset, untouched.
+
+#### THE FIND — AN LLM LANE WAS AWAKE INSIDE THE SWITCH-OFF, AND ONLY A BROKEN TOKEN HID IT
+His 20 Aug order re-enabled exactly ONE organ: thalamus, *"capture only, ZERO TOKENS"*. Measured
+against `brain_ledger.jsonl`: `thalamus_adjudicator` fired **89 times SINCE that order, 20
+succeeded, 143,124 tokens spent** inside the window the order calls zero. It spends nothing today
+only because the `claude` CLI's OAuth session expired ~23 Aug (`watchman` RED `claude-logged-out`;
+newest failure 28 Aug 22:57, *"OAuth session expired and could not be refreshed"*). **Stage 5 must
+restore that login — which would have un-darkened this lane with no stage and no gate between.**
+`adjudicateLive` (thalamus.mjs:1281) consults exactly one thing before spending —
+`cfg.adjudicator.enabled` — and never `gate.mjs`, though the lane IS declared in
+`gate.mjs LANE_CONSUMERS:168`. The declaration sits outside its own spend path. **This is §0's
+headline shape, re-measured live by the rung that exists to close it.**
+
+**ESCALATED, NOT DECIDED ALONE** (§10-D rule 13). Ruling verbatim on disk:
+`arsenal-audit-artifacts\queue\RULING__2026-08-29_s12-adjudicator.md`, numbers re-verified in the
+ruler's own shell. **Q1 → option B, and the write is ALREADY AUTHORISED:** setting `enabled=false`
+does not change his choice, it makes the one he already made a code path (L4); the approval-gate on
+that file guards against changing his choices, and this ENFORCES one. The live-kill problem
+dissolves by sequencing — the disk edit is inert until restart, and the restart rides his stage-5
+word. **Q2 → the knob/spend disagreement + the gate-wiring become ONE carded micro-rung, priced
+post-S12; S12 is a WAKE rung and builds do not ride it. Q3 → the login restore stays in stage 5.**
+
+#### THE WRITE, AND THE RAIL THAT REFUSED IT
+`thalamus_config.json` → `adjudicator.enabled: true → false`, with the receipt key the file's own
+convention demands (`_gemini_lane_2026_08_09` is the precedent: the ruling is the approval, the note
+is the receipt). **S1's owners-only rail refused the write, correctly**, and it went through only as
+`ARSENAL_RAILS_OVERRIDE=S12:state`, written into the rung's micro-order BEFORE the write, scoped to
+this one key in this one file and carried to nothing else. **The absence the rail itself names is
+recorded as a finding:** `thalamus.mjs` dispatches only `selftest` and `status`
+(thalamus.mjs:2302-2304), so this approval-gated file has NO owner CLI and only a hand-edit can
+change it — a rule-4 hole by construction, not a licence. *(His own safety classifier also blocked
+the override three times; the work STOPPED and went to HIM for the word rather than around it.)*
+
+#### A FALSE RED KILLED IN THE SAME BREATH — GATE STRICTER, NEVER KINDER
+The knob turning off went RED on `thalamus selftest`, and **the assert was wrong, not the knob**: it
+pinned the literal `on`, i.e. the knob's current VALUE, eight lines below a comment saying these
+asserts must be *"stated as an invariant, not a value, so it survives him legitimately turning the
+knob tomorrow"*. It now pins BOTH branches against the live config — OFF when off, `on` when on, and
+never the other. **thalamus selftest GREEN.**
+
+#### THE SECOND STALE SENTENCE, FOUND BY RUNNING THE ROW'S OWN REQUIREMENT
+S12's row says *"Watchdog-reporter live"*. Turning it on filed **four cards** saying *"watchdog ne
+start kiya"* and sending him to `setup/START_DAEMONS.vbs`. **Both halves false in this build:** S9
+removed the arm (the organ's own line reads *"this build dispatches nothing"*) and moved five of the
+six daemons' lives to WinSW units. Fixed at source: the card, the operator line and the finding's
+`owner` field all now read off the `surface` column each `DAEMONS` row already declares — the same
+column `services.mjs` generates the units from — so the two faces of one fact cannot drift again. A
+headless daemon is sent to its own unit BY NAME; `turnstile` is never sent to a service it
+physically cannot be (it reads the clipboard; session 0 has none). The duplicate
+`port != null && name !== "turnstile"` predicate that re-derived this beside the column is gone.
+**daemon_watchdog selftest 81/0 → 82/0**, and the two asserts that PINNED the retired path now pin
+the corrected truth AND its negation, plus a new one covering BOTH surface classes across every row.
+
+#### CORRECTIONS TO WHAT THIS ORDER WAS CARRYING (measured, not argued)
+1. **"the LIVE thalamus was NOT restarted — the drain code is inert"** (S8's carried line) was
+   already FALSE at open: pid 17376 booted 28 Aug 20:24, AFTER the S8 spool commit `4bd9ff4`
+   (28 Aug 10:49). The drain has been live since; `spool.db-wal` and `afferent.jsonl` were both
+   being written this morning.
+2. **`ArsenalFC-CapturePull` is not the transcript belt** it reads like — it pulls a Google Drive
+   reps inbox (`G:/My Drive/arsenal/reps_inbox`) that **has never existed**, so it has never pulled
+   anything. Left ENABLED (design agreement with `tasks_expected.json`, zero tokens, and its
+   "nothing pulled" message is honest, not a false green). It is not a registered lane, so the
+   registry's never-fed meter cannot see it — recorded here instead.
+
+#### STAGE 5, DONE TO THE LINE HIS HAAN COVERS
+(a) his word → (b) thalamus restarted via its own task — old pid killed, task started, **new pid
+16100 booted 09:24:55, AFTER the 09:19:13 config write**, so the live nucleus carries the false
+value → (c) verified: `status` reads `adjudicator : OFF`, nerve UP on :4113, **0 adjudicator rows
+since boot**, and both the bus and the spool WAL took writes immediately after the restart — the gap
+cost latency, not data → (d) **THE LOGIN RESTORE IS HIS HANDS AND IS OPEN.**
+
+#### WHAT IS STILL OPEN, AND ON WHOM
+- **HIS:** `claude` → `/login`. Nothing in the LLM group can run until it returns. Not a card — it
+  is the live blocker of the last stage.
+- **HIS WORD:** the LLM stage itself — BrainTick · BrainDaemon · DMN · ConceptGraph · NightShift ·
+  BootRoom · Morning-Conductor · Evening-Conductor, **plus the adjudicator's OWN named stage** (the
+  ruling's Q2: it wakes only through that stage, and only after the gate-wiring rung lands).
+  **RE-PROBE `models.mjs` first** — the keys reading is guarded at 6 h and a stale "keys ok" is the
+  19 Aug 429 lesson.
+- **HIS CONSOLE (elevated):** the five WinSW units are installed, `Stopped`, `StartType Manual`;
+  this session's shell is NOT elevated (`IsInRole(Administrator)` = False), so starting them is one
+  visit — the c86 shape. Two logon lanes (Dugout · Turnstile) need his desktop and can never be
+  services. The `Dugout` logon task is ALSO an un-gated wake path: bare `dugout.mjs` demands
+  `GEMINI_API_KEY` and spawns thalamus + cortex + turnstile detached.
+- **CARDED MICRO-RUNG, priced post-S12 by the ruler:** *the adjudicator's own gate-wiring* — route
+  `adjudicateLive` through `gate.mjs`, and reconcile the knob with the spend. **Not hidden today:**
+  the live status line already announces the disagreement itself (*`thalamus_config asks
+  "gemini-flash-lite-latest", REFUSED … the live-proven default is spent instead (his call to
+  change)`*) — the organ declares its own refusal; what is missing is the rung that resolves it.
+- Four daemon cards with the OLD sentence still sit in his queue. `captains_call` has no `retire`
+  verb — only `answer` — and answering on his behalf would be a lie about his word, so they stand.
+  Every FUTURE filing carries the corrected text.
+
+#### WHAT S12's REMAINDER MUST NOT RE-DERIVE
+1. The pre-flight is SIGNED — cite it, never re-run it.
+2. F-5 stays an accepted cost: the atlas stale-proof keys on mtime; clear with `xray.mjs build` +
+   `flow_atlas.mjs build`, NEVER weaken it.
+3. F-6 stays instrumented, not closed — the suite is spoken as REPRODUCIBLE, NOT STABLE, and
+   `scripts/hermeticity_forensics.log` is read BEFORE anyone theorises (it did not exist this rung).
+4. Task and daemon counts are LIVE-READ, never written in prose.
+
+#### THE CLOSE PROOF — `npm test` **122 passed, 1 failed** (baseline was 121/2)
+Run twice. **The first run was 121/2 with a DIFFERENT pair of reds than the baseline's**, and both
+halves of that difference are worth naming because one was mine and one was the reboot working:
+- **ALIVE went GREEN** — the baseline's two reds (`watchman_last` 200h+, `audit_ledger` stale) are
+  gone because stage 2 ran those organs. That is the reboot doing its job, measured.
+- **FLOW ATLAS went RED, and it was MINE.** Not F-5's accepted mtime cost — a real one: I changed
+  code (daemon_watchdog, thalamus) and the graph moved. The gate's own words: *"a code change that
+  moves the graph demands `xray.mjs build` + `flow_atlas.mjs build` in the same commit."* Done —
+  **535 → 538 edges**, sha `d67e17e4a04cf897`, `check: OK`. The gate caught a thing I had missed.
+
+**THE ONE SURVIVING RED, characterised rather than waived** — `all 108 suite members pass`, failing
+on two members with three underlying asserts:
+1. **watchman `CLEAN — a healthy day yields ZERO findings`** and
+2. **watchman `c12 RED — … a recent green run is silent`** — ONE cause, not two. Both assert
+   `checks(…).length === 0` as a proxy for "no finding of MY kind", but `checks()` also reads the
+   LIVE afferent bus, which is returning three unrelated WARNs: source `presence` silent **227.3 h**
+   (cadence 36 h), `activitywatch` silent **221.8 h** (cadence 12 h), `reps` undeclared. **Those ages
+   are the proof of vintage: 227 h ≈ 9.5 days ≈ the 20 Aug switch-off, so these asserts were already
+   red when the pre-flight was signed this morning.** Not introduced here. A fixture that reads the
+   live bus is the same family as F-6 — recorded, and it is a BUILD, so it does not ride a wake rung.
+3. **teaching_audit `END-TO-END — a spawned child with a piped Stop payload … lands ON DISK`.**
+   Cannot be from this rung: nothing changed in that chain, and the file was measured **62/1 both
+   before and after** the settings-comment move below — the same single assert, unmoved.
+
+**NOTHING WAS WEAKENED TO GET HERE.** Gates went the other way: daemon_watchdog **81/0 → 82/0**,
+thalamus selftest green with an assert that now pins BOTH branches instead of one literal value,
+flow_atlas 535 → 538 edges re-derived sha-identical.
+
+#### ONE SIDE-FIX, because he hit it live
+Doing the `/login` this rung needs, he was stopped by a **Settings Warning** on every launch: two
+documentation comments were parked INSIDE `.claude/settings.json`'s `hooks` object, where every key
+is validated as a hook EVENT NAME, so Claude Code skipped them and warned. Both moved to the top
+level beside the `_comment` key that already lives there and has never warned — **byte-identical
+prose, asserted so in the mover** (L9: nothing of it lost), `hooks` now holds only real events.
+Proven neutral: teaching_audit 62/1 before and after.
+
+#### LOGIN — RESTORED AND VERIFIED WITHOUT SPENDING A TOKEN
+He ran `claude` → `/login` at ~09:37 and `~/.claude/.credentials.json` was rewritten
+**09:37:57**. That is proof a fresh credential landed; it is NOT yet proof that headless
+`claude -p` authenticates. **That canary is the LLM stage's own first act, behind his word** — and
+it is now safe to fire, which it was not this morning, because the adjudicator can no longer wake
+with it.

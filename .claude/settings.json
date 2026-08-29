@@ -49,7 +49,6 @@
         ]
       }
     ],
-    "_SessionEnd_comment": "THE ARCHIVE'S TAIL (14 Aug 2026, ARCHIVE__DAY_ONE_SPEC.md §7.6). afferent.jsonl is a WRITE-AHEAD LOG and $ARSENAL_ARCHIVE is the durable store behind it, so the gap between 'he said it' and 'it is permanent' is the whole risk. The scheduled ArsenalFC-Archivist covers it every 15 minutes; this closes the last gap, archiving a session's tail the moment the session ends. SessionEnd AND NOT Stop, deliberately: an incremental run measures ~0.6s, which is nothing once at the end of a session and a real tax paid on EVERY turn of a study session. Layering, not replacing — if a session is killed and SessionEnd never fires, the 15-minute task still catches the tail; this only makes it prompt. The archivist is READ-ONLY on dressing-room/ and writes nothing this session can see, so it cannot bite the editor.",
     "SessionEnd": [
       {
         "hooks": [
@@ -60,7 +59,6 @@
         ]
       }
     ],
-    "_PreToolUse_comment": "THE RAILS (AUDIT §10-C rung S1b, 20 Aug 2026). Root B of the audit: THE FACTORY IS LESS GUARDED THAN THE PRODUCT — both token disasters happened in SESSIONS, not in the organism (the 16-agent fleet; the 19-Aug reading session at 505.02 lakh weighted, ~2x the organism's whole week). The organism has a gate, a ledger, owners and a suite; the sessions that BUILD it had nothing. Prose in a work order cannot stop a session; a PreToolUse hook can, because it runs BEFORE the permission modes even under skip-permissions. THREE RAILS, each an accident that already happened: a fan-out with no ceiling in its prompt (Agent/Task/Workflow) . a session's EDITOR writing under dressing-room/state, or a shell redirecting into it (the owners-only law at session level) . `claude -p` from a session shell (the organism's own transport L6, outside the gate L5, in nobody's ledger, and the organism is switched off until S12). The matcher keeps the ~200ms node boot off every Read/Grep/Glob: only the tools a rail can actually refuse pay it. A deny costs nothing (the tool never runs) and every deny names the rail, the accident and the compliant form. OVERRIDE, per rung, declared IN THE CALL so it is visible in the transcript and expires with the call: ARSENAL_RAILS_OVERRIDE=<rung>:<rail>. FAIL-OPEN by design (the tripwire's precedent): if rails.mjs throws, the tool proceeds.",
     "PreToolUse": [
       {
         "matcher": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|Agent|Task|Workflow",
@@ -72,5 +70,7 @@
         ]
       }
     ]
-  }
+  },
+  "_SessionEnd_comment": "THE ARCHIVE'S TAIL (14 Aug 2026, ARCHIVE__DAY_ONE_SPEC.md §7.6). afferent.jsonl is a WRITE-AHEAD LOG and $ARSENAL_ARCHIVE is the durable store behind it, so the gap between 'he said it' and 'it is permanent' is the whole risk. The scheduled ArsenalFC-Archivist covers it every 15 minutes; this closes the last gap, archiving a session's tail the moment the session ends. SessionEnd AND NOT Stop, deliberately: an incremental run measures ~0.6s, which is nothing once at the end of a session and a real tax paid on EVERY turn of a study session. Layering, not replacing — if a session is killed and SessionEnd never fires, the 15-minute task still catches the tail; this only makes it prompt. The archivist is READ-ONLY on dressing-room/ and writes nothing this session can see, so it cannot bite the editor.",
+  "_PreToolUse_comment": "THE RAILS (AUDIT §10-C rung S1b, 20 Aug 2026). Root B of the audit: THE FACTORY IS LESS GUARDED THAN THE PRODUCT — both token disasters happened in SESSIONS, not in the organism (the 16-agent fleet; the 19-Aug reading session at 505.02 lakh weighted, ~2x the organism's whole week). The organism has a gate, a ledger, owners and a suite; the sessions that BUILD it had nothing. Prose in a work order cannot stop a session; a PreToolUse hook can, because it runs BEFORE the permission modes even under skip-permissions. THREE RAILS, each an accident that already happened: a fan-out with no ceiling in its prompt (Agent/Task/Workflow) . a session's EDITOR writing under dressing-room/state, or a shell redirecting into it (the owners-only law at session level) . `claude -p` from a session shell (the organism's own transport L6, outside the gate L5, in nobody's ledger, and the organism is switched off until S12). The matcher keeps the ~200ms node boot off every Read/Grep/Glob: only the tools a rail can actually refuse pay it. A deny costs nothing (the tool never runs) and every deny names the rail, the accident and the compliant form. OVERRIDE, per rung, declared IN THE CALL so it is visible in the transcript and expires with the call: ARSENAL_RAILS_OVERRIDE=<rung>:<rail>. FAIL-OPEN by design (the tripwire's precedent): if rails.mjs throws, the tool proceeds."
 }
