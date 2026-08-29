@@ -30,6 +30,27 @@ STATUS (update this block before any session stops — this is the handoff)
      until RUNG A) · `ArsenalFC-Dugout` + `ArsenalFC-Turnstile` (HIS desktop, never services).
      Read the board live, never from here: `node scripts/state.mjs` · `brain.mjs gate show`.
 
+  ⚠ **THE THREE NUMBERS IN THE BLOCK ABOVE WERE RE-MEASURED BY THE FLOOR AUDIT, 30 Aug 2026,
+     AND TWO OF THEM DO NOT HOLD. The block is kept as written (L9); the measurement is here.**
+     · `8/8 LLM-group tasks Ready` → **6/8.** `ArsenalFC-DMN` and `ArsenalFC-NightShift` are
+       two OF the eight, and the same paragraph says they are off — it asserts and refutes
+       itself. Live-read: `Get-ScheduledTask -TaskName 'ArsenalFC*' | Select TaskName,State`
+       (the `schtasks /TN "\ArsenalFC-*"` form in this block returns nothing under Git Bash,
+       which mangles `/Query` into a path — it is fine in cmd/PowerShell).
+     · `5/5 WinSW daemons Running` → **the SERVICES are 5/5; the DAEMONS are 3/5.**
+       `ArsenalFC-Brain` (PID 21912) and `ArsenalFC-Context` (PID 17968) are wrappers with NO
+       node child, and 4 of 5 ports are silent. `state.mjs`'s own "daemons 3/6" is the honest
+       number. This is F-A6's bill: the wrapper cannot signal the SCM under `.rsenal-svc`,
+       so a dead child leaves the service RUNNING forever.
+     · `STILL OFF ... each for a named reason` names FOUR tasks. **26 of 57 are Disabled.**
+       Two of those are correct (their services replaced the tasks); the other twenty are the
+       switch-off's residue, and two of them are starving live LLM lanes (a 26-day-old Oura
+       input and a 5-day-old sprint input, both named by the gate itself).
+     **AND ONE THAT IS TRUE BUT READ WRONG:** `ArsenalFC-DMN` really is Disabled — and the DMN's
+     THIRD lane runs off the thalamus service anyway, 12 times in 24h, 22.4% of the day's
+     model-aware spend. It is GUARDED (Rung A registered it), so nothing was contained.
+     Full account: `arsenal-audit-artifactsloor-audit\VERDICT.md` + `FINDINGS.md`.
+
   ~~⛔ THE ORGANISM IS SWITCHED OFF — HIS ORDER, 20 Aug 2026 ("nothing burns tokens anywhere").
      EVERY ArsenalFC-* task Disabled · all daemons killed · the Startup launcher renamed
      (the count is LIVE-READ, never written here — S10-R's O-1 caught the frozen "56" while
@@ -3052,7 +3073,60 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`RUNG B` · THE FLOOR AUDIT. MODEL: Opus 5 · effort max.
+  RUNG B THE FLOOR AUDIT ....... ☑ **DONE 30 Aug 2026 (Opus 5 · max) — VERIFY-ONLY, AND NOTHING
+                                   WAS FIXED, CONTAINED, WOKEN OR DISABLED.** All four passes
+                                   covered. **16 findings — 1 SPEND-RISK · 8 BROKEN-PROMISE ·
+                                   4 DRIFT-RECORD · 3 IMPROVEMENT**, 15 CONFIRMED by recompute.
+                                   The one pre-authorized act (contain a LIVE UNGUARDED spender)
+                                   was NOT used: the single spend-risk lane is GUARDED, so it
+                                   failed the trigger's own test. Suite re-derived clean+solo at
+                                   **124/5** (the handover said 126/3). Spend **45.44 lakh of 65**;
+                                   the close ran past the EXECUTION line on HIS word — *"close the
+                                   entire floor-audit. i am allowing you"* (the S5 precedent, not
+                                   a repeal of §10-D rule 2).
+                                   ⚠ **THIS AUDIT CONTAMINATED ITS OWN FIRST MEASUREMENT AND SAYS SO**
+                                   — two owner-CLI state writes landed mid-suite; that run (123/6)
+                                   is VOID and the clean re-run is the number of record. And ONE
+                                   FINDING WAS KILLED BY ITS OWN EVIDENCE: the registry's rotten
+                                   line numbers are DELIBERATE, the durable half is a needle, and
+                                   13/13 needles resolve.
+                                   Deliverables: `arsenal-audit-artifactsloor-audit\`
+                                   (VERDICT.md · FINDINGS.md · CHECKPOINT.md · 4 TIER-0 instruments
+                                   · RAW_*.txt, paraphrase banned).
+
+  ▶ NEXT SESSION ............... **`RUNG C` · THE ARCHITECT ORGAN — BUILD. MODEL: Opus 5 · effort max.
+                                   BUILD 14 · PROOF 6 · HANDOFF 5 · CEILING 25. Corridor:
+                                   `queue\PREOPEN__2026-08-29_guard-extension+floor-audit.md`
+                                   RUNG C **plus** `queue\RULING__2026-08-29_floor-audit+organ.md`.
+                                   ⛑ WHAT THE FLOOR AUDIT HANDS IT:
+                                   (1) **THE VERDICT IS ON DISK AND IT IS RUNG C's ONLY PROSE SOURCE**
+                                   — `arsenal-audit-artifactsloor-audit\VERDICT.md` (him-readable)
+                                   + `FINDINGS.md` (16 rows, every one with its RAW output).
+                                   The ruled design says every prose claim carries a source
+                                   pointer; these two files ARE that source.
+                                   (2) **16 FINDINGS: 1 SPEND-RISK · 8 BROKEN-PROMISE · 4 DRIFT-
+                                   RECORD · 3 IMPROVEMENT.** 15 CONFIRMED by recompute; the 16th
+                                   (the atlas gate) is confirmed in EFFECT with its cause NOT
+                                   established and said so. NOTHING WAS FIXED, NOTHING CONTAINED.
+                                   (3) **THE SUITE BASELINE IT INHERITS IS `124 passed / 5 failed`,
+                                   measured clean and solo on this HEAD — NOT the 126/3 handed
+                                   over.** Members reconcile exactly (126+3 = 124+5 = 129); two
+                                   flipped, both named. A successor that treats 126/3 as the bar
+                                   will read its own honest number as a regression it caused.
+                                   (4) **THREE FINDINGS ARE ONE DISEASE** — a claim true of the
+                                   WRAPPER and false of the thing the reader cares about: 5/5
+                                   services RUNNING but 2 hold no live child · "8/8 LLM-group
+                                   tasks Ready" measures 6/8 · `ArsenalFC-DMN` Disabled while its
+                                   third lane is the day's single largest spender (22.4%).
+                                   (5) **THE INPUT GUARD IS SOUND AND IS THE BEST INSTRUMENT HERE.**
+                                   What it reports is starvation: two lanes cannot wake because
+                                   the producers of their inputs are still Disabled from the
+                                   20-Aug switch-off. 26 of 57 tasks are Disabled; the record
+                                   names four.
+                                   (6) F-B1 is in `queue\OPEN-FORKS.md` — P4 was swept BY CONCERN
+                                   with one head, no agents (the LAW kept, the MECHANISM dropped).**
+
+  ~~▶ NEXT SESSION ............... **`RUNG B` · THE FLOOR AUDIT. MODEL: Opus 5 · effort max.
                                    4 passes · 45/10/10 · CEILING 65 · VERIFY-ONLY, FIX NOTHING.
                                    Corridor: `queue\PREOPEN__2026-08-29_guard-extension+floor-
                                    audit.md` RUNG B **plus** `queue\RULING__2026-08-29_floor-
@@ -3082,7 +3156,8 @@ STATUS (update this block before any session stops — this is the handoff)
                                    classifier blocked `schtasks /Change /ENABLE` and it was NOT
                                    worked around (the 29-Aug precedent). Both lanes are now
                                    guarded and were measured safe at close.
-                                   (5) F-5 PAID: `xray build` + `flow_atlas build` in the commit.**
+                                   (5) F-5 PAID: `xray build` + `flow_atlas build` in the commit.**~~ ✅ **DONE 30 Aug 2026 — see the `RUNG B` ☑ row above and the PROGRESS entry of 30 Aug.
+                                   Kept struck, not deleted (L9).**
 
   ~~▶ NEXT SESSION ............... **`RUNG A` · THE GUARD EXTENSION. MODEL: Opus 5 · effort max.
                                    BUILD 10 · PROOF 6 · HANDOFF 5 · CEILING 21 — the SELF-DRIVING
@@ -20352,3 +20427,107 @@ a sentence that promises what no code performs:**
 - **F-A6 · a service account that cannot restart its own service is a self-healing hole.** The
   WinSW SCM refusal means every future source edit under `scripts/` retires a daemon that then
   waits for HIM. The wake rung bought OS ownership; this is the bill that came with it.
+
+
+---
+
+## PROGRESS · 30 Aug 2026 · RUNG B — THE FLOOR AUDIT (Opus 5 · max · VERIFY-ONLY)
+
+**THE HEADLINE.** The machinery is sound and the guards work. What is wrong is the organism's own
+WRITTEN RECORD of what is on, what is running and where the money goes — and two live LLM lanes are
+starving because the producers of their inputs were never re-enabled after the 20-Aug switch-off.
+**16 findings — 1 SPEND-RISK · 8 BROKEN-PROMISE · 4 DRIFT-RECORD · 3 IMPROVEMENT.** 15 CONFIRMED by
+recompute. **Nothing was fixed, contained, woken or disabled.**
+
+**THE ONE PRE-AUTHORIZED ACT WAS NOT USED, AND THAT IS A FINDING ABOUT THE TRIGGER, NOT A MISS.**
+Packet B allows exactly one act: contain a CONFIRMED SPEND-RISK that is LIVE **and unguarded**. The
+single spend-risk found (`dmn_bg_drain`, 12 runs in 24h, 22.4% of the day's model-aware cost) is
+GUARDED — Rung A registered it and `organism_test.mjs:1367` pins the gate call. It fails the
+trigger's own test, so no task was touched.
+
+**THREE FINDINGS ARE ONE DISEASE, and naming it is this rung's most useful output: A CLAIM TRUE OF
+THE WRAPPER, READ AS A CLAIM ABOUT THE THING INSIDE.**
+- `5/5 WinSW daemons Running` — the SERVICES are 5/5; the DAEMONS are **3/5**. `ArsenalFC-Brain`
+  (21912) and `ArsenalFC-Context` (17968) hold no node child; 4 of 5 ports are silent.
+- `8/8 LLM-group tasks Ready` — measured **6/8**, and the SAME paragraph names the two that are off.
+- `ArsenalFC-DMN` Disabled — true of the task; its third lane runs off the thalamus service anyway
+  and is the day's single largest spender.
+
+**THE INPUT GUARD IS THE BEST INSTRUMENT ON THE BOARD, AND NOBODY IS ACTING ON WHAT IT SAYS.** It
+sleeps a lane when its input is dead and it NAMES the dead root. `formation_read` has been asleep
+623.7h because `oura_coach.mjs`'s task is Disabled; `prepare_tomorrow` 118.0h because
+`sprintsync.mjs`'s task is Disabled. Both were disabled by the switch-off and the reboot re-enabled
+only the eight-task LLM group. **`night_coach` is NOT this class** and is recorded so it is not
+miscounted: `teaching_audit.mjs` has no scheduled task and never did; that file fills when HE
+studies, and its 241h age is the guard correctly reporting the last FORGE session was 19 Aug.
+
+**THE LADDER'S OWN NUMBERS.** The suite re-derived clean and solo on this HEAD is **124 passed / 5
+failed**, not the **126/3** handed over. Members reconcile exactly (126+3 = 124+5 = 129) — two
+flipped, both explained (the dead brain daemon crossing its 24h-awake deadline, and the atlas gate).
+**This is the third recorded non-reproduction of a handed-over suite number**, and the finding is not
+"a rung lied" — it is that a suite baseline is not a constant and keeps being handed over as if it
+were.
+
+**THE DATED JUGAD WINDOW IS CLOSED — the site is named here for the first time.** The law pack has
+read `jugad-literal-subject-list 92, baseline 91` since S13, and S13 and Rung A each recorded it as
+"PRE-EXISTING, not mine" — true of each, false of the ladder. The 92nd site is
+`brain.mjs:6898 BRAIN_MODES [13 items]`, added by **S12's own spend-guard commit `6a7ff96`** — the
+commit that fixed the 28k verb fall-through tripped the jugad ratchet in the same act. §10-D rule 6
+makes a risen gate a REFUSAL; instead it became an inherited red. `teaching_audit 62/1` is the same
+shape and older: red since S2, ten days, and it sits on the chain that writes his teaching record.
+
+**AN UNRECORDED RUNTIME BUMP.** `node -v` is **v24.19.0**; the Windows uninstall registry dates the
+MSI to **28 Aug 2026**. §10-G promised Node 24 would land "suite green before AND after, own commit",
+`tsconfig.json:2` promises its types move in the same commit, and S8's row still reads "STEP 0 IS NOT
+DONE AND NOT FAKED". No version commit exists, `@types/node` still pins `22.20.1`, and every suite
+number from S9 onward was measured on a runtime no document names. The bump is not wrong; the
+unrecorded bump is.
+
+**TWO THINGS RECORDED AGAINST THIS AUDIT ITSELF (§4 on the audit's own tool).**
+1. **It contaminated its own first measurement.** `registry.mjs laws` persists by design and
+   `registry.mjs meter` rewrites metering fields; both ran through their OWNER CLI while the suite
+   was mid-flight, and the hermeticity check correctly caught the state moving — naming `sitting.mjs`
+   and `lawpack.mjs` as CANDIDATES while saying in its own words that an external writer can land
+   inside the window. **The external writer was this audit.** That run (123/6) is VOID; the clean
+   re-run is the number of record. The two writes were left in place (reverting would have written a
+   stale `payload_rows` back), and the revert attempt was REFUSED by the S1 rail, correctly, because
+   this rung's micro-order declares no state override.
+2. **One finding was killed by its own evidence.** The first reading — 9 of 13 input-guard witnesses
+   cite a line that does not contain what they say (uniformly +78 today, +34 the day they were
+   written) — is WRONG as a defect: `registry.mjs:345-353` already says a line number rots and makes
+   the durable half a backtick needle read back out of the file. **13/13 needles resolve.** Kept as a
+   finding because the refutation is the result.
+
+**WHAT WAS CHECKED AND HELD, recorded so it is not mistaken for unexamined.** Registry citation
+integrity **94/95** · input-guard needles **13/13, 0 off-root** · `registry check` GREEN with its one
+declared born-red · `rails.mjs orders` clean · reconcile **"all produced work reaches a reader"**,
+zero bleeding, 160 artifacts none orphaned · S11's crash/staleness guards PASS on live data · S7's
+gate-judge is exactly the recorded, reversible judgement in one predicate. The reach-side meter's
+PRODUCE half and its "never born > 7 days" check work — this session's own brief carried
+`rejirah_log NEVER BORN`.
+
+**THE SHARPEST CROSS-FILE FINDING (LAW T: name the path, never the file).** The reach-side meter's
+CONSUME half has never held a single measurement, because `registry.mjs:455` keys consumption rows on
+`subject || lane` — **`subject` appears in 0 of 809 rows and `lane` in 21**, so 788 rows are dropped
+before the meter sees them. It is not an ambiguous file: `reconcile.mjs:452` reads the SAME file by
+`job`, pins that contract in its own selftest at `:780`, and returns real dates on the live data.
+Two organs, one file, one wrong key — and the wrong one is the organ the spec appoints as the meter.
+
+**METHOD NOTE FOR THE NEXT AUDITOR.** A 770-line grep sweep of every protective claim was built and
+then abandoned as an instrument: token-anchoring cannot decide truth, and all 30 survivors were
+ALL-CAPS prose and commit-hash fragments. The population that paid was the 211 STANDING promises,
+verified BY RUNNING. The four TIER-0 instruments are on disk and reusable.
+
+**FORK.** `F-B1` in `queue\OPEN-FORKS.md`: PASS 4's ruled mechanism is LAW T's agent fan-out, and
+this session carried an explicit standing instruction not to call the Agent tool. Resolved by keeping
+the LAW (swept BY CONCERN, never by directory; every finding names its cross-file path) and dropping
+the MECHANISM. Severable, strictly conservative, recorded for ratification.
+
+**SPEND: 45.44 lakh of a 65 ceiling** (meter 140.28 → 185.72 today, +124 turns, same 8 sessions). The
+EXECUTION line (45) was spent almost exactly; the close ran on HIS explicit word — *"close the entire
+floor-audit. i am allowing you"* — which is the S5 precedent, not a repeal of §10-D rule 2.
+
+**DELIVERABLES:** `arsenal-audit-artifacts\floor-audit\` — `VERDICT.md` (him-readable, plain
+Hinglish) · `FINDINGS.md` (16 rows, each with claim · code-cite · RAW output · severity · confidence)
+· `CHECKPOINT.md` (closed) · `p1_extract.mjs` `p1_standing.mjs` `p1_witness.mjs` `p1_needle.mjs` ·
+`RAW_*.txt`. **NEXT: `RUNG C` · THE ARCHITECT ORGAN — BUILD · Opus 5 · effort max · ceiling 25.**

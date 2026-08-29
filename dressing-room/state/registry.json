@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-29T20:45:32.110Z",
+ "updated_at": "2026-08-29T23:25:19.620Z",
  "tables": {
   "mechanisms": [
    {
@@ -673,8 +673,8 @@
     "updated_at": "2026-08-28T23:13:47.526Z",
     "added_at": "2026-08-28T23:05:25.023Z",
     "first_real_row_at": "2026-08-12T10:08:07.792Z",
-    "newest_row_at": "2026-08-29T04:25:00.711Z",
-    "payload_rows": 2064,
+    "newest_row_at": "2026-08-29T21:44:02.618Z",
+    "payload_rows": 2095,
     "consumer_reads": {
      "brain.mjs": null,
      "captains_call.mjs": null,
@@ -697,7 +697,7 @@
      "unleash_verdict.mjs": null,
      "viz.mjs": null
     },
-    "metered_at": "2026-08-29T04:35:50.954Z",
+    "metered_at": "2026-08-29T23:25:19.580Z",
     "declared_elsewhere": "xray.mjs:1017 MULTI_WRITER_ALLOWLIST + the live IR writers/readers — a shared append LEDGER, not a gated LLM lane: nothing spends tokens on it and gate.mjs never judges it, so it must not enter the off-road consumer map"
    },
    {
@@ -761,7 +761,7 @@
     "newest_row_at": "2026-08-23T19:21:36.605Z",
     "payload_rows": 37,
     "consumer_reads": {},
-    "metered_at": "2026-08-29T04:35:50.954Z"
+    "metered_at": "2026-08-29T23:25:19.580Z"
    },
    {
     "subject": "rejirah_log",
@@ -777,7 +777,7 @@
     "newest_row_at": null,
     "payload_rows": 0,
     "consumer_reads": {},
-    "metered_at": "2026-08-29T04:35:50.954Z"
+    "metered_at": "2026-08-29T23:25:19.580Z"
    },
    {
     "subject": "forge_sessions",
@@ -793,7 +793,7 @@
     "newest_row_at": "2026-08-19T11:55:53.719Z",
     "payload_rows": 11,
     "consumer_reads": {},
-    "metered_at": "2026-08-29T04:35:50.954Z"
+    "metered_at": "2026-08-29T23:25:19.580Z"
    },
    {
     "subject": "capsules",
@@ -809,7 +809,7 @@
     "newest_row_at": "2026-06-28",
     "payload_rows": 4,
     "consumer_reads": {},
-    "metered_at": "2026-08-29T04:35:50.954Z"
+    "metered_at": "2026-08-29T23:25:19.580Z"
    }
   ],
   "checks": [

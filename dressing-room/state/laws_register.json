@@ -1,12 +1,12 @@
 {
- "generated_at": "2026-08-29T00:41:08.529Z",
+ "generated_at": "2026-08-29T23:25:19.344Z",
  "generated_by": "registry.mjs laws collect (DERIVED — hand edits are the drift disease)",
  "_two_kinds_law": "F-7: standing_laws carry law text AND a check_site; ruling_pointers carry a ruling document's title and check_site:null. They are NEVER summed — there is no total in this file, and 'N laws' may not be written of the pair.",
  "queue_dir": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue",
  "queue_reachable": true,
  "counts": {
   "standing_laws": 14,
-  "ruling_pointers": 61
+  "ruling_pointers": 73
  },
  "standing_laws": [
   {
@@ -566,6 +566,38 @@
    "check_site": null
   },
   {
+   "law_id": "RULING__2026-08-29_dmn-bleed+msa",
+   "title": "RULING — the dmn_bg_drain bleed + the MSA account fork (29 Aug, architect ab)",
+   "statement": "RULING — the dmn_bg_drain bleed + the MSA account fork (29 Aug, architect ab)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_dmn-bleed+msa.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_executor-protocol",
+   "title": "RULING — THE EXECUTOR PROTOCOL: junior engineer, architect finalizes (29 Aug 2026, standing)",
+   "statement": "RULING — THE EXECUTOR PROTOCOL: junior engineer, architect finalizes (29 Aug 2026, standing)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_executor-protocol.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_floor-audit+organ",
+   "title": "RULING — THE FLOOR AUDIT + THE ARCHITECT ORGAN RUNG (29 Aug 2026, architect a7)",
+   "statement": "RULING — THE FLOOR AUDIT + THE ARCHITECT ORGAN RUNG (29 Aug 2026, architect a7)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_floor-audit+organ.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_review-bench",
+   "title": "⚠ DRAFT — NOT RULED (his 29-Aug order: nothing recorded as decided without his final yes).",
+   "statement": "⚠ DRAFT — NOT RULED (his 29-Aug order: nothing recorded as decided without his final yes).",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_review-bench.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
    "law_id": "RULING__2026-08-29_s10-backfill",
    "title": "RULING — S10 back-fill's two forks (29 Aug 2026, Architect-5 · session arsenal-ai-fc-5a)",
    "statement": "RULING — S10 back-fill's two forks (29 Aug 2026, Architect-5 · session arsenal-ai-fc-5a)",
@@ -594,6 +626,70 @@
    "title": "RULING — S10-R SIGNED + THE SEVEN FINDINGS ROUTED (29 Aug, Architect · arsenal-ai-fc-08)",
    "statement": "RULING — S10-R SIGNED + THE SEVEN FINDINGS ROUTED (29 Aug, Architect · arsenal-ai-fc-08)",
    "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_s10r-signoff.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_s11-signoff+preflight",
+   "title": "RULING — S11 SIGNED + THE REBOOT PRE-FLIGHT SIGNED (29 Aug 2026 ~06:20 IST, Architect · arsenal-ai-fc-08)",
+   "statement": "RULING — S11 SIGNED + THE REBOOT PRE-FLIGHT SIGNED (29 Aug 2026 ~06:20 IST, Architect · arsenal-ai-fc-08)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_s11-signoff+preflight.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_s12-adjudicator",
+   "title": "RULING — S12's adjudicator fork (29 Aug, Architect · arsenal-ai-fc-08)",
+   "statement": "RULING — S12's adjudicator fork (29 Aug, Architect · arsenal-ai-fc-08)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_s12-adjudicator.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_s12-inputguard-full",
+   "title": "RULING — the full input-guard ticket (29 Aug, Architect · arsenal-ai-fc-08)",
+   "statement": "RULING — the full input-guard ticket (29 Aug, Architect · arsenal-ai-fc-08)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_s12-inputguard-full.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_s12-inputguard",
+   "title": "RULING — first_real_row_at fork (29 Aug, Architect · verified: 0 in gate, 0 in brain, meter-only)",
+   "statement": "RULING — first_real_row_at fork (29 Aug, Architect · verified: 0 in gate, 0 in brain, meter-only)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_s12-inputguard.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_s13-emptyrequired",
+   "title": "RULING — S13's empty-required fork + two routed findings (29 Aug, architect a7)",
+   "statement": "RULING — S13's empty-required fork + two routed findings (29 Aug, architect a7)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_s13-emptyrequired.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_s13-rowhome+transitivity",
+   "title": "RULING — S13's two forks: row home + transitivity carrier (29 Aug, architect a7)",
+   "statement": "RULING — S13's two forks: row home + transitivity carrier (29 Aug, architect a7)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_s13-rowhome+transitivity.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_service-logon-1326",
+   "title": "RULING — the 1326 credential stop (29 Aug, architect ab)",
+   "statement": "RULING — the 1326 credential stop (29 Aug, architect ab)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_service-logon-1326.md",
+   "scope": "ruling",
+   "check_site": null
+  },
+  {
+   "law_id": "RULING__2026-08-29_wake-thalamus-service",
+   "title": "RULING — the fifth service: FULL HANDOVER, option B (29 Aug, architect ab — rotated from a7)",
+   "statement": "RULING — the fifth service: FULL HANDOVER, option B (29 Aug, architect ab — rotated from a7)",
+   "source_file": "C:\\Users\\nikhi\\arsenal-audit-artifacts\\queue\\RULING__2026-08-29_wake-thalamus-service.md",
    "scope": "ruling",
    "check_site": null
   }
