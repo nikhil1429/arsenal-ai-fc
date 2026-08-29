@@ -1,8 +1,8 @@
 {
- "built_at": "2026-08-29T19:23:53.297Z",
- "content_sha16": "3868daf332df9d78",
+ "built_at": "2026-08-29T21:13:25.176Z",
+ "content_sha16": "e88d0f96a2d910fa",
  "derived_from": {
-  "ir_built_at": "2026-08-29T19:23:52.764Z",
+  "ir_built_at": "2026-08-29T21:13:24.919Z",
   "organs": 111,
   "tables": [
    "thalamus.mjs AFFERENT_SOURCES",
@@ -242,8 +242,8 @@
    "via": "dressing-room/hippocampus/who_he_is.json",
    "liveness": {
     "exists": true,
-    "size": 6225,
-    "payload_ts": "2026-08-20"
+    "size": 7268,
+    "payload_ts": "2026-08-30"
    },
    "consumption": {
     "measured": false,
@@ -265,8 +265,8 @@
    "via": "dressing-room/hippocampus/who_he_is.json",
    "liveness": {
     "exists": true,
-    "size": 6225,
-    "payload_ts": "2026-08-20"
+    "size": 7268,
+    "payload_ts": "2026-08-30"
    },
    "consumption": {
     "measured": false,
@@ -288,8 +288,8 @@
    "via": "dressing-room/state/afferent.jsonl",
    "liveness": {
     "exists": true,
-    "size": 5378998,
-    "payload_ts": "2026-08-30T00:53:01.838+05:30"
+    "size": 5438254,
+    "payload_ts": "2026-08-29T20:57:06.679Z"
    },
    "consumption": {
     "measured": false,
@@ -311,8 +311,8 @@
    "via": "dressing-room/state/afferent.jsonl",
    "liveness": {
     "exists": true,
-    "size": 5378998,
-    "payload_ts": "2026-08-30T00:53:01.838+05:30"
+    "size": 5438254,
+    "payload_ts": "2026-08-29T20:57:06.679Z"
    },
    "consumption": {
     "measured": false,
@@ -334,8 +334,8 @@
    "via": "dressing-room/state/afferent.jsonl",
    "liveness": {
     "exists": true,
-    "size": 5378998,
-    "payload_ts": "2026-08-30T00:53:01.838+05:30"
+    "size": 5438254,
+    "payload_ts": "2026-08-29T20:57:06.679Z"
    },
    "consumption": {
     "measured": false,
@@ -357,8 +357,8 @@
    "via": "dressing-room/state/afferent.jsonl",
    "liveness": {
     "exists": true,
-    "size": 5378998,
-    "payload_ts": "2026-08-30T00:53:01.838+05:30"
+    "size": 5438254,
+    "payload_ts": "2026-08-29T20:57:06.679Z"
    },
    "consumption": {
     "measured": false,
@@ -380,8 +380,8 @@
    "via": "dressing-room/state/afferent.jsonl",
    "liveness": {
     "exists": true,
-    "size": 5378998,
-    "payload_ts": "2026-08-30T00:53:01.838+05:30"
+    "size": 5438254,
+    "payload_ts": "2026-08-29T20:57:06.679Z"
    },
    "consumption": {
     "measured": false,
@@ -403,8 +403,8 @@
    "via": "dressing-room/state/afferent.jsonl",
    "liveness": {
     "exists": true,
-    "size": 5378998,
-    "payload_ts": "2026-08-30T00:53:01.838+05:30"
+    "size": 5438254,
+    "payload_ts": "2026-08-29T20:57:06.679Z"
    },
    "consumption": {
     "measured": false,
@@ -426,8 +426,8 @@
    "via": "dressing-room/state/afferent.jsonl",
    "liveness": {
     "exists": true,
-    "size": 5378998,
-    "payload_ts": "2026-08-30T00:53:01.838+05:30"
+    "size": 5438254,
+    "payload_ts": "2026-08-29T20:57:06.679Z"
    },
    "consumption": {
     "measured": false,
@@ -449,8 +449,8 @@
    "via": "dressing-room/state/afferent.jsonl",
    "liveness": {
     "exists": true,
-    "size": 5378998,
-    "payload_ts": "2026-08-30T00:53:01.838+05:30"
+    "size": 5438254,
+    "payload_ts": "2026-08-29T20:57:06.679Z"
    },
    "consumption": {
     "measured": false,
@@ -472,8 +472,8 @@
    "via": "dressing-room/state/afferent.jsonl",
    "liveness": {
     "exists": true,
-    "size": 5378998,
-    "payload_ts": "2026-08-30T00:53:01.838+05:30"
+    "size": 5438254,
+    "payload_ts": "2026-08-29T20:57:06.679Z"
    },
    "consumption": {
     "measured": false,
@@ -495,8 +495,8 @@
    "via": "dressing-room/state/afferent.jsonl",
    "liveness": {
     "exists": true,
-    "size": 5378998,
-    "payload_ts": "2026-08-30T00:53:01.838+05:30"
+    "size": 5438254,
+    "payload_ts": "2026-08-29T20:57:06.679Z"
    },
    "consumption": {
     "measured": false,
@@ -6242,8 +6242,8 @@
    "via": "dressing-room/state/brain_out/gate.jsonl",
    "liveness": {
     "exists": true,
-    "size": 39356,
-    "payload_ts": "2026-08-29T19:01:48.206Z"
+    "size": 40418,
+    "payload_ts": "2026-08-29T20:36:55.932Z"
    },
    "consumption": {
     "measured": false,
@@ -6265,8 +6265,8 @@
    "via": "dressing-room/state/brain_out/gate.jsonl",
    "liveness": {
     "exists": true,
-    "size": 39356,
-    "payload_ts": "2026-08-29T19:01:48.206Z"
+    "size": 40418,
+    "payload_ts": "2026-08-29T20:36:55.932Z"
    },
    "consumption": {
     "measured": false,
@@ -6334,8 +6334,8 @@
    "via": "dressing-room/state/brain_queue.json",
    "liveness": {
     "exists": true,
-    "size": 16641,
-    "payload_ts": "2026-08-29T19:23:46.427Z"
+    "size": 16474,
+    "payload_ts": "2026-08-29T20:44:03.216Z"
    },
    "consumption": {
     "measured": false,
@@ -6357,8 +6357,8 @@
    "via": "dressing-room/state/brain_queue.json",
    "liveness": {
     "exists": true,
-    "size": 16641,
-    "payload_ts": "2026-08-29T19:23:46.427Z"
+    "size": 16474,
+    "payload_ts": "2026-08-29T20:44:03.216Z"
    },
    "consumption": {
     "measured": false,
@@ -6380,8 +6380,8 @@
    "via": "dressing-room/state/brain_queue.json",
    "liveness": {
     "exists": true,
-    "size": 16641,
-    "payload_ts": "2026-08-29T19:23:46.427Z"
+    "size": 16474,
+    "payload_ts": "2026-08-29T20:44:03.216Z"
    },
    "consumption": {
     "measured": false,
@@ -6403,8 +6403,8 @@
    "via": "dressing-room/state/brain_queue.json",
    "liveness": {
     "exists": true,
-    "size": 16641,
-    "payload_ts": "2026-08-29T19:23:46.427Z"
+    "size": 16474,
+    "payload_ts": "2026-08-29T20:44:03.216Z"
    },
    "consumption": {
     "measured": false,
@@ -6426,8 +6426,8 @@
    "via": "dressing-room/state/brain_queue.json",
    "liveness": {
     "exists": true,
-    "size": 16641,
-    "payload_ts": "2026-08-29T19:23:46.427Z"
+    "size": 16474,
+    "payload_ts": "2026-08-29T20:44:03.216Z"
    },
    "consumption": {
     "measured": false,
@@ -6449,8 +6449,8 @@
    "via": "dressing-room/state/brain_queue.json",
    "liveness": {
     "exists": true,
-    "size": 16641,
-    "payload_ts": "2026-08-29T19:23:46.427Z"
+    "size": 16474,
+    "payload_ts": "2026-08-29T20:44:03.216Z"
    },
    "consumption": {
     "measured": false,
@@ -7277,8 +7277,8 @@
    "via": "dressing-room/state/consumption.jsonl",
    "liveness": {
     "exists": true,
-    "size": 116362,
-    "payload_ts": "2026-08-29T19:10:06.288Z"
+    "size": 117990,
+    "payload_ts": "2026-08-29T20:36:55.298Z"
    },
    "consumption": {
     "measured": false,
@@ -7300,8 +7300,8 @@
    "via": "dressing-room/state/consumption.jsonl",
    "liveness": {
     "exists": true,
-    "size": 116362,
-    "payload_ts": "2026-08-29T19:10:06.288Z"
+    "size": 117990,
+    "payload_ts": "2026-08-29T20:36:55.298Z"
    },
    "consumption": {
     "measured": false,
@@ -7369,8 +7369,8 @@
    "via": "dressing-room/state/daemon_watchdog.json",
    "liveness": {
     "exists": true,
-    "size": 3141,
-    "payload_ts": "2026-08-29T19:21:05.300Z"
+    "size": 3605,
+    "payload_ts": "2026-08-29T21:11:02.164Z"
    },
    "consumption": {
     "measured": false,
@@ -7392,8 +7392,8 @@
    "via": "dressing-room/state/daemon_watchdog.json",
    "liveness": {
     "exists": true,
-    "size": 3141,
-    "payload_ts": "2026-08-29T19:21:05.300Z"
+    "size": 3605,
+    "payload_ts": "2026-08-29T21:11:02.164Z"
    },
    "consumption": {
     "measured": false,
@@ -7415,8 +7415,8 @@
    "via": "dressing-room/state/distiller_latency.jsonl",
    "liveness": {
     "exists": true,
-    "size": 109166,
-    "payload_ts": "2026-08-29T19:14:03.655Z"
+    "size": 110275,
+    "payload_ts": "2026-08-29T19:59:02.037Z"
    },
    "consumption": {
     "measured": false,
@@ -9757,7 +9757,7 @@
    "via": "dressing-room/state/presence_log.jsonl",
    "liveness": {
     "exists": true,
-    "size": 3291169,
+    "size": 3330752,
     "payload_ts": "2026-08-30"
    },
    "consumption": {
@@ -9780,7 +9780,7 @@
    "via": "dressing-room/state/presence_log.jsonl",
    "liveness": {
     "exists": true,
-    "size": 3291169,
+    "size": 3330752,
     "payload_ts": "2026-08-30"
    },
    "consumption": {
@@ -10799,7 +10799,7 @@
    "via": "dressing-room/state/salience_ledger.jsonl",
    "liveness": {
     "exists": true,
-    "size": 1807145,
+    "size": 1821330,
     "payload_ts": "2026-08-30"
    },
    "consumption": {
@@ -10822,7 +10822,7 @@
    "via": "dressing-room/state/salience_ledger.jsonl",
    "liveness": {
     "exists": true,
-    "size": 1807145,
+    "size": 1821330,
     "payload_ts": "2026-08-30"
    },
    "consumption": {
@@ -10845,7 +10845,7 @@
    "via": "dressing-room/state/salience_ledger.jsonl",
    "liveness": {
     "exists": true,
-    "size": 1807145,
+    "size": 1821330,
     "payload_ts": "2026-08-30"
    },
    "consumption": {
@@ -10868,7 +10868,7 @@
    "via": "dressing-room/state/salience_ledger.jsonl",
    "liveness": {
     "exists": true,
-    "size": 1807145,
+    "size": 1821330,
     "payload_ts": "2026-08-30"
    },
    "consumption": {
@@ -11535,7 +11535,7 @@
    "via": "dressing-room/state/tanks.json",
    "liveness": {
     "exists": true,
-    "size": 1502,
+    "size": 1503,
     "payload_ts": "2026-08-30"
    },
    "consumption": {
@@ -11696,7 +11696,7 @@
    "via": "dressing-room/state/teaching_audit_last.json",
    "liveness": {
     "exists": true,
-    "size": 1916,
+    "size": 1662,
     "payload_ts": null
    },
    "consumption": {
@@ -11719,7 +11719,7 @@
    "via": "dressing-room/state/teaching_audit_last.json",
    "liveness": {
     "exists": true,
-    "size": 1916,
+    "size": 1662,
     "payload_ts": null
    },
    "consumption": {
@@ -11742,7 +11742,7 @@
    "via": "dressing-room/state/teaching_audit_last.json",
    "liveness": {
     "exists": true,
-    "size": 1916,
+    "size": 1662,
     "payload_ts": null
    },
    "consumption": {
@@ -11996,7 +11996,7 @@
    "liveness": {
     "exists": true,
     "size": 111,
-    "payload_ts": "2026-08-29T19:14:04.473Z"
+    "payload_ts": "2026-08-29T20:59:02.545Z"
    },
    "consumption": {
     "measured": false,
@@ -12203,7 +12203,7 @@
    "liveness": {
     "exists": true,
     "size": 1431,
-    "payload_ts": "2026-08-29T19:23:46.427Z"
+    "payload_ts": "2026-08-29T20:44:03.216Z"
    },
    "consumption": {
     "measured": false,
@@ -12226,7 +12226,7 @@
    "liveness": {
     "exists": true,
     "size": 1431,
-    "payload_ts": "2026-08-29T19:23:46.427Z"
+    "payload_ts": "2026-08-29T20:44:03.216Z"
    },
    "consumption": {
     "measured": false,
@@ -12249,7 +12249,7 @@
    "liveness": {
     "exists": true,
     "size": 1431,
-    "payload_ts": "2026-08-29T19:23:46.427Z"
+    "payload_ts": "2026-08-29T20:44:03.216Z"
    },
    "consumption": {
     "measured": false,
@@ -12272,7 +12272,7 @@
    "liveness": {
     "exists": true,
     "size": 1431,
-    "payload_ts": "2026-08-29T19:23:46.427Z"
+    "payload_ts": "2026-08-29T20:44:03.216Z"
    },
    "consumption": {
     "measured": false,
@@ -12295,7 +12295,7 @@
    "liveness": {
     "exists": true,
     "size": 1431,
-    "payload_ts": "2026-08-29T19:23:46.427Z"
+    "payload_ts": "2026-08-29T20:44:03.216Z"
    },
    "consumption": {
     "measured": false,
@@ -12318,7 +12318,7 @@
    "liveness": {
     "exists": true,
     "size": 271,
-    "payload_ts": "2026-08-29T19:20:04.608Z"
+    "payload_ts": "2026-08-29T21:10:02.192Z"
    },
    "consumption": {
     "measured": false,
@@ -12915,8 +12915,8 @@
    "via": "dressing-room/state/working_set.json",
    "liveness": {
     "exists": true,
-    "size": 1034,
-    "payload_ts": "2026-08-29T19:14:03.655Z"
+    "size": 1182,
+    "payload_ts": "2026-08-29T20:59:02.586Z"
    },
    "consumption": {
     "measured": false,
@@ -12938,8 +12938,8 @@
    "via": "dressing-room/state/working_set.json",
    "liveness": {
     "exists": true,
-    "size": 1034,
-    "payload_ts": "2026-08-29T19:14:03.655Z"
+    "size": 1182,
+    "payload_ts": "2026-08-29T20:59:02.586Z"
    },
    "consumption": {
     "measured": false,
@@ -12961,8 +12961,8 @@
    "via": "dressing-room/state/workspace.json",
    "liveness": {
     "exists": true,
-    "size": 8706,
-    "payload_ts": "2026-08-29T19:23:02.210Z"
+    "size": 7338,
+    "payload_ts": "2026-08-29T20:57:07.586Z"
    },
    "consumption": {
     "measured": false,
@@ -12984,8 +12984,8 @@
    "via": "dressing-room/state/workspace.json",
    "liveness": {
     "exists": true,
-    "size": 8706,
-    "payload_ts": "2026-08-29T19:23:02.210Z"
+    "size": 7338,
+    "payload_ts": "2026-08-29T20:57:07.586Z"
    },
    "consumption": {
     "measured": false,
@@ -13007,8 +13007,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 503731,
-    "payload_ts": "2026-08-29T19:23:52.764Z"
+    "size": 503903,
+    "payload_ts": "2026-08-29T21:13:24.919Z"
    },
    "consumption": {
     "measured": false,
@@ -13030,8 +13030,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 503731,
-    "payload_ts": "2026-08-29T19:23:52.764Z"
+    "size": 503903,
+    "payload_ts": "2026-08-29T21:13:24.919Z"
    },
    "consumption": {
     "measured": false,
@@ -13053,8 +13053,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 503731,
-    "payload_ts": "2026-08-29T19:23:52.764Z"
+    "size": 503903,
+    "payload_ts": "2026-08-29T21:13:24.919Z"
    },
    "consumption": {
     "measured": false,
@@ -13076,8 +13076,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 503731,
-    "payload_ts": "2026-08-29T19:23:52.764Z"
+    "size": 503903,
+    "payload_ts": "2026-08-29T21:13:24.919Z"
    },
    "consumption": {
     "measured": false,
@@ -13099,8 +13099,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 503731,
-    "payload_ts": "2026-08-29T19:23:52.764Z"
+    "size": 503903,
+    "payload_ts": "2026-08-29T21:13:24.919Z"
    },
    "consumption": {
     "measured": false,
@@ -13122,8 +13122,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 503731,
-    "payload_ts": "2026-08-29T19:23:52.764Z"
+    "size": 503903,
+    "payload_ts": "2026-08-29T21:13:24.919Z"
    },
    "consumption": {
     "measured": false,
@@ -13145,8 +13145,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 503731,
-    "payload_ts": "2026-08-29T19:23:52.764Z"
+    "size": 503903,
+    "payload_ts": "2026-08-29T21:13:24.919Z"
    },
    "consumption": {
     "measured": false,
@@ -14075,7 +14075,7 @@
    "∅": 12,
    "finding": 23
   },
-  "off_road_lanes": 15
+  "off_road_lanes": 16
  },
  "off_road": {
   "dmn_rollout": "feeds dmn.mjs / physio.mjs / council.mjs — the default-mode rollout, never a file he opens",
@@ -14092,7 +14092,8 @@
   "gaffer_verify": "feeds gaffer_brain.mjs / scout.mjs — same: the Gaffer's own reasoning inside a sitting",
   "mission_m03": "feeds scout.mjs — the mission lane carries its own returns and its own cards",
   "haiku_pulse": "RETIRED on purpose (commit 4f94805) — 98% of 32,480 tok/pulse was boot tax",
-  "selfknowledge": "feeds dugout.mjs get_organism, which stamps its consumption directly"
+  "selfknowledge": "feeds dugout.mjs get_organism, which stamps its consumption directly",
+  "dmn_bg_drain": "feeds thalamus.mjs — the SECOND SPOTLIGHT: a moment the salience gate suppressed gets its deep read and is posted back to the nucleus, never a file he opens. dmn.mjs reads the queue's backlog for its own status line."
  },
  "spec_copy": {
   "class": "spec→derived-copy {source_file · source_version · derived_file · declared_version}",

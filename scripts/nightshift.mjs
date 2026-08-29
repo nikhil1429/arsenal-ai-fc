@@ -1120,7 +1120,12 @@ function isOvernight(now = new Date()) { const h = now.getHours(); return h >= 1
 // An asleep lane prints ONE line into the shift record and spends nothing.
 // ---------------------------------------------------------------------------
 const NS_GATE = {
-  ns_probe_bank: { gate: { event: "lock" }, surface: { kind: "code", where: "scripts/dugout.mjs buildScrimmageInstruction (probe bank) + get_rejirah" } },
+  // RUNG A (30 Aug 2026) — `aliases` is DERIVED, not chosen: gradeProbes is called at :1212
+  // INSIDE this lane's own `gPB.run` branch and meters its calls as `ns_grade_probes`
+  // (:514-515), so those 86 ledger rows ARE this lane's runs. Without the alias, everRan and
+  // failStreak read past them — the same one-lane-two-names blindness the DMN's third lane was
+  // found in, one organ over.
+  ns_probe_bank: { gate: { event: "lock" }, aliases: ["ns_grade_probes"], surface: { kind: "code", where: "scripts/dugout.mjs buildScrimmageInstruction (probe bank) + get_rejirah" } },
   ns_distractors: { gate: {}, surface: { kind: "code", where: "scripts/dugout.mjs get_rejirah (distractors ride each due concept)" } },
   ns_pre_answers: { gate: {}, surface: { kind: "code", where: "scripts/thalamus.mjs matchPreAnswer → the mouth's hint" } },
 };
@@ -1158,7 +1163,7 @@ function nsGate(lane, { evidence, event_armed, deps, now, collect }) {
   // hermetic seam: the suite hands a verdict function; the live path asks the owner
   if (deps.gateVerdict) return deps.gateVerdict(lane, { evidence, event_armed });
   const spec = NS_GATE[lane] || { gate: {}, surface: null };
-  const v = gateVerdictForLane(lane, { evidence, gate: spec.gate, event_armed, now, surface: spec.surface });
+  const v = gateVerdictForLane(lane, { evidence, gate: spec.gate, event_armed, now, surface: spec.surface, aliases: spec.aliases || [] });
   // journal on transition; the CARD is collected and filed ONCE per shift (below) —
   // three lanes sleeping on the same night for the same reason is one question, not three
   try { gateTransition(lane, v, { now, by: "nightshift", collectCards: collect }); } catch { /* the journal must never cost the shift */ }
@@ -1421,7 +1426,7 @@ async function selftest() {
     // because a hermetic suite cannot run it without a live ledger
     const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
     assert("GATE — the live path calls brain's gateVerdictForLane + gateTransition (owner-held journal/card), and the three lanes carry a declared gate/surface",
-      /gateVerdictForLane\(lane, \{ evidence, gate: spec\.gate, event_armed, now, surface: spec\.surface \}\)/.test(src)
+      /gateVerdictForLane\(lane, \{ evidence, gate: spec\.gate, event_armed, now, surface: spec\.surface, aliases: spec\.aliases \|\| \[\] \}\)/.test(src)
       && /gateTransition\(lane, v, \{ now, by: "nightshift", collectCards: collect \}\)/.test(src)
       && /gateCardsForTick\(sleptNow, now, \{ threshold: 1, label: "nightshift" \}\)/.test(src)
       && ["ns_probe_bank", "ns_distractors", "ns_pre_answers"].every((l) => NS_GATE[l] && NS_GATE[l].surface));

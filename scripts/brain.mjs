@@ -1805,11 +1805,30 @@ export function gateForce(queueState, lane) {
   const f = queueState && queueState.gate && queueState.gate.forced && queueState.gate.forced[lane];
   return f && typeof f === "object" ? f : null;
 }
-export function setGateForce(queueState, lane, { until, once = true, by = "cli", now = new Date() } = {}) {
+// RUNG A (30 Aug 2026) — `why` rides the force from birth. The rung found ONE live force on the
+// board (`selfknowledge`, armed 18 Aug, `by: "cli"`) and nothing anywhere said what it was for:
+// twelve days of a hand held open over the gate with no account. An author without a reason is
+// half a receipt, so the reason is now recorded where the force is, and the CLI journals both
+// the arming and the clearing (journalForce below). Optional by shape, so nothing that arms a
+// force today breaks — but absent, it PRINTS as absent in `gate show`, which is the pressure.
+export function setGateForce(queueState, lane, { until = null, once = true, by = "cli", now = new Date(), why = null } = {}) {
   queueState.gate = queueState.gate || {};
   queueState.gate.forced = queueState.gate.forced || {};
-  queueState.gate.forced[lane] = { until: until || null, once: !!once, by, ts: now.toISOString() };
+  queueState.gate.forced[lane] = { until: until || null, once: !!once, by, ts: now.toISOString(), ...(why ? { why: String(why).slice(0, 300) } : {}) };
   return queueState;
+}
+// The FORCE's own row in the gate journal. gateTransition records what the EVIDENCE decided;
+// this records what a HAND decided, which is the thing that was invisible: a force left no trace
+// anywhere except the queue file it lived in, so a force that had already expired left none at
+// all. Same lane, same file, same owner — one journal, two kinds of row.
+export function journalForce({ lane = null, action = null, by = "cli", why = null, force = null, now = new Date(), appendJournal = null } = {}) {
+  const row = { ts: now.toISOString(), lane, kind: "force", action, by, why: why || null,
+    force: force ? { until: force.until || null, once: !!force.once, by: force.by || null, armed_at: force.ts || null, why: force.why || null } : null };
+  try {
+    if (appendJournal) appendJournal(JSON.stringify(row) + "\n");
+    else { mkdirSync(OUT_DIR, { recursive: true }); appendFileSync(GATE_JOURNAL, JSON.stringify(row) + "\n"); }
+  } catch (e) { swallow("journalForce: the gate journal is unwritable → the force still applied, the record did not", e); return null; }
+  return row;
 }
 
 // ---- THE FOLD, the runner's fact (overhaul §10 · Block 5.2, 18 Aug 2026) ---------
@@ -1925,7 +1944,23 @@ export function gateVerdictFor(job, cfg, ctx, visited = new Set()) {
 // have no brain_config row.
 // `aliases` = the ledger job names this lane's rows carry (the DMN's rows are
 // dmn_rollout/dmn_counter; the shift's are ns_*) — everRan/failStreak read them as ONE.
-export function gateVerdictForLane(lane, { evidence = {}, gate = {}, event_armed, ledger = null, consumption = null, queueState = null, now = new Date(), surface = null, aliases = [], outbox = undefined } = {}) {
+//
+// RUNG A (30 Aug 2026) — THE GUARD EXTENSION. THE `inputs` ARGUMENT IS NOW COMPUTED HERE BY
+// DEFAULT, so a non-brain lane is on the input guard the moment it asks for a verdict and a
+// lane added tomorrow is guarded without anyone remembering to wire it. FAIL-CLOSED BY
+// CONSTRUCTION: a lane with no `job_inputs` row declares nothing, `inputLiveness` hands back
+// `null`, and gate.mjs's input ratchet sleeps it. The row — not a hand-list here — is the
+// only door, exactly as it is for the six code-computed brain jobs (S13).
+// A CALL SITE MAY PASS `inputs` EXPLICITLY, and one does: `selfknowledge`, whose whole input
+// class is the SOURCE TREE (selfknowledge.mjs gatherMachinery reads scripts/*.mjs +
+// package.json + the functional docs — MEASURED: zero state files, zero data of his). The
+// vintage predicate cannot judge a lane fed by the organism itself, so that lane passes
+// `inputs: undefined` at its own site with the fork cited — the honest `covered:false` state
+// gate.mjs was built with, printed by the journal, the card and `gate show`, and recorded in
+// arsenal-audit-artifacts\queue\OPEN-FORKS.md for the architect. Silence would be SHAPE 8;
+// a named, printed gap is a measured remainder.
+export function gateVerdictForLane(lane, opts = {}) {
+  const { evidence = {}, gate = {}, event_armed, ledger = null, consumption = null, queueState = null, now = new Date(), surface = null, aliases = [], outbox = undefined, cfg = null } = opts;
   const led = ledger || readLines(LEDGER);
   const cons = consumption || consumptionRows();
   const qs = queueState || readJson(QUEUE) || {};
@@ -1943,14 +1978,15 @@ export function gateVerdictForLane(lane, { evidence = {}, gate = {}, event_armed
   const c = (oc && (!c0.last_at || Date.parse(oc.last_at) > Date.parse(c0.last_at))) ? oc : c0;
   const never_ran = !gateEverRan(led, ids);
   const forced = gateForce(qs, lane);
-  // RUNG S13 — `inputs` is DELIBERATELY not passed here, and the verdict SAYS SO. This is the
-  // non-brain lane path (nightshift, dmn, selfknowledge): those lanes hand their own `evidence`
-  // and have no brain_config row, so they are outside the 34 jobs S13's ruling scopes. gate.mjs
-  // turns the absence into `input_guard.covered:false` — a measured gap with a name, printed by
-  // the journal, the card and `gate show`. A guard that green-lights what it cannot see SILENTLY
-  // is SHAPE 8; this one says it out loud, and the remainder is named in the rung's handoff.
-  const v = gateDecide({ job: { id: lane, gate, surface }, evidence, consumption: { ...c, never_ran, ...(event_armed !== undefined ? { event_armed } : {}) }, failures: { streak: failStreakOf(led, ids) }, now, forced });
-  return { ...v, consumption: c, never_ran, forced, evidence };
+  // RUNG A — the S13 comment that stood here said `inputs` is deliberately NOT passed on this
+  // path because the non-brain lanes were outside S13's ruled 34 jobs. That is no longer true
+  // and the prose does not get to lag the code (L9: layered, not deleted — the old sentence is
+  // preserved in git and in the S13 header block of gate.mjs, corrected in place there too).
+  // The remainder S13 named is what this rung closed.
+  const inputs = ("inputs" in opts) ? opts.inputs
+    : inputLiveness({ id: lane, gate, surface }, cfg || loadConfig(), { now });
+  const v = gateDecide({ job: { id: lane, gate, surface }, evidence, consumption: { ...c, never_ran, ...(event_armed !== undefined ? { event_armed } : {}) }, failures: { streak: failStreakOf(led, ids) }, now, forced, inputs });
+  return { ...v, consumption: c, never_ran, forced, evidence, inputs };
 }
 // The live context, read ONCE per tick/status. Hermetic callers hand their own.
 function gateContext(deps, now, ledger, queueState) {
@@ -2034,10 +2070,18 @@ export function gateTransition(lane, verdict, deps = {}) {
   // cards about this plan"), the journal + `brain status` name it, and `brain gate wake`
   // stays his hand door. A sleep that also fails E/C/F cards as before.
   const cardable = state === "asleep" && failedLetters(verdict.why).some((k) => k !== "D");
+  // RUNG A (30 Aug 2026) — THE JOURNAL SAID "ASLEEP" WITH EVERY LETTER TRUE. Measured on the
+  // live lane before this line changed: `2026-08-29T18:34:20.148Z day_cartridge asleep
+  // why={"E":true,"C":true,"F":true,"D":true}` — a receipt that records the verdict and not the
+  // reason, which is SHAPE 8 inside the organism's own record. CAUSE: S13 added I to the verdict
+  // and to GATE_LETTERS, but this row was a HAND-WRITTEN four-letter literal, so the fifth letter
+  // fell on the floor between them. FIX BY THE LIST, never by adding a fifth literal: both maps
+  // are folded off GATE_LETTERS, so the sixth letter cannot repeat this.
+  const letters = Object.fromEntries(GATE_LETTERS.map((k) => [k, verdict.why[k] || (k === "D" ? D : null)]));
   const row = {
     ts: now.toISOString(), lane, state, by: deps.by || "brain",
-    why: { E: verdict.why.E.ok, C: verdict.why.C.ok, F: verdict.why.F.ok, D: D.ok },
-    detail: { E: verdict.why.E.detail, C: verdict.why.C.detail, F: verdict.why.F.detail, D: D.detail },
+    why: Object.fromEntries(GATE_LETTERS.map((k) => [k, letters[k] ? letters[k].ok !== false : true])),
+    detail: Object.fromEntries(GATE_LETTERS.map((k) => [k, letters[k] ? (letters[k].detail || null) : null])),
     fold: verdict.fold || null,
     card: state === "asleep" ? (cardable ? "filed" : "none (fold — his approved design, journal only)") : null,
     wakes_when: verdict.wakes_when || null,
@@ -4425,7 +4469,16 @@ export function armTrigger(name, reason, { queuePath = QUEUE, now = new Date() }
 // hand, or dispatched by his 'na' on a card) writes gate.forced[lane] to disk at any
 // moment, and this tick's whole-object write must not erase it. Disk wins on forces
 // EXCEPT for a `once` this tick just spent (consumedForces) — that stays spent.
-function mergeTriggers(disk, mine, consumed = [], consumedForces = []) {
+// RUNG A (30 Aug 2026) — `removedForces` EXISTS BECAUSE `gate clear` NEVER CLEARED ANYTHING.
+// MEASURED at this rung, by running it: `node scripts/brain.mjs gate clear selfknowledge`
+// printed "force dropped" and the force was still in brain_queue.json afterwards. The cause is
+// one line below — `{ ...mineForced, ...diskForced }` lets DISK WIN, which is exactly right for
+// a force ADDED behind the tick's back (the lost-update safety this function exists for) and
+// exactly wrong for one the caller DELETED on purpose: the delete is invisible in `mine`, so
+// disk always puts it back. So a deletion, like a consumed trigger, has to be STATED — the
+// `consumed` parameter's own shape, applied to the other half of the object. A CLI that reports
+// an act it did not perform is SHAPE 8 in the organism's own hand: the receipt was testimony.
+function mergeTriggers(disk, mine, consumed = [], consumedForces = [], removedForces = []) {
   if (!disk || typeof disk !== "object") return mine;
   const triggers = { ...(disk.triggers || {}) };
   for (const k of consumed) delete triggers[k];
@@ -4433,6 +4486,7 @@ function mergeTriggers(disk, mine, consumed = [], consumedForces = []) {
   const diskForced = (disk.gate && disk.gate.forced) || {};
   const forced = { ...mineForced, ...diskForced };
   for (const lane of consumedForces) if (forced[lane]) forced[lane] = { ...forced[lane], once: false };
+  for (const lane of removedForces) delete forced[lane];   // a STATED removal outranks the disk; nothing else does
   const gate = { ...(mine.gate || {}), forced };
   return { ...mine, triggers, gate };
 }
@@ -6496,6 +6550,14 @@ async function selftest() {
     const merged2 = mergeTriggers({ triggers: {}, gate: { forced: { x: { until: iso(-14), once: true, by: "cli" } } } }, { jobs_run: {} }, [], []);
     assert("MERGE — a tick that never touched gate state still carries the disk's forces forward (and triggers merge exactly as before)",
       merged2.gate.forced.x.once === true && typeof merged2.triggers === "object");
+    // RUNG A — the bite for the defect this rung found by RUNNING `gate clear`: without the
+    // stated removal the disk copy comes straight back, and the CLI reports a clear it never did.
+    const dsk = { triggers: {}, gate: { forced: { gone: { until: iso(-14), once: true, by: "cli" }, keep: { until: iso(-14), once: true, by: "cli" } } } };
+    const mineAfterDelete = { jobs_run: {}, gate: { forced: { keep: dsk.gate.forced.keep } } };
+    assert("RUNG A · MERGE — a STATED removal actually removes (and only it): `gate clear` used to print \"force dropped\" and drop nothing, because disk-wins put the deleted key back every time",
+      mergeTriggers(dsk, mineAfterDelete, [], [], ["gone"]).gate.forced.gone === undefined
+      && !!mergeTriggers(dsk, mineAfterDelete, [], [], ["gone"]).gate.forced.keep
+      && !!mergeTriggers(dsk, mineAfterDelete, [], [], []).gate.forced.gone);
 
     // ── THE FOLD (Block 5.2) — the runner's fact, then the fourth letter, then the transition ──
     {
@@ -6913,7 +6975,11 @@ async function main() {
       printGate(gateReport(cfg, gateContext({}, now, ledger, q)), { verbose: process.argv.includes("-v") || process.argv.includes("--verbose") });
       const forced = (q.gate && q.gate.forced) || {};
       const live = Object.entries(forced).filter(([, f]) => f && ((f.until && Date.parse(f.until) > now.getTime()) || f.once));
-      if (live.length) console.log(`brain: gate forces live — ${live.map(([l, f]) => `${l} (until ${String(f.until || "-").slice(0, 16)}${f.once ? ", once" : ""}, by ${f.by})`).join(" · ")}`);
+      // RUNG A (30 Aug 2026) — FORCE HYGIENE: a live force is a HAND HELD OPEN over the gate,
+      // and the one live force found at this rung (`selfknowledge`, armed 18 Aug by "cli") had
+      // NO recorded reason at all — twelve days of an open door nobody could account for. The
+      // line now prints the reason, and says so out loud when there is none.
+      if (live.length) console.log(`brain: gate forces live — ${live.map(([l, f]) => `${l} (until ${String(f.until || "-").slice(0, 16)}${f.once ? ", once" : ""}, by ${f.by}${f.why ? ` — ${f.why}` : " — NO REASON RECORDED (arm it with `gate wake <lane> --why \"…\"`; an open door nobody can account for is the thing the gate exists to end)"})`).join(" · ")}`);
       return;
     }
     if (sub === "json") {
@@ -6935,7 +7001,17 @@ async function main() {
       const n = Math.max(1, Number(process.argv[4]) || 20);
       const rows = gateJournalRows().slice(-n);
       if (!rows.length) console.log("brain: gate journal — no transition recorded yet (the first tick after the gate landed writes the first rows)");
-      for (const r of rows) console.log(`  ${String(r.ts).slice(0, 19)}Z ${r.lane.padEnd(18)} → ${r.state.padEnd(6)} E${r.why.E ? "✓" : "✗"} C${r.why.C ? "✓" : "✗"} F${r.why.F ? "✓" : "✗"}${r.state === "asleep" ? ` · wakes when: ${String(r.wakes_when || "").slice(0, 110)}` : ""}`);
+      // RUNG A — TWO ROW KINDS, and ALL FIVE LETTERS. This printer showed E·C·F only, so a lane
+      // that slept on D or on I printed three ticks and no reason — the same dropped-letter bug
+      // the journal row itself carried, in the reader instead of the writer. Both are folded off
+      // GATE_LETTERS now, so the sixth letter cannot repeat it in either place. And a `force` row
+      // (a HAND on the gate, journaled since this rung) has no `state` at all: printing it
+      // through the verdict format would have thrown on `r.state.padEnd`.
+      for (const r of rows) {
+        if (r.kind === "force") { console.log(`  ${String(r.ts).slice(0, 19)}Z ${String(r.lane).padEnd(18)} → FORCE ${String(r.action || "?").padEnd(8)} by ${r.by || "?"}${r.why ? ` — ${r.why}` : " — no reason given"}${r.force && r.force.armed_at ? ` (armed ${String(r.force.armed_at).slice(0, 16)}${r.force.why ? `, why "${r.force.why}"` : ", NO REASON RECORDED"})` : ""}`); continue; }
+        const letters = GATE_LETTERS.map((k) => `${k}${r.why && r.why[k] === false ? "✗" : "✓"}`).join(" ");
+        console.log(`  ${String(r.ts).slice(0, 19)}Z ${String(r.lane).padEnd(18)} → ${String(r.state).padEnd(6)} ${letters}${r.state === "asleep" ? ` · wakes when: ${String(r.wakes_when || "").slice(0, 110)}` : ""}`);
+      }
       return;
     }
     const lane = process.argv[4];
@@ -6948,18 +7024,29 @@ async function main() {
         ? gateReport(cfg, gateContext({}, now, readLines(LEDGER), q)).asleep.map((r) => r.lane)
         : String(lane).split(",").map((s) => s.trim()).filter(Boolean);
       if (!lanes.length) { console.log("brain: gate wake all — nothing is asleep right now"); return; }
+      const wi = process.argv.indexOf("--why");
+      const why = wi >= 0 ? String(process.argv[wi + 1] || "").slice(0, 300) : null;
       for (const l of lanes) {
         const job = (cfg.jobs || []).find((j) => j.id === l) || {};
         const days = di >= 0 && Number(process.argv[di + 1]) > 0 ? Number(process.argv[di + 1]) : gateConfig(job).window_days;
         const until = new Date(now.getTime() + days * 86400000).toISOString();
-        setGateForce(q, l, { until, once: true, by: process.env.ARSENAL_GATE_BY || "cli", now });
-        console.log(`brain: gate wake ${l} — forced awake until ${until.slice(0, 16)}Z (${days}d) and through the fail guard for ONE run; the next eligible slot runs it, and a success clears any streak. Sleeping again after that is a verdict on the evidence, not a switch.`);
+        setGateForce(q, l, { until, once: true, by: process.env.ARSENAL_GATE_BY || "cli", now, why });
+        journalForce({ lane: l, action: "armed", by: process.env.ARSENAL_GATE_BY || "cli", why, force: q.gate.forced[l], now });
+        console.log(`brain: gate wake ${l} — forced awake until ${until.slice(0, 16)}Z (${days}d) and through the fail guard for ONE run${why ? ` · why: ${why}` : ""}; the next eligible slot runs it, and a success clears any streak. Sleeping again after that is a verdict on the evidence, not a switch.`);
       }
       writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), q, [], []));
       return;
     }
     if (sub === "clear") {
-      if (q.gate && q.gate.forced && q.gate.forced[lane]) { delete q.gate.forced[lane]; writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), q, [], [])); console.log(`brain: gate clear ${lane} — force dropped; the live evidence decides again`); }
+      const wi = process.argv.indexOf("--why");
+      const why = wi >= 0 ? String(process.argv[wi + 1] || "").slice(0, 300) : null;
+      if (q.gate && q.gate.forced && q.gate.forced[lane]) {
+        const dropped = q.gate.forced[lane];
+        delete q.gate.forced[lane];
+        writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), q, [], [], [lane]));   // RUNG A: the removal is STATED, or the disk copy simply comes back
+        journalForce({ lane, action: "cleared", by: process.env.ARSENAL_GATE_BY || "cli", why, force: dropped, now });
+        console.log(`brain: gate clear ${lane} — force dropped (armed ${String(dropped.ts || "?").slice(0, 16)} by ${dropped.by || "?"}${dropped.why ? `, why "${dropped.why}"` : ", NO REASON RECORDED"})${why ? ` · cleared because: ${why}` : ""}; the live evidence decides again, and the clear is journaled`);
+      }
       else console.log(`brain: gate clear ${lane} — no force on record`);
       return;
     }

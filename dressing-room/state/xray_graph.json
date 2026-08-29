@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-29T19:23:52.764Z",
+ "built_at": "2026-08-29T21:13:24.919Z",
  "organs_parsed": 111,
  "organs_expected": 111,
  "parse_errors": [],
@@ -1097,86 +1097,86 @@
    "unresolved": 5
   },
   "brain.mjs": {
-   "loc": 7424,
+   "loc": 7511,
    "reads": [
     {
      "path": "dressing-room/manager/system.md",
      "lines": [
-      3679,
-      3679,
-      3679,
-      3679,
-      3679,
-      3679,
-      3679,
-      3679
+      3723,
+      3723,
+      3723,
+      3723,
+      3723,
+      3723,
+      3723,
+      3723
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      4122,
+      4166,
       218,
       218,
-      4122,
+      4166,
       218,
       218,
-      4122,
+      4166,
       218,
       218,
-      4122
+      4166
      ],
      "fixture": false
     },
     {
      "path": "scripts/brain.mjs",
      "lines": [
-      5404,
-      5791,
-      6101,
-      6336,
-      5404,
-      5791,
-      6101,
-      6336,
-      5404,
-      5791,
-      6101,
-      6336,
-      5404,
-      5791,
-      6101,
-      6336
+      5458,
+      5845,
+      6155,
+      6390,
+      5458,
+      5845,
+      6155,
+      6390,
+      5458,
+      5845,
+      6155,
+      6390,
+      5458,
+      5845,
+      6155,
+      6390
      ],
      "fixture": true
     },
     {
      "path": "scripts/nightshift.mjs",
      "lines": [
-      5641,
-      5641,
-      5641,
-      5641
+      5695,
+      5695,
+      5695,
+      5695
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      5715,
+      5769,
       218,
       218,
-      5715,
+      5769,
       218,
       218,
       281,
-      5715,
+      5769,
       218,
       218,
       247,
       281,
-      5715
+      5769
      ],
      "fixture": false
     },
@@ -1409,21 +1409,21 @@
     {
      "path": "dressing-room/state/brain_out/lexicon",
      "lines": [
-      2730,
-      2730,
-      2730
+      2774,
+      2774,
+      2774
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_outcomes.jsonl",
      "lines": [
-      3589,
+      3633,
       281,
-      3589,
+      3633,
       247,
       281,
-      3589
+      3633
      ],
      "fixture": false
     },
@@ -1570,25 +1570,25 @@
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
       907,
-      4208,
-      4238,
-      4300,
-      7215,
+      4252,
+      4282,
+      4344,
+      7302,
       907,
-      4208,
-      4238,
-      4300,
-      7215,
+      4252,
+      4282,
+      4344,
+      7302,
       907,
-      4208,
-      4238,
-      4300,
-      7215,
+      4252,
+      4282,
+      4344,
+      7302,
       907,
-      4208,
-      4238,
-      4300,
-      7215
+      4252,
+      4282,
+      4344,
+      7302
      ],
      "verbs": [
       "appendFileSync"
@@ -1611,13 +1611,17 @@
     {
      "path": "dressing-room/state/brain_out/gate.jsonl",
      "lines": [
-      2051,
-      2051,
-      2051,
-      2051,
-      2051,
-      2051,
-      2051
+      1829,
+      2095,
+      1829,
+      2095,
+      2095,
+      1829,
+      2095,
+      2095,
+      1829,
+      2095,
+      2095
      ],
      "verbs": [
       "appendFileSync"
@@ -1627,14 +1631,14 @@
     {
      "path": "dressing-room/state/brain_ledger.jsonl.1",
      "lines": [
-      4122,
-      4122,
-      4122,
-      4122,
-      4122,
-      4122,
-      4122,
-      4122
+      4166,
+      4166,
+      4166,
+      4166,
+      4166,
+      4166,
+      4166,
+      4166
      ],
      "verbs": [
       "rmSync",
@@ -1672,19 +1676,19 @@
      "kind": "organ",
      "script": "captains_call.mjs",
      "verb": null,
-     "line": 2022,
+     "line": 2058,
      "ctx": "defaultFileCard"
     },
     {
      "kind": "llm",
      "bin": "claude",
-     "line": 2351
+     "line": 2395
     },
     {
      "kind": "organ",
      "script": "tasks.mjs",
      "verb": null,
-     "line": 7205,
+     "line": 7292,
      "ctx": "main"
     }
    ],
@@ -1705,17 +1709,17 @@
      "catch_stmts": 2
     },
     {
-     "line": 2350,
+     "line": 2394,
      "try_stmts": 7,
      "catch_stmts": 2
     },
     {
-     "line": 2413,
+     "line": 2457,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2729,
+     "line": 2773,
      "try_stmts": 8,
      "catch_stmts": 2
     },
@@ -1735,17 +1739,17 @@
      "catch_stmts": 2
     },
     {
-     "line": 2350,
+     "line": 2394,
      "try_stmts": 7,
      "catch_stmts": 2
     },
     {
-     "line": 2413,
+     "line": 2457,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2729,
+     "line": 2773,
      "try_stmts": 8,
      "catch_stmts": 2
     },
@@ -1765,17 +1769,17 @@
      "catch_stmts": 2
     },
     {
-     "line": 2350,
+     "line": 2394,
      "try_stmts": 7,
      "catch_stmts": 2
     },
     {
-     "line": 2413,
+     "line": 2457,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2729,
+     "line": 2773,
      "try_stmts": 8,
      "catch_stmts": 2
     },
@@ -1795,17 +1799,17 @@
      "catch_stmts": 2
     },
     {
-     "line": 2350,
+     "line": 2394,
      "try_stmts": 7,
      "catch_stmts": 2
     },
     {
-     "line": 2413,
+     "line": 2457,
      "try_stmts": 6,
      "catch_stmts": 1
     },
     {
-     "line": 2729,
+     "line": 2773,
      "try_stmts": 8,
      "catch_stmts": 2
     }
@@ -1887,6 +1891,7 @@
     "jobConsumers",
     "jobSurface",
     "jobWindows",
+    "journalForce",
     "laneListing",
     "laneRestable",
     "lastGateStates",
@@ -4335,19 +4340,19 @@
    "unresolved": 3
   },
   "dmn.mjs": {
-   "loc": 1569,
+   "loc": 1623,
    "reads": [
     {
      "path": "scripts/dmn.mjs",
      "lines": [
-      992,
-      1267,
-      992,
-      1267,
-      992,
-      1267,
-      992,
-      1267
+      1020,
+      1295,
+      1020,
+      1295,
+      1020,
+      1295,
+      1020,
+      1295
      ],
      "fixture": true
     },
@@ -4481,13 +4486,13 @@
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
       638,
-      828,
+      856,
       638,
-      828,
+      856,
       638,
-      828,
+      856,
       638,
-      828
+      856
      ],
      "verbs": [
       "appendFileSync"
@@ -4678,19 +4683,19 @@
    "unresolved": 4
   },
   "dugout.mjs": {
-   "loc": 6870,
+   "loc": 6889,
    "reads": [
     {
      "path": "dressing-room/club/media/ack",
      "lines": [
       433,
-      6659,
+      6678,
       433,
-      6659,
+      6678,
       433,
-      6659,
+      6678,
       433,
-      6659
+      6678
      ],
      "fixture": false
     },
@@ -4698,13 +4703,13 @@
      "path": "dressing-room/state/brain_out/dugout",
      "lines": [
       798,
-      4445,
+      4464,
       798,
-      4445,
+      4464,
       798,
-      4445,
+      4464,
       798,
-      4445
+      4464
      ],
      "fixture": false
     },
@@ -4738,25 +4743,25 @@
       1420,
       1427,
       1439,
-      3645,
+      3664,
       511,
       511,
       1420,
       1427,
       1439,
-      3645,
+      3664,
       511,
       511,
       1420,
       1427,
       1439,
-      3645,
+      3664,
       511,
       511,
       1420,
       1427,
       1439,
-      3645
+      3664
      ],
      "fixture": false
     },
@@ -4767,7 +4772,7 @@
       1428,
       2097,
       2638,
-      4606,
+      4625,
       1133,
       1137,
       1421,
@@ -4832,7 +4837,7 @@
       2638,
       2097,
       2638,
-      4606,
+      4625,
       1133,
       1137,
       1421,
@@ -4897,7 +4902,7 @@
       2638,
       2097,
       2638,
-      4606,
+      4625,
       1133,
       1137,
       1421,
@@ -4962,7 +4967,7 @@
       2638,
       2097,
       2638,
-      4606
+      4625
      ],
      "fixture": false
     },
@@ -5448,100 +5453,100 @@
     {
      "path": "scripts/dugout.mjs",
      "lines": [
-      3338,
-      3428,
-      3616,
-      3671,
-      3777,
-      3870,
-      3887,
-      4328,
-      4496,
-      4564,
-      4672,
-      4931,
-      5119,
-      5176,
-      5176,
-      5176,
-      5181,
-      3338,
-      3428,
-      3616,
-      3671,
-      3777,
-      3870,
-      3887,
-      4328,
-      4496,
-      4564,
-      4672,
-      4931,
-      5119,
-      5176,
-      5176,
-      5176,
-      5181,
-      3338,
-      3428,
-      3616,
-      3671,
-      3777,
-      3870,
-      3887,
-      4328,
-      4496,
-      4564,
-      4672,
-      4931,
-      5119,
-      5176,
-      5176,
-      5176,
-      5181,
-      3338,
-      3428,
-      3616,
-      3671,
-      3777,
-      3870,
-      3887,
-      4328,
-      4496,
-      4564,
-      4672,
-      4931,
-      5119,
-      5176,
-      5176,
-      5176,
-      5181
+      3357,
+      3447,
+      3635,
+      3690,
+      3796,
+      3889,
+      3906,
+      4347,
+      4515,
+      4583,
+      4691,
+      4950,
+      5138,
+      5195,
+      5195,
+      5195,
+      5200,
+      3357,
+      3447,
+      3635,
+      3690,
+      3796,
+      3889,
+      3906,
+      4347,
+      4515,
+      4583,
+      4691,
+      4950,
+      5138,
+      5195,
+      5195,
+      5195,
+      5200,
+      3357,
+      3447,
+      3635,
+      3690,
+      3796,
+      3889,
+      3906,
+      4347,
+      4515,
+      4583,
+      4691,
+      4950,
+      5138,
+      5195,
+      5195,
+      5195,
+      5200,
+      3357,
+      3447,
+      3635,
+      3690,
+      3796,
+      3889,
+      3906,
+      4347,
+      4515,
+      4583,
+      4691,
+      4950,
+      5138,
+      5195,
+      5195,
+      5195,
+      5200
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/capsules/tokenization.json",
      "lines": [
-      4629,
-      4629,
-      4629,
-      4629
+      4648,
+      4648,
+      4648,
+      4648
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/dugout_reminders.jsonl",
      "lines": [
-      6478,
+      6497,
       511,
       511,
-      6478,
+      6497,
       511,
       511,
-      6478,
+      6497,
       511,
       511,
-      6478
+      6497
      ],
      "fixture": false
     },
@@ -6162,10 +6167,10 @@
     {
      "path": "dressing-room/state/dugout_scrimmage.jsonl",
      "lines": [
-      6728,
-      6728,
-      6728,
-      6728
+      6747,
+      6747,
+      6747,
+      6747
      ],
      "verbs": [
       "appendFileSync"
@@ -6175,18 +6180,18 @@
     {
      "path": "dressing-room/state/dugout_ledger.jsonl",
      "lines": [
-      6736,
-      6746,
-      6769,
-      6736,
-      6746,
-      6769,
-      6736,
-      6746,
-      6769,
-      6736,
-      6746,
-      6769
+      6755,
+      6765,
+      6788,
+      6755,
+      6765,
+      6788,
+      6755,
+      6765,
+      6788,
+      6755,
+      6765,
+      6788
      ],
      "verbs": [
       "appendFileSync"
@@ -6196,10 +6201,10 @@
     {
      "path": "dressing-room/state/recital_audit.jsonl",
      "lines": [
-      6782,
-      6782,
-      6782,
-      6782
+      6801,
+      6801,
+      6801,
+      6801
      ],
      "verbs": [
       "appendFileSync"
@@ -6209,10 +6214,10 @@
     {
      "path": "dressing-room/state/dugout_stamps.jsonl",
      "lines": [
-      6825,
-      6825,
-      6825,
-      6825
+      6844,
+      6844,
+      6844,
+      6844
      ],
      "verbs": [
       "appendFileSync"
@@ -6249,46 +6254,46 @@
      "kind": "organ",
      "script": "shadow.mjs",
      "verb": null,
-     "line": 6428,
+     "line": 6447,
      "ctx": "detectShadows"
     },
     {
      "kind": "organ",
      "script": "sitting.mjs",
      "verb": "daemon",
-     "line": 6519,
+     "line": 6538,
      "ctx": "main"
     },
     {
      "kind": "organ",
      "script": "fuelboard.mjs",
      "verb": "use",
-     "line": 6738,
+     "line": 6757,
      "ctx": "main"
     },
     {
      "kind": "organ",
      "script": "fuelboard.mjs",
      "verb": "use",
-     "line": 6744,
+     "line": 6763,
      "ctx": "main"
     },
     {
      "kind": "organ",
      "script": "fuelboard.mjs",
      "verb": "fault",
-     "line": 6763,
+     "line": 6782,
      "ctx": "main"
     },
     {
      "kind": "bin",
      "bin": "cmd",
-     "line": 6839
+     "line": 6858
     },
     {
      "kind": "bin",
      "bin": "cmd",
-     "line": 6856
+     "line": 6875
     }
    ],
    "swallows": [
@@ -6348,7 +6353,7 @@
      "catch_stmts": 1
     },
     {
-     "line": 6552,
+     "line": 6571,
      "try_stmts": 12,
      "catch_stmts": 1
     },
@@ -6703,7 +6708,7 @@
      "catch_stmts": 1
     },
     {
-     "line": 6552,
+     "line": 6571,
      "try_stmts": 12,
      "catch_stmts": 1
     },
@@ -7058,7 +7063,7 @@
      "catch_stmts": 1
     },
     {
-     "line": 6552,
+     "line": 6571,
      "try_stmts": 12,
      "catch_stmts": 1
     },
@@ -7413,7 +7418,7 @@
      "catch_stmts": 1
     },
     {
-     "line": 6552,
+     "line": 6571,
      "try_stmts": 12,
      "catch_stmts": 1
     }
@@ -8752,7 +8757,7 @@
    "unresolved": 2
   },
   "gate.mjs": {
-   "loc": 835,
+   "loc": 867,
    "reads": [],
    "writes": [],
    "spawns": [],
@@ -11229,7 +11234,7 @@
    "unresolved": 3
   },
   "nightshift.mjs": {
-   "loc": 2034,
+   "loc": 2039,
    "reads": [
     {
      "path": "dressing-room/state/capsules",
@@ -11248,24 +11253,24 @@
     {
      "path": "dressing-room/state/brain_out/nightshift",
      "lines": [
-      1142,
-      1142,
-      1142,
-      1142
+      1147,
+      1147,
+      1147,
+      1147
      ],
      "fixture": false
     },
     {
      "path": "scripts/nightshift.mjs",
      "lines": [
-      1422,
-      1562,
-      1422,
-      1562,
-      1422,
-      1562,
-      1422,
-      1562
+      1427,
+      1567,
+      1427,
+      1567,
+      1427,
+      1567,
+      1427,
+      1567
      ],
      "fixture": true
     },
@@ -11505,7 +11510,7 @@
      "kind": "organ",
      "script": "gate_tune.mjs",
      "verb": "score",
-     "line": 1320,
+     "line": 1325,
      "ctx": "runShift"
     }
    ],
@@ -11709,7 +11714,7 @@
    "unresolved": 3
   },
   "organism_test.mjs": {
-   "loc": 1536,
+   "loc": 1685,
    "reads": [
     {
      "path": "scripts",
@@ -11717,12 +11722,21 @@
       70,
       444,
       596,
+      813,
+      885,
+      918,
       70,
       444,
       596,
+      813,
+      885,
+      918,
       70,
       444,
-      596
+      596,
+      813,
+      885,
+      918
      ],
      "fixture": false
     },
@@ -11731,13 +11745,13 @@
      "lines": [
       86,
       140,
-      840,
+      989,
       86,
       140,
-      840,
+      989,
       86,
       140,
-      840
+      989
      ],
      "fixture": false
     },
@@ -11787,12 +11801,12 @@
     {
      "path": "node_modules",
      "lines": [
-      1404,
-      1404,
-      1404,
-      1404,
-      1404,
-      1404
+      1553,
+      1553,
+      1553,
+      1553,
+      1553,
+      1553
      ],
      "fixture": false
     },
@@ -11880,24 +11894,24 @@
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
-      1510,
-      1510
+      1659,
+      1659
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/flow_atlas.json",
      "lines": [
-      1510,
-      1510
+      1659,
+      1659
      ],
      "fixture": false
     },
     {
      "path": "scripts/thalamus.log",
      "lines": [
-      1249,
-      1249
+      1398,
+      1398
      ],
      "fixture": false
     }
@@ -11906,9 +11920,9 @@
     {
      "path": "scripts/hermeticity_forensics.log",
      "lines": [
-      1225,
-      1225,
-      1225
+      1374,
+      1374,
+      1374
      ],
      "verbs": [
       "appendFileSync"
@@ -11920,7 +11934,7 @@
     {
      "kind": "bin",
      "bin": "git",
-     "line": 884
+     "line": 1033
     }
    ],
    "swallows": [],
@@ -14614,7 +14628,7 @@
    "unresolved": 10
   },
   "selfknowledge.mjs": {
-   "loc": 558,
+   "loc": 571,
    "reads": [
     {
      "path": "dressing-room/state/organism_self.md",
@@ -14650,18 +14664,18 @@
     {
      "path": "docs/archive/THE_ORGANISM__EVERYTHING.md",
      "lines": [
-      487,
-      487,
-      487
+      500,
+      500,
+      500
      ],
      "fixture": true
     },
     {
      "path": "THE_DAILY_LOOP.md",
      "lines": [
-      487,
-      487,
-      487
+      500,
+      500,
+      500
      ],
      "fixture": true
     },

@@ -125,7 +125,7 @@ export const BASELINE = {
   //     and gaffer_state:525 reads standing instructions the code itself declares
   //     non-expiring, where a recency gate would silently drop his own standing word.
   "trailing-n-slice": 0,
-  "bare-catch": 38,
+  "bare-catch": 37,   // RUNG A (30 Aug 2026): the drain's new gate-journal catch was written with swallow("why", e) from birth, and the ratchet took the point back — tightened on the spot, never left as slack a later edit could spend
   // SHAPE 8, frozen at S10 (29 Aug 2026), every one READ before freezing:
   //   archive_audit:808 (.ok off a lane receipt) · capture:1618/:1640 (.n off saved
   //   rows — both inside selftest blocks) · timeaudit:588 (.ok off its own tmp) ·

@@ -328,12 +328,24 @@ export function foldOf(job) {
 //                 declare-or-die extended to the INPUT side, symmetric with C's consumer
 //                 ratchet. A lane with zero declarable inputs after honest derivation earns a
 //                 BORN-RED registry row and an escalation — never an invented input class.
-//   `undefined` → the CALLER is not on the input guard (the non-brain lane path: nightshift,
-//                 dmn, selfknowledge — outside this rung's ruled 34 jobs). I holds, and the
-//                 verdict CARRIES `input_guard.covered === false` so the journal, the card and
-//                 `gate show` all SAY the guard cannot see it. A guard that green-lights what
-//                 it cannot see SILENTLY is SHAPE 8; one that says so out loud is a measured
-//                 gap with a name, which is what the handoff carries as the remainder.
+//   `undefined` → the CALLER is not on the input guard. I holds, and the verdict CARRIES
+//                 `input_guard.covered === false` so the journal, the card and `gate show` all
+//                 SAY the guard cannot see it. A guard that green-lights what it cannot see
+//                 SILENTLY is SHAPE 8; one that says so out loud is a measured gap with a name.
+//                 ⟵ RUNG A (30 Aug 2026) SHRANK THIS STATE TO ONE NAMED LANE. S13 wrote here
+//                 that the whole non-brain path (nightshift, dmn, selfknowledge) sat outside its
+//                 ruled 34 jobs; that remainder is what the guard-extension rung closed.
+//                 brain.mjs `gateVerdictForLane` now COMPUTES the fact by default, so a lane
+//                 with no `job_inputs` row reaches `null` (the ratchet) and not `undefined`.
+//                 The one caller left passing `undefined` is `selfknowledge`, and it is a
+//                 MEASUREMENT, not an exemption: gatherMachinery reads scripts/*.mjs +
+//                 package.json + the functional docs — ZERO state files, ZERO data of his — so
+//                 the lane's whole input class is the SOURCE TREE, which carries no payload
+//                 timestamp and cannot be judged by a vintage window. Its own guard is
+//                 STRICTER than one: it spends only when the tree HASH changed
+//                 (selfknowledge.mjs portraitStatus). The shape question — what does I mean for
+//                 a lane fed by the organism itself — is a fork on file at
+//                 arsenal-audit-artifacts\queue\OPEN-FORKS.md, not a silence.
 export function inputVerdict(inputs, { forcedLive = false, forcedUntilMs = null } = {}) {
   if (inputs === undefined) return { ok: true, covered: false, detail: "NOT COVERED BY THE INPUT GUARD — this caller declares no input class to the gate (the non-brain lane path); its spend is unguarded on the input side and this verdict says so rather than passing it silently" };
   if (inputs === null) return { ok: false, covered: true, detail: "NO INPUT CLASS DECLARED — the input-side ratchet: a lane may not spend until something declares what it reads (its brain_config `inputs`, or a `job_inputs` registry row for a lane that computes them in code)" };
@@ -384,7 +396,7 @@ export function inputVerdict(inputs, { forcedLive = false, forcedUntilMs = null 
 //               (a wake) overrides F for exactly one run; a success then clears the
 //               streak on the ledger by itself, which is the only clear there is.
 //   forced      { until?: ISO|null, once?: boolean } — the two wake mechanisms.
-export function decide({ job, evidence, consumption, failures, now = new Date(), forced = null, fold = null, consumer = undefined, inputs = undefined } = {}) {
+export function decide({ job = null, evidence = null, consumption = null, failures = null, now = new Date(), forced = null, fold = null, consumer = undefined, inputs = undefined } = {}) {
   const cfg = gateConfig(job);
   const nowMs = now instanceof Date ? now.getTime() : ms(now);
   const ev = evidence || {};
@@ -690,10 +702,30 @@ function selftest() {
       const inProse = organsNamedIn(r.why), declared = r.right_consumer.names;
       return inProse.length === declared.length && inProse.every((o) => declared.includes(o));
     }));
+  // RUNG A (30 Aug 2026) — THE TWO DRIFT-LOCKS BELOW ARE RE-PINNED, NOT LOOSENED. They were
+  // written when the off-road population WAS exactly the S7 set, so they read "15" and "byte-
+  // identical to the frozen layer" — which together forbid the population ever growing. The
+  // guard-extension rung's ruled scope is precisely to grow it by one: `dmn_bg_drain`, the
+  // third DMN lane, absent from this table on 29 Aug while it spent 134,948 tokens (the two
+  // suite REDs this rung was handed). Re-pinning a measured count at its new truth is the
+  // S6-F operation exactly (flow_atlas 5→7, rails 49→52), not a weakening — and the pin below
+  // is STRICTER than what it replaces on every axis that mattered:
+  //   · the count is still HARD (16, not ">= 15"), so silent growth is still impossible;
+  //   · the frozen S7 layer must still match BYTE FOR BYTE — now as a subset, so the drift-lock
+  //     keeps doing its whole job (an altered S7 row still fails) without freezing the future;
+  //   · and every row beyond the layer must PROVE ITSELF — a live registry row with a witness
+  //     and a why — which is a PREDICATE, not a list of names (THE JUGAD RULE: a literal array
+  //     of the instances that existed the day the pin was written becomes the pin's ceiling).
+  //     The extras are still printed on every run, by the assert's own detail line.
+  const OFF_ROAD_SINCE_S7 = 1;   // RUNG A · `dmn_bg_drain`, the third DMN lane, registered at last
+  const extras = Object.keys(LANE_CONSUMERS).filter((k) => !(k in LANE_CONSUMERS_S7_LAYER));
   assert("S7 TABLE — it holds ONLY lanes that declare no surface of their own (it is outbox's off-road CONSUMER MAP, moved — never a second copy of brain_config's 34 surfaces)",
-    Object.keys(LANE_CONSUMERS).length === 15 && !Object.keys(LANE_CONSUMERS).includes("diary") && !Object.keys(LANE_CONSUMERS).includes("night_coach"));
-  assert("S10 FOLD — the registry-derived view and the frozen S7 layer CANNOT DISAGREE (one copy: the rows moved to registry.json, this table derives, the layer is the drift-lock fixture)",
-    JSON.stringify(LANE_CONSUMERS) === JSON.stringify(LANE_CONSUMERS_S7_LAYER));
+    Object.keys(LANE_CONSUMERS).length === 15 + OFF_ROAD_SINCE_S7 && !Object.keys(LANE_CONSUMERS).includes("diary") && !Object.keys(LANE_CONSUMERS).includes("night_coach"));
+  assert("S10 FOLD — the registry-derived view and the frozen S7 layer CANNOT DISAGREE (one copy: the rows moved to registry.json, this table derives, the layer is the drift-lock fixture) — and RUNG A: every row added since S7 must PROVE itself in the registry, never merely be counted",
+    Object.entries(LANE_CONSUMERS_S7_LAYER).every(([k, r]) => JSON.stringify(LANE_CONSUMERS[k]) === JSON.stringify(r))
+    && extras.length === OFF_ROAD_SINCE_S7
+    && extras.every((k) => { const r = registryLaneRows().find((x) => x.subject === k); return !!(r && typeof r.witness === "string" && r.witness.length >= 10 && typeof r.why === "string" && r.why.length >= 25 && Array.isArray(r.consumers) && r.consumers.length); }),
+    `derived ${Object.keys(LANE_CONSUMERS).length} · frozen layer ${Object.keys(LANE_CONSUMERS_S7_LAYER).length} · extra ${extras.join(", ") || "none"}`);
   assert("S10-F — a lanes row that says WHERE it is declared stays OUT of this map, and the exclusion is the ROW'S OWN FIELD: night_coach and brain_ledger live in the registry now, and neither may leak into a table whose whole definition is \"declares nothing anywhere\"",
     (() => {
       const all = registryLaneRows();

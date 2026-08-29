@@ -780,6 +780,155 @@ async function laws() {
         assert("S7 RATCHET · ...and the gate's table is the ONE copy: outbox.LANES_NOT_IN_CONFIG is a derived view of it, key for key (two lists allowed to diverge is the twin-copy signature §2 names)",
           Object.keys(OB.LANES_NOT_IN_CONFIG).length === Object.keys(G.LANE_CONSUMERS).length
           && Object.entries(OB.LANES_NOT_IN_CONFIG).every(([k, w]) => G.LANE_CONSUMERS[k] && G.LANE_CONSUMERS[k].why === w));
+
+        // ── RUNG A · THE COMPLETENESS BITE, BOTH DIRECTIONS (architect ruling, 29 Aug 2026) ────
+        // WHY IT IS TWO AND NOT ONE, in the ruler's words: a table-shaped check cannot see a
+        // DETACHED SPAWN, so the static direction alone would have missed `selfknowledge`'s real
+        // carrier; and a spawn-shaped check cannot see a lane that simply spends inside its own
+        // organ, which is what `dmn_bg_drain` did for 134,948 tokens on 29 Aug. The ledger is the
+        // one shared append lane EVERY spend already writes, so it is the net under everything:
+        // registration is asserted at the point of the RECEIPT, and any spend path — job table,
+        // detached spawn, or a shape nobody has invented yet — is caught by construction.
+        //
+        // ── DIRECTION 1 · LEDGER-SIDE ─────────────────────────────────────────────────────────
+        // Every job name that has ever written a ledger row must resolve to a GATE-REGISTERED
+        // SUBJECT that carries BOTH ratchets: a declared right consumer (C) and a declared input
+        // class (I). S7's check above asks the first half for the lane's own name; this asks the
+        // second, and it asks it THROUGH THE ALIAS MAP, because a lane's ledger rows may carry
+        // names that are not the gate subject (the DMN's dream is one gate call writing
+        // dmn_rollout + dmn_counter). The alias map is READ OUT OF THE SOURCE, never kept here —
+        // a second copy of it would be the twin-copy disease, and a hand-list would rot.
+        {
+          const R = await import(pathToFileURL(join(ROOT, "scripts", "registry.mjs")).href);
+          // subject → the ledger names that subject owns, harvested from every live
+          // gateVerdictForLane( … aliases: [ … ] ) call in scripts/.
+          // TWO SHAPES, because the organism writes the declaration two ways and a reader that
+          // knows only one goes half-blind: (a) the direct call with a literal subject
+          // (dmn.mjs, selfknowledge.mjs), and (b) a LANE TABLE whose rows carry the aliases and
+          // whose call passes the subject as a variable (nightshift.mjs NS_GATE). Both are
+          // declarations in source; neither is copied here.
+          const aliasMap = new Map();
+          const own = (subject, names) => aliasMap.set(subject, [...new Set([...(aliasMap.get(subject) || []), subject, ...names])]);
+          let callSites = 0;
+          for (const f of readdirSync(join(ROOT, "scripts")).filter((x) => x.endsWith(".mjs"))) {
+            const src = readOrgan(f);
+            for (const m of src.matchAll(/gateVerdictForLane\(\s*"([a-z0-9_]+)"\s*,\s*\{([\s\S]{0,900}?)\}\s*\)/g)) {
+              callSites++;
+              own(m[1], [...((m[2].match(/aliases:\s*\[([^\]]*)\]/) || [])[1] || "").matchAll(/"([a-z0-9_]+)"/g)].map((x) => x[1]));
+            }
+            for (const m of src.matchAll(/^\s{2}([a-z0-9_]+):\s*\{[\s\S]{0,240}?aliases:\s*\[([^\]]*)\]/gm)) {
+              callSites++;
+              own(m[1], [...m[2].matchAll(/"([a-z0-9_]+)"/g)].map((x) => x[1]));
+            }
+          }
+          // THE INSTRUMENT PROVES ITSELF FIRST (§4 on the audit's own tools, and the S5 lesson:
+          // a scan that silently finds nothing reads as a clean GREEN). If the call shape ever
+          // changes, this bite goes RED here rather than passing on an empty map.
+          assert(`RUNG A · the alias map is READ FROM SOURCE, and the reader still finds the call sites (${callSites} gateVerdictForLane call site(s), ${aliasMap.size} subject(s))`,
+            callSites >= 3 && aliasMap.size >= 3 && (aliasMap.get("dmn") || []).includes("dmn_rollout"),
+            `the source scan found ${callSites} call site(s) / ${aliasMap.size} subject(s) — an empty or shrunken map would make the completeness bite below pass on nothing`);
+
+          // A subject is INPUT-REGISTERED if brain_config declares its `inputs`, or a job_inputs
+          // registry row does. The one declared exception is named IN CODE, with its reason and
+          // its fork pointer — never a silent skip. (selfknowledge: gatherMachinery reads
+          // scripts/*.mjs + package.json + the functional docs, MEASURED zero state files, so its
+          // input class is the SOURCE TREE and a vintage window is the wrong question for it;
+          // its own guard is the tree HASH, which is stricter. Fork on file at
+          // arsenal-audit-artifacts\queue\OPEN-FORKS.md.)
+          const INPUT_GUARD_EXCEPTIONS = { selfknowledge: "its whole input class is the SOURCE TREE (gatherMachinery: scripts/*.mjs + package.json + the functional docs — zero state files, zero data of his), which carries no payload timestamp; its own tree-HASH guard is stricter than a vintage window. Fork on file: queue\\OPEN-FORKS.md" };
+          const inputRegistered = (subject) => {
+            if (INPUT_GUARD_EXCEPTIONS[subject]) return true;
+            const j = (cfg.jobs || []).find((x) => x && x.id === subject);
+            if (j && Array.isArray(j.inputs) && j.inputs.length) return true;
+            try { return !!R.jobInputClass(subject); } catch { return false; }
+          };
+          // ALIAS FIRST, always: a ledger name owned by another subject is judged through THAT
+          // subject (dmn_rollout/dmn_counter → `dmn`, ns_grade_probes → `ns_probe_bank`), never
+          // as a lane of its own — the whole point of an alias list.
+          const subjectFor = (ledgerJob) => {
+            for (const [s, names] of aliasMap) if (names.includes(ledgerJob)) return s;
+            if (known.has(ledgerJob)) return ledgerJob;
+            if (G.LANE_CONSUMERS[ledgerJob]) return ledgerJob;
+            return null;
+          };
+          const orphan = [], noInputClass = [];
+          for (const lane of ledgerLanes) {
+            const s = subjectFor(lane);
+            if (!s) { orphan.push(`${lane} (NO gate subject owns this ledger name — no brain_config job, no lanes row, no alias)`); continue; }
+            if (!inputRegistered(s)) noInputClass.push(s === lane ? lane : `${lane}→${s}`);
+          }
+          // HALF ONE IS ABSOLUTE. A receipt whose lane nothing anywhere registers is the
+          // dmn_bg_drain shape exactly, and it is RED on sight, forever.
+          assert(`RUNG A · LEDGER-SIDE COMPLETENESS (a) — every job name that has ever spent resolves to a REGISTERED gate subject (${ledgerLanes.length} ledger lanes, ${aliasMap.size} subjects with alias lists)`,
+            orphan.length === 0,
+            `${orphan.join(" · ")} — a receipt exists for this spend and nothing declares the lane. This is the net under every other check: the ledger is the one shared append lane every spend already writes, so ANY spend path — job table, detached spawn, or a shape nobody has invented yet — surfaces here. dmn_bg_drain reached this list on 29 Aug 2026 having spent 134,948 tokens through no instrument at all.`);
+          // HALF TWO IS A RATCHET, and the honest reason is written here rather than hidden in a
+          // green tick: RUNG A's ruled scope is the six lanes of the guard-extension packet, and
+          // MEASURING the whole ledger found the remainder is bigger than the handoff said —
+          // again. Eight more lanes carry a declared consumer and NO declared input class, three
+          // of them having spent on 29 Aug (cortex_wake · cortex_consolidate · council_chair) and
+          // one of them the S12 adjudicator itself (thalamus_adjudicator, 138 rows). They are NOT
+          // silently excluded: they are counted, NAMED on every run, and the count may only FALL.
+          // Same shape as the law pack's own baselines — frozen at what was measured, tightening
+          // only. A NEW uncovered lane pushes the count up and is RED the same day it appears.
+          const UNCOVERED_BASELINE = 8;   // measured 30 Aug 2026, after this rung's six rows landed (was 16 before it)
+          assert(`RUNG A · LEDGER-SIDE COMPLETENESS (b) — the RATCHET on lanes with no declared input class: ${noInputClass.length} of ${ledgerLanes.length}, baseline ${UNCOVERED_BASELINE}, may only fall — ${noInputClass.sort().join(", ") || "none"}`,
+            noInputClass.length <= UNCOVERED_BASELINE,
+            `${noInputClass.length} lane(s) spend with nothing declaring what they read, above the ${UNCOVERED_BASELINE} measured on 30 Aug 2026: ${noInputClass.sort().join(", ")}. A gate may only get stricter (§10-D rule 6) — register the new lane with a \`job_inputs\` row through \`registry.mjs set\`, and drop the baseline in the same commit.`);
+
+          // ── DIRECTION 2 · STATIC · the *_JOBS arrays ───────────────────────────────────────
+          // Every lane literal in any `*_JOBS` array in scripts/ must be a registered lane. The
+          // scan is generic on purpose: a FOURTH hidden lane added to DMN_JOBS — or a new
+          // XX_JOBS array in an organ nobody is watching — is caught by construction, which is
+          // the class-check the ruling asked for after the third one was found by hand.
+          const jobsArrays = [];
+          for (const f of readdirSync(join(ROOT, "scripts")).filter((x) => x.endsWith(".mjs"))) {
+            for (const m of readOrgan(f).matchAll(/(?:const|let|var)\s+([A-Z][A-Z0-9_]*_JOBS)\s*=\s*\[([^\]]*)\]/g)) {
+              const names = [...m[2].matchAll(/"([a-z0-9_]+)"/g)].map((x) => x[1]);
+              if (names.length) jobsArrays.push({ file: f, name: m[1], names });
+            }
+          }
+          assert(`RUNG A · the *_JOBS scan still finds its arrays (${jobsArrays.length} array(s): ${jobsArrays.map((a) => `${a.file}:${a.name}[${a.names.length}]`).join(", ") || "NONE"})`,
+            jobsArrays.length >= 1 && jobsArrays.some((a) => a.name === "DMN_JOBS" && a.names.length >= 3),
+            "the scan found no *_JOBS array of lane names — an instrument that finds nothing reports a clean GREEN, which is the failure this bite exists to prevent");
+          const strayJobLiterals = jobsArrays.flatMap((a) => a.names.filter((n) => !known.has(n) && !G.LANE_CONSUMERS[n]).map((n) => `${a.file}:${a.name} → ${n}`));
+          assert("RUNG A · STATIC COMPLETENESS (a) — every lane named in a *_JOBS array is a REGISTERED lane (a brain_config job, or a registry lanes row)",
+            strayJobLiterals.length === 0,
+            `${strayJobLiterals.join(" · ")} — an organ lists a lane its own gate has never heard of. This is the exact shape of the 29 Aug bleed: DMN_JOBS held three names and the gate's rows held two.`);
+
+          // ── DIRECTION 2 · STATIC · the SPAWN EDGES ─────────────────────────────────────────
+          // A detached spawn escapes every table, so the population must also cover spawn sites.
+          // ⚠ THE INSTRUMENT'S BLIND SPOT, MEASURED AND NAMED RATHER THAN ASSUMED AWAY: xray
+          // matches a spawn by its CALLEE NAME (xray.mjs:499), so an indirected call —
+          // `(deps.spawnFn || spawn)(…)`, which is exactly the dugout site the ruling named — is
+          // INVISIBLE in the IR. Verified live at build time: the IR carries 4 llm + 76 organ
+          // spawn edges and NOT the dugout→selfknowledge one. So this bite reads BOTH: the IR's
+          // edges, and the source itself for a spawn of a spender organ however it is written.
+          // Every such site must have a gate ask in the SAME file.
+          const spenders = new Set(["brain.mjs", "cortex.mjs", "selfknowledge.mjs", "talk.mjs"]);   // organs with an llm spawn edge in the IR
+          // THE VERB DECIDES, and the exemptions are DECLARED with their reason — the ruling's
+          // own condition, that declare-or-die covers exclusions exactly as it covers
+          // requirements, or the exclusion list becomes the next invisible hand-list. Both were
+          // read off the code, not assumed: neither verb can reach a generator.
+          const NON_SPENDING_VERBS = {
+            "brain.mjs:trigger": "arms a trigger flag in brain_queue; the brain's own tick then runs EVERY job through gateVerdictFor, so the gate is downstream of this by construction",
+            "brain.mjs:consumed": "appends one row to the consumption lane — the C-letter's own door; there is no generator anywhere on that path",
+          };
+          const ungatedSpawns = [];
+          for (const f of readdirSync(join(ROOT, "scripts")).filter((x) => x.endsWith(".mjs"))) {
+            const src = readOrgan(f);
+            const asksTheGate = /gateVerdictForLane\(/.test(src) || /gateVerdictFor\(/.test(src);
+            for (const m of src.matchAll(/process\.execPath\s*,\s*\[\s*join\(__dirname,\s*"([a-z0-9_]+\.mjs)"\)\s*(?:,\s*"([a-z0-9_-]+)")?/g)) {
+              const target = m[1], verb = m[2] || "";
+              if (!spenders.has(target) || target === f) continue;
+              if (NON_SPENDING_VERBS[`${target}:${verb}`]) continue;
+              if (!asksTheGate) ungatedSpawns.push(`${f} spawns ${target}${verb ? ` ${verb}` : " (no verb)"} and never asks the gate`);
+            }
+          }
+          assert(`RUNG A · STATIC COMPLETENESS (b) — every SPAWN of a token-spending organ asks the gate in the spawning file, unless its verb is DECLARED non-spending (${[...spenders].join(", ")} · ${Object.keys(NON_SPENDING_VERBS).length} declared non-spending verbs)`,
+            ungatedSpawns.length === 0,
+            `${ungatedSpawns.join(" · ")} — a detached child is a spend path with no row in any table. dugout.mjs's spawn of selfknowledge.mjs was this class. ⚠ AND THE STATIC INSTRUMENT HAS A MEASURED BLIND SPOT, named rather than assumed away: xray matches a spawn by its CALLEE NAME (xray.mjs:499), so the indirected \`(deps.spawnFn || spawn)(…)\` form — which is exactly that dugout site — appears in NO xray edge; verified at build time (4 llm + 76 organ edges, and not that one). This bite therefore reads the SOURCE, and a spawn whose TARGET is a variable resolves only at runtime, where the ledger-side half above is the net.`);
+        }
       }
     }
 

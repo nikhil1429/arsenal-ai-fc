@@ -75,7 +75,7 @@ import { execFileSync, spawn } from "node:child_process";   // spawn: 15 Aug 202
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import os from "node:os";
-import { buildFingerprint, bannedPhraseCheck, starvedNightFor, recordConsumption } from "./brain.mjs";
+import { buildFingerprint, bannedPhraseCheck, starvedNightFor, recordConsumption, gateVerdictForLane } from "./brain.mjs";   // gateVerdictForLane: RUNG A (30 Aug 2026) — the detached selfknowledge spawn asks THE GATE at THIS call site, before a process exists to spend
 import { readingFor } from "./oura_coach.mjs";   // LOAD ZERO BLOCK 9 (19 Aug 2026): ABSENCE MUST BE EXPLICIT — a reading is judged on its OWN day, never on the file's mtime. oura_coach imports only node builtins, so this is not a cycle.   // starvedNightFor: 11 Aug 2026 dead-wire sweep — WHY get_diary is empty, in the brain's own words · recordConsumption: THE GATE's "sat" stamp (18 Aug 2026), owner-held
 // M2 — memory READS only (writes go through the owner via sh("hippocampus.mjs"))
 // ORPHANED IMPORTS CUT, 10 Aug 2026: this line also pulled `learningArcVerdict`
@@ -2661,7 +2661,26 @@ function execTool(name, args, deps = {}) {
           if (deps.live) {
             // the stamp goes through the OWNER; `deps.record` is the selftest's seam (a test run is not a serve — the live lane must never see one)
             try { (deps.record || recordConsumption)({ lane: "selfknowledge", kind: "sat", by: "dugout get_organism", file: "dressing-room/state/organism_self.md" }); } catch {}
-            if (!status.fresh) { try { const c = (deps.spawnFn || spawn)(process.execPath, [join(__dirname, "selfknowledge.mjs"), "regen-if-changed"], { detached: true, stdio: "ignore", windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } }); if (c && c.unref) c.unref(); } catch {} }
+            // RUNG A (30 Aug 2026) — THE SPAWN ASKS THE GATE HERE, not only inside the child.
+            // The architect's addendum mapped `selfknowledge`'s real spend carrier to THIS line:
+            // a DETACHED CHILD SPAWN from a him-fired surface, which no *_JOBS table and no
+            // lane list can see — the reason the completeness bite had to be strengthened to
+            // cross spawn edges. The child does ask the gate (selfknowledge.mjs regenIfChanged),
+            // so this was never an ungated SPEND; what it was, was an ungated LAUNCH: an asleep
+            // lane still cost a detached node process every time he opened get_organism, and
+            // the refusal happened somewhere nothing here could see or report. Now the verdict
+            // is taken before a process exists, and an asleep lane costs nothing at all.
+            // Fail-OPEN, like every other gate call in this organism: a broken meter must not
+            // kill an organ that was working. The child's own gate remains the second belt.
+            if (!status.fresh) {
+              let awake = true;
+              try {
+                const gv = deps.selfknowledgeVerdict || ((l, o) => gateVerdictForLane(l, o));
+                const v = gv("selfknowledge", { evidence: { ok: true, detail: "the tree changed since the portrait" }, gate: { window_days: 14, fail_streak: 5 }, surface: { kind: "code", where: "scripts/dugout.mjs get_organism" }, aliases: ["selfknowledge"], inputs: undefined });
+                awake = !!(v && v.run);
+              } catch { awake = true; }
+              if (awake) { try { const c = (deps.spawnFn || spawn)(process.execPath, [join(__dirname, "selfknowledge.mjs"), "regen-if-changed"], { detached: true, stdio: "ignore", windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } }); if (c && c.unref) c.unref(); } catch {} }
+            }
           }
           return { generated_at: status.generated_at, fresh: status.fresh, why: status.why, regenerating: deps.live ? !status.fresh : null, ...section,
             how_to_use: "lecture THIS section in your own voice (plain words, his pace); the toc is what else you can walk; ask get_organism again with `section` for the next part. Numbers: only from live_snapshot below." };

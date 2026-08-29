@@ -80,7 +80,7 @@ export const HARD_TYPE_CODES = [2304, 2552, 2307, 2686, 2662, 2663];
 // `// @ts-check` and produced ZERO new diagnostics, so the checked list grew and the soft count
 // did not move. The gate ASKED for this constant to be raised and a session raised it, in the
 // same commit — which is the whole design: the gate never edits its own baseline.
-export const TYPE_BASELINE = { checked_organs: 14, soft_errors: 303 };
+export const TYPE_BASELINE = { checked_organs: 14, soft_errors: 298 };   // RUNG A (30 Aug 2026): 303 -> 298. Giving `decide()`, `setGateForce` and `journalForce` explicit defaults for their no-default params fixed five diagnostics of the SAME class (a destructured param with no default vanishes from the `= {}` type, so every call site that passes it is a phantom "unknown property"). Ratcheted on the spot: slack a later edit could spend is not a gate.
 export const HARD_LINT_RULES = ["no-undef"];
 export const LINT_BASELINE = { "no-empty": 267, "no-unused-vars": 87, warnings: 2 };
 // ── S11 · THE THIRD TIER-0 TOOL: ajv, JSON-Schema per state file ────────────

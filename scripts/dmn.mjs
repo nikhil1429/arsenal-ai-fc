@@ -820,6 +820,34 @@ async function drainBg(deps = {}) {
     .filter(l => deps.away === true || !["T1", "T2"].includes(l.tank.id))
     .map(l => ({ ...l, spent: 0 }));                 // audit 25 Jul: the drain must respect budgets too (see the lane pick below)
   if (!lanes.length) return { ok: false, skipped: "no borrowable lane — the thoughts keep waiting (never spend the core)" };
+  // ---- THE GATE, RUNG A (30 Aug 2026) — THE THIRD LANE JOINS THE OTHER TWO --------
+  // MEASURED, and this is why the line exists: on 29 Aug 2026 this function spent 134,948
+  // sonnet tokens in ~75 minutes while `brain gate show` printed `dmn=asleep`. The dream above
+  // has answered to E∧C∧F since 18 Aug; the drain — a SECOND spend path in the same organ,
+  // through a different queue, with its own ledger job name — asked NOTHING. It was absent from
+  // the gate's lane rows, absent from brain_config, and invisible to everRan/failStreak: three
+  // instruments, one lane, no eyes. The class is the S12 adjudicator repeating one rung later.
+  // NOT AN ALIAS OF `dmn`. Folding it into the dream's alias list would make a drain failure
+  // sleep the dream and a dream failure sleep the drain, and the two read different files for
+  // different consumers. It is its own lane: its own `lanes` row (consumer thalamus.mjs, which
+  // eats the insight at /bg-drained), its own `job_inputs` row (bg_queue.jsonl — the one file
+  // this function reads and the one its first refusal names), its own everRan and failStreak,
+  // which now work by construction because the gate subject IS the ledger job name.
+  // Fail-OPEN on a broken meter, like the dream's gate and the window gate, for the reason
+  // stated there: a broken instrument must not silently kill an organ that was running fine.
+  if (!deps.skipGate) {
+    try {
+      const brain = deps.brain || await import("./brain.mjs");
+      const evidence = { ok: true, detail: `${open.length} suppressed thought(s) waiting` };
+      const v = deps.gateVerdict ? deps.gateVerdict("dmn_bg_drain", { evidence })
+        : brain.gateVerdictForLane("dmn_bg_drain", { evidence, gate: {}, now: deps.now || new Date(), surface: { kind: "code", where: "scripts/thalamus.mjs /bg-drained (the second spotlight returns to the nucleus)" } });
+      if (!deps.gateVerdict) { try { brain.gateTransition("dmn_bg_drain", v, { now: deps.now || new Date(), by: "dmn" }); } catch (e) { swallow("drainBg: the gate journal is unwritable — the verdict still applied, the record did not", e); } }
+      if (!v.run) {
+        const failed = ["E", "C", "F", "D", "I"].filter((k) => v.why[k] && !v.why[k].ok);
+        return { ok: false, asleep: true, skipped: `THE GATE: asleep on ${failed.join("+")} — ${failed.map((k) => `${k}: ${v.why[k].detail}`).join(" · ")} · wakes when: ${v.wakes_when}` };
+      }
+    } catch (e) { swallow("fail-open — see above", e); }
+  }
   const gen = deps.generate || defaultGen;
   const use = deps.recordUse || recordUse;
   // same law as the stadium: a gauge write is telemetry and may never kill the drain
@@ -1302,24 +1330,50 @@ async function selftest() {
     ] };
     const posts = []; const spends = {};
     const genBG = async () => ({ ok: true, text: JSON.stringify({ concept: "attention", insight: "the suppressed read: caching kills recompute, the handshakes stay — hold that distinction" }) });
-    const r = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genBG, recordUse: (id) => { spends[id] = (spends[id] || 0) + 1; }, post: async (b) => { posts.push(b); return { ok: true }; } });
+    const r = await drainBg({ skipGate: true, appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genBG, recordUse: (id) => { spends[id] = (spends[id] || 0) + 1; }, post: async (b) => { posts.push(b); return { ok: true }; } });
     assert("DRAIN: open thoughts drained on idle lanes, folded back via :4113", r.ok && r.drained === 2 && posts.length === 2 && posts[0].moment_id === "bg1" && posts[0].tokens.includes("attention"));
     assert("DRAIN: already-drained entries never re-drain (event-sourced)", !posts.some(p => p.moment_id === "bg0"));
     assert("DRAIN: every spend recorded on ITS lane", Object.keys(spends).length >= 1);
-    const rMute = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: false } }, readBgQueue: () => bgRows });
+    const rMute = await drainBg({ skipGate: true, appendLedger: () => {}, tone: { effects: { dmn_allowed: false } }, readBgQueue: () => bgRows });
     assert("DRAIN: conserve tone mutes the drain too", rMute.ok === false && rMute.skipped.includes("conserve"));
     const t12 = { tanks: [
       { id: "T1", name: "Gaffer", region: "mouth", key_index: 0, quota_est: 90, observed_ceiling: 0, used_today: 0, enabled: true },
       { id: "T2", name: "Watcher", region: "vision", key_index: 1, quota_est: 90, observed_ceiling: 0, used_today: 0, enabled: true },
     ] };
-    const rT12 = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: t12, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }) });
+    const rT12 = await drainBg({ skipGate: true, appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: t12, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }) });
     assert("DRAIN: mouth/eyes lanes NEVER borrowed mid-day (pickTank's law)", rT12.ok === false && rT12.skipped.includes("never spend the core"));
-    const rAway = await drainBg({ appendLedger: () => {}, away: true, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: t12, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }) });
+    const rAway = await drainBg({ skipGate: true, appendLedger: () => {}, away: true, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: t12, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }) });
     assert("DRAIN: away-time legalizes the borrow (same law as the stadium)", rAway.ok && rAway.drained === 2);
-    const rDown = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => { throw new Error("nucleus down"); } });
+    const rDown = await drainBg({ skipGate: true, appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genBG, recordUse: () => {}, post: async () => { throw new Error("nucleus down"); } });
     assert("DRAIN: thalamus down → thoughts stay queued (honest retry, nothing lost)", rDown.ok && rDown.drained === 0 && rDown.waiting === 2);
-    const rNone = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => [{ moment_id: "x", status: "queued" }, { moment_id: "x", status: "returned" }] });
+    const rNone = await drainBg({ skipGate: true, appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => [{ moment_id: "x", status: "queued" }, { moment_id: "x", status: "returned" }] });
     assert("DRAIN: empty queue → quiet no-op", rNone.ok && rNone.drained === 0 && rNone.note);
+
+    // ── RUNG A · THE THIRD LANE ASKS THE GATE BEFORE IT SPENDS ──────────────
+    // RED-FIRST BY CONSTRUCTION: this bite drives the SEAM, so it fails the moment the gate
+    // call is removed — which is the state this organ was in on 29 Aug when the lane spent
+    // 134,948 tokens with `brain gate show` printing `dmn=asleep`. PROVEN by planting exactly
+    // that at build time (the gate block deleted → this assert went ✗, restored → ✓). Three
+    // things are proven: the gate is asked AT ALL, it is asked under the lane's OWN subject
+    // (never folded into the dream's alias list), and an ASLEEP verdict returns BEFORE the
+    // generator is reached.
+    {
+      const asked = [];
+      let generated = 0;
+      const asleepV = { run: false, state: "asleep", why: { E: { ok: true }, C: { ok: true }, F: { ok: true }, D: { ok: true }, I: { ok: false, detail: "bg_queue.jsonl: STALE" } }, wakes_when: "his data lands in bg_queue.jsonl" };
+      const rGate = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix,
+        generate: async (...a) => { generated++; return genBG(...a); }, recordUse: () => {}, post: async () => ({ ok: true }),
+        gateVerdict: (lane, ctx) => { asked.push({ lane, ctx }); return asleepV; } });
+      assert("RUNG A · THE DRAIN ASKS THE GATE, under its OWN subject `dmn_bg_drain`, and an ASLEEP verdict stops it BEFORE one token is generated",
+        asked.length === 1 && asked[0].lane === "dmn_bg_drain" && asked[0].ctx.evidence.ok === true
+        && rGate.asleep === true && /asleep on I/.test(String(rGate.skipped)) && generated === 0,
+        JSON.stringify({ asked: asked.map((a) => a.lane), generated, skipped: rGate.skipped }));
+      const awakeV = { run: true, state: "awake", why: { E: { ok: true }, C: { ok: true }, F: { ok: true }, D: { ok: true }, I: { ok: true } } };
+      const rAwakeGate = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix,
+        generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }), gateVerdict: () => awakeV });
+      assert("RUNG A · …and an AWAKE verdict drains exactly as before — the gate added a refusal, never a new behaviour",
+        rAwakeGate.ok === true && rAwakeGate.drained === r.drained, JSON.stringify({ gated: rAwakeGate.drained, ungated: r.drained }));
+    }
 
     // ── THE DOOR (wiring audit, 11 Aug 2026) ────────────────────────────────
     // These ride the PROMPT THE GENERATOR ACTUALLY RECEIVED, not the helper, so
@@ -1332,7 +1386,7 @@ async function selftest() {
         bound_context: [{ modality: "context", text: "Code.exe — attention.py", event_key: "context:Code.exe" }] }];
       let seen = "";
       const genSpy = async (p) => { seen = p; return { ok: true, text: JSON.stringify({ concept: "attention", insight: "the suppressed read: caching kills recompute, the handshakes stay — hold that distinction" }) }; };
-      const rDoor = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bigRow, board: twoLanes, keys: keysFix, generate: genSpy, recordUse: () => {}, post: async () => ({ ok: true }) });
+      const rDoor = await drainBg({ skipGate: true, appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bigRow, board: twoLanes, keys: keysFix, generate: genSpy, recordUse: () => {}, post: async () => ({ ok: true }) });
       assert("DOOR: a 14k moment still drains (the repair did not break the lane)", rDoor.ok && rDoor.drained === 1 && seen.length > 0);
       assert("DOOR: concept_tokens REACH the model — the field the recall-shelf keys on (the old 600-char cut dropped them entirely)",
         seen.includes("concept_tokens") && seen.includes("attention") && seen.includes("kv"));
@@ -1374,7 +1428,7 @@ async function selftest() {
     {
       // a Claude plan wall mid-drain: engineFault = (limit_hit || threw) && not gemini
       const genWall = async () => ({ ok: false, limit_hit: true, error: "Claude usage limit reached — resets 22:00" });
-      const rWallBg = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genWall, recordUse: () => {}, post: async () => ({ ok: true }) });
+      const rWallBg = await drainBg({ skipGate: true, appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix, generate: genWall, recordUse: () => {}, post: async () => ({ ok: true }) });
       assert("VOICE — THE DEFECT ITSELF, pinned: a walled drain returns ok:true with drained 0, so the old `bg.ok && bg.drained` call site was FALSE for exactly the outage it was meant to report",
         rWallBg.ok === true && rWallBg.drained === 0 && rWallBg.engine_down === "claude" && !(rWallBg.ok && rWallBg.drained));
       const wallLine = drainLine(rWallBg);

@@ -3052,7 +3052,39 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`RUNG A` · THE GUARD EXTENSION. MODEL: Opus 5 · effort max.
+  ▶ NEXT SESSION ............... **`RUNG B` · THE FLOOR AUDIT. MODEL: Opus 5 · effort max.
+                                   4 passes · 45/10/10 · CEILING 65 · VERIFY-ONLY, FIX NOTHING.
+                                   Corridor: `queue\PREOPEN__2026-08-29_guard-extension+floor-
+                                   audit.md` RUNG B **plus** `queue\RULING__2026-08-29_floor-
+                                   audit+organ.md` (read the ruling FIRST — it is the spine; the
+                                   packet adds the autonomy layer). Self-driving: forks land in
+                                   `queue\OPEN-FORKS.md`, never on a waiting architect. CHECKPOINT
+                                   after every pass AND at ~80% context — multi-sitting by design;
+                                   re-open the same prompt to resume. Then RUNG C · THE ARCHITECT
+                                   ORGAN (same packet · BUILD 14 · PROOF 6 · HANDOFF 5 · c25).
+                                   ⛑ WHAT RUNG A HANDS IT, all measured 30 Aug:
+                                   (1) **THE SUITE BASELINE IT INHERITS IS `126 passed / 3 failed`**
+                                   (from 118/5). The three are PRE-EXISTING and none is Rung A's:
+                                   the `gate` trigger reaching no job · the two member selftests
+                                   (teaching_audit 62/1 · watchman 114/2) · `jugad-literal-
+                                   subject-list` 92-vs-91. F-6/`timeaudit` was GREEN this run —
+                                   the known REPRODUCIBLE-NOT-STABLE instability, never "fixed".
+                                   (2) **FOUR OPEN FORKS** in `queue\OPEN-FORKS.md` (F-A1 … F-A4),
+                                   none blocking, all wanting the post-reset architect's word.
+                                   (3) **F-A4 IS A NAMED PASS-1 INPUT:** eight lanes carry a
+                                   declared consumer and NO declared input class — three spent on
+                                   29 Aug (`cortex_wake` · `cortex_consolidate` · `council_chair`)
+                                   and one is the S12 adjudicator itself (`thalamus_adjudicator`).
+                                   Ratcheted at 8, named on every suite run, may only fall.
+                                   (4) **ONE THING IS ON HIM, TWO COMMANDS:** `ArsenalFC-DMN` and
+                                   `ArsenalFC-NightShift` are still Disabled. Every bite is GREEN
+                                   so the stage-gate's condition is MET; the session's safety
+                                   classifier blocked `schtasks /Change /ENABLE` and it was NOT
+                                   worked around (the 29-Aug precedent). Both lanes are now
+                                   guarded and were measured safe at close.
+                                   (5) F-5 PAID: `xray build` + `flow_atlas build` in the commit.**
+
+  ~~▶ NEXT SESSION ............... **`RUNG A` · THE GUARD EXTENSION. MODEL: Opus 5 · effort max.
                                    BUILD 10 · PROOF 6 · HANDOFF 5 · CEILING 21 — the SELF-DRIVING
                                    packet's later re-price GOVERNS (scope grew: re-enables +
                                    spawn-gating): `queue\PREOPEN__2026-08-29_guard-extension+
@@ -3096,7 +3128,12 @@ STATUS (update this block before any session stops — this is the handoff)
                                    (3) `jugad-literal-subject-list` 92-vs-91 is PRE-EXISTING.
                                    ⛑ ONE STALE-PROSE DEFECT FOUND AND LEFT (outside that rung's
                                    scope, take it or route it): `services.mjs status` still prints
-                                   *"the organism is supposed to be OFF until S12"*.
+                                   *"the organism is supposed to be OFF until S12"*.~~
+                                   ✅ **RUNG A CLOSED 30 Aug 2026 — both handed REDs GREEN, suite
+                                   118/5 → 126/3, five of six items done and the sixth (the two
+                                   task re-enables) on HIM. Kept struck, not deleted (L9). Its
+                                   PROGRESS entry is the record; the stale `services.mjs` prose
+                                   above is still open and still routed.**
 
   ~~▶ NEXT SESSION ............... **HIS ONE HAAN ON THE LLM GROUP + ONE ELEVATED CONSOLE — then THE
                                    FLOOR AUDIT (verify-only, Opus 5 · effort max, 4 passes,
@@ -20172,3 +20209,103 @@ haan"; it was the architect, same hour, same class. **On a machine with two agen
 state change is a teammate before it is a defect.** No code was touched on any of these hypotheses.
 
 **NEXT: RUNG A — THE GUARD EXTENSION** (architect-priced 8/5/4, ceiling 17), then the floor audit.
+
+---
+
+### PROGRESS 2026-08-30 — `RUNG A` · THE GUARD EXTENSION — **BOTH HANDED-OVER REDS ARE GREEN, AND THE REMAINDER UNDERCOUNTED ITSELF A THIRD TIME** (Opus 5 · effort max · BUILD 10 · PROOF 6 · HANDOFF 5 · ceiling 21)
+
+Corridor: `queue\PREOPEN__2026-08-29_guard-extension+floor-audit.md` RUNG A, executed as written.
+Binding: `queue\RULING__2026-08-29_executor-protocol.md` · `…dmn-bleed+msa.md` (+ADDENDUM) ·
+`…s13-rowhome+transitivity.md` · `…s13-emptyrequired.md`.
+
+**THE HEADLINE.** `npm test` **118 passed / 5 failed → 126 passed / 3 failed.** The two REDs the
+wake rung handed this rung as its first evidence — the ones its close was to be judged on — are
+**GREEN**, and nothing was weakened to make them so. Every other gate got STRICTER or held:
+gate selftest **55/2 → 57/0** · lawpack bare-catch **38 → 37** · type gate **303 → 298** · lint at
+baseline exactly · xray Q2 0 / Q5 0 · flow_atlas 539 edges, `check` OK · `rails orders` clean.
+
+**THE THREE SURVIVING REDS ARE ALL PRE-EXISTING, none of them this rung's:** the `gate` trigger
+that reaches no job · the two member selftests (teaching_audit 62/1 · watchman 114/2) ·
+`jugad-literal-subject-list` 92-vs-91, which the S13 ruling already named PRE-EXISTING and routed
+to the floor audit. F-6/`timeaudit` was GREEN this run — the known REPRODUCIBLE-NOT-STABLE
+instability, **never "fixed"**.
+
+**THE SIX ITEMS, one line each.**
+1. **THE I-CONDITION NOW COVERS THE NON-BRAIN LANES.** `brain.mjs gateVerdictForLane` COMPUTES the
+   input fact by default, so a lane is guarded the moment it asks for a verdict and one added
+   tomorrow is guarded without anyone remembering to wire it — fail-closed: no `job_inputs` row ⇒
+   `null` ⇒ the ratchet sleeps it. Six registry rows landed through the owner's writer
+   (`lanes` 17→18, `job_inputs` 8→13), every input class DERIVED from the lane's own code with a
+   resolved-needle witness. Live proof, five lanes covered and one named gap:
+   `ns_probe_bank I=PASS covered=true (2 required alive)` · `ns_distractors PASS (3)` ·
+   `ns_pre_answers PASS (1)` · `dmn PASS (2)` · `dmn_bg_drain PASS (1)` ·
+   `selfknowledge covered=FALSE` (fork F-A1). And it REFUSES: probed ten days forward, every one
+   flips — *"afferent.jsonl: STALE — newest row 188.0h old, outside the 48h cadence · the dead root
+   is thalamus.mjs — fix THAT, not this lane"*.
+2. **`dmn_bg_drain` IS A FIRST-CLASS LANE, NOT AN ALIAS.** Its own `lanes` row (consumer
+   thalamus.mjs at `/bg-drained`), its own `job_inputs` row (`bg_queue.jsonl`), and its own gate
+   ask inside `drainBg` — so everRan and failStreak work by construction, the gate subject BEING
+   the ledger job name. Folding it into the dream's alias list was refused with the reason on the
+   record: a drain failure would sleep the dream, and the two read different files for different
+   consumers. Same law, one organ over: `ns_grade_probes` (86 ledger rows) is now declared an
+   ALIAS of `ns_probe_bank`, derived — `gradeProbes` is called at nightshift.mjs:1212 inside that
+   lane's own `gPB.run` branch.
+3. **THE COMPLETENESS BITE, BOTH DIRECTIONS, six new asserts.** LEDGER-SIDE (a): every job name
+   that ever spent resolves to a registered gate subject — absolute, RED on sight. LEDGER-SIDE (b):
+   the RATCHET on lanes with no declared input class, **16 → 8**, names all eight every run, may
+   only fall. STATIC (a): every lane in any `*_JOBS` array is registered. STATIC (b): every spawn
+   of a spender asks the gate, unless its verb is DECLARED non-spending. Plus two instrument
+   self-proofs, because a scan that silently finds nothing reads as a clean GREEN.
+4. **THE DUGOUT'S DETACHED SPAWN ASKS THE GATE AT THE CALL SITE** (dugout.mjs, the `:2664` class).
+   It was never an ungated SPEND — the child asks too — it was an ungated **LAUNCH**: an asleep
+   lane cost a detached node process every time he opened `get_organism`, and the refusal happened
+   where nothing here could see it.
+5. **FORCE HYGIENE — and the CLI could not do it.** One live force (`selfknowledge`, armed 18 Aug
+   `by: "cli"`, **no reason recorded**). Running `gate clear` printed *"force dropped"* and dropped
+   **nothing**: `mergeTriggers` lets DISK WIN, which is right for a force added behind a tick's
+   back and makes deletion impossible. **A CLI reporting an act it did not perform — SHAPE 8 in
+   the organism's own hand.** Fixed with a STATED removal (the `consumed` parameter's own shape,
+   applied to the other half of the object), bitten in brain's selftest, and the force is now
+   genuinely gone: `forced: {}`. Forces carry `why` from birth, arming and clearing are journaled,
+   and `gate show` PRINTS "NO REASON RECORDED" where there is none.
+6. ⛔ **THE STAGE-GATE DID NOT LIFT — IT IS ON HIM, TWO COMMANDS.** All bites are GREEN, so the
+   condition is met; the session's safety classifier **blocked `schtasks /Change /ENABLE`** and it
+   was **not worked around** — the same call the 29-Aug bleed session made. Both lanes are proven
+   safe to enable, measured at close: `dmn` and `dmn_bg_drain` are ASLEEP on C (thalamus has not
+   consumed), so `ArsenalFC-DMN` spends nothing until it does; `ns_probe_bank` and `ns_pre_answers`
+   are AWAKE on live data and `ns_distractors` sleeps on C.
+
+**TWO DEFECTS FOUND BY RUNNING, BOTH OUTSIDE THE SIX ITEMS, BOTH FIXED.**
+- **THE JOURNAL RECORDED "ASLEEP" WITH EVERY LETTER TRUE.** Measured before the fix:
+  `2026-08-29T18:34:20.148Z day_cartridge asleep why={"E":true,"C":true,"F":true,"D":true}`.
+  S13 added I to the verdict and to `GATE_LETTERS`, but the journal row was a hand-written
+  four-letter literal — so the fifth letter fell between them and the record could not say why a
+  lane slept. Both the writer and the `gate journal` printer are folded off `GATE_LETTERS` now.
+- **`gate clear` never cleared** — item 5 above.
+
+**THE FINDING THAT OUTLIVES THE RUNG: a remainder written in prose is a claim; only the ledger is a
+census.** Measuring all 49 ledger lanes — instead of the handoff's list — found **eight** more
+lanes with a declared consumer and NO declared input class, three of which spent on 29 Aug
+(`cortex_wake` · `cortex_consolidate` · `council_chair`) and one of which is the S12 adjudicator
+itself (`thalamus_adjudicator`, 138 rows). This is the **third** time a named remainder has
+undercounted itself (S13 said "the DMN's two", the code said three; the wake PREOPEN never crossed
+the remainder against the task list). They are ratcheted, named on every run, and routed to RUNG B.
+
+**FOUR FORKS ON FILE, none blocking, all self-driven per the packet's FORK RULE:**
+`queue\OPEN-FORKS.md` — F-A1 what the I letter means for a lane fed by the organism itself
+(`selfknowledge`; the ONE item SKIPPED, and the skip is named) · F-A2 row granularity for the DMN
+(executed subject-keyed, ratify or I migrate) · F-A3 the off-road drift-locks re-pinned, S6-F's
+precedent · F-A4 the eight-lane remainder.
+
+**PROOFS, RED-FIRST, EVERY NEW BITE PLANTED AND RESTORED.** (1) drain's gate ask deleted → its bite
+went red · (2) `dmn_bg_drain`'s lanes row removed → both handed REDs return verbatim, gate selftest
+57/0 → 55/2 · (3) a fourth ghost lane in `DMN_JOBS` → STATIC (a) FAIL · (4) dugout's spawn ungated →
+STATIC (b) FAIL · (5) the ratchet baseline dropped below the measured count → LEDGER (b) FAIL.
+Tree restored and re-verified after each.
+
+**⚠ AND ONE OF THOSE RESTORES BIT ME:** a `git checkout --` inside the plant script reverted two
+REAL edits along with the plants, `registry.json` included. Caught by re-reading the tree, re-seeded
+through the owner's writer and re-applied — but the lesson is the rung's own: **a restore scoped to
+a file, not to a change, is a restore that takes your work with it.** The organism's `RAIL state`
+then refused a `cp` over a state file on the next attempt, correctly, and the last two plants ran
+without touching state at all.

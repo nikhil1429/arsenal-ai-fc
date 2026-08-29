@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-29T06:15:06.750Z",
+ "updated_at": "2026-08-29T20:45:32.110Z",
  "tables": {
   "mechanisms": [
    {
@@ -726,6 +726,24 @@
     "updated_at": "2026-08-28T23:13:47.671Z",
     "added_at": "2026-08-28T23:05:25.152Z",
     "declared_elsewhere": "brain_config.json night_coach.surface.where (kind:code) — a lane declaring its consumer at its own call site OUTRANKS gate.mjs table, which is the fallback for lanes that declare nothing anywhere"
+   },
+   {
+    "subject": "dmn_bg_drain",
+    "schema_owner": "dmn.mjs",
+    "witness": "scripts/dmn.mjs:811 drainBg — `meter(\"dmn_bg_drain\", r, lane.tank.id)` at :863, POSTing to the thalamus at /bg-drained",
+    "why": "feeds thalamus.mjs — the SECOND SPOTLIGHT: a moment the salience gate suppressed gets its deep read and is posted back to the nucleus, never a file he opens. dmn.mjs reads the queue's backlog for its own status line.",
+    "consumers": [
+     {
+      "name": "thalamus.mjs"
+     },
+     {
+      "name": "dmn.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-08-29T20:45:32.062Z",
+    "added_at": "2026-08-29T20:45:32.062Z"
    }
   ],
   "emit_contract": [
@@ -1315,6 +1333,123 @@
     ],
     "updated_at": "2026-08-29T06:15:06.747Z",
     "added_at": "2026-08-29T06:15:06.747Z"
+   },
+   {
+    "subject": "ns_probe_bank",
+    "witness": "scripts/nightshift.mjs:257 drillConcepts — `for (const d of (cal && cal.danger_zone) || [])` (:260) and the learning_state leg at :264",
+    "why": "THE PROBE BANK (sonnet). Its reading is computed in drillConcepts + probeBank, invisible to any declarative guard — the lane has no brain_config row at all. The two LIVE sources drillConcepts unions are calibration.json (his measured danger zone) and learning_state.json (the trends learnstate writes off his reps); both are already declared liveness-bearing by the S13 `formation_read` row on manager.mjs staleness()'s witness, so requiring them here is cited, not invented. THE THIRD SOURCE IS DELIBERATELY ABSENT: `capsules/` is a directory of LOCKED capsules read for decay-guard drilling (:267) — static by construction, so it can carry no vintage and is not a signal that his data arrived; a lane fed only by it would drill forever after he stopped studying, which is exactly the failure his sentence names. The probe grammar and the lock-event fingerprint are context, not liveness.",
+    "input_class": [
+     {
+      "path": "calibration.json",
+      "required": true
+     },
+     {
+      "path": "learning_state.json",
+      "required": true
+     },
+     {
+      "path": "dossier_weights.json",
+      "required": false
+     },
+     {
+      "path": "mirror_manifest.json",
+      "required": false
+     }
+    ],
+    "updated_at": "2026-08-29T20:45:32.077Z",
+    "added_at": "2026-08-29T20:45:32.077Z"
+   },
+   {
+    "subject": "ns_distractors",
+    "witness": "scripts/nightshift.mjs:1236 — `doubt_grammar.json has no clusters` is the lane's OWN refusal sentence, and its evidence is the AND `shapes && pbConcepts.length`",
+    "why": "PERSONALIZED DISTRACTORS (sonnet). The required set is read straight off the lane's own evidence expression, which is a conjunction: `shapes && pbConcepts.length` — the shapes come from doubt_grammar.json (the refusal names the file by name: \"distractors need HIS confusion shapes\") and the concepts from drillConcepts' two live sources. Nothing is chosen here; the `&&` chose it.",
+    "input_class": [
+     {
+      "path": "doubt_grammar.json",
+      "required": true
+     },
+     {
+      "path": "calibration.json",
+      "required": true
+     },
+     {
+      "path": "learning_state.json",
+      "required": true
+     }
+    ],
+    "updated_at": "2026-08-29T20:45:32.085Z",
+    "added_at": "2026-08-29T20:45:32.085Z"
+   },
+   {
+    "subject": "ns_pre_answers",
+    "witness": "scripts/nightshift.mjs:896 preAnswerMaterial — `const aff = (deps.afferents || readLines(join(STATE_DIR, \"afferent.jsonl\"))).filter(a => new Date(a.ts || 0).getTime() >= weekAgo)` (:900)",
+    "why": "PRE-ANSWERS (sonnet) — the lane that predicts the doubts he is about to voice. Of the five files preAnswerMaterial reads, exactly ONE carries HIS OWN WORDS and exactly one is windowed by the lane itself: afferent.jsonl, filtered to the trailing 7 days at :899-900. Its own refusal is \"no real signal on the bus — never predict doubts from nothing\", and the bus IS this file. The other four (doubt_grammar, cards, calibration, who_he_is) are shapes and context the material carries alongside; the lane composes without them. THE LANE'S OWN 7-DAY WINDOW IS NOT COPIED INTO cadence_h: 168h is LOOSER than the declared 48h seed, and cadence tightens by measurement, never loosens by prose (architect ruling 29 Aug, Q3).",
+    "input_class": [
+     {
+      "path": "afferent.jsonl",
+      "required": true
+     },
+     {
+      "path": "doubt_grammar.json",
+      "required": false
+     },
+     {
+      "path": "cards.json",
+      "required": false
+     },
+     {
+      "path": "calibration.json",
+      "required": false
+     },
+     {
+      "path": "../hippocampus/who_he_is.json",
+      "required": false
+     }
+    ],
+    "updated_at": "2026-08-29T20:45:32.094Z",
+    "added_at": "2026-08-29T20:45:32.094Z"
+   },
+   {
+    "subject": "dmn",
+    "witness": "scripts/dmn.mjs:326 weakVector — `for (const d of (cal && cal.danger_zone) || []) out.push({ concept: d.topic || d.concept, why: \"confident-but-wrong (danger zone)\" })` (:329) and the learning_state leg at :330, refused hard at :543",
+    "why": "THE REST ROOM'S DREAM (claude, 64% of all cost-weighted spend). Gate subject `dmn`; its ledger rows are dmn_rollout + dmn_counter, which are two PHASES of one pass behind one gate call (dmn.mjs:573 declares exactly that alias pair), so they share one input class and a second row would be the twin copy §2 names. The required pair is the lane's own hard refusal read backwards: weakVector unions calibration.json's danger zone and learning_state.json's stalling/regressing slopes, and :543 returns `no real weak points on the bus` when the union is empty. twin.json is the third leg and stays optional — the wiring audit of 11 Aug found it puts PROSE in a concept field and it is dormant by that finding. reps_log/rejirah_log are the E letter's evidence (a disjunction at :571), not the material the prompt is built from.",
+    "input_class": [
+     {
+      "path": "calibration.json",
+      "required": true
+     },
+     {
+      "path": "learning_state.json",
+      "required": true
+     },
+     {
+      "path": "twin.json",
+      "required": false
+     },
+     {
+      "path": "reps_log.jsonl",
+      "required": false
+     },
+     {
+      "path": "rejirah_log.jsonl",
+      "required": false
+     }
+    ],
+    "updated_at": "2026-08-29T20:45:32.102Z",
+    "added_at": "2026-08-29T20:45:32.102Z"
+   },
+   {
+    "subject": "dmn_bg_drain",
+    "witness": "scripts/dmn.mjs:811 drainBg — `const rows = deps.readBgQueue ? deps.readBgQueue() : readLines(join(STATE_DIR, \"bg_queue.jsonl\"))` (:814), refused at :817 with `no suppressed thoughts waiting`",
+    "why": "THE SECOND SPOTLIGHT (sonnet) — the lane that spent 134,948 tokens in 75 minutes on 29 Aug 2026 through no gate at all, because nothing anywhere registered it. Its input class is unambiguous and singular: the thalamus-owned bg_queue.jsonl, the only file drainBg reads and the one its own first refusal names. Every row in it is a moment of HIS that the salience gate suppressed, so an empty or stale queue is precisely \"his data is not coming in\".",
+    "input_class": [
+     {
+      "path": "bg_queue.jsonl",
+      "required": true
+     }
+    ],
+    "updated_at": "2026-08-29T20:45:32.108Z",
+    "added_at": "2026-08-29T20:45:32.108Z"
    }
   ]
  }

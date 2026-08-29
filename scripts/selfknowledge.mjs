@@ -353,7 +353,20 @@ async function regenIfChanged(deps = {}) {
   if (st.exists && st.fresh) return { ok: true, ran: false, why: `fresh — ${st.why} (tree ${st.current_hash})`, status: st };
   const verdict = deps.verdict || await (async () => {
     const b = await import("./brain.mjs");
-    return b.gateVerdictForLane("selfknowledge", { evidence: { ok: true, detail: st.exists ? "the tree changed since the portrait" : "no portrait on disk" }, gate: { window_days: 14, fail_streak: 5 }, surface: { kind: "code", where: "scripts/dugout.mjs get_organism" }, aliases: ["selfknowledge"], now: deps.now || new Date() });
+    // RUNG A (30 Aug 2026) — `inputs: undefined` IS PASSED ON PURPOSE, and it is a MEASUREMENT.
+    // Every other non-brain lane is now on the input guard by default (brain.mjs
+    // gateVerdictForLane computes the fact). This lane cannot be: gatherMachinery() reads
+    // scripts/*.mjs, package.json, .claude/skills and the functional docs — ZERO state files and
+    // ZERO data of his — so its input class IS THE SOURCE TREE, which carries no payload
+    // timestamp, and a vintage window is the wrong question for it. Declaring its portrait
+    // "required, fresh inside 48h" would sleep the lane in EXACTLY the case it exists for (a
+    // stale portrait after a tree change), which is the c74 false-negative class re-created.
+    // Its own guard is STRICTER than a window: portraitStatus compares the portrait's stamped
+    // TREE HASH against the live tree, and nothing spends while they match.
+    // The gate PRINTS this gap (`input_guard.covered:false` in the journal, the card and
+    // `gate show`) instead of passing it silently, and the shape question is on file at
+    // arsenal-audit-artifacts\queue\OPEN-FORKS.md for the architect. A named gap, never a hole.
+    return b.gateVerdictForLane("selfknowledge", { evidence: { ok: true, detail: st.exists ? "the tree changed since the portrait" : "no portrait on disk" }, gate: { window_days: 14, fail_streak: 5 }, surface: { kind: "code", where: "scripts/dugout.mjs get_organism" }, aliases: ["selfknowledge"], now: deps.now || new Date(), inputs: undefined });
   })();
   if (!verdict.run) return { ok: true, ran: false, asleep: true, why: `tree changed but ASLEEP by THE GATE (${["E", "C", "F", "D"].filter((k) => verdict.why[k] && !verdict.why[k].ok).join("+")}) — ${verdict.wakes_when}`, status: st, verdict };
   const freeze = deps.freeze !== undefined ? deps.freeze : freezeCheck(deps);
