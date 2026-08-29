@@ -490,3 +490,13 @@ setup/services/WinSW*.exe
 # S9: WinSW is copied once per service (v2 finds <id>.xml by its own exe name).
 # These copies are generated, ~17 MB each, and never belong in the repo.
 setup/services/ArsenalFC-*.exe
+
+# S12 (29 Aug 2026, the reboot's first act) — THE TORN-WRITE ORPHAN CLASSES.
+# The `*.tmp` rule above catches shapes A (`<target>.tmp`) and B (`<target>.<pid>.tmp`) but NOT
+# shape C (`<target>.tmp<pid>`) — which is exactly why `gaffer_blocks.json.tmp6756` sat untracked
+# in the tree for nine days until S10-R's O-6 found it. And `watchman.mjs tmpsweep` keeps every
+# quarantined orphan forever as `.torn-<stamp>` (L9: evidence outlives the sweep) — evidence on
+# disk, never state in the repo. Both classes are ignored so a dead writer's leftover can never
+# be committed as if it were his state, and so a healthy tree never reads as dirty.
+dressing-room/state/**/*.tmp[0-9]*
+dressing-room/state/**/*.torn-*

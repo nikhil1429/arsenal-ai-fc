@@ -612,10 +612,31 @@ export function staleCardArgs(entry, day) {
 // anchor, same shape as the stale card: ONE rolling day-key per daemon, filed
 // through captains_call's own CLI, so the 10-minute cadence cannot mint a second
 // ask while the first sits unanswered (captains_call fileGuard).
-export function stuckCardArgs(name, day) {
-  return ["captains_call.mjs", "file",
-    "--line", `${name} daemon RELAUNCH NAHI CHADHA — watchdog ne start kiya, agla probe phir bhi chup. setup/START_DAEMONS.vbs aapke haath se chalana padega; machine yahan se aage nahi ja sakti.`,
-    "--key", `daemon:stuck:${name}:${day}`];
+// S12 (29 Aug 2026) — THE SENTENCE SURVIVED THE REBUILD OF THE THING IT DESCRIBES.
+// The line this used to speak was written when this organ still had an arm: it told him
+// "watchdog ne start kiya" and sent him to setup/START_DAEMONS.vbs. S9 took the arm away
+// (line 25: THIS ORGAN IS A REPORTER, `this build dispatches nothing`) and moved every
+// daemon's life to the substrate — a WinSW service for the headless ones, a logon task for
+// the desktop one. The card kept saying the old thing, so the first pass S12 ran filed four
+// cards that were false in their first clause and pointed at a retired path in their second.
+// Caught by running it, not by reading it. The owner now comes from the `surface` column each
+// row already declares — the SAME column services.mjs generates from — so the card and the
+// service definition cannot drift apart again.
+/** serviceUnit / stuckRemedy — the ONE place that turns a daemon's declared `surface` into
+ *  the name of the thing that actually owns its life. The card (his words) and the operator
+ *  line (machine face) both call it, so the two faces of one fact are the same fact. */
+export const serviceUnit = (name) => `ArsenalFC-${name[0].toUpperCase()}${name.slice(1)}`;
+export function stuckRemedy(name, surface = (DAEMONS.find((x) => x.name === name) || {}).surface) {
+  return surface === "desktop"
+    ? `${name}: HIS logon session — it reads the clipboard, so it can never be a service`
+    : `${name}: its WinSW service ${serviceUnit(name)} — installed, not started; starting it needs an elevated console`;
+}
+
+export function stuckCardArgs(name, day, surface = (DAEMONS.find((x) => x.name === name) || {}).surface) {
+  const line = surface === "desktop"
+    ? `${name} daemon BAND hai. Ye organ sirf batata hai, chalata nahi — aur ye wala service ban hi nahi sakta (tumhara clipboard padhta hai, aur service ke paas clipboard hota hi nahi). Isko tumhare apne logon se chalna padta hai. Machine yahan se aage nahi ja sakti.`
+    : `${name} daemon BAND hai. Ye organ sirf batata hai, chalata nahi — iski jaan ab Windows ki apni service ke paas hai (ArsenalFC-${name[0].toUpperCase()}${name.slice(1)}). Wo install to hai, bas chalu nahi hai, aur usko chalu karne ke liye ek baar admin wala console chahiye. Machine yahan se aage nahi ja sakti.`;
+  return ["captains_call.mjs", "file", "--line", line, "--key", `daemon:stuck:${name}:${day}`];
 }
 
 // ── THE LEDGER IS A WITNESS TO THE BUILD (WIRING AUDIT, 11 Aug 2026) ────────
@@ -761,7 +782,10 @@ async function pass(deps = {}) {
       witness: d.port != null
         ? `port ${d.port} refused a TCP connect on this pass (${nowIso})`
         : `the process table held no "${d.match}" on this pass and the previous one (${nowIso})`,
-      owner: d.port != null && d.name !== "turnstile"
+      // S12: read off the `surface` column, not re-derived from port+name. That predicate
+      // was a SECOND copy of what the row already declares and what services.mjs generates
+      // from — one truth, one place, so a sixth daemon cannot be classed two ways.
+      owner: d.surface === "headless"
         ? "its WinSW service (S9) — if it is dead too, that is the finding to act on"
         : "a logon task (S9) — it needs HIS desktop session, so it cannot be a service",
       remedy_is_his: true,
@@ -907,7 +931,10 @@ export function launchLine(s) {
   if (found.length) bits.push(`FINDING: ${found.map((f) => `${f.name} DOWN (witness: ${f.witness})`).join(" · ")} — this organ REPORTS, it does not relaunch; the owner is ${found.map((f) => f.owner).join(" / ")}`);
   if (ok.length) bits.push(`relaunch DISPATCHED by a PRE-S9 build: ${ok.join(", ")} (this build dispatches nothing)`);
   if (threw.length) bits.push(`RELAUNCH THREW (pre-S9 build): ${threw.map((x) => `${x.name} — ${x.error}`).join(" · ")}`);
-  if (stuck.length) bits.push(`STILL DOWN across two passes: ${stuck.map((x) => x.name + (x.card_error ? " (card FAILED to file)" : "")).join(", ")} — card filed, HIS hands needed (setup/START_DAEMONS.vbs)`);
+  // S12 (29 Aug 2026): the remedy this line names is read off the `surface` column too —
+  // it used to send him to setup/START_DAEMONS.vbs for every daemon, which S9 retired for
+  // five of the six. Same source as the card and as services.mjs; they cannot disagree.
+  if (stuck.length) bits.push(`STILL DOWN across two passes: ${stuck.map((x) => x.name + (x.card_error ? " (card FAILED to file)" : "")).join(", ")} — card filed, HIS hands needed (${stuck.map((x) => stuckRemedy(x.name)).join(" · ")})`);
   return bits.join(" · ");
 }
 
@@ -1383,11 +1410,26 @@ async function selftest() {
     assert("DISPATCH ≠ OUTCOME (S9 shape) — the NEXT pass is the proof: reported-down-then-still-dark ⇒ STUCK, and the line says so",
       stuck.state.stuck.map((s) => s.name).join(",") === "thalamus"
       && /STILL DOWN across two passes: thalamus/.test(launchLine(stuck.state))
-      && /START_DAEMONS\.vbs/.test(launchLine(stuck.state)));
+      // S12: was pinned to START_DAEMONS.vbs — the path S9 retired for the five headless
+      // daemons. Now it pins the SUBSTRATE that actually owns this one, by name.
+      && /ArsenalFC-Thalamus/.test(launchLine(stuck.state))
+      && !/START_DAEMONS\.vbs/.test(launchLine(stuck.state)));
+
+    // S12 — STRICTER, both branches, not one string: the remedy a stuck daemon names is
+    // driven by its declared `surface`, so a headless one is sent to its service and the
+    // desktop one is NEVER sent to a service it physically cannot be (clipboard, session 0).
+    assert("OWNER BY SURFACE — headless ⇒ its own WinSW unit by name; desktop ⇒ his logon, and never a service",
+      /ArsenalFC-Cortex/.test(stuckRemedy("cortex")) && /elevated console/.test(stuckRemedy("cortex"))
+      && /HIS logon session/.test(stuckRemedy("turnstile")) && !/service/i.test(stuckRemedy("turnstile").replace("can never be a service", ""))
+      && DAEMONS.every((d) => /ArsenalFC-/.test(stuckRemedy(d.name)) === (d.surface === "headless")));
     assert("DISPATCH ≠ OUTCOME — the stuck verdict rides an anchor: ONE card, rolling day-key, through captains_call's OWN cli (never its file, never a kill)",
       calls.length === 1 && calls[0].startsWith("captains_call.mjs file --line ")
       && / --key daemon:stuck:thalamus:2026-08-11$/.test(calls[0])
-      && /START_DAEMONS\.vbs/.test(calls[0]) && stuck.state.stuck[0].card === "captains_call: filed c99");
+      // S12: the card names the unit that owns this daemon, in HIS words, and no longer
+      // claims a dispatch this build cannot make nor a launcher S9 retired.
+      && /ArsenalFC-Thalamus/.test(calls[0]) && /admin wala console/.test(calls[0])
+      && !/START_DAEMONS\.vbs/.test(calls[0]) && !/watchdog ne start kiya/.test(calls[0])
+      && stuck.state.stuck[0].card === "captains_call: filed c99");
 
     const back = await pass({
       dry: true, cortexRow: null, prev: boom.state, now: new Date(`${DAY}T10:10:00Z`), today: DAY, report: null,
