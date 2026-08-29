@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "arsenal://state/captains_call.json",
+  "title": "THE CAPTAIN'S CALL — the one-line card deck",
+  "_owner": "scripts/captains_call.mjs (SOLE WRITER)",
+  "_why": "This is the ONE lane that may ask him for anything (his 7 Aug ruling: max one card per anchor). A malformed card is a question he can never answer, and by his 11 Aug ruling anything he must chase is a bug in the organism.",
+  "type": "object",
+  "required": ["cards"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "next_id": { "type": ["integer", "string"] },
+    "cards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "source", "line"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "key": { "type": ["string", "null"] },
+          "source": { "type": "string", "minLength": 1, "description": "which lane minted it — the rank order reads this" },
+          "line": { "type": "string", "minLength": 1, "description": "ONE line, in his words' register — a card he cannot read in one breath is not a card" },
+          "filed_at": { "type": "string" },
+          "dealt": {
+            "type": "array",
+            "description": "every time it reached an anchor; expired_unanswered is DERIVED from the distinct days here (S11)",
+            "items": { "type": "string" }
+          },
+          "answer": { "type": ["string", "null"], "enum": ["haan", "na", "baad", null] },
+          "answered_at": { "type": ["string", "null"] },
+          "sleep_until": { "type": ["string", "null"] },
+          "retired_at": { "type": ["string", "null"] },
+          "resolution": { "type": ["string", "null"] },
+          "expired_unanswered": { "type": "integer", "minimum": 0, "description": "S11: deal-DAYS that rotated away with no word — derived every sync, never counted up" },
+          "expired_first": { "type": ["string", "null"] },
+          "expired_last": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

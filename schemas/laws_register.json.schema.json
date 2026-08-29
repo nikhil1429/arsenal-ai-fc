@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "arsenal://state/laws_register.json",
+  "title": "THE STANDING-LAWS REGISTER — derived, two sections, no total",
+  "_owner": "scripts/registry.mjs `laws collect` (SOLE WRITER; hand-consolidating this file is the drift disease it was built to end)",
+  "_why": "S10-R's F-7: the DATA here was always honest, but the two kinds were summed into one number — '73 laws' — when 59 of them are pointers to ruling DOCUMENTS with no check site. S10-F split the file in two and removed every total. This schema is what stops a total from growing back.",
+  "type": "object",
+  "required": ["generated_at", "counts", "standing_laws", "ruling_pointers"],
+  "not": {
+    "anyOf": [
+      { "required": ["count"] },
+      { "required": ["total"] },
+      { "required": ["laws"] }
+    ]
+  },
+  "properties": {
+    "generated_at": { "type": "string", "minLength": 1 },
+    "generated_by": { "type": "string" },
+    "_two_kinds_law": { "type": "string" },
+    "queue_dir": { "type": "string" },
+    "queue_reachable": { "type": "boolean" },
+    "counts": {
+      "type": "object",
+      "required": ["standing_laws", "ruling_pointers"],
+      "properties": {
+        "standing_laws": { "type": "integer", "minimum": 0 },
+        "ruling_pointers": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "standing_laws": {
+      "type": "array",
+      "description": "law TEXT with a place it is checked — check_site is never null here",
+      "items": {
+        "type": "object",
+        "required": ["law_id", "statement", "scope", "check_site"],
+        "properties": {
+          "law_id": { "type": "string", "minLength": 1 },
+          "statement": { "type": "string", "minLength": 1 },
+          "source_file": { "type": "string" },
+          "scope": { "type": "string", "enum": ["standing"] },
+          "check_site": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "ruling_pointers": {
+      "type": "array",
+      "description": "pointers to ruling DOCUMENTS — check_site is null BY DEFINITION, and that null is what says these are not laws",
+      "items": {
+        "type": "object",
+        "required": ["law_id", "title", "scope", "check_site"],
+        "properties": {
+          "law_id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "statement": { "type": "string" },
+          "source_file": { "type": "string" },
+          "scope": { "type": "string", "enum": ["ruling"] },
+          "check_site": { "type": "null" }
+        }
+      }
+    }
+  }
+}

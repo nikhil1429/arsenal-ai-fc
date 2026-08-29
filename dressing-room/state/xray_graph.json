@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-29T00:21:44.992Z",
+ "built_at": "2026-08-29T00:32:41.945Z",
  "organs_parsed": 111,
  "organs_expected": 111,
  "parse_errors": [],
- "unresolved_sinks": 1440,
+ "unresolved_sinks": 1444,
  "organs": {
   "acts.mjs": {
    "loc": 496,
@@ -8837,23 +8837,23 @@
    "unresolved": 4
   },
   "gates.mjs": {
-   "loc": 269,
+   "loc": 351,
    "reads": [
     {
      "path": "node_modules/typescript/bin/tsc",
      "lines": [
-      84,
-      84,
-      84
+      97,
+      97,
+      97
      ],
      "fixture": false
     },
     {
      "path": "node_modules/eslint/bin/eslint.js",
      "lines": [
-      84,
-      84,
-      84
+      97,
+      97,
+      97
      ],
      "fixture": false
     }
@@ -8864,6 +8864,7 @@
    "verbs": [
     "lint",
     "report",
+    "schemas",
     "selftest",
     "types"
    ],
@@ -8877,15 +8878,20 @@
     "HARD_LINT_RULES",
     "HARD_TYPE_CODES",
     "LINT_BASELINE",
+    "SCHEMA_BASELINE",
+    "SCHEMA_DIR",
+    "STATE_DIR_G",
     "TYPE_BASELINE",
     "available",
     "checkedOrgans",
     "judge",
+    "judgeSchemas",
     "measure",
     "parseEslint",
-    "parseTsc"
+    "parseTsc",
+    "validateState"
    ],
-   "unresolved": 5
+   "unresolved": 9
   },
   "groundsman.mjs": {
    "loc": 449,
@@ -29660,6 +29666,6 @@
     ]
    }
   ],
-  "md_files": 226
+  "md_files": 227
  }
 }

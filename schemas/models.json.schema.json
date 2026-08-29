@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "arsenal://state/models.json",
+  "title": "THE MODEL BOARD — LAW M's measured roster",
+  "_owner": "scripts/models.mjs (SOLE WRITER; LAW M says no organ names a model, it names a ROLE and this file answers)",
+  "_why": "Every Gemini call in the organism resolves through this file. A malformed board does not fail loudly — it falls back to the seed, quietly, and the organism keeps paying for the wrong model. S11 also split its two clocks: the roster is fresh for 36 h, the KEYS reading for 6 h.",
+  "type": "object",
+  "required": ["at", "roles"],
+  "properties": {
+    "at": { "type": "string", "minLength": 1, "description": "when this board was probed — board() derives BOTH age answers from it" },
+    "previous_at": { "type": ["string", "null"] },
+    "ms": { "type": ["number", "null"] },
+    "list_status": { "type": ["string", "number", "null"] },
+    "listed": { "type": ["array", "null"], "items": { "type": "string" } },
+    "unranked": { "type": ["array", "null"], "items": { "type": "string" } },
+    "keys": {
+      "type": "object",
+      "description": "the key sweep — ok beats quota, bad is bad. Its AGE is what S11 gated: a reading older than KEYS_FRESH_H cannot answer for NOW.",
+      "required": ["ok", "quota", "bad"],
+      "properties": {
+        "n": { "type": "integer", "minimum": 0 },
+        "ok": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "uniqueItems": true },
+        "quota": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "uniqueItems": true },
+        "bad": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "uniqueItems": true },
+        "sweep_model": { "type": ["string", "null"] }
+      }
+    },
+    "roles": {
+      "type": "object",
+      "description": "one entry per ROLE; `chosen` is the name an organ may never write down itself",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "chosen": { "type": ["string", "null"] },
+          "seed_top": { "type": ["string", "null"] },
+          "fell_back_from": { "type": ["string", "null"] },
+          "chosen_since": { "type": ["string", "null"] },
+          "dead": { "type": "boolean" },
+          "fallback_role": { "type": ["string", "null"] },
+          "embed_dim": { "type": ["integer", "null"] },
+          "dim_changed_from": { "type": ["integer", "null"] },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "model": { "type": "string", "minLength": 1 },
+                "ok": { "type": ["boolean", "null"] },
+                "class": { "type": ["string", "null"] },
+                "latency_ms": { "type": ["number", "null"] }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

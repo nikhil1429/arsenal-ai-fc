@@ -60,6 +60,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
 const TSC = join(ROOT, "node_modules", "typescript", "bin", "tsc");
 const ESLINT = join(ROOT, "node_modules", "eslint", "bin", "eslint.js");
+const AJV = join(ROOT, "node_modules", "ajv", "lib", "ajv.js");
+export const SCHEMA_DIR = join(ROOT, "schemas");
+export const STATE_DIR_G = join(ROOT, "dressing-room", "state");
 
 // ── THE FROZEN BASELINES — measured 20 Aug 2026, and they may only move one way ──
 /** THE "THIS NAME DOES NOT EXIST" FAMILY, and nothing else: TS2304 cannot-find-name ·
@@ -80,6 +83,16 @@ export const HARD_TYPE_CODES = [2304, 2552, 2307, 2686, 2662, 2663];
 export const TYPE_BASELINE = { checked_organs: 14, soft_errors: 303 };
 export const HARD_LINT_RULES = ["no-undef"];
 export const LINT_BASELINE = { "no-empty": 267, "no-unused-vars": 87, warnings: 2 };
+// ── S11 · THE THIRD TIER-0 TOOL: ajv, JSON-Schema per state file ────────────
+// The owners-only law answers WHO may write each state file. Nothing answered WHAT
+// lands there — so a sole writer with a bug writes valid JSON that is not a valid
+// anything, and every reader downstream finds out one crash at a time. schemas/ holds
+// one draft-07 schema per file; a file that HAS one must validate, always, as a RED.
+// THE RATCHET, same shape as its two neighbours: the count may only RISE, and this
+// gate never edits its own baseline — a session raises it in the commit that adds the
+// schema. Started at 4 (registry · captains_call · models · laws_register), the four
+// whose shapes S10 and S11 have just finished pinning down in code.
+export const SCHEMA_BASELINE = 4;
 
 export const available = () => existsSync(TSC) && existsSync(ESLINT);
 
@@ -149,6 +162,43 @@ export function judge(m, { typeBase = TYPE_BASELINE, lintBase = LINT_BASELINE } 
   return { ok: reds.length === 0, reds, falls };
 }
 
+// ── S11 · SCHEMA VALIDATION (pure over injected results; ajv is loaded lazily) ──
+/** judgeSchemas — a file WITH a schema must validate; the schema'd count may only rise. */
+export function judgeSchemas(results, { base = SCHEMA_BASELINE } = {}) {
+  const reds = [], falls = [];
+  for (const r of results) {
+    if (r.state_missing) { reds.push(`SCHEMA — ${r.file} has a schema and NO state file; a schema for a file that does not exist is a claim nothing can check`); continue; }
+    if (r.schema_broken) { reds.push(`SCHEMA — ${r.file}'s schema does not compile (${r.schema_broken}); an unrunnable gate reads GREEN by absence`); continue; }
+    if (!r.valid) reds.push(`SCHEMA — ${r.file} does NOT match schemas/${r.file}.schema.json:\n           ${r.errors.slice(0, 6).join("\n           ")}`);
+  }
+  if (results.length < base) reds.push(`SCHEMA COUNT FELL — ${results.length} state file(s) schema'd, baseline ${base}. The list may only grow (§10-D rule 6).`);
+  else if (results.length > base) falls.push(`SCHEMA COUNT GREW — ${results.length} schema'd (baseline ${base}); tighten SCHEMA_BASELINE to ${results.length}.`);
+  return { ok: reds.length === 0, reds, falls };
+}
+
+/** validateState — reads schemas/, validates each named state file. Returns one row per
+ *  schema; never throws, because a gate that dies is a gate that cannot say NO. */
+export async function validateState({ schemaDir = SCHEMA_DIR, stateDir = STATE_DIR_G } = {}) {
+  const out = [];
+  let Ajv; try { ({ default: Ajv } = await import(pathToFileURL(AJV).href)); } catch { return out; }   // no node_modules ⇒ NOT MEASURABLE, same as tsc/eslint
+  let names = []; try { names = readdirSync(schemaDir).filter((f) => f.endsWith(".schema.json")); } catch { return out; }
+  for (const sf of names.sort()) {
+    const file = sf.replace(/\.schema\.json$/, "");
+    const row = { file, valid: false, errors: [], state_missing: false, schema_broken: null };
+    let validate;
+    try { validate = new Ajv({ allErrors: true, strict: false }).compile(JSON.parse(readFileSync(join(schemaDir, sf), "utf8"))); }
+    catch (e) { row.schema_broken = String((e && e.message) || e).slice(0, 160); out.push(row); continue; }
+    const target = join(stateDir, file);
+    if (!existsSync(target)) { row.state_missing = true; out.push(row); continue; }
+    let data; try { data = JSON.parse(readFileSync(target, "utf8")); }
+    catch (e) { row.errors = [`the file is not parseable JSON: ${String((e && e.message) || e).slice(0, 120)}`]; out.push(row); continue; }
+    row.valid = !!validate(data);
+    if (!row.valid) row.errors = (validate.errors || []).map((e) => `${e.dataPath || e.instancePath || "(root)"} ${e.message}`);
+    out.push(row);
+  }
+  return out;
+}
+
 // ── MEASURE (spawns the two tools; they write nothing) ──────────────────────
 export function checkedOrgans() {
   let n = 0;
@@ -178,7 +228,7 @@ export function measure() {
 }
 
 // ── SELFTEST — hermetic: the ratchet is driven on synthetic numbers, no tools spawned ──
-function selftest() {
+async function selftest() {
   let pass = 0, fail = 0;
   const assert = (n, c, d) => { if (c) pass++; else fail++; console.log(`  ${c ? "✓" : "✗"} ${n}${c || !d ? "" : `\n      ${d}`}`); };
   // the fixture IS the frozen baseline, derived — a selftest that hardcodes the numbers
@@ -236,14 +286,36 @@ function selftest() {
   assert(`LIVE — ${checkedOrgans()} organ(s) carry \`@ts-check\` on disk, baseline ${TYPE_BASELINE.checked_organs}`, checkedOrgans() >= TYPE_BASELINE.checked_organs);
   assert("BARE CHECKOUT — the gate can say whether it is measurable at all", typeof available() === "boolean");
 
+  // ── S11 · THE SCHEMA GATE (ajv), judged on synthetic rows then RUN for real ──
+  const okRow = (f) => ({ file: f, valid: true, errors: [], state_missing: false, schema_broken: null });
+  const four = ["a.json", "b.json", "c.json", "d.json"].map(okRow);
+  assert("SCHEMA — four valid files at the baseline is GREEN", judgeSchemas(four, { base: 4 }).ok);
+  assert("SCHEMA — a state file that does NOT match its schema is RED, and the RED quotes the failing paths",
+    (() => { const bad = [...four.slice(0, 3), { file: "d.json", valid: false, errors: ["/cards/0 should have required property id"], state_missing: false, schema_broken: null }];
+      const jj = judgeSchemas(bad, { base: 4 }); return !jj.ok && /d\.json does NOT match/.test(jj.reds[0]) && /required property id/.test(jj.reds[0]); })());
+  assert("SCHEMA — a schema whose FILE is missing is RED (a claim nothing can check), and a schema that will not compile is RED too (an unrunnable gate reads GREEN by absence)",
+    !judgeSchemas([...four.slice(0, 3), { file: "d.json", valid: false, errors: [], state_missing: true, schema_broken: null }], { base: 4 }).ok
+    && !judgeSchemas([...four.slice(0, 3), { file: "d.json", valid: false, errors: [], state_missing: false, schema_broken: "unknown keyword" }], { base: 4 }).ok);
+  assert("SCHEMA RATCHET — deleting a schema is RED (the list may only grow); adding one is GREEN and ASKS for the constant to be raised",
+    !judgeSchemas(four.slice(0, 3), { base: 4 }).ok
+    && judgeSchemas([...four, okRow("e.json")], { base: 4 }).ok
+    && judgeSchemas([...four, okRow("e.json")], { base: 4 }).falls.some((f) => /SCHEMA COUNT GREW — 5/.test(f)));
+  {
+    // and the LIVE four, actually validated — an unrun gate is a hypothesis.
+    const live = await validateState({});
+    assert(`SCHEMA LIVE — ${live.length} schema(s) on disk, every one compiling and every named state file matching it`,
+      live.length >= SCHEMA_BASELINE && live.every((r) => r.valid && !r.schema_broken && !r.state_missing),
+      live.filter((r) => !r.valid).map((r) => `${r.file}: ${r.schema_broken || r.errors.slice(0, 2).join(" | ") || "state missing"}`).join(" · "));
+  }
+
   console.log(`gates selftest: ${pass} passed, ${fail} failed`);
   if (fail) process.exit(1);
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
-function main() {
+async function main() {
   const mode = process.argv[2] || "report";
-  if (mode === "selftest") return selftest();
+  if (mode === "selftest") return await selftest();
   if (!available()) {
     console.log("gates: NOT MEASURABLE HERE — no node_modules (tsc/eslint absent). `npm ci` installs the pinned toolchain; a bare checkout is not a failure.");
     return;
@@ -259,10 +331,20 @@ function main() {
     console.log(`gates lint   · ${m.lint.errors} error(s) · ${m.lint.warnings} warning(s) · ${top} (frozen: ${Object.entries(LINT_BASELINE).map(([k, v]) => `${k} ${v}`).join(" · ")})`);
     if (mode === "lint") { const j = judge(m); for (const r of j.reds) console.log(`  RED  ${r}`); for (const f of j.falls) console.log(`  ok   ${f}`); process.exit(j.ok ? 0 : 1); }
   }
+  // S11 · the third TIER-0 tool. Its rows are printed even when everything passes,
+  // because "4 state files have a schema" is a number that must be visible to rise.
+  const sr = await validateState({});
+  const sj = judgeSchemas(sr);
+  if (mode === "schemas" || mode === "report") {
+    console.log(`gates schema · ${sr.filter((r) => r.valid).length}/${sr.length} state file(s) match their schema (baseline ${SCHEMA_BASELINE}, may only grow)${sr.length ? "" : " — NOT MEASURABLE (no ajv / no schemas/)"}`);
+    if (mode === "schemas") { for (const r of sj.reds) console.log(`  RED  ${r}`); for (const f of sj.falls) console.log(`  ok   ${f}`); process.exit(sj.ok ? 0 : 1); }
+  }
   const j = judge(m);
-  for (const r of j.reds) console.log(`  RED  ${r}`);
-  for (const f of j.falls) console.log(`  ok   ${f}`);
-  console.log(j.ok ? "gates: GREEN — nothing rose, and the undefined-symbol families are 0 on both sides" : `gates: ${j.reds.length} RED — a gate may only get stricter (§10-D rule 6)`);
-  process.exit(j.ok ? 0 : 1);
+  const reds = [...j.reds, ...sj.reds], falls = [...j.falls, ...sj.falls];
+  for (const r of reds) console.log(`  RED  ${r}`);
+  for (const f of falls) console.log(`  ok   ${f}`);
+  const ok = j.ok && sj.ok;
+  console.log(ok ? "gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches" : `gates: ${reds.length} RED — a gate may only get stricter (§10-D rule 6)`);
+  process.exit(ok ? 0 : 1);
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

@@ -1464,14 +1464,14 @@ function alive() {
 // The baselines live inside gates.mjs, and the only law is DIRECTION: the undefined-symbol
 // families stay 0, frozen counts may only fall, the checked list may only grow.
 function gates() {
-  section("GATES — tsc --checkJs + eslint, frozen at their measured baseline, tightening only");
+  section("GATES — tsc --checkJs + eslint + ajv schemas, frozen at their measured baselines, tightening only");
   const r = run([join(ROOT, "scripts", "gates.mjs"), "report"], { timeout: 600000 });
   if (/NOT MEASURABLE HERE/.test(r.out)) {
     assert("GATES — bare checkout: the gate answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));
     return;
   }
   const reds = r.out.split(/\r?\n/).filter((l) => /^\s*RED\s/.test(l));
-  assert("GATES — undefined-symbol families 0 on both sides, and no frozen count rose (a gate may only get stricter)",
+  assert("GATES — undefined-symbol families 0 on both sides, every schema-d state file matches, and no frozen count rose (a gate may only get stricter)",
     r.code === 0, reds.join("\n         ") || r.out.split(/\r?\n/).slice(-3).join(" | "));
 }
 

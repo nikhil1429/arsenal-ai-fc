@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "arsenal://state/registry.json",
+  "title": "THE REGISTRY — the organism's rows (rung S10)",
+  "_owner": "scripts/registry.mjs (SOLE WRITER; every other organ reads through its exported readers or its CLI)",
+  "_why": "Every un-nailed literal in the organism moved into this file as ROWS. A row that cannot be checked validates nothing (spec §6's witness law), so the shape of a row is the shape of the organism's own memory.",
+  "type": "object",
+  "required": ["version", "tables"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "updated_at": { "type": ["string", "null"], "format": "date-time" },
+    "tables": {
+      "type": "object",
+      "description": "the CLOSED table set — registry.mjs TABLES is the authority; this pins that each table is an array of row objects",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "description": "a row is identified by subject (or id, for the rulings lane) and carries the stamps its owner writes",
+          "anyOf": [
+            { "required": ["subject"] },
+            { "required": ["id"] }
+          ],
+          "properties": {
+            "subject": { "type": "string", "minLength": 1 },
+            "id": { "type": "string", "minLength": 1 },
+            "retired": { "type": "boolean" },
+            "added_at": { "type": "string" },
+            "updated_at": { "type": "string" },
+            "consumers": {
+              "type": "array",
+              "description": "R1's DECLARED SET — each consumer is a named organ or HIM",
+              "items": {
+                "type": "object",
+                "anyOf": [{ "required": ["name"] }, { "required": ["kind"] }],
+                "properties": {
+                  "name": { "type": "string", "minLength": 1 },
+                  "kind": { "type": "string", "enum": ["him"] }
+                }
+              }
+            },
+            "reach": { "type": "string", "pattern": "^(any|all|quorum-[1-9][0-9]*)$" },
+            "appenders": {
+              "type": "array",
+              "description": "R1's MANY-ONE shape — >= 2 unique organ names on a lane whose SCHEMA belongs to schema_owner",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "born_red": {
+              "type": "object",
+              "description": "F-1's DECLARED red — a red with no reason is a mood, not a measurement",
+              "required": ["why"],
+              "properties": {
+                "why": { "type": "string", "minLength": 1 },
+                "unblocked_by": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

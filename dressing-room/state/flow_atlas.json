@@ -1,8 +1,8 @@
 {
- "built_at": "2026-08-29T00:21:45.198Z",
- "content_sha16": "bc6760f6543716c9",
+ "built_at": "2026-08-29T00:32:42.151Z",
+ "content_sha16": "37206284501718ae",
  "derived_from": {
-  "ir_built_at": "2026-08-29T00:21:44.992Z",
+  "ir_built_at": "2026-08-29T00:32:41.945Z",
   "organs": 111,
   "tables": [
    "thalamus.mjs AFFERENT_SOURCES",
@@ -12983,8 +12983,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 501918,
-    "payload_ts": "2026-08-29T00:21:44.992Z"
+    "size": 502034,
+    "payload_ts": "2026-08-29T00:32:41.945Z"
    },
    "consumption": {
     "measured": false,
@@ -13006,8 +13006,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 501918,
-    "payload_ts": "2026-08-29T00:21:44.992Z"
+    "size": 502034,
+    "payload_ts": "2026-08-29T00:32:41.945Z"
    },
    "consumption": {
     "measured": false,
@@ -13029,8 +13029,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 501918,
-    "payload_ts": "2026-08-29T00:21:44.992Z"
+    "size": 502034,
+    "payload_ts": "2026-08-29T00:32:41.945Z"
    },
    "consumption": {
     "measured": false,
@@ -13052,8 +13052,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 501918,
-    "payload_ts": "2026-08-29T00:21:44.992Z"
+    "size": 502034,
+    "payload_ts": "2026-08-29T00:32:41.945Z"
    },
    "consumption": {
     "measured": false,
@@ -13075,8 +13075,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 501918,
-    "payload_ts": "2026-08-29T00:21:44.992Z"
+    "size": 502034,
+    "payload_ts": "2026-08-29T00:32:41.945Z"
    },
    "consumption": {
     "measured": false,
@@ -13098,8 +13098,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 501918,
-    "payload_ts": "2026-08-29T00:21:44.992Z"
+    "size": 502034,
+    "payload_ts": "2026-08-29T00:32:41.945Z"
    },
    "consumption": {
     "measured": false,
@@ -13121,8 +13121,8 @@
    "via": "dressing-room/state/xray_graph.json",
    "liveness": {
     "exists": true,
-    "size": 501918,
-    "payload_ts": "2026-08-29T00:21:44.992Z"
+    "size": 502034,
+    "payload_ts": "2026-08-29T00:32:41.945Z"
    },
    "consumption": {
     "measured": false,
