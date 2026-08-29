@@ -5135,6 +5135,37 @@ async function selftest() {
       assert("DEAD BRAIN — logged-out still wins over any status code",
         failureStreak(deadRows).cause === "not_logged_in" && failureStreak(deadRows).not_logged_in === true);
 
+      // ── S12 · THE SPEND-GUARD, BITTEN THREE WAYS (29 Aug 2026) ──────────────
+      // Born of a measured accident, not a hypothesis: `brain.mjs help` fell through
+      // to `tick` and bought `formation_read | opus | 28,120 tokens`. Each assert below
+      // is one of the three behaviours the ruling named, and the last two are the ones
+      // that make this a guard rather than a whitelist that breaks the pacemaker.
+      assert("S12 SPEND-GUARD — an unknown NON-EMPTY verb is refused, so a typo can never mean `tick` (which spends)",
+        !isKnownMode("halp") && !isKnownMode("stats") && !isKnownMode("tickk") && !isKnownMode("HELPME")
+        && !isKnownMode("help ")   /* a trailing space is a different word — no trimming, no guessing */);
+      assert("S12 SPEND-GUARD — EMPTY argv still ticks: that is the SCHEDULED CONTRACT (ArsenalFC-BrainTick passes no verb) and breaking it would silence the pacemaker",
+        isKnownMode("") && isKnownMode(undefined) && isKnownMode(null));
+      assert("S12 SPEND-GUARD — a leading `-` is a FLAG, never a verb, so --dry and --daemon still reach the dispatch",
+        isKnownMode("--dry") && isKnownMode("--daemon") && isKnownMode("-x"));
+      assert("S12 SPEND-GUARD — case does not smuggle a verb past the guard, and every listed verb passes",
+        isKnownMode("STATUS") && isKnownMode("Daemon") && BRAIN_MODES.every((m) => isKnownMode(m)));
+      // THE RATCHET: the vocabulary is checked against the DISPATCH ITSELF, so the two can never
+      // drift — a new branch with no row in BRAIN_MODES would be unreachable, and a row with no
+      // branch would quietly mean tick, which is the exact bug this closes.
+      // It reads only REAL dispatch lines: an `if (` on the same line, and never a comment. That
+      // second filter is not decoration — the first cut of this ratchet went red on the prose
+      // directly above it, which is the ratchet catching its own author and is why it stays.
+      {
+        const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+        const dispatched = src.split(/\r?\n/)
+          .filter((l) => !/^\s*(\/\/|\*)/.test(l))
+          .flatMap((l) => [...l.matchAll(/if \(mode === "([a-z-]+)"/g)].map((m) => m[1]))
+          .filter((m) => !m.startsWith("-"));   // --daemon is the flag spelling of `daemon`
+        const missing = [...new Set(dispatched)].filter((m) => !BRAIN_MODES.includes(m));
+        assert(`S12 SPEND-GUARD — BRAIN_MODES covers every verb main() actually dispatches (unlisted: ${missing.join(", ") || "none"})`,
+          missing.length === 0 && dispatched.length > 0);
+      }
+
       // ── THE KILL IS READ TOO (wiring pass, 11 Aug 2026) ───────────────────
       // claudegen has stamped killed/kill_signal on every result since 10 Aug
       // and projected both onto the ledger row, and NO organ read either — a
@@ -6473,9 +6504,23 @@ function buildDeps(now, argv = process.argv) {
   return { exec: dry ? dryExec : claudeExec, gexec: dry ? dryGexec : geminiExec, now, dry, signals: liveSignal(now) };
 }
 
+/** S12 · THE SPEND-GUARD's vocabulary. Every verb main() actually dispatches, in dispatch order,
+ *  plus `tick` (the empty-argv default) and `help`. EXPORTED so the selftest can bite it against
+ *  the source itself: a branch added below without a row here is a verb nobody can reach, and a
+ *  row here with no branch is a verb that quietly means `tick` — which is the 28,120-token bug. */
+export const BRAIN_MODES = ["tick", "help", "selftest", "bell", "trigger", "gate", "consumed", "tokens", "spend", "status", "run", "pulse", "daemon"];
+/** isKnownMode — PURE, so the suite drives every branch without spawning anything.
+ *  A leading `-` is a FLAG, never a verb: `--dry` and `--daemon` must keep reaching the dispatch. */
+export const isKnownMode = (m) => { const s = String(m == null ? "" : m).toLowerCase(); return s === "" || s.startsWith("-") || BRAIN_MODES.includes(s); };
+
 async function main() {
   const mode = (process.argv[2] || "tick").toLowerCase();
+  if (mode === "help") { console.log(`brain: ${BRAIN_MODES.filter((m) => m !== "tick" && m !== "help").join(" | ")}\n  no verb at all = tick (the scheduled default — ArsenalFC-BrainTick passes none)\n  flags (anything starting with "-", e.g. --dry) pass through to the dispatch`); return; }
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
+  // S12 spend-guard: the verb list lives HERE, beside the dispatch it describes, so a new branch
+  // added below without a row here fails its own selftest rather than going quietly unreachable.
+  // `help` is listed deliberately — it is what a human types first, and it is what cost 28,120
+  // Opus tokens by meaning `tick` on 29 Aug 2026.
   const cfg = loadConfig();
   const now = new Date();
   const deps = buildDeps(now);   // --dry ⇒ stub executors: dry is DRY, not "writes off"
@@ -7000,6 +7045,26 @@ async function main() {
     try { resident.close(); } catch {}                 // release the singleton for the next start
     console.log(`brain: --daemon stopped after ${beats} beat(s).`);
     return;
+  }
+
+  // ── S12 · THE SPEND-GUARD (29 Aug 2026) — NO SILENT DEFAULT ON THE ORGAN THAT SPENDS MOST ──
+  // MEASURED, not theorised: `node scripts/brain.mjs help` fell straight through this point into
+  // the tick below and ran a real job — `formation_read | opus | ok=true | tokens=28120`. A typo
+  // on the most expensive organ in the system silently bought an Opus call.
+  // The organism ALREADY knows this law and applies it twice elsewhere: daemon_watchdog's
+  // "S9 · NO SILENT DEFAULT — an unknown mode REFUSES with a non-zero exit instead of falling
+  // through to `pass`", and models.mjs, which prints its verb list and exits 2. brain.mjs was the
+  // outlier, and it was the one where being an outlier costs money.
+  // THREE BEHAVIOURS, and the second and third are why this is a guard and not a whitelist:
+  //   · an unknown NON-EMPTY verb refuses, non-zero, naming every verb that does exist;
+  //   · a leading `-` passes through, so `--dry` and every other flag keep working;
+  //   · EMPTY argv still ticks — that is the SCHEDULED CONTRACT (ArsenalFC-BrainTick passes no
+  //     verb at all), and a guard that broke the pacemaker would cost far more than the typo.
+  // Ruled INTO S12 by the architect rather than carded, because the LLM stage is about to wake
+  // the exact organ this typo detonates: queue\RULING__2026-08-29_s12-adjudicator.md, addendum 2.
+  if (!isKnownMode(mode)) {
+    console.error(`brain: unknown mode "${mode}" — REFUSING rather than falling through to \`tick\` (which spends).\n\n  verbs: ${BRAIN_MODES.join(" | ")}\n  (no verb at all = tick, the scheduled default; anything starting with "-" is a flag and passes)`);
+    process.exit(2);
   }
 
   // tick (single-instance guarded — won't run concurrently with the resident daemon)

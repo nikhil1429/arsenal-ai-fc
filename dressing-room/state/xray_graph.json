@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-29T04:10:05.832Z",
+ "built_at": "2026-08-29T04:31:47.835Z",
  "organs_parsed": 111,
  "organs_expected": 111,
  "parse_errors": [],
@@ -1097,7 +1097,7 @@
    "unresolved": 5
   },
   "brain.mjs": {
-   "loc": 7034,
+   "loc": 7099,
    "reads": [
     {
      "path": "dressing-room/manager/system.md",
@@ -1130,51 +1130,55 @@
      "fixture": false
     },
     {
+     "path": "scripts/brain.mjs",
+     "lines": [
+      5159,
+      5546,
+      5856,
+      6091,
+      5159,
+      5546,
+      5856,
+      6091,
+      5159,
+      5546,
+      5856,
+      6091,
+      5159,
+      5546,
+      5856,
+      6091
+     ],
+     "fixture": true
+    },
+    {
      "path": "scripts/nightshift.mjs",
      "lines": [
-      5365,
-      5365,
-      5365,
-      5365
+      5396,
+      5396,
+      5396,
+      5396
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      5439,
+      5470,
       217,
       217,
-      5439,
+      5470,
       217,
       217,
       280,
-      5439,
+      5470,
       217,
       217,
       246,
       280,
-      5439
+      5470
      ],
      "fixture": false
-    },
-    {
-     "path": "scripts/brain.mjs",
-     "lines": [
-      5515,
-      5825,
-      6060,
-      5515,
-      5825,
-      6060,
-      5515,
-      5825,
-      6060,
-      5515,
-      5825,
-      6060
-     ],
-     "fixture": true
     },
     {
      "path": "dressing-room/state/brain_config.json",
@@ -1559,22 +1563,22 @@
       3963,
       3993,
       4055,
-      6845,
+      6890,
       906,
       3963,
       3993,
       4055,
-      6845,
+      6890,
       906,
       3963,
       3993,
       4055,
-      6845,
+      6890,
       906,
       3963,
       3993,
       4055,
-      6845
+      6890
      ],
      "verbs": [
       "appendFileSync"
@@ -1670,7 +1674,7 @@
      "kind": "organ",
      "script": "tasks.mjs",
      "verb": null,
-     "line": 6835,
+     "line": 6880,
      "ctx": "main"
     }
    ],
@@ -1761,6 +1765,7 @@
     "consumed",
     "daemon",
     "gate",
+    "help",
     "off",
     "pulse",
     "run",
@@ -1778,6 +1783,7 @@
     "tick"
    ],
    "exports": [
+    "BRAIN_MODES",
     "PULSE_STOPWORDS",
     "SHEET_ABSENCE_TITLE",
     "SHEET_PUSH_TITLE",
@@ -1824,6 +1830,7 @@
     "geminiCommand",
     "headroom",
     "hypeGuardOn",
+    "isKnownMode",
     "jobConsumers",
     "jobSurface",
     "jobWindows",
