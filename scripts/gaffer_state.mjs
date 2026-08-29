@@ -377,6 +377,10 @@ export function observe(state, lines, now = new Date(), standing = null, judgmen
     }
   }
   // keep the repeat list bounded — a sitting is a few hundred turns, not a database
+  // law-waiver:trailing-n a WRITE-SIDE CAP, not a read. This keeps the NEWEST 200 and
+  // discards the older ones, which is the opposite of §9 SHAPE 4 (treating an old window
+  // as current). Nothing downstream reads this slice as "recent"; it is the trim that
+  // stops one sitting's repeat list from growing without bound.
   if (s.repeats.length > 200) s.repeats = s.repeats.slice(-200);
   return { state: s, standing: st, newStanding };
 }
@@ -522,6 +526,11 @@ export function renderBrief(state, standing, { forRotation = false } = {}) {
   if (rep.length) L.push(`HE HAS SAID THESE MORE THAN ONCE (the first answer did not land): ${rep.map(r => `"${r.text}" ×${r.count}`).join(" · ")}`);
   if (st.instructions && st.instructions.length) {
     L.push("STANDING INSTRUCTIONS — he gave these out loud and they do NOT expire:");
+    // law-waiver:trailing-n STANDING INSTRUCTIONS DO NOT EXPIRE — the line three above
+    // says so in his own frame ("he gave these out loud and they do NOT expire"). Age is
+    // deliberately not a gate here; the 12 is a PROMPT-BUDGET cap on how many fit in the
+    // head, not a window of now. Gating these by recency would silently drop a standing
+    // instruction he never withdrew — the one thing this block exists to prevent.
     for (const i of st.instructions.slice(-12)) L.push(`  · [${i.label}] ${i.text}`);
   }
   if (s.forgot_flags > 0) L.push(`⚠ He has had to tell you "you forgot" ${s.forgot_flags}× today. Do not make it ${s.forgot_flags + 1}.`);

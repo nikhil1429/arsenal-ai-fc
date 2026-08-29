@@ -34,6 +34,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, appendF
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
+import { recentRows } from "./daykey.mjs";   // S11 — the recency gate (seven history ROWS are not seven DAYS)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -317,7 +318,14 @@ function tankRead(cards, cfg) {
 // today so the in-progress day is watched, never judged.
 function weakFootRead(history, repsByDate, cfg, excludeDate = null) {
   const streaks = {};
-  const days = (excludeDate ? history.filter(h => h && h.date !== excludeDate) : history).slice(-7);
+  // RECENCY GATE (S11 · §9 SHAPE 4): the last seven ROWS of history are not the last
+  // seven DAYS. History has gaps — a fortnight off the pitch and this read a month of
+  // sparse days as "the week", charging a weak foot for cards he was never offered in
+  // that window. The anchor is the day being judged from (today when main() passes it,
+  // else the newest row we have, which is the only honest anchor a fixture can offer).
+  const judged = excludeDate ? history.filter(h => h && h.date !== excludeDate) : (history || []).filter(Boolean);
+  const anchor = excludeDate || (judged.length ? judged[judged.length - 1].date : null);
+  const days = recentRows(judged, { anchor, days: 7, cap: 7 }).rows;
   for (const day of days) {
     const served = new Set(day.due_served || []);
     const played = repsByDate[day.date] || new Set();

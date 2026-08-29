@@ -28,7 +28,8 @@
 //   the law it is holding · a RED here is a real defect, not a flaky net.
 // CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack]
 // ============================================================================
-import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync, appendFileSync } from "node:fs";
+import { createHash } from "node:crypto";   // S11 · F-6: the content discriminator (an idempotent rewrite is not a leak)
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -987,6 +988,65 @@ async function laws() {
 
 // ── 4. HERMETICITY ───────────────────────────────────────────────────────────
 // A selftest that writes into live state corrupts the thing it protects.
+// ── S11 · F-6 · THE INSTRUMENT (29 Aug 2026) ─────────────────────────────────
+// S10-R measured this assert going GREEN then RED at the same commit with nothing
+// edited between runs, and recorded CAUSE NOT ESTABLISHED — two measurements that
+// disagreed. The signoff ruling routed it here with one instruction: INSTRUMENT
+// ACROSS A RED WINDOW, NEVER HUNT A WRITER. So nothing below changes what trips
+// the assert (§10-D rule 6 — a gate may only get stricter); it changes what the
+// trip can TELL you, and it costs nothing on the green path.
+//
+// Two instruments, both cheap, both measured before being written:
+//   (a) THE CONTENT DISCRIMINATOR. snap() keys on `size:mtimeMs`, so an atomic
+//       temp→rename that writes byte-identical content still reads as MODIFIED.
+//       That is S10-R's hypothesis and it was never measurable. It is now: the
+//       non-excluded candidate set is 690 files / 8.0 MB (measured 29 Aug — the
+//       82.7 MB lives in LIVE_WRITERS files we never hash), so hashing it either
+//       side of the run is affordable where hashing the 93 MB tree is not.
+//   (b) THE TIMELINE. Every selftest is spawned sequentially, so recording each
+//       one's [start, end] turns the tripped file's OWN mtime into an attribution:
+//       the write either lands inside exactly one selftest's window — which names
+//       it without a hunt — or lands in NO window, which is the daemon/other-session
+//       race this list's own header has documented a dozen times. No stat costs are
+//       added: the timestamps come from the spawn loop that already runs.
+// The record is APPENDED to a gitignored log OUTSIDE the state bus (the same law the
+// sanctioned thalamus write obeys), so the next occurrence is diagnosable from disk
+// even if it happens in a session nobody is watching.
+export const HERMETIC_FORENSICS = join(ROOT, "scripts", "hermeticity_forensics.log");
+
+/** attributeWrite — a tripped file's own mtime, mapped into the run's timeline.
+ *  PURE: the suite bites it on planted fixtures every run, so the instrument is
+ *  never itself an unrun hypothesis. */
+export function attributeWrite(mtimeMs, timeline) {
+  if (!Number.isFinite(mtimeMs)) return { kind: "unknown", why: "no mtime" };
+  if (!timeline || !timeline.length) return { kind: "unknown", why: "empty timeline" };
+  const inside = timeline.find((t) => mtimeMs >= t.start && mtimeMs <= t.end);
+  // A WINDOW NAMES A CANDIDATE, NOT A CULPRIT. The probe that proved this instrument
+  // landed inside blackbox.mjs's window and was written by neither blackbox nor any
+  // selftest — it was an external process, deliberately. So the sentence says what was
+  // RUNNING and says out loud that an external writer can land inside a window too.
+  // Overstating it would rebuild the very wrong-conclusion-from-one-measurement F-6 is.
+  if (inside) return { kind: "selftest", organ: inside.organ, why: `${inside.organ} selftest WAS RUNNING at that instant — a CANDIDATE, not a culprit (an external writer can land inside a window too). Confirm by running that one selftest alone with the file stat-ed either side.` };
+  const first = timeline[0].start, last = timeline[timeline.length - 1].end;
+  if (mtimeMs < first) return { kind: "predates", why: `mtime is ${Math.round((first - mtimeMs) / 1000)}s BEFORE the run started — not written by this run at all` };
+  if (mtimeMs > last) return { kind: "after", why: `mtime is ${Math.round((mtimeMs - last) / 1000)}s AFTER the last selftest ended` };
+  const prev = [...timeline].reverse().find((t) => t.end < mtimeMs);
+  const next = timeline.find((t) => t.start > mtimeMs);
+  return { kind: "external", why: `NO selftest was running — the write landed in the gap between ${prev ? prev.organ : "?"} and ${next ? next.organ : "?"}, so an external writer raced the suite` };
+}
+
+/** forensicVerdict — MODIFIED with identical content is an atomic rewrite moving
+ *  mtime, not a leak. Saying which is the whole point of F-6. PURE. */
+export function forensicVerdict({ before, after, beforeSha, afterSha }) {
+  if (before == null) return { verdict: "CREATED", leak: true, why: "the file did not exist before the run" };
+  if (after == null) return { verdict: "DELETED", leak: true, why: "the file existed before the run and is gone" };
+  if (beforeSha && afterSha && beforeSha === afterSha) {
+    return { verdict: "IDEMPOTENT REWRITE", leak: false, why: `content is BYTE-IDENTICAL (${beforeSha.slice(0, 12)}); only size:mtimeMs moved — an atomic temp→rename, which snap() cannot distinguish from a write` };
+  }
+  if (beforeSha && afterSha) return { verdict: "CONTENT CHANGED", leak: true, why: `${beforeSha.slice(0, 12)} → ${afterSha.slice(0, 12)}` };
+  return { verdict: "MODIFIED", leak: true, why: "size:mtimeMs moved and the content could not be hashed either side" };
+}
+
 function hermetic() {
   section("HERMETICITY — a selftest must never touch dressing-room/state");
   const snap = () => {
@@ -1127,19 +1187,57 @@ function hermetic() {
   // ARSENAL_SPOOL_DB pointed at a sandbox and asserts the live db is untouched (check 6a).
   // The -wal/-shm siblings are covered by the same pattern (it matches the prefix).
   const LIVE_WRITERS = /swallow_ledger\.jsonl|session_intent\.jsonl|afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl|pulse_session\.json|cortex_session\.json|captains_call\.json|sitting\.json|sitting_out\.jsonl|sitting_log\.jsonl|sitting_reviews\.jsonl|spool\.db/;
-  const before = snap();
+  // F-6's hash side: candidates only (LIVE_WRITERS files are the 82.7 MB we skip).
+  const hashes = () => {
+    const m = new Map();
+    const walk = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); let s; try { s = statSync(p); } catch { continue; } if (s.isDirectory()) walk(p); else if (!LIVE_WRITERS.test(p)) { try { m.set(p, createHash("sha256").update(readFileSync(p)).digest("hex")); } catch { /* unreadable mid-run — the verdict says so */ } } } };
+    walk(STATE); return m;
+  };
+  const before = snap(), beforeH = hashes();
   const targets = scripts().filter(hasSelftest);
-  for (const f of targets) run([join(ROOT, "scripts", f), "selftest"]);
-  const after = snap();
+  const timeline = [];                       // F-6's attribution side, free: the spawn loop already runs
+  for (const f of targets) { const t0 = Date.now(); run([join(ROOT, "scripts", f), "selftest"]); timeline.push({ organ: f, start: t0, end: Date.now() }); }
+  const after = snap(), afterH = hashes();
 
+  // THE TRIP METRIC IS UNCHANGED (rule 6): size:mtimeMs, exactly as before. The
+  // forensics ride ALONGSIDE it — they explain a red, they never excuse one.
+  const forensics = [];
+  const record = (p, kind) => {
+    const v = forensicVerdict({
+      before: kind === "CREATED" ? null : before.get(p), after: kind === "DELETED" ? null : after.get(p),
+      beforeSha: beforeH.get(p) || null, afterSha: afterH.get(p) || null,
+    });
+    let mt = null; try { mt = statSync(p).mtimeMs; } catch { /* deleted: no mtime to attribute */ }
+    const who = kind === "DELETED" ? { kind: "deleted", why: "the file is gone; nothing to attribute" } : attributeWrite(mt, timeline);
+    forensics.push({ path: p.replace(STATE, "state"), kind, verdict: v.verdict, leak: v.leak, why: v.why, attribution: who.kind, attribution_why: who.why, organ: who.organ || null });
+    return `${kind} ${p.replace(STATE, "state")} — ${v.verdict}: ${v.why} · ${who.why}`;
+  };
   const touched = [];
   for (const [p, v] of after) {
     if (LIVE_WRITERS.test(p)) continue;
-    if (!before.has(p)) touched.push(`CREATED ${p.replace(STATE, "state")}`);
-    else if (before.get(p) !== v) touched.push(`MODIFIED ${p.replace(STATE, "state")}`);
+    if (!before.has(p)) touched.push(record(p, "CREATED"));
+    else if (before.get(p) !== v) touched.push(record(p, "MODIFIED"));
   }
-  for (const p of before.keys()) if (!after.has(p) && !LIVE_WRITERS.test(p)) touched.push(`DELETED ${p.replace(STATE, "state")}`);
+  for (const p of before.keys()) if (!after.has(p) && !LIVE_WRITERS.test(p)) touched.push(record(p, "DELETED"));
+  if (forensics.length) {
+    // OUTSIDE the state bus, gitignored (*.log) — the same law the sanctioned
+    // thalamus write obeys. A red that nobody was watching is still diagnosable.
+    try { appendFileSync(HERMETIC_FORENSICS, JSON.stringify({ at: new Date().toISOString(), selftests: targets.length, window_ms: timeline.length ? timeline[timeline.length - 1].end - timeline[0].start : 0, forensics }) + "\n"); } catch { /* the suite never dies for its own journal */ }
+  }
   assert(`running all ${targets.length} selftests leaves live state untouched`, touched.length === 0, touched.slice(0, 8).join("\n         "));
+
+  // THE INSTRUMENT IS ITSELF TESTED, every run, on planted fixtures — an unrun
+  // instrument is a hypothesis, and this one exists precisely because a measurement
+  // that could not be reproduced was believed once already.
+  const tl = [{ organ: "a.mjs", start: 1000, end: 2000 }, { organ: "b.mjs", start: 2500, end: 3000 }];
+  assert("F-6 INSTRUMENT · a write inside a selftest's window is attributed to THAT selftest, and one in the gap is named an external writer racing the suite",
+    attributeWrite(1500, tl).organ === "a.mjs" && attributeWrite(2200, tl).kind === "external"
+    && attributeWrite(500, tl).kind === "predates" && attributeWrite(9999, tl).kind === "after");
+  assert("F-6 INSTRUMENT · MODIFIED with BYTE-IDENTICAL content is named an idempotent rewrite (not a leak), and a real content change is still a leak — the discriminator S10-R could not measure",
+    forensicVerdict({ before: "10:1", after: "10:2", beforeSha: "aa", afterSha: "aa" }).leak === false
+    && forensicVerdict({ before: "10:1", after: "11:2", beforeSha: "aa", afterSha: "bb" }).leak === true
+    && forensicVerdict({ before: null, after: "1:1", beforeSha: null, afterSha: "aa" }).verdict === "CREATED"
+    && forensicVerdict({ before: "1:1", after: null, beforeSha: "aa", afterSha: null }).verdict === "DELETED");
 
   // THE ONE SANCTIONED WRITE (6 Aug 2026). thalamus.mjs:1790 declares one deliberate
   // non-hermetic check: audit #10's whole claim is "the diagnostics now have somewhere

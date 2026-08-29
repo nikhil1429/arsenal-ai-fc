@@ -1315,6 +1315,40 @@ function postToRoad(card, now) {
     return { ok: true, out: String(r || "") };
   } catch (e) { return { ok: false, why: String((e && e.message) || e).slice(0, 160) }; }
 }
+// ── S11 · THE ROTATION'S OWN LOSS, RECORDED (29 Aug 2026) ───────────────────
+// LADDER A1 gave the deck rotation: a card dealt today rests for the rest of the day
+// and the least-dealt card goes first, so nothing monopolises his one line. What it
+// never did was RECORD the cost of that rotation. A card dealt on Tuesday and rotated
+// away with no word simply went back in the pile; the only trace was `dealt.length`,
+// which counts ASKS, not LOSSES — and by his 11 Aug ruling anything he must remember
+// is a bug in the organism, so a silently-expired ask is exactly that bug.
+//
+// DERIVED, NEVER COUNTED UP. The number is the count of DISTINCT deal-days strictly
+// before today on a card that is still unanswered — read straight off `dealt[]`, which
+// already exists. A counter would drift the first time a sync was skipped for a day;
+// a derivation is exact on every run, self-corrects, and is idempotent by construction.
+// PURE, so the selftest drives it on fixtures rather than on his live deck.
+export function expiredUnanswered(card, today) {
+  if (!card || card.answer || card.retired_at) return null;   // a settled card keeps whatever it cost; nothing is recomputed on it
+  const days = [...new Set((card.dealt || []).map((t) => localDate(new Date(t))).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)))]
+    .filter((d) => d < today).sort();
+  return { count: days.length, last: days.length ? days[days.length - 1] : null, first: days.length ? days[0] : null };
+}
+/** stampExpiries — the recording half. Mutates live cards only, in the owner's own
+ *  sync pass, so nothing else ever writes these fields. Returns what it stamped. */
+export function stampExpiries(state, today) {
+  const stamped = [];
+  for (const c of (state && state.cards) || []) {
+    const e = expiredUnanswered(c, today);
+    if (!e) continue;
+    if (c.expired_unanswered !== e.count || c.expired_last !== e.last) stamped.push({ id: c.id, from: c.expired_unanswered || 0, to: e.count });
+    c.expired_unanswered = e.count;
+    c.expired_last = e.last;
+    c.expired_first = e.first;
+  }
+  return stamped;
+}
+
 function sync(now = new Date()) {
   const next = deriveCards(loadState(), gatherSources(), now);
   // THE DECISION GATE runs AFTER derive, so it sees this sync's fresh mints too: a card minted and
@@ -1329,6 +1363,9 @@ function sync(now = new Date()) {
       r.retired_at = null; r.resolution = null;
     }
   }
+  // S11: the rotation's loss is stamped in the owner's OWN pass, before the write —
+  // one writer, one file, and the number is re-derived every time rather than nudged.
+  stampExpiries(next, localDate(now));
   writeAtomic(CALL, next);
   return next;
 }
@@ -1610,7 +1647,10 @@ async function main() {
     const s = loadState();
     for (const c of s.cards) {
       const st = c.retired_at ? `settled: ${clip(c.resolution, 60)}` : c.answer ? c.answer : c.sleep_until ? `sleeping→${c.sleep_until}` : "LIVE";
-      console.log(`  ${c.id} [${c.source}] ${st}\n     ${c.line}`);
+      // S11: say the rotation's loss out loud. A number recorded where nobody reads it
+      // is the same silence it was invented to end.
+      const exp = c.expired_unanswered ? `  ⌛ ${c.expired_unanswered}× dealt and rotated away with no word (last ${c.expired_last})` : "";
+      console.log(`  ${c.id} [${c.source}] ${st}${exp}\n     ${c.line}`);
     }
     if (!s.cards.length) console.log("  (no cards ever)");
     return;
@@ -2222,6 +2262,27 @@ function selftest() {
         fileGuard(g1.cards, "gate:teamtalk_am:2026-08-19", true).mint === false
         && fileGuard(na.state.cards, "gate:teamtalk_am:2026-08-25", true).mint === true);
     }
+  }
+
+  // ── S11 · THE ROTATION'S LOSS, bitten on fixtures (never on his live deck) ──
+  {
+    const d = (day, h = 9) => new Date(`${day}T0${h}:00:00`).toISOString();
+    const card = { id: "c1", dealt: [d("2026-08-25"), d("2026-08-25", 8), d("2026-08-27"), d("2026-08-29")] };
+    assert("S11 · EXPIRED — distinct deal-DAYS before today, not deal COUNT: two asks on the same day are ONE day lost, and today's own deal is not a loss yet",
+      (() => { const e = expiredUnanswered(card, "2026-08-29"); return e.count === 2 && e.first === "2026-08-25" && e.last === "2026-08-27"; })());
+    assert("S11 · EXPIRED — DERIVED, so it is idempotent and self-correcting: stamping twice cannot double it, and a skipped day never drifts the number",
+      (() => {
+        const st = { cards: [{ ...card, dealt: [...card.dealt] }] };
+        const first = stampExpiries(st, "2026-08-29");
+        const second = stampExpiries(st, "2026-08-29");
+        return first.length === 1 && second.length === 0 && st.cards[0].expired_unanswered === 2;
+      })());
+    assert("S11 · EXPIRED — a SETTLED card is never recomputed: his word ends the ask, and what it cost him stays on the record (L9)",
+      expiredUnanswered({ ...card, answer: "haan" }, "2026-08-29") === null
+      && expiredUnanswered({ ...card, retired_at: "2026-08-28T00:00:00Z" }, "2026-08-29") === null);
+    assert("S11 · EXPIRED — a card never dealt, and a card dealt only TODAY, have both lost nothing (a fresh ask is not a failure)",
+      expiredUnanswered({ id: "x", dealt: [] }, "2026-08-29").count === 0
+      && expiredUnanswered({ id: "y", dealt: [d("2026-08-29")] }, "2026-08-29").count === 0);
   }
 
   console.log(`\ncaptains_call selftest: ${pass} passed, ${fail} failed`);

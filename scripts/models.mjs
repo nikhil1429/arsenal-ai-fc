@@ -108,6 +108,20 @@ const FAMILY = {
 export const LABELS = new Set(["gemini-study", "gemini-study-teaching", "gemini-quality", "gemini-quality-recorded", "gemini-lane", "gemini-quarantine", "gemini-login", "gemini-flash", "gemini-quality-quarantine"]);
 export const LITERAL_OK = "models-literal-ok";        // a fixture line that must carry a retired/known literal declares itself with this word
 const FRESH_H = 36;                                    // models.json older than this is stale: resolveSync falls back to the seed and says so
+// ── S11 · THE KEYS ARE NOT THE ROSTER, AND THEY DO NOT AGE THE SAME ─────────
+// One freshness number served both halves of this file, and they change on different
+// clocks. WHICH MODEL LEADS a role changes on Google's release cadence — days — so 36 h
+// is right for the roster. WHETHER A KEY ANSWERS changes on QUOTA cadence: a key that
+// said ok this morning is 429 by afternoon and ok again after the window rolls. The one
+// measurement we have is the 19 Aug 429 lesson, written into the §10-C row: a TEN-HOUR-OLD
+// "keys ok" answered for a moment that had already passed.
+// So the keys carry their own, tighter window. 6 h is a GUARD, not a budget (L8): it never
+// blocks a call and never changes which key is tried — every caller still rides the live
+// wire with its own 429 handling. All it refuses to do is CLAIM a key is ok on a reading
+// too old to answer for now. It is bounded above by the only datum we have (10 h was too
+// old) and set to the longest span that still sits inside one sitting; a later measurement
+// may only tighten it.
+export const KEYS_FRESH_H = 6;
 
 // ── rank: generation parsed from the name; -latest aliases rank BELOW any explicit generation (an alias is a moving target — 18 Aug it moved onto a paid tier) ──
 export function rank(name) {
@@ -177,7 +191,11 @@ export function board(path = MODELS_JSON, now = Date.now()) {
   const j = readJson(path);
   if (!j) return null;
   const at = Date.parse(j.at || "");
-  return { ...j, age_h: Number.isFinite(at) ? (now - at) / 3600000 : null, fresh: Number.isFinite(at) && (now - at) / 3600000 <= FRESH_H };
+  const ageH = Number.isFinite(at) ? (now - at) / 3600000 : null;
+  // S11: TWO freshness answers, because the roster and the keys age on different clocks.
+  // keys_fresh is null when nothing was ever measured — never false, which would read as
+  // "measured and stale" about a thing that was never measured at all.
+  return { ...j, age_h: ageH, fresh: ageH !== null && ageH <= FRESH_H, keys_fresh: ageH === null ? null : ageH <= KEYS_FRESH_H };
 }
 
 // ── candidates(role): env → probe-ranked live → seed; then the fallback role's, marked ──
@@ -426,7 +444,13 @@ export function resolveClaudeRole(role) {
 export function boardLine(b = board()) {
   if (!b) return "gemini: never probed — `node scripts/models.mjs probe`";
   const r = (role) => { const x = (b.roles || {})[role] || {}; return x.chosen ? x.chosen.replace(/^gemini-/, "") : x.fallback_role ? `→${x.fallback_role}` : !SEED[role].length ? `unseeded(${(x.candidates || []).filter((c) => c.ok).length} listed)` : "DEAD"; };
-  return `gemini: text→${r("text")} · lite→${r("lite")} · pro→${r("pro")} · live→${r("live")} · image→${r("image")} · embed→${r("embed")}${(b.roles || {}).embed && b.roles.embed.embed_dim ? `(${b.roles.embed.embed_dim})` : ""} · keys ok ${(b.keys || {}).ok ? b.keys.ok.length : "?"}/${(b.keys || {}).n || "?"}${(b.keys || {}).quota && b.keys.quota.length ? ` quota ${b.keys.quota.length}` : ""}${(b.keys || {}).bad && b.keys.bad.length ? ` BAD ${b.keys.bad.length}` : ""} · probed ${b.age_h === null ? "?" : b.age_h.toFixed(0)} h ago${b.fresh ? "" : " (STALE)"}`;
+  // S11 · the keys half says its own age. A number this old presented flat would be
+  // answering for NOW with a reading from another quota window (the 19 Aug 429 lesson).
+  const k = b.keys || {};
+  const keysTxt = b.keys_fresh === false
+    ? `keys ${k.ok ? k.ok.length : "?"}/${k.n || "?"} answered ${b.age_h.toFixed(0)} h ago — READING TOO OLD TO ANSWER FOR NOW (guard ${KEYS_FRESH_H} h; quota rolls faster than the roster): re-probe before believing it`
+    : `keys ok ${k.ok ? k.ok.length : "?"}/${k.n || "?"}${k.quota && k.quota.length ? ` quota ${k.quota.length}` : ""}${k.bad && k.bad.length ? ` BAD ${k.bad.length}` : ""}`;
+  return `gemini: text→${r("text")} · lite→${r("lite")} · pro→${r("pro")} · live→${r("live")} · image→${r("image")} · embed→${r("embed")}${(b.roles || {}).embed && b.roles.embed.embed_dim ? `(${b.roles.embed.embed_dim})` : ""} · ${keysTxt} · probed ${b.age_h === null ? "?" : b.age_h.toFixed(0)} h ago${b.fresh ? "" : " (STALE)"}`;
 }
 // findings for the watchman (pure over a board object)
 export function findings(b = board(), now = Date.now()) {
@@ -456,7 +480,13 @@ export function findings(b = board(), now = Date.now()) {
     else if (x.fell_back_from && x.chosen_since && now - Date.parse(x.chosen_since) > 24 * 3600000) F.push({ id: "model-fell-back", level: "WARN", finding: `role ${role} served by ${x.chosen} (seed top ${x.fell_back_from}) for ${((now - Date.parse(x.chosen_since)) / 3600000).toFixed(0)} h`, evidence: `${(x.candidates || []).filter((c) => c.model === x.fell_back_from).map((c) => `${c.model} ${c.class}`).join("") || "seed top not probed"} · his one-line seed edit or Google's tier — \`node scripts/models.mjs status\`` });
     if (x.dim_changed_from) F.push({ id: "embed-dim-changed", level: "RED", finding: `embed dim changed ${x.dim_changed_from} → ${x.embed_dim} — every stored vector (hippocampus recall index, dugout) is now incomparable`, evidence: `${x.chosen} · re-index or pin the previous model in SEED.embed` });
   }
-  if (b.keys && b.keys.n) F.push({ id: "quota-keys", level: "INFO", finding: `gemini keys ok ${b.keys.ok.length}/${b.keys.n}${b.keys.quota.length ? ` · quota ${b.keys.quota.join(",")}` : ""}${b.keys.bad.length ? ` · BAD ${b.keys.bad.join(",")}` : ""}`, evidence: boardLine(b) });
+  // S11 · a stale keys reading is its own finding, ABOVE the INFO tally: the tally is a
+  // measurement and this says whether the measurement can still answer. Ordered first so
+  // nothing reads the counts without the age beside them.
+  if (b.keys && b.keys.n && b.keys_fresh === false) F.push({ id: "keys-reading-stale", level: "WARN",
+    finding: `the "keys ok ${b.keys.ok.length}/${b.keys.n}" reading is ${b.age_h.toFixed(0)} h old — older than the ${KEYS_FRESH_H} h keys guard, so it cannot answer for NOW (quota rolls in minutes; the roster rolls in days)`,
+    evidence: `probed ${new Date(Date.parse(b.at)).toISOString()} · re-measure with \`node scripts/models.mjs probe\` before any lane is judged on it (19 Aug: a 10 h-old ok was believed and every call 429'd)` });
+  if (b.keys && b.keys.n) F.push({ id: "quota-keys", level: "INFO", finding: `gemini keys ok ${b.keys.ok.length}/${b.keys.n}${b.keys.quota.length ? ` · quota ${b.keys.quota.join(",")}` : ""}${b.keys.bad.length ? ` · BAD ${b.keys.bad.join(",")}` : ""}${b.keys_fresh === false ? ` (reading ${b.age_h.toFixed(0)} h old — see keys-reading-stale)` : ""}`, evidence: boardLine(b) });
   return F;
 }
 
@@ -664,6 +694,23 @@ async function selftest() {
   const live = check();
   assert(`THE LAW (live tree): zero literal gemini model names in scripts/*.mjs outside models.mjs (${live.files} files scanned · ${live.declared.length} declared fixture line(s))`, live.hits.length === 0, live.hits.map((h) => `${h.file}:${h.line} ${h.literal}`).join(" · "));
   assert("THE LAW (Claude side): brain_config.json names only opus|sonnet|haiku", live.claude.ok, live.claude.offenders.join(" · "));
+  // ── S11 · THE KEYS FRESHNESS GATE, bitten on fixtures (no wire, no spend) ───
+  {
+    const mk = (hoursAgo) => ({ at: new Date(Date.now() - hoursAgo * 3600000).toISOString(), roles: {}, keys: { ok: [0, 1, 2], quota: [], bad: [], n: 3 } });
+    const write = (o) => { const p = join(tmpdir(), `models-s11-${process.pid}-${o.at.replace(/[:.]/g, "")}.json`); writeFileSync(p, JSON.stringify(o)); return p; };
+    const fresh = board(write(mk(2))), stale = board(write(mk(11)));
+    assert("S11 KEYS · the roster and the keys age on DIFFERENT clocks — an 11 h board is still a fresh ROSTER (36 h) and an already-stale KEYS reading (6 h)",
+      fresh.fresh === true && fresh.keys_fresh === true && stale.fresh === true && stale.keys_fresh === false);
+    assert("S11 KEYS · a stale reading is never presented as an answer for NOW — the line says the age and what to do, instead of printing \"keys ok 3/3\" flat",
+      /keys ok 3\/3/.test(boardLine(fresh)) && !/keys ok 3\/3/.test(boardLine(stale))
+      && /READING TOO OLD TO ANSWER FOR NOW/.test(boardLine(stale)) && /re-probe/.test(boardLine(stale)));
+    assert("S11 KEYS · the watchman gets its own WARN, and the INFO tally carries the age beside the counts (a count without its age is how 19 Aug happened)",
+      findings(stale).some((f) => f.id === "keys-reading-stale" && f.level === "WARN" && /19 Aug/.test(f.evidence))
+      && findings(fresh).every((f) => f.id !== "keys-reading-stale")
+      && /reading 11 h old/.test((findings(stale).find((f) => f.id === "quota-keys") || {}).finding || ""));
+    assert("S11 KEYS · never measured is NULL, not false — \"we never looked\" and \"we looked and it went stale\" are different states and only one of them is a finding",
+      board(write({ at: "not-a-date", roles: {}, keys: { ok: [], quota: [], bad: [], n: 3 } })).keys_fresh === null);
+  }
   console.log(`\nmodels selftest: ${pass} passed, ${fail} failed`);
   if (fail) for (const x of fails) console.log(`  · ${x.n}${x.d ? `\n      ${x.d}` : ""}`);
   process.exit(fail ? 1 : 0);

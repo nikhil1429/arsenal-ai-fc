@@ -113,7 +113,18 @@ export const BASELINE = {
   "owners-only-state-write": 0,
   "law-m-literal-model": 0,   // S10 §10-G: watchman.mjs:1067's live literal moved into models.mjs CLAUDE_ROLES (the resolver, where a name may live) — same resolved string, no model change
   "jugad-literal-subject-list": 91,    // S10 ratchet (a2): 102 −1 shadow(#1) −1 tasks KINDS(#5) −2 CORE_AXES twins(#12) −3 calibration(r13) −2 acts(r14) −2 distiller INTERACTIVE+AMBIENT(r15; LEGACY stays frozen AND counted — honesty over score)
-  "trailing-n-slice": 7,
+  // S11 RATCHET 7 → 0 (29 Aug 2026), and the seven were SPLIT by reading every one:
+  //   THREE WERE REAL §9 SHAPE 4 and are now GATED by daykey.withinDays/recentRows —
+  //     viz:383 the wall's kal-lines · postmatch:178 the season form strip ·
+  //     touchline:320 the weak-foot streak read. Each filters to a calendar WINDOW
+  //     first and only then caps, and postmatch now SAYS the record is old rather
+  //     than drawing a fortnight-old glyph strip under the words "current run".
+  //   FOUR WERE NOT SHAPE 4 and carry a DECLARED law-waiver:trailing-n with its why —
+  //     gaffer_state:380 · postmatch:265 · physio:856 are WRITE-SIDE CAPS (they keep
+  //     the newest N and discard older, the opposite of treating an old window as new),
+  //     and gaffer_state:525 reads standing instructions the code itself declares
+  //     non-expiring, where a recency gate would silently drop his own standing word.
+  "trailing-n-slice": 0,
   "bare-catch": 38,
   // SHAPE 8, frozen at S10 (29 Aug 2026), every one READ before freezing:
   //   archive_audit:808 (.ok off a lane receipt) · capture:1618/:1640 (.n off saved

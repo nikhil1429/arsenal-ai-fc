@@ -91,6 +91,36 @@ export function addDays(key, n) {
   return localDate(new Date(new Date(`${key}T12:00:00`).getTime() + n * 86400000));
 }
 
+// ── S11 · THE RECENCY GATE (29 Aug 2026) ────────────────────────────────────
+// §9 SHAPE 4, stated by the lawpack's own rule: "the last N rows are not the RECENT
+// rows — they are the last N rows, and if the lane stopped writing a month ago they
+// are a month old while every reader treats them as now." Three READ sites were doing
+// exactly that (the wall's kal-lines · the season form strip · the weak-foot streak),
+// so after a quiet fortnight each showed three-week-old data as current.
+// THE GATE LIVES HERE, ONCE, because daykey is already the organism's single owner of
+// what a calendar day is — three private copies of this arithmetic would be the
+// twin-copy disease the lawpack exists to catch.
+// A row whose date will not parse is NOT recent: an unreadable stamp must never buy
+// its way into a window of NOW by defaulting to true.
+export function withinDays(key, anchor, n) {
+  if (!isDayKey(key) || !isDayKey(anchor) || !Number.isFinite(n) || n < 0) return false;
+  const ms = new Date(`${anchor}T12:00:00`).getTime() - new Date(`${key}T12:00:00`).getTime();
+  return ms >= 0 ? ms <= n * 86400000 : true;   // a FUTURE-dated row is not stale; it is tomorrow's, and its own writer owns that
+}
+/**
+ * recentRows — the shape every caller actually wants: filter to the window FIRST,
+ * then take the last N. Returns {rows, dropped, span} so a caller can SAY what it cut.
+ * @param {any[]} rows
+ * @param {{anchor?: string, days?: number, cap?: number|null, dateOf?: (r: any) => any}} [opts]
+ */
+export function recentRows(rows, { anchor, days, cap = null, dateOf = (r) => r && r.date } = {}) {
+  const all = Array.isArray(rows) ? rows.filter(Boolean) : [];
+  const inWindow = all.filter((r) => withinDays(dateOf(r), anchor, days));
+  const kept = cap == null ? inWindow : inWindow.slice(-cap);
+  const dates = kept.map(dateOf).filter(isDayKey).sort();
+  return { rows: kept, dropped: all.length - kept.length, span: dates.length ? { from: dates[0], to: dates[dates.length - 1] } : null };
+}
+
 const parseHHMM = (s) => {
   const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(String(s || "").trim());
   return m ? { h: +m[1], m: +m[2], s: +(m[3] || 0) } : null;
@@ -288,6 +318,30 @@ function selftest() {
     ok("every live slot row names its organ and parses its trigger time(s)", bad.length === 0, bad.map(([n]) => n).join(","));
     ok("the live snapshot marks the four daemon rows (Thalamus/Cortex/Turnstile/BrainDaemon) daemon:true", ["ArsenalFC-BrainDaemon", "ArsenalFC-Thalamus", "ArsenalFC-Cortex", "ArsenalFC-Turnstile"].every((n) => !live[n] || live[n].daemon === true));
   }
+
+  // ── S11 · THE RECENCY GATE, bitten (an unrun gate is a hypothesis) ────────
+  ok("S11 RECENCY · withinDays — inside the window is true, one day past it is false, and the boundary day itself counts",
+    withinDays("2026-08-25", "2026-08-29", 7) && withinDays("2026-08-22", "2026-08-29", 7)
+    && !withinDays("2026-08-21", "2026-08-29", 7));
+  ok("S11 RECENCY · a date that will not parse is NOT recent — an unreadable stamp may never buy its way into a window of NOW",
+    !withinDays("", "2026-08-29", 7) && !withinDays(undefined, "2026-08-29", 7)
+    && !withinDays("last tuesday", "2026-08-29", 7) && !withinDays("2026-08-25", "not-a-day", 7));
+  ok("S11 RECENCY · a FUTURE-dated row is not stale (it is tomorrow's, and its own writer owns that)",
+    withinDays("2026-09-05", "2026-08-29", 7));
+  ok("S11 RECENCY · recentRows windows FIRST and caps SECOND — the bug was the other way round: seven ROWS spanning a month read as seven DAYS",
+    (() => {
+      const rows = [{ date: "2026-07-01" }, { date: "2026-07-15" }, { date: "2026-08-26" }, { date: "2026-08-28" }, { date: "2026-08-29" }];
+      const r = recentRows(rows, { anchor: "2026-08-29", days: 7, cap: 7 });
+      const capped = recentRows(rows, { anchor: "2026-08-29", days: 7, cap: 2 });
+      return r.rows.length === 3 && r.dropped === 2 && r.span.from === "2026-08-26" && r.span.to === "2026-08-29"
+        && capped.rows.length === 2 && capped.rows[0].date === "2026-08-28";
+    })());
+  ok("S11 RECENCY · a lane that stopped writing a month ago returns EMPTY, so a caller must say the record is old instead of drawing stale rows as now",
+    recentRows([{ date: "2026-07-01" }, { date: "2026-07-02" }], { anchor: "2026-08-29", days: 14, cap: 7 }).rows.length === 0);
+  ok("S11 RECENCY · junk in, nothing claimed: a null list, a non-array and rowless input all answer with an empty window and a null span",
+    recentRows(null, { anchor: "2026-08-29", days: 7 }).rows.length === 0
+    && recentRows("nope", { anchor: "2026-08-29", days: 7 }).span === null
+    && recentRows([{ nodate: 1 }], { anchor: "2026-08-29", days: 7 }).rows.length === 0);
 
   console.log(`\ndaykey: ${pass} passed, ${fail} failed`);
   if (fail) for (const f of fails) console.log(`  · ${f.n}${f.d ? `\n      ${f.d}` : ""}`);

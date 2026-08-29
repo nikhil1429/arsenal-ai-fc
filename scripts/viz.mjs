@@ -48,7 +48,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // third.
 import { allowedNumbers, noNewNumbers } from "./validators.mjs";
 import { captain } from "./captain.mjs";   // Block 2 §7.3
-import { dayKey, addDays, launchContext } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW (+ the Wall-Live gate reads the launch context)
+import { dayKey, addDays, launchContext, recentRows } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW (+ the Wall-Live gate reads the launch context; S11 — the recency gate)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -380,7 +380,11 @@ function assembleWallData(bus, now = new Date()) {
     })) : [],
     twin_voice: twin ? twin.voice : null,
     media: bus.media || null,   // {teamtalk_am,teamtalk_pm,poster,filmkit} — presence flags only
-    commitments: Array.isArray(bus.commitments) ? bus.commitments.slice(-7) : [],   // kal-lines, kept (U4)
+    // kal-lines, kept (U4). RECENCY GATE (S11 · §9 SHAPE 4): commitments carry their
+    // own `date`, and the last 7 ROWS are not the last 7 DAYS — after a quiet fortnight
+    // the wall showed three-week-old kal-lines as live commitments. Window FIRST (a
+    // fortnight: a commitment older than that is history, not a promise), then the cap.
+    commitments: recentRows(bus.commitments, { anchor: dayKey(now), days: 14, cap: 7 }).rows,
     // THE NOW STRIP (captain's call, high-dopamine): live odometers that only
     // count UP + the struggle verdict in forge-framing. No quota bars, no
     // wall-minutes daily meter (that law stands), hidden entirely on RED.

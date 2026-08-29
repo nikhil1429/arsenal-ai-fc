@@ -63,7 +63,7 @@
 //   a design decision, not a patch) · brain.mjs (never: it owns the organism's half only).
 // CLI: node scripts/session_meter.mjs [line|today|status|report [days]|stop|sweep|selftest]
 // ============================================================================
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, openSync, readSync, closeSync, renameSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, statSync, openSync, readSync, closeSync, renameSync, mkdirSync, mkdtempSync, rmSync, appendFileSync, utimesSync } from "node:fs";   // S11 — the identity bites drive real appends and rewrites
 import { join, dirname } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { createHash } from "node:crypto";
@@ -79,7 +79,11 @@ const CACHE = join(STATE_DIR, "session_meter.json");
 // They are NOT this organ's to change (treasury.mjs's precedent and its exact words).
 export const W = { input: 1, cache_write: 1.25, cache_read: 0.1, output: 5 };
 export const LANES = ["his", "organism", "unknown"];   // index 0/1/2 in a cached row
-const CACHE_VERSION = 2;   // 2 = the dedup-key fix. A v1 cache holds rows keyed the broken way, so it is discarded and rebuilt rather than trusted.
+// 3 = S11's identity fix (29 Aug 2026). A v2 row carries no head_sha, so it cannot prove
+// the file it was folded from is still the same file — and by this constant's own
+// precedent ("a v1 cache holds rows keyed the broken way") an unprovable row is discarded
+// and rebuilt rather than trusted. The rebuild is a local disk re-read; it costs no tokens.
+const CACHE_VERSION = 3;   // 2 = the dedup-key fix. A v1 cache holds rows keyed the broken way, so it is discarded and rebuilt rather than trusted.
 const WINDOW_DAYS = 7;
 
 export function projectsDir() {
@@ -203,16 +207,50 @@ function readFrom(path, from) {
   } finally { closeSync(fd); }
 }
 
+// ── S11 · sha256(inputs) FOLDED INTO THE CACHE KEY (29 Aug 2026) ────────────
+// This cache keyed a folded transcript on `size + mtimeMs` and then read only the bytes
+// AFTER its stored offset. That key omits the thing that changes: WHICH FILE this is.
+// Rewrite a transcript in place to the same-or-greater length — a rotation, a repair, a
+// restore, a session id reused — and every existing check passes while the new tail is
+// appended onto days folded from bytes that are no longer there. §9 SHAPE 4's sibling: a
+// key that omits the thing that changes.
+// THE FIX IS CHEAP ON PURPOSE. The corpus is tens of MB and hashing it whole on every
+// run would be a real cost for a rare event, so the identity is the sha256 of the FIRST
+// 4 KB. For an append-only JSONL that prefix is immutable by construction: if it moved,
+// the file was rewritten, and the only safe answer is to fold it again from zero.
+const HEAD_BYTES = 4096;
+export function headSha(path, want = HEAD_BYTES) {
+  const n = Math.max(0, Math.floor(want) || 0);
+  try {
+    const fd = openSync(path, "r");
+    try {
+      const buf = Buffer.allocUnsafe(n);
+      let off = 0;
+      while (off < n) { const r = readSync(fd, buf, off, n - off, off); if (r <= 0) break; off += r; }
+      return { sha: createHash("sha256").update(buf.slice(0, off)).digest("hex").slice(0, 32), len: off };
+    } finally { closeSync(fd); }
+  } catch { return null; }   // unreadable: the caller treats a null identity as UNPROVEN, never as unchanged
+}
+
 // Fold ONE transcript into the cache, incrementally. Returns true if it changed.
 export function foldFile(cache, path, { mtimeMs = null, size = null } = {}) {
   let st; try { st = statSync(path); } catch { return false; }
   const prev = cache.files[path];
-  const full = !prev || (size ?? st.size) < (prev.offset || 0);
+  // S11: three ways a row stops being trustworthy, and IDENTITY is the new one.
+  //   shrank   — it was rewritten shorter (the original test)
+  //   no proof — a pre-S11 row with no head_sha cannot say it is the same file
+  //   moved    — the first 4 KB changed, so this is a different file wearing the same path
+  // Re-hash EXACTLY the byte count this row was folded on: those bytes cannot move
+  // under an append, at any file size, so equality here means "the same file, longer".
+  const check = prev && prev.head_len ? headSha(path, prev.head_len) : null;
+  const identityLost = !!prev && (!prev.head_sha || !prev.head_len || !check || check.len < prev.head_len || check.sha !== prev.head_sha);
+  const head = identityLost || !prev ? headSha(path) : { sha: prev.head_sha, len: prev.head_len };
+  const full = !prev || (size ?? st.size) < (prev.offset || 0) || identityLost;
   if (prev && !full && st.size === prev.size && st.mtimeMs === prev.mtime) return false;   // untouched
   const from = full ? 0 : (prev.offset || 0);
   const text = readFrom(path, from);
   if (!text) {
-    if (prev) { prev.size = st.size; prev.mtime = st.mtimeMs; }
+    if (prev) { prev.size = st.size; prev.mtime = st.mtimeMs; if (head) { prev.head_sha = head.sha; prev.head_len = head.len; } }
     return false;
   }
   const scan = scanChunk(text);
@@ -221,6 +259,9 @@ export function foldFile(cache, path, { mtimeMs = null, size = null } = {}) {
   row.offset = from + scan.consumed;
   row.size = st.size;
   row.mtime = st.mtimeMs;
+  // S11: the identity this row was folded from — the sha AND the byte count it covers,
+  // because a sha without its length cannot be re-checked against a file that has grown.
+  if (head) { row.head_sha = head.sha; row.head_len = head.len; }
   row.sid = row.sid || scan.sid;
   row.entrypoint = row.entrypoint || scan.entrypoint;
   cache.files[path] = row;
@@ -606,6 +647,42 @@ setTimeout(()=>{if(!done){try{c.kill()}catch{}console.log("HUNG");process.exit(0
     Number.isFinite(hangMs) && hangMs < 3000, `wrapper said: ${JSON.stringify((hangProbe.stdout || "").trim())}${hangProbe.error ? " · " + hangProbe.error.code : ""}`);
 
   try { rmSync(tmp, { recursive: true, force: true }); } catch { /* temp */ }
+  // ── S11 · THE CACHE KEY NOW CARRIES THE FILE'S IDENTITY ────────────────────
+  {
+    const sb = mkdtempSync(join(tmpdir(), "meter-s11-"));
+    const p = join(sb, "t.jsonl");
+    const row = (day, out) => JSON.stringify({ type: "assistant", entrypoint: "cli", timestamp: `${day}T06:00:00.000Z`, message: { id: `m${out}`, model: "claude-opus-5", usage: { input_tokens: 1, output_tokens: out } } });   // models-literal-ok — selftest fixture: a synthetic usage row needs a model field (this file already declares two of these the same way)
+    writeFileSync(p, row("2026-08-25", 10) + "\n");
+    const c1 = { v: CACHE_VERSION, files: {} };
+    foldFile(c1, p);
+    const sha1 = c1.files[p].head_sha;
+    assert("S11 CACHE · a folded row records the sha256 identity of the bytes it was folded FROM (the key used to omit which file this is)",
+      typeof sha1 === "string" && sha1.length === 32);
+    assert("S11 CACHE · an unchanged file is still skipped — the identity check must not cost a re-read on the happy path",
+      foldFile(c1, p) === false);
+
+    appendFileSync(p, row("2026-08-26", 20) + "\n");
+    assert("S11 CACHE · a genuine APPEND still folds incrementally from the stored offset, identity intact (this is the whole point of the cache)",
+      foldFile(c1, p) === true && c1.files[p].head_sha === sha1 && Object.keys(c1.files[p].days).length === 2);
+
+    // THE BUG: rewrite in place, SAME length, different content. size+mtime cannot see it.
+    const c2 = JSON.parse(JSON.stringify(c1));
+    writeFileSync(p, row("2026-09-01", 99) + "\n" + row("2026-09-02", 99) + "\n");
+    utimesSync(p, new Date(0), new Date(0));
+    assert("S11 CACHE · a file REWRITTEN IN PLACE is caught by its head sha and re-folded WHOLE — under the old key the new tail was appended onto days folded from bytes that no longer exist",
+      foldFile(c2, p) === true && c2.files[p].head_sha !== sha1
+      && Object.keys(c2.files[p].days).sort().join(",") === "2026-09-01,2026-09-02");
+
+    assert("S11 CACHE · a PRE-S11 row (no head_sha) is UNPROVEN, not assumed unchanged — it re-folds from zero, the same answer this constant already gives a v1 cache",
+      (() => {
+        const c3 = { v: CACHE_VERSION, files: { [p]: { ...c2.files[p], head_sha: undefined, days: { "1999-01-01": [] } } } };
+        return foldFile(c3, p) === true && !c3.files[p].days["1999-01-01"] && c3.files[p].head_sha === c2.files[p].head_sha;
+      })());
+    assert("S11 CACHE · an unreadable file yields a NULL identity and claims nothing (never a silent \"unchanged\")",
+      headSha(join(sb, "no-such-file.jsonl")) === null);
+    try { rmSync(sb, { recursive: true, force: true }); } catch { /* best effort */ }
+  }
+
   console.log(`session_meter selftest: ${pass} passed, ${fail} failed`);
   if (fail) process.exit(1);
 }

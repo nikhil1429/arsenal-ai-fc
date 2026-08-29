@@ -66,6 +66,7 @@ const KAL_RE = /KAL-?LINE\s*→\s*(.+)/i;      // manager.mjs's exact parser con
 const BADGE = "⚪🔴";
 
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+import { recentRows } from "./daykey.mjs";   // S11 — the recency gate (the form strip is a window of NOW, not the last 7 rows)
 
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
@@ -175,8 +176,14 @@ function renderSeasonMd({ season, lockedCount, lockedNote, python, benchmark, no
     L.push(`- no matchday closed yet — the first /full-time writes row 1. The season starts when he plays, not when a date says so.`);
   } else {
     L.push(`- season day ${season.season_day || 0} · matchdays played ${season.matches_played || 0} · current run: ${seasonStreak(rows)} won-day(s)`);
-    const tail = rows.slice(-7);
-    if (tail.length) L.push(`- form (last ${tail.length} close${tail.length > 1 ? "s" : ""}, oldest→newest): ${tail.map((r) => FORM_GLYPH[r.result] || "·").join(" ")}   (● won · ◦ rest — a won day too · «·» not-won: data, not a verdict)`);
+    // RECENCY GATE (S11 · §9 SHAPE 4). `rows.slice(-7)` is the last seven CLOSES, not the
+    // last seven DAYS: after a fortnight away it drew a fortnight-old strip under the words
+    // "current run". The window comes first, and when it is empty the line SAYS the record
+    // is old instead of drawing stale glyphs — a form strip that cannot go quiet is a lie.
+    const form = recentRows(rows, { anchor: dateStr, days: 14, cap: 7 });
+    const tail = form.rows;
+    if (tail.length) L.push(`- form (last ${tail.length} close${tail.length > 1 ? "s" : ""} in the past fortnight, ${form.span.from}→${form.span.to}): ${tail.map((r) => FORM_GLYPH[r.result] || "·").join(" ")}   (● won · ◦ rest — a won day too · «·» not-won: data, not a verdict)`);
+    else if (rows.length) L.push(`- form: NO close in the past fortnight — the newest row is ${rows[rows.length - 1].date}. The record is not gone, it is OLD, and a glyph strip would have read as now.`);
   }
   L.push(`- capsules locked: ${typeof lockedCount === "number" ? lockedCount : "—"}${lockedNote ? ` ⚠ ${lockedNote}` : ""}`);
   L.push(`- python: ${python ? `tier ${python.tier || "—"} · ${python.fluency || "—"}` : "no track state yet"}`);
@@ -262,6 +269,9 @@ function gatherSeasonExtras(now, dir = STATE_DIR) {
 function updateNotebook(notebook, signal, hit, dateStr) {
   const nb = notebook && Array.isArray(notebook.moments) ? notebook : { moments: [] };
   if (signal) nb.moments.push({ date: dateStr, line: signal, result: hit });
+  // law-waiver:trailing-n a WRITE-SIDE CAP: keeps the NEWEST 45 moments and drops older
+  // ones. The read side (the notebook panel) is what would need a window, and it does not
+  // present these as "now" — they are the compressed memory, dated per row.
   if (nb.moments.length > 45) nb.moments = nb.moments.slice(-45);   // ~30–40 day compressed memory
   return nb;
 }

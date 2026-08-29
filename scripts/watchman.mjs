@@ -83,11 +83,12 @@
 // MODES: run [--no-tier2] [--skip-suite] | brief | report | selftest
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, statSync, renameSync, readdirSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, statSync, renameSync, readdirSync, mkdtempSync, rmSync, utimesSync } from "node:fs";   // S11 — the torn-write sweep is proven in a REAL sandbox tree, not on fixtures alone
+import { join, dirname, basename } from "node:path";   // S11 — basename for the torn-write sweep
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 import net from "node:net";
+import { tmpdir } from "node:os";   // S11 — the torn-write sandbox
 // H0 FLOW AUDIT (10 Aug 2026): the evening chain's declared shape — its last
 // step's `at` is the moment after which "silent tonight" is a fair claim.
 // conductor.mjs is import-safe (main() is argv-guarded, zero side effects).
@@ -2359,6 +2360,82 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
       cli.status === 0 && /watchman: run \[--no-tier2\]/.test(String(cli.stdout)));
   }
 
+  // ── S11 · THE TORN-WRITE SWEEP, driven end to end in a SANDBOX state tree ──
+  // Every branch, on real files, in a temp dir — never on his bus. The sweep can
+  // rename, so a fixture-only proof would be the unrun-instrument failure again.
+  {
+    const sb = mkdtempSync(join(tmpdir(), "watchman-torn-"));
+    const old = new Date(Date.now() - 60 * 60000);
+    const put = (name, body, age = true) => { const p = join(sb, name); writeFileSync(p, body); if (age) utimesSync(p, old, old); return p; };
+
+    assert("S11 TORN · all THREE live tmp shapes are recognised (the first cut saw only one and reported \"no orphan\" while a real one sat in the tree)",
+      (() => {
+        put("a.json", "{\"x\":1}"); put("a.json.tmp", "{\"x\":2}");
+        put("b.json", "{\"x\":1}"); put("b.json.4242.tmp", "{\"x\":2}");
+        put("c.json", "{\"x\":1}"); put("c.json.tmp6756", "{\"x\":2}");
+        const r = tmpSweep({ stateDir: sb, apply: false });
+        return r.found.length === 3 && new Set(r.found.map((f) => f.shape)).size === 3;
+      })());
+
+    assert("S11 TORN · a HEALTHY target makes the orphan a leftover, never the newest truth — quarantine, and the target keeps its own bytes",
+      (() => {
+        const r = tmpSweep({ stateDir: sb, apply: false });
+        return r.found.every((f) => f.action === "quarantine") && readFileSync(join(sb, "a.json"), "utf8") === "{\"x\":1}";
+      })());
+
+    assert("S11 TORN · a MISSING target + an orphan that parses WHOLE is the one case we replay: finishing the owner's interrupted rename authors nothing",
+      (() => {
+        put("d.json.9001.tmp", "{\"restored\":true}");
+        const r = tmpSweep({ stateDir: sb, apply: false });
+        return (r.found.find((f) => f.tmp.endsWith("d.json.9001.tmp")) || {}).action === "replay";
+      })());
+
+    assert("S11 TORN · a torn orphan (bytes that do NOT parse) is NEVER replayed, even with the target gone — we do not gamble with his state",
+      (() => {
+        put("e.json.9002.tmp", "{ half a wri");
+        const r = tmpSweep({ stateDir: sb, apply: false });
+        const f = r.found.find((x) => x.tmp.endsWith("e.json.9002.tmp"));
+        return f.action === "quarantine" && /does not parse whole/.test(f.why);
+      })());
+
+    assert("S11 TORN · an orphan YOUNGER than the grace window is left alone — a live writer may be mid-write, and touching it would CAUSE the corruption this repairs",
+      (() => {
+        put("f.json.9003.tmp", "{\"fresh\":1}", false);
+        const r = tmpSweep({ stateDir: sb, apply: false });
+        return (r.found.find((x) => x.tmp.endsWith("f.json.9003.tmp")) || {}).action === "in-flight";
+      })());
+
+    assert("S11 TORN · REPORT IS THE DEFAULT — a sweep without --apply changes NOTHING on disk",
+      (() => {
+        const before = readdirSync(sb).sort().join("|");
+        tmpSweep({ stateDir: sb, apply: false });
+        return readdirSync(sb).sort().join("|") === before;
+      })());
+
+    assert("S11 TORN · --apply REPLAYS the recoverable one, QUARANTINES the rest, DELETES NOTHING (L9), and journals every action with its revert path (§7.2)",
+      (() => {
+        const jrn = join(sb, "repairs.jsonl");
+        const r = tmpSweep({ stateDir: sb, apply: true, journal: jrn });
+        const replayed = existsSync(join(sb, "d.json")) && JSON.parse(readFileSync(join(sb, "d.json"), "utf8")).restored === true;
+        const quarantined = readdirSync(sb).filter((f) => /\.torn-/.test(f));
+        const rows = readFileSync(jrn, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+        const inflightUntouched = existsSync(join(sb, "f.json.9003.tmp"));
+        return replayed && quarantined.length === 4 && inflightUntouched
+          && rows.length === 5 && rows.every((x) => x.revert && x.finding_id === "s11-torn-write")
+          && r.found.filter((f) => f.applied).length === 5;
+      })());
+
+    assert("S11 TORN · a QUARANTINED file is not swept again — the sweep is idempotent, so re-running it can never cascade",
+      (() => { const r = tmpSweep({ stateDir: sb, apply: false }); return r.found.length === 1 && r.found[0].action === "in-flight"; })());
+
+    assert("S11 TORN · parsesWhole PROVES completeness or refuses: .jsonl needs every line to parse, and an unprovable payload (.db, unknown suffix) is never replayable",
+      parsesWhole("x.jsonl", '{"a":1}\n{"b":2}') === true && parsesWhole("x.jsonl", '{"a":1}\n{ torn') === false
+      && parsesWhole("x.jsonl", "") === false && parsesWhole("x.json", "{}") === true
+      && parsesWhole("x.db", "anything") === false);
+
+    try { rmSync(sb, { recursive: true, force: true }); } catch (e) { swallow("selftest sandbox cleanup", e); }
+  }
+
   console.log(`\n${fail === 0 ? "ALL CHECKS PASSED" : "SELFTEST FAILED"} (${pass} passed, ${fail} failed)\n`);
   if (fail) process.exit(1);
 }
@@ -2373,9 +2450,109 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
 // law. And `gather`/`checks` are both EXPORTED, i.e. importing them is invited.
 // conductor.mjs has carried this exact line for weeks, and line 93 of this file
 // praises it for being import-safe while this file was not.
+// ── S11 · THE TORN-WRITE CLASS: TMP-FILE REPLAY (29 Aug 2026) ───────────────
+// 74 sites in this repo write state the same safe way — `writeFileSync(path.pid.tmp)`
+// then `renameSync`. The rename is atomic; the WINDOW BEFORE IT is not. Kill the
+// process in that window and the payload survives on disk as an orphan .tmp while the
+// target still holds the old bytes — and nothing anywhere looks for it. There is a LIVE
+// instance in the tree as this is written: `state/gaffer_blocks.json.tmp6756`, which
+// S10-R found sitting there at session open (its O-6) and which no organ has ever read.
+//
+// WHY THIS ORGAN. rails.mjs would be the instinct, but its own header forbids it:
+// "SOLE WRITER of: NOTHING ... a rail that can write is a rail that can be part of the
+// accident." A replay WRITES. This is the self-repair lane (§7.2) — it already owns
+// watchman_repairs.jsonl and its law is repair-with-a-recorded-revert-path, which is
+// exactly the shape of finishing somebody else's interrupted rename.
+//
+// THREE VERDICTS, and the safe one is the default:
+//   in-flight  — younger than the grace window. A live writer may be mid-write RIGHT NOW;
+//                touching it would CAUSE the corruption this exists to repair.
+//   replay     — an orphan whose target is missing or unparseable, and whose own bytes
+//                PARSE WHOLE. Only then do we know the payload is complete. Finishing the
+//                owner's rename restores the owner's own last write; it authors nothing.
+//   quarantine — everything else: a stale orphan behind a healthy target, or a tmp that
+//                does not parse (a genuinely torn write). Renamed aside, NEVER deleted
+//                (L9), so the evidence outlives the sweep.
+// REPORT IS THE DEFAULT. `--apply` acts. The organism is switched off by his order, so
+// this rung LANDS the mechanism and S12's first reboot stage runs it with --apply,
+// behind the approval gate that already sits there.
+export const TMP_GRACE_MIN = 5;   // a writer that has not landed in 5 minutes is not mid-write, it is dead
+// THE THREE LIVE SHAPES, read out of the source before this regex was written (§4:
+// an instrument is a LEAD until one run verifies it — the first cut of this matched
+// only shape B and cheerfully reported "no orphan" while shape C sat in the tree):
+//   A  <target>.tmp                          archivist.mjs:393 · THRESHOLDS + ".tmp"
+//   B  <target>.<pid>[.seq][.stamp].tmp      models · registry(save) · capture:503 · brain:210
+//   C  <target>.tmp<pid>                     registry.mjs · gaffer_state · the LIVE orphan
+const TMP_RE = /^(.*?)\.(?:(\d+)(?:\.[0-9a-z]+)*\.tmp|tmp(\d*))$/i;
+
+/** parsesWhole — can we PROVE these bytes are a complete payload? .json must parse;
+ *  .jsonl must parse on every line. Anything else (a .db, an unknown suffix) is
+ *  UNPROVABLE and therefore never replayed — we do not gamble with his state. PURE. */
+export function parsesWhole(target, text) {
+  const t = String(text == null ? "" : text);
+  if (/\.jsonl$/i.test(target)) {
+    const lines = t.split(/\r?\n/).filter((l) => l.trim());
+    if (!lines.length) return false;
+    for (const l of lines) { try { JSON.parse(l); } catch { return false; } }
+    return true;
+  }
+  if (/\.json$/i.test(target)) { try { JSON.parse(t); return t.trim().length > 0; } catch { return false; } }
+  return false;
+}
+
+/** tornVerdict — the whole decision, PURE, so the suite drives every branch on
+ *  fixtures instead of on his live bus. Returns {action, why}. */
+export function tornVerdict({ target, ageMin, targetHealthy, tmpParses, graceMin = TMP_GRACE_MIN }) {
+  if (!(ageMin >= graceMin)) return { action: "in-flight", why: `only ${Number(ageMin).toFixed(1)} min old — a live writer may be mid-write; touching it would cause the corruption this repairs` };
+  if (targetHealthy) return { action: "quarantine", why: `${target} is present and parses — this orphan is a dead writer's leftover, not the newest truth` };
+  if (!tmpParses) return { action: "quarantine", why: `${target} is missing/unreadable AND the orphan does not parse whole — a genuinely torn write; the bytes are kept as evidence, never replayed` };
+  return { action: "replay", why: `${target} is missing/unreadable and the orphan parses WHOLE — finishing the owner's own interrupted rename restores the owner's last write` };
+}
+
+/** tmpSweep — find every orphan under the state tree, judge it, and (with apply)
+ *  act. Every action is journaled into THIS organ's own repair lane with its revert
+ *  path, per §7.2. Read-only unless apply is passed. */
+export function tmpSweep({ stateDir = STATE_DIR, now = new Date(), apply = false, graceMin = TMP_GRACE_MIN, journal = REPAIR_JOURNAL } = {}) {
+  const found = [];
+  const walk = (d) => {
+    let entries = []; try { entries = readdirSync(d); } catch (e) { swallow(`tmpSweep cannot read ${d}`, e); return; }
+    for (const f of entries) {
+      const p = join(d, f);
+      let st; try { st = statSync(p); } catch (e) { swallow(`tmpSweep cannot stat ${p}`, e); continue; }
+      if (st.isDirectory()) { walk(p); continue; }
+      const m = TMP_RE.exec(f);
+      if (!m) continue;
+      const target = join(d, m[1]);
+      const ageMin = (now.getTime() - st.mtimeMs) / 60000;
+      let targetHealthy = false;
+      if (existsSync(target)) { try { targetHealthy = parsesWhole(target, readFileSync(target, "utf8")); } catch (e) { swallow(`tmpSweep cannot read target ${target}`, e); } }
+      let tmpParses = false;
+      try { tmpParses = parsesWhole(target, readFileSync(p, "utf8")); } catch (e) { swallow(`tmpSweep cannot read orphan ${p}`, e); }
+      const v = tornVerdict({ target: basename(target), ageMin, targetHealthy, tmpParses, graceMin });
+      // Every field the apply branch can set is DECLARED here, null until it happens.
+      // tsc refused a row that grows properties mid-function, and a reader deserves the
+      // same courtesy: the shape of a sweep row is knowable without running the sweep.
+      const row = { tmp: p, target, age_min: Math.round(ageMin), pid: m[2] || m[3] || "?", shape: m[2] ? "B" : (m[3] ? "C" : "A"), ...v, applied: false,
+        /** @type {string|null} */ revert: null, /** @type {string|null} */ quarantined_to: null, /** @type {string|null} */ error: null };
+      if (apply && v.action !== "in-flight") {
+        try {
+          if (v.action === "replay") { renameSync(p, target); row.applied = true; row.revert = `the previous ${basename(target)} was missing or unparseable — revert by deleting it; the orphan's bytes ARE the owner's last write`; }
+          else { const q = `${p}.torn-${now.toISOString().replace(/[:.]/g, "")}`; renameSync(p, q); row.applied = true; row.quarantined_to = q; row.revert = `mv ${q} ${p}`; }
+          try { appendFileSync(journal, JSON.stringify({ ts: now.toISOString(), finding_id: "s11-torn-write", change: row.action, files: [row.tmp, row.target], evidence: row.why, revert: row.revert }) + "\n"); }
+          catch (e) { swallow("tmpSweep could not journal its own repair", e); }
+        } catch (e) { row.error = String((e && e.message) || e); swallow(`tmpSweep ${v.action} failed for ${p}`, e); }
+      }
+      found.push(row);
+    }
+  };
+  walk(stateDir);
+  return { applied: !!apply, grace_min: graceMin, found };
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
 function main() {
+
 const cmd = process.argv[2] || "run";
 if (cmd === "run") run(process.argv.slice(3));
 else if (cmd === "brief") {
@@ -2388,7 +2565,12 @@ else if (cmd === "brief") {
     } catch (e) { swallow("silence is the contract", e); }
   }
   return;   // was process.exit(0) — 18 Aug 2026, Block 1 (turn_hook.mjs contract 2): the SessionStart dispatcher runs captains_call after us in the SAME process
+} else if (cmd === "tmpsweep") {
+  // REPORT by default; --apply acts. S12's first reboot stage is where --apply belongs.
+  const r = tmpSweep({ apply: process.argv.includes("--apply") });
+  if (!r.found.length) console.log(`watchman tmpsweep: no orphan .tmp under the state tree (grace ${r.grace_min} min)`);
+  for (const f of r.found) console.log(`  ${f.action.toUpperCase().padEnd(10)} ${f.tmp.replace(STATE_DIR, "state")}  (${f.age_min} min old, pid ${f.pid})\n     ${f.why}${f.applied ? "  → DONE" + (f.quarantined_to ? ` (kept at ${basename(f.quarantined_to)})` : "") : r.applied ? "" : "  → not applied (report only; pass --apply)"}`);
 } else if (cmd === "report") report();
 else if (cmd === "selftest") selftest();
-else console.log("watchman: run [--no-tier2] [--skip-suite] | brief | report | selftest");
+else console.log("watchman: run [--no-tier2] [--skip-suite] | brief | report | tmpsweep [--apply] | selftest");
 }

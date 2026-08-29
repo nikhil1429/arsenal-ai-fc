@@ -853,6 +853,10 @@ function compute(world, cfg, now = new Date()) {
   // monotone, never below what Oura can already prove, and can actually reach 84.
   const bodyDays = new Set((Array.isArray(world.bodyDaysSeen) ? world.bodyDaysSeen : []).filter(d => ISO_DAY.test(String(d))));
   if (ISO_DAY.test(String(world.readinessDay || ""))) bodyDays.add(String(world.readinessDay));
+  // law-waiver:trailing-n a WRITE-SIDE CAP on a SORTED SET OF ISO DAYS. Because the
+  // members are day keys and they are sorted, the last 730 ARE by construction the newest
+  // 730 — there is no window to mis-date. And what the number feeds is a COUNT of distinct
+  // days ever witnessed (bodyArchiveDays, monotone by design), never a "recent" read.
   const body_days_seen = [...bodyDays].sort().slice(-730);      // two seasons of memory is plenty
   const bodyArchiveDays = Math.max(body_days_seen.length, world.readinessCount || 0);
 
