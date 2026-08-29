@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-29T03:12:37.024Z",
+ "updated_at": "2026-08-29T04:48:06.107Z",
  "tables": {
   "mechanisms": [
    {
@@ -235,6 +235,18 @@
     "notes": "THE RATCHET'S SUBJECT LIST, as a ROW: adding a fifth him-fired surface is a ROW EDIT here PLUS a ruling named on the row itself. Never a literal in code — the lawpack refuses that (jugad-literal-subject-list) and it is right",
     "updated_at": "2026-08-28T23:13:38.324Z",
     "added_at": "2026-08-28T23:13:38.324Z"
+   },
+   {
+    "subject": "approval_gated_config_without_owner_cli",
+    "schema_owner": "registry.mjs",
+    "witness": "S12, 29 Aug 2026 — three instances measured in one session: thalamus.mjs dispatches only selftest|status (thalamus.mjs:2302-2304) yet thalamus_config.json declares itself approval-gated; brain.mjs dispatches tick|help|selftest|bell|trigger|gate|consumed|tokens|spend|status|run|pulse|daemon and has no config verb, yet brain_config.json holds the per-lane `enabled` switch; and every other approval-gated config inherits the same shape by construction",
+    "subjects": [
+     "dressing-room/state/thalamus_config.json",
+     "dressing-room/state/brain_config.json"
+    ],
+    "notes": "STANDING FINDING, architect-ruled 29 Aug (queue\\RULING__2026-08-29_s12-inputguard-full.md answer 4). THE CLASS: a state file that declares itself approval-gated, whose owner organ exposes NO CLI able to change it. The owners-only law (§10-D rule 4) then has no compliant path, so honouring an approval-gate requires a hand-edit behind a declared ARSENAL_RAILS_OVERRIDE — which is exactly the shape the rail exists to refuse. S1's rail already names this case in its own refusal text: 'if no owner exists, that absence is the finding'. This row IS that finding, made standing rather than re-discovered per incident. ROUTED: a `config set` verb designed ONCE for the whole class (receipt + revert path per write) is its own carded post-floor rung; explicitly NOT S13's. Until it lands, an approval-gated config may be hand-edited ONLY with (a) an architect ruling naming the write, (b) the override declared in the rung's micro-order BEFORE the write, (c) a receipt key inside the file itself, and (d) the scope limited to the single key ruled. S12 met all four for thalamus_config and REFUSED to do it for brain_config, which is the precedent this row carries forward.",
+    "updated_at": "2026-08-29T04:48:06.101Z",
+    "added_at": "2026-08-29T04:48:06.101Z"
    }
   ],
   "sandbox_subjects": [
@@ -650,8 +662,8 @@
     "updated_at": "2026-08-28T23:13:47.526Z",
     "added_at": "2026-08-28T23:05:25.023Z",
     "first_real_row_at": "2026-08-12T10:08:07.792Z",
-    "newest_row_at": "2026-08-28T22:57:50.928Z",
-    "payload_rows": 2063,
+    "newest_row_at": "2026-08-29T04:25:00.711Z",
+    "payload_rows": 2064,
     "consumer_reads": {
      "brain.mjs": null,
      "captains_call.mjs": null,
@@ -674,7 +686,7 @@
      "unleash_verdict.mjs": null,
      "viz.mjs": null
     },
-    "metered_at": "2026-08-29T03:12:37.004Z",
+    "metered_at": "2026-08-29T04:35:50.954Z",
     "declared_elsewhere": "xray.mjs:1017 MULTI_WRITER_ALLOWLIST + the live IR writers/readers — a shared append LEDGER, not a gated LLM lane: nothing spends tokens on it and gate.mjs never judges it, so it must not enter the off-road consumer map"
    },
    {
@@ -720,7 +732,7 @@
     "newest_row_at": "2026-08-23T19:21:36.605Z",
     "payload_rows": 37,
     "consumer_reads": {},
-    "metered_at": "2026-08-29T03:12:37.004Z"
+    "metered_at": "2026-08-29T04:35:50.954Z"
    },
    {
     "subject": "rejirah_log",
@@ -736,7 +748,7 @@
     "newest_row_at": null,
     "payload_rows": 0,
     "consumer_reads": {},
-    "metered_at": "2026-08-29T03:12:37.004Z"
+    "metered_at": "2026-08-29T04:35:50.954Z"
    },
    {
     "subject": "forge_sessions",
@@ -752,7 +764,7 @@
     "newest_row_at": "2026-08-19T11:55:53.719Z",
     "payload_rows": 11,
     "consumer_reads": {},
-    "metered_at": "2026-08-29T03:12:37.004Z"
+    "metered_at": "2026-08-29T04:35:50.954Z"
    },
    {
     "subject": "capsules",
@@ -768,7 +780,7 @@
     "newest_row_at": "2026-06-28",
     "payload_rows": 4,
     "consumer_reads": {},
-    "metered_at": "2026-08-29T03:12:37.004Z"
+    "metered_at": "2026-08-29T04:35:50.954Z"
    }
   ],
   "checks": [

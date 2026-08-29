@@ -15,3 +15,4 @@
 {"at":"2026-08-16T18:13:24.870Z","day":"2026-08-16","mode":"run","outcome":"no_evidence","reason":"no axis has any shows 0/5 late-checkpoint lapses — the genome looked and found nothing to propose","gate_open":true,"counter":{"have":0,"need":5,"kind":"evidence_bar","axis":null}}
 {"at":"2026-08-16T18:13:24.870Z","day":"2026-08-16","mode":"run","outcome":"waiting","id":"mut-2026-08-11-captain-rejirah-intervals-days","review_after_days":42}
 {"at":"2026-08-18T04:42:57.333Z","day":"2026-08-18","mode":"approve","outcome":"approve_no_such_mutation","id":"mutation001"}
+{"at":"2026-08-29T04:47:15.899Z","day":"2026-08-29","mode":"run","outcome":"waiting","id":"mut-2026-08-11-captain-rejirah-intervals-days","review_after_days":42}
