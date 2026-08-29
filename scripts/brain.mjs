@@ -86,6 +86,7 @@ import { readRows as outboxRows, fold as outboxFold } from "./outbox.mjs";   // 
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: a chain child (the morning sheet tick) keys the CHAIN's day; overnight jobs keep their wall-clock shift (shiftDay/serveDate untouched)
 import { digestInput as intentDigestInput, validateDigest as intentValidateDigest } from "./intent.mjs";   // Block 2 §7.2 (18 Aug 2026): the intent_digest job's food + its validator — brain never writes the intent lane
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
+import { jobInputClass, inputCadenceDefaultH } from "./registry.mjs";   // rung S13 (29 Aug 2026): THE INPUT GUARD reads its declarations from the registry — the six code-computed lanes’ input classes and the DECLARED cadence seed. registry.mjs imports nothing of ours, so there is no cycle (gate.mjs already reads it the same way).
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -1585,6 +1586,220 @@ export function gateEvidence(job, cfg, ctx) {
   return { ok, required_absent, absent, upstream_absent, detail, declared: gi.declared || 0, present: gi.present || 0 };
 }
 
+// ---- I · THE INPUT GUARD, the runner's fact (rung S13, 29 Aug 2026) ----------
+// HIS SENTENCE, verbatim 29 Aug: "i want to turn on everything in organism with the highest
+// level of quality and intensity but it should only start working my data comes in them."
+// gate.mjs turns this fact into the letter I; everything that touches disk lives here, exactly
+// as it does for the fold. The law and the three states are documented at gate.mjs inputVerdict.
+//
+// THREE THINGS THIS MEASURES that E never did (E is `existsSync`, brain.mjs:2591):
+//   NEVER BORN   — the file is there and holds no real row.
+//   VINTAGE      — the newest row is older than this lane's declared cadence.
+//   THE ROOT     — a chain bottoming in a dead producer names the PRODUCER, not the lane
+//                  that merely reads it. Fixing a named root fixes every lane below it.
+
+// The vintage probe. PAYLOAD ROWS, NEVER MTIME — the readiness lesson (thalamus.mjs
+// AFFERENT_SOURCES) and flow_atlas.mjs's own header say the same thing: a file that was
+// re-saved is not a file that was fed. It is a PREDICATE OVER VALUES, never a key-name list
+// (the S3 jugad law): any ISO-8601-shaped substring in the payload counts, the newest wins,
+// and a stamp in the FUTURE is never vintage (serve-day artifacts are named for tomorrow).
+// A date-only stamp anchors at the START of its day — the fail-closed direction, because a
+// gate may only get stricter (§10-D rule 6).
+const ISO_IN_PAYLOAD = /\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?/g;
+const STAMP_SCAN_BYTES = 262144;   // the tail we scan for a stamp — bounded like every other read here
+export function payloadStamp(p, { now = new Date() } = {}) {
+  let fd = null;
+  try {
+    const st = statSync(p);
+    if (st.isDirectory()) {
+      // a lane directory: the newest entry's own name carries the day (brain_out/<lane>/<day>.json)
+      const names = readdirSync(p).map((f) => (String(f).match(/^(\d{4}-\d{2}-\d{2})/) || [])[1]).filter(Boolean).sort();
+      const d = names[names.length - 1];
+      return d ? Date.parse(d + "T00:00:00Z") : null;
+    }
+    const take = Math.min(st.size, STAMP_SCAN_BYTES);
+    if (take === 0) return null;
+    fd = openSync(p, "r");
+    const buf = Buffer.alloc(take);
+    readSync(fd, buf, 0, take, st.size - take);
+    const text = buf.toString("utf8");
+    const nowMs = now.getTime();
+    let newest = null;
+    for (const m of text.match(ISO_IN_PAYLOAD) || []) {
+      const ms = Date.parse(m.length === 10 ? m + "T00:00:00Z" : m);
+      if (!Number.isFinite(ms) || ms > nowMs) continue;
+      if (newest === null || ms > newest) newest = ms;
+    }
+    return newest;
+  } catch (e) { swallow("payloadStamp: statSync/read of an absent or unreadable input → null", e); return null; }
+  finally { if (fd !== null) { try { closeSync(fd); } catch (e) { swallow("payloadStamp: closeSync(fd) already closed → ignored", e); } } }
+}
+
+// "≥ 1 REAL ROW" per file class. An EMPTY log is a measured zero for the ledger (gatherInputs-
+// Audited says so) — but for the INPUT GUARD it is exactly the never-born case his order is
+// about: a lane may not spend on a file that has never held anything.
+export function realRowCount(p) {
+  try {
+    const st = statSync(p);
+    if (st.isDirectory()) return readdirSync(p).length;
+    if (st.size === 0) return 0;
+    if (p.endsWith(".jsonl")) { const n = liveRowCount(p); return typeof n === "number" ? n : null; }
+    if (p.endsWith(".json")) {
+      const j = readJson(p);
+      if (j == null) return 0;
+      return Array.isArray(j) ? j.length : (typeof j === "object" ? Object.keys(j).length : 1);
+    }
+    return readFileSync(p, "utf8").trim() ? 1 : 0;
+  } catch (e) { swallow("realRowCount: unreadable input → null (never a measured zero)", e); return null; }
+}
+
+// THE WITNESSED EDGES, half one: file → the ORGAN that writes it, read off the atlas that
+// already derives it from xray's IR. Used ONLY to NAME a dead root; it never decides a verdict.
+// A path with no witnessed writer is a GHOST READ (measured today for brain_outcomes.jsonl) and
+// is named UNWITNESSED rather than silently attributed.
+export function atlasWriters(atlasPath = join(STATE_DIR, "flow_atlas.json")) {
+  const m = new Map();
+  const a = readJson(atlasPath);
+  for (const e of (a && a.edges) || []) {
+    if (!e || !e.via || !e.from) continue;
+    const k = String(e.via).replace(/\\/g, "/");
+    if (!m.has(k)) m.set(k, new Set());
+    m.get(k).add(e.from);
+  }
+  return m;
+}
+
+// THE WITNESSED EDGES, half two: job → job, DERIVED AT READ TIME from brain_config's own
+// out↔inputs pair — never a hand-list (architect ruling RULING__2026-08-29_s13-rowhome+
+// transitivity.md, which AMENDS the parent ruling's "atlas edges" letter because the atlas is
+// organ-scoped, drops self-edges by design at flow_atlas.mjs:131, and therefore cannot carry
+// the ruling's own named case: diary and agenda are both brain.mjs jobs).
+export function producersOf(cfg, inputPath) {
+  const lane = (String(inputPath).replace(/\\/g, "/").match(/^brain_out\/([^/]+)\//) || [])[1];
+  if (!lane) return [];
+  // MANY, never one. Measured 29 Aug: FOUR jobs declare `out: "dugout_digest"` (midday_digest,
+  // _2, _3 and dugout_digest — one lane, four scheduled slots), and two declare `out:
+  // "day_cartridge"`. A `.find()` here would name ONE of them as "the" root and be quietly
+  // wrong about the other three, which is the same class of half-truth this rung exists to end.
+  return ((cfg && cfg.jobs) || []).filter((j) => j && (j.out === lane || (!j.out && j.id === lane)));
+}
+
+// THE DECLARATION. A job that declares `inputs` in brain_config IS declared — that config is
+// the declaration. A job that computes its reading in the runJob branch is invisible to any
+// declarative guard, so it declares through a `job_inputs` REGISTRY ROW whose witness is the
+// code-cite of that branch. Neither ⇒ null, and the ratchet at gate.mjs sleeps the lane:
+// declare-or-die, extended to the input side.
+export function declaredInputClass(job, { registryRow = undefined } = {}) {
+  const own = normalizeInputs(job || {});
+  const row = registryRow !== undefined ? registryRow : (() => { try { return jobInputClass(job && job.id); } catch (e) { swallow("declaredInputClass: registry unreadable → no row", e); return null; } })();
+  const rowEntries = (row && Array.isArray(row.input_class) ? row.input_class : []).filter((c) => c && c.path);
+  if (!own.length && !rowEntries.length) return null;
+  // THE MERGE, and it may only TIGHTEN (architect ruling 29 Aug, the empty-required fork).
+  // A registry row SUPPLEMENTS brain_config: it adds the paths the runJob branch computes, and
+  // it may mark REQUIRED what the config left optional. It can never do the reverse — `||` is
+  // the whole enforcement, so loosening is not a policy anyone has to remember. brain_config is
+  // approval-gated config and is NEVER edited to make this work; the row is the door.
+  const byPath = new Map();
+  for (const e of own) byPath.set(e.path, { path: e.path, required: e.required === true, from: "brain_config" });
+  for (const c of rowEntries) {
+    const k = String(c.path);
+    const prev = byPath.get(k);
+    byPath.set(k, { path: k, required: (prev ? prev.required : false) || c.required === true,
+      config_not_signal: c.config_not_signal === true, why: c.why || (prev && prev.why) || null,
+      from: prev ? "brain_config+registry" : "registry" });
+  }
+  const entries = [...byPath.values()];
+  const source = own.length && rowEntries.length ? "brain_config.inputs + registry job_inputs"
+    : (rowEntries.length ? "registry job_inputs" : "brain_config.inputs");
+  return { source, entries, cadence_h: (row && typeof row.cadence_h === "number") ? row.cadence_h : null,
+    witness: (row && row.witness) || "dressing-room/state/brain_config.json (the job's own `inputs`)" };
+}
+
+// THE FACT the gate judges. Fail-closed everywhere: an unreadable probe is never a pass, an
+// undeclared lane is never a pass, and a chain whose root is dead or unwitnessed is never a pass.
+export function inputLiveness(job, cfg, ctx = {}, visited = new Set()) {
+  const now = ctx.now instanceof Date ? ctx.now : new Date();
+  const decl = ctx.inputClassFor ? ctx.inputClassFor(job) : declaredInputClass(job);
+  if (!decl) return null;                                   // the ratchet — gate.mjs turns null into I=false
+  let seed;
+  try { seed = ctx.cadenceDefaultH !== undefined ? ctx.cadenceDefaultH : inputCadenceDefaultH(); }
+  catch (e) {
+    swallow("inputLiveness: the declared cadence seed is unreadable → fail closed", e);
+    return { ok: false, declared: 0, cadence_h: null, dead: [], root: "registry mechanisms/input_cadence_default",
+      detail: "the DECLARED cadence seed is missing or unreadable — the guard fails closed rather than inventing a window (seed it through `node scripts/registry.mjs set --table mechanisms`)" };
+  }
+  const cadence_h = decl.cadence_h || seed;
+  const day = shiftDay(job, now, cfg);
+  const writers = ctx.atlasWriters !== undefined ? ctx.atlasWriters : atlasWriters();
+  const dead = [];
+  const required = decl.entries.filter((e) => e.required);
+  // THE EMPTY-REQUIRED RATCHET (architect ruling RULING__2026-08-29_s13-emptyrequired.md,
+  // reading 1). A lane that declares inputs and marks NONE of them required makes no liveness
+  // claim, so checking it is checking nothing — and passing it is the vacuous green-light the
+  // PREOPEN refuses by name. MEASURED at build time: two of the 34 were in exactly this state
+  // (`diary`, whose one input is a plain string, and `midday_reread`), and `diary` is the
+  // ruling's OWN named transitive case — so built without this clause, the case item 3 exists
+  // for is the one case the guard would never exercise. The door out is a `job_inputs` row,
+  // never an edit to approval-gated config.
+  if (!required.length) {
+    return { ok: false, declared: 0, cadence_h, dead: [], root: null,
+      detail: `declared ${decl.entries.length} input(s), but NOTHING required — a lane with no required input makes no liveness claim, and a claim nobody can check may not open a spend path (declare the liveness-bearing ones in a \`job_inputs\` registry row)` };
+  }
+  for (const e of required) {
+    const name = String(e.path).replace(/TODAY/g, day);
+    const rel = name.replace(/\\/g, "/");
+    // TRANSITIVE — a `brain_out/<lane>/…` input is another JOB's output. Recurse into the
+    // producer's own input liveness so a chain bottoming in an unfed root does not spend.
+    const prods = producersOf(cfg, rel);
+    if (prods.length) {
+      // THE FOOD FIRST, THE KITCHEN SECOND. If the artifact is on the plate and fresh, this lane
+      // eats — the producer's own health is not this lane's business. The walk upstream happens
+      // only to EXPLAIN a miss, which is the whole value of transitivity: it turns "diary is
+      // asleep" into "agenda has no salience to allocate", and that is the thing worth fixing.
+      const pUp = isAbsolute(name) ? name : join(STATE_DIR, name);
+      const upRows = existsSync(pUp) ? realRowCount(pUp) : null;
+      const upStamp = typeof upRows === "number" && upRows > 0 ? payloadStamp(pUp, { now }) : null;
+      const upAge = upStamp === null ? null : (now.getTime() - upStamp) / 3600000;
+      if (upAge !== null && upAge <= cadence_h) continue;                       // fed, fresh, done
+      const names = prods.map((x) => x.id).join(" / ");
+      const cyc = prods.filter((x) => !visited.has(x.id) && x.id !== (job && job.id));
+      if (!cyc.length) { dead.push({ path: rel, why: `the producer chain cycles at ${names} — refused, fail-closed`, root: names }); continue; }
+      const ups = cyc.map((x) => ({ id: x.id, f: inputLiveness(x, cfg, ctx, new Set([...visited, job && job.id])) }));
+      const fedOne = ups.find((u) => u.f && u.f.ok === true);
+      const why0 = !existsSync(pUp) ? "the artifact does not exist"
+        : upRows === 0 ? "the artifact exists and holds no real row"
+        : upRows === null ? "the artifact is unreadable"
+        : upStamp === null ? "the artifact carries no payload timestamp"
+        : `the artifact is ${upAge.toFixed(1)}h old, outside the ${cadence_h}h cadence`;
+      if (fedOne) { dead.push({ path: rel, why: `${why0}, and its producer ${fedOne.id} IS fed — the producer has not written it yet`, root: fedOne.id }); continue; }
+      const first = ups[0];
+      const upDetail = first.f === null ? `declares NO input class — the chain bottoms out in an undeclared lane` : `is not fed (${first.f.detail})`;
+      dead.push({ path: rel, why: `${why0}, and its producer ${prods.length > 1 ? `set (${names})` : first.id} ${upDetail}`,
+        root: (first.f && first.f.root) || first.id });
+      continue;
+    }
+    const p = isAbsolute(name) ? name : join(STATE_DIR, name);
+    const key = (rel.startsWith("dressing-room/") || isAbsolute(name)) ? rel : `dressing-room/state/${rel}`;
+    const w = writers && writers.get ? writers.get(key) : null;
+    const root = (w && w.size) ? [...w].join(" / ") : `${rel} (UNWITNESSED — no organ in the atlas writes it)`;
+    if (!existsSync(p)) { dead.push({ path: rel, why: "the input does not exist", root }); continue; }
+    const rows = realRowCount(p);
+    if (rows === null) { dead.push({ path: rel, why: "the input is unreadable — an unreadable probe is never a pass", root }); continue; }
+    if (rows === 0) { dead.push({ path: rel, why: "NEVER BORN — the file exists and holds no real row", root }); continue; }
+    const stamp = payloadStamp(p, { now });
+    if (stamp === null) { dead.push({ path: rel, why: `VINTAGE UNMEASURABLE — ${rows} row(s), and no payload timestamp anywhere in them (mtime is not vintage)`, root }); continue; }
+    const age_h = (now.getTime() - stamp) / 3600000;
+    if (age_h > cadence_h) dead.push({ path: rel, why: `STALE — newest row ${age_h.toFixed(1)}h old, outside the ${cadence_h}h cadence`, age_h: +age_h.toFixed(1), root });
+  }
+  const ok = dead.length === 0;
+  return {
+    ok, declared: required.length, cadence_h, dead, root: dead.length ? (dead[0].root || null) : null,
+    detail: ok
+      ? `${required.length} required input class(es) alive, newest row inside ${cadence_h}h (declared by ${decl.source})`
+      : `${dead.length}/${required.length} required input class(es) not alive — ${dead.map((d) => `${d.path}: ${d.why}`).join(" · ")}`,
+  };
+}
+
 // ---- forces (the two wake doors) -------------------------------------------
 export function gateForce(queueState, lane) {
   const f = queueState && queueState.gate && queueState.gate.forced && queueState.gate.forced[lane];
@@ -1676,6 +1891,11 @@ export function foldStatus(job, cfg, ctx, visited = new Set()) {
   return { target: tid, covered: false, day, detail: `${tid}'s slot for ${day} passed with no attempt — the fold is OPEN, this lane is the fallback` };
 }
 
+// The fixture world's input fact — declared once, here, so no fixture invents its own and no
+// reader has to guess why a hermetic verdict passed I.
+const HERMETIC_INPUTS = Object.freeze({ ok: true, declared: 0, cadence_h: null, dead: [], root: null,
+  detail: "fixture world — a fixture may not read the live disk, so I is neutral here; the guard is proven by gate.mjs's verdict bites, this file's S13 RUNNER measurement bites, and the live `gate show` table" });
+
 // ---- the verdict for one brain job -----------------------------------------
 export function gateVerdictFor(job, cfg, ctx, visited = new Set()) {
   const evidence = gateEvidence(job, cfg, ctx);
@@ -1688,8 +1908,13 @@ export function gateVerdictFor(job, cfg, ctx, visited = new Set()) {
   // declarations (jobConsumers) and by `gate.consumers`, not by the surface's prose. Passing them
   // is what lets a verdict say "day_cartridge went quiet" instead of "he never read it".
   const consumer = declaredConsumer(job.id, { surface: job.surface, downstream: [...new Set([...jobConsumers(cfg, job).map((j) => j.id), ...gateConfig(job).consumers])] });
-  const v = gateDecide({ job, evidence, consumption: { ...consumption, never_ran }, failures: { streak: failStreakOf(ctx.ledger || [], job.id) }, now: ctx.now, forced, fold, consumer });
-  return { ...v, evidence, consumption, never_ran, forced, fold_status: fold };
+  // RUNG S13 — the INPUT side. Every one of brain_config's jobs is covered: a job that declares
+  // `inputs` is declared by that config; the six that compute their reading in the runJob branch
+  // are declared by a `job_inputs` registry row; a job that has neither hands `null`, and the
+  // gate's input ratchet sleeps it. No brain job reaches the spend path unguarded on its inputs.
+  const inputs = ctx.inputsFor ? ctx.inputsFor(job) : inputLiveness(job, cfg, ctx);
+  const v = gateDecide({ job, evidence, consumption: { ...consumption, never_ran }, failures: { streak: failStreakOf(ctx.ledger || [], job.id) }, now: ctx.now, forced, fold, consumer, inputs });
+  return { ...v, evidence, consumption, never_ran, forced, fold_status: fold, inputs };
 }
 // ---- the verdict for a NON-brain lane (nightshift, DMN) — same law, same journal ----
 // The other gated organs already import this file; they hand their own evidence
@@ -1718,6 +1943,12 @@ export function gateVerdictForLane(lane, { evidence = {}, gate = {}, event_armed
   const c = (oc && (!c0.last_at || Date.parse(oc.last_at) > Date.parse(c0.last_at))) ? oc : c0;
   const never_ran = !gateEverRan(led, ids);
   const forced = gateForce(qs, lane);
+  // RUNG S13 — `inputs` is DELIBERATELY not passed here, and the verdict SAYS SO. This is the
+  // non-brain lane path (nightshift, dmn, selfknowledge): those lanes hand their own `evidence`
+  // and have no brain_config row, so they are outside the 34 jobs S13's ruling scopes. gate.mjs
+  // turns the absence into `input_guard.covered:false` — a measured gap with a name, printed by
+  // the journal, the card and `gate show`. A guard that green-lights what it cannot see SILENTLY
+  // is SHAPE 8; this one says it out loud, and the remainder is named in the rung's handoff.
   const v = gateDecide({ job: { id: lane, gate, surface }, evidence, consumption: { ...c, never_ran, ...(event_armed !== undefined ? { event_armed } : {}) }, failures: { streak: failStreakOf(led, ids) }, now, forced });
   return { ...v, consumption: c, never_ran, forced, evidence };
 }
@@ -1735,6 +1966,20 @@ function gateContext(deps, now, ledger, queueState) {
     outbox: g.outbox !== undefined ? g.outbox : (hermetic ? [] : outboxRows()),   // LOAD ZERO BLOCK 6 — read ONCE per tick, like mouth; a fixture ledger ⇒ a fixture world (no live road)
     mediaExists: g.mediaExists !== undefined ? g.mediaExists : (hermetic ? () => false : undefined),
     evidenceFor: g.evidenceFor, crackedInv: deps.crackedInv,
+    // S13 — the input guard's two READ-ONCE facts. Same law as mouth/outbox above: read once per
+    // tick, never per job. A hermetic caller hands its own (an empty map names no root, which is
+    // the honest fixture answer: a fixture has no atlas).
+    atlasWriters: g.atlasWriters !== undefined ? g.atlasWriters : (hermetic ? new Map() : atlasWriters()),
+    cadenceDefaultH: g.cadenceDefaultH,
+    inputClassFor: g.inputClassFor,
+    // A FIXTURE WORLD GETS A FIXTURE FACT — the same law as `consumption: []`, `mouth: []` and
+    // `mediaExists: () => false` two lines up: a fixture may never read the live disk (the
+    // hermeticity law this suite already instruments). The guard itself is NOT proven here and
+    // is not meant to be: it is proven by gate.mjs's own bites (the verdict), by this file's
+    // `S13 RUNNER` bites on a temp state dir (the measurement), and by the live 34-job table
+    // `node scripts/brain.mjs gate show` prints. A hermetic caller that wants to drive I hands
+    // its own `inputsFor`, exactly as the tick fixtures hand their own `evidenceFor`.
+    inputsFor: g.inputsFor !== undefined ? g.inputsFor : (hermetic ? () => HERMETIC_INPUTS : undefined),
   };
 }
 
@@ -1751,7 +1996,7 @@ export function gateJournalRows() { return readLines(GATE_JOURNAL); }
 // sleep-episode) through captains_call's rolling-key guard: gate:<lane>:<day>.
 // THE LETTERS a verdict can fail on — E·C·F since Block 0, D (displaced by a fold) since
 // Block 5.2. One list, so the printer, the journal, the card and `gate json` agree.
-const GATE_LETTERS = ["E", "C", "F", "D"];
+const GATE_LETTERS = ["E", "C", "F", "D", "I"];   // S13 — I (his data is actually in the lane's inputs) joins E·C·F·D
 const failedLetters = (why) => GATE_LETTERS.filter((k) => why && why[k] && why[k].ok === false);
 // RUNG S7 — the card NAMES WHICH CONSUMER WENT QUIET (§1's ratchet sentence, in his language).
 // Before this, every C card said the same thing — "output kabhi tum tak nahi pahuncha" — which for
@@ -6372,6 +6617,86 @@ async function selftest() {
         gatedIds.sort().join() === "failing,needs_season,stale_lane" && !ranIds.some((id) => gatedIds.includes(id)) && ranIds.includes("cartridge") && ranIds.includes("fresh_lane")
         && jr.length === 0 && cf.length === 0);
     }
+  }
+
+  // ── S13 · THE INPUT GUARD, the RUNNER's half — hermetic, on a temp state dir ──────
+  // gate.mjs proves the VERDICT; these prove the MEASUREMENT that feeds it. Each bite is
+  // written so that weakening the thing it names turns it red.
+  {
+    const sdir = mkdtempSync(join(tmpdir(), "s13-inputs-"));
+    const NOW = new Date("2026-08-29T12:00:00.000Z");
+    const wr = (rel, text) => { mkdirSync(join(sdir, dirname(rel)), { recursive: true }); writeFileSync(join(sdir, rel), text); return join(sdir, rel); };
+    const hrs = (h) => new Date(NOW.getTime() - h * 3600000).toISOString();
+
+    const fresh = wr("fresh.jsonl", JSON.stringify({ ts: hrs(2), v: 1 }) + "\n");
+    wr("stale.jsonl", JSON.stringify({ ts: hrs(200), v: 1 }) + "\n");   // reached through `abs()` below, like every other fixture path
+    const empty = wr("empty.jsonl", "");
+    const noStamp = wr("nostamp.json", JSON.stringify({ a: 1, b: 2 }));
+    // THE PAYLOAD LAW, bitten with the live shape that proves it earns its keep: readiness.json
+    // was measured on 29 Aug at mtime 242.5h and PAYLOAD 606.3h — a file re-saved ten days ago
+    // carrying data twenty-five days old. mtime would have called it fed.
+    const resaved = wr("resaved.json", JSON.stringify({ day: "2026-08-04", note: "written long ago, re-saved just now" }));
+    assert("S13 RUNNER — vintage is the PAYLOAD's newest stamp, never mtime: a file WRITTEN NOW carrying an old row reads OLD (readiness.json's measured shape — mtime 242.5h, payload 606.3h)",
+      Math.round((NOW.getTime() - payloadStamp(resaved, { now: NOW })) / 3600000) === 612
+      && Math.round((NOW.getTime() - payloadStamp(fresh, { now: NOW })) / 3600000) === 2);
+    assert("S13 RUNNER — a stamp in the FUTURE is never vintage (serve-day artifacts are named for tomorrow), and a payload with no stamp at all reads UNMEASURABLE, not fresh",
+      payloadStamp(wr("future.json", JSON.stringify({ date: "2027-01-01" })), { now: NOW }) === null
+      && payloadStamp(noStamp, { now: NOW }) === null);
+    assert("S13 RUNNER — NEVER BORN is separable from ABSENT: an empty file is 0 real rows, an unreadable one is null (never a measured zero)",
+      realRowCount(empty) === 0 && realRowCount(fresh) === 1 && realRowCount(join(sdir, "no_such_file")) === null
+      && realRowCount(wr("emptyobj.json", "{}")) === 0);
+
+    const J = (id, extra) => ({ id, window: "overnight", ...extra });
+    // The fixture drives the REAL function through its injected seams — no live registry, no
+    // live atlas, no live state (the hermeticity law: a fixture may never read the live world).
+    // resolve fixture paths by pointing the declarations at absolute paths (the resolver is total
+    // for absolute inputs by design — the 12 Aug cross-drive lesson), and key the fixture's atlas
+    // by the SAME strings, because the root-namer looks an input up by the path it resolved.
+    const abs = (rel) => join(sdir, rel).replace(/\\/g, "/");
+    const CTX = { now: NOW, cadenceDefaultH: 48, atlasWriters: new Map([[abs("stale.jsonl"), new Set(["scorer.mjs"])]]),
+      inputClassFor: (job) => declaredInputClass(job, { registryRow: null }) };
+    const CFG2 = { jobs: [
+      J("producer", { out: "prod", inputs: [{ path: abs("fresh.jsonl"), required: true }] }),
+      J("starved", { out: "starved", inputs: [{ path: abs("stale.jsonl"), required: true }] }),
+      J("eater", { inputs: [{ path: "brain_out/prod/TODAY.json", required: true }] }),
+      J("nothing_required", { inputs: ["a.json", "b.json"] }),
+      J("undeclared", {}),
+    ] };
+    const live = inputLiveness(CFG2.jobs[0], CFG2, CTX);
+    const dead = inputLiveness(CFG2.jobs[1], CFG2, CTX);
+    assert("S13 RUNNER — EXISTS ∧ ≥1 REAL ROW ∧ NEWEST ROW INSIDE THE CADENCE: a 2h-old input passes, a 200h-old one fails and the reason carries the measured age",
+      live.ok === true && live.cadence_h === 48
+      && dead.ok === false && /STALE/.test(dead.dead[0].why) && /200\.0h/.test(dead.dead[0].why));
+    assert("S13 RUNNER — the dead root is NAMED from the atlas's witnessed writer, and a path no organ writes is named UNWITNESSED rather than guessed",
+      dead.root === "scorer.mjs"
+      && /UNWITNESSED/.test(inputLiveness(J("x", { inputs: [{ path: abs("nostamp.json"), required: true }] }), CFG2, CTX).root));
+    assert("S13 RUNNER — THE EMPTY-REQUIRED RATCHET: a lane that declares inputs and marks NONE required makes no liveness claim, and a claim nobody can check may not open a spend path",
+      inputLiveness(CFG2.jobs[3], CFG2, CTX).ok === false
+      && /NOTHING required/.test(inputLiveness(CFG2.jobs[3], CFG2, CTX).detail)
+      && inputLiveness(CFG2.jobs[4], CFG2, CTX) === null);
+    // TRANSITIVITY — the ruling's own named case, in a fixture: a chain whose producer is starved
+    // fails CLOSED and names the PRODUCER's own root, not the lane that merely reads it.
+    const chain = inputLiveness(CFG2.jobs[2], CFG2, CTX);
+    assert("S13 RUNNER — TRANSITIVE, FAIL-CLOSED, ROOT NAMED: an unwritten brain_out input walks to the job whose `out` names that lane; a fed producer is named as the producer, a starved one hands up ITS root",
+      chain.ok === false && /producer producer IS fed/.test(chain.dead[0].why) && chain.root === "producer"
+      && (() => { const c2 = inputLiveness(J("eater2", { inputs: [{ path: "brain_out/starved/TODAY.json", required: true }] }), CFG2, CTX); return c2.ok === false && c2.root === "scorer.mjs"; })());
+    assert("S13 RUNNER — MANY producers, never one: four live jobs declare out:\"dugout_digest\" and two declare out:\"day_cartridge\", so the resolver returns the SET (a .find() would name one and be quietly wrong about the rest)",
+      producersOf(loadConfig(), "brain_out/dugout_digest/2026-08-29.md").length === 4
+      && producersOf(loadConfig(), "brain_out/day_cartridge/x.json").length === 2
+      && producersOf(loadConfig(), "lexicon.json").length === 0);
+    assert("S13 RUNNER — THE MERGE MAY ONLY TIGHTEN: a registry row marks REQUIRED what brain_config left optional, adds what the code computes, and can never loosen a config-required input (brain_config is approval-gated and is never edited for this)",
+      (() => {
+        const job = J("m", { inputs: ["opt.json", { path: "req.json", required: true }] });
+        const row = { input_class: [{ path: "opt.json", required: true }, { path: "req.json", required: false }, { path: "extra.json", required: true }], witness: "w" };
+        const d = declaredInputClass(job, { registryRow: row });
+        const by = Object.fromEntries(d.entries.map((e) => [e.path, e.required]));
+        return by["opt.json"] === true && by["req.json"] === true && by["extra.json"] === true && d.source === "brain_config.inputs + registry job_inputs";
+      })());
+    assert("S13 RUNNER — ALL 34 brain jobs are COVERED: every one resolves a declared input class, so none reaches the spend path unguarded on its inputs (0 hitting the ratchet)",
+      (() => { const c = loadConfig(); return (c.jobs || []).length >= 34 && (c.jobs || []).every((j) => declaredInputClass(j) !== null); })());
+    assert("S13 RUNNER — the CADENCE SEED is read from the registry, not from a constant in this file: no bare 48 is written into the guard",
+      (() => { const src = readFileSync(new URL(import.meta.url), "utf8"); const guard = src.slice(src.indexOf("export function inputLiveness"), src.indexOf("export function inputLiveness") + 4000); return /inputCadenceDefaultH\(/.test(guard) && !/=\s*48\b/.test(guard); })());
+    rmSync(sdir, { recursive: true, force: true });
   }
 
   const passed = checks.every(c => c[1]);

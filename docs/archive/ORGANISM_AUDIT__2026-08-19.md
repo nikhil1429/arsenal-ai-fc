@@ -3041,7 +3041,58 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`S13` · HARDENING — THE INPUT GUARD. MODEL: Opus 5 · effort max.
+  ▶ NEXT SESSION ............... **HIS ONE HAAN ON THE LLM GROUP + ONE ELEVATED CONSOLE — then THE
+                                   FLOOR AUDIT (verify-only, Opus 5 · effort max, 4 passes,
+                                   `queue\RULING__2026-08-29_floor-audit+organ.md`).**
+                                   ⭐ **S13 IS DONE, SO ACTIVATION IS AUTOMATIC NOW — THE GUARD IS
+                                   THE FLIP.** Every brain lane is enabled and self-gating on the
+                                   liveness of its own input class: 34/34 declared, 0 unguarded,
+                                   and a lane wakes ITSELF the moment his data lands inside that
+                                   lane's declared cadence. No stage, no per-lane haan, no card.
+                                   His remaining words are exactly ONE: a single haan to enable
+                                   the LLM group under the finished guard.
+                                   ⛑ WHAT S13 HANDS THE NEXT SITTING, all measured:
+                                   (1) The board is **7 awake · 23 asleep** (was 18 · 12) and
+                                   every lane that moved is asleep on I ALONE — that is the
+                                   switch-off's own data drought showing up as a verdict for the
+                                   first time, not a defect. Read it live:
+                                   `node scripts/brain.mjs gate show`.
+                                   (2) THE ROOTS ARE NAMED, and they are the actual work: the
+                                   most-blamed roots are `doubtminer.mjs` (lexicon +
+                                   doubt_grammar, 4 lanes), `scout.mjs`, `scorer.mjs`,
+                                   `setpiece.mjs`, `oura_coach.mjs` (readiness — mtime 242.5h but
+                                   PAYLOAD 606.3h, a file re-saved ten days ago carrying data
+                                   twenty-five days old), and two UNWITNESSED ghost reads
+                                   (`brain_outcomes.jsonl`, `sitting_agenda.jsonl`) that no organ
+                                   in the atlas writes. Feeding a root wakes every lane under it.
+                                   (3) THE REMAINDER, NAMED (nothing hidden): the non-brain lane
+                                   path — nightshift's three `ns_*`, the DMN's two, and
+                                   `selfknowledge` — is OUTSIDE the ruled 34 and is therefore
+                                   NOT covered. It is not silently green: every such verdict
+                                   carries `input_guard.covered:false` and says so in words.
+                                   Extending the guard to those lanes is a rung, not a patch.
+                                   (4) `no-unused-vars` measures 86 against a frozen 87 — one
+                                   BETTER. Ratcheting the frozen number down is a gate edit and
+                                   was left undone deliberately (outside this rung).
+                                   ⛑ THREE THINGS THE NEXT SITTING MUST NOT RE-DERIVE:
+                                   (1) The S1 pre-flight is SIGNED — cite
+                                   `queue\RULING__2026-08-29_s11-signoff+preflight.md`.
+                                   (2) F-5 is an ACCEPTED COST — `xray build` + `flow_atlas build`
+                                   in the SAME commit. S13 paid it.
+                                   (3) **THE SUITE BASELINE IS 119/4, NOT 122/1.** Re-measured on
+                                   a CLEAN tree at HEAD 8e92766 before any edit; the scene is
+                                   preserved at `arsenal-audit-artifacts/s13-2026-08-29/`. S13
+                                   closes at 119/4 — the same COUNT, with the set differing by one
+                                   swap in the two instrumented classes (flow-atlas F-5 red went
+                                   GREEN; hermeticity F-6 went red on `timeaudit.json`, and
+                                   `freeze.mjs` was cleared as its culprit by the log's own
+                                   prescribed check). `jugad-literal-subject-list` 92-vs-91 is
+                                   PRE-EXISTING and untouched — neither of the two commits before
+                                   S13 touched `scripts/` at all.
+                                   ⛑ carried for HIM, unchanged: **one elevated console** for the
+                                   five WinSW units, the c86 shape.**
+
+  ~~▶ NEXT SESSION ............... **`S13` · HARDENING — THE INPUT GUARD. MODEL: Opus 5 · effort max.
                                    **BUILD 18 · PROOF 8 · HANDOFF 5 · CEILING 31.** Ruling:
                                    `queue\RULING__2026-08-29_s12-inputguard-full.md`. Its §10-C
                                    row is the scope and it is FOUR items — do all four or hand off
@@ -3105,7 +3156,8 @@ STATUS (update this block before any session stops — this is the handoff)
                                    OLD pre-S9 sentence — `captains_call` has no `retire` verb, only
                                    `answer`, and answering for him would be a lie about his word.
                                    The interim fresh-questions law STILL BINDS the four samjhao'd
-                                   topics.**
+                                   topics.**~~ ☑ **DONE 29 Aug 2026 — see the `S13` ☑ row in §10-C
+                                   and the PROGRESS entry of 29 Aug. Kept struck, not deleted (L9).**
 
   ~~▶ NEXT SESSION ............... **`S12` · THE REBOOT'S LAST STAGE — THE LLM GROUP. MODEL:
                                    Opus 5 · effort max. CEILING: 40 (the rung's first sitting,
@@ -8545,7 +8597,7 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       today: the brain daemon is among those five, and starting it outside a stage is the exact
       mistake this rung caught at 09:00.
 
-☐ S13 HARDENING — THE INPUT GUARD.                          MODEL: Opus 5 · effort max
+☑ S13 HARDENING — THE INPUT GUARD.                          MODEL: Opus 5 · effort max
       **RE-PRICED 29 Aug: BUILD 18 · PROOF 8 · HANDOFF 5 · CEILING 31** (the earlier 12/6/5 is
       VOID — it was priced before the six invisible lanes were known). Ruling:
       `queue\RULING__2026-08-29_s12-inputguard-full.md`.
@@ -8565,6 +8617,46 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       FORBIDDEN: the `config set` verb (its own carded post-floor rung, designed ONCE for the
       whole class with receipt + revert per write) · weakening the gate's evidence-function shape
       into a table · flipping any LLM lane before (a)–(d) are green.
+   ☑ **DONE 29 Aug 2026 (Opus 5 · max). ALL FOUR ITEMS SHIPPED; the guard is in the SPEND PATH.**
+      **(a)** THE LETTER I joins E·C·F·D in `gate.mjs decide()` — pure, like every other letter;
+      the runner measures and hands the fact in, exactly as it does for the fold. `run = E ∧ C ∧
+      F ∧ D ∧ I`. **(b)** The SIX invisible lanes DECLARE their code-computed input classes as
+      `job_inputs` registry rows, each witnessed by the runJob branch that computes it — and the
+      witness is RESOLVED, not quoted: a cite whose file is gone, or whose named branch its own
+      file no longer contains, goes born-red. **(c)** TRANSITIVE through the WITNESSED edges,
+      fail-closed, root named. **(d)** Cadence is a per-lane row field over a DECLARED seed
+      (`mechanisms/input_cadence_default` = 48h); no bare 48 exists anywhere in the guard, and
+      the selftest asserts that.
+      ⚠ **ITEM 3'S LETTER WAS WRONG AND IS AMENDED, NOT WORKED AROUND** (architect,
+      `queue\RULING__2026-08-29_s13-rowhome+transitivity.md`). "Transitive through the atlas
+      edges" cannot resolve its own named case: MEASURED — `flow_atlas.json` holds 538 edges, of
+      which exactly FOUR have a `brain_out/` via and ZERO are `brain_out/agenda/*`; the IR has no
+      files row for those paths at all (they are computed at runtime); and `flow_atlas.mjs:131`
+      is `if (w === r) continue` — self-edges are dropped BY DESIGN, and diary and agenda are
+      both brain.mjs jobs. The atlas is ORGAN-scoped; the case is JOB-scoped inside one organ.
+      The carrier that ships: job→job derived at read time from brain_config's own `out`↔`inputs`
+      pair (never a hand-list), file→organ from the atlas for cross-organ inputs, and a root with
+      no witnessed writer named UNWITNESSED and failed closed.
+      ⚠ **AND THE HOLE THE FOUR ITEMS DID NOT CLOSE, found while seeding**
+      (`queue\RULING__2026-08-29_s13-emptyrequired.md`): TWO of the 34 declared inputs and marked
+      NONE required (`diary` — whose one input is a plain string — and `midday_reread`), so the
+      guard would have passed them VACUOUSLY, and `diary` is the ruling's OWN named transitive
+      case. An empty required set is now the same ratchet as no declaration at all, and both
+      lanes got a row. The row MERGES with brain_config and may only TIGHTEN — `brain_config.json`
+      is approval-gated config and was never edited.
+      **MEASURED, live, after the build:** ALL 34 jobs resolve a declared input class (0 hit the
+      ratchet) · I over the 34: **11 PASS · 23 FAIL** · the gate board moves **18 awake → 7
+      awake**, and every one of the 11 that moved is asleep on I ALONE. Six invisibles:
+      gemini_render + maidan_poster PASS, formation_read + agenda + model_mine + dreams FAIL,
+      each naming its root. The transitive case reads end to end: `diary` ← `agenda` ←
+      `brain_outcomes.jsonl (UNWITNESSED)`.
+      ⛔ **THE 29-AUG "14 PASS / 4 FAIL" DOES NOT REPRODUCE.** The POPULATION matches exactly
+      (18 lanes awake by E∧C∧F∧D — the coded predicate agrees to the lane), but the coded result
+      is 7 PASS / 11 FAIL. The hand pass's per-lane table was never written down, so the delta
+      cannot be attributed line by line — only re-measured. Three of the eleven are outside the
+      hand rule BY ITS OWN WORDING ("every declared non-`brain_out` input"), so those three were
+      vacuously green by construction: `midday_cartridge`, `day_cartridge`, `gaffer_claim_audit`.
+      A number recorded without its working can be re-measured but never diffed.
 ```
 
 **The whole ladder's ceiling is 500 CORRECTED lakh across 12 sessions (11 × 40 + S10's 60) —
@@ -19798,3 +19890,121 @@ post-floor rung — explicitly NOT S13's.
 `rails orders` open order clean · **26 → 28 of 57 tasks Ready**, every one of them zero-token.
 The row's false clause is struck IN PLACE with its measurement beside it, because a session reading
 the old sentence would have woken 18 lanes believing a guard was holding them.
+
+---
+
+### PROGRESS 2026-08-29 — RUNG `S13` · HARDENING · THE INPUT GUARD — **ALL FOUR ITEMS SHIPPED, AND TWO OF THEM WERE WRONG AS WRITTEN** (Opus 5 · effort max · BUILD 18 · PROOF 8 · HANDOFF 5 · ceiling 31)
+
+**HIS SENTENCE IS THE WHOLE RUNG**, verbatim 29 Aug: *"i want to turn on everything in organism with
+the highest level of quality and intensity but it should only start working my data comes in them."*
+That is ONE property, not a compromise, and it is now a code path: `run = E ∧ C ∧ F ∧ D ∧ I`.
+
+#### WHAT LANDED
+- **(a) THE LETTER I, in the SPEND PATH.** `gate.mjs decide()` gains a fifth letter, PURE like the
+  other four: the runner measures, the gate judges (`inputVerdict`, one function, three states).
+  EXISTS ∧ ≥1 REAL ROW ∧ NEWEST ROW INSIDE THE LANE'S DECLARED CADENCE. Vintage comes from the
+  PAYLOAD's own stamps, never mtime — and that is not decoration: `readiness.json` measures mtime
+  **242.5h** and payload **606.3h**, a file re-saved ten days ago carrying data twenty-five days old.
+  mtime would have called it fed.
+- **(b) THE SIX INVISIBLES DECLARE.** New registry table `job_inputs` (the closed set moves 12→13,
+  and `redLawCoverage` proves the born-red law covers the new table — no exemption door). Rows for
+  `formation_read · agenda · model_mine · dreams · gemini_render · maidan_poster`, each witnessed by
+  the runJob branch that computes its reading. The witness is **RESOLVED, not quoted**: a cite whose
+  file is gone goes red, and so does one whose named branch its own file no longer contains — a line
+  number rots, a backtick-quoted needle can be read back out of the source.
+- **(c) TRANSITIVE, FAIL-CLOSED, ROOT NAMED.** A `brain_out/<lane>/…` input resolves to the job whose
+  own `out` is that lane; the walk happens only to EXPLAIN a miss, which is what turns *"diary is
+  asleep"* into *"agenda has no salience to allocate"*. **MANY producers, never one** — measured:
+  FOUR jobs declare `out:"dugout_digest"` and two declare `out:"day_cartridge"`, so a `.find()` would
+  have named one and been quietly wrong about the rest.
+- **(d) CADENCE IS A DECLARED ACT.** `mechanisms/input_cadence_default` holds 48h with its receipt;
+  per-lane `cadence_h` overrides it. **No bare 48 exists in the guard**, and a selftest asserts that.
+  The seed also matches the manager's own tolerance to the hour (`readinessFresh`: lag ≤ 2 days).
+
+#### THE TWO THINGS THAT WERE WRONG AS WRITTEN — both escalated, both ruled, neither worked around
+1. **ITEM 3'S LETTER CANNOT RESOLVE ITS OWN NAMED CASE.** MEASURED before saying so: the atlas holds
+   538 edges, exactly FOUR with a `brain_out/` via and ZERO for `brain_out/agenda/*`; the IR has no
+   files row for those paths (computed at runtime); `flow_atlas.mjs:131` is `if (w === r) continue`,
+   so self-edges are dropped BY DESIGN — and `diary` and `agenda` are both brain.mjs jobs. The atlas
+   is ORGAN-scoped, the case is JOB-scoped inside one organ. Built literally, the guard would have
+   green-lit `diary` vacuously: SHAPE 8 re-created on the other side of the rung built to refuse it.
+   The architect AMENDED the parent ruling's letter rather than patching around it
+   (`queue\RULING__2026-08-29_s13-rowhome+transitivity.md`), so record and code cannot diverge.
+2. **THE VACUOUS-PASS HOLE THE FOUR ITEMS DID NOT CLOSE.** Two of the 34 declare inputs and mark NONE
+   required (`diary`, whose one input is a plain string; `midday_reread`) — an empty required set is
+   no liveness claim, so the guard would have passed them on nothing. And `diary` is the ruling's own
+   named case. Ruled reading 1 (`queue\RULING__2026-08-29_s13-emptyrequired.md`): empty-required is
+   the same ratchet as no declaration, and a `job_inputs` row supplies the missing half. The row
+   MERGES with brain_config and **may only TIGHTEN** (`||` is the whole enforcement) — `brain_config.json`
+   is approval-gated config and was **never edited**.
+
+#### THE MEASUREMENT, live
+```
+ALL 34 jobs resolve a declared input class — 0 hit the ratchet
+I over the 34: 11 PASS · 23 FAIL
+gate board:    18 awake → 7 awake · 23 asleep — every lane that moved is asleep on I ALONE
+six invisibles: gemini_render PASS · maidan_poster PASS · formation_read FAIL (readiness 606.3h,
+                root oura_coach.mjs) · agenda FAIL · model_mine FAIL · dreams FAIL
+transitive:    diary <- agenda <- brain_outcomes.jsonl (UNWITNESSED — no organ in the atlas writes it)
+```
+The card sentence reads the way his order asked: *"his data lands in readiness.json (the dead root is
+oura_coach.mjs — fix THAT, not this lane), inside its 48h cadence."*
+
+#### ⛔ THE 29-AUG "14 PASS / 4 FAIL" DOES NOT REPRODUCE
+The POPULATION matches exactly — 18 lanes awake by E∧C∧F∧D, the coded predicate agrees to the lane.
+The RESULT does not: 7 PASS / 11 FAIL. The hand pass's per-lane table was never written down, so the
+delta cannot be attributed line by line, only re-measured. Three of the eleven are outside the hand
+rule BY ITS OWN WORDING (*"every declared non-`brain_out` input"*) and were therefore vacuously green
+by construction: `midday_cartridge`, `day_cartridge`, `gaffer_claim_audit`. **A number recorded
+without its working can be re-measured but never diffed** — the same shape as the baseline finding below.
+
+#### ⛔ AND THE SUITE BASELINE IS 119/4, NOT 122/1
+Measured on a CLEAN tree at HEAD `8e92766` before any edit (the first run was discarded as contaminated
+— it had my own edits landing mid-run — and re-taken properly). The four: brain arms trigger `gate` and
+nothing reaches it · `teaching_audit` selftest 62/1 · `watchman` selftest 114/2 (its *"a healthy day
+yields ZERO findings"* assert, against 39 live switch-off findings) · `jugad-literal-subject-list` 92 vs
+frozen 91. **Neither of the two commits before this rung touched `scripts/` at all**, so that lawpack RED
+predates them both. The architect measured the rest and routed it: S10-F commit `4aa426d` ratcheted jugad
+93→91, so the 92nd literal entered in the S11/S12 window and S12's reported 122/1 did not catch it —
+a dated input to the floor audit's Pass 2, not this rung's work. Scene preserved verbatim at
+`arsenal-audit-artifacts/s13-2026-08-29/` (the four red outputs + `hermeticity_forensics.log`).
+
+#### PROOFS (raw, this shell)
+```
+node scripts/gate.mjs selftest          57 passed, 0 failed     (was 50/0 — 7 new S13 bites)
+node scripts/registry.mjs selftest      50 passed, 0 failed     (was 45/0 — 5 new S13 bites)
+node scripts/brain.mjs selftest         ALL CHECKS PASSED       (11 new S13 RUNNER bites)
+node scripts/registry.mjs check         GREEN · 1 born-red (spool_vacuum, known)
+node scripts/lawpack.mjs                jugad 92 (UNCHANGED) · bare-catch 38 · depcruise 7
+npx eslint scripts/                     no-unused-vars 86 vs frozen 87 — one BETTER
+node scripts/xray.mjs build             111 organs · 366 files
+node scripts/flow_atlas.mjs build       539 edges (was 538 — brain.mjs now reads the atlas)
+npm test                                119 passed, 4 failed  = the baseline COUNT
+```
+**RED-FIRST, PROVEN, six planted bites:** I removed from the conjunction ⇒ 4 red · the input ratchet
+weakened to a pass ⇒ 2 red · the `covered:false` flag falsified ⇒ 2 red · vintage falling back to mtime
+⇒ 3 red · transitivity removed ⇒ 1 red · the empty-required ratchet weakened ⇒ 1 red. All green after.
+
+**THE SUITE'S FOUR, DIFFED LINE BY LINE against the baseline:** three are identical (brain-triggers ·
+the two member selftests · lawpack 92). The fourth SWAPPED: the baseline's `FLOW ATLAS` red — F-5, my
+own `git checkout` moving two mtimes — is now GREEN (`xray build` + `flow_atlas build` in this commit,
+the accepted cost paid). In its place the hermeticity check went red on `state\timeaudit.json`. That is
+F-6, INSTRUMENTED not closed: I read `scripts/hermeticity_forensics.log` BEFORE theorising, as the
+PREOPEN demands, and then ran the check the log itself prescribes — `freeze.mjs selftest` alone leaves
+`timeaudit.json` byte-identical (`f2f0364a…` → `f2f0364a…`), so the named CANDIDATE is CLEARED and an
+external writer landed inside the window. **No new failure is mine.**
+
+#### THE REMAINDER, NAMED (the PREOPEN's own instruction, not a quiet omission)
+The non-brain lane path — nightshift's three `ns_*`, the DMN's two, `selfknowledge` — is OUTSIDE the
+ruled 34 and is **not covered**. It is also not silently green: every such verdict carries
+`input_guard.covered:false` and says so in words, because a guard that green-lights what it cannot see
+silently is SHAPE 8 and one that says so out loud is a measured gap with a name. Extending the guard
+there is a rung, not a patch. Also left deliberately undone: ratcheting the frozen `no-unused-vars` 87
+down to the measured 86 (a gate edit, outside this rung).
+
+#### CLOSE
+Escalations: THREE forks raised, all three ruled inside minutes over the direct channel, all three with
+my recommendation ratified — and the executor protocol's alone-space used once and cited
+(`manager.mjs staleness()` naming formation_read's six liveness-bearing files, with the config-not-signal
+exclusions in source at `manager.mjs:67-74`). **After this rung, activation is AUTOMATIC — the guard IS
+the flip.** His remaining word is exactly ONE: a single haan to enable the LLM group under it.

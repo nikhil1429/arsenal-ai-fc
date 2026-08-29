@@ -78,6 +78,14 @@ const TABLES = {
   orders:         { req: { subject: 1, path: 1, status: 1, witness: 1 } },
   self_repair:    { req: { subject: 1, artifact: 1, verified_by: 1, report_anchor: 1, witness: 1 } },
   predicates:     { req: { subject: 1, property: 1, site: 1, witness: 1 } },
+  // S13 (29 Aug 2026) — THE INPUT SIDE. `lanes` declares who must EAT a lane's output;
+  // this table declares what a lane READS, for the lanes whose reading is computed in code
+  // and is therefore invisible to any declarative guard. Ruled A1 (architect,
+  // RULING__2026-08-29_s13-rowhome+transitivity.md): a `lanes` row REQUIRES consumers+reach,
+  // so putting the input side there would make the six declare their consumer a SECOND time
+  // (brain_config `surface` already holds it) — the twin-copy disease gate.mjs names by name.
+  // Input side and reach side are different concerns; they get different tables.
+  job_inputs:     { req: { subject: 1, input_class: 1, witness: 1 } },
   sandbox_subjects: { req: { subject: 1, env_pin: 1, schema_owner: 1, witness: 1 } },
   mcp:            { req: { subject: 1, mode: 1, status: 1, witness: 1 } },
   rulings:        { req: { id: 1, at: 1, scope: 1, text: 1 } },
@@ -148,6 +156,29 @@ export function coreAxes(concept, { conceptsPath = join(STATE_DIR, "concepts.jso
   } catch { /* canon unreadable → the default row still answers */ }
   return subjectsOf("core_axes_default", path);
 }
+// ── S13 · THE INPUT-SIDE READERS (what brain.mjs's guard imports) ───────────
+/** jobInputRows — every live input-side declaration. */
+export function jobInputRows(path = REGISTRY_PATH) { return tableRows("job_inputs", path).filter((r) => r && !r.retired); }
+/** jobInputClass(jobId) → the row, or null. A job whose reading is DECLARED in
+ *  brain_config (`inputs`) has no row and needs none — that config IS its
+ *  declaration. A row exists exactly for the lanes that compute their reading in
+ *  code, where no declarative guard can see it. */
+export function jobInputClass(jobId, path = REGISTRY_PATH) {
+  const r = rowOf("job_inputs", jobId, path);
+  return r && !r.retired ? r : null;
+}
+/** inputCadenceDefaultH — the SEEDED cadence, in hours, as a DECLARED act with a
+ *  receipt (architect ruling 29 Aug, A1: "a mechanisms row is the right home for the
+ *  NUMBER" — the emit_declared_set / core_axes_default idiom exactly). It is NOT a
+ *  constant in the guard: a number hidden in code is the thing the seeding law
+ *  forbids, and subjectsOf's loud throw is what stops a quietly-emptied seed from
+ *  reading as "no cadence, everything passes". */
+export function inputCadenceDefaultH(path = REGISTRY_PATH) {
+  const subj = subjectsOf("input_cadence_default", path);
+  const h = Number(subj[0]);
+  if (!Number.isFinite(h) || h <= 0) throw new Error(`registry: input_cadence_default holds "${clip(subj[0], 40)}", which is not a positive number of hours — the input guard's cadence seed is a DECLARED act and an unreadable one may never silently pass`);
+  return h;
+}
 /** fixturePin — sandbox_subjects reader: which env var pins this ledger to a
  *  sandbox (migration #7's general form; samjhao's guard is instance #1). */
 export function fixturePin(subject, path = REGISTRY_PATH) {
@@ -213,6 +244,34 @@ export function validateRow(table, row, { queueDir = QUEUE_DIR, path = REGISTRY_
       return { ok: false, why: "declared_elsewhere names WHERE this lane declares its consumer (a file, a site) — never true/false; a flag would be testimony again" };
     }
   }
+  // S13 — the input-side row shape. `input_class` is the DECLARATION the guard reads; an
+  // empty or malformed one is refused here so it can never reach the spend path as a shrug.
+  // `cadence_h` OVERRIDES the declared seed for this lane only, and only downward in effect
+  // (tightening is measurement, loosening is prose — the ruler's Q3); the value is validated
+  // as a real number here, and where it is absent the declared seed row answers.
+  if (table === "job_inputs") {
+    if (!Array.isArray(row.input_class) || !row.input_class.length) {
+      return { ok: false, why: "job_inputs rows carry input_class[] — a NON-EMPTY declaration of what this lane actually reads; a lane with zero declarable inputs is a BORN-RED row plus an escalation, never an empty array that reads as \"nothing to check\"" };
+    }
+    for (const c of row.input_class) {
+      if (!c || typeof c !== "object" || Array.isArray(c) || !clip(c.path)) return { ok: false, why: "each input_class entry is {path:\"…\", required:true|false} — a path is what the guard measures liveness on" };
+      if (typeof c.required !== "boolean") return { ok: false, why: `input_class entry "${clip(c.path, 60)}" must say required:true|false explicitly — an undeclared requirement is the ratio guard the #64 trap already refused` };
+      // S13 · EXCLUSIONS ARE DECLARED TOO (architect condition, 29 Aug): a file that is CONFIG
+      // rather than a SIGNAL is not liveness-bearing — manager.mjs:67-74 makes exactly this
+      // distinction in source for buckets/ls_config, and `concepts.json` (measured: no payload
+      // timestamp of any kind) is the second site. It is a ROW PROPERTY with its own reason,
+      // never a special case buried in the guard: declare-or-die covers exclusions as well as
+      // requirements, or the exclusion list becomes the untraceable literal we keep killing.
+      if (c.config_not_signal !== undefined) {
+        if (c.config_not_signal !== true) return { ok: false, why: `input_class entry "${clip(c.path, 60)}": config_not_signal is true or it is absent — a false flag is a sentence nobody can act on` };
+        if (c.required === true) return { ok: false, why: `input_class entry "${clip(c.path, 60)}" is declared config_not_signal AND required — a config file has no vintage to be inside a cadence; one of the two claims is wrong` };
+        if (!clip(c.why)) return { ok: false, why: `input_class entry "${clip(c.path, 60)}" claims config_not_signal with no why — an exclusion without a reason is exactly the silent green-light this table exists to refuse` };
+      }
+    }
+    if (row.cadence_h !== undefined && !(typeof row.cadence_h === "number" && Number.isFinite(row.cadence_h) && row.cadence_h > 0)) {
+      return { ok: false, why: "cadence_h is a positive number of HOURS or it is absent (absent ⇒ the declared seed row `input_cadence_default` answers)" };
+    }
+  }
   // the DECLARED red (F-1): a red with no reason is a mood, not a measurement.
   if (row.born_red !== undefined && (!row.born_red || typeof row.born_red !== "object" || Array.isArray(row.born_red) || !clip(row.born_red.why))) {
     return { ok: false, why: 'born_red is {why:"…", unblocked_by:"…"} — a row may not claim it is red without saying why in the row itself' };
@@ -273,6 +332,28 @@ const RED_PREDICATES = {
   mcp: (r) => r.status === "installed" && !r.evidence
     ? "installed with no evidence — the adoption contract runs evidence → owner → gates → window" : null,
   rulings: NO_STRUCTURAL_RED("a ruling row is HIS WORD on the record, never a duty the organism owes — it cannot be born-red"),
+  // S13 · condition (1) of the A1 ruling: the new table INHERITS the born-red law — a new
+  // table is not an exemption door, and redLawCoverage's count moves 12→13 to prove it.
+  // The witness must RESOLVE ON DISK (condition (2)): an input declaration nobody can check
+  // against the source that computes it is testimony, which is the SHAPE-8 class this whole
+  // rung exists to refuse. Same shape as the `predicates` red, and for the same reason.
+  job_inputs: (r) => {
+    const w = String(r.witness || "");
+    const site = w.split(/[:#\s]/)[0];
+    if (!onDisk(site)) return `the witness site "${clip(w, 80)}" is not on disk — an input declaration that cannot be checked against the code computing it is testimony, not measurement`;
+    // …AND THE CITE IS RESOLVED, NOT JUST THE FILE (condition (2) of the A1 ruling: "the
+    // declaration must be checkable against source, never testimony"). A line number ROTS the
+    // moment anything above it moves — this organism has watched that happen — so the durable
+    // half of the cite is a BACKTICK-QUOTED NEEDLE from the branch itself, and it is READ back
+    // out of the file. A witness that names a needle its own file no longer contains is a
+    // declaration about code that has moved on, which is the SHAPE-8 class again.
+    const needle = (w.match(/`([^`]{4,})`/) || [])[1];
+    if (needle && !organReads(site.replace(/^scripts[\\/]/, ""), needle)) {
+      return `the witness cites \`${clip(needle, 60)}\` in ${site}, and that file no longer contains it — the branch this declaration describes has moved, so the row is now testimony about code that is gone`;
+    }
+    return !(Array.isArray(r.input_class) && r.input_class.length)
+      ? "input_class is EMPTY — a lane with zero declarable inputs is a BORN-RED row and an escalation, never a silent green-light" : null;
+  },
 };
 
 /** redRows — the born-red law (R1) + §13's eligibility law, over EVERY table (F-1). */
@@ -772,6 +853,33 @@ function selftest() {
 
   // ── S10-F · the four S10-R findings, each bitten where it was found ────────
   // F-1 · THE BORN-RED LAW COVERS EVERY TABLE — coverage is now a gate on itself.
+  // ── S13 · THE INPUT SIDE — item 2 (declare-or-die on what a lane READS) + item 4
+  // (cadence is a DECLARED act, never a constant hidden in code). Bitten RED-first.
+  assert("S13 · INPUT ROW LAW — subject + input_class + witness or the row is refused; an EMPTY input_class is refused too (a lane with nothing to check is a shrug, and a shrug is what the ratchet exists to catch)",
+    upsertRow("job_inputs", { subject: "j1", witness: "scripts/brain.mjs" }, { path: P }).ok === false
+    && upsertRow("job_inputs", { subject: "j1", input_class: [], witness: "scripts/brain.mjs" }, { path: P }).ok === false
+    && upsertRow("job_inputs", { subject: "j1", input_class: [{ path: "a.json" }], witness: "scripts/brain.mjs" }, { path: P }).ok === false
+    && upsertRow("job_inputs", { subject: "j1", input_class: [{ path: "a.json", required: true }], witness: "scripts/brain.mjs" }, { path: P }).ok === true);
+  assert("S13 · EVERY ENTRY SAYS required EXPLICITLY — an undeclared requirement is the ratio guard finding #64 already refused, arriving through a new door",
+    upsertRow("job_inputs", { subject: "j2", input_class: [{ path: "a.json", required: true }, { path: "b.json" }], witness: "scripts/brain.mjs" }, { path: P }).ok === false);
+  assert("S13 · CADENCE OVERRIDE IS A NUMBER OF HOURS OR IT IS ABSENT — absent means the DECLARED seed answers, never a hidden default",
+    upsertRow("job_inputs", { subject: "j3", input_class: [{ path: "a.json", required: true }], witness: "scripts/brain.mjs", cadence_h: "soon" }, { path: P }).ok === false
+    && upsertRow("job_inputs", { subject: "j3", input_class: [{ path: "a.json", required: true }], witness: "scripts/brain.mjs", cadence_h: 0 }, { path: P }).ok === false
+    && upsertRow("job_inputs", { subject: "j3", input_class: [{ path: "a.json", required: true }], witness: "scripts/brain.mjs", cadence_h: 24 }, { path: P }).ok === true
+    && jobInputClass("j3", P).cadence_h === 24);
+  assert("S13 · THE WITNESS IS RESOLVED, NOT QUOTED (A1 condition 2) — a cite whose FILE is gone goes red, and so does one whose named branch its own file no longer contains",
+    redRows(P).some((r) => r.subject === "j_ghost") === false
+    && upsertRow("job_inputs", { subject: "j_ghost", input_class: [{ path: "a.json", required: true }], witness: "scripts/no_such_organ.mjs:1" }, { path: P }).ok === true
+    && redRows(P).some((r) => r.subject === "j_ghost" && /not on disk/.test(r.why))
+    && upsertRow("job_inputs", { subject: "j_moved", input_class: [{ path: "a.json", required: true }], witness: "scripts/brain.mjs:1 · runJob branch `job.kind === \"a_branch_that_never_existed\"`" }, { path: P }).ok === true
+    && redRows(P).some((r) => r.subject === "j_moved" && /no longer contains it/.test(r.why)));
+  assert("S13 · THE SEED IS A DECLARED ACT — the cadence default is a mechanisms ROW with a receipt; an absent or unreadable seed THROWS rather than silently passing every lane",
+    (() => { try { inputCadenceDefaultH(P); return false; } catch (e) { return /seed it via/.test(String(e.message)); } })()
+    && upsertRow("mechanisms", { subject: "input_cadence_default", schema_owner: "registry.mjs", witness: "queue RULING__2026-08-29_s12-inputguard-full.md Q3", subjects: ["48"] }, { path: P }).ok === true
+    && inputCadenceDefaultH(P) === 48
+    && upsertRow("mechanisms", { subject: "input_cadence_default", schema_owner: "registry.mjs", witness: "q", subjects: ["soon"] }, { path: P }).ok === true
+    && (() => { try { inputCadenceDefaultH(P); return false; } catch (e) { return /not a positive number of hours/.test(String(e.message)); } })());
+
   assert("F-1 · RED-LAW COVERAGE — every table in the closed set declares how its rows go red (a thirteenth table cannot escape the law by omission)",
     redLawCoverage().ok === true && redLawCoverage().covered === Object.keys(TABLES).length, JSON.stringify(redLawCoverage().missing));
   assert("F-1 · DECLARED RED ON ANY TABLE — a row that says it is red IS red, in a table redRows never used to read (spool_vacuum's class: a notes sentence was testimony, this field is measurement)",

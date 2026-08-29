@@ -290,9 +290,72 @@ export function foldOf(job) {
   return typeof f === "string" && f.trim() ? f.trim() : null;
 }
 
+// ── THE INPUT GUARD (rung S13, 29 Aug 2026) — the fifth letter, I ────────────
+// HIS SENTENCE IS THE SPEC, verbatim 29 Aug 2026: "i want to turn on everything in organism
+// with the highest level of quality and intensity but it should only start working my data
+// comes in them." That is ONE property, not a compromise: every lane enabled permanently,
+// each self-gating on the LIVENESS OF ITS OWN INPUT CLASS. After this letter, activation is
+// AUTOMATIC — the guard IS the flip, and no lane needs a stage or a haan to come back.
+//
+// WHY E WAS NOT ALREADY THIS, MEASURED (S12, 29 Aug): E is `existsSync(p)` at brain.mjs:2591.
+// An input that exists and is EMPTY passes it, and one whose newest row is nine days old
+// passes exactly like one written a minute ago. The missing dimension is VINTAGE and
+// NEVER-BORN — §9's SHAPE 3 verbatim. `first_real_row_at` was believed to be that guard and
+// was NOT: `grep -c first_real_row_at gate.mjs brain.mjs` → 0 and 0. It is a REPORTING meter
+// in registry.mjs and sits in no spend path. I is that guard, in the spend path.
+//
+// THE PREDICATE, per required input class: EXISTS ∧ ≥1 REAL ROW ∧ NEWEST ROW INSIDE the
+// lane's own declared cadence. Vintage is read from the PAYLOAD's own timestamps, never
+// from mtime (the readiness lesson — thalamus.mjs AFFERENT_SOURCES; flow_atlas.mjs says the
+// same in its own header). Cadence is a DECLARED row field, seeded 48h in the registry
+// (`mechanisms/input_cadence_default`), tightened per lane only by measurement, never
+// loosened by prose (architect ruling, 29 Aug, Q3).
+//
+// TRANSITIVE, FAIL-CLOSED, ROOT NAMED (ruling RULING__2026-08-29_s13-rowhome+transitivity.md,
+// which AMENDS the parent ruling's letter): a chain bottoming in a dead or unfed root does not
+// spend, and the verdict NAMES the root. `diary` is rooted only in `agenda`'s output, so a
+// non-transitive guard green-lights a chain that bottoms out in nothing. The edges are
+// WITNESSED, never hand-listed — job→job derived at read time from brain_config's own
+// out↔inputs pairs, file→organ from the atlas, and a root with no witnessed writer is
+// UNWITNESSED and fails closed.
+//
+// PURE, LIKE EVERY OTHER LETTER. This file opens no file and knows no clock: the RUNNER
+// measures (brain.mjs inputLiveness) and hands the fact in, exactly as it does for `fold`.
+//
+// THE THREE STATES, and the middle one is the whole point:
+//   fact object → judged on it.
+//   `null`      → the runner looked and found NO DECLARED INPUT CLASS ⇒ I FAILS. That is
+//                 declare-or-die extended to the INPUT side, symmetric with C's consumer
+//                 ratchet. A lane with zero declarable inputs after honest derivation earns a
+//                 BORN-RED registry row and an escalation — never an invented input class.
+//   `undefined` → the CALLER is not on the input guard (the non-brain lane path: nightshift,
+//                 dmn, selfknowledge — outside this rung's ruled 34 jobs). I holds, and the
+//                 verdict CARRIES `input_guard.covered === false` so the journal, the card and
+//                 `gate show` all SAY the guard cannot see it. A guard that green-lights what
+//                 it cannot see SILENTLY is SHAPE 8; one that says so out loud is a measured
+//                 gap with a name, which is what the handoff carries as the remainder.
+export function inputVerdict(inputs, { forcedLive = false, forcedUntilMs = null } = {}) {
+  if (inputs === undefined) return { ok: true, covered: false, detail: "NOT COVERED BY THE INPUT GUARD — this caller declares no input class to the gate (the non-brain lane path); its spend is unguarded on the input side and this verdict says so rather than passing it silently" };
+  if (inputs === null) return { ok: false, covered: true, detail: "NO INPUT CLASS DECLARED — the input-side ratchet: a lane may not spend until something declares what it reads (its brain_config `inputs`, or a `job_inputs` registry row for a lane that computes them in code)" };
+  const f = typeof inputs === "object" ? inputs : {};
+  const dead = Array.isArray(f.dead) ? f.dead : [];
+  if (forcedLive && f.ok === false) {
+    return { ok: true, covered: true, forced: true, dead, root: f.root || null, cadence_h: f.cadence_h ?? null,
+      detail: `${dead.length} input class(es) dead (${f.root ? `root: ${f.root}` : dead.map((d) => d && d.path).filter(Boolean).join(", ") || "unnamed"}), but forced awake until ${forcedUntilMs ? new Date(forcedUntilMs).toISOString().slice(0, 16) : "?"}Z (his na / gate wake) — reversibility beats every letter` };
+  }
+  const ok = f.ok !== false;
+  return { ok, covered: true, dead, root: f.root || null, cadence_h: f.cadence_h ?? null,
+    detail: f.detail || (ok
+      ? `every declared input class is alive${typeof f.declared === "number" ? ` (${f.declared} checked)` : ""}`
+      : `${dead.length} input class(es) not alive${f.root ? ` — root: ${f.root}` : ""}${dead.length ? ` · ${dead.map((d) => `${d && d.path}: ${d && d.why}`).join(" · ")}` : ""}`) };
+}
+
 // ── THE VERDICT ──────────────────────────────────────────────────────────────
-// decide({ job, evidence, consumption, failures, now, forced, fold }) →
-//   { run, state: "awake"|"asleep", why: {E,C,F,D}, wakes_when, cfg }
+// decide({ job, evidence, consumption, failures, now, forced, fold, inputs }) →
+//   { run, state: "awake"|"asleep", why: {E,C,F,D,I}, wakes_when, cfg }
+//
+//   inputs      the RUNNER's input-liveness fact — see inputVerdict above for the three
+//               states and why `undefined` is a MEASURED gap and not a silent pass.
 //
 //   fold        { target: string, covered: boolean, detail?: string } | null — the
 //               runner's read of the fold (null / absent ⇒ D holds: not folded, or the
@@ -321,7 +384,7 @@ export function foldOf(job) {
 //               (a wake) overrides F for exactly one run; a success then clears the
 //               streak on the ledger by itself, which is the only clear there is.
 //   forced      { until?: ISO|null, once?: boolean } — the two wake mechanisms.
-export function decide({ job, evidence, consumption, failures, now = new Date(), forced = null, fold = null, consumer = undefined } = {}) {
+export function decide({ job, evidence, consumption, failures, now = new Date(), forced = null, fold = null, consumer = undefined, inputs = undefined } = {}) {
   const cfg = gateConfig(job);
   const nowMs = now instanceof Date ? now.getTime() : ms(now);
   const ev = evidence || {};
@@ -380,21 +443,27 @@ export function decide({ job, evidence, consumption, failures, now = new Date(),
   else if (fold && fold.covered === true) { D = false; Ddetail = fold.detail || `folded → ${foldTarget}: the fold target covers this lane's day`; }
   else Ddetail = (fold && fold.detail) ? `folded → ${foldTarget}, fold OPEN — ${fold.detail}` : `folded → ${foldTarget}, but the runner reported no cover — the fold is OPEN and this lane decides on E·C·F`;
 
-  const run = E && C && F && D;
+  // I — every declared INPUT CLASS is alive (rung S13). The runner measured; this turns it
+  // into the verdict, like E·C·F·D. A live force opens I for the same reason it opens D.
+  const iv = inputVerdict(inputs, { forcedLive, forcedUntilMs });
+  const I = iv.ok;
+
+  const run = E && C && F && D && I;
   const state = run ? "awake" : "asleep";
   return {
     run, state, cfg,
-    why: { E: { ok: E, detail: Edetail }, C: { ok: C, detail: Cdetail }, F: { ok: F, detail: Fdetail }, D: { ok: D, detail: Ddetail } },
+    why: { E: { ok: E, detail: Edetail }, C: { ok: C, detail: Cdetail }, F: { ok: F, detail: Fdetail }, D: { ok: D, detail: Ddetail }, I: { ok: I, detail: iv.detail } },
     fold: foldTarget ? { target: foldTarget, covered: !D } : null,
     consumer: who,                                                   // S7: the verdict CARRIES its declared consumer — the journal, the card and `gate json` all name WHICH consumer went quiet
-    wakes_when: run ? null : wakesWhen({ job, E, C, F, D, reqAbsent, cfg, foldTarget, consumer: who }),
+    input_guard: { covered: iv.covered, root: iv.root || null, dead: iv.dead || [], cadence_h: iv.cadence_h ?? null },   // S13: the verdict CARRIES its input reading — an UNCOVERED caller is a measured gap with a name, never a silent green
+    wakes_when: run ? null : wakesWhen({ job, E, C, F, D, I, iv, reqAbsent, cfg, foldTarget, consumer: who }),
   };
 }
 
 // The sentence on the card and in `brain status`: what has to happen for this lane
 // to wake ITSELF. Derived from the job's own declarations, never a hand-written per-
 // job string (a per-job table is the list this file exists to abolish).
-export function wakesWhen({ job, E, C, F, D = true, reqAbsent = [], cfg = gateConfig(job), foldTarget = foldOf(job), consumer = undefined } = {}) {
+export function wakesWhen({ job, E, C, F, D = true, I = true, iv = null, reqAbsent = [], cfg = gateConfig(job), foldTarget = foldOf(job), consumer = undefined } = {}) {
   const who = consumer === undefined ? declaredConsumer(job && job.id, { surface: job && job.surface }) : consumer;
   const parts = [];
   if (!E) parts.push(reqAbsent.length ? `${reqAbsent.join(", ")} exists again` : "its evidence exists again");
@@ -407,6 +476,14 @@ export function wakesWhen({ job, E, C, F, D = true, reqAbsent = [], cfg = gateCo
   else if (!C) parts.push(`its output reaches him (${consumptionHint(job)}) — or his 'na' on the card / \`brain gate wake ${job && job.id ? job.id : "<job>"}\` opens it for ${cfg.window_days}d`);
   if (!F) parts.push(`\`brain gate wake ${job && job.id ? job.id : "<job>"}\` runs it once (a success clears the ${cfg.fail_streak}-fail streak)`);
   if (!D) parts.push(`the fold opens by itself the night ${foldTarget || "its fold target"} fails or misses (this lane is the fallback) — or \`brain gate wake ${job && job.id ? job.id : "<job>"}\` runs it beside the fold for ${cfg.window_days}d`);
+  // S13 — HIS OWN SENTENCE, as an instruction: "it should only start working my data comes in
+  // them". So the I clause names the DATA, and its arrival is the wake — no stage, no haan.
+  if (!I) {
+    const dead = (iv && Array.isArray(iv.dead) ? iv.dead : []).map((d) => d && d.path).filter(Boolean);
+    parts.push(iv && iv.covered === true && !dead.length
+      ? `something DECLARES what this lane reads (its brain_config \`inputs\`, or a \`job_inputs\` registry row) — until then no data of his can open it`
+      : `his data lands in ${dead.slice(0, 3).join(", ") || "its input class"}${iv && iv.root ? ` (the dead root is ${iv.root} — fix THAT, not this lane)` : ""}${iv && iv.cadence_h ? `, inside its ${iv.cadence_h}h cadence` : ""} — or \`brain gate wake ${job && job.id ? job.id : "<job>"}\` runs it once`);
+  }
   return parts.join(" · ") || "n/a";
 }
 
@@ -689,6 +766,59 @@ function selftest() {
   assert("S7 consumerLabel — him · the organs by name · the retired lane · and the undeclared lane, each said in words a card can carry",
     consumerLabel({ kind: "him" }) === "him" && consumerLabel({ kind: "organ", names: ["a.mjs", "b.mjs"] }) === "a.mjs / b.mjs"
     && /RETIRED/.test(consumerLabel({ kind: "organ", names: [], retired: true })) && /no consumer declared/.test(consumerLabel(null)));
+
+  // ── S13 · THE INPUT GUARD, bitten RED-first (his order made a letter) ──────────
+  // Every assert below is written so that DELETING the I clause from decide() turns it red.
+  const JI = (id) => J(id);
+  const LIVE = { ok: true, declared: 2, cadence_h: 48, dead: [], root: null };
+  const DEAD = { ok: false, declared: 2, cadence_h: 48, root: "physio.mjs",
+    dead: [{ path: "readiness.json", why: "STALE — newest row 606.1h old, outside the 48h cadence", age_h: 606.1, root: "physio.mjs" }] };
+
+  const iLive = decide({ job: JI("formation_read"), evidence: {}, consumption: { last_at: iso(1) }, now: NOW, inputs: LIVE });
+  const iDead = decide({ job: JI("formation_read"), evidence: {}, consumption: { last_at: iso(1) }, now: NOW, inputs: DEAD });
+  assert("S13/I — HIS SENTENCE AS A LETTER: a lane whose declared input class is ALIVE runs; the same lane with a STALE input SLEEPS on I, and nothing else about it changed",
+    iLive.run === true && iLive.why.I.ok === true
+    && iDead.run === false && iDead.state === "asleep" && iDead.why.I.ok === false
+    && iDead.why.E.ok === true && iDead.why.C.ok === true && iDead.why.F.ok === true && iDead.why.D.ok === true);
+  assert("S13/I — the verdict NAMES THE ROOT, not the lane that merely reads it (fixing a named root fixes every lane below it)",
+    iDead.input_guard.root === "physio.mjs" && /606\.1h/.test(iDead.why.I.detail)
+    && /physio\.mjs/.test(iDead.wakes_when) && /his data lands in readiness\.json/.test(iDead.wakes_when));
+
+  // THE RATCHET — declare-or-die, extended to the INPUT side. `null` is the runner saying
+  // "I looked and nothing declares what this lane reads"; it may never read as a pass.
+  const iRatchet = decide({ job: JI("some_lane"), evidence: {}, consumption: { last_at: iso(1) }, now: NOW, inputs: null });
+  assert("S13/I — THE INPUT RATCHET: a lane that declares NO input class may not spend, and the sentence names both doors that can declare it",
+    iRatchet.run === false && iRatchet.why.I.ok === false
+    && /NO INPUT CLASS DECLARED/.test(iRatchet.why.I.detail)
+    && /job_inputs/.test(iRatchet.why.I.detail) && /something DECLARES what this lane reads/.test(iRatchet.wakes_when));
+
+  // THE MEASURED GAP — a caller outside the guard is FLAGGED, never silently green-lit. This is
+  // the assert that refuses SHAPE 8 on the guard's own side: `covered:false` is a fact the
+  // journal, the card and `gate show` carry, so an unguarded lane can never read as a guarded one.
+  const iUncovered = decide({ job: JI("ns_probe_bank"), evidence: {}, consumption: { last_at: iso(1) }, now: NOW });
+  assert("S13/I — a caller the guard does NOT cover passes, and the verdict SAYS SO (covered:false) — a silent green-light is SHAPE 8, a named gap is a measurement",
+    iUncovered.run === true && iUncovered.why.I.ok === true
+    && iUncovered.input_guard.covered === false && /NOT COVERED BY THE INPUT GUARD/.test(iUncovered.why.I.detail)
+    && decide({ job: JI("x"), evidence: {}, consumption: { last_at: iso(1) }, now: NOW, inputs: LIVE }).input_guard.covered === true);
+
+  // HIS DOOR, on this letter too — "reversibility beats every letter" is the D branch's own
+  // sentence, and I is not an exception to it.
+  const iForced = decide({ job: JI("formation_read"), evidence: {}, consumption: { last_at: iso(1) }, now: NOW, inputs: DEAD, forced: { until: iso(-1) } });
+  assert("S13/I — his `gate wake` / `na` opens I exactly as it opens D: reversibility beats every letter, and the verdict records that it was forced",
+    iForced.run === true && iForced.why.I.ok === true && /forced awake until/.test(iForced.why.I.detail) && /root: physio\.mjs/.test(iForced.why.I.detail));
+
+  // THE TRANSITIVE SENTENCE — a chain bottoming in an unfed root fails closed and the ROOT is
+  // the thing named, which is what makes the card actionable (item 3 of the ruling).
+  const iChain = decide({ job: JI("diary"), evidence: {}, consumption: { last_at: iso(1) }, now: NOW,
+    inputs: { ok: false, declared: 1, cadence_h: 48, root: "agenda", dead: [{ path: "brain_out/agenda/TODAY.json", why: "its producer agenda is not fed (salience_ledger.jsonl: STALE)", root: "agenda" }] } });
+  assert("S13/I — TRANSITIVE, FAIL-CLOSED: a chain bottoming in an unfed producer sleeps, and the verdict names the PRODUCER as the root",
+    iChain.run === false && iChain.why.I.ok === false && iChain.input_guard.root === "agenda"
+    && /fix THAT, not this lane/.test(iChain.wakes_when));
+
+  assert("S13/I — inputVerdict is the ONE place the three states live, so reversing any of them is a one-function edit",
+    inputVerdict(undefined).covered === false && inputVerdict(undefined).ok === true
+    && inputVerdict(null).ok === false && inputVerdict(null).covered === true
+    && inputVerdict({ ok: true }).ok === true && inputVerdict({ ok: false, dead: [] }).ok === false);
 
   assert("THIS ORGAN WRITES NOTHING — its source has no write call (the journal, the lane and the card belong to their owners)",
     !/writeFileSync|appendFileSync|renameSync|mkdirSync|unlinkSync/.test(readFileSync(new URL(import.meta.url), "utf8").replace(/^\/\/.*$/gm, "").replace(/assert\("THIS ORGAN WRITES NOTHING[^\n]*\n[^\n]*/m, "")));

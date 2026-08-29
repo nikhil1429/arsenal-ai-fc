@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-08-29T04:48:06.107Z",
+ "updated_at": "2026-08-29T06:15:06.750Z",
  "tables": {
   "mechanisms": [
    {
@@ -247,6 +247,17 @@
     "notes": "STANDING FINDING, architect-ruled 29 Aug (queue\\RULING__2026-08-29_s12-inputguard-full.md answer 4). THE CLASS: a state file that declares itself approval-gated, whose owner organ exposes NO CLI able to change it. The owners-only law (§10-D rule 4) then has no compliant path, so honouring an approval-gate requires a hand-edit behind a declared ARSENAL_RAILS_OVERRIDE — which is exactly the shape the rail exists to refuse. S1's rail already names this case in its own refusal text: 'if no owner exists, that absence is the finding'. This row IS that finding, made standing rather than re-discovered per incident. ROUTED: a `config set` verb designed ONCE for the whole class (receipt + revert path per write) is its own carded post-floor rung; explicitly NOT S13's. Until it lands, an approval-gated config may be hand-edited ONLY with (a) an architect ruling naming the write, (b) the override declared in the rung's micro-order BEFORE the write, (c) a receipt key inside the file itself, and (d) the scope limited to the single key ruled. S12 met all four for thalamus_config and REFUSED to do it for brain_config, which is the precedent this row carries forward.",
     "updated_at": "2026-08-29T04:48:06.101Z",
     "added_at": "2026-08-29T04:48:06.101Z"
+   },
+   {
+    "subject": "input_cadence_default",
+    "schema_owner": "registry.mjs",
+    "subjects": [
+     "48"
+    ],
+    "witness": "queue RULING__2026-08-29_s12-inputguard-full.md Q3 — \"Cadence = a PER-LANE ROW FIELD, seeded 48h (the pulse's own measured number is a legitimate seed)\"",
+    "why": "THE INPUT GUARD'S CADENCE SEED, IN HOURS. The subject IS the number: a lane's declared input class is alive only while its newest PAYLOAD row is inside this window. It lives here and not in the guard because seeding is a DECLARED ACT with a receipt — a window hidden as a constant in code is a decision nobody can find, revert or tighten. Per-lane `cadence_h` on a job_inputs row overrides it; tightening is measurement, loosening is prose (ruled 29 Aug, Q3). Also the exact tolerance the manager's own readiness gate already uses (manager.mjs readinessFresh: lag <= 2 days), so the guard and the organ agree to the hour.",
+    "updated_at": "2026-08-29T06:15:05.586Z",
+    "added_at": "2026-08-29T06:15:05.586Z"
    }
   ],
   "sandbox_subjects": [
@@ -1084,6 +1095,226 @@
     "text": "HIS DECISION + HIS VISION, 24 Aug — PERISHABLE LIST AND THE FITNESS ORGAN. VERBATIM: \"i think youtube skip karo but movement should be there?? gemini live on my phone can become a fitness coach right?? ... kaise hoga ab ye nahi pata, that s not my job right? i have this vision that organism should use his brain on gemini live app which i have to direct it daily and it should be a closed loop bascially gemini live on my phone becomes an organ of fitness coach because i think body movement is important, it will give me more energy to work for domination job\". YouTube confirmed NOT perishable, waits. EXECUTOR REFINEMENT HIS INSTINCT FORCED: Oura records THAT he moved, nothing records WHAT HE TRAINED - session, load, reps, how it felt, whether form held. So the TRAINING RECORD is a distinct perishable stream that begins existing the day he starts training. TWO PROBLEMS ADDED TO Q-19 SO THE FORK IS NOT UNDER-READ: (1) the OUTBOUND leg has a pattern (day_cartridge writes another model s system instruction) but the INBOUND leg has NONE - every existing organ writes its own state to a file; a Gemini Live session on his phone writes nothing the organism can read, so the loop is open at the return end and that is where the engineering actually sits; (2) his own clause \"which i have to direct it daily\" makes HIM the transport, and his standing law says anything he must remember or chase is a bug in the organism - acceptable perhaps, but it should be deliberate.",
     "updated_at": "2026-08-28T20:30:42.633Z",
     "added_at": "2026-08-28T20:30:42.633Z"
+   }
+  ],
+  "job_inputs": [
+   {
+    "subject": "formation_read",
+    "witness": "scripts/brain.mjs:3642 · runJob branch `job.kind === \"manager_m3\"` → manager.mjs runManager → loadBus",
+    "why": "THE TEAM SHEET (opus). Its reading is invisible to any declarative guard: the job declares no `inputs` at all and the whole bus is assembled inside manager.mjs loadBus. WHICH of the 15 files are LIVENESS-BEARING is not a reading of mine — manager.mjs staleness() names exactly these six and gates on them, and manager.mjs:67-74 says in as many words that buckets.json / learning_state_config.json are \"config, not a signal => never staleness-gated\". The organ's own gate is the witness; nothing here is invented.",
+    "input_class": [
+     {
+      "path": "readiness.json",
+      "required": true
+     },
+     {
+      "path": "timeaudit.json",
+      "required": true
+     },
+     {
+      "path": "cards.json",
+      "required": true
+     },
+     {
+      "path": "calibration.json",
+      "required": true
+     },
+     {
+      "path": "weaknesses.json",
+      "required": true
+     },
+     {
+      "path": "learning_state.json",
+      "required": true
+     },
+     {
+      "path": "season.json",
+      "required": false
+     },
+     {
+      "path": "season_read.json",
+      "required": false
+     },
+     {
+      "path": "capsule_map.json",
+      "required": false
+     },
+     {
+      "path": "shipped.json",
+      "required": false
+     },
+     {
+      "path": "benchmark.json",
+      "required": false
+     },
+     {
+      "path": "captain_note.md",
+      "required": false
+     },
+     {
+      "path": "post_match/TODAY.md",
+      "required": false
+     },
+     {
+      "path": "buckets.json",
+      "required": false,
+      "config_not_signal": true,
+      "why": "manager.mjs:67-69 — \"Config, not a signal => never staleness-gated\", in source"
+     },
+     {
+      "path": "learning_state_config.json",
+      "required": false,
+      "config_not_signal": true,
+      "why": "manager.mjs:70-74 — the have/need target set, config not a signal, in source"
+     }
+    ],
+    "updated_at": "2026-08-29T06:15:05.732Z",
+    "added_at": "2026-08-29T06:15:05.732Z"
+   },
+   {
+    "subject": "agenda",
+    "witness": "scripts/brain.mjs:3771 · runJob branch `job.kind === \"agenda\"` (salienceDaySummary · outcomesFor · teaching_contract · last shift's dreams)",
+    "why": "THE FIRST THOUGHT OF THE NIGHT LANE (opus). Its own config `_note` says it outright: \"Inputs are ALL code-computed in the runJob branch\", and `inputs: []` — so the declarative guard saw NOTHING and would have passed it vacuously. The salience ledger is the day's evidence and the whole point of the lane (spend follows surprise); with it dead there is no surprise to follow. Last night's dreams stay OPTIONAL by the lane's own law — an unpicked bridge is inert by construction, never a reason to sleep the agenda.",
+    "input_class": [
+     {
+      "path": "salience_ledger.jsonl",
+      "required": true
+     },
+     {
+      "path": "brain_outcomes.jsonl",
+      "required": true
+     },
+     {
+      "path": "teaching_contract.json",
+      "required": true
+     },
+     {
+      "path": "brain_out/dreams",
+      "required": false
+     }
+    ],
+    "updated_at": "2026-08-29T06:15:05.883Z",
+    "added_at": "2026-08-29T06:15:05.883Z"
+   },
+   {
+    "subject": "model_mine",
+    "witness": "scripts/brain.mjs:3761 · runJob branch `job.kind === \"model_mine\"` (nikhil_model_grid tail · nikhil_model edges · outcomesFor)",
+    "why": "THE NIGHTLY EDGE PROPOSER (opus). `inputs: []`, and the food is read in the branch: the owner's own 14-day fact grid and the currently-tracked edges. Both are REQUIRED because the lane's contract is that code re-derives every number from the grid — a proposer with a dead grid proposes from nothing, which is the invented-statistic failure the lane was built to prevent. Outcomes are context, not the subject.",
+    "input_class": [
+     {
+      "path": "nikhil_model_grid.jsonl",
+      "required": true
+     },
+     {
+      "path": "nikhil_model.json",
+      "required": true
+     },
+     {
+      "path": "brain_outcomes.jsonl",
+      "required": false
+     }
+    ],
+    "updated_at": "2026-08-29T06:15:06.031Z",
+    "added_at": "2026-08-29T06:15:06.031Z"
+   },
+   {
+    "subject": "dreams",
+    "witness": "scripts/brain.mjs:3875 · runJob branch `job.kind === \"dreams\"` (crackedAxesInventory · lexicon · concepts alias map)",
+    "why": "THE NIGHT RECOMBINATION. `inputs: []`; the branch computes a cracked-axes inventory from rejirah_log + brain_outcomes + reps_log and REFUSES BEFORE SPEND when it is empty (that refusal is already a code path, and it is the inventory's real guard — this row does not duplicate it). What the row adds is his LEXICON: the bridges must be written in the metaphors his brain already runs on, so a dead lexicon means invented imagery. concepts.json is the syllabus registry and carries NO payload timestamp of any kind (measured) — declared required it would sleep this lane forever, so it is declared config-not-signal, the same distinction manager.mjs makes in source.",
+    "input_class": [
+     {
+      "path": "lexicon.json",
+      "required": true
+     },
+     {
+      "path": "rejirah_log.jsonl",
+      "required": false
+     },
+     {
+      "path": "reps_log.jsonl",
+      "required": false
+     },
+     {
+      "path": "brain_outcomes.jsonl",
+      "required": false
+     },
+     {
+      "path": "concepts.json",
+      "required": false,
+      "config_not_signal": true,
+      "why": "the syllabus registry — a concept id list with no payload timestamp anywhere in it (measured 29 Aug); config, not a signal"
+     }
+    ],
+    "updated_at": "2026-08-29T06:15:06.173Z",
+    "added_at": "2026-08-29T06:15:06.173Z"
+   },
+   {
+    "subject": "gemini_render",
+    "witness": "scripts/brain.mjs:3728 · runJob branch `job.kind === \"render\" && job.prompt_file` (reads club/prompts/<prompt_file>)",
+    "why": "THE WALL RENDER. `inputs: null`; the branch reads the auto-written Wall-Painter prompt, which viz.mjs regenerates with the night's own JSON state inside it. That file IS the lane's whole input class, and it carries its own payload stamp (`generated_at` inside the fenced json viz writes) — so its vintage is measurable from the payload and no mtime is needed. A stale prompt file means the render would repaint an old night as tonight.",
+    "input_class": [
+     {
+      "path": "../club/prompts/wall_painter.md",
+      "required": true
+     }
+    ],
+    "updated_at": "2026-08-29T06:15:06.316Z",
+    "added_at": "2026-08-29T06:15:06.316Z"
+   },
+   {
+    "subject": "maidan_poster",
+    "witness": "scripts/brain.mjs:3728 · runJob branch `job.kind === \"render\" && job.prompt_file` (reads club/prompts/<prompt_file>)",
+    "why": "THE MATCH POSTER. Same shape as gemini_render and the same reason: `inputs: null`, the branch reads viz.mjs's auto-written prompt file, and that file carries its own `generated_at` payload stamp. A stale prompt is a poster of a week that has already gone.",
+    "input_class": [
+     {
+      "path": "../club/prompts/match_poster.md",
+      "required": true
+     }
+    ],
+    "updated_at": "2026-08-29T06:15:06.457Z",
+    "added_at": "2026-08-29T06:15:06.457Z"
+   },
+   {
+    "subject": "diary",
+    "witness": "scripts/brain.mjs:3798 · runJob branch `job.kind === \"diary\"` (ledgerShiftSummary · outcomesFor · watchman_last · night_coach serve file)",
+    "why": "THE BRAIN'S NIGHTLY PAGE, and the ruling's OWN named transitive case. brain_config declares one input as a plain string, so it is optional and the required set was EMPTY — the guard would have passed this lane vacuously, and the case item 3 exists for would never have been exercised. This row supplies the liveness-bearing half without touching approval-gated config: the agenda sibling (the transitive edge: `brain_out/agenda/…` resolves to the job whose `out` is `agenda`, so a dead agenda names AGENDA as the root, not diary), and tonight's ledger, which ledgerShiftSummary reads and which is the page's actual subject — attended, believed, tested, was wrong.",
+    "input_class": [
+     {
+      "path": "brain_out/agenda/TODAY.json",
+      "required": true
+     },
+     {
+      "path": "brain_ledger.jsonl",
+      "required": true
+     },
+     {
+      "path": "brain_outcomes.jsonl",
+      "required": false
+     },
+     {
+      "path": "watchman_last.json",
+      "required": false
+     },
+     {
+      "path": "nikhil_model.json",
+      "required": false
+     }
+    ],
+    "updated_at": "2026-08-29T06:15:06.605Z",
+    "added_at": "2026-08-29T06:15:06.605Z"
+   },
+   {
+    "subject": "midday_reread",
+    "witness": "scripts/brain.mjs:3728 · the generic `buildAnalysisPrompt` path (kind \"analysis\": no branch of its own, so brain_config's `inputs` are its whole reading)",
+    "why": "THE DAY'S BEHAVIOUR, READ AT 13:30 (its G9 note: \"The day's behaviour finally reaches the evening voice\"). All five of its declared inputs are plain strings, so the required set was EMPTY and the guard would have passed it vacuously. WHICH input is liveness-bearing is derived from the config itself, not from taste: the three other lanes of this same midday window (midday_digest, midday_digest_2, midday_digest_3) each declare `{\"path\":\"timeaudit.json\",\"required\":true}` — the config names the day-behaviour input three times over, and this is the fourth lane of that window reading the same day. The rest stay optional exactly as its siblings leave them.",
+    "input_class": [
+     {
+      "path": "timeaudit.json",
+      "required": true
+     }
+    ],
+    "updated_at": "2026-08-29T06:15:06.747Z",
+    "added_at": "2026-08-29T06:15:06.747Z"
    }
   ]
  }
