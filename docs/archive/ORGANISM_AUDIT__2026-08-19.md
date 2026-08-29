@@ -3041,7 +3041,45 @@ STATUS (update this block before any session stops — this is the handoff)
                                    na or on S6-R findings: the ruler routes (S6-F).**~~ ✅ **DONE 28 Aug 2026 — see the `S6-R` ☑ row in §10-C
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
-  ▶ NEXT SESSION ............... **`S11` · BUILD · STALENESS / KEYS / CRASH. MODEL: Opus 5 ·
+  ▶ NEXT SESSION ............... **`S12` · THE STAGED REBOOT. MODEL: Opus 5 · effort max.
+                                   CEILING: 40. ⛔ **THIS RUNG IS THE ONE WITH HIS GATE ON IT: his
+                                   word flips EACH stage, one at a time, and no stage flips without
+                                   it.** ⭐ AND ITS PRE-FLIGHT COMES FIRST (quality-strategy ruling,
+                                   28 Aug): a full-ladder acceptance pass — every rung's proofs
+                                   re-run GREEN in ONE sitting, signed by the architect — or no
+                                   stage flips at all.
+                                   ⛑ WHAT S11 HANDS IT, all of it built and none of it fired:
+                                   (1) `node scripts/watchman.mjs tmpsweep --apply` is the FIRST
+                                   thing the reboot runs, before any organ wakes — it is report-only
+                                   today and there is a real orphan waiting for it (S10-R's O-6,
+                                   `gaffer_blocks.json.tmp6756`, judged QUARANTINE).
+                                   (2) F-3 IS STILL S12'S: per-consumer read-stamps go live when the
+                                   consuming organs wake. `brain_ledger` reports 20 declared
+                                   consumers / 0 read-stamps — that is the switch-off measured
+                                   honestly, and a waking organ is what changes it.
+                                   (3) `models.json`'s keys reading is guarded at 6 h now, so the
+                                   first LLM stage must RE-PROBE rather than trust the board — a
+                                   stale "keys ok" is exactly the 19 Aug 429 lesson.
+                                   ⛑ THREE THINGS S12 MUST NOT RE-DERIVE:
+                                   (1) `npm test` is **121/2** now, and it is still spoken as
+                                   REPRODUCIBLE, NOT STABLE — F-6 is INSTRUMENTED, not closed. The
+                                   cause is still not established; what changed is that the next
+                                   trip writes its own forensics to
+                                   `scripts/hermeticity_forensics.log` (gitignored). READ THAT FILE
+                                   before theorising about hermeticity.
+                                   (2) F-5 is an ACCEPTED COST: the atlas stale-proof keys on mtime,
+                                   so any checkout/branch switch/clone reds `flow_atlas check` on
+                                   byte-identical files. Clear it with `node scripts/xray.mjs build`
+                                   + `node scripts/flow_atlas.mjs build`. NEVER weaken the guard.
+                                   (3) The two waking-related numbers are LIVE-READ, never in prose:
+                                   the task count (`schtasks /Query`) and the daemon count
+                                   (`node scripts/state.mjs`).
+                                   ⛑ carried for HIM, unchanged: c86 is DONE (Node v24.19.0 live)
+                                   but its CARD still sits in the queue; his anchor clears it,
+                                   nothing else may. The interim fresh-questions law STILL BINDS
+                                   the four already-samjhao'd topics.**
+
+  ~~▶ NEXT SESSION ............... **`S11` · BUILD · STALENESS / KEYS / CRASH. MODEL: Opus 5 ·
                                    effort max. CEILING: 40. Its §10-C row is the scope, and it now
                                    carries F-6 as well (routed there by the S10-R signoff ruling):
                                    the suite's HERMETICITY assert is NON-DETERMINISTIC — green then
@@ -3068,7 +3106,9 @@ STATUS (update this block before any session stops — this is the handoff)
                                    ⛑ carried for HIM, unchanged: c86 is DONE (Node v24.19.0 live)
                                    but its CARD still sits in the queue; his anchor clears it,
                                    nothing else may. The interim fresh-questions law STILL BINDS
-                                   the four already-samjhao'd topics.**
+                                   the four already-samjhao'd topics.**~~
+                                   ☑ **S11 IS DONE — all seven items, two commits (`8ecb97b` +
+                                   `fa6df70`), gates stricter only, `npm test` 121/2.**
 
   ~~▶ NEXT SESSION ............... **`S10-F` · REPAIR (ruled + priced 29 Aug): Opus 5 · effort max ·
                                    BUILD 10 · PROOF 6 · HANDOFF 5 (ceiling 21). SCOPE = exactly four
@@ -8206,7 +8246,67 @@ single-rung session. His ruling, 20 Aug 2026. Check it, never guess it:
       any organ. F-3/F-5/F-6 untouched by design. Receipt:
       `arsenal-audit-artifacts\queue\RECEIPT__2026-08-29_s10f.md`
                                                                        CEILING: 21
-☐ S11 BUILD · STALENESS / KEYS / CRASH.                     MODEL: Opus · effort max
+☑ S11 BUILD · STALENESS / KEYS / CRASH — **DONE 29 Aug 2026 (Opus 5 · effort max). ALL SEVEN
+      ITEMS LANDED, in TWO commits because the seventh moves a dependency (§10-D rule 11).**
+      **F-6 · INSTRUMENTED, never hunted** (the row's own instruction). Nothing that TRIPS the
+      assert changed — rule 6 — only what a trip can TELL you, at zero cost on the green path.
+      Two instruments, both measured first: the CONTENT DISCRIMINATOR (the non-excluded set is
+      690 files / 8.0 MB, so hashing either side is affordable where the 93 MB tree is not —
+      S10-R's "idempotent rewrite" hypothesis is now MEASURABLE), and the TIMELINE (selftests
+      spawn sequentially, so a tripped file's own mtime names the window it landed in).
+      **PROVEN ON A REAL RED WINDOW:** a planted mid-suite write was caught, classified,
+      attributed and journaled — and the wording was then TIGHTENED, because that probe was
+      written by an external process inside `blackbox.mjs`'s window, so a window names a
+      CANDIDATE, not a culprit. Forensics append to a gitignored log OUTSIDE the state bus.
+      **RECENCY GATES** · `trailing-n-slice` **7 → 0**, the seven SPLIT by reading each one:
+      three were real SHAPE 4 and are gated by `daykey.withinDays/recentRows` (window FIRST,
+      cap second) — the wall's kal-lines, the season form strip (which now SAYS the record is
+      old instead of drawing a fortnight-old glyph strip under "current run"), the weak-foot
+      streak; four are NOT SHAPE 4 and carry a declared `law-waiver:trailing-n` with its why
+      (three are write-side CAPS — keep the newest N, discard older — and one reads standing
+      instructions the code itself declares non-expiring). The gate lives ONCE, in daykey.
+      **ROTATED CARDS** · `expired_unanswered`, DERIVED not counted up: distinct deal-DAYS
+      before today on a still-unanswered card, read off `dealt[]`. A counter drifts the first
+      skipped day; a derivation is exact, idempotent and self-correcting. Said in `list`.
+      **MODEL-ROSTER KEYS** · the roster and the keys age on DIFFERENT clocks — releases vs
+      quota. `keys_fresh` gets its own **6 h** guard, bounded above by the only datum there is
+      (19 Aug: a 10 h-old "keys ok" was believed and every call 429'd). A GUARD, not a budget:
+      it never blocks a call, it only refuses to CLAIM a key is ok on a reading too old to
+      answer for now. Never measured is NULL, not false.
+      **TORN WRITES** · `watchman tmpsweep [--apply]`. rails.mjs was the instinct and its own
+      header refused it (*"SOLE WRITER of: NOTHING — a rail that can write is a rail that can
+      be part of the accident"*), so it went to the self-repair lane, which already owns a
+      repair journal with revert paths. Three verdicts, safe one default: in-flight · replay
+      (only when the target is missing/unparseable AND the orphan parses WHOLE) · quarantine
+      (renamed aside, NEVER deleted). **The three live tmp shapes are MEASURED** — the first
+      cut matched one and reported "no orphan" while the live one sat in the tree. It now
+      finds S10-R's **O-6** (`gaffer_blocks.json.tmp6756`) and judges it QUARANTINE. **Report
+      only; `--apply` belongs to S12's first stage, behind his gate.**
+      **CACHE KEYS** · `session_meter` keyed a folded transcript on `size+mtimeMs` — a key that
+      omits WHICH FILE this is. sha256 identity folded in, cache **v2 → v3**. Its own append
+      bite caught the FIRST cut of the fix: "the first 4 KB" is only an immutable prefix for
+      files already larger than 4 KB. The identity is now over a RECORDED LENGTH.
+      **ajv · JSON-SCHEMA PER STATE FILE (commit 2/2)** · the third TIER-0 tool beside tsc and
+      eslint, same ratchet. ajv was already on disk as an eslint transitive; it is now a direct
+      devDependency PINNED EXACT at that same version — no second copy, nothing else moved.
+      Four schemas (`schemas/`, with a README that IS the contract), and `laws_register`'s is
+      the sharpest: `not: anyOf[required count|total|laws]`, so **F-7's removed total cannot
+      grow back** — structurally enforced, not merely currently absent.
+      **TWO GATES CAUGHT THIS RUNG'S OWN CODE AND WERE RIGHT BOTH TIMES:** `law-m-literal-model`
+      0→1 (a Claude model id in a new fixture — declared with the file's own `models-literal-ok`
+      marker, as its two neighbours already are) and checkJs 303→309 (a row growing properties
+      mid-function; an options bag tsc could only half-infer). Both returned to baseline.
+      GATES, STRICTER ONLY: `npm test` **121/2** (was 119/2 — +2 asserts, the SAME two known
+      reds) · lawpack GREEN, trailing-n ratcheted **7→0** · gates GREEN 303/303 + schema **4/4**
+      · daykey 33→**39** · captains_call 111→**115** · models 43→**47** · session_meter 31→**37**
+      · gates 15→**20** · watchman 105/2→**114/2** (same two pre-existing reds, verified against
+      a stashed HEAD) · rails **52**/0 · registry **45**/0 · flow_atlas **7**/7 + check OK ·
+      xray Q2/Q5 **0/0** · `proofs_s10` **34**/0.
+      NOTHING WOKEN: no task enabled, no daemon, no LLM lane, no live model probe, 0 organ
+      tokens. Commits `8ecb97b` (six items) + `fa6df70` (the dependency). Receipt:
+      `arsenal-audit-artifacts\queue\RECEIPT__2026-08-29_s11.md`
+                                                                       CEILING: 40
+☐ S11-LEFTOVER (none) — every item in this row is closed; the row is kept for its record.
       sha256(inputs) folded into cache keys · recency gates on trailing-N reads ·
       rotated cards record expired_unanswered · tmp-file replay on boot (the
       torn-write class) · ajv JSON-Schema per state file (owners-only says WHO
@@ -19045,3 +19145,150 @@ cost with a documented clearing command; ④ c86 is DONE but its CARD still sits
 only his anchor clears it; ⑤ `dressing-room\state\gaffer_blocks.json.tmp6756` is still in the tree
 — S10-R's O-6, a live instance of S11's tmp-file replay class, deliberately left for the rung that
 owns it.
+
+---
+
+### PROGRESS 2026-08-29 — RUNG `S11` · BUILD · STALENESS / KEYS / CRASH — **ALL SEVEN ITEMS, TWO COMMITS, AND THE ORGANISM'S OWN GATES CAUGHT MY CODE TWICE** (Opus 5 · effort max · ceiling 40)
+
+Two commits, because the seventh item moves a dependency and §10-D rule 11 says versions move
+alone: **`8ecb97b`** (the six code items) and **`fa6df70`** (ajv + the schemas), the suite green
+at **121/2** on both sides of the dependency. Nothing was woken: no task enabled, no daemon
+started, no LLM lane fired, **no live model probe**, zero organ tokens.
+
+#### F-6 — INSTRUMENTED, NOT HUNTED (the row's own instruction, followed literally)
+S10-R recorded *cause not established* on an assert that went green then red at the same commit.
+The routing ruling said: **instrument across a red window, never hunt a writer.** So nothing that
+TRIPS the assert changed — that would be rule 6 in reverse — only what a trip can TELL you, and
+it costs nothing on the green path.
+
+**(a) The content discriminator.** `snap()` keys on `size:mtimeMs`, so an atomic temp→rename
+writing byte-identical content reads as MODIFIED. That was S10-R's hypothesis and it was never
+measurable. It is now: the non-excluded candidate set was MEASURED at **690 files / 8.0 MB** (the
+82.7 MB is all `LIVE_WRITERS`), so hashing it either side of the run is affordable where hashing
+the 93 MB tree is not. A MODIFIED file now says whether its bytes actually changed.
+
+**(b) The timeline.** Selftests are spawned sequentially, so recording each one's `[start, end]`
+turns a tripped file's own `mtimeMs` into an attribution — **at zero added stat cost**, because
+the spawn loop already runs. A write either lands inside exactly one selftest's window, or lands
+in none, which is the daemon/other-session race this list's header has documented a dozen times.
+
+**PROVEN ON A REAL RED WINDOW, not only on fixtures.** A probe raced the hermeticity section and
+planted one write into live state mid-run; the instrument caught it, classified it `CREATED`,
+named the window it landed in, journaled it, and the planted file was removed. **Then the wording
+was TIGHTENED because of what that proof showed:** the probe landed inside `blackbox.mjs`'s window
+and was written by neither blackbox nor any selftest. A window names a **CANDIDATE, not a
+culprit** — and overstating it would have rebuilt the exact wrong-conclusion-from-one-measurement
+that F-6 *is*. The record appends to a gitignored log OUTSIDE the state bus (the same law the one
+sanctioned thalamus write obeys), so the next occurrence is diagnosable even in a session nobody
+is watching. **F-6 is INSTRUMENTED, not CLOSED** — the cause is still not established, and the
+suite is still spoken as *121/2 reproducible, not stable*.
+
+#### RECENCY GATES — `trailing-n-slice` 7 → 0, and the seven were SPLIT, not swept
+Every one was read in source before it was classified. **Three were real §9 SHAPE 4** and are now
+gated by `daykey.withinDays` / `recentRows` — window FIRST, cap second, which is the inversion
+that was the bug: the wall's kal-lines, the season form strip, the weak-foot streak read. The
+form strip now **says the record is old** rather than drawing a fortnight-old glyph strip under
+the words *"current run"* — a form strip that cannot go quiet is a lie. **Four were not SHAPE 4**
+and carry a declared `law-waiver:trailing-n` with its why: three are WRITE-SIDE CAPS (they keep
+the newest N and discard older — the opposite of treating an old window as new), and one reads
+standing instructions the code itself declares non-expiring, where a recency gate would silently
+drop his own standing word.
+The gate lives **ONCE**, in `daykey.mjs` — already the organism's single owner of what a calendar
+day is. Three private copies of that arithmetic would be the twin-copy disease the lawpack exists
+to catch. Six bites, including the two that matter: an unparseable date is NOT recent (an
+unreadable stamp may never buy its way into a window of NOW), and a lane that stopped writing a
+month ago returns EMPTY so the caller must say so.
+
+#### ROTATED CARDS — `expired_unanswered`, derived rather than counted
+LADDER A1 gave the deck its rotation; nothing ever recorded what the rotation COST. A card dealt
+on Tuesday and rotated away with no word simply went back in the pile, and the only trace was
+`dealt.length`, which counts ASKS, not LOSSES — while his 11 Aug ruling says anything he must
+remember is a bug in the organism. It is now the count of **distinct deal-DAYS strictly before
+today** on a still-unanswered card, read straight off `dealt[]`. **Derived, never incremented:** a
+counter drifts the first time a sync is skipped for a day; a derivation is exact on every run,
+idempotent by construction, and self-correcting. Stamped in the owner's own sync pass and said
+out loud in `list`, because a number recorded where nobody reads it is the same silence.
+
+#### MODEL-ROSTER KEYS — two clocks, two windows
+One freshness number served both halves of `models.json`, and they do not age the same. WHICH
+MODEL LEADS changes on Google's release cadence — days — so 36 h is right for the roster. WHETHER
+A KEY ANSWERS changes on quota cadence. `keys_fresh` now has its own **6 h** guard, bounded above
+by the only datum there is: the 19 Aug 429 lesson, where a **ten-hour-old** *"keys ok"* answered
+for a moment that had already passed. It is a **GUARD, not a budget** (L8): it never blocks a call
+and never changes which key is tried — it only refuses to CLAIM a key is ok on a reading too old
+to answer for now. Never measured is **NULL, not false**: "we never looked" and "we looked and it
+went stale" are different states and only one of them is a finding.
+
+#### TORN WRITES — and the organ I first reached for REFUSED the job
+74 sites write state as `writeFileSync(tmp)` → `renameSync`. The rename is atomic; the window
+before it is not, and there was a **live orphan in the tree** as this rung opened — S10-R's O-6,
+`gaffer_blocks.json.tmp6756`, nine days old, which no organ has ever looked for.
+`rails.mjs` was the instinct. **Its own header refused it:** *"SOLE WRITER of: NOTHING … a rail
+that can write is a rail that can be part of the accident."* A replay writes. So it went to
+`watchman.mjs`, the self-repair lane, which already owns a repair journal with revert paths
+recorded at change time (§7.2) — and finishing somebody else's interrupted rename is exactly that
+shape. Three verdicts, the safe one default: **in-flight** (younger than grace — touching it would
+CAUSE the corruption this repairs) · **replay** (only when the target is missing/unparseable AND
+the orphan parses WHOLE) · **quarantine** (renamed aside, **never deleted**, L9).
+**The three live tmp shapes are MEASURED, not assumed** — and that mattered: the first cut matched
+only one shape and cheerfully reported *"no orphan"* while the real one sat in the tree. That is
+the instrument-believed-before-it-was-run failure §4 forbids, caught inside one run. Nine bites
+drive every branch in a real sandbox state tree, not on fixtures alone.
+
+#### CACHE KEYS — and my own fix's first cut was caught by my own bite
+`session_meter` keyed a folded transcript on `size + mtimeMs` and then read only the bytes after
+its stored offset — **a key that omits WHICH FILE this is.** Rewrite one in place to the same-or-
+greater length and every check passes while a new tail is appended onto days folded from bytes
+that are no longer there. sha256 identity is folded in; cache **v2 → v3**, because by this
+constant's own precedent an unprovable row is discarded and rebuilt rather than trusted.
+**The append bite caught the first cut of the fix on its first run:** hashing "the first 4 KB" is
+only an immutable prefix for files ALREADY larger than 4 KB, so every append to a young transcript
+changed the identity and forced a full re-fold — right answer, wrong reason, and the cache would
+have quietly stopped being a cache for every young session. The identity is now over a **RECORDED
+LENGTH**: re-hash exactly the bytes hashed last time, which are immutable under append at any size.
+
+#### ajv — the third TIER-0 tool (commit 2/2, alone, as the rule requires)
+Owners-only answers WHO may write each state file. Nothing answered WHAT lands there. ajv 6.15.0
+was already on disk as an **eslint transitive**; using it undeclared would be the implicit coupling
+this organism refuses, so it is now a direct devDependency **pinned exact at the version already
+present** — no second copy in the tree, nothing else moved, two one-line diffs.
+Four schemas in `schemas/`, with a README that IS the contract, and they are the four whose shapes
+S10 and S11 have just finished pinning down in code. **`laws_register`'s is the sharpest:** it
+carries `not: anyOf[required count|total|laws]`, so **F-7's removed total cannot grow back** — the
+fix is structurally enforced, not merely currently absent. The gate has the same ratchet shape as
+its two neighbours (a file WITH a schema must validate, ALWAYS, as a RED; the count may only rise;
+the gate never edits its own baseline), and it fails loudly in three directions rather than
+quietly in one: an invalid file quotes its failing paths, a schema whose state file is MISSING is
+red, and a schema that will not COMPILE is red — because an unrunnable gate reads GREEN by absence.
+`additionalProperties` stays TRUE in this first set on purpose: these pin the invariants their
+owners already enforce, so an owner adding a field is not a false red. Tightening is a later,
+deliberate, per-file decision, and the ratchet only allows movement that way.
+
+#### THE ORGANISM CAUGHT ITS OWN BUILDER TWICE, AND IT WAS RIGHT BOTH TIMES
+- `law-m-literal-model` **0 → 1**: a Claude model id in a new session_meter fixture. Declared with
+  the file's own `models-literal-ok` marker, exactly as its two neighbouring fixtures already are.
+- checkJs **303 → 309**: six diagnostics, all mine — a sweep row that grew properties mid-function,
+  and an options bag tsc could only half-infer. Both are now DECLARED rather than baselined; a
+  reader deserves the same courtesy tsc asked for.
+Both back to baseline. Neither was baselined away, which is what rule 6 is for.
+
+#### GATES — STRICTER, NEVER WEAKER
+`npm test` **121 passed, 2 failed** (was 119/2: **+2 asserts**, the SAME two known reds and the
+same three member selftests) · lawpack GREEN with `trailing-n-slice` ratcheted **7 → 0** · gates
+GREEN at 303/303 **plus schema 4/4** · daykey 33→**39** · captains_call 111→**115** · models
+43→**47** · session_meter 31→**37** · gates 15→**20** · watchman 105/2→**114/2** (the same two
+pre-existing reds, verified by stashing to HEAD and re-running) · rails **52**/0 · registry
+**45**/0 · flow_atlas **7**/7 + `check` OK · xray Q2/Q5 **0/0** · `proofs_s10` **34**/0.
+F-5 was paid and never weakened: three organ edits reddened `flow_atlas check` via the STALE-IR
+guard, and each time the answer was `xray build` + `flow_atlas build`.
+
+#### ⛑ LEFT OPEN BY NAME
+① **F-6 is instrumented, NOT closed** — the cause is still unestablished and the suite stays
+*reproducible, not stable*; the next trip writes its own forensics to
+`scripts/hermeticity_forensics.log`, and S12 should READ that file before theorising.
+② **`tmpsweep --apply` has never run** — it is report-only by design while the organism is off,
+and there is a real orphan waiting for it. It belongs to S12's first stage, behind his gate.
+③ **F-3 remains S12's**: `brain_ledger`'s 20 declared consumers / 0 read-stamps is the switch-off
+measured honestly, and a waking organ is what changes it.
+④ The `schemas/` set is FOUR of many; the ratchet is the invitation to grow it.
+⑤ c86 is DONE but its CARD still sits in his queue and only his anchor clears it.
