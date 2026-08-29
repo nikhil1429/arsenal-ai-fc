@@ -3046,6 +3046,20 @@ STATUS (update this block before any session stops — this is the handoff)
                                    `queue\RULING__2026-08-29_s12-inputguard-full.md`. Its §10-C
                                    row is the scope and it is FOUR items — do all four or hand off
                                    at the ceiling with the remainder named.
+                                   ⛔ **BEFORE ANY EDIT read TWO more queue files (29 Aug):**
+                                   `PREOPEN__2026-08-29_s13.md` (the pre-open packet — decision
+                                   tables pre-ruled, ask-first list, forbidden lines) and
+                                   `RULING__2026-08-29_executor-protocol.md` (BINDING: junior
+                                   protocol — alone-space = deterministic + reversible +
+                                   covered-and-cited; everything else ASK-FIRST over SendMessage).
+                                   ▶ **AFTER THIS RUNG — THE SEQUENCE IS RULED on his word
+                                   ("ok let's do it", 29 Aug):** his ONE haan on the LLM group +
+                                   one elevated console (organism fully ON) → **THE FLOOR AUDIT**
+                                   (verify-only, Opus max, 4 passes —
+                                   `queue\RULING__2026-08-29_floor-audit+organ.md`) → **THE
+                                   ARCHITECT ORGAN build rung** (Book derived render + prose from
+                                   AUDITED truth + watchlist code + tokens-per-ruling ledger;
+                                   priced at the audit's close) → reset = the decision sprint.
                                    ⛔ **THIS RUNG IS WHAT HIS OWN SENTENCE ASKED FOR**, verbatim
                                    29 Aug: *"i want to turn on everything in organism with the
                                    highest level of quality and intensity but it should only start
