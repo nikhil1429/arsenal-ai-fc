@@ -3053,10 +3053,15 @@ STATUS (update this block before any session stops — this is the handoff)
                                    and the PROGRESS entry of 28 Aug. Kept struck, not deleted (L9).**
 
   ▶ NEXT SESSION ............... **`RUNG A` · THE GUARD EXTENSION. MODEL: Opus 5 · effort max.
-                                   BUILD 8 · PROOF 5 · HANDOFF 4 · CEILING 17 (architect-priced,
-                                   `queue\RULING__2026-08-29_dmn-bleed+msa.md`). Then THE FLOOR
-                                   AUDIT (verify-only, Opus 5 · max, 4 passes,
-                                   `queue\RULING__2026-08-29_floor-audit+organ.md`).**
+                                   BUILD 10 · PROOF 6 · HANDOFF 5 · CEILING 21 — the SELF-DRIVING
+                                   packet's later re-price GOVERNS (scope grew: re-enables +
+                                   spawn-gating): `queue\PREOPEN__2026-08-29_guard-extension+
+                                   floor-audit.md` RUNG A is the corridor; the 8/5/4-17 in the
+                                   dmn-bleed ruling is superseded. Then THE FLOOR AUDIT (RUNG B,
+                                   same packet + `queue\RULING__2026-08-29_floor-audit+organ.md`),
+                                   then THE ARCHITECT ORGAN (RUNG C, same packet). All three
+                                   self-driving — forks land in queue\OPEN-FORKS.md, never on a
+                                   waiting architect (Fable dry till Mon 11:30 PM).**
                                    ⭐ **ITS FIRST EVIDENCE IS TWO REDS THAT ARE ALREADY IN THE
                                    SUITE, and its close is judged on turning them GREEN** — both
                                    name `dmn_bg_drain`, both quoted verbatim in the 30-Aug
