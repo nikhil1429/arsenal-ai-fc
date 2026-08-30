@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-29T21:13:24.919Z",
+ "built_at": "2026-08-30T00:42:36.652Z",
  "organs_parsed": 111,
  "organs_expected": 111,
  "parse_errors": [],
@@ -14772,14 +14772,14 @@
    "unresolved": 8
   },
   "services.mjs": {
-   "loc": 1151,
+   "loc": 1266,
    "reads": [
     {
      "path": "setup/START_DAEMONS.vbs",
      "lines": [
-      1123,
-      1123,
-      1123
+      1238,
+      1238,
+      1238
      ],
      "fixture": true
     }
@@ -24839,6 +24839,8 @@
   "dressing-room/state/brain_out/diary/2026-08-19.md",
   "dressing-room/state/brain_out/diary/2026-08-20.json",
   "dressing-room/state/brain_out/diary/2026-08-20.md",
+  "dressing-room/state/brain_out/diary/2026-08-30.json",
+  "dressing-room/state/brain_out/diary/2026-08-30.md",
   "dressing-room/state/brain_out/doubts/2026-07-18.md",
   "dressing-room/state/brain_out/doubts/2026-07-21.md",
   "dressing-room/state/brain_out/doubts/2026-07-29.md",
@@ -24963,6 +24965,8 @@
   "dressing-room/state/brain_out/intent_digest/2026-08-18.md",
   "dressing-room/state/brain_out/intent_digest/2026-08-19.json",
   "dressing-room/state/brain_out/intent_digest/2026-08-19.md",
+  "dressing-room/state/brain_out/intent_digest/2026-08-29.json",
+  "dressing-room/state/brain_out/intent_digest/2026-08-29.md",
   "dressing-room/state/brain_out/lexicon/2026-07-18.md",
   "dressing-room/state/brain_out/lexicon/2026-07-19.md",
   "dressing-room/state/brain_out/lexicon/2026-08-06.md",
