@@ -1099,7 +1099,7 @@ function createNucleus(cfg, deps = {}) {
   // can inject each unseen one. Stale reads die at the bridge (10-min TTL).
   function foldDeepAnswer(body) {
     const cur = N.workspace;
-    const entry = { moment_id: String(body.moment_id || ""), text: body.declined ? null : String(body.text || "").slice(0, 4000), declined: !!body.declined, reason: body.reason || null, provenance: body.provenance || "opus", ts: new Date(D.now()).toISOString() };
+    const entry = { moment_id: String(body.moment_id || ""), text: body.declined ? null : String(body.text || ""), declined: !!body.declined, reason: body.reason || null, provenance: body.provenance || "opus", ts: new Date(D.now()).toISOString() };
     const recent = (Array.isArray(cur.deep_recent) ? cur.deep_recent : []).filter(d => d.moment_id !== entry.moment_id);
     if (!entry.declined && entry.text) recent.push({ moment_id: entry.moment_id, text: entry.text, provenance: entry.provenance, ts: entry.ts });
     while (recent.length > 3) recent.shift();
@@ -1281,7 +1281,11 @@ function meterAdjudication(r, deps = {}, mdl = { model: ADJ_MODEL_FALLBACK, requ
 async function adjudicateLive(evt, S, deps = {}) {
   const cfg = deps.cfg || loadConfig();
   if (!cfg.adjudicator.enabled) return false;
-  const q = `A personal learning system must decide if a moment needs its EXPENSIVE deep-reasoning brain or the free reflex is enough. Moment: ${JSON.stringify({ modality: evt.modality, text: String(evt.text || "").slice(0, 300), event_key: evt.event_key || null }).slice(0, 500)}. Is this a genuinely reasoning-hard moment (conceptual confusion, strategy question, contradiction) rather than routine chat/logging? Answer with exactly one word: yes or no.`;
+  // ⛔ THE WHOLE MOMENT IS JUDGED — his order, 30 Aug 2026: "analyze everything what i say and
+  // do". This cut the moment at 300 chars and then the envelope again at 500, so the adjudicator
+  // decided "is this reasoning-hard?" on an opening fragment. The part that makes a moment hard
+  // is almost never in its first sentence, and a no from a fragment was written down as a no.
+  const q = `A personal learning system must decide if a moment needs its EXPENSIVE deep-reasoning brain or the free reflex is enough. Moment: ${JSON.stringify({ modality: evt.modality, text: String(evt.text || ""), event_key: evt.event_key || null })}. Is this a genuinely reasoning-hard moment (conceptual confusion, strategy question, contradiction) rather than routine chat/logging? Answer with exactly one word: yes or no.`;
   // 17 Jul: the adjudicator rides Claude (one word, async — the gate's event loop
   // never blocks). 15s ceiling: the CLI cold-starts slower than a REST call. Any
   // failure → the same conservative verdict as ever: no wake.

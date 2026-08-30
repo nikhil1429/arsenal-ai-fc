@@ -233,7 +233,8 @@ function captainProposal(target, value, why, profile, now = new Date()) {
       // pretend to. The ruling IS the warrant, quoted, and the row says the gate
       // was bypassed so no later reader mistakes this for a measured proposal.
       evidence: [
-        `CAPTAIN'S ORDER — not derived from reps. His words: "${String(why).slice(0, 400)}"`,
+        // A line that SAYS "His words" and then cuts them at 400 is the worst place to truncate.
+        `CAPTAIN'S ORDER — not derived from reps. His words: "${String(why)}"`,
         `the volume speak-gate was BYPASSED on his ruling: that gate governs the MACHINE proposing from thin evidence, not the captain setting his own study schedule`,
         `old value, read live off forge_profile.json at filing: ${JSON.stringify(oldValue)}`,
       ],

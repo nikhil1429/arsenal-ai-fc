@@ -414,7 +414,10 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
   if (o.note !== undefined) rep.note = o.note;
   if (o.confidence === null && o.confidence_source === UNGRADED_SOURCE) rep.confidence_source = UNGRADED_SOURCE;
   if (register) rep.register = register;
-  if (corrects) { rep.corrects = corrects; rep.why = String(o.why).slice(0, 300); }
+  // HIS REASON IS STORED WHOLE (his order, 30 Aug 2026: "store everything what i say").
+  // This was .slice(0, 300) — a correction's WHY is the most valuable sentence in the row,
+  // and it was the one being cut.
+  if (corrects) { rep.corrects = corrects; rep.why = String(o.why); }
   return { ok: true, rep };
 }
 
@@ -2385,7 +2388,7 @@ function main() {
       console.error(`correct: --correct must be literally true or false (got: ${flag("correct") === undefined ? "MISSING" : JSON.stringify(flag("correct"))}). Nothing written.`);
       process.exit(1);
     }
-    const row = { ...orig, ts: new Date().toISOString(), correct: fixed, corrects: ofTs, why: why.slice(0, 300) };
+    const row = { ...orig, ts: new Date().toISOString(), correct: fixed, corrects: ofTs, why };  // WHOLE — never cut his reason (30 Aug 2026)
     const v = validateRep(row, reg);
     if (!v.ok) { console.error(`correct: refused by the rep validator — ${v.error}. Nothing written.`); process.exit(1); }
     const r = ingest(REPS_LOG, [v.rep], reg);
@@ -2454,7 +2457,7 @@ function main() {
       // its surface-of-origin erased and shadow would stop seeing scrimmages at all.
       // Same law as latency above: written only when supplied, never invented.
       const noteFlag = flag("note");
-      if (noteFlag !== undefined && String(noteFlag).trim()) one.note = String(noteFlag).slice(0, 300);
+      if (noteFlag !== undefined && String(noteFlag).trim()) one.note = String(noteFlag);  // WHOLE — his note is never cut (30 Aug 2026)
       // --register (18 Aug 2026, OVERHAUL Block 4 §9.4). The judge (gaffer_brain
       // judge-round) hands its vocabulary reading through THIS door as JSON; the same
       // validator that guards a pasted rep checks its shape. Unparseable JSON is a

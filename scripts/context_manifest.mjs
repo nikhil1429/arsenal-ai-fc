@@ -159,20 +159,27 @@ const clipTo = (s, n, tail = MEMO_TAIL) => {
 // where the complete ledger lives. A reader can then trust every line it does show, and
 // knows one call gets the rest. Lines are kept in file order (oldest first) so the shape
 // of his history survives a squeeze; the count is what tells him a squeeze happened.
+// THE RESERVE IS MEASURED, NOT GUESSED — caught by the suite the same morning this was written.
+// The first version reserved a hand-typed 120 characters for its own notice, and the notice was
+// longer than that, so the brief came out 5,439 against a 5,300 ceiling: a truncation marker that
+// itself overflows the cap, which is the exact bug clipTo's own header warns about, reproduced one
+// function below it. The notice is now built first and its real length is the reserve.
+const FACTS_NOTE = (n) => `\n… (${n} line(s) held back for budget — nothing truncated; \`get_context\` has all of it)`;
 const clipFactsTo = (s, n) => {
   if (typeof s !== "string" || s.length <= n) return s;
   const lines = s.split("\n");
+  const reserve = FACTS_NOTE(lines.length).length;   // worst case: every line dropped
   const kept = [];
   let used = 0, dropped = 0;
   for (const line of lines) {
     const cost = line.length + 1;
-    // Reserve room for the notice itself — a truncation marker that overflows the cap is
-    // the same bug in a smaller coat (clipTo's own comment, and it applies here too).
-    if (used + cost > Math.max(0, n - 120) && kept.length) { dropped++; continue; }
+    if (used + cost > Math.max(0, n - reserve) && kept.length) { dropped++; continue; }
     kept.push(line); used += cost;
   }
   if (!dropped) return clipTo(s, n);
-  return kept.join("\n") + `\n… (${dropped} whole line(s) held back for budget — NOTHING is truncated: the ledger is complete on disk and \`get_context\` serves all of it)`;
+  const out = kept.join("\n") + FACTS_NOTE(dropped);
+  // BELT AND BRACES: if the arithmetic is ever wrong again, the ceiling still holds.
+  return out.length <= n ? out : clipTo(out, n);
 };
 
 // ── PENDING IDENTITY FACTS ───────────────────────────────────────────────────

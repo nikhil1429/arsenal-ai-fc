@@ -757,7 +757,13 @@ export function pulseDelta(rows, sinceTs, capN) {
     .filter(a => a && a.text && a.modality !== "pulse")
     .filter(a => !Number.isFinite(since) || Date.parse(a.ts || 0) > since)
     .slice(-capN)
-    .map(a => `[${a.modality}] ${String(a.text).slice(0, 160)}`);
+    // ⛔ THE MOMENT REACHES THE MODEL WHOLE — HIS ORDER, 30 Aug 2026: "analyze everything what
+    // i say and do". This was `.slice(0, 160)`, so the brain judged every moment on its first
+    // 160 characters: a long question was assessed on its opening clause and the part that made
+    // it HARD never arrived — then the verdict was recorded as if the whole thing had been read.
+    // The row COUNT stays bounded (capN), which is the honest place to bound a prompt: how many
+    // moments, never how much of each one. A fragment in, a verdict out, is not analysis.
+    .map(a => `[${a.modality}] ${String(a.text)}`);
 }
 
 async function runPulse(cfg, deps = {}) {
@@ -806,7 +812,7 @@ async function runPulse(cfg, deps = {}) {
   const tail = afferentRows
     .filter(a => a && a.text && a.modality !== "pulse")
     .slice(-pc.tail_n)
-    .map(a => `[${a.modality}] ${String(a.text).slice(0, 160)}`);
+    .map(a => `[${a.modality}] ${String(a.text)}`);   // WHOLE, same reason as the block above
   if (!tail.length) return { pulsed: false, skipped: "empty tail" };
   const ASK = `\n\nAbove routine chat / logging / app-switching, is ANY of these a genuinely reasoning-hard moment — a conceptual confusion, a contradiction, a strategy question worth deep thought? Reply STRICT JSON, no prose: {"escalate": true|false, "which": "<the moment text or empty>", "why": "<=12 words>"}`;
   // ---- ROLLING SESSION (Phase 3) -------------------------------------------
@@ -1814,7 +1820,7 @@ export function gateForce(queueState, lane) {
 export function setGateForce(queueState, lane, { until = null, once = true, by = "cli", now = new Date(), why = null } = {}) {
   queueState.gate = queueState.gate || {};
   queueState.gate.forced = queueState.gate.forced || {};
-  queueState.gate.forced[lane] = { until: until || null, once: !!once, by, ts: now.toISOString(), ...(why ? { why: String(why).slice(0, 300) } : {}) };
+  queueState.gate.forced[lane] = { until: until || null, once: !!once, by, ts: now.toISOString(), ...(why ? { why: String(why) } : {}) };  // his override reason, WHOLE (30 Aug 2026)
   return queueState;
 }
 // The FORCE's own row in the gate journal. gateTransition records what the EVIDENCE decided;

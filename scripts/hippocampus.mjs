@@ -94,7 +94,16 @@ const WHO       = join(HIPPO_DIR, "who_he_is.json");
 const COLD_DIR  = join(HIPPO_DIR, "cold");
 
 const KINDS = ["doubt", "win", "preference", "thread"];
-const FACTS_CAP = 40;                               // the ledger stays TINY — always injectable
+// ⛔ NO CEILING ON HOW MUCH OF HIM THE LEDGER MAY HOLD — HIS ORDER, 30 Aug 2026:
+//   "i do not want any limit anywhere... record everything what i say and do, store everything
+//    what i say and do, analyze everything what i say and do"
+// This was FACTS_CAP = 40, and it REFUSED the 41st thing he ever told the organism to remember.
+// The property it protected — "small enough to ALWAYS inject" — was real, and it is not
+// abandoned: it MOVED to the display, where context_manifest now drops WHOLE lines and says how
+// many it held back, and get_context serves the ledger complete. A store that says no to the
+// captain is the wrong place to solve a context-window problem.
+// The constant is GONE, not set to Infinity — a dead knob reads like a live one, and the next
+// session would wonder what it was for.
 const RECALL_THRESHOLD = 0.55;
 const BANNED = ["10x", "exponential", "on steroids", "god-tier", "time is short"];
 const DAY_MS = 86400000;
@@ -220,7 +229,13 @@ async function markMoment(kind, text, deps = {}) {
   // writer must NEVER cause a write to the captain's real episodes.jsonl.
   const patch = deps.patch || (deps.append ? (() => true) : ((row) => patchEpisodeVec(row.id, row.vec)));
   const now = deps.now || new Date();
-  const row = { id: textHash(t + now.toISOString()), ts: now.toISOString(), day: dayKey(now), kind: k, text: t.slice(0, 500), vec: null, recalls: 0 };
+  // ⛔ THE EPISODE IS STORED WHOLE — HIS ORDER, 30 Aug 2026: "record everything what i say and do,
+  // store everything what i say and do, analyze everything what i say and do". This read
+  // `t.slice(0, 500)`, so every episode longer than 500 characters lost its tail forever, at the
+  // moment of capture, with nothing said. The same shape as the 240-char fact cap removed the same
+  // morning: a store that quietly discards the captain's words. Bounding belongs at a DISPLAY,
+  // where it can be named and undone — never at the write, where the loss is silent and permanent.
+  const row = { id: textHash(t + now.toISOString()), ts: now.toISOString(), day: dayKey(now), kind: k, text: t, vec: null, recalls: 0 };
   append(row);                                      // ← the moment is durable from HERE, whatever the network does
   let embedded = false;
   try {
@@ -311,7 +326,6 @@ function rememberFact(text, deps = {}) {
   if (!t) return { ok: false, error: "no words to remember" };
   const facts = (deps.read || (() => readJson(FACTS)))() || { facts: [] };
   if (facts.facts.some(f => f.text === t)) return { ok: true, id: facts.facts.find(f => f.text === t).id, note: "already held" };
-  if (facts.facts.length >= FACTS_CAP) return { ok: false, error: `the ledger holds ${FACTS_CAP} facts max — forget one first (it must stay small enough to ALWAYS be present)` };
   const f = { id: textHash(t), ts: (deps.now || new Date()).toISOString(), text: t };
   facts.facts.push(f);
   (deps.write || ((o) => writeAtomic(FACTS, o)))(facts);
@@ -1231,9 +1245,12 @@ async function selftest() {
     assert("LEDGER: fact held verbatim with an id", r1.ok && store.facts[0].text.includes("Delhi") && store.facts[0].id);
     const r2 = rememberFact("main Delhi mein rehta hoon, mornings are my best hours", deps);
     assert("LEDGER: duplicate fact not doubled (already held)", r2.note === "already held" && store.facts.length === 1);
-    for (let i = 0; store.facts.length < FACTS_CAP; i++) rememberFact(`fact ${i}`, deps);
-    const over = rememberFact("one too many", deps);
-    assert(`LEDGER: hard cap at ${FACTS_CAP} — must stay small enough to ALWAYS inject`, over.ok === false && over.error.includes("forget"));
+    // REPLACES the old "hard cap at 40" assert, and pins the OPPOSITE guarantee on his order
+    // of 30 Aug 2026: the ledger may NEVER refuse him. 200 facts go in, 200 are held, and the
+    // 201st is accepted too — bounding is the display's job, not the store's.
+    for (let i = 0; i < 200; i++) rememberFact(`fact ${i}`, deps);
+    const over = rememberFact("one more, and it must be taken", deps);
+    assert("LEDGER: the store NEVER refuses him — no ceiling on how much of him it holds", over.ok === true && store.facts.length === 202);
     const gone = forgetFact(r1.id, deps);
     assert("LEDGER: forget removes by id, surfaced", gone.ok && !store.facts.some(f => f.id === r1.id));
     assert("LEDGER: forget unknown id is an honest error", forgetFact("nope", deps).ok === false);
@@ -1262,11 +1279,19 @@ async function selftest() {
       settlePendingFact("2026-08-09T09:00:00.000Z", "promote", { rows: mkRows(), factDeps, writeRaw: () => { } }).ok === false
       && settlePendingFact("2099-01-01T00:00:00.000Z", "promote", { rows: mkRows(), factDeps, writeRaw: () => { } }).ok === false);
     {
-      let full = { facts: Array.from({ length: FACTS_CAP }, (_, i) => ({ id: `f${i}`, ts: "2026-08-01T00:00:00Z", text: `fact ${i}` })) };
+      let full = { facts: Array.from({ length: 40 }, (_, i) => ({ id: `f${i}`, ts: "2026-08-01T00:00:00Z", text: `fact ${i}` })) };
       const rows3 = mkRows(); let wrote = false;
       const capHit = settlePendingFact("2026-08-09T08:00:00.000Z", "promote", { rows: rows3, factDeps: { read: () => full, write: (o) => { full = o; } }, writeRaw: () => { wrote = true; } });
-      assert("B6: a cap-full promote fails OUT LOUD and the row STAYS pending (no silent loss)",
-        capHit.ok === false && rows3[0].status === "pending" && wrote === false);
+      // INVERTED on his order, 30 Aug 2026 — and the guarantee it was protecting is now
+      // unconditional. It used to prove that a promote into a FULL ledger failed out loud and
+      // left the row pending, so nothing vanished. With the ceiling gone there is no such thing
+      // as full: the promote must simply SUCCEED, the row must leave pending, and the fact must
+      // land. No silent loss, and no refusal either.
+      assert("B6: a promote is NEVER blocked by ledger size — it lands, and the row leaves pending",
+        // `wrote` is checked truthy, not `=== true`: it is declared `false` and only ever set
+        // inside a callback, which checkJs cannot see, so the strict compare reads as a
+        // false-vs-true impossibility and costs a diagnostic. Same assertion, no phantom.
+        capHit.ok === true && rows3[0].status !== "pending" && wrote && full.facts.length === 41);
     }
   }
   // 10 AUG 2026 — THE STAGING DOOR (single-writer repair, his ruling). The row
