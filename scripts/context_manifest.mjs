@@ -144,6 +144,37 @@ const clipTo = (s, n, tail = MEMO_TAIL) => {
   return n <= tail.length ? s.slice(0, Math.max(0, n)) : s.slice(0, n - tail.length) + tail;
 };
 
+// ── clipFactsTo — the memory leg's own cut, on FACT BOUNDARIES ───────────────
+// HIS ORDER, 30 Aug 2026: "store the entire things for always everywhere." The STORE now
+// obeys that literally — hippocampus.mjs truncates nothing on the way in. This brief still
+// has a real ceiling, because it is injected into every session and something must give
+// when it overflows. What changed is HOW it gives.
+//
+// clipTo cuts at a character index, which lands mid-word: measured on him the same
+// morning, a fact came back ending "...use that while teaching me everyt". A half sentence
+// is worse than a missing one — it reads as whole and is not, and that is the exact
+// silent-loss shape this module was built to abolish, reproduced by its own scissors.
+//
+// So: keep WHOLE facts while they fit, drop the rest, and SAY HOW MANY were dropped and
+// where the complete ledger lives. A reader can then trust every line it does show, and
+// knows one call gets the rest. Lines are kept in file order (oldest first) so the shape
+// of his history survives a squeeze; the count is what tells him a squeeze happened.
+const clipFactsTo = (s, n) => {
+  if (typeof s !== "string" || s.length <= n) return s;
+  const lines = s.split("\n");
+  const kept = [];
+  let used = 0, dropped = 0;
+  for (const line of lines) {
+    const cost = line.length + 1;
+    // Reserve room for the notice itself — a truncation marker that overflows the cap is
+    // the same bug in a smaller coat (clipTo's own comment, and it applies here too).
+    if (used + cost > Math.max(0, n - 120) && kept.length) { dropped++; continue; }
+    kept.push(line); used += cost;
+  }
+  if (!dropped) return clipTo(s, n);
+  return kept.join("\n") + `\n… (${dropped} whole line(s) held back for budget — NOTHING is truncated: the ledger is complete on disk and \`get_context\` serves all of it)`;
+};
+
 // ── PENDING IDENTITY FACTS ───────────────────────────────────────────────────
 // Law 4: remember_fact STAGES, it never writes canon. mcp-memory.mjs surfaces this
 // queue because a staged fact with no surface to be confirmed on is a fact that rots.
@@ -553,7 +584,16 @@ export async function assemble(deps = {}) {
     // string came out LONGER than the original and the comparison read false. Real loss,
     // reported as no loss: the exact silent-drop this module exists to abolish, reproduced
     // inside its own accounting. The flag is now set where the cut happens.
-    if (memory && memory.length > memCap) { memory = clipTo(memory, memCap); clipped = true; }
+    // ⛔ THE CUT IS ON FACT BOUNDARIES, NEVER MID-SENTENCE — HIS ORDER, 30 Aug 2026:
+    //   "trimming remove karo... store the entire things for always everywhere."
+    // The store no longer truncates at all (hippocampus.mjs — the 240-char write cap is
+    // gone). Here, where a real ceiling exists because this brief is injected into EVERY
+    // session, the budget is still spent — but it now drops WHOLE FACTS and says how many,
+    // instead of slicing a sentence in half. A half-sentence is worse than an absent one:
+    // it reads as complete and is not, which is this module's own founding defect wearing
+    // a different coat. Nothing is lost anywhere — `get_context` serves the ledger whole,
+    // verified 30 Aug, and the notice below names that door.
+    if (memory && memory.length > memCap) { memory = clipFactsTo(memory, memCap); clipped = true; }
   } catch (e) { memory = null; memErr = (e && e.message) || String(e); }
   const trimmed = clipped || !!(memory && memFull > memory.length);
   // A THROW IS NOT AN ABSENCE — AND THIS IS THE LEG WHERE IT COSTS MOST (audit 11 Aug 2026).

@@ -21,11 +21,14 @@
 >   samjhao until a concept closes all nine axes under live capture.
 > · The method, the axis loop, the notes law, the traps and doubts in this file are all **still
 >   canon**. What changed is the STARTING POINT and the STATUS of the four, not the how.
-> ⚠ **AND THE BAR HE SET IN THE SAME BREATH:** *"from today onwards every single part of the cyborg
-> organism will keep the quality intensity and gravity and superpowers of my adhd brain."* Measured
-> that morning: the organism spent **78.0% of its tokens on itself and 17.3% on his study**, carries
-> **129 tests for itself and zero gates on him**, and `struggle-first` exists only in prose — which
-> by **L4** means it does not exist. A session in this lane reports HIS number first.
+> ⚠ **THE BAR HE SET IN THE SAME BREATH, in his words:** *"from today onwards every single part of
+> the cyborg organism will understand and see the quality intensity and gravity and superpowers of
+> my adhd brain."*
+> **AN EARLIER DRAFT OF THIS BLOCK PUT A SESSION'S OPINION HERE AS IF IT WERE HIS RULING** — "a
+> session in this lane reports HIS number first" — which he never said and expressly rejected:
+> **the organism is DESIGNED to evaluate itself AND him once the data arrives.** Struck. The
+> measurements behind it are real and stay as measurements only (30 Aug, its own ledger: 78.0% of
+> tokens on itself, 17.3% on his study, 129 suite tests for itself). What they MEAN is his call.
 > ⛑ **THIS IS THE TWELFTH DECLARED START** (ten are in canon; five on 18 Aug alone). It is recorded
 > here without mockery and with one consequence: by his own law — *"jo cheez use yaad rakhni pade,
 > woh ek DESIGN FAILURE hai"* — **an intention he must re-choose every morning is the failure.**

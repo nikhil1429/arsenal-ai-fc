@@ -284,15 +284,30 @@ async function indexEpisodes(deps = {}) { return (await indexEpisodesDetailed(de
 // ---------------------------------------------------------------------------
 // L2 — THE LEDGER OF SELF (captain-gated at the mouth; shape enforced here)
 // ---------------------------------------------------------------------------
-const FACT_MAX_CHARS = 240;
+// ⛔ NOTHING HE SAYS IS EVER TRUNCATED ON THE WAY IN — HIS ORDER, 30 Aug 2026:
+//   "trimming remove karo, why trimming is there?? store the entire things for
+//    always everywhere. remove the barrier"
+//   This used to be `FACT_MAX_CHARS = 240` and it silently ate the tail of every
+//   longer fact. Measured that morning, on him: four facts written at ~2,000 chars
+//   each came back 240 long, cut mid-word ("...use that while teaching me everyt"),
+//   and the write had answered {"ok":true} — the call said yes while the outcome
+//   said no. A store that quietly discards the captain's words is the same class of
+//   defect as a status line that reports the wrapper instead of the daemon.
+//
+// THE OLD COMMENT'S BUG IS NOT RE-INTRODUCED, it is dissolved. The 25-Jul defect was
+//   that dedupe compared the FULL input against a row that had ALREADY been cut, so a
+//   long fact never matched itself and re-appended forever while every copy shared one
+//   id. With nothing cut, compare + id + stored text are the same string by
+//   construction — which is what that fix was reaching for. Existing rows keep their
+//   old ids: dedupe matches on text, and a row stored short in the old era stays short
+//   until he says it again in full.
+//
+// THE PROPERTY THE CAP WAS PROTECTING — "small enough to ALWAYS be present" — is NOT
+//   abandoned, it MOVES. Bounding belongs at the DISPLAY, where it can drop WHOLE facts
+//   and say how many it dropped. It never belonged at the write, where the loss is
+//   silent and permanent.
 function rememberFact(text, deps = {}) {
-  // E2E audit (25 Jul 2026): dedupe compared the FULL input against the stored
-  // row, which was already truncated to 240 — so any fact longer than that
-  // never matched itself and re-appended on every re-utterance, while
-  // id = textHash(FULL text) gave all the copies the SAME id (forget one, the
-  // twins stay). Truncate ONCE, up front, so compare + id + stored text are the
-  // same string. Existing rows keep their old ids: dedupe matches on text.
-  const t = String(text || "").trim().slice(0, FACT_MAX_CHARS);
+  const t = String(text || "").trim();
   if (!t) return { ok: false, error: "no words to remember" };
   const facts = (deps.read || (() => readJson(FACTS)))() || { facts: [] };
   if (facts.facts.some(f => f.text === t)) return { ok: true, id: facts.facts.find(f => f.text === t).id, note: "already held" };
@@ -1331,7 +1346,13 @@ async function selftest() {
     const long = "the interview arc runs through retrieval and evals, and " + "detail ".repeat(40);
     const a = rememberFact(long, deps);
     const b = rememberFact(long, deps);
-    assert("LEDGER: a >240-char fact dedupes against its OWN stored (truncated) form — no twins sharing one id", long.length > 240 && a.ok && b.note === "already held" && b.id === a.id && store.facts.length === 1 && store.facts[0].id === textHash(store.facts[0].text));
+    // STRICTER THAN THE ASSERT IT REPLACES (§10-D rule 6): the old one proved a long
+    // fact deduped against its own TRUNCATED form. This proves it is not truncated AT
+    // ALL — stored whole, byte-for-byte — and still dedupes with one stable id. His
+    // order, 30 Aug 2026: "store the entire things for always everywhere."
+    assert("LEDGER: a long fact is stored WHOLE — never truncated on the way in — and still dedupes against itself with one id",
+      long.length > 240 && a.ok && store.facts[0].text === long.trim() && store.facts[0].text.length === long.trim().length
+      && b.note === "already held" && b.id === a.id && store.facts.length === 1 && store.facts[0].id === textHash(store.facts[0].text));
   }
 
   // L3 — the Consolidator (AI proposes · code validates)

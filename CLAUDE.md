@@ -87,12 +87,16 @@ mechanical check. Never hand-edit a state file.
   before it stand in canon, struck not erased: **this is the twelfth start, so it is held by a CODE
   PATH and not by intention** — his own law, *"jo cheez use yaad rakhni pade, woh ek DESIGN FAILURE
   hai."* Teaching is `samjhao`, never verbatim `padho`.
-- ⚠ **AND THE INSTRUMENT MUST TURN TOWARD HIM.** Measured 30 Aug on the organism's own ledger:
-  **78.0% of all tokens were spent by the organism on ITSELF, 17.3% reached his study**; the suite
-  holds **129 tests for the organism and ZERO gates on him**; and `struggle-first` lives in prose,
-  which by **L4** means it is not a law at all. From this era every organ carries the bar it already
-  applies to itself — quality, intensity, gravity, and the shape of his ADHD brain — and what an
-  organ reports FIRST is his number, not its own.
+- **HIS BAR, 30 Aug 2026, his words:** *"from today onwards every single part of the cyborg organism
+  will understand and see the quality intensity and gravity and superpowers of my adhd brain."*
+  ⚠ **AN EARLIER DRAFT OF THIS LINE CARRIED A SESSION'S OWN OPINION AS IF IT WERE HIS RULING** — it
+  read "an organ that reports its own health before his is pointed the wrong way", which he never
+  said and expressly rejected: **the organism is DESIGNED to evaluate itself AND him when the data
+  arrives; self-evaluation is the design, not a defect.** Removed here and from canon (facts
+  `282def25`, `ba76299e` retired). The measurements that draft leaned on are real and are kept as
+  MEASUREMENTS, never as a directive — 30 Aug, on the organism's own ledger: 78.0% of tokens spent
+  by the organism on itself, 17.3% reaching his study, 129 suite tests for the organism. What they
+  mean is HIS call, not a session's.
 
 ## Working style
 Hinglish, direct, honest — not a hype-man; push back on vague/wrong. Business-first framing. Teach from zero. Live Oura runs need the gitignored tokens in `scripts/` (`.worktreeinclude` carries them). **Unrun system = hypothesis** — write the test, RUN it, show output. **AI proposes · code validates · human approves.**
