@@ -1,5 +1,5 @@
 {
- "built_at": "2026-08-30T03:00:53.215Z",
+ "built_at": "2026-08-30T03:13:56.328Z",
  "organs_parsed": 111,
  "organs_expected": 111,
  "parse_errors": [],
@@ -9322,7 +9322,7 @@
    "unresolved": 1
   },
   "hippocampus.mjs": {
-   "loc": 1865,
+   "loc": 1872,
    "reads": [
     {
      "path": "dressing-room/hippocampus/identity_facts.json",
@@ -9494,20 +9494,20 @@
      "lines": [
       293,
       293,
-      1066,
-      1066,
-      1066,
-      1066,
+      1073,
+      1073,
+      1073,
+      1073,
       293,
-      1066,
-      1066,
-      1066,
-      1066,
+      1073,
+      1073,
+      1073,
+      1073,
       293,
-      1066,
-      1066,
-      1066,
-      1066
+      1073,
+      1073,
+      1073,
+      1073
      ],
      "verbs": [
       "writeFileSync",
@@ -9582,9 +9582,9 @@
     {
      "path": "dressing-room/hippocampus/recall_hints.jsonl",
      "lines": [
-      1054,
-      1054,
-      1054
+      1061,
+      1061,
+      1061
      ],
      "verbs": [
       "appendFileSync"
@@ -9595,67 +9595,67 @@
    "spawns": [],
    "swallows": [
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 1063,
+     "line": 1070,
      "try_stmts": 4,
      "catch_stmts": 1
     }

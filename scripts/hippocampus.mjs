@@ -1041,7 +1041,14 @@ function recallReflexLexical(turnText, deps = {}) {
   const score = Math.round(bestScore * 100) / 100;
   if (!best || bestScore < min) return { hit: null, scored, best: score, min, why: `nothing over the bar (best ${score} < ${min})` };
   return {
-    hit: { ...best, score, hint: `${best.kind} · ${best.day} · his words: "${String(best.text).slice(0, 300)}"` },
+    // ⛔ RECALL RETURNS THE MOMENT WHOLE — HIS ORDER, 30 Aug 2026: "i want my every moment to be
+    // stored, analyzed and retrival back from anywhere in the entire cyborg organism, be it claude
+    // code sessions or gaffer in the live moment." This cut the hint at 300 chars, so a moment
+    // stored whole came BACK cut — and it is a line that says "his words:" and then does not give
+    // them. Storage without retrieval is not memory. The row COUNT is still bounded by the score
+    // bar above (only a hit over `min` is served at all), which is the honest place to bound a
+    // recall: WHICH moment, never how much of it.
+    hit: { ...best, score, hint: `${best.kind} · ${best.day} · his words: "${String(best.text)}"` },
     scored, best: score, min, why: "earned",
   };
 }
