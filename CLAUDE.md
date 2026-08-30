@@ -132,10 +132,17 @@ ORDER-GATE: docs/archive/ORGANISM_AUDIT__2026-08-19.md
   CORRECTION (§1 — C is "did it reach its RIGHT consumer"), what is measured, what is known FALSE, and
   **§10 (20 Aug) — THE EXECUTION PLAN: the session ladder S1–S12.** An engineering session **OPENS THIS
   FIRST**, pastes its version-3 prompt, and executes exactly ONE rung under §10-D's rules.
-- **② LEARNING — `docs/archive/SAMJHAO_ORDER__2026-08-20.md`** — samjhao of the four closed fundamentals
-  (tokenization → embeddings → inference → context), then Re-Jirah on all four. Multi-session; **§0 is the
-  resume pointer and the ONLY place progress lives.** Method, notes law (what gets captured and where),
-  scope, both research lanes, the 2026 patch list and the career picture are all settled there — do not
-  re-derive them. Also carries §9: the **design lane is this lane's job now** (Claude Design retired).
+- **② LEARNING — `docs/archive/SAMJHAO_MERGED__2026-08-30.md` ← OPEN THIS ONE FIRST.** ⭐ **FORGE AND
+  SAMJHAO ARE ONE PROCESS** since 30 Aug 2026 on his word (*"ok all approved"*, act `amtfkb4r48m`,
+  teaching-contract rule 31). RE-JIRAH stays separate as the topic's cold TEST. That file carries the whole
+  operating spine — the loop, the gates, the per-turn laws, what is captured live, and what is degraded
+  today. It runs with **zero code changes** and is binding until the architect rules on its §7.
+  ⚠ **Its §2 corrects a rule two sessions taught wrong, and HE caught it:** teacher-authored **mechanism and
+  facts DO belong in the notes**, marked `[T]`; only understanding/framing is `[N]`-only. The forbidden act
+  was never "the teacher wrote it" — it is **inventing his understanding** (architect ruling N1, 22 Aug).
+  Its predecessor `docs/archive/SAMJHAO_ORDER__2026-08-20.md` is now the **reference**, not the router —
+  read it for the failure map (§6), the nine angles (§7), the axis loop's substance (§8), the 2026 patch
+  list (§11), the career picture (§12) and the verbatim ruling record (§16). Do not re-derive any of them.
+  Also carries §9: the **design lane is this lane's job now** (Claude Design retired).
 - Its predecessor, **closed 19 Aug 2026 (all ten blocks ☑)**: `docs/archive/LOAD_ZERO__2026-08-19.md` — a record now, not a work order.
 - Repo: `nikhil1429/arsenal-ai-fc`, branch `main`.

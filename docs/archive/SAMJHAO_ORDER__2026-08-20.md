@@ -69,13 +69,27 @@ START AT     : TOKENIZATION, axis a, TREATED AS NEVER TAUGHT.
                He said it plainer than any instrument could: "i am starting my learning from the
                first topic again."
 
+⛔ SUPERSEDED THE SAME DAY — 30 Aug 2026, by his word "ok all approved".
+               FORGE AND SAMJHAO ARE ONE PROCESS NOW. The two-lane split below is dead.
+               THE OPERATING ORDER IS: docs/archive/SAMJHAO_MERGED__2026-08-30.md
+               A learning session opens THAT file first; this one stays the reference for the
+               method's depth (§6 failure map, §7 the nine angles, §8's substance, §16 rulings).
+               Receipt: act amtfkb4r48m · teaching-contract rule 31.
+
 LIVE LANES   : 1. SAMJHAO   — tokenization, FROM ZERO. Nine axes, live capture, nothing inherited.
-               2. FORGE     — after the four re-close. (1-04 Hallucinations is NOT the next thing;
-                              the SessionStart brief still points there and the brief is WRONG.)
+                              ⭐ SAMJHAO now means THE WHOLE PROCESS, not one lane — it is also
+                              still the name of step 3 inside it (his ruling ④, both names kept).
+               2. ~~FORGE~~ — merged into 1. There is no separate forge lane. A concept with no
+                              capsule runs the SAME loop; the only difference is that nothing
+                              old exists to open at the axis's end. (1-04 Hallucinations is still
+                              NOT the next thing; the SessionStart brief points there and is WRONG.)
                3. RE-JIRAH  — DEAD for these four until they are re-learned. A Re-Jirah tests a
                               PROOF and he has withdrawn the proof. A session asked for one REFUSES
                               and says why. The overdue clocks (57d/53d/42d/18d) are pre-cyborg
                               artifacts — they must never drive the queue.
+                              ⚠ AND NOW ALSO: once a topic is taught, its nine stored strikes are
+                              SPENT (his ruling ②) — a later round is generated FRESH, never from
+                              the stored bank.
 
 THE ONE THING A SESSION MUST DO DIFFERENTLY THIS ERA:
                capture the rep LIVE — confidence, latency, aided. The old rows have all three null
@@ -454,7 +468,7 @@ worth building later, never a blocker here.
 | 4 | **New doubts** raised today | his | `doubts[]` |
 | 5 | **2026 patch** | fact, marked | same block, flagged |
 | 6 | **Interview line** if changed | his + tightened | `interviewLines[]` |
-| — | **The teaching prose** | mine | **nowhere.** Reproducible; and Claude may never author `deep` |
+| — | ~~**The teaching prose**~~ | mine | ⛔ **SUPERSEDED — ARCHITECT RULING N1, 22 Aug 2026** (§16, verbatim). This row was WRONG and it misled a session on 30 Aug 2026 until HE caught it. The ruling: *"MECHANISM / FACTS may be teacher-authored, marked `[T]`; UNDERSTANDING / FRAMING (stuck-story, Bolo, his analogies, his derivations) are his words only, marked `[N]`. Never mixed."* `FORGE_SPEC.md:54` never said "nowhere" — its words are: source = *"Bolo / teaching-threads"*, forbidden act = **INVENT**. And the corpus refutes the stricter reading: **29 of 36 June `deep` fields are in teacher voice.** *"June's `deep` failed even though it came from his own mouth, so authorship was never the cause: COMPRESSION was."* Kept struck, not deleted (L9). |
 
 ### The doubt quality bar (FORGE_SPEC, already locked)
 **Q-fields:** ATOMIC (one confusion) · SUBJECT explicitly named (no dangling *ye/woh*) · **ANSWER-HIDDEN** ·

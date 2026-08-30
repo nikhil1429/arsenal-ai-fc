@@ -75,6 +75,16 @@
       "staged_at": "2026-08-19T11:55:53.946Z",
       "ingested_at": null,
       "report": null
+    },
+    {
+      "id": "T-tokenization",
+      "type": "topic_open",
+      "cluster": null,
+      "concept": "tokenization",
+      "file": "dressing-room/missions/T-tokenization.md",
+      "staged_at": "2026-08-30T05:02:22.435Z",
+      "ingested_at": null,
+      "report": null
     }
   ],
   "syllabus_audit": {
@@ -147,6 +157,11 @@
       "ts": "2026-08-19T11:55:53.946Z",
       "kind": "stage_topic",
       "id": "T-hallucinations@2026-08-19"
+    },
+    {
+      "ts": "2026-08-30T05:02:22.435Z",
+      "kind": "stage_topic",
+      "id": "T-tokenization"
     }
   ]
 }
