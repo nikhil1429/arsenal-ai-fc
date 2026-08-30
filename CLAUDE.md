@@ -68,7 +68,31 @@ mechanical check. Never hand-edit a state file.
 - **THE CAPTAIN'S CALL, 7 Aug 2026:** reports are MACHINE-face; anything needing his word is ONE one-line card at an anchor he already hits (`node scripts/captains_call.mjs file --line "…"`), max ONE dealt per anchor. **If a thing needs the captain, it rides an anchor; if it cannot ride an anchor, it does not need the captain.**
 - **DRIFT IS SELF-REPORTED and auto-counts, 7 Aug 2026 (his "ok do it..")** — the moment you break a teaching-contract rule, in that turn: `node scripts/teaching_contract.mjs flag <rule-id> --why "…"`. `unhit-auto <id>` walks it back. His `hits` lane is his alone.
 - **SESSION-AGNOSTIC, VOCAB-AGNOSTIC, 15 Aug 2026:** never pattern-match the last incident's words or situation.
-- **DAY 1 = 18 Aug 2026:** all earlier data is baseline/test; official learning starts now. Teaching is `samjhao`, never verbatim `padho`.
+- ⭐ **GAME ON — 30 Aug 2026, 7:30 AM IST. THE PRE-CYBORG ERA IS CLOSED** (his word; canon `7744acf1`).
+  EVERY learning record dated before that stamp is **PRE-CYBORG: baseline/test, and it measures the
+  INSTRUMENT, not him** — the capture was demonstrably broken (reps carry `confidence:null`,
+  `latency_ms:null`, `aided:null`, the organism's own `confidence_source:"unrecorded-samjhao-era"`,
+  and 22 were BACK-FILLED on 29 Aug rather than captured live). Kept, never deleted (L9); never cited
+  as evidence of what he knows. **THE SYLLABUS RESTARTS AT THE FIRST TOPIC** — tokenization,
+  embeddings, inference & sampling and context window are re-opened as UNLEARNED, and their Re-Jirah
+  overdue clocks are pre-cyborg artifacts that must NOT drive the queue (a Re-Jirah tests a proof
+  that no longer exists). ⚠ **BUT THE NOTES ARE NOT WITHDRAWN — ONLY THE PROOF IS** (his correction,
+  same breath, canon `b40e585d`): *"keep my 4 closed topic notes data as a powerful resource and use
+  that while teaching me everything from the scratch again."* The four capsules
+  (`dressing-room/state/capsules/*.json`, ~211 KB, nine axes each, still IMMUTABLE) are the
+  teaching resource — `doubts` holds HIS OWN questions, `traps` the exact baits he fell for,
+  `calibration` what he predicted about himself. **Teach from zero WITH them open: they say in
+  advance where he will break.** Never "you already know this" (HOW_HE_LEARNS #10).
+  ~~DAY 1 = 18 Aug 2026~~ and the nine "official first day" declarations
+  before it stand in canon, struck not erased: **this is the twelfth start, so it is held by a CODE
+  PATH and not by intention** — his own law, *"jo cheez use yaad rakhni pade, woh ek DESIGN FAILURE
+  hai."* Teaching is `samjhao`, never verbatim `padho`.
+- ⚠ **AND THE INSTRUMENT MUST TURN TOWARD HIM.** Measured 30 Aug on the organism's own ledger:
+  **78.0% of all tokens were spent by the organism on ITSELF, 17.3% reached his study**; the suite
+  holds **129 tests for the organism and ZERO gates on him**; and `struggle-first` lives in prose,
+  which by **L4** means it is not a law at all. From this era every organ carries the bar it already
+  applies to itself — quality, intensity, gravity, and the shape of his ADHD brain — and what an
+  organ reports FIRST is his number, not its own.
 
 ## Working style
 Hinglish, direct, honest — not a hype-man; push back on vague/wrong. Business-first framing. Teach from zero. Live Oura runs need the gitignored tokens in `scripts/` (`.worktreeinclude` carries them). **Unrun system = hypothesis** — write the test, RUN it, show output. **AI proposes · code validates · human approves.**

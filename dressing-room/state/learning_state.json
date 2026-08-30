@@ -1,6 +1,6 @@
 {
   "date": "2026-08-29",
-  "generated_at": "2026-08-28T21:50:28.451Z",
+  "generated_at": "2026-08-30T01:24:22.404Z",
   "total_reps": 22,
   "status": "ok",
   "low_confidence": false,
@@ -61,22 +61,22 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 57
+      "overdue_days": 59
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 53
+      "overdue_days": 55
     },
     {
       "concept": "embeddings",
       "axis": "a (kya+analogy)",
-      "overdue_days": 42
+      "overdue_days": 43
     },
     {
       "concept": "hallucinations",
       "axis": "a (kya+analogy)",
-      "overdue_days": 18
+      "overdue_days": 19
     }
   ],
   "core_vs_light": {

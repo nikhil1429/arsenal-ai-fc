@@ -1,5 +1,39 @@
-# SAMJHAO ORDER — THE FOUR CLOSED TOPICS
+> ⭐⭐ **STOP — READ THIS BEFORE §0. THE PREMISE OF THIS ORDER CHANGED ON 30 AUG 2026, 7:30 AM IST.**
+> **GAME ON. THE PRE-CYBORG ERA IS CLOSED** — his word, canon `7744acf1`, quoted in full there.
+> This file's title says "THE FOUR **CLOSED** TOPICS". **They are no longer closed.** He re-opened
+> tokenization, embeddings, inference & sampling and context window as **UNLEARNED**, and the
+> syllabus **restarts at the first topic**.
+> ⛔ **WHAT THAT VOIDS, mechanically, so no session re-derives it:**
+> · **Re-Jirah is DEAD for these four until they are re-learned.** A Re-Jirah tests a PROOF; the
+>   proof was produced in the pre-cyborg era and he has withdrawn it. The overdue clocks
+>   (inference 57d · context 53d · embeddings 42d · hallucinations 18d) are **pre-cyborg artifacts
+>   and must not drive the queue.** The SessionStart brief still prints them — it is reading the old
+>   era; the brief is WRONG on this and this line is the authority. One sitting already died of it:
+>   `sit_20260830_0128_63dd`, opened 01:28 that morning on route REJIRAH with route_why *"proof
+>   purana ho raha hai"*, closed the same morning as VOIDED.
+> · **Every reps/scoreboard row before the stamp measures the INSTRUMENT, not him** — the capture
+>   carried `confidence:null`, `latency_ms:null`, `aided:null` and the organism's own
+>   `confidence_source:"unrecorded-samjhao-era"`, and 22 rows were BACK-FILLED on 29 Aug rather than
+>   captured live. **Kept, never deleted (L9); never cited as what he knows.** "0/3 fluent" is not a
+>   verdict on him — it is a verdict on a broken meter.
+> · **SAMJHAO ITSELF SURVIVES AND IS NOW THE WHOLE ROUTE.** His 19-Aug ruling (samjhao before
+>   Re-Jirah, §5) is not weakened by this — it is *completed* by it: there is now nothing BUT
+>   samjhao until a concept closes all nine axes under live capture.
+> · The method, the axis loop, the notes law, the traps and doubts in this file are all **still
+>   canon**. What changed is the STARTING POINT and the STATUS of the four, not the how.
+> ⚠ **AND THE BAR HE SET IN THE SAME BREATH:** *"from today onwards every single part of the cyborg
+> organism will keep the quality intensity and gravity and superpowers of my adhd brain."* Measured
+> that morning: the organism spent **78.0% of its tokens on itself and 17.3% on his study**, carries
+> **129 tests for itself and zero gates on him**, and `struggle-first` exists only in prose — which
+> by **L4** means it does not exist. A session in this lane reports HIS number first.
+> ⛑ **THIS IS THE TWELFTH DECLARED START** (ten are in canon; five on 18 Aug alone). It is recorded
+> here without mockery and with one consequence: by his own law — *"jo cheez use yaad rakhni pade,
+> woh ek DESIGN FAILURE hai"* — **an intention he must re-choose every morning is the failure.**
+> This start is held by a code path or it is the eleventh again.
+
+# SAMJHAO ORDER — THE FOUR ~~CLOSED~~ **RE-OPENED** TOPICS
 ## Opened 20 Aug 2026 · on his word · THE LEARNING WORK ORDER
+## ⭐ RE-BASED 30 Aug 2026, 7:30 AM IST — GAME ON (see the block above)
 ### v3 — the full design pass. v1's measurements were wrong (§2); v2 invented rules that were already canon (§5).
 
 > **A NEXT SESSION OPENS THIS FILE FIRST.** Read §0 for position, §5 for the canon this obeys, §6 for the
@@ -19,6 +53,34 @@
 ---
 
 ## §0 · THE RESUME POINTER — read this first
+
+⭐ **RE-BASED 30 Aug 2026, 07:30 IST — GAME ON. Everything below the fence is the PRE-CYBORG
+position and is kept for archaeology only (L9). A session starts from the NEW line.**
+
+```
+GAME ON      : 2026-08-30 07:30 IST — the pre-cyborg era is CLOSED (canon 7744acf1)
+CAMPAIGN     : re-learn the fundamentals from the FIRST TOPIC, under live capture, from zero
+TOPIC ORDER  : tokenization -> embeddings -> inference -> context   (his order, unchanged)
+START AT     : TOKENIZATION, axis a, TREATED AS NEVER TAUGHT.
+               NOT "axis a closed, axis b 85%" — that was the old era's reading of a broken meter.
+               He said it plainer than any instrument could: "i am starting my learning from the
+               first topic again."
+
+LIVE LANES   : 1. SAMJHAO   — tokenization, FROM ZERO. Nine axes, live capture, nothing inherited.
+               2. FORGE     — after the four re-close. (1-04 Hallucinations is NOT the next thing;
+                              the SessionStart brief still points there and the brief is WRONG.)
+               3. RE-JIRAH  — DEAD for these four until they are re-learned. A Re-Jirah tests a
+                              PROOF and he has withdrawn the proof. A session asked for one REFUSES
+                              and says why. The overdue clocks (57d/53d/42d/18d) are pre-cyborg
+                              artifacts — they must never drive the queue.
+
+THE ONE THING A SESSION MUST DO DIFFERENTLY THIS ERA:
+               capture the rep LIVE — confidence, latency, aided. The old rows have all three null
+               and 22 were back-filled; that is why the scoreboard says 0/3 and why that number is
+               about the meter, not about him. An uncaptured rep did not happen.
+```
+
+<details><summary>PRE-CYBORG POSITION (superseded 30 Aug 07:30 — kept, not deleted)</summary>
 
 ```
 CAMPAIGN     : samjhao of the 4 closed fundamentals, then Re-Jirah on all four
@@ -181,8 +243,34 @@ PARKED       : the render fix (§13) — architect ruled N6: this lane owns it, 
 NEXT MOVE    : axis b, concept ⑦ SUBWORD — why the middle path wins. His pending answer first:
 (THE KAL-LINE) "invoice vs zzq — whose vector is more useful, and why?"
 ```
+</details>
 
-**Update this block at the end of every session. It is the only place progress lives.**
+⚠ **THE FOLDED BLOCK ABOVE IS NOT POSITION — BUT IT IS NOT ARCHAEOLOGY EITHER, AND AN EARLIER
+DRAFT OF THIS LINE GOT THAT WRONG.** He corrected it in the same breath: *"keep my 4 closed topic
+notes data as a powerful resource and use that while teaching me everything from the scratch
+again."*
+**What he withdrew is the PROOF. He did not withdraw the NOTES.**
+So: a session that resumes from "axis b, concept ⑦ SUBWORD" is resuming the pre-cyborg era and is
+wrong. A session that ignores the old material is *also* wrong. **Start at tokenization axis a,
+from zero, with live capture — and teach with the capsules OPEN.**
+
+📚 **THE RESOURCE, so nobody hunts for it** (canon `b40e585d`):
+`dressing-room/state/capsules/{tokenization,embeddings,inference,context}.json` — ~211 KB, all
+nine axes present, locked 15–28 June 2026. `mirror.mjs` is the sole writer; the gists are master;
+capsules are IMMUTABLE (never re-emit, never edit).
+Each one carries, and this is why it beats a textbook:
+· `faultLines` ~19k chars — the nine axes with their strike questions
+· `doubts` ~8k chars — **HIS OWN questions, with the answers he got** ("strawberry common fruit hai,
+  phir split kyun hota hai?")
+· `traps` — the exact baits he fell for, with the wrong answer named
+· `calibration` — what he predicted about himself BEFORE the Jirah ("main abhi sab axes pe weak hoon")
+· plus `bridges`, `hook`, `mechanism`, `threeWays`, `interviewLines`, `bolo`, `deep`, `viz`
+**HOW TO USE IT:** teach the axis from zero, in his shape — and use the capsule to know IN ADVANCE
+where he broke last time. Fire that trap deliberately. Ask his own recorded doubt back at him.
+**Never say "you already know this"** (HOW_HE_LEARNS #10). The capsule is the map of his cracks,
+not a certificate that the cracks are closed.
+
+**Update the LIVE block at the end of every session. It is the only place progress lives.**
 This is the same mechanic as `DAILY_CADENCE.md`'s **KAL → KICKOFF WELD**: tonight's line is tomorrow's first
 move, pre-decided, so no session opens with a decision to make.
 
