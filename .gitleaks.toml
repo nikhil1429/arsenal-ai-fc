@@ -14,22 +14,33 @@ title = "ARSENAL AI FC — the secret + personal-data belt (THE BLUEPRINT rung 0
 # never a value. What only HE knows — other people's names — belongs in `.gitleaks.local.toml`,
 # which is gitignored and which hooks/pre-commit prefers when it exists.
 #
-# TWO CLASSES OF RULE, BECAUSE THEY ANSWER TO DIFFERENT OWNERS.
-#   BLOCKING — live credentials and personal-capture-lane files. A key is never legitimately
-#     committed, and a new capture lane is the exact class that already escaped once
-#     (afferent.2026-07.jsonl reached origin/main and sat there for six weeks).
-#   PENDING HIS CALL — the medical / salary / personal-email class. Its disposition is HIS
-#     scrub-or-accept decision (THE_PLAN §5.2d), and rung 0.1's own critique withdrew the
-#     architect deciding his health-data exposure. So each of those rules BLOCKS A NEW FILE and
-#     allowlists, BY NAME, only the files that already carry it. Stop the bleeding; never
-#     re-litigate a decision that is his. When he rules, the allowlist shrinks — never grows.
+# ⭐ HE RULED, 1 Sep 2026, VERBATIM: "keep on working, i do not care about my data. public jane
+#   do." (act receipt `amtix55talg`.) That CLOSES the scrub-or-accept question as **ACCEPT**, and
+#   this file shrank the same hour: the medical-disclosure rule and the compensation-band rule are
+#   RETIRED — removed, not merely allowlisted, because a gate that stops his own data from going
+#   public after he ruled it public is a session overruling the captain. With them went ~25 lines
+#   of "pending" bookkeeping that now has no owner and no purpose. Nothing is scrubbed, no history
+#   is rewritten, and no card is filed for any of it.
+#   TWO THINGS HIS LINE DOES NOT COVER, AND THEY STAY — said once here, not re-litigated:
+#     · LIVE CREDENTIALS. A leaked token is an account takeover, not a privacy preference, and
+#       his own 14 Aug law names them separately from his data.
+#     · ANYTHING CARRYING OTHER PEOPLE. He can rule on his own exposure; he cannot consent for
+#       someone else. `arsenal-personal-email` and the capture-lane rules survive on that ground
+#       alone — his own two files are allowlisted, so they cost him nothing.
+#   A casual line in a keep-working message does not repeal a named standing law, so the 14 Aug
+#   archive ruling stands intact.
+#
+# WHAT REMAINS, AND WHY IT BLOCKS: live credentials, personal-capture-lane files, and third-party
+#   contact shapes. A key is never legitimately committed, and a new capture lane is the exact
+#   class that already escaped once (afferent.2026-07.jsonl reached origin/main and sat there for
+#   six weeks) — and those lanes carry OTHER people's names as often as his own.
 #
 # MEASURED BEFORE ANY RULE WAS WRITTEN (a rule nobody measured is a rule that gets uninstalled),
 # over TRACKED files at HEAD: `medicated` 26 files and `ADHD-PI` 48 — the repo's OWN vocabulary
 # (CLAUDE.md's goalkeeper medical boundary), so neither is a rule here; the PAIR together is the
 # disclosure shape. Then the first full scan with this config: 724 findings on disk, of which
-# only 25 are in TRACKED files, and every one of those 25 is the pending-his-call class — 0 live
-# credentials tracked at HEAD. Both key-shaped hits in the tree are deliberate fixtures, read
+# only 25 are in TRACKED files, and every one of those 25 was the class he has now ACCEPTED —
+# 0 live credentials tracked at HEAD. Both key-shaped hits in the tree are deliberate fixtures, read
 # before they were allowlisted. The "ntfy topic is on the remote" claim does not reproduce: the
 # topic is on this disk, in a gitignored file, and in no tracked file at all.
 # ============================================================================
@@ -100,54 +111,16 @@ paths = [
   '''scripts[\\/](archivist|thalamus)\.mjs''',
 ]
 
-# ── PENDING HIS CALL · blocks a NEW file, never re-litigates an old one ─────
-[[rules]]
-id = "arsenal-medical-disclosure"
-description = "a medical disclosure — the condition AND the treatment in one line. Whether the EXISTING ones stay is his call; a NEW one is refused"
-regex = '''(?i)(ADHD[^\n]{0,40}medicat|medicat[^\n]{0,40}ADHD)'''
-[rules.allowlist]
-description = "every file that already carries it, named one by one, disposition pending HIS scrub-or-accept call (THE_PLAN §5.2d). This list may only SHRINK."
-paths = [
-  '''docs[\\/]archive[\\/]OPS_STATE_2026-08-18\.md''',
-  '''docs[\\/]archive[\\/]ARSENAL_AI_FC_MASTERPLAN\.md''',
-  '''docs[\\/]archive[\\/]BRIEF__self_sustaining_organism\.md''',
-  '''docs[\\/]archive[\\/]PROBLEM_STATEMENT__teaching_compliance\.md''',
-  '''docs[\\/]archive[\\/]THE_ORGANISM_A_TO_Z\.md''',
-  '''docs[\\/]archive[\\/]MODELS_AND_ACTS__2026-08-18\.md''',
-  '''docs[\\/]archive[\\/]ORGANISM_ISSUES\.md''',
-  '''docs[\\/]archive[\\/]ORGANISM_REPAIR_PLAN\.md''',
-  '''docs[\\/]archive[\\/]SAMJHAO_ORDER__2026-08-20\.md''',
-  '''docs[\\/]archive[\\/]CLAUDE_2026-08-18\.md''',
-  '''learning-layer[\\/]EXECUTION_FINAL_Tier2_Metamorphosis\.md''',
-  '''learning-layer[\\/]FORGE_DEEP_RENDER_BRIEF\.md''',
-  '''learning-layer[\\/]God-Tier_Gemini_Workflow_for_Learning_Python\.md''',
-  '''learning-layer[\\/]GEMINI_RIG_SETUP\.md''',
-  '''learning-layer[\\/]PROJECT_OS\.md''',
-  '''\.claude[\\/]skills[\\/]forge[\\/]SKILL\.md''',
-  '''scripts[\\/]dugout\.mjs''',
-  '''CLAUDE\.md''',
-  '''README\.md''',
-]
-
-[[rules]]
-id = "arsenal-salary-band"
-description = "a compensation band — a SHAPE, never his figure. His call whether the existing ones stay; a NEW file is refused"
-regex = '''[0-9]{1,3}\s*[-\x{2013}\x{2014}]\s*[0-9]{1,3}\s*LPA'''
-[rules.allowlist]
-description = "the mission prompts are GENERATED from his career context, so the band is there by design; the rest are named one by one. Pending his §5.2d call."
-paths = [
-  '''dressing-room[\\/]missions[\\/]''',
-  '''learning-layer[\\/](FINOPS_AI_CONCEPTS|OPPONENT_SCOUT|SYSTEM_BLUEPRINT|SYSTEM_FOUNDATION|GEMINI_RIG_SETUP)\.md''',
-  '''scripts[\\/](scout|nightshift)\.mjs''',
-  '''docs[\\/]archive[\\/](ORGANISM_AUDIT__2026-08-19|ARSENAL_AI_FC_MASTERPLAN|OPS_STATE_2026-08-18|THE_ORGANISM_A_TO_Z)\.md''',
-]
-
+# ── THIRD-PARTY CONTACT — survives his 1-Sep ruling, on the one ground it does not cover ──
+# He ruled his own data public. An email address in a commit is as often SOMEONE ELSE'S, and he
+# cannot consent for them. His own two files are allowlisted, so this rule costs him nothing and
+# only ever fires on a NEW contact detail.
 [[rules]]
 id = "arsenal-personal-email"
-description = "a personal-provider email address in a tracked file"
+description = "a personal-provider email address — kept for the person who is not him"
 regex = '''[A-Za-z0-9._%+-]+@(gmail|googlemail|outlook|hotmail|yahoo|proton|protonmail|icloud)\.[a-z]{2,}'''
 [rules.allowlist]
-description = "already tracked, pending his §5.2d call"
+description = "his own, already tracked, and ACCEPTED by his 1 Sep ruling — never a blocker again"
 paths = [
   '''docs[\\/]archive[\\/]ORGANISM_AUDIT__2026-08-19\.md''',
   '''learning-layer[\\/]PROJECT_OS\.md''',
@@ -162,7 +135,7 @@ regex = '''(drive|docs)\.google\.com/[^\s)"']*[/=][A-Za-z0-9_-]{25,}'''
 # Kept deliberately SMALL. Everything that is merely "already tracked" lives on its own rule
 # above, so allowlisting one class can never quietly excuse another.
 [allowlist]
-description = "deliberate fixtures, the two biometric files his ruling tracks, and the generated mirrors"
+description = "deliberate fixtures, the two biometric files his rulings track, and the generated mirrors"
 paths = [
   # DELIBERATE FIXTURES — obvious placeholder strings, each read before it was allowlisted.
   '''scripts[\\/]harvest\.mjs''',        # :302 "AIzaSyABCDEFGHIJKLMNOPQRSTUVWXYZ0123456" — a sample fed to the scrubber's own selftest
