@@ -1,9 +1,9 @@
 {
- "built_at": "2026-08-30T03:13:56.328Z",
- "organs_parsed": 111,
- "organs_expected": 111,
+ "built_at": "2026-09-01T12:53:06.820Z",
+ "organs_parsed": 112,
+ "organs_expected": 112,
  "parse_errors": [],
- "unresolved_sinks": 1456,
+ "unresolved_sinks": 1462,
  "organs": {
   "acts.mjs": {
    "loc": 496,
@@ -2936,6 +2936,84 @@
     "validateRep"
    ],
    "unresolved": 126
+  },
+  "claims.mjs": {
+   "loc": 310,
+   "reads": [
+    {
+     "path": "scripts/claims.mjs",
+     "lines": [
+      261,
+      261,
+      261
+     ],
+     "fixture": true
+    },
+    {
+     "path": "dressing-room/state/claims.jsonl",
+     "lines": [
+      88,
+      89,
+      88,
+      89
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [
+    {
+     "path": "dressing-room/state/claims.jsonl",
+     "lines": [
+      95,
+      95
+     ],
+     "verbs": [
+      "appendFileSync"
+     ],
+     "fixture": false
+    }
+   ],
+   "spawns": [],
+   "swallows": [
+    {
+     "line": 188,
+     "try_stmts": 4,
+     "catch_stmts": 1
+    },
+    {
+     "line": 188,
+     "try_stmts": 4,
+     "catch_stmts": 1
+    },
+    {
+     "line": 188,
+     "try_stmts": 4,
+     "catch_stmts": 1
+    }
+   ],
+   "verbs": [
+    "check",
+    "claim",
+    "selftest",
+    "status",
+    "stop"
+   ],
+   "header_verbs": [
+    "claim"
+   ],
+   "exports": [
+    "CLAIMS_LEDGER",
+    "CLAIM_RE",
+    "DEFAULT_MINUTES",
+    "assistantText",
+    "decide",
+    "fileClaim",
+    "freshReceipt",
+    "readRows",
+    "sessionOfEnv",
+    "stopHook"
+   ],
+   "unresolved": 6
   },
   "claudegen.mjs": {
    "loc": 983,
@@ -18234,7 +18312,7 @@
    "unresolved": 0
   },
   "turn_hook.mjs": {
-   "loc": 356,
+   "loc": 364,
    "reads": [
     {
      "path": ".claude/settings.json",
@@ -18364,7 +18442,7 @@
      "kind": "organ",
      "script": "turn_hook.mjs",
      "verb": null,
-     "line": 319,
+     "line": 327,
      "ctx": "selftest"
     }
    ],
@@ -21173,6 +21251,19 @@
    "is_dir": false
   },
   {
+   "path": "dressing-room/state/claims.jsonl",
+   "readers": [
+    "claims.mjs"
+   ],
+   "writers": [
+    "claims.mjs"
+   ],
+   "fixture_readers": [],
+   "fixture_writers": [],
+   "on_disk": true,
+   "is_dir": false
+  },
+  {
    "path": "dressing-room/state/concept_graph.json",
    "readers": [
     "cortex.mjs",
@@ -23926,6 +24017,17 @@
    "is_dir": false
   },
   {
+   "path": "scripts/claims.mjs",
+   "readers": [],
+   "writers": [],
+   "fixture_readers": [
+    "claims.mjs"
+   ],
+   "fixture_writers": [],
+   "on_disk": true,
+   "is_dir": false
+  },
+  {
    "path": "scripts/claudegen.mjs",
    "readers": [],
    "writers": [],
@@ -24756,6 +24858,7 @@
  "on_disk": [
   "dressing-room/state/acts.jsonl",
   "dressing-room/state/afferent.2026-07.jsonl",
+  "dressing-room/state/afferent.2026-08.jsonl",
   "dressing-room/state/afferent.jsonl",
   "dressing-room/state/answer_cache.jsonl",
   "dressing-room/state/archive_audit.jsonl",
@@ -24790,6 +24893,10 @@
   "dressing-room/state/brain_out/agenda/2026-08-19.md",
   "dressing-room/state/brain_out/agenda/2026-08-29.json",
   "dressing-room/state/brain_out/agenda/2026-08-29.md",
+  "dressing-room/state/brain_out/agenda/2026-08-30.json",
+  "dressing-room/state/brain_out/agenda/2026-08-30.md",
+  "dressing-room/state/brain_out/agenda/2026-08-31.json",
+  "dressing-room/state/brain_out/agenda/2026-08-31.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-17.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-18.md",
   "dressing-room/state/brain_out/day_cartridge/2026-07-21.md",
@@ -24825,6 +24932,8 @@
   "dressing-room/state/brain_out/day_cartridge/2026-08-19.md",
   "dressing-room/state/brain_out/day_cartridge/2026-08-29.allowed.json",
   "dressing-room/state/brain_out/day_cartridge/2026-08-29.md",
+  "dressing-room/state/brain_out/day_cartridge/2026-08-30.allowed.json",
+  "dressing-room/state/brain_out/day_cartridge/2026-08-30.md",
   "dressing-room/state/brain_out/diary/2026-08-13.json",
   "dressing-room/state/brain_out/diary/2026-08-13.md",
   "dressing-room/state/brain_out/diary/2026-08-14.json",
@@ -24841,6 +24950,10 @@
   "dressing-room/state/brain_out/diary/2026-08-20.md",
   "dressing-room/state/brain_out/diary/2026-08-30.json",
   "dressing-room/state/brain_out/diary/2026-08-30.md",
+  "dressing-room/state/brain_out/diary/2026-08-31.json",
+  "dressing-room/state/brain_out/diary/2026-08-31.md",
+  "dressing-room/state/brain_out/diary/2026-09-01.json",
+  "dressing-room/state/brain_out/diary/2026-09-01.md",
   "dressing-room/state/brain_out/doubts/2026-07-18.md",
   "dressing-room/state/brain_out/doubts/2026-07-21.md",
   "dressing-room/state/brain_out/doubts/2026-07-29.md",
@@ -24860,6 +24973,7 @@
   "dressing-room/state/brain_out/doubts/2026-08-14.md",
   "dressing-room/state/brain_out/doubts/2026-08-15.md",
   "dressing-room/state/brain_out/doubts/2026-08-17.md",
+  "dressing-room/state/brain_out/doubts/2026-08-31.md",
   "dressing-room/state/brain_out/dreams/2026-08-09.md",
   "dressing-room/state/brain_out/drill_forge/2026-07-18.md",
   "dressing-room/state/brain_out/drill_forge/2026-07-21.md",
@@ -24895,6 +25009,7 @@
   "dressing-room/state/brain_out/dugout/2026-08-18.md",
   "dressing-room/state/brain_out/dugout/2026-08-19.md",
   "dressing-room/state/brain_out/dugout/2026-08-20.md",
+  "dressing-room/state/brain_out/dugout/2026-08-30.md",
   "dressing-room/state/brain_out/dugout_digest/2026-07-17.md",
   "dressing-room/state/brain_out/dugout_digest/2026-07-18.md",
   "dressing-room/state/brain_out/dugout_digest/2026-07-21.md",
@@ -24920,6 +25035,9 @@
   "dressing-room/state/brain_out/dugout_digest/2026-08-18.md",
   "dressing-room/state/brain_out/dugout_digest/2026-08-19.md",
   "dressing-room/state/brain_out/dugout_digest/2026-08-29.md",
+  "dressing-room/state/brain_out/dugout_digest/2026-08-30.md",
+  "dressing-room/state/brain_out/dugout_digest/2026-08-31.md",
+  "dressing-room/state/brain_out/dugout_digest/2026-09-01.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-18.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-29.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-30.md",
@@ -24967,6 +25085,10 @@
   "dressing-room/state/brain_out/intent_digest/2026-08-19.md",
   "dressing-room/state/brain_out/intent_digest/2026-08-29.json",
   "dressing-room/state/brain_out/intent_digest/2026-08-29.md",
+  "dressing-room/state/brain_out/intent_digest/2026-08-30.json",
+  "dressing-room/state/brain_out/intent_digest/2026-08-30.md",
+  "dressing-room/state/brain_out/intent_digest/2026-08-31.json",
+  "dressing-room/state/brain_out/intent_digest/2026-08-31.md",
   "dressing-room/state/brain_out/lexicon/2026-07-18.md",
   "dressing-room/state/brain_out/lexicon/2026-07-19.md",
   "dressing-room/state/brain_out/lexicon/2026-08-06.md",
@@ -24999,6 +25121,8 @@
   "dressing-room/state/brain_out/midday/2026-08-18.md",
   "dressing-room/state/brain_out/midday/2026-08-19.md",
   "dressing-room/state/brain_out/midday/2026-08-29.md",
+  "dressing-room/state/brain_out/midday/2026-08-30.md",
+  "dressing-room/state/brain_out/midday/2026-09-01.md",
   "dressing-room/state/brain_out/model_mine/2026-08-09.md",
   "dressing-room/state/brain_out/model_mine/2026-08-10.json",
   "dressing-room/state/brain_out/model_mine/2026-08-10.md",
@@ -25155,6 +25279,10 @@
   "dressing-room/state/brain_out/prepare/2026-08-20.md",
   "dressing-room/state/brain_out/prepare/2026-08-30.json",
   "dressing-room/state/brain_out/prepare/2026-08-30.md",
+  "dressing-room/state/brain_out/prepare/2026-08-31.json",
+  "dressing-room/state/brain_out/prepare/2026-08-31.md",
+  "dressing-room/state/brain_out/prepare/2026-09-01.json",
+  "dressing-room/state/brain_out/prepare/2026-09-01.md",
   "dressing-room/state/brain_out/prepare_on_request/2026-08-18.md",
   "dressing-room/state/brain_out/prepare_on_request/2026-08-19.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-09.md",
@@ -25168,6 +25296,8 @@
   "dressing-room/state/brain_out/reanalysis/2026-08-18.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-19.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-29.md",
+  "dressing-room/state/brain_out/reanalysis/2026-08-30.md",
+  "dressing-room/state/brain_out/reanalysis/2026-08-31.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-18.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-21.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-29.md",
@@ -25346,6 +25476,14 @@
   "dressing-room/state/capsule_backups/2026-08-30/embeddings.json",
   "dressing-room/state/capsule_backups/2026-08-30/inference.json",
   "dressing-room/state/capsule_backups/2026-08-30/tokenization.json",
+  "dressing-room/state/capsule_backups/2026-08-31/context.json",
+  "dressing-room/state/capsule_backups/2026-08-31/embeddings.json",
+  "dressing-room/state/capsule_backups/2026-08-31/inference.json",
+  "dressing-room/state/capsule_backups/2026-08-31/tokenization.json",
+  "dressing-room/state/capsule_backups/2026-09-01/context.json",
+  "dressing-room/state/capsule_backups/2026-09-01/embeddings.json",
+  "dressing-room/state/capsule_backups/2026-09-01/inference.json",
+  "dressing-room/state/capsule_backups/2026-09-01/tokenization.json",
   "dressing-room/state/capsule_map.json",
   "dressing-room/state/capsules/context.json",
   "dressing-room/state/capsules/embeddings.json",
@@ -25356,6 +25494,7 @@
   "dressing-room/state/capture_config.json",
   "dressing-room/state/cards.json",
   "dressing-room/state/chrome_rail_stamp.json",
+  "dressing-room/state/claims.jsonl",
   "dressing-room/state/concept_graph.json",
   "dressing-room/state/concepts.json",
   "dressing-room/state/conductor.json",
@@ -25431,6 +25570,7 @@
   "dressing-room/state/post_match/2026-08-18.md",
   "dressing-room/state/predictions.jsonl",
   "dressing-room/state/presence_log.2026-07.jsonl",
+  "dressing-room/state/presence_log.2026-08.jsonl",
   "dressing-room/state/presence_log.jsonl",
   "dressing-room/state/presence_thresholds.json",
   "dressing-room/state/proactivity_ledger.json",
@@ -25560,6 +25700,8 @@
   "dressing-room/state/capsule_backups/2026-08-19",
   "dressing-room/state/capsule_backups/2026-08-29",
   "dressing-room/state/capsule_backups/2026-08-30",
+  "dressing-room/state/capsule_backups/2026-08-31",
+  "dressing-room/state/capsule_backups/2026-09-01",
   "dressing-room/state/capsules",
   "dressing-room/state/post_match",
   "dressing-room/state/scout_reports"
@@ -25592,6 +25734,10 @@
   {
    "organ": "capture.mjs",
    "file": "reps_log.json"
+  },
+  {
+   "organ": "claims.mjs",
+   "file": "claims.json"
   },
   {
    "organ": "daemon_watchdog.mjs",
@@ -28201,6 +28347,11 @@
     "source": "settings.json"
    },
    {
+    "script": "claims.mjs",
+    "verb": "stop",
+    "source": "settings.json"
+   },
+   {
     "script": "turn_hook.mjs",
     "verb": "start",
     "source": "settings.json"
@@ -28218,6 +28369,11 @@
    {
     "script": "rails.mjs",
     "verb": "pretooluse",
+    "source": "settings.json"
+   },
+   {
+    "script": "claims.mjs",
+    "verb": "claim",
     "source": "settings.json"
    },
    {
@@ -28617,6 +28773,11 @@
    },
    {
     "script": "rails.mjs",
+    "verb": "selftest",
+    "source": "package.json"
+   },
+   {
+    "script": "claims.mjs",
     "verb": "selftest",
     "source": "package.json"
    },
@@ -29032,6 +29193,20 @@
    }
   ],
   "doc_cited": [
+   {
+    "script": "claims.mjs",
+    "verbs": [
+     "claim",
+     "stop"
+    ]
+   },
+   {
+    "script": "rails.mjs",
+    "verbs": [
+     "orders",
+     "selftest"
+    ]
+   },
    {
     "script": "acts.mjs",
     "verbs": [
@@ -29674,7 +29849,9 @@
    {
     "script": "samjhao.mjs",
     "verbs": [
-     "plan"
+     "open",
+     "plan",
+     "taught"
     ]
    },
    {
@@ -29701,13 +29878,6 @@
    {
     "script": "spool.mjs",
     "verbs": []
-   },
-   {
-    "script": "rails.mjs",
-    "verbs": [
-     "orders",
-     "selftest"
-    ]
    },
    {
     "script": "ghost.mjs",
@@ -29778,6 +29948,6 @@
     "verbs": []
    }
   ],
-  "md_files": 228
+  "md_files": 238
  }
 }

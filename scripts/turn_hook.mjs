@@ -299,8 +299,16 @@ function selftest() {
     assert("WIRING — SessionStart = exactly [turn_hook start] (5 processes → 1)",
       ss.length === 1 && ss[0] === "node scripts/turn_hook.mjs start", JSON.stringify(ss));
     const st = cmds("Stop");
-    assert("WIRING — Stop = exactly [afferent-post, turn_hook stop] (Block 2: teaching_audit hook + intent stop, one process)",
-      st.length === 2 && st[0] === "node hooks/afferent-post.mjs" && st[1] === "node scripts/turn_hook.mjs stop", JSON.stringify(st));
+    // THE CLAIMS GATE JOINED THIS ANCHOR (1 Sep 2026, THE BLUEPRINT rung 0.1+0.2) and it does
+    // NOT ride the dispatcher — deliberately, for the same reason afferent-post never did.
+    // A dispatcher callee prints TEXT into a shared stdout; a gate must emit a JSON decision
+    // ALONE, or it is not a decision at all. So Stop is 3 processes: the capture nerve, the
+    // dispatcher (teaching_audit hook · intent stop · acts stop · session_meter stop), and the
+    // gate. The list stays EXACT and ordered — this assertion's job is to refuse the five
+    // per-callee commands ever coming back, and it still does (§10-D rule 6: a gate may only
+    // get stricter, so the gate's own presence is now pinned here too).
+    assert("WIRING — Stop = exactly [afferent-post, turn_hook stop, claims gate] (5 callees → 1 dispatcher; the gate is its own process by design)",
+      st.length === 3 && st[0] === "node hooks/afferent-post.mjs" && st[1] === "node scripts/turn_hook.mjs stop" && st[2] === "node scripts/claims.mjs stop", JSON.stringify(st));
 
     // 3. THE LIVE CALLEES UNDER ARSENAL_ORGAN=1 — hermetic by every callee's own
     //    guard (no read of his state reaches stdout, no write lands), so this both

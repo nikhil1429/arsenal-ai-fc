@@ -207,6 +207,14 @@ dressing-room/hippocampus/
 # the thalamus + cortex (M1) — his moments, words, frame-hashes: LOCAL ONLY.
 # the public repo holds the machinery, never the moments (CYBORG_BRAIN.md §11)
 dressing-room/state/afferent.jsonl
+# THE MONTH-ROLL CLASS RULE (1 Sep 2026, floor-audit W0-A, findings CC-02/CC-10/SB-01):
+# the D10 monthly roll renames afferent.jsonl → afferent.<YYYY-MM>.jsonl, and the exact-name
+# rule above never covered the rolled siblings — afferent.2026-07.jsonl reached origin/main
+# carrying his verbatim words (his 14 Aug ruling admits no exception). Same class, same cure
+# as the presence_log glob: ignore the WHOLE rotation family, forever. July's tracked copy is
+# untracked in this same commit (git rm --cached — file stays on disk, L9); the history
+# question rides his card.
+dressing-room/state/afferent.*.jsonl
 # THE WRITE-AHEAD SPOOL (rung S8, 28 Aug 2026) — the SAME CONTENT as afferent.jsonl, one step
 # earlier in the pipe: it holds his verbatim turns BEFORE they reach the bus, which is the whole
 # point of it. It arrives here in the commit that creates it, deliberately: a new lane that
@@ -500,3 +508,11 @@ setup/services/ArsenalFC-*.exe
 # be committed as if it were his state, and so a healthy tree never reads as dirty.
 dressing-room/state/**/*.tmp[0-9]*
 dressing-room/state/**/*.torn-*
+
+# THE CLAIMS GATE (1 Sep 2026, THE BLUEPRINT rung 0.1+0.2 — scripts/claims.mjs, SOLE WRITER).
+# Same class as teaching_audit_last.json and the session-intent memory two blocks up: machine-
+# local turn bookkeeping a Stop hook writes, keyed to a session id that means nothing on any
+# other machine, and rebuilt from zero the moment it is deleted. It also quotes back what a
+# session CLAIMED, in its own words, which is the assistant's half of the same "his words never
+# reach a public remote" rule. The gate itself is code and IS tracked; only its ledger is not.
+dressing-room/state/claims.jsonl
