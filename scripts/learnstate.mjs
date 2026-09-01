@@ -153,7 +153,10 @@ function outwardLines(dir, nowMs) {
         ? `OUTWARD: full-syllabus audit ${audit.length - todo.length}/4 returned — fire ${todo[0].id} on Gemini Deep Research (dressing-room/missions/) · benchmark gated till audit-close`
         : `OUTWARD: all 4 audit returns in — diff review + audit-close (his word) unlocks the benchmark`);
     }
-    const gen = mj.missions.filter((r) => r.type !== "audit" && !r.ingested_at);
+    // W0-A (1 Sep 2026, OL-05): a RETIRED mission is not work. This line shows exactly one
+    // generated mission — the oldest open one — so a single piece of junk at the head of the
+    // desk owned the only outward slot he ever sees. scout's missionLines() filters the same way.
+    const gen = mj.missions.filter((r) => r.type !== "audit" && !r.ingested_at && !r.retired_at);
     if (gen.length) L.push(`OUTWARD: ${gen[0].id} staged — fire when he sits with Gemini (EMPHASIS only, syllabus canon)`);
     // the floor line only when UNMET — a met floor is silence, not applause
     const cutoff = nowMs - 7 * 86400000;

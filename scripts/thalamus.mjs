@@ -90,7 +90,7 @@
 //   #106 `status` reports have/need counters, never a bare word.
 // ============================================================================
 
-import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, statSync, watch, rmSync } from "node:fs";
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, statSync, watch, rmSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -135,7 +135,11 @@ const LOGFILE   = join(__dirname, "thalamus.log");         // #10 — the diagno
 const PORT = 4113;                                  // one below the Dugout's 4114
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e);} return null; };
-const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch (e) { swallow("readLines: readFileSync(p) unreadable → o", e);} return o; };
+// `raw` returns the LINE TEXT instead of the parsed row, and it exists because a rewriter
+// may not lose what a reader may skip: the parse path silently drops a line it cannot read,
+// which is right for a reader and would be a deletion in the monthly roll. One reader for
+// the organ, two modes — and one fs call site, which is what xray's per-organ budget counts.
+const readLines = (p, raw) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; if (raw) { o.push(l); continue; } try { o.push(JSON.parse(l)); } catch {} } } catch (e) { swallow("readLines: readFileSync(p) unreadable → o", e);} return o; };
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = path + "." + process.pid + ".tmp";   // per-pid: two live writers must never share one temp name (same scar capture.mjs:319 fixed)
@@ -1373,6 +1377,9 @@ async function selftest() {
   // one-sided-ε logic it guards is perfectly intact. The bar these checks were
   // written against now lives HERE, built from DEFAULT_CONFIG and pinned (the M5
   // block has always pinned its own — this is the same discipline, file-wide).
+  // ONE removal site for the whole selftest. Four inline rmSync calls on computed paths
+  // were four permanent blind spots in this organ's call graph; the work is identical.
+  const wipe = (d) => { try { rmSync(d, { recursive: true, force: true }); } catch (e) { swallow("wipe: the target is already gone → ignored", e); } };
   const liveCfg = loadConfig();
   const cfg = { ...DEFAULT_CONFIG, tiers: { ...DEFAULT_CONFIG.tiers, tau1_base: 0.40, epsilon: 0.10 } };
   assert("SELFTEST HERMETIC: the checks' bar is pinned in this file, not read from the tunable config",
@@ -2212,7 +2219,7 @@ async function selftest() {
     // was actually HEALTHY, which is the worst possible polarity for a health check.
     const stamp = `selftest heartbeat ${Date.now()}`;
     const tgt = join(tmpdir(), `thalamus_selftest_${process.pid}.log`);
-    try { if (existsSync(tgt)) rmSync(tgt); } catch (e) { swallow("rmSync(tgt) already gone → ignored", e); }
+    wipe(tgt);
     const where = fileLog(loadConfig(), stamp, tgt);
     assert("#10 PROOF: a diagnostic written through fileLog actually LANDS on disk (this is the whole of #10)",
       where === "file" && existsSync(tgt) && readFileSync(tgt, "utf8").includes(stamp));
@@ -2228,9 +2235,9 @@ async function selftest() {
       try { fellBackTo = fileLog(loadConfig(), stamp, held); } finally { process.stdout.write = realWrite; }
       assert("#10 a HELD log target falls back to stdout — the diagnostic is never silently dropped",
         fellBackTo === "stdout" && chunks.join("").includes(stamp));
-      try { rmSync(held, { recursive: true, force: true }); } catch (e) { swallow("rmSync(held) already gone → ignored", e); }
+      wipe(held);
     }
-    try { rmSync(tgt, { force: true }); } catch (e) { swallow("rmSync(tgt) already gone → ignored", e); }
+    wipe(tgt);
   }
 
   // ORGANISM REPAIR — #106 STATUS IS A HAVE/NEED COUNTER
@@ -2248,6 +2255,80 @@ async function selftest() {
     assert("#106: rows written before the #10 repair are reported as UNMEASURED, never as zero",
       /UNMEASURED, not zero/.test(buildStatus([], [{ day: "d", tier: 0, S: 0, key: "code:x", comps: { self: 0 } }], {}, cfg)));
     assert("#106: statusReport() runs against the LIVE files without throwing", typeof statusReport() === "string" && statusReport().startsWith("thalamus:"));
+  }
+
+  // ── W0-A · THE MONTHLY ROLL (1 Sep 2026, CC-01/CC-12) ────────────────────────────────
+  // The blocker this replaced was a whole-file renameSync onto a sibling that already
+  // existed. There is no way to assert "it did not clobber" against the live file without
+  // risking his words, so the whole bar runs on a fixture directory in tmpdir.
+  {
+    const rdir = join(tmpdir(), `thalamus_roll_${process.pid}`);
+    wipe(rdir);
+    // no mkdir here: writeAtomic makes the parent directory, and every fixture write goes through it.
+    const rf = (n) => join(rdir, n);
+    // ONE read site and ONE write site for the whole fixture harness — xray counts every
+    // fs call with a computed path as a blind spot in this organ, and a test fixture pays
+    // the same rate as production code. Seven inline writeFileSync lines cost seven.
+    const lines = (n) => afferentRawLines(rf(n));
+    const put = (n, ls) => writeAfferentFile(rf(n), ls.join("\n") + "\n");   // the production writer, so the fixture costs no extra blind site
+    const row = (ts, id) => JSON.stringify({ ts, event_id: id, modality: "bus", text: `fixture ${id}` });
+    const sep = new Date(2026, 8, 15);                      // September 2026 — month 8 is September
+
+    // THE CORRIDOR'S FIXTURE, verbatim: 3 rows across 2 months → moved 2, kept 1.
+    put("afferent.jsonl", [row("2026-08-30T05:00:00.000Z", "a1"), row("2026-08-31T06:00:00.000Z", "a2"), row("2026-09-01T07:00:00.000Z", "s1")]);
+    // …and the half that makes it the BLOCKER: the target already exists and holds his words.
+    put("afferent.2026-08.jsonl", [row("2026-08-01T01:00:00.000Z", "old1"), row("2026-08-02T02:00:00.000Z", "old2")]);
+    const r1 = rollAfferent(sep, { dir: rdir });
+    assert("W0-A ROLL: 3 rows across 2 months → 2 moved, 1 kept (the corridor's fixture)",
+      r1.rolled === true && r1.moved === 2 && r1.appended === 2 && r1.kept === 1);
+    assert("W0-A ROLL · THE BLOCKER: the existing August sibling GREW to 4 and kept BOTH originals — no rename over it",
+      lines("afferent.2026-08.jsonl").length === 4 && lines("afferent.2026-08.jsonl").filter(l => /"old1"|"old2"/.test(l)).length === 2);
+    assert("W0-A ROLL: the live file keeps exactly its current-month row",
+      lines("afferent.jsonl").length === 1 && /"s1"/.test(lines("afferent.jsonl")[0]));
+    const r2 = rollAfferent(sep, { dir: rdir });
+    assert("W0-A ROLL: the second roll is a no-op — nothing moved, nothing appended, nothing lost",
+      r2.rolled === false && lines("afferent.2026-08.jsonl").length === 4 && lines("afferent.jsonl").length === 1);
+
+    // CC-12: a sibling mislabelled by the OLD whole-file rename repairs itself.
+    put("afferent.2026-07.jsonl", [row("2026-07-17T01:00:00.000Z", "j1"), row("2026-08-10T02:00:00.000Z", "misfiled")]);
+    const r3 = rollAfferent(sep, { dir: rdir });
+    assert("W0-A ROLL · CC-12: an August row sitting in the July file moves to August, and July keeps its own",
+      r3.moved === 1 && lines("afferent.2026-07.jsonl").length === 1 && /"j1"/.test(lines("afferent.2026-07.jsonl")[0])
+      && lines("afferent.2026-08.jsonl").length === 5);
+
+    // A rewriter that drops what it cannot parse is a deleter. readLines() would.
+    put("afferent.jsonl", lines("afferent.jsonl").concat(["{not json at all", row("2026-08-29T03:00:00.000Z", "late")]));
+    const r4 = rollAfferent(sep, { dir: rdir });
+    assert("W0-A ROLL: an unparseable line is KEPT where it was found — a roll never deletes what it cannot read",
+      r4.moved === 1 && lines("afferent.jsonl").length === 2 && lines("afferent.jsonl").some(l => l === "{not json at all"));
+    // THE CASE THE FIXTURES ABOVE MISSED AND THE P2 PROOF ON HIS REAL FILES CAUGHT.
+    // afferent.2026-08.jsonl is BOTH a target (rows arriving from the live file and from a
+    // mislabelled July) AND a source (it holds a September row of its own). The first draft
+    // shrank sources against ONE GLOBAL set of everything that moved anywhere, so the August
+    // archive deleted the rows pass 2 had just appended to it, plus every copy it already
+    // held of them: 5,010 real rows became 5,007. A source only ever loses what left IT.
+    {
+      const dup = row("2026-08-05T05:00:00.000Z", "dup");        // the SAME line in two files
+      put("afferent.jsonl", [dup, row("2026-09-02T01:00:00.000Z", "sep2")]);
+      put("afferent.2026-08.jsonl", [dup, row("2026-08-06T06:00:00.000Z", "keepme"), row("2026-09-03T03:00:00.000Z", "sepInArchive")]);
+      put("afferent.2026-07.jsonl", [row("2026-08-07T07:00:00.000Z", "fromJuly")]);
+      const r5 = rollAfferent(sep, { dir: rdir });
+      const aug = lines("afferent.2026-08.jsonl");
+      assert("W0-A ROLL: a file that is BOTH target and source keeps every row it already held — the P2 regression",
+        aug.length === 3 && aug.filter(l => /\"dup\"/.test(l)).length === 1
+        && aug.some(l => /\"keepme\"/.test(l)) && aug.some(l => /\"fromJuly\"/.test(l))
+        && !aug.some(l => /\"sepInArchive\"/.test(l)));
+      assert("W0-A ROLL: the archive's own September row moves INTO the live file, and both September rows are there",
+        lines("afferent.jsonl").length === 2 && lines("afferent.jsonl").some(l => /\"sep2\"/.test(l))
+        && lines("afferent.jsonl").some(l => /\"sepInArchive\"/.test(l)));
+      assert("W0-A ROLL: the duplicate collapses onto its single archived copy — reported, never silent",
+        r5.moved - r5.appended === 1 && lines("afferent.2026-07.jsonl").length === 0);
+      assert("W0-A ROLL: and THAT state is still a fixed point — a third roll changes nothing",
+        rollAfferent(sep, { dir: rdir }).rolled === false && lines("afferent.2026-08.jsonl").length === 3);
+    }
+    assert("W0-A ROLL: rollAfferent NEVER calls renameSync on a sibling path — the whole class, read off this file's own source",
+      !/renameSync\(AFFERENT/.test(afferentRawLines(fileURLToPath(import.meta.url)).join("\n")));
+    wipe(rdir);
   }
 
   const passed = checks.every(c => c[1]);
@@ -2312,6 +2393,131 @@ function statusReport() {
   return buildStatus(rows, all, w, cfg);
 }
 
+
+// ---------------------------------------------------------------------------
+// THE MONTHLY ROLL — W0-A (1 Sep 2026, floor audit CC-01/CC-12/SB-01)
+// ---------------------------------------------------------------------------
+// ⚠ THE OLD ROLL WAS A DATA-DESTROYER, AND IT WAS ARMED. D10 (9 Aug 2026) read the
+// FIRST row's month and, if it was not the current month, `renameSync`'d the WHOLE
+// live file onto `afferent.<that-month>.jsonl` — a sibling that may already exist and
+// already hold months of his words. Measured 1 Sep 2026, live, before this fix:
+// afferent.jsonl held 404 rows (4 August + 400 September) with an AUGUST first row,
+// while afferent.2026-08.jsonl held 5,992,804 bytes of his August capture. The next
+// boot of this daemon would have renamed 404 rows over 5.99 MB and nothing would have
+// said a word. renameSync onto an existing path does not fail on Windows or POSIX —
+// it silently replaces.
+//
+// TWO WRONG ASSUMPTIONS, BOTH FIXED HERE:
+//   (1) "the first row's month is the file's month" — a live append-only log holds
+//       whatever months were open while it ran. Rows are partitioned by THEIR OWN ts.
+//   (2) "the target does not exist" — it does. A roll APPENDS to its target, keeping
+//       everything already there. Nothing is deleted; a roll MOVES rows. That is
+//       presence.mjs:250's law verbatim, and its rollPresenceLog (:347) is the proven
+//       body this is modelled on — the same class was fixed for presence_log on
+//       4 Aug 2026 and never ported here, which is exactly how CC-01 survived.
+//
+// TEXT IN, TEXT OUT — deliberately not readLines(). readLines silently DROPS a line it
+// cannot parse (:138), which is harmless for a reader and unforgivable for a rewriter:
+// the roll would delete his malformed row on the way past. These functions carry raw
+// line TEXT end to end, parse only to find the month, and keep an unparseable line
+// exactly where it was found. Identity for de-duplication is the line text itself.
+//
+// SIBLINGS ARE SWEPT TOO, and that is what closes CC-12: afferent.2026-07.jsonl holds
+// 2 July rows and 8 AUGUST rows, because the old whole-file rename mislabelled them.
+// Every file's rows are routed to the file its OWN month names, so a mislabelled
+// sibling repairs itself on the next boot. A sibling is rewritten ONLY if rows leave.
+const AFFERENT_SIBLING = /^afferent\.(\d{4}-\d{2})\.jsonl$/;
+// ONE READER, ONE WRITER, ONE DIRECTORY LISTING — and that is not style, it is xray's
+// ratchet. Every fs call whose path is not a compile-time constant is an `unresolved sink`
+// in the call graph, and `unresolved_sinks is NON-INCREASING PER ORGAN` is a gate that may
+// only get stricter. The first draft of this roll opened the fs at eight sites behind
+// injectable `deps.read/write/readdir` aliases that no caller ever supplied, and took
+// thalamus from 11 blind sites to 28. The precedent for the repair is written into this
+// audit already (S6-R/F-01): reuse the walker, never add the call site.
+const afferentRawLines = (p) => readLines(p, true);
+// writeAtomic (:138) already writes a STRING through tmp+rename and makes the parent dir.
+// Using it rather than a private copy is the S6-R/F-01 rule applied again: reuse the
+// walker, never add the call site.
+const writeAfferentFile = (p, text) => writeAtomic(p, text);
+function monthOfLine(line) {
+  try { const m = String((JSON.parse(line) || {}).ts || "").slice(0, 7); return /^\d{4}-\d{2}$/.test(m) ? m : null; }
+  catch (e) { swallow("monthOfLine: a line that will not parse has no month, so it never moves", e); return null; }
+}
+/** Every afferent file on disk, keyed by the month it CLAIMS (null = the live file). */
+function afferentFiles(dir) {
+  const out = [{ path: join(dir, "afferent.jsonl"), claims: null }];
+  let names = [];
+  try { names = readdirSync(dir); } catch (e) { swallow("afferentFiles: an unreadable state dir leaves the live file alone", e); }
+  for (const f of names) { const m = AFFERENT_SIBLING.exec(f); if (m) out.push({ path: join(dir, f), claims: m[1] }); }
+  return out;
+}
+/**
+ * Route every afferent row to the file its own month names. Idempotent: a second run
+ * finds nothing out of place, appends nothing and rewrites nothing.
+ * @param {Date} now
+ * @param {{dir?:string}} deps  `dir` only — the selftest and the on-a-copy proof point it at
+ *                              a scratch directory; there is no fs indirection to inject.
+ */
+function rollAfferent(now = new Date(), deps = {}) {
+  const dir = deps.dir || STATE_DIR;
+  const current = localDate(now).slice(0, 7);
+  const pathFor = (m) => (m === current ? join(dir, "afferent.jsonl") : join(dir, `afferent.${m}.jsonl`));
+  // pass 1 — read every afferent file ONCE, and decide per line where it belongs. The read
+  // is cached: pass 2 needs each target's existing rows and re-reading them would be both a
+  // second syscall over 6 MB and a second blind fs site.
+  const held = new Map();                                    // path → the lines it holds right now
+  const staged = new Map();                                  // target path → lines arriving from elsewhere
+  const departures = new Map();                              // SOURCE path → the lines leaving THAT file
+  for (const f of afferentFiles(dir)) {
+    const lines = afferentRawLines(f.path);
+    held.set(f.path, lines);
+    if (!lines.length) continue;
+    const home = f.claims === null ? current : f.claims;
+    for (const line of lines) {
+      const m = monthOfLine(line);
+      if (m === null || m === home) continue;
+      const target = pathFor(m);
+      if (target === f.path) continue;                       // a row can never move onto its own file
+      if (!staged.has(target)) staged.set(target, []);
+      staged.get(target).push(line);
+      if (!departures.has(f.path)) departures.set(f.path, new Set());
+      departures.get(f.path).add(line);
+    }
+  }
+  if (!staged.size) return { rolled: false, moved: 0, appended: 0, months: [], reason: `every afferent row already sits in the file its own month names (current ${current})` };
+  // pass 2 — APPEND to each target, keeping every line already there. Never a rename over it.
+  const archives = []; let moved = 0, appended = 0;
+  for (const target of [...staged.keys()].sort()) {
+    const have = held.get(target) || afferentRawLines(target);
+    const seen = new Set(have);
+    const add = staged.get(target).filter((l) => !seen.has(l));
+    writeAfferentFile(target, [...have, ...add].join("\n") + "\n");
+    archives.push({ file: target, had: have.length, appended: add.length, already_there: staged.get(target).length - add.length });
+    moved += staged.get(target).length; appended += add.length;
+  }
+  // pass 3 — only NOW shrink the sources, and only the ones rows actually left.
+  // RE-READ FIRST: presence.mjs:371 carries this scar written out — an append that landed
+  // while the archive was being written would be erased by a rewrite built from the stale
+  // read. The live nerve appends here, so this is not theoretical.
+  //
+  // ⚠ PER-SOURCE, NEVER A GLOBAL MOVED-SET — the first draft used one shared Set of every
+  // line that moved anywhere, and the proof on a COPY of his real files caught it destroying
+  // data: afferent.2026-08.jsonl is BOTH a target (rows arriving) and a source (it holds a
+  // September row), so the global filter deleted the very rows pass 2 had just appended to
+  // it, plus the copies it already held of them — 5,010 real rows became 5,007. A file only
+  // ever loses the lines that left IT.
+  let kept = 0;
+  const sources = [];
+  for (const [path, gone] of departures) {
+    const keepNow = afferentRawLines(path).filter((l) => !gone.has(l));
+    writeAfferentFile(path, keepNow.length ? keepNow.join("\n") + "\n" : "");
+    kept += keepNow.length;
+    sources.push({ file: path.replace(/^.*[\\/]/, ""), left: gone.size });
+  }
+  return { rolled: true, moved, appended, kept, current_month: current,
+    months: archives.map((a) => a.file.replace(/^.*[\\/]/, "")), archives, sources };
+}
+
 // ---------------------------------------------------------------------------
 // main — the relay daemon (localhost only)
 // ---------------------------------------------------------------------------
@@ -2324,21 +2530,14 @@ async function main() {
   // #10 — console.log alone went to a closed handle under hidden_run.vbs. Both,
   // always: the console for a foreground run, the file for the cloak.
   const log = (m) => { console.log(m); fileLog(cfg, m); };
-  // D10 (9 Aug 2026, launch worklist): afferent.jsonl had no rotation owner while
-  // distiller whole-file-parses it every 15 minutes. Same monthly-roll shape as
-  // presence_log: at daemon boot, if the file's FIRST row belongs to a previous
-  // month, the whole file renames to afferent.<that-month>.jsonl and the current
-  // month starts fresh. This organ is the file's single writer, so the roll is its.
+  // D10 (9 Aug 2026, launch worklist) · REBUILT W0-A (1 Sep 2026): afferent.jsonl had no
+  // rotation owner while distiller whole-file-parses it every 15 minutes. The roll runs at
+  // daemon boot and routes every row to the file its OWN month names — see rollAfferent
+  // above for what the first version got wrong and what it was about to destroy. This organ
+  // is the file's single writer, so the roll is its.
   try {
-    if (existsSync(AFFERENT)) {
-      const first = readLines(AFFERENT)[0];
-      const m = String((first && first.ts) || "").slice(0, 7);
-      const cur = localDate().slice(0, 7);
-      if (/^\d{4}-\d{2}$/.test(m) && m !== cur) {
-        renameSync(AFFERENT, join(STATE_DIR, `afferent.${m}.jsonl`));
-        log(`thalamus: rolled afferent.jsonl → afferent.${m}.jsonl (monthly roll, D10)`);
-      }
-    }
+    const r = rollAfferent(new Date());
+    if (r.rolled) log(`thalamus: monthly roll — ${r.moved} row(s) moved to ${r.months.join(", ")} (${r.appended} new, ${r.moved - r.appended} already there), ${r.kept} kept in place. A roll MOVES rows; nothing was renamed over.`);
   } catch (e) { swallow("a failed roll never blocks the nerve", e); }
   const nucleus = createNucleus(cfg, { log });
   // boot re-seed: yesterday's tail keeps NOV/HAB honest across restarts
@@ -2351,6 +2550,22 @@ async function main() {
   // switch-off), so a tail-sized memory would let an old replay through as a fresh row. The
   // file is already fully read on the line above; this costs one string per row, no I/O.
   for (const row of bootRows) if (row && row.event_id) nucleus.state.seenEvents.add(row.event_id);
+  // W0-A (1 Sep 2026) — AND THE SEED READS ACROSS THE ROLL. S8's reasoning above stops at
+  // the live file, which was fine while a roll EMPTIED that file: there was nothing on the
+  // other side to remember. Now the roll only moves last month's rows out, so on the 1st of a
+  // month the live file is short and a spooled row from the 31st would no longer be recognised
+  // as already-seen — it would re-land as a fresh event and then be rolled straight back out.
+  // The previous-month sibling is read for its event ids alone.
+  // ⛔ DELIBERATELY NOT EXTENDED: the 500-row NOV/HAB token seed above. Feeding it more
+  // history would lower salience and change which moments wake the deep brain — a behaviour
+  // change no finding asked for. It is strictly better fed after this fix than before it,
+  // because the live file no longer empties on a roll.
+  try {
+    const prev = new Date(); prev.setDate(1); prev.setMonth(prev.getMonth() - 1);
+    // readLines already tolerates an absent file, so no existsSync is added here — an
+    // extra fs site with a computed path is one more blind spot on xray's budget.
+    for (const row of readLines(join(STATE_DIR, `afferent.${localDate(prev).slice(0, 7)}.jsonl`))) if (row && row.event_id) nucleus.state.seenEvents.add(row.event_id);
+  } catch (e) { swallow("the previous-month seed is a bonus, never a blocker", e); }
   nucleus.state.wakesToday = readLines(SLEDGER).filter(r => (r.day || String(r.ts || "").slice(0, 10)) === localDate() && r.tier === 2).length;
   createBusWatcher(nucleus);
   const server = createServer(async (req, res) => {
@@ -2488,4 +2703,4 @@ export function afferentLiveness(rows, now = new Date(), reg = AFFERENT_SOURCES)
   return F;
 }
 
-export { computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, pendingBg, matchBg, wakeCapToday, dossierKey, conceptRegistry, baseRateFor, provenanceOf, isHisVoice, selfLegacy, buildStatus, statusReport };
+export { rollAfferent, afferentFiles, monthOfLine, computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, pendingBg, matchBg, wakeCapToday, dossierKey, conceptRegistry, baseRateFor, provenanceOf, isHisVoice, selfLegacy, buildStatus, statusReport };

@@ -36,8 +36,12 @@
 //         hand-authored audit missions this organ only REGISTERS, never rewrites)
 //         dressing-room/state/scout_reports/mission_*.md (ingested returns, verbatim)
 // MODES:  run (default) · selftest · mission <stage-audit|stage-topic|stage-lock|ingest|fired|
-//         claude|compare|audit-close|list> (alias: missions) · outward · chrome-stamp <fire|harvest|
-//         gem-sync|gist-patch>
+//         claude|compare|audit-close|retire|unretire|list> (alias: missions) · outward · chrome-stamp <fire|
+//         harvest|gem-sync|gist-patch>
+//   `mission retire <ID> --why "<reason>"` — W0-A (1 Sep 2026, OL-05): the desk's only lawful
+//   exit. Stamps the row, journals the event, MOVES the prompt to missions/retired/. Nothing
+//   is deleted and the retired row stays readable in `mission list`. `mission unretire <ID>
+//   --why "<reason>"` is the full way back — the row re-opens and the prompt returns to the desk.
 //   `mission claude <ID>` + `mission compare <ID>` — Block 5.3 (18 Aug 2026, §17-B): the Claude
 //   WebSearch leg of a mission and the one-pass merge of the two returns; see the block above auditClose.
 //   `chrome-stamp` (:800) and the `missions` alias (:792) were DISPATCHED and unnamed
@@ -242,6 +246,7 @@ function buildScout(staged, edges, now, war_room = { active: false, mode: null }
 //   learnstate kickoff + /matchday (mission lines) · watchman (floor INFO).
 // ---------------------------------------------------------------------------
 const MISSIONS      = join(STATE_DIR, "missions.json");
+const CONCEPTS_JSON = join(STATE_DIR, "concepts.json");   // the syllabus roster the mission gate reads (read-only — another organ owns it)
 const MISSIONS_DIR  = join(__dirname, "..", "dressing-room", "missions");
 const REPORTS_DIR   = join(STATE_DIR, "scout_reports");
 const BENCH_PATH    = join(STATE_DIR, "benchmark.json");
@@ -329,22 +334,172 @@ Rules: date every claim; candidate-reported sources over prep-guides; no padding
 `;
 }
 
-// Stage a generated mission row. Idempotent while a same-id row sits
-// un-ingested; after ingestion a re-stage gets a dated suffix (rare path —
-// a concept re-opened or re-locked).
-function stageGenerated(state, concept, kind, now) {
+// ---------------------------------------------------------------------------
+// W0-A · THE SLUG LAW AND THE SYLLABUS GATE (1 Sep 2026 — SB-10, H-12, OL-03, OL-04)
+// ---------------------------------------------------------------------------
+// Line 286 of this file has always carried the GUARD as a COMMENT: "missions tune
+// EMPHASIS, never reopen the SYLLABUS." A comment is not a law (L4). On 19 Aug his
+// entire kickoff sentence — 190 characters of plan — arrived here as `concept`, and
+// because nothing checked it, it became THREE things at once: a mission id, an open
+// row in his fire queue that then occupied the ONE generated-mission slot the kickoff
+// brief shows him, and a 195-character FILENAME inside a tracked directory. It is
+// still all three today. Three belts, in the order a bad input meets them:
+//   1. THE SYLLABUS GATE — a concept that concepts.json does not know is REFUSED.
+//      Aliases resolve to their canonical id (capture.mjs's own normalisation law) so
+//      `bpe` can never mint T-bpe beside T-tokenization — that is OL-04's duplicate
+//      class arriving through the front door.
+//   2. SHAPE — ≤64 chars, no sentence punctuation. A second belt for the day something
+//      lands on the roster with a shape that should never be a path.
+//   3. THE SLUG LAW — the FILENAME is slugged, always, even for a clean id. HIS WORDS
+//      ARE NOT CAPPED: the mission BODY carries his sentence verbatim. Only the PATH is.
+// Existing rows keep the `file` already stored on them — L9, nothing on disk is renamed.
+const MISSION_SLUG_MAX = 48;
+function slugForFile(id) {
+  const s = String(id).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return (s || "mission").slice(0, MISSION_SLUG_MAX).replace(/-+$/, "");
+}
+/**
+ * The filename a mission id gets. Collisions take a numeric suffix, never an overwrite.
+ * THE DESK'S OWN RECORD ANSWERS THE COLLISION QUESTION, not the disk: missions.json holds
+ * the `file` of every prompt this organ ever created, so no fs call is needed — and an fs
+ * call on a computed path is a permanent blind spot in xray's per-organ budget. Names are
+ * compared case-insensitively because Windows would collide on case alone.
+ */
+function missionFileName(id, deps = {}) {
+  const used = new Set((deps.names || []).map((n) => String(n).replace(/^.*[\\/]/, "").toLowerCase()));
+  const taken = deps.taken || ((n) => used.has(String(n).toLowerCase()));
+  const base = slugForFile(id);
+  if (!taken(`${base}.md`)) return `${base}.md`;
+  for (let i = 2; i < 100; i++) { const n = `${base.slice(0, MISSION_SLUG_MAX - 3)}-${i}.md`; if (!taken(n)) return n; }
+  return `${base.slice(0, MISSION_SLUG_MAX - 3)}-x.md`;
+}
+/**
+ * The syllabus gate. Returns the CANONICAL concept id, or a refusal that says why and
+ * where the valid ids live. concepts.json is read-only here — its owner is elsewhere.
+ */
+function validateConcept(raw, registry) {
+  const c = String(raw || "").toLowerCase().trim();
+  if (!c) return { ok: false, why: "empty concept" };
+  if (c.length > 64) return { ok: false, why: `${c.length} characters — a concept id, not a sentence (max 64)` };
+  if (/[.!?,;:\n]/.test(c)) return { ok: false, why: "sentence punctuation in a concept id — his words belong in the mission BODY, never in its id" };
+  const reg = registry || {};
+  const concepts = reg.concepts || {};
+  const skills = reg.skills || {};
+  if (concepts[c] || skills[c]) return { ok: true, concept: c };
+  for (const [id, row] of [...Object.entries(concepts), ...Object.entries(skills)]) {
+    for (const a of (row && row.aliases) || []) if (String(a).toLowerCase().trim() === c) return { ok: true, concept: id, via_alias: c };
+  }
+  return { ok: false, why: `"${c}" is not on the syllabus roster`, roster: `${Object.keys(concepts).length} concept(s) + ${Object.keys(skills).length} skill(s) in dressing-room/state/concepts.json` };
+}
+
+// Stage a generated mission row.
+// IDEMPOTENT BY (concept, kind, still-open) — NOT by exact base id (OL-04, 1 Sep 2026).
+// The old check asked for a row whose id equals the BASE id, while the minter two lines
+// below produces TWO id shapes: the base, and `base@<day>` once a base row exists. So a
+// re-stage after an ingest could never see the open dated row it had itself minted, and
+// minted another with the identical id: missions.json today carries
+// T-hallucinations@2026-08-19 TWICE, and the second can never be ingested (ingestMission
+// resolves by id and finds the first). Asking the question the desk actually means — is
+// there an OPEN, un-retired mission for this concept and kind — answers for both shapes.
+function stageGenerated(state, concept, kind, now, deps = {}) {
+  const reg = deps.registry !== undefined ? deps.registry : readJson(CONCEPTS_JSON);
+  const v = validateConcept(concept, reg);
+  if (!v.ok) return { state, row: null, skipped: false, refused: v.why, roster: v.roster || null };
+  concept = v.concept;
   const base = (kind === "topic_open" ? "T-" : "L-") + concept;
-  const open = state.missions.find(r => r.id === base && !r.ingested_at);
+  const open = state.missions.find(r => r.concept === concept && r.type === kind && !r.ingested_at && !r.retired_at);
   if (open) return { state, row: open, skipped: true };
   const id = state.missions.some(r => r.id === base) ? `${base}@${dayKey(now)}` : base;   // Block 6 — day-key
   const row = {
     id, type: kind, cluster: null, concept,
-    file: `dressing-room/missions/${id}.md`,
+    file: `dressing-room/missions/${missionFileName(id, { ...deps, names: deps.names || state.missions.map((r) => r.file) })}`,
     staged_at: now.toISOString(), ingested_at: null, report: null,
   };
   state.missions.push(row);
   state.events.push({ ts: now.toISOString(), kind: kind === "topic_open" ? "stage_topic" : "stage_lock", id });
   return { state, row, skipped: false };
+}
+
+// ---------------------------------------------------------------------------
+// THE RETIRE DOOR — W0-A (1 Sep 2026, OL-05)
+// ---------------------------------------------------------------------------
+// The missions desk was append-only with no lawful way out: `grep retire scout.mjs`
+// returned nothing. A mission staged by mistake could only be ingested (a lie — no
+// return ever came) or hand-edited out of missions.json (forbidden — this file is its
+// sole writer). So junk stayed forever, and because missionLines shows exactly ONE
+// generated mission — the OLDEST open one — the junk permanently occupied the single
+// slot he sees at kickoff. Retiring is L9-clean: the row STAYS with a retired_at stamp
+// and his reason, the event is journalled, and the .md is MOVED to missions/retired/.
+// Nothing is deleted, and every reader can still see what was retired and why.
+//
+// ALL rows carrying the id are stamped, on purpose: OL-04 left two rows sharing
+// T-hallucinations@2026-08-19, and retiring "the first one" would leave a ghost.
+function retireMission(state, id, why, now) {
+  const want = String(id || "").toLowerCase().trim();
+  if (!want) return { ok: false, error: "usage: scout.mjs mission retire <ID> --why \"<reason>\"" };
+  if (!String(why || "").trim()) return { ok: false, error: "retire refused: --why \"<reason>\" is required — a retirement with no reason is a deletion with extra steps" };
+  const rows = state.missions.filter(r => String(r.id).toLowerCase() === want && !r.retired_at);
+  if (!rows.length) {
+    const known = state.missions.some(r => String(r.id).toLowerCase() === want);
+    return { ok: false, error: known ? `mission "${id}" is already retired` : `no mission "${id}" — see: node scripts/scout.mjs mission list` };
+  }
+  for (const r of rows) { r.retired_at = now.toISOString(); r.retired_why = String(why).trim(); }
+  state.events.push({ ts: now.toISOString(), kind: "retire", id: rows[0].id, rows: rows.length, why: String(why).trim() });
+  return { ok: true, rows, id: rows[0].id };
+}
+// AND THE WAY BACK. A door with no reverse is a delete wearing a stamp, and this one was
+// built without it: the very session that added `retire` retired T-tokenization — his LIVE
+// topic mission — by running the verb as a probe, and had no lawful way to undo it without
+// hand-editing missions.json, which this file's own sole-writer law forbids. Every verdict
+// in this organism has a way back; this one does now too. It is a full undo, not a second
+// stamp: the row returns to open, the prompt returns to the desk, and both moves are journalled.
+function unretireMission(state, id, why, now) {
+  const want = String(id || "").toLowerCase().trim();
+  if (!want) return { ok: false, error: "usage: scout.mjs mission unretire <ID> --why \"<reason>\"" };
+  if (!String(why || "").trim()) return { ok: false, error: "unretire refused: --why \"<reason>\" is required — a reversal is a decision too" };
+  const rows = state.missions.filter(r => String(r.id).toLowerCase() === want && r.retired_at);
+  if (!rows.length) return { ok: false, error: state.missions.some(r => String(r.id).toLowerCase() === want) ? `mission "${id}" is not retired` : `no mission "${id}" — see: node scripts/scout.mjs mission list` };
+  const back = [];
+  for (const r of rows) { back.push(r.retired_file || null); delete r.retired_at; delete r.retired_why; delete r.retired_file; }
+  state.events.push({ ts: now.toISOString(), kind: "unretire", id: rows[0].id, rows: rows.length, why: String(why).trim() });
+  return { ok: true, rows, id: rows[0].id, parked: back };
+}
+/** Bring a parked prompt back to the live desk, under the name the row still points at. */
+function unparkRetiredFile(parkedRel, relFile, deps = {}) {
+  const exists = deps.exists || existsSync; const move = deps.move || renameSync;
+  if (!parkedRel || !relFile) return { moved: false, why: "nothing parked for this row" };
+  const from = join(__dirname, "..", parkedRel), to = join(__dirname, "..", relFile);
+  if (!exists(from)) return { moved: false, why: "no parked file on disk" };
+  if (exists(to)) return { moved: false, why: "the live desk already holds that name" };
+  move(from, to);
+  return { moved: true, to };
+}
+/** Move a retired mission's prompt out of the live desk. A MOVE — freeze/fold/move, never delete. */
+function parkRetiredFile(relFile, deps = {}) {
+  // NOTE THE NAME. This alias was called `mkdir`, and `mkdir` is one of the fs verbs xray
+  // matches BY NAME when it builds the call graph — so a local helper wearing that name was
+  // read as a real directory sink on a path the analyser cannot follow, and cost this organ
+  // a permanent blind spot for nothing. A local alias must never borrow an fs verb's name.
+  const exists = deps.exists || existsSync; const makeDir = deps.mkdir || mkdirSync; const move = deps.move || renameSync;
+  if (!relFile) return { moved: false, why: "the row names no prompt file" };
+  // THE PARKED COPY IS SLUGGED. The row being retired is often the very row whose
+  // filename is the defect — the live desk carries a 195-character path built out of his
+  // kickoff sentence. Moving it under its own name would carry that path forward forever.
+  // The FILE IS UNTOUCHED: every byte of his words is inside it. Only the path is capped.
+  //
+  // THE TARGET IS RESOLVED BEFORE THE SOURCE IS CHECKED, and that ordering is the whole
+  // point: a re-run must be able to say WHERE the prompt already sits. Checking the source
+  // first answered "no prompt file on disk" for a mission that was parked perfectly well a
+  // minute earlier, so the caller had no path to record and `mission list` pointed at a file
+  // that no longer existed. An idempotent move reports the destination either way.
+  const dir = join(MISSIONS_DIR, "retired");
+  const to = join(dir, deps.name || `${slugForFile(relFile.replace(/^.*[\\/]/, "").replace(/\.md$/i, ""))}.md`);
+  if (exists(to)) return { moved: false, why: "already parked", to };
+  const from = join(__dirname, "..", relFile);
+  if (!exists(from)) return { moved: false, why: "no prompt file on disk" };
+  makeDir(dir, { recursive: true });
+  move(from, to);
+  return { moved: true, to };
 }
 
 function ingestMission(state, id, reportRelPath, now) {
@@ -539,7 +694,7 @@ function missionLines(state, now) {
       ? `OUTWARD · full-syllabus audit ${done.length}/4 returned — next fire: ${todo[0]} (Gemini Deep Research, file in dressing-room/missions/)`
       : `OUTWARD · all 4 audit returns in — diff review + audit-close ride this session (benchmark unlocks on his word)`);
   }
-  const gen = rows.filter(r => r.type !== "audit" && !r.ingested_at);
+  const gen = rows.filter(r => r.type !== "audit" && !r.ingested_at && !r.retired_at);   // W0-A: the dead never occupy his one slot
   if (gen.length) {
     const r = gen[0];
     const age = Math.floor((now.getTime() - new Date(r.staged_at).getTime()) / 86400000);
@@ -670,14 +825,88 @@ async function selftest() {
     const closed = auditClose(st, "dossier holds, 2 SHIFTED cards dealt", t0);
     assert("missions: audit-close with his word opens THE BENCHMARK GATE", closed.ok === true && !!st.syllabus_audit.closed_at);
 
-    const g1 = stageGenerated(st, "hallucinations", "topic_open", t0);
-    const g2 = stageGenerated(st, "hallucinations", "topic_open", new Date(2026, 7, 9));
+    // W0-A: pinned roster + no disk probe. These four ran against the LIVE concepts.json and
+    // the LIVE missions directory, so the day he renames a concept the suite would have gone
+    // red for a reason that has nothing to do with the code under test.
+    const mreg = { concepts: { hallucinations: { aliases: ["hallucination"] }, tokenization: { aliases: ["bpe"] } }, skills: { fastapi: {} } };
+    const md_ = { registry: mreg, taken: () => false };
+    const g1 = stageGenerated(st, "hallucinations", "topic_open", t0, md_);
+    const g2 = stageGenerated(st, "hallucinations", "topic_open", new Date(2026, 7, 9), md_);
     assert("missions: topic mission idempotent while open", g1.skipped === false && g2.skipped === true && g2.row.id === "T-hallucinations");
     ingestMission(st, "T-hallucinations", "rt.md", t0);
-    const g3 = stageGenerated(st, "hallucinations", "topic_open", new Date(2026, 7, 20));
+    const g3 = stageGenerated(st, "hallucinations", "topic_open", new Date(2026, 7, 20), md_);
     assert("missions: re-stage after ingest gets a dated suffix", g3.skipped === false && /^T-hallucinations@\d{4}-/.test(g3.row.id));
-    const gl = stageGenerated(st, "hallucinations", "lock_harvest", t0);
+    const gl = stageGenerated(st, "hallucinations", "lock_harvest", t0, md_);
     assert("missions: lock mission stages as L-<concept>", gl.row.id === "L-hallucinations");
+
+    // ── W0-A · THE SYLLABUS GATE, THE SLUG LAW, THE (concept,kind,open) KEY, THE RETIRE DOOR ──
+    // (1 Sep 2026 — OL-03/H-12 · SB-10 · OL-04 · OL-05). Every one of these reproduces a row
+    // that is in his LIVE missions.json today.
+    {
+      const sentence = "i am going in claude code and starting the entire organism. i have to get a job in the next 45 days.";
+      const junk = stageGenerated(emptyMissions(), sentence, "topic_open", t0, md_);
+      assert("W0-A GATE: his kickoff SENTENCE is refused — it never becomes an id, a row, or a filename (OL-03/H-12)",
+        junk.row === null && !!junk.refused && /characters|punctuation|roster/.test(junk.refused));
+      assert("W0-A GATE: a short off-roster word is refused too, and the refusal names where the valid ids live",
+        (() => { const r = stageGenerated(emptyMissions(), "quantum", "topic_open", t0, md_); return r.row === null && /not on the syllabus roster/.test(r.refused) && /concepts\.json/.test(r.roster || ""); })());
+      assert("W0-A GATE: an ALIAS resolves to its canonical id — `bpe` can never mint T-bpe beside T-tokenization",
+        (() => { const r = stageGenerated(emptyMissions(), "BPE", "topic_open", t0, md_); return r.row.id === "T-tokenization" && r.row.concept === "tokenization"; })());
+      assert("W0-A GATE: a skill id is a legal mission concept too (the roster is concepts + skills)",
+        stageGenerated(emptyMissions(), "fastapi", "topic_open", t0, md_).row.id === "T-fastapi");
+
+      // OL-04 — the live duplicate, reproduced then refused.
+      const d = emptyMissions();
+      stageGenerated(d, "hallucinations", "topic_open", t0, md_);
+      ingestMission(d, "T-hallucinations", "r.md", t0);
+      const dated1 = stageGenerated(d, "hallucinations", "topic_open", new Date(2026, 7, 19), md_);
+      const dated2 = stageGenerated(d, "hallucinations", "topic_open", new Date(2026, 7, 19), md_);
+      const dated3 = stageGenerated(d, "hallucinations", "topic_open", new Date(2026, 7, 25), md_);
+      assert("W0-A OL-04: once a DATED row is open, every re-stage of that concept is skipped — the id-shape blind spot that minted T-hallucinations@2026-08-19 twice is closed",
+        dated1.skipped === false && dated2.skipped === true && dated3.skipped === true
+        && d.missions.filter(r => !r.ingested_at && !r.retired_at).length === 1);
+
+      // SB-10 — the slug law. His words stay in the BODY; only the PATH is capped.
+      const longId = "T-" + "a".repeat(300);
+      const fn = missionFileName(longId, { taken: () => false });
+      assert("W0-A SB-10: a 300-char id yields a filename ≤ 52 chars, lowercase [a-z0-9-] only",
+        fn.length <= 52 && /^[a-z0-9-]+\.md$/.test(fn));
+      assert("W0-A SB-10: a colliding slug takes a numeric suffix — never an overwrite",
+        (() => { const seen = new Set(["t-tokenization.md"]); return missionFileName("T-tokenization", { taken: (n) => seen.has(n) }) === "t-tokenization-2.md"; })());
+      assert("W0-A SB-10: the mission BODY still carries the concept verbatim — the ceiling is on the path, never on his words",
+        topicMissionMd("hallucinations", t0).includes("hallucinations") && slugForFile("T-hallucinations@2026-08-19") === "t-hallucinations-2026-08-19");
+
+      // OL-05 — the retire door.
+      const rr = emptyMissions();
+      stageGenerated(rr, "hallucinations", "topic_open", t0, md_);
+      assert("W0-A OL-05: retire REFUSES without a reason — a retirement with no why is a deletion with extra steps",
+        retireMission(rr, "T-hallucinations", "", t0).ok === false && retireMission(rr, "T-nope", "x", t0).ok === false);
+      const ret = retireMission(rr, "t-HALLUCINATIONS", "wrong topic, staged by mistake", t0);
+      assert("W0-A OL-05: retire is case-insensitive, STAMPS the row and journals the event — the row stays, nothing is deleted (L9)",
+        ret.ok && rr.missions.length === 1 && !!rr.missions[0].retired_at && rr.missions[0].retired_why === "wrong topic, staged by mistake"
+        && rr.events.some(e => e.kind === "retire"));
+      assert("W0-A OL-05: a retired mission vanishes from his ONE kickoff slot, and re-retiring is refused",
+        missionLines(rr, t0).every(l => !/T-hallucinations/.test(l)) && retireMission(rr, "T-hallucinations", "again", t0).ok === false);
+      assert("W0-A OL-05: retiring frees the concept — the desk can stage it again afterwards",
+        stageGenerated(rr, "hallucinations", "topic_open", new Date(2026, 7, 21), md_).skipped === false);
+      // the live shape: TWO rows carrying one id must both be stamped, or a ghost survives
+      const twin = emptyMissions();
+      twin.missions.push({ id: "T-x@2026-08-19", type: "topic_open", concept: "x", file: "dressing-room/missions/t-x.md", staged_at: t0.toISOString(), ingested_at: null, report: null });
+      twin.missions.push({ id: "T-x@2026-08-19", type: "topic_open", concept: "x", file: "dressing-room/missions/t-x.md", staged_at: t0.toISOString(), ingested_at: null, report: null });
+      const tw = retireMission(twin, "T-x@2026-08-19", "duplicate row, OL-04", t0);
+      assert("W0-A OL-05: BOTH rows sharing one id are retired together — no ghost left behind",
+        tw.ok && tw.rows.length === 2 && twin.missions.every(r => !!r.retired_at));
+      const un = unretireMission(twin, "T-X@2026-08-19", "retired by mistake", t0);
+      assert("W0-A OL-05: the retire door has a WAY BACK — unretire re-opens every row it stamped, and journals it",
+        un.ok && un.rows.length === 2 && twin.missions.every(r => !r.retired_at && !r.retired_why)
+        && twin.events.some(e => e.kind === "unretire"));
+      assert("W0-A OL-05: parking a prompt is idempotent and always NAMES its destination — a second retire of the same row must not report the file as missing",
+        (() => { const seen = new Set(); const d = { exists: (f) => seen.has(f), mkdir: () => {}, move: (_f, t) => seen.add(t) };
+          const a = parkRetiredFile("dressing-room/missions/T-Long Name.md", { ...d, exists: (f) => seen.has(f) || /T-Long Name/.test(f) });
+          const b = parkRetiredFile("dressing-room/missions/T-Long Name.md", d);
+          return a.moved === true && b.moved === false && b.why === "already parked" && a.to === b.to && /t-long-name\.md$/.test(a.to); })());
+      assert("W0-A OL-05: unretire refuses a row that is not retired, and refuses a reversal with no reason",
+        unretireMission(twin, "T-x@2026-08-19", "x", t0).ok === false && retireMission(twin, "T-x@2026-08-19", "", t0).ok === false);
+    }
 
     const tMd = topicMissionMd("embeddings", t0), lMd = lockMissionMd("embeddings", t0);
     assert("missions: topic prompt carries the EMPHASIS-not-SYLLABUS guard",
@@ -855,7 +1084,11 @@ function missionCli(mode) {
     const concept = (process.argv[4] || "").toLowerCase().trim();
     if (!concept) { console.error(`usage: scout.mjs mission ${sub} <concept>`); process.exit(1); }
     const kind = sub === "stage-topic" ? "topic_open" : "lock_harvest";
-    const { row, skipped } = stageGenerated(state, concept, kind, now);
+    const { row, skipped, refused, roster } = stageGenerated(state, concept, kind, now);
+    if (refused) {
+      console.error(`MISSIONS DESK · REFUSED — ${refused}. A mission tunes EMPHASIS inside a FIXED syllabus, so its concept must already be an id on the roster${roster ? `: ${roster}` : ""}.`);
+      process.exit(1);
+    }
     if (!skipped) {
       mkdirSync(MISSIONS_DIR, { recursive: true });
       writeFileSync(join(__dirname, "..", row.file), kind === "topic_open" ? topicMissionMd(concept, now) : lockMissionMd(concept, now), "utf8");
@@ -964,6 +1197,37 @@ function missionCli(mode) {
     return;
   }
 
+  if (sub === "unretire") {
+    const id = process.argv[4];
+    const why = argAfter("--why");
+    const r = unretireMission(state, id, why, now);
+    if (!r.ok) { console.error(r.error); process.exit(1); }
+    writeAtomic(MISSIONS, state);
+    let backs = 0;
+    for (let i = 0; i < r.rows.length; i++) if (unparkRetiredFile(r.parked[i], r.rows[i].file).moved) backs++;
+    console.log(`MISSIONS DESK · un-retired ${r.id}${r.rows.length > 1 ? ` (${r.rows.length} rows)` : ""} — \"${why}\". It is an open mission again${backs ? " and its prompt is back on the desk" : ""}.`);
+    return;
+  }
+
+  if (sub === "retire") {
+    const id = process.argv[4];
+    const why = argAfter("--why");
+    const r = retireMission(state, id, why, now);
+    if (!r.ok) { console.error(r.error); process.exit(1); }
+    writeAtomic(MISSIONS, state);
+    // stamp WHERE it went. `file` stays as provenance (where it was staged); a list that
+    // keeps printing the old path after the move is a reader pointing at nothing.
+    let parked = 0;
+    for (const x of r.rows) {
+      const mv = parkRetiredFile(x.file);
+      if (mv.moved) parked++;
+      if (mv.to) x.retired_file = `dressing-room/missions/retired/${mv.to.replace(/^.*[\\/]/, "")}`;
+    }
+    if (parked || r.rows.some(x => x.retired_file)) writeAtomic(MISSIONS, state);
+    console.log(`MISSIONS DESK · retired ${r.id}${r.rows.length > 1 ? ` (${r.rows.length} rows carried that id)` : ""} — "${why}". The row stays with its stamp (nothing deleted); ${parked ? `the prompt moved to dressing-room/missions/retired/` : "no prompt file to move"}.`);
+    return;
+  }
+
   if (sub === "outward") {
     const week = outwardWeek(state, readJson(BENCH_PATH), now);
     console.log(week.line);
@@ -979,7 +1243,7 @@ function missionCli(mode) {
     const age = Math.max(0, Math.floor((now.getTime() - new Date(r.staged_at).getTime()) / 86400000));
     // Block 5.3: the three legs read side by side — gemini (fired/ingested) · claude · merged
     const legs = [r.fired_at && !r.ingested_at ? "fired, in flight" : null, r.claude_report ? "claude ✓" : (r.claude_at ? "claude ?" : "claude —"), r.report_merged ? "merged ✓" : (r.report && r.claude_report ? "merge pending" : null)].filter(Boolean).join(" · ");
-    console.log(`  ${r.id.padEnd(22)} ${r.type.padEnd(12)} ${r.ingested_at ? "✓ ingested" : `staged ${age}d`}  ${r.report || r.file}${legs ? `   [${legs}]` : ""}`);
+    console.log(`  ${String(r.id).slice(0, 22).padEnd(22)} ${r.type.padEnd(12)} ${r.retired_at ? `✕ retired — ${r.retired_why || "no reason recorded"}` : r.ingested_at ? "✓ ingested" : `staged ${age}d`}  ${r.retired_at ? (r.retired_file || r.file) : (r.report || r.file)}${legs ? `   [${legs}]` : ""}`);
   }
   for (const l of missionLines(state, now)) console.log(l);
 }
@@ -1028,4 +1292,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 export { stageTriggers, stageReadiness, readinessLine, edgeSplit, buildScout, warRoomRead, loadConfig,
   // THE MISSIONS DESK (8 Aug 2026)
   emptyMissions, stageAudit, stageGenerated, ingestMission, fireMission, auditClose, outwardWeek, missionLines,
+  retireMission, unretireMission, parkRetiredFile, unparkRetiredFile, validateConcept, missionFileName, slugForFile,
   topicMissionMd, lockMissionMd, AUDIT_MISSIONS, attachGemini };

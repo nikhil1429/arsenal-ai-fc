@@ -64,7 +64,10 @@
       "file": "dressing-room/missions/T-hallucinations@2026-08-19.md",
       "staged_at": "2026-08-19T01:35:21.432Z",
       "ingested_at": null,
-      "report": null
+      "report": null,
+      "retired_at": "2026-09-01T18:34:16.780Z",
+      "retired_why": "duplicate row minted twice by the OL-04 id-shape blind spot, and hallucinations is not where the syllabus stands after GAME ON (30 Aug) - re-stage it when that topic actually opens",
+      "retired_file": "dressing-room/missions/retired/t-hallucinations-2026-08-19.md"
     },
     {
       "id": "T-hallucinations@2026-08-19",
@@ -74,7 +77,10 @@
       "file": "dressing-room/missions/T-hallucinations@2026-08-19.md",
       "staged_at": "2026-08-19T11:55:53.946Z",
       "ingested_at": null,
-      "report": null
+      "report": null,
+      "retired_at": "2026-09-01T18:34:16.780Z",
+      "retired_why": "duplicate row minted twice by the OL-04 id-shape blind spot, and hallucinations is not where the syllabus stands after GAME ON (30 Aug) - re-stage it when that topic actually opens",
+      "retired_file": "dressing-room/missions/retired/t-hallucinations-2026-08-19.md"
     },
     {
       "id": "T-tokenization",
@@ -94,7 +100,10 @@
       "file": "dressing-room/missions/T-i am going in claude code and starting the entire organism. i have to get a job in the next 45 days. i have to finish every single thing in the next 45 days. that is the plan for domination..md",
       "staged_at": "2026-08-30T10:53:39.778Z",
       "ingested_at": null,
-      "report": null
+      "report": null,
+      "retired_at": "2026-09-01T18:34:17.715Z",
+      "retired_why": "not a concept at all - his whole kickoff sentence arrived at stage-topic on 19 Aug through the forge-start door and became an id, an open row and a 195-character filename; the syllabus gate refuses this shape now",
+      "retired_file": "dressing-room/missions/retired/t-i-am-going-in-claude-code-and-starting-the-ent.md"
     }
   ],
   "syllabus_audit": {
@@ -177,6 +186,90 @@
       "ts": "2026-08-30T10:53:39.778Z",
       "kind": "stage_topic",
       "id": "T-i am going in claude code and starting the entire organism. i have to get a job in the next 45 days. i have to finish every single thing in the next 45 days. that is the plan for domination."
+    },
+    {
+      "ts": "2026-09-01T18:30:47.518Z",
+      "kind": "retire",
+      "id": "T-hallucinations@2026-08-19",
+      "rows": 2,
+      "why": "duplicate row minted twice by the OL-04 id-shape blind spot, and hallucinations is not where the syllabus stands after GAME ON (30 Aug) - re-stage it when that topic actually opens"
+    },
+    {
+      "ts": "2026-09-01T18:30:57.262Z",
+      "kind": "retire",
+      "id": "T-i am going in claude code and starting the entire organism. i have to get a job in the next 45 days. i have to finish every single thing in the next 45 days. that is the plan for domination.",
+      "rows": 1,
+      "why": "not a concept at all - his whole kickoff sentence arrived at stage-topic on 19 Aug through the forge-start door and became an id, an open row and a 195-character filename; the syllabus gate refuses this shape now"
+    },
+    {
+      "ts": "2026-09-01T18:31:42.824Z",
+      "kind": "retire",
+      "id": "T-tokenization",
+      "rows": 1,
+      "why": "probe"
+    },
+    {
+      "ts": "2026-09-01T18:32:44.648Z",
+      "kind": "unretire",
+      "id": "T-tokenization",
+      "rows": 1,
+      "why": "retired by mistake while probing the new verb in the same session that built it - it is his live topic mission"
+    },
+    {
+      "ts": "2026-09-01T18:33:06.245Z",
+      "kind": "unretire",
+      "id": "T-hallucinations@2026-08-19",
+      "rows": 2,
+      "why": "re-stamping through the owner CLI so the row records where its prompt was parked"
+    },
+    {
+      "ts": "2026-09-01T18:33:06.579Z",
+      "kind": "retire",
+      "id": "T-hallucinations@2026-08-19",
+      "rows": 2,
+      "why": "duplicate row minted twice by the OL-04 id-shape blind spot, and hallucinations is not where the syllabus stands after GAME ON (30 Aug) - re-stage it when that topic actually opens"
+    },
+    {
+      "ts": "2026-09-01T18:33:06.868Z",
+      "kind": "unretire",
+      "id": "T-i am going in claude code and starting the entire organism. i have to get a job in the next 45 days. i have to finish every single thing in the next 45 days. that is the plan for domination.",
+      "rows": 1,
+      "why": "re-stamping through the owner CLI so the row records where its prompt was parked"
+    },
+    {
+      "ts": "2026-09-01T18:33:07.151Z",
+      "kind": "retire",
+      "id": "T-i am going in claude code and starting the entire organism. i have to get a job in the next 45 days. i have to finish every single thing in the next 45 days. that is the plan for domination.",
+      "rows": 1,
+      "why": "not a concept at all - his whole kickoff sentence arrived at stage-topic on 19 Aug through the forge-start door and became an id, an open row and a 195-character filename; the syllabus gate refuses this shape now"
+    },
+    {
+      "ts": "2026-09-01T18:34:16.506Z",
+      "kind": "unretire",
+      "id": "T-hallucinations@2026-08-19",
+      "rows": 2,
+      "why": "re-stamp so the row records where its prompt is parked"
+    },
+    {
+      "ts": "2026-09-01T18:34:16.780Z",
+      "kind": "retire",
+      "id": "T-hallucinations@2026-08-19",
+      "rows": 2,
+      "why": "duplicate row minted twice by the OL-04 id-shape blind spot, and hallucinations is not where the syllabus stands after GAME ON (30 Aug) - re-stage it when that topic actually opens"
+    },
+    {
+      "ts": "2026-09-01T18:34:17.400Z",
+      "kind": "unretire",
+      "id": "T-i am going in claude code and starting the entire organism. i have to get a job in the next 45 days. i have to finish every single thing in the next 45 days. that is the plan for domination.",
+      "rows": 1,
+      "why": "re-stamp so the row records where its prompt is parked"
+    },
+    {
+      "ts": "2026-09-01T18:34:17.715Z",
+      "kind": "retire",
+      "id": "T-i am going in claude code and starting the entire organism. i have to get a job in the next 45 days. i have to finish every single thing in the next 45 days. that is the plan for domination.",
+      "rows": 1,
+      "why": "not a concept at all - his whole kickoff sentence arrived at stage-topic on 19 Aug through the forge-start door and became an id, an open row and a 195-character filename; the syllabus gate refuses this shape now"
     }
   ]
 }

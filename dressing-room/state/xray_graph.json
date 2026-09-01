@@ -1,9 +1,9 @@
 {
- "built_at": "2026-09-01T12:53:06.820Z",
+ "built_at": "2026-09-01T19:03:58.138Z",
  "organs_parsed": 112,
  "organs_expected": 112,
  "parse_errors": [],
- "unresolved_sinks": 1462,
+ "unresolved_sinks": 1458,
  "organs": {
   "acts.mjs": {
    "loc": 496,
@@ -7830,7 +7830,7 @@
    "unresolved": 7
   },
   "forge_session.mjs": {
-   "loc": 2018,
+   "loc": 2025,
    "reads": [
     {
      "path": "dressing-room/state/sprint.json",
@@ -10239,17 +10239,17 @@
    "unresolved": 3
   },
   "learnstate.mjs": {
-   "loc": 1440,
+   "loc": 1443,
    "reads": [
     {
      "path": "learning-layer/HOW_HE_LEARNS.md",
      "lines": [
-      423,
-      424,
-      423,
-      424,
-      423,
-      424
+      426,
+      427,
+      426,
+      427,
+      426,
+      427
      ],
      "fixture": false
     },
@@ -10350,22 +10350,22 @@
    "spawns": [],
    "swallows": [
     {
-     "line": 422,
+     "line": 425,
      "try_stmts": 11,
      "catch_stmts": 1
     },
     {
-     "line": 422,
+     "line": 425,
      "try_stmts": 11,
      "catch_stmts": 1
     },
     {
-     "line": 422,
+     "line": 425,
      "try_stmts": 11,
      "catch_stmts": 1
     },
     {
-     "line": 422,
+     "line": 425,
      "try_stmts": 11,
      "catch_stmts": 1
     }
@@ -14507,97 +14507,115 @@
    "unresolved": 5
   },
   "scout.mjs": {
-   "loc": 1032,
+   "loc": 1297,
    "reads": [
     {
      "path": "dressing-room/state/dossier_weights.json",
      "lines": [
-      558,
-      95,
-      95,
-      558,
-      95,
-      95,
-      558
+      713,
+      99,
+      99,
+      713,
+      99,
+      99,
+      713,
+      99,
+      99,
+      713
      ],
      "fixture": false
     },
     {
      "path": "scripts/scout.mjs",
      "lines": [
-      771,
-      771,
-      771
+      1000,
+      1000,
+      1000,
+      1000
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/scout_config.json",
      "lines": [
-      77,
-      78,
-      77,
-      78
+      81,
+      82,
+      81,
+      82,
+      81,
+      82
      ],
      "fixture": false
     },
     {
      "path": "__no_such__",
      "lines": [
-      77,
-      78,
-      77,
-      78
+      81,
+      82,
+      81,
+      82,
+      81,
+      82
      ],
      "fixture": true
     },
     {
+     "path": "dressing-room/state/concepts.json",
+     "lines": [
+      99,
+      99,
+      99,
+      99,
+      99,
+      99
+     ],
+     "fixture": false
+    },
+    {
      "path": "dressing-room/state/missions.json",
      "lines": [
-      95,
-      95,
-      95,
-      95
+      99,
+      99,
+      99,
+      99,
+      99,
+      99
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/benchmark.json",
      "lines": [
-      95,
-      95,
-      95,
-      95
+      99,
+      99,
+      99,
+      99,
+      99,
+      99
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/learning_state.json",
      "lines": [
-      95,
-      95,
-      95,
-      95
-     ],
-     "fixture": false
-    },
-    {
-     "path": "dressing-room/state/concepts.json",
-     "lines": [
-      95,
-      95,
-      95,
-      95
+      99,
+      99,
+      99,
+      99,
+      99,
+      99
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/season.json",
      "lines": [
-      95,
-      95,
-      95,
-      95
+      99,
+      99,
+      99,
+      99,
+      99,
+      99
      ],
      "fixture": false
     }
@@ -14606,9 +14624,10 @@
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      443,
-      443,
-      443
+      598,
+      598,
+      598,
+      598
      ],
      "verbs": [
       "appendFileSync"
@@ -14618,8 +14637,9 @@
     {
      "path": "dressing-room/state/missions.json",
      "lines": [
-      93,
-      93
+      97,
+      97,
+      97
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -14629,8 +14649,9 @@
     {
      "path": "dressing-room/state/chrome_rail_stamp.json",
      "lines": [
-      93,
-      93
+      97,
+      97,
+      97
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -14640,8 +14661,9 @@
     {
      "path": "dressing-room/state/scout.json",
      "lines": [
-      93,
-      93
+      97,
+      97,
+      97
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -14662,11 +14684,13 @@
     "mission",
     "missions",
     "outward",
+    "retire",
     "run",
     "selftest",
     "stage-audit",
     "stage-lock",
-    "stage-topic"
+    "stage-topic",
+    "unretire"
    ],
    "header_verbs": [
     "fired",
@@ -14692,15 +14716,22 @@
     "ingestMission",
     "loadConfig",
     "lockMissionMd",
+    "missionFileName",
     "missionLines",
     "missionPromptFrom",
     "outwardWeek",
+    "parkRetiredFile",
     "readinessLine",
+    "retireMission",
+    "slugForFile",
     "stageAudit",
     "stageGenerated",
     "stageReadiness",
     "stageTriggers",
     "topicMissionMd",
+    "unparkRetiredFile",
+    "unretireMission",
+    "validateConcept",
     "warRoomRead"
    ],
    "unresolved": 10
@@ -17148,87 +17179,74 @@
    "unresolved": 0
   },
   "thalamus.mjs": {
-   "loc": 2492,
+   "loc": 2707,
    "reads": [
     {
      "path": "scripts/thalamus.mjs",
      "lines": [
-      116
+      116,
+      142,
+      142,
+      142,
+      142,
+      142,
+      142
      ],
      "fixture": false
     },
     {
      "path": "scripts/thalamus.log",
      "lines": [
-      260,
-      261,
-      2303,
-      2303,
-      260,
-      261,
-      2303,
-      2303,
-      260,
-      261,
-      2303,
-      2303,
-      260,
-      261,
-      2303,
-      2303,
-      260,
-      261,
-      2303,
-      2303
+      264,
+      265,
+      2384,
+      2384,
+      264,
+      265,
+      2384,
+      2384,
+      264,
+      265,
+      2384,
+      2384,
+      264,
+      265,
+      2384,
+      2384,
+      264,
+      265,
+      2384,
+      2384
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/concepts.json",
      "lines": [
-      612,
-      612,
-      612,
-      612,
-      612
+      616,
+      616,
+      616,
+      616,
+      616
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/salience_ledger.jsonl",
      "lines": [
-      643,
-      138,
-      138,
-      643,
-      138,
-      138,
-      643,
-      138,
-      138,
-      643,
-      138,
-      138,
-      643
-     ],
-     "fixture": false
-    },
-    {
-     "path": "dressing-room/state/afferent.jsonl",
-     "lines": [
-      2333,
-      138,
-      138,
-      2333,
-      138,
-      138,
-      2333,
-      138,
-      138,
-      2333,
-      138,
-      138,
-      2333
+      647,
+      142,
+      142,
+      647,
+      142,
+      142,
+      647,
+      142,
+      142,
+      647,
+      142,
+      142,
+      647
      ],
      "fixture": false
     },
@@ -17389,56 +17407,79 @@
     {
      "path": "dressing-room/state/answer_cache.jsonl",
      "lines": [
-      138,
-      138,
-      138,
-      138,
-      138,
-      138,
-      138,
-      138
+      142,
+      142,
+      142,
+      142,
+      142,
+      142,
+      142,
+      142
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      138,
-      138,
-      138,
-      138,
-      138,
-      138,
-      138,
-      138
+      142,
+      142,
+      142,
+      142,
+      142,
+      142,
+      142,
+      142
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      138,
-      138,
-      138,
-      138,
-      138,
-      138,
-      138,
-      138
+      142,
+      142,
+      142,
+      142,
+      142,
+      142,
+      142,
+      142
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/slip.jsonl",
      "lines": [
-      138,
-      138,
-      138,
-      138,
-      138,
-      138,
-      138,
-      138
+      142,
+      142,
+      142,
+      142,
+      142,
+      142,
+      142,
+      142
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/afferent.jsonl",
+     "lines": [
+      142,
+      142,
+      142,
+      142,
+      142,
+      142,
+      142,
+      142
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state",
+     "lines": [
+      2450,
+      2450,
+      2450
      ],
      "fixture": false
     }
@@ -17447,11 +17488,11 @@
     {
      "path": "scripts/thalamus.log.1",
      "lines": [
-      262,
-      262,
-      262,
-      262,
-      262
+      266,
+      266,
+      266,
+      266,
+      266
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -17461,11 +17502,11 @@
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      638,
-      638,
-      638,
-      638,
-      638
+      642,
+      642,
+      642,
+      642,
+      642
      ],
      "verbs": [
       "appendFileSync"
@@ -17475,16 +17516,16 @@
     {
      "path": "dressing-room/state/salience_ledger.jsonl.1",
      "lines": [
-      643,
-      643,
-      643,
-      643,
-      643,
-      643,
-      643,
-      643,
-      643,
-      643
+      647,
+      647,
+      647,
+      647,
+      647,
+      647,
+      647,
+      647,
+      647,
+      647
      ],
      "verbs": [
       "rmSync",
@@ -17495,11 +17536,11 @@
     {
      "path": "dressing-room/state/salience_ledger.jsonl",
      "lines": [
-      644,
-      644,
-      644,
-      644,
-      644
+      648,
+      648,
+      648,
+      648,
+      648
      ],
      "verbs": [
       "appendFileSync"
@@ -17509,11 +17550,11 @@
     {
      "path": "dressing-room/state/wake_queue.jsonl",
      "lines": [
-      650,
-      650,
-      650,
-      650,
-      650
+      654,
+      654,
+      654,
+      654,
+      654
      ],
      "verbs": [
       "appendFileSync"
@@ -17523,11 +17564,11 @@
     {
      "path": "dressing-room/state/bg_queue.jsonl",
      "lines": [
-      652,
-      652,
-      652,
-      652,
-      652
+      656,
+      656,
+      656,
+      656,
+      656
      ],
      "verbs": [
       "appendFileSync"
@@ -17537,11 +17578,11 @@
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      1276,
-      1276,
-      1276,
-      1276,
-      1276
+      1280,
+      1280,
+      1280,
+      1280,
+      1280
      ],
      "verbs": [
       "appendFileSync"
@@ -17551,10 +17592,10 @@
     {
      "path": "dressing-room/state/workspace.json",
      "lines": [
-      143,
-      143,
-      143,
-      143
+      147,
+      147,
+      147,
+      147
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -17564,10 +17605,10 @@
     {
      "path": "dressing-room/state/wake.json",
      "lines": [
-      143,
-      143,
-      143,
-      143
+      147,
+      147,
+      147,
+      147
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -17577,10 +17618,10 @@
     {
      "path": "dressing-room/state/dossier.json",
      "lines": [
-      143,
-      143,
-      143,
-      143
+      147,
+      147,
+      147,
+      147
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -17590,75 +17631,75 @@
     {
      "path": "scripts/thalamus.log",
      "lines": [
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282,
-      282
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286,
+      286
      ],
      "verbs": [
       "appendFileSync"
@@ -17671,33 +17712,33 @@
      "kind": "organ",
      "script": "brain.mjs",
      "verb": "consumed",
-     "line": 1156,
+     "line": 1160,
      "ctx": "defaultConsumed"
     }
    ],
    "swallows": [
     {
-     "line": 258,
+     "line": 262,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 258,
+     "line": 262,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 258,
+     "line": 262,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 258,
+     "line": 262,
      "try_stmts": 4,
      "catch_stmts": 1
     },
     {
-     "line": 258,
+     "line": 262,
      "try_stmts": 4,
      "catch_stmts": 1
     }
@@ -17715,6 +17756,7 @@
    "exports": [
     "AFFERENT_SOURCES",
     "AFFERENT_STATES",
+    "afferentFiles",
     "afferentLiveness",
     "baseRateFor",
     "buildStatus",
@@ -17727,10 +17769,12 @@
     "loadConfig",
     "matchBg",
     "matchPreAnswer",
+    "monthOfLine",
     "pendingBg",
     "pendingWakes",
     "phashHamming",
     "provenanceOf",
+    "rollAfferent",
     "salience",
     "sanitizeAfferent",
     "selfLegacy",
@@ -17740,7 +17784,7 @@
     "tau1Effective",
     "wakeCapToday"
    ],
-   "unresolved": 11
+   "unresolved": 7
   },
   "throwin.mjs": {
    "loc": 701,
@@ -20610,6 +20654,7 @@
     "limits.mjs",
     "organism_test.mjs",
     "reconcile.mjs",
+    "thalamus.mjs",
     "throwin.mjs",
     "viz.mjs",
     "watchman.mjs",
@@ -24974,6 +25019,7 @@
   "dressing-room/state/brain_out/doubts/2026-08-15.md",
   "dressing-room/state/brain_out/doubts/2026-08-17.md",
   "dressing-room/state/brain_out/doubts/2026-08-31.md",
+  "dressing-room/state/brain_out/doubts/2026-09-01.md",
   "dressing-room/state/brain_out/dreams/2026-08-09.md",
   "dressing-room/state/brain_out/drill_forge/2026-07-18.md",
   "dressing-room/state/brain_out/drill_forge/2026-07-21.md",
@@ -25298,6 +25344,7 @@
   "dressing-room/state/brain_out/reanalysis/2026-08-29.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-30.md",
   "dressing-room/state/brain_out/reanalysis/2026-08-31.md",
+  "dressing-room/state/brain_out/reanalysis/2026-09-01.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-18.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-21.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-29.md",

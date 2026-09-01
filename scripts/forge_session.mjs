@@ -1857,7 +1857,14 @@ switch (mode) {
     try {
       const out = execFileSync(process.execPath, [join(__dirname, "scout.mjs"), "mission", "stage-topic", s.concept], { encoding: "utf8", timeout: 15000 });
       console.log((out.trim().split("\n")[0] || "").replace(/^MISSIONS DESK · /, "scout: "));
-    } catch { console.log("scout: topic mission not staged (scout unavailable) — non-blocking"); }
+    } catch (e) {
+      // W0-A (1 Sep 2026): scout now REFUSES a concept the syllabus does not know, and this
+      // is the door that concept came through — on 19 Aug his whole kickoff sentence reached
+      // `forge start` and became a mission id, a row and a 195-char filename. Printing
+      // "scout unavailable" over a refusal would hide the one message worth reading.
+      const said = String((e && (e.stderr || e.stdout)) || "").trim().split("\n").find(l => l.trim());
+      console.log(said ? `scout: ${said.replace(/^MISSIONS DESK · /, "")} — non-blocking` : "scout: topic mission not staged (scout unavailable) — non-blocking");
+    }
     break;
   }
   case "step": {
