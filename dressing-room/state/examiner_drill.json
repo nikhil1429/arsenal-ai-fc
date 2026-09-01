@@ -1,16 +1,16 @@
 {
-  "date": "2026-08-30",
-  "staged_at": "2026-08-30T17:30:47.944Z",
+  "date": "2026-09-01",
+  "staged_at": "2026-09-01T00:40:28.564Z",
   "concept": "hallucinations",
   "picked_because": "stalling/regressing in learning_state",
   "shape": "phenomenon",
   "shape_source": "examiner registry",
   "shape_unverified": false,
-  "template": "measure",
-  "task": "Build the smallest honest MEASUREMENT of hallucinations in Python — a tiny labelled set and a score. Ten examples is enough if they are honest. Talk through what the number would have to say to change your mind.",
+  "template": "detect",
+  "task": "Write a DETECTOR in Python: given a model output (and whatever grounding you decide it needs), return a judgement about whether hallucinations occurred. You choose the signal; defend it while you type.",
   "hidden_tests": [
-    "run it and ask what the number MEANS — a score with no interpretation is not a measurement",
-    "ask how many examples his score would need before he would trust it, and why that number",
-    "plant one mislabelled example and see whether he notices the score move"
+    "run it on one clean case and one hallucinations case — it must separate them",
+    "hand him a case his detector gets WRONG, and ask him to explain the failure before fixing it",
+    "ask for the precision/recall trade-off his threshold implies, and which one he would rather lose here"
   ]
 }
