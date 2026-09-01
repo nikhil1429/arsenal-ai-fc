@@ -1,6 +1,6 @@
 {
- "built_at": "2026-09-01T12:53:07.084Z",
- "content_sha16": "9e10665a55ab4a09",
+ "built_at": "2026-09-01T13:03:45.236Z",
+ "content_sha16": "73882956587312b9",
  "derived_from": {
   "ir_built_at": "2026-09-01T12:53:06.820Z",
   "organs": 112,
@@ -6886,7 +6886,7 @@
    "via": "dressing-room/state/captains_call.json",
    "liveness": {
     "exists": true,
-    "size": 80814,
+    "size": 81367,
     "payload_ts": null
    },
    "consumption": {
@@ -6909,7 +6909,7 @@
    "via": "dressing-room/state/captains_call.json",
    "liveness": {
     "exists": true,
-    "size": 80814,
+    "size": 81367,
     "payload_ts": null
    },
    "consumption": {
@@ -6932,7 +6932,7 @@
    "via": "dressing-room/state/captains_call.json",
    "liveness": {
     "exists": true,
-    "size": 80814,
+    "size": 81367,
     "payload_ts": null
    },
    "consumption": {
@@ -6955,7 +6955,7 @@
    "via": "dressing-room/state/captains_call.json",
    "liveness": {
     "exists": true,
-    "size": 80814,
+    "size": 81367,
     "payload_ts": null
    },
    "consumption": {
@@ -7369,8 +7369,8 @@
    "via": "dressing-room/state/daemon_watchdog.json",
    "liveness": {
     "exists": true,
-    "size": 2887,
-    "payload_ts": "2026-09-01T12:51:02.156Z"
+    "size": 2997,
+    "payload_ts": "2026-09-01T13:01:02.153Z"
    },
    "consumption": {
     "measured": false,
@@ -7392,8 +7392,8 @@
    "via": "dressing-room/state/daemon_watchdog.json",
    "liveness": {
     "exists": true,
-    "size": 2887,
-    "payload_ts": "2026-09-01T12:51:02.156Z"
+    "size": 2997,
+    "payload_ts": "2026-09-01T13:01:02.153Z"
    },
    "consumption": {
     "measured": false,
@@ -9757,8 +9757,8 @@
    "via": "dressing-room/state/presence_log.jsonl",
    "liveness": {
     "exists": true,
-    "size": 221510,
-    "payload_ts": "2026-09-01T12:53:02.326Z"
+    "size": 225125,
+    "payload_ts": "2026-09-01T13:03:01.347Z"
    },
    "consumption": {
     "measured": false,
@@ -9780,8 +9780,8 @@
    "via": "dressing-room/state/presence_log.jsonl",
    "liveness": {
     "exists": true,
-    "size": 221510,
-    "payload_ts": "2026-09-01T12:53:02.326Z"
+    "size": 225125,
+    "payload_ts": "2026-09-01T13:03:01.347Z"
    },
    "consumption": {
     "measured": false,
@@ -11536,7 +11536,7 @@
    "liveness": {
     "exists": true,
     "size": 1504,
-    "payload_ts": "2026-09-01T12:44:24.177Z"
+    "payload_ts": "2026-09-01T12:59:54.535Z"
    },
    "consumption": {
     "measured": false,
@@ -11996,7 +11996,7 @@
    "liveness": {
     "exists": true,
     "size": 111,
-    "payload_ts": "2026-09-01T12:44:02.920Z"
+    "payload_ts": "2026-09-01T12:59:02.511Z"
    },
    "consumption": {
     "measured": false,
@@ -12318,7 +12318,7 @@
    "liveness": {
     "exists": true,
     "size": 341,
-    "payload_ts": "2026-09-01T12:50:01.388Z"
+    "payload_ts": "2026-09-01T13:00:01.291Z"
    },
    "consumption": {
     "measured": false,
@@ -12915,8 +12915,8 @@
    "via": "dressing-room/state/working_set.json",
    "liveness": {
     "exists": true,
-    "size": 1250,
-    "payload_ts": "2026-09-01T12:44:03.114Z"
+    "size": 1161,
+    "payload_ts": "2026-09-01T12:59:02.487Z"
    },
    "consumption": {
     "measured": false,
@@ -12938,8 +12938,8 @@
    "via": "dressing-room/state/working_set.json",
    "liveness": {
     "exists": true,
-    "size": 1250,
-    "payload_ts": "2026-09-01T12:44:03.114Z"
+    "size": 1161,
+    "payload_ts": "2026-09-01T12:59:02.487Z"
    },
    "consumption": {
     "measured": false,
@@ -13585,12 +13585,12 @@
    "via": "dressing-room/state/captains_call.json",
    "liveness": {
     "exists": true,
-    "size": 80814,
+    "size": 81367,
     "payload_ts": null
    },
    "consumption": {
     "measured": true,
-    "note": "29 of 114 cards ever answered — the one him-consumption number the organism records"
+    "note": "29 of 115 cards ever answered — the one him-consumption number the organism records"
    },
    "witness": {
     "kind": "ir",
