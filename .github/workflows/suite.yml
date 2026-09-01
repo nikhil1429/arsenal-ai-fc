@@ -81,14 +81,18 @@ jobs:
       # when something goes red. No `|| true`, no continue-on-error: a red here must BE red —
       # `exit $code` at the end carries npm's own status out, unchanged.
       #
-      # WHY THE RESULT IS WRITTEN TO THE JOB SUMMARY AND NOT LEFT IN THE LOG. Measured on this
-      # workflow's own first run: GitHub answers "Sign in to view logs" for Actions logs even on
-      # a PUBLIC repo, and the logs REST endpoint answers 403 "Must have admin rights" without a
-      # token. So a red whose only home is the log is a red exactly one person can read, on one
-      # machine, while signed in — which is the failure this whole campaign exists to end. The
-      # job summary renders on the public run page, so the headline count and every RED line are
-      # readable by him, by any future session, and by anyone auditing this repo, with no login
-      # and no token. A verdict nobody can reach is not a verdict.
+      # WHY THE RESULT IS ALSO EMITTED AS ANNOTATIONS. Two things were MEASURED on this
+      # workflow's own first two runs, in this order, and the second one corrected the first:
+      #   1. Actions LOGS are unreadable without a login — the web UI answers "Sign in to view
+      #      logs" even on a PUBLIC repo, and the logs REST endpoint answers 403 "Must have admin
+      #      rights" without a token. A red whose only home is the log is a red exactly one
+      #      person can read, on one machine, while signed in.
+      #   2. The JOB SUMMARY, added on run #2 to fix that, IS GATED THE SAME WAY — it does not
+      #      render for a signed-out reader either. The fix did not work and is kept anyway,
+      #      because it is the right home for the detail once you ARE signed in.
+      # ANNOTATIONS are the one surface that renders signed-out — verified by reading run #1's
+      # "Process completed with exit code 1" with no session at all. So the headline count and
+      # the RED lines go out as `::error::` too. A verdict nobody can reach is not a verdict.
       - name: npm test
         shell: bash
         run: |
@@ -108,4 +112,15 @@ jobs:
             echo '```'
             echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
+
+          # THE SIGNED-OUT SURFACE. One annotation for the headline, then one per RED heading
+          # (the `  · ` lines the runner prints under "Each RED below"), capped at 10 because
+          # GitHub renders no more than that per level and a truncated list that says so beats
+          # a full list nobody sees. Newlines are escaped to %0A per the workflow-command spec.
+          headline=$(grep -E "^organism_test:" suite_output.txt | head -1)
+          echo "::error title=suite · node ${{ matrix.node }}::${headline:-npm test produced no headline line}"
+          sed -n '/Each RED below/,$p' suite_output.txt | grep -E "^  · " | head -10 | while IFS= read -r line; do
+            echo "::error title=suite RED · node ${{ matrix.node }}::${line}"
+          done
+
           exit $code
