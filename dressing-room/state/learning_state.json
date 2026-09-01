@@ -1,197 +1,21 @@
 {
-  "date": "2026-08-31",
-  "generated_at": "2026-08-31T03:45:11.250Z",
-  "total_reps": 22,
-  "status": "ok",
-  "low_confidence": false,
-  "gate": {
-    "have": 22,
-    "need": 1,
-    "unit": "reps",
-    "line": "22/1 reps",
-    "open": true,
-    "withheld": [],
-    "emitted_regardless": [
-      "axes",
-      "core_vs_light",
-      "rejirah_due",
-      "python_fluency",
-      "concepts",
-      "position"
-    ],
-    "sub": [
-      {
-        "name": "weak_connection",
-        "have": 22,
-        "need": 1,
-        "unit": "reps",
-        "line": "22/1 reps",
-        "open": true
-      },
-      {
-        "name": "maidan_stage_focus",
-        "have": 22,
-        "need": 1,
-        "unit": "reps",
-        "line": "22/1 reps",
-        "open": true
-      },
-      {
-        "name": "any concept → 🟡 held",
-        "have": 1,
-        "need": 2,
-        "unit": "correct in a row",
-        "line": "1/2 correct in a row",
-        "open": false
-      },
-      {
-        "name": "any concept → 🟢 fluent",
-        "have": 1,
-        "need": 3,
-        "unit": "cold-fast in a row",
-        "line": "1/3 cold-fast in a row",
-        "open": false
-      }
-    ]
+  "date": "2026-09-02",
+  "generated_at": "2026-09-01T19:26:40.548Z",
+  "total_reps": 0,
+  "status": "awaiting_data",
+  "low_confidence": true,
+  "pre_cyborg": {
+    "reps": 22,
+    "floor": "2026-08-30T02:00:00.000Z",
+    "note": "GAME ON, 30 Aug 2026 — in reps se pehle ka data instrument ko naapta hai, tumhe nahi. Record ke liye rakha hai, saboot ke liye nahi. Notes poore khule hain."
   },
-  "maidan_stage_focus": "tokenization → embeddings handoff",
-  "weak_connection": "tokenization → embeddings (text → vectors)",
+  "maidan_stage_focus": null,
+  "weak_connection": null,
   "python_fluency": {},
-  "rejirah_due": [
-    {
-      "concept": "inference",
-      "axis": null,
-      "overdue_days": 60
-    },
-    {
-      "concept": "context",
-      "axis": null,
-      "overdue_days": 56
-    },
-    {
-      "concept": "embeddings",
-      "axis": "a (kya+analogy)",
-      "overdue_days": 44
-    },
-    {
-      "concept": "hallucinations",
-      "axis": "a (kya+analogy)",
-      "overdue_days": 20
-    }
-  ],
-  "core_vs_light": {
-    "core": "spine: 0/3 fluent",
-    "light": "no light concepts drilled"
-  },
-  "edge_map": {},
-  "confusion_pairs": [],
-  "concepts": [
-    {
-      "id": "embeddings",
-      "track": "concept",
-      "axis": "a",
-      "fluency": "🔴 learning",
-      "core": true,
-      "reps": 2,
-      "last_seen": "2026-07-18",
-      "velocity": {
-        "slope": "holding",
-        "reps_to_state": 1,
-        "stalled": false
-      },
-      "edge": null,
-      "confusions": []
-    },
-    {
-      "id": "hallucinations",
-      "track": "concept",
-      "axis": "a",
-      "fluency": "🔴 learning",
-      "core": true,
-      "reps": 19,
-      "last_seen": "2026-08-10",
-      "velocity": {
-        "slope": "regressing",
-        "reps_to_state": 18,
-        "stalled": false
-      },
-      "edge": null,
-      "confusions": []
-    },
-    {
-      "id": "tokenization",
-      "track": "concept",
-      "axis": "b",
-      "fluency": "🔴 learning",
-      "core": true,
-      "reps": 1,
-      "last_seen": "2026-08-22",
-      "velocity": {
-        "slope": "holding",
-        "reps_to_state": 1,
-        "stalled": false
-      },
-      "edge": null,
-      "confusions": []
-    }
-  ],
-  "axes": [
-    {
-      "axis": "a",
-      "label": "kya+analogy",
-      "fluent_frac": 0,
-      "counts": {
-        "learning": 2,
-        "held": 0,
-        "fluent": 0
-      },
-      "due_count": 2
-    },
-    {
-      "axis": "b",
-      "label": "kyun/first-principles",
-      "fluent_frac": 0,
-      "counts": {
-        "learning": 2,
-        "held": 0,
-        "fluent": 0
-      },
-      "due_count": 0
-    },
-    {
-      "axis": "c",
-      "label": "mechanism",
-      "fluent_frac": 0,
-      "counts": {
-        "learning": 1,
-        "held": 0,
-        "fluent": 0
-      },
-      "due_count": 0
-    },
-    {
-      "axis": "d",
-      "label": "math+range",
-      "fluent_frac": 0,
-      "counts": {
-        "learning": 2,
-        "held": 0,
-        "fluent": 0
-      },
-      "due_count": 0
-    },
-    {
-      "axis": "e",
-      "label": "limits/failure-modes",
-      "fluent_frac": 0,
-      "counts": {
-        "learning": 1,
-        "held": 0,
-        "fluent": 0
-      },
-      "due_count": 0
-    }
-  ],
+  "rejirah_due": [],
+  "core_vs_light": {},
+  "concepts": [],
+  "axes": [],
   "maidan": {
     "stages": [
       {
@@ -201,7 +25,7 @@
           "tokenization"
         ],
         "runnable_frac": 0,
-        "status": "building"
+        "status": "awaiting_data"
       },
       {
         "id": "rag_pipeline",
@@ -213,7 +37,7 @@
           "rag_eval"
         ],
         "runnable_frac": 0,
-        "status": "building"
+        "status": "awaiting_data"
       },
       {
         "id": "agents",
@@ -229,26 +53,75 @@
       {
         "from": "tokenization",
         "to": "embeddings",
-        "label": "text → vectors",
         "combined_fluency": "🔴"
       },
       {
         "from": "chunking",
         "to": "embeddings",
-        "label": "chunks → vectors",
         "combined_fluency": "🔴"
       },
       {
         "from": "embeddings",
         "to": "retrieval",
-        "label": "vectors → top-k",
         "combined_fluency": "🔴"
       },
       {
         "from": "retrieval",
         "to": "rag_eval",
-        "label": "results → eval",
         "combined_fluency": "🔴"
+      }
+    ]
+  },
+  "gate": {
+    "have": 0,
+    "need": 1,
+    "unit": "reps",
+    "line": "0/1 reps",
+    "open": false,
+    "withheld": [
+      "weak_connection",
+      "maidan_stage_focus"
+    ],
+    "emitted_regardless": [
+      "axes",
+      "core_vs_light",
+      "rejirah_due",
+      "python_fluency",
+      "concepts",
+      "position"
+    ],
+    "sub": [
+      {
+        "name": "weak_connection",
+        "have": 0,
+        "need": 1,
+        "unit": "reps",
+        "line": "0/1 reps",
+        "open": false
+      },
+      {
+        "name": "maidan_stage_focus",
+        "have": 0,
+        "need": 1,
+        "unit": "reps",
+        "line": "0/1 reps",
+        "open": false
+      },
+      {
+        "name": "any concept → 🟡 held",
+        "have": 0,
+        "need": 2,
+        "unit": "correct in a row",
+        "line": "0/2 correct in a row",
+        "open": false
+      },
+      {
+        "name": "any concept → 🟢 fluent",
+        "have": 0,
+        "need": 3,
+        "unit": "cold-fast in a row",
+        "line": "0/3 cold-fast in a row",
+        "open": false
       }
     ]
   },
@@ -271,12 +144,12 @@
       "i"
     ],
     "axes_ungraded": [],
-    "started_at": "2026-08-30T13:04:02.968Z",
-    "stale": false,
-    "stale_as_of": "2026-08-31T03:45:11.250Z",
+    "started_at": "2026-09-01T01:09:46.726Z",
+    "stale": true,
+    "stale_as_of": "2026-09-01T19:26:40.548Z",
     "last_closed": {
       "concept": "tokenization",
-      "ended_at": "2026-08-30T12:54:40.948Z",
+      "ended_at": "2026-09-01T01:09:37.244Z",
       "steps_ran": [
         0,
         1,
@@ -306,7 +179,7 @@
         "h",
         "i"
       ],
-      "elapsed_min": 472.3,
+      "elapsed_min": 2165.6,
       "axis_marks_span_min": null,
       "check_q_refused": 0,
       "core_missing": [

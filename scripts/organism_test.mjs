@@ -77,6 +77,25 @@ const scripts = () => readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWit
 // cost ONE between them and the file reads better, which is exactly the trade the
 // budget exists to force: move the code, never the budget.
 const readOrgan = (f) => { try { return readFileSync(join(ROOT, "scripts", f), "utf8"); } catch { return ""; } };
+// ONE reader and ONE writer for a SANDBOX capsule (W0-B, 2 Sep 2026). Both existed already
+// as inline calls — the BLOCK 2 lane read one, the CI seeder wrote four. They are named here
+// because the GAME-ON stamp below needs both, and because every fs call on a computed path
+// is a permanent blind spot in this organ's xray budget: shared, the stamp costs nothing.
+const capsulePath = (root, id) => join(root, "dressing-room", "state", "capsules", `${id}.json`);
+const readCapsuleAt = (root, id) => JSON.parse(readFileSync(capsulePath(root, id), "utf8"));
+const writeCapsuleAt = (root, id, obj) => writeFileSync(capsulePath(root, id), JSON.stringify(obj, null, 2));
+/** Stamp ONE sandbox capsule as re-locked, so a cold round exists for the lanes whose subject
+ *  is the LOOP rather than the epoch. Idempotent, and it must be callable more than once:
+ *  `forge_session.mjs close` fires the LOCK-CHAIN, which shells mirror.mjs — the capsules'
+ *  sole writer — and mirror re-writes them, dropping any stamp made earlier. That is exactly
+ *  how this was found: correct at sandbox-build time, gone by the time the lane ran. */
+function relockSandboxCapsule(root, id) {
+  try {
+    const c = readCapsuleAt(root, id);
+    if (c && !c.relockedOn) writeCapsuleAt(root, id, { ...c, relockedOn: "2026-09-01" });
+    return true;
+  } catch { return false; }
+}
 const hasSelftest = (f) => { const src = readOrgan(f); return /['"`]selftest['"`]/.test(src) || /function selftest\(/.test(src); };
 
 // ── 1. COVERAGE LAW ──────────────────────────────────────────────────────────
@@ -515,7 +534,7 @@ async function laws() {
     // reads the REAL strike out of his own capsule and proves the cold screen stops serving it
     // the moment samjhao opens that axis. Without this in npm test, the hole comes straight back.
     let strikeA = null;
-    try { strikeA = JSON.parse(readFileSync(join(sb, "dressing-room", "state", "capsules", "tokenization.json"), "utf8")).faultLines[0].strike.trim(); } catch { /* asserted */ }
+    try { strikeA = readCapsuleAt(sb, "tokenization").faultLines[0].strike.trim(); } catch { /* asserted */ }
     const coldBefore = deepDue();
     assert("LOAD ZERO BLOCK 2 · before any samjhao, the cold round DOES serve the capsule's own strike (this is the baseline the guard must change)",
       !!strikeA && coldBefore.out.includes(strikeA), `strike=${String(strikeA).slice(0, 60)}`);
@@ -525,7 +544,7 @@ async function laws() {
       !!strikeA && !coldAfter.out.includes(strikeA) && /SAMJHAO mein khul chuka/.test(coldAfter.out) && /FRESH sawaal chahiye/.test(coldAfter.out),
       `the burned strike is still being served as cold: ${String(strikeA).slice(0, 60)}`);
     assert("LOAD ZERO BLOCK 2 · ...and an axis he never reached is UNTOUCHED — only what was actually opened is burned",
-      (() => { try { const b = JSON.parse(readFileSync(join(sb, "dressing-room", "state", "capsules", "tokenization.json"), "utf8")).faultLines[1].strike.trim(); return coldAfter.out.includes(b); } catch { return false; } })());
+      (() => { try { const b = readCapsuleAt(sb, "tokenization").faultLines[1].strike.trim(); return coldAfter.out.includes(b); } catch { return false; } })());
 
     // ── LOAD ZERO BLOCK 3 (19 Aug 2026) — OUTBOX + RELAY ────────────────────────
     // THE LAW: a producer never delivers; the relay is the only thing that reaches him; a row
@@ -615,6 +634,47 @@ async function laws() {
     for (const org of ["sitting.mjs", "talk.mjs", "captains_call.mjs"]) {
       assert(`LOAD ZERO BLOCK 5 · ${org} asks the ONE resolver (acts.resolveIntent), rather than keeping its own vocabulary`,
         /resolveIntent/.test(readOrgan(org)));
+    }
+
+    // ── ONE SCHEDULE, ONE OWNER — W0-B (2 Sep 2026, LR-10) ─────────────────────
+    // The Re-Jirah schedule was derived THREE times from lockedOn — rejirah.mjs (the owner),
+    // deep.mjs and capsule_bridge.mjs — and no organ's own selftest could see the drift,
+    // because each one agreed with itself. It bit for real: the GAME-ON epoch landed in the
+    // owner, `learnstate nextup` went quiet, and `deep.mjs due` kept printing "Tokenization
+    // · R2 · 71d overdue" off a proof the captain had withdrawn. This is the cross-organ
+    // check that a fourth derivation, or a fix patched into two of three, cannot survive.
+    {
+      const owner = await import(pathToFileURL(join(ROOT, "scripts", "rejirah.mjs")).href);
+      const dp = await import(pathToFileURL(join(ROOT, "scripts", "deep.mjs")).href);
+      const cb = await import(pathToFileURL(join(ROOT, "scripts", "capsule_bridge.mjs")).href);
+      const IV = [3, 14, 42];
+      const pre = { id: "pre", lockedOn: "2026-06-15", reJirahDone: [] };
+      const post = { id: "post", lockedOn: "2026-09-05", reJirahDone: [] };
+      const today = "2026-11-04";
+      const ownerPre = owner.openRound(pre, IV);
+      const deepPre = dp.rejirahStatus(pre, IV, new Date(today + "T12:00:00Z"));
+      const bridgePre = cb.mapCapsule(pre, IV, today).rejirah;
+      assert("ONE SCHEDULE — all THREE derivations agree that a pre-epoch capsule is not due: the owner refuses it, deep calls it pre_cyborg, the map carries pre_cyborg with no next_due",
+        ownerPre.ok === false && ownerPre.pre_cyborg === true
+        && deepPre.status === "pre_cyborg" && deepPre.overdueDays === null
+        && bridgePre.pre_cyborg === true && bridgePre.next_due === null,
+        `owner=${ownerPre.ok}/${ownerPre.pre_cyborg} deep=${deepPre.status} bridge=${bridgePre.pre_cyborg}/${bridgePre.next_due}`);
+      const ownerPost = owner.openRound(post, IV);
+      const deepPost = dp.rejirahStatus(post, IV, new Date(today + "T12:00:00Z"));
+      const bridgePost = cb.mapCapsule(post, IV, today).rejirah;
+      assert("ONE SCHEDULE — and all three agree on the SAME open round and the SAME due date for a post-epoch capsule (a drifted derivation fails here, not in production)",
+        ownerPost.ok === true && ownerPost.round === deepPost.round
+        && ownerPost.due === deepPost.nextDue && ownerPost.due === bridgePost.next_due,
+        `owner=R${ownerPost.round}/${ownerPost.due} deep=R${deepPost.round}/${deepPost.nextDue} bridge=${bridgePost.next_due}`);
+      // and the frozen twins stay frozen: kept for the archaeology, called by nobody
+      const frozen = [["deep.mjs", "rejirahStatusLegacy"], ["capsule_bridge.mjs", "rejirahRoundsLegacy"]];
+      const live = frozen.filter(([f, name]) => {
+        const src = readOrgan(f);
+        const body = src.slice(0, src.indexOf("function selftest("));
+        return (body.match(new RegExp(name, "g")) || []).length !== 1;
+      }).map(([f]) => f);
+      assert("ONE SCHEDULE — the two collapsed twins are FROZEN, not deleted (L9), and referenced by nothing outside their own selftest",
+        live.length === 0, live.length ? `still referenced in: ${live.join(", ")}` : "");
     }
 
     // ── LOAD ZERO BLOCK 6 (19 Aug 2026) — THE DECISION GATE + THE ROAD THE GATE CAN SEE ──────────
@@ -1447,12 +1507,16 @@ function path() {
     assert("RE-JIRAH · the carry names it as UNLOCKED and invents no due-date for it (no lockedOn ⇒ no honest schedule)",
       /NOT LOCKED/.test(carry.out));
 
+    // The forge closes above fired the LOCK-CHAIN, which shells mirror.mjs and re-pulls the
+    // capsules — so re-stamp here, immediately before the lanes that need a live cold round.
+    relockSandboxCapsule(sb, "embeddings");
     const grade = run([S("rejirah.mjs"), "grade", "embeddings", "a", "held", "--gut", "knew"], { cwd: sb });
     assert("RE-JIRAH · a cold round grades and schedules the next due date", grade.code === 0 && /next due/.test(grade.out));
 
     const rclose = run([S("rejirah.mjs"), "close", "embeddings"], { cwd: sb });
     assert("RE-JIRAH · close prints the reJirahDone gist patch (HIS paste — nothing auto-saves)",
-      rclose.code === 0 && /reJirahDone/.test(rclose.out));
+      rclose.code === 0 && /reJirahDone/.test(rclose.out),
+      `exit ${rclose.code} · ${String(rclose.out).trim().split(String.fromCharCode(10)).slice(0, 3).join(" | ").slice(0, 300)}`);
     assert("RE-JIRAH · close REPORTS the successive-relearning criterion without BLOCKING",
       /successive-relearning/.test(rclose.out));
 
@@ -1462,7 +1526,8 @@ function path() {
 
     const due = run([S("deep.mjs"), "due"], { cwd: sb });
     assert("DEEP · the cold queue serves QUESTIONS ONLY (no answers leak into a cold round)",
-      due.code === 0 && /COLD/.test(due.out) && !/reJirahDone/.test(due.out));
+      due.code === 0 && /COLD/.test(due.out) && !/reJirahDone/.test(due.out),
+      `exit ${due.code} · ${String(due.out).trim().split(String.fromCharCode(10)).slice(0, 4).join(" | ").slice(0, 300)}`);
 
     const rep = run([S("capture.mjs"), "rep", "--concept", "embeddings", "--axis", "a", "--q", "probe", "--gut", "shaky", "--correct", "true"], { cwd: sb });
     assert("CAPTURE · one valid rep lands with zero capture tax", rep.code === 0 && /appended 1/.test(rep.out));
@@ -1560,6 +1625,19 @@ function sandbox() {
   // in the SANDBOX only, never the live mirror (mirror.mjs stays its only writer).
   const capDir = join(d, "dressing-room", "state", "capsules");
   const hasCapsule = existsSync(capDir) && readdirSync(capDir).some((f) => f.endsWith(".json"));
+
+  // ── W0-B (2 Sep 2026) · THE SANDBOX CAPSULES DECLARE THEMSELVES RE-LOCKED ───────────
+  // The GAME-ON epoch closes the Re-Jirah queue on every capsule locked before 30 Aug, which
+  // is all four of his. The lanes below (the coldness ratchet, grade → close → pending, the
+  // cold queue) need a LIVE cold round to exist at all — their subject is the LOOP, not
+  // whether a round is due. A post-epoch lock cannot supply one either: the earliest round
+  // such a capsule can have is three days after the epoch, so in the first days of the
+  // restart no lawful capsule has an overdue round anywhere. So the SANDBOX COPY — a
+  // throwaway, never the live mirror, whose only writer is still mirror.mjs — is stamped
+  // re-locked, which is exactly the state these lanes are about: a concept learned again and
+  // locked again, whose schedule is live once more. His real capsules are untouched.
+  // the BLOCK 2 lane needs tokenization to have a live cold round; see relockSandboxCapsule
+  if (hasCapsule) relockSandboxCapsule(d, "tokenization");
   if (!hasCapsule) {
     mkdirSync(capDir, { recursive: true });
     // LOAD ZERO BLOCK 6 (19 Aug 2026) — SEED ALL FOUR, not just embeddings. Measured on a real
@@ -1569,12 +1647,23 @@ function sandbox() {
     // embeddings.json. Not a CI red today (ci_manifest runs the two chains, not `npm test`), but a
     // fresh clone running `npm test` went red, which is the same bug class 6 one level up.
     for (const id of ["embeddings", "tokenization", "inference", "context"]) {
-      writeFileSync(join(capDir, `${id}.json`), JSON.stringify({
-        id, num: "02", title: `${id} (CI fixture)`, lockedOn: "2026-06-21",
+      writeCapsuleAt(d, id, ({
+        // W0-B (2 Sep 2026) — THE FIXTURE DECLARES ITSELF RE-LOCKED, and that is not a dodge.
+        // The GAME-ON epoch closes the Re-Jirah queue on every capsule locked before 30 Aug, so
+        // a June-locked fixture now has NO due round — correctly — and the lanes below (the
+        // coldness ratchet, close/pending, the cold queue) would be testing an empty screen.
+        // A post-epoch lock cannot help either: the earliest R1 such a capsule can have is
+        // 3 days after the epoch, so for the first days of the restart no lawful fixture has an
+        // overdue round at all. `relockedOn` is the honest state these lanes are actually about
+        // — a concept re-learned and locked again, whose schedule is live once more.
+        // ⚠ The schedule still anchors on `lockedOn`, so this fixture keeps its June due-dates.
+        // Whether a re-lock should RE-ANCHOR the schedule is LR-05, which is an open question
+        // routed to the architect, not something this rung decides.
+        id, num: "02", title: `${id} (CI fixture)`, lockedOn: "2026-06-21", relockedOn: "2026-09-01",
         reJirahDone: [], status: "tempered", mechanism: "fixture mechanism head",
         doubts: [{ q: "fixture doubt?", at: "2026-06-21" }],
         faultLines: "abcdefghi".split("").map((a) => ({ axis: a, title: `axis ${a}`, strike: `fixture strike ${a}?`, weld: "fixture weld", status: "held" })),
-      }, null, 2));
+      }));
     }
   }
   return d;

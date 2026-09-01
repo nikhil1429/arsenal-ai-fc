@@ -11,9 +11,34 @@ STATUS       : RATIFIED by him, 30 Aug 2026 — "ok all approved". Receipt: act 
 WHAT THIS IS : the ONE process a learning session runs. FORGE and SAMJHAO are merged.
                RE-JIRAH stays separate — it is the cold TEST of a topic, not teaching.
 LIFESPAN     : binding until the architect rules on §7. Nothing here waits on code.
-NEXT ACTION  : TOKENIZATION, axis a, taught FROM ZERO. Session already opened 30 Aug
-               (forge_session.mjs start tokenization) and NOTHING has been taught yet —
-               step 0 of 11, all nine axes untouched.
+NEXT ACTION  : TOKENIZATION, axis a — RESUME MID-AXIS. Do NOT re-teach ideas 1 and 2.
+               Session is OPEN on disk (step 3 SAMJHAO, ON axis a, marked STALE, not dead).
+               31 Aug: he stopped the axis himself to raise the Oura/body work; that stop is
+               a RECORDED STATE, not a failure, and the whole detour is on the crash belt.
+               TAUGHT AND HELD (he answered the check correctly, first try, unaided):
+                 idea 1 — the model never receives text, only integers; a converter (the
+                          TOKENIZER) sits at its door. Analogy in play: supermarket checkout,
+                          scanner = tokenizer, billing computer = model, barcode = token ID.
+                 idea 2 — that number comes from a FIXED, frozen catalog (VOCAB); nothing is
+                          invented while you type, and an ID means nothing outside its own
+                          catalog, so tokenizer and model must share one frozen vocab.
+                          Told: ~50k (GPT-2) to ~1-2 lakh entries, model-dependent; the real
+                          range work belongs to axis d. Told: HOW the catalog is built is
+                          axis c and was deliberately withheld.
+               HAND HIM THIS EXACT MICRO-QUESTION, UNANSWERED, WORD FOR WORD:
+                 he types `Blinkit`, the word is not in the frozen register and no new entry
+                 can be added — does the tokenizer (1) error out, or (2) do something else,
+                 and if something else, what? Two-option guess, wrong is fine.
+               REMAINING IN AXIS a: the out-of-vocab answer -> "token" named as a subword
+               unit -> where tokenization's job ENDS (the ID list; meaning is embeddings).
+               Then Jirah, then his Bolo, and ONLY THEN open his June note.
+               DOUBTS ALREADY PLACED THIS PASS: #3 (are the splits exact or illustrative)
+               answered inline at the first example. STILL UNPLACED for axis a: #2 (how many
+               tokens is a symbol), #9 (vocab size vs token count), #1 (why a common word
+               splits — may belong to axis b).
+               MOMENTS SPENT THIS PASS: pehle_guess 1 (he answered "no idea" — blank cold
+               guess, expected, nothing to refute at A1), check_q 1. Per-idea checks are
+               taught and deliberately not logged (§8).
 DO NOT       : run a Re-Jirah on tokenization / embeddings / inference / context. Their
                proof was withdrawn 30 Aug 07:30. The SessionStart brief still points there
                and the brief is WRONG. One sitting has already died of this

@@ -1147,12 +1147,22 @@ function selftest() {
     /PEHLE.*close/.test(nextup(dirA, NOW).winner.line));
   writeFileSync(join(dirA, "forge_session.json"), JSON.stringify({ concept: "hallucinations", started_at: new Date(NOW - 30 * 3600000).toISOString(), step: 4, closed_at: new Date(NOW - 20 * 3600000).toISOString() }));
   const capDirA = join(dirA, "capsules"); mkdirSync(capDirA, { recursive: true });
-  writeFileSync(join(capDirA, "tokenization.json"), JSON.stringify({ id: "tokenization", lockedOn: "2026-06-15", reJirahDone: [] }));
+  // W0-B (2 Sep 2026): these ask whether an OVERDUE round outranks a closed session — a
+  // RANKING question. The GAME-ON epoch closes the queue on any capsule locked before it,
+  // so this fixture's world moves +92 days past the epoch (its own NOW included, for these
+  // assertions only) and every interval stays identical to the unit. The rest of this suite
+  // keeps its clock — its other fixtures have nothing to do with capsules.
+  const NOW_POST = Date.parse("2026-10-25T12:00:00Z");   // NOW + 92d
+  const writeCap = (lock) => writeFileSync(join(capDirA, "tokenization.json"), JSON.stringify({ id: "tokenization", lockedOn: lock, reJirahDone: [] }));
+  writeCap("2026-09-15");
   assert("ARBITER — session closed + an overdue Re-Jirah round → Re-Jirah wins (proof decays first)",
-    (() => { const n = nextup(dirA, NOW); return n.winner.name === "rejirah-due" && /tokenization/.test(n.winner.line); })());
-  writeFileSync(join(dirA, "rejirah_log.jsonl"), JSON.stringify({ kind: "round-close", concept: "tokenization", round: 1, due: "2026-06-18", closed_at: iso(1), axes_graded: ["a"] }) + "\n");
+    (() => { const n = nextup(dirA, NOW_POST); return n.winner.name === "rejirah-due" && /tokenization/.test(n.winner.line); })());
+  assert("ARBITER · W0-B — and a PRE-restart capsule never reaches that slot at all: same fixture, lock moved back before GAME ON",
+    (() => { writeCap("2026-06-15"); const n = nextup(dirA, NOW_POST); writeCap("2026-09-15");
+      return n.winner.name !== "rejirah-due" && !n.contenders.some((c) => c.name === "rejirah-due"); })());
+  writeFileSync(join(dirA, "rejirah_log.jsonl"), JSON.stringify({ kind: "round-close", concept: "tokenization", round: 1, due: "2026-09-18", closed_at: iso(1), axes_graded: ["a"] }) + String.fromCharCode(10));
   assert("ARBITER — a round SAT-but-unpasted beats a merely-due round (five organs read it as never-served)",
-    nextup(dirA, NOW).winner.name === "rejirah-pending");
+    nextup(dirA, NOW_POST).winner.name === "rejirah-pending");
   // ---- DEAD-WIRE SWEEP (11 Aug 2026): the Examiner slot must go through the OWNER's
   // freshness gate. Before the fix these three passed with a 7-month-old drill winning
   // the PEHLA KAAM slot. The dir carries no sprint/forge/rejirah, so the drill is the

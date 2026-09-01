@@ -18,6 +18,10 @@
 // MODES: sync (default) · set-start <YYYY-MM-DD> · selftest
 // ============================================================================
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { preCyborg } from "./registry.mjs";
+import { loadCapsules } from "./rejirah.mjs";   // the capsules have ONE loader, and it is their owner's   // W0-B — THE SYLLABUS FLOOR: one predicate, one owner
+import { swallow } from "./swallow.mjs";       // Block 7 — every fs-guarding silent catch is declared
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -111,10 +115,53 @@ async function sync({ fetchFn = fetch, now = new Date() } = {}) {
   // the way it already age-tags working_set.json, so a stale spine is VISIBLE rather
   // than silently believed.
   progress.synced_at = now.toISOString();
+  // W0-B — label the done-claims the GAME-ON epoch disqualifies, and ask him for the one
+  // edit only he can make. `done` itself is left exactly as the sheet wrote it.
+  const preDone = preRestartDone(progress.done, loadCapsuleHeads());
+  if (preDone.length) {
+    progress.done_pre_restart = preDone;
+    progress.done_pre_restart_note = "GAME ON (30 Aug 2026) — yeh sheet ke apne shabd hain aur waise hi rakhe hain; lekin in topics ko tumne dobara khola tha, to organism inhe proof nahi maanta.";
+    cardTheSheetEdit(preDone);
+  }
   sprint.progress = progress;
   writeAtomic(SPRINT, sprint);
   console.log(`sprintsync: synced — current ${progress.current.id} ${progress.current.task} (${progress.current.status}) · ${progress.done.length} done · next ${progress.next_up.length}`);
   return { ok: true, progress };
+}
+
+// ── W0-B (2 Sep 2026) · THE SYLLABUS FLOOR AT THE SHEET (SD-01) ──────────────────
+// His live Sheet still marks Embeddings, Inference & sampling and Context window DONE,
+// because it was true when he ticked them — and on 30 Aug he re-opened exactly those as
+// UNLEARNED. So every router downstream reads "three concepts proven" off a sheet canon
+// has overruled, and drives him to the fourth.
+//
+// THE SHEET IS HIS AND THIS CODE DOES NOT TOUCH IT, and it does not fake the mirror
+// either: `done` keeps saying exactly what the sheet says, because that is what `done`
+// means. What is added is a LABEL — which of those claims the epoch disqualifies — plus
+// ONE card asking him for the one edit only he can make. A floor that silently rewrote his
+// own record would be the organism deciding what he has learned, which is his call alone.
+//
+// NO LIST OF CONCEPT NAMES: the disqualified set is derived from the capsules themselves
+// (a pre-epoch lock with no re-lock), so it needs no maintenance the day he locks a fifth.
+function preRestartDone(done, capsules) {
+  const stale = (capsules || []).filter((c) => { try { return preCyborg(c); } catch { return false; } }).map((c) => String(c.id || "").toLowerCase()).filter(Boolean);
+  if (!stale.length) return [];
+  return (done || []).filter((d) => stale.some((id) => new RegExp(`\\b${id}\\b`, "i").test(String(d))));
+}
+// The capsules are READ THROUGH THEIR OWNER (rejirah.mjs loadCapsules), not with a private
+// reader. Two reasons, and the second is a gate: one loader means one definition of "a
+// capsule", and every fs call on a computed path is a permanent blind spot in xray's
+// per-organ budget — a private copy here cost this organ one, and the ratchet caught it.
+const loadCapsuleHeads = (dir = join(STATE, "capsules")) => loadCapsules(dir);
+// ONE card, at an anchor he already hits, in plain words — no ids, no filenames as the
+// subject (his 28-Aug correction). Keyed, so it mints once and not once per sync.
+function cardTheSheetEdit(names) {
+  if (!names.length) return { minted: false };
+  const line = `Sheet pe ${names.length} topic abhi bhi DONE dikh rahe hain (${names.join(", ")}), lekin 30 August ko tumne unhe dobara kholá tha. Sheet mein unka tick hata do — tab tak organism unhe proof nahi maanta, sirf record.`;
+  try {
+    execFileSync(process.execPath, [join(__dirname, "captains_call.mjs"), "file", "--line", line, "--key", "sprint:pre-restart-done"], { encoding: "utf8", timeout: 15000 });
+    return { minted: true, line };
+  } catch (e) { swallow("the card is a nudge; a failed mint never blocks the sync", e); return { minted: false, line }; }
 }
 
 // set-start — the owner's path for moving sprint.json's `start`, HIS order only.
@@ -149,6 +196,23 @@ function setStart(dateStr) {
 function selftest() {
   const checks = [];
   const assert = (n, c) => { checks.push(!!c); console.log(`  ${c ? "✓" : "✗"} ${n}`); };
+  // ── W0-B · THE SYLLABUS FLOOR AT THE SHEET (2 Sep 2026 — SD-01) ─────────────────
+  {
+    const done = ["1-01 Embeddings (finish)", "1-02 Inference & sampling", "1-04 Hallucinations"];
+    const caps = [{ id: "embeddings", lockedOn: "2026-06-21" }, { id: "inference", lockedOn: "2026-06-24" },
+                  { id: "hallucinations", lockedOn: "2026-09-10" }];
+    const pre = preRestartDone(done, caps);
+    assert("W0-B FLOOR — a sheet claim naming a PRE-restart capsule is disqualified; one locked AFTER the epoch is not",
+      pre.length === 2 && pre.every(d => /Embeddings|Inference/.test(d)) && !pre.some(d => /Hallucinations/.test(d)));
+    assert("W0-B FLOOR — the disqualified set is derived from the CAPSULES, never a list of names: no capsules ⇒ nothing disqualified",
+      preRestartDone(done, []).length === 0);
+    assert("W0-B FLOOR — a re-locked capsule leaves the disqualified set by itself, with no code change",
+      preRestartDone(done, [{ id: "embeddings", lockedOn: "2026-06-21", relockedOn: "2026-09-05" }]).length === 0);
+    assert("W0-B FLOOR — HIS SHEET IS NOT REWRITTEN: `done` is untouched and the verdict rides a separate labelled field",
+      (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+        const sync = src.slice(src.indexOf("progress.synced_at = now.toISOString();"), src.indexOf("writeAtomic(SPRINT, sprint);"));
+        return /done_pre_restart/.test(sync) && !/progress\.done\s*=/.test(sync); })());
+  }
   const csv = 'ID,Sprint,Stream / Epic,Task,Sub-topics,Priority,Est Hrs,Status,Date Done,Notes\n'
     + '1-01,Sprint 1,Foundations,Embeddings (finish),"vectors, cosine",P0,8,Done,21/06/2026,\n'
     + '1-02,Sprint 1,Foundations,Inference & sampling,"temperature, top-p",P0,6,Done,24/06/2026,\n'
@@ -190,4 +254,4 @@ async function main() {
   await sync();
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
-export { sync, boardToProgress, parseCSV, resolveCfg };
+export { sync, boardToProgress, parseCSV, resolveCfg, preRestartDone, loadCapsuleHeads };

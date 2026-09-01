@@ -49,6 +49,7 @@ import { tmpdir } from "node:os";        // selftest fixtures only — the loade
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { subjectsOf } from "./registry.mjs";   // S10 row 13 — the config schema's key sets are rows
+import { gameOnEpoch } from "./registry.mjs";   // W0-B — THE SYLLABUS FLOOR: one reader, one row, one receipt
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
@@ -572,7 +573,25 @@ function buildGate(N, cfg, knewCount, perTopicKnew = [], reg = null) {
 // `corpusStats` is loadReps' out-param, handed straight through — the denominator every
 // number below is really computed over. Optional and defaulted for the same reason the
 // out-param is: every existing caller is byte-identical without it (it publishes null).
-function compute(reps, cfg, reg, now, corpusStats = null) {
+function compute(reps, cfg, reg, now, corpusStats = null, opts = {}) {
+  // ── W0-B (2 Sep 2026) · THE SYLLABUS FLOOR (LR-08) ─────────────────────────
+  // This file was publishing a LIVE claim about how well the captain knows himself —
+  // "calibration_gap 0.0568, trend narrowing (0.18 → 0.13), best_topic hallucinations" —
+  // computed from 22 reps his own 30-Aug ruling disqualified: confidence:null,
+  // latency_ms:null, and 22 of them BACK-FILLED the day before the stamp. A calibration
+  // number is a claim about HIM; built on an instrument canon has withdrawn, it is not a
+  // rough number, it is a wrong one, and it was regenerated as recently as today.
+  // NOTHING IS DELETED (L9): the pre-floor reps are counted in their own labelled block.
+  // With none after the floor, N is 0 and this file's OWN awaiting_data branch says
+  // UNMEASURED — the honest answer, not a fabricated zero.
+  const floorMs = Number.isFinite(opts.floorMs) ? opts.floorMs : null;
+  const preFloor = floorMs === null ? [] : reps.filter((r) => !(Date.parse(String(r && r.ts)) >= floorMs));
+  if (floorMs !== null && preFloor.length) reps = reps.filter((r) => Date.parse(String(r && r.ts)) >= floorMs);
+  const pre_cyborg = floorMs === null ? null : {
+    reps: preFloor.length,
+    floor: new Date(floorMs).toISOString(),
+    note: "GAME ON, 30 Aug 2026 — in reps ka confidence hi record nahi hua tha, to inse nikla calibration tumhare baare mein kuch nahi kehta. Record ke liye rakha hai, saboot ke liye nahi.",
+  };
   const N = reps.length;
   const gap = ece(reps, cfg.targets);
   const knew = reps.filter((r) => r.confidence === "knew");
@@ -591,6 +610,7 @@ function compute(reps, cfg, reg, now, corpusStats = null) {
     danger_zone,
     total_reps: N,
     status, low_confidence,
+    ...(pre_cyborg ? { pre_cyborg } : {}),
     // WAS THE ALIAS TABLE EVEN THERE (11 Aug 2026 wiring audit — see loadRegistry).
     // Flat, and named exactly as capture.mjs:540 names them, so one field name answers
     // "was canon readable on this run" across every organ that touches concepts.json.
@@ -633,6 +653,25 @@ function selftest() {
   // 1) empty-safe
   const e0 = compute([], cfg, reg, now);
   assert("empty-safe: awaiting_data, gap null, danger []", e0.status === "awaiting_data" && e0.calibration_gap === null && e0.danger_zone.length === 0);
+
+  // ── W0-B · THE SYLLABUS FLOOR (2 Sep 2026 — LR-08) ─────────────────────────
+  // The live file published calibration_gap 0.0568 and "trend narrowing" off 22 reps the
+  // captain's own 30-Aug ruling disqualified — a claim about HIM, built on an instrument
+  // he withdrew, regenerated as recently as the day this was written.
+  {
+    const FLOOR = Date.parse("2026-08-30T02:00:00Z");
+    const stale = [...rep(20, "chunking", "knew", false)];                       // ts() stamps 2026-07-01+, all pre-floor
+    const off = compute(stale, cfg, reg, now);
+    const on = compute(stale, cfg, reg, now, null, { floorMs: FLOOR });
+    assert("W0-B FLOOR — without it, pre-restart reps produce a LIVE calibration claim (the behaviour that shipped 0.0568)",
+      off.total_reps === 20 && off.calibration_gap !== null && off.status === "ok");
+    assert("W0-B FLOOR — with it, the claim is UNMEASURED, not a fabricated zero: gap null, awaiting_data, no danger zone",
+      on.total_reps === 0 && on.calibration_gap === null && on.status === "awaiting_data" && on.danger_zone.length === 0);
+    assert("W0-B FLOOR — NOTHING IS DELETED (L9): the 20 are counted and dated in their own labelled block, in his words",
+      on.pre_cyborg && on.pre_cyborg.reps === 20 && on.pre_cyborg.floor === "2026-08-30T02:00:00.000Z" && /GAME ON/.test(on.pre_cyborg.note));
+    assert("W0-B FLOOR — a post-restart rep counts normally, so the measurement restarts the moment he banks one",
+      compute([...stale, { ...mk("chunking", "knew", true), ts: "2026-09-01T00:00:00Z" }], cfg, reg, now, null, { floorMs: FLOOR }).total_reps === 1);
+  }
 
   // 2) warming_up: 10 reps incl a qualifying danger topic ⇒ danger SUPPRESSED
   const warm = [...rep(3, "chunking", "knew", false), ...rep(7, "filler", "shaky", true)];
@@ -1086,7 +1125,7 @@ function main() {
   const reg = loadRegistry();
   const corpusStats = {};
   const reps = loadReps(REPS_LOG, corpusStats);
-  const out = compute(reps, cfg, reg, new Date(), corpusStats);
+  const out = compute(reps, cfg, reg, new Date(), corpusStats, { floorMs: gameOnEpoch() });   // W0-B — the live run carries the floor; the row holds the instant, with its receipt
   writeAtomic(CAL, out);
   // #106 — the console line leads with the counter, not the word. A refusal a human
   // reads must carry the number that would end it.

@@ -120,6 +120,8 @@ import { loadConfig as loadBrainConfig, bannedPhraseCheck, headroom as brainHead
 import { loadConfig as loadThalamusConfig } from "./thalamus.mjs";
 import { captain } from "./captain.mjs";   // Block 2 §7.3
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: NightShift 02:40 keys its SLOT's day in a catch-up burst
+import { preCyborg } from "./registry.mjs";
+import { loadCapsules } from "./rejirah.mjs";   // the capsules have ONE loader, and it is their owner's   // W0-B — THE GAME-ON EPOCH: one predicate, one owner
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -597,6 +599,18 @@ function gemCartridge(deps = {}, now = new Date()) {
   const who = deps.who !== undefined ? deps.who : readJson(join(__dirname, "..", "dressing-room", "hippocampus", "who_he_is.json"));
   const cal = deps.calibration !== undefined ? deps.calibration : readJson(join(STATE_DIR, "calibration.json"));
   const caps = deps.capsuleFiles || (() => { try { return readdirSync(join(STATE_DIR, "capsules")).filter(f => f.endsWith(".json")).map(f => f.replace(".json", "")); } catch (e) { swallow("gemCartridge: readdirSync(join(STATE_DIR, \"capsules\")) unreadable → []", e); return []; } })();
+  // ── W0-B (2 Sep 2026) · THE CARTRIDGE STOPS CONTRADICTING CANON (OL-08) ───────────
+  // The 20-Aug cartridge told his Gem: "Locked concepts (probe these for decay): context,
+  // embeddings, inference, tokenization" — and on 30 Aug he withdrew the proof for all four.
+  // A /gem-sync would have pasted that into the examiner he actually sits with, so the one
+  // surface outside this repo would be running on an instruction canon had reversed. There
+  // is no decay to probe on a proof that no longer exists; there IS a re-open to teach from
+  // zero — with the notes open, which is his own correction (canon b40e585d), not a silence.
+  // read through the capsules' OWNER — one loader for the organism, and no private fs call
+  // on a computed path (which is a permanent blind spot on xray's per-organ budget).
+  const capHead = deps.capsuleHead || ((id) => loadCapsules(join(STATE_DIR, "capsules")).find((c) => String(c.id) === String(id)) || null);
+  const reopened = caps.filter((id) => { const h = capHead(id); try { return h ? preCyborg(h) : false; } catch { return false; } });
+  const live = caps.filter((id) => !reopened.includes(id));
   const bank = deps.probeBank || readJson(join(OUT_DIR, `probe_bank_${dayKey(now)}.json`));
   // LADDER G10 (9 Aug 2026): the revived capsule_premap joins the cartridge —
   // the night's repeatable filler. The viz-style i<=2 day-lookback is MANDATORY,
@@ -629,7 +643,8 @@ function gemCartridge(deps = {}, now = new Date()) {
   const md = [
     `# GEM CARTRIDGE · ${dayKey(now)} — paste into your Gem's instructions (your own data → your own Google account)`,
     "",
-    `You are my interview examiner. Locked concepts (probe these for decay): ${caps.join(", ") || "none yet"}.`,
+    `You are my interview examiner. Locked concepts (probe these for decay): ${live.join(", ") || "none yet"}.`,
+    reopened.length ? `RE-OPENED on 30 Aug 2026 — do NOT probe these as things I already know: ${reopened.join(", ")}. I withdrew that proof myself and I am learning them again from zero. My old notes on them are still good and still open, so use them to find where I break — but never say "you already know this", and never reuse a question I have already been asked on them. Ask them as if for the first time.` : "",
     who && who.fingerprint ? `Where I stand right now: ${who.fingerprint}` : "",
     ((who && who.open_threads) || []).length ? `Open threads to attack: ${who.open_threads.join(" · ")}` : "",
     dzConcept.length ? `My confident-but-wrong zone (drill these HARDEST): ${dzConcept.map(d => `${d.topic || d.concept}${d.axis ? ` — axis ${d.axis} is the kind of thinking that keeps breaking, attack that` : ""}`).join(", ")}` : "",
@@ -1574,6 +1589,24 @@ async function selftest() {
     // and a guard that reads `base` alone would have passed while missing it.
     const shiftDeps = { ...base, generate: genProbes, write: (n, c) => { writes[n] = c; } };
     const r = await runShift(shiftDeps);
+    // ── W0-B · THE CARTRIDGE MAY NOT CONTRADICT CANON (2 Sep 2026 — OL-08) ──────────
+    {
+      const heads = { old: { id: "old", lockedOn: "2026-06-15" }, fresh: { id: "fresh", lockedOn: "2026-09-05" } };
+      const gc = gemCartridge({ capsuleFiles: ["old", "fresh"], capsuleHead: (id) => heads[id], who: null, calibration: null, probeBank: null }, new Date("2026-09-02T00:00:00Z"));
+      assert("W0-B: a capsule whose proof he withdrew is NOT offered to his Gem as decay-probing material",
+        (() => { const line = (gc.md.split(String.fromCharCode(10)).find(l => /probe these for decay/.test(l)) || "");
+          return /fresh/.test(line) && !/old/.test(line); })());
+      assert("W0-B: it is named as RE-OPENED instead, with his own correction — notes stay open, questions must be fresh, never 'you already know this'",
+        (() => { const m = gc.md;
+          const parts = { reopened: /RE-OPENED on 30 Aug 2026/.test(m), zero: /from zero/.test(m),
+            notes: /notes on them are still good/.test(m), fresh: /never reuse a question/.test(m) };
+          const missing = Object.entries(parts).filter(([, v]) => !v).map(([k]) => k);
+          if (missing.length) console.log("      MISSING: " + missing.join(", "));
+          return missing.length === 0; })());
+      const none = gemCartridge({ capsuleFiles: ["fresh"], capsuleHead: (id) => heads[id], who: null, calibration: null, probeBank: null }, new Date("2026-09-02T00:00:00Z"));
+      assert("W0-B: with nothing re-opened the cartridge says nothing extra — the line is a fact, not boilerplate",
+        !/RE-OPENED/.test(none.md));
+    }
     assert("the shift runs all eight jobs and files the shift record", r.ok && writes["shift_2026-07-15.json"] && r.jobs.probe_bank && r.jobs.gem_cartridge && "pre_answers" in r.jobs && "season_read" in r.jobs);
     assert("JOB 1c — the field probes ride the shift record too (a job with no record is a job nobody can audit)",
       "field_probes" in r.jobs);

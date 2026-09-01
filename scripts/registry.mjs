@@ -179,6 +179,40 @@ export function inputCadenceDefaultH(path = REGISTRY_PATH) {
   if (!Number.isFinite(h) || h <= 0) throw new Error(`registry: input_cadence_default holds "${clip(subj[0], 40)}", which is not a positive number of hours — the input guard's cadence seed is a DECLARED act and an unreadable one may never silently pass`);
   return h;
 }
+/** gameOnEpoch — THE GAME-ON EPOCH, as an instant (W0-B, 2 Sep 2026).
+ *  HIS RULING, 30 Aug 2026 7:30 AM IST (canon 7744acf1): the pre-cyborg era is
+ *  CLOSED, and every learning record dated before that stamp measures the
+ *  INSTRUMENT, not him. Until this row existed the ruling lived only in prose
+ *  — `grep -i "pre-cyborg\|GAME ON" scripts/*.mjs` returned ZERO — while every
+ *  live queue surface kept driving him by pre-cyborg clocks. His own L4: a law
+ *  is a code path or it does not exist.
+ *  IT IS A DATE, NEVER A LIST OF CONCEPTS. A roster of the four topics reopened
+ *  that day would be the exact jugad his 11-Aug law forbids and would need
+ *  hand-maintenance the day he locks a fifth; an instant is a PROPERTY every
+ *  capsule can be tested against forever. Same shape as inputCadenceDefaultH:
+ *  the number lives in a row with a receipt, and an unreadable seed throws
+ *  loudly rather than quietly reading as "no epoch, everything is due".
+ *  @returns {number} epoch in ms */
+export function gameOnEpoch(path = REGISTRY_PATH) {
+  const subj = subjectsOf("game_on_epoch", path);
+  const ms = Date.parse(String(subj[0] || ""));
+  if (!Number.isFinite(ms)) throw new Error(`registry: game_on_epoch holds "${clip(subj[0], 40)}", which is not a readable instant — the syllabus floor is a DECLARED act (canon 7744acf1) and an unreadable one may never silently pass as "no floor"`);
+  return ms;
+}
+/** preCyborg — is this capsule's proof one the captain withdrew? A capsule locked
+ *  before the epoch, with no re-lock after it, holds a proof that no longer exists.
+ *  ONE predicate, so rejirah/deep/capsule_bridge/learnstate cannot drift apart.
+ *  ⚠ THE NOTES ARE NOT WITHDRAWN, ONLY THE PROOF IS (his correction the same
+ *  breath, canon b40e585d): the capsule stays IMMUTABLE and stays the teaching
+ *  resource. This says nothing about reading it — only about testing him on it. */
+export function preCyborg(capsule, path = REGISTRY_PATH) {
+  const locked = Date.parse(String((capsule && capsule.lockedOn) || "") + "T00:00:00Z");
+  if (!Number.isFinite(locked)) return false;               // no readable lock date → its own owner refuses it; not this predicate's call
+  const epoch = gameOnEpoch(path);
+  if (locked >= epoch) return false;
+  const relock = Date.parse(String((capsule && capsule.relockedOn) || ""));
+  return !(Number.isFinite(relock) && relock >= epoch);
+}
 /** fixturePin — sandbox_subjects reader: which env var pins this ledger to a
  *  sandbox (migration #7's general form; samjhao's guard is instance #1). */
 export function fixturePin(subject, path = REGISTRY_PATH) {

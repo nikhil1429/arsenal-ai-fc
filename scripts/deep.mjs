@@ -65,6 +65,7 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { roundSchedule, openRound } from "./rejirah.mjs";   // W0-B — TWIN COLLAPSE: rejirah.mjs owns the Re-Jirah schedule; this file reads it, it does not re-derive it
 import { burnedAxes } from "./samjhao.mjs";   // LOAD ZERO BLOCK 2 (19 Aug 2026): samjhao OPENS a weld, so that axis's strike can never again be served as a COLD question
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -155,7 +156,17 @@ function printLoadFailures() {
 // Re-Jirah is date-driven off `lockedOn` + the profile's intervals, and rounds
 // already done are listed in `reJirahDone`. This mirrors capsule_bridge.mjs's
 // reading — it does NOT invent a second scheduler.
-export function rejirahStatus(capsule, intervals, now = new Date()) {
+// ── W0-B (2 Sep 2026) · THE TWIN COLLAPSE (LR-10, SD-02) ────────────────────────────
+// The comment above says this "does NOT invent a second scheduler" — and it was true in
+// intent and false in fact: this file, rejirah.mjs and capsule_bridge.mjs each derived the
+// Re-Jirah schedule from lockedOn independently. Three derivations means an epoch patched
+// into fewer than all three leaves a surface lying, and that is exactly what happened: the
+// GAME-ON gate landed in rejirah.mjs and `learnstate nextup` went quiet while THIS screen
+// kept printing "Tokenization · R2 · 71d overdue" off a proof the captain had withdrawn.
+// So the owner's derivation is imported and this body is FROZEN, not deleted (L9) — kept
+// byte-for-byte, referenced by nothing, so the archaeology of B7 and the 10-Aug dead-wire
+// repair stays readable. The S10 twin-collapse pattern, verbatim.
+export function rejirahStatusLegacy(capsule, intervals, now = new Date()) {
   const locked = new Date(capsule.lockedOn + "T00:00:00Z");
   // DEAD WIRE, traced + repaired overnight 10→11 Aug 2026. This branch returned a bare
   // status:"unknown" and then NOTHING said so: `due`'s filter below keeps only overdue/due,
@@ -180,6 +191,29 @@ export function rejirahStatus(capsule, intervals, now = new Date()) {
   const overdueDays = Math.floor((now.getTime() - nextDue.getTime()) / 86400000);
   const status = overdueDays > 0 ? "overdue" : overdueDays === 0 ? "due" : "up";
   return { round: nextIdx + 1, status, overdueDays: Math.max(0, overdueDays), nextDue: nextDue.toISOString().slice(0, 10) };
+}
+
+/**
+ * THE LIVE READER — one derivation, the owner's. Shapes rejirah.mjs's answer into the
+ * status vocabulary this screen has always spoken, and adds exactly one new word:
+ * `pre_cyborg`, for a round whose proof the captain withdrew on 30 Aug. That is NOT
+ * "not due" and it is NOT hidden — `due` prints it as record, the way it already prints
+ * an unschedulable capsule, because a concept leaving the rotation in silence is the
+ * failure this file has a whole paragraph about.
+ */
+export function rejirahStatus(capsule, intervals, now = new Date()) {
+  const sched = roundSchedule(capsule, intervals);
+  if (!sched.ok) return { round: null, status: "unknown", overdueDays: null, nextDue: null, why: sched.why };
+  const open = openRound(capsule, intervals);
+  if (!open.ok && open.pre_cyborg) {
+    const first = (open.rounds || []).find((r) => !r.done) || null;
+    return { round: first ? first.round : null, status: "pre_cyborg", overdueDays: null, nextDue: first ? first.due : null, why: open.why };
+  }
+  if (!open.ok && open.complete) return { round: intervals.length, status: "complete", overdueDays: 0, nextDue: null };
+  if (!open.ok) return { round: null, status: "unknown", overdueDays: null, nextDue: null, why: open.why };
+  const overdueDays = Math.floor((now.getTime() - Date.parse(open.due + "T00:00:00Z")) / 86400000);
+  return { round: open.round, status: overdueDays > 0 ? "overdue" : overdueDays === 0 ? "due" : "up",
+    overdueDays: Math.max(0, overdueDays), nextDue: open.due };
 }
 
 // ---------------------------------------------------------------------------
@@ -251,6 +285,18 @@ function due(caps, intervals, now) {
     console.log(`\n⚠ ${unreadable.length} capsule Re-Jirah queue se BAAHAR hai (schedule ban hi nahi saka): `
       + unreadable.map(({ c }) => `${c.id} (lockedOn: "${c.lockedOn ?? ""}")`).join(" · "));
     console.log("   Gist mein lockedOn ko YYYY-MM-DD karo, phir `node scripts/mirror.mjs` — tab tak yeh concept kisi bhi cold round mein nahi aayega.");
+  }
+
+  // W0-B — THE WITHDRAWN PROOFS ARE SAID OUT LOUD, NEVER SILENTLY DROPPED. Same reason
+  // as the block above: a concept that leaves the cold rotation without anyone noticing is
+  // the exact failure this screen exists to prevent. It is a RECORD line, not a queue line
+  // — these rounds are not work, and they must not read as work.
+  const withdrawn = scored.filter(({ r }) => r.status === "pre_cyborg");
+  if (withdrawn.length) {
+    console.log(`\n⚑ ${withdrawn.length} concept ka Re-Jirah GAME ON (30 Aug) pe band hua: `
+      + withdrawn.map(({ c }) => c.id).join(" · "));
+    console.log("   Inka proof tumne khud withdraw kiya tha — purana saboot test karne ka matlab nahi. Notes poore rakhe hain, woh padhne ke liye khule hain.");
+    console.log("   Concept dobara lock hoga to schedule khud restart ho jayega. Phir bhi ek round baithna ho: `node scripts/rejirah.mjs close <concept> --anyway`.");
   }
 
   if (!rows.length) { console.log("\nRe-Jirah: abhi kuch due nahi hai.\n"); return; }
@@ -503,24 +549,43 @@ const PLACED = [
 function selftest() {
   let pass = 0, fail = 0;
   const ok = (n, c) => { if (c) { pass++; console.log(`  ✓ ${n}`); } else { fail++; console.log(`  ✗ ${n}`); } };
-  const now = new Date("2026-08-04T12:00:00Z");
+  // W0-B (2 Sep 2026) — THE FIXTURE CLOCK MOVED PAST THE GAME-ON EPOCH, and every date below
+  // shifted by EXACTLY +92 days, so every arithmetic assertion is unchanged to the unit
+  // (41 days overdue is still 41). These fixtures were written before the epoch existed and
+  // were pinned to June; a June lock now means "proof withdrawn", which is a different
+  // question from the one they were written to ask. The withdrawal itself is asserted
+  // directly, below — not by leaving the arithmetic tests standing in a world canon closed.
+  const now = new Date("2026-11-04T12:00:00Z");
   const iv = [3, 14, 42];
 
-  const cap = { id: "x", num: "01", title: "X", lockedOn: "2026-06-21", reJirahDone: [], status: "tempered",
+  const cap = { id: "x", num: "01", title: "X", lockedOn: "2026-09-21", reJirahDone: [], status: "tempered",
     faultLines: [{ axis: "a", title: "T", strike: "S?", weld: "W", status: "held", deep: "D" }] };
 
   const r = rejirahStatus(cap, iv, now);
   ok("R1 due-date = lockedOn + first interval, and overdue is measured not guessed",
-    r.round === 1 && r.status === "overdue" && r.overdueDays === 41 && r.nextDue === "2026-06-24");
+    r.round === 1 && r.status === "overdue" && r.overdueDays === 41 && r.nextDue === "2026-09-24");
   ok("a completed round advances to the NEXT interval, never repeats R1",
-    rejirahStatus({ ...cap, reJirahDone: ["2026-06-24"] }, iv, now).round === 2);
+    rejirahStatus({ ...cap, reJirahDone: ["2026-09-24"] }, iv, now).round === 2);
   ok("all rounds done → 'complete', never a phantom overdue (B7: matched by DUE date, junk entries no longer count)",
-    rejirahStatus({ ...cap, reJirahDone: ["2026-06-24", "2026-07-05", "2026-08-02"] }, iv, now).status === "complete"
+    rejirahStatus({ ...cap, reJirahDone: ["2026-09-24", "2026-10-05", "2026-11-02"] }, iv, now).status === "complete"
     && rejirahStatus({ ...cap, reJirahDone: ["a", "b", "c"] }, iv, now).status !== "complete");
   ok("a future due-date reads 'up', not overdue",
-    rejirahStatus({ ...cap, lockedOn: "2026-08-03" }, iv, now).status === "up");
+    rejirahStatus({ ...cap, lockedOn: "2026-11-03" }, iv, now).status === "up");
   ok("a junk lockedOn degrades honestly instead of throwing",
     rejirahStatus({ ...cap, lockedOn: "not-a-date" }, iv, now).status === "unknown");
+
+  ok("GAME ON — a pre-epoch lock reads `pre_cyborg`, never `overdue`: this screen printed \"71d overdue\" off a proof the captain withdrew",
+    (() => { const r = rejirahStatus({ ...cap, lockedOn: "2026-06-21" }, iv, now);
+      return r.status === "pre_cyborg" && r.overdueDays === null && /withdraw|GAME ON/i.test(r.why || ""); })());
+  ok("GAME ON — and `due` SAYS SO rather than dropping it in silence, which is this screen's own law",
+    (() => { const out = []; const w = console.log; console.log = (...a) => out.push(a.join(" "));
+      try { due([{ ...cap, id: "old", lockedOn: "2026-06-21" }], iv, now); } finally { console.log = w; }
+      const t = out.join(" ");
+      return /GAME ON/.test(t) && /old/.test(t) && !/overdue/.test(t) && /kuch due nahi/.test(t); })());
+  ok("TWIN COLLAPSE — the frozen legacy derivation is kept byte-for-byte and referenced by NOTHING (L9)",
+    (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+      const body = src.slice(0, src.indexOf("function selftest("));   // outside this selftest, the name may appear exactly once: its own declaration
+      return /function rejirahStatusLegacy\(/.test(body) && (body.match(/rejirahStatusLegacy/g) || []).length === 1; })());
 
   // ALWAYS-COLD is the load-bearing law here: `due` must never leak a weld.
   const out = [];

@@ -5,6 +5,26 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
 
 # /forge — the zero-tax study session
 
+> ## ⚠ THE OPERATING SPINE — READ THIS BEFORE ANYTHING ELSE
+> **`docs/archive/SAMJHAO_MERGED__2026-08-30.md` is the binding order for this lane. Open it
+> FIRST and read its RESUME block — it says where he actually is.** FORGE and SAMJHAO are
+> ONE process since 30 Aug 2026, on his word (*"ok all approved"*, act `amtfkb4r48m`,
+> teaching-contract rule 31). RE-JIRAH stays separate, as the topic's cold test.
+>
+> **GAME ON — 30 Aug 2026, 7:30 AM IST: the pre-cyborg era is CLOSED** (canon `7744acf1`).
+> Every learning record before that stamp measures the INSTRUMENT, not him, and the syllabus
+> RESTARTS at the first topic. The four locked capsules are re-opened as UNLEARNED, so a
+> Re-Jirah on them is no longer due — it would test a proof that no longer exists, and the
+> code now refuses it (`registry.mjs gameOnEpoch`, one row, one reader).
+> ⚠ **BUT THE NOTES ARE NOT WITHDRAWN, ONLY THE PROOF IS** (his correction the same breath,
+> canon `b40e585d`): *"keep my 4 closed topic notes data as a powerful resource and use that
+> while teaching me everything from the scratch again."* The capsules stay IMMUTABLE and stay
+> OPEN as the teaching resource — `doubts` holds his own questions, `traps` the exact baits he
+> fell for, `calibration` what he predicted about himself. **Teach from zero WITH them open:
+> they say in advance where he will break.** Never "you already know this" (HOW_HE_LEARNS #10).
+> Any stored strike on a re-opened topic needs a FRESH question — a burned axis is burned.
+
+
 You are the FORGE teacher-examiner. The concept is `$ARGUMENTS` (if empty, read
 `dressing-room/state/drills.json` and propose drill #1's concept — winnable by law;
 if no drills, read `dressing-room/state/cards.json` for what's due).

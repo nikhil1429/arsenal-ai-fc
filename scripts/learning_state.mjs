@@ -50,6 +50,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { gameOnEpoch } from "./registry.mjs";   // W0-B — THE SYLLABUS FLOOR: one reader, one row, one receipt
 import { supersedeReps, ungradedSplit, ungradedLine } from "./capture.mjs";   // BLOCK 4 supersession + S10: the samjhao-era skip is SAID, from the owner's one counter
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
 
@@ -500,7 +501,28 @@ function buildGate(N, th, fluencies) {
 // It gets the constant empty block, so the field is never missing — only empty.
 // The RAW inputs come in and the projection happens HERE, so a caller cannot hand
 // the bus a hand-shaped `position` that never passed the rules above.
-function compute(reps, fsrsCards, reg, cfg, now, forgeSession = null, forgeLastRow = null) {
+function compute(reps, fsrsCards, reg, cfg, now, forgeSession = null, forgeLastRow = null, opts = {}) {
+  // ── W0-B (2 Sep 2026) · THE SYLLABUS FLOOR (LR-02, LR-03, LR-08, SD-01) ────────────
+  // His 30-Aug ruling: every learning record before GAME ON measures the INSTRUMENT, not
+  // him — the reps carry confidence:null, latency_ms:null, aided:null, and 22 of them were
+  // BACK-FILLED a day before the stamp. This file was publishing them as live truth: 22
+  // total_reps, a per-concept fluency ladder, and `hallucinations · regressing`, which is
+  // the exact verdict the examiner then staged a drill on. A number computed from an
+  // instrument canon has disqualified is not a small number — it is a wrong one.
+  // NOTHING IS DELETED (L9, and his own correction canon b40e585d — the NOTES stay). The
+  // pre-floor reps are counted and reported in their own labelled block; they simply stop
+  // being evidence. With no post-floor reps yet, N falls to 0 and the file's OWN
+  // awaiting_data path renders UNMEASURED — which is the honest reading, not a zero.
+  // The floor is a PARAMETER, not a constant here: registry.mjs holds the instant with its
+  // receipt, and a caller that passes nothing (every fixture below) is unaffected.
+  const floorMs = Number.isFinite(opts.floorMs) ? opts.floorMs : null;
+  const preCyborgReps = floorMs === null ? [] : reps.filter((r) => !(Date.parse(String(r && r.ts)) >= floorMs));
+  if (floorMs !== null && preCyborgReps.length) reps = reps.filter((r) => Date.parse(String(r && r.ts)) >= floorMs);
+  const pre_cyborg = floorMs === null ? null : {
+    reps: preCyborgReps.length,
+    floor: new Date(floorMs).toISOString(),
+    note: "GAME ON, 30 Aug 2026 — in reps se pehle ka data instrument ko naapta hai, tumhe nahi. Record ke liye rakha hai, saboot ke liye nahi. Notes poore khule hain.",
+  };
   const N = reps.length;
   const date = dayKey(now);   // Block 6 — day-key
   const generated_at = new Date(now).toISOString();
@@ -522,6 +544,7 @@ function compute(reps, fsrsCards, reg, cfg, now, forgeSession = null, forgeLastR
   if (N === 0) {
     return {
       date, generated_at, total_reps: 0, status: "awaiting_data", low_confidence: true,
+      ...(pre_cyborg ? { pre_cyborg } : {}),
       maidan_stage_focus: null, weak_connection: null, python_fluency: {}, rejirah_due: [], core_vs_light: {},
       concepts: [], axes: [],
       maidan: { stages: stageSkeleton(), handoffs: cfgHandoffs.map((h) => ({ from: h.from, to: h.to, combined_fluency: EMOJI.learning })) },
@@ -671,6 +694,25 @@ function selftest() {
   const findC = (o, id) => o.concepts.find((c) => c.id === id);
 
   // 1) empty-safe
+  // ── W0-B · THE SYLLABUS FLOOR (2 Sep 2026 — LR-02/LR-03/LR-08) ────────────────────
+  {
+    const FLOOR = Date.parse("2026-08-30T02:00:00Z");
+    // rp() derives ts from its own clock, so the stamp is set after it builds the row
+    const old1 = { ...rp({ concept: "chunking" }), ts: "2026-07-01T00:00:00Z" };
+    const old2 = { ...rp({ concept: "chunking" }), ts: "2026-07-02T00:00:00Z" };
+    const fresh = { ...rp({ concept: "chunking" }), ts: "2026-09-01T00:00:00Z" };
+    const off = compute([old1, old2], [], REG, cfg, now);
+    const on = compute([old1, old2], [], REG, cfg, now, null, null, { floorMs: FLOOR });
+    assert("FLOOR — with no floor the pre-restart reps still count (this is the behaviour that published 22 as live truth)",
+      off.total_reps === 2 && !off.pre_cyborg);
+    assert("FLOOR — with the floor, pre-restart reps stop being evidence and the file's own awaiting_data path answers UNMEASURED",
+      on.total_reps === 0 && on.status === "awaiting_data" && on.concepts.length === 0 && on.rejirah_due.length === 0);
+    assert("FLOOR — NOTHING IS DELETED (L9): they are counted and dated in a labelled block, in his words",
+      on.pre_cyborg && on.pre_cyborg.reps === 2 && on.pre_cyborg.floor === "2026-08-30T02:00:00.000Z"
+      && /GAME ON/.test(on.pre_cyborg.note) && /[Nn]otes/.test(on.pre_cyborg.note));
+    assert("FLOOR — a POST-restart rep counts normally, so the moment he banks one the ladder starts again",
+      compute([old1, fresh], [], REG, cfg, now, null, null, { floorMs: FLOOR }).total_reps === 1);
+  }
   const e0 = compute([], [], REG, cfg, now);
   assert("empty-safe: awaiting_data, lists empty, maidan skeleton present", e0.status === "awaiting_data" && e0.concepts.length === 0 && e0.rejirah_due.length === 0 && e0.maidan.stages.length === 3 && e0.maidan.stages[0].status === "awaiting_data");
 
@@ -950,7 +992,9 @@ function main() {
   const reg = loadRegistry();
   const reps = loadReps(REPS_LOG);
   const cards = loadFsrsCards();
-  const out = compute(reps, cards, reg, cfg, new Date(), loadForgeSession(), loadForgeLastClosed());
+  // W0-B — the LIVE run carries the floor. registry.mjs holds the instant with its receipt;
+  // an unreadable one THROWS there rather than quietly reading as "no floor, everything counts".
+  const out = compute(reps, cards, reg, cfg, new Date(), loadForgeSession(), loadForgeLastClosed(), { floorMs: gameOnEpoch() });
   writeAtomic(OUT, out);
   // the position clause is APPENDED, never replacing the existing line — the 08:45
   // log is how an operator sees whether the pacer was actually picked up this run.

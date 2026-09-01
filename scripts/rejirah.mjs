@@ -64,6 +64,7 @@ import { readFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, mkdte
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { preCyborg } from "./registry.mjs";   // W0-B — THE GAME-ON EPOCH: one reader, one predicate, no organ keeps its own copy
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATE = join(HERE, "..", "dressing-room", "state");
@@ -216,18 +217,39 @@ export function roundSchedule(capsule, intervals) {
     const due = addDays(locked, n);
     return { round: i + 1, interval_days: n, due, done: done.has(due) };
   });
-  return { ok: true, rounds, locked };
+  // W0-B (2 Sep 2026) — THE SCHEDULE STILL COMPUTES; ONLY THE QUEUE STOPS.
+  // roundSchedule stays pure arithmetic and still returns every round, because the
+  // record must remain readable (L9: a pre-cyborg round is KEPT and LABELLED, never
+  // dropped). The flag is what openRound below acts on.
+  let pre = false;
+  try { pre = preCyborg(capsule); } catch (e) { throw e; }   // an unreadable epoch must be LOUD, never a silent "no floor"
+  return { ok: true, rounds, locked, pre_cyborg: pre };
 }
 
 // The round he is closing is the FIRST one not yet in `reJirahDone` — never the most
 // overdue. Three rounds overdue means R1 is the one being sat, and jumping to R3 would
 // silently mark two rounds served that never were.
-export function openRound(capsule, intervals) {
+export function openRound(capsule, intervals, opts = {}) {
   const s = roundSchedule(capsule, intervals);
   if (!s.ok) return { ok: false, why: s.why };
+  // W0-B (2 Sep 2026) — GAME ON IS A CODE PATH NOW (LR-02/SD-02, his own L4).
+  // A Re-Jirah is a COLD TEST OF A PROOF. On 30 Aug he withdrew the proof for every
+  // pre-epoch lock, so a round scheduled off one tests something that no longer exists
+  // — and it was WINNING: `deep.mjs due` read "Tokenization · R2 · 71d overdue" and the
+  // arbiter carried "R2 tokenization 71d ripe (+3 more)" as its next claim.
+  // ⚠ THE NOTES ARE NOT WITHDRAWN, ONLY THE PROOF IS (his correction, canon b40e585d):
+  // the capsule stays IMMUTABLE and stays the teaching resource. This closes the QUEUE,
+  // it does not close the capsule, and it deletes nothing — the rounds are still returned
+  // by roundSchedule and still printable as record.
+  // HIS WORD REOPENS IT: `opts.anyway` (the CLI's existing --anyway door). A schedule
+  // that cannot be overridden by the captain is a schedule that owns him.
+  if (s.pre_cyborg && !opts.anyway) {
+    return { ok: false, pre_cyborg: true, complete: false, rounds: s.rounds,
+      why: `'${capsule && capsule.id}' ka lock ${s.locked} ka hai — GAME ON (30 Aug) se pehle. Us proof ko tumne khud withdraw kiya tha, to yeh round ek aise saboot ko test karega jo ab hai hi nahi. Notes poore rakhe hain — sirf saboot hata hai. Concept dobara lock hoga to schedule khud se restart ho jayega.` };
+  }
   const open = s.rounds.find((r) => !r.done);
   if (!open) return { ok: false, why: `every scheduled round is already in reJirahDone (${s.rounds.length}/${s.rounds.length} served) — FORGE_SPEC schedules ${intervals.join("d / ")}d and no more.`, complete: true };
-  return { ok: true, ...open, total: s.rounds.length };
+  return { ok: true, ...open, total: s.rounds.length, pre_cyborg: !!s.pre_cyborg };
 }
 
 // VALIDATED BEFORE IT IS WRITTEN, like buildRow. A close row records the round, the
@@ -733,12 +755,17 @@ function selftest() {
     (() => { const s = axisState({ ...TOK, reJirahDone: ["2026-06-18", "2026-06-29", "2026-07-27"] }, "a", [], IV, NOW);
       return s.nextDue === null && s.overdueDays === null; })());
 
+  // W0-B (2 Sep 2026): these five ask about the SCHEDULE ARITHMETIC, and every fixture
+  // below is deliberately pre-epoch (June dates, chosen when they were written). The
+  // GAME-ON gate now closes the queue on such a capsule, so they pass `{ anyway: true }`
+  // — his own override door — to keep asking the arithmetic question. The gate itself is
+  // asserted separately, right below them.
   assert("OPEN ROUND — the FIRST unserved round, never the most overdue (R1 before R3)",
-    (() => { const o = openRound(cap, IV); return o.ok && o.round === 1 && o.due === "2026-06-24"; })());
+    (() => { const o = openRound(cap, IV, { anyway: true }); return o.ok && o.round === 1 && o.due === "2026-06-24"; })());
   assert("OPEN ROUND — with two served, the next one is R3, not R1 again",
-    (() => { const o = openRound(TOK, IV); return o.ok && o.round === 3 && o.due === "2026-07-27" && o.total === 3; })());
+    (() => { const o = openRound(TOK, IV, { anyway: true }); return o.ok && o.round === 3 && o.due === "2026-07-27" && o.total === 3; })());
   assert("OPEN ROUND — all three served reports COMPLETE, and refuses to invent a fourth",
-    (() => { const o = openRound({ ...TOK, reJirahDone: ["2026-06-18", "2026-06-29", "2026-07-27"] }, IV);
+    (() => { const o = openRound({ ...TOK, reJirahDone: ["2026-06-18", "2026-06-29", "2026-07-27"] }, IV, { anyway: true });
       return !o.ok && o.complete === true; })());
 
   assert("CLOSE ROW — validated: concept, an ISO due-day, and a positive round are all required",
@@ -771,6 +798,30 @@ function selftest() {
     })());
 
   // THE PROOF, not the assumption.
+  // ── W0-B · THE GAME-ON EPOCH (2 Sep 2026 — LR-02, SD-02) ────────────────────────────
+  // His 30-Aug ruling had ZERO code paths until this rung: `grep -i "pre-cyborg|GAME ON"
+  // scripts/*.mjs` returned nothing, while `deep.mjs due` read "Tokenization · R2 · 71d
+  // overdue" off a proof he had withdrawn. L4: a law is a code path or it does not exist.
+  {
+    const pre = { id: "tokenization", lockedOn: "2026-06-15", reJirahDone: [] };
+    const post = { id: "fresh", lockedOn: "2026-09-05", reJirahDone: [] };
+    const relocked = { id: "again", lockedOn: "2026-06-15", relockedOn: "2026-09-01", reJirahDone: [] };
+    const g = openRound(pre, IV);
+    assert("GAME ON — a capsule locked before the epoch is NOT due: the queue closes on a proof he withdrew",
+      g.ok === false && g.pre_cyborg === true && /withdraw|GAME ON/i.test(g.why));
+    assert("GAME ON — and it says so in HIS words: the notes are kept, only the proof is gone, and a re-lock restarts the schedule",
+      /[Nn]otes poore rakhe hain/.test(g.why) && /restart/i.test(g.why));
+    assert("GAME ON — NOTHING IS DELETED (L9): every round is still returned as record, and the arithmetic is untouched",
+      Array.isArray(g.rounds) && g.rounds.length === IV.length && g.rounds[0].due === "2026-06-18"
+      && roundSchedule(pre, IV).ok === true && roundSchedule(pre, IV).rounds.length === IV.length);
+    assert("GAME ON — HIS WORD REOPENS IT: --anyway carries the captain through his own gate",
+      openRound(pre, IV, { anyway: true }).ok === true);
+    assert("GAME ON — a capsule locked AFTER the epoch is untouched, and so is one that was RE-LOCKED after it",
+      openRound(post, IV).ok === true && openRound(relocked, IV).ok === true);
+    assert("GAME ON — the epoch is a DATE, never a list of concept names: `fresh` and `tokenization` differ only by their lock day",
+      openRound({ ...pre, id: "fresh" }, IV).ok === false && openRound({ ...post, id: "tokenization" }, IV).ok === true);
+  }
+
   assert("PENDING — a closed round whose date is NOT in the capsule reads PENDING",
     (() => { const p = pendingCloses([cap], [closeRow]);
       return p.length === 1 && p[0].round === 1 && p[0].due === "2026-06-24" && p[0].known_capsule === true; })());
@@ -783,13 +834,13 @@ function selftest() {
   // know about a close until the paste lands, so openRound legitimately still says R1 —
   // and a naive second `close` would append a duplicate row for the same due-date.
   assert("DOUBLE-CLOSE — a pending round is still 'open' in the mirror, and the pair detects it",
-    (() => { const o = openRound(cap, IV);                       // mirror still shows reJirahDone: []
+    (() => { const o = openRound(cap, IV, { anyway: true });     // mirror still shows reJirahDone: []
       const p = pendingCloses([cap], [closeRow]);
       return o.ok && o.round === 1 && o.due === "2026-06-24"
         && !!p.find((x) => x.concept === "embeddings" && x.due === o.due); })());
   assert("DOUBLE-CLOSE — once the paste lands, the same pair opens R2 cleanly and flags nothing",
     (() => { const landed = { ...cap, reJirahDone: ["2026-06-24"] };
-      const o = openRound(landed, IV);
+      const o = openRound(landed, IV, { anyway: true });
       return o.ok && o.round === 2 && o.due === "2026-07-05"
         && pendingCloses([landed], [closeRow]).length === 0; })());
 
@@ -999,8 +1050,12 @@ function main() {
       console.error(`rejirah: "${want}" is not a locked capsule in the mirror. Locked: ${caps.map((c) => c.id).join(" · ") || "(none — run \`node scripts/mirror.mjs\`)"}`);
       process.exit(1);
     }
-    const open = openRound(cap, intervals);
-    if (!open.ok) { console.error(`rejirah: ${open.why}`); process.exit(1); }
+    const open = openRound(cap, intervals, { anyway });
+    if (!open.ok) {
+      console.error(`rejirah: ${open.why}`);
+      if (open.pre_cyborg) console.error(`  phir bhi baithna hai? \`node scripts/rejirah.mjs close ${want} --anyway\` — tumhara word hi isse khol sakta hai.`);
+      process.exit(1);
+    }
 
     // ALREADY CLOSED, STILL PENDING. openRound reads the MIRROR, and the mirror only
     // learns about a close after the gist paste + the next mirror run — so a round he

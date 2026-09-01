@@ -285,9 +285,19 @@ function pickConcept(deps = {}) {
   if (stalling.length) return { concept: stalling[0], why: "stalling/regressing in learning_state", input_errors };
   const learning = arr.filter(c => /learning|red/i.test(String(c.fluency || c.stage || c.state || ""))).map(nameOf).filter(Boolean);
   if (learning.length) return { concept: learning[0], why: "earliest ladder stage", input_errors };
+  // ── W0-B (2 Sep 2026) · A DRILL MAY NOT BE PICKED BY DATA CANON DISQUALIFIED (LR-03) ──
+  // On 1 Sep this picker staged a drill on `hallucinations` with picked_because
+  // "stalling/regressing in learning_state" — a verdict computed entirely from pre-cyborg
+  // reps. The floor in learning_state.mjs empties the trend lanes above, but FSRS's
+  // hardest-due is fed by the SAME reps, so without this the picker just cites the same
+  // disqualified evidence through a different door. When learning_state says it is still
+  // awaiting post-floor data, every rep-derived lane is pre-floor by construction, and the
+  // capsule floor — where the syllabus actually restarted — is the only honest pick.
+  const preFloor = !!(ls && ls.pre_cyborg && ls.status === "awaiting_data");
   const cards = cardsRead.value;
-  const hard = (cards && cards.hardest_due) || [];
+  const hard = preFloor ? [] : ((cards && cards.hardest_due) || []);
   if (hard.length) return { concept: typeof hard[0] === "string" ? hard[0] : (hard[0].concept || hard[0].topic), why: "FSRS hardest due", input_errors };
+  if (preFloor) return { concept: "tokenization", why: `capsule floor — GAME ON (${String(ls.pre_cyborg.floor).slice(0, 10)}): ${ls.pre_cyborg.reps} pre-restart rep(s) are record, not evidence, and no post-restart rep exists yet`, input_errors };
   // THE FLOOR — and the line that used to lie. "no live signal yet" is only true when
   // every input was genuinely ABSENT. If one was present and unreadable, say THAT.
   if (input_errors.length) {
@@ -849,6 +859,19 @@ async function selftest() {
     const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
     assert("RECEIPT WIRE: the nightly stage reads the outgoing drill's receipt and says out loud when it has none",
       /const outgoing = readJson\(DRILL\);/.test(src) && /carries NO serve receipt/.test(src) && /outgoing\.served/.test(src));
+    // ── W0-B · A DRILL IS NEVER PICKED BY DISQUALIFIED DATA (2 Sep 2026 — LR-03) ──────
+    // Reproduced from the live file: on 1 Sep this picker staged a drill on
+    // `hallucinations` with picked_because "stalling/regressing in learning_state",
+    // a trend computed entirely from pre-restart reps. Both doors are closed now.
+    {
+      const preFloorLs = { status: "awaiting_data", pre_cyborg: { reps: 22, floor: "2026-08-30T02:00:00.000Z" }, concepts: [] };
+      const p1 = pickConcept({ ls: preFloorLs, cards: { hardest_due: ["inference"] } });
+      assert("W0-B: with only pre-restart data, the pick is the capsule floor and it NAMES the epoch — never FSRS-hardest, which is fed by the same reps",
+        p1.concept === "tokenization" && /GAME ON/.test(p1.why) && !/FSRS/.test(p1.why));
+      const stale = { status: "ok", concepts: [{ id: "hallucinations", velocity: { slope: "regressing" } }] };
+      assert("W0-B: a 'regressing' verdict still drives the pick ONCE post-restart data exists — the floor withholds evidence, it does not disable the picker",
+        pickConcept({ ls: stale, cards: {} }).concept === "hallucinations");
+    }
     assert("RECEIPT WIRE: markServed is EXPORTED (dugout.mjs's in-process door) and dispatched as `served` (the skill's out-of-process door)",
       /export \{[^}]*\bmarkServed\b/.test(src) && MODES.has("served"));
   }

@@ -64,6 +64,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, rename
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";                      // selftest only — the disk exercise (mirror.mjs:315 precedent)
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { roundSchedule } from "./rejirah.mjs";   // W0-B — TWIN COLLAPSE: the Re-Jirah schedule has exactly one owner
 import { dayKey } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW (this file has its own UTC addDays below — not imported)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -88,7 +89,14 @@ const daysBetween = (a, b) => Math.round((dayMs(b) - dayMs(a)) / 86400000);
 // Re-Jirah schedule for ONE capsule, computed live from lockedOn (FORGE_SPEC §4:
 // "engine new Date() se compute, no stored countdown"). reJirahDone holds the
 // due-dates already served.
-function rejirahRounds(capsule, intervals, today) {
+//
+// ── W0-B (2 Sep 2026) · THE TWIN COLLAPSE (LR-10) ──────────────────────────────
+// This was the THIRD independent derivation of the same schedule (rejirah.mjs owns it,
+// deep.mjs had one too). Three derivations meant the GAME-ON epoch could land in one and
+// leave the other two telling him a proof he withdrew was 71 days overdue — which is
+// exactly what happened for one commit. Frozen here, kept byte-for-byte and referenced by
+// nothing (L9); the live map now reads the owner. The S10 twin-collapse pattern, verbatim.
+function rejirahRoundsLegacy(capsule, intervals, today) {
   const locked = ISO_DAY.test(String(capsule.lockedOn || "")) ? capsule.lockedOn : null;
   if (!locked) return { rounds: [], next_due: null, overdue_days: null, rounds_done: 0, schedule_known: false };
   const done = new Set((Array.isArray(capsule.reJirahDone) ? capsule.reJirahDone : []).filter(d => ISO_DAY.test(String(d))));
@@ -105,6 +113,30 @@ function rejirahRounds(capsule, intervals, today) {
     overdue_days: worst ? worst.overdue_days : 0,
     rounds_done: rounds.filter(r => r.status === "done").length,
     schedule_known: true,
+  };
+}
+
+/** THE LIVE READER — the owner's derivation, shaped into this map's vocabulary. A capsule
+ *  whose proof the captain withdrew reports `pre_cyborg: true` with NO due date and NO
+ *  overdue count: the rounds stay listed (L9, the record is never dropped) but nothing
+ *  downstream may read them as work. */
+function rejirahRounds(capsule, intervals, today) {
+  const sched = roundSchedule(capsule, intervals);
+  if (!sched.ok) return { rounds: [], next_due: null, overdue_days: null, rounds_done: 0, schedule_known: false, pre_cyborg: false };
+  const rounds = sched.rounds.map((r) => ({
+    round: r.round, interval_days: r.interval_days, due: r.due,
+    status: r.done ? "done" : sched.pre_cyborg ? "pre_cyborg" : r.due < today ? "overdue" : r.due === today ? "due" : "up",
+    overdue_days: !r.done && !sched.pre_cyborg && r.due < today ? daysBetween(r.due, today) : 0,
+  }));
+  const pending = rounds.filter((r) => r.status !== "done");
+  const worst = pending.filter((r) => r.status === "overdue").sort((a, b) => b.overdue_days - a.overdue_days)[0] || null;
+  return {
+    rounds,
+    next_due: sched.pre_cyborg ? null : (pending[0] ? pending[0].due : null),
+    overdue_days: worst ? worst.overdue_days : 0,
+    rounds_done: rounds.filter((r) => r.status === "done").length,
+    schedule_known: true,
+    pre_cyborg: !!sched.pre_cyborg,
   };
 }
 
@@ -517,9 +549,14 @@ const localDate = (now = new Date()) =>
 function selftest() {
   let pass = 0, fail = 0;
   const assert = (d, c) => { if (c) { pass++; console.log("  ✓ " + d); } else { fail++; console.log("  ✗ " + d); } };
-  const TODAY = "2026-07-30";
+  // W0-B (2 Sep 2026) — THE FIXTURE CLOCK MOVED PAST THE GAME-ON EPOCH: every DATA date in
+  // this selftest shifted by EXACTLY +92 days, so every interval and every overdue count is
+  // unchanged to the unit. A June lock now means "the captain withdrew this proof", which is
+  // a different question from the schedule arithmetic these were written to ask. The
+  // withdrawal is asserted on its own, below.
+  const TODAY = "2026-10-30";
   const cap = (over = {}) => ({
-    id: "inference", title: "Inference", lockedOn: "2026-06-24", status: "tempered", reJirahDone: [],
+    id: "inference", title: "Inference", lockedOn: "2026-09-24", status: "tempered", reJirahDone: [],
     faultLines: AXES.map(a => ({ axis: a, status: "held", strike: `strike-${a}`, weld: "w", deep: "d" })),
     doubts: [1, 2, 3], traps: [1], bridges: [1, 2], interviewLines: [1], ...over,
   });
@@ -537,12 +574,12 @@ function selftest() {
   // Re-Jirah: locked 24 Jun ⇒ 27 Jun / 8 Jul / 5 Aug against a 30 Jul clock
   const r = b.concepts[0].rejirah;
   assert("schedule computed live from lockedOn + genome intervals",
-    r.rounds.map(x => x.due).join() === "2026-06-27,2026-07-08,2026-08-05");
+    r.rounds.map(x => x.due).join() === "2026-09-27,2026-10-08,2026-11-05");
   assert("two rounds overdue, one still up, none done", r.rounds.map(x => x.status).join() === "overdue,overdue,up" && r.rounds_done === 0);
   assert("overdue_days reports the WORST round, not the newest", r.overdue_days === 33);
-  assert("next_due is the earliest unserved round", r.next_due === "2026-06-27");
-  const served = build([cap({ reJirahDone: ["2026-06-27"] })], DEFAULT_INTERVALS, TODAY).concepts[0].rejirah;
-  assert("a served round goes `done` and stops driving next_due", served.rounds[0].status === "done" && served.next_due === "2026-07-08" && served.rounds_done === 1);
+  assert("next_due is the earliest unserved round", r.next_due === "2026-09-27");
+  const served = build([cap({ reJirahDone: ["2026-09-27"] })], DEFAULT_INTERVALS, TODAY).concepts[0].rejirah;
+  assert("a served round goes `done` and stops driving next_due", served.rounds[0].status === "done" && served.next_due === "2026-10-08" && served.rounds_done === 1);
 
   // deferred axes are visible, never silently absent (THE METHOD step 0)
   const partial = build([cap({ faultLines: [{ axis: "a", status: "held", strike: "s", weld: "w" }, { axis: "b", status: "cracked", strike: "s2" }] })], DEFAULT_INTERVALS, TODAY);
@@ -556,6 +593,22 @@ function selftest() {
   const dis = build([cap()], DEFAULT_INTERVALS, TODAY, ["embeddings"]).scheduler_disagreement;
   assert("names what the capsule calls due and FSRS does not", dis.capsule_says_due_fsrs_quiet.join() === "inference");
   assert("and what FSRS calls due and the capsule does not", dis.fsrs_says_due_capsule_quiet.join() === "embeddings");
+
+
+  // W0-B · THE GAME-ON EPOCH reaches the capsule map, or this file becomes the surface
+  // that still says "overdue" after the other two went quiet (LR-10's whole point).
+  {
+    const old = build([cap({ lockedOn: "2026-06-24" })], DEFAULT_INTERVALS, TODAY).concepts[0].rejirah;
+    assert("GAME ON — a pre-epoch capsule reports pre_cyborg, with NO next_due and NO overdue count",
+      old.pre_cyborg === true && old.next_due === null && old.overdue_days === 0
+      && old.rounds.every(r => r.status === "pre_cyborg" || r.status === "done"));
+    assert("GAME ON — NOTHING IS DELETED (L9): all three rounds and their due dates are still in the map",
+      old.schedule_known === true && old.rounds.length === DEFAULT_INTERVALS.length && old.rounds[0].due === "2026-06-27");
+    assert("TWIN COLLAPSE — the frozen legacy derivation is kept and called by NOTHING outside this selftest",
+      (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+        const body = src.slice(0, src.indexOf("function selftest("));
+        return /function rejirahRoundsLegacy\(/.test(body) && (body.match(/rejirahRoundsLegacy/g) || []).length === 1; })());
+  }
 
   // ORGANISM audit #33 (2026-08-04) — THE FIXTURE THAT HID THE BUG.
   // The check above passes a hand-made ARRAY, so the disk reader was never exercised and
@@ -645,9 +698,9 @@ function selftest() {
   assert("MALFORMED-SAFE — junk faultLines are skipped, not crashed on",
     build([cap({ faultLines: [null, { axis: "z" }, "nope"] })], DEFAULT_INTERVALS, TODAY).concepts[0].axes_present.length === 0);
   assert("a capsule with no id is not mapped at all (no phantom concept)",
-    build([{ lockedOn: "2026-06-24" }], DEFAULT_INTERVALS, TODAY).totals.capsules === 0);
+    build([{ lockedOn: "2026-09-24" }], DEFAULT_INTERVALS, TODAY).totals.capsules === 0);
   assert("the genome owns the intervals — a custom schedule is honoured",
-    build([cap()], [1, 2], TODAY).concepts[0].rejirah.rounds.map(x => x.due).join() === "2026-06-25,2026-06-26");
+    build([cap()], [1, 2], TODAY).concepts[0].rejirah.rounds.map(x => x.due).join() === "2026-09-25,2026-09-26");
   // (11 Aug 2026: `.join()` here until today — loadIntervals now returns the tracked
   // reading, and an ABSENT genome is still canon with no fault, which is what this asserts)
   assert("intervals fall back to canon when there is no genome at all",
@@ -666,7 +719,7 @@ function selftest() {
   {
     const dir = join(tmpdir(), `capsule-bridge-selftest-${process.pid}-${Date.now()}`);
     mkdirSync(dir, { recursive: true });
-    const good = { id: "alpha", title: "Alpha", lockedOn: "2026-06-24", status: "tempered",
+    const good = { id: "alpha", title: "Alpha", lockedOn: "2026-09-24", status: "tempered",
       faultLines: [{ axis: "a", status: "held", strike: "s", weld: "w" }] };
     writeFileSync(join(dir, "alpha.json"), JSON.stringify(good));
     writeFileSync(join(dir, "beta.json"), JSON.stringify({ ...good, id: "beta" }).slice(0, 120));  // a truncated write, mid-mirror
@@ -742,11 +795,11 @@ function selftest() {
       && loadIntervals(nokey).days.join() === "3,14,42");
 
     // the whole point: the map must SAY the schedule below is canon's, not the genome's
-    const capG = cap({ lockedOn: "2026-06-24" });
+    const capG = cap({ lockedOn: "2026-09-24" });
     const mGood = build([capG], okRead, TODAY), mBad = build([capG], badRead, TODAY);
     assert("GENOME WIRE — the approved mutation really does move the dates (so a silent revert is a real lie)",
-      mGood.concepts[0].rejirah.rounds.map(r => r.due).join() === "2026-06-27,2026-07-04,2026-08-05"
-      && mBad.concepts[0].rejirah.rounds.map(r => r.due).join() === "2026-06-27,2026-07-08,2026-08-05");
+      mGood.concepts[0].rejirah.rounds.map(r => r.due).join() === "2026-09-27,2026-10-04,2026-11-05"
+      && mBad.concepts[0].rejirah.rounds.map(r => r.due).join() === "2026-09-27,2026-10-08,2026-11-05");
     assert("GENOME WIRE — the shifted map carries the fault on the bus (this was [] before 11 Aug 2026)",
       mBad.input_faults.length === 1 && mBad.input_faults[0].file === "forge_profile.json"
       && mBad.rejirah_intervals_days.join() === "3,14,42" && mGood.input_faults.length === 0);
@@ -852,7 +905,7 @@ function main() {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { build, mapCapsule, rejirahRounds, strikeBank,
+export { build, mapCapsule, rejirahRounds, rejirahRoundsLegacy, strikeBank,
   // dead-wire sweep (2026-08-11): the tracked genome reader that NAMES an unreadable
   // forge_profile.json instead of silently reverting the schedule to canon, with the
   // silent one frozen beside it and the array/object normaliser build() accepts.

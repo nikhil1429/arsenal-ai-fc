@@ -1381,8 +1381,8 @@ async function selftest() {
     // confidently wrong sentence onto the night's packet.
     const { build: cbBuild, fsrsDueFromCards } = await import("./capsule_bridge.mjs");
     const CB_INTERVALS = [3, 14, 42];                 // capsule_bridge DEFAULT_INTERVALS (FORGE_SPEC §4)
-    const CB_TODAY = "2026-07-30";                    // same clock capsule_bridge's own suite uses
-    const capFix = { id: "inference", lockedOn: "2026-06-24", status: "tempered", reJirahDone: [],
+    const CB_TODAY = "2026-10-30";                    // same clock capsule_bridge's own suite uses (both shifted +92d past the GAME-ON epoch in W0-B; every interval is unchanged)
+    const capFix = { id: "inference", lockedOn: "2026-09-24", status: "tempered", reJirahDone: [],
       faultLines: [{ axis: "a", status: "held", strike: "s" }] };
     const unknown = cbBuild([capFix], CB_INTERVALS, CB_TODAY, fsrsDueFromCards(null));
     assert("#33 UNKNOWN is a real THIRD producer state (null), not the truncated one and not a measured empty",
