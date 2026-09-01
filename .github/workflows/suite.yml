@@ -1,0 +1,83 @@
+# THE NEUTRAL BASELINE MACHINE (THE BLUEPRINT rung 0.4, 1 Sep 2026).
+#
+# WHY IT EXISTS. Every suite number this project has ever argued about was measured on ONE
+# laptop, by a session that also had thirty other things running. Two numbers on record did not
+# reproduce when they were finally re-run by hand. A green here is the first suite result in this
+# repo's life that no session's environment, no half-finished edit and no parallel command can
+# flatter — and required checks (blueprint, DAYS 4-10) can only ever be built on a machine like
+# this one. Public repo, so it costs ₹0.
+#
+# WINDOWS, NOT UBUNTU — and that is not a preference, it is a measured ruling already on record
+# in .github/workflows/awayday.yml: this suite ran on ubuntu-latest and failed on EVERY push from
+# 15 Jul (~24 red emails) while the identical suite passed on a clean Windows checkout. The
+# organism IS a Windows system — schtasks in ten files, eight PowerShell installers, %APPDATA%
+# shims, cmd.exe spawns, the Windows-clipboard turnstile. A red from Linux said nothing true and
+# trained everyone to ignore CI, which is worse than having none.
+#
+# THE MATRIX IS THE POINT, NOT THRIFT. The local 125-pass/4-fail baseline was measured on Node
+# v24.19.0; CLAUDE.md and awayday.yml both say Node 22; package.json declares no `engines` and
+# there is no .nvmrc. With ONE version, this workflow's first red would be unreadable — version
+# drift, or environment? With both, the answer is in the run itself. fail-fast is off so one
+# version's red can never hide the other's result. (Fixing the doc-vs-runtime discrepancy is NOT
+# this workflow's job — W2-A owns the version-truth commit.)
+#
+# NO SECRET IS USED HERE AND NONE EVER WILL BE. The organism's first law is that every LLM lane
+# rides his Max subscription and NEVER an API key — ANTHROPIC_API_KEY set means every organ
+# refuses to start. So the run ASSERTS the variable is absent instead of trusting that it is:
+# a law nobody checks is a law that has already been broken somewhere.
+name: suite
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch: {}
+
+# A second push while a run is in flight cancels the older one — the newest commit is the only
+# one whose verdict anybody acts on.
+concurrency:
+  group: suite-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  npm-test:
+    name: npm test · node ${{ matrix.node }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # THE NO-API-KEY LAW, CHECKED RATHER THAN TRUSTED.
+      - name: the no-API-key law holds on this runner
+        shell: bash
+        run: |
+          if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "REFUSED — ANTHROPIC_API_KEY is set on this runner. Every organ refuses to start"
+            echo "          when it is, and no lane here needs one: the organism rides the Max"
+            echo "          subscription. Remove the secret from the repo, do not work around this."
+            exit 1
+          fi
+          echo "ok — no API key on this runner, which is the only state this repo allows."
+
+      # `npm ci` and not `npm install`: the lockfile is committed and pinned EXACT (rung S2's
+      # ruling), so the runner must install what the lockfile says or its verdict is about a
+      # different dependency tree than the one on his machine.
+      - run: npm ci
+
+      # THE AUTHORITY (package.json `_runner_law`): the && chains fail fast, but `npm test` runs
+      # every member INDEPENDENTLY and reports all of them, so coverage cannot silently shrink
+      # when something goes red. No `|| true`, no continue-on-error: a red here must BE red.
+      - name: npm test
+        run: npm test
