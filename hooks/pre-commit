@@ -33,4 +33,29 @@ node scripts/archivist.mjs tripwire || exit 1
 # commands whose organ has no such verb. It BLOCKS on the OPEN order only — a closed record
 # prints LEADS and never holds a commit hostage (§10-H: a record is never edited).
 node scripts/rails.mjs orders --quiet || exit 1
+# ── BELT 3 · GITLEAKS (THE BLUEPRINT rung 0.3, 1 Sep 2026).
+# Belts 1 and 2 above are unchanged and still run first — this LAYERS beside them (L9).
+# WHY A THIRD BELT WHEN BELT 1 EXISTS: belt 1 knows THIS organism's shapes (a bag, a brand-new
+# capture lane, the two Oura files by name). It cannot know what a Stripe key or an AWS secret
+# looks like, and it never scanned CONTENT. gitleaks brings ~200 industry rules plus the
+# organism's own, and LAW T's ruling applies — where a hand-rolled scan and an industry tool
+# overlap, the industry tool wins and the hand-rolled one keeps only what only this repo knows.
+# CONFIG: `.gitleaks.local.toml` when it exists (gitignored — it holds what only HE knows, i.e.
+#   other people's names), else the tracked `.gitleaks.toml`. Nothing to remember, nothing to fill.
+# --redact: a leak must never be echoed in FULL into a terminal, a scrollback or a transcript.
+# MEASURED before wiring: 0 findings across every TRACKED file, so this belt is silent on an
+#   ordinary commit — and a belt that reds every commit is a belt that gets uninstalled.
+# FAIL-OPEN, DELIBERATELY, exactly like the two belts above do for a missing node.
+if command -v gitleaks >/dev/null 2>&1; then
+  GL_CONFIG=".gitleaks.toml"
+  [ -f ".gitleaks.local.toml" ] && GL_CONFIG=".gitleaks.local.toml"
+  gitleaks git --staged --no-banner --redact --config "$GL_CONFIG" || {
+    echo "pre-commit: BELT 3 (gitleaks) REFUSED this commit — a secret or a personal-data shape is in the staged diff."
+    echo "            The repo is PUBLIC and a push cannot be taken back. Remove it, do not --no-verify."
+    echo "            A deliberate fixture declares itself: add the path to the allowlist in $GL_CONFIG, with the reason."
+    exit 1
+  }
+else
+  echo "pre-commit: gitleaks not found — BELT 3 IS OFF for this commit (belts 1 and 2 still ran). Install: scoop install gitleaks"
+fi
 exit 0

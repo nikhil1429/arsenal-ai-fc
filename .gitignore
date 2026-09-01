@@ -516,3 +516,16 @@ dressing-room/state/**/*.torn-*
 # session CLAIMED, in its own words, which is the assistant's half of the same "his words never
 # reach a public remote" rule. The gate itself is code and IS tracked; only its ledger is not.
 dressing-room/state/claims.jsonl
+
+# GITLEAKS (1 Sep 2026, THE BLUEPRINT rung 0.3 — BELT 3 in hooks/pre-commit).
+# `.gitleaks.toml` IS tracked: it holds only SHAPES, and a belt nobody else gets is not a belt.
+# This local extension is where the things only HE knows go — other people's names above all —
+# and those may never reach a public remote (his 14 Aug ruling: "code public, data private, koi
+# apwaad nahi"). hooks/pre-commit prefers this file whenever it exists, so it is an extension
+# point with nothing to remember and nothing to fill in.
+.gitleaks.local.toml
+# and the scan reports themselves, which CONCENTRATE every finding into one greppable place —
+# they belong in arsenal-audit-artifacts (local git), never here, however they get named.
+gitleaks_*.json
+gitleaks-report*.json
+GITLEAKS_HISTORY__*.md

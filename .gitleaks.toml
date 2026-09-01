@@ -1,0 +1,182 @@
+title = "ARSENAL AI FC — the secret + personal-data belt (THE BLUEPRINT rung 0.3, 1 Sep 2026)"
+
+# ============================================================================
+# WHY THIS FILE EXISTS. The repo is PUBLIC and a push cannot be taken back — forks, clones and
+# GitHub's dangling-commit cache mean a later delete is not an erase. hooks/pre-commit already
+# carries BELT 1 (the archive tripwire: no BagIt bag, no live Oura credentials, no brand-new
+# dressing-room capture lane) and BELT 2 (the order-checker). This is BELT 3, and it layers
+# BESIDE them — neither is touched, and belt 1 still runs first (L9: layering, never replace).
+#
+# THE ONE RULE THIS FILE OBEYS ABOUT ITSELF: it is TRACKED and PUBLIC, so it may not contain a
+# single personal VALUE. His ruling, 14 Aug 2026: "archive HAMESHA repo ke bahar rahega. Code
+# public, data private. Koi apwaad nahi, kabhi nahi." A leak-detector that spells out his salary
+# figure or his email in order to detect them would BE the leak. Every rule below is a SHAPE,
+# never a value. What only HE knows — other people's names — belongs in `.gitleaks.local.toml`,
+# which is gitignored and which hooks/pre-commit prefers when it exists.
+#
+# TWO CLASSES OF RULE, BECAUSE THEY ANSWER TO DIFFERENT OWNERS.
+#   BLOCKING — live credentials and personal-capture-lane files. A key is never legitimately
+#     committed, and a new capture lane is the exact class that already escaped once
+#     (afferent.2026-07.jsonl reached origin/main and sat there for six weeks).
+#   PENDING HIS CALL — the medical / salary / personal-email class. Its disposition is HIS
+#     scrub-or-accept decision (THE_PLAN §5.2d), and rung 0.1's own critique withdrew the
+#     architect deciding his health-data exposure. So each of those rules BLOCKS A NEW FILE and
+#     allowlists, BY NAME, only the files that already carry it. Stop the bleeding; never
+#     re-litigate a decision that is his. When he rules, the allowlist shrinks — never grows.
+#
+# MEASURED BEFORE ANY RULE WAS WRITTEN (a rule nobody measured is a rule that gets uninstalled),
+# over TRACKED files at HEAD: `medicated` 26 files and `ADHD-PI` 48 — the repo's OWN vocabulary
+# (CLAUDE.md's goalkeeper medical boundary), so neither is a rule here; the PAIR together is the
+# disclosure shape. Then the first full scan with this config: 724 findings on disk, of which
+# only 25 are in TRACKED files, and every one of those 25 is the pending-his-call class — 0 live
+# credentials tracked at HEAD. Both key-shaped hits in the tree are deliberate fixtures, read
+# before they were allowlisted. The "ntfy topic is on the remote" claim does not reproduce: the
+# topic is on this disk, in a gitignored file, and in no tracked file at all.
+# ============================================================================
+
+[extend]
+useDefault = true
+
+# ── BLOCKING · personal capture lanes ───────────────────────────────────────
+# .gitignore now covers `afferent.*.jsonl` after the July file was caught, but a SIBLING SHAPE
+# (afferent_2026-07.jsonl, afferent-july.jsonl) or a `git add -f` still walks past a glob. Belt 1
+# refuses a dressing-room jsonl git has never tracked; this is a SECOND belt on the same class,
+# deliberately redundant, because this is the one class that has already escaped once.
+[[rules]]
+id = "arsenal-capture-lane-file"
+description = "a personal-capture lane file is staged — these hold HIS words and never travel to a public remote"
+path = '''(^|[\\/])(afferent|intent|acts|claims|teaching_audit|dugout_notes|loose_balls|gaffer_blocks|brain_ledger)[._-][^\\/]*\.jsonl$'''
+
+# The mission SLUG LAW (a W0-A finding): a mission filename carrying his whole sentence puts his
+# prose into the tree listing itself, where no content scanner ever looks. Four-plus spaces in a
+# filename under missions/ is a sentence, not a slug.
+[[rules]]
+id = "arsenal-mission-prose-filename"
+description = "a mission file is named with his prose instead of a slug — the filename itself is the leak"
+path = '''dressing-room[\\/]missions[\\/][^\\/]* [^\\/]* [^\\/]* [^\\/]*'''
+
+[[rules]]
+id = "arsenal-oura-credential-file"
+description = "a live Oura credential file is staged (belt 1 refuses these too — this is the second belt)"
+path = '''(^|[\\/])oura_(secrets|tokens)\.json$'''
+
+# ── BLOCKING · credential SHAPES ────────────────────────────────────────────
+# THIS RULE EXISTS BECAUSE THE RUNG'S OWN DONE-PROOF FOUND THE HOLE. A planted
+# `sk-ant-api03-…` key sailed through the default ruleset untouched — gitleaks ships no
+# Anthropic rule — and an Anthropic key is precisely the thing this repo may never carry:
+# the organism's first law is that every lane rides the Max subscription and NEVER an API key
+# (ANTHROPIC_API_KEY set ⇒ every organ refuses). The one credential that matters most here was
+# the one nothing was watching for. The OpenAI and Google shapes ride along for the same reason.
+[[rules]]
+id = "arsenal-llm-api-key"
+description = "an LLM provider API key (Anthropic / OpenAI / Google) — the organism rides the subscription and NEVER a key"
+# \b IS LOAD-BEARING, and the history scan is what proved it: without it, `sk-` matched INSIDE
+# ordinary words — `task-resurrection-guard…` in watchman.mjs was reported as an OpenAI key.
+# Go's RE2 has no lookbehind, so the word boundary is the whole guard. A quote or a space before
+# the key still IS a boundary, so every real key shape still matches.
+regex = '''(\bsk-ant-[A-Za-z0-9_\-]{20,}|\bsk-(proj-)?[A-Za-z0-9_\-]{32,}|\bAIza[0-9A-Za-z_\-]{30,})'''
+[rules.allowlist]
+description = "the deliberate fixtures that PROVE the no-key law bites, each read before it was listed"
+paths = [
+  '''scripts[\\/]sandbox\.mjs''',      # ANTHROPIC_API_KEY "sk-ant-SANDBOX-JUNK-refuse-me" — the canary
+  '''scripts[\\/]harvest\.mjs''',      # "AIzaSyABCDEFGHIJKLMNOPQRSTUVWXYZ0123456" — a scrubber selftest sample
+  '''scripts[\\/](archivist|thalamus|claims)\.mjs''',
+  '''\.gitleaks\.toml''',
+]
+
+[[rules]]
+id = "arsenal-ntfy-topic-url"
+description = "an ntfy topic URL — on ntfy.sh the topic IS the password; whoever holds it reads his phone's lane"
+regex = '''ntfy\.sh/[A-Za-z0-9_-]{8,}'''
+
+[[rules]]
+id = "arsenal-oura-oauth-secret"
+description = "an Oura OAuth client secret or refresh-token VALUE"
+regex = '''(?i)(oura[_-]?(client[_-]?)?secret|refresh[_-]?token)["'\s:=]{1,6}["']?[A-Za-z0-9_\-]{24,}["']?'''
+[rules.allowlist]
+description = "the organs that NAME these fields in order to read or scrub them"
+paths = [
+  '''scripts[\\/]oura_(auth|coach)\.mjs''',
+  '''scripts[\\/](archivist|thalamus)\.mjs''',
+]
+
+# ── PENDING HIS CALL · blocks a NEW file, never re-litigates an old one ─────
+[[rules]]
+id = "arsenal-medical-disclosure"
+description = "a medical disclosure — the condition AND the treatment in one line. Whether the EXISTING ones stay is his call; a NEW one is refused"
+regex = '''(?i)(ADHD[^\n]{0,40}medicat|medicat[^\n]{0,40}ADHD)'''
+[rules.allowlist]
+description = "every file that already carries it, named one by one, disposition pending HIS scrub-or-accept call (THE_PLAN §5.2d). This list may only SHRINK."
+paths = [
+  '''docs[\\/]archive[\\/]OPS_STATE_2026-08-18\.md''',
+  '''docs[\\/]archive[\\/]ARSENAL_AI_FC_MASTERPLAN\.md''',
+  '''docs[\\/]archive[\\/]BRIEF__self_sustaining_organism\.md''',
+  '''docs[\\/]archive[\\/]PROBLEM_STATEMENT__teaching_compliance\.md''',
+  '''docs[\\/]archive[\\/]THE_ORGANISM_A_TO_Z\.md''',
+  '''docs[\\/]archive[\\/]MODELS_AND_ACTS__2026-08-18\.md''',
+  '''docs[\\/]archive[\\/]ORGANISM_ISSUES\.md''',
+  '''docs[\\/]archive[\\/]ORGANISM_REPAIR_PLAN\.md''',
+  '''docs[\\/]archive[\\/]SAMJHAO_ORDER__2026-08-20\.md''',
+  '''docs[\\/]archive[\\/]CLAUDE_2026-08-18\.md''',
+  '''learning-layer[\\/]EXECUTION_FINAL_Tier2_Metamorphosis\.md''',
+  '''learning-layer[\\/]FORGE_DEEP_RENDER_BRIEF\.md''',
+  '''learning-layer[\\/]God-Tier_Gemini_Workflow_for_Learning_Python\.md''',
+  '''learning-layer[\\/]GEMINI_RIG_SETUP\.md''',
+  '''learning-layer[\\/]PROJECT_OS\.md''',
+  '''\.claude[\\/]skills[\\/]forge[\\/]SKILL\.md''',
+  '''scripts[\\/]dugout\.mjs''',
+  '''CLAUDE\.md''',
+  '''README\.md''',
+]
+
+[[rules]]
+id = "arsenal-salary-band"
+description = "a compensation band — a SHAPE, never his figure. His call whether the existing ones stay; a NEW file is refused"
+regex = '''[0-9]{1,3}\s*[-\x{2013}\x{2014}]\s*[0-9]{1,3}\s*LPA'''
+[rules.allowlist]
+description = "the mission prompts are GENERATED from his career context, so the band is there by design; the rest are named one by one. Pending his §5.2d call."
+paths = [
+  '''dressing-room[\\/]missions[\\/]''',
+  '''learning-layer[\\/](FINOPS_AI_CONCEPTS|OPPONENT_SCOUT|SYSTEM_BLUEPRINT|SYSTEM_FOUNDATION|GEMINI_RIG_SETUP)\.md''',
+  '''scripts[\\/](scout|nightshift)\.mjs''',
+  '''docs[\\/]archive[\\/](ORGANISM_AUDIT__2026-08-19|ARSENAL_AI_FC_MASTERPLAN|OPS_STATE_2026-08-18|THE_ORGANISM_A_TO_Z)\.md''',
+]
+
+[[rules]]
+id = "arsenal-personal-email"
+description = "a personal-provider email address in a tracked file"
+regex = '''[A-Za-z0-9._%+-]+@(gmail|googlemail|outlook|hotmail|yahoo|proton|protonmail|icloud)\.[a-z]{2,}'''
+[rules.allowlist]
+description = "already tracked, pending his §5.2d call"
+paths = [
+  '''docs[\\/]archive[\\/]ORGANISM_AUDIT__2026-08-19\.md''',
+  '''learning-layer[\\/]PROJECT_OS\.md''',
+]
+
+[[rules]]
+id = "arsenal-drive-file-url"
+description = "a Google Drive file URL — a live fileId is an access grant, not a citation"
+regex = '''(drive|docs)\.google\.com/[^\s)"']*[/=][A-Za-z0-9_-]{25,}'''
+
+# ── THE GLOBAL ALLOWLIST — fixtures and his own tracked-by-ruling data only ─
+# Kept deliberately SMALL. Everything that is merely "already tracked" lives on its own rule
+# above, so allowlisting one class can never quietly excuse another.
+[allowlist]
+description = "deliberate fixtures, the two biometric files his ruling tracks, and the generated mirrors"
+paths = [
+  # DELIBERATE FIXTURES — obvious placeholder strings, each read before it was allowlisted.
+  '''scripts[\\/]harvest\.mjs''',        # :302 "AIzaSyABCDEFGHIJKLMNOPQRSTUVWXYZ0123456" — a sample fed to the scrubber's own selftest
+  '''scripts[\\/]sandbox\.mjs''',        # :132 ANTHROPIC_API_KEY "sk-ant-SANDBOX-JUNK-refuse-me" — the canary that PROVES the no-API-key law
+  '''scripts[\\/]claims\.mjs''',         # rung 0.1's selftest fixtures
+  '''\.gitleaks\.toml''',                # this file: it describes the shapes, so of course it matches them
+  '''\.claude[\\/]hookify\..*\.local\.md''',   # rung 0.1's rules NAME the protected paths
+
+  # HIS RULING, TWICE (5 + 10 Aug 2026): these two are TRACKED on purpose. The asymmetry with
+  # the archive is deliberate, and a session that "harmonises" it reverses a captain's decision.
+  '''dressing-room[\\/]state[\\/]readiness\.json''',
+  '''dressing-room[\\/]state[\\/]intake_log\.json''',
+
+  # Generated mirrors — they only repeat paths and counts derived from the files above.
+  '''FLOW_ATLAS\.html''',
+  '''dressing-room[\\/]state[\\/](flow_atlas|xray_graph)\.json''',
+]
