@@ -122,7 +122,7 @@ export async function start(opts = {}) {
   // learnstate back — a top-level `await main()` there DEADLOCKED (unsettled TLA,
   // exit 13, zero bytes). Measured 18 Aug 2026; see learnstate.mjs's guard comment.
   await runOrgan("learnstate.mjs", "brief", { ...opts, call: "hookMain" }, r);
-  await runOrgan("forge_session.mjs", "boot", opts, r);
+  await runOrgan("forge_session.mjs", "boot", { ...opts, call: "hookMain" }, r);   // R-01 (W0-C): CALL, not SHIM — learnstate imports this organ three lines up, so the cached body made `boot` a silent no-op
   await runOrgan("watchman.mjs", "brief", opts, r);
   // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE ROAD GETS ITS DRIVER. BLOCK 3 built the outbox and
   // measured that morning that `relay` had never once been called in production: 22 rows posted,
@@ -132,8 +132,21 @@ export async function start(opts = {}) {
   // is news, not a question. Bounded at 3 by the outbox itself (L7: never a list), silent when the
   // road is empty, and the same call that DELIVERS is the call that RENDERS — which is the only
   // reason gate.mjs is allowed to read a `delivered` stamp as "he was shown it".
-  await runOrgan("outbox.mjs", "brief", opts, r);
-  await runOrgan("captains_call.mjs", "deal", opts, r);
+  // R-01 (W0-C, 2 Sep 2026) — BOTH OF THESE RIDE THE `call` SHAPE NOW, and until today
+  // both were structurally dead. The SHIM makes a callee's own entry guard true by
+  // rewriting process.argv[1], but an ES module body runs ONCE per process: every later
+  // `import()` returns the cache and the guard never re-evaluates. Both callees are
+  // already in that cache by the time these two lines run —
+  //   · `watchman.mjs brief` (7 lines up) imports outbox.mjs at module load
+  //   · `learnstate.mjs brief` (11 lines up) imports brain.mjs, which imports captains_call.mjs
+  // — so since 18 Aug 2026 the road has never been driven and no card has ever been
+  // dealt at SessionStart, while `r.ran` counted both as successes. Reproduced through
+  // this very function: cold cache prints the full outbox brief, warm cache prints zero
+  // bytes and still returns `ran 1, failed []`. The CALL shape imports the file as a
+  // library and AWAITS a named export, which the module cache cannot swallow.
+  // The suite now ratchets this: see "NO SHIM CALLEE" in organism_test.mjs.
+  await runOrgan("outbox.mjs", "brief", { ...opts, call: "hookMain" }, r);
+  await runOrgan("captains_call.mjs", "deal", { ...opts, call: "hookMain" }, r);
   return r;
 }
 // Stop (Block 2, §7.2 · 18 Aug 2026): teaching_audit's Stop audit + the session-intent

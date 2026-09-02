@@ -108,6 +108,12 @@ export const LANES_NOT_IN_CONFIG = Object.freeze(
   Object.fromEntries(Object.entries(LANE_CONSUMERS).map(([lane, row]) => [lane, row.why])));
 const DEFAULT_DEADLINE_H = 12;
 const DEFAULT_MAX_PER_SWEEP = 3;                                 // L7: he is never handed a list
+// R-03 (W0-C, 2 Sep 2026): the floor under the backlog line. 20 is chosen as "deeper
+// than a normal few days of production" — at 3 per sitting, 20 is already a week of
+// sittings behind — so a healthy road never trips it and the line cannot become the
+// always-fires warning the audit's #38 failure mode names. Measured when it landed:
+// 50+ rows standing, which is what made the depth worth one line of his attention.
+const BACKLOG_LOUD = 20;
 
 const clip = (s, n = 300) => String(s == null ? "" : s).replace(/\s+/g, " ").trim().slice(0, n);
 const newId = (now) => `o${now.getTime().toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, "0")}`;
@@ -152,10 +158,17 @@ export function fold(rows) {
   const by = new Map();
   for (const r of rows || []) {
     if (!r || !r.ev) continue;
-    if (r.ev === "post") { if (!by.has(r.id)) by.set(r.id, { id: r.id, produced_by: r.produced_by, kind: r.kind, subject: r.subject, body_ref: r.body_ref || null, idempotency_key: r.idempotency_key, priority: r.priority ?? 50, requires_decision: !!r.requires_decision, why_code_cannot_decide: r.why_code_cannot_decide || null, close_ref: r.close_ref || null, created_at: r.ts, delivered_at: null, delivered_via: null, acked_at: null }); continue; }
+    if (r.ev === "post") { if (!by.has(r.id)) by.set(r.id, { id: r.id, produced_by: r.produced_by, kind: r.kind, subject: r.subject, body_ref: r.body_ref || null, idempotency_key: r.idempotency_key, priority: r.priority ?? 50, requires_decision: !!r.requires_decision, why_code_cannot_decide: r.why_code_cannot_decide || null, close_ref: r.close_ref || null, created_at: r.ts, delivered_at: null, delivered_via: null, delivered_witnessed: null, delivered_by: null, acked_at: null }); continue; }
     if (r.ev === "sweep") continue;
     const o = by.get(r.of); if (!o) continue;
-    if (r.ev === "deliver") { o.delivered_at = r.ts; o.delivered_via = r.via || null; }
+    // R-04 (W0-C): the witness rides the fold, so every reader can ask WHO rendered this.
+    // `delivered_witnessed` is null on every row written before this field existed — an
+    // absent witness is UNKNOWN, never a false claim of one and never a denial of one.
+    if (r.ev === "deliver") { o.delivered_at = r.ts; o.delivered_via = r.via || null; o.delivered_witnessed = typeof r.witnessed === "boolean" ? r.witnessed : null; o.delivered_by = r.by || null; }
+    // W0-C · R-04 — the reverse door. The deliver row is KEPT (L9: the ledger is the
+    // history, and "this was stamped and put back" is part of it); the fold simply reads
+    // the row as pending again, so the relay can carry it to him properly.
+    else if (r.ev === "undeliver") { o.delivered_at = null; o.delivered_via = null; o.delivered_witnessed = null; o.delivered_by = null; o.undelivered_at = r.ts; o.undelivered_why = r.why || null; }
     else if (r.ev === "ack") o.acked_at = r.ts;
   }
   return by;
@@ -238,8 +251,18 @@ export function relay(surface, deps = {}, max = DEFAULT_MAX_PER_SWEEP) {
   return withLock(() => {
     const queue = pending(rowsOf(deps));
     const take = queue.slice(0, Math.max(0, Number(max) || DEFAULT_MAX_PER_SWEEP));
+    // R-04 (W0-C, 2 Sep 2026) — A `delivered` STAMP MUST NAME ITS WITNESS.
+    // gate.mjs reads `delivered` as "he was shown it", and the only thing that made that
+    // legitimate was the note at the call site: the call that DELIVERS is the call that
+    // RENDERS. Nothing enforced it. `relay` run from any shell — a debug run, a cron, an
+    // organ child — stamped rows delivered with nobody in front of the screen, and the
+    // gate then counted them as consumption. `witnessed` records whether this sweep was
+    // actually a him-facing render: false for a headless organ child, which is the one
+    // case the organism can prove about itself. Additive (L9) — old rows have no field,
+    // and a reader that ignores it behaves exactly as before.
+    const witnessed = process.env.ARSENAL_ORGAN !== "1";
     for (const o of take) {
-      appendRow({ ev: "deliver", of: o.id, ts: now.toISOString(), via: s }, deps);
+      appendRow({ ev: "deliver", of: o.id, ts: now.toISOString(), via: s, witnessed, by: deps.by || (witnessed ? `${s} render` : "organ child (ARSENAL_ORGAN=1)") }, deps);
       // BLOCK 4: the delivered stamp IS the close. Fired here, from the one road, so an ask born
       // at ANY door closes — the Gaffer's included. A scheme that does not close says why.
       const c = closeFor(o, deps);
@@ -248,6 +271,30 @@ export function relay(surface, deps = {}, max = DEFAULT_MAX_PER_SWEEP) {
     }
     appendRow({ ev: "sweep", ts: now.toISOString(), surface: s, n: take.length }, deps);
     return { ok: true, surface: s, delivered: take, held_back: Math.max(0, queue.length - take.length) };
+  }, deps);
+}
+
+// ── THE WAY BACK (W0-C, 2 Sep 2026 · R-04) ─────────────────────────────────
+// A DOOR WITH NO REVERSE IS A DELETE WEARING A STAMP — W0-A's own words, when it
+// found itself having retired a live mission with no undo. This door needed the same
+// lesson and it was PAID FOR, not theorised: reviving the SessionStart callee (R-01)
+// meant turn_hook's selftest — which drives the live callees and trusts each one's own
+// guard — actually ran `brief`, and NINE rows made for him were stamped delivered with
+// nobody in front of a screen. `pending` drops a delivered row, so those nine would
+// never have been shown to him again. A stamp that can fire by accident must be
+// reversible through the owner, journalled, with a reason.
+// Nothing is deleted or rewritten (L9): the deliver row stays on the ledger forever and
+// this appends an `undeliver` event beside it, so the ledger reads as the history it is.
+export function undeliver(id, why, deps = {}) {
+  const now = deps.now || new Date();
+  if (!String(why || "").trim()) return { ok: false, why: "undeliver needs a reason — a row put back on the road without one is indistinguishable from a bug" };
+  return withLock(() => {
+    const o = fold(rowsOf(deps)).get(id);
+    if (!o) return { ok: false, why: `no outbox row ${id}` };
+    if (!o.delivered_at) return { ok: false, why: `row ${id} is already pending — nothing to put back` };
+    if (o.acked_at) return { ok: false, why: `row ${id} was ACKED by him — his own hand closes a row, and this door does not reopen that` };
+    appendRow({ ev: "undeliver", of: id, ts: now.toISOString(), why: String(why) }, deps);
+    return { ok: true, row: fold(rowsOf(deps)).get(id) };
   }, deps);
 }
 
@@ -387,6 +434,80 @@ function selftest() {
   assert("a delivered row carries WHEN and VIA — the stamp BLOCK 4 will use to close the originating ask", !!one.delivered_at && one.delivered_via === "code");
   assert("ack is once and only once", ack(p1.row.id, deps).ok && !ack(p1.row.id, deps).ok);
 
+  // ── THE WAY BACK (W0-C · R-04) — and it was paid for, not theorised ────────
+  // Reviving the SessionStart callee made turn_hook's selftest actually run `brief`, and
+  // NINE rows made for him were stamped delivered with nobody watching. `pending` drops a
+  // delivered row, so those nine would never have been shown again. All nine were put
+  // back through this door, by id, each with its reason on the ledger.
+  {
+    const urows = [];
+    const udeps = { rows: urows, append: (row) => { urows.push(row); return true; }, now: new Date("2026-08-21T09:00:00Z") };
+    const up = post({ producedBy: "brain:diary", kind: "material", subject: "way-back fixture" }, udeps);
+    relay("code", udeps);
+    assert("R-04 · undeliver — a stamped row is gone from `pending`, which is exactly why an accidental stamp is a LOSS and not a cosmetic one",
+      !pending(urows).some((o) => o.id === up.row.id));
+    assert("R-04 · undeliver — it REFUSES without a reason (a row back on the road with no why is indistinguishable from a bug)",
+      !undeliver(up.row.id, "", udeps).ok && !undeliver(up.row.id, "   ", udeps).ok);
+    const back = undeliver(up.row.id, "nobody was in front of a screen", udeps);
+    assert("R-04 · undeliver — the row is PENDING again and carries when and why it came back",
+      back.ok && pending(urows).some((o) => o.id === up.row.id)
+      && back.row.delivered_at === null && back.row.undelivered_why === "nobody was in front of a screen");
+    assert("R-04 · undeliver — NOTHING IS DELETED (L9): the original deliver event is still on the ledger, so the history reads as what happened",
+      urows.filter((r) => r.ev === "deliver" && r.of === up.row.id).length === 1
+      && urows.filter((r) => r.ev === "undeliver" && r.of === up.row.id).length === 1);
+    assert("R-04 · undeliver — it refuses an already-pending row and an unknown id, so it can never quietly do nothing",
+      !undeliver(up.row.id, "again", udeps).ok && !undeliver("oNOPE", "x", udeps).ok);
+    relay("code", udeps);
+    ack(up.row.id, udeps);
+    assert("R-04 · undeliver — an ACKED row is HIS OWN HAND and this door does not reopen it",
+      !undeliver(up.row.id, "should refuse", udeps).ok);
+  }
+
+  // ── R-04 (W0-C, 2 Sep 2026) — A `delivered` STAMP NAMES ITS WITNESS ────────
+  // gate.mjs (brain.outboxConsumption) reads `delivered` as "he was shown it". The only
+  // thing that ever made that true was a comment at the call site; `relay` from any
+  // shell stamped rows delivered with nobody watching, and the gate counted it.
+  {
+    const wrows = [];
+    const wdeps = { rows: wrows, append: (row) => { wrows.push(row); return true; }, now: new Date("2026-08-20T10:00:00Z") };
+    post({ producedBy: "brain:diary", kind: "material", subject: "witness fixture" }, wdeps);
+    const wasOrgan = process.env.ARSENAL_ORGAN;
+    delete process.env.ARSENAL_ORGAN;
+    relay("code", wdeps);
+    const him = fold(wrows).get([...fold(wrows).keys()][0]);
+    assert("R-04 — a him-facing render stamps witnessed:true and names the surface that rendered it",
+      him.delivered_witnessed === true && typeof him.delivered_by === "string" && /code/.test(him.delivered_by));
+    const orows = [];
+    const odeps = { rows: orows, append: (row) => { orows.push(row); return true; }, now: new Date("2026-08-20T11:00:00Z") };
+    post({ producedBy: "brain:diary", kind: "material", subject: "organ fixture" }, odeps);
+    process.env.ARSENAL_ORGAN = "1";
+    relay("code", odeps);
+    const org = fold(orows).get([...fold(orows).keys()][0]);
+    if (wasOrgan === undefined) delete process.env.ARSENAL_ORGAN; else process.env.ARSENAL_ORGAN = wasOrgan;
+    assert("R-04 — a headless organ child stamps witnessed:FALSE and says so, instead of forging a delivery nobody saw",
+      org.delivered_witnessed === false && /ARSENAL_ORGAN/.test(String(org.delivered_by)));
+    assert("R-04 — a row written BEFORE the field existed folds to null: UNKNOWN, never a retroactive denial (L9 — old rows keep their meaning)",
+      fold([{ ev: "post", id: "oOLD", ts: "2026-08-01T00:00:00Z", produced_by: "brain:diary", kind: "material", subject: "s", idempotency_key: "k", priority: 50 },
+        { ev: "deliver", of: "oOLD", ts: "2026-08-02T00:00:00Z", via: "code" }]).get("oOLD").delivered_witnessed === null);
+  }
+
+  // ── R-02 / R-03 (W0-C) — the brief's two CLI-inline contracts, pinned off this
+  // file's own source (the block prints rather than returns, the same reason
+  // forge_session pins its DISPATCH DOC WIRE and capture pins its success line).
+  {
+    const src = readFileSync(SELF, "utf8");
+    const b = src.slice(src.indexOf('else if (mode === "bri' + 'ef") {'));
+    const body = b.slice(0, b.indexOf('\n  else if (mode ==='));
+    assert("R-02 — `brief` INGESTS before it relays: ingest had ZERO production callers and brain material stopped becoming rows after one hand-run on 18 Aug, so the road was starving at BOTH ends",
+      /ingest\(\)/.test(body) && body.indexOf("ingest()") < body.indexOf("relay("));
+    assert("R-02 — and a producer that cannot be scanned never costs him the rows already on the road (the ingest is wrapped, the relay still runs)",
+      /try \{ ingest\(\); \} catch/.test(body));
+    assert("R-03 — the backlog is ONE line with a number and a command, gated on a floor, never a list (L7)",
+      /BACKLOG_LOUD/.test(body) && /pending\(\)\.length/.test(body) && !/forEach/.test(body.slice(body.indexOf("BACKLOG_LOUD"))));
+    assert("R-03 — the floor is high enough that a healthy road never trips it (audit #38: a line that always fires is a line he learns to ignore)",
+      BACKLOG_LOUD >= 20 && BACKLOG_LOUD > DEFAULT_MAX_PER_SWEEP * 3);
+  }
+
   // THE DEAD-MAN'S SWITCH, with BLOCK 9's correction applied
   const t0 = Date.parse("2026-08-19T04:00:00Z");
   const waitRows = [{ ev: "post", id: "oWAIT", ts: "2026-08-18T00:00:00Z", produced_by: "brain:diary", kind: "material", subject: "kal ka diary", idempotency_key: "k1", priority: 50 }];
@@ -441,7 +562,21 @@ const flag = (n, d = null) => { const i = process.argv.indexOf(`--${n}`); return
 const has = (n) => process.argv.includes(`--${n}`);
 const fmt = (o) => `${o.id} · ${o.produced_by} · [${o.kind}] ${clip(o.subject, 100)}${o.body_ref ? ` · ${o.body_ref}` : ""}${o.delivered_at ? ` · delivered ${o.delivered_via}` : " · PENDING"}`;
 
-if (process.argv[1] && process.argv[1].endsWith("outbox.mjs")) {
+// ── R-01 (W0-C, 2 Sep 2026) — THE CLI GETS A NAME, BECAUSE THE SHIM WAS A NO-OP ──
+// turn_hook reaches this organ in-process. Its default SHIM shape works by setting
+// `process.argv[1]` to this file so the guard below is true — and that works EXACTLY
+// ONCE per process, because an ES module body runs once and every later `import()`
+// returns the cache. `turn_hook:126` runs `watchman.mjs brief`, and watchman imports
+// this file at module load, so by the time line 135 shimmed `outbox.mjs brief` the
+// body was already cached and NOTHING RAN. Reproduced through the real runOrgan:
+// cold cache prints the whole brief, warm cache prints ZERO bytes — and reports
+// `ran 1, failed []` either way, so the reach counter recorded a success.
+// Since 18 Aug 2026 that means the road has never once been driven at SessionStart.
+// The fix is additive (L9): the dispatch is unchanged, byte for byte, and simply has
+// a name now, so turn_hook can ride the CALL shape (`{ call: "hookMain" }`) that
+// learnstate already uses — a library import plus an awaited export, which the module
+// cache cannot swallow.
+export async function hookMain() {
   const mode = process.argv[2] || "status";
   if (mode === "selftest") selftest();
   else if (mode === "post") {
@@ -471,6 +606,32 @@ if (process.argv[1] && process.argv[1].endsWith("outbox.mjs")) {
   // delivers and prints in the same breath, at the SessionStart anchor (turn_hook `start`), so the
   // stamp and the seeing are the same event. Silent when there is nothing, per L7.
   else if (mode === "brief") {
+    // THE SILENCE LAW, WHICH THIS VERB NEVER NEEDED UNTIL TODAY (W0-C · R-01/R-04).
+    // `brief` is the him-facing render: it DELIVERS as it prints, which is the only
+    // reason gate.mjs may read a `delivered` stamp as "he was shown it". A headless
+    // organ child has nobody in front of the screen, so it must not drive the road at
+    // all — delivering there would stamp rows nobody saw, which is exactly the forgery
+    // R-04 closes one function up.
+    // It had no guard before because it could not run: the SHIM shape made this callee a
+    // silent no-op, and turn_hook's own selftest — which drives the LIVE callees under
+    // ARSENAL_ORGAN=1 and trusts "every callee's own guard" for hermeticity — was passing
+    // on that accident. Reviving the callee turned that accident into a real write, and
+    // the suite's hermeticity member caught it in the same run. The guard is the thing
+    // that was always missing; the no-op was hiding it.
+    if (process.env.ARSENAL_ORGAN === "1") return;
+    // R-02 (W0-C, 2 Sep 2026) — THE ROAD STOPS STARVING AT THE PRODUCER END.
+    // `ingest` turns the brain's finished night work into rows for him, and it had ZERO
+    // production callers: grep across scripts/, hooks/, setup/ and .claude/skills found
+    // only its own CLI branch. It was hand-run ONCE, on 18 Aug, and after that no brain
+    // material became a row at all — so the relay below was driving an emptying road
+    // while the night kept producing. Both ends were starved, and the RED the watchman
+    // reports counted only the far end.
+    // It rides HERE because this is the one call that already runs at his anchor, and
+    // ingest is idempotent by its own day-key (`keyOf(producedBy, kind, day)`), so a
+    // second SessionStart in the same day posts nothing. Fail-silent and non-blocking:
+    // if brain_config or the ledger cannot be read, the relay still runs — a producer
+    // that cannot be scanned must never cost him the rows already on the road.
+    try { ingest(); } catch { /* the road still gets driven; a starved producer is not a reason to skip delivery */ }
     const r = relay("code", {}, Number(flag("max", DEFAULT_MAX_PER_SWEEP)) || DEFAULT_MAX_PER_SWEEP);
     if (r.ok && r.delivered.length) {                               // silent otherwise: no road news is not news
       console.log(`📮 OUTBOX (${r.delivered.length} naya${r.held_back ? ` · ${r.held_back} aur rukka hai` : ""}) — jo ban chuka tha aur tum tak nahi pahuncha tha:`);
@@ -478,6 +639,16 @@ if (process.argv[1] && process.argv[1].endsWith("outbox.mjs")) {
       // or `finding` row carries no close_ref by design, and printing "no close_ref on this row"
       // beside every line hands him the plumbing instead of the news.
       r.delivered.forEach((o) => console.log(`  · ${clip(o.subject, 110)}${o.body_ref ? `  → ${o.body_ref}` : ""}${o.close_ref && o.close_note ? `  [${clip(o.close_note, 40)}]` : ""}`));
+      // R-03 (W0-C) — THE DEPTH, ONCE, NEVER THE PILE. Three per sweep against a
+      // 37-row burst is why 50+ rows are standing: the relay is not broken, it is
+      // rate-limited, and the difference is invisible from the three lines above.
+      // ONE line, only when the backlog is genuinely deep, and it is a NUMBER plus the
+      // command — never a list (L7), nothing auto-acked, nothing deleted. Under the
+      // floor it says nothing, so it can never become the always-fires warning.
+      const backlog = pending().length;
+      if (backlog >= BACKLOG_LOUD) {
+        console.log(`   (${backlog} rukke hue hain — 3 per sitting nikalte hain, is raftaar se ~${Math.ceil(backlog / DEFAULT_MAX_PER_SWEEP)} sittings lagenge. Poori list: \`node scripts/outbox.mjs pending\`)`);
+      }
     }
   }
   else if (mode === "pending") {
@@ -486,10 +657,19 @@ if (process.argv[1] && process.argv[1].endsWith("outbox.mjs")) {
     else { console.log(`${q.length} pending`); q.forEach((o) => console.log(`  ${fmt(o)}`)); }
   }
   else if (mode === "ack") { const r = ack(process.argv[3]); console.log(r.ok ? `outbox: ok ${fmt(r.row)}` : `outbox: ${r.why}`); process.exit(r.ok ? 0 : 1); }
+  else if (mode === "undeliver") {
+    const r = undeliver(process.argv[3], flag("why"));
+    console.log(r.ok ? `outbox: BACK ON THE ROAD ${fmt(r.row)} — he will be shown it at his next surface` : `outbox: ${r.why}`);
+    process.exit(r.ok ? 0 : 1);
+  }
   else if (mode === "status") {
     const s = stats();
     console.log(boardLine(s));
     findings(s).forEach((f) => console.log(`  ${f.level} ${f.id} — ${f.finding}`));
   }
-  else console.log(`outbox: post --produced-by <o> --kind <k> --subject "..." [--body-ref p --priority n --close-ref r --requires-decision --why-code-cannot-decide "..."] | ingest [--days n] | relay --surface ${SURFACES.join("|")} [--max n] | brief [--max n] | pending | ack <id> | status | selftest`);
+  else console.log(`outbox: post --produced-by <o> --kind <k> --subject "..." [--body-ref p --priority n --close-ref r --requires-decision --why-code-cannot-decide "..."] | ingest [--days n] | relay --surface ${SURFACES.join("|")} [--max n] | brief [--max n] | pending | ack <id> | undeliver <id> --why "..." | status | selftest`);
 }
+
+// The direct-invocation guard, unchanged in meaning: `node scripts/outbox.mjs <verb>`
+// still runs exactly what it always ran. Only the in-process caller changed doors.
+if (process.argv[1] && process.argv[1].endsWith("outbox.mjs")) await hookMain();

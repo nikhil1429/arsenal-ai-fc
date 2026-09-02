@@ -677,6 +677,97 @@ async function laws() {
         live.length === 0, live.length ? `still referenced in: ${live.join(", ")}` : "");
     }
 
+    // ── NO SHIM CALLEE — W0-C (2 Sep 2026, R-01) ───────────────────────────────
+    // THE LAST MILE DIED OF AN ES-MODULE-CACHE COLLISION and nothing noticed for three
+    // weeks. turn_hook reaches its callees in-process; the default SHIM shape works by
+    // rewriting `process.argv[1]` so the callee's own entry guard evaluates true — and a
+    // module body runs ONCE per process, so a callee ALREADY IMPORTED by something
+    // earlier in the same sequence is a silent no-op that `r.ran` still counts as a
+    // success. Since 18 Aug that killed `outbox brief` (watchman imports outbox) and
+    // `captains_call deal` (learnstate → brain → captains_call): the road was never
+    // driven and no card was ever dealt at SessionStart.
+    // It is not a historical bug. W0-D — EARLIER THE SAME DAY as this member — made
+    // forge_session importable and had learnstate import it, which killed `boot` by the
+    // identical mechanism, and no test saw that either. THAT is why this exists.
+    // It is a PROPERTY, not a list: for each hook sequence, walk the callees in order,
+    // accumulate the transitive static-import closure of everything loaded so far, and
+    // fail if a SHIM callee is already in it. A callee that grows an importer tomorrow
+    // fails a commit instead of dying quietly.
+    {
+      const src = readOrgan("turn_hook.mjs");
+      const importsOf = new Map();
+      const localImports = (file) => {
+        if (importsOf.has(file)) return importsOf.get(file);
+        let out = [];
+        try { out = [...readOrgan(file).matchAll(/^\s*import\s[^;]*?from\s+"\.\/([A-Za-z0-9_.-]+\.mjs)"/gm)].map((m) => m[1]); }
+        catch { out = []; }
+        importsOf.set(file, out);
+        return out;
+      };
+      const closure = (file, seen = new Set()) => {
+        if (seen.has(file)) return seen;
+        seen.add(file);
+        for (const dep of localImports(file)) closure(dep, seen);
+        return seen;
+      };
+      const dead = [];
+      let callsSeen = 0;
+      // the sequence names are READ FROM turn_hook's own exports, not listed here — a
+      // literal roster would be the jugad his 11-Aug law forbids AND would silently skip
+      // a fourth anchor the day one is added, which is exactly the blindness this member
+      // exists to close.
+      for (const name of [...src.matchAll(/^export async function ([a-z]+)\(opts = \{\}\)/gm)].map((m) => m[1])) {
+        const at = src.indexOf(`export async function ${name}(`);
+        if (at < 0) continue;
+        const body = src.slice(at, src.indexOf("\n}", at));
+        const loaded = new Set(["turn_hook.mjs"]);
+        for (const m of body.matchAll(/runOrgan\("([A-Za-z0-9_.-]+\.mjs)",\s*"([a-z-]+)"([^)]*)\)/g)) {
+          const [, file, verb, tail] = m;
+          callsSeen++;
+          const isCall = /\bcall\s*:/.test(tail);
+          if (!isCall && loaded.has(file)) dead.push(`${name}: ${file} ${verb} (already loaded — SHIM is a no-op)`);
+          for (const f of closure(file)) loaded.add(f);
+        }
+      }
+      assert("NO SHIM CALLEE — the call list parses and every hook sequence was walked (an empty walk would make the next assert vacuously true)",
+        callsSeen >= 10, `runOrgan calls found: ${callsSeen}`);
+      assert("NO SHIM CALLEE — no turn_hook callee is SHIM-reached after something already imported it (the ES-module cache would make it a silent no-op that `ran` counts as a success)",
+        dead.length === 0, dead.join(" · "));
+      assert("NO SHIM CALLEE — the three revived callees ride the CALL shape explicitly (outbox brief · captains_call deal · forge_session boot), so the cache can never swallow them again",
+        /runOrgan\("outbox\.mjs", "brief", \{ \.\.\.opts, call: "hookMain" \}/.test(src)
+        && /runOrgan\("captains_call\.mjs", "deal", \{ \.\.\.opts, call: "hookMain" \}/.test(src)
+        && /runOrgan\("forge_session\.mjs", "boot", \{ \.\.\.opts, call: "hookMain" \}/.test(src));
+      for (const f of ["outbox.mjs", "captains_call.mjs", "forge_session.mjs"]) {
+        assert(`NO SHIM CALLEE — ${f} actually EXPORTS hookMain (the call shape throws without it, and a throw here is one stderr line and a lost organ)`,
+          /export\s+(async\s+)?function\s+hookMain\b/.test(readOrgan(f)) || /\bmain\s+as\s+hookMain\b/.test(readOrgan(f)));
+      }
+    }
+
+    // ── THE WITNESS SURVIVES THE SEAM — W0-C (2 Sep 2026, R-04) ────────────────
+    // outbox writes the witness; brain's outboxConsumption is what BELIEVES it, and the
+    // gate reads that as "he was shown it". Neither organ's own selftest can see the
+    // seam, and the seam is the whole finding: before today a `relay` run from any shell
+    // stamped rows delivered with nobody in front of the screen, and gate C counted it.
+    {
+      const OB = await import(pathToFileURL(join(ROOT, "scripts", "outbox.mjs")).href);
+      const BR2 = await import(pathToFileURL(join(ROOT, "scripts", "brain.mjs")).href);
+      const mk = (over) => ([
+        { ev: "post", id: "oW1", ts: "2026-08-20T09:00:00Z", produced_by: "brain:diary", kind: "material", subject: "s", idempotency_key: "k1", priority: 50 },
+        { ev: "deliver", of: "oW1", ts: "2026-08-20T10:00:00Z", via: "code", ...over },
+      ]);
+      assert("R-04 — a WITNESSED delivery counts as consumption (nothing that worked before stops working)",
+        !!BR2.outboxConsumption(["diary"], { outbox: mk({ witnessed: true }) }));
+      assert("R-04 — an UNWITNESSED delivery is REFUSED: a stamp written by a headless child is not evidence that he saw anything",
+        BR2.outboxConsumption(["diary"], { outbox: mk({ witnessed: false }) }) === null);
+      assert("R-04 — a legacy row with no witness field stays UNKNOWN and keeps its old meaning (L9: the gate got stricter only where it can prove the negative)",
+        !!BR2.outboxConsumption(["diary"], { outbox: mk({}) }));
+      assert("R-04 — an ACK is his own hand and is never second-guessed, even on an unwitnessed row",
+        !!BR2.outboxConsumption(["diary"], { outbox: [...mk({ witnessed: false }), { ev: "ack", of: "oW1", ts: "2026-08-20T11:00:00Z" }] }));
+      assert("R-04 — and the writer really does emit the field the reader checks (the two halves are the same word, not two conventions)",
+        /witnessed/.test(readOrgan("outbox.mjs")) && /delivered_witnessed/.test(readOrgan("brain.mjs"))
+        && typeof OB.fold === "function");
+    }
+
     // ── ONE STALENESS, ONE OWNER — W0-D (2 Sep 2026, SD-03/SD-04/SD-05) ────────
     // The forge staleness predicate was derived SIX times — forge_session.mjs (the owner),
     // captains_call.mjs, watchman.mjs, learning_state.mjs, learnstate.mjs and sitting.mjs —

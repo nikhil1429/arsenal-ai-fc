@@ -1536,6 +1536,18 @@ export function outboxConsumption(keys, ctx) {
   let best = null;
   for (const o of outboxFold(rows).values()) {
     if (!o || (!o.delivered_at && !o.acked_at)) continue;               // pending is NOT consumption — it is a row still waiting for a surface
+    // R-04 (W0-C, 2 Sep 2026) — THE GATE BELIEVES A WITNESS, NOT A STAMP. `delivered`
+    // is read here as "he was shown it", and the only thing that ever justified that was
+    // a note at the relay's call site: the call that delivers is the call that renders.
+    // Nothing enforced it, so `relay` run from any shell — a debug run, a cron, an organ
+    // child — stamped rows delivered with nobody in front of the screen and this
+    // function then counted them as consumption. The relay now records whether the sweep
+    // was a him-facing render, and a stamp that says it was NOT is refused here.
+    // STRICTLY STRICTER, and deliberately narrow: `delivered_witnessed === false` is the
+    // only refusal. Every row written before the field existed carries null — UNKNOWN,
+    // which keeps its old meaning rather than being retroactively disbelieved. An `acked`
+    // row is his own hand and is never second-guessed.
+    if (!o.acked_at && o.delivered_witnessed === false) continue;
     const pb = String(o.produced_by || "");
     if (!want.has(pb) && !want.has(pb.replace(/^[A-Za-z0-9_.-]+:/, ""))) continue;
     // acked is strictly stronger than delivered and wins when both exist on the same row

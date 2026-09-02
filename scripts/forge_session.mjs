@@ -1896,7 +1896,12 @@ function selftest() {
     // this same file than the block it hunts, so a plain indexOf matches the assert's
     // own string (that scar was paid for once already, two asserts up).
     const dispatch = src.slice(src.indexOf("switch (mode" + ") {"));
-    const verbs = [...dispatch.matchAll(/^ {2}case "([a-z]+)":/gm)].map((m) => m[1]);
+    // W0-C (2 Sep 2026): the indent widened from 2 to 2-or-4 because the dispatch moved
+    // inside `hookMain()` (R-01 — the SHIM shape cannot reach a cached module, so the
+    // hook needs a named export). What this asserts is UNCHANGED: every verb the switch
+    // accepts must be named in both docs. The pattern matches a superset of positions,
+    // so no case can hide from it — and the assert below still fails on an empty set.
+    const verbs = [...dispatch.matchAll(/^ {2,4}case "([a-z]+)":/gm)].map((m) => m[1]);
     const hAt = src.indexOf("// MODES:");   // first hit IS the header block — no line address, addresses rot
     const header = hAt < 0 ? "" : src.slice(hAt, src.indexOf("\n// " + "=".repeat(12), hAt));
     const uAt = src.indexOf("forge_session: start <" + "concept> [--force] |");
@@ -2049,267 +2054,272 @@ function lockChain(s, { dry = false } = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// THE IMPORT GUARD (W0-D, 2 Sep 2026). This dispatch has always run at MODULE LOAD,
-// so `import` from here executed the CLI with the importer's argv — `node
-// scripts/watchman.mjs run` would have fallen straight through to `default:` and
-// printed the usage line into the watchman's own stdout. That is why nothing has ever
-// imported this organ, and why the staleness predicate it owns was hand-copied into
-// six files instead. Same one-liner registry.mjs:987 and thalamus.mjs:2626 already use.
+// THE HOOK DOOR (W0-C, 2 Sep 2026 · R-01) — and it exists because W0-D BROKE THIS LINE
+// EARLIER TODAY. W0-D made this organ importable (five organs now read its staleness
+// predicate) and gave it the argv guard below. What it did not notice is that
+// `turn_hook` reaches `boot` through the SHIM shape, which works by rewriting
+// process.argv[1] so that guard evaluates true — and an ES module body runs ONCE per
+// process. `turn_hook:124` runs learnstate, learnstate now imports THIS FILE, so by
+// line 125 the body was already cached and `boot` printed nothing at SessionStart.
+// Proven by running the real sequence, and the same shape that killed the outbox brief
+// and the captain's call on 18 Aug. So the dispatch gets a name and turn_hook rides the
+// CALL shape, which the module cache cannot swallow. The suite now ratchets the class:
+// see "NO SHIM CALLEE" in organism_test.mjs.
+// Direct invocation is unchanged: `node scripts/forge_session.mjs <verb>` runs exactly
+// what it always ran.
 const INVOKED_DIRECTLY = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-const [mode, ...rest] = INVOKED_DIRECTLY ? process.argv.slice(2) : ["--imported--"];
-switch (mode) {
-  // NOT A VERB. Punctuated on purpose: the DISPATCH DOC WIRE selftest derives the
-  // verb list with /^ {2}case "([a-z]+)":/ and would otherwise demand this sentinel be
-  // advertised in the header MODES block and the usage line, where it would read as a
-  // command he could type. It is the module-import sentinel and nothing else.
-  case "--imported--": break;
-  case "start": {
-    const force = rest.includes("--force");
-    const concept = rest.filter((a) => a !== "--force").join(" ");
-    if (!concept) { console.error("forge_session: start needs a concept"); process.exit(1); }
-    // A live session is WORK — its coverage report is the only record that the
-    // session happened at all. `start` used to silently overwrite it, so a stray
-    // re-start erased which axes were deferred. (audit 30 Jul 2026)
-    // UNCLOSED is the whole test now (31 Jul 2026). The old guard also required the
-    // session to be FRESH, so a stale-but-real session fell straight through and was
-    // blanked with no record — the live hallucinations session was one plain `start`
-    // from erasure. The refusal deliberately names ONLY `close`: the draft ended with
-    // "or re-run with --force to discard it", offering the escape at the exact moment
-    // the command is being retyped. --force still works and is still in the usage
-    // string, where someone who genuinely needs it will look.
-    const prev = load();
-    if (startBlocked(prev, force)) {
-      const age = hoursSince(prev.started_at);
-      const when = Number.isFinite(age) ? `started ${age.toFixed(1)}h ago${isStale(prev) ? ", STALE" : ""}` : "age unknown";
-      console.error(`forge_session: '${prev.concept}' is still open (STEP ${prev.step} ${STEPS[prev.step] || "?"}, axes done ${prev.axes_done.join("") || "—"}, ${when}).`);
-      // W0-D: `resume` is offered ONLY when he is re-typing THIS concept. Offering it
-      // for a different concept would be the same trap the --force omission avoids —
-      // it would look like the way forward and would silently continue the OLD topic.
-      // `--force` still stays unnamed here, deliberately (31 Jul: never offer the
-      // discard at the moment the command is being retyped).
-      if (isStale(prev) && prev.concept === String(concept).trim().toLowerCase()) {
-        console.error("  → `node scripts/forge_session.mjs resume` — wahi concept, wahin se aage. Nothing is blanked, nothing re-taught.");
+export async function hookMain() {
+  const [mode, ...rest] = process.argv.slice(2);
+  switch (mode) {
+    case "start": {
+      const force = rest.includes("--force");
+      const concept = rest.filter((a) => a !== "--force").join(" ");
+      if (!concept) { console.error("forge_session: start needs a concept"); process.exit(1); }
+      // A live session is WORK — its coverage report is the only record that the
+      // session happened at all. `start` used to silently overwrite it, so a stray
+      // re-start erased which axes were deferred. (audit 30 Jul 2026)
+      // UNCLOSED is the whole test now (31 Jul 2026). The old guard also required the
+      // session to be FRESH, so a stale-but-real session fell straight through and was
+      // blanked with no record — the live hallucinations session was one plain `start`
+      // from erasure. The refusal deliberately names ONLY `close`: the draft ended with
+      // "or re-run with --force to discard it", offering the escape at the exact moment
+      // the command is being retyped. --force still works and is still in the usage
+      // string, where someone who genuinely needs it will look.
+      const prev = load();
+      if (startBlocked(prev, force)) {
+        const age = hoursSince(prev.started_at);
+        const when = Number.isFinite(age) ? `started ${age.toFixed(1)}h ago${isStale(prev) ? ", STALE" : ""}` : "age unknown";
+        console.error(`forge_session: '${prev.concept}' is still open (STEP ${prev.step} ${STEPS[prev.step] || "?"}, axes done ${prev.axes_done.join("") || "—"}, ${when}).`);
+        // W0-D: `resume` is offered ONLY when he is re-typing THIS concept. Offering it
+        // for a different concept would be the same trap the --force omission avoids —
+        // it would look like the way forward and would silently continue the OLD topic.
+        // `--force` still stays unnamed here, deliberately (31 Jul: never offer the
+        // discard at the moment the command is being retyped).
+        if (isStale(prev) && prev.concept === String(concept).trim().toLowerCase()) {
+          console.error("  → `node scripts/forge_session.mjs resume` — wahi concept, wahin se aage. Nothing is blanked, nothing re-taught.");
+        }
+        console.error("  → `node scripts/forge_session.mjs close` first — that is the only thing that saves the coverage report. Then re-run start.");
+        process.exit(1);
       }
-      console.error("  → `node scripts/forge_session.mjs close` first — that is the only thing that saves the coverage report. Then re-run start.");
-      process.exit(1);
-    }
-    // RECORD BEFORE DISCARD: a --force overwrite still leaves a row behind.
-    if (prev && !prev.closed_at && force) {
-      // The discarded session's teaching drifts ride along too: a --force row is a
-      // session ending WITHOUT a close report, so this row is the only trace it leaves.
-      const d = teachingDrifts(loadTeaching(), prev.started_at);
-      // Computed BEFORE the append and off the SAME disk snapshot the row carries —
-      // `close`'s rule, and it is what lets the failure branch print the record
-      // instead of losing it (the return value used to be dropped right here).
-      const cov = coverage(prev);
-      const recorded = appendCoverage(prev, "force", {
-        ...(prev.concept === String(concept).trim().toLowerCase() ? { continues: prev.started_at || null } : {}),
-        ...(d ? { teaching_drifts: d } : {}),
-      });
-      for (const l of forceDiscardLines(prev, recorded, cov)) console.log(l);
-    }
-    const s = blank(concept);
-    save(s);
-    console.log(oneLine(s));
-    // TOPIC-OPEN SCOUTING (Ruling 6 layer 2, 8 Aug 2026): stage the T-mission
-    // the moment a concept opens — prevent at open, validate at lock. Fail-silent:
-    // scouting must never block the study from starting. EMPHASIS only; the
-    // syllabus stays canon (the guard is baked into the mission prompt itself).
-    try {
-      const out = execFileSync(process.execPath, [join(__dirname, "scout.mjs"), "mission", "stage-topic", s.concept], { encoding: "utf8", timeout: 15000 });
-      console.log((out.trim().split("\n")[0] || "").replace(/^MISSIONS DESK · /, "scout: "));
-    } catch (e) {
-      // W0-A (1 Sep 2026): scout now REFUSES a concept the syllabus does not know, and this
-      // is the door that concept came through — on 19 Aug his whole kickoff sentence reached
-      // `forge start` and became a mission id, a row and a 195-char filename. Printing
-      // "scout unavailable" over a refusal would hide the one message worth reading.
-      const said = String((e && (e.stderr || e.stdout)) || "").trim().split("\n").find(l => l.trim());
-      console.log(said ? `scout: ${said.replace(/^MISSIONS DESK · /, "")} — non-blocking` : "scout: topic mission not staged (scout unavailable) — non-blocking");
-    }
-    break;
-  }
-  case "step": {
-    const before = load();
-    const wasAtLock = !!(before && before.step === 10);
-    const s = apply(setStep(live(need(before)), rest[0]));
-    console.log(oneLine(s));
-    // THE LOCK-CHAIN fires exactly on ARRIVAL at step 10 (never on a re-type),
-    // after the step change is already saved — outward work can fail without
-    // touching the LOCK (Ruling 2, 8 Aug 2026).
-    if (s.step === 10 && !wasAtLock) lockChain(s);
-    break;
-  }
-  case "axis": {
-    // FROZEN 7 Aug 2026 (full-organism audit P4.1) — the original dispatch, verbatim:
-    //   case "axis":   console.log(oneLine(apply(markAxis(live(need(load())), rest[0], rest[1] || "done")))); break;
-    // `rest[1] || "done"` made the argument optional and the default "COMPLETE" — so
-    // "axis b", typed on 7 Aug to mean "I am now on axis b", recorded "axis b is
-    // DONE" twice in twenty minutes, both before any Jirah. A no-argument form that
-    // silently marks work complete is a trap. It now refuses and names the three
-    // explicit forms; `now` is the declaration that was missing entirely.
-    const how = String(rest[1] || "").trim().toLowerCase();
-    if (!how) {
-      console.error(`forge_session: axis ${rest[0] || "<x>"} — KYA karna hai? Bina bole kuch nahi hota (purana default 'done' 7 Aug ko do baar kaat gaya):`);
-      console.error(`  axis ${rest[0] || "<x>"} now    → ab is axis par kaam chal raha hai (sirf declare — kuch COMPLETE nahi hota)`);
-      console.error(`  axis ${rest[0] || "<x>"} done   → axis COMPLETE (sirf uske apne Jirah ke BAAD)`);
-      console.error(`  axis ${rest[0] || "<x>"} defer  → aaj nahi — deferred list mein (core axis d kabhi nahi)`);
-      process.exit(1);
-    }
-    if (how === "now" || how === "on" || how === "current") {
-      console.log(oneLine(apply(setCurrentAxis(live(need(load())), rest[0]))));
-    } else {
-      console.log(oneLine(apply(markAxis(live(need(load())), rest[0], how))));
-    }
-    break;
-  }
-  case "moment": console.log(oneLine(apply(addMoment(live(need(load())), rest[0])))); break;
-  case "lockchain": {
-    // Read-only PREVIEW of what arrival at step 10 will run — proves the wiring
-    // live without staging a premature L-mission or advancing any state.
-    const s = load();
-    if (!s || !s.concept) { console.error("forge_session: no session on disk"); process.exit(1); }
-    lockChain(s, { dry: true });
-    break;
-  }
-  case "resume": {
-    // need(), NOT live() — live() REFUSES a stale session, and a stale session is the
-    // only thing this verb exists for. Same reasoning `close` states one case down.
-    const before = need(load());
-    const r = resumeSession(before);
-    if (!r.ok) { console.error("forge_session: " + r.error); process.exit(1); }
-    save(r.session);
-    const last = r.session.resumes[r.session.resumes.length - 1];
-    console.log(oneLine(r.session));
-    console.log(`forge_session: RESUMED '${r.session.concept}' after ${last.after_h === null ? "an unmeasurable gap" : last.after_h + "h"} — the pacer is speaking again.`);
-    // The pointer is the whole point of the verb: it says where he was, in the
-    // language the boot line uses, so nothing gets re-taught.
-    const left = AXES.filter((a) => !r.session.axes_done.includes(a) && !r.session.axes_deferred.includes(a));
-    console.log(`  continue at STEP ${r.session.step} ${STEPS[r.session.step] || "?"}`
-      + (r.session.current_axis ? ` · ON axis ${r.session.current_axis}` : "")
-      + ` · left ${left.join("") || "—"} — do NOT re-teach ${r.session.axes_done.join("") || "the done axes"}.`);
-    break;
-  }
-  case "status": { const s = load(); if (s) console.log(oneLine(s)); break; }
-  case "contract": {                      // HOOK PATH — silence is the default
-    // SELF-INJECTION GUARD (same scar as hooks/afferent-post.mjs): every headless
-    // `claude -p` the organism spawns runs inside this project, inherits
-    // .claude/settings.json and fires UserPromptSubmit. An organ prompt must never
-    // be handed the captain's forge contract.
-    if (process.env.ARSENAL_ORGAN === "1") break;
-    const sNow = load();
-    const lines = contractLines(sNow);
-    if (lines.length) {
-      // Deliverable 2 (7 Aug 2026): the dossier calibration rides the SAME block,
-      // loaded here (not inside the pure renderer) so fixtures stay disk-free and
-      // a missing/corrupt dossier or registry costs nothing but the line itself.
-      const rj = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
-      const dossier = rj(join(STATE_DIR, "dossier_weights.json"));
-      const registry = rj(join(STATE_DIR, "concepts.json"));
-      console.log(lines.concat(dossierLines(sNow.concept, sNow, { dossier, registry })).join("\n"));
+      // RECORD BEFORE DISCARD: a --force overwrite still leaves a row behind.
+      if (prev && !prev.closed_at && force) {
+        // The discarded session's teaching drifts ride along too: a --force row is a
+        // session ending WITHOUT a close report, so this row is the only trace it leaves.
+        const d = teachingDrifts(loadTeaching(), prev.started_at);
+        // Computed BEFORE the append and off the SAME disk snapshot the row carries —
+        // `close`'s rule, and it is what lets the failure branch print the record
+        // instead of losing it (the return value used to be dropped right here).
+        const cov = coverage(prev);
+        const recorded = appendCoverage(prev, "force", {
+          ...(prev.concept === String(concept).trim().toLowerCase() ? { continues: prev.started_at || null } : {}),
+          ...(d ? { teaching_drifts: d } : {}),
+        });
+        for (const l of forceDiscardLines(prev, recorded, cov)) console.log(l);
+      }
+      const s = blank(concept);
+      save(s);
+      console.log(oneLine(s));
+      // TOPIC-OPEN SCOUTING (Ruling 6 layer 2, 8 Aug 2026): stage the T-mission
+      // the moment a concept opens — prevent at open, validate at lock. Fail-silent:
+      // scouting must never block the study from starting. EMPHASIS only; the
+      // syllabus stays canon (the guard is baked into the mission prompt itself).
+      try {
+        const out = execFileSync(process.execPath, [join(__dirname, "scout.mjs"), "mission", "stage-topic", s.concept], { encoding: "utf8", timeout: 15000 });
+        console.log((out.trim().split("\n")[0] || "").replace(/^MISSIONS DESK · /, "scout: "));
+      } catch (e) {
+        // W0-A (1 Sep 2026): scout now REFUSES a concept the syllabus does not know, and this
+        // is the door that concept came through — on 19 Aug his whole kickoff sentence reached
+        // `forge start` and became a mission id, a row and a 195-char filename. Printing
+        // "scout unavailable" over a refusal would hide the one message worth reading.
+        const said = String((e && (e.stderr || e.stdout)) || "").trim().split("\n").find(l => l.trim());
+        console.log(said ? `scout: ${said.replace(/^MISSIONS DESK · /, "")} — non-blocking` : "scout: topic mission not staged (scout unavailable) — non-blocking");
+      }
       break;
     }
-    // ── THE SILENCE GAP (4 Aug 2026) ────────────────────────────────────────
-    // contractLines() is silent on three conditions — no session · closed · stale.
-    // That is correct FOR THE 12-STEP BLOCK: a full pacer block on a non-study
-    // turn is noise. But the consequence was never stated anywhere: with no open
-    // session, THE METHOD's step order, the four-legal-question-moments law and
-    // META-FREEZE **reach the turn not at all**, and nothing notices. Measured
-    // today: `contract` printed ZERO bytes for this entire session while the
-    // sprint's current task was a concept mid-flight.
-    // His own law (HOW_HE_LEARNS / CLAUDE.md): *anything he has to remember is a
-    // design defect, not a discipline problem.* Opening the session was a thing he
-    // had to remember, and the whole METHOD hung off it.
-    // So: ONE line — never the block — and only when the sprint itself says a
-    // CONCEPT is in motion. On a Python/course/build/career day this stays silent,
-    // which is why it cannot become the always-fires warning that trains him to
-    // ignore it (the audit's #38 failure mode).
-    { const n = nudgeLine(); if (n) console.log(n); }   // F5 (9 Aug): the silence law means ZERO bytes, not one newline
-    break;
-  }
-  case "boot": {                          // HOOK PATH — read-only, at most two lines
-    // SELF-INJECTION GUARD (same scar as `contract` above, learnstate.mjs and
-    // hooks/afferent-post.mjs): every headless `claude -p` the organism spawns runs
-    // inside this project and fires SessionStart. An organ prompt must never be
-    // handed the captain's open-session state.
-    if (process.env.ARSENAL_ORGAN === "1") break;
-    try {
-      const lines = bootLines(load(), lastHistory());
-      if (lines.length) console.log(lines.join("\n"));
-    } catch { /* a boot line is orientation, never a reason to bite the session */ }
-    break;
-  }
-  case "close": {
-    // need(), NOT live() — a stale session MUST stay closable, or the coverage
-    // report is unreachable for exactly the sessions that most need one.
-    const s = need(load());
-    const cov = coverage(s);
-    // Computed BEFORE the append so the history row carries the same thing stdout
-    // says — a number read once in a terminal and never written down is not a record.
-    const drifts = teachingDrifts(loadTeaching(), s.started_at);
-    // audit #108 — read BEFORE the append too, and for the same reason as the drifts:
-    // whatever stdout is about to say about this session must be computed off one
-    // snapshot of disk, not re-read after the close has already moved things.
-    const reps = repsBanked(s.started_at);
-    console.log(JSON.stringify(cov, null, 2));
-    let recorded = null;                  // F5 (9 Aug): the "recorded" line stops asserting what it never checked
-    if (shouldRecordClose(s)) {           // RECORD BEFORE REFUSE · double-close appends once
-      // LR-04 (W0-D, 2 Sep 2026): the rep count was computed right here and printed to
-      // a terminal, and that was the whole of it — forge_sessions.jsonl carried no rep
-      // field, so "this session banked NOTHING" died with the scrollback. Two
-      // post-restart tokenization sessions closed exactly that way and nothing
-      // downstream could see it. His order ("an uncaptured rep did not happen") needs
-      // the fact to OUTLIVE the terminal, and this row is the organ's only durable
-      // record of a session. Same disk snapshot as the drifts, same read-only terms:
-      // capture.mjs remains the sole writer of reps_log.jsonl.
-      recorded = appendCoverage(s, "close", {
-        ...(drifts ? { teaching_drifts: drifts } : {}),
-        reps_banked: reps && reps.present ? reps.reps : 0,
-        reps_log_present: !!(reps && reps.present),
-      });
-      save({ ...s, closed_at: nowISO() });
+    case "step": {
+      const before = load();
+      const wasAtLock = !!(before && before.step === 10);
+      const s = apply(setStep(live(need(before)), rest[0]));
+      console.log(oneLine(s));
+      // THE LOCK-CHAIN fires exactly on ARRIVAL at step 10 (never on a re-type),
+      // after the step change is already saved — outward work can fail without
+      // touching the LOCK (Ruling 2, 8 Aug 2026).
+      if (s.step === 10 && !wasAtLock) lockChain(s);
+      break;
     }
-    // ALWAYS printed — never gated on failure. The draft printed this block only
-    // when something was wrong, which quietly made "make the report say clean" the
-    // smartest move for a tired session. That incentive is deleted.
-    const R = [];
-    R.push(`FORGE METHOD CHECK · ${cov.concept} · method_clean: ${cov.method_clean}`);
-    R.push(`  elapsed ${cov.elapsed_min === null ? "unknown" : cov.elapsed_min} min · axis marks spread over ${cov.axis_marks_span_min === null ? "span unknown" : cov.axis_marks_span_min + " min"}`);
-    R.push("  (a 12-step session in 1.4 min is theatre — read these two numbers out loud)");
-    if (cov.steps_missed.length) R.push(`  steps never run: ${cov.steps_missed.map((i) => `${i} ${STEPS[i]}`).join(" · ")}`);
-    if (cov.axes_untouched.length) R.push(`  axes never touched: ${cov.axes_untouched.join("")}`);
-    if (cov.axes_ungraded.length) R.push(`  axes marked done without their OWN jirah (self-rated or batch-graded, not per-axis graded): ${cov.axes_ungraded.join("")}`);
-    // #108 — the CAUSE under that line, which nothing had ever named (see jirahNeverRanLine).
-    const jl = jirahNeverRanLine(cov);
-    if (jl) R.push(`  ${jl}`);
-    if (cov.core_missing.length) R.push(`  CORE axis ${cov.core_missing.join("")} never closed (CORE-NEVER-DEFERRED — canon forbids deferring it)`);
-    if (cov.widget_gates < WIDGET_GATES_MIN) R.push(`  widget guess-gates driven ${cov.widget_gates}/${WIDGET_GATES_MIN} — built is not driven`);
-    if (cov.check_q_refused) R.push(`  check-questions REFUSED: ${cov.check_q_refused} (quiz-dump attempts)`);
-    // The session graded itself above; this grades the TEACHER. Unconditional, same
-    // reason the two clocks are: a report that only speaks when it has bad news makes
-    // "have no bad news" the cheapest move. Silent only when the file cannot be read.
-    const dl = teachingDriftLine(drifts);
-    if (dl) R.push(`  ${dl}`);
-    // 7 Aug 2026 — the other two lanes + coverage, same disk snapshot as `drifts`.
-    for (const al of auditLaneLines(loadTeaching(), s.started_at, loadAuditLast())) R.push(`  ${al}`);
-    // #108 — and this grades neither the session nor the teacher: it asks whether the
-    // night left anything behind at all. Unconditional, loudest at zero.
-    const rl = repsBankedLine(reps);
-    if (rl) R.push(`  ${rl}`);
-    R.push("  → say all of this out loud to him, verbatim, before the delta.");
-    R.push(recorded === false
-      ? `forge_session: history append FAILED — the coverage above is the ONLY copy; save it (F5)`
-      : recorded === null
-        ? `forge_session: already closed earlier — nothing re-recorded (the history line exists)`
-        : `forge_session: recorded to ${HISTORY}`);
-    console.log(R.join("\n"));
-    break;
+    case "axis": {
+      // FROZEN 7 Aug 2026 (full-organism audit P4.1) — the original dispatch, verbatim:
+      //   case "axis":   console.log(oneLine(apply(markAxis(live(need(load())), rest[0], rest[1] || "done")))); break;
+      // `rest[1] || "done"` made the argument optional and the default "COMPLETE" — so
+      // "axis b", typed on 7 Aug to mean "I am now on axis b", recorded "axis b is
+      // DONE" twice in twenty minutes, both before any Jirah. A no-argument form that
+      // silently marks work complete is a trap. It now refuses and names the three
+      // explicit forms; `now` is the declaration that was missing entirely.
+      const how = String(rest[1] || "").trim().toLowerCase();
+      if (!how) {
+        console.error(`forge_session: axis ${rest[0] || "<x>"} — KYA karna hai? Bina bole kuch nahi hota (purana default 'done' 7 Aug ko do baar kaat gaya):`);
+        console.error(`  axis ${rest[0] || "<x>"} now    → ab is axis par kaam chal raha hai (sirf declare — kuch COMPLETE nahi hota)`);
+        console.error(`  axis ${rest[0] || "<x>"} done   → axis COMPLETE (sirf uske apne Jirah ke BAAD)`);
+        console.error(`  axis ${rest[0] || "<x>"} defer  → aaj nahi — deferred list mein (core axis d kabhi nahi)`);
+        process.exit(1);
+      }
+      if (how === "now" || how === "on" || how === "current") {
+        console.log(oneLine(apply(setCurrentAxis(live(need(load())), rest[0]))));
+      } else {
+        console.log(oneLine(apply(markAxis(live(need(load())), rest[0], how))));
+      }
+      break;
+    }
+    case "moment": console.log(oneLine(apply(addMoment(live(need(load())), rest[0])))); break;
+    case "lockchain": {
+      // Read-only PREVIEW of what arrival at step 10 will run — proves the wiring
+      // live without staging a premature L-mission or advancing any state.
+      const s = load();
+      if (!s || !s.concept) { console.error("forge_session: no session on disk"); process.exit(1); }
+      lockChain(s, { dry: true });
+      break;
+    }
+    case "resume": {
+      // need(), NOT live() — live() REFUSES a stale session, and a stale session is the
+      // only thing this verb exists for. Same reasoning `close` states one case down.
+      const before = need(load());
+      const r = resumeSession(before);
+      if (!r.ok) { console.error("forge_session: " + r.error); process.exit(1); }
+      save(r.session);
+      const last = r.session.resumes[r.session.resumes.length - 1];
+      console.log(oneLine(r.session));
+      console.log(`forge_session: RESUMED '${r.session.concept}' after ${last.after_h === null ? "an unmeasurable gap" : last.after_h + "h"} — the pacer is speaking again.`);
+      // The pointer is the whole point of the verb: it says where he was, in the
+      // language the boot line uses, so nothing gets re-taught.
+      const left = AXES.filter((a) => !r.session.axes_done.includes(a) && !r.session.axes_deferred.includes(a));
+      console.log(`  continue at STEP ${r.session.step} ${STEPS[r.session.step] || "?"}`
+        + (r.session.current_axis ? ` · ON axis ${r.session.current_axis}` : "")
+        + ` · left ${left.join("") || "—"} — do NOT re-teach ${r.session.axes_done.join("") || "the done axes"}.`);
+      break;
+    }
+    case "status": { const s = load(); if (s) console.log(oneLine(s)); break; }
+    case "contract": {                      // HOOK PATH — silence is the default
+      // SELF-INJECTION GUARD (same scar as hooks/afferent-post.mjs): every headless
+      // `claude -p` the organism spawns runs inside this project, inherits
+      // .claude/settings.json and fires UserPromptSubmit. An organ prompt must never
+      // be handed the captain's forge contract.
+      if (process.env.ARSENAL_ORGAN === "1") break;
+      const sNow = load();
+      const lines = contractLines(sNow);
+      if (lines.length) {
+        // Deliverable 2 (7 Aug 2026): the dossier calibration rides the SAME block,
+        // loaded here (not inside the pure renderer) so fixtures stay disk-free and
+        // a missing/corrupt dossier or registry costs nothing but the line itself.
+        const rj = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
+        const dossier = rj(join(STATE_DIR, "dossier_weights.json"));
+        const registry = rj(join(STATE_DIR, "concepts.json"));
+        console.log(lines.concat(dossierLines(sNow.concept, sNow, { dossier, registry })).join("\n"));
+        break;
+      }
+      // ── THE SILENCE GAP (4 Aug 2026) ────────────────────────────────────────
+      // contractLines() is silent on three conditions — no session · closed · stale.
+      // That is correct FOR THE 12-STEP BLOCK: a full pacer block on a non-study
+      // turn is noise. But the consequence was never stated anywhere: with no open
+      // session, THE METHOD's step order, the four-legal-question-moments law and
+      // META-FREEZE **reach the turn not at all**, and nothing notices. Measured
+      // today: `contract` printed ZERO bytes for this entire session while the
+      // sprint's current task was a concept mid-flight.
+      // His own law (HOW_HE_LEARNS / CLAUDE.md): *anything he has to remember is a
+      // design defect, not a discipline problem.* Opening the session was a thing he
+      // had to remember, and the whole METHOD hung off it.
+      // So: ONE line — never the block — and only when the sprint itself says a
+      // CONCEPT is in motion. On a Python/course/build/career day this stays silent,
+      // which is why it cannot become the always-fires warning that trains him to
+      // ignore it (the audit's #38 failure mode).
+      { const n = nudgeLine(); if (n) console.log(n); }   // F5 (9 Aug): the silence law means ZERO bytes, not one newline
+      break;
+    }
+    case "boot": {                          // HOOK PATH — read-only, at most two lines
+      // SELF-INJECTION GUARD (same scar as `contract` above, learnstate.mjs and
+      // hooks/afferent-post.mjs): every headless `claude -p` the organism spawns runs
+      // inside this project and fires SessionStart. An organ prompt must never be
+      // handed the captain's open-session state.
+      if (process.env.ARSENAL_ORGAN === "1") break;
+      try {
+        const lines = bootLines(load(), lastHistory());
+        if (lines.length) console.log(lines.join("\n"));
+      } catch { /* a boot line is orientation, never a reason to bite the session */ }
+      break;
+    }
+    case "close": {
+      // need(), NOT live() — a stale session MUST stay closable, or the coverage
+      // report is unreachable for exactly the sessions that most need one.
+      const s = need(load());
+      const cov = coverage(s);
+      // Computed BEFORE the append so the history row carries the same thing stdout
+      // says — a number read once in a terminal and never written down is not a record.
+      const drifts = teachingDrifts(loadTeaching(), s.started_at);
+      // audit #108 — read BEFORE the append too, and for the same reason as the drifts:
+      // whatever stdout is about to say about this session must be computed off one
+      // snapshot of disk, not re-read after the close has already moved things.
+      const reps = repsBanked(s.started_at);
+      console.log(JSON.stringify(cov, null, 2));
+      let recorded = null;                  // F5 (9 Aug): the "recorded" line stops asserting what it never checked
+      if (shouldRecordClose(s)) {           // RECORD BEFORE REFUSE · double-close appends once
+        // LR-04 (W0-D, 2 Sep 2026): the rep count was computed right here and printed to
+        // a terminal, and that was the whole of it — forge_sessions.jsonl carried no rep
+        // field, so "this session banked NOTHING" died with the scrollback. Two
+        // post-restart tokenization sessions closed exactly that way and nothing
+        // downstream could see it. His order ("an uncaptured rep did not happen") needs
+        // the fact to OUTLIVE the terminal, and this row is the organ's only durable
+        // record of a session. Same disk snapshot as the drifts, same read-only terms:
+        // capture.mjs remains the sole writer of reps_log.jsonl.
+        recorded = appendCoverage(s, "close", {
+          ...(drifts ? { teaching_drifts: drifts } : {}),
+          reps_banked: reps && reps.present ? reps.reps : 0,
+          reps_log_present: !!(reps && reps.present),
+        });
+        save({ ...s, closed_at: nowISO() });
+      }
+      // ALWAYS printed — never gated on failure. The draft printed this block only
+      // when something was wrong, which quietly made "make the report say clean" the
+      // smartest move for a tired session. That incentive is deleted.
+      const R = [];
+      R.push(`FORGE METHOD CHECK · ${cov.concept} · method_clean: ${cov.method_clean}`);
+      R.push(`  elapsed ${cov.elapsed_min === null ? "unknown" : cov.elapsed_min} min · axis marks spread over ${cov.axis_marks_span_min === null ? "span unknown" : cov.axis_marks_span_min + " min"}`);
+      R.push("  (a 12-step session in 1.4 min is theatre — read these two numbers out loud)");
+      if (cov.steps_missed.length) R.push(`  steps never run: ${cov.steps_missed.map((i) => `${i} ${STEPS[i]}`).join(" · ")}`);
+      if (cov.axes_untouched.length) R.push(`  axes never touched: ${cov.axes_untouched.join("")}`);
+      if (cov.axes_ungraded.length) R.push(`  axes marked done without their OWN jirah (self-rated or batch-graded, not per-axis graded): ${cov.axes_ungraded.join("")}`);
+      // #108 — the CAUSE under that line, which nothing had ever named (see jirahNeverRanLine).
+      const jl = jirahNeverRanLine(cov);
+      if (jl) R.push(`  ${jl}`);
+      if (cov.core_missing.length) R.push(`  CORE axis ${cov.core_missing.join("")} never closed (CORE-NEVER-DEFERRED — canon forbids deferring it)`);
+      if (cov.widget_gates < WIDGET_GATES_MIN) R.push(`  widget guess-gates driven ${cov.widget_gates}/${WIDGET_GATES_MIN} — built is not driven`);
+      if (cov.check_q_refused) R.push(`  check-questions REFUSED: ${cov.check_q_refused} (quiz-dump attempts)`);
+      // The session graded itself above; this grades the TEACHER. Unconditional, same
+      // reason the two clocks are: a report that only speaks when it has bad news makes
+      // "have no bad news" the cheapest move. Silent only when the file cannot be read.
+      const dl = teachingDriftLine(drifts);
+      if (dl) R.push(`  ${dl}`);
+      // 7 Aug 2026 — the other two lanes + coverage, same disk snapshot as `drifts`.
+      for (const al of auditLaneLines(loadTeaching(), s.started_at, loadAuditLast())) R.push(`  ${al}`);
+      // #108 — and this grades neither the session nor the teacher: it asks whether the
+      // night left anything behind at all. Unconditional, loudest at zero.
+      const rl = repsBankedLine(reps);
+      if (rl) R.push(`  ${rl}`);
+      R.push("  → say all of this out loud to him, verbatim, before the delta.");
+      R.push(recorded === false
+        ? `forge_session: history append FAILED — the coverage above is the ONLY copy; save it (F5)`
+        : recorded === null
+          ? `forge_session: already closed earlier — nothing re-recorded (the history line exists)`
+          : `forge_session: recorded to ${HISTORY}`);
+      console.log(R.join("\n"));
+      break;
+    }
+    case "selftest": selftest(); break;
+    default:
+      // `lockchain` was missing here too until the 10 Aug DEAD_COMMAND repair — a verb
+      // dispatched at the `case` below but named by neither doc is a command only its
+      // author knows exists. Keep this line and the header MODES block in step with the
+      // switch; the selftest reads all three out of this file's own source and fails if
+      // they diverge (grep -n "DISPATCH DOC WIRE").
+      console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | lockchain (read-only preview of the step-10 chain) | resume (wake a STALE session where it stands — nothing blanked) | status | contract | boot | close | selftest");
   }
-  case "selftest": selftest(); break;
-  default:
-    // `lockchain` was missing here too until the 10 Aug DEAD_COMMAND repair — a verb
-    // dispatched at the `case` below but named by neither doc is a command only its
-    // author knows exists. Keep this line and the header MODES block in step with the
-    // switch; the selftest reads all three out of this file's own source and fails if
-    // they diverge (grep -n "DISPATCH DOC WIRE").
-    console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | lockchain (read-only preview of the step-10 chain) | resume (wake a STALE session where it stands — nothing blanked) | status | contract | boot | close | selftest");
 }
+if (INVOKED_DIRECTLY) await hookMain();

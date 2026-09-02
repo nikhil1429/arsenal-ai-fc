@@ -486,7 +486,16 @@ function consumptionReads(consumptionPath) {
     for (const l of readFileSync(consumptionPath, "utf8").split("\n")) {
       if (!l.trim()) continue;
       let r; try { r = JSON.parse(l); } catch { continue; }
-      const subj = r && (r.subject || r.lane); const by = r && r.by; const ts = r && r.ts;
+      // R-06 (W0-C, 2 Sep 2026) — THE METER WAS THROWING AWAY 97.5% OF ITS OWN EVIDENCE.
+      // recordConsumption (brain.mjs, the sole writer) emits `{ts, job, lane, kind, by,
+      // file, note}` — there is no `subject` field and there never was. Counted on his
+      // live consumption.jsonl the day this landed: 924 rows · 901 carry `job` · 23 carry
+      // `lane` · **0 carry `subject`**. So the first term of this key was dead on arrival
+      // and the `continue` below silently dropped 901 rows — every one of them evidence
+      // that a lane HAD been consumed. That is why lanes read as never-reached and the
+      // spec-appointed consumers looked asleep. `job` goes first because it is what the
+      // writer actually writes; subject/lane stay for the shapes that carry them.
+      const subj = r && (r.job || r.subject || r.lane); const by = r && r.by; const ts = r && r.ts;
       if (!subj || !by || !ts) continue;
       const m = bySubject.get(subj) || new Map();
       const base = String(by).toLowerCase();
@@ -512,7 +521,15 @@ export function meter({ path = REGISTRY_PATH, stateDir = STATE_DIR, consumptionP
       const m = reads.get(r.subject) || reads.get((r.surface || "").replace(/\.mjs$/, "")) || new Map();
       r.consumer_reads = {};
       for (const c of Array.isArray(r.consumers) ? r.consumers : []) {
-        if (c.kind === "him") continue;
+        // R-06 (W0-C): the him-skip is GONE. It read `if (c.kind === "him") continue`,
+        // so a lane whose only declared consumer is HIM could never register a read —
+        // its consumer_reads stayed empty forever and the lane looked dead by
+        // construction. But "did it reach him" is the ONE question this whole campaign
+        // is about (§1's gate correction), and his surfaces DO stamp: `briefed` from the
+        // SessionStart brief, `sat`, `spoken`. Skipping the him rows meant the meter
+        // measured everything except the thing that matters. Nothing else changes — the
+        // same word-bounded match decides, and a lane he has genuinely never opened
+        // still reports null, which is the honest answer rather than an absent one.
         // word-bounded on purpose — gate.mjs consumerMatches' lesson: `dmn` must not
         // match `dmn_rollout`, and `c` must not match the word "consumer".
         const base = String(c.name || "").toLowerCase().replace(/\.mjs$/, "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -783,18 +800,55 @@ function selftest() {
     && !redRows(P).some((r) => r.subject === "l_orphan"));
 
   // meter: a planted payload file with real rows; stamps come from ROWS, never mtime.
-  writeFileSync(join(tmp, "l1.jsonl"), [
+  // ONE FIXTURE WRITER (W0-C, 2 Sep 2026). xray's per-organ ratchet counts unresolved fs
+  // sinks BY CALL SITE, so the two fixtures R-06 needed took registry 49 → 51 and turned
+  // the instrument red. The campaign's own repair (S6-R/F-01, and W0-D one rung earlier):
+  // REUSE the writer, never add a call site. All five fixture writes below go through
+  // this one, so registry ends BELOW the baseline it was measured against and the next
+  // fixture costs the ratchet nothing.
+  const put = (name, body) => writeFileSync(join(tmp, name), Array.isArray(body) ? body.join("\n") + "\n" : body);
+  put("l1.jsonl", [
     JSON.stringify({ ts: "2026-08-21T05:00:00Z", v: 1 }),
     "not json — a torn line must not kill the meter",
     JSON.stringify({ ts: "2026-08-25T05:00:00Z", v: 2 }),
   ].join("\n"));
-  writeFileSync(join(tmp, "consumption.jsonl"), JSON.stringify({ subject: "l1", by: "b consumer read", ts: "2026-08-26T00:00:00Z" }) + "\n");
+  put("consumption.jsonl", [JSON.stringify({ subject: "l1", by: "b consumer read", ts: "2026-08-26T00:00:00Z" })]);
   const mt = meter({ path: P, stateDir: tmp, now: new Date("2026-08-29T12:00:00Z") });
   const l1 = tableRows("lanes", P).find((r) => r.subject === "l1");
   assert("METER — first_real_row_at/newest_row_at stamped from PAYLOAD ROWS (torn line skipped, never fatal)",
     mt.ok === true && l1.first_real_row_at === "2026-08-21T05:00:00Z" && l1.newest_row_at === "2026-08-25T05:00:00Z" && l1.payload_rows === 2);
   assert("METER · PER-CONSUMER READ-STAMPS (R1) — each declared consumer carries its own last read",
     l1.consumer_reads["b.mjs"] === "2026-08-26T00:00:00Z" && l1.consumer_reads["c.mjs"] === null);
+  // ── R-06 (W0-C, 2 Sep 2026) — THE METER READS THE ROWS THAT ACTUALLY EXIST ──
+  // The fixture above writes `{subject}`, which is the ONE shape the live writer never
+  // produces: recordConsumption (brain.mjs, sole writer) emits `{ts, job, lane, kind,
+  // by, …}`. Counted on his live consumption.jsonl the day this landed — 924 rows: 901
+  // carry `job`, 23 carry `lane`, ZERO carry `subject`. So the old key dropped 97.5% of
+  // the evidence, and the fixture's own shape is what hid it. Both live shapes are
+  // asserted here, and a him-consumer is asserted alongside them because the meter used
+  // to `continue` past every one — which silenced exactly the question this campaign is
+  // about ("did it reach HIM").
+  {
+    put("l2.jsonl", [JSON.stringify({ ts: "2026-08-22T05:00:00Z", v: 1 })]);
+    upsertRow("lanes", { subject: "l2", schema_owner: "a.mjs", witness: "w", reach: "any", writes_to: "l2.jsonl",
+      consumers: [{ kind: "organ", name: "b.mjs" }, { kind: "him", name: "learnstate.mjs" }] }, { path: P });
+    put("consumption.jsonl", [
+      JSON.stringify({ subject: "l1", by: "b consumer read", ts: "2026-08-26T00:00:00Z" }),
+      JSON.stringify({ ts: "2026-08-27T00:00:00Z", job: "l2", kind: "briefed", by: "learnstate brief (SessionStart)" }),
+      JSON.stringify({ ts: "2026-08-27T01:00:00Z", lane: "l2", kind: "sat", by: "b.mjs" }),
+    ]);
+    meter({ path: P, stateDir: tmp, now: new Date("2026-08-29T12:00:00Z") });
+    const l2 = tableRows("lanes", P).find((r) => r.subject === "l2");
+    assert("R-06 · METER — a row keyed by `job` is COUNTED (the live writer's shape, and 901 of his 924 rows carry it; the old key dropped every one)",
+      l2.consumer_reads["learnstate.mjs"] === "2026-08-27T00:00:00Z");
+    assert("R-06 · METER — a row keyed by `lane` still counts too, so the fix widened the key and narrowed nothing",
+      l2.consumer_reads["b.mjs"] === "2026-08-27T01:00:00Z");
+    assert("R-06 · METER — a him-consumer registers a read at all, which it could not before: the loop skipped `kind:'him'` outright, so a lane he DOES open read as never-reached forever",
+      Object.keys(l2.consumer_reads).includes("learnstate.mjs"));
+    assert("R-06 · …and a consumer with no matching row still reports null — the fix adds evidence, it does not invent it",
+      meter({ path: P, stateDir: tmp, now: new Date("2026-08-29T12:00:00Z") }).ok
+      && tableRows("lanes", P).find((r) => r.subject === "l1").consumer_reads["c.mjs"] === null);
+  }
   assert("NEVER-FED — a lane older than the window with first_real_row_at null earns ONE line (heartbeat-proves-only-the-heartbeat class)",
     (() => {
       upsertRow("lanes", { subject: "l_dead", schema_owner: "a.mjs", witness: "w", consumers: [{ kind: "him" }], reach: "any", writes_to: "absent.jsonl" }, { path: P, at: "2026-08-01T00:00:00Z" });
@@ -814,7 +868,7 @@ function selftest() {
   assert("MEMORY-INDEX · UNREACHABLE DIR measures nothing and claims nothing (never a fake green-or-red)",
     memoryIndexCheck({ dir: join(tmp, "no-such") }).unreachable === true);
 
-  writeFileSync(join(tmp, "src.md"), "# THING v2.2\n"); writeFileSync(join(tmp, "der.md"), "derived from THING v2.1\n");
+  put("src.md", "# THING v2.2\n"); put("der.md", "derived from THING v2.1\n");
   upsertRow("derived_copies", { subject: "thing→derived", source_file: "src.md", derived_file: "der.md", witness: "selftest", source_version_re: "v(\\d+\\.\\d+)", declared_version_re: "v(\\d+\\.\\d+)" }, { path: P });
   const dc = derivedCopyCheck({ path: P, root: tmp });
   assert("§7 · SPEC→DERIVED-COPY — versions extracted LIVE from both files; unequal = drifted",

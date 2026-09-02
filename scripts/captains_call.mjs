@@ -2410,4 +2410,11 @@ function selftest() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
 
-export { loadState, sync };
+// R-01 (W0-C, 2 Sep 2026): `main` is exported as `hookMain` so turn_hook can reach the
+// deal through the CALL shape instead of the argv SHIM. The SHIM sets process.argv[1]
+// to make the guard above true, and that only works on a module's FIRST import — this
+// file is imported by brain.mjs:65, and turn_hook runs learnstate (which imports brain)
+// three calls before it shims this one, so the body was always already cached and the
+// deal NEVER RAN at SessionStart. Nothing here changes shape: `main` is untouched, the
+// guard is untouched, and `node scripts/captains_call.mjs deal` behaves exactly as it did.
+export { loadState, sync, main as hookMain };

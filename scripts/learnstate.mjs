@@ -24,7 +24,7 @@ import { pythonBrief } from "./python_state.mjs";   // audit #107 #26 — the Py
 import { loadCapsules, readLog, pendingCloses, openRound, intervalsOf } from "./rejirah.mjs";   // #107 pass 2 — un-pasted rounds; P7.B — the arbiter's live overdue read
 import { loadFreshDrill } from "./examiner.mjs";   // 11 Aug 2026 dead-wire sweep — the drill's age gate belongs to its owner (see nextup)
 import { isStale as forgeIsStale } from "./forge_session.mjs";   // W0-D — the PEHLA KAAM line asks the pacer whether its session is stale, instead of re-deriving it
-import { starvedNightFor, recordConsumption } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep — WHY the diary page is blank, in the brain's own words (see diaryLine) · recordConsumption: THE GATE's "briefed" stamp (18 Aug 2026), owner-held
+import { starvedNightFor, recordConsumption, consumptionRows } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep — WHY the diary page is blank, in the brain's own words (see diaryLine) · recordConsumption: THE GATE's "briefed" stamp (18 Aug 2026), owner-held
 
 // audit #11 — read capsule_map.json (capsule_bridge's own output, read-only) and say
 // what is overdue for Re-Jirah. Reads a file, never computes a second schedule.
@@ -1455,15 +1455,46 @@ async function main() {
 // fail-silent, and only on this main path — never from brief() itself, which the
 // suite calls against fixture dirs. The diary's starvation line ("page nahi
 // likhi") is the brain explaining an ABSENCE, not the page reaching him.
+// ── R-05 + N-04 (W0-C, 2 Sep 2026) — "BRIEFED" MUST MEAN *HIS* SESSION ──────
+// This stamp is what `reached_him` is computed from, and it was firing for EVERY
+// session that rendered the brief — every headless `claude -p` the organism spawns,
+// every SDK agent, and this audit campaign's own 25 subagents. Counted on his live
+// consumption.jsonl the day this landed: **863 of 924 rows are `briefed`**, which is
+// why "a lane reached him" and "a machine printed the brief" had become the same
+// measurement. A number that cannot tell those apart is worse than no number: it
+// closes gate C on lanes he has never once seen.
+// TWO GUARDS, and they are deliberately different in kind:
+//  1. ARSENAL_ORGAN=1 — the organism's own convention for a headless child. Every
+//     organ spawn sets it, so the organism can no longer certify itself.
+//  2. ONE ROW PER LANE PER DAY. This is the half that holds REGARDLESS OF SOURCE: 25
+//     subagents on one day now leave one row, not twenty-five, and a re-opened session
+//     does not re-certify a lane it already certified this morning.
+// ⚠ THE RESIDUAL IS NAMED, NOT PAPERED OVER: an SDK or fleet agent that never sets
+// ARSENAL_ORGAN still passes guard 1. Guard 2 caps what that can inflate to one row a
+// day per lane, and `by` carries the provenance so a reader can tell what stamped it —
+// but a machine session that renders his brief on a day he never opened one is still
+// counted. Closing that needs a mark only HIS interactive surface can make; it is not
+// invented here.
 function recordBriefed(text) {
   try {
+    if (process.env.ARSENAL_ORGAN === "1") return;        // an organ certifying itself is not evidence
     const t = String(text || "");
-    if (t.includes("🌙 NIGHT COACH")) recordConsumption({ job: "night_coach", kind: "briefed", by: "learnstate brief (SessionStart)" });
-    if (t.includes("📔 BRAIN DIARY") && !t.includes("page nahi likhi")) recordConsumption({ job: "diary", kind: "briefed", by: "learnstate brief (SessionStart)" });
-    if (t.includes("🧠 ROUND READ")) recordConsumption({ lane: "ns_round_read", kind: "briefed", by: "learnstate brief (SessionStart)" });
+    const day = new Date().toISOString().slice(0, 10);
+    // read-only; brain.mjs stays the sole writer of consumption.jsonl
+    const already = new Set();
+    try {
+      for (const r of consumptionRows()) {
+        if (!r || r.kind !== "briefed" || String(r.ts || "").slice(0, 10) !== day) continue;
+        const k = r.job || r.lane; if (k) already.add(k);
+      }
+    } catch { /* an unreadable ledger must not stop the stamp — it degrades to the old behaviour */ }
+    const once = (evt) => { const k = evt.job || evt.lane; if (k && already.has(k)) return; if (k) already.add(k); recordConsumption({ ...evt, by: "learnstate brief (SessionStart · interactive)" }); };
+    if (t.includes("🌙 NIGHT COACH")) once({ job: "night_coach", kind: "briefed" });
+    if (t.includes("📔 BRAIN DIARY") && !t.includes("page nahi likhi")) once({ job: "diary", kind: "briefed" });
+    if (t.includes("🧠 ROUND READ")) once({ lane: "ns_round_read", kind: "briefed" });
     // Block 2 §7.2 (18 Aug 2026): the SESSION INTENTS block is where the intent_digest
     // job's labels reach a session — its GATE (C) rides this stamp. Squeezed out = not consumed.
-    if (t.includes("--- SESSION INTENTS")) recordConsumption({ job: "intent_digest", kind: "briefed", by: "learnstate brief (SessionStart)" });
+    if (t.includes("--- SESSION INTENTS")) once({ job: "intent_digest", kind: "briefed" });
   } catch { /* bookkeeping must never cost the brief */ }
 }
 // NOT `await main()` here, deliberately (18 Aug 2026, Block 1). It was tried for the
