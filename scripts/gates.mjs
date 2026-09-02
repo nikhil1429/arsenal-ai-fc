@@ -163,33 +163,90 @@ export function judge(m, { typeBase = TYPE_BASELINE, lintBase = LINT_BASELINE } 
 }
 
 // ── S11 · SCHEMA VALIDATION (pure over injected results; ajv is loaded lazily) ──
-/** judgeSchemas — a file WITH a schema must validate; the schema'd count may only rise. */
+/** judgeSchemas — a file WITH a schema must validate; the schema'd count may only rise.
+ *
+ * ⚠ `state_missing` MEANT TWO DIFFERENT THINGS UNDER ONE NAME (bead af-beh, 2 Sep 2026), and this
+ * is what it cost: `node scripts/gates.mjs selftest` was 20 passed / 0 failed at home and
+ * 19 / 1 in a fresh clone of the same commit, with the evidence line
+ * "captains_call.json: state missing · models.json: state missing". Both of those files are
+ * GITIGNORED BY HIS DESIGN (.gitignore:397 and :467), so no checkout — cloud or local — will ever
+ * carry them, and their absence there is evidence of exactly nothing. The member is inside
+ * `organism:selftest`, which the away-day CI lane runs, so this red exits 1 in the cloud and
+ * nowhere else. It was NAMED by that lane itself on the run for da841a6 — the second member the
+ * repaired annotation has named, after af-kih.
+ * THE TWO MEANINGS, NOW SPLIT:
+ *   · a TRACKED state file that is gone → a broken checkout → still a RED, untouched.
+ *   · a GITIGNORED state file absent from a checkout → correct by his own ruling → a NAMED SKIP.
+ * THE SHAPE IS THIS CAMPAIGN'S OWN RULING, taken verbatim from bead af-2it: "a suite member whose
+ * verdict depends on [something absent] is not a ratchet — it should degrade to a NAMED skip
+ * ('… this member measured nothing') rather than a red". Never a red, and never a silent pass:
+ * a skip is counted and named, and a run where EVERYTHING skipped must not read green.
+ * STRICTLY MORE PRECISE, NOT WEAKER: at home nothing changes (both files exist), a tracked file
+ * that vanishes is still red, and when git cannot answer the row falls back to red — uncertainty
+ * resolves to the strict side, the same rule awayday.mjs follows ("silence must never look green").
+ * The count ratchet still counts SCHEMAS, which do not move, so SCHEMA_BASELINE stays 4.
+ */
 export function judgeSchemas(results, { base = SCHEMA_BASELINE } = {}) {
-  const reds = [], falls = [];
+  const reds = [], falls = [], skips = [];
   for (const r of results) {
+    if (r.not_in_checkout) { skips.push(`${r.file} is not in this checkout (gitignored by design) — NOT MEASURED, not passed`); continue; }
     if (r.state_missing) { reds.push(`SCHEMA — ${r.file} has a schema and NO state file; a schema for a file that does not exist is a claim nothing can check`); continue; }
     if (r.schema_broken) { reds.push(`SCHEMA — ${r.file}'s schema does not compile (${r.schema_broken}); an unrunnable gate reads GREEN by absence`); continue; }
     if (!r.valid) reds.push(`SCHEMA — ${r.file} does NOT match schemas/${r.file}.schema.json:\n           ${r.errors.slice(0, 6).join("\n           ")}`);
   }
   if (results.length < base) reds.push(`SCHEMA COUNT FELL — ${results.length} state file(s) schema'd, baseline ${base}. The list may only grow (§10-D rule 6).`);
   else if (results.length > base) falls.push(`SCHEMA COUNT GREW — ${results.length} schema'd (baseline ${base}); tighten SCHEMA_BASELINE to ${results.length}.`);
-  return { ok: reds.length === 0, reds, falls };
+  // A RUN THAT MEASURED NOTHING MUST NOT READ GREEN. If every schema'd file is out of the
+  // checkout there is no evidence here at all, and saying so is the whole point of a named skip.
+  if (results.length && skips.length === results.length) {
+    falls.push(`SCHEMA NOT MEASURED — all ${results.length} schema'd state file(s) are out of this checkout; this member measured NOTHING`);
+  }
+  return { ok: reds.length === 0, reds, falls, skips, measured: results.length - skips.length };
 }
 
 /** validateState — reads schemas/, validates each named state file. Returns one row per
- *  schema; never throws, because a gate that dies is a gate that cannot say NO. */
-export async function validateState({ schemaDir = SCHEMA_DIR, stateDir = STATE_DIR_G } = {}) {
+ *  schema; never throws, because a gate that dies is a gate that cannot say NO.
+ *  `tracked` is the seam the selftest drives: a Set of state filenames git carries, or null
+ *  meaning "git could not answer", which keeps every absent file RED (af-beh). Its DEFAULT is the
+ *  live git read, so production takes the real answer and only a test can supply another. */
+// IS THIS PATH CARRIED BY A CHECKOUT AT ALL? (af-beh, 2 Sep 2026.) Read from git, LIVE — never a
+// hand-written list of "files that may be missing", which is the exact jugad LAW PACK's own rule
+// refuses and which would rot the day he ignores a fifth file. `git ls-files` is the same move
+// awayday.mjs's exposure() already makes to answer the mirror question about this repo.
+// FAIL-CLOSED: if git cannot answer — not on PATH, not a work tree, a timeout — this returns null
+// and every caller keeps today's RED. An unanswerable question must never resolve to a pass.
+function trackedStateFiles(deps = {}) {
+  try {
+    const out = deps.gitLs || execFileSync("git", ["ls-files", "--", "dressing-room/state"],
+      { encoding: "utf8", cwd: ROOT, windowsHide: true, timeout: 30000, stdio: ["ignore", "pipe", "ignore"] });
+    return new Set(String(typeof out === "function" ? out() : out).split(/\r?\n/)
+      .map((l) => l.trim()).filter(Boolean).map((p) => p.split("/").pop()));
+  } catch { return null; }
+}
+
+export async function validateState({ schemaDir = SCHEMA_DIR, stateDir = STATE_DIR_G, tracked = trackedStateFiles() } = {}) {
   const out = [];
+  // Read ONCE for the whole pass, not per row: one git call in the default above, and every row
+  // asks the same answer.
+  const trackedSet = tracked;
   let Ajv; try { ({ default: Ajv } = await import(pathToFileURL(AJV).href)); } catch { return out; }   // no node_modules ⇒ NOT MEASURABLE, same as tsc/eslint
   let names = []; try { names = readdirSync(schemaDir).filter((f) => f.endsWith(".schema.json")); } catch { return out; }
   for (const sf of names.sort()) {
     const file = sf.replace(/\.schema\.json$/, "");
-    const row = { file, valid: false, errors: [], state_missing: false, schema_broken: null };
+    const row = { file, valid: false, errors: [], state_missing: false, schema_broken: null, not_in_checkout: false };
     let validate;
     try { validate = new Ajv({ allErrors: true, strict: false }).compile(JSON.parse(readFileSync(join(schemaDir, sf), "utf8"))); }
     catch (e) { row.schema_broken = String((e && e.message) || e).slice(0, 160); out.push(row); continue; }
     const target = join(stateDir, file);
-    if (!existsSync(target)) { row.state_missing = true; out.push(row); continue; }
+    // ABSENT, AND WHY IT IS ABSENT — the split af-beh exists for. A file git does not track can
+    // never be in a checkout, so its absence is a fact about the checkout, not a defect. A TRACKED
+    // file that is missing is still exactly the red this rule was written for, and `trackedSet ===
+    // null` (git could not answer) also keeps that red — the strict side wins every tie.
+    if (!existsSync(target)) {
+      row.state_missing = true;
+      row.not_in_checkout = trackedSet !== null && !trackedSet.has(file);
+      out.push(row); continue;
+    }
     let data; try { data = JSON.parse(readFileSync(target, "utf8")); }
     catch (e) { row.errors = [`the file is not parseable JSON: ${String((e && e.message) || e).slice(0, 120)}`]; out.push(row); continue; }
     row.valid = !!validate(data);
@@ -302,10 +359,38 @@ async function selftest() {
     && judgeSchemas([...four, okRow("e.json")], { base: 4 }).falls.some((f) => /SCHEMA COUNT GREW — 5/.test(f)));
   {
     // and the LIVE four, actually validated — an unrun gate is a hypothesis.
+    // ⚠ THE SKIP IS PART OF THE CLAIM NOW (af-beh). This read `every(r => … && !r.state_missing)`,
+    // which was 20/0 here and 19/1 in a fresh clone of the same commit, because two of the four
+    // state files are gitignored by his design and a checkout cannot carry them. The member now
+    // says how many it actually MEASURED and names what it could not — never a red for a file that
+    // was never going to be there, and never a silent pass either.
     const live = await validateState({});
-    assert(`SCHEMA LIVE — ${live.length} schema(s) on disk, every one compiling and every named state file matching it`,
-      live.length >= SCHEMA_BASELINE && live.every((r) => r.valid && !r.schema_broken && !r.state_missing),
-      live.filter((r) => !r.valid).map((r) => `${r.file}: ${r.schema_broken || r.errors.slice(0, 2).join(" | ") || "state missing"}`).join(" · "));
+    const lj = judgeSchemas(live);
+    const outOf = live.filter((r) => r.not_in_checkout).map((r) => r.file);
+    assert(`SCHEMA LIVE — ${live.length} schema(s) on disk, every one compiling and every state file THIS CHECKOUT CARRIES matching it (measured ${lj.measured}${outOf.length ? ` · not in this checkout: ${outOf.join(", ")}` : ""})`,
+      live.length >= SCHEMA_BASELINE && live.every((r) => r.not_in_checkout || (r.valid && !r.schema_broken && !r.state_missing)),
+      live.filter((r) => !r.valid && !r.not_in_checkout).map((r) => `${r.file}: ${r.schema_broken || r.errors.slice(0, 2).join(" | ") || "state missing"}`).join(" · "));
+
+    // ── af-beh — THE SPLIT ITSELF, ON FIXTURES, BOTH DIRECTIONS ──────────────────────────────
+    const goneRow = (f) => ({ file: f, valid: false, errors: [], state_missing: true, schema_broken: null, not_in_checkout: true });
+    const missingRow = (f) => ({ file: f, valid: false, errors: [], state_missing: true, schema_broken: null, not_in_checkout: false });
+    assert("af-beh — a gitignored state file absent from a checkout is a NAMED SKIP, not a red: it is counted out of `measured`, it is named in `skips`, and it never becomes a pass",
+      (() => { const j = judgeSchemas([...four.slice(0, 3), goneRow("d.json")], { base: 4 });
+               return j.ok && j.measured === 3 && j.skips.length === 1 && /d\.json is not in this checkout/.test(j.skips[0]); })());
+    assert("af-beh — …and a TRACKED state file that is missing is STILL RED. That is the law this rule was written for and it is not touched",
+      !judgeSchemas([...four.slice(0, 3), missingRow("d.json")], { base: 4 }).ok);
+    assert("af-beh — a run where EVERY schema'd file is out of the checkout does not read green: it says it measured NOTHING",
+      (() => { const j = judgeSchemas(["a.json", "b.json", "c.json", "d.json"].map(goneRow), { base: 4 });
+               return j.measured === 0 && j.falls.some((f) => /measured NOTHING/.test(f)); })());
+    assert("af-beh — WHEN GIT CANNOT ANSWER, THE ROW STAYS RED: an unanswerable question resolves to the strict side, never to a pass (the same rule awayday.mjs follows for a failed read)",
+      (await validateState({ tracked: null })).every((r) => !r.not_in_checkout));
+    assert("af-beh — the tracked set is READ FROM GIT, never a hand-written list of files that may be absent (that list would rot the day he ignores a fifth one)",
+      (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+               const fn = src.slice(src.indexOf("function trackedStateFiles"), src.indexOf("export async function validateState"));
+               return /git", \["ls-files"/.test(fn) && !/captains_call|models\.json/.test(fn); })());
+    assert("af-beh — and the report line NAMES what it could not measure, because '2/2 match' alone is a smaller truth wearing a bigger number",
+      (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+               return /NOT MEASURED — not in this checkout/.test(src) && /sj\.measured/.test(src); })());
   }
 
   console.log(`gates selftest: ${pass} passed, ${fail} failed`);
@@ -336,7 +421,13 @@ async function main() {
   const sr = await validateState({});
   const sj = judgeSchemas(sr);
   if (mode === "schemas" || mode === "report") {
-    console.log(`gates schema · ${sr.filter((r) => r.valid).length}/${sr.length} state file(s) match their schema (baseline ${SCHEMA_BASELINE}, may only grow)${sr.length ? "" : " — NOT MEASURABLE (no ajv / no schemas/)"}`);
+    // THE SKIPPED FILES ARE NAMED IN THE LINE, not just excluded from it (af-beh). "2/2 match" with
+    // no further word would be a smaller truth wearing a bigger number — the reader has to be able
+    // to see that two of the four were never measured, and which two.
+    const gone = sr.filter((r) => r.not_in_checkout).map((r) => r.file);
+    console.log(`gates schema · ${sr.filter((r) => r.valid).length}/${sj.measured} state file(s) match their schema (baseline ${SCHEMA_BASELINE}, may only grow)`
+      + (gone.length ? ` · ${gone.length} NOT MEASURED — not in this checkout: ${gone.join(", ")}` : "")
+      + (sr.length ? "" : " — NOT MEASURABLE (no ajv / no schemas/)"));
     if (mode === "schemas") { for (const r of sj.reds) console.log(`  RED  ${r}`); for (const f of sj.falls) console.log(`  ok   ${f}`); process.exit(sj.ok ? 0 : 1); }
   }
   const j = judge(m);

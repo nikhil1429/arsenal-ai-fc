@@ -1,5 +1,5 @@
 {
- "built_at": "2026-09-02T08:52:31.965Z",
+ "built_at": "2026-09-02T09:13:31.747Z",
  "organs_parsed": 112,
  "organs_expected": 112,
  "parse_errors": [],
@@ -9063,7 +9063,7 @@
    "unresolved": 4
   },
   "gates.mjs": {
-   "loc": 351,
+   "loc": 442,
    "reads": [
     {
      "path": "node_modules/typescript/bin/tsc",
@@ -9082,10 +9082,28 @@
       97
      ],
      "fixture": false
+    },
+    {
+     "path": "scripts/gates.mjs",
+     "lines": [
+      388,
+      392,
+      388,
+      392,
+      388,
+      392
+     ],
+     "fixture": true
     }
    ],
    "writes": [],
-   "spawns": [],
+   "spawns": [
+    {
+     "kind": "bin",
+     "bin": "git",
+     "line": 220
+    }
+   ],
    "swallows": [],
    "verbs": [
     "lint",
@@ -24450,6 +24468,17 @@
    "writers": [],
    "fixture_readers": [
     "limits.mjs"
+   ],
+   "fixture_writers": [],
+   "on_disk": true,
+   "is_dir": false
+  },
+  {
+   "path": "scripts/gates.mjs",
+   "readers": [],
+   "writers": [],
+   "fixture_readers": [
+    "gates.mjs"
    ],
    "fixture_writers": [],
    "on_disk": true,
