@@ -1,5 +1,5 @@
 {
- "built_at": "2026-09-02T07:08:17.140Z",
+ "built_at": "2026-09-02T08:01:55.186Z",
  "organs_parsed": 112,
  "organs_expected": 112,
  "parse_errors": [],
@@ -620,69 +620,81 @@
    "unresolved": 0
   },
   "awayday.mjs": {
-   "loc": 1120,
+   "loc": 1295,
    "reads": [
     {
      "path": "scripts/awayday.mjs",
      "lines": [
-      717,
-      787,
-      791,
-      819,
-      844,
-      855,
-      965,
-      717,
-      787,
-      791,
-      819,
-      844,
-      855,
-      965,
-      717,
-      787,
-      791,
-      819,
-      844,
-      855,
-      965,
-      717,
-      787,
-      791,
-      819,
-      844,
-      855,
-      965
-     ],
-     "fixture": true
-    },
-    {
-     "path": ".github/workflows/awayday.yml",
-     "lines": [
-      918,
-      918,
-      918,
-      918
-     ],
-     "fixture": true
-    },
-    {
-     "path": "scripts/groundsman.mjs",
-     "lines": [
-      920,
-      920,
-      920,
-      920
+      820,
+      890,
+      894,
+      922,
+      953,
+      964,
+      1018,
+      1025,
+      1133,
+      820,
+      890,
+      894,
+      922,
+      953,
+      964,
+      1018,
+      1025,
+      1133,
+      820,
+      890,
+      894,
+      922,
+      953,
+      964,
+      1018,
+      1025,
+      1133,
+      820,
+      890,
+      894,
+      922,
+      953,
+      964,
+      1018,
+      1025,
+      1133
      ],
      "fixture": true
     },
     {
      "path": "scripts/physio.mjs",
      "lines": [
-      930,
-      930,
-      930,
-      930
+      1029,
+      1098,
+      1029,
+      1098,
+      1029,
+      1098,
+      1029,
+      1098
+     ],
+     "fixture": true
+    },
+    {
+     "path": ".github/workflows/awayday.yml",
+     "lines": [
+      1086,
+      1086,
+      1086,
+      1086
+     ],
+     "fixture": true
+    },
+    {
+     "path": "scripts/groundsman.mjs",
+     "lines": [
+      1088,
+      1088,
+      1088,
+      1088
      ],
      "fixture": true
     },
@@ -740,14 +752,14 @@
      "kind": "organ",
      "script": "captains_call.mjs",
      "verb": "file",
-     "line": 643,
+     "line": 678,
      "ctx": "checkLane"
     },
     {
      "kind": "organ",
      "script": "awayday.mjs",
      "verb": null,
-     "line": 976,
+     "line": 1144,
      "ctx": "selftest"
     }
    ],
@@ -772,7 +784,8 @@
     "repoSlug",
     "run",
     "verdictOf",
-    "vetJobs"
+    "vetJobs",
+    "workflowLanes"
    ],
    "unresolved": 10
   },
@@ -12583,259 +12596,259 @@
    "unresolved": 10
   },
   "physio.mjs": {
-   "loc": 1680,
+   "loc": 1743,
    "reads": [
     {
      "path": "scripts/physio.mjs",
      "lines": [
-      1336,
-      1382,
-      1448,
-      1508,
-      1336,
-      1382,
-      1448,
-      1508,
-      1336,
-      1382,
-      1448,
-      1508
+      1368,
+      1414,
+      1511,
+      1571,
+      1368,
+      1414,
+      1511,
+      1571,
+      1368,
+      1414,
+      1511,
+      1571
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/physio_config.json",
      "lines": [
-      438,
-      439,
-      438,
-      439
+      446,
+      447,
+      446,
+      447
      ],
      "fixture": false
     },
     {
      "path": "__no_such__",
      "lines": [
-      438,
-      439,
-      438,
-      439
+      446,
+      447,
+      446,
+      447
      ],
      "fixture": true
     },
     {
      "path": "dressing-room/state/readiness.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/timeaudit.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/tanks.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/fuelboard_config.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/daemon_watchdog.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/awayday.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/token_vitals.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/throwin_state.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/fsrs_store.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/loop_vitals.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gem_sync_stamp.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/chrome_rail_stamp.json",
      "lines": [
-      461,
-      461,
-      461,
-      461
+      469,
+      469,
+      469,
+      469
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      465,
-      465,
-      465,
-      465
+      473,
+      473,
+      473,
+      473
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
-      465,
-      465,
-      465,
-      465
+      473,
+      473,
+      473,
+      473
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/bootroom_log.jsonl",
      "lines": [
-      465,
-      465,
-      465,
-      465
+      473,
+      473,
+      473,
+      473
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/loose_balls.jsonl",
      "lines": [
-      465,
-      465,
-      465,
-      465
+      473,
+      473,
+      473,
+      473
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/slip.jsonl",
      "lines": [
-      465,
-      465,
-      465,
-      465
+      473,
+      473,
+      473,
+      473
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/mutations.jsonl",
      "lines": [
-      465,
-      465,
-      465,
-      465
+      473,
+      473,
+      473,
+      473
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/capsules",
      "lines": [
-      1033,
-      1034,
-      1033,
-      1034
+      1065,
+      1066,
+      1065,
+      1066
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/weaknesses.json",
      "lines": [
-      1044,
-      1044,
-      461,
-      461,
-      1044,
-      1044
+      1076,
+      1076,
+      469,
+      469,
+      1076,
+      1076
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/team_sheet.md",
      "lines": [
-      1045,
-      1045,
-      1049,
-      1049,
-      1045,
-      1045,
-      1049,
-      1049
+      1077,
+      1077,
+      1081,
+      1081,
+      1077,
+      1077,
+      1081,
+      1081
      ],
      "fixture": false
     }
@@ -12844,8 +12857,8 @@
     {
      "path": "dressing-room/state/loop_vitals.json",
      "lines": [
-      458,
-      458
+      466,
+      466
      ],
      "verbs": [
       "renameSync→WRITE(dst)"

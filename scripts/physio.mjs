@@ -351,9 +351,17 @@ function awayDayRead(state) {
     head_sha: state.head_sha || null,
     run_url: state.run_url || null,
     ran_at: state.ran_at || null,
-    // TRUE when the one card this run gets has already been dealt — which is
+    // TRUE when the one card this red gets has already been dealt — which is
     // precisely when this bleed becomes the only thing still reporting the red.
-    already_carded: state.run_id != null && state.carded_run_id === state.run_id,
+    // ⚠ WIDENED 2 Sep 2026 (af-7fn): this read `carded_run_id === run_id`, i.e. "THIS RUN was
+    // carded". awayday.mjs's card law moved that day from one-card-per-RUN to one-card-per-RED-
+    // EPISODE — because the old test dealt TWELVE cards for one unbroken red, against a comment
+    // in that file promising one. Under the new law `carded_run_id` holds the run that OPENED
+    // the episode, so the old equality went false on the very next run of the same red and this
+    // bleed stopped saying "his card is already spent" exactly when that became most true.
+    // A non-null value only ever survives a red verdict (awayday.mjs clears it on green), so
+    // this cannot report a spent card for a lane that is not red.
+    already_carded: state.carded_run_id != null,
     card_error: state.card_error || null,
     unreachable: state.unreachable || null,
   };
@@ -808,6 +816,30 @@ function compute(world, cfg, now = new Date()) {
     bleeds.push({ organ: "awayday", kind: "away_day_read_blind",
       evidence: `the last read-back (${awayDay.checked_at}) could not reach GitHub :: ${awayDay.unreachable} — the verdict on disk (${awayDay.lane}${awayDay.head_sha ? ` on ${awayDay.head_sha}` : ""}) is the last known one, not today's`,
       line: "away-day ka verdict aaj padha hi nahi gaya — jo disk pe hai woh purani khabar hai, green nahi." });
+  }
+
+  // 9b) EVERY OTHER CLOUD LANE — af-7fn, 2 Sep 2026. The away-day lane was read back from 11 Aug
+  //     and reached the body here. `.github/workflows/suite.yml` — THE NEUTRAL BASELINE MACHINE,
+  //     commissioned 1 Sep — was RED on both node legs (136/7) and `grep -rn "suite\.yml"` over
+  //     the whole repo matched only the git index: no organ could see it, this one included,
+  //     because awayday.mjs polled a single hardcoded filename. It now reads every workflow on
+  //     disk into `lanes`, and this is where the standing state arrives — one bleed per lane, the
+  //     lane NAMED, using awayDayRead unchanged because the rows are deliberately the same shape.
+  //     No new judgement and no new number: same fields, same GitHub vocabulary, same
+  //     self-clearing on green as the away-day bleed above.
+  for (const [wf, raw] of Object.entries((world.awayDay && world.awayDay.lanes) || {})) {
+    const lane = awayDayRead(raw);
+    if (!lane) continue;                                  // never checked ≠ bleeding
+    const name = wf.replace(/\.ya?ml$/i, "");
+    if (lane.lane === "red") {
+      bleeds.push({ organ: "awayday", kind: "ci_lane_red",
+        evidence: `the cloud lane ${wf} is RED on ${lane.head_sha || "(no sha)"} — ${lane.why || "failure"} · run ${lane.run_id ?? "?"}${lane.ran_at ? ` at ${lane.ran_at}` : ""} · read back ${lane.checked_at}${lane.already_carded ? " · its one card has already been dealt, so this line is the only thing still saying so" : ""}${lane.card_error ? ` · card could NOT be filed: ${lane.card_error}` : ""}${lane.run_url ? ` · ${lane.run_url}` : ""}`,
+        line: `${name} CI lane laal hai — cloud pe yeh lane fail ho rahi hai.` });
+    } else if (lane.unreachable) {
+      bleeds.push({ organ: "awayday", kind: "ci_lane_read_blind",
+        evidence: `${wf}'s last read-back (${lane.checked_at}) could not reach GitHub :: ${lane.unreachable} — the verdict on disk (${lane.lane}${lane.head_sha ? ` on ${lane.head_sha}` : ""}) is the last known one, not today's`,
+        line: `${name} ka verdict aaj padha hi nahi gaya — jo disk pe hai woh purani khabar hai, green nahi.` });
+    }
   }
 
   // 10) THE BRAIN'S FUEL — wire repair, 11 Aug 2026. See brainFuelRead's header:
@@ -1412,6 +1444,37 @@ async function selftest() {
     assert("AWAY-DAY · a card that could NOT be filed is named in the evidence — otherwise the red reaches him nowhere at all",
       compute({ ...base, awayDay: { ...red, carded_run_id: null, card_error: "captains_call exploded" } }, cfg, now)
         .bleeds.some(b => b.kind === "away_day_lane_red" && /exploded/.test(b.evidence)));
+
+    // ── EVERY OTHER CLOUD LANE (af-7fn, 2 Sep 2026) ──────────────────────────────────────
+    // suite.yml — the neutral baseline machine — was RED on both node legs while nothing in
+    // this house could see it. These fail the moment a lane is read but never bled.
+    const twoLane = { ...red, lanes: { "suite.yml": { workflow: "suite.yml", checked_at: red.checked_at,
+      state: "red", why: "failure", run_id: 777, head_sha: "5uitere", ran_at: red.ran_at,
+      run_url: "https://github.com/x/y/actions/runs/777", carded_run_id: 777, red_since: red.checked_at, unreachable: null } } };
+    const vTwo = compute({ ...base, awayDay: twoLane }, cfg, now);
+    const sb = vTwo.bleeds.find(b => b.kind === "ci_lane_red");
+    assert("CI LANES · a SECOND red cloud lane bleeds too, and NAMES ITSELF — with more than one lane an unnamed 'CI lane laal hai' points at nothing",
+      !!sb && /suite\.yml/.test(sb.evidence) && /5uitere/.test(sb.evidence) && /777/.test(sb.evidence) && /^suite /.test(sb.line));
+    assert("CI LANES · the away-day bleed still fires beside it — the new lanes are added, never in place of (L9)",
+      vTwo.bleeds.some(b => b.kind === "away_day_lane_red") && vTwo.bleeds.filter(b => b.kind === "ci_lane_red").length === 1);
+    assert("CI LANES · a GREEN extra lane is silent, and a never-checked one never bleeds — never born ≠ bleeding, the same rule the away-day read follows",
+      compute({ ...base, awayDay: { ...twoLane, lanes: { "suite.yml": { ...twoLane.lanes["suite.yml"], state: "green", why: "success" } } } }, cfg, now)
+        .bleeds.every(b => b.kind !== "ci_lane_red")
+      && compute({ ...base, awayDay: { ...twoLane, lanes: { "suite.yml": { workflow: "suite.yml" } } } }, cfg, now)
+        .bleeds.every(b => b.kind !== "ci_lane_red"));
+    assert("CI LANES · an extra lane that could not be READ bleeds as BLIND and says the verdict on disk is last-known — silence must never look green on any lane",
+      compute({ ...base, awayDay: { ...twoLane, lanes: { "suite.yml": { ...twoLane.lanes["suite.yml"], state: "green", why: "success", unreachable: "getaddrinfo ENOTFOUND api.github.com" } } } }, cfg, now)
+        .bleeds.some(b => b.kind === "ci_lane_read_blind" && /ENOTFOUND/.test(b.evidence) && /last known/.test(b.evidence)));
+    // ⚠ WIDENED WITH awayday.mjs's CARD LAW, and asserted rather than assumed. That organ moved
+    // from one-card-per-RUN to one-card-per-RED-EPISODE (it had dealt twelve cards for one
+    // unbroken red), so `carded_run_id` now holds the run that OPENED the episode and no longer
+    // equals the CURRENT run. The old equality here went false exactly when it mattered most.
+    assert("CI LANES · 'his card is already spent' survives the episode: a standing red whose carded run is an EARLIER run still reports the card as dealt — under the old equality this went quiet precisely when this line became the only thing still saying so",
+      compute({ ...base, awayDay: { ...red, run_id: 999999, carded_run_id: 31436912105 } }, cfg, now)
+        .bleeds.some(b => b.kind === "away_day_lane_red" && /already been dealt/.test(b.evidence)));
+    assert("CI LANES · …and a lane with NO card dealt does not claim one",
+      !/already been dealt/.test((compute({ ...base, awayDay: { ...red, carded_run_id: null } }, cfg, now)
+        .bleeds.find(b => b.kind === "away_day_lane_red") || { evidence: "" }).evidence));
 
     // SELF-CLEARING, and never louder than GitHub itself: green is silent, and a
     // run still in flight or cancelled is not a verdict — awayday.mjs refuses to

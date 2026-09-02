@@ -43,7 +43,7 @@
 //        exit 1 instead of printing help and exiting 0 — see the comment there.
 // ============================================================================
 
-import { readFileSync, existsSync, writeFileSync, rmSync, mkdirSync, renameSync } from "node:fs";  // rm/tmpdir: selftest only. writeFileSync also carries the ONE state file this organ owns (awayday.json, house side) — never written from a cloud runner, which only ever calls `run`.
+import { readFileSync, existsSync, writeFileSync, rmSync, mkdirSync, renameSync, readdirSync } from "node:fs";  // rm/tmpdir: selftest only. writeFileSync also carries the ONE state file this organ owns (awayday.json, house side) — never written from a cloud runner, which only ever calls `run`.
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -526,6 +526,34 @@ function repoSlug(deps = {}) {
 // "cancelled"/"skipped"/"neutral" are human or no-op outcomes and are reported
 // verbatim but never carded. Anything still in flight is not a verdict at all.
 const RED_CONCLUSIONS = ["failure", "timed_out", "startup_failure"];
+
+// ============================================================================
+// EVERY LANE, NOT ONE LANE (2 Sep 2026, floor audit · bead af-7fn)
+// ----------------------------------------------------------------------------
+// WHAT WAS FOUND, by grep, on 2 Sep: `.github/workflows/suite.yml` — THE NEUTRAL
+// BASELINE MACHINE, commissioned 1 Sep as the blueprint's rung 0.4 — was RED on
+// BOTH matrix legs (136 passed / 7 failed, node 22 and node 24) and
+// `grep -rn "suite\.yml"` over the whole repo matched exactly one thing: the git
+// index. No organ, script, skill or package.json entry read it. This organ, the
+// one built to read a cloud verdict back home, could not see it either, because
+// WORKFLOW was a single hardcoded filename. suite.yml's own header says "A
+// verdict nobody can reach is not a verdict"; it solved that for a signed-out
+// HUMAN — it emits ::error annotations because the log endpoint 403s and the job
+// summary needs a login — and for NO ORGAN at all.
+// THE LIST IS READ FROM DISK, NEVER WRITTEN DOWN. A literal roster of lanes here
+// would be the exact jugad LAW PACK's own rule refuses, and the same mistake
+// W0-C's NO SHIM CALLEE ratchet was born from three days ago. A third workflow
+// added tomorrow is read back the day it lands, with no edit in this file.
+// ABSENT ≠ BROKEN, for the directory too: an unreadable workflows dir yields the
+// away-day lane alone, so this can never silently read back nothing.
+function workflowLanes(deps = {}) {
+  const dir = deps.workflowDir || join(__dirname, "..", ".github", "workflows");
+  let names = [];
+  try { names = (deps.readdir || readdirSync)(dir).filter((f) => /\.ya?ml$/i.test(f)); }
+  catch { return [WORKFLOW]; }
+  if (!names.includes(WORKFLOW)) names.push(WORKFLOW);   // this organ IS awayday.yml's runner
+  return names.sort();
+}
 function verdictOf(runRow) {
   if (!runRow) return { state: "unknown", why: "the lane has never run on main" };
   if (runRow.status !== "completed") return { state: "running", why: runRow.status || "in flight" };
@@ -534,11 +562,14 @@ function verdictOf(runRow) {
   return { state: "unknown", why: runRow.conclusion || "no conclusion" };
 }
 
-async function fetchLatestRun(slug, deps = {}) {
-  if (deps.fetchRun) return deps.fetchRun(slug);
+// `workflow` is a PARAMETER since 2 Sep 2026 (af-7fn) — it was WORKFLOW, closed over, which is
+// what made this reader blind to every lane but its own. The default keeps every existing caller
+// and every injected fixture working unchanged.
+async function fetchLatestRun(slug, deps = {}, workflow = WORKFLOW) {
+  if (deps.fetchRun) return deps.fetchRun(slug, workflow);
   // per_page=1 is not a tuned number: the endpoint is scoped to THIS workflow on
   // main, and the newest run is the only one whose verdict is current.
-  const url = `https://api.github.com/repos/${slug}/actions/workflows/${WORKFLOW}/runs?branch=main&per_page=1`;
+  const url = `https://api.github.com/repos/${slug}/actions/workflows/${workflow}/runs?branch=main&per_page=1`;
   const res = await fetch(url, {
     headers: { "user-agent": "arsenal-ai-fc-awayday", accept: "application/vnd.github+json" },
     signal: AbortSignal.timeout(NET_TIMEOUT_MS),
@@ -603,7 +634,22 @@ async function checkLane(deps = {}) {
   // twice, so a lane that stays red for a week is one card, not seven. LOCK 2 is
   // captains_call's own --key idempotency (LADDER B8) — two independent locks,
   // the same discipline as the groundsman's publish allowlist.
-  const shouldCard = v.state === "red" && runId !== null && (!prior || prior.carded_run_id !== runId);
+  //
+  // ⚠ CORRECTED 2 Sep 2026 (af-7fn): THE LINE ABOVE STATED THE LAW AND THE CODE BELOW HAS NEVER
+  // IMPLEMENTED IT. The test was `prior.carded_run_id !== runId` — a RUN id, not a red EPISODE —
+  // so an unbroken red carded again on every new run id. MEASURED on his live captains_call the
+  // day this was found: TWELVE `awayday:red:*` cards for one continuous red, against a comment
+  // promising one. The suite lane made it impossible to leave alone: it fires on push to `**`
+  // AND on pull_request, so per-run-id would have carded him once per push.
+  // FIXED AS A CLASS, NOT A PATCH (his standing law — an issue is never the one instance): BOTH
+  // lanes now card once when a lane ENTERS red, stay silent while it stays red, and re-arm on
+  // green. Two different card laws inside one organ would be exactly the patch shape he refuses.
+  // NOTHING IS HIDDEN BY THIS — it is the EDGE that got quieter, and the design already says the
+  // edge was never the state: physio bleeds the red into loop_vitals for as long as it stands and
+  // self-clears on green (see awayDayRead's header there, and the WHO CONSUMES IT block above).
+  // `red_since` is the episode's own stamp, so "carded" can never again mean "carded for a run".
+  const wasRed = !!(prior && prior.state === "red");
+  const shouldCard = v.state === "red" && runId !== null && !(wasRed && prior.carded_run_id != null);
 
   const next = {
     version: 1,
@@ -619,9 +665,19 @@ async function checkLane(deps = {}) {
     event: runRow ? runRow.event : null,
     ran_at: runRow ? runRow.updated_at : null,
     run_url: runRow ? runRow.html_url : null,
-    carded_run_id: shouldCard ? runId : (prior ? prior.carded_run_id ?? null : null),
+    // The episode's own two fields (af-7fn). `carded_run_id` keeps its NAME and its meaning for
+    // every existing reader — the run whose red was carded — it simply stops being re-stamped by
+    // each new run of the SAME red. Cleared on any non-red verdict, which is what re-arms the card.
+    carded_run_id: v.state === "red" ? (shouldCard ? runId : (prior ? prior.carded_run_id ?? null : null)) : null,
+    red_since: v.state === "red" ? ((wasRed && prior.red_since) || now.toISOString()) : null,
     unreachable: null,
   };
+
+  // HOISTED out of the `if` below (af-7fn) so every lane files through the SAME door with the
+  // same seam. Unchanged otherwise — still the owner's CLI, still no exec.
+  const fileCardFn = deps.fileCard || ((l, k, u) => execFileSync(process.execPath,
+    [join(__dirname, "captains_call.mjs"), "file", "--line", l, "--key", k, ...(u ? ["--open", u] : [])],
+    { encoding: "utf8", windowsHide: true, cwd: join(__dirname, ".."), timeout: NET_TIMEOUT_MS }));
 
   let carded = false;
   if (shouldCard) {
@@ -640,10 +696,7 @@ async function checkLane(deps = {}) {
     // prints the link the session reads. The LINE is unchanged: 140 chars is his
     // reading budget, and a URL spent half of it. Still no exec — captains_call
     // only PRINTS an `open` locator; nothing acts for him.
-    const fileCard = deps.fileCard || ((l, k, u) => execFileSync(process.execPath,
-      [join(__dirname, "captains_call.mjs"), "file", "--line", l, "--key", k, ...(u ? ["--open", u] : [])],
-      { encoding: "utf8", windowsHide: true, cwd: join(__dirname, ".."), timeout: NET_TIMEOUT_MS }));
-    try { fileCard(line, key, next.run_url); carded = true; }
+    try { fileCardFn(line, key, next.run_url); carded = true; }
     catch (e) {
       // A card that could not be filed must NOT be recorded as filed, or the red
       // never reaches him and lock 1 suppresses every retry after it.
@@ -651,8 +704,58 @@ async function checkLane(deps = {}) {
       next.card_error = String((e && e.message) || e).split("\n")[0].slice(0, 160);
     }
   }
+  // ── EVERY OTHER LANE (af-7fn) ───────────────────────────────────────────────────────────
+  // The away-day lane keeps the top level BYTE-FOR-BYTE — physio, /organism-doctor and this
+  // organ's own card lock all read those fields by name, and layering means adding beside, never
+  // moving (L9). Each other workflow's verdict lands under `lanes` in the SAME shape, so
+  // physio's `awayDayRead` reads one of these without a second parser existing anywhere.
+  // A LANE THAT CANNOT BE READ IS NAMED, NEVER SKIPPED: `unreachable` carries the reason and the
+  // last known verdict is kept verbatim, which is the rule the away-day path already follows —
+  // silence must never look green, and that is the whole reason this organ exists.
+  const others = workflowLanes(deps).filter((w) => w !== WORKFLOW);
+  const priorLanes = (prior && prior.lanes) || {};
+  next.lanes = {};
+  for (const wf of others) {
+    const was = priorLanes[wf] || null;
+    let row = null, laneUnreachable = null;
+    try { row = await fetchLatestRun(slug, deps, wf); }
+    catch (e) { laneUnreachable = String((e && e.message) || e).slice(0, 160); }
+    if (laneUnreachable) {
+      next.lanes[wf] = { ...(was || { state: "unknown" }), workflow: wf, checked_at: now.toISOString(), unreachable: laneUnreachable };
+      continue;
+    }
+    const lv = verdictOf(row);
+    const lid = row ? row.id : null;
+    const laneWasRed = !!(was && was.state === "red");
+    const laneShouldCard = lv.state === "red" && lid !== null && !(laneWasRed && was.carded_run_id != null);
+    const lane = {
+      workflow: wf, checked_at: now.toISOString(), state: lv.state, why: lv.why, run_id: lid,
+      status: row ? row.status : null, conclusion: row ? row.conclusion : null,
+      head_sha: row ? String(row.head_sha || "").slice(0, 7) : null,
+      event: row ? row.event : null, ran_at: row ? row.updated_at : null, run_url: row ? row.html_url : null,
+      carded_run_id: lv.state === "red" ? (laneShouldCard ? lid : (was ? was.carded_run_id ?? null : null)) : null,
+      red_since: lv.state === "red" ? ((laneWasRed && was.red_since) || now.toISOString()) : null,
+      unreachable: null,
+    };
+    if (laneShouldCard) {
+      // The lane NAMES ITSELF in the line: with more than one lane, "CI lane RED" is a wrong
+      // diagnosis half the time, and a wrong diagnosis in his one card costs him the sitting.
+      const laneName = wf.replace(/\.ya?ml$/i, "");
+      try {
+        fileCardFn(`${laneName} CI lane RED on ${lane.head_sha} — the cloud verdict on this lane is failing (run ${lid}). Dekh lein?`,
+          `awayday:red:${laneName}:${lid}`, lane.run_url);
+        carded = true;
+      } catch (e) {
+        lane.carded_run_id = was ? was.carded_run_id ?? null : null;
+        lane.card_error = String((e && e.message) || e).split("\n")[0].slice(0, 160);
+      }
+    }
+    next.lanes[wf] = lane;
+  }
+
   (deps.write || ((o) => writeAtomic(STATE, o)))(next);
-  return { ok: true, state: v.state, why: v.why, run_id: runId, head_sha: next.head_sha, run_url: next.run_url, carded };
+  return { ok: true, state: v.state, why: v.why, run_id: runId, head_sha: next.head_sha, run_url: next.run_url, carded,
+    lanes: next.lanes };
 }
 
 async function selftest() {
@@ -829,9 +932,15 @@ async function selftest() {
     const T = new Date("2026-08-10T04:00:00Z");
     const redRun = { id: 31359935125, status: "completed", conclusion: "failure", head_sha: "2c231686f11280614d2804debb4b4cfbdf7ccc26", event: "push", updated_at: "2026-08-10T05:52:15Z", html_url: "https://github.com/x/y/actions/runs/31359935125" };
     const greenRun = { ...redRun, id: 42, conclusion: "success" };
+    // `readdir` is pinned to the away-day lane alone (af-7fn) so every assertion below keeps
+    // testing exactly what it was written to test. Without it these would silently start
+    // driving whatever workflows happen to be on disk — the fixture would drift with the repo,
+    // which is the opposite of a fixture. The multi-lane behaviour gets its OWN block further
+    // down, with its own explicit two-lane roster.
     const drive = async (runRow, prior, extra = {}) => {
       let wrote = null; const cards = [];
       const r = await checkLane({ now: T, slug: "nikhil1429/arsenal-ai-fc", prior, fetchRun: async () => runRow,
+        readdir: () => [WORKFLOW],
         write: (o) => { wrote = o; }, fileCard: (l, k, u) => cards.push({ l, k, u }), ...extra });
       return { r, wrote, cards };
     };
@@ -857,9 +966,68 @@ async function selftest() {
     const again = await drive(redRun, red.wrote);
     assert("LOCK 1 — the SAME red run never cards twice (a week-long red is one card, not seven), and awayday.json is what remembers it",
       again.cards.length === 0 && again.wrote.carded_run_id === redRun.id && again.wrote.state === "red");
+    // ⚠ THIS ASSERT REPLACES ONE THAT ENCODED THE OPPOSITE LAW, and that is said out loud rather
+    // than quietly rewritten. It read: "a NEW red run does card again — lock 1 dedups a run, it
+    // never silences the lane", and it passed for three weeks while the lane dealt TWELVE cards
+    // for ONE unbroken red — the exact thing the comment beside it promised would not happen.
+    // The law it was protecting is "the lane can never go permanently silent", and that law is
+    // NOT dropped: it is asserted below in the form that actually holds — green RE-ARMS the card
+    // — and the standing red is carried by physio's bleed, which is asserted at the seam.
     const newRed = await drive({ ...redRun, id: 99, head_sha: "deadbee0000" }, red.wrote);
-    assert("a NEW red run does card again — lock 1 dedups a run, it never silences the lane",
-      newRed.cards.length === 1 && newRed.cards[0].k === "awayday:red:99");
+    assert("A NEW RED RUN INSIDE THE SAME RED DOES NOT CARD AGAIN — one card per red EPISODE, which is what the line above this always claimed and what the code never did (12 cards were dealt for one unbroken red)",
+      newRed.cards.length === 0 && newRed.wrote.state === "red" && newRed.wrote.carded_run_id === redRun.id);
+    assert("…and the EPISODE's own stamp is what makes that possible: red_since is set when the red opens and never re-stamped by a later run of the same red",
+      red.wrote.red_since === T.toISOString() && newRed.wrote.red_since === red.wrote.red_since);
+    const wentGreen = await drive(greenRun, newRed.wrote);
+    assert("GREEN CLEARS THE EPISODE — carded_run_id and red_since both drop, which is what re-arms the card; a lane can never go permanently silent",
+      wentGreen.wrote.state === "green" && wentGreen.wrote.carded_run_id === null && wentGreen.wrote.red_since === null
+      && wentGreen.cards.length === 0);
+    const redAgain = await drive({ ...redRun, id: 123 }, wentGreen.wrote);
+    assert("…and the NEXT red after a green cards again — the silence is bounded by the red itself, never by time",
+      redAgain.cards.length === 1 && redAgain.cards[0].k === "awayday:red:123");
+
+    // ── EVERY LANE, NOT ONE LANE (af-7fn, 2 Sep 2026) ────────────────────────────────────
+    // suite.yml was RED on both node legs and NO organ in the house could see it, this one
+    // included. These fail the moment the read-back narrows back to a single lane.
+    const twoLane = async (rows, prior) => {
+      let wrote = null; const cards = [];
+      await checkLane({ now: T, slug: "nikhil1429/arsenal-ai-fc", prior,
+        readdir: () => ["awayday.yml", "suite.yml"],
+        fetchRun: async (_s, wf) => rows[wf], write: (o) => { wrote = o; },
+        fileCard: (l, k, u) => cards.push({ l, k, u }) });
+      return { wrote, cards };
+    };
+    const bothRed = await twoLane({ "awayday.yml": redRun, "suite.yml": { ...redRun, id: 777, head_sha: "5uitered0000", html_url: "https://github.com/x/y/actions/runs/777" } }, null);
+    assert("A SECOND CLOUD LANE REACHES THE HOUSE: suite.yml's verdict is written under `lanes`, in the SAME row shape, so physio reads it with awayDayRead and no second parser exists anywhere",
+      bothRed.wrote.lanes["suite.yml"].state === "red" && bothRed.wrote.lanes["suite.yml"].run_id === 777
+      && bothRed.wrote.lanes["suite.yml"].head_sha === "5uitere" && bothRed.wrote.lanes["suite.yml"].workflow === "suite.yml");
+    assert("the away-day lane keeps the TOP LEVEL byte-for-byte — physio, /organism-doctor and this organ's own card lock all read those fields by name, so the new lanes are added BESIDE, never in place of (L9)",
+      bothRed.wrote.state === "red" && bothRed.wrote.run_id === redRun.id && bothRed.wrote.workflow === WORKFLOW
+      && bothRed.wrote.run_url === redRun.html_url);
+    assert("each red lane NAMES ITSELF in its own card — with more than one lane, 'CI lane RED' is a wrong diagnosis half the time, and a wrong diagnosis in his one card costs him the sitting",
+      bothRed.cards.length === 2 && bothRed.cards.some((c) => c.k === "awayday:red:suite:777" && /^suite CI lane RED/.test(c.l))
+      && bothRed.cards.some((c) => c.k === `awayday:red:${redRun.id}`));
+    const stillBothRed = await twoLane({ "awayday.yml": { ...redRun, id: 2 }, "suite.yml": { ...redRun, id: 888 } }, bothRed.wrote);
+    assert("the episode law holds PER LANE, not globally — new run ids on both, still red on both, ZERO further cards",
+      stillBothRed.cards.length === 0 && stillBothRed.wrote.lanes["suite.yml"].carded_run_id === 777);
+    const suiteBlind = await twoLane({ "awayday.yml": redRun, get "suite.yml"() { throw new Error("getaddrinfo ENOTFOUND api.github.com"); } }, bothRed.wrote);
+    assert("A LANE THAT CANNOT BE READ IS NAMED, NEVER SKIPPED: the failure is stamped on the row and the last known verdict is kept verbatim — silence must never look green, which is the whole reason this organ exists",
+      /ENOTFOUND/.test(suiteBlind.wrote.lanes["suite.yml"].unreachable || "")
+      && suiteBlind.wrote.lanes["suite.yml"].state === "red" && suiteBlind.wrote.lanes["suite.yml"].run_id === 777);
+    assert("THE LANE LIST IS READ FROM DISK, NEVER WRITTEN DOWN — a workflow added tomorrow is read back the day it lands, and a literal roster here would be the exact jugad LAW PACK's own rule refuses",
+      (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+               const fn = src.slice(src.indexOf("function workflowLanes"), src.indexOf("function verdictOf"));
+               return /readdir/.test(fn) && !/["']suite\.ya?ml["']/.test(fn)
+                 && workflowLanes({ readdir: () => ["a.yml", "b.yaml", "notes.md"] }).join() === "a.yml,awayday.yml,b.yaml"; })());
+    assert("…and an UNREADABLE workflows directory yields the away-day lane alone, so this can never silently read back nothing (absent ≠ broken, for the directory too)",
+      workflowLanes({ readdir: () => { throw new Error("ENOENT"); } }).join() === WORKFLOW);
+    assert("main()'s check mode PRINTS every lane, not just the first — a lane that is read but never printed is the same silence this rung came from (the groundsman relays this block into the push log)",
+      (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+               const tail = src.slice(src.indexOf("async function main"));
+               return /r\.lanes/.test(tail) && /Object\.entries/.test(tail); })());
+    assert("physio bleeds the OTHER lanes into loop_vitals, named, and reads them with awayDayRead — the standing state this organ's own card is deliberately NOT (the card is an edge, the bleed is the state)",
+      (() => { const p = readFileSync(join(__dirname, "physio.mjs"), "utf8");
+               return /ci_lane_red/.test(p) && /awayDay\.lanes|awayDay && world\.awayDay\.lanes|world\.awayDay\.lanes/.test(p) && /awayDayRead\(raw\)/.test(p); })());
 
     const green = await drive(greenRun, red.wrote);
     assert("a GREEN lane writes the verdict and files NOTHING — he is never woken for good news",
@@ -1103,6 +1271,13 @@ async function main() {
     const where = r.head_sha ? ` on ${r.head_sha}` : "";
     console.log(`awayday: cloud lane ${String(r.state).toUpperCase()}${where} — ${r.why}${r.carded ? " · card filed, it deals at his next anchor" : ""}`);
     if (r.state === "red" && r.run_url) console.log(`awayday: ${r.run_url}`);
+    // EVERY OTHER LANE PRINTS TOO (af-7fn). The groundsman relays this block into the push log,
+    // and a lane that is read but never printed is the same silence this rung came from.
+    for (const [wf, lane] of Object.entries(r.lanes || {})) {
+      const w = lane.head_sha ? ` on ${lane.head_sha}` : "";
+      console.log(`awayday: ${wf} ${String(lane.state).toUpperCase()}${w} — ${lane.unreachable ? `NOT READ TODAY :: ${lane.unreachable} (verdict on disk is the last known one)` : lane.why}`);
+      if (lane.state === "red" && lane.run_url) console.log(`awayday: ${lane.run_url}`);
+    }
     return;
   }
   // UNREACHABLE BY CONSTRUCTION — a mode declared in the table with no branch above.
@@ -1116,4 +1291,4 @@ async function main() {
 // a failing job must FAIL the run with a clean line, never an unhandled-rejection stack
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((e) => { console.error(`awayday: FAILED — ${e && e.message ? e.message : e}`); process.exit(1); });
 
-export { vetJobs, run, checkLane, verdictOf, repoSlug, failureTail };
+export { vetJobs, run, checkLane, verdictOf, repoSlug, failureTail, workflowLanes };
