@@ -102,6 +102,10 @@ Each one cost a session. None is a rule of thumb; each was measured.
   not exclusion.
 - **A DESTRUCTURED PARAM WITH NO DEFAULT vanishes from the `= {}` type**, so every call site passing
   it becomes a phantom `tsc` error. Give it a default — the JSDoc route makes it worse (TS8024).
+- **`bd` DOES NOT WRITE THE TRACKED FILE — RUN `bd export -o .beads/issues.jsonl` BEFORE COMMITTING.**
+  Measured 2 Sep: `bd show` said CLOSED while the git-tracked `issues.jsonl` still said `"open"` for
+  **all seven** beads closed that day. Every close lived only in the local database; a restore from
+  git would have erased the lot. Export, then confirm the status in the FILE, then commit.
 - **HIS DATA IS PUBLIC by his 1-Sep ruling** — never card him about his own exposure. Two carve-outs
   stand and are absolute: **live credentials**, and **anything naming other people**. Glance at the
   diff before every push.
