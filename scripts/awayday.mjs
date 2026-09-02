@@ -137,6 +137,89 @@ function vetJobs(manifest) {
   }
   return { runnable, refused };
 }
+// ============================================================================
+// THE FAILURE TAIL — what a red run is ALLOWED to say about itself
+// ----------------------------------------------------------------------------
+// EXTRACTED AND FIXED 2 Sep 2026 (floor audit, bead af-wxx). This was three lines
+// inside the default `exec` closure below, and it had ZERO test coverage: every
+// selftest in this file injects `exec`, so the closure has never once been driven
+// by a test. It is a function now for exactly that reason — the bite below drives
+// THIS, not a copy of it.
+//
+// WHAT IT USED TO BE, verbatim, so the change is readable without git:
+//     const lines = out.trim().split(/\r?\n/).filter((l) => l.trim());
+//     const red = lines.filter((l) => /✗|(^|\s)FAIL(ED)?\b/u.test(l)).slice(0, 6);
+//     const tail = [...red, "· · ·", ...lines.slice(-3)].join(" | ").slice(0, 650);
+// Edited in place, not frozen as a *Legacy body: the three `*Legacy` freezes in
+// this file are all EXPORTED or dispatch-selectable alternatives a caller can still
+// choose, and this is neither — it is one private expression, and its own 12 Aug
+// revision was made in place the same way, with the superseded behaviour kept in
+// the comment above it. That comment is kept below, unchanged.
+//
+// MEASURED ON LIVE RUN 33596776404 (2 Sep 2026, read through the public check-runs
+// annotations API — the ONE surface a signed-out reader can reach, since the logs
+// endpoint answers 403 without admin rights and both the web log and the job
+// summary need a sign-in). THREE DEFECTS, all in those three lines:
+//   D1 · A PASSING LINE WAS ELIGIBLE. An assert prints "  ✓ <name>" or "  ✗ <name>"
+//        (the assert helper in selftest() below), and the filter read the whole
+//        line — so any ✓ whose PROSE contains ✗ or FAIL matched. On that run all
+//        six slots went to passing asserts: "FAIL-CLOSED", "receipt ✗ with the
+//        owner's error", "a ✗ says what could not be done", "a FAILED spool write",
+//        "FAIL-OPEN". The annotation named five green checks and no failure.
+//   D2 · THE ORGAN-NAMING LINE COULD NEVER MATCH. Every organ ends its selftest
+//        with "<organ> selftest: N passed, M failed" — lowercase `failed`, and the
+//        pattern is uppercase-only with no `i` flag. The single most identifying
+//        line in the whole output was ineligible by construction.
+//   D3 · THE CAP ATE THE TAIL. `.slice(0, 650)` was applied AFTER joining red +
+//        separator + tail, so a long red block deleted the "· · ·" and the tail
+//        with it — that run's annotation ends mid-word. And `.slice(0, 6)` kept the
+//        FIRST six matches while the failure is always at the END of the output.
+// CONSEQUENCE, and it is the whole reason this rung exists: after 469 runs of this
+// lane, WHICH MEMBER KILLS IT HAS NEVER BEEN KNOWN. The bead could only say "red
+// for the same pre-existing reasons" because no reachable surface ever named one.
+//
+// THE BUDGET IS NOT MOVED. 650 here and 700 in dispatchAll stay exactly as they
+// are — this fixes ALLOCATION, not budget, and raising a cap to make something fit
+// is how the last cap stopped being believed. The tail is RESERVED first and the
+// red block spends what is left, so the red can never again eat the tail.
+const TAIL_BUDGET = 650;          // unchanged since 12 Aug 2026 — see above
+const LINE_CAP    = 180;          // per line; a member's NAME leads its line, so a
+                                  // left-anchored clip always keeps the name
+// A PASSING ASSERT IS NEVER EVIDENCE OF A FAILURE (D1). First non-space glyph "✓"
+// ⇒ the line is a pass by construction, whatever its prose says. Nothing real is
+// lost: a failure cannot print itself with a tick.
+const isPassLine = (l) => /^\s*✓/u.test(l);
+// STRICTLY MORE THAN BEFORE, never less (D2): the original uppercase FAIL/FAILED
+// and ✗ tests are both kept verbatim, and the organ summary line is ADDED beside
+// them. `[1-9]\d*` so a clean "0 failed" footer is not dragged in.
+const isRedLine = (l) => !isPassLine(l)
+  && (/✗|(^|\s)FAIL(ED)?\b/u.test(l) || /\b[1-9]\d*\s+failed\b/i.test(l));
+const clipLine = (l, n = LINE_CAP) => (l.length > n ? l.slice(0, n - 1) + "…" : l);
+function failureTail(out, deps = {}) {
+  const budget = deps.budget || TAIL_BUDGET;
+  const lines = String(out).trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) return "";
+  // The tail is claimed FIRST (D3) — three lines, each clipped — so whatever the red
+  // block costs, the reader still sees where the output actually stopped.
+  const tailPart = lines.slice(-3).map((l) => clipLine(l)).join(" | ");
+  const sep = tailPart ? " | · · · | " : "";
+  // NEWEST-FIRST, NOT OLDEST-FIRST (D3): walk the red lines from the END and keep
+  // what fits. In a fail-fast chain the failure is the last thing printed, so the
+  // line that names it is the last one that may be dropped, never the first.
+  const room = Math.max(0, budget - tailPart.length - sep.length);
+  const kept = [];
+  let used = 0;
+  for (const l of lines.filter(isRedLine).reverse()) {
+    const c = clipLine(l);
+    const cost = c.length + (kept.length ? 3 : 0);   // " | "
+    if (used + cost > room) break;
+    kept.unshift(c);
+    used += cost;
+  }
+  const redPart = kept.join(" | ");
+  return redPart ? redPart + sep + tailPart : tailPart;
+}
+
 async function run(deps = {}) {
   // deps.path lets the selftest drive a REAL file through this exact read (below), so the
   // absent-vs-broken split is proven end-to-end and not just at the helper.
@@ -190,9 +273,9 @@ async function run(deps = {}) {
       // two standing ntfy warnings after the one ✗ line that matters — so the
       // annotation carried everything except the failure. A red run's readable
       // surface must lead with the lines that went red.
-      const lines = out.trim().split(/\r?\n/).filter((l) => l.trim());
-      const red = lines.filter((l) => /✗|(^|\s)FAIL(ED)?\b/u.test(l)).slice(0, 6);
-      const tail = [...red, "· · ·", ...lines.slice(-3)].join(" | ").slice(0, 650);
+      // The three lines that used to sit here are now failureTail() above — see the
+      // header there for the three defects that made this print ✓ lines for 469 runs.
+      const tail = failureTail(out);
       throw new Error(`exit ${r.status} · ${tail || "(no output)"}`);
     }
     return out;
@@ -598,6 +681,56 @@ async function selftest() {
              const tail = src.slice(src.indexOf("async function main"));   // NOT a split on the mode string — this probe's own regex would match first
              return /ciAnnotate\(r\)/.test(tail) && /r\.failed/.test(tail); })());
 
+  // ── THE FAILURE TAIL, BITTEN ON THE REAL THING (2 Sep 2026, floor audit · af-wxx) ──
+  // The five ✓ lines below are VERBATIM from live away-day run 33596776404 (head 9f8d486),
+  // read through the public check-runs annotations API. They are what the annotation
+  // actually carried instead of the failure, for 469 runs. This fixture is the bite: it
+  // drives failureTail() itself, not a copy of it, and every assert here is red on the
+  // three-line expression this replaced.
+  const LIVE_RED = [
+    "  ✓ S13 RUNNER — TRANSITIVE, FAIL-CLOSED, ROOT NAMED: an unwritten brain_out input walks to the job whose `out` names that lane",
+    "  ✓ take_note when the owner errors: routed:false on the row, receipt ✗ with the owner's error — never a fake done",
+    "  ✓ the six thin act tools (set_agenda · set_preference · add_rule · queue_job · file_card · fire_mission) are declared and each is ONE dispatch; a ✗ says what could not be done",
+    "  ✓ #wire: a FAILED spool write is never silent, and never sets the paid-and-waiting flag",
+    "  ✓ C3.8 — FAIL-OPEN: an unreachable owner never blocks the lane",
+    "  ✗ THE ONE THAT DIED: pacer.mjs refuses an open loop older than its own deadline",
+    "",
+    "pacer selftest: 41 passed, 1 failed",
+  ].join("\n");
+  const liveTail = failureTail(LIVE_RED);
+  // THE TWO HALVES ARE JUDGED SEPARATELY, and that split is the finding itself. The RED
+  // BLOCK is a claim — "these lines went red" — and quoting a green check there is the bug.
+  // The TAIL is not a claim: it is the last three lines verbatim, showing where the output
+  // stopped, and it may legitimately contain a ✓. Asserting "no ✓ anywhere" would have been
+  // the easy assert and the wrong law.
+  const liveRedBlock = liveTail.split(" | · · · | ")[0];
+  assert("D1 — the RED BLOCK never quotes a PASSING assert, however much ✗ or FAIL its prose carries (five such lines filled every slot on live run 33596776404)",
+    !liveRedBlock.includes("✓") && !liveRedBlock.includes("S13 RUNNER") && !liveRedBlock.includes("FAIL-OPEN"));
+  assert("D1 — and the line that DID go red is named, which is the whole point of the surface",
+    liveRedBlock.includes("✗ THE ONE THAT DIED") && liveRedBlock.includes("pacer.mjs"));
+  assert("D2 — the organ's own summary line is captured: lowercase `failed` was ineligible under the uppercase-only pattern, and it is the single most identifying line in the output",
+    liveRedBlock.includes("pacer selftest: 41 passed, 1 failed"));
+  // The line still appears — in the TAIL, which quotes the last lines verbatim and is not a
+  // claim. What must not happen is a RED BLOCK being built out of it, and the absence of the
+  // "· · ·" separator is exactly how you tell: no separator means nothing was claimed red.
+  assert("D2 — but a clean footer is not dragged in: `0 failed` produces NO red claim at all",
+    !failureTail("everything fine\nrouter selftest: 12 passed, 0 failed").includes("· · ·"));
+  assert("D3 — the tail and its separator survive a red block far bigger than the whole budget; they used to be deleted by the cap that was applied after the join",
+    (() => { const big = failureTail([...Array(40)].map((_, i) => `  ✗ red number ${i} ` + "x".repeat(200)).join("\n") + "\nLAST LINE OF OUTPUT");
+             return big.includes("· · ·") && big.includes("LAST LINE OF OUTPUT"); })());
+  assert("D3 — when the reds do not all fit, the NEWEST survive and the oldest are dropped: in a fail-fast chain the failure is the last thing printed",
+    (() => { const big = failureTail([...Array(40)].map((_, i) => `  ✗ red number ${i} ` + "x".repeat(200)).join("\n") + "\nLAST LINE OF OUTPUT");
+             return big.includes("red number 39") && !big.includes("red number 0 "); })());
+  assert("the budget is honoured, not merely re-spent — 650 is unchanged from 12 Aug 2026 and this rung moved no cap",
+    failureTail([...Array(40)].map((_, i) => `  ✗ ` + "x".repeat(300)).join("\n")).length <= 650
+    && /const TAIL_BUDGET = 650;/.test(readFileSync(fileURLToPath(import.meta.url), "utf8")));
+  assert("empty or whitespace-only child output yields no tail at all, so the caller's `(no output)` fallback still fires",
+    failureTail("") === "" && failureTail("   \n  \n") === "");
+  assert("the default exec CALLS failureTail — the fix cannot be orphaned the way `failed` was for twelve days (the ciAnnotate probe pattern)",
+    (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+             const closure = src.slice(src.indexOf("const exec = deps.exec ||"), src.indexOf("const dispatch = deps.dispatch"));
+             return /failureTail\(out\)/.test(closure); })());
+
   // THE DROPPED-JOB WIRE (10 Aug 2026, wiring audit). run() returned on the FIRST red job, so
   // with the real 2-job manifest one red left squad-selftests — 22 selftests, the entire
   // learning loop — unrun AND unnamed: traced on an isolated copy, the string
@@ -922,4 +1055,4 @@ async function main() {
 // a failing job must FAIL the run with a clean line, never an unhandled-rejection stack
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((e) => { console.error(`awayday: FAILED — ${e && e.message ? e.message : e}`); process.exit(1); });
 
-export { vetJobs, run, checkLane, verdictOf, repoSlug };
+export { vetJobs, run, checkLane, verdictOf, repoSlug, failureTail };
