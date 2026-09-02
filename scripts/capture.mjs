@@ -435,6 +435,47 @@ export function supersedeReps(rows) {
   return (rows || []).filter((r) => !(r && r.ts && corrected.has(r.ts)));
 }
 
+// ── THE CORRECTION ROW (W0-E, 2 Sep 2026 · floor-audit B1) ───────────────────
+// PURE, and pulled out of the CLI on purpose: the `correct` verb writes through
+// REPS_LOG, a module const with no env seam, so its logic could not be driven by
+// a selftest — and a path this file never drove shipped WRITING NOTHING AT ALL
+// while printing success. The CLI now builds its row here, and the asserts below
+// drive the same function the captain's command does.
+//
+// HIS CONTENT, ITS OWN CLOCKS. Everything that makes the rep what it is — concept,
+// axis, question, surface, confidence, his gut-word — is carried WHOLE from the
+// original; only the verdict changes, plus the two fields that make it a walk-back
+// (`corrects`, `why`). The four CLOCK fields are deliberately NOT inherited:
+//   · `ts_claimed` — resolveClocks prefers a stored claim over anything a caller
+//     offers (its idempotence law). Inherited, the correction's `ts` collapses onto
+//     the original's, keyOf() matches, and the dedupe eats his walk-back. Measured
+//     on a copy of his real log: byte-identical file, `appended 0`, exit 0.
+//   · `ts` — with ts === corrects, supersedeReps() drops the correction AND the
+//     original (driven on fixtures: visible rows → []). A correction that can
+//     supersede itself is worse than no correction at all.
+//   · `observed_at` — 28 of the 37 live rows carry one, and a claim later than its
+//     arrival gets clamped, so an inherited arrival stamps a correction made today
+//     with a week-old `ts` and ts_source "claim_after_arrival": a false clock and a
+//     false provenance on a row arriving this second.
+//   · `ts_source` — derived, never carried; resolveClocks re-decides it.
+// The link back to "then" is `corrects`, which holds the original's ts. Nothing is
+// lost. And idempotence — the law that made inheriting tempting — still holds: a
+// stored correction re-read from disk returns its OWN stamps, so its key is stable
+// and it dedupes against itself rather than re-appending forever.
+// The options shape is DECLARED, not inferred: with only `now` carrying a default,
+// `tsc --checkJs` infers `{ now?: Date }` and reports the other three as unknown
+// properties — LAW T's TIER 0 gate, and its answer is JSDoc rather than a cast.
+/**
+ * @param {Record<string, any>} orig            the row being walked back, straight off the log
+ * @param {{ correct?: boolean, corrects?: string, why?: string, now?: Date }} [opts]
+ * @returns {Record<string, any>}               the correction row, clocks stamped fresh
+ */
+export function correctionRow(orig, { correct, corrects, why, now = new Date() } = {}) {
+  const { ts: _ts, ts_claimed: _tc, observed_at: _obs, ts_source: _src, ...content } = orig || {};
+  const at = now.toISOString();
+  return { ...content, ts: at, ts_claimed: at, observed_at: at, correct, corrects, why };
+}
+
 // DEDUP KEY (audit 30 Jul 2026): was [ts, question] only. A FORGE session logs many
 // reps in one burst, and its most common question text is literally "Bolo." — so two
 // reps on DIFFERENT concepts sharing a rounded/reused ts collapsed into one and the
@@ -2335,6 +2376,77 @@ function selftest() {
       cardRegistryDown({ why: "x", scriptsDir: __dirname, exec: () => { throw new Error("deck locked"); } }).filed === false);
   }
 
+  // ── W0-E (2 Sep 2026 · floor-audit B1) — THE WAY BACK, FINALLY DRIVEN ───────
+  // This path had NEVER been exercised, and it wrote nothing at all: measured on a
+  // copy of his real log, `correct` left the file byte-identical (sha 8edfbfb5e1df
+  // before and after), reported `appended 0`, exited 0, and printed "CORRECTED …
+  // every organ now skips the superseded row". A verdict about him, walked back by
+  // his own hand, disappeared in silence. Everything below drives the SAME function
+  // his command does.
+  {
+    const ORIG_TS = "2026-08-23T19:21:36.605Z";
+    const NOWC = new Date("2026-09-02T03:05:30.259Z");
+    // shaped like a real live row, including the two fields that did the damage
+    const orig = {
+      ts: ORIG_TS, ts_claimed: ORIG_TS, observed_at: "2026-08-28T20:30:28.449Z", ts_source: "claimed",
+      surface: "samjhao", track: "concept", concept: "tokenization", axis: "b",
+      question: "which requirement does word-level break?", confidence: "shaky", correct: true, note: "back-fill",
+    };
+    const corr = correctionRow(orig, { correct: false, corrects: ORIG_TS, why: "the judge marked the wording, not the mechanism", now: NOWC });
+
+    assert("B1 · the correction carries HIS CONTENT whole — concept, axis, question, surface, his gut-word and the note all survive; only the verdict changes",
+      corr.concept === orig.concept && corr.axis === orig.axis && corr.question === orig.question
+      && corr.surface === orig.surface && corr.confidence === orig.confidence && corr.note === orig.note
+      && corr.correct === false && orig.correct === true);
+    assert("B1 · and it carries ITS OWN CLOCKS — no ts, ts_claimed, observed_at or ts_source is inherited (each one of those four is a separate way this row vanished)",
+      corr.ts === NOWC.toISOString() && corr.ts_claimed === NOWC.toISOString()
+      && corr.observed_at === NOWC.toISOString() && corr.ts_source === undefined);
+    assert("B1 · his reason is never cut, and the pointer back to the original is exact",
+      corr.why === "the judge marked the wording, not the mechanism" && corr.corrects === ORIG_TS);
+
+    const vo = validateRep(orig, reg), vc = validateRep(corr, reg);
+    assert("B1 · both rows pass the SAME validator (a correction rides the rep door, not a softer one)", vo.ok && vc.ok);
+    assert("B1 · THE DEDUPE NO LONGER EATS IT — the correction's identity differs from the original's, which is the whole bug: keyOf matched exactly, so his walk-back was counted as a re-paste",
+      keyOf(vc.rep) !== keyOf(vo.rep));
+    assert("B1 · the clamp is gone too — a claim made today against a week-old inherited arrival used to land stamped 28 Aug as 'claim_after_arrival'; the correction now says plainly that it was claimed now",
+      vc.rep.ts === NOWC.toISOString() && vc.rep.ts_source === "claimed");
+
+    const visible = supersedeReps([vo.rep, vc.rep]);
+    assert("B1 · SUPERSESSION IS RIGHT WAY ROUND — the original is hidden and the CORRECTION SURVIVES",
+      visible.length === 1 && visible[0].corrects === ORIG_TS && visible[0].correct === false);
+    // ⚠ THE FROZEN COUNTER-EXAMPLE, kept because the audit named it FIRST and it is
+    // worse than the bug. Fixing only the dedupe key leaves ts === corrects, and
+    // supersedeReps drops every row whose ts is in the corrected set — so the
+    // correction supersedes ITSELF and takes the original down with it. This assert
+    // is what stops a future session from "simplifying" the clocks back.
+    const keyOnly = { ...orig, correct: false, corrects: ORIG_TS, why: "w" };
+    assert("B1 · and the audit's OTHER option is proved WORSE, not equivalent: leaving the original's clocks on the correction makes it supersede itself and takes the original with it (visible rows → 0)",
+      supersedeReps([orig, keyOnly]).length === 0);
+
+    assert("B1 · IDEMPOTENCE HOLDS — re-validating the STORED correction returns identical clocks and an identical key, so it dedupes against itself instead of re-appending forever",
+      (() => { const again = validateRep(vc.rep, reg);
+        return again.ok && keyOf(again.rep) === keyOf(vc.rep)
+          && again.rep.ts === vc.rep.ts && again.rep.ts_claimed === vc.rep.ts_claimed
+          && again.rep.observed_at === vc.rep.observed_at; })());
+
+    // THE FALSE-SUCCESS WIRE. The message block is CLI-inline (it prints, it does not
+    // return), so it is pinned the way this repo pins its other CLI-only contracts —
+    // off the file's own source. The old block printed "CORRECTED" unconditionally
+    // with `appended 0` sitting inside it: the number that says it failed, beside the
+    // sentence that says it worked. That is what hid this bug for as long as it lived.
+    {
+      const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+      const verb = src.slice(src.indexOf('if (mode === "corr' + 'ect") {'));
+      const body = verb.slice(0, verb.indexOf("\n  if (mode ==="));
+      const guardAt = body.indexOf("r.appended !== 1");
+      const claimAt = body.indexOf("capture: CORRECTED");
+      assert("B1 · THE SUCCESS LINE IS GUARDED — 'CORRECTED' can only be printed after the append is confirmed, and a non-appending correction exits non-zero instead of announcing itself",
+        guardAt > 0 && claimAt > guardAt && /process\.exit\(1\)/.test(body.slice(guardAt, claimAt)));
+      assert("B1 · …and the failure branch NAMES the loss in his terms — that the walk-back is not on disk and nothing downstream will see it",
+        /did NOT land/.test(body) && /NOT on disk/.test(body));
+    }
+  }
+
   rmSync(dir, { recursive: true, force: true });
   const passed = checks.every(([, ok]) => ok);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
@@ -2388,10 +2500,28 @@ function main() {
       console.error(`correct: --correct must be literally true or false (got: ${flag("correct") === undefined ? "MISSING" : JSON.stringify(flag("correct"))}). Nothing written.`);
       process.exit(1);
     }
-    const row = { ...orig, ts: new Date().toISOString(), correct: fixed, corrects: ofTs, why };  // WHOLE — never cut his reason (30 Aug 2026)
+    // W0-E (2 Sep 2026 · floor-audit B1): the row is built by correctionRow(), which
+    // is pure so the selftest can drive the same construction this command does — this
+    // path used to write NOTHING while printing success, and it was never once driven.
+    // The whole diagnosis (three separate reasons it vanished, and why the audit's
+    // first-named fix would have been worse) lives in that function's header.
+    const row = correctionRow(orig, { correct: fixed, corrects: ofTs, why });  // WHOLE — never cut his reason (30 Aug 2026)
     const v = validateRep(row, reg);
     if (!v.ok) { console.error(`correct: refused by the rep validator — ${v.error}. Nothing written.`); process.exit(1); }
     const r = ingest(REPS_LOG, [v.rep], reg);
+    // THE SUCCESS LINE MAY ONLY SPEAK WHEN THE ROW LANDED. The old block printed the
+    // whole "CORRECTED … every organ now skips the superseded row" message
+    // unconditionally, with `appended 0` sitting inside it — the number that says it
+    // failed, printed beside the sentence that says it worked. On a data-loss path
+    // that is the worst failure mode this file has, and it is what hid the bug above
+    // for as long as it existed.
+    if (r.appended !== 1) {
+      console.error(`correct: the correction did NOT land — appended ${r.appended}. His walk-back is NOT on disk and nothing downstream will see it.`);
+      if (r.duplicates) console.error(`  the ingest counted it as a duplicate of a row already on file (dedupe key: ts_claimed + concept + axis + question).`);
+      if (r.rejected) console.error(`  rejected by the validator: ${(r.errors || []).slice(0, 2).join(" · ")}`);
+      console.error(`  nothing was overwritten; the original ${ofTs} is untouched. Fix the cause, then re-run — do not hand-edit the log.`);
+      process.exit(1);
+    }
     console.log(`capture: CORRECTED ${orig.concept}${orig.axis ? " " + orig.axis : ""} — correct ${orig.correct} → ${fixed} (the original ${ofTs} is untouched on disk)`);
     console.log(`  why: ${why.slice(0, 300)}`);
     console.log(`  appended ${r.appended}; every organ that derives from reps_log now skips the superseded row (nemesis · calibration · learning_state · fsrs · this file)`);

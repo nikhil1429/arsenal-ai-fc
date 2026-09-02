@@ -1,5 +1,5 @@
 {
- "built_at": "2026-09-02T02:47:54.406Z",
+ "built_at": "2026-09-02T05:13:12.646Z",
  "organs_parsed": 112,
  "organs_expected": 112,
  "parse_errors": [],
@@ -2693,7 +2693,7 @@
    "unresolved": 6
   },
   "capture.mjs": {
-   "loc": 2673,
+   "loc": 2803,
    "reads": [
     {
      "path": "dressing-room/state/capture_config.json",
@@ -2712,22 +2712,26 @@
     {
      "path": "scripts/capture.mjs",
      "lines": [
-      1877,
-      1910,
-      2128,
-      2263,
-      1877,
-      1910,
-      2128,
-      2263,
-      1877,
-      1910,
-      2128,
-      2263,
-      1877,
-      1910,
-      2128,
-      2263
+      1918,
+      1951,
+      2169,
+      2304,
+      2438,
+      1918,
+      1951,
+      2169,
+      2304,
+      2438,
+      1918,
+      1951,
+      2169,
+      2304,
+      2438,
+      1918,
+      1951,
+      2169,
+      2304,
+      2438
      ],
      "fixture": true
     },
@@ -2746,47 +2750,47 @@
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      469,
-      471,
-      469,
-      471,
-      654,
-      469,
-      471,
-      654
+      510,
+      512,
+      510,
+      512,
+      695,
+      510,
+      512,
+      695
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/gemini_quality.jsonl",
      "lines": [
-      1232,
-      1234,
-      1232,
-      1234,
-      825,
-      825,
-      1232,
-      1234,
-      825,
-      825
+      1273,
+      1275,
+      1273,
+      1275,
+      866,
+      866,
+      1273,
+      1275,
+      866,
+      866
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/heartbeat_config.json",
      "lines": [
-      1511,
-      1511,
-      1511
+      1552,
+      1552,
+      1552
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/reps_log.jsonl.quarantine.jsonl",
      "lines": [
-      825,
-      825
+      866,
+      866
      ],
      "fixture": false
     }
@@ -2795,9 +2799,9 @@
     {
      "path": "dressing-room/state/gemini_quality.jsonl",
      "lines": [
-      833,
-      833,
-      833
+      874,
+      874,
+      874
      ],
      "verbs": [
       "appendFileSync"
@@ -2807,8 +2811,8 @@
     {
      "path": "dressing-room/state/reps_log.jsonl.quarantine.jsonl",
      "lines": [
-      629,
-      629
+      670,
+      670
      ],
      "verbs": [
       "appendFileSync"
@@ -2818,9 +2822,9 @@
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      655,
-      511,
-      655
+      696,
+      552,
+      696
      ],
      "verbs": [
       "appendFileSync",
@@ -2834,7 +2838,7 @@
      "kind": "organ",
      "script": "captains_call.mjs",
      "verb": "file",
-     "line": 1031,
+     "line": 1072,
      "ctx": "cardRejectedReps"
     }
    ],
@@ -2845,12 +2849,12 @@
      "catch_stmts": 1
     },
     {
-     "line": 939,
+     "line": 980,
      "try_stmts": 19,
      "catch_stmts": 3
     },
     {
-     "line": 1510,
+     "line": 1551,
      "try_stmts": 4,
      "catch_stmts": 0
     },
@@ -2860,12 +2864,12 @@
      "catch_stmts": 1
     },
     {
-     "line": 939,
+     "line": 980,
      "try_stmts": 19,
      "catch_stmts": 3
     },
     {
-     "line": 1510,
+     "line": 1551,
      "try_stmts": 4,
      "catch_stmts": 0
     },
@@ -2875,12 +2879,12 @@
      "catch_stmts": 1
     },
     {
-     "line": 939,
+     "line": 980,
      "try_stmts": 19,
      "catch_stmts": 3
     },
     {
-     "line": 1510,
+     "line": 1551,
      "try_stmts": 4,
      "catch_stmts": 0
     },
@@ -2890,12 +2894,12 @@
      "catch_stmts": 1
     },
     {
-     "line": 939,
+     "line": 980,
      "try_stmts": 19,
      "catch_stmts": 3
     },
     {
-     "line": 1510,
+     "line": 1551,
      "try_stmts": 4,
      "catch_stmts": 0
     }
@@ -2929,6 +2933,7 @@
     "cardUnreadableFiles",
     "chainHeartbeat",
     "chainTimeoutMs",
+    "correctionRow",
     "enrichConcept",
     "enrichConceptLegacy",
     "geminiBatchStats",
@@ -30169,6 +30174,6 @@
     "verbs": []
    }
   ],
-  "md_files": 238
+  "md_files": 239
  }
 }

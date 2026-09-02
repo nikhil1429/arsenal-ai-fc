@@ -1,6 +1,6 @@
 {
   "date": "2026-09-02",
-  "generated_at": "2026-09-01T19:26:40.548Z",
+  "generated_at": "2026-09-02T05:11:26.661Z",
   "total_reps": 0,
   "status": "awaiting_data",
   "low_confidence": true,
@@ -146,7 +146,7 @@
     "axes_ungraded": [],
     "started_at": "2026-09-01T01:09:46.726Z",
     "stale": true,
-    "stale_as_of": "2026-09-01T19:26:40.548Z",
+    "stale_as_of": "2026-09-02T05:11:26.661Z",
     "last_closed": {
       "concept": "tokenization",
       "ended_at": "2026-09-01T01:09:37.244Z",
