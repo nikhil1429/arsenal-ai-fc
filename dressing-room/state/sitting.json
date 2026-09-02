@@ -1,126 +1,29 @@
 {
-  "id": "sit_20260830_1059_7973",
+  "id": "sit_20260903_2104_2520",
   "captain": "Nikhil (#14)",
   "surfaces": [
-    "voice"
+    "code"
   ],
-  "task": "Tokenization",
+  "task": "tokenization",
   "task_id": "1-04",
   "track": "concept",
   "route": "FORGE",
-  "concept": "tokenization",
-  "route_why": "forge session open @ step 0 — resume, kuch dobara nahi",
-  "claude_session_id": "b4031d29-a643-4406-b9c5-79a75280b75a",
-  "transport": "stream",
-  "opened_at": "2026-08-30T10:59:31.275Z",
-  "last_turn_at": "2026-08-30T10:59:31.275Z",
-  "closed_at": "2026-08-30T11:20:34.196Z",
+  "concept": "hallucinations",
+  "route_why": "purani forge session stale (>18h) — owner CLI se band, phir 'Hallucinations' shuru",
+  "claude_session_id": null,
+  "transport": "code",
+  "opened_at": "2026-09-02T21:04:21.451Z",
+  "last_turn_at": "2026-09-02T21:04:21.452Z",
+  "closed_at": "2026-09-02T21:24:22.447Z",
   "close_reason": "idle",
-  "plan": [
-    {
-      "i": 0,
-      "kind": "map",
-      "step": 0,
-      "axis": "a",
-      "text": "Captain, aaj sirf tokenization ka axis a — ek hi cheez. Teen padaav: pehle tera apna guess, bina meri madad; phir hum token ko haath se kholenge; phir tera locked weld wapas. Ant mein tere paas ek saaf line — token kya hai, aur tokenization ka kaam kahan khatam hota hai. Shuru karein?",
-      "question": true,
-      "est_seconds": 30,
-      "src": [
-        "capsule"
-      ]
-    },
-    {
-      "i": 1,
-      "kind": "question",
-      "step": 1,
-      "axis": "a",
-      "text": "Tu yahan hai: padaav ek, tera Pehle-Guess. Main abhi kuch nahi bataunga. Pehle gut-word bol — knew, shaky, ya guessed? Phir do cheezein: token exactly kya hai, aur tokenization ka kaam kahan jaakar khatam ho jaata hai? 'Abhi yaad nahi' poora legal jawab hai — bas guess ko guess bol dena. Bata, gut-word kya hai?",
-      "question": true,
-      "est_seconds": 45,
-      "src": [
-        "capsule"
-      ]
-    },
-    {
-      "i": 2,
-      "kind": "unit",
-      "step": 2,
-      "axis": "a",
-      "text": "Tu yahan hai: padaav do, pehla tukda. Ek moti dictionary soch — usme fixed shabd-tukde chhape hain, aur har page pe number. Ye kitaab ek baar chhap gayi, ab badalti nahi; lagbhag ek lakh entries. Token matlab usi kitaab ka ek text-tukda: kabhi ek akshar, kabhi aadha shabd, kabhi pura common shabd. Aur har tukde ke saath ek fixed ID number chipka hai. Bas itna — token koi jaadu nahi, catalog ki ek entry hai.",
-      "question": false,
-      "est_seconds": 50,
-      "src": [
-        "capsule"
-      ]
-    },
-    {
-      "i": 3,
-      "kind": "unit",
-      "step": 3,
-      "axis": "a",
-      "text": "Tu yahan hai: padaav do, doosra tukda. Ab tokenization ka kaam — sirf do steps. Ek: tera text uthao aur usi chhapi hui kitaab ke known tukdon mein todo. Do: har tukde ka page number, matlab uska ID, line se likh do. Bas. Output ek numbers ki list hai, jaise [4,5]. Na koi matlab, na koi samajh — sirf tukde aur unke numbers.",
-      "question": false,
-      "est_seconds": 45,
-      "src": [
-        "capsule"
-      ]
-    },
-    {
-      "i": 4,
-      "kind": "unit",
-      "step": 4,
-      "axis": "a",
-      "text": "Tu yahan hai: padaav do, teesra tukda — aur yahi asli daraar hai. Tokenizer ka kaam us ID-list pe KHATAM. Usse aage un IDs ko matlab-wala vector dena, woh embedding hai — bilkul alag, agla stage. Ghar ki soch: raashan ki parchi banana ek kaam, aur dukaan se saamaan uthana doosra kaam. Tokenizer sirf parchi banata hai, saamaan nahi laata.",
-      "question": false,
-      "est_seconds": 45,
-      "src": [
-        "capsule"
-      ]
-    },
-    {
-      "i": 5,
-      "kind": "question",
-      "step": 5,
-      "axis": "a",
-      "text": "Tu yahan hai: padaav do ka end, chhota check. Pehle gut-word — knew, shaky, ya guessed? Phir sirf ek option chun: tokenizer ka aakhri output kya hai — (A) numbers ki ID list, ya (B) shabd ka matlab? Gut-word pehle bol?",
-      "question": true,
-      "est_seconds": 30,
-      "src": [
-        "capsule"
-      ]
-    },
-    {
-      "i": 6,
-      "kind": "recital",
-      "step": 6,
-      "axis": "a",
-      "text": "Token = ek fixed catalog (vocab, ~1 lakh entries) ka text-tukda - letter, subword, ya pura common word. Har token ka ek fixed ID number. Tokenization = text ko un tukdon mein todna + har tukde ka ID nikaalna. Kaam ID-list pe KHATAM (e.g. [4,5]). Un IDs ko meaning-vector dena = embedding (alag, agla stage). Analogy: tokenizer = dictionary jo text ko known shabd-tukdon mein todta aur har ka 'page number' (ID) deta.",
-      "question": false,
-      "est_seconds": 50,
-      "src": [
-        "capsule"
-      ]
-    },
-    {
-      "i": 7,
-      "kind": "question",
-      "step": 7,
-      "axis": "a",
-      "text": "Tu yahan hai: aakhri padaav, axis a ka closing. Pehle gut-word — knew, shaky, ya guessed? Phir apne shabdon mein, ek ya do line: token kya hai, aur tokenizer ka kaam kahan khatam hota hai? Meri lines dobara mat bol — jo tere dimaag mein baitha hai wahi bol. Gut-word kya hai?",
-      "question": true,
-      "est_seconds": 40,
-      "src": [
-        "capsule"
-      ]
-    }
-  ],
-  "plan_source": "model",
-  "plan_map": "Captain, aaj sirf tokenization ka axis a — ek hi cheez. Teen padaav: pehle tera apna guess, bina meri madad; phir hum token ko haath se kholenge; phir tera locked weld wapas. Ant mein tere paas ek saaf line — token kya hai, aur tokenization ka kaam kahan khatam hota hai. Shuru karein?",
-  "cursor": 1,
-  "unit_seq": 2,
+  "plan": [],
+  "plan_source": null,
+  "plan_map": null,
+  "cursor": 0,
+  "unit_seq": 0,
   "pending_question": null,
   "forge_step": 0,
-  "forge_axis": "a",
+  "forge_axis": null,
   "effort": {
     "compose": "high",
     "respond": "high",
@@ -128,30 +31,21 @@
     "_note": "one live child = ONE effort (a per-spawn flag, probed 18 Aug); the child runs at effort.compose. respond latency is MEASURED into sitting_log — §18: if p50 > 10 s, move respond down; never before the numbers."
   },
   "model": "opus",
-  "head_chars": 34215,
-  "head_footer": "[sitting_system: role 2717 · how_he_learns 1574 · gaffer_law 16168 · captain 154 · agenda EMPTY · kickoff 810 · plan 125 · capsule 10896 · review_of_last 176 · intents 777 · standing EMPTY · night_coach 82 (TRIMMED from 4146 — cap 4000) · pacer_note 437 · assembled 34215/60000]",
-  "inputs_read": [
-    "learning-layer/HOW_HE_LEARNS.md",
-    "THE_GAFFER.md",
-    "dressing-room/state/captain.json",
-    "learnstate json",
-    "dressing-room/state/capsules/tokenization.json",
-    "dressing-room/state/sitting_reviews.jsonl",
-    "dressing-room/state/session_intent.jsonl",
-    "brain_out/night_coach/2026-08-30.md"
-  ],
+  "head_chars": 0,
+  "head_footer": null,
+  "inputs_read": [],
   "stats": {
-    "turns": 2,
+    "turns": 0,
     "by_class": {
-      "deliver": 1,
+      "deliver": 0,
       "respond": 0,
-      "compose": 1,
+      "compose": 0,
       "judge": 0
     },
     "tokens": {
-      "input": 2,
-      "output": 4019,
-      "cache_creation": 14790,
+      "input": 0,
+      "output": 0,
+      "cache_creation": 0,
       "cache_read": 0
     },
     "latency_ms": {
@@ -160,10 +54,10 @@
       "compose": [],
       "judge": []
     },
-    "units_composed": 2,
+    "units_composed": 0,
     "units_delivered": 0,
     "banked": 0,
-    "owner_calls": 1,
-    "head_tokens": 14790
+    "owner_calls": 3,
+    "head_tokens": null
   }
 }

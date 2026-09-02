@@ -104,6 +104,16 @@
       "retired_at": "2026-09-01T18:34:17.715Z",
       "retired_why": "not a concept at all - his whole kickoff sentence arrived at stage-topic on 19 Aug through the forge-start door and became an id, an open row and a 195-character filename; the syllabus gate refuses this shape now",
       "retired_file": "dressing-room/missions/retired/t-i-am-going-in-claude-code-and-starting-the-ent.md"
+    },
+    {
+      "id": "T-hallucinations@2026-09-03",
+      "type": "topic_open",
+      "cluster": null,
+      "concept": "hallucinations",
+      "file": "dressing-room/missions/t-hallucinations-2026-09-03.md",
+      "staged_at": "2026-09-02T21:04:21.928Z",
+      "ingested_at": null,
+      "report": null
     }
   ],
   "syllabus_audit": {
@@ -270,6 +280,11 @@
       "id": "T-i am going in claude code and starting the entire organism. i have to get a job in the next 45 days. i have to finish every single thing in the next 45 days. that is the plan for domination.",
       "rows": 1,
       "why": "not a concept at all - his whole kickoff sentence arrived at stage-topic on 19 Aug through the forge-start door and became an id, an open row and a 195-character filename; the syllabus gate refuses this shape now"
+    },
+    {
+      "ts": "2026-09-02T21:04:21.928Z",
+      "kind": "stage_topic",
+      "id": "T-hallucinations@2026-09-03"
     }
   ]
 }

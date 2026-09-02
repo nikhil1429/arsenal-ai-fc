@@ -1,16 +1,16 @@
 {
-  "date": "2026-09-01",
-  "staged_at": "2026-09-01T17:25:02.481Z",
-  "concept": "hallucinations",
-  "picked_because": "stalling/regressing in learning_state",
-  "shape": "phenomenon",
+  "date": "2026-09-02",
+  "staged_at": "2026-09-02T17:25:03.351Z",
+  "concept": "tokenization",
+  "picked_because": "capsule floor — GAME ON (2026-08-30): 22 pre-restart rep(s) are record, not evidence, and no post-restart rep exists yet",
+  "shape": "mechanism",
   "shape_source": "examiner registry",
   "shape_unverified": false,
-  "template": "detect",
-  "task": "Write a DETECTOR in Python: given a model output (and whatever grounding you decide it needs), return a judgement about whether hallucinations occurred. You choose the signal; defend it while you type.",
+  "template": "extend",
+  "task": "Start from a working minimal tokenization (the examiner provides it). Extend it with ONE realistic production constraint (batching, caching, or an input guard) — his choice, defended.",
   "hidden_tests": [
-    "run it on one clean case and one hallucinations case — it must separate them",
-    "hand him a case his detector gets WRONG, and ask him to explain the failure before fixing it",
-    "ask for the precision/recall trade-off his threshold implies, and which one he would rather lose here"
+    "run before-and-after on the same input; the behavior must be identical where the constraint doesn't bind",
+    "construct one input where the extension actually matters, and run it",
+    "ask for the cost of the extension (memory/latency) and sanity-check the claim in code"
   ]
 }

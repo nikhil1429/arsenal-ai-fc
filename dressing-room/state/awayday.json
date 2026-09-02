@@ -1,17 +1,36 @@
 {
   "version": 1,
-  "checked_at": "2026-09-02T01:09:58.349Z",
+  "checked_at": "2026-09-02T22:15:02.805Z",
   "repo": "nikhil1429/arsenal-ai-fc",
   "workflow": "awayday.yml",
-  "state": "red",
-  "why": "failure",
-  "run_id": 33571129937,
+  "state": "green",
+  "why": "success",
+  "run_id": 33625280019,
   "status": "completed",
-  "conclusion": "failure",
-  "head_sha": "f536efb",
-  "event": "schedule",
-  "ran_at": "2026-09-01T23:28:58Z",
-  "run_url": "https://github.com/nikhil1429/arsenal-ai-fc/actions/runs/33571129937",
-  "carded_run_id": 33571129937,
-  "unreachable": null
+  "conclusion": "success",
+  "head_sha": "7671669",
+  "event": "push",
+  "ran_at": "2026-09-02T11:35:37Z",
+  "run_url": "https://github.com/nikhil1429/arsenal-ai-fc/actions/runs/33625280019",
+  "carded_run_id": null,
+  "red_since": null,
+  "unreachable": null,
+  "lanes": {
+    "suite.yml": {
+      "workflow": "suite.yml",
+      "checked_at": "2026-09-02T22:15:02.805Z",
+      "state": "red",
+      "why": "failure",
+      "run_id": 33625280010,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_sha": "7671669",
+      "event": "push",
+      "ran_at": "2026-09-02T11:39:20Z",
+      "run_url": "https://github.com/nikhil1429/arsenal-ai-fc/actions/runs/33625280010",
+      "carded_run_id": 33625280010,
+      "red_since": "2026-09-02T22:15:02.805Z",
+      "unreachable": null
+    }
+  }
 }
