@@ -1,5 +1,5 @@
 {
- "built_at": "2026-09-02T11:23:51.007Z",
+ "built_at": "2026-09-02T11:33:06.341Z",
  "organs_parsed": 112,
  "organs_expected": 112,
  "parse_errors": [],
@@ -28589,6 +28589,11 @@
     "verb": null
    },
    {
+    "skill": "sitting",
+    "script": "state.mjs",
+    "verb": null
+   },
+   {
     "skill": "talk",
     "script": "talk.mjs",
     "verb": null
@@ -30258,6 +30263,6 @@
     "verbs": []
    }
   ],
-  "md_files": 240
+  "md_files": 241
  }
 }
