@@ -198,6 +198,14 @@ export function gather(now = new Date()) {
     contract: { exists: existsSync(CONTRACT), json: null, unreadable: false },
     auditLast: readJson(AUDIT_LAST),
     affToday: { total: 0, teaching: 0, readable: existsSync(AFFERENT) },
+    // THE INBOUND LIVENESS ROWS (af-kih, 2 Sep 2026). This read used to sit INSIDE checks(),
+    // which made the one pure judge in this file secretly machine-dependent — see the long note
+    // at its call site. It lives here now, beside every other disk read this function does, and
+    // it fails the same way they do: unreadable ⇒ [] with a journal line, never a throw.
+    afferentRows: (() => {
+      try { return readFileSync(AFFERENT, "utf8").split(/\r?\n/).filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); }
+      catch (e) { swallow("gather: afferent.jsonl unreadable → the inbound liveness check has no rows to judge", e); return []; }
+    })(),
     auditRowsToday: 0,
     auditLogExists: existsSync(AUDIT_LOG),
     // THE OPPONENT PAIR (7 Aug 2026, captain's market_scan ruling). OPPONENT_SCOUT.md
@@ -667,14 +675,38 @@ export function checks(w) {
   // can be late — a naive age scan called three sources silent on 19 Aug and all three were false,
   // which would have RAISED the LOAD number while claiming to protect it. thalamus.mjs holds the
   // declaration (it is the bus's sole writer); this organ, which sits outside it, does the asking.
-  // the reader is INLINE on purpose: this file has NO readLines/readJsonl helper, and calling one
-  // that does not exist is a ReferenceError the swallow would eat — shipping green while the check
-  // never ran once. This file already carries the scar of exactly that (see the note further down),
-  // and the first cut of THIS line repeated it.
-  F.push(...afferentLiveness((() => {
-    try { return readFileSync(AFFERENT, "utf8").split(/\r?\n/).filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); }
-    catch (e) { swallow("findings: afferent.jsonl unreadable → the inbound liveness check has no rows to judge", e); return []; }
-  })(), new Date()));
+  // ⚠ THE ROWS COME FROM `w` NOW, AND THAT IS THE WHOLE OF BEAD af-kih (2 Sep 2026).
+  // This was an INLINE `readFileSync(AFFERENT)` right here — the ONE disk read inside a function
+  // every other line of which is a pure judgement over `w`. The reasoning in the comment above
+  // was sound (a helper that does not exist is a ReferenceError the swallow eats) and the fix for
+  // it was the wrong shape: the read belongs in gather(), where every other disk read in this file
+  // already lives, not in the judge.
+  // WHAT IT COST, MEASURED: `node scripts/watchman.mjs selftest` was 120 passed / 0 failed at home
+  // and 118 passed / 2 failed in a clean checkout — the same tree, the same minute. Reproduced in
+  // a fresh clone: `afferent.jsonl` is gitignored, so a checkout has no rows, so every source
+  // DECLARED live in thalamus's contract has "never been seen" and raises `afferent-silent`. Two
+  // of them (activitywatch, presence) landed inside `checks(base)`, and the two asserts that
+  // compare an EXACT finding set — "CLEAN — a healthy day yields ZERO findings" and
+  // "c12 RED — …a recent green run is silent" — failed on findings their fixture never asked for.
+  // That is what has been killing the away-day CI lane, unnamed, for 469 runs: the runner drives
+  // `organism:selftest`, this member exits 1 there and nowhere else, and until the annotation was
+  // repaired two rungs ago nothing could say which member it was.
+  // THE DEEPER FAULT IS NOT THE TWO REDS — IT IS THAT `checks()` WAS NEVER PURE. Every assert in
+  // the selftest that drives it was silently measuring `base` PLUS whatever this laptop's bus
+  // happened to hold. It read green here only because the file is fresh here; the moment a real
+  // source went quiet at home, every exact-set assert in this suite would have gone red at once,
+  // for a reason none of them names. Passing the rows through `w` is what makes the fixture the
+  // whole input again.
+  // BACKWARD-COMPATIBLE ON PURPOSE (L9): a caller that hands no `afferentRows` — an older test, an
+  // organ calling checks() with a hand-built world — gets `[]`, which is exactly what the old read
+  // returned when the file was missing. Nothing that used to run stops running.
+  // AND THE CLOCK COMES FROM `w` TOO — same fault, same line, found while fixing the first half.
+  // This was `new Date()`: a judge that reaches for the ambient clock cannot be driven by a
+  // fixture at all, because rows dated to the fixture's day are always "silent" against real now.
+  // In production the two are the same instant — gather(now) stamps `w.now` and checks(w) runs on
+  // the next line — so this changes nothing that runs and everything that can be tested.
+  F.push(...afferentLiveness(Array.isArray(w.afferentRows) ? w.afferentRows : [],
+    w.now ? new Date(w.now) : new Date()));
 
   // LADDER E8 · THE COACH THAT DIDN'T TEACH — night_coach is enabled and this
   // morning's lesson file never appeared. The map, the examiner probe, the
@@ -1827,6 +1859,17 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
     auditLast: { stop: { at: "2026-08-06T13:00:00+05:30", audited: true, why: null } },
     affToday: { total: 20, teaching: 8, readable: true },
     auditRowsToday: 8, auditLogExists: true,
+    // A HEALTHY DAY NOW SAYS SO OUT LOUD (af-kih, 2 Sep 2026). Until this line the fixture was
+    // silent about the inbound bus and checks() read the LAPTOP's afferent.jsonl instead — so
+    // "a healthy day yields ZERO findings" was really "a healthy day on this machine", and it was
+    // 120/0 here while a clean checkout ran 118/2 on the same commit. Both declared-live pollers
+    // get a row inside their cadence (activitywatch 12 h, presence 36 h — thalamus's own contract,
+    // read from there, never restated here). Every other source in that contract is event-only,
+    // retired or depends-on-him, and none of those can ever be "late" by design.
+    afferentRows: [
+      { source: "activitywatch", ts: "2026-08-06T19:00:00+05:30" },
+      { source: "presence", ts: "2026-08-06T09:00:00+05:30" },
+    ],
   };
   assert("c4b PROJECTION LAG — canon newer than its projection → RED projection-stale, both mtimes in evidence",
     checks({ ...base, scout_pair: { canon_mtime: 2000, projection_mtime: 1000 } })
@@ -1840,6 +1883,36 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
 
   assert("CLEAN — a healthy day yields ZERO findings (the detector can fail, so a clean is a measured clean)",
     checks(base).length === 0);
+
+  // ── af-kih (2 Sep 2026) — THE JUDGE MUST BE PURE, AND THIS IS THE RATCHET THAT KEEPS IT SO ──
+  // The line above passed at home and FAILED in a clean checkout: 120/0 here, 118/2 there, same
+  // commit, same minute. checks() carried one inline readFileSync of the gitignored afferent bus,
+  // so every fixture-driven assert in this suite was silently measuring `base` PLUS this laptop.
+  // That single member is what has been failing the away-day CI lane, unnamed, for 469 runs.
+  // A source probe, not a behaviour test, because the defect is a SHAPE: one more disk read added
+  // to this function tomorrow re-opens the whole class, and no fixture would notice.
+  assert("af-kih RATCHET — checks() reads NO disk: it is the one pure judge in this file, and the moment it touches the filesystem every fixture in this suite starts measuring the machine instead of the fixture",
+    (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+             const from = src.indexOf("export function checks(");
+             const body = src.slice(from, src.indexOf("\n}", from))
+               .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");   // comments name the old read on purpose
+             return !/\b(readFileSync|readdirSync|statSync|existsSync|execSync|spawnSync)\s*\(/.test(body); })());
+  assert("af-kih — …and gather() is where that read went, beside every other disk read this file does",
+    (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+             const g = src.slice(src.indexOf("export function gather("), src.indexOf("export function checks("));
+             return /afferentRows:/.test(g) && /readFileSync\(AFFERENT/.test(g); })());
+  assert("af-kih — A BARE BUS IS LOUD, NOT SILENT: with no afferent rows both DECLARED-LIVE pollers raise afferent-silent. This is exactly what a clean checkout produced, and it was landing inside fixtures that never asked for it",
+    // asserted on `finding`, not on `.source`: the finding text is what a reader actually gets,
+    // it names the source inside it, and it exists on every branch of the findings union.
+    (() => { const f = checks({ ...base, afferentRows: [] });
+             return f.length === 2 && f.every((x) => x.id === "afferent-silent")
+               && f.some((x) => /"activitywatch"/.test(x.finding)) && f.some((x) => /"presence"/.test(x.finding)); })());
+  assert("af-kih — THE CLOCK COMES FROM `w` TOO: the SAME rows are clean against the fixture's own now and silent against a now three days later — a judge that reads the ambient clock cannot be driven by a fixture at all",
+    checks(base).length === 0
+    && checks({ ...base, now: "2026-08-09T21:00:00+05:30" }).filter((x) => x.id === "afferent-silent").length === 2);
+  assert("af-kih — and a caller that hands NO afferentRows still runs, exactly as the old read behaved when the file was missing (layering: nothing that used to run stops running)",
+    (() => { const noRows = { ...base }; delete noRows.afferentRows;
+             return checks(noRows).filter((x) => x.id === "afferent-silent").length === 2; })());
   assert("c1 DEAD — teaching captured today + forge open + zero audit rows = the §5.1 silence, re-caught",
     checks({ ...base, auditRowsToday: 0, auditLogExists: false }).some((f) => f.id === "audit-dead" && f.level === "DEAD"));
   assert("c1 CONDITIONAL — a day with NO teaching afferents is a day off, not a death (NEVER-BORN stays true for workless days)",
