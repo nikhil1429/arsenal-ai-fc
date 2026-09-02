@@ -1,5 +1,5 @@
 {
- "built_at": "2026-09-02T09:13:31.747Z",
+ "built_at": "2026-09-02T09:42:45.055Z",
  "organs_parsed": 112,
  "organs_expected": 112,
  "parse_errors": [],
@@ -26579,6 +26579,11 @@
     "verb": "status"
    },
    {
+    "skill": "executor",
+    "script": "awayday.mjs",
+    "verb": "check"
+   },
+   {
     "skill": "fire",
     "script": "scout.mjs",
     "verb": "mission"
@@ -29520,6 +29525,13 @@
     ]
    },
    {
+    "script": "awayday.mjs",
+    "verbs": [
+     "check",
+     "run"
+    ]
+   },
+   {
     "script": "scout.mjs",
     "verbs": [
      "chrome-stamp",
@@ -29860,13 +29872,6 @@
      "all",
      "coverage",
      "suites"
-    ]
-   },
-   {
-    "script": "awayday.mjs",
-    "verbs": [
-     "check",
-     "run"
     ]
    },
    {
@@ -30253,6 +30258,6 @@
     "verbs": []
    }
   ],
-  "md_files": 239
+  "md_files": 240
  }
 }
