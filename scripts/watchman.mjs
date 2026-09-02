@@ -100,6 +100,9 @@ import { board as modelsBoard, findings as modelsFindings, MODELS_JSON, resolveC
 import { stats as actsStats, findings as actsFindings } from "./acts.mjs";
 import { stats as tasksStats, findings as tasksFindings } from "./tasks.mjs";
 import { stats as outboxStats, findings as outboxFindings } from "./outbox.mjs";
+// W0-D (2 Sep 2026): the forge staleness predicate + its number come from the OWNER
+// now — see the frozen mirror below the imports for what this replaces and why.
+import { staleHours as forgeStaleHours, STALE_HOURS as FORGE_STALE_HOURS } from "./forge_session.mjs";
 import { afferentLiveness } from "./thalamus.mjs";   // LOAD ZERO BLOCK 9 (19 Aug 2026): the INBOUND liveness contract — declared states, never a flat age scan (that scored 3 false positives out of 3)   // LOAD ZERO BLOCK 3 (19 Aug 2026): THE DEAD-MAN'S SWITCH — the relay is now the single point of failure for everything he sees, so the watchman sits OUTSIDE it   // LOAD ZERO BLOCK 1 (19 Aug 2026): RED task-stuck (a runner died holding a key) · RED task-failed (never retried in 24 h) · INFO tasks-daily   // MODELS + ACTS Block 2 (18 Aug 2026): LAW A — RED act-failed (an owner error unfixed 24 h) · INFO acts-daily   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — RED model-role-dead · WARN model-fell-back · RED embed-dim-changed · INFO quota-keys; the nightly probe rides run() as a step
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -143,12 +146,26 @@ const SENTINEL_CONTRACT = join(ROOT, "setup", "CLOUD_SENTINEL.md");
 const NOT_A_CONTRACT = join(ROOT, "package.json");
 const NO_SUCH_CONTRACT = join(ROOT, "setup", "__no_such_contract__.md");
 
-// Mirrored from forge_session.mjs STALE_HOURS (its number, not a new one — line ref
-// dropped 9 Aug: it had already rotted once): past this the
-// pacer calls a session STALE and goes silent. The auditor deliberately does NOT
-// gate on it (his "sab audit, no gates" ruling) — which is exactly why a
-// forgotten-open session is worth a nightly INFO line.
-const STALE_HOURS = 18;
+// FROZEN 2 Sep 2026 (W0-D) — the mirror this file used to keep, verbatim:
+//     // Mirrored from forge_session.mjs STALE_HOURS (its number, not a new one — line ref
+//     // dropped 9 Aug: it had already rotted once): past this the
+//     // pacer calls a session STALE and goes silent. The auditor deliberately does NOT
+//     // gate on it (his "sab audit, no gates" ruling) — which is exactly why a
+//     // forgotten-open session is worth a nightly INFO line.
+//     const STALE_HOURS = 18;
+// It had already rotted once (the line ref), and the number was only ever half the
+// mirror — the ANCHOR was the other half, and c8 below re-derived it by hand off
+// `started_at`. Both now come from the owner, so a resumed session cannot be reported
+// abandoned by the night watch while the pacer is actively speaking to him. Everything
+// the old comment asserted still holds: the auditor does not gate on staleness.
+// THE CARD FOR HIM IS captains_call's (SD-05, same rung); this stays the NIGHT RECORD.
+const STALE_HOURS = FORGE_STALE_HOURS;
+// Past a full DAY the finding stops being a note and becomes something he has to hear:
+// 18 h is when the pacer goes quiet (a machine decision, and `resume` now makes it
+// costless), while a session untouched for a whole day is an open loop that starves
+// his kickoff arbiter. INFO never reaches briefLines by construction (:1114), so this
+// threshold is the only thing standing between the finding and a file nobody opens.
+const STALE_LOUD_HOURS = 24;
 // A CEILING on the selftest sweep, not a judgement — organism_test spawns 60+
 // organs independently; this only stops a hung child from holding the night.
 const SUITE_TIMEOUT_MS = 15 * 60 * 1000;
@@ -673,13 +690,25 @@ export function checks(w) {
   // c8 · STALE FORGE SESSION — open past the pacer's own STALE_HOURS. The pacer
   // goes silent there; the auditor (per his sab-audit ruling) does not. Worth a
   // line, not an escalation: closing a session is HIS move.
-  if (forgeOpen && w.forge.json.started_at) {
-    const hrs = (Date.parse(w.now) - Date.parse(w.forge.json.started_at)) / 3.6e6;
+  if (forgeOpen) {
+    // W0-D (2 Sep 2026 · SD-04/SD-05): asked of the OWNER, so "stale" here means exactly
+    // what the pacer means by it — untouched, not merely old. The hand-rolled
+    // `started_at` arithmetic that used to live on this line would have gone on
+    // reporting a session he had just resumed as abandoned, every night.
+    const hrs = forgeStaleHours(w.forge.json, new Date(w.now));
     if (Number.isFinite(hrs) && hrs > STALE_HOURS) {
+      // INFO → WARN past a day, and the choice is the same one the recital probe makes
+      // one screen down: INFO never reaches briefLines, and a record he cannot see is
+      // the defect this probe exists to close. Strictly stricter — nothing that used to
+      // be reported stops being reported. It also arms Tier 2, which is inert today
+      // (his 11 Aug kill switch) and must STAY inert for this id if it is ever re-armed:
+      // resuming or closing his session is HIS move, never a repair lane's.
+      const loud = hrs > STALE_LOUD_HOURS;
       F.push({
-        id: "forge-stale-open", level: "INFO",
-        finding: `forge session '${w.forge.json.concept}' has been open ${hrs.toFixed(1)}h (pacer calls >${STALE_HOURS}h stale and goes silent; the auditor keeps auditing every session machine-wide until it is closed)`,
-        evidence: `started_at ${w.forge.json.started_at} — \`node scripts/forge_session.mjs close\` is the only thing that saves the coverage report`,
+        id: "forge-stale-open", level: loud ? "WARN" : "INFO",
+        finding: `forge session '${w.forge.json.concept}' has gone ${hrs.toFixed(1)}h without a touch (pacer calls >${STALE_HOURS}h stale and goes silent; the auditor keeps auditing every session machine-wide until it is closed)`
+          + (loud ? " — past a full day, so it is an open loop starving his kickoff, not a note" : ""),
+        evidence: `last touched ${w.forge.json.updated_at || w.forge.json.started_at || "unknown"} — \`node scripts/forge_session.mjs resume\` continues it where it stands, \`close\` ends it and saves the coverage report`,
       });
     }
   }
@@ -1873,10 +1902,23 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
   assert("c5 RED — a shapeless forge file and an unreadable contract are both loud (the PROBLEM-1 class)",
     checks({ ...base, forge: { exists: true, json: null, shapeless: true } }).some((f) => f.id === "forge-shapeless")
     && checks({ ...base, contract: { exists: true, json: null, unreadable: true } }).some((f) => f.id === "contract-unreadable"));
-  assert("c8 INFO — a forge session open past the pacer's own 18h is a line, not an escalation; under 18h it is silent",
-    (() => { const f = checks({ ...base, now: "2026-08-07T18:00:00+05:30" }).find((x) => x.id === "forge-stale-open");
-      const under = checks({ ...base, now: "2026-08-06T20:00:00+05:30" }).find((x) => x.id === "forge-stale-open");
-      return f && f.level === "INFO" && !under; })());
+  // W0-D (2 Sep 2026) — this assert used to clear the 24 h line by TEN MINUTES
+  // (started 2026-08-06T12:39Z, probed 2026-08-07T12:30Z = 23.8 h), so the moment a
+  // level threshold existed it was one fixture edit away from being an accident. The
+  // three bands are now separated on purpose and named one by one.
+  const c8 = (now, over = {}) => checks({ ...base, now, forge: { ...base.forge, json: { ...base.forge.json, ...over } } }).find((x) => x.id === "forge-stale-open");
+  assert("c8 — under the pacer's 18h the night says nothing (not every overnight gap is a finding)",
+    !c8("2026-08-06T20:00:00+05:30"));
+  assert("c8 INFO — past 18h it is a line, not an escalation: the pacer stopped, and `resume` makes that costless",
+    (() => { const f = c8("2026-08-07T14:30:00+05:30"); return !!f && f.level === "INFO"; })());   // 20.3h — squarely inside the band, not on its edge
+  assert("c8 WARN — past a FULL DAY it reaches briefLines, because INFO by construction never does (:1114) and a record he cannot see is the defect",
+    (() => { const f = c8("2026-08-07T20:00:00+05:30"); return !!f && f.level === "WARN" && /open loop starving his kickoff/.test(f.finding); })());
+  assert("c8 — the evidence names BOTH doors now: the one that continues the concept and the one that ends it",
+    (() => { const f = c8("2026-08-07T20:00:00+05:30"); return /resume/.test(f.evidence) && /close/.test(f.evidence); })());
+  assert("c8 W0-D — staleness is asked of the OWNER, so a RESUMED session (born 2 days ago, touched an hour ago) is NOT reported abandoned",
+    !c8("2026-08-07T20:00:00+05:30", { started_at: "2026-08-05T12:00:00.000Z", updated_at: "2026-08-07T13:30:00.000Z" })
+    && (() => { const f = c8("2026-08-07T20:00:00+05:30", { started_at: "2026-08-05T12:00:00.000Z", updated_at: "2026-08-05T12:00:00.000Z" });
+      return !!f && f.level === "WARN"; })());
 
   // c12 — THE SILENT AUDITOR (spec §16.2.3). Both directions, because the whole
   // value of this check is that it cannot be quietly satisfied: it must fire on

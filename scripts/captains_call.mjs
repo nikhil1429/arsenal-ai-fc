@@ -65,6 +65,9 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE intent door
+// W0-D (2 Sep 2026): the forge staleness predicate now comes from its OWNER instead of
+// being re-derived here. See the frozen mirror below for what this replaces and why.
+import { isStale as forgeIsStale, staleHours as forgeStaleHours, STALE_HOURS as FORGE_STALE_HOURS } from "./forge_session.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // ARSENAL_CALL_STATE_DIR is the selftest's seam and NOTHING else's (same pattern
@@ -77,11 +80,19 @@ const MARKET_DIR = join(STATE_DIR, "brain_out", "market");
 const GATE_JOURNAL = join(STATE_DIR, "brain_out", "gate.jsonl");   // LOAD ZERO BLOCK 6 — brain.mjs is its SOLE WRITER; this is a read of what that owner published (a module-level const so xray can resolve the sink)
 const CONTRACT_MJS = join(__dirname, "teaching_contract.mjs");
 
-// Mirrored from forge_session.mjs:115 (STALE_HOURS), with the same comment
-// discipline as teaching_audit's CORE_AXES mirror: one constant that has never
-// moved, and the owner's boot line + this deal-guard would disagree out loud if
-// it ever does.
-const FORGE_STALE_HOURS = 18;
+// FROZEN 2 Sep 2026 (W0-D), verbatim, no longer on any live path — the constant this
+// file used to keep for itself:
+//     // Mirrored from forge_session.mjs:115 (STALE_HOURS), with the same comment
+//     // discipline as teaching_audit's CORE_AXES mirror: one constant that has never
+//     // moved, and the owner's boot line + this deal-guard would disagree out loud if
+//     // it ever does.
+//     const FORGE_STALE_HOURS = 18;
+// The comment's bet was that the NUMBER would never move, and it did not. What moved
+// was the ANCHOR: staleness now runs from the last touch, not from birth (SD-04), so a
+// mirror that kept reading `started_at` would have gone on calling a resumed session
+// abandoned and dealing cards straight into the middle of his concept — the exact
+// rule-#12 breach this guard exists to prevent. The number is now IMPORTED, so the
+// "would disagree out loud" clause is no longer a hope. (L9: nothing deleted.)
 
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
 const readLinesJson = (p) => { const o = []; try { for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch { } } } catch { } return o; };
@@ -367,7 +378,8 @@ export function decisionGate(state, now = new Date(), post = null) {
 
 export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", marketNoopFiles = [], gate2 = null, missions = null, bench = null, tiers = null,
   rejirah = null, gem = null, claudeOut = null, oura = null, geminiLogin = null, geminiLane = { live: true }, gatetune = null, gatetuneSource = null, pendingFacts = [], m2 = null, canonPatches = [], staleFacts = [], model = null, awayday = null,
-  gateStates = null, daemonPorts = null, watchmanLast = null } = {}, now = new Date()) {
+  gateStates = null, daemonPorts = null, watchmanLast = null,
+  forge = null } = {}, now = new Date()) {   // W0-D · SD-05: the stale open loop, read from the pacer's own file
   const s = { ...state, cards: state.cards.map((c) => ({ ...c })) };
   const byKey = new Map(s.cards.map((c) => [c.key, c]));
   const ts = now.toISOString();
@@ -742,6 +754,42 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
     }
   }
 
+  // ── W0-D (2 Sep 2026 · SD-05) — THE OPEN LOOP FINALLY REACHES HIM ──────────
+  // Measured: a forge session had been open and stale for 25 h, and the ONLY thing in
+  // the organism that noticed filed it at INFO — a level watchman.mjs:1114 drops from
+  // briefLines by construction. So the finding lived exclusively inside `watchman
+  // report`, a command he must REMEMBER to run, which is the disease his 11 Aug ruling
+  // names outright ("jo cheez use yaad rakhni pade, woh ek DESIGN FAILURE hai").
+  // An open loop starves the whole queue — his own kickoff arbiter puts it above
+  // everything — so it belongs on the ONE surface he already hits.
+  // WHY 24 h AND NOT 18: 18 h is when the PACER stops talking (a machine decision, and
+  // `resume` makes it costless). Carding him at 18 h would fire on any normal
+  // overnight gap. A session untouched for a full day is a different fact, and it is
+  // the one that needs his word.
+  // The rolling day-key means fileGuard keeps exactly ONE live ask in this family: it
+  // re-mints tomorrow only if he ANSWERED today's, never piling a card per night.
+  // at-source, so it retires when the fact changes (he resumed it or he closed it) —
+  // never on his word alone, because a haan that nothing acts on is how a card lies.
+  if (forge && forge.concept && !forge.closed_at && forgeIsStale(forge, now)) {
+    const h = forgeStaleHours(forge, now);
+    // THE ONE-LIVE-ASK GUARD, and it is not optional here. mint() dedupes by EXACT key
+    // only, so a day-key alone would mint a brand-new top-priority card every night an
+    // open loop stood — the exact "four fresh duplicates a night" disease the
+    // ROLLING_KEY comment below documents for watchman's canon cards, on the one
+    // condition guaranteed to persist for days. The rejirah block above uses this same
+    // shape. Result: one live ask; a NEW day mints again only after he has answered.
+    const liveAlready = s.cards.some((c) => c.source === "forge.stale_open" && !c.answer && !c.retired_at);
+    if (!liveAlready && Number.isFinite(h) && h > 24) {
+      const days = Math.floor(h / 24);
+      mint(`forge:stale:${localDate(now)}`, "forge.stale_open",
+        `"${forge.concept}" ki padhai beech mein khuli reh gayi (${days} din se chhui nahi) — wahin se continue karein? (na bolo to band karke coverage report nikaal lenge)`,
+        { kind: "at-source" });
+    }
+  }
+  retireAtSource((c) => c.source === "forge.stale_open"
+    && !(forge && forge.concept && !forge.closed_at && forgeIsStale(forge, now)),
+  "the session was resumed or closed");
+
   // B2 — Gem sync overdue (physio's own 7d bar). One card per stamp-epoch.
   if (gem) {
     mint(`gem:sync:${gem.stamp}`, "gem.sync_due",
@@ -1072,13 +1120,30 @@ export function applyAnswer(state, id, word, now = new Date()) {
 }
 
 // ── DEAL GUARDS (injectable for the selftest) ────────────────────────────────
-export function dealGuard({ organEnv, forge, now = new Date() }) {
+// FROZEN 2 Sep 2026 (W0-D), byte-kept, called by nothing (L9). Its age line read
+// `(now - new Date(forge.started_at)) / 36e5` — BIRTH, not last touch — so the moment
+// `resume` existed this guard would have disagreed with the pacer that had just woken:
+// the session speaking its 12-step contract every turn, and this organ dealing him a
+// system card in the middle of it because the clock said 25 h. Rule #12's whole point.
+export function dealGuardLegacy({ organEnv, forge, now = new Date() }) {
   if (organEnv === "1") return { silent: true, why: "headless organ" };
   if (forge && forge.concept && !forge.closed_at) {
     const h = (now - new Date(forge.started_at)) / 36e5;
     if (Number.isFinite(h) && h >= 0 && h <= FORGE_STALE_HOURS) {
       return { silent: true, why: "fresh forge session open — no system asks mid-concept (his rule #12); cards wait at matchday/full-time/close" };
     }
+  }
+  return { silent: false, why: null };
+}
+
+export function dealGuard({ organEnv, forge, now = new Date() }) {
+  if (organEnv === "1") return { silent: true, why: "headless organ" };
+  // ONE derivation, in the owner (forge_session.mjs). "Fresh" is now exactly "the
+  // pacer is speaking", because it is literally the same predicate the pacer uses —
+  // so a resumed session silences this guard the instant it is resumed, and an
+  // abandoned one stops silencing it 18 h after the last real touch.
+  if (forge && forge.concept && !forge.closed_at && !forgeIsStale(forge, now)) {
+    return { silent: true, why: "fresh forge session open — no system asks mid-concept (his rule #12); cards wait at matchday/full-time/close" };
   }
   return { silent: false, why: null };
 }
@@ -1292,7 +1357,10 @@ function gatherSources() {
     rejirah, gem, claudeOut, oura, geminiLogin, geminiLane, gatetune, gatetuneSource, pendingFacts, m2, canonPatches, staleFacts, model, awayday,
     // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE THREE STALE-CARD CLASSES, each read from the OWNER's own
     // published state, read-only, no spawn. See the retire-at-source block in deriveCards for why.
-    gateStates: liveGateStates(), daemonPorts: readJson(join(STATE_DIR, "daemon_watchdog.json")), watchmanLast: readJson(join(STATE_DIR, "watchman_last.json")) };
+    gateStates: liveGateStates(), daemonPorts: readJson(join(STATE_DIR, "daemon_watchdog.json")), watchmanLast: readJson(join(STATE_DIR, "watchman_last.json")),
+    // W0-D · SD-05 — the pacer's live file, read-only (forge_session.mjs is its sole
+    // writer). Same read dealGuard already does one function down; one source, two uses.
+    forge: readJson(FORGE) };
 }
 
 // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE ROAD, as this organ reaches it. Owners-only: this file
@@ -1882,6 +1950,57 @@ function selftest() {
     dealGuard({ organEnv: undefined, forge: { concept: "x", started_at: "2026-08-05T08:00:00+05:30" }, now: T0 }).silent === false
     && dealGuard({ organEnv: undefined, forge: { concept: "x", started_at: "2026-08-07T08:00:00+05:30", closed_at: "2026-08-07T09:00:00+05:30" }, now: T0 }).silent === false
     && dealGuard({ organEnv: undefined, forge: null, now: T0 }).silent === false);
+  // ── W0-D (2 Sep 2026 · SD-04) — ONE DERIVATION, AND THE RESUMED SESSION IS FRESH ──
+  // The frozen dealGuardLegacy answers BIRTH; the live one answers the owner's
+  // last-touch predicate. This pair is the whole difference, stated as a test: a
+  // session born two days ago and touched a minute ago is mid-concept, and dealing
+  // him a system card there is the rule-#12 breach this guard exists to stop.
+  {
+    const born = "2026-08-05T08:00:00+05:30";                 // 2 days before T0
+    const resumed = { concept: "tokenization", started_at: born, updated_at: "2026-08-07T09:55:00+05:30" };
+    assert("W0-D — a RESUMED session (born days ago, touched minutes ago) silences the deck; the frozen birth-anchored twin would have dealt into his concept",
+      dealGuard({ organEnv: undefined, forge: resumed, now: T0 }).silent === true
+      && dealGuardLegacy({ organEnv: undefined, forge: resumed, now: T0 }).silent === false);
+    assert("W0-D — and a genuinely abandoned session still deals: the guard got sharper, not softer",
+      dealGuard({ organEnv: undefined, forge: { concept: "x", started_at: born, updated_at: born }, now: T0 }).silent === false);
+    assert("W0-D — the number is IMPORTED from the owner now, so the two can no longer drift apart silently",
+      FORGE_STALE_HOURS === 18);
+  }
+
+  // ── W0-D (2 Sep 2026 · SD-05) — THE STALE OPEN LOOP REACHES HIS ANCHOR ──────
+  {
+    const NOWC = new Date("2026-08-07T10:00:00+05:30");
+    const base = { next_id: 1, cards: [] };
+    const stale2d = { concept: "tokenization", started_at: "2026-08-05T02:00:00+05:30", updated_at: "2026-08-05T02:00:00+05:30" };
+    const one = deriveCards(base, { forge: stale2d }, NOWC);
+    const card = one.cards.find((c) => c.source === "forge.stale_open");
+    assert("SD-05 — a session untouched for more than a day mints ONE card at his anchor",
+      !!card && one.cards.filter((c) => c.source === "forge.stale_open").length === 1);
+    assert("SD-05 — the card is PLAIN WORDS: it names the concept and the gap, never a filename, an id or a command",
+      /tokenization/.test(card.line) && /din se/.test(card.line)
+      && !/\.mjs|\.json|forge_session|§|W0-/.test(card.line));
+    assert("SD-05 — both readings are on the card, so haan and na both mean something",
+      /continue/.test(card.line) && /band/.test(card.line));
+    assert("SD-05 — it is at-source: only the FACT changing retires it, never his word alone",
+      card.dispatch.kind === "at-source");
+    assert("SD-05 — a session stale but under a day does NOT card him (18h is the pacer's bar, not his)",
+      !deriveCards(base, { forge: { concept: "x", started_at: "2026-08-06T13:00:00+05:30", updated_at: "2026-08-06T13:00:00+05:30" } }, NOWC)
+        .cards.some((c) => c.source === "forge.stale_open"));
+    assert("SD-05 — no session, a closed session and a LIVE session all card him nothing",
+      !deriveCards(base, { forge: null }, NOWC).cards.some((c) => c.source === "forge.stale_open")
+      && !deriveCards(base, { forge: { ...stale2d, closed_at: "2026-08-06T02:00:00+05:30" } }, NOWC).cards.some((c) => c.source === "forge.stale_open")
+      && !deriveCards(base, { forge: { ...stale2d, updated_at: "2026-08-07T09:00:00+05:30" } }, NOWC).cards.some((c) => c.source === "forge.stale_open"));
+    assert("SD-05 — re-deriving on the same day is idempotent (one ask, not one per sync)",
+      deriveCards(one, { forge: stale2d }, NOWC).cards.filter((c) => c.source === "forge.stale_open").length === 1);
+    assert("SD-05 — the rolling day-key keeps ONE live ask: an unanswered card does not breed a second one tomorrow",
+      deriveCards(one, { forge: stale2d }, new Date("2026-08-08T10:00:00+05:30"))
+        .cards.filter((c) => c.source === "forge.stale_open" && !c.answer && !c.retired_at).length === 1);
+    assert("SD-05 — the card RETIRES AT SOURCE the moment he resumes it (and again when he closes it)",
+      deriveCards(one, { forge: { ...stale2d, updated_at: "2026-08-07T09:55:00+05:30" } }, NOWC)
+        .cards.find((c) => c.source === "forge.stale_open").retired_at !== null
+      && deriveCards(one, { forge: { ...stale2d, closed_at: "2026-08-07T09:55:00+05:30" } }, NOWC)
+        .cards.find((c) => c.source === "forge.stale_open").retired_at !== null);
+  }
 
   // LADDER A1 (9 Aug 2026) — the monopoly is dead: rotation, day-rest, word-alone, sheet nag
   {

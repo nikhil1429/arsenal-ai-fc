@@ -71,6 +71,7 @@ runs `forge_session.mjs boot` — `grep -n "forge_session.mjs" .claude/settings.
 node scripts/forge_session.mjs boot                   # read-only; SessionStart runs it for you
 node scripts/sitting.mjs open --surface code --task "<concept>"   # registers the sitting (joins an open one) — ONE OPEN SITTING law
 node scripts/forge_session.mjs start <concept>        # at session open, before anything
+node scripts/forge_session.mjs resume                 # SAME concept, next day: wakes the STALE session where it stands (W0-D, 2 Sep 2026). Blanks nothing, re-teaches nothing, moves no step — it re-stamps the last-touch clock so the pacer speaks again and records the re-entry. `start` still REFUSES while a session is open; `close` still ENDS it. Use this whenever a concept spans two sittings.
 node scripts/forge_session.mjs step <0-11>            # BEFORE each step's first message
 node scripts/forge_session.mjs axis <a-i> now         # the moment you START teaching an axis (declares, completes NOTHING)
 node scripts/forge_session.mjs axis <a-i> done|defer  # as each axis closes (or is deferred) — `done` only AFTER its own Jirah; bare `axis <x>` refuses (P4.1)
@@ -104,6 +105,18 @@ Python/course/build/career day it stays silent by design. Evidence:
 `grep -n "export function nudgeLine" scripts/forge_session.mjs` and
 `grep -n "the silence law means ZERO bytes" scripts/forge_session.mjs`. The obligation on this
 skill is unchanged — the nudge is a backstop, not a substitute for opening the session.)*
+*(corrected again 2 Sep 2026, W0-D · SD-03 — and the correction is that the paragraph above
+described a nudge that **lied**. It read only `sprint.json`, so with `tokenization` OPEN and
+stale on disk it announced "koi session KHULI nahi hai", named the sprint's concept
+(`Hallucinations`) instead of the open one, and ordered a `start` that `startBlocked` refuses.
+Three falsehoods, on the hook that fires every turn. It now reads the SESSION first: with a
+stale session open it prints the true state — concept, step, hours since the last touch, and
+the two commands that work (`resume` | `close`), naming the sprint only when the two disagree.
+With a FRESH session open it stays silent, because the 12-step block is already speaking.
+STALENESS ALSO MOVED, in the same rung: it runs from the LAST TOUCH, not from `started_at`, so a
+concept worked across two evenings is no longer called abandoned at hour 19. The number is
+unchanged at 18h. That predicate had SIX hand-rolled copies across the organism and now has one
+owner — `grep -n "export const isStale" scripts/forge_session.mjs`.)*
 
 **`start` HAS A SIDE EFFECT — know it before you run it** *(added 10 Aug 2026; this block
 described `start` as if it only wrote pacer state).* On success `start` also spawns

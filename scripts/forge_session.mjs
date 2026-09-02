@@ -62,11 +62,11 @@
 // read-only lock-chain preview was invisible to anyone who read this header or ran the
 // script bare. The two docs now fail the selftest the moment either drops a verb.
 // MODES: start <concept> [--force] · step <0-11> · axis <a-i> now|done|defer
-//        · moment <kind> · lockchain · status · contract · boot · close · selftest
+//        · moment <kind> · lockchain · resume · status · contract · boot · close · selftest
 // ============================================================================
 import { readFileSync, writeFileSync, existsSync, renameSync, mkdirSync, rmSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";   // W0-D: pathToFileURL for the import guard at the dispatch
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";   // LOCK-chain + topic-open spawns (outward loop, 8 Aug 2026)
 import { coreAxes } from "./registry.mjs";   // S10 #12 — per-concept core axes, ONE reader (twin literal died)
@@ -124,13 +124,44 @@ const AXES = "abcdefghi".split("");
 const WIDGET_GATES_MIN = 2;
 // Phases 3-6 carry the one-check-question-at-a-time law.
 const SOFT_PHASE = (n) => n >= 3 && n <= 6;
-const STALE_HOURS = 18;   // a study session does not span a night
+export const STALE_HOURS = 18;   // a study session does not span a night
 
 const nowISO = (now = new Date()) => now.toISOString();
 const hoursSince = (iso, now = new Date()) => {
   const t = Date.parse(iso || "");
   return Number.isFinite(t) ? (now.getTime() - t) / 3600000 : Infinity;
 };
+
+// ---------------------------------------------------------------------------
+// STALENESS RUNS FROM THE LAST TOUCH, NEVER FROM BIRTH (W0-D, 2 Sep 2026 — SD-04).
+// The number does NOT move: 18 hours is still "a study session does not span a
+// night". What moves is the ANCHOR. Measured before this change: every staleness
+// read in the organism ran off `started_at`, so a concept that legitimately spans
+// two sittings was declared abandoned at hour 19 — his own ratified RESUME MID-AXIS
+// was mechanically impossible, and the only way back into a real session was to
+// `close` it (ending it) or `start --force` (discarding it). Every mutation in this
+// file already stamps `updated_at`, so an actively-worked session can never go stale
+// under this anchor, and a genuinely abandoned one still sleeps 18 h after the last
+// real touch — which is the behaviour the 31 Jul rule was reaching for.
+//
+// REPAIR TOWARD SILENCE, UNCHANGED (30 Jul 2026's law, and it is why the fallback
+// chain ends in `undefined`): no readable anchor at all ⇒ hoursSince() is Infinity
+// ⇒ stale ⇒ the pacer is SILENT. A missing clock must never read as "touched this
+// second"; see load(), which repairs BOTH stamps for exactly this reason.
+//
+// EXPORTED because this predicate had SIX independent derivations on 2 Sep 2026
+// (this file · captains_call.mjs:84 · watchman.mjs:151 · learning_state.mjs:240 ·
+// learnstate.mjs:575 · sitting.mjs:280), every one of them off `started_at` and two
+// of them a bare `18` with no name. Patching the owner alone would have left five
+// organs telling him the opposite of what the pacer had just decided. Same collapse
+// the S10 CORE_AXES twins and W0-B's three schedule twins got: the owner derives it,
+// everyone else imports it, and the old bodies freeze as *Legacy (L9).
+export const lastTouchISO = (s) => (
+  s && typeof s.updated_at === "string" ? s.updated_at
+    : s && typeof s.started_at === "string" ? s.started_at
+      : undefined);
+export const staleHours = (s, now = new Date()) => hoursSince(lastTouchISO(s), now);
+export const isStale = (s, now = new Date()) => staleHours(s, now) > STALE_HOURS;
 
 // ---------------------------------------------------------------------------
 // PURE CORE — every mutation is a pure function so the selftest never needs disk
@@ -247,13 +278,90 @@ function addMoment(s, kind, now = new Date()) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// RESUME — the door back IN (W0-D, 2 Sep 2026 · SD-04). Canon ratified "RESUME
+// MID-AXIS" (SAMJHAO_MERGED / his taught-state pointer, committed at W0-B) and this
+// organ had no verb for it: the three doors were `start` (blanks the session),
+// `start --force` (records a discard row, then blanks it) and `close` (ends it and
+// files the coverage report). All three END the concept. So the ratified behaviour
+// was not merely unimplemented — it was unreachable, and the boot line's own
+// instruction ("do NOT re-teach those axes, do NOT start from step 0") had no
+// command behind it after hour 18.
+//
+// WHAT IT DOES AND, MORE IMPORTANTLY, WHAT IT DOES NOT. It stamps the last-touch
+// clock and records the re-entry. It moves no step, marks no axis, counts no
+// question-moment, touches no history row, and cannot create a session — `need()`
+// still refuses when there is nothing on disk, and a CLOSED session is finished
+// (start is that door). Nothing is blanked and nothing is deleted, so the worst a
+// mistaken `resume` can do is wake a pacer.
+//
+// AND IT CANNOT BECOME A LAUNDROMAT. `elapsed_min` still runs from `started_at`, so
+// a three-day trail still reports three days — the anti-theatre clock does not move.
+// The re-entries are appended, counted, printed at status/boot and carried into the
+// history row, so "12 steps in 40 minutes across 3 resumes" reads as exactly that.
+function resumeSession(s, now = new Date()) {
+  if (s.closed_at) return { ok: false, error: `session '${s.concept}' was closed at ${s.closed_at} — resume cannot re-open a finished session (\`start <concept>\` opens a new one).`, session: s };
+  const h = staleHours(s, now);
+  if (!isStale(s, now)) return { ok: false, error: `session '${s.concept}' is already LIVE (last touched ${Number.isFinite(h) ? h.toFixed(1) + "h" : "unknown"} ago, stale at ${STALE_HOURS}h) — the pacer is speaking; nothing to wake. Just continue at STEP ${s.step} ${STEPS[s.step] || "?"}.`, session: s };
+  return {
+    ok: true,
+    session: {
+      ...s,
+      resumes: [...(Array.isArray(s.resumes) ? s.resumes : []),
+        { at: nowISO(now), after_h: Number.isFinite(h) ? Math.round(h * 10) / 10 : null, at_step: s.step, at_axis: s.current_axis ?? null }],
+      updated_at: nowISO(now),
+    },
+  };
+}
+
 // THE CONTRACT — what the hook injects on every turn. Short by design: a wall of
 // text read every turn is a wall of text ignored every turn.
 // ONE line, emitted only when the sprint says a CONCEPT is in motion and no forge
 // session is carrying it. Reads sprint.json read-only; any failure = silence (this
 // runs on a hook, and a hook that throws costs him a turn).
+// ── THE NUDGE MUST NOT LIE (W0-D, 2 Sep 2026 — SD-03) ──────────────────────
+// Measured live, in the very session that wrote this: with `tokenization` OPEN on
+// disk at STEP 3 and stale, this function printed *"koi session KHULI nahi hai, aur
+// sprint pe 'Hallucinations' (concept) chal raha hai … PEHLE `start <concept>`"* —
+// three falsehoods in one line, on the hook that fires every turn: a session DOES
+// exist, its concept is not the one named, and the command it orders is the one
+// `startBlocked` refuses (`start` on an unclosed session exits 1). A per-turn line
+// that is wrong about the state is worse than the silence it was built to end: it
+// trains him to ignore the one surface that speaks every turn.
+// It read ONLY sprint.json — the roster of what he SHOULD be studying — and never
+// the pacer's own file, which is the thing it is nudging about. So it now reads the
+// session FIRST and describes what is actually on disk.
+// STILL ONE LINE, still silent on any failure, still silent on a non-concept day —
+// those three laws are what keep it from becoming the always-fires warning (#38).
+// `session` is INJECTABLE and the selftest passes it: a checker that falls through
+// to load() would read HIS live study state, which is the exact 10-Aug scar
+// teaching_audit.mjs carries (a test that reads his day is not a test).
 export function nudgeLine(deps = {}) {
   try {
+    const now = deps.now !== undefined ? deps.now : new Date();
+    const s = deps.session !== undefined ? deps.session : load();
+    if (s && s.concept && !s.closed_at) {
+      // FRESH: contractLines() is already printing the whole 12-step block this turn.
+      // Two voices about one session is a wall, and the block is the better one.
+      if (!isStale(s, now)) return "";
+      const h = staleHours(s, now);
+      const since = Number.isFinite(h) ? `${h.toFixed(0)}h se koi touch nahi` : "kab se, pata nahi";
+      // The sprint's own idea of today is named ONLY when it disagrees — that
+      // disagreement IS the decision in front of him, and staying quiet about it is
+      // how he ends up studying one thing while the machine records another.
+      let other = "";
+      try {
+        const sprint = deps.sprint !== undefined ? deps.sprint
+          : JSON.parse(readFileSync(join(STATE_DIR, "sprint.json"), "utf8"));
+        const cur = sprint && sprint.progress && sprint.progress.current;
+        const task = cur && String(cur.track || "").toLowerCase() === "concept" ? String(cur.task || cur.id || "") : "";
+        if (task && task.trim().toLowerCase() !== s.concept) other = ` (sprint "${task}" bol raha hai — pehle yeh nipta lo)`;
+      } catch { /* the sprint is a courtesy here; the session is the fact */ }
+      return `FORGE: "${s.concept}" ki session KHULI hai par STALE`
+        + ` (STEP ${s.step}/${STEPS.length - 1} ${STEPS[s.step] || "?"}, ${since})${other} —`
+        + ` \`node scripts/forge_session.mjs resume\` se wahin se continue karo (kuch delete nahi hota),`
+        + ` ya \`close\` karo (coverage report bachta hai), phir \`start <concept>\`.`;
+    }
     const sprint = deps.sprint !== undefined ? deps.sprint
       : JSON.parse(readFileSync(join(STATE_DIR, "sprint.json"), "utf8"));
     const cur = sprint && sprint.progress && sprint.progress.current;
@@ -311,7 +419,7 @@ export function dossierLines(concept, s, { dossier, registry } = {}) {
 function contractLines(s, now = new Date()) {
   if (!s || !s.concept) return [];
   if (s.closed_at) return [];                                    // a closed session pacts nothing
-  if (hoursSince(s.started_at, now) > STALE_HOURS) return [];
+  if (isStale(s, now)) return [];                                // W0-D: last touch, not birth
   const n = s.step;
   const skipped = STEPS.map((_, i) => i).filter((i) => i < n && !s.steps_done.includes(i));
   // Per-turn additions (31 Jul 2026) ride on EXISTING lines wherever possible —
@@ -393,6 +501,13 @@ function coverage(s, now = new Date()) {
     core_axes: [...CORE_AXES],
     core_missing: coreMissing,
     widget_gates: gates,
+    // W0-D: the re-entries ride the report, so elapsed_min is readable. A session
+    // with elapsed_min 2900 and resumes 0 is abandoned-then-closed; the same number
+    // with 3 resumes is a concept that legitimately spanned three sittings. Before
+    // `resume` existed the first reading was the only one available, which is why the
+    // clock had to mean "one sitting" and a two-day concept looked like theatre.
+    resumes: (s.resumes || []).length,
+    resumed_at: (s.resumes || []).map((r) => (r && typeof r.at === "string" ? r.at : null)).filter(Boolean),
     // THE TWO CLOCKS (red team, 31 Jul 2026). A whole method trail can be replayed
     // in one `;`-joined shell line at close — every counter forged, every axis
     // "graded" — and it reads identical to a real session. What cannot be typed is
@@ -595,6 +710,19 @@ function load(path = SESSION) {
       // never fire, the hook injected that contract on every turn, and `start` stayed
       // blocked. Left undefined, hoursSince() is Infinity → stale → silent → safe.
       started_at: typeof j.started_at === "string" ? j.started_at : undefined,
+      // THE SAME REPAIR, FOR THE STAMP THAT NOW DECIDES STALENESS (W0-D, 2 Sep 2026).
+      // Without this line the last-touch anchor would be strictly WORSE than the birth
+      // anchor it replaces: blank() stamps updated_at = NOW and the `...j` spread only
+      // overwrites it when the file actually carries one — so a session file written
+      // before this field existed (or hand-mangled since) would have read "touched this
+      // second" on every load, forever, and STALE-means-silent could never fire. That is
+      // repair toward SPEECH, the exact bug the started_at comment above was written for.
+      // Left undefined, the fallback chain in lastTouchISO() drops to started_at, and if
+      // that is gone too the session reads stale — silent, which is the safe direction.
+      updated_at: typeof j.updated_at === "string" ? j.updated_at : undefined,
+      // Same drop-the-malformed rule as axes_marked_at: a junk entry downgrades to
+      // "this re-entry was not recorded", never to a fabricated one.
+      resumes: (Array.isArray(j.resumes) ? j.resumes : []).filter((r) => r && typeof r === "object" && !Array.isArray(r)),
       steps_done: (Array.isArray(j.steps_done) ? j.steps_done : [])
         .filter((n) => Number.isInteger(n) && n >= 0 && n < STEPS.length)
         .sort((a, b) => a - b),
@@ -859,8 +987,13 @@ const live = (s) => {
   // Staleness is the COMMON abandonment (a session left open overnight); closed was the rare
   // one. contractLines() already goes silent past STALE_HOURS, so without this the writes
   // reported success into a session the hook had stopped pacing. (regression audit 30 Jul)
-  if (hoursSince(s.started_at) > STALE_HOURS) {
-    console.error(`forge_session: session '${s.concept}' is stale (started ${s.started_at || "unknown"}) — the pacer already stopped. \`close\` it for the coverage report, or \`start <concept> --force\`.`);
+  // W0-D (2 Sep 2026): measured from the LAST TOUCH, and the refusal finally names a
+  // way back IN. Before today the only two doors out of a stale session both ENDED it
+  // — `close` (finish it) or `start --force` (discard it) — so a concept spanning two
+  // sittings had no lawful continuation at all. `resume` is that door; it blanks
+  // nothing and it is offered FIRST because continuing is what he is usually doing.
+  if (isStale(s)) {
+    console.error(`forge_session: session '${s.concept}' is stale (last touched ${lastTouchISO(s) || "unknown"}) — the pacer stopped after ${STALE_HOURS}h. \`resume\` it (wahin se continue, kuch delete nahi hota), or \`close\` it for the coverage report, or \`start <concept> --force\`.`);
     process.exit(1);
   }
   return s;
@@ -876,7 +1009,13 @@ const apply = (r) => {
 };
 const oneLine = (s) => `forge_session: ${s.concept} · STEP ${s.step}/${STEPS.length - 1} ${STEPS[s.step]}${s.current_axis ? ` · ON axis ${s.current_axis}` : ""} · axes done ${s.axes_done.join("") || "—"} · check-Q this pass ${s.check_q_this_pass || 0}`
   + (s.check_q_refused ? ` · refused ${s.check_q_refused}` : "")
-  + (s.closed_at ? ` · CLOSED ${s.closed_at}` : (hoursSince(s.started_at) > STALE_HOURS ? " · STALE (pacer silent)" : ""));
+  // RESUMES ARE SAID OUT LOUD, ALWAYS (W0-D): a session re-entered across days has a
+  // legitimately huge elapsed_min, and a reader who cannot see the re-entries would
+  // read that clock as theatre — or, worse, a session could LAUNDER a three-day trail
+  // as one sitting. The two clocks at close are unchanged; this is the third fact that
+  // makes them honest.
+  + ((s.resumes || []).length ? ` · resumed ${(s.resumes || []).length}×` : "")
+  + (s.closed_at ? ` · CLOSED ${s.closed_at}` : (isStale(s) ? " · STALE (pacer silent — `resume` wakes it)" : ""));
 
 // ---------------------------------------------------------------------------
 // BOOT — the ONE deliberate exception to STALE = SILENT (31 Jul 2026).
@@ -953,8 +1092,12 @@ function historyDigest(h) {
 function bootLines(s, hist, now = new Date()) {
   const h = hist || { last: null, same_concept: 0 };
   if (s && s.concept && !s.closed_at) {
+    // W0-D: `age` still reports from BIRTH — that is the number a human wants at boot
+    // ("started 40h ago") — while STALENESS is judged on the last touch, because that
+    // is what decides whether the pacer is speaking. Two different questions, and
+    // collapsing them is how a two-sitting concept got called abandoned.
     const age = hoursSince(s.started_at, now);
-    const stale = age > STALE_HOURS;
+    const stale = isStale(s, now);
     const marks = s.axes_marked_at || {};
     const jb = (a) => { const m = marks[a]; return m && Number.isInteger(m.jirah_before) ? m.jirah_before : 0; };
     const ungraded = s.axes_done.filter((a) => !(jb(a) >= 1 && !s.axes_done.some((b) => b !== a && jb(b) === jb(a))));
@@ -964,9 +1107,16 @@ function bootLines(s, hist, now = new Date()) {
       `FORGE SESSION OPEN ON DISK · ${s.concept} · STEP ${s.step}/${STEPS.length - 1} ${STEPS[s.step] || "?"}`
         + ` · axes done ${s.axes_done.join("") || "—"} ${s.axes_done.length}/${AXES.length} · ungraded ${ungraded.join("") || "—"}`
         + ` · deferred ${s.axes_deferred.join("") || "—"} · left ${left.join("") || "—"} · ${when}`
+        + ((s.resumes || []).length ? ` · resumed ${(s.resumes || []).length}×` : "")
         + historyDigest(h),                      // #30 — no longer swallowed, and still ONE line
+      // W0-D (2 Sep 2026): the stale branch used to name ONE door, and it was the door
+      // that ENDS the session. So the only mechanically possible answer to "he came
+      // back the next morning" was to close a concept he was mid-way through, or to
+      // re-teach it from step 0 — the two things the line above forbids in its own
+      // words. `resume` goes first because continuing is the common case; `close`
+      // stays named, because a session he is genuinely done with still owes a report.
       stale
-        ? "Do NOT re-teach those axes and do NOT start this concept from step 0. Run `node scripts/forge_session.mjs close` FIRST (that is the only thing that saves the coverage report), then `start <concept>`."
+        ? `Do NOT re-teach those axes and do NOT start this concept from step 0. Two doors: \`node scripts/forge_session.mjs resume\` (wahin se continue — kuch delete nahi hota, STEP ${s.step} se aage), or \`close\` if that concept is finished (that is the only thing that saves the coverage report).`
         : `Resume it — do NOT re-teach those axes and do NOT run \`start\` again (it will refuse). Continue at STEP ${s.step}.`,
     ];
   }
@@ -992,6 +1142,10 @@ function selftest() {
   let pass = 0, fail = 0;
   const assert = (d, c) => { if (c) { pass++; console.log("  ✓ " + d); } else { fail++; console.log("  ✗ " + d); } };
   const T0 = new Date("2026-07-30T10:00:00Z");
+  // HOISTED from the 31 Jul block below (W0-D, 2 Sep 2026): the SD-03/SD-04 asserts
+  // added up-file need a clock too, and a `const` used above its own declaration is a
+  // TDZ ReferenceError that would have taken the whole selftest down, not one line.
+  const T = (min) => new Date(T0.getTime() + min * 60000);
 
   const s0 = blank("Hallucinations", T0);
   assert("start lowercases + trims the concept", s0.concept === "hallucinations");
@@ -1020,22 +1174,93 @@ function selftest() {
   // Measured before this fix: `contract` printed ZERO bytes for a whole session
   // while sprint.json's current task was a concept mid-flight. The 12-step block
   // staying silent is correct; the METHOD reaching the turn NOT AT ALL is not.
+  // W0-D (2 Sep 2026): every one of these now injects `session` explicitly. Without it
+  // nudgeLine() falls through to load() and READS HIS LIVE STUDY FILE — the same
+  // "a test that reads his day is not a test" scar teaching_audit.mjs carries from
+  // 10 Aug, and these asserts would silently start measuring his morning instead of
+  // this function.
+  const NO_SESSION = { session: null };
   assert("SILENCE GAP — a concept in the sprint with NO open session gets ONE nudge line",
-    /forge_session\.mjs start/.test(nudgeLine({ sprint: { progress: { current: { task: "Hallucinations", track: "concept" } } } })));
+    /forge_session\.mjs start/.test(nudgeLine({ ...NO_SESSION, sprint: { progress: { current: { task: "Hallucinations", track: "concept" } } } })));
   assert("SILENCE GAP — the nudge names the CONCEPT, so it is never a generic nag",
-    /Hallucinations/.test(nudgeLine({ sprint: { progress: { current: { task: "Hallucinations", track: "concept" } } } })));
+    /Hallucinations/.test(nudgeLine({ ...NO_SESSION, sprint: { progress: { current: { task: "Hallucinations", track: "concept" } } } })));
   assert("SILENCE GAP — it names WHAT IS LOST, not just what to run",
-    /META-FREEZE/.test(nudgeLine({ sprint: { progress: { current: { task: "X", track: "concept" } } } })));
+    /META-FREEZE/.test(nudgeLine({ ...NO_SESSION, sprint: { progress: { current: { task: "X", track: "concept" } } } })));
   assert("SILENCE GAP — a NON-concept track stays SILENT (never the always-fires warning, audit #38)",
-    nudgeLine({ sprint: { progress: { current: { task: "Python basics", track: "skill" } } } }) === ""
-    && nudgeLine({ sprint: { progress: { current: { task: "API", track: "course" } } } }) === ""
-    && nudgeLine({ sprint: { progress: { current: { task: "resume", track: "career" } } } }) === "");
+    nudgeLine({ ...NO_SESSION, sprint: { progress: { current: { task: "Python basics", track: "skill" } } } }) === ""
+    && nudgeLine({ ...NO_SESSION, sprint: { progress: { current: { task: "API", track: "course" } } } }) === ""
+    && nudgeLine({ ...NO_SESSION, sprint: { progress: { current: { task: "resume", track: "career" } } } }) === "");
   assert("SILENCE GAP — it is ONE line, so it can never become a wall",
-    nudgeLine({ sprint: { progress: { current: { task: "X", track: "concept" } } } }).split("\n").length === 1);
+    nudgeLine({ ...NO_SESSION, sprint: { progress: { current: { task: "X", track: "concept" } } } }).split("\n").length === 1);
   assert("SILENCE GAP — a missing/junk sprint degrades to silence, never to a thrown hook",
-    nudgeLine({ sprint: null }) === "" && nudgeLine({ sprint: {} }) === "");
+    nudgeLine({ ...NO_SESSION, sprint: null }) === "" && nudgeLine({ ...NO_SESSION, sprint: {} }) === "");
   assert("SILENCE GAP — an OPEN session suppresses the nudge (the block speaks instead)",
     contractLines(s4, T0).length > 0);
+  assert("W0-D INJECTION LAW — nudgeLine takes its session as a dependency, so no test of it can ever read his live forge_session.json",
+    nudgeLine({ session: null, sprint: null }) === ""
+    && nudgeLine({ session: { concept: "z", started_at: nowISO(T0), updated_at: nowISO(T0), step: 3, axes_done: [], axes_deferred: [] }, sprint: null, now: T0 }) === "");
+
+  // ── SD-03 · THE NUDGE MUST NOT LIE ────────────────────────────────────────
+  // Reproduced from the live 2 Sep state: `tokenization` open at STEP 3 and stale,
+  // sprint saying "Hallucinations". The old line asserted all three of: no session
+  // exists · the concept is Hallucinations · run `start`. All three were false.
+  {
+    const staleOpen = { concept: "tokenization", started_at: nowISO(T0), updated_at: nowISO(T0), step: 3,
+      steps_done: [0, 1, 2, 3], axes_done: [], axes_deferred: [], axes_marked_at: {}, current_axis: "a",
+      question_moments: { pehle_guess: 1, widget_gate: 0, check_q: 0, jirah: 0 } };
+    const sprintOther = { progress: { current: { task: "Hallucinations", track: "concept" } } };
+    const line = nudgeLine({ session: staleOpen, sprint: sprintOther, now: T(19 * 60) });
+    assert("SD-03 — with a STALE session open the nudge NEVER says 'koi session KHULI nahi hai'",
+      line !== "" && !/koi session KHULI nahi hai/.test(line));
+    assert("SD-03 — it names the OPEN session's real concept and step, not the sprint's",
+      /tokenization/.test(line) && /STEP 3\/11/.test(line));
+    assert("SD-03 — it orders the commands that WORK (resume | close), never the `start` that startBlocked refuses",
+      /resume/.test(line) && /close/.test(line) && !/mjs start\b/.test(line));
+    assert("SD-03 — a DISAGREEING sprint is named as the decision it is, and an agreeing one adds nothing",
+      /sprint "Hallucinations"/.test(line)
+      && !/sprint "/.test(nudgeLine({ session: staleOpen, now: T(19 * 60), sprint: { progress: { current: { task: "tokenization", track: "concept" } } } })));
+    assert("SD-03 — still ONE line, and still silent when the whole read throws",
+      line.split("\n").length === 1 && nudgeLine({ session: staleOpen, now: T(19 * 60), sprint: { get progress() { throw new Error("boom"); } } }).split("\n").length === 1);
+    assert("SD-03 — a FRESH open session stays silent here (contractLines owns that turn — two voices is a wall)",
+      nudgeLine({ session: staleOpen, sprint: sprintOther, now: T(60) }) === "");
+  }
+
+  // ── SD-04 · STALENESS RUNS FROM THE LAST TOUCH, AND `resume` IS THE DOOR ───
+  {
+    const born = { ...blank("multiday", T0), step: 5, steps_done: [0, 1, 2, 3, 4, 5], current_axis: "c" };
+    const touched = { ...born, updated_at: nowISO(T(19 * 60)) };          // born T0, touched 19h later
+    assert("SD-04 — a session BORN 20h ago but TOUCHED 1h ago is LIVE (the two-sitting concept the old anchor called abandoned)",
+      isStale(born, T(20 * 60)) === true && isStale(touched, T(20 * 60)) === false
+      && contractLines(touched, T(20 * 60)).length > 0);
+    assert("SD-04 — the NUMBER did not move: 18h from the last touch is still stale",
+      STALE_HOURS === 18 && isStale(touched, T(19 * 60 + 18 * 60 + 1)) === true);
+    assert("SD-04 — REPAIR TOWARD SILENCE survives the new anchor: no readable stamp at all reads STALE, never fresh",
+      lastTouchISO({ concept: "x" }) === undefined
+      && isStale({ concept: "x" }, T0) === true
+      && contractLines({ ...born, started_at: undefined, updated_at: undefined }, T0).length === 0);
+    assert("SD-04 — updated_at falls back to started_at, so a session file written before this field existed still ages correctly",
+      lastTouchISO({ started_at: nowISO(T0) }) === nowISO(T0)
+      && isStale({ concept: "x", started_at: nowISO(T0) }, T(19 * 60)) === true);
+    const r1 = resumeSession(born, T(20 * 60));
+    assert("SD-04 — `resume` on a stale session wakes the pacer and BLANKS NOTHING",
+      r1.ok && contractLines(r1.session, T(20 * 60)).length > 0
+      && r1.session.step === 5 && r1.session.current_axis === "c"
+      && r1.session.started_at === born.started_at
+      && JSON.stringify(r1.session.steps_done) === JSON.stringify(born.steps_done));
+    assert("SD-04 — the re-entry is RECORDED (a resumed session can never read as one sitting)",
+      r1.session.resumes.length === 1 && r1.session.resumes[0].at_step === 5 && r1.session.resumes[0].after_h === 20
+      && coverage(r1.session, T(20 * 60)).resumes === 1
+      && /resumed 1×/.test(oneLine(r1.session)));
+    assert("SD-04 — elapsed_min still runs from BIRTH after a resume: the anti-theatre clock does not move",
+      coverage(r1.session, T(20 * 60)).elapsed_min === coverage(born, T(20 * 60)).elapsed_min);
+    assert("SD-04 — `resume` REFUSES a live session (nothing to wake) and a CLOSED one (start is that door)",
+      !resumeSession(touched, T(20 * 60)).ok && /already LIVE/.test(resumeSession(touched, T(20 * 60)).error)
+      && !resumeSession({ ...born, closed_at: nowISO(T0) }, T(20 * 60)).ok);
+    assert("SD-04 — a second resume appends, never replaces (the count is the honesty)",
+      resumeSession({ ...r1.session, updated_at: nowISO(T(20 * 60)) }, T(48 * 60)).session.resumes.length === 2);
+    assert("SD-04 — the boot line's stale branch now names a door that CONTINUES, not only the two that end it",
+      bootLines(born, null, T(20 * 60))[1].includes("resume") && bootLines(born, null, T(20 * 60))[1].includes("close"));
+  }
   assert("step 7 contract demands voice-first Bolo",
     contractLines(setStep(s4, 7, T0).session, T0).some((l) => /voice-first/.test(l)));
 
@@ -1089,8 +1314,19 @@ function selftest() {
   assert("a REFUSED check-Q is recorded, so coverage can still see the quiz-dump attempt",
     addMoment(withQ, "check_q").session.check_q_refused === 1 && addMoment(withQ, "check_q").record === true
     && coverage(addMoment(withQ, "check_q").session).check_q_refused === 1);
-  assert("REPAIR TOWARD SILENCE — a session file with no started_at reads as stale, not fresh",
-    contractLines({ ...s4, started_at: undefined }, T0).length === 0);
+  // W0-D (2 Sep 2026) — THE LAW IS UNCHANGED; THE FIELD THAT CARRIES IT MOVED. This
+  // assert used to drop `started_at` alone, because `started_at` WAS the clock. Under
+  // the last-touch anchor that fixture no longer describes "a file with no clock" — it
+  // describes a file with a perfectly good one (`updated_at`), so reading it as LIVE is
+  // correct, not a regression. The law itself — NO READABLE STAMP ⇒ STALE ⇒ SILENT — is
+  // asserted below on the case that actually expresses it, plus the direction that
+  // matters: dropping a stamp may never make a session look FRESHER than it is.
+  assert("REPAIR TOWARD SILENCE — a session file with NO readable stamp at all reads as stale, not fresh",
+    contractLines({ ...s4, started_at: undefined, updated_at: undefined }, T0).length === 0
+    && contractLines({ ...s4, started_at: 12345, updated_at: null }, T0).length === 0);
+  assert("REPAIR TOWARD SILENCE — losing a stamp can only ever make a session look OLDER, never younger",
+    staleHours({ ...s4, updated_at: undefined }, T0) >= staleHours(s4, T0)
+    && staleHours({ ...s4, started_at: undefined, updated_at: undefined }, T0) === Infinity);
   assert("pehle_guess/jirah are never rate-limited by the check-Q law",
     addMoment(withQ, "pehle_guess").ok && addMoment(withQ, "jirah").ok);
 
@@ -1120,7 +1356,7 @@ function selftest() {
   // 31 Jul 2026 — GRADING PROVENANCE · THE TWO CLOCKS · HISTORY · BOOT
   // Every disk path below lives under tmpdir(), never dressing-room/state.
   // =========================================================================
-  const T = (min) => new Date(T0.getTime() + min * 60000);
+  // (`T` now lives beside T0 at the top of this selftest — W0-D.)
   const at5 = setStep(blank("hallucinations", T0), 5, T0).session;
   const mA = markAxis(at5, "a", "done", T0).session;
   assert("PROVENANCE — a mark stamps at (ISO) + step + jirah_before",
@@ -1321,7 +1557,12 @@ function selftest() {
   assert("BOOT SPEAKS on a stale unclosed session — the exact case `contract` is silent for",
     bStale.length === 2 && /hallucinations/.test(bStale[0]) && /STEP 5/.test(bStale[0])
     && /axes done abcef/.test(bStale[0]) && /ungraded abcef/.test(bStale[0]) && /STALE/.test(bStale[0])
-    && /close` FIRST/.test(bStale[1]));
+    // W0-D: the second line named ONE door and it was the door that ENDS the session,
+    // so the only mechanically possible answer to "he came back the next morning" was
+    // to close a concept he was mid-way through. Both doors are now asserted, and so is
+    // the instruction they serve — never re-teach, never restart from step 0.
+    && /resume/.test(bStale[1]) && /`close`/.test(bStale[1])
+    && /Do NOT re-teach/.test(bStale[1]) && /from step 0/.test(bStale[1]));
   const bFresh = bootLines(staleSession, { last: null, same_concept: 0 }, T(30));
   assert("BOOT on a FRESH session says 'Resume it', never 'close FIRST'",
     /Resume it/.test(bFresh[1]) && !/close` FIRST/.test(bFresh[1]));
@@ -1808,8 +2049,20 @@ function lockChain(s, { dry = false } = {}) {
 }
 
 // ---------------------------------------------------------------------------
-const [mode, ...rest] = process.argv.slice(2);
+// THE IMPORT GUARD (W0-D, 2 Sep 2026). This dispatch has always run at MODULE LOAD,
+// so `import` from here executed the CLI with the importer's argv — `node
+// scripts/watchman.mjs run` would have fallen straight through to `default:` and
+// printed the usage line into the watchman's own stdout. That is why nothing has ever
+// imported this organ, and why the staleness predicate it owns was hand-copied into
+// six files instead. Same one-liner registry.mjs:987 and thalamus.mjs:2626 already use.
+const INVOKED_DIRECTLY = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+const [mode, ...rest] = INVOKED_DIRECTLY ? process.argv.slice(2) : ["--imported--"];
 switch (mode) {
+  // NOT A VERB. Punctuated on purpose: the DISPATCH DOC WIRE selftest derives the
+  // verb list with /^ {2}case "([a-z]+)":/ and would otherwise demand this sentinel be
+  // advertised in the header MODES block and the usage line, where it would read as a
+  // command he could type. It is the module-import sentinel and nothing else.
+  case "--imported--": break;
   case "start": {
     const force = rest.includes("--force");
     const concept = rest.filter((a) => a !== "--force").join(" ");
@@ -1827,8 +2080,16 @@ switch (mode) {
     const prev = load();
     if (startBlocked(prev, force)) {
       const age = hoursSince(prev.started_at);
-      const when = Number.isFinite(age) ? `started ${age.toFixed(1)}h ago${age > STALE_HOURS ? ", STALE" : ""}` : "age unknown";
+      const when = Number.isFinite(age) ? `started ${age.toFixed(1)}h ago${isStale(prev) ? ", STALE" : ""}` : "age unknown";
       console.error(`forge_session: '${prev.concept}' is still open (STEP ${prev.step} ${STEPS[prev.step] || "?"}, axes done ${prev.axes_done.join("") || "—"}, ${when}).`);
+      // W0-D: `resume` is offered ONLY when he is re-typing THIS concept. Offering it
+      // for a different concept would be the same trap the --force omission avoids —
+      // it would look like the way forward and would silently continue the OLD topic.
+      // `--force` still stays unnamed here, deliberately (31 Jul: never offer the
+      // discard at the moment the command is being retyped).
+      if (isStale(prev) && prev.concept === String(concept).trim().toLowerCase()) {
+        console.error("  → `node scripts/forge_session.mjs resume` — wahi concept, wahin se aage. Nothing is blanked, nothing re-taught.");
+      }
       console.error("  → `node scripts/forge_session.mjs close` first — that is the only thing that saves the coverage report. Then re-run start.");
       process.exit(1);
     }
@@ -1910,6 +2171,24 @@ switch (mode) {
     lockChain(s, { dry: true });
     break;
   }
+  case "resume": {
+    // need(), NOT live() — live() REFUSES a stale session, and a stale session is the
+    // only thing this verb exists for. Same reasoning `close` states one case down.
+    const before = need(load());
+    const r = resumeSession(before);
+    if (!r.ok) { console.error("forge_session: " + r.error); process.exit(1); }
+    save(r.session);
+    const last = r.session.resumes[r.session.resumes.length - 1];
+    console.log(oneLine(r.session));
+    console.log(`forge_session: RESUMED '${r.session.concept}' after ${last.after_h === null ? "an unmeasurable gap" : last.after_h + "h"} — the pacer is speaking again.`);
+    // The pointer is the whole point of the verb: it says where he was, in the
+    // language the boot line uses, so nothing gets re-taught.
+    const left = AXES.filter((a) => !r.session.axes_done.includes(a) && !r.session.axes_deferred.includes(a));
+    console.log(`  continue at STEP ${r.session.step} ${STEPS[r.session.step] || "?"}`
+      + (r.session.current_axis ? ` · ON axis ${r.session.current_axis}` : "")
+      + ` · left ${left.join("") || "—"} — do NOT re-teach ${r.session.axes_done.join("") || "the done axes"}.`);
+    break;
+  }
   case "status": { const s = load(); if (s) console.log(oneLine(s)); break; }
   case "contract": {                      // HOOK PATH — silence is the default
     // SELF-INJECTION GUARD (same scar as hooks/afferent-post.mjs): every headless
@@ -1974,7 +2253,19 @@ switch (mode) {
     console.log(JSON.stringify(cov, null, 2));
     let recorded = null;                  // F5 (9 Aug): the "recorded" line stops asserting what it never checked
     if (shouldRecordClose(s)) {           // RECORD BEFORE REFUSE · double-close appends once
-      recorded = appendCoverage(s, "close", drifts ? { teaching_drifts: drifts } : {});
+      // LR-04 (W0-D, 2 Sep 2026): the rep count was computed right here and printed to
+      // a terminal, and that was the whole of it — forge_sessions.jsonl carried no rep
+      // field, so "this session banked NOTHING" died with the scrollback. Two
+      // post-restart tokenization sessions closed exactly that way and nothing
+      // downstream could see it. His order ("an uncaptured rep did not happen") needs
+      // the fact to OUTLIVE the terminal, and this row is the organ's only durable
+      // record of a session. Same disk snapshot as the drifts, same read-only terms:
+      // capture.mjs remains the sole writer of reps_log.jsonl.
+      recorded = appendCoverage(s, "close", {
+        ...(drifts ? { teaching_drifts: drifts } : {}),
+        reps_banked: reps && reps.present ? reps.reps : 0,
+        reps_log_present: !!(reps && reps.present),
+      });
       save({ ...s, closed_at: nowISO() });
     }
     // ALWAYS printed — never gated on failure. The draft printed this block only
@@ -2020,5 +2311,5 @@ switch (mode) {
     // author knows exists. Keep this line and the header MODES block in step with the
     // switch; the selftest reads all three out of this file's own source and fails if
     // they diverge (grep -n "DISPATCH DOC WIRE").
-    console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | lockchain (read-only preview of the step-10 chain) | status | contract | boot | close | selftest");
+    console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | lockchain (read-only preview of the step-10 chain) | resume (wake a STALE session where it stands — nothing blanked) | status | contract | boot | close | selftest");
 }

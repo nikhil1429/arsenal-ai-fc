@@ -53,6 +53,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { gameOnEpoch } from "./registry.mjs";   // W0-B — THE SYLLABUS FLOOR: one reader, one row, one receipt
 import { supersedeReps, ungradedSplit, ungradedLine } from "./capture.mjs";   // BLOCK 4 supersession + S10: the samjhao-era skip is SAID, from the owner's one counter
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
+import { isStale as forgeIsStale } from "./forge_session.mjs";   // W0-D — the pacer's staleness, from the pacer. The NUMBER is deliberately not imported here: this file asks the predicate and never re-implements the comparison, so a bare STALE_HOURS would be an unused symbol and a standing invitation to re-derive.
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -237,7 +238,14 @@ const FORGE_STEPS = [                                     // THE METHOD, verbati
   "AKELE-KARO", "BOLO", "CALIBRATE", "JIRAH", "LOCK", "RE-JIRAH",
 ];
 const FORGE_AXES = "abcdefghi".split("");
-const FORGE_STALE_HOURS = 18;               // forge_session: "a study session does not span a night"
+// FROZEN 2 Sep 2026 (W0-D) — the local copy, verbatim, now imported from the owner:
+//     const FORGE_STALE_HOURS = 18;               // forge_session: "a study session does not span a night"
+// The number was right and stayed right; the ANCHOR moved (staleness runs from the
+// last touch, not from birth), and this file published its verdict onto the bus as
+// `stale` for the Gaffer and the sitting to read. A mirror that kept the old anchor
+// would have had the bus asserting a dead session while the pacer was actively
+// speaking — the same inversion this file's own "A FROZEN BOOLEAN OUTLIVES ITS TRUTH"
+// note (below) was written about, one layer down. (L9: nothing deleted.)
 
 // The shape is CONSTANT — present in every output, on every path, whether or not
 // a session exists. A consumer that has to branch on `position` being absent will
@@ -343,11 +351,14 @@ function projectPosition(raw, lastRow, now) {
   // here would have the Gaffer and the contract contradicting each other about the
   // same file on the same turn, and he would have to adjudicate. One organ, one answer.
   const step = Number.isInteger(raw.step) && raw.step >= 0 && raw.step < FORGE_STEPS.length ? raw.step : 0;
-  // STALE mirrors forge_session's STALE_HOURS notion: a session older than that is
-  // not being paced any more (its contract goes silent). Unparseable/absent
-  // started_at ⇒ stale, the same "repair toward silence" direction the pacer takes.
-  const t0 = Date.parse(typeof raw.started_at === "string" ? raw.started_at : "");
-  const stale = !Number.isFinite(t0) || !Number.isFinite(nowMs) || ((nowMs - t0) / 3600000) > FORGE_STALE_HOURS;
+  // STALE is now ASKED OF THE PACER (W0-D, 2 Sep 2026) rather than re-derived here: a
+  // session untouched past forge_session's own STALE_HOURS is not being paced any more
+  // (its contract goes silent). Unreadable stamps ⇒ stale, the same "repair toward
+  // silence" direction the pacer takes — that law lives in lastTouchISO() now.
+  // The nowMs guard stays LOCAL and stays first: an unusable clock must read STALE, and
+  // handing an Invalid Date to the predicate would produce NaN > 18 === false — i.e.
+  // "live", which is repair toward SPEECH and the exact wrong direction.
+  const stale = !Number.isFinite(nowMs) || forgeIsStale(raw, new Date(nowMs));
   // UNGRADED, verbatim from forge_session's coverage(): an axis needs a jirah
   // BEFORE its own mark, and it may not SHARE that jirah with another axis — nine
   // axes marked after one `moment jirah` are nine ungraded claims, not nine grades.
@@ -857,11 +868,21 @@ function selftest() {
     && ungradedWith({}) === "ab"
     && ungradedWith({ a: { jirah_before: "many" }, b: null }) === "ab");
 
-  assert("position: STALE mirrors the pacer's 18h notion (18h fresh · 19h stale · no started_at ⇒ stale)",
-    projectPosition({ ...openSess, started_at: new Date(T0 - 17 * 3600000).toISOString() }, null, T0).stale === false
-    && projectPosition({ ...openSess, started_at: new Date(T0 - 19 * 3600000).toISOString() }, null, T0).stale === true
-    && projectPosition({ ...openSess, started_at: undefined }, null, T0).stale === true
-    && projectPosition({ ...openSess, started_at: undefined }, null, T0).session_open === true);
+  // W0-D (2 Sep 2026): the fixture used to vary `started_at` while a fixed `updated_at`
+  // sat beside it, because BIRTH was the clock. It varies the clock that actually
+  // decides now. The law is the same one it always asserted, and it is no longer this
+  // file's own opinion of it — it is the pacer's predicate, imported.
+  const touched = (h) => ({ ...openSess, updated_at: new Date(T0 - h * 3600000).toISOString() });
+  assert("position: STALE mirrors the pacer's 18h notion, now off the LAST TOUCH (17h fresh · 19h stale · no readable stamp ⇒ stale)",
+    projectPosition(touched(17), null, T0).stale === false
+    && projectPosition(touched(19), null, T0).stale === true
+    && projectPosition({ ...openSess, started_at: undefined, updated_at: undefined }, null, T0).stale === true
+    && projectPosition({ ...openSess, started_at: undefined, updated_at: undefined }, null, T0).session_open === true);
+  assert("position: a TWO-SITTING concept is LIVE on the bus (born 3 days ago, touched an hour ago) — the Gaffer and the sitting read this field",
+    projectPosition({ ...openSess, started_at: new Date(T0 - 72 * 3600000).toISOString(), updated_at: new Date(T0 - 1 * 3600000).toISOString() }, null, T0).stale === false
+    && projectPosition({ ...openSess, started_at: new Date(T0 - 72 * 3600000).toISOString(), updated_at: new Date(T0 - 72 * 3600000).toISOString() }, null, T0).stale === true);
+  assert("position: an unusable clock still reads STALE — never 'live' by way of a NaN comparison",
+    projectPosition(touched(1), null, Number.NaN).stale === true);
 
   assert("position: a mangled step is repaired to the pacer's own answer (0 TIME-BOX), never left undefined",
     projectPosition({ ...openSess, step: 99 }, null, T0).step_name === "TIME-BOX"

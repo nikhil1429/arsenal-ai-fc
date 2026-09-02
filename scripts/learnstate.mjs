@@ -23,6 +23,7 @@ import { courseBrief, fmtStamp } from "./course.mjs";   // audit #35 — the cou
 import { pythonBrief } from "./python_state.mjs";   // audit #107 #26 — the Python track's one reader
 import { loadCapsules, readLog, pendingCloses, openRound, intervalsOf } from "./rejirah.mjs";   // #107 pass 2 — un-pasted rounds; P7.B — the arbiter's live overdue read
 import { loadFreshDrill } from "./examiner.mjs";   // 11 Aug 2026 dead-wire sweep — the drill's age gate belongs to its owner (see nextup)
+import { isStale as forgeIsStale } from "./forge_session.mjs";   // W0-D — the PEHLA KAAM line asks the pacer whether its session is stale, instead of re-deriving it
 import { starvedNightFor, recordConsumption } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep — WHY the diary page is blank, in the brain's own words (see diaryLine) · recordConsumption: THE GATE's "briefed" stamp (18 Aug 2026), owner-held
 
 // audit #11 — read capsule_map.json (capsule_bridge's own output, read-only) and say
@@ -572,9 +573,18 @@ export function nextup(dir = STATE, now = Date.now()) {
   if (examRaw && examRaw.concept) losers.push({ name: "examiner", line: `staged drill on ${examRaw.concept} (${examRaw.date || "?"})${examStale ? " — STALE, gate ne rok diya: \`node scripts/examiner.mjs stage\`" : ""}${examTag}` });
 
   if (forgeOpen) {
-    const stale = (now - Date.parse(forge.started_at || "")) / 3600000 > 18;
+    // W0-D (2 Sep 2026 · SD-04): asked of the pacer, not re-derived. This line was the
+    // LAST hand-rolled copy of the predicate and the only one with a bare, unnamed 18 —
+    // and it is the one he actually reads, as PEHLA KAAM, at every kickoff.
+    const stale = forgeIsStale(forge, new Date(now));
+    // AND IT USED TO ORDER THE WRONG THING. Its own words were "close … PHIR wahi
+    // concept continue" — close it, then continue the same concept — which is exactly
+    // what `resume` does in one move, without ending the session or spending the
+    // coverage report on a concept he has not finished. Until 2 Sep that verb did not
+    // exist, so the line was the best available advice; now it is simply wrong advice.
+    // `close` stays named, because a concept he IS done with still owes its report.
     const line = stale
-      ? `PEHLE \`node scripts/forge_session.mjs close\` — '${forge.concept}' kal se khula pada hai; coverage report zor se padho, PHIR wahi concept continue`
+      ? `PEHLE \`node scripts/forge_session.mjs resume\` — '${forge.concept}' STEP ${forge.step} pe khula pada hai; wahin se aage, kuch dobara nahi. (Us concept se sach mein fursat ho tabhi \`close\` — coverage report wahi bachata hai.)`
       : `resume '${forge.concept}' @ STEP ${forge.step} — usi jagah se, kuch dobara nahi`;
     return winnerOf("forge-open", line, "ek khula loop sab kuch rok deta hai — pehle woh", losers);
   }
@@ -1139,13 +1149,33 @@ function selftest() {
   writeFileSync(join(dirA, "sprint.json"), JSON.stringify({ sprints: [], progress: { current: { id: "1-04", task: "Hallucinations", track: "concept" } } }));
   assert("ARBITER — with only a sprint, the sprint wins (plan of record)",
     nextup(dirA, NOW).winner.name === "sprint");
-  writeFileSync(join(dirA, "forge_session.json"), JSON.stringify({ concept: "hallucinations", started_at: new Date(NOW - 2 * 3600000).toISOString(), step: 4 }));
+  // ONE FIXTURE WRITER (W0-D, 2 Sep 2026). This block had FIVE separate writeFileSync
+  // call sites for the same file, and xray's per-organ ratchet counts unresolved fs
+  // sinks BY CALL SITE — so adding the two W0-D fixtures below took learnstate 62 → 64
+  // and turned the instrument red. The campaign's own precedent (S6-R/F-01, W0-A) is to
+  // REUSE the walker rather than add a call site, so all five collapse into this one.
+  // Net: 62 → 61, better than the baseline it was measured against, and a sixth fixture
+  // costs the ratchet nothing.
+  const forgeFx = (o) => writeFileSync(join(dirA, "forge_session.json"),
+    JSON.stringify({ concept: "hallucinations", step: 4, ...o }));
+  const hoursAgo = (h) => new Date(NOW - h * 3600000).toISOString();
+  forgeFx({ started_at: hoursAgo(2) });
   assert("ARBITER — an OPEN fresh forge session beats the sprint, and says RESUME",
     (() => { const n = nextup(dirA, NOW); return n.winner.name === "forge-open" && /resume/.test(n.winner.line) && n.contenders.some((c) => c.name === "sprint"); })());
-  writeFileSync(join(dirA, "forge_session.json"), JSON.stringify({ concept: "hallucinations", started_at: new Date(NOW - 30 * 3600000).toISOString(), step: 4 }));
-  assert("ARBITER — a STALE-open session wins but the action is CLOSE-first (coverage report is the record)",
-    /PEHLE.*close/.test(nextup(dirA, NOW).winner.line));
-  writeFileSync(join(dirA, "forge_session.json"), JSON.stringify({ concept: "hallucinations", started_at: new Date(NOW - 30 * 3600000).toISOString(), step: 4, closed_at: new Date(NOW - 20 * 3600000).toISOString() }));
+  forgeFx({ started_at: hoursAgo(30) });
+  // W0-D (2 Sep 2026): a stale-open session still WINS the slot — an open loop starves
+  // everything, that ranking is untouched. What changed is the ACTION: the old line
+  // ordered "close … PHIR wahi concept continue", which is `resume` spelled as two
+  // steps, one of which throws away the session. Both doors are asserted so neither can
+  // quietly vanish from the one line he reads every morning.
+  assert("ARBITER — a STALE-open session wins, and the action is RESUME-first (close is still offered, for a concept he is actually done with)",
+    (() => { const l = nextup(dirA, NOW).winner.line;
+      return /PEHLE.*resume/.test(l) && /`close`/.test(l) && /hallucinations/.test(l); })());
+  forgeFx({ started_at: hoursAgo(72), updated_at: hoursAgo(2) });
+  assert("ARBITER W0-D — a TWO-SITTING concept (born 3 days ago, touched 2h ago) reads as LIVE here, so his kickoff stops ordering a close on work in progress",
+    (() => { const w = nextup(dirA, NOW).winner; return w.name === "forge-open" && !/PEHLE/.test(w.line) && /resume 'hallucinations' @ STEP 4/.test(w.line); })());
+  forgeFx({ started_at: hoursAgo(30) });
+  forgeFx({ started_at: hoursAgo(30), closed_at: hoursAgo(20) });
   const capDirA = join(dirA, "capsules"); mkdirSync(capDirA, { recursive: true });
   // W0-B (2 Sep 2026): these ask whether an OVERDUE round outranks a closed session — a
   // RANKING question. The GAME-ON epoch closes the queue on any capsule locked before it,

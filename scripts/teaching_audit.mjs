@@ -108,10 +108,23 @@ const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } ca
 
 // The rules this file can actually measure. EXPORTED and stamped into every
 // teaching_audit_last.json so no surface ever has to hardcode (and rot) the list.
+// W0-D (2 Sep 2026 · LR-04) adds `uncaptured-rep`. His 30-Aug order — "an uncaptured
+// rep did not happen" — had no code path anywhere, and the cost was measured: two
+// post-restart forge sessions produced ZERO reps while the whole study-derived spine —
+// calibration, nemesis, fluency, night_coach — sat waiting on data that was never
+// banked. The capture step lived only in /forge's prose, and prose read once at
+// skill-load drowns after forty turns: the exact failure this organ exists for.
+// ⚠ AND THIS COMMENT SITS *OUTSIDE* THE ARRAY ON PURPOSE. Written inside it, its
+// parentheses made lawpack's jugad rule skip the whole literal (`judgeJugad` drops any
+// array whose inner text holds a brace or paren), so the LAW PACK count fell 92 → 91
+// and the gate went GREEN — not because anything improved, but because a finding had
+// been hidden by punctuation in a comment. A gate may only get stricter (§10-D rule 6);
+// it may never be quieted by accident. Keep prose out of literal arrays here.
 export const CHECKED_RULES = [
   "one-idea", "dheema-not-lamba", "hinglish", "his-level",
   "no-system-mid-concept", "confusion-is-literal", "his-word",
   "coverage", "neev-pehle", "link-back", "terminology", "decided",
+  "uncaptured-rep",
 ];
 
 // COVERAGE HONESTY, PER RULE (full-organism audit P1.1-P1.2, 7 Aug 2026). A rule
@@ -126,6 +139,7 @@ export const RULE_NOTES = {
   "decided": "machine sees TWO fingerprints only (re-opening the selfknowledge freeze; re-opening the tool-less/guest surface — both PERMANENT rulings, 7 Aug 2026). The general form (re-litigating any settled decision) has no decision registry to check against and stays his to catch.",
   "his-word": "machine sees ONE fingerprint: an axis marked done with zero Jirah before it. Every other his-word violation is semantic and stays his.",
   "coverage": "machine sees ONE fingerprint: a CORE axis landing in axes_deferred. The half-answer/scope-cut class is semantic and stays his.",
+  "uncaptured-rep": "machine sees ONE fingerprint, and it is a COUNT, not a judgement: a legal question-moment was declared to the pacer during this turn and reps_log.jsonl grew by zero rows in the same window. It cannot see whether the moment DESERVED a rep (a widget_gate he waved through is not a bankable answer), and it cannot see a rep banked late, in a later turn — that one closes itself the moment the row lands. WHAT IT CANNOT SEE AT ALL is the session that never declares a moment: an untracked teaching turn banks nothing and is measured as nothing. That slice stays his.",
 };
 
 // CORE-NEVER-DEFERRED's axis set, mirrored from the owner (forge_session.mjs:109;
@@ -579,7 +593,8 @@ export function auditTurnLegacy({ assistantText = "", userText = "", session = n
  *   no-system           steps 3-6  (unchanged; now code-stripped)
  *   confusion/ungraded  state comparisons, step-agnostic by construction
  */
-export function auditTurn({ assistantText = "", userText = "", session = null, prevStep = null, prevAxesDone = null, prevAxesDeferred = null, termState = null, linkState = null, closed = null } = {}) {
+export function auditTurn({ assistantText = "", userText = "", session = null, prevStep = null, prevAxesDone = null, prevAxesDeferred = null, termState = null, linkState = null, closed = null,
+  prevMoments = null, prevReps = null, repsNow = null } = {}) {
   const drifts = [];
   const open = !!(session && session.concept && !session.closed_at);
 
@@ -683,6 +698,31 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
         });
       }
     }
+  }
+
+  // ---- 6b) AN UNCAPTURED REP DID NOT HAPPEN (his 30 Aug order · LR-04) -------
+  // Pure state comparison, threshold-free, exactly the shape of check 6 above: two
+  // counts taken at this turn's two ends, and a drift only when the pair disagrees.
+  // WHY A COUNT AND NOT A JUDGEMENT: nothing here can tell whether an answer was worth
+  // banking — that is the teacher's call and it stays the teacher's. What a machine CAN
+  // see is that a legal question-moment was declared to the pacer and reps_log.jsonl
+  // did not grow, which is the exact shape of the two post-restart sessions that banked
+  // nothing at all while every downstream organ waited on their data.
+  // NO ANCHOR, NO CLAIM — this file's standing law: without both ends of the window
+  // (the prompt-time snapshot AND a readable rep count) it says NOTHING, rather than
+  // treating a missing number as a zero. A fabricated zero here would auto-count a
+  // drift against the teacher off no evidence, which is worse than silence.
+  // capture.mjs remains the SOLE WRITER of reps_log.jsonl; both numbers are reads.
+  const momentsNow = session.question_moments && typeof session.question_moments === "object"
+    ? Object.values(session.question_moments).reduce((a, b) => a + (Number.isFinite(Number(b)) ? Number(b) : 0), 0)
+    : null;
+  if (Number.isFinite(prevMoments) && Number.isFinite(momentsNow) && momentsNow > prevMoments
+      && Number.isFinite(prevReps) && Number.isFinite(repsNow) && repsNow <= prevReps) {
+    drifts.push({
+      rule: "uncaptured-rep",
+      evidence: `${momentsNow - prevMoments} question-moment(s) declared this turn (${prevMoments} → ${momentsNow}) and reps_log grew by ${repsNow - prevReps} — his 30 Aug order: an uncaptured rep did not happen. Bank it now (\`node scripts/capture.mjs\`), or the answer is gone.`,
+      excerpt: `question_moments total ${prevMoments} → ${momentsNow} · reps ${prevReps} → ${repsNow}`,
+    });
   }
 
   // ---- 7) COVERAGE — core axis deferred (the half-answer class, 7 Aug 2026) --
@@ -878,6 +918,20 @@ const liveIO = () => ({ writeLast: writeLastReal, appendLog: appendLogReal, auto
 // (hooks/afferent-post.mjs:59-62 is the field map) — this write is the only reason
 // confusion-is-literal can ever fire. step is captured HERE because prompt-time
 // step IS "the step before this turn", exactly the prevStep the check needs.
+// LR-04 (W0-D, 2 Sep 2026): the two ends of the rep window. Both are READS —
+// capture.mjs is and stays the sole writer of reps_log.jsonl. A missing or unreadable
+// file returns null, never 0: "I could not count" and "there are none" are different
+// facts, and collapsing them would auto-count a drift against the teacher off nothing.
+function repsCount(path = join(STATE_DIR, "reps_log.jsonl")) {
+  try {
+    if (!existsSync(path)) return null;
+    return readFileSync(path, "utf8").split("\n").filter((l) => l.trim()).length;
+  } catch { return null; }
+}
+const momentsTotal = (session) => (session && session.question_moments && typeof session.question_moments === "object"
+  ? Object.values(session.question_moments).reduce((a, b) => a + (Number.isFinite(Number(b)) ? Number(b) : 0), 0)
+  : null);
+
 function promptHook(hook) {
   const { session } = readForgeSession();
   const last = readLast() || {};
@@ -886,6 +940,11 @@ function promptHook(hook) {
     prompt: {
       text: String(hook.prompt || ""),
       step: session && Number.isFinite(Number(session.step)) ? Number(session.step) : null,
+      // LR-04 — the OPENING end of this turn's window, captured for the same reason
+      // `step` is: prompt-time IS "before this turn", and it is the only moment at
+      // which that number can be taken honestly.
+      moments: momentsTotal(session),
+      reps: repsCount(),
       session_id: typeof hook.session_id === "string" ? hook.session_id : null,
       at: new Date().toISOString(),
     },
@@ -912,6 +971,15 @@ export function stopHook(hook, io) {
     : (last.stop && Number.isFinite(last.stop.step) ? last.stop.step : null);
   const prevAxesDone = last.stop && Array.isArray(last.stop.axes_done) ? last.stop.axes_done : null;
   const prevAxesDeferred = last.stop && Array.isArray(last.stop.axes_deferred) ? last.stop.axes_deferred : null;
+  // LR-04 — the window's two ends, resolved exactly the way prevStep is: this turn's
+  // OWN prompt when it paired, otherwise the previous Stop. A parallel session's prompt
+  // is discarded there and is discarded here, for the same reason: a window whose ends
+  // come from two different conversations measures nothing.
+  const prevMoments = paired && Number.isFinite(p.moments) ? p.moments
+    : (last.stop && Number.isFinite(last.stop.moments) ? last.stop.moments : null);
+  const prevReps = paired && Number.isFinite(p.reps) ? p.reps
+    : (last.stop && Number.isFinite(last.stop.reps) ? last.stop.reps : null);
+  const repsNow = repsCount();
 
   // Cross-turn state for neev-pehle + link-back (P1.1/P1.2), keyed by CONCEPT —
   // a term opened in yesterday's session of the same concept stays opened (canon
@@ -934,6 +1002,7 @@ export function stopHook(hook, io) {
     assistantText: String(hook.last_assistant_message || ""),
     userText, session, prevStep, prevAxesDone, prevAxesDeferred,
     termState: terms0, linkState: link0, closed,
+    prevMoments, prevReps, repsNow,
   });
 
   const why = res.audited ? null : (readWhy || res.why);
@@ -972,6 +1041,12 @@ export function stopHook(hook, io) {
       drifts: res.drifts.length,
       axes_done: session && Array.isArray(session.axes_done) ? session.axes_done : [],
       axes_deferred: session && Array.isArray(session.axes_deferred) ? session.axes_deferred : [],
+      // LR-04 — the CLOSING end, which is also the next turn's opening end when no
+      // prompt pairs (an assistant-only turn, or a UserPromptSubmit that never fired).
+      // Without it the rule would go permanently silent on exactly the sessions that
+      // skip the prompt hook, which is the wrong direction for a capture law.
+      moments: momentsTotal(session),
+      reps: repsNow,
     },
     terms: terms1,
     terms_by_concept: { ...termsByConcept, [concept]: terms1 },   // C4: no concept's opened-set is ever displaced again
@@ -1091,6 +1166,20 @@ function report() {
     const unchecked = tc.rules.map((r) => r.id).filter((id) => !CHECKED_RULES.includes(id));
     console.log(`  coverage: checks exist for ${tc.rules.length - unchecked.length} of ${tc.rules.length} contract rules`
       + (unchecked.length ? ` — UNCHECKED: ${unchecked.join(" · ")}` : ""));
+    // W0-D (2 Sep 2026) — THE OTHER DIRECTION, which nothing said until today. The line
+    // above answers "which of his rules has no check". The failure that actually costs
+    // something is the reverse: a check that EMITS a rule id the contract has no row
+    // for. Then every autohit for it exits 1 and the drift is measured, staged and
+    // dropped — silently, because the auto-count's failure lives in a jsonl field and
+    // not on any screen. It is a live risk, not a hypothetical: teaching_contract.json
+    // is gitignored, so a rule added through its CLI does not travel with the commit
+    // that taught this file to emit it (the seed carries it now — this is the tripwire
+    // for the day the seed and CHECKED_RULES drift apart again).
+    const unwired = CHECKED_RULES.filter((id) => !tc.rules.some((r) => r.id === id));
+    if (unwired.length) {
+      console.log(`  ⚠ UNWIRED: ${unwired.join(" · ")} — a check exists and emits this id, but the contract has NO row for it,`);
+      console.log("    so every auto-count against it fails and the drift is measured and then dropped. Fix: `node scripts/teaching_contract.mjs add <id> \"<line>\"`.");
+    }
     console.log("  ('no drift caught' is NOT 'taught correctly' — only the checked rules are checked,");
     console.log("   and for these, only the stated slice:)");
     for (const [r, note] of Object.entries(RULE_NOTES)) {
@@ -1274,9 +1363,41 @@ function selftest() {
     }).drifts.some((d) => d.rule === "coverage"));
   assert("CHECKED_RULES names every rule id this engine can emit, and nothing else",
     (() => {
-      const emitted = ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle", "link-back", "terminology", "decided"];
+      const emitted = ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle", "link-back", "terminology", "decided",
+        "uncaptured-rep"];   // W0-D · LR-04 — grown deliberately: this mirror is the ratchet, and it may only ever be widened alongside a real emitter
       return emitted.every((r) => CHECKED_RULES.includes(r)) && CHECKED_RULES.every((r) => emitted.includes(r));
     })());
+  assert("W0-D · LR-04 — every CHECKED_RULE that is only PARTIALLY machine-visible carries its RULE_NOTES slice, so 'no drift caught' can never widen into 'taught correctly'",
+    typeof RULE_NOTES["uncaptured-rep"] === "string" && RULE_NOTES["uncaptured-rep"].length > 80);
+
+  // ── LR-04 (W0-D, 2 Sep 2026) — "AN UNCAPTURED REP DID NOT HAPPEN" ──────────
+  // His 30-Aug order, finally a code path. Measured before this rule existed:
+  // reps_log.jsonl's newest row was 2026-08-23 and two post-restart forge sessions had
+  // closed with steps [0,1,2,3] and no reps at all — the capture step lived only in
+  // /forge's prose, and nothing in the machine objected even once.
+  {
+    const M = (n) => ({ ...at(4), question_moments: { pehle_guess: n, widget_gate: 0, check_q: 0, jirah: 0 } });
+    const fired = (o) => auditTurn({ assistantText: "x", ...o }).drifts.some((d) => d.rule === "uncaptured-rep");
+    assert("LR-04 — a question-moment declared with NO rep banked in the same window is a drift",
+      fired({ session: M(2), prevMoments: 1, prevReps: 5, repsNow: 5 }));
+    assert("LR-04 — SILENT when the rep landed (the honest turn costs the teacher nothing)",
+      !fired({ session: M(2), prevMoments: 1, prevReps: 5, repsNow: 6 }));
+    assert("LR-04 — SILENT when no moment was declared, however many turns pass (this rule never fires on a turn that asked nothing)",
+      !fired({ session: M(1), prevMoments: 1, prevReps: 5, repsNow: 5 }));
+    assert("LR-04 — NO ANCHOR, NO CLAIM: a missing snapshot or an unreadable reps_log says NOTHING rather than treating absence as zero",
+      !fired({ session: M(2), prevMoments: null, prevReps: 5, repsNow: 5 })
+      && !fired({ session: M(2), prevMoments: 1, prevReps: null, repsNow: 5 })
+      && !fired({ session: M(2), prevMoments: 1, prevReps: 5, repsNow: null }));
+    assert("LR-04 — the evidence carries BOTH counts and names his order, so the auto-count is auditable and reversible",
+      (() => { const d = auditTurn({ assistantText: "x", session: M(3), prevMoments: 1, prevReps: 5, repsNow: 5 }).drifts.find((x) => x.rule === "uncaptured-rep");
+        return /2 question-moment/.test(d.evidence) && /an uncaptured rep did not happen/.test(d.evidence)
+          && /question_moments total 1 → 3/.test(d.excerpt) && /reps 5 → 5/.test(d.excerpt); })());
+    assert("LR-04 — it is step-agnostic by construction (a state comparison, like the ungraded-axis check) and never fires outside an open session",
+      fired({ session: { ...M(2), step: 9 }, prevMoments: 1, prevReps: 0, repsNow: 0 })
+      && !auditTurn({ assistantText: "x", session: { ...M(2), closed_at: "2026-08-06T12:00:00Z" }, prevMoments: 1, prevReps: 0, repsNow: 0 }).audited);
+    assert("LR-04 — a rep count that somehow SHRANK (a roll, a truncation) is still 'nothing banked', never a negative that reads as growth",
+      fired({ session: M(2), prevMoments: 1, prevReps: 9, repsNow: 4 }));
+  }
 
   // ========================================================================
   // PART 2b — P1.1/P1.2 (7 Aug 2026): neev-pehle, link-back, terminology,
@@ -1390,9 +1511,32 @@ function selftest() {
         question_moments: { pehle_guess: 0, widget_gate: 0, check_q: 0, jirah: 0 }, check_q_this_pass: 0,
       };
       delete openSeed.closed_at;
+      // ── LR-01 (W0-D, 2 Sep 2026) — THE SECOND SCOPE FIELD, NORMALISED TOO ──────
+      // The 10-Aug repair above normalised ONE field, `closed_at`, because that was the
+      // field that had bitten. It is not the only field that decides scope: `step`
+      // decides which RULES APPLY (see the STEP SCOPING block at auditTurn's contract —
+      // one-idea and no-system are steps 3-6, dheema 3-9, hinglish 2-9 except 7). So
+      // this selftest still read HIS STUDY DAY, one field over, and the assert below
+      // ("the row carries at least one drift") was really an assertion about which step
+      // Nikhil happened to be on when the suite ran.
+      // MEASURED with a step-sweep harness against this exact probe message:
+      //     step 0 → 0 drifts · step 1 → 0 · step 2 → 1 · step 3 → 3 · step 4 → 3
+      //     step 9 → 2 · step 10 → 0
+      // — so his live steps 0, 1 and 10 turn this member RED and steps 2-4/9 turn it
+      // green, which is exactly the 10-day 62/1 red and today's 63/0 green: ONE defect,
+      // two faces. Step 4 is chosen because it sits in the widest band (every text rule
+      // in scope) and is nowhere near an edge.
+      // The live bytes are STILL the seed — that is what keeps this an end-to-end test
+      // of the REAL shape. Only the fields that decide SCOPE are normalised, and each
+      // one is now asserted, so a third scope field arriving fails as a named line.
+      openSeed.step = 4;
+      openSeed.steps_done = [0, 1, 2, 3, 4];
       writeFileSync(join(tmp, "forge_session.json"), JSON.stringify(openSeed, null, 2));
       assert("END-TO-END — the seeded session is OPEN before the chain is driven (a closed seed makes the next three asserts meaningless, not failing)",
         openSeed.closed_at === undefined && typeof openSeed.concept === "string" && Number.isInteger(openSeed.step));
+      assert("END-TO-END — and its STEP is pinned inside the measured green band, so this member can never again be decided by which step HIS session is on (LR-01)",
+        openSeed.step === 4 && openSeed.step >= 2 && openSeed.step <= 9
+        && openSeed.steps_done.includes(openSeed.step));
       const env = { ...process.env, ARSENAL_AUDIT_STATE_DIR: tmp, ARSENAL_AUDIT_NO_SPAWN: "1" };
       delete env.ARSENAL_ORGAN;
       const payload = JSON.stringify({
@@ -1403,8 +1547,15 @@ function selftest() {
       const logRows = existsSync(join(tmp, "teaching_audit.jsonl"))
         ? readFileSync(join(tmp, "teaching_audit.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l)) : [];
       const lastJ = readJson(join(tmp, "teaching_audit_last.json"));
-      assert("END-TO-END — a spawned child with a piped Stop payload AUDITS and the row lands ON DISK (stdin → reader → engine → jsonl, the whole chain §5.2 never ran)",
-        r.status === 0 && logRows.length === 1 && logRows[0].drifts.length >= 1 && logRows[0].session_id === "selftest-e2e");
+      // LR-01: SPLIT. These were one assert, and the conflation is what made the
+      // diagnosis take ten days — "the chain is dead" and "the chain ran and measured
+      // nothing on this step" are different failures with different repairs, and they
+      // arrived as a single red line. The chain's liveness is asserted first, on its
+      // own, because it is the thing this block exists to prove.
+      assert("END-TO-END — a spawned child with a piped Stop payload runs the WHOLE chain and the row lands ON DISK (stdin → reader → engine → jsonl, the chain §5.2 never ran)",
+        r.status === 0 && logRows.length === 1 && logRows[0].session_id === "selftest-e2e");
+      assert("END-TO-END — and that row carries at least one measured drift (the engine did WORK, not just I/O — a green chain writing empty rows is the silent death this file was built after)",
+        logRows.length === 1 && logRows[0].drifts.length >= 1);
       assert("END-TO-END — teaching_audit_last.json records audited:true with the why field null (quiet-vs-dead is now readable off disk)",
         lastJ && lastJ.stop && lastJ.stop.audited === true && lastJ.stop.why === null
         && Array.isArray(lastJ.checked_rules) && lastJ.checked_rules.length === CHECKED_RULES.length);

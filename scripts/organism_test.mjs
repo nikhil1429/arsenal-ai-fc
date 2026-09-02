@@ -677,6 +677,66 @@ async function laws() {
         live.length === 0, live.length ? `still referenced in: ${live.join(", ")}` : "");
     }
 
+    // ── ONE STALENESS, ONE OWNER — W0-D (2 Sep 2026, SD-03/SD-04/SD-05) ────────
+    // The forge staleness predicate was derived SIX times — forge_session.mjs (the owner),
+    // captains_call.mjs, watchman.mjs, learning_state.mjs, learnstate.mjs and sitting.mjs —
+    // every one off `started_at` (BIRTH), two of them a bare unnamed `18`. Each organ's own
+    // selftest was green, because each agreed with itself; the disagreement only exists
+    // BETWEEN them, which is exactly what no per-organ suite can see. It is not theoretical:
+    // the anchor moved to LAST TOUCH so a two-sitting concept could be resumed, and any
+    // mirror left behind would have gone on telling him to close a session the pacer had
+    // just woken — on his kickoff line, in his card deck, in the Dugout's route and in the
+    // night watch, all four contradicting the organ that owns the fact.
+    {
+      const FS = await import(pathToFileURL(join(ROOT, "scripts", "forge_session.mjs")).href);
+      const CC2 = await import(pathToFileURL(join(ROOT, "scripts", "captains_call.mjs")).href);
+      const LS2 = await import(pathToFileURL(join(ROOT, "scripts", "learning_state.mjs")).href);
+      const SIT = await import(pathToFileURL(join(ROOT, "scripts", "sitting.mjs")).href);
+      const NOW = new Date("2026-09-02T12:00:00Z");
+      const mk = (bornH, touchedH) => ({
+        concept: "tokenization", step: 3, steps_done: [0, 1, 2, 3], axes_done: [], axes_deferred: [],
+        axes_marked_at: {}, question_moments: { pehle_guess: 1, widget_gate: 0, check_q: 0, jirah: 0 },
+        started_at: new Date(NOW.getTime() - bornH * 3600000).toISOString(),
+        updated_at: new Date(NOW.getTime() - touchedH * 3600000).toISOString(),
+      });
+      const twoSitting = mk(72, 1);       // born 3 days ago, touched an hour ago — mid-concept
+      const abandoned = mk(72, 72);       // born 3 days ago, untouched since — genuinely stale
+      const kick = { cur: { id: "1-04", task: "tokenization", track: "concept" } };
+      const verdicts = (f) => ({
+        owner: FS.isStale(f, NOW),
+        cards: !CC2.dealGuard({ organEnv: undefined, forge: f, now: NOW }).silent,
+        bus: LS2.projectPosition(f, null, NOW.getTime()).stale,
+        route: !SIT.routeFor({ forge: f, nextup: null, kickoff: kick, scout: null, capsules: [] }, NOW.getTime()).why.includes("forge session open @ step"),
+      });
+      const vLive = verdicts(twoSitting), vDead = verdicts(abandoned);
+      assert("ONE STALENESS — all four live derivations agree a TWO-SITTING concept is still being paced (pacer speaking · deck silent · bus live · route says resume)",
+        Object.values(vLive).every((v) => v === false),
+        JSON.stringify(vLive));
+      assert("ONE STALENESS — and all four agree an ABANDONED session is stale (a mirror patched into three of four fails HERE, not in front of him)",
+        Object.values(vDead).every((v) => v === true),
+        JSON.stringify(vDead));
+      assert("ONE STALENESS — the frozen birth-anchored twin is the witness: it calls the same live session abandoned, which is what every mirror would still be doing",
+        CC2.dealGuardLegacy({ organEnv: undefined, forge: twoSitting, now: NOW }).silent === false
+        && CC2.dealGuard({ organEnv: undefined, forge: twoSitting, now: NOW }).silent === true);
+      // The two organs not imported here (watchman is a CLI with no import guard;
+      // learnstate needs a state dir) are pinned at the SOURCE instead — both have their
+      // own selftest for the behaviour, and this stops a seventh derivation appearing.
+      for (const org of ["watchman.mjs", "learnstate.mjs", "sitting.mjs", "learning_state.mjs", "captains_call.mjs"]) {
+        assert(`ONE STALENESS — ${org} IMPORTS the predicate from forge_session.mjs instead of re-deriving it`,
+          /import \{[^}]*(isStale|staleHours|STALE_HOURS)[^}]*\} from "\.\/forge_session\.mjs"/.test(readOrgan(org)));
+      }
+      const reDerived = ["watchman.mjs", "learnstate.mjs", "sitting.mjs", "learning_state.mjs"].filter((f) => {
+        const src = readOrgan(f);
+        const body = src.slice(0, src.indexOf("function selftest("));
+        // a live (non-comment) line that does forge-clock arithmetic by hand
+        return body.split("\n").some((l) => !/^\s*(\/\/|\*)/.test(l) && /started_at[^\n]*\/\s*(3600000|36e5)/.test(l));
+      });
+      assert("ONE STALENESS — no organ outside the owner still does forge-clock arithmetic by hand (the frozen copies are comments or *Legacy, never live paths)",
+        reDerived.length === 0, reDerived.length ? `hand-rolled again in: ${reDerived.join(", ")}` : "");
+      assert("ONE STALENESS — the NUMBER is the owner's, everywhere: nobody re-declares 18",
+        FS.STALE_HOURS === 18);
+    }
+
     // ── LOAD ZERO BLOCK 6 (19 Aug 2026) — THE DECISION GATE + THE ROAD THE GATE CAN SEE ──────────
     // The block that finally moves the LOAD NUMBER, which rose (36 → 37 → 39) through five green
     // blocks. Every assertion here is PURE — driven on fixtures, never on the live deck — because a

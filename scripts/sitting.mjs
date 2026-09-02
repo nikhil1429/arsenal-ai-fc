@@ -66,6 +66,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { tmpdir, homedir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE intent door — no organ keeps its own word list
+import { isStale as forgeIsStale } from "./forge_session.mjs";   // W0-D — the route asks the pacer whether its session is stale; it used to re-derive it from started_at with a bare 18
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -277,7 +278,11 @@ export async function gatherPlanContext(deps = {}, nowMs = Date.now()) {
 // ── ROUTE — the same table /learn drives (§6.3), read from state, never from chat ──
 export function routeFor({ forge, nextup, kickoff, scout, capsules }, now = Date.now()) {
   const forgeOpen = !!(forge && forge.concept && !forge.closed_at);
-  const forgeFresh = forgeOpen && (now - Date.parse(forge.started_at || "")) / 3600000 <= 18;
+  // W0-D (2 Sep 2026 · SD-04): the pacer's own predicate, not a sixth hand-rolled copy.
+  // This one was a bare `18` with no name, on the route that decides what the Dugout
+  // says out loud — so before today a concept he had worked on across two evenings was
+  // routed as "purani session stale, band karo" by the surface he was speaking to.
+  const forgeFresh = forgeOpen && !forgeIsStale(forge, new Date(now));
   const cur = kickoff && kickoff.cur ? kickoff.cur : null;
   const w = nextup && nextup.winner ? nextup.winner.name : "none";
   if (forgeFresh) return { route: "FORGE", concept: forge.concept, why: `forge session open @ step ${forge.step} — resume, kuch dobara nahi` };
@@ -288,7 +293,18 @@ export function routeFor({ forge, nextup, kickoff, scout, capsules }, now = Date
   }
   if (scout && Array.isArray(scout.staged) && scout.staged.some((s) => s && s.kind === "scrimmage")) return { route: "SCRIMMAGE", concept: null, why: "scout ne scrimmage stage kiya hai" };
   if (cur && cur.track === "skill") return { route: "PYTHON", concept: String(cur.task || ""), why: "sprint ki current task Python track pe hai" };
-  if (cur && cur.track === "concept") return { route: "FORGE", concept: String(cur.task || "").toLowerCase(), why: forgeOpen ? `purani forge session stale (>18h) — owner CLI se band, phir '${cur.task}' shuru` : "sprint ki current task ek concept hai — THE METHOD" };
+  if (cur && cur.track === "concept") {
+    // W0-D: the stale branch used to order a CLOSE unconditionally. When the stale
+    // session is the SAME concept the sprint is asking for, that throws away a
+    // half-taught concept to re-open it at step 0 — the thing the boot line forbids in
+    // its own words. `resume` is the answer there; `close` stays the answer when he is
+    // genuinely switching topics, because the old concept still owes its report.
+    const same = forgeOpen && String(forge.concept || "").toLowerCase() === String(cur.task || "").toLowerCase();
+    return { route: "FORGE", concept: String(cur.task || "").toLowerCase(),
+      why: same ? `wahi concept pehle se khula hai par stale — owner CLI se \`resume\`, wahin se aage`
+        : forgeOpen ? `purani forge session ('${forge.concept}') stale — owner CLI se band, phir '${cur.task}' shuru`
+          : "sprint ki current task ek concept hai — THE METHOD" };
+  }
   const last = (capsules || []).slice().sort((a, b) => String(b.lockedOn || "").localeCompare(String(a.lockedOn || "")))[0];
   return { route: "REVISION", concept: last ? last.id : null, why: last ? `koi khula loop nahi — aakhri locked capsule '${last.id}' pe samjhao` : "koi capsule nahi, koi task nahi" };
 }
