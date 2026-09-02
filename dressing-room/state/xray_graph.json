@@ -1,5 +1,5 @@
 {
- "built_at": "2026-09-02T06:44:50.806Z",
+ "built_at": "2026-09-02T07:08:17.140Z",
  "organs_parsed": 112,
  "organs_expected": 112,
  "parse_errors": [],
@@ -620,69 +620,69 @@
    "unresolved": 0
   },
   "awayday.mjs": {
-   "loc": 1059,
+   "loc": 1120,
    "reads": [
     {
      "path": "scripts/awayday.mjs",
      "lines": [
-      680,
-      726,
-      730,
-      758,
-      783,
-      794,
-      904,
-      680,
-      726,
-      730,
-      758,
-      783,
-      794,
-      904,
-      680,
-      726,
-      730,
-      758,
-      783,
-      794,
-      904,
-      680,
-      726,
-      730,
-      758,
-      783,
-      794,
-      904
+      717,
+      787,
+      791,
+      819,
+      844,
+      855,
+      965,
+      717,
+      787,
+      791,
+      819,
+      844,
+      855,
+      965,
+      717,
+      787,
+      791,
+      819,
+      844,
+      855,
+      965,
+      717,
+      787,
+      791,
+      819,
+      844,
+      855,
+      965
      ],
      "fixture": true
     },
     {
      "path": ".github/workflows/awayday.yml",
      "lines": [
-      857,
-      857,
-      857,
-      857
+      918,
+      918,
+      918,
+      918
      ],
      "fixture": true
     },
     {
      "path": "scripts/groundsman.mjs",
      "lines": [
-      859,
-      859,
-      859,
-      859
+      920,
+      920,
+      920,
+      920
      ],
      "fixture": true
     },
     {
      "path": "scripts/physio.mjs",
      "lines": [
-      869,
-      869,
-      869,
-      869
+      930,
+      930,
+      930,
+      930
      ],
      "fixture": true
     },
@@ -715,9 +715,9 @@
     {
      "path": "dressing-room/state/awayday.json",
      "lines": [
-      447,
-      447,
-      447
+      484,
+      484,
+      484
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -729,25 +729,25 @@
     {
      "kind": "bin",
      "bin": "git",
-     "line": 457
+     "line": 494
     },
     {
      "kind": "bin",
      "bin": "git",
-     "line": 476
+     "line": 513
     },
     {
      "kind": "organ",
      "script": "captains_call.mjs",
      "verb": "file",
-     "line": 606,
+     "line": 643,
      "ctx": "checkLane"
     },
     {
      "kind": "organ",
      "script": "awayday.mjs",
      "verb": null,
-     "line": 915,
+     "line": 976,
      "ctx": "selftest"
     }
    ],

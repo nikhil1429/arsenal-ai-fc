@@ -195,29 +195,66 @@ const isPassLine = (l) => /^\s*✓/u.test(l);
 const isRedLine = (l) => !isPassLine(l)
   && (/✗|(^|\s)FAIL(ED)?\b/u.test(l) || /\b[1-9]\d*\s+failed\b/i.test(l));
 const clipLine = (l, n = LINE_CAP) => (l.length > n ? l.slice(0, n - 1) + "…" : l);
+// ── D3, ROUND 2 — CORRECTED BY THE LIVE RUN THAT PROVED ROUND 1 (2 Sep 2026) ──
+// The first fix reserved the TAIL first, and the very next away-day run showed what that
+// costs. Live run on 8c6dd2a, read back through the annotations API: no ✓ line survived
+// (D1 held in production), but the red block came back EMPTY. Arithmetic, measured on that
+// run: three clipped tail lines spent ~513 of the 650, the separator 11, leaving 126 — less
+// than one clipped line — so every red was dropped and the annotation carried only the tail.
+// Reserving the tail cured "the tail disappears" by creating "the failure disappears", which
+// is the worse of the two. TWO THINGS ARE FIXED HERE, both measured on that run:
+//   1 · THE CLAIM OUTRANKS THE CONTEXT. The red block is a claim — "these lines went red" —
+//       and it is what the surface exists for. It is packed FIRST out of everything except a
+//       floor kept for the tail, so a chatty tail can never again starve the line that names
+//       the failure, and the tail can never vanish either.
+//   2 · STRONG EVIDENCE OUTRANKS RECENT EVIDENCE. Recency alone was the wrong key: `out` is
+//       `stdout + stderr` CONCATENATED, not interleaved, so "newest" means the end of stderr,
+//       and on that run the three newest reds were brain's standing warnings ("the last 5 of
+//       10 calls ALL FAILED") while the assert lines sit in stdout. A line carrying ✗ or an
+//       organ's own "N failed" summary NAMES the member; a warning that merely contains the
+//       word does not. Strong first, newest within each class.
+const isStrongRed = (l) => !isPassLine(l) && (/✗/u.test(l) || /\b[1-9]\d*\s+failed\b/i.test(l));
+// The tail's guaranteed minimum, and it is a SHARE, not a flat number: a flat 220 out of a
+// 260-char budget left 29 for the claim, which is under one line — the same starvation this
+// round exists to fix, just moved to small budgets. Caught by the ranking assert below.
+const TAIL_FLOOR = 220;
+const tailFloorFor = (budget) => Math.min(TAIL_FLOOR, Math.floor(budget / 3));
+const SEP = " | · · · | ";
+// Packs as many of `arr` as fit in `room`, in the order given, joined by " | ".
+function packLines(arr, room) {
+  const kept = [];
+  let used = 0;
+  for (const l of arr) {
+    const c = clipLine(l);
+    const cost = c.length + (kept.length ? 3 : 0);   // " | "
+    if (used + cost > room) break;
+    kept.push(c);
+    used += cost;
+  }
+  return kept;
+}
 function failureTail(out, deps = {}) {
   const budget = deps.budget || TAIL_BUDGET;
   const lines = String(out).trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return "";
-  // The tail is claimed FIRST (D3) — three lines, each clipped — so whatever the red
-  // block costs, the reader still sees where the output actually stopped.
-  const tailPart = lines.slice(-3).map((l) => clipLine(l)).join(" | ");
-  const sep = tailPart ? " | · · · | " : "";
-  // NEWEST-FIRST, NOT OLDEST-FIRST (D3): walk the red lines from the END and keep
-  // what fits. In a fail-fast chain the failure is the last thing printed, so the
-  // line that names it is the last one that may be dropped, never the first.
-  const room = Math.max(0, budget - tailPart.length - sep.length);
-  const kept = [];
-  let used = 0;
-  for (const l of lines.filter(isRedLine).reverse()) {
-    const c = clipLine(l);
-    const cost = c.length + (kept.length ? 3 : 0);   // " | "
-    if (used + cost > room) break;
-    kept.unshift(c);
-    used += cost;
-  }
-  const redPart = kept.join(" | ");
-  return redPart ? redPart + sep + tailPart : tailPart;
+  // LAW PACK's SHAPE 4 asks whether "the last N rows" are being mistaken for "the RECENT rows"
+  // without anything checking a time. There is no time here to check: these are the lines of a
+  // child process that has already EXITED, and "the last three" means literally the last three
+  // it printed. That is one of the three shapes judgeTrailingN's own comment says it cut before
+  // the rule was trusted — "a process's captured OUTPUT" — and it is flagged here only because
+  // that carve-out keys on the receiver's NAME (`.out`, `.stdout`, …) while this one is called
+  // `lines`. Declared at the site, per the rule's own mechanism, and the baseline is NOT moved:
+  // trailing-n stays frozen at 0.   law-waiver:trailing-n
+  const tailAll = lines.slice(-3).reverse();                       // newest first, so a squeeze
+  const redAll = lines.filter(isRedLine);                          // drops the OLDEST tail line
+  const ranked = [...redAll.filter(isStrongRed).reverse(), ...redAll.filter((l) => !isStrongRed(l)).reverse()];
+  const floor = tailAll.length ? tailFloorFor(budget) : 0;
+  const redPart = packLines(ranked, Math.max(0, budget - floor - (tailAll.length ? SEP.length : 0))).join(" | ");
+  const tailPart = packLines(tailAll, Math.max(0, budget - redPart.length - (redPart ? SEP.length : 0)))
+    .reverse().join(" | ");                                        // …then back to reading order
+  if (!redPart) return tailPart;
+  if (!tailPart) return redPart;
+  return redPart + SEP + tailPart;
 }
 
 async function run(deps = {}) {
@@ -721,6 +758,30 @@ async function selftest() {
   assert("D3 — when the reds do not all fit, the NEWEST survive and the oldest are dropped: in a fail-fast chain the failure is the last thing printed",
     (() => { const big = failureTail([...Array(40)].map((_, i) => `  ✗ red number ${i} ` + "x".repeat(200)).join("\n") + "\nLAST LINE OF OUTPUT");
              return big.includes("red number 39") && !big.includes("red number 0 "); })());
+  // ── D3 ROUND 2, BITTEN ON THE LIVE RUN THAT EXPOSED ROUND 1 (2 Sep 2026) ──
+  // These three tail lines are VERBATIM from the away-day annotation on 8c6dd2a — the run that
+  // proved round 1 in production and, in the same breath, showed it had starved the red block:
+  // three clipped tail lines spent ~513 of the 650 and every red was dropped.
+  const STARVING_TAIL = [
+    "  ✗ THE MEMBER THAT ACTUALLY DIED: reconcile.mjs refuses a ledger it cannot re-derive",
+    "brain: ⚠ ntfy topic is set INSIDE brain_config.json — that file is COMMITTED to a public repo. Move it to env ARSENAL_NTFY_TOPIC or dressing-room/state/throwin_topic.txt (gitignored), and rotate the topic that is already public",
+    "brain: ⚠⚠ DEAD BRAIN — the last 5 of 10 calls ALL FAILED. every recent brain call failed and no row named a status. Last error reads: validator: banned",
+    "awayday: checkout exposure: 3 tracked personal-state file(s) ARE in this checkout — dressing-room/state/intake_log.json, dressing-room/state/readiness.json, dressing-room/state/reps_log.jsonl",
+  ].join("\n");
+  const starved = failureTail(STARVING_TAIL);
+  assert("D3/2 — A CHATTY TAIL CAN NEVER STARVE THE FAILURE: on live run 8c6dd2a these exact three tail lines ate the whole budget and the red block came back EMPTY. The claim is packed first now, out of everything but the tail's floor",
+    starved.includes("✗ THE MEMBER THAT ACTUALLY DIED") && starved.includes("reconcile.mjs"));
+  assert("D3/2 — and the tail still survives beside it: curing 'the tail disappears' by making the failure disappear is the worse of the two bugs",
+    starved.includes("· · ·") && starved.includes("awayday: checkout exposure"));
+  assert("D3/2 — STRONG EVIDENCE OUTRANKS RECENT EVIDENCE: `out` is stdout+stderr CONCATENATED, so 'newest' is the end of stderr, where standing warnings live. A ✗ or an organ's own `N failed` NAMES the member; a warning that merely contains the word does not",
+    // The law is ORDER, not exclusion: the weak red is still evidence and still belongs in the
+    // block — it must simply never come before the line that names the member. Written as
+    // "the weak one is absent" first, which was the third easy-assert of this rung and wrong
+    // for the third time; the weak line is genuinely useful once it is not in the way.
+    (() => { const t = failureTail("  ✗ the assert that died: turnstile refuses a stale clipboard\nnoise\nbrain: the last 5 of 10 calls ALL FAILED\nmore noise\nstill more noise", { budget: 260 });
+             const block = t.split(SEP)[0];
+             return block.includes("the assert that died")
+               && block.indexOf("the assert that died") < block.indexOf("ALL FAILED"); })());
   assert("the budget is honoured, not merely re-spent — 650 is unchanged from 12 Aug 2026 and this rung moved no cap",
     failureTail([...Array(40)].map((_, i) => `  ✗ ` + "x".repeat(300)).join("\n")).length <= 650
     && /const TAIL_BUDGET = 650;/.test(readFileSync(fileURLToPath(import.meta.url), "utf8")));
