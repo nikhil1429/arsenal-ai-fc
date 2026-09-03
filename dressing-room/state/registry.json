@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-09-01T19:18:57.964Z",
+ "updated_at": "2026-09-02T22:45:57.553Z",
  "tables": {
   "mechanisms": [
    {
@@ -1124,6 +1124,16 @@
     "text": "HIS DECISION + HIS VISION, 24 Aug — PERISHABLE LIST AND THE FITNESS ORGAN. VERBATIM: \"i think youtube skip karo but movement should be there?? gemini live on my phone can become a fitness coach right?? ... kaise hoga ab ye nahi pata, that s not my job right? i have this vision that organism should use his brain on gemini live app which i have to direct it daily and it should be a closed loop bascially gemini live on my phone becomes an organ of fitness coach because i think body movement is important, it will give me more energy to work for domination job\". YouTube confirmed NOT perishable, waits. EXECUTOR REFINEMENT HIS INSTINCT FORCED: Oura records THAT he moved, nothing records WHAT HE TRAINED - session, load, reps, how it felt, whether form held. So the TRAINING RECORD is a distinct perishable stream that begins existing the day he starts training. TWO PROBLEMS ADDED TO Q-19 SO THE FORK IS NOT UNDER-READ: (1) the OUTBOUND leg has a pattern (day_cartridge writes another model s system instruction) but the INBOUND leg has NONE - every existing organ writes its own state to a file; a Gemini Live session on his phone writes nothing the organism can read, so the loop is open at the return end and that is where the engineering actually sits; (2) his own clause \"which i have to direct it daily\" makes HIM the transport, and his standing law says anything he must remember or chase is a bug in the organism - acceptable perhaps, but it should be deliberate.",
     "updated_at": "2026-08-28T20:30:42.633Z",
     "added_at": "2026-08-28T20:30:42.633Z"
+   },
+   {
+    "id": "rul-mtkoq9ihbq",
+    "at": "2026-09-02T22:45:57.541Z",
+    "scope": "architecture",
+    "by": "captain",
+    "source": "architect-ec:his-order-3sep-0400",
+    "text": "3 Sep 2026 ~04:00 IST, his order to the architect (verbatim head): 'these are headers which we need to fill: 1- problem statement 2- previous solution and their short coming 3- current solution and its pros and cons 4- impact of solution on actual studying 5- relevance of product with respect to ROI matrix (example - studying and applying to jobs) 6- pyscological benefits of the product 7- distraction and avoidance if created with this product 8- Loop/deal locks/ spiral like behaviour with study pattern 9- what is the proposed plan for him to use this product and complete studying and applying in the course of 30 days. additionally create another doc for her which explains every single thing in the organism, every single thing which is made, will be made and create it like an official PRD document and system design document ... officially treat it like a proper CTO meeting for a FANG product. take as much time as you want, read as much as you possibly can. exhaust your brain on creating this because she will not give another chance ... write things which you think we could not cover in this prompt'. The reviewer is the second study user (a Flipkart SDE, CS grad), referred to by role. Executed by architect arsenal-ai-fc-ec: campaign-2026-09/cto-review/.",
+    "updated_at": "2026-09-02T22:45:57.545Z",
+    "added_at": "2026-09-02T22:45:57.545Z"
    }
   ],
   "job_inputs": [
