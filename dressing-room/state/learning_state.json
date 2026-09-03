@@ -1,6 +1,6 @@
 {
-  "date": "2026-09-02",
-  "generated_at": "2026-09-02T05:11:26.661Z",
+  "date": "2026-09-03",
+  "generated_at": "2026-09-03T03:45:12.946Z",
   "total_reps": 0,
   "status": "awaiting_data",
   "low_confidence": true,
@@ -144,19 +144,19 @@
       "i"
     ],
     "axes_ungraded": [],
-    "started_at": "2026-09-01T01:09:46.726Z",
-    "stale": true,
-    "stale_as_of": "2026-09-02T05:11:26.661Z",
+    "started_at": "2026-09-02T21:05:33.373Z",
+    "stale": false,
+    "stale_as_of": "2026-09-03T03:45:12.946Z",
     "last_closed": {
-      "concept": "tokenization",
-      "ended_at": "2026-09-01T01:09:37.244Z",
+      "concept": "hallucinations",
+      "ended_at": "2026-09-02T21:05:33.180Z",
       "steps_ran": [
-        0,
-        1,
-        2,
-        3
+        0
       ],
       "steps_missed": [
+        1,
+        2,
+        3,
         4,
         5,
         6,
@@ -179,7 +179,7 @@
         "h",
         "i"
       ],
-      "elapsed_min": 2165.6,
+      "elapsed_min": 1.2,
       "axis_marks_span_min": null,
       "check_q_refused": 0,
       "core_missing": [
