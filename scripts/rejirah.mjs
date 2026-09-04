@@ -60,7 +60,7 @@
 // CLI: node scripts/rejirah.mjs [grade <concept> <axis> held|cracked [--gut w] [--cold false]|correct <concept> <axis> held|cracked --of <ts> --why "…"|close <concept> [--anyway]|pending|state [concept]|due|selftest]
 //   (correct = a NEW row naming the old one — every verdict has a way back; due is the default)
 // ============================================================================
-import { readFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, mkdtempSync } from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, mkdtempSync } from "node:fs";   // writeFileSync: A8 sidecar fixtures in the selftest only
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -161,10 +161,79 @@ export function readLog(path = LOG, opts = {}) {
 export const isGrade = (r) => !!(r && r.axis && !r.kind);
 export const isClose = (r) => !!(r && r.kind === "round-close");
 
-export function loadCapsules(dir = CAPSULES) {
+// ── A8 (4 Sep 2026) · THE RE-LOCK SIDECAR ────────────────────────────────────
+// HIS DEFAULT, 4 Sep 2026 ~03:50 IST: a re-lock is a SIDECAR, not a capsule edit.
+// The reason is a standing ruling, not a preference — "CAPSULES ARE IMMUTABLE, their
+// prose SACRED", `capsules/` is a read-only mirror whose sole writer is mirror.mjs,
+// and the gist is master. So when he finishes re-learning a topic and it is proven
+// again, the fact is recorded BESIDE the capsule and LAYERED IN MEMORY here, at the
+// one place every consumer already reads a capsule through. The files on disk stay
+// byte-identical; `mirror.mjs` can re-fetch from the gist at any time and lose nothing.
+//
+// WHY IT IS LAYERED HERE: registry.preCyborg() reads `relockedOn` off the capsule object it
+// is handed, so layering at a loader means the epoch predicate needs no change at all.
+// ⚠ AND IT IS NOT THE ONLY LOADER, WHICH THIS COMMENT USED TO CLAIM IT WAS (corrected
+// 4 Sep 2026 by the rung's own verifier, who ran it). learnstate, sprintsync and
+// capsule_bridge read capsules through THIS function; **deep.mjs and doubtminer.mjs each
+// define a LOCAL loadCapsules**, and teaching_contract does its own readdirSync. deep.mjs
+// is the one that mattered — forge_session tells him "Re-Jirah restarts from TODAY, run
+// `deep.mjs due`" — so deep.mjs now imports this loader (see its import line). doubtminer
+// and teaching_contract read capsules for their PROSE, never for their schedule, so the
+// split does not reach him there; that is a statement about today, not a licence.
+//
+// THE SIDECAR'S SOLE WRITER IS forge_session.mjs — the pacer, and only on arrival at
+// STEP 10 with the evidence to back it. This file only READS it.
+const RELOCKS = join(STATE, "relocks.jsonl");
+/** relockIndex — {id → latest ISO day} from the sidecar. Read-only; an unreadable or
+ *  absent sidecar yields {} and every capsule keeps exactly the status it has today. */
+// ⚠ SPLIT PURE/SHELL ON PURPOSE, and the reason is a measured law, not taste. The first
+// version took `path = RELOCKS` as a parameter, and a parameterised path is UNRESOLVABLE
+// to xray — this organ went from 1 unresolved sink to 8 and the suite's non-increasing
+// per-organ ratchet caught it in the same hour. Same scar sprintsync.mjs carries in its
+// own words ("the first version passed a path parameter and made this organ 5 sites
+// blinder"). The arithmetic is pure and takes TEXT; the shell reads one literal const.
+/** relockIndexFrom — PURE: sidecar text → {id → latest ISO day}. No fs, no path. */
+export function relockIndexFrom(text) {
+  const out = {};
+  for (const line of String(text || "").split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let r = null; try { r = JSON.parse(line); } catch { continue; }
+    const id = String((r && r.concept) || "").toLowerCase();
+    const day = String((r && r.relockedOn) || "");
+    if (!id || !/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
+    if (!out[id] || day > out[id]) out[id] = day;   // append-only: the LATEST re-lock wins, older rows stay readable
+  }
+  return out;
+}
+export function relockIndex() {
+  try { return existsSync(RELOCKS) ? relockIndexFrom(readFileSync(RELOCKS, "utf8")) : {}; }
+  catch { return {}; }   // the sidecar is an addition; its absence must never break the loader
+}
+/** layerRelocks — PURE: capsules + index → capsules with `relockedOn` filled from the
+ *  sidecar. THE ONE DEFINITION of what a sidecar layering is, exported because deep.mjs
+ *  has its own loader (it classifies and NAMES every capsule file it had to drop, which
+ *  this loader does not) and must reach the same answer. Two loaders is a fact; two
+ *  definitions of "is this proof current" would be the split brain. In memory only:
+ *  a capsule that already carries its own `relockedOn` (the gist's word) is untouched. */
+export function layerRelocks(capsules, idx = {}) {
+  return (capsules || []).map((c) => {
+    const day = c && !c.relockedOn ? idx[String(c.id || "").toLowerCase()] : null;
+    return day ? { ...c, relockedOn: day, relocked_from: "sidecar" } : c;
+  });
+}
+export function loadCapsules(dir = CAPSULES, relocks = undefined) {
   if (!existsSync(dir)) return [];
-  return readdirSync(dir).filter((f) => f.endsWith(".json"))
-    .map((f) => readJson(join(dir, f))).filter((c) => c && c.id)
+  // ⚠ THE SIDECAR IS LIVE STATE AND MAY NEVER REACH A FIXTURE (4 Sep 2026, verifier
+  // finding, reproduced). The first draft defaulted to `relockIndex()` for EVERY dir, so a
+  // caller handing a temp fixture directory — learnstate's selftest does this three times —
+  // got the real machine's re-lock rows layered onto its fixtures. Measured: with one
+  // genuine re-lock row on disk, `learnstate selftest` went from ALL CHECKS PASSED to two
+  // reds. The suite would have gone red on day 1 of his program, at the moment of success.
+  // The live sidecar belongs to the live capsule dir and to nothing else; a fixture that
+  // wants one passes it explicitly.
+  const idx = relocks !== undefined ? relocks : (dir === CAPSULES ? relockIndex() : {});
+  return layerRelocks(readdirSync(dir).filter((f) => f.endsWith(".json"))
+    .map((f) => readJson(join(dir, f))).filter((c) => c && c.id), idx)
     .sort((a, b) => String(a.num || "").localeCompare(String(b.num || "")));
 }
 
@@ -191,6 +260,10 @@ export function buildRow(input = {}, deps = {}) {
     round: Number.isInteger(input.round) ? input.round : null,
     source: input.source || "deep",
   };
+  // A8b / Fork 5 — stored WHOLE and only when supplied (the law this file already
+  // holds for `gut`): a measurement nobody made is null, never a manufactured one.
+  const shape = input.error_shape === undefined || input.error_shape === null ? null : String(input.error_shape).trim();
+  if (shape) row.error_shape = shape;
   return { ok: true, row, unregistered: !known.includes(concept) };
 }
 
@@ -210,7 +283,23 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const addDays = (isoDay, n) => new Date(Date.parse(`${isoDay}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 
 export function roundSchedule(capsule, intervals) {
-  const locked = ISO_DAY.test(String(capsule && capsule.lockedOn || "")) ? capsule.lockedOn : null;
+  // ── A8b (4 Sep 2026) · A RE-LOCK RE-ANCHORS THE SCHEDULE (LR-05, ruled) ─────
+  // W0-B left this open in as many words: "Whether a re-lock should RE-ANCHOR the
+  // schedule is LR-05, which is an open question routed to the architect." The study
+  // order rules it: R1 lands three days after the re-lock. It has to. Anchored on the
+  // ORIGINAL June lock, a topic he re-learns in September is born with all six rounds
+  // already months overdue — the queue would demand a cold test of a proof made hours
+  // earlier, which tests nothing and teaches him the queue is noise. The original
+  // `lockedOn` is untouched on disk and is still what `pre_cyborg` is measured from;
+  // only the arithmetic below moves.
+  const relocked = ISO_DAY.test(String(capsule && capsule.relockedOn || "")) ? capsule.relockedOn : null;
+  const lockedOn = ISO_DAY.test(String(capsule && capsule.lockedOn || "")) ? capsule.lockedOn : null;
+  // LATER OF THE TWO, never "whichever is set". The first draft read
+  //   relocked && lockedOn && relocked > lockedOn ? relocked : (relocked || lockedOn)
+  // whose else-branch hands back the EARLIER date whenever a re-lock predates the lock
+  // — a typo'd year would have silently dragged every round backwards and re-opened a
+  // queue that is supposed to be closed. Caught by this file's own assert.
+  const locked = lockedOn && relocked ? (relocked > lockedOn ? relocked : lockedOn) : (lockedOn || relocked);
   if (!locked) return { ok: false, why: `"${capsule && capsule.id}" has no valid lockedOn — its Re-Jirah schedule cannot be computed, and inventing one would be a fabricated date.`, rounds: [] };
   const done = new Set((Array.isArray(capsule.reJirahDone) ? capsule.reJirahDone : []).filter((d) => ISO_DAY.test(String(d))));
   const rounds = intervals.map((n, i) => {
@@ -223,7 +312,9 @@ export function roundSchedule(capsule, intervals) {
   // dropped). The flag is what openRound below acts on.
   let pre = false;
   try { pre = preCyborg(capsule); } catch (e) { throw e; }   // an unreadable epoch must be LOUD, never a silent "no floor"
-  return { ok: true, rounds, locked, pre_cyborg: pre };
+  // `anchored_on` says WHICH date the arithmetic used, so a reader never has to guess
+  // why R1 moved. `locked` keeps its old meaning for every existing consumer.
+  return { ok: true, rounds, locked, anchored_on: relocked && lockedOn && relocked > lockedOn ? "relock" : "lock", lockedOn, relockedOn: relocked, pre_cyborg: pre };
 }
 
 // The round he is closing is the FIRST one not yet in `reJirahDone` — never the most
@@ -949,6 +1040,58 @@ function selftest() {
       })());
   }
 
+  // ── A8 (4 Sep 2026) · THE RE-LOCK SIDECAR, ON A TMP DIR ────────────────────
+  {
+    const d = mkdtempSync(join(tmpdir(), "relock-"));
+    const capDir = join(d, "capsules");
+    mkdirSync(capDir, { recursive: true });
+    // ONE reader and ONE writer for the whole block: every fs call on a computed path is
+    // a permanent blind spot in this organ's xray budget, and a fixture is not a licence.
+    const WR = (f, t) => writeFileSync(f, t);
+    const RD = (f) => readFileSync(f, "utf8");
+    const CAP = { id: "tokenization", num: "01", title: "Tokenization", lockedOn: "2026-06-15", reJirahDone: [], faultLines: [], doubts: [] };
+    const capFile = join(capDir, "tokenization.json");
+    WR(capFile, JSON.stringify(CAP, null, 2));
+    const before = RD(capFile);
+    let sidecarText = "";
+
+    assert("A8 · with NO sidecar every capsule keeps exactly the status it has today (an absent sidecar claims nothing)",
+      loadCapsules(capDir, relockIndexFrom(sidecarText)).length === 1 && !loadCapsules(capDir, relockIndexFrom(sidecarText))[0].relockedOn);
+
+    sidecarText = JSON.stringify({ ts: "2026-09-04T06:00:00.000Z", concept: "tokenization", relockedOn: "2026-09-04", by: "forge_session.mjs step 10" }) + "\n";
+    const layered = loadCapsules(capDir, relockIndexFrom(sidecarText))[0];
+    assert("A8 · the sidecar is LAYERED IN MEMORY at the one loader every consumer reads a capsule through",
+      layered.relockedOn === "2026-09-04" && layered.relocked_from === "sidecar");
+    assert("A8 · the CAPSULE FILE IS BYTE-IDENTICAL — capsules are immutable and mirror.mjs is still their only writer",
+      RD(capFile) === before);
+    assert("A8 · registry.preCyborg needs no change at all: it reads relockedOn off the object this loader hands it, so one layering moves every organ at once",
+      preCyborg(CAP) === true && preCyborg(layered) === false);
+    assert("A8 · the sidecar is append-only and the LATEST re-lock wins; older rows stay readable",
+      (() => { sidecarText += JSON.stringify({ concept: "tokenization", relockedOn: "2026-09-20" }) + "\n";
+               return relockIndexFrom(sidecarText).tokenization === "2026-09-20"; })());
+    assert("A8 · a malformed or undated sidecar row is skipped, never allowed to claim a re-lock",
+      Object.keys(relockIndexFrom("{not json\n" + JSON.stringify({ concept: "x", relockedOn: "yesterday" }) + "\n")).length === 0);
+    assert("A8 · the SHELL reads one literal path and the arithmetic is pure — a parameterised path would make this organ blinder to xray, which is how the ratchet caught the first draft",
+      (() => { const src = RD(fileURLToPath(import.meta.url)); const i = src.indexOf("export function relockIndex()");
+               return i > 0 && /existsSync\(RELOCKS\)/.test(src.slice(i, i + 400)); })());
+
+    // A8b — LR-05, ruled by the study order: R1 lands 3 days after the RE-LOCK.
+    const IV = [3, 14, 42];
+    const sOld = roundSchedule(CAP, IV);
+    const sNew = roundSchedule({ ...CAP, relockedOn: "2026-09-04" }, IV);
+    assert("A8b · a re-lock RE-ANCHORS the Re-Jirah schedule: R1 is three days after the re-lock, not months overdue from the original June lock",
+      sOld.rounds[0].due === "2026-06-18" && sNew.rounds[0].due === "2026-09-07" && sNew.anchored_on === "relock");
+    assert("A8b · the original lockedOn is untouched and still readable on the schedule — the record moves nowhere, only the arithmetic",
+      sNew.lockedOn === "2026-06-15" && sNew.relockedOn === "2026-09-04" && sOld.anchored_on === "lock");
+    assert("A8b · a re-lock EARLIER than the lock cannot drag the schedule backwards",
+      roundSchedule({ ...CAP, relockedOn: "2026-01-01" }, IV).rounds[0].due === "2026-06-18");
+
+    // Fork 5 — the error shape
+    assert("Fork 5 · `--error-shape` is stored WHOLE when given and absent when not — a shape nobody wrote down is not an empty one",
+      (() => { const a = buildRow({ concept: "tokenization", axis: "a", result: "cracked", gut: "knew", error_shape: "sub-word ko word samajh liya" }, { capsuleIds: ["tokenization"] });
+               const b = buildRow({ concept: "tokenization", axis: "a", result: "cracked", gut: "knew" }, { capsuleIds: ["tokenization"] });
+               return a.ok && a.row.error_shape === "sub-word ko word samajh liya" && b.ok && b.row.error_shape === undefined; })());
+  }
   console.log(`\nrejirah selftest: ${pass} passed, ${fail} failed`);
   return fail === 0;
 }
@@ -983,9 +1126,15 @@ function main() {
       console.error(`  node scripts/rejirah.mjs grade ${rest[0] || "<concept>"} ${rest[1] || "<axis>"} ${rest[2] || "held|cracked"} --gut shaky`);
       process.exit(1);
     }
+    // A8b / Fork 5 (4 Sep 2026) — `--error-shape "<free text>"`. A `cracked` verdict
+    // records THAT he broke and never HOW, so the same crack is re-tested identically
+    // for weeks. This is the one sentence that makes a round teachable: the SHAPE of
+    // the mistake, in the teacher's words, on the row. Optional and never invented —
+    // absent means nobody wrote it down, which is a different fact from "no shape".
     const built = buildRow({
       concept: rest[0], axis: rest[1], result: rest[2],
       gut: flag("gut"), cold: flag("cold") === "false" ? false : true,
+      error_shape: flag("error-shape"),
     }, { capsuleIds: caps.map((c) => c.id) });
     if (!built.ok) { console.error(`rejirah: ${built.why}`); process.exit(1); }
     append(built.row);
@@ -994,6 +1143,8 @@ function main() {
       + (built.row.gut ? ` (gut ${built.row.gut})` : " (no gut-word committed)")
       + ` → ${st.fluencyState} · round ${st.rounds} · next due ${st.nextDue || "?"}`
       + (st.escalate ? "  ⛔ OVERCONFIDENT — tighten the interval and bump the mode" : ""));
+    if (built.row.error_shape) console.log(`  error-shape recorded: "${built.row.error_shape}"`);
+    else if (built.row.result === "cracked") console.log(`  (no error-shape recorded — the NEXT round will re-test this crack blind. \`--error-shape "<how he broke>"\`)`);
     if (built.unregistered) console.log(`  ⚠ "${built.row.concept}" is not a locked capsule — say so; concepts.json is hand-curated canon.`);
     return;
   }

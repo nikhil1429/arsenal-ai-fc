@@ -65,7 +65,7 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { roundSchedule, openRound } from "./rejirah.mjs";   // W0-B — TWIN COLLAPSE: rejirah.mjs owns the Re-Jirah schedule; this file reads it, it does not re-derive it
+import { roundSchedule, openRound, relockIndex, layerRelocks } from "./rejirah.mjs";   // W0-B — TWIN COLLAPSE: rejirah.mjs owns the Re-Jirah schedule; this file reads it, it does not re-derive it · A8 (4 Sep 2026) — and the RE-LOCK SIDECAR too: this file keeps its own loader (it names every capsule file it had to drop) but not its own idea of what a re-lock means
 import { burnedAxes } from "./samjhao.mjs";   // LOAD ZERO BLOCK 2 (19 Aug 2026): samjhao OPENS a weld, so that axis's strike can never again be served as a COLD question
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -120,6 +120,13 @@ export function classifyCapsuleFile(file, text) {
   return { capsule: c };
 }
 
+// ⚠ A8 (4 Sep 2026, verifier finding, reproduced). This file has its OWN loader — on
+// purpose: it classifies and NAMES every capsule file it had to drop, which rejirah's does
+// not. But it had its own idea of a capsule's PROOF STATUS too, and that was a split brain:
+// after a re-lock, rejirah/learnstate/sprintsync said "proven again" while this screen —
+// the one `forge_session` sends him to by name ("Re-Jirah restarts from TODAY, run
+// `deep.mjs due`") — still read the pre-cyborg refusal, forever. Measured end to end.
+// The loader stays; the DEFINITION comes from the sidecar's owner.
 function loadCapsules(dir = CAPSULES) {
   LOAD_FAILURES = [];
   if (!existsSync(dir)) return [];
@@ -132,7 +139,11 @@ function loadCapsules(dir = CAPSULES) {
     if (v.failure) { LOAD_FAILURES.push(v.failure); continue; }
     good.push(v.capsule);
   }
-  return good.sort((a, b) => String(a.num || "").localeCompare(String(b.num || "")));
+  // A8 — the sidecar, through its owner's ONE definition. Only for the LIVE capsule dir:
+  // a fixture directory must never be handed the real machine's re-lock rows (the same
+  // leak the verifier reproduced in rejirah's own loader an hour ago).
+  const layered = dir === CAPSULES ? layerRelocks(good, relockIndex()) : good;
+  return layered.sort((a, b) => String(a.num || "").localeCompare(String(b.num || "")));
 }
 
 // Read-only accessor. Exported so a future organ (a watchman check, the doctor)
@@ -325,6 +336,22 @@ function due(caps, intervals, now) {
     // re-activated material. samjhao.mjs holds the fact; this screen decides what to serve.
     let burnedOf = new Map();
     try { burnedOf = new Map(burnedAxes(c.id).map((b) => [b.axis, b.at])); } catch { burnedOf = new Map(); }
+    // ── A8b · "FRESH STRIKES AFTER A RE-LOCK" IS **NOT DONE**, AND ON PURPOSE ──
+    // The study order asks for it: "rejirah serves only FRESH strikes for a re-locked topic
+    // (stored strikes are burned, ruling ②)". It was BUILT here on 4 Sep 2026 as a burn —
+    // `if (c.relockedOn) burn all nine` — and then REMOVED the same hour, because the two
+    // halves of that sentence are not separable and only one of them exists in code:
+    //   · "stored strikes are burned" is implementable (this line was it), but
+    //   · "serves only FRESH strikes" has NO PRODUCER. Nothing in this repo authors a new
+    //     strike; the capsule's own faultLines are the entire supply.
+    // So the burn alone does not make the queue fresher — it makes it EMPTY. Measured: with
+    // it in place, `deep.mjs due` on a re-locked topic serves nothing at all, three days
+    // after the re-lock, which is exactly when R1 falls due. It also went red against the
+    // LOAD ZERO BLOCK 2 lane, whose subject is the per-axis samjhao burn.
+    // ROUTED TO THE ARCHITECT, not silently dropped: a re-locked topic keeps serving its
+    // stored strikes today (the status quo, and it is not nothing — those are HIS questions),
+    // and the fresh-strike producer is the open item. The per-axis burn (`samjhao taught`)
+    // is unchanged and still does the honest half of this for any axis actually re-taught.
     for (const a of c.faultLines || []) {
       const strike = (a.strike || "").trim();
       if (burnedOf.has(a.axis)) {

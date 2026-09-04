@@ -123,7 +123,24 @@ export async function start(opts = {}) {
   // exit 13, zero bytes). Measured 18 Aug 2026; see learnstate.mjs's guard comment.
   await runOrgan("learnstate.mjs", "brief", { ...opts, call: "hookMain" }, r);
   await runOrgan("forge_session.mjs", "boot", { ...opts, call: "hookMain" }, r);   // R-01 (W0-C): CALL, not SHIM — learnstate imports this organ three lines up, so the cached body made `boot` a silent no-op
-  await runOrgan("watchman.mjs", "brief", opts, r);
+  // ── A5 (4 Sep 2026) · THE MACHINE GOES QUIET WHILE HE IS MID-CONCEPT ────────
+  // The order: "`watchman.mjs brief` and `outbox.mjs brief` silent under the same
+  // condition". learnstate parks its own six lines behind one counted line; these two are
+  // separate callees printing their own stdout after it, so without this the first screen
+  // of a study session still carried 22 watchman findings and three outbox rows UNDER a
+  // line that said everything was parked. Nothing is deleted and nothing is lost — both
+  // briefs still run, their state is untouched, and /organism-doctor prints every one.
+  // The predicate is the pacer's own file and nothing else (A5's law: an OPEN, unclosed
+  // session is a session he is in the middle of; staleness silences the pacer, not this).
+  const studying = await (async () => {
+    try {
+      const fs = await import("node:fs");
+      const f = JSON.parse(fs.readFileSync(join(opts.dir || HERE, "..", "dressing-room", "state", "forge_session.json"), "utf8"));
+      return !!(f && f.concept && !f.closed_at);
+    } catch { return false; }
+  })();
+  const parked = studying ? [] : null;
+  await runOrgan("watchman.mjs", "brief", { ...opts, sink: parked }, r);
   // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE ROAD GETS ITS DRIVER. BLOCK 3 built the outbox and
   // measured that morning that `relay` had never once been called in production: 22 rows posted,
   // 6 delivered, and those 6 by a hand-run proof. The road existed and nobody drove on it.
@@ -145,7 +162,15 @@ export async function start(opts = {}) {
   // bytes and still returns `ran 1, failed []`. The CALL shape imports the file as a
   // library and AWAITS a named export, which the module cache cannot swallow.
   // The suite now ratchets this: see "NO SHIM CALLEE" in organism_test.mjs.
-  await runOrgan("outbox.mjs", "brief", { ...opts, call: "hookMain" }, r);
+  await runOrgan("outbox.mjs", "brief", { ...opts, call: "hookMain", sink: parked }, r);
+  if (parked) {
+    // A COUNT, never the content, and only when there IS something — so a quiet machine
+    // costs the study screen nothing at all. Deliberately NOT merged with learnstate's own
+    // parked-line: neither organ can see the other's output, and one line claiming a total
+    // it cannot measure would be worse than two lines that are each true.
+    const n = parked.join("").split(/\r?\n/).filter((l) => l.trim()).length;
+    if (n) console.log(`ORGANISM: ${n} more notice(s) parked (watchman · outbox) — /organism-doctor when the session closes.`);
+  }
   await runOrgan("captains_call.mjs", "deal", { ...opts, call: "hookMain" }, r);
   return r;
 }
@@ -192,6 +217,14 @@ export async function runOrgan(file, verb, opts = {}, r = { ran: 0, failed: [] }
   const importer = opts.importer || ((href) => import(href));
   const stdin = typeof opts.stdin === "string" ? opts.stdin : "";
   const err = opts.stderr || ((s) => process.stderr.write(s + "\n"));
+  // A5 (4 Sep 2026) — `opts.sink`: capture this callee's stdout instead of printing it.
+  // The ONLY reason this exists is the study collapse below: each callee prints its own
+  // stdout by design (that property is what made the five-command → one-dispatcher switch
+  // provably byte-identical), so the only way to hold two of them without touching either
+  // organ is to catch what they say. Restored in `finally`, always.
+  const sink = Array.isArray(opts.sink) ? opts.sink : null;
+  const realWrite = sink ? process.stdout.write.bind(process.stdout) : null;
+  if (sink) process.stdout.write = (chunk, ...rest) => { sink.push(String(chunk)); const cb = rest[rest.length - 1]; if (typeof cb === "function") cb(); return true; };
   const abs = join(dir, file);
   const savedArgv = process.argv;
   const savedExit = process.exit;
@@ -212,6 +245,7 @@ export async function runOrgan(file, verb, opts = {}, r = { ran: 0, failed: [] }
     r.failed.push({ file, verb, why: e && e.hookExit ? e.message : String((e && e.message) || e).slice(0, 160) });
     err(`turn_hook: ${file} ${verb || ""} — ${e && e.hookExit ? `called ${e.message} on its hook path (its output stands; the callees after it still ran)` : `threw: ${String((e && e.message) || e).slice(0, 160)} (the callees after it still ran)`}`);
   } finally {
+    if (realWrite) process.stdout.write = realWrite;
     process.exit = savedExit;
     process.argv = savedArgv;
   }

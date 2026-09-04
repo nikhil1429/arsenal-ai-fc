@@ -120,6 +120,7 @@ import { observe as observeLegacy, supervise as superviseLegacy, emptyState, isS
 // against the ground it was given. It lives in its own file, not here, because its
 // hedge regex DOES test his words — a measurement he designed, never a gate — and
 // this file's own law (selftest: "not one regex here tests HIS words") stays whole.
+import { subjectsOf } from "./registry.mjs";   // A3 (4 Sep 2026) — the probe/register vocabularies are ROWS, never literals (his 11-Aug jugad law)
 import { countHedges, REGISTER_TYPES, validateRegister, registerLine } from "./register.mjs";
 import { generate as modelsGenerate, loadKeys as modelsLoadKeys, resolveSync as modelsResolve } from "./models.mjs";   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — the Watcher names the ROLE `text`; the resolver picks the live model + key and says why (models.mjs imports no organ — the import graph stays tiny)
 
@@ -856,6 +857,53 @@ async function postToBus(row, deps = {}) {
 //            embeddings axis d cracked" is ONE finding, not two events.
 
 const GRADE_QUEUE = join(STATE_DIR, "gaffer_grade_queue.jsonl");
+// ── A3 (4 Sep 2026) · THE BANK ROW LEARNS THREE WORDS ────────────────────────
+// The study loop's gates ask three questions of a banked answer that this row could
+// not answer before, so each gets a field rather than a guess:
+//   surface  — WHERE it was banked. A Claude Code lesson banks "code"; the older
+//              doors keep their own defaults, so nothing that banked yesterday moves.
+//   probe    — WHICH KIND of question it was, in the dossier's own vocabulary. The
+//              one that matters most is `negative_space` ("what does this NOT do") —
+//              OPPONENT_SCOUT calls it the #1 senior signal, and step 10 now refuses
+//              a LOCK without one.
+//   register — WHICH LANGUAGE the answer was given in. An axis is not closed until he
+//              can say it twice: once in Hinglish (understanding) and once in cold
+//              interview English (the room he is training for). Two different skills,
+//              and only one of them was ever measured.
+// EXPORTED because forge_session.mjs's axis gate reads these rows and must not
+// hand-roll this organ's path or its row shape (owners-only, read side).
+// ROWS, NOT LITERALS (his 11-Aug jugad law; the law pack ratchets every literal subject
+// list in the repo). Read once at module load and LOUD on failure: `subjectsOf` throws when
+// the row is missing, which is the house behaviour — a vocabulary that silently read as
+// empty would make every `--probe` and `--register` value illegal and say nothing useful.
+export const PROBE_KINDS = subjectsOf("probe_kinds");
+export const REGISTERS = subjectsOf("registers");
+/** bankRows — the capture rows this organ has banked, filtered the way a gate asks.
+ *  READ-ONLY, and it is this organ's own file: one reader, so a gate can never drift
+ *  from the door that wrote the row. `since` is an ISO string or null (no floor). */
+export function outstandingBank(path = GRADE_QUEUE) {
+  // ⚠ WHY THIS EXISTS AND WHY IT IS NOT `outstandingGrades(bankRows({}))`. That
+  // composition is wrong and it fails OPEN: bankRows filters the queue to
+  // `kind === "capture"`, which strips the very `settled` rows outstandingGrades
+  // subtracts — so every judged answer reads as still outstanding, forever. Caught
+  // by the A3 dry run the hour it was written, on a queue that was fully settled.
+  // The owner answers the question with its own whole file; no caller composes it.
+  return outstandingGrades(readJournal(path, 4000));
+}
+export function bankRows({ concept = null, axis = null, since = null, probe = null, register = null, surface = null } = {}, path = GRADE_QUEUE) {
+  const t0 = since ? Date.parse(since) : NaN;
+  const norm = (x) => String(x || "").trim().toLowerCase();
+  return readJournal(path, 4000).filter((r) => {
+    if (!r || r.kind !== "capture") return false;
+    if (concept && norm(r.concept) !== norm(concept)) return false;
+    if (axis && norm(r.axis) !== norm(axis)) return false;
+    if (probe && norm(r.probe) !== norm(probe)) return false;
+    if (register && norm(r.register) !== norm(register)) return false;
+    if (surface && norm(r.surface) !== norm(surface)) return false;
+    if (Number.isFinite(t0)) { const t = Date.parse(r.ts || ""); if (!Number.isFinite(t) || t < t0) return false; }
+    return true;
+  });
+}
 // THE SHARED APPEND LANE — brain.mjs owns the SCHEMA, six organs append (CLAUDE.md
 // declares this by name). The judge becomes the seventh, because a lane whose spend
 // the governor cannot see is a lane that can be starved without anyone knowing why —
@@ -1251,6 +1299,32 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
   if (said.length < 10) return { ok: false, reason: "empty", say: "gaffer_brain: nothing was said — an empty answer is not a failed one, and guessing which it was is exactly what this lane must never do." };
   const mat = deps.material !== undefined ? deps.material : gradeMaterial(type, ref, deps);
   if (!mat) return { ok: false, reason: "no-material", say: `gaffer_brain: nothing on disk for ${type} "${ref}" — grading needs HIS page, and inventing one is the single thing this lane must never do.` };
+  // ── A3 · THE SAME LAW AT EVERY DOOR ──────────────────────────────────────────
+  // capture.mjs refuses a `code` rep with no axis (CODE_STRICT). If this door banked
+  // one anyway, the answer would sit in the queue looking captured and then be thrown
+  // away hours later at judge-dispatch, with his words as the thing that got lost.
+  // A refusal a typist can act on NOW beats a silent drop at close. Same reasoning as
+  // the gut-word law above: the loosest door would otherwise become the real rule.
+  const surf = String(deps.surface || "").trim().toLowerCase();
+  if (surf === "code" && !/^[a-i]$/.test(String(deps.axis || ""))) {
+    return { ok: false, reason: "code-no-axis", say: "gaffer_brain: a `--surface code` rep MUST carry `--axis <a-i>` — the forge gate counts these per axis, and capture.mjs would refuse it at dispatch anyway (his answer would be the thing that got lost)." };
+  }
+  // …and the QUESTION rule, mirrored from the same place (capture.mjs CODE_STRICT). Both
+  // halves or neither: a bank door that holds one of the owner's two rules still lets a row
+  // through that the owner will reject hours later, at dispatch, silently — and `capture.mjs
+  // rep` exits 0 even when it appends nothing, so the judge would mark it SETTLED with
+  // nothing on disk. Found by the rung's own verifier, reproduced end to end.
+  if (surf === "code" && String(deps.asked || "").trim().length < 8) {
+    return { ok: false, reason: "code-short-q", say: "gaffer_brain: a `--surface code` rep MUST carry the question he was actually asked (≥8 chars, not a label) — capture.mjs refuses it at dispatch and exits 0 doing so, so a short question here becomes a rep that was judged and never written." };
+  }
+  const probeRaw = String(deps.probe === undefined || deps.probe === null ? "" : deps.probe).trim();
+  if (probeRaw && !PROBE_KINDS.includes(probeRaw.toLowerCase())) {
+    return { ok: false, reason: "bad-probe", say: `gaffer_brain: --probe must be one of ${PROBE_KINDS.join("|")} (got "${clip(probeRaw, 40)}"). A probe kind nobody recognises would count as "some probe" at the LOCK gate and prove nothing.` };
+  }
+  const regRaw = String(deps.register === undefined || deps.register === null ? "" : deps.register).trim();
+  if (regRaw && !REGISTERS.includes(regRaw.toLowerCase())) {
+    return { ok: false, reason: "bad-register", say: `gaffer_brain: --register must be ${REGISTERS.join("|")} (got "${clip(regRaw, 40)}"). The axis gate asks for the INTERVIEW line by name; an unrecognised word could never satisfy it and would never say why.` };
+  }
   const row = {
     v: 2, kind: "capture",
     id: `${type}:${ref}:${now.toISOString()}`,
@@ -1278,6 +1352,12 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
     axis: /^[a-i]$/.test(String(deps.axis || "")) ? String(deps.axis) : null,
     latency_ms: Number.isInteger(deps.latencyMs) && deps.latencyMs >= 0 ? deps.latencyMs : null,
     note: deps.note ? clip(String(deps.note), 300) : null,
+    // A3 — the three new words. Each is null when not declared and is NEVER guessed:
+    // a gate that counts these rows must be able to tell "he did not do it" from
+    // "nobody wrote it down", and a default would erase that difference forever.
+    surface: deps.surface ? String(deps.surface).trim().toLowerCase() : null,
+    probe: PROBE_KINDS.includes(String(deps.probe || "").trim().toLowerCase()) ? String(deps.probe).trim().toLowerCase() : null,
+    register: REGISTERS.includes(String(deps.register || "").trim().toLowerCase()) ? String(deps.register).trim().toLowerCase() : null,
     spoken: clip(said, 4000),
     // §9.4 — HEDGES ARE COUNTED HERE, at the moment of capture, by code (register.mjs's
     // meter — the scrimmage's own). Every banked answer, every surface, no model. The
@@ -1667,6 +1747,12 @@ export function ownerCommand(s) {
     // row: the axis feeds the fluency ladder, latency_ms feeds three gates that read
     // null as "no objection", and the note is what shadow.mjs scans for /scrimmage/i.
     if (s.axis) argv.push("--axis", s.axis);
+    // A3 — the SURFACE rides to reps_log. Passed ONLY when the bank row declared one,
+    // so every older lane keeps capture.mjs's own default ("gem" for a concept rep)
+    // and no row already on disk changes meaning. A rep whose surface is erased at
+    // dispatch is a rep the study loop cannot count, which is how the Code lane came
+    // to bank nothing at all.
+    if (s.surface) argv.push("--surface", String(s.surface));
     if (Number.isInteger(s.latency_ms) && s.latency_ms >= 0) argv.push("--latency", String(s.latency_ms));
     if (s.note) argv.push("--note", s.note);
     // §9.4 — the register rides the rep through the OWNER's own door (capture.mjs
@@ -1765,6 +1851,16 @@ export async function gradeJudge(deps = {}) {
       // carried from the CAPTURE row, unchanged, so the owner receives everything the
       // old direct-to-capture door used to hand it (see the note on gradeCapture's row)
       axis: it.axis || null, latency_ms: Number.isInteger(it.latency_ms) ? it.latency_ms : null, note: it.note || null,
+      // ⚠ A3 FIX (4 Sep 2026, found by the rung's own verifier). `surface` was stamped on the
+      // CAPTURE row and ownerCommand pushed `--surface` — but ownerCommand is only ever
+      // called with a SETTLED row, and this constructor rebuilds from a FIXED FIELD LIST, so
+      // an undeclared field is silently dropped. The push was dead code: every study rep
+      // dispatched to capture.mjs would have carried capture's own default ("gem"), his
+      // stated verification (`tail -3 reps_log.jsonl` shows surface "code") would have shown
+      // nothing, CODE_STRICT would have been unreachable in production, and every Code rep
+      // would have entered the GEM-ONLY quality ledger as if it came from a Gem sitting.
+      // Same class as `corrects` in capture.mjs's own validator, one organ over.
+      surface: it.surface || null, probe: it.probe || null, register_of: it.register || null,
       asked: it.asked ? clip(it.asked, 300) : null,
       standard: it.standard || (VERDICT_TYPES[it.type] || {}).standard || null,
       missing: Array.isArray(g.missing) ? g.missing.slice(0, 8) : [],
@@ -2059,14 +2155,27 @@ async function main() {
     // --asked is REQUIRED for voice_rep and ignored elsewhere (every other type's
     // question is on disk). --axis / --latency / --note carry what the old
     // dugout->capture.mjs door carried, so nothing measured is lost by the reroute.
-    const lat = flag("latency");
-    const r = gradeCapture({ type: process.argv[3], ref: process.argv[4], gut: flag("gut"), spoken: readFileSync(0, "utf8") }, {
+    // A3 — `--said "<his words>"` beside the stdin door. The teacher banks mid-lesson
+    // from a Claude Code session, where a heredoc on stdin is a second moving part in
+    // the one command that must never be the reason a rep is lost. stdin still works
+    // and is still what the voice lane uses; when both are offered --said is the one
+    // read, by declaration, so the other can never look banked when it was not.
+    // `--latency_ms` is accepted as a spelling of `--latency`: the study order writes
+    // it that way, and a flag ignored for its spelling is a measurement thrown away.
+    const lat = flag("latency") !== undefined ? flag("latency") : flag("latency_ms");
+    const said = flag("said");
+    const spoken = said !== undefined ? String(said) : readFileSync(0, "utf8");
+    const r = gradeCapture({ type: process.argv[3], ref: process.argv[4], gut: flag("gut"), spoken }, {
       asked: flag("asked"), axis: flag("axis"), note: flag("note"),
+      surface: flag("surface"), probe: flag("probe"), register: flag("register"),
       latencyMs: lat !== undefined && Number.isFinite(Number(lat)) ? Math.trunc(Number(lat)) : undefined,
     });
     if (!r.ok) { console.log(r.say); process.exit(1); }
     const ground = r.has_key ? "against his own weld" : "NO answer key exists for this type — it is judged against his own capsule ground";
-    console.log(`gaffer_brain: captured ${r.row.type} · ${r.row.label} · gut ${r.row.gut} · ${ground}. Nothing was judged and nothing was spent.`);
+    console.log(`gaffer_brain: captured ${r.row.type} · ${r.row.label} · gut ${r.row.gut}`
+      + `${r.row.surface ? ` · surface ${r.row.surface}` : ""}${r.row.probe ? ` · probe ${r.row.probe}` : ""}${r.row.register ? ` · register ${r.row.register}` : ""}`
+      + `${Number.isInteger(r.row.latency_ms) ? ` · ${r.row.latency_ms} ms` : " · latency UNMEASURED (null — never invented)"}`
+      + ` · ${ground}. Nothing was judged and nothing was spent.`);
     return;
   }
   // PASS 1 — ROUND CLOSE. One Opus call, the whole round, whatever types are in it.

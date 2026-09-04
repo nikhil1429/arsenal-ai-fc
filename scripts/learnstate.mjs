@@ -24,6 +24,7 @@ import { pythonBrief } from "./python_state.mjs";   // audit #107 #26 — the Py
 import { loadCapsules, readLog, pendingCloses, openRound, intervalsOf } from "./rejirah.mjs";   // #107 pass 2 — un-pasted rounds; P7.B — the arbiter's live overdue read
 import { loadFreshDrill } from "./examiner.mjs";   // 11 Aug 2026 dead-wire sweep — the drill's age gate belongs to its owner (see nextup)
 import { isStale as forgeIsStale } from "./forge_session.mjs";   // W0-D — the PEHLA KAAM line asks the pacer whether its session is stale, instead of re-deriving it
+import { derivedFloor } from "./sprintsync.mjs";   // A4 (4 Sep 2026) — the SYLLABUS FLOOR belongs to sprint.json's owner; this file reads it, it does not re-derive it
 import { starvedNightFor, recordConsumption, consumptionRows } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep — WHY the diary page is blank, in the brain's own words (see diaryLine) · recordConsumption: THE GATE's "briefed" stamp (18 Aug 2026), owner-held
 
 // audit #11 — read capsule_map.json (capsule_bridge's own output, read-only) and say
@@ -616,6 +617,70 @@ export function nextup(dir = STATE, now = Date.now()) {
     : winnerOf("none", "kuch nahi mila — `node scripts/sprintsync.mjs` chala ke sprint wapas lao", "har source khali/unreadable tha", losers);
 }
 
+// ── A4 + A5 + A6 (4 Sep 2026) · THE BRIEF OPENS ON HIS STUDY, NOT ON THE MACHINE
+// ----------------------------------------------------------------------------
+// MEASURED THE MORNING THIS LANDED, on his own laptop: line 1 of the brief read
+// "LEARNING NOW: 1-04 Hallucinations" while the open forge session on disk was
+// TOKENIZATION at step 3 — because this line has always rendered `sprint.progress
+// .current`, the In-Progress row of a Sheet he last ticked before 30 August. The
+// GAME-ON epoch existed in code (registry.mjs gameOnEpoch/preCyborg) and NO ROUTER
+// CONSULTED IT. Under it sat 22 watchman findings, three OUTWARD lines and a season
+// counter — so the first screen of a study session was a machine-health report with
+// his topic in the wrong place.
+//
+// TWO CHANGES, both layerings:
+//   · the FLOOR outranks the sheet's current whenever one exists (his override first,
+//     else derived from the capsules the epoch disqualified — never a list of names).
+//     The sheet's own current is NOT deleted; it moves to NEXT UP, where it is true.
+//   · with a live forge session, the machine's own lines are COUNTED, not printed,
+//     and one line says how many are parked and where to read them. Nothing is lost
+//     and nothing is deleted — /organism-doctor still prints every one of them. With
+//     no session open the brief is byte-for-byte what it was.
+/** floorLine — {line, concept} for the syllabus floor, or null when the sheet's own
+ *  current is the truth (every capsule re-locked, or an unreadable capsule mirror). */
+// ONE DOOR for this rung's new state reads. Every fs call on a computed path is a
+// permanent blind spot in this organ's xray budget and the per-organ ratchet charges for
+// each SITE, so two readers of two files cost one between them. (The same discipline
+// organism_test's `readOrgan` and sprintsync's literal-const SPRINT path already keep.)
+const readStateText = (dir, name) => { try { return readFileSync(join(dir, name), "utf8"); } catch { return ""; } };
+function floorOf(dir, sprint) {
+  try {
+    const over = sprint && sprint.progress && sprint.progress.current_floor;
+    if (over && over.concept) return { concept: String(over.concept), why: "his word (sprintsync floor)" };
+    const d = derivedFloor(loadCapsules(join(dir, "capsules")));
+    return d ? { concept: d.id, why: "GAME ON — first topic not proven post-epoch" } : null;
+  } catch { return null; }
+}
+/** fsrsDueLine — the scheduler of record's own count, read from ITS file, never
+ *  re-derived here. Silent when the file is absent or was written for another day:
+ *  a stale due-count presented as today's is worse than no count at all. */
+function fsrsDue(dir, now = Date.now()) {
+  try {
+    const c = JSON.parse(readStateText(dir, "cards.json"));
+    if (!c || typeof c.due_today !== "number") return null;
+    const day = new Date(now).toISOString().slice(0, 10);
+    return { due: c.due_today, overdue: typeof c.overdue === "number" ? c.overdue : null, stale: String(c.date || "").slice(0, 10) !== day, date: c.date || null };
+  } catch { return null; }
+}
+/** studyBlock — the lines a session that is MID-CONCEPT needs, in the order it needs
+ *  them. Pure: the session and the counts are handed in. */
+function studyBlock(f, fs) {
+  const AX = "abcdefghi".split("");
+  const done = Array.isArray(f.axes_done) ? f.axes_done : [];
+  const deferred = Array.isArray(f.axes_deferred) ? f.axes_deferred : [];
+  const untouched = AX.filter((a) => !done.includes(a) && !deferred.includes(a));
+  const L = [];
+  // DEFERRED FIRST, then untouched — an axis he consciously put off is work he has
+  // already decided to do; an axis nobody has opened is work nobody has decided about.
+  const next = [...deferred, ...untouched];
+  L.push(`  NEXT: STEP ${f.step}${f.current_axis ? ` · ON axis ${f.current_axis}` : ""} · pehle ${next.length ? next.slice(0, 4).join("") : "—"}`
+    + `${deferred.length ? ` (deferred ${deferred.join("")} pehle — woh tay ho chuka kaam hai)` : ""}`
+    + ` · done ${done.join("") || "—"}`);
+  if (fs) L.push(`  FSRS: ${fs.due} card due${fs.overdue ? ` · ${fs.overdue} overdue` : ""}${fs.stale ? ` (⚠ ${fs.date || "undated"} ka count — aaj ka nahi; \`node scripts/fsrs.mjs recompute\`)` : ""}`);
+  L.push(`  ▶ OPEN WITH ONE FRESH MICRO-QUESTION on where he stopped — never a recap, never "you already know this".`);
+  return L;
+}
+
 function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   const { sprint, ws, cur, watch, modeLine, wsAge } = gather(dir, now);
   // age tag for the working-set slots (see WS_STALE_DAYS above). Same-day = no tag
@@ -636,14 +701,51 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     : spAge >= WS_STALE_DAYS ? ` (SPRINT STALE · ${Math.floor(spAge)}d since sync)`
     : "";
   const L = [];
+  // ── A4 + A5 · DECIDED HERE, ABOVE EVERYTHING (4 Sep 2026; both halves are verifier
+  // findings, both reproduced). Two mistakes lived in the first draft and both of them
+  // turned this whole rung OFF in exactly the conditions it was built for:
+  //   · STUDYING and the FLOOR were computed INSIDE `if (cur)` — i.e. gated on the SHEET
+  //     having an In-Progress row. A failed sprintsync, a cleared row or an unreadable
+  //     sprint.json produced no floor line, no study block and no collapse, with no error.
+  //     The trigger for "is he mid-concept" is forge_session.json and nothing else.
+  //   · STUDYING required the session to be FRESH (<18 h). His program is one topic per
+  //     day, so on the morning of day 2 the session is ~20 h old, STUDYING went null, and
+  //     the study block vanished on the exact session the rung exists for. The pacer's own
+  //     law already says it: staleness silences the PACER, never the MEMORY (see
+  //     forge_session's bootLines, which deliberately speaks on a stale session). An OPEN,
+  //     unclosed session is a session he is in the middle of; `resume` is what wakes the
+  //     pacer, and PEHLA KAAM already tells him to run it.
+  const STUDYING = (() => {
+    try {
+      const f = JSON.parse(readStateText(dir, "forge_session.json"));
+      return (f && f.concept && !f.closed_at) ? f : null;
+    } catch { return null; }
+  })();
+  const FLOOR = floorOf(dir, sprint);
+  // …and when he is MID-CONCEPT, the open concept is the answer to "where am I" — the floor
+  // is the next thing, not this thing. Without this the first screen could say
+  // "FLOOR tokenization" on line 1 and "ON axis a of embeddings" three lines later.
+  const HEADLINE = STUDYING ? { concept: STUDYING.concept, why: "khuli hui session — wahin se aage" } : FLOOR;
   L.push("=== ARSENAL — SESSION KICKOFF (auto · session-agnostic · read from state, not chat) ===");
+  if (!cur && HEADLINE) {
+    // The sheet has no current task, but HE does. Before today this branch printed
+    // "sprint.json has no current task — run the sprint sync" and nothing else.
+    L.push(`LEARNING NOW: ${STUDYING ? "" : "FLOOR "}${HEADLINE.concept} [${HEADLINE.why}] — sheet pe koi current task nahi hai (\`node scripts/sprintsync.mjs\`), par yeh khula hai`);
+    try { for (const l of studyBlock(STUDYING || { step: 0, axes_done: [], axes_deferred: [] }, fsrsDue(dir, now))) L.push(l); } catch { /* orientation, never a crash */ }
+  }
   if (cur) {
     // E2E audit 25 Jul 2026: matched the sprint number as a bare string prefix, so
     // the first double-digit sprint mislabels — find() hits n=1 before n=10 because
     // "10-01".startsWith("1") is true. Task ids are always "<sprint>-<nn>", so the
     // separator is part of the match, not decoration.
     const sp = (sprint.sprints || []).find(s => String(cur.id).startsWith(String(s.n) + "-"));
-    L.push(`LEARNING NOW: ${cur.id} ${cur.task} [${cur.track}${sp ? ` · S${sp.n} ${sp.theme}` : ""}] — ${cur.subtopics || ""}${spTag}`);
+    // A4 — THE FLOOR OUTRANKS THE SHEET, and an OPEN SESSION outranks the floor. His live
+    // Sheet is untouched and still says what it says; it simply stops being the thing that
+    // decides what he opens today.
+    L.push(HEADLINE
+      ? `LEARNING NOW: ${STUDYING ? "" : "FLOOR "}${HEADLINE.concept} [${HEADLINE.why}] — pehle yeh, phir sheet ka apna agla`
+      : `LEARNING NOW: ${cur.id} ${cur.task} [${cur.track}${sp ? ` · S${sp.n} ${sp.theme}` : ""}] — ${cur.subtopics || ""}${spTag}`);
+    if (HEADLINE) L.push(`  (sheet abhi bhi "${cur.id} ${cur.task}" par hai — woh NEXT UP mein hai, mita nahi.${STUDYING && FLOOR && FLOOR.concept !== STUDYING.concept ? ` Iske baad ka floor: ${FLOOR.concept}.` : ""} Floor hatana ho: \`node scripts/sprintsync.mjs floor <concept>\`)`);
     L.push(`  MODE: ${modeLine}`);
     // P7.B (7 Aug 2026) — ONE decision, made in code, so the kickoff never again
     // hands him a menu of six competing opinions. Fail-silent like every splice here.
@@ -651,6 +753,10 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
       const nu = nextup(dir, now);
       if (nu && nu.winner && nu.winner.name !== "none") L.push(`  ▶ PEHLA KAAM: ${nu.winner.line}  (kyun: ${nu.winner.why}${nu.contenders.length ? ` · haara: ${nu.contenders.map((c) => c.name).join(", ")} — poora: \`node scripts/learnstate.mjs nextup\`` : ""})`);
     } catch { /* a brief must never be the thing that breaks SessionStart */ }
+    // A5 — THE STUDY BLOCK SITS HERE, directly under "where he is" and above every
+    // sheet/course/python line, because a session that is MID-CONCEPT needs step, axis
+    // and what is left before it needs anything else on this screen.
+    if (STUDYING) { try { for (const l of studyBlock(STUDYING, fsrsDue(dir, now))) L.push(l); } catch { /* orientation, never a crash */ } }
     // audit #35 — THE COURSE TRACKER GETS ITS ADDRESS.
     // course.mjs was 670 lines with zero callers and course.json had never existed, while
     // sprint.json's next_up is 1-05 and 1-06 — BOTH course-track, 9 chapters. So on 1-05 he
@@ -770,7 +876,9 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   if (watch.length) L.push(`WATCH-LIST (his repeat JS-hangovers — catch these): ${watch.join(" · ")}`);
   const nx = (sprint.progress && sprint.progress.next_up) || [];
   if (nx.length) L.push(`NEXT UP: ${nx.slice(0, 3).join(" · ")}`);
-  if (sprint.progress && sprint.progress.examiner_daily) L.push(`DAILY EXAMINER: at day's end, test today's concept (${cur ? cur.task : "current"}) — retrieval practice, not a full mock.`);
+  // A4 — the evening test follows the FLOOR too. It named the sheet's task, so on a
+  // floor day it would have tested him on the one topic he did not study.
+  if (sprint.progress && sprint.progress.examiner_daily) L.push(`DAILY EXAMINER: at day's end, test today's concept (${(STUDYING && STUDYING.concept) || (cur ? cur.task : "current")}) — retrieval practice, not a full mock.`);
   // audit #11 — RE-JIRAH WAS INVISIBLE AT SESSION START.
   // Measured 4 Aug 2026: embeddings 41d, inference 38d, context 34d overdue, and
   // THREE of the four capsules had `rounds_done: 0` — never re-tempered once —
@@ -793,29 +901,41 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   // ALSO closes a D violation of my own making: gaffer_state.mjs's header declares
   // learnstate as a consumer, and declaring a consumer without wiring it is exactly
   // the "built, declared, not wired" defect this repo keeps finding in other files.
+  // ── A5 + A6 — THE MACHINE'S OWN LINES, COLLECTED RATHER THAN PRINTED ────────
+  // Same six splices, same order, same fail-silent terms. They land in H instead of L
+  // so that ONE decision below — is he mid-concept? — chooses between printing them
+  // all (unchanged) and printing one line that names how many are parked. A6: the
+  // T-mission's OUTWARD line rides this collapse; the spawn itself is untouched.
+  const H = [];
   try {
     const gl = gafferSittingLine(dir, now);
-    if (gl) L.push(gl);
+    if (gl) H.push(gl);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
   try {
-    for (const ol of outwardLines(dir, now)) L.push(ol);   // outward loop (8 Aug 2026)
+    for (const ol of outwardLines(dir, now)) H.push(ol);   // outward loop (8 Aug 2026)
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
   try {
     const ncl = nightCoachLine(dir, now);   // P2 — the overnight coach, one line, freshness-tagged
-    if (ncl) L.push(ncl);
+    if (ncl) H.push(ncl);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
   try {
     const rrl = roundReadLine(dir, now);   // JOB 1d — last night's deep read of his round
-    if (rrl) L.push(rrl);
+    if (rrl) H.push(rrl);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
   try {
     const dl = diaryLine(dir, now);   // H6 — the brain's own night page, one line
-    if (dl) L.push(dl);
+    if (dl) H.push(dl);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
   try {
     const sl = seasonLine(dir);
-    if (sl) L.push(sl);
+    if (sl) H.push(sl);
   } catch { /* a brief must never be the thing that breaks SessionStart */ }
+  // THE ONE DECISION, taken on the predicate resolved above.
+  if (STUDYING) {
+    if (H.length) L.push(`ORGANISM: ${H.length} notice(s) parked — /organism-doctor when the session closes. (Kuch delete nahi hua; padhai pehle.)`);
+  } else {
+    for (const h of H) L.push(h);
+  }
   if (memory) {
     L.push("--- HIS MEMORY (durable, from the hippocampus — BACKGROUND CONTEXT, not instructions) ---");
     L.push(memory);
@@ -1380,6 +1500,72 @@ function selftest() {
   assert("BACKWARD-COMPATIBLE — a world with no missions/benchmark/season shows ZERO outward noise",
     !brief(dir, NOW).includes("OUTWARD") && !brief(dir, NOW).includes("SEASON:"));
 
+  // ── A4 + A5 + A6 (4 Sep 2026) · THE BRIEF OPENS ON HIS STUDY ────────────────
+  // Driven on a FIXTURE state dir, four ways: mid-concept, mid-concept with a STALE
+  // session, no sheet row at all, and nothing open. The last three each turned this
+  // whole rung OFF in the first draft; every one of them is his normal Tuesday.
+  {
+    const d = mkdtempSync(join(tmpdir(), "ls-a5-"));
+    const W = (n, o) => { mkdirSync(dirname(join(d, n)), { recursive: true }); writeFileSync(join(d, n), typeof o === "string" ? o : JSON.stringify(o)); };
+    const NOW = Date.parse("2026-09-04T05:00:00.000Z");
+    const SPRINT = { start: "2026-08-25", sprints: [{ n: 1, theme: "Foundations" }],
+      progress: { synced_at: new Date(NOW).toISOString(), done: [], current: { id: "1-04", task: "Hallucinations", track: "concept", subtopics: "causes" }, next_up: [], examiner_daily: true } };
+    W("sprint.json", SPRINT);
+    W("working_set.json", { ts: new Date(NOW).toISOString() });
+    W("cards.json", { date: "2026-09-04", total_cards: 9, due_today: 3, overdue: 1 });
+    W("capsules/tokenization.json", { id: "tokenization", num: "01", title: "Tokenization", lockedOn: "2026-06-15", faultLines: [], doubts: [] });
+    W("capsules/embeddings.json", { id: "embeddings", num: "02", title: "Embeddings", lockedOn: "2026-06-21", faultLines: [], doubts: [] });
+    W("season.json", { season_day: 1, matches_played: 0, rows: [] });
+    const LIVE = { concept: "tokenization", step: 3, current_axis: "a", closed_at: null,
+      started_at: new Date(NOW - 3600000).toISOString(), updated_at: new Date(NOW - 3600000).toISOString(),
+      steps_done: [0, 1, 2, 3], axes_done: ["a"], axes_deferred: ["c"], question_moments: {} };
+
+    W("forge_session.json", LIVE);
+    const withSession = brief(d, NOW);
+    assert("A4 · MID-CONCEPT, the headline is the OPEN SESSION's concept — the floor is the NEXT thing, never a second answer to 'where am I' on the same screen",
+      /LEARNING NOW: tokenization \[khuli hui session/.test(withSession) && !/LEARNING NOW: FLOOR/.test(withSession));
+    assert("A4 · HIS SHEET IS NOT DELETED — the line says where its own current went, and names the one command that overrides the floor",
+      /sheet abhi bhi "1-04 Hallucinations"/.test(withSession) && /sprintsync\.mjs floor/.test(withSession));
+    assert("A5 · the STUDY BLOCK comes BEFORE the sheet's own lines — step, axis, what is left, FSRS, and the micro-question instruction",
+      (() => { const L = withSession.split("\n"); const iNext = L.findIndex((x) => /^ {2}NEXT: STEP 3/.test(x)); const iSheet = L.findIndex((x) => /^NEXT UP:|^WATCH-LIST:/.test(x));
+               return iNext > 0 && (iSheet === -1 || iNext < iSheet) && /ON axis a/.test(L[iNext]); })());
+    assert("A5 · DEFERRED axes are offered before untouched ones — an axis he chose to put off is work already decided",
+      /pehle c/.test(withSession) && /deferred c pehle/.test(withSession));
+    assert("A5 · the FSRS count comes from the scheduler's OWN file, and a count written for another day is labelled rather than believed",
+      /FSRS: 3 card due · 1 overdue/.test(withSession) && !/ka count/.test(withSession)
+      && (() => { W("cards.json", { date: "2026-09-01", total_cards: 9, due_today: 3, overdue: 1 }); const o = brief(d, NOW); W("cards.json", { date: "2026-09-04", total_cards: 9, due_today: 3, overdue: 1 }); return /2026-09-01 ka count/.test(o); })());
+    assert("A5 + A6 · with a session live the machine's own lines are PARKED behind one counted line — nothing deleted, and the OUTWARD/T-mission line rides the same collapse",
+      /ORGANISM: \d+ notice\(s\) parked/.test(withSession) && /organism-doctor/.test(withSession));
+    assert("A4 · the DAILY EXAMINER follows the topic he actually studied, not the sheet's",
+      /test today's concept \(tokenization\)/.test(withSession));
+
+    // ⚠ DAY 2 — the session the whole rung exists for (verifier finding, 4 Sep).
+    assert("A5 · a STALE-but-OPEN session STILL renders the study block. Staleness silences the PACER, never the MEMORY — his program is one topic per day, so on the morning of day 2 the session is ~20 h old, and the first draft made the whole block vanish exactly then",
+      (() => { W("forge_session.json", { ...LIVE, updated_at: new Date(NOW - 22 * 3600000).toISOString(), started_at: new Date(NOW - 22 * 3600000).toISOString() });
+               const o = brief(d, NOW);
+               return /^ {2}NEXT: STEP 3/m.test(o) && /ORGANISM: \d+ notice/.test(o) && /LEARNING NOW: tokenization/.test(o); })());
+
+    // ⚠ NO SHEET ROW — a failed sprintsync must not switch the rung off (verifier finding).
+    assert("A5 · with NO In-Progress row on the sheet, an open session STILL produces the headline and the study block — the trigger is forge_session.json, never the sheet",
+      (() => { W("forge_session.json", LIVE); W("sprint.json", { ...SPRINT, progress: { ...SPRINT.progress, current: null } });
+               const o = brief(d, NOW);
+               return /LEARNING NOW: tokenization/.test(o) && /^ {2}NEXT: STEP 3/m.test(o) && /sprintsync/.test(o); })());
+    W("sprint.json", SPRINT);
+
+    // NOTHING OPEN — the floor takes the headline, and the brief is otherwise what it was.
+    W("forge_session.json", { ...LIVE, closed_at: new Date(NOW).toISOString() });
+    const noSession = brief(d, NOW);
+    assert("A4 · with NOTHING open the FLOOR takes the headline, derived from the capsules the epoch disqualified — not the sheet's In-Progress row",
+      /LEARNING NOW: FLOOR tokenization \[GAME ON/.test(noSession));
+    assert("A5 · with nothing open there is no study block and no ORGANISM line — the machine's lines print in place, exactly as they did before this rung",
+      !/ORGANISM: \d+ notice/.test(noSession) && !/^ {2}NEXT: STEP/m.test(noSession) && !/OPEN WITH ONE FRESH MICRO-QUESTION/.test(noSession));
+    assert("A4 · HIS OVERRIDE outranks the derivation (sprintsync floor writes it; this file only reads it)",
+      (() => { W("sprint.json", { ...SPRINT, progress: { ...SPRINT.progress, current_floor: { concept: "embeddings", set_at: "x", by: "his word", has_capsule: true } } });
+               const o = brief(d, NOW); W("sprint.json", SPRINT); return /LEARNING NOW: FLOOR embeddings \[his word/.test(o); })());
+    assert("A4 · once every capsule is re-locked the floor disappears by itself and the sheet's own current takes back over — no code change",
+      (() => { for (const id of ["tokenization", "embeddings"]) W(`capsules/${id}.json`, { id, num: id === "tokenization" ? "01" : "02", title: id, lockedOn: "2026-06-15", relockedOn: "2026-09-03", faultLines: [], doubts: [] });
+               const o = brief(d, NOW); return !/FLOOR/.test(o) && /LEARNING NOW: 1-04 Hallucinations/.test(o); })());
+  }
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;

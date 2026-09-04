@@ -79,6 +79,79 @@ node scripts/forge_session.mjs moment pehle_guess|widget_gate|check_q|jirah
 node scripts/forge_session.mjs close                  # at session khatam → coverage report
 ```
 
+### THE BANK — one command per answer, and it is not optional any more (A3, 4 Sep 2026)
+
+**The moment he finishes speaking an answer, you type ONE line. Nothing else. He types nothing.**
+
+```
+node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut knew|shaky|guessed --asked "<the question you actually asked, verbatim>" --said "<his words, verbatim>" --surface code --latency_ms <n> [--probe recall|reconstruct|defend|novel|negative_space] [--register interview]
+```
+
+- `--said` is new and is why this is one command: no heredoc, no stdin, nothing to get wrong
+  mid-lesson. (`<<< "…"` still works and is what the voice lane uses.)
+- `--latency_ms` is the **Stop→prompt clock** — how long he took to answer. `forge_session.mjs
+  contract` prints it every turn. **If you cannot read it, LEAVE THE FLAG OFF.** A null latency
+  is a measurement that was not made; an invented one corrupts the fluency ladder permanently.
+- `--register interview` marks the **cold English line** — the one he says the way he would in
+  the room. Everything else is Hinglish and needs no flag.
+- `--probe negative_space` is "what does this NOT do". The dossier calls it the #1 senior signal.
+
+**THREE GATES NOW REFUSE YOU, and each one names the exact command that clears it:**
+
+| The gate | What it wants |
+|---|---|
+| `axis <x> done` | ≥1 banked answer for that axis since `axis <x> now` · that axis's own `moment jirah` · ≥1 `--register interview` line for it |
+| `step 10` (LOCK) | ≥1 banked answer with `--probe negative_space` for the concept |
+| `close` | the session banked something, and every banked answer has a verdict (`judge-round` ran) |
+
+Every one takes `--no-rep-why "<reason>"` as an override. **It is recorded, it is counted, and
+it costs the session its `method_clean`.** Use it when the truth is "we genuinely could not do
+that today" — never to move faster.
+
+### T0 — OPEN HIS OWN CAPSULE BEFORE YOU TEACH A WORD (A7)
+
+```
+node scripts/samjhao.mjs open <concept>
+node scripts/samjhao.mjs plan <concept> --json
+```
+
+`plan --json` hands you, for this concept: **his own doubts** (the questions he actually
+raised), **the exact traps** he fell for with the bait and why it tempted him, his welds
+per axis, and **`calibration`** — what he predicted about himself. It is the single most
+useful thing to read before teaching him, because *it says in advance where he will break*.
+
+Two rules on it, and they are his:
+
+1. **`pre_cyborg: true` ⇒ every faultLine, strike and weld is served `proof: "unproven-
+   pre-cyborg"`.** The NOTES are not withdrawn — only the PROOF is (his correction,
+   30 Aug). Teach from zero WITH them open. **Never "you already know this."**
+2. At topic close, `node scripts/samjhao.mjs sweep <concept>` prints how many of his own
+   doubts today actually touched. It is a COUNT, not a gate — read it out loud.
+
+If you opened an axis whose stored strike he has now answered live, burn it:
+`node scripts/samjhao.mjs taught <id> --axis <a-i>` — that strike may never be served COLD
+again. (A re-lock burns all nine at once; you do not have to do it per axis after that.)
+
+### THE PER-AXIS LOOP (A10) — nine steps, every axis, in this order
+
+1. **Refute the wrong model, never the person.** Name the belief, not him.
+2. **Samjhao** — the mechanism in the three layers: the dukaan/ghar picture · the real name · the technical line.
+3. **Dikhao** — the concept's ONE widget, driven at *this* axis (`moment widget_gate`).
+4. **Saath karo** — you and he trace it together, on HIS data, numbered.
+5. **Akele karo** — he does it alone. Struggle-first; never hand him the answer.
+6. **Jirah** — `moment jirah`, gut-word FIRST, the dossier's probe kind for this axis, traps sprung here.
+7. **Bolo** — in Hinglish (empty skeleton if he stalls, never a written answer) **and then ONE
+   cold line in interview English.** Bank both, with latency.
+8. **The old note opens LAST** — his own capsule entry for this axis, after he has said it himself.
+9. `axis <x> done`.
+
+THE METHOD's 0–11 numbering stays the code order; this loop runs as pacer moments inside steps
+3–9. Steps 7 BOLO and 8 CALIBRATE also run ONCE at concept level before 10.
+
+**EVERY TEACHER TURN:** `STEP n/11 · <name> · axis x` + "tu yahan hai, itna bacha" → ONE idea in
+the three layers → the mechanism in text + a numbered trace on HIS data → ONE check-question →
+**STOP.**
+
 **START IT YOURSELF, AS THE FIRST ACTION OF THIS SKILL — never wait to be reminded.**
 *(5 Aug 2026, audit #107.)* `forge_session.mjs contract` is silent on three conditions —
 no session · closed · stale — which is correct for the 12-step block but had a consequence
@@ -411,7 +484,10 @@ When he says "session khatam / done / bas":
    `nemesis.mjs` calls its SOLE truth source, and from there into FSRS and into what he is
    made to drill for weeks. **Bank the answer; the judge grades it.** Same law as the voice
    surface, same door, same cartridge:
-   `node scripts/gaffer_brain.mjs capture voice_rep <concept> --gut <word> --asked "<the question you actually asked, verbatim>" [--axis <a-i>] <<< "<what he actually said>"`
+   `node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut <word> --asked "<the question you actually asked, verbatim>" --said "<what he actually said>" --surface code [--latency_ms <n>] [--probe <kind>] [--register interview]`
+   *(A3, 4 Sep 2026 — `--said` replaces the heredoc from a Code session, `--surface code` is
+   what makes the rep countable by the axis gate, and a `code` rep without `--axis` is refused
+   at this door rather than dropped hours later at dispatch. See THE BANK above.)*
    (use `axis_weld` instead of `voice_rep`, with `<concept>:<axis>` as the ref, when you probed
    one of his LOCKED fault-lines — then it is graded against his own weld.)
    Then, when the round is over — not per rep, once:

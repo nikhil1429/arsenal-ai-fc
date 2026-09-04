@@ -54,7 +54,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { subjectsOf } from "./registry.mjs";   // S10 — the build-verb ratchet's verb set is a ROW
+import { subjectsOf, preCyborg } from "./registry.mjs";   // S10 — the build-verb ratchet's verb set is a ROW · A4 (4 Sep 2026) — preCyborg: ONE predicate for "is this proof still his", shared with rejirah/deep/learnstate
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -783,8 +783,35 @@ function save(s) {
 // unable to name a quarter of what he has actually closed. A locked capsule is the
 // harder evidence of the two — the Sheet is hand-maintained, a capsule is not — so
 // both sources feed the line, de-duplicated, Sheet wording first.
+// ── A4 (4 Sep 2026) · A WITHDRAWN PROOF IS NOT A CLOSED CONCEPT ──────────────
+// This function feeds rule #8's "link back BY NAME to what is already closed", which
+// the UserPromptSubmit hook injects into EVERY TURN. Measured this morning, verbatim
+// off his own screen:
+//     link back BY NAME to what is already closed: 1-01 Embeddings ·
+//     1-02 Inference & sampling · 1-03 Context window · Tokenization (capsule locked)
+// All four are the topics his 30-August ruling RE-OPENED as unlearned. So the one rule
+// that exists to build on settled ground was telling the teacher, forty times a
+// session, that the ground he is about to re-teach is already settled — and
+// HOW_HE_LEARNS #10 ("never place his level above his own — no 'you already know
+// this'") is the rule this contract ranks as one of the two that break him most.
+//
+// TWO SOURCES, TWO FILTERS, both derived and neither a list of names:
+//   · the SHEET — its own `done_pre_restart`, the labelled set W0-B already computes
+//     in sprintsync. His `done` is not touched here either; it is READ PAST.
+//   · the CAPSULES — registry.preCyborg(), the single predicate rejirah, deep,
+//     capsule_bridge and learnstate all share.
+// ⚠ AND THE NOTES ARE NOT WITHDRAWN, ONLY THE PROOF IS (his correction, canon
+// b40e585d). This changes exactly one thing: whether a topic may be cited to him as
+// ALREADY CLOSED. The capsules stay the teaching resource and every other reader of
+// them is untouched.
 function doneConcepts() {
   const out = [], seen = new Set();
+  const withdrawn = new Set();
+  try {
+    const sp = JSON.parse(readFileSync(SPRINT, "utf8"));
+    for (const d of (sp && sp.progress && sp.progress.done_pre_restart) || []) withdrawn.add(String(d).toLowerCase().replace(/[^a-z]/g, ""));
+  } catch { /* no sheet on this machine — the capsule filter below still holds */ }
+  const stale = (id) => { const k = String(id || "").toLowerCase().replace(/[^a-z]/g, ""); return !!k && [...withdrawn].some((w) => w === k || w.includes(k) || k.includes(w)); };
   const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z]/g, "");
   // The two sources word the same concept differently — the Sheet says "Context window",
   // the capsule id is "context". An exact-key dedupe would print BOTH, which is worse
@@ -801,14 +828,23 @@ function doneConcepts() {
     const d = sp && sp.progress && Array.isArray(sp.progress.done) ? sp.progress.done : [];
     for (const x of d) {
       const label = String(x).replace(/\s*\(finish\)\s*$/i, "").trim();
-      if (label) push(label, label.replace(/^\d+-\d+\s*/, ""));   // "1-01 Embeddings" keys on "embeddings"
+      if (!label) continue;
+      const key = label.replace(/^\d+-\d+\s*/, "");
+      if (stale(key) || stale(label)) continue;   // A4 — the epoch disqualified this claim; it may not be cited to him as closed
+      push(label, key);
     }
   } catch {}
   try {
     for (const f of readdirSync(CAPSULE_DIR)) {
       if (!f.endsWith(".json")) continue;
       const c = JSON.parse(readFileSync(join(CAPSULE_DIR, f), "utf8"));
-      if (c && c.id) push(`${c.title || c.id} (capsule locked)`, c.id);
+      if (!c || !c.id) continue;
+      // A4 — ONE predicate, the registry's, shared with rejirah/deep/learnstate. A
+      // capsule locked before the epoch with no re-lock holds a proof he withdrew.
+      let withdrawnProof = false;
+      try { withdrawnProof = preCyborg(c); } catch { withdrawnProof = false; }   // unreadable epoch ⇒ claim nothing new, behave as before
+      if (withdrawnProof || stale(c.id)) continue;
+      push(`${c.title || c.id} (capsule locked)`, c.id);
     }
   } catch { /* no capsule mirror on this machine — the Sheet alone still works */ }
   return out;
@@ -1216,6 +1252,26 @@ function selftest() {
   assert("NO CAP ON WHY — a 300-char self-report survives whole (his 'no limit' ruling; 3 of his 5 live reports were cut mid-word at 240)",
     flagRule(base, "his-word", "x".repeat(300), T0).state.staged[0].why.length === 300);
 
+  // ── A4 (4 Sep 2026) · A WITHDRAWN PROOF IS NOT A CLOSED CONCEPT ────────────
+  // Driven through the LIVE reader on purpose: doneConcepts() takes no arguments and
+  // reads the real sheet + the real capsule mirror, which is exactly the pair that was
+  // telling him, every turn, that the four re-opened topics were already closed.
+  {
+    const live = doneConcepts();
+    assert("A4 · not one topic the GAME-ON epoch disqualified is offered as 'already closed' — the rule that builds on settled ground may not cite withdrawn ground",
+      !live.some((x) => /tokeniz|embedding|inference|context/i.test(String(x))), JSON.stringify(live));
+    assert("A4 · the filter is DERIVED, never a list of names: this file asks registry.preCyborg and the sheet's own done_pre_restart, and names no concept",
+      (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+               const i = src.indexOf("function doneConcepts()");
+               const fn = src.slice(i, src.indexOf("\n}", i));
+               // COMMENTS ARE STRIPPED before the negative half: the prose above this
+               // function quotes the capsule id "context" while explaining the dedupe,
+               // and a check that cannot tell a sentence from a branch would either
+               // fail forever or force the comment out — the comment is the record.
+               const code = fn.split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join("\n");
+               return /preCyborg\(/.test(code) && /done_pre_restart/.test(code)
+                 && !/"tokenization"|"embeddings"|"inference"|"context"/.test(code); })());
+  }
   console.log(`\nteaching_contract selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

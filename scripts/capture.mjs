@@ -224,7 +224,17 @@ function enrichConcept(o, reg) {
 // validation — accept ONLY well-typed reps; enrich concept + unregistered.
 // Strictly additive over v1 (all prior checks retained).
 // ---------------------------------------------------------------------------
-const SURFACES   = new Set(["gem", "colab", "samjhao"]);         // "samjhao" ADDED at S10 (the C4 back-fill's him-fired sitting; gem-only quality stats stay gem-only)
+// ── A3 (4 Sep 2026) · "code" JOINS THE SURFACES, AND IT ARRIVES STRICTER ──────
+// HIS HAAN, 4 Sep 2026 03:50 IST: reps banked from a Claude Code study session
+// carry surface "code". Until today they could not exist at all — a rep from the
+// one surface he actually studies on was rejected by its own validator, so the
+// whole Code lane banked NOTHING and the log has stood at 37 rows since.
+// A SURFACE IS NEVER ADDED ALONE. Widening an allow-list is the loosening half;
+// this one is paired with its own tightening half two gates down (see CODE_STRICT):
+// a `code` rep MUST name the axis it belongs to and the question he was actually
+// asked. gem/colab/samjhao are untouched, so nothing that validated yesterday
+// stops validating today, and the new door is the narrowest of the four.
+const SURFACES   = new Set(["gem", "colab", "samjhao", "code"]);  // "samjhao" ADDED at S10 (the C4 back-fill's him-fired sitting; gem-only quality stats stay gem-only) · "code" ADDED 4 Sep 2026 (A3, his haan) — and see CODE_STRICT
 const TRACKS     = new Set(["concept", "skill"]);
 const CONFIDENCE = new Set(["knew", "shaky", "guessed"]);        // gut-word, committed BEFORE the answer
 const AXES       = new Set("abcdefghi".split(""));               // 9 axes a–i (canon; FORGE faultLines a–i)
@@ -325,7 +335,7 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
   // (ts + question) cannot split on two spellings of the same instant.
   const clocks = resolveClocks(o, opts);
   if (!clocks) return { ok: false, error: `ts not a parseable date (${o.ts})` };
-  if (!SURFACES.has(o.surface)) return { ok: false, error: `surface not gem|colab (${o.surface})` };
+  if (!SURFACES.has(o.surface)) return { ok: false, error: `surface not ${[...SURFACES].join("|")} (${o.surface})` };
   if (!TRACKS.has(o.track)) return { ok: false, error: `track not concept|skill (${o.track})` };
   if (typeof o.concept !== "string" || o.concept.trim() === "") return { ok: false, error: "concept missing/empty" };
   if (typeof o.question !== "string" || o.question.trim() === "") return { ok: false, error: "question missing/empty" };
@@ -336,6 +346,25 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
   if (o.axis !== null) {
     if (o.track !== "concept") return { ok: false, error: "axis only on track=concept (skill+axis)" };
     if (!AXES.has(o.axis)) return { ok: false, error: `axis not a..i (${o.axis})` };
+  }
+  // ── CODE_STRICT (A3, 4 Sep 2026) — THE TIGHTENING HALF OF THE NEW SURFACE ────
+  // A `code` rep is written by a TEACHER mid-lesson, one command per answer, which is
+  // the loosest authoring context this log has ever had: no paste review, no batch, no
+  // second pair of eyes. So it is held to more than the other three, not less. Two
+  // fields, both of which the other surfaces are allowed to leave null:
+  //   axis     — a rep that cannot say which of the nine axes it belongs to cannot
+  //              close one, and closing axes is the only reason this door exists.
+  //   question — already required of every rep above; restated here because the
+  //              forge gate counts `code` rows and a labelled row ("voice rep") would
+  //              satisfy a count while telling a reader six months from now nothing.
+  // Deliberately NOT enforced: `latency_ms`. It is null whenever the Stop→prompt clock
+  // could not be read, and the standing law in this file is that a missing measurement
+  // is written as null and never invented — a gate on it would make inventing one the
+  // cheapest way past the gate.
+  if (o.surface === "code") {
+    if (o.track !== "concept") return { ok: false, error: "a code rep is a CONCEPT rep — the study loop banks axes, and a skill rep has no axis to close" };
+    if (o.axis === null) return { ok: false, error: "a code rep MUST name its axis (a–i): the forge gate counts these rows per axis, and an axis-less row can close nothing" };
+    if (String(o.question).trim().length < 8) return { ok: false, error: "a code rep MUST carry the question he was actually asked, not a label — this row is the only record of it" };
   }
   // latency_ms: optional; null or int>=0
   let latency_ms = null;
@@ -2449,6 +2478,27 @@ function selftest() {
 
   rmSync(dir, { recursive: true, force: true });
   const passed = checks.every(([, ok]) => ok);
+  // ── A3 · CODE_STRICT (4 Sep 2026) — the TIGHTENING half of the new surface ──
+  // The rung's own law: every change ships with a planted-violation assert. Widening
+  // SURFACES is the loosening half and it had none of its own; the only nearby coverage
+  // was in a different organ, on a different check (the rung's verifier caught that).
+  {
+    const base = { ts: "2026-09-04T05:00:00.000Z", track: "concept", concept: "tokenization",
+      axis: "a", question: "Token kya hota hai apne shabdon mein?", confidence: "shaky", correct: true };
+    const v = (o) => validateRep({ ...base, ...o });
+    assert("A3 · a well-formed `code` rep is accepted — the surface his study sessions bank on now exists",
+      v({ surface: "code" }).ok === true && v({ surface: "code" }).rep.surface === "code");
+    assert("A3 · PLANTED VIOLATION — a `code` rep with NO axis is refused, and the reason says why the gate needs it",
+      (() => { const r = v({ surface: "code", axis: null }); return r.ok === false && /MUST name its axis/.test(r.error); })());
+    assert("A3 · PLANTED VIOLATION — a `code` rep whose question is a LABEL rather than the question he was asked is refused",
+      (() => { const r = v({ surface: "code", question: "rep" }); return r.ok === false && /question he was actually asked/.test(r.error); })());
+    assert("A3 · PLANTED VIOLATION — a `code` rep on the SKILL track is refused (the study loop banks axes, and a skill rep has none)",
+      (() => { const r = v({ surface: "code", track: "skill", axis: null }); return r.ok === false && /CONCEPT rep/.test(r.error); })());
+    assert("A3 · the OTHER three surfaces are untouched — an axis-less gem rep still validates exactly as it did yesterday",
+      v({ surface: "gem", axis: null }).ok === true && v({ surface: "colab", axis: null }).ok === true && v({ surface: "samjhao", axis: null }).ok === true);
+    assert("A3 · an unknown surface is still refused, and the message now NAMES the four legal ones",
+      (() => { const r = v({ surface: "voice" }); return r.ok === false && /gem\|colab\|samjhao\|code/.test(r.error); })());
+  }
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
 }

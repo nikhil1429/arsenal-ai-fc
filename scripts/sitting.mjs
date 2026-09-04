@@ -54,7 +54,7 @@
 // PLAN FILE CONTRACT (Block 5 writes it, `open` prefers it): brain_out/prepare/<day>.json =
 //   { "task": {"id","title"}, "route", "map", "units":[{step,axis,kind,text,question,est_seconds,src[]}] }
 //   — re-checked for freshness at open (a task/route mismatch is not served stale).
-// MODES: daemon | status | open [--surface voice|code] [--task "<title>"] [--route R] | turn --text "…" [--surface s]
+// MODES: daemon | status | open [--surface voice|code] [--task "<title>"] [--route R] [--no-spawn] | turn --text "…" [--surface s]
 //        | next | spoken <id> | close [--reason r] | review [--sitting id] [--force] [--dry] | plan | stats [--days N] | head [--out p] | selftest
 // CLI:   node scripts/sitting.mjs <mode>   (env: ARSENAL_SITTING_STATE_DIR · ARSENAL_SITTING_PORT — selftest only)
 // ============================================================================
@@ -81,6 +81,12 @@ const F = {
   prepare: (day) => join(STATE_DIR, "brain_out", "prepare", `${day}.json`),
   agenda: () => join(STATE_DIR, "sitting_agenda.jsonl"),          // LAW A (18 Aug 2026): his explicit asks for the NEXT sitting — this organ's SOLE WRITE (acts.mjs verb agenda rides `agenda add`)
   prepared: (day) => join(STATE_DIR, "brain_out", "prepare_on_request", `${day}.md`),   // brain job prepare_on_request (Opus, on his ask) — read at open, never written here
+  // READ-ONLY (owned by forge_session.mjs). It is in this map for one reason: the map is
+  // what the selftest re-points, and `close()` read this path off STATE_DIR directly — so
+  // a "hermetic" selftest was reading HIS LIVE forge session and went red the moment that
+  // session reached step 10 or 11. Same class as the `forge: null` fixture repair above,
+  // one function further down; found by the rung's own verifier, reproduced both ways.
+  forge: () => join(STATE_DIR, "forge_session.json"),
 };
 export const PORT = Number(process.env.ARSENAL_SITTING_PORT || 4117);
 export const SITTING_URL = `http://127.0.0.1:${PORT}`;
@@ -603,6 +609,44 @@ export function createSitting(deps = {}) {
       return { ok: true, id: S.id, joined: true, surfaces: S.surfaces, plan_len: (S.plan || []).length, first_unit: null, route: S.route, task: S.task, transport: S.transport };
     }
     const ctx = await gatherContext({ task, route });
+    // ── A1 (4 Sep 2026) · AN OPEN FORGE SESSION OUTRANKS THIS OPEN ────────────────
+    // Decided HERE, before any state is built or written, so the refusal leaves
+    // sitting.json byte-identical — a 409 that had already stamped an id would be a
+    // refusal in name only. Two doors, and neither of them ends his concept:
+    //   · no explicit task  → JOIN the open forge (its concept becomes this sitting's;
+    //     `same` is then true below, so NO close and NO start owner call is made)
+    //   · explicit task, different concept → REFUSE 409 and print the resume line
+    // The third case the old code had — close his and start the router's — is gone
+    // (frozen below). Nothing here can create, close or advance a forge session.
+    {
+      const f = ctx.forge;
+      const fOpen = !!(f && f.concept && !f.closed_at);
+      const other = fOpen && ctx.concept && String(f.concept).toLowerCase() !== String(ctx.concept).toLowerCase();
+      if (ctx.route === "FORGE" && other) {
+        if (ctx.taskExplicit) {
+          return {
+            ok: false, status: 409,
+            error: `forge '${f.concept}' is open (STEP ${f.step ?? "?"}) — a sitting on '${ctx.concept}' would replace it. Nothing was opened and nothing was closed.`,
+            open_concept: String(f.concept).toLowerCase(), wanted: String(ctx.concept).toLowerCase(),
+            resume: `node scripts/forge_session.mjs resume   # wahi concept, wahin se aage — kuch dobara nahi`,
+          };
+        }
+        // ⚠ RE-RESOLVE EVERYTHING THE CONCEPT DECIDES (4 Sep 2026, verifier finding).
+        // The first draft reassigned `concept` and then read `ctx.capsule` — which
+        // gatherContext had already resolved from the SHEET's concept — so the sitting was
+        // written with concept "tokenization" and task "Hallucinations", task_id "1-04".
+        // Every reader of S.task (the head assembler, the plan-freshness match, stats, the
+        // review) would then have named the wrong topic all four days.
+        ctx.concept = String(f.concept).toLowerCase();
+        ctx.capsule = (ctx.capsules || []).find((c) => String(c.id || "").toLowerCase() === ctx.concept
+          || String(c.title || "").toLowerCase() === ctx.concept) || null;
+        ctx.taskTitle = (ctx.capsule && ctx.capsule.title) || ctx.concept;
+        // The sheet's row is about the sheet's topic, not this one. Carrying its id would
+        // file this sitting's intent row and review under a task he did not sit.
+        ctx.taskId = null; ctx.track = "concept";
+        ctx.routeWhy = `${ctx.routeWhy} · JOINED the open forge '${ctx.concept}' (A1: the router never replaces a live concept)`;
+      }
+    }
     S = {
       id: newId(), captain: ctx.captain.tag, surfaces: [surface], task: ctx.taskTitle, task_id: ctx.taskId, track: ctx.track, route: ctx.route, concept: ctx.concept, route_why: ctx.routeWhy,
       claude_session_id: null, transport: surface === "code" ? "code" : cfg.transport, opened_at: now().toISOString(), last_turn_at: now().toISOString(), closed_at: null, close_reason: null,
@@ -618,10 +662,21 @@ export function createSitting(deps = {}) {
       const open = !!(f && f.concept && !f.closed_at);
       const same = open && String(f.concept).toLowerCase() === String(S.concept).toLowerCase();
       if (!same) {
-        if (open) { owner("forge_session.mjs", ["close"]); S.stats.owner_calls++; }
-        const r = owner("forge_session.mjs", ["start", S.concept]); S.stats.owner_calls++;
-        if (!r.ok) log(`sitting: forge start '${S.concept}' → ${r.status} ${r.err || r.out}`);
-        S.forge_step = 0; S.forge_axis = null;
+        // ── A1 (4 Sep 2026) · THE AUTO-CLOSE IS FROZEN (L9) ──────────────────────
+        // Verbatim, as it ran until today:
+        //   if (open) { owner("forge_session.mjs", ["close"]); S.stats.owner_calls++; }
+        // One line, and it ended a live concept every time the router disagreed with
+        // the pacer. Both doors that could reach it are decided above — JOIN when no
+        // task was given, 409 when one was — so `open && !same` is now unreachable.
+        // It is kept as a LOUD branch rather than deleted: if a future path ever gets
+        // here, it must SAY so instead of quietly closing his session.
+        if (open) {
+          log(`sitting: forge '${f.concept}' is OPEN and this sitting wants '${S.concept}' — not closing it (A1). The pacer stays where he left it; nothing was started.`);
+        } else {
+          const r = owner("forge_session.mjs", ["start", S.concept]); S.stats.owner_calls++;
+          if (!r.ok) log(`sitting: forge start '${S.concept}' → ${r.status} ${r.err || r.out}`);
+          S.forge_step = 0; S.forge_axis = null;
+        }
       }
     }
     let first = null;
@@ -650,14 +705,29 @@ export function createSitting(deps = {}) {
     const captain = await readCaptain(deps);
     const r = route && ROUTES.includes(String(route).toUpperCase()) ? { route: String(route).toUpperCase(), concept: null, why: "route given at open" } : { route: base.route, concept: base.routeConcept, why: base.routeWhy };
     const cur = kickoff && kickoff.cur ? kickoff.cur : null;
-    let concept = r.concept || (cur && cur.track === "concept" ? String(cur.task || "").toLowerCase() : null);
-    if (task && !r.concept) concept = String(task).toLowerCase();
+    // ── A1 (4 Sep 2026) · AN EXPLICIT `--task` OUTRANKS THE ROUTER ────────────────
+    // FROZEN, verbatim, as it ran until today (L9 — layering, never replace):
+    //   let concept = r.concept || (cur && cur.track === "concept" ? String(cur.task || "").toLowerCase() : null);
+    //   if (task && !r.concept) concept = String(task).toLowerCase();
+    // `r.concept` is the SPRINT's concept whenever no --route was given, so it was
+    // truthy on exactly the path that matters and the second line COULD NOT FIRE: a
+    // captain (or a skill) typing `--task tokenization` while the sheet still said
+    // "Hallucinations" got a sitting on hallucinations — and, through the branch in
+    // open(), his live tokenization session was closed to make room for it. That is
+    // how the 3 Sep tokenization session died at STEP 3, with a coverage report as
+    // its only trace. An explicit task is a HUMAN saying what this sitting is about;
+    // the router is a guess made off a sheet he has not edited since 30 Aug. The
+    // human wins, and `taskExplicit` rides ctx so open() can tell the two apart.
+    const taskExplicit = !!(task && String(task).trim());
+    let concept = taskExplicit
+      ? String(task).trim().toLowerCase()
+      : r.concept || (cur && cur.track === "concept" ? String(cur.task || "").toLowerCase() : null);
     const capsule = concept ? capsules.find((c) => String(c.id).toLowerCase() === String(concept).toLowerCase() || String(c.title || "").toLowerCase() === String(concept).toLowerCase()) || null : null;
     // the head assembler is PURE given ctx — every state read happens HERE, in the organ that owns the sitting
     const day = istDay(now());
     const readText = (p) => { try { return readFileSync(p, "utf8"); } catch { return ""; } };
     return {
-      forge, kickoff, nextup, capsules, capsule, scout, captain, route: r.route, routeWhy: r.why, concept, taskTitle: task || (capsule && capsule.title) || concept || (cur && cur.task) || null,
+      forge, kickoff, nextup, capsules, capsule, scout, captain, route: r.route, routeWhy: r.why, concept, taskExplicit, taskTitle: task || (capsule && capsule.title) || concept || (cur && cur.task) || null,
       taskId: cur ? cur.id : null, track: cur ? cur.track : null, topCard: readTopCard(deps), lastReview: lastReview(), intents: readIntentBrief(deps), stateDir: STATE_DIR, day,
       standing: readJson(join(STATE_DIR, "gaffer_standing.json")),
       nightCoachText: readText(join(STATE_DIR, "brain_out", "night_coach", `${day}.md`)),
@@ -854,7 +924,7 @@ export function createSitting(deps = {}) {
     // 2. the pacer — closed through the owner ONLY when the concept reached its lock (a concept spans sittings; a stale one is boot's call)
     let forgeStatus = null;
     if (S.route === "FORGE") {
-      const f = readJson(join(STATE_DIR, "forge_session.json"));
+      const f = readJson(F.forge());
       forgeStatus = f ? { concept: f.concept, step: f.step, steps_done: f.steps_done, axes_done: f.axes_done } : null;
       if (f && f.concept && !f.closed_at && Array.isArray(f.steps_done) && (f.steps_done.includes(10) || f.steps_done.includes(11))) { const r = owner("forge_session.mjs", ["close"]); S.stats.owner_calls++; forgeStatus.closed = r.ok; forgeStatus.coverage = clip(r.out, 600); }
     }
@@ -1111,8 +1181,29 @@ async function main() {
       return;
     }
     case "open": {
+      // ── A2 (4 Sep 2026) · `--no-spawn`: THE STUDY LOOP NEVER WAITS ON A DAEMON ──
+      // S9's forbidden line, as code. The two study skills register the sitting at
+      // boot, and `ensureDaemon()` spawns a detached child and then BLOCKS up to six
+      // seconds polling for it — on a box where the daemon is deliberately down (it
+      // has been since 20 Aug and is still not one of the five that run as the
+      // service account) that is six seconds of nothing, an exit 1, and a skill that
+      // reads as broken at the exact moment he sat down to study. The sitting is a
+      // BANK and a plan; the pacer, the capture door and the judge do not need it.
+      // So with --no-spawn: one line, exit 0, and no child is ever spawned.
+      const noSpawn = rest.includes("--no-spawn");
+      if (noSpawn && !(await daemonUp())) {
+        console.log(`sitting: daemon down on :${PORT} — no sitting registered (--no-spawn), and nothing was started. The study loop does not need it: the pacer, the bank and the judge all run without a daemon.`);
+        return;
+      }
       if (!(await ensureDaemon())) { console.error(`sitting: could not start the daemon on :${PORT}`); process.exit(1); }
       const r = await post("/open", { surface: opt("--surface") || "code", task: opt("--task") || null, route: opt("--route") || null }, 180000);
+      // A1 — a 409 is not a crash: it says his concept is still open and how to get
+      // back into it. Printed as two lines and exits 1, so a skill can branch on it.
+      if (!r.ok && r.status === 409) {
+        console.error(`sitting: ${r.error}`);
+        console.error(`  → ${r.resume}`);
+        process.exit(1);
+      }
       console.log(r.ok ? `sitting: ${r.joined ? "JOINED" : "OPEN"} ${r.id} · ${r.route} '${r.task || ""}' · surfaces ${(r.surfaces || []).join("+")} · plan ${r.plan_len} unit(s) · transport ${r.transport}${r.first_unit ? `\n  first unit → ${clip(r.first_unit.text, 160)}` : ""}` : `sitting: open failed — ${r.error}`);
       return;
     }
@@ -1169,7 +1260,7 @@ async function main() {
     }
     case "selftest": process.exit((await selftest()) ? 0 : 1);
     default:
-      console.log("sitting.mjs — daemon | status | open [--surface voice|code] [--task \"…\"] [--route R] | turn --text \"…\" | next | spoken <id> | close [--reason r] | review [--sitting id] [--force] [--dry] | plan | stats [--days N] | head [--out p] | selftest");
+      console.log("sitting.mjs — daemon | status | open [--surface voice|code] [--task \"…\"] [--route R] [--no-spawn] | turn --text \"…\" | next | spoken <id> | close [--reason r] | review [--sitting id] [--force] [--dry] | plan | stats [--days N] | head [--out p] | selftest");
   }
 }
 
@@ -1184,7 +1275,7 @@ async function selftest() {
   const realState = STATE_DIR;
   const F0 = { ...F };
   const P = (name) => join(tmp, name);
-  F.sitting = () => P("sitting.json"); F.out = () => P("sitting_out.jsonl"); F.log = () => P("sitting_log.jsonl"); F.reviews = () => P("sitting_reviews.jsonl"); F.config = () => P("sitting_config.json"); F.head = () => P("brain_out/sitting/sitting_system.md"); F.prepare = (day) => P(`brain_out/prepare/${day}.json`); F.agenda = () => P("sitting_agenda.jsonl"); F.prepared = (day) => P(`brain_out/prepare_on_request/${day}.md`);   // LAW A: the two new files re-point too — the live agenda is never touched by a selftest
+  F.forge = () => P("forge_session.json"); F.sitting = () => P("sitting.json"); F.out = () => P("sitting_out.jsonl"); F.log = () => P("sitting_log.jsonl"); F.reviews = () => P("sitting_reviews.jsonl"); F.config = () => P("sitting_config.json"); F.head = () => P("brain_out/sitting/sitting_system.md"); F.prepare = (day) => P(`brain_out/prepare/${day}.json`); F.agenda = () => P("sitting_agenda.jsonl"); F.prepared = (day) => P(`brain_out/prepare_on_request/${day}.md`);   // LAW A: the two new files re-point too — the live agenda is never touched by a selftest
   const calls = [];
   const owner = (file, args, input) => {
     calls.push({ file, args, input: input == null ? null : String(input).slice(0, 80) });
@@ -1233,6 +1324,15 @@ async function selftest() {
   const capsule = { id: "hallucinations", title: "Hallucinations", lockedOn: "2026-06-15", reJirahDone: [], faultLines: [{ axis: "a", title: "Kya hai", strike: "Hallucination kya hai?", weld: "Model confident galat jawab deta hai." }, { axis: "b", title: "Kyun", strike: "Kyun hota hai?", weld: "Training data + sampling." }] };
   const baseDeps = {
     config: { ...DEFAULT_CONFIG, idle_close_min: 0 }, owner, kickoff: { cur: { id: "1-04", task: "Hallucinations", track: "concept" } }, nextup: { winner: { name: "sprint", line: "", why: "" }, contenders: [] },
+    // ── HERMETIC (4 Sep 2026) · `forge: null` IS DECLARED, NOT OMITTED ─────────────
+    // gatherPlanContext reads `deps.forge !== undefined ? deps.forge : readJson(<live
+    // forge_session.json>)`, and this fixture never declared the key — so a selftest
+    // whose banner says "hermetic — temp state dir" was routing off HIS OPEN SESSION.
+    // Measured today with a live tokenization session at STEP 3: four checks red that
+    // are green on a machine with no session open, including two whose names say "no
+    // forge session on disk". The reds were real and they were about the fixture, not
+    // the organ. The tests that WANT a session inject their own (see 13b).
+    forge: null,
     capsules: [capsule], captain: { tag: "Nikhil (#14)", profile: { name: "Nikhil" } }, intents: ["nothing open"], topCard: null,
     assembleHead: async (ctx) => ({ text: `HEAD route=${ctx.route} concept=${ctx.concept} plan=${ctx.plan ? ctx.plan.units.length : "none"}\n${ctx.ctrl_grammar}`, footer: "[sitting_system: fixture]", parts: [{ id: "kickoff", present: true, file: "learnstate json" }] }),
     pacer: async (text, id, n) => ({ text: `FORGE · step 1/12 · turn ${n}\nTEACHING CONTRACT · turn ${n}/40`, failed: [] }),
@@ -1427,6 +1527,63 @@ async function selftest() {
     const o5b = await d5b.open({ surface: "voice" });
     assert("join: a voice mouth joining a code-only sitting ATTACHES the brain to the same id (plan composed, first unit emitted, transport stream)", o5b.joined && o5b.id === d5.state.id && d5b.state.plan.length === 4 && d5b.state.transport === "stream" && d5b.state.surfaces.includes("voice"));
     await d5b.close({ reason: "his_word" }); await d5b.stop(); await d5.stop();
+    // ── 13b. A1 + A2 (4 Sep 2026) — THE OPEN CONCEPT SURVIVES THE ROUTER ──────────
+    // The three ways his live session could die, each now a law with a test. The
+    // fixture is the exact 3 Sep shape: a tokenization forge open and STALE (26 h
+    // since the last touch, so routeFor stops calling it fresh and the sprint wins),
+    // while the sheet's current task still says "Hallucinations".
+    {
+      // ONE reader for this block (xray budget: the ratchet charges per SITE).
+      const RD = (f) => readFileSync(f, "utf8");
+      const staleForge = { concept: "tokenization", step: 3, closed_at: null,
+        started_at: new Date(Date.now() - 26 * 3600000).toISOString(),
+        updated_at: new Date(Date.now() - 26 * 3600000).toISOString(),
+        steps_done: [0, 1, 2, 3], axes_done: [], axes_deferred: [] };
+      const noSpawn = () => { throw new Error("must not spawn a child for these checks"); };
+
+      // (i) an explicit --task beats the router — the line that could not fire before
+      const dA = createSitting({ ...baseDeps, forge: null, session: noSpawn });
+      const ctxA = await dA.context({ task: "tokenization" });
+      assert("A1 · an explicit --task OUTRANKS the router: ctx.concept is his word, not the sheet's current task, and taskExplicit says which door it came through",
+        ctxA.concept === "tokenization" && ctxA.taskExplicit === true
+        && (await dA.context({})).concept === "hallucinations" && (await dA.context({})).taskExplicit === false);
+      await dA.stop();
+
+      // (ii) no task + an open forge of another concept → JOIN, and NOTHING is closed
+      // `calls` is NEVER cleared here — the close-review assert further down reads the
+      // whole recording, and wiping it made that net pass on an empty array.
+      const markB = calls.length;
+      const dB = createSitting({ ...baseDeps, forge: staleForge, session: noSpawn });
+      const oB = await dB.open({ surface: "code" });
+      assert("A1 · a STALE open forge + no explicit task → the sitting JOINS that concept, is LABELLED with it (not the sheet's), and makes NO forge_session owner call at all (the 3 Sep close/start pair is gone)",
+        oB.ok && dB.state.concept === "tokenization" && /JOINED the open forge/.test(dB.state.route_why)
+        && String(dB.state.task).toLowerCase() === "tokenization" && dB.state.task_id === null
+        && !calls.slice(markB).some((c) => c.file === "forge_session.mjs" && (c.args[0] === "close" || c.args[0] === "start")));
+      await dB.close({ reason: "his_word" }); await dB.stop();
+
+      // (iii) an explicit task for ANOTHER concept → 409, and the disk is untouched
+      const markC = calls.length;
+      const before409 = RD(F.sitting());
+      const dC = createSitting({ ...baseDeps, forge: staleForge, session: noSpawn });
+      const oC = await dC.open({ surface: "code", task: "hallucinations" });
+      assert("A1 · an explicit task naming ANOTHER concept is REFUSED 409 with the resume line — no sitting is opened, no forge is closed, and sitting.json is byte-identical",
+        oC.ok === false && oC.status === 409 && oC.open_concept === "tokenization" && oC.wanted === "hallucinations"
+        && /forge_session\.mjs resume/.test(oC.resume)
+        && !calls.slice(markC).some((c) => c.file === "forge_session.mjs")
+        && RD(F.sitting()) === before409);
+      await dC.stop();
+
+      // (iv) A2 — the --no-spawn branch must sit BEFORE ensureDaemon, or it spawns the
+      // very child it exists to avoid. Read off this file's own source (the shape
+      // sprintsync's floor assert uses), because the ORDER is the whole law here.
+      assert("A2 · `open --no-spawn` returns before ensureDaemon() is ever reached — the study skills can register a sitting on a box whose daemon is deliberately down and pay nothing for it",
+        (() => {
+          const src = RD(fileURLToPath(import.meta.url));
+          const blk = src.slice(src.indexOf('case "open": {'), src.indexOf('case "turn": {'));
+          return blk.indexOf("noSpawn && !(await daemonUp())") > 0
+            && blk.indexOf("noSpawn && !(await daemonUp())") < blk.indexOf("await ensureDaemon()");
+        })());
+    }
     // ── 14. stats print per class latency + tokens from the ledger ──
     const st = stats({ days: 1 });
     assert("stats: per-class counts + p50/p90 + tokens + head from sitting_log (§6.6 numbers are PRINTED, never re-derived)", /respond +n +\d+/.test(st.text) && st.heads.includes(9000) && st.weighted > 0);

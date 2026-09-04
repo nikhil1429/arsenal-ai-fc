@@ -68,7 +68,7 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { fixturePin } from "./registry.mjs";   // S10 #7 — sandbox pinning is a TABLE (sandbox_subjects); this organ is instance #1
+import { fixturePin, preCyborg } from "./registry.mjs";   // S10 #7 — sandbox pinning is a TABLE (sandbox_subjects); this organ is instance #1 · A7b (4 Sep 2026) — preCyborg: ONE predicate for "is this proof still his"
 import { noNewNumbers, quotesOnly } from "./validators.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
@@ -169,13 +169,73 @@ export function planDoubts(cap) {
   return d.map((x, i) => ({ n: i + 1, q: x.q || null, a: x.a || null, source: `doubts[${i}]` }));
 }
 
+// ── A7b (4 Sep 2026) · THE ERA LAW, ON THE READ SIDE ─────────────────────────
+// HIS TWO RULINGS, both from 30 August and both binding at once:
+//   ⭐ the pre-cyborg era is CLOSED — every learning record before that stamp measures
+//     the INSTRUMENT, not him; and
+//   ⚠ "keep my 4 closed topic notes data as a powerful resource and use that while
+//     teaching me everything from the scratch again" — the NOTES are not withdrawn,
+//     only the PROOF is.
+// A capsule is therefore two things at once, and this is where the two are separated.
+// Its prose is the best teaching resource in the building: `doubts` are HIS OWN
+// questions, `traps` the exact baits he fell for, `calibration` what he predicted about
+// himself. Its STATUSES — faultLine.status "held", a strike already answered — are a
+// claim that he knows this, and that claim he withdrew.
+// LABELS, NEVER EDITS. Nothing is removed, nothing is rewritten and the capsule file is
+// untouched; a `proof` field is attached beside each entry so no organ downstream can
+// read a June "held" as current, and every surface can say so out loud.
+export const UNPROVEN = "unproven-pre-cyborg";
+function stampEra(units, pre) {
+  if (!pre) return units;
+  return units.map((u) => ({ ...u,
+    status: u.status, proof: UNPROVEN,
+    // The strike stays READABLE — it is his own question and the best cold probe there
+    // is — but it is marked so that nothing may serve it as a settled test of a proof
+    // that no longer exists (deep.mjs burns it separately; this is the read-side twin).
+    predict: { ...u.predict, proof: UNPROVEN },
+    reveal: { ...u.reveal, proof: UNPROVEN },
+  }));
+}
 export function plan(concept, dir = CAPSULE_DIR) {
   const cap = loadCapsule(concept, dir);
   if (!cap) return { ok: false, why: `no locked capsule for "${concept}" — samjhao revises HIS OWN notes, so without a capsule there is nothing to revise (FORGE it first)` };
   if (!cap.lockedOn) return { ok: false, why: `capsule "${cap.id}" is not locked (no lockedOn) — samjhao revises LOCKED notes only` };
-  const units = planUnits(cap), doubts = planDoubts(cap);
+  let pre = false;
+  try { pre = preCyborg(cap); } catch { pre = false; }   // unreadable epoch ⇒ claim nothing new; the capsule keeps the status it has
+  const units = stampEra(planUnits(cap), pre), doubts = planDoubts(cap);
   if (!units.length) return { ok: false, why: `capsule "${cap.id}" has no faultLines — nothing to open` };
-  return { ok: true, concept: cap.id, title: cap.title || cap.id, lockedOn: cap.lockedOn, units, doubts, capsule: cap };
+  return { ok: true, concept: cap.id, title: cap.title || cap.id, lockedOn: cap.lockedOn,
+    // A7b — the era, named on the plan itself, so a teacher never has to infer it.
+    pre_cyborg: pre,
+    era_note: pre ? "Yeh capsule GAME ON (30 Aug 2026) se PEHLE lock hua tha. Notes poore rakhe hain aur padhane ke liye hain — lekin inka 'proof' wapas le liya gaya hai. Isse kabhi mat kaho 'ye to tumhe aata hai'." : null,
+    // A7 — HIS OWN CALIBRATION rides the plan: what he predicted about himself on this
+    // topic. null when the capsule carries none, never an empty object pretending to be
+    // data. It is the single most useful thing a teacher can read before teaching him,
+    // because it says in advance where he will be confident and wrong.
+    calibration: cap && cap.calibration !== undefined && cap.calibration !== null ? cap.calibration : null,
+    units, doubts, capsule: cap };
+}
+
+// ── A7c (4 Sep 2026) · THE DOUBT SWEEP ───────────────────────────────────────
+// C1's rule is "unplaced doubts must be ZERO" — every doubt he ever raised on a topic
+// gets answered somewhere in the re-teach. This is a COUNT AT CLOSE, deliberately not
+// a gate on a first teach: gating it would make a long ledger a reason not to start,
+// and tokenization alone carries 26. It answers one question honestly — how many of
+// his own questions did today actually touch?
+/** sweep — {placed, unplaced, total, open[]} for a concept, from the session ledger. */
+export function doubtSweep(concept, deps = {}) {
+  const p = deps.plan !== undefined ? deps.plan : plan(concept);
+  if (!p.ok) return { ok: false, why: p.why };
+  const rows = deps.rows !== undefined ? deps.rows : readRows();
+  const cid = String(p.concept).toLowerCase();
+  const closed = new Set();
+  for (const r of rows || []) {
+    if (!r || String(r.concept || "").toLowerCase() !== cid) continue;
+    if (r.kind === "doubt" && Number.isFinite(Number(r.n))) closed.add(Number(r.n));
+  }
+  const open = p.doubts.filter((d) => !closed.has(d.n));
+  return { ok: true, concept: p.concept, total: p.doubts.length, placed: p.doubts.length - open.length,
+    unplaced: open.length, open: open.map((d) => ({ n: d.n, q: d.q })) };
 }
 
 /**
@@ -514,6 +574,51 @@ function selftest() {
   } finally {
     for (const d of junk) { try { rmSync(d, { recursive: true, force: true }); } catch { /* tmp */ } }
   }
+  // ── A7 (4 Sep 2026) · THE CAPSULE OPENS AT T0, AND ITS PROOF IS LABELLED ───
+  {
+    const d = mkdtempSync(join(tmpdir(), "samjhao-a7-"));
+    // ONE writer and ONE reader for the whole block — see the xray budget note in
+    // rejirah's own A8 block: a fixture is not a licence to add call sites.
+    const W = (id, o) => writeFileSync(join(d, `${id}.json`), JSON.stringify(o));
+    const RD = (f) => readFileSync(f, "utf8");
+    const BASE = { id: "toke", num: "01", title: "Toke", mechanism: "mechanism head",
+      faultLines: [{ axis: "a", title: "axis a", strike: "a ka strike?", weld: "uska weld", status: "held" }],
+      traps: [{ bait: "bait", wrong: "wrong", truth: "truth" }],
+      doubts: [{ q: "pehla doubt?", a: "uska jawab" }, { q: "doosra doubt?", a: null }],
+      calibration: { predicted: "confident", actual: "cracked" } };
+
+    W("toke", { ...BASE, lockedOn: "2026-06-15" });                       // pre-epoch
+    const pre = plan("toke", d);
+    assert("A7b · a PRE-CYBORG capsule serves every faultLine, strike and weld as UNPROVEN — labels, never edits",
+      pre.ok && pre.pre_cyborg === true && pre.units[0].proof === UNPROVEN
+      && pre.units[0].predict.proof === UNPROVEN && pre.units[0].reveal.proof === UNPROVEN);
+    assert("A7b · the NOTES ARE NOT WITHDRAWN — his weld, his strike, his trap and his doubts all still reach the teacher, whole",
+      pre.units[0].reveal.weld === "uska weld" && pre.units[0].predict.ask === "a ka strike?"
+      && pre.units[0].trap.truth === "truth" && pre.doubts.length === 2);
+    assert("A7b · the plan SAYS which era it is from, in his own words, so a teacher never has to infer it — and never says 'ye to tumhe aata hai'",
+      /GAME ON/.test(pre.era_note) && /aata hai/.test(pre.era_note));
+    assert("A7 · HIS OWN CALIBRATION rides the plan — what he predicted about himself is the best thing to read before teaching him",
+      pre.calibration && pre.calibration.predicted === "confident");
+    assert("A7 · a capsule with no calibration reports NULL, never an empty object dressed as data",
+      (() => { W("nocal", { ...BASE, id: "nocal", lockedOn: "2026-06-15", calibration: undefined }); return plan("nocal", d).calibration === null; })());
+
+    W("post", { ...BASE, id: "post", lockedOn: "2026-09-05" });           // post-epoch
+    const post = plan("post", d);
+    assert("A7b · a capsule locked AFTER the epoch carries no UNPROVEN stamp at all — the label is a DATE test, never a list of concepts",
+      post.ok && post.pre_cyborg === false && post.era_note === null && post.units[0].proof === undefined);
+    assert("A7b · a RE-LOCKED pre-epoch capsule leaves the unproven set by itself — A8's sidecar and this label share one predicate",
+      (() => { W("re", { ...BASE, id: "re", lockedOn: "2026-06-15", relockedOn: "2026-09-04" }); const r = plan("re", d); return r.pre_cyborg === false && r.units[0].proof === undefined; })());
+    assert("A7b · the capsule FILES are byte-identical after every read — this organ labels in memory and writes nothing",
+      (() => { const f = join(d, "toke.json"); const b = RD(f); plan("toke", d); plan("toke", d); return RD(f) === b; })());
+
+    // A7c — the sweep
+    assert("A7c · the sweep counts his OWN doubts: none closed yet ⇒ every one is unplaced, and it is a COUNT, not a gate",
+      (() => { const r = doubtSweep("toke", { plan: pre, rows: [] }); return r.ok && r.total === 2 && r.placed === 0 && r.unplaced === 2 && r.open[0].n === 1; })());
+    assert("A7c · a doubt he actually closed in the session moves to PLACED, keyed on the session ledger's own rows",
+      (() => { const r = doubtSweep("toke", { plan: pre, rows: [{ kind: "doubt", concept: "toke", n: 1 }] }); return r.placed === 1 && r.unplaced === 1 && r.open[0].n === 2; })());
+    assert("A7c · another concept's rows never count toward this concept's sweep",
+      doubtSweep("toke", { plan: pre, rows: [{ kind: "doubt", concept: "embeddings", n: 1 }] }).placed === 0);
+  }
   console.log(`\nsamjhao: ${pass} passed, ${failed} failed`);
   process.exit(failed ? 1 : 0);
 }
@@ -692,7 +797,10 @@ if (process.argv[1] && process.argv[1].endsWith("samjhao.mjs")) {
     const p = plan(arg);
     if (!p.ok) { console.log(`samjhao: ${p.why}`); process.exit(1); }
     if (mode === "verify") { const v = verifyPlan(p); console.log(v.ok ? `samjhao: ${p.concept} — ${v.checked} unit(s), NO NEW FACTS (noNewNumbers + quotesOnly vs his own capsule)` : `samjhao: ${p.concept} — ${v.bad.length} unsourced assertion(s): ${JSON.stringify(v.bad.slice(0, 3))}`); process.exit(v.ok ? 0 : 1); }
-    if (has("json")) console.log(JSON.stringify({ concept: p.concept, lockedOn: p.lockedOn, units: p.units, doubts: p.doubts }));
+    // A7 — the era verdict, his own calibration and the doubt ledger all ride the JSON,
+    // because /forge reads THIS to open the capsule at T0 and a field that never reaches
+    // the teacher is a field that does not exist.
+    if (has("json")) console.log(JSON.stringify({ concept: p.concept, lockedOn: p.lockedOn, pre_cyborg: p.pre_cyborg, era_note: p.era_note, calibration: p.calibration, units: p.units, doubts: p.doubts }));
     else {
       console.log(`SAMJHAO PLAN · ${p.title} · capsule locked ${p.lockedOn} · ${p.units.length} unit(s) · ${p.doubts.length} doubt(s) in the ledger`);
       p.units.forEach((u) => console.log(`  ${u.n}. [${u.axis}] ${u.title}\n       guess pehle: ${clip(u.predict.ask, 120)}\n       check: ${clip(u.check, 110)}`));
@@ -749,11 +857,24 @@ if (process.argv[1] && process.argv[1].endsWith("samjhao.mjs")) {
     console.log(r.ok ? `samjhao: ${r.why}` : `samjhao: ${r.why}`);
     process.exit(r.ok ? 0 : 1);
   }
+  else if (mode === "sweep") {
+    const r = doubtSweep(arg, {});
+    if (!r.ok) { console.log(`samjhao: ${r.why}`); process.exit(1); }
+    if (has("json")) console.log(JSON.stringify(r));
+    else {
+      console.log(`SAMJHAO SWEEP · ${r.concept} · uske apne ${r.total} doubt — ${r.placed} chhue gaye, ${r.unplaced} abhi tak nahi`);
+      // A COUNT, NEVER A SCOLDING. Unplaced doubts on a first re-teach are normal;
+      // what is not normal is nobody knowing the number.
+      for (const d of r.open.slice(0, 8)) console.log(`  ${d.n}. ${clip(d.q, 110)}`);
+      if (r.open.length > 8) console.log(`  … aur ${r.open.length - 8}`);
+      if (!r.unplaced) console.log("  har doubt uske apne jawab se band ho chuka hai.");
+    }
+  }
   else if (mode === "list") {
     const s = stats();
     console.log(boardLine(s));
     [...foldSessions(readRows()).values()].forEach((x) => console.log(`  ${x.id} · ${x.concept} · units ${x.answered.size}/${x.units} · doubts ${x.closed_doubts.size}/${x.doubts}${x.closed_at ? " · CLOSED" : ""}`));
     if (!s.n) console.log(`  (koi samjhao nahi khula — shuru: node scripts/samjhao.mjs open ${THE_FOUR[0]})`);
   }
-  else console.log(`samjhao: plan|verify <concept> | open <concept> | next <concept|id> | guess|answer <id> --unit n --text "..." --gut knew|shaky|guessed | doubt <id> --n k --text "..." --gut w | status <concept|id> | close <id> | list | selftest`);
+  else console.log(`samjhao: plan|verify <concept> | open <concept> | next <concept|id> | guess|answer <id> --unit n --text "..." --gut knew|shaky|guessed | doubt <id> --n k --text "..." --gut w | status <concept|id> | sweep <concept> | close <id> | list | selftest`);
 }

@@ -21,6 +21,10 @@
 //
 // LAWS:
 //   · SOLE WRITER of dressing-room/state/forge_session.json. Nothing else writes it.
+//   · SOLE WRITER of dressing-room/state/relocks.jsonl (A8, 4 Sep 2026) — the re-lock
+//     SIDECAR, append-only. His default: a re-lock never edits a capsule (immutable,
+//     mirror.mjs is their sole writer), so the fact lives beside them and rejirah.mjs's
+//     loadCapsules layers it in memory for every reader of a capsule.
 //   · NEVER teaches, never grades, never touches reps_log — capture.mjs owns reps.
 //     AMENDED (audit #108, 6 Aug 2026): "never touches" is now exactly NEVER WRITES.
 //     `close` READS reps_log.jsonl, one direction only, to say whether this session
@@ -63,6 +67,10 @@
 // script bare. The two docs now fail the selftest the moment either drops a verb.
 // MODES: start <concept> [--force] · step <0-11> · axis <a-i> now|done|defer
 //        · moment <kind> · lockchain · resume · status · contract · boot · close · selftest
+// A3 (4 Sep 2026): `step 10`, `axis <x> done` and `close` are EVIDENCE-GATED — each
+//        refuses unless the bank (gaffer_brain.mjs, read-only from here) holds the row
+//        it names, and each takes `--no-rep-why "<reason>"` as a recorded, counted
+//        override that costs the session its method_clean.
 // ============================================================================
 import { readFileSync, writeFileSync, existsSync, renameSync, mkdirSync, rmSync, appendFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -78,6 +86,11 @@ const HISTORY   = join(STATE_DIR, "forge_sessions.jsonl");
 const TEACHING  = join(STATE_DIR, "teaching_contract.json");   // READ-ONLY here; owned by teaching_contract.mjs
 const AUDIT_LAST = join(STATE_DIR, "teaching_audit_last.json"); // READ-ONLY here; owned by teaching_audit.mjs (checked_rules stamp)
 const REPS      = join(STATE_DIR, "reps_log.jsonl");           // READ-ONLY here; owned by capture.mjs (audit #108)
+// A8 (4 Sep 2026) — SOLE WRITER of dressing-room/state/relocks.jsonl, the re-lock
+// SIDECAR. His default, 4 Sep: a re-lock never edits a capsule (they are immutable and
+// mirror.mjs is their only writer), so the fact is recorded beside them and layered in
+// memory by rejirah.mjs's loadCapsules. Append-only, one row per proven re-lock.
+const RELOCKS   = join(STATE_DIR, "relocks.jsonl");
 
 // THE METHOD — PER-CONCEPT PIPELINE, verbatim order (PROJECT_OS.md).
 const STEPS = [
@@ -178,6 +191,25 @@ const blank = (concept, now = new Date()) => ({
   current_axis: null,
   question_moments: MOMENTS.reduce((o, m) => ((o[m] = 0), o), {}),
   check_q_this_pass: 0,
+  // ── A3 (4 Sep 2026) · THE THREE FIELDS THE ZERO-TAX GATE NEEDS ──────────────
+  // All three default to empty and every reader below tolerates their absence, so a
+  // session already on disk when this landed keeps working and simply has no marks.
+  //   axes_now_at     — WHEN `axis x now` was declared. The floor a bank row must
+  //                     land after to count toward closing that axis: a row banked
+  //                     before the axis was even opened is evidence about some other
+  //                     axis, and counting it would let one answer close nine.
+  //   moments_by_axis — WHICH axis was current when a question-moment fired. The
+  //                     global `question_moments.jirah` counter could never answer
+  //                     "was THIS axis cross-examined", which is why nine axes could
+  //                     be marked done off one jirah (coverage() already names that
+  //                     as ungraded; now the mark itself is refused).
+  //   bypasses        — every gate a teacher overrode, with HIS OWN reason. A bypass
+  //                     is legal and is never blocked — it is COUNTED, and a session
+  //                     with one is not method_clean. An escape hatch that left no
+  //                     trace would make itself the fastest path through the method.
+  axes_now_at: {},
+  moments_by_axis: {},
+  bypasses: [],
 });
 
 // STRICT — Number("") and Number(" ") are 0, and Number(true) is 1, so a bare
@@ -244,7 +276,15 @@ function markAxis(s, axis, how = "done", now = new Date()) {
 function setCurrentAxis(s, axis, now = new Date()) {
   const a = String(axis || "").trim().toLowerCase();
   if (!AXES.includes(a)) return { ok: false, error: `axis not a..i (${axis})`, session: s };
-  return { ok: true, session: { ...s, current_axis: a, updated_at: nowISO(now) } };
+  // A3 — the declaration now STAMPS A CLOCK, and that clock is the floor the axis
+  // gate measures bank rows against. RE-DECLARING an axis does NOT move the stamp:
+  // an axis worked across two sittings would otherwise disqualify every rep banked
+  // in the first one, and "re-declare to reset the evidence floor" would be a
+  // one-command way to make an already-satisfied gate unsatisfiable (or the reverse,
+  // if the arithmetic were the other way round). First `now` wins, always.
+  const marks = { ...(s.axes_now_at || {}) };
+  if (!marks[a]) marks[a] = nowISO(now);
+  return { ok: true, session: { ...s, current_axis: a, axes_now_at: marks, updated_at: nowISO(now) } };
 }
 
 function addMoment(s, kind, now = new Date()) {
@@ -267,11 +307,22 @@ function addMoment(s, kind, now = new Date()) {
     };
   }
   const qm = { ...s.question_moments, [m]: (s.question_moments[m] || 0) + 1 };
+  // A3 — A MOMENT NOW REMEMBERS WHICH AXIS IT WAS ABOUT. The global counter cannot
+  // answer the only question the axis gate asks ("was THIS axis cross-examined?"),
+  // and that gap is exactly how five axes were marked done on 31 Jul with
+  // question_moments.jirah sitting at 0. Recorded only when an axis is CURRENT: a
+  // moment fired with no axis declared belongs to the concept, not to a letter, and
+  // attributing it to whichever axis happened to be last would be an invention.
+  const mba = { ...(s.moments_by_axis || {}) };
+  if (s.current_axis && AXES.includes(s.current_axis)) {
+    mba[s.current_axis] = { ...(mba[s.current_axis] || {}), [m]: ((mba[s.current_axis] || {})[m] || 0) + 1 };
+  }
   return {
     ok: true,
     session: {
       ...s,
       question_moments: qm,
+      moments_by_axis: mba,
       check_q_this_pass: m === "check_q" ? (s.check_q_this_pass || 0) + 1 : (s.check_q_this_pass || 0),
       updated_at: nowISO(now),
     },
@@ -416,7 +467,28 @@ export function dossierLines(concept, s, { dossier, registry } = {}) {
   } catch { return []; }
 }
 
-function contractLines(s, now = new Date()) {
+// ── A3 (4 Sep 2026) · THE LATENCY THE TEACHER IS ASKED TO BANK ───────────────
+// `--latency_ms` is the Stop→prompt clock: the gap between the teacher's last message
+// ENDING and his answer arriving. Three gates already read `latency_ms` (learning_state's
+// isColdFast, touchline's latRising and allFastKnew) and every one treats null as "no
+// objection" — so an un-measured lane is a silently un-gated one.
+// ⚠ THE SKILL DOCUMENTED THIS AS PRINTED BEFORE IT WAS (verifier finding, 4 Sep). Nothing
+// in this file emitted a clock; a teacher following the skill would have found no number,
+// and — correctly, under the never-invent law — banked null every time.
+// The anchor is `stop.at` from the teaching audit's own last row (stamped by the Stop
+// hook), else teaching_contract.json's `checked_at` (stamped by the same anchor). NEVER
+// invented: with no readable anchor the line SAYS the number could not be read and tells
+// the teacher to leave the flag off, which is a different fact from "he answered fast".
+export function stopToPromptMs(auditLast, teaching, now = new Date()) {
+  const iso = (auditLast && auditLast.stop && auditLast.stop.at) || (teaching && teaching.checked_at) || null;
+  const t = Date.parse(String(iso || ""));
+  if (!Number.isFinite(t)) return null;
+  const ms = now.getTime() - t;
+  // A negative gap means the clocks disagree, and an implausibly long one means he walked
+  // away — neither is a measurement of how fast he answered. Both read as unmeasured.
+  return ms >= 0 && ms <= 30 * 60000 ? Math.round(ms) : null;
+}
+function contractLines(s, now = new Date(), clock = undefined) {
   if (!s || !s.concept) return [];
   if (s.closed_at) return [];                                    // a closed session pacts nothing
   if (isStale(s, now)) return [];                                // W0-D: last touch, not birth
@@ -448,6 +520,11 @@ function contractLines(s, now = new Date()) {
   L.push(`  axes:${s.current_axis && !s.axes_done.includes(s.current_axis) && !s.axes_deferred.includes(s.current_axis) ? ` ON ${s.current_axis} ·` : ""} done ${s.axes_done.join("") || "—"} · deferred ${s.axes_deferred.join("") || "—"} · left ${AXES.filter((a) => !s.axes_done.includes(a) && !s.axes_deferred.includes(a)).join("") || "—"}`
     + (ungraded.length ? ` · ungraded ${ungraded.join("")}` : ""));
   L.push(`  question-moments used: ${MOMENTS.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these four are legal — no quiz-dump)`);
+  if (clock !== undefined) {
+    L.push(clock === null
+      ? `  latency: UNMEASURABLE this turn — leave \`--latency_ms\` OFF when you bank. A null latency is a measurement nobody made; an invented one corrupts the fluency ladder permanently.`
+      : `  latency: ${clock} ms since your last message ended — pass it VERBATIM as \`--latency_ms ${clock}\` on the next bank.`);
+  }
   if (SOFT_PHASE(n)) {
     L.push((s.check_q_this_pass || 0) >= 1
       ? `  ⛔ ONE check-question already spent this pass. TEACH or advance the step — do NOT ask another.`
@@ -462,6 +539,109 @@ function contractLines(s, now = new Date()) {
   if (coreDeferred.length) L.push(`  ⛔ CORE-NEVER-DEFERRED VIOLATED: axis ${coreDeferred.join("")} is DEFERRED. Canon forbids it (PROJECT_OS.md:316). Undo it — \`axis ${coreDeferred[0]} done\` only after you actually teach it.`);
   else if (coreOpen.length && n >= 3) L.push(`  CORE axis ${coreOpen.join("")} (math + value RANGE + high/low ka MATLAB) still open — it can never be deferred or dropped.`);
   return L;
+}
+
+// ---------------------------------------------------------------------------
+// THE ZERO-TAX GATES (A3, 4 Sep 2026) — an uncaptured rep did not happen
+// ---------------------------------------------------------------------------
+// WHAT WAS MEASURED, the morning this landed: reps_log.jsonl held 37 rows, NOT ONE of
+// them banked since the GAME-ON epoch; all eleven recorded forge sessions carried
+// `method_clean:false`; `question_moments.jirah` was 0 across every one of them. The
+// capture step existed only as a SENTENCE at the end of a skill file — the pacer wrote
+// nothing, so a session that ended the way his sessions actually end (tired, mid-axis,
+// with the terminal closed) lost the whole day. His own law: an uncaptured rep did not
+// happen, and anything he has to remember to do is a design defect.
+//
+// SO THE PACER STOPS ASKING AND STARTS REFUSING. Three gates, and every one of them is
+// a COUNT of rows another organ already owns — this file writes no rep, judges nothing,
+// and spends nothing. Rows are passed IN (never read here) so the whole core stays pure
+// and the selftest needs no disk and no import.
+//
+// EVERY GATE HAS A WAY OUT, and the way out is `--no-rep-why "<his words>"`: it is
+// recorded, counted, and it costs the session its method_clean. A gate with no escape
+// gets disabled by the first tired evening; a gate whose escape leaves no trace becomes
+// the normal path by the third. This one leaves a row.
+const GATE_BYPASS_FLAG = "--no-rep-why";
+/** axisDoneGate — may axis `a` be marked DONE? Three questions, each about evidence
+ *  that exists on disk, none of them about how the teacher feels the session went.
+ *  @param rows bank rows for THIS CONCEPT (gaffer_brain.bankRows), newest-inclusive */
+export function axisDoneGate(s, axis, rows = []) {
+  const a = String(axis || "").trim().toLowerCase();
+  if (!AXES.includes(a)) return { ok: false, missing: [], error: `axis not a..i (${axis})` };
+  // THE FLOOR: the axis's own `now` mark, else the session's start. Never epoch —
+  // a missing floor that admitted every row ever banked would turn the gate into
+  // a formality on exactly the sessions that skipped the declaration.
+  const floor = (s.axes_now_at || {})[a] || s.started_at || null;
+  const t0 = Date.parse(floor || "");
+  const inWindow = (r) => { const t = Date.parse((r && r.ts) || ""); return Number.isFinite(t) && (!Number.isFinite(t0) || t >= t0); };
+  const mine = (rows || []).filter((r) => r && String(r.axis || "").toLowerCase() === a && inWindow(r));
+  // A row with no register declared IS the Hinglish one: that is the default register of the
+  // whole lesson, and the flag exists to mark the exception, not the rule.
+  const hinglish = mine.filter((r) => String(r.register || "").toLowerCase() !== "interview");
+  const jirah = ((s.moments_by_axis || {})[a] || {}).jirah || 0;
+  const missing = [];
+  if (!mine.length) missing.push(`no banked answer for axis ${a} since ${floor ? `it was opened (${String(floor).slice(0, 16)})` : "this session began"} — bank his words: \`node scripts/gaffer_brain.mjs capture voice_rep <concept>:${a} --axis ${a} --gut <knew|shaky|guessed> --asked "<q>" --said "<his words>" --surface code\``);
+  if (jirah < 1) missing.push(`axis ${a} was never cross-examined — declare it where it happens: \`node scripts/forge_session.mjs moment jirah\` (with axis ${a} current)`);
+  if (!mine.some((r) => String(r.register || "").toLowerCase() === "interview")) missing.push(`no INTERVIEW-register line for axis ${a} — he has said it in Hinglish, not yet in the room's English: bank one more with \`--register interview\``);
+  // …AND THE OTHER HALF (4 Sep 2026, verifier finding, reproduced). This gate's own words
+  // are "he can say it twice: once in Hinglish and once in cold interview English — two
+  // different skills". The first draft asked for `mine.length >= 1` AND `some(interview)`,
+  // which ONE interview row satisfies both of — so an axis could close having never been
+  // said in his own language, which is the half that means he understood it.
+  else if (!hinglish.length) missing.push(`axis ${a} has ONLY the interview line — he has not said it in his OWN words yet, and that is the half that means he understood it. Bank the Hinglish one too (no \`--register\` flag needed; that is the default).`);
+  return { ok: missing.length === 0, missing, floor, rows_seen: mine.length, jirah };
+}
+/** lockGate — may this concept reach STEP 10 (LOCK)? One question, and it is the one
+ *  OPPONENT_SCOUT calls the #1 senior signal: has he been asked what this thing does
+ *  NOT do. A concept locked without it locks a definition, not a judgement. */
+export function lockGate(s, rows = []) {
+  const t0 = Date.parse(s.started_at || "");
+  const has = (rows || []).some((r) => {
+    if (!r || String(r.probe || "").toLowerCase() !== "negative_space") return false;
+    const t = Date.parse(r.ts || "");
+    return Number.isFinite(t) && (!Number.isFinite(t0) || t >= t0);
+  });
+  return { ok: has, missing: has ? [] : [`STEP 10 is the LOCK and nothing has asked him what ${s.concept} does NOT do — the negative-space probe is the single strongest senior signal in the dossier. Ask it, bank it with \`--probe negative_space\`, then lock.`] };
+}
+/** closeGate — may the session close? A close is the ONLY durable record a session
+ *  leaves, so this gate is deliberately the mildest of the three: it refuses only
+ *  when the session banked nothing at all, or banked answers that nobody ever judged.
+ *  Both are the same defect wearing different clothes — his words on disk with no
+ *  verdict attached to them, which is what "37 reps and 11 sessions" looked like. */
+export function closeGate(s, rows = [], outstanding = []) {
+  const t0 = Date.parse(s.started_at || "");
+  const mine = (rows || []).filter((r) => { const t = Date.parse((r && r.ts) || ""); return Number.isFinite(t) && (!Number.isFinite(t0) || t >= t0); });
+  const unjudged = (outstanding || []).filter((r) => mine.some((m) => m && r && m.id === r.id));
+  const missing = [];
+  if (!mine.length) missing.push("this session banked NOTHING — every gut-word he said tonight dies with this terminal. Bank them first (`gaffer_brain.mjs capture …`), then close.");
+  else if (unjudged.length) missing.push(`${unjudged.length} banked answer(s) have no verdict — run the round's ONE judge call first: \`node scripts/gaffer_brain.mjs judge-round\`. capture.mjs writes the reps, not this organ.`);
+  return { ok: missing.length === 0, missing, banked: mine.length, unjudged: unjudged.length };
+}
+/** relockRow — PURE: is this session a proven re-lock, and what row says so?
+ *  Two conditions, both about EVIDENCE and neither about how the session felt:
+ *    · every CORE axis is not merely marked done but GRADED (its own jirah before its
+ *      own mark — coverage()'s existing definition, not a second one), and
+ *    · at least one banked answer of this session carries a verdict.
+ *  Anything less is a session that reached step 10, which is not the same thing as a
+ *  concept that is proven again — and a re-lock is exactly the claim "his proof is
+ *  current", the claim his 30-August ruling withdrew from all four capsules. */
+export function relockRow(s, cov, judgedReps, now = new Date()) {
+  const core = Array.isArray(cov.core_axes) ? cov.core_axes : [];
+  const graded = new Set(Array.isArray(cov.axes_graded) ? cov.axes_graded : []);
+  const coreGraded = core.length > 0 && core.every((a) => graded.has(a));
+  const why = [];
+  if (!core.length) why.push("this concept declares no core axis, so nothing here can testify that its measure was taught");
+  if (core.length && !coreGraded) why.push(`core axis ${core.filter((a) => !graded.has(a)).join("") || "?"} is not GRADED (marked done is not the same as cross-examined)`);
+  if (!(judgedReps >= 1)) why.push("no banked answer of this session carries a verdict yet");
+  if (why.length) return { ok: false, why };
+  return { ok: true, row: { ts: nowISO(now), concept: s.concept, relockedOn: nowISO(now).slice(0, 10),
+    by: "forge_session.mjs step 10", core_axes: core, judged_reps: judgedReps, session_started_at: s.started_at || null } };
+}
+
+/** recordBypass — the escape hatch, as a row. PURE; the caller saves. */
+export function recordBypass(s, gate, why, now = new Date()) {
+  const row = { at: nowISO(now), gate: String(gate), step: s.step, axis: s.current_axis || null, why: String(why || "").trim().slice(0, 400) };
+  return { ...s, bypasses: [...(s.bypasses || []), row], updated_at: nowISO(now) };
 }
 
 // COVERAGE — the thing that was invisible before: what actually ran.
@@ -519,14 +699,24 @@ function coverage(s, now = new Date()) {
     axis_marks_span_min: span_min,
     question_moments: { ...s.question_moments },
     check_q_refused: s.check_q_refused || 0,     // quiz-dump attempts, kept legible at close
+    // A3 — every gate the teacher overrode, with his own reason, in the row that
+    // outlives the terminal. Reported unconditionally like the two clocks: a number
+    // that only appears when it is bad makes "have nothing bad" the cheapest move.
+    bypasses: [...(s.bypasses || [])],
+    bypass_count: (s.bypasses || []).length,
+    moments_by_axis: { ...(s.moments_by_axis || {}) },
+    axes_now_at: { ...(s.axes_now_at || {}) },
     // FROZEN VERBATIM (30 Jul semantics — layering, never replace). `honest` answers
     // exactly one question: did every step run and was every axis touched. It stays
     // byte-for-byte what it was, so a comparison across old and new rows is valid.
     honest: missed.length === 0 && untouched.length === 0,
     // The new verdict layers ON TOP: coverage AND grading AND the core axis AND a
     // driven widget AND no quiz-dump attempt.
+    // A3 adds ONE term: zero bypasses. A session that talked its way past an
+    // evidence gate is not a clean one, however good the teaching felt.
     method_clean: missed.length === 0 && untouched.length === 0 && ungraded.length === 0
-      && coreMissing.length === 0 && gates >= WIDGET_GATES_MIN && (s.check_q_refused || 0) === 0,
+      && coreMissing.length === 0 && gates >= WIDGET_GATES_MIN && (s.check_q_refused || 0) === 0
+      && (s.bypasses || []).length === 0,
   };
 }
 
@@ -1920,6 +2110,87 @@ function selftest() {
       && /now\|done\|defer/.test(header) && /now\|done\|defer/.test(usage));
   }
 
+  // ── A3 (4 Sep 2026) · THE ZERO-TAX GATES, ON FIXTURES ──────────────────────
+  // Pure functions, rows handed in, no disk and no import — the whole reason the
+  // gates take `rows` as a parameter. Each check plants exactly ONE violation and
+  // requires the gate to bite on it, so a gate that quietly stops biting fails here.
+  {
+    const T = "2026-09-04T05:00:00.000Z";
+    const later = (min) => new Date(Date.parse(T) + min * 60000).toISOString();
+    const base = { concept: "tokenization", started_at: T, updated_at: T, step: 3,
+      axes_now_at: { a: later(1) }, moments_by_axis: { a: { jirah: 1 } }, bypasses: [] };
+    const row = (over = {}) => ({ kind: "capture", id: `x:${Math.abs(Object.keys(over).length)}`, ts: later(5), concept: "tokenization", axis: "a", surface: "code", probe: "recall", register: null, ...over });
+    const HINGLISH = row();
+    const INTERVIEW = row({ id: "x:iv", register: "interview" });
+
+    assert("A3 AXIS GATE — with a banked answer, its own jirah AND an interview-register line, axis a closes",
+      axisDoneGate(base, "a", [HINGLISH, INTERVIEW]).ok === true);
+    assert("A3 AXIS GATE — ZERO bank rows: refused, and the refusal hands over the exact bank command (never 'try harder')",
+      (() => { const g = axisDoneGate(base, "a", []); return g.ok === false && g.missing.some((m) => /no banked answer/.test(m) && /gaffer_brain\.mjs capture/.test(m)); })());
+    assert("A3 AXIS GATE — the axis's OWN jirah is required: the same two rows with the jirah moment missing are refused",
+      (() => { const g = axisDoneGate({ ...base, moments_by_axis: {} }, "a", [HINGLISH, INTERVIEW]); return g.ok === false && g.missing.some((m) => /never cross-examined/.test(m)); })());
+    assert("A3 AXIS GATE — the INTERVIEW-register line is required: Hinglish alone does not close an axis (two skills, only one of them was ever measured)",
+      (() => { const g = axisDoneGate(base, "a", [HINGLISH]); return g.ok === false && g.missing.length === 1 && /INTERVIEW-register/.test(g.missing[0]); })());
+    assert("A3 AXIS GATE — a row banked BEFORE the axis was opened does not count for it (one answer may not close nine axes)",
+      axisDoneGate(base, "a", [row({ ts: T }), row({ ts: T, id: "x:iv2", register: "interview" })]).ok === false);
+    assert("A3 AXIS GATE — another axis's rows never count for this one",
+      axisDoneGate(base, "a", [row({ axis: "b" }), row({ axis: "b", id: "x:iv3", register: "interview" })]).ok === false);
+    assert("A3 AXIS GATE — a jirah declared while NO axis was current is attributed to no axis at all, never to a guess",
+      (() => { const m = addMoment({ ...base, current_axis: null, moments_by_axis: {}, question_moments: { jirah: 0 } }, "jirah"); return m.ok && m.session.question_moments.jirah === 1 && Object.keys(m.session.moments_by_axis || {}).length === 0; })());
+    assert("A3 AXIS GATE — `axis x now` stamps the evidence floor, and RE-declaring never moves it (re-declare would reset the floor and void real work)",
+      (() => { const one = setCurrentAxis({ ...base, axes_now_at: {} }, "b", new Date(T));
+               const two = setCurrentAxis(one.session, "b", new Date(later(90)));
+               return one.session.axes_now_at.b === T && two.session.axes_now_at.b === T; })());
+
+    assert("A3 LOCK GATE — STEP 10 refuses without a negative-space probe (the dossier's #1 senior signal), and passes with one",
+      lockGate(base, [HINGLISH, INTERVIEW]).ok === false
+      && /does NOT do/.test(lockGate(base, []).missing[0])
+      && lockGate(base, [row({ probe: "negative_space" })]).ok === true);
+
+    assert("A3 CLOSE GATE — a session that banked NOTHING is refused, and the refusal says what dies with the terminal",
+      (() => { const g = closeGate(base, [], []); return g.ok === false && /banked NOTHING/.test(g.missing[0]); })());
+    assert("A3 CLOSE GATE — banked answers with no verdict are refused and named (the round's ONE judge call is what is missing)",
+      (() => { const g = closeGate(base, [HINGLISH], [HINGLISH]); return g.ok === false && g.unjudged === 1 && /judge-round/.test(g.missing[0]); })());
+    assert("A3 CLOSE GATE — banked AND judged closes; an outstanding row belonging to ANOTHER session is not this session's problem",
+      closeGate(base, [HINGLISH], []).ok === true
+      && closeGate(base, [HINGLISH], [row({ id: "someone-else", ts: "2026-08-01T00:00:00.000Z" })]).ok === true);
+
+    assert("A3 BYPASS — the escape hatch is a ROW with his own reason, and one bypass costs the session its method_clean",
+      (() => { const b = recordBypass({ ...base, axes_done: [], axes_deferred: [], steps_done: [0], question_moments: {}, axes_marked_at: {} }, "axis_done:a", "aaj sirf samajh ban rahi hai, bolne ka time nahi tha");
+               const cov = coverage({ ...b, axes_done: [], axes_deferred: [], steps_done: STEPS.map((_, i) => i), axes_marked_at: {}, question_moments: { widget_gate: 9 } });
+               return b.bypasses.length === 1 && b.bypasses[0].gate === "axis_done:a" && /bolne ka time/.test(b.bypasses[0].why)
+                 && cov.bypass_count === 1 && cov.method_clean === false; })());
+    assert("A3 · a session written before these fields existed still gates: absent marks read as absent evidence, never as a pass",
+      axisDoneGate({ concept: "x", started_at: T }, "a", [HINGLISH, INTERVIEW]).ok === false
+      && lockGate({ concept: "x", started_at: T }, []).ok === false);
+    assert("A3 · reps_log is NEVER touched by any gate — the three of them read gaffer_brain's bank and nothing else (capture.mjs stays its sole writer)",
+      (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+               const blk = src.slice(src.indexOf("export function axisDoneGate"), src.indexOf("// COVERAGE — the thing that was invisible"));
+               return !/REPS|reps_log|writeFileSync|appendFileSync/.test(blk); })());
+  }
+
+  // ── A3 · THE STOP→PROMPT CLOCK (4 Sep 2026) ────────────────────────────────
+  {
+    const T = new Date("2026-09-04T05:00:00.000Z");
+    const at = (ms) => new Date(T.getTime() - ms).toISOString();
+    assert("A3 LATENCY — measured off the Stop hook's own stamp, in milliseconds, so the teacher never has to guess",
+      stopToPromptMs({ stop: { at: at(4200) } }, null, T) === 4200);
+    assert("A3 LATENCY — teaching_contract's checked_at is the fallback anchor (same hook, same instant)",
+      stopToPromptMs(null, { checked_at: at(9000) }, T) === 9000 && stopToPromptMs({ stop: {} }, { checked_at: at(150) }, T) === 150);
+    assert("A3 LATENCY — NO readable anchor ⇒ null, never a number. A missing measurement and a fast answer must never look alike",
+      stopToPromptMs(null, null, T) === null && stopToPromptMs({ stop: { at: "yesterday" } }, null, T) === null);
+    assert("A3 LATENCY — a negative gap (clocks disagreeing) and a half-hour gap (he walked away) both read UNMEASURED rather than as a reaction time",
+      stopToPromptMs({ stop: { at: at(-5000) } }, null, T) === null && stopToPromptMs({ stop: { at: at(45 * 60000) } }, null, T) === null);
+    assert("A3 LATENCY — the contract PRINTS it, and when it cannot it says so and tells the teacher to leave the flag off (the skill documented this line before it existed)",
+      (() => { const S0 = blank("tokenization", T); const s3 = setStep(S0, 3).session;
+               const withClock = contractLines(s3, T, 4200).join("\n");
+               const without = contractLines(s3, T, null).join("\n");
+               const absent = contractLines(s3, T).join("\n");
+               return /latency: 4200 ms/.test(withClock) && /--latency_ms 4200/.test(withClock)
+                 && /latency: UNMEASURABLE/.test(without) && /leave .*--latency_ms.* OFF/.test(without)
+                 && !/latency/.test(absent); })());
+  }
+
   console.log(`\nforge_session selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
@@ -2068,8 +2339,38 @@ function lockChain(s, { dry = false } = {}) {
 // Direct invocation is unchanged: `node scripts/forge_session.mjs <verb>` runs exactly
 // what it always ran.
 const INVOKED_DIRECTLY = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+
+// ── A3 · THE BANK IS READ THROUGH ITS OWNER, AND ONLY ON THE GATE PATHS ──────
+// gaffer_brain.mjs owns the capture rows, so `bankRows` comes from there rather than
+// a second reader of gaffer_grade_queue.jsonl living in this file (owners-only, read
+// side — one reader means a gate can never drift from the door that wrote the row).
+// DYNAMIC, and that is the whole point: this file is imported by learnstate.mjs and
+// reached by the SessionStart and per-turn hooks, while gaffer_brain pulls register,
+// models and gaffer_state behind it. A static import would put ~3,000 lines and three
+// organs into every hook turn to serve three CLI verbs. Failure is NOT silent and it
+// is NOT a pass: an unreadable bank returns null, and every gate below treats null as
+// "cannot testify" and REFUSES rather than waving the axis through.
+async function readBank(concept) {
+  try {
+    const g = await import("./gaffer_brain.mjs");
+    return { rows: g.bankRows({ concept }), outstanding: g.outstandingBank() };
+  } catch (e) {
+    return { rows: null, outstanding: null, why: String((e && e.message) || e).slice(0, 160) };
+  }
+}
+// The gate's voice, in one place so all three sound the same: what is missing, and
+// the exact command that fixes it. Never a scolding, never a score.
+function gateRefusal(title, missing, bypassHint) {
+  const L = [`forge_session: ${title}`];
+  for (const m of missing) L.push(`  · ${m}`);
+  L.push(`  → ya phir, agar aaj yeh sach mein nahi ho sakta: ${bypassHint}  (yeh row par darj hota hai aur session method_clean nahi rehta — chhupta kuch nahi)`);
+  return L.join("\n");
+}
+
 export async function hookMain() {
   const [mode, ...rest] = process.argv.slice(2);
+  // `--no-rep-why "<his words>"` — the one escape hatch, shared by all three gates.
+  const bypassWhy = (() => { const i = rest.indexOf(GATE_BYPASS_FLAG); return i >= 0 ? String(rest[i + 1] || "").trim() : null; })();
   switch (mode) {
     case "start": {
       const force = rest.includes("--force");
@@ -2138,13 +2439,55 @@ export async function hookMain() {
     }
     case "step": {
       const before = load();
-      const wasAtLock = !!(before && before.step === 10);
-      const s = apply(setStep(live(need(before)), rest[0]));
+      // ── A3 · THE LOCK GATE (step 10) ────────────────────────────────────────
+      // Checked BEFORE the step moves, so a refusal leaves the session exactly where
+      // it stood and the lock-chain below never fires on a concept that has not been
+      // asked the one question a senior room always asks.
+      // THE GATE GUARDS THE CROSSING, NOT THE NUMBER 10 (4 Sep 2026, verifier finding).
+      // `setStep` permits any jump, so `step 11` walked straight past a refused `step 10`:
+      // RE-JIRAH became reachable with no lock, and because `wasAtLock` stayed false the
+      // re-lock sidecar and the lock-chain never fired at all on a 9→11 path.
+      const crossingLock = (() => { const k = parseStep(rest[0]); return Number.isInteger(k) && k >= 10 && !(before && Number(before.step) >= 10); })();
+      if (crossingLock && before && before.concept) {
+        const bank = await readBank(before.concept);
+        const g = bank.rows === null
+          ? { ok: false, missing: [`the bank could not be read (${bank.why}), so nothing can testify that the negative-space probe happened — a gate that cannot see must refuse, not wave through`] }
+          : lockGate(before, bank.rows);
+        if (!g.ok) {
+          if (bypassWhy) { save(recordBypass(before, "lock_negative_space", bypassWhy)); console.log(`forge_session: LOCK gate bypassed — "${bypassWhy}" (recorded; method_clean is now false for this session)`); }
+          else { console.error(gateRefusal(`STEP 10 abhi nahi — LOCK ke liye ek cheez baaki hai:`, g.missing, `\`node scripts/forge_session.mjs step 10 ${GATE_BYPASS_FLAG} "<kyun>"\``)); process.exit(1); }
+        }
+      }
+      const s = apply(setStep(live(need(load())), rest[0]));
       console.log(oneLine(s));
+      // ── A8 (4 Sep 2026) · THE RE-LOCK SIDECAR, ON ARRIVAL AT STEP 10 ────────
+      // Written BEFORE the lock-chain, because the chain shells mirror.mjs — the
+      // capsules' sole writer — and this row must not depend on outward work
+      // succeeding (Ruling 2's own reasoning, one layer down). Refused loudly and
+      // NON-BLOCKINGLY when the evidence is not there: reaching step 10 is not the
+      // same claim as "this concept is proven again", and only the second one may
+      // restart a Re-Jirah schedule.
+      if (s.step >= 10 && crossingLock) {
+        try {
+          const bank = await readBank(s.concept);
+          const judged = bank.rows === null ? 0
+            : bank.rows.filter((r) => { const t = Date.parse(r.ts || ""); const t0 = Date.parse(s.started_at || "");
+                return Number.isFinite(t) && (!Number.isFinite(t0) || t >= t0) && !(bank.outstanding || []).some((o) => o && o.id === r.id); }).length;
+          const rl = relockRow(s, coverage(s), judged);
+          if (rl.ok) {
+            mkdirSync(dirname(RELOCKS), { recursive: true });
+            appendFileSync(RELOCKS, JSON.stringify(rl.row) + "\n");
+            console.log(`forge_session: RE-LOCK recorded — '${s.concept}' proven again on ${rl.row.relockedOn} (sidecar; the capsule file is byte-identical, mirror.mjs is still its only writer).`);
+            console.log(`  Re-Jirah restarts from TODAY: R1 in 3 days. \`node scripts/deep.mjs due\``);
+          } else {
+            console.log(`forge_session: no re-lock recorded — ${rl.why.join(" · ")}. STEP 10 still stands; the topic simply keeps the proof status it had.`);
+          }
+        } catch (e) { console.log(`forge_session: re-lock sidecar skipped (${String((e && e.message) || e).slice(0, 100)}) — the LOCK itself is unaffected`); }
+      }
       // THE LOCK-CHAIN fires exactly on ARRIVAL at step 10 (never on a re-type),
       // after the step change is already saved — outward work can fail without
       // touching the LOCK (Ruling 2, 8 Aug 2026).
-      if (s.step === 10 && !wasAtLock) lockChain(s);
+      if (s.step >= 10 && crossingLock) lockChain(s);
       break;
     }
     case "axis": {
@@ -2166,6 +2509,22 @@ export async function hookMain() {
       if (how === "now" || how === "on" || how === "current") {
         console.log(oneLine(apply(setCurrentAxis(live(need(load())), rest[0]))));
       } else {
+        // ── A3 · THE AXIS GATE ────────────────────────────────────────────────
+        // `defer` is NOT gated: deferring is an honest "not today", and gating it
+        // would push a tired evening toward `done` — the exact opposite of what this
+        // whole block exists to prevent. Only the CLAIM is gated.
+        if (how === "done") {
+          const cur = live(need(load()));
+          const bank = await readBank(cur.concept);
+          const g = bank.rows === null
+            ? { ok: false, missing: [`the bank could not be read (${bank.why}) — a gate that cannot see the evidence must refuse, never assume it is there`] }
+            : axisDoneGate(cur, rest[0], bank.rows);
+          if (g.error) { console.error(`forge_session: ${g.error}`); process.exit(1); }
+          if (!g.ok) {
+            if (bypassWhy) { save(recordBypass(cur, `axis_done:${String(rest[0]).toLowerCase()}`, bypassWhy)); console.log(`forge_session: axis ${rest[0]} gate bypassed — "${bypassWhy}" (recorded; method_clean is now false for this session)`); }
+            else { console.error(gateRefusal(`axis ${rest[0]} abhi CLOSE nahi ho sakta — uska apna saboot disk par nahi hai:`, g.missing, `\`node scripts/forge_session.mjs axis ${rest[0]} done ${GATE_BYPASS_FLAG} "<kyun>"\``)); process.exit(1); }
+          }
+        }
         console.log(oneLine(apply(markAxis(live(need(load())), rest[0], how))));
       }
       break;
@@ -2205,7 +2564,10 @@ export async function hookMain() {
       // be handed the captain's forge contract.
       if (process.env.ARSENAL_ORGAN === "1") break;
       const sNow = load();
-      const lines = contractLines(sNow);
+      // The clock is read HERE (not inside the pure renderer) for the same reason the
+      // dossier line is: fixtures stay disk-free, and an unreadable audit file costs
+      // nothing but the line itself.
+      const lines = contractLines(sNow, new Date(), stopToPromptMs(loadAuditLast(), loadTeaching()));
       if (lines.length) {
         // Deliverable 2 (7 Aug 2026): the dossier calibration rides the SAME block,
         // loaded here (not inside the pure renderer) so fixtures stay disk-free and
@@ -2250,7 +2612,41 @@ export async function hookMain() {
       // need(), NOT live() — a stale session MUST stay closable, or the coverage
       // report is unreachable for exactly the sessions that most need one.
       const s = need(load());
-      const cov = coverage(s);
+      // ── A3 · THE CLOSE GATE ────────────────────────────────────────────────
+      // VERIFIES the round's one judge call; it does not RUN it. Deliberate, and it
+      // is the safer half of the order's "runs/verifies": this organ stays model-free
+      // and token-free, `judge-round` keeps its single home in the evening close
+      // (/full-time runs it, then this), and the whole gate is a count of rows — so
+      // it behaves identically in a sandbox, in CI and on his laptop with the window
+      // shut. The refusal happens BEFORE anything is recorded and leaves the session
+      // OPEN: the coverage report is a session's only durable trace, so this gate may
+      // never be the reason one is unreachable.
+      {
+        const bank = await readBank(s.concept);
+        // ⚠ FAILS CLOSED, like the other two (4 Sep 2026, found by the rung's own verifier).
+        // The first draft returned `{ok:true}` on an unreadable bank, reasoning that a gate
+        // must not strand a real session's report. That reasoning is right about the REPORT
+        // and wrong about the GATE: it contradicted this file's own declared law one screen
+        // up ("every gate below treats null as 'cannot testify' and REFUSES"), and it meant
+        // any import-time failure anywhere in gaffer_brain — or in register, models or
+        // gaffer_state behind it — silently turned A3's evidence law off for `close`, with
+        // no bypass row and no method_clean penalty. Proven by appending a syntax error to
+        // the sandbox's gaffer_brain: axis and step refused, close sailed through.
+        // The report is NOT stranded: `--no-rep-why` still closes, and now it leaves a row
+        // saying the bank could not be read — which is the fact worth keeping.
+        const g = bank.rows === null
+          ? { ok: false, missing: [`the bank could not be read (${bank.why}) — nothing can testify that tonight's answers were judged, and a gate that cannot see must refuse rather than assume`] }
+          : closeGate(s, bank.rows, bank.outstanding);
+        if (!g.ok) {
+          if (bypassWhy) { save(recordBypass(s, "close_unjudged", bypassWhy)); console.log(`forge_session: close gate bypassed — "${bypassWhy}" (recorded; method_clean is now false for this session)`); }
+          else {
+            console.error(gateRefusal(`session abhi band nahi ho sakti — jo bola gaya woh abhi tak record par nahi hai:`, g.missing, `\`node scripts/forge_session.mjs close ${GATE_BYPASS_FLAG} "<kyun>"\``));
+            console.error(`  (session KHULI hai — kuch blank nahi hua, kuch re-teach nahi hoga: \`node scripts/forge_session.mjs resume\`)`);
+            process.exit(1);
+          }
+        }
+      }
+      const cov = coverage(load());
       // Computed BEFORE the append so the history row carries the same thing stdout
       // says — a number read once in a terminal and never written down is not a record.
       const drifts = teachingDrifts(loadTeaching(), s.started_at);
@@ -2292,6 +2688,9 @@ export async function hookMain() {
       if (cov.core_missing.length) R.push(`  CORE axis ${cov.core_missing.join("")} never closed (CORE-NEVER-DEFERRED — canon forbids deferring it)`);
       if (cov.widget_gates < WIDGET_GATES_MIN) R.push(`  widget guess-gates driven ${cov.widget_gates}/${WIDGET_GATES_MIN} — built is not driven`);
       if (cov.check_q_refused) R.push(`  check-questions REFUSED: ${cov.check_q_refused} (quiz-dump attempts)`);
+      // A3 — said out loud, with HIS reason, every time. A bypass is legal; a silent
+      // one would make itself the normal path by the third tired evening.
+      if (cov.bypass_count) R.push(`  EVIDENCE GATES BYPASSED: ${cov.bypass_count} — ${cov.bypasses.map((b) => `${b.gate} ("${b.why}")`).join(" · ")}`);
       // The session graded itself above; this grades the TEACHER. Unconditional, same
       // reason the two clocks are: a report that only speaks when it has bad news makes
       // "have no bad news" the cheapest move. Silent only when the file cannot be read.
@@ -2319,7 +2718,8 @@ export async function hookMain() {
       // author knows exists. Keep this line and the header MODES block in step with the
       // switch; the selftest reads all three out of this file's own source and fails if
       // they diverge (grep -n "DISPATCH DOC WIRE").
-      console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | lockchain (read-only preview of the step-10 chain) | resume (wake a STALE session where it stands — nothing blanked) | status | contract | boot | close | selftest");
+      console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | lockchain (read-only preview of the step-10 chain) | resume (wake a STALE session where it stands — nothing blanked) | status | contract | boot | close | selftest"
+        + `\n  evidence gates (A3): \`step 10\` needs a negative-space probe · \`axis <x> done\` needs a banked answer + its own jirah + an interview-register line · \`close\` needs every banked answer judged. Each takes ${GATE_BYPASS_FLAG} "<reason>" — recorded, counted, method_clean false.`);
   }
 }
 if (INVOKED_DIRECTLY) await hookMain();

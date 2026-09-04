@@ -29,7 +29,35 @@ You are the session driver. The captain should NEVER re-explain where he is — 
 machine already knows. **Orient from STATE first, then route.**
 
 ## 0. Orient (read, don't ask)
-0a. **Register the sitting (ONE OPEN SITTING law, Block 3):** run `node scripts/sitting.mjs open --surface code` FIRST. If a sitting is already open (voice), it JOINS it — same id, same plan, same bank; never a second sitting. The line it prints (route · task · plan) is where you are; do not re-derive it.
+0a. **THE BOOT, IN THIS ORDER (A10, 4 Sep 2026). He types `/learn` and nothing else; his first
+screen is at most six lines.**
+
+```
+node scripts/forge_session.mjs resume        # a session open on disk → continue it. Refuses if there is none; that is fine.
+node scripts/forge_session.mjs start <the floor concept>   # ONLY when resume found nothing
+node scripts/sitting.mjs open --surface code --no-spawn --task "<concept>"   # AFTER the pacer, never before
+node scripts/samjhao.mjs open <concept> ; node scripts/samjhao.mjs plan <concept> --json
+```
+
+- **`resume` first, `start` second.** `start` REFUSES while a session is open, and that refusal
+  is the correct answer — never `--force` your way past it, and never `close` a session to open
+  a "clean" one. A concept that spans four days is the normal case.
+- **`--no-spawn` is not optional.** Without it, `sitting.mjs open` spawns a daemon and blocks up
+  to six seconds waiting for it on a box where the daemon is deliberately down — six seconds of
+  nothing at the exact moment he sat down. With it: one line, exit 0, no child. The sitting is a
+  bank and a plan; the pacer, the capture door and the judge all run without it.
+- If `sitting.mjs open` answers **409**, it is telling you his concept is still open and you
+  asked for a different one. Read the resume line it prints. Do not override it.
+- **The capsule opens WITH the lesson, not instead of it.** `samjhao plan --json` gives you his
+  own doubts by axis, the exact traps he fell for, and his own calibration — i.e. where he is
+  about to break, written in advance, by him. For a pre-cyborg capsule every one of those is
+  served **UNPROVEN**: it is the teaching resource, never evidence that he knows it.
+  **Never "you already know this."** (HOW_HE_LEARNS #10.)
+
+0b. **Register the sitting (ONE OPEN SITTING law, Block 3):** the `sitting.mjs open` line above is
+that registration. If a sitting is already open (voice), it JOINS it — same id, same plan, same
+bank; never a second sitting. The line it prints (route · task · plan) is where you are; do not
+re-derive it.
 
 Run `node scripts/learnstate.mjs json` and read:
 - `cur.track` · `cur.task` · `cur.subtopics` — the task of record (mirrors his live sheet)
@@ -325,7 +353,14 @@ When he pastes the `📋 CLAUDE-HANDOFF` (or says "done / bas / khatam"):
    **⚠ BUT YOU DO NOT DECIDE `--correct` ANY MORE (17 Aug 2026, THE TRUTH LAYER BLOCK 2).**
    Bank his answer and let the one judge grade it, so the verdict stops depending on which
    surface he happened to open (voice / Gem / here). Per answer, instant and model-free:
-   `node scripts/gaffer_brain.mjs capture voice_rep <concept> --gut <word> --asked "<your question, verbatim>" [--axis <a-i>] <<< "<what he said>"`
+   `node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut <word> --asked "<your question, verbatim>" --said "<what he said>" --surface code [--latency_ms <n>] [--probe <kind>] [--register interview]`
+   *(A3, 4 Sep 2026. Three things changed and each one matters: `--said` replaces the stdin
+   heredoc so this is ONE command mid-lesson; `--surface code` is what makes the rep
+   countable by the axis gate and is what puts `surface:"code"` in `reps_log.jsonl`; and
+   `--axis` is now REQUIRED here, not optional — an axis-less row can close nothing, and
+   both this door and `capture.mjs` refuse it. `--latency_ms` comes from the `latency:` line
+   `forge_session.mjs contract` prints each turn — if that line says UNMEASURABLE, leave the
+   flag off rather than guessing.)*
    Once, at the end of the round: `node scripts/gaffer_brain.mjs judge-round` — one Opus call,
    graded against his own material, dispatched to the owners, and it names what he missed.
    Full rule and the reasoning: `.claude/skills/forge/SKILL.md`, same step.

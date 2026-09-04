@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-09-02T22:45:57.553Z",
+ "updated_at": "2026-09-04T01:25:11.430Z",
  "tables": {
   "mechanisms": [
    {
@@ -269,6 +269,99 @@
     "notes": "GAME ON — his ruling 30 Aug 2026 7:30 AM IST, canon 7744acf1: the pre-cyborg era is closed and every learning record before this stamp measures the INSTRUMENT, not him. A DATE, never a list of concepts (his 11 Aug no-jugad law). The NOTES are not withdrawn, only the PROOF is — canon b40e585d. Moving this instant re-opens or re-closes every schedule at once, so it is a ROW EDIT with a receipt, never a code change.",
     "updated_at": "2026-09-01T19:18:57.962Z",
     "added_at": "2026-09-01T19:18:57.962Z"
+   },
+   {
+    "subject": "study_entry_points",
+    "schema_owner": "organism_test.mjs",
+    "witness": "organism_test.mjs · laws() STUDY ENTRY POINTS",
+    "subjects": [
+     "acts.mjs",
+     "calibration.mjs",
+     "capsule_bridge.mjs",
+     "captains_call.mjs",
+     "capture.mjs",
+     "course.mjs",
+     "deep.mjs",
+     "doubtminer.mjs",
+     "dugout_notes.mjs",
+     "examiner.mjs",
+     "forge_session.mjs",
+     "fsrs.mjs",
+     "gaffer_brain.mjs",
+     "gem_sync.mjs",
+     "heartbeat.mjs",
+     "hippocampus.mjs",
+     "intent.mjs",
+     "learning_state.mjs",
+     "learnstate.mjs",
+     "loose_balls.mjs",
+     "mirror.mjs",
+     "nemesis.mjs",
+     "organism_test.mjs",
+     "python_state.mjs",
+     "registry.mjs",
+     "rejirah.mjs",
+     "samjhao.mjs",
+     "scout.mjs",
+     "shadow.mjs",
+     "sitting.mjs",
+     "sprintsync.mjs",
+     "state.mjs",
+     "teaching_contract.mjs",
+     "widget.mjs"
+    ],
+    "updated_at": "2026-09-04T00:15:33.136Z",
+    "added_at": "2026-09-04T00:11:09.128Z"
+   },
+   {
+    "subject": "probe_kinds",
+    "schema_owner": "gaffer_brain.mjs",
+    "witness": "gaffer_brain.mjs — gradeCapture --probe; forge_session lockGate reads negative_space",
+    "subjects": [
+     "recall",
+     "reconstruct",
+     "defend",
+     "novel",
+     "negative_space"
+    ],
+    "updated_at": "2026-09-04T01:25:10.247Z",
+    "added_at": "2026-09-04T01:25:10.247Z"
+   },
+   {
+    "subject": "registers",
+    "schema_owner": "gaffer_brain.mjs",
+    "witness": "gaffer_brain.mjs — gradeCapture --register; forge_session axisDoneGate requires one of each",
+    "subjects": [
+     "hinglish",
+     "interview"
+    ],
+    "updated_at": "2026-09-04T01:25:10.627Z",
+    "added_at": "2026-09-04T01:25:10.627Z"
+   },
+   {
+    "subject": "study_deny_list",
+    "schema_owner": "organism_test.mjs",
+    "witness": "organism_test.mjs · laws() STUDY ENTRY POINTS — never runnable from a study skill",
+    "subjects": [
+     "daemon_watchdog.mjs",
+     "brain.mjs",
+     "cortex.mjs",
+     "turnstile.mjs",
+     "thalamus.mjs"
+    ],
+    "updated_at": "2026-09-04T01:25:11.028Z",
+    "added_at": "2026-09-04T01:25:11.028Z"
+   },
+   {
+    "subject": "study_skills",
+    "schema_owner": "organism_test.mjs",
+    "witness": "organism_test.mjs · laws() STUDY ENTRY POINTS — the two skill files the gate reads",
+    "subjects": [
+     "forge",
+     "learn"
+    ],
+    "updated_at": "2026-09-04T01:25:11.423Z",
+    "added_at": "2026-09-04T01:25:11.423Z"
    }
   ],
   "sandbox_subjects": [
@@ -821,6 +914,18 @@
     "payload_rows": 4,
     "consumer_reads": {},
     "metered_at": "2026-09-01T10:53:52.085Z"
+   },
+   {
+    "subject": "relocks",
+    "surface": "forge_session.mjs",
+    "writes_to": "relocks.jsonl",
+    "fired_by": "him",
+    "cadence": "per re-lock (arrival at STEP 10 with core axes graded and >=1 judged rep)",
+    "taught_event": true,
+    "witness": "forge_session.mjs — SOLE WRITER of relocks.jsonl (A8, 4 Sep 2026); rejirah.mjs relockIndex/layerRelocks read it, deep.mjs layers the same definition",
+    "ruling": "RULING__2026-09-03_0300-stage0-forks",
+    "updated_at": "2026-09-04T01:07:40.537Z",
+    "added_at": "2026-09-04T01:07:40.537Z"
    }
   ],
   "checks": [
