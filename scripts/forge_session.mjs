@@ -625,6 +625,29 @@ export function axisDoneGate(s, axis, rows = []) {
  *  faked. So the ruling did not loosen the method — it moved the check to where he
  *  said it belongs and made it harder there. */
 const JIRAH_PROBE = "jirah";
+/** gradedAxes — ⭐ THE DEFINITION OF "PROVEN", IN ONE PLACE (his ruling row 46, 4 Sep 2026).
+ *  An axis is GRADED when a bank row tagged `--probe jirah` for THAT axis, banked inside this
+ *  session's window, carries a JUDGE VERDICT — the same evidence the LOCK gate demands, and
+ *  not "a jirah moment happened before its done-mark". The old definition counted a COUNTER
+ *  (`jirah_before`), which a tired evening could tap nine times and which the 4-Sep ruling
+ *  withdrew from the axis gate entirely; this one counts HIS ANSWER plus a grade against it.
+ *  ONE reader, so `lockGate` (may this lock?) and `coverage` (what actually ran?) can never
+ *  drift into two different meanings of the same word. PURE — rows handed in, nothing read.
+ *  @returns Set of axis letters (lower-case) that carry a judged jirah row. */
+export function gradedAxes(s, rows = [], outstanding = []) {
+  const t0 = Date.parse((s && s.started_at) || "");
+  const judged = (r) => !(outstanding || []).some((o) => o && r && o.id === r.id);
+  const out = new Set();
+  for (const r of rows || []) {
+    if (!r || String(r.probe || "").toLowerCase() !== JIRAH_PROBE) continue;
+    const t = Date.parse((r && r.ts) || "");
+    if (!Number.isFinite(t) || (Number.isFinite(t0) && t < t0)) continue;
+    if (!judged(r)) continue;
+    const a = String(r.axis || "").toLowerCase();
+    if (AXES.includes(a)) out.add(a);
+  }
+  return out;
+}
 export function lockGate(s, rows = [], outstanding = []) {
   const t0 = Date.parse(s.started_at || "");
   const inWindow = (r) => { const t = Date.parse((r && r.ts) || ""); return Number.isFinite(t) && (!Number.isFinite(t0) || t >= t0); };
@@ -633,9 +656,9 @@ export function lockGate(s, rows = [], outstanding = []) {
   // A row with an id nobody has settled is a question ASKED, not a grade. Same reader
   // `close` uses (outstandingBank), so the two gates can never drift on what "judged"
   // means — the drift that would let a concept lock on ungraded answers.
-  const judged = (r) => !(outstanding || []).some((o) => o && r && o.id === r.id);
+  const graded = gradedAxes(s, rows, outstanding);
   const done = (Array.isArray(s.axes_done) ? s.axes_done : []).map((a) => String(a || "").toLowerCase());
-  const ungrilled = done.filter((a) => !mine.some((r) => String(r.axis || "").toLowerCase() === a && probeIs(r, JIRAH_PROBE) && judged(r)));
+  const ungrilled = done.filter((a) => !graded.has(a));
   const missing = [];
   if (!mine.some((r) => probeIs(r, "negative_space"))) missing.push(`STEP 10 is the LOCK and nothing has asked him what ${s.concept} does NOT do — the negative-space probe is the single strongest senior signal in the dossier. Ask it, bank it with \`--probe negative_space\`, then lock.`);
   if (ungrilled.length) missing.push(`axis ${ungrilled.join("")} ${ungrilled.length === 1 ? "was" : "were"} taught and closed but never GRILLED — the Jirah round (STEP 9) runs on the WHOLE concept now, and the LOCK is where it is counted. Per axis: one sharp question + his own capsule's traps + "reinvent it from scratch", then \`node scripts/gaffer_brain.mjs capture voice_rep ${s.concept}:<axis> --axis <axis> --gut <knew|shaky|guessed> --asked "<q>" --said "<his words>" --surface code --probe ${JIRAH_PROBE}\` — and \`node scripts/gaffer_brain.mjs judge-round\` after, because a jirah row nobody judged is a question asked, not a grade.`);
@@ -658,8 +681,10 @@ export function closeGate(s, rows = [], outstanding = []) {
 }
 /** relockRow — PURE: is this session a proven re-lock, and what row says so?
  *  Two conditions, both about EVIDENCE and neither about how the session felt:
- *    · every CORE axis is not merely marked done but GRADED (its own jirah before its
- *      own mark — coverage()'s existing definition, not a second one), and
+ *    · every CORE axis is not merely marked done but GRADED — and since his ruling row 46
+ *      (4 Sep 2026) GRADED means a banked `--probe jirah` answer for that axis carrying a
+ *      judge verdict, which is coverage()'s definition and the LOCK gate's, never a third
+ *      one written here, and
  *    · at least one banked answer of this session carries a verdict.
  *  Anything less is a session that reached step 10, which is not the same thing as a
  *  concept that is proven again — and a re-lock is exactly the claim "his proof is
@@ -670,7 +695,10 @@ export function relockRow(s, cov, judgedReps, now = new Date()) {
   const coreGraded = core.length > 0 && core.every((a) => graded.has(a));
   const why = [];
   if (!core.length) why.push("this concept declares no core axis, so nothing here can testify that its measure was taught");
-  if (core.length && !coreGraded) why.push(`core axis ${core.filter((a) => !graded.has(a)).join("") || "?"} is not GRADED (marked done is not the same as cross-examined)`);
+  // THE BANK IS THE WITNESS NOW, so a coverage computed WITHOUT one cannot testify at all —
+  // and saying so is not the same as saying "not proven". Refused either way, named differently.
+  if (cov.graded_source && cov.graded_source !== "bank") why.push("this coverage was computed with no bank in hand, so nothing here can say which axes carry a judged jirah row");
+  if (core.length && !coreGraded) why.push(`core axis ${core.filter((a) => !graded.has(a)).join("") || "?"} is not GRADED — no banked \`--probe jirah\` answer with a verdict on it (marked done is not the same as grilled)`);
   if (!(judgedReps >= 1)) why.push("no banked answer of this session carries a verdict yet");
   if (why.length) return { ok: false, why };
   return { ok: true, row: { ts: nowISO(now), concept: s.concept, relockedOn: nowISO(now).slice(0, 10),
@@ -684,7 +712,7 @@ export function recordBypass(s, gate, why, now = new Date()) {
 }
 
 // COVERAGE — the thing that was invisible before: what actually ran.
-function coverage(s, now = new Date()) {
+function coverage(s, now = new Date(), bank = null) {
   const ran = STEPS.map((_, i) => i).filter((i) => s.steps_done.includes(i));
   const missed = STEPS.map((_, i) => i).filter((i) => !s.steps_done.includes(i));
   const untouched = AXES.filter((a) => !s.axes_done.includes(a) && !s.axes_deferred.includes(a));
@@ -692,11 +720,27 @@ function coverage(s, now = new Date()) {
   // --- grading provenance (added 31 Jul 2026; `honest` below is untouched) ------
   const marks = s.axes_marked_at || {};
   const jb = (a) => { const m = marks[a]; return m && Number.isInteger(m.jirah_before) ? m.jirah_before : 0; };
-  // PER-AXIS, per canon: "Per axis: one sharp Q + a trap" (forge/SKILL.md:71) and
-  // "Capsule status comes from JIRAH — never from self-rating" (:75). An axis needs
-  // a jirah BEFORE its mark, and it may not SHARE that jirah with another axis —
-  // nine axes marked after one `moment jirah` are nine ungraded claims, not nine grades.
-  const graded = s.axes_done.filter((a) => jb(a) >= 1 && !s.axes_done.some((b) => b !== a && jb(b) === jb(a)));
+  // FROZEN, NEVER DELETED (L9) — the 31 Jul definition, verbatim: an axis needed a jirah
+  // BEFORE its mark and could not SHARE it with another axis, so nine axes marked after one
+  // `moment jirah` were nine ungraded claims. Four months of history rows were produced by
+  // this line and stay readable against it, which is why it is computed and shipped rather
+  // than removed — as `axes_graded_by_moment_legacy`, and as `axes_marked_at[a].jirah_before`,
+  // which is untouched.
+  const gradedByMoment = s.axes_done.filter((a) => jb(a) >= 1 && !s.axes_done.some((b) => b !== a && jb(b) === jb(a)));
+  // ⭐ HIS RULING, row 46 (4 Sep 2026), AND IT REPLACES THE SOURCE, NOT THE WORD. An axis is
+  // PROVEN when a banked `--probe jirah` answer for it carries a JUDGE VERDICT — exactly the
+  // evidence the LOCK now demands, computed by the LOCK's own reader (gradedAxes). It had to
+  // move: the 4-Sep ruling took the per-axis jirah moment off the axis gate, so `jirah_before`
+  // is 0 on every axis of every honest session from that day on, and a definition built on it
+  // would have reported EVERY axis ungraded forever — and killed the re-lock sidecar silently.
+  // WHEN NO BANK IS HANDED IN the legacy answer stands, and the row SAYS SO (`graded_source`):
+  // the hook paths (boot, contract, nudge) have no bank to read and must not pretend to a
+  // verdict they cannot see, while every DURABLE writer — `close`, `start --force`, the step-10
+  // re-lock — hands the bank in. A missing bank is a missing measurement, and it is labelled,
+  // never laundered into either answer.
+  const gradedSource = bank && Array.isArray(bank.rows) ? "bank" : "moment-legacy";
+  const gradedSet = gradedSource === "bank" ? gradedAxes(s, bank.rows, bank.outstanding || []) : null;
+  const graded = gradedSet ? s.axes_done.filter((a) => gradedSet.has(String(a).toLowerCase())) : gradedByMoment;
   const ungraded = s.axes_done.filter((a) => !graded.includes(a));
   const CORE_AXES = coreAxes(s.concept);   // S10 #12 — per-concept, one reader
   const coreMissing = CORE_AXES.filter((a) => !s.axes_done.includes(a));
@@ -716,6 +760,12 @@ function coverage(s, now = new Date()) {
     axes_untouched: untouched,
     axes_graded: graded,
     axes_ungraded: ungraded,
+    // WHICH DEFINITION PRODUCED THE TWO LINES ABOVE — "bank" (a judged jirah row per axis,
+    // his ruling row 46) or "moment-legacy" (the frozen 31 Jul counter, used only where no
+    // bank was handed in). A row that does not say which yardstick it was measured with is
+    // the exact thing LAW 1 of the truth layer abolishes.
+    graded_source: gradedSource,
+    axes_graded_by_moment_legacy: gradedByMoment,
     axes_marked_at: { ...marks },
     core_axes: [...CORE_AXES],
     core_missing: coreMissing,
@@ -1003,10 +1053,13 @@ function save(s, path = SESSION) {
 // cannot make it throw the way an atomic rewrite does on Windows. And a failed
 // append is a COURTESY, never a blocker — same rule as capture.mjs's quarantine.
 // ---------------------------------------------------------------------------
-function appendCoverage(s, ended_by, extra = {}, path = HISTORY, now = new Date()) {
+function appendCoverage(s, ended_by, extra = {}, path = HISTORY, now = new Date(), bank = null) {
   try {
     const row = {
-      ...coverage(s, now),
+      // `bank` rides through so the DURABLE row carries the ruling's definition of graded
+      // (a judged jirah row per axis) and not the hook paths' legacy fallback. Every caller
+      // that writes history reads the bank one line earlier and hands it in here.
+      ...coverage(s, now, bank),
       started_at: s.started_at || null,
       updated_at: s.updated_at || null,
       ended_at: nowISO(now),
@@ -2471,11 +2524,14 @@ export async function hookMain() {
         // Computed BEFORE the append and off the SAME disk snapshot the row carries —
         // `close`'s rule, and it is what lets the failure branch print the record
         // instead of losing it (the return value used to be dropped right here).
-        const cov = coverage(prev);
+        // The bank rides along (his ruling row 46): a discarded session's row must carry
+        // the same definition of GRADED as a closed one, or the two are not comparable.
+        const fbank = await readBank(prev.concept);
+        const cov = coverage(prev, new Date(), fbank);
         const recorded = appendCoverage(prev, "force", {
           ...(prev.concept === String(concept).trim().toLowerCase() ? { continues: prev.started_at || null } : {}),
           ...(d ? { teaching_drifts: d } : {}),
-        });
+        }, HISTORY, new Date(), fbank);
         for (const l of forceDiscardLines(prev, recorded, cov)) console.log(l);
       }
       const s = blank(concept);
@@ -2538,7 +2594,12 @@ export async function hookMain() {
           const judged = bank.rows === null ? 0
             : bank.rows.filter((r) => { const t = Date.parse(r.ts || ""); const t0 = Date.parse(s.started_at || "");
                 return Number.isFinite(t) && (!Number.isFinite(t0) || t >= t0) && !(bank.outstanding || []).some((o) => o && o.id === r.id); }).length;
-          const rl = relockRow(s, coverage(s), judged);
+          // THE BANK GOES IN (his ruling row 46): coverage's GRADED set is now the judged
+          // jirah rows, so the sidecar fires exactly when every core axis was grilled at the
+          // round and graded for it. Without this argument it would read the frozen
+          // moment-legacy answer, which the 4-Sep ruling made permanently zero — a re-lock
+          // that could never be recorded again, and nothing would have said why.
+          const rl = relockRow(s, coverage(s, new Date(), bank), judged);
           if (rl.ok) {
             mkdirSync(dirname(RELOCKS), { recursive: true });
             appendFileSync(RELOCKS, JSON.stringify(rl.row) + "\n");
@@ -2715,7 +2776,7 @@ export async function hookMain() {
           }
         }
       }
-      const cov = coverage(load());
+      const cov = coverage(load(), new Date(), bank);
       // Computed BEFORE the append so the history row carries the same thing stdout
       // says — a number read once in a terminal and never written down is not a record.
       const drifts = teachingDrifts(loadTeaching(), s.started_at);
@@ -2738,7 +2799,7 @@ export async function hookMain() {
           ...(drifts ? { teaching_drifts: drifts } : {}),
           reps_banked: reps && reps.present ? reps.reps : 0,
           reps_log_present: !!(reps && reps.present),
-        });
+        }, HISTORY, new Date(), bank);
         save({ ...s, closed_at: nowISO() });
       }
       // ALWAYS printed — never gated on failure. The draft printed this block only
