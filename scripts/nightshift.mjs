@@ -1184,7 +1184,12 @@ function nsGate(lane, { evidence, event_armed, deps, now, collect }) {
   try { gateTransition(lane, v, { now, by: "nightshift", collectCards: collect }); } catch { /* the journal must never cost the shift */ }
   return v;
 }
-const asleepRecord = (v) => ({ asleep: true, why: ["E", "C", "F"].filter((k) => !v.why[k].ok).join("+"), detail: ["E", "C", "F"].filter((k) => !v.why[k].ok).map((k) => `${k}: ${v.why[k].detail}`).join(" · "), wakes_when: v.wakes_when, spent: 0 });
+// THE LETTERS ARE FOLDED OFF THE VERDICT ITSELF — never a hand-written list. A literal E·C·F
+// stood here and would have recorded `why: ""` with no detail at all the night a shift lane slept
+// on D, on I, or (4 Sep 2026) on H, the captain's hold: the same dropped-letter bug RUNG A fixed
+// in brain's journal row and in its reader, surviving in the shift's own record of WHY it rested.
+const failedOf = (v) => Object.keys((v && v.why) || {}).filter((k) => v.why[k] && !v.why[k].ok);
+const asleepRecord = (v) => ({ asleep: true, why: failedOf(v).join("+"), detail: failedOf(v).map((k) => `${k}: ${v.why[k].detail}`).join(" · "), wakes_when: v.wakes_when, spent: 0 });
 
 async function runShift(deps = {}) {
   const now = deps.now || new Date();

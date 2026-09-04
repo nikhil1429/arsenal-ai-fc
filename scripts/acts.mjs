@@ -111,7 +111,17 @@ export const OWNERS = {
   // second lane.
   design:   { organ: "registry.mjs",          argv: (a) => ["rulings", "add", "--scope", a.scope === "learning-method" ? "learning-method" : "architecture", "--source", "acts.design", "--by", "captain"], stdin: (a) => a.text,
               reverse: () => ({ argv: null, why: "his word is on the record — a later ruling SUPERSEDES it with a new row; nothing unsays a ruling" }) },
+  // THE CAPTAIN'S HOLD (4 Sep 2026) — his word "close every API call the organism is doing"
+  // becomes a RECEIPT in the same turn, and the thing it arms is a gate LETTER (H), not a switch.
+  // Owner brain.mjs, because brain owns brain_queue.json where the one hold slot lives. The
+  // reverse is REAL and total — `hold clear` ends it outright — which is the difference between
+  // this and the `paused` table his 29 Aug order forbids: an expiry, a reason, a journal row and
+  // a way back, all four, or it is not a hold. `--until` is validated below, never here.
+  hold:     { organ: "brain.mjs",             argv: (a) => (holdIsClear(a) ? ["hold", "clear"] : ["hold", "--until", String(a.until), "--why", a.text]),
+              reverse: () => ({ argv: ["hold", "clear"] }) },
 };
+/** a `hold` act that ENDS the hold rather than arming one — `{clear:true}` or `until:"clear"` */
+export const holdIsClear = (a) => !!(a && (a.clear === true || String(a.until == null ? "" : a.until).trim().toLowerCase() === "clear"));
 // VERBS = the OWNER table's keys (S10 row 14) — a verb IS an owner's CLI; deriving
 // the list from the table makes "a verb without an owner" unrepresentable.
 export const VERBS = Object.freeze(Object.keys(OWNERS));
@@ -142,9 +152,17 @@ export function validateAct(a) {
   const verb = String(a.verb || "").toLowerCase();
   if (!VERBS.includes(verb)) return { ok: false, why: `unknown verb "${a.verb}" (${VERBS.join("|")})` };
   const args = a.args && typeof a.args === "object" ? a.args : {};
-  const text = clip(args.text, 500);
+  const text = clip(args.text || args.why, 500);   // `hold` speaks in `why`; every other verb in `text`. One field on the row either way.
   if (verb === "job") { if (!args.job) return { ok: false, why: "job needs args.job (an existing brain job id)" }; }
-  else if (!text) return { ok: false, why: `${verb} needs args.text (his words)` };
+  // THE HOLD'S TWO REFUSALS, and both are the same law wearing two faces: a hold with no END is
+  // the `paused` table (no expiry, no self-wake — forbidden by his 29 Aug order), and a hold with
+  // no REASON is the un-accountable open hand over the gate that force-hygiene ended. Refused at
+  // the DOOR, so the owner is never called and no receipt can claim a hold nobody can account for.
+  else if (verb === "hold" && !holdIsClear(args)) {
+    if (!Number.isFinite(Date.parse(String(args.until == null ? "" : args.until)))) return { ok: false, why: 'hold needs args.until as an ISO instant (or {clear:true}) — a hold with no expiry is a switch, and the gate has none' };
+    if (!text) return { ok: false, why: "hold needs args.text / args.why (his reason) — a hand held over the whole gate that nobody can account for is exactly what the force-hygiene rung ended" };
+  }
+  else if (verb !== "hold" && !text) return { ok: false, why: `${verb} needs args.text (his words)` };
   return { ok: true, verb, args: { ...args, text } };
 }
 
@@ -213,7 +231,7 @@ export function findings(s = stats(7), now = Date.now()) {
 // ── DOOR 4 — a ball → acts, by a `lite` model under a strict schema; unparseable = note verbatim ──
 export const BALL_SCHEMA = { type: "OBJECT", properties: { acts: { type: "ARRAY", items: { type: "OBJECT", properties: { verb: { type: "STRING", enum: VERBS }, args: { type: "OBJECT", properties: { text: { type: "STRING" }, kind: { type: "STRING" }, axis: { type: "STRING" }, job: { type: "STRING" }, id: { type: "STRING" } }, required: ["text"] } }, required: ["verb", "args"] } } }, required: ["acts"] };
 export function ballPrompt(text) {
-  return `You route ONE message the captain sent himself (an ntfy "ball") into acts the organism executes. VERBS: note (a thought/doubt/win to keep verbatim — the DEFAULT), fact (a durable fact ABOUT HIM to stage for his confirmation), pref (a standing preference for how the coach speaks/behaves), rule (a teaching rule to add), agenda (something the NEXT sitting must do first), card (a decision only he can make later), reminder (a timed nudge), mission (research to run), rep (a spoken answer of his to grade), job (ONLY when he names an existing brain job id), design (a ruling about HOW THE ORGANISM SHOULD WORK — build/architecture word, goes to the registry rulings lane). Keep his words VERBATIM in args.text (never paraphrase, never translate). Split ONLY when the message clearly carries two different asks. When unsure: ONE note. Reply with JSON only.\n\nBALL:\n${text}`;
+  return `You route ONE message the captain sent himself (an ntfy "ball") into acts the organism executes. VERBS: note (a thought/doubt/win to keep verbatim — the DEFAULT), fact (a durable fact ABOUT HIM to stage for his confirmation), pref (a standing preference for how the coach speaks/behaves), rule (a teaching rule to add), agenda (something the NEXT sitting must do first), card (a decision only he can make later), reminder (a timed nudge), mission (research to run), rep (a spoken answer of his to grade), job (ONLY when he names an existing brain job id), design (a ruling about HOW THE ORGANISM SHOULD WORK — build/architecture word, goes to the registry rulings lane), hold (ONLY when he explicitly says to STOP the system's own AI spending for a while — set args.until to the ISO instant he named and args.why to his reason; if he names no end time, this is a note, not a hold). Keep his words VERBATIM in args.text (never paraphrase, never translate). Split ONLY when the message clearly carries two different asks. When unsure: ONE note. Reply with JSON only.\n\nBALL:\n${text}`;
 }
 export function parseBallText(raw, fallbackText) {
   let parsed = null;
@@ -333,7 +351,7 @@ async function selftest() {
   const liveStat = existsSync(ACTS_LEDGER) ? (() => { const s = statSync(ACTS_LEDGER); return `${s.size}:${s.mtimeMs}`; })() : "absent";
   const rows = [];
   const calls = [];
-  const exec = (organ, argv, stdin) => { calls.push({ organ, argv, stdin }); if (organ === "hippocampus.mjs" && argv[0] === "mark") return { ok: true, out: '{"ok":true,"id":"m1","kind":"thread"}' }; if (organ === "hippocampus.mjs" && argv[0] === "stage-pending") return { ok: true, out: '{"ok":true,"at":"2026-08-18T20:00:00Z"}' }; if (organ === "gaffer_state.mjs") return { ok: true, out: "gaffer_state: standing add [how_to_speak] — Hinglish bolo" }; if (organ === "teaching_contract.mjs") return argv[0] === "add" ? { ok: true, out: "teaching_contract: added" } : { ok: true, out: "dropped" }; if (organ === "sitting.mjs") return { ok: true, out: "sitting: agenda added ag1 — pehle 4 samjhao" }; if (organ === "brain.mjs") return { ok: true, out: "brain: ran prepare_on_request" }; if (organ === "captains_call.mjs") return { ok: true, out: "captains_call: filed c99" }; if (organ === "scout.mjs") return { ok: false, status: 1, out: "", err: "scout: mission lane down" }; return { ok: true, out: "ok" }; };
+  const exec = (organ, argv, stdin) => { calls.push({ organ, argv, stdin }); if (organ === "hippocampus.mjs" && argv[0] === "mark") return { ok: true, out: '{"ok":true,"id":"m1","kind":"thread"}' }; if (organ === "hippocampus.mjs" && argv[0] === "stage-pending") return { ok: true, out: '{"ok":true,"at":"2026-08-18T20:00:00Z"}' }; if (organ === "gaffer_state.mjs") return { ok: true, out: "gaffer_state: standing add [how_to_speak] — Hinglish bolo" }; if (organ === "teaching_contract.mjs") return argv[0] === "add" ? { ok: true, out: "teaching_contract: added" } : { ok: true, out: "dropped" }; if (organ === "sitting.mjs") return { ok: true, out: "sitting: agenda added ag1 — pehle 4 samjhao" }; if (organ === "brain.mjs" && argv[0] === "hold") return argv[1] === "clear" ? { ok: true, out: "brain: hold CLEARED (was until 2026-09-07T18:00Z, armed 2026-09-04T14:10 by cli, why \"study week\")" } : { ok: true, out: "brain: CAPTAIN HOLD armed until 2026-09-07T18:00Z — study week. Every Claude-spending lane sleeps on H from this instant" }; if (organ === "brain.mjs") return { ok: true, out: "brain: ran prepare_on_request" }; if (organ === "captains_call.mjs") return { ok: true, out: "captains_call: filed c99" }; if (organ === "scout.mjs") return { ok: false, status: 1, out: "", err: "scout: mission lane down" }; return { ok: true, out: "ok" }; };
   const deps = { exec, append: (r) => { rows.push(r); return true; }, now: new Date("2026-08-18T20:30:00Z"), jobIds: ["prepare_on_request", "diary"] };
   // note
   const n1 = dispatch({ door: "gaffer", verb: "note", args: { text: "note karo: kal pehle tokenization se shuru", kind: "thread" } }, deps);
@@ -405,6 +423,34 @@ async function selftest() {
   const before = rows.length;
   const all = dispatchAll(pb1.acts, "ball", deps);
   assert("dispatchAll: every act of a door dispatched in order, each with its own row", all.length === 2 && all.every((r) => r.door === "ball") && rows.length === before + 2);
+  // ── THE CAPTAIN'S HOLD (4 Sep 2026) — his word, a receipt, and a real way back ──
+  // These sit AFTER the stats/boardLine asserts on purpose: those pin exact row counts, and a
+  // new act dispatched above them would move numbers that measure something else entirely.
+  {
+    const c0 = calls.length, r0 = rows.length;
+    const h1 = dispatch({ door: "cli", verb: "hold", args: { until: "2026-09-07T18:00:00Z", why: "study week — weekly pool reset", scope: "claude" } }, deps);
+    assert("HOLD → brain.mjs `hold --until <ISO> --why <his reason>`; the receipt is the owner's own line and the row carries the argv his word became",
+      h1.ok && h1.owner === "brain.mjs" && calls[c0].organ === "brain.mjs"
+      && calls[c0].argv.join(" ") === "hold --until 2026-09-07T18:00:00Z --why study week — weekly pool reset"
+      && /CAPTAIN HOLD armed until 2026-09-07T18:00Z/.test(h1.receipt) && rows[r0].verb === "hold", JSON.stringify(h1));
+    const hBad1 = dispatch({ door: "cli", verb: "hold", args: { why: "no end date" } }, deps);
+    const hBad2 = dispatch({ door: "cli", verb: "hold", args: { until: "next week sometime", why: "prose is not an instant" } }, deps);
+    const hBad3 = dispatch({ door: "cli", verb: "hold", args: { until: "2026-09-07T18:00:00Z" } }, deps);
+    assert("HOLD refused at the DOOR — no expiry (that is the `paused` table his 29 Aug order forbids), a non-ISO expiry, or no reason: the owner is never called and no receipt can claim it",
+      !hBad1.ok && /no expiry is a switch|needs args\.until/.test(hBad1.error) && !hBad2.ok && !hBad3.ok && /reason/.test(hBad3.error)
+      && calls.length === c0 + 1, JSON.stringify([hBad1.error, hBad2.error, hBad3.error]));
+    const hClear = dispatch({ door: "cli", verb: "hold", args: { clear: true } }, deps);
+    assert("HOLD clear — `{clear:true}` (and `until:\"clear\"`) needs NO expiry and NO reason: ending a hold early is always allowed, and it goes to the same owner",
+      hClear.ok && calls[calls.length - 1].argv.join(" ") === "hold clear" && holdIsClear({ until: "clear" }) && holdIsClear({ clear: true }) && !holdIsClear({ until: "2026-09-07T18:00:00Z" }));
+    const hUndo = undo(h1.id, { ...deps, rows });
+    assert("undo(hold) → the verb's DECLARED reverse is real and total: brain.mjs `hold clear`, with undone_at on the row — a hold is the one spend-stopper that can be taken back in full",
+      hUndo.ok && calls[calls.length - 1].argv.join(" ") === "hold clear" && hUndo.row.of === h1.id && hUndo.row.undone_at
+      && OWNERS.hold.reverse({}, "", h1.id, rows[r0]).argv.join(" ") === "hold clear");
+    assert("HOLD — the act ROUND-TRIPS: the ledger row alone carries door · verb · owner · argv · receipt · ms, so `acts status` can answer \"is the organism held, and on whose word\" with no other file open",
+      rows[r0].door === "cli" && rows[r0].owner === "brain.mjs" && rows[r0].argv[0] === "hold" && rows[r0].args.why === "study week — weekly pool reset"
+      && rows[r0].args.text === "study week — weekly pool reset" && typeof rows[r0].ms === "number" && rows[r0].receipt);
+  }
+
   // hermetic
   const liveStat2 = existsSync(ACTS_LEDGER) ? (() => { const s = statSync(ACTS_LEDGER); return `${s.size}:${s.mtimeMs}`; })() : "absent";
   assert("HERMETIC: the live acts.jsonl is untouched (size:mtime unchanged) — every row above went to the injected append", liveStat === liveStat2);
@@ -473,7 +519,9 @@ async function main() {
   }
   if (mode === "do") {
     const verb = process.argv[3];
-    const args = { text: flag("text"), kind: flag("kind"), axis: flag("axis"), id: flag("id"), job: flag("job"), gut: flag("gut"), asked: flag("asked") };
+    // `--why` / `--until` / `--scope` are the HOLD's flags (4 Sep 2026); `--why` doubles as his
+    // words for that verb, so the receipt row carries the reason in the same field as every other.
+    const args = { text: flag("text"), why: flag("why"), until: flag("until"), scope: flag("scope"), clear: process.argv.includes("--clear") || undefined, kind: flag("kind"), axis: flag("axis"), id: flag("id"), job: flag("job"), gut: flag("gut"), asked: flag("asked") };
     if (flag("json")) { try { Object.assign(args, JSON.parse(flag("json"))); } catch { console.log("acts: --json is not JSON"); process.exit(2); } }
     const row = dispatch({ door: flag("door") || "cli", verb, args });
     console.log(row.ok ? `acts: ✓ ${row.verb} → ${row.owner} · ${row.receipt} · ${row.id}` : `acts: ✗ ${row.verb || verb} — ${row.error} · ${row.id}`);
@@ -489,7 +537,7 @@ async function main() {
     for (const f of findings(s)) console.log(`  [${f.level}] ${f.id} — ${f.finding}`);
     return;
   }
-  console.log("acts: do <verb> --door d --text … [--kind --axis --id --job --json] | undo <id> | status [days] | parse-ball <text> | selftest");
+  console.log("acts: do <verb> --door d --text … [--kind --axis --id --job --until --why --clear --json] | undo <id> | status [days] | parse-ball <text> | selftest");
   process.exit(2);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

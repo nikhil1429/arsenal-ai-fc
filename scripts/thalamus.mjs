@@ -1187,6 +1187,29 @@ function defaultAllowedTokens() {
 }
 let brainMod = null;
 
+// ── H · THE CAPTAIN'S HOLD (4 Sep 2026) — the door to brain's reader, opened LAZILY ─────────
+// This nucleus imports NOTHING from brain.mjs at load time and must not (the law is written out
+// at the /consumed door below: brain imports half the organism, and the capture daemon must stay
+// light and unkillable). The DAEMON already loads it once in main(), so after that this is a
+// module-registry hit and costs nothing; anywhere else it is one lazy load — the exact shape
+// `claudeGenAsync` is reached by, three lines down inside adjudicateLive itself.
+// ONE DEFINITION OF "HELD": the adjudicator does not get its own copy of the rule.
+async function brainDoor() {
+  if (brainMod) return brainMod;
+  try { brainMod = await import("./brain.mjs"); } catch (e) { swallow("brainDoor: brain.mjs unimportable → the hold cannot be read; capture is never blocked by it", e); brainMod = null; }
+  return brainMod;
+}
+// THE FIXTURE WORLD READS A FIXTURE — a selftest may never read live brain_queue.json, or the
+// suite goes red the day HE arms a hold, which tests his settings and not the code (brain.mjs's
+// own selftest header). Same seam acts.mjs uses to keep its live ledger out of a fixture run.
+const isFixtureRun = () => (process.argv[2] || "").toLowerCase() === "selftest";
+async function captainHoldFact(deps = {}) {
+  if (deps.hold !== undefined) return deps.hold;
+  if (isFixtureRun()) return { held: false };
+  const b = await brainDoor();
+  return b && b.captainHold ? b.captainHold(deps.now || new Date()) : { held: false };
+}
+
 // ── THE ADJUDICATOR METERS ITSELF (10 Aug 2026 — a BUILT-BUT-NOT-WIRED repair) ─
 // claudeGenAsync has returned honest spend since claudegen G1 (total_tokens plus
 // the four components, duration_ms, limit_hit, http_status, error). This call
@@ -1285,6 +1308,20 @@ function meterAdjudication(r, deps = {}, mdl = { model: ADJ_MODEL_FALLBACK, requ
 async function adjudicateLive(evt, S, deps = {}) {
   const cfg = deps.cfg || loadConfig();
   if (!cfg.adjudicator.enabled) return false;
+  // ── H · THE CAPTAIN'S HOLD (4 Sep 2026) ───────────────────────────────────
+  // HIS WORD: "close every API call the organism is doing and just keep on noting down data."
+  // THIS IS THE ONE PAID CALL INSIDE THE CAPTURE DAEMON, and it is the only thing here the hold
+  // touches. CAPTURE ITSELF IS NEVER HELD — the nerve, the afferent bus, the spool, the bank and
+  // the /note door all keep writing exactly as they did, because the whole point of the hold is
+  // to keep noting his data down while the organism stops thinking about itself.
+  // The verdict when held is the SAME conservative one every failure here returns: no wake. The
+  // moment is not lost — it stays on the bus and the ε-band judges it again after the expiry.
+  const hold = await captainHoldFact(deps);
+  if (hold && hold.held === true) {
+    try { const b = await brainDoor(); if (b && b.journalHold) (deps.journalHold || b.journalHold)({ lane: "thalamus_adjudicator", hold, by: "thalamus", now: deps.now || new Date() }); else if (deps.journalHold) deps.journalHold({ lane: "thalamus_adjudicator", hold, by: "thalamus", now: deps.now || new Date() }); }
+    catch (e) { swallow("adjudicateLive: the gate journal is unwritable — the hold still applied, the record did not", e); }
+    return false;   // captain hold — no adjudication is paid for; the reflex answers, capture is untouched
+  }
   // ⛔ THE WHOLE MOMENT IS JUDGED — his order, 30 Aug 2026: "analyze everything what i say and
   // do". This cut the moment at 300 chars and then the envelope again at 500, so the adjudicator
   // decided "is this reasoning-hard?" on an opening fragment. The part that makes a moment hard
@@ -1609,6 +1646,30 @@ async function selftest() {
       yes === true && rows.length === 1 && rows[0].job === "thalamus_adjudicator" && rows[0].engine === "claude");
     assert("METER: the honest 4-field spend rides the row — not just in+out (claudegen G1's whole point)",
       rows[0].total_tokens === 4210 && rows[0].cache_creation_tokens === 3900 && rows[0].cache_read_tokens === 8 && rows[0].duration_ms === 9123);
+    // ── H · THE CAPTAIN'S HOLD (4 Sep 2026) — THE PLANTED VIOLATION ─────────
+    // Identical deps to the passing call above — same event, same ε-band, a generator that
+    // WORKS — with his hold as the only difference. The spy is the generator itself: if the
+    // hold check were missing, this line spends a paid adjudication inside the capture daemon.
+    {
+      const heldRows = []; const jr = []; let gens = 0;
+      const HOLD = { held: true, until: "2026-09-07T18:00:00.000Z", why: "study week — weekly pool reset" };
+      const heldVerdict = await adjudicateLive(evt, 0.44, {
+        cfg: bandCfg, hold: HOLD, journalHold: (a) => jr.push(a), appendBrainLedger: (o) => heldRows.push(o),
+        gen: async () => { gens++; return { ok: true, text: "yes", total_tokens: 4210 }; },
+      });
+      assert("H · CAPTAIN HOLD — the ONE paid call inside the capture daemon spends NOTHING under his word: the generator is never reached, no ledger row is billed, and the verdict is the same conservative `no wake` every failure here returns",
+        heldVerdict === false && gens === 0 && heldRows.length === 0 && jr.length === 1 && jr[0].lane === "thalamus_adjudicator" && jr[0].hold.until === HOLD.until);
+      let gens2 = 0;
+      const expired = await adjudicateLive(evt, 0.44, {
+        cfg: bandCfg, hold: { held: false, until: "2026-09-01T00:00:00.000Z", why: "last week", expired: true }, appendBrainLedger: () => {},
+        gen: async () => { gens2++; return { ok: true, text: "yes", total_tokens: 1 }; },
+      });
+      assert("H · an EXPIRED hold is not a hold — the same moment is adjudicated again with nothing cleared anywhere (the expiry IS the self-wake)",
+        expired === true && gens2 === 1);
+      assert("H · HERMETIC + CAPTURE UNTOUCHED — a selftest never reads live brain_queue.json for this letter, and the hold reaches ONLY the paid adjudication: this file's nerve, afferent bus, spool and /note door name it nowhere",
+        isFixtureRun() === true && (await captainHoldFact({})).held === false && (await captainHoldFact({ hold: HOLD })).held === true
+        && (readFileSync(fileURLToPath(import.meta.url), "utf8").match(/captainHoldFact\(/g) || []).length === 4);
+    }
     // THE SILENT WALL: a plan limit used to return the same bare `false` as a real
     // "not reasoning-hard" verdict, with nothing anywhere naming the outage.
     const wall = [];

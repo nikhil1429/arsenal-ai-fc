@@ -49,7 +49,7 @@ import { execFile } from "node:child_process";
 import { generatePool } from "./hippocampus.mjs";
 import { claudeGenAsync, ledgerForensics } from "./claudegen.mjs";
 import { recordUse } from "./fuelboard.mjs";
-import { headroom, loadConfig as loadBrainConfig } from "./brain.mjs";
+import { headroom, loadConfig as loadBrainConfig, captainHold, journalHold } from "./brain.mjs";   // captainHold/journalHold: H, THE CAPTAIN'S HOLD (4 Sep 2026) — the council asks no gate, so the letter reaches it through brain's own reader
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -477,6 +477,13 @@ const seatFailure = (e, t0) => ({
 //     brain.mjs forensicText ORs FIRST, and the only thing that tells a 429
 //     plan wall from a 500 server bug. claudegen.mjs's own selftest scans this
 //     file's source for the spread; it goes red if a future edit drops it.
+// H · THE CAPTAIN'S HOLD — the fact, read once, with the FIXTURE WORLD carved out by construction.
+// A selftest may never read live brain_queue.json: a suite whose verdict flips the day HE arms a
+// hold is testing his settings and not the code (brain.mjs's selftest header says exactly this,
+// and forces every live switch for the same reason). The seam is acts.mjs's `isFixture`, verbatim.
+const isFixtureRun = () => (process.argv[2] || "").toLowerCase() === "selftest";
+const holdNow = (deps = {}) => (deps.hold !== undefined ? deps.hold : (isFixtureRun() ? { held: false } : captainHold(deps.now || new Date())));
+
 function councilLedgerRow(seatId, model, r) {
   return {
     ts: new Date().toISOString(), job: "council_chair", seat: seatId, engine: "claude", model,
@@ -492,6 +499,19 @@ function councilLedgerRow(seatId, model, r) {
 async function convene(question, deps = {}) {
   const q = String(question || "").trim();
   if (!q) return { drafts: [], disagreement: 0, note: "no question" };
+  // ── H · THE CAPTAIN'S HOLD (4 Sep 2026) ───────────────────────────────────
+  // Every seat at this table bills `job: "council_chair", engine: "claude"` against HIS window,
+  // and this file asks no gate at all — the council convenes when a cortex wake calls it. So the
+  // sixth letter reaches it here, off brain's own reader, one definition of "held".
+  // THE WHOLE TABLE STANDS DOWN, not just the Claude seats: the steelman chair is Gemini and free,
+  // but a council of one accent is not a council (cross-FAMILY disagreement is M15's whole signal)
+  // — a bench that returns one unopposed draft would be worse than an honest empty one.
+  const hold = holdNow(deps);
+  if (hold && hold.held === true) {
+    try { (deps.journalHold || journalHold)({ lane: "council_chair", hold, by: "council", now: deps.now || new Date() }); } catch { /* the journal must never cost the decision — brain.mjs's own rule for this row */ }
+    return { drafts: [], disagreement: 0, captain_hold: { until: hold.until, why: hold.why },
+      note: `captain hold until ${String(hold.until).slice(0, 16)}Z — ${hold.why || "no reason recorded"}; no chair was paid for and none was benched: the table sits again by itself at the expiry` };
+  }
   const { seats, cross, min_headroom } = deps.seatsCfg !== undefined ? { min_headroom: 20000, cross: null, ...deps.seatsCfg } : loadSeats();
   // 17 Jul: the chairs ride Claude (haiku — the bus leaves in 25s) EXCEPT the
   // steelman seat, kept on Gemini deliberately: cross-FAMILY disagreement is
@@ -838,6 +858,32 @@ async function selftest() {
     // thing now asserted: the failed chair does not sit, and the other three do.
     assert("a failed chair degrades to the 3-chair council (layering)",
       cFail.drafts.length === 3 && !cFail.drafts.some(d => d.seat === "cross_examiner"));
+    // ── H · THE CAPTAIN'S HOLD (4 Sep 2026) — THE PLANTED VIOLATION ──────────
+    // The deps below are the four-chair happy path, byte for byte: full headroom, no key, a
+    // generator and a chair that both WORK. Every seat throws if it is asked. His word alone
+    // stops the whole table, and no seat — paid or free — is ever called.
+    {
+      const jr = []; let asked = 0;
+      const HOLD = { held: true, until: "2026-09-07T18:00:00.000Z", why: "study week — weekly pool reset" };
+      const cHold = await convene("why does quadratic attention survive the kv cache?", {
+        seatsCfg: { seats: DEFAULT_SEATS, cross: CROSS_SEAT, min_headroom: 20000 }, capsules: null, env: {}, headroom: { allowed: 300000 },
+        hold: HOLD, journalHold: (a) => jr.push(a),
+        generate: async () => { asked++; throw new Error("no free seat may be asked under a captain hold"); },
+        freeClaude: async () => { asked++; throw new Error("no free Claude seat may be asked under a captain hold"); },
+        claudeChair: async () => { asked++; throw new Error("no paid chair may be asked under a captain hold"); },
+        recordUse: () => { throw new Error("no tank may be charged under a captain hold"); },
+        appendLedger: () => { throw new Error("no council_chair row may be billed under a captain hold"); }, writeFlag: () => {},
+      });
+      assert("H · CAPTAIN HOLD — the WHOLE table stands down: zero seats asked (paid AND free), zero ledger rows, zero tank charge, and the note names the expiry and his reason",
+        cHold.drafts.length === 0 && asked === 0 && /captain hold until 2026-09-07T18:00Z/.test(cHold.note) && /study week/.test(cHold.note)
+        && cHold.captain_hold && cHold.captain_hold.until === HOLD.until && jr.length === 1 && jr[0].lane === "council_chair", JSON.stringify(cHold));
+      assert("H · CAPTAIN HOLD — a council of one accent is not a council: the free Gemini bench stands down WITH the paid chair, because cross-FAMILY disagreement is the whole product (M15)",
+        !cHold.drafts.length && cHold.disagreement === 0 && councilSection(cHold) === councilSection({ drafts: [] }));
+      assert("H · an EXPIRED hold is not a hold — the same question convenes the full bench again with nothing cleared anywhere",
+        (await convene("q question here", { seatsCfg: { seats: DEFAULT_SEATS, cross: CROSS_SEAT, min_headroom: 20000 }, generate: genThree, recordUse: () => {}, capsules: null, env: {}, headroom: { allowed: 5000 }, hold: { held: false, until: "2026-09-01T00:00:00.000Z", why: "last week" }, claudeChair: async () => { throw new Error("benched by headroom, as before"); }, appendLedger: () => {}, writeFlag: () => {} })).drafts.length === 3);
+      assert("H · HERMETIC — a selftest never reads live brain_queue.json for this letter: the fixture world is carved out by construction, so the suite cannot flip the day HE arms a hold",
+        isFixtureRun() === true && holdNow({}).held === false && holdNow({ hold: HOLD }).held === true);
+    }
   }
   // ── THE ENGINE WIRE (10 Aug 2026 wiring audit) ────────────────────────────
   // The chair used to spawn its OWN `claude -p` — no lean flags, no BIN() shim

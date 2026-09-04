@@ -396,7 +396,10 @@ function reconcileBrainLanes(deps = {}) {
         // ASLEEP BY THE GATE — resting by rule, not lying dead. The note carries the
         // verdict's own why and what wakes it, so a reader of this report never has to
         // open the journal to tell sleep from death. D (Block 5.2) = displaced by a fold.
-        const failed = ["E", "C", "F", "D"].filter((k) => asleep.why && asleep.why[k] === false).join("+");
+        // folded off the JOURNAL ROW'S OWN `why` map, never a hand-written list: a literal
+        // E·C·F·D here printed "on ?" the moment a lane slept on I (S13) or on H — the captain's
+        // hold (4 Sep 2026) — and this report is where "asleep" is told apart from "dead".
+        const failed = Object.keys((asleep && asleep.why) || {}).filter((k) => asleep.why[k] === false).join("+");
         notes.push(`asleep by THE GATE since ${String(asleep.ts).slice(0, 16)}Z (on ${failed || "?"}: ${asleep.detail ? failed.split("+").map((k) => asleep.detail[k]).filter(Boolean).join(" · ").slice(0, 160) : ""})${foldedInto ? ` · folded → ${foldedInto}` : ""} — wakes when: ${String(asleep.wakes_when || "").slice(0, 120)} · (${line})`);
       }
       else if (foldedInto) {

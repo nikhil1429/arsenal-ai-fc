@@ -1823,6 +1823,77 @@ export function gateForce(queueState, lane) {
   const f = queueState && queueState.gate && queueState.gate.forced && queueState.gate.forced[lane];
   return f && typeof f === "object" ? f : null;
 }
+
+// ---- THE CAPTAIN'S HOLD — the RUNNER's read of the sixth letter (4 Sep 2026) ----
+// HIS WORD, 4 Sep 2026: "close every API call the organism is doing and just keep on noting
+// down data from me and the Claude Code teacher in /learn sessions." The verdict is gate.mjs's
+// (holdVerdict / the H letter); this is only the MEASUREMENT, exactly as inputLiveness is the
+// measurement behind I and foldStatus is the one behind D.
+//
+// ONE SLOT, ON THE QUEUE brain.mjs already owns: `brain_queue.gate.hold`. A later hold simply
+// overwrites it, which IS supersession by ts — there is no list to search and no second hold to
+// disagree with. `hold clear` deletes the slot; an `until` in the past reads as NOT HELD without
+// anything clearing it, which is what makes the expiry the self-wake (L5) rather than a chore.
+//
+// PURE WHEN HANDED A STATE, like gateForce above: every gate path already carries `queueState`,
+// so the live table costs no extra read and a fixture can drive the letter with an object.
+// A hold that cannot be READ is NOT a hold (absent ⇒ held:false) — gate.mjs's H is open by
+// default on purpose; the header there says why fail-closed would be the kill list again.
+// ONE RETURN, ONE SHAPE — every field is always present. Three different object literals would
+// make `expired` and `scope` exist on some readings and not others, which is how a caller ends up
+// branching on `undefined` and calling an unread hold an absent one.
+export function captainHold(now = new Date(), queueState = undefined) {
+  const qs = queueState === undefined ? (readJson(QUEUE) || {}) : (queueState || {});
+  const h = qs && qs.gate && typeof qs.gate.hold === "object" && qs.gate.hold ? qs.gate.hold : null;
+  const nowMs = now instanceof Date ? now.getTime() : Date.parse(now);
+  const on = !!(h && h.until);
+  const untilMs = on ? Date.parse(String(h.until)) : NaN;
+  const live = on && Number.isFinite(untilMs) && Number.isFinite(nowMs) && untilMs > nowMs;
+  return {
+    held: live,
+    expired: on && !live,                                  // "he DID hold, and it lapsed" — the self-wake, told apart from "he never held"
+    until: on ? h.until : null,
+    why: (h && h.why) || null,
+    ts: (h && h.ts) || null,
+    by: (h && h.by) || null,
+    scope: on ? (h.scope || "claude") : null,
+  };
+}
+// The two writers, both through this owner (brain.mjs is the sole writer of brain_queue.json).
+// `hold clear` is a STATED removal — the same shape `gate clear` needs, and for the same reason:
+// mergeTriggers spreads `mine.gate` over the disk copy, so an absent slot in `mine` is what
+// records the removal. A hold written by another process inside that same read→write window is
+// the one thing this loses, and it is a CLI-only door, so the race is a person racing himself.
+export function setCaptainHold(queueState, { until = null, why = null, by = "cli", scope = "claude", now = new Date() } = {}) {
+  queueState.gate = queueState.gate || {};
+  queueState.gate.hold = { until: until || null, why: why ? String(why).slice(0, 300) : null, by, scope, ts: now.toISOString() };
+  return queueState;
+}
+export function clearCaptainHold(queueState) {
+  const prev = (queueState && queueState.gate && queueState.gate.hold) || null;
+  if (queueState && queueState.gate) delete queueState.gate.hold;
+  return prev;
+}
+// The HOLD's own row in the gate journal — the same file, the same owner, a third row kind
+// beside the verdict rows and journalForce's `force` rows. A hold that left no trace would be
+// exactly the un-accountable open door RUNG A's force hygiene ended, pointed the other way.
+// ONCE PER (lane, until) PER PROCESS: the non-gate organs (cortex · council · thalamus) ask on
+// every wake, and a daemon that journalled every refusal would turn one decision into a log
+// flood. The gated lanes need no such guard — gateTransition already journals on CHANGE only.
+const HOLD_JOURNALLED = new Set();
+export function journalHold({ lane = null, action = "held", hold = null, by = "brain", now = new Date(), appendJournal = null, once = true } = {}) {
+  const key = `${lane}|${action}|${hold && hold.until ? hold.until : "-"}`;
+  if (once && HOLD_JOURNALLED.has(key)) return null;
+  if (once) HOLD_JOURNALLED.add(key);
+  const row = { ts: now.toISOString(), lane, kind: "hold", action, by,
+    hold: hold ? { until: hold.until || null, why: hold.why || null, by: hold.by || null, armed_at: hold.ts || null, scope: hold.scope || null } : null,
+    card: "none (captain hold)" };
+  try {
+    if (appendJournal) appendJournal(JSON.stringify(row) + "\n");
+    else { mkdirSync(OUT_DIR, { recursive: true }); appendFileSync(GATE_JOURNAL, JSON.stringify(row) + "\n"); }
+  } catch (e) { swallow("journalHold: the gate journal is unwritable → the hold still applied, the record did not", e); return null; }
+  return row;
+}
 // RUNG A (30 Aug 2026) — `why` rides the force from birth. The rung found ONE live force on the
 // board (`selfknowledge`, armed 18 Aug, `by: "cli"`) and nothing anywhere said what it was for:
 // twelve days of a hand held open over the gate with no account. An author without a reason is
@@ -1923,7 +1994,10 @@ export function foldStatus(job, cfg, ctx, visited = new Set()) {
   }
   // not yet tried: is the target itself awake, and is its slot for `day` still ahead?
   const tv = gateVerdictFor(target, cfg, ctx, new Set([...visited, job.id]));
-  if (!tv.run) return { target: tid, covered: false, day, detail: `${tid} is itself ASLEEP (${["E", "C", "F", "D"].filter((k) => tv.why[k] && !tv.why[k].ok).join("+")}) — the fold is OPEN, this lane decides on its own` };
+  // the failed letters are folded off the VERDICT'S OWN `why` — never a hand-written list here.
+  // A literal E·C·F·D stood on this line and would have printed "ASLEEP ()" for a target held or
+  // starved of inputs: the same dropped-letter bug RUNG A fixed in the journal row and its reader.
+  if (!tv.run) return { target: tid, covered: false, day, detail: `${tid} is itself ASLEEP (${Object.keys(tv.why || {}).filter((k) => tv.why[k] && !tv.why[k].ok).join("+")}) — the fold is OPEN, this lane decides on its own` };
   if (foldSlotAhead(target, day, now, cfg)) return { target: tid, covered: true, day, detail: `folded → ${tid}: due ${target.at || "in its window"} for ${day} (awake, not yet run) — this lane waits; the fold opens by itself if it fails or misses` };
   return { target: tid, covered: false, day, detail: `${tid}'s slot for ${day} passed with no attempt — the fold is OPEN, this lane is the fallback` };
 }
@@ -1950,8 +2024,11 @@ export function gateVerdictFor(job, cfg, ctx, visited = new Set()) {
   // are declared by a `job_inputs` registry row; a job that has neither hands `null`, and the
   // gate's input ratchet sleeps it. No brain job reaches the spend path unguarded on its inputs.
   const inputs = ctx.inputsFor ? ctx.inputsFor(job) : inputLiveness(job, cfg, ctx);
-  const v = gateDecide({ job, evidence, consumption: { ...consumption, never_ran }, failures: { streak: failStreakOf(ctx.ledger || [], job.id) }, now: ctx.now, forced, fold, consumer, inputs });
-  return { ...v, evidence, consumption, never_ran, forced, fold_status: fold, inputs };
+  // H (4 Sep 2026) — read off the SAME queueState the force already rides on: no extra file
+  // read, and a hermetic ctx (queueState {}) gets held:false, which is the honest fixture answer.
+  const hold = ctx.hold !== undefined ? ctx.hold : captainHold(ctx.now, ctx.queueState);
+  const v = gateDecide({ job, evidence, consumption: { ...consumption, never_ran }, failures: { streak: failStreakOf(ctx.ledger || [], job.id) }, now: ctx.now, forced, fold, consumer, inputs, hold });
+  return { ...v, evidence, consumption, never_ran, forced, fold_status: fold, inputs, hold };
 }
 // ---- the verdict for a NON-brain lane (nightshift, DMN) — same law, same journal ----
 // The other gated organs already import this file; they hand their own evidence
@@ -2003,8 +2080,12 @@ export function gateVerdictForLane(lane, opts = {}) {
   // The remainder S13 named is what this rung closed.
   const inputs = ("inputs" in opts) ? opts.inputs
     : inputLiveness({ id: lane, gate, surface }, cfg || loadConfig(), { now });
-  const v = gateDecide({ job: { id: lane, gate, surface }, evidence, consumption: { ...c, never_ran, ...(event_armed !== undefined ? { event_armed } : {}) }, failures: { streak: failStreakOf(led, ids) }, now, forced, inputs });
-  return { ...v, consumption: c, never_ran, forced, evidence, inputs };
+  // H (4 Sep 2026) — the non-brain lanes (ns_*, dmn, dmn_bg_drain, selfknowledge) are Claude
+  // spenders on the SAME pool, so they answer to his hold through the same letter. Read off the
+  // queue this function already loaded; a caller may hand its own for a hermetic run.
+  const hold = ("hold" in opts) ? opts.hold : captainHold(now, qs);
+  const v = gateDecide({ job: { id: lane, gate, surface }, evidence, consumption: { ...c, never_ran, ...(event_armed !== undefined ? { event_armed } : {}) }, failures: { streak: failStreakOf(led, ids) }, now, forced, inputs, hold });
+  return { ...v, consumption: c, never_ran, forced, evidence, inputs, hold };
 }
 // The live context, read ONCE per tick/status. Hermetic callers hand their own.
 function gateContext(deps, now, ledger, queueState) {
@@ -2050,7 +2131,7 @@ export function gateJournalRows() { return readLines(GATE_JOURNAL); }
 // sleep-episode) through captains_call's rolling-key guard: gate:<lane>:<day>.
 // THE LETTERS a verdict can fail on — E·C·F since Block 0, D (displaced by a fold) since
 // Block 5.2. One list, so the printer, the journal, the card and `gate json` agree.
-const GATE_LETTERS = ["E", "C", "F", "D", "I"];   // S13 — I (his data is actually in the lane's inputs) joins E·C·F·D
+const GATE_LETTERS = ["H", "E", "C", "F", "D", "I"];   // S13 — I (his data is in the lane's inputs) joined E·C·F·D; 4 Sep 2026 — H (the captain's hold) joins them FIRST, in the order the verdict decides them
 const failedLetters = (why) => GATE_LETTERS.filter((k) => why && why[k] && why[k].ok === false);
 // RUNG S7 — the card NAMES WHICH CONSUMER WENT QUIET (§1's ratchet sentence, in his language).
 // Before this, every C card said the same thing — "output kabhi tum tak nahi pahuncha" — which for
@@ -2087,7 +2168,13 @@ export function gateTransition(lane, verdict, deps = {}) {
   // A sleep on D ALONE files NO card: the fold is his approved design (§10 — "do not deal
   // cards about this plan"), the journal + `brain status` name it, and `brain gate wake`
   // stays his hand door. A sleep that also fails E/C/F cards as before.
-  const cardable = state === "asleep" && failedLetters(verdict.why).some((k) => k !== "D");
+  // 4 Sep 2026 — A HOLD DEALS NO CARD, EVER, on any letter. The fold precedent above is the
+  // shape: a sleep he HIMSELF ordered is not news, and carding him about it would be the
+  // report-disguised-as-an-ask his 7 Aug ruling forbids — twenty lanes asking permission to
+  // obey him. The row still says asleep · H✗ with the expiry, so the record is complete and
+  // `gate show` / `gate journal` name it; only the ANCHOR is left alone.
+  const heldNow = !!(verdict.why.H && verdict.why.H.ok === false);
+  const cardable = state === "asleep" && !heldNow && failedLetters(verdict.why).some((k) => k !== "D");
   // RUNG A (30 Aug 2026) — THE JOURNAL SAID "ASLEEP" WITH EVERY LETTER TRUE. Measured on the
   // live lane before this line changed: `2026-08-29T18:34:20.148Z day_cartridge asleep
   // why={"E":true,"C":true,"F":true,"D":true}` — a receipt that records the verdict and not the
@@ -2101,7 +2188,8 @@ export function gateTransition(lane, verdict, deps = {}) {
     why: Object.fromEntries(GATE_LETTERS.map((k) => [k, letters[k] ? letters[k].ok !== false : true])),
     detail: Object.fromEntries(GATE_LETTERS.map((k) => [k, letters[k] ? (letters[k].detail || null) : null])),
     fold: verdict.fold || null,
-    card: state === "asleep" ? (cardable ? "filed" : "none (fold — his approved design, journal only)") : null,
+    captain_hold: verdict.captain_hold || null,   // the row CARRIES his hold: what was held, until when, and why — a hold with no record is the un-accountable open door, pointed the other way
+    card: state === "asleep" ? (cardable ? "filed" : heldNow ? "none (captain hold)" : "none (fold — his approved design, journal only)") : null,
     wakes_when: verdict.wakes_when || null,
     consumption: verdict.consumption || null,
     // S7 — the ROAD ROW names which consumer went quiet (§1's ratchet). `undefined` on a pre-S7
@@ -2155,7 +2243,15 @@ export function gateReport(cfg, ctx) {
 export function printGate(rep, { verbose = false } = {}) {
   const asleep = rep.asleep, awake = rep.awake;
   const folded = rep.rows.filter((r) => r.fold && r.fold.target);
-  console.log(`brain: THE GATE — ${awake.length} lane(s) awake · ${asleep.length} asleep (E=evidence · C=its DECLARED consumer ate it ≤window — him, or the organ it was actually for (S7 · §1) · F=fail streak · D=displaced by a fold; asleep is health, not disease — it wakes itself)`);
+  console.log(`brain: THE GATE — ${awake.length} lane(s) awake · ${asleep.length} asleep (H=the captain's hold · E=evidence · C=its DECLARED consumer ate it ≤window — him, or the organ it was actually for (S7 · §1) · F=fail streak · D=displaced by a fold · I=his data is live in its inputs; asleep is health, not disease — it wakes itself)`);
+  // H — the hold, said ONCE at the top with its expiry, so he never has to read 30 identical
+  // lane lines to learn the one fact that explains all of them.
+  const heldRow = rep.rows.find((r) => r.captain_hold);
+  if (heldRow && heldRow.captain_hold) {
+    const h = heldRow.captain_hold;
+    const n = rep.rows.filter((r) => r.why.H && r.why.H.ok === false).length;
+    console.log(`  · CAPTAIN HOLD until ${String(h.until).slice(0, 16)}Z — ${h.why || "NO REASON RECORDED"} · ${n} lane(s) held · his study (gaffer_judge/gaffer_verify) runs through it · \`brain gate wake <lane>\` outranks it for one window · nothing to answer: the expiry IS the wake`);
+  }
   for (const r of asleep) {
     const failed = failedLetters(r.why);
     const foldTag = r.fold && r.fold.target ? ` · folded → ${r.fold.target}${r.fold.covered ? "" : " (fold OPEN — fallback)"}` : "";
@@ -6577,6 +6673,61 @@ async function selftest() {
       && !!mergeTriggers(dsk, mineAfterDelete, [], [], ["gone"]).gate.forced.keep
       && !!mergeTriggers(dsk, mineAfterDelete, [], [], []).gate.forced.gone);
 
+    // ── H · THE CAPTAIN'S HOLD (4 Sep 2026) — the RUNNER, the WRITER, the JOURNAL, the CARD ──
+    // gate.mjs proves the LETTER; this proves the three things only the runner can be wrong about:
+    // that the fact is read off the queue at all, that a held sleep deals NO card, and that the
+    // hold slot survives the merge that every queue write goes through.
+    {
+      const HOLD_UNTIL = new Date(T.getTime() + 3 * 86400000).toISOString();
+      const qHold = { jobs_run: {} };
+      setCaptainHold(qHold, { until: HOLD_UNTIL, why: "study week — weekly pool reset", now: T });
+      assert("HOLD/runner — captainHold reads the ONE slot off brain_queue.gate.hold: live ⇒ held with his reason; PAST ⇒ NOT held and nothing had to clear it; absent ⇒ not held",
+        captainHold(T, qHold).held === true && captainHold(T, qHold).why === "study week — weekly pool reset" && captainHold(T, qHold).until === HOLD_UNTIL
+        && captainHold(new Date(T.getTime() + 4 * 86400000), qHold).held === false && captainHold(new Date(T.getTime() + 4 * 86400000), qHold).expired === true
+        && captainHold(T, {}).held === false && captainHold(T, { gate: {} }).held === false && captainHold(T, { gate: { hold: { until: "not-a-date" } } }).held === false);
+      const qLater = { jobs_run: {} };
+      setCaptainHold(qLater, { until: HOLD_UNTIL, why: "first word", now: T });
+      setCaptainHold(qLater, { until: new Date(T.getTime() + 86400000).toISOString(), why: "second word — shorter", now: new Date(T.getTime() + 60000) });
+      assert("HOLD/runner — ONE SLOT, so a LATER hold supersedes by ts even when it SHORTENS the first; `clear` ends it outright and leaves no trace to expire",
+        captainHold(T, qLater).why === "second word — shorter" && captainHold(T, qLater).until === new Date(T.getTime() + 86400000).toISOString()
+        && (() => { const q = { jobs_run: {} }; setCaptainHold(q, { until: HOLD_UNTIL, why: "x", now: T }); const prev = clearCaptainHold(q); return prev && prev.why === "x" && captainHold(T, q).held === false && clearCaptainHold(q) === null; })());
+      // THE PLANTED VIOLATION: every one of these lanes is AWAKE in the fixture above. Under his
+      // hold every single one of them sleeps on H — and gaffer_judge, which is his study, does not.
+      const gcHeld = { ...gc, queueState: qHold };
+      const heldRep = gateReport(gcfg, gcHeld);
+      assert("HOLD/gate — EVERY gated brain lane sleeps on H under a live hold (the fixture's 4 awake lanes included), and each one's wake sentence asks him for NOTHING",
+        heldRep.awake.length === 0 && heldRep.asleep.length === gcfg.jobs.length
+        && heldRep.rows.every((r) => r.why.H.ok === false && r.run === false && /wakes ITSELF, nothing to answer/.test(r.wakes_when))
+        && gateReport(gcfg, gc).awake.length > 0);
+      assert("HOLD/lane — a NON-brain lane (nightshift · dmn · dmn_bg_drain · selfknowledge) answers to the same letter through gateVerdictForLane, and his study does not",
+        gateVerdictForLane("dmn_bg_drain", { evidence: { ok: true }, gate: {}, now: T, ledger: hist, consumption, queueState: qHold, inputs: undefined, outbox: [] }).why.H.ok === false
+        && gateVerdictForLane("gaffer_judge", { evidence: { ok: true }, gate: {}, now: T, ledger: hist, consumption, queueState: qHold, inputs: undefined, outbox: [] }).why.H.ok === true
+        && gateVerdictForLane("dmn_bg_drain", { evidence: { ok: true }, gate: {}, now: T, ledger: hist, consumption, queueState: { jobs_run: {} }, inputs: undefined, outbox: [] }).why.H.ok === true);
+      // ZERO CARDS. A sleep he himself ordered is not news; carding him would be twenty lanes
+      // asking permission to obey him. The ROW is still written, with the expiry in it.
+      journal.length = 0; cards.length = 0;
+      const vHeld = heldRep.rows.find((r) => r.lane === "cartridge");
+      const tH = gateTransition("cartridge", vHeld, { now: T, prevState: { lane: "cartridge", state: "awake", ts: iso(1) }, appendJournal: (l) => journal.push(JSON.parse(l)), fileCard: (a) => { cards.push(a); return true; }, cfg: gcfg });
+      assert("HOLD/journal — a held sleep journals ONE row `asleep · H✗` carrying the expiry and the reason, and files ZERO cards (`card: none (captain hold)`, the fold-transition precedent)",
+        tH.changed === true && journal.length === 1 && journal[0].state === "asleep" && journal[0].why.H === false
+        && journal[0].card === "none (captain hold)" && cards.length === 0
+        && journal[0].captain_hold && journal[0].captain_hold.until === HOLD_UNTIL && /study week/.test(journal[0].captain_hold.why)
+        && Object.keys(journal[0].why).join("") === "HECFDI" && Object.keys(journal[0].detail).join("") === "HECFDI");
+      // …and a lane that ALSO fails C still deals no card while the hold is live: the hold is
+      // total on the anchor side, or it becomes a report disguised as twenty asks.
+      journal.length = 0; cards.length = 0;
+      gateTransition("stale_lane", heldRep.rows.find((r) => r.lane === "stale_lane"), { now: T, prevState: null, appendJournal: (l) => journal.push(JSON.parse(l)), fileCard: (a) => { cards.push(a); return true; }, cfg: gcfg });
+      assert("HOLD/card — a lane failing C *and* H under a live hold still deals ZERO cards; the same lane with no hold cards exactly as before (the suppression is the HOLD's, not a new silence)",
+        cards.length === 0 && journal[0].card === "none (captain hold)"
+        && (() => { const c2 = []; gateTransition("stale_lane", by("stale_lane"), { now: T, prevState: null, appendJournal: () => {}, fileCard: (a) => { c2.push(a); return true; }, cfg: gcfg }); return c2.length === 1; })());
+      assert("HOLD/merge — the hold slot survives the whole-object queue write every door goes through, and `hold clear`'s absent slot is what STATES the removal",
+        !!mergeTriggers({ triggers: {}, gate: { forced: {} } }, qHold, [], []).gate.hold
+        && mergeTriggers({ triggers: {}, gate: { forced: {}, hold: qHold.gate.hold } }, { jobs_run: {}, gate: { forced: {} } }, [], []).gate.hold === undefined);
+      assert("HOLD/modes — `hold` is a dispatched verb of brain's own vocabulary (the S12 spend-guard ratchet covers it), and it is NOT a `gate sleep`: it names no lane and cannot be selective",
+        BRAIN_MODES.includes("hold") && isKnownMode("hold") && !BRAIN_MODES.includes("sleep")
+        && !/if \(mode === "gate"\)[\s\S]{0,4000}sub === "sleep"/.test(readFileSync(fileURLToPath(import.meta.url), "utf8")));
+    }
+
     // ── THE FOLD (Block 5.2) — the runner's fact, then the fourth letter, then the transition ──
     {
       // T = 18 Aug 23:30 (evening half of the overnight shift): prepare_tomorrow (03:20, serve
@@ -6913,7 +7064,7 @@ function buildDeps(now, argv = process.argv) {
  *  plus `tick` (the empty-argv default) and `help`. EXPORTED so the selftest can bite it against
  *  the source itself: a branch added below without a row here is a verb nobody can reach, and a
  *  row here with no branch is a verb that quietly means `tick` — which is the 28,120-token bug. */
-export const BRAIN_MODES = ["tick", "help", "selftest", "bell", "trigger", "gate", "consumed", "tokens", "spend", "status", "run", "pulse", "daemon"];
+export const BRAIN_MODES = ["tick", "help", "selftest", "bell", "trigger", "gate", "hold", "consumed", "tokens", "spend", "status", "run", "pulse", "daemon"];   // `hold` — the captain's hold (4 Sep 2026), the H letter's one door
 /** isKnownMode — PURE, so the suite drives every branch without spawning anything.
  *  A leading `-` is a FLAG, never a verb: `--dry` and `--daemon` must keep reaching the dispatch. */
 export const isKnownMode = (m) => { const s = String(m == null ? "" : m).toLowerCase(); return s === "" || s.startsWith("-") || BRAIN_MODES.includes(s); };
@@ -7010,7 +7161,12 @@ async function main() {
         at: now.toISOString(),
         // `consumer` (S7) — the machine face names WHO must eat each lane, so a reader never has to
         // re-derive the one fact the C verdict now turns on.
-        lanes: rep.rows.map((r) => ({ lane: r.lane, state: r.state, why: { E: r.why.E.ok, C: r.why.C.ok, F: r.why.F.ok, D: r.why.D ? r.why.D.ok : true }, detail: { E: r.why.E.detail, C: r.why.C.detail, F: r.why.F.detail, D: r.why.D ? r.why.D.detail : null }, consumer: r.consumer !== undefined ? r.consumer : null, fold: r.fold || null, wakes_when: r.wakes_when, never_ran: r.never_ran, forced: r.forced || null, journaled: r.journaled ? { state: r.journaled.state, ts: r.journaled.ts } : null })),
+        // THE LETTERS ARE FOLDED OFF GATE_LETTERS, never hand-listed. This map WAS a literal
+        // E·C·F·D, so `gate json` had been silently dropping I since S13 landed it — the exact
+        // dropped-letter bug RUNG A fixed in the journal row and in `gate journal`'s printer,
+        // surviving in the third reader. Both maps derive from the one list now, so the seventh
+        // letter cannot repeat it here either.
+        lanes: rep.rows.map((r) => ({ lane: r.lane, state: r.state, why: Object.fromEntries(GATE_LETTERS.map((k) => [k, r.why[k] ? r.why[k].ok !== false : true])), detail: Object.fromEntries(GATE_LETTERS.map((k) => [k, r.why[k] ? (r.why[k].detail || null) : null])), consumer: r.consumer !== undefined ? r.consumer : null, fold: r.fold || null, captain_hold: r.captain_hold || null, wakes_when: r.wakes_when, never_ran: r.never_ran, forced: r.forced || null, journaled: r.journaled ? { state: r.journaled.state, ts: r.journaled.ts } : null })),
         others: rep.others.map((r) => ({ lane: r.lane, state: r.state, ts: r.ts, why: r.why || null, detail: r.detail || null, wakes_when: r.wakes_when || null })),
       }));
       return;
@@ -7027,6 +7183,10 @@ async function main() {
       // through the verdict format would have thrown on `r.state.padEnd`.
       for (const r of rows) {
         if (r.kind === "force") { console.log(`  ${String(r.ts).slice(0, 19)}Z ${String(r.lane).padEnd(18)} → FORCE ${String(r.action || "?").padEnd(8)} by ${r.by || "?"}${r.why ? ` — ${r.why}` : " — no reason given"}${r.force && r.force.armed_at ? ` (armed ${String(r.force.armed_at).slice(0, 16)}${r.force.why ? `, why "${r.force.why}"` : ", NO REASON RECORDED"})` : ""}`); continue; }
+        // the THIRD row kind (4 Sep 2026): a HOLD — his word, on a lane that never asks the gate
+        // (cortex · council · thalamus) or on the hold itself being armed/cleared. Like `force`
+        // it carries no `state`, so it must be printed before the verdict format touches it.
+        if (r.kind === "hold") { console.log(`  ${String(r.ts).slice(0, 19)}Z ${String(r.lane || "-").padEnd(18)} → HOLD  ${String(r.action || "?").padEnd(8)} by ${r.by || "?"}${r.hold && r.hold.until ? ` · until ${String(r.hold.until).slice(0, 16)}Z` : ""} — ${(r.hold && r.hold.why) || "NO REASON RECORDED"} · card: ${r.card || "none (captain hold)"}`); continue; }
         const letters = GATE_LETTERS.map((k) => `${k}${r.why && r.why[k] === false ? "✗" : "✓"}`).join(" ");
         console.log(`  ${String(r.ts).slice(0, 19)}Z ${String(r.lane).padEnd(18)} → ${String(r.state).padEnd(6)} ${letters}${r.state === "asleep" ? ` · wakes when: ${String(r.wakes_when || "").slice(0, 110)}` : ""}`);
       }
@@ -7070,6 +7230,48 @@ async function main() {
     }
     console.log("brain: gate show | gate wake <lane> [--days N] | gate clear <lane> | gate journal [n]");
     process.exit(1);
+  }
+  // ---- THE CAPTAIN'S HOLD (4 Sep 2026) — the H letter's one door -------------
+  //   node scripts/brain.mjs hold --until <ISO> --why "…"   arm it (a later hold supersedes)
+  //   node scripts/brain.mjs hold clear [--why "…"]         end it early
+  //   node scripts/brain.mjs hold [status]                  read it
+  // THIS IS NOT `gate sleep`. The refusal three screens up still stands: no LANE can be put to
+  // sleep by hand, because a hand-slept lane is the kill list wearing a new coat. A hold is the
+  // opposite shape — it names no lane, it cannot be selective, it carries a mandatory EXPIRY and
+  // a reason, it journals, and it undoes itself. His word is the only thing that can arm it, and
+  // the act lane (`acts.mjs do hold`) is how that word becomes a receipt in the same turn.
+  if (mode === "hold") {
+    const sub = (process.argv[3] || "status").toLowerCase();
+    const q = readJson(QUEUE) || { observed_window_ceiling: null, jobs_run: {} };
+    const wi = process.argv.indexOf("--why");
+    const why = wi >= 0 ? String(process.argv[wi + 1] || "").slice(0, 300) : null;
+    const live = captainHold(now, q);
+    if (sub === "clear") {
+      const prev = clearCaptainHold(q);
+      if (!prev) { console.log("brain: hold clear — no captain hold on record; nothing was held"); return; }
+      writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), q, [], []));   // mine.gate has no `hold` slot ⇒ the removal IS stated (mergeTriggers spreads mine.gate over the disk's)
+      journalHold({ lane: "all", action: "cleared", hold: prev, by: process.env.ARSENAL_GATE_BY || "cli", now, once: false });
+      console.log(`brain: hold CLEARED (was until ${String(prev.until || "?").slice(0, 16)}Z, armed ${String(prev.ts || "?").slice(0, 16)} by ${prev.by || "?"}${prev.why ? `, why "${prev.why}"` : ", NO REASON RECORDED"})${why ? ` · cleared because: ${why}` : ""}; every lane decides on its own evidence again from this instant`);
+      return;
+    }
+    if (sub === "status") {
+      if (!live.until) { console.log("brain: hold — none. Every Claude-spending lane answers to its own evidence."); return; }
+      console.log(live.held
+        ? `brain: CAPTAIN HOLD LIVE until ${String(live.until).slice(0, 16)}Z — ${live.why || "NO REASON RECORDED"} (armed ${String(live.ts || "?").slice(0, 16)} by ${live.by || "?"}, scope ${live.scope}) · his study (gaffer_judge/gaffer_verify) runs through it · \`brain gate wake <lane>\` outranks it for one window · nothing to answer: the expiry IS the wake`
+        : `brain: hold EXPIRED at ${String(live.until).slice(0, 16)}Z — ${live.why || "no reason recorded"}; nothing is held, and nothing had to clear it (the expiry is the self-wake)`);
+      return;
+    }
+    const ui = process.argv.indexOf("--until");
+    const until = ui >= 0 ? String(process.argv[ui + 1] || "") : "";
+    const untilMs = Date.parse(until);
+    if (!Number.isFinite(untilMs)) { console.log('brain: hold --until <ISO instant> --why "…" | hold clear | hold status  — an expiry is NOT optional: a hold with no end is the `paused` table wearing a new coat, and his 29 Aug order forbids it by name'); process.exit(1); }
+    if (untilMs <= now.getTime()) { console.log(`brain: hold REFUSED — --until ${until} is already in the past; a hold that is born expired would hold nothing and record a decision nobody made`); process.exit(1); }
+    if (!why) { console.log('brain: hold REFUSED — --why "…" is required: an open hand over the gate that nobody can account for is the exact thing the force-hygiene rung ended'); process.exit(1); }
+    setCaptainHold(q, { until: new Date(untilMs).toISOString(), why, by: process.env.ARSENAL_GATE_BY || "cli", now });
+    writeAtomic(QUEUE, mergeTriggers(readJson(QUEUE), q, [], []));
+    journalHold({ lane: "all", action: "armed", hold: q.gate.hold, by: process.env.ARSENAL_GATE_BY || "cli", now, once: false });
+    console.log(`brain: CAPTAIN HOLD armed until ${new Date(untilMs).toISOString().slice(0, 16)}Z — ${why}${live.until ? ` (supersedes the hold armed ${String(live.ts || "?").slice(0, 16)})` : ""}. Every Claude-spending lane sleeps on H from this instant; capture keeps writing; his study (gaffer_judge/gaffer_verify) is exempt by name; \`brain gate wake <lane>\` still opens one lane for one window. NOTHING has to be cleared — at the expiry every lane wakes itself on its own evidence.`);
+    return;
   }
   // ---- THE CONSUMPTION DOOR (overhaul §5.2) — for organs that do not import this file
   //   node scripts/brain.mjs consumed <job-or-lane> --kind spoken|sat|briefed|carded|opened|pushed --by <organ> [--lane] [--file <p>] [--note "…"]

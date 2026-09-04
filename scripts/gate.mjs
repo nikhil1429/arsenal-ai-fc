@@ -362,9 +362,61 @@ export function inputVerdict(inputs, { forcedLive = false, forcedUntilMs = null 
       : `${dead.length} input class(es) not alive${f.root ? ` — root: ${f.root}` : ""}${dead.length ? ` · ${dead.map((d) => `${d && d.path}: ${d && d.why}`).join(" · ")}` : ""}`) };
 }
 
+// ── H · THE CAPTAIN'S HOLD (4 Sep 2026) ──────────────────────────────────────
+// HIS WORD, 4 Sep 2026: "close every API call the organism is doing and just keep on noting
+// down data from me and the Claude Code teacher in /learn sessions." He is studying inside
+// Claude Code all week on the SAME subscription pool the organism spends from, and measured
+// that evening (`brain.mjs spend 7`, read-only) the organism had spent 141 Claude rows on
+// ITSELF in seven days while the weekly pool read 86%.
+//
+// WHY A SIXTH LETTER AND NOT A SWITCH. The organism already had exactly one sleep-everything
+// control — the `paused` table in brain_config.json — and his 29 Aug order forbids it by name:
+// a TABLE where the gate demands a FUNCTION. A table has no expiry, no journal, no reason and
+// no way back; it also only covers brain's own jobs and leaves cortex, council, thalamus and
+// the shift spending beside it. So the hold is a LETTER: it rides the same verdict, prints in
+// the same table, journals in the same row, and — this is the whole point — EXPIRY IS THE
+// SELF-WAKE (L5). Nothing has to be remembered, cleared or answered; at the instant it lapses
+// every lane wakes itself on its own evidence, exactly as if the hold had never existed.
+//
+// H IS EVALUATED BEFORE E because it is the cheapest and the most total: no measurement of
+// evidence, consumption or inputs can change what his word already settled.
+//
+// TWO WAYS THROUGH IT, both deliberate:
+//   · `gate wake <lane>` — HIS WORD OUTRANKS HIS OWN HOLD, for one window. Reversibility beats
+//     every letter (the D and I branches say the same in as many words).
+//   · THE STUDY IS EXEMPT BY NAME. `gaffer_judge` / `gaffer_verify` are the truth layer of the
+//     thing he is holding the pool FOR; a hold that stopped them would spend his week to save
+//     his tokens. The exemption is narrow ON PURPOSE — it is not a category anyone may widen by
+//     analogy, it is the two lanes his own study runs through, and any third one is his ruling.
+// The `hold` fact itself is MEASURED by the runner (brain.mjs captainHold), like `fold` and
+// `inputs`: this file opens no file and knows no clock but the `now` it is handed.
+export function holdExempt(subject) {
+  const s = String(subject == null ? "" : subject);
+  return s === "gaffer_judge" || s === "gaffer_verify";
+}
+// holdVerdict(hold, {subject, forcedLive, forcedUntilMs}) → the H letter.
+//   hold  { held: boolean, until?: ISO, why?: string } | null | undefined
+//   ABSENT IS OPEN, never fail-closed: a missing hold means he has not spoken, and a letter
+//   that slept every lane the day its fact could not be read would be the kill list again.
+export function holdVerdict(hold, { subject = null, forcedLive = false, forcedUntilMs = null } = {}) {
+  const h = hold && typeof hold === "object" ? hold : null;
+  if (!h || h.held !== true) return { ok: true, held: false, until: null, why: null, detail: "no captain hold — nothing of his is holding this lane" };
+  const until = h.until || null;
+  const stamp = until ? `${String(until).slice(0, 16)}Z` : "?";
+  const why = h.why || "NO REASON RECORDED";
+  if (holdExempt(subject)) return { ok: true, held: true, exempt: true, until, why: h.why || null,
+    detail: `captain hold until ${stamp} — ${why}, but ${subject} is HIS STUDY and is exempt by name: the hold closes the organism's spend on ITSELF, never the lane he is learning through` };
+  if (forcedLive) return { ok: true, held: true, forced: true, until, why: h.why || null,
+    detail: `captain hold until ${stamp} — ${why}, but forced awake until ${forcedUntilMs ? new Date(forcedUntilMs).toISOString().slice(0, 16) : "?"}Z (his gate wake) — his word outranks his own hold, for one window` };
+  return { ok: false, held: true, until, why: h.why || null, detail: `CAPTAIN HOLD until ${stamp} — ${why}` };
+}
+
 // ── THE VERDICT ──────────────────────────────────────────────────────────────
-// decide({ job, evidence, consumption, failures, now, forced, fold, inputs }) →
-//   { run, state: "awake"|"asleep", why: {E,C,F,D,I}, wakes_when, cfg }
+// decide({ job, evidence, consumption, failures, now, forced, fold, inputs, hold }) →
+//   { run, state: "awake"|"asleep", why: {H,E,C,F,D,I}, wakes_when, cfg }
+//
+//   hold        the RUNNER's read of the captain's hold — see holdVerdict above. H is
+//               evaluated FIRST and, unlike I, an absent fact leaves it OPEN.
 //
 //   inputs      the RUNNER's input-liveness fact — see inputVerdict above for the three
 //               states and why `undefined` is a MEASURED gap and not a silent pass.
@@ -396,7 +448,7 @@ export function inputVerdict(inputs, { forcedLive = false, forcedUntilMs = null 
 //               (a wake) overrides F for exactly one run; a success then clears the
 //               streak on the ledger by itself, which is the only clear there is.
 //   forced      { until?: ISO|null, once?: boolean } — the two wake mechanisms.
-export function decide({ job = null, evidence = null, consumption = null, failures = null, now = new Date(), forced = null, fold = null, consumer = undefined, inputs = undefined } = {}) {
+export function decide({ job = null, evidence = null, consumption = null, failures = null, now = new Date(), forced = null, fold = null, consumer = undefined, inputs = undefined, hold = null } = {}) {
   const cfg = gateConfig(job);
   const nowMs = now instanceof Date ? now.getTime() : ms(now);
   const ev = evidence || {};
@@ -406,6 +458,10 @@ export function decide({ job = null, evidence = null, consumption = null, failur
   const forcedUntilMs = ms(fz.until);
   const forcedLive = Number.isFinite(forcedUntilMs) && forcedUntilMs > nowMs;
   const foldTarget = (fold && typeof fold === "object" && fold.target) ? String(fold.target) : foldOf(job);
+
+  // H — the captain's hold, BEFORE everything (his word settles it; no measurement can move it)
+  const hv = holdVerdict(hold, { subject: job && job.id, forcedLive, forcedUntilMs });
+  const H = hv.ok;
 
   // E — evidence
   const reqAbsent = Array.isArray(ev.required_absent) ? ev.required_absent : [];
@@ -460,24 +516,30 @@ export function decide({ job = null, evidence = null, consumption = null, failur
   const iv = inputVerdict(inputs, { forcedLive, forcedUntilMs });
   const I = iv.ok;
 
-  const run = E && C && F && D && I;
+  const run = H && E && C && F && D && I;
   const state = run ? "awake" : "asleep";
   return {
     run, state, cfg,
-    why: { E: { ok: E, detail: Edetail }, C: { ok: C, detail: Cdetail }, F: { ok: F, detail: Fdetail }, D: { ok: D, detail: Ddetail }, I: { ok: I, detail: iv.detail } },
+    // H FIRST in this object on purpose: every reader that folds the letters off `Object.keys(why)`
+    // (dmn, nightshift, selfknowledge, reconcile) prints them in the order they are decided.
+    why: { H: { ok: H, detail: hv.detail }, E: { ok: E, detail: Edetail }, C: { ok: C, detail: Cdetail }, F: { ok: F, detail: Fdetail }, D: { ok: D, detail: Ddetail }, I: { ok: I, detail: iv.detail } },
+    captain_hold: hv.held ? { until: hv.until, why: hv.why, exempt: !!hv.exempt, forced: !!hv.forced, blocking: !hv.ok } : null,   // the verdict CARRIES the hold, so the journal and `gate show` never have to re-read it
     fold: foldTarget ? { target: foldTarget, covered: !D } : null,
     consumer: who,                                                   // S7: the verdict CARRIES its declared consumer — the journal, the card and `gate json` all name WHICH consumer went quiet
     input_guard: { covered: iv.covered, root: iv.root || null, dead: iv.dead || [], cadence_h: iv.cadence_h ?? null },   // S13: the verdict CARRIES its input reading — an UNCOVERED caller is a measured gap with a name, never a silent green
-    wakes_when: run ? null : wakesWhen({ job, E, C, F, D, I, iv, reqAbsent, cfg, foldTarget, consumer: who }),
+    wakes_when: run ? null : wakesWhen({ job, H, hv, E, C, F, D, I, iv, reqAbsent, cfg, foldTarget, consumer: who }),
   };
 }
 
 // The sentence on the card and in `brain status`: what has to happen for this lane
 // to wake ITSELF. Derived from the job's own declarations, never a hand-written per-
 // job string (a per-job table is the list this file exists to abolish).
-export function wakesWhen({ job, E, C, F, D = true, I = true, iv = null, reqAbsent = [], cfg = gateConfig(job), foldTarget = foldOf(job), consumer = undefined } = {}) {
+export function wakesWhen({ job, H = true, hv = null, E, C, F, D = true, I = true, iv = null, reqAbsent = [], cfg = gateConfig(job), foldTarget = foldOf(job), consumer = undefined } = {}) {
   const who = consumer === undefined ? declaredConsumer(job && job.id, { surface: job && job.surface }) : consumer;
   const parts = [];
+  // H FIRST, and it is the ONE clause that asks nothing of him: the expiry IS the wake. No card,
+  // no answer, no clearing step — that is what makes a hold safe to say and impossible to forget.
+  if (!H) parts.push(`the hold expires at ${hv && hv.until ? `${String(hv.until).slice(0, 16)}Z` : "its expiry"}; the lane wakes ITSELF, nothing to answer`);
   if (!E) parts.push(reqAbsent.length ? `${reqAbsent.join(", ")} exists again` : "its evidence exists again");
   // S7 — the C clause names WHOSE reading opens the lane, because "its output reaches him" is the
   // wrong instruction for a lane that was never for him. An undeclared lane's clause is a
@@ -851,6 +913,49 @@ function selftest() {
     inputVerdict(undefined).covered === false && inputVerdict(undefined).ok === true
     && inputVerdict(null).ok === false && inputVerdict(null).covered === true
     && inputVerdict({ ok: true }).ok === true && inputVerdict({ ok: false, dead: [] }).ok === false);
+
+  // ── H · THE CAPTAIN'S HOLD (4 Sep 2026) — the sixth letter, PLANTED VIOLATIONS ──
+  // Every bite below is a hold that WOULD have spent his pool if the letter were missing:
+  // the lane is otherwise perfectly awake (evidence present, consumed today, no streak, no
+  // fold, inputs neutral) and the ONLY thing sleeping it is his word.
+  {
+    const HOLD = { held: true, until: "2026-09-07T18:00:00.000Z", why: "study week — weekly pool reset" };
+    const OK = (j, extra = {}) => decide({ job: J(j), evidence: {}, consumption: { last_at: iso(1), kind: "spoken", by: "dugout" }, failures: { streak: 0 }, now: NOW, ...extra });
+    const awake = OK("intent_digest");
+    const held = OK("intent_digest", { hold: HOLD });
+    assert("H — a lane that is AWAKE on every other letter SLEEPS the moment his hold is live, and only H fails (nothing else was disturbed)",
+      awake.run === true && awake.why.H.ok === true
+      && held.run === false && held.state === "asleep" && held.why.H.ok === false
+      && held.why.E.ok === true && held.why.C.ok === true && held.why.F.ok === true && held.why.D.ok === true && held.why.I.ok === true);
+    assert("H — the verdict SAYS the expiry and his reason, and the wake sentence asks him for NOTHING: the hold expiring IS the self-wake (L5)",
+      /CAPTAIN HOLD until 2026-09-07T18:00Z/.test(held.why.H.detail) && /study week/.test(held.why.H.detail)
+      && /the hold expires at 2026-09-07T18:00Z/.test(held.wakes_when) && /wakes ITSELF, nothing to answer/.test(held.wakes_when)
+      && held.captain_hold && held.captain_hold.blocking === true && held.captain_hold.until === HOLD.until);
+    assert("H — an EXPIRED hold is NOT a hold: `held:false` from the runner leaves the letter open with no clearing step anywhere",
+      OK("intent_digest", { hold: { held: false, until: "2026-09-01T00:00:00.000Z", why: "last week" } }).run === true
+      && OK("intent_digest", { hold: null }).why.H.ok === true && OK("intent_digest").why.H.ok === true
+      && /no captain hold/.test(awake.why.H.detail));
+    assert("H — HIS WORD OUTRANKS HIS OWN HOLD: `gate wake <lane>` (a live force) opens H for one window, and the verdict records that it was forced",
+      OK("intent_digest", { hold: HOLD, forced: { until: iso(-1), once: true } }).run === true
+      && /his word outranks his own hold/.test(OK("intent_digest", { hold: HOLD, forced: { until: iso(-1), once: true } }).why.H.detail)
+      && OK("intent_digest", { hold: HOLD, forced: { until: iso(1) } }).run === false);   // an EXPIRED force is not a force, here either
+    assert("H — HIS STUDY IS EXEMPT BY NAME: gaffer_judge and gaffer_verify run THROUGH a live hold; every other Claude lane sleeps in it",
+      OK("gaffer_judge", { hold: HOLD }).run === true && OK("gaffer_judge", { hold: HOLD }).why.H.ok === true
+      && /HIS STUDY and is exempt by name/.test(OK("gaffer_judge", { hold: HOLD }).why.H.detail)
+      && OK("gaffer_verify", { hold: HOLD }).run === true
+      && holdExempt("gaffer_judge") && holdExempt("gaffer_verify")
+      && !holdExempt("cortex_wake") && !holdExempt("council_chair") && !holdExempt("dmn") && !holdExempt("thalamus_adjudicator") && !holdExempt(null)
+      && OK("cortex_wake", { hold: HOLD }).run === false && OK("council_chair", { hold: HOLD }).run === false && OK("dmn_bg_drain", { hold: HOLD }).run === false);
+    assert("H — A HOLD CAN ONLY SLEEP: a lane already asleep on C stays asleep and the hold NEVER wakes anything (gates only get stricter)",
+      OK("night_coach", { consumption: { last_at: iso(40), kind: "spoken", by: "dugout" }, hold: HOLD }).run === false
+      && OK("night_coach", { consumption: { last_at: iso(40), kind: "spoken", by: "dugout" }, hold: HOLD }).why.C.ok === false);
+    assert("H — the letter is DECIDED BEFORE E and rides in `why` first, so every reader that folds off Object.keys(why) prints it in decision order",
+      Object.keys(held.why).join("") === "HECFDI");
+    assert("H — an ABSENT hold fact is OPEN, never fail-closed (unlike I's ratchet): a letter that slept every lane when its fact could not be read would be the kill list again",
+      holdVerdict(undefined).ok === true && holdVerdict(null).ok === true && holdVerdict({}).ok === true
+      && holdVerdict({ held: true, until: "2026-09-07T18:00:00.000Z" }).ok === false
+      && /NO REASON RECORDED/.test(holdVerdict({ held: true, until: "2026-09-07T18:00:00.000Z" }).detail));
+  }
 
   assert("THIS ORGAN WRITES NOTHING — its source has no write call (the journal, the lane and the card belong to their owners)",
     !/writeFileSync|appendFileSync|renameSync|mkdirSync|unlinkSync/.test(readFileSync(new URL(import.meta.url), "utf8").replace(/^\/\/.*$/gm, "").replace(/assert\("THIS ORGAN WRITES NOTHING[^\n]*\n[^\n]*/m, "")));

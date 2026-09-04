@@ -573,7 +573,12 @@ async function dream(deps = {}) {
       const v = deps.gateVerdict ? deps.gateVerdict("dmn", { evidence }) : brain.gateVerdictForLane("dmn", { evidence, gate: {}, now, aliases: ["dmn_rollout", "dmn_counter"], surface: { kind: "code", where: "scripts/thalamus.mjs precache whisper (dmn_precache.json → the mouth's hint)" } });
       if (!deps.gateVerdict) { try { brain.gateTransition("dmn", v, { now, by: "dmn" }); } catch { } }
       if (!v.run) {
-        const failed = ["E", "C", "F"].filter((k) => !v.why[k].ok);
+        // the failed letters are folded off the VERDICT'S OWN `why`, never a hand-written list.
+        // A literal E·C·F stood here and would have printed "asleep on  — " the day the lane slept
+        // on D, on I, or (4 Sep 2026) on H, the captain's hold: the same dropped-letter bug RUNG A
+        // fixed in brain's journal row and in its reader, surviving in the skip line the DMN
+        // actually returns. Structure-derived, so the seventh letter cannot repeat it here.
+        const failed = Object.keys(v.why || {}).filter((k) => v.why[k] && !v.why[k].ok);
         return { ok: false, asleep: true, skipped: `THE GATE: asleep on ${failed.join("+")} — ${failed.map((k) => `${k}: ${v.why[k].detail}`).join(" · ")} · wakes when: ${v.wakes_when}` };
       }
     } catch (e) { swallow("fail-open — see above", e); }
@@ -843,7 +848,7 @@ async function drainBg(deps = {}) {
         : brain.gateVerdictForLane("dmn_bg_drain", { evidence, gate: {}, now: deps.now || new Date(), surface: { kind: "code", where: "scripts/thalamus.mjs /bg-drained (the second spotlight returns to the nucleus)" } });
       if (!deps.gateVerdict) { try { brain.gateTransition("dmn_bg_drain", v, { now: deps.now || new Date(), by: "dmn" }); } catch (e) { swallow("drainBg: the gate journal is unwritable — the verdict still applied, the record did not", e); } }
       if (!v.run) {
-        const failed = ["E", "C", "F", "D", "I"].filter((k) => v.why[k] && !v.why[k].ok);
+        const failed = Object.keys(v.why || {}).filter((k) => v.why[k] && !v.why[k].ok);   // folded off the verdict itself — see the dream's gate above for why a literal here is a bug waiting for the next letter
         return { ok: false, asleep: true, skipped: `THE GATE: asleep on ${failed.join("+")} — ${failed.map((k) => `${k}: ${v.why[k].detail}`).join(" · ")} · wakes when: ${v.wakes_when}` };
       }
     } catch (e) { swallow("fail-open — see above", e); }
@@ -1373,6 +1378,21 @@ async function selftest() {
         generate: genBG, recordUse: () => {}, post: async () => ({ ok: true }), gateVerdict: () => awakeV });
       assert("RUNG A · …and an AWAKE verdict drains exactly as before — the gate added a refusal, never a new behaviour",
         rAwakeGate.ok === true && rAwakeGate.drained === r.drained, JSON.stringify({ gated: rAwakeGate.drained, ungated: r.drained }));
+      // ── H · THE CAPTAIN'S HOLD (4 Sep 2026) — the Rest Room is 64% of ALL spend, so it is the
+      // single biggest thing his word closes. It rides the letter for free (both its Claude doors
+      // already ask brain's gateVerdictForLane), and the ONLY new failure mode was the SKIP LINE:
+      // a hand-written E·C·F list here would have printed "asleep on  — " and named no reason.
+      {
+        const askedH = []; let genH = 0;
+        const heldV = { run: false, state: "asleep", why: { H: { ok: false, detail: "CAPTAIN HOLD until 2026-09-07T18:00Z — study week" }, E: { ok: true }, C: { ok: true }, F: { ok: true }, D: { ok: true }, I: { ok: true } }, wakes_when: "the hold expires at 2026-09-07T18:00Z; the lane wakes ITSELF, nothing to answer" };
+        const rHeld = await drainBg({ appendLedger: () => {}, tone: { effects: { dmn_allowed: true } }, readBgQueue: () => bgRows, board: twoLanes, keys: keysFix,
+          generate: async () => { genH++; return genBG(); }, recordUse: () => {}, post: async () => ({ ok: true }),
+          gateVerdict: (lane, ctx) => { askedH.push(lane); return heldV; } });
+        assert("H · CAPTAIN HOLD — the biggest spender in the organism stops on the SIXTH letter with zero tokens generated, and the skip line NAMES it (H, his reason, the expiry) instead of the blank the old hand-written E·C·F list would have printed",
+          rHeld.asleep === true && genH === 0 && askedH.length === 1
+          && /asleep on H/.test(String(rHeld.skipped)) && /CAPTAIN HOLD until 2026-09-07T18:00Z/.test(String(rHeld.skipped)) && /study week/.test(String(rHeld.skipped))
+          && /wakes ITSELF, nothing to answer/.test(String(rHeld.skipped)));
+      }
     }
 
     // ── THE DOOR (wiring audit, 11 Aug 2026) ────────────────────────────────

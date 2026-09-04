@@ -368,7 +368,10 @@ async function regenIfChanged(deps = {}) {
     // arsenal-audit-artifacts\queue\OPEN-FORKS.md for the architect. A named gap, never a hole.
     return b.gateVerdictForLane("selfknowledge", { evidence: { ok: true, detail: st.exists ? "the tree changed since the portrait" : "no portrait on disk" }, gate: { window_days: 14, fail_streak: 5 }, surface: { kind: "code", where: "scripts/dugout.mjs get_organism" }, aliases: ["selfknowledge"], now: deps.now || new Date(), inputs: undefined });
   })();
-  if (!verdict.run) return { ok: true, ran: false, asleep: true, why: `tree changed but ASLEEP by THE GATE (${["E", "C", "F", "D"].filter((k) => verdict.why[k] && !verdict.why[k].ok).join("+")}) — ${verdict.wakes_when}`, status: st, verdict };
+  // the failed letters are folded off the VERDICT'S OWN `why` — a hand-written E·C·F·D list here
+  // printed "ASLEEP by THE GATE ()" the moment a fifth or sixth letter bit (I since S13, H — the
+  // captain's hold — since 4 Sep 2026). Same dropped-letter class RUNG A fixed twice inside brain.
+  if (!verdict.run) return { ok: true, ran: false, asleep: true, why: `tree changed but ASLEEP by THE GATE (${Object.keys(verdict.why || {}).filter((k) => verdict.why[k] && !verdict.why[k].ok).join("+")}) — ${verdict.wakes_when}`, status: st, verdict };
   const freeze = deps.freeze !== undefined ? deps.freeze : freezeCheck(deps);
   const r = (deps.generate || generate)({ ...deps, freeze, thaw: deps.thaw });
   return { ok: r.ok, ran: true, result: r, status: st, why: r.ok ? `regenerated — tree ${r.tree_hash}` : `regen FAILED — ${r.error}` };

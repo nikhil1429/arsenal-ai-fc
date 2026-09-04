@@ -61,7 +61,7 @@ import { execFileSync, execFile } from "node:child_process";
 // consumer of the bench census stamped below, and the selftest runs the real rows
 // through it so the producer goes red the day the reader is deleted. brain.mjs does
 // not import this file, so the edge stays one-way.
-import { headroom, loadConfig as loadBrainConfig, bannedPhraseCheck, maxThinkingFor, ledgerShiftSummary } from "./brain.mjs";
+import { headroom, loadConfig as loadBrainConfig, bannedPhraseCheck, maxThinkingFor, ledgerShiftSummary, captainHold, journalHold } from "./brain.mjs";   // captainHold/journalHold: H, THE CAPTAIN'S HOLD (4 Sep 2026) — the cortex never asks THE GATE, so the letter reaches it through brain's own reader; one definition of "held", never a second copy
 import { loadConfig as loadThalamusConfig, pendingWakes } from "./thalamus.mjs";
 // M8 — the Back Room: three cheap adversarial drafts before the one deep call
 import { convene, councilSection } from "./council.mjs";
@@ -695,6 +695,22 @@ async function serveOne(wake, deps = {}) {
   }
   if (!wake || !wake.moment_id || wake.consumed || wake.status !== "pending") return { served: false, idle: true };
 
+  // ── H · THE CAPTAIN'S HOLD (4 Sep 2026) ───────────────────────────────────
+  // HIS WORD: "close every API call the organism is doing." This is the single most expensive
+  // read in the organism (opus, ~40k a wake) and it answers to NO gate — cortex_wake serves a
+  // live queue, it is not a scheduled brain job — so the sixth letter reaches it here, through
+  // brain's own captainHold. Same fact, same slot, same expiry as every gated lane.
+  // DECLINE, never drop: only the thalamus can close a queue row, so a silent return leaves the
+  // wake pending and the daemon re-fires on it forever (the busy-loop scar this file is full of).
+  // No attempt burned, not one token, ONE journal row, ZERO cards — a sleep he ordered is not news.
+  const hold = deps.hold !== undefined ? deps.hold : captainHold(now);
+  if (hold && hold.held === true) {
+    log(`cortex: CAPTAIN HOLD until ${String(hold.until).slice(0, 16)}Z (${hold.why || "no reason recorded"}) — ${wake.moment_id} declined (captain hold), no call, no attempt burned; the hold expires by itself`);
+    try { (deps.journalHold || journalHold)({ lane: "cortex_wake", hold, by: "cortex", now }); } catch (e) { swallow("serveOne: the gate journal is unwritable — the hold still applied, the record did not", e); }
+    const s = await post("/deep-answer", { moment_id: wake.moment_id, declined: true, reason: "captain-hold", provenance: "cortex" });
+    return { served: false, declined: "captain hold", captain_hold: { until: hold.until, why: hold.why }, reported: !(s && s.ok === false) };
+  }
+
   // §11 (Block 5.2) — a sitting is open: the sitting brain holds this conversation. DECLINE the
   // wake (reported to the thalamus, nothing dangles), burn no attempt, spend nothing.
   if (sittingOpenNow(deps)) {
@@ -1029,6 +1045,8 @@ async function selftest() {
         cfg: CFG_FIX, brainCfg, env: {}, readWake: () => wake, bus,
         sitting: null,                               // hermetic — §11's sitting gate reads the FIXTURE, never live sitting.json (no sitting ⇒ the cortex as before)
         council: null,                               // hermetic — the live council never convenes inside a selftest
+        hold: { held: false },                       // hermetic — H reads the FIXTURE, never live brain_queue.json: a suite whose verdict flips the day HE arms a hold is testing his settings, not the code (brain.mjs's own rule)
+        journalHold: () => {},                       // hermetic — the gate journal belongs to brain.mjs and no selftest may append to it
         post: async (p, b) => { out.posts.push({ p, b }); return { ok: true }; },
         appendLedger: (r) => out.rows.push(r),
         runtime: over.runtime || { attempts: {} }, saveRuntime: (o) => out.saved.push(JSON.parse(JSON.stringify(o))),
@@ -1056,6 +1074,25 @@ async function selftest() {
     const r2 = await serveWake(d2);
     assert("§11 SITTING GATE — a CLOSED sitting on disk (or none) is no sitting: the wake is served as before; laneResolved treats the decline as an acknowledged close (no busy-loop)",
       r2.served === true && sittingOpenNow({ sitting: null }) === false && sittingOpenNow({ sitting: { id: "a", closed_at: null } }) === true && laneResolved({ declined: "sitting-open", reported: true }) === true);
+  }
+  // ── H · THE CAPTAIN'S HOLD (4 Sep 2026) — the PLANTED VIOLATION is a wake that would spend ──
+  // The fixture below is the happy arc, byte for byte: a pending wake, full headroom, no sitting,
+  // a generator that WORKS. The only difference is his word. If the hold check were missing this
+  // block spends ~40k opus tokens; the assert is the spy proving it spends none.
+  {
+    let calls = 0;
+    const HOLD = { held: true, until: "2026-09-07T18:00:00.000Z", why: "study week — weekly pool reset" };
+    const journalled = [];
+    const { deps, out } = mkDeps({ deps: { hold: HOLD, journalHold: (a) => journalled.push(a), call: () => { calls++; return { ok: true, text: "x", total_tokens: 40000 }; } } });
+    const r = await serveWake(deps);
+    assert("H · CAPTAIN HOLD — the most expensive read in the organism spends ZERO under his hold: no `claude` call, no ledger row, NO attempt burned, and the wake is DECLINED to the thalamus so nothing dangles",
+      r.declined === "captain hold" && r.reported === true && calls === 0 && out.rows.length === 0 && out.saved.length === 0
+      && out.posts.length === 1 && out.posts[0].b.reason === "captain-hold" && laneResolved(r) === true);
+    assert("H · CAPTAIN HOLD — ONE journal row on the gate journal (lane cortex_wake, his reason and the expiry), and ZERO cards: a sleep he ordered is not news",
+      journalled.length === 1 && journalled[0].lane === "cortex_wake" && journalled[0].by === "cortex" && journalled[0].hold.until === HOLD.until && /study week/.test(journalled[0].hold.why));
+    const { deps: dExpired, out: oExpired } = mkDeps({ deps: { hold: { held: false, until: "2026-09-01T00:00:00.000Z", why: "last week", expired: true }, call: () => ({ ok: true, text: "served", total_tokens: 1440, input_tokens: 1200, output_tokens: 240, duration_ms: 9000 }) } });
+    assert("H · an EXPIRED hold is not a hold — the very same wake is served again with nothing cleared anywhere: the expiry IS the self-wake (L5)",
+      (await serveWake(dExpired)).served === true && oExpired.rows.length === 1);
   }
   // the happy arc
   {
@@ -1614,12 +1651,21 @@ async function selftest() {
     const lstate = { concepts: [{ id: "embeddings", fluency: "🟢 fluent" }, { id: "attention", fluency: "🔴 learning" }] };
     const goodGraph = JSON.stringify({ nodes: [{ id: "embeddings", fluency: "fluent" }, { id: "attention", fluency: "expert" }, { id: "attention", fluency: "learning" }, { id: "not-a-real-concept", fluency: "fluent" }], edges: [{ from: "embeddings", to: "vector-search", kind: "prereq" }, { from: "attention", to: "ghost", kind: "related" }], clusters: [{ name: "rag", concepts: ["embeddings", "ghost-concept"] }, { name: "all-ghost", concepts: ["nope"] }], next_unlocks: ["vector-search", "ghost"] });
     const okHr = { allowed: 400000, phase: "overnight" };
-    const base = { concepts, lstate, headroom: okHr, now: new Date("2026-07-18T03:00:00Z"), env: {}, brainCfg: { guards: {} }, cfg: { deep: { min_headroom_tokens: 50000 } } };
+    const base = { concepts, lstate, headroom: okHr, now: new Date("2026-07-18T03:00:00Z"), env: {}, brainCfg: { guards: {} }, cfg: { deep: { min_headroom_tokens: 50000 } }, hold: { held: false }, journalHold: () => {} };   // hold/journalHold hermetic — same law as mkDeps above
     let wrote = null, metered = [];
     const r = await runConsolidation({ ...base, appendLedger: (o) => metered.push(o), write: (o) => { wrote = o; }, call: async () => ({ ok: true, text: goodGraph, total_tokens: 12000, input_tokens: 8000, output_tokens: 4000, duration_ms: 30000 }) });
     assert("CONSOLIDATE — writes a concept graph, metered as cortex_consolidate", r.ok && wrote && metered.length === 1 && metered[0].job === "cortex_consolidate");
     assert("CONSOLIDATE — grounds it: nodes/edges/unlocks NOT in the concept set are dropped (no ghosts)", wrote && wrote.nodes.length === 2 && wrote.edges.length === 1 && wrote.next_unlocks.length === 1 && wrote.next_unlocks[0] === "vector-search");
     assert("CONSOLIDATE — clusters grounded (ghost concepts dropped, all-ghost cluster removed) + nodes deduped + fluency clamped to enum", wrote.clusters.length === 1 && wrote.clusters[0].concepts.length === 1 && wrote.clusters[0].concepts[0] === "embeddings" && wrote.node_count === 2 && wrote.nodes.find(n => n.id === "attention").fluency === "unknown");
+    // H · THE CAPTAIN'S HOLD — the second opus door, same planted violation: a run that would
+    // otherwise succeed, stopped by his word alone, and METERED as a did-not-run (#71's law).
+    {
+      const jm = []; const jr = [];
+      const heldRun = /** @type {any} */ (await runConsolidation({ ...base, hold: { held: true, until: "2026-09-07T18:00:00.000Z", why: "study week" }, journalHold: (a) => jr.push(a), appendLedger: (o) => jm.push(o), write: () => { throw new Error("no write under a hold"); }, call: async () => { throw new Error("must not call under a captain hold"); } }));
+      assert("H · CAPTAIN HOLD — cortex_consolidate spends nothing under his hold, says WHY in the skip line, and is METERED as a did-not-run like every other early return (#71); one journal row, no card",
+        heldRun.ok === false && /captain hold until 2026-09-07T18:00Z/.test(heldRun.skipped) && jm.length === 1 && jm[0].ran !== true && /did not run: captain hold/.test(jm[0].error)
+        && jr.length === 1 && jr[0].lane === "cortex_consolidate");
+    }
     const skip = await runConsolidation({ ...base, headroom: { allowed: 10000, phase: "study" }, call: async () => { throw new Error("must not call with no headroom"); }, write: () => { throw new Error("no write"); }, appendLedger: () => {} });
     assert("CONSOLIDATE — no headroom → skip, no Opus call, no write (never overshoots the meter)", skip.ok === false && /headroom/.test(skip.skipped));
     let m2 = [];
@@ -1863,6 +1909,15 @@ async function runConsolidation(deps = {}) {
   };
   if (brainCfg.guards && brainCfg.guards.refuse_if_api_key_env && env.ANTHROPIC_API_KEY) {
     return { ...bail("API-key refusal (Max plan only, never metered)"), refused: true };
+  }
+  // H · THE CAPTAIN'S HOLD (4 Sep 2026) — the second opus door in this file, and it asks no gate
+  // either. It goes through `bail`, which is #71's whole point: EVERY early return is metered, so
+  // a night the consolidation did not run because he held the pool is visible on the same ledger
+  // as one it did. Journal once, no card, nothing to clear.
+  const hold = deps.hold !== undefined ? deps.hold : captainHold(now);
+  if (hold && hold.held === true) {
+    try { (deps.journalHold || journalHold)({ lane: "cortex_consolidate", hold, by: "cortex", now }); } catch (e) { swallow("runConsolidation: the gate journal is unwritable — the hold still applied, the record did not", e); }
+    return { ...bail(`captain hold until ${String(hold.until).slice(0, 16)}Z — ${hold.why || "no reason recorded"} (the hold expires by itself; nothing to clear)`), captain_hold: { until: hold.until, why: hold.why } };
   }
   const { concepts, fluency } = gatherCorpus(deps);
   if (concepts.length < 3) return bail(`too few concepts (${concepts.length}/3 needed)`);
