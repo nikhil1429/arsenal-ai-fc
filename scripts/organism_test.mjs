@@ -1785,15 +1785,17 @@ function path() {
         (() => { const r = bank("tokenization:a", "--gut", "shaky", "--asked", "q?", "--said", "kuch bola gaya hai", "--surface", "code"); return r.code !== 0 && /--axis/.test(r.out); })());
 
       const d1 = forge("axis", "a", "done");
-      assert("A3 · `axis a done` is REFUSED while that axis has had no jirah of its own (five axes were marked done on one jirah in July)",
-        d1.code !== 0 && /never cross-examined/.test(d1.out), d1.out.slice(0, 250));
-      forge("moment", "jirah");
-      const d2 = forge("axis", "a", "done");
-      assert("A3 · still refused with no INTERVIEW-register line — Hinglish understanding and the cold English line are two skills, and only one was ever measured",
-        d2.code !== 0 && /INTERVIEW-register/.test(d2.out), d2.out.slice(0, 250));
+      assert("A3 · `axis a done` is REFUSED with no INTERVIEW-register line — Hinglish understanding and the cold English line are two skills, and only one was ever measured",
+        d1.code !== 0 && /INTERVIEW-register/.test(d1.out), d1.out.slice(0, 250));
+      // HIS RULING, 4 Sep 2026 (row 45) — driven, not asserted in prose. NO `moment jirah`
+      // is declared anywhere in this axis, on purpose: the grilling is a CONCEPT-level act
+      // (THE METHOD 7 BOLO · 8 CALIBRATE · 9 JIRAH) and it is counted at the LOCK below.
+      assert("A3 · …and the axis refusal never asks for a jirah any more — the grilling moved to the STEP 9 round on his word, and a gate still demanding it here would re-install what he withdrew",
+        !/cross-examined/.test(d1.out) && !/moment jirah/.test(d1.out), d1.out.slice(0, 250));
       bank("tokenization:a", "--axis", "a", "--gut", "knew", "--asked", "Say it as you would in the room.",
         "--said", "Tokenization splits text into sub-word units the model holds embeddings for.", "--surface", "code", "--register", "interview");
-      assert("A3 · with the banked answer, its own jirah and the interview line, the axis closes", forge("axis", "a", "done").code === 0);
+      assert("A3 · the axis closes on his Bolo row + the interview line, with NO jirah moment ever declared for it",
+        forge("axis", "a", "done").code === 0 && !((readSession().moments_by_axis || {}).a || {}).jirah);
 
       const e1 = forge("axis", "b", "done");
       assert("A3 · an axis with NO evidence exits 1 and hands over the exact bank command — never 'try harder'",
@@ -1802,12 +1804,39 @@ function path() {
       assert("A3 · the bypass works, is recorded with HIS reason, and is counted — an escape hatch that left no trace would become the normal path",
         e2.code === 0 && (readSession().bypasses || []).length === 1 && /sunna tha/.test(readSession().bypasses[0].why));
 
+      // THE JUDGE'S VERDICTS, as rows — the settlement `gaffer_brain.mjs judge-round`
+      // writes, replayed here so this lane stays model-free and token-free.
+      const settleAll = () => {
+        const t = RD(QUEUE);
+        const rs = t.split(/\r?\n/).filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+        WR(QUEUE, t + rs.filter((r) => r.kind === "capture").map((r) => JSON.stringify({ kind: "settled", of: r.id, ts: "2026-09-04T06:00:00.000Z" })).join("\n") + "\n");
+      };
       const l1 = forge("step", "10");
       assert("A3 · STEP 10 is refused without a negative-space probe, and the refusal leaves the step exactly where it stood",
         l1.code !== 0 && /does NOT do/.test(l1.out) && readSession().step !== 10);
       bank("tokenization:c", "--axis", "c", "--gut", "guessed", "--asked", "Ye kya NAHI karta?",
         "--said", "ye meaning nahi samajhta, sirf tukde karta hai", "--surface", "code", "--probe", "negative_space");
-      assert("A3 · STEP 10 opens once the negative-space probe exists (the dossier's #1 senior signal)", forge("step", "10").code === 0);
+      // ── HIS RULING, 4 Sep 2026 (row 45) · THE GRILLING IS COUNTED HERE NOW ────
+      // axes a (closed on evidence) and b (closed on a declared bypass) are both DONE,
+      // and neither has been grilled. The LOCK is the one place that can see that.
+      const l2 = forge("step", "10");
+      assert("A3 · STEP 10 is STILL refused while the axes he closed were never GRILLED — the refusal names them by letter and hands over the exact bank command",
+        l2.code !== 0 && /axis ab /.test(l2.out) && /--probe jirah/.test(l2.out) && /judge-round/.test(l2.out) && readSession().step !== 10, l2.out.slice(0, 400));
+      for (const a of ["a", "b"]) {
+        bank(`tokenization:${a}`, "--axis", a, "--gut", "shaky", "--asked", `Axis ${a}: apna hi weld tod ke dikhao — reinvent it from scratch.`,
+          "--said", "phir se banata hoon: pehle tukde, phir unke ids, phir unke vectors", "--surface", "code", "--probe", "jirah");
+      }
+      bank("tokenization:a", "--axis", "a", "--gut", "knew", "--asked", "Axis a aur axis b ko ek saath jodo — dono ke bina kya tootta hai?",
+        "--said", "dono milke hi ek pipeline banate hain, ek nikal do to doosra bekaar", "--surface", "code", "--probe", "cross_axis");
+      const l3 = forge("step", "10");
+      assert("A3 · a jirah row nobody JUDGED is a question asked, not a grade — STEP 10 stays shut until the round's ONE judge call has settled them",
+        l3.code !== 0 && /axis ab /.test(l3.out) && readSession().step !== 10, l3.out.slice(0, 300));
+      settleAll();
+      assert("A3 · STEP 10 opens once every done axis carries a JUDGED jirah row, the negative-space probe is banked (the dossier's #1 senior signal) and one cross_axis row exists",
+        forge("step", "10").code === 0);
+      // …and one more unjudged answer, so the CLOSE gate below still has its subject.
+      bank("tokenization:d", "--axis", "d", "--gut", "guessed", "--asked", "Axis d: ye number kis range mein hota hai?",
+        "--said", "shayad hazaaron mein, exact yaad nahi aa raha abhi", "--surface", "code", "--probe", "recall");
 
       const before = RD(REPSP);
       forge("status"); forge("contract");
@@ -1817,9 +1846,7 @@ function path() {
       const c1 = forge("close");
       assert("A3 · `close` refuses while banked answers carry no verdict — and it leaves the session OPEN, because a coverage report is a session's only durable trace",
         c1.code !== 0 && /judge-round/.test(c1.out) && !readSession().closed_at);
-      const queueText = RD(QUEUE);
-      const rows = queueText.split(/\r?\n/).filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
-      WR(QUEUE, queueText + rows.map((r) => JSON.stringify({ kind: "settled", of: r.id, ts: "2026-09-04T06:00:00.000Z" })).join("\n") + "\n");
+      settleAll();
       const c2 = forge("close");
       assert("A3 · once every banked answer has a verdict the close goes through, and the report NAMES the bypass out loud with his own reason",
         c2.code === 0 && /EVIDENCE GATES BYPASSED/.test(c2.out) && /sunna tha/.test(c2.out), c2.out.slice(-400));

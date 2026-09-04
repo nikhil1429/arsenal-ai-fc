@@ -74,7 +74,7 @@ node scripts/forge_session.mjs start <concept>        # at session open, before 
 node scripts/forge_session.mjs resume                 # SAME concept, next day: wakes the STALE session where it stands (W0-D, 2 Sep 2026). Blanks nothing, re-teaches nothing, moves no step — it re-stamps the last-touch clock so the pacer speaks again and records the re-entry. `start` still REFUSES while a session is open; `close` still ENDS it. Use this whenever a concept spans two sittings.
 node scripts/forge_session.mjs step <0-11>            # BEFORE each step's first message
 node scripts/forge_session.mjs axis <a-i> now         # the moment you START teaching an axis (declares, completes NOTHING)
-node scripts/forge_session.mjs axis <a-i> done|defer  # as each axis closes (or is deferred) — `done` only AFTER its own Jirah; bare `axis <x>` refuses (P4.1)
+node scripts/forge_session.mjs axis <a-i> done|defer  # as each axis closes (or is deferred) — `done` once his Bolo + interview line are banked (NO jirah since 4 Sep 2026); bare `axis <x>` refuses (P4.1)
 node scripts/forge_session.mjs moment pehle_guess|widget_gate|check_q|jirah
 node scripts/forge_session.mjs close                  # at session khatam → coverage report
 ```
@@ -84,7 +84,7 @@ node scripts/forge_session.mjs close                  # at session khatam → co
 **The moment he finishes speaking an answer, you type ONE line. Nothing else. He types nothing.**
 
 ```
-node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut knew|shaky|guessed --asked "<the question you actually asked, verbatim>" --said "<his words, verbatim>" --surface code --latency_ms <n> [--probe recall|reconstruct|defend|novel|negative_space] [--register interview]
+node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut knew|shaky|guessed --asked "<the question you actually asked, verbatim>" --said "<his words, verbatim>" --surface code --latency_ms <n> [--probe recall|reconstruct|defend|novel|negative_space|jirah|cross_axis] [--register interview]
 ```
 
 - `--said` is new and is why this is one command: no heredoc, no stdin, nothing to get wrong
@@ -95,13 +95,17 @@ node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --
 - `--register interview` marks the **cold English line** — the one he says the way he would in
   the room. Everything else is Hinglish and needs no flag.
 - `--probe negative_space` is "what does this NOT do". The dossier calls it the #1 senior signal.
+- `--probe jirah` marks an answer given **in the step-9 grilling round**. The LOCK counts one
+  judged jirah row per axis he closed, so this flag is what makes the round provable.
+- `--probe cross_axis` marks a question that needed **two axes at once**. Nine axes answered
+  one at a time are nine facts, not one concept; the LOCK wants at least one of these.
 
 **THREE GATES NOW REFUSE YOU, and each one names the exact command that clears it:**
 
 | The gate | What it wants |
 |---|---|
-| `axis <x> done` | ≥1 banked answer for that axis since `axis <x> now` · that axis's own `moment jirah` · ≥1 `--register interview` line for it |
-| `step 10` (LOCK) | ≥1 banked answer with `--probe negative_space` for the concept |
+| `axis <x> done` | ≥1 banked answer for that axis since `axis <x> now` · ≥1 `--register interview` line for it. **No jirah** — withdrawn 4 Sep 2026 on his ruling |
+| `step 10` (LOCK) | ≥1 banked `--probe jirah` answer **carrying a judge verdict** for EVERY axis marked done · ≥1 `--probe negative_space` answer · ≥1 `--probe cross_axis` answer. The refusal names the axes still missing one |
 | `close` | the session banked something, and every banked answer has a verdict (`judge-round` ran) |
 
 Every one takes `--no-rep-why "<reason>"` as an override. **It is recorded, it is counted, and
@@ -139,14 +143,21 @@ again. (A re-lock burns all nine at once; you do not have to do it per axis afte
 3. **Dikhao** — the concept's ONE widget, driven at *this* axis (`moment widget_gate`).
 4. **Saath karo** — you and he trace it together, on HIS data, numbered.
 5. **Akele karo** — he does it alone. Struggle-first; never hand him the answer.
-6. **Jirah** — `moment jirah`, gut-word FIRST, the dossier's probe kind for this axis, traps sprung here.
+6. **ONE check-question** — `moment check_q`, on what you JUST taught, then STOP and wait.
+   **No grilling here. No traps. No "reinvent it from scratch."** *(HIS RULING, 4 Sep 2026,
+   after he closed axis a: "questions and grilling as much as you want with full intensity and
+   quality should be done after the entire topic is taught… right now after every axis it is
+   not the right strategy for domination." The Jirah moved OUT of this loop and into the round
+   at step 9 — see below. `moment jirah` is still legal at any step; it just no longer belongs
+   here, and `axis <x> done` no longer asks for it.)*
 7. **Bolo** — in Hinglish (empty skeleton if he stalls, never a written answer) **and then ONE
-   cold line in interview English.** Bank both, with latency.
+   cold line in interview English.** Bank BOTH, with latency — the Hinglish one plain, the
+   English one with `--register interview`. These two rows are what `axis <x> done` counts.
 8. **The old note opens LAST** — his own capsule entry for this axis, after he has said it himself.
 9. `axis <x> done`.
 
 THE METHOD's 0–11 numbering stays the code order; this loop runs as pacer moments inside steps
-3–9. Steps 7 BOLO and 8 CALIBRATE also run ONCE at concept level before 10.
+3–6. Steps 7 BOLO, 8 CALIBRATE and 9 JIRAH run ONCE at CONCEPT level, after all nine axes, before 10.
 
 **EVERY TEACHER TURN:** `STEP n/11 · <name> · axis x` + "tu yahan hai, itna bacha" → ONE idea in
 the three layers → the mechanism in text + a numbered trace on HIS data → ONE check-question →
@@ -202,10 +213,14 @@ staged … non-blocking" and the session still opens). Evidence:
 do NOT re-teach the axes it lists and do NOT restart from step 0. `start` will **REFUSE**
 while any unclosed session exists, stale or not.
 
-**Mark an axis `done` AFTER its own `moment jirah`, not before.** An axis marked with no
-jirah behind it — or sharing one jirah with other axes — is recorded as **UNGRADED**: canon
-says the status comes from JIRAH, **per axis**, never from a self-rating (§9, §10 below).
-Re-marking after the Jirah upgrades it, so a mis-ordered mark is always recoverable.
+**Mark an axis `done` once his Bolo row AND his interview line are banked for it — that is the
+whole of it.** *(Changed 4 Sep 2026 on his ruling. This paragraph used to read "mark an axis
+`done` AFTER its own `moment jirah`, not before"; the per-axis Jirah is withdrawn.)* Nothing is
+unguarded by the move: the grilling is now counted at the **LOCK**, per axis, and counted
+HARDER there — `step 10` refuses until every axis you marked done carries a banked
+`--probe jirah` answer **with a judge verdict on it**, which a declared moment never was.
+Canon's law is unchanged and is now enforced where it can actually be checked: the status comes
+from JIRAH, never from a self-rating (§9, §10 below).
 
 **Every teaching message opens with one line: `STEP n/11 · NAME · axis <x>`.** He must be
 able to see, at a glance and without reading any rule, which step he is in and which one
@@ -287,16 +302,39 @@ is not.
   Chala-mode clause means an **undriven widget is a FAILED widget** — built was never the bar.
 - **5 · SAATH KARO.** Work it through together — on the widget or on paper.
 - **6 · AKELE KARO.** He does it alone and makes mistakes. Widget Chala mode fits here.
-- **7 · BOLO.** **Voice first** — he speaks it aloud (or voice note), THEN types the
-  transcript. The rep is the voice; the text is only delivery. **NON-NEGOTIABLE** — this is
-  the interview defense. Grade honestly.
-- **8 · CALIBRATE.** Before Jirah, he self-rates confidence **per axis**. Predicted-vs-actual
-  gap = the unknown-unknown detector → goes in the capsule's `calibration` field.
-- **9 · JIRAH.** You become the **skeptical interviewer**. Per axis: one sharp Q + a trap +
-  "what's your take?" (taste) + "reinvent it from scratch" (first-principles).
-  `moment jirah`. Held = green; cracked = re-weld NOW, or cracked-log it if the time-box
-  hit. *"Look it up karunga, reasoning yeh hai"* = an acceptable hold. Capsule status
-  (`tempered-90`) comes from JIRAH — **never** from self-rating.
+**⭐ 7, 8 AND 9 ARE THE ROUND — they run ONCE, after ALL NINE AXES are taught, on the whole
+concept.** *(HIS RULING, 4 Sep 2026: "once i learn the entire concept and finish it then grill
+me as much as you can". Not Re-Jirah — that stays a separate cold test days later. This is the
+same-day round that turns nine taught axes into one owned concept, and the LOCK will not open
+without it.)*
+
+- **7 · BOLO.** The WHOLE concept, not an axis. **Voice first** — he speaks it aloud (or voice
+  note), THEN types the transcript. The rep is the voice; the text is only delivery.
+  **NON-NEGOTIABLE** — this is the interview defense. Grade honestly.
+- **8 · CALIBRATE.** Before a single question is asked: **one gut-word per axis**, all nine, out
+  loud. Predicted-vs-actual gap = the unknown-unknown detector → goes in the capsule's
+  `calibration` field. Do this BEFORE Jirah or the number means nothing.
+- **9 · JIRAH — full intensity, the whole topic, 30–45 minutes, time-boxed.** You become the
+  **skeptical interviewer** and you stop being kind. `moment jirah` once at the top. In order:
+  1. **Per axis** — one sharp question + **the capsule's own traps** for it (bait him with the
+     exact thing he fell for last time) + "what's your take?" (taste) + "reinvent it from
+     scratch" (first-principles), shaped by that axis's **probe kind from the dossier** —
+     `forge_session.mjs contract` prints them per axis every turn, on the line
+     `bache axes ke interview-probes: a←recall · b←reconstruct · …`. Bank every answer:
+     `--probe jirah --gut <word> --latency_ms <n>`.
+  2. **Cross-axis** — questions that need TWO axes at once, because nine axes answered one at a
+     time are nine facts and not one concept. Bank them `--probe cross_axis`.
+  3. **Negative space** — what this concept does **NOT** do, and where he would refuse to use
+     it. Bank `--probe negative_space`. The dossier's #1 senior signal.
+  4. **The three registers** — say it to a **CEO**, to a **junior**, and to a **skeptical senior
+     engineer** who thinks he is wrong. Bank the senior one `--register interview`.
+
+  **Gut-word BEFORE every answer, latency on every bank.** Held = green; **cracked = re-weld
+  NOW and ask it again in the same round** — a crack you only logged is a crack he keeps.
+  Cracked-log it only if the time-box actually hit. *"Look it up karunga, reasoning yeh hai"* =
+  an acceptable hold. Then `node scripts/gaffer_brain.mjs judge-round` — the judge grades the
+  round at its close, and **`step 10` refuses until it has**. Capsule status (`tempered-90`)
+  comes from JIRAH — **never** from self-rating.
 - **10 · LOCK.** Emit that ONE capsule's `<id>.json` (FORGE_SPEC §3 shape) + the widget's
   self-contained `.html` + poster. **GATE 1 — CAPTURE-GATE:** draft every `doubts[]` entry
   on the **COLD-READER STANDARD** (ATOMIC · SUBJECT explicitly named · answer-HIDDEN · RICH

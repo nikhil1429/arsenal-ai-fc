@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-09-04T01:25:11.430Z",
+ "updated_at": "2026-09-04T05:52:53.280Z",
  "tables": {
   "mechanisms": [
    {
@@ -316,15 +316,17 @@
    {
     "subject": "probe_kinds",
     "schema_owner": "gaffer_brain.mjs",
-    "witness": "gaffer_brain.mjs — gradeCapture --probe; forge_session lockGate reads negative_space",
+    "witness": "gaffer_brain.mjs — gradeCapture --probe; forge_session lockGate reads negative_space + jirah (per done axis, judged) + cross_axis at STEP 10 (his ruling row 45, 4 Sep 2026)",
     "subjects": [
      "recall",
      "reconstruct",
      "defend",
      "novel",
-     "negative_space"
+     "negative_space",
+     "jirah",
+     "cross_axis"
     ],
-    "updated_at": "2026-09-04T01:25:10.247Z",
+    "updated_at": "2026-09-04T05:52:53.278Z",
     "added_at": "2026-09-04T01:25:10.247Z"
    },
    {

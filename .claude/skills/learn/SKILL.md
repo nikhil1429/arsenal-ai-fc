@@ -42,6 +42,14 @@ node scripts/samjhao.mjs open <concept> ; node scripts/samjhao.mjs plan <concept
 - **`resume` first, `start` second.** `start` REFUSES while a session is open, and that refusal
   is the correct answer — never `--force` your way past it, and never `close` a session to open
   a "clean" one. A concept that spans four days is the normal case.
+- ⭐ **MORNING WARM-UP — 3 to 5 cold probes on YESTERDAY's topic, BEFORE today's resume.** Take
+  them from the JUDGED bank — the answers he already gave that the judge already graded:
+  `node -e "const fs=require('fs');const rs=fs.readFileSync('dressing-room/state/gaffer_grade_queue.jsonl','utf8').split(/\r?\n/).filter(l=>l.trim()).map(JSON.parse);const done=new Set(rs.filter(r=>r.kind==='settled').map(r=>r.of));rs.filter(r=>r.kind==='capture'&&done.has(r.id)&&r.concept==='<yesterday>').forEach(r=>console.log(r.axis,r.gut,'|',r.asked))"`
+  — and **ask them in FRESH WORDING**: a
+  question repeated verbatim tests the sentence, not the concept. Gut-word first, bank every
+  answer the normal way (`--surface code`, `--probe recall`, latency on). Two minutes, then
+  today's topic starts. **Skip it silently on day one, or whenever there is no earlier topic** —
+  a warm-up with nothing to warm up is the always-fires line he learns to ignore.
 - **`--no-spawn` is not optional.** Without it, `sitting.mjs open` spawns a daemon and blocks up
   to six seconds waiting for it on a box where the daemon is deliberately down — six seconds of
   nothing at the exact moment he sat down. With it: one line, exit 0, no child. The sitting is a
