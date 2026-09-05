@@ -1363,6 +1363,9 @@ function selftest() {
     }).drifts.some((d) => d.rule === "coverage"));
   assert("CHECKED_RULES names every rule id this engine can emit, and nothing else",
     (() => {
+      // law-waiver:jugad — a SELFTEST ORACLE, deliberately literal: this list is the independent truth the
+      // assertion holds CHECKED_RULES against; deriving it from the code under test would make the check
+      // tautological. It ships in no lane and reaches no runtime (row 68 (g), 6 Sep 2026).
       const emitted = ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle", "link-back", "terminology", "decided",
         "uncaptured-rep"];   // W0-D · LR-04 — grown deliberately: this mirror is the ratchet, and it may only ever be widened alongside a real emitter
       return emitted.every((r) => CHECKED_RULES.includes(r)) && CHECKED_RULES.every((r) => emitted.includes(r));
@@ -1421,6 +1424,8 @@ function selftest() {
       const fired = r.drifts.filter((d) => d.rule === "neev-pehle").map((d) => d.evidence).join(" ");
       return /closed-book/.test(fired) && /ground truth/.test(fired);
     })());
+  // law-waiver:tum — the fixture below quotes the teacher's REAL 6 Aug 2026 turn verbatim, in the register of that day;
+  // the detector under test needs the text as it was said (row 68 (e): prose TO him is "tum" everywhere else).
   assert("NEEV-PEHLE — the REAL 6 Aug repair turn (asli naam: EVALUATION SET … Yahi tera ground truth hai) OPENS and stays clean",
     (() => {
       const real = "Us test track ka asli naam: **EVALUATION SET** *(chhota naam: **eval set**, ya **test set**)*. Yeh hai: sawaalon ki ek fixed list, aur har sawaal ka verified sahi jawab. Yahi tera **ground truth** hai.";

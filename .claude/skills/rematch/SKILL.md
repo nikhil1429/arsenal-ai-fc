@@ -123,5 +123,5 @@ name "THE_ORGANISM" now matches several other files, most of them in the repo ro
      tape_room.json records only retires. Marked so nobody looks for a field
      that does not exist.)
 5. One fixture per invocation. Never chain rematches — one focus (ADHD law).
-6. Voice: rivalry is tu-vs-past-tu ONLY. Never shame; the old doubt was the
+6. Voice: rivalry is tum-vs-past-tum ONLY ("tum", never "tu" — his standing preference, 30 Aug 2026). Never shame; the old doubt was the
    price of the current understanding.

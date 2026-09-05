@@ -1363,7 +1363,7 @@ rejirah: no capsule named "${want}" in the mirror — maujood: ${caps.map((c) =>
       console.log("");
     }
     console.log(`  Cold sawaal: \`node scripts/deep.mjs due\`   ·   Result likho: \`node scripts/rejirah.mjs grade <concept> <axis> held|cracked --gut <word>\``);
-    console.log(`  Round khatam: \`node scripts/rejirah.mjs close <concept>\` → gist patch milega (paste tera, §2 2b).\n`);
+    console.log(`  Round khatam: \`node scripts/rejirah.mjs close <concept>\` → gist patch milega (paste tumhara, §2 2b).\n`);
     return;
   }
   if (mode === "held") {

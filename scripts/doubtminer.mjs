@@ -319,6 +319,7 @@ const STOP_V0 = new Set(("the a an is are was were hai hain ka ki ke ko se me me
 // This list ADDS the missing Hinglish function words (postpositions, pronouns,
 // auxiliaries, question words, quantifiers) plus the English closed class.
 // It is a superset — nothing that was a stopword stopped being one.
+// law-waiver:tum — a stop-word LEXICON: the familiar pronouns sit here as function words to strip from n-grams, never as prose to him (row 68 (e), 6 Sep 2026)
 const STOP_HINGLISH = ("be been being if then than these those its as by from into about over under not no do does did have has had will would can could should shall may might must me my your his her our their there here which who whom whose so such very just also only more most some any each every other same too much many both either neither one two three ek do teen char tha thi hona hone honge hogi hoga na ne haan wo vo yahan wahan kahan kaise kaisa kaisi kya kyu kyun kyunki jaisa jaisi fir ab abhi tab kab sab saare saara saari sabhi kuch koi apna apne apni uska uski uske iska iski iske isko usko inko unko mera meri mere tera teri tere hum tum aap unka unki unke wala wale wali karo karna karne kiya kiye kare karenge raha rahi rahe rakhna dena lena leta deta hi bas pehle baad liye chahiye padega padta padti sakta sakti sakte gaya gayi gaye diya diye laga lagi lage lagta dekhna dekho socho samajh chalta chalte chalti banta bante banti nikalta nikalti lekin magar sirf tak wagera").split(" ");
 const STOP = new Set([...STOP_V0, ...STOP_HINGLISH]);
 

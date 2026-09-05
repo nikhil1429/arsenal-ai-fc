@@ -72,7 +72,7 @@ const SGCONFIG = join(ROOT, "sgconfig.yml");
 const NM = join(ROOT, "node_modules");
 
 /** The five rule ids that must exist in laws/ — the pack IS the law, so a missing rule is a RED. */
-export const RULE_IDS = ["owners-only-state-write", "law-m-literal-model", "jugad-literal-subject-list", "trailing-n-slice", "bare-catch", "receipt-testimony-read"];
+export const RULE_IDS = ["owners-only-state-write", "law-m-literal-model", "jugad-literal-subject-list", "trailing-n-slice", "bare-catch", "receipt-testimony-read", "tum-not-tu-prose"];
 
 /** THE EIGHT PRODUCTION LANES — §14.2's own list, and it is swallow.mjs's, not a new one.
  *  (That this list is itself a literal is recorded on purpose: it is a §9 Shape-1 instance
@@ -132,6 +132,11 @@ export const BASELINE = {
   //   outwork_audit:403 (.counts off its own last-run file). May only FALL; a
   //   display-only read declares itself `receipt-ok`.
   "receipt-testimony-read": 5,
+  // ROW 68 (e), 6 Sep 2026 — born at ZERO, the day the last five prose sites were moved to "tum" by
+  // hand (the judge's card prose · the atlas banner · learnstate's footer · rejirah's close line ·
+  // the rematch voice line). His word, 30 Aug 2026: "Bro are again referring me as tera tu." A
+  // baseline of 0 is the class fix: the ratchet refuses the first string that brings it back.
+  "tum-not-tu-prose": 0,
   depcruise_errors: 7,
 };
 
@@ -274,6 +279,19 @@ export function judgeReceiptTestimony(matches, { read = srcOf } = {}) {
   return { findings };
 }
 
+/** ROW 68 (e): a familiar second-person form inside a STRING the organism composes for him — his register is
+ *  "tum" (30 Aug 2026). The YAML rule already skips lexicon entries, regex alternations and his own quoted
+ *  phrases by shape (no whitespace before the word inside the string); a selftest fixture that quotes a PAST
+ *  turn in the old register declares itself with law-waiver:tum <why>. */
+export function judgeTum(matches, { read = srcOf } = {}) {
+  const findings = [];
+  for (const m of matches.filter((x) => x.rule === "tum-not-tu-prose")) {
+    if (waived(read(m.file), m.line, "tum")) continue;
+    findings.push({ ...m, why: `a "tu/tera" form in prose the organism says to him — his register is "tum" (30 Aug 2026; row 68 (e))` });
+  }
+  return { findings };
+}
+
 /** SHAPE 4: a trailing-N read with nothing in its neighbourhood that asks how OLD the window is. */
 export function judgeTrailingN(matches, { read = srcOf } = {}) {
   const findings = [];
@@ -378,6 +396,7 @@ export async function measure({ withDepcruise = true } = {}) {
   const t = judgeTrailingN(matches);
   const c = judgeBareCatch(matches);
   const rt = judgeReceiptTestimony(matches);
+  const tm = judgeTum(matches);
   const dc = withDepcruise ? depcruise() : { available: false, errors: [], leads: [] };
   const counts = {
     "owners-only-state-write": o.findings.length,
@@ -386,9 +405,10 @@ export async function measure({ withDepcruise = true } = {}) {
     "trailing-n-slice": t.findings.length,
     "bare-catch": c.findings.length,
     "receipt-testimony-read": rt.findings.length,
+    "tum-not-tu-prose": tm.findings.length,
     depcruise_errors: dc.available ? dc.errors.length : 0,
   };
-  return { matches, counts, o, m, j, t, c, rt, dc, raw, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
+  return { matches, counts, o, m, j, t, c, rt, tm, dc, raw, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
 }
 
 // ── THE PLANT — the rung's DONE-PROOF, and it runs on EVERY selftest ────────
@@ -405,6 +425,7 @@ export const PLANTS = {
   "trailing-n-slice": "export const tail = (rows) => rows.slice(-50);\n",
   "bare-catch": "export const p = (f) => { try { f(); } catch {} };\n",
   "receipt-testimony-read": 'import { readFileSync } from "node:fs";\nexport const gate = () => JSON.parse(readFileSync("receipt.json", "utf8")).count;\n',
+  "tum-not-tu-prose": "export const say = (x) => `Ye faisla tera hai, machine ka nahi — ${x}`;\n",   // law-waiver:tum — THE PLANT: the violation this rule must bite on (row 68 (e))
 };
 
 export function plantAndScan({ bin = sgBin() } = {}) {

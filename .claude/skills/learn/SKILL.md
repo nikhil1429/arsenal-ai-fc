@@ -69,7 +69,7 @@ screen is exactly three lines and one question, nothing else:
      letter alone, never a count, never hours since the last touch, never "kahan the".
   2. The NEXT named step (what comes after this one). That is the only "preview" that exists.
   3. One sentence: what he does now, in twenty seconds.
-  Then THE POINTER'S QUESTION — the exact unanswered micro-question where he stopped (source: the `[T] … AGLA SAWAAL:` line the teacher APPENDED to the crash belt at the last stop; if none exists, the oldest unpaid udhaar on the belt, written by you as ONE clause; no state field holds it until the `resume_pointer` verb is built — plan §12). The boot commands above are for YOU, not for him — read them, then write the three lines yourself; never paste a pacer line onto his screen. Typed answer, no length cap. NO LOSS on this screen: no STALE, no drift
+  Then THE POINTER'S QUESTION — the exact unanswered micro-question where he stopped (source, IN THIS ORDER — 6 Sep 2026, forks ruling row 68 (b): FIRST the pacer's own pointer, the second line `node scripts/forge_session.mjs status` prints — the teacher writes it with `node scripts/forge_session.mjs pointer "<the exact unanswered micro-question>"` at every stop; SECOND, if the pacer has none, the `[T] … AGLA SAWAAL:` line the teacher APPENDED to the crash belt at the last stop; THIRD, if neither exists, the oldest unpaid udhaar on the belt, written by you as ONE clause). The boot commands above are for YOU, not for him — read them, then write the three lines yourself; never paste a pacer line onto his screen. Typed answer, no length cap. NO LOSS on this screen: no STALE, no drift
   counts, no reds, no "resumed N×", no skipped/missed, no organism health. Register: **"tum"**,
   never "tu/tera" (his standing preference, 30 Aug). Never a tile, a widget, a stepper or a
   multiple-choice question on this screen or on any step-3 SAMJHAO turn (step 4's one concept widget, once after axis g, is the exception) — the turn shape lives in
@@ -408,7 +408,7 @@ code-confirmed, and it also means **do not run `examiner.mjs stage` for this clo
 `node scripts/examiner.mjs` is the read-only look, `stage` is a write. This beat has no organ; you
 run it in the turn and the reps land through §3.)*
 
-Then the day's ONE judge call — `node scripts/gaffer_brain.mjs judge-round` — on every banked study row (row 48 (3); until the code-fired judge is built, THIS line is the door; a second call the same evening re-refuses the same rows for nothing).
+Then the day's ONE judge call — `node scripts/gaffer_brain.mjs judge-round` — on every banked study row (row 48 (3); since 6 Sep 2026 (row 68 (d)) the sitting organ fires this BY CODE at every sitting close when the grade queue holds unjudged rows — THIS line is the fallback for a day no sitting was open; a second call the same evening re-refuses the same rows for nothing).
 
 Finally: `node scripts/sitting.mjs close --reason fulltime` — the review row + session-intent line land through the owners.
 

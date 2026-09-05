@@ -66,7 +66,7 @@
 // read-only lock-chain preview was invisible to anyone who read this header or ran the
 // script bare. The two docs now fail the selftest the moment either drops a verb.
 // MODES: start <concept> [--force] · step <0-11> · axis <a-i> now|done|defer
-//        · moment <kind> · lockchain · resume · status · contract · boot · close · selftest
+//        · moment <kind> · pointer ["<question>"] · lockchain · resume · status · contract · boot · close · selftest
 // A3 (4 Sep 2026): `step 10`, `axis <x> done` and `close` are EVIDENCE-GATED — each
 //        refuses unless the bank (gaffer_brain.mjs, read-only from here) holds the row
 //        it names, and each takes `--no-rep-why "<reason>"` as a recorded, counted
@@ -289,8 +289,26 @@ function setCurrentAxis(s, axis, now = new Date()) {
   // if the arithmetic were the other way round). First `now` wins, always.
   const marks = { ...(s.axes_now_at || {}) };
   if (!marks[a]) marks[a] = nowISO(now);
-  return { ok: true, session: { ...s, current_axis: a, axes_now_at: marks, updated_at: nowISO(now) } };
+  // ROW 68 (a), 6 Sep 2026 — A NEW AXIS IS A NEW PASS for the one-check-question law (row 62's
+  // "check_q reset on `axis <x> now`"). The allowance was tied to the STEP, and in the merged
+  // FORGE+SAMJHAO process one step (3, SAMJHAO) spans all nine axes — so the second axis of a
+  // day was refused its one sharp check because the first axis had spent it. Re-declaring the
+  // SAME axis keeps the spent counter: otherwise "re-declare" would be a one-command second
+  // question, the quiz-dump law's back door.
+  const pass = s.current_axis === a ? (s.check_q_this_pass || 0) : 0;
+  return { ok: true, session: { ...s, current_axis: a, axes_now_at: marks, check_q_this_pass: pass, updated_at: nowISO(now) } };
 }
+
+// ROW 68 (a), 6 Sep 2026 — THE ONE-CHECK ALLOWANCE IS PER AXIS, DERIVED, NEVER MIGRATED.
+// With an axis CURRENT, "spent" means THIS axis already had its sharp check (moments_by_axis,
+// the A3 record) — a stored pass counter would have needed a migration for every session on
+// disk (his live one carried axis a's spent check into axis b). With no axis declared the
+// step-scoped counter still rules, exactly as before.
+const checkSpent = (s) => {
+  const cur = s && s.current_axis;
+  if (cur && AXES.includes(cur)) return (((s.moments_by_axis || {})[cur] || {}).check_q || 0) >= 1;
+  return (s && s.check_q_this_pass || 0) >= 1;
+};
 
 function addMoment(s, kind, now = new Date()) {
   const m = String(kind || "").trim().toLowerCase();
@@ -299,7 +317,7 @@ function addMoment(s, kind, now = new Date()) {
   // only WARN here while SKILL.md claimed "the pacer hard-stops the second one" —
   // a claim the code did not honour. It does now: in phases 3-6 the second
   // check-question is refused, so the teacher must TEACH or advance the step.
-  if (m === "check_q" && SOFT_PHASE(s.step) && (s.check_q_this_pass || 0) >= 1) {
+  if (m === "check_q" && SOFT_PHASE(s.step) && checkSpent(s)) {
     // A REFUSAL IS EVIDENCE, NOT A NON-EVENT (regression audit 30 Jul 2026). The old
     // warn-only behaviour still counted the attempt, so a quiz-dump was legible at close;
     // enforcing it without recording made the coverage report UNDER-count the exact
@@ -308,6 +326,20 @@ function addMoment(s, kind, now = new Date()) {
       ok: false,
       error: `ONE check-question already spent on STEP ${s.step} ${STEPS[s.step]} — teach, or advance the step. (canon: max EK sharp check-question during phases 3-6)`,
       session: { ...s, check_q_refused: (s.check_q_refused || 0) + 1, updated_at: nowISO(now) },
+      record: true,
+    };
+  }
+  // ── TEXT FIRST (row 68 (c), 6 Sep 2026 — plan v3 §5, row 51's "text-first gate") ──────
+  // The concept widget is driven ONCE, after axis g, TEXT FIRST. A guess-gate logged before
+  // axis g is done is a picture standing in for the teaching — HOW_HE_LEARNS #3 (visuals only
+  // after understanding) and #2 (the tap-widget trace is one of his three recorded failures).
+  // Refused AND counted, exactly like the second check-question: a refusal is evidence, and
+  // coverage() reads the count into the verdict.
+  if (m === "widget_gate" && !(s.axes_done || []).includes("g")) {
+    return {
+      ok: false,
+      error: `widget_gate refused — TEXT FIRST: the concept widget is driven once, AFTER axis g is done (axes done so far: ${(s.axes_done || []).join("") || "none"}). Teach the axis in words, mark it done, then drive the widget (plan v3 §5 · HOW_HE_LEARNS #3).`,
+      session: { ...s, widget_refused: (s.widget_refused || 0) + 1, updated_at: nowISO(now) },
       record: true,
     };
   }
@@ -333,6 +365,30 @@ function addMoment(s, kind, now = new Date()) {
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// THE RESUME POINTER (row 68 (b), 6 Sep 2026 — plan v3 §4/§6, row 51's `resume_pointer`).
+// The exact unanswered micro-question where he stopped, written by the teacher at EVERY
+// stop (an axis end, or a mid-axis exit) and read FIRST by /learn's re-entry screen. Before
+// this verb the screen's only source was a crash-belt line no session had ever written
+// (measured 6 Sep 2026: zero "AGLA SAWAAL" lines on the belt), so the screen could only ever
+// show its fallback — a re-entry that starts with "where were we" is the failure HOW_HE_LEARNS
+// #6 and #12 name. One clause, one question; the newest replaces the older, and every older
+// one is KEPT in a capped history (L9 — where he stopped is a record, not a scratch value).
+const POINTER_MAX = 280;
+const POINTER_HISTORY_MAX = 20;
+function setPointer(s, text, now = new Date()) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t) return { ok: false, error: "pointer needs the exact unanswered micro-question (one clause, at most 280 chars) — an empty pointer is the old fallback in disguise", session: s };
+  if (t.length > POINTER_MAX) return { ok: false, error: `pointer is ${t.length} chars — one clause (at most ${POINTER_MAX}); a paragraph is a re-teach, not a pointer`, session: s };
+  const p = { text: t, step: s.step, axis: s.current_axis ?? null, at: nowISO(now) };
+  const hist = [...(Array.isArray(s.resume_pointer_history) ? s.resume_pointer_history : []), ...(s.resume_pointer && s.resume_pointer.text ? [s.resume_pointer] : [])].slice(-POINTER_HISTORY_MAX);
+  return { ok: true, session: { ...s, resume_pointer: p, resume_pointer_history: hist, updated_at: nowISO(now) } };
+}
+// ONE line, or nothing: a session with no pointer prints no invented question.
+const pointerLine = (s) => (s && s.resume_pointer && s.resume_pointer.text)
+  ? `  pointer: ${s.resume_pointer.text} (${s.resume_pointer.axis ? `axis ${s.resume_pointer.axis} · ` : ""}step ${s.resume_pointer.step} · ${s.resume_pointer.at})`
+  : null;
 
 // ---------------------------------------------------------------------------
 // RESUME — the door back IN (W0-D, 2 Sep 2026 · SD-04). Canon ratified "RESUME
@@ -531,7 +587,7 @@ function contractLines(s, now = new Date(), clock = undefined) {
       : `  latency: ${clock} ms since your last message ended — pass it VERBATIM as \`--latency_ms ${clock}\` on the next bank.`);
   }
   if (SOFT_PHASE(n)) {
-    L.push((s.check_q_this_pass || 0) >= 1
+    L.push(checkSpent(s)
       ? `  ⛔ ONE check-question already spent this pass. TEACH or advance the step — do NOT ask another.`
       : `  phase 3-6: max ONE sharp check-question this pass, and only on what you JUST taught. ONE idea per message — after each pass ask only "samajh aaya — haan ya nahi?" and WAIT.`);
   }
@@ -788,6 +844,7 @@ function coverage(s, now = new Date(), bank = null) {
     axis_marks_span_min: span_min,
     question_moments: { ...s.question_moments },
     check_q_refused: s.check_q_refused || 0,     // quiz-dump attempts, kept legible at close
+    widget_refused: s.widget_refused || 0,       // TEXT-FIRST refusals (row 68 (c)) — a picture offered before the words
     // A3 — every gate the teacher overrode, with his own reason, in the row that
     // outlives the terminal. Reported unconditionally like the two clocks: a number
     // that only appears when it is bad makes "have nothing bad" the cheapest move.
@@ -805,6 +862,7 @@ function coverage(s, now = new Date(), bank = null) {
     // evidence gate is not a clean one, however good the teaching felt.
     method_clean: missed.length === 0 && untouched.length === 0 && ungraded.length === 0
       && coreMissing.length === 0 && gates >= WIDGET_GATES_MIN && (s.check_q_refused || 0) === 0
+      && (s.widget_refused || 0) === 0      // row 68 (c): a widget offered before the words is a method violation, like a quiz-dump
       && (s.bypasses || []).length === 0,
   };
 }
@@ -1291,6 +1349,7 @@ const apply = (r) => {
 };
 const oneLine = (s) => `forge_session: ${s.concept} · STEP ${s.step}/${STEPS.length - 1} ${STEPS[s.step]}${s.current_axis ? ` · ON axis ${s.current_axis}` : ""} · axes done ${s.axes_done.join("") || "—"} · check-Q this pass ${s.check_q_this_pass || 0}`
   + (s.check_q_refused ? ` · refused ${s.check_q_refused}` : "")
+  + (s.widget_refused ? ` · widget refused ${s.widget_refused}` : "")
   // RESUMES ARE SAID OUT LOUD, ALWAYS (W0-D): a session re-entered across days has a
   // legitimately huge elapsed_min, and a reader who cannot see the re-entries would
   // read that clock as theatre — or, worse, a session could LAUNDER a three-day trail
@@ -1390,6 +1449,11 @@ function bootLines(s, hist, now = new Date()) {
         + ` · axes done ${s.axes_done.join("") || "—"} ${s.axes_done.length}/${AXES.length} · ungraded ${ungraded.join("") || "—"}`
         + ` · deferred ${s.axes_deferred.join("") || "—"} · left ${left.join("") || "—"} · ${when}`
         + ((s.resumes || []).length ? ` · resumed ${(s.resumes || []).length}×` : "")
+        // row 68 (b): the pointer rides the boot line, so the re-entry screen's first source is on
+        // the first line any session reads — still ONE line, clipped so the hook budget holds.
+        + (s.resume_pointer && s.resume_pointer.text
+          ? ` · pointer: "${s.resume_pointer.text.length > 140 ? s.resume_pointer.text.slice(0, 137) + "…" : s.resume_pointer.text}"`
+          : "")
         + historyDigest(h),                      // #30 — no longer swallowed, and still ONE line
       // W0-D (2 Sep 2026): the stale branch used to name ONE door, and it was the door
       // that ENDS the session. So the only mechanically possible answer to "he came
@@ -1447,6 +1511,39 @@ function selftest() {
   assert("a new pass restores the one check-question allowance", s4.check_q_this_pass === 0);
   assert("total check_q survives the pass change (audit trail intact)", s4.question_moments.check_q === 1);
   assert("moment rejects an unknown kind", !addMoment(s3, "vibes").ok);
+
+  // ── ROW 68 (6 Sep 2026) — three study-lane code items, each a pure rule here ──────────
+  {
+    // (a) A NEW AXIS IS A NEW PASS for the one-check-question law; re-declaring the same axis is not.
+    const onA = addMoment(setCurrentAxis(s3, "a", T0).session, "check_q", T0).session;
+    assert("AXIS PASS — a spent check-Q on axis a is refused again on axis a", !addMoment(onA, "check_q", T0).ok);
+    assert("AXIS PASS — `axis b now` (a NEW axis) restores the one check-question allowance",
+      setCurrentAxis(onA, "b", T0).session.check_q_this_pass === 0 && addMoment(setCurrentAxis(onA, "b", T0).session, "check_q", T0).ok);
+    assert("AXIS PASS — re-declaring the SAME axis keeps the spent counter (no second question by re-declaration)",
+      setCurrentAxis(onA, "a", T0).session.check_q_this_pass === 1);
+    // (b) THE RESUME POINTER — the exact unanswered micro-question, into state, read first at re-entry.
+    const onB = setCurrentAxis(s3, "b", T0).session;
+    assert("POINTER — an empty pointer is refused (the fallback in disguise)", !setPointer(onB, "   ", T0).ok);
+    assert("POINTER — a paragraph is refused (one clause, at most 280 chars)", !setPointer(onB, "x".repeat(281), T0).ok);
+    const p1 = setPointer(onB, "  Word-level tokenizer 'Mohana' pe kyun toota —  kaun si requirement giri?  ", T0).session;
+    assert("POINTER — stored trimmed, with the axis, the step and a clock",
+      p1.resume_pointer.text.startsWith("Word-level") && !/  /.test(p1.resume_pointer.text) && p1.resume_pointer.axis === "b" && p1.resume_pointer.step === 3 && p1.resume_pointer.at === nowISO(T0));
+    assert("POINTER — status/resume print it as ONE line, and the boot line carries it",
+      /pointer: Word-level/.test(pointerLine(p1)) && /pointer: "Word-level/.test(bootLines(p1, { last: null, same_concept: 0 }, T0)[0]));
+    const p2 = setPointer(p1, "Char-level list lambi kyun ho jaati hai?", T(5)).session;
+    assert("POINTER — the newest replaces the older, and the older is KEPT in history (L9)",
+      p2.resume_pointer.text.startsWith("Char-level") && p2.resume_pointer_history.length === 1 && p2.resume_pointer_history[0].text.startsWith("Word-level"));
+    assert("POINTER — a session with no pointer prints nothing (no invented question)", pointerLine(onB) === null);
+    // (c) TEXT FIRST — the concept widget is driven once, AFTER axis g is done; earlier attempts are refused and counted.
+    const early = addMoment(s3, "widget_gate", T0);
+    assert("TEXT FIRST — widget_gate before axis g is REFUSED and the refusal is recorded",
+      !early.ok && early.record === true && early.session.widget_refused === 1 && /TEXT FIRST/.test(early.error));
+    let g = s3; for (const a of "abcdefg") g = markAxis(g, a, "done", T0).session;
+    assert("TEXT FIRST — widget_gate after axis g is done is accepted",
+      addMoment(g, "widget_gate", T0).ok && addMoment(g, "widget_gate", T0).session.question_moments.widget_gate === 1);
+    assert("TEXT FIRST — a refused widget counts against the verdict like a quiz-dump, and the count is reported",
+      coverage({ ...g, widget_refused: 1 }, T0).method_clean === false && coverage(g, T0).widget_refused === 0);
+  }
 
   assert("SKIP DETECTION — steps jumped over are named in the contract",
     contractLines(s4, T0).some((l) => /SKIPPED so far.*1 DARAAR-MAP/.test(l)));
@@ -1690,16 +1787,16 @@ function selftest() {
 
   let clean = blank("hallucinations", T0);
   STEPS.forEach((_, i) => { clean = setStep(clean, i, T0).session; });
-  clean = addMoment(addMoment(clean, "widget_gate", T0).session, "widget_gate", T0).session;
   for (const a of AXES) { clean = addMoment(clean, "jirah", T0).session; clean = markAxis(clean, a, "done", T0).session; }
+  clean = addMoment(addMoment(clean, "widget_gate", T0).session, "widget_gate", T0).session;   // TEXT FIRST (row 68 (c)): the widget is driven after the axes' words
   assert("A GENUINELY CLEAN SESSION reports method_clean:true", coverage(clean, T0).method_clean === true);
   const noCore = markAxis(clean, "d", "defer", T0).session;
   assert("CORE-NEVER-DEFERRED — method_clean false and core_missing names 'd' when d is not done",
     coverage(noCore, T0).method_clean === false && coverage(noCore, T0).core_missing.join() === "d");
   let oneGate = blank("hallucinations", T0);
   STEPS.forEach((_, i) => { oneGate = setStep(oneGate, i, T0).session; });
-  oneGate = addMoment(oneGate, "widget_gate", T0).session;
   for (const a of AXES) { oneGate = addMoment(oneGate, "jirah", T0).session; oneGate = markAxis(oneGate, a, "done", T0).session; }
+  oneGate = addMoment(oneGate, "widget_gate", T0).session;   // TEXT FIRST (row 68 (c)): after the axes' words
   assert("WIDGET GATES — false at 1 gate, true at 2, and there is NO widget_driven boolean",
     coverage(oneGate, T0).method_clean === false && coverage(clean, T0).method_clean === true
     && !("widget_driven" in coverage(clean, T0)));
@@ -1732,8 +1829,8 @@ function selftest() {
   const step4 = setStep(blank("x", T0), 4, T0).session;
   assert("REGRESSION PIN — step 4 still says 'owes a WIDGET' at 0 gates, and names the count",
     contractLines(step4, T0).some((l) => /owes a WIDGET/.test(l) && /Gates driven so far: 0/.test(l)));
-  assert("step 4 drops 'owes a WIDGET' only once the gates are actually driven",
-    !contractLines(addMoment(addMoment(step4, "widget_gate", T0).session, "widget_gate", T0).session, T0)
+  assert("step 4 drops 'owes a WIDGET' only once the gates are actually driven (text first: axis g done before the widget — row 68 (c))",
+    !contractLines(addMoment(addMoment(markAxis(step4, "g", "done", T0).session, "widget_gate", T0).session, "widget_gate", T0).session, T0)
       .some((l) => /owes a WIDGET/.test(l)));
   assert("CONTRACT — META-FREEZE ON at steps 1-9, absent at step 0 and step 10",
     contractLines(setStep(blank("x", T0), 1, T0).session, T0)[0].includes("META-FREEZE ON")
@@ -2656,6 +2753,23 @@ export async function hookMain() {
       break;
     }
     case "moment": console.log(oneLine(apply(addMoment(live(need(load())), rest[0])))); break;
+    case "pointer": {
+      // THE RESUME POINTER (row 68 (b), 6 Sep 2026). `pointer "<question>"` writes the exact
+      // unanswered micro-question where he stopped; bare `pointer` reads it back. need(), not
+      // live(): a pointer is written AT a stop, and a stop can come hours after the last touch —
+      // refusing it as stale would lose the one fact re-entry needs.
+      const cur = need(load());
+      const text = rest.join(" ").trim();
+      if (!text) {
+        const pl = pointerLine(cur);
+        console.log(pl ? pl.trim() : `forge_session: no pointer on disk — the teacher writes one at every stop: node scripts/forge_session.mjs pointer "<the exact unanswered micro-question>"`);
+        break;
+      }
+      const sP = apply(setPointer(cur, text));
+      console.log(oneLine(sP));
+      console.log(pointerLine(sP));
+      break;
+    }
     case "lockchain": {
       // Read-only PREVIEW of what arrival at step 10 will run — proves the wiring
       // live without staging a premature L-mission or advancing any state.
@@ -2680,9 +2794,10 @@ export async function hookMain() {
       console.log(`  continue at STEP ${r.session.step} ${STEPS[r.session.step] || "?"}`
         + (r.session.current_axis ? ` · ON axis ${r.session.current_axis}` : "")
         + ` · left ${left.join("") || "—"} — do NOT re-teach ${r.session.axes_done.join("") || "the done axes"}.`);
+      { const pl = pointerLine(r.session); if (pl) console.log(pl); }   // row 68 (b): the exact question where he stopped, if the teacher wrote it
       break;
     }
-    case "status": { const s = load(); if (s) console.log(oneLine(s)); break; }
+    case "status": { const s = load(); if (s) { console.log(oneLine(s)); const pl = pointerLine(s); if (pl) console.log(pl); } break; }
     case "contract": {                      // HOOK PATH — silence is the default
       // SELF-INJECTION GUARD (same scar as hooks/afferent-post.mjs): every headless
       // `claude -p` the organism spawns runs inside this project, inherits
@@ -2859,7 +2974,7 @@ export async function hookMain() {
       // author knows exists. Keep this line and the header MODES block in step with the
       // switch; the selftest reads all three out of this file's own source and fails if
       // they diverge (grep -n "DISPATCH DOC WIRE").
-      console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | lockchain (read-only preview of the step-10 chain) | resume (wake a STALE session where it stands — nothing blanked) | status | contract | boot | close | selftest"
+      console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | pointer [\"<the exact unanswered micro-question>\"] (write at EVERY stop; bare = read back — row 68 (b)) | lockchain (read-only preview of the step-10 chain) | resume (wake a STALE session where it stands — nothing blanked) | status | contract | boot | close | selftest"
         + `\n  evidence gates (A3): \`step 10\` needs a judged \`--probe ${JIRAH_PROBE}\` row for EVERY done axis + a negative-space probe + one cross_axis row · \`axis <x> done\` needs his banked Bolo + an interview-register line (NO jirah — that moved to the STEP 9 round, his ruling 4 Sep 2026) · \`close\` needs every banked answer judged. Each takes ${GATE_BYPASS_FLAG} "<reason>" — recorded, counted, method_clean false.`);
   }
 }

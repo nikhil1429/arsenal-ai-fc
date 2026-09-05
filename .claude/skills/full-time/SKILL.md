@@ -32,7 +32,7 @@ description: The 30-second evening close — HIT/MISS, one signal, KAL-line, thr
    (`grep -n "pendingBalls.slice" scripts/postmatch.mjs`) while the header carries
    the true total — if the header says more than five, read the two files yourself.
 3. Run, in order:
-   `node scripts/gaffer_brain.mjs judge-round`  ← the day's ONE judge call on the banked study rows (5 Sep 2026, row 48 (3); until the code-fired judge is built this line is the door) →
+   `node scripts/gaffer_brain.mjs judge-round`  ← the day's ONE judge call on the banked study rows (5 Sep 2026, row 48 (3)). Since 6 Sep 2026 (row 68 (d)) the sitting organ fires it BY CODE at every sitting close when the grade queue holds unjudged rows — this line is the fallback for a day no sitting was open; a second call re-refuses the same rows for nothing →
    `node scripts/postmatch.mjs --hit <X> --signal "<s>" --kal "<k>" [--diag start|block|sleep] [--route all]`
    → `node scripts/scorer.mjs` → `node scripts/setpiece.mjs` →
    `node scripts/viz.mjs`.

@@ -910,16 +910,26 @@ export function createSitting(deps = {}) {
     if (!isOpen()) return { ok: false, error: "no open sitting", status: 409 };
     if (idleTimer) clearTimeout(idleTimer);
     const t0 = Date.now();
-    // 1. the judge — ONE opus call through the owner (only if something was banked); the sitting never grades
+    // 1. the judge — ONE opus call through the owner, and ONLY when there is something to judge; the sitting never grades.
+    //    ROW 68 (d), 6 Sep 2026 — THE DOOR READ THE WRONG COUNT. `S.stats.banked` counts the rows THIS sitting banked
+    //    through its own turn door; on the code surface the teacher banks through `gaffer_brain.mjs capture` directly,
+    //    so the count stayed 0 while unjudged rows sat in the grade queue (row 55 measured "banked 0" with rows on
+    //    disk) and the day's judge never fired without a hand — the ritual his 11 Aug law forbids. The door now asks
+    //    the OWNER what is outstanding (its read-only `queue` verb) and fires on THAT, or on this sitting's own count,
+    //    whichever says yes. Nothing outstanding = no Opus call (judge-round would only re-refuse the same rows).
     let judge = null;
-    if ((S.stats.banked || 0) > 0) {
+    const q = owner("gaffer_brain.mjs", ["queue"]); S.stats.owner_calls++;
+    const qm = /(\d+) captured item\(s\) waiting/.exec(String(q.out || ""));
+    const waiting = qm ? Number(qm[1]) : 0;
+    if ((S.stats.banked || 0) > 0 || waiting > 0) {
       const r = owner("gaffer_brain.mjs", ["judge-round"]); S.stats.owner_calls++; S.stats.by_class.judge++; S.stats.latency_ms.judge.push(Date.now() - t0);
       // §9.4 (18 Aug 2026) — THE ONE SPOKEN LINE the judge closes a round with (its
       // last stdout line, prefixed 🗣) is kept WHOLE beside the clipped output, so the
       // next head can open with it ("pichhli baar interviewer yeh shabd sunna chahta
       // tha…"). Parsed off the owner's own machine-written prefix, never off his words.
       const rl = String(r.out || "").split(/\r?\n/).map((l) => l.trim()).find((l) => l.startsWith("🗣"));
-      judge = { ok: r.ok, out: clip(r.out, 300), register_line: rl ? clip(rl.replace(/^🗣\s*/, ""), 240) : null };
+      judge = { ok: r.ok, out: clip(r.out, 300), register_line: rl ? clip(rl.replace(/^🗣\s*/, ""), 240) : null,
+        fired_on: (S.stats.banked || 0) > 0 ? "sitting-bank" : "grade-queue", queue_waiting: waiting };   // row 68 (d): which door opened, on the record
     }
     // 2. the pacer — closed through the owner ONLY when the concept reached its lock (a concept spans sittings; a stale one is boot's call)
     let forgeStatus = null;
@@ -1277,12 +1287,16 @@ async function selftest() {
   const P = (name) => join(tmp, name);
   F.forge = () => P("forge_session.json"); F.sitting = () => P("sitting.json"); F.out = () => P("sitting_out.jsonl"); F.log = () => P("sitting_log.jsonl"); F.reviews = () => P("sitting_reviews.jsonl"); F.config = () => P("sitting_config.json"); F.head = () => P("brain_out/sitting/sitting_system.md"); F.prepare = (day) => P(`brain_out/prepare/${day}.json`); F.agenda = () => P("sitting_agenda.jsonl"); F.prepared = (day) => P(`brain_out/prepare_on_request/${day}.md`);   // LAW A: the two new files re-point too — the live agenda is never touched by a selftest
   const calls = [];
+  let queueWaiting = 0;   // row 68 (d): what the recorded owner says the grade queue holds (0 = nothing outstanding)
   const owner = (file, args, input) => {
     calls.push({ file, args, input: input == null ? null : String(input).slice(0, 80) });
     // the judge's recorded stdout ends on its §9.4 spoken line, like the real owner's does
     const out = file === "gaffer_brain.mjs" && args[0] === "judge-round" ? `gaffer_brain: 1 item(s) graded in ONE Opus call · types: voice_rep
   voice_rep     LANDED (gut guessed)  theek
-  🗣 interviewer yeh shabd sunna chahega: "grounding"` : `${file} ${args[0]} ok`;
+  🗣 interviewer yeh shabd sunna chahega: "grounding"`
+      : file === "gaffer_brain.mjs" && args[0] === "queue"
+        ? (queueWaiting > 0 ? `gaffer_brain: ${queueWaiting} captured item(s) waiting for judge-round:` : "gaffer_brain: nothing outstanding — every captured item has been judged and recorded.")
+        : `${file} ${args[0]} ok`;
     return { ok: true, status: 0, out, err: "" };
   };
   // fixture session: answers with a plan JSON on the first send, then echo replies with a CTRL tail; DIE/WALL words steer failure modes
@@ -1527,6 +1541,30 @@ async function selftest() {
     const o5b = await d5b.open({ surface: "voice" });
     assert("join: a voice mouth joining a code-only sitting ATTACHES the brain to the same id (plan composed, first unit emitted, transport stream)", o5b.joined && o5b.id === d5.state.id && d5b.state.plan.length === 4 && d5b.state.transport === "stream" && d5b.state.surfaces.includes("voice"));
     await d5b.close({ reason: "his_word" }); await d5b.stop(); await d5.stop();
+    // ── 13a. ROW 68 (d), 6 Sep 2026 — THE JUDGE FIRES BY CODE OFF THE GRADE QUEUE ──────
+    // A code sitting banks through the capture CLI, never through the turn door, so its own
+    // `stats.banked` is 0 at close. Before this row the judge door read only that count, and the
+    // day's ONE judge call needed a hand. Now the close asks the owner's `queue` and fires on it.
+    {
+      calls.length = 0;
+      const dq = createSitting({ ...baseDeps, session: () => { throw new Error("must not spawn for a code sitting"); } });
+      await dq.open({ surface: "code" });
+      queueWaiting = 2;
+      const cq = await dq.close({ reason: "his_word" });
+      assert("row 68 (d) · a code sitting with banked 0 but 2 rows waiting in the grade queue FIRES judge-round through the owner at close, and the review row says which door opened",
+        cq.ok && dq.state.stats.banked === 0 && calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "queue")
+        && calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "judge-round")
+        && cq.review.judge && cq.review.judge.fired_on === "grade-queue" && cq.review.judge.queue_waiting === 2);
+      await dq.stop();
+      calls.length = 0; queueWaiting = 0;
+      const dz = createSitting({ ...baseDeps, session: () => { throw new Error("must not spawn for a code sitting"); } });
+      await dz.open({ surface: "code" });
+      const cz = await dz.close({ reason: "his_word" });
+      assert("row 68 (d) · nothing banked AND nothing waiting → the queue is asked, judge-round is NOT called (no Opus call for nothing)",
+        cz.ok && calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "queue")
+        && !calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "judge-round") && cz.review.judge === null);
+      await dz.stop();
+    }
     // ── 13b. A1 + A2 (4 Sep 2026) — THE OPEN CONCEPT SURVIVES THE ROUTER ──────────
     // The three ways his live session could die, each now a law with a test. The
     // fixture is the exact 3 Sep shape: a tokenization forge open and STALE (26 h

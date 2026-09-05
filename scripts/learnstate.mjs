@@ -1594,7 +1594,7 @@ async function main() {
       console.log(`\n  haare hue daave (order = precedence):`);
       for (const c of nu.contenders) console.log(`   · ${c.name}: ${c.line}`);
     }
-    console.log(`\n  (watchman kabhi is list mein nahi aata — organ repair machine ka kaam hai, tera nahi.)\n`);
+    console.log(`\n  (watchman kabhi is list mein nahi aata — organ repair machine ka kaam hai, tumhara nahi.)\n`);
     return;
   }
   // AFTER the organ guard, never before — an organ prompt must never carry his memory.

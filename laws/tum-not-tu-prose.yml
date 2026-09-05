@@ -1,0 +1,26 @@
+id: tum-not-tu-prose
+language: JavaScript
+severity: warning
+message: a familiar second-person form (tu · tera · teri · tere · tujhe · tujhko) inside prose the organism says to him — his standing preference is "tum" (30 Aug 2026; forks ruling row 68 (e), 6 Sep 2026)
+note: |
+  His words, 30 Aug 2026: "Bro are again referring me as tera tu. This I I told you know not to do so."
+  The class came back three times after that — the judge's card prose, the atlas banner, the
+  learnstate footer, the Re-Jirah close line — all fixed by hand 6 Sep 2026 (row 68 (e)). A patch
+  per site is the jugad his law forbids; THIS rule is the class fix: any STRING the organism
+  composes for him that carries a familiar second-person form is a finding, frozen at 0, and the
+  ratchet (scripts/lawpack.mjs) keeps it at 0 — a gate may only get stricter.
+  What is NOT prose and never counts: a single-word lexicon entry ("tera" alone in a stop-word
+  list — the word has no whitespace before it inside the string), a detector's regex alternation
+  ("(tera|tumhara|hamara)"), his own quoted phrases at a string's start ("tera finops"), and
+  comments (ast-grep matches string nodes only). A selftest fixture that quotes a PAST turn in the
+  old register declares itself with `law-waiver:tum <why>` on the line or within six lines above.
+rule:
+  any:
+    - kind: string
+    - kind: template_string
+  regex: '(?i)\s(tu|tera|teri|tere|tujhe|tujhko)[\s.,!?:;)—-]'
+files:
+  - "scripts/**/*.mjs"
+  - "hooks/**/*.mjs"
+ignores:
+  - "scripts/legacy/**"

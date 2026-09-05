@@ -282,7 +282,7 @@ is not.
   verdict, never seconds) · (b) BOLO — the axis spoken in Hinglish (dictation), transcript pasted,
   banked · (c) the English interview line, banked `--register interview`. Then `axis <x> done`
   (the gate wants ≥1 Hinglish row + ≥1 interview row since the axis opened), the [T]/[N] block to
-  the crash belt, his own words read back, the resume pointer — today that is the `[T] … AGLA SAWAAL:` line you APPEND to the crash belt at every stop (no state verb exists yet; plan §12) — the two-option axis-end
+  the crash belt, his own words read back, the resume pointer — `node scripts/forge_session.mjs pointer "<the exact unanswered micro-question>"` (row 68 (b), 6 Sep 2026; the re-entry screen reads it FIRST) AND the `[T] … AGLA SAWAAL:` line you APPEND to the crash belt, both at EVERY stop (axis end or a mid-axis exit) — the two-option axis-end
   moment (walk or next — his pick; he may stop ANYWHERE and the pointer records "idea k on axis
   x"). The judge runs ONCE per sitting at his full-time (`/full-time` step 3 runs `node scripts/gaffer_brain.mjs judge-round` first), never per axis (row 48 (3)) — EXCEPT at STEP 10, where the lock gate refuses until every done axis carries a judged jirah row: run judge-round there, then lock. The axis's sharp check is BANKED through capture, not logged as `moment check_q` — the pacer's check_q stays the step-level check, one per pass, and the numbered trace's (tum) steps are the pen in his hand, not question-moments. The
   concept's widget is driven ONCE, after axis g, text first (row 51).
@@ -609,6 +609,13 @@ When he says "session khatam / done / bas":
   research. Math = formula + tiny hand example + ranges. Past the ceiling → "park it."
 - **CORE-NEVER-DEFERRED:** the core measure/formula/range goes in the MAIN explanation, never
   a side-section. Overwhelm → fewer concepts today; correctness never thins.
+- **AXIS d TOOL — the tokenizer playground (row 68 (f), 6 Sep 2026; read-only, writes nothing):**
+  `node scripts/tokenizer_play.mjs train "<his own line>" --merges 3` is the ANSWER KEY for the
+  factory he ran BY HAND (the pair counts · the merge chosen and why · the frozen rulebook);
+  `dial "<his line>" --merges 0,5,20` is the vocab-size RANGE (tokens vs register vs chars-per-token
+  — high aur low ka matlab); `ids "<his line>" --rules "E+c,Ec+o"` shows the same tukda = the same
+  number and NO meaning inside it (the axis-a weld); `bytes "₹81,500"` shows why ₹ costs three.
+  HE runs it, at AKELE-KARO (step 6) after his hand-run — never the teacher on a step-3 turn.
 - **URGENCY ≠ KAINCHI.** No mood, no "jaldi karo", no calendar talk ever skims an axis. Never
   invoke time pressure, never say "time kam hai."
 - **Honest frame:** no hype words; a crack is data. Medical territory = "show your doctor",

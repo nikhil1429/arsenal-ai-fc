@@ -1701,7 +1701,7 @@ export function disagreementCard(item, first, second) {
   let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
   const flip = (h & 1) === 1;
   const A = flip ? second : first, B = flip ? first : second;
-  return `💎 DO judge alag-alag bole — ${item.concept || item.ref} (${item.type}). JUDGE A: ${A.verdict} — ${A.why || "no reason given"} · JUDGE B: ${B.verdict} — ${B.why || "no reason given"}. Tera answer tha: "${clip(item.spoken, 220)}". Kaun sahi hai? Ye faisla tera hai, machine ka nahi — aur yahi sabse keemti signal hai.`;
+  return `💎 DO judge alag-alag bole — ${item.concept || item.ref} (${item.type}). JUDGE A: ${A.verdict} — ${A.why || "no reason given"} · JUDGE B: ${B.verdict} — ${B.why || "no reason given"}. Tumhara answer tha: "${clip(item.spoken, 220)}". Kaun sahi hai? Ye faisla tumhara hai, machine ka nahi — aur yahi sabse keemti signal hai.`;
 }
 
 // ── key_doubt — when the judge thinks HIS OWN answer key looks wrong ──────────
@@ -1709,7 +1709,7 @@ export function disagreementCard(item, first, second) {
 // wrote. It is a doubt about the page itself, and only he edits a capsule — the
 // mirror is read-only and the gist is the master. So it is a card, never an edit.
 export function keyDoubtCard(item, doubt) {
-  return `📄 Capsule check — "${item.concept}" ${item.label || item.ref}: judge ko tera apna answer-key hi galat lag raha. Uski wajah: ${clip(doubt, 220)}. Tera recall theek tha, ye page ke baare mein sawaal hai — gist tere haath se hi badalta hai.`;
+  return `📄 Capsule check — "${item.concept}" ${item.label || item.ref}: judge ko tumhara apna answer-key hi galat lag raha. Uski wajah: ${clip(doubt, 220)}. Tumhara recall theek tha, ye page ke baare mein sawaal hai — gist tumhare haath se hi badalta hai.`;
 }
 
 // THE OWNER TABLE. Nothing here writes another organ's file: each verdict is

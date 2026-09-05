@@ -820,7 +820,7 @@ if (process.argv[1] && process.argv[1].endsWith("samjhao.mjs")) {
     else if (r.phase === "close") console.log(`samjhao: ${r.why}`);
     else if (r.phase === "doubts") console.log(`DOUBT ${r.doubt.n} (${r.you_are_here})\n  ${r.doubt.q}\n  → apna jawab do: samjhao doubt <id> --n ${r.doubt.n} --text "..." --gut knew|shaky|guessed`);
     else if (r.phase === "predict") console.log(`UNIT ${r.unit.n} [${r.unit.axis}] ${r.unit.title} · ${r.you_are_here}\n  PEHLE GUESS: ${r.unit.predict.ask}\n  ${r.unit.predict.law}\n  → samjhao guess <id> --unit ${r.unit.n} --text "..." --gut <word>`);
-    else console.log(`UNIT ${r.unit.n} [${r.unit.axis}] ${r.unit.title} · ${r.you_are_here}\n  MECHANISM: ${clip(r.unit.reveal.mechanism_head, 400)}\n  TERA APNA WELD: ${clip(r.unit.reveal.weld, 900)}${r.unit.reveal.analogy ? `\n  ANALOGY: ${r.unit.reveal.analogy}` : ""}${r.unit.trap ? `\n  TRAP: ${r.unit.trap.bait}\n    sach: ${r.unit.trap.truth}` : ""}\n  CHECK: ${r.unit.check}\n  → samjhao answer <id> --unit ${r.unit.n} --text "..." --gut <word>`);
+    else console.log(`UNIT ${r.unit.n} [${r.unit.axis}] ${r.unit.title} · ${r.you_are_here}\n  MECHANISM: ${clip(r.unit.reveal.mechanism_head, 400)}\n  TUMHARA APNA WELD: ${clip(r.unit.reveal.weld, 900)}${r.unit.reveal.analogy ? `\n  ANALOGY: ${r.unit.reveal.analogy}` : ""}${r.unit.trap ? `\n  TRAP: ${r.unit.trap.bait}\n    sach: ${r.unit.trap.truth}` : ""}\n  CHECK: ${r.unit.check}\n  → samjhao answer <id> --unit ${r.unit.n} --text "..." --gut <word>`);
   }
   else if (mode === "guess" || mode === "answer") {
     const id = resolveId(arg);

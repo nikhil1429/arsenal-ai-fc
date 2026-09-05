@@ -277,12 +277,12 @@ details{margin:8px 0}summary{cursor:pointer;color:#58a6ff}
 </style></head><body>
 <h1>FLOW ATLAS — poora organism, ek page</h1>
 <div class="sub">CODE se nikla hai (xray IR ${esc(a.derived_from.ir_built_at)} · ${a.derived_from.organs} organs + 3 declared tables) — haath se ek bhi edge nahi. built ${esc(a.built_at)} · sha ${esc(a.content_sha16)}</div>
-<div class="banner">⛔ ORGANISM 20 Aug se SWITCHED OFF hai (tera order). Machine lanes ki chuppi us din ke baad EXPECTED hai — woh defect nahi. Neeche jo <b>TERE HAATH</b> wali 4 lanes hain, unki chuppi hi asli zakham hai (SHAPE 6).</div>
+<div class="banner">⛔ ORGANISM 20 Aug se SWITCHED OFF hai (tumhara order). Machine lanes ki chuppi us din ke baad EXPECTED hai — woh defect nahi. Neeche jo <b>TUMHARE HAATH</b> wali 4 lanes hain, unki chuppi hi asli zakham hai (SHAPE 6).</div>
 <div class="legend sub"><span><span class="dot green"></span>fresh (≤1d)</span><span><span class="dot amber"></span>quiet, post-switch-off (expected)</span><span><span class="dot red"></span>quiet since before switch-off</span><span><span class="dot black"></span>never born / absent</span><span><span class="dot grey"></span>no payload ts</span></div>
 
-<h2>① TERA HAATH — him → learning record (SHAPE 6 ke chaar edges, first-class)</h2>
+<h2>① TUMHARA HAATH — him → learning record (SHAPE 6 ke chaar edges, first-class)</h2>
 ${s6rows}
-<div class="law">Yeh chaaron lanes ka producer TU hai — koi machine inhe fire nahi karti. Isi liye registry spec har aise surface se {surface · writes_to · fired_by · cadence} declare karwati hai, jisme <b>fired_by:"him"</b> first-class value hai jo reach-side meter pakad sake.</div>
+<div class="law">Yeh chaaron lanes ka producer TUM ho — koi machine inhe fire nahi karti. Isi liye registry spec har aise surface se {surface · writes_to · fired_by · cadence} declare karwati hai, jisme <b>fired_by:"him"</b> first-class value hai jo reach-side meter pakad sake.</div>
 
 <h2>② TU/DUNIYA → BUS (afferent door — ${himIn.length} declared sources)</h2>
 <table><tr><th></th><th>source</th><th>from</th><th>state</th><th>kyun</th></tr>
@@ -293,7 +293,7 @@ ${himIn.map((e) => `<tr><td>${e.state === "retired" ? '<span class="dot grey"></
 <table><tr><th></th><th>file</th><th>writer(s)</th><th>readers</th></tr>${viaRows}</table></details>
 <div class="edge"><b>Negative space (atlas ka khaali hissa):</b> ${a.counts.orphan_writes} orphan writes (likha, koi nahi padhta) · ${a.counts.ghost_reads} ghost reads (padhte hain, file paida hi nahi hui — rejirah_log inmein sabse bada) — poori list JSON mein.</div>
 
-<h2>④ MACHINE → TU (the mouths — ${himOut.length} surfaces)</h2>
+<h2>④ MACHINE → TUM (the mouths — ${himOut.length} surfaces)</h2>
 ${himOut.map((e) => `<div class="edge"><div class="arrow">${esc(e.from)} ⟶ <b>${esc(e.to)}</b> <span class="mono">${esc(e.via)}</span></div><div class="stamp">${dot(e.liveness)} ${esc(e.consumption.note)}${e.consumption.measured ? "" : " · <b>UNMEASURED</b>"}</div></div>`).join("\n")}
 <div class="law">Shape 3 ka sach yahan dikhta hai: production sab jagah logged hai, CONSUMPTION sirf cards par measured hai (${esc(String((a.edges.find((e) => e.from === "captains_call.mjs") || { consumption: { note: "" } }).consumption.note))}). Outbox: ${a.outbox.ledger_rows} rows, <b>${a.outbox.acked_ever} acked ever</b>, kinds ${esc(JSON.stringify(a.outbox.by_kind))} (declared: ${esc(a.outbox.declared_kinds.join(", "))}) · ${a.outbox.off_road_lanes} declared off-road lanes.</div>
 

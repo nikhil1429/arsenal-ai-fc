@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-09-04T05:52:53.280Z",
+ "updated_at": "2026-09-05T21:03:52.894Z",
  "tables": {
   "mechanisms": [
    {
@@ -308,10 +308,12 @@
      "sprintsync.mjs",
      "state.mjs",
      "teaching_contract.mjs",
+     "tokenizer_play.mjs",
      "widget.mjs"
     ],
-    "updated_at": "2026-09-04T00:15:33.136Z",
-    "added_at": "2026-09-04T00:11:09.128Z"
+    "updated_at": "2026-09-05T21:03:52.885Z",
+    "added_at": "2026-09-04T00:11:09.128Z",
+    "why": "6 Sep 2026 (row 68 (f)): tokenizer_play.mjs joins — the axis-d playground the /forge skill names; read-only, writes nothing, selftest 13/0."
    },
    {
     "subject": "probe_kinds",
