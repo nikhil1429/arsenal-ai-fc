@@ -587,7 +587,13 @@ export function nextup(dir = STATE, now = Date.now()) {
     const line = stale
       ? `PEHLE \`node scripts/forge_session.mjs resume\` — '${forge.concept}' STEP ${forge.step} pe khula pada hai; wahin se aage, kuch dobara nahi. (Us concept se sach mein fursat ho tabhi \`close\` — coverage report wahi bachata hai.)`
       : `resume '${forge.concept}' @ STEP ${forge.step} — usi jagah se, kuch dobara nahi`;
-    return winnerOf("forge-open", line, "ek khula loop sab kuch rok deta hai — pehle woh", losers);
+    // row 69 (3) (6 Sep 2026): the `pointer` verb (row 68 (b)) writes the exact unanswered
+    // micro-question at every stop; the ONE line he reads at kickoff carries it, so PEHLA KAAM
+    // names the question and not just the step (his 11 Aug law: nothing he must remember).
+    // Read, never derived; no pointer on disk = nothing invented. Capped like the boot line.
+    const ptr = forge.resume_pointer && typeof forge.resume_pointer.text === "string" ? forge.resume_pointer.text.trim() : "";
+    const ptrTag = ptr ? ` · agla sawaal: "${ptr.length > 140 ? ptr.slice(0, 137) + "…" : ptr}"` : "";
+    return winnerOf("forge-open", line + ptrTag, "ek khula loop sab kuch rok deta hai — pehle woh", losers);
   }
   if (pend.length) {
     return winnerOf("rejirah-pending", `gist paste: ${pend.slice(0, 2).map((p) => `${p.concept} R${p.round}`).join(" · ")} — \`node scripts/rejirah.mjs pending\` se patch lo`,
@@ -1282,6 +1288,12 @@ function selftest() {
   forgeFx({ started_at: hoursAgo(2) });
   assert("ARBITER — an OPEN fresh forge session beats the sprint, and says RESUME",
     (() => { const n = nextup(dirA, NOW); return n.winner.name === "forge-open" && /resume/.test(n.winner.line) && n.contenders.some((c) => c.name === "sprint"); })());
+  // row 69 (3) (6 Sep 2026): the pointer rides the one line he reads. With a pointer on disk the
+  // line names the question; without one it invents nothing (the fallback in disguise, refused).
+  forgeFx({ started_at: hoursAgo(2), resume_pointer: { text: "Word-level itna simple hai — toh subword kyun?", axis: "b", step: 4, at: hoursAgo(1) } });
+  assert("ARBITER row 69 (3) — the PEHLA KAAM line carries the pointer's exact question when one is on disk, and invents none when there is none",
+    (() => { const withP = nextup(dirA, NOW).winner.line; forgeFx({ started_at: hoursAgo(2) }); const without = nextup(dirA, NOW).winner.line;
+      return withP.includes('agla sawaal: "Word-level itna simple hai — toh subword kyun?"') && /resume 'hallucinations' @ STEP 4/.test(withP) && !without.includes("agla sawaal"); })());
   forgeFx({ started_at: hoursAgo(30) });
   // W0-D (2 Sep 2026): a stale-open session still WINS the slot — an open loop starves
   // everything, that ranking is untouched. What changed is the ACTION: the old line

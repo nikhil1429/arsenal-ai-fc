@@ -1,5 +1,5 @@
 {
- "built_at": "2026-09-05T21:03:30.491Z",
+ "built_at": "2026-09-05T23:39:51.145Z",
  "organs_parsed": 113,
  "organs_expected": 113,
  "parse_errors": [],
@@ -10395,7 +10395,7 @@
    "unresolved": 3
   },
   "learnstate.mjs": {
-   "loc": 1700,
+   "loc": 1712,
    "reads": [
     {
      "path": "learning-layer/HOW_HE_LEARNS.md",
@@ -10454,10 +10454,10 @@
      "lines": [
       137,
       137,
-      645,
+      651,
       137,
       137,
-      645
+      651
      ],
      "fixture": false
     },
@@ -10474,8 +10474,8 @@
     {
      "path": "dressing-room/state/cards.json",
      "lines": [
-      645,
-      645
+      651,
+      651
      ],
      "fixture": false
     },
