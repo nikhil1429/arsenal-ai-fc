@@ -200,8 +200,7 @@ alag rule hai; ab woh un-numbered hai.)
 **Har concept ka EK widget; widget HI lesson hai, text side mein.** Yeh 1 Aug 2026 ko captain ne
 explicitly re-confirm kiya — neeche §11 mein poora ruling.
 
-Clauses: story hook = business cliffhanger (definition nahi) · **stepper only, NO autoplay**, counter
-"3/9" visible, mechanism ka working VISIBLE (interactivity ke peeche chhupa nahi) · spotlight = ek step
+Clauses: story hook = business cliffhanger (definition nahi) · **stepper only, NO autoplay**, ~~counter "3/9" visible~~ (named step — SAMJHAO_MERGED A3; struck 5 Sep 2026), mechanism ka working VISIBLE (interactivity ke peeche chhupa nahi) · spotlight = ek step
 = ek highlight, baaki dim, caption ek line · **load budget max ~6 objects ek waqt visible, baaki tap-to-expand; ek viewport, zero scroll** ·
 history trail (har transformation ka breadcrumb) · 2-3 **guess-gates** · trap cards (misconception
 pre-bunk) · **Tod button** (famous failure khud todna) · **Chala mode** (Nikhil drive kare, widget
@@ -939,7 +938,7 @@ rename kiya → splice **chupchap** band ho jaata hai, by design.)*
 3. Mechanism **text + numbered trace** mein rakho; visuals samajh ke **baad**.
 4. Har example **usse haath se chalwao** — dekhne se nahi chipakta.
 5. Analogy sirf **rozmarra ki physical cheezon** se (khana, ghar, dukaan, sheher). Geometry kabhi nahi.
-6. Har turn batao: **"tu yahan hai, itna bacha hai."**
+6. Har turn batao: **"tum yahan ho, itna bacha hai."** *(register corrected 5 Sep 2026)*
 7. **Pehle apni galti maano**, phir padhao — woh seedha wapas aa jaata hai.
 8. Har naya naam ya label **pehli baar mein hi ek line mein kholo**.
 9. **"Samajh nahi aaya" ko literally lo** — wahin ruko, zero se shuru karo, aage mat badho.

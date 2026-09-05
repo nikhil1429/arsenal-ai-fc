@@ -346,3 +346,10 @@ node -e "const fs=require('fs');for(const f of fs.readdirSync('dressing-room/sta
 Ratified by him 30 Aug 2026 (*"ok all approved"*), receipt `amtfkb4r48m`, teaching-contract rule 31.
 Built from a 17-agent read of **360 distinct `.md` files** across the repo, the architect artifacts folder and the memory folder, four adversarial reviews (his rulings · dropped content · code-path honesty · his brain) and one completeness audit, against commit `d466b43`.
 The correction in §2 was **his**, not the review's.
+
+## 11 · AMENDMENTS BY LATER RULINGS (appended 5 Sep 2026 by the architect; the body above stands as written — L9)
+- **Per-axis JIRAH is WITHDRAWN (his word 4 Sep, forks ruling row 45):** Jirah runs ONCE at the CONCEPT level after all nine axes — per axis only ONE check-question + Bolo (Hinglish) + one English interview line, banked. His traps and doubts are the ROUND's cold bait, never a teaching-turn lure; a teaching turn refutes the wrong model impersonally.
+- **GRADED = a judged jirah row (row 46);** the lock gate demands a judged jirah row per done axis + the negative-space probe + one cross-axis row.
+- **The judge runs ONCE per sitting at his full-time (row 48 (3)), never per axis;** until the code-fired judge is built, `/full-time` step 3 and learn §4 carry the line.
+- **The approved study shape (5 Sep, rows 51 + 53b) lives in `.claude/skills/learn/SKILL.md` 0a-R and `.claude/skills/forge/SKILL.md` step 3:** the three-line re-entry screen; every teaching turn = position by NAME + the idea at full depth in the three layers with the pen in his hand + one typed ask + same-turn re-weld; the axis banks exactly three moments; the concept widget once after axis g; register "tum".
+- **The RESUME block at the top of this file is a snapshot of 31 Aug and is STALE:** the live position is read only from `node scripts/forge_session.mjs status` (today: tokenization, STEP 3, axis a done, ON axis b). Never resume from this file's block.

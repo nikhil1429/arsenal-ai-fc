@@ -495,7 +495,7 @@ i) SAMJHAO 3 WAYS — CEO (business) / junior (mechanics) / skeptical senior (tr
 #   1 driven" — which is why nothing here is hardcoded; that second number moves the day he drives one.)*
 - Story hook: pehla frame = business cliffhanger, definition nahi.
 - Stepper only, NO autoplay: ek click = ek micro-step; step 0 pe poora route greyed-out;
-  counter "3/9" visible. Mechanism ka working VISIBLE rahe — interactivity ke peeche
+  ~~counter "3/9" visible~~ → har step apne NAAM se, count se nahi *(SAMJHAO_MERGED A3, 30 Aug 2026; struck 5 Sep 2026, L9)*. Mechanism ka working VISIBLE rahe — interactivity ke peeche
   hidden nahi.
 - Spotlight: har step pe sirf EK change highlight, baaki dim; caption ek line, visual se
   synced.
@@ -599,7 +599,7 @@ i) SAMJHAO 3 WAYS — CEO (business) / junior (mechanics) / skeptical senior (tr
   RECALL (cold fact) / RECONSTRUCT (derive-live) / DEFEND (judgment, hold-under-pressure); har axis
   apne mode mein test ho · (3) PER-AXIS ADAPTIVE INTERVAL (SM-2-lite: clean-held → interval expand,
   cracked → reset short; global +3d/+2wk/+6wk hatao) · (4) ROUND-MODE ESCALATION (R-early gentle cold ·
-  R-mid adversarial + traps + "tera take" + ek counterfactual · R-late timed mini-mock, axes mixed,
+  R-mid adversarial + traps + "tumhara take" + ek counterfactual · R-late timed mini-mock, axes mixed,
   interrupt/push-back, cross-concept) · (5) CROSS-CONCEPT SEAMS (bridges drilled — "ek invoice line
   trace: raw → tokens → embeddings → KV cache → logits; har handoff naam de").
 4 mechanics: FORCED cold-guess before EVERY correction (Re-Jirah cracks pe bhi) · CALIBRATION-GAP =

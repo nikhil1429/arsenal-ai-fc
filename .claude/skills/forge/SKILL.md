@@ -81,7 +81,7 @@ node scripts/forge_session.mjs close                  # at session khatam → co
 
 ### THE BANK — one command per answer, and it is not optional any more (A3, 4 Sep 2026)
 
-**The moment he finishes speaking an answer, you type ONE line. Nothing else. He types nothing.**
+**At the axis's THREE banked moments only — the sharp check, the Bolo, the interview line — you type ONE bank line. Per-idea typed answers are re-welded in the turn and never banked (5 Sep 2026, row 53b). He types his answer; you type the bank line.**
 
 ```
 node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut knew|shaky|guessed --asked "<the question you actually asked, verbatim>" --said "<his words, verbatim>" --surface code --latency_ms <n> [--probe recall|reconstruct|defend|novel|negative_space|jirah|cross_axis] [--register interview]
@@ -140,7 +140,7 @@ again. (A re-lock burns all nine at once; you do not have to do it per axis afte
 
 1. **Refute the wrong model, never the person.** Name the belief, not him.
 2. **Samjhao** — the mechanism in the three layers: the dukaan/ghar picture · the real name · the technical line.
-3. **Dikhao** — the concept's ONE widget, driven at *this* axis (`moment widget_gate`).
+3. **Dikhao** — a concrete example on his data. ~~the concept's ONE widget, driven at *this* axis~~ → the concept's ONE widget is driven ONCE for the whole concept, after axis g (`moment widget_gate` ×3), never inside an axis *(SAMJHAO_MERGED A3; 5 Sep 2026 row 53b; struck, not deleted — L9)*.
 4. **Saath karo** — you and he trace it together, on HIS data, numbered.
 5. **Akele karo** — he does it alone. Struggle-first; never hand him the answer.
 6. **ONE check-question** — `moment check_q`, on what you JUST taught, then STOP and wait.
@@ -159,7 +159,7 @@ again. (A re-lock burns all nine at once; you do not have to do it per axis afte
 THE METHOD's 0–11 numbering stays the code order; this loop runs as pacer moments inside steps
 3–6. Steps 7 BOLO, 8 CALIBRATE and 9 JIRAH run ONCE at CONCEPT level, after all nine axes, before 10.
 
-**EVERY TEACHER TURN:** `STEP n/11 · <name> · axis x` + "tu yahan hai, itna bacha" → ONE idea in
+**EVERY TEACHER TURN:** ~~`STEP n/11 · <name> · axis x`~~ → position by NAME — `TOKENIZATION > AXIS c (factory vs use) > <micro-step>` — + "tum yahan ho, itna bacha" *(counter struck and register corrected 5 Sep 2026: SAMJHAO_MERGED T2 "never an abstract counter"; his "tum")* → ONE idea in
 the three layers → the mechanism in text + a numbered trace on HIS data → ONE check-question →
 **STOP.**
 
@@ -209,9 +209,7 @@ one `scout:` line. It is fail-silent and non-blocking (a scout failure prints "t
 staged … non-blocking" and the session still opens). Evidence:
 `grep -n "stage-topic" scripts/forge_session.mjs`. Missions tune EMPHASIS, never the syllabus.
 
-**If SessionStart reported an OPEN session, `close` it FIRST and read the coverage aloud** —
-do NOT re-teach the axes it lists and do NOT restart from step 0. `start` will **REFUSE**
-while any unclosed session exists, stale or not.
+**If SessionStart reported an OPEN session, run `node scripts/forge_session.mjs resume` and continue where it says** — do NOT re-teach the axes it lists, do NOT restart from step 0, and NEVER `close` a live concept to get a "clean" one *(5 Sep 2026, row 53b: the old line here said "close it FIRST" — struck; a concept spanning days is the normal case, learn A10)*. `start` will **REFUSE** while any unclosed session exists, stale or not.
 
 **Mark an axis `done` once his Bolo row AND his interview line are banked for it — that is the
 whole of it.** *(Changed 4 Sep 2026 on his ruling. This paragraph used to read "mark an axis
@@ -222,7 +220,7 @@ HARDER there — `step 10` refuses until every axis you marked done carries a ba
 Canon's law is unchanged and is now enforced where it can actually be checked: the status comes
 from JIRAH, never from a self-rating (§9, §10 below).
 
-**Every teaching message opens with one line: `STEP n/11 · NAME · axis <x>`.** He must be
+**Every teaching message opens with one line: ~~`STEP n/11 · NAME · axis <x>`~~ → `TOKENIZATION > AXIS <x> (<axis name>) > <micro-step>` — the named position, never a count (5 Sep 2026; SAMJHAO_MERGED T2).** He must be
 able to see, at a glance and without reading any rule, which step he is in and which one
 you skipped. A skipped step is allowed (time-box, RED day) — a **silently** skipped step
 is not.
@@ -270,25 +268,23 @@ is not.
   row 51; the canon critic's findings that shaped it:
   `C:\Users\nikhi\arsenal-audit-artifacts\study-interface-2026-09-05\07_CANON_CRITIC__v2-findings.md`).
   Every teaching turn, in this order:** (1) position by name (`TOKENIZATION > AXIS c > FACTORY`) +
-  the NEXT named step · (2) the idea at FULL DEPTH in THREE registers — dukaan → asli naam (opened
-  in one line) → the technical/interview line — with a numbered trace on HIS hero line where HE
+  the NEXT named step · (2) the idea at FULL DEPTH in the THREE LAYERS — dukaan → asli naam (opened
+  in one line) → the technical line — with a numbered trace on HIS hero line where HE
   writes the steps (you give step 1, he writes 2–4, you re-weld) · (3) the wrong model refuted
   IMPERSONALLY ("yahan sabka dimaag ek taraf jaata hai"), never "your June bait" — his traps and
   doubts are the ROUND's cold bait (step 9), never a teaching lure · (4) ONE ask, single clause,
-  typed (or dictated and pasted), no length cap · (5) same-turn re-weld of what he wrote, then the
-  next idea by name. On a teaching turn there is NO gut-word, NO bank, NO tile, NO widget, NO
-  stepper, NO line to repeat before "apne shabdon mein", NO latency shown. Per-idea typed lines are
+  typed, no length cap · (5) same-turn re-weld of what he wrote, then the
+  next idea by name. On a step-3 SAMJHAO turn there is NO gut-word, NO bank, NO tile, NO widget, NO
+  stepper (step 4's one concept widget, once after axis g, is the exception), NO line to repeat before "apne shabdon mein", NO latency shown. Per-idea typed lines are
   checks with feedback — never logged, never banked.
   **THE AXIS BANKS EXACTLY THREE MOMENTS:** (a) the ONE sharp check — gut pehle (pakka / shayad /
-  pata nahi → knew / shaky / guessed), answer typed, no cap → `node scripts/gaffer_brain.mjs capture
-  voice_rep <concept>:<axis> --axis <a-i> --gut <word> --asked "<verbatim>" --said "<his words>"
-  --surface code [--latency_ms n]` → say **"bank mein gaya · axis <x> · judge shaam ko"** (never a
+  pata nahi → knew / shaky / guessed), answer typed, no cap → `node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut <word> --asked "<verbatim>" --said "<his words>" --surface code [--latency_ms n]` → say **"bank mein gaya · axis <x> · judge shaam ko"** (never a
   verdict, never seconds) · (b) BOLO — the axis spoken in Hinglish (dictation), transcript pasted,
   banked · (c) the English interview line, banked `--register interview`. Then `axis <x> done`
   (the gate wants ≥1 Hinglish row + ≥1 interview row since the axis opened), the [T]/[N] block to
-  the crash belt, his own words read back, the resume pointer, the existing two-option axis-end
+  the crash belt, his own words read back, the resume pointer — today that is the `[T] … AGLA SAWAAL:` line you APPEND to the crash belt at every stop (no state verb exists yet; plan §12) — the two-option axis-end
   moment (walk or next — his pick; he may stop ANYWHERE and the pointer records "idea k on axis
-  x"). The judge runs ONCE per sitting at his full-time, never per axis (row 48 (3)). The
+  x"). The judge runs ONCE per sitting at his full-time (`/full-time` step 3 runs `node scripts/gaffer_brain.mjs judge-round` first), never per axis (row 48 (3)) — EXCEPT at STEP 10, where the lock gate refuses until every done axis carries a judged jirah row: run judge-round there, then lock. The axis's sharp check is BANKED through capture, not logged as `moment check_q` — the pacer's check_q stays the step-level check, one per pass, and the numbered trace's (tum) steps are the pen in his hand, not question-moments. The
   concept's widget is driven ONCE, after axis g, text first (row 51).
 - **4 · DIKHAO.** Concrete example **+ the concept's WIDGET** (Visualization Contract):
   story hook = a business cliffhanger, not a definition · stepper only / **no autoplay**,

@@ -42,7 +42,7 @@ node scripts/samjhao.mjs open <concept> ; node scripts/samjhao.mjs plan <concept
 - **`resume` first, `start` second.** `start` REFUSES while a session is open, and that refusal
   is the correct answer — never `--force` your way past it, and never `close` a session to open
   a "clean" one. A concept that spans four days is the normal case.
-- ⭐ **MORNING WARM-UP — 3 to 5 cold probes on YESTERDAY's topic, BEFORE today's resume.** Take
+- ⭐ **MORNING WARM-UP — 3 to 5 cold probes on YESTERDAY's topic, AFTER the re-entry screen (0a-R below), never before it; SKIP it when yesterday's topic is the concept still open, or when the judged rows sit on an axis already marked done (5 Sep 2026).** Take
   them from the JUDGED bank — the answers he already gave that the judge already graded:
   `node -e "const fs=require('fs');const rs=fs.readFileSync('dressing-room/state/gaffer_grade_queue.jsonl','utf8').split(/\r?\n/).filter(l=>l.trim()).map(JSON.parse);const done=new Set(rs.filter(r=>r.kind==='settled').map(r=>r.of));rs.filter(r=>r.kind==='capture'&&done.has(r.id)&&r.concept==='<yesterday>').forEach(r=>console.log(r.axis,r.gut,'|',r.asked))"`
   — and **ask them in FRESH WORDING**: a
@@ -69,12 +69,10 @@ screen is exactly three lines and one question, nothing else:
      letter alone, never a count, never hours since the last touch, never "kahan the".
   2. The NEXT named step (what comes after this one). That is the only "preview" that exists.
   3. One sentence: what he does now, in twenty seconds.
-  Then THE POINTER'S QUESTION — the exact unanswered micro-question where he stopped (source order:
-  the `forge_session.mjs resume` line → the crash belt's `[T] … KYA BACHA HAI` block →
-  `samjhao plan --json`). Typed answer, no length cap. NO LOSS on this screen: no STALE, no drift
+  Then THE POINTER'S QUESTION — the exact unanswered micro-question where he stopped (source: the `[T] … AGLA SAWAAL:` line the teacher APPENDED to the crash belt at the last stop; if none exists, the oldest unpaid udhaar on the belt, written by you as ONE clause; no state field holds it until the `resume_pointer` verb is built — plan §12). The boot commands above are for YOU, not for him — read them, then write the three lines yourself; never paste a pacer line onto his screen. Typed answer, no length cap. NO LOSS on this screen: no STALE, no drift
   counts, no reds, no "resumed N×", no skipped/missed, no organism health. Register: **"tum"**,
   never "tu/tera" (his standing preference, 30 Aug). Never a tile, a widget, a stepper or a
-  multiple-choice question on this screen or on any teaching turn — the turn shape lives in
+  multiple-choice question on this screen or on any step-3 SAMJHAO turn (step 4's one concept widget, once after axis g, is the exception) — the turn shape lives in
   `/forge` under step 3 (same ruling).
 
 0b. **Register the sitting (ONE OPEN SITTING law, Block 3):** the `sitting.mjs open` line above is
@@ -123,7 +121,7 @@ Run `node scripts/learnstate.mjs json` and read:
   `node scripts/deep.mjs` and read them off the live screen; the per-capsule `rounds_done` is
   `node -e` on `dressing-room/state/capsule_map.json` or just `node scripts/rejirah.mjs state`.)*
 
-Open with ONE line: what he's on + the open loop. Then route. If `cur` is empty,
+~~Open with ONE line: what he's on + the open loop.~~ → The opening IS 0a-R's three-line screen (5 Sep 2026); everything in §0 between is read silently — none of it reaches his screen. Then route. If `cur` is empty,
 tell him the sprint has no current task (run `node scripts/sprintsync.mjs`) and stop.
 
 ### RE-READ / RE-JIRAH (he wants to revisit, not start new)
@@ -322,7 +320,7 @@ hai, baad mein COLD wapas). Sab done → solutions copy karke Coach le ja. ⚠�
 ━━━━ BLOCK-B → PYTHON COACH Gem mein paste (neeche D1–D5 solutions laga ke) ━━━━
 FOREMAN RUN — subtopic: [X]. Steps (position dikhate chalo, ek step per reply):
 (1) REVIEW: mere solutions senior-lens se — idiomatic? JS-hangover kahan? bug/edge? senior kya
-    badle + 1-line KYUN. Rewrite MAT — main karunga, tu verify. ⚠️ WATCH-LIST against: [inject]
+    badle + 1-line KYUN. Rewrite MAT — main karunga, tum verify karna. ⚠️ WATCH-LIST against: [inject]
 (2) BOLO [raw-fundamental → light/optional; CORE build-skill + FinOps → NON-NEGOTIABLE, §11.0]:
     CUE mujhe VERBATIM code-block mein → main record → transcript paste → 1-line interviewer-poke
     → "isi transcript ko NotebookLM Python mein note/source bana."
@@ -397,7 +395,7 @@ When he pastes the `📋 CLAUDE-HANDOFF` (or says "done / bas / khatam"):
 When the day's work is done, run a short **cold retrieval test on today's concept** — 3–5 probes,
 no teaching, gut-word BEFORE each answer. This is retrieval practice, distinct from the graded
 `/scrimmage` mock and from forge's teaching-Bolo. Capture these probes as reps too (§3: concept
-day → `surface:"gem", track:"concept"`, real axis; skill day → `surface:"colab", track:"skill"`).
+day in a Code session → `surface:"code"`, banked through `gaffer_brain.mjs capture voice_rep … --surface code`, real axis (a Gem day → `surface:"gem"`); skill day → `surface:"colab", track:"skill"`).
 Close with ONE honest line, self-scout register. No praise unless earned and specific.
 *(10 Aug 2026 — NAME COLLISION, flagged before it costs a session. This beat is his 18 Jul
 captain's call, and `sprint.json` carries it under `progress.examiner_daily` in those words
@@ -409,6 +407,8 @@ scripts/examiner.mjs`. Which means the "distinct from the graded /scrimmage mock
 code-confirmed, and it also means **do not run `examiner.mjs stage` for this close** — bare
 `node scripts/examiner.mjs` is the read-only look, `stage` is a write. This beat has no organ; you
 run it in the turn and the reps land through §3.)*
+
+Then the day's ONE judge call — `node scripts/gaffer_brain.mjs judge-round` — on every banked study row (row 48 (3); until the code-fired judge is built, THIS line is the door; a second call the same evening re-refuses the same rows for nothing).
 
 Finally: `node scripts/sitting.mjs close --reason fulltime` — the review row + session-intent line land through the owners.
 
