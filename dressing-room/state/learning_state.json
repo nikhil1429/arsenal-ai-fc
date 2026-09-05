@@ -1,6 +1,6 @@
 {
-  "date": "2026-09-04",
-  "generated_at": "2026-09-04T03:56:55.096Z",
+  "date": "2026-09-05",
+  "generated_at": "2026-09-05T06:16:43.180Z",
   "total_reps": 0,
   "status": "awaiting_data",
   "low_confidence": true,
@@ -130,10 +130,11 @@
     "concept": "tokenization",
     "step": 3,
     "step_name": "SAMJHAO",
-    "axes_done": [],
+    "axes_done": [
+      "a"
+    ],
     "axes_deferred": [],
     "axes_left": [
-      "a",
       "b",
       "c",
       "d",
@@ -146,7 +147,7 @@
     "axes_ungraded": [],
     "started_at": "2026-09-02T21:05:33.373Z",
     "stale": false,
-    "stale_as_of": "2026-09-04T03:56:55.096Z",
+    "stale_as_of": "2026-09-05T06:16:43.180Z",
     "last_closed": {
       "concept": "hallucinations",
       "ended_at": "2026-09-02T21:05:33.180Z",
