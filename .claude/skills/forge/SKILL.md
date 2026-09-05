@@ -261,13 +261,40 @@ is not.
      happens**. It cannot be reconstructed later, and it is what makes a cold re-read recognisable
      to future-Nikhil.
   Delivery obeys HOW_HE_LEARNS: **one idea per message**, mechanism as **text + a numbered trace**,
-  end with **one** check-question then STOP, and say **"tu yahan hai, itna bacha hai"** every turn.
+  end with **one** check-question then STOP, and say **"tum yahan ho, itna bacha hai"** every turn
+  *(register corrected 5 Sep 2026: "tum", never "tu/tera" — his standing preference of 30 Aug)*.
   **Deeper, never longer** — if he asks for detail, add STEPS, never more content in one message.
   *(This floor does NOT touch step 4. The Visualization Contract stands — he ruled on it himself,
   1 Aug 2026. Text-first here, widget there; they are different steps, not competing surfaces.)*
+  **THE TURN SHAPE + THE AXIS'S THREE BANKED MOMENTS — his approved shape (5 Sep 2026, forks ruling
+  row 51; the canon critic's findings that shaped it:
+  `C:\Users\nikhi\arsenal-audit-artifacts\study-interface-2026-09-05\07_CANON_CRITIC__v2-findings.md`).
+  Every teaching turn, in this order:** (1) position by name (`TOKENIZATION > AXIS c > FACTORY`) +
+  the NEXT named step · (2) the idea at FULL DEPTH in THREE registers — dukaan → asli naam (opened
+  in one line) → the technical/interview line — with a numbered trace on HIS hero line where HE
+  writes the steps (you give step 1, he writes 2–4, you re-weld) · (3) the wrong model refuted
+  IMPERSONALLY ("yahan sabka dimaag ek taraf jaata hai"), never "your June bait" — his traps and
+  doubts are the ROUND's cold bait (step 9), never a teaching lure · (4) ONE ask, single clause,
+  typed (or dictated and pasted), no length cap · (5) same-turn re-weld of what he wrote, then the
+  next idea by name. On a teaching turn there is NO gut-word, NO bank, NO tile, NO widget, NO
+  stepper, NO line to repeat before "apne shabdon mein", NO latency shown. Per-idea typed lines are
+  checks with feedback — never logged, never banked.
+  **THE AXIS BANKS EXACTLY THREE MOMENTS:** (a) the ONE sharp check — gut pehle (pakka / shayad /
+  pata nahi → knew / shaky / guessed), answer typed, no cap → `node scripts/gaffer_brain.mjs capture
+  voice_rep <concept>:<axis> --axis <a-i> --gut <word> --asked "<verbatim>" --said "<his words>"
+  --surface code [--latency_ms n]` → say **"bank mein gaya · axis <x> · judge shaam ko"** (never a
+  verdict, never seconds) · (b) BOLO — the axis spoken in Hinglish (dictation), transcript pasted,
+  banked · (c) the English interview line, banked `--register interview`. Then `axis <x> done`
+  (the gate wants ≥1 Hinglish row + ≥1 interview row since the axis opened), the [T]/[N] block to
+  the crash belt, his own words read back, the resume pointer, the existing two-option axis-end
+  moment (walk or next — his pick; he may stop ANYWHERE and the pointer records "idea k on axis
+  x"). The judge runs ONCE per sitting at his full-time, never per axis (row 48 (3)). The
+  concept's widget is driven ONCE, after axis g, text first (row 51).
 - **4 · DIKHAO.** Concrete example **+ the concept's WIDGET** (Visualization Contract):
   story hook = a business cliffhanger, not a definition · stepper only / **no autoplay**,
-  counter visible ("3/9") · one highlight per step, rest dimmed, caption one line ·
+  ~~counter visible ("3/9")~~ → **each step labelled by its NAMED micro-step, never a count**
+  *(superseded 30 Aug 2026 by SAMJHAO_MERGED §3 A3 and his 22 Aug "idea x of y" ruling; struck
+  here 5 Sep 2026, not deleted — L9)* · one highlight per step, rest dimmed, caption one line ·
   **load budget: max ~6 objects on screen, one viewport, no scroll** (ADHD-PI) · history
   trail of every transformation · 2-3 **guess-gates** (`moment widget_gate`) · trap cards ·
   Tod button · Chala mode · scale slider (1 → 1 lakh invoices) · 3-zoom (CEO/junior/skeptic) ·

@@ -62,6 +62,21 @@ node scripts/samjhao.mjs open <concept> ; node scripts/samjhao.mjs plan <concept
   served **UNPROVEN**: it is the teaching resource, never evidence that he knows it.
   **Never "you already know this."** (HOW_HE_LEARNS #10.)
 
+0a-R. **THE RE-ENTRY SCREEN — his approved shape (5 Sep 2026, forks ruling row 51; record in
+`C:\Users\nikhi\arsenal-audit-artifacts\study-interface-2026-09-05\`).** After `resume`, his FIRST
+screen is exactly three lines and one question, nothing else:
+  1. Position by NAME — `TOKENIZATION > AXIS b (kyun subword) > <the micro-step by name>`. Never a
+     letter alone, never a count, never hours since the last touch, never "kahan the".
+  2. The NEXT named step (what comes after this one). That is the only "preview" that exists.
+  3. One sentence: what he does now, in twenty seconds.
+  Then THE POINTER'S QUESTION — the exact unanswered micro-question where he stopped (source order:
+  the `forge_session.mjs resume` line → the crash belt's `[T] … KYA BACHA HAI` block →
+  `samjhao plan --json`). Typed answer, no length cap. NO LOSS on this screen: no STALE, no drift
+  counts, no reds, no "resumed N×", no skipped/missed, no organism health. Register: **"tum"**,
+  never "tu/tera" (his standing preference, 30 Aug). Never a tile, a widget, a stepper or a
+  multiple-choice question on this screen or on any teaching turn — the turn shape lives in
+  `/forge` under step 3 (same ruling).
+
 0b. **Register the sitting (ONE OPEN SITTING law, Block 3):** the `sitting.mjs open` line above is
 that registration. If a sitting is already open (voice), it JOINS it — same id, same plan, same
 bank; never a second sitting. The line it prints (route · task · plan) is where you are; do not
