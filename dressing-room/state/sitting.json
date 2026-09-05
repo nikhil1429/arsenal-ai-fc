@@ -1,5 +1,5 @@
 {
-  "id": "sit_20260903_2104_2520",
+  "id": "sit_20260904_0858_a5dd",
   "captain": "Nikhil (#14)",
   "surfaces": [
     "code"
@@ -8,13 +8,13 @@
   "task_id": "1-04",
   "track": "concept",
   "route": "FORGE",
-  "concept": "hallucinations",
-  "route_why": "purani forge session stale (>18h) — owner CLI se band, phir 'Hallucinations' shuru",
+  "concept": "tokenization",
+  "route_why": "forge session open @ step 3 — resume, kuch dobara nahi",
   "claude_session_id": null,
   "transport": "code",
-  "opened_at": "2026-09-02T21:04:21.451Z",
-  "last_turn_at": "2026-09-02T21:04:21.452Z",
-  "closed_at": "2026-09-02T21:24:22.447Z",
+  "opened_at": "2026-09-04T08:58:33.814Z",
+  "last_turn_at": "2026-09-04T08:58:33.814Z",
+  "closed_at": "2026-09-04T09:18:33.998Z",
   "close_reason": "idle",
   "plan": [],
   "plan_source": null,
@@ -22,8 +22,8 @@
   "cursor": 0,
   "unit_seq": 0,
   "pending_question": null,
-  "forge_step": 0,
-  "forge_axis": null,
+  "forge_step": 3,
+  "forge_axis": "a",
   "effort": {
     "compose": "high",
     "respond": "high",
@@ -57,7 +57,7 @@
     "units_composed": 0,
     "units_delivered": 0,
     "banked": 0,
-    "owner_calls": 3,
+    "owner_calls": 1,
     "head_tokens": null
   }
 }

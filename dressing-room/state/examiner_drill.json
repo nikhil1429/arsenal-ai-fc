@@ -1,16 +1,16 @@
 {
-  "date": "2026-09-03",
-  "staged_at": "2026-09-03T17:25:02.705Z",
+  "date": "2026-09-05",
+  "staged_at": "2026-09-05T00:54:31.357Z",
   "concept": "tokenization",
   "picked_because": "capsule floor — GAME ON (2026-08-30): 22 pre-restart rep(s) are record, not evidence, and no post-restart rep exists yet",
   "shape": "mechanism",
   "shape_source": "examiner registry",
   "shape_unverified": false,
-  "template": "implement",
-  "task": "Implement a MINIMAL working tokenization from scratch in Python — smallest honest version, no libraries doing the core step for you. Talk while you type; the examiner runs it when you say run.",
+  "template": "extend",
+  "task": "Start from a working minimal tokenization (the examiner provides it). Extend it with ONE realistic production constraint (batching, caching, or an input guard) — his choice, defended.",
   "hidden_tests": [
-    "run his code on a tiny input and check the output SHAPE is right",
-    "ask him to predict the output for one edge input BEFORE running it, then run it",
-    "change one parameter and ask what changes, then run to verify his claim"
+    "run before-and-after on the same input; the behavior must be identical where the constraint doesn't bind",
+    "construct one input where the extension actually matters, and run it",
+    "ask for the cost of the extension (memory/latency) and sanity-check the claim in code"
   ]
 }
