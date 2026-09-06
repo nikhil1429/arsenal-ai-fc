@@ -334,6 +334,20 @@ function integrity() {
     for (const m of src.matchAll(/"trigger",\s*"([a-z_]+)"/g)) armings.set(m[1], f);
     for (const m of src.matchAll(/\barmTrigger\(\s*"([a-z_]+)"/g)) armings.set(m[1], f);
   }
+  // 6 Sep 2026 (forks ruling row 76, architect df): brain.mjs exports its VERB LIST — `["tick", …, "trigger", "gate",
+  // "hold", …]` — and the CLI-shape regex above reads the pair `"trigger", "gate"` INSIDE that list as an arming of a
+  // trigger named `gate`. The red was born the day the `hold` verb (row 47, 4 Sep) put "gate" right after "trigger" in
+  // the array. A verb is never a trigger name — brain.mjs dispatches verbs, brain_config.json declares triggers, and the
+  // two namespaces are disjoint by construction — so the verb list, DERIVED from brain.mjs's own exported literal and
+  // never typed here, is subtracted from the armings. The plant right below proves the pair is still SEEN by the scanner,
+  // so the subtraction is a classification and not a blind spot; a real arming inside brain.mjs would fail the plant.
+  const brainSrc = readOrgan("brain.mjs");
+  const verbsM = brainSrc.match(/export const BRAIN_MODES = \[([^\]]*)\]/);
+  const brainVerbs = new Set(verbsM ? [...verbsM[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]) : []);
+  const seenPairs = [...brainSrc.matchAll(/"trigger",\s*"([a-z_]+)"/g)].map((m) => m[1]);
+  assert("the trigger scanner SEES brain.mjs's own verb list (a `\"trigger\", \"<verb>\"` pair inside BRAIN_MODES) and classifies it as a verb, never as an arming",
+    brainVerbs.size > 0 && seenPairs.length > 0 && seenPairs.every((v) => brainVerbs.has(v)), `verbs ${brainVerbs.size} · pairs seen in brain.mjs: ${seenPairs.join(",") || "none"}`);
+  for (const v of brainVerbs) if (armings.get(v) === "brain.mjs") armings.delete(v);
   const brainJobs = JSON.parse(readFileSync(join(STATE, "brain_config.json"), "utf8")).jobs || [];
   const orphaned = [];
   for (const [name, organ] of armings) {
