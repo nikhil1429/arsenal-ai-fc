@@ -52,8 +52,9 @@
 //   liveness assertions — RED on violation, on his machine only).
 // CLI: node scripts/pulse.mjs [report|json|alive|selftest] [--no-reconcile]
 // ============================================================================
-import { readFileSync, existsSync, statSync } from "node:fs";
+import { readFileSync, existsSync, statSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { awakeModel } from "./herd.mjs";   // Block 8 · §14.3 — a deadline is measured in the LAPTOP'S AWAKE HOURS, never the wall clock
@@ -193,7 +194,9 @@ export function watcherVerdicts(stateDir = STATE_DIR, now = Date.now()) {
     try {
       const lines = readFileSync(led, "utf8").split("\n").filter((l) => l.trim());
       for (let i = lines.length - 1; i >= 0 && i >= lines.length - 50; i--) {
-        try { const t = Date.parse(JSON.parse(lines[i]).at); if (Number.isFinite(t)) { newest = t; break; } } catch { /* torn row — keep walking */ }
+        // 6 Sep 2026 (row 76): a `refused` row is the audit ALIVE but NOT RUNNING (its precondition said no) —
+        // it must never count as the run this lane measures, or a week of refusals reads as a healthy lane.
+        try { const row = JSON.parse(lines[i]); if (row && row.event === "refused") continue; const t = Date.parse(row.at); if (Number.isFinite(t)) { newest = t; break; } } catch { /* torn row — keep walking */ }
       }
     } catch { /* unreadable — handled below */ }
     if (!Number.isFinite(newest)) out.push({ name: "audit", class: "watcher-never", violation: true, detail: "audit_ledger.jsonl has no parseable dated row" });
@@ -321,6 +324,21 @@ function selftest() {
   const wv = watcherVerdicts(HERE, NOW);
   assert("WATCHERS — a directory with no watchman_last.json and no audit ledger reads watcher-never TWICE (fail-closed, never fail-quiet)",
     wv.filter((w) => w.class === "watcher-never").length === 2);
+  // 6 Sep 2026 (forks ruling row 76): a `refused` audit row is the lane ALIVE-BUT-NOT-RUNNING and must never count
+  // as the run — a week of daily refusals (30 Aug → 5 Sep) would otherwise read as a healthy lane the day they
+  // started landing on the ledger. A `ran` row is the run.
+  const tmpW = mkdtempSync(join(tmpdir(), "pulse-audit-"));
+  const H = 3600000;
+  writeFileSync(join(tmpW, "audit_ledger.jsonl"),
+    JSON.stringify({ event: "ran", at: new Date(NOW - 72 * H).toISOString(), findings: 0 }) + "\n"
+    + JSON.stringify({ event: "refused", at: new Date(NOW - 1 * H).toISOString(), why: "audit: REFUSING — fixture" }) + "\n");
+  const wvR = watcherVerdicts(tmpW, NOW).find((w) => w.name === "audit");
+  assert("WATCHERS — a fresh `refused` row does NOT revive the audit lane: the newest RUN is 72h old, so it reads watcher-stale",
+    !!wvR && wvR.class === "watcher-stale" && wvR.age_h > 70);
+  writeFileSync(join(tmpW, "audit_ledger.jsonl"), JSON.stringify({ event: "ran", at: new Date(NOW - 1 * H).toISOString(), findings: 0 }) + "\n");
+  const wvA = watcherVerdicts(tmpW, NOW).find((w) => w.name === "audit");
+  assert("WATCHERS — a `ran` row with zero findings IS a run: the lane reads alive (a clean audit is not a dead one)",
+    !!wvA && wvA.class === "alive");
 
   console.log(`\npulse selftest: ${pass} passed, ${fail} failed`);
   return fail === 0;

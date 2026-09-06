@@ -1657,7 +1657,16 @@ function hermetic() {
   // spool.db and no existing state file; the S8 DONE-proof drives the REAL hook with
   // ARSENAL_SPOOL_DB pointed at a sandbox and asserts the live db is untouched (check 6a).
   // The -wal/-shm siblings are covered by the same pattern (it matches the prefix).
-  const LIVE_WRITERS = /swallow_ledger\.jsonl|session_intent\.jsonl|afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl|pulse_session\.json|cortex_session\.json|captains_call\.json|sitting\.json|sitting_out\.jsonl|sitting_log\.jsonl|sitting_reviews\.jsonl|spool\.db/;
+  // session_meter.json · claims.jsonl · outbox.jsonl · reconcile.json added 6 Sep 2026 (forks ruling row 76). The
+  // forensics log blamed each of them across the 29 Aug → 6 Sep runs, every time attributed to a DIFFERENT selftest
+  // (sitting, freeze, spool, dugout, blackbox, sandbox, herd) — the signature of an external writer racing the
+  // window, not of a leaking selftest. Their live writers are the per-turn hooks and the daemons: claims.mjs runs on
+  // every Stop, the turn hooks and sweeps move the session meter, outbox rows land from brain/captains_call on their
+  // own ticks, reconcile.json is watchman's/reconcile's. PRICE PAID, MEASURED THIS DAY rather than waved: each
+  // owner's selftest was run ALONE with all four files stat-ed either side (size:mtimeMs), and none moved —
+  // session_meter 37/0 · claims 24/0 · outbox 42/0 · reconcile 42/0. A leak into these four would now be invisible
+  // to the trip metric; the belt against it is that measurement, to be repeated the day any of those selftests grows.
+  const LIVE_WRITERS = /swallow_ledger\.jsonl|session_intent\.jsonl|afferent\.jsonl|salience_ledger\.jsonl|presence_log|recall_index|brain_queue|context_state|dossier\.json|pitch_read|token_vitals\.json|workspace\.json|working_set\.json|distiller_latency\.jsonl|throwin_state\.json|teaching_contract\.json|teaching_audit|brain_ledger\.jsonl|tanks\.json|bg_queue\.jsonl|wake_queue\.jsonl|wake\.json|tone\.json|daemon_watchdog\.json|dugout_reminders\.jsonl|shadow_log\.jsonl|mouth_log\.jsonl|wall_data\.json|xray_graph\.json|audit_ledger\.jsonl|pulse_session\.json|cortex_session\.json|captains_call\.json|sitting\.json|sitting_out\.jsonl|sitting_log\.jsonl|sitting_reviews\.jsonl|spool\.db|session_meter\.json|claims\.jsonl|outbox\.jsonl|reconcile\.json/;
   // F-6's hash side: candidates only (LIVE_WRITERS files are the 82.7 MB we skip).
   const hashes = () => {
     const m = new Map();

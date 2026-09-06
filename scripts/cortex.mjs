@@ -53,7 +53,7 @@
 //  to main()'s dispatcher by a selftest, see "THE CONTRACT HEADER IS A WIRE" below.)
 // ============================================================================
 
-import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, watch, readdirSync } from "node:fs";
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, watch, readdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync, execFile } from "node:child_process";
@@ -1019,6 +1019,13 @@ async function serveWakes(deps = {}) {
 async function selftest() {
   const checks = [];
   const assert = (name, cond) => { checks.push([name, !!cond]); console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
+  // HERMETICITY, ASSERTED BY THIS FILE ON ITSELF (forks ruling row 76, 6 Sep 2026 — the swallow.mjs pattern): the
+  // live gate journal is stat-ed here and again at the end; a serve that reads the live captain hold journals its
+  // decline THERE, which is exactly how this selftest leaked +315 bytes per run for a week while every check
+  // above it printed a tick. size:mtimeMs, the same trip metric organism_test's hermetic mode uses.
+  const gateJournalLive = join(STATE_DIR, "brain_out", "gate.jsonl");
+  const gateStat = () => { try { const s = statSync(gateJournalLive); return `${s.size}:${s.mtimeMs}`; } catch { return "absent"; } };
+  const gateBefore = gateStat();
   const wake = { moment_id: "m_1", status: "pending", spotlight: { modality: "voice", text: "i don't get attention scaling", concept_tokens: ["attention"], S: 0.7, comps: { self: 1 } }, bound_context: [{ modality: "vision", event_key: "frame" }] };
   // `current_window` is INJECTED here for the same reason every other bus slot is: without
   // it buildDeepPrompt would fall through to the live ambient read and the suite's verdict
@@ -1331,6 +1338,7 @@ async function selftest() {
       post: async (p, b) => { postsP.push(b); return { ok: true }; },
       readUnsent: () => (reads++ === 0 ? [spoolRow] : []),   // the pre-drain empties it
       writeUnsent: () => {},
+      hold: { held: false }, journalHold: () => null,   // hermetic (row 76): the fixture hold, never the live one
     });
     assert("#wire: the PRE-DRAIN's receipt reaches the re-buy guard — a real handover is served, not mourned as lost",
       rPre.served === 1 && postsP.length === 1 && postsP[0].text === "the expensive read"
@@ -1359,6 +1367,11 @@ async function selftest() {
       post: async (p, b) => { out.posts.push({ p, b }); return { ok: true }; },
       appendLedger: (r) => out.rows.push(r), runtime: { attempts: {} }, saveRuntime: () => {},
       headroom: { allowed: 300000, used: 0, cap: 800000, phase: "overnight" },
+      // hermetic (forks ruling row 76, 6 Sep 2026): H reads the FIXTURE, never live brain_queue.json. Without this
+      // line every serve below read the captain hold he armed on 4 Sep, declined, and journalled the decline into
+      // the LIVE gate journal — seven reds in this block and +315 bytes on brain_out/gate.jsonl per run, the
+      // hermetic mode's culprit for a week. mkDeps() had the fixture; these hand-built deps did not.
+      hold: { held: false }, journalHold: () => null,
       call: slowCall,
     });
     const K = CFG_FIX.deep.concurrency;   // derived, not hardcoded — the fixture IS the contract
@@ -1789,6 +1802,9 @@ async function selftest() {
       !!door && /cortex:\s*\["cortex\.mjs",\s*"restart"\]/.test(door[1])
       && [...new Set([...mainSrc.matchAll(/\bmode === "([a-z_-]+)"/g)].map((m) => m[1]))].includes("restart"));
   }
+
+  assert("HERMETIC — this selftest left the live gate journal untouched (size:mtime unchanged; a serve that read the LIVE hold would have journalled its decline here)",
+    gateStat() === gateBefore);
 
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");

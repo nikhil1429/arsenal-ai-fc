@@ -57,8 +57,9 @@
 //   OPS_STATE.md · THE_DAILY_LOOP.md · README.md · FREEZE.md · the learning-layer canon,
 //   run inside the audit sandbox; exit 1 iff a claim there is dead. docs/archive/ = RECORDS.
 // ============================================================================
-import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, mkdirSync, statSync, unlinkSync, openSync, closeSync } from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync, existsSync, readdirSync, mkdirSync, mkdtempSync, statSync, unlinkSync, openSync, closeSync } from "node:fs";
 import { join, dirname, basename, relative } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -107,10 +108,29 @@ export function assertNoNewNumber(before, after) {
 }
 
 // ── PRECONDITIONS, fail-closed ───────────────────────────────────────────────
-function preconditions({ allowDirty = false } = {}) {
+function preconditions({ allowDirty = false, dirtyLines = null, stateDir = STATE_DIR } = {}) {
   const notes = [];
-  const dirty = sh("git", ["status", "--porcelain"]).trim();
-  if (dirty && !allowDirty) throw new Error(`audit: REFUSING — the working tree is dirty. A fixer that commits on top of unrelated changes cannot be reverted per finding.\n${dirty.split("\n").slice(0, 8).join("\n")}`);
+  // 6 Sep 2026 (forks ruling row 76 · row 68 (g), architect df): THE LANE WAS DEAD FOR A WEEK WITHOUT A RED.
+  // scripts/audit.log, 30 Aug → 5 Sep: "REFUSING — the working tree is dirty" every day at 13:10, the dirt being
+  // dressing-room/state/*.json — the TRACKED state bus that live daemons write all day and the groundsman commits
+  // on its own cadence (his 9 Aug ruling). The tree is therefore never clean while the organism runs, and a
+  // precondition that can never hold is a switch-off wearing a guard's uniform. What the refusal was WRITTEN for
+  // still stands, narrowed to what it meant: the fixer works in a worktree built from HEAD, so uncommitted CODE
+  // means somebody is mid-edit and the audit would measure a tree nobody is running — that REFUSES. A dirty
+  // state-bus file cannot mix into a fix commit (RULE ZERO: the fixer never edits state; the worktree has its own
+  // index), and an untracked file is invisible to the worktree until added — both are NOTES on the run.
+  // `dirtyLines` / `stateDir` are injectable so the selftest can drive these branches on fixtures; the live run
+  // passes neither.
+  const porcelain = Array.isArray(dirtyLines) ? dirtyLines : sh("git", ["status", "--porcelain"]).split(/\r?\n/);
+  const lines = porcelain.map((l) => String(l).replace(/\s+$/, "")).filter((l) => l.length > 3);
+  const pathOf = (l) => l.slice(3).replace(/^.* -> /, "");
+  const stateBus = lines.filter((l) => STATE_RE.test(pathOf(l)));
+  const untracked = lines.filter((l) => l.startsWith("??") && !STATE_RE.test(pathOf(l)));
+  const code = lines.filter((l) => !l.startsWith("??") && !STATE_RE.test(pathOf(l)));
+  if (stateBus.length) notes.push(`state bus dirty (${stateBus.length} file(s)) — the live daemons' lane, committed by the groundsman; not a refusal`);
+  if (untracked.length) notes.push(`untracked outside the state bus (${untracked.length}) — invisible to the worktree until added; not a refusal`);
+  if (code.length && !allowDirty) throw new Error(`audit: REFUSING — the working tree has uncommitted CODE changes (${code.length}); the worktree is built from HEAD, so the audit would measure a tree nobody is running, and a fixer that commits beside them cannot be reverted per finding.\n${code.slice(0, 8).join("\n")}`);
+  const dirty = lines.join("\n");
   const head = sh("git", ["rev-parse", "HEAD"]).trim();
   // AN OPEN FORGE SESSION IS A HARD REFUSE. He may be mid-study, and the one
   // thing this audit must never do is interrupt the thing the organism is for.
@@ -120,14 +140,26 @@ function preconditions({ allowDirty = false } = {}) {
   // that exists to keep the audit from interrupting him mid-study could never
   // fire once, and the guard read as present while being structurally dead. The
   // repo's own law, broken by the file that quotes it.
-  const fs_ = join(STATE_DIR, "forge_session.json");
+  // 6 Sep 2026 (row 76): the guard above fired at last on 2 Sep — and it has been TRUE EVER SINCE, because a
+  // concept now spans sittings by design (W0-D, 2 Sep: "a TWO-SITTING concept reads as LIVE"); tokenization has
+  // been open since 3 Sep. "Mid-study" is not "a concept is open" — it is "he is in a sitting RIGHT NOW", which is
+  // the organism's own definition, kept in sitting.json (opened by sitting.mjs at his first turn, closed on idle).
+  // So: an OPEN SITTING refuses; an open forge session with the sitting closed is a NOTE. The audit touches
+  // neither the state bus nor the study lane (RULE ZERO), so nothing of his is interrupted either way.
+  const sit = join(stateDir, "sitting.json");
+  if (existsSync(sit)) {
+    let sitOpen = false;
+    try { const j = JSON.parse(readFileSync(sit, "utf8")); sitOpen = !!(j && j.opened_at && !j.closed_at); } catch { sitOpen = false; }
+    if (sitOpen) throw new Error("audit: REFUSING — a study sitting is OPEN right now (sitting.json carries no closed_at). He is mid-study; the audit waits for the idle close.");
+  }
+  const fs_ = join(stateDir, "forge_session.json");
   if (existsSync(fs_)) {
-    let open = false;
+    let open = false, concept = null;
     try {
       const j = JSON.parse(readFileSync(fs_, "utf8"));
-      open = !!(j && j.concept && !j.closed_at);
+      open = !!(j && j.concept && !j.closed_at); concept = j && j.concept ? j.concept : null;
     } catch { open = false; }
-    if (open) throw new Error("audit: REFUSING — a forge session is OPEN (a concept is started and not closed). He may be mid-study; the audit waits.");
+    if (open) notes.push(`a forge session is open (${concept}) — the normal multi-sitting shape since W0-D; not a refusal: the audit touches neither the state bus nor the study lane`);
   }
   return { head, dirty: !!dirty, notes };
 }
@@ -1019,6 +1051,11 @@ the fixes are on BRANCH ${wt.branch} — the live tree was never touched.`);
         for (const r of refused.slice(0, 12)) console.log(`  ${r.f.rule} ${r.f.file}\n      ${r.why}`);
       }
     }
+    // 6 Sep 2026 (row 76): a run that found NOTHING wrote NOTHING — the ledger had only found/fixed/held/closed/
+    // dealt rows, so pulse's audit lane ("newest row ≤ 48h") measured findings, not runs, and a clean audit read as
+    // a dead lane (SHAPE 8: the receipt was testimony about findings, never a measurement of the run). ONE row per
+    // completed run, always; this organ is the ledger's sole writer.
+    append({ event: "ran", at: new Date().toISOString(), head: pre.head, findings: out.length, fresh: fresh.length, fixed: fixed.length, refused: refused.length, skipped: skipped.length, health, notes: pre.notes });
     return { health, ranked, fixed, refused, fresh, skipped, out };
   } finally { release(); }
 }
@@ -1083,6 +1120,23 @@ function selftest() {
   let num = false; try { assertNoNewNumber("[a|b]", "[a|b|c] cap 500"); } catch { num = true; }
   assert("a patch introducing a NEW NUMBER is refused — a free parameter is HIS", num);
   assert("…but a patch introducing no new number passes", (() => { try { assertNoNewNumber("[a|b]", "[a|b|c]"); return true; } catch { return false; } })());
+  // 6 Sep 2026 (row 76): THE PRECONDITIONS, ON FIXTURES — they had none, and the lane was dead for a week with
+  // every organ green. Each branch is driven with injected porcelain lines and a tmp state dir.
+  const tmpP = mkdtempSync(join(tmpdir(), "audit-pre-"));
+  const pre = (o) => { try { return { ok: true, r: preconditions({ stateDir: tmpP, ...o }) }; } catch (e) { return { ok: false, e: String(e.message) }; } };
+  assert("PRECONDITIONS — a dirty STATE BUS alone is a note, never a refusal (live daemons own it; the fixer never touches it)",
+    (() => { const p = pre({ dirtyLines: [" M dressing-room/state/conductor.json", " M dressing-room/state/sitting.json"] }); return p.ok && p.r.notes.some((n) => /state bus dirty/.test(n)); })());
+  assert("PRECONDITIONS — an untracked file outside the state bus is a note, never a refusal (invisible to the worktree until added)",
+    (() => { const p = pre({ dirtyLines: ["?? dressing-room/missions/T-x.md"] }); return p.ok && p.r.notes.some((n) => /untracked/.test(n)); })());
+  assert("PRECONDITIONS — an uncommitted CODE change REFUSES (the worktree is built from HEAD, the audit would measure a tree nobody runs)",
+    (() => { const p = pre({ dirtyLines: [" M scripts/brain.mjs", " M dressing-room/state/conductor.json"] }); return !p.ok && /CODE changes \(1\)/.test(p.e); })());
+  writeFileSync(join(tmpP, "sitting.json"), JSON.stringify({ id: "sit_fixture", opened_at: "2026-09-06T00:00:00.000Z", closed_at: null }));
+  assert("PRECONDITIONS — an OPEN sitting REFUSES (he is mid-study right now)",
+    (() => { const p = pre({ dirtyLines: [] }); return !p.ok && /sitting is OPEN/.test(p.e); })());
+  writeFileSync(join(tmpP, "sitting.json"), JSON.stringify({ id: "sit_fixture", opened_at: "2026-09-06T00:00:00.000Z", closed_at: "2026-09-06T00:20:00.000Z", close_reason: "idle" }));
+  writeFileSync(join(tmpP, "forge_session.json"), JSON.stringify({ concept: "tokenization", step: 3, started_at: "2026-09-03T00:00:00.000Z" }));
+  assert("PRECONDITIONS — an open forge session with the sitting CLOSED is a note, never a refusal (a concept spans sittings since W0-D)",
+    (() => { const p = pre({ dirtyLines: [] }); return p.ok && p.r.notes.some((n) => /forge session is open \(tokenization\)/.test(n)); })());
 
   assert("a fingerprint is stable across runs", fingerprint("r", "f", " Subject ") === fingerprint("r", "f", "subject"));
   assert("…and distinguishes different subjects", fingerprint("r", "f", "a") !== fingerprint("r", "f", "b"));
@@ -1220,4 +1274,10 @@ async function main() {
   console.log("audit: run | report | fix | canon | ledger | docs | docexec | quarantine | selftest  [--deep] [-v] [--fix] [--no-canon]");
   process.exit(1);
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((e) => { console.error(`audit: ${e.message}`); process.exit(1); });
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((e) => {
+  // 6 Sep 2026 (row 76): a refusal leaves a row too, so the ledger shows WHY the lane did not run (a week of
+  // refusals was invisible on disk except in a gitignored log). pulse's audit lane skips `refused` rows on purpose
+  // — a refusal is the lane alive but not doing its job, and must never read as a run.
+  if (/^audit: REFUSING/.test(String(e.message))) { try { append({ event: "refused", at: new Date().toISOString(), why: String(e.message).split("\n")[0].slice(0, 240) }); } catch { /* the log line below is the fallback */ } }
+  console.error(`audit: ${e.message}`); process.exit(1);
+});
