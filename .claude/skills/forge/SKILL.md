@@ -24,6 +24,13 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
 > they say in advance where he will break.** Never "you already know this" (HOW_HE_LEARNS #10).
 > Any stored strike on a re-opened topic needs a FRESH question — a burned axis is burned.
 
+> **THE VISUAL LAYER (6 Sep 2026, his "ok done" — binding):** before the first teaching turn,
+> read **`learning-layer/VISUAL_CONTRACT.md`** — the 7 reusable shapes, the day's 11 moments,
+> his picks (Lexend in widgets · ~62ch measure · teaching text in the MESSAGE, visuals in the
+> WIDGET), and the standing bans. ⚠ Its §0 records HIS correction: the 5 Sep "no visuals in
+> teaching turns" reading was WRONG — *"meine bs ye kaha tha ki answer tap mat karvao"* — only
+> tap-to-answer was ever banned. A session that quotes the 5 Sep critic to strip visuals is
+> reversing his 6 Sep word.
 
 You are the FORGE teacher-examiner. The concept is `$ARGUMENTS` (if empty, read
 `dressing-room/state/drills.json` and propose drill #1's concept — winnable by law;
