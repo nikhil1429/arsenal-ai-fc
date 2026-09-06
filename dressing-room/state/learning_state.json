@@ -1,21 +1,126 @@
 {
-  "date": "2026-09-05",
-  "generated_at": "2026-09-05T06:16:43.180Z",
-  "total_reps": 0,
-  "status": "awaiting_data",
-  "low_confidence": true,
-  "pre_cyborg": {
-    "reps": 22,
-    "floor": "2026-08-30T02:00:00.000Z",
-    "note": "GAME ON, 30 Aug 2026 — in reps se pehle ka data instrument ko naapta hai, tumhe nahi. Record ke liye rakha hai, saboot ke liye nahi. Notes poore khule hain."
+  "date": "2026-09-06",
+  "generated_at": "2026-09-06T03:45:21.553Z",
+  "total_reps": 2,
+  "status": "ok",
+  "low_confidence": false,
+  "gate": {
+    "have": 2,
+    "need": 1,
+    "unit": "reps",
+    "line": "2/1 reps",
+    "open": true,
+    "withheld": [],
+    "emitted_regardless": [
+      "axes",
+      "core_vs_light",
+      "rejirah_due",
+      "python_fluency",
+      "concepts",
+      "position"
+    ],
+    "sub": [
+      {
+        "name": "weak_connection",
+        "have": 2,
+        "need": 1,
+        "unit": "reps",
+        "line": "2/1 reps",
+        "open": true
+      },
+      {
+        "name": "maidan_stage_focus",
+        "have": 2,
+        "need": 1,
+        "unit": "reps",
+        "line": "2/1 reps",
+        "open": true
+      },
+      {
+        "name": "any concept → 🟡 held",
+        "have": 1,
+        "need": 2,
+        "unit": "correct in a row",
+        "line": "1/2 correct in a row",
+        "open": false
+      },
+      {
+        "name": "any concept → 🟢 fluent",
+        "have": 0,
+        "need": 3,
+        "unit": "cold-fast in a row",
+        "line": "0/3 cold-fast in a row",
+        "open": false
+      }
+    ]
   },
-  "maidan_stage_focus": null,
-  "weak_connection": null,
+  "maidan_stage_focus": "tokenization → embeddings handoff",
+  "weak_connection": "tokenization → embeddings (text → vectors)",
   "python_fluency": {},
-  "rejirah_due": [],
-  "core_vs_light": {},
-  "concepts": [],
-  "axes": [],
+  "rejirah_due": [
+    {
+      "concept": "inference",
+      "axis": null,
+      "overdue_days": 66
+    },
+    {
+      "concept": "context",
+      "axis": null,
+      "overdue_days": 62
+    },
+    {
+      "concept": "embeddings",
+      "axis": null,
+      "overdue_days": 50
+    },
+    {
+      "concept": "hallucinations",
+      "axis": null,
+      "overdue_days": 26
+    },
+    {
+      "concept": "tokenization",
+      "axis": "a (kya+analogy)",
+      "overdue_days": 0
+    }
+  ],
+  "core_vs_light": {
+    "core": "spine: 0/1 fluent",
+    "light": "no light concepts drilled"
+  },
+  "edge_map": {},
+  "confusion_pairs": [],
+  "concepts": [
+    {
+      "id": "tokenization",
+      "track": "concept",
+      "axis": "a",
+      "fluency": "🔴 learning",
+      "core": true,
+      "reps": 2,
+      "last_seen": "2026-09-05",
+      "velocity": {
+        "slope": "holding",
+        "reps_to_state": 1,
+        "stalled": false
+      },
+      "edge": null,
+      "confusions": []
+    }
+  ],
+  "axes": [
+    {
+      "axis": "a",
+      "label": "kya+analogy",
+      "fluent_frac": 0,
+      "counts": {
+        "learning": 1,
+        "held": 0,
+        "fluent": 0
+      },
+      "due_count": 1
+    }
+  ],
   "maidan": {
     "stages": [
       {
@@ -25,7 +130,7 @@
           "tokenization"
         ],
         "runnable_frac": 0,
-        "status": "awaiting_data"
+        "status": "building"
       },
       {
         "id": "rag_pipeline",
@@ -53,75 +158,26 @@
       {
         "from": "tokenization",
         "to": "embeddings",
+        "label": "text → vectors",
         "combined_fluency": "🔴"
       },
       {
         "from": "chunking",
         "to": "embeddings",
+        "label": "chunks → vectors",
         "combined_fluency": "🔴"
       },
       {
         "from": "embeddings",
         "to": "retrieval",
+        "label": "vectors → top-k",
         "combined_fluency": "🔴"
       },
       {
         "from": "retrieval",
         "to": "rag_eval",
+        "label": "results → eval",
         "combined_fluency": "🔴"
-      }
-    ]
-  },
-  "gate": {
-    "have": 0,
-    "need": 1,
-    "unit": "reps",
-    "line": "0/1 reps",
-    "open": false,
-    "withheld": [
-      "weak_connection",
-      "maidan_stage_focus"
-    ],
-    "emitted_regardless": [
-      "axes",
-      "core_vs_light",
-      "rejirah_due",
-      "python_fluency",
-      "concepts",
-      "position"
-    ],
-    "sub": [
-      {
-        "name": "weak_connection",
-        "have": 0,
-        "need": 1,
-        "unit": "reps",
-        "line": "0/1 reps",
-        "open": false
-      },
-      {
-        "name": "maidan_stage_focus",
-        "have": 0,
-        "need": 1,
-        "unit": "reps",
-        "line": "0/1 reps",
-        "open": false
-      },
-      {
-        "name": "any concept → 🟡 held",
-        "have": 0,
-        "need": 2,
-        "unit": "correct in a row",
-        "line": "0/2 correct in a row",
-        "open": false
-      },
-      {
-        "name": "any concept → 🟢 fluent",
-        "have": 0,
-        "need": 3,
-        "unit": "cold-fast in a row",
-        "line": "0/3 cold-fast in a row",
-        "open": false
       }
     ]
   },
@@ -147,7 +203,7 @@
     "axes_ungraded": [],
     "started_at": "2026-09-02T21:05:33.373Z",
     "stale": false,
-    "stale_as_of": "2026-09-05T06:16:43.180Z",
+    "stale_as_of": "2026-09-06T03:45:21.553Z",
     "last_closed": {
       "concept": "hallucinations",
       "ended_at": "2026-09-02T21:05:33.180Z",
