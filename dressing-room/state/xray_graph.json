@@ -1,7 +1,7 @@
 {
- "built_at": "2026-09-07T10:21:10.018Z",
- "organs_parsed": 114,
- "organs_expected": 114,
+ "built_at": "2026-09-07T12:36:31.932Z",
+ "organs_parsed": 115,
+ "organs_expected": 115,
  "parse_errors": [],
  "unresolved_sinks": 1475,
  "organs": {
@@ -16988,85 +16988,63 @@
    "unresolved": 8
   },
   "teaching_audit.mjs": {
-   "loc": 2184,
+   "loc": 2223,
    "reads": [
     {
      "path": "dressing-room/state/teaching_audit.jsonl",
      "lines": [
-      1601,
-      1602,
-      1601,
-      1602,
-      1601,
-      1602
+      1630,
+      1631,
+      1630,
+      1631,
+      1630,
+      1631
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/forge_session.json",
      "lines": [
-      107,
-      1244,
-      107,
-      1244
+      108,
+      1270,
+      108,
+      1270
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/teaching_audit_last.json",
      "lines": [
-      107,
-      107
+      108,
+      108
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/teaching_contract.json",
      "lines": [
-      107,
-      107
-     ],
-     "fixture": false
-    },
-    {
-     "path": "dressing-room/state/capsules",
-     "lines": [
-      621,
-      621
+      108,
+      108
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/afferent.jsonl",
      "lines": [
-      655,
-      660,
-      655,
-      660
+      637,
+      642,
+      637,
+      642
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/reps_log.jsonl",
      "lines": [
-      1309,
-      1310,
-      1309,
-      1310
-     ],
-     "fixture": false
-    },
-    {
-     "path": "dressing-room/state/sprint.json",
-     "lines": [
-      107
-     ],
-     "fixture": false
-    },
-    {
-     "path": "dressing-room/state/concepts.json",
-     "lines": [
-      107
+      1335,
+      1336,
+      1335,
+      1336
      ],
      "fixture": false
     }
@@ -17075,9 +17053,9 @@
     {
      "path": "dressing-room/state/teaching_audit_last.json",
      "lines": [
-      1290,
-      1290,
-      1290
+      1316,
+      1316,
+      1316
      ],
      "verbs": [
       "renameSync→WRITE(dst)"
@@ -17087,9 +17065,9 @@
     {
      "path": "dressing-room/state/teaching_audit.jsonl",
      "lines": [
-      1294,
-      1294,
-      1294
+      1320,
+      1320,
+      1320
      ],
      "verbs": [
       "appendFileSync"
@@ -17102,55 +17080,54 @@
      "kind": "organ",
      "script": "teaching_contract.mjs",
      "verb": "flag",
-     "line": 1257,
+     "line": 1283,
      "ctx": "stageDrift"
     },
     {
      "kind": "organ",
      "script": "teaching_contract.mjs",
      "verb": null,
-     "line": 1273,
+     "line": 1299,
      "ctx": "contractCall"
     },
     {
      "kind": "organ",
      "script": "teaching_audit.mjs",
      "verb": "hook",
-     "line": 2124,
+     "line": 2153,
      "ctx": "selftest"
     },
     {
      "kind": "organ",
      "script": "teaching_audit.mjs",
      "verb": "hook",
-     "line": 2144,
+     "line": 2173,
      "ctx": "selftest"
     },
     {
      "kind": "organ",
      "script": "teaching_audit.mjs",
      "verb": "hook",
-     "line": 2146,
+     "line": 2175,
      "ctx": "selftest"
     }
    ],
    "swallows": [],
    "verbs": [
-    "hook",
-    "probe",
-    "report",
-    "seed-terms",
     "selftest"
    ],
    "header_verbs": [],
    "exports": [
     "CHECKED_RULES",
+    "CLOSED_EXTRA_VOCAB",
     "RULE_NOTES",
     "SEED_GAP",
+    "TERMS_OF_ART",
     "asliNaamAct",
     "auditTurn",
     "auditTurnLegacy",
     "closedDerive",
+    "conceptOwnTerms",
     "countForm",
     "countQuestions",
     "countQuestionsLegacy",
@@ -17165,50 +17142,59 @@
     "opensTerm",
     "readForgeSession",
     "readForgeSessionLegacy",
+    "requiredTerms",
     "seedTerms",
     "stopHook",
+    "syllabusVocab",
     "technicalLine",
     "termUsed"
    ],
    "unresolved": 11
   },
   "teaching_bar.mjs": {
-   "loc": 349,
+   "loc": 499,
    "reads": [
     {
      "path": "scripts/teaching_bar.mjs",
      "lines": [
-      306,
-      306,
-      306
+      443,
+      443,
+      443
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/forge_session.json",
      "lines": [
-      197
+      229
      ],
      "fixture": false
     },
     {
      "path": "no-such-dir-for-cases/forge_session.json",
      "lines": [
-      197
+      229
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/teaching_audit_last.json",
+     "lines": [
+      229
      ],
      "fixture": false
     },
     {
      "path": "dressing-room/state/teaching_contract.json",
      "lines": [
-      197
+      229
      ],
      "fixture": false
     },
     {
      "path": "no-such-dir-for-cases/teaching_contract.json",
      "lines": [
-      197
+      229
      ],
      "fixture": false
     }
@@ -17239,7 +17225,8 @@
     "conceptOpen",
     "loadSession",
     "picked",
-    "turnNumber"
+    "turnNumber",
+    "unopenedNames"
    ],
    "unresolved": 0
   },
@@ -17536,6 +17523,47 @@
    ],
    "exports": [],
    "unresolved": 5
+  },
+  "teaching_terms.mjs": {
+   "loc": 203,
+   "reads": [
+    {
+     "path": "dressing-room/state/capsules",
+     "lines": [
+      175,
+      175
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/concepts.json",
+     "lines": [
+      38
+     ],
+     "fixture": false
+    },
+    {
+     "path": "dressing-room/state/sprint.json",
+     "lines": [
+      38
+     ],
+     "fixture": false
+    }
+   ],
+   "writes": [],
+   "spawns": [],
+   "swallows": [],
+   "verbs": [],
+   "header_verbs": [],
+   "exports": [
+    "CLOSED_EXTRA_VOCAB",
+    "TERMS_OF_ART",
+    "closedDerive",
+    "conceptOwnTerms",
+    "requiredTerms",
+    "syllabusVocab"
+   ],
+   "unresolved": 0
   },
   "test_coach_v2.mjs": {
    "loc": 176,
@@ -21644,8 +21672,8 @@
     "rejirah.mjs",
     "samjhao.mjs",
     "shipped.mjs",
-    "teaching_audit.mjs",
     "teaching_contract.mjs",
+    "teaching_terms.mjs",
     "widget.mjs"
    ],
    "writers": [],
@@ -21785,7 +21813,7 @@
     "scoreboard.mjs",
     "scout.mjs",
     "setpiece.mjs",
-    "teaching_audit.mjs",
+    "teaching_terms.mjs",
     "thalamus.mjs"
    ],
    "writers": [],
@@ -23371,8 +23399,8 @@
     "presence.mjs",
     "setpiece.mjs",
     "sprintsync.mjs",
-    "teaching_audit.mjs",
     "teaching_contract.mjs",
+    "teaching_terms.mjs",
     "thalamus.mjs"
    ],
    "writers": [
@@ -23476,6 +23504,7 @@
     "forge_session.mjs",
     "intent.mjs",
     "teaching_audit.mjs",
+    "teaching_bar.mjs",
     "watchman.mjs"
    ],
    "writers": [

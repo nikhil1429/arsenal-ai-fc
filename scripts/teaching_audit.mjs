@@ -88,9 +88,10 @@
 
 // cpSync dropped 10 Aug 2026 with the E2E hermeticity scar below — the seed is
 // now written, not copied, so the one scope-deciding field can be normalised.
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdtempSync, rmSync, readdirSync, renameSync } from "node:fs";
+// readdirSync left with closedDerive when the vocabulary moved to teaching_terms.mjs (7 Sep 2026).
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdtempSync, rmSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { subjectsOf, coreAxes } from "./registry.mjs";   // S10 #10 sources + #12 core axes — rows, never literals
@@ -227,6 +228,25 @@ const CONFUSION_MARKERS_V2 = [
 
 const norm = (s) => String(s || "").toLowerCase();
 const stripCode = (s) => String(s || "").replace(/```[\s\S]*?```/g, " ").replace(/`[^`]*`/g, " ");
+
+// ── THE BACKTICK BLINDNESS (7 Sep 2026 — he stopped the lesson to have it fixed)
+// stripCode above deletes INLINE backticks along with their contents, and every
+// term check ran through it. His own message grammar (VISUAL_CONTRACT §8.1, his
+// word "done" the same day) says a real name — the ASLI NAAM layer — MUST be
+// written `like this`. So the one syntax his law mandates for a real name was the
+// one syntax the checker could not see, in BOTH directions:
+//   termUsed("Us list ka naam `sequence` hai", "sequence")  -> false (measured)
+//   opensTerm("uska asli naam `precision` hai", "precision") -> false (measured)
+// i.e. a correctly-written opening did not count as an opening, and a correctly
+// written use did not count as a use. The live state proves the damage: for
+// tokenization, `opened` held exactly ONE term while `flagged` held nine.
+// stripCode is NOT changed — eight other checks are calibrated on it and the
+// layering law says freeze, never replace. This is the term lane's own stripper:
+// fenced blocks still go (a diff block is not teaching prose), inline backticks
+// are UNWRAPPED so the name inside them is read as the word it is.
+const stripFencesKeepInline = (s) => String(s || "")
+  .replace(/```[\s\S]*?```/g, " ")
+  .replace(/`([^`\n]*)`/g, " $1 ");
 
 // FROZEN 6 Aug 2026 (layering law) — the original counter, byte-for-byte. Its
 // defect, measured against his real teaching rows: /\?(?=\s|$)/ misses a question
@@ -536,28 +556,23 @@ export function mentionsSystemWork(text) {
 // an un-opened IDEA that has no listed name — that is semantic, needs a judge, and
 // stays his to flag. This list is therefore a FLOOR, like Gate 2's regexes: grown
 // from observed failures + the near-syllabus term space, never claimed complete.
-const TERMS_OF_ART = [
-  // the two observed failures and their cluster
-  "ground truth", "eval set", "evaluation set", "test set", "closed-book", "open-book",
-  "groundedness", "factuality", "hallucination rate",
-  // near-syllabus terms a teacher could plausibly conclude-with before opening
-  "benchmark", "precision", "recall", "f1", "rag", "retrieval", "chunking", "reranking",
-  "system prompt", "few-shot", "zero-shot", "chain of thought", "fine-tuning", "rlhf",
-];
-
-// Vocabulary already OPENED by closed concepts — a term the syllabus already
-// taught never fires. concepts.json aliases carry most of it; this map adds the
-// core words of each CLOSED concept that its alias list does not spell out.
-const CLOSED_EXTRA_VOCAB = {
-  tokenization: ["token", "tokens", "vocabulary", "next-token", "next-token prediction"],
-  inference: ["probability", "probability distribution"],
-};
+// MOVED 7 Sep 2026 to scripts/teaching_terms.mjs and RE-EXPORTED unchanged.
+// Not tidiness: teaching_bar.mjs needs the same derivation to warn BEFORE a
+// message is written, and importing THIS file from a sibling hook callee trips
+// organism_test NO SHIM CALLEE (the ES-module cache turns the later SHIM into a
+// silent no-op — the mechanism that killed outbox brief for three weeks). A leaf
+// both organs import, importing neither, is the only shape that is safe here.
+export { TERMS_OF_ART, CLOSED_EXTRA_VOCAB, syllabusVocab, conceptOwnTerms, requiredTerms, closedDerive } from "./teaching_terms.mjs";
+// The re-export line above carries the whole API onward without creating local
+// bindings; this line imports ONLY what this file's own body still calls, so the
+// no-unused-vars gate stays where it was.
+import { TERMS_OF_ART, requiredTerms, closedDerive } from "./teaching_terms.mjs";
 
 // Hyphen/space-flexible, word-bounded presence. "closed-book" matches "closed book";
 // plural s/es tolerated; substrings never match ("rag" does not fire inside "storage").
 const flexTerm = (t) => String(t).trim().split(/[\s-]+/).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\s-]+");
 export function termUsed(text, term) {
-  return new RegExp(`(^|[^a-z0-9])${flexTerm(term)}(e?s)?([^a-z0-9]|$)`, "i").test(stripCode(text));
+  return new RegExp(`(^|[^a-z0-9])${flexTerm(term)}(e?s)?([^a-z0-9]|$)`, "i").test(stripFencesKeepInline(text));
 }
 
 // Did this text OPEN the term — a one-line definitional act, in the house style
@@ -565,7 +580,7 @@ export function termUsed(text, term) {
 // naam: EVALUATION SET", "Yahi tera ground truth hai", "eval set ek FILE hai",
 // "X matlab/yaani …", "X (gloss…)", "X = …".
 export function opensTerm(text, term) {
-  const s = stripCode(text);
+  const s = stripFencesKeepInline(text);
   const T = `[*_"'«»]*${flexTerm(term)}(e?s)?[*_"'«»]*`;
   const pats = [
     `${T}\\s*(=|ka matlab|matlab|yaani)`,                                  // eval set = / matlab
@@ -608,39 +623,6 @@ const DECIDED_RULINGS = [
 // The closed-concept world, derived LIVE (never hardcoded): sprint.json
 // progress.done + the locked capsule mirror. Returns { names, vocab } — names for
 // the link-back check, vocab (ids + aliases + extra) pre-opened for neev-pehle.
-export function closedDerive(stateDir = STATE_DIR) {
-  const names = [], vocab = [];
-  try {
-    const sprint = readJson(join(stateDir, "sprint.json"));
-    for (const d of ((sprint || {}).progress || {}).done || []) {
-      const clean = String(d).replace(/^\d+-\d+\s+/, "").replace(/\s*\(.*\)$/, "");
-      for (const part of clean.split(/[&,]/)) { const p = part.trim(); if (p) names.push(p); }
-    }
-  } catch { /* absent sprint = empty world, never a throw */ }
-  try {
-    for (const f of readdirSync(join(stateDir, "capsules"))) {
-      if (f.endsWith(".json")) names.push(f.replace(/\.json$/, ""));
-    }
-  } catch { /* no mirror on this machine */ }
-  try {
-    const reg = readJson(join(stateDir, "concepts.json"));
-    const byId = (reg || {}).concepts || {};
-    for (const n of names) {
-      const id = n.toLowerCase().replace(/\s+/g, "_");
-      const hit = byId[n.toLowerCase()] || byId[id] || Object.entries(byId).find(([k]) => n.toLowerCase().includes(k))?.[1];
-      if (hit && Array.isArray(hit.aliases)) vocab.push(...hit.aliases);
-    }
-  } catch { /* registry optional */ }
-  for (const n of names) {
-    vocab.push(n.toLowerCase());
-    const extra = CLOSED_EXTRA_VOCAB[n.toLowerCase()];
-    if (extra) vocab.push(...extra);
-  }
-  const seen = new Set();
-  const uniqNames = names.filter((n) => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
-  return { names: uniqNames, vocab: [...new Set(vocab.map((v) => String(v).toLowerCase()))] };
-}
-
 // SEED FROM HISTORY (P1.2, 7 Aug 2026). The cross-turn term/link state was born
 // mid-concept — six hallucinations sessions predate it, and their teaching turns
 // are all on disk in afferent.jsonl (claude-code-teaching lane). Claiming "never
@@ -655,7 +637,7 @@ export function seedTerms({ concept = null, sinceSession = null } = {}) {
   if (!existsSync(afferents)) return { ok: false, why: "no afferent.jsonl — nothing recorded to replay" };
   const opened = new Set(), used = new Set();
   let rows = 0, teachRows = 0, linkSeen = false;
-  const closed = closedDerive();
+  const closed = closedDerive(STATE_DIR, c);   // 7 Sep: the replayed concept is the OPEN one — never its own pre-opened vocabulary
   const startISO = sinceSession || (fs.session && fs.session.started_at) || null;
   const lines = readFileSync(afferents, "utf8").split("\n");
   // S10 migration #10: the audited-source set is the registry row `audit_sources`
@@ -974,11 +956,18 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
   // caller supplies cross-turn state (termState) — a stateless call never guesses.
   // A term this turn OPENS is clean and becomes opened; a term already flagged
   // never re-fires; closed-concept vocabulary is pre-opened.
-  const termResult = { used: [], opened_now: [], fired: [] };
+  // 7 Sep 2026 — the watched set is now requiredTerms(THIS CONCEPT), not the
+  // frozen 23. See CONCEPT_TERMS for the measurement that forced it.
+  const termResult = { used: [], opened_now: [], fired: [], names_now: [] };
   if (inBody && termState && Array.isArray(termState.opened)) {
     const preOpened = new Set([...(termState.opened || []), ...(((closed || {}).vocab) || [])].map((t) => String(t).toLowerCase()));
     const flagged = new Set((termState.flagged || []).map((t) => String(t).toLowerCase()));
-    for (const t of TERMS_OF_ART) {
+    const watched = requiredTerms(
+      (session && session.concept) || (termState && termState.concept) || "",
+      STATE_DIR,
+      termState.names || [],
+    );
+    for (const t of watched) {
       if (!termUsed(assistantText, t)) continue;
       termResult.used.push(t);
       if (opensTerm(assistantText, t)) { termResult.opened_now.push(t); continue; }
@@ -991,7 +980,44 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
       drifts.push({
         rule: "neev-pehle",
         evidence: `term-of-art "${t}" USED at step ${step} but never OPENED — no definitional line for it this concept, this turn or any before (canon HOW_HE_LEARNS #8: naya naam pehli baar aate hi EK line mein kholo; conclusion-before-foundation is the 7 Aug class)`,
-        excerpt: quote(String(stripCode(assistantText)).split(/\n/).find((l) => termUsed(l, t)) || assistantText, 160),
+        excerpt: quote(String(stripFencesKeepInline(assistantText)).split(/\n/).find((l) => termUsed(l, t)) || assistantText, 160),
+      });
+    }
+
+    // ---- 8b) THE BACKTICKED NAME — list-free, and it never rots ------------
+    // Every list above is a floor somebody has to remember to grow, which is the
+    // failure mode that produced 8) in the first place. This half needs no list
+    // at all, because HIS OWN GRAMMAR already marks the real names for us:
+    // VISUAL_CONTRACT §8.1, his word "done" on 7 Sep 2026 — "`backtick` = THE
+    // REAL NAME he must say in an interview. Nothing else is ever backticked."
+    // So a backticked span in the teaching body IS a declared real name, and the
+    // three-layer law (ASLI NAAM, opened in one line) applies to it whatever the
+    // concept, forever, with nobody maintaining anything.
+    // Deliberately narrow so it cannot cry wolf: prose-shaped spans only — no
+    // path, no flag, no command, no code punctuation, at most three words. A span
+    // that fails those tests is a code reference, not a name he must say.
+    const NAME_SPAN = /^[a-z][a-z0-9 .+-]{1,38}$/i;
+    const looksLikeCode = (s) => /[\\/_(){}[\]<>=|$*#@:;,"']/.test(s) || /--/.test(s)
+      || /\.(mjs|js|json|jsonl|md|ts|py|html|ps1)\b/i.test(s) || s.trim().split(/\s+/).length > 3;
+    const seenSpan = new Set();
+    for (const m of String(assistantText || "").replace(/```[\s\S]*?```/g, " ").matchAll(/`([^`\n]{2,40})`/g)) {
+      const raw = m[1].trim();
+      const t = raw.toLowerCase();
+      if (seenSpan.has(t)) continue;
+      seenSpan.add(t);
+      if (!NAME_SPAN.test(raw) || looksLikeCode(raw)) continue;
+      // Source 3: whatever survives those tests is a DECLARED real name, so it
+      // joins this concept's watched corpus from now on — this is the lane that
+      // makes the whole check topic-agnostic and self-growing (his order, 7 Sep).
+      termResult.names_now.push(t);
+      if (termResult.opened_now.includes(t) || termResult.fired.includes(t)) continue;
+      if (opensTerm(assistantText, t)) { termResult.opened_now.push(t); continue; }
+      if (preOpened.has(t) || flagged.has(t)) continue;
+      termResult.fired.push(t);
+      drifts.push({
+        rule: "neev-pehle",
+        evidence: `backticked REAL NAME "${raw}" used at step ${step} but never OPENED — his own grammar says a backtick marks the name he must say in an interview (VISUAL_CONTRACT §8.1), and HOW_HE_LEARNS #8 says every new name is opened in ONE line the first time`,
+        excerpt: quote(String(stripFencesKeepInline(assistantText)).split(/\n/).find((l) => termUsed(l, t)) || assistantText, 160),
       });
     }
   }
@@ -1386,10 +1412,10 @@ export function stopHook(hook, io) {
   // a fallback so live state migrates without a manual step.
   const termsByConcept = (last.terms_by_concept && typeof last.terms_by_concept === "object") ? last.terms_by_concept : {};
   const terms0 = termsByConcept[concept]
-    || ((last.terms && last.terms.concept === concept) ? last.terms : { concept, opened: [], flagged: [] });
+    || ((last.terms && last.terms.concept === concept) ? last.terms : { concept, opened: [], flagged: [], names: [] });
   const link0 = (last.linkback && last.linkback.concept === concept && last.linkback.session === (session && session.started_at))
     ? last.linkback : { concept, session: session && session.started_at, seen: false, flagged: false };
-  const closed = closedDerive();
+  const closed = closedDerive(STATE_DIR, concept);   // 7 Sep: never pre-open the concept being taught
   // 7 Sep — the max-intensity latch, keyed the same way link-back is: per CONCEPT
   // and per forge SESSION, so a new session never inherits a stale armed axis.
   const int0 = (last.intensity && last.intensity.concept === concept && last.intensity.session === (session && session.started_at))
@@ -1412,6 +1438,9 @@ export function stopHook(hook, io) {
     concept,
     opened: [...new Set([...(terms0.opened || []), ...(res.terms?.opened_now || [])])],
     flagged: [...new Set([...(terms0.flagged || []), ...(res.terms?.fired || [])])],
+    // 7 Sep — the self-growing, topic-agnostic corpus: every real name this
+    // concept's teaching has ever DECLARED in backticks. Nobody maintains it.
+    names: [...new Set([...(terms0.names || []), ...(res.terms?.names_now || [])])],
   } : terms0;
   const link1 = res.audited ? {
     ...link0,
@@ -2166,18 +2195,28 @@ function selftest() {
   if (fail) process.exit(1);
 }
 
-const cmd = process.argv[2];
-if (cmd === "selftest") selftest();
-else if (cmd === "report") report();
-else if (cmd === "probe") probe(process.argv.slice(3));
-else if (cmd === "seed-terms") {
-  const ci = process.argv.indexOf("--concept");
-  const r = seedTerms({ concept: ci >= 0 ? process.argv[ci + 1] : null });
-  if (!r.ok) { console.log(`seed-terms: ${r.why}`); process.exit(1); }
-  console.log(`seed-terms · ${r.concept} · replayed ${r.teachRows} teaching rows (of ${r.rows} afferents)`);
-  console.log(`  OPENED (definitional line found on record): ${r.opened.join(" · ") || "—"}`);
-  console.log(`  used but NEVER opened (these will fire if used bare again): ${r.used_never_opened.join(" · ") || "—"}`);
-  console.log(`  link-back this session: ${r.linkSeen ? "a closed concept HAS been named" : "no closed concept named yet"}`);
+// IMPORT GUARD (7 Sep 2026). Until today this dispatch ran on IMPORT as well as
+// on spawn — `import("./teaching_audit.mjs")` from any other module printed the
+// usage banner (measured), and under a different argv would have run a COMMAND.
+// That is why nothing had ever imported this organ: it could not be imported
+// safely. teaching_bar.mjs now does, to read the very derivation this file owns
+// rather than keeping a second copy of it. Same one-line pattern teaching_bar
+// already uses. Every existing caller spawns this file as main, so all of them
+// still dispatch exactly as before.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const cmd = process.argv[2];
+  if (cmd === "selftest") selftest();
+  else if (cmd === "report") report();
+  else if (cmd === "probe") probe(process.argv.slice(3));
+  else if (cmd === "seed-terms") {
+    const ci = process.argv.indexOf("--concept");
+    const r = seedTerms({ concept: ci >= 0 ? process.argv[ci + 1] : null });
+    if (!r.ok) { console.log(`seed-terms: ${r.why}`); process.exit(1); }
+    console.log(`seed-terms · ${r.concept} · replayed ${r.teachRows} teaching rows (of ${r.rows} afferents)`);
+    console.log(`  OPENED (definitional line found on record): ${r.opened.join(" · ") || "—"}`);
+    console.log(`  used but NEVER opened (these will fire if used bare again): ${r.used_never_opened.join(" · ") || "—"}`);
+    console.log(`  link-back this session: ${r.linkSeen ? "a closed concept HAS been named" : "no closed concept named yet"}`);
+  }
+  else if (cmd === "hook") await hookMain();
+  else console.log("teaching_audit: hook | report | probe [--clean|--text \"...\"] | seed-terms [--concept <c>] | selftest");
 }
-else if (cmd === "hook") await hookMain();
-else console.log("teaching_audit: hook | report | probe [--clean|--text \"...\"] | seed-terms [--concept <c>] | selftest");

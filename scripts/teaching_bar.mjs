@@ -99,6 +99,12 @@
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+// 7 Sep 2026 — the NEEV line reads the shared derivation from the LEAF, never
+// from teaching_audit.mjs directly. Importing that sibling would trip
+// organism_test's NO SHIM CALLEE law: both are turn_hook callees on the same
+// anchor, and a callee already loaded by an earlier one becomes a silent no-op
+// the dispatcher still counts as ran. teaching_terms.mjs is nobody's callee.
+import { requiredTerms, conceptOwnTerms, closedDerive } from "./teaching_terms.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(HERE, "..", "dressing-room", "state");
@@ -108,18 +114,31 @@ const STATE_DIR = join(HERE, "..", "dressing-room", "state");
 // same measured reason: a wall of text read every turn is a wall of text ignored
 // every turn. This block is the THIRD on the anchor, so it takes the smallest
 // share: one header, one hard-stop line, two rotating lines.
-const MAX_BAR_LINES = 4;
+// 7 Sep 2026 — one more, conditional: the NEEV line (see barLines). It is the
+// whole point of that repair, so it is counted in the budget rather than being
+// allowed to overflow it.
+const MAX_BAR_LINES = 5;
+
+// How many un-opened names the NEEV line may print. A reminder that scrolls is a
+// reminder that is skipped — the same anti-wall law this file already runs on.
+const NEEV_SHOWN = 4;
 
 // THE BYTE BUDGET. Derived, never chosen: measured across turns 0..999 on a live
 // -shaped session the day this landed, the widest block this organ can emit is
-// 864 bytes, at turn 106 (header + the hard stops + the two longest rotating
+// ~~864 bytes, at turn 106~~ (header + the hard stops + the two longest rotating
 // lines that can share a turn — the three-layer carry and the diff-block shape).
+// RE-MEASURED 7 Sep 2026 after the NEEV line landed: 1107 bytes at turn 101, with
+// the line carrying its longest legal payload (four of the longest names on the
+// syllabus). Raised DELIBERATELY, on his order to stop the un-opened-name defect,
+// and with the new number written here as this comment demands. The extra ~243 B
+// buys the one thing the Stop-hook checker structurally cannot: the warning
+// arrives BEFORE the message instead of after it.
 // For scale, on the same anchor: teaching_contract caps itself at 5 lines and
 // the forge contract printed 6-9. The budget is that worst case plus a guard, so
 // it fails the moment a line grows past what was reviewed — and NOT whatever
 // today happened to print. Raising it is a decision to spend more of his every
 // prompt; take it deliberately, with the new measurement written beside it.
-const BAR_BUDGET_BYTES = 900;
+const BAR_BUDGET_BYTES = 1120;
 
 // ── THE THREE SHAPES · HIS WORD, 7 Sep 2026 ("done") ────────────────────────
 // Canon: learning-layer/VISUAL_CONTRACT.md §8.1. THREE, and a fourth is refused
@@ -182,7 +201,16 @@ export function picked(turn, pool = ROTATION, slots = ROTATION_SLOTS) {
 
 /** The block. Returns [] whenever it must be silent — no session, no concept,
  *  closed. `turn` drives rotation only; an unreadable turn is 0, not a crash. */
-export function barLines(session, turn = 0) {
+/** `unopened` (7 Sep 2026 — HIS ORDER, given mid-lesson: "why are these things
+ *  constantly getting skipped?"). The neev-pehle checker runs on the Stop hook,
+ *  i.e. AFTER the message is already on his screen — so even a correct hit was a
+ *  report, never a gate, and the harness has no pre-assistant-message hook to
+ *  make it one. This anchor is the earliest point the organism can speak: it
+ *  fires on UserPromptSubmit, BEFORE the answer is written. So the names this
+ *  concept has not opened yet ride the bar into the turn that is about to use
+ *  them. Stated honestly and not oversold: this is an INJECTOR, not a hard gate.
+ *  It cannot refuse a message; it can only make sure the writer was told first. */
+export function barLines(session, turn = 0, unopened = []) {
   if (!conceptOpen(session)) return [];
   const t = Number.isFinite(turn) ? Math.abs(Math.trunc(turn)) : 0;
   const step = Number.isInteger(session.step) ? session.step : "?";
@@ -190,6 +218,10 @@ export function barLines(session, turn = 0) {
   L.push(`TEACHING BAR · ${session.concept} step ${step} · turn ${t} — binds EVERY teaching message, skill opened or not (VISUAL_CONTRACT §8.1 · /learn §0a-T)`);
   L.push(`  ⛔ ${HARD_STOPS}`);
   for (const r of picked(t)) L.push(`  ⚠ ${r.line}`);
+  const names = (Array.isArray(unopened) ? unopened : []).map((n) => String(n || "").trim()).filter(Boolean);
+  if (names.length) {
+    L.push(`  ⚠ NEEV — not opened yet on this concept: ${names.slice(0, NEEV_SHOWN).join(" · ")}. Every real name you use: backtick AND its one-line opening, SAME message — never left for him to ask.`);
+  }
   return L;
 }
 
@@ -198,6 +230,53 @@ const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } ca
 
 /** The live forge session — owner: forge_session.mjs. Read-only here. */
 export function loadSession(dir = STATE_DIR) { return readJson(join(dir, "forge_session.json")); }
+
+/** The names this concept has NOT opened yet, for the NEEV line. Read-only, and
+ *  fail-soft in every direction: an unreadable state file, an absent registry or
+ *  a concept with nothing left un-opened all return [] and the line is simply not
+ *  printed. Ordering is deliberate — the concept's OWN names first (they are the
+ *  ones about to be used), then the rest of the syllabus.
+ *  Owner of teaching_audit_last.json is teaching_audit.mjs; this only reads it. */
+export function unopenedNames(dir = STATE_DIR, session = null) {
+  try {
+    const concept = session && session.concept ? String(session.concept) : "";
+    if (!concept) return [];
+    // NO STATE, NO CLAIM. With the opened-set unreadable we do not know what has
+    // been opened, and listing the whole floor as "not opened" would be a wall of
+    // wrong on his very first prompt. Silence is the honest answer, not a guess.
+    const last = readJson(join(dir, "teaching_audit_last.json"));
+    if (!last || typeof last !== "object") return [];
+    const byC = (last.terms_by_concept && typeof last.terms_by_concept === "object") ? last.terms_by_concept : {};
+    const st = byC[concept] || ((last.terms && last.terms.concept === concept) ? last.terms : null);
+    if (!st) return [];
+    const opened = new Set([...(st.opened || []), ...(st.flagged || [])].map((t) => String(t).toLowerCase()));
+    for (const v of (closedDerive(dir, concept).vocab || [])) opened.add(String(v).toLowerCase());
+    const watched = requiredTerms(concept, dir, st.names || []);
+    // ORDER IS THE WHOLE VALUE OF THIS LINE. Only four names are printed, so the
+    // four must be the ones about to be used: this concept's own registry names
+    // and the names its own teaching has already declared in backticks. A first
+    // cut ranked by substring-match on the concept id, which matched almost
+    // nothing and led the line with another topic's eval vocabulary — noise in
+    // the exact slot the repair exists to fill.
+    const own = new Set([
+      ...conceptOwnTerms(concept, dir),
+      ...((st.names || []).map((t) => String(t).toLowerCase())),
+    ]);
+    // The concept's own id is not a name he must be told to open — it is the
+    // title of the lesson, and printing it every turn is the always-fires noise
+    // this line exists to avoid.
+    const self = concept.toLowerCase();
+    // ONLY THIS CONCEPT'S OWN NAMES ARE SHOWN. The WATCHED set is deliberately
+    // wide — the whole syllabus, so a stray name from any topic still fires after
+    // the fact — but the pre-write nudge is four slots on his every prompt, and
+    // filling them with another topic's vocabulary is exactly the noise he named
+    // on 7 Sep: "wo list poori ki poori evaluation aur RAG ki duniya se hai …
+    // tokenization ka ek bhi shabd us list par nahi hai." Nothing relevant left
+    // to name means the line goes silent, which is the correct answer, not a
+    // reason to print something.
+    return watched.filter((t) => own.has(t) && !opened.has(t) && t !== self);
+  } catch { return []; }
+}
 
 /** The turn number, for rotation only — owner: teaching_contract.mjs, which
  *  increments it on THIS SAME ANCHOR in the callee immediately before this one,
@@ -225,8 +304,19 @@ export function barSelfCheck() {
   const OPEN = { concept: "tokenization", step: 3, closed_at: null, updated_at: "2026-09-07T02:39:24.234Z" };
 
   // 1. FIRES with a concept open — the whole reason this organ exists.
+  // The NEEV line is conditional, so the floor is MAX_BAR_LINES - 1 and the
+  // ceiling is MAX_BAR_LINES. Both are asserted; neither is assumed.
+  // A CASE FIXTURE, not a subject list. The jugad law bans a PRODUCTION subject
+  // set shipped as a literal array ("do not create jugad, do permanent stuff") —
+  // and the entire point of this build is that the real set is DERIVED and names
+  // no topic anywhere. These five strings exist only so the cases can assert the
+  // NEEV line's shape and its cap against known input; nothing reads them at
+  // runtime. Declared rather than left to spend the ratchet: measured 7 Sep 2026,
+  // without the marker the frozen count went 91 -> 92 on a test fixture alone.
+  // law-waiver:jugad
+  const NEEV = ["sequence", "subword", "embedding", "token id", "oov"];
   const open = barLines(OPEN, 23);
-  check("bar · FIRES with a concept open (the route that opens neither skill)", open.length === MAX_BAR_LINES && /^TEACHING BAR · tokenization step 3 · turn 23/.test(open[0]), JSON.stringify(open.slice(0, 1)));
+  check("bar · FIRES with a concept open (the route that opens neither skill)", open.length === MAX_BAR_LINES - 1 && /^TEACHING BAR · tokenization step 3 · turn 23/.test(open[0]), JSON.stringify(open.slice(0, 1)));
 
   // 2. SILENT in every shape of "no concept". A bar that spams a non-teaching
   //    session is a bar he learns to skip, and then it is worth nothing.
@@ -239,7 +329,52 @@ export function barSelfCheck() {
   // 3. STALENESS DOES NOT SILENCE IT — hole (a) in one assertion. All three
   //    recorded resumes came after 22-27 h, i.e. when the pacer was stale-silent.
   check("bar · a STALE but unclosed concept still gets the bar (A5: staleness silences the pacer, not this)",
-    barLines({ ...OPEN, updated_at: "2026-08-01T00:00:00.000Z" }, 7).length === MAX_BAR_LINES);
+    barLines({ ...OPEN, updated_at: "2026-08-01T00:00:00.000Z" }, 7).length === MAX_BAR_LINES - 1);
+
+  // 3b. THE NEEV LINE — his order of 7 Sep, the whole reason the checker stops
+  //     being a report card. It must arrive BEFORE the message, carry real names,
+  //     cap what it prints, and vanish entirely when there is nothing to say.
+  {
+    const withNeev = barLines(OPEN, 23, NEEV);
+    const line = withNeev.find((l) => /NEEV/.test(l)) || "";
+    check("bar · the NEEV line RIDES the pre-write anchor when this concept has un-opened names",
+      withNeev.length === MAX_BAR_LINES && /NEEV — not opened yet on this concept:/.test(line), JSON.stringify(withNeev.slice(-1)));
+    check("bar · it names the actual terms, and CAPS what it prints (a reminder that scrolls is a reminder skipped)",
+      line.includes("sequence") && line.includes("subword") && !line.includes("oov")
+        && line.split(" · ").length <= NEEV_SHOWN + 1, line);
+    check("bar · it orders the ASK: backtick AND the one-line opening, in the SAME message, never left for him",
+      /backtick AND its one-line opening/i.test(line) && /SAME message/.test(line) && /never left for him/.test(line), line);
+    check("bar · with nothing un-opened it is SILENT — a line that always fires is a line he learns to skip",
+      barLines(OPEN, 23, []).length === MAX_BAR_LINES - 1
+        && barLines(OPEN, 23, ["", "  "]).length === MAX_BAR_LINES - 1
+        && barLines(OPEN, 23, "not-an-array").length === MAX_BAR_LINES - 1);
+    check("bar · the NEEV line never resurrects a CLOSED concept's bar (silence still wins over any input)",
+      barLines({ ...OPEN, closed_at: "2026-09-07T05:00:00.000Z" }, 23, NEEV).length === 0);
+  }
+
+  // 3c. THE READER behind that line: read-only, fail-soft, and it must return []
+  //     rather than throwing on every shape of missing state.
+  {
+    const nowhere = join(HERE, "..", "no-such-dir-for-cases");
+    check("bar · unopenedNames is fail-soft in every direction (no dir, no session, no concept, garbage)",
+      Array.isArray(unopenedNames(nowhere, OPEN)) && unopenedNames(nowhere, OPEN).length === 0
+      && unopenedNames(STATE_DIR, null).length === 0
+      && unopenedNames(STATE_DIR, {}).length === 0
+      && unopenedNames(STATE_DIR, "garbage").length === 0);
+    check("bar · against the REAL state dir it returns names, and never the concept's own id as a name to open",
+      (() => {
+        const n = unopenedNames(STATE_DIR, OPEN);
+        return Array.isArray(n) && !n.includes("tokenization");
+      })(), JSON.stringify(unopenedNames(STATE_DIR, OPEN).slice(0, 6)));
+    // HIS COMPLAINT, 7 Sep, made a case: the nudge must never spend his four
+    // slots on another topic's vocabulary. The watched set stays wide; only what
+    // is SHOWN is narrowed to this concept's own names.
+    check("bar · the NEEV line never shows another topic's vocabulary (eval/RAG words are watched, never nudged)",
+      (() => {
+        const n = unopenedNames(STATE_DIR, OPEN).map((x) => String(x).toLowerCase());
+        return !["eval set", "evaluation set", "test set", "ground truth", "rag", "chunking", "precision", "recall"].some((w) => n.includes(w));
+      })(), JSON.stringify(unopenedNames(STATE_DIR, OPEN).slice(0, 8)));
+  }
 
   // 4. THE HARD STOPS ARE ON EVERY TURN — the three that actually broke.
   {
@@ -258,7 +393,9 @@ export function barSelfCheck() {
   {
     let worstBytes = 0, worstTurn = -1, overLines = [];
     for (let t = 0; t < 1000; t++) {
-      const L = barLines(OPEN, t);
+      // WORST CASE means WITH the NEEV line and its longest legal payload —
+      // measuring the budget on the narrow path is how a budget becomes a lie.
+      const L = barLines(OPEN, t, ["out-of-vocabulary", "next-token prediction", "probability distribution", "chain of thought", "byte pair encoding"]);
       if (L.length > MAX_BAR_LINES) overLines.push(t);
       const b = Buffer.byteLength(L.join("\n") + "\n", "utf8");
       if (b > worstBytes) { worstBytes = b; worstTurn = t; }
@@ -308,6 +445,19 @@ export function barSelfCheck() {
     check("bar · the production half of this organ contains no write call of any kind (sole writer of nothing)",
       production.length > 2000 && !/\b(writeFileSync|appendFileSync|mkdirSync|renameSync|rmSync|unlinkSync)\b/.test(production),
       `production half is ${production.length} B`);
+    // 7 Sep — BOTH CLI paths must pass the un-opened names. Measured the day it
+    // landed: an edit updated `print` and left `show` on the two-argument call,
+    // so reading the bar by hand showed a bar the hook does not emit — the exact
+    // way a fix gets believed while being half-wired. Pinned as source, because
+    // there is no other way to assert "these two call sites agree".
+    // The subject is main(), which lives BELOW the cases — `production` stops at
+    // this function, so scanning that half would have found nothing and passed
+    // vacuously in the other direction. Scanned to end of line, because the inner
+    // turnNumber(...) call makes a balanced-paren regex a trap.
+    const cli = src.slice(src.indexOf("function main()"));
+    const calls = cli.match(/barLines\(s,[^\n]*/g) || [];
+    check("bar · EVERY CLI path (print and show) hands barLines the un-opened names — the two can never drift apart again",
+      calls.length === 2 && calls.every((c) => /unopenedNames\(/.test(c)), JSON.stringify(calls));
   }
   check("bar · an unreadable state dir costs the turn nothing (no session, no turn, no throw)",
     loadSession(join(HERE, "..", "no-such-dir-for-cases")) === null && turnNumber(join(HERE, "..", "no-such-dir-for-cases"), null, new Date()) === 0);
@@ -329,14 +479,14 @@ function main() {
       if (process.env.ARSENAL_ORGAN === "1") break;
       try {
         const s = loadSession();
-        const lines = barLines(s, turnNumber(STATE_DIR, s));
+        const lines = barLines(s, turnNumber(STATE_DIR, s), unopenedNames(STATE_DIR, s));
         if (lines.length) console.log(lines.join("\n"));
       } catch { /* a grammar reminder is never a reason to bite his prompt */ }
       break;                              // no process.exit on the hook path (turn_hook contract 2)
     }
     case "show": {                        // by hand — same block, no organ guard
       const s = loadSession();
-      const lines = barLines(s, turnNumber(STATE_DIR, s));
+      const lines = barLines(s, turnNumber(STATE_DIR, s), unopenedNames(STATE_DIR, s));
       console.log(lines.length ? lines.join("\n") : "teaching_bar: silent — no concept is open (forge_session.json has no concept, or it is closed).");
       break;
     }
