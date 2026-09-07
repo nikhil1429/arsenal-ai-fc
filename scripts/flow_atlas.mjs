@@ -243,12 +243,16 @@ export function derive(deps = {}) {
 // the same sha off a written atlas.
 export const STRUCTURAL_LIVENESS_KEYS = Object.freeze(["declared", "why", "event", "note"]);
 export const STRUCTURAL_OUTBOX_KEYS = Object.freeze(["declared_kinds", "off_road_lanes"]);
+// consumption: the `measured` flag is code; the `note` is page prose and one of them interpolates a
+// LIVE COUNT ("29 of 149 cards ever answered" — captains_call's edge; it moved the sha 20 minutes
+// after the allowlist landed, row 120). A number inside a sentence is still a measurement.
+export const STRUCTURAL_CONSUMPTION_KEYS = Object.freeze(["measured"]);
 export function structuralProjection(atlas) {
   const pick = (o, keys) => (o && typeof o === "object" ? Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]])) : o);
   return {
     derived_from: atlas.derived_from,
     counts: atlas.counts,
-    edges: (atlas.edges || []).map((e) => ({ ...e, liveness: pick(e.liveness, STRUCTURAL_LIVENESS_KEYS) })),
+    edges: (atlas.edges || []).map((e) => ({ ...e, liveness: pick(e.liveness, STRUCTURAL_LIVENESS_KEYS), consumption: pick(e.consumption, STRUCTURAL_CONSUMPTION_KEYS) })),
     orphan_writes: atlas.orphan_writes,
     ghost_reads: atlas.ghost_reads,
     outbox: pick(atlas.outbox, STRUCTURAL_OUTBOX_KEYS),
@@ -358,6 +362,11 @@ function selftest() {
     const b = derive({ ir, skipFreshness: true, liveness: busy, outboxRows: [{ kind: "finding" }, { kind: "ask", acked: true }, {}] });
     if (a.hash !== b.hash) throw new Error(`a data-only move moved the sha: ${a.hash} vs ${b.hash}`);
     if (b.atlas.outbox.ledger_rows !== 3 || b.atlas.outbox.acked_ever !== 1) throw new Error("the measurement must still be ON the page (outbox.ledger_rows / acked_ever)");
+    // row 120: a live count hid inside a prose `note` ("29 of 149 cards ever answered") and moved the sha —
+    // so the projection may carry NO "N of M" count and no measurement key anywhere, prose included.
+    const projected = JSON.stringify(structuralProjection(b.atlas));
+    const leak = projected.match(/\b\d+ of \d+\b/) || projected.match(/"(ledger_rows|acked_ever|by_kind|payload_ts|size|rows|newest|closes|exists)":/);
+    if (leak) throw new Error("a measurement leaked into the structural projection: " + leak[0]);
   });
   t("…and a STRUCTURAL move (one afferent row added in code) moves the hash", () => {
     const a = derive({ ir, skipFreshness: true, outboxRows: [] });

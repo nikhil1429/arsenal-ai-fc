@@ -1,5 +1,5 @@
 {
- "built_at": "2026-09-07T19:28:55.651Z",
+ "built_at": "2026-09-07T19:36:49.518Z",
  "organs_parsed": 115,
  "organs_expected": 115,
  "parse_errors": [],
@@ -7720,19 +7720,19 @@
    "unresolved": 5
   },
   "flow_atlas.mjs": {
-   "loc": 423,
+   "loc": 432,
    "reads": [
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
       92,
-      340,
+      344,
       92,
-      340,
+      344,
       92,
-      340,
+      344,
       92,
-      340
+      344
      ],
      "fixture": false
     },
@@ -7793,8 +7793,8 @@
     {
      "path": "dressing-room/state/flow_atlas.json",
      "lines": [
-      412,
-      412
+      421,
+      421
      ],
      "fixture": false
     },
@@ -7815,7 +7815,7 @@
     {
      "path": "dressing-room/state/flow_atlas.json",
      "lines": [
-      417
+      426
      ],
      "verbs": [
       "writeFileSync"
@@ -7825,7 +7825,7 @@
     {
      "path": "FLOW_ATLAS.html",
      "lines": [
-      418
+      427
      ],
      "verbs": [
       "writeFileSync"
@@ -7838,7 +7838,7 @@
      "kind": "organ",
      "script": "flow_atlas.mjs",
      "verb": "__unknown_verb__",
-     "line": 389,
+     "line": 398,
      "ctx": "selftest"
     }
    ],
@@ -7895,6 +7895,7 @@
     "selftest"
    ],
    "exports": [
+    "STRUCTURAL_CONSUMPTION_KEYS",
     "STRUCTURAL_LIVENESS_KEYS",
     "STRUCTURAL_OUTBOX_KEYS",
     "derive",
