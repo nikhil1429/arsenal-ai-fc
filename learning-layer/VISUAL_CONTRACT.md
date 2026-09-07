@@ -92,6 +92,16 @@ his; only the checker's reach stays where it is. **Binds §8.3.**
 - **Tap-to-answer, NEVER**: no answer tiles, no multiple-choice buttons, no AskUserQuestion
   for study answers. His answers are TYPED (or spoken via voice dictation). A "next step"
   button on an animation is fine — it answers nothing.
+- ⭐ **EVERY STEPPER CARRIES BACK, NOT JUST NEXT — his standing order, 7 Sep 2026**, verbatim:
+  *"for widgets where i need to interact to see it moving by click next button and start again
+  always make sure that go behind behind is there too in the same for every learning sessions."*
+  So any widget with a forward control ships all three: **peeche · aage · shuru se**, plus the
+  left/right arrow keys. Back is disabled on the first pane and forward on the last, never hidden —
+  a control that vanishes reads as a broken page. **This is not a preference, it is his attention
+  working correctly:** an ADHD-PI reader who loses the thread mid-animation must be able to step
+  back to the frame where it broke, not restart the whole thing and re-read what he already had.
+  A stepper with only NEXT forces exactly the re-reading the short-block rule exists to prevent.
+  It binds every learning session from now on — no session re-decides it.
 - **No points, XP, streaks, badges, juice, novelty rotation** (his 24 Aug word: *"why tf i
   crave novelity?? i seek internal validation"*).
 - **No latency shown to him. No drift counts, reds, or organism health on study screens.**
