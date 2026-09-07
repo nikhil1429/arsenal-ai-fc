@@ -110,6 +110,23 @@ export async function prompt(opts = {}) {
   const r = { ran: 0, failed: [] };
   await runOrgan("forge_session.mjs", "contract", opts, r);
   await runOrgan("teaching_contract.mjs", "print", opts, r);
+  // ── THE TEACHING BAR (7 Sep 2026) — THE MESSAGE GRAMMAR JOINS THE ANCHOR ───
+  // The two callees above carry PACING (where you are in THE METHOD) and DRIFT
+  // (which rule he is failed on most). Neither has ever carried a single byte of
+  // MESSAGE GRAMMAR: read forge_session's contractLines() — no shape, no cap, no
+  // ban in it — and teaching_contract rotates 2 rules of 36, so a given rule
+  // reaches a turn roughly once in 35. His grammar lived in markdown that a
+  // session read ONLY on opening /learn or /forge, and there is a live route
+  // into a teaching turn that opens NEITHER: a fresh session continuing an
+  // already-open concept (forge_session.json was open on `tokenization` with
+  // three recorded resumes when this landed). THIS LINE IS THE FIX FOR THAT
+  // ROUTE, and the reason it works is one property of the wiring: the
+  // UserPromptSubmit hook carries NO `matcher` (PreToolUse is the only hook in
+  // settings.json that does), so this dispatcher fires on EVERY prompt whatever
+  // skill was or was not invoked. The selftest pins that property.
+  // It sits third deliberately: after the drift rules, before the auditor that
+  // records the turn — the two "how to speak to him" blocks read as one.
+  await runOrgan("teaching_bar.mjs", "print", opts, r);
   await runOrgan("teaching_audit.mjs", "hook", opts, r);
   await runOrgan("hippocampus.mjs", "recall-hint", opts, r);
   return r;
@@ -356,6 +373,58 @@ function selftest() {
     // get stricter, so the gate's own presence is now pinned here too).
     assert("WIRING — Stop = exactly [afferent-post, turn_hook stop, claims gate] (5 callees → 1 dispatcher; the gate is its own process by design)",
       st.length === 3 && st[0] === "node hooks/afferent-post.mjs" && st[1] === "node scripts/turn_hook.mjs stop" && st[2] === "node scripts/claims.mjs stop", JSON.stringify(st));
+
+    // ── THE ROUTE-INDEPENDENCE PROPERTY (7 Sep 2026) ─────────────────────────
+    // The teaching bar's whole claim is that it reaches a teaching turn on the
+    // route that opens NEITHER /learn nor /forge. That claim rests on ONE fact
+    // about this file's wiring and nothing else: the UserPromptSubmit hook has
+    // no `matcher`, so it fires on every prompt whatever skill was invoked —
+    // unlike PreToolUse, which is the only matcher-bearing hook in settings.json
+    // and is checked here as the PLANT, so this assert cannot pass vacuously
+    // against a settings file whose matchers this test simply cannot see.
+    // A future edit that narrows UserPromptSubmit to a matcher would silently
+    // return every teaching law to "only if he types the skill". It fails here.
+    {
+      const groups = (ev) => ((settings && settings.hooks && settings.hooks[ev]) || []);
+      const upsMatchers = groups("UserPromptSubmit").filter((g) => g && g.matcher !== undefined);
+      const ptuMatchers = groups("PreToolUse").filter((g) => g && g.matcher !== undefined);
+      assert("ROUTE-INDEPENDENT — UserPromptSubmit carries NO matcher, so this dispatcher (and the teaching bar under it) fires on EVERY prompt, skill opened or not",
+        groups("UserPromptSubmit").length > 0 && upsMatchers.length === 0, `matchers found: ${JSON.stringify(upsMatchers.map((g) => g.matcher))}`);
+      assert("…and this check is not vacuous — it really can see a matcher when one exists (PreToolUse has one)",
+        ptuMatchers.length > 0, "PreToolUse has no matcher either, so the check above proves nothing");
+    }
+
+    // ── THE TEACHING BAR'S OWN CASES (7 Sep 2026) ────────────────────────────
+    // They live WITH the organ (`barSelfCheck`, exported there) and run HERE,
+    // because package.json's suite-membership list was outside the file ownership
+    // of the build that added it and organism_test's COVERAGE LAW fails any
+    // scripts/*.mjs that carries a case-runner verb and sits in no suite. So the
+    // organ has no verb of its own and is covered by this entry, which is already
+    // in organism:selftest — nothing is uncovered, only the CLI verb is absent.
+    // THE IMPORT IS DYNAMIC AND DELIBERATELY SO: a static import at the top of
+    // this file would put teaching_bar.mjs in the module cache before the SHIM
+    // ever runs, which is exactly the R-01 collision that killed three callees
+    // for three weeks. Here it happens inside the case runner, in a process that
+    // never drives the live sequence in-process, so the cache cannot be poisoned.
+    assert("THE TEACHING BAR is NOT statically imported by this dispatcher (a static import would put it in the module cache and make its SHIM a silent no-op — R-01)",
+      !/^\s*import\s[^;]*?from\s+"\.\/teaching_bar\.mjs"/m.test(readFileSync(fileURLToPath(import.meta.url), "utf8")));
+    assert("THE TEACHING BAR rides the prompt sequence (the message grammar reaches every turn, not only the turns that open a skill)",
+      /runOrgan\("teaching_bar\.mjs", "print"/.test(readFileSync(join(HERE, "turn_hook.mjs"), "utf8")));
+    // contract 3 for this callee, and it is the SHIM half: the organ must dispatch
+    // behind its own argv[1] guard so the rewritten argv opens it. Measured in
+    // sequence the day it landed — `runOrgan("teaching_bar.mjs", "print")` printed
+    // the four-line block and returned `ran 1, failed []`. This assert is what stops
+    // a later edit turning it into a library-only file whose SHIM prints nothing
+    // while `r.ran` still counts it a success.
+    assert("contract 3 — teaching_bar.mjs dispatches behind the argv[1] guard (the SHIM shape this dispatcher gives it) and carries the ARSENAL_ORGAN silence guard",
+      /pathToFileURL\(process\.argv\[1\]\)\.href\)\s*main\(\)/.test(src("teaching_bar.mjs")) && /ARSENAL_ORGAN === "1"/.test(src("teaching_bar.mjs")));
+    try {
+      const bar = await import(pathToFileURL(join(HERE, "teaching_bar.mjs")).href);
+      const br = bar.barSelfCheck();
+      for (const c of br.cases) assert(c.name, c.ok, c.detail);
+    } catch (e) {
+      assert("the teaching bar's cases ran at all", false, String((e && e.message) || e));
+    }
 
     // 3. THE LIVE CALLEES UNDER ARSENAL_ORGAN=1 — hermetic by every callee's own
     //    guard (no read of his state reaches stdout, no write lands), so this both

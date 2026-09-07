@@ -38,8 +38,18 @@ description: The session-agnostic front door to the day's learning — reads the
 > that paragraph, no colour anywhere · ONE ```diff block = right-model-vs-wrong-model, green/red),
 > the measured render facts behind each, the fence traps that fire the drift counters, and — read
 > this WITH §2 — **the NO-TABLES ruling**, his own, 22 Aug 2026, broken five times in a month
-> because it lived only on the state bus and in no file a session reads. §8.4 lists the two things
-> still needing HIS word: emoji, and the fact that no colour has yet been observed rendering.
+> because it lived only on the state bus and in no file a session reads.
+>
+> ⭐ **AND READ ITS §0b — HIS SIX RULINGS OF 7 Sep 2026. None of them is re-openable by a session.**
+> In his own words: colour carries meaning or it is not used (*"rang sirf matlab ke liye"*) ·
+> **emoji are IN**, as four fixed meaning-markers — ✅ the true model · ❌ the wrong one · ⚠ a trap ·
+> ⭐ the one thing to carry away — **alongside** the diff block and never instead of it (asked emoji
+> or diff, he answered *"both"*), capped at 2 per message, the set and the meanings in §8.1c ·
+> three colour-and-emphasis shapes and no fourth (*"done"*) · **the simultaneous-units cap is ~4**,
+> not 5-7 (*"done"*) · the link-back check must fire during teaching (*"kardo"*) · the table
+> checker is deliberately NOT widened (*"skip it"* — his ban still covers every surface, it is
+> simply not machine-caught in three of them, named in §8.3). **§8.4 now lists ONE thing still
+> needing his word:** no colour in that grammar has yet been observed actually rendering.
 
 You are the session driver. The captain should NEVER re-explain where he is — the
 machine already knows. **Orient from STATE first, then route.**
@@ -101,9 +111,16 @@ screen is exactly three lines and one question, nothing else:
 `hits=0 auto=0` in `teaching_contract.mjs list`. For **three** of the four that is because nothing
 measures them — `teaching_audit.mjs` auto-counts 13 rules and none of them is three-layer,
 position-by-name or the intensity check. The **fourth, link-back, DOES have a live checker**
-(`teaching_audit.mjs:794`) — but it is gated `step > 3`, so it can never fire during step 3 SAMJHAO,
-which is the entire teaching phase. His own L4: a law is a code path or it does not exist. Until the
-other three have checkers, THIS BLOCK is their code path — read it every session.
+(`teaching_audit.mjs:794`) — but it was gated to the turns AFTER teaching ends, so it could never
+fire during step 3 SAMJHAO, which is the entire teaching phase. His own L4: a law is a code path or
+it does not exist. Until the other three have checkers, THIS BLOCK is their code path — read it
+every session.
+⭐ **HE ORDERED THAT GATE WIDENED ON 7 Sep 2026, in one word — *"kardo"*** (recorded with his five
+other rulings of that day in `learning-layer/VISUAL_CONTRACT.md` §0b). **Do not take it as done
+from this line, and do not take it as undone either** — a skill file is the wrong place to record
+whether code runs. The truth is the checker's own selftest: run
+`node scripts/teaching_audit.mjs selftest` and read what it asserts about link-back during step 3.
+Believe that output over this sentence, always.
 
 - **THREE LAYERS PER IDEA** (`act-mt2kgbt7`, his ruling 21 Aug 2026). Every idea lands three times:
   **DUKAAN** (the everyday physical analogy) → **ASLI NAAM** (the real term, opened in one line) →
@@ -125,6 +142,12 @@ other three have checkers, THIS BLOCK is their code path — read it every sessi
   Anything below standard is named to him in the NEXT turn, in one line, so it gets revised. Never
   a silent pass.
 - **LINK-BACK** (`link-back`). A new concept is always joined to an already-closed concept BY NAME.
+  **This is the one carry of the four that the machine can see, and on 7 Sep 2026 he ordered it to
+  start seeing it DURING the lesson and not only after** — *"kardo"*. The reason it matters here:
+  a link made in the teaching itself is the weld; a link named after teaching has ended is a
+  footnote. What the checker can see either way is only that a closed concept was NAMED — whether
+  the join was a real weld or a name-drop stays yours to judge, and the checker says so in its own
+  words.
 
 0b. **Register the sitting (ONE OPEN SITTING law, Block 3):** the `sitting.mjs open` line above is
 that registration. If a sitting is already open (voice), it JOINS it — same id, same plan, same

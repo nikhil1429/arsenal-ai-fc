@@ -120,12 +120,31 @@ const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } ca
 // and the gate went GREEN — not because anything improved, but because a finding had
 // been hidden by punctuation in a comment. A gate may only get stricter (§10-D rule 6);
 // it may never be quieted by accident. Keep prose out of literal arrays here.
+// 7 Sep 2026 adds his three UNCHECKED per-turn carries — `act-mt2kgbt7`
+// (three-layer delivery), `act-mt2kgn09` (C7 one-idea, position BY NAME) and
+// `max-intensity-check`. Until this build all three read hits=0 auto=0 for the
+// same reason: nothing measured them. See the detector block below countTables.
 export const CHECKED_RULES = [
   "one-idea", "dheema-not-lamba", "hinglish", "his-level",
   "no-system-mid-concept", "confusion-is-literal", "his-word",
   "coverage", "neev-pehle", "link-back", "terminology", "decided",
   "uncaptured-rep",
+  "act-mt2kgbt7", "act-mt2kgn09", "max-intensity-check",
 ];
+
+// THE SEED GAP, DECLARED IN CODE RATHER THAN DISCOVERED LATER (7 Sep 2026).
+// teaching_contract.mjs's own header names this trap twice (C1, and again at
+// W0-D · LR-04): `dressing-room/state/teaching_contract.json` is GITIGNORED, so
+// a rule row added through its CLI does not travel with the commit that teaches
+// this file to emit that id. These three ids are LIVE on his laptop (added
+// through the act lane on 19 and 21 Aug) but are NOT in teaching_contract.mjs's
+// `seed()`. On any other machine, or after a reset, every autohit against them
+// exits 1 and the measured drift is dropped — silently, in a jsonl field.
+// CLOSED 7 Sep 2026 — the three `r(...)` rows landed in teaching_contract.mjs seed(),
+// so this declared gap is now EMPTY and the selftest tripwire below keeps it empty.
+// law-waiver:jugad — a DECLARED GAP LIST, never a subject list: it names rule ids this
+// file emits that its OWNER has not yet seeded, and its whole purpose is to shrink to [].
+export const SEED_GAP = [];
 
 // COVERAGE HONESTY, PER RULE (full-organism audit P1.1-P1.2, 7 Aug 2026). A rule
 // id in CHECKED_RULES means "a check EXISTS", never "the whole rule is machine-
@@ -134,7 +153,10 @@ export const CHECKED_RULES = [
 // can never quietly widen into "taught correctly". `report` prints it verbatim.
 export const RULE_NOTES = {
   "neev-pehle": "machine sees the LEXICAL slice only: a listed term-of-art used in the teaching body before any definitional line for it, this concept. The SEMANTIC form (a conclusion resting on an un-opened idea that has no listed name) is not machine-checkable without an LLM judge — that slice stays his to flag.",
-  "link-back": "machine sees NAME-presence only: by the time SAMJHAO ends (first turn past step 3) some closed concept must have been NAMED in this session. Whether the link was a real weld or a name-drop is not machine-visible.",
+  "link-back": "machine sees NAME-presence only: some ALREADY-CLOSED concept must have been NAMED in this session. Whether the link was a real weld or a name-drop is not machine-visible. WIDENED 7 Sep 2026 on his word ('kardo'): it now also fires DURING step 3 SAMJHAO, which is where the teaching actually happens (826 of the 907 audited rows on disk that day were step 3, and the old `step > 3` gate made this rule structurally silent on every one of them). Inside step 3 the condition is narrowed so the widening cannot flood: it waits until the concept has LANDED something — an axis closed, or the teaching has moved past its first axis — which is once per forge session at most, and the flag latches. Two holes were closed in the same pass, both in the STRICTER direction: the OPEN concept's own name no longer satisfies its own link-back (live proof: tokenization sat in its own closed-names list and latched `seen` on turn 1, so the check could never fire), and names now match on word boundaries instead of substrings (the name 'context' was being satisfied by 'in this context').",
+  "act-mt2kgbt7": "machine sees ONE conditional, and it is deliberately narrow: a turn that performs the ASLI NAAM act — the real name put on the page in an emphasised term, the middle layer — and carries NO technical line. It CANNOT see an idea delivered with no naming act at all, and it cannot see a missing DUKAAN analogy; layer 3's presence is read generously (the house label OR any substantial English sentence), so a labelled-but-empty line reads as present. MEASURED over 519 live rows of 1-7 Sep: 5 anchors, 0 false fires. It is precise and SPARSE — a whole engineering week produces almost no anchors, which is correct (those are not teaching turns) but means silence here is never evidence the layer was delivered.",
+  "act-mt2kgn09": "TWO halves with very different reach. (1) THE COUNT — 'idea 2 of 4', 'STEP 3/11', 'axis 3/9' — his ruling rul-mtdep0iye1 struck the abstract counter and only the LABEL, never C7's pacing law. This half is strict and near-zero false positive (0 hits across 519 live rows after the quote-guard and the numeral-list guard) and fires on any teaching-band turn. A BARE 'n/m' with no unit noun is deliberately NOT caught: it hit 60 of those 519 rows, all engineering. (2) NO POSITION AT ALL — fires only on a turn already anchored as idea-delivery (the same asli-naam act, or a check_q moment declared to the pacer in this turn's window), because firing it on every teaching-band turn would flag several hundred engineering turns that ride an open forge session. What it cannot see: an idea delivered with neither a naming act nor a declared moment.",
+  "max-intensity-check": "machine sees the AXIS-CLOSE half only, and it is a state comparison, not a judgement: an axis newly lands in axes_done and neither that turn nor the next one names his three axes (depth · breadth · interaction) with a verdict on them. The latch is PER AXIS, so nine axis closes can produce at most nine drifts and a standing closed axis produces none. It CANNOT see the DAY-CLOSE half of the same rule — a day close leaves no mark in forge_session.json, so there is no pair of ends to compare and this organ says nothing rather than inventing a proxy. It also cannot judge whether the check was HONEST; presence of the check is all a regex can see. Its twin rule `adhd_intensity` is deliberately NOT emitted against: the same measured miss counted twice would inflate the ranking, and the drift ledger already names both rulings in its evidence.",
   "terminology": "machine sees a fixed translation-pair floor (shabdkosh/bhram/prasang-class replacements — 0 false positives across 4,270 live rows because they never occur in his register). Softer paraphrase-drift is not machine-visible; the pair list under-counts by design.",
   "decided": "machine sees TWO fingerprints only (re-opening the selfknowledge freeze; re-opening the tool-less/guest surface — both PERMANENT rulings, 7 Aug 2026). The general form (re-litigating any settled decision) has no decision registry to check against and stays his to catch.",
   "his-word": "machine sees ONE fingerprint: an axis marked done with zero Jirah before it. Every other his-word violation is semantic and stays his.",
@@ -262,9 +284,195 @@ export function countSectionBreaks(text) {
 // tables confuse him AND that he had said so before. The combined counter above
 // needs breaks > 1, so the exact shape he reported — ONE table per message —
 // passed clean. One separator row = one table = the drift. Presence, no number.
+//
+// ⛔ DO NOT WIDEN THIS CHECK — HIS DELIBERATE SKIP, 7 Sep 2026, one word: "skip it".
+// The widening that was put to him and DECLINED, so the next session does not
+// re-propose it as if it were an oversight:
+//   · step-10 LOCK reports (the `at(10)` exemption in the selftest below stays),
+//   · fenced csv/tsv grids (the fence strip above stays — a grid inside ``` is not read),
+//   · the postmatch SEASON.md surface (out of this organ's scope entirely).
+// His 22-Aug ruling rul-mtdep06gy4 ("never never use tables… table is something
+// which irritates my mind") does name "every teaching surface", and the three
+// shapes above are inside that scope on the letter of it — he was told that and
+// still said skip. Recorded as a DECISION, not a gap: this is a captain's call
+// under the same law that lets him keep biometric files public. Behaviour here is
+// unchanged by the 7 Sep build; only this comment was added.
 export function countTables(text) {
   const stripped = String(text || "").replace(/```[\s\S]*?```/g, "");
   return (stripped.match(/^\s*\|[\s:|-]+\|\s*$/gm) || []).length;
+}
+
+// ===========================================================================
+// HIS FOUR PER-TURN CARRIES (7 Sep 2026 — the build his haan ordered).
+//
+// Measured that morning: `teaching_contract.mjs list` showed hits=0 auto=0 on
+// all four. For THREE of them the zero meant nothing measures them at all —
+// this organ auto-counted 13 rules and none was three-layer, position-by-name
+// or the intensity check. The fourth, link-back, HAD a checker (check 9 below)
+// gated `step > 3`, so it was structurally silent through step 3 SAMJHAO, which
+// is where the teaching happens: 826 of the 907 rows on disk that day were step 3.
+// His own L4 — a law is a code path or it does not exist — was failing on four
+// laws at once, and the proof arrived in the same sitting that ordered the fix:
+// the assistant sent him a markdown table (banned 22 Aug, rul-mtdep06gy4) and
+// wrote "idea 2 of 4" into a skill file (banned 22 Aug, rul-mtdep0iye1). Review
+// agents caught both. No code caught either.
+//
+// ── THE CASE-FOLDING TRAP, MEASURED, BECAUSE IT ALMOST SHIPPED A WOLF-CRIER ──
+// Under the /i flag a class like [A-Z] matches lowercase. The first cut of the
+// naming-act detector below carried /i so that "Asli naam" and "ASLI NAAM" would
+// both match — and its ALL-CAPS-term branch then matched ANY word. Replayed over
+// 519 real teaching-lane rows it scored 19 hits, of which four were engineering
+// prose ("path ka asli naam resolve karega", "asli naam kabhi reject nahi honge").
+// Case-sensitive, the same corpus gives 5 hits and every one is a real naming act.
+// So: no regex below that carries an ALL-CAPS branch may carry /i, and the words
+// that must tolerate case spell their letters out through `ci()`.
+// ===========================================================================
+
+// A case-insensitive literal that does NOT need the /i flag (see above).
+const ci = (w) => w.split("").map((c) => (/[a-zA-Z]/.test(c)
+  ? `[${c.toLowerCase()}${c.toUpperCase()}]`
+  : c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))).join("");
+
+// An EMPHASISED TERM — the house's way of putting a real name on the page:
+// **bold**, `backticked`, a <SPECIAL> token, or an ALL-CAPS word. Case-sensitive.
+const EMPH_TERM = "(?:\\*\\*[^*\\n]{2,40}\\*\\*|`[^`\\n]{1,40}`|<[A-Za-z_]{2,12}>|\\b[A-Z][A-Z0-9_]{2,}\\b)";
+
+// ---------------------------------------------------------------------------
+// LAYER 2 — THE ASLI NAAM ACT. This is the ANCHOR for the two idea-delivery
+// checks below, and the choice is deliberate: it is the ONE layer of his
+// three-layer law that leaves an unambiguous mark on the page. When the teacher
+// performs it, an idea is being opened BY THE TEACHER'S OWN HAND — no guessing,
+// no "does this look like teaching", no negative gate on engineering vocabulary.
+//
+// The connector between the phrase and its term is punctuation-only (at most 8
+// chars, plus an optional copula). That is what separates the ACT — "uska asli
+// naam **VOCABULARY** hai", "**Uska asli naam:** `<UNK>`" — from the same two
+// words used as ordinary prose ("asli naam resolve karega", "asli naam nahi").
+// MEASURED over the 519 live rows of 1-7 Sep: 5 hits, all 5 genuine naming acts,
+// 0 engineering prose. `(?!\s+nahi)` kills the negation form explicitly.
+const ASLI_NAAM_ACT = new RegExp(
+  `\\b${ci("asli")}\\s+(?:${ci("naam")}|${ci("term")})\\b(?!\\s+${ci("nahi")})` +
+  `(?:\\s+(?:${ci("hai")}|${ci("hain")}|${ci("is")}))?[\\s:.,;—–*_"'()\\[\\]-]{0,8}${EMPH_TERM}`);
+export function asliNaamAct(text) { return ASLI_NAAM_ACT.test(String(text || "").replace(/```[\s\S]*?```/g, " ")); }
+
+// ---------------------------------------------------------------------------
+// LAYER 3 — THE TECHNICAL LINE. His R1 ruling's third layer: "woh sentence jo
+// tum interview mein bologe". Two independent ways of seeing it, OR'd, because
+// the register carries both and a drift needs BOTH absent:
+//   · the house LABEL — "**Technical line:** …", "yeh woh line hai jo tum
+//     interview mein bologe" (measured live 09-01 and 09-05); the labelled line
+//     is sometimes itself Hinglish, so the label alone must count;
+//   · an ENGLISH SENTENCE of substance — >= 7 words, zero Hindi function words,
+//     which is what an interview line looks like when it is delivered unlabelled
+//     (measured live 09-04: "The vocabulary is a fixed, finite list of text
+//     pieces, built once before…").
+// The OR makes this detector generous, and that direction is chosen on purpose:
+// a generous "layer 3 is present" test makes the CHECK quieter, never louder.
+const TECH_LINE_LABEL = /(technical\s+line|interview\s+line|english\s+line|interview\s*-?\s*ready|interview\s+mein\s+(?:bol|keh|kehna|bologe|bolni|bolna|bolo)|jo\s+(?:tum|aap|tu)\s+interview\s+mein)/i;
+export function technicalLine(text) {
+  const t = stripCode(text);
+  if (TECH_LINE_LABEL.test(t)) return { via: "label", excerpt: String(t.match(TECH_LINE_LABEL)[0]).slice(0, 80) };
+  // full text, fences dropped but inline code KEPT — a technical line routinely
+  // carries a backticked token and stripping it would shorten the sentence below
+  // the word floor.
+  for (const raw of String(text || "").replace(/```[\s\S]*?```/g, " ").split(/\n/)) {
+    const line = raw.replace(/^[\s>*_#-]+/, "").replace(/[*_`"“”]/g, "").trim();
+    for (const sent of line.split(/(?<=[.!])\s+/)) {
+      const w = sent.toLowerCase().split(/[^a-z0-9'-]+/).filter(Boolean);
+      if (w.length < 7) continue;
+      if (w.some((x) => HINDI_MARKERS.includes(x))) continue;
+      return { via: "english-sentence", excerpt: sent.slice(0, 120) };
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// POSITION, BY NAME (C7 + his 22-Aug ruling rul-mtdep0iye1). The lawful shape is
+// a NAMED path — `TOKENIZATION › AXIS b (sequence length) › OOV ka asli dard`
+// (that exact line is on disk, 09-05 21:48) — or an explicit locator, "Tum yahan
+// ho: axis a" (on disk, 09-01 01:22). Both live shapes are covered.
+// The caps branch uses [ \t]* and NOT \s*, so a capitalised word followed by a
+// markdown blockquote on the next line cannot pass as a chevron path.
+const NAMED_POSITION = new RegExp(
+  `(?:\\b[A-Z][A-Z0-9 _'-]{2,40}[ \\t]*[\u203a\u00bb>\u2192]` +
+  `|\\b${ci("axis")}\\s+[a-i]\\b` +
+  `|${ci("tum yahan ho")}|${ci("aap yahan ho")}|${ci("you are here")})`);
+export function namedPosition(text) { return NAMED_POSITION.test(stripCode(text)); }
+
+// ---------------------------------------------------------------------------
+// THE BANNED COUNT (his ruling rul-mtdep0iye1, 22 Aug 2026, verbatim: "please
+// drop this vague things like idea x out of y, i want to see the real terms and
+// concept names… i have adhd pi bro, don't forget it"). The pacing law C7 is
+// untouched by that ruling — only the LABEL died.
+//
+// STRICT BY MEASUREMENT, not by intention. Replayed over the 519 live rows:
+//   · a UNIT NOUN must carry the count ("idea 2 of 4", "STEP 3/11", "axis 3/9").
+//     A bare n/m is NOT caught and that is a decision, not an omission — bare
+//     n/m hit 60 of 519 rows, every one of them engineering ("gate selftest
+//     57/0", "0/9 axes", "6/12 steps"). A checker that fires on those is a
+//     checker he learns to ignore.
+//   · `(?![\s]*[/\d])` kills the numeral-LIST form: "step 0/1/10 par woh khud
+//     fail hota hai" is three step numbers, not "step 0 of 1". 2 of the 3 raw
+//     hits in the corpus were this shape.
+//   · QUOTED spans are dropped first. The third raw hit was the teacher quoting
+//     the banned form while apologising for it ("Maine likh diya tha ki har turn
+//     \"idea 2 of 4\" carry karega. Wo tumne khud ban kiya tha."). Naming the
+//     banned thing is not doing it.
+// After all three guards: 0 hits in 519 real rows. That is the near-zero-false-
+// positive floor this half was asked for.
+const COUNT_UNIT = "(?:idea|ideas|point|points|concept|concepts|step|steps|part|parts|axis|axes|topic|topics|chunk|chunks|piece|pieces|section|sections|beat|beats|sawaal|padav|kadam)";
+const COUNT_OF = new RegExp(`\\b${COUNT_UNIT}\\s*#?\\s*(\\d{1,2})\\s*(?:of|out\\s+of|mein\\s+se|me\\s+se)\\s*(\\d{1,2})\\b`, "i");
+const COUNT_SLASH = new RegExp(`\\b${COUNT_UNIT}\\s*#?\\s*(\\d{1,2})\\s*/\\s*(\\d{1,2})(?![\\s]*[/\\d])`, "i");
+// Citation forms, dropped before the count is looked for — the register's ways of
+// naming a thing rather than using it.
+// SHORT BY ABLATION, not by taste. The first cut of this list also stripped
+// '\u2026', *italic* and blockquote lines. Each rule was then ablated against the same
+// 519 live rows: the DOUBLE-QUOTE rule alone accounts for the one real false
+// positive in the corpus (the teacher quoting the banned form while apologising
+// for it \u2014 09-07 06:27), and the other three catch nothing at all while each one
+// opens a hole a counter can hide in: `*idea 2 of 4*` and a blockquoted
+// `> idea 2 of 4` both went UNDETECTED until they came out. The single-quote rule
+// was the worst of the three \u2014 apostrophes are unpaired in this register, so two
+// of them bracket and delete everything between, counter included. A guard that
+// buys zero and costs coverage is not a guard, and a gate may only get stricter.
+// ~~struck~~ stays: canon marks the retired header exactly that way
+// (`~~STEP n/11~~` \u2192 the named path), so a strikethrough really is the dead form
+// being shown. BOLD is deliberately never stripped \u2014 it is the house's ordinary
+// emphasis, and `**idea 2 of 4**` is caught (asserted in the selftest).
+const dequote = (s) => String(s || "")
+  .replace(/"[^"\n]{0,400}"/g, " ")
+  .replace(/\u201c[^\u201d\n]{0,400}\u201d/g, " ")
+  .replace(/~~[^~\n]{0,300}~~/g, " ");
+export function countForm(text) {
+  const t = dequote(stripCode(text));
+  for (const [form, rx] of [["k of n", COUNT_OF], ["k/n", COUNT_SLASH]]) {
+    const m = t.match(rx);
+    if (!m) continue;
+    const k = Number(m[1]), n = Number(m[2]);
+    if (!(n >= k && n >= 2 && n <= 50)) continue;   // "57/0" and "1 of 1" are not progress counters
+    return { form, match: String(m[0]).replace(/\s+/g, " ").trim() };
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// THE MAX-INTENSITY CHECK (`max-intensity-check` + `adhd_intensity`, his rulings
+// 19 Aug 2026): "Har topic ke samjhao ke baad explicitly check karo ki intensity
+// aur depth maximum thi ya nahi… Agar kuch bhi standard se niche hai toh next
+// turn mein mujhe explicitly batao." Three named axes — depth, breadth,
+// interaction — and a verdict on them.
+// The test is his own shape: either the word INTENSITY itself, or at least TWO
+// of his three axes named, AND a verdict word alongside. One axis word alone is
+// ordinary prose ("depth" appears in engineering turns constantly); two of three
+// plus a verdict is somebody answering his question.
+const INT_AXES = [/\b(?:depth|gehra?ai|gehrai|gahrai)\b/i, /\b(?:breadth|chaudai|chaudaai|daayra|dayra|scope)\b/i, /\b(?:interaction|involvement|baat-?cheet|aadan-?pradan)\b/i];
+const INT_WORD = /\b(?:intensity|inten?sity|teevrata)\b/i;
+const INT_VERDICT = /\b(?:maximum|max|poori|poora|full|standard|domination|dominate|niche|below|kam|adhoori|adhura|kamzor|theek)\b/i;
+export function intensityCheck(text) {
+  const t = stripCode(text);
+  const axes = INT_AXES.filter((rx) => rx.test(t)).length;
+  return (INT_WORD.test(t) || axes >= 2) && INT_VERDICT.test(t);
 }
 
 // FROZEN 6 Aug 2026 — the original, byte-for-byte. Kept exported because the
@@ -594,7 +802,18 @@ export function auditTurnLegacy({ assistantText = "", userText = "", session = n
  *   confusion/ungraded  state comparisons, step-agnostic by construction
  */
 export function auditTurn({ assistantText = "", userText = "", session = null, prevStep = null, prevAxesDone = null, prevAxesDeferred = null, termState = null, linkState = null, closed = null,
-  prevMoments = null, prevReps = null, repsNow = null } = {}) {
+  prevMoments = null, prevReps = null, repsNow = null,
+  // 7 Sep 2026 — the two ends the three new carries need.
+  //  prevMomentsByKind  question_moments BY KIND at this turn's opening (the
+  //                     prompt-time snapshot). Only `check_q` growth is read: it
+  //                     is the teacher's OWN declaration to the pacer that this
+  //                     turn served an idea and asked its one check-question,
+  //                     which is the C7 turn shape exactly. null = no anchor,
+  //                     and this file's standing law is NO ANCHOR, NO CLAIM.
+  //  intensityState     the max-intensity latch, carried across turns the way
+  //                     linkState is: an axis close ARMS it, the next audited
+  //                     turn either satisfies it or fires it, once.
+  prevMomentsByKind = null, intensityState = null } = {}) {
   const drifts = [];
   const open = !!(session && session.concept && !session.closed_at);
 
@@ -777,22 +996,65 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
     }
   }
 
-  // ---- 9) LINK-BACK — SAMJHAO ended and no closed concept was ever named ----
-  // (P1.1.) Presence-of-name only (RULE_NOTES). Fires ONCE per session, at the
-  // first audited turn past step 3, when no closed-concept name has appeared in
-  // any audited turn of this session including this one.
+  // ---- 9) LINK-BACK — no closed concept was ever named this session ---------
+  // (P1.1, WIDENED 7 Sep 2026 on his one word, "kardo".) Presence-of-name only
+  // (RULE_NOTES). Fires ONCE per session; the latch is `flagged`.
+  //
+  // WHY IT WAS WIDENED. The gate was `step > 3`, written when "SAMJHAO is over"
+  // was the natural moment to ask whether anything had been linked. The cost was
+  // measured on 7 Sep: 826 of the 907 rows in teaching_audit.jsonl are step 3, so
+  // the rule was silent across the entire teaching phase — a law with a code path
+  // that could not run is L4's failure wearing a green badge.
+  //
+  // WHY IT DOES NOT FLOOD. A widened gate that fired on the first step-3 turn
+  // would be unfair and useless — the teacher is allowed to link back later in
+  // SAMJHAO. So inside step 3 the CONDITION is narrowed (never the coverage): it
+  // waits until the concept has LANDED something — an axis closed, or the
+  // teaching has moved past its first axis (axes_now_at holds two or more). By
+  // then a session that has never named a closed concept is not "not yet", it is
+  // "not going to". Past step 3 the old condition is unchanged.
+  //
+  // TWO HOLES CLOSED IN THE SAME PASS, both STRICTER (a gate may only tighten):
+  //   · THE OPEN CONCEPT NO LONGER SATISFIES ITS OWN LINK-BACK. Live proof at the
+  //     moment of the build: closedDerive() returned ["Embeddings","Inference",
+  //     "sampling","Context window","context","tokenization"] while `tokenization`
+  //     was the OPEN concept, so the first turn that said its own name latched
+  //     `seen` and the check could never fire again. Linking a concept to itself
+  //     is not a link.
+  //   · WORD BOUNDARIES, NOT SUBSTRINGS. The closed name "context" was satisfied
+  //     by "in this context" in ordinary prose. Same tolerance as before for the
+  //     singular/plural pair ("embedding" still names "Embeddings").
   let linkbackNamedNow = false, linkbackFired = false;
-  if (linkState && closed && Array.isArray(closed.names) && closed.names.length) {
-    linkbackNamedNow = closed.names.some((n) => {
-      const key = n.toLowerCase();
-      const t = norm(stripCode(assistantText));
-      return t.includes(key) || t.includes(key.replace(/s$/, ""));
-    });
-    if (Number.isFinite(step) && step > 3 && step <= 9 && !linkState.seen && !linkState.flagged && !linkbackNamedNow) {
+  const openConcept = String((session && session.concept) || "").toLowerCase().trim();
+  const linkTargets = (closed && Array.isArray(closed.names) ? closed.names : [])
+    .filter((n) => String(n).toLowerCase().trim() !== openConcept);
+  if (linkState && linkTargets.length) {
+    const body = stripCode(assistantText);
+    // termUsed() word-bounds and tolerates a trailing s/es on the TEXT side; the
+    // singular of a plural NAME ("embedding" for the closed concept "Embeddings")
+    // is the other direction and is tried explicitly, exactly as the substring
+    // form did before this pass — the tightening is boundaries, never tolerance.
+    const namesAny = (n) => {
+      const s = String(n);
+      return termUsed(body, s) || (s.length > 3 && /s$/i.test(s) && termUsed(body, s.slice(0, -1)));
+    };
+    linkbackNamedNow = linkTargets.some(namesAny);
+    // Has this concept LANDED anything yet? The step-3 arming condition.
+    const axesDoneN = Array.isArray(session.axes_done) ? session.axes_done.length : 0;
+    const axesSeenN = session.axes_now_at && typeof session.axes_now_at === "object"
+      ? Object.keys(session.axes_now_at).length : 0;
+    const landed = axesDoneN >= 1 || axesSeenN >= 2;
+    const inWindow = Number.isFinite(step)
+      && step <= 9
+      && (step > 3 || (step === 3 && landed));
+    if (inWindow && !linkState.seen && !linkState.flagged && !linkbackNamedNow) {
       linkbackFired = true;
+      const where = step === 3
+        ? `SAMJHAO is under way (step 3) and this concept has already landed an axis`
+        : `SAMJHAO is over (step ${step})`;
       drifts.push({
         rule: "link-back",
-        evidence: `SAMJHAO is over (step ${step}) and NO closed concept has been named this session — canon: naya concept hamesha band ho chuke concepts se NAAM le kar jodo (closed: ${closed.names.join(" · ")})`,
+        evidence: `${where}, and NO already-closed concept has been named this session — canon: naya concept hamesha band ho chuke concepts se NAAM le kar jodo (closed, excluding the open concept itself: ${linkTargets.join(" · ")})`,
         excerpt: quote(assistantText, 120),
       });
     }
@@ -824,6 +1086,112 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
     }
   }
 
+  // ═══ HIS FOUR PER-TURN CARRIES — checks 12-14 (7 Sep 2026) ═══════════════
+  // The detectors, their measurements and the traps they were tuned against all
+  // live in the block above countTables. Everything below is scope + wiring.
+
+  // THE IDEA-DELIVERY ANCHOR, shared by checks 12 and 13(ii). Two independent
+  // ways of knowing this turn served an idea, and BOTH are the teacher's own act,
+  // never an inference about "does this look like teaching":
+  //   · the ASLI NAAM act — the real name put on the page in an emphasised term;
+  //   · a check_q moment DECLARED to the pacer inside this turn's window — the
+  //     C7 turn shape by the teacher's own hand (the same anchor check 6b trusts).
+  // WHY AN ANCHOR AT ALL, stated plainly: under his "sab audit, no gates" ruling
+  // every interactive Stop in this project is audited while a forge session sits
+  // open on disk, and the session HAS sat open for days at a time — 826 of the 907
+  // rows on disk at build time were step 3, and a replay of the 519 live rows of
+  // 1-7 Sep found them overwhelmingly to be ENGINEERING turns, not teaching. An
+  // idea-delivery law fired on those would produce hundreds of false auto-hits
+  // against his teaching contract, which is worse than no checker at all.
+  const kindNow = (session.question_moments && typeof session.question_moments === "object")
+    ? session.question_moments : null;
+  const checkQNow = kindNow && Number.isFinite(Number(kindNow.check_q)) ? Number(kindNow.check_q) : null;
+  const checkQPrev = prevMomentsByKind && typeof prevMomentsByKind === "object"
+    && Number.isFinite(Number(prevMomentsByKind.check_q)) ? Number(prevMomentsByKind.check_q) : null;
+  const momentAnchor = Number.isFinite(checkQPrev) && Number.isFinite(checkQNow) && checkQNow > checkQPrev;
+  const namingAct = asliNaamAct(assistantText);
+  const ideaDelivery = inBody && (namingAct || momentAnchor);
+  const anchorVia = !ideaDelivery ? null : (namingAct ? "asli-naam act" : "check_q moment declared to the pacer");
+
+  // ---- 12) THREE-LAYER DELIVERY (act-mt2kgbt7, his ruling 21 Aug 2026) ------
+  // "har idea teen layer mein — DUKAAN (everyday analogy) then ASLI NAAM (the
+  // real term) then TECHNICAL LINE (how it is actually said in AI language).
+  // Analogy akela kaafi nahi: analogy interview mein bol nahi sakte."
+  // Measured 7 Sep across a whole tokenization sitting: layer 3 landed ZERO times.
+  // The check is a conditional on the layer that leaves a mark: layer 2 present,
+  // layer 3 absent. It never claims the reverse — RULE_NOTES says what it misses.
+  const techLine = technicalLine(assistantText);
+  if (ideaDelivery && !techLine) {
+    drifts.push({
+      rule: "act-mt2kgbt7",
+      evidence: `an idea was opened at step ${step} (${anchorVia}) with NO TECHNICAL LINE — layer 3 of three. R1, his ruling 21 Aug 2026: DUKAAN → ASLI NAAM → TECHNICAL LINE, "woh sentence jo tum interview mein bologe". Analogy plus term is TWO layers, and the missing one is the one he has to say out loud in an interview.`,
+      excerpt: quote(assistantText, 160),
+    });
+  }
+
+  // ---- 13) POSITION BY NAME (act-mt2kgn09 · C7) — two failures -------------
+  // (i) THE BANNED COUNT, his ruling rul-mtdep0iye1, 22 Aug 2026 — the higher-
+  //     value half and the strict one. It fires across the teaching band on any
+  //     turn, anchored or not, because the counter is banned on every surface he
+  //     reads; it does not need to know whether an idea was being served.
+  //     0 false positives across 519 live rows (see the detector's own note).
+  const cf = (Number.isFinite(step) && step >= 2 && step <= 9) ? countForm(assistantText) : null;
+  if (cf) {
+    drifts.push({
+      rule: "act-mt2kgn09",
+      evidence: `an ABSTRACT PROGRESS COUNTER reached him at step ${step}: "${cf.match}" (${cf.form} form). His ruling rul-mtdep0iye1, 22 Aug 2026, verbatim: "please drop this vague things like idea x out of y, i want to see the real terms and concept names… i have adhd pi bro, don't forget it." The lawful shape is a NAMED position — TOKENIZATION › AXIS b (sequence length) › the named micro-step. C7's pacing law is untouched; only the LABEL died.`,
+      excerpt: quote(String(stripCode(assistantText)).split(/\n/).find((l) => countForm(l)) || assistantText, 160),
+    });
+  }
+  // (ii) NO POSITION AT ALL — anchored, because an unanchored version would flag
+  //      every engineering turn riding the open session (see the anchor's note).
+  if (ideaDelivery && !cf && !namedPosition(assistantText)) {
+    drifts.push({
+      rule: "act-mt2kgn09",
+      evidence: `an idea was served at step ${step} (${anchorVia}) carrying NO POSITION at all — C7, architect ruling 21 Aug 2026: har turn apni jagah NAAM se carry kare. He must be able to see where he is without asking: TOKENIZATION › AXIS b (sequence length) › the named micro-step, and the next step named too. Not a count — a name.`,
+      excerpt: quote(assistantText, 160),
+    });
+  }
+
+  // ---- 14) MAX-INTENSITY CHECK (max-intensity-check + adhd_intensity) ------
+  // His 19-Aug rulings: after each axis closes, check EXPLICITLY whether depth,
+  // breadth and interaction were at maximum, and name anything below standard in
+  // the NEXT turn. Pure state comparison at the front — the same new-mark-only
+  // shape as checks 6 and 7 — with a one-turn latch behind it, because his own
+  // words put the report in the NEXT turn: an axis close ARMS, and the check
+  // fires only if neither the closing turn nor the one after it carried it.
+  // WHAT IS NOT OBSERVABLE, said plainly rather than proxied: the DAY-CLOSE half
+  // of the same rule. A day close leaves no mark in forge_session.json, so there
+  // is no pair of ends to compare and this organ stays silent on it (RULE_NOTES).
+  // THE LATCH IS PER AXIS, NOT PER SESSION. His rule is "har topic ke samjhao ke
+  // baad" — after EACH axis — so a session-wide flag would report the first miss
+  // and go quiet for the other eight. Checks 6 and 7 are the precedent: one drift
+  // per NEW mark, never one per turn. `flagged_axes` holds the axes already
+  // reported, so nine axis closes can produce at most nine drifts and a standing
+  // condition still produces none.
+  const intensityNow = intensityCheck(assistantText);
+  const intensityRes = { check_now: intensityNow, armed: null, fired: null, cleared: false };
+  if (intensityState && typeof intensityState === "object") {
+    const pending = intensityState.pending_axis || null;
+    const already = Array.isArray(intensityState.flagged_axes) ? intensityState.flagged_axes : [];
+    if (intensityNow) intensityRes.cleared = true;
+    else if (pending && !already.includes(pending)) {
+      intensityRes.fired = pending;
+      drifts.push({
+        rule: "max-intensity-check",
+        evidence: `axis "${pending}" closed and the intensity check never came — not on the closing turn, not on this one. His rulings (19 Aug 2026): "Har topic ke samjhao ke baad explicitly check karo ki intensity aur depth maximum thi ya nahi… Agar kuch bhi standard se niche hai toh next turn mein mujhe explicitly batao" + "depth, breadth, aur interaction maximum". Name all three and give the verdict — a silent pass is the drift.`,
+        excerpt: quote(assistantText, 160),
+      });
+    }
+  }
+  // Arm on a NEWLY closed axis, and only when the closing turn did not already
+  // carry the check. Same new-mark-only discipline as check 6: a standing closed
+  // axis arms nothing, so this can never become one drift per turn forever.
+  if (Array.isArray(prevAxesDone) && Array.isArray(session.axes_done)) {
+    const fresh = session.axes_done.filter((ax) => !prevAxesDone.includes(ax));
+    if (fresh.length && !intensityNow) intensityRes.armed = fresh[fresh.length - 1];
+  }
+
   // ---- MEASURED ONLY, NEVER JUDGED ---------------------------------------
   const measured = {
     chars: String(assistantText).length,
@@ -835,9 +1203,23 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
     section_breaks: breaks,
     tables,
     step: Number.isFinite(step) ? step : null,
+    // 7 Sep 2026 — the four carries, MEASURED on every audited turn whether or
+    // not they fired. This is the lane that answers "how often is layer 3
+    // actually delivered", which nothing could answer before today; it is data,
+    // judged by nobody, exactly like `chars` and `hindi_markers`.
+    idea_delivery: ideaDelivery,
+    idea_anchor: anchorVia,
+    technical_line: techLine ? techLine.via : null,
+    named_position: namedPosition(assistantText),
+    count_form: cf ? cf.form : null,
+    intensity_check: intensityNow,
   };
 
-  return { audited: true, why: null, drifts, measured, terms: termResult, linkback: { named_now: linkbackNamedNow, fired: linkbackFired } };
+  return {
+    audited: true, why: null, drifts, measured, terms: termResult,
+    linkback: { named_now: linkbackNamedNow, fired: linkbackFired },
+    intensity: intensityRes,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -931,6 +1313,12 @@ function repsCount(path = join(STATE_DIR, "reps_log.jsonl")) {
 const momentsTotal = (session) => (session && session.question_moments && typeof session.question_moments === "object"
   ? Object.values(session.question_moments).reduce((a, b) => a + (Number.isFinite(Number(b)) ? Number(b) : 0), 0)
   : null);
+// 7 Sep 2026 — the same window, kept BY KIND. LR-04's total answers "was anything
+// declared"; the C7 checks need "was a CHECK-QUESTION declared", because a
+// pehle_guess turn legitimately serves no idea and a jirah turn is grilling, not
+// teaching. A plain object copy, never a reference into the live session.
+const momentsByKind = (session) => (session && session.question_moments && typeof session.question_moments === "object"
+  ? { ...session.question_moments } : null);
 
 function promptHook(hook) {
   const { session } = readForgeSession();
@@ -944,6 +1332,7 @@ function promptHook(hook) {
       // `step` is: prompt-time IS "before this turn", and it is the only moment at
       // which that number can be taken honestly.
       moments: momentsTotal(session),
+      moments_by_kind: momentsByKind(session),   // 7 Sep — the C7 anchor's opening end
       reps: repsCount(),
       session_id: typeof hook.session_id === "string" ? hook.session_id : null,
       at: new Date().toISOString(),
@@ -980,6 +1369,10 @@ export function stopHook(hook, io) {
   const prevReps = paired && Number.isFinite(p.reps) ? p.reps
     : (last.stop && Number.isFinite(last.stop.reps) ? last.stop.reps : null);
   const repsNow = repsCount();
+  // 7 Sep — resolved exactly the way prevMoments is, and for the same reason: a
+  // window whose ends come from two different conversations measures nothing.
+  const prevMomentsByKind = (paired && p.moments_by_kind && typeof p.moments_by_kind === "object") ? p.moments_by_kind
+    : ((last.stop && last.stop.moments_by_kind && typeof last.stop.moments_by_kind === "object") ? last.stop.moments_by_kind : null);
 
   // Cross-turn state for neev-pehle + link-back (P1.1/P1.2), keyed by CONCEPT —
   // a term opened in yesterday's session of the same concept stays opened (canon
@@ -997,12 +1390,17 @@ export function stopHook(hook, io) {
   const link0 = (last.linkback && last.linkback.concept === concept && last.linkback.session === (session && session.started_at))
     ? last.linkback : { concept, session: session && session.started_at, seen: false, flagged: false };
   const closed = closedDerive();
+  // 7 Sep — the max-intensity latch, keyed the same way link-back is: per CONCEPT
+  // and per forge SESSION, so a new session never inherits a stale armed axis.
+  const int0 = (last.intensity && last.intensity.concept === concept && last.intensity.session === (session && session.started_at))
+    ? last.intensity : { concept, session: session && session.started_at, pending_axis: null, flagged_axes: [] };
 
   const res = auditTurn({
     assistantText: String(hook.last_assistant_message || ""),
     userText, session, prevStep, prevAxesDone, prevAxesDeferred,
     termState: terms0, linkState: link0, closed,
     prevMoments, prevReps, repsNow,
+    prevMomentsByKind, intensityState: int0,
   });
 
   const why = res.audited ? null : (readWhy || res.why);
@@ -1020,6 +1418,18 @@ export function stopHook(hook, io) {
     seen: !!(link0.seen || res.linkback?.named_now),
     flagged: !!(link0.flagged || res.linkback?.fired),
   } : link0;
+  // The intensity latch rolls forward: a check delivered CLEARS the pending axis,
+  // a fire latches `flagged` so one axis close is one drift and never a per-turn
+  // repeat, and a newly-closed axis arms the next turn.
+  const int1 = res.audited ? {
+    ...int0,
+    pending_axis: res.intensity?.armed
+      || (res.intensity?.cleared || res.intensity?.fired ? null : int0.pending_axis),
+    flagged_axes: [...new Set([
+      ...(Array.isArray(int0.flagged_axes) ? int0.flagged_axes : []),
+      ...(res.intensity?.fired ? [res.intensity.fired] : []),
+    ])],
+  } : int0;
 
   // Auto-count first, so the log row can record what actually landed.
   const staged = [];
@@ -1046,11 +1456,13 @@ export function stopHook(hook, io) {
       // Without it the rule would go permanently silent on exactly the sessions that
       // skip the prompt hook, which is the wrong direction for a capture law.
       moments: momentsTotal(session),
+      moments_by_kind: momentsByKind(session),   // 7 Sep — the closing end, = the next turn's opening end when no prompt pairs
       reps: repsNow,
     },
     terms: terms1,
     terms_by_concept: { ...termsByConcept, [concept]: terms1 },   // C4: no concept's opened-set is ever displaced again
     linkback: link1,
+    intensity: int1,
     checked_rules: CHECKED_RULES,
   });
 
@@ -1367,7 +1779,8 @@ function selftest() {
       // assertion holds CHECKED_RULES against; deriving it from the code under test would make the check
       // tautological. It ships in no lane and reaches no runtime (row 68 (g), 6 Sep 2026).
       const emitted = ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle", "link-back", "terminology", "decided",
-        "uncaptured-rep"];   // W0-D · LR-04 — grown deliberately: this mirror is the ratchet, and it may only ever be widened alongside a real emitter
+        "uncaptured-rep",   // W0-D · LR-04 — grown deliberately: this mirror is the ratchet, and it may only ever be widened alongside a real emitter
+        "act-mt2kgbt7", "act-mt2kgn09", "max-intensity-check"];   // 7 Sep 2026 — checks 12, 13 and 14, each with a real emitter above
       return emitted.every((r) => CHECKED_RULES.includes(r)) && CHECKED_RULES.every((r) => emitted.includes(r));
     })());
   assert("W0-D · LR-04 — every CHECKED_RULE that is only PARTIALLY machine-visible carries its RULE_NOTES slice, so 'no drift caught' can never widen into 'taught correctly'",
@@ -1466,6 +1879,166 @@ function selftest() {
     auditTurn({ assistantText: "Ek idea: selfknowledge wapas enable kar dein?", session: at(4) }).drifts.some((d) => d.rule === "decided")
     && auditTurn({ assistantText: "Hum ek tool-less surface bana sakte hain guests ke liye.", session: at(4) }).drifts.some((d) => d.rule === "decided")
     && !auditTurn({ assistantText: "Token wo sabse chhoti unit hai jo model padhta hai.", session: at(4) }).drifts.some((d) => d.rule === "decided"));
+
+  // ========================================================================
+  // PART 2c — HIS FOUR PER-TURN CARRIES (7 Sep 2026). Three of them had no
+  // checker anywhere in the organism; the fourth had one that could not run
+  // during the phase it was written for. Every fixture below has a PASS twin
+  // and a FAIL twin, and the false-positive pins are the REAL corpus strings
+  // that broke the first cut of each detector (519 live rows, 1-7 Sep).
+  // ========================================================================
+  {
+    const DUKAAN = "**Dukaan wali baat.** Socho ek dhaba, menu deewar pe tanga hai, har dish ke aage uska number likha hai.";
+    const NAAM = "Us chhapi hui list ka asli naam **VOCABULARY** hai, aur us number ka naam token ID hai.";
+    const TECH_LABELLED = "**Technical line:** yahi woh line hai jo tum interview mein bologe.";
+    const TECH_ENGLISH = "The tokenizer does not compute the IDs, it looks them up in a fixed vocabulary table.";
+    const POSN = "**TOKENIZATION › AXIS b (vocab ka darwaza) › lookup, calculation nahi**";
+    const fires = (rule, o) => auditTurn({ ...o }).drifts.some((d) => d.rule === rule);
+
+    // ── A · THREE-LAYER DELIVERY (act-mt2kgbt7) ─────────────────────────────
+    assert("R1 THREE-LAYER — an idea OPENED by name with NO technical line FIRES (his 7 Sep measurement: layer 3 landed zero times in a whole sitting)",
+      fires("act-mt2kgbt7", { assistantText: `${POSN}\n\n${DUKAAN}\n\n${NAAM}`, session: at(4) }));
+    assert("R1 THREE-LAYER — the SAME turn with the labelled technical line is CLEAN, and so is the unlabelled English one (both live shapes count)",
+      !fires("act-mt2kgbt7", { assistantText: `${POSN}\n\n${DUKAAN}\n\n${NAAM}\n\n${TECH_LABELLED}`, session: at(4) })
+      && !fires("act-mt2kgbt7", { assistantText: `${POSN}\n\n${DUKAAN}\n\n${NAAM}\n\n> ${TECH_ENGLISH}`, session: at(4) }));
+    assert("R1 THREE-LAYER — the CASE-FOLDING TRAP, pinned: under /i the ALL-CAPS branch matched any word and 'path ka asli naam resolve karega' (real engineering prose, 09-03) scored as a naming act",
+      asliNaamAct("Rule: har walker pehle path ka asli naam resolve karega, phir koi predicate.") === false
+      && asliNaamAct("asli naam kabhi reject nahi honge, haath se list kabhi nahi badlegi.") === false
+      && asliNaamAct(NAAM) === true);
+    assert("R1 THREE-LAYER — the NEGATION form is not a naming act ('catalog mera banaya hua shabd tha, asli naam nahi', live 09-01)",
+      asliNaamAct("\"catalog\" mera banaya hua shabd tha, asli naam nahi.") === false);
+    assert("R1 THREE-LAYER — UNANCHORED turns stay silent: no naming act and no declared check_q means this rule says NOTHING, however English the turn is",
+      !fires("act-mt2kgbt7", { assistantText: "Fleet returned and the four seats landed. Nothing depends on the runner now.", session: at(4) })
+      && !fires("act-mt2kgbt7", { assistantText: DUKAAN, session: at(4) }));
+    assert("R1 THREE-LAYER — the OTHER anchor is the teacher's OWN declaration: a check_q moment declared in this window anchors the turn, and no growth does not",
+      fires("act-mt2kgbt7", { assistantText: "Toh yahi baat hai. Ab bolo, tumhare hisaab se kya hoga?", session: { ...at(4), question_moments: { check_q: 2 } }, prevMomentsByKind: { check_q: 1 } })
+      && !fires("act-mt2kgbt7", { assistantText: "Toh yahi baat hai. Ab bolo, tumhare hisaab se kya hoga?", session: { ...at(4), question_moments: { check_q: 1 } }, prevMomentsByKind: { check_q: 1 } })
+      && !fires("act-mt2kgbt7", { assistantText: "Toh yahi baat hai. Ab bolo, tumhare hisaab se kya hoga?", session: { ...at(4), question_moments: { check_q: 2 } }, prevMomentsByKind: null }));
+    assert("R1 THREE-LAYER — step-scoped to the teaching body: the same layer-2-only turn at step 10 (LOCK, a report) is clean",
+      !fires("act-mt2kgbt7", { assistantText: `${DUKAAN}\n\n${NAAM}`, session: at(10) }));
+
+    // ── B · POSITION BY NAME (act-mt2kgn09) — the COUNT half, strict ────────
+    assert("C7 COUNT — 'idea 2 of 4' FIRES, and so does the struck 'STEP 3/11' header (his ruling rul-mtdep0iye1, 22 Aug 2026)",
+      fires("act-mt2kgn09", { assistantText: "Chalo aage badhte hain — idea 2 of 4. Token wo chhoti unit hai.", session: at(4) })
+      && fires("act-mt2kgn09", { assistantText: "STEP 3/11 · SAMJHAO · axis b — chalo shuru karte hain.", session: at(4) }));
+    assert("C7 COUNT — the LAWFUL named position is clean, at every step in the band",
+      !fires("act-mt2kgn09", { assistantText: `${POSN}\n\n${NAAM}\n\n${TECH_LABELLED}`, session: at(4) })
+      && !fires("act-mt2kgn09", { assistantText: `${POSN}\n\n${NAAM}\n\n${TECH_LABELLED}`, session: at(3) }));
+    assert("C7 COUNT — QUOTING the banned form while apologising for it is not USING it (the real 09-07 turn: 'Maine likh diya tha ki har turn \"idea 2 of 4\" carry karega')",
+      !fires("act-mt2kgn09", { assistantText: `${POSN}\n${TECH_LABELLED}\nMaine likh diya tha ki har turn \"idea 2 of 4\" carry karega. Wo tumne khud ban kiya tha.`, session: at(4) }));
+    assert("C7 COUNT — the NUMERAL-LIST and the unit-less ratio are NOT counters: 'step 0/1/10 par woh khud fail hota hai' and 'gate selftest 57/0' are both real live rows and both clean",
+      countForm("teaching-audit ka test step 0/1/10 par woh khud fail hota hai.") === null
+      && countForm("Rung A ka owed sign-off ho gaya (gate selftest 57/0 — locks hold).") === null
+      && countForm("tumhare do forge sessions dono step-3 pe mare, 0/9 axes.") === null);
+    assert("C7 COUNT — out of the teaching band (step 10 LOCK reports) the counter check does not fire",
+      !fires("act-mt2kgn09", { assistantText: "Coverage: idea 2 of 4 axes closed.", session: at(10) }));
+    assert("C7 COUNT — THE ABLATION, pinned: the quote-guard is the ONLY citation rule that earns its place. Bold, ITALIC and BLOCKQUOTE counters are all caught — the first cut stripped the last two and they went undetected, which is a hole, not a guard",
+      countForm("**idea 2 of 4**") !== null
+      && countForm("*idea 2 of 4*") !== null
+      && countForm("> idea 2 of 4") !== null
+      && countForm("## step 2 of 5 par ho tum") !== null);
+    assert("C7 COUNT — apostrophes never bracket-and-delete a counter (the dropped single-quote rule did exactly that: two unpaired apostrophes swallowed everything between them)",
+      countForm("Don't bhoolna — idea 2 of 4 — doesn't matter abhi.") !== null);
+    assert("C7 COUNT — the struck canon header stays a citation: ~~STEP n/11~~ shown as the DEAD form is not the form being used",
+      countForm("~~STEP 3/11 · SAMJHAO~~ → TOKENIZATION › AXIS b › lookup") === null
+      && countForm("STEP 3/11 · SAMJHAO") !== null);
+    assert("C7 COUNT — every unit noun in his own vocabulary is covered, in both the 'of' and the slash form",
+      countForm("Tum abhi axis 3 of 9 par ho.") !== null
+      && countForm("Chalo — concept 1/4 shuru.") !== null
+      && countForm("part 2 of 3 baaki hai.") !== null);
+
+    // ── B · POSITION BY NAME — the NO-POSITION half, anchored ──────────────
+    assert("C7 POSITION — an idea served with NO position at all FIRES; the same turn with the named path, or with 'Tum yahan ho: axis a', is clean",
+      fires("act-mt2kgn09", { assistantText: `${DUKAAN}\n\n${NAAM}\n\n${TECH_LABELLED}`, session: at(4) })
+      && !fires("act-mt2kgn09", { assistantText: `${POSN}\n\n${DUKAAN}\n\n${NAAM}\n\n${TECH_LABELLED}`, session: at(4) })
+      && !fires("act-mt2kgn09", { assistantText: `**Tum yahan ho: axis a.**\n\n${NAAM}\n\n${TECH_LABELLED}`, session: at(4) }));
+    assert("C7 POSITION — UNANCHORED turns stay silent (the several hundred engineering turns that ride an open forge session are not idea deliveries)",
+      !fires("act-mt2kgn09", { assistantText: "Belt 0 fleet: four seats running since 11:27, none returned yet. Main yahin hoon.", session: at(4) }));
+    assert("C7 POSITION — a counted turn fires ONCE, not twice: the count drift replaces the no-position drift rather than double-counting the same rule",
+      auditTurn({ assistantText: `${DUKAAN}\n\n${NAAM}\n\n${TECH_LABELLED}\n\nidea 2 of 4`, session: at(4) })
+        .drifts.filter((d) => d.rule === "act-mt2kgn09").length === 1);
+
+    // ── C · MAX-INTENSITY CHECK (max-intensity-check) ──────────────────────
+    const INT_OK = "Axis a band. Depth aur breadth dono maximum thi, interaction bhi poori rahi.";
+    const ST0 = { pending_axis: null, flagged_axes: [] };
+    assert("MAX-INTENSITY — a NEWLY closed axis with no check on the closing turn ARMS (it does not fire yet: his rule puts the report in the NEXT turn)",
+      (() => { const r = auditTurn({ assistantText: "Theek hai, axis a band. Aage badhte hain.", session: { ...at(3), axes_done: ["a"] }, prevAxesDone: [], intensityState: ST0 });
+        return r.intensity.armed === "a" && !r.drifts.some((d) => d.rule === "max-intensity-check"); })());
+    assert("MAX-INTENSITY — and the NEXT turn, still silent on depth/breadth/interaction, FIRES and names the axis it is about",
+      (() => { const r = auditTurn({ assistantText: "Chalo agla axis shuru karte hain.", session: { ...at(3), axes_done: ["a"] }, prevAxesDone: ["a"], intensityState: { pending_axis: "a", flagged_axes: [] } });
+        return r.intensity.fired === "a" && r.drifts.some((d) => d.rule === "max-intensity-check" && /axis "a"/.test(d.evidence)); })());
+    assert("MAX-INTENSITY — the check delivered ON the closing turn arms nothing, and delivered on the NEXT turn clears the pending axis: both are clean",
+      (() => { const r = auditTurn({ assistantText: INT_OK, session: { ...at(3), axes_done: ["a"] }, prevAxesDone: [], intensityState: ST0 });
+        const r2 = auditTurn({ assistantText: INT_OK, session: { ...at(3), axes_done: ["a"] }, prevAxesDone: ["a"], intensityState: { pending_axis: "a", flagged_axes: [] } });
+        return r.intensity.armed === null && r.intensity.cleared === true && !r.drifts.some((d) => d.rule === "max-intensity-check")
+          && r2.intensity.cleared === true && !r2.drifts.some((d) => d.rule === "max-intensity-check"); })());
+    assert("MAX-INTENSITY — one axis close is ONE drift: an axis already reported never re-fires, and a STANDING closed axis arms nothing (same discipline as the ungraded-axis check)",
+      !fires("max-intensity-check", { assistantText: "Chalo aage.", session: { ...at(3), axes_done: ["a"] }, prevAxesDone: ["a"], intensityState: { pending_axis: "a", flagged_axes: ["a"] } })
+      && auditTurn({ assistantText: "Chalo aage.", session: { ...at(3), axes_done: ["a"] }, prevAxesDone: ["a"], intensityState: ST0 }).intensity.armed === null);
+    assert("MAX-INTENSITY — the latch is PER AXIS, not per session: axis 'a' already reported does not silence axis 'b' (his rule is 'har topic ke samjhao ke baad', every axis, not the first one only)",
+      (() => { const r = auditTurn({ assistantText: "Chalo aage.", session: { ...at(3), axes_done: ["a", "b"] }, prevAxesDone: ["a", "b"], intensityState: { pending_axis: "b", flagged_axes: ["a"] } });
+        return r.intensity.fired === "b" && r.drifts.some((d) => d.rule === "max-intensity-check" && /axis "b"/.test(d.evidence)); })());
+    assert("MAX-INTENSITY — NO ANCHOR, NO CLAIM: with no prompt-time axes_done record it arms nothing, and with no latch state it never fires",
+      auditTurn({ assistantText: "Theek hai.", session: { ...at(3), axes_done: ["a"] }, intensityState: ST0 }).intensity.armed === null
+      && !fires("max-intensity-check", { assistantText: "Chalo aage.", session: { ...at(3), axes_done: ["a"] }, prevAxesDone: ["a"] }));
+    assert("MAX-INTENSITY — the detector needs his OWN shape: one axis word alone is ordinary prose, two of three plus a verdict is an answer",
+      intensityCheck("Depth kaafi zyada hai is packet mein.") === false
+      && intensityCheck("Depth aur interaction dono maximum the.") === true
+      && intensityCheck("Intensity standard se niche thi, agle turn mein revise karenge.") === true);
+
+    // ── D · LINK-BACK, WIDENED INTO STEP 3 (his word: "kardo") ─────────────
+    const CLOSED2 = { names: ["Embeddings", "Context window", "tokenization"], vocab: [] };
+    const LINK0 = { seen: false, flagged: false };
+    const s3 = (extra) => ({ ...at(3), concept: "tokenization", ...extra });
+    assert("LINK-BACK WIDENED — step 3 with an axis already closed and NO closed concept named FIRES (the old `step > 3` gate made this rule silent on 826 of the 907 rows on disk)",
+      fires("link-back", { assistantText: "Chalo char-level ki doosri daraar dekhte hain.", session: s3({ axes_done: ["a"] }), linkState: LINK0, closed: CLOSED2 }));
+    assert("LINK-BACK WIDENED — but NOT on turn one: at step 3 with nothing landed yet the condition is narrowed, not the coverage, so the widening cannot flood",
+      !fires("link-back", { assistantText: "Chalo shuru karte hain.", session: s3({ axes_done: [], axes_now_at: { a: "x" } }), linkState: LINK0, closed: CLOSED2 })
+      && fires("link-back", { assistantText: "Chalo aage.", session: s3({ axes_done: [], axes_now_at: { a: "x", b: "y" } }), linkState: LINK0, closed: CLOSED2 }));
+    assert("LINK-BACK WIDENED — naming a closed concept at step 3 is clean and latches `seen` (singular of a plural name still counts)",
+      (() => { const r = auditTurn({ assistantText: "Yeh wahi baat hai jo embedding mein dekhi thi.", session: s3({ axes_done: ["a"] }), linkState: LINK0, closed: CLOSED2 });
+        return !r.drifts.some((d) => d.rule === "link-back") && r.linkback.named_now === true; })());
+    assert("LINK-BACK STRICTER — the OPEN concept cannot satisfy its OWN link-back: naming 'tokenization' while teaching tokenization still fires (live proof: it sat in its own closed-names list and latched `seen` on turn one)",
+      (() => { const r = auditTurn({ assistantText: "Aaj tokenization ka agla hissa. Tokenization mein subword aata hai.", session: s3({ axes_done: ["a"] }), linkState: LINK0, closed: CLOSED2 });
+        return r.drifts.some((d) => d.rule === "link-back") && r.linkback.named_now === false; })());
+    assert("LINK-BACK STRICTER — names match on WORD BOUNDARIES, not substrings: 'contextual' no longer satisfies the closed concept 'context' (the old includes() did)",
+      (() => { const closed1 = { names: ["context"], vocab: [] };
+        const r = auditTurn({ assistantText: "Yeh contextual baat hai, aage dekhenge.", session: s3({ axes_done: ["a"] }), linkState: LINK0, closed: closed1 });
+        const r2 = auditTurn({ assistantText: "Yeh wahi context wali baat hai.", session: s3({ axes_done: ["a"] }), linkState: LINK0, closed: closed1 });
+        return r.drifts.some((d) => d.rule === "link-back") && !r2.drifts.some((d) => d.rule === "link-back"); })());
+    assert("LINK-BACK — everything the old gate guaranteed still holds: silent once seen, silent once flagged, silent past step 9, silent with no closed concept but the open one",
+      !fires("link-back", { assistantText: "x", session: s3({ axes_done: ["a"] }), linkState: { seen: true, flagged: false }, closed: CLOSED2 })
+      && !fires("link-back", { assistantText: "x", session: s3({ axes_done: ["a"] }), linkState: { seen: false, flagged: true }, closed: CLOSED2 })
+      && !fires("link-back", { assistantText: "x", session: { ...at(10), concept: "tokenization", axes_done: ["a"] }, linkState: LINK0, closed: CLOSED2 })
+      && !fires("link-back", { assistantText: "x", session: s3({ axes_done: ["a"] }), linkState: LINK0, closed: { names: ["tokenization"], vocab: [] } }));
+
+    // ── THE MEASURED LANE — data before verdicts, on every audited turn ─────
+    assert("ALL FOUR — every audited turn now records the four carries under `measured`, judged by nobody (the lane that can finally answer 'how often does layer 3 arrive')",
+      (() => { const m = auditTurn({ assistantText: `${POSN}\n\n${NAAM}\n\n${TECH_LABELLED}`, session: at(4) }).measured;
+        return m.idea_delivery === true && m.idea_anchor === "asli-naam act" && m.technical_line === "label"
+          && m.named_position === true && m.count_form === null && m.intensity_check === false; })());
+  }
+
+  // THE SEED-GAP RATCHET (7 Sep 2026). teaching_contract.json is gitignored, so
+  // a rule row added through its CLI does not travel with the commit that teaches
+  // THIS file to emit that id — and then every autohit exits 1 and the measured
+  // drift is dropped in silence. teaching_contract.mjs has another owner and is
+  // not edited from here, so the gap is DECLARED in SEED_GAP and pinned both ways:
+  // an emitter with neither a seed row nor a declaration goes red, and a declared
+  // gap that has since been closed goes red too, so the list cannot rot.
+  {
+    const seedSrc = join(__dirname, "teaching_contract.mjs");
+    if (existsSync(seedSrc)) {
+      const src = readFileSync(seedSrc, "utf8");
+      const seeded = (id) => src.includes(`r("${id}"`);
+      assert("SEED GAP — every rule id this file emits is either in teaching_contract.mjs's seed() or DECLARED in SEED_GAP (no emitter is ever silently unwired)",
+        CHECKED_RULES.every((id) => seeded(id) || SEED_GAP.includes(id)));
+      assert("SEED GAP — and every DECLARED gap is still a real gap: the day the three seed rows land, this assertion goes red and forces SEED_GAP to shrink",
+        SEED_GAP.every((id) => !seeded(id)) && SEED_GAP.every((id) => CHECKED_RULES.includes(id)));
+    } else {
+      skip("SEED GAP assertions", "teaching_contract.mjs not on this machine");
+    }
+  }
 
   // ========================================================================
   // PART 3 — THE DISK PATH. This is what 25 green assertions never touched

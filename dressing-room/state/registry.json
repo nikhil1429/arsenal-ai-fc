@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-09-05T21:03:52.894Z",
+ "updated_at": "2026-09-07T10:18:25.343Z",
  "tables": {
   "mechanisms": [
    {
@@ -307,11 +307,12 @@
      "sitting.mjs",
      "sprintsync.mjs",
      "state.mjs",
+     "teaching_audit.mjs",
      "teaching_contract.mjs",
      "tokenizer_play.mjs",
      "widget.mjs"
     ],
-    "updated_at": "2026-09-05T21:03:52.885Z",
+    "updated_at": "2026-09-07T10:18:25.339Z",
     "added_at": "2026-09-04T00:11:09.128Z",
     "why": "6 Sep 2026 (row 68 (f)): tokenizer_play.mjs joins — the axis-d playground the /forge skill names; read-only, writes nothing, selftest 13/0."
    },
@@ -1243,6 +1244,16 @@
     "text": "3 Sep 2026 ~04:00 IST, his order to the architect (verbatim head): 'these are headers which we need to fill: 1- problem statement 2- previous solution and their short coming 3- current solution and its pros and cons 4- impact of solution on actual studying 5- relevance of product with respect to ROI matrix (example - studying and applying to jobs) 6- pyscological benefits of the product 7- distraction and avoidance if created with this product 8- Loop/deal locks/ spiral like behaviour with study pattern 9- what is the proposed plan for him to use this product and complete studying and applying in the course of 30 days. additionally create another doc for her which explains every single thing in the organism, every single thing which is made, will be made and create it like an official PRD document and system design document ... officially treat it like a proper CTO meeting for a FANG product. take as much time as you want, read as much as you possibly can. exhaust your brain on creating this because she will not give another chance ... write things which you think we could not cover in this prompt'. The reviewer is the second study user (a Flipkart SDE, CS grad), referred to by role. Executed by architect arsenal-ai-fc-ec: campaign-2026-09/cto-review/.",
     "updated_at": "2026-09-02T22:45:57.545Z",
     "added_at": "2026-09-02T22:45:57.545Z"
+   },
+   {
+    "id": "rul-mtr1jdil9f",
+    "at": "2026-09-07T09:31:08.204Z",
+    "scope": "learning-method",
+    "by": "captain",
+    "source": "visual-contract-v2",
+    "text": "HIS SIX RULINGS ON THE TEACHING SURFACE, 7 Sep 2026 — all six his own words, none re-openable by a session. (1) COLOUR CARRIES MEANING OR IT IS NOT USED — \"rang sirf matlab ke liye - done\". This closes the boredom question he had left open after saying \"text font colors is too boring\"; decoration is out on his word, not on a session's inference. (2) EMOJI ARE IN, as fixed meaning-markers, ALONGSIDE the diff block and never instead of it — asked \"emoji chahiye, ya diff se kaam chal jaayega\", he answered \"both\". On a teaching surface his canon beats the assistant's own avoid-emoji instruction. The fixed four: the true model, the wrong model, a trap, and the one thing to carry away — capped at 2 per message, 1 per line. (3) THREE COLOUR AND EMPHASIS SHAPES AND NO FOURTH — \"done\" to backtick = the real name, bold = the one load-bearing word, one diff block = right-model-versus-wrong-model. The no-colour structural companions and the emoji lane are not fourth shapes. (4) THE SIMULTANEOUS-UNITS CAP IS ~4, not 5-7 — \"done\". The separate ~6 (what may be VISIBLE with the rest collapsed) stays a different quantity; he was not asked about it and did not rule on it. (5) THE LINK-BACK CHECK MUST FIRE DURING THE TEACHING PHASE, not only after it — \"kardo\". (6) THE TABLE CHECKER IS DELIBERATELY NOT WIDENED to step-10 reports, fenced csv/tsv grids or the postmatch SEASON.md write — \"skip it\". His no-tables ban still covers all three; it is simply not machine-caught there. A DECLINE, not a gap: do not re-propose it. Written up in learning-layer/VISUAL_CONTRACT.md — section 0b carries all six, 8.1c the emoji set and its cap, 8.3 the preserved finding behind the decline, 6 the ~4 cap.",
+    "updated_at": "2026-09-07T09:31:08.205Z",
+    "added_at": "2026-09-07T09:31:08.205Z"
    }
   ],
   "job_inputs": [

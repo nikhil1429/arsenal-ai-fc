@@ -38,8 +38,18 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
 > that paragraph, no colour anywhere · ONE ```diff block = right-model-vs-wrong-model, green/red),
 > the measured render facts behind each, the fence traps that fire the drift counters, and — read
 > this WITH §2 — **the NO-TABLES ruling**, his own, 22 Aug 2026, broken five times in a month
-> because it lived only on the state bus and in no file a session reads. §8.4 lists the two things
-> still needing HIS word: emoji, and the fact that no colour has yet been observed rendering.
+> because it lived only on the state bus and in no file a session reads.
+>
+> ⭐ **AND READ ITS §0b — HIS SIX RULINGS OF 7 Sep 2026. None of them is re-openable by a session.**
+> In his own words: colour carries meaning or it is not used (*"rang sirf matlab ke liye"*) ·
+> **emoji are IN**, as four fixed meaning-markers — ✅ the true model · ❌ the wrong one · ⚠ a trap ·
+> ⭐ the one thing to carry away — **alongside** the diff block and never instead of it (asked emoji
+> or diff, he answered *"both"*), capped at 2 per message, the set and the meanings in §8.1c ·
+> three colour-and-emphasis shapes and no fourth (*"done"*) · **the simultaneous-units cap is ~4**,
+> not 5-7 (*"done"*) · the link-back check must fire during teaching, i.e. inside step 3 below
+> (*"kardo"*) · the table checker is deliberately NOT widened (*"skip it"* — his ban still covers
+> every surface including a step-10 report, it is simply not machine-caught there). **§8.4 now
+> lists ONE thing still needing his word:** no colour in that grammar has been observed rendering.
 >
 > **The four per-turn carries live in `/learn` §0a-T** (three layers per idea · one idea per turn
 > with POSITION BY NAME, never a count · the max-intensity check · link-back). They bind a FORGE

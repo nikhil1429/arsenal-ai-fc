@@ -145,6 +145,13 @@ function seed(now = new Date()) {
       r("hinglish", "HINGLISH — shuddh Hindi nahi. Technical shabd ANGREZI mein hi rehne dena."),
       r("terminology", "Asli terminology bolo (token · vocabulary · next-token · sampling · groundedness). Hindi anuvaad se naam mat badlo — analogy alag cheez hai, naam alag."),
       r("link-back", "Naya concept hamesha pehle band ho chuke concepts se NAAM le kar jodo."),
+      // The three per-turn carries teaching_audit.mjs emits (checks 12/13/14), seeded 7 Sep 2026.
+      // Before this they existed ONLY in the gitignored live state file, so on any machine but his
+      // the checkers measured a drift and dropped it silently. teaching_audit's SEED_GAP declared
+      // that hole; these rows close it, and that declaration must now shrink to empty.
+      r("act-mt2kgbt7", "R1 THREE-LAYER DELIVERY (his ruling, 21 Aug 2026): har idea teen layer mein — DUKAAN (everyday analogy) → ASLI NAAM (the real term, opened in one line) → TECHNICAL LINE (the interview-ready English sentence). Analogy akela kaafi nahi: analogy interview mein bol nahi sakte. Measured 7 Sep 2026: the third layer was delivered ZERO times across a whole sitting."),
+      r("act-mt2kgn09", "C7 DECLARE-THEN-SERVE-ONE (architect ruling, 21 Aug 2026): teaching density ka gate STRUCTURE hai, text-metric nahi. Axis open pe us axis ke ideas ki list chupchap banao; phir har turn SIRF EK idea, uske check-question ke saath. Har turn apni position NAAM se carry kare — CONCEPT > AXIS > IDEA — aur agla step bhi naam se. ⛔ GINTI KABHI NAHI: 'idea k of n' uska apna struck form hai (ruling rul-mtdep0iye1, 22 Aug 2026 — 'please drop this vague things like idea x out of y, i want to see the real terms and concept names'). Pacing law untouched; only the label died."),
+      r("max-intensity-check", "Har axis close ke baad AUR din ke ant mein explicitly check karo ki depth, breadth aur interaction maximum thi ya nahi. Agar kuch bhi standard se neeche hai toh AGLE turn mein use explicitly batao taaki hum use revise karein. Chup-chaap pass kabhi nahi. We aim for domination."),
       r("decided", "Jo faisla wo pehle le chuka hai wo zinda hai — har naye message se intent dobara mat nikaalo."),
       r("one-idea", "EK naya idea per message, aur ANT mein EK check-question. Ye uska rule #1 hai aur usko sabse zyada todta hai."),
       r("his-level", "Uska level uske apne shabd se upar mat rakho — koi 'dormant', koi 'ye to tumhe pata hai'."),
@@ -938,7 +945,7 @@ function selftest() {
   const T0 = new Date("2026-07-31T18:00:00Z");
   const base = seed(T0);
 
-  assert("seed carries all thirteen rules (grown 6 Aug, 7 Aug, 9 Aug C1 and 2 Sep W0-D: a re-seed must never orphan the audit's rule ids)", base.rules.length === 13);
+  assert("seed carries all SIXTEEN rules (grown 6 Aug, 7 Aug, 9 Aug C1, 2 Sep W0-D, and 7 Sep 2026 — the three per-turn carries teaching_audit emits: a re-seed must never orphan the audit's rule ids)", base.rules.length === 16);
   assert("every rule id the audit organ stages against exists in the seed (the re-seed trap, closed — incl. neev-pehle and uncaptured-rep, the two it has missed)",
     ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle", "uncaptured-rep"]
       .every((id) => base.rules.some((r) => r.id === id)));
@@ -950,15 +957,17 @@ function selftest() {
     pick(hit.rules, 1, 2)[0].id === "hinglish" && pick(hit.rules, 7, 2)[0].id === "hinglish");
 
   const secondSlots = new Set();
-  for (let t = 0; t < 12; t++) secondSlots.add(pick(hit.rules, t, 2)[1].id);
+  // DERIVED, not hardcoded (7 Sep 2026): the window must be one turn per non-slot-1 rule, or
+  // this assertion silently weakens every time the rule set grows. It was 12 when the seed held 13.
+  for (let t = 0; t < hit.rules.length - 1; t++) secondSlots.add(pick(hit.rules, t, 2)[1].id);
   assert("ROTATION — every other rule resurfaces in slot 2 (nothing goes stale-invisible)",
     secondSlots.size === hit.rules.length - 1);
 
   const grown = addRule(base, "no-praise", "Praise sirf jab kamayi ho, aur specific ho.", T0);
-  assert("add grows the set without touching this file", grown.ok && grown.state.rules.length === 14);
+  assert("add grows the set without touching this file", grown.ok && grown.state.rules.length === 17);
   assert("add refuses a duplicate id", addRule(grown.state, "no-praise", "x", T0).ok === false);
   assert("hit refuses an unknown id", hitRule(base, "nope", T0).ok === false);
-  assert("drop removes", dropRule(base, "hinglish").state.rules.length === 12);
+  assert("drop removes", dropRule(base, "hinglish").state.rules.length === 15);
 
   // ---- the turn clock: the three ORIGINAL invariants, asserted against BOTH engines
   const t1L = bumpTurnLegacy(base, "S1");

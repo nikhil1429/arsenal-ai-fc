@@ -19,6 +19,64 @@ not budget.
 The 5 Sep critic's other findings STAND untouched (mechanism never hidden inside a stepper,
 no second question-moment per idea, no teacher-written line to repeat, judge once per sitting).
 
+## §0b · HIS SIX RULINGS — 7 Sep 2026 (all six are HIS words, none is a session's reading)
+
+Six questions were put to him in one sitting and he answered all six. They are written here
+verbatim, dated, and at the TOP of the file — because the whole reason this build exists is that
+his rulings kept living somewhere no session ever opened. **A session does not re-open any of
+these.** If one of them looks wrong, it goes to him or to the architect; it is never quietly
+rewritten. Each says which section it binds, and each of those sections now points back here.
+
+**1 · Colour carries meaning, or it is not used.** His words: *"rang sirf matlab ke liye - done"*.
+This ANSWERS the boredom question §8.4 had been holding open on his behalf. He had said *"text
+font colors is too boring"* — which reads as a make-it-look-nicer ask — while §5 says colour may
+only ever encode meaning, and a session was not allowed to settle that against him. He settled it
+himself: meaning. Decoration stays out, now on HIS word rather than on a session's inference of it.
+**Binds §5, §8.1, §8.1c, §8.4.**
+
+**2 · Emoji are in, as fixed meaning-markers, and the diff block stays.** Asked whether he wanted
+emoji or whether the diff block alone was enough — *emoji chahiye, ya diff se kaam chal jaayega* —
+he answered **"both"**. So both lanes live in the grammar and neither one replaces the other. This
+CLOSES the collision §8.4 was carrying: his own canon opens right-and-wrong lines with ✅ and ❌
+(`docs/archive/SAMJHAO_MERGED__2026-08-30.md:144-145`), while the assistant's own operating
+instructions say to avoid emoji. **On a teaching surface his canon wins.** That general instruction
+still governs everything else the assistant writes; this ruling is scoped to what is taught to him.
+The fixed set, the fixed meanings and the cap are §8.1c. **Binds §8.1c, §8.4.**
+
+**3 · Three colour and emphasis shapes, and there is no fourth.** *"done"* — to backtick = the
+real name, bold = the one load-bearing word, one diff block = right-model-versus-wrong-model.
+Read this WITH ruling 2 and do not let the two fight. The cap of three governs the shapes that
+colour or weight WORDS INSIDE a line. Emoji mark the KIND of a whole line and carry none of the
+app's own colour, so they are ruling 2's meaning-marker lane, not a fourth word-level shape. **That
+last sentence is this file's reading of two of his answers taken together, not a third answer he
+gave** — he said "done" to three shapes and "both" to emoji in the same sitting, and something has
+to hold them without one deleting the other. If the reading is wrong, he or the architect says so;
+a session does not resolve it by dropping either ruling. The
+three no-colour structural companions in §8.1 — one `##` spine line, one ```text mechanical walk,
+`---` rules — and the one legitimate blockquote are equally untouched: they were never colour, they
+each keep their own cap, and nothing here drops them. **Binds §8.1.**
+
+**4 · The simultaneous-units cap is ~4.** *"done"*. This CLOSES the three-number contradiction §6
+was holding for him. The operating number is **~4**, which is what the top-precedence file already
+carried — `PROJECT_OS.md:45`, *"(ADHD-PI neuro-profile: working-memory ~4 …)"*, re-read live 7 Sep
+2026. The "5-7" this file used to run on is struck, not erased. ⚠ **~6 is a different quantity and
+he did not rule on it:** `PROJECT_OS.md:502` caps what may be VISIBLE at once (*"max ~6 objects ek
+waqt visible, baaki tap-to-expand"*) with the rest collapsed, while ~4 caps what he must HOLD in
+his head. Neither corrects the other and neither is dropped. **Binds §6.**
+
+**5 · The link-back check must fire during the teaching phase.** *"kardo"*. Joining a new concept
+to an already-closed one BY NAME is one of his four per-turn carries (`/learn` §0a-T). It is the
+only one of those four that HAS a checker at all, and that checker could never fire while he was
+actually being taught, because it was gated to the steps after teaching ends. He ordered it
+widened. The code is in `scripts/teaching_audit.mjs`, which this file does not own — whether it now
+fires is that checker's own selftest, never this line. **Binds `/learn` §0a-T.**
+
+**6 · The table checker is NOT widened — his deliberate decline.** *"skip it"*. A finding was put
+to him: the live no-tables checker does not reach three places. He declined to widen it. **The
+finding is kept, not dropped** — it is written out in full in §8.3 so that it reads as a decision
+he made and never as a gap nobody noticed. The ban itself (§2) is untouched and is still entirely
+his; only the checker's reach stays where it is. **Binds §8.3.**
+
 ## §1 · HIS PICKS (6 Sep, after seeing live demos)
 
 - **Font: Lexend** (Google Fonts, weights 400/500 only) — inside every widget. Chat message
@@ -53,6 +111,10 @@ no second question-moment per idea, no teacher-written line to repeat, judge onc
   the architect's, not a session's.** It covers a markdown pipe table AND anything
   that renders as a grid — a ```csv / ```tsv column block is a table wearing a monospace costume
   and is equally banned. Prose and simple lists only. Reopening it is HIS call, never a session's.
+  ⚠ **The BAN is wider than its CHECKER, and that is now his decision, not an oversight** — he was
+  offered the widening on 7 Sep 2026 and said *"skip it"*. The three places the checker does not
+  reach are named in §8.3; writing a table into any of them still breaks his rule, it is simply not
+  machine-caught. Do not "fix" this quietly: it is declined, not broken.
 - ⛔ **NOTHING HE MUST ABSORB GOES IN A BLOCKQUOTE.** Measured 7 Sep 2026 in the app's own
   stylesheet: `blockquote{…color:var(--cds-text-secondary)}` — a quote block renders MUTED GREY on
   his surface. It DEMOTES text. Sessions had been putting the turn's check-question inside `>`,
@@ -94,7 +156,9 @@ Code tab this session, 6 Sep 2026)
 
 - Google Fonts (Lexend; Atkinson Hyperlegible as fallback pick) · 9 colour ramps — **colour
   only ever encodes meaning** (e.g. teal = on the shelf, red = meaning lost), never decoration
-  · Tabler icons.
+  · Tabler icons. **This line stopped being a design principle and became HIS ruling on 7 Sep
+  2026** — *"rang sirf matlab ke liye - done"* (§0b-1). It binds the message text (§8) exactly as
+  it binds the widget.
 - SVG diagrams, static and **animated**; step-through replays with a "next step" control
   (post-stream JS) — legal because stepping a REPLAY answers nothing.
 - **Live tools**: text input → live computation (e.g. a real longest-match splitter), sliders
@@ -116,17 +180,22 @@ custom colour themes are terminal-only · third-party MCP-App widgets do not ren
 ## §6 · THE ATTENTION LIMIT (evidence, not budget)
 
 The research he was shown 6 Sep: visual overload harms an ADHD reader as much as a wall of
-text; chunk ceiling 5-7 units; colour helps only when it encodes meaning. A visual on every
-message makes visuals invisible. **Moments, not messages.** His token waiver does not touch
-this — this limit is about his brain, not his wallet.
+text; ~~chunk ceiling 5-7 units~~ **→ the operating cap is ~4, HIS ruling 7 Sep 2026**; colour
+helps only when it encodes meaning. A visual on every message makes visuals invisible.
+**Moments, not messages.** His token waiver does not touch this — this limit is about his brain,
+not his wallet.
 
-⚠ **THE "5-7" ABOVE CONTRADICTS EIGHT OTHER CANON FILES AND IS NOT CORRECTED HERE — it is HIS
-call, or the architect's, never a session's.** Measured 7 Sep 2026 by `grep -rn "working-memory"
-learning-layer/*.md`: the number in canon is **~4**, and it sits in the TOP-PRECEDENCE file —
-`PROJECT_OS.md:45`, *"(ADHD-PI neuro-profile: working-memory ~4 …)"* — plus `FORGE_DESIGN.md:225`,
-`HOW_HE_LEARNS.md:107`, `FORGE_DEEP_RENDER_BRIEF.md:66`, `GEMINI_LOOP.md:73,429`,
-`LEARNING_LAYER_MAP.md:902`, `THE_ORGANISM.md:554,939`. `PROJECT_OS.md:637` already prescribes
-3-4 groupings. Until he rules, **follow ~4**, because CLAUDE.md's precedence puts PROJECT_OS first.
+✅ **CLOSED BY HIM, 7 Sep 2026 — the cap is ~4, and he said so himself: *"done"*** (§0b-4). What
+follows is the working that was put in front of him, kept because the working is the evidence and
+the total alone is not. Measured 7 Sep 2026 by `grep -rn "working-memory" learning-layer/*.md`: the
+number in canon is **~4**, and it sits in the TOP-PRECEDENCE file — `PROJECT_OS.md:45`, *"(ADHD-PI
+neuro-profile: working-memory ~4 …)"* — plus `FORGE_DESIGN.md:225`, `HOW_HE_LEARNS.md:107`,
+`FORGE_DEEP_RENDER_BRIEF.md:66`, `GEMINI_LOOP.md:73,429`, `LEARNING_LAYER_MAP.md:902`,
+`THE_ORGANISM.md:554,939`. `PROJECT_OS.md:637` already prescribes 3-4 groupings. The old line here
+read *"Until he rules, follow ~4"* — **he has now ruled, so ~4 stops being a session's best
+reading of precedence and becomes his instruction.** The "5-7" is struck above rather than deleted
+(L9), because it is what the 6 Sep research actually said and a future session must be able to see
+that his number and the paper's number are not the same number.
 
 **And the shape of the cap is not optional, in his own words.** It caps how many units he must hold
 AT ONCE — items in one list, colour meanings in play. It NEVER caps how much
@@ -140,8 +209,10 @@ this block silently halved it.** `PROJECT_OS.md:502` (the same top-precedence fi
 *"max ~6 objects ek waqt visible, baaki tap-to-expand, one viewport, no scroll"* — and #489 records
 ~6 as the remedy to HIS OWN June complaint about too much on screen. **~4 caps what he must HOLD;
 ~6 caps what he can SEE with the rest collapsed. Different quantities; neither corrects the other.**
-So: three numbers now stand in canon — 5-7 here, ~4 in eight files, ~6 for the visual. A session
-must not pick between them. His call, or the architect's.
+~~So: three numbers now stand in canon — 5-7 here, ~4 in eight files, ~6 for the visual. A session
+must not pick between them. His call, or the architect's.~~ → **TWO quantities stand, 7 Sep 2026:
+~4 to hold (his ruling), ~6 to see (untouched — he was not asked about it and did not rule on it).
+The third, 5-7, is retired above.** A session still must not collapse the two survivors into one.
 
 **Outside evidence, fetched 7 Sep 2026, that changes what "colour" is FOR** (full run:
 26 agents, 18 claims adjudicated, 9 corrected):
@@ -150,7 +221,11 @@ must not pick between them. His call, or the architect's.
   the rest plain raised retention *and* transfer; making things colourful on its own returned
   p = 1.000 and p = 0.430. The active ingredient is the CONTRAST between marked and unmarked, and it
   works by cutting extraneous load. **Therefore scarcity is the whole mechanism — mark few things or
-  the effect is gone.** This is why the answer to "colours are boring" is not more colour.
+  the effect is gone.** ~~This is why the answer to "colours are boring" is not more colour.~~
+  → **Struck 7 Sep 2026.** That clause used a paper to answer a request he had made, which is not a
+  session's move to make (§8.4 keeps the lesson). He answered it himself the same day —
+  *"rang sirf matlab ke liye - done"* (§0b-1) — so the conclusion now stands on HIS word, and the
+  research below it is what it always was: evidence for the caps, never the reply to him.
 - **Mis-placed emphasis is measurably harmful, and it poisons THIS system specifically.** Gier,
   Kreiner & Natz-Gonzalez (2009), *J Gen Psychol* 136(3) 287-302, PubMed 19650523, n=180: wrong
   highlighting impaired comprehension AND metacognitive accuracy — readers falsely believed they had
@@ -185,7 +260,11 @@ must not pick between them. His call, or the architect's.
   There is also a live route with NEITHER skill: a fresh session continuing an open concept without
   typing `/learn` or `/forge` — both SessionStart organs point at a CLI command, never at a skill.
   Making this a genuinely injected path (a `turn_hook.mjs` callee, or folding the per-turn carries
-  into `forge_session.mjs contract`) is a BUILD and needs his word.
+  into `forge_session.mjs contract`) is a BUILD and needs his word. ⚠ **He gave that word on 7 Sep
+  2026, in the same sitting as the six rulings in §0b, and the build was started that day — but do
+  not read this line as "done".** The check is the grep above, and the last time it was run, while
+  these rulings were being written, it still returned no caller: one hit, in `scripts/distiller.log`,
+  which is a log line and not a code path. **Re-run the grep and believe it, never this sentence.**
 - The widget lane exists in-session: the `mcp__visualize__show_widget` tool (Code tab inline
   visuals, launched 12 Mar 2026, desktop confirmed).
 - The capture reason in §1: the afferent nerve reads prompt + assistant message only —
@@ -242,6 +321,12 @@ never write there — only `TrustedInstaller` and `SYSTEM` can, and it is an MSI
 The cap is the point. His law: *"jo cheez use yaad rakhni pade, woh ek DESIGN FAILURE hai."* A
 legend of six colours is a memory tax levied on the same ~4 slots the lesson needs (§6). Three
 shapes, each meaning exactly one thing, forever.
+
+**These three are HIS, since 7 Sep 2026 — he was shown them and said *"done"* (§0b-3), and there
+is no fourth.** Two things that reading must not do: it must not delete the three no-colour
+structural companions below (they were never colour shapes and each keeps its own cap), and it
+must not shut the emoji lane in §8.1c, which he opened in the same sitting — emoji mark the KIND
+of a line, these three colour or weight WORDS inside a line.
 
 1. **`` `backtick` `` = THE REAL NAME.** The term he must say out loud in an interview — the ASLI
    NAAM layer of the three-layer law. Nothing else is ever backticked; a fourth backticked word and
@@ -307,7 +392,66 @@ mein ek shabd mein bolo ki kitne confident ho.
 
 ⚠ What this example still OWES, so it is not copied as complete: the **TECHNICAL LINE** layer
 (`/learn` §0a-T) — the interview-ready English sentence — is missing from it, which is the very
-failure it was restored to fix. Add that third layer when using this shape.
+failure it was restored to fix. Add that third layer when using this shape. It also carries no
+emoji, which is legal and deliberate: §8.1c's markers are ALLOWED, never required, and a turn that
+needs none spends none.
+
+### §8.1c · THE EMOJI LANE — four markers, fixed meanings (HIS ruling, 7 Sep 2026)
+
+He was asked *emoji chahiye, ya diff se kaam chal jaayega* and answered **"both"** (§0b-2). So
+emoji are IN as meaning-markers, and the diff block is NOT replaced by them. This section is the
+settled answer; §8.4 used to carry the question and no longer does.
+
+⚠ **WHAT IS HIS AND WHAT IS THIS SECTION'S — do not blur the two.** HIS word is: emoji are in, as
+meaning-markers, alongside the diff block. **The specific four below, and the cap of two, are the
+session's fill-in on his instruction to define them** — he has not seen these numbers. They are
+built from the markers his own canon already uses and from the caps the other three shapes already
+run on, so they should hold; if he wants a different set or a looser cap, that is his to say and it
+does not re-open ruling §0b-2. This paragraph exists because a draft of this file once carried a
+session's own opinion as if it were his ruling, and he caught it.
+
+⚠ **SCOPE — this grammar governs what is RENDERED TO HIM, never machine-facing text.** Added 7 Sep
+2026 because the build's own verifier caught the teaching bar breaking the rule it injects: the bar
+opens its hard-stop line with ⛔, which is not one of the four, and uses ⚠ twice as a "rotating
+reminder" rather than as "a trap". That is not a violation, and the fix is this sentence rather than
+crippling the anchor: the bar is emitted into a SESSION's context by `scripts/teaching_bar.mjs` and
+never reaches his screen. His ban and this cap bind teaching turns, session reports, and anything
+else he reads — the same scope his no-tables ruling uses, *"anything rendered for him"*. Hook output,
+selftest text and code comments are outside it.
+
+**The set is FOUR and it is closed.** They are the four his own canon already uses, so there is no
+new legend to learn — his law: *"jo cheez use yaad rakhni pade, woh ek DESIGN FAILURE hai."*
+
+1. ✅ — **the true model. This is the one that holds.**
+2. ❌ — **the wrong model. The bait most people take.**
+3. ⚠ — **a trap or a caveat. Do not step here.**
+4. ⭐ — **the one thing to carry out of this turn.**
+
+Each means that and nothing else, forever. An emoji used as a bullet, as a mood, as decoration or
+as a fifth meaning is banned by his colour ruling (§0b-1) in exactly the way a decorative colour
+is: ✅ at the head of every line means "line", which means nothing.
+
+**Cap: at most 2 in a message, at most 1 on a line, and never a second one carrying the same
+meaning.** Same scarcity rule as the other three shapes, for the same measured reason — marking
+few things IS the mechanism (§6: Désiron & Schneider 2024, where making things colourful on its
+own returned p = 1.000).
+
+**Where ✅/❌ and the diff block meet.** Both lanes are his, so neither is cut. The ```diff block IS
+the correction — two lines, green and red, spent at the moment of correcting. ✅/❌ mark a
+right-versus-wrong contrast running in PROSE, where no diff block is being spent. Do not spend
+both on the same two sentences: that is one meaning wearing two costumes, and it burns the whole
+message's emoji budget on a contrast the diff block is already carrying.
+
+**They survive his record** — which is the test that killed the inline-image lane (§8.3). An emoji
+is plain text and reads back as itself when he re-opens the note; a data URI does not.
+
+**Scope: teaching surfaces — what is written TO him.** This file's own session-facing reference
+blocks (§3's grid, this list) are not teaching turns, the same carve-out §3 already declares.
+
+⚠ **Not observed rendering, like everything else in §8.0.** These four are read out of his canon
+files, not out of a watched transcript, and the ⚠ here is typed with no variation selector — which
+is a rendering difference on some surfaces. One of them joins the §8.4 probe for exactly this
+reason.
 
 ### §8.2 · Fence rules that are traps, all measured
 
@@ -327,6 +471,17 @@ failure it was restored to fix. Add that third layer when using this shape.
 - **Tables and ```csv / ```tsv column colour** — his ruling, §2. The tsv rainbow was the single most
   tempting find in the 7 Sep run; it is a table in a monospace costume, and `overflow:"wrap"` on his
   narrow transcript destroys the grid anyway.
+- ⛔ **WIDENING THE TABLE CHECKER — HIS DELIBERATE DECLINE, 7 Sep 2026. Not a gap; a decision.**
+  His word: *"skip it"* (§0b-6). **The finding is preserved here in full, so no future session
+  re-discovers it as news and "fixes" it.** The no-tables ban is his, 22 Aug 2026, and it DOES have
+  a live checker — `teaching_audit.mjs`'s table count feeding the `dheema-not-lamba` drift. What
+  that checker does not reach is three places: a **step-10 report**, a fenced ```csv / ```tsv grid,
+  and the **postmatch `SEASON.md` write**. Widening it to cover those three was put to him and he
+  declined. Two things follow, and neither is optional. **The BAN still covers all three** — the
+  ruling's own scope is *"every teaching surface … and anything rendered for him"*, so a table in
+  any of them still breaks his rule; it is simply not machine-caught, and a human has to hold that
+  line. And **the reach stays where it is until HE says otherwise** — re-proposing this is
+  re-opening a decision he already made.
 - **```log severity words** — `ERROR` / `FATAL` / `CRITICAL` resolve GREEN or unstyled through a
   malformed scope name. A device that paints ERROR green is a trap, not a tool.
 - **KaTeX `\textcolor`** — the one path to arbitrary-coloured words; it lands in his plain-text
@@ -340,29 +495,38 @@ failure it was restored to fix. Add that third layer when using this shape.
 - **`<kbd>`** — genuinely renders (§8.0), so the flat "no HTML" line was half wrong. Still unused: it
   copies out as a rendered glyph rather than source, so it is not round-trip-safe in his own notes.
 
-### §8.4 · Open, needing HIS word — never resolved by a session
+### §8.4 · STILL open, needing HIS word — never resolved by a session
 
-- **EMOJI.** His own canon uses ⭐ ⚠ ✅ ❌ as meaning-carriers (e.g.
-  `docs/archive/SAMJHAO_MERGED__2026-08-30.md:144-145` opens lines with ✅ / ❌ for right-vs-wrong
-  model), while the assistant's own operating instructions say avoid emoji. That is a harness rule
-  standing against his canon. **His call. Ask; do not quietly pick a side either way.**
-- ⭐ **THE BOREDOM QUESTION ITSELF — the biggest open item, and an earlier draft of this file closed
-  it against him.** He said *"text font colors is too boring"*, which is a **decoration** request.
-  §5 says colour may only ever encode meaning, **never decoration**. This grammar answers the second
-  question, not the one he asked. The 7 Sep draft even wrote "this is why the answer to colours are
-  boring is not more colour" — a session settling his own request by quoting research at him.
-  **Put it to him in plain words instead:** *"you said the colours are boring, which is a
-  make-it-look-nicer ask; canon says colour may only ever mean something. This grammar answers the
-  second. Is that what you want, or do you want it to just look better?"* His answer, not a session's.
+**One item is open. Two that used to live here are closed, by him, on 7 Sep 2026 — they are listed
+at the bottom as pointers so nothing reads as lost.**
+
 - **NOTHING IN §8.0 HAS BEEN OBSERVED RENDERING.** Every colour above is static reading of the
-  shipped bundle. **THE PROBE IS SEVEN ITEMS, not five** (it was narrowed once, restoring it here):
-  a backticked word · a bare repo path · a `[link](x)` · a ```diff pair · a `> quote` ·
-  a `- [x]` checked item · a `<kbd>Ctrl</kbd>`. Sent as ONE message and **WATCHED AS IT STREAMS**
+  shipped bundle. **THE PROBE IS EIGHT ITEMS — seven, plus one added by his emoji ruling** (it was
+  narrowed to five once; the seven were restored, and the eighth is new on 7 Sep 2026, so this list
+  has only ever grown): a backticked word · a bare repo path · a `[link](x)` · a ```diff pair ·
+  a `> quote` · a `- [x]` checked item · a `<kbd>Ctrl</kbd>` · **one ⚠ typed exactly as §8.1c types
+  it, with no variation selector** (the emoji lane is his ruling but its rendering is as unobserved
+  as every colour here, and a marker that renders as a bare text glyph on his surface is worth
+  knowing before it carries meaning). Sent as ONE message and **WATCHED AS IT STREAMS**
   (fences are uncoloured until the language token settles), at his real transcript width, **in BOTH
   light and dark**. ⚠ The light-mode contrast check has never been run at all: `claude-light`
   `comment` ink is `hsl(220,10%,48%)` and it lands on the fence's `--cds-alpha-1` tint, not on white —
   grey-on-tint at mono size is exactly where small-text contrast fails. Until this is seen, a session
   may use the grammar but must not tell him a colour is confirmed.
+
+**CLOSED BY HIM 7 Sep 2026 — kept here as pointers, not as entries. Neither is re-opened by a
+session.**
+
+- **Emoji → he said "both".** The collision was real: his own canon opens right-and-wrong lines
+  with ✅ and ❌ while the assistant's operating instructions say avoid emoji. He settled it in
+  favour of his canon on teaching surfaces. The ruling is §0b-2; the four markers, their fixed
+  meanings and their cap are §8.1c.
+- **The boredom question → he said "rang sirf matlab ke liye".** The ruling is §0b-1. ⚠ **The
+  lesson under it outlives the question and is the reason this bullet is not simply deleted:** an
+  earlier draft of this file answered his *"text font colors is too boring"* by quoting research at
+  him — it wrote "this is why the answer to colours are boring is not more colour", which is a
+  session settling his own request against him. What actually worked was putting it to him in plain
+  words and letting him answer. **Do that with the next one too.**
 
 ### §8.5 · Verify
 
