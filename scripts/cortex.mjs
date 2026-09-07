@@ -1024,7 +1024,10 @@ async function selftest() {
   // decline THERE, which is exactly how this selftest leaked +315 bytes per run for a week while every check
   // above it printed a tick. size:mtimeMs, the same trip metric organism_test's hermetic mode uses.
   const gateJournalLive = join(STATE_DIR, "brain_out", "gate.jsonl");
-  const gateStat = () => { try { const s = statSync(gateJournalLive); return `${s.size}:${s.mtimeMs}`; } catch { return "absent"; } };
+  // BLOCK 7 LAW (§14.2): a catch that guards fs I/O in this lane must not be silent — this one RETURNS
+  // WITH ITS WHY (the error code rides the value; "absent:ENOENT" before and after is still "unchanged"),
+  // so it is a report, not a swallow, and it writes no swallow_ledger row from inside a selftest.
+  const gateStat = () => { try { const s = statSync(gateJournalLive); return `${s.size}:${s.mtimeMs}`; } catch (e) { return `absent:${(e && e.code) || "unknown"}`; } };
   const gateBefore = gateStat();
   const wake = { moment_id: "m_1", status: "pending", spotlight: { modality: "voice", text: "i don't get attention scaling", concept_tokens: ["attention"], S: 0.7, comps: { self: 1 } }, bound_context: [{ modality: "vision", event_key: "frame" }] };
   // `current_window` is INJECTED here for the same reason every other bus slot is: without
