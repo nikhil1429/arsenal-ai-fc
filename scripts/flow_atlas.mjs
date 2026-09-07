@@ -223,9 +223,38 @@ export function derive(deps = {}) {
   // exists — and deliberately not what HIS LIFE moves (payload_ts, size). The
   // stamps stay ON the page, un-hashed; a code change still moves the sha
   // through the IR's edges. Same class as the self-artifact stamp above.
-  const structural = JSON.stringify(atlas, (k, v) => (k === "payload_ts" || k === "size" ? undefined : v));
+  // 8 SEP 2026 (architect b4, forks ruling row 119 — the CLASS named): a DENYLIST of two field
+  // names rots the moment a third measurement is added. `check` went red at HEAD 7aa4323 with
+  // ZERO code change — the hash still carried outbox.ledger_rows / by_kind / acked_ever (the
+  // evening conductor's two rows moved it), and liveness.exists / rows / newest / closes were
+  // never excluded. So the projection is an ALLOWLIST: inside `liveness` only the DECLARED
+  // members survive (declared · why · event · note — table/code text), inside `outbox` only
+  // declared_kinds and off_road_lanes (code tables); every measurement — of his life or of the
+  // organism's day — is out by default, so a measurement added tomorrow cannot red the gate.
+  // The stamps stay ON the page, un-hashed, exactly as before. The selftest proves both
+  // directions: a data-only move leaves the sha; an edge added in code moves it.
+  const structural = JSON.stringify(structuralProjection(atlas));
   const hash = createHash("sha256").update(structural).digest("hex").slice(0, 16);
   return { atlas: { built_at: new Date(now).toISOString(), content_sha16: hash, ...atlas }, hash };
+}
+
+// THE STRUCTURAL PROJECTION of an atlas — what CODE moves, and nothing his life moves. An
+// ALLOWLIST, never a denylist (see the row-119 note in derive). Exported so a reader can compute
+// the same sha off a written atlas.
+export const STRUCTURAL_LIVENESS_KEYS = Object.freeze(["declared", "why", "event", "note"]);
+export const STRUCTURAL_OUTBOX_KEYS = Object.freeze(["declared_kinds", "off_road_lanes"]);
+export function structuralProjection(atlas) {
+  const pick = (o, keys) => (o && typeof o === "object" ? Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]])) : o);
+  return {
+    derived_from: atlas.derived_from,
+    counts: atlas.counts,
+    edges: (atlas.edges || []).map((e) => ({ ...e, liveness: pick(e.liveness, STRUCTURAL_LIVENESS_KEYS) })),
+    orphan_writes: atlas.orphan_writes,
+    ghost_reads: atlas.ghost_reads,
+    outbox: pick(atlas.outbox, STRUCTURAL_OUTBOX_KEYS),
+    off_road: atlas.off_road,
+    spec_copy: atlas.spec_copy,
+  };
 }
 
 // ── the one visual page (rendering only — every number above this line) ─────
@@ -319,6 +348,21 @@ function selftest() {
   t("clean derive passes + is idempotent (same content hash twice)", () => {
     const a = derive({ ir, skipFreshness: true }), b = derive({ ir, skipFreshness: true });
     if (a.hash !== b.hash) throw new Error(`hashes differ ${a.hash} vs ${b.hash}`);
+  });
+  // 8 SEP 2026 (row 119) — THE CLASS, both directions. Before the allowlist the first case FAILED
+  // on `exists` and on outbox.ledger_rows alone: the gate was red at HEAD with zero code change.
+  t("THE SHA IS STRUCTURAL BY ALLOWLIST — a data-only move (outbox rows · liveness exists/size/payload_ts) leaves the hash, and the measurement stays ON the page", () => {
+    const quiet = () => ({ exists: false, size: 0, payload_ts: null });
+    const busy = () => ({ exists: true, size: 999999, payload_ts: "2026-09-08T00:00:00.000Z" });
+    const a = derive({ ir, skipFreshness: true, liveness: quiet, outboxRows: [] });
+    const b = derive({ ir, skipFreshness: true, liveness: busy, outboxRows: [{ kind: "finding" }, { kind: "ask", acked: true }, {}] });
+    if (a.hash !== b.hash) throw new Error(`a data-only move moved the sha: ${a.hash} vs ${b.hash}`);
+    if (b.atlas.outbox.ledger_rows !== 3 || b.atlas.outbox.acked_ever !== 1) throw new Error("the measurement must still be ON the page (outbox.ledger_rows / acked_ever)");
+  });
+  t("…and a STRUCTURAL move (one afferent row added in code) moves the hash", () => {
+    const a = derive({ ir, skipFreshness: true, outboxRows: [] });
+    const b = derive({ ir, skipFreshness: true, outboxRows: [], afferent: { ...AFFERENT_SOURCES, planted_row_in_code: { state: "live", cadence_h: 1, why: "planted by the selftest — an edge only code can add" } } });
+    if (a.hash === b.hash) throw new Error("an edge added in code did not move the sha");
   });
   t("the four SHAPE-6 edges are present, fired_by him, witness=ruling", () => {
     const { atlas } = derive({ ir, skipFreshness: true });

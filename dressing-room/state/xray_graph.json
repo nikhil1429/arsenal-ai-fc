@@ -1,5 +1,5 @@
 {
- "built_at": "2026-09-07T12:36:31.932Z",
+ "built_at": "2026-09-07T19:28:55.651Z",
  "organs_parsed": 115,
  "organs_expected": 115,
  "parse_errors": [],
@@ -3515,7 +3515,7 @@
    "unresolved": 8
   },
   "cortex.mjs": {
-   "loc": 2254,
+   "loc": 2257,
    "reads": [
     {
      "path": "dressing-room/state/cortex_unsent.jsonl",
@@ -3533,21 +3533,21 @@
     {
      "path": "scripts/cortex.mjs",
      "lines": [
-      1756,
-      1784,
-      1756,
-      1784,
-      1756,
-      1784
+      1759,
+      1787,
+      1759,
+      1787,
+      1759,
+      1787
      ],
      "fixture": true
     },
     {
      "path": "scripts/captains_call.mjs",
      "lines": [
-      1799,
-      1799,
-      1799
+      1802,
+      1802,
+      1802
      ],
      "fixture": true
     },
@@ -3686,8 +3686,8 @@
     {
      "path": "dressing-room/state/brain_out/gate.jsonl",
      "lines": [
-      1027,
-      1027
+      1030,
+      1030
      ],
      "fixture": true
     }
@@ -3713,11 +3713,11 @@
      "path": "dressing-room/state/brain_ledger.jsonl",
      "lines": [
       686,
-      1917,
+      1920,
       686,
-      1917,
+      1920,
       686,
-      1917
+      1920
      ],
      "verbs": [
       "appendFileSync"
@@ -7720,19 +7720,19 @@
    "unresolved": 5
   },
   "flow_atlas.mjs": {
-   "loc": 379,
+   "loc": 423,
    "reads": [
     {
      "path": "dressing-room/state/xray_graph.json",
      "lines": [
       92,
-      311,
+      340,
       92,
-      311,
+      340,
       92,
-      311,
+      340,
       92,
-      311
+      340
      ],
      "fixture": false
     },
@@ -7793,8 +7793,8 @@
     {
      "path": "dressing-room/state/flow_atlas.json",
      "lines": [
-      368,
-      368
+      412,
+      412
      ],
      "fixture": false
     },
@@ -7815,7 +7815,7 @@
     {
      "path": "dressing-room/state/flow_atlas.json",
      "lines": [
-      373
+      417
      ],
      "verbs": [
       "writeFileSync"
@@ -7825,7 +7825,7 @@
     {
      "path": "FLOW_ATLAS.html",
      "lines": [
-      374
+      418
      ],
      "verbs": [
       "writeFileSync"
@@ -7838,7 +7838,7 @@
      "kind": "organ",
      "script": "flow_atlas.mjs",
      "verb": "__unknown_verb__",
-     "line": 345,
+     "line": 389,
      "ctx": "selftest"
     }
    ],
@@ -7895,7 +7895,10 @@
     "selftest"
    ],
    "exports": [
-    "derive"
+    "STRUCTURAL_LIVENESS_KEYS",
+    "STRUCTURAL_OUTBOX_KEYS",
+    "derive",
+    "structuralProjection"
    ],
    "unresolved": 7
   },
@@ -25635,6 +25638,7 @@
   "dressing-room/state/brain_out/doubts/2026-09-01.md",
   "dressing-room/state/brain_out/doubts/2026-09-02.md",
   "dressing-room/state/brain_out/doubts/2026-09-03.md",
+  "dressing-room/state/brain_out/doubts/2026-09-07.md",
   "dressing-room/state/brain_out/dreams/2026-08-09.md",
   "dressing-room/state/brain_out/drill_forge/2026-07-18.md",
   "dressing-room/state/brain_out/drill_forge/2026-07-21.md",
@@ -25702,6 +25706,7 @@
   "dressing-room/state/brain_out/dugout_digest/2026-09-02.md",
   "dressing-room/state/brain_out/dugout_digest/2026-09-03.md",
   "dressing-room/state/brain_out/dugout_digest/2026-09-04.md",
+  "dressing-room/state/brain_out/dugout_digest/2026-09-07.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-18.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-29.md",
   "dressing-room/state/brain_out/evening_voice/2026-07-30.md",
@@ -25744,6 +25749,7 @@
   "dressing-room/state/brain_out/gemini_wall/2026-08-16.md",
   "dressing-room/state/brain_out/gemini_wall/2026-08-18.md",
   "dressing-room/state/brain_out/gemini_wall/2026-09-04.md",
+  "dressing-room/state/brain_out/gemini_wall/2026-09-08.md",
   "dressing-room/state/brain_out/intent_digest/2026-08-18.json",
   "dressing-room/state/brain_out/intent_digest/2026-08-18.md",
   "dressing-room/state/brain_out/intent_digest/2026-08-19.json",
@@ -25774,6 +25780,7 @@
   "dressing-room/state/brain_out/lexicon/2026-08-15.md",
   "dressing-room/state/brain_out/lexicon/2026-08-17.md",
   "dressing-room/state/brain_out/lexicon/2026-09-03.md",
+  "dressing-room/state/brain_out/lexicon/2026-09-07.md",
   "dressing-room/state/brain_out/market/2026-07-19.md",
   "dressing-room/state/brain_out/market/2026-08-01.md",
   "dressing-room/state/brain_out/market/2026-08-08.md",
@@ -25814,6 +25821,8 @@
   "dressing-room/state/brain_out/model_mine/2026-08-17.md",
   "dressing-room/state/brain_out/model_mine/2026-09-03.json",
   "dressing-room/state/brain_out/model_mine/2026-09-03.md",
+  "dressing-room/state/brain_out/model_mine/2026-09-07.json",
+  "dressing-room/state/brain_out/model_mine/2026-09-07.md",
   "dressing-room/state/brain_out/night_coach/2026-08-10.md",
   "dressing-room/state/brain_out/night_coach/2026-08-11.json",
   "dressing-room/state/brain_out/night_coach/2026-08-11.md",
@@ -25937,6 +25946,7 @@
   "dressing-room/state/brain_out/poster/2026-08-16.md",
   "dressing-room/state/brain_out/poster/2026-08-18.md",
   "dressing-room/state/brain_out/poster/2026-09-04.md",
+  "dressing-room/state/brain_out/poster/2026-09-08.md",
   "dressing-room/state/brain_out/premap/2026-07-18.md",
   "dressing-room/state/brain_out/premap/2026-07-21.md",
   "dressing-room/state/brain_out/premap/2026-07-29.md",
@@ -25985,6 +25995,7 @@
   "dressing-room/state/brain_out/reanalysis/2026-09-01.md",
   "dressing-room/state/brain_out/reanalysis/2026-09-02.md",
   "dressing-room/state/brain_out/reanalysis/2026-09-03.md",
+  "dressing-room/state/brain_out/reanalysis/2026-09-07.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-18.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-21.md",
   "dressing-room/state/brain_out/scrimmage/2026-07-29.md",
@@ -26004,6 +26015,7 @@
   "dressing-room/state/brain_out/scrimmage/2026-08-15.md",
   "dressing-room/state/brain_out/scrimmage/2026-08-17.md",
   "dressing-room/state/brain_out/scrimmage/2026-09-03.md",
+  "dressing-room/state/brain_out/scrimmage/2026-09-07.md",
   "dressing-room/state/brain_out/season/2026-07-19.md",
   "dressing-room/state/brain_out/season/2026-08-01.md",
   "dressing-room/state/brain_out/season/2026-08-02.md",
@@ -26096,6 +26108,8 @@
   "dressing-room/state/brain_out/wall_insights/2026-08-18.md",
   "dressing-room/state/brain_out/wall_insights/2026-09-04.allowed.json",
   "dressing-room/state/brain_out/wall_insights/2026-09-04.md",
+  "dressing-room/state/brain_out/wall_insights/2026-09-08.allowed.json",
+  "dressing-room/state/brain_out/wall_insights/2026-09-08.md",
   "dressing-room/state/brain_out/wall_review/2026-07-18.md",
   "dressing-room/state/brain_out/wall_review/2026-07-21.md",
   "dressing-room/state/brain_out/wall_review/2026-07-29.md",
@@ -26114,6 +26128,7 @@
   "dressing-room/state/brain_out/wall_review/2026-08-15.md",
   "dressing-room/state/brain_out/wall_review/2026-08-17.md",
   "dressing-room/state/brain_out/wall_review/2026-09-03.md",
+  "dressing-room/state/brain_out/wall_review/2026-09-07.md",
   "dressing-room/state/brain_out/widget_spec/2026-07-29.md",
   "dressing-room/state/brain_out/widget_spec/2026-08-10.md",
   "dressing-room/state/brain_out/widget_spec/2026-08-11.md",
