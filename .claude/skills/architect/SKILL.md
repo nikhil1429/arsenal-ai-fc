@@ -50,6 +50,19 @@ process; the org carries the knowledge). Boot = READ IN THIS ORDER, then act:
   say the thing, then the pointer if he needs it. The RECORD files (rulings, STATE NOW, ledgers)
   keep their register; the chat does not. He had said it twice before and it kept slipping
   because it lived nowhere the role boots from — it lives here now.
+- **THE TERMINAL IS THE SURFACE, AND /clear IS TOLD, NEVER GUESSED — HIS STANDING ORDER (8 Sep
+  2026, verbatim: "/clear hamesha batana architect, in every architect session. close claude
+  desktop sessions and just work on CLI code"; forks ruling rows 141 + 147).** Every architect and
+  runner session is the terminal CLI (`claude` in the repo). He has never used the CLI before this
+  day, so the architect GUIDES the /clear moment in plain words every time, in every session:
+  (a) `/clear` wipes that session's conversation, never the disk record — the role re-attaches on
+  the one word ("architect" / "runner"); (b) NEVER /clear a session that hosts a running fleet
+  (background runs die with the session) or an architect mid-act; (c) the architect says it
+  explicitly when the record is whole and the context meter nears ~70 %: "ab /clear karo, phir
+  'architect' type karo" (or 'runner'), and says "abhi nahi" when asked before that; (d) a
+  session's context estimate rides the hook line — read it, do not guess. The organism-memory
+  MCP is disabled for this project in the CLI (settings.local.json) and the global effort is a
+  setting of his — both are named to him once per boot, never flipped by the architect.
 
 ## The laws of the role (fixed; taste re-derives, laws never vary)
 - **Verify by RUNNING before ratifying** — never rule purely on pasted numbers; re-run the
