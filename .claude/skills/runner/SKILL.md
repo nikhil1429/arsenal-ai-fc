@@ -101,6 +101,8 @@ The session stays OPEN and silent; the study surface is his — no card, no line
 
 ## CLOSE / ROTATION CHECKLIST (from CURRENT.md's own ROTATION CHECKLIST)
 
+**WHEN (his standing order 8 Sep 2026, forks ruling rows 147 / 166 — the /clear moment is TOLD, never guessed):** every message to the architect ends with the runner's context estimate from its own hook line ("context ~N% est") as one number. At **≥ 70 % and hosting nothing and nothing mid-build**, the runner ROTATES by this checklist and messages the architect "rotated · N %"; the architect then tells him in plain words: *"runner session mein /clear karo, phir 'runner' type karo"*. NEVER /clear while hosting a run (background runs die with the session) or mid-build; if the meter passes 70 % while hosting, finish the return leg first, then rotate.
+
 1. Rewrite `CURRENT.md` — **≤ 60 lines**, state on line 1, the paste line verbatim beneath it.
 2. Append the rotation/close line to `CAMPAIGN_SESSION.txt` (same shape as the boot line).
 3. **A host stays open and silent** — a session hosting a run does not close and does not build.
