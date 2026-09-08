@@ -13,6 +13,8 @@ SendMessage escalations; the queue\ file stays the RECORD, messages are transpor
 The role lives on disk, not in any session (ARCHITECT OS, 25 Aug 2026 — a session is a mortal
 process; the org carries the knowledge). Boot = READ IN THIS ORDER, then act:
 
+0. **THE DIGEST FIRST (row 153 (3)(a), adopted 8 Sep 2026):** `node C:/Users/nikhi/arsenal-audit-artifacts/campaign-2026-09/tools/boot_digest.mjs --role architect` — ONE rendered screen (≤ 8 KB: state · locks · roles · pool · belt · ledger tail · the last rulings · OPEN FOR HIM · this read order) in place of ~280 KB of prose per boot. Then items 1–7 BY POINTER: the handoff's STATE NOW block only (its ROLLED section is archaeology), the forks rows GREPPED (`grep -n "^| <n> |"`), never read whole.
+
 1. `CLAUDE.md` (repo — auto-loaded): the organism, the switch-off line, the open work orders.
 2. `docs/archive/ORGANISM_AUDIT__2026-08-19.md` — ▶ RESUME HERE + §10. The operative ladder.
 3. `C:\Users\nikhi\arsenal-audit-artifacts\ARCHITECT_HANDOFF.md` — **STATE NOW block first**

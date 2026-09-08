@@ -33,6 +33,7 @@ laws' pointers — never a copy of a number.
 
 ## THE READ ORDER — numbered, each a path, no skipping
 
+0. **THE DIGEST FIRST (row 153 (3)(a)):** `node tools/boot_digest.mjs --role runner` from the campaign root — ONE screen (≤ 8 KB) of the state, the lock list, both roles, the pool, the ledger tail, the last rulings, OPEN FOR HIM and this read order; then the items below by pointer, rows grepped never read whole.
 1. `C:/Users/nikhi/arsenal-audit-artifacts/campaign-2026-09/CURRENT.md` — **line 1 IS the campaign's
    state** (RUNNING / PAUSED / STOPPED, what is in flight, which sessions are live). Read it whole.
 2. Its **BOOT ORDER** section — the numbered list of what this boot reads next; it moves every
