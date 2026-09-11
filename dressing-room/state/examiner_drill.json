@@ -1,16 +1,16 @@
 {
-  "date": "2026-09-09",
-  "staged_at": "2026-09-09T17:26:55.238Z",
+  "date": "2026-09-10",
+  "staged_at": "2026-09-10T17:25:02.073Z",
   "concept": "tokenization",
   "picked_because": "earliest ladder stage",
   "shape": "mechanism",
   "shape_source": "examiner registry",
   "shape_unverified": false,
-  "template": "implement",
-  "task": "Implement a MINIMAL working tokenization from scratch in Python — smallest honest version, no libraries doing the core step for you. Talk while you type; the examiner runs it when you say run.",
+  "template": "debug",
+  "task": "The examiner will write a SHORT tokenization implementation containing ONE planted conceptual bug (not a typo). Read it aloud, find the flaw, fix it live.",
   "hidden_tests": [
-    "run his code on a tiny input and check the output SHAPE is right",
-    "ask him to predict the output for one edge input BEFORE running it, then run it",
-    "change one parameter and ask what changes, then run to verify his claim"
+    "run the buggy version so the failure is SEEN, not described",
+    "run his fixed version on the same input to prove the fix",
+    "ask why the bug produced THAT failure mode, not a crash"
   ]
 }
