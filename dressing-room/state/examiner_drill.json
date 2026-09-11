@@ -1,16 +1,16 @@
 {
-  "date": "2026-09-10",
-  "staged_at": "2026-09-10T17:25:02.073Z",
+  "date": "2026-09-11",
+  "staged_at": "2026-09-11T21:53:40.934Z",
   "concept": "tokenization",
   "picked_because": "earliest ladder stage",
   "shape": "mechanism",
   "shape_source": "examiner registry",
   "shape_unverified": false,
-  "template": "debug",
-  "task": "The examiner will write a SHORT tokenization implementation containing ONE planted conceptual bug (not a typo). Read it aloud, find the flaw, fix it live.",
+  "template": "extend",
+  "task": "Start from a working minimal tokenization (the examiner provides it). Extend it with ONE realistic production constraint (batching, caching, or an input guard) — his choice, defended.",
   "hidden_tests": [
-    "run the buggy version so the failure is SEEN, not described",
-    "run his fixed version on the same input to prove the fix",
-    "ask why the bug produced THAT failure mode, not a crash"
+    "run before-and-after on the same input; the behavior must be identical where the constraint doesn't bind",
+    "construct one input where the extension actually matters, and run it",
+    "ask for the cost of the extension (memory/latency) and sanity-check the claim in code"
   ]
 }
