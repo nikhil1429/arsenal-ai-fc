@@ -1,11 +1,11 @@
 {
-  "started": "2026-09-12T03:45:01.935Z",
-  "finished": "2026-09-12T03:45:15.084Z",
-  "day_key": "2026-09-12",
+  "started": "2026-09-13T03:45:02.352Z",
+  "finished": "2026-09-13T03:45:24.978Z",
+  "day_key": "2026-09-13",
   "day_source": "slot",
   "slot": "09:15",
   "late_min": 0,
-  "total_ms": 12938,
+  "total_ms": 22603,
   "ran": 16,
   "ok": 16,
   "failed": 0,
@@ -31,7 +31,7 @@
     {
       "id": "mirror",
       "ok": true,
-      "ms": 4896,
+      "ms": 2360,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -45,7 +45,7 @@
     {
       "id": "sprintsync",
       "ok": true,
-      "ms": 1482,
+      "ms": 1651,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -59,28 +59,29 @@
     {
       "id": "thalamus",
       "ok": true,
-      "ms": 32,
+      "ms": 27,
       "port": 4113,
       "daemon": "already running (build current)"
     },
     {
       "id": "cortex",
       "ok": true,
-      "ms": 690,
+      "ms": 1698,
       "port": 4112,
       "daemon": "already running (build unverified — no /status stamp and no process match)"
     },
     {
       "id": "turnstile",
       "ok": true,
-      "ms": 1014,
+      "ms": 13,
+      "daemon": "launched (detached — exit code not awaited)",
       "port": 4111,
-      "daemon": "already running (build current — via process table)"
+      "error": null
     },
     {
       "id": "physio",
       "ok": true,
-      "ms": 161,
+      "ms": 159,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -94,7 +95,7 @@
     {
       "id": "goalkeeper",
       "ok": true,
-      "ms": 1534,
+      "ms": 1321,
       "exit": 0,
       "wrote": "readiness.json",
       "produced": true,
@@ -108,7 +109,7 @@
     {
       "id": "twin",
       "ok": true,
-      "ms": 105,
+      "ms": 118,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -122,7 +123,7 @@
     {
       "id": "heartbeat",
       "ok": true,
-      "ms": 1703,
+      "ms": 1736,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -136,7 +137,7 @@
     {
       "id": "fsrs",
       "ok": true,
-      "ms": 107,
+      "ms": 108,
       "exit": 0,
       "wrote": "cards.json",
       "produced": true,
@@ -150,7 +151,7 @@
     {
       "id": "calibration",
       "ok": true,
-      "ms": 103,
+      "ms": 115,
       "exit": 0,
       "wrote": "calibration.json",
       "produced": true,
@@ -164,7 +165,7 @@
     {
       "id": "nemesis",
       "ok": true,
-      "ms": 114,
+      "ms": 113,
       "exit": 0,
       "wrote": "weaknesses.json",
       "produced": true,
@@ -178,7 +179,7 @@
     {
       "id": "learningstate",
       "ok": true,
-      "ms": 111,
+      "ms": 105,
       "exit": 0,
       "wrote": "learning_state.json",
       "produced": true,
@@ -199,7 +200,7 @@
     {
       "id": "sheet",
       "ok": true,
-      "ms": 202,
+      "ms": 12917,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -213,7 +214,7 @@
     {
       "id": "wall",
       "ok": true,
-      "ms": 681,
+      "ms": 159,
       "exit": 0,
       "wrote": null,
       "produced": null,
