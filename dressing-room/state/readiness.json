@@ -1,60 +1,59 @@
 {
   "ok": true,
   "engine": "v2-recalibrated",
-  "day": "2026-09-15",
+  "day": "2026-09-18",
   "mode": "full-coach",
-  "nights": 18,
+  "nights": 21,
   "verdict": "AMBER",
   "ceiling": "MODERATE",
   "workType": [
-    "ENCODE: front-load new factual/declarative learning + memorisation",
-    "SYNTHESISE: creative synthesis, architecture / system-design, connecting concepts"
+    "RETRIEVE/REVIEW known material (encoding capacity reduced) — favour consolidation over first-exposure learning"
   ],
   "timing": {
-    "wake": "06:01",
-    "peak1": "10:01–13:01  (hardest adversarial work: mocks, timed system-design, novel problems)",
-    "dip": "14:01–15:31  (admin, email, easy review, MOVEMENT)",
-    "peak2": "16:01–19:01  (second hard block)",
+    "wake": "21:35",
+    "peak1": "01:35–04:35  (hardest adversarial work: mocks, timed system-design, novel problems)",
+    "dip": "05:35–07:05  (admin, email, easy review, MOVEMENT)",
+    "peak2": "07:35–10:35  (second hard block)",
     "blocks": "~90-min deep-focus blocks; genuine non-screen break between; movement snack every 30–60 min"
   },
   "signals": {
-    "readiness_raw": 68,
-    "oura_sleep_score": 76,
-    "deep_7d_h": 0.93,
-    "deep_base_h": 0.77,
-    "rem_7d_h": 0.95,
+    "readiness_raw": 49,
+    "oura_sleep_score": 55,
+    "deep_7d_h": 0.77,
+    "deep_base_h": 0.78,
+    "rem_7d_h": 0.79,
     "rem_base_h": 0.78,
-    "total_sleep_today_h": 7.62,
-    "total_sleep_7d_h": 4.63,
+    "total_sleep_today_h": 2.21,
+    "total_sleep_7d_h": 3.73,
     "personal_sleep_need_h": 6.5,
-    "oura_sleep_balance_7d": 43.6,
+    "oura_sleep_balance_7d": 45,
     "resilience_today": null,
     "resilience_available": false,
     "contributors_today": {
-      "sleep_balance": 55,
-      "previous_night": 79,
-      "recovery_index": 92,
-      "body_temperature": 98,
-      "hrv_balance": 49,
-      "resting_heart_rate": 64,
-      "activity_balance": 95,
-      "previous_day_activity": 75,
-      "sleep_regularity": 47
+      "sleep_balance": 46,
+      "previous_night": 45,
+      "recovery_index": 82,
+      "body_temperature": null,
+      "hrv_balance": 34,
+      "resting_heart_rate": 3,
+      "activity_balance": 94,
+      "previous_day_activity": 69,
+      "sleep_regularity": 50
     },
-    "hrv_today": 18,
-    "hrv_7d": 19.2,
-    "hrv_60d": 19.1,
-    "SWC": 2.63,
-    "rhr": 75,
-    "rhr_baseline": 78.1,
-    "rr": 15,
-    "rr_baseline": 15.8,
-    "temp_dev": -0.19,
-    "temp_trend": -0.14,
-    "efficiency": 82,
-    "latency_min": 22,
-    "spo2": 96.829,
-    "bdi": 1,
+    "hrv_today": 14,
+    "hrv_7d": 15.8,
+    "hrv_60d": 18.7,
+    "SWC": 2.57,
+    "rhr": 86,
+    "rhr_baseline": 78.4,
+    "rr": 16.875,
+    "rr_baseline": 15.9,
+    "temp_dev": null,
+    "temp_trend": null,
+    "efficiency": 72,
+    "latency_min": 28,
+    "spo2": null,
+    "bdi": null,
     "vo2max": null,
     "vascular_age": null
   },
@@ -68,7 +67,7 @@
       },
       "sleep_vs_personal_baseline": {
         "short": true,
-        "oura_sleep_balance_7d": 43.6
+        "oura_sleep_balance_7d": 45
       },
       "resilience": {
         "available": false,
@@ -79,7 +78,10 @@
       "rr_sustained_days": 0,
       "fired": false
     },
-    "low_confidence_med_informational": [],
+    "low_confidence_med_informational": [
+      "HRV 7d below your own baseline — medication-influenced, low weight (not counted).",
+      "RHR +7.6bpm vs baseline — medication-influenced, low weight (not counted)."
+    ],
     "verdict_driver": "one sustained HIGH-confidence deviation (or two mixed) — not a red day"
   },
   "medication": {
@@ -90,10 +92,10 @@
     "intake_today": {}
   },
   "periodization": {
-    "sleep_debt_h_14d_vs_personal": 34,
+    "sleep_debt_h_14d_vs_personal": 39.1,
     "personal_sleep_need_h": 6.5,
-    "oura_sleep_balance_7d": 43.6,
-    "week_mean_readiness": 60.2,
+    "oura_sleep_balance_7d": 45,
+    "week_mean_readiness": 55.8,
     "note": "Running below your OWN sleep baseline (~6.5h) this week — worth banking sleep. (Measured vs YOUR normal, not a textbook 8h.)"
   },
   "safety": {
