@@ -1,26 +1,57 @@
 {
-  "id": "sit_20260908_0153_a558",
+  "id": "sit_20260919_1835_3196",
   "captain": "Nikhil (#14)",
   "surfaces": [
-    "code"
+    "voice"
   ],
-  "task": "tokenization",
-  "task_id": "1-04",
+  "task": "Tokenization",
+  "task_id": null,
   "track": "concept",
   "route": "FORGE",
   "concept": "tokenization",
-  "route_why": "forge session open @ step 3 — resume, kuch dobara nahi",
-  "claude_session_id": null,
-  "transport": "code",
-  "opened_at": "2026-09-08T01:53:50.307Z",
-  "last_turn_at": "2026-09-08T01:53:50.308Z",
-  "closed_at": "2026-09-08T02:14:10.555Z",
+  "route_why": "purani forge session ('tokenization') stale — owner CLI se band, phir 'Hallucinations' shuru · JOINED the open forge 'tokenization' (A1: the router never replaces a live concept)",
+  "claude_session_id": "53709424-c423-4f6a-b4ed-cfb0af2a4654",
+  "transport": "stream",
+  "opened_at": "2026-09-18T18:35:52.024Z",
+  "last_turn_at": "2026-09-18T18:37:32.175Z",
+  "closed_at": "2026-09-18T18:57:39.595Z",
   "close_reason": "idle",
-  "plan": [],
-  "plan_source": null,
-  "plan_map": null,
-  "cursor": 0,
-  "unit_seq": 0,
+  "plan": [
+    {
+      "i": 0,
+      "kind": "map",
+      "step": 3,
+      "axis": null,
+      "question": true,
+      "est_seconds": 20,
+      "src": [],
+      "text": "Aaj Tokenization — THE METHOD ke 12 kadam, step 3 se. Har kadam ek idea, ek chhota check-question, tumhara gut-word pehle. Map yeh raha: pehle-guess → mechanism → axes a se i → traps → bridges → lock. Shuru?"
+    },
+    {
+      "i": 1,
+      "kind": "question",
+      "step": 3,
+      "axis": null,
+      "question": true,
+      "est_seconds": 12,
+      "src": [],
+      "text": "Pehle-Guess: bina padhe, Tokenization kya hai — apne shabdon mein ek line? Gut-word pehle."
+    },
+    {
+      "i": 2,
+      "kind": "unit",
+      "step": null,
+      "axis": null,
+      "question": false,
+      "est_seconds": 8,
+      "src": [],
+      "text": "Model abhi upalabdh nahi (window band ya child mar gaya) — main sirf plan ke units de sakta hoon. 'aage' bolo, ya 'full time'."
+    }
+  ],
+  "plan_source": "skeleton",
+  "plan_map": "Aaj Tokenization — THE METHOD ke 12 kadam, step 3 se. Har kadam ek idea, ek chhota check-question, tumhara gut-word pehle. Map yeh raha: pehle-guess → mechanism → axes a se i → traps → bridges → lock. Shuru?",
+  "cursor": 1,
+  "unit_seq": 3,
   "pending_question": null,
   "forge_step": 3,
   "forge_axis": "b",
@@ -31,15 +62,22 @@
     "_note": "one live child = ONE effort (a per-spawn flag, probed 18 Aug); the child runs at effort.compose. respond latency is MEASURED into sitting_log — §18: if p50 > 10 s, move respond down; never before the numbers."
   },
   "model": "opus",
-  "head_chars": 0,
-  "head_footer": null,
-  "inputs_read": [],
+  "head_chars": 33943,
+  "head_footer": "[sitting_system: role 2717 · how_he_learns 1574 · gaffer_law 16168 · captain 154 · agenda EMPTY · kickoff 1219 · plan 125 · capsule 10896 · review_of_last 383 · intents EMPTY · standing EMPTY · night_coach EMPTY · pacer_note 437 · assembled 33943/60000]",
+  "inputs_read": [
+    "learning-layer/HOW_HE_LEARNS.md",
+    "THE_GAFFER.md",
+    "dressing-room/state/captain.json",
+    "learnstate json",
+    "dressing-room/state/capsules/tokenization.json",
+    "dressing-room/state/sitting_reviews.jsonl"
+  ],
   "stats": {
-    "turns": 0,
+    "turns": 3,
     "by_class": {
-      "deliver": 0,
+      "deliver": 1,
       "respond": 0,
-      "compose": 0,
+      "compose": 1,
       "judge": 1
     },
     "tokens": {
@@ -53,13 +91,13 @@
       "respond": [],
       "compose": [],
       "judge": [
-        20127
+        6638
       ]
     },
-    "units_composed": 0,
+    "units_composed": 3,
     "units_delivered": 0,
     "banked": 0,
     "owner_calls": 3,
-    "head_tokens": null
+    "head_tokens": 0
   }
 }
