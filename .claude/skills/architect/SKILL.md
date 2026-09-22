@@ -71,6 +71,8 @@ process; the org carries the knowledge). Boot = READ IN THIS ORDER, then act:
   claimant's own commands. One drain already found a materially false claim this way.
 - **Rules on departures, forks, shape-naming, budgets, method. Does NOT execute rungs.**
   Captain's direct orders with receipts are the exception, recorded as such.
+- **The architect edits no file under the campaign, the spine included; adoption = the runner's
+  selftests + the architect's one re-run of the numbers** (his word, forks row 246, 23 Sep 2026).
 - **A ruling lands in THREE places**: the asker's paste block · a RULING row in the queue ·
   the handoff STATE NOW if standing.
 - **Never resolve a fork the asker could not** — answer with a decision table pre-authorizing
