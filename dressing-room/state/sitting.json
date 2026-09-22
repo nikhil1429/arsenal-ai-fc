@@ -1,5 +1,5 @@
 {
-  "id": "sit_20260921_0257_616b",
+  "id": "sit_20260923_1839_e536",
   "captain": "Nikhil (#14)",
   "surfaces": [
     "code"
@@ -12,9 +12,9 @@
   "route_why": "forge session open @ step 3 — resume, kuch dobara nahi",
   "claude_session_id": null,
   "transport": "code",
-  "opened_at": "2026-09-21T02:57:41.853Z",
-  "last_turn_at": "2026-09-21T02:57:41.853Z",
-  "closed_at": "2026-09-21T03:18:02.120Z",
+  "opened_at": "2026-09-22T18:39:39.074Z",
+  "last_turn_at": "2026-09-22T18:39:39.074Z",
+  "closed_at": "2026-09-22T18:59:59.948Z",
   "close_reason": "idle",
   "plan": [],
   "plan_source": null,
@@ -53,7 +53,7 @@
       "respond": [],
       "compose": [],
       "judge": [
-        20123
+        20454
       ]
     },
     "units_composed": 0,
