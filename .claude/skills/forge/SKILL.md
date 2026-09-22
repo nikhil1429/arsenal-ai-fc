@@ -5,9 +5,19 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
 
 # /forge — the zero-tax study session
 
+> ## ⭐ THE DIGEST FIRST — 22 Sep 2026 (his word, forks ruling row 242)
+> `node scripts/learn_digest.mjs` is the boot for EVERY study session, this skill included: one screen by code
+> (position · the pointer question verbatim · this axis's capsule doubts/traps · the four live duties · every
+> command filled in). **If /learn already ran it this session, do NOT re-read this file's body** — open only the
+> section the current step needs (THE BANK · a gate line · a step's paragraph) by grep, when the step arrives.
+> Loading this 57 KB body "to be safe" was measured at 204 K cached tokens before the first teaching word
+> (row 242). The spine below is unchanged (L9): its RESUME-block instruction is now done BY the digest — do not
+> open SAMJHAO_MERGED whole; the digest points at its §3 when the axis loop's substance is needed.
+
 > ## ⚠ THE OPERATING SPINE — READ THIS BEFORE ANYTHING ELSE
 > **`docs/archive/SAMJHAO_MERGED__2026-08-30.md` is the binding order for this lane. Open it
-> FIRST and read its RESUME block — it says where he actually is.** FORGE and SAMJHAO are
+> FIRST and read its RESUME block — it says where he actually is.** *(22 Sep: the digest reads the
+> RESUME position by code — see the block above; open §3 by name only when a step needs its substance.)* FORGE and SAMJHAO are
 > ONE process since 30 Aug 2026, on his word (*"ok all approved"*, act `amtfkb4r48m`,
 > teaching-contract rule 31). RE-JIRAH stays separate, as the topic's cold test.
 >
