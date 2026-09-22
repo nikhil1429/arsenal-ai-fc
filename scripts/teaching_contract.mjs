@@ -118,6 +118,12 @@ const DEFAULT_TRANSCRIPT_WARN_BYTES_6AUG = Math.round(MEASURED_BYTES_PER_TOKEN_L
 const DEFAULT_TRANSCRIPT_WARN_BYTES = Math.round(MEASURED_BYTES_PER_TOKEN * CONTEXT_WINDOW_TOKENS);
 const FILL_CALIBRATION = "estimate: bytes ÷ 6.64/token, calibrated 18 Aug (4.18 MB ↔ 629k tok = 63% of 1M); the UI's meter is the truth";
 const SOFT_FRACTION = 0.6;      // a heads-up BEFORE the hard line — he asked to be warned beforehand
+// THE STUDY RESET LINE (22 Sep 2026, his "ye bi kardo theek", forks ruling row 244). Compaction is not the
+// only cost of a long session: every turn RE-READS the whole context. Measured 22 Sep on his Desktop study
+// session: a 2.4 MB transcript ↔ 330,078 cached tokens a turn (7.3 bytes/token) and 68–159 s to the first
+// word — and the 60 % line above (≈ 4 MB) never fired. The re-entry is free by design (pointer + digest), so
+// past this many bytes the cheapest turn is a NEW SESSION. State-tunable like transcript_warn_bytes.
+const DEFAULT_STUDY_RESET_BYTES = 1_000_000;   // ≈ 137–150 K tokens at the two measured ratios
 
 // ── SEED ──────────────────────────────────────────────────────────────────────
 // None of these is invented: the first five are the drifts that actually happened on
@@ -139,6 +145,9 @@ function seed(now = new Date()) {
     // editing this file — same discipline as `context_warn_at`. Absent in pre-#107
     // state files, and absent falls back to the derived default (never to silence).
     transcript_warn_bytes: DEFAULT_TRANSCRIPT_WARN_BYTES,
+    // THE STUDY RESET LINE (22 Sep 2026): the byte count past which a new session is cheaper than the next
+    // turn. Same discipline — lives in state, retunable from observation, absent falls back to the default.
+    study_reset_bytes: DEFAULT_STUDY_RESET_BYTES,
     turns: { session_started_at: null, count: 0 },
     rules: [
       r("his-word", "Uska saaf bola hua instruction > meri samajh. Scope kaatna/badalna ho to PEHLE poochho, khud mat kaato."),
@@ -678,8 +687,17 @@ function blockLines(state, done, now = new Date(), fill = null, fillUnknown = fa
     ? `  ⚠ context fill UNKNOWN this turn — transcript unreadable, so nothing measured it. turn ${turn} is a PROMPT count, not a context measure; if this session has been long, say so out loud rather than assume it is fine.`
     : null;
 
+  // THE STUDY RESET LINE (22 Sep 2026, row 244): below the compaction lines above, a COST line. Every turn
+  // re-reads the whole context; past this many bytes a new session (free re-entry: pointer + digest) is
+  // cheaper than the next turn. Measured 22 Sep: 2.4 MB ↔ 330 K tokens a turn, 68–159 s to the first word.
+  // It fires only when no compaction warning is already up (that one outranks it; the anti-wall cap holds).
+  const resetBytes = Number.isFinite(state.study_reset_bytes) && state.study_reset_bytes > 0 ? state.study_reset_bytes : DEFAULT_STUDY_RESET_BYTES;
+  const reset = (fill && !warn && fill.bytes >= resetBytes)
+    ? `  ⛔ STUDY RESET LINE — transcript ${mb(fill.bytes)} ≥ ${mb(resetBytes)}: every turn now re-reads all of it (22 Sep: 2.4 MB ↔ 330 K tokens a turn, 68–159 s to the first word). At the next natural break, in order: (1) node scripts/forge_session.mjs pointer "<the exact unanswered micro-question>" · (2) tell him in plain words — Desktop: is folder ki NAYI session kholo, phir 'learn' · CLI: /clear, phir learn. Kuch nahi khoyega: re-entry = the digest.`
+    : null;
+
   const staged = stagedLine(state);
-  const reserved = 1 + (link ? 1 : 0) + ((warn || unknown) ? 1 : 0) + (staged ? 1 : 0);
+  const reserved = 1 + (link ? 1 : 0) + ((warn || unknown || reset) ? 1 : 0) + (staged ? 1 : 0);
   const room = Math.max(0, MAX_BLOCK_LINES - reserved);
   const shown = pick(state.rules, turn, state.show_n).slice(0, room);
 
@@ -707,6 +725,7 @@ function blockLines(state, done, now = new Date(), fill = null, fillUnknown = fa
   }
   if (link) L.push(link);
   if (warn) L.push(warn);
+  else if (reset) L.push(reset);
   else if (unknown) L.push(unknown);
   if (staged) L.push(staged);
   return L;
@@ -1104,6 +1123,26 @@ function selftest() {
     /context ~80% est/.test(blockLines(quietState, done, T0, fSoft)[0])
     && !/context \d+%/.test(blockLines(quietState, done, T0, fSoft)[0])
     && !/context/.test(blockLines(quietState, done, T0, null)[0]));
+  // THE STUDY RESET LINE (22 Sep 2026, row 244) — planted both ways, and it never widens the wall.
+  {
+    const over = { bytes: 1_200_000, limit: DEFAULT_TRANSCRIPT_WARN_BYTES, pct: 1_200_000 / DEFAULT_TRANSCRIPT_WARN_BYTES };   // 1.2 MB: over the reset line, under the 60 % soft line
+    const under = { bytes: 500_000, limit: DEFAULT_TRANSCRIPT_WARN_BYTES, pct: 500_000 / DEFAULT_TRANSCRIPT_WARN_BYTES };
+    const isReset = (l) => /STUDY RESET LINE/.test(l) && /forge_session\.mjs pointer/.test(l) && /NAYI session/.test(l) && /\/clear/.test(l);
+    assert("STUDY RESET LINE fires past the reset bytes, names the pointer command FIRST and both surfaces' actions in plain words",
+      blockLines(quietState, done, T0, over).some(isReset));
+    assert("STUDY RESET LINE stays silent under the reset bytes and when no transcript was read",
+      !blockLines(quietState, done, T0, under).some(isReset) && !blockLines(quietState, done, T0, null).some(isReset));
+    assert("STUDY RESET LINE yields to a compaction warning (one context line at most, the graver one)",
+      !blockLines(quietState, done, T0, fHard).some(isReset) && blockLines(quietState, done, T0, fHard).filter((l) => /STUDY RESET LINE|CONTEXT WARNING|context filling/.test(l)).length === 1);
+    assert("STUDY RESET LINE is state-tunable — a stored study_reset_bytes wins over the default, absent falls back",
+      blockLines({ ...quietState, study_reset_bytes: 2_000_000 }, done, T0, over).some(isReset) === false
+      && withSeedDefaults({ rules: [] }, T0).study_reset_bytes === DEFAULT_STUDY_RESET_BYTES
+      && withSeedDefaults({ rules: [], study_reset_bytes: 777 }, T0).study_reset_bytes === 777);
+    assert("STUDY RESET LINE keeps the anti-wall cap",
+      (() => { let worst = 0; for (let n = 1; n <= 8; n++) for (let t = 0; t < 60; t++)
+        worst = Math.max(worst, blockLines({ ...base, show_n: n, turns: { anchor: "tx:/t", anchor_kind: "tx", count: t } }, done, T0, over).length);
+        return worst <= MAX_BLOCK_LINES; })());
+  }
   assert("ANTI-WALL HOLDS WITH THE GAUGE ON — still never more than 5 lines, at every show_n and both tiers",
     (() => { let worst = 0;
       for (const f of [fHard, fSoft, fQuiet, null]) for (let n = 1; n <= 8; n++) for (let t = 0; t < 60; t++)
