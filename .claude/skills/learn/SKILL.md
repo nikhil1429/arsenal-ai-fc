@@ -24,6 +24,23 @@ description: The session-agnostic front door to the day's learning — reads the
 > they say in advance where he will break.** Never "you already know this" (HOW_HE_LEARNS #10).
 > Any stored strike on a re-opened topic needs a FRESH question — a burned axis is burned.
 
+> ## ⭐ THE NOTES LAW — 22 Sep 2026, his word *"okay let's do it."* (act `amucdnagn7o`, forks ruling row 240)
+> **Notes are EXTRACTED from the archive by code, never written from memory and never hand-written
+> mid-lesson.** The archive (`archivist.mjs status`) and the raw transcript hold every word with its
+> timestamp; a rung at the week's end pulls each axis's `[N]`/`[T]` block out of them and he ratifies
+> it cold. So the teacher's ONLY live job is to make sure the things that must be SAID get said —
+> extraction cannot recover what was never spoken. **FOUR LIVE DUTIES, nothing else:**
+> 1. **Gut-word before every answer** — pakka / shayad / pata nahi, out loud, before he answers.
+> 2. **Stuck-story the moment a crack fires** — "main atka kahan, maine socha X, phir Y ne toda", in
+>    HIS words, asked right then (a crack asked cold at axis close comes back thin). The ```diff
+>    correction block you write at that moment is the machine's crack marker — write it there, once.
+> 3. **Bolo at axis close** — the axis in his Hinglish, spoken/dictated, pasted verbatim.
+> 4. **The English interview line** — the cold sentence he would say in the room.
+> Plus what was already law: the pointer at every stop (`forge_session.mjs pointer "…"`) and the ONE
+> bank line at the three banked moments when they occur (THE BANK, /forge). **Do NOT append a note
+> block to any file this week; do NOT run build_exchanges mid-lesson; do NOT log cracks late** — the
+> diff block is the log. Record: `arsenal-audit-artifacts/queue/NOTES_DIAGNOSIS__row239__2026-09-22.md`.
+
 > **THE VISUAL LAYER (6 Sep 2026, his "ok done" — binding):** before the first teaching turn,
 > read **`learning-layer/VISUAL_CONTRACT.md`** — the 7 reusable shapes, the day's 11 moments,
 > his picks (Lexend in widgets · ~62ch measure · teaching text in the MESSAGE, visuals in the

@@ -109,6 +109,16 @@ node scripts/forge_session.mjs moment pehle_guess|widget_gate|check_q|jirah
 node scripts/forge_session.mjs close                  # at session khatam → coverage report
 ```
 
+### ⭐ THE NOTES LAW — 22 Sep 2026, his word *"okay let's do it."* (act `amucdnagn7o`, forks ruling row 240)
+
+**Notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — never
+written from memory, never hand-written mid-lesson, never appended to a blocks file this week.**
+Extraction cannot recover what was never spoken, so the teacher's only live job is FOUR ELICITATIONS:
+(1) gut-word before every answer · (2) the stuck-story in HIS words the moment a crack fires, with the
+one ```diff block written right there (it is the machine's crack marker — no late crack logging) ·
+(3) Bolo at axis close, pasted verbatim · (4) the English interview line. Plus the pointer at every
+stop and THE BANK line below at its three moments. Nothing else typed. Full text: /learn, THE NOTES LAW.
+
 ### THE BANK — one command per answer, and it is not optional any more (A3, 4 Sep 2026)
 
 **At the axis's THREE banked moments only — the sharp check, the Bolo, the interview line — you type ONE bank line. Per-idea typed answers are re-welded in the turn and never banked (5 Sep 2026, row 53b). He types his answer; you type the bank line.**
