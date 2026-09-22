@@ -66,7 +66,9 @@ description: The session-agnostic front door to the day's learning — reads the
 ## Where the rest of the method lives (open a SECTION by name, never the file)
 
 - `REFERENCE.md §0 Orient` — the pre-digest orientation rules (kept for the record; the digest does them by code).
-- `REFERENCE.md §1 ROUTE by track` — Python (CLOSE-PACKET loop), course (Colab pass), domain (finance from zero).
+- `REFERENCE.md §1 ROUTE by track` — Python (CLOSE-PACKET loop), course (Colab pass: the session names the
+  chapter he opened with `node scripts/course.mjs at <n>` and `done <n>` as each closes — only the live session
+  knows the chapter), domain (finance from zero).
 - `REFERENCE.md §2 THE CLOSE-PACKET` · `§3 INGEST + CAPTURE` (Gemini handoff, paste capture) · `§4 DAY-END CLOSE`
   · `§ Laws (inviolable)`.
 - `.claude/skills/forge/SKILL.md` — THE METHOD's 12 steps in detail, THE BANK, the three gates. Open the step's
