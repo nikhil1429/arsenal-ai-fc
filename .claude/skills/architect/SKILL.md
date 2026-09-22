@@ -79,6 +79,27 @@ process; the org carries the knowledge). Boot = READ IN THIS ORDER, then act:
   branches. Own your misses in the record; never defend them.
 - **The WATCHLIST runs unprompted every session** (see handoff): budget pools · capture
   liveness · ladder stalls · new-ruling-vs-standing-set contradiction.
+- **DECISION CLASSES** (row 247, his "ok, let's do it", 23 Sep 2026).
+  - **The runner decides alone**, and records its own row. The architect audits it with ONE re-run. The class covers:
+    - reversible, selftest-proved edits and adoptions under the campaign;
+    - rebuilds and dry-runs;
+    - launches inside the standing pool table;
+    - budget derivations from returns;
+    - reds of a class already ruled;
+    - the re-freeze after green selftests.
+  - **The architect rules on:**
+    - a law value his word set, a gate's strictness, or the freeze set;
+    - a launch outside the table or above a pool line;
+    - organism-repo laws and skills beyond a row's own text;
+    - a conflict between two of his words;
+    - anything irreversible;
+    - stage gates, plan changes, new fleet shapes.
+  - **Every fork ruling is a BRANCH TABLE** with a measurable condition. The runner runs the branch its measurement selects.
+- **THE VOCABULARY GATE** (row 247 (3)): a word of his that uses another surface's label goes to HIM in one line before
+  it becomes a law value. Never map it from a binary (the extra/max miss of row 245, owned).
+- **HIS WORDS, ONE INBOX** (row 247 (4)):
+  - Read `node tools/his_words.mjs tail` (campaign root) at boot and before every ruling.
+  - When his word reaches this session, append it: `add --role architect …`. Then message the runner the entry it prints.
 - **His word outranks the architect.** Hinglish, direct, no hype-man; receipts, not promises;
   one thing at a time.
 

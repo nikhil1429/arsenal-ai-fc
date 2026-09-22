@@ -60,15 +60,47 @@ laws' pointers — never a copy of a number.
 ## THE LAWS — each one line, with its ruling row
 
 - **ATTACK MODE** (rows 131 / 132) — handbrake off; the runner builds and launches, then hosts in silence.
-- **THE MODEL RULE** (row 132), verbatim: *"EVERY sub agent is OPUS 5 at effort max (model 'opus'; no
-  Sonnet, no Haiku, no Fable seat until his word)."*
+- **THE MODEL RULE** (row 132; the effort VALUE moved by his word, row 246): every sub agent is Opus
+  (model 'opus'; no Sonnet, no Haiku, no Fable seat until his word) at the effort `tools/model_law.mjs
+  effort <phase>` resolves — **xhigh** since his 23 Sep word *"Runner aur saare sub-agents hamesha xhigh
+  pe"*. The value is read from that one home, never typed in a script, a check or this file.
 - **THE WINDOWS ARE NOT MEASURED** (row 131), verbatim: *"the gate's five-hour and weekly arithmetic
   are NOTES; every launch at the 3,000,000 cap; fleets fly together — FLEET.lock is a LIST."*
-- **THE HOST RULE** (row 130 (2)(a)), verbatim: *"the session that hosts a run builds nothing"* — the
-  in-code counter reads the hosting session's own output, so a host that writes charges the fleet.
+- **THE HOST RULE** (row 130 (2)(a), NARROWED by his word, row 248): while a fleet flies the host
+  builds anything EXCEPT the return path — campaign.mjs, the return watcher, the export, any
+  `witness_*return*`, the belt, verifiers and the freeze set. The in-code counter still reads the host's
+  own output, so keep the build well under the fleet's cap.
 - **THE PAUSE** (row 136 (1)) — a code path, below.
 - **THE POOL IS HIS PANEL** — recorded whenever he posts one, never asked inside a window.
-- **HIS WORD OUTRANKS EVERYTHING HERE**, and a fork is not the runner's to rule.
+- **HIS WORD OUTRANKS EVERYTHING HERE**; a fork OUTSIDE the runner's class (below) is the architect's.
+
+## DECISION CLASSES — row 247, his word "ok, let's do it" (23 Sep 2026)
+
+- **THE RUNNER DECIDES ALONE** and records its own row (`node tools/row_add.mjs row …` — one write:
+  the row, its STATE NOW bullet, its message); the architect audits by ONE re-run. The class covers:
+  - any edit or adoption under campaign-2026-09 that git reverts and a selftest with planted cases proves;
+  - rebuilds, dry-runs and scratch copies;
+  - launches inside the standing pool table (one 16-seat launch a window, the gate arithmetic fits, his 75 pause);
+  - budget derivations from returns;
+  - witness and belt reds of a class already ruled or homed;
+  - the re-freeze after green selftests.
+- **THE RUNNER BRINGS TO THE ARCHITECT:**
+  - a law value his word set, a gate's strictness, or the freeze set;
+  - a launch outside the table or above a pool line;
+  - organism-repo laws and skills beyond text a row spells out;
+  - a conflict between two of his words;
+  - anything irreversible (delete, history, remote);
+  - stage gates, plan changes, new fleet shapes.
+- **BRANCH TABLES:** an architect ruling on a fork carries its branches with a measurable condition;
+  the runner runs the branch its measurement selects and records which.
+- **THE VOCABULARY GATE:** a word of his that uses another surface's label, or that would map his
+  vocabulary onto a machine word, goes to HIM in one line before it becomes a law value. Never map it
+  from a binary (the extra/max miss of row 245).
+- **HIS WORDS, ONE INBOX** (row 247 (4)):
+  - When his word reaches THIS session, run `node tools/his_words.mjs add --session "<name [ref]>"
+    --role runner --surface "<where>" --verbatim "<exactly>"`. Then send the architect the entry it prints.
+  - The boot digest shows the last three.
+  - Run `node tools/his_words.mjs tail` before every launch.
 
 ## THE TWO LEGS — one verb each
 
@@ -112,7 +144,7 @@ The session stays OPEN and silent; the study surface is his — no card, no line
 
 ## WHAT THE RUNNER NEVER DOES
 
-- **Never rules on a fork** — that is the architect's. Write one file into
+- **Never rules on a fork outside its class** (row 247) — that is the architect's. Write one file into
   `C:/Users/nikhi/arsenal-audit-artifacts/queue/`, message the architect, and halt that thread.
 - **Never edits a frozen verifier**, and never runs `verifiers freeze` while `FLEET.lock` exists.
 - **Never launches while the pool reads STOP** (or while a gate check says NO-GO), unless a ruling row
