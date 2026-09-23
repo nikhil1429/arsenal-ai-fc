@@ -57,7 +57,7 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
-import { studyScope, readSitting, readForge, payloadOf, classifyPrompt, unboundVerdict, GUT_BEARING_MOMENTS, bankDueAt } from "./study_scope.mjs";
+import { studyScope, readSitting, readForge, payloadOf, classifyPrompt, unboundVerdict, GUT_BEARING_MOMENTS, bankDueAt, shellInStudySet, humanText, CANON_READ_PATH, NEVER_READ } from "./study_scope.mjs";
 import { countTables, namedPosition, countForm, opensTerm, hindiMarkerCount, technicalLine, intensityCheck } from "./teaching_audit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -280,13 +280,6 @@ function readTail(path, max = TRANSCRIPT_MAX) {
   const fd = openSync(path, "r");
   try { const buf = Buffer.alloc(span); readSync(fd, buf, 0, span, size - span); return buf.toString("utf8"); } finally { closeSync(fd); }
 }
-const humanText = (o) => {
-  if (!o || o.type !== "user" || o.isMeta) return null;
-  const c = o.message && o.message.content;
-  if (typeof c === "string") return c;
-  if (Array.isArray(c) && !c.some((b) => b && b.type === "tool_result")) return c.filter((b) => b && b.type === "text").map((b) => b.text).join("\n");
-  return null;
-};
 /** Parse a transcript (text) into prompts and ordered assistant blocks. Torn lines are skipped. */
 export function parseTranscript(raw) {
   const prompts = []; const blocks = []; const hooks = [];
@@ -346,15 +339,12 @@ const VOICE_REP = /gaffer_brain\.mjs["']?\s+capture\s+voice_rep\b/i;
 // FIVE since forks row 266 (sharp_check).
 export const MOMENT_KINDS = Object.freeze(["pehle_guess", "check_q", "widget_gate", "jirah", "sharp_check"]);
 
-// THE STUDY SET (G3's allowed set, read after the fact for the tools no PreToolUse rail sees).
-// The owner CLIs a study turn may run (G3's set, widened only by rows the rule table maps here: the act lane
-// learn:R29, the doubt lane learn:R158, the close's own capture paste forge:R152/R153, the widget registry forge:R103).
-const ALLOWED_CMD = /(learn_digest\.mjs|sitting\.mjs["']?\s+(open|status|host|touch|close)|forge_session\.mjs["']?\s+(pointer|moment|crack|axis|status|step|contract|resume|boot|start|close|lockchain)|gaffer_brain\.mjs["']?\s+(capture\s+(voice_rep|axis_weld)|judge[_-]round)|teaching_contract\.mjs["']?\s+flag|judge[_-]round|deep\.mjs|rejirah\.mjs|acts\.mjs["']?\s+do\b|hippocampus\.mjs["']?\s+mark\s+doubt|capture\.mjs["']?\s+paste|heartbeat\.mjs|widget\.mjs["']?\s+(list|register)|samjhao\.mjs["']?\s+(open|plan|sweep|taught)|doubtminer\.mjs|mirror\.mjs)/i;
-const CANON_READ_PATH = /(learning-layer[\\/]|\.claude[\\/]skills[\\/]|docs[\\/]archive[\\/]|dressing-room[\\/]state[\\/]capsules[\\/]|(^|[\\/])capsules[\\/]|dressing-room[\\/]state[\\/]forge_sessions?\.jsonl?$)/i;
+// THE STUDY SET (G3's allowed set, read after the fact for the tools no PreToolUse rail sees). ONE home since P2
+// concern 2: study_scope.mjs (ALLOWED_CMD, the unsafe-shell fence, the canon-read paths — shellInStudySet), which
+// G3's rails read at PreToolUse; the Read / Grep / Glob half below stays here (the rails' matcher never sees them,
+// row 264 (4)).
 const FORGE_SKILL = /forge[\\/]SKILL\.md$/i;
-const SHELL_CANON_READ = /^\s*(grep|rg|sed\s+-n|head|tail|cat|Select-String|Get-Content)\b/i;
 const WHOLE_READ_NAMED = /(REFERENCE\.md|SAMJHAO_MERGED__2026-08-30\.md|VISUAL_CONTRACT\.md|forge[\\/]SKILL\.md)$/i;
-const NEVER_READ = /(scripts[\\/][^\\/]+\.m?js$|[\\/]memory[\\/])/i;
 const FREE_TOOLS = /^(ToolSearch|TodoWrite|Skill|mcp__visualize__read_me|mcp__visualize__show_widget)$|bank_answer|judge_round/;
 /** Every tool call of the turn outside the study set, and every whole-file read of a named canon file. */
 export function toolFindings(turn, { step = null } = {}) {
@@ -365,8 +355,7 @@ export function toolFindings(turn, { step = null } = {}) {
     if (FREE_TOOLS.test(name)) continue;
     if (shell(b)) {
       const c = cmdOf(b);
-      if (ALLOWED_CMD.test(c) && !/\bgit\s+(commit|push|add)\b|\bnpm\s|>\s*[\w./\\-]+\.(m?js|json|md)\b|Set-Content|Out-File|\brm\s/i.test(c)) continue;
-      if (SHELL_CANON_READ.test(c) && CANON_READ_PATH.test(c) && !NEVER_READ.test(c)) continue;
+      if (shellInStudySet(c)) continue;
       outside.push(`${name}: ${c.slice(0, 60)}`); continue;
     }
     if (name === "Read") {
@@ -445,7 +434,8 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
   if (textAbove) red("A.text-last", "a text block sits above a tool call in this turn");
   const tf = toolFindings(T.turn, { step: forge && Number.isInteger(forge.step) ? forge.step : null });
   if (T.turn.some((b) => b.kind === "tool" && b.name === "AskUserQuestion")) red("B.askuser", "AskUserQuestion was called");
-  if (tf.outside.length) red("B.tools", tf.outside.slice(0, 3).join(" · "));
+  // forks row 267: his prompt is a CLOSING (/full-time, "post match") → the close organs run; B.tools stands down, as G3 does
+  if (tf.outside.length && !cls.closing) red("B.tools", tf.outside.slice(0, 3).join(" · "));
   if (tf.whole.length) red("B.whole-read", tf.whole.slice(0, 3).join(" · "));
 
   const d = { secondPass, cls: cls.kind, moment, prevMoments };
@@ -918,6 +908,11 @@ async function selftest() {
   // 10 — tools outside the study set, whole reads, AskUserQuestion, judge once, widget, moment kinds
   const grep = run("ok", [TOOL("Grep", { pattern: "x", path: "C:/Users/nikhi/GitHub/arsenal-ai-fc/scripts" }), ...TURN_OK], "grep chala · " + GOOD);
   assert("forge:R171 · a Grep over scripts/ mid-concept → B.tools (db82184b t9)", has(grep, "B.tools"));
+  const CLOSE_ORGANS = [BASH("node scripts/postmatch.mjs --hit \"axis c\""), BASH("node scripts/captains_call.mjs deal")];
+  const closeTurn = run("<command-message>full-time</command-message>\n<command-name>/full-time</command-name>", CLOSE_ORGANS, "full time · post match likh diya");
+  const organsMidStudy = run("ok", [...CLOSE_ORGANS, ...TURN_OK], "post match chala · " + GOOD);
+  assert("row 267 · his prompt is a CLOSING (/full-time) → its close organs run with no B.tools; the same organs on a study turn → B.tools (planted both ways)",
+    !has(closeTurn, "B.tools") && has(organsMidStudy, "B.tools"), JSON.stringify([closeTurn.reds, organsMidStudy.reds]));
   const canon = run("ok", [TOOL("Read", { file_path: "C:/r/learning-layer/VISUAL_CONTRACT.md", offset: 100, limit: 30 }), ...TURN_OK], "padh liya · " + GOOD);
   assert("learn:R3 · a canon SECTION read (offset + limit) is inside the study set", !has(canon, "B.tools") && !has(canon, "B.whole-read"), JSON.stringify(canon.reds));
   const whole = run("ok", [TOOL("Read", { file_path: "C:/r/learning-layer/VISUAL_CONTRACT.md" }), ...TURN_OK], "padh liya · " + GOOD);

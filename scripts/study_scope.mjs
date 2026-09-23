@@ -43,7 +43,7 @@
 //   law is met by the entry that is already in organism:selftest). Its two CLI verbs, `scope` and
 //   `unbound`, are read-only hand checks (the architect's adoption re-run uses them).
 // ============================================================================
-import { readFileSync, openSync, readSync, closeSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { readFileSync, openSync, readSync, closeSync, statSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -222,7 +222,9 @@ const NO_IDEA = /^(no\s+idea|pata\s+nahi|pata\s+nhi|idk)(\s+(bro|yaar|yar))?\s*[
 const ACK_ONLY = /^(ok|okay|haan|ha|han|yes|hmm+|theek|thik|chalo|done|next|aage|sure)\b[\s.!]*$/i;
 const CONFUSED = /(samajh|samjh|smjh|smajh)\s*(nahi|nhi|nai|na)\s*(aa?ya|aa?ye|aa?\s*raha|aa?\s*rha|aa?\s*rahi)|\bnahi\s+samjh?a\b|\bunderstood\s+nothing\b|\bdid\s*n[o']?t\s+(get|understand)\b|\b(i|i\s+am|i'm)\s+(not\s+understanding|confused|lost)\b|\bi\s+do\s*n[o']?t\s+(get|understand)\b|\bclear\s+nahi\s+(hua|hai)\b|\bkuch\s+(samajh|smjh)\s+nahi\b/i;
 const SYSTEM_TALK = /(?:^|\s)\/(learn|forge)\b|\b(ruling|rules?|notes?|sessions?|hooks?|widgets?|visuali[sz]ations?|pacer|organism|system|contract|skill|hinglish|hindi|gut[\s-]*words?|restart|re-start|new\s+session|keep\s+yourself\s+updated|mistakes?)\b/i;
-const CLOSING = /\b(done\s+for\s+today|full\s+time|aaj\s+ke\s+liye\s+bas|band\s+karo|let'?s\s+stop|stop\s+here)\b/i;
+// forks row 267: the classifier learns /full-time (its command tag reads "full-time") and "post match" — a CLOSING
+// skips G3 and B.tools, because /full-time's own close organs are outside the study set
+const CLOSING = /\b(done\s+for\s+today|full[\s-]*time|post[\s-]*match|aaj\s+ke\s+liye\s+bas|band\s+karo|let'?s\s+stop|stop\s+here)\b/i;
 // forks row 268 (branch A): the sharp check carries the trio too — his 5 Sep study shape ("the ONE sharp check —
 // gut pehle", forge REFERENCE step 3) and the bank door's GUT-WORD LAW, both later than the 30 Aug act
 export const GUT_BEARING_MOMENTS = Object.freeze(["pehle_guess", "jirah", "sharp_check"]);
@@ -266,6 +268,57 @@ export function bankDueAt({ cls = null, prevMoments = [] } = {}) {
   const c = cls && typeof cls === "object" ? cls : {};
   if (prev.includes("jirah") && c.answer) return "answers the jirah your last turn declared";
   if (prev.includes("sharp_check") && c.answer) return "answers the sharp check your last turn declared";
+  return null;
+}
+
+// ── THE STUDY SET — ONE home for G3's rails (rails.mjs, PreToolUse) and the gate's B.tools (teaching_gate, Stop) ──
+// Moved here from teaching_gate (CURRENT.md's G3 line, forks rows 264 / 267): rails must not import the gate or the
+// pacer (heavy, and a forge_session import before its turn_hook SHIM makes the shim a silent no-op), and two copies
+// of one allowed set is the drift this whole lane exists to end. The owner CLIs a study turn may run (widened only by
+// rows the rule table maps here: the act lane learn:R29, the doubt lane learn:R158, the close's own capture paste
+// forge:R152/R153, the widget registry forge:R103, and the course track's chapter pointer learn:R35 / R136).
+export const ALLOWED_CMD = /(learn_digest\.mjs|sitting\.mjs["']?\s+(open|status|host|touch|close)|forge_session\.mjs["']?\s+(pointer|moment|crack|axis|status|step|contract|resume|boot|start|close|lockchain)|gaffer_brain\.mjs["']?\s+(capture\s+(voice_rep|axis_weld)|judge[_-]round)|teaching_contract\.mjs["']?\s+flag|judge[_-]round|deep\.mjs|rejirah\.mjs|acts\.mjs["']?\s+do\b|hippocampus\.mjs["']?\s+mark\s+doubt|capture\.mjs["']?\s+paste|heartbeat\.mjs|widget\.mjs["']?\s+(list|register)|samjhao\.mjs["']?\s+(open|plan|sweep|taught)|doubtminer\.mjs|mirror\.mjs|course\.mjs["']?\s+(at|done)\b)/i;
+// an allowed organ named in a command that ALSO commits, installs, redirects into code/state or deletes is not a study call
+export const UNSAFE_SHELL = /\bgit\s+(commit|push|add)\b|\bnpm\s|>\s*[\w./\\-]+\.(m?js|json|md)\b|Set-Content|Out-File|\brm\s/i;
+export const CANON_READ_PATH = /(learning-layer[\\/]|\.claude[\\/]skills[\\/]|docs[\\/]archive[\\/]|dressing-room[\\/]state[\\/]capsules[\\/]|(^|[\\/])capsules[\\/]|dressing-room[\\/]state[\\/]forge_sessions?\.jsonl?$)/i;
+export const SHELL_CANON_READ = /^\s*(grep|rg|sed\s+-n|head|tail|cat|Select-String|Get-Content)\b/i;
+export const NEVER_READ = /(scripts[\\/][^\\/]+\.m?js$|[\\/]memory[\\/])/i;
+/** Is this shell command inside the study set? An owner CLI of the set, or a read of the canon (never code, never memory). */
+export function shellInStudySet(cmd) {
+  const c = String(cmd || "");
+  if (ALLOWED_CMD.test(c) && !UNSAFE_SHELL.test(c)) return true;
+  return SHELL_CANON_READ.test(c) && CANON_READ_PATH.test(c) && !NEVER_READ.test(c);
+}
+
+// ── HIS LAST PROMPT, read from the transcript's TAIL — for a hook that has only the payload (rails, G3) ──
+/** The text of a HUMAN user line (never a tool result, never a harness meta line). */
+export const humanText = (o) => {
+  if (!o || o.type !== "user" || o.isMeta) return null;
+  const c = o.message && o.message.content;
+  if (typeof c === "string") return c;
+  if (Array.isArray(c) && !c.some((b) => b && b.type === "tool_result")) return c.filter((b) => b && b.type === "text").map((b) => b.text).join("\n");
+  return null;
+};
+const SLASH_NOISE = /^\s*<(local-command|command-name>\/(clear|model|effort|compact))/;
+/** His last prompt in this transcript, or null (unreadable, none in the tail). Reads at most tailBytes from the end. */
+export function lastHumanPrompt(path, tailBytes = 262144) {
+  let text = "";
+  try {
+    const size = statSync(String(path)).size;
+    const fd = openSync(String(path), "r");
+    try {
+      const span = Math.min(size, tailBytes); const buf = Buffer.alloc(span);
+      readSync(fd, buf, 0, span, size - span); text = buf.toString("utf8");
+    } finally { closeSync(fd); }
+  } catch { return null; }
+  const lines = text.split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const l = lines[i];
+    if (!l || l[0] !== "{" || !/"type":"user"/.test(l)) continue;
+    let o; try { o = JSON.parse(l); } catch { continue; }
+    const t = humanText(o);
+    if (t !== null && !SLASH_NOISE.test(t)) return t;
+  }
   return null;
 }
 
@@ -388,7 +441,31 @@ export function scopeSelfCheck() {
       ].join("\n"));
       check("the first HUMAN prompt skips meta rows, /clear rows and torn lines (P0's own skips); an absent file is null",
         firstHumanPrompt(tx) === "learn" && firstHumanPrompt(join(dir, "none.jsonl")) === null && entrypointOfTranscript(tx) === "cli");
+      // G3 reads his LAST prompt from the tail: the last human line wins; a tool result, a meta row, /clear and a torn line never do
+      writeFileSync(tx, [
+        JSON.stringify({ type: "user", message: { content: "pakka - pay" } }),
+        JSON.stringify({ type: "assistant", message: { content: [{ type: "text", text: "ok" }] } }),
+        JSON.stringify({ type: "user", message: { content: [{ type: "text", text: "<command-message>full-time</command-message>\n<command-name>/full-time</command-name>" }] } }),
+        JSON.stringify({ type: "user", isMeta: true, message: { content: "the skill body" } }),
+        JSON.stringify({ type: "user", message: { content: [{ type: "tool_result", content: "x" }] } }),
+        JSON.stringify({ type: "user", message: { content: "<command-name>/compact</command-name>" } }),
+        "{torn",
+      ].join("\n"));
+      check("LAST PROMPT (G3) · the last HUMAN line of the tail is his prompt — past a skill's meta body, a tool result, /compact and a torn line; an absent file is null",
+        /\/full-time/.test(lastHumanPrompt(tx) || "") && lastHumanPrompt(join(dir, "none.jsonl")) === null && lastHumanPrompt(tx, 40) === null);
     } finally { rmSync(dir, { recursive: true, force: true }); }
   }
+  // THE STUDY SET (G3 + B.tools, one home) — planted both ways
+  check("STUDY SET · owner CLIs of the set pass (pointer, moment, voice_rep bank, course at/done — learn:R35 / R136); a canon read passes",
+    shellInStudySet("node scripts/forge_session.mjs pointer \"axis c merge\"") && shellInStudySet("node \"$CLAUDE_PROJECT_DIR/scripts/forge_session.mjs\" moment sharp_check")
+    && shellInStudySet("node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut knew") && shellInStudySet("node scripts/course.mjs at 3") && shellInStudySet("node scripts/course.mjs done 3")
+    && shellInStudySet("sed -n '120,160p' learning-layer/VISUAL_CONTRACT.md"));
+  check("STUDY SET · system work is outside: xray, git, npm, an organ outside the set, a read of code or memory, an allowed organ chained to a commit, course ingest (not ruled in)",
+    !shellInStudySet("node scripts/xray.mjs report") && !shellInStudySet("git status") && !shellInStudySet("npm test") && !shellInStudySet("node scripts/tokenizer_play.mjs train \"x\"")
+    && !shellInStudySet("sed -n '1,40p' scripts/forge_session.mjs") && !shellInStudySet("cat C:/Users/nikhi/.claude/projects/x/memory/MEMORY.md")
+    && !shellInStudySet("node scripts/forge_session.mjs pointer x && git commit -m y") && !shellInStudySet("node scripts/course.mjs ingest ch.txt") && !shellInStudySet(""));
+  check("CLOSING · /full-time's command tag, \"post match\" and \"full time\" are a CLOSING (G3 and B.tools stand down for the close organs, row 267); a study answer is not",
+    classifyPrompt("<command-message>full-time</command-message>\n<command-name>/full-time</command-name>").closing === true && classifyPrompt("post match").closing === true
+    && classifyPrompt("post-match karo").closing === true && classifyPrompt("ok full time").closing === true && classifyPrompt("pakka - pay kyunki repeat").closing === false);
   return { pass: cases.filter((c) => c.ok).length, fail: cases.filter((c) => !c.ok).length, cases };
 }
