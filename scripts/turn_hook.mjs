@@ -447,8 +447,10 @@ function selftest() {
     // gate. The list stays EXACT and ordered — this assertion's job is to refuse the five
     // per-callee commands ever coming back, and it still does (§10-D rule 6: a gate may only
     // get stricter, so the gate's own presence is now pinned here too).
-    assert("WIRING — Stop = exactly [afferent-post, turn_hook stop, claims gate], anchored (5 callees → 1 dispatcher; the gate is its own process by design)",
-      st.length === 3 && st[0] === A("hooks/afferent-post.mjs") && st[1] === A("scripts/turn_hook.mjs", "stop") && st[2] === A("scripts/claims.mjs", "stop"), JSON.stringify(st));
+    // THE TEACHING GATE JOINED (23 Sep 2026, forks row 264 (5)) — its own process for the claims
+    // gate's reason, so Stop is 4 processes and the pin grows to hold it: a gate only gets stricter.
+    assert("WIRING — Stop = exactly [afferent-post, turn_hook stop, claims gate, teaching gate], anchored (5 callees → 1 dispatcher; each gate is its own process by design)",
+      st.length === 4 && st[0] === A("hooks/afferent-post.mjs") && st[1] === A("scripts/turn_hook.mjs", "stop") && st[2] === A("scripts/claims.mjs", "stop") && st[3] === A("scripts/teaching_gate.mjs", "stop"), JSON.stringify(st));
 
     // ── THE ROUTE-INDEPENDENCE PROPERTY (7 Sep 2026) ─────────────────────────
     // The teaching bar's whole claim is that it reaches a teaching turn on the
