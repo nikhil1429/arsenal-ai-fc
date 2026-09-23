@@ -243,6 +243,26 @@ export function classifyPrompt(text, { prevMoments = [] } = {}) {
   return { kind, gut, answer, confusion, system, closing, question };
 }
 
+// ── THE BANK'S MOMENTS — ONE predicate for the skeleton's [BANK] and the gate's B.bank (forks row 264 (1)) ──
+// Forge row 53b STANDS (his 5 Sep approval, consistent with the 30 Aug ratified act): the bank is due at the
+// axis's banked moments plus jirah, NEVER per idea; P0's R5 narrows to those moments. Of the four, two are
+// readable on a turn:
+//   JIRAH       — the last teacher turn declared `moment jirah` and his message is an answer;
+//   SHARP CHECK — "gut pehle, answer typed" (forge REFERENCE step 3): a gut-word answer to a question that
+//                 declared NO per-idea moment (the sharp check is banked through capture, never logged as a moment).
+// The other two — the Bolo and the English interview line — are held by their owner: forge_session's
+// `axis <x> done` refuses without ≥ 1 Hinglish bank and ≥ 1 --register interview since the axis opened.
+// A reply to a per-idea moment is re-welded in the turn and never banked (forge:R40 / R90) — db82184b t3 t4 t5
+// t11 (the pehle_guess replies P0 counted unbanked) are exactly that class, and none of them is due here.
+export const PER_IDEA_MOMENTS = Object.freeze(["pehle_guess", "check_q", "widget_gate"]);
+export function bankDueAt({ cls = null, prevMoments = [] } = {}) {
+  const prev = Array.isArray(prevMoments) ? prevMoments : [];
+  const c = cls && typeof cls === "object" ? cls : {};
+  if (prev.includes("jirah") && c.answer) return "answers the jirah your last turn declared";
+  if (c.gut && !prev.some((k) => PER_IDEA_MOMENTS.includes(k))) return "gives a gut-word at the sharp check";
+  return null;
+}
+
 // ── CLI — by hand only (the hook path is the CALL shape above); read-only, prints one JSON line ──
 //   node scripts/study_scope.mjs scope   --session <id>                              → the predicate's verdict for that session
 //   node scripts/study_scope.mjs unbound --session <id> [--transcript p] [--prompt "…"] [--entrypoint claude-desktop|cli]
@@ -334,6 +354,18 @@ export function scopeSelfCheck() {
     K("nahi", { prevMoments: ["check_q"] }).kind === "confusion" && K("nahi yaar, thoda aur", { prevMoments: ["check_q"] }).confusion === true && K("nahi").confusion === false);
   check("CLASSIFY · a study question is a QUESTION, not system talk (a33327c2 t2); an empty prompt is empty",
     K("ijust got this, what do i need to do?").kind === "question" && K("").kind === "empty" && K("<command-message>learn</command-message> <command-name>/learn</command-name>").system === true);
+  // THE BANK'S MOMENTS (forks row 264 (1)): due at the jirah and the sharp check, never per idea.
+  const B = (t, prev = []) => bankDueAt({ cls: K(t, { prevMoments: prev }), prevMoments: prev });
+  check("BANK · a reply to a declared jirah is due, a gut-word one or not; a bare 'ok' to it is not",
+    /jirah/.test(B("word level issue is - vocab will be of a very big size", ["jirah"]) || "") && /jirah/.test(B("pakka - pay", ["jirah"]) || "") && B("ok", ["jirah"]) === null);
+  check("BANK · a gut-word answer to a question that declared no per-idea moment is the SHARP CHECK — due (db82184b t2 'shaya -', banked in P0)",
+    /sharp check/.test(B("shaya - word level tokenization - out of vocab issue") || "") && /sharp check/.test(B("no idea")) );
+  check("BANK · a reply to a PER-IDEA moment is never due, gut-word or not — db82184b t3 t4 t5 t11 (P0's unbanked pehle_guess replies) and a check_q 'haan'",
+    B("pakka - no because a LLM model does not understand", ["pehle_guess"]) === null && B("no idea bro", ["pehle_guess"]) === null && B("no idea", ["pehle_guess"]) === null
+    && B("pakka - i think pay because it is repeated the most", ["pehle_guess"]) === null && B("haan", ["check_q"]) === null && B("A", ["widget_gate"]) === null
+    && B("knew - sequence length will be 3", ["check_q", "check_q"]) === null);
+  check("BANK · no answer, no bank: system talk, his confusion, an empty prompt, garbage input",
+    B("are you following the visualization ruling correctly?") === null && B("samajh nahi aaya") === null && B("") === null && bankDueAt() === null && bankDueAt({ cls: "x", prevMoments: "y" }) === null);
   {
     const dir = mkdtempSync(join(tmpdir(), "study_scope-")); const tx = join(dir, "t.jsonl");
     try {

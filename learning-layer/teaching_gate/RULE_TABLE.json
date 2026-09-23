@@ -13,12 +13,12 @@
   "duplicate": "the same rule as another row"
  },
  "counts": {
-  "mapped": 275,
-  "judge": 133,
+  "mapped": 278,
+  "judge": 131,
   "owner-held": 107,
   "not-per-turn": 108,
   "other-lane": 65,
-  "superseded": 51,
+  "superseded": 50,
   "his-decline": 5,
   "one-time-record": 2
  },
@@ -206,8 +206,8 @@
    "check": "A.emoji"
   },
   "learn:R60": {
-   "exempt": "judge",
-   "why": "CONFLICT, flagged to the architect in the P2 return: learn:R60 says ✅/❌ ride ALONGSIDE the diff (\"both\"), visual:R86 says not both — the gate blocks neither until it is ruled"
+   "check": "A.emoji-diff",
+   "why": "forks row 264 (23 Sep 2026) (2): learn:R60 STANDS, his 7 Sep word \"both\" — the closed four ride ALONGSIDE the diff, never INSTEAD of it; the gate blocks a correction of his answer carried by ❌ with no diff block"
   },
   "learn:R61": {
    "check": "A.emoji"
@@ -691,12 +691,15 @@
    "why": "the two-option axis-end offer is a session-shape judgement"
   },
   "forge:R39": {
-   "exempt": "superseded",
-   "why": "CONFLICT, flagged to the architect in the P2 return: forge row 53b (5 Sep) says per-idea answers are never banked; ruling R5 (23 Sep, P0) makes a gut-word answer bank-due. The gate runs R5 (the later ruling) until the architect rules"
+   "check": [
+    "B.bank",
+    "B.bank-per-idea"
+   ],
+   "why": "forks row 264 (23 Sep 2026) (1): forge row 53b STANDS (his 5 Sep approval) — un-superseded. B.bank is due at the sharp check and the jirah (study_scope.bankDueAt); the Bolo and the interview line are owner-held by forge_session `axis <x> done`; B.bank-per-idea holds the \"only\" side on a check_q reply"
   },
   "forge:R40": {
-   "exempt": "superseded",
-   "why": "CONFLICT, flagged to the architect in the P2 return: forge row 53b (5 Sep) says per-idea answers are never banked; ruling R5 (23 Sep, P0) makes a gut-word answer bank-due. The gate runs R5 (the later ruling) until the architect rules"
+   "check": "B.bank-per-idea",
+   "why": "forks row 264 (23 Sep 2026) (1): un-superseded — a bank on his reply to a check_q is refused; a pehle_guess reply is not held per turn (step-2 cold guesses are reps by the method, and R3 forbids a step key)"
   },
   "forge:R41": {
    "check": "B.bank-verbatim"
@@ -852,8 +855,11 @@
    ]
   },
   "forge:R90": {
-   "exempt": "superseded",
-   "why": "CONFLICT, flagged to the architect in the P2 return: forge row 53b (5 Sep) says per-idea answers are never banked; ruling R5 (23 Sep, P0) makes a gut-word answer bank-due. The gate runs R5 (the later ruling) until the architect rules"
+   "check": [
+    "B.bank-per-idea",
+    "B.askuser"
+   ],
+   "why": "forks row 264 (23 Sep 2026) (1): un-superseded — no capture on a per-idea check_q reply (B.bank-per-idea), no option/tap tool (B.askuser)"
   },
   "forge:R92": {
    "check": "B.bank-verbatim"
@@ -2053,8 +2059,8 @@
    "check": "A.emoji"
   },
   "visual:R86": {
-   "exempt": "judge",
-   "why": "CONFLICT, flagged to the architect in the P2 return: learn:R60 says ✅/❌ ride ALONGSIDE the diff (\"both\"), visual:R86 says not both — the gate blocks neither until it is ruled"
+   "exempt": "superseded",
+   "why": "forks row 264 (23 Sep 2026) (2): superseded by his 7 Sep word (learn:R60, \"both\") — ✅/❌ may ride alongside the diff; the not-both line predates it"
   },
   "visual:R89": {
    "check": "A.diff"
@@ -2456,7 +2462,8 @@
    "why": "the day's close (full-time) — its own sequence, not a teaching turn"
   },
   "howhelearns:R112": {
-   "check": "B.bank"
+   "exempt": "superseded",
+   "why": "forks row 264 (23 Sep 2026) (1): superseded by his 5 Sep word (forge row 53b, \"per-idea typed answers are re-welded in the turn and never banked\") — \"har jawaab ke turant baad bank\" read per idea is withdrawn; the bank is due at the axis's moments plus jirah"
   },
   "howhelearns:R113": {
    "exempt": "judge",
@@ -2795,5 +2802,12 @@
    "exempt": "not-per-turn",
    "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
   }
- }
+ },
+ "revised": [
+  {
+   "at": "2026-09-23",
+   "by": "runner arsenal-ai-fc-15 [63b216], session 279bbdfc",
+   "why": "forks row 264 (23 Sep 2026): six rows re-mapped (learn:R60, visual:R86, forge:R39, forge:R40, forge:R90, howhelearns:R112)"
+  }
+ ]
 }
