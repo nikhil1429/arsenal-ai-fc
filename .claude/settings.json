@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/turn_hook.mjs start"
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/turn_hook.mjs\" start"
           }
         ]
       }
