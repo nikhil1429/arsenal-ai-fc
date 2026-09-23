@@ -1021,7 +1021,10 @@ export function createSitting(deps = {}) {
 
   // HTTP — the doors
   let server = null;
-  function serve(port = PORT, host = "127.0.0.1") {
+  // The bind address is `iface`, never `host`: a parameter named host SHADOWED the host() verb above inside this
+  // closure, so POST /host called the string "127.0.0.1" and every real bind through the door died with a 500
+  // (measured on the G0 build, 23 Sep 19:23 IST, witness_p1 daemon; forks row 259). The door clauses below drive it.
+  function serve(port = PORT, iface = "127.0.0.1") {
     return new Promise((resolve, reject) => {
       server = http.createServer(async (req, res) => {
         const send = (code, obj) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(obj)); };
@@ -1044,7 +1047,7 @@ export function createSitting(deps = {}) {
         } catch (e) { return send(500, { ok: false, error: String(e && e.message || e).slice(0, 200) }); }
       });
       server.on("error", (e) => { if (e && e.code === "EADDRINUSE") { log(`sitting: another sitting brain holds :${port} — standing down.`); resolve({ ok: false, standing_down: true }); } else reject(e); });
-      server.listen(port, host, () => { const p = server.address().port; log(`sitting: THE SITTING BRAIN live on http://${host}:${p}${isOpen() ? ` · resuming open sitting ${S.id} at cursor ${S.cursor}` : ""}`); if (isOpen()) armIdle(); resolve({ ok: true, port: p }); });
+      server.listen(port, iface, () => { const p = server.address().port; log(`sitting: THE SITTING BRAIN live on http://${iface}:${p}${isOpen() ? ` · resuming open sitting ${S.id} at cursor ${S.cursor}` : ""}`); if (isOpen()) armIdle(); resolve({ ok: true, port: p }); });
     });
   }
   function stop() { return new Promise((resolve) => { if (idleTimer) clearTimeout(idleTimer); if (session) { try { session.kill(); } catch { } } if (!server) return resolve(); server.close(() => resolve()); }); }
@@ -1651,6 +1654,29 @@ async function selftest() {
       await g1.close({ reason: "his_word" });
       assert("G0 · after close nobody is in scope, the host included", sc.studyScope({ payload: { session_id: E }, sitting: readJson(F.sitting()) }).study === false);
       await g1.stop();
+    }
+    // ── 13d. G0 THROUGH THE DOORS (forks row 259) — 13c drives the verbs on the object, which stayed green while
+    // POST /host was dead in the live daemon (serve's `host` parameter shadowed the verb). These go over HTTP.
+    {
+      const H = "11111111-2222-3333-4444-555555555555", E = "99999999-8888-7777-6666-555555555555";
+      let t = Date.parse("2026-09-23T13:00:00Z");
+      const g2 = createSitting({ ...baseDeps, now: () => new Date(t), session: () => { throw new Error("must not spawn for a code sitting"); } });
+      const srv2 = await g2.serve(0);
+      const P2 = (p, b) => fetch(`http://127.0.0.1:${srv2.port}${p}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b) }).then(async (r) => ({ code: r.status, body: await r.json() }));
+      const bad = await P2("/host", { session: "not-an-id" });
+      assert("G0 DOOR · POST /host with a planted NON-id → 400 from the host verb itself ('host needs --session'), nothing pending",
+        bad.code === 400 && /host needs --session/.test(String(bad.body.error)) && (await P2("/open", { surface: "code" })).body.host_session_id === null, JSON.stringify(bad));
+      await g2.close({ reason: "his_word" });
+      const good = await P2("/host", { session: H, transcript: "C:/t/h.jsonl", by: "rails pretooluse" });
+      const op = await P2("/open", { surface: "code" });
+      assert("G0 DOOR · POST /host with a real id → 200 PENDING, and the next POST /open binds it (the rails hand-off path, end to end over HTTP)",
+        good.code === 200 && good.body.ok && good.body.pending && op.body.ok && op.body.host_session_id === H && g2.state.host_source === "hook-payload", JSON.stringify({ good, op: op.body.host_session_id }));
+      t += 60000;
+      const tOther = await P2("/touch", { session: E });
+      const tHost = await P2("/touch", { session: H });
+      assert("G0 DOOR · POST /touch from a non-host is a no-op; from the host it moves last_turn_at",
+        tOther.code === 200 && tOther.body.touched === false && tHost.code === 200 && tHost.body.touched === true && tHost.body.last_turn_at === new Date(t).toISOString());
+      await g2.close({ reason: "his_word" }); await g2.stop();
     }
     // ── 13a. ROW 68 (d), 6 Sep 2026 — THE JUDGE FIRES BY CODE OFF THE GRADE QUEUE ──────
     // A code sitting banks through the capture CLI, never through the turn door, so its own
