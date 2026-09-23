@@ -133,7 +133,7 @@ export function render(g) {
   push("");
   push("THE COMMANDS (owners only; you type them, he never does):");
   push(`  bank    node scripts/gaffer_brain.mjs capture voice_rep ${ca} --axis ${ax} --gut knew|shaky|guessed --asked "<verbatim>" --said "<his words>" --surface code [--latency_ms <from the hook line, verbatim, or OMIT>] [--probe recall|reconstruct|defend|novel|negative_space|cross_axis] [--register interview]`);
-  push("          three banked moments an axis: the sharp check (declare `moment sharp_check`, no gut trio) · the Bolo · the interview line. Say «bank mein gaya · axis " + ax + " · judge shaam ko». Never a verdict, never seconds.");
+  push("          three banked moments an axis: the sharp check (declare `moment sharp_check`, gut trio pehle) · the Bolo · the interview line. Say «bank mein gaya · axis " + ax + " · judge shaam ko». Never a verdict, never seconds.");
   push('  pointer node scripts/forge_session.mjs pointer "<the exact unanswered micro-question + gut-word ask + where in the axis>"   ← at EVERY stop, before anything else');
   push(`  axis    node scripts/forge_session.mjs axis ${ax} done   (gate: ≥1 Hinglish bank + ≥1 --register interview since the axis opened)  ·  contract: node scripts/forge_session.mjs contract`);
   push(`  moments node scripts/forge_session.mjs moment ${MOMENTS.join("|")}   (only these ${MOMENTS.length} are legal question-moments; the list is the pacer's own, forks row 266)`);

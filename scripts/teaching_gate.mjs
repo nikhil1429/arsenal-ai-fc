@@ -76,7 +76,7 @@ export const CHECKS = Object.freeze({
   "A.sections": { fam: "A", fix: "ek heading YA ek rule — dono nahi, aur ek se zyada nahi" },
   "A.one-question": { fam: "A", fix: "sirf EK question sentence — baaki sawaal hatao (\"haan ya nahi?\" usi ka hissa hai; \"Aur kyun?\" doosra sawaal hai)" },
   "A.question-last": { fam: "A", fix: "check-question AAKHRI ho — uske baad sirf EK line: gut trio (pehle_guess / jirah par) ya khali skeleton \"maine socha ___, phir ___\"" },
-  "A.gut-by-moment": { fam: "A", fix: "gut-word moment se chalta hai: pehle_guess / jirah → aakhri line \"pehle gut-word: pakka / shayad / pata nahi\" · check_q → koi gut-word nahi, sawaal \"samajh aaya — haan ya nahi\" par khatam · sharp_check → koi gut trio nahi" },
+  "A.gut-by-moment": { fam: "A", fix: "gut-word moment se chalta hai: pehle_guess / sharp_check / jirah → aakhri line \"pehle gut-word: pakka / shayad / pata nahi\" · check_q → koi gut-word nahi, sawaal \"samajh aaya — haan ya nahi\" par khatam" },
   "A.gut-trio": { fam: "A", fix: "gut-word maango to teeno naam likho: pakka / shayad / pata nahi (knew / shaky / guessed kabhi nahi)" },
   "A.new-terms": { fam: "A", fix: "ek message mein sirf EK naya `backticked` naam — baaki agle turn ke liye rakho" },
   "A.neev-pehle": { fam: "A", fix: "naya naam usi line par colon form mein kholo: `X`: … (pehle kholo, phir use karo)" },
@@ -466,9 +466,9 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
       if (!okTail) red("A.question-last", `${tail.length} line(s) after the last question: "${tail.join(" / ").slice(0, 80)}"`);
     }
     const hasTrio = TRIO_RX.test(text), gutAsk = GUT_ASK.test(prose(text, { keepQuotes: false }));
-    if ((moment === "pehle_guess" || moment === "jirah") && !hasTrio) red("A.gut-by-moment", `moment ${moment} needs the trio pakka / shayad / pata nahi as the last line`);
+    // the trio rides pehle_guess, the sharp check and jirah (row 254 (3)(b) as narrowed by forks row 268)
+    if (GUT_BEARING_MOMENTS.includes(moment) && !hasTrio) red("A.gut-by-moment", `moment ${moment} needs the trio pakka / shayad / pata nahi as the last line`);
     if (moment === "check_q" && (hasTrio || gutAsk)) red("A.gut-by-moment", "moment check_q forbids the gut-word ask");
-    if (moment === "sharp_check" && hasTrio) red("A.gut-by-moment", "moment sharp_check carries no gut trio (row 254 (3)(b): the trio is at pehle_guess and once before jirah)");
     if (moment === "check_q" && !(/samajh\s+aaya/i.test(text) && /haan\s+ya\s+na(hi)?/i.test(text))) red("A.gut-by-moment", "a check_q question ends \"samajh aaya — haan ya nahi\"");
     if ((gutAsk && !hasTrio) || ENGLISH_TRIO.test(prose(text))) red("A.gut-trio", "a gut-word ask that does not name pakka / shayad / pata nahi");
     // the name lane (R4 + learn:R21)
@@ -567,8 +567,8 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
     }
     // ── B · the duties ──
     // THE BANK (forks row 264 (1)): forge row 53b STANDS — due at the axis's banked moments plus jirah, never
-    // per idea. ONE predicate with the skeleton's [BANK] (study_scope.bankDueAt): a reply to the jirah the last
-    // turn declared, or a gut-word at the sharp check. The Bolo and the interview line are owner-held
+    // per idea. ONE predicate with the skeleton's [BANK] (study_scope.bankDueAt): a reply to the jirah or the
+    // sharp check the last turn declared (both carry the trio, row 268). The Bolo and the interview line are owner-held
     // (forge_session `axis <x> done` refuses without them).
     const reps = T.turn.filter((b) => shell(b) && VOICE_REP.test(cmdOf(b)));
     const due = bankDueAt({ cls, prevMoments });
@@ -863,12 +863,13 @@ async function selftest() {
   const noRan = run("ok", TURN_OK, GOOD.replace("pointer set · check_q declared\n", ""));
   assert("v2 §3 (a) · tools ran and the first line names none → A.ran-line", has(noRan, "A.ran-line"));
   // 9 — the bank duty (R5) + latency
-  const SHARP = [BASH("node scripts/forge_session.mjs moment sharp_check"), TXT("Axis c ka sharp check: pehla merge kaunsa pair hoga, aur kyun?")];
+  const SHARP = [BASH("node scripts/forge_session.mjs moment sharp_check"), TXT("Axis c ka sharp check: pehla merge kaunsa pair hoga, aur kyun?\npehle gut-word: pakka / shayad / pata nahi")];
   const ans = run("pakka - pay kyunki woh sabse zyada repeat hota hai", TURN_OK, GOOD, { prev: SHARP });
   const absent = run("pakka - pay kyunki woh sabse zyada repeat hota hai", TURN_OK, GOOD);
   const gutless = run("pay, kyunki woh sabse zyada repeat hota hai", TURN_OK, GOOD, { prev: SHARP });
-  assert("row 266 · his gut-word reply to a DECLARED sharp_check with no voice_rep → B.bank; the same words to an undeclared question (the retired absence reading) are not due; a gut-less reply is not made due (gaffer_brain refuses a bank with no --gut — the architect's)",
-    has(ans, "B.bank") && !has(absent, "B.bank") && !has(gutless, "B.bank"), JSON.stringify([ans.reds, absent.reds, gutless.reds]));
+  const ackOnly = run("ok", TURN_OK, GOOD, { prev: SHARP });
+  assert("rows 266 / 268 · his reply to a DECLARED sharp_check with no voice_rep → B.bank, a gut-word one or not (the sharp check carries the trio like jirah, row 268); the same words to an undeclared question (the retired absence reading), or a bare 'ok', are not due",
+    has(ans, "B.bank") && has(gutless, "B.bank") && !has(absent, "B.bank") && !has(ackOnly, "B.bank"), JSON.stringify([ans.reds, gutless.reds, absent.reds, ackOnly.reds]));
   const REP = "node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut knew --asked \"Pehla merge kaunsa pair?\" --said \"pay kyunki woh sabse zyada repeat hota hai\" --surface code --latency_ms 204218";
   const PREV_Q = [BASH("node scripts/forge_session.mjs moment jirah"), TXT("Jirah: Pehla merge kaunsa pair?\npehle gut-word: pakka / shayad / pata nahi")];
   const banked = run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP), ...TURN_OK], "bank mein gaya · axis c · judge shaam ko · pointer set\n" + GOOD.split("\n").slice(1).join("\n"), { hook: "latency: 204218 ms since your last message ended", prev: PREV_Q });
@@ -912,10 +913,10 @@ async function selftest() {
   const ask = run("ok", [TOOL("AskUserQuestion", { questions: [] }), ...TURN_OK], "set · " + GOOD);
   assert("AskUserQuestion in a study turn → B.askuser", has(ask, "B.askuser"));
   const kinds = run("ok", [BASH("node scripts/forge_session.mjs moment quiz"), BASH("node scripts/forge_session.mjs pointer x")], GOOD);
-  const sharpKind = run("ok", [BASH("node scripts/forge_session.mjs moment sharp_check"), BASH("node scripts/forge_session.mjs pointer x")], "pointer set\n**Tokenization › axis c › pair-merge**\nAxis c ka sharp check: \"tea tea teen\" mein pehla merge kaunsa pair hoga, aur kyun?");
-  const sharpTrio = run("ok", [BASH("node scripts/forge_session.mjs moment sharp_check"), BASH("node scripts/forge_session.mjs pointer x")], "pointer set\n**Tokenization › axis c › pair-merge**\nAxis c ka sharp check: \"tea tea teen\" mein pehla merge kaunsa pair hoga?\npehle gut-word: pakka / shayad / pata nahi");
-  assert("C · the fence, planted BOTH ways (row 266): a moment outside the five → B.moment-kind; sharp_check is legal and clean; a gut trio on it → A.gut-by-moment (row 254 (3)(b))",
-    has(kinds, "B.moment-kind") && sharpKind.reds.length === 0 && has(sharpTrio, "A.gut-by-moment") && !has(sharpTrio, "B.moment-kind"), JSON.stringify([sharpKind.reds, sharpKind.why, sharpTrio.reds]));
+  const sharpTrio = run("ok", [BASH("node scripts/forge_session.mjs moment sharp_check"), BASH("node scripts/forge_session.mjs pointer x")], "pointer set\n**Tokenization › axis c › pair-merge**\nAxis c ka sharp check: \"tea tea teen\" mein pehla merge kaunsa pair hoga, aur kyun?\npehle gut-word: pakka / shayad / pata nahi");
+  const sharpBare = run("ok", [BASH("node scripts/forge_session.mjs moment sharp_check"), BASH("node scripts/forge_session.mjs pointer x")], "pointer set\n**Tokenization › axis c › pair-merge**\nAxis c ka sharp check: \"tea tea teen\" mein pehla merge kaunsa pair hoga, aur kyun?");
+  assert("C · the fence, planted BOTH ways (rows 266 / 268): a moment outside the five → B.moment-kind; sharp_check WITH the trio as its last line is legal and clean; a sharp_check with no trio → A.gut-by-moment (row 254 (3)(b) narrowed by row 268)",
+    has(kinds, "B.moment-kind") && sharpTrio.reds.length === 0 && has(sharpBare, "A.gut-by-moment") && !has(sharpBare, "B.moment-kind"), JSON.stringify([sharpTrio.reds, sharpTrio.why, sharpBare.reds]));
   const w = run("ok", [TOOL("mcp__visualize__show_widget", { widget_code: "<div style='font-family:Arial'><button>aage</button></div><script>setInterval(()=>{},9)</script>" }), ...TURN_OK], "widget dikhaya · " + GOOD);
   assert("VISUAL_CONTRACT · a widget without Lexend / 34em, with autoplay and a half stepper → B.widget", has(w, "B.widget"));
   const j2 = run("ok", [TOOL("mcp__organism-memory__judge_round", {}), ...TURN_OK], "set · " + GOOD, { before: [...BOOT, TOOL("mcp__organism-memory__judge_round", {})] });
@@ -965,7 +966,7 @@ async function selftest() {
     const turns = {
       check_q: run("ok", moment("check_q"), `${ranLine}\n${lesson}\nToh "tea tea teen" mein pehla merge kaunsa pair hoga, ${checkEnd}?`),
       bank: run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP), ...moment("check_q")], `${bankLine} · ${ranLine}\n${lesson}\nToh "tea tea teen" mein pehla merge kaunsa pair hoga, ${checkEnd}?`, { prev: SHARP }),
-      sharp_check: run("ok", moment("sharp_check"), `${ranLine}\n${position}\nAxis c ka sharp check: "tea tea teen" mein pehla merge kaunsa pair hoga, aur kyun?`),
+      sharp_check: run("ok", moment("sharp_check"), `${ranLine}\n${position}\nAxis c ka sharp check: "tea tea teen" mein pehla merge kaunsa pair hoga, aur kyun?\n${gutLine}`),
       pehle_guess: run("ok", moment("pehle_guess"), `${ranLine}\n${position}\nTumhara guess: "tea tea" mein kaunsa pair pehle judega?\n${gutLine}`),
       widget_gate: run("ok", moment("widget_gate"), `${ranLine}\n${position}\n"tea tea" mein kaunsa pair pehle judega?\n${blankLine}`),
     };

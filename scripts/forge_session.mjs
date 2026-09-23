@@ -123,8 +123,9 @@ const STEPS = [
 ];
 // The legal question-moments (PROJECT_OS: "yeh quiz-dump nahi hai"). FIVE since forks row 266 (23 Sep 2026):
 // `sharp_check` is the axis-close sharp check — his reply to it is BANK-DUE (forge row 53b's banked moment,
-// given a name the gate can key on instead of an absence); it carries NO gut trio (row 254 (3)(b): the trio is
-// at pehle_guess and once immediately before jirah). check_q stays the per-idea check, never bank-due.
+// given a name the gate can key on instead of an absence); it carries the gut trio (forks row 268: row 254 (3)(b)
+// narrows to the trio at pehle_guess, at the sharp check, and once immediately before jirah — his 5 Sep "gut pehle"
+// in the forge REFERENCE step 3). check_q stays the per-idea check, trio-less, never bank-due.
 // EXPORTED: this list is the one home; the gate's fence (teaching_gate MOMENT_KINDS) is asserted equal to it.
 export const MOMENTS = ["pehle_guess", "widget_gate", "check_q", "jirah", "sharp_check"];
 const AXES = "abcdefghi".split("");

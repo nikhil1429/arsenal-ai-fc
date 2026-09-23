@@ -263,9 +263,10 @@ export const MAX_SKELETON_LINES = 12;
 // the case list below, which fails if this drifts more than 120 B above the measurement.
 // Re-derived under forks row 264 (3): the ALWAYS line's "≤ 2 words · no italics" and the [BANK] line's bank
 // line (the text the gate's A.bank-line reads) and [POSITION]'s "axis <x>" moved the worst case 2,420 → 2,509 B;
-// forks row 266's fifth kind (sharp_check on [EK CHECK] and its no-trio line, the [BANK] reason) → 2,599 B.
+// forks row 266's fifth kind (sharp_check on [EK CHECK] and its no-trio line, the [BANK] reason) → 2,599 B;
+// forks row 268 folds sharp_check into the trio line (its separate no-trio clause gone) → 2,586 B.
 // The 12-line cap stands.
-export const SKELETON_BUDGET_BYTES = 2615;   // measured worst 2,599 B (step 4 + [BANK] "answers the sharp check…" + four long NEEV names), 23 Sep 2026
+export const SKELETON_BUDGET_BYTES = 2600;   // measured worst 2,586 B (step 4 + [BANK] "answers the sharp check…" + four long NEEV names), 23 Sep 2026
 export const GUT_TRIO = "pakka / shayad / pata nahi";
 // Which slot carries which teaching_contract rule (teaching_terms.mjs SKELETON_CARRIED). The cases
 // assert every carried id has a slot here AND that slot's label is on the rendered skeleton.
@@ -321,7 +322,7 @@ export function barLines(session, turn = 0, unopened = [], ctx = {}) {
   }
   if (step === null || (step >= 2 && step <= 9)) {
     L.push(`  [EK CHECK] exactly ONE question sentence and it is the LAST one ("haan ya nahi?" restating it is part of it; "Aur kyun?" is a second) — declare its moment THIS turn: node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah|sharp_check`);
-    L.push(`    check_q → end "samajh aaya — haan ya nahi", NO gut trio · sharp_check (the axis-close check) → NO trio, his answer is banked · pehle_guess / jirah → ONE line after it: "pehle gut-word: ${GUT_TRIO}" · otherwise at most ONE blank line after it: "maine socha ___, phir ___"`);
+    L.push(`    check_q → end "samajh aaya — haan ya nahi", NO gut trio · pehle_guess / sharp_check (the axis-close check, his answer is banked) / jirah → ONE line after it: "pehle gut-word: ${GUT_TRIO}" · otherwise at most ONE blank line after it: "maine socha ___, phir ___"`);
   }
   L.push(`  ⛔ ALWAYS — ${HARD_STOPS.replace(/^ALWAYS — /, "")} · Hinglish = English content words on Hindi glue (never akshar · shabd · niyam · sira) · address him as "tum", never the familiar singular · ONE \`\`\`diff (+ sahi / - galat, ≤ 4 lines) only at a correction · emoji only ✅ ❌ ⚠ ⭐ (≤ 2, ≤ 1 a line) · bold ≤ 1 a paragraph, ≤ 2 words · no italics`);
   L.push(`  [PARK] his message is about the system or tools, not the concept → ONE line naming it parked + the pointer question back, nothing else`);
@@ -578,8 +579,9 @@ export function barSelfCheck() {
       barLines(null).length === 0 && barLines({}).length === 0 && barLines({ step: 3 }).length === 0 && barLines({ ...S3, closed_at: "x" }).length === 0 && barLines("junk").length === 0);
     check("skeleton · step 3 fills in the ORDER: tools first → position → DUKAAN → ASLI NAAM → TECHNICAL LINE → EK CHECK → ALWAYS → PARK",
       ["0 TOOLS FIRST", "[POSITION]", "[DUKAAN]", "[ASLI NAAM]", "[TECHNICAL LINE]", "[EK CHECK]", "⛔ ALWAYS", "[PARK]"].every((m, i, a) => j.indexOf(m) >= 0 && (i === 0 || j.indexOf(a[i - 1]) < j.indexOf(m))), j.slice(0, 300));
-    check("skeleton · R3 MOMENT-KEYED: check_q ends 'samajh aaya — haan ya nahi' with NO gut trio; pehle_guess / jirah carry the trio as the one line after; the moment is declared THIS turn",
-      /check_q → end "samajh aaya — haan ya nahi", NO gut trio/.test(j) && /pehle_guess \/ jirah → ONE line after it: "pehle gut-word: pakka \/ shayad \/ pata nahi"/.test(j) && /declare its moment THIS turn: node scripts\/forge_session\.mjs moment/.test(j));
+    check("skeleton · R3 MOMENT-KEYED: check_q ends 'samajh aaya — haan ya nahi' with NO gut trio; pehle_guess / sharp_check / jirah carry the trio as the one line after (forks row 268); the moment is declared THIS turn",
+      /check_q → end "samajh aaya — haan ya nahi", NO gut trio/.test(j) && /pehle_guess \/ sharp_check \([^)]*\) \/ jirah → ONE line after it: "pehle gut-word: pakka \/ shayad \/ pata nahi"/.test(j)
+      && !/NO trio/.test(j) && /declare its moment THIS turn: node scripts\/forge_session\.mjs moment/.test(j));
     check("skeleton · R2 ONE question SENTENCE, the last; the restatement belongs to it, 'Aur kyun?' is a second; at most ONE trailing line",
       /exactly ONE question sentence and it is the LAST one/.test(j) && /"Aur kyun\?" is a second/.test(j) && /at most ONE blank line after it/.test(j));
     check("skeleton · R1 DHEEMA structurally: ≤ 1 new backticked name, ≤ 4 new units, one label set", /at most ONE new `backticked` real name/.test(j) && /at most 4 new units/.test(j) && (j.match(/\[DUKAAN\]/g) || []).length === 1);
@@ -596,9 +598,10 @@ export function barSelfCheck() {
       /bold ≤ 1 a paragraph, ≤ 2 words · no italics/.test(j));
     // forks rows 264 (1) / 266: the bank is due at the declared jirah and the declared sharp_check, never per idea (study_scope.bankDueAt)
     const AL = (from, to, sid = "S") => ({ prompt: { session_id: sid, moments_by_kind: from }, stop: { session_id: sid, moments_by_kind: to } });
-    check("skeleton · bankDue (rows 264 (1) / 266): a gut-word reply to the sharp_check, or a reply to the jirah, THIS session's last turn declared; an undeclared question, a per-idea moment, another session's turn, or no rise, is not",
+    check("skeleton · bankDue (rows 264 (1) / 266 / 268): a reply to the sharp_check or the jirah THIS session's last turn declared, a gut-word one or not; an undeclared question, a per-idea moment, another session's turn, or no rise, is not",
       /sharp check/.test(bankDue({ prompt: "pakka — merge sabse common pair ka hota hai", sessionId: "S", auditLast: AL({ sharp_check: 0 }, { sharp_check: 1 }) }) || "")
       && /sharp check/.test(bankDue({ prompt: "Shayad: 3", sessionId: "S", auditLast: AL({}, { sharp_check: 1 }) }) || "")
+      && /sharp check/.test(bankDue({ prompt: "3 tokens", sessionId: "S", auditLast: AL({}, { sharp_check: 1 }) }) || "")
       && bankDue({ prompt: "pakka — merge sabse common pair ka hota hai" }) === null
       && bankDue({ prompt: "pakka nahi pata yaar" }) === null
       && /jirah/.test(bankDue({ prompt: "3 tokens", sessionId: "S", auditLast: AL({ jirah: 0, check_q: 3 }, { jirah: 1, check_q: 3 }) }) || "")

@@ -202,7 +202,8 @@ export async function unboundMain() {
 //   gut        the gut-word he opened with (the trio, the retired English trio, and the typos he
 //              actually types: "shaya -"), or one given as "gut word - pakka" mid-message
 //   answer     a gut-word, or a reply to the gut-bearing moment the last teacher turn declared
-//              (pehle_guess / jirah — ruling R3 puts the trio exactly there, so the reply is graded)
+//              (pehle_guess / jirah / sharp_check — ruling R3, narrowed by forks row 268, puts the trio
+//              exactly there, so the reply is graded)
 //   confusion  HIS OWN not-understanding, first person ("samajh nahi aaya", "understood nothing",
 //              "did not understand the question") — never an answer about a model ("LLM does not
 //              understand any language" is db82184b t3's ANSWER, one of P0's six false hits)
@@ -222,7 +223,9 @@ const ACK_ONLY = /^(ok|okay|haan|ha|han|yes|hmm+|theek|thik|chalo|done|next|aage
 const CONFUSED = /(samajh|samjh|smjh|smajh)\s*(nahi|nhi|nai|na)\s*(aa?ya|aa?ye|aa?\s*raha|aa?\s*rha|aa?\s*rahi)|\bnahi\s+samjh?a\b|\bunderstood\s+nothing\b|\bdid\s*n[o']?t\s+(get|understand)\b|\b(i|i\s+am|i'm)\s+(not\s+understanding|confused|lost)\b|\bi\s+do\s*n[o']?t\s+(get|understand)\b|\bclear\s+nahi\s+(hua|hai)\b|\bkuch\s+(samajh|smjh)\s+nahi\b/i;
 const SYSTEM_TALK = /(?:^|\s)\/(learn|forge)\b|\b(ruling|rules?|notes?|sessions?|hooks?|widgets?|visuali[sz]ations?|pacer|organism|system|contract|skill|hinglish|hindi|gut[\s-]*words?|restart|re-start|new\s+session|keep\s+yourself\s+updated|mistakes?)\b/i;
 const CLOSING = /\b(done\s+for\s+today|full\s+time|aaj\s+ke\s+liye\s+bas|band\s+karo|let'?s\s+stop|stop\s+here)\b/i;
-export const GUT_BEARING_MOMENTS = Object.freeze(["pehle_guess", "jirah"]);
+// forks row 268 (branch A): the sharp check carries the trio too — his 5 Sep study shape ("the ONE sharp check —
+// gut pehle", forge REFERENCE step 3) and the bank door's GUT-WORD LAW, both later than the 30 Aug act
+export const GUT_BEARING_MOMENTS = Object.freeze(["pehle_guess", "jirah", "sharp_check"]);
 export function classifyPrompt(text, { prevMoments = [] } = {}) {
   const raw = String(text || "");
   const t = raw.replace(/<\/?(command-message|command-name|command-args|pasted_content)[^>]*>/g, " ").replace(/\s+/g, " ").trim();
@@ -234,8 +237,8 @@ export function classifyPrompt(text, { prevMoments = [] } = {}) {
   const confusion = CONFUSED.test(t) || nahiToCheck;
   const closing = CLOSING.test(t);
   const system = closing || SYSTEM_TALK.test(t.replace(GUT_INLINE, " "));
-  // a reply to a gut-bearing moment, or to the sharp check (row 266: a graded moment with no trio), is his answer
-  const replyToGradedMoment = (Array.isArray(prevMoments) ? prevMoments : []).some((k) => GUT_BEARING_MOMENTS.includes(k) || k === "sharp_check");
+  // a reply to a gut-bearing moment (the sharp check among them since row 268) is his answer
+  const replyToGradedMoment = (Array.isArray(prevMoments) ? prevMoments : []).some((k) => GUT_BEARING_MOMENTS.includes(k));
   const answer = !!gut || (replyToGradedMoment && !!t && !ACK_ONLY.test(t) && !confusion && !system);
   const question = /\?/.test(t) && !answer;
   // confusion outranks system talk: a33327c2 t6 is "understood nothing … always tell me the gut words" — the
@@ -249,11 +252,10 @@ export function classifyPrompt(text, { prevMoments = [] } = {}) {
 // axis's banked moments plus jirah, NEVER per idea. Each banked moment the gate reads has a NAME the last teacher
 // turn declared — never an absence (row 266: an undeclared question is a quiz-dump under R2 (c), not a check):
 //   JIRAH       — `moment jirah`, and his message is an answer;
-//   SHARP CHECK — `moment sharp_check` (row 266, the fifth legal kind), and his message is an answer that carries
-//                 HIS gut-word. gaffer_brain's own contract refuses a bank without one ("--gut is required …
-//                 committed BEFORE the answer. GUT-WORD LAW: no gut-word, no rep"), and the sharp check carries
-//                 no trio (row 254 (3)(b)) — so a gut-less reply to it cannot be banked lawfully and is NOT made
-//                 due here: that case is the architect's (queue, 23 Sep), never filled by a typed --gut.
+//   SHARP CHECK — `moment sharp_check` (row 266, the fifth legal kind), and his message is an answer. Row 268
+//                 (branch A) gives it the trio, like jirah, so every reply to it is due: gaffer_brain's own contract
+//                 wants his gut-word BEFORE the answer ("GUT-WORD LAW: no gut-word, no rep"), and the trio line is
+//                 where he commits it.
 // The Bolo and the English interview line are held by their owner: forge_session's `axis <x> done` refuses
 // without ≥ 1 Hinglish bank and ≥ 1 --register interview since the axis opened.
 // A reply to a per-idea moment (pehle_guess · check_q · widget_gate) is re-welded, never banked (forge:R40 / R90):
@@ -263,7 +265,7 @@ export function bankDueAt({ cls = null, prevMoments = [] } = {}) {
   const prev = Array.isArray(prevMoments) ? prevMoments : [];
   const c = cls && typeof cls === "object" ? cls : {};
   if (prev.includes("jirah") && c.answer) return "answers the jirah your last turn declared";
-  if (prev.includes("sharp_check") && c.answer && c.gut) return "answers the sharp check your last turn declared";
+  if (prev.includes("sharp_check") && c.answer) return "answers the sharp check your last turn declared";
   return null;
 }
 
@@ -351,7 +353,7 @@ export function scopeSelfCheck() {
     && K("before we start, can you please tell me how are you taking my notes topic and session agnostically when i start learning by command /learn ??").kind === "system"
     && K("bruh why don't you keep yourself updated with the entire /learn first on how to do it, you keep on doing mistakes").kind === "system"
     && K("Hi bro, i am starting my learning after 1 day and i forgot what were we doing?? can we please re-start?").kind === "system");
-  check("CLASSIFY · a reply to a gut-bearing moment (pehle_guess / jirah) is an answer; to check_q, or a bare 'ok', it is not (db82184b t10 'A')",
+  check("CLASSIFY · a reply to a gut-bearing moment (pehle_guess / jirah / sharp_check) is an answer; to check_q, or a bare 'ok', it is not (db82184b t10 'A')",
     K("A", { prevMoments: ["pehle_guess"] }).kind === "answer" && K("word level issue is - vocab will be of a very big size", { prevMoments: ["jirah"] }).answer === true
     && K("A", { prevMoments: ["check_q"] }).answer === false && K("ok", { prevMoments: ["pehle_guess"] }).answer === false && K("A").answer === false);
   check("CLASSIFY · his \"nahi\" to a check_q is HIS confusion (forge:R140); \"nahi\" with no check_q before it is not",
@@ -362,11 +364,12 @@ export function scopeSelfCheck() {
   const B = (t, prev = []) => bankDueAt({ cls: K(t, { prevMoments: prev }), prevMoments: prev });
   check("BANK · a reply to a declared jirah is due, a gut-word one or not; a bare 'ok' to it is not",
     /jirah/.test(B("word level issue is - vocab will be of a very big size", ["jirah"]) || "") && /jirah/.test(B("pakka - pay", ["jirah"]) || "") && B("ok", ["jirah"]) === null);
-  check("BANK · row 266: a reply carrying HIS gut-word to a declared sharp_check is due — and it is his answer (the classifier), whatever it opens with",
+  check("BANK · rows 266 / 268: a reply to a declared sharp_check is due, a gut-word one or not (it carries the trio like jirah) — and it is his answer (the classifier), whatever it opens with; a bare 'ok' to it is not",
     /sharp check/.test(B("shaya - word level tokenization - out of vocab issue", ["sharp_check"]) || "") && /sharp check/.test(B("no idea", ["sharp_check"]) || "")
-    && K("the vocab would be huge, so OOV", { prevMoments: ["sharp_check"] }).answer === true);
-  check("BANK · row 266 retires the ABSENCE reading: a gut-word to a question that declared NO moment is not due (that question is a quiz-dump red, R2 (c)); a gut-less reply to sharp_check is not made due (gaffer_brain refuses a bank with no --gut; the architect's)",
-    B("shaya - word level tokenization - out of vocab issue") === null && B("no idea") === null && B("the vocab would be huge, so OOV", ["sharp_check"]) === null);
+    && /sharp check/.test(B("the vocab would be huge, so OOV", ["sharp_check"]) || "") && B("ok", ["sharp_check"]) === null
+    && K("the vocab would be huge, so OOV", { prevMoments: ["sharp_check"] }).answer === true && GUT_BEARING_MOMENTS.includes("sharp_check"));
+  check("BANK · row 266 retires the ABSENCE reading: a gut-word to a question that declared NO moment is not due (that question is a quiz-dump red, R2 (c))",
+    B("shaya - word level tokenization - out of vocab issue") === null && B("no idea") === null && B("the vocab would be huge, so OOV") === null);
   check("BANK · a reply to a PER-IDEA moment is never due, gut-word or not — db82184b t3 t4 t5 t11 (P0's unbanked pehle_guess replies) and a check_q 'haan'",
     B("pakka - no because a LLM model does not understand", ["pehle_guess"]) === null && B("no idea bro", ["pehle_guess"]) === null && B("no idea", ["pehle_guess"]) === null
     && B("pakka - i think pay because it is repeated the most", ["pehle_guess"]) === null && B("haan", ["check_q"]) === null && B("A", ["widget_gate"]) === null
