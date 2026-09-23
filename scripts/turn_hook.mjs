@@ -65,7 +65,7 @@
 //   --time → ONE line on STDERR (`turn_hook: <seq> · <n> organ(s) · <ms> ms`);
 //   stdout stays exactly the callees'.
 // ============================================================================
-import { readFileSync, mkdtempSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { readFileSync, mkdtempSync, writeFileSync, rmSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -360,8 +360,28 @@ function selftest() {
     const ups = cmds("UserPromptSubmit"), ss = cmds("SessionStart");
     assert("WIRING — UserPromptSubmit = exactly [afferent-post, turn_hook prompt] (5 processes → 2)",
       ups.length === 2 && ups[0] === "node hooks/afferent-post.mjs" && ups[1] === "node scripts/turn_hook.mjs prompt", JSON.stringify(ups));
-    assert("WIRING — SessionStart = exactly [turn_hook start] (5 processes → 1)",
-      ss.length === 1 && ss[0] === "node scripts/turn_hook.mjs start", JSON.stringify(ss));
+    assert("WIRING — SessionStart = exactly [turn_hook start], anchored (5 processes → 1)",
+      ss.length === 1 && ss[0] === 'node "$CLAUDE_PROJECT_DIR/scripts/turn_hook.mjs" start', JSON.stringify(ss));
+    // THE ANCHOR (forks row 252, 23 Sep 2026, his "Haan, abhi kar do"). A relative hook
+    // command resolves against the SESSION'S current directory, which moves whenever a
+    // session cd's into another folder — and then the hook is silently skipped, the
+    // rails and the claims gate included. The Claude Code hooks doc: shell form runs
+    // under Git Bash on Windows and exports CLAUDE_PROJECT_DIR (the folder the session
+    // started in); quote the placeholder. ONE hook first (SessionStart) until his next
+    // fresh session proves the form; the other eight join this clause when they move.
+    const ANCHORED = /^node "\$CLAUDE_PROJECT_DIR\/([^"\s]+)"(?: [a-z][a-z0-9-]*)?$/;
+    // The two folders a hook may name, listed at literal paths — a dynamic existsSync would
+    // be an unresolved sink, and xray's per-organ budget only goes down (xray.mjs:1331).
+    const list = (read, d) => { try { return read().map((f) => `${d}/${f}`); } catch { return []; } };
+    const hookFiles = new Set([...list(() => readdirSync(join(ROOT, "scripts")), "scripts"), ...list(() => readdirSync(join(ROOT, "hooks")), "hooks")]);
+    const anchorOf = (cmd) => { const m = ANCHORED.exec(String(cmd || "")); return m ? { rel: m[1], exists: hookFiles.has(m[1]) } : null; };
+    assert("ANCHOR plant — a relative command is refused", anchorOf("node scripts/turn_hook.mjs start") === null);
+    assert("ANCHOR plant — an unquoted placeholder is refused (the doc's rule: quote it)", anchorOf("node $CLAUDE_PROJECT_DIR/scripts/turn_hook.mjs start") === null);
+    assert("ANCHOR plant — an anchored path to a file that does not exist is caught", (anchorOf('node "$CLAUDE_PROJECT_DIR/scripts/no_such_organ.mjs" start') || {}).exists === false);
+    assert("ANCHOR plant — an anchored path to a real file passes", (anchorOf('node "$CLAUDE_PROJECT_DIR/scripts/turn_hook.mjs" start') || {}).exists === true);
+    const ssAnchor = anchorOf(ss[0]);
+    assert("ANCHOR — the SessionStart hook is anchored to $CLAUDE_PROJECT_DIR and the file it names exists",
+      !!ssAnchor && ssAnchor.exists, JSON.stringify(ss));
     const st = cmds("Stop");
     // THE CLAIMS GATE JOINED THIS ANCHOR (1 Sep 2026, THE BLUEPRINT rung 0.1+0.2) and it does
     // NOT ride the dispatcher — deliberately, for the same reason afferent-post never did.

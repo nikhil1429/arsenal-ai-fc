@@ -798,7 +798,9 @@ function rootSets() {
   // 3. the hooks
   const settings = join(ROOT, ".claude", "settings.json");
   if (existsSync(settings)) {
-    const txt = readFileSync(settings, "utf8");
+    // An anchored hook (row 252) reads node \"$CLAUDE_PROJECT_DIR/scripts/x.mjs\" verb in the
+    // raw JSON; the quote between the path and the verb hid the verb from VERB_AFTER_PATH.
+    const txt = readFileSync(settings, "utf8").replace(/\\"\$CLAUDE_PROJECT_DIR\/([^"\\]+)\\"/g, "$1");
     for (const m of txt.matchAll(VERB_AFTER_PATH)) {
       hooks.push({ script: `${m[1]}.mjs`, verb: m[2] || null, source: "settings.json" });
     }
