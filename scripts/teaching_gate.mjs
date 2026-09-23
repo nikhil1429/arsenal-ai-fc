@@ -19,8 +19,10 @@
 //       (no other hook parses tool_use — every duty rule was unmeasurable before this),
 //     · the previous teacher turn's declared moments (for the bank duty) and the session's earlier
 //       backticked names (for "new"), and the UserPromptSubmit hook's own latency line,
-//   runs the CHECKS below and, on red, answers {"decision":"block","reason":"REWRITE — …"} ONCE:
-//   ≤ 6 fix lines in drift-rank order. On stop_hook_active it allows and logs what survived.
+//   runs the CHECKS below and, on an ABSENCE red, answers {"decision":"block","reason":"PATCH — …"} ONCE:
+//   ≤ 6 add-shaped fix lines in drift-rank order. A PRESENCE red never blocks — it is logged and counted
+//   (forks row 272: a block cannot retract what he already sees; it can only ADD). On stop_hook_active it
+//   judges only the segment after the block message, allows, and logs what survived.
 //   TIER 0: zero model tokens. Every check is a count, a presence or a state comparison.
 //
 // SCOPE (G0, R7). It gates ONLY the study session: payload.session_id === the open sitting's
@@ -46,7 +48,7 @@
 //   is worse than the drift it catches) · SOLE WRITER of dressing-room/state/teaching_gate.jsonl and
 //   nothing else (it reads sitting.json, forge_session.json and the transcript; it writes no organ's
 //   file) · no process.exit on the hook path · a gate only gets stricter.
-// WHO ELSE COULD ACT ON THIS OUTPUT? Claude Code (the block makes the model rewrite the turn) · P3's
+// WHO ELSE COULD ACT ON THIS OUTPUT? Claude Code (the block makes the model ADD a patch below the reply he already sees) · P3's
 //   proof reads teaching_gate.jsonl (blocks per turn, false blocks, hook ms) · P4's judge ranking
 //   will replace RANK below.
 // CASES: `node scripts/teaching_gate.mjs selftest` — planted both ways for every family, the
@@ -69,70 +71,82 @@ export const RULE_TABLE_PATH = join(ROOT, "learning-layer", "teaching_gate", "RU
 export const RULES_PATH = join(ROOT, "learning-layer", "teaching_gate", "RULES.jsonl");
 const TRANSCRIPT_MAX = 16 * 1024 * 1024;   // the largest Desktop study transcript P0 read is 2.75 MB
 
-// ── THE CHECK CATALOGUE — id → family + the fix line the block prints ─────────────
+// ── THE CHECK CATALOGUE — id → family + MOUTH + the fix line ─────────────────────
 // Families: A the message text · B this turn's tool calls · C state · D the session's boot.
+// THE MOUTH (forks row 272, his word #20, 23 Sep 2026: "why am i getting every output … two times on my screen??").
+//   A Stop-hook block NEVER retracts the reply already rendered on his screen: Claude Code keeps it and appends the
+//   continuation below it. So a block may PATCH, never REWRITE — and only a red a PATCH can cure may block:
+//   patch  = ABSENCE — something is missing that ONE added line (≤ 3 lines in all) or ONE tool call supplies. BLOCKS,
+//            and its fix line is add-shaped: it says what to ADD, never what to take out or send again.
+//   count  = PRESENCE — the violation is already on his screen; a block changes nothing he sees and doubles what he
+//            reads. LOGGED and drift-COUNTED, never blocked; its fix line rides the next turn ("agle turn se").
+//   Detection is unchanged: every red still lands on the log and the drift count. Only the mouth changed. A red site
+//   may name a narrower mouth for a case of its id (a trio on a check_q is PRESENCE; a missing trio is ABSENCE).
 export const CHECKS = Object.freeze({
-  "A.table": { fam: "A", fix: "table hatao — mechanism text mein, numbered trace ke saath (his word, twice: tables confuse him)" },
-  "A.sections": { fam: "A", fix: "ek heading YA ek rule — dono nahi, aur ek se zyada nahi" },
-  "A.one-question": { fam: "A", fix: "sirf EK question sentence — baaki sawaal hatao (\"haan ya nahi?\" usi ka hissa hai; \"Aur kyun?\" doosra sawaal hai)" },
-  "A.question-last": { fam: "A", fix: "check-question AAKHRI ho — uske baad sirf EK line: gut trio (pehle_guess / jirah par) ya khali skeleton \"maine socha ___, phir ___\"" },
-  "A.gut-by-moment": { fam: "A", fix: "gut-word moment se chalta hai: pehle_guess / sharp_check / jirah → aakhri line \"pehle gut-word: pakka / shayad / pata nahi\" · check_q → koi gut-word nahi, sawaal \"samajh aaya — haan ya nahi\" par khatam" },
-  "A.gut-trio": { fam: "A", fix: "gut-word maango to teeno naam likho: pakka / shayad / pata nahi (knew / shaky / guessed kabhi nahi)" },
-  "A.new-terms": { fam: "A", fix: "ek message mein sirf EK naya `backticked` naam — baaki agle turn ke liye rakho" },
-  "A.neev-pehle": { fam: "A", fix: "naya naam usi line par colon form mein kholo: `X`: … (pehle kholo, phir use karo)" },
-  "A.codes-at-him": { fam: "A", fix: "id / command / code usse mat dikhao — poori baat plain words mein" },
-  "A.position": { fam: "A", fix: "position line NAAM se: concept > axis > idea (jaise \"Tokenization › axis c › pair-merge\")" },
-  "A.count-form": { fam: "A", fix: "\"idea 2 of 4\" jaisa count hatao — position sirf naam se" },
-  "A.emoji": { fam: "A", fix: "emoji sirf ✅ ❌ ⚠ ⭐ — message mein ≤ 2, ek line mein ≤ 1" },
-  "A.emoji-diff": { fam: "A", fix: "uske jawab ki galti ❌ se nahi, ```diff se kaato (+ sahi / - galat) — ✅ / ❌ diff ke SAATH chal sakte hain, uski JAGAH kabhi nahi" },
-  "A.backticks": { fam: "A", fix: "backticks sirf naamon ke liye: message mein ≤ 3 alag naam, ek paragraph mein ≤ 1" },
-  "A.bold": { fam: "A", fix: "bold ek paragraph mein ≤ 1 (sirf wahi ek load-bearing word)" },
-  "A.diff": { fam: "A", fix: "sirf EK ```diff, ≤ 4 lines, har line + (sahi) ya - (galat), bagal mein prose" },
-  "A.blockquote": { fam: "A", fix: "blockquote ≤ 1, aur usme check-question ya koi naam nahi" },
-  "A.tum": { fam: "A", fix: "\"tum\" bolo — tu / tera / tujhe nahi" },
-  "A.too-hindi": { fam: "A", fix: "Hindi content word ki jagah English content word (Hindi sirf glue)" },
-  "A.too-english": { fam: "A", fix: "Hinglish: English content words, Hindi glue (hai, ka, mein, toh …) — poora English sirf interview line" },
-  "A.gamify": { fam: "A", fix: "XP / streak / drift / ms-seconds ke figure usse mat dikhao" },
-  "A.markdown": { fam: "A", fix: "raw HTML, kbd, footnote, task list, mermaid / log fence, KaTeX colour, data-URI image, hex swatch hatao" },
-  "A.his-level": { fam: "A", fix: "\"you already know\" / \"tumhe pata hi hai\" family hatao — uska level uske apne shabdon se" },
-  "A.list-length": { fam: "A", fix: "ek list level mein ≤ 4 items (≤ 4 naye units hawa mein)" },
-  "A.text-last": { fam: "B", fix: "saare tools PEHLE, text AAKHIR mein — tool ke upar ka text Desktop par uski screen se gayab ho jaata hai" },
-  "A.ran-line": { fam: "A", fix: "tool chala to text ki PEHLI line batao kya chala (jaise \"bank kiya · pointer set\")" },
-  "A.confusion-literal": { fam: "A", fix: "woh confused hai: wahi naam dobara, koi naya `naam` nahi, step / axis mat badlo — zero se, chhote qadam" },
-  "A.hype": { fam: "A", fix: "hype / khali praise hatao — crack data hai, verdict nahi; praise sirf earned + specific" },
-  "A.medical": { fam: "A", fix: "dawai / dose / diagnosis par sirf ek baat: \"apne doctor ko dikhao\" — khud interpret kabhi nahi" },
-  "A.layers": { fam: "A", fix: "naya naam khola to usi idea mein EK interview-ready English technical line bhi (dukaan → asli naam → technical line)" },
-  "A.intensity": { fam: "A", fix: "axis band kiya — ek line mein depth · breadth · interaction ka verdict (maximum tha ya nahi)" },
-  "A.closed-axis": { fam: "A", fix: "band ho chuka axis dobara mat padhao — position line abhi ke axis ki ho" },
-  "A.ask-where": { fam: "A", fix: "usse mat poochho woh kahan tha, na kuch paste karne ko kaho — state se padho" },
-  "A.bank-line": { fam: "A", fix: "bank ke baad bolo: \"bank mein gaya · axis <x> · judge shaam ko\" — koi verdict nahi, koi seconds nahi" },
-  "A.blame": { fam: "A", fix: "galat MODEL ko kaato, usse nahi — \"yahan sabka dimaag ek taraf jaata hai\", \"tumne galat socha\" kabhi nahi" },
-  "A.no-grill": { fam: "A", fix: "teaching turn par grilling / reinvent-from-scratch nahi — woh jirah round ka kaam hai" },
-  "A.urgency": { fam: "A", fix: "pace uska hai — \"time kam hai\" / jaldi / deadline / per-day cap kabhi nahi" },
-  "A.his-data": { fam: "A", fix: "example uska data ho (invoice, FinOps, Blinkit) — hello world / foo / Alice nahi" },
-  "A.repeat-line": { fam: "A", fix: "usse koi line dohraane ko mat do — woh apne shabdon mein bolega" },
-  "A.emdash": { fam: "A", fix: "em-dash ki deewar nahi — paragraph mein ≤ 2, message mein ≤ 4" },
-  "A.text-fence": { fam: "A", fix: "```text fence sirf symbols / ids / arrows ke liye, Hinglish bahar — aur concept mein ek hi baar" },
-  "A.buying": { fam: "A", fix: "kharidaari ki baat ek line mein park — koi price, koi link nahi" },
-  "B.bank": { fam: "B", fix: "uska jawab bank karo — PEHLA tool: node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut … --asked \"…\" --said \"…\" --surface code [--latency_ms <hook line ka number>]" },
-  "B.bank-per-idea": { fam: "B", fix: "\"samajh aaya\" check ka jawab per-idea hai — bank NAHI hota; bank sirf axis ke moments par (sharp check · Bolo · interview line) aur jirah par" },
-  "B.bank-verbatim": { fam: "B", fix: "bank line mein --gut uska apna gut-word (pakka→knew · shayad→shaky · pata nahi→guessed) — usne gut-word nahi diya to --gut kabhi type mat karo, --said uske shabd verbatim, --asked tumhara sawaal verbatim" },
-  "B.latency": { fam: "B", fix: "--latency_ms wahi number jo hook line ne diya (VERBATIM) — nahi padh sakte to flag hata do" },
-  "B.moment": { fam: "B", fix: "sawaal par khatam turn: ISI turn moment declare karo — node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah|sharp_check" },
-  "B.moment-kind": { fam: "B", fix: "moment sirf paanch: pehle_guess · check_q · widget_gate · jirah · sharp_check" },
-  "B.askuser": { fam: "B", fix: "AskUserQuestion nahi — ek sawaal text mein, woh khud type karega" },
-  "B.whole-read": { fam: "B", fix: "poori file mat padho (REFERENCE / SAMJHAO_MERGED / VISUAL_CONTRACT / forge SKILL / scripts / memory) — digest jo section bataye, sirf wahi, offset+limit se" },
-  "B.tools": { fam: "B", fix: "mid-concept system / tool kaam nahi — park it: ek line, phir micro-question wapas" },
-  "B.judge-once": { fam: "B", fix: "judge_round ek sitting mein EK hi baar" },
-  "B.widget": { fam: "B", fix: "widget: Lexend 400/500, max-width 34em, stepper = peeche / aage / shuru se + arrow keys, koi autoplay nahi, answer tiles nahi" },
-  "D.digest-first": { fam: "D", fix: "session ka PEHLA tool learn_digest hai — abhi chalao: node scripts/learn_digest.mjs, aur uski screen maano" },
-  "D.sitting-first": { fam: "D", fix: "teaching text se pehle sitting kholo: node scripts/sitting.mjs open --surface code --no-spawn --task \"<concept> axis <x>\"" },
-  "D.start-once": { fam: "D", fix: "forge_session start dobara nahi, --force kabhi nahi — khuli session RESUME karo (pointer se)" },
-  "D.digest-whole": { fam: "D", fix: "digest poora padho — head / tail / Select-Object -First se mat kaato (≤ 16 KB by contract)" },
-  "D.first-screen": { fam: "D", fix: "pehli screen: ≤ 6 lines (resume ke baad 3 lines + pointer ka sawaal), koi STALE / drift / resumed / missed / health nahi" },
-  "D.pacer": { fam: "D", fix: "teaching se pehle pacer: node scripts/forge_session.mjs resume (khuli session) — start sirf jab resume kuch na mile" },
-  "D.unbound": { fam: "D", fix: "(the unbound nudge — its line is study_scope.unboundLine)" },
+  "A.table": { fam: "A", mouth: "count", fix: "table nahi — mechanism text mein, numbered trace ke saath (his word, twice: tables confuse him)" },
+  "A.sections": { fam: "A", mouth: "count", fix: "ek heading YA ek rule — dono nahi, aur ek se zyada nahi" },
+  "A.one-question": { fam: "A", mouth: "count", fix: "sirf EK question sentence (\"haan ya nahi?\" usi ka hissa hai; \"Aur kyun?\" doosra sawaal hai)" },
+  "A.question-last": { fam: "A", mouth: "count", fix: "check-question AAKHRI ho — uske baad sirf EK line: gut trio ya khali skeleton \"maine socha ___, phir ___\"" },
+  "A.gut-by-moment": { fam: "A", mouth: "patch", fix: "jodo EK line — pehle_guess / sharp_check / jirah: \"pehle gut-word: pakka / shayad / pata nahi\" · check_q: \"samajh aaya — haan ya nahi?\" (check_q par gut-word kabhi nahi)" },
+  "A.gut-trio": { fam: "A", mouth: "patch", fix: "jodo EK line: \"pehle gut-word: pakka / shayad / pata nahi\" — teeno naam (knew / shaky / guessed kabhi nahi)" },
+  "A.new-terms": { fam: "A", mouth: "count", fix: "ek message mein sirf EK naya `backticked` naam — baaki agle turn ke liye" },
+  "A.neev-pehle": { fam: "A", mouth: "patch", fix: "jodo EK line jo woh naam kholti hai, colon form mein: `X`: … (sirf wahi naam jo khula nahi)" },
+  "A.codes-at-him": { fam: "A", mouth: "count", fix: "id / command / code usse mat dikhao — poori baat plain words mein" },
+  "A.position": { fam: "A", mouth: "patch", fix: "jodo EK position line NAAM se: concept › axis › idea (jaise \"Tokenization › axis c › pair-merge\")" },
+  "A.count-form": { fam: "A", mouth: "count", fix: "\"idea 2 of 4\" jaisa count nahi — position sirf naam se" },
+  "A.emoji": { fam: "A", mouth: "count", fix: "emoji sirf ✅ ❌ ⚠ ⭐ — message mein ≤ 2, ek line mein ≤ 1" },
+  "A.emoji-diff": { fam: "A", mouth: "count", fix: "uske jawab ki galti ❌ se nahi, ```diff se kaato (+ sahi / - galat) — ✅ / ❌ diff ke SAATH chal sakte hain, uski JAGAH kabhi nahi" },
+  "A.backticks": { fam: "A", mouth: "count", fix: "backticks sirf naamon ke liye: message mein ≤ 3 alag naam, ek paragraph mein ≤ 1" },
+  "A.bold": { fam: "A", mouth: "count", fix: "bold ek paragraph mein ≤ 1 (sirf wahi ek load-bearing word)" },
+  "A.diff": { fam: "A", mouth: "count", fix: "sirf EK ```diff, ≤ 4 lines, har line + (sahi) ya - (galat), bagal mein prose" },
+  "A.blockquote": { fam: "A", mouth: "count", fix: "blockquote ≤ 1, aur usme check-question ya koi naam nahi" },
+  "A.tum": { fam: "A", mouth: "count", fix: "\"tum\" bolo — tu / tera / tujhe nahi" },
+  "A.too-hindi": { fam: "A", mouth: "count", fix: "Hindi content word ki jagah English content word (Hindi sirf glue)" },
+  "A.too-english": { fam: "A", mouth: "count", fix: "Hinglish: English content words, Hindi glue (hai, ka, mein, toh …) — poora English sirf interview line" },
+  "A.gamify": { fam: "A", mouth: "count", fix: "XP / streak / drift / ms-seconds ke figure usse mat dikhao" },
+  "A.markdown": { fam: "A", mouth: "count", fix: "raw HTML, kbd, footnote, task list, mermaid / log fence, KaTeX colour, data-URI image, hex swatch nahi" },
+  "A.his-level": { fam: "A", mouth: "count", fix: "\"you already know\" / \"tumhe pata hi hai\" family nahi — uska level uske apne shabdon se" },
+  "A.list-length": { fam: "A", mouth: "count", fix: "ek list level mein ≤ 4 items (≤ 4 naye units hawa mein)" },
+  "A.text-last": { fam: "B", mouth: "patch", fix: "tool ke upar ka text uski Desktop screen se GAYAB hua — uska zaroori hissa ≤ 3 lines mein jodo; aage se saare tools PEHLE, text AAKHIR mein" },
+  "A.ran-line": { fam: "A", mouth: "patch", fix: "jodo EK line jo batati hai kya chala (jaise \"bank kiya · pointer set\")" },
+  "A.confusion-literal": { fam: "A", mouth: "count", fix: "woh confused hai: wahi naam dobara, koi naya `naam` nahi, step / axis mat badlo — zero se, chhote qadam" },
+  "A.hype": { fam: "A", mouth: "count", fix: "hype / khali praise nahi — crack data hai, verdict nahi; praise sirf earned + specific" },
+  "A.medical": { fam: "A", mouth: "patch", fix: "jodo EK line: \"apne doctor ko dikhao\" — dawai / dose / diagnosis par khud interpret kabhi nahi" },
+  "A.layers": { fam: "A", mouth: "patch", fix: "jodo EK interview-ready English technical line usi naye naam ke liye (dukaan → asli naam → technical line)" },
+  "A.intensity": { fam: "A", mouth: "patch", fix: "jodo EK line: axis ka depth · breadth · interaction verdict (maximum tha ya nahi)" },
+  "A.closed-axis": { fam: "A", mouth: "count", fix: "band ho chuka axis dobara mat padhao — position line abhi ke axis ki ho" },
+  "A.ask-where": { fam: "A", mouth: "count", fix: "usse mat poochho woh kahan tha, na kuch paste karne ko kaho — state se padho" },
+  "A.bank-line": { fam: "A", mouth: "patch", fix: "jodo EK line: \"bank mein gaya · axis <x> · judge shaam ko\" — koi verdict nahi, koi seconds nahi" },
+  "A.blame": { fam: "A", mouth: "count", fix: "galat MODEL ko kaato, usse nahi — \"yahan sabka dimaag ek taraf jaata hai\", \"tumne galat socha\" kabhi nahi" },
+  "A.no-grill": { fam: "A", mouth: "count", fix: "teaching turn par grilling / reinvent-from-scratch nahi — woh jirah round ka kaam hai" },
+  "A.urgency": { fam: "A", mouth: "count", fix: "pace uska hai — \"time kam hai\" / jaldi / deadline / per-day cap kabhi nahi" },
+  "A.his-data": { fam: "A", mouth: "count", fix: "example uska data ho (invoice, FinOps, Blinkit) — hello world / foo / Alice nahi" },
+  "A.repeat-line": { fam: "A", mouth: "count", fix: "usse koi line dohraane ko mat do — woh apne shabdon mein bolega" },
+  "A.emdash": { fam: "A", mouth: "count", fix: "em-dash ki deewar nahi — paragraph mein ≤ 2, message mein ≤ 4" },
+  "A.text-fence": { fam: "A", mouth: "count", fix: "```text fence sirf symbols / ids / arrows ke liye, Hinglish bahar — aur concept mein ek hi baar" },
+  "A.buying": { fam: "A", mouth: "count", fix: "kharidaari ki baat ek line mein park — koi price, koi link nahi" },
+  "B.bank": { fam: "B", mouth: "patch", fix: "abhi bank karo, EK tool: node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> [--gut <USKA gut-word>] --asked \"…\" --said \"…\" --surface code [--latency_ms <hook line ka number>] · phir EK line: \"bank mein gaya · axis <x> · judge shaam ko\"" },
+  "B.bank-per-idea": { fam: "B", mouth: "count", fix: "\"samajh aaya\" check ka jawab per-idea hai — bank NAHI hota; bank sirf axis ke moments par (sharp check · Bolo · interview line) aur jirah par" },
+  "B.bank-verbatim": { fam: "B", mouth: "count", fix: "bank line mein --gut uska apna gut-word (pakka→knew · shayad→shaky · pata nahi→guessed) — usne gut-word nahi diya to --gut kabhi type mat karo, --said uske shabd verbatim, --asked tumhara sawaal verbatim" },
+  "B.latency": { fam: "B", mouth: "count", fix: "--latency_ms wahi number jo hook line ne diya (VERBATIM) — nahi padh sakte to flag hata do" },
+  "B.moment": { fam: "B", mouth: "patch", fix: "abhi EK tool: node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah|sharp_check — text mein kuch nahi jodna" },
+  "B.moment-kind": { fam: "B", mouth: "patch", fix: "abhi EK tool: legal moment declare karo (pehle_guess · check_q · widget_gate · jirah · sharp_check) — text mein kuch nahi jodna" },
+  "B.askuser": { fam: "B", mouth: "count", fix: "AskUserQuestion nahi — ek sawaal text mein, woh khud type karega" },
+  "B.whole-read": { fam: "B", mouth: "count", fix: "poori file mat padho (REFERENCE / SAMJHAO_MERGED / VISUAL_CONTRACT / forge SKILL / scripts / memory) — digest jo section bataye, sirf wahi, offset+limit se" },
+  "B.tools": { fam: "B", mouth: "count", fix: "mid-concept system / tool kaam nahi — park it: ek line, phir micro-question wapas" },
+  "B.judge-once": { fam: "B", mouth: "count", fix: "judge_round ek sitting mein EK hi baar" },
+  "B.widget": { fam: "B", mouth: "count", fix: "widget: Lexend 400/500, max-width 34em, stepper = peeche / aage / shuru se + arrow keys, koi autoplay nahi, answer tiles nahi" },
+  "D.digest-first": { fam: "D", mouth: "patch", fix: "abhi chalao: node scripts/learn_digest.mjs — text mein kuch nahi jodna, jab tak uski screen tumhara sawaal na badle" },
+  "D.sitting-first": { fam: "D", mouth: "patch", fix: "abhi kholo: node scripts/sitting.mjs open --surface code --no-spawn --task \"<concept> axis <x>\" — text mein kuch nahi jodna" },
+  "D.start-once": { fam: "D", mouth: "count", fix: "forge_session start dobara nahi, --force kabhi nahi — khuli session RESUME karo (pointer se)" },
+  "D.digest-whole": { fam: "D", mouth: "patch", fix: "abhi digest POORA chalao: node scripts/learn_digest.mjs (head / tail / Select-Object ke bina) — text mein kuch nahi jodna" },
+  "D.first-screen": { fam: "D", mouth: "count", fix: "pehli screen: ≤ 6 lines (resume ke baad 3 lines + pointer ka sawaal), koi STALE / drift / resumed / missed / health nahi" },
+  "D.pacer": { fam: "D", mouth: "patch", fix: "abhi pacer chalao: node scripts/forge_session.mjs resume — kuch mat jodo, jab tak uski line tumhara sawaal na badle" },
+  "D.unbound": { fam: "D", mouth: "patch", fix: "(the unbound nudge — its line is study_scope.unboundLine)" },
 });
+export const MOUTHS = Object.freeze(["patch", "count"]);
+// THE PATCH OPENER (row 272 (1)) — the first line of every block; it never says REWRITE and never asks for the turn again
+export const PATCH_OPENER = "PATCH — tumhara jawab uski screen par hai aur rahega; kuch bhi dobara mat bhejo; sirf yeh jodo (≤ 3 lines):";
 
 // DRIFT RANK — the order the fix lines print in. Until P4's judge ranking lands this is P0's own
 // measured order on his last five Desktop sessions (text lost above a tool 14/35 · neev-pehle and
@@ -288,8 +302,12 @@ const humanText = (o) => {
   return null;
 };
 /** Parse a transcript (text) into prompts and ordered assistant blocks. Torn lines are skipped. */
+// The Stop-hook block message, as Claude Code writes it into the transcript: a META user row whose text opens
+// "Stop hook feedback:" (measured on edc4eb0d / 0bd91c84, 23 Sep 2026). The second pass's turn begins after it.
+const HOOK_FEEDBACK = /^\s*Stop hook feedback\b/i;
+const metaText = (o) => { const c = o && o.message && o.message.content; return typeof c === "string" ? c : Array.isArray(c) ? c.filter((b) => b && b.type === "text").map((b) => b.text).join("\n") : ""; };
 export function parseTranscript(raw) {
-  const prompts = []; const blocks = []; const hooks = [];
+  const prompts = []; const blocks = []; const hooks = []; const feedbacks = [];
   let seq = 0;
   for (const l of String(raw || "").split("\n")) {
     if (!l || l[0] !== "{") continue;
@@ -299,6 +317,7 @@ export function parseTranscript(raw) {
     if (o.type === "user") {
       const t = humanText(o);
       if (t !== null && !/^\s*<(local-command|command-name>\/(clear|model|effort|compact))/.test(t)) prompts.push({ seq, text: t, ts: o.timestamp || null });
+      else if (o.isMeta && HOOK_FEEDBACK.test(metaText(o))) feedbacks.push({ seq });
       continue;
     }
     if (o.type === "attachment") {
@@ -314,15 +333,18 @@ export function parseTranscript(raw) {
       else if (b.type === "tool_use") blocks.push({ seq, kind: "tool", name: b.name, input: b.input || {} });
     }
   }
-  return { prompts, blocks, hooks };
+  return { prompts, blocks, hooks, feedbacks };
 }
 /** Split into { prompt, turn, prevTurn, before, hookText }. */
-export function turnsOf(parsed) {
+export function turnsOf(parsed, { afterFeedback = false } = {}) {
   const P = parsed.prompts;
   const last = P.length ? P[P.length - 1] : null;
   const prev = P.length > 1 ? P[P.length - 2] : null;
   const after = (s) => parsed.blocks.filter((b) => b.seq > s);
-  const turn = last ? after(last.seq) : parsed.blocks.slice();
+  // forks row 272 (3): on the second pass the turn BEGINS at the block message — the reply above it is already on
+  // his screen and was judged by the first pass; judging it again read a phantom A.text-last on 8 of 10 second passes
+  const fb = afterFeedback && last ? (parsed.feedbacks || []).filter((f) => f.seq > last.seq).pop() : null;
+  const turn = last ? after(fb ? fb.seq : last.seq) : parsed.blocks.slice();
   const prevTurn = last && prev ? parsed.blocks.filter((b) => b.seq > prev.seq && b.seq < last.seq) : [];
   const before = last ? parsed.blocks.filter((b) => b.seq < last.seq) : [];
   const hookText = last ? parsed.hooks.filter((h) => h.seq > last.seq).map((h) => h.text).join("\n") : "";
@@ -425,24 +447,25 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
     const v = unbound || { line: null };
     if (!v.line || secondPass) return allow(scope.legacy ? "transition scope (pre-G0 sitting) — never gated" : "not the study session", { scope: "out", quiet: true });
     if (mine.some((r) => r.nudged)) return allow("unbound nudge already given in this session", { scope: "out", quiet: true });
-    return { decision: "block", scope: "out", nudged: true, reds: ["D.unbound"], reason: `REWRITE — ${v.line}` };
+    return { decision: "block", scope: "out", nudged: true, reds: ["D.unbound"], reason: `${PATCH_OPENER}\n  · D.unbound: yeh tools abhi chalao, text mein kuch nahi jodna — ${v.line}` };
   }
   if (transcript === null) return allow("in scope, transcript unreadable — fail open", { scope: "study", error: "transcript unreadable" });
-  const T = turnsOf(parseTranscript(transcript));
+  const T = turnsOf(parseTranscript(transcript), { afterFeedback: secondPass });
   const finalText = String(payload.last_assistant_message || "").trim() || (T.turn.filter((b) => b.kind === "text").pop() || { text: "" }).text;
   const prevMoments = momentsOf(T.prevTurn);
   const cls = classifyPrompt(T.prompt, { prevMoments });
   const moments = momentsOf(T.turn);
   const moment = moments.length ? moments[moments.length - 1] : null;
-  const reds = []; const why = {};
-  const red = (id, detail) => { if (!reds.includes(id)) { reds.push(id); why[id] = detail; } };
+  const reds = []; const why = {}; const mouthOf = {}; const mechanical = new Set();
+  // a red site may name a narrower mouth for one case of its id (row 272 (2)); otherwise the catalogue's
+  const red = (id, detail, mouth = null) => { if (!reds.includes(id)) { reds.push(id); why[id] = detail; mouthOf[id] = mouth || (CHECKS[id] && CHECKS[id].mouth) || "count"; } };
 
   // ── MECHANICAL — on every study turn, system talk included ──
   const turnBlocks = T.turn.slice();
   const lastText = [...turnBlocks].reverse().findIndex((b) => b.kind === "text");
   const lastTextIdx = lastText < 0 ? -1 : turnBlocks.length - 1 - lastText;
   const textAbove = turnBlocks.some((b, i) => b.kind === "text" && turnBlocks.slice(i + 1).some((x) => x.kind === "tool") && !(i === lastTextIdx && String(b.text).trim() === finalText));
-  if (textAbove) red("A.text-last", "a text block sits above a tool call in this turn");
+  if (textAbove) { red("A.text-last", "a text block sits above a tool call in this turn"); mechanical.add("A.text-last"); }
   const tf = toolFindings(T.turn, { step: forge && Number.isInteger(forge.step) ? forge.step : null });
   if (T.turn.some((b) => b.kind === "tool" && b.name === "AskUserQuestion")) red("B.askuser", "AskUserQuestion was called");
   if (tf.outside.length) red("B.tools", tf.outside.slice(0, 3).join(" · "));
@@ -468,7 +491,7 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
     const hasTrio = TRIO_RX.test(text), gutAsk = GUT_ASK.test(prose(text, { keepQuotes: false }));
     // the trio rides pehle_guess, the sharp check and jirah (row 254 (3)(b) as narrowed by forks row 268)
     if (GUT_BEARING_MOMENTS.includes(moment) && !hasTrio) red("A.gut-by-moment", `moment ${moment} needs the trio pakka / shayad / pata nahi as the last line`);
-    if (moment === "check_q" && (hasTrio || gutAsk)) red("A.gut-by-moment", "moment check_q forbids the gut-word ask");
+    if (moment === "check_q" && (hasTrio || gutAsk)) red("A.gut-by-moment", "moment check_q forbids the gut-word ask", "count");   // the ask is already on his screen
     if (moment === "check_q" && !(/samajh\s+aaya/i.test(text) && /haan\s+ya\s+na(hi)?/i.test(text))) red("A.gut-by-moment", "a check_q question ends \"samajh aaya — haan ya nahi\"");
     if ((gutAsk && !hasTrio) || ENGLISH_TRIO.test(prose(text))) red("A.gut-trio", "a gut-word ask that does not name pakka / shayad / pata nahi");
     // the name lane (R4 + learn:R21)
@@ -616,16 +639,19 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
   if (!mine.some((r) => r.d_checked)) {
     d.d_checked = true;
     const tools = T.all.filter((b) => b.kind === "tool" && !/^(ToolSearch|Skill|TodoWrite)$/.test(b.name));
-    if (tools.length && !/learn_digest\.mjs/.test(cmdOf(tools[0]))) red("D.digest-first", `the first tool was ${tools[0].name}${cmdOf(tools[0]) ? `: ${cmdOf(tools[0]).slice(0, 50)}` : ""}`);
+    // row 272 (2): a boot step that NEVER ran is an absence (run it now, add nothing); one that ran in the wrong
+    // order is already past — it is counted, never blocked (a block cannot re-order what happened)
+    const digestRan = T.all.some((b) => shell(b) && /learn_digest\.mjs/.test(cmdOf(b)));
+    if (tools.length && !/learn_digest\.mjs/.test(cmdOf(tools[0]))) red("D.digest-first", `the first tool was ${tools[0].name}${cmdOf(tools[0]) ? `: ${cmdOf(tools[0]).slice(0, 50)}` : ""}`, digestRan ? "count" : "patch");
     const openIdx = T.all.findIndex((b) => shell(b) && /sitting\.mjs["']?\s+open\b/.test(cmdOf(b)));
     const teachIdx = T.all.findIndex((b) => b.kind === "text" && (/\?/.test(prose(b.text)) || prose(b.text).length > 300));
-    if (teachIdx >= 0 && (openIdx < 0 || openIdx > teachIdx)) red("D.sitting-first", "teaching text came before the sitting opened");
+    if (teachIdx >= 0 && (openIdx < 0 || openIdx > teachIdx)) red("D.sitting-first", "teaching text came before the sitting opened", openIdx < 0 ? "patch" : "count");
     const openCmd = openIdx >= 0 ? cmdOf(T.all[openIdx]) : "";
     const pacerIdx = T.all.findIndex((b) => (shell(b) && /forge_session\.mjs["']?\s+(resume|start|boot)\b/.test(cmdOf(b))) || (b.kind === "tool" && b.name === "Skill" && /forge/.test(JSON.stringify(b.input || {}))));
-    if (openCmd && !(/--no-spawn\b/.test(openCmd) && /--surface\s+code\b/.test(openCmd))) red("D.sitting-first", "the sitting opened without --surface code --no-spawn");
-    else if (openIdx >= 0 && pacerIdx > openIdx) red("D.sitting-first", "the sitting opened before the pacer (resume / start) ran");
+    if (openCmd && !(/--no-spawn\b/.test(openCmd) && /--surface\s+code\b/.test(openCmd))) red("D.sitting-first", "the sitting opened without --surface code --no-spawn", "count");
+    else if (openIdx >= 0 && pacerIdx > openIdx) red("D.sitting-first", "the sitting opened before the pacer (resume / start) ran", "count");
     const lesson0 = !!(forge && forge.concept && !forge.closed_at);
-    if (lesson0 && teachIdx >= 0 && (pacerIdx < 0 || pacerIdx > teachIdx)) red("D.pacer", "teaching text before forge_session resume / start");
+    if (lesson0 && teachIdx >= 0 && (pacerIdx < 0 || pacerIdx > teachIdx)) red("D.pacer", "teaching text before forge_session resume / start", pacerIdx < 0 ? "patch" : "count");
     const starts = T.all.filter((b) => shell(b) && /forge_session\.mjs["']?\s+start\b/.test(cmdOf(b)));
     if (starts.length > 1 || starts.some((b) => /--force\b/.test(cmdOf(b)))) red("D.start-once", `${starts.length} forge_session start call(s)${starts.some((b) => /--force\b/.test(cmdOf(b))) ? ", one with --force" : ""}`);
     const digestCmd = (T.all.find((b) => shell(b) && /learn_digest\.mjs/.test(cmdOf(b))) || null);
@@ -639,13 +665,28 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
   }
   const ordered = reds.slice().sort((a, b) => rankOf(a) - rankOf(b));
   if (!ordered.length) return { decision: "allow", scope: "study", why: "clean", reds: [], ...d };
-  if (secondPass) return { decision: "allow", scope: "study", why: "second pass — the gate speaks once; the surviving drift is logged", reds: ordered, surviving: true, ...d };
-  const shown = ordered.slice(0, MAX_FIX_LINES);
-  const reason = ["REWRITE — the teaching gate (study session). Fix these, then give the turn again:",
+  const patch = ordered.filter((id) => mouthOf[id] === "patch");
+  const counted = ordered.filter((id) => mouthOf[id] !== "patch");
+  if (secondPass) {
+    // forks row 272 (3): only the segment after the block message was judged. A PRESENCE red there is the patch's
+    // own; an ABSENCE red survives only when the first pass named it too — a patch is additive, so a line it had no
+    // need to carry (the position line already above it on his screen) is not missing
+    const first = [...mine].reverse().find((r) => r && !r.second_pass && r.decision === "block");
+    const firstReds = first && Array.isArray(first.reds) ? first.reds : null;
+    // the MECHANICAL reds (what the segment itself ran, or lost above its own tool call) are the patch's own and survive
+    const surviving = ordered.filter((id) => mouthOf[id] !== "patch" || mechanical.has(id) || (firstReds !== null && firstReds.includes(id)));
+    return { decision: "allow", scope: "study", why: "second pass — the gate speaks once; the segment after the block message was judged and what survived is logged", reds: surviving, surviving: true, detail: why, ...d };
+  }
+  // forks row 272 (2): PRESENCE only — already on his screen; a block would change nothing he sees and double what he reads
+  if (!patch.length) return { decision: "allow", scope: "study", why: "presence reds only — logged and drift-counted, never blocked (row 272 (2))", reds: ordered, patch, counted, detail: why, ...d };
+  const room = MAX_FIX_LINES - (counted.length ? 1 : 0);
+  const shown = patch.slice(0, room);
+  const reason = [PATCH_OPENER,
     ...shown.map((id) => `  · ${id}: ${CHECKS[id] ? CHECKS[id].fix : id}${why[id] ? `  [${String(why[id]).slice(0, 120)}]` : ""}`),
-    ...(ordered.length > shown.length ? [`  (+${ordered.length - shown.length} more: ${ordered.slice(shown.length).join(", ")})`] : []),
-    "  Tools first, the whole message LAST. He sees only the rewritten turn."].join("\n");
-  return { decision: "block", scope: "study", reds: ordered, reason, why, ...d };
+    ...(patch.length > shown.length ? [`  (+${patch.length - shown.length} more to add: ${patch.slice(shown.length).join(", ")})`] : []),
+    ...(counted.length ? [`  AGLE TURN SE (is turn mein inhe mat chhedo): ${counted.slice(0, 4).map((id) => `${id} — ${CHECKS[id] ? CHECKS[id].fix.split(" — ")[0] : id}`).join(" · ")}${counted.length > 4 ? ` (+${counted.length - 4})` : ""}`] : []),
+    "  Tools pehle, phir sirf yeh naye lines — upar wala jawab kabhi dohrao mat."].join("\n");
+  return { decision: "block", scope: "study", reds: ordered, patch, counted, reason, why, detail: why, ...d };
 }
 
 // ── THE HOOK — Claude Code's Stop contract: a JSON decision on stdout, exit 0 ─────
@@ -678,7 +719,7 @@ export function stopHook({ raw = null, env = process.env, dir = STATE_DIR, now =
   if (!d.quiet) {
     try {
       mkdirSync(dir, { recursive: true });
-      appendFileSync(GATE_LOG(dir), JSON.stringify({ ts: now.toISOString(), session: payload.session_id || null, sitting: (readSitting(dir) || {}).id || null, decision: d.decision, scope: d.scope, reds: d.reds || [], cls: d.cls || null, moment: d.moment || null, second_pass: !!d.secondPass, surviving: !!d.surviving, d_checked: !!d.d_checked, nudged: !!d.nudged, ms: d.ms, error: d.error || null }) + "\n");
+      appendFileSync(GATE_LOG(dir), JSON.stringify({ ts: now.toISOString(), session: payload.session_id || null, sitting: (readSitting(dir) || {}).id || null, decision: d.decision, scope: d.scope, reds: d.reds || [], patch: d.patch || [], counted: d.counted || [], cls: d.cls || null, moment: d.moment || null, second_pass: !!d.secondPass, surviving: !!d.surviving, d_checked: !!d.d_checked, nudged: !!d.nudged, ms: d.ms, error: d.error || null }) + "\n");
     } catch { /* the log is never a reason to bite his turn */ }
   }
   if (d.decision === "block") process.stdout.write(JSON.stringify({ decision: "block", reason: d.reason }) + "\n");
@@ -762,7 +803,44 @@ async function selftest() {
   assert("SECOND PASS · stop_hook_active never blocks; the surviving drift is kept for the log", second.decision === "allow" && second.surviving === true && has(second, "A.one-question"));
   // 3 — the question form (R2)
   const two = run("ok", TURN_OK, GOOD.replace("haan ya nahi?", "haan ya nahi? Aur kyun?"));
-  assert("R2 · \"(…)? Aur kyun?\" is TWO questions → A.one-question BLOCKS (a33327c2 t12)", two.decision === "block" && has(two, "A.one-question") && /A\.one-question/.test(two.reason));
+  assert("R2 · \"(…)? Aur kyun?\" is TWO questions → A.one-question is DETECTED and counted — a PRESENCE red, never a block (row 272 (2))",
+    two.decision === "allow" && has(two, "A.one-question") && (two.counted || []).includes("A.one-question") && !two.reason, JSON.stringify([two.decision, two.reds, two.counted]));
+  // forks row 272 — THE PATCH LAW, planted both ways
+  {
+    const presence = run("ok", TURN_OK, GOOD.replace("\n\nToh", "\n\n| a | b |\n|---|---|\n| x | y |\n\nToh"));
+    const absence = run("ok", [BASH("node scripts/forge_session.mjs pointer \"axis c merge\"")], GOOD.replace("pointer set · check_q declared", "pointer set"));
+    const noMoment = run("ok", [BASH("node scripts/forge_session.mjs status")], GOOD.replace("pointer set · check_q declared", "status padha"));
+    assert("row 272 (2) · PRESENCE (a table already on his screen) → A.table DETECTED + counted, the turn ALLOWED; ABSENCE (a check-question with no moment declared and no pointer) → B.moment BLOCKS with a patch",
+      presence.decision === "allow" && has(presence, "A.table") && (presence.counted || []).includes("A.table")
+      && noMoment.decision === "block" && has(noMoment, "B.moment") && (noMoment.patch || []).includes("B.moment") && absence.decision === "allow",
+      JSON.stringify([presence.decision, presence.reds, noMoment.decision, noMoment.reds, absence.reds]));
+    assert("row 272 (1) · the block reason opens PATCH, never says REWRITE, never asks for the turn again, and lists only ABSENCE ids as fix lines",
+      noMoment.reason.startsWith(PATCH_OPENER) && !/REWRITE|give the turn again|rewritten|re-?send/i.test(noMoment.reason)
+      && noMoment.reason.split("\n").filter((l) => /^\s+· /.test(l)).every((l) => CHECKS[l.trim().slice(2).split(":")[0]].mouth === "patch"), noMoment.reason);
+    const bad = Object.entries(CHECKS).filter(([, c]) => !MOUTHS.includes(c.mouth)).map(([id]) => id);
+    const presenceFixAsksRemoval = Object.entries(CHECKS).filter(([, c]) => c.mouth === "patch" && /\b(hatao|hata do|dobara bhejo|rewrite)\b/i.test(c.fix)).map(([id]) => id);
+    assert(`row 272 (2) · every one of the ${Object.keys(CHECKS).length} checks names its mouth in the table (patch | count), and no PATCH fix line asks to remove or re-send`,
+      bad.length === 0 && presenceFixAsksRemoval.length === 0, JSON.stringify({ bad, presenceFixAsksRemoval }));
+    const trioOnCheck = run("ok", TURN_OK, GOOD.replace("samajh aaya, haan ya nahi?", "samajh aaya, haan ya nahi?\npehle gut-word: pakka / shayad / pata nahi"));
+    assert("row 272 (2) · one id, two cases: a trio ON a check_q is already on his screen (counted, allowed); a sharp_check with its trio MISSING is added (blocks)",
+      has(trioOnCheck, "A.gut-by-moment") && trioOnCheck.decision === "allow"
+      && run("ok", [BASH("node scripts/forge_session.mjs moment sharp_check"), BASH("node scripts/forge_session.mjs pointer x")], "pointer set\n**Tokenization › axis c › pair-merge**\nAxis c ka sharp check: pehla merge kaunsa pair hoga, aur kyun?").decision === "block",
+      JSON.stringify([trioOnCheck.decision, trioOnCheck.reds]));
+  }
+  // forks row 272 (3) — THE SECOND PASS judges only the segment after the block message, planted both ways
+  {
+    const FEEDBACK = row({ type: "user", isMeta: true, message: { role: "user", content: `Stop hook feedback:\n${PATCH_OPENER}\n  · B.moment: …` } });
+    const firstReply = TXT(GOOD.replace("pointer set · check_q declared", "status padha"));
+    const logRows = [{ session: HOST, d_checked: true }, { session: HOST, decision: "block", second_pass: false, reds: ["B.moment"] }];
+    const rows = (patchRows) => [...BOOT, U("ok"), BASH("node scripts/forge_session.mjs status"), firstReply, FEEDBACK, ...patchRows].join("\n");
+    const clean = decide({ payload: { session_id: HOST, last_assistant_message: "check_q declared", stop_hook_active: true }, sitting: SIT, forge: FORGE, transcript: rows([BASH("node scripts/forge_session.mjs moment check_q"), TXT("check_q declared")]), logRows, env: {} });
+    const lossy = decide({ payload: { session_id: HOST, last_assistant_message: "check_q declared", stop_hook_active: true }, sitting: SIT, forge: FORGE, transcript: rows([TXT("ek line upar"), BASH("node scripts/forge_session.mjs moment check_q"), TXT("check_q declared")]), logRows, env: {} });
+    const whole = turnsOf(parseTranscript(rows([BASH("node scripts/forge_session.mjs moment check_q"), TXT("check_q declared")])));
+    assert("row 272 (3) · second pass: the first reply above the block message is NOT re-judged — no phantom A.text-last, no phantom absence red; a text above a tool INSIDE the patch still reds A.text-last",
+      clean.decision === "allow" && !has(clean, "A.text-last") && !has(clean, "A.position") && !has(clean, "B.moment")
+      && lossy.decision === "allow" && has(lossy, "A.text-last") && whole.turn.some((b) => b.kind === "text" && /status padha/.test(b.text)),
+      JSON.stringify([clean.reds, lossy.reds]));
+  }
   assert("R2 · \"… kaunsa? Haan ya nahi?\" is ONE (the answer-set restatement is part of it)", questionCount("Pehla merge kaunsa pair hoga? Haan ya nahi?") === 1 && questionCount("(1) word-level ya (2) char-level?") === 1);
   const trailing = run("ok", TURN_OK, GOOD + "\nAur haan, agle turn mein trace karenge.");
   assert("R2 (b) · a non-trio, non-skeleton line after the question → A.question-last", has(trailing, "A.question-last"));
@@ -889,8 +967,8 @@ async function selftest() {
   const invented = run(GUTLESS, [BASH(REP), ...TURN_OK], "bank mein gaya · axis c · judge shaam ko\n" + GOOD, { prev: PREV_Q });
   const noGutFlag = run(GUTLESS, [BASH(REP.replace("--gut knew ", "")), ...TURN_OK], "bank mein gaya · axis c · judge shaam ko\n" + GOOD, { prev: PREV_Q });
   assert("row 270 (A) · a --gut on his gut-less answer → B.bank-verbatim (an invented calibration, the typed-latency class); no --gut on it, or --gut knew on HIS pakka → no B.bank-verbatim",
-    has(invented, "B.bank-verbatim") && /invented calibration/.test(JSON.stringify(invented.why)) && !has(noGutFlag, "B.bank-verbatim") && !has(banked, "B.bank-verbatim") && !has(noGutFlag, "B.bank"),
-    JSON.stringify([invented.reds, invented.why, noGutFlag.reds, banked.reds]));
+    has(invented, "B.bank-verbatim") && /invented calibration/.test(JSON.stringify(invented.detail)) && !has(noGutFlag, "B.bank-verbatim") && !has(banked, "B.bank-verbatim") && !has(noGutFlag, "B.bank"),
+    JSON.stringify([invented.reds, invented.detail, noGutFlag.reds, banked.reds]));
   const lat = run("pakka - pay", [BASH("node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut knew --latency_ms 5000"), ...TURN_OK], "bank kiya · " + GOOD, { hook: "latency: 204218 ms since your last message ended", prev: SHARP });
   assert("R5 · a latency that is not the hook's number → B.latency", has(lat, "B.latency"));
   // forks row 264 (1): forge row 53b STANDS — the bank is due at the jirah and the sharp check, never per idea
@@ -950,7 +1028,9 @@ async function selftest() {
   // 13 — the reason: ranked, capped, names the ids
   const many = run("pakka - x", [TXT("upar"), TOOL("Grep", { pattern: "x", path: "C:/r/scripts" })], "## a\n---\nTu bata? Aur? Kyun? `embedding` `byte` 🚀🚀🚀", { prev: SHARP });
   const shown = (many.reason || "").split("\n").filter((l) => /^\s+· /.test(l));
-  assert("REASON · ≤ 6 fix lines, in drift-rank order (text-last and bank first), the rest counted", many.decision === "block" && shown.length === MAX_FIX_LINES && /A\.text-last/.test(shown[0]) && /B\.bank/.test(shown[1]) && /\(\+\d+ more/.test(many.reason), many.reason);
+  assert("REASON · the PATCH lines are the ABSENCE reds only, in drift-rank order (text-last, then bank); the PRESENCE reds ride ONE 'agle turn se' line; ≤ 6 lines of fixes",
+    many.decision === "block" && shown.length >= 2 && shown.length <= MAX_FIX_LINES && /A\.text-last/.test(shown[0]) && /B\.bank/.test(shown[1])
+    && shown.every((l) => CHECKS[l.trim().slice(2).split(":")[0]].mouth === "patch") && /AGLE TURN SE[^\n]*A\.one-question/.test(many.reason) && !/REWRITE/.test(many.reason), many.reason);
   assert("REASON · every red id is a catalogue id with a fix line", (many.reds || []).every((id) => CHECKS[id] && CHECKS[id].fix));
   // 13b — THE SKELETON NEVER TEACHES THE VIOLATION (forks row 264 (3)). The G1 skeleton's own examples, copied
   // exactly as it renders them — the ran-line, the bank line, the position label, the check_q ending, the gut
@@ -1015,6 +1095,8 @@ async function selftest() {
     let out = null; try { out = JSON.parse(r.stdout); } catch { /* none */ }
     const log = readFileSync(GATE_LOG(dir), "utf8").trim().split("\n").map((l) => JSON.parse(l));
     assert("HOOK · spawned on a planted study payload it prints ONE block decision naming A.text-last, exits 0, and logs the row", r.status === 0 && out && out.decision === "block" && /A\.text-last/.test(out.reason) && log.length === 1 && log[0].decision === "block" && log[0].reds.includes("A.text-last"), `${r.status} ${r.stdout} ${r.stderr}`);
+    assert("HOOK · row 272 (1): the spawned block opens PATCH, never says REWRITE, never asks for the turn again; the log row splits patch from counted",
+      out && out.reason.startsWith(PATCH_OPENER) && !/REWRITE|give the turn again|rewritten/i.test(out.reason) && Array.isArray(log[0].patch) && log[0].patch.includes("A.text-last") && Array.isArray(log[0].counted), out ? out.reason : r.stdout);
     const r2 = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "stop"], { input: JSON.stringify({ session_id: ARCH, transcript_path: archTx, last_assistant_message: "x? y?" }), env, encoding: "utf8", timeout: 20000 });
     assert("HOOK · the architect's payload: silent stdout, exit 0, and NOTHING written", r2.status === 0 && r2.stdout.trim() === "" && readFileSync(GATE_LOG(dir), "utf8").trim().split("\n").length === 1);
     const r3 = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "stop"], { input: "{not json", env, encoding: "utf8", timeout: 20000 });
