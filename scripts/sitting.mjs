@@ -54,7 +54,19 @@
 // PLAN FILE CONTRACT (Block 5 writes it, `open` prefers it): brain_out/prepare/<day>.json =
 //   { "task": {"id","title"}, "route", "map", "units":[{step,axis,kind,text,question,est_seconds,src[]}] }
 //   — re-checked for freshness at open (a task/route mismatch is not served stale).
+// THE HOST SESSION (23 Sep 2026 · THE TEACHING GATE P1 · G0, architect ruling R7 on forks row 255):
+//   the open sitting names the ONE Claude Code session that is his study session — host_session_id +
+//   host_transcript_path (+ host_source, host_bound_at) — and every study organ fires only for it
+//   (scripts/study_scope.mjs is the predicate). The id enters from a HOOK PAYLOAD, never from the model:
+//   rails.mjs pretooluse sees the Bash/PowerShell call that runs `sitting.mjs open` and hands
+//   payload.session_id + transcript_path to `host` (kept PENDING in the daemon for HOST_PENDING_TTL_MS);
+//   `open` — new or JOIN — binds it. The `open` CLI also sends its own harness env CLAUDE_CODE_SESSION_ID
+//   (claims.mjs measured it equal to the payload id on this machine): the cross-check, and on a conflict
+//   it wins over a pending stamp that names another session (a stale stamp from a denied call).
+//   `claude_session_id` keeps its old meaning (the voice brain's child). LIVENESS: the host's
+//   UserPromptSubmit calls `touch`, so last_turn_at moves with his prompts and idle means idle.
 // MODES: daemon | status | open [--surface voice|code] [--task "<title>"] [--route R] [--no-spawn] | turn --text "…" [--surface s]
+//        | host --session <id> [--transcript <path>] [--by <who>] | touch --session <id>
 //        | next | spoken <id> | close [--reason r] | review [--sitting id] [--force] [--dry] | plan | stats [--days N] | head [--out p] | selftest
 // CLI:   node scripts/sitting.mjs <mode>   (env: ARSENAL_SITTING_STATE_DIR · ARSENAL_SITTING_PORT — selftest only)
 // ============================================================================
@@ -67,6 +79,7 @@ import { tmpdir, homedir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE intent door — no organ keeps its own word list
 import { isStale as forgeIsStale } from "./forge_session.mjs";   // W0-D — the route asks the pacer whether its session is stale; it used to re-derive it from started_at with a bare 18
+import { transcriptPathFor } from "./study_scope.mjs";   // G0 (23 Sep) — the leaf's one derivation of where a session's transcript lives
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -95,6 +108,11 @@ const TEXT_LOG = join(HERE, "sitting.log");            // *.log is gitignored; s
 // The vocabulary the driver validates the model's proposals against — the same three
 // words capture.mjs / rejirah.mjs / gaffer_brain.mjs hold at their doors (GUT-WORD LAW).
 export const GUT_WORDS = Object.freeze(["knew", "shaky", "guessed"]);
+// G0 (23 Sep 2026): how long a hook-payload host stamp waits for its `open`. A definition, not a
+// measurement: it spans the permission prompt between rails' PreToolUse and the call itself on
+// Desktop. A stamp from a DENIED call can outlive it by this much; within that window the `open`
+// CLI's own env id (bindHost) is what refuses it — the TTL alone is not the guard.
+export const HOST_PENDING_TTL_MS = 10 * 60000;
 export const ROUTES = Object.freeze(["FORGE", "REJIRAH", "SCRIMMAGE", "PYTHON", "REVISION"]);
 export const TURN_CLASSES = Object.freeze(["deliver", "respond", "compose", "judge"]);
 // LAW A (MODELS + ACTS Block 2, 18 Aug 2026): the tail carries `acts` — his explicit asks, dispatched by the
@@ -474,6 +492,39 @@ export function createSitting(deps = {}) {
     idleTimer = setTimeout(() => { close({ reason: "idle" }).catch(() => { }); }, idleMs);
     if (idleTimer.unref) idleTimer.unref();
   };
+  // ── G0 · THE HOST SESSION (23 Sep 2026, ruling R7) — see the header ─────────────
+  // PENDING, not bound: rails' PreToolUse fires BEFORE the `open` call runs (and before any
+  // permission prompt), so a stamp is only a candidate until `open` actually happens. A denied
+  // call leaves a stamp that expires; `open` consumes whatever it finds, used or not.
+  let pendingHost = null;
+  const UUIDISH = /^[0-9a-f-]{36}$/i;
+  function host({ session = null, transcript = null, by = null } = {}) {
+    if (typeof session !== "string" || !UUIDISH.test(session)) return { ok: false, status: 400, error: "host needs --session <the hook payload's session_id>" };
+    pendingHost = { session, transcript: typeof transcript === "string" && transcript ? transcript : null, by: by ? clip(by, 60) : null, at: now().getTime() };
+    return { ok: true, pending: true, session, ttl_ms: HOST_PENDING_TTL_MS, open: isOpen(), id: S ? S.id : null };
+  }
+  const bindHost = (envSession) => {
+    if (!S) return null;
+    const fresh = pendingHost && now().getTime() - pendingHost.at <= HOST_PENDING_TTL_MS ? pendingHost : null;
+    const env = typeof envSession === "string" && UUIDISH.test(envSession) ? envSession : null;
+    pendingHost = null;                                   // consumed either way — one stamp, one open
+    let pick = null;
+    if (fresh && (!env || env === fresh.session)) pick = { session: fresh.session, transcript: fresh.transcript, source: env ? "hook-payload (harness env agrees)" : "hook-payload" };
+    else if (env) pick = { session: env, transcript: null, source: fresh ? "harness-env (the pending hook stamp named another session — stale, discarded)" : "harness-env" };
+    if (!pick) return null;                               // nothing to bind: a JOIN keeps its host, a new sitting has none
+    if (!pick.transcript) { const p = transcriptPathFor(pick.session); if (p && existsSync(p)) pick.transcript = p; }
+    S.host_session_id = pick.session; S.host_transcript_path = pick.transcript || null; S.host_source = pick.source; S.host_bound_at = now().toISOString();
+    log(`sitting: HOST ${pick.session.slice(0, 8)} bound to ${S.id} (${pick.source})`);
+    return pick;
+  };
+  // LIVENESS (R7): the host's UserPromptSubmit moves last_turn_at and re-arms the idle timer.
+  // Any other session's touch is a no-op, so an engineering session can never keep his sitting alive.
+  function touch({ session = null } = {}) {
+    if (!isOpen()) return { ok: true, touched: false, why: "no open sitting" };
+    if (!session || session !== S.host_session_id) return { ok: true, touched: false, why: "not the host session" };
+    S.last_turn_at = now().toISOString(); save(); armIdle();
+    return { ok: true, touched: true, id: S.id, last_turn_at: S.last_turn_at };
+  }
   const declareToPacer = (unit) => {
     // THE METHOD's step changes are declared through the OWNER (forge_session.mjs), exactly as /forge does
     if (!S || S.route !== "FORGE" || !unit) return;
@@ -594,10 +645,11 @@ export function createSitting(deps = {}) {
     S.plan = plan.units; S.plan_source = plan.source; S.plan_map = plan.map;
   };
 
-  async function open({ surface = "voice", task = null, route = null } = {}) {
+  async function open({ surface = "voice", task = null, route = null, env_session = null } = {}) {
     if (isOpen()) {
       if (!S.surfaces.includes(surface)) S.surfaces.push(surface);
       S.last_turn_at = now().toISOString();
+      bindHost(env_session);   // G0: the session that runs `open` now is the study session (a new Desktop session after a study reset rebinds it)
       // a voice mouth joining a code-only sitting gets the brain attached to the SAME state (one plan, one bank)
       if (surface === "voice" && !session && S.transport === "code") {
         const ctx = await gatherContext({ task, route });
@@ -606,7 +658,7 @@ export function createSitting(deps = {}) {
         if (S.plan && S.plan.length) { const u = S.plan[0]; const row = emit(u.text, { cls: "deliver", est: u.est_seconds, src: u.src, question: u.question, planIndex: 0, kind: u.kind }); S.cursor = 1; declareToPacer(u); S.stats.by_class.deliver++; logTurn({ turn: ++S.stats.turns, class: "deliver", surface, chars_in: 0, latency_ms: 0, tokens: null, unit: row && row.id }); }
       }
       save(); armIdle();
-      return { ok: true, id: S.id, joined: true, surfaces: S.surfaces, plan_len: (S.plan || []).length, first_unit: null, route: S.route, task: S.task, transport: S.transport };
+      return { ok: true, id: S.id, joined: true, surfaces: S.surfaces, plan_len: (S.plan || []).length, first_unit: null, route: S.route, task: S.task, transport: S.transport, host_session_id: S.host_session_id || null, host_source: S.host_source || null };
     }
     const ctx = await gatherContext({ task, route });
     // ── A1 (4 Sep 2026) · AN OPEN FORGE SESSION OUTRANKS THIS OPEN ────────────────
@@ -649,11 +701,13 @@ export function createSitting(deps = {}) {
     }
     S = {
       id: newId(), captain: ctx.captain.tag, surfaces: [surface], task: ctx.taskTitle, task_id: ctx.taskId, track: ctx.track, route: ctx.route, concept: ctx.concept, route_why: ctx.routeWhy,
-      claude_session_id: null, transport: surface === "code" ? "code" : cfg.transport, opened_at: now().toISOString(), last_turn_at: now().toISOString(), closed_at: null, close_reason: null,
+      claude_session_id: null, host_session_id: null, host_transcript_path: null, host_source: null, host_bound_at: null,
+      transport: surface === "code" ? "code" : cfg.transport, opened_at: now().toISOString(), last_turn_at: now().toISOString(), closed_at: null, close_reason: null,
       plan: [], plan_source: null, plan_map: null, cursor: 0, unit_seq: 0, pending_question: null, forge_step: ctx.forge && ctx.forge.concept ? Number(ctx.forge.step || 0) : null, forge_axis: ctx.forge ? ctx.forge.current_axis || null : null,
       effort: { ...cfg.effort }, model: cfg.model, head_chars: 0, head_footer: null, inputs_read: [],
       stats: { turns: 0, by_class: { deliver: 0, respond: 0, compose: 0, judge: 0 }, tokens: { input: 0, output: 0, cache_creation: 0, cache_read: 0 }, latency_ms: { deliver: [], respond: [], compose: [], judge: [] }, units_composed: 0, units_delivered: 0, banked: 0, owner_calls: 0, head_tokens: null },
     };
+    bindHost(env_session);   // G0: before the first save, so the file never exists open-and-hostless when a host was known
     save();
     log(`sitting: OPEN ${S.id} · ${surface} · ${S.route} '${S.task}' — ${S.route_why}`);
     // the pacer session (FORGE): resume the same concept, or close a stale one through its owner and start
@@ -693,7 +747,7 @@ export function createSitting(deps = {}) {
       void ack;
     }
     save(); armIdle();
-    return { ok: true, id: S.id, joined: false, surfaces: S.surfaces, route: S.route, task: S.task, plan_len: (S.plan || []).length, first_unit: first ? { id: first.id, text: first.text, est_seconds: first.est_seconds } : null, transport: S.transport, head_chars: S.head_chars };
+    return { ok: true, id: S.id, joined: false, surfaces: S.surfaces, route: S.route, task: S.task, plan_len: (S.plan || []).length, first_unit: first ? { id: first.id, text: first.text, est_seconds: first.est_seconds } : null, transport: S.transport, head_chars: S.head_chars, host_session_id: S.host_session_id || null, host_source: S.host_source || null };
   }
 
   async function gatherContext({ task, route } = {}) {
@@ -904,6 +958,7 @@ export function createSitting(deps = {}) {
     const und = isOpen() ? undelivered().length : 0;
     return { ok: true, open: isOpen(), id: S ? S.id : null, task: S ? S.task : null, route: S ? S.route : null, concept: S ? S.concept : null, surfaces: S ? S.surfaces : [], cursor: S ? S.cursor : 0, plan_len: S ? (S.plan || []).length : 0,
       undelivered: und, transport: S ? S.transport : null, claude_session_id: S ? S.claude_session_id : null, child_alive: !!(session && session.alive), opened_at: S ? S.opened_at : null, last_turn_at: S ? S.last_turn_at : null,
+      host_session_id: S ? S.host_session_id || null : null, host_source: S ? S.host_source || null : null, host_bound_at: S ? S.host_bound_at || null : null, host_pending: !!pendingHost,
       pending_question: S && S.pending_question ? S.pending_question.unit_id : null, stats: S ? S.stats : null, pid: process.pid, uptime_ms: Math.round(process.uptime() * 1000), port: PORT, booted_at: BOOTED_AT, module_mtime_ms: MODULE_MTIME_MS };
   }
   async function close({ reason = "his_word" } = {}) {
@@ -979,6 +1034,8 @@ export function createSitting(deps = {}) {
             let raw = ""; for await (const c of req) raw += c;
             let body = {}; try { body = raw ? JSON.parse(raw) : {}; } catch { return send(400, { ok: false, error: "bad json" }); }
             if (url === "/open") return send(200, await open(body));
+            if (url === "/host") { const r = host(body); return send(r.status || 200, r); }     // G0 (23 Sep): rails' payload hand-off
+            if (url === "/touch") return send(200, touch(body));                               // G0 (23 Sep): the host's prompt liveness
             if (url === "/turn") { const r = turn(body); return send(r.status || 200, r); }
             if (url === "/spoken") { const r = spoken(body); return send(r.status || 200, r); }
             if (url === "/close") { const r = await close(body); return send(r.status || 200, r); }
@@ -991,7 +1048,7 @@ export function createSitting(deps = {}) {
     });
   }
   function stop() { return new Promise((resolve) => { if (idleTimer) clearTimeout(idleTimer); if (session) { try { session.kill(); } catch { } } if (!server) return resolve(); server.close(() => resolve()); }); }
-  return { open, turn, spoken, next, status, close, plan, serve, stop, context: (o) => gatherContext(o || {}), get state() { return S; }, get session() { return session; }, undelivered, _classify: (t) => classifyTurn(t, S, deps.intent || {}) };
+  return { open, turn, spoken, next, status, close, plan, serve, stop, host, touch, context: (o) => gatherContext(o || {}), get state() { return S; }, get session() { return session; }, undelivered, _classify: (t) => classifyTurn(t, S, deps.intent || {}) };
 }
 const BOOTED_AT = new Date().toISOString();
 const MODULE_MTIME_MS = (() => { try { return statSync(fileURLToPath(import.meta.url)).mtimeMs; } catch { return null; } })();
@@ -1187,7 +1244,7 @@ async function main() {
       const up = await daemonUp();
       if (!up) { const s = readJson(F.sitting()); console.log(`sitting: daemon DOWN on :${PORT} · file says ${s && s.id && !s.closed_at ? `OPEN ${s.route} '${s.task}' (${s.id}) — the plan persists; the next \`daemon\` resumes at cursor ${s.cursor}` : "no open sitting"} · start: node scripts/sitting.mjs daemon`); return; }
       const s = await get("/status");
-      console.log(`sitting: ${s.open ? `OPEN ${s.route} '${s.task}' · ${s.id} · surfaces ${s.surfaces.join("+")} · plan ${s.cursor}/${s.plan_len} · undelivered ${s.undelivered} · transport ${s.transport} · child ${s.child_alive ? "alive" : "none"} · turns ${s.stats.turns} · banked ${s.stats.banked}` : "none open"} · daemon :${s.port} pid ${s.pid} up ${Math.round(s.uptime_ms / 1000)}s`);
+      console.log(`sitting: ${s.open ? `OPEN ${s.route} '${s.task}' · ${s.id} · surfaces ${s.surfaces.join("+")} · plan ${s.cursor}/${s.plan_len} · undelivered ${s.undelivered} · transport ${s.transport} · child ${s.child_alive ? "alive" : "none"} · turns ${s.stats.turns} · banked ${s.stats.banked} · host ${s.host_session_id ? `${String(s.host_session_id).slice(0, 8)} (${s.host_source}) · last turn ${s.last_turn_at}` : s.host_source === undefined ? "UNKNOWN (older daemon build)" : "NOT BOUND"}` : "none open"} · daemon :${s.port} pid ${s.pid} up ${Math.round(s.uptime_ms / 1000)}s`);
       return;
     }
     case "open": {
@@ -1206,7 +1263,8 @@ async function main() {
         return;
       }
       if (!(await ensureDaemon())) { console.error(`sitting: could not start the daemon on :${PORT}`); process.exit(1); }
-      const r = await post("/open", { surface: opt("--surface") || "code", task: opt("--task") || null, route: opt("--route") || null }, 180000);
+      // G0: this process's own harness session id rides the body (never typed by the model) — the cross-check for rails' stamp.
+      const r = await post("/open", { surface: opt("--surface") || "code", task: opt("--task") || null, route: opt("--route") || null, env_session: process.env.CLAUDE_CODE_SESSION_ID || null }, 180000);
       // A1 — a 409 is not a crash: it says his concept is still open and how to get
       // back into it. Printed as two lines and exits 1, so a skill can branch on it.
       if (!r.ok && r.status === 409) {
@@ -1214,7 +1272,25 @@ async function main() {
         console.error(`  → ${r.resume}`);
         process.exit(1);
       }
-      console.log(r.ok ? `sitting: ${r.joined ? "JOINED" : "OPEN"} ${r.id} · ${r.route} '${r.task || ""}' · surfaces ${(r.surfaces || []).join("+")} · plan ${r.plan_len} unit(s) · transport ${r.transport}${r.first_unit ? `\n  first unit → ${clip(r.first_unit.text, 160)}` : ""}` : `sitting: open failed — ${r.error}`);
+      // G0: say whether the study scope is bound — a sitting with no host silences every study organ in every session.
+      const hostPart = !r.ok ? "" : r.host_session_id ? ` · host ${String(r.host_session_id).slice(0, 8)} (${r.host_source})`
+        : r.host_source === undefined ? " · host UNKNOWN (the daemon runs a build older than this file — restart it through the Daemon-Watchdog task)"
+          : " · host NOT BOUND (no hook stamp and no harness id) — the study organs stay silent in every session";
+      console.log(r.ok ? `sitting: ${r.joined ? "JOINED" : "OPEN"} ${r.id} · ${r.route} '${r.task || ""}' · surfaces ${(r.surfaces || []).join("+")} · plan ${r.plan_len} unit(s) · transport ${r.transport}${hostPart}${r.first_unit ? `\n  first unit → ${clip(r.first_unit.text, 160)}` : ""}` : `sitting: open failed — ${r.error}`);
+      return;
+    }
+    case "host": {   // G0 — called by rails.mjs pretooluse with the hook payload's ids; by hand only to repair
+      if (!(await daemonUp())) { console.log(`sitting: daemon down on :${PORT} — no host stamped (and \`open --no-spawn\` would register no sitting either).`); return; }
+      try {
+        const r = await post("/host", { session: opt("--session") || null, transcript: opt("--transcript") || null, by: opt("--by") || null }, 2000);
+        console.log(r.ok ? `sitting: host ${String(r.session).slice(0, 8)} stamped PENDING (${Math.round(r.ttl_ms / 60000)} min) — the next \`open\` binds it${r.open ? ` · sitting ${r.id} is open, so it JOINS and rebinds` : ""}` : `sitting: host refused — ${r.error || "no /host door (the daemon runs an older build — restart it through the Daemon-Watchdog task)"}`);
+      } catch (e) { console.log(`sitting: host not stamped — ${String(e && e.message || e).slice(0, 120)}`); }
+      return;
+    }
+    case "touch": {   // G0 — the host's UserPromptSubmit (turn_hook, CALL shape). HOOK PATH: silent on stdout, always, and never slow.
+      const session = opt("--session");
+      if (!session) return;
+      try { await post("/touch", { session }, 800); } catch { /* a down or old daemon costs his prompt nothing */ }
       return;
     }
     case "turn": { const r = await post("/turn", { text: opt("--text") || rest.filter((a) => !a.startsWith("--")).join(" "), surface: opt("--surface") || "code" }); console.log(JSON.stringify(r)); return; }
@@ -1270,7 +1346,7 @@ async function main() {
     }
     case "selftest": process.exit((await selftest()) ? 0 : 1);
     default:
-      console.log("sitting.mjs — daemon | status | open [--surface voice|code] [--task \"…\"] [--route R] [--no-spawn] | turn --text \"…\" | next | spoken <id> | close [--reason r] | review [--sitting id] [--force] [--dry] | plan | stats [--days N] | head [--out p] | selftest");
+      console.log("sitting.mjs — daemon | status | open [--surface voice|code] [--task \"…\"] [--route R] [--no-spawn] | host --session <id> [--transcript p] [--by who] | touch --session <id> | turn --text \"…\" | next | spoken <id> | close [--reason r] | review [--sitting id] [--force] [--dry] | plan | stats [--days N] | head [--out p] | selftest");
   }
 }
 
@@ -1541,6 +1617,41 @@ async function selftest() {
     const o5b = await d5b.open({ surface: "voice" });
     assert("join: a voice mouth joining a code-only sitting ATTACHES the brain to the same id (plan composed, first unit emitted, transport stream)", o5b.joined && o5b.id === d5.state.id && d5b.state.plan.length === 4 && d5b.state.transport === "stream" && d5b.state.surfaces.includes("voice"));
     await d5b.close({ reason: "his_word" }); await d5b.stop(); await d5.stop();
+    // ── 13c. G0 (23 Sep 2026, ruling R7) — THE HOST SESSION: stamp → bind → touch → rebind ──
+    {
+      const H = "11111111-2222-3333-4444-555555555555", E = "99999999-8888-7777-6666-555555555555";
+      let t = Date.parse("2026-09-23T12:00:00Z");
+      const g1 = createSitting({ ...baseDeps, now: () => new Date(t), session: () => { throw new Error("must not spawn for a code sitting"); } });
+      const h1 = g1.host({ session: H, transcript: "C:/t/h.jsonl", by: "rails pretooluse" });
+      const o1 = await g1.open({ surface: "code" });
+      assert("G0 · a hook-payload stamp is PENDING until `open`, and a NEW open binds it (host id + transcript + source), in the reply too",
+        h1.ok && h1.pending && o1.ok && g1.state.host_session_id === H && g1.state.host_transcript_path === "C:/t/h.jsonl" && g1.state.host_source === "hook-payload" && o1.host_session_id === H && !!g1.state.host_bound_at);
+      t += 60000;
+      const before = g1.state.last_turn_at;
+      const tOther = g1.touch({ session: E });
+      assert("G0 · touch from ANOTHER session is a no-op — an engineering session can never keep his sitting alive", tOther.touched === false && g1.state.last_turn_at === before);
+      const tHost = g1.touch({ session: H });
+      assert("G0 · touch from the HOST moves last_turn_at (liveness: idle means idle)", tHost.touched === true && g1.state.last_turn_at === new Date(t).toISOString() && g1.state.last_turn_at !== before);
+      g1.host({ session: E, transcript: "C:/t/e.jsonl" });
+      const j1 = await g1.open({ surface: "code" });
+      assert("G0 · a JOIN from a new session with a stamp REBINDS the host (the study-reset route: new Desktop session, 'learn')", j1.joined && g1.state.host_session_id === E && j1.host_session_id === E);
+      const j2 = await g1.open({ surface: "code" });
+      assert("G0 · the stamp was CONSUMED: a JOIN with no stamp and no harness id keeps the host it had", j2.joined && g1.state.host_session_id === E);
+      g1.host({ session: H }); await g1.open({ surface: "code", env_session: H });
+      assert("G0 · stamp + the open CLI's own harness id agreeing → bound, and the source names both", g1.state.host_session_id === H && /harness env agrees/.test(g1.state.host_source));
+      g1.host({ session: H }); await g1.open({ surface: "code", env_session: E });
+      assert("G0 · a pending stamp naming ANOTHER session than the open CLI's own harness id is discarded as stale; the harness id binds", g1.state.host_session_id === E && /stale, discarded/.test(g1.state.host_source));
+      g1.host({ session: H }); t += HOST_PENDING_TTL_MS + 1; await g1.open({ surface: "code" });
+      assert("G0 · a stamp older than HOST_PENDING_TTL_MS binds nothing", g1.state.host_session_id === E);
+      assert("G0 · `host` refuses anything that is not a session id", g1.host({ session: "not-an-id" }).ok === false && g1.host({}).ok === false);
+      const sc = await import("./study_scope.mjs");
+      const disk = readJson(F.sitting());
+      assert("G0 · study_scope reads the WRITTEN file: the host is in scope, the previous host is not",
+        sc.studyScope({ payload: { session_id: E }, sitting: disk }).study === true && sc.studyScope({ payload: { session_id: H }, sitting: disk }).study === false);
+      await g1.close({ reason: "his_word" });
+      assert("G0 · after close nobody is in scope, the host included", sc.studyScope({ payload: { session_id: E }, sitting: readJson(F.sitting()) }).study === false);
+      await g1.stop();
+    }
     // ── 13a. ROW 68 (d), 6 Sep 2026 — THE JUDGE FIRES BY CODE OFF THE GRADE QUEUE ──────
     // A code sitting banks through the capture CLI, never through the turn door, so its own
     // `stats.banked` is 0 at close. Before this row the judge door read only that count, and the
@@ -1677,4 +1788,7 @@ async function selftest() {
   return fail === 0;
 }
 
+// G0 (23 Sep 2026): the CALL shape for turn_hook.mjs — `touch` runs in-process on the host's prompts.
+// argv[1] stays the dispatcher's, so the guard below stays shut and main runs exactly once, awaited.
+export { main as hookMain };
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((e) => { console.error(`sitting: ${e && e.stack || e}`); process.exit(1); });

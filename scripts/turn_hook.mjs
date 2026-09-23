@@ -72,8 +72,27 @@ import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { performance } from "node:perf_hooks";
 
+// G0 (23 Sep 2026) — the study-scope predicate is a LEAF (node builtins only) and it is a CALL-shape
+// callee here (`unboundMain`), never a SHIM one, so this static import cannot poison the module cache.
+import { scopeFromHook, SCOPE_GLOBAL, scopeSelfCheck } from "./study_scope.mjs";
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
+
+// ── G0 · THE STUDY SCOPE (23 Sep 2026 · THE TEACHING GATE P1, architect ruling R7, forks row 255) ──
+// P0 measured 86 % of the audited turns as ENGINEERING sessions: every study organ keyed on the one
+// global forge_session.json, so the architect's and the runner's prompts were handed the whole
+// teaching block, advanced his turn clock, fed the latency line and were audited as teaching.
+// From here the study callees run ONLY when this hook's payload session IS the open sitting's host
+// (scripts/study_scope.mjs). UNIVERSAL, unchanged: the SessionStart brief (state line, kickoff, the
+// forge boot line, watchman, outbox, the card) and hippocampus's recall hint. The verdict is parked
+// on globalThis[SCOPE_GLOBAL] for the callees (teaching_audit stamps its rows from it).
+// `opts.scope` is injectable so the selftest can plant both verdicts over fixture callees.
+function scopeOf(opts) {
+  const s = opts && opts.scope ? opts.scope : scopeFromHook(typeof opts.stdin === "string" ? opts.stdin : "");
+  globalThis[SCOPE_GLOBAL] = s;
+  return s;
+}
 
 // THE STDIN HANDOFF — the one name every callee's stdin reader checks first.
 export const STDIN_HANDOFF = "__ARSENAL_HOOK_STDIN__";
@@ -108,6 +127,18 @@ const BUDGET_MS = 450;
 // `reset-turns` / `brief` / `boot` / `deal` remain "invoked", not orphan verbs.
 export async function prompt(opts = {}) {
   const r = { ran: 0, failed: [] };
+  const scope = scopeOf(opts);
+  if (!scope.study) {
+    // G0 — outside the study session: no pacer, no contract, no bar, no audit, no turn clock. ONE
+    // pointer line, and only on a surface he studies on while a concept is open (study_scope.mjs).
+    await runOrgan("study_scope.mjs", "unbound", { ...opts, call: "unboundMain" }, r);
+    await runOrgan("hippocampus.mjs", "recall-hint", opts, r);
+    return r;
+  }
+  // G0 LIVENESS (R7): the host's prompt touches the sitting through the owner's own verb, so its
+  // idle timer measures HIS silence. CALL shape: sitting.mjs guards its main behind argv[1].
+  // Not under the TRANSITION guard (an old-build sitting): there is no host to be, and no /touch door.
+  if (!scope.legacy) await runOrgan("sitting.mjs", "touch", { ...opts, call: "hookMain", extraArgs: ["--session", scope.session] }, r);
   await runOrgan("forge_session.mjs", "contract", opts, r);
   await runOrgan("teaching_contract.mjs", "print", opts, r);
   // ── THE TEACHING BAR (7 Sep 2026) — THE MESSAGE GRAMMAR JOINS THE ANCHOR ───
@@ -133,7 +164,10 @@ export async function prompt(opts = {}) {
 }
 export async function start(opts = {}) {
   const r = { ran: 0, failed: [] };
-  await runOrgan("teaching_contract.mjs", "reset-turns", opts, r);
+  // G0: the turn clock is the study session's. SessionStart fires on every new session AND on the
+  // host's own compact/resume; only the second may reset his clock. A NEW study session needs no
+  // reset here — its first scoped `print` sees a new transcript anchor and counts 1 (bumpTurn).
+  if (scopeOf(opts).study) await runOrgan("teaching_contract.mjs", "reset-turns", opts, r);
   // learnstate rides the `call` shape (library import + awaited `hookMain`), NOT the
   // argv[1] shim: its brief() dynamically imports context_manifest, which imports
   // learnstate back — a top-level `await main()` there DEADLOCKED (unsettled TLA,
@@ -196,7 +230,7 @@ export async function start(opts = {}) {
 // fate with the auditors), so Stop = afferent-post + `turn_hook stop` = 2 processes.
 export async function stop(opts = {}) {
   const r = { ran: 0, failed: [] };
-  await runOrgan("teaching_audit.mjs", "hook", opts, r);
+  if (scopeOf(opts).study) await runOrgan("teaching_audit.mjs", "hook", opts, r);   // G0: only the study session's turns are audited as teaching
   await runOrgan("intent.mjs", "stop", opts, r);
   await runOrgan("acts.mjs", "stop", opts, r);   // LAW A door 3 (18 Aug 2026): a `<<ACT {…}>>` tail on the turn → receipts, same anchor, same process
   await runOrgan("session_meter.mjs", "stop", opts, r);   // AUDIT §10-C S1a (20 Aug 2026): what THIS session has spent, said at the anchor that costs him nothing. Tail-parses ONE transcript; the full sweep rides `state.mjs week`, never a hook
@@ -466,6 +500,48 @@ function selftest() {
       for (const c of br.cases) assert(c.name, c.ok, c.detail);
     } catch (e) {
       assert("the teaching bar's cases ran at all", false, String((e && e.message) || e));
+    }
+
+    // ── G0 · THE STUDY SCOPE (23 Sep 2026, ruling R7) — planted both ways over FIXTURE callees ──
+    // One fresh dir per sequence × verdict: a module is evaluated once per URL, so a shared dir
+    // would turn the second run's SHIMs into silent no-ops (the R-01 class) and prove nothing.
+    for (const c of scopeSelfCheck().cases) assert(c.name, c.ok, c.detail);
+    {
+      const SID = "11111111-2222-3333-4444-555555555555";
+      const shim = (tag) => `console.log("${tag}:" + process.argv.slice(2).join(","));\n`;
+      const call = (tag, fn = "hookMain") => `export async function ${fn}() { console.log("${tag}:" + process.argv.slice(2).join(",")); }\n`;
+      const FIX = {
+        prompt: { "sitting.mjs": call("SITTING"), "forge_session.mjs": shim("FORGE"), "teaching_contract.mjs": shim("TC"), "teaching_bar.mjs": shim("BAR"),
+          "teaching_audit.mjs": shim("AUDIT"), "hippocampus.mjs": shim("HIPPO"), "study_scope.mjs": call("UNBOUND", "unboundMain") },
+        stop: { "teaching_audit.mjs": shim("AUDIT"), "intent.mjs": shim("INTENT"), "acts.mjs": shim("ACTS"), "session_meter.mjs": shim("METER") },
+        start: { "teaching_contract.mjs": shim("TC"), "learnstate.mjs": call("LEARN"), "forge_session.mjs": call("FORGE"), "watchman.mjs": shim("WATCH"), "outbox.mjs": call("OUTBOX"), "captains_call.mjs": call("CARD") },
+      };
+      const runSeq = async (seq, study, extra = {}) => {
+        const d = mkdtempSync(join(tmpdir(), `turn_hook-g0-${seq}-`));
+        for (const [n, s] of Object.entries(FIX[seq])) writeFileSync(join(d, n), s);
+        const got = [], w0 = process.stdout.write.bind(process.stdout);
+        process.stdout.write = (chunk) => { got.push(String(chunk)); return true; };
+        let rr;
+        try { rr = await SEQUENCES[seq]({ dir: d, stdin: JSON.stringify({ session_id: SID }), stderr: () => { }, scope: { study, session: study ? SID : null, why: "planted", ...extra } }); }
+        finally { process.stdout.write = w0; rmSync(d, { recursive: true, force: true }); }
+        return { lines: got.join("").split("\n").filter(Boolean), r: rr };
+      };
+      const ps = await runSeq("prompt", true), pn = await runSeq("prompt", false);
+      assert("G0 · prompt IN SCOPE — the host's prompt touches the sitting through its owner (with its own session id) and then runs pacer, contract, bar, audit, recall — in that order",
+        JSON.stringify(ps.lines) === JSON.stringify([`SITTING:touch,--session,${SID}`, "FORGE:contract", "TC:print", "BAR:print", "AUDIT:hook", "HIPPO:recall-hint"]), JSON.stringify(ps.lines));
+      assert("G0 · prompt OUT OF SCOPE — no pacer, no contract, no bar, no audit, no turn clock, no touch: only the unbound pointer and the universal recall hint (the H3 class closed)",
+        JSON.stringify(pn.lines) === JSON.stringify(["UNBOUND:unbound", "HIPPO:recall-hint"]), JSON.stringify(pn.lines));
+      const pl = await runSeq("prompt", true, { legacy: true });
+      assert("G0 · prompt under the TRANSITION guard (an old-build sitting) keeps the study blocks but touches nothing — there is no host and no /touch door",
+        JSON.stringify(pl.lines) === JSON.stringify(["FORGE:contract", "TC:print", "BAR:print", "AUDIT:hook", "HIPPO:recall-hint"]), JSON.stringify(pl.lines));
+      const ss = await runSeq("stop", true), sn = await runSeq("stop", false);
+      assert("G0 · stop — the teaching audit runs ONLY for the study session; intent, acts and the session meter stay universal",
+        JSON.stringify(ss.lines) === JSON.stringify(["AUDIT:hook", "INTENT:stop", "ACTS:stop", "METER:stop"]) && JSON.stringify(sn.lines) === JSON.stringify(["INTENT:stop", "ACTS:stop", "METER:stop"]), JSON.stringify({ ss: ss.lines, sn: sn.lines }));
+      const ts = await runSeq("start", true), tn = await runSeq("start", false);
+      assert("G0 · start — the turn clock resets only on the HOST's own SessionStart (compact/resume); the brief, the forge boot line, watchman, outbox and the card stay universal",
+        ts.lines[0] === "TC:reset-turns" && JSON.stringify(ts.lines.slice(1)) === JSON.stringify(tn.lines) && !tn.lines.some((l) => l.startsWith("TC:"))
+        && JSON.stringify(tn.lines) === JSON.stringify(["LEARN:brief", "FORGE:boot", "WATCH:brief", "OUTBOX:brief", "CARD:deal"]), JSON.stringify({ ts: ts.lines, tn: tn.lines }));
+      assert("G0 · the verdict is parked for the callees on the named global", globalThis[SCOPE_GLOBAL] && globalThis[SCOPE_GLOBAL].why === "planted");
     }
 
     // 3. THE LIVE CALLEES UNDER ARSENAL_ORGAN=1 — hermetic by every callee's own

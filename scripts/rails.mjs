@@ -52,6 +52,13 @@
 //
 // LAWS: writes nothing · never rewrites a command · fail-open on its own error ·
 //   every deny names the rail id, the reason, and the compliant form.
+// THE ONE HAND-OFF (23 Sep 2026 · THE TEACHING GATE P1 · G0, architect ruling R7, forks row 255):
+//   when a Bash/PowerShell call runs `sitting.mjs open` in COMMAND POSITION, this hook hands the
+//   PAYLOAD's own session_id + transcript_path to `sitting.mjs host` — sitting's OWN verb writes
+//   them (a pending stamp its `open` then binds). This organ still writes nothing; it is the only
+//   process that can see the payload of the call that opens the study sitting, and the model must
+//   never type an id. Bounded (5 s), silent on stdout, fail-open: a failed hand-off costs the call
+//   nothing, and the `open` CLI's own harness id is the second path (sitting.mjs bindHost).
 // WHO ELSE COULD ACT ON THIS OUTPUT? .claude/settings.json PreToolUse (wired) ·
 //   hooks/pre-commit (wired — tripwire first, then `orders`) · xray.mjs (reads this file
 //   like any organ; it has no state edges by design).
@@ -149,6 +156,23 @@ export function decide(payload = {}) {
   return allow("no rail covers this tool");
 }
 
+// G0 · THE HAND-OFF'S PREDICATE — pure. `node` in command position (the CLAUDE-P rule's own
+// CMD_POS, so a grep or a sentence ABOUT the command is never a call), then a path ending in
+// sitting.mjs (bare, relative, or the quoted $CLAUDE_PROJECT_DIR form), then the `open` verb.
+export const SITTING_OPEN_RE = new RegExp(`${CMD_POS}node(?:\\.exe)?\\s+"?[^\\s";|&]*sitting\\.mjs"?\\s+open\\b`, "i");
+export function hostHandoff(payload = {}) {
+  const tool = String(payload.tool_name || "");
+  if (tool !== "Bash" && tool !== "PowerShell") return null;
+  const cmd = String((payload.tool_input || {}).command || "");
+  if (!SITTING_OPEN_RE.test(cmd)) return null;
+  const sid = typeof payload.session_id === "string" ? payload.session_id : "";
+  if (!/^[0-9a-f-]{36}$/i.test(sid)) return null;
+  const tp = typeof payload.transcript_path === "string" ? payload.transcript_path : "";
+  return ["host", "--session", sid, ...(tp ? ["--transcript", tp] : []), "--by", "rails pretooluse"];
+}
+const SITTING_CLI = join(HERE, "sitting.mjs");
+const spawnHandoff = (args) => spawnSync(process.execPath, [SITTING_CLI, ...args], { cwd: ROOT, timeout: 5000, stdio: ["ignore", "ignore", "ignore"], windowsHide: true });
+
 // THE HOOK — Claude Code's PreToolUse contract: a JSON decision on stdout, exit 0.
 // ⛔ fd 0 IS NEVER READ BLINDLY (rung S5-R, 20 Aug 2026). The first version called
 //   `readFileSync(0)` whenever stdin was not a TTY — the EXACT defect S5 STEP 0 fixed in
@@ -158,7 +182,7 @@ export function decide(payload = {}) {
 //   only the hang case changes, from a forever-block into a LOUD fast refusal that
 //   fail-opens — which is this rail's declared failure mode ("if this organ throws, the
 //   tool proceeds"), now reached in 300 ms instead of never.
-export function pretooluse({ raw = null } = {}) {
+export function pretooluse({ raw = null, handoff = spawnHandoff } = {}) {
   let payload = {};
   try {
     const handed = globalThis.__ARSENAL_HOOK_STDIN__;
@@ -182,6 +206,8 @@ export function pretooluse({ raw = null } = {}) {
     return d;
   }
   if (d.override) process.stderr.write(`rails: ${d.why}\n`);
+  // G0 — only on an ALLOWED call (a denied one never runs, so it opens nothing).
+  try { const h = hostHandoff(payload); if (h) { handoff(h); d.handoff = h; } } catch { /* fail-open: the call proceeds either way */ }
   return d;   // silence = the tool proceeds under the normal permission flow
 }
 
@@ -387,6 +413,37 @@ function selftest() {
   process.stdout.write = (s) => { out3.push(s); return true; };
   try { pretooluse({ raw: "{not json" }); } finally { process.stdout.write = w; }
   assert("HOOK — junk on stdin never blocks a tool call (fail-open, deliberately)", out3.join("") === "");
+
+  // G0 (23 Sep 2026, ruling R7) — THE HAND-OFF, planted both ways
+  {
+    const SID = "0d9b6b3b-1111-2222-3333-444444444444";
+    const P = (tool, command, extra = {}) => ({ tool_name: tool, tool_input: { command }, session_id: SID, transcript_path: "C:/t/x.jsonl", ...extra });
+    const hit = (p) => !!hostHandoff(p);
+    assert("G0 HAND-OFF — the /learn boot's own line hands the payload ids to `sitting.mjs host`",
+      JSON.stringify(hostHandoff(P("Bash", 'node scripts/sitting.mjs open --surface code --no-spawn --task "tokenization axis c"')))
+        === JSON.stringify(["host", "--session", SID, "--transcript", "C:/t/x.jsonl", "--by", "rails pretooluse"]));
+    assert("G0 HAND-OFF — the anchored quoted path, a head-of-chain cd, and PowerShell are the same call",
+      hit(P("Bash", 'node "$CLAUDE_PROJECT_DIR/scripts/sitting.mjs" open --surface code')) && hit(P("Bash", "cd C:/x && node scripts/sitting.mjs open")) && hit(P("PowerShell", "node scripts\\sitting.mjs open --no-spawn")));
+    assert("G0 HAND-OFF — a mention is not a call (grep, echo, a quoted sentence), and another verb of sitting is not `open`",
+      !hit(P("Bash", 'grep -n "node scripts/sitting.mjs open" .claude/skills/learn/SKILL.md')) && !hit(P("Bash", "echo run sitting.mjs open later"))
+      && !hit(P("Bash", "node scripts/sitting.mjs status")) && !hit(P("Bash", "node scripts/sitting.mjs opener")));
+    assert("G0 HAND-OFF — no session id on the payload (or a non-id) hands nothing; a non-shell tool hands nothing",
+      !hit(P("Bash", "node scripts/sitting.mjs open", { session_id: undefined })) && !hit(P("Bash", "node scripts/sitting.mjs open", { session_id: "selftest" }))
+      && !hostHandoff({ tool_name: "Write", tool_input: { file_path: "x", content: "node scripts/sitting.mjs open" }, session_id: SID }));
+    assert("G0 HAND-OFF — no transcript on the payload still hands the session id",
+      JSON.stringify(hostHandoff(P("Bash", "node scripts/sitting.mjs open", { transcript_path: undefined }))) === JSON.stringify(["host", "--session", SID, "--by", "rails pretooluse"]));
+    const got = [], o4 = [];
+    process.stdout.write = (s) => { o4.push(s); return true; };
+    try {
+      pretooluse({ raw: JSON.stringify(P("Bash", "node scripts/sitting.mjs open --surface code --no-spawn")), handoff: (a) => got.push(a) });
+      pretooluse({ raw: JSON.stringify(P("Bash", "node scripts/sitting.mjs status")), handoff: (a) => got.push(a) });
+      pretooluse({ raw: JSON.stringify(P("Bash", "claude -p go && node scripts/sitting.mjs open")), handoff: (a) => got.push(a) });
+      pretooluse({ raw: JSON.stringify(P("Bash", "node scripts/sitting.mjs open")), handoff: () => { throw new Error("spawn failed"); } });
+    } finally { process.stdout.write = w; }
+    assert("G0 HOOK — the hook runs the hand-off exactly once for the open call, never for another verb, never for a DENIED call; stdout stays the decision alone",
+      got.length === 1 && got[0][0] === "host" && got[0][2] === SID && o4.length === 1 && /RAIL claude-p/.test(o4[0]), JSON.stringify({ got, o4 }));
+    assert("G0 HOOK — a hand-off that throws costs the call nothing (fail-open, no stdout)", o4.length === 1);
+  }
 
   // (c) THE ORDER-CHECKER
   const found = orderFiles();

@@ -5,10 +5,16 @@ description: BOOT THE ARCHITECT ROLE (the organism's CTO — rules on forks, nev
 
 # /architect — attach to the role, zero loss
 
-**FIRST ACT AT BOOT (26 Aug 2026, the direct channel):** write THIS session's name (from
-ListAgents' header line) into `C:\Users\nikhi\arsenal-audit-artifacts\ARCHITECT_SESSION.txt` —
-executors SendMessage the architect directly now; he only opens sessions. Watch for incoming
-SendMessage escalations; the queue\ file stays the RECORD, messages are transport.
+**FIRST ACT AT BOOT (forks row 255 R11, 23 Sep 2026 — replaces the 26 Aug hand-write):** the CLAIM,
+never a hand write. From the campaign root:
+`node tools/roles.mjs claim architect --me "<THIS session's name from ListAgents' header line>" --session-id <this session's uuid>`
+— `roles.mjs claim` writes `C:\Users\nikhi\arsenal-audit-artifacts\ARCHITECT_SESSION.txt` itself (five lines:
+name, stamp, session id, transport note, claim note). READ THE LINE IT PRINTS. If it says "already holds …
+nothing written", the record has no line for this hand (the 21 Sep inverse case): `node tools/roles.mjs release
+architect --me "<the name on record>" --note "<what actually ended it>"`, then claim again with `--session-id`.
+Never `printf`/`echo` into that file — a hand write clobbered the record on 23 Sep 17:36 (restored from git).
+Executors SendMessage the architect directly; he only opens sessions. Watch for incoming SendMessage
+escalations; the queue\ file stays the RECORD, messages are transport.
 
 The role lives on disk, not in any session (ARCHITECT OS, 25 Aug 2026 — a session is a mortal
 process; the org carries the knowledge). Boot = READ IN THIS ORDER, then act:

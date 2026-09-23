@@ -95,6 +95,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { subjectsOf, coreAxes } from "./registry.mjs";   // S10 #10 sources + #12 core axes — rows, never literals
+import { SCOPE_GLOBAL } from "./study_scope.mjs";   // G0 (23 Sep 2026): the dispatcher's study-scope verdict, stamped on every row
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // ARSENAL_AUDIT_STATE_DIR is the selftest's seam and NOTHING else's: it lets the
@@ -1497,9 +1498,17 @@ export function stopHook(hook, io) {
 
   if (!res.audited) return { res, staged, userTextSource };
 
+  // G0 (23 Sep 2026, ruling R7 + R8): the dispatcher runs this hook ONLY for the study session's
+  // host, and says so on a named global. The stamp is what R8's 14-day ranking counts; a row with
+  // no stamp predates G0 (or came from a probe) and is classified there, never here.
+  const scopeNow = globalThis[SCOPE_GLOBAL];
   io.appendLog({
     ts: now,
     session_id: sid,
+    // A LEGACY verdict (an old-build sitting — study_scope's transition guard) is NOT a host match, so
+    // its rows stay unstamped and R8 classifies them the P0 way, by surface.
+    scope: scopeNow && scopeNow.study && !scopeNow.legacy ? "study" : null,
+    sitting_id: scopeNow && scopeNow.study && !scopeNow.legacy ? scopeNow.sitting_id || null : null,
     concept: session.concept,
     step: res.measured.step,
     drifts: res.drifts.map((d) => d.rule),
@@ -2189,6 +2198,25 @@ function selftest() {
     } finally {
       try { rmSync(tmp, { recursive: true, force: true }); } catch {}
     }
+  }
+
+  // G0 (23 Sep 2026) — THE SCOPE STAMP that R8's 14-day ranking counts. Driven through the REAL
+  // stopHook with a collecting io (nothing written); the dispatcher's verdict arrives on the global.
+  {
+    const rowsG = [];
+    const ioG = { writeLast: () => {}, appendLog: (r) => rowsG.push(r), autoHit: () => ({ ok: null, skipped: "selftest" }), stampChecked: () => {} };
+    const saved = globalThis[SCOPE_GLOBAL];
+    try {
+      globalThis[SCOPE_GLOBAL] = { study: true, sitting_id: "sit_selftest" };
+      const a = stopHook({ hook_event_name: "Stop", session_id: "selftest-g0", last_assistant_message: SAMPLE_CLEAN }, ioG);
+      globalThis[SCOPE_GLOBAL] = undefined;
+      const b = stopHook({ hook_event_name: "Stop", session_id: "selftest-g0", last_assistant_message: SAMPLE_CLEAN }, ioG);
+      const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+      assert("G0 · the row writer stamps scope + sitting id from the dispatcher's global (source pin — it cannot pass vacuously when no forge is open)",
+        /scope: scopeNow && scopeNow\.study && !scopeNow\.legacy \? "study" : null/.test(src) && /sitting_id: scopeNow && scopeNow\.study && !scopeNow\.legacy/.test(src));
+      assert("G0 · driven through the real stopHook: under the dispatcher's study verdict the row says scope 'study' + the sitting; with no verdict (a probe, a child) it says null",
+        !a.res.audited || (rowsG[0] && rowsG[0].scope === "study" && rowsG[0].sitting_id === "sit_selftest" && (!b.res.audited || (rowsG[1] && rowsG[1].scope === null))));
+    } finally { globalThis[SCOPE_GLOBAL] = saved; }
   }
 
   console.log(`\n${fail === 0 ? "ALL CHECKS PASSED" : "SELFTEST FAILED"} (${pass} passed, ${fail} failed)\n`);

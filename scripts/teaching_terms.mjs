@@ -200,3 +200,25 @@ export function closedDerive(stateDir = STATE_DIR, openConcept = null) {
   }
   return { names: uniqNames, vocab: vocabOut };
 }
+
+// ── THE TURN SKELETON'S CARRIED RULES (23 Sep 2026 · THE TEACHING GATE P1 · G1) ──
+// SPEC v2 §2 G1: the skeleton REPLACES the prose lines of the checkable rules; the judgement
+// rules stay as drift-ranked prose. These are the teaching_contract rule ids whose law now rides
+// a skeleton SLOT (teaching_bar.mjs renders it every study turn), so teaching_contract's printed
+// pool leaves them out — their drift counters, `list` and `flag` are untouched (L9: nothing is
+// deleted, only where the law is SAID moves). Each id names the slot that carries it:
+//   one-idea · act-mt2kgn09 → [POSITION] + [EK CHECK] (one idea, one question, the moment declared)
+//   dheema-not-lamba        → R1: held STRUCTURALLY — one question, ≤ 1 new name, ≤ 4 new units, one label set
+//   neev-pehle · terminology → [ASLI NAAM] (the real name, opened in the same line)
+//   act-mt2kgbt7            → [DUKAAN] [ASLI NAAM] [TECHNICAL LINE] (three layers)
+//   uncaptured-rep          → [BANK]
+//   act-mtfkb4r4 · act-mucnf18j → [EK CHECK]'s gut trio, keyed on the declared moment (R3)
+//   hinglish · act-mtfp0ney · act-mtfp38gn → the ALWAYS line (both Hinglish directions, never tu/tera)
+//   no-system-mid-concept   → [PARK]
+//   act-mt0bayry · declare-latency → line 0 (tools first; the first text line names what ran — v2 §3 (a))
+// A leaf, because both teaching_bar (the renderer) and teaching_contract (the pool) read it and
+// neither may import the other (organism_test NO SHIM CALLEE — see this file's header).
+export const SKELETON_CARRIED = Object.freeze([
+  "one-idea", "act-mt2kgn09", "dheema-not-lamba", "neev-pehle", "terminology", "act-mt2kgbt7", "uncaptured-rep",
+  "act-mtfkb4r4", "act-mucnf18j", "hinglish", "act-mtfp0ney", "act-mtfp38gn", "no-system-mid-concept", "act-mt0bayry", "declare-latency",
+]);

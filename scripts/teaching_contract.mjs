@@ -55,6 +55,8 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSy
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { subjectsOf, preCyborg } from "./registry.mjs";   // S10 — the build-verb ratchet's verb set is a ROW · A4 (4 Sep 2026) — preCyborg: ONE predicate for "is this proof still his", shared with rejirah/deep/learnstate
+import { SKELETON_CARRIED } from "./teaching_terms.mjs";   // G1 (23 Sep 2026) — the rules the TURN SKELETON carries leave the printed pool (a leaf; never teaching_bar itself — NO SHIM CALLEE)
+import { transcriptPathFor, entrypointOfTranscript } from "./study_scope.mjs";   // R8 (23 Sep 2026) — the transition classifier for audit rows written before G0 stamped them
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -62,6 +64,19 @@ const STATE = join(ROOT, "dressing-room", "state", "teaching_contract.json");
 const SPRINT = join(ROOT, "dressing-room", "state", "sprint.json");
 const FORGE = join(ROOT, "dressing-room", "state", "forge_session.json");
 const CAPSULE_DIR = join(ROOT, "dressing-room", "state", "capsules");
+// R8 (23 Sep 2026): the audit rows the 14-day window counts — owner teaching_audit.mjs, READ-ONLY here.
+const AUDIT_LOG = join(ROOT, "dressing-room", "state", "teaching_audit.jsonl");
+const AUDIT_TAIL_BYTES = 4 * 1048576;   // the file is append-ordered (measured 23 Sep: 1,317 rows, 805 KB, 14 d = 148 KB); the window never needs more than its tail
+function liveWindow(state, now = new Date()) {
+  let rows = [];
+  try {
+    const size = statSync(AUDIT_LOG).size;
+    let text = readFileSync(AUDIT_LOG, "utf8");
+    if (size > AUDIT_TAIL_BYTES) text = text.slice(text.length - AUDIT_TAIL_BYTES).replace(/^[^\n]*\n/, "");
+    rows = text.split("\n").map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  } catch { rows = []; }   // unreadable ⇒ an EMPTY window (the judgement pool in birth order) — never the all-time rank back
+  return windowDrift({ rows, selfReports: state && state.self_reports, now });
+}
 
 const MAX_BLOCK_LINES = 5;      // the anti-wall law, this organ's own copy
 const DEFAULT_WARN_AT = 40;
@@ -225,6 +240,64 @@ function rank(rules) {
     || (newestStamp(b) - newestStamp(a))
     || String(a.born || "").localeCompare(String(b.born || "")));
 }
+
+// ── R8 · THE PRINTED RANKING (23 Sep 2026 · THE TEACHING GATE P1, architect ruling R8, forks row 255) ──
+// P0 measured what the all-time lanes above hide: "DHEEMA drifted 305×" led every block, yet 190 of
+// those rows fell on 1–15 Aug and 2 on 16–23 Sep; and 86 % of the 14-day audit rows were ENGINEERING
+// sessions, every flag on them false. So, until P4's judge-fed ranking lands, the PRINTED block ranks
+// by a 14-day, STUDY-SCOPED window. The all-time counters stay on the contract as history (L9) and in
+// `list` — never as the printed rank.
+// WHICH ROWS ARE STUDY: a row stamped scope "study" by teaching_audit (G0 runs it only for the sitting's
+// host). A row with NO stamp was written before G0 landed; it counts only if its session's transcript
+// was written on claude-desktop — P0's own split for this window (every Desktop session in it was
+// study). That transition path reads a transcript head per session and DIES ON ITS OWN: 14 days after
+// G0 no unstamped row is left in the window. Self-reports (`flag`) carry no session id; they are the
+// only signal the judgement rules have, so they count, and the header says the window includes them.
+export const RANK_WINDOW_DAYS = 14;
+export function studyRowOf(row, entrypointOf) {
+  if (!row || typeof row !== "object") return false;
+  if (row.scope === "study") return true;
+  if (row.scope) return false;
+  return entrypointOf(String(row.session_id || "")) === "claude-desktop";
+}
+export function windowDrift({ rows = [], selfReports = [], now = new Date(), days = RANK_WINDOW_DAYS, entrypointOf = null } = {}) {
+  const until = now.getTime(), since = until - days * 86400000;
+  const cache = new Map();
+  const ep = (sid) => {
+    if (!cache.has(sid)) cache.set(sid, entrypointOf ? entrypointOf(sid) : entrypointOfTranscript(transcriptPathFor(sid)));
+    return cache.get(sid);
+  };
+  const counts = {}, last = {};
+  let studyRows = 0, selfCounted = 0;
+  const bump = (id, t) => { counts[id] = (counts[id] || 0) + 1; last[id] = Math.max(last[id] || 0, t); };
+  for (const r of rows) {
+    const t = Date.parse((r && r.ts) || "");
+    if (!Number.isFinite(t) || t < since || t > until || !studyRowOf(r, ep)) continue;
+    studyRows++;
+    for (const id of Array.isArray(r.drifts) ? r.drifts : []) bump(String(id), t);
+  }
+  for (const s of Array.isArray(selfReports) ? selfReports : []) {
+    const t = Date.parse((s && s.at) || "");
+    if (!s || !s.id || !Number.isFinite(t) || t < since || t > until) continue;
+    selfCounted++; bump(String(s.id), t);
+  }
+  return { counts, last, studyRows, selfCounted, days };
+}
+function rankWindowed(rules, win) {
+  const c = (r) => win.counts[r.id] || 0, l = (r) => win.last[r.id] || 0;
+  return [...rules].sort((a, b) => (c(b) - c(a)) || (l(b) - l(a)) || String(a.born || "").localeCompare(String(b.born || "")));
+}
+// The same slot law as pick(): slot 1 stable (the worst in the window), the rest rotate by turn.
+function pickWindowed(rules, turn, showN, win) {
+  const ranked = rankWindowed(rules, win);
+  if (!ranked.length) return [];
+  const n = Math.max(1, Math.min(showN || 2, ranked.length));
+  const out = [ranked[0]], rest = ranked.slice(1);
+  for (let k = 0; k < n - 1 && rest.length; k++) out.push(rest[(turn + k) % rest.length]);
+  return out;
+}
+// G1: the judgement pool — every rule the TURN SKELETON does not carry (teaching_terms.mjs).
+export const judgementPool = (rules) => (Array.isArray(rules) ? rules : []).filter((r) => r && !SKELETON_CARRIED.includes(r.id));
 
 function pick(rules, turn, showN) {
   const ranked = rank(rules);
@@ -654,7 +727,11 @@ const mb = (b) => (b / 1048576).toFixed(2) + " MB";
 //     fired), so the arithmetic still bounds at header 1 + link 1 + warn|unknown 1 +
 //     staged 1 = 4 reserved → at least ONE rule slot, and slot 1 is pick()'s index 0,
 //     so the worst offender is still never the line that gets eaten.
-function blockLines(state, done, now = new Date(), fill = null, fillUnknown = false) {
+// `win` (23 Sep 2026, G1 + R8): when the live print path passes the 14-day study window, the rotating
+// slots are drawn from the JUDGEMENT pool (the skeleton carries the rest) ranked by that window, and a
+// rule line shows its window count, never the all-time one. With `win` absent every byte is as before —
+// the frozen-engine assertions below still pin the old slot law against the old pool.
+function blockLines(state, done, now = new Date(), fill = null, fillUnknown = false, win = null) {
   if (!state || !Array.isArray(state.rules) || !state.rules.length) return [];
   const t = (state.turns && typeof state.turns === "object") ? state.turns : {};
   const turn = Number.isInteger(t.count) ? t.count : 0;
@@ -699,10 +776,11 @@ function blockLines(state, done, now = new Date(), fill = null, fillUnknown = fa
   const staged = stagedLine(state);
   const reserved = 1 + (link ? 1 : 0) + ((warn || unknown || reset) ? 1 : 0) + (staged ? 1 : 0);
   const room = Math.max(0, MAX_BLOCK_LINES - reserved);
-  const shown = pick(state.rules, turn, state.show_n).slice(0, room);
+  const pool = win ? judgementPool(state.rules) : state.rules;
+  const shown = (win ? pickWindowed(pool, turn, state.show_n, win) : pick(state.rules, turn, state.show_n)).slice(0, room);
 
   const L = [];
-  L.push(`TEACHING CONTRACT (drift-ranked · mutates with the journey) · turn ${turn}/${warnAt}`
+  L.push(`TEACHING CONTRACT (${win ? `judgement rules · ranked by ${win.days} d of study drift, ${win.studyRows} audited turn(s) + ${win.selfCounted} self-report(s) · the TURN SKELETON carries the rest` : "drift-ranked · mutates with the journey"}) · turn ${turn}/${warnAt}`
     + (anchored ? "" : " · CLOCK UNANCHORED (no session boundary recorded — see reset-turns)")
     // LOAD ZERO BLOCK 8 (19 Aug 2026) — THE TILDE IS THE WHOLE POINT. This printed a bare
     // `context 37%`, which reads as a MEASUREMENT on line 1 of every turn. It is not one: it is
@@ -714,11 +792,12 @@ function blockLines(state, done, now = new Date(), fill = null, fillUnknown = fa
     // the calibration and says the UI's meter is the truth; this short one had no such caveat and
     // no room for one, so the caveat is the `~` and the `est`.
     + (fill ? ` · context ~${Math.round(fill.pct * 100)}% est` : "")
-    + ` · rules ${shown.length}/${total}`);
+    + ` · rules ${shown.length}/${win ? pool.length : total}`);
   // Both lanes shown, provenance visible (6 Aug two-lane ruling): "3× · 2 auto"
   // means 1 confirmed by him + 2 measured by code. A bare number would hide who
   // recorded it, and hidden provenance is how a lane gets gamed.
   for (const r of shown) {
+    if (win) { const w = win.counts[r.id] || 0; L.push(`  ⚠ ${r.line}${w ? `  [${w}× in ${win.days} d]` : ""}`); continue; }
     const n = ruleWeight(r);
     const auto = Number(r.auto_hits) || 0;
     L.push(`  ⚠ ${r.line}${n ? `  [drifted ${n}×${auto ? ` · ${auto} auto` : ""}]` : ""}`);
@@ -1149,6 +1228,40 @@ function selftest() {
         worst = Math.max(worst, blockLines({ ...base, show_n: n, turns: { anchor: "tx:/t", anchor_kind: "tx", count: t } }, done, T0, f).length);
       return worst <= MAX_BLOCK_LINES; })());
 
+  // ---- G1 + R8 (23 Sep 2026) — the JUDGEMENT pool, ranked by a 14-DAY STUDY-SCOPED window. Planted.
+  {
+    const NOW = new Date("2026-09-23T12:00:00Z");
+    const day = (d) => new Date(NOW.getTime() - d * 86400000).toISOString();
+    const ep = (sid) => (sid === "desk" ? "claude-desktop" : sid === "cli" ? "cli" : null);
+    const rows = [
+      { ts: day(1), session_id: "cli", drifts: ["his-level", "his-level"] },               // an unstamped ENGINEERING row — never counted
+      { ts: day(1), session_id: "desk", drifts: ["his-level"] },                           // unstamped, Desktop — the transition path counts it
+      { ts: day(2), session_id: "anything", scope: "study", drifts: ["decided", "one-idea"] },   // stamped by G0 — counted whatever the surface
+      { ts: day(3), session_id: "desk", scope: "not-study", drifts: ["coverage"] },          // a stamp that is not "study" wins over the surface
+      { ts: day(20), session_id: "desk", scope: "study", drifts: ["decided"] },              // outside the 14 days
+    ];
+    const w = windowDrift({ rows, selfReports: [{ id: "decided", at: day(1) }, { id: "his-word", at: day(30) }], now: NOW, entrypointOf: ep });
+    assert("R8 · the window counts a G0-stamped row, an UNSTAMPED Desktop row (the transition path), and a self-report in 14 d — never an engineering row, a non-study stamp, or anything older",
+      w.studyRows === 2 && w.counts["his-level"] === 1 && w.counts["decided"] === 2 && w.counts["one-idea"] === 1 && !w.counts["coverage"] && !w.counts["his-word"] && w.selfCounted === 1);
+    const st = { ...base, rules: [
+      { id: "his-level", line: "L-his-level", hits: 0, auto_hits: 900, born: "2026-01-01" },
+      { id: "decided", line: "L-decided", hits: 0, auto_hits: 0, born: "2026-01-02" },
+      { id: "one-idea", line: "L-one-idea", hits: 0, auto_hits: 999, born: "2026-01-03" },
+      { id: "coverage", line: "L-coverage", hits: 0, auto_hits: 5000, born: "2026-01-04" },
+    ], show_n: 2, turns: { anchor: "tx:/t", anchor_kind: "tx", count: 3 } };
+    const L = blockLines(st, [], NOW, null, false, w);
+    const J = L.join("\n");
+    assert("G1 · the printed pool leaves out every rule the TURN SKELETON carries (one-idea here), whatever its drift",
+      !/L-one-idea/.test(J) && judgementPool(st.rules).length === 3 && SKELETON_CARRIED.includes("one-idea"));
+    assert("R8 · slot 1 is the WINDOW's worst (decided, 2 in 14 d) — not the all-time worst (coverage, 5000 auto) — and a line shows its window count, never the all-time one",
+      /L-decided\s+\[2× in 14 d\]/.test(L[1] || "") && !/drifted \d+×/.test(J), JSON.stringify(L));
+    assert("R8 · the header says what ranked it (14 d of study drift, turns + self-reports) and counts the JUDGEMENT pool",
+      /judgement rules · ranked by 14 d of study drift, 2 audited turn\(s\) \+ 1 self-report\(s\)/.test(L[0]) && /rules 2\/3/.test(L[0]), L[0]);
+    assert("R8 · an EMPTY window still prints the judgement pool (birth order), never the all-time rank back",
+      /L-his-level/.test(blockLines(st, [], NOW, null, false, windowDrift({ rows: [], now: NOW, entrypointOf: ep })).join("\n")));
+    assert("G1 · with no window (every older caller) the block is byte-for-byte the old engine", JSON.stringify(blockLines(st, [], NOW)) === JSON.stringify(blockLines(st, [], NOW, null, false, null)) && /drifted/.test(blockLines(st, [], NOW).join("\n")));
+  }
+
   // ---- audit #107 — THE ANCHOR. This is the measured defect, pinned.
   const TX = { tx: "/p/t.jsonl" };
   assert("ANCHOR — the transcript outranks the session id",
@@ -1399,7 +1512,7 @@ switch (cmd) {
       // The staged-drift line is built INSIDE blockLines now and paid for out of the
       // 5-line budget. Pushing it on here (as this did until 6 Aug) spent a sixth line
       // the anti-wall law does not have — see audit #108 at blockLines.
-      const lines = blockLines(s, doneConcepts(), new Date(), fill, fillUnknown);
+      const lines = blockLines(s, doneConcepts(), new Date(), fill, fillUnknown, liveWindow(s));   // G1 + R8 (23 Sep 2026)
       // …with one exception, preserved verbatim from the old append: with ZERO rules the
       // block is empty by the hook-safe law, and a staged drift would then have nowhere
       // to be seen. One line, still inside the budget.
@@ -1407,6 +1520,13 @@ switch (cmd) {
       if (lines.length) console.log(lines.join("\n"));
     } catch { /* silence is the contract */ }
     break;                                      // was process.exit(0) — see the guard above
+  }
+  case "show": {                                // READ-ONLY (23 Sep 2026): the block the next study prompt gets, with no turn bumped and nothing saved
+    const s = load();
+    const w = liveWindow(s);
+    console.log(blockLines(s, doneConcepts(), new Date(), null, false, w).join("\n"));
+    console.log(`  (window ${w.days} d: ${w.studyRows} study-scoped audited turn(s) + ${w.selfCounted} self-report(s) · top ${Object.entries(w.counts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `${k} ${v}`).join(" · ") || "—"} · pool ${judgementPool(s.rules).length} judgement of ${s.rules.length})`);
+    break;
   }
   case "list": {
     const s = load();

@@ -589,7 +589,10 @@ function contractLines(s, now = new Date(), clock = undefined) {
   if (SOFT_PHASE(n)) {
     L.push(checkSpent(s)
       ? `  ⛔ ONE check-question already spent this pass. TEACH or advance the step — do NOT ask another.`
-      : `  phase 3-6: max ONE sharp check-question this pass, and only on what you JUST taught. ONE idea per message — after each pass ask only "samajh aaya — haan ya nahi?" and WAIT.`);
+      // R3 (23 Sep 2026, forks row 255): the question's SHAPE keys on the moment declared this turn, never on
+      // this step — a per-idea pehle_guess inside step 3 carries the gut trio. The shape lives in the TURN
+      // SKELETON's [EK CHECK] slot (teaching_bar.mjs); this line keeps only the pacing law.
+      : `  phase 3-6: max ONE sharp check-question this pass, and only on what you JUST taught. ONE idea per message — its shape is the TURN SKELETON's [EK CHECK] (keyed on the moment you declare), then WAIT.`);
   }
   // The 30 Jul assertion pins the literal substring "owes a WIDGET"; it stays until
   // the gates are actually driven. "Built" was never the obligation — DRIVEN was.
