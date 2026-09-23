@@ -264,9 +264,10 @@ export const MAX_SKELETON_LINES = 12;
 // Re-derived under forks row 264 (3): the ALWAYS line's "≤ 2 words · no italics" and the [BANK] line's bank
 // line (the text the gate's A.bank-line reads) and [POSITION]'s "axis <x>" moved the worst case 2,420 → 2,509 B;
 // forks row 266's fifth kind (sharp_check on [EK CHECK] and its no-trio line, the [BANK] reason) → 2,599 B;
-// forks row 268 folds sharp_check into the trio line (its separate no-trio clause gone) → 2,586 B.
+// forks row 268 folds sharp_check into the trio line (its separate no-trio clause gone) → 2,586 B;
+// forks row 270 (A): the [BANK] line's gut is HIS word or absent ("none spoken → no --gut") → 2,624 B.
 // The 12-line cap stands.
-export const SKELETON_BUDGET_BYTES = 2600;   // measured worst 2,586 B (step 4 + [BANK] "answers the sharp check…" + four long NEEV names), 23 Sep 2026
+export const SKELETON_BUDGET_BYTES = 2640;   // measured worst 2,624 B (step 4 + [BANK] "answers the sharp check…" + four long NEEV names), 23 Sep 2026
 export const GUT_TRIO = "pakka / shayad / pata nahi";
 // Which slot carries which teaching_contract rule (teaching_terms.mjs SKELETON_CARRIED). The cases
 // assert every carried id has a slot here AND that slot's label is on the rendered skeleton.
@@ -303,7 +304,7 @@ export function barLines(session, turn = 0, unopened = [], ctx = {}) {
   const L = [];
   L.push(`TURN SKELETON · ${c} > axis ${axis} · step ${step ?? "?"} — fill it in this order; the [LABELS] are for you, he sees plain Hinglish (VISUAL_CONTRACT §8.1)`);
   L.push(`  0 TOOLS FIRST, TEXT LAST — every tool call before any text (Desktop replaces text above a tool) · when a tool ran, the text's first line names it: "pointer set"`);
-  if (ctx && ctx.bank) L.push(`  [BANK] his message ${ctx.bank} → the FIRST tool: node scripts/gaffer_brain.mjs capture voice_rep ${c}:${axis} --axis ${axis} --gut knew|shaky|guessed --asked "<verbatim>" --said "<his words>" --surface code --latency_ms <the FORGE CONTRACT's latency number, or OMIT it> · the text's first line: "bank mein gaya · axis ${axis} · judge shaam ko"`);
+  if (ctx && ctx.bank) L.push(`  [BANK] his message ${ctx.bank} → the FIRST tool: node scripts/gaffer_brain.mjs capture voice_rep ${c}:${axis} --axis ${axis} --gut <HIS word: knew|shaky|guessed; none spoken → no --gut> --asked "<verbatim>" --said "<his words>" --surface code --latency_ms <the FORGE CONTRACT's latency number, or OMIT it> · the text's first line: "bank mein gaya · axis ${axis} · judge shaam ko"`);
   const teaching = step === null || (step >= 3 && step <= 6);
   if (step !== null && step >= 2 && step <= 9) {
     // "axis <x>", never the bare letter: the label is copied as written, and "tokenization > c > …" fails the
@@ -593,7 +594,9 @@ export function barSelfCheck() {
     check("skeleton · R9 + v2 §3 (a): tools first, text last, and the first text line names what ran", /TOOLS FIRST, TEXT LAST/.test(j) && /first line names it: "pointer set"/.test(j));
     check("skeleton · [BANK] rides ONLY a turn the bank owes a row, and then it names the live concept:axis, the hook's latency line and the bank line the gate reads",
       !/\[BANK\]/.test(j) && /\[BANK\] his message answers the sharp check your last turn declared → the FIRST tool: node scripts\/gaffer_brain\.mjs capture voice_rep tokenization:c --axis c/.test(barLines(S3, 1, [], { bank: "answers the sharp check your last turn declared" }).join("\n"))
-      && /FORGE CONTRACT's latency number, or OMIT it/.test(barLines(S3, 1, [], { bank: "x" }).join("\n")) && /first line: "bank mein gaya · axis c · judge shaam ko"/.test(barLines(S3, 1, [], { bank: "x" }).join("\n")));
+      && /FORGE CONTRACT's latency number, or OMIT it/.test(barLines(S3, 1, [], { bank: "x" }).join("\n")) && /first line: "bank mein gaya · axis c · judge shaam ko"/.test(barLines(S3, 1, [], { bank: "x" }).join("\n"))
+      // forks row 270 (A): the gut is HIS word or absent — the skeleton never teaches the invented-calibration red
+      && /--gut <HIS word: knew\|shaky\|guessed; none spoken → no --gut>/.test(barLines(S3, 1, [], { bank: "x" }).join("\n")));
     check("skeleton · forks row 264 (3): the ALWAYS line carries bold ≤ 2 words and no italics (the two loudest replay blocks, visual:R71 / the fourth shape)",
       /bold ≤ 1 a paragraph, ≤ 2 words · no italics/.test(j));
     // forks rows 264 (1) / 266: the bank is due at the declared jirah and the declared sharp_check, never per idea (study_scope.bankDueAt)

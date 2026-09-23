@@ -116,7 +116,7 @@ export const CHECKS = Object.freeze({
   "A.buying": { fam: "A", fix: "kharidaari ki baat ek line mein park — koi price, koi link nahi" },
   "B.bank": { fam: "B", fix: "uska jawab bank karo — PEHLA tool: node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut … --asked \"…\" --said \"…\" --surface code [--latency_ms <hook line ka number>]" },
   "B.bank-per-idea": { fam: "B", fix: "\"samajh aaya\" check ka jawab per-idea hai — bank NAHI hota; bank sirf axis ke moments par (sharp check · Bolo · interview line) aur jirah par" },
-  "B.bank-verbatim": { fam: "B", fix: "bank line mein --gut uska apna gut-word (pakka→knew · shayad→shaky · pata nahi→guessed), --said uske shabd verbatim, --asked tumhara sawaal verbatim" },
+  "B.bank-verbatim": { fam: "B", fix: "bank line mein --gut uska apna gut-word (pakka→knew · shayad→shaky · pata nahi→guessed) — usne gut-word nahi diya to --gut kabhi type mat karo, --said uske shabd verbatim, --asked tumhara sawaal verbatim" },
   "B.latency": { fam: "B", fix: "--latency_ms wahi number jo hook line ne diya (VERBATIM) — nahi padh sakte to flag hata do" },
   "B.moment": { fam: "B", fix: "sawaal par khatam turn: ISI turn moment declare karo — node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah|sharp_check" },
   "B.moment-kind": { fam: "B", fix: "moment sirf paanch: pehle_guess · check_q · widget_gate · jirah · sharp_check" },
@@ -593,6 +593,10 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
       const hisText = normWords(T.prompt);
       const bad = [];
       if (cls.gut && gutFlag && GUT_TO_FLAG[cls.gut] && gutFlag !== GUT_TO_FLAG[cls.gut]) bad.push(`--gut ${gutFlag} but he said ${cls.gut}`);
+      // forks row 270 (A): a --gut on a message that carries NO gut-word is an invented calibration — the same
+      // fabrication class as a typed latency. Measured before it landed: 0 of the 10 banks in the Desktop study
+      // transcripts carried one (every --gut there was his own word).
+      if (!cls.gut && gutFlag) bad.push(`--gut ${gutFlag} but his message carries no gut-word (an invented calibration)`);
       if (said === null) bad.push("no --said");
       else if (!hisText.includes(normWords(said)) || normWords(said).length < 0.6 * hisText.length) bad.push("--said is not his words verbatim");
       if (asked !== null && prevText && !prevText.includes(normWords(asked))) bad.push("--asked is not your question verbatim");
@@ -879,6 +883,14 @@ async function selftest() {
   const noLine = run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP), ...TURN_OK], "bank kiya · " + GOOD, { prev: PREV_Q });
   assert("learn:R154 / forge:R92 · --gut shaky on HIS pakka, and a reworded --said → B.bank-verbatim; a bank with no \"bank mein gaya … judge shaam ko\" → A.bank-line",
     has(wrongGut, "B.bank-verbatim") && has(reworded, "B.bank-verbatim") && has(noLine, "A.bank-line") && !has(noLine, "B.bank-verbatim"), JSON.stringify([wrongGut.why, reworded.why, noLine.why]));
+  // forks row 270 (A), planted both ways: his answer carries NO gut-word and the bank types --gut knew → invented;
+  // the same gut-less answer banked with no --gut (the door refuses it, the attempt is the lawful act), or his own pakka → not
+  const GUTLESS = "pay kyunki woh sabse zyada repeat hota hai";
+  const invented = run(GUTLESS, [BASH(REP), ...TURN_OK], "bank mein gaya · axis c · judge shaam ko\n" + GOOD, { prev: PREV_Q });
+  const noGutFlag = run(GUTLESS, [BASH(REP.replace("--gut knew ", "")), ...TURN_OK], "bank mein gaya · axis c · judge shaam ko\n" + GOOD, { prev: PREV_Q });
+  assert("row 270 (A) · a --gut on his gut-less answer → B.bank-verbatim (an invented calibration, the typed-latency class); no --gut on it, or --gut knew on HIS pakka → no B.bank-verbatim",
+    has(invented, "B.bank-verbatim") && /invented calibration/.test(JSON.stringify(invented.why)) && !has(noGutFlag, "B.bank-verbatim") && !has(banked, "B.bank-verbatim") && !has(noGutFlag, "B.bank"),
+    JSON.stringify([invented.reds, invented.why, noGutFlag.reds, banked.reds]));
   const lat = run("pakka - pay", [BASH("node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut knew --latency_ms 5000"), ...TURN_OK], "bank kiya · " + GOOD, { hook: "latency: 204218 ms since your last message ended", prev: SHARP });
   assert("R5 · a latency that is not the hook's number → B.latency", has(lat, "B.latency"));
   // forks row 264 (1): forge row 53b STANDS — the bank is due at the jirah and the sharp check, never per idea

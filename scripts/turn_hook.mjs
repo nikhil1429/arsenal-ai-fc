@@ -69,7 +69,7 @@ import { readFileSync, mkdtempSync, writeFileSync, rmSync, existsSync, readdirSy
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
-import { tmpdir } from "node:os";
+import { tmpdir, freemem } from "node:os";
 import { performance } from "node:perf_hooks";
 
 // G0 (23 Sep 2026) — the study-scope predicate is a LEAF (node builtins only) and it is a CALL-shape
@@ -118,6 +118,21 @@ export const STDIN_HANDOFF = "__ARSENAL_HOOK_STDIN__";
 // IT IS NOT A LICENCE: the two real drivers (watchman 457, learnstate 310) are named here
 // so the next session optimises THEM rather than raising this again.
 const BUDGET_MS = 450;
+// THE RAM FLOOR (forks row 270 (2), 23 Sep 2026): a timing red under RAM pressure measures the machine, not the code.
+// Derived from the clause's own readings (os.freemem() beside the in-process ms of `start`, 23 Sep 21:00–21:20 IST,
+// 8,043 MB total): every over-budget reading came at 520–845 MB free (496–762 ms: three selftest runs, five direct
+// runs); 15 of 15 readings at 896–966 MB free held the budget (237–364 ms). The floor sits ABOVE the highest
+// over-budget reading, at the lowest level where the clean sample held: 896 MB. Above it an over-budget reading REDS
+// as before; below it the reading and the RAM are printed and NOT judged. A pass below the floor (330 ms at 723 MB,
+// 21:22) says RAM is not the only load — a concurrent selftest's CPU is the other candidate, not measured. Re-derive
+// the floor from new readings, never by taste.
+const BUDGET_RAM_FLOOR_MB = 896;
+function budgetVerdict({ ms, freeMb, budget = BUDGET_MS, floor = BUDGET_RAM_FLOOR_MB } = {}) {
+  if (!Number.isFinite(ms)) return { ok: false, judged: true, why: "no reading" };
+  if (ms <= budget) return { ok: true, judged: true, why: "within budget" };
+  if (Number.isFinite(freeMb) && freeMb < floor) return { ok: true, judged: false, why: `NOT JUDGED — over budget under RAM pressure (${freeMb} MB free < floor ${floor} MB): the machine, not the code` };
+  return { ok: false, judged: true, why: `over budget with ${Number.isFinite(freeMb) ? freeMb : "?"} MB free (floor ${floor} MB)` };
+}
 
 
 // The two anchors this organ serves, in the exact order settings.json listed the
@@ -559,17 +574,29 @@ function selftest() {
       // flaky net; the minimum of three spawns is the number the law is about.
       let best = null, wall = 0;
       for (let i = 0; i < 3; i++) {
+        const freeMb = Math.round(freemem() / 1048576);
         const t0 = performance.now();
         const q = spawnSync(process.execPath, [fileURLToPath(import.meta.url), seq, "--time"], { input: payload, encoding: "utf8", cwd: ROOT, env: { ...process.env, ARSENAL_ORGAN: "1" }, timeout: 60000 });
         const w = performance.now() - t0;
         const mm = /turn_hook: \w+ · \d+ organ\(s\) · (\d+) ms/.exec(q.stderr || "");
         const v = mm ? Number(mm[1]) : NaN;
-        if (best === null || (Number.isFinite(v) && v < best.ms)) { best = { p: q, ms: v }; wall = w; }
+        if (best === null || (Number.isFinite(v) && v < best.ms)) { best = { p: q, ms: v, freeMb }; wall = w; }
         if (Number.isFinite(v) && v <= BUDGET_MS) break;
       }
       const p = best.p, ms = best.ms;
       assert(`SILENCE LAW — \`${seq}\` under ARSENAL_ORGAN=1 printed ZERO bytes on stdout (every callee's own guard, through the dispatcher)`, p.status === 0 && (p.stdout || "") === "", `status ${p.status} stdout=${JSON.stringify((p.stdout || "").slice(0, 200))} stderr=${JSON.stringify((p.stderr || "").slice(0, 300))}`);
-      assert(`BUDGET — \`${seq}\` sequence ran in-process in ${Number.isFinite(ms) ? ms : "?"} ms (≤ ${BUDGET_MS} ms law; wall incl. node boot ${Math.round(wall)} ms)`, Number.isFinite(ms) && ms <= BUDGET_MS, `stderr=${JSON.stringify((p.stderr || "").slice(0, 300))}`);
+      const bv = budgetVerdict({ ms, freeMb: best.freeMb });
+      assert(`BUDGET — \`${seq}\` sequence ran in-process in ${Number.isFinite(ms) ? ms : "?"} ms at ${best.freeMb} MB free (≤ ${BUDGET_MS} ms law; RAM floor ${BUDGET_RAM_FLOOR_MB} MB; wall incl. node boot ${Math.round(wall)} ms)${bv.judged ? "" : ` · ${bv.why}`}`, bv.ok, `${bv.why} · stderr=${JSON.stringify((p.stderr || "").slice(0, 300))}`);
+    }
+    // forks row 270 (2), planted both ways: over budget ABOVE the floor reds; over budget BELOW it is printed, not judged;
+    // within budget passes at any RAM; no reading reds
+    {
+      const V = (ms, freeMb) => budgetVerdict({ ms, freeMb, budget: 450, floor: 896 });
+      assert("BUDGET RAM FLOOR · 500 ms at 1,200 MB free REDS (the code, the machine had room) · 500 ms at 600 MB is NOT JUDGED (printed) · 300 ms passes at any RAM · no reading reds",
+        V(500, 1200).ok === false && V(500, 1200).judged === true && V(500, 896).ok === false
+        && V(500, 600).ok === true && V(500, 600).judged === false && /NOT JUDGED/.test(V(500, 600).why)
+        && V(300, 400).ok === true && V(300, 400).judged === true && V(NaN, 2000).ok === false,
+        JSON.stringify([V(500, 1200), V(500, 600), V(300, 400), V(NaN, 2000)]));
     }
 
     console.log(`\nturn_hook: ${pass} passed, ${fail} failed`);
