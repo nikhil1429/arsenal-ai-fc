@@ -24,6 +24,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
+// the legal moment kinds are the pacer's OWN list (forks row 266): printed from it, never typed here
+import { MOMENTS } from "./forge_session.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const STATE = path.join(ROOT, "dressing-room", "state");
@@ -97,7 +99,7 @@ export function render(g) {
     const stepName = STEP_NAMES[g.step] || String(g.step);
     push(`POSITION · ${g.concept} · STEP ${stepName} · ON axis ${g.axis}${g.capsule?.line ? " — " + one(g.capsule.line.title, 90) : ""}`);
     push(`  axes done ${g.done.join("") || "—"} · deferred ${g.deferred.join("") || "—"} · left ${g.left.join("")} · resumed ${g.resumes}× · last touched ${g.lastTouchH == null ? "?" : g.lastTouchH.toFixed(1) + " h ago"}`);
-    push(`  moments this session: pehle_guess ${g.moments?.pehle_guess ?? 0} · widget_gate ${g.moments?.widget_gate ?? 0} · check_q ${g.moments?.check_q ?? 0} · jirah ${g.moments?.jirah ?? 0} · check-Q this pass ${g.checkQPass ?? 0} (refused ${g.checkQRefused ?? 0})`);
+    push(`  moments this session: ${MOMENTS.map((m) => `${m} ${g.moments?.[m] ?? 0}`).join(" · ")} · check-Q this pass ${g.checkQPass ?? 0} (refused ${g.checkQRefused ?? 0})`);
     push("");
     push("▶ THE FIRST MESSAGE OF THIS SESSION IS THIS QUESTION, WORD FOR WORD — no recap, no 'you already know this', nothing before it:");
     push(`  «${g.pointer?.text || "(no pointer recorded — ask ONE fresh micro-question on axis " + g.axis + " and set the pointer)"}»`);
@@ -131,10 +133,10 @@ export function render(g) {
   push("");
   push("THE COMMANDS (owners only; you type them, he never does):");
   push(`  bank    node scripts/gaffer_brain.mjs capture voice_rep ${ca} --axis ${ax} --gut knew|shaky|guessed --asked "<verbatim>" --said "<his words>" --surface code [--latency_ms <from the hook line, verbatim, or OMIT>] [--probe recall|reconstruct|defend|novel|negative_space|cross_axis] [--register interview]`);
-  push("          three banked moments an axis: the sharp check · the Bolo · the interview line. Say «bank mein gaya · axis " + ax + " · judge shaam ko». Never a verdict, never seconds.");
+  push("          three banked moments an axis: the sharp check (declare `moment sharp_check`, no gut trio) · the Bolo · the interview line. Say «bank mein gaya · axis " + ax + " · judge shaam ko». Never a verdict, never seconds.");
   push('  pointer node scripts/forge_session.mjs pointer "<the exact unanswered micro-question + gut-word ask + where in the axis>"   ← at EVERY stop, before anything else');
   push(`  axis    node scripts/forge_session.mjs axis ${ax} done   (gate: ≥1 Hinglish bank + ≥1 --register interview since the axis opened)  ·  contract: node scripts/forge_session.mjs contract`);
-  push(`  moments node scripts/forge_session.mjs moment pehle_guess|widget_gate|check_q|jirah   (only these four are legal question-moments)`);
+  push(`  moments node scripts/forge_session.mjs moment ${MOMENTS.join("|")}   (only these ${MOMENTS.length} are legal question-moments; the list is the pacer's own, forks row 266)`);
   push('  crack   the ```diff block in the message (the marker) · his ruling → node scripts/acts.mjs do rule --door claude-code --text "…" · your drift → node scripts/teaching_contract.mjs flag <rule-id> --why "…"');
   push("  day end node scripts/gaffer_brain.mjs judge-round → node scripts/sitting.mjs close --reason fulltime → /full-time");
   push("");

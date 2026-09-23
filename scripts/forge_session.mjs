@@ -121,8 +121,12 @@ const STEPS = [
   "LOCK",           // 10 capsule + GATE 1 cold-reader standard on doubts[]
   "RE-JIRAH",       // 11 ~3 din / ~2 hafte / ~6 hafte
 ];
-// The FOUR legal question-moments (PROJECT_OS: "yeh quiz-dump nahi hai").
-const MOMENTS = ["pehle_guess", "widget_gate", "check_q", "jirah"];
+// The legal question-moments (PROJECT_OS: "yeh quiz-dump nahi hai"). FIVE since forks row 266 (23 Sep 2026):
+// `sharp_check` is the axis-close sharp check — his reply to it is BANK-DUE (forge row 53b's banked moment,
+// given a name the gate can key on instead of an absence); it carries NO gut trio (row 254 (3)(b): the trio is
+// at pehle_guess and once immediately before jirah). check_q stays the per-idea check, never bank-due.
+// EXPORTED: this list is the one home; the gate's fence (teaching_gate MOMENT_KINDS) is asserted equal to it.
+export const MOMENTS = ["pehle_guess", "widget_gate", "check_q", "jirah", "sharp_check"];
 const AXES = "abcdefghi".split("");
 // CORE-NEVER-DEFERRED, finally in code (audit 31 Jul 2026). Canon, verbatim:
 //   PROJECT_OS.md:316 — "CORE-NEVER-DEFERRED: core measure/formula/range MAIN
@@ -580,7 +584,7 @@ function contractLines(s, now = new Date(), clock = undefined) {
   if (skipped.length) L.push(`  ⚠ SKIPPED so far: ${skipped.map((i) => `${i} ${STEPS[i]}`).join(" · ")} — say so out loud, or go back.`);
   L.push(`  axes:${s.current_axis && !s.axes_done.includes(s.current_axis) && !s.axes_deferred.includes(s.current_axis) ? ` ON ${s.current_axis} ·` : ""} done ${s.axes_done.join("") || "—"} · deferred ${s.axes_deferred.join("") || "—"} · left ${AXES.filter((a) => !s.axes_done.includes(a) && !s.axes_deferred.includes(a)).join("") || "—"}`
     + (ungraded.length ? ` · ungraded ${ungraded.join("")}` : ""));
-  L.push(`  question-moments used: ${MOMENTS.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these four are legal — no quiz-dump)`);
+  L.push(`  question-moments used: ${MOMENTS.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these ${MOMENTS.length} are legal — no quiz-dump)`);
   if (clock !== undefined) {
     L.push(clock === null
       ? `  latency: UNMEASURABLE this turn — leave \`--latency_ms\` OFF when you bank. A null latency is a measurement nobody made; an invented one corrupts the fluency ladder permanently.`
@@ -1544,6 +1548,12 @@ function selftest() {
     let g = s3; for (const a of "abcdefg") g = markAxis(g, a, "done", T0).session;
     assert("TEXT FIRST — widget_gate after axis g is done is accepted",
       addMoment(g, "widget_gate", T0).ok && addMoment(g, "widget_gate", T0).session.question_moments.widget_gate === 1);
+    // forks row 266 — the FIFTH legal kind, planted both ways: sharp_check is counted (overall and on the current
+    // axis, the record the bank reads), a kind outside the five is refused and nothing is counted
+    const sc = addMoment(g, "sharp_check", T0);
+    const bogus = addMoment(g, "sharp", T0);
+    assert("row 266 — `moment sharp_check` is legal and counted (overall + on the current axis); a kind outside the five is refused and counts nothing",
+      MOMENTS.length === 5 && sc.ok && sc.session.question_moments.sharp_check === 1 && !bogus.ok && /sharp_check/.test(bogus.error) && bogus.session === g, JSON.stringify({ sc: sc.ok && sc.session.question_moments, bogus: bogus.error }));
     assert("TEXT FIRST — a refused widget counts against the verdict like a quiz-dump, and the count is reported",
       coverage({ ...g, widget_refused: 1 }, T0).method_clean === false && coverage(g, T0).widget_refused === 0);
   }

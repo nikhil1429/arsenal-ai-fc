@@ -263,8 +263,9 @@ export const MAX_SKELETON_LINES = 12;
 // the case list below, which fails if this drifts more than 120 B above the measurement.
 // Re-derived under forks row 264 (3): the ALWAYS line's "≤ 2 words · no italics" and the [BANK] line's bank
 // line (the text the gate's A.bank-line reads) and [POSITION]'s "axis <x>" moved the worst case 2,420 → 2,509 B;
-// the 12-line cap stands.
-export const SKELETON_BUDGET_BYTES = 2520;   // measured worst 2,509 B (step 4 + [BANK] "answers the jirah…" + four long NEEV names), 23 Sep 2026
+// forks row 266's fifth kind (sharp_check on [EK CHECK] and its no-trio line, the [BANK] reason) → 2,599 B.
+// The 12-line cap stands.
+export const SKELETON_BUDGET_BYTES = 2615;   // measured worst 2,599 B (step 4 + [BANK] "answers the sharp check…" + four long NEEV names), 23 Sep 2026
 export const GUT_TRIO = "pakka / shayad / pata nahi";
 // Which slot carries which teaching_contract rule (teaching_terms.mjs SKELETON_CARRIED). The cases
 // assert every carried id has a slot here AND that slot's label is on the rendered skeleton.
@@ -319,8 +320,8 @@ export function barLines(session, turn = 0, unopened = [], ctx = {}) {
     L.push(`  [TECHNICAL LINE] ONE interview-ready English sentence`);
   }
   if (step === null || (step >= 2 && step <= 9)) {
-    L.push(`  [EK CHECK] exactly ONE question sentence and it is the LAST one ("haan ya nahi?" restating it is part of it; "Aur kyun?" is a second) — declare its moment THIS turn: node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah`);
-    L.push(`    check_q → end "samajh aaya — haan ya nahi", NO gut trio · pehle_guess / jirah → ONE line after it: "pehle gut-word: ${GUT_TRIO}" · otherwise at most ONE blank line after it: "maine socha ___, phir ___"`);
+    L.push(`  [EK CHECK] exactly ONE question sentence and it is the LAST one ("haan ya nahi?" restating it is part of it; "Aur kyun?" is a second) — declare its moment THIS turn: node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah|sharp_check`);
+    L.push(`    check_q → end "samajh aaya — haan ya nahi", NO gut trio · sharp_check (the axis-close check) → NO trio, his answer is banked · pehle_guess / jirah → ONE line after it: "pehle gut-word: ${GUT_TRIO}" · otherwise at most ONE blank line after it: "maine socha ___, phir ___"`);
   }
   L.push(`  ⛔ ALWAYS — ${HARD_STOPS.replace(/^ALWAYS — /, "")} · Hinglish = English content words on Hindi glue (never akshar · shabd · niyam · sira) · address him as "tum", never the familiar singular · ONE \`\`\`diff (+ sahi / - galat, ≤ 4 lines) only at a correction · emoji only ✅ ❌ ⚠ ⭐ (≤ 2, ≤ 1 a line) · bold ≤ 1 a paragraph, ≤ 2 words · no italics`);
   L.push(`  [PARK] his message is about the system or tools, not the concept → ONE line naming it parked + the pointer question back, nothing else`);
@@ -589,14 +590,16 @@ export function barSelfCheck() {
       /never akshar · shabd · niyam · sira/.test(j) && /address him as "tum", never the familiar singular/.test(j) && /no TABLE/.test(j) && /blockquote/.test(j) && /NEVER a count/.test(j) && /✅ ❌ ⚠ ⭐ \(≤ 2, ≤ 1 a line\)/.test(j));
     check("skeleton · R9 + v2 §3 (a): tools first, text last, and the first text line names what ran", /TOOLS FIRST, TEXT LAST/.test(j) && /first line names it: "pointer set"/.test(j));
     check("skeleton · [BANK] rides ONLY a turn the bank owes a row, and then it names the live concept:axis, the hook's latency line and the bank line the gate reads",
-      !/\[BANK\]/.test(j) && /\[BANK\] his message gives a gut-word at the sharp check → the FIRST tool: node scripts\/gaffer_brain\.mjs capture voice_rep tokenization:c --axis c/.test(barLines(S3, 1, [], { bank: "gives a gut-word at the sharp check" }).join("\n"))
+      !/\[BANK\]/.test(j) && /\[BANK\] his message answers the sharp check your last turn declared → the FIRST tool: node scripts\/gaffer_brain\.mjs capture voice_rep tokenization:c --axis c/.test(barLines(S3, 1, [], { bank: "answers the sharp check your last turn declared" }).join("\n"))
       && /FORGE CONTRACT's latency number, or OMIT it/.test(barLines(S3, 1, [], { bank: "x" }).join("\n")) && /first line: "bank mein gaya · axis c · judge shaam ko"/.test(barLines(S3, 1, [], { bank: "x" }).join("\n")));
     check("skeleton · forks row 264 (3): the ALWAYS line carries bold ≤ 2 words and no italics (the two loudest replay blocks, visual:R71 / the fourth shape)",
       /bold ≤ 1 a paragraph, ≤ 2 words · no italics/.test(j));
-    // forks row 264 (1): the bank is due at the jirah and the sharp check, never per idea (study_scope.bankDueAt)
+    // forks rows 264 (1) / 266: the bank is due at the declared jirah and the declared sharp_check, never per idea (study_scope.bankDueAt)
     const AL = (from, to, sid = "S") => ({ prompt: { session_id: sid, moments_by_kind: from }, stop: { session_id: sid, moments_by_kind: to } });
-    check("skeleton · bankDue (row 264 (1)): a gut-word at the sharp check, or a reply to the jirah THIS session's last turn declared; a reply to a per-idea moment, another session's turn, or no rise, is not",
-      /sharp check/.test(bankDue({ prompt: "pakka — merge sabse common pair ka hota hai" }) || "") && /sharp check/.test(bankDue({ prompt: "Shayad: 3" }) || "")
+    check("skeleton · bankDue (rows 264 (1) / 266): a gut-word reply to the sharp_check, or a reply to the jirah, THIS session's last turn declared; an undeclared question, a per-idea moment, another session's turn, or no rise, is not",
+      /sharp check/.test(bankDue({ prompt: "pakka — merge sabse common pair ka hota hai", sessionId: "S", auditLast: AL({ sharp_check: 0 }, { sharp_check: 1 }) }) || "")
+      && /sharp check/.test(bankDue({ prompt: "Shayad: 3", sessionId: "S", auditLast: AL({}, { sharp_check: 1 }) }) || "")
+      && bankDue({ prompt: "pakka — merge sabse common pair ka hota hai" }) === null
       && bankDue({ prompt: "pakka nahi pata yaar" }) === null
       && /jirah/.test(bankDue({ prompt: "3 tokens", sessionId: "S", auditLast: AL({ jirah: 0, check_q: 3 }, { jirah: 1, check_q: 3 }) }) || "")
       && bankDue({ prompt: "3 tokens", sessionId: "S", auditLast: AL({ check_q: 2 }, { check_q: 3 }) }) === null
@@ -621,7 +624,7 @@ export function barSelfCheck() {
     // law-waiver:jugad
     const LONG = ["out-of-vocabulary", "next-token prediction", "probability distribution", "byte pair encoding"];
     // the [BANK] reasons are DERIVED from the one predicate (every text it can return), never typed here
-    const REASONS = [bankDueAt({ cls: { answer: true }, prevMoments: ["jirah"] }), bankDueAt({ cls: { gut: "pakka", answer: true }, prevMoments: [] })];
+    const REASONS = [bankDueAt({ cls: { answer: true }, prevMoments: ["jirah"] }), bankDueAt({ cls: { gut: "pakka", answer: true }, prevMoments: ["sharp_check"] })];
     for (let st = 0; st <= 11; st++) for (const bank of [null, ...REASONS]) {
       const Lk = barLines({ ...S3, step: st, current_axis: "d" }, 999, LONG, { bank });
       if (Lk.length > MAX_SKELETON_LINES) over.push(`step ${st}`);

@@ -234,8 +234,9 @@ export function classifyPrompt(text, { prevMoments = [] } = {}) {
   const confusion = CONFUSED.test(t) || nahiToCheck;
   const closing = CLOSING.test(t);
   const system = closing || SYSTEM_TALK.test(t.replace(GUT_INLINE, " "));
-  const replyToGutMoment = (Array.isArray(prevMoments) ? prevMoments : []).some((k) => GUT_BEARING_MOMENTS.includes(k));
-  const answer = !!gut || (replyToGutMoment && !!t && !ACK_ONLY.test(t) && !confusion && !system);
+  // a reply to a gut-bearing moment, or to the sharp check (row 266: a graded moment with no trio), is his answer
+  const replyToGradedMoment = (Array.isArray(prevMoments) ? prevMoments : []).some((k) => GUT_BEARING_MOMENTS.includes(k) || k === "sharp_check");
+  const answer = !!gut || (replyToGradedMoment && !!t && !ACK_ONLY.test(t) && !confusion && !system);
   const question = /\?/.test(t) && !answer;
   // confusion outranks system talk: a33327c2 t6 is "understood nothing … always tell me the gut words" — the
   // concept lesson restarts from zero (HOW_HE_LEARNS #9), it is not a park.
@@ -243,23 +244,26 @@ export function classifyPrompt(text, { prevMoments = [] } = {}) {
   return { kind, gut, answer, confusion, system, closing, question };
 }
 
-// ── THE BANK'S MOMENTS — ONE predicate for the skeleton's [BANK] and the gate's B.bank (forks row 264 (1)) ──
+// ── THE BANK'S MOMENTS — ONE predicate for the skeleton's [BANK] and the gate's B.bank (forks rows 264 (1) / 266) ──
 // Forge row 53b STANDS (his 5 Sep approval, consistent with the 30 Aug ratified act): the bank is due at the
-// axis's banked moments plus jirah, NEVER per idea; P0's R5 narrows to those moments. Of the four, two are
-// readable on a turn:
-//   JIRAH       — the last teacher turn declared `moment jirah` and his message is an answer;
-//   SHARP CHECK — "gut pehle, answer typed" (forge REFERENCE step 3): a gut-word answer to a question that
-//                 declared NO per-idea moment (the sharp check is banked through capture, never logged as a moment).
-// The other two — the Bolo and the English interview line — are held by their owner: forge_session's
-// `axis <x> done` refuses without ≥ 1 Hinglish bank and ≥ 1 --register interview since the axis opened.
-// A reply to a per-idea moment is re-welded in the turn and never banked (forge:R40 / R90) — db82184b t3 t4 t5
-// t11 (the pehle_guess replies P0 counted unbanked) are exactly that class, and none of them is due here.
-export const PER_IDEA_MOMENTS = Object.freeze(["pehle_guess", "check_q", "widget_gate"]);
+// axis's banked moments plus jirah, NEVER per idea. Each banked moment the gate reads has a NAME the last teacher
+// turn declared — never an absence (row 266: an undeclared question is a quiz-dump under R2 (c), not a check):
+//   JIRAH       — `moment jirah`, and his message is an answer;
+//   SHARP CHECK — `moment sharp_check` (row 266, the fifth legal kind), and his message is an answer that carries
+//                 HIS gut-word. gaffer_brain's own contract refuses a bank without one ("--gut is required …
+//                 committed BEFORE the answer. GUT-WORD LAW: no gut-word, no rep"), and the sharp check carries
+//                 no trio (row 254 (3)(b)) — so a gut-less reply to it cannot be banked lawfully and is NOT made
+//                 due here: that case is the architect's (queue, 23 Sep), never filled by a typed --gut.
+// The Bolo and the English interview line are held by their owner: forge_session's `axis <x> done` refuses
+// without ≥ 1 Hinglish bank and ≥ 1 --register interview since the axis opened.
+// A reply to a per-idea moment (pehle_guess · check_q · widget_gate) is re-welded, never banked (forge:R40 / R90):
+// db82184b t3 t4 t5 t11 are that class.
+export const BANKED_MOMENTS = Object.freeze(["jirah", "sharp_check"]);
 export function bankDueAt({ cls = null, prevMoments = [] } = {}) {
   const prev = Array.isArray(prevMoments) ? prevMoments : [];
   const c = cls && typeof cls === "object" ? cls : {};
   if (prev.includes("jirah") && c.answer) return "answers the jirah your last turn declared";
-  if (c.gut && !prev.some((k) => PER_IDEA_MOMENTS.includes(k))) return "gives a gut-word at the sharp check";
+  if (prev.includes("sharp_check") && c.answer && c.gut) return "answers the sharp check your last turn declared";
   return null;
 }
 
@@ -358,8 +362,11 @@ export function scopeSelfCheck() {
   const B = (t, prev = []) => bankDueAt({ cls: K(t, { prevMoments: prev }), prevMoments: prev });
   check("BANK · a reply to a declared jirah is due, a gut-word one or not; a bare 'ok' to it is not",
     /jirah/.test(B("word level issue is - vocab will be of a very big size", ["jirah"]) || "") && /jirah/.test(B("pakka - pay", ["jirah"]) || "") && B("ok", ["jirah"]) === null);
-  check("BANK · a gut-word answer to a question that declared no per-idea moment is the SHARP CHECK — due (db82184b t2 'shaya -', banked in P0)",
-    /sharp check/.test(B("shaya - word level tokenization - out of vocab issue") || "") && /sharp check/.test(B("no idea")) );
+  check("BANK · row 266: a reply carrying HIS gut-word to a declared sharp_check is due — and it is his answer (the classifier), whatever it opens with",
+    /sharp check/.test(B("shaya - word level tokenization - out of vocab issue", ["sharp_check"]) || "") && /sharp check/.test(B("no idea", ["sharp_check"]) || "")
+    && K("the vocab would be huge, so OOV", { prevMoments: ["sharp_check"] }).answer === true);
+  check("BANK · row 266 retires the ABSENCE reading: a gut-word to a question that declared NO moment is not due (that question is a quiz-dump red, R2 (c)); a gut-less reply to sharp_check is not made due (gaffer_brain refuses a bank with no --gut; the architect's)",
+    B("shaya - word level tokenization - out of vocab issue") === null && B("no idea") === null && B("the vocab would be huge, so OOV", ["sharp_check"]) === null);
   check("BANK · a reply to a PER-IDEA moment is never due, gut-word or not — db82184b t3 t4 t5 t11 (P0's unbanked pehle_guess replies) and a check_q 'haan'",
     B("pakka - no because a LLM model does not understand", ["pehle_guess"]) === null && B("no idea bro", ["pehle_guess"]) === null && B("no idea", ["pehle_guess"]) === null
     && B("pakka - i think pay because it is repeated the most", ["pehle_guess"]) === null && B("haan", ["check_q"]) === null && B("A", ["widget_gate"]) === null

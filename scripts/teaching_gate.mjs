@@ -76,7 +76,7 @@ export const CHECKS = Object.freeze({
   "A.sections": { fam: "A", fix: "ek heading YA ek rule — dono nahi, aur ek se zyada nahi" },
   "A.one-question": { fam: "A", fix: "sirf EK question sentence — baaki sawaal hatao (\"haan ya nahi?\" usi ka hissa hai; \"Aur kyun?\" doosra sawaal hai)" },
   "A.question-last": { fam: "A", fix: "check-question AAKHRI ho — uske baad sirf EK line: gut trio (pehle_guess / jirah par) ya khali skeleton \"maine socha ___, phir ___\"" },
-  "A.gut-by-moment": { fam: "A", fix: "gut-word moment se chalta hai: pehle_guess / jirah → aakhri line \"pehle gut-word: pakka / shayad / pata nahi\" · check_q → koi gut-word nahi, sawaal \"samajh aaya — haan ya nahi\" par khatam" },
+  "A.gut-by-moment": { fam: "A", fix: "gut-word moment se chalta hai: pehle_guess / jirah → aakhri line \"pehle gut-word: pakka / shayad / pata nahi\" · check_q → koi gut-word nahi, sawaal \"samajh aaya — haan ya nahi\" par khatam · sharp_check → koi gut trio nahi" },
   "A.gut-trio": { fam: "A", fix: "gut-word maango to teeno naam likho: pakka / shayad / pata nahi (knew / shaky / guessed kabhi nahi)" },
   "A.new-terms": { fam: "A", fix: "ek message mein sirf EK naya `backticked` naam — baaki agle turn ke liye rakho" },
   "A.neev-pehle": { fam: "A", fix: "naya naam usi line par colon form mein kholo: `X`: … (pehle kholo, phir use karo)" },
@@ -118,8 +118,8 @@ export const CHECKS = Object.freeze({
   "B.bank-per-idea": { fam: "B", fix: "\"samajh aaya\" check ka jawab per-idea hai — bank NAHI hota; bank sirf axis ke moments par (sharp check · Bolo · interview line) aur jirah par" },
   "B.bank-verbatim": { fam: "B", fix: "bank line mein --gut uska apna gut-word (pakka→knew · shayad→shaky · pata nahi→guessed), --said uske shabd verbatim, --asked tumhara sawaal verbatim" },
   "B.latency": { fam: "B", fix: "--latency_ms wahi number jo hook line ne diya (VERBATIM) — nahi padh sakte to flag hata do" },
-  "B.moment": { fam: "B", fix: "sawaal par khatam turn: ISI turn moment declare karo — node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah" },
-  "B.moment-kind": { fam: "B", fix: "moment sirf chaar: pehle_guess · check_q · widget_gate · jirah" },
+  "B.moment": { fam: "B", fix: "sawaal par khatam turn: ISI turn moment declare karo — node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah|sharp_check" },
+  "B.moment-kind": { fam: "B", fix: "moment sirf paanch: pehle_guess · check_q · widget_gate · jirah · sharp_check" },
   "B.askuser": { fam: "B", fix: "AskUserQuestion nahi — ek sawaal text mein, woh khud type karega" },
   "B.whole-read": { fam: "B", fix: "poori file mat padho (REFERENCE / SAMJHAO_MERGED / VISUAL_CONTRACT / forge SKILL / scripts / memory) — digest jo section bataye, sirf wahi, offset+limit se" },
   "B.tools": { fam: "B", fix: "mid-concept system / tool kaam nahi — park it: ek line, phir micro-question wapas" },
@@ -341,7 +341,10 @@ export function momentsOf(turn) {
 }
 const ran = (turn, rx) => turn.some((b) => shell(b) && rx.test(cmdOf(b)));
 const VOICE_REP = /gaffer_brain\.mjs["']?\s+capture\s+voice_rep\b/i;
-export const MOMENT_KINDS = Object.freeze(["pehle_guess", "check_q", "widget_gate", "jirah"]);
+// The fence: forge_session's own MOMENTS (the pacer owns the kinds; a copy here keeps the Stop hook from loading the
+// pacer — importing it would also make its turn_hook SHIM a silent no-op). The selftest asserts the two are equal.
+// FIVE since forks row 266 (sharp_check).
+export const MOMENT_KINDS = Object.freeze(["pehle_guess", "check_q", "widget_gate", "jirah", "sharp_check"]);
 
 // THE STUDY SET (G3's allowed set, read after the fact for the tools no PreToolUse rail sees).
 // The owner CLIs a study turn may run (G3's set, widened only by rows the rule table maps here: the act lane
@@ -465,6 +468,7 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
     const hasTrio = TRIO_RX.test(text), gutAsk = GUT_ASK.test(prose(text, { keepQuotes: false }));
     if ((moment === "pehle_guess" || moment === "jirah") && !hasTrio) red("A.gut-by-moment", `moment ${moment} needs the trio pakka / shayad / pata nahi as the last line`);
     if (moment === "check_q" && (hasTrio || gutAsk)) red("A.gut-by-moment", "moment check_q forbids the gut-word ask");
+    if (moment === "sharp_check" && hasTrio) red("A.gut-by-moment", "moment sharp_check carries no gut trio (row 254 (3)(b): the trio is at pehle_guess and once before jirah)");
     if (moment === "check_q" && !(/samajh\s+aaya/i.test(text) && /haan\s+ya\s+na(hi)?/i.test(text))) red("A.gut-by-moment", "a check_q question ends \"samajh aaya — haan ya nahi\"");
     if ((gutAsk && !hasTrio) || ENGLISH_TRIO.test(prose(text))) red("A.gut-trio", "a gut-word ask that does not name pakka / shayad / pata nahi");
     // the name lane (R4 + learn:R21)
@@ -859,8 +863,12 @@ async function selftest() {
   const noRan = run("ok", TURN_OK, GOOD.replace("pointer set · check_q declared\n", ""));
   assert("v2 §3 (a) · tools ran and the first line names none → A.ran-line", has(noRan, "A.ran-line"));
   // 9 — the bank duty (R5) + latency
-  const ans = run("pakka - pay kyunki woh sabse zyada repeat hota hai", TURN_OK, GOOD);
-  assert("R5 as narrowed by row 264 (1) · his gut-word at the SHARP CHECK (no per-idea moment before it) with no voice_rep this turn → B.bank", has(ans, "B.bank"));
+  const SHARP = [BASH("node scripts/forge_session.mjs moment sharp_check"), TXT("Axis c ka sharp check: pehla merge kaunsa pair hoga, aur kyun?")];
+  const ans = run("pakka - pay kyunki woh sabse zyada repeat hota hai", TURN_OK, GOOD, { prev: SHARP });
+  const absent = run("pakka - pay kyunki woh sabse zyada repeat hota hai", TURN_OK, GOOD);
+  const gutless = run("pay, kyunki woh sabse zyada repeat hota hai", TURN_OK, GOOD, { prev: SHARP });
+  assert("row 266 · his gut-word reply to a DECLARED sharp_check with no voice_rep → B.bank; the same words to an undeclared question (the retired absence reading) are not due; a gut-less reply is not made due (gaffer_brain refuses a bank with no --gut — the architect's)",
+    has(ans, "B.bank") && !has(absent, "B.bank") && !has(gutless, "B.bank"), JSON.stringify([ans.reds, absent.reds, gutless.reds]));
   const REP = "node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut knew --asked \"Pehla merge kaunsa pair?\" --said \"pay kyunki woh sabse zyada repeat hota hai\" --surface code --latency_ms 204218";
   const PREV_Q = [BASH("node scripts/forge_session.mjs moment jirah"), TXT("Jirah: Pehla merge kaunsa pair?\npehle gut-word: pakka / shayad / pata nahi")];
   const banked = run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP), ...TURN_OK], "bank mein gaya · axis c · judge shaam ko · pointer set\n" + GOOD.split("\n").slice(1).join("\n"), { hook: "latency: 204218 ms since your last message ended", prev: PREV_Q });
@@ -870,7 +878,7 @@ async function selftest() {
   const noLine = run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP), ...TURN_OK], "bank kiya · " + GOOD, { prev: PREV_Q });
   assert("learn:R154 / forge:R92 · --gut shaky on HIS pakka, and a reworded --said → B.bank-verbatim; a bank with no \"bank mein gaya … judge shaam ko\" → A.bank-line",
     has(wrongGut, "B.bank-verbatim") && has(reworded, "B.bank-verbatim") && has(noLine, "A.bank-line") && !has(noLine, "B.bank-verbatim"), JSON.stringify([wrongGut.why, reworded.why, noLine.why]));
-  const lat = run("pakka - pay", [BASH("node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut knew --latency_ms 5000"), ...TURN_OK], "bank kiya · " + GOOD, { hook: "latency: 204218 ms since your last message ended" });
+  const lat = run("pakka - pay", [BASH("node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut knew --latency_ms 5000"), ...TURN_OK], "bank kiya · " + GOOD, { hook: "latency: 204218 ms since your last message ended", prev: SHARP });
   assert("R5 · a latency that is not the hook's number → B.latency", has(lat, "B.latency"));
   // forks row 264 (1): forge row 53b STANDS — the bank is due at the jirah and the sharp check, never per idea
   const prevOf = (k) => [BASH(`node scripts/forge_session.mjs moment ${k}`), TXT("sawaal?")];
@@ -904,7 +912,10 @@ async function selftest() {
   const ask = run("ok", [TOOL("AskUserQuestion", { questions: [] }), ...TURN_OK], "set · " + GOOD);
   assert("AskUserQuestion in a study turn → B.askuser", has(ask, "B.askuser"));
   const kinds = run("ok", [BASH("node scripts/forge_session.mjs moment quiz"), BASH("node scripts/forge_session.mjs pointer x")], GOOD);
-  assert("C · a moment outside the four kinds → B.moment-kind", has(kinds, "B.moment-kind"));
+  const sharpKind = run("ok", [BASH("node scripts/forge_session.mjs moment sharp_check"), BASH("node scripts/forge_session.mjs pointer x")], "pointer set\n**Tokenization › axis c › pair-merge**\nAxis c ka sharp check: \"tea tea teen\" mein pehla merge kaunsa pair hoga, aur kyun?");
+  const sharpTrio = run("ok", [BASH("node scripts/forge_session.mjs moment sharp_check"), BASH("node scripts/forge_session.mjs pointer x")], "pointer set\n**Tokenization › axis c › pair-merge**\nAxis c ka sharp check: \"tea tea teen\" mein pehla merge kaunsa pair hoga?\npehle gut-word: pakka / shayad / pata nahi");
+  assert("C · the fence, planted BOTH ways (row 266): a moment outside the five → B.moment-kind; sharp_check is legal and clean; a gut trio on it → A.gut-by-moment (row 254 (3)(b))",
+    has(kinds, "B.moment-kind") && sharpKind.reds.length === 0 && has(sharpTrio, "A.gut-by-moment") && !has(sharpTrio, "B.moment-kind"), JSON.stringify([sharpKind.reds, sharpKind.why, sharpTrio.reds]));
   const w = run("ok", [TOOL("mcp__visualize__show_widget", { widget_code: "<div style='font-family:Arial'><button>aage</button></div><script>setInterval(()=>{},9)</script>" }), ...TURN_OK], "widget dikhaya · " + GOOD);
   assert("VISUAL_CONTRACT · a widget without Lexend / 34em, with autoplay and a half stepper → B.widget", has(w, "B.widget"));
   const j2 = run("ok", [TOOL("mcp__organism-memory__judge_round", {}), ...TURN_OK], "set · " + GOOD, { before: [...BOOT, TOOL("mcp__organism-memory__judge_round", {})] });
@@ -924,7 +935,7 @@ async function selftest() {
   const teachFirst = run("ok", TURN_OK, GOOD, { before: [U("learn"), BASH("node scripts/learn_digest.mjs"), TXT("Chalo shuru: tokenization kya hai, pata hai?"), BASH("node scripts/sitting.mjs open")], logRows: [] });
   assert("D · teaching text before the sitting opened → D.sitting-first", has(teachFirst, "D.sitting-first"));
   // 13 — the reason: ranked, capped, names the ids
-  const many = run("pakka - x", [TXT("upar"), TOOL("Grep", { pattern: "x", path: "C:/r/scripts" })], "## a\n---\nTu bata? Aur? Kyun? `embedding` `byte` 🚀🚀🚀");
+  const many = run("pakka - x", [TXT("upar"), TOOL("Grep", { pattern: "x", path: "C:/r/scripts" })], "## a\n---\nTu bata? Aur? Kyun? `embedding` `byte` 🚀🚀🚀", { prev: SHARP });
   const shown = (many.reason || "").split("\n").filter((l) => /^\s+· /.test(l));
   assert("REASON · ≤ 6 fix lines, in drift-rank order (text-last and bank first), the rest counted", many.decision === "block" && shown.length === MAX_FIX_LINES && /A\.text-last/.test(shown[0]) && /B\.bank/.test(shown[1]) && /\(\+\d+ more/.test(many.reason), many.reason);
   assert("REASON · every red id is a catalogue id with a fix line", (many.reds || []).every((id) => CHECKS[id] && CHECKS[id].fix));
@@ -934,7 +945,14 @@ async function selftest() {
   // Imported here only (the hook path never loads teaching_bar).
   {
     const bar = await import("./teaching_bar.mjs");
-    const sk = bar.barLines(FORGE, 1, [], { bank: "gives a gut-word at the sharp check" }).join("\n");
+    const sk = bar.barLines(FORGE, 1, [], { bank: bankDueAt({ cls: { answer: true, gut: "pakka" }, prevMoments: ["sharp_check"] }) }).join("\n");
+    // THE FENCE HAS ONE HOME (row 266): the pacer's MOMENTS = this gate's MOMENT_KINDS = the kinds the skeleton tells
+    // the model to declare. Read here, in the selftest only — the hook path never loads the pacer.
+    const pacer = await import("./forge_session.mjs");
+    const skKinds = ((/moment ((?:[a-z_]+\|)+[a-z_]+)`?\s*$/m.exec(sk.split("\n").find((l) => /\[EK CHECK\]/.test(l)) || "") || [])[1] || "").split("|");
+    const same = (a, b) => a.length === b.length && a.every((k) => b.includes(k));
+    assert(`FENCE · the pacer's ${pacer.MOMENTS.length} legal kinds = the gate's MOMENT_KINDS = the kinds the skeleton's [EK CHECK] prints (sharp_check included, row 266)`,
+      Array.isArray(pacer.MOMENTS) && same(pacer.MOMENTS, [...MOMENT_KINDS]) && same(skKinds, [...MOMENT_KINDS]) && pacer.MOMENTS.includes("sharp_check"), JSON.stringify({ pacer: pacer.MOMENTS, gate: MOMENT_KINDS, skeleton: skKinds }));
     const q = (rx) => { const m = rx.exec(sk); return m ? m[1] : null; };
     const ranLine = q(/first line names it: "([^"]+)"/), bankLine = q(/the text's first line: "([^"]+)"/);
     const position = (q(/\[POSITION\] (.+?) — never a count/) || "").replace("<the idea, BY NAME>", "pair-merge");
@@ -946,14 +964,15 @@ async function selftest() {
     const moment = (k) => [BASH(`node scripts/forge_session.mjs moment ${k}`), BASH("node scripts/forge_session.mjs pointer \"axis c merge\"")];
     const turns = {
       check_q: run("ok", moment("check_q"), `${ranLine}\n${lesson}\nToh "tea tea teen" mein pehla merge kaunsa pair hoga, ${checkEnd}?`),
-      bank: run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP), ...moment("check_q")], `${bankLine} · ${ranLine}\n${lesson}\nToh "tea tea teen" mein pehla merge kaunsa pair hoga, ${checkEnd}?`),
+      bank: run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP), ...moment("check_q")], `${bankLine} · ${ranLine}\n${lesson}\nToh "tea tea teen" mein pehla merge kaunsa pair hoga, ${checkEnd}?`, { prev: SHARP }),
+      sharp_check: run("ok", moment("sharp_check"), `${ranLine}\n${position}\nAxis c ka sharp check: "tea tea teen" mein pehla merge kaunsa pair hoga, aur kyun?`),
       pehle_guess: run("ok", moment("pehle_guess"), `${ranLine}\n${position}\nTumhara guess: "tea tea" mein kaunsa pair pehle judega?\n${gutLine}`),
       widget_gate: run("ok", moment("widget_gate"), `${ranLine}\n${position}\n"tea tea" mein kaunsa pair pehle judega?\n${blankLine}`),
     };
     const dirty = Object.entries(turns).filter(([, d]) => d.reds.length);
     // the control: P1's label ("tokenization > c > …", no "axis") is what this case caught on 23 Sep — it must stay red
     const oldLabel = run("ok", moment("check_q"), `${ranLine}\n${lesson.replace(position, "tokenization > c > pair-merge")}\nToh "tea tea teen" mein pehla merge kaunsa pair hoga, ${checkEnd}?`);
-    assert("SKELETON · every example it teaches passes the gate with ZERO reds on its own turn (check_q · a sharp-check bank · pehle_guess · widget_gate); P1's bare-letter label stays red (the control)",
+    assert("SKELETON · every example it teaches passes the gate with ZERO reds on its own turn (check_q · a sharp-check bank · sharp_check · pehle_guess · widget_gate); P1's bare-letter label stays red (the control)",
       got.every(Boolean) && dirty.length === 0 && has(oldLabel, "A.position"), dirty.map(([k, d]) => `${k}: ${d.reds.join(" ")} ${JSON.stringify(d.why)}`).join(" | ") + ` · control ${JSON.stringify(oldLabel.reds)}`);
   }
   // 14 — the transcript reader

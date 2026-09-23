@@ -28,7 +28,7 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
   calibration); never a Re-Jirah on them; a burned strike is burned. → `REFERENCE.md` "THE OPERATING SPINE".
 - **THE PACER** — `forge_session.mjs` paces THE METHOD; a skipped step is refused, not invisible. Verbs:
   `start <concept>` (refuses while a session is open) · `step <0-11>` · `axis <a-i> now|done|defer` ·
-  `moment pehle_guess|widget_gate|check_q|jirah` · `pointer "…"` · `contract` · `resume` · `close`.
+  `moment pehle_guess|widget_gate|check_q|jirah|sharp_check` (sharp_check = the axis-close sharp check, row 266) · `pointer "…"` · `contract` · `resume` · `close`.
   → `REFERENCE.md` "THE PACER".
 - **THE NOTES LAW** (22 Sep, row 240): notes are extracted from the archive by code at the week's end;
   your only live job is the four elicitations (gut-word · stuck-story at the crack with the one ```diff
