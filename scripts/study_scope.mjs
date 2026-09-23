@@ -193,6 +193,56 @@ export async function unboundMain() {
   } catch { /* a pointer line is never a reason to bite his prompt */ }
 }
 
+// ── HIS PROMPT, CLASSIFIED — TIER 0 (forks row 258 (2)(d), P2) ─────────────────────
+// ONE classifier for what his message IS, so the skeleton's [PARK] line, the gate's "his non-study
+// question passes" and the bank duty all read the same answer. Flags, never one label: his real
+// messages mix (a33327c2 t3 is a complaint AND a gut-word answer; db82184b t12 an answer AND a
+// question about the visualization ruling). The cases below are HIS OWN prompts from the five
+// Desktop study transcripts P0 read (db82184b · c1d9abce · a33327c2 · e3316fbd · 9e29b88c).
+//   gut        the gut-word he opened with (the trio, the retired English trio, and the typos he
+//              actually types: "shaya -"), or one given as "gut word - pakka" mid-message
+//   answer     a gut-word, or a reply to the gut-bearing moment the last teacher turn declared
+//              (pehle_guess / jirah — ruling R3 puts the trio exactly there, so the reply is graded)
+//   confusion  HIS OWN not-understanding, first person ("samajh nahi aaya", "understood nothing",
+//              "did not understand the question") — never an answer about a model ("LLM does not
+//              understand any language" is db82184b t3's ANSWER, one of P0's six false hits)
+//   system     talk about the system, the method or the tools — the rules, the notes, the session,
+//              the widget ruling, the language it teaches in — not about the concept
+//   question   a study question he asked ("what is morphology?")
+// kind: answer › confusion › system › question › other (a system flag riding an answer or a confusion
+// does not make the message a park).
+const GUT_LEAD = /^\s*(?:gut[\s-]*word\s*(?:is|=|:|-|—)?\s*)?(pakka|pakaa|pkka|shayad|shaya|shyad|shayd|pata\s*nahi|pata\s*nhi|knew|shaky|guessed)\b\s*[—–\-:,.;!]/i;
+const GUT_INLINE = /\bgut[\s-]*word\s*(?:is|=|:|-|—)\s*(pakka|shayad|pata\s*nahi|knew|shaky|guessed)\b/i;
+// after a sentence break: 9e29b88c t3 "gut word was in enlgish right? knew - sequence length will be 3"
+const GUT_AFTER_BREAK = /(?:[?.!]\s+)(pakka|shayad|pata\s*nahi|knew|shaky|guessed)\s*[—–\-:]\s*\S/i;
+// the whole message is "I don't know" — db82184b t4 "no idea bro", t5 "no idea" (P0 counted both as unbanked answers)
+const NO_IDEA = /^(no\s+idea|pata\s+nahi|pata\s+nhi|idk)(\s+(bro|yaar|yar))?\s*[.!]*$/i;
+// an acknowledgement is not an answer to a gut-bearing moment ("ok" after a pehle-guess banks nothing)
+const ACK_ONLY = /^(ok|okay|haan|ha|han|yes|hmm+|theek|thik|chalo|done|next|aage|sure)\b[\s.!]*$/i;
+const CONFUSED = /(samajh|samjh|smjh|smajh)\s*(nahi|nhi|nai|na)\s*(aa?ya|aa?ye|aa?\s*raha|aa?\s*rha|aa?\s*rahi)|\bnahi\s+samjh?a\b|\bunderstood\s+nothing\b|\bdid\s*n[o']?t\s+(get|understand)\b|\b(i|i\s+am|i'm)\s+(not\s+understanding|confused|lost)\b|\bi\s+do\s*n[o']?t\s+(get|understand)\b|\bclear\s+nahi\s+(hua|hai)\b|\bkuch\s+(samajh|smjh)\s+nahi\b/i;
+const SYSTEM_TALK = /(?:^|\s)\/(learn|forge)\b|\b(ruling|rules?|notes?|sessions?|hooks?|widgets?|visuali[sz]ations?|pacer|organism|system|contract|skill|hinglish|hindi|gut[\s-]*words?|restart|re-start|new\s+session|keep\s+yourself\s+updated|mistakes?)\b/i;
+const CLOSING = /\b(done\s+for\s+today|full\s+time|aaj\s+ke\s+liye\s+bas|band\s+karo|let'?s\s+stop|stop\s+here)\b/i;
+export const GUT_BEARING_MOMENTS = Object.freeze(["pehle_guess", "jirah"]);
+export function classifyPrompt(text, { prevMoments = [] } = {}) {
+  const raw = String(text || "");
+  const t = raw.replace(/<\/?(command-message|command-name|command-args|pasted_content)[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const m = GUT_LEAD.exec(t) || GUT_INLINE.exec(t) || GUT_AFTER_BREAK.exec(t);
+  const gut = m ? m[1].toLowerCase().replace(/\s+/g, " ").replace(/^pata nhi$/, "pata nahi").replace(/^(shaya|shyad|shayd)$/, "shayad").replace(/^(pakaa|pkka)$/, "pakka")
+    : NO_IDEA.test(t) ? "pata nahi" : null;
+  // forge:R140 / HOW_HE_LEARNS R107 — his "nahi" to "samajh aaya — haan ya nahi?" is the not-understood answer, literally
+  const nahiToCheck = (Array.isArray(prevMoments) ? prevMoments : []).includes("check_q") && /^(nahi|nhi|nai|na|no|nope)\b/i.test(t);
+  const confusion = CONFUSED.test(t) || nahiToCheck;
+  const closing = CLOSING.test(t);
+  const system = closing || SYSTEM_TALK.test(t.replace(GUT_INLINE, " "));
+  const replyToGutMoment = (Array.isArray(prevMoments) ? prevMoments : []).some((k) => GUT_BEARING_MOMENTS.includes(k));
+  const answer = !!gut || (replyToGutMoment && !!t && !ACK_ONLY.test(t) && !confusion && !system);
+  const question = /\?/.test(t) && !answer;
+  // confusion outranks system talk: a33327c2 t6 is "understood nothing … always tell me the gut words" — the
+  // concept lesson restarts from zero (HOW_HE_LEARNS #9), it is not a park.
+  const kind = answer ? "answer" : confusion ? "confusion" : system ? "system" : question ? "question" : t ? "other" : "empty";
+  return { kind, gut, answer, confusion, system, closing, question };
+}
+
 // ── CLI — by hand only (the hook path is the CALL shape above); read-only, prints one JSON line ──
 //   node scripts/study_scope.mjs scope   --session <id>                              → the predicate's verdict for that session
 //   node scripts/study_scope.mjs unbound --session <id> [--transcript p] [--prompt "…"] [--entrypoint claude-desktop|cli]
@@ -257,6 +307,33 @@ export function scopeSelfCheck() {
     && isLearnOpener("<command-name>/forge</command-name> embeddings", trig)
     && !isLearnOpener("continue the audit", trig) && !isLearnOpener("runner", trig) && !isLearnOpener("architect", trig) && !isLearnOpener("", trig));
   check("an unreadable skill file yields NO openers (the Desktop leg still stands), never a throw", learnTriggers(join(HERE, "no-such-skill.md")).length === 0);
+  // THE CLASSIFIER (row 258 (2)(d)) — HIS OWN prompts from the five Desktop study transcripts P0 read, both ways.
+  const K = (t, o) => classifyPrompt(t, o);
+  check("CLASSIFY · a gut-word opener is an ANSWER, the typo he types included (db82184b t2 'shaya -', t3/t11 'pakka -', a33327c2 t12 'shayad -')",
+    K("shaya - word level tokenization - out of vocab issue").gut === "shayad" && K("pakka - i think pay because it is repeated the most number of times").kind === "answer"
+    && K("shayad - no, single character tokens can not explain the meaning").gut === "shayad");
+  check("CLASSIFY · an answer ABOUT a model's not-understanding is not HIS confusion (db82184b t3 — one of P0's six false confusion hits)",
+    K("pakka - no because a LLM model does not understand any language, it only understands numbers").confusion === false);
+  check("CLASSIFY · 'no idea' is the pata-nahi answer (db82184b t4/t5, both unbanked in P0)", K("no idea bro").gut === "pata nahi" && K("no idea").kind === "answer");
+  check("CLASSIFY · the gut given mid-message or after a question still banks (a33327c2 t3 'gut word - pakka', 9e29b88c t3 '… right? knew - …'), and the complaint riding it is flagged system",
+    K("weren't you supposed to teach me in hinglish and not in hindi or english? gut word - pakka word-level --- ar, isto").gut === "pakka"
+    && K("weren't you supposed to teach me in hinglish and not in hindi or english? gut word - pakka word-level").system === true
+    && K("gut word was in enlgish right? knew - sequence length will be 3").kind === "answer");
+  check("CLASSIFY · HIS confusion, first person, outranks the system talk riding it (c1d9abce t2, a33327c2 t6)",
+    K("i am not understanding what am i supposed to answer? like did not understand the question").kind === "confusion"
+    && K("i did not get it, understood nothing. i mean what is morphology? always tell me what are the gut words, bhai merko kuch smjh nahi aya").kind === "confusion");
+  check("CLASSIFY · talk about the system, the notes, the ruling, a new session is SYSTEM (db82184b t12, e3316fbd t6, 9e29b88c t8, e3316fbd t4)",
+    K("yes i got it its and bits, i think more will be clear by visualization right? are you following the visualization ruling correctly?").kind === "system"
+    && K("before we start, can you please tell me how are you taking my notes topic and session agnostically when i start learning by command /learn ??").kind === "system"
+    && K("bruh why don't you keep yourself updated with the entire /learn first on how to do it, you keep on doing mistakes").kind === "system"
+    && K("Hi bro, i am starting my learning after 1 day and i forgot what were we doing?? can we please re-start?").kind === "system");
+  check("CLASSIFY · a reply to a gut-bearing moment (pehle_guess / jirah) is an answer; to check_q, or a bare 'ok', it is not (db82184b t10 'A')",
+    K("A", { prevMoments: ["pehle_guess"] }).kind === "answer" && K("word level issue is - vocab will be of a very big size", { prevMoments: ["jirah"] }).answer === true
+    && K("A", { prevMoments: ["check_q"] }).answer === false && K("ok", { prevMoments: ["pehle_guess"] }).answer === false && K("A").answer === false);
+  check("CLASSIFY · his \"nahi\" to a check_q is HIS confusion (forge:R140); \"nahi\" with no check_q before it is not",
+    K("nahi", { prevMoments: ["check_q"] }).kind === "confusion" && K("nahi yaar, thoda aur", { prevMoments: ["check_q"] }).confusion === true && K("nahi").confusion === false);
+  check("CLASSIFY · a study question is a QUESTION, not system talk (a33327c2 t2); an empty prompt is empty",
+    K("ijust got this, what do i need to do?").kind === "question" && K("").kind === "empty" && K("<command-message>learn</command-message> <command-name>/learn</command-name>").system === true);
   {
     const dir = mkdtempSync(join(tmpdir(), "study_scope-")); const tx = join(dir, "t.jsonl");
     try {

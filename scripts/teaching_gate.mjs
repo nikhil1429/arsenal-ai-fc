@@ -1,0 +1,955 @@
+#!/usr/bin/env node
+// ============================================================================
+// teaching_gate.mjs · ARSENAL AI FC — THE TEACHING GATE (G2), a Stop hook of its own (23 Sep 2026)
+//   queue/SPEC_v2__2026-09-23_teaching-gate.md §2 G2 · ruled by the architect in
+//   RULING__TEACHING_GATE__2026-09-23_P0.md (R1–R12) and forks rows 255 / 256 / 258 / 259.
+// ----------------------------------------------------------------------------
+// WHY THIS EXISTS. His word, 23 Sep 2026: "i want every session in claude code on claude desktop
+//   to follow everything /learn says everytime in every session and in every turn … please do not
+//   do shallow work". Until today every teaching rule reached the model as PROSE (the skills, the
+//   contract, the bar) and every check COUNTED — none blocked. P0 measured what that buys on his
+//   last five Desktop sessions: 17 of 35 teacher turns drifted, 14 of 35 lost text above a tool
+//   call on his screen, 6 of 7 of his graded answers were never banked. Prose read once drowns by
+//   turn forty; a count read at night changes nothing in the turn he is sitting in.
+//
+// WHAT IT IS. A Stop hook in ITS OWN PROCESS (the claims.mjs pattern — the three Stop hooks run in
+//   parallel, so a gate cannot ride another organ's process). It reads:
+//     · the payload (session_id, transcript_path, last_assistant_message, stop_hook_active),
+//     · THIS turn out of the transcript: every block since his last prompt, text AND tool_use
+//       (no other hook parses tool_use — every duty rule was unmeasurable before this),
+//     · the previous teacher turn's declared moments (for the bank duty) and the session's earlier
+//       backticked names (for "new"), and the UserPromptSubmit hook's own latency line,
+//   runs the CHECKS below and, on red, answers {"decision":"block","reason":"REWRITE — …"} ONCE:
+//   ≤ 6 fix lines in drift-rank order. On stop_hook_active it allows and logs what survived.
+//   TIER 0: zero model tokens. Every check is a count, a presence or a state comparison.
+//
+// SCOPE (G0, R7). It gates ONLY the study session: payload.session_id === the open sitting's
+//   host_session_id (study_scope.mjs, the one predicate). The pre-G0 TRANSITION scope never gates —
+//   it covers every session, and a gate on it would block engineering work (P0's H3 class).
+//   OUTSIDE scope it has ONE job (row 256 (1)(c)): the unbound nudge as a ONCE-PER-SESSION block —
+//   a Desktop (or learn-opened CLI) session with a forge concept open and no sitting bound is told
+//   the boot order once. Everything else outside scope is silent and writes nothing.
+//
+// NEVER BLOCKS (v2 §2 G2): a non-study session · stop_hook_active (the second pass) · his message
+//   classified SYSTEM talk (study_scope.classifyPrompt, row 258 (2)(d)) — then only the three
+//   MECHANICAL checks stay (text above a tool is lost on his screen; a tool outside the study set;
+//   AskUserQuestion), because those are not style: they are what he sees and what ran.
+//   A park message passes by construction (one line + the micro-question is inside every check).
+//
+// THE CHECKS ARE THE RULE TABLE'S TARGETS. learning-layer/teaching_gate/RULE_TABLE.json maps every
+//   A/B/C/D row of TEACHING_GATE__RULES.jsonl (the 925-row canon inventory, copied beside it) to a
+//   check id below or to an EXEMPTION with its reason; the selftest's COMPLETENESS clause refuses
+//   an unmapped row and a mapping to a check id that does not exist. A rule not in the table does
+//   not exist for the gate — the table is checked, never remembered.
+//
+// LAWS. Fail-OPEN (a throw allows the turn and logs the error: a checker that can break his session
+//   is worse than the drift it catches) · SOLE WRITER of dressing-room/state/teaching_gate.jsonl and
+//   nothing else (it reads sitting.json, forge_session.json and the transcript; it writes no organ's
+//   file) · no process.exit on the hook path · a gate only gets stricter.
+// WHO ELSE COULD ACT ON THIS OUTPUT? Claude Code (the block makes the model rewrite the turn) · P3's
+//   proof reads teaching_gate.jsonl (blocks per turn, false blocks, hook ms) · P4's judge ranking
+//   will replace RANK below.
+// CASES: `node scripts/teaching_gate.mjs selftest` — planted both ways for every family, the
+//   completeness clause, the scope proofs, and the hook spawned end to end on a temp state dir.
+// ============================================================================
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, mkdtempSync, rmSync, statSync, openSync, readSync, closeSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { spawnSync } from "node:child_process";
+import { studyScope, readSitting, readForge, payloadOf, classifyPrompt, unboundVerdict, GUT_BEARING_MOMENTS } from "./study_scope.mjs";
+import { countTables, namedPosition, countForm, opensTerm, hindiMarkerCount, technicalLine, intensityCheck } from "./teaching_audit.mjs";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(HERE, "..");
+// ARSENAL_GATE_STATE_DIR is the selftest's seam and nothing else's (the teaching_audit precedent).
+const STATE_DIR = process.env.ARSENAL_GATE_STATE_DIR || join(ROOT, "dressing-room", "state");
+export const GATE_LOG = (dir = STATE_DIR) => join(dir, "teaching_gate.jsonl");
+export const RULE_TABLE_PATH = join(ROOT, "learning-layer", "teaching_gate", "RULE_TABLE.json");
+export const RULES_PATH = join(ROOT, "learning-layer", "teaching_gate", "RULES.jsonl");
+const TRANSCRIPT_MAX = 16 * 1024 * 1024;   // the largest Desktop study transcript P0 read is 2.75 MB
+
+// ── THE CHECK CATALOGUE — id → family + the fix line the block prints ─────────────
+// Families: A the message text · B this turn's tool calls · C state · D the session's boot.
+export const CHECKS = Object.freeze({
+  "A.table": { fam: "A", fix: "table hatao — mechanism text mein, numbered trace ke saath (his word, twice: tables confuse him)" },
+  "A.sections": { fam: "A", fix: "ek heading YA ek rule — dono nahi, aur ek se zyada nahi" },
+  "A.one-question": { fam: "A", fix: "sirf EK question sentence — baaki sawaal hatao (\"haan ya nahi?\" usi ka hissa hai; \"Aur kyun?\" doosra sawaal hai)" },
+  "A.question-last": { fam: "A", fix: "check-question AAKHRI ho — uske baad sirf EK line: gut trio (pehle_guess / jirah par) ya khali skeleton \"maine socha ___, phir ___\"" },
+  "A.gut-by-moment": { fam: "A", fix: "gut-word moment se chalta hai: pehle_guess / jirah → aakhri line \"pehle gut-word: pakka / shayad / pata nahi\" · check_q → koi gut-word nahi, sawaal \"samajh aaya — haan ya nahi\" par khatam" },
+  "A.gut-trio": { fam: "A", fix: "gut-word maango to teeno naam likho: pakka / shayad / pata nahi (knew / shaky / guessed kabhi nahi)" },
+  "A.new-terms": { fam: "A", fix: "ek message mein sirf EK naya `backticked` naam — baaki agle turn ke liye rakho" },
+  "A.neev-pehle": { fam: "A", fix: "naya naam usi line par colon form mein kholo: `X`: … (pehle kholo, phir use karo)" },
+  "A.codes-at-him": { fam: "A", fix: "id / command / code usse mat dikhao — poori baat plain words mein" },
+  "A.position": { fam: "A", fix: "position line NAAM se: concept > axis > idea (jaise \"Tokenization › axis c › pair-merge\")" },
+  "A.count-form": { fam: "A", fix: "\"idea 2 of 4\" jaisa count hatao — position sirf naam se" },
+  "A.emoji": { fam: "A", fix: "emoji sirf ✅ ❌ ⚠ ⭐ — message mein ≤ 2, ek line mein ≤ 1" },
+  "A.backticks": { fam: "A", fix: "backticks sirf naamon ke liye: message mein ≤ 3 alag naam, ek paragraph mein ≤ 1" },
+  "A.bold": { fam: "A", fix: "bold ek paragraph mein ≤ 1 (sirf wahi ek load-bearing word)" },
+  "A.diff": { fam: "A", fix: "sirf EK ```diff, ≤ 4 lines, har line + (sahi) ya - (galat), bagal mein prose" },
+  "A.blockquote": { fam: "A", fix: "blockquote ≤ 1, aur usme check-question ya koi naam nahi" },
+  "A.tum": { fam: "A", fix: "\"tum\" bolo — tu / tera / tujhe nahi" },
+  "A.too-hindi": { fam: "A", fix: "Hindi content word ki jagah English content word (Hindi sirf glue)" },
+  "A.too-english": { fam: "A", fix: "Hinglish: English content words, Hindi glue (hai, ka, mein, toh …) — poora English sirf interview line" },
+  "A.gamify": { fam: "A", fix: "XP / streak / drift / ms-seconds ke figure usse mat dikhao" },
+  "A.markdown": { fam: "A", fix: "raw HTML, kbd, footnote, task list, mermaid / log fence, KaTeX colour, data-URI image, hex swatch hatao" },
+  "A.his-level": { fam: "A", fix: "\"you already know\" / \"tumhe pata hi hai\" family hatao — uska level uske apne shabdon se" },
+  "A.list-length": { fam: "A", fix: "ek list level mein ≤ 4 items (≤ 4 naye units hawa mein)" },
+  "A.text-last": { fam: "B", fix: "saare tools PEHLE, text AAKHIR mein — tool ke upar ka text Desktop par uski screen se gayab ho jaata hai" },
+  "A.ran-line": { fam: "A", fix: "tool chala to text ki PEHLI line batao kya chala (jaise \"bank kiya · pointer set\")" },
+  "A.confusion-literal": { fam: "A", fix: "woh confused hai: wahi naam dobara, koi naya `naam` nahi, step / axis mat badlo — zero se, chhote qadam" },
+  "A.hype": { fam: "A", fix: "hype / khali praise hatao — crack data hai, verdict nahi; praise sirf earned + specific" },
+  "A.medical": { fam: "A", fix: "dawai / dose / diagnosis par sirf ek baat: \"apne doctor ko dikhao\" — khud interpret kabhi nahi" },
+  "A.layers": { fam: "A", fix: "naya naam khola to usi idea mein EK interview-ready English technical line bhi (dukaan → asli naam → technical line)" },
+  "A.intensity": { fam: "A", fix: "axis band kiya — ek line mein depth · breadth · interaction ka verdict (maximum tha ya nahi)" },
+  "A.closed-axis": { fam: "A", fix: "band ho chuka axis dobara mat padhao — position line abhi ke axis ki ho" },
+  "A.ask-where": { fam: "A", fix: "usse mat poochho woh kahan tha, na kuch paste karne ko kaho — state se padho" },
+  "A.bank-line": { fam: "A", fix: "bank ke baad bolo: \"bank mein gaya · axis <x> · judge shaam ko\" — koi verdict nahi, koi seconds nahi" },
+  "A.blame": { fam: "A", fix: "galat MODEL ko kaato, usse nahi — \"yahan sabka dimaag ek taraf jaata hai\", \"tumne galat socha\" kabhi nahi" },
+  "A.no-grill": { fam: "A", fix: "teaching turn par grilling / reinvent-from-scratch nahi — woh jirah round ka kaam hai" },
+  "A.urgency": { fam: "A", fix: "pace uska hai — \"time kam hai\" / jaldi / deadline / per-day cap kabhi nahi" },
+  "A.his-data": { fam: "A", fix: "example uska data ho (invoice, FinOps, Blinkit) — hello world / foo / Alice nahi" },
+  "A.repeat-line": { fam: "A", fix: "usse koi line dohraane ko mat do — woh apne shabdon mein bolega" },
+  "A.emdash": { fam: "A", fix: "em-dash ki deewar nahi — paragraph mein ≤ 2, message mein ≤ 4" },
+  "A.text-fence": { fam: "A", fix: "```text fence sirf symbols / ids / arrows ke liye, Hinglish bahar — aur concept mein ek hi baar" },
+  "A.buying": { fam: "A", fix: "kharidaari ki baat ek line mein park — koi price, koi link nahi" },
+  "B.bank": { fam: "B", fix: "uska jawab bank karo — PEHLA tool: node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --gut … --asked \"…\" --said \"…\" --surface code [--latency_ms <hook line ka number>]" },
+  "B.bank-verbatim": { fam: "B", fix: "bank line mein --gut uska apna gut-word (pakka→knew · shayad→shaky · pata nahi→guessed), --said uske shabd verbatim, --asked tumhara sawaal verbatim" },
+  "B.latency": { fam: "B", fix: "--latency_ms wahi number jo hook line ne diya (VERBATIM) — nahi padh sakte to flag hata do" },
+  "B.moment": { fam: "B", fix: "sawaal par khatam turn: ISI turn moment declare karo — node scripts/forge_session.mjs moment check_q|pehle_guess|widget_gate|jirah" },
+  "B.moment-kind": { fam: "B", fix: "moment sirf chaar: pehle_guess · check_q · widget_gate · jirah" },
+  "B.askuser": { fam: "B", fix: "AskUserQuestion nahi — ek sawaal text mein, woh khud type karega" },
+  "B.whole-read": { fam: "B", fix: "poori file mat padho (REFERENCE / SAMJHAO_MERGED / VISUAL_CONTRACT / forge SKILL / scripts / memory) — digest jo section bataye, sirf wahi, offset+limit se" },
+  "B.tools": { fam: "B", fix: "mid-concept system / tool kaam nahi — park it: ek line, phir micro-question wapas" },
+  "B.judge-once": { fam: "B", fix: "judge_round ek sitting mein EK hi baar" },
+  "B.widget": { fam: "B", fix: "widget: Lexend 400/500, max-width 34em, stepper = peeche / aage / shuru se + arrow keys, koi autoplay nahi, answer tiles nahi" },
+  "D.digest-first": { fam: "D", fix: "session ka PEHLA tool learn_digest hai — abhi chalao: node scripts/learn_digest.mjs, aur uski screen maano" },
+  "D.sitting-first": { fam: "D", fix: "teaching text se pehle sitting kholo: node scripts/sitting.mjs open --surface code --no-spawn --task \"<concept> axis <x>\"" },
+  "D.start-once": { fam: "D", fix: "forge_session start dobara nahi, --force kabhi nahi — khuli session RESUME karo (pointer se)" },
+  "D.digest-whole": { fam: "D", fix: "digest poora padho — head / tail / Select-Object -First se mat kaato (≤ 16 KB by contract)" },
+  "D.first-screen": { fam: "D", fix: "pehli screen: ≤ 6 lines (resume ke baad 3 lines + pointer ka sawaal), koi STALE / drift / resumed / missed / health nahi" },
+  "D.pacer": { fam: "D", fix: "teaching se pehle pacer: node scripts/forge_session.mjs resume (khuli session) — start sirf jab resume kuch na mile" },
+  "D.unbound": { fam: "D", fix: "(the unbound nudge — its line is study_scope.unboundLine)" },
+});
+
+// DRIFT RANK — the order the fix lines print in. Until P4's judge ranking lands this is P0's own
+// measured order on his last five Desktop sessions (text lost above a tool 14/35 · neev-pehle and
+// one-idea 2.86 per 10 turns · bank 6 of 7 missed · too-Hindi 12/35 · position), then the rest in
+// catalogue order. A measured order, not a preference; P4 replaces it with the judge's.
+export const RANK = Object.freeze(["D.unbound", "D.digest-first", "D.sitting-first", "A.text-last", "B.bank", "B.tools", "A.one-question", "A.new-terms", "A.neev-pehle",
+  "A.too-hindi", "A.question-last", "A.gut-by-moment", "A.gut-trio", "B.moment", "A.confusion-literal", "A.position", "A.count-form", "A.codes-at-him"]);
+const rankOf = (id) => { const i = RANK.indexOf(id); return i >= 0 ? i : RANK.length + Object.keys(CHECKS).indexOf(id); };
+export const MAX_FIX_LINES = 6;
+
+// ── TEXT HELPERS (pure) ────────────────────────────────────────────────────────
+const FENCE = /```[\s\S]*?```/g;
+const noFences = (t) => String(t || "").replace(FENCE, "\n");
+const QUOTED = /"[^"\n]{0,400}"|\u201c[^\u201d\n]{0,400}\u201d/g;
+/** Prose for counting: fences out, inline code → a word, quoted spans → a word, blockquote lines out. */
+export function prose(text, { keepQuotes = false } = {}) {
+  let t = noFences(text).replace(/`[^`\n]*`/g, " TERM ");
+  if (!keepQuotes) t = t.replace(QUOTED, " QUOTE ");
+  return t.split("\n").map((l) => (/^\s*>/.test(l) ? "" : l)).join("\n");   // blanked, not dropped: line numbers stay aligned
+}
+const lines = (t) => String(t || "").split("\n");
+const paragraphs = (t) => noFences(t).split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+const words = (s) => String(s || "").toLowerCase().replace(/[*_`~#>()[\]"'“”.,!?:;—–]/g, " ").split(/\s+/).filter(Boolean);
+
+/** R2 (a): question SENTENCES addressed to him; an answer-set restatement ("haan ya nahi?", "(1) ya (2)?",
+ *  "pakka, shayad ya pata nahi?" — ≤ 5 words joined by ya / or / slash) is part of the question it restates. */
+export function questionSentences(text) {
+  const out = [];
+  lines(prose(text)).forEach((line, li) => {
+    for (const s of line.split(/(?<=[?!.])\s+/)) {
+      const t = s.trim();
+      if (!/\?[*_)\]"'\u201d]*$/.test(t)) continue;
+      const w = words(t);
+      const option = w.length <= 5 && (w.includes("ya") || w.includes("or") || /\//.test(t));
+      out.push({ text: t, line: li, option });
+    }
+  });
+  return out;
+}
+export function questionCount(text) {
+  const q = questionSentences(text);
+  const main = q.filter((x) => !x.option).length;
+  return main > 0 ? main : q.length > 0 ? 1 : 0;
+}
+export const TRIO_RX = /pakka[\s\S]{0,40}shayad[\s\S]{0,40}pata\s+nahi/i;
+const ENGLISH_TRIO = /\bknew\b[\s\S]{0,30}\bshaky\b|\bshaky\b[\s\S]{0,30}\bguessed\b/i;
+const GUT_ASK = /\bgut[\s-]*word\b/i;
+const SKELETON_LINE = /_{3,}|\.\.\.\s*$|…\s*$/;
+
+/** R2 (b): the lines that follow the LAST question sentence (0 or 1 allowed; the one must be the trio or a skeleton). */
+export function afterLastQuestion(text) {
+  const ls = lines(noFences(text));
+  const pl = lines(prose(text));
+  let last = -1;
+  pl.forEach((l, i) => { if (/\?[*_)\]"'\u201d]*\s*$/.test(l.trim()) || /\?[*_)\]"'\u201d]*\s/.test(l)) last = i; });
+  if (last < 0) return null;
+  const tail = [];
+  const lastLine = pl[last];
+  const qEnd = lastLine.lastIndexOf("?");
+  const rest = ls[last] !== undefined ? pl[last].slice(qEnd + 1).replace(/^[*_)\]"'\u201d]+/, "").trim() : "";
+  if (rest) tail.push(rest);
+  for (let i = last + 1; i < ls.length; i++) if (ls[i].trim()) tail.push(ls[i].trim());
+  return tail;
+}
+
+// R4 — the name lane. A backticked string is a NAME unless it is a token EXAMPLE (a substring of a longer
+// word or quoted string in the same message: `un` `believ` `able` from "unbelievable") or a CODE (an id or a command).
+const ID_RX = /^(?=[^\s]*[a-z])(?=[^\s]*\d)[a-z0-9_-]{8,}$/i;
+// visual:R69 — a backtick holds a TERM: ≤ 3 words, no "/", no file extension; anything else is code at him
+const CODE_RX = /[(){}=<>;\\/]|\.[a-z]{1,5}$|\.m?js\b|\.json\b|^node\s|^npm\s|^git\s|--[a-z]|^(\S+\s+){3,}\S+$/i;
+const BARE_ID_RX = /\b(act|rul|row|sit|cap)-[a-z0-9]{6,}\b/i;
+export function backticked(text) {
+  const t = noFences(text);
+  return [...t.matchAll(/`([^`\n]+)`/g)].map((m) => m[1].trim()).filter(Boolean);
+}
+export function tokenExample(term, text) {
+  const low = String(term).toLowerCase();
+  if (low.length > 12 || /\s/.test(low)) return false;
+  const esc = low.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const rest = noFences(text).replace(/`[^`\n]*`/g, " ").toLowerCase();
+  // a PIECE of a longer word — never the word itself inflected ("merges" does not make `merge` a token piece)
+  for (const m of rest.matchAll(new RegExp(`[a-z0-9]*${esc}[a-z0-9]*`, "g"))) {
+    const w = m[0];
+    if (w === low) continue;
+    if (w.startsWith(low) && /^(s|es|d|ed|ing|er|ers)$/.test(w.slice(low.length))) continue;
+    return true;
+  }
+  return false;
+}
+export const isCode = (term) => ID_RX.test(term) || CODE_RX.test(term);
+/** R4 (i): the colon form OPENS — "`X`: …", "- X: …", "`X` — …" on the line of the first use; plus the audit's own opening forms. */
+export function opensInMessage(text, term) {
+  const esc = String(term).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const colon = new RegExp(`(\`${esc}\`|^\\s*[-*]\\s+\\**${esc}\\**)\\s*(:|—|–|-\\s)`, "im");
+  return colon.test(noFences(text)) || opensTerm(text, term);
+}
+
+// R6 — TOO-HINDI: a table that only grows (removals need his word). Seed from R6 + the 35 Desktop turns.
+export const TOO_HINDI = Object.freeze({
+  akshar: "character / letter", shabd: "word", shabdon: "words", niyam: "rule", sira: "end", sire: "ends", siron: "ends",
+  shabdkosh: "vocabulary", bhram: "hallucination", antargat: "embedding", nishkarsh: "inference",
+});
+/** R6 exemptions: inside quotes · after "jaise" in the same sentence · a ```diff minus line · a blockquote of HIS words. */
+export function tooHindiHits(text) {
+  const hits = [];
+  if (/[\u0900-\u097F]/.test(prose(text))) hits.push("Devanagari script");
+  for (const line of lines(prose(text))) {
+    for (const sent of line.split(/(?<=[?!.])\s+/)) {
+      const cut = sent.search(/\bjaise\b/i);
+      const scan = cut >= 0 ? sent.slice(0, cut) : sent;
+      for (const w of words(scan)) if (Object.prototype.hasOwnProperty.call(TOO_HINDI, w)) hits.push(w);
+    }
+  }
+  return [...new Set(hits)];
+}
+const TUM_RX = /\b(tu|tera|teri|tere|tujhe|tujhko|tujhse)\b/i;
+const HIS_LEVEL_RX = /\b(dormant|you already know|you already understand|as you know|obviously|of course you|this should be easy|trivially|needless to say|goes without saying|you'll recall|you'?re not at zero|already (an )?(expert|pro))\b|tumhe\s+(toh\s+)?pata\s+hi\s+hai|tum\s+(toh\s+)?(already\s+)?jaante\s+hi\s+ho|yeh\s+toh\s+tumhe\s+aata\s+hai|tumhe\s+yaad\s+hi\s+hoga|\byaad\s+hoga\b|pehle\s+se\s+pata|tujhe\s+aata\s+hai|zero\s+pe\s+nahi/i;
+// visual:R23-R25 — no points economy, no latency figure, no organism health on a study screen ("RED" only in capitals)
+const GAMIFY_RX = /\b(XP|streaks?|badges?|level[\s-]?up|drift|selftest|daemon|watchman|organism\s+health)\b|\b\d+(\.\d+)?\s*(ms|milliseconds?|seconds?|secs?)\b/i;
+const RED_WORD = /\bRED\b/;
+const EMOJI_OK = new Set(["✅", "❌", "⚠", "⭐"]);
+const EMOJI_RX = /\p{Extended_Pictographic}/gu;
+const EMOJI_ONE = /\p{Extended_Pictographic}/u;   // no /g: .test on a global regex carries lastIndex between calls
+const MARKDOWN_BAD = [/<\/?(div|span|br|kbd|sup|sub|details|summary|img|p|table|font|b|i|u|mark)\b[^>]*>/i, /\[\^[^\]]+\]/, /^\s*[-*]\s+\[[ xX]\]/m, /```(mermaid|log)\b/i, /\\(color|textcolor)\{/, /\$\$/, /data:image\//i,
+  /!\[[^\]]*\]\(/, /(^|[^!])\[[^\]\n]+\]\([^)\n]+\)/, /==[^=\n]+==/, /(^|[^*\w])\*[^*\s][^*\n]*[^*\s]\*(?!\*)/m];
+const HYPE_RX = /\b(great job|amazing|awesome|zabardast|shabash|shandaar|fantastic|brilliant|well done|badhiya|superb|you'?re doing great)\b/i;
+const MEDICAL_RX = /\b(dose|dosage|medication|medicine|dawai|dawa|diagnos\w*|prescri\w*|\d+\s*mg)\b/i;
+const ASK_WHERE_RX = /\b(kahaa?n\s+the|where\s+were\s+we|kahaa?n\s+tak\s+pahunche|kya\s+padha\s+tha|where\s+did\s+we\s+(stop|leave\s+off)|paste\s+(karo|kar\s+do|kijiye)|paste\s+(it|this|the\s+file)\s+here)\b/i;
+const BLAME_RX = /\btumne\s+(pichli\s+baar\s+)?(yeh\s+)?galat\b|\bpichli\s+baar\s+galat\b|\btumhari\s+galti\b|\byou\s+(were\s+wrong|thought\s+last\s+time)\b|\byour\s+mistake\b/i;
+const GRILL_RX = /\b(reinvent|from\s+scratch|scratch\s+se|grill)\b/i;
+const URGENCY_RX = /\b(time\s+kam\s+hai|jaldi\s+karo|jaldi\s+se\s+khatam|hurry|deadline|kal\s+tak|aaj\s+itna\s+hi|one\s+axis\s+per\s+day)\b/i;
+const TOY_DATA_RX = /\b(hello\s+world|foo|lorem\s+ipsum|alice|bob)\b/i;
+const REPEAT_RX = /\b(repeat\s+karo|dohraa?o|yeh\s+line\s+bolo|repeat\s+after\s+me|say\s+after\s+me)\b/i;
+const BUYING_PROMPT = /\b(buy|buying|kharid\w*|khareed\w*|price|laptop|headphones?|earbuds|monitor|keyboard|amazon|flipkart)\b/i;
+const PRICE_OR_LINK = /₹\s?\d|\bRs\.?\s?\d|\$\s?\d|https?:\/\//i;
+const LOSS_WORDS = /\b(STALE|drift|resumed\s+\d|skipped|missed|health)\b|🔴/;
+const GUT_TO_FLAG = { pakka: "knew", shayad: "shaky", "pata nahi": "guessed", knew: "knew", shaky: "shaky", guessed: "guessed" };
+const normWords = (s) => String(s || "").toLowerCase().replace(/\\["']/g, "").replace(/[^a-z0-9ऀ-ॿ₹]+/g, " ").trim();
+const argOf = (cmd, flag) => { const m = new RegExp(`${flag}\\s+(?:"((?:[^"\\\\]|\\\\.)*)"|'([^']*)'|(\\S+))`).exec(cmd); return m ? (m[1] ?? m[2] ?? m[3]) : null; };
+const HEX_SWATCH = /(^|\s)#[0-9a-f]{6}\b/i;
+
+// ── THE TRANSCRIPT — this turn, the one before it, and the session so far ─────────
+function readTail(path, max = TRANSCRIPT_MAX) {
+  const size = statSync(path).size; const span = Math.min(size, max);
+  const fd = openSync(path, "r");
+  try { const buf = Buffer.alloc(span); readSync(fd, buf, 0, span, size - span); return buf.toString("utf8"); } finally { closeSync(fd); }
+}
+const humanText = (o) => {
+  if (!o || o.type !== "user" || o.isMeta) return null;
+  const c = o.message && o.message.content;
+  if (typeof c === "string") return c;
+  if (Array.isArray(c) && !c.some((b) => b && b.type === "tool_result")) return c.filter((b) => b && b.type === "text").map((b) => b.text).join("\n");
+  return null;
+};
+/** Parse a transcript (text) into prompts and ordered assistant blocks. Torn lines are skipped. */
+export function parseTranscript(raw) {
+  const prompts = []; const blocks = []; const hooks = [];
+  let seq = 0;
+  for (const l of String(raw || "").split("\n")) {
+    if (!l || l[0] !== "{") continue;
+    if (!/"type":"(user|assistant|attachment)"/.test(l)) continue;
+    let o; try { o = JSON.parse(l); } catch { continue; }
+    seq++;
+    if (o.type === "user") {
+      const t = humanText(o);
+      if (t !== null && !/^\s*<(local-command|command-name>\/(clear|model|effort|compact))/.test(t)) prompts.push({ seq, text: t, ts: o.timestamp || null });
+      continue;
+    }
+    if (o.type === "attachment") {
+      const a = o.attachment || {};
+      if (a.hookEvent === "UserPromptSubmit") hooks.push({ seq, text: `${a.content || ""}\n${a.stdout || ""}` });
+      continue;
+    }
+    const c = o.message && o.message.content;
+    if (!Array.isArray(c)) continue;
+    for (const b of c) {
+      if (!b) continue;
+      if (b.type === "text" && String(b.text || "").trim()) blocks.push({ seq, kind: "text", text: b.text });
+      else if (b.type === "tool_use") blocks.push({ seq, kind: "tool", name: b.name, input: b.input || {} });
+    }
+  }
+  return { prompts, blocks, hooks };
+}
+/** Split into { prompt, turn, prevTurn, before, hookText }. */
+export function turnsOf(parsed) {
+  const P = parsed.prompts;
+  const last = P.length ? P[P.length - 1] : null;
+  const prev = P.length > 1 ? P[P.length - 2] : null;
+  const after = (s) => parsed.blocks.filter((b) => b.seq > s);
+  const turn = last ? after(last.seq) : parsed.blocks.slice();
+  const prevTurn = last && prev ? parsed.blocks.filter((b) => b.seq > prev.seq && b.seq < last.seq) : [];
+  const before = last ? parsed.blocks.filter((b) => b.seq < last.seq) : [];
+  const hookText = last ? parsed.hooks.filter((h) => h.seq > last.seq).map((h) => h.text).join("\n") : "";
+  const f0 = P.length ? P[0].seq : 0, f1 = P.length > 1 ? P[1].seq : Infinity;
+  const firstTurn = parsed.blocks.filter((b) => b.seq > f0 && b.seq < f1);
+  return { prompt: last ? last.text : "", prompts: P.map((p) => p.text), turn, prevTurn, before, all: parsed.blocks, firstTurn, hookText };
+}
+
+// ── TOOL-CALL READERS ────────────────────────────────────────────────────────────
+const cmdOf = (b) => (b && b.kind === "tool" && b.input && typeof b.input.command === "string" ? b.input.command : "");
+const shell = (b) => b.kind === "tool" && /^(Bash|PowerShell)$/.test(b.name);
+export function momentsOf(turn) {
+  const out = [];
+  for (const b of turn) if (shell(b)) for (const m of cmdOf(b).matchAll(/forge_session\.mjs["']?\s+moment\s+([A-Za-z_-]+)/g)) out.push(m[1]);
+  return out;
+}
+const ran = (turn, rx) => turn.some((b) => shell(b) && rx.test(cmdOf(b)));
+const VOICE_REP = /gaffer_brain\.mjs["']?\s+capture\s+voice_rep\b/i;
+export const MOMENT_KINDS = Object.freeze(["pehle_guess", "check_q", "widget_gate", "jirah"]);
+
+// THE STUDY SET (G3's allowed set, read after the fact for the tools no PreToolUse rail sees).
+// The owner CLIs a study turn may run (G3's set, widened only by rows the rule table maps here: the act lane
+// learn:R29, the doubt lane learn:R158, the close's own capture paste forge:R152/R153, the widget registry forge:R103).
+const ALLOWED_CMD = /(learn_digest\.mjs|sitting\.mjs["']?\s+(open|status|host|touch|close)|forge_session\.mjs["']?\s+(pointer|moment|crack|axis|status|step|contract|resume|boot|start|close|lockchain)|gaffer_brain\.mjs["']?\s+(capture\s+(voice_rep|axis_weld)|judge[_-]round)|teaching_contract\.mjs["']?\s+flag|judge[_-]round|deep\.mjs|rejirah\.mjs|acts\.mjs["']?\s+do\b|hippocampus\.mjs["']?\s+mark\s+doubt|capture\.mjs["']?\s+paste|heartbeat\.mjs|widget\.mjs["']?\s+(list|register)|samjhao\.mjs["']?\s+(open|plan|sweep|taught)|doubtminer\.mjs|mirror\.mjs)/i;
+const CANON_READ_PATH = /(learning-layer[\\/]|\.claude[\\/]skills[\\/]|docs[\\/]archive[\\/]|dressing-room[\\/]state[\\/]capsules[\\/]|(^|[\\/])capsules[\\/]|dressing-room[\\/]state[\\/]forge_sessions?\.jsonl?$)/i;
+const FORGE_SKILL = /forge[\\/]SKILL\.md$/i;
+const SHELL_CANON_READ = /^\s*(grep|rg|sed\s+-n|head|tail|cat|Select-String|Get-Content)\b/i;
+const WHOLE_READ_NAMED = /(REFERENCE\.md|SAMJHAO_MERGED__2026-08-30\.md|VISUAL_CONTRACT\.md|forge[\\/]SKILL\.md)$/i;
+const NEVER_READ = /(scripts[\\/][^\\/]+\.m?js$|[\\/]memory[\\/])/i;
+const FREE_TOOLS = /^(ToolSearch|TodoWrite|Skill|mcp__visualize__read_me|mcp__visualize__show_widget)$|bank_answer|judge_round/;
+/** Every tool call of the turn outside the study set, and every whole-file read of a named canon file. */
+export function toolFindings(turn, { step = null } = {}) {
+  const outside = []; const whole = [];
+  for (const b of turn) {
+    if (b.kind !== "tool") continue;
+    const name = String(b.name || "");
+    if (FREE_TOOLS.test(name)) continue;
+    if (shell(b)) {
+      const c = cmdOf(b);
+      if (ALLOWED_CMD.test(c) && !/\bgit\s+(commit|push|add)\b|\bnpm\s|>\s*[\w./\\-]+\.(m?js|json|md)\b|Set-Content|Out-File|\brm\s/i.test(c)) continue;
+      if (SHELL_CANON_READ.test(c) && CANON_READ_PATH.test(c) && !NEVER_READ.test(c)) continue;
+      outside.push(`${name}: ${c.slice(0, 60)}`); continue;
+    }
+    if (name === "Read") {
+      const p = String(b.input.file_path || "");
+      // learn:R36 — on a step-3 SAMJHAO turn the digest + the hook are enough: no read of forge/SKILL.md at all
+      if (NEVER_READ.test(p) || (WHOLE_READ_NAMED.test(p) && !(b.input.offset && b.input.limit)) || (step === 3 && FORGE_SKILL.test(p))) { whole.push(p.split(/[\\/]/).slice(-2).join("/")); continue; }
+      if (CANON_READ_PATH.test(p)) continue;
+      outside.push(`Read: ${p.split(/[\\/]/).slice(-2).join("/")}`); continue;
+    }
+    if (name === "Grep" || name === "Glob") {
+      const p = String(b.input.path || b.input.pattern || "");
+      if (CANON_READ_PATH.test(p) && !NEVER_READ.test(p)) continue;
+      outside.push(`${name}: ${p.slice(0, 60)}`); continue;
+    }
+    outside.push(name);
+  }
+  return { outside, whole };
+}
+/** VISUAL_CONTRACT's checkable half on a show_widget call (the rest is the judge's). */
+export function widgetFindings(turn) {
+  const out = [];
+  for (const b of turn) {
+    if (b.kind !== "tool" || !/show_widget/.test(String(b.name))) continue;
+    const code = String(b.input.widget_code || b.input.html || "");
+    if (!/Lexend/.test(code)) out.push("font is not Lexend");
+    if (!/max-width\s*:\s*(34em|62ch)/i.test(code)) out.push("no max-width: 34em");
+    if (/\bautoplay\b|setInterval\s*\(/i.test(code)) out.push("autoplay / setInterval");
+    const stepper = /\baage\b|\bnext\b/i.test(code) && /<button/i.test(code);
+    if (stepper && !(/\bpeeche\b/i.test(code) && /\baage\b/i.test(code) && /shuru\s+se/i.test(code) && /ArrowLeft/.test(code) && /ArrowRight/.test(code))) out.push("a stepper without peeche / aage / shuru se + arrow keys");
+    if (stepper && !/disabled/.test(code)) out.push("end controls not disabled (disabled, never hidden)");
+    if (/type\s*=\s*["']?(radio|checkbox)|<select\b/i.test(code)) out.push("answer inputs (tap-to-answer)");
+    if (/\b(XP|streaks?|badges?|points)\b/.test(code)) out.push("a points economy");
+  }
+  return out;
+}
+
+// ── THE DECISION — pure: everything it reads is passed in ────────────────────────
+/**
+ * @param {object} o
+ * @param {object} o.payload   the Stop payload
+ * @param {object|null} o.sitting  sitting.json
+ * @param {object|null} o.forge    forge_session.json
+ * @param {string|null} o.transcript the transcript's raw text (null = unreadable)
+ * @param {Array} o.logRows   this gate's own earlier rows (for once-per-session blocks)
+ * @param {object} o.env
+ */
+export function decide({ payload = {}, sitting = null, forge = null, transcript = null, logRows = [], env = {}, unbound = null } = {}) {
+  const allow = (why, extra = {}) => ({ decision: "allow", why, reds: [], ...extra });
+  if (String(env.ARSENAL_ORGAN || "") === "1") return allow("headless organ", { scope: "organ" });
+  const scope = studyScope({ payload, sitting, env });
+  const sid = String(payload.session_id || "");
+  const mine = (logRows || []).filter((r) => r && r.session === sid);
+  const secondPass = payload.stop_hook_active === true;
+  if (!scope.study || scope.legacy) {
+    // OUTSIDE SCOPE — the one job: the unbound nudge, ONCE per session (row 256 (1)(c)).
+    const v = unbound || { line: null };
+    if (!v.line || secondPass) return allow(scope.legacy ? "transition scope (pre-G0 sitting) — never gated" : "not the study session", { scope: "out", quiet: true });
+    if (mine.some((r) => r.nudged)) return allow("unbound nudge already given in this session", { scope: "out", quiet: true });
+    return { decision: "block", scope: "out", nudged: true, reds: ["D.unbound"], reason: `REWRITE — ${v.line}` };
+  }
+  if (transcript === null) return allow("in scope, transcript unreadable — fail open", { scope: "study", error: "transcript unreadable" });
+  const T = turnsOf(parseTranscript(transcript));
+  const finalText = String(payload.last_assistant_message || "").trim() || (T.turn.filter((b) => b.kind === "text").pop() || { text: "" }).text;
+  const prevMoments = momentsOf(T.prevTurn);
+  const cls = classifyPrompt(T.prompt, { prevMoments });
+  const moments = momentsOf(T.turn);
+  const moment = moments.length ? moments[moments.length - 1] : null;
+  const reds = []; const why = {};
+  const red = (id, detail) => { if (!reds.includes(id)) { reds.push(id); why[id] = detail; } };
+
+  // ── MECHANICAL — on every study turn, system talk included ──
+  const turnBlocks = T.turn.slice();
+  const lastText = [...turnBlocks].reverse().findIndex((b) => b.kind === "text");
+  const lastTextIdx = lastText < 0 ? -1 : turnBlocks.length - 1 - lastText;
+  const textAbove = turnBlocks.some((b, i) => b.kind === "text" && turnBlocks.slice(i + 1).some((x) => x.kind === "tool") && !(i === lastTextIdx && String(b.text).trim() === finalText));
+  if (textAbove) red("A.text-last", "a text block sits above a tool call in this turn");
+  const tf = toolFindings(T.turn, { step: forge && Number.isInteger(forge.step) ? forge.step : null });
+  if (T.turn.some((b) => b.kind === "tool" && b.name === "AskUserQuestion")) red("B.askuser", "AskUserQuestion was called");
+  if (tf.outside.length) red("B.tools", tf.outside.slice(0, 3).join(" · "));
+  if (tf.whole.length) red("B.whole-read", tf.whole.slice(0, 3).join(" · "));
+
+  const d = { secondPass, cls: cls.kind, moment, prevMoments };
+  if (cls.kind !== "system") {
+    // ── A · the message ──
+    const text = finalText;
+    const qn = questionCount(text);
+    const teaching = qn > 0 || !!moment;
+    if (countTables(text) >= 1) red("A.table", `${countTables(text)} table(s)`);
+    const pr = noFences(text);
+    const heads = (pr.match(/^#{1,6}\s+\S/gm) || []).length, rules = (pr.match(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/gm) || []).length;
+    if (heads + rules > 1) red("A.sections", `${heads} heading(s) + ${rules} rule(s)`);
+    if (qn > 1) red("A.one-question", `${qn} question sentences: ${questionSentences(text).filter((x) => !x.option).map((x) => x.text.slice(0, 40)).join(" | ")}`);
+    const tail = afterLastQuestion(text);
+    if (tail) {
+      const gutAllowed = GUT_BEARING_MOMENTS.includes(moment);
+      const okTail = tail.length === 0 || (tail.length === 1 && ((gutAllowed && TRIO_RX.test(tail[0])) || SKELETON_LINE.test(tail[0])));
+      if (!okTail) red("A.question-last", `${tail.length} line(s) after the last question: "${tail.join(" / ").slice(0, 80)}"`);
+    }
+    const hasTrio = TRIO_RX.test(text), gutAsk = GUT_ASK.test(prose(text, { keepQuotes: false }));
+    if ((moment === "pehle_guess" || moment === "jirah") && !hasTrio) red("A.gut-by-moment", `moment ${moment} needs the trio pakka / shayad / pata nahi as the last line`);
+    if (moment === "check_q" && (hasTrio || gutAsk)) red("A.gut-by-moment", "moment check_q forbids the gut-word ask");
+    if (moment === "check_q" && !(/samajh\s+aaya/i.test(text) && /haan\s+ya\s+na(hi)?/i.test(text))) red("A.gut-by-moment", "a check_q question ends \"samajh aaya — haan ya nahi\"");
+    if ((gutAsk && !hasTrio) || ENGLISH_TRIO.test(prose(text))) red("A.gut-trio", "a gut-word ask that does not name pakka / shayad / pata nahi");
+    // the name lane (R4 + learn:R21)
+    const seen = new Set();
+    for (const b of T.before) if (b.kind === "text") for (const n of backticked(b.text)) seen.add(n.toLowerCase());
+    const names = [...new Set(backticked(text))];
+    const codes = names.filter((n) => isCode(n));
+    if (codes.length || BARE_ID_RX.test(prose(text))) red("A.codes-at-him", codes.slice(0, 3).map((c) => `\`${c}\``).join(" ") || String(prose(text).match(BARE_ID_RX)[0]));
+    const realNames = names.filter((n) => !isCode(n) && !tokenExample(n, text));
+    const fresh = realNames.filter((n) => !seen.has(n.toLowerCase()));
+    if (fresh.length > 1) red("A.new-terms", `${fresh.length} new names: ${fresh.slice(0, 4).join(", ")}`);
+    const unopened = fresh.filter((n) => !opensInMessage(text, n));
+    if (unopened.length) red("A.neev-pehle", `unopened: ${unopened.slice(0, 3).join(", ")}`);
+    if (realNames.length > 3) red("A.backticks", `${realNames.length} distinct backticked names`);
+    else if (paragraphs(text).some((p) => new Set(backticked(p).filter((n) => !isCode(n) && !tokenExample(n, text))).size > 1)) red("A.backticks", "more than one backticked name in a paragraph");
+    // position + count
+    if (teaching && !namedPosition(text)) red("A.position", "no position line by name");
+    const cf = countForm(text); if (cf) red("A.count-form", cf.match);
+    // the surface grammar
+    const emo = [...String(text).matchAll(EMOJI_RX)].map((m) => m[0]);
+    if (emo.some((e) => !EMOJI_OK.has(e)) || emo.length > 2 || lines(text).some((l) => (l.match(EMOJI_RX) || []).length > 1)) red("A.emoji", `emoji: ${emo.join(" ")}`);
+    if (emo.length && (new Set(emo).size < emo.length || lines(text).some((l, i, L) => i > 0 && EMOJI_ONE.test(l.trim().slice(0, 2)) && EMOJI_ONE.test(String(L[i - 1]).trim().slice(0, 2))))) red("A.emoji", "an emoji repeated or used as a bullet");
+    const bolds = paragraphs(text).map((p) => p.match(/\*\*[^*\n]+\*\*/g) || []);
+    if (bolds.some((b) => b.length > 1)) red("A.bold", "two bold spans in one paragraph");
+    else if (bolds.flat().some((b) => !/[›>→»]/.test(b) && b.replace(/\*/g, "").trim().split(/\s+/).length > 2)) red("A.bold", "a bold span longer than two words");
+    const diffs = [...String(text).matchAll(/```diff\n([\s\S]*?)```/g)];
+    const diffBad = diffs.some((m) => { const L = m[1].split("\n").filter((x) => x.trim()); return L.length > 4 || L.some((x) => !/^[+-]/.test(x) || /^(---|\+\+\+)\s/.test(x) || /^[+-]\s*[-*•]\s/.test(x)); });
+    const proseBeside = noFences(text).replace(/\s+/g, " ").trim().length >= 20;
+    if (diffs.length > 1 || diffBad || (diffs.length && !proseBeside) || (diffs.length && !cls.answer && cls.kind !== "confusion")) red("A.diff", `${diffs.length} diff fence(s)${diffs.length && !cls.answer && cls.kind !== "confusion" ? " with no answer of his to correct" : ""}`);
+    const bq = pr.split(/\n\s*\n/).filter((p) => /^\s*>/m.test(p));
+    const hisWords = normWords(T.prompts.join(" \n "));
+    const bqNotHis = bq.some((p) => { const w = normWords(p.replace(/^\s*>\s?/gm, "")); return w && !hisWords.includes(w); });
+    if (bq.length > 1 || bq.some((p) => /\?/.test(p) && qn <= 1 && questionSentences(text).length === 0) || bq.some((p) => /`[^`]+`|⭐/.test(p)) || bqNotHis) red("A.blockquote", `${bq.length} blockquote(s)${bqNotHis ? " — not his own words played back" : ""}`);
+    if (TUM_RX.test(prose(text))) red("A.tum", String(prose(text).match(TUM_RX)[0]));
+    const hi = tooHindiHits(text);
+    if (hi.length) red("A.too-hindi", hi.map((w) => TOO_HINDI[w] ? `${w} → ${TOO_HINDI[w]}` : w).join(" · "));
+    if (teaching && hindiMarkerCount(prose(text)) === 0 && prose(text).replace(/\s+/g, " ").length > 300) red("A.too-english", "no Hindi glue in a teaching message");
+    if (GAMIFY_RX.test(prose(text)) || RED_WORD.test(prose(text))) red("A.gamify", String((prose(text).match(GAMIFY_RX) || prose(text).match(RED_WORD))[0]));
+    const P_ = prose(text);
+    if (HYPE_RX.test(P_)) red("A.hype", P_.match(HYPE_RX)[0]);
+    if (MEDICAL_RX.test(P_) && !/doctor/i.test(text)) red("A.medical", P_.match(MEDICAL_RX)[0]);
+    if (ASK_WHERE_RX.test(P_)) red("A.ask-where", P_.match(ASK_WHERE_RX)[0]);
+    if (BLAME_RX.test(P_)) red("A.blame", P_.match(BLAME_RX)[0]);
+    if (["check_q", "pehle_guess", "widget_gate"].includes(moment) && GRILL_RX.test(P_)) red("A.no-grill", `${P_.match(GRILL_RX)[0]} on a ${moment} turn`);
+    if (URGENCY_RX.test(P_)) red("A.urgency", P_.match(URGENCY_RX)[0]);
+    if (TOY_DATA_RX.test(String(text).replace(/`[^`\n]*`/g, " "))) red("A.his-data", String(text).match(TOY_DATA_RX)[0]);
+    if (REPEAT_RX.test(P_)) red("A.repeat-line", P_.match(REPEAT_RX)[0]);
+    const dashes = (s) => (String(s).match(/—/g) || []).length;
+    if (dashes(noFences(text)) > 4 || paragraphs(text).some((p) => dashes(p) > 2)) red("A.emdash", `${dashes(noFences(text))} em-dashes`);
+    const textFences = [...String(text).matchAll(/```text\n([\s\S]*?)```/g)];
+    const earlierFences = T.before.filter((b) => b.kind === "text" && /```text\n/.test(b.text)).length;
+    if (textFences.some((m) => hindiMarkerCount(m[1]) > 0) || (textFences.length && textFences.length + earlierFences > 1)) red("A.text-fence", textFences.length + earlierFences > 1 ? "a second ```text walk this session" : "Hinglish inside a ```text fence");
+    if (BUYING_PROMPT.test(T.prompt) && PRICE_OR_LINK.test(text)) red("A.buying", "a price or a link on a buying topic");
+    // the lesson checks that read the forge state: a closed axis re-taught, the intensity line at an axis close, the layers
+    const lesson = !!(forge && forge.concept && !forge.closed_at);
+    const posAxis = (/\baxis\s+([a-i])\b/i.exec(P_) || [])[1];
+    if (lesson && posAxis && Array.isArray(forge.axes_done) && forge.axes_done.includes(posAxis.toLowerCase()) && posAxis.toLowerCase() !== String(forge.current_axis || "").toLowerCase()) red("A.closed-axis", `axis ${posAxis} is done`);
+    if (ran(T.turn, /forge_session\.mjs["']?\s+axis\s+[a-i]\s+done\b/i) && !intensityCheck(text)) red("A.intensity", "an axis closed with no depth / breadth / interaction verdict");
+    if (lesson && fresh.some((n) => opensInMessage(text, n)) && !technicalLine(text)) red("A.layers", "a name opened with no English technical line");
+    if (MARKDOWN_BAD.some((rx) => rx.test(noFences(text))) || HEX_SWATCH.test(prose(text))) red("A.markdown", "forbidden markdown");
+    if (HIS_LEVEL_RX.test(prose(text))) red("A.his-level", String(prose(text).match(HIS_LEVEL_RX)[0]));
+    const listRuns = []; let run = null;
+    for (const l of lines(noFences(text))) {
+      const m = /^(\s*)([-*+]|\d+[.)])\s+/.exec(l);
+      if (m) { const ind = m[1].length; if (run && run.ind === ind) run.n++; else { run = { ind, n: 1 }; listRuns.push(run); } }
+      else if (l.trim() && !/^\s{2,}/.test(l)) run = null;
+    }
+    if (listRuns.some((r) => r.n > 4)) red("A.list-length", `a list level of ${Math.max(...listRuns.map((r) => r.n))} items`);
+    // the ran-line (v2 §3 (a)): tools ran → the first line names one of them
+    const ranTools = T.turn.filter((b) => b.kind === "tool" && !/^(ToolSearch|TodoWrite|Skill|mcp__visualize__read_me)$/.test(b.name));
+    if (ranTools.length) {
+      const first = (lines(text).find((l) => l.trim()) || "").toLowerCase();
+      const said = ranTools.some((b) => {
+        const c = cmdOf(b).toLowerCase(), n = String(b.name).toLowerCase();
+        if (VOICE_REP.test(c)) return /bank/.test(first);
+        if (/forge_session\.mjs["']?\s+pointer/.test(c)) return /pointer/.test(first);
+        if (/forge_session\.mjs["']?\s+moment/.test(c)) return /moment|pointer|check|set/.test(first);
+        if (/forge_session\.mjs["']?\s+(axis|step)/.test(c)) return /axis|step/.test(first);
+        if (/learn_digest/.test(c)) return /digest/.test(first);
+        if (/sitting\.mjs/.test(c)) return /sitting/.test(first);
+        if (/show_widget/.test(n)) return /widget|tasveer|visual|picture|diagram/.test(first);
+        return /\b(chala|chalaya|kiya|ran|set|padh|dekha|read)\b/.test(first);
+      });
+      if (!said) red("A.ran-line", `tools ran (${ranTools.map((b) => b.name).slice(0, 3).join(", ")}) and the first line does not name any`);
+    }
+    // confusion is literal (v2 §3 (f))
+    if (cls.kind === "confusion") {
+      const prevNames = new Set(T.prevTurn.filter((b) => b.kind === "text").flatMap((b) => backticked(b.text)).map((n) => n.toLowerCase()));
+      if (fresh.length) red("A.confusion-literal", `a NEW name on his confusion: ${fresh[0]}`);
+      else if (ran(T.turn, /forge_session\.mjs["']?\s+(step|axis)\s/i)) red("A.confusion-literal", "the step / axis moved on his confusion");
+      else if (prevNames.size && !names.some((n) => prevNames.has(n.toLowerCase()))) red("A.confusion-literal", "the name he was confused by is not carried");
+    }
+    // ── B · the duties ──
+    if (cls.answer) {
+      const reps = T.turn.filter((b) => shell(b) && VOICE_REP.test(cmdOf(b)));
+      if (!reps.length) red("B.bank", `his message is an answer (${cls.gut ? `gut-word ${cls.gut}` : `a reply to ${prevMoments.join("/")}`}) and no voice_rep ran`);
+      const hook = /latency:\s*(\d+)\s*ms/.exec(T.hookText || "");
+      if (reps.length && hook) {
+        const got = /--latency_ms\s+["']?(\d+)/.exec(cmdOf(reps[0]));
+        if (got && got[1] !== hook[1]) red("B.latency", `--latency_ms ${got[1]} but the hook line said ${hook[1]}`);
+      }
+    }
+    // every bank of this turn, whatever made it due: his gut-word, his words, your question — verbatim (learn:R154, forge:R41/R92)
+    const reps = T.turn.filter((b) => shell(b) && VOICE_REP.test(cmdOf(b)));
+    if (reps.length) {
+      const c = cmdOf(reps[0]);
+      const gutFlag = argOf(c, "--gut"), said = argOf(c, "--said"), asked = argOf(c, "--asked");
+      const prevText = normWords(T.prevTurn.filter((b) => b.kind === "text").map((b) => b.text).join(" \n "));
+      const hisText = normWords(T.prompt);
+      const bad = [];
+      if (cls.gut && gutFlag && GUT_TO_FLAG[cls.gut] && gutFlag !== GUT_TO_FLAG[cls.gut]) bad.push(`--gut ${gutFlag} but he said ${cls.gut}`);
+      if (said === null) bad.push("no --said");
+      else if (!hisText.includes(normWords(said)) || normWords(said).length < 0.6 * hisText.length) bad.push("--said is not his words verbatim");
+      if (asked !== null && prevText && !prevText.includes(normWords(asked))) bad.push("--asked is not your question verbatim");
+      if (bad.length) red("B.bank-verbatim", bad.join(" · "));
+      if (!(/bank\s+mein\s+gaya/i.test(text) && /judge\s+shaam/i.test(text))) red("A.bank-line", "a bank ran and the message does not say \"bank mein gaya · axis <x> · judge shaam ko\"");
+    }
+    if (qn > 0 && !moment && !ran(T.turn, /forge_session\.mjs["']?\s+pointer\b/i)) red("B.moment", "a question-ending turn declared no moment and set no pointer");
+    const badKinds = moments.filter((k) => !MOMENT_KINDS.includes(k));
+    if (badKinds.length) red("B.moment-kind", badKinds.join(", "));
+    const judges = T.all.filter((b) => b.kind === "tool" && (/judge[_-]round/.test(String(b.name)) || /judge[_-]round/.test(cmdOf(b)))).length;
+    if (T.all.filter((b) => b.kind === "tool" && /show_widget/.test(String(b.name))).length > 12) red("B.widget", "more than 12 widgets in this session (~10-12 a day, at moments)");
+    if (judges > 1) red("B.judge-once", `${judges} judge_round calls in this session`);
+    const wf = widgetFindings(T.turn);
+    if (wf.length) red("B.widget", wf.join(" · "));
+  }
+  // ── D · the boot, ONCE per session (the first in-scope stop) ──
+  if (!mine.some((r) => r.d_checked)) {
+    d.d_checked = true;
+    const tools = T.all.filter((b) => b.kind === "tool" && !/^(ToolSearch|Skill|TodoWrite)$/.test(b.name));
+    if (tools.length && !/learn_digest\.mjs/.test(cmdOf(tools[0]))) red("D.digest-first", `the first tool was ${tools[0].name}${cmdOf(tools[0]) ? `: ${cmdOf(tools[0]).slice(0, 50)}` : ""}`);
+    const openIdx = T.all.findIndex((b) => shell(b) && /sitting\.mjs["']?\s+open\b/.test(cmdOf(b)));
+    const teachIdx = T.all.findIndex((b) => b.kind === "text" && (/\?/.test(prose(b.text)) || prose(b.text).length > 300));
+    if (teachIdx >= 0 && (openIdx < 0 || openIdx > teachIdx)) red("D.sitting-first", "teaching text came before the sitting opened");
+    const openCmd = openIdx >= 0 ? cmdOf(T.all[openIdx]) : "";
+    const pacerIdx = T.all.findIndex((b) => (shell(b) && /forge_session\.mjs["']?\s+(resume|start|boot)\b/.test(cmdOf(b))) || (b.kind === "tool" && b.name === "Skill" && /forge/.test(JSON.stringify(b.input || {}))));
+    if (openCmd && !(/--no-spawn\b/.test(openCmd) && /--surface\s+code\b/.test(openCmd))) red("D.sitting-first", "the sitting opened without --surface code --no-spawn");
+    else if (openIdx >= 0 && pacerIdx > openIdx) red("D.sitting-first", "the sitting opened before the pacer (resume / start) ran");
+    const lesson0 = !!(forge && forge.concept && !forge.closed_at);
+    if (lesson0 && teachIdx >= 0 && (pacerIdx < 0 || pacerIdx > teachIdx)) red("D.pacer", "teaching text before forge_session resume / start");
+    const starts = T.all.filter((b) => shell(b) && /forge_session\.mjs["']?\s+start\b/.test(cmdOf(b)));
+    if (starts.length > 1 || starts.some((b) => /--force\b/.test(cmdOf(b)))) red("D.start-once", `${starts.length} forge_session start call(s)${starts.some((b) => /--force\b/.test(cmdOf(b))) ? ", one with --force" : ""}`);
+    const digestCmd = (T.all.find((b) => shell(b) && /learn_digest\.mjs/.test(cmdOf(b))) || null);
+    if (digestCmd && /learn_digest\.mjs[^\n]*(\|\s*(head|tail|Select-Object\s+-(First|Last))|-TotalCount)/i.test(cmdOf(digestCmd))) red("D.digest-whole", "the digest was cut by a pipe");
+    const firstText = (T.firstTurn.filter((b) => b.kind === "text").pop() || {}).text || (T.prompts.length <= 1 ? finalText : "");
+    if (firstText) {
+      const n = lines(noFences(firstText)).filter((l) => l.trim()).length;
+      const resumed = T.firstTurn.some((b) => shell(b) && /forge_session\.mjs["']?\s+resume\b/.test(cmdOf(b)));
+      if (n > (resumed ? 4 : 6) || LOSS_WORDS.test(firstText)) red("D.first-screen", `the first screen is ${n} line(s)${LOSS_WORDS.test(firstText) ? ` and carries "${firstText.match(LOSS_WORDS)[0]}"` : ""}`);
+    }
+  }
+  const ordered = reds.slice().sort((a, b) => rankOf(a) - rankOf(b));
+  if (!ordered.length) return { decision: "allow", scope: "study", why: "clean", reds: [], ...d };
+  if (secondPass) return { decision: "allow", scope: "study", why: "second pass — the gate speaks once; the surviving drift is logged", reds: ordered, surviving: true, ...d };
+  const shown = ordered.slice(0, MAX_FIX_LINES);
+  const reason = ["REWRITE — the teaching gate (study session). Fix these, then give the turn again:",
+    ...shown.map((id) => `  · ${id}: ${CHECKS[id] ? CHECKS[id].fix : id}${why[id] ? `  [${String(why[id]).slice(0, 120)}]` : ""}`),
+    ...(ordered.length > shown.length ? [`  (+${ordered.length - shown.length} more: ${ordered.slice(shown.length).join(", ")})`] : []),
+    "  Tools first, the whole message LAST. He sees only the rewritten turn."].join("\n");
+  return { decision: "block", scope: "study", reds: ordered, reason, why, ...d };
+}
+
+// ── THE HOOK — Claude Code's Stop contract: a JSON decision on stdout, exit 0 ─────
+function readLogRows(dir = STATE_DIR) {
+  const p = GATE_LOG(dir);
+  if (!existsSync(p)) return [];
+  let raw = ""; try { raw = readTail(p, 512 * 1024); } catch { return []; }
+  const out = []; for (const l of raw.split("\n")) { if (!l.trim()) continue; try { out.push(JSON.parse(l)); } catch { /* torn */ } }
+  return out;
+}
+export function stopHook({ raw = null, env = process.env, dir = STATE_DIR, now = new Date() } = {}) {
+  const t0 = Date.now();
+  let payload = {};
+  try {
+    const handed = globalThis.__ARSENAL_HOOK_STDIN__;
+    const text = raw !== null ? raw : typeof handed === "string" ? handed : process.stdin.isTTY ? "" : readFileSync(0, "utf8");
+    payload = payloadOf(text);
+  } catch { payload = {}; }
+  let d;
+  try {
+    const sitting = readSitting(dir), forge = readForge(dir);
+    const scope = studyScope({ payload, sitting, env });
+    const inScope = scope.study && !scope.legacy;
+    let transcript = null;
+    if (inScope) { try { const p = String(payload.transcript_path || ""); transcript = p && existsSync(p) ? readTail(p) : null; } catch { transcript = null; } }
+    const unbound = inScope ? null : unboundVerdict({ payload, env, sitting, forge });
+    d = decide({ payload, sitting, forge, transcript, logRows: readLogRows(dir), env, unbound });
+  } catch (e) { d = { decision: "allow", scope: "error", reds: [], why: "the gate threw and fails OPEN", error: String((e && e.message) || e).slice(0, 200) }; }
+  d.ms = Date.now() - t0;
+  if (!d.quiet) {
+    try {
+      mkdirSync(dir, { recursive: true });
+      appendFileSync(GATE_LOG(dir), JSON.stringify({ ts: now.toISOString(), session: payload.session_id || null, sitting: (readSitting(dir) || {}).id || null, decision: d.decision, scope: d.scope, reds: d.reds || [], cls: d.cls || null, moment: d.moment || null, second_pass: !!d.secondPass, surviving: !!d.surviving, d_checked: !!d.d_checked, nudged: !!d.nudged, ms: d.ms, error: d.error || null }) + "\n");
+    } catch { /* the log is never a reason to bite his turn */ }
+  }
+  if (d.decision === "block") process.stdout.write(JSON.stringify({ decision: "block", reason: d.reason }) + "\n");
+  return d;
+}
+
+// ── THE RULE TABLE + THE COMPLETENESS LAW (v2 §1) ───────────────────────────────
+export const EXEMPTION_KINDS = Object.freeze(["duplicate", "his-decline", "not-per-turn", "one-time-record", "owner-held", "judge", "superseded", "other-lane"]);
+export function readRules(p = RULES_PATH) {
+  try { return readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).map((l) => JSON.parse(l)); } catch { return null; }
+}
+export function readRuleTable(p = RULE_TABLE_PATH) { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } }
+/** Every A/B/C/D row mapped to a check that exists, or exempted with a kind + reason; E rows go to the judge. */
+export function completeness(rules, table) {
+  const map = (table && table.map) || {};
+  const unmapped = [], badCheck = [], badExempt = [], mapped = [], exempt = [];
+  for (const r of rules || []) {
+    if (!/^[ABCD]$/.test(r.check)) continue;
+    const e = map[r.id];
+    if (!e) { unmapped.push(r.id); continue; }
+    if (e.check) {
+      const ids = Array.isArray(e.check) ? e.check : [e.check];
+      if (ids.some((id) => !CHECKS[id])) badCheck.push(`${r.id} → ${ids.join("+")}`); else mapped.push(r.id);
+    } else if (e.exempt) {
+      if (!EXEMPTION_KINDS.includes(e.exempt) || !String(e.why || "").trim()) badExempt.push(r.id); else exempt.push(r.id);
+    } else unmapped.push(r.id);
+  }
+  const abcd = (rules || []).filter((r) => /^[ABCD]$/.test(r.check)).length;
+  return { abcd, mapped: mapped.length, exempt: exempt.length, unmapped, badCheck, badExempt, green: !unmapped.length && !badCheck.length && !badExempt.length && abcd > 0 };
+}
+
+// ── SELFTEST ─────────────────────────────────────────────────────────────────────
+let pass = 0, fail = 0;
+const assert = (n, c, d = "") => { if (c) { pass++; console.log(`  ok   ${n}`); } else { fail++; console.log(`  FAIL ${n}${d ? `\n         ${String(d).slice(0, 400)}` : ""}`); } };
+
+const HOST = "11111111-2222-3333-4444-555555555555", ARCH = "a8909716-3d43-4752-b3af-40613f4814d4";
+const SIT = { id: "sit_t", closed_at: null, host_session_id: HOST };
+const FORGE = { concept: "tokenization", current_axis: "c", step: 3, closed_at: null };
+const row = (o) => JSON.stringify(o);
+const U = (text) => row({ type: "user", message: { role: "user", content: text } });
+const TXT = (text) => row({ type: "assistant", message: { content: [{ type: "text", text }] } });
+const TOOL = (name, input) => row({ type: "assistant", message: { content: [{ type: "tool_use", name, input }] } });
+const BASH = (command) => TOOL("Bash", { command });
+const HOOK = (content) => row({ type: "attachment", attachment: { type: "hook_success", hookEvent: "UserPromptSubmit", content } });
+const BOOT = [U("<command-message>learn</command-message> <command-name>/learn</command-name>"), BASH("node scripts/learn_digest.mjs"), BASH("node scripts/forge_session.mjs resume"), BASH("node scripts/sitting.mjs open --surface code --no-spawn --task \"tokenization axis c\"")];
+const GOOD = [
+  "pointer set · check_q declared",
+  "**Tokenization › axis c › pair-merge**",
+  "Dukaan mein sabse zyada bikne wali cheez ko ek hi shelf milti hai — wahi idea yahan hai.",
+  "`merge`: do sabse common padosi pieces ko ek naya piece bana dena.",
+  "In English: BPE repeatedly merges the most frequent adjacent pair into a new token.",
+  "",
+  "Toh \"tea tea teen\" mein pehla merge kaunsa pair hoga — samajh aaya, haan ya nahi?",
+].join("\n");
+const TURN_OK = [BASH("node scripts/forge_session.mjs moment check_q"), BASH("node scripts/forge_session.mjs pointer \"axis c merge\"")];
+const run = (prompt, turnRows, final, { prev = [], payload = {}, logRows = [{ session: HOST, d_checked: true }], sitting = SIT, before = BOOT, hook = null, forge = FORGE } = {}) => {
+  const rows = [...before, ...prev, U(prompt), ...(hook ? [HOOK(hook)] : []), ...turnRows, ...(final !== null ? [TXT(final)] : [])];
+  return decide({ payload: { session_id: HOST, transcript_path: "x", last_assistant_message: final, ...payload }, sitting, forge, transcript: rows.join("\n"), logRows, env: {} });
+};
+const has = (d, id) => (d.reds || []).includes(id);
+
+function selftest() {
+  console.log("=== teaching_gate.mjs selftest — the gate BLOCKS every planted family with its id, and never outside the study session ===\n");
+  // 0 — scope
+  const good = run("ok", TURN_OK, GOOD);
+  assert("SCOPE · a clean study turn (tools first, the ran-line, position by name, one colon-opened name, one question ending the check_q form) is ALLOWED", good.decision === "allow" && good.reds.length === 0, JSON.stringify(good.reds) + " " + JSON.stringify(good.why || ""));
+  const arch = decide({ payload: { session_id: ARCH, last_assistant_message: "Tables:\n| a | b |\n|---|---|\nDone? And more?" }, sitting: SIT, forge: FORGE, transcript: "", env: {}, unbound: { line: null } });
+  assert("SCOPE · the ARCHITECT's session (not the host) is never gated, whatever it writes (R7 proof clause, planted)", arch.decision === "allow" && arch.quiet === true);
+  const legacy = decide({ payload: { session_id: ARCH, last_assistant_message: "x? y?" }, sitting: { id: "old", closed_at: null }, forge: FORGE, transcript: "", env: {}, unbound: { line: null } });
+  assert("SCOPE · the pre-G0 TRANSITION scope (every session) is never gated — it would block engineering work", legacy.decision === "allow");
+  assert("SCOPE · a headless organ is never gated", decide({ payload: { session_id: HOST, last_assistant_message: "a? b?" }, sitting: SIT, forge: FORGE, transcript: "", env: { ARSENAL_ORGAN: "1" } }).decision === "allow");
+  assert("SCOPE · in scope with the transcript unreadable → fail OPEN, named", decide({ payload: { session_id: HOST }, sitting: SIT, forge: FORGE, transcript: null, env: {} }).decision === "allow");
+  // 1 — the unbound nudge, once per session
+  const nudge = decide({ payload: { session_id: ARCH }, sitting: null, forge: FORGE, transcript: "", env: {}, unbound: { line: "STUDY SCOPE NOT BOUND — learn_digest first, then sitting open" }, logRows: [] });
+  const nudge2 = decide({ payload: { session_id: ARCH }, sitting: null, forge: FORGE, transcript: "", env: {}, unbound: { line: "STUDY SCOPE NOT BOUND" }, logRows: [{ session: ARCH, nudged: true }] });
+  const nudge3 = decide({ payload: { session_id: ARCH, stop_hook_active: true }, sitting: null, forge: FORGE, transcript: "", env: {}, unbound: { line: "STUDY SCOPE NOT BOUND" }, logRows: [] });
+  assert("NUDGE · an unbound study surface is BLOCKED once with the boot-order line (row 256 (1)(c)); the second time, and on stop_hook_active, it passes",
+    nudge.decision === "block" && /learn_digest first/.test(nudge.reason) && nudge.nudged === true && nudge2.decision === "allow" && nudge3.decision === "allow");
+  // 2 — stop_hook_active never blocks, logs the survivors
+  const second = run("ok", TURN_OK, GOOD.replace("haan ya nahi?", "haan ya nahi? Aur kyun?"), { payload: { stop_hook_active: true } });
+  assert("SECOND PASS · stop_hook_active never blocks; the surviving drift is kept for the log", second.decision === "allow" && second.surviving === true && has(second, "A.one-question"));
+  // 3 — the question form (R2)
+  const two = run("ok", TURN_OK, GOOD.replace("haan ya nahi?", "haan ya nahi? Aur kyun?"));
+  assert("R2 · \"(…)? Aur kyun?\" is TWO questions → A.one-question BLOCKS (a33327c2 t12)", two.decision === "block" && has(two, "A.one-question") && /A\.one-question/.test(two.reason));
+  assert("R2 · \"… kaunsa? Haan ya nahi?\" is ONE (the answer-set restatement is part of it)", questionCount("Pehla merge kaunsa pair hoga? Haan ya nahi?") === 1 && questionCount("(1) word-level ya (2) char-level?") === 1);
+  const trailing = run("ok", TURN_OK, GOOD + "\nAur haan, agle turn mein trace karenge.");
+  assert("R2 (b) · a non-trio, non-skeleton line after the question → A.question-last", has(trailing, "A.question-last"));
+  const skel = run("ok", TURN_OK, GOOD + "\nmaine socha ___, phir ___ ne toda");
+  assert("R2 (b) · ONE blank-skeleton line after the question passes", !has(skel, "A.question-last"), JSON.stringify(skel.reds));
+  const noMoment = run("ok", [], "tool chala nahi\n**Tokenization › axis c › merge**\nKya samjhe — samajh aaya, haan ya nahi?");
+  assert("R2 (c) · a question-ending turn with no moment and no pointer → B.moment", has(noMoment, "B.moment"));
+  // 4 — gut by moment (R3)
+  const pg = [BASH("node scripts/forge_session.mjs moment pehle_guess")];
+  const pgNoTrio = run("ok", pg, "moment set\n**Tokenization › axis c › merge**\nTumhara guess: \"tea tea\" mein kaunsa pair pehle judega?");
+  const pgTrio = run("ok", pg, "moment set\n**Tokenization › axis c › merge**\nTumhara guess: \"tea tea\" mein kaunsa pair pehle judega?\npehle gut-word: pakka / shayad / pata nahi");
+  assert("R3 · pehle_guess REQUIRES the trio as the one line after the question; with it, the turn passes", has(pgNoTrio, "A.gut-by-moment") && !has(pgTrio, "A.gut-by-moment") && !has(pgTrio, "A.question-last"), JSON.stringify(pgTrio.reds));
+  const cqTrio = run("ok", TURN_OK, GOOD + "\npehle gut-word: pakka / shayad / pata nahi");
+  assert("R3 · check_q FORBIDS the trio (forge:R89)", has(cqTrio, "A.gut-by-moment"));
+  const wrongTrio = run("ok", pg, "moment set\n**Tokenization › axis c › merge**\nKaunsa pair? Pehle ek gut-word bolo — knew, shaky, ya guessed");
+  assert("learn:R41 · the English trio (knew / shaky / guessed) → A.gut-trio (9e29b88c t7)", has(wrongTrio, "A.gut-trio"));
+  // 5 — the name lane (R4, learn:R21)
+  const twoNew = run("ok", TURN_OK, GOOD.replace("`merge`: do", "`merge`: do").replace("In English:", "`vocab size`: kitne pieces. In English:"));
+  assert("learn:R21 · two NEW backticked names in one message → A.new-terms (db82184b t2)", has(twoNew, "A.new-terms"));
+  const unopened = run("ok", TURN_OK, GOOD.replace("`merge`: do sabse common padosi pieces ko ek naya piece bana dena.", "Ab `embedding` ki baat karte hain, woh sab badal deta hai."));
+  assert("R4 · a new name used without an opening → A.neev-pehle (e3316fbd t2, TRUE class)", has(unopened, "A.neev-pehle"));
+  assert("R4 (i) · the colon form OPENS; (iii) `un` `believ` `able` from \"unbelievable\" are token EXAMPLES, not names",
+    opensInMessage("`merge`: do pieces ko jodna", "merge") && opensInMessage("- merge: do pieces", "merge") && tokenExample("un", "word \"unbelievable\" ke tukde `un` `believ` `able`") && tokenExample("believ", "\"unbelievable\""));
+  const ids = run("ok", TURN_OK, GOOD.replace("samajh aaya", "(receipt `amuco1j1yec`) samajh aaya"));
+  assert("R4 (iv) · a backticked id at him → A.codes-at-him, never an unopened name (a33327c2 t10)", has(ids, "A.codes-at-him") && !has(ids, "A.neev-pehle"), JSON.stringify(ids.reds));
+  const seenBefore = run("ok", TURN_OK, GOOD.replace("`merge`: do sabse common padosi pieces ko ek naya piece bana dena.", "Wahi `merge` phir se, ab dhyaan se."), { before: [...BOOT, TXT("`merge`: do pieces ko jodna. Samajh aaya — haan ya nahi?")] });
+  assert("learn:R21 · a name opened EARLIER in this session is not new, needs no re-opening", !has(seenBefore, "A.new-terms") && !has(seenBefore, "A.neev-pehle"), JSON.stringify(seenBefore.reds));
+  // 6 — position + count
+  const noPos = run("ok", TURN_OK, GOOD.replace("**Tokenization › axis c › pair-merge**\n", ""));
+  assert("learn:R26 · a teaching turn with no position line by name → A.position (a33327c2 t9)", has(noPos, "A.position"));
+  const cnt = run("ok", TURN_OK, GOOD.replace("pair-merge**", "pair-merge (idea 2 of 4)**"));
+  assert("act-mt2kgn09 · \"idea 2 of 4\" → A.count-form", has(cnt, "A.count-form"));
+  // 7 — the surface grammar
+  const grammar = [
+    ["A.table", GOOD + "\n\n| a | b |\n|---|---|\n| 1 | 2 |"],
+    ["A.sections", "## One\n" + GOOD + "\n\n---\n## Two"],
+    ["A.emoji", GOOD.replace("pointer set", "pointer set 🚀")],
+    ["A.bold", GOOD.replace("Dukaan mein sabse", "**Dukaan** mein **sabse**")],
+    ["A.diff", GOOD + "\n```diff\n+ a\n+ b\n- c\n- d\n+ e\n```"],
+    ["A.blockquote", GOOD + "\n\n> ek\n\nbeech\n\n> do"],
+    ["A.tum", GOOD.replace("Toh \"tea", "Tu bata, \"tea")],
+    ["A.too-hindi", GOOD.replace("Dukaan mein sabse", "Har akshar aur har shabd ko niyam se")],
+    ["A.gamify", GOOD.replace("pointer set", "pointer set · +10 XP")],
+    ["A.markdown", GOOD.replace("Dukaan", "<kbd>Dukaan</kbd>")],
+    ["A.his-level", GOOD.replace("Dukaan mein", "Yeh toh tumhe pata hi hai, dukaan mein")],
+    ["A.list-length", GOOD + "\n\n- a\n- b\n- c\n- d\n- e"],
+    ["A.too-english", "pointer set · check_q declared\n**Tokenization › axis c › pair-merge**\nThe tokenizer looks at every adjacent pair of symbols in the training corpus, counts how often each pair occurs, and merges the most frequent pair into a brand new symbol, then it repeats the counting and merging until the vocabulary reaches the size that was chosen before training started, which is why frequent words end up as single tokens. Does this make sense?"],
+  ];
+  grammar.push(
+    ["A.hype", GOOD.replace("Dukaan mein", "Zabardast! Dukaan mein")],
+    ["A.medical", GOOD.replace("Dukaan mein", "Apni dawai ki dose kam karke dekho. Dukaan mein")],
+    ["A.ask-where", GOOD.replace("Dukaan mein", "Pichli baar hum kahan the? Dukaan mein")],
+    ["A.blame", GOOD.replace("Dukaan mein", "Tumne pichli baar yeh galat socha tha. Dukaan mein")],
+    ["A.urgency", GOOD.replace("Dukaan mein", "Time kam hai, chalo. Dukaan mein")],
+    ["A.his-data", GOOD.replace("Dukaan mein", "\"hello world\" lo. Dukaan mein")],
+    ["A.repeat-line", GOOD.replace("Dukaan mein", "Yeh line bolo mere saath. Dukaan mein")],
+    ["A.emdash", GOOD.replace("Dukaan mein", "Ek — do — teen — dukaan mein")],
+    ["A.text-fence", GOOD + "\n```text\npay pay → yeh merge hota hai\n```"],
+    ["A.codes-at-him", GOOD.replace("samajh aaya", "(`scripts/forge_session.mjs`) samajh aaya")],
+    ["A.markdown", GOOD.replace("Dukaan mein", "[dekho](https://x.y) dukaan mein")],
+    ["A.bold", GOOD.replace("Dukaan mein sabse", "**Dukaan mein sabse zyada** bikne")],
+    ["A.emoji", GOOD.replace("pointer set", "pointer set ✅").replace("In English:", "✅ In English:")],
+  );
+  for (const [id, text] of grammar) { const r = run("ok", TURN_OK, text); assert(`GRAMMAR · ${id} blocks its planted shape, and the clean message does not carry it`, has(r, id) && !has(good, id), JSON.stringify(r.reds)); }
+  // the lesson checks that read state or the turn's shape
+  const grill = run("ok", TURN_OK, GOOD.replace("Dukaan mein", "Ab isko scratch se reinvent karo. Dukaan mein"));
+  assert("forge:R65 · grilling (reinvent from scratch) on a check_q turn → A.no-grill", has(grill, "A.no-grill"));
+  const buy = run("kaunsa laptop lun is course ke liye?", [], "Parked. Yeh wala ₹85,000 ka hai: https://shop.x\n**Tokenization › axis c › merge**\nWapas merge par — samajh aaya, haan ya nahi?");
+  assert("HOW_HE_LEARNS #14 · a price and a link on his buying question → A.buying", has(buy, "A.buying"));
+  const closedAxis = run("ok", TURN_OK, GOOD.replace("axis c", "axis a"), { forge: { ...FORGE, axes_done: ["a", "b"] } });
+  assert("learn:R106 · a position line on a DONE axis → A.closed-axis; the current axis is fine", has(closedAxis, "A.closed-axis") && !has(run("ok", TURN_OK, GOOD, { forge: { ...FORGE, axes_done: ["a", "b"] } }), "A.closed-axis"));
+  const axisDone = run("ok", [BASH("node scripts/forge_session.mjs axis c done"), ...TURN_OK], "axis c done · pointer set\n" + GOOD.split("\n").slice(1).join("\n"));
+  const axisDoneOk = run("ok", [BASH("node scripts/forge_session.mjs axis c done"), ...TURN_OK], "axis c done · pointer set\nIntensity: depth maximum, breadth theek, interaction poori.\n" + GOOD.split("\n").slice(1).join("\n"));
+  assert("learn:R99 · an axis closed with no depth / breadth / interaction verdict → A.intensity; with it, no", has(axisDone, "A.intensity") && !has(axisDoneOk, "A.intensity"), JSON.stringify(axisDoneOk.reds));
+  const noTech = run("ok", TURN_OK, GOOD.replace("In English: BPE repeatedly merges the most frequent adjacent pair into a new token.", "Bas itna hi."));
+  assert("learn:R24 · a name opened with no English technical line → A.layers", has(noTech, "A.layers"));
+  const forgeRead = run("ok", [TOOL("Read", { file_path: "C:/r/.claude/skills/forge/SKILL.md", offset: 30, limit: 20 }), ...TURN_OK], "padh liya · " + GOOD);
+  assert("learn:R36 · any read of forge/SKILL.md on a step-3 turn → B.whole-read", has(forgeRead, "B.whole-read"));
+  const radio = run("ok", [TOOL("mcp__visualize__show_widget", { widget_code: "<link href='Lexend'><style>.w{max-width:34em}</style><input type=radio name=a>" }), ...TURN_OK], "widget dikhaya · " + GOOD);
+  assert("VISUAL_CONTRACT §3 · a widget with radio answers → B.widget (tap-to-answer, NEVER)", has(radio, "B.widget"));
+  // the boot, once
+  const bootRows = (xs) => [U("learn"), ...xs];
+  const cut = run("ok", TURN_OK, GOOD, { before: bootRows([BASH("node scripts/learn_digest.mjs | head -40"), BASH("node scripts/forge_session.mjs resume"), BASH("node scripts/sitting.mjs open --surface code --no-spawn")]), logRows: [] });
+  assert("learn:R4 · the digest cut by a pipe → D.digest-whole", has(cut, "D.digest-whole"));
+  const spawn = run("ok", TURN_OK, GOOD, { before: bootRows([BASH("node scripts/learn_digest.mjs"), BASH("node scripts/forge_session.mjs resume"), BASH("node scripts/sitting.mjs open --surface code")]), logRows: [] });
+  const early = run("ok", TURN_OK, GOOD, { before: bootRows([BASH("node scripts/learn_digest.mjs"), BASH("node scripts/sitting.mjs open --surface code --no-spawn"), BASH("node scripts/forge_session.mjs resume")]), logRows: [] });
+  assert("learn:R77 / R68 · the sitting opened without --no-spawn, or before the pacer → D.sitting-first", has(spawn, "D.sitting-first") && has(early, "D.sitting-first"));
+  const noPacer = run("ok", TURN_OK, GOOD, { before: bootRows([BASH("node scripts/learn_digest.mjs"), BASH("node scripts/sitting.mjs open --surface code --no-spawn"), TXT("Chalo — tokenization kya karta hai?")]), logRows: [] });
+  assert("learn:R120 · teaching text on an open concept with no forge_session resume / start → D.pacer", has(noPacer, "D.pacer"));
+  const force = run("ok", TURN_OK, GOOD, { before: bootRows([BASH("node scripts/learn_digest.mjs"), BASH("node scripts/forge_session.mjs start tokenization --force"), BASH("node scripts/sitting.mjs open --surface code --no-spawn")]), logRows: [] });
+  assert("learn:R71 · forge_session start --force → D.start-once", has(force, "D.start-once"));
+  const bigScreen = run("ok", TURN_OK, GOOD, { before: bootRows([BASH("node scripts/learn_digest.mjs"), BASH("node scripts/forge_session.mjs resume"), BASH("node scripts/sitting.mjs open --surface code --no-spawn"), TXT("a\nb\nc\nd\ne — STALE 3 din\nf?")]), logRows: [] });
+  const okScreen = run("ok", TURN_OK, GOOD, { before: bootRows([BASH("node scripts/learn_digest.mjs"), BASH("node scripts/forge_session.mjs resume"), BASH("node scripts/sitting.mjs open --surface code --no-spawn"), TXT("Tokenization › axis c › pair-merge\nAgla: trace card\nAb ek pair gino.\nTea tea teen mein pehla pair kaunsa?")]), logRows: [] });
+  assert("learn:R67 / R80 / R88 · a first screen past 4 lines after resume, carrying STALE → D.first-screen; three lines + the pointer question passes",
+    has(bigScreen, "D.first-screen") && !has(okScreen, "D.first-screen"), JSON.stringify(okScreen.reds));
+  const quoted = run("ok", TURN_OK, GOOD.replace("Dukaan mein sabse", "Maine pehle \"akshar\" aur \"shabd\" likha tha, galat tha — dukaan mein sabse"));
+  assert("R6 · the words QUOTED in an apology are exempt (a33327c2 t3); \"jaise shabd\" is exempt", !has(quoted, "A.too-hindi") && tooHindiHits("Hindi words jaise shabd aur akshar mat use karo").length === 0, JSON.stringify(quoted.reds));
+  // 8 — the Desktop trap (R9) and the ran-line
+  const above = run("ok", [TXT("Ek minute, pointer set kar raha hoon"), ...TURN_OK], GOOD);
+  assert("R9 · a text block ABOVE a tool call → A.text-last BLOCKS (H8: 14 of 35 Desktop turns)", above.decision === "block" && has(above, "A.text-last"));
+  assert("R9 · tools first, the whole text last → passes (the clean turn)", !has(good, "A.text-last"));
+  const noRan = run("ok", TURN_OK, GOOD.replace("pointer set · check_q declared\n", ""));
+  assert("v2 §3 (a) · tools ran and the first line names none → A.ran-line", has(noRan, "A.ran-line"));
+  // 9 — the bank duty (R5) + latency
+  const ans = run("pakka - pay kyunki woh sabse zyada repeat hota hai", TURN_OK, GOOD);
+  assert("R5 · his gut-word answer with no voice_rep this turn → B.bank (db82184b t11)", has(ans, "B.bank"));
+  const REP = "node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut knew --asked \"Pehla merge kaunsa pair?\" --said \"pay kyunki woh sabse zyada repeat hota hai\" --surface code --latency_ms 204218";
+  const PREV_Q = [BASH("node scripts/forge_session.mjs moment pehle_guess"), TXT("Guess: Pehla merge kaunsa pair?\npehle gut-word: pakka / shayad / pata nahi")];
+  const banked = run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP), ...TURN_OK], "bank mein gaya · axis c · judge shaam ko · pointer set\n" + GOOD.split("\n").slice(1).join("\n"), { hook: "latency: 204218 ms since your last message ended", prev: PREV_Q });
+  assert("R5 · banked through voice_rep: his gut, his words and your question VERBATIM, the hook's latency, the bank line → no B.bank / B.latency / B.bank-verbatim / A.bank-line", !has(banked, "B.bank") && !has(banked, "B.latency") && !has(banked, "B.bank-verbatim") && !has(banked, "A.bank-line"), JSON.stringify(banked.reds) + JSON.stringify(banked.why));
+  const wrongGut = run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP.replace("--gut knew", "--gut shaky")), ...TURN_OK], "bank mein gaya · axis c · judge shaam ko\n" + GOOD, { prev: PREV_Q });
+  const reworded = run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP.replace("--said \"pay kyunki woh sabse zyada repeat hota hai\"", "--said \"pay is most frequent\"")), ...TURN_OK], "bank mein gaya · axis c · judge shaam ko\n" + GOOD, { prev: PREV_Q });
+  const noLine = run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP), ...TURN_OK], "bank kiya · " + GOOD, { prev: PREV_Q });
+  assert("learn:R154 / forge:R92 · --gut shaky on HIS pakka, and a reworded --said → B.bank-verbatim; a bank with no \"bank mein gaya … judge shaam ko\" → A.bank-line",
+    has(wrongGut, "B.bank-verbatim") && has(reworded, "B.bank-verbatim") && has(noLine, "A.bank-line") && !has(noLine, "B.bank-verbatim"), JSON.stringify([wrongGut.why, reworded.why, noLine.why]));
+  const lat = run("pakka - pay", [BASH("node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut knew --latency_ms 5000"), ...TURN_OK], "bank kiya · " + GOOD, { hook: "latency: 204218 ms since your last message ended" });
+  assert("R5 · a latency that is not the hook's number → B.latency", has(lat, "B.latency"));
+  const reply = run("A", TURN_OK, GOOD, { prev: [BASH("node scripts/forge_session.mjs moment pehle_guess"), TXT("guess?")] });
+  assert("R5 · a reply to a pehle_guess moment is an answer too → B.bank; a reply to check_q is not", has(reply, "B.bank") && !has(run("A", TURN_OK, GOOD, { prev: [BASH("node scripts/forge_session.mjs moment check_q"), TXT("?")] }), "B.bank"));
+  // 10 — tools outside the study set, whole reads, AskUserQuestion, judge once, widget, moment kinds
+  const grep = run("ok", [TOOL("Grep", { pattern: "x", path: "C:/Users/nikhi/GitHub/arsenal-ai-fc/scripts" }), ...TURN_OK], "grep chala · " + GOOD);
+  assert("forge:R171 · a Grep over scripts/ mid-concept → B.tools (db82184b t9)", has(grep, "B.tools"));
+  const canon = run("ok", [TOOL("Read", { file_path: "C:/r/learning-layer/VISUAL_CONTRACT.md", offset: 100, limit: 30 }), ...TURN_OK], "padh liya · " + GOOD);
+  assert("learn:R3 · a canon SECTION read (offset + limit) is inside the study set", !has(canon, "B.tools") && !has(canon, "B.whole-read"), JSON.stringify(canon.reds));
+  const whole = run("ok", [TOOL("Read", { file_path: "C:/r/learning-layer/VISUAL_CONTRACT.md" }), ...TURN_OK], "padh liya · " + GOOD);
+  assert("learn:R2 · a WHOLE read of VISUAL_CONTRACT → B.whole-read (db82184b t12)", has(whole, "B.whole-read"));
+  const ask = run("ok", [TOOL("AskUserQuestion", { questions: [] }), ...TURN_OK], "set · " + GOOD);
+  assert("AskUserQuestion in a study turn → B.askuser", has(ask, "B.askuser"));
+  const kinds = run("ok", [BASH("node scripts/forge_session.mjs moment quiz"), BASH("node scripts/forge_session.mjs pointer x")], GOOD);
+  assert("C · a moment outside the four kinds → B.moment-kind", has(kinds, "B.moment-kind"));
+  const w = run("ok", [TOOL("mcp__visualize__show_widget", { widget_code: "<div style='font-family:Arial'><button>aage</button></div><script>setInterval(()=>{},9)</script>" }), ...TURN_OK], "widget dikhaya · " + GOOD);
+  assert("VISUAL_CONTRACT · a widget without Lexend / 34em, with autoplay and a half stepper → B.widget", has(w, "B.widget"));
+  const j2 = run("ok", [TOOL("mcp__organism-memory__judge_round", {}), ...TURN_OK], "set · " + GOOD, { before: [...BOOT, TOOL("mcp__organism-memory__judge_round", {})] });
+  assert("B · a second judge_round in the session → B.judge-once", has(j2, "B.judge-once"));
+  // 11 — system talk passes (mechanical checks only), confusion is literal
+  const sys = run("bruh why don't you keep yourself updated with the entire /learn first, you keep on doing mistakes", [], "Haan, galti meri. Parked.\n\n| a | b |\n|---|---|\nKya hum wapas merge par chalein? Aur kaise?");
+  assert("SYSTEM · his system talk (9e29b88c t8) is never style-gated — tables, two questions pass", sys.decision === "allow", JSON.stringify(sys.reds));
+  const sysAbove = run("are you following the visualization ruling correctly?", [TXT("dekh raha hoon"), TOOL("Grep", { pattern: "x", path: "C:/r/scripts" })], "Parked.");
+  assert("SYSTEM · …but text above a tool and a tool outside the study set still BLOCK (what he sees, what ran)", has(sysAbove, "A.text-last") && has(sysAbove, "B.tools") && !has(sysAbove, "A.position"));
+  const conf = run("i did not get it, understood nothing", TURN_OK, GOOD.replace("`merge`: do", "`BPE`: byte pair encoding. `merge`: do"), { prev: [TXT("`merge`: jodna. Samajh aaya — haan ya nahi?")] });
+  assert("v2 §3 (f) · on HIS confusion a NEW name → A.confusion-literal", has(conf, "A.confusion-literal"));
+  const confOk = run("i did not get it, understood nothing", TURN_OK, GOOD.replace("`merge`: do sabse common padosi pieces ko ek naya piece bana dena.", "Wahi `merge`, zero se: do pieces ko ek banana."), { prev: [TXT("`merge`: jodna. Samajh aaya — haan ya nahi?")] });
+  assert("v2 §3 (f) · the same name carried, nothing new, no step move → passes", !has(confOk, "A.confusion-literal"), JSON.stringify(confOk.reds));
+  // 12 — D, once per session
+  const noDigest = run("ok", TURN_OK, GOOD, { before: [U("learn"), BASH("node scripts/forge_session.mjs status"), BASH("node scripts/sitting.mjs open --surface code")], logRows: [] });
+  assert("D · the session's first tool was not learn_digest → D.digest-first (on the first in-scope stop only)", has(noDigest, "D.digest-first") && noDigest.d_checked === true && !has(run("ok", TURN_OK, GOOD, { before: [U("learn"), BASH("node scripts/forge_session.mjs status")], logRows: [{ session: HOST, d_checked: true }] }), "D.digest-first"));
+  const teachFirst = run("ok", TURN_OK, GOOD, { before: [U("learn"), BASH("node scripts/learn_digest.mjs"), TXT("Chalo shuru: tokenization kya hai, pata hai?"), BASH("node scripts/sitting.mjs open")], logRows: [] });
+  assert("D · teaching text before the sitting opened → D.sitting-first", has(teachFirst, "D.sitting-first"));
+  // 13 — the reason: ranked, capped, names the ids
+  const many = run("pakka - x", [TXT("upar"), TOOL("Grep", { pattern: "x", path: "C:/r/scripts" })], "## a\n---\nTu bata? Aur? Kyun? `embedding` `byte` 🚀🚀🚀");
+  const shown = (many.reason || "").split("\n").filter((l) => /^\s+· /.test(l));
+  assert("REASON · ≤ 6 fix lines, in drift-rank order (text-last and bank first), the rest counted", many.decision === "block" && shown.length === MAX_FIX_LINES && /A\.text-last/.test(shown[0]) && /B\.bank/.test(shown[1]) && /\(\+\d+ more/.test(many.reason), many.reason);
+  assert("REASON · every red id is a catalogue id with a fix line", (many.reds || []).every((id) => CHECKS[id] && CHECKS[id].fix));
+  // 14 — the transcript reader
+  const parsed = parseTranscript([U("a"), TXT("t1"), BASH("x"), "torn {", U("b"), HOOK("latency: 5 ms"), TXT("t2")].join("\n"));
+  const T = turnsOf(parsed);
+  assert("TRANSCRIPT · this turn = the blocks after his last prompt; the previous turn and the hook line are split out; torn lines skipped",
+    T.prompt === "b" && T.turn.length === 1 && T.turn[0].text === "t2" && T.prevTurn.length === 2 && /latency: 5/.test(T.hookText));
+  // 15 — the completeness law
+  const rules = readRules(); const table = readRuleTable();
+  const c = completeness(rules, table);
+  assert(`COMPLETENESS · every A/B/C/D row of RULES.jsonl is mapped to a check that exists or exempted with a kind + reason (${c.mapped} mapped · ${c.exempt} exempt · ${c.unmapped.length} unmapped of ${c.abcd})`,
+    !!rules && !!table && c.green, `unmapped ${c.unmapped.slice(0, 8).join(", ")} · bad check ${c.badCheck.slice(0, 4).join(", ")} · bad exempt ${c.badExempt.slice(0, 4).join(", ")}`);
+  const planted = completeness([{ id: "x:R1", check: "A" }, { id: "x:R2", check: "B" }, { id: "x:R3", check: "E" }], { map: { "x:R1": { check: "A.nope" } } });
+  assert("COMPLETENESS · PLANTED: an unmapped row and a mapping to a check that does not exist are both REFUSED; E rows are the judge's",
+    !planted.green && planted.unmapped.includes("x:R2") && planted.badCheck.length === 1 && planted.abcd === 2);
+  // 16 — the hook, end to end (spawned, temp state dir), and its time
+  const dir = mkdtempSync(join(tmpdir(), "teaching_gate-"));
+  try {
+    writeFileSync(join(dir, "sitting.json"), JSON.stringify(SIT)); writeFileSync(join(dir, "forge_session.json"), JSON.stringify(FORGE));
+    const tx = join(dir, "t.jsonl"); writeFileSync(tx, [...BOOT, U("ok"), TXT("upar ka text"), ...TURN_OK, TXT(GOOD)].join("\n"));
+    // the surface is pinned: run from a Desktop session, the inherited entrypoint would make the unbound nudge fire here
+    const env = { ...process.env, ARSENAL_GATE_STATE_DIR: dir, ARSENAL_ORGAN: "", CLAUDE_CODE_ENTRYPOINT: "cli" };
+    const archTx = join(dir, "arch.jsonl"); writeFileSync(archTx, U("architect"));
+    const t0 = Date.now();
+    const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "stop"], { input: JSON.stringify({ session_id: HOST, transcript_path: tx, last_assistant_message: GOOD, hook_event_name: "Stop" }), env, encoding: "utf8", timeout: 20000 });
+    const ms = Date.now() - t0;
+    let out = null; try { out = JSON.parse(r.stdout); } catch { /* none */ }
+    const log = readFileSync(GATE_LOG(dir), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    assert("HOOK · spawned on a planted study payload it prints ONE block decision naming A.text-last, exits 0, and logs the row", r.status === 0 && out && out.decision === "block" && /A\.text-last/.test(out.reason) && log.length === 1 && log[0].decision === "block" && log[0].reds.includes("A.text-last"), `${r.status} ${r.stdout} ${r.stderr}`);
+    const r2 = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "stop"], { input: JSON.stringify({ session_id: ARCH, transcript_path: archTx, last_assistant_message: "x? y?" }), env, encoding: "utf8", timeout: 20000 });
+    assert("HOOK · the architect's payload: silent stdout, exit 0, and NOTHING written", r2.status === 0 && r2.stdout.trim() === "" && readFileSync(GATE_LOG(dir), "utf8").trim().split("\n").length === 1);
+    const r3 = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "stop"], { input: "{not json", env, encoding: "utf8", timeout: 20000 });
+    assert("HOOK · garbage stdin → silent, exit 0 (fail open, never a throw)", r3.status === 0 && r3.stdout.trim() === "");
+    console.log(`  info hook wall time on this laptop (spawn included): ${ms} ms · in-process decide: ${log[0].ms} ms`);
+    assert("HOOK · the in-process decision is well under the < 1 s budget (R10)", log[0].ms < 500, `${log[0].ms} ms`);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+  console.log(`\nteaching_gate selftest: ${pass} passed, ${fail} failed`);
+  process.exitCode = fail ? 1 : 0;
+}
+
+// ── CLI ──────────────────────────────────────────────────────────────────────────
+//   node scripts/teaching_gate.mjs stop        (the Stop hook; reads the payload on stdin)
+//   node scripts/teaching_gate.mjs check --session <id> --transcript <path>   (by hand, read-only: the decision JSON, nothing logged)
+//   node scripts/teaching_gate.mjs table       (the completeness count)
+//   node scripts/teaching_gate.mjs selftest
+function cli() {
+  const [cmd, ...rest] = process.argv.slice(2);
+  const opt = (k) => { const i = rest.indexOf(k); return i >= 0 ? rest[i + 1] : undefined; };
+  if (cmd === "stop") { stopHook(); return; }
+  if (cmd === "selftest") { selftest(); return; }
+  if (cmd === "table") { const c = completeness(readRules(), readRuleTable()); console.log(`teaching_gate table: ${c.abcd} A/B/C/D rows · ${c.mapped} mapped · ${c.exempt} exempt · ${c.unmapped.length} unmapped · ${c.badCheck.length} bad check · ${c.badExempt.length} bad exemption · ${c.green ? "GREEN" : "RED"}`); if (!c.green) { console.log(`  unmapped: ${c.unmapped.slice(0, 40).join(" ")}`); process.exitCode = 1; } return; }
+  if (cmd === "check") {
+    const tp = opt("--transcript"); const sid = opt("--session");
+    let transcript = null; try { transcript = tp ? readTail(tp) : null; } catch { transcript = null; }
+    const sitting = opt("--as-host") ? { id: "sit_check", closed_at: null, host_session_id: sid } : readSitting();
+    const d = decide({ payload: { session_id: sid, transcript_path: tp }, sitting, forge: readForge(), transcript, logRows: [], env: {}, unbound: { line: null } });
+    console.log(JSON.stringify({ decision: d.decision, scope: d.scope, reds: d.reds, why: d.why, cls: d.cls, moment: d.moment }));
+    return;
+  }
+  console.log("teaching_gate.mjs — stop | check --session <id> --transcript <path> [--as-host 1] | table | selftest");
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) cli();

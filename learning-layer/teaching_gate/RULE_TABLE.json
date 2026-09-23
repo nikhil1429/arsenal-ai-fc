@@ -1,0 +1,2799 @@
+{
+ "built": "2026-09-23",
+ "by": "runner arsenal-ai-fc-15 [63b216], session 6f30702c — every A/B/C/D row of RULES.jsonl read and mapped by hand (P2, SPEC_v2 §1 THE COMPLETENESS LAW)",
+ "law": "every A/B/C/D row → a teaching_gate.mjs CHECKS id, or an exemption {exempt: kind, why}; E rows are the P4 round judge's. The selftest refuses an unmapped row and a check id that does not exist.",
+ "kinds": {
+  "owner-held": "another organ's own code already refuses it (named)",
+  "judge": "semantic — the P4 round judge's",
+  "not-per-turn": "fires at a close / lock / notes-time, not on a teaching turn",
+  "superseded": "a later ruling replaced it (named)",
+  "other-lane": "another lane's (Re-Jirah, Python, course, engineering)",
+  "his-decline": "his standing decline (quoted)",
+  "one-time-record": "a dated one-time record",
+  "duplicate": "the same rule as another row"
+ },
+ "counts": {
+  "mapped": 275,
+  "judge": 133,
+  "owner-held": 107,
+  "not-per-turn": 108,
+  "other-lane": 65,
+  "superseded": 51,
+  "his-decline": 5,
+  "one-time-record": 2
+ },
+ "map": {
+  "learn:R1": {
+   "check": "D.digest-first"
+  },
+  "learn:R2": {
+   "check": "B.whole-read"
+  },
+  "learn:R3": {
+   "exempt": "judge",
+   "why": "which canon section a step needs lives in the digest's prose; the section→step map is not a code path yet — B.whole-read holds the whole-file half"
+  },
+  "learn:R4": {
+   "check": "D.digest-whole"
+  },
+  "learn:R5": {
+   "check": "D.sitting-first"
+  },
+  "learn:R6": {
+   "exempt": "judge",
+   "why": "the pointer holds a NOTE ('Axis c: … Pucha: …'), not the literal question, so verbatim equality is not a code path until the pointer stores the question alone — measured on the live forge_session.json 23 Sep"
+  },
+  "learn:R7": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs start / resume own the routing; start REFUSES while a session is open"
+  },
+  "learn:R8": {
+   "check": "B.moment"
+  },
+  "learn:R9": {
+   "exempt": "not-per-turn",
+   "why": "fires at the session's end, not on a teaching turn"
+  },
+  "learn:R10": {
+   "exempt": "not-per-turn",
+   "why": "fires at the day's close (judge-round → sitting close → /full-time), not on a teaching turn; the close is its own sequence"
+  },
+  "learn:R11": {
+   "check": "B.tools"
+  },
+  "learn:R12": {
+   "check": "A.gut-by-moment"
+  },
+  "learn:R13": {
+   "exempt": "judge",
+   "why": "needs a verdict on HIS answer (held or cracked) — semantic; the P4 round judge reads it"
+  },
+  "learn:R14": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs `axis <x> done` REFUSES without ≥ 1 Hinglish bank + ≥ 1 --register interview since the axis opened (forge SKILL 'THREE GATES')"
+  },
+  "learn:R15": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs `axis <x> done` REFUSES without ≥ 1 Hinglish bank + ≥ 1 --register interview since the axis opened (forge SKILL 'THREE GATES')"
+  },
+  "learn:R16": {
+   "check": "B.bank"
+  },
+  "learn:R17": {
+   "check": "B.tools"
+  },
+  "learn:R18": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST (SAMJHAO_MERGED: RE-JIRAH stays separate); rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "learn:R21": {
+   "check": "A.new-terms"
+  },
+  "learn:R22": {
+   "check": "A.one-question"
+  },
+  "learn:R24": {
+   "check": "A.layers"
+  },
+  "learn:R25": {
+   "check": "A.table"
+  },
+  "learn:R26": {
+   "check": "A.position"
+  },
+  "learn:R27": {
+   "check": "A.diff"
+  },
+  "learn:R28": {
+   "exempt": "owner-held",
+   "why": "teaching_audit autohit counts the measured drift by code; the self-report is the model's judgement half, never gated (it would rank itself)"
+  },
+  "learn:R29": {
+   "exempt": "judge",
+   "why": "whether his message carries a ruling is semantic; the act lane (acts.mjs do rule) is inside the study set"
+  },
+  "learn:R30": {
+   "check": "B.tools"
+  },
+  "learn:R31": {
+   "exempt": "judge",
+   "why": "whether a question is an architect's fork is semantic"
+  },
+  "learn:R32": {
+   "check": "A.text-last"
+  },
+  "learn:R33": {
+   "check": "B.tools"
+  },
+  "learn:R34": {
+   "check": "B.whole-read"
+  },
+  "learn:R35": {
+   "exempt": "other-lane",
+   "why": "the course / Colab track (course.mjs owns it); not a forge sitting"
+  },
+  "learn:R36": {
+   "check": "B.whole-read"
+  },
+  "learn:R37": {
+   "check": "B.widget"
+  },
+  "learn:R38": {
+   "exempt": "superseded",
+   "why": "superseded by learn:R2 (v2 §2 G2: no whole-file read of SAMJHAO_MERGED); its RESUME block by section is inside the study set"
+  },
+  "learn:R39": {
+   "exempt": "judge",
+   "why": "question similarity against the capsule's stored strikes needs a similarity judge"
+  },
+  "learn:R40": {
+   "check": "A.his-level"
+  },
+  "learn:R41": {
+   "check": "A.gut-by-moment"
+  },
+  "learn:R42": {
+   "exempt": "judge",
+   "why": "needs a verdict on HIS answer (held or cracked) — semantic; the P4 round judge reads it"
+  },
+  "learn:R43": {
+   "check": "A.diff"
+  },
+  "learn:R44": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs `axis <x> done` REFUSES without ≥ 1 Hinglish bank + ≥ 1 --register interview since the axis opened (forge SKILL 'THREE GATES')"
+  },
+  "learn:R45": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs `axis <x> done` REFUSES without ≥ 1 Hinglish bank + ≥ 1 --register interview since the axis opened (forge SKILL 'THREE GATES')"
+  },
+  "learn:R47": {
+   "check": [
+    "B.moment",
+    "B.bank"
+   ]
+  },
+  "learn:R48": {
+   "check": "B.tools"
+  },
+  "learn:R49": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-first law (learn:R1/R3/R36): the digest + the hook are enough for step 3; a canon section opens when its step arrives"
+  },
+  "learn:R50": {
+   "check": "B.widget"
+  },
+  "learn:R51": {
+   "exempt": "judge",
+   "why": "whether widget text is teaching prose is semantic"
+  },
+  "learn:R53": {
+   "check": "A.backticks"
+  },
+  "learn:R54": {
+   "check": "A.bold"
+  },
+  "learn:R55": {
+   "check": "A.diff"
+  },
+  "learn:R56": {
+   "check": "A.table"
+  },
+  "learn:R58": {
+   "check": "A.markdown"
+  },
+  "learn:R59": {
+   "check": "A.emoji"
+  },
+  "learn:R60": {
+   "exempt": "judge",
+   "why": "CONFLICT, flagged to the architect in the P2 return: learn:R60 says ✅/❌ ride ALONGSIDE the diff (\"both\"), visual:R86 says not both — the gate blocks neither until it is ruled"
+  },
+  "learn:R61": {
+   "check": "A.emoji"
+  },
+  "learn:R62": {
+   "check": "A.markdown"
+  },
+  "learn:R63": {
+   "check": "A.list-length"
+  },
+  "learn:R64": {
+   "exempt": "owner-held",
+   "why": "teaching_audit's link-back latch fires during step 3 (its selftest asserts it)"
+  },
+  "learn:R65": {
+   "exempt": "his-decline",
+   "why": "his deliberate skip, 7 Sep 2026: \"skip it\" — the table checker is not widened to widgets / pointer text (teaching_audit.mjs countTables comment)"
+  },
+  "learn:R66": {
+   "check": "A.ask-where"
+  },
+  "learn:R67": {
+   "check": "D.first-screen"
+  },
+  "learn:R68": {
+   "check": "D.sitting-first"
+  },
+  "learn:R69": {
+   "exempt": "superseded",
+   "why": "FORGE and SAMJHAO are one process since 30 Aug (SAMJHAO_MERGED, act amtfkb4r48m): the forge pacer is the pacer; samjhao.mjs open/plan is not a boot duty"
+  },
+  "learn:R70": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs start REFUSES while a session is open, so a start before a failed resume cannot land"
+  },
+  "learn:R71": {
+   "check": "D.start-once"
+  },
+  "learn:R72": {
+   "exempt": "judge",
+   "why": "the warm-up's timing and count against yesterday's topic is a session-shape judgement"
+  },
+  "learn:R73": {
+   "exempt": "judge",
+   "why": "a probe's source row in the judged bank is not visible in the turn"
+  },
+  "learn:R74": {
+   "exempt": "judge",
+   "why": "fresh wording needs a similarity judge"
+  },
+  "learn:R75": {
+   "check": "B.bank"
+  },
+  "learn:R76": {
+   "exempt": "judge",
+   "why": "day one / no earlier topic is a session-shape judgement"
+  },
+  "learn:R77": {
+   "check": "D.sitting-first"
+  },
+  "learn:R78": {
+   "exempt": "owner-held",
+   "why": "sitting.mjs open answers 409 for a different task while a sitting is open"
+  },
+  "learn:R80": {
+   "check": "D.first-screen"
+  },
+  "learn:R81": {
+   "check": "A.position"
+  },
+  "learn:R82": {
+   "exempt": "judge",
+   "why": "the re-entry screen's content (the next step named, one sentence, no pasted boot output) is semantic; D.first-screen holds its size and its loss words"
+  },
+  "learn:R83": {
+   "exempt": "judge",
+   "why": "the re-entry screen's content (the next step named, one sentence, no pasted boot output) is semantic; D.first-screen holds its size and its loss words"
+  },
+  "learn:R84": {
+   "exempt": "judge",
+   "why": "the pointer holds a NOTE ('Axis c: … Pucha: …'), not the literal question, so verbatim equality is not a code path until the pointer stores the question alone — measured on the live forge_session.json 23 Sep"
+  },
+  "learn:R85": {
+   "check": "B.moment"
+  },
+  "learn:R86": {
+   "exempt": "judge",
+   "why": "the re-entry screen's content (the next step named, one sentence, no pasted boot output) is semantic; D.first-screen holds its size and its loss words"
+  },
+  "learn:R88": {
+   "check": "D.first-screen"
+  },
+  "learn:R89": {
+   "check": "A.tum"
+  },
+  "learn:R90": {
+   "check": [
+    "B.askuser",
+    "B.widget"
+   ]
+  },
+  "learn:R91": {
+   "exempt": "judge",
+   "why": "the Board rides the Desktop widget tool only (the CLI study surface has none); P3 measures it before it becomes a block"
+  },
+  "learn:R92": {
+   "exempt": "superseded",
+   "why": "superseded by learn:R2 and the digest (the 0a-T block's checkers are this gate now)"
+  },
+  "learn:R93": {
+   "exempt": "not-per-turn",
+   "why": "an engineering duty (a claim about link-back), not a study turn"
+  },
+  "learn:R94": {
+   "check": "A.layers"
+  },
+  "learn:R95": {
+   "check": "A.layers"
+  },
+  "learn:R97": {
+   "check": "A.position"
+  },
+  "learn:R98": {
+   "check": "A.count-form"
+  },
+  "learn:R99": {
+   "check": "A.intensity"
+  },
+  "learn:R100": {
+   "exempt": "not-per-turn",
+   "why": "fires at the day's close (judge-round → sitting close → /full-time), not on a teaching turn; the close is its own sequence"
+  },
+  "learn:R101": {
+   "exempt": "owner-held",
+   "why": "teaching_audit's link-back latch — once per forge session, not per turn"
+  },
+  "learn:R102": {
+   "exempt": "owner-held",
+   "why": "sitting.mjs open JOINS an open sitting (same id) — never a second"
+  },
+  "learn:R104": {
+   "exempt": "superseded",
+   "why": "the digest replaced learnstate.mjs json at boot (the pre-digest record)"
+  },
+  "learn:R106": {
+   "check": "A.closed-axis"
+  },
+  "learn:R107": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs start REFUSES while open; the >18 h close order is the digest's printed line"
+  },
+  "learn:R108": {
+   "exempt": "superseded",
+   "why": "GAME ON (canon 7744acf1): the Re-Jirah clocks of the four re-opened topics must NOT drive the queue"
+  },
+  "learn:R109": {
+   "exempt": "superseded",
+   "why": "GAME ON (canon 7744acf1): a pre-cyborg Re-Jirah is not offered"
+  },
+  "learn:R110": {
+   "exempt": "judge",
+   "why": "a day-count's source is the live deep.mjs screen — equality needs its output"
+  },
+  "learn:R111": {
+   "exempt": "judge",
+   "why": "the re-entry screen's content (the next step named, one sentence, no pasted boot output) is semantic; D.first-screen holds its size and its loss words"
+  },
+  "learn:R112": {
+   "exempt": "not-per-turn",
+   "why": "a routing branch of the digest (empty sprint), not a teaching turn"
+  },
+  "learn:R113": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST (SAMJHAO_MERGED: RE-JIRAH stays separate); rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "learn:R114": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST (SAMJHAO_MERGED: RE-JIRAH stays separate); rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "learn:R115": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST (SAMJHAO_MERGED: RE-JIRAH stays separate); rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "learn:R116": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST (SAMJHAO_MERGED: RE-JIRAH stays separate); rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "learn:R117": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST (SAMJHAO_MERGED: RE-JIRAH stays separate); rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "learn:R118": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST (SAMJHAO_MERGED: RE-JIRAH stays separate); rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "learn:R119": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST (SAMJHAO_MERGED: RE-JIRAH stays separate); rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "learn:R120": {
+   "check": "D.pacer"
+  },
+  "learn:R121": {
+   "check": "D.pacer"
+  },
+  "learn:R122": {
+   "check": "B.tools"
+  },
+  "learn:R123": {
+   "exempt": "other-lane",
+   "why": "the Python track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "learn:R125": {
+   "check": "B.tools"
+  },
+  "learn:R126": {
+   "exempt": "other-lane",
+   "why": "the Python track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "learn:R128": {
+   "exempt": "other-lane",
+   "why": "the Python track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "learn:R130": {
+   "exempt": "other-lane",
+   "why": "the Python track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "learn:R131": {
+   "exempt": "other-lane",
+   "why": "the Python track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "learn:R132": {
+   "exempt": "other-lane",
+   "why": "the Python track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "learn:R133": {
+   "exempt": "other-lane",
+   "why": "the Python track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "learn:R134": {
+   "exempt": "other-lane",
+   "why": "the course / Colab track (course.mjs owns it); not a forge sitting"
+  },
+  "learn:R135": {
+   "exempt": "other-lane",
+   "why": "the course / Colab track (course.mjs owns it); not a forge sitting"
+  },
+  "learn:R136": {
+   "exempt": "other-lane",
+   "why": "the course / Colab track (course.mjs owns it); not a forge sitting"
+  },
+  "learn:R138": {
+   "exempt": "other-lane",
+   "why": "the course / Colab track (course.mjs owns it); not a forge sitting"
+  },
+  "learn:R142": {
+   "exempt": "other-lane",
+   "why": "the career track is not a study session (no ritual)"
+  },
+  "learn:R143": {
+   "exempt": "other-lane",
+   "why": "an unknown track runs no ritual; nothing to gate"
+  },
+  "learn:R144": {
+   "exempt": "other-lane",
+   "why": "the Python track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "learn:R145": {
+   "exempt": "other-lane",
+   "why": "the Python track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "learn:R146": {
+   "exempt": "owner-held",
+   "why": "capture.mjs validates the rep shape (its selftest is the contract) — the door refuses a bad row"
+  },
+  "learn:R147": {
+   "exempt": "owner-held",
+   "why": "capture.mjs validates the rep shape (its selftest is the contract) — the door refuses a bad row"
+  },
+  "learn:R148": {
+   "exempt": "owner-held",
+   "why": "capture.mjs validates the rep shape (its selftest is the contract) — the door refuses a bad row"
+  },
+  "learn:R149": {
+   "check": "B.bank-verbatim"
+  },
+  "learn:R150": {
+   "exempt": "owner-held",
+   "why": "capture.mjs validates the rep shape (its selftest is the contract) — the door refuses a bad row"
+  },
+  "learn:R151": {
+   "exempt": "owner-held",
+   "why": "capture.mjs validates the rep shape (its selftest is the contract) — the door refuses a bad row"
+  },
+  "learn:R152": {
+   "exempt": "owner-held",
+   "why": "capture.mjs validates the rep shape (its selftest is the contract) — the door refuses a bad row"
+  },
+  "learn:R153": {
+   "check": "B.tools"
+  },
+  "learn:R154": {
+   "check": "B.bank-verbatim"
+  },
+  "learn:R155": {
+   "exempt": "owner-held",
+   "why": "the voice_rep door REFUSES a call without --axis"
+  },
+  "learn:R156": {
+   "check": "B.latency"
+  },
+  "learn:R157": {
+   "check": "B.judge-once"
+  },
+  "learn:R158": {
+   "exempt": "judge",
+   "why": "whether he voiced a doubt is semantic; hippocampus.mjs mark doubt is inside the study set"
+  },
+  "learn:R159": {
+   "exempt": "not-per-turn",
+   "why": "fires at the day's close (judge-round → sitting close → /full-time), not on a teaching turn; the close is its own sequence"
+  },
+  "learn:R160": {
+   "exempt": "not-per-turn",
+   "why": "fires at the day's close (judge-round → sitting close → /full-time), not on a teaching turn; the close is its own sequence"
+  },
+  "learn:R161": {
+   "exempt": "not-per-turn",
+   "why": "fires at the day's close (judge-round → sitting close → /full-time), not on a teaching turn; the close is its own sequence"
+  },
+  "learn:R162": {
+   "exempt": "not-per-turn",
+   "why": "fires at the day's close (judge-round → sitting close → /full-time), not on a teaching turn; the close is its own sequence"
+  },
+  "learn:R163": {
+   "check": "A.hype"
+  },
+  "learn:R164": {
+   "check": "B.tools"
+  },
+  "learn:R165": {
+   "check": "B.judge-once"
+  },
+  "learn:R166": {
+   "exempt": "not-per-turn",
+   "why": "fires at the day's close (judge-round → sitting close → /full-time), not on a teaching turn; the close is its own sequence"
+  },
+  "learn:R168": {
+   "check": "B.bank-verbatim"
+  },
+  "learn:R169": {
+   "exempt": "other-lane",
+   "why": "the course / Colab track (course.mjs owns it); not a forge sitting"
+  },
+  "learn:R170": {
+   "check": "B.tools"
+  },
+  "learn:R171": {
+   "exempt": "not-per-turn",
+   "why": "fires at the day's close (judge-round → sitting close → /full-time), not on a teaching turn; the close is its own sequence"
+  },
+  "learn:R172": {
+   "check": "A.medical"
+  },
+  "learn:R173": {
+   "check": "A.hype"
+  },
+  "forge:R1": {
+   "check": "D.digest-first"
+  },
+  "forge:R2": {
+   "check": "B.whole-read"
+  },
+  "forge:R4": {
+   "check": "B.whole-read"
+  },
+  "forge:R5": {
+   "check": "B.whole-read"
+  },
+  "forge:R6": {
+   "exempt": "judge",
+   "why": "whether the capsule was open while teaching is not visible in a turn (the digest serves it); the judge reads the weld"
+  },
+  "forge:R7": {
+   "check": "A.his-level"
+  },
+  "forge:R8": {
+   "exempt": "judge",
+   "why": "question similarity against stored strikes needs a similarity judge"
+  },
+  "forge:R9": {
+   "exempt": "other-lane",
+   "why": "step 11 is the Re-Jirah round — the topic's separate cold TEST (rejirah.mjs / deep.mjs hold its gates; registry.preCyborg refuses the four re-opened capsules)"
+  },
+  "forge:R10": {
+   "exempt": "not-per-turn",
+   "why": "an empty-argument route (drills.json) at skill load — a routing branch, not a teaching turn"
+  },
+  "forge:R13": {
+   "check": "D.sitting-first"
+  },
+  "forge:R14": {
+   "check": "D.pacer"
+  },
+  "forge:R15": {
+   "check": "D.pacer"
+  },
+  "forge:R16": {
+   "exempt": "owner-held",
+   "why": "the contract hook's nudgeLine() is the backstop and prints every turn until start/resume runs"
+  },
+  "forge:R17": {
+   "check": "D.pacer"
+  },
+  "forge:R18": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs start REFUSES while a session is open; close needs his word"
+  },
+  "forge:R19": {
+   "check": "D.pacer"
+  },
+  "forge:R20": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs step is the pacer; a skipped step is counted (method_clean false)"
+  },
+  "forge:R21": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and REFUSES it (a skipped step sets method_clean false; axis done / step 10 / close carry their own gates)"
+  },
+  "forge:R22": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and REFUSES it (a skipped step sets method_clean false; axis done / step 10 / close carry their own gates)"
+  },
+  "forge:R24": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs axis <x> now declares the axis; the pacer counts a teaching turn outside a declared axis"
+  },
+  "forge:R25": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and REFUSES it (a skipped step sets method_clean false; axis done / step 10 / close carry their own gates)"
+  },
+  "forge:R26": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs `axis <x> done` REFUSES without ≥ 1 Hinglish bank + ≥ 1 --register interview since the axis opened"
+  },
+  "forge:R27": {
+   "check": "B.moment-kind"
+  },
+  "forge:R28": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs moment check_q REFUSES the second check-question in a pass and counts it (check_q_refused)"
+  },
+  "forge:R29": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R31": {
+   "check": "B.tools"
+  },
+  "forge:R33": {
+   "exempt": "judge",
+   "why": "needs a verdict on HIS answer (held or cracked) — semantic; the P4 round judge reads it"
+  },
+  "forge:R34": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs `axis <x> done` REFUSES without ≥ 1 Hinglish bank + ≥ 1 --register interview since the axis opened"
+  },
+  "forge:R35": {
+   "check": "B.moment"
+  },
+  "forge:R36": {
+   "exempt": "owner-held",
+   "why": "the crash belt line is appended by its owner at the pointer call; the pointer is B.moment"
+  },
+  "forge:R37": {
+   "exempt": "judge",
+   "why": "reading back his Bolo verbatim at axis close is a content check on an axis-close turn"
+  },
+  "forge:R38": {
+   "exempt": "judge",
+   "why": "the two-option axis-end offer is a session-shape judgement"
+  },
+  "forge:R39": {
+   "exempt": "superseded",
+   "why": "CONFLICT, flagged to the architect in the P2 return: forge row 53b (5 Sep) says per-idea answers are never banked; ruling R5 (23 Sep, P0) makes a gut-word answer bank-due. The gate runs R5 (the later ruling) until the architect rules"
+  },
+  "forge:R40": {
+   "exempt": "superseded",
+   "why": "CONFLICT, flagged to the architect in the P2 return: forge row 53b (5 Sep) says per-idea answers are never banked; ruling R5 (23 Sep, P0) makes a gut-word answer bank-due. The gate runs R5 (the later ruling) until the architect rules"
+  },
+  "forge:R41": {
+   "check": "B.bank-verbatim"
+  },
+  "forge:R42": {
+   "exempt": "owner-held",
+   "why": "the voice_rep door REFUSES a code rep without --axis"
+  },
+  "forge:R43": {
+   "exempt": "owner-held",
+   "why": "voice_rep takes --said as an argument; a heredoc capture is refused by the door's own usage"
+  },
+  "forge:R44": {
+   "check": "B.latency"
+  },
+  "forge:R45": {
+   "check": "B.latency"
+  },
+  "forge:R46": {
+   "exempt": "owner-held",
+   "why": "the axis gate counts --register interview rows; a missing register fails `axis done`"
+  },
+  "forge:R47": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R48": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R49": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R50": {
+   "check": "A.bank-line"
+  },
+  "forge:R51": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs `axis <x> done` REFUSES without ≥ 1 Hinglish bank + ≥ 1 --register interview since the axis opened"
+  },
+  "forge:R52": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and its chain — forge_session.mjs step 10 refuses until its gates hold; not a teaching turn"
+  },
+  "forge:R53": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R55": {
+   "exempt": "superseded",
+   "why": "FORGE and SAMJHAO are one process since 30 Aug (act amtfkb4r48m): the digest serves the capsule plan; samjhao.mjs open/plan is not a boot duty"
+  },
+  "forge:R57": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R58": {
+   "exempt": "owner-held",
+   "why": "samjhao.mjs taught burns a stored strike through its owner; the four re-opened capsules are refused by registry.preCyborg"
+  },
+  "forge:R59": {
+   "check": "A.blame"
+  },
+  "forge:R61": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs moment widget_gate is paced by the owner (after axis g)"
+  },
+  "forge:R62": {
+   "exempt": "judge",
+   "why": "a trace built on HIS hero-line data is a content judgement"
+  },
+  "forge:R64": {
+   "check": [
+    "A.one-question",
+    "A.question-last",
+    "A.text-last"
+   ]
+  },
+  "forge:R65": {
+   "check": "A.no-grill"
+  },
+  "forge:R66": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs `axis <x> done` REFUSES without ≥ 1 Hinglish bank + ≥ 1 --register interview since the axis opened"
+  },
+  "forge:R67": {
+   "exempt": "judge",
+   "why": "the capsule entry opening AFTER his Bolo is a content-order judgement"
+  },
+  "forge:R68": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R69": {
+   "check": "A.position"
+  },
+  "forge:R70": {
+   "check": "A.position"
+  },
+  "forge:R71": {
+   "check": "A.one-question"
+  },
+  "forge:R72": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and REFUSES it (a skipped step sets method_clean false; axis done / step 10 / close carry their own gates)"
+  },
+  "forge:R74": {
+   "exempt": "owner-held",
+   "why": "step 1's daraar-map is paced by forge_session.mjs step 1"
+  },
+  "forge:R75": {
+   "exempt": "owner-held",
+   "why": "step 2's pehle-guess is paced by forge_session.mjs (moment pehle_guess)"
+  },
+  "forge:R78": {
+   "exempt": "judge",
+   "why": "the analogy's KIND (everyday and physical, never geometry) is semantic — a word ban would block embeddings, whose TERMS are vectors and dimensions"
+  },
+  "forge:R79": {
+   "exempt": "judge",
+   "why": "his own hero-line data in the worked example is a content judgement"
+  },
+  "forge:R82": {
+   "check": "A.tum"
+  },
+  "forge:R83": {
+   "exempt": "judge",
+   "why": "'deeper, never longer' after his ask for detail is a comparison of two teaching turns' substance (R1: no length rule)"
+  },
+  "forge:R84": {
+   "check": "A.position"
+  },
+  "forge:R85": {
+   "exempt": "judge",
+   "why": "the trace left blank for him (steps 2–4) is a content-shape judgement"
+  },
+  "forge:R86": {
+   "exempt": "judge",
+   "why": "matching his capsule traps / doubts text needs the capsule and a similarity judge"
+  },
+  "forge:R87": {
+   "check": "A.one-question"
+  },
+  "forge:R88": {
+   "exempt": "judge",
+   "why": "a same-turn re-weld of his line is a content judgement"
+  },
+  "forge:R89": {
+   "check": [
+    "A.gut-by-moment",
+    "A.gamify"
+   ]
+  },
+  "forge:R90": {
+   "exempt": "superseded",
+   "why": "CONFLICT, flagged to the architect in the P2 return: forge row 53b (5 Sep) says per-idea answers are never banked; ruling R5 (23 Sep, P0) makes a gut-word answer bank-due. The gate runs R5 (the later ruling) until the architect rules"
+  },
+  "forge:R92": {
+   "check": "B.bank-verbatim"
+  },
+  "forge:R93": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs `axis <x> done` REFUSES without ≥ 1 Hinglish bank + ≥ 1 --register interview since the axis opened"
+  },
+  "forge:R94": {
+   "check": "B.judge-once"
+  },
+  "forge:R95": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and its chain — forge_session.mjs step 10 refuses until its gates hold; not a teaching turn"
+  },
+  "forge:R96": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs moment check_q ≤ 1 per pass is REFUSED by the owner"
+  },
+  "forge:R97": {
+   "check": "B.widget"
+  },
+  "forge:R99": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry and its 'built, NOT driven' gate"
+  },
+  "forge:R100": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry and its 'built, NOT driven' gate"
+  },
+  "forge:R103": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry and its 'built, NOT driven' gate"
+  },
+  "forge:R104": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry and its 'built, NOT driven' gate"
+  },
+  "forge:R105": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry and its 'built, NOT driven' gate"
+  },
+  "forge:R108": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R109": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R110": {
+   "exempt": "owner-held",
+   "why": "step 8 CALIBRATE is paced by forge_session.mjs step 8; the nine gut-words are his prompts"
+  },
+  "forge:R111": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R113": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R114": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R115": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R116": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R117": {
+   "check": "A.gut-by-moment"
+  },
+  "forge:R118": {
+   "exempt": "judge",
+   "why": "needs a verdict on HIS answer (held or cracked) — semantic; the P4 round judge reads it"
+  },
+  "forge:R120": {
+   "exempt": "owner-held",
+   "why": "steps 7-9 run ONCE at concept level after all nine axes — forge_session.mjs refuses `step 7` before every axis is done or deferred; the round's banks carry --probe, checked by the step-10 gate"
+  },
+  "forge:R122": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and its chain — forge_session.mjs step 10 refuses until its gates hold; not a teaching turn"
+  },
+  "forge:R124": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and its chain — forge_session.mjs step 10 refuses until its gates hold; not a teaching turn"
+  },
+  "forge:R125": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and its chain — forge_session.mjs step 10 refuses until its gates hold; not a teaching turn"
+  },
+  "forge:R126": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and its chain — forge_session.mjs step 10 refuses until its gates hold; not a teaching turn"
+  },
+  "forge:R127": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and its chain — forge_session.mjs step 10 refuses until its gates hold; not a teaching turn"
+  },
+  "forge:R128": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and its chain — forge_session.mjs step 10 refuses until its gates hold; not a teaching turn"
+  },
+  "forge:R130": {
+   "exempt": "other-lane",
+   "why": "step 11 is the Re-Jirah round — the topic's separate cold TEST (rejirah.mjs / deep.mjs hold its gates; registry.preCyborg refuses the four re-opened capsules)"
+  },
+  "forge:R131": {
+   "exempt": "other-lane",
+   "why": "step 11 is the Re-Jirah round — the topic's separate cold TEST (rejirah.mjs / deep.mjs hold its gates; registry.preCyborg refuses the four re-opened capsules)"
+  },
+  "forge:R132": {
+   "exempt": "other-lane",
+   "why": "step 11 is the Re-Jirah round — the topic's separate cold TEST (rejirah.mjs / deep.mjs hold its gates; registry.preCyborg refuses the four re-opened capsules)"
+  },
+  "forge:R133": {
+   "exempt": "other-lane",
+   "why": "step 11 is the Re-Jirah round — the topic's separate cold TEST (rejirah.mjs / deep.mjs hold its gates; registry.preCyborg refuses the four re-opened capsules)"
+  },
+  "forge:R134": {
+   "exempt": "other-lane",
+   "why": "step 11 is the Re-Jirah round — the topic's separate cold TEST (rejirah.mjs / deep.mjs hold its gates; registry.preCyborg refuses the four re-opened capsules)"
+  },
+  "forge:R136": {
+   "check": [
+    "A.one-question",
+    "B.moment-kind"
+   ]
+  },
+  "forge:R137": {
+   "check": [
+    "A.one-question",
+    "B.moment-kind"
+   ]
+  },
+  "forge:R139": {
+   "check": "A.gut-by-moment"
+  },
+  "forge:R140": {
+   "check": "A.confusion-literal"
+  },
+  "forge:R141": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R142": {
+   "exempt": "owner-held",
+   "why": "capture.mjs validates the rep shape (its selftest is the contract) — the door refuses a bad row"
+  },
+  "forge:R143": {
+   "exempt": "owner-held",
+   "why": "capture.mjs validates the rep shape (its selftest is the contract) — the door refuses a bad row"
+  },
+  "forge:R144": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R145": {
+   "check": "B.tools"
+  },
+  "forge:R146": {
+   "exempt": "judge",
+   "why": "whether --asked probes a LOCKED fault-line (axis_weld vs voice_rep) needs the capsule's fault-lines"
+  },
+  "forge:R147": {
+   "check": "B.judge-once"
+  },
+  "forge:R148": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R149": {
+   "check": "B.bank"
+  },
+  "forge:R150": {
+   "check": "B.tools"
+  },
+  "forge:R151": {
+   "check": "A.his-level"
+  },
+  "forge:R152": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R153": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R154": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R155": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R156": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R157": {
+   "exempt": "not-per-turn",
+   "why": "session close (his khatam / bas): forge_session close → capture paste → sitting close — its own sequence, not a teaching turn"
+  },
+  "forge:R158": {
+   "check": "A.hype"
+  },
+  "forge:R159": {
+   "check": "B.bank-verbatim"
+  },
+  "forge:R160": {
+   "check": [
+    "A.his-level",
+    "A.hype"
+   ]
+  },
+  "forge:R162": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and REFUSES it (a skipped step sets method_clean false; axis done / step 10 / close carry their own gates)"
+  },
+  "forge:R165": {
+   "check": "B.tools"
+  },
+  "forge:R166": {
+   "check": "A.urgency"
+  },
+  "forge:R167": {
+   "check": [
+    "A.medical",
+    "A.hype"
+   ]
+  },
+  "forge:R168": {
+   "check": "B.tools"
+  },
+  "forge:R169": {
+   "check": "B.tools"
+  },
+  "forge:R170": {
+   "check": "B.tools"
+  },
+  "forge:R171": {
+   "check": "B.tools"
+  },
+  "forge:R172": {
+   "check": "B.tools"
+  },
+  "forge:R173": {
+   "exempt": "judge",
+   "why": "whether he voiced a doubt is semantic; hippocampus.mjs mark doubt is inside the study set"
+  },
+  "forge:R175": {
+   "check": "A.text-last"
+  },
+  "forge:R176": {
+   "exempt": "judge",
+   "why": "whether his message carries a ruling is semantic; acts.mjs do rule is inside the study set"
+  },
+  "forge:R177": {
+   "exempt": "owner-held",
+   "why": "teaching_audit autohit counts measured drift by code; the self-report is the model's judgement half"
+  },
+  "forge:R178": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-first law (learn:R1/R3/R36: the digest + the hook are enough for step 3; a canon section opens when its step arrives)"
+  },
+  "forge:R179": {
+   "check": "B.widget"
+  },
+  "forge:R181": {
+   "check": [
+    "A.diff",
+    "A.bold",
+    "A.markdown"
+   ]
+  },
+  "forge:R182": {
+   "check": "A.table"
+  },
+  "forge:R183": {
+   "check": "A.emoji"
+  },
+  "forge:R184": {
+   "check": "A.markdown"
+  },
+  "samjhao:R1": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-first boot (learn:R1): learn_digest.mjs is the first tool and prints the position; the SessionStart brief is no longer overridden by hand"
+  },
+  "samjhao:R2": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-first boot (learn:R1): learn_digest.mjs is the first tool and prints the position; the SessionStart brief is no longer overridden by hand"
+  },
+  "samjhao:R3": {
+   "exempt": "one-time-record",
+   "why": "a one-time record (30 Aug): the SessionStart brief then pointed at the wrong task; the digest-first boot replaced the override"
+  },
+  "samjhao:R4": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "samjhao:R6": {
+   "exempt": "judge",
+   "why": "a count's source is a same-turn tool_result — needs the result text matched to the number"
+  },
+  "samjhao:R7": {
+   "check": "B.tools"
+  },
+  "samjhao:R8": {
+   "check": "B.tools"
+  },
+  "samjhao:R10": {
+   "check": "A.gut-by-moment"
+  },
+  "samjhao:R11": {
+   "check": "A.gut-by-moment"
+  },
+  "samjhao:R12": {
+   "exempt": "owner-held",
+   "why": "capture.mjs:331 / the voice_rep door hard-refuse a rep without --gut"
+  },
+  "samjhao:R13": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R14": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "samjhao:R15": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R16": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (a skipped step is counted, axis done / step 10 / close carry their own gates)"
+  },
+  "samjhao:R17": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (a skipped step is counted, axis done / step 10 / close carry their own gates)"
+  },
+  "samjhao:R18": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R19": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R20": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R21": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R22": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R23": {
+   "exempt": "owner-held",
+   "why": "step 1's daraar-map is paced by forge_session.mjs step 1"
+  },
+  "samjhao:R24": {
+   "check": "D.pacer"
+  },
+  "samjhao:R25": {
+   "exempt": "superseded",
+   "why": "FORGE and SAMJHAO are one process since 30 Aug (act amtfkb4r48m): the forge pacer paces, and the digest serves the capsule plan and the doubt map — samjhao.mjs open / plan / the hand-read of forge_sessions.jsonl are not boot duties"
+  },
+  "samjhao:R26": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R27": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (a skipped step is counted, axis done / step 10 / close carry their own gates)"
+  },
+  "samjhao:R29": {
+   "exempt": "superseded",
+   "why": "FORGE and SAMJHAO are one process since 30 Aug (act amtfkb4r48m): the forge pacer paces, and the digest serves the capsule plan and the doubt map — samjhao.mjs open / plan / the hand-read of forge_sessions.jsonl are not boot duties"
+  },
+  "samjhao:R30": {
+   "exempt": "superseded",
+   "why": "FORGE and SAMJHAO are one process since 30 Aug (act amtfkb4r48m): the forge pacer paces, and the digest serves the capsule plan and the doubt map — samjhao.mjs open / plan / the hand-read of forge_sessions.jsonl are not boot duties"
+  },
+  "samjhao:R36": {
+   "check": "A.gut-by-moment"
+  },
+  "samjhao:R38": {
+   "exempt": "not-per-turn",
+   "why": "fires once at topic open or topic close (the doubt map, the batch render, the contract line), not on a teaching turn"
+  },
+  "samjhao:R39": {
+   "check": [
+    "A.position",
+    "A.count-form",
+    "A.table"
+   ]
+  },
+  "samjhao:R41": {
+   "check": "A.blame"
+  },
+  "samjhao:R44": {
+   "exempt": "judge",
+   "why": "the analogy's KIND is semantic — a geometry word ban would block the embeddings lesson, whose TERMS are geometric"
+  },
+  "samjhao:R47": {
+   "check": "A.his-data"
+  },
+  "samjhao:R48": {
+   "check": "A.confusion-literal"
+  },
+  "samjhao:R49": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R51": {
+   "exempt": "judge",
+   "why": "whether a turn introduces the core formula / measure / range is semantic (CORE-NEVER-DEFERRED's axis half is held by forge_session.mjs)"
+  },
+  "samjhao:R53": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R54": {
+   "check": "B.tools"
+  },
+  "samjhao:R55": {
+   "check": "B.widget"
+  },
+  "samjhao:R56": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list reports 'built, NOT driven' until the gates are driven"
+  },
+  "samjhao:R59": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R60": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R62": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R65": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R66": {
+   "check": "B.bank-verbatim"
+  },
+  "samjhao:R67": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R68": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R69": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R70": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs axis <x> done REFUSES without the axis's Hinglish (Bolo) bank + the interview line"
+  },
+  "samjhao:R72": {
+   "exempt": "judge",
+   "why": "the capsule read's order against HIS Bolo turn needs the Bolo identified — P4"
+  },
+  "samjhao:R73": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R75": {
+   "exempt": "judge",
+   "why": "the order of the compression against his own words is a content-order judgement"
+  },
+  "samjhao:R77": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R78": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R79": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R80": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (a skipped step is counted, axis done / step 10 / close carry their own gates)"
+  },
+  "samjhao:R81": {
+   "exempt": "owner-held",
+   "why": "samjhao.mjs taught burns a stored strike through its owner (registry.preCyborg refuses the four re-opened capsules)"
+  },
+  "samjhao:R82": {
+   "check": "B.moment"
+  },
+  "samjhao:R83": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R84": {
+   "exempt": "not-per-turn",
+   "why": "fires once at topic open or topic close (the doubt map, the batch render, the contract line), not on a teaching turn"
+  },
+  "samjhao:R85": {
+   "exempt": "superseded",
+   "why": "FORGE and SAMJHAO are one process since 30 Aug (act amtfkb4r48m): the forge pacer paces, and the digest serves the capsule plan and the doubt map — samjhao.mjs open / plan / the hand-read of forge_sessions.jsonl are not boot duties"
+  },
+  "samjhao:R87": {
+   "exempt": "not-per-turn",
+   "why": "fires once at topic open or topic close (the doubt map, the batch render, the contract line), not on a teaching turn"
+  },
+  "samjhao:R88": {
+   "exempt": "not-per-turn",
+   "why": "fires once at topic open or topic close (the doubt map, the batch render, the contract line), not on a teaching turn"
+  },
+  "samjhao:R89": {
+   "exempt": "not-per-turn",
+   "why": "session / topic close — its own sequence (forge_session close → sitting close), not a teaching turn"
+  },
+  "samjhao:R90": {
+   "exempt": "not-per-turn",
+   "why": "session / topic close — its own sequence (forge_session close → sitting close), not a teaching turn"
+  },
+  "samjhao:R91": {
+   "exempt": "not-per-turn",
+   "why": "session / topic close — its own sequence (forge_session close → sitting close), not a teaching turn"
+  },
+  "samjhao:R92": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R93": {
+   "exempt": "judge",
+   "why": "a crack is a verdict on HIS answer — semantic"
+  },
+  "samjhao:R94": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R95": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R98": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R100": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R101": {
+   "check": "B.tools"
+  },
+  "samjhao:R102": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R103": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R104": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R105": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R106": {
+   "exempt": "other-lane",
+   "why": "an engineering-lane law (numbers by command, re-read before write, brainstorm before filing, escalation files) — the study session writes no files; B.tools refuses the writes"
+  },
+  "samjhao:R107": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R108": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R109": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "samjhao:R110": {
+   "exempt": "judge",
+   "why": "whether his message carries a ruling is semantic; acts.mjs do rule is inside the study set"
+  },
+  "samjhao:R111": {
+   "exempt": "owner-held",
+   "why": "teaching_audit autohit counts measured drift by code; the self-report is the model's judgement half"
+  },
+  "samjhao:R112": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R113": {
+   "check": "A.new-terms"
+  },
+  "samjhao:R114": {
+   "check": [
+    "A.one-question",
+    "A.new-terms"
+   ]
+  },
+  "samjhao:R115": {
+   "check": "A.table"
+  },
+  "samjhao:R116": {
+   "check": "A.too-hindi"
+  },
+  "samjhao:R118": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R119": {
+   "check": "A.confusion-literal"
+  },
+  "samjhao:R120": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R121": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R122": {
+   "check": "A.his-level"
+  },
+  "samjhao:R123": {
+   "check": "A.position"
+  },
+  "samjhao:R124": {
+   "check": "B.tools"
+  },
+  "samjhao:R126": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R127": {
+   "exempt": "not-per-turn",
+   "why": "session / topic close — its own sequence (forge_session close → sitting close), not a teaching turn"
+  },
+  "samjhao:R128": {
+   "check": "B.moment"
+  },
+  "samjhao:R129": {
+   "check": "A.urgency"
+  },
+  "samjhao:R130": {
+   "exempt": "other-lane",
+   "why": "an engineering-lane law (numbers by command, re-read before write, brainstorm before filing, escalation files) — the study session writes no files; B.tools refuses the writes"
+  },
+  "samjhao:R131": {
+   "exempt": "other-lane",
+   "why": "an engineering-lane law (numbers by command, re-read before write, brainstorm before filing, escalation files) — the study session writes no files; B.tools refuses the writes"
+  },
+  "samjhao:R132": {
+   "exempt": "other-lane",
+   "why": "an engineering-lane law (numbers by command, re-read before write, brainstorm before filing, escalation files) — the study session writes no files; B.tools refuses the writes"
+  },
+  "samjhao:R133": {
+   "exempt": "other-lane",
+   "why": "an engineering-lane law (numbers by command, re-read before write, brainstorm before filing, escalation files) — the study session writes no files; B.tools refuses the writes"
+  },
+  "samjhao:R136": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "samjhao:R137": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "samjhao:R138": {
+   "exempt": "superseded",
+   "why": "FORGE and SAMJHAO are one process since 30 Aug (act amtfkb4r48m): the forge pacer paces, and the digest serves the capsule plan and the doubt map — samjhao.mjs open / plan / the hand-read of forge_sessions.jsonl are not boot duties"
+  },
+  "samjhao:R139": {
+   "exempt": "one-time-record",
+   "why": "a one-time record (30 Aug): the brief was overridden by hand until the digest-first boot"
+  },
+  "samjhao:R141": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (a skipped step is counted, axis done / step 10 / close carry their own gates)"
+  },
+  "samjhao:R142": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list owns the widget registry and is the step-4 read"
+  },
+  "samjhao:R143": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (a skipped step is counted, axis done / step 10 / close carry their own gates)"
+  },
+  "samjhao:R144": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R145": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK gate (forge_session.mjs step 10 refuses without a judged jirah row per done axis)"
+  },
+  "samjhao:R146": {
+   "check": "B.judge-once"
+  },
+  "samjhao:R147": {
+   "check": [
+    "A.position",
+    "A.layers",
+    "A.one-question"
+   ]
+  },
+  "samjhao:R148": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R149": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs moment widget_gate is paced by the owner (after axis g)"
+  },
+  "samjhao:R150": {
+   "check": "D.first-screen"
+  },
+  "samjhao:R153": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R155": {
+   "exempt": "superseded",
+   "why": "FORGE and SAMJHAO are one process since 30 Aug (act amtfkb4r48m): the forge pacer paces, and the digest serves the capsule plan and the doubt map — samjhao.mjs open / plan / the hand-read of forge_sessions.jsonl are not boot duties"
+  },
+  "samjhao:R156": {
+   "check": "B.tools"
+  },
+  "samjhao:R157": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "samjhao:R158": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R161": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R166": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R167": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R171": {
+   "exempt": "judge",
+   "why": "a capsule read during REFUTATION needs the step's beat identified — P4"
+  },
+  "samjhao:R172": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R173": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list is the step-4 read; building a widget is a Write, refused by B.tools"
+  },
+  "samjhao:R174": {
+   "check": "B.moment-kind"
+  },
+  "samjhao:R175": {
+   "check": "A.one-question"
+  },
+  "samjhao:R176": {
+   "check": "A.confusion-literal"
+  },
+  "samjhao:R177": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R178": {
+   "exempt": "not-per-turn",
+   "why": "fires once at topic open or topic close (the doubt map, the batch render, the contract line), not on a teaching turn"
+  },
+  "samjhao:R179": {
+   "exempt": "not-per-turn",
+   "why": "fires once at topic open or topic close (the doubt map, the batch render, the contract line), not on a teaching turn"
+  },
+  "samjhao:R180": {
+   "exempt": "judge",
+   "why": "a capsule deep read at axis open needs the axis open identified against the read — P4"
+  },
+  "samjhao:R181": {
+   "exempt": "judge",
+   "why": "a long verbatim substring of capsule text needs the capsule — P4"
+  },
+  "samjhao:R185": {
+   "exempt": "judge",
+   "why": "a numbered trace before any visual is a content-order judgement across turns"
+  },
+  "samjhao:R189": {
+   "check": "A.urgency"
+  },
+  "samjhao:R191": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R192": {
+   "exempt": "superseded",
+   "why": "superseded by learn:R29 (digest era): his rulings become receipts in the SAME turn"
+  },
+  "samjhao:R193": {
+   "exempt": "owner-held",
+   "why": "acts.mjs owns the rulings lane and its scope field"
+  },
+  "samjhao:R194": {
+   "check": "B.tools"
+  },
+  "samjhao:R195": {
+   "exempt": "judge",
+   "why": "a meta span over 10 min is a timestamp measurement across turns — P3 measures it"
+  },
+  "samjhao:R196": {
+   "exempt": "not-per-turn",
+   "why": "session / topic close — its own sequence (forge_session close → sitting close), not a teaching turn"
+  },
+  "samjhao:R200": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R201": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK's negative-space probe (the step-10 gate counts it)"
+  },
+  "samjhao:R202": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R203": {
+   "exempt": "not-per-turn",
+   "why": "fires once at topic open or topic close (the doubt map, the batch render, the contract line), not on a teaching turn"
+  },
+  "samjhao:R205": {
+   "check": "B.tools"
+  },
+  "samjhao:R206": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R207": {
+   "check": "B.tools"
+  },
+  "samjhao:R208": {
+   "check": "B.tools"
+  },
+  "samjhao:R209": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "samjhao:R210": {
+   "exempt": "judge",
+   "why": "a calendar estimate derived from work-size is semantic"
+  },
+  "samjhao:R211": {
+   "exempt": "other-lane",
+   "why": "an engineering-lane law (numbers by command, re-read before write, brainstorm before filing, escalation files) — the study session writes no files; B.tools refuses the writes"
+  },
+  "samjhao:R213": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R214": {
+   "exempt": "superseded",
+   "why": "FORGE and SAMJHAO are one process since 30 Aug (act amtfkb4r48m): the forge pacer paces, and the digest serves the capsule plan and the doubt map — samjhao.mjs open / plan / the hand-read of forge_sessions.jsonl are not boot duties"
+  },
+  "samjhao:R215": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R216": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "samjhao:R217": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates and registry.preCyborg refuses the four re-opened capsules"
+  },
+  "samjhao:R218": {
+   "exempt": "superseded",
+   "why": "superseded by the full-time judge (§11 / forks row 48): verdicts are the round judge's"
+  },
+  "samjhao:R219": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK's negative-space probe"
+  },
+  "samjhao:R220": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-era notes law (learn:R11/R17/R48): notes are EXTRACTED from the archive by code at the week's end and ratified by him cold — no crash-belt block, raw-facts row or build_exchanges run mid-lesson; B.tools refuses such a write in a study turn"
+  },
+  "samjhao:R221": {
+   "check": "B.moment"
+  },
+  "samjhao:R222": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R223": {
+   "exempt": "not-per-turn",
+   "why": "fires once at topic open or topic close (the doubt map, the batch render, the contract line), not on a teaching turn"
+  },
+  "samjhao:R224": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R225": {
+   "exempt": "other-lane",
+   "why": "an engineering-lane law (numbers by command, re-read before write, brainstorm before filing, escalation files) — the study session writes no files; B.tools refuses the writes"
+  },
+  "samjhao:R227": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R228": {
+   "exempt": "other-lane",
+   "why": "an engineering-lane law (numbers by command, re-read before write, brainstorm before filing, escalation files) — the study session writes no files; B.tools refuses the writes"
+  },
+  "samjhao:R229": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "samjhao:R231": {
+   "exempt": "not-per-turn",
+   "why": "notes-time: the shape of a note block is the week-end extraction's contract, not a teaching turn's"
+  },
+  "samjhao:R232": {
+   "check": "D.first-screen"
+  },
+  "visual:R1": {
+   "exempt": "superseded",
+   "why": "superseded by the digest-first law (learn:R1/R3/R36): the digest + the hook are enough for step 3; a canon section opens when its step arrives"
+  },
+  "visual:R2": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry, its gates count and its 'built, NOT driven' verdict"
+  },
+  "visual:R5": {
+   "check": "A.one-question"
+  },
+  "visual:R6": {
+   "check": "A.repeat-line"
+  },
+  "visual:R7": {
+   "check": "B.judge-once"
+  },
+  "visual:R8": {
+   "check": "A.markdown"
+  },
+  "visual:R9": {
+   "check": "A.emoji"
+  },
+  "visual:R10": {
+   "check": "A.markdown"
+  },
+  "visual:R12": {
+   "check": "A.list-length"
+  },
+  "visual:R13": {
+   "exempt": "owner-held",
+   "why": "teaching_audit's link-back latch — once per forge session, not per turn"
+  },
+  "visual:R16": {
+   "check": "B.widget"
+  },
+  "visual:R17": {
+   "check": "B.widget"
+  },
+  "visual:R18": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "visual:R19": {
+   "check": "B.askuser"
+  },
+  "visual:R20": {
+   "check": "B.widget"
+  },
+  "visual:R21": {
+   "check": "B.widget"
+  },
+  "visual:R22": {
+   "check": "B.widget"
+  },
+  "visual:R23": {
+   "check": "A.gamify"
+  },
+  "visual:R24": {
+   "check": "A.gamify"
+  },
+  "visual:R25": {
+   "check": "A.gamify"
+  },
+  "visual:R26": {
+   "check": "A.gut-by-moment"
+  },
+  "visual:R27": {
+   "check": "A.one-question"
+  },
+  "visual:R28": {
+   "check": "A.tum"
+  },
+  "visual:R29": {
+   "check": "A.emdash"
+  },
+  "visual:R30": {
+   "exempt": "superseded",
+   "why": "superseded by ruling R1 (23 Sep, P0): NO length rule in the gate — not a block, not a warn — DHEEMA is held structurally"
+  },
+  "visual:R31": {
+   "check": "A.table"
+  },
+  "visual:R32": {
+   "exempt": "his-decline",
+   "why": "his deliberate skip, 7 Sep 2026: \"skip it\" — the table checker is not widened to step-10 reports, csv / tsv fences or SEASON.md (teaching_audit.mjs countTables comment); the ban stands, it is his to catch there"
+  },
+  "visual:R33": {
+   "exempt": "his-decline",
+   "why": "his deliberate skip, 7 Sep 2026: \"skip it\" — the table checker is not widened to step-10 reports, csv / tsv fences or SEASON.md (teaching_audit.mjs countTables comment); the ban stands, it is his to catch there"
+  },
+  "visual:R34": {
+   "exempt": "his-decline",
+   "why": "his deliberate skip, 7 Sep 2026: \"skip it\" — the table checker is not widened to step-10 reports, csv / tsv fences or SEASON.md (teaching_audit.mjs countTables comment); the ban stands, it is his to catch there"
+  },
+  "visual:R35": {
+   "exempt": "his-decline",
+   "why": "his deliberate skip, 7 Sep 2026: \"skip it\" — the table checker is not widened to step-10 reports, csv / tsv fences or SEASON.md (teaching_audit.mjs countTables comment); the ban stands, it is his to catch there"
+  },
+  "visual:R36": {
+   "check": "A.blockquote"
+  },
+  "visual:R37": {
+   "check": "A.blockquote"
+  },
+  "visual:R38": {
+   "exempt": "judge",
+   "why": "the Board rides the Desktop widget tool only; P3 measures it before it becomes a block"
+  },
+  "visual:R39": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "visual:R40": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "visual:R41": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "visual:R42": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "visual:R43": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates"
+  },
+  "visual:R44": {
+   "exempt": "not-per-turn",
+   "why": "the day's close (full-time) — its own sequence, not a teaching turn"
+  },
+  "visual:R45": {
+   "check": "D.first-screen"
+  },
+  "visual:R46": {
+   "exempt": "judge",
+   "why": "the warm-up's count against yesterday's topic is a session-shape judgement"
+  },
+  "visual:R48": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "visual:R49": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "visual:R50": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "visual:R51": {
+   "check": "B.widget"
+  },
+  "visual:R53": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "visual:R54": {
+   "exempt": "owner-held",
+   "why": "the own-data chart readers filter by registry.gameOnEpoch"
+  },
+  "visual:R56": {
+   "check": "A.markdown"
+  },
+  "visual:R58": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "visual:R60": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "visual:R62": {
+   "exempt": "judge",
+   "why": "a claim that the bold cap has a study behind it is a content judgement"
+  },
+  "visual:R63": {
+   "check": [
+    "A.backticks",
+    "A.bold",
+    "A.emoji",
+    "A.diff"
+   ]
+  },
+  "visual:R65": {
+   "check": "A.markdown"
+  },
+  "visual:R66": {
+   "check": "A.markdown"
+  },
+  "visual:R67": {
+   "check": "A.markdown"
+  },
+  "visual:R68": {
+   "check": "A.markdown"
+  },
+  "visual:R69": {
+   "check": "A.codes-at-him"
+  },
+  "visual:R70": {
+   "check": "A.backticks"
+  },
+  "visual:R71": {
+   "check": "A.bold"
+  },
+  "visual:R73": {
+   "check": "A.diff"
+  },
+  "visual:R74": {
+   "check": "A.diff"
+  },
+  "visual:R75": {
+   "check": "A.sections"
+  },
+  "visual:R76": {
+   "check": "A.text-fence"
+  },
+  "visual:R77": {
+   "check": "A.text-fence"
+  },
+  "visual:R78": {
+   "check": "A.sections"
+  },
+  "visual:R79": {
+   "check": "A.codes-at-him"
+  },
+  "visual:R80": {
+   "check": "A.gut-by-moment"
+  },
+  "visual:R81": {
+   "check": "A.layers"
+  },
+  "visual:R83": {
+   "check": "A.emoji"
+  },
+  "visual:R84": {
+   "check": "A.emoji"
+  },
+  "visual:R85": {
+   "check": "A.emoji"
+  },
+  "visual:R86": {
+   "exempt": "judge",
+   "why": "CONFLICT, flagged to the architect in the P2 return: learn:R60 says ✅/❌ ride ALONGSIDE the diff (\"both\"), visual:R86 says not both — the gate blocks neither until it is ruled"
+  },
+  "visual:R89": {
+   "check": "A.diff"
+  },
+  "visual:R90": {
+   "check": "A.diff"
+  },
+  "visual:R91": {
+   "check": "A.too-english"
+  },
+  "visual:R92": {
+   "check": [
+    "A.sections",
+    "A.table"
+   ]
+  },
+  "visual:R93": {
+   "check": "A.diff"
+  },
+  "visual:R94": {
+   "check": "A.markdown"
+  },
+  "visual:R95": {
+   "check": "A.markdown"
+  },
+  "visual:R96": {
+   "check": "A.markdown"
+  },
+  "visual:R97": {
+   "check": "A.markdown"
+  },
+  "visual:R98": {
+   "exempt": "judge",
+   "why": "a claim that a colour renders is a content judgement"
+  },
+  "visual:R100": {
+   "exempt": "other-lane",
+   "why": "an engineering duty (test new syntax against the audit engine) — not a study turn"
+  },
+  "visual:R101": {
+   "check": "A.count-form"
+  },
+  "visual:R102": {
+   "check": "A.position"
+  },
+  "visual:R104": {
+   "check": "A.emoji"
+  },
+  "howhelearns:R1": {
+   "check": [
+    "A.one-question",
+    "A.new-terms"
+   ]
+  },
+  "howhelearns:R2": {
+   "check": "A.too-english"
+  },
+  "howhelearns:R3": {
+   "exempt": "judge",
+   "why": "the mechanism in a text trace BEFORE any visual is a content order across turns"
+  },
+  "howhelearns:R5": {
+   "exempt": "judge",
+   "why": "the analogy's KIND is semantic — a geometry word ban would block embeddings"
+  },
+  "howhelearns:R6": {
+   "check": "A.position"
+  },
+  "howhelearns:R7": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R8": {
+   "check": [
+    "A.neev-pehle",
+    "A.codes-at-him"
+   ]
+  },
+  "howhelearns:R9": {
+   "check": "A.confusion-literal"
+  },
+  "howhelearns:R10": {
+   "check": "A.his-level"
+  },
+  "howhelearns:R11": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R12": {
+   "check": "B.tools"
+  },
+  "howhelearns:R13": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R14": {
+   "check": "A.buying"
+  },
+  "howhelearns:R16": {
+   "exempt": "judge",
+   "why": "the thread-heavy call rides the prompt hook's warn line; whether the notice came is P3's to measure"
+  },
+  "howhelearns:R18": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R19": {
+   "exempt": "judge",
+   "why": "a mechanism living only in a widget is a content judgement"
+  },
+  "howhelearns:R20": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R21": {
+   "check": "B.tools"
+  },
+  "howhelearns:R22": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R23": {
+   "check": "A.too-english"
+  },
+  "howhelearns:R24": {
+   "check": [
+    "A.neev-pehle",
+    "A.codes-at-him"
+   ]
+  },
+  "howhelearns:R25": {
+   "check": "A.his-level"
+  },
+  "howhelearns:R26": {
+   "exempt": "judge",
+   "why": "a 'padh liya' claim backed by a full read needs the read's extent against the claim"
+  },
+  "howhelearns:R27": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R28": {
+   "check": "A.buying"
+  },
+  "howhelearns:R29": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R30": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R31": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R33": {
+   "exempt": "judge",
+   "why": "the thread-heavy call rides the prompt hook's warn line; P3 measures it"
+  },
+  "howhelearns:R35": {
+   "exempt": "judge",
+   "why": "the analogy's KIND is semantic"
+  },
+  "howhelearns:R36": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R38": {
+   "check": "A.new-terms"
+  },
+  "howhelearns:R39": {
+   "check": "A.neev-pehle"
+  },
+  "howhelearns:R40": {
+   "exempt": "judge",
+   "why": "a mechanism put in a widget first is a content order"
+  },
+  "howhelearns:R41": {
+   "check": "A.too-english"
+  },
+  "howhelearns:R42": {
+   "check": "A.his-level"
+  },
+  "howhelearns:R43": {
+   "exempt": "judge",
+   "why": "a read claim needs the read's extent"
+  },
+  "howhelearns:R44": {
+   "check": "B.tools"
+  },
+  "howhelearns:R45": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R46": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry, its gates count and its 'built, NOT driven' verdict"
+  },
+  "howhelearns:R47": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry, its gates count and its 'built, NOT driven' verdict"
+  },
+  "howhelearns:R48": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs moment widget_gate is paced by the owner (after axis g); step 3 text comes first by the pacer's order"
+  },
+  "howhelearns:R49": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R51": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry, its gates count and its 'built, NOT driven' verdict"
+  },
+  "howhelearns:R52": {
+   "check": "A.hype"
+  },
+  "howhelearns:R54": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R56": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R58": {
+   "check": "B.tools"
+  },
+  "howhelearns:R59": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R60": {
+   "check": "B.bank-verbatim"
+  },
+  "howhelearns:R61": {
+   "check": "A.gut-by-moment"
+  },
+  "howhelearns:R62": {
+   "check": "A.his-level"
+  },
+  "howhelearns:R63": {
+   "exempt": "judge",
+   "why": "a read-a-thread claim needs the read's extent"
+  },
+  "howhelearns:R64": {
+   "check": "B.tools"
+  },
+  "howhelearns:R65": {
+   "check": "B.tools"
+  },
+  "howhelearns:R66": {
+   "check": "A.urgency"
+  },
+  "howhelearns:R67": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (skips counted, axis done / step 10 / close gated)"
+  },
+  "howhelearns:R68": {
+   "check": "B.tools"
+  },
+  "howhelearns:R69": {
+   "check": "A.ask-where"
+  },
+  "howhelearns:R71": {
+   "check": "A.gamify"
+  },
+  "howhelearns:R72": {
+   "exempt": "superseded",
+   "why": "superseded by the /learn re-entry (learn:R80 / 0a-R: the pointer question first) and the morning warm-up's own rule"
+  },
+  "howhelearns:R73": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R74": {
+   "exempt": "not-per-turn",
+   "why": "a doubt back-write is drafted to the cold-reader standard at the close (doubtminer gate 2), not on a teaching turn"
+  },
+  "howhelearns:R75": {
+   "exempt": "owner-held",
+   "why": "the digest serves the capsule plan; capsules/ is mirror.mjs's"
+  },
+  "howhelearns:R76": {
+   "exempt": "superseded",
+   "why": "superseded by the /learn re-entry screen (learn:R80)"
+  },
+  "howhelearns:R77": {
+   "exempt": "not-per-turn",
+   "why": "the day's close (full-time) — its own sequence, not a teaching turn"
+  },
+  "howhelearns:R79": {
+   "exempt": "owner-held",
+   "why": "sprintsync / the sprint order hold the dependency chain"
+  },
+  "howhelearns:R81": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R82": {
+   "exempt": "not-per-turn",
+   "why": "the day's close (full-time) — its own sequence, not a teaching turn"
+  },
+  "howhelearns:R83": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (skips counted, axis done / step 10 / close gated)"
+  },
+  "howhelearns:R84": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (skips counted, axis done / step 10 / close gated)"
+  },
+  "howhelearns:R85": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (skips counted, axis done / step 10 / close gated)"
+  },
+  "howhelearns:R87": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R88": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry, its gates count and its 'built, NOT driven' verdict"
+  },
+  "howhelearns:R89": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry, its gates count and its 'built, NOT driven' verdict"
+  },
+  "howhelearns:R93": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs moment check_q REFUSES the second check-question in a pass"
+  },
+  "howhelearns:R95": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (skips counted, axis done / step 10 / close gated)"
+  },
+  "howhelearns:R96": {
+   "exempt": "owner-held",
+   "why": "the voice_rep door takes --gut from the teacher's typed flag; B.bank-verbatim checks it against his word"
+  },
+  "howhelearns:R97": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (skips counted, axis done / step 10 / close gated)"
+  },
+  "howhelearns:R98": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R99": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R100": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R101": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R102": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates"
+  },
+  "howhelearns:R103": {
+   "check": "B.moment"
+  },
+  "howhelearns:R104": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R105": {
+   "exempt": "superseded",
+   "why": "superseded by his ruling rul-mtdep0iye1 (the abstract counter struck: 'STEP n/11' is banned) — position is by NAME (A.position, A.count-form)"
+  },
+  "howhelearns:R106": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs is the pacer and refuses it (skips counted, axis done / step 10 / close gated)"
+  },
+  "howhelearns:R107": {
+   "check": [
+    "A.gut-by-moment",
+    "A.confusion-literal"
+   ]
+  },
+  "howhelearns:R108": {
+   "check": "B.moment"
+  },
+  "howhelearns:R109": {
+   "exempt": "superseded",
+   "why": "superseded: per-axis jirah was WITHDRAWN 4 Sep on his ruling (forge SKILL 'THREE GATES'); jirah runs once at concept level"
+  },
+  "howhelearns:R110": {
+   "exempt": "superseded",
+   "why": "superseded by the resume law (learn:R70 'resume first'; forge:R18 'NEVER close a live concept')"
+  },
+  "howhelearns:R111": {
+   "exempt": "not-per-turn",
+   "why": "the day's close (full-time) — its own sequence, not a teaching turn"
+  },
+  "howhelearns:R112": {
+   "check": "B.bank"
+  },
+  "howhelearns:R113": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R114": {
+   "check": "A.hype"
+  },
+  "howhelearns:R115": {
+   "exempt": "other-lane",
+   "why": "the Python / skill track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "howhelearns:R116": {
+   "check": "B.latency"
+  },
+  "howhelearns:R117": {
+   "exempt": "not-per-turn",
+   "why": "the day's close (full-time) — its own sequence, not a teaching turn"
+  },
+  "howhelearns:R118": {
+   "check": "A.medical"
+  },
+  "howhelearns:R119": {
+   "check": [
+    "A.hype",
+    "A.blame"
+   ]
+  },
+  "howhelearns:R120": {
+   "exempt": "judge",
+   "why": "the organism-memory MCP is DISABLED for this project in the CLI (settings.local.json); its presence on Desktop is unmeasured — P3 reads it before it becomes a boot check"
+  },
+  "howhelearns:R121": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R122": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R124": {
+   "exempt": "owner-held",
+   "why": "the axis gate counts the --register interview line; the three registers are the step-9 round's"
+  },
+  "howhelearns:R128": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs CORE-NEVER-DEFERRED refuses deferring a core axis"
+  },
+  "howhelearns:R129": {
+   "exempt": "judge",
+   "why": "the core formula sitting in the main body is a content judgement"
+  },
+  "howhelearns:R130": {
+   "exempt": "not-per-turn",
+   "why": "the day's close (full-time) — its own sequence, not a teaching turn"
+  },
+  "howhelearns:R132": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "howhelearns:R133": {
+   "check": "B.widget"
+  },
+  "howhelearns:R136": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "howhelearns:R138": {
+   "exempt": "owner-held",
+   "why": "widget.mjs list / register own the widget registry, its gates count and its 'built, NOT driven' verdict"
+  },
+  "howhelearns:R139": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "howhelearns:R140": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "howhelearns:R141": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "howhelearns:R142": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "howhelearns:R143": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "howhelearns:R144": {
+   "exempt": "judge",
+   "why": "a widget's design content (story hook, trap cards, slider, zoom, object count, colour meaning) is read from its html by the P4 judge, not by a per-turn regex"
+  },
+  "howhelearns:R145": {
+   "check": "A.his-data"
+  },
+  "howhelearns:R146": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R147": {
+   "exempt": "owner-held",
+   "why": "the widget delivery path (inline, else a self-contained .html) is widget.mjs's"
+  },
+  "howhelearns:R149": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R150": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R151": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates"
+  },
+  "howhelearns:R155": {
+   "exempt": "judge",
+   "why": "his attempt before a correction needs the correction identified — semantic"
+  },
+  "howhelearns:R156": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates"
+  },
+  "howhelearns:R158": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates"
+  },
+  "howhelearns:R159": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates"
+  },
+  "howhelearns:R162": {
+   "check": "A.gamify"
+  },
+  "howhelearns:R165": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates"
+  },
+  "howhelearns:R166": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates"
+  },
+  "howhelearns:R168": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R169": {
+   "exempt": "not-per-turn",
+   "why": "the day's close (full-time) — its own sequence, not a teaching turn"
+  },
+  "howhelearns:R170": {
+   "exempt": "not-per-turn",
+   "why": "the day's close (full-time) — its own sequence, not a teaching turn"
+  },
+  "howhelearns:R171": {
+   "exempt": "not-per-turn",
+   "why": "the day's close (full-time) — its own sequence, not a teaching turn"
+  },
+  "howhelearns:R172": {
+   "exempt": "not-per-turn",
+   "why": "the day's close (full-time) — its own sequence, not a teaching turn"
+  },
+  "howhelearns:R173": {
+   "check": "A.urgency"
+  },
+  "howhelearns:R175": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R177": {
+   "exempt": "other-lane",
+   "why": "the Python / skill track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "howhelearns:R178": {
+   "exempt": "other-lane",
+   "why": "the Python / skill track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "howhelearns:R179": {
+   "exempt": "other-lane",
+   "why": "the Python / skill track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "howhelearns:R180": {
+   "exempt": "other-lane",
+   "why": "the Python / skill track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "howhelearns:R184": {
+   "exempt": "other-lane",
+   "why": "the Python / skill track (python_state.mjs owns it); the gate's lesson checks scope the concept track"
+  },
+  "howhelearns:R185": {
+   "exempt": "judge",
+   "why": "the thread-heavy notice rides the prompt hook's warn line; P3 measures it"
+  },
+  "howhelearns:R186": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R187": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R188": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R189": {
+   "check": "B.tools"
+  },
+  "howhelearns:R192": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R193": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R194": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R195": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R196": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R197": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R198": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R199": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R200": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R201": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R203": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R204": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R205": {
+   "check": "B.tools"
+  },
+  "howhelearns:R206": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R207": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R209": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R210": {
+   "exempt": "other-lane",
+   "why": "the Re-Jirah round is the topic's separate cold TEST; rejirah.mjs / deep.mjs hold its gates"
+  },
+  "howhelearns:R211": {
+   "exempt": "other-lane",
+   "why": "an engineering duty (the render footer) — not a study turn"
+  },
+  "howhelearns:R212": {
+   "check": "B.tools"
+  },
+  "howhelearns:R213": {
+   "check": "B.tools"
+  },
+  "howhelearns:R214": {
+   "check": "B.tools"
+  },
+  "howhelearns:R215": {
+   "check": "B.tools"
+  },
+  "howhelearns:R216": {
+   "check": "B.tools"
+  },
+  "howhelearns:R217": {
+   "check": "B.tools"
+  },
+  "howhelearns:R218": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R219": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R220": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  },
+  "howhelearns:R221": {
+   "exempt": "judge",
+   "why": "semantic — the P4 round judge reads it from the sitting's turns"
+  },
+  "howhelearns:R222": {
+   "check": "A.too-hindi"
+  },
+  "howhelearns:R223": {
+   "exempt": "owner-held",
+   "why": "teaching_audit's link-back latch — once per forge session"
+  },
+  "howhelearns:R225": {
+   "exempt": "owner-held",
+   "why": "forge_session.mjs CORE-NEVER-DEFERRED; the passing-doubt half is the judge's"
+  },
+  "howhelearns:R226": {
+   "check": "A.neev-pehle"
+  },
+  "howhelearns:R227": {
+   "exempt": "owner-held",
+   "why": "teaching_audit autohit counts measured drift by code; the self-report is the model's judgement half"
+  },
+  "howhelearns:R228": {
+   "exempt": "not-per-turn",
+   "why": "the LOCK (step 10) and the capsule's shape — forge_session.mjs step 10 and doubtminer / FORGE_SPEC hold it; not a teaching turn"
+  }
+ }
+}
