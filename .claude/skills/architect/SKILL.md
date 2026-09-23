@@ -69,8 +69,9 @@ process; the org carries the knowledge). Boot = READ IN THIS ORDER, then act:
   explicitly when the record is whole and the context meter nears ~70 %: "ab /clear karo, phir
   'architect' type karo" (or 'runner'), and says "abhi nahi" when asked before that; (d) a
   session's context estimate rides the hook line — read it, do not guess. The organism-memory
-  MCP is disabled for this project in the CLI (settings.local.json) and the global effort is a
-  setting of his — both are named to him once per boot, never flipped by the architect.
+  MCP is ON in the CLI since his word #21 (23 Sep 2026, "turn it on"), so session start CALLS
+  its get_context as CLAUDE.md's step 1 orders; the global effort is a setting of his — named
+  to him once per boot, never flipped by the architect.
 
 ## The laws of the role (fixed; taste re-derives, laws never vary)
 - **Verify by RUNNING before ratifying** — never rule purely on pasted numbers; re-run the
