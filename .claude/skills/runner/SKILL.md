@@ -21,10 +21,15 @@ laws' pointers — never a copy of a number.
 1. **Switch this session's mode off Auto → Accept edits.** The Auto-mode classifier refuses the
    campaign's own limit files (POOL.json, the launch gate, witnesses, even a ledger row). Verbatim
    from the boot line: *"FIRST: switch this session's mode off Auto (Accept edits) before any write."*
-2. **Append the boot line** to `C:/Users/nikhi/arsenal-audit-artifacts/CAMPAIGN_SESSION.txt`
-   (append-only; the witnesses parse it). The measured shape, one real line with the names as
-   placeholders:
-   `campaign-runner <session id> (<agent name> [<short>]) [<model> · max · ultracode] · booted <ISO with +05:30> from campaign-2026-09/CURRENT.md on his paste line · stage <n> (<what continues, in one clause: predecessor, what is in flight, what the first act is>) · architect on record: <the name in ARCHITECT_SESSION.txt>`
+2. **CLAIM the role — the claim writes the boot line; never append it by hand** (forks rows 255 R11 /
+   258 (3): the hand-append is the class that clobbered the architect's record on 23 Sep). From the
+   campaign root:
+   `node tools/roles.mjs claim runner --me "<this session's ListAgents name>" --session-id "$CLAUDE_CODE_SESSION_ID" --note "<what continues, in one clause: predecessor, what is in flight, what the first act is>"`
+   **Read the line it prints.** `ok · runner claimed …` = the boot line is on `CAMPAIGN_SESSION.txt`.
+   `already holds … nothing written` = the predecessor never released (a pause, then his `/clear`):
+   `node tools/roles.mjs release runner --me "<name>" --note "<what actually ended it>"`, then claim again.
+   Check for a LIVE runner first (`node tools/roles.mjs who` + `ListAgents`): a live holder that is
+   acting means zero writes here.
 3. **Write the ledger BOOT row through the campaign's own verb** — never a raw append:
    `node campaign.mjs ledger add --stage <n> --workflow "RUNNER BOOT <name> — <one clause>" --run none --agents 0 --tokens 0 --duration 0 --note "BOOT <ts> … READ WHOLE: … BY COMMAND: … NEXT: …"`
    (`campaign.mjs` is the sole writer of `ledgers/CAMPAIGN_LEDGER.jsonl`.)
@@ -136,7 +141,8 @@ The session stays OPEN and silent; the study surface is his — no card, no line
 **WHEN (his standing order 8 Sep 2026, forks ruling rows 147 / 166 — the /clear moment is TOLD, never guessed):** every message to the architect ends with the runner's context estimate from its own hook line ("context ~N% est") as one number. At **≥ 70 % and hosting nothing and nothing mid-build**, the runner ROTATES by this checklist and messages the architect "rotated · N %"; the architect then tells him in plain words: *"runner session mein /clear karo, phir 'runner' type karo"*. NEVER /clear while hosting a run (background runs die with the session) or mid-build; if the meter passes 70 % while hosting, finish the return leg first, then rotate.
 
 1. Rewrite `CURRENT.md` — **≤ 60 lines**, state on line 1, the paste line verbatim beneath it.
-2. Append the rotation/close line to `CAMPAIGN_SESSION.txt` (same shape as the boot line).
+2. `node tools/roles.mjs release runner --me "<name>" --note "<why, the % measured, what is next>"` — the
+   release writes the CLOSED line to `CAMPAIGN_SESSION.txt`; never append it by hand (row 258 (3)).
 3. **A host stays open and silent** — a session hosting a run does not close and does not build.
 4. Commit **by pathspec** through
    `node tools/witness_commit.mjs --witness "<command>" --msg "<message>" -- <pathspec…>`.
