@@ -358,17 +358,19 @@ function selftest() {
     try { settings = JSON.parse(readFileSync(join(ROOT, ".claude", "settings.json"), "utf8")); } catch {}
     const cmds = (ev) => ((settings && settings.hooks && settings.hooks[ev]) || []).flatMap((g) => (g.hooks || []).map((h) => h.command));
     const ups = cmds("UserPromptSubmit"), ss = cmds("SessionStart");
-    assert("WIRING — UserPromptSubmit = exactly [afferent-post, turn_hook prompt] (5 processes → 2)",
-      ups.length === 2 && ups[0] === "node hooks/afferent-post.mjs" && ups[1] === "node scripts/turn_hook.mjs prompt", JSON.stringify(ups));
+    const A = (p, v) => `node "$CLAUDE_PROJECT_DIR/${p}"${v ? ` ${v}` : ""}`;
+    assert("WIRING — UserPromptSubmit = exactly [afferent-post, turn_hook prompt], anchored (5 processes → 2)",
+      ups.length === 2 && ups[0] === A("hooks/afferent-post.mjs") && ups[1] === A("scripts/turn_hook.mjs", "prompt"), JSON.stringify(ups));
     assert("WIRING — SessionStart = exactly [turn_hook start], anchored (5 processes → 1)",
-      ss.length === 1 && ss[0] === 'node "$CLAUDE_PROJECT_DIR/scripts/turn_hook.mjs" start', JSON.stringify(ss));
+      ss.length === 1 && ss[0] === A("scripts/turn_hook.mjs", "start"), JSON.stringify(ss));
     // THE ANCHOR (forks row 252, 23 Sep 2026, his "Haan, abhi kar do"). A relative hook
     // command resolves against the SESSION'S current directory, which moves whenever a
     // session cd's into another folder — and then the hook is silently skipped, the
     // rails and the claims gate included. The Claude Code hooks doc: shell form runs
     // under Git Bash on Windows and exports CLAUDE_PROJECT_DIR (the folder the session
-    // started in); quote the placeholder. ONE hook first (SessionStart) until his next
-    // fresh session proves the form; the other eight join this clause when they move.
+    // started in); quote the placeholder. SessionStart went first (cc3d311) and its proof
+    // is the architect's 06:29 resume printing the brief through the anchored command;
+    // the other eight followed in one commit, and this clause covers every hook.
     const ANCHORED = /^node "\$CLAUDE_PROJECT_DIR\/([^"\s]+)"(?: [a-z][a-z0-9-]*)?$/;
     // The two folders a hook may name, listed at literal paths — a dynamic existsSync would
     // be an unresolved sink, and xray's per-organ budget only goes down (xray.mjs:1331).
@@ -379,9 +381,29 @@ function selftest() {
     assert("ANCHOR plant — an unquoted placeholder is refused (the doc's rule: quote it)", anchorOf("node $CLAUDE_PROJECT_DIR/scripts/turn_hook.mjs start") === null);
     assert("ANCHOR plant — an anchored path to a file that does not exist is caught", (anchorOf('node "$CLAUDE_PROJECT_DIR/scripts/no_such_organ.mjs" start') || {}).exists === false);
     assert("ANCHOR plant — an anchored path to a real file passes", (anchorOf('node "$CLAUDE_PROJECT_DIR/scripts/turn_hook.mjs" start') || {}).exists === true);
-    const ssAnchor = anchorOf(ss[0]);
-    assert("ANCHOR — the SessionStart hook is anchored to $CLAUDE_PROJECT_DIR and the file it names exists",
-      !!ssAnchor && ssAnchor.exists, JSON.stringify(ss));
+    const allCmds = Object.keys((settings && settings.hooks) || {}).flatMap((ev) => cmds(ev).map((c) => ({ ev, c })));
+    const unanchored = allCmds.filter(({ c }) => !(anchorOf(c) || {}).exists);
+    assert(`ANCHOR — every hook command (${allCmds.length}) is anchored to $CLAUDE_PROJECT_DIR and names a file that exists`,
+      allCmds.length > 0 && unanchored.length === 0, JSON.stringify(unanchored));
+    // THE SAME CLASS INSIDE THE SCRIPTS (row 252's completion, ruled by the architect): an
+    // anchored command still bites if the script it runs finds the repo through the working
+    // directory. The hook-entry scripts are DERIVED, never listed: every file an anchored
+    // command names, every .mjs under hooks/, and every callee this organ runs in-process
+    // (read from its own runOrgan lines). A full-line comment is prose, not a read.
+    const CWD_USE = /process\.cwd\(\)/;
+    const cwdHit = (code) => CWD_USE.test(code.split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n"));
+    assert("CWD plant — a hook script reading through the working directory is refused", cwdHit('const p = join(process' + '.cwd(), "dressing-room");') === true);
+    assert("CWD plant — a root taken from the file's own location passes", cwdHit('const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");') === false);
+    assert("CWD plant — a full-line comment naming it passes (prose is not a read)", cwdHit('  // never process' + '.cwd() here') === false);
+    const entry = new Set(allCmds.map(({ c }) => (anchorOf(c) || {}).rel).filter(Boolean));
+    for (const f of hookFiles) if (f.startsWith("hooks/") && f.endsWith(".mjs")) entry.add(f);
+    for (const m of src("turn_hook.mjs").matchAll(/runOrgan\("([a-z_]+\.mjs)"/g)) if (hookFiles.has(`scripts/${m[1]}`)) entry.add(`scripts/${m[1]}`);
+    const entrySrc = (rel) => src(rel.startsWith("scripts/") ? rel.slice("scripts/".length) : `../${rel}`);
+    const unread = [...entry].filter((rel) => !entrySrc(rel));
+    const cwdOffenders = [...entry].filter((rel) => cwdHit(entrySrc(rel)));
+    assert(`CWD — no hook-entry script (${entry.size}: the anchored commands, hooks/, this organ's callees) finds the repo through the working directory`,
+      entry.size >= 10 && entry.has("hooks/afferent-post.mjs") && entry.has("scripts/rails.mjs") && unread.length === 0 && cwdOffenders.length === 0,
+      `unreadable ${JSON.stringify(unread)} · offenders ${JSON.stringify(cwdOffenders)}`);
     const st = cmds("Stop");
     // THE CLAIMS GATE JOINED THIS ANCHOR (1 Sep 2026, THE BLUEPRINT rung 0.1+0.2) and it does
     // NOT ride the dispatcher — deliberately, for the same reason afferent-post never did.
@@ -391,8 +413,8 @@ function selftest() {
     // gate. The list stays EXACT and ordered — this assertion's job is to refuse the five
     // per-callee commands ever coming back, and it still does (§10-D rule 6: a gate may only
     // get stricter, so the gate's own presence is now pinned here too).
-    assert("WIRING — Stop = exactly [afferent-post, turn_hook stop, claims gate] (5 callees → 1 dispatcher; the gate is its own process by design)",
-      st.length === 3 && st[0] === "node hooks/afferent-post.mjs" && st[1] === "node scripts/turn_hook.mjs stop" && st[2] === "node scripts/claims.mjs stop", JSON.stringify(st));
+    assert("WIRING — Stop = exactly [afferent-post, turn_hook stop, claims gate], anchored (5 callees → 1 dispatcher; the gate is its own process by design)",
+      st.length === 3 && st[0] === A("hooks/afferent-post.mjs") && st[1] === A("scripts/turn_hook.mjs", "stop") && st[2] === A("scripts/claims.mjs", "stop"), JSON.stringify(st));
 
     // ── THE ROUTE-INDEPENDENCE PROPERTY (7 Sep 2026) ─────────────────────────
     // The teaching bar's whole claim is that it reaches a teaching turn on the

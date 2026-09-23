@@ -6,11 +6,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node hooks/afferent-post.mjs"
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/afferent-post.mjs\""
           },
           {
             "type": "command",
-            "command": "node scripts/turn_hook.mjs prompt"
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/turn_hook.mjs\" prompt"
           }
         ]
       }
@@ -20,15 +20,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node hooks/afferent-post.mjs"
+            "command": "node \"$CLAUDE_PROJECT_DIR/hooks/afferent-post.mjs\""
           },
           {
             "type": "command",
-            "command": "node scripts/turn_hook.mjs stop"
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/turn_hook.mjs\" stop"
           },
           {
             "type": "command",
-            "command": "node scripts/claims.mjs stop"
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/claims.mjs\" stop"
           }
         ]
       }
@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/learnstate.mjs brief"
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/learnstate.mjs\" brief"
           }
         ]
       }
@@ -58,7 +58,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/archivist.mjs run"
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/archivist.mjs\" run"
           }
         ]
       }
@@ -69,7 +69,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/rails.mjs pretooluse"
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/rails.mjs\" pretooluse"
           }
         ]
       }

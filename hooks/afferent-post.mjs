@@ -23,7 +23,6 @@
 // WIRED BY: .claude/settings.json → hooks.UserPromptSubmit
 // ============================================================================
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 
 const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
 const ZONE = "Asia/Kolkata";
@@ -100,12 +99,15 @@ function scrub(text) {
 // weeks ago can never again tell you which task was live when it was written,
 // unless it was stamped HERE, at write time.
 // DELIBERATELY DUPLICATED from scripts/archivist.mjs currentMoment(): this file
-// imports nothing but node:fs/node:path on purpose (an import graph is a way for
+// imports nothing but node:fs on purpose (node:path left 23 Sep; an import graph is a way for
 // a capture nerve to start biting), and three small readFileSync calls are ~1 ms.
 // Every read is wrapped, a missing value is null, and nothing here can throw.
 function moment(cwd) {
   const m = { sprint_task: null, forge_step: null, forge_concept: null, readiness: null, focus_app: null, cwd };
-  const rd = (f) => { try { return JSON.parse(readFileSync(join(process.cwd(), "dressing-room", "state", f), "utf8")); } catch { return null; } };
+  // The repo root comes from THIS file's own location, never the working directory (row 252):
+  // a session that cd's into another folder still fires this hook, and a cwd-relative read then
+  // returned null for every field without a sound. A URL needs no import beyond node:fs.
+  const rd = (f) => { try { return JSON.parse(readFileSync(new URL(`../dressing-room/state/${f}`, import.meta.url), "utf8")); } catch { return null; } };
   try {
     const cur = (rd("sprint.json") || {}).progress;
     if (cur && cur.current) m.sprint_task = [cur.current.id, cur.current.task].filter(Boolean).join(" ") || null;
