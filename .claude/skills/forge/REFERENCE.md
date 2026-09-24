@@ -311,7 +311,7 @@ is not.
   *(register corrected 5 Sep 2026: "tum", never "tu/tera" — his standing preference of 30 Aug)*.
   **Deeper, never longer** — if he asks for detail, add STEPS, never more content in one message.
   *(This floor does NOT touch step 4. The Visualization Contract stands — he ruled on it himself,
-  1 Aug 2026. Text-first here, widget there; they are different steps, not competing surfaces.)*
+  1 Aug 2026. ~~Text-first here, widget there; they are different steps, not competing surfaces.~~ *(SUPERSEDED 24 Sep 2026, his word #22, forks rows 276 / 283 (3): PICTURE FIRST, then text — both at every new idea; the mechanism still gets text + a numbered trace.)*)*
   **THE TURN SHAPE + THE AXIS'S THREE BANKED MOMENTS — his approved shape (5 Sep 2026, forks ruling
   row 51; the canon critic's findings that shaped it:
   `C:\Users\nikhi\arsenal-audit-artifacts\study-interface-2026-09-05\07_CANON_CRITIC__v2-findings.md`).
@@ -337,8 +337,8 @@ is not.
   (the gate wants ≥1 Hinglish row + ≥1 interview row since the axis opened), the [T]/[N] block to
   the crash belt, his own words read back, the resume pointer — `node scripts/forge_session.mjs pointer "<the exact unanswered micro-question>"` (row 68 (b), 6 Sep 2026; the re-entry screen reads it FIRST) AND the `[T] … AGLA SAWAAL:` line you APPEND to the crash belt, both at EVERY stop (axis end or a mid-axis exit) — the two-option axis-end
   moment (walk or next — his pick; he may stop ANYWHERE and the pointer records "idea k on axis
-  x"). The judge runs ONCE per sitting at his full-time (`/full-time` step 3 runs `node scripts/gaffer_brain.mjs judge-round` first), never per axis (row 48 (3)) — EXCEPT at STEP 10, where the lock gate refuses until every done axis carries a judged jirah row: run judge-round there, then lock. The axis's sharp check is BANKED through capture, not logged as `moment check_q` — the pacer's check_q stays the step-level check, one per pass, and the numbered trace's (tum) steps are the pen in his hand, not question-moments. The
-  concept's widget is driven ONCE, after axis g, text first (row 51).
+  x"). The judge runs ONCE per sitting at his full-time (`/full-time` step 3 runs `node scripts/gaffer_brain.mjs judge-round` first), never per axis (row 48 (3)) — EXCEPT at STEP 10, where the lock gate refuses until every done axis carries a judged jirah row: run judge-round there, then lock. The axis's sharp check is BANKED through capture, not logged as `moment check_q` — the pacer's check_q stays the step-level check, one per pass, and the numbered trace's (tum) steps are the pen in his hand, not question-moments. ~~The
+  concept's widget is driven ONCE, after axis g, text first (row 51).~~ *(SUPERSEDED 24 Sep 2026, his word #22, forks rows 276 / 283 (3): PICTURE FIRST, then text — both at every new idea; the mechanism still gets text + a numbered trace.)*
 - **4 · DIKHAO.** Concrete example **+ the concept's WIDGET** (Visualization Contract):
   story hook = a business cliffhanger, not a definition · stepper only / **no autoplay**,
   ~~counter visible ("3/9")~~ → **each step labelled by its NAMED micro-step, never a count**
