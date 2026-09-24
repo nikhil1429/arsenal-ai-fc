@@ -59,7 +59,7 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
-import { studyScope, readSitting, readForge, payloadOf, classifyPrompt, unboundVerdict, GUT_BEARING_MOMENTS, bankDueAt, shellInStudySet, humanText, CANON_READ_PATH, NEVER_READ } from "./study_scope.mjs";
+import { studyScope, readSitting, readForge, payloadOf, classifyPrompt, unboundVerdict, GUT_BEARING_MOMENTS, BANKED_MOMENTS, bankDueAt, shellInStudySet, humanText, CANON_READ_PATH, NEVER_READ } from "./study_scope.mjs";
 import { countTables, namedPosition, countForm, opensTerm, hindiMarkerCount, technicalLine, intensityCheck } from "./teaching_audit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -159,6 +159,8 @@ export const RANK = Object.freeze(["D.unbound", "D.digest-first", "D.sitting-fir
   "A.too-hindi", "A.question-last", "A.gut-by-moment", "A.gut-trio", "B.moment", "A.confusion-literal", "A.position", "A.count-form", "A.codes-at-him"]);
 const rankOf = (id) => { const i = RANK.indexOf(id); return i >= 0 ? i : RANK.length + Object.keys(CHECKS).indexOf(id); };
 // B.widget's presence cases carry their own fix line (the catalogue's is the absence's add-shaped one, row 276 (1)(d))
+// forks row 305 (24 Sep 2026): the test-moment presence case's own fix line, verbatim from the ruling
+export const TEST_MOMENT_FIX = "test moment: sawaal seedha, picture nahi";
 export const WIDGET_STYLE_FIX = "widget: Lexend 400/500, max-width 34em, stepper = peeche / aage / shuru se + arrow keys, koi autoplay nahi, answer tiles nahi";
 export const MAX_FIX_LINES = 6;
 
@@ -344,11 +346,15 @@ export function turnsOf(parsed, { afterFeedback = false } = {}) {
   const fb = afterFeedback && last ? (parsed.feedbacks || []).filter((f) => f.seq > last.seq).pop() : null;
   const turn = last ? after(fb ? fb.seq : last.seq) : parsed.blocks.slice();
   const prevTurn = last && prev ? parsed.blocks.filter((b) => b.seq > prev.seq && b.seq < last.seq) : [];
+  // forks row 305 (24 Sep 2026): the turn TWO back (between the prompt before his previous one and it) — the dodge
+  // reading needs it; empty when the read tail holds no earlier prompt
+  const prev2 = P.length > 2 ? P[P.length - 3] : null;
+  const prev2Turn = prev && prev2 ? parsed.blocks.filter((b) => b.seq > prev2.seq && b.seq < prev.seq) : [];
   const before = last ? parsed.blocks.filter((b) => b.seq < last.seq) : [];
   const hookText = last ? parsed.hooks.filter((h) => h.seq > last.seq).map((h) => h.text).join("\n") : "";
   const f0 = P.length ? P[0].seq : 0, f1 = P.length > 1 ? P[1].seq : Infinity;
   const firstTurn = parsed.blocks.filter((b) => b.seq > f0 && b.seq < f1);
-  return { prompt: last ? last.text : "", prompts: P.map((p) => p.text), turn, prevTurn, before, all: parsed.blocks, firstTurn, hookText };
+  return { prompt: last ? last.text : "", prompts: P.map((p) => p.text), turn, prevTurn, prev2Turn, before, all: parsed.blocks, firstTurn, hookText };
 }
 
 // ── TOOL-CALL READERS ────────────────────────────────────────────────────────────
@@ -610,7 +616,18 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
     const reps = T.turn.filter((b) => shell(b) && VOICE_REP.test(cmdOf(b)));
     const due = bankDueAt({ cls, prevMoments });
     if (due) {
-      if (!reps.length) red("B.bank", `his message ${due} and no voice_rep ran`);
+      // forks row 305 (24 Sep 2026) — THE NON-ANSWER PATH, model-declared, never a word list: his reply to a declared
+      // sharp_check / jirah with no voice_rep is NOT B.bank when this turn RE-DECLARES the same moment kind and carries
+      // ONE question line (the bank is due on his next reply). The SECOND consecutive re-declare of that moment with no
+      // bank between is the dodge: B.bank, counted. Neither → the patch, unchanged. The turn two back is turnsOf's.
+      const dueKind = prevMoments.includes("jirah") ? "jirah" : "sharp_check";
+      const redeclared = !reps.length && moments.includes(dueKind) && qn === 1;
+      const prev2Moments = momentsOf(T.prev2Turn);
+      const prevDue = T.prompts.length > 1 ? bankDueAt({ cls: classifyPrompt(T.prompts[T.prompts.length - 2], { prevMoments: prev2Moments }), prevMoments: prev2Moments }) : null;
+      const prevKind = prev2Moments.includes("jirah") ? "jirah" : "sharp_check";
+      const dodge = redeclared && !!prevDue && prevKind === dueKind && !T.prevTurn.some((b) => shell(b) && VOICE_REP.test(cmdOf(b)));
+      if (dodge) red("B.bank", `his message ${due}, and this turn re-declared ${dueKind} a second time in a row with no bank between (the dodge, row 305)`, "count");
+      else if (!reps.length && !redeclared) red("B.bank", `his message ${due} and no voice_rep ran`);
       const hook = /latency:\s*(\d+)\s*ms/.exec(T.hookText || "");
       if (reps.length && hook) {
         const got = /--latency_ms\s+["']?(\d+)/.exec(cmdOf(reps[0]));
@@ -650,6 +667,10 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
     // check or jirah turn is a test before or after the teaching — a picture there would give the answer away.
     const pictured = T.turn.some((b) => b.kind === "tool" && /show_widget/.test(String(b.name)));
     if (forge && forge.step === 3 && moments.includes("check_q") && !pictured) red("B.widget", "a new idea was taught (check_q declared) with no picture in its turn — picture first, then text (his word #22, row 276)", "patch");
+    // forks row 305 (24 Sep 2026), his word: A TEST MOMENT CARRIES NO PICTURE — a show_widget in a turn that declares
+    // sharp_check or jirah and no check_q is a PRESENCE red (already on his screen: counted). Disjoint from the absence
+    // case above by construction (that one needs check_q, this one its absence), so neither masks the other.
+    if (pictured && !moments.includes("check_q") && moments.some((k) => BANKED_MOMENTS.includes(k))) red("B.widget", `a picture in a test moment (${moments.filter((k) => BANKED_MOMENTS.includes(k)).join(", ")} declared)`, "count", TEST_MOMENT_FIX);
     if (T.all.filter((b) => b.kind === "tool" && /show_widget/.test(String(b.name))).length > 12) red("B.widget", "more than 12 widgets in this session (~10-12 a day, at moments)", "count", WIDGET_STYLE_FIX);
     if (judges > 1) red("B.judge-once", `${judges} judge_round calls in this session`);
     const wf = widgetFindings(T.turn);
@@ -1002,6 +1023,47 @@ async function selftest() {
     JSON.stringify([invented.reds, invented.detail, noGutFlag.reds, banked.reds]));
   const lat = run("pakka - pay", [BASH("node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut knew --latency_ms 5000"), ...TURN_OK], "bank kiya · " + GOOD, { hook: "latency: 204218 ms since your last message ended", prev: SHARP });
   assert("R5 · a latency that is not the hook's number → B.latency", has(lat, "B.latency"));
+  // forks row 305 (24 Sep 2026) — THE NON-ANSWER PATH, planted both ways (his reply of 24 Sep verbatim), sharp_check and jirah
+  {
+    const COMPLAINT = "bruh directly ask me questions, why giving me this picture?", AGAIN = "phir wahi? seedha sawaal pucho bas";
+    const redeclare = (k) => [BASH(`node scripts/forge_session.mjs moment ${k}`), BASH("node scripts/forge_session.mjs pointer \"axis c merge\"")];
+    const REQ = "moment set · pointer set\n**Tokenization › axis c › pair-merge**\nSeedha sawaal: \"tea tea teen\" mein pehla merge kaunsa pair hoga, aur kyun?\npehle gut-word: pakka / shayad / pata nahi";
+    const TWOQ = REQ.replace("aur kyun?", "aur kyun? Aur doosra kaunsa?");
+    for (const [k, PREV] of [["sharp_check", SHARP], ["jirah", PREV_Q]]) {
+      const once = run(COMPLAINT, redeclare(k), REQ, { prev: PREV });
+      const twice = run(AGAIN, redeclare(k), REQ, { prev: [...PREV, U(COMPLAINT), ...redeclare(k), TXT(REQ)] });
+      const bankedBetween = run(AGAIN, redeclare(k), REQ, { prev: [...PREV, U(COMPLAINT), BASH(REP.replace("--gut knew ", "")), ...redeclare(k), TXT("bank mein gaya · axis c · judge shaam ko\n" + REQ)] });
+      const neither = run(COMPLAINT, TURN_OK, GOOD, { prev: PREV });
+      const twoQ = run(COMPLAINT, redeclare(k), TWOQ, { prev: PREV });
+      const otherKind = run(COMPLAINT, redeclare(k === "jirah" ? "sharp_check" : "jirah"), REQ, { prev: PREV });
+      const bankedNow = run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP), ...TURN_OK], "bank mein gaya · axis c · judge shaam ko · pointer set\n" + GOOD.split("\n").slice(1).join("\n"), { prev: PREV });
+      assert(`row 305 · ${k} · (a) his reply, then this turn RE-DECLARES ${k} with ONE question and no voice_rep → no B.bank (allowed once; the bank is due on his next reply)`,
+        !has(once, "B.bank") && once.cls === "answer" && once.moment === k, JSON.stringify([once.cls, once.reds, once.detail]));
+      assert(`row 305 · ${k} · (b) the SECOND consecutive re-declare with no bank between → B.bank, mouth COUNT (the dodge) — never a patch; a bank between resets it`,
+        has(twice, "B.bank") && (twice.counted || []).includes("B.bank") && !(twice.patch || []).includes("B.bank") && /dodge/.test(JSON.stringify(twice.detail)) && !has(bankedBetween, "B.bank"),
+        JSON.stringify([twice.reds, twice.patch, twice.counted, bankedBetween.reds]));
+      assert(`row 305 · ${k} · (c) neither re-declared nor banked → B.bank PATCH (as live main); a re-declare with TWO questions or of ANOTHER kind is no re-declare → PATCH`,
+        (neither.patch || []).includes("B.bank") && (twoQ.patch || []).includes("B.bank") && (otherKind.patch || []).includes("B.bank"), JSON.stringify([neither.reds, twoQ.reds, otherKind.reds]));
+      assert(`row 305 · ${k} · (e) a banked reply → no B.bank (as live main)`, !has(bankedNow, "B.bank"), JSON.stringify(bankedNow.reds));
+    }
+  }
+  // forks row 305 (24 Sep 2026), his word — A TEST MOMENT CARRIES NO PICTURE, planted both ways against the absence case
+  {
+    const TEST_TXT = "moment set · pointer set\n**Tokenization › axis c › pair-merge**\nSeedha sawaal: \"tea tea teen\" mein pehla merge kaunsa pair hoga, aur kyun?\npehle gut-word: pakka / shayad / pata nahi";
+    const PTR = BASH("node scripts/forge_session.mjs pointer \"axis c merge\"");
+    const picSharp = run("ok", [PIC, BASH("node scripts/forge_session.mjs moment sharp_check"), PTR], TEST_TXT);
+    const picJirah = run("ok", [PIC, BASH("node scripts/forge_session.mjs moment jirah"), PTR], TEST_TXT);
+    const picJirahNoTrio = run("ok", [PIC, BASH("node scripts/forge_session.mjs moment jirah"), PTR], TEST_TXT.replace("\npehle gut-word: pakka / shayad / pata nahi", ""));
+    const noPicSharp = run("ok", [BASH("node scripts/forge_session.mjs moment sharp_check"), PTR], TEST_TXT);
+    const picCheck = run("ok", TURN_OK, GOOD);
+    const noPicCheck = run("ok", [BASH("node scripts/forge_session.mjs moment check_q"), PTR], GOOD);
+    assert("row 305 · (f) show_widget + a declared sharp_check / jirah and no check_q → B.widget, mouth COUNT (presence — never a block on its own), the fix line verbatim; no picture on the same test turn → no B.widget",
+      TEST_MOMENT_FIX === "test moment: sawaal seedha, picture nahi" && has(picSharp, "B.widget") && (picSharp.counted || []).includes("B.widget") && picSharp.decision === "allow"
+      && has(picJirah, "B.widget") && (picJirah.counted || []).includes("B.widget") && !has(noPicSharp, "B.widget")
+      && picJirahNoTrio.decision === "block" && picJirahNoTrio.reason.includes(`B.widget — ${TEST_MOMENT_FIX}`), JSON.stringify([picSharp.reds, picSharp.counted, picJirah.reds, noPicSharp.reds, picJirahNoTrio.reason]));
+    assert("row 305 · (f) the same widget + check_q at step 3 → no presence red; check_q at step 3 with no widget → the ABSENCE patch (as live main) — neither case masks the other",
+      !has(picCheck, "B.widget") && has(noPicCheck, "B.widget") && (noPicCheck.patch || []).includes("B.widget"), JSON.stringify([picCheck.reds, noPicCheck.reds, noPicCheck.patch]));
+  }
   // forks row 264 (1): forge row 53b STANDS — the bank is due at the jirah and the sharp check, never per idea
   const prevOf = (k) => [BASH(`node scripts/forge_session.mjs moment ${k}`), TXT("sawaal?")];
   const replyJ = run("A", TURN_OK, GOOD, { prev: prevOf("jirah") });

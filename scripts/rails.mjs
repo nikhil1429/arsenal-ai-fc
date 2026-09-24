@@ -182,6 +182,7 @@ export function studyContext(payload = {}, { dir = undefined, env = process.env 
     return { scope, prompt: tp ? lastHumanPrompt(tp) : null };
   } catch { return null; }
 }
+export const STUDY_LEARNSTATE_LINE = "study rail: learnstate is the boot's front door — mid-lesson re-run `node scripts/learn_digest.mjs` (or `node scripts/forge_session.mjs status`)";
 export const studyRerunLine = (parts) => `study rail: re-run the study part alone → ${parts.join("; ")} ; park the rest: ek line, phir micro-question wapas`;
 /** PURE — the study rail over a payload and its context. null = no opinion. */
 export function studyRail(payload = {}, ctx = null) {
@@ -201,7 +202,9 @@ export function studyRail(payload = {}, ctx = null) {
   // forks row 297 (2): a study part chained to system work is named, so a capture or an axis call is never lost silently
   const rerun = shell ? studyRerun(cmd) : [];
   const again = rerun.length ? `\n   ${studyRerunLine(rerun)}` : "";
-  return { decision: "deny", rail: "study", why, fix, rerun, reason: `RAIL study — ${STUDY_DENY}\n   WHY: ${why}\n   FIX: ${fix}${again}` };
+  // forks row 305 (24 Sep 2026): learnstate is the front-door read before the sitting opens; mid-lesson the pointer is the digest
+  const digest = shell && /learnstate\.mjs/i.test(cmd) ? `\n   ${STUDY_LEARNSTATE_LINE}` : "";
+  return { decision: "deny", rail: "study", why, fix, rerun, reason: `RAIL study — ${STUDY_DENY}\n   WHY: ${why}\n   FIX: ${fix}${again}${digest}` };
 }
 
 // THE WHOLE DECISION — the factory's rails first (a factory deny stands whatever the lesson), then the study rail.
@@ -542,6 +545,19 @@ function selftest() {
       JSON.stringify(never.map(([t, i]) => [t, S(t, i, IN(ANSWER)).decision])));
     assert("STUDY — a tool outside the rail's matcher gets NO opinion (Read, Grep, Glob, WebSearch, TodoWrite, an MCP tool)",
       ["Read", "Grep", "Glob", "WebSearch", "TodoWrite", "mcp__organism-memory__recall"].every((t) => studyRail(P(t, {}), IN(ANSWER)) === null && S(t, {}, IN(ANSWER)).decision === "allow"));
+    // forks row 305 (24 Sep 2026) — the drift law's verbs in, the rest out; learnstate's deny names the digest; parking rides MCP note
+    const TC = (v) => S("Bash", { command: `node scripts/teaching_contract.mjs ${v}` }, IN(ANSWER)).decision;
+    assert("STUDY · DRIFT LAW (row 305) — teaching_contract list / unhit-auto <id> / flag <id> --why are ALLOWED mid-lesson; add / drop / reset-turns / selftest and the bare call are DENIED",
+      TC("list") === "allow" && TC("unhit-auto teach-12") === "allow" && TC('flag teach-12 --why "x"') === "allow"
+      && ["add teach-99 x", "drop teach-12", "reset-turns", "selftest", ""].every((v) => TC(v) === "deny"));
+    const dL = S("Bash", { command: "node scripts/learnstate.mjs nextup" }, IN(ANSWER)), dJ = S("Bash", { command: "node scripts/learnstate.mjs json" }, IN(ANSWER));
+    assert("STUDY · LEARNSTATE (row 305) — learnstate nextup / json are DENIED mid-lesson and the reason names `node scripts/learn_digest.mjs` as the re-run; state / tokenizer_play / captains_call are DENIED without that line",
+      dL.decision === "deny" && dL.reason.includes(STUDY_LEARNSTATE_LINE) && STUDY_LEARNSTATE_LINE.includes("node scripts/learn_digest.mjs") && dJ.decision === "deny" && dJ.reason.includes(STUDY_LEARNSTATE_LINE)
+      && ["node scripts/state.mjs", 'node scripts/tokenizer_play.mjs train "x"', 'node scripts/captains_call.mjs file --line "x"'].every((c) => { const d = S("Bash", { command: c }, IN(ANSWER)); return d.decision === "deny" && !d.reason.includes("learn_digest"); })
+      && !d0.reason.includes("learn_digest"), JSON.stringify(dL));
+    assert("STUDY · PARKING (row 305) — the MCP `note` tool gets NO opinion from the rail (no deny, no count)",
+      studyRail(P("mcp__organism-memory__note", { text: "park: xray later" }), IN(ANSWER)) === null
+      && (() => { const d = S("mcp__organism-memory__note", { text: "park: xray later" }, IN(ANSWER)); return d.decision === "allow" && !d.study; })());
     const cap = S("Bash", XRAY, IN(ORDERED)), capW = S("Write", { file_path: "scripts/foo.mjs" }, IN(ORDERED));
     assert("STUDY · THE 480 RULING — his LAST PROMPT ordered system work (class system) → the same xray call and a Write are ALLOWED as captain's mid-lesson engineering, flagged for the count",
       classifyPrompt(ORDERED).kind === "system" && cap.decision === "allow" && cap.study.captain === true && /captain's mid-lesson engineering/.test(cap.study.why)

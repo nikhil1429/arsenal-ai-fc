@@ -279,7 +279,10 @@ export function bankDueAt({ cls = null, prevMoments = [] } = {}) {
 // forge:R152/R153, the widget registry forge:R103, and the course track's chapter pointer learn:R35 / R136).
 // Forks row 299 (24 Sep 2026): a BARE `forge_session.mjs` (no verb) is in — its default branch only prints the usage
 // line, writes nothing — but only when nothing follows it except a 2>&1 and the end or a separator (no verb, no flag).
-export const ALLOWED_CMD = /(learn_digest\.mjs|sitting\.mjs["']?\s+(open|status|host|touch|close)|forge_session\.mjs["']?\s+(pointer|moment|crack|axis|status|step|contract|resume|boot|start|close|lockchain)|forge_session\.mjs["']?(?=[ \t]*(?:2>&1[ \t]*)?(?:$|[;&|\r\n]))|gaffer_brain\.mjs["']?\s+(capture\s+(voice_rep|axis_weld)|judge[_-]round)|teaching_contract\.mjs["']?\s+flag|judge[_-]round|deep\.mjs|rejirah\.mjs|acts\.mjs["']?\s+do\b|hippocampus\.mjs["']?\s+mark\s+doubt|capture\.mjs["']?\s+paste|heartbeat\.mjs|widget\.mjs["']?\s+(list|register)|samjhao\.mjs["']?\s+(open|plan|sweep|taught)|doubtminer\.mjs|mirror\.mjs|course\.mjs["']?\s+(at|done)\b)/i;
+// Forks row 305 (24 Sep 2026): the drift law's verbs travel together — `teaching_contract.mjs list` (prints, no save())
+// and `unhit-auto <id>` (writes only the contract's own owner file, as `flag` does) JOIN `flag`; add / drop /
+// reset-turns / selftest, a bare teaching_contract, learnstate, state, tokenizer_play and captains_call stay OUT.
+export const ALLOWED_CMD = /(learn_digest\.mjs|sitting\.mjs["']?\s+(open|status|host|touch|close)|forge_session\.mjs["']?\s+(pointer|moment|crack|axis|status|step|contract|resume|boot|start|close|lockchain)|forge_session\.mjs["']?(?=[ \t]*(?:2>&1[ \t]*)?(?:$|[;&|\r\n]))|gaffer_brain\.mjs["']?\s+(capture\s+(voice_rep|axis_weld)|judge[_-]round)|teaching_contract\.mjs["']?\s+(flag|list\b|unhit-auto\b)|judge[_-]round|deep\.mjs|rejirah\.mjs|acts\.mjs["']?\s+do\b|hippocampus\.mjs["']?\s+mark\s+doubt|capture\.mjs["']?\s+paste|heartbeat\.mjs|widget\.mjs["']?\s+(list|register)|samjhao\.mjs["']?\s+(open|plan|sweep|taught)|doubtminer\.mjs|mirror\.mjs|course\.mjs["']?\s+(at|done)\b)/i;
 // an allowed organ named in a command that ALSO commits, installs, redirects into code/state or deletes is not a study call
 export const UNSAFE_SHELL = /\bgit\s+(commit|push|add)\b|\bnpm\s|>\s*[\w./\\-]+\.(m?js|json|md)\b|Set-Content|Out-File|\brm\s/i;
 export const CANON_READ_PATH = /(learning-layer[\\/]|\.claude[\\/]skills[\\/]|docs[\\/]archive[\\/]|dressing-room[\\/]state[\\/]capsules[\\/]|(^|[\\/])capsules[\\/]|dressing-room[\\/]state[\\/]forge_sessions?\.jsonl?$)/i;
@@ -790,6 +793,15 @@ export function scopeSelfCheck() {
     rC.length === 1 && rC[0] === CAPTURE_C && rA.length === 3 && rA[0].startsWith("said=$(cat <<'EOF'") && /--said "\$said"/.test(rA[1]) && rA[2] === "node scripts/forge_session.mjs axis b done"
     && shellInStudySet(rA.join("; ")) && studyRerun(SHAPE_A).length === 0 && studyRerun("node scripts/xray.mjs report").length === 0 && studyRerun('node scripts/forge_session.mjs pointer "$(id)"').length === 0,
     JSON.stringify({ rC, rA }));
+  // forks row 305 (24 Sep 2026) — the drift law's verbs travel together; everything else named in the ruling stays out
+  check("DRIFT LAW (row 305) · ALLOW — teaching_contract list, unhit-auto <id> (with --n), flag <id> --why (still)",
+    shellInStudySet("node scripts/teaching_contract.mjs list") && shellInStudySet("node scripts/teaching_contract.mjs unhit-auto teach-12") && shellInStudySet("node scripts/teaching_contract.mjs unhit-auto teach-12 --n 2")
+    && shellInStudySet('node scripts/teaching_contract.mjs flag teach-12 --why "x"') && shellInStudySet("node scripts/teaching_contract.mjs list 2>&1 | head -20"));
+  check("DRIFT LAW (row 305) · DENY — add / drop / reset-turns / selftest, a verb that only STARTS with list, a bare teaching_contract (SHAPE_C still out), learnstate nextup / json, state, tokenizer_play (forge:R165), captains_call, list redirected to a file",
+    !shellInStudySet('node scripts/teaching_contract.mjs add teach-99 "x"') && !shellInStudySet("node scripts/teaching_contract.mjs drop teach-12") && !shellInStudySet("node scripts/teaching_contract.mjs reset-turns")
+    && !shellInStudySet("node scripts/teaching_contract.mjs selftest") && !shellInStudySet("node scripts/teaching_contract.mjs listx") && !shellInStudySet("node scripts/teaching_contract.mjs") && !shellInStudySet(SHAPE_C)
+    && !shellInStudySet("node scripts/learnstate.mjs nextup") && !shellInStudySet("node scripts/learnstate.mjs json") && !shellInStudySet("node scripts/state.mjs")
+    && !shellInStudySet("node scripts/tokenizer_play.mjs train \"x\"") && !shellInStudySet('node scripts/captains_call.mjs file --line "x"') && !shellInStudySet("node scripts/teaching_contract.mjs list > x.json"));
   check("CLOSING · /full-time's command tag, \"post match\" and \"full time\" are a CLOSING (G3 and B.tools stand down for the close organs, row 267); a study answer is not",
     classifyPrompt("<command-message>full-time</command-message>\n<command-name>/full-time</command-name>").closing === true && classifyPrompt("post match").closing === true
     && classifyPrompt("post-match karo").closing === true && classifyPrompt("ok full time").closing === true && classifyPrompt("pakka - pay kyunki repeat").closing === false);
