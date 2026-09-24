@@ -465,7 +465,24 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
   const lastText = [...turnBlocks].reverse().findIndex((b) => b.kind === "text");
   const lastTextIdx = lastText < 0 ? -1 : turnBlocks.length - 1 - lastText;
   const textAbove = turnBlocks.some((b, i) => b.kind === "text" && turnBlocks.slice(i + 1).some((x) => x.kind === "tool") && !(i === lastTextIdx && String(b.text).trim() === finalText));
-  if (textAbove) { red("A.text-last", "a text block sits above a tool call in this turn"); mechanical.add("A.text-last"); }
+  // forks row 275 (2): the MOUTH is decided by what stands AFTER the last tool call. PATCH iff the lesson vanished —
+  // the turn does not end on text, or the text after the last tool is shorter in words than the text above the tools
+  // (the 22 Sep shape). COUNT when the lesson stands on his screen and only a line above a tool was lost (5dc8436e
+  // turn 3, 24 Sep: a patch there re-sent a sentence he had already read — the double his word #20 banned).
+  // The payload's last_assistant_message is the reply on his screen: when the transcript has not caught up with it,
+  // it still stands after the last tool.
+  if (textAbove) {
+    const lastToolIdx = turnBlocks.map((b) => b.kind).lastIndexOf("tool");
+    const wordsIn = (t) => String(t).split(/\s+/).filter(Boolean).length;
+    const aboveTexts = turnBlocks.slice(0, lastToolIdx).filter((b) => b.kind === "text").map((b) => String(b.text).trim());
+    const postTexts = turnBlocks.slice(lastToolIdx + 1).filter((b) => b.kind === "text").map((b) => String(b.text).trim());
+    if (finalText && !postTexts.includes(finalText) && !aboveTexts.includes(finalText)) postTexts.push(finalText);
+    const postWords = postTexts.reduce((n, t) => n + wordsIn(t), 0), aboveWords = aboveTexts.reduce((n, t) => n + wordsIn(t), 0);
+    const vanished = !postTexts.length || postWords < aboveWords;
+    red("A.text-last", vanished ? `a text block sits above a tool call and the lesson did not stand after the last tool (${postWords} words after, ${aboveWords} above)`
+      : `a text block sits above a tool call; the lesson stands after the last tool (${postWords} words after, ${aboveWords} above) — counted, never patched (row 275)`, vanished ? "patch" : "count");
+    mechanical.add("A.text-last");
+  }
   const tf = toolFindings(T.turn, { step: forge && Number.isInteger(forge.step) ? forge.step : null });
   if (T.turn.some((b) => b.kind === "tool" && b.name === "AskUserQuestion")) red("B.askuser", "AskUserQuestion was called");
   if (tf.outside.length) red("B.tools", tf.outside.slice(0, 3).join(" · "));
@@ -939,8 +956,17 @@ async function selftest() {
   const quoted = run("ok", TURN_OK, GOOD.replace("Dukaan mein sabse", "Maine pehle \"akshar\" aur \"shabd\" likha tha, galat tha — dukaan mein sabse"));
   assert("R6 · the words QUOTED in an apology are exempt (a33327c2 t3); \"jaise shabd\" is exempt", !has(quoted, "A.too-hindi") && tooHindiHits("Hindi words jaise shabd aur akshar mat use karo").length === 0, JSON.stringify(quoted.reds));
   // 8 — the Desktop trap (R9) and the ran-line
-  const above = run("ok", [TXT("Ek minute, pointer set kar raha hoon"), ...TURN_OK], GOOD);
-  assert("R9 · a text block ABOVE a tool call → A.text-last BLOCKS (H8: 14 of 35 Desktop turns)", above.decision === "block" && has(above, "A.text-last"));
+  const above = run("ok", [TXT(GOOD), ...TURN_OK], "pointer set");
+  assert("R9 · the lesson ABOVE the tools and a short tail after them → A.text-last BLOCKS as a patch (H8: 14 of 35 Desktop turns; the 22 Sep shape)", above.decision === "block" && has(above, "A.text-last") && (above.patch || []).includes("A.text-last"), JSON.stringify([above.reds, above.patch]));
+  // forks row 275 (2), planted both ways: a narration line above a tool while the whole lesson stands after the last
+  // tool (5dc8436e turn 3, 24 Sep) is COUNTED — detection unchanged, never a block, so no patch re-sends what he read
+  const narration = run("ok", [TXT("Ek minute, pointer set kar raha hoon"), ...TURN_OK], GOOD);
+  assert("row 275 · a narration above a tool with the lesson standing after the last tool → A.text-last is logged and COUNTED, never patched",
+    narration.decision === "allow" && has(narration, "A.text-last") && !(narration.patch || []).includes("A.text-last") && (narration.counted || []).includes("A.text-last"), JSON.stringify([narration.decision, narration.reds, narration.patch, narration.counted]));
+  const endsOnTool = run("ok", [TXT("Ek minute, pointer set kar raha hoon"), TXT(GOOD), ...TURN_OK], null, { payload: { last_assistant_message: "" } });
+  const lagging = run("ok", [TXT("Ek minute, pointer set kar raha hoon"), ...TURN_OK], null, { payload: { last_assistant_message: GOOD } });
+  assert("row 275 · a turn that does not end on text → PATCH; a reply the transcript has not caught up with (payload only) still stands after the last tool → COUNT",
+    (endsOnTool.patch || []).includes("A.text-last") && has(lagging, "A.text-last") && !(lagging.patch || []).includes("A.text-last"), JSON.stringify([endsOnTool.reds, endsOnTool.patch, lagging.reds, lagging.patch]));
   assert("R9 · tools first, the whole text last → passes (the clean turn)", !has(good, "A.text-last"));
   const noRan = run("ok", TURN_OK, GOOD.replace("pointer set · check_q declared\n", ""));
   assert("v2 §3 (a) · tools ran and the first line names none → A.ran-line", has(noRan, "A.ran-line"));
@@ -1026,7 +1052,8 @@ async function selftest() {
   const teachFirst = run("ok", TURN_OK, GOOD, { before: [U("learn"), BASH("node scripts/learn_digest.mjs"), TXT("Chalo shuru: tokenization kya hai, pata hai?"), BASH("node scripts/sitting.mjs open")], logRows: [] });
   assert("D · teaching text before the sitting opened → D.sitting-first", has(teachFirst, "D.sitting-first"));
   // 13 — the reason: ranked, capped, names the ids
-  const many = run("pakka - x", [TXT("upar"), TOOL("Grep", { pattern: "x", path: "C:/r/scripts" })], "## a\n---\nTu bata? Aur? Kyun? `embedding` `byte` 🚀🚀🚀", { prev: SHARP });
+  // the text above the tool outweighs the tail after it, so A.text-last is a patch here (row 275 (2))
+  const many = run("pakka - x", [TXT("upar poora jawab tha jo tool ke upar likha gaya aur uski Desktop screen se gayab ho gaya"), TOOL("Grep", { pattern: "x", path: "C:/r/scripts" })], "## a\n---\nTu bata? Aur? Kyun? `embedding` `byte` 🚀🚀🚀", { prev: SHARP });
   const shown = (many.reason || "").split("\n").filter((l) => /^\s+· /.test(l));
   assert("REASON · the PATCH lines are the ABSENCE reds only, in drift-rank order (text-last, then bank); the PRESENCE reds ride ONE 'agle turn se' line; ≤ 6 lines of fixes",
     many.decision === "block" && shown.length >= 2 && shown.length <= MAX_FIX_LINES && /A\.text-last/.test(shown[0]) && /B\.bank/.test(shown[1])
@@ -1085,12 +1112,13 @@ async function selftest() {
   const dir = mkdtempSync(join(tmpdir(), "teaching_gate-"));
   try {
     writeFileSync(join(dir, "sitting.json"), JSON.stringify(SIT)); writeFileSync(join(dir, "forge_session.json"), JSON.stringify(FORGE));
-    const tx = join(dir, "t.jsonl"); writeFileSync(tx, [...BOOT, U("ok"), TXT("upar ka text"), ...TURN_OK, TXT(GOOD)].join("\n"));
+    // the lesson above the tools, a two-word tail after them: the 22 Sep shape, a patch (row 275 (2))
+    const tx = join(dir, "t.jsonl"); writeFileSync(tx, [...BOOT, U("ok"), TXT(GOOD), ...TURN_OK, TXT("pointer set")].join("\n"));
     // the surface is pinned: run from a Desktop session, the inherited entrypoint would make the unbound nudge fire here
     const env = { ...process.env, ARSENAL_GATE_STATE_DIR: dir, ARSENAL_ORGAN: "", CLAUDE_CODE_ENTRYPOINT: "cli" };
     const archTx = join(dir, "arch.jsonl"); writeFileSync(archTx, U("architect"));
     const t0 = Date.now();
-    const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "stop"], { input: JSON.stringify({ session_id: HOST, transcript_path: tx, last_assistant_message: GOOD, hook_event_name: "Stop" }), env, encoding: "utf8", timeout: 20000 });
+    const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "stop"], { input: JSON.stringify({ session_id: HOST, transcript_path: tx, last_assistant_message: "pointer set", hook_event_name: "Stop" }), env, encoding: "utf8", timeout: 20000 });
     const ms = Date.now() - t0;
     let out = null; try { out = JSON.parse(r.stdout); } catch { /* none */ }
     const log = readFileSync(GATE_LOG(dir), "utf8").trim().split("\n").map((l) => JSON.parse(l));
