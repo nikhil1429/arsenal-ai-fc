@@ -293,7 +293,45 @@ const CMD_SUBST = /\$\(|`|<\(/;
 const NODE_HEAD = /^\s*(?:&\s*)?(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:"[^"]*[\\/])?node(?:\.exe)?"?\s+/i;
 const CD_ONLY = /^\s*(?:cd|Set-Location|pushd)(?:\s+(?:"[^"]*"|'[^']*'|[^\s"'&|;]+))?\s*$/i;
 const PIPE_FILTER = /^\s*(?:head|tail|grep|rg|sort|uniq|wc|cut|tr|nl|findstr|Select-Object|Select-String|Out-String|Measure-Object)\b[^/\\]*$/i;
-/** The command split on its unquoted separators: [{ text, piped }], or null when it carries a command substitution. */
+// G3 v2 (24 Sep 2026, forks row 297): NEUTRAL SEGMENTS — never a reason to refuse, never a reason to allow. (a) a
+// read-only filter on an in-set organ's pipe that names no file and writes nothing; (b) a quoted-string or
+// QUOTED-delimiter heredoc assignment whose every later use sits in an in-set organ's argument list. Any segment
+// carrying an unquoted output redirect other than a descriptor dup (2>&1) is outside, neutral or not.
+//   VAR=$(cat <<'EOF' … EOF) · VAR='…' · VAR="…" (no $( ${ or backtick) · PowerShell $VAR = @' … '@ · $VAR = '…'
+const ASSIGN_FORMS = [
+  { re: /([A-Za-z_][A-Za-z0-9_]*)=\$\([ \t]*cat[ \t]*<<[ \t]*(['"])([A-Za-z_][A-Za-z0-9_]*)\2[ \t]*\r?\n/y, body: "heredoc" },
+  { re: /\$([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*@'[ \t]*\r?\n/y, body: "here-string" },
+  { re: /([A-Za-z_][A-Za-z0-9_]*)='[^']*'/y },
+  { re: /([A-Za-z_][A-Za-z0-9_]*)="(?:[^"\\`$]|\\[^`$]|\$(?![({]))*"/y },
+  { re: /\$([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*'(?:[^']|'')*'/y },
+];
+const AFTER_ASSIGN = /[ \t]*(?:$|;|&&|\|\||\r?\n)/y;
+/** A neutral-shaped assignment opening at c[i]: { name, end } — or null (then the ordinary scan judges it). */
+function assignAt(c, i) {
+  for (const f of ASSIGN_FORMS) {
+    f.re.lastIndex = i;
+    const m = f.re.exec(c);
+    if (!m) continue;
+    let end = f.re.lastIndex;
+    if (f.body) {
+      const delim = f.body === "heredoc" ? m[3] : null;
+      let p = end, found = false;
+      for (;;) {
+        const nl = c.indexOf("\n", p), line = c.slice(p, nl < 0 ? c.length : nl).replace(/\r$/, "");
+        if (delim ? line === delim : line.startsWith("'@")) { end = delim ? (nl < 0 ? c.length : nl) : p + 2; found = true; break; }
+        if (nl < 0) break;
+        p = nl + 1;
+      }
+      if (!found) return null;
+      if (delim) { const close = /\s*\)/y; close.lastIndex = end; if (!close.exec(c)) return null; end = close.lastIndex; }
+    }
+    AFTER_ASSIGN.lastIndex = end;
+    return AFTER_ASSIGN.test(c) ? { name: m[1], end } : null;
+  }
+  return null;
+}
+/** The command split on its unquoted separators: [{ text, piped, assign? }], or null when it carries a command
+ *  substitution outside a neutral-shaped assignment (row 297 (1)(b)). */
 export function shellSegments(cmd) {
   const c = String(cmd || "");
   const segs = []; let cur = "", q = null, piped = false;
@@ -306,6 +344,7 @@ export function shellSegments(cmd) {
       if (ch === "`" || (ch === "$" && c[i + 1] === "(")) return null;
       cur += ch; if (ch === '"') q = null; continue;
     }
+    if (!cur.trim()) { const a = assignAt(c, i); if (a) { segs.push({ text: c.slice(i, a.end), piped, assign: a.name }); cur = ""; i = a.end - 1; continue; } }
     if (ch === "'" || ch === '"') { q = ch; cur += ch; continue; }
     if (CMD_SUBST.test(c.slice(i, i + 2))) return null;
     if (ch === "\n" || ch === ";") { push(false); continue; }
@@ -327,16 +366,196 @@ function segmentInStudySet({ text, piped }) {
   if (!piped && CD_ONLY.test(text)) return true;
   return piped && PIPE_FILTER.test(text);
 }
+/** An unquoted output redirect (>, >>, &>, 2>file) — a descriptor dup (2>&1) or a discard (2>/dev/null, 2>$null, >NUL) is not one. */
+function outRedirect(text) {
+  let q = null;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === q) q = null; else if (q === '"' && ch === "\\") i++; continue; }
+    if (ch === "'" || ch === '"') { q = ch; continue; }
+    if (ch === ">" && !/^(?:&\d\b|>?\s*(?:\/dev\/null|\$null|NUL)(?![\w./\\-]))/i.test(text.slice(i + 1))) return true;
+  }
+  return false;
+}
+// the STRICT organ for the neutral rules: `node <script>` with the script FIRST (no -e / -p / flag, no env prefix), its
+// basename opening an ALLOWED_CMD match — returns where the argument list starts, or -1
+const ORGAN_HEAD = /^\s*(?:&\s*)?(?:"[^"]*[\\/])?node(?:\.exe)?"?\s+(?:"([^"]*)"|'([^']*)'|([^\s"'-][^\s"']*))(?=\s|$)/i;
+const ALLOWED_AT_START = new RegExp(`^(?:${ALLOWED_CMD.source})`, "i");
+function organArgsAt(text) {
+  if (UNSAFE_SHELL.test(text) || outRedirect(text)) return -1;
+  const m = ORGAN_HEAD.exec(text);
+  if (!m) return -1;
+  const base = (m[1] ?? m[2] ?? m[3]).replace(/^.*[\\/]/, "");
+  if (!/\.mjs$/i.test(base) || /\$/.test(m[1] ?? m[2] ?? m[3])) return -1;
+  return ALLOWED_AT_START.test(base + text.slice(m[0].length)) ? m[0].length : -1;
+}
+const inSetOrgan = (text) => organArgsAt(text) >= 0;
+/** A filter's words, quote-aware ([{ w }]) — null on anything a read-only stdin filter never carries unquoted
+ *  ($ * ? [ ] { } ~ ! < > ; \ ` ( ) & | #) or a double-quoted expansion. */
+function filterWords(text) {
+  const out = []; let cur = "", has = false, q = null;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q === "'") { if (ch === "'") q = null; else cur += ch; continue; }
+    if (q === '"') { if (ch === '"') q = null; else if (ch === "$" || ch === "`") return null; else if (ch === "\\" && i + 1 < text.length) cur += text[++i]; else cur += ch; continue; }
+    if (ch === "'" || ch === '"') { q = ch; has = true; continue; }
+    if (/\s/.test(ch)) { if (has) out.push(cur); cur = ""; has = false; continue; }
+    if (!/[\w.,:+=%@^/-]/.test(ch)) return null;
+    cur += ch; has = true;
+  }
+  if (q) return null;
+  if (has) out.push(cur);
+  return out;
+}
+/** Short/long options by whitelist → { operands, opts: [[flag, value?]] }, or null on an option outside it. */
+function parseOpts(args, { flags = "", valued = "", longFlags = [], longValued = [], numeric = false }) {
+  const operands = [], opts = [];
+  for (let i = 0, dd = false; i < args.length; i++) {
+    const a = args[i];
+    if (dd || a === "-" || !a.startsWith("-")) { operands.push(a); continue; }
+    if (a === "--") { dd = true; continue; }
+    if (numeric && /^-\d+$/.test(a)) { opts.push(["n", a.slice(1)]); continue; }
+    if (a.startsWith("--")) {
+      const eq = a.indexOf("="), k = eq < 0 ? a.slice(2) : a.slice(2, eq);
+      if (eq < 0 && longFlags.includes(k)) { opts.push([k]); continue; }
+      if (!longValued.includes(k)) return null;
+      if (eq >= 0) opts.push([k, a.slice(eq + 1)]); else if (i + 1 < args.length) opts.push([k, args[++i]]); else return null;
+      continue;
+    }
+    for (let j = 1; j < a.length; j++) {
+      const f = a[j];
+      if (flags.includes(f)) { opts.push([f]); continue; }
+      if (!valued.includes(f)) return null;
+      const v = a.slice(j + 1);
+      if (v) opts.push([f, v]); else if (i + 1 < args.length) opts.push([f, args[++i]]); else return null;
+      break;
+    }
+  }
+  return { operands, opts };
+}
+/** A sed script that only prints: [addr[,addr]][!] p P = q Q {…} and s/…/…/[gpiI0-9] — never w W e r R or any other. */
+function sedPrintsOnly(s) {
+  let i = 0, depth = 0;
+  const n = s.length, digits = () => { const st = i; while (i < n && /\d/.test(s[i])) i++; return i > st; };
+  const regex = () => { i++; while (i < n && s[i] !== "/") { if (s[i] === "\\") i++; i++; } if (i >= n) return false; i++; if (s[i] === "I" || s[i] === "M") i++; return true; };
+  const addr = () => {
+    if (/\d/.test(s[i] || "")) { digits(); if (s[i] === "~") { i++; if (!digits()) return false; } return true; }
+    if (s[i] === "$") { i++; return true; }
+    if (s[i] === "/") return regex();
+    return null;
+  };
+  for (;;) {
+    while (i < n && /[\s;]/.test(s[i])) i++;
+    if (i >= n) return depth === 0;
+    if (s[i] === "}") { if (!depth) return false; depth--; i++; continue; }
+    const a = addr();
+    if (a === false) return false;
+    if (a && s[i] === ",") { i++; if (s[i] === "+" || s[i] === "~") { i++; if (!digits()) return false; } else if (!addr()) return false; }
+    while (s[i] === " ") i++;
+    if (s[i] === "!") i++;
+    while (s[i] === " ") i++;
+    const cmd = s[i++];
+    if (cmd === "{") { depth++; continue; }
+    if (cmd === "p" || cmd === "P" || cmd === "=") continue;
+    if (cmd === "q" || cmd === "Q") { digits(); continue; }
+    if (cmd === "s") {
+      const d = s[i++];
+      if (!d || /[\s\\]/.test(d)) return false;
+      for (let k = 0; k < 2; k++) { while (i < n && s[i] !== d) { if (s[i] === "\\") i++; i++; } if (i >= n) return false; i++; }
+      while (i < n && /[gpiI0-9]/.test(s[i])) i++;
+      continue;
+    }
+    return false;
+  }
+}
+const COUNT = /^[+-]?\d+$/;
+/** (a) THE NEUTRAL FILTERS, and only these — each reads stdin only (a FILE operand, -i, w/e, -o, -f, -r → not neutral). */
+export const NEUTRAL_FILTERS = Object.freeze({
+  sed: (a) => {
+    const p = parseOpts(a, { flags: "nEr", valued: "e", longFlags: ["quiet", "silent", "regexp-extended"] });
+    if (!p || !p.opts.some(([f]) => f === "n" || f === "quiet" || f === "silent")) return false;
+    const scripts = p.opts.filter(([f]) => f === "e").map(([, v]) => v);
+    if (!scripts.length && p.operands.length) scripts.push(p.operands.shift());
+    return scripts.length > 0 && !p.operands.length && scripts.every(sedPrintsOnly);
+  },
+  head: (a) => { const p = parseOpts(a, { flags: "qv", valued: "nc", longValued: ["lines", "bytes"], numeric: true }); return !!p && !p.operands.length && p.opts.every(([, v]) => v === undefined || /^-?\d+$/.test(v)); },
+  tail: (a) => { const p = parseOpts(a, { flags: "qv", valued: "nc", longValued: ["lines", "bytes"], numeric: true }); return !!p && !p.operands.length && p.opts.every(([, v]) => v === undefined || COUNT.test(v)); },
+  grep: (a) => {
+    const p = parseOpts(a, { flags: "ivncwxoEFPhHsq", valued: "emABC" });
+    if (!p || p.opts.some(([f, v]) => "mABC".includes(f) && !/^\d+$/.test(v))) return false;
+    return p.operands.length === (p.opts.some(([f]) => f === "e") ? 0 : 1);
+  },
+  cut: (a) => { const p = parseOpts(a, { flags: "sn", valued: "dfcb" }); return !!p && !p.operands.length; },
+  wc: (a) => { const p = parseOpts(a, { flags: "lwcmL" }); return !!p && !p.operands.length; },
+  sort: (a) => { const p = parseOpts(a, { flags: "nrufbhVgMsdi", valued: "kt" }); return !!p && !p.operands.length; },
+  uniq: (a) => { const p = parseOpts(a, { flags: "cdui", valued: "fsw" }); return !!p && !p.operands.length && p.opts.every(([, v]) => v === undefined || /^\d+$/.test(v)); },
+  tr: (a) => { const p = parseOpts(a, { flags: "dscC" }); return !!p && p.operands.length >= 1 && p.operands.length <= 2; },
+  "select-object": (a) => a.length > 0 && a.length % 2 === 0 && a.every((w, i) => (i % 2 ? /^\d+(,\d+)*$/.test(w) : /^-(first|last|skip|index)$/i.test(w))),
+  "select-string": (a) => a.length === 2 && /^-pattern$/i.test(a[0]),
+});
+function neutralFilter(text) {
+  const w = filterWords(text);
+  if (!w || !w.length) return false;
+  const key = /^select-/i.test(w[0]) ? w[0].toLowerCase() : w[0];   // PowerShell names are case-blind, the unix ones are not
+  return Object.hasOwn(NEUTRAL_FILTERS, key) && NEUTRAL_FILTERS[key](w.slice(1));
+}
+/** (b) every later use of the assignment's $VAR sits in an in-set organ's ARGUMENT list (never its script path). */
+function assignNeutral(segs, k) {
+  const use = new RegExp(`\\$\\{?(?:[A-Za-z]+:)?${segs[k].assign}(?![A-Za-z0-9_])`, "gi");
+  for (let j = k + 1; j < segs.length; j++) {
+    const hits = [...segs[j].text.matchAll(use)];
+    if (!hits.length) continue;
+    const at = segs[j].assign ? -1 : organArgsAt(segs[j].text);
+    if (at < 0 || hits.some((h) => h.index < at)) return false;
+  }
+  return true;
+}
+/** Each segment's kind: "in" (G3's rule) · "neutral" (row 297 (1)) · "out". */
+function segmentKinds(segs) {
+  const kinds = [];
+  let head = -1;
+  segs.forEach((s, k) => {
+    if (!s.piped) head = k;
+    if (s.assign) { kinds.push(!s.piped && assignNeutral(segs, k) ? "neutral" : "out"); return; }
+    if (outRedirect(s.text)) { kinds.push("out"); return; }
+    if (segmentInStudySet(s)) { kinds.push("in"); return; }
+    const onOrgan = s.piped && head >= 0 && inSetOrgan(segs[head].text) && kinds.slice(head, k).every((x) => x !== "out");
+    kinds.push(onOrgan && neutralFilter(s.text) ? "neutral" : "out");
+  });
+  return kinds;
+}
 /** Is this shell command inside the study set? Every segment an owner CLI of the set or a read of the canon (never code,
- *  never memory); a bare cd or a path-less pipe filter rides along; one segment of system work takes the whole call out. */
+ *  never memory) or NEUTRAL; a bare cd or a path-less pipe filter rides along; one segment of system work takes the whole
+ *  call out; neutral segments alone (or with only a cd) are no study call. */
 export function shellInStudySet(cmd) {
   const c = String(cmd || "");
   // the pre-G3 whole-string test still has to pass — so this can only ever refuse MORE (a gate only gets stricter)
   if (!((ALLOWED_CMD.test(c) && !UNSAFE_SHELL.test(c)) || (SHELL_CANON_READ.test(c) && CANON_READ_PATH.test(c) && !NEVER_READ.test(c)))) return false;
   const segs = shellSegments(c);
   if (!segs || !segs.length) return false;
-  if (segs.every((s) => !s.piped && CD_ONLY.test(s.text))) return false;   // a cd alone is no study call (a filter is never first)
-  return segs.every(segmentInStudySet);
+  const kinds = segmentKinds(segs);
+  return kinds.every((k) => k !== "out") && segs.some((s, k) => kinds[k] === "in" && (s.piped || !CD_ONLY.test(s.text)));
+}
+/** THE CHAIN RULE (row 297 (2)): a REFUSED command's study part to re-run alone — its neutral assignments and each
+ *  in-set organ with the in-set / neutral filters of its pipe — so a capture or an axis call is never lost silently.
+ *  [] when the command is in the set, carries a command substitution, or has no in-set organ. */
+export function studyRerun(cmd) {
+  const c = String(cmd || "");
+  if (shellInStudySet(c)) return [];
+  const segs = shellSegments(c);
+  if (!segs) return [];
+  const kinds = segmentKinds(segs), parts = [];
+  let organs = 0;
+  for (let k = 0; k < segs.length; k++) {
+    if (segs[k].piped) continue;
+    if (segs[k].assign) { if (kinds[k] === "neutral") parts.push(segs[k].text.trim()); continue; }
+    if (!inSetOrgan(segs[k].text)) continue;
+    const pipe = [segs[k].text.trim()];
+    for (let j = k + 1; j < segs.length && segs[j].piped && kinds[j] !== "out"; j++) pipe.push(segs[j].text.trim());
+    parts.push(pipe.join(" | ")); organs++;
+  }
+  if (!organs) return [];
+  return shellInStudySet(parts.join("; ")) ? parts : parts.filter((p) => shellInStudySet(p));
 }
 
 // ── HIS LAST PROMPT, read from the transcript's TAIL — for a hook that has only the payload (rails, G3) ──
@@ -524,6 +743,41 @@ export function scopeSelfCheck() {
     && !shellInStudySet("node scripts/forge_session.mjs pointer x\nnode scripts/xray.mjs") && !shellInStudySet('node scripts/forge_session.mjs pointer "$(node scripts/xray.mjs)"')
     && !shellInStudySet("node scripts/forge_session.mjs pointer `id`") && !shellInStudySet("node scripts/forge_session.mjs status | tee scripts/x.mjs")
     && !shellInStudySet("cat learning-layer/a.md | grep x scripts/a.mjs") && !shellInStudySet("echo forge_session.mjs pointer x") && !shellInStudySet("cd C:/x"));
+  // G3 v2 · THE NEUTRAL SHAPES (forks row 297) — his lesson shapes of 22–23 Sep verbatim, planted both ways, forever (L9)
+  const SHAPE_A = "said=$(cat <<'EOF'\nmujhe lagta hai subword beech ka rasta hai; word-level | vocab phat jaata hai\nEOF\n)\n"
+    + 'node scripts/gaffer_brain.mjs capture voice_rep tokenization:b --axis b --gut knew --asked "Why do LLMs use subword tokenization instead of word-level or character-level?" --said "$said" --surface code --latency_ms 434963 --probe reconstruct --register interview && node scripts/forge_session.mjs axis b done';
+  const SHAPE_A_PS = "$said = @'\nmujhe lagta hai; subword | beech ka\n'@\nnode scripts/gaffer_brain.mjs capture voice_rep tokenization:b --axis b --gut knew --said $said --surface code; node scripts/forge_session.mjs axis b done";
+  const SHAPE_B = "node scripts/forge_session.mjs axis c now && node scripts/learn_digest.mjs | sed -n '/^POSITION/,/^THE TRAPS/p' | tail -n +2 | head -20";
+  const SHAPE_B2 = 'cd "C:/Users/nikhi/GitHub/arsenal-ai-fc" && node scripts/forge_session.mjs 2>&1 | head -30';
+  const CAPTURE_C = 'node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut guessed --asked "ek round mein factory poore corpus ke saare adjacent pairs ek saath gin ke sirf sabse common ek pair jodti hai, ya ek-ek letter utha ke uske pairs ginti hai?" --said "pata nahi - i have no clue. i am confused about the jargons you are using, what do you mean by factory here?" --probe reconstruct --surface code';
+  const SHAPE_C = `${CAPTURE_C}; node scripts/teaching_contract.mjs 2>&1 | Select-Object -First 40`;
+  check("NEUTRAL (row 297) · ALLOW — shape A (his Bolo through a quoted heredoc, CRLF too) and its PowerShell here-string form · shape B (an organ piped into sed -n / tail / head) · status 2>&1 | head · Select-String -Pattern · quoted assignments read only by organs",
+    shellInStudySet(SHAPE_A) && shellInStudySet(SHAPE_A.replace(/\n/g, "\r\n")) && shellInStudySet(SHAPE_A_PS) && shellInStudySet(SHAPE_B)
+    && shellInStudySet("node scripts/forge_session.mjs status 2>&1 | head -30") && shellInStudySet("node scripts/learn_digest.mjs | Select-String -Pattern POSITION")
+    && shellInStudySet("said='x y'; node scripts/forge_session.mjs pointer \"$said\"") && shellInStudySet('said="x y"; node scripts/forge_session.mjs pointer "$said"')
+    && shellInStudySet("$said = 'it''s'; node scripts/forge_session.mjs pointer $said") && shellInStudySet("node scripts/learn_digest.mjs | sed -n 's/a/b/p' | grep -n 'THE TRAPS/x'"));
+  check("NEUTRAL · the second shape-B command (`forge_session.mjs` with NO subcommand) is refused by the pre-G3 whole-string test, not by a segment — with `status` it passes (a gate only gets stricter than main)",
+    !shellInStudySet(SHAPE_B2) && !(ALLOWED_CMD.test(SHAPE_B2)) && shellInStudySet(SHAPE_B2.replace("forge_session.mjs 2>&1", "forge_session.mjs status 2>&1")));
+  check("NEUTRAL · DENY — shape C (a capture chained to an out-of-set read) · sed -i · an organ redirected to a file (a discard to /dev/null or $null is no file) · tee · a filter with a FILE operand (alone, chained, piped) · sed w/e · sed -n with a file · a filter on a non-organ",
+    !shellInStudySet(SHAPE_C) && !shellInStudySet("node scripts/learn_digest.mjs | sed -i s/a/b/") && !shellInStudySet("node scripts/forge_session.mjs status > out.txt")
+    && !shellInStudySet("node scripts/learn_digest.mjs | tee x.txt") && !shellInStudySet("grep -n x scripts/rails.mjs") && !shellInStudySet("node scripts/forge_session.mjs status; grep -n x scripts/rails.mjs")
+    && !shellInStudySet("node scripts/forge_session.mjs status | grep -n x scripts/rails.mjs") && !shellInStudySet("node scripts/learn_digest.mjs | sed -n '1,5w out.txt'")
+    && !shellInStudySet("node scripts/learn_digest.mjs | sed -n '1e id'") && !shellInStudySet("node scripts/learn_digest.mjs | sed -n 1,5p notes.md")
+    && !shellInStudySet("node scripts/forge_session.mjs status | head > x.txt") && !shellInStudySet("node scripts/xray.mjs report | sed -n '1,5p'")
+    && !shellInStudySet("node scripts/forge_session.mjs status 2>/dev/nullx") && !shellInStudySet("node scripts/forge_session.mjs status >> NUL.txt")
+    && shellInStudySet("node scripts/forge_session.mjs status 2>/dev/null") && shellInStudySet("node scripts/forge_session.mjs status 2>$null | Select-Object -First 5"));
+  check("NEUTRAL · DENY — an assignment from any other command ($(curl …)), an UNQUOTED heredoc, a quoted heredoc fed to node -e (as a var or inline), $VAR read by a non-organ or in an organ's script path, an assignment alone or with only a cd, the 7 Sep engineering shape",
+    !shellInStudySet('said=$(curl -s http://x); node scripts/gaffer_brain.mjs capture voice_rep t:c --said "$said"') && !shellInStudySet("said=$(cat <<EOF\nx\nEOF\n)\nnode scripts/gaffer_brain.mjs capture voice_rep t:c --said \"$said\"")
+    && !shellInStudySet("code=$(cat <<'EOF'\nconsole.log(1)\nEOF\n)\nnode -e \"$code\" && node scripts/forge_session.mjs status") && !shellInStudySet("code=$(cat <<'EOF'\nconsole.log(1)\nEOF\n)\nnode -e \"$code\" scripts/forge_session.mjs status")
+    && !shellInStudySet("node -e \"$(cat <<'EOF'\nconsole.log(1)\nEOF\n)\" && node scripts/forge_session.mjs status") && !shellInStudySet("said='x'; echo \"$said\"")
+    && !shellInStudySet("said='x'; echo \"$said\"; node scripts/forge_session.mjs status") && !shellInStudySet("$said = 'x'; Get-Content learning-layer/$said; node scripts/forge_session.mjs status")
+    && !shellInStudySet("d='/tmp/evil'; node \"$d/forge_session.mjs\" pointer x") && !shellInStudySet("said='forge_session.mjs pointer x'") && !shellInStudySet("said='forge_session.mjs pointer x'; cd y")
+    && !shellInStudySet("said='x' | node scripts/forge_session.mjs status") && !shellInStudySet("node scripts/xray.mjs report"));
+  const rC = studyRerun(SHAPE_C), rA = studyRerun(SHAPE_A.replace("axis b done", "axis b done; git status"));
+  check("CHAIN RULE (row 297 (2)) · a refused command names its study part to re-run alone (shape C → the capture; shape A chained to git → its heredoc + capture + axis); an in-set command, a substitution or no organ names nothing",
+    rC.length === 1 && rC[0] === CAPTURE_C && rA.length === 3 && rA[0].startsWith("said=$(cat <<'EOF'") && /--said "\$said"/.test(rA[1]) && rA[2] === "node scripts/forge_session.mjs axis b done"
+    && shellInStudySet(rA.join("; ")) && studyRerun(SHAPE_A).length === 0 && studyRerun("node scripts/xray.mjs report").length === 0 && studyRerun('node scripts/forge_session.mjs pointer "$(id)"').length === 0,
+    JSON.stringify({ rC, rA }));
   check("CLOSING · /full-time's command tag, \"post match\" and \"full time\" are a CLOSING (G3 and B.tools stand down for the close organs, row 267); a study answer is not",
     classifyPrompt("<command-message>full-time</command-message>\n<command-name>/full-time</command-name>").closing === true && classifyPrompt("post match").closing === true
     && classifyPrompt("post-match karo").closing === true && classifyPrompt("ok full time").closing === true && classifyPrompt("pakka - pay kyunki repeat").closing === false);

@@ -19,13 +19,16 @@
 //   the model started. deny share = DENY / every call judged.
 // LIMITS, SAID ONCE: a sitting opened in ANOTHER transcript (a JOIN, a Desktop host) is invisible here — only
 //   the opening transcript is replayed; the factory rails (fleet / state / claude-p) are not re-judged.
+// G3 v2 (forks row 297): a DENY names its study part to re-run alone (rails' studyRail `rerun`, the segment finder in
+//   study_scope), and `--json` carries `calls` — one { file, ts, tool, verdict, cmd_head } per DENY and captain-ordered
+//   call — so the runner can diff two replays call by call.
 // CLI: node scripts/study_rail_replay.mjs <dir-of-.jsonl | file.jsonl> [--json] | selftest
 // ============================================================================
 import { readFileSync, readdirSync, statSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { studyRail, SITTING_OPEN_RE, CMD_POS } from "./rails.mjs";
+import { studyRail, studyRerunLine, SITTING_OPEN_RE, CMD_POS } from "./rails.mjs";
 import { humanText, SLASH_NOISE } from "./study_scope.mjs";
 
 const SITTING_CLOSE_RE = new RegExp(`${CMD_POS}node(?:\\.exe)?\\s+"?[^\\s";|&]*sitting\\.mjs"?\\s+close\\b`, "i");
@@ -33,7 +36,7 @@ const STUDY_SCOPE = Object.freeze({ study: true, why: "replay — the transcript
 
 /** Replay ONE transcript's text. Pure. */
 export function replayTranscript(text, name = "") {
-  const r = { file: name, opened: false, calls: 0, allow: 0, captain: 0, deny: 0, none: 0, denied: [], ordered: [] };
+  const r = { file: name, opened: false, calls: 0, allow: 0, captain: 0, deny: 0, none: 0, denied: [], ordered: [], list: [] };
   let open = false, prompt = null;
   for (const line of String(text || "").split("\n")) {
     if (!line || line[0] !== "{") continue;
@@ -52,9 +55,10 @@ export function replayTranscript(text, name = "") {
       r.calls++;
       const d = studyRail(payload, { scope: STUDY_SCOPE, prompt });
       const what = `${payload.tool_name}${cmd ? `: ${cmd.slice(0, 80)}` : ""}`;
+      const row = (verdict) => r.list.push({ file: name, ts: typeof o.timestamp === "string" ? o.timestamp : null, tool: payload.tool_name, verdict, cmd_head: cmd.slice(0, 120) });
       if (!d) r.none++;
-      else if (d.decision === "deny") { r.deny++; r.denied.push(what); }
-      else if (d.captain) { r.captain++; r.ordered.push(what); }
+      else if (d.decision === "deny") { r.deny++; r.denied.push(d.rerun && d.rerun.length ? `${what}\n        ↳ ${studyRerunLine(d.rerun)}` : what); row("DENY"); }
+      else if (d.captain) { r.captain++; r.ordered.push(what); row("ALLOW-captain-ordered"); }
       else r.allow++;
       if (/^(Bash|PowerShell)$/.test(payload.tool_name) && SITTING_CLOSE_RE.test(cmd)) open = false;
     }
@@ -74,7 +78,8 @@ export function replayDir(target) {
   T.judged = T.allow + T.captain + T.deny;
   T.model_initiated_share_pct = share(T.deny, T.deny + T.captain);
   T.deny_share_pct = share(T.deny, T.judged);
-  return { totals: T, per };
+  const calls = per.flatMap((p) => p.list || []);
+  return { totals: T, per: per.map(({ list, ...p }) => p), calls };
 }
 
 function printReport({ totals: T, per }) {
@@ -105,7 +110,7 @@ function selftest() {
     U("pakka - pay aur ment"), B('node scripts/forge_session.mjs pointer "axis c merge"'), RES(),   // 2 ALLOW
     B("node scripts/xray.mjs report"), RES(),                                                         // 3 DENY
     A("Write", { file_path: "scripts/foo.mjs", content: "x" }), RES(),                                // 4 DENY
-    B("node scripts/forge_session.mjs pointer x && git status"),                                     // 5 DENY (chained)
+    JSON.stringify({ type: "assistant", timestamp: "2026-09-23T10:00:00.000Z", message: { content: [{ type: "tool_use", name: "Bash", input: { command: "node scripts/forge_session.mjs pointer x && git status" } }] } }),   // 5 DENY (chained)
     "{torn",
     U("ruk — pehle hook fix karo, rails ka system dekho"), B("node scripts/xray.mjs report"), RES(),   // 6 CAPTAIN
     A("Edit", { file_path: "scripts/rails.mjs" }), RES(),                                             // 7 CAPTAIN
@@ -134,9 +139,17 @@ function selftest() {
     assert("REPLAY — model-initiated share = DENY/(DENY+captain) = 50%; deny share of judged = 3/8 = 37.5%",
       T.model_initiated_share_pct === 50 && T.deny_share_pct === 37.5, JSON.stringify(T));
     assert("REPLAY — a single file path works the same as its dir", replayDir(join(dir, "study.jsonl")).totals.deny === 3);
+    assert("REPLAY (row 297) — a DENY that chained a study part names it to re-run alone; a DENY with none names nothing",
+      s.denied.some((w) => w.includes("↳ study rail: re-run the study part alone → node scripts/forge_session.mjs pointer x ; park the rest"))
+      && s.denied.filter((w) => w.includes("↳")).length === 1, JSON.stringify(s.denied));
+    assert("REPLAY (row 297) — `calls` lists every DENY and captain-ordered call as { file, ts, tool, verdict, cmd_head }, in order (3 DENY + 3 captain; ts from the transcript row, null when absent)",
+      R.calls.length === 6 && R.calls.filter((c) => c.verdict === "DENY").length === 3 && R.calls.filter((c) => c.verdict === "ALLOW-captain-ordered").length === 3
+      && R.calls.every((c) => c.file === "study.jsonl" && Object.keys(c).join() === "file,ts,tool,verdict,cmd_head")
+      && R.calls[2].ts === "2026-09-23T10:00:00.000Z" && R.calls[2].cmd_head === "node scripts/forge_session.mjs pointer x && git status" && R.calls[0].ts === null && R.calls[1].tool === "Write"
+      && !("list" in s), JSON.stringify(R.calls));
     const cli = process.getBuiltinModule("node:child_process").spawnSync(process.execPath, [fileURLToPath(import.meta.url), dir, "--json"], { encoding: "utf8", timeout: 15000 });
     let j = null; try { j = JSON.parse(cli.stdout); } catch { /* asserted */ }
-    assert("REPLAY CLI — `--json` prints the same totals as one JSON object", j && j.totals && j.totals.deny === 3 && j.totals.captain === 3, cli.stdout + cli.stderr);
+    assert("REPLAY CLI — `--json` prints the same totals as one JSON object, with the per-call list", j && j.totals && j.totals.deny === 3 && j.totals.captain === 3 && Array.isArray(j.calls) && j.calls.length === 6, cli.stdout + cli.stderr);
   } finally { rmSync(dir, { recursive: true, force: true }); }
   console.log(`study_rail_replay selftest: ${pass} passed, ${fail} failed`);
   if (fail) process.exit(1);

@@ -85,7 +85,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { readStdinWithDeadline } from "./session_meter.mjs";
 // G3 — the study scope, the study set and his prompt's class, from the LEAF (never the gate or the pacer: heavy,
 // and a forge_session import before turn_hook's shim makes the shim a silent no-op — study_scope's own note)
-import { readSitting, studyScope, classifyPrompt, shellInStudySet, lastHumanPrompt } from "./study_scope.mjs";
+import { readSitting, studyScope, classifyPrompt, shellInStudySet, studyRerun, lastHumanPrompt } from "./study_scope.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -182,6 +182,7 @@ export function studyContext(payload = {}, { dir = undefined, env = process.env 
     return { scope, prompt: tp ? lastHumanPrompt(tp) : null };
   } catch { return null; }
 }
+export const studyRerunLine = (parts) => `study rail: re-run the study part alone → ${parts.join("; ")} ; park the rest: ek line, phir micro-question wapas`;
 /** PURE — the study rail over a payload and its context. null = no opinion. */
 export function studyRail(payload = {}, ctx = null) {
   const tool = String(payload.tool_name || "");
@@ -197,7 +198,10 @@ export function studyRail(payload = {}, ctx = null) {
   if (cls.kind === "system") return { decision: "allow", rail: "study", captain: true, why: `captain's mid-lesson engineering — his last prompt ordered it (class system), so ${what} runs; counted, never blocked (row 283 (2))` };
   const why = `${what} is system work mid-lesson and his last prompt did not order it (class ${cls.kind}) — HOW_HE_LEARNS #12 binds the model`;
   const fix = "name it in ONE line, park it, hand back the micro-question; if HE orders it, his word opens this rail (not overridable)";
-  return { decision: "deny", rail: "study", why, fix, reason: `RAIL study — ${STUDY_DENY}\n   WHY: ${why}\n   FIX: ${fix}` };
+  // forks row 297 (2): a study part chained to system work is named, so a capture or an axis call is never lost silently
+  const rerun = shell ? studyRerun(cmd) : [];
+  const again = rerun.length ? `\n   ${studyRerunLine(rerun)}` : "";
+  return { decision: "deny", rail: "study", why, fix, rerun, reason: `RAIL study — ${STUDY_DENY}\n   WHY: ${why}\n   FIX: ${fix}${again}` };
 }
 
 // THE WHOLE DECISION — the factory's rails first (a factory deny stands whatever the lesson), then the study rail.
@@ -520,6 +524,17 @@ function selftest() {
     assert("STUDY — an allowed organ CHAINED to system work is DENIED (the whole-string hole, closed); the organ alone passes",
       S("Bash", { command: "node scripts/forge_session.mjs pointer x && node scripts/xray.mjs report" }, IN(ANSWER)).decision === "deny"
       && S("Bash", { command: "node scripts/forge_session.mjs pointer x" }, IN(ANSWER)).decision === "allow");
+    // G3 v2 · THE NEUTRAL SHAPES + THE CHAIN RULE (forks row 297) — at the rail, both ways
+    const CAP_C = 'node scripts/gaffer_brain.mjs capture voice_rep tokenization:c --axis c --gut guessed --asked "ek round mein factory poore corpus ke saare adjacent pairs ek saath gin ke sirf sabse common ek pair jodti hai, ya ek-ek letter utha ke uske pairs ginti hai?" --said "pata nahi - i have no clue. i am confused about the jargons you are using, what do you mean by factory here?" --probe reconstruct --surface code';
+    const dC = S("PowerShell", { command: `${CAP_C}; node scripts/teaching_contract.mjs 2>&1 | Select-Object -First 40` }, IN(ANSWER));
+    assert("STUDY · CHAIN RULE — shape C (a capture chained to an out-of-set read) is DENIED and the deny text names the capture to re-run alone, then the park line",
+      dC.decision === "deny" && dC.rerun.length === 1 && dC.rerun[0] === CAP_C && dC.reason.includes(`study rail: re-run the study part alone → ${CAP_C} ; park the rest: ek line, phir micro-question wapas`)
+      && d0.rerun.length === 0 && !/re-run the study part/.test(d0.reason), JSON.stringify(dC));
+    const BOLO = "said=$(cat <<'EOF'\npakka - subword beech ka rasta\nEOF\n)\nnode scripts/gaffer_brain.mjs capture voice_rep tokenization:b --axis b --gut knew --said \"$said\" --surface code && node scripts/forge_session.mjs axis b done";
+    assert("STUDY · NEUTRAL — his Bolo through a quoted heredoc and an organ piped into sed -n | tail | head are ALLOWED mid-lesson; the 7 Sep shapes (xray, an Edit) stay DENIED",
+      S("Bash", { command: BOLO }, IN(ANSWER)).decision === "allow" && S("Bash", { command: "node scripts/forge_session.mjs axis c now && node scripts/learn_digest.mjs | sed -n '/^POSITION/,/^THE TRAPS/p' | tail -n +2 | head -20" }, IN(ANSWER)).decision === "allow"
+      && S("Bash", XRAY, IN(ANSWER)).decision === "deny" && S("Edit", { file_path: "scripts/rails.mjs" }, IN(ANSWER)).decision === "deny"
+      && S("Bash", { command: "node scripts/learn_digest.mjs | sed -i s/a/b/" }, IN(ANSWER)).decision === "deny");
     const never = [["Write", { file_path: "scripts/foo.mjs", content: "x" }], ["Edit", { file_path: "learning-layer/NOTES.md" }], ["MultiEdit", { file_path: "scripts/a.mjs" }],
       ["Agent", { prompt: "read it — ceiling 2 agents" }], ["Task", { prompt: "go — ceiling 1 agent" }], ["Workflow", { script: "x — ceiling: 3 agents" }]];
     assert("STUDY — Write / Edit / MultiEdit / Agent / Task / Workflow are NEVER in the set (a fleet WITH its ceiling clears the factory and is still denied mid-lesson)",
