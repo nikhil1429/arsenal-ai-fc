@@ -57,7 +57,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { subjectsOf, preCyborg } from "./registry.mjs";   // S10 — the build-verb ratchet's verb set is a ROW · A4 (4 Sep 2026) — preCyborg: ONE predicate for "is this proof still his", shared with rejirah/deep/learnstate
 import { SKELETON_CARRIED } from "./teaching_terms.mjs";   // G1 (23 Sep 2026) — the rules the TURN SKELETON carries leave the printed pool (a leaf; never teaching_bar itself — NO SHIM CALLEE)
-import { transcriptPathFor, entrypointOfTranscript } from "./study_scope.mjs";   // R8 (23 Sep 2026) — the transition classifier for audit rows written before G0 stamped them
+import { transcriptPathFor, entrypointOfTranscript, studyScope, readSitting } from "./study_scope.mjs";   // R8 (23 Sep 2026) — the transition classifier for audit rows written before G0 stamped them · THE predicate stamps each self-report (THE STAMP, below)
 import { usageOf } from "./session_meter.mjs";   // forks row 277 (a), 24 Sep 2026 — THE usage-block reader (one per transcript row); never a second parser
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -264,6 +264,9 @@ function rank(rules) {
 // study). That transition path reads a transcript head per session and DIES ON ITS OWN: 14 days after
 // G0 no unstamped row is left in the window. Self-reports (`flag`) carry no session id; they are the
 // only signal the judgement rules have, so they count, and the header says the window includes them.
+// And `flag` now STAMPS its row (THE STAMP, below) — a self-report with a
+// `scope` counts only when that scope is "study"; an UNSTAMPED one (filed before the stamp, or under an
+// old-build sitting) keeps the old rule and so falls out of this window 14 days after its `at`.
 export const RANK_WINDOW_DAYS = 14;
 export function studyRowOf(row, entrypointOf) {
   if (!row || typeof row !== "object") return false;
@@ -290,6 +293,7 @@ export function windowDrift({ rows = [], selfReports = [], now = new Date(), day
   for (const s of Array.isArray(selfReports) ? selfReports : []) {
     const t = Date.parse((s && s.at) || "");
     if (!s || !s.id || !Number.isFinite(t) || t < since || t > until) continue;
+    if (Object.prototype.hasOwnProperty.call(s, "scope") && s.scope !== "study") continue;   // THE STAMP: a stamp that is not "study" wins
     selfCounted++; bump(String(s.id), t);
   }
   return { counts, last, studyRows, selfCounted, days };
@@ -421,10 +425,25 @@ function flagRule(state, id, why, now = new Date()) {
 // and stays legal for any legacy staged entry. What this knowingly trades away:
 // the model now classifies its own violations unreviewed (the 6 Aug evidence says
 // it classifies coarsely). The guard is VISIBILITY + REVERSIBILITY, not a gate.
-function selfReport(state, id, why, now = new Date()) {
+// THE STAMP (forks row 258 (2)(e), 24 Sep 2026). R8 could not scope a self-report: the row named no
+// session and no scope, so an engineering session's flag counted in the STUDY window. `flag` now stamps
+// the session id from the harness env when present (absent ⇒ the key is ABSENT — never null, never
+// guessed) and the scope from study_scope's OWN predicate, fed that id and the sitting file. The
+// predicate is fail-closed, so a flag with no id is "not-study". A LEGACY verdict (an old-build sitting,
+// study_scope's transition guard) is no host match, so — as teaching_audit does — it leaves scope
+// UNSTAMPED and the row rides the 14-day transition rule. Pure: env and sitting are passed in.
+function flagStamp({ env = {}, sitting = null } = {}) {
+  const sid = String((env && env.CLAUDE_CODE_SESSION_ID) || "").trim();
+  const v = studyScope({ payload: sid ? { session_id: sid } : {}, sitting, env });
+  const out = {};
+  if (sid) out.session_id = sid;
+  if (!v.legacy) out.scope = v.study ? "study" : "not-study";
+  return out;
+}
+function selfReport(state, id, why, now = new Date(), stamp = {}) {
   const hit = autoHitRule(state, id, why, now);
   if (!hit.ok) return hit;
-  const self_reports = [...(state.self_reports || []), { id, why: String(why || ""), at: now.toISOString() }];
+  const self_reports = [...(state.self_reports || []), { id, why: String(why || ""), at: now.toISOString(), ...(stamp || {}) }];
   return { ok: true, state: { ...hit.state, self_reports } };
 }
 
@@ -1483,6 +1502,38 @@ function selftest() {
         && r.state.self_reports.length === 1 && r.state.self_reports[0].why === "maine do sawaal pooche"; })());
   assert("SELF-REPORT — an unknown rule id still refuses (a typo must not vanish into a count)",
     !selfReport(base, "no-such-rule", "x").ok);
+  // THE STAMP — planted both ways.
+  {
+    const SIT = { id: "sit-1", host_session_id: "host-A", closed_at: null };
+    const withId = flagStamp({ env: { CLAUDE_CODE_SESSION_ID: "host-A" }, sitting: SIT });
+    const noId = flagStamp({ env: {}, sitting: SIT });
+    const other = flagStamp({ env: { CLAUDE_CODE_SESSION_ID: "eng-B" }, sitting: SIT });
+    const legacy = flagStamp({ env: { CLAUDE_CODE_SESSION_ID: "host-A" }, sitting: { id: "old" } });
+    assert("STAMP · flag with the env id set carries it; without, the key is ABSENT (not null, not guessed)",
+      withId.session_id === "host-A" && !Object.prototype.hasOwnProperty.call(noId, "session_id"), JSON.stringify({ withId, noId }));
+    assert("STAMP · scope comes from study_scope's predicate both ways — the sitting's host is study, another session (or no id, fail-closed) is not-study",
+      withId.scope === "study" && other.scope === "not-study" && noId.scope === "not-study" && flagStamp({ env: { CLAUDE_CODE_SESSION_ID: "host-A", ARSENAL_ORGAN: "1" }, sitting: SIT }).scope === "not-study");
+    assert("STAMP · an old-build (legacy) sitting is no host match — scope stays UNSTAMPED, as teaching_audit leaves it",
+      legacy.session_id === "host-A" && !Object.prototype.hasOwnProperty.call(legacy, "scope"), JSON.stringify(legacy));
+    const r = selfReport(base, "one-idea", "w", T0, withId);
+    const row = r.state.self_reports[0];
+    assert("STAMP · the self_reports row carries the stamp beside id/why/at; an unstamped call writes the old row shape",
+      row.session_id === "host-A" && row.scope === "study" && row.why === "w"
+      && JSON.stringify(Object.keys(selfReport(base, "one-idea", "w", T0).state.self_reports[0])) === JSON.stringify(["id", "why", "at"]));
+    const NOW = new Date("2026-09-24T12:00:00Z");
+    const day = (d) => new Date(NOW.getTime() - d * 86400000).toISOString();
+    const w = windowDrift({ rows: [], now: NOW, entrypointOf: () => null, selfReports: [
+      { id: "decided", at: day(1), session_id: "host-A", scope: "study" },       // stamped, in scope — counts
+      { id: "coverage", at: day(1), session_id: "eng-B", scope: "not-study" },   // stamped, out of scope — ignored
+      { id: "his-word", at: day(13) },                                          // unstamped, 13 d — counts
+      { id: "his-level", at: day(15) },                                         // unstamped, 15 d — out of the window
+    ] });
+    assert("STAMP · R8 counts a stamped in-scope self-report, ignores an out-of-scope one; an UNSTAMPED row counts at 13 d and not at 15 d",
+      w.counts["decided"] === 1 && !w.counts["coverage"] && w.counts["his-word"] === 1 && !w.counts["his-level"] && w.selfCounted === 2, JSON.stringify(w));
+    const u = unhitAutoRule(r.state, "one-idea", 1);
+    assert("STAMP · unhit-auto walks back a stamped self-report's count, and list's rank reads a stamped state like any other",
+      u.ok && u.state.rules.find((x) => x.id === "one-idea").auto_hits === 0 && rank(u.state.rules).length === base.rules.length);
+  }
   assert("PROMOTE-STAGED — the pre-ruling queue counts AS FILED, whys+original timestamps preserved, queue empties, idempotent",
     (() => { const st = { ...base, staged: [{ id: "one-idea", why: "w1", at: "2026-08-06T12:00:00Z" }, { id: "his-word", why: "w2", at: "2026-08-06T13:00:00Z" }] };
       const p = promoteStaged(st, T0);
@@ -1719,7 +1770,7 @@ switch (cmd) {
     //   const res = flagRule(load(), arg, wi >= 0 ? process.argv[wi + 1] : "");
     //   console.log(`teaching_contract: "${arg}" STAGED (${...} awaiting his word) — hits unchanged; only he promotes it.`);
     const wi = process.argv.indexOf("--why");
-    const res = selfReport(load(), arg, wi >= 0 ? process.argv[wi + 1] : "");
+    const res = selfReport(load(), arg, wi >= 0 ? process.argv[wi + 1] : "", new Date(), flagStamp({ env: process.env, sitting: readSitting() }));   // THE STAMP
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
     save(res.state);
     const r = res.state.rules.find((x) => x.id === arg);
