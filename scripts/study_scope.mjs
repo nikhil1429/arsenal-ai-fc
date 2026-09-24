@@ -504,6 +504,15 @@ function neutralFilter(text) {
   const key = /^select-/i.test(w[0]) ? w[0].toLowerCase() : w[0];   // PowerShell names are case-blind, the unix ones are not
   return Object.hasOwn(NEUTRAL_FILTERS, key) && NEUTRAL_FILTERS[key](w.slice(1));
 }
+// Forks row 299 (ii) (24 Sep 2026): (c) an echo / printf of a LITERAL — a separator such as `echo ---` — is neutral the
+// same way: every word a literal (no $, $( ), backtick, glob or redirect — filterWords refuses them), no printf -v (it
+// assigns), and its output reaches no pipe (neither piped itself nor piped into the next segment). A file write is
+// already out (outRedirect); nothing else loosens.
+function literalEcho(text) {
+  const w = filterWords(text);
+  if (!w || !w.length || (w[0] !== "echo" && w[0] !== "printf")) return false;
+  return w[0] === "echo" || !w.slice(1).some((a) => /^-[A-Za-z]*v/.test(a));
+}
 /** (b) every later use of the assignment's $VAR sits in an in-set organ's ARGUMENT list (never its script path). */
 function assignNeutral(segs, k) {
   const use = new RegExp(`\\$\\{?(?:[A-Za-z]+:)?${segs[k].assign}(?![A-Za-z0-9_])`, "gi");
@@ -515,7 +524,7 @@ function assignNeutral(segs, k) {
   }
   return true;
 }
-/** Each segment's kind: "in" (G3's rule) · "neutral" (row 297 (1)) · "out". */
+/** Each segment's kind: "in" (G3's rule) · "neutral" (row 297 (1), row 299 (ii)) · "out". */
 function segmentKinds(segs) {
   const kinds = [];
   let head = -1;
@@ -524,6 +533,7 @@ function segmentKinds(segs) {
     if (s.assign) { kinds.push(!s.piped && assignNeutral(segs, k) ? "neutral" : "out"); return; }
     if (outRedirect(s.text)) { kinds.push("out"); return; }
     if (segmentInStudySet(s)) { kinds.push("in"); return; }
+    if (!s.piped && !(segs[k + 1] && segs[k + 1].piped) && literalEcho(s.text)) { kinds.push("neutral"); return; }
     const onOrgan = s.piped && head >= 0 && inSetOrgan(segs[head].text) && kinds.slice(head, k).every((x) => x !== "out");
     kinds.push(onOrgan && neutralFilter(s.text) ? "neutral" : "out");
   });
@@ -773,6 +783,24 @@ export function scopeSelfCheck() {
     !shellInStudySet("echo ---") && !shellInStudySet("printf x") && !shellInStudySet('echo "$said"; node scripts/forge_session.mjs status')
     && !shellInStudySet("echo x > f.txt; node scripts/forge_session.mjs status") && !shellInStudySet("echo $(whoami); node scripts/forge_session.mjs status")
     && !shellInStudySet('echo x | node -e "process.stdin.pipe(process.stdout)"') && !shellInStudySet("echo x | node scripts/forge_session.mjs status"));
+  // forks row 299 (ii) (24 Sep 2026) — echo / printf of a LITERAL is neutral; planted both ways
+  const EK = (c) => { const g = shellSegments(c); return g ? segmentKinds(g) : null; };
+  const SHAPE_ECHO = "node scripts/forge_session.mjs axis c now && echo --- && node scripts/learn_digest.mjs | head -20";
+  check("ECHO LITERAL (row 299 (ii)) · NEUTRAL — `<study call> && echo ---` IN (the axis + digest call verbatim) · echo --- alone and printf '%s\\n' --- / printf '\\n' are neutral segments (alone still no study call) · echo -n, a quoted literal",
+    shellInStudySet("node scripts/forge_session.mjs status && echo ---") && shellInStudySet(SHAPE_ECHO) && studyRerun(SHAPE_ECHO).length === 0
+    && shellInStudySet("echo ---; node scripts/forge_session.mjs status") && shellInStudySet("node scripts/learn_digest.mjs; printf '%s\\n' ---; node scripts/forge_session.mjs status")
+    && shellInStudySet("node scripts/forge_session.mjs status; printf '\\n'") && shellInStudySet("node scripts/forge_session.mjs status && echo -n '--- next ---'")
+    && EK("echo ---").join() === "neutral" && EK("printf '%s\\n' ---").join() === "neutral" && EK("printf '\\n'").join() === "neutral" && !shellInStudySet("echo ---"),
+    JSON.stringify(EK(SHAPE_ECHO)));
+  check("ECHO LITERAL (row 299 (ii)) · NOT neutral — echo $HOME / \"$HOME\" / ${HOME}, echo x > f and >> f, echo | tee, echo $(cat f) and backticks, printf x | node scripts/state.mjs, echo piped into a filter or an organ, printf -v, a glob, echo chained to system work",
+    EK("echo $HOME").join() === "out" && EK('echo "$HOME"').join() === "out" && EK("echo ${HOME}").join() === "out" && EK("echo x > f").join() === "out" && EK("echo x >> f").join() === "out"
+    && EK("echo $(cat f)") === null && EK("echo `cat f`") === null && EK("printf x | node scripts/state.mjs").every((x) => x === "out") && EK("echo x | tee f")[0] === "out"
+    && EK("echo x | head -1")[0] === "out" && EK("printf -v y x").join() === "out" && EK("echo *").join() === "out"
+    && !shellInStudySet("node scripts/forge_session.mjs status && echo $HOME") && !shellInStudySet("node scripts/forge_session.mjs status && echo x > f")
+    && !shellInStudySet("node scripts/forge_session.mjs status && echo x >> f") && !shellInStudySet("node scripts/forge_session.mjs status && echo x | tee f")
+    && !shellInStudySet("node scripts/forge_session.mjs status && echo $(cat f)") && !shellInStudySet("node scripts/forge_session.mjs status; printf x | node scripts/state.mjs")
+    && !shellInStudySet("node scripts/forge_session.mjs status; echo x | head -1") && !shellInStudySet("echo x | node scripts/forge_session.mjs status")
+    && !shellInStudySet("node scripts/forge_session.mjs status; printf -v y x") && !shellInStudySet("node scripts/forge_session.mjs status && echo --- && git status"));
   check("NEUTRAL · DENY — shape C (a capture chained to an out-of-set read) · sed -i · an organ redirected to a file (a discard to /dev/null or $null is no file) · tee · a filter with a FILE operand (alone, chained, piped) · sed w/e · sed -n with a file · a filter on a non-organ",
     !shellInStudySet(SHAPE_C) && !shellInStudySet("node scripts/learn_digest.mjs | sed -i s/a/b/") && !shellInStudySet("node scripts/forge_session.mjs status > out.txt")
     && !shellInStudySet("node scripts/learn_digest.mjs | tee x.txt") && !shellInStudySet("grep -n x scripts/rails.mjs") && !shellInStudySet("node scripts/forge_session.mjs status; grep -n x scripts/rails.mjs")
