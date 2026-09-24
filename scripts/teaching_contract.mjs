@@ -51,12 +51,14 @@
 // asserted by the selftest, so a command can never again exist in the switch and be
 // invisible in the help (audit #108, 6 Aug 2026).
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync, renameSync, rmSync, openSync, readSync, closeSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { subjectsOf, preCyborg } from "./registry.mjs";   // S10 — the build-verb ratchet's verb set is a ROW · A4 (4 Sep 2026) — preCyborg: ONE predicate for "is this proof still his", shared with rejirah/deep/learnstate
 import { SKELETON_CARRIED } from "./teaching_terms.mjs";   // G1 (23 Sep 2026) — the rules the TURN SKELETON carries leave the printed pool (a leaf; never teaching_bar itself — NO SHIM CALLEE)
 import { transcriptPathFor, entrypointOfTranscript } from "./study_scope.mjs";   // R8 (23 Sep 2026) — the transition classifier for audit rows written before G0 stamped them
+import { usageOf } from "./session_meter.mjs";   // forks row 277 (a), 24 Sep 2026 — THE usage-block reader (one per transcript row); never a second parser
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -139,6 +141,15 @@ const SOFT_FRACTION = 0.6;      // a heads-up BEFORE the hard line — he asked 
 // word — and the 60 % line above (≈ 4 MB) never fired. The re-entry is free by design (pointer + digest), so
 // past this many bytes the cheapest turn is a NEW SESSION. State-tunable like transcript_warn_bytes.
 const DEFAULT_STUDY_RESET_BYTES = 1_000_000;   // ≈ 137–150 K tokens at the two measured ratios
+// THE TOKEN LINE (24 Sep 2026, forks row 277 (a)). The line fired at 1.01–1.06 MB while his Desktop meter
+// read 155 K of 1 M (16 %): the bytes proxy held (~7 bytes a token), the THRESHOLD did not — his "ye bi kardo
+// theek" approved the LINE, never that number. So the line now reads the transcript's LAST usage block (the
+// tokens the next turn re-reads) and prints the meter's own figure; it ORDERS a reset only past HIS number
+// (`study_reset_pct`, absent by default, written only by `reset-pct`). Until he sets it the line is an
+// ESTIMATE and orders nothing. 35 % is a RECOMMENDATION, printed as one, never used as a threshold.
+// With no readable usage block the bytes path above is the fallback, labelled `~bytes est`.
+const RECOMMENDED_STUDY_RESET_PCT = 35;
+const USAGE_TAIL_BYTES = [256 * 1024, 4 * 1048576];   // tail windows tried in order; the hook never reads a whole transcript
 
 // ── SEED ──────────────────────────────────────────────────────────────────────
 // None of these is invented: the first five are the drifts that actually happened on
@@ -610,6 +621,42 @@ function transcriptFill(path, warnBytes = DEFAULT_TRANSCRIPT_WARN_BYTES) {
   } catch { return null; }
 }
 
+// THE TOKEN LINE's read (forks row 277 (a)). The NEWEST main-thread assistant row with a usage block, via
+// session_meter's usageOf: cache_read + input + cache_creation = what the next turn re-reads. Sidechain rows
+// are a subagent's context, not his. Every failure path is null, and null falls back to the labelled bytes
+// proxy — never to a fabricated number.
+function lastContextTokens(path) {
+  try {
+    if (!path || typeof path !== "string" || !existsSync(path)) return null;
+    const st = statSync(path);
+    if (!st.isFile() || st.size <= 0) return null;
+    for (const win of USAGE_TAIL_BYTES) {
+      const n = Math.min(st.size, win);
+      const buf = Buffer.alloc(n);
+      const fd = openSync(path, "r");
+      try { readSync(fd, buf, 0, n, st.size - n); } finally { closeSync(fd); }
+      const lines = buf.toString("utf8").split("\n");
+      for (let i = lines.length - 1; i >= 0; i--) {
+        if (lines[i].indexOf('"usage"') < 0) continue;
+        let j; try { j = JSON.parse(lines[i]); } catch { continue; }   // a tail's first line may be cut mid-row
+        if (!j || j.isSidechain === true) continue;
+        const u = usageOf(j);
+        if (u) return u.cache_read + u.input + u.cache_write;
+      }
+      if (n === st.size) break;
+    }
+    return null;
+  } catch { return null; }
+}
+
+// `reset-pct` — HIS number, the only writer of `study_reset_pct`. Pure so the selftest never touches his file.
+function setResetPct(state, raw) {
+  const t = String(raw ?? "").trim();
+  if (!/^\d{1,3}$/.test(t) || +t < 1 || +t > 100) return { ok: false, why: `"${t}" is not a whole percentage 1-100` };
+  return { ok: true, state: { ...state, study_reset_pct: +t } };
+}
+const resetPctOf = (state) => (Number.isInteger(state && state.study_reset_pct) && state.study_reset_pct >= 1 && state.study_reset_pct <= 100 ? state.study_reset_pct : null);
+
 // PLAN OF RECORD. `anchor` may be the {id, kind} object from resolveAnchor, or a bare
 // string (legacy call shape — read as a forge anchor, so the three original selftest
 // invariants still hold verbatim against this engine).
@@ -768,10 +815,28 @@ function blockLines(state, done, now = new Date(), fill = null, fillUnknown = fa
   // re-reads the whole context; past this many bytes a new session (free re-entry: pointer + digest) is
   // cheaper than the next turn. Measured 22 Sep: 2.4 MB ↔ 330 K tokens a turn, 68–159 s to the first word.
   // It fires only when no compaction warning is already up (that one outranks it; the anti-wall cap holds).
+  // 24 Sep 2026 (forks row 277 (a)): a TOKEN line. It shows where the bytes line used to fire (past
+  // study_reset_bytes, or past HIS number on the meter's own figure) and ORDERS the reset only past his number.
   const resetBytes = Number.isFinite(state.study_reset_bytes) && state.study_reset_bytes > 0 ? state.study_reset_bytes : DEFAULT_STUDY_RESET_BYTES;
-  const reset = (fill && !warn && fill.bytes >= resetBytes)
-    ? `  ⛔ STUDY RESET LINE — transcript ${mb(fill.bytes)} ≥ ${mb(resetBytes)}: every turn now re-reads all of it (22 Sep: 2.4 MB ↔ 330 K tokens a turn, 68–159 s to the first word). At the next natural break, in order: (1) node scripts/forge_session.mjs pointer "<the exact unanswered micro-question>" · (2) tell him in plain words — Desktop: is folder ki NAYI session kholo, phir 'learn' · CLI: /clear, phir learn. Kuch nahi khoyega: re-entry = the digest.`
-    : null;
+  const hisPct = resetPctOf(state);
+  const order = " At the next natural break, in order: (1) node scripts/forge_session.mjs pointer \"<the exact unanswered micro-question>\" · (2) tell him in plain words — Desktop: is folder ki NAYI session kholo, phir 'learn' · CLI: /clear, phir learn. Kuch nahi khoyega: re-entry = the digest.";
+  const pending = `reset threshold: his number pending (recommended ${RECOMMENDED_STUDY_RESET_PCT} %) · no reset ordered`;
+  let reset = null;
+  if (fill && !warn) {
+    if (Number.isFinite(fill.tokens) && fill.tokens > 0) {
+      const pct = (fill.tokens / CONTEXT_WINDOW_TOKENS) * 100;
+      const fig = `${Math.round(fill.tokens / 1000)} K of 1 M (${Math.round(pct)} %)`;
+      if (hisPct !== null && pct >= hisPct) {
+        reset = `  ⛔ STUDY RESET LINE — context ${fig} ≥ his ${hisPct} % (last usage block: every turn now re-reads all of it).${order}`;
+      } else if (hisPct === null && fill.bytes >= resetBytes) {
+        reset = `  ⓘ STUDY RESET LINE (estimate) — context ${fig}, read off the last usage block (the tokens the next turn re-reads) · ${pending}.`;
+      }
+    } else if (fill.bytes >= resetBytes) {
+      reset = hisPct !== null
+        ? `  ⛔ STUDY RESET LINE (~bytes est) — transcript ${mb(fill.bytes)} ≥ ${mb(resetBytes)}; no usage block readable, so this is the bytes proxy (~7 bytes/token), not the meter.${order}`
+        : `  ⓘ STUDY RESET LINE (~bytes est) — transcript ${mb(fill.bytes)} ≥ ${mb(resetBytes)}; no usage block readable, so this is the bytes proxy (~7 bytes/token), not the meter · ${pending}.`;
+    }
+  }
 
   const staged = stagedLine(state);
   const reserved = 1 + (link ? 1 : 0) + ((warn || unknown || reset) ? 1 : 0) + (staged ? 1 : 0);
@@ -1207,20 +1272,79 @@ function selftest() {
     const over = { bytes: 1_200_000, limit: DEFAULT_TRANSCRIPT_WARN_BYTES, pct: 1_200_000 / DEFAULT_TRANSCRIPT_WARN_BYTES };   // 1.2 MB: over the reset line, under the 60 % soft line
     const under = { bytes: 500_000, limit: DEFAULT_TRANSCRIPT_WARN_BYTES, pct: 500_000 / DEFAULT_TRANSCRIPT_WARN_BYTES };
     const isReset = (l) => /STUDY RESET LINE/.test(l) && /forge_session\.mjs pointer/.test(l) && /NAYI session/.test(l) && /\/clear/.test(l);
+    // 24 Sep 2026 (forks row 277 (a)): the bytes path is now the labelled PROXY and orders only once HIS number is set.
     assert("STUDY RESET LINE fires past the reset bytes, names the pointer command FIRST and both surfaces' actions in plain words",
-      blockLines(quietState, done, T0, over).some(isReset));
+      blockLines({ ...quietState, study_reset_pct: 35 }, done, T0, over).some(isReset));
     assert("STUDY RESET LINE stays silent under the reset bytes and when no transcript was read",
       !blockLines(quietState, done, T0, under).some(isReset) && !blockLines(quietState, done, T0, null).some(isReset));
     assert("STUDY RESET LINE yields to a compaction warning (one context line at most, the graver one)",
       !blockLines(quietState, done, T0, fHard).some(isReset) && blockLines(quietState, done, T0, fHard).filter((l) => /STUDY RESET LINE|CONTEXT WARNING|context filling/.test(l)).length === 1);
     assert("STUDY RESET LINE is state-tunable — a stored study_reset_bytes wins over the default, absent falls back",
-      blockLines({ ...quietState, study_reset_bytes: 2_000_000 }, done, T0, over).some(isReset) === false
+      blockLines({ ...quietState, study_reset_pct: 35, study_reset_bytes: 2_000_000 }, done, T0, over).some(isReset) === false
       && withSeedDefaults({ rules: [] }, T0).study_reset_bytes === DEFAULT_STUDY_RESET_BYTES
       && withSeedDefaults({ rules: [], study_reset_bytes: 777 }, T0).study_reset_bytes === 777);
     assert("STUDY RESET LINE keeps the anti-wall cap",
       (() => { let worst = 0; for (let n = 1; n <= 8; n++) for (let t = 0; t < 60; t++)
         worst = Math.max(worst, blockLines({ ...base, show_n: n, turns: { anchor: "tx:/t", anchor_kind: "tx", count: t } }, done, T0, over).length);
         return worst <= MAX_BLOCK_LINES; })());
+  }
+  // THE TOKEN LINE (24 Sep 2026, forks row 277 (a)) — planted both ways against a real fixture transcript.
+  {
+    const dir = mkdtempSync(join(tmpdir(), "tc-277-"));
+    try {
+      const row = (o) => JSON.stringify(o);
+      const asst = (u, extra = {}) => row({ type: "assistant", message: { id: "m", model: "claude-x", usage: u }, ...extra });
+      const u155 = { input_tokens: 5, cache_creation_input_tokens: 4995, cache_read_input_tokens: 150000, output_tokens: 900 };   // 155,000 re-read
+      const txA = join(dir, "a.jsonl");
+      writeFileSync(txA, [row({ type: "user", message: { content: "x" } }),
+        asst({ input_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 9000, output_tokens: 1 }),
+        asst(u155), asst(u155),                                              // one row per content block, same usage
+        asst({ input_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 800000, output_tokens: 1 }, { isSidechain: true }),
+        row({ type: "user", message: { content: "y" } }), '{"type":"assistant","usage"'].join("\n") + "\n");
+      const txB = join(dir, "b.jsonl");
+      writeFileSync(txB, [row({ type: "user", message: { content: "x" } }), row({ type: "assistant", message: { id: "m", content: [] } })].join("\n") + "\n");
+      const tokA = lastContextTokens(txA);
+      assert("TOKEN LINE · the reader takes the NEWEST main-thread usage block (read + input + creation = 155,000), skipping a sidechain and a cut row",
+        tokA === 155000);
+      assert("TOKEN LINE · no usage block, a missing file and a directory read as null (the proxy), never a throw",
+        lastContextTokens(txB) === null && lastContextTokens(join(dir, "none.jsonl")) === null && lastContextTokens(dir) === null && lastContextTokens(null) === null);
+      const f = (tokens, bytes = 1_060_000) => ({ bytes, limit: DEFAULT_TRANSCRIPT_WARN_BYTES, pct: bytes / DEFAULT_TRANSCRIPT_WARN_BYTES, tokens });
+      const ordered = (L) => L.some((l) => /STUDY RESET LINE/.test(l) && /NAYI session/.test(l) && /\/clear/.test(l) && /forge_session\.mjs pointer/.test(l));
+      const newSess = (L) => L.some((l) => /NAYI session|\/clear|forge_session\.mjs pointer|new session/i.test(l));
+      const L155 = blockLines(quietState, done, T0, f(tokA));
+      const line155 = L155.find((l) => /STUDY RESET LINE/.test(l)) || "";
+      assert("TOKEN LINE · 155 K with his number absent prints `155 K of 1 M (16 %)`, `estimate`, the pending-threshold words — and NO new-session order",
+        line155.includes("155 K of 1 M (16 %)") && /estimate/.test(line155)
+        && line155.includes("reset threshold: his number pending (recommended 35 %)") && !newSess(L155));
+      assert("TOKEN LINE · 35 % is a RECOMMENDATION, never a threshold — 900 K with his number absent still orders nothing",
+        !newSess(blockLines(quietState, done, T0, f(900_000, 6_000_000 * 0.5))) && !ordered(blockLines(quietState, done, T0, f(900_000))));
+      const his35 = { ...quietState, study_reset_pct: 35 };
+      assert("TOKEN LINE · his number 35 → no order at 16 %; a 360,000-token block → the order prints, with the meter's figure",
+        !newSess(blockLines(his35, done, T0, f(tokA))) && ordered(blockLines(his35, done, T0, f(360_000)))
+        && blockLines(his35, done, T0, f(360_000)).some((l) => l.includes("360 K of 1 M (36 %)") && /his 35 %/.test(l)));
+      const Lpx = blockLines(quietState, done, T0, f(lastContextTokens(txB)));
+      assert("TOKEN LINE · no usage block → the bytes proxy, LABELLED `~bytes est`, orders nothing while his number is absent; orders once it is set",
+        Lpx.some((l) => /STUDY RESET LINE \(~bytes est\)/.test(l) && /his number pending/.test(l)) && !newSess(Lpx)
+        && ordered(blockLines(his35, done, T0, f(null))) && blockLines(his35, done, T0, f(null)).some((l) => /~bytes est/.test(l)));
+      assert("TOKEN LINE · UNKNOWN never orders — no transcript read prints no reset line at all, his number set or not",
+        !blockLines(his35, done, T0, null).some((l) => /STUDY RESET LINE/.test(l)) && !blockLines(quietState, done, T0, null, true).some((l) => /STUDY RESET LINE/.test(l)));
+      const hard = { ...fHard, tokens: 900_000 };
+      assert("TOKEN LINE · a compaction warning still outranks it (one context line at most, the graver one)",
+        !blockLines(his35, done, T0, hard).some((l) => /STUDY RESET LINE/.test(l))
+        && blockLines(his35, done, T0, hard).filter((l) => /STUDY RESET LINE|CONTEXT WARNING|context filling/.test(l)).length === 1);
+      assert("TOKEN LINE · the anti-wall cap holds, pending and ordering",
+        (() => { let worst = 0; for (const st of [{}, { study_reset_pct: 35 }]) for (const fx of [f(tokA), f(360_000), f(null)]) for (let n = 1; n <= 8; n++) for (let t = 0; t < 60; t++)
+          worst = Math.max(worst, blockLines({ ...base, ...st, show_n: n, turns: { anchor: "tx:/t", anchor_kind: "tx", count: t } }, done, T0, fx).length);
+          return worst <= MAX_BLOCK_LINES; })());
+      const r35 = setResetPct(base, "35");
+      const changed = r35.ok ? [...new Set([...Object.keys(base), ...Object.keys(r35.state)])].filter((k) => JSON.stringify(base[k]) !== JSON.stringify(r35.state[k])) : null;
+      assert("reset-pct · 0, 101, abc, 35.5 and nothing REFUSE; 35 writes ONLY study_reset_pct",
+        ["0", "101", "abc", "35.5", undefined, ""].every((v) => setResetPct(base, v).ok === false)
+        && r35.ok && r35.state.study_reset_pct === 35 && JSON.stringify(changed) === JSON.stringify(["study_reset_pct"]));
+      assert("reset-pct · his number is ABSENT by default (the seed carries none) and study_reset_bytes is kept for the proxy",
+        !("study_reset_pct" in seed(T0)) && !("study_reset_pct" in withSeedDefaults({ rules: [] }, T0)) && resetPctOf(seed(T0)) === null
+        && seed(T0).study_reset_bytes === DEFAULT_STUDY_RESET_BYTES && resetPctOf({ study_reset_pct: 0 }) === null && resetPctOf({ study_reset_pct: "35" }) === null);
+    } finally { try { rmSync(dir, { recursive: true, force: true }); } catch { /* best effort */ } }
   }
   assert("ANTI-WALL HOLDS WITH THE GAUGE ON — still never more than 5 lines, at every show_n and both tiers",
     (() => { let worst = 0;
@@ -1449,7 +1573,7 @@ function selftest() {
 const USAGE = "teaching_contract: print | list | add <id> <line...> | hit <id>"
   + " | flag <id> --why \"...\" (auto-counts — his 7 Aug ruling) | confirm <id> | dismiss <id> | staged | promote-staged"
   + " | autohit <id> --why \"...\" | unhit-auto <id> [--n <k>] | checked"
-  + " | drop <id> | reset-turns | selftest";
+  + " | drop <id> | reset-turns | reset-pct <1-100> (HIS study reset number) | selftest";
 
 const cmd = process.argv[2];
 const arg = process.argv[3];
@@ -1506,8 +1630,9 @@ switch (cmd) {
       // `!tx` closes it and loses nothing that works today — NOT done here, because it is a
       // behaviour change outside the four assigned repairs. Captain's ruling.
       const heldTx = (held && held.startsWith(TX_PREFIX)) ? held.slice(TX_PREFIX.length) : null;
-      let fill = transcriptFill(tx, st.transcript_warn_bytes);
-      if (!fill && heldTx && heldTx !== tx) fill = transcriptFill(heldTx, st.transcript_warn_bytes);
+      let fill = transcriptFill(tx, st.transcript_warn_bytes), fillPath = tx;
+      if (!fill && heldTx && heldTx !== tx) { fill = transcriptFill(heldTx, st.transcript_warn_bytes); fillPath = heldTx; }
+      if (fill) fill.tokens = lastContextTokens(fillPath);   // forks row 277 (a) — the meter's own figure, or null ⇒ the labelled bytes proxy
       const fillUnknown = !fill && !!(tx || heldTx);   // we had something to measure and still failed
       // The staged-drift line is built INSIDE blockLines now and paid for out of the
       // 5-line budget. Pushing it on here (as this did until 6 Aug) spent a sixth line
@@ -1703,6 +1828,15 @@ switch (cmd) {
     if (process.stdin.isTTY) {
       console.log(`teaching_contract: turn clock reset · anchor ${id}${(tx || cc) ? "" : " (no transcript_path or session_id on stdin — minted a local one)"}`);
     }
+    break;
+  }
+  case "reset-pct": {                           // HIS NUMBER (forks row 277 (a)) — system work, never in the study set; writes ONLY study_reset_pct
+    const s = load();
+    if (s._unreadable) { console.error("teaching_contract: REFUSED — state unreadable, nothing written"); process.exitCode = 1; break; }
+    const r = setResetPct(s, arg);
+    if (!r.ok) { console.error(`teaching_contract: REFUSED — ${r.why}; usage: reset-pct <1-100>`); process.exitCode = 2; break; }
+    if (!save(r.state)) { console.error("teaching_contract: REFUSED — save failed"); process.exitCode = 1; break; }
+    console.log(`teaching_contract: study_reset_pct = ${r.state.study_reset_pct} % — the study reset line now orders a new session at ≥ ${r.state.study_reset_pct} % of 1 M`);
     break;
   }
   case "selftest": selftest(); break;
