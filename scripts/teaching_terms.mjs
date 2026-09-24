@@ -216,9 +216,12 @@ export function closedDerive(stateDir = STATE_DIR, openConcept = null) {
 //   hinglish · act-mtfp0ney · act-mtfp38gn → the ALWAYS line (both Hinglish directions, never tu/tera)
 //   no-system-mid-concept   → [PARK]
 //   act-mt0bayry · declare-latency → line 0 (tools first; the first text line names what ran — v2 §3 (a))
+//   act-mueywvag            → line 0 at step 3: a new idea's PICTURE first, then the text (his word #22, 24 Sep, forks row 276 (1))
+//   act-mueyzi9q            → [ASLI NAAM]'s TERM: the industry's real name first, never a pet word (his word #23, row 276 (2))
 // A leaf, because both teaching_bar (the renderer) and teaching_contract (the pool) read it and
 // neither may import the other (organism_test NO SHIM CALLEE — see this file's header).
 export const SKELETON_CARRIED = Object.freeze([
   "one-idea", "act-mt2kgn09", "dheema-not-lamba", "neev-pehle", "terminology", "act-mt2kgbt7", "uncaptured-rep",
   "act-mtfkb4r4", "act-mucnf18j", "hinglish", "act-mtfp0ney", "act-mtfp38gn", "no-system-mid-concept", "act-mt0bayry", "declare-latency",
+  "act-mueywvag", "act-mueyzi9q",
 ]);

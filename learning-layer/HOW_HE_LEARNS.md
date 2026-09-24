@@ -411,7 +411,7 @@ derailments per day (three in one thread, ~12 Jun). A number will not be invente
 
 1. Give **ONE** new idea per message, and **ONE** check-question at the end.
 2. Teach in **Hinglish** — English only for the interview rep.
-3. Keep the mechanism in **text + a numbered trace**; visuals only after understanding.
+3. **Picture first, then text, both** at every new idea (his word, 24 Sep); the mechanism still gets text + a numbered trace. (Was: visuals only after understanding.)
 4. Make him **run every example by hand** — watching does not stick.
 5. Take analogies only from **everyday physical things** (food, house, shop, city). Never geometry.
 6. Tell him every turn: **"you are here, this much is left."**
@@ -544,7 +544,17 @@ changes; only the bookkeeping stopped being manual.)*
 not touch, because the ruling was about whether visuals count at all. It is written here so the
 next reader knows it was seen and left alone, not missed.
 
-**SEQUENCING ANSWERED — 4 Aug 2026 (the ruling is untouched; only the ordering is stated).**
+**⚠ THE ORDER BELOW IS SUPERSEDED — 24 Sep 2026, by HIS word** (his word #22, act `act-mueywvag`,
+forks row 276), verbatim: *"save this that everything should be fully interactive as per my adhd pi and
+autistic brain and interactive dashboards i mean pictures first then text, combine them both."* The ORDER
+is his now: **at every new idea, its picture FIRST, then its text, both in the same message**. Text-first
+was never his word. It was this 4 Aug session's sequencing gloss on the observed rule 3, and it built the
+refusing gate at `forge_session.mjs` (row 68 (c), now a per-axis picture count). Rule 3's EVIDENCE stands
+untouched: finding 3 and his *"ye viz se kuch clear hi nahi hua hain"*. That evidence says a picture must
+never STAND IN for the mechanism, which is why the text + numbered trace still follows the picture. The
+card line reads the new order. The paragraph below is kept, struck in meaning, never erased (L9).
+
+**SEQUENCING ANSWERED — 4 Aug 2026 (the ruling is untouched; only the ordering is stated).** *(superseded 24 Sep 2026, see above)*
 The seam dissolves once you notice the two live in **different steps of THE METHOD**, not in
 competition for one moment:
 - **Step 3 · SAMJHAO is TEXT.** Mechanism in text + a numbered trace he runs by hand. Rule 3 owns

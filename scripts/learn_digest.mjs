@@ -144,10 +144,13 @@ export function render(g) {
   push("  ONE new idea per message, ONE check-question at its end · DHEEMA not LAMBA: one thing fully opened, small steps · THREE LAYERS per idea: DUKAAN (an everyday physical analogy — food, shop, house, city, his own FinOps/Blinkit data; never geometry) → ASLI NAAM (the real term, opened in one line, `backticked`) → TECHNICAL LINE (the interview-ready English sentence)");
   push("  HINGLISH = English content words on Hindi glue (no akshar/sira/niyam) · NO tables anywhere he reads · position BY NAME (concept > axis > idea), never a count · 'samajh nahi aaya' = stop and restart from zero · stop him with a two-option question, never a lecture · struggle first: never hand him an answer he has not attempted · own your own mistake first");
   push("  DESKTOP TRAP (22 Sep): text written ABOVE a tool call is replaced on his screen — run every tool FIRST, write the whole teaching message LAST, self-contained.");
+  // forks row 276 (1)(b), his words #22 / #23 (24 Sep 2026)
+  push("  PICTURE FIRST (his word, 24 Sep: \"pictures first then text, combine them both\"): the Board at this open · at EVERY new idea ONE picture first (mcp__visualize__show_widget, then `moment widget_gate`), then its text, both in the same message · the step-4 concept widget after axis g stays.");
+  push("  REAL TERMS (his word, 24 Sep): the AI industry's real name every time, a Hinglish gloss beside it, never a pet word in its place.");
   if (g.watch && g.watch.length) push("  WATCH-LIST (his repeat hangovers): " + g.watch.map((w) => one(typeof w === "string" ? w : (w.concept || w.name || JSON.stringify(w)), 40)).join(" · "));
   push("");
   push("WHERE THE FULL WORDING LIVES (open ONLY the section a step needs — never the whole file):");
-  push("  step 3 turn shape + THE BANK + the three gates → .claude/skills/forge/SKILL.md §'THE BANK' · step 4 widget → learning-layer/VISUAL_CONTRACT.md §4 (one DRIVEN widget after axis g, stepper, no autoplay, ≤6 objects) · steps 9–10 (Jirah once at CONCEPT level, then LOCK) → forge SKILL 'step 10' gate line · the axis loop's substance → docs/archive/SAMJHAO_MERGED__2026-08-30.md §3 · the notes law in full → .claude/skills/learn/SKILL.md 'THE NOTES LAW' · the whole method → learning-layer/PROJECT_OS.md");
+  push("  step 3 turn shape + THE BANK + the three gates → .claude/skills/forge/SKILL.md §'THE BANK' · per-idea picture + Board → learning-layer/VISUAL_CONTRACT.md §4 PICTURE FIRST block · step 4 widget → §4 (one DRIVEN widget after axis g, stepper, no autoplay, ≤6 objects) · steps 9–10 (Jirah once at CONCEPT level, then LOCK) → forge SKILL 'step 10' gate line · the axis loop's substance → docs/archive/SAMJHAO_MERGED__2026-08-30.md §3 · the notes law in full → .claude/skills/learn/SKILL.md 'THE NOTES LAW' · the whole method → learning-layer/PROJECT_OS.md");
   push("  boot: open the sitting FIRST → node scripts/sitting.mjs open --surface code --no-spawn --task \"" + (g.open ? `${g.concept} axis ${g.axis}` : "<task>") + "\"  (a sitting is the day's container; without it nothing lands at full-time)");
   return L.join("\n") + "\n";
 }
@@ -164,6 +167,7 @@ function selftest() {
     ["the pointer appears verbatim when a session is open", !g.open || !g.pointer?.text || out.includes(g.pointer.text), ""],
     ["the first message is ruled to be the pointer question, no recap", !g.open || /WORD FOR WORD — no recap/.test(out), ""],
     ["the render names where the full wording lives, never the whole file", /never the whole file/.test(out), ""],
+    ["his 24 Sep words ride the render: the Board at open, a picture FIRST at every new idea, the real industry term (forks row 276)", /PICTURE FIRST/.test(out) && /Board at this open/.test(out) && /EVERY new idea ONE picture first/.test(out) && /REAL TERMS/.test(out), ""],
     ["the digest writes nothing (no write call in its own source)", !/\b(writeFileSync|appendFileSync|writeFile)\s*\(/.test(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\/\/.*$/gm, "").replace(/"the digest writes nothing[^"]*"/, "")), ""],
     ["--json round-trips the gathered facts", (() => { try { return JSON.parse(JSON.stringify(g)).open === g.open; } catch { return false; } })(), ""],
   ];

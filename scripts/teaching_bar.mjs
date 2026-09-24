@@ -266,8 +266,10 @@ export const MAX_SKELETON_LINES = 12;
 // forks row 266's fifth kind (sharp_check on [EK CHECK] and its no-trio line, the [BANK] reason) → 2,599 B;
 // forks row 268 folds sharp_check into the trio line (its separate no-trio clause gone) → 2,586 B;
 // forks row 270 (A): the [BANK] line's gut is HIS word or absent ("none spoken → no --gut") → 2,624 B.
+// forks row 276 (his words #22 / #23, 24 Sep): [ASLI NAAM] carries the TERM law on its own line (no new line: the
+// 12-line cap is full at step 4 + [BANK]); step 3's line 0 carries the picture-first order → 2,719 B (step 4 + [BANK]).
 // The 12-line cap stands.
-export const SKELETON_BUDGET_BYTES = 2640;   // measured worst 2,624 B (step 4 + [BANK] "answers the sharp check…" + four long NEEV names), 23 Sep 2026
+export const SKELETON_BUDGET_BYTES = 2736;   // measured worst 2,719 B (step 4 + [BANK] "answers the sharp check…" + four long NEEV names), 24 Sep 2026
 export const GUT_TRIO = "pakka / shayad / pata nahi";
 // Which slot carries which teaching_contract rule (teaching_terms.mjs SKELETON_CARRIED). The cases
 // assert every carried id has a slot here AND that slot's label is on the rendered skeleton.
@@ -275,6 +277,7 @@ export const CARRIED_BY_SLOT = Object.freeze({
   "one-idea": "[POSITION]", "act-mt2kgn09": "[EK CHECK]", "dheema-not-lamba": "[EK CHECK]", "neev-pehle": "[ASLI NAAM]", "terminology": "[ASLI NAAM]",
   "act-mt2kgbt7": "[TECHNICAL LINE]", "uncaptured-rep": "[BANK]", "act-mtfkb4r4": "[EK CHECK]", "act-mucnf18j": "[EK CHECK]", "hinglish": "⛔ ALWAYS",
   "act-mtfp0ney": "⛔ ALWAYS", "act-mtfp38gn": "⛔ ALWAYS", "no-system-mid-concept": "[PARK]", "act-mt0bayry": "TOOLS FIRST", "declare-latency": "TOOLS FIRST",
+  "act-mueywvag": "TOOLS FIRST", "act-mueyzi9q": "[ASLI NAAM]",   // his words #22 / #23, 24 Sep (forks row 276)
 });
 
 /** The moment kinds the previous turn of THIS session declared: those whose prompt→stop count rose in
@@ -303,7 +306,9 @@ export function barLines(session, turn = 0, unopened = [], ctx = {}) {
   const names = (Array.isArray(unopened) ? unopened : []).map((n) => String(n || "").trim()).filter(Boolean).slice(0, NEEV_SHOWN);
   const L = [];
   L.push(`TURN SKELETON · ${c} > axis ${axis} · step ${step ?? "?"} — fill it in this order; the [LABELS] are for you, he sees plain Hinglish (VISUAL_CONTRACT §8.1)`);
-  L.push(`  0 TOOLS FIRST, TEXT LAST — every tool call before any text (Desktop replaces text above a tool) · when a tool ran, the text's first line names it: "pointer set"`);
+  // forks row 276 (1), his word #22 ("pictures first then text, combine them both"): at step 3 a new idea's picture is
+  // the first tool — the gate's B.widget patches a check_q turn without one
+  L.push(`  0 TOOLS FIRST, TEXT LAST — every tool call before any text (Desktop replaces text above a tool) · when a tool ran, the text's first line names it: "pointer set"${step === 3 ? " · a NEW idea: its PICTURE first (show_widget), then the text, both" : ""}`);
   if (ctx && ctx.bank) L.push(`  [BANK] his message ${ctx.bank} → the FIRST tool: node scripts/gaffer_brain.mjs capture voice_rep ${c}:${axis} --axis ${axis} --gut <HIS word: knew|shaky|guessed; none spoken → no --gut> --asked "<verbatim>" --said "<his words>" --surface code --latency_ms <the FORGE CONTRACT's latency number, or OMIT it> · the text's first line: "bank mein gaya · axis ${axis} · judge shaam ko"`);
   const teaching = step === null || (step >= 3 && step <= 6);
   if (step !== null && step >= 2 && step <= 9) {
@@ -318,7 +323,8 @@ export function barLines(session, turn = 0, unopened = [], ctx = {}) {
   }
   if (teaching) {
     L.push(`  [DUKAAN] ONE everyday physical analogy — food, shop, house, city, his FinOps/Blinkit data; never geometry`);
-    L.push(`  [ASLI NAAM] at most ONE new \`backticked\` real name, opened on its own line in the colon form (\`X\`: …)${names.length ? ` · not opened yet here: ${names.join(" · ")}` : ""}`);
+    // forks row 276 (2), his word #23: TERM = the industry's real name, every time — never a pet word in its place
+    L.push(`  [ASLI NAAM] TERM: the AI industry's real name first, Hinglish gloss beside it, never a pet word instead · at most ONE new \`backticked\` real name, opened on its own line in the colon form (\`X\`: …)${names.length ? ` · not opened yet here: ${names.join(" · ")}` : ""}`);
     L.push(`  [TECHNICAL LINE] ONE interview-ready English sentence`);
   }
   if (step === null || (step >= 2 && step <= 9)) {

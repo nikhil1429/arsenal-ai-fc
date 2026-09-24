@@ -220,6 +220,9 @@ const blank = (concept, now = new Date()) => ({
   axes_now_at: {},
   moments_by_axis: {},
   bypasses: [],
+  // pictures_by_axis — forks row 276 (1)(a): the per-idea pictures (a widget_gate before axis g),
+  // counted per axis; absent on a session written before it, and every reader tolerates that.
+  pictures_by_axis: {},
 });
 
 // STRICT — Number("") and Number(" ") are 0, and Number(true) is 1, so a bare
@@ -334,19 +337,24 @@ function addMoment(s, kind, now = new Date()) {
       record: true,
     };
   }
-  // ── TEXT FIRST (row 68 (c), 6 Sep 2026 — plan v3 §5, row 51's "text-first gate") ──────
-  // The concept widget is driven ONCE, after axis g, TEXT FIRST. A guess-gate logged before
-  // axis g is done is a picture standing in for the teaching — HOW_HE_LEARNS #3 (visuals only
-  // after understanding) and #2 (the tap-widget trace is one of his three recorded failures).
-  // Refused AND counted, exactly like the second check-question: a refusal is evidence, and
-  // coverage() reads the count into the verdict.
+  // ── ~~TEXT FIRST~~ (row 68 (c), 6 Sep 2026 — plan v3 §5, row 51's "text-first gate") ──────
+  // STRUCK 24 Sep 2026 (L9: kept, never erased). It read: "The concept widget is driven ONCE,
+  // after axis g, TEXT FIRST. A guess-gate logged before axis g is done is a picture standing in
+  // for the teaching — HOW_HE_LEARNS #3 (visuals only after understanding). Refused AND counted."
+  // Text-first was never his word: it was the 4 Aug sequencing gloss on observed rule 3.
+  // ── PICTURE FIRST (forks row 276 (1)(a), his word #22, 24 Sep 2026, verbatim: "pictures first
+  // then text, combine them both") ──────────────────────────────────────────────────────────
+  // A widget_gate before axis g is the per-idea PICTURE, shown before that idea's text: accepted and
+  // COUNTED per axis (pictures_by_axis), never refused. It does NOT feed question_moments.widget_gate:
+  // that count stays the step-4 concept widget's guess-gates (driven after g, unchanged), so
+  // coverage()'s "driven ≥ WIDGET_GATES_MIN" is never met by per-idea pictures. widget_refused stays
+  // readable for the sessions that recorded it; nothing new increments it.
   if (m === "widget_gate" && !(s.axes_done || []).includes("g")) {
-    return {
-      ok: false,
-      error: `widget_gate refused — TEXT FIRST: the concept widget is driven once, AFTER axis g is done (axes done so far: ${(s.axes_done || []).join("") || "none"}). Teach the axis in words, mark it done, then drive the widget (plan v3 §5 · HOW_HE_LEARNS #3).`,
-      session: { ...s, widget_refused: (s.widget_refused || 0) + 1, updated_at: nowISO(now) },
-      record: true,
-    };
+    const pa = s.current_axis && AXES.includes(s.current_axis) ? s.current_axis : "concept";
+    const pba = { ...(s.pictures_by_axis || {}), [pa]: ((s.pictures_by_axis || {})[pa] || 0) + 1 };
+    const mbaP = { ...(s.moments_by_axis || {}) };
+    if (pa !== "concept") mbaP[pa] = { ...(mbaP[pa] || {}), widget_gate: ((mbaP[pa] || {}).widget_gate || 0) + 1 };
+    return { ok: true, picture: true, session: { ...s, pictures_by_axis: pba, moments_by_axis: mbaP, updated_at: nowISO(now) } };
   }
   const qm = { ...s.question_moments, [m]: (s.question_moments[m] || 0) + 1 };
   // A3 — A MOMENT NOW REMEMBERS WHICH AXIS IT WAS ABOUT. The global counter cannot
@@ -586,6 +594,9 @@ function contractLines(s, now = new Date(), clock = undefined) {
   L.push(`  axes:${s.current_axis && !s.axes_done.includes(s.current_axis) && !s.axes_deferred.includes(s.current_axis) ? ` ON ${s.current_axis} ·` : ""} done ${s.axes_done.join("") || "—"} · deferred ${s.axes_deferred.join("") || "—"} · left ${AXES.filter((a) => !s.axes_done.includes(a) && !s.axes_deferred.includes(a)).join("") || "—"}`
     + (ungraded.length ? ` · ungraded ${ungraded.join("")}` : ""));
   L.push(`  question-moments used: ${MOMENTS.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these ${MOMENTS.length} are legal — no quiz-dump)`);
+  // forks row 276 (1)(a): the per-axis count of step 3's per-idea pictures — said, never gated (the ORDER rides the
+  // TURN SKELETON's line 0, the one home of the checkable rules)
+  if (n === 3) L.push(`  pictures per axis (picture first at every new idea): ${Object.entries(s.pictures_by_axis || {}).map(([a, k]) => `${a} ${k}`).join(" · ") || "none yet"}`);
   if (clock !== undefined) {
     L.push(clock === null
       ? `  latency: UNMEASURABLE this turn — leave \`--latency_ms\` OFF when you bank. A null latency is a measurement nobody made; an invented one corrupts the fluency ladder permanently.`
@@ -852,7 +863,8 @@ function coverage(s, now = new Date(), bank = null) {
     axis_marks_span_min: span_min,
     question_moments: { ...s.question_moments },
     check_q_refused: s.check_q_refused || 0,     // quiz-dump attempts, kept legible at close
-    widget_refused: s.widget_refused || 0,       // TEXT-FIRST refusals (row 68 (c)) — a picture offered before the words
+    widget_refused: s.widget_refused || 0,       // TEXT-FIRST refusals (row 68 (c)) — a picture offered before the words; nothing increments it since row 276 (1)(a)
+    pictures_by_axis: { ...(s.pictures_by_axis || {}) },   // row 276 (1)(a): per-idea pictures, a count, never a gate
     // A3 — every gate the teacher overrode, with his own reason, in the row that
     // outlives the terminal. Reported unconditionally like the two clocks: a number
     // that only appears when it is bad makes "have nothing bad" the cheapest move.
@@ -1542,20 +1554,26 @@ function selftest() {
     assert("POINTER — the newest replaces the older, and the older is KEPT in history (L9)",
       p2.resume_pointer.text.startsWith("Char-level") && p2.resume_pointer_history.length === 1 && p2.resume_pointer_history[0].text.startsWith("Word-level"));
     assert("POINTER — a session with no pointer prints nothing (no invented question)", pointerLine(onB) === null);
-    // (c) TEXT FIRST — the concept widget is driven once, AFTER axis g is done; earlier attempts are refused and counted.
-    const early = addMoment(s3, "widget_gate", T0);
-    assert("TEXT FIRST — widget_gate before axis g is REFUSED and the refusal is recorded",
-      !early.ok && early.record === true && early.session.widget_refused === 1 && /TEXT FIRST/.test(early.error));
+    // (c) ~~TEXT FIRST~~ → PICTURE FIRST (forks row 276 (1)(a), his word #22, 24 Sep 2026). Before axis g a
+    // widget_gate is the per-idea picture: accepted, counted per axis, never refused, and it never feeds the step-4
+    // guess-gate count; after axis g it is the concept widget's guess-gate exactly as before. Planted both ways.
+    const early = addMoment({ ...s3, current_axis: "c" }, "widget_gate", T0);
+    assert("PICTURE FIRST — widget_gate before axis g is ACCEPTED and counted per axis (pictures_by_axis), no refusal recorded, and the step-4 guess-gate count does not move",
+      early.ok && early.picture === true && early.session.pictures_by_axis.c === 1 && !early.session.widget_refused
+      && (early.session.question_moments.widget_gate || 0) === 0 && early.session.moments_by_axis.c.widget_gate === 1, JSON.stringify(early.session.pictures_by_axis));
+    const twice = addMoment(early.session, "widget_gate", T0).session;
+    assert("PICTURE FIRST — a second idea's picture on the same axis counts 2; with no axis current it counts under 'concept'",
+      twice.pictures_by_axis.c === 2 && addMoment({ ...s3, current_axis: null }, "widget_gate", T0).session.pictures_by_axis.concept === 1);
     let g = s3; for (const a of "abcdefg") g = markAxis(g, a, "done", T0).session;
-    assert("TEXT FIRST — widget_gate after axis g is done is accepted",
-      addMoment(g, "widget_gate", T0).ok && addMoment(g, "widget_gate", T0).session.question_moments.widget_gate === 1);
+    assert("PICTURE FIRST — widget_gate after axis g is done is the step-4 guess-gate (question_moments), never a per-idea picture",
+      addMoment(g, "widget_gate", T0).ok && addMoment(g, "widget_gate", T0).session.question_moments.widget_gate === 1 && !addMoment(g, "widget_gate", T0).picture);
     // forks row 266 — the FIFTH legal kind, planted both ways: sharp_check is counted (overall and on the current
     // axis, the record the bank reads), a kind outside the five is refused and nothing is counted
     const sc = addMoment(g, "sharp_check", T0);
     const bogus = addMoment(g, "sharp", T0);
     assert("row 266 — `moment sharp_check` is legal and counted (overall + on the current axis); a kind outside the five is refused and counts nothing",
       MOMENTS.length === 5 && sc.ok && sc.session.question_moments.sharp_check === 1 && !bogus.ok && /sharp_check/.test(bogus.error) && bogus.session === g, JSON.stringify({ sc: sc.ok && sc.session.question_moments, bogus: bogus.error }));
-    assert("TEXT FIRST — a refused widget counts against the verdict like a quiz-dump, and the count is reported",
+    assert("a TEXT-FIRST widget refusal recorded before row 276 still counts against the verdict like a quiz-dump, and the count is reported",
       coverage({ ...g, widget_refused: 1 }, T0).method_clean === false && coverage(g, T0).widget_refused === 0);
   }
 
@@ -1802,7 +1820,7 @@ function selftest() {
   let clean = blank("hallucinations", T0);
   STEPS.forEach((_, i) => { clean = setStep(clean, i, T0).session; });
   for (const a of AXES) { clean = addMoment(clean, "jirah", T0).session; clean = markAxis(clean, a, "done", T0).session; }
-  clean = addMoment(addMoment(clean, "widget_gate", T0).session, "widget_gate", T0).session;   // TEXT FIRST (row 68 (c)): the widget is driven after the axes' words
+  clean = addMoment(addMoment(clean, "widget_gate", T0).session, "widget_gate", T0).session;   // the step-4 widget's guess-gates, driven after axis g (row 68 (c); per-idea pictures are row 276's count)
   assert("A GENUINELY CLEAN SESSION reports method_clean:true", coverage(clean, T0).method_clean === true);
   const noCore = markAxis(clean, "d", "defer", T0).session;
   assert("CORE-NEVER-DEFERRED — method_clean false and core_missing names 'd' when d is not done",
@@ -1810,7 +1828,7 @@ function selftest() {
   let oneGate = blank("hallucinations", T0);
   STEPS.forEach((_, i) => { oneGate = setStep(oneGate, i, T0).session; });
   for (const a of AXES) { oneGate = addMoment(oneGate, "jirah", T0).session; oneGate = markAxis(oneGate, a, "done", T0).session; }
-  oneGate = addMoment(oneGate, "widget_gate", T0).session;   // TEXT FIRST (row 68 (c)): after the axes' words
+  oneGate = addMoment(oneGate, "widget_gate", T0).session;   // the step-4 guess-gate, after axis g (row 68 (c))
   assert("WIDGET GATES — false at 1 gate, true at 2, and there is NO widget_driven boolean",
     coverage(oneGate, T0).method_clean === false && coverage(clean, T0).method_clean === true
     && !("widget_driven" in coverage(clean, T0)));

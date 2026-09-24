@@ -135,7 +135,10 @@ export const CHECKS = Object.freeze({
   "B.whole-read": { fam: "B", mouth: "count", fix: "poori file mat padho (REFERENCE / SAMJHAO_MERGED / VISUAL_CONTRACT / forge SKILL / scripts / memory) — digest jo section bataye, sirf wahi, offset+limit se" },
   "B.tools": { fam: "B", mouth: "count", fix: "mid-concept system / tool kaam nahi — park it: ek line, phir micro-question wapas" },
   "B.judge-once": { fam: "B", mouth: "count", fix: "judge_round ek sitting mein EK hi baar" },
-  "B.widget": { fam: "B", mouth: "count", fix: "widget: Lexend 400/500, max-width 34em, stepper = peeche / aage / shuru se + arrow keys, koi autoplay nahi, answer tiles nahi" },
+  // forks row 276 (1)(d), his word #22 ("pictures first then text, combine them both"): B.widget's ABSENCE case — a new
+  // idea taught at step 3 with no picture in its turn — is a patch (one show_widget call cures it); its PRESENCE cases
+  // (the widget's style, more than 12 in a session) narrow to count at their red sites and carry WIDGET_STYLE_FIX
+  "B.widget": { fam: "B", mouth: "patch", fix: "abhi EK tool: mcp__visualize__show_widget — is naye idea ki PICTURE (pehle picture, phir text, dono); text mein kuch nahi jodna" },
   "D.digest-first": { fam: "D", mouth: "patch", fix: "abhi chalao: node scripts/learn_digest.mjs — text mein kuch nahi jodna, jab tak uski screen tumhara sawaal na badle" },
   "D.sitting-first": { fam: "D", mouth: "patch", fix: "abhi kholo: node scripts/sitting.mjs open --surface code --no-spawn --task \"<concept> axis <x>\" — text mein kuch nahi jodna" },
   "D.start-once": { fam: "D", mouth: "count", fix: "forge_session start dobara nahi, --force kabhi nahi — khuli session RESUME karo (pointer se)" },
@@ -155,6 +158,8 @@ export const PATCH_OPENER = "PATCH — tumhara jawab uski screen par hai aur rah
 export const RANK = Object.freeze(["D.unbound", "D.digest-first", "D.sitting-first", "A.text-last", "B.bank", "B.tools", "A.one-question", "A.new-terms", "A.neev-pehle",
   "A.too-hindi", "A.question-last", "A.gut-by-moment", "A.gut-trio", "B.moment", "A.confusion-literal", "A.position", "A.count-form", "A.codes-at-him"]);
 const rankOf = (id) => { const i = RANK.indexOf(id); return i >= 0 ? i : RANK.length + Object.keys(CHECKS).indexOf(id); };
+// B.widget's presence cases carry their own fix line (the catalogue's is the absence's add-shaped one, row 276 (1)(d))
+export const WIDGET_STYLE_FIX = "widget: Lexend 400/500, max-width 34em, stepper = peeche / aage / shuru se + arrow keys, koi autoplay nahi, answer tiles nahi";
 export const MAX_FIX_LINES = 6;
 
 // ── TEXT HELPERS (pure) ────────────────────────────────────────────────────────
@@ -456,9 +461,11 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
   const cls = classifyPrompt(T.prompt, { prevMoments });
   const moments = momentsOf(T.turn);
   const moment = moments.length ? moments[moments.length - 1] : null;
-  const reds = []; const why = {}; const mouthOf = {}; const mechanical = new Set();
-  // a red site may name a narrower mouth for one case of its id (row 272 (2)); otherwise the catalogue's
-  const red = (id, detail, mouth = null) => { if (!reds.includes(id)) { reds.push(id); why[id] = detail; mouthOf[id] = mouth || (CHECKS[id] && CHECKS[id].mouth) || "count"; } };
+  const reds = []; const why = {}; const mouthOf = {}; const fixOf = {}; const mechanical = new Set();
+  // a red site may name a narrower mouth for one case of its id (row 272 (2)); otherwise the catalogue's. A site that
+  // narrows may also carry its case's own fix line (row 276 (1)(d)); otherwise the catalogue's.
+  const red = (id, detail, mouth = null, fix = null) => { if (!reds.includes(id)) { reds.push(id); why[id] = detail; mouthOf[id] = mouth || (CHECKS[id] && CHECKS[id].mouth) || "count"; if (fix) fixOf[id] = fix; } };
+  const fixLine = (id) => fixOf[id] || (CHECKS[id] ? CHECKS[id].fix : id);
 
   // ── MECHANICAL — on every study turn, system talk included ──
   const turnBlocks = T.turn.slice();
@@ -647,10 +654,16 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
     const badKinds = moments.filter((k) => !MOMENT_KINDS.includes(k));
     if (badKinds.length) red("B.moment-kind", badKinds.join(", "));
     const judges = T.all.filter((b) => b.kind === "tool" && (/judge[_-]round/.test(String(b.name)) || /judge[_-]round/.test(cmdOf(b)))).length;
-    if (T.all.filter((b) => b.kind === "tool" && /show_widget/.test(String(b.name))).length > 12) red("B.widget", "more than 12 widgets in this session (~10-12 a day, at moments)");
+    // forks row 276 (1)(d), his word #22 ("pictures first then text, combine them both"): at step 3 a turn that TEACHES
+    // an idea (it declares check_q) carries that idea's picture in the same turn. Its ABSENCE is what one show_widget
+    // call cures, so it patches; it is judged first so the presence cases below never mask it. A pehle_guess, sharp
+    // check or jirah turn is a test before or after the teaching — a picture there would give the answer away.
+    const pictured = T.turn.some((b) => b.kind === "tool" && /show_widget/.test(String(b.name)));
+    if (forge && forge.step === 3 && moments.includes("check_q") && !pictured) red("B.widget", "a new idea was taught (check_q declared) with no picture in its turn — picture first, then text (his word #22, row 276)", "patch");
+    if (T.all.filter((b) => b.kind === "tool" && /show_widget/.test(String(b.name))).length > 12) red("B.widget", "more than 12 widgets in this session (~10-12 a day, at moments)", "count", WIDGET_STYLE_FIX);
     if (judges > 1) red("B.judge-once", `${judges} judge_round calls in this session`);
     const wf = widgetFindings(T.turn);
-    if (wf.length) red("B.widget", wf.join(" · "));
+    if (wf.length) red("B.widget", wf.join(" · "), "count", WIDGET_STYLE_FIX);
   }
   // ── D · the boot, ONCE per session (the first in-scope stop) ──
   if (!mine.some((r) => r.d_checked)) {
@@ -699,9 +712,9 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
   const room = MAX_FIX_LINES - (counted.length ? 1 : 0);
   const shown = patch.slice(0, room);
   const reason = [PATCH_OPENER,
-    ...shown.map((id) => `  · ${id}: ${CHECKS[id] ? CHECKS[id].fix : id}${why[id] ? `  [${String(why[id]).slice(0, 120)}]` : ""}`),
+    ...shown.map((id) => `  · ${id}: ${fixLine(id)}${why[id] ? `  [${String(why[id]).slice(0, 120)}]` : ""}`),
     ...(patch.length > shown.length ? [`  (+${patch.length - shown.length} more to add: ${patch.slice(shown.length).join(", ")})`] : []),
-    ...(counted.length ? [`  AGLE TURN SE (is turn mein inhe mat chhedo): ${counted.slice(0, 4).map((id) => `${id} — ${CHECKS[id] ? CHECKS[id].fix.split(" — ")[0] : id}`).join(" · ")}${counted.length > 4 ? ` (+${counted.length - 4})` : ""}`] : []),
+    ...(counted.length ? [`  AGLE TURN SE (is turn mein inhe mat chhedo): ${counted.slice(0, 4).map((id) => `${id} — ${fixLine(id).split(" — ")[0]}`).join(" · ")}${counted.length > 4 ? ` (+${counted.length - 4})` : ""}`] : []),
     "  Tools pehle, phir sirf yeh naye lines — upar wala jawab kabhi dohrao mat."].join("\n");
   return { decision: "block", scope: "study", reds: ordered, patch, counted, reason, why, detail: why, ...d };
 }
@@ -791,7 +804,9 @@ const GOOD = [
   "",
   "Toh \"tea tea teen\" mein pehla merge kaunsa pair hoga — samajh aaya, haan ya nahi?",
 ].join("\n");
-const TURN_OK = [BASH("node scripts/forge_session.mjs moment check_q"), BASH("node scripts/forge_session.mjs pointer \"axis c merge\"")];
+// the idea's picture FIRST (forks row 276 (1)(d)): a clean widget — Lexend, 34em, no stepper, no inputs
+const PIC = TOOL("mcp__visualize__show_widget", { title: "pair_merge", widget_code: "<style>.w{font-family:Lexend;max-width:34em}</style><div class=w>tea tea teen: sabse common padosi pair</div>" });
+const TURN_OK = [PIC, BASH("node scripts/forge_session.mjs moment check_q"), BASH("node scripts/forge_session.mjs pointer \"axis c merge\"")];
 const run = (prompt, turnRows, final, { prev = [], payload = {}, logRows = [{ session: HOST, d_checked: true }], sitting = SIT, before = BOOT, hook = null, forge = FORGE } = {}) => {
   const rows = [...before, ...prev, U(prompt), ...(hook ? [HOOK(hook)] : []), ...turnRows, ...(final !== null ? [TXT(final)] : [])];
   return decide({ payload: { session_id: HOST, transcript_path: "x", last_assistant_message: final, ...payload }, sitting, forge, transcript: rows.join("\n"), logRows, env: {} });
@@ -1035,6 +1050,20 @@ async function selftest() {
     has(kinds, "B.moment-kind") && sharpTrio.reds.length === 0 && has(sharpBare, "A.gut-by-moment") && !has(sharpBare, "B.moment-kind"), JSON.stringify([sharpTrio.reds, sharpTrio.why, sharpBare.reds]));
   const w = run("ok", [TOOL("mcp__visualize__show_widget", { widget_code: "<div style='font-family:Arial'><button>aage</button></div><script>setInterval(()=>{},9)</script>" }), ...TURN_OK], "widget dikhaya · " + GOOD);
   assert("VISUAL_CONTRACT · a widget without Lexend / 34em, with autoplay and a half stepper → B.widget", has(w, "B.widget"));
+  // forks row 276 (1)(d), his word #22 — PICTURE FIRST, planted both ways: a step-3 teaching turn (check_q) with no
+  // picture PATCHES with one show_widget call; the same turn with its picture is clean; a test turn (pehle_guess) and a
+  // step-4 turn never owe one; the style case stays a PRESENCE and carries the style fix, never the absence's
+  const TEACH_NO_PIC = TURN_OK.filter((b) => b !== PIC);
+  const noPic = run("ok", TEACH_NO_PIC, GOOD);
+  const withPic = run("ok", TURN_OK, GOOD);
+  const guessNoPic = run("ok", [BASH("node scripts/forge_session.mjs moment pehle_guess"), BASH("node scripts/forge_session.mjs pointer \"axis c merge\"")], "pointer set · pehle_guess declared\nTokenization › axis c › pair-merge\nTumhara guess: \"tea tea\" mein kaunsa pair pehle judega?\npehle gut-word: pakka / shayad / pata nahi");
+  const step4NoPic = run("ok", TEACH_NO_PIC, GOOD, { forge: { ...FORGE, step: 4 } });
+  assert("row 276 · a step-3 teaching turn (check_q) with NO picture → B.widget BLOCKS as a patch whose fix is one show_widget call; with its picture first → no B.widget",
+    noPic.decision === "block" && (noPic.patch || []).includes("B.widget") && /show_widget/.test(noPic.reason || "") && !has(withPic, "B.widget"), JSON.stringify([noPic.reds, noPic.patch, withPic.reds]));
+  assert("row 276 · a pehle_guess turn and a step-4 turn owe no per-idea picture (a test turn must not give the answer away; step 4 has its concept widget)",
+    !has(guessNoPic, "B.widget") && !has(step4NoPic, "B.widget"), JSON.stringify([guessNoPic.reds, step4NoPic.reds]));
+  assert("row 276 · the widget's STYLE stays a presence: counted, never patched, and its AGLE TURN SE line carries the style fix, never the absence's",
+    has(w, "B.widget") && !(w.patch || []).includes("B.widget") && (w.counted || []).includes("B.widget") && (!w.reason || /B\.widget — widget: Lexend/.test(w.reason)), JSON.stringify([w.decision, w.patch, w.counted, (w.reason || "").split("\n").filter((l) => /AGLE/.test(l))]));
   const j2 = run("ok", [TOOL("mcp__organism-memory__judge_round", {}), ...TURN_OK], "set · " + GOOD, { before: [...BOOT, TOOL("mcp__organism-memory__judge_round", {})] });
   assert("B · a second judge_round in the session → B.judge-once", has(j2, "B.judge-once"));
   // 11 — system talk passes (mechanical checks only), confusion is literal
@@ -1081,7 +1110,8 @@ async function selftest() {
     assert("SKELETON · its six examples are read off the rendered skeleton (ran-line · bank line · position · check_q ending · gut line · blank line)",
       got.every((x) => typeof x === "string" && x.length > 3 && !x.includes("<")), JSON.stringify(got));
     const lesson = [position, "Dukaan mein sabse zyada bikne wali cheez ko ek hi shelf milti hai — wahi idea yahan hai.", "`merge`: do sabse common padosi pieces ko ek naya piece bana dena.", "In English: BPE repeatedly merges the most frequent adjacent pair into a new token.", ""].join("\n");
-    const moment = (k) => [BASH(`node scripts/forge_session.mjs moment ${k}`), BASH("node scripts/forge_session.mjs pointer \"axis c merge\"")];
+    // the skeleton's line 0 orders the idea's picture FIRST on a teaching turn (row 276 (1)(d)) — its check_q turns carry it
+    const moment = (k) => [...(k === "check_q" ? [PIC] : []), BASH(`node scripts/forge_session.mjs moment ${k}`), BASH("node scripts/forge_session.mjs pointer \"axis c merge\"")];
     const turns = {
       check_q: run("ok", moment("check_q"), `${ranLine}\n${lesson}\nToh "tea tea teen" mein pehla merge kaunsa pair hoga, ${checkEnd}?`),
       bank: run("pakka - pay kyunki woh sabse zyada repeat hota hai", [BASH(REP), ...moment("check_q")], `${bankLine} · ${ranLine}\n${lesson}\nToh "tea tea teen" mein pehla merge kaunsa pair hoga, ${checkEnd}?`, { prev: SHARP }),

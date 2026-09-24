@@ -150,16 +150,30 @@ his; only the checker's reach stays where it is. **Binds §8.3.**
 
 ## §4 · THE DAY (the 11 moments — what fires when)
 
+> **PICTURE FIRST — HIS WORD, 24 Sep 2026** (his word #22, act `act-mueywvag`, forks row 276), verbatim:
+> *"save this that everything should be fully interactive as per my adhd pi and autistic brain and interactive
+> dashboards i mean pictures first then text, combine them both."*
+> **Every new idea opens with ONE picture, then its text: both, in the same message** (tools first: the
+> `show_widget` call, then `moment widget_gate`, then the whole text last). The **Board** opens every /learn.
+> The step-4 concept widget after axis g stays exactly as below. The gate holds it: a step-3 teaching turn
+> (`check_q`) with no picture is patched with one `show_widget` call (`teaching_gate.mjs` B.widget).
+> The text-first order below was a 4 Aug session gloss on HOW_HE_LEARNS rule 3, never his word. It is struck,
+> not erased (L9). *Carried to him in one line (row 276 (3)): "pictures first" is read as every new idea, not
+> once a session. If he names another cadence, this block changes, not the gate's detection.*
+
 /learn open → 3-line re-entry + pointer question + **Board** → warm-up 3-5 cold probes
-(+ gut-strip after) → per axis: shaped text idea → **Mechanism-tasveer** → **Trace card** →
+(+ gut-strip after) → per axis, at EVERY new idea: **its picture FIRST** (24 Sep) → shaped text idea
+(~~shaped text idea → **Mechanism-tasveer**~~) → **Trace card** →
 ONE typed check-q → axis close: **Board fills** + his words back → once per concept:
 **Live tool** (saath, then akele) → Bolo via voice dictation (zero tokens) → CALIBRATE:
 pehle-guesses return as guess-vs-actual chart → JIRAH: **Traps wapas** → LOCK: **poster file**
 (SendUserFile, one designed page) + Board fully lit + concept-web node → full-time:
 **Close card** + own-data chart.
 
-Rhythm: **~10-12 visuals a day, at MOMENTS — never one per message.** Per-idea = shaped text
-only. This is the attention limit (§6), not a token limit.
+Rhythm: ~~**~10-12 visuals a day, at MOMENTS — never one per message.** Per-idea = shaped text
+only.~~ *(struck 24 Sep 2026 by his word #22 above: per idea = its picture FIRST, then its shaped
+text.)* The attention limit (§6) is evidence, and weighing it against his word is HIS call, never a
+session's: the gate's more-than-12-a-session line stays a COUNT (logged, never a block).
 
 ## §5 · THE FULL CAPABILITY SHELF (what a session may draw on — all verified working in the
 Code tab this session, 6 Sep 2026)
