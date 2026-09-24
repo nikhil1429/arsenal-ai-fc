@@ -59,6 +59,18 @@
 //   process that can see the payload of the call that opens the study sitting, and the model must
 //   never type an id. Bounded (5 s), silent on stdout, fail-open: a failed hand-off costs the call
 //   nothing, and the `open` CLI's own harness id is the second path (sitting.mjs bindHost).
+// G3 · THE STUDY RAIL (24 Sep 2026 · THE TEACHING GATE P2 concern 2 · forks row 283 (2) + CURRENT line 3):
+//   HOW_HE_LEARNS #12 — no system/notes/tool work mid-concept — as a code path. It fires only when the call's
+//   session HOSTS the open sitting (study_scope's R7 predicate: payload.session_id === sitting.host_session_id;
+//   another terminal with the same sitting open gets no opinion) ∧ the sitting is not a pre-G0 legacy one ∧ his
+//   last prompt is not a CLOSING. A shell call passes iff shellInStudySet (ONE home: study_scope.mjs); Write /
+//   Edit / Agent / Task / Workflow are never in the set; every other tool gets no opinion. The rail id is
+//   `study` and it is NOT overridable. THE ARCHITECT'S RULING ON THE 480 DENIES (row 283 (2), binding): the
+//   replay over his study transcripts found 480 DENY of 634 calls, mostly engineering HE ORDERED mid-lesson —
+//   so when his LAST PROMPT classifies "system" (the gate's own classifyPrompt, never a second one) the call is
+//   ALLOWED as "captain's mid-lesson engineering": said on stderr and counted by study_rail_replay.mjs, never
+//   blocked. #12 binds the model, not his order. The context read is FAIL-OPEN: any read error, no transcript,
+//   no prompt in the tail → no opinion, never a deny.
 // WHO ELSE COULD ACT ON THIS OUTPUT? .claude/settings.json PreToolUse (wired) ·
 //   hooks/pre-commit (wired — tripwire first, then `orders`) · xray.mjs (reads this file
 //   like any organ; it has no state edges by design).
@@ -71,6 +83,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // THE STDIN DEADLINE (rung S5-R, 20 Aug 2026): session_meter's proven guard, imported —
 // never a second implementation (§2: a universal need solved twice is the disease).
 import { readStdinWithDeadline } from "./session_meter.mjs";
+// G3 — the study scope, the study set and his prompt's class, from the LEAF (never the gate or the pacer: heavy,
+// and a forge_session import before turn_hook's shim makes the shim a silent no-op — study_scope's own note)
+import { readSitting, studyScope, classifyPrompt, shellInStudySet, lastHumanPrompt } from "./study_scope.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -105,9 +120,8 @@ const OVERRIDE_RE = /ARSENAL_RAILS_OVERRIDE=([A-Za-z0-9_.-]+):([a-z-]+)/;
 
 const textOf = (v) => { try { return typeof v === "string" ? v : JSON.stringify(v ?? ""); } catch { return String(v); } };
 
-// PURE — the whole decision, over a PreToolUse payload. This is the function the
-// selftest drives; the CLI is a thin shell around it.
-export function decide(payload = {}) {
+// PURE — the factory's decision, over a PreToolUse payload (the three rails of S1).
+export function factoryDecide(payload = {}) {
   const tool = String(payload.tool_name || "");
   const input = payload.tool_input || {};
   const blob = textOf(input);
@@ -156,6 +170,47 @@ export function decide(payload = {}) {
   return allow("no rail covers this tool");
 }
 
+// ── G3 · THE STUDY RAIL ─────────────────────────────────────────────────────
+export const SHELL_TOOLS = ["Bash", "PowerShell"];
+export const STUDY_DENY = "park it: ek line, phir micro-question wapas";
+/** What the study rail needs, read live: the scope verdict and — only in scope — his last prompt. FAIL-OPEN: null on any throw. */
+export function studyContext(payload = {}, { dir = undefined, env = process.env } = {}) {
+  try {
+    const scope = studyScope({ payload, sitting: readSitting(dir), env });
+    if (!scope.study || scope.legacy) return { scope, prompt: null };
+    const tp = typeof payload.transcript_path === "string" ? payload.transcript_path : "";
+    return { scope, prompt: tp ? lastHumanPrompt(tp) : null };
+  } catch { return null; }
+}
+/** PURE — the study rail over a payload and its context. null = no opinion. */
+export function studyRail(payload = {}, ctx = null) {
+  const tool = String(payload.tool_name || "");
+  const shell = SHELL_TOOLS.includes(tool);
+  if (!shell && !EDIT_TOOLS.includes(tool) && !FLEET_TOOLS.includes(tool)) return null;   // outside the rail's matcher
+  if (!ctx || !ctx.scope || !ctx.scope.study || ctx.scope.legacy) return null;           // not the sitting's host · legacy
+  if (typeof ctx.prompt !== "string") return null;                                       // his prompt unreadable → fail-open
+  const cls = classifyPrompt(ctx.prompt);
+  if (cls.closing) return null;                                                          // /full-time's close organs run
+  const cmd = shell ? String((payload.tool_input || {}).command || "") : "";
+  if (shell && shellInStudySet(cmd)) return { decision: "allow", rail: "study", why: "inside the study set" };
+  const what = shell ? `\`${cmd.slice(0, 60)}\`` : tool;
+  if (cls.kind === "system") return { decision: "allow", rail: "study", captain: true, why: `captain's mid-lesson engineering — his last prompt ordered it (class system), so ${what} runs; counted, never blocked (row 283 (2))` };
+  const why = `${what} is system work mid-lesson and his last prompt did not order it (class ${cls.kind}) — HOW_HE_LEARNS #12 binds the model`;
+  const fix = "name it in ONE line, park it, hand back the micro-question; if HE orders it, his word opens this rail (not overridable)";
+  return { decision: "deny", rail: "study", why, fix, reason: `RAIL study — ${STUDY_DENY}\n   WHY: ${why}\n   FIX: ${fix}` };
+}
+
+// THE WHOLE DECISION — the factory's rails first (a factory deny stands whatever the lesson), then the study rail.
+// ctx undefined → read live (the hook); null → no study context (hermetic callers).
+export function decide(payload = {}, ctx = undefined) {
+  const f = factoryDecide(payload);
+  if (f.decision === "deny") return f;
+  let s = null;
+  try { s = studyRail(payload, ctx === undefined ? studyContext(payload) : ctx); } catch { s = null; }   // fail-open
+  if (!s) return f;
+  return s.decision === "deny" ? s : { ...f, study: s };
+}
+
 // G0 · THE HAND-OFF'S PREDICATE — pure. `node` in command position (the CLAUDE-P rule's own
 // CMD_POS, so a grep or a sentence ABOUT the command is never a call), then a path ending in
 // sitting.mjs (bare, relative, or the quoted $CLAUDE_PROJECT_DIR form), then the `open` verb.
@@ -182,7 +237,7 @@ const spawnHandoff = (args) => spawnSync(process.execPath, [SITTING_CLI, ...args
 //   only the hang case changes, from a forever-block into a LOUD fast refusal that
 //   fail-opens — which is this rail's declared failure mode ("if this organ throws, the
 //   tool proceeds"), now reached in 300 ms instead of never.
-export function pretooluse({ raw = null, handoff = spawnHandoff } = {}) {
+export function pretooluse({ raw = null, handoff = spawnHandoff, ctx = undefined } = {}) {
   let payload = {};
   try {
     const handed = globalThis.__ARSENAL_HOOK_STDIN__;
@@ -200,12 +255,13 @@ export function pretooluse({ raw = null, handoff = spawnHandoff } = {}) {
     }
     payload = text && text.trim() ? JSON.parse(text) : {};
   } catch { payload = {}; }
-  const d = decide(payload);
+  const d = decide(payload, ctx);
   if (d.decision === "deny") {
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: d.reason } }) + "\n");
     return d;
   }
   if (d.override) process.stderr.write(`rails: ${d.why}\n`);
+  if (d.study && d.study.captain) process.stderr.write(`rails: study · ${d.study.why}\n`);
   // G0 — only on an ALLOWED call (a denied one never runs, so it opens nothing).
   try { const h = hostHandoff(payload); if (h) { handoff(h); d.handoff = h; } } catch { /* fail-open: the call proceeds either way */ }
   return d;   // silence = the tool proceeds under the normal permission flow
@@ -331,7 +387,7 @@ export function checkOrders({ dir = ORDER_DIR, root = ROOT } = {}) {
 function selftest() {
   let pass = 0, fail = 0;
   const assert = (n, c, d) => { if (c) pass++; else fail++; console.log(`  ${c ? "✓" : "✗"} ${n}${c || !d ? "" : `\n      ${d}`}`); };
-  const D = (tool, input) => decide({ tool_name: tool, tool_input: input });
+  const D = (tool, input) => decide({ tool_name: tool, tool_input: input }, null);   // hermetic: no study context
 
   // RAIL 1 — the fleet
   assert("FLEET — an Agent call with no ceiling in the prompt is DENIED",
@@ -443,6 +499,103 @@ function selftest() {
     assert("G0 HOOK — the hook runs the hand-off exactly once for the open call, never for another verb, never for a DENIED call; stdout stays the decision alone",
       got.length === 1 && got[0][0] === "host" && got[0][2] === SID && o4.length === 1 && /RAIL claude-p/.test(o4[0]), JSON.stringify({ got, o4 }));
     assert("G0 HOOK — a hand-off that throws costs the call nothing (fail-open, no stdout)", o4.length === 1);
+  }
+
+  // G3 · THE STUDY RAIL (24 Sep 2026, forks row 283 (2)) — every clause planted both ways, on a pure ctx
+  {
+    const SID = "5dc8436e-f788-4483-bf15-564a89ec7aaf", OTHER = "9e29b88c-0000-1111-2222-333333333333";
+    const IN = (prompt) => ({ scope: { study: true, why: "payload session is the open sitting's host" }, prompt });
+    const ANSWER = "pakka - pay aur ment alag tokens", ORDERED = "ruk — pehle hook fix karo, rails ka system dekho", CLOSE = "<command-message>full-time</command-message>\n<command-name>/full-time</command-name>";
+    const CP = ["claude", "-p", "go"].join(" ");   // built, so this file never carries the call in command position
+    const P = (tool, input) => ({ tool_name: tool, tool_input: input, session_id: SID, transcript_path: "C:/t/x.jsonl" });
+    const S = (tool, input, ctx) => decide(P(tool, input), ctx);
+    const XRAY = { command: "node scripts/xray.mjs report" };
+    const d0 = S("Bash", XRAY, IN(ANSWER));
+    assert("STUDY — mid-lesson system work the model started (his last prompt an answer) is DENIED, rail `study`, and the reason opens with the park line",
+      d0.decision === "deny" && d0.rail === "study" && d0.reason.split("\n")[0] === `RAIL study — ${STUDY_DENY}` && STUDY_DENY === "park it: ek line, phir micro-question wapas", JSON.stringify(d0));
+    assert("STUDY — …and an owner CLI of the study set in the same lesson is ALLOWED (the rail names itself, no captain flag)",
+      (() => { const d = S("Bash", { command: 'node scripts/forge_session.mjs pointer "axis c merge"' }, IN(ANSWER)); return d.decision === "allow" && d.study && d.study.rail === "study" && !d.study.captain; })());
+    assert("STUDY — PowerShell is the same shell: outside the set DENIED, a canon read ALLOWED",
+      S("PowerShell", { command: "git status" }, IN(ANSWER)).decision === "deny" && S("PowerShell", { command: "Get-Content learning-layer/HOW_HE_LEARNS.md | Select-Object -First 40" }, IN(ANSWER)).decision === "allow");
+    assert("STUDY — an allowed organ CHAINED to system work is DENIED (the whole-string hole, closed); the organ alone passes",
+      S("Bash", { command: "node scripts/forge_session.mjs pointer x && node scripts/xray.mjs report" }, IN(ANSWER)).decision === "deny"
+      && S("Bash", { command: "node scripts/forge_session.mjs pointer x" }, IN(ANSWER)).decision === "allow");
+    const never = [["Write", { file_path: "scripts/foo.mjs", content: "x" }], ["Edit", { file_path: "learning-layer/NOTES.md" }], ["MultiEdit", { file_path: "scripts/a.mjs" }],
+      ["Agent", { prompt: "read it — ceiling 2 agents" }], ["Task", { prompt: "go — ceiling 1 agent" }], ["Workflow", { script: "x — ceiling: 3 agents" }]];
+    assert("STUDY — Write / Edit / MultiEdit / Agent / Task / Workflow are NEVER in the set (a fleet WITH its ceiling clears the factory and is still denied mid-lesson)",
+      never.every(([t, i]) => S(t, i, IN(ANSWER)).decision === "deny" && S(t, i, IN(ANSWER)).rail === "study") && never.every(([t, i]) => S(t, i, null).decision === "allow"),
+      JSON.stringify(never.map(([t, i]) => [t, S(t, i, IN(ANSWER)).decision])));
+    assert("STUDY — a tool outside the rail's matcher gets NO opinion (Read, Grep, Glob, WebSearch, TodoWrite, an MCP tool)",
+      ["Read", "Grep", "Glob", "WebSearch", "TodoWrite", "mcp__organism-memory__recall"].every((t) => studyRail(P(t, {}), IN(ANSWER)) === null && S(t, {}, IN(ANSWER)).decision === "allow"));
+    const cap = S("Bash", XRAY, IN(ORDERED)), capW = S("Write", { file_path: "scripts/foo.mjs" }, IN(ORDERED));
+    assert("STUDY · THE 480 RULING — his LAST PROMPT ordered system work (class system) → the same xray call and a Write are ALLOWED as captain's mid-lesson engineering, flagged for the count",
+      classifyPrompt(ORDERED).kind === "system" && cap.decision === "allow" && cap.study.captain === true && /captain's mid-lesson engineering/.test(cap.study.why)
+      && capW.decision === "allow" && capW.study.captain === true, JSON.stringify([cap, capW]));
+    assert("STUDY · THE 480 RULING — …both ways: the same calls after his ANSWER, his confusion, a study question or an ack are DENIED",
+      ["pakka - pay", "samajh nahi aaya", "what is morphology?", "ok"].every((p) => S("Bash", XRAY, IN(p)).decision === "deny" && S("Write", { file_path: "scripts/foo.mjs" }, IN(p)).decision === "deny"));
+    assert("STUDY — a CLOSING (/full-time, \"post match\") stands the rail down for the close organs; the same organ on a study prompt is DENIED",
+      studyRail(P("Bash", { command: "node scripts/postmatch.mjs --hit x" }), IN(CLOSE)) === null && studyRail(P("Bash", { command: "node scripts/postmatch.mjs --hit x" }), IN("post match")) === null
+      && S("Bash", { command: "node scripts/postmatch.mjs --hit x" }, IN(ANSWER)).decision === "deny");
+    assert("STUDY — NOT OVERRIDABLE: ARSENAL_RAILS_OVERRIDE=<rung>:study in the call opens nothing; a factory rail's own token still opens that rail",
+      S("Bash", { command: "ARSENAL_RAILS_OVERRIDE=G3:study node scripts/xray.mjs report" }, IN(ANSWER)).decision === "deny"
+      && S("Bash", { command: "ARSENAL_RAILS_OVERRIDE=S12:claude-p " + CP }, null).decision === "allow");
+    assert("STUDY — a factory deny stands whatever the lesson (the claude-p and state rails after his order still bite)",
+      S("Bash", { command: CP }, IN(ORDERED)).rail === "claude-p" && S("Write", { file_path: "dressing-room/state/x.json" }, IN(ORDERED)).rail === "state");
+    assert("STUDY · SCOPE — not the host, a legacy (pre-G0) sitting, a null context, an unreadable prompt → NO opinion; the host with his prompt → an opinion",
+      studyRail(P("Bash", XRAY), { scope: { study: false, why: "this session is not the sitting's host" }, prompt: ANSWER }) === null
+      && studyRail(P("Bash", XRAY), { scope: { study: true, legacy: true }, prompt: ANSWER }) === null
+      && studyRail(P("Bash", XRAY), null) === null && studyRail(P("Bash", XRAY), IN(null)) === null && studyRail(P("Bash", XRAY), IN(ANSWER)) !== null);
+    assert("STUDY — FAIL-OPEN: a context that THROWS costs the call nothing (allow, no rail)",
+      (() => { const d = decide(P("Bash", XRAY), { get scope() { throw new Error("boom"); } }); return d.decision === "allow" && !d.study; })());
+
+    // studyContext over a temp state dir + transcript — the SCOPE GUARD read live, both ways
+    const { mkdtempSync, writeFileSync, rmSync } = process.getBuiltinModule("node:fs");
+    const tmp = mkdtempSync(join(process.getBuiltinModule("node:os").tmpdir(), "g3-rail-"));
+    try {
+      const tx = join(tmp, "t.jsonl");
+      const SIT = (extra) => writeFileSync(join(tmp, "sitting.json"), JSON.stringify({ id: "sit_x", opened_at: "2026-09-24T00:00:00Z", closed_at: null, ...extra }));
+      writeFileSync(tx, [JSON.stringify({ type: "user", message: { content: ORDERED } }), JSON.stringify({ type: "assistant", message: { content: [{ type: "text", text: "ok" }] } }),
+        JSON.stringify({ type: "user", message: { content: ANSWER } }), JSON.stringify({ type: "user", message: { content: [{ type: "tool_result", content: "x" }] } })].join("\n"));
+      const CTX = (sid, t = tx) => studyContext({ session_id: sid, transcript_path: t }, { dir: tmp, env: {} });
+      SIT({ host_session_id: SID, host_transcript_path: tx });
+      const host = CTX(SID), other = CTX(OTHER);
+      assert("STUDY · SCOPE GUARD — the sitting's HOST session is bound (its last HUMAN prompt read off the tail); ANOTHER session with the same sitting open gets NO opinion",
+        host.scope.study === true && host.prompt === ANSWER && decide(P("Bash", XRAY), host).decision === "deny"
+        && other.scope.study === false && other.prompt === null && decide({ ...P("Bash", XRAY), session_id: OTHER }, other).decision === "allow"
+        && decide({ ...P("Bash", XRAY), session_id: OTHER }, { ...other, prompt: ANSWER }).decision === "allow", JSON.stringify({ host, other }));
+      SIT({});
+      const legacy = CTX(SID);
+      SIT({ host_session_id: null });
+      const unbound = CTX(SID);
+      assert("STUDY · SCOPE GUARD — a sitting with NO host field (pre-G0 build) or a null host binds NO session: fail-open for all",
+        legacy.scope.legacy === true && decide(P("Bash", XRAY), legacy).decision === "allow" && unbound.scope.study === false && decide(P("Bash", XRAY), unbound).decision === "allow");
+      SIT({ host_session_id: SID, closed_at: "2026-09-24T01:00:00Z" });
+      assert("STUDY · SCOPE GUARD — a CLOSED sitting binds nobody", decide(P("Bash", XRAY), CTX(SID)).decision === "allow");
+      SIT({ host_session_id: SID });
+      const absent = decide(P("Bash", XRAY), CTX(SID, join(tmp, "none.jsonl"))).decision;
+      const noPath = decide(P("Bash", XRAY), studyContext({ session_id: SID }, { dir: tmp, env: {} })).decision;
+      writeFileSync(join(tmp, "sitting.json"), "{torn");
+      const torn = decide(P("Bash", XRAY), CTX(SID)).decision;
+      assert("STUDY — FAIL-OPEN on the read: an absent transcript, no transcript path, a garbage sitting file → no opinion",
+        absent === "allow" && noPath === "allow" && torn === "allow", JSON.stringify({ absent, noPath, torn }));
+      SIT({ host_session_id: SID });
+      assert("STUDY — a headless organ (ARSENAL_ORGAN=1) is never the study session",
+        studyContext({ session_id: SID, transcript_path: tx }, { dir: tmp, env: { ARSENAL_ORGAN: "1" } }).scope.study === false);
+    } finally { try { rmSync(tmp, { recursive: true, force: true }); } catch { /* temp */ } }
+
+    // THE HOOK SHAPE for the study rail — a deny prints the PreToolUse object; a captain's order prints nothing on stdout
+    const w5 = process.stdout.write.bind(process.stdout), e5 = process.stderr.write.bind(process.stderr);
+    const o5 = [], e5o = [];
+    process.stdout.write = (x) => { o5.push(x); return true; };
+    process.stderr.write = (x) => { e5o.push(x); return true; };
+    try {
+      pretooluse({ raw: JSON.stringify(P("Bash", XRAY)), ctx: IN(ANSWER), handoff: () => {} });
+      pretooluse({ raw: JSON.stringify(P("Bash", XRAY)), ctx: IN(ORDERED), handoff: () => {} });
+    } finally { process.stdout.write = w5; process.stderr.write = e5; }
+    let j5 = null; try { j5 = JSON.parse(o5[0] || ""); } catch { /* asserted */ }
+    assert("STUDY HOOK — the deny is the PreToolUse decision object opening `RAIL study — park it…`; the captain's order prints NOTHING on stdout and one `captain's mid-lesson engineering` line on stderr",
+      o5.length === 1 && j5 && j5.hookSpecificOutput.permissionDecision === "deny" && j5.hookSpecificOutput.permissionDecisionReason.startsWith(`RAIL study — ${STUDY_DENY}`)
+      && e5o.length === 1 && /captain's mid-lesson engineering/.test(e5o[0]), JSON.stringify({ o5, e5o }));
   }
 
   // (c) THE ORDER-CHECKER
