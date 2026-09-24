@@ -277,7 +277,9 @@ export function bankDueAt({ cls = null, prevMoments = [] } = {}) {
 // of one allowed set is the drift this whole lane exists to end. The owner CLIs a study turn may run (widened only by
 // rows the rule table maps here: the act lane learn:R29, the doubt lane learn:R158, the close's own capture paste
 // forge:R152/R153, the widget registry forge:R103, and the course track's chapter pointer learn:R35 / R136).
-export const ALLOWED_CMD = /(learn_digest\.mjs|sitting\.mjs["']?\s+(open|status|host|touch|close)|forge_session\.mjs["']?\s+(pointer|moment|crack|axis|status|step|contract|resume|boot|start|close|lockchain)|gaffer_brain\.mjs["']?\s+(capture\s+(voice_rep|axis_weld)|judge[_-]round)|teaching_contract\.mjs["']?\s+flag|judge[_-]round|deep\.mjs|rejirah\.mjs|acts\.mjs["']?\s+do\b|hippocampus\.mjs["']?\s+mark\s+doubt|capture\.mjs["']?\s+paste|heartbeat\.mjs|widget\.mjs["']?\s+(list|register)|samjhao\.mjs["']?\s+(open|plan|sweep|taught)|doubtminer\.mjs|mirror\.mjs|course\.mjs["']?\s+(at|done)\b)/i;
+// Forks row 299 (24 Sep 2026): a BARE `forge_session.mjs` (no verb) is in — its default branch only prints the usage
+// line, writes nothing — but only when nothing follows it except a 2>&1 and the end or a separator (no verb, no flag).
+export const ALLOWED_CMD = /(learn_digest\.mjs|sitting\.mjs["']?\s+(open|status|host|touch|close)|forge_session\.mjs["']?\s+(pointer|moment|crack|axis|status|step|contract|resume|boot|start|close|lockchain)|forge_session\.mjs["']?(?=[ \t]*(?:2>&1[ \t]*)?(?:$|[;&|\r\n]))|gaffer_brain\.mjs["']?\s+(capture\s+(voice_rep|axis_weld)|judge[_-]round)|teaching_contract\.mjs["']?\s+flag|judge[_-]round|deep\.mjs|rejirah\.mjs|acts\.mjs["']?\s+do\b|hippocampus\.mjs["']?\s+mark\s+doubt|capture\.mjs["']?\s+paste|heartbeat\.mjs|widget\.mjs["']?\s+(list|register)|samjhao\.mjs["']?\s+(open|plan|sweep|taught)|doubtminer\.mjs|mirror\.mjs|course\.mjs["']?\s+(at|done)\b)/i;
 // an allowed organ named in a command that ALSO commits, installs, redirects into code/state or deletes is not a study call
 export const UNSAFE_SHELL = /\bgit\s+(commit|push|add)\b|\bnpm\s|>\s*[\w./\\-]+\.(m?js|json|md)\b|Set-Content|Out-File|\brm\s/i;
 export const CANON_READ_PATH = /(learning-layer[\\/]|\.claude[\\/]skills[\\/]|docs[\\/]archive[\\/]|dressing-room[\\/]state[\\/]capsules[\\/]|(^|[\\/])capsules[\\/]|dressing-room[\\/]state[\\/]forge_sessions?\.jsonl?$)/i;
@@ -756,8 +758,18 @@ export function scopeSelfCheck() {
     && shellInStudySet("node scripts/forge_session.mjs status 2>&1 | head -30") && shellInStudySet("node scripts/learn_digest.mjs | Select-String -Pattern POSITION")
     && shellInStudySet("said='x y'; node scripts/forge_session.mjs pointer \"$said\"") && shellInStudySet('said="x y"; node scripts/forge_session.mjs pointer "$said"')
     && shellInStudySet("$said = 'it''s'; node scripts/forge_session.mjs pointer $said") && shellInStudySet("node scripts/learn_digest.mjs | sed -n 's/a/b/p' | grep -n 'THE TRAPS/x'"));
-  check("NEUTRAL · the second shape-B command (`forge_session.mjs` with NO subcommand) is refused by the pre-G3 whole-string test, not by a segment — with `status` it passes (a gate only gets stricter than main)",
-    !shellInStudySet(SHAPE_B2) && !(ALLOWED_CMD.test(SHAPE_B2)) && shellInStudySet(SHAPE_B2.replace("forge_session.mjs 2>&1", "forge_session.mjs status 2>&1")));
+  // row 297 planted SHAPE_B2 as refused by the whole-string test; forks row 299 (24 Sep 2026) rules the verbless form IN
+  check("BARE forge_session (row 299) · ALLOW — shape B2 verbatim (the 4 Sep lesson), the bare call alone and quoted, and with `status` as before; the whole-string test now names it",
+    shellInStudySet(SHAPE_B2) && ALLOWED_CMD.test(SHAPE_B2) && shellInStudySet("node scripts/forge_session.mjs") && shellInStudySet('node "scripts/forge_session.mjs" 2>&1')
+    && shellInStudySet(SHAPE_B2.replace("forge_session.mjs 2>&1", "forge_session.mjs status 2>&1")));
+  check("BARE forge_session (row 299) · DENY — a verb or flag outside the set (selftest, --x, a stray word after 2>&1), a redirect to a file, chained to system work, a bare cd",
+    !shellInStudySet("node scripts/forge_session.mjs selftest") && !shellInStudySet("node scripts/forge_session.mjs --no-rep-why x") && !shellInStudySet("node scripts/forge_session.mjs 2>&1 selftest")
+    && !shellInStudySet("node scripts/forge_session.mjs > out.txt") && !shellInStudySet("node scripts/forge_session.mjs 2>err.txt") && !shellInStudySet("node scripts/forge_session.mjs; git status")
+    && !shellInStudySet("node scripts/forge_session.mjs && node scripts/xray.mjs report") && !shellInStudySet("node scripts/forge_session.mjs | tee x.txt") && !shellInStudySet("cd C:/x"));
+  check("ECHO (row 299's DENY half) · a bare echo/printf, a non-literal echo, an echo redirected, a substitution, an echo fed to node -e — all refused",
+    !shellInStudySet("echo ---") && !shellInStudySet("printf x") && !shellInStudySet('echo "$said"; node scripts/forge_session.mjs status')
+    && !shellInStudySet("echo x > f.txt; node scripts/forge_session.mjs status") && !shellInStudySet("echo $(whoami); node scripts/forge_session.mjs status")
+    && !shellInStudySet('echo x | node -e "process.stdin.pipe(process.stdout)"') && !shellInStudySet("echo x | node scripts/forge_session.mjs status"));
   check("NEUTRAL · DENY — shape C (a capture chained to an out-of-set read) · sed -i · an organ redirected to a file (a discard to /dev/null or $null is no file) · tee · a filter with a FILE operand (alone, chained, piped) · sed w/e · sed -n with a file · a filter on a non-organ",
     !shellInStudySet(SHAPE_C) && !shellInStudySet("node scripts/learn_digest.mjs | sed -i s/a/b/") && !shellInStudySet("node scripts/forge_session.mjs status > out.txt")
     && !shellInStudySet("node scripts/learn_digest.mjs | tee x.txt") && !shellInStudySet("grep -n x scripts/rails.mjs") && !shellInStudySet("node scripts/forge_session.mjs status; grep -n x scripts/rails.mjs")
