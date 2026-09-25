@@ -1,6 +1,6 @@
 {
   "date": "2026-09-25",
-  "generated_at": "2026-09-25T04:54:42.758Z",
+  "generated_at": "2026-09-25T04:55:11.181Z",
   "total_reps": 2,
   "status": "ok",
   "low_confidence": false,
@@ -207,7 +207,7 @@
     ],
     "started_at": "2026-09-02T21:05:33.373Z",
     "stale": false,
-    "stale_as_of": "2026-09-25T04:54:42.758Z",
+    "stale_as_of": "2026-09-25T04:55:11.181Z",
     "last_closed": {
       "concept": "hallucinations",
       "ended_at": "2026-09-02T21:05:33.180Z",
