@@ -252,9 +252,10 @@ export function barLinesLegacy(session, turn = 0, unopened = []) {
 // previous turn of THIS session declared (read from teaching_audit_last.json's two window ends — owner
 // teaching_audit.mjs, read-only here); ONE predicate with the gate, study_scope.bankDueAt.
 // The ALWAYS line carries bold ≤ 2 words and no italics (row 264 (3)): the two loudest blocks P2's replay
-// measured, so the skeleton never teaches the violation. [PARK] is printed every turn: the organism has no classifier
-// for "his message is system talk" (v2's "partition heuristic" is the campaign's, not an organ here),
-// so the slot states the law and the model judges — P2's gate owns the classifier question.
+// measured, so the skeleton never teaches the violation. [PARK] rides only a turn whose message carries the
+// system flag (forks row 258 (2)(d)): read on the SAME study_scope.classifyPrompt the bank reads, never a second
+// classifier — flags, not one label, so an answer riding a complaint about the method still parks. No prompt
+// (a hand-run, an unreadable payload) prints it as before: fail toward the law, never away from it.
 // The [LABELS] are for the model. He never sees one (VISUAL_CONTRACT §8.1): the labels are a writing
 // order, and the gate (P2) reads the message, never the labels.
 export const MAX_SKELETON_LINES = 12;
@@ -288,6 +289,12 @@ export function prevMomentKinds({ sessionId = null, auditLast = null } = {}) {
   const open = L.prompt.moments_by_kind, close = L.stop.moments_by_kind;
   if (!open || !close || typeof open !== "object" || typeof close !== "object") return [];
   return Object.keys(close).filter((k) => (Number(close[k]) || 0) > (Number(open[k]) || 0));
+}
+/** Does his message need the [PARK] slot? Only when it carries the system flag (forks row 258 (2)(d)), on the
+ *  same classifier the bank reads; no prompt → true (the old every-turn law, the safe side). */
+export function parkDue({ prompt = "" } = {}) {
+  const t = String(prompt || "").trim();
+  return !t || classifyPrompt(t).system === true;
 }
 /** Does the bank owe his message a row? Forks row 264 (1) narrowed R5 to the axis's banked moments plus
  *  jirah, never per idea — ONE predicate with the gate's B.bank (study_scope.bankDueAt), read on the same
@@ -332,7 +339,7 @@ export function barLines(session, turn = 0, unopened = [], ctx = {}) {
     L.push(`    check_q → end "samajh aaya — haan ya nahi", NO gut trio · pehle_guess / sharp_check (the axis-close check, his answer is banked) / jirah → ONE line after it: "pehle gut-word: ${GUT_TRIO}" · otherwise at most ONE blank line after it: "maine socha ___, phir ___"`);
   }
   L.push(`  ⛔ ALWAYS — ${HARD_STOPS.replace(/^ALWAYS — /, "")} · Hinglish = English content words on Hindi glue (never akshar · shabd · niyam · sira) · address him as "tum", never the familiar singular · ONE \`\`\`diff (+ sahi / - galat, ≤ 4 lines) only at a correction · emoji only ✅ ❌ ⚠ ⭐ (≤ 2, ≤ 1 a line) · bold ≤ 1 a paragraph, ≤ 2 words · no italics`);
-  L.push(`  [PARK] his message is about the system or tools, not the concept → ONE line naming it parked + the pointer question back, nothing else`);
+  if (!ctx || ctx.park !== false) L.push(`  [PARK] his message is about the system or tools, not the concept → ONE line naming it parked + the pointer question back, nothing else`);
   return L;
 }
 
@@ -624,6 +631,15 @@ export function barSelfCheck() {
       && /\[TRACE\] a NUMBERED text trace first/.test(barLines({ ...S3, step: 4 }).join("\n")) && /\[BOLO\] hand him the EMPTY skeleton/.test(barLines({ ...S3, step: 7 }).join("\n"))
       && /\[CALIBRATE\]/.test(barLines({ ...S3, step: 8 }).join("\n")) && /\[JIRAH\]/.test(barLines({ ...S3, step: 9 }).join("\n"))
       && !/\[EK CHECK\]/.test(barLines({ ...S3, step: 10 }).join("\n")) && /⛔ ALWAYS/.test(barLines({ ...S3, step: 10 }).join("\n")));
+    // forks row 258 (2)(d): [PARK] only on system talk, read on classifyPrompt's own planted prompts — both ways
+    const parkOn = (prompt) => /\[PARK\]/.test(barLines(S3, 1, [], { park: parkDue({ prompt }) }).join("\n"));
+    check("skeleton · [PARK] rides his system talk (e3316fbd t6, a message about the notes and the session)",
+      parkOn("before we start, can you please tell me how are you taking my notes topic and session agnostically when i start learning by command /learn ??"));
+    check("skeleton · NO [PARK] on a plain gut-word answer", !parkOn("pakka — merge sabse common pair ka hota hai"));
+    check("skeleton · NO [PARK] on a study question (a33327c2 t2)", !parkOn("ijust got this, what do i need to do?"));
+    check("skeleton · [PARK] on an answer carrying a complaint about the method — flags, not one label (9e29b88c)",
+      parkOn("weren't you supposed to teach me in hinglish and not in hindi or english? gut word - pakka word-level"));
+    check("skeleton · no prompt → [PARK] as before (fail toward the law)", parkDue({}) === true && parkDue({ prompt: "  " }) === true && parkOn(""));
     // THE CARRIED-RULE COMPLETENESS (G1's own clause): every teaching_contract rule the pool no longer
     // prints must have a slot here, and that slot must be ON the skeleton of a teaching turn.
     const withBank = barLines(S3, 1, [], { bank: "x" }).join("\n");
@@ -668,7 +684,7 @@ function main() {
         let payload = {};
         try { payload = JSON.parse(String(globalThis.__ARSENAL_HOOK_STDIN__ || "") || "{}") || {}; } catch { payload = {}; }
         const bank = bankDue({ prompt: payload.prompt, sessionId: payload.session_id, auditLast: readJson(join(STATE_DIR, "teaching_audit_last.json")) });
-        const lines = barLines(s, turnNumber(STATE_DIR, s), unopenedNames(STATE_DIR, s), { bank });
+        const lines = barLines(s, turnNumber(STATE_DIR, s), unopenedNames(STATE_DIR, s), { bank, park: parkDue({ prompt: payload.prompt }) });
         if (lines.length) console.log(lines.join("\n"));
       } catch { /* a grammar reminder is never a reason to bite his prompt */ }
       break;                              // no process.exit on the hook path (turn_hook contract 2)
