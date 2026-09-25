@@ -237,12 +237,27 @@ async function markMoment(kind, text, deps = {}) {
   // where it can be named and undone — never at the write, where the loss is silent and permanent.
   const row = { id: textHash(t + now.toISOString()), ts: now.toISOString(), day: dayKey(now), kind: k, text: t, vec: null, recalls: 0 };
   append(row);                                      // ← the moment is durable from HERE, whatever the network does
+  // deps.post === false (the home pin refused this checkout — markCli below): the row is
+  // local and stays; his words never leave for the embed pool.
+  if (deps.post === false) return { ok: true, id: row.id, embedded: false, durable: true, embed_refused: true };
   let embedded = false;
   try {
     const vecs = await embed([t]);
     if (vecs && vecs[0]) { row.vec = vecs[0]; embedded = patch(row) !== false; }
   } catch { }
   return { ok: true, id: row.id, embedded, durable: true };
+}
+// ── THE HOME PIN (forks row 334, 26 Sep 2026) — `mark` sends his words to Gemini ──
+// `acts note` (turn_hook's Stop lane among its doors) spawns `mark`, and markMoment's
+// embed ships the text to the Gemini pool. A fresh clone runs the same hooks, so the
+// CLI door asks the pin: home, a git worktree of it, or an unpinned machine embeds;
+// anything else keeps the local row and sends nothing. `--no-embed` is acts.mjs saying
+// it already asked (and already said its one stderr line). If the guard cannot load,
+// nothing is sent — the hourly `index` sweep back-fills a home row's vector.
+async function markCli(argv, text, deps = {}) {
+  const ask = deps.mayPost || (async (who) => { try { return (await import("./home_pin.mjs")).mayPostHome(who); } catch { return false; } });
+  const post = argv.includes("--no-embed") ? false : await ask("hippocampus mark");
+  return markMoment(argv[0], text, { ...deps, post });
 }
 // single writer of episodes.jsonl (this organ) → an in-place rewrite is safe;
 // the hot set is O(recent) by consolidateStore, so this stays cheap.
@@ -1165,6 +1180,19 @@ async function selftest() {
   const mockEmbed = async (ts) => ts.map(t => /token/i.test(t) ? [1, 0] : /cosine|embed/i.test(t) ? [0.9, 0.44] : [0, 1]);
 
   // L1 — the Scribe
+  // THE HOME PIN: the CLI door's gate, both ways — refused ⇒ the row is
+  // durable and the embed (the Gemini client) is never called; allowed ⇒ called once.
+  {
+    const rows = [], sent = [];
+    const spy = async (ts) => { sent.push(...ts); return mockEmbed(ts); };
+    const no = await markCli(["thread", "--no-embed"], "meri baat — pin fixture", { append: r => rows.push(r), embed: spy, mayPost: async () => true });
+    const refused = await markCli(["thread"], "meri baat — pin fixture", { append: r => rows.push(r), embed: spy, mayPost: async () => false });
+    assert("PIN: `mark --no-embed` and a pin that REFUSES this checkout keep the row (durable) and send ZERO bytes to the embed client",
+      no.ok && refused.ok && no.embed_refused && refused.embed_refused && rows.length === 2 && sent.length === 0);
+    const yes = await markCli(["thread"], "meri baat — pin fixture", { append: r => rows.push(r), embed: spy, mayPost: async () => true });
+    assert("PIN: home / a worktree of it (the guard says post): the embed is called once with his words, as before",
+      yes.ok && !yes.embed_refused && sent.length === 1 && sent[0] === "meri baat — pin fixture" && rows.length === 3);
+  }
   {
     const rows = [];
     const bad = await markMoment("vibe", "x", { append: r => rows.push(r), embed: mockEmbed });
@@ -1728,7 +1756,7 @@ async function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   const stdin = () => { try { return readFileSync(0, "utf8"); } catch { return ""; } };
   if (mode === "selftest") process.exit((await selftest()) ? 0 : 1);
-  if (mode === "mark") { console.log(JSON.stringify(await markMoment(process.argv[3], stdin()))); return; }
+  if (mode === "mark") { console.log(JSON.stringify(await markCli(process.argv.slice(3), stdin()))); return; }
   if (mode === "remember") { console.log(JSON.stringify(rememberFact(stdin()))); return; }
   if (mode === "forget") { console.log(JSON.stringify(forgetFact(process.argv[3]))); return; }
   // 10 AUG 2026 — THE STAGING DOOR. Text on STDIN, exactly like `remember` above,
@@ -1844,7 +1872,7 @@ async function main() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
 
 export {
-  markMoment, indexEpisodes, indexEpisodesDetailed, rememberFact, forgetFact,
+  markMoment, markCli, indexEpisodes, indexEpisodesDetailed, rememberFact, forgetFact,
   identityCartridge, whoCartridge, whoStale, consolidate, validateWho, recallReflex,
   // B14 — THE ICEBERG. Sections as DATA and the spoken text, so a reader can take
   // either (the Gaffer's tool wants the text; a supervisor wants one section).

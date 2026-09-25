@@ -84,6 +84,9 @@ const MOMENT_STALE_MS = 6 * 60 * 60 * 1000;    // see stampMoment()
 // twenty years `arsenal-ai-fc` will not exist. The app writes to the archive; the
 // app does not own the archive.
 export const archiveRoot = () => resolve(process.env.ARSENAL_ARCHIVE || join(homedir(), "CyborgArchive"));
+// …and the env that points a CHILD at an archive (a poster's selftest runs the real hook
+// against a temp one) — named here so no second organ learns where the archive lives.
+export const archiveEnv = (root) => ({ ARSENAL_ARCHIVE: resolve(root) });
 // The home pin lives WITH the archive, in the writer's own directory; home_pin.mjs
 // reads it through this, and this file is its only writer (recordPin below).
 export const pinFileOf = (root) => join(resolve(root), "_writer", "root_pin.json");
@@ -120,8 +123,81 @@ export function homeCheck({ repo = ROOT, archive = archiveRoot() } = {}) {
 // hand at a terminal or a session's own shell does not have it.
 export const calledAsHook = (env = process.env) => !!env.CLAUDE_PROJECT_DIR;
 
-// The one stderr line, the same words from every writer.
-export const refusalLine = (who, c) => `${who}: REFUSED — this checkout (${c.here}) is not the pinned home checkout (${c.pinned}); nothing written outside it. forks row 328.`;
+// ── THE POSTING PREDICATE (forks row 334, 26 Sep 2026) ───────────────────────
+// homeCheck above decides WRITES to his archive and stays STRICT: home only. Posting
+// his words to the home daemons (thalamus · sitting) or to the Gemini pool is a
+// wider door on purpose — study and engineering sessions run in a git WORKTREE of the
+// home checkout and must keep capturing — but a fresh clone runs the same hooks
+// (the P6 incident), so it is not an open door. A checkout MAY POST iff homeCheck says
+// home, or unpinned (as before), or it is a live worktree OF THE PINNED ROOT: the set
+// `git worktree list --porcelain` of the pinned root prints, read here WITHOUT a spawn.
+// A linked worktree's .git is a FILE whose gitdir line points into
+// <pinned>/.git/worktrees/NAME, and that directory's gitdir file points back at this
+// checkout's .git — BOTH directions, or it is foreign: a clone (.git is a directory),
+// a byte-copy (no .git, or a copied one whose back-pointer names the original), a
+// worktree of another repo (points into another .git), and a stale entry whose
+// folder is gone (nothing there to point anywhere) all fail one of the two.
+// Cost: home never reaches this (one realpath compare, as today); the worktree path
+// reads the .git file and the one gitdir file it names. No git spawn on any path.
+// `.git` FILE: "gitdir: <path>" · worktrees/NAME/gitdir: the bare path. Either may be relative.
+function gitdirOf(file, base, re = /^gitdir:\s*(.+?)\s*$/m) {
+  let s;
+  try { s = readFileSync(file, "utf8"); } catch { return null; }   // a DIRECTORY .git (a clone) throws here
+  const m = re.exec(s);
+  return m ? resolve(base, m[1]) : null;                            // git may write it relative (worktree.useRelativePaths)
+}
+export function worktreeOfPin(here, pinned) {
+  if (!here || !pinned) return false;
+  const fwd = gitdirOf(join(here, ".git"), here);                   // this checkout → <pinned>/.git/worktrees/NAME
+  if (!fwd) return false;
+  const admin = realRoot(fwd);
+  if (!samePath(dirname(admin), realRoot(join(pinned, ".git", "worktrees")))) return false;
+  const back = gitdirOf(join(admin, "gitdir"), admin, /^\s*(.+?)\s*$/m);  // …and back → <this checkout>/.git
+  return !!back && samePath(realRoot(back), realRoot(join(here, ".git")));
+}
+// home | unpinned | worktree | foreign — "worktree" exists ONLY here, never in homeCheck.
+export function postCheck({ repo = ROOT, archive = archiveRoot() } = {}) {
+  const c = homeCheck({ repo, archive });
+  return c.state === "foreign" && worktreeOfPin(c.here, c.pinned) ? { ...c, state: "worktree" } : c;
+}
+
+// The one stderr line, the same words from every writer (a poster says so: `posting`).
+export const refusalLine = (who, c, { posting = false } = {}) => (posting
+  ? `${who}: REFUSED — this checkout (${c.here}) is neither the pinned home checkout (${c.pinned}) nor a worktree of it; nothing posted.`
+  : `${who}: REFUSED — this checkout (${c.here}) is not the pinned home checkout (${c.pinned}); nothing written outside it. forks row 328.`);
+// THE POSTING FIXTURE — real temp git repos for the selftest of every poster (home_pin
+// re-exports it; temp dirs only, never this checkout): home · a `git worktree add` of it ·
+// a clone · a stale worktree entry whose folder was deleted and replaced by an unrelated
+// folder at the same name · a byte-copy of a live worktree (its .git file included) · a
+// worktree of ANOTHER repo. `files` (paths relative to this checkout) are copied into
+// both repos before their one commit, so a hook can run from each checkout.
+export function postingFixture(tmp, { files = [] } = {}) {
+  const git = (cwd, ...a) => {
+    const r = spawnSync("git", ["-c", "user.name=selftest", "-c", "user.email=selftest@invalid", "-c", "commit.gpgsign=false", "-c", `core.hooksPath=${join(tmp, "no-hooks")}`, ...a], { cwd, encoding: "utf8", windowsHide: true });
+    if (r.status !== 0) throw new Error(`git ${a.join(" ")}: ${r.stderr || r.error}`);
+    return r.stdout;
+  };
+  const p = (n) => join(tmp, n);
+  for (const r of [p("home"), p("other")]) {
+    mkdirSync(r, { recursive: true });
+    git(r, "init", "-q");
+    writeFileSync(join(r, "README.md"), "posting fixture\n");
+    for (const f of files) { mkdirSync(dirname(join(r, f)), { recursive: true }); cpSync(join(ROOT, f), join(r, f)); }
+    git(r, "add", "-A");
+    git(r, "commit", "-q", "-m", "fixture");
+  }
+  git(p("home"), "worktree", "add", "-q", "--detach", p("wt"));
+  git(tmp, "clone", "-q", p("home"), p("clone"));
+  git(p("home"), "worktree", "add", "-q", "--detach", p("stale"));
+  rmSync(p("stale"), { recursive: true, force: true });              // deleted without `git worktree prune`
+  cpSync(p("clone"), p("stale"), { recursive: true });              // …and an unrelated folder takes its name
+  cpSync(p("wt"), p("forged"), { recursive: true });                // a byte-copy of a live worktree, .git FILE and all
+  git(p("other"), "worktree", "add", "-q", "--detach", p("otherwt"));
+  const listed = () => git(p("home"), "worktree", "list", "--porcelain").split(/\n\n+/).filter((b) => /^worktree /m.test(b) && !/^prunable/m.test(b))
+    .map((b) => realRoot(/^worktree (.+)$/m.exec(b)[1]));
+  return { home: p("home"), wt: p("wt"), clone: p("clone"), stale: p("stale"), forged: p("forged"), otherwt: p("otherwt"), listed };
+}
+
 export const unpinnedLine = (who, c) => `${who}: UNPINNED — no home pin recorded yet (run \`node scripts/archivist.mjs pin\` once from the home checkout); proceeding as before from ${c.here}.`;
 
 // ── THE HOME PIN (forks row 328, 26 Sep 2026) ────────────────────────────────
@@ -2980,6 +3056,39 @@ function selftest() {
         JSON.stringify({ a: ckA.files[relOut] && ckA.files[relOut].pin, b: ckB.files[relOut] && ckB.files[relOut].pin, rs: rs.length }));
       ok("PIN (e) · …and the dedupe held: only B's rows the archive never had were added, nothing doubled, every chain intact",
         rE.ok && recs() - before === 2 && rcE.doubled.length === 0 && verifyArchive({ root: pa, quiet: true }).ok, JSON.stringify({ rE, doubled: rcE.doubled }));
+    }
+
+    // ── THE POSTING PREDICATE — worktrees post, the archive stays home-only ──
+    // Real `git worktree add` / `git clone` fixtures; the reader must agree with
+    // `git worktree list --porcelain` of the pinned root, both ways, and go past it
+    // exactly where git trusts a folder by its path alone (the stale entry).
+    {
+      const fx = postingFixture(join(tmp, "posting"));
+      const pa = join(tmp, "posting-archive");
+      const st = (repo) => postCheck({ repo, archive: pa }).state;
+      ok("POST · UNPINNED (no pin yet): every checkout reads unpinned — posts as before", ["home", "wt", "clone", "otherwt"].every((k) => st(fx[k]) === "unpinned"));
+      initArchive({ root: pa, repo: fx.home, quiet: true });
+      ok("POST · HOME: the pinned checkout reads home (no .git read on this path)", st(fx.home) === "home");
+      ok("POST · WORKTREE: a real `git worktree add` of the pinned root reads worktree — and homeCheck still reads it FOREIGN",
+        st(fx.wt) === "worktree" && homeCheck({ repo: fx.wt, archive: pa }).state === "foreign");
+      ok("POST · CLONE / FOREIGN-REPO WORKTREE / BYTE-COPY OF A WORKTREE: all foreign",
+        st(fx.clone) === "foreign" && st(fx.otherwt) === "foreign" && st(fx.forged) === "foreign", JSON.stringify(["clone", "otherwt", "forged"].map((k) => st(fx[k]))));
+      const listed = fx.listed();
+      const member = (k) => ["home", "worktree"].includes(st(fx[k]));
+      const agree = ["home", "wt", "clone", "forged", "otherwt"].map((k) => [k, member(k), listed.some((l) => samePath(l, realRoot(fx[k])))]);
+      ok("POST · THE READER AGREES WITH `git worktree list --porcelain` of the pinned root, both ways (members listed, non-members not)",
+        agree.every(([, a, b]) => a === b) && agree.filter(([, a]) => a).length === 2, JSON.stringify(agree));
+      ok("POST · STALE ENTRY: a worktree folder deleted without prune and replaced by an unrelated folder of the same name — git still LISTS the path, the back-pointer refuses it: foreign",
+        listed.some((l) => samePath(l, realRoot(fx.stale))) && st(fx.stale) === "foreign");
+      rmSync(fx.stale, { recursive: true, force: true });
+      ok("POST · STALE ENTRY, folder simply gone: git marks it prunable (unlisted) and the reader says foreign",
+        !fx.listed().some((l) => samePath(l, realRoot(fx.stale))) && st(fx.stale) === "foreign");
+      const pw = [];
+      const rW = runArchive({ root: pa, repo: fx.wt, quiet: true, warn: (l) => pw.push(l) });
+      ok("POST (g) · THE ARCHIVIST STAYS STRICT: `run` from the worktree that may POST is still REFUSED — a worktree never writes his archive",
+        rW.ok === false && rW.reason === "foreign-checkout" && pw.length === 1 && /REFUSED/.test(pw[0]), JSON.stringify({ rW, pw }));
+      ok("POST · the posting refusal line names who, this checkout and the pin",
+        (() => { const c = postCheck({ repo: fx.clone, archive: pa }); const l = refusalLine("x", c, { posting: true }); return l.includes(c.here) && l.includes(realRoot(fx.home)) && /REFUSED/.test(l) && /nothing posted/.test(l); })());
     }
 
     // ── 13. THE HOOK IS STILL SAFE ──

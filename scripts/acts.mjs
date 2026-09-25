@@ -75,7 +75,8 @@ const newId = (now) => `a${now.getTime().toString(36)}${Math.floor(Math.random()
 // words verbatim (never through shell quoting); `reverse(args, receipt, id)` names the undo
 // argv or null with `why` (a spend cannot be unspent; a filed card is answered, not unfiled).
 export const OWNERS = {
-  note:     { organ: "hippocampus.mjs",       argv: (a) => ["mark", a.kind && ["doubt", "win", "preference", "thread"].includes(a.kind) ? a.kind : "thread"], stdin: (a) => a.text,
+  // `posts`: the owner sends his words OUT (mark → the Gemini embed) — see THE HOME PIN below.
+  note:     { organ: "hippocampus.mjs",       posts: true, argv: (a, id, door, post) => ["mark", a.kind && ["doubt", "win", "preference", "thread"].includes(a.kind) ? a.kind : "thread", ...(post === false ? ["--no-embed"] : [])], stdin: (a) => a.text,
               reverse: (a, r) => { const id = r && /"id":"([^"]+)"/.exec(r); return id ? { argv: ["forget", id[1]] } : { argv: null, why: "the moment carried no id in its receipt" }; } },
   fact:     { organ: "hippocampus.mjs",       argv: () => ["stage-pending"], stdin: (a) => a.text,
               reverse: (a, r) => { const at = r && /"at":"([^"]+)"/.exec(r); return at ? { argv: ["drop-pending", "--at", at[1]] } : { argv: null, why: "the staged fact carried no `at` in its receipt" }; } },
@@ -179,7 +180,7 @@ export function dispatch(act, deps = {}) {
   const o = OWNERS[v.verb];
   const guardWhy = o.guard ? o.guard(v.args, deps) : null;
   if (guardWhy) { const row = { id, ts: now.toISOString(), door, verb: v.verb, args: v.args, owner: o.organ, argv: null, ok: false, error: guardWhy, ms: 0 }; appendRow(row, deps); return row; }
-  const argv = o.argv(v.args, id, door).map((x) => String(x));   // BLOCK 1: the door rides along — a task records which mouth asked
+  const argv = o.argv(v.args, id, door, o.posts ? deps.post : undefined).map((x) => String(x));   // BLOCK 1: the door rides along — a task records which mouth asked
   const t0 = Date.now();
   const r = runOwner(o.organ, argv, o.stdin ? o.stdin(v.args) : null, deps, v.verb);
   const receipt = clip((r.out || "").trim() || (r.err || "").trim(), 300);
@@ -188,6 +189,27 @@ export function dispatch(act, deps = {}) {
   return row;
 }
 export function dispatchAll(acts, door, deps = {}) { return (Array.isArray(acts) ? acts : []).map((a) => dispatch({ ...a, door }, deps)); }
+
+// ── THE HOME PIN (forks row 334, 26 Sep 2026) — a `posts` verb asks before it spawns ──
+// `note` → hippocampus mark → the Gemini embed carries his words OUT of this checkout,
+// and turn_hook's Stop lane reaches it from ANY checkout the CLI opened — a fresh clone
+// included. So the CLI doors (stop · do) ask the pin once: home, a git worktree of it,
+// or an unpinned machine → as before; anything else → deps.post=false, the owner gets
+// `--no-embed` (its local row stays, nothing is sent), exit 0, ONE stderr line from here.
+// A library caller that never asked leaves deps.post undefined and the owner asks itself.
+async function pinSaysPost(who, pinOpts) {
+  try { return (await import("./home_pin.mjs")).mayPostHome(who, pinOpts || {}); } catch { return false; }
+}
+const postingVerb = (acts) => (acts || []).map((a) => String(a && a.verb || "").toLowerCase()).find((v) => OWNERS[v] && OWNERS[v].posts) || null;
+/** door 3's body: a turn's `<<ACT {…}>>` tail → the pin asked (if a verb posts) → rows. deps.pin: the selftest's fixture. */
+export async function actsFromTail(text, deps = {}) {
+  const t = parseActTail(text);
+  if (!t.acts.length) return [];
+  const acts = t.acts.slice(0, 6);
+  const pv = postingVerb(acts);
+  const post = deps.post !== undefined ? deps.post : pv ? await pinSaysPost(`acts ${pv}`, deps.pin) : undefined;
+  return dispatchAll(acts, "code", { ...deps, post });
+}
 
 /** undo(id) — the verb's declared reverse through the same owner; a verb with no reverse says why */
 export function undo(id, deps = {}) {
@@ -490,6 +512,48 @@ async function selftest() {
     assert("INTENT · nothing was written to the live cache (hermetic — deps.cache held every verdict)", !existsSync(INTENT_CACHE) || true);
   }
 
+  // ── THE HOME PIN (h) — acts note from a foreign checkout sends ZERO bytes to the model client ──
+  // A real git fixture (home · worktree · clone · stale name · another repo's worktree) and a
+  // temp archive. The owner is recorded, never spawned; each recorded `hippocampus mark` is then
+  // REPLAYED through hippocampus's own CLI door (markCli) with a counting embed standing in for
+  // the Gemini client, the child's own guard asked for the same checkout.
+  {
+    const hp = await import("./home_pin.mjs");
+    const { markCli } = await import("./hippocampus.mjs");
+    const tmp = mkdtempSync(join(tmpdir(), "acts-pin-"));
+    try {
+      const fx = hp.postingFixture(join(tmp, "posting"));
+      const parc = join(tmp, "posting-archive");
+      const tail = '<<ACT {"acts":[{"verb":"note","args":{"text":"meri baat — pin fixture","kind":"thread"}}]}>>';
+      const run = async (k) => {
+        const warns = [], pc = [], sent = [], local = [];
+        const pin = { repo: fx[k], archive: parc, warn: (l) => warns.push(l) };
+        const got = await actsFromTail(tail, { pin, append: () => true, exec: (organ, argv, stdin) => { pc.push({ organ, argv, stdin }); return { ok: true, out: '{"ok":true,"id":"m1"}' }; } });
+        for (const c of pc.filter((x) => x.organ === "hippocampus.mjs" && x.argv[0] === "mark")) {
+          await markCli(c.argv.slice(1), c.stdin, { append: (r) => local.push(r), embed: async (ts) => { sent.push(...ts); return ts.map(() => [1, 0]); }, patch: () => true, mayPost: async (who) => hp.mayPostHome(who, { ...pin, quiet: true }) });
+        }
+        return { ok: got.length === 1 && got[0].ok, argv: pc.map((c) => c.argv.join(" ")), bytes: sent.join("").length, local: local.length, warns };
+      };
+      const u = await run("clone");
+      assert("PIN (f) · UNPINNED: acts note embeds as today (the owner asks itself), ONE UNPINNED line from acts",
+        u.ok && u.argv[0] === "mark thread" && u.bytes > 0 && u.local === 1 && u.warns.length === 1 && /UNPINNED/.test(u.warns[0]), JSON.stringify(u));
+      mkdirSync(dirname(hp.pinPath(parc)), { recursive: true });
+      writeFileSync(hp.pinPath(parc), JSON.stringify({ realpath: hp.realRoot(fx.home), pinned_at: new Date().toISOString(), by: "selftest" }) + "\n");   // a FIXTURE pin — the real one's writer is archivist.mjs
+      const a = await run("home"), b = await run("wt");
+      assert("PIN (a)(b) · HOME and a `git worktree add` of it: the note reaches the model client with his words, silently",
+        [a, b].every((x) => x.ok && x.argv[0] === "mark thread" && x.bytes === "meri baat — pin fixture".length && x.local === 1 && x.warns.length === 0), JSON.stringify({ a, b }));
+      const c = await run("clone");
+      assert("PIN (h) · CLONE: acts note sends ZERO bytes to the model client — the owner gets `--no-embed`, the local row stays, ONE stderr line naming both paths",
+        c.ok && c.argv[0] === "mark thread --no-embed" && c.bytes === 0 && c.local === 1 && c.warns.length === 1 && /REFUSED/.test(c.warns[0])
+        && c.warns[0].includes(hp.realRoot(fx.clone)) && c.warns[0].includes(hp.realRoot(fx.home)), JSON.stringify(c));
+      const d = await run("stale"), e = await run("otherwt");
+      assert("PIN (d)(e) · a stale worktree's name reused, and another repo's worktree: zero bytes to the model client",
+        [d, e].every((x) => x.ok && x.bytes === 0 && x.warns.length === 1), JSON.stringify({ d, e }));
+      const other = await actsFromTail('<<ACT {"acts":[{"verb":"agenda","args":{"text":"kal pehle 4"}}]}>>', { pin: { repo: fx.clone, archive: parc, warn: () => { throw new Error("asked"); } }, append: () => true, exec: () => ({ ok: true, out: "sitting: agenda added ag1" }) });
+      assert("PIN · a tail with no posting verb never asks the pin (no line, nothing refused)", other.length === 1 && other[0].ok);
+    } finally { try { rmSync(tmp, { recursive: true, force: true }); } catch { } }
+  }
+
   assert("OWNERS: every verb names an EXISTING organ file and declares a reverse", VERBS.every((v) => OWNERS[v] && existsSync(join(__dirname, OWNERS[v].organ)) && typeof OWNERS[v].reverse === "function"), VERBS.filter((v) => !existsSync(join(__dirname, OWNERS[v].organ))).join(","));
   console.log(`\nacts selftest: ${pass} passed, ${fail} failed`);
   if (fail) for (const x of fails) console.log(`  · ${x.n}${x.d ? `\n      ${x.d}` : ""}`);
@@ -511,9 +575,8 @@ async function main() {
     if (raw === undefined) { try { raw = readFileSync(0, "utf8"); } catch { raw = ""; } }
     let hook = null; try { hook = JSON.parse(raw || "{}"); } catch { hook = null; }
     const text = hook && typeof hook.last_assistant_message === "string" ? hook.last_assistant_message : "";
-    const t = parseActTail(text);
-    if (!t.acts.length) return;
-    const rows = dispatchAll(t.acts.slice(0, 6), "code");
+    const rows = await actsFromTail(text);
+    if (!rows.length) return;
     console.log(`acts: ${rows.map((r) => `${r.verb} ${r.ok ? "✓" : "✗"}${r.ok ? "" : ` (${clip(r.error, 60)})`}`).join(" · ")}`);
     return;
   }
@@ -523,7 +586,8 @@ async function main() {
     // words for that verb, so the receipt row carries the reason in the same field as every other.
     const args = { text: flag("text"), why: flag("why"), until: flag("until"), scope: flag("scope"), clear: process.argv.includes("--clear") || undefined, kind: flag("kind"), axis: flag("axis"), id: flag("id"), job: flag("job"), gut: flag("gut"), asked: flag("asked") };
     if (flag("json")) { try { Object.assign(args, JSON.parse(flag("json"))); } catch { console.log("acts: --json is not JSON"); process.exit(2); } }
-    const row = dispatch({ door: flag("door") || "cli", verb, args });
+    const pv = postingVerb([{ verb }]);
+    const row = dispatch({ door: flag("door") || "cli", verb, args }, pv ? { post: await pinSaysPost(`acts ${pv}`) } : {});
     console.log(row.ok ? `acts: ✓ ${row.verb} → ${row.owner} · ${row.receipt} · ${row.id}` : `acts: ✗ ${row.verb || verb} — ${row.error} · ${row.id}`);
     process.exit(row.ok ? 0 : 1);
   }

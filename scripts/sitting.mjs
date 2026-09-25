@@ -1232,6 +1232,32 @@ async function ensureDaemon() {
   for (let i = 0; i < 12; i++) { await new Promise((r) => setTimeout(r, 500)); if (await daemonUp()) return true; }
   return false;
 }
+// ── THE HOME PIN (forks row 334, 26 Sep 2026) — the two HOOK-reached verbs ───
+// `touch` (turn_hook, every prompt) and `host` (rails pretooluse) reach the sitting
+// daemon on :PORT — the HOME daemon, whichever checkout the hook fired from. A fresh
+// clone opened by the CLI runs the same hooks, so both ask the pin first: the home
+// checkout, a git worktree of it, or an unpinned machine reaches the daemon; anything
+// else sends NOTHING (not even the /status probe), prints nothing on stdout, returns
+// normally (exit 0) and leaves ONE stderr line. deps.pin / deps.post / deps.daemonUp
+// are the selftest's seams; if the guard cannot load, nothing is sent.
+async function pinSaysPost(who, deps = {}) {
+  try { return (await import("./home_pin.mjs")).mayPostHome(who, deps.pin || {}); } catch { return false; }
+}
+async function touchVerb(session, deps = {}) {
+  if (!session) return { posted: false };
+  if (!(await pinSaysPost("sitting touch", deps))) return { posted: false, refused: true };
+  try { await (deps.post || post)("/touch", { session }, 800); } catch { /* a down or old daemon costs his prompt nothing */ }
+  return { posted: true };
+}
+async function hostVerb({ session, transcript, by }, deps = {}) {
+  if (!(await pinSaysPost("sitting host", deps))) return null;
+  if (!(await (deps.daemonUp || daemonUp)())) return `sitting: daemon down on :${PORT} — no host stamped (and \`open --no-spawn\` would register no sitting either).`;
+  try {
+    const r = await (deps.post || post)("/host", { session, transcript, by }, 2000);
+    return r.ok ? `sitting: host ${String(r.session).slice(0, 8)} stamped PENDING (${Math.round(r.ttl_ms / 60000)} min) — the next \`open\` binds it${r.open ? ` · sitting ${r.id} is open, so it JOINS and rebinds` : ""}` : `sitting: host refused — ${r.error || "no /host door (the daemon runs an older build — restart it through the Daemon-Watchdog task)"}`;
+  } catch (e) { return `sitting: host not stamped — ${String(e && e.message || e).slice(0, 120)}`; }
+}
+
 async function main() {
   const [mode, ...rest] = process.argv.slice(2);
   const opt = (k) => { const i = rest.indexOf(k); return i >= 0 ? rest[i + 1] : undefined; };
@@ -1283,17 +1309,12 @@ async function main() {
       return;
     }
     case "host": {   // G0 — called by rails.mjs pretooluse with the hook payload's ids; by hand only to repair
-      if (!(await daemonUp())) { console.log(`sitting: daemon down on :${PORT} — no host stamped (and \`open --no-spawn\` would register no sitting either).`); return; }
-      try {
-        const r = await post("/host", { session: opt("--session") || null, transcript: opt("--transcript") || null, by: opt("--by") || null }, 2000);
-        console.log(r.ok ? `sitting: host ${String(r.session).slice(0, 8)} stamped PENDING (${Math.round(r.ttl_ms / 60000)} min) — the next \`open\` binds it${r.open ? ` · sitting ${r.id} is open, so it JOINS and rebinds` : ""}` : `sitting: host refused — ${r.error || "no /host door (the daemon runs an older build — restart it through the Daemon-Watchdog task)"}`);
-      } catch (e) { console.log(`sitting: host not stamped — ${String(e && e.message || e).slice(0, 120)}`); }
+      const line = await hostVerb({ session: opt("--session") || null, transcript: opt("--transcript") || null, by: opt("--by") || null });
+      if (line) console.log(line);
       return;
     }
     case "touch": {   // G0 — the host's UserPromptSubmit (turn_hook, CALL shape). HOOK PATH: silent on stdout, always, and never slow.
-      const session = opt("--session");
-      if (!session) return;
-      try { await post("/touch", { session }, 800); } catch { /* a down or old daemon costs his prompt nothing */ }
+      await touchVerb(opt("--session"));
       return;
     }
     case "turn": { const r = await post("/turn", { text: opt("--text") || rest.filter((a) => !a.startsWith("--")).join(" "), surface: opt("--surface") || "code" }); console.log(JSON.stringify(r)); return; }
@@ -1801,6 +1822,30 @@ async function selftest() {
       assert("AGENDA · served keeps the row OPEN (still his ask) and marks it served", openAgenda().length === 1 && openAgenda()[0].served === true);
       agendaMark("done", [a1.id], { sitting_id: "sit_x" });
       assert("AGENDA · done at close closes the row; a new add reopens with a NEW id; drop closes it too", openAgenda().length === 0 && (() => { const a3 = agendaAdd("kuch aur", { now: new Date("2026-08-18T20:02:00Z") }); const one = openAgenda().length === 1 && a3.id !== a1.id; agendaMark("drop", [a3.id]); return one && openAgenda().length === 0; })());
+    }
+    // ── 15b. THE HOME PIN — touch/host reach the daemon only from home or a worktree of it ──
+    {
+      const hp = await import("./home_pin.mjs");
+      const fx = hp.postingFixture(join(tmp, "posting"));
+      const parc = join(tmp, "posting-archive");
+      const sent = [], probes = [], warns = [];
+      const D = (k) => ({ pin: { repo: fx[k], archive: parc, warn: (l) => warns.push(l) }, post: async (p, b) => { sent.push([k, p, b]); return { ok: true, session: b.session, ttl_ms: 600000 }; }, daemonUp: async () => { probes.push(k); return true; } });
+      const run = async (k) => { sent.length = 0; probes.length = 0; warns.length = 0; const t = await touchVerb("sess-fx", D(k)); const h = await hostVerb({ session: "sess-fx", transcript: null, by: "selftest" }, D(k)); return { t, h, sent: sent.map((s) => s[1]), probes: probes.length, warns: [...warns] }; };
+      const u = await run("clone");
+      assert("PIN (f) · UNPINNED: touch and host POST as today (/touch + /host), one UNPINNED line each",
+        u.t.posted && u.sent.join(",") === "/touch,/host" && typeof u.h === "string" && u.warns.length === 2 && u.warns.every((w) => /UNPINNED/.test(w)), JSON.stringify(u));
+      mkdirSync(dirname(hp.pinPath(parc)), { recursive: true });
+      writeFileSync(hp.pinPath(parc), JSON.stringify({ realpath: hp.realRoot(fx.home), pinned_at: new Date().toISOString(), by: "selftest" }) + "\n");   // a FIXTURE pin — the real one's writer is archivist.mjs
+      const a = await run("home"), b = await run("wt");
+      assert("PIN (a)(b) · HOME and a `git worktree add` of it: touch and host both reach the (stub) daemon, silently",
+        [a, b].every((x) => x.t.posted && x.sent.join(",") === "/touch,/host" && /stamped PENDING/.test(x.h) && x.warns.length === 0), JSON.stringify({ a, b }));
+      const c = await run("clone");
+      assert("PIN (c) · CLONE: touch and host send NOTHING — no POST, not even the /status probe — host returns no stdout line, and each leaves ONE stderr line naming both paths",
+        !c.t.posted && c.t.refused && c.h === null && c.sent.length === 0 && c.probes === 0 && c.warns.length === 2
+        && c.warns.every((w) => /REFUSED/.test(w) && w.includes(hp.realRoot(fx.clone)) && w.includes(hp.realRoot(fx.home))), JSON.stringify(c));
+      const d = await run("stale"), e = await run("otherwt");
+      assert("PIN (d)(e) · a stale worktree's name reused by an unrelated folder, and a worktree of ANOTHER repo: nothing sent",
+        [d, e].every((x) => !x.t.posted && x.h === null && x.sent.length === 0 && x.probes === 0 && x.warns.length === 2), JSON.stringify({ d, e }));
     }
     // ── 16. HERMETIC — nothing outside tmp was touched ──
     const stateAfter = existsSync(join(realState, "sitting.json")) ? statSync(join(realState, "sitting.json")).mtimeMs : null;
