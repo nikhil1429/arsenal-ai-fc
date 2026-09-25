@@ -630,10 +630,14 @@ function resolveAnchor(stored, obs = {}) {
 // ── THE FILL GAUGE ───────────────────────────────────────────────────────────
 // Pure read. Every failure path returns null, and a null fill means the block falls
 // back to the turn counter — never to silence, and never to a fabricated number.
+// A FILE, never merely a path that exists (forks row 277 (a)): on Linux a directory stats
+// at 4096 bytes, not 0, so the size guard alone let a directory through as a transcript.
 function transcriptFill(path, warnBytes = DEFAULT_TRANSCRIPT_WARN_BYTES) {
   try {
     if (!path || typeof path !== "string" || !existsSync(path)) return null;
-    const bytes = statSync(path).size;
+    const st = statSync(path);
+    if (!st.isFile()) return null;
+    const bytes = st.size;
     if (!Number.isFinite(bytes) || bytes <= 0) return null;
     const limit = Number.isFinite(warnBytes) && warnBytes > 0 ? warnBytes : DEFAULT_TRANSCRIPT_WARN_BYTES;
     return { bytes, limit, pct: bytes / limit };
@@ -1266,6 +1270,12 @@ function selftest() {
   assert("FILL GAUGE — a missing path, a non-string and a directory all yield null, never a throw",
     transcriptFill(join(HERE, "__nope__.mjs")) === null && transcriptFill(null) === null
     && transcriptFill(123) === null && transcriptFill(HERE) === null);
+  // The Linux shape, pinned both ways: HERE is a directory whose stat() SUCCEEDS and whose
+  // size is whatever the platform says (4096 on Linux, 0 on Windows) — it yields null on
+  // the file-kind alone, while the real file beside it still reads.
+  assert("FILL GAUGE — a directory whose stat succeeds yields null whatever its size; the file in it still reads",
+    statSync(HERE).isDirectory() && transcriptFill(HERE, 1) === null
+    && transcriptFill(SELF, 1) !== null && transcriptFill(SELF, 1).bytes === selfBytes);
   assert("HARD TIER — at/over the budget the warning names the TRANSCRIPT and still says TELL HIM NOW",
     blockLines(quietState, done, T0, fHard).some((l) => /CONTEXT WARNING/.test(l) && /transcript/.test(l) && /TELL HIM NOW/.test(l)));
   assert("SOFT TIER — past 60% he is warned BEFOREHAND, and it is NOT the loud line",
