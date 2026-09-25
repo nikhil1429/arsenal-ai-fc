@@ -364,9 +364,30 @@ export function shellSegments(cmd) {
   push(false);
   return segs.filter((s) => s.text.trim() && s.text.trim() !== "&");
 }
+// Forks row 316 (3) (26 Sep 2026): ALLOWED_CMD is unanchored, so an organ OUT of the set whose QUOTED argument names an
+// in-set command passed (`node scripts/claims.mjs claim --cmd 'node scripts/teaching_contract.mjs list'`). NODE_HEAD ∧
+// ALLOWED_CMD stays necessary; when the match holds only THROUGH a quoted argument (it fails once every quoted span after
+// the script token is emptied), the segment must ALSO be an anchored in-set organ (inSetOrgan). An unquoted match is
+// judged exactly as before — stricter only.
+const SCRIPT_TOKEN = /(?:"[^"]*"|'[^']*'|[^\s"']+)+/y;
+/** The segment with every quoted span AFTER the script token emptied ('…' → '', "…" → ""); the head is kept as is. */
+function quotesEmptied(text) {
+  const h = NODE_HEAD.exec(text);
+  if (!h) return text;
+  SCRIPT_TOKEN.lastIndex = h[0].length;
+  const at = SCRIPT_TOKEN.exec(text) ? SCRIPT_TOKEN.lastIndex : h[0].length;
+  let out = text.slice(0, at), q = null;
+  for (let i = at; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === q) { q = null; out += ch; } else if (q === '"' && ch === "\\") i++; continue; }
+    if (ch === "'" || ch === '"') q = ch;
+    out += ch;
+  }
+  return q ? out + q : out;
+}
 function segmentInStudySet({ text, piped }) {
   if (UNSAFE_SHELL.test(text)) return false;
-  if (NODE_HEAD.test(text) && ALLOWED_CMD.test(text)) return true;
+  if (NODE_HEAD.test(text) && ALLOWED_CMD.test(text) && (ALLOWED_CMD.test(quotesEmptied(text)) || inSetOrgan(text))) return true;
   if (SHELL_CANON_READ.test(text) && CANON_READ_PATH.test(text) && !NEVER_READ.test(text)) return true;
   if (!piped && CD_ONLY.test(text)) return true;
   return piped && PIPE_FILTER.test(text);
@@ -830,6 +851,13 @@ export function scopeSelfCheck() {
     && !shellInStudySet("node scripts/teaching_contract.mjs selftest") && !shellInStudySet("node scripts/teaching_contract.mjs listx") && !shellInStudySet("node scripts/teaching_contract.mjs") && !shellInStudySet(SHAPE_C)
     && !shellInStudySet("node scripts/learnstate.mjs nextup") && !shellInStudySet("node scripts/learnstate.mjs json") && !shellInStudySet("node scripts/state.mjs")
     && !shellInStudySet("node scripts/tokenizer_play.mjs train \"x\"") && !shellInStudySet('node scripts/captains_call.mjs file --line "x"') && !shellInStudySet("node scripts/teaching_contract.mjs list > x.json"));
+  // forks row 316 (3) (26 Sep 2026) — the organ segment judges by the anchored head when ALLOWED_CMD holds only through a quote
+  const QUOTED_1 = "node scripts/claims.mjs claim --cmd 'node scripts/teaching_contract.mjs list'";
+  const QUOTED_2 = "node scripts/hippocampus.mjs note --note 'teaching_contract.mjs flag x'";
+  check("ANCHORED ORGAN (row 316 (3)) · OUT — an organ outside the set whose QUOTED argument names an in-set command (the old unanchored test matched both)",
+    ALLOWED_CMD.test(QUOTED_1) && ALLOWED_CMD.test(QUOTED_2) && !shellInStudySet(QUOTED_1) && !shellInStudySet(QUOTED_2));
+  check("ANCHORED ORGAN (row 316 (3)) · IN — the in-set organ itself, piped to a filter",
+    shellInStudySet("node scripts/teaching_contract.mjs list | head -5"));
   check("CLOSING · /full-time's command tag, \"post match\" and \"full time\" are a CLOSING (G3 and B.tools stand down for the close organs, row 267); a study answer is not",
     classifyPrompt("<command-message>full-time</command-message>\n<command-name>/full-time</command-name>").closing === true && classifyPrompt("post match").closing === true
     && classifyPrompt("post-match karo").closing === true && classifyPrompt("ok full time").closing === true && classifyPrompt("pakka - pay kyunki repeat").closing === false);
