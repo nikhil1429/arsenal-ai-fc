@@ -273,6 +273,16 @@ async function main() {
     if (spool.write(evt).ok) spooled = spool;
   } catch { /* no spool on this runtime → the old POST-and-hope path, unchanged */ }
 
+  // THE HOME PIN (forks row 334, 26 Sep 2026). A fresh CLONE opened by the CLI runs this
+  // same hook, and before this line it POSTed his prompt into the HOME thalamus. So the
+  // POST asks the pin first: the home checkout, a git worktree of it, or an unpinned
+  // machine posts; anything else sends nothing and says ONE stderr line (never stdout).
+  // The spool row above is local to this checkout and stays. The import sits here, after
+  // every early exit, so a slash-command or a self-talk turn never pays for it; if it
+  // cannot load, nothing is posted — the row is already spooled, so that is latency.
+  try { if (!(await import("../scripts/home_pin.mjs")).mayPostHome("afferent-post")) return die(); }
+  catch { return die(); }
+
   // THE POST. Its 250ms abort is UNCHANGED and stays deliberately tight — this nerve runs on
   // his keystroke and a slow bus must never be something he can feel. What changed is what a
   // timeout MEANS: before, it meant the turn was gone; now it means the turn is on disk and
