@@ -40,7 +40,7 @@
 // SINGLE WRITER: this organ owns $ARSENAL_ARCHIVE and nothing else. It is
 //   READ-ONLY on dressing-room/ — including its own selftest.
 //
-// MODES: init · run · backfill · verify [--month YYYY-MM] · vitals · seal [--quarter] ·
+// MODES: init · pin [--repin] · run · backfill · verify [--month YYYY-MM] · vitals · seal [--quarter] ·
 //        reconcile · rebuild <lane> · dedupe <lane> · lanes · lexicon <list|add|retire> · tripwire · status · selftest
 //
 // TIME (spec §4): three separate clock facts, all irrecoverable if skipped —
@@ -60,8 +60,8 @@
 //   and is corrected here rather than copied forward.
 // ============================================================================
 import {
-  existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync,
-  openSync, readSync, writeSync, fsyncSync, closeSync, renameSync, rmSync, mkdtempSync,
+  existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync, realpathSync,
+  openSync, readSync, writeSync, fsyncSync, closeSync, renameSync, rmSync, mkdtempSync, cpSync,
 } from "node:fs";
 import { join, dirname, basename, resolve, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -83,7 +83,75 @@ const MOMENT_STALE_MS = 6 * 60 * 60 * 1000;    // see stampMoment()
 // THE ARCHIVE ROOT is an env var and its default is OUTSIDE the repo, because in
 // twenty years `arsenal-ai-fc` will not exist. The app writes to the archive; the
 // app does not own the archive.
-const archiveRoot = () => resolve(process.env.ARSENAL_ARCHIVE || join(homedir(), "CyborgArchive"));
+export const archiveRoot = () => resolve(process.env.ARSENAL_ARCHIVE || join(homedir(), "CyborgArchive"));
+// The home pin lives WITH the archive, in the writer's own directory; home_pin.mjs
+// reads it through this, and this file is its only writer (recordPin below).
+export const pinFileOf = (root) => join(resolve(root), "_writer", "root_pin.json");
+
+// THE PIN'S CORE (forks row 328). scripts/home_pin.mjs re-exports it, with the one
+// guard every OTHER outside-writer calls; the core lives here, with the pin's writer.
+// realpath, not resolve: a junction, a symlink or a subst drive is the SAME
+// checkout, and a byte-copy somewhere else is NOT — which is the whole distinction.
+export function realRoot(dir = ROOT) {
+  try { return (realpathSync.native || realpathSync)(dir); } catch { return resolve(dir); }
+}
+// Windows paths are case-insensitive; a pin must not read foreign over a drive letter's case.
+export const samePath = (a, b) => (process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b);
+// A stable short id for a pinned path — what checkpoints are stamped with.
+export const pinIdOf = (realpath) => (realpath ? createHash("sha256").update(process.platform === "win32" ? realpath.toLowerCase() : realpath).digest("hex").slice(0, 16) : null);
+
+export function readPin(archive = archiveRoot()) {
+  try {
+    const j = JSON.parse(readFileSync(pinFileOf(archive), "utf8"));
+    return j && typeof j.realpath === "string" && j.realpath ? j : null;
+  } catch { return null; }
+}
+
+// THE CHECK. `repo` is the checkout asking; `archive` is where the pin lives.
+export function homeCheck({ repo = ROOT, archive = archiveRoot() } = {}) {
+  const here = realRoot(repo);
+  const pin = readPin(archive);
+  if (!pin) return { state: "unpinned", here, pinned: null, pin: null, pinId: null };
+  return { state: samePath(here, pin.realpath) ? "home" : "foreign", here, pinned: pin.realpath, pin, pinId: pinIdOf(pin.realpath) };
+}
+
+// A HOOK MUST NEVER BREAK A FOREIGN SESSION. Claude Code exports CLAUDE_PROJECT_DIR
+// to every hook command (settings.json expands "$CLAUDE_PROJECT_DIR/…" from it); a
+// hand at a terminal or a session's own shell does not have it.
+export const calledAsHook = (env = process.env) => !!env.CLAUDE_PROJECT_DIR;
+
+// The one stderr line, the same words from every writer.
+export const refusalLine = (who, c) => `${who}: REFUSED — this checkout (${c.here}) is not the pinned home checkout (${c.pinned}); nothing written outside it. forks row 328.`;
+export const unpinnedLine = (who, c) => `${who}: UNPINNED — no home pin recorded yet (run \`node scripts/archivist.mjs pin\` once from the home checkout); proceeding as before from ${c.here}.`;
+
+// ── THE HOME PIN (forks row 328, 26 Sep 2026) ────────────────────────────────
+// A fresh clone opened by the CLI in a temp folder ran ITS SessionEnd hook, and
+// because the root above is home-relative, the clone appended to his real archive
+// and moved his checkpoint offsets to the clone's file sizes. So every verb that
+// WRITES the archive first asks homeCheck() above whether THIS checkout is the
+// pinned one. foreign ⇒ one stderr line naming both paths and NOTHING written — no
+// record, no health row, no checkpoint, not even the lock. unpinned ⇒ exactly as
+// before, plus one stderr line, until `pin` runs once from the home checkout.
+const warnOut = (s) => process.stderr.write(s + "\n");
+function foreignRefusal(root, repo, who, warn = warnOut) {
+  const c = homeCheck({ repo, archive: root });
+  if (c.state === "foreign") { warn(refusalLine(who, c)); return { ok: false, reason: "foreign-checkout", here: c.here, pinned: c.pinned }; }
+  if (c.state === "unpinned") warn(unpinnedLine(who, c));
+  return null;
+}
+// THE PIN'S ONE WRITER (`pin` · `init`). Refuses to replace a DIFFERENT existing
+// pin unless repin is set, and hands back the old one so the caller journals it.
+function recordPin({ repo, root, repin = false, by, now = new Date() }) {
+  const here = realRoot(repo);
+  const old = readPin(root);
+  if (old && samePath(old.realpath, here)) return { ok: true, unchanged: true, pin: old, old: null };
+  if (old && !repin) return { ok: false, reason: "pinned-elsewhere", pin: old, here };
+  const pin = { realpath: here, pinned_at: now.toISOString(), by, ...(old ? { replaces: old } : {}) };
+  writeAtomic(pinFileOf(root), JSON.stringify(pin, null, 2) + "\n");
+  return { ok: true, pin, old };
+}
+// The checkpoint's pin id under the CURRENT pin (null while unpinned).
+const currentPinId = (root) => { const c = homeCheck({ archive: root }); return c.pin ? pinIdOf(c.pin.realpath) : null; };
 
 // ── CANONICAL BYTES (spec §5.1) ──────────────────────────────────────────────
 // JCS-style: keys sorted by UTF-16 code unit, no insignificant whitespace, UTF-8.
@@ -523,6 +591,26 @@ function loadCkpt(root) {
 }
 const saveCkpt = (root, c) => { c.updated_at = new Date().toISOString(); writeAtomic(P(root).checkpoints, JSON.stringify(c, null, 2) + "\n"); };
 
+// CHECKPOINTS ARE KEYED BY PIN + RELPATH (forks row 328). A relpath alone let a
+// clone's older state files read as HIS files rewritten in place. Every file entry
+// now carries the pin id it was written under, and an entry is used only under
+// that same pin (see archiveOne). THE MIGRATION IS A STAMP, NOT A RESYNC: the
+// first time a pin is recorded, every UNSTAMPED entry is stamped with it — the
+// offsets and anchors are untouched, so his live archive re-reads nothing. It is
+// one-way (an entry already stamped with another pin is never re-stamped) and it
+// is journalled to health/fixity-*.jsonl.
+function stampCkptPin(root, pinId, by) {
+  if (!pinId || !existsSync(P(root).data)) return 0;
+  const ck = loadCkpt(root);
+  let n = 0;
+  for (const cf of Object.values(ck.files || {})) if (cf && !cf.pin) { cf.pin = pinId; n++; }
+  if (ck.pin === pinId && !n) return 0;
+  ck.pin = pinId;
+  saveCkpt(root, ck);
+  appendHealth(root, "fixity", { kind: "checkpoint-pin-stamp", at: new Date().toISOString(), pin_id: pinId, stamped: n, by, note: "existing checkpoint entries stamped with the home pin — a stamp, not a resync: offsets and anchors unchanged (forks row 328)" });
+  return n;
+}
+
 // ── READING A SOURCE LANE ────────────────────────────────────────────────────
 // Bytes after the LAST newline are an INCOMPLETE APPEND — a power cut mid-write.
 // They are never parsed and never consumed (the offset stops at the last \n), so
@@ -612,8 +700,23 @@ function recoverySkipper(root, days, lane) {
 }
 
 function archiveOne(root, src, ckpt, opts) {
-  const { force = false, live = true, moment = null, now = new Date(), log = () => {} } = opts;
+  const { force = false, live = true, moment = null, now = new Date(), log = () => {}, pinId = null } = opts;
+  // A CHECKPOINT WRITTEN UNDER ANOTHER PIN IS NEVER USED (forks row 328): its
+  // offset describes some other checkout's file. It is set aside untouched under
+  // ckpt.retired_pins, and this file is re-read from 0 WITH DEDUPE — exactly the
+  // rewrite path — so nothing the archive already holds is archived twice.
+  let pinResync = null;
+  const prior = ckpt.files[src.rel];
+  if (prior && (prior.pin ?? null) !== pinId) {
+    const key = prior.pin || "unstamped";
+    ckpt.retired_pins = ckpt.retired_pins || {};
+    ckpt.retired_pins[key] = ckpt.retired_pins[key] || {};
+    ckpt.retired_pins[key][src.rel] = prior;
+    delete ckpt.files[src.rel];
+    pinResync = `checkpoint written under another pin (${key}) — never used under ${pinId || "no pin"}; re-read with dedupe`;
+  }
   const cf = ckpt.files[src.rel] || { lane: src.lane, offset: 0, lines: 0, first_seen: now.toISOString(), inflight: null, partial_sha: null };
+  cf.pin = pinId || undefined;
   if (force) { cf.offset = 0; cf.inflight = null; }
   const firstSight = !ckpt.files[src.rel];
   // ANYTHING ALREADY ON DISK WHEN THE ARCHIVIST FIRST SEES A FILE IS BACKFILL.
@@ -628,8 +731,8 @@ function archiveOne(root, src, ckpt, opts) {
   // re-read is safe because it is deduped, and the alternative — trusting an
   // offset whose file may have been rewritten — is how the promotion event was
   // lost in the first place.
-  let resync = null;
-  if (cf.offset > 0) {
+  let resync = pinResync;
+  if (!resync && cf.offset > 0) {
     try {
       const live = anchorOf(src.abs, Math.min(cf.offset, statSync(src.abs).size));
       if (!cf.anchor) resync = "no anchor on record (checkpoint predates the anchor guard) — one-time re-sync";
@@ -637,7 +740,7 @@ function archiveOne(root, src, ckpt, opts) {
     } catch { resync = "anchor unreadable"; }
   }
   if (resync) {
-    appendHealth(root, "quarantine", { kind: "source-resync", at: now.toISOString(), path: src.rel, was_offset: cf.offset, why: resync, note: "re-reading the whole file with dedupe: unchanged rows are skipped, changed rows are archived as NEW records (LAW 2 — never edit, always add)" });
+    appendHealth(root, "quarantine", { kind: "source-resync", at: now.toISOString(), path: src.rel, was_offset: pinResync ? prior.offset : cf.offset, why: resync, note: "re-reading the whole file with dedupe: unchanged rows are skipped, changed rows are archived as NEW records (LAW 2 — never edit, always add)" });
     cf.offset = 0;
   }
 
@@ -737,6 +840,8 @@ export function runArchive(opts = {}) {
   const live = opts.live !== false;
   const force = !!opts.force;
   const log = opts.quiet ? () => {} : console.log;
+  const refused = foreignRefusal(root, repo, `archivist ${force ? "backfill" : "run"}`, opts.warn);
+  if (refused) return refused;
   if (!existsSync(P(root).data)) { log(`archivist: no archive at ${root} — run \`archivist.mjs init\` first`); return { ok: false, reason: "no-archive" }; }
   const lock = takeLock(root, force ? "backfill" : "run");
   if (!lock.ok) {
@@ -746,6 +851,7 @@ export function runArchive(opts = {}) {
   try {
   const now = new Date();
   const ckpt = loadCkpt(root);
+  const pinId = currentPinId(root);
   const moment = currentMoment(repo);
   const sources = discoverSources(repo);
   let added = 0, skipped = 0;
@@ -756,7 +862,7 @@ export function runArchive(opts = {}) {
     const why = isExcluded(src.lane);
     if (why) { excluded.add(src.lane); continue; }   // named below — never a silent skip
     try {
-      const r = archiveOne(root, src, ckpt, { force, live, moment, now, log });
+      const r = archiveOne(root, src, ckpt, { force, live, moment, now, log, pinId });
       added += r.added; skipped += r.skipped;
       if (r.added) lanes.add(r.lane);
     } catch (e) {
@@ -805,6 +911,8 @@ export function rebuildLane(lane, opts = {}) {
   const root = opts.root || archiveRoot();
   const repo = opts.repo || ROOT;
   const log = opts.quiet ? () => {} : console.log;
+  const refused = foreignRefusal(root, repo, "archivist rebuild", opts.warn);
+  if (refused) return refused;
   const lock = takeLock(root, "rebuild");
   if (!lock.ok) { log(`archivist rebuild: another archivist holds the lock (pid ${lock.held.pid}) — not touching the archive.`); return { ok: false, reason: "locked" }; }
   try {
@@ -819,7 +927,8 @@ export function rebuildLane(lane, opts = {}) {
     delete ckpt.lanes[lane];
     saveCkpt(root, ckpt);
     let added = 0;
-    for (const s of sources) added += archiveOne(root, s, ckpt, { force: true, live: false, moment: null, now, log: () => {} }).added;
+    const pinId = currentPinId(root);
+    for (const s of sources) added += archiveOne(root, s, ckpt, { force: true, live: false, moment: null, now, log: () => {}, pinId }).added;
     saveCkpt(root, ckpt);
     const v = verifyArchive({ root, lane, quiet: true });
     appendHealth(root, "fixity", { kind: "rebuild-done", at: new Date().toISOString(), lane, dropped: before, rebuilt: added, chain_ok: v.ok, breaks: v.breaks.length });
@@ -848,6 +957,8 @@ export function reconcile(opts = {}) {
   const root = opts.root || archiveRoot();
   const repo = opts.repo || ROOT;
   const log = opts.quiet ? () => {} : console.log;
+  const refused = foreignRefusal(root, repo, "archivist reconcile", opts.warn);
+  if (refused) return { ...refused, doubled: [], missing: [], lanes: [] };
   const srcByLane = new Map();
   for (const s of discoverSources(repo)) {
     if (isExcluded(s.lane)) continue;
@@ -914,6 +1025,8 @@ export function dedupeLane(lane, opts = {}) {
   const root = opts.root || archiveRoot();
   const repo = opts.repo || ROOT;
   const log = opts.quiet ? () => {} : console.log;
+  const refused = foreignRefusal(root, repo, "archivist dedupe", opts.warn);
+  if (refused) return refused;
   const lock = takeLock(root, "dedupe");
   if (!lock.ok) { log(`archivist dedupe: another archivist holds the lock (pid ${lock.held.pid})`); return { ok: false, reason: "locked" }; }
   try {
@@ -1270,6 +1383,10 @@ export function initArchive(opts = {}) {
     log("  Set $ARSENAL_ARCHIVE to a path with no .git above it, e.g. %USERPROFILE%\\CyborgArchive");
     return { ok: false, reason: "inside-git", why: guard.why };
   }
+  const repo = opts.repo || ROOT;
+  // init PINS an unpinned archive below, so only the foreign refusal speaks here.
+  const refused = foreignRefusal(root, repo, "archivist init", (l) => { if (/REFUSED/.test(l)) (opts.warn || warnOut)(l); });
+  if (refused) return refused;
   const p = P(root);
   for (const d of [root, p.data, p.health, p.schema, p.lexicon, p.derived, p.writer]) mkdirSync(d, { recursive: true });
 
@@ -1305,11 +1422,44 @@ export function initArchive(opts = {}) {
   // loadCkpt owns the migration, so init must ask it rather than guess.
   const ck = loadCkpt(root);
   if (!existsSync(p.checkpoints)) saveCkpt(root, ck);
+  // INIT RECORDS THE PIN TOO (forks row 328) — only when none exists; a foreign
+  // checkout was refused above, so this can only pin the checkout that inits.
+  const pinned = recordPin({ repo, root, by: "archivist.mjs init" });
+  if (pinned.ok && !pinned.unchanged) stampCkptPin(root, pinIdOf(pinned.pin.realpath), "archivist.mjs init");
 
   log(`archivist init: ${root}`);
   log(`  bagit.txt · bag-info.txt · README.md · SCHEMA/v${SCHEMA_V}.json · LEXICON/terms.jsonl${seeded ? ` (${seeded} terms seeded)` : " (kept)"} · data/ · health/ · derived/`);
   log(`  day partition: IST (${ZONE}) — stated in bag-info.txt, README.md and the schema, because a reader who assumes UTC is wrong about every late night.`);
   return { ok: true, root, seeded };
+}
+
+// ── PIN — the verb that records the home checkout (forks row 328) ────────────
+// Run ONCE from his home checkout. It is the only verb exempt from the foreign
+// check, because it is the verb that decides what "foreign" means — and so it
+// refuses to move an existing pin to a different checkout without --repin, and a
+// repin journals the old pin to health/ so a moved pin is never a silent one.
+// It takes the lock: the checkpoint stamp below must not race a scheduled run.
+export function pinArchive(opts = {}) {
+  const root = opts.root || archiveRoot();
+  const repo = opts.repo || ROOT;
+  const log = opts.quiet ? () => {} : console.log;
+  const warn = opts.warn || warnOut;
+  if (!existsSync(P(root).data)) { log(`archivist pin: no archive at ${root} — run \`archivist.mjs init\` first (init records the pin itself)`); return { ok: false, reason: "no-archive" }; }
+  const lock = takeLock(root, "pin");
+  if (!lock.ok) { log(`archivist pin: another archivist holds the lock (pid ${lock.held.pid}) — try again after it finishes.`); return { ok: false, reason: "locked" }; }
+  try {
+    const w = recordPin({ repo, root, repin: !!opts.repin, by: opts.by || "archivist.mjs pin" });
+    if (!w.ok) {
+      warn(`archivist pin: REFUSED — this archive is already pinned to ${w.pin.realpath} (since ${w.pin.pinned_at}); this checkout is ${w.here}. A pin is moved only on purpose: if his home checkout really moved, run \`archivist.mjs pin --repin\` from the new one (the old pin is journalled).`);
+      return { ok: false, reason: "pinned-elsewhere", pinned: w.pin.realpath, here: w.here };
+    }
+    if (w.unchanged) { log(`archivist pin: already pinned to this checkout (${w.pin.realpath}, since ${w.pin.pinned_at}) — nothing to do.`); return { ok: true, unchanged: true, pin: w.pin }; }
+    const pinId = pinIdOf(w.pin.realpath);
+    if (w.old) appendHealth(root, "fixity", { kind: "repin", at: w.pin.pinned_at, old: w.old, new: { realpath: w.pin.realpath, pinned_at: w.pin.pinned_at, by: w.pin.by }, old_pin_id: pinIdOf(w.old.realpath), new_pin_id: pinId, note: "checkpoints stamped under the old pin are never used under the new one; the next run re-reads those sources with dedupe (forks row 328)" });
+    const stamped = stampCkptPin(root, pinId, w.pin.by);
+    log(`archivist pin: ${w.old ? `RE-PINNED from ${w.old.realpath} to` : "pinned to"} ${w.pin.realpath} · pin id ${pinId} · ${stamped} checkpoint entr${stamped === 1 ? "y" : "ies"} stamped (a stamp, not a resync)`);
+    return { ok: true, pin: w.pin, old: w.old, stamped };
+  } finally { lock.release(); }
 }
 
 // ── LANES / STATUS ───────────────────────────────────────────────────────────
@@ -1404,6 +1554,8 @@ function status(opts = {}) {
   for (const l of lanes) recs += (ckpt.lanes[l] && ckpt.lanes[l].seq) || laneHead(root, l).seq;
   const inflight = Object.entries(ckpt.files).filter(([, f]) => f.inflight);
   console.log(`THE ARCHIVE · ${root}`);
+  const hc = homeCheck({ archive: root });
+  console.log(`  home pin: ${hc.state.toUpperCase()}${hc.pinned ? ` · pinned ${hc.pinned}` : " · none recorded — run `archivist.mjs pin` once from the home checkout"}${hc.state === "foreign" ? ` · THIS checkout ${hc.here} writes nothing here` : ""}`);
   console.log(`  ${recs} record(s) · ${lanes.length} lane(s) · checkpoint updated ${ckpt.updated_at || "never"}`);
   const s = sealState(root);
   if (!s.sealed) console.log("  sealed: NO — run `seal` before copying anything to the disk");
@@ -2739,6 +2891,97 @@ function selftest() {
     ok("TRIPWIRE LIVE-FIRE · unstaging the lane clears it — the refusal is about THIS commit, not a permanent lock",
       live2.ok === true);
 
+    // ── THE HOME PIN (forks row 328) — the clone that wrote his archive ──────
+    // 26 Sep 2026: a fresh clone in a temp folder ran ITS SessionEnd hook and
+    // appended to his real archive, moving his checkpoint offsets as it went.
+    // These plants rebuild that exact shape hermetically: checkout A is home, B is
+    // a BYTE-COPY of A at another realpath, and the archive lives in this temp dir.
+    {
+      const pa = join(tmp, "pin-archive"), cA = join(tmp, "pin-A"), cB = join(tmp, "pin-B");
+      const laneA = join(cA, CAPTURE_ROOT, "state", "outbox.jsonl");
+      mkdirSync(dirname(laneA), { recursive: true });
+      appendLines(laneA, [0, 1, 2].map((i) => JSON.stringify({ card: `c${i}`, ts: `2026-09-2${i}T06:00:00Z` })));
+      const warns = [];
+      const PA = { root: pa, repo: cA, quiet: true, warn: (l) => warns.push(l) };
+      const PB = { root: pa, repo: cB, quiet: true, warn: (l) => warns.push(l) };
+      initArchive(PA);
+      ok("PIN · init records the pin for the checkout that inits it (realpath, pinned_at, by — data, never a literal)",
+        readPin(pa)?.realpath === realRoot(cA) && !!readPin(pa).pinned_at && /init/.test(readPin(pa).by));
+      runArchive(PA);
+      cpSync(cA, cB, { recursive: true });            // the clone: same bytes, other realpath
+      appendLines(join(cB, CAPTURE_ROOT, "state", "outbox.jsonl"), [JSON.stringify({ card: "clone-card", ts: "2026-09-26T06:00:00Z" })]);
+      appendLines(join(cB, CAPTURE_ROOT, "state", "swallow_ledger.jsonl"), [JSON.stringify({ x: 1, ts: "2026-09-26T06:00:00Z" })]);
+      const snap = () => walkFiles(pa).sort().map((f) => `${bagPath(pa, f)}:${fileSha(f)}`).join("\n");
+      const recs = () => archivedLanes(pa).reduce((n, l) => n + [...laneRecords(pa, l)].length, 0);
+      const ck0 = readFileSync(P(pa).checkpoints, "utf8"), tree0 = snap(), n0 = recs();
+      warns.length = 0;
+      const rB = runArchive(PB);
+      ok("PIN (a) · THE CLONE FIXTURE: run from a byte-copy checkout at another realpath is REFUSED — records, health rows and the checkpoint file BYTE-IDENTICAL, and no lock left behind",
+        rB.ok === false && rB.reason === "foreign-checkout" && recs() === n0 && readFileSync(P(pa).checkpoints, "utf8") === ck0 && snap() === tree0,
+        JSON.stringify(rB));
+      ok("PIN (a) · …with ONE stderr line naming BOTH paths",
+        warns.length === 1 && warns[0].includes(realRoot(cA)) && warns[0].includes(realRoot(cB)) && /REFUSED/.test(warns[0]), JSON.stringify(warns));
+      ok("PIN (a) · …and every other checkout-taking writer refuses the clone the same way (backfill · rebuild · dedupe · reconcile · init), tree byte-identical",
+        runArchive({ ...PB, force: true }).reason === "foreign-checkout" && rebuildLane("outbox", { ...PB }).reason === "foreign-checkout"
+        && dedupeLane("outbox", { ...PB }).reason === "foreign-checkout" && reconcile({ ...PB }).reason === "foreign-checkout"
+        && initArchive({ ...PB }).reason === "foreign-checkout" && snap() === tree0);
+      ok("PIN (a) · a hook exits 0 on the refusal (a foreign SESSION is never broken); a hand exits 1",
+        (() => { const e = process.env.CLAUDE_PROJECT_DIR; process.env.CLAUDE_PROJECT_DIR = cB; const hook = exitFor(rB); delete process.env.CLAUDE_PROJECT_DIR; const hand = exitFor(rB); if (e !== undefined) process.env.CLAUDE_PROJECT_DIR = e; return hook === 0 && hand === 1; })());
+      appendLines(laneA, [JSON.stringify({ card: "home-card", ts: "2026-09-26T07:00:00Z" })]);
+      warns.length = 0;
+      const rA = runArchive(PA);
+      ok("PIN (b) · the same run from the pinned checkout proceeds exactly as today (+1, silent on stderr)",
+        rA.ok === true && rA.added === 1 && warns.length === 0 && verifyArchive({ root: pa, quiet: true }).ok, JSON.stringify({ rA, warns }));
+
+      // (c) NO PIN — an archive from before this change. Behaves as before + UNPINNED.
+      const ua = join(tmp, "unpinned-archive");
+      initArchive({ root: ua, repo: cA, quiet: true });
+      rmSync(pinFileOf(ua), { force: true });
+      warns.length = 0;
+      const rU = runArchive({ root: ua, repo: cB, quiet: true, warn: (l) => warns.push(l) });
+      ok("PIN (c) · no pin: run proceeds as today and prints ONE UNPINNED line (backward compatible until `pin` runs once)",
+        rU.ok === true && rU.added > 0 && warns.length === 1 && /UNPINNED/.test(warns[0]), JSON.stringify({ rU, warns }));
+      // THE MIGRATION IS A STAMP, NOT A RESYNC: pin it now; offsets untouched, next run re-reads nothing.
+      const ckU0 = JSON.parse(readFileSync(P(ua).checkpoints, "utf8"));
+      const pu = pinArchive({ root: ua, repo: cB, quiet: true, warn: () => {} });
+      const ckU1 = JSON.parse(readFileSync(P(ua).checkpoints, "utf8"));
+      const healthRows = (root, kind) => (existsSync(P(root).health) ? readdirSync(P(root).health) : []).filter((f) => f.startsWith(`${kind}-`))
+        .flatMap((f) => readFileSync(join(P(root).health, f), "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)));
+      const resyncs0 = healthRows(ua, "quarantine").filter((r) => r.kind === "source-resync").length;
+      const rU2 = runArchive({ root: ua, repo: cB, quiet: true, warn: () => {} });
+      ok("PIN · MIGRATION: the first `pin` STAMPS every existing checkpoint with the pin (offsets and anchors unchanged, one fixity row) — and the next run re-reads NOTHING",
+        pu.ok && pu.stamped === Object.keys(ckU0.files).length && Object.entries(ckU1.files).every(([k, f]) => f.pin === pinIdOf(realRoot(cB)) && f.offset === ckU0.files[k].offset && canon(f.anchor) === canon(ckU0.files[k].anchor))
+        && healthRows(ua, "fixity").some((r) => r.kind === "checkpoint-pin-stamp" && r.stamped === pu.stamped)
+        && rU2.added === 0 && healthRows(ua, "quarantine").filter((r) => r.kind === "source-resync").length === resyncs0,
+        JSON.stringify({ pu, rU2 }));
+
+      // (d) PIN OVER A DIFFERENT PIN
+      const pinBytes = readFileSync(pinFileOf(pa), "utf8");
+      warns.length = 0;
+      const pd = pinArchive({ root: pa, repo: cB, quiet: true, warn: (l) => warns.push(l) });
+      ok("PIN (d) · pinning over a DIFFERENT existing pin REFUSES without --repin, says why, and the pin is byte-identical",
+        pd.ok === false && pd.reason === "pinned-elsewhere" && readFileSync(pinFileOf(pa), "utf8") === pinBytes && warns.length === 1 && /--repin/.test(warns[0]));
+      const pr = pinArchive({ root: pa, repo: cB, repin: true, quiet: true, warn: () => {} });
+      ok("PIN (d) · …with --repin it moves, and the OLD pin is recorded in a health row",
+        pr.ok === true && readPin(pa).realpath === realRoot(cB)
+        && healthRows(pa, "fixity").some((r) => r.kind === "repin" && r.old && r.old.realpath === realRoot(cA) && r.new.realpath === realRoot(cB)));
+
+      // (e) A CHECKPOINT STAMPED UNDER PIN A IS NOT USED UNDER PIN B
+      const ckA = JSON.parse(readFileSync(P(pa).checkpoints, "utf8"));
+      const relOut = `${CAPTURE_ROOT}/state/outbox.jsonl`;
+      const idA = pinIdOf(realRoot(cA)), idB = pinIdOf(realRoot(cB));
+      const before = recs();
+      const rE = runArchive(PB);
+      const ckB = JSON.parse(readFileSync(P(pa).checkpoints, "utf8"));
+      const rs = healthRows(pa, "quarantine").filter((r) => r.kind === "source-resync" && r.path === relOut && /another pin/.test(r.why || ""));
+      const rcE = reconcile({ root: pa, repo: cB, quiet: true });
+      ok("PIN (e) · a checkpoint stamped under pin A is NOT used under pin B: set aside untouched, re-read with dedupe, restamped B",
+        ckA.files[relOut].pin === idA && ckB.files[relOut].pin === idB && canon(ckB.retired_pins[idA][relOut]) === canon(ckA.files[relOut]) && rs.length === 1,
+        JSON.stringify({ a: ckA.files[relOut] && ckA.files[relOut].pin, b: ckB.files[relOut] && ckB.files[relOut].pin, rs: rs.length }));
+      ok("PIN (e) · …and the dedupe held: only B's rows the archive never had were added, nothing doubled, every chain intact",
+        rE.ok && recs() - before === 2 && rcE.doubled.length === 0 && verifyArchive({ root: pa, quiet: true }).ok, JSON.stringify({ rE, doubled: rcE.doubled }));
+    }
+
     // ── 13. THE HOOK IS STILL SAFE ──
     const hookRes = hookProbe();
     ok("13. HOOK SAFETY · the extended afferent-post.mjs exits 0 and writes 0 bytes to stdout (its stdout would be injected into his prompt)",
@@ -2838,13 +3081,26 @@ process.exit(0);
 }
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
+// A FOREIGN CHECKOUT EXITS 0 AS A HOOK, 1 BY HAND (forks row 328): a hook that
+// fails would break a session that did nothing wrong by opening a clone, while a
+// hand that typed the verb in the wrong checkout needs to see it did not happen.
+const exitFor = (r) => (r && r.reason === "foreign-checkout" ? (calledAsHook() ? 0 : 1) : (r && r.ok ? 0 : 1));
+// Verbs whose writers take no checkout of their own are gated here, on THIS checkout.
+const WRITING_VERBS_GATED_HERE = new Set(["verify", "vitals", "seal"]);
+
 function main() {
   const mode = (process.argv[2] || "status").toLowerCase();
   const arg = (flag) => { const i = process.argv.indexOf(flag); return i > 0 ? process.argv[i + 1] : null; };
+  const lexMutates = mode === "lexicon" && ["add", "retire"].includes((process.argv[3] || "list").toLowerCase());
+  if (WRITING_VERBS_GATED_HERE.has(mode) || lexMutates) {
+    const refused = foreignRefusal(archiveRoot(), ROOT, `archivist ${mode}`);
+    if (refused) return process.exit(exitFor(refused));
+  }
   switch (mode) {
-    case "init": return process.exit(initArchive().ok ? 0 : 1);
-    case "run": return process.exit(runArchive().ok ? 0 : 1);
-    case "backfill": return process.exit(runArchive({ force: true }).ok ? 0 : 1);
+    case "init": return process.exit(exitFor(initArchive()));
+    case "run": return process.exit(exitFor(runArchive()));
+    case "backfill": return process.exit(exitFor(runArchive({ force: true })));
+    case "pin": return process.exit(pinArchive({ repin: process.argv.includes("--repin") }).ok ? 0 : 1);
     case "verify": return process.exit(verifyArchive({ month: arg("--month") }).ok ? 0 : 1);
     // VITALS EXITS 0 EVEN ON A RED. Task Scheduler's Last Result is what
     // /organism-doctor reads to decide whether an ORGAN is alive, so "the organ
@@ -2863,7 +3119,7 @@ function main() {
     case "rebuild": {
       const lane = process.argv[3];
       if (!lane) { console.log('archivist rebuild <lane> --why "<the reason>"   (drops a lane and re-derives it from source — refuses if any source is gone)'); return process.exit(1); }
-      return process.exit(rebuildLane(lane, { why: arg("--why") }).ok ? 0 : 1);
+      return process.exit(exitFor(rebuildLane(lane, { why: arg("--why") })));
     }
     case "lanes": { lanesReport(); return process.exit(0); }
     case "lexicon": {
@@ -2871,17 +3127,17 @@ function main() {
       const r = lexicon(sub, { term: process.argv[4], def: arg("--def"), source: arg("--source"), why: arg("--why") });
       return process.exit(r.ok ? 0 : 1);
     }
-    case "reconcile": return process.exit(reconcile().ok ? 0 : 1);
+    case "reconcile": return process.exit(exitFor(reconcile()));
     case "dedupe": {
       const l = process.argv[3];
       if (!l) { console.log('archivist dedupe <lane> --why "<the reason>"   (drops only surplus copies; keeps superseded history)'); return process.exit(1); }
-      return process.exit(dedupeLane(l, { why: arg("--why") }).ok ? 0 : 1);
+      return process.exit(exitFor(dedupeLane(l, { why: arg("--why") })));
     }
     case "tripwire": return process.exit(tripwire().ok ? 0 : 1);
     case "status": { status(); return process.exit(0); }
     case "selftest": return process.exit(selftest());
     default:
-      console.log("archivist: init | run | backfill | verify [--month YYYY-MM] | reconcile | vitals | seal [--quarter] | rebuild <lane> | dedupe <lane> | lanes | lexicon <list|add|retire> | tripwire | status | selftest");
+      console.log("archivist: init | pin [--repin] | run | backfill | verify [--month YYYY-MM] | reconcile | vitals | seal [--quarter] | rebuild <lane> | dedupe <lane> | lanes | lexicon <list|add|retire> | tripwire | status | selftest");
       return process.exit(1);
   }
 }

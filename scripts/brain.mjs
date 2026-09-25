@@ -2618,6 +2618,16 @@ async function pushNtfy(cfg, title, body, fetchFn = fetch, opts = {}) {
   if (!cfg.ntfy || !cfg.ntfy.enabled) return { sent: false, why: "disabled" };
   const topic = resolveNtfyTopic(cfg);
   if (!topic) return { sent: false, why: "no topic" };
+  // THE HOME PIN (forks row 328): his phone is outside every checkout. A clone the
+  // CLI opened in a temp folder runs this repo's hooks, and a Stop-hook act can
+  // reach a job that pushes here — so a checkout that is not the pinned home one
+  // never reaches the phone. The gate sits on the REAL wire (an injected transport
+  // is a test double and reaches nothing); `opts.home` lets a plant aim the check
+  // at a temp archive. Loaded lazily so the hook path that imports brain pays nothing.
+  if (fetchFn === fetch || opts.home) {
+    const { mayWriteOutside } = await import("./home_pin.mjs");
+    if (!mayWriteOutside("brain ntfy", opts.home || {})) return { sent: false, why: "foreign-checkout" };
+  }
   try {
     const res = await fetchFn(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
       // Markdown renders in the ntfy app — plain text passes through unchanged,
@@ -5393,6 +5403,31 @@ async function selftest() {
   assert("badge title survives real fetch header rules (RFC 2047, never raw emoji)", (await pushNtfy({ ntfy: { enabled: true, topic: "t1" } }, BELLS.fulltime.title, "b", strictFetch)).sent === true);
   assert("encoded title decodes back to the badge on the phone", Buffer.from(ntfyHeaderSafe(BELLS.fulltime.title).replace(/^=\?UTF-8\?B\?/, "").replace(/\?=$/, ""), "base64").toString("utf8") === BELLS.fulltime.title);
   assert("plain ASCII titles pass through untouched", ntfyHeaderSafe("Team sheet is up") === "Team sheet is up");
+  // THE HOME PIN (forks row 328): a checkout that is not the pinned home one never
+  // reaches the phone. A temp archive pinned to checkout A; B is a byte-copy elsewhere.
+  {
+    const fsx = await import("node:fs"), osx = await import("node:os");
+    const { pinFileOf } = await import("./archivist.mjs");
+    const { realRoot } = await import("./home_pin.mjs");
+    const t = fsx.mkdtempSync(join(osx.tmpdir(), "arsenal-brain-pin-"));
+    try {
+      const arc = join(t, "archive"), A = join(t, "A"), B = join(t, "B");
+      fsx.mkdirSync(join(A, "scripts"), { recursive: true });
+      fsx.cpSync(A, B, { recursive: true });
+      fsx.mkdirSync(dirname(pinFileOf(arc)), { recursive: true });
+      fsx.writeFileSync(pinFileOf(arc), JSON.stringify({ realpath: realRoot(A), pinned_at: new Date().toISOString(), by: "selftest" }));
+      let wire = 0;
+      const countFetch = async () => { wire++; return { ok: true, status: 200 }; };
+      const errW = process.stderr.write;
+      /** @type {any} */ (process.stderr).write = () => true;       // the refusal line is the organ's; the plant only counts the wire
+      let foreign;
+      try { foreign = await pushNtfy({ ntfy: { enabled: true, topic: "t1" } }, "t", "b", countFetch, { home: { repo: B, archive: arc } }); }
+      finally { process.stderr.write = errW; }
+      assert("HOME PIN — a FOREIGN checkout never reaches the phone: zero bytes on the wire, why foreign-checkout (forks row 328)", foreign.sent === false && foreign.why === "foreign-checkout" && wire === 0);
+      const home = await pushNtfy({ ntfy: { enabled: true, topic: "t1" } }, "t", "b", countFetch, { home: { repo: A, archive: arc } });
+      assert("HOME PIN — …and the pinned home checkout pushes exactly as before", home.sent === true && wire === 1);
+    } finally { try { fsx.rmSync(t, { recursive: true, force: true }); } catch { /* windows locks */ } }
+  }
 
   // ---- THE MORNING SLOT: one utterance, whoever claims it (1 Aug 2026 audit) ----
   // The old push was gated on `res.source === "llm"`, so a validator reject, a spawn
