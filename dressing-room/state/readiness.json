@@ -1,59 +1,60 @@
 {
   "ok": true,
   "engine": "v2-recalibrated",
-  "day": "2026-09-23",
+  "day": "2026-09-25",
   "mode": "full-coach",
-  "nights": 24,
+  "nights": 26,
   "verdict": "RED",
   "ceiling": "LOW",
   "workType": [
-    "RETRIEVE/REVIEW known material (encoding capacity reduced) — favour consolidation over first-exposure learning"
+    "ENCODE: front-load new factual/declarative learning + memorisation",
+    "SYNTHESISE: creative synthesis, architecture / system-design, connecting concepts"
   ],
   "timing": {
-    "wake": "10:18",
-    "peak1": "14:18–17:18  (hardest adversarial work: mocks, timed system-design, novel problems)",
-    "dip": "18:18–19:48  (admin, email, easy review, MOVEMENT)",
-    "peak2": "20:18–23:18  (second hard block)",
+    "wake": "09:44",
+    "peak1": "13:44–16:44  (hardest adversarial work: mocks, timed system-design, novel problems)",
+    "dip": "17:44–19:14  (admin, email, easy review, MOVEMENT)",
+    "peak2": "19:44–22:44  (second hard block)",
     "blocks": "~90-min deep-focus blocks; genuine non-screen break between; movement snack every 30–60 min"
   },
   "signals": {
-    "readiness_raw": null,
-    "oura_sleep_score": null,
-    "deep_7d_h": 0.43,
-    "deep_base_h": 0.83,
-    "rem_7d_h": 0.37,
-    "rem_base_h": 0.82,
-    "total_sleep_today_h": 2.26,
-    "total_sleep_7d_h": 2.19,
+    "readiness_raw": 78,
+    "oura_sleep_score": 69,
+    "deep_7d_h": 0.6,
+    "deep_base_h": 0.78,
+    "rem_7d_h": 0.43,
+    "rem_base_h": 0.79,
+    "total_sleep_today_h": 8.68,
+    "total_sleep_7d_h": 2.74,
     "personal_sleep_need_h": 6.5,
-    "oura_sleep_balance_7d": 36.3,
+    "oura_sleep_balance_7d": 34,
     "resilience_today": null,
     "resilience_available": false,
     "contributors_today": {
       "sleep_balance": null,
-      "previous_night": null,
-      "recovery_index": null,
-      "body_temperature": null,
+      "previous_night": 67,
+      "recovery_index": 100,
+      "body_temperature": 95,
       "hrv_balance": null,
-      "resting_heart_rate": null,
-      "activity_balance": null,
-      "previous_day_activity": null,
-      "sleep_regularity": null
+      "resting_heart_rate": 89,
+      "activity_balance": 85,
+      "previous_day_activity": 79,
+      "sleep_regularity": 51
     },
-    "hrv_today": 11,
-    "hrv_7d": 14.3,
-    "hrv_60d": 17.9,
-    "SWC": 2.62,
-    "rhr": 91,
-    "rhr_baseline": 80.3,
-    "rr": null,
+    "hrv_today": 20,
+    "hrv_7d": 14.7,
+    "hrv_60d": 17.8,
+    "SWC": 2.56,
+    "rhr": 72,
+    "rhr_baseline": 80.8,
+    "rr": 14.625,
     "rr_baseline": 15.7,
-    "temp_dev": null,
+    "temp_dev": 0.12,
     "temp_trend": null,
-    "efficiency": 81,
-    "latency_min": 17.5,
-    "spo2": null,
-    "bdi": null,
+    "efficiency": 58,
+    "latency_min": 34,
+    "spo2": 97.264,
+    "bdi": 3,
     "vo2max": null,
     "vascular_age": null
   },
@@ -67,7 +68,7 @@
       },
       "sleep_vs_personal_baseline": {
         "short": true,
-        "oura_sleep_balance_7d": 36.3
+        "oura_sleep_balance_7d": 34
       },
       "resilience": {
         "available": false,
@@ -79,8 +80,7 @@
       "fired": false
     },
     "low_confidence_med_informational": [
-      "HRV 7d below your own baseline — medication-influenced, low weight (not counted).",
-      "RHR +10.7bpm vs baseline — medication-influenced, low weight (not counted)."
+      "HRV 7d below your own baseline — medication-influenced, low weight (not counted)."
     ],
     "verdict_driver": "sustained multi-day convergence: sleep-architecture collapse (deep+REM) + a second axis"
   },
@@ -92,10 +92,10 @@
     "intake_today": {}
   },
   "periodization": {
-    "sleep_debt_h_14d_vs_personal": 45.5,
+    "sleep_debt_h_14d_vs_personal": 44.7,
     "personal_sleep_need_h": 6.5,
-    "oura_sleep_balance_7d": 36.3,
-    "week_mean_readiness": 42,
+    "oura_sleep_balance_7d": 34,
+    "week_mean_readiness": 47.2,
     "note": "Running below your OWN sleep baseline (~6.5h) this week — worth banking sleep. (Measured vs YOUR normal, not a textbook 8h.)"
   },
   "safety": {
