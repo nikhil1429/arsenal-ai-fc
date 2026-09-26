@@ -365,6 +365,15 @@ export function depcruise() {
   };
 }
 
+// knip.json's own note, moved here verbatim (26 Sep 2026, forks row 368 (4)): knip 6.32.2's
+// schema rejects the "_comment" key, so the note could not stay in the config it explains.
+//   THE ORGANISM AUDIT §10-C · rung S3 (20 Aug 2026). knip answers ONE question no other
+//   instrument here answers: which exported symbol does nobody import? In an organism whose
+//   organs are CLIs, an orphan export is not automatically dead code — it can be a writer
+//   another organ is SUPPOSED to call through (CLAUDE.md's owners-only rule names exactly that
+//   path) and never does. That is why knip's findings enter as LEADS, never as REDs: §4's rule
+//   binds every new instrument, and a lead is a lead until one run verifies it.
+//   scripts/lawpack.mjs prints them and counts them; it never fails a build on them.
 export function knipLeads() {
   const bin = jsEntry("knip", "bin", "knip.js");
   if (!bin) return { available: false, leads: [] };

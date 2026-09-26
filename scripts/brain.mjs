@@ -5417,7 +5417,7 @@ async function selftest() {
       fsx.mkdirSync(dirname(pinFileOf(arc)), { recursive: true });
       fsx.writeFileSync(pinFileOf(arc), JSON.stringify({ realpath: realRoot(A), pinned_at: new Date().toISOString(), by: "selftest" }));
       let wire = 0;
-      const countFetch = async () => { wire++; return { ok: true, status: 200 }; };
+      const countFetch = /** @type {any} */ (async () => { wire++; return { ok: true, status: 200 }; });
       const errW = process.stderr.write;
       /** @type {any} */ (process.stderr).write = () => true;       // the refusal line is the organ's; the plant only counts the wire
       let foreign;

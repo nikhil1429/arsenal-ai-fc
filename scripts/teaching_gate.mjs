@@ -100,7 +100,7 @@ export const CHECKS = Object.freeze({
   "A.bold": { fam: "A", mouth: "count", fix: "bold ek paragraph mein ≤ 1 (sirf wahi ek load-bearing word)" },
   "A.diff": { fam: "A", mouth: "count", fix: "sirf EK ```diff, ≤ 4 lines, har line + (sahi) ya - (galat), bagal mein prose" },
   "A.blockquote": { fam: "A", mouth: "count", fix: "blockquote ≤ 1, aur usme check-question ya koi naam nahi" },
-  "A.tum": { fam: "A", mouth: "count", fix: "\"tum\" bolo — tu / tera / tujhe nahi" },
+  "A.tum": { fam: "A", mouth: "count", fix: "\"tum\" bolo — \"tu\" / \"tera\" / \"tujhe\" nahi" },
   "A.too-hindi": { fam: "A", mouth: "count", fix: "Hindi content word ki jagah English content word (Hindi sirf glue)" },
   "A.too-english": { fam: "A", mouth: "count", fix: "Hinglish: English content words, Hindi glue (hai, ka, mein, toh …) — poora English sirf interview line" },
   "A.gamify": { fam: "A", mouth: "count", fix: "XP / streak / drift / ms-seconds ke figure usse mat dikhao" },

@@ -43,11 +43,11 @@
 //
 // MODES: status · selftest
 // ============================================================================
-import { writeFileSync, mkdirSync, mkdtempSync, rmSync, cpSync, existsSync } from "node:fs";
+import { writeFileSync, mkdirSync, mkdtempSync, rmSync, cpSync, existsSync, readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import http from "node:http";
-import { join, dirname, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join, dirname, resolve, relative, sep } from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 // THE PIN'S CORE LIVES WITH ITS OWNER. Where the archive is, how the pin reads and
 // how a checkout compares all belong to archivist.mjs — the archive's single writer
@@ -79,8 +79,20 @@ export function mayPostHome(who, opts = {}) {
 }
 
 // What a checkout needs for hooks/afferent-post.mjs to run in a selftest fixture: the
-// hook, the guard, the pin core and its two imports, and the spool it writes ahead to.
-const POSTER_FILES = ["hooks/afferent-post.mjs", "scripts/home_pin.mjs", "scripts/archivist.mjs", "scripts/captain.mjs", "scripts/daykey.mjs", "scripts/spool.mjs"];
+// hook, the guard, the pin core and its two imports, and the spool it writes ahead to —
+// i.e. the hook's relative-import closure (static and literal dynamic imports). DERIVED
+// from the hook's own source, never listed (26 Sep 2026, forks row 368 (4)): a roster
+// goes stale the day the hook grows an import; a closure cannot (organism_test's NO SHIM
+// CALLEE walk is the precedent). Walked only when the selftest asks, never on a hook's path.
+const REPO = dirname(dirname(fileURLToPath(import.meta.url)));
+function importClosure(file, seen = new Set()) {
+  if (seen.has(file)) return seen;
+  seen.add(file);
+  for (const m of readFileSync(join(REPO, file), "utf8").matchAll(/(?:\bfrom\s+|\bimport\s*\(\s*|^\s*import\s+)["'](\.{1,2}\/[^"']+)["']/gm))
+    importClosure(relative(REPO, join(REPO, dirname(file), m[1])).split(sep).join("/"), seen);
+  return seen;
+}
+const posterFiles = () => [...importClosure("hooks/afferent-post.mjs")];
 
 // ── SELFTEST (hermetic: temp dirs only; never reads or writes a real home archive) ──
 async function selftest() {
@@ -110,7 +122,7 @@ async function selftest() {
     // ── THE POSTERS — the real hooks/afferent-post.mjs, run from each
     // checkout of a real git fixture, against a COUNTING stub thalamus on an ephemeral
     // port (never a real daemon; the archive is a temp one; the spool a temp db).
-    const fx = postingFixture(join(tmp, "posting"), { files: POSTER_FILES });
+    const fx = postingFixture(join(tmp, "posting"), { files: posterFiles() });
     const parc = join(tmp, "posting-archive");
     const pinTo = (dir) => { mkdirSync(dirname(pinPath(parc)), { recursive: true }); writeFileSync(pinPath(parc), JSON.stringify({ realpath: realRoot(dir), pinned_at: new Date().toISOString(), by: "selftest" }) + "\n"); };
     const guard = (k) => { const w = []; const r = mayPostHome("t", { repo: fx[k], archive: parc, warn: (l) => w.push(l) }); return { r, w }; };

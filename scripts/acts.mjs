@@ -551,7 +551,7 @@ async function selftest() {
         [d, e].every((x) => x.ok && x.bytes === 0 && x.warns.length === 1), JSON.stringify({ d, e }));
       const other = await actsFromTail('<<ACT {"acts":[{"verb":"agenda","args":{"text":"kal pehle 4"}}]}>>', { pin: { repo: fx.clone, archive: parc, warn: () => { throw new Error("asked"); } }, append: () => true, exec: () => ({ ok: true, out: "sitting: agenda added ag1" }) });
       assert("PIN · a tail with no posting verb never asks the pin (no line, nothing refused)", other.length === 1 && other[0].ok);
-    } finally { try { rmSync(tmp, { recursive: true, force: true }); } catch { } }
+    } finally { try { rmSync(tmp, { recursive: true, force: true }); } catch { /* windows locks */ } }
   }
 
   assert("OWNERS: every verb names an EXISTING organ file and declares a reverse", VERBS.every((v) => OWNERS[v] && existsSync(join(__dirname, OWNERS[v].organ)) && typeof OWNERS[v].reverse === "function"), VERBS.filter((v) => !existsSync(join(__dirname, OWNERS[v].organ))).join(","));
