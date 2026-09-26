@@ -60,7 +60,7 @@
 // CLI: node scripts/lawpack.mjs [report|gate|leads|rules|selftest]
 // ============================================================================
 import { readFileSync, existsSync, readdirSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, copyFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { join, dirname, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -349,13 +349,34 @@ export function judge(counts, base = BASELINE) {
 // gates.mjs rides tsc and eslint — one runtime, no shell, no PATH, no .cmd shim.
 const jsEntry = (...p) => { const f = join(NM, ...p); return existsSync(f) ? f : null; };
 
-export function depcruise() {
-  const bin = jsEntry("dependency-cruiser", "bin", "dependency-cruise.mjs");
+// A LEAD READER THAT FAILS TO START REDS, NEVER A FALSE ZERO (26 Sep 2026, forks row 375).
+// Measured the day it landed: knip crashed on its own config (exit 2, "Invalid input") and
+// `leads` printed "knip 0 orphan(s)" — the parse catch had swallowed the crash into an empty
+// list. So: a tool that fails to spawn, exits with no parseable stdout, or whose stdout does
+// not parse returns { failed: <its first stderr line> } and NO list; every mode that prints
+// the reader prints FAILED TO START and exits RED. A zero comes ONLY from a parsed, empty
+// result. ABSENT (the tool is not installed) is unchanged. stdout and stderr are kept apart,
+// so a warning on stderr can never be parsed as — or hide — the result.
+const runLead = (bin, args) => {
+  const r = spawnSync(process.execPath, [bin, ...args], { cwd: ROOT, encoding: "utf8", timeout: 600000, windowsHide: true, maxBuffer: 128 * 1024 * 1024 });
+  const first = (t) => String(t || "").split(/\r?\n/).map((l) => l.trim()).find(Boolean) || "";
+  return { out: r.stdout || "", code: r.status, why: first(r.error && r.error.message) || first(r.stderr) || `exit ${r.status}, no parseable output` };
+};
+const parseLead = (r) => {
+  if (!r.out.includes("{")) return null;
+  try { return JSON.parse(r.out.slice(r.out.indexOf("{"), r.out.lastIndexOf("}") + 1)); }
+  catch { return null; }   // null IS the failed state: the caller reds on it, never counts it as zero
+};
+export const failedLine = (tool, r) => `${tool} FAILED TO START — ${r.failed}`;
+/** @param {Record<string, { available?: boolean, failed?: string }>} readers — tool name → reader result; the RED lines, empty only when every reader parsed (or is ABSENT) */
+export const leadReds = (readers) => Object.entries(readers).filter(([, x]) => x.failed).map(([tool, x]) => failedLine(tool, x));
+
+export function depcruise({ bin = jsEntry("dependency-cruiser", "bin", "dependency-cruise.mjs") } = {}) {
   if (!bin) return { available: false, errors: [], leads: [], raw: "" };
-  const r = runTool(process.execPath, [bin, "--config", ".dependency-cruiser.cjs", "--output-type", "json", "scripts", "hooks"]);
-  let v = [];
-  try { v = ((JSON.parse(r.out.slice(r.out.indexOf("{"), r.out.lastIndexOf("}") + 1)).summary) || {}).violations || []; }
-  catch { /* unparseable = the raw tail is printed below, never silently treated as zero */ }
+  const r = runLead(bin, ["--config", ".dependency-cruiser.cjs", "--output-type", "json", "scripts", "hooks"]);
+  const j = parseLead(r);
+  if (!j || !j.summary) return { available: true, failed: r.why, raw: r.out.slice(0, 300) };
+  const v = j.summary.violations || [];
   return {
     available: true,
     errors: v.filter((x) => x.rule && x.rule.severity === "error"),
@@ -374,13 +395,11 @@ export function depcruise() {
 //   path) and never does. That is why knip's findings enter as LEADS, never as REDs: §4's rule
 //   binds every new instrument, and a lead is a lead until one run verifies it.
 //   scripts/lawpack.mjs prints them and counts them; it never fails a build on them.
-export function knipLeads() {
-  const bin = jsEntry("knip", "bin", "knip.js");
+export function knipLeads({ bin = jsEntry("knip", "bin", "knip.js") } = {}) {
   if (!bin) return { available: false, leads: [] };
-  const r = runTool(process.execPath, [bin, "--reporter", "json", "--no-exit-code"]);
-  let j = null;
-  try { j = JSON.parse(r.out.slice(r.out.indexOf("{"), r.out.lastIndexOf("}") + 1)); }
-  catch { /* knip prints nothing parseable when it is clean */ }
+  const r = runLead(bin, ["--reporter", "json", "--no-exit-code"]);
+  const j = parseLead(r);   // knip's json reporter prints {"issues":[]} even when clean — nothing parseable is a failure
+  if (!j) return { available: true, failed: r.why };
   const leads = [];
   for (const f of (j && j.files) || []) leads.push({ kind: "unused file", file: String(f) });
   for (const [file, issues] of Object.entries((j && j.issues) || {}))
@@ -415,7 +434,7 @@ export async function measure({ withDepcruise = true } = {}) {
     "bare-catch": c.findings.length,
     "receipt-testimony-read": rt.findings.length,
     "tum-not-tu-prose": tm.findings.length,
-    depcruise_errors: dc.available ? dc.errors.length : 0,
+    depcruise_errors: dc.available && !dc.failed ? dc.errors.length : 0,
   };
   return { matches, counts, o, m, j, t, c, rt, tm, dc, raw, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
 }
@@ -542,6 +561,32 @@ async function selftest() {
     assert("BARE CHECKOUT — no ast-grep binary, so the plant test is skipped and SAID (measurability is an answer)", true);
   }
 
+  // 6 · A LEAD READER THAT FAILS TO START REDS, NEVER A FALSE ZERO (forks row 375) — stub bins, both ways
+  {
+    const st = mkdtempSync(join(tmpdir(), "arsenal-lawpack-lead-"));
+    try {
+      const stub = (name, body) => { const f = join(st, name); writeFileSync(f, body); return f; };
+      const crash = stub("crash.mjs", 'process.stderr.write("ERROR: Invalid input (unrecognized_keys: _comment)\\n"); process.exit(2);\n');
+      const silent = stub("silent.mjs", "process.exit(0);\n");
+      const knipEmpty = stub("knip-empty.mjs", 'process.stdout.write(JSON.stringify({ issues: [] }) + "\\n");\n');
+      const dcEmpty = stub("dc-empty.mjs", 'process.stdout.write(JSON.stringify({ summary: { violations: [] } }) + "\\n");\n');
+      const k = knipLeads({ bin: crash }), d = depcruise({ bin: crash });
+      const reds = leadReds({ knip: k, "dependency-cruiser": d });
+      assert("LEAD READER — a knip that CRASHES (exit 2, error on stderr) is FAILED TO START with its first stderr line, and carries NO list",
+        k.available && k.failed === "ERROR: Invalid input (unrecognized_keys: _comment)" && !("leads" in k), JSON.stringify(k));
+      assert("LEAD READER — …and the same for dependency-cruiser: no errors list, so depcruise_errors can never read as a FELL zero", d.failed && !("errors" in d), JSON.stringify(d));
+      assert("LEAD READER — both crashes are RED: FAILED TO START names the tool and the stderr line",
+        reds.length === 2 && reds.every((r) => /^(knip|dependency-cruiser) FAILED TO START — ERROR: Invalid input/.test(r)), JSON.stringify(reds));
+      const q = knipLeads({ bin: silent });
+      assert("LEAD READER — exit 0 with NO parseable output is still FAILED, never zero", Boolean(q.failed) && leadReds({ knip: q }).length === 1, JSON.stringify(q));
+      const k0 = knipLeads({ bin: knipEmpty }), d0 = depcruise({ bin: dcEmpty });
+      assert("LEAD READER — a PARSED, empty result is the only zero: knip 0 orphan(s), dependency-cruiser 0 errors, and NOT red",
+        !k0.failed && k0.leads.length === 0 && !d0.failed && d0.errors.length === 0 && leadReds({ knip: k0, "dependency-cruiser": d0 }).length === 0, JSON.stringify({ k0, d0 }));
+      assert("LEAD READER — ABSENT (not installed) stays ABSENT, never FAILED",
+        (() => { const a = knipLeads({ bin: null }); return !a.available && !a.failed && leadReds({ knip: a }).length === 0; })());
+    } finally { try { rmSync(st, { recursive: true, force: true }); } catch { /* windows locks */ } }
+  }
+
   console.log(`lawpack selftest: ${pass} passed, ${fail} failed`);
   if (fail) process.exit(1);
 }
@@ -562,17 +607,26 @@ async function main() {
   const m = await measure();
   if (mode === "leads") {
     const k = knipLeads();
-    console.log(`lawpack leads · knip ${k.available ? `${k.leads.length} orphan(s)` : "ABSENT"} · depcruise ${m.dc.available ? `${m.dc.leads.length} informational` : "ABSENT"} · owners UNRESOLVED-by-syntax ${m.o.unresolved.length} (xray's IR owns that class)`);
-    for (const l of k.leads.slice(0, 40)) console.log(`  LEAD ${l.kind} · ${l.file}${l.line ? `:${l.line}` : ""}${l.name ? ` · ${l.name}` : ""}`);
-    if (k.leads.length > 40) console.log(`  … ${k.leads.length - 40} more`);
-    for (const l of m.dc.leads.slice(0, 20)) console.log(`  LEAD ${l.rule.name} · ${l.from}`);
+    const said = (x, n) => (!x.available ? "ABSENT" : x.failed ? "FAILED TO START" : n());
+    console.log(`lawpack leads · knip ${said(k, () => `${k.leads.length} orphan(s)`)} · depcruise ${said(m.dc, () => `${m.dc.leads.length} informational`)} · owners UNRESOLVED-by-syntax ${m.o.unresolved.length} (xray's IR owns that class)`);
+    for (const l of (k.leads || []).slice(0, 40)) console.log(`  LEAD ${l.kind} · ${l.file}${l.line ? `:${l.line}` : ""}${l.name ? ` · ${l.name}` : ""}`);
+    if ((k.leads || []).length > 40) console.log(`  … ${k.leads.length - 40} more`);
+    for (const l of (m.dc.leads || []).slice(0, 20)) console.log(`  LEAD ${l.rule.name} · ${l.from}`);
+    const failed = leadReds({ knip: k, "dependency-cruiser": m.dc });
+    for (const r of failed) console.log(`  RED  ${r}`);
+    if (failed.length) { console.log(`lawpack leads: ${failed.length} RED — a lead reader that fails to start is never a zero (forks row 375)`); process.exit(1); }
     return;
   }
   const miss = RULE_IDS.filter((id) => !m.rulesPresent.includes(id));
   const j = judge(m.counts);
   if (miss.length) j.reds.push(`RULE MISSING — ${miss.join(", ")} — the pack IS the law, so a missing rule file is a missing law.`);
+  if (m.dc.failed) {   // forks row 375: a count that was never measured neither FELL nor held
+    j.reds.push(...leadReds({ "dependency-cruiser": m.dc }));
+    j.falls = j.falls.filter((f) => !f.startsWith("depcruise_errors "));
+    j.ok = false;
+  }
   console.log(`lawpack · ${m.matches.length} raw match(es) over ${m.rulesPresent.length}/${RULE_IDS.length} rules · findings: ` +
-    Object.entries(m.counts).map(([k2, v]) => `${k2} ${v}`).join(" · "));
+    Object.entries(m.counts).map(([k2, v]) => `${k2} ${k2 === "depcruise_errors" && m.dc.failed ? "FAILED TO START" : v}`).join(" · "));
   console.log(`  frozen: ${Object.entries(BASELINE).map(([k2, v]) => `${k2} ${v}`).join(" · ")}`);
   if (mode === "report") {
     const top = (label, rows) => { if (rows.length) console.log(`  ${label}`); for (const r of rows.slice(0, 6)) console.log(`      ${r.file}:${r.line} — ${r.why}`); if (rows.length > 6) console.log(`      … ${rows.length - 6} more`); };
@@ -581,7 +635,7 @@ async function main() {
     top("JUGAD", m.j.findings.filter((f) => f.lane));
     top("TRAILING-N", m.t.findings);
     top("BARE CATCH", m.c.findings);
-    if (m.dc.available) for (const e of m.dc.errors.slice(0, 8)) console.log(`      DEPCRUISE ${e.rule.name} · ${e.from} → ${e.to}`);
+    if (m.dc.available && !m.dc.failed) for (const e of m.dc.errors.slice(0, 8)) console.log(`      DEPCRUISE ${e.rule.name} · ${e.from} → ${e.to}`);
   }
   for (const r of j.reds) console.log(`  RED  ${r}`);
   for (const f of j.falls) console.log(`  ok   ${f}`);
