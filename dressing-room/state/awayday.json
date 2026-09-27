@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "checked_at": "2026-09-26T22:15:02.034Z",
+  "checked_at": "2026-09-27T22:15:01.431Z",
   "repo": "nikhil1429/arsenal-ai-fc",
   "workflow": "awayday.yml",
   "state": "green",
@@ -14,7 +14,7 @@
   "run_url": "https://github.com/nikhil1429/arsenal-ai-fc/actions/runs/36203198161",
   "carded_run_id": null,
   "red_since": null,
-  "unreachable": null,
+  "unreachable": "GitHub API 404 Not Found",
   "lanes": {
     "suite.yml": {
       "workflow": "suite.yml",
