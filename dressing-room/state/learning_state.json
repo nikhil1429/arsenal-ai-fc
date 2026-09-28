@@ -1,6 +1,6 @@
 {
-  "date": "2026-09-27",
-  "generated_at": "2026-09-27T05:48:10.472Z",
+  "date": "2026-09-28",
+  "generated_at": "2026-09-28T04:54:17.734Z",
   "total_reps": 2,
   "status": "ok",
   "low_confidence": false,
@@ -61,27 +61,27 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 87
+      "overdue_days": 88
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 83
+      "overdue_days": 84
     },
     {
       "concept": "embeddings",
       "axis": null,
-      "overdue_days": 71
+      "overdue_days": 72
     },
     {
       "concept": "hallucinations",
       "axis": null,
-      "overdue_days": 47
+      "overdue_days": 48
     },
     {
       "concept": "tokenization",
       "axis": "a (kya+analogy)",
-      "overdue_days": 21
+      "overdue_days": 22
     }
   ],
   "core_vs_light": {
@@ -191,13 +191,13 @@
       "b",
       "c",
       "d",
-      "e"
+      "e",
+      "g"
     ],
     "axes_deferred": [
       "f"
     ],
     "axes_left": [
-      "g",
       "h",
       "i"
     ],
@@ -206,11 +206,12 @@
       "b",
       "c",
       "d",
-      "e"
+      "e",
+      "g"
     ],
     "started_at": "2026-09-02T21:05:33.373Z",
     "stale": false,
-    "stale_as_of": "2026-09-27T05:48:10.472Z",
+    "stale_as_of": "2026-09-28T04:54:17.734Z",
     "last_closed": {
       "concept": "hallucinations",
       "ended_at": "2026-09-02T21:05:33.180Z",

@@ -1,5 +1,5 @@
 {
-  "id": "sit_20260927_1428_8e3a",
+  "id": "sit_20260928_1807_a6f0",
   "captain": "Nikhil (#14)",
   "surfaces": [
     "code"
@@ -11,14 +11,14 @@
   "concept": "tokenization",
   "route_why": "forge session open @ step 3 — resume, kuch dobara nahi",
   "claude_session_id": null,
-  "host_session_id": "c0d3448d-586a-41dc-948d-a3d9bdcea2ea",
-  "host_transcript_path": "C:\\Users\\nikhi\\.claude\\projects\\C--Users-nikhi-GitHub-arsenal-ai-fc\\c0d3448d-586a-41dc-948d-a3d9bdcea2ea.jsonl",
+  "host_session_id": "69927553-00ec-4810-938f-9d5206fc4e6c",
+  "host_transcript_path": "C:\\Users\\nikhi\\.claude\\projects\\C--Users-nikhi-GitHub-arsenal-ai-fc\\69927553-00ec-4810-938f-9d5206fc4e6c.jsonl",
   "host_source": "hook-payload (harness env agrees)",
-  "host_bound_at": "2026-09-27T14:28:37.494Z",
+  "host_bound_at": "2026-09-28T18:07:15.853Z",
   "transport": "code",
-  "opened_at": "2026-09-27T14:28:37.494Z",
-  "last_turn_at": "2026-09-27T14:29:35.491Z",
-  "closed_at": "2026-09-27T17:25:05.918Z",
+  "opened_at": "2026-09-28T18:07:15.853Z",
+  "last_turn_at": "2026-09-28T18:18:58.136Z",
+  "closed_at": "2026-09-28T18:39:18.641Z",
   "close_reason": "idle",
   "plan": [],
   "plan_source": null,
@@ -57,7 +57,7 @@
       "respond": [],
       "compose": [],
       "judge": [
-        21968
+        20262
       ]
     },
     "units_composed": 0,
