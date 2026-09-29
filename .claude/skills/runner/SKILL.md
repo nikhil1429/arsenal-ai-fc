@@ -16,6 +16,35 @@ laws' pointers — never a copy of a number.
 
 ---
 
+## THE LANES — the boot word names the lane; bare `runner` is lane S (rows 437 / 438 / 456)
+
+The campaign runs up to three runner lanes at once, cut by STAGE, never by directory (row 437 (2)). Every lane letter,
+boot file, record file and heartbeat key lives in `tools/lanes.mjs`; `node tools/lanes.mjs table` prints each lane's
+scope sentence cut from row 437.
+
+- **THE BOOT WORD:** `runner` boots lane S (the sheet path), exactly as before the lanes existed. `runner V` boots
+  lane V (Stage 3 as written) and `runner M` boots lane M (Stage 2.3-2.5 plus 0.5 / 0.6). The letter after `runner` is
+  the lane; nothing else in his word is.
+- **FIRST ACT BINDS EVERY LANE** (row 456): its mode step (Auto → Accept edits before any write) and its live-runner
+  check run for every lane, and the check is BY LANE — `node tools/roles.mjs who` prints one line per lane, and a live
+  holder of YOUR lane that is acting means zero writes here.
+- **THE BOOT FILE:** lane S reads `CURRENT.md` as THE READ ORDER below says; lane V reads
+  `C:/Users/nikhi/arsenal-audit-artifacts/campaign-2026-09/CURRENT_V.md` and lane M reads
+  `C:/Users/nikhi/arsenal-audit-artifacts/campaign-2026-09/CURRENT_M.md` INSTEAD of CURRENT.md, and every other item
+  of THE READ ORDER stands for them. A lane's own `## OWNER FILES` section names the only files it edits; a path two
+  lanes' sections both name REFUSES every lane's boot (row 438 (4)).
+- **THE LANE ON EVERY ROLE COMMAND:** lanes V and M add `--lane V` / `--lane M` to FIRST ACT's claim
+  (`node tools/roles.mjs claim runner --lane V --me "<name>" --session-id "$CLAUDE_CODE_SESSION_ID" --note "…"`), to
+  the digest (`node tools/boot_digest.mjs --role runner --lane V`), to `heartbeat` and to `release`; no `--lane` is
+  lane S. A REFUSED claim ENDS THE BOOT: the overlap check names the path and both lanes, and the lane that owns the
+  path fixes its boot file — never `--force`, which does not reach the overlap check. One session holds one lane.
+- **DERIVED, NEVER TYPED:** the boot row's lane comes from the record the claim just wrote (`campaign.mjs ledger add`
+  refuses a `--lane` that disagrees); launches, stamps and pushes derive the lane themselves
+  (`tools/launch_close_fleet.mjs`, `tools/private_push.mjs`, `tools/cloud_launch.mjs`), and the push lock serialises
+  every lane's `private_push.mjs push`.
+- **ROTATION:** `/clear` + the SAME boot word; the successor of a lane boots that lane, never another.
+
+---
 ## FIRST ACT AT BOOT — in this order, before any other write
 
 1. **Switch this session's mode off Auto → Accept edits.** The Auto-mode classifier refuses the
