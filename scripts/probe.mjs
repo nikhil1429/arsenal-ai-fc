@@ -84,6 +84,29 @@
 //          depends on the flags (F1) is so caught in a throwaway tree before it can write a
 //          dump into --root; (b) stays armed for a crash that happens only on the host. The
 //          receipt's runs[] keep the lane's order. --host-only keeps the host first.
+//      f · ANOTHER WRITER IS NAMED, NOT BLAMED (forks rows 494 / 495; the live run's probe 36:
+//          his own daemon's atomic write, brain_queue.json.8020.tmp, landed in --root while a
+//          COLLAR axis ran). A change (b) sees is filed on the run as other_writer {path, pid,
+//          session, name, rule} and the run is GRADED, never quarantined, in exactly two
+//          shapes; every other change stays TREE-WRITTEN:
+//          A · seen while a COLLAR axis ran, the collar armed: the run's verbs work inside the
+//              collar's temp tree, and its node verbs are denied every write outside it
+//              (audit_preload), so a --root change then is another writer's. A collar that
+//              failed (not armed, a build or copy that threw) proves nothing: rule B there.
+//          B · any other window (the HOST axis): a path shaped `<existing file>.<pid>.tmp` (the
+//              organs' writeAtomic) ONLY when that pid is live, is NOT in this engine's own
+//              process tree, and the file is gone (renamed or removed) within SETTLE_MS of the
+//              after-check, its <existing file> present.
+//          STRICTER THAN A, ON EVERY AXIS: a pid-named tmp whose pid IS in this engine's own
+//          process tree stays TREE-WRITTEN. The pids come from ONE snapshot of the process
+//          table per attribution (Win32_Process on Windows, /proc elsewhere); no snapshot =
+//          nothing confirmed = B never grades. `run` names every other writer on a NOTE line.
+//      g · A LOCKED FILE IS RETRIED, BOUNDED AND NAMED (rows 494 (4) / 495 (1); the live run's
+//          probe 16: Node read Windows ERROR_LOCK_VIOLATION (33) as errno 33 = EDOM while the
+//          fixture copied his live state bus). The collar build and the fixture's state copy
+//          are retried on EDOM / EBUSY, RETRY_TRIES attempts, the wait doubling from
+//          RETRY_BASE_MS; every failed attempt is named on the run (`retries`). Exhausted, the
+//          probe is COLLAR-NOT-ARMED naming the lock, never an INTERNAL crash.
 //
 // THE COLLAR is scripts/sandbox.mjs, reached through an injectable deps.sandbox and
 //   loaded LAZILY from ./sandbox.mjs only when a collar axis runs — importing this file
@@ -122,6 +145,7 @@ const HERE = path.dirname(SELF);
 export const DEFAULT_ROOT = path.join(HERE, "..");
 const NL = "\n";
 const SEG_TIMEOUT_MS = 30000, OUTPUT_CAP = 1 << 20, HEAD_BYTES = 2048;
+const RETRY_TRIES = 4, RETRY_BASE_MS = 250, SETTLE_MS = 5000, SETTLE_STEP_MS = 100;   // (g) · (f) B
 const STATE_REL = path.join("dressing-room", "state");
 const WIN = process.platform === "win32";
 
@@ -139,8 +163,8 @@ const RUNNABLE_IF = Object.freeze({
   UNPARSABLE: "predicate_cmd is words, quotes, `&&` and `|` only — no shell syntax",
   "VERB-OUTSIDE-AXIS": "every segment is in the organism verb table for every axis the lane runs on (node only on a collar axis)",
   "VERB-NOT-FOUND": "the verb resolves to an executable on PATH or in the usr/bin beside git",
-  "COLLAR-NOT-ARMED": "scripts/sandbox.mjs loads beside probe.mjs, builds from --root, and assertArmed passes (and the call is not --host-only)",
-  "TREE-WRITTEN": "the run leaves --root as it found it: git status --porcelain --ignored and the listing of its top level and of every cwd the run enters are unchanged — the engine never deletes what a verb wrote: read it, remove it, re-run",
+  "COLLAR-NOT-ARMED": "scripts/sandbox.mjs loads beside probe.mjs, builds from --root, and assertArmed passes, its build and the fixture's state copy complete (a locked file is retried, bounded) (and the call is not --host-only)",
+  "TREE-WRITTEN": "the run leaves --root as it found it: git status --porcelain --ignored and the listing of its top level and of every cwd the run enters are unchanged, save what law 7f names as another writer's — the engine never deletes what a verb wrote: read it, remove it, re-run",
 });
 
 class Stop extends Error { constructor(msg, code = 2) { super(msg); this.code = code; } }
@@ -547,21 +571,41 @@ export function absentReads(tree, check) {
   return check.filter(r => { const m = treePath(r, ""); return !(m.ok && fs.existsSync(joinRel(tree, m.rel))); });
 }
 const NOT_RUN = Object.freeze({ exit: null, stdout: "", bytes: 0, seconds: 0, timed_out: false, capped: false, crashed: null });
+// (g) A LOCKED FILE: the code of a lock error (EDOM = Node reading Windows' ERROR_LOCK_VIOLATION 33 as an errno), else null
+const LOCKED = new Set(["EDOM", "EBUSY"]);
+export const lockedCode = e => { const c = e && (e.code || (/^(EDOM|EBUSY)\b/.exec(String(e.message || "")) || [])[1]); return LOCKED.has(c) ? c : null; };
+const sleepSync = ms => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); };
+// one step of the collar, retried on a LOCKED file only, at most `tries` attempts, the wait doubling from baseMs. Every
+// failed attempt is pushed onto `named` (the run's `retries`); exhausted = a CollarError naming the lock. Any other error
+// is thrown on its first attempt, never retried.
+export function retryLocked(step, fn, named, { tries = RETRY_TRIES, baseMs = RETRY_BASE_MS, sleep = sleepSync } = {}) {
+  for (let a = 1; ; a++) {
+    try { return fn(); }
+    catch (e) {
+      const code = lockedCode(e);
+      if (!code) throw e;
+      named.push({ step, code, attempt: a, error: String(e && e.message || e).slice(0, 200) });
+      if (a >= tries) throw new CollarError(`${step} stayed locked after ${a} attempt(s), ${code}: ${String(e && e.message || e).slice(0, 200)}`);
+      sleep(baseMs * 2 ** (a - 1));
+    }
+  }
+}
 // one run on one axis → the run's observed fields (held is set by the caller)
 async function runAxis(axis, plan, ctx, { remove = [], check = [] } = {}) {
   if (axis === "host") { const ab = absentReads(ctx.root, check); return ab.length ? { ...NOT_RUN, read_absent: ab } : { ...runPlan(plan, ctx.root, hostEnv(), ctx) }; }
   const collar = await collarOf(ctx);
+  const retries = [], ro = ctx.deps.retryBaseMs ? { baseMs: ctx.deps.retryBaseMs } : {};
   let sb;
-  try { sb = collar.buildSandbox({ trace: false }); }
-  catch (e) { throw new CollarError(`buildSandbox threw: ${String(e && e.message || e).slice(0, 200)}`); }
+  try { sb = retryLocked("buildSandbox", () => collar.buildSandbox({ trace: false }), retries, ro); }
+  catch (e) { if (e instanceof CollarError) throw e; throw new CollarError(`buildSandbox threw: ${String(e && e.message || e).slice(0, 200)}`); }
   const stateDir = path.join(sb.root, STATE_REL);
   try {
     try { collar.assertArmed(sb); }
     catch (e) { throw new CollarError(`assertArmed refused: ${String(e && e.message || e).slice(0, 200)}`); }
-    const extra = {};
+    const extra = { retries };
     if (axis === "fixture") {
-      const live = path.join(ctx.root, STATE_REL);
-      if (fs.existsSync(live)) { fs.mkdirSync(stateDir, { recursive: true }); fs.cpSync(live, stateDir, { recursive: true, force: true }); }
+      const live = path.join(ctx.root, STATE_REL), copy = ctx.deps.copyState || ((from, to) => fs.cpSync(from, to, { recursive: true, force: true }));
+      if (fs.existsSync(live)) { fs.mkdirSync(stateDir, { recursive: true }); retryLocked("the fixture's state copy", () => copy(live, stateDir), retries, ro); }
     }
     for (const r of remove) { const m = treePath(r, ""); if (m.ok && m.rel) fs.rmSync(joinRel(sb.root, m.rel), { recursive: true, force: true }); }
     if (axis === "fixture") { setMode(stateDir, 0o444); extra.state_sha256 = hashTree(stateDir); }
@@ -598,12 +642,12 @@ export function staticCheck(p, verbs) {
   for (const plan of Object.values(plans)) for (const pl of plan) for (const s of pl) if (s.tool !== "cd" && !verbs[s.tool]) return { quarantine: Q("VERB-NOT-FOUND", s.tool, `${s.tool} is not on PATH nor in the usr/bin beside git`) };
   return { plans };
 }
-const stubRun = (axis, cmd, why) => ({ axis, cmd, exit: null, stdout_sha256: null, stdout_head: "", bytes: 0, seconds: 0, timed_out: false, capped: false, crashed: null, read_absent: null, tree_written: null, held: null, skipped: why });
+const stubRun = (axis, cmd, why) => ({ axis, cmd, exit: null, stdout_sha256: null, stdout_head: "", bytes: 0, seconds: 0, timed_out: false, capped: false, crashed: null, read_absent: null, tree_written: null, other_writer: null, retries: null, held: null, skipped: why });
 function shapeRun(axis, cmd, r, expect) {
   const incomplete = r.timed_out || r.capped || Boolean(r.crashed) || Boolean(r.read_absent);
   const o = { axis, cmd, exit: r.exit, stdout_sha256: sha256(Buffer.from(r.stdout, "utf8")), stdout_head: Buffer.from(r.stdout, "utf8").subarray(0, HEAD_BYTES).toString("utf8"),
     bytes: r.bytes, seconds: r.seconds, timed_out: r.timed_out, capped: r.capped, crashed: r.crashed || null, read_absent: r.read_absent || null, tree_written: null,
-    held: incomplete ? null : expectHolds(expect, r) };
+    other_writer: null, retries: r.retries && r.retries.length ? r.retries : null, held: incomplete ? null : expectHolds(expect, r) };
   if ("fixture_dirtied" in r) { o.state_sha256 = r.state_sha256; o.fixture_dirtied = r.fixture_dirtied; }
   return o;
 }
@@ -631,15 +675,85 @@ export function lensC(runs) {
   if (!off.length) return { split: "AGREE", why: null };
   return { split: h ? "HOST-ONLY" : "COLLAR-ONLY", why: `host ${h ? "held" : "did not hold"}; ${[...new Set(off)].join(" + ")} ${h ? "did not" : "held"}` };
 }
-// one run under THE TREE WATCHER: → { r, written } — written = the --root paths the run changed (empty = untouched). A
-// collar error is re-thrown carrying what was written before it, so a build that wrote is never filed as "not armed".
+// (f) THE TMP SHAPE of the organs' writeAtomic: <existing file>.<pid>.tmp
+export const TMP_SHAPE = /^(.*[^/])\.(\d{1,10})\.tmp$/;
+// one Win32_Process CSV row ("pid","ppid","session","name") → {pid, ppid, session, name}, or null (the header, a blank)
+export function cimRow(l) {
+  const m = /^"(\d+)","(\d*)","(\d*)","(.*)"$/.exec(String(l).trim());
+  return m ? { pid: Number(m[1]), ppid: m[2] === "" ? null : Number(m[2]), session: m[3] === "" ? null : Number(m[3]), name: m[4] } : null;
+}
+// one /proc/<pid>/stat → {ppid, session, name}; the name (comm) may hold spaces and parentheses, so the fields are cut
+// after its LAST ")": state ppid pgrp session …
+export function statFields(s) {
+  const f = s.slice(s.lastIndexOf(")") + 2).split(" ");
+  return { ppid: Number(f[1]), session: Number(f[3]), name: s.slice(s.indexOf("(") + 1, s.lastIndexOf(")")) };
+}
+// ONE snapshot of the process table → Map pid → {ppid, session, name}, or null when it cannot be read (then nothing is confirmed)
+export function procSnapshot() {
+  const snap = new Map();
+  try {
+    if (WIN) {
+      const r = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,SessionId,Name | ConvertTo-Csv -NoTypeInformation"], { encoding: "utf8", shell: false, windowsHide: true, timeout: SEG_TIMEOUT_MS });
+      if (r.status !== 0) return null;
+      for (const l of String(r.stdout).split(/\r?\n/)) { const c = cimRow(l); if (c) snap.set(c.pid, { ppid: c.ppid, session: c.session, name: c.name }); }
+    } else if (fs.existsSync("/proc/self/stat")) {
+      for (const d of fs.readdirSync("/proc")) {
+        if (!/^\d+$/.test(d)) continue;
+        let s; try { s = fs.readFileSync(`/proc/${d}/stat`, "utf8"); } catch { continue; }
+        snap.set(Number(d), statFields(s));
+      }
+    } else {
+      const r = spawnSync("ps", ["-A", "-o", "pid=", "-o", "ppid=", "-o", "comm="], { encoding: "utf8", shell: false, timeout: SEG_TIMEOUT_MS });
+      if (r.status !== 0) return null;
+      for (const l of String(r.stdout).split("\n")) { const m = /^\s*(\d+)\s+(\d+)\s+(.*)$/.exec(l); if (m) snap.set(Number(m[1]), { ppid: Number(m[2]), session: null, name: m[3].trim() }); }
+    }
+  } catch { return null; }
+  return snap.size ? snap : null;
+}
+// is pid in the process tree rooted at `self` (this engine)? walks the ppid chain up the snapshot, bounded, cycle-safe
+export function inOwnTree(pid, snap, self = process.pid) {
+  const seen = new Set();
+  for (let p = pid, i = 0; p !== null && p !== undefined && i < 64 && !seen.has(p); i++) {
+    if (p === self) return true;
+    seen.add(p);
+    const e = snap.get(p);
+    if (!e) return false;
+    p = e.ppid;
+  }
+  return false;
+}
+// LAW 7f: the --root paths a run changed → { own: [stay TREE-WRITTEN], other: [{path, pid, session, name, rule}] }.
+// collarRan = a collar axis whose collar ARMED and ran (rule A); anything else gets rule B. The snapshot is taken only
+// when something was written; B's settle polls (async) so the other writer can finish its rename.
+export async function attribute(written, ctx, { collarRan }) {
+  const own = [], other = [], pending = [];
+  if (!written.length) return { own, other };
+  const snap = written.some(r => TMP_SHAPE.test(r)) ? (ctx.deps.procSnapshot || procSnapshot)() : null, self = process.pid;
+  for (const rel of written) {
+    const m = TMP_SHAPE.exec(rel), pid = m ? Number(m[2]) : null, e = m && snap ? snap.get(pid) || null : null;
+    const facts = { path: rel, pid, session: e ? e.session : null, name: e ? e.name : null };
+    if (m && snap && inOwnTree(pid, snap, self)) { own.push(rel); continue; }       // stricter than A, on every axis
+    if (collarRan) { other.push({ ...facts, rule: "A" }); continue; }
+    if (m && e) pending.push({ rel, base: m[1], facts }); else own.push(rel);
+  }
+  const settle = ctx.deps.settleMs ?? SETTLE_MS, t0 = Date.now(), still = x => fs.existsSync(joinRel(ctx.root, x.rel));
+  for (let left = pending.filter(still); left.length && Date.now() - t0 < settle; left = left.filter(still)) await new Promise(res => setTimeout(res, SETTLE_STEP_MS));
+  for (const x of pending) {
+    if (!fs.existsSync(joinRel(ctx.root, x.rel)) && fs.existsSync(joinRel(ctx.root, x.base))) other.push({ ...x.facts, rule: "B" });
+    else own.push(x.rel);
+  }
+  return { own: own.sort(), other };
+}
+// one run under THE TREE WATCHER: → { r, written, other } — written = the --root paths the run changed that law 7f does
+// not name as another writer's (empty = untouched). A collar error is re-thrown carrying what was written before it,
+// so a build that wrote is never filed as "not armed" — and a collar that failed proves nothing, so rule B judges it.
 async function watched(axis, plan, ctx, o) {
   const dirs = watchDirs(axis, plan), before = treeView(ctx, dirs);
   let r = null, err = null;
   try { r = await runAxis(axis, plan, ctx, o); } catch (e) { err = e; }
-  const written = treeDiff(before, treeView(ctx, dirs));
-  if (err) { if (err instanceof CollarError && written.length) err.written = written; throw err; }
-  return { r, written };
+  const att = await attribute(treeDiff(before, treeView(ctx, dirs)), ctx, { collarRan: !err && COLLAR_AXES.has(axis) });
+  if (err) { if (err instanceof CollarError) { if (att.own.length) err.written = att.own; if (att.other.length) err.other_writer = att.other; } throw err; }
+  return { r, written: att.own, other: att.other };
 }
 export async function runProbe(p, ctx) {
   const at = new Date().toISOString();
@@ -665,10 +779,16 @@ export async function runProbe(p, ctx) {
         const w = await watched(axis, sc.plans[axis], ctx, { check });
         const run = shapeRun(axis, cmd, w.r, p.expect);
         runs[i] = run;
+        if (w.other.length) run.other_writer = w.other;
         if (w.written.length) { run.tree_written = w.written; run.held = null; quarantine = Q("TREE-WRITTEN", null, w.written.join(", "), axis); break; }
         if (run.crashed && COLLAR_AXES.has(axis) && !collarCrash) collarCrash = { axis, verb: run.crashed.verb, why: run.crashed.why };
       }
-      catch (e) { if (e instanceof CollarError) { quarantine = collarFail(e, axis); break; } throw e; }
+      catch (e) {
+        if (!(e instanceof CollarError)) throw e;
+        quarantine = collarFail(e, axis);
+        if (e.other_writer) runs[i] = { ...stubRun(axis, cmd, quarantine.why), other_writer: e.other_writer };
+        break;
+      }
     }
   }
   for (let i = 0; i < runs.length; i++) if (!runs[i]) runs[i] = stubRun(axes[i], cmd, quarantine ? quarantine.why : "not run");
@@ -679,18 +799,18 @@ export async function runProbe(p, ctx) {
     if (!reads.length) A = { reading: "NOT-APPLICABLE", why: "the probe names no reads[]" };
     else {
       try {
-        const w = await watched(axis, sc.plans[axis], ctx, { remove: reads }), r = w.r;
-        if (w.written.length) { quarantine = Q("TREE-WRITTEN", null, w.written.join(", "), axis); v = verdictOf(runs, quarantine); A = { reading: "NOT-APPLICABLE", why: `the ablation run on ${axis} wrote into --root: ${w.written.join(", ")}`, axis, removed: reads }; }
-        else if (r.timed_out || r.capped || r.crashed) A = { reading: "NOT-APPLICABLE", why: `the ablation run on ${axis} was incomplete${r.crashed ? ` (VERB-CRASHED ${r.crashed.verb} ${r.crashed.why})` : ""}`, axis, removed: reads };
+        const w = await watched(axis, sc.plans[axis], ctx, { remove: reads }), r = w.r, ow = w.other.length ? { other_writer: w.other } : {};
+        if (w.written.length) { quarantine = Q("TREE-WRITTEN", null, w.written.join(", "), axis); v = verdictOf(runs, quarantine); A = { reading: "NOT-APPLICABLE", why: `the ablation run on ${axis} wrote into --root: ${w.written.join(", ")}`, axis, removed: reads, ...ow }; }
+        else if (r.timed_out || r.capped || r.crashed) A = { reading: "NOT-APPLICABLE", why: `the ablation run on ${axis} was incomplete${r.crashed ? ` (VERB-CRASHED ${r.crashed.verb} ${r.crashed.why})` : ""}`, axis, removed: reads, ...ow };
         else {
           const held = expectHolds(p.expect, r), was = v.verdict === "CONFIRMED";
-          A = held === was ? { reading: "VACUOUS", why: `held stayed ${held} on ${axis} with every reads[] path removed`, axis, removed: reads }
-            : { reading: "NOT-APPLICABLE", why: `held flipped ${was} → ${held} on ${axis} with reads[] removed: the predicate rests on them`, axis, removed: reads };
+          A = held === was ? { reading: "VACUOUS", why: `held stayed ${held} on ${axis} with every reads[] path removed`, axis, removed: reads, ...ow }
+            : { reading: "NOT-APPLICABLE", why: `held flipped ${was} → ${held} on ${axis} with reads[] removed: the predicate rests on them`, axis, removed: reads, ...ow };
         }
       } catch (e) {
         if (!(e instanceof CollarError)) throw e;
         if (e.written) { quarantine = collarFail(e, axis); v = verdictOf(runs, quarantine); }
-        A = { reading: "NOT-APPLICABLE", why: `the ablation collar did not arm: ${e.message}` };
+        A = { reading: "NOT-APPLICABLE", why: `the ablation collar did not arm: ${e.message}`, ...(e.other_writer ? { other_writer: e.other_writer } : {}) };
       }
     }
   }
@@ -755,12 +875,16 @@ export function face(receipts, { stale = null } = {}) {
   }
   const fmt = m => [...m].sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1)).map(([k, n]) => `${k} ${n}`).join(" · ") || "none";
   const nq = [...by.values()].reduce((s, n) => s + n, 0);
+  const ow = receipts.filter(r => otherWriters(r).length).length;
   return [
     `QUARANTINE ${nq} of ${receipts.length}${nq ? ` · by why: ${fmt(by)}` : ""}`,
     `VERDICTS ${fmt(v)}`,
     `LENSES A: ${fmt(a)} | B: ${fmt(b)} | C: ${fmt(c)}`,
+    ...(ow ? [`OTHER-WRITER ${ow} of ${receipts.length} · another writer changed --root during a run, named on the run and graded (law 7f, rows 494 / 495)`] : []),
   ];
 }
+// law 7f: every other_writer a receipt names (its runs', and lens A's ablation run's)
+export const otherWriters = r => [...(r.runs || []).flatMap(x => (x && x.other_writer) || []), ...((r.lenses && r.lenses.A && r.lenses.A.other_writer) || [])];
 const readJsonl = f => fs.readFileSync(f, "utf8").split(/\r?\n/).filter(l => l.trim()).map((l, i) => { try { return JSON.parse(l); } catch { throw new Stop(`probe: ${fwd(f)} line ${i + 1} is not JSON`); } });
 
 // ---------------------------------------------------------------------------- 10 · THE VERBS
@@ -796,6 +920,7 @@ export async function cmdRun(o, deps = {}, log = console.log) {
   for (const l of face(receipts)) log(l);
   for (const r of receipts) log(`${r.probe_id}  ${r.verdict}${r.quarantine ? `  ${r.quarantine.why}${r.quarantine.reason ? `(${r.quarantine.reason})` : ""}` : ""}${r.verdict_why ? `  ${r.verdict_why}` : ""}`);
   log(`run: ${receipts.length} receipt(s) at tree ${ctx.tree_sha.slice(0, 12)} → ${fwd(outAbs)}`);
+  for (const r of receipts) for (const x of otherWriters(r)) log(`NOTE: ${r.probe_id} saw another writer in --root (law 7f rule ${x.rule}, graded): ${x.path}${x.pid !== null ? ` · pid ${x.pid}${x.name ? ` ${x.name}` : ""}${x.session !== null ? ` · session ${x.session}` : ""}` : ""}`);
   const written = receipts.filter(r => r.quarantine && r.quarantine.why === "TREE-WRITTEN");
   if (written.length) { log(`RED: ${written.length} probe(s) wrote into --root ${fwd(ctx.root)}: ${written.map(r => `${r.probe_id} → ${r.quarantine.detail}`).join(" · ")} — the engine deleted nothing; read and remove them`); return 1; }
   return 0;
@@ -889,6 +1014,8 @@ async function selftest() {
       return { log, ROOT: root,
         buildSandbox() {
           if (o.leakTo) fs.writeFileSync(o.leakTo, "a collar build that wrote outside its own temp dir\n");
+          if (o.during) o.during();                                    // another writer, acting while this collar axis runs
+          if (o.lockFirst && !log.some(e => e.ev === "locked")) { log.push({ ev: "locked" }); const e = new Error(`${o.lockFirst}, The process cannot access the file because another process has locked a portion of the file.`); e.code = o.lockFirst; throw e; }
           const sb = fs.mkdtempSync(path.join(T, "sb-"));
           for (const rel of String(git(root, "ls-files", "-z").stdout).split("\0").filter(Boolean)) { const src = path.join(root, rel); if (!fs.existsSync(src)) continue; fs.mkdirSync(path.dirname(path.join(sb, rel)), { recursive: true }); fs.copyFileSync(src, path.join(sb, rel)); }
           log.push({ ev: "build", root: sb });
@@ -898,7 +1025,7 @@ async function selftest() {
         destroy(sb) { fs.rmSync(sb.root, { recursive: true, force: true }); log.push({ ev: "destroy", root: sb.root }); },
       };
     };
-    const ctxFor = async (o = {}) => { const collar = o.collar || makeCollar(REPO); const ctx = await makeCtx({ root: REPO }, { sandbox: collar, verbs: o.verbs || verbs, timeout: o.timeout, cap: o.cap }); return { ctx, collar }; };
+    const ctxFor = async (o = {}) => { const collar = o.collar || makeCollar(REPO); const ctx = await makeCtx({ root: REPO }, { sandbox: collar, verbs: o.verbs || verbs, timeout: o.timeout, cap: o.cap, ...(o.deps || {}) }); return { ctx, collar }; };
     const P = (id, cmd, expect, lane = "host", reads = [], extra = {}) => ({ id, claim: `planted ${id}`, source: { population_id: id, seed_file: "fixture.md", seed_line: 1, verdict_claimed: "CONFIRM", aj_final: "UPHELD", tier0: "LITERALS-HOLD" }, predicate_cmd: cmd, expect, tier: 0, lane, reads, authored_at_tree: HEAD1, ...extra });
     const run1 = async (p, o = {}) => { const { ctx, collar } = await ctxFor(o); const r = await runProbe(p, ctx); return { r, collar, ctx }; };
 
@@ -1077,8 +1204,8 @@ async function selftest() {
       const { r } = await run1(P("rc", "node scripts/loud.mjs", { exit: 0 }, "sandbox", ["scripts/loud.mjs"]));
       const keys = Object.keys(r).sort().join(","), rk = Object.keys(r.runs[0]).sort().join(",");
       const full = "x".repeat(5000) + "\n";
-      return keys === "at,dirty_reads,lenses,probe_id,quarantine,runs,tree_sha,verdict" && r.tree_sha === HEAD1 && rk === "axis,bytes,capped,cmd,crashed,exit,held,read_absent,seconds,stdout_head,stdout_sha256,timed_out,tree_written"
-        && r.runs.every(x => x.crashed === null && x.read_absent === null && x.tree_written === null)
+      return keys === "at,dirty_reads,lenses,probe_id,quarantine,runs,tree_sha,verdict" && r.tree_sha === HEAD1 && rk === "axis,bytes,capped,cmd,crashed,exit,held,other_writer,read_absent,retries,seconds,stdout_head,stdout_sha256,timed_out,tree_written"
+        && r.runs.every(x => x.crashed === null && x.read_absent === null && x.tree_written === null && x.other_writer === null && x.retries === null)
         && Buffer.byteLength(r.runs[0].stdout_head) === 2048 && r.runs[0].bytes === 5001 && r.runs[0].stdout_sha256 === sha256(Buffer.from(full)) && Object.keys(r.lenses).join(",") === "A,B,C" || why({ keys, rk });
     });
 
@@ -1189,7 +1316,7 @@ async function selftest() {
     w(path.join(WREPO, "old.stackdump"), "old\n");
     git(WREPO, "init", "-q"); git(WREPO, "add", "-A"); git(WREPO, "commit", "-q", "-m", "wfixture");
     const wv = { ...verbs, wc: process.execPath };             // `wc scripts/writer.mjs <path>` = a verb that writes without a write flag
-    const runW = async (p, v = wv, o = {}) => { const collar = makeCollar(WREPO); const ctx = await makeCtx({ root: WREPO }, { sandbox: collar, verbs: v }); if (o.hostOnly) ctx.hostOnly = true; return runProbe(p, ctx); };
+    const runW = async (p, v = wv, o = {}) => { const collar = o.collar || makeCollar(WREPO); const ctx = await makeCtx({ root: WREPO }, { sandbox: collar, verbs: v, ...(o.deps || {}) }); if (o.hostOnly) ctx.hostOnly = true; return runProbe(p, ctx); };
     const rmW = rel => fs.rmSync(path.join(WREPO, ...rel.split("/")), { force: true });
     const writtenCase = async (id, cmd, rel) => {
       const r = await runW(P(id, cmd, { stdout_includes: ["wrote"] }, "host"));
@@ -1236,14 +1363,35 @@ async function selftest() {
     const LEAK = path.join(WREPO, "leaked.txt");
     w(path.join(WREPO, "scripts", "leak.mjs"), `import fs from 'node:fs';\nif (!fs.existsSync(process.argv[2])) fs.writeFileSync(${JSON.stringify(LEAK)}, 'leaked\\n');\nconsole.log('ok');\n`);
     git(WREPO, "add", "-A"); git(WREPO, "commit", "-q", "-m", "leak");
-    await tc("L7b TREE WATCHER · a COLLAR run that leaks into --root is TREE-WRITTEN too: a main run, and lens A's ablation run (its verdict withdrawn)", async () => {
+    // (f) rule A REPLACES row 471 (1)(b)'s "a collar run that leaks into --root is TREE-WRITTEN too" (row 495 (1)(A)): the
+    // REAL collar's node verbs are denied every write outside its temp tree (audit_preload; sandbox.mjs canary); this FAKE
+    // collar has no preload, so its verb can leak — and the leak is then named, kept, and the run graded.
+    await tc("L7f-A0 (A) · a --root change while an ARMED COLLAR axis ran is other_writer rule A on the run, GRADED, the file KEPT: a main run, and lens A's ablation run", async () => {
       try {
         const r = await runW(P("lmain", "node scripts/leak.mjs docs/nothere.md", { stdout_includes: ["ok"] }, "sandbox"), verbs);
         const leakedMain = fs.existsSync(LEAK); rmW("leaked.txt");
         const r2 = await runW(P("labl", "node scripts/leak.mjs docs/notes.md", { stdout_includes: ["ok"] }, "sandbox", ["docs/notes.md"]), verbs);
-        return r.verdict === "UNRUNNABLE" && r.quarantine.why === "TREE-WRITTEN" && r.quarantine.detail === "leaked.txt" && r.runs[0].axis === "sandbox" && leakedMain
-          && r2.verdict === "UNRUNNABLE" && r2.quarantine.why === "TREE-WRITTEN" && r2.runs.every(x => x.held === true) && /the ablation run on sandbox wrote into --root: leaked.txt/.test(r2.lenses.A.why) || why({ r: [r.verdict, r.quarantine], r2: [r2.verdict, r2.quarantine, r2.lenses.A] });
+        const ow = r.runs[0].other_writer, aw = r2.lenses.A.other_writer;
+        return r.verdict === "CONFIRMED" && r.quarantine === null && r.runs[0].axis === "sandbox" && r.runs.every(x => x.tree_written === null) && leakedMain
+          && ow && ow.length === 1 && ow[0].path === "leaked.txt" && ow[0].rule === "A" && ow[0].pid === null
+          && r2.verdict === "CONFIRMED" && r2.quarantine === null && r2.lenses.A.reading === "VACUOUS" && aw && aw.length === 1 && aw[0].path === "leaked.txt" && aw[0].rule === "A"
+          || why({ r: [r.verdict, r.quarantine, ow], r2: [r2.verdict, r2.quarantine, r2.lenses.A] });
       } finally { rmW("leaked.txt"); }
+    });
+    // ITS SIBLING (row 500, the architect's word): the same leak by the probe's OWN tree, named so it can be told — the verb
+    // writes <existing file>.<its parent pid = this engine>.tmp into --root — still REDS on the collar axis
+    const OWNLEAK = path.join(WREPO, "docs", `notes.md.${process.pid}.tmp`);
+    w(path.join(WREPO, "scripts", "leakown.mjs"), `import fs from 'node:fs';\nif (!fs.existsSync(process.argv[2])) fs.writeFileSync(${JSON.stringify(path.join(WREPO, "docs"))} + '/notes.md.' + process.ppid + '.tmp', 'own\\n');\nconsole.log('ok');\n`);
+    git(WREPO, "add", "-A"); git(WREPO, "commit", "-q", "-m", "leakown");
+    await tc("L7f-A4 (A) the sibling · a COLLAR run whose verb (the probe's OWN tree) leaks a tmp named for this engine stays TREE-WRITTEN, the file kept: a main run, and lens A's ablation run (its verdict withdrawn)", async () => {
+      const rel = `docs/notes.md.${process.pid}.tmp`;
+      try {
+        const r = await runW(P("lown", "node scripts/leakown.mjs docs/nothere.md", { stdout_includes: ["ok"] }, "sandbox"), verbs);
+        const kept = fs.existsSync(OWNLEAK); rmW(rel);
+        const r2 = await runW(P("lownabl", "node scripts/leakown.mjs docs/notes.md", { stdout_includes: ["ok"] }, "sandbox", ["docs/notes.md"]), verbs);
+        return r.verdict === "UNRUNNABLE" && r.quarantine.why === "TREE-WRITTEN" && r.quarantine.detail === rel && r.runs[0].axis === "sandbox" && r.runs[0].other_writer === null && kept
+          && r2.verdict === "UNRUNNABLE" && r2.quarantine.why === "TREE-WRITTEN" && r2.runs.every(x => x.held === true) && new RegExp(`the ablation run on sandbox wrote into --root: ${rel.replace(/\./g, "[.]")}`).test(r2.lenses.A.why) || why({ r: [r.verdict, r.quarantine, kept], r2: [r2.verdict, r2.quarantine, r2.lenses.A] });
+      } finally { rmW(rel); }
     });
     await tc("L7b TREE WATCHER · a collar BUILD that writes into --root and then refuses to arm is TREE-WRITTEN, never filed as COLLAR-NOT-ARMED", async () => {
       const lb = path.join(WREPO, "leakbuild.txt");
@@ -1252,6 +1400,107 @@ async function selftest() {
         const r = await runProbe(P("lbuild", "wc -l docs/notes.md", { exit: 0 }, "sandbox"), ctx);
         return r.verdict === "UNRUNNABLE" && r.quarantine.why === "TREE-WRITTEN" && r.quarantine.detail === "leakbuild.txt" || why(r.quarantine);
       } finally { fs.rmSync(lb, { force: true }); }
+    });
+    // (f) ANOTHER WRITER — the pids are REAL: a live FOREIGN one (an orphaned sleeper; its parent exited, so it is not in this
+    // engine's process tree) and this engine's OWN (process.pid); DEAD is a pid no process holds (an exited child's pid can be
+    // reused at once on Windows by any process the laptop starts, so it is not used). The snapshot is the real process table
+    // of this machine; only B6 injects one (absent).
+    const orphan = spawnSync(process.execPath, ["-e", "const c=require('child_process').spawn(process.execPath,['-e','setTimeout(()=>{},300000)'],{detached:true,stdio:'ignore',windowsHide:true});c.unref();console.log(c.pid)"], { encoding: "utf8", shell: false, windowsHide: true, timeout: 30000 });
+    const DAEMON = Number(String(orphan.stdout).trim()), DEAD = 4294967291;
+    // the other writer finishing its rename: removes the file the moment it is seen, at the engine's first await (B's settle)
+    const removeWhenSeen = rel => { const f = path.join(WREPO, ...rel.split("/")); const t = setInterval(() => { if (fs.existsSync(f)) { fs.rmSync(f, { force: true }); clearInterval(t); } }, 40); return () => clearInterval(t); };
+    const hostTmp = async (id, rel, { remove = true, deps = {} } = {}) => {
+      const stop = remove ? removeWhenSeen(rel) : () => {};
+      try { const r = await runW(P(id, `wc scripts/writer.mjs ${rel}`, { stdout_includes: ["wrote"] }, "host"), wv, { deps: { settleMs: 2500, ...deps } }); return { r, kept: fs.existsSync(path.join(WREPO, ...rel.split("/"))) }; }
+      finally { stop(); rmW(rel); }
+    };
+    const staysWritten = (r, rel) => r.verdict === "UNRUNNABLE" && r.quarantine.why === "TREE-WRITTEN" && r.quarantine.detail === rel && r.runs[0].axis === "host" && r.runs[0].tree_written.join() === rel && r.runs[0].other_writer === null;
+    await tc("L7f-P0 pure · TMP_SHAPE: <file>.<pid>.tmp both ways (no pid, a non-digit pid, an empty base are not the shape); inOwnTree walks the ppid chain both ways, bounded on a cycle", async () => {
+      const m = TMP_SHAPE.exec("dressing-room/state/brain_queue.json.8020.tmp");
+      const no = ["dressing-room/state/brain_queue.json.tmp", "x.json.80a0.tmp", "a/.8020.tmp", "x.json.8020.tmp.bak"].filter(s => TMP_SHAPE.test(s));
+      const snap = new Map([[10, { ppid: 5 }], [5, { ppid: 1 }], [1, { ppid: 0 }], [0, { ppid: 0 }], [7, { ppid: 8 }], [8, { ppid: 7 }]]);
+      return m && m[1] === "dressing-room/state/brain_queue.json" && m[2] === "8020" && no.length === 0
+        && inOwnTree(10, snap, 5) && inOwnTree(5, snap, 5) && !inOwnTree(1, snap, 5) && !inOwnTree(99, snap, 5) && !inOwnTree(7, snap, 5) || why({ m, no });
+    });
+    await tc("L7f-P2 pure · the process-table parsers: a Win32_Process CSV row (the header and a blank are not rows) and a /proc stat line whose name holds spaces and parentheses", async () => {
+      const c = cimRow('"8020","4532","0","node.exe"'), h = cimRow('"ProcessId","ParentProcessId","SessionId","Name"'), b = cimRow("");
+      const s = statFields("4242 (node (x) y) S 17 4242 99 0 -1 4194560 0 0");
+      return c && c.pid === 8020 && c.ppid === 4532 && c.session === 0 && c.name === "node.exe" && h === null && b === null && s.ppid === 17 && s.session === 99 && s.name === "node (x) y" || why({ c, h, s });
+    });
+    await tc("L7f-P1 the REAL process table · the orphan is live and foreign, this engine is its own tree, the dead pid is absent", async () => {
+      const s = procSnapshot();
+      return Boolean(s) && s.has(DAEMON) && !inOwnTree(DAEMON, s) && inOwnTree(process.pid, s) && !s.has(DEAD) || why({ snap: Boolean(s), DAEMON, DEAD, has: s && s.has(DAEMON), own: s && inOwnTree(DAEMON, s) });
+    });
+    await tc("L7f-B1 (B) · on the HOST axis a daemon-shaped <existing file>.<pid>.tmp, the pid live and foreign, gone within the settle = other_writer rule B naming pid and session — the run GRADED", async () => {
+      const rel = `docs/notes.md.${DAEMON}.tmp`, { r } = await hostTmp("fb1", rel), ow = r.runs[0].other_writer;
+      return r.verdict === "CONFIRMED" && r.quarantine === null && r.runs.every(x => x.tree_written === null) && ow && ow.length === 1 && ow[0].path === rel && ow[0].pid === DAEMON && ow[0].rule === "B" && ow[0].session !== null || why({ v: r.verdict, q: r.quarantine, ow });
+    });
+    await tc("L7f-B2 (B) · the pid in the name is THIS ENGINE'S OWN process tree → stays TREE-WRITTEN, though gone within the settle", async () => { const rel = `docs/notes.md.${process.pid}.tmp`, { r } = await hostTmp("fb2", rel); return staysWritten(r, rel) || why({ v: r.verdict, q: r.quarantine }); });
+    await tc("L7f-B3 (B) · the pid in the name is DEAD → stays TREE-WRITTEN", async () => { const rel = `docs/notes.md.${DEAD}.tmp`, { r } = await hostTmp("fb3", rel); return staysWritten(r, rel) || why({ v: r.verdict, q: r.quarantine }); });
+    await tc("L7f-B4 (B) · the tmp is NOT gone within the settle → stays TREE-WRITTEN, the file kept", async () => { const rel = `docs/notes.md.${DAEMON}.tmp`, { r, kept } = await hostTmp("fb4", rel, { remove: false, deps: { settleMs: 600 } }); return staysWritten(r, rel) && kept || why({ v: r.verdict, q: r.quarantine, kept }); });
+    await tc("L7f-B5 (B) · no <existing file> beside the tmp → stays TREE-WRITTEN", async () => { const rel = `docs/nothere.md.${DAEMON}.tmp`, { r } = await hostTmp("fb5", rel); return staysWritten(r, rel) || why({ v: r.verdict, q: r.quarantine }); });
+    await tc("L7f-B6 (B) · no process table (the snapshot unreadable) confirms nothing → stays TREE-WRITTEN", async () => { const rel = `docs/notes.md.${DAEMON}.tmp`, { r } = await hostTmp("fb6", rel, { deps: { procSnapshot: () => null } }); return staysWritten(r, rel) || why({ v: r.verdict, q: r.quarantine }); });
+    const collarTmp = (rel, o = {}) => makeCollar(WREPO, { ...o, during: () => { const f = path.join(WREPO, ...rel.split("/")); if (!fs.existsSync(f)) fs.writeFileSync(f, "an atomic write in flight\n"); } });
+    await tc("L7f-A1 (A) · a daemon-shaped tmp written while an ARMED COLLAR axis runs = other_writer rule A with its pid and session, the run GRADED, the file kept (no settle needed)", async () => {
+      const rel = `docs/notes.md.${DAEMON}.tmp`;
+      try {
+        const r = await runW(P("fa1", "wc -l docs/notes.md", { exit: 0 }, "sandbox"), verbs, { collar: collarTmp(rel) }), ow = r.runs[0].other_writer, kept = fs.existsSync(path.join(WREPO, ...rel.split("/")));
+        return r.verdict === "CONFIRMED" && r.quarantine === null && r.runs.every(x => x.tree_written === null) && kept && ow && ow.length === 1 && ow[0].path === rel && ow[0].pid === DAEMON && ow[0].session !== null && ow[0].rule === "A" || why({ v: r.verdict, q: r.quarantine, ow, kept });
+      } finally { rmW(rel); }
+    });
+    await tc("L7f-A2 (A) stricter · a tmp named for THIS ENGINE'S OWN pid on a collar axis stays TREE-WRITTEN", async () => {
+      const rel = `docs/notes.md.${process.pid}.tmp`;
+      try { const r = await runW(P("fa2", "wc -l docs/notes.md", { exit: 0 }, "sandbox"), verbs, { collar: collarTmp(rel) }); return r.verdict === "UNRUNNABLE" && r.quarantine.why === "TREE-WRITTEN" && r.quarantine.detail === rel && r.quarantine.axis === "sandbox" || why({ v: r.verdict, q: r.quarantine }); }
+      finally { rmW(rel); }
+    });
+    await tc("L7f-A3 (A) needs an ARMED collar · a collar that refused to arm proves nothing, so rule B judges its window: a daemon tmp still there stays TREE-WRITTEN; one gone within the settle is named on the stub, the probe COLLAR-NOT-ARMED", async () => {
+      const rel = `docs/notes.md.${DAEMON}.tmp`;
+      try {
+        const r = await runW(P("fa3", "wc -l docs/notes.md", { exit: 0 }, "sandbox"), verbs, { collar: collarTmp(rel, { disarmed: true }), deps: { settleMs: 600 } }); rmW(rel);
+        const stop = removeWhenSeen(rel);
+        let r2; try { r2 = await runW(P("fa3b", "wc -l docs/notes.md", { exit: 0 }, "sandbox"), verbs, { collar: collarTmp(rel, { disarmed: true }), deps: { settleMs: 2500 } }); } finally { stop(); }
+        const ow = r2.runs[0].other_writer;
+        return r.verdict === "UNRUNNABLE" && r.quarantine.why === "TREE-WRITTEN" && r.quarantine.detail === rel
+          && r2.verdict === "UNRUNNABLE" && r2.quarantine.why === "COLLAR-NOT-ARMED" && ow && ow.length === 1 && ow[0].rule === "B" && ow[0].pid === DAEMON || why({ r: r.quarantine, r2: [r2.quarantine, ow] });
+      } finally { rmW(rel); }
+    });
+    await tc("L7f-R0 `run` · a probe that saw another writer is NOT red (exit 0): a NOTE line names it with its pid, and the face counts OTHER-WRITER", async () => {
+      const rel = `docs/notes.md.${DAEMON}.tmp`, po = path.join(OUTD, "ow.probes.jsonl"), lines = [];
+      fs.writeFileSync(po, JSON.stringify(P("frun", "wc -l docs/notes.md", { exit: 0 }, "sandbox")) + NL);
+      try {
+        const code = await cmdRun({ probes: po, out: path.join(OUTD, "ow.receipts.jsonl"), root: WREPO }, { sandbox: collarTmp(rel), verbs }, l => lines.push(l));
+        return code === 0 && !lines.some(l => /^RED/.test(l)) && lines.some(l => l.startsWith(`NOTE: frun saw another writer in --root (law 7f rule A, graded): ${rel} · pid ${DAEMON}`)) && lines[3] && lines[3].startsWith("OTHER-WRITER 1 of 1") || why({ code, lines });
+      } finally { rmW(rel); }
+    });
+    try { process.kill(DAEMON); } catch {}
+    // (g) A LOCKED FILE — retried, bounded, named
+    await tc("L7g-P0 pure · retryLocked: locked twice then fine = the value + 2 named + waits 250/500; locked past the bound = CollarError after 4 (waits 250/500/1000); any other error thrown at once, unnamed; EDOM read from the message too", async () => {
+      const mk = code => Object.assign(new Error(`${code}, locked`), { code });
+      let n = 0; const s1 = [], n1 = [], v = retryLocked("step", () => { if (n++ < 2) throw mk("EDOM"); return 42; }, n1, { sleep: ms => s1.push(ms) });
+      const s2 = [], n2 = []; let e2 = null; try { retryLocked("the copy", () => { throw mk("EBUSY"); }, n2, { sleep: ms => s2.push(ms) }); } catch (e) { e2 = e; }
+      const s3 = [], n3 = []; let e3 = null; try { retryLocked("x", () => { throw mk("ENOENT"); }, n3, { sleep: ms => s3.push(ms) }); } catch (e) { e3 = e; }
+      return v === 42 && n1.length === 2 && n1.every(x => x.code === "EDOM" && x.step === "step") && s1.join() === "250,500"
+        && e2 instanceof CollarError && /^the copy stayed locked after 4 attempt\(s\), EBUSY/.test(e2.message) && n2.length === 4 && s2.join() === "250,500,1000"
+        && e3 && e3.code === "ENOENT" && n3.length === 0 && s3.length === 0
+        && lockedCode({ message: "EDOM, The process cannot access the file" }) === "EDOM" && lockedCode({ code: "EPERM" }) === null || why({ v, n1, s1, e2: e2 && e2.message, s2, e3: e3 && e3.code });
+    });
+    await tc("L7g-C1 the collar BUILD locked once (EDOM) is retried and NAMED on that run; the probe GRADED", async () => {
+      const { r } = await run1(P("gb", "wc -l docs/notes.md", { exit: 0 }, "sandbox"), { collar: makeCollar(REPO, { lockFirst: "EDOM" }), deps: { retryBaseMs: 1 } });
+      const rt = r.runs[0].retries;
+      return r.verdict === "CONFIRMED" && rt && rt.length === 1 && rt[0].step === "buildSandbox" && rt[0].code === "EDOM" && rt[0].attempt === 1 && r.runs.slice(1).every(x => x.retries === null) || why({ v: r.verdict, rt, q: r.quarantine });
+    });
+    await tc("L7g-C2 the fixture's state copy locked twice (EBUSY) is retried and NAMED; locked past the bound it is COLLAR-NOT-ARMED naming the lock — never an INTERNAL crash", async () => {
+      let calls = 0; const copyState = (a, b) => { if (calls++ < 2) throw Object.assign(new Error("EBUSY, resource busy or locked"), { code: "EBUSY" }); fs.cpSync(a, b, { recursive: true, force: true }); };
+      const { r } = await run1(P("gc", "grep -c STATE_MARK dressing-room/state/bus.json", { exit: 0 }, "FIXTURE"), { deps: { retryBaseMs: 1, copyState } });
+      const rt = r.runs[0].retries;
+      const { r: r2 } = await run1(P("gx", "grep -c STATE_MARK dressing-room/state/bus.json", { exit: 0 }, "FIXTURE"), { deps: { retryBaseMs: 1, copyState: () => { throw Object.assign(new Error("EDOM, locked a portion of the file"), { code: "EDOM" }); } } });
+      return r.verdict === "CONFIRMED" && rt && rt.length === 2 && rt.every(x => x.step === "the fixture's state copy" && x.code === "EBUSY")
+        && r2.verdict === "UNRUNNABLE" && r2.quarantine.why === "COLLAR-NOT-ARMED" && /the fixture's state copy stayed locked after 4 attempt\(s\), EDOM/.test(r2.quarantine.detail) || why({ r: [r.verdict, rt], r2: r2.quarantine });
+    });
+    await tc("L7g-C3 a NON-lock error in the copy is not retried: thrown on its first attempt, as before", async () => {
+      let calls = 0, err = null;
+      try { await run1(P("gn", "grep -c STATE_MARK dressing-room/state/bus.json", { exit: 0 }, "FIXTURE"), { deps: { retryBaseMs: 1, copyState: () => { calls++; throw Object.assign(new Error("ENOENT, no such file"), { code: "ENOENT" }); } } }); } catch (e) { err = e; }
+      return err && err.code === "ENOENT" && calls === 1 || why({ calls, err: err && err.code });
     });
     await tc("L7b `run` · a probe that wrote --root makes the call RED (1) with a line naming it; a clean call is 0", async () => {
       const pw = path.join(OUTD, "wr.probes.jsonl"), pc = path.join(OUTD, "wc.probes.jsonl");
