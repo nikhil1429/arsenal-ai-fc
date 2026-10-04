@@ -107,6 +107,37 @@
 //          are retried on EDOM / EBUSY, RETRY_TRIES attempts, the wait doubling from
 //          RETRY_BASE_MS; every failed attempt is named on the run (`retries`). Exhausted, the
 //          probe is COLLAR-NOT-ARMED naming the lock, never an INTERNAL crash.
+//   8. VACUITY, Stage 3.2 (forks rows 523 / 524) — `vacuity` asks of every graded probe: does
+//      the predicate REST ON THE LINES ITS CLAIM CITES? Lens A's deletion floor removes whole
+//      files, and on the face of record it read the VERDICT's direction (REFUTED → VACUOUS
+//      58 of 63, CONFIRMED → NOT-APPLICABLE 66 of 67), not the predicate; mutagen as written
+//      changes the first match in a file, and 6 of 1,305 such mutants landed inside a cited
+//      window. So each cited line is mutated ON ITS OWN and the predicate re-run.
+//      a · THE MUTANT SET (F1 (B)): per cited line, LINE-DEL (the line blanked, its EOL kept, so
+//          every other line keeps its number) + each of mutagen.mjs's CODE_OPS applied to THAT
+//          line alone (its own functions, imported lazily, unchanged; on .mjs / .js / .cjs lines,
+//          mutagen's own target). Cited = the reads[] windows (path:N, path:N-M, the receipt's
+//          tree's line numbers); for a whole-file read, the line numbers the unmutated collar run
+//          PRINTS (grep -n's N: / path:N:). A whole-file read with none has NO WINDOW and the
+//          deletion floor (A_floor) stands for it, named.
+//      b · ONE FRESH COLLAR PER PROBE (F2 (b), stricter): armed first; the unmutated BASELINE run
+//          must reproduce the verdict of record or nothing is mutated (BASELINE-DIFFERS); a mutant
+//          is written ONLY inside the collar's copy (mutationGuard refuses every other path), run,
+//          restored, and the file's sha256 checked against the bytes the collar built — a
+//          mismatch REFUSES the probe (RESTORE-MISMATCH). A read that moved since the receipt's
+//          tree, or is dirty now, is never mutated (STALE). THE TREE WATCHER wraps the whole
+//          probe: a --root change is TREE-WRITTEN (exit 1) unless law 7f names another writer.
+//      c · THE READINGS (F3): NOT-VACUOUS = a complete mutant flipped held (every flip named
+//          {op, path, line}, the first first) · VACUOUS = complete mutants ran, none flipped, and
+//          a deletion COULD have flipped it (its evidence is not where the claim says) ·
+//          NOT-DECIDABLE-BY-DELETION = none flipped and no deletion could have (deletionCanFlip,
+//          key by key on the unmutated run: F3's REFUTED "the text is there", and its mirror, a
+//          CONFIRMED "the text is NOT there"; the insertion co-flip is to be built) · a mutant run
+//          that crashes, times out or caps is INCOMPLETE, never a flip; no complete mutant =
+//          INCOMPLETE. STRICTER THAN F3 AS WRITTEN: the mutants run on EVERY graded probe, so the
+//          not-decidable label is only ever the reading of a no-flip and never hides a flip.
+//      d · WRITES: only --out (refused inside --root); the receipts of record are read, never
+//          rewritten; lens A of record is carried beside as A_floor (L9).
 //
 // THE COLLAR is scripts/sandbox.mjs, reached through an injectable deps.sandbox and
 //   loaded LAZILY from ./sandbox.mjs only when a collar axis runs — importing this file
@@ -122,16 +153,17 @@
 //   runReceipt (ADAPTED: the snapshot path map and unit_slice are dropped, cd resolves
 //   inside the probed tree, the node row is ours).
 //
-// WHO ELSE COULD ACT ON THIS OUTPUT? Stage 3.2 (vacuity by mutagen) reads the receipts'
-//   lens A; Stage 3.4's refuters D / E read B and C; Stage 3.5's `npm run probes` lane
-//   runs `run` + `report`. None is wired yet — named here so none is a declared-but-
-//   unwired consumer by surprise.
+// WHO ELSE COULD ACT ON THIS OUTPUT? `vacuity` (law 8) reads the receipts of record; Stage
+//   3.4's refuters D / E read B and C; Stage 3.5's `npm run probes` lane runs `run` +
+//   `report`. None is wired yet — named here so none is a declared-but-unwired consumer by
+//   surprise.
 // CLI: node scripts/probe.mjs import --population <jsonl> --out <probes.jsonl>
 //      node scripts/probe.mjs run --probes <f> --out <receipts.jsonl> [--ids a,b] [--root <dir>] [--timeout-ms N] [--host-only]
+//      node scripts/probe.mjs vacuity --probes <f> --receipts <receipts of record> --out <vacuity.jsonl> [--ids a,b] [--root <dir>] [--timeout-ms N]
 //      node scripts/probe.mjs status --probes <f> --receipts <f> [--root <dir>]
 //      node scripts/probe.mjs report --receipts <f>
-//      node scripts/probe.mjs selftest
-// EXIT: 0 ok · 1 selftest RED, or a run wrote into --root (TREE-WRITTEN) · 2 usage / refused
+//      node scripts/probe.mjs selftest            (PROBE_SELFTEST_ONLY=<prefix> runs only the cases so named, and says so)
+// EXIT: 0 ok · 1 selftest RED, or a run / vacuity wrote into --root (TREE-WRITTEN) · 2 usage / refused
 // ============================================================================
 import fs from "node:fs";
 import os from "node:os";
@@ -818,6 +850,200 @@ export async function runProbe(p, ctx) {
     lenses: { A, B: lensB(p && p.source, v.verdict), C: lensC(runs) }, quarantine, at };
 }
 
+// ---------------------------------------------------------------------------- 7b · VACUITY (law 8 · Stage 3.2, forks rows 523 / 524)
+const LINE_DEL = "LINE-DEL";
+const OP_FILE = /\.(mjs|js|cjs)$/;                     // the lines mutagen's code operators take: mutagen's own target files
+// one reads[] entry → { path, lines } — path:N · path:N-M · path@LN · comma lists of either; a bare path has lines null
+export function citedLines(r) {
+  const s = fwd(String(r)).replace(/^\.\//, "");
+  const m = /^(.*?)(?::|@L)(\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)$/.exec(s);
+  if (!m) return { path: readsPath(s), lines: null };
+  const lines = new Set();
+  for (const part of m[2].split(",")) { const [a, b = a] = part.split("-").map(Number); for (let n = Math.min(a, b); n <= Math.max(a, b); n++) lines.add(n); }
+  return { path: m[1].replace(/\/+$/, ""), lines: [...lines].sort((x, y) => x - y) };
+}
+// the line numbers a run PRINTED, per whole-file read: grep -n's `N:` (no file named → every whole-file read; an extra
+// mutant at worst, and a flip there is still a flip of that line) and `path:N:` (its own read). A context line (`N-`) is
+// not a match and is never cited.
+export function printedLines(stdout, wholeReads) {
+  const out = new Map(wholeReads.map(p => [p, new Set()]));
+  for (const l of String(stdout).split("\n")) {
+    let m = /^(\d+):/.exec(l);
+    if (m) { for (const p of wholeReads) out.get(p).add(Number(m[1])); continue; }
+    m = /^(.+?):(\d+):/.exec(l);
+    if (m) { const f = fwd(m[1]).replace(/^\.\//, ""); for (const p of wholeReads) if (p === f || p.endsWith(`/${f}`)) out.get(p).add(Number(m[2])); }
+  }
+  return out;
+}
+// one cited line's mutants → [{ op, line, body }]: LINE-DEL (the line blanked), then each op that changes THE LINE ALONE
+// (mutagen's functions, on an op file only). The line's own CR stays out of what an op sees and is kept on what it
+// returns. A blank line, or a number past the last line, has none.
+export function lineMutants(lines, n, file, ops) {
+  if (!(n >= 1 && n <= lines.length) || (n === lines.length && lines[n - 1] === "")) return [];
+  const raw = lines[n - 1], cr = raw.endsWith("\r"), body = cr ? raw.slice(0, -1) : raw, eol = cr ? "\r" : "";
+  if (body === "") return [];
+  const out = [{ op: LINE_DEL, line: n, body: eol }];
+  if (OP_FILE.test(file)) for (const [op, fn] of Object.entries(ops || {})) {
+    let nb; try { nb = fn(body); } catch { continue; }
+    if (typeof nb === "string" && nb !== body) out.push({ op, line: n, body: nb + eol });
+  }
+  return out;
+}
+// row 524 (2): a mutation is written ONLY inside the collar's copy; any other target is refused before a byte is written
+export function mutationGuard(target, collarRoot, root) {
+  if (samePath(collarRoot, root) || inside(collarRoot, root) || inside(root, collarRoot) || !inside(target, collarRoot) || samePath(target, collarRoot))
+    throw new Stop(`probe: REFUSED — a vacuity mutant targets ${fwd(target)}, which is not inside the collar's copy ${fwd(collarRoot)} (--root ${fwd(root)}); nothing was written`);
+}
+// COULD A DELETION FLIP IT? Judged key by key on the UNMUTATED run, because a mutant only ever takes text away. Held → some
+// key a deletion can BREAK (exit 0 · an included string · a line count >= or ==). Not held → EVERY failing key is one a
+// deletion can FIX (an exit other than 0 expected and 0 seen · an excluded string present · a line count <= or == that is
+// too high); a failing key asking for MORE text (exit 0 · an included string missing · a count too low) no deletion can
+// fix. A no-flip on a predicate no deletion could flip is NOT-DECIDABLE-BY-DELETION, never VACUOUS — so a REFUTED
+// "the text is there" claim (F3's presence case) and a CONFIRMED "the text is NOT there" claim are both named, not
+// graded. Conservative where a count verb blurs the line: an included digit that a deletion might produce reads as
+// "asks for more text", so the label claims LESS, never more; a real flip is read first in every case.
+export function deletionCanFlip(e, run, held) {
+  if (!e || typeof e !== "object") return false;
+  const lines = e.stdout_lines || null, inc = Array.isArray(e.stdout_includes) ? e.stdout_includes : [], exc = Array.isArray(e.stdout_excludes) ? e.stdout_excludes : [];
+  if (held) return e.exit === 0 || inc.length > 0 || Boolean(lines && (lines.op === ">=" || lines.op === "=="));
+  const out = normalize(run.stdout), n = lineCount(out);
+  let failing = 0;
+  if ("exit" in e && run.exit !== e.exit) { failing++; if (!(e.exit !== 0 && run.exit === 0)) return false; }
+  if (inc.some(s => !out.includes(normalize(s)))) return false;
+  if (exc.some(s => out.includes(normalize(s)))) failing++;
+  if (lines) {
+    const bad = lines.op === "==" ? n !== lines.n : lines.op === ">=" ? n < lines.n : n > lines.n;
+    if (bad) { failing++; if (n < lines.n) return false; }
+  }
+  return failing > 0;
+}
+export function vacuityReading({ decidable, complete, flips }) {
+  if (flips.length) return "NOT-VACUOUS";
+  if (!complete) return "INCOMPLETE";
+  return decidable ? "VACUOUS" : "NOT-DECIDABLE-BY-DELETION";
+}
+// mutagen.mjs's CODE_OPS beside probe.mjs (or in `dir`), unchanged — loaded only when `vacuity` runs
+export async function loadCodeOps(dir = HERE) {
+  let m;
+  try { m = await import(pathToFileURL(path.join(dir, "mutagen.mjs")).href); }
+  catch (e) { throw new Stop(`probe: REFUSED — vacuity takes mutagen.mjs's CODE_OPS from beside probe.mjs and it could not be loaded (${e && e.code ? e.code : String(e && e.message || e).slice(0, 120)}); nothing was spawned`); }
+  const ops = m && m.CODE_OPS;
+  if (!ops || typeof ops !== "object" || !Object.keys(ops).length || !Object.values(ops).every(f => typeof f === "function")) throw new Stop("probe: REFUSED — mutagen.mjs exports no CODE_OPS of functions; nothing was spawned");
+  return ops;
+}
+// one probe's mutants inside ONE fresh collar → the reading's fields. Throws CollarError only before the collar armed.
+async function vacuityInCollar(p, plan, axis, ctx, cites, was, onArmed) {
+  const collar = await collarOf(ctx), ops = ctx._ops;
+  const retries = [], ro = ctx.deps.retryBaseMs ? { baseMs: ctx.deps.retryBaseMs } : {};
+  let sb;
+  try { sb = retryLocked("buildSandbox", () => collar.buildSandbox({ trace: false }), retries, ro); }
+  catch (e) { if (e instanceof CollarError) throw e; throw new CollarError(`buildSandbox threw: ${String(e && e.message || e).slice(0, 200)}`); }
+  const stateDir = path.join(sb.root, STATE_REL);
+  try {
+    try { collar.assertArmed(sb); }
+    catch (e) { throw new CollarError(`assertArmed refused: ${String(e && e.message || e).slice(0, 200)}`); }
+    onArmed();
+    const extra = retries.length ? { retries } : {};
+    if (axis === "fixture") {
+      const live = path.join(ctx.root, STATE_REL), copy = ctx.deps.copyState || ((from, to) => fs.cpSync(from, to, { recursive: true, force: true }));
+      if (fs.existsSync(live)) { fs.mkdirSync(stateDir, { recursive: true }); retryLocked("the fixture's state copy", () => copy(live, stateDir), retries, ro); }
+      setMode(stateDir, 0o444); extra.state_sha256 = hashTree(stateDir);
+    }
+    const declaredAbsent = new Set(p.expect && Array.isArray(p.expect.reads_absent) ? p.expect.reads_absent.map(readsPath) : []);
+    const check = [...new Set(p.reads.map(readsPath))].filter(r => !declaredAbsent.has(r));
+    const once = () => { const ab = absentReads(sb.root, check); return ab.length ? { ...NOT_RUN, read_absent: ab } : runPlan(plan, sb.root, { ...sb.env }, ctx); };
+    const b = once(), bw = incompleteWhy(b);
+    const baseline = { exit: b.exit, held: bw ? null : expectHolds(p.expect, b), stdout_sha256: sha256(Buffer.from(b.stdout, "utf8")), seconds: b.seconds, ...(bw ? { incomplete: bw } : {}) };
+    if (bw) return { reading: "INCOMPLETE", why: `the unmutated baseline run was incomplete: ${bw} — nothing mutated`, baseline, ...extra };
+    if (baseline.held !== was) return { reading: "BASELINE-DIFFERS", why: `the unmutated collar run ${baseline.held ? "held" : "did not hold"}, the verdict of record is ${was ? "CONFIRMED" : "REFUTED"} — nothing mutated`, baseline, ...extra };
+    // what is cited: the windows, then the lines the baseline printed for each whole-file read
+    const targets = new Map();
+    for (const c of cites) if (c.lines) { const s = targets.get(c.path) || new Set(); for (const n of c.lines) s.add(n); targets.set(c.path, s); }
+    const no_window = [];
+    for (const [f, s] of printedLines(b.stdout, [...new Set(cites.filter(c => !c.lines).map(c => c.path))])) {
+      if (s.size) { const t = targets.get(f) || new Set(); for (const n of s) t.add(n); targets.set(f, t); }
+      else if (!targets.has(f)) no_window.push(f);
+    }
+    if (!targets.size) return { reading: "NO-WINDOW", why: `no read cites a line and the baseline printed none (${no_window.join(", ")}): the deletion floor (A_floor) stands`, baseline, no_window, ...extra };
+    const cited = {}, flips = [], incomplete = [], skipped = [];
+    let tried = 0;
+    for (const [rel, set] of [...targets].sort((x, y) => (x[0] < y[0] ? -1 : x[0] > y[0] ? 1 : 0))) {
+      const m = treePath(rel, "");
+      if (!m.ok || !m.rel) { skipped.push({ path: rel, why: `not a tree path (${m.reason || "the root"})` }); continue; }
+      const file = joinRel(sb.root, m.rel);
+      mutationGuard(file, sb.root, ctx.root);
+      let orig; try { orig = fs.readFileSync(file); } catch { skipped.push({ path: rel, why: "absent in the collar's copy" }); continue; }
+      const sha0 = sha256(orig), lines = orig.toString("utf8").split("\n"), last = lines[lines.length - 1] === "" ? lines.length - 1 : lines.length;
+      const ns = [...set].sort((x, y) => x - y), past = ns.filter(n => n > last);
+      if (past.length) skipped.push({ path: rel, why: `line(s) past its last line ${last}: ${past.join(",")}` });
+      cited[rel] = ns.filter(n => n <= last);
+      const ro = axis === "fixture" && inside(file, stateDir);
+      for (const n of cited[rel]) for (const mu of lineMutants(lines, n, rel, ops)) {
+        const text = lines.slice(); text[n - 1] = mu.body;
+        if (ro) fs.chmodSync(file, 0o644);
+        fs.writeFileSync(file, text.join("\n"));
+        let r;
+        try { r = once(); }
+        finally { fs.writeFileSync(file, orig); if (ctx.deps.afterRestore) ctx.deps.afterRestore(file); if (ro) fs.chmodSync(file, 0o444); }
+        tried++;
+        if (sha256(fs.readFileSync(file)) !== sha0) return { reading: "RESTORE-MISMATCH", why: `${rel} did not restore to the bytes the collar built after ${mu.op} at line ${n} — the probe is REFUSED`, baseline, cited, mutants_tried: tried, flips, incomplete, ...extra };
+        const w = incompleteWhy(r);
+        if (w) { incomplete.push({ op: mu.op, path: rel, line: n, why: w }); continue; }
+        if (expectHolds(p.expect, r) !== was) flips.push({ op: mu.op, path: rel, line: n });
+      }
+    }
+    if (axis === "fixture") extra.fixture_dirtied = hashTree(stateDir) !== extra.state_sha256;
+    const complete = tried - incomplete.length, decidable = deletionCanFlip(p.expect, b, was);
+    const reading = vacuityReading({ decidable, complete, flips });
+    const nLines = Object.values(cited).reduce((s, a) => s + a.length, 0), resting = new Set(flips.map(f => `${f.path}:${f.line}`)).size;
+    const why = reading === "NOT-VACUOUS" ? `${flips.length} of ${complete} complete mutant(s) flipped held, on ${resting} of ${nLines} cited line(s); first: ${flips[0].op} at ${flips[0].path}:${flips[0].line}`
+      : reading === "INCOMPLETE" ? `no mutant run completed (${incomplete.length} incomplete${tried ? "" : ", none tried"})`
+      : reading === "NOT-DECIDABLE-BY-DELETION" ? `${was ? "CONFIRMED" : "REFUTED"} and no deletion of text could flip it (its ${was ? "holding" : "failing"} keys ask for ${was ? "text to be absent" : "more text"}): ${complete} complete mutant(s) over ${nLines} cited line(s), none flipped — the insertion co-flip is to be built`
+      : `${complete} complete mutant(s) over ${nLines} cited line(s), none flipped held: the predicate does not rest on the lines its claim cites`;
+    return { reading, why, baseline, cited, ...(no_window.length ? { no_window } : {}), mutants_tried: tried, mutants_complete: complete, lines_resting: resting, flips, first_flip: flips[0] || null, incomplete, ...(skipped.length ? { skipped } : {}), deletion_can_flip: decidable, ...extra };
+  } finally {
+    setMode(stateDir, 0o644);
+    try { collar.destroy(sb); } catch {}
+  }
+}
+// one probe + its receipt of record → its VACUITY receipt. `moved` = the paths changed between the receipt's tree and HEAD
+// (null = that tree is not in this repo).
+export async function vacuityProbe(p, rec, ctx, moved) {
+  const at = new Date().toISOString();
+  const base = { probe_id: p && typeof p.id === "string" ? p.id : null, tree_sha: ctx.tree_sha, receipt_tree_sha: rec ? rec.tree_sha || null : null, verdict: rec ? rec.verdict : null,
+    A_floor: rec && rec.lenses && rec.lenses.A ? rec.lenses.A.reading || null : null };
+  const done = (reading, why, extra = {}) => ({ ...base, reading, why, ...extra, at });
+  if (!rec) return done("NOT-APPLICABLE", "no receipt of record for this probe");
+  if (rec.verdict !== "CONFIRMED" && rec.verdict !== "REFUTED") return done("NOT-APPLICABLE", `the verdict of record is ${rec.verdict}`);
+  const sc = staticCheck(p, ctx.verbs);
+  if (sc.quarantine) return done("NOT-APPLICABLE", `the probe is on the register now: ${sc.quarantine.why}`);
+  const cites = p.reads.map(citedLines), paths = [...new Set(cites.map(c => c.path))];
+  if (moved === null) return done("STALE", `the receipt's tree ${String(rec.tree_sha).slice(0, 12)} is not in this repo — its line numbers cannot be trusted`);
+  const touched = paths.filter(x => [...(moved || []), ...ctx.dirty].some(d => d === x || d.startsWith(`${x}/`)));
+  if (touched.length) return done("STALE", `read(s) moved since ${String(rec.tree_sha).slice(0, 12)} or dirty now: ${touched.join(", ")} — the cited line numbers no longer hold, nothing mutated`, { stale_reads: touched });
+  const axis = LANES[p.lane].includes("sandbox") ? "sandbox" : "fixture", plan = sc.plans[axis], was = rec.verdict === "CONFIRMED";
+  const dirs = watchDirs(axis, plan), before = treeView(ctx, dirs);
+  let res = null, err = null, armed = false;
+  try { res = await vacuityInCollar(p, plan, axis, ctx, cites, was, () => { armed = true; }); } catch (e) { err = e; }
+  const att = await attribute(treeDiff(before, treeView(ctx, dirs)), ctx, { collarRan: armed });
+  const ow = att.other.length ? { other_writer: att.other } : {};
+  if (att.own.length) return { ...base, axis, ...(res || {}), reading: "TREE-WRITTEN", why: `the vacuity session wrote into --root: ${att.own.join(", ")} — the engine deleted nothing${res ? ` (its mutants read ${res.reading}, withdrawn)` : ""}`, tree_written: att.own, ...ow, at };
+  if (err) { if (!(err instanceof CollarError)) throw err; return done("COLLAR-NOT-ARMED", err.message, { axis, ...ow }); }
+  return { ...base, axis, ...res, ...ow, at };
+}
+export function vacuityFace(rows) {
+  const by = new Map(), split = new Map();
+  const inc = (m, k) => m.set(k, (m.get(k) || 0) + 1);
+  for (const r of rows) { inc(by, r.reading); if (r.verdict === "CONFIRMED" || r.verdict === "REFUTED") inc(split, `${r.verdict} ${r.reading}`); }
+  const fmt = m => [...m].sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1)).map(([k, n]) => `${k} ${n}`).join(" · ") || "none";
+  const n = k => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
+  return [
+    `VACUITY ${fmt(by)} (of ${rows.length})`,
+    `BY VERDICT OF RECORD ${fmt(split)}`,
+    `MUTANTS tried ${n("mutants_tried")} · complete ${n("mutants_complete")} · flips ${rows.reduce((s, r) => s + (r.flips ? r.flips.length : 0), 0)} · cited lines resting ${n("lines_resting")}`,
+  ];
+}
+
 // ---------------------------------------------------------------------------- 8 · THE TREE (git, through the resolved verb)
 // --no-optional-locks: a `git status` otherwise refreshes a stale index INTO .git (a linked worktree's index lives in HIS
 // live repo's .git/worktrees/) — reading the tree must write nothing, there either.
@@ -925,6 +1151,39 @@ export async function cmdRun(o, deps = {}, log = console.log) {
   if (written.length) { log(`RED: ${written.length} probe(s) wrote into --root ${fwd(ctx.root)}: ${written.map(r => `${r.probe_id} → ${r.quarantine.detail}`).join(" · ")} — the engine deleted nothing; read and remove them`); return 1; }
   return 0;
 }
+// law 8 · VACUITY: every probe against its receipt of record (the latest per probe_id in --receipts), ONE fresh collar each
+export async function cmdVacuity(o, deps = {}, log = console.log) {
+  if (!o.probes || !o.receipts || !o.out) throw new Stop(USAGE);
+  const ctx = await makeCtx(o, deps);
+  const outAbs = path.resolve(o.out);
+  if (inside(path.dirname(outAbs), ctx.root) || inside(outAbs, ctx.root)) throw new Stop(`probe: REFUSED — --out ${fwd(outAbs)} is inside --root ${fwd(ctx.root)}; nothing is ever written into the probed tree`);
+  if (!fs.existsSync(path.dirname(outAbs))) throw new Stop(`probe: --out's directory does not exist: ${fwd(path.dirname(outAbs))}`);
+  let probes = readJsonl(o.probes);
+  if (o.ids) { const want = new Set(String(o.ids).split(",").map(s => s.trim()).filter(Boolean)); probes = probes.filter(p => p && want.has(p.id)); }
+  const latest = new Map(); for (const r of readJsonl(o.receipts)) latest.set(r.probe_id, r);
+  // the collar and mutagen's operators bind BEFORE anything is spawned, whenever a graded probe is due
+  if (probes.some(p => { const r = p && latest.get(p.id); return r && (r.verdict === "CONFIRMED" || r.verdict === "REFUTED"); })) {
+    try { await collarOf(ctx); }
+    catch (e) { if (e instanceof CollarError) throw new Stop(`probe: REFUSED — vacuity mutates only inside the collar, and it does not bind --root ${fwd(ctx.root)}: ${e.message}. Nothing was spawned`); throw e; }
+    ctx._ops = deps.codeOps || await loadCodeOps(deps.opsDir || HERE);
+  }
+  const movedBy = new Map();
+  const movedOf = sha => {
+    if (sha === ctx.tree_sha) return [];
+    if (!movedBy.has(sha)) { const d = /^[0-9a-f]{40}$/.test(String(sha)) ? gitAt(ctx, ["diff", "--name-only", sha, "HEAD"]) : { status: 128 }; movedBy.set(sha, d.status === 0 ? String(d.stdout).split(/\r?\n/).filter(Boolean).map(fwd) : null); }
+    return movedBy.get(sha);
+  };
+  const rows = [];
+  for (const p of probes) { const rec = latest.get(p && p.id); rows.push(await vacuityProbe(p, rec, ctx, rec ? movedOf(rec.tree_sha) : [])); }
+  fs.writeFileSync(outAbs, rows.map(r => JSON.stringify(r)).join(NL) + (rows.length ? NL : ""));
+  for (const l of vacuityFace(rows)) log(l);
+  for (const r of rows) log(`${r.probe_id}  ${r.verdict || "-"}  ${r.reading}  ${r.why}`);
+  log(`vacuity: ${rows.length} probe(s) at tree ${ctx.tree_sha.slice(0, 12)} → ${fwd(outAbs)}`);
+  for (const r of rows) for (const x of r.other_writer || []) log(`NOTE: ${r.probe_id} saw another writer in --root (law 7f rule ${x.rule}, graded): ${x.path}${x.pid !== null ? ` · pid ${x.pid}${x.name ? ` ${x.name}` : ""}` : ""}`);
+  const written = rows.filter(r => r.reading === "TREE-WRITTEN");
+  if (written.length) { log(`RED: ${written.length} vacuity session(s) wrote into --root ${fwd(ctx.root)}: ${written.map(r => `${r.probe_id} → ${r.tree_written.join(", ")}`).join(" · ")} — the engine deleted nothing; read and remove them`); return 1; }
+  return 0;
+}
 // STALE: the receipt's tree is not HEAD and the diff since it (or a dirty path now) touches the probe's reads[]
 export async function statusOf(o, deps = {}) {
   const ctx = await makeCtx(o, deps);
@@ -974,9 +1233,11 @@ export function cmdReport(o, log = console.log) {
 // is its own try: a throw is a RED naming its case, never a crash, and the summary line is always reached.
 async function selftest() {
   const T = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "probe-selftest-")));
-  let good = 0, ran = 0;
+  let good = 0, ran = 0, skippedCases = 0;
+  // PROBE_SELFTEST_ONLY=<prefix>: only the cases whose name starts with it run (an engine mutant's harness); the skip is SAID
+  const ONLY = process.env.PROBE_SELFTEST_ONLY || "";
   const ok = (c, name, detail = "") => { ran++; if (c) good++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${!c && detail ? `  — ${detail}` : ""}`); };
-  const tc = async (name, fn) => { try { const r = await fn(); ok(r === true, name, r === true ? "" : String(r)); } catch (e) { ok(false, name, `THREW ${e && e.stack ? e.stack.split(NL).slice(0, 2).join(" | ") : String(e)}`); } };
+  const tc = async (name, fn) => { if (ONLY && !name.startsWith(ONLY)) { skippedCases++; return; } try { const r = await fn(); ok(r === true, name, r === true ? "" : String(r)); } catch (e) { ok(false, name, `THREW ${e && e.stack ? e.stack.split(NL).slice(0, 2).join(" | ") : String(e)}`); } };
   const w = (p, c) => { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, c); };
   const verbs = resolveVerbs();
   const git = (dir, ...a) => spawnSync(verbs.git || "git", ["-C", dir, "-c", "user.name=fixture", "-c", "user.email=fixture@invalid", "-c", "commit.gpgsign=false", ...a], { encoding: "utf8", shell: false, windowsHide: true });
@@ -1566,16 +1827,212 @@ async function selftest() {
       const s = await statusOf({ probes: p2, receipts: path.join(OUTD, "d.receipts.jsonl"), root: REPO }, { sandbox: makeCollar(REPO), verbs });
       return s.rows[0].status === "NO-RECEIPT" || why(s.rows);
     });
+    // ================= LAW 8 · VACUITY (Stage 3.2, forks rows 523 / 524) — its OWN fixture repo, so no earlier case's edits reach it
+    const VREPO = path.join(T, "vrepo");
+    w(path.join(VREPO, "scripts", "alpha.mjs"), "// line one\n// ALPHA_MARK here\nconst a = 1, b = 2;\nif (a === b) console.log('same');\n");
+    w(path.join(VREPO, "scripts", "flip.mjs"), "const x = 1;\nif (x === 1) console.log('OK'); else process.exit(200);\n");
+    w(path.join(VREPO, "scripts", "crlf.mjs"), "first\r\nCRLF_MARK\r\nthird\r\n");
+    w(path.join(VREPO, "docs", "notes.md"), "one\ntwo\nthree\nfour\nfive\n");
+    w(path.join(VREPO, "docs", "eq.md"), "x === y\n");
+    w(path.join(VREPO, ".gitignore"), "dressing-room/state/\n");
+    w(path.join(VREPO, "dressing-room", "state", "bus.json"), '{"k":"STATE_MARK"}\n');
+    git(VREPO, "init", "-q"); git(VREPO, "config", "core.autocrlf", "false"); git(VREPO, "add", "-A"); git(VREPO, "commit", "-q", "-m", "vacuity fixture");
+    const VHEAD = String(git(VREPO, "rev-parse", "HEAD").stdout).trim();
+    const VOPS = { COND_FLIP: s => s.replace(/([^!=<>])===/, "$1!==") };     // mutagen's COND_FLIP, verbatim; the real seven load in V32-26
+    const vsig = () => sha256(Buffer.from(String(git(VREPO, "ls-files", "-z").stdout).split("\0").filter(Boolean).map(f => `${f}\0${sha256(fs.readFileSync(path.join(VREPO, f)))}`).join("\n") + sha256(fs.readFileSync(path.join(VREPO, "dressing-room", "state", "bus.json")))));
+    const VSIG0 = vsig();
+    const VP = (id, cmd, expect, reads, lane = "host") => ({ ...P(id, cmd, expect, lane, reads), authored_at_tree: VHEAD });
+    const REC = (id, verdict, tree = VHEAD) => ({ probe_id: id, tree_sha: tree, verdict, lenses: { A: { reading: verdict === "REFUTED" ? "VACUOUS" : "NOT-APPLICABLE" } } });
+    const vac = async (p, rec, o = {}) => {
+      const collar = o.collar || makeCollar(VREPO, o.collarOpts || {});
+      const ctx = await makeCtx({ root: VREPO }, { sandbox: collar, verbs, codeOps: VOPS, ...(o.deps || {}) });
+      ctx._ops = VOPS;
+      const r = await vacuityProbe(p, rec === undefined ? REC(p.id, "CONFIRMED") : rec, ctx, "moved" in o ? o.moved : []);
+      return { r, collar, ctx };
+    };
+    const F = x => x && `${x.op}@${x.path}:${x.line}`;
+    await tc("V32-1 NOT-VACUOUS · a CONFIRMED predicate resting on its cited line flips under LINE-DEL; the flip is named {op, path, line}", async () => {
+      const { r } = await vac(VP("v1", "grep -n ALPHA_MARK scripts/alpha.mjs", { exit: 0 }, ["scripts/alpha.mjs:2"]));
+      return r.reading === "NOT-VACUOUS" && F(r.first_flip) === "LINE-DEL@scripts/alpha.mjs:2" && JSON.stringify(r.cited) === '{"scripts/alpha.mjs":[2]}' && r.mutants_tried === 1 && r.lines_resting === 1 && r.A_floor === "NOT-APPLICABLE" || why(r);
+    });
+    await tc("V32-2 VACUOUS · the same predicate citing a line it does NOT rest on: complete mutants, none flips", async () => {
+      const { r } = await vac(VP("v2", "grep -n ALPHA_MARK scripts/alpha.mjs", { exit: 0 }, ["scripts/alpha.mjs:1"]));
+      return r.reading === "VACUOUS" && r.mutants_complete === 1 && r.flips.length === 0 && r.first_flip === null && /does not rest on the lines its claim cites/.test(r.why) || why(r);
+    });
+    await tc("V32-3 OPERATORS · mutagen's op on the cited line ALONE flips a predicate on that text; a line the op cannot change gets LINE-DEL only", async () => {
+      const { r } = await vac(VP("v3", "grep -c 'a === b' scripts/alpha.mjs", { exit: 0 }, ["scripts/alpha.mjs:4"]));
+      const { r: r2 } = await vac(VP("v3b", "grep -c 'a === b' scripts/alpha.mjs", { exit: 0 }, ["scripts/alpha.mjs:3"]));
+      return r.reading === "NOT-VACUOUS" && r.flips.map(F).join(",") === "LINE-DEL@scripts/alpha.mjs:4,COND_FLIP@scripts/alpha.mjs:4" && r.mutants_tried === 2
+        && r2.reading === "VACUOUS" && r2.mutants_tried === 1 || why({ r: [r.reading, r.flips, r.mutants_tried], r2: [r2.reading, r2.mutants_tried] });
+    });
+    await tc("V32-4 OPERATORS TAKE CODE LINES ONLY · a .md line carrying the op's pattern gets LINE-DEL alone; the .mjs line gets both", async () => {
+      const { r } = await vac(VP("v4", "grep -c 'x === y' docs/eq.md", { exit: 0 }, ["docs/eq.md:1"]));
+      return r.reading === "NOT-VACUOUS" && r.mutants_tried === 1 && r.flips.map(F).join(",") === "LINE-DEL@docs/eq.md:1" || why(r);
+    });
+    await tc("V32-5 REFUTED PRESENCE · none flips → NOT-DECIDABLE-BY-DELETION, never VACUOUS", async () => {
+      const { r } = await vac(VP("v5", "grep -c NOPE_ABSENT docs/notes.md", { exit: 0 }, ["docs/notes.md:1-2"]), REC("v5", "REFUTED"));
+      return r.reading === "NOT-DECIDABLE-BY-DELETION" && r.mutants_complete === 2 && r.deletion_can_flip === false && /REFUTED and no deletion of text could flip it/.test(r.why) || why(r);
+    });
+    await tc("V32-6 REFUTED ABSENCE · a deletion of its cited line flips it → NOT-VACUOUS; citing a line it does not rest on → VACUOUS", async () => {
+      const { r } = await vac(VP("v6", "grep -c two docs/notes.md", { exit: 1 }, ["docs/notes.md:2"]), REC("v6", "REFUTED"));
+      const { r: r2 } = await vac(VP("v6b", "grep -c two docs/notes.md", { exit: 1 }, ["docs/notes.md:4"]), REC("v6b", "REFUTED"));
+      return r.reading === "NOT-VACUOUS" && F(r.first_flip) === "LINE-DEL@docs/notes.md:2" && r2.reading === "VACUOUS" && r2.deletion_can_flip === true || why({ r, r2 });
+    });
+    await tc("V32-7 deletionCanFlip · held: exit 0 / includes / lines >= or == breakable, exit 1 / excludes / lines <= not; not held: only failing keys a deletion FIXES", async () => {
+      const R = (exit, stdout) => ({ exit, stdout });
+      const held = [[{ exit: 0 }, true], [{ stdout_includes: ["a"] }, true], [{ stdout_lines: { op: ">=", n: 1 } }, true], [{ stdout_lines: { op: "==", n: 1 } }, true],
+        [{ exit: 1 }, false], [{ stdout_excludes: ["a"] }, false], [{ stdout_lines: { op: "<=", n: 3 } }, false], [{ exit: 1, stdout_excludes: ["a"] }, false]];
+      const not = [[{ exit: 0 }, R(1, ""), false], [{ exit: 1 }, R(0, "a\n"), true], [{ exit: 1 }, R(2, ""), false], [{ stdout_excludes: ["a"] }, R(0, "a\n"), true],
+        [{ stdout_includes: ["zz"] }, R(0, "a\n"), false], [{ exit: 1, stdout_includes: ["a"] }, R(0, "b\n"), false], [{ stdout_lines: { op: "<=", n: 1 } }, R(0, "a\nb\n"), true],
+        [{ stdout_lines: { op: "==", n: 1 } }, R(0, "a\nb\n"), true], [{ stdout_lines: { op: "==", n: 3 } }, R(0, "a\nb\n"), false], [{ stdout_lines: { op: ">=", n: 3 } }, R(0, "a\n"), false],
+        [{ exit: 0, stdout_includes: ["x"], stdout_excludes: ["y"] }, R(1, ""), false]];
+      const bad = [...held.filter(([e, want]) => deletionCanFlip(e, R(0, ""), true) !== want).map(x => ["held", x[0]]), ...not.filter(([e, run, want]) => deletionCanFlip(e, run, false) !== want).map(x => ["not", x[0]])];
+      return bad.length === 0 && deletionCanFlip(null, R(0, ""), true) === false || why(bad);
+    });
+    await tc("V32-8 A FLIP IS READ FIRST · a REFUTED predicate the key test calls not-decidable (an included digit) that a deletion DOES flip reads NOT-VACUOUS", async () => {
+      const { r } = await vac(VP("v8", "grep -c two docs/notes.md", { stdout_includes: ["0"] }, ["docs/notes.md:2"]), REC("v8", "REFUTED"));
+      return r.deletion_can_flip === false && r.reading === "NOT-VACUOUS" && F(r.first_flip) === "LINE-DEL@docs/notes.md:2" || why(r);
+    });
+    await tc("V32-29 NEITHER DIRECTION OVERCLAIMS · a REFUTED presence claim with an excludes clause, and a CONFIRMED absence claim, read NOT-DECIDABLE-BY-DELETION, never VACUOUS", async () => {
+      const { r } = await vac(VP("v29", "grep -c NOPE_ABSENT docs/notes.md", { exit: 0, stdout_includes: ["1"], stdout_excludes: ["x"] }, ["docs/notes.md:1"]), REC("v29", "REFUTED"));
+      const { r: r2 } = await vac(VP("v29b", "grep -c NOPE_ABSENT docs/notes.md", { exit: 1 }, ["docs/notes.md:1"]), REC("v29b", "CONFIRMED"));
+      return r.reading === "NOT-DECIDABLE-BY-DELETION" && r2.reading === "NOT-DECIDABLE-BY-DELETION" && /CONFIRMED and no deletion of text could flip it \(its holding keys ask for text to be absent\)/.test(r2.why) && r2.mutants_complete === 1 || why({ r: [r.reading, r.why], r2: [r2.reading, r2.why] });
+    });
+    await tc("V32-9 WHOLE-FILE READ · the lines the baseline PRINTS are cited (grep -n); none printed = NO-WINDOW, the floor named, nothing mutated", async () => {
+      const { r } = await vac(VP("v9", "grep -n three docs/notes.md", { exit: 0 }, ["docs/notes.md"]));
+      const { r: r2 } = await vac(VP("v9b", "wc -l docs/notes.md", { exit: 0 }, ["docs/notes.md"]));
+      return r.reading === "NOT-VACUOUS" && JSON.stringify(r.cited) === '{"docs/notes.md":[3]}' && r2.reading === "NO-WINDOW" && r2.no_window.join(",") === "docs/notes.md" && r2.mutants_tried === undefined && /A_floor/.test(r2.why) || why({ r, r2 });
+    });
+    await tc("V32-10 printedLines · `N:` goes to every whole read, `path:N:` to its own read only, a context `N-` line never", async () => {
+      const m = printedLines("3:three\ndocs/a.md:7:x\n9-context\nscripts/b.mjs:12:y\n", ["docs/a.md", "scripts/b.mjs"]);
+      return [...m.get("docs/a.md")].sort().join(",") === "3,7" && [...m.get("scripts/b.mjs")].sort((a, b) => a - b).join(",") === "3,12" || why([...m].map(([k, s]) => [k, [...s]]));
+    });
+    await tc("V32-11 citedLines · path:N, path:N-M, path@LN, a comma list; a bare path has no window", async () => {
+      const a = citedLines("scripts/x.mjs:7"), b = citedLines("scripts/x.mjs:640-643"), c = citedLines("docs/y.md@L5"), d = citedLines("s/z.mjs:1-2,9"), e = citedLines("./scripts/x.mjs"), f = citedLines("s/r.mjs:9-7");
+      return a.path === "scripts/x.mjs" && a.lines.join(",") === "7" && b.lines.join(",") === "640,641,642,643" && c.path === "docs/y.md" && c.lines.join(",") === "5"
+        && d.lines.join(",") === "1,2,9" && e.path === "scripts/x.mjs" && e.lines === null && f.lines.join(",") === "7,8,9" || why({ a, b, c, d, e, f });
+    });
+    await tc("V32-12 lineMutants · LINE-DEL blanks the line KEEPING its CR; an op sees the line without its CR and keeps it; a blank line and a line past the end yield none", async () => {
+      const L = "first\r\nif (p === q) go();\r\n\r\nlast\n".split("\n");
+      const ms = lineMutants(L, 2, "s/c.mjs", VOPS), del = ms.find(x => x.op === "LINE-DEL"), op = ms.find(x => x.op === "COND_FLIP");
+      return del && del.body === "\r" && op && op.body === "if (p !== q) go();\r" && lineMutants(L, 3, "s/c.mjs", VOPS).length === 0 && lineMutants(L, 5, "s/c.mjs", VOPS).length === 0 && lineMutants(L, 0, "s/c.mjs", VOPS).length === 0
+        && lineMutants(L, 2, "docs/c.md", VOPS).length === 1 || why(ms);
+    });
+    await tc("V32-13 NOT-APPLICABLE · no receipt, and a verdict of record that is not CONFIRMED / REFUTED, build no collar", async () => {
+      const p = VP("v13", "grep -n ALPHA_MARK scripts/alpha.mjs", { exit: 0 }, ["scripts/alpha.mjs:2"]);
+      const a = await vac(p, null), b = await vac(p, REC("v13", "NON-DETERMINISTIC")), c = await vac(p, REC("v13", "UNRUNNABLE"));
+      return [a, b, c].every(x => x.r.reading === "NOT-APPLICABLE" && !x.collar.log.some(e => e.ev === "build")) && /NON-DETERMINISTIC/.test(b.r.why) || why([a.r, b.r]);
+    });
+    await tc("V32-14 STALE · a read moved since the receipt's tree, or dirty now, is never mutated (no collar); an untouched read runs", async () => {
+      const p = VP("v14", "grep -n ALPHA_MARK scripts/alpha.mjs", { exit: 0 }, ["scripts/alpha.mjs:2"]);
+      const a = await vac(p, undefined, { moved: ["scripts/alpha.mjs"] }), b = await vac(p, undefined, { moved: ["docs/other.md"] }), c = await vac(p, REC("v14", "CONFIRMED", "f".repeat(40)), { moved: null });
+      fs.appendFileSync(path.join(VREPO, "scripts", "alpha.mjs"), "// dirty\n");
+      let d; try { d = await vac(p); } finally { git(VREPO, "checkout", "--", "scripts/alpha.mjs"); }
+      return a.r.reading === "STALE" && a.r.stale_reads.join(",") === "scripts/alpha.mjs" && !a.collar.log.some(e => e.ev === "build") && b.r.reading === "NOT-VACUOUS" && c.r.reading === "STALE" && /not in this repo/.test(c.r.why)
+        && d.r.reading === "STALE" && /dirty now/.test(d.r.why) && !d.collar.log.some(e => e.ev === "build") || why({ a: a.r.reading, b: b.r.reading, c: c.r.why, d: d.r.reading });
+    });
+    await tc("V32-15 BASELINE-DIFFERS · a verdict of record the collar no longer reproduces mutates NOTHING; one that it reproduces does", async () => {
+      const { r } = await vac(VP("v15", "grep -c NOPE_ABSENT docs/notes.md", { exit: 0 }, ["docs/notes.md:1"]), REC("v15", "CONFIRMED"));
+      const { r: r2 } = await vac(VP("v15b", "grep -c NOPE_ABSENT docs/notes.md", { exit: 0 }, ["docs/notes.md:1"]), REC("v15b", "REFUTED"));
+      return r.reading === "BASELINE-DIFFERS" && r.baseline.held === false && r.mutants_tried === undefined && r2.reading === "NOT-DECIDABLE-BY-DELETION" && r2.mutants_tried === 1 || why({ r, r2 });
+    });
+    await tc("V32-16 ONE FRESH COLLAR PER PROBE · five mutants, ONE build, armed before any run, destroyed; --root byte-identical after", async () => {
+      const { r, collar } = await vac(VP("v16", "grep -c three docs/notes.md", { exit: 0 }, ["docs/notes.md:1-5"]));
+      const ev = collar.log.map(e => e.ev).join(",");
+      return r.reading === "NOT-VACUOUS" && r.mutants_tried === 5 && F(r.first_flip) === "LINE-DEL@docs/notes.md:3" && r.flips.length === 1 && ev === "build,armed,destroy" && !fs.existsSync(collar.log[0].root) && vsig() === VSIG0 || why({ r: [r.reading, r.mutants_tried, r.flips], ev });
+    });
+    await tc("V32-17 RESTORE-MISMATCH · a restore that does not return the built bytes REFUSES the probe by name; a true restore passes (V32-16)", async () => {
+      const { r } = await vac(VP("v17", "grep -c three docs/notes.md", { exit: 0 }, ["docs/notes.md:1-5"]), undefined, { deps: { afterRestore: f => fs.appendFileSync(f, "tamper\n") } });
+      return r.reading === "RESTORE-MISMATCH" && /docs\/notes\.md did not restore .* after LINE-DEL at line 1 — the probe is REFUSED/.test(r.why) && r.mutants_tried === 1 && vsig() === VSIG0 || why(r);
+    });
+    await tc("V32-18 mutationGuard · a target in --root, outside the copy, or the copy's root itself is refused before a write; inside the copy it is admitted", async () => {
+      const sbx = fs.mkdtempSync(path.join(T, "sbx-")), refused = t => { try { mutationGuard(t, sbx, VREPO); return false; } catch (e) { return e instanceof Stop && /REFUSED — a vacuity mutant targets/.test(e.message); } };
+      let admitted = true; try { mutationGuard(path.join(sbx, "docs", "notes.md"), sbx, VREPO); } catch { admitted = false; }
+      let same = false; try { mutationGuard(path.join(VREPO, "docs", "notes.md"), VREPO, VREPO); } catch (e) { same = e instanceof Stop; }
+      return refused(path.join(VREPO, "docs", "notes.md")) && refused(path.join(T, "elsewhere.txt")) && refused(sbx) && same && admitted || why({ admitted, same });
+    });
+    await tc("V32-19 A MUTANT THAT CRASHES IS INCOMPLETE, NEVER A FLIP · COND_FLIP drives node out of its exit set; LINE-DEL completes and flips", async () => {
+      const { r } = await vac(VP("v19", "node scripts/flip.mjs", { stdout_includes: ["OK"] }, ["scripts/flip.mjs:2"], "sandbox"));
+      return r.reading === "NOT-VACUOUS" && r.flips.map(F).join(",") === "LINE-DEL@scripts/flip.mjs:2" && r.incomplete.length === 1 && r.incomplete[0].op === "COND_FLIP" && /VERB-CRASHED node exit 200/.test(r.incomplete[0].why) && r.mutants_complete === 1 || why(r);
+    });
+    await tc("V32-20 vacuityReading · a flip → NOT-VACUOUS (decidable or not); no complete mutant → INCOMPLETE; no flip → VACUOUS only where a deletion could have flipped it", async () => {
+      const f = [{ op: "x" }];
+      return vacuityReading({ decidable: true, complete: 3, flips: f }) === "NOT-VACUOUS" && vacuityReading({ decidable: false, complete: 3, flips: f }) === "NOT-VACUOUS"
+        && vacuityReading({ decidable: true, complete: 0, flips: [] }) === "INCOMPLETE" && vacuityReading({ decidable: false, complete: 2, flips: [] }) === "NOT-DECIDABLE-BY-DELETION"
+        && vacuityReading({ decidable: true, complete: 2, flips: [] }) === "VACUOUS";
+    });
+    await tc("V32-21 THE FIXTURE AXIS · a cited line of the READ-ONLY state copy is mutated and restored; the copy is not dirtied; his live state untouched", async () => {
+      const { r } = await vac(VP("v21", "grep -n STATE_MARK dressing-room/state/bus.json", { exit: 0 }, ["dressing-room/state/bus.json:1"], "FIXTURE"));
+      return r.reading === "NOT-VACUOUS" && r.axis === "fixture" && r.fixture_dirtied === false && /^[0-9a-f]{64}$/.test(r.state_sha256) && vsig() === VSIG0 || why(r);
+    });
+    await tc("V32-22 THE TREE WATCHER wraps the session (law 7f) · a --root change with no armed collar is TREE-WRITTEN by name; while armed, another writer's (rule A) is named and the probe graded; a tmp of this engine's OWN pid stays TREE-WRITTEN, its mutants withdrawn", async () => {
+      const leak = path.join(VREPO, "leak.txt"), own = path.join(VREPO, `.gitignore.${process.pid}.tmp`);
+      const p = VP("v22", "grep -n ALPHA_MARK scripts/alpha.mjs", { exit: 0 }, ["scripts/alpha.mjs:2"]);
+      try {
+        const { r: a } = await vac(p, undefined, { collarOpts: { leakTo: leak, disarmed: true } }); fs.rmSync(leak, { force: true });
+        const { r: b } = await vac(p, undefined, { collarOpts: { leakTo: leak } }); fs.rmSync(leak, { force: true });
+        const snap = () => new Map([[process.pid, { ppid: null, session: 1, name: "node.exe" }]]);
+        const { r: c } = await vac(p, undefined, { collarOpts: { during: () => fs.writeFileSync(own, "mine\n") }, deps: { procSnapshot: snap, settleMs: 0 } });
+        return a.reading === "TREE-WRITTEN" && a.tree_written.join(",") === "leak.txt" && a.mutants_tried === undefined
+          && b.reading === "NOT-VACUOUS" && b.other_writer && b.other_writer.length === 1 && b.other_writer[0].path === "leak.txt" && b.other_writer[0].rule === "A"
+          && c.reading === "TREE-WRITTEN" && c.tree_written.join(",") === `.gitignore.${process.pid}.tmp` && /its mutants read NOT-VACUOUS, withdrawn/.test(c.why) && c.mutants_tried === 1
+          || why({ a: [a.reading, a.tree_written], b: [b.reading, b.other_writer], c: [c.reading, c.tree_written, c.why] });
+      } finally { fs.rmSync(leak, { force: true }); fs.rmSync(own, { force: true }); }
+    });
+    await tc("V32-23 COLLAR-NOT-ARMED · a disarmed collar mutates nothing and is destroyed", async () => {
+      const collar = makeCollar(VREPO, { disarmed: true });
+      const { r } = await vac(VP("v23", "grep -n ALPHA_MARK scripts/alpha.mjs", { exit: 0 }, ["scripts/alpha.mjs:2"]), undefined, { collar });
+      return r.reading === "COLLAR-NOT-ARMED" && /assertArmed refused/.test(r.why) && r.mutants_tried === undefined && collar.log.map(e => e.ev).join(",") === "build,refused,destroy" || why({ r, log: collar.log });
+    });
+    await tc("V32-24 CLI `vacuity` · writes ONLY --out (refused inside --root), the face first, exit 0; the receipts of record are read, never rewritten", async () => {
+      const pf2 = path.join(OUTD, "v.probes.jsonl"), rf2 = path.join(OUTD, "v.receipts.jsonl"), out = path.join(OUTD, "v.vacuity.jsonl");
+      fs.writeFileSync(pf2, [VP("c1", "grep -n ALPHA_MARK scripts/alpha.mjs", { exit: 0 }, ["scripts/alpha.mjs:2"]), VP("c2", "grep -c NOPE_ABSENT docs/notes.md", { exit: 0 }, ["docs/notes.md:1"]), VP("c3", null, null, [])].map(x => JSON.stringify(x)).join(NL) + NL);
+      fs.writeFileSync(rf2, [REC("c1", "CONFIRMED"), REC("c2", "REFUTED"), REC("c3", "UNRUNNABLE")].map(x => JSON.stringify(x)).join(NL) + NL);
+      const rs0 = sha256(fs.readFileSync(rf2)), lines = [];
+      const code = await cmdVacuity({ probes: pf2, receipts: rf2, out, root: VREPO }, { sandbox: makeCollar(VREPO), verbs, codeOps: VOPS }, l => lines.push(l));
+      const rows = readJsonl(out);
+      let inRoot = null; try { await cmdVacuity({ probes: pf2, receipts: rf2, out: path.join(VREPO, "v.jsonl"), root: VREPO }, { sandbox: makeCollar(VREPO), verbs, codeOps: VOPS }, () => {}); } catch (e) { inRoot = e instanceof Stop ? e.message : `other ${e.message}`; }
+      return code === 0 && rows.map(x => x.reading).join(",") === "NOT-VACUOUS,NOT-DECIDABLE-BY-DELETION,NOT-APPLICABLE" && /^VACUITY /.test(lines[0]) && /^BY VERDICT OF RECORD /.test(lines[1]) && /^MUTANTS tried 2 /.test(lines[2])
+        && sha256(fs.readFileSync(rf2)) === rs0 && /REFUSED — --out .* is inside --root/.test(inRoot || "") && !fs.existsSync(path.join(VREPO, "v.jsonl")) && vsig() === VSIG0 || why({ code, lines: lines.slice(0, 3), rows: rows.map(x => x.reading), inRoot });
+    });
+    await tc("V32-25 THE OPERATORS LOADER · CODE_OPS of functions load from mutagen.mjs beside; absent or empty REFUSES the call before any spawn", async () => {
+      const good = path.join(T, "opsgood"), none = path.join(T, "opsnone"), bad = path.join(T, "opsbad");
+      w(path.join(good, "mutagen.mjs"), "export const CODE_OPS = { STUB_OP: s => s + '!' };\n"); fs.mkdirSync(none, { recursive: true }); w(path.join(bad, "mutagen.mjs"), "export const CODE_OPS = {};\n");
+      const ops = await loadCodeOps(good);
+      const refusal = async d => { try { await loadCodeOps(d); return null; } catch (e) { return e instanceof Stop ? e.message : `other ${e.message}`; } };
+      const a = await refusal(none), b = await refusal(bad);
+      const pf3 = path.join(OUTD, "v3.probes.jsonl"), rf3 = path.join(OUTD, "v3.receipts.jsonl"), out = path.join(OUTD, "v3.vacuity.jsonl"), n0 = SPAWNS.count;
+      fs.writeFileSync(pf3, JSON.stringify(VP("o1", "grep -n ALPHA_MARK scripts/alpha.mjs", { exit: 0 }, ["scripts/alpha.mjs:2"])) + NL); fs.writeFileSync(rf3, JSON.stringify(REC("o1", "CONFIRMED")) + NL);
+      let cli = null; try { await cmdVacuity({ probes: pf3, receipts: rf3, out, root: VREPO }, { sandbox: makeCollar(VREPO), verbs, opsDir: none }, () => {}); } catch (e) { cli = e instanceof Stop ? e.message : `other ${e.message}`; }
+      return Object.keys(ops).join(",") === "STUB_OP" && ops.STUB_OP("a") === "a!" && /could not be loaded/.test(a || "") && /exports no CODE_OPS/.test(b || "") && /REFUSED — vacuity takes mutagen\.mjs/.test(cli || "") && !fs.existsSync(out) && SPAWNS.count === n0 || why({ a, b, cli, spawned: SPAWNS.count - n0 });
+    });
+    if (fs.existsSync(path.join(HERE, "mutagen.mjs"))) {
+      await tc("V32-26 THE REAL OPERATORS · mutagen.mjs beside probe.mjs loads its seven CODE_OPS, functions, unchanged", async () => {
+        const ops = await loadCodeOps(HERE);
+        return Object.keys(ops).join(",") === "FIELD_RENAME,PATH_LIT,COND_FLIP,SLICE_OB1,CATCH_RETHROW,CONST_SCALE,STMT_DEL" && ops.COND_FLIP("if (a === b) x();") === "if (a !== b) x();" || why(Object.keys(ops));
+      });
+    } else console.log("NOTE  V32-26 NOT RUN: no mutagen.mjs beside this probe.mjs (a build copy) — it runs where the organism's mutagen.mjs is");
+    await tc("V32-28 LINE-DEL BLANKS, NEVER REMOVES · every other line keeps its number: sed -n '3p' citing line 2 stays VACUOUS, citing line 3 flips", async () => {
+      const { r } = await vac(VP("v28", "sed -n '3p' docs/notes.md", { stdout_includes: ["three"] }, ["docs/notes.md:2"]));
+      const { r: r2 } = await vac(VP("v28b", "sed -n '3p' docs/notes.md", { stdout_includes: ["three"] }, ["docs/notes.md:3"]));
+      return r.reading === "VACUOUS" && r2.reading === "NOT-VACUOUS" && F(r2.first_flip) === "LINE-DEL@docs/notes.md:3" || why({ r: [r.reading, r.flips], r2: r2.reading });
+    });
+    await tc("V32-27 vacuityFace · readings counted on line 1, split by verdict of record on line 2, mutants on line 3", async () => {
+      const rows = [{ reading: "NOT-VACUOUS", verdict: "CONFIRMED", mutants_tried: 3, mutants_complete: 3, flips: [1, 2], lines_resting: 1 }, { reading: "VACUOUS", verdict: "CONFIRMED", mutants_tried: 2, mutants_complete: 1, flips: [], lines_resting: 0 }, { reading: "NOT-APPLICABLE", verdict: "UNRUNNABLE" }];
+      const f = vacuityFace(rows);
+      return f[0] === "VACUITY NOT-APPLICABLE 1 · NOT-VACUOUS 1 · VACUOUS 1 (of 3)" && f[1] === "BY VERDICT OF RECORD CONFIRMED NOT-VACUOUS 1 · CONFIRMED VACUOUS 1" && f[2] === "MUTANTS tried 5 · complete 4 · flips 2 · cited lines resting 1" || why(f);
+    });
     await tc("CLI · an unknown verb is usage (exit 2), never a run", async () => { const r = spawnSync(process.execPath, [SELF, "frobnicate"], { encoding: "utf8", shell: false, windowsHide: true, timeout: 60000 }); return r.status === 2 && /usage/.test(String(r.stderr)) || why({ code: r.status }); });
   } catch (e) {
     ok(false, "selftest threw outside a case", e && e.stack ? e.stack.split(NL).slice(0, 3).join(" | ") : String(e));
   } finally { try { fs.rmSync(T, { recursive: true, force: true }); } catch {} }
+  if (ONLY) console.log(`NOTE  PROBE_SELFTEST_ONLY="${ONLY}": ${skippedCases} case(s) NOT run — this is not the whole selftest`);
   console.log(`probe selftest: ${good}/${ran} ok${good === ran ? " · GREEN" : " · RED"}`);
   return good === ran ? 0 : 1;
 }
 
 // ---------------------------------------------------------------------------- main
-const USAGE = "usage: node scripts/probe.mjs import --population <jsonl> --out <probes.jsonl> | run --probes <f> --out <receipts.jsonl> [--ids a,b] [--root <dir>] [--timeout-ms N] [--host-only] | status --probes <f> --receipts <f> [--root <dir>] | report --receipts <f> | selftest";
+const USAGE = "usage: node scripts/probe.mjs import --population <jsonl> --out <probes.jsonl> | run --probes <f> --out <receipts.jsonl> [--ids a,b] [--root <dir>] [--timeout-ms N] [--host-only] | vacuity --probes <f> --receipts <receipts of record> --out <vacuity.jsonl> [--ids a,b] [--root <dir>] [--timeout-ms N] | status --probes <f> --receipts <f> [--root <dir>] | report --receipts <f> | selftest";
 const BOOL_FLAGS = new Set(["host-only"]);
 function args(argv) {
   const o = {};
@@ -1592,10 +2049,11 @@ function args(argv) {
 async function main(argv) {
   const verb = argv[0];
   if (verb === "selftest") return selftest();
-  if (!["import", "run", "status", "report"].includes(verb)) throw new Stop(USAGE);
+  if (!["import", "run", "vacuity", "status", "report"].includes(verb)) throw new Stop(USAGE);
   const o = args(argv);
   if (verb === "import") return cmdImport(o);
   if (verb === "run") return cmdRun(o);
+  if (verb === "vacuity") return cmdVacuity(o);
   if (verb === "status") return cmdStatus(o);
   return cmdReport(o);
 }
