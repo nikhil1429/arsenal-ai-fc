@@ -107,6 +107,24 @@
 //          are retried on EDOM / EBUSY, RETRY_TRIES attempts, the wait doubling from
 //          RETRY_BASE_MS; every failed attempt is named on the run (`retries`). Exhausted, the
 //          probe is COLLAR-NOT-ARMED naming the lock, never an INTERNAL crash.
+//      h · ARGV FIDELITY (Stage 3.3, forks row 545; the census cloud/V33/derive/, 6 Oct 2026): node quotes only a
+//          word carrying a space or a quote, and the MSYS runtime of Git for Windows' grep / sed / head / tail / wc
+//          GLOBS and UNESCAPES every unquoted word it receives from a Windows process — `password\s*[:=]` reached
+//          grep as `passwords*[:=]`, `\(` as `(`. MEASURED with the MSYS printf beside grep printing back what its
+//          runtime parsed: 3 of the face's 255 segments arrived with other bytes, and the engine graded two claims
+//          on a pattern that never compiled (grep exit 2) and one on a pattern it never searched. So on win32 EVERY
+//          spawned word is quoted by the engine itself (a quote escaped, the backslashes before it or before the
+//          closing quote doubled), windowsVerbatimArguments on, the program path quoted as argv0: 255 of 255
+//          byte-equal; git.exe and node.exe 22 of 22 planted words either way. The one shape the quoted form
+//          still alters — a text-verb word OPENING with two backslashes arrives with one — is UNRUNNABLE
+//          ARGV-UNFAITHFUL by name, on every platform (one register everywhere), never guessed. `MSYS=noglob` is
+//          NOT the fix: it breaks every embedded quote (35 of the face's probes).
+//      i · AN ERROR STATUS IS NEVER EVIDENCE (row 545): a segment ending in its verb's ERROR status (the table's
+//          errs: grep 2, sed / head / tail / wc 1) makes the run incomplete (VERB-ERRORED naming verb, status and
+//          stderr head), held null — upstream in a pipe included, where the last segment's exit used to hide it.
+//          THE ONE EXCEPTION: the error is explained by a missing path expect.reads_absent declares (every tree
+//          path of that segment that is absent is declared), and then it is the claim's evidence — `wc -l` of a
+//          never-born file. Lens A's ablation run declares the reads[] it removed on purpose.
 //   8. VACUITY, Stage 3.2 (forks rows 523 / 524) — `vacuity` asks of every graded probe: does
 //      the predicate REST ON THE LINES ITS CLAIM CITES? Lens A's deletion floor removes whole
 //      files, and on the face of record it read the VERDICT's direction (REFUTED → VACUOUS
@@ -138,6 +156,14 @@
 //          not-decidable label is only ever the reading of a no-flip and never hides a flip.
 //      d · WRITES: only --out (refused inside --root); the receipts of record are read, never
 //          rewritten; lens A of record is carried beside as A_floor (L9).
+//   9. SILENT SUCCESS, Stage 3.3 (row 545) — exit 0 is not evidence of work; touching the file is (blackbox.mjs's
+//      own argument, at the grain of one probe). A plan with a `node scripts/<f>.mjs` segment builds its collar
+//      with the TRACE on and labels each node segment; a node segment that exits 0 having made 0 reads, 0 writes
+//      and 0 spawns (its trace rows, children included; its module loader's own reads of code files are counted
+//      apart as code_reads — see nodeTrace) reads SILENT-SUCCESS on its run (silent_success) and on
+//      the receipt (silent). It is a reading, never a verdict change: the claim may be exactly "it does nothing".
+//      The face of 6 Oct 2026 has 0 node segments, so the reading guards the probes not yet authored. blackbox.mjs
+//      itself (every organ, one collar) is NOT run by this file — an npm-test-sized load, his word's class.
 //
 // THE COLLAR is scripts/sandbox.mjs, reached through an injectable deps.sandbox and
 //   loaded LAZILY from ./sandbox.mjs only when a collar axis runs — importing this file
@@ -196,6 +222,7 @@ const RUNNABLE_IF = Object.freeze({
   "VERB-OUTSIDE-AXIS": "every segment is in the organism verb table for every axis the lane runs on (node only on a collar axis)",
   "VERB-NOT-FOUND": "the verb resolves to an executable on PATH or in the usr/bin beside git",
   "COLLAR-NOT-ARMED": "scripts/sandbox.mjs loads beside probe.mjs, builds from --root, and assertArmed passes, its build and the fixture's state copy complete (a locked file is retried, bounded) (and the call is not --host-only)",
+  "ARGV-UNFAITHFUL": "no word of a grep / sed / head / tail / wc segment opens with two backslashes (the MSYS runtime parses it back with one even quoted: measured 6 Oct 2026, row 545) — write the pattern another way",
   "TREE-WRITTEN": "the run leaves --root as it found it: git status --porcelain --ignored and the listing of its top level and of every cwd the run enters are unchanged, save what law 7f names as another writer's — the engine never deletes what a verb wrote: read it, remove it, re-run",
 });
 
@@ -225,21 +252,26 @@ export const VERB_TABLE = Object.freeze([
     refused: Object.freeze(["-o", "--output", "--output-directory", "--ext-diff", "--textconv", "--filters", "--exec"]),
     refused_in_usage: false }),
   Object.freeze({ tool: "grep", rows: "363 (1) · 365 (1)", usage: "--help", exit_max: 2, exits_cite: "grep --help: 'Exit status is 0 if any line is selected, 1 otherwise; if any error occurs and -q is not given, the exit status is 2.'",
+    errs: Object.freeze([2]), errs_cite: "the same --help sentence: 2 = an error occurred (row 545, law 7i)",
     admits: "grep [admitted flags] <pattern> [paths inside the snapshot]; -r only over the snapshot; never -R (it follows symlinks out of it); exact long names only (an abbreviation is not in the table)",
     short_bool: "nEFivcwxohHlLrsqP", short_val: "ABCme",
     long_bool: Object.freeze(["--line-number", "--extended-regexp", "--fixed-strings", "--ignore-case", "--invert-match", "--count", "--word-regexp", "--line-regexp", "--only-matching", "--no-filename", "--with-filename", "--files-with-matches", "--files-without-match", "--recursive", "--no-messages", "--quiet", "--perl-regexp"]),
     long_val: Object.freeze(["--after-context", "--before-context", "--context", "--max-count", "--regexp"]),
     verbs: Object.freeze([]), flags: null, refused: Object.freeze(["-f", "--file"]) }),
   Object.freeze({ tool: "sed", rows: "363 (1) · 364 (2) · 365 (1)", usage: "--help", exit_max: 1, exits_cite: "fork 0353 (a), ruled row 471 (1)",
+    errs: Object.freeze([1]), errs_cite: "a print-only sed has no 'no match' status: its 1 is a failure (row 545, law 7i); its 2 (an input file not opened, measured 6 Oct on GNU sed 4.8) already lies outside the ruled 0..1 and is VERB-CRASHED by law 7a",
     admits: "sed -n '<script>' [paths]; the script ONLY line-address print commands (Np, N,Mp) joined by ';' inside the one argument",
     verbs: Object.freeze([]), flags: Object.freeze(["-n"]), refused: Object.freeze(["-i", "-e", "-f"]) }),
   Object.freeze({ tool: "head", rows: "363 (1) · 365 (1)", usage: "--help", exit_max: 1, exits_cite: "fork 0353 (a), ruled row 471 (1)", admits: "head [admitted flags] [paths]",
+    errs: Object.freeze([1]), errs_cite: "head has no 'no match' status: its 1 is a failure, e.g. a missing file (row 545, law 7i)",
     short_bool: "qv", short_val: "nc", long_bool: Object.freeze(["--quiet", "--verbose"]), long_val: Object.freeze(["--lines", "--bytes"]), num_flag: true,
     verbs: Object.freeze([]), flags: null, refused: Object.freeze([]) }),
   Object.freeze({ tool: "tail", rows: "363 (1) · 365 (1)", usage: "--help", exit_max: 1, exits_cite: "fork 0353 (a), ruled row 471 (1)", admits: "tail [admitted flags] [paths]; never -f / -F",
+    errs: Object.freeze([1]), errs_cite: "tail has no 'no match' status: its 1 is a failure, e.g. a missing file (row 545, law 7i)",
     short_bool: "qv", short_val: "nc", long_bool: Object.freeze(["--quiet", "--verbose"]), long_val: Object.freeze(["--lines", "--bytes"]), num_flag: true,
     verbs: Object.freeze([]), flags: null, refused: Object.freeze(["-f", "-F", "--follow"]) }),
   Object.freeze({ tool: "wc", rows: "363 (1) · 365 (1)", usage: "--help", exit_max: 1, exits_cite: "fork 0353 (a), ruled row 471 (1)", admits: "wc [admitted flags] [paths]",
+    errs: Object.freeze([1]), errs_cite: "wc has no 'no match' status: its 1 is a failure, e.g. a missing file (row 545, law 7i)",
     short_bool: "lcwmL", short_val: "", long_bool: Object.freeze(["--lines", "--bytes", "--words", "--chars", "--max-line-length"]), long_val: Object.freeze([]),
     verbs: Object.freeze([]), flags: null, refused: Object.freeze(["--files0-from"]) }),
 ]);
@@ -357,13 +389,18 @@ function parseFlags(row, args) {
   return { ok: true, operands, patternGiven };
 }
 function pathOperands(words, cwdRel) {
+  const rels = [];
   for (const w of words) {
     if (w.text === "-") continue;
     const m = treePath(w.text, cwdRel);
     if (!m.ok) return { ok: false, reason: m.reason, detail: w.text.length > 120 ? `${w.text.slice(0, 120)}…` : w.text };
+    rels.push(m.rel);
   }
-  return { ok: true };
+  return { ok: true, rels };                                 // the tree paths the segment opens (law 7i's one exception reads them)
 }
+// law 7h: the text verbs ride Git for Windows' MSYS runtime; a word of theirs opening with two backslashes is altered even quoted
+const TEXT_VERBS = new Set(["grep", "sed", "head", "tail", "wc"]);
+export const argvUnfaithful = (tool, words) => (TEXT_VERBS.has(tool) ? words.find(w => w.text.startsWith("\\\\")) || null : null);
 const SED_SCRIPT = /^\d+(,\d+)?p(;\d+(,\d+)?p)*$/;
 const NODE_SCRIPT = /^scripts\/[A-Za-z0-9_.-]+\.mjs$/;
 // ADAPTED from adjudicate.mjs checkSegment(): one segment on one axis → { ok, spec:{ tool, argv, cwd }, cwdAfter } or a refusal
@@ -416,7 +453,7 @@ export function checkSegment(words, cwdRel, inPipe, axis) {
     for (const w of args.slice(2)) if (w.text.startsWith("-") && w.text !== "-") return R("FLAG-NOT-IN-TABLE", `sed ${w.text}`);
     const p = pathOperands(args.slice(2), cwdRel);
     if (!p.ok) return R(p.reason, p.detail);
-    return { ok: true, spec: { tool: "sed", argv: args.map(w => w.text), cwd: cwdRel } };
+    return { ok: true, spec: { tool: "sed", argv: args.map(w => w.text), cwd: cwdRel, paths: p.rels } };
   }
   // grep · head · tail · wc
   const row = TABLE[tool];
@@ -426,7 +463,7 @@ export function checkSegment(words, cwdRel, inPipe, axis) {
   if (tool === "grep" && !f.patternGiven) { if (!ops.length) return R("GREP-NO-PATTERN", "grep with no pattern"); ops = ops.slice(1); }
   const p = pathOperands(ops, cwdRel);
   if (!p.ok) return R(p.reason, p.detail);
-  return { ok: true, spec: { tool, argv: args.map(w => w.text), cwd: cwdRel } };
+  return { ok: true, spec: { tool, argv: args.map(w => w.text), cwd: cwdRel, paths: p.rels } };
 }
 // the whole predicate on one axis → { class: RUNNABLE, plan } or { class: UNRUNNABLE, why, reason, detail }
 export function classify(cmd, axis) {
@@ -437,6 +474,8 @@ export function classify(cmd, axis) {
   for (const pipeline of t.chain) {
     const specs = [];
     for (const segment of pipeline) {
+      const u = argvUnfaithful(segment[0].text, segment.slice(1));
+      if (u) return { class: "UNRUNNABLE", why: "ARGV-UNFAITHFUL", reason: "ARGV-UNFAITHFUL", detail: `${segment[0].text} ${u.text.length > 80 ? `${u.text.slice(0, 80)}…` : u.text}` };
       const c = checkSegment(segment, cwd, pipeline.length > 1, axis);
       if (!c.ok) return { class: "UNRUNNABLE", why: "VERB-OUTSIDE-AXIS", reason: c.reason, detail: c.detail, axis };
       specs.push(c.spec);
@@ -519,23 +558,50 @@ export function crashOf(tool, r) {
 // THE ONE SPAWN of a predicate segment. `SPAWNS` counts every call and keeps the last options, so the selftest can
 // prove shell:false and windowsHide:true on the path actually taken.
 export const SPAWNS = { count: 0, last: null };
+// law 7h: one word → the form the Windows command line must carry for its program to parse back exactly that word (the
+// CommandLineToArgvW / MSYS rule: a quote is escaped, the backslashes before a quote or before the closing quote doubled)
+export const winQuote = a => `"${String(a).replace(/(\\*)"/g, (m, b) => `${b}${b}\\"`).replace(/(\\+)$/, "$1$1")}"`;
+// → { argv, extra } for spawnSync(bin, argv, { ...opts, ...extra }): on win32 every word quoted by THIS file, node quoting
+// nothing (windowsVerbatimArguments), the program path quoted as argv0; elsewhere the words as they are
+export function spawnForm(bin, args, win = WIN) {
+  return win ? { argv: args.map(winQuote), extra: { windowsVerbatimArguments: true, argv0: winQuote(bin) } } : { argv: args, extra: {} };
+}
 function spawnSegment(bin, args, o) {
   SPAWNS.count++;
-  const opts = { cwd: o.cwd, input: o.input, timeout: o.timeout, maxBuffer: o.cap, shell: false, env: o.env, windowsHide: true, killSignal: "SIGKILL" };
-  SPAWNS.last = { bin, args, shell: opts.shell, windowsHide: opts.windowsHide, cwd: opts.cwd };
-  return spawnSync(bin, args, opts);
+  const f = spawnForm(bin, args);
+  const opts = { cwd: o.cwd, input: o.input, timeout: o.timeout, maxBuffer: o.cap, shell: false, env: o.env, windowsHide: true, killSignal: "SIGKILL", ...f.extra };
+  SPAWNS.last = { bin, args, argv: f.argv, shell: opts.shell, windowsHide: opts.windowsHide, verbatim: Boolean(opts.windowsVerbatimArguments), cwd: opts.cwd };
+  return spawnSync(bin, f.argv, opts);
 }
+// law 7i: → the error a segment's status is, or null (a status in its verb's errs, outside law 7a's crash)
+export function errorOf(tool, r) {
+  const errs = TABLE[tool] && TABLE[tool].errs;
+  if (!errs || !errs.includes(r.status)) return null;
+  const e = Buffer.isBuffer(r.stderr) ? r.stderr.toString("utf8") : String(r.stderr || "");
+  return { verb: tool, status: r.status, stderr: normalize(e).trim().slice(0, 300) };
+}
+// the one exception: every tree path of the segment that is absent in `tree` is declared absent, and there is at least one
+export function declaredAbsence(spec, tree, declared) {
+  if (!declared || !declared.size || !Array.isArray(spec.paths)) return null;
+  const gone = spec.paths.filter(p => p && !fs.existsSync(joinRel(tree, p)));
+  return gone.length && gone.every(p => declared.has(p)) ? gone : null;
+}
+export const nodeLabel = k => `probe-seg-${k}`;
 const ENV_KEEP = ["PATH", "Path", "PATHEXT", "SYSTEMROOT", "SystemRoot", "WINDIR", "COMSPEC", "TEMP", "TMP", "TMPDIR", "HOME", "USERPROFILE", "LANG", "LC_ALL", "LC_CTYPE"];
 function hostEnv() { const env = {}; for (const k of ENV_KEEP) if (process.env[k] !== undefined) env[k] = process.env[k]; return env; }
 const joinRel = (base, rel) => (rel ? path.join(base, ...rel.split("/")) : base);
-// ADAPTED from adjudicate.mjs runReceipt(): one plan inside one tree → { exit, stdout, seconds, timed_out, capped, crashed }
-// A segment that ends outside its verb's declared exit set ends the plan there: crashed names it, exit keeps its raw status.
+// ADAPTED from adjudicate.mjs runReceipt(): one plan inside one tree → { exit, stdout, seconds, timed_out, capped, crashed,
+// errored, declared_absent, node_segs }. A segment that ends outside its verb's declared exit set ends the plan there:
+// crashed names it, exit keeps its raw status. Law 7i: a segment ending in its verb's ERROR status ends it too, wherever it
+// sits in its pipeline (errored names it), unless o.declared (a Set of tree paths) explains it — then declared_absent
+// names the paths and the plan goes on. Law 9: each node segment runs labelled (nodeLabel(k)), and node_segs lists them.
 export function runPlan(plan, tree, env, o) {
   const timeout = o.timeout || SEG_TIMEOUT_MS, cap = o.cap || OUTPUT_CAP, verbs = o.verbs;
   const real = a => (a === TREE ? tree : a.startsWith(`${TREE}/`) ? joinRel(tree, a.slice(TREE.length + 1)) : a);
   const genv = { ...env, GIT_CEILING_DIRECTORIES: path.dirname(path.resolve(tree)), GIT_PAGER: "cat" };
   const t0 = process.hrtime.bigint();
-  let out = Buffer.alloc(0), exit = 0, cwd = "", timedOut = false, capped = false, crashed = null;
+  let out = Buffer.alloc(0), exit = 0, cwd = "", timedOut = false, capped = false, crashed = null, errored = null, declaredAbsent = null, k = 0;
+  const nodeSegs = [];
   outer: for (const pipeline of plan) {
     if (pipeline.length === 1 && pipeline[0].tool === "cd") {
       let isDir = false; try { isDir = fs.statSync(joinRel(tree, pipeline[0].cwd)).isDirectory(); } catch {}
@@ -544,12 +610,20 @@ export function runPlan(plan, tree, env, o) {
     }
     let input = Buffer.alloc(0), last = null;
     for (const s of pipeline) {
-      const bin = verbs[s.tool];
-      const r = spawnSegment(bin, s.argv.map(real), { cwd: joinRel(tree, cwd), input, timeout, cap, env: genv });
+      const bin = verbs[s.tool], seg = k++;
+      const senv = s.tool === "node" ? { ...genv, ARSENAL_AUDIT_LABEL: nodeLabel(seg) } : genv;
+      const r = spawnSegment(bin, s.argv.map(real), { cwd: joinRel(tree, cwd), input, timeout, cap, env: senv });
+      if (s.tool === "node") nodeSegs.push({ seg, label: nodeLabel(seg), script: String(s.argv[0]).replace(`${TREE}/`, ""), status: r.status ?? null });
       if (r.error && r.error.code === "ETIMEDOUT") { timedOut = true; out = Buffer.concat([out, r.stdout || Buffer.alloc(0)]); exit = null; break outer; }
       if (r.error && r.error.code === "ENOBUFS") { capped = true; out = Buffer.concat([out, r.stdout || Buffer.alloc(0)]); exit = null; break outer; }
       crashed = crashOf(s.tool, r);
       if (crashed) { out = Buffer.concat([out, r.stdout || Buffer.alloc(0)]); exit = crashed.status; break outer; }
+      const er = errorOf(s.tool, r);
+      if (er) {
+        const gone = declaredAbsence(s, tree, o.declared);
+        if (!gone) { errored = { ...er, segment: seg }; out = Buffer.concat([out, r.stdout || Buffer.alloc(0)]); exit = er.status; break outer; }
+        declaredAbsent = [...new Set([...(declaredAbsent || []), ...gone])];
+      }
       last = { status: r.status, stdout: r.stdout || Buffer.alloc(0) };
       input = last.stdout;
     }
@@ -559,8 +633,25 @@ export function runPlan(plan, tree, env, o) {
     if (exit !== 0) break;           // `&&`: a failed link ends the chain, as the shell would
   }
   const seconds = Number((Number(process.hrtime.bigint() - t0) / 1e9).toFixed(3));
-  return { exit, stdout: normalize(out.toString("utf8")), bytes: out.length, seconds, timed_out: timedOut, capped, crashed };
+  return { exit, stdout: normalize(out.toString("utf8")), bytes: out.length, seconds, timed_out: timedOut, capped, crashed, errored, declared_absent: declaredAbsent, node_segs: nodeSegs };
 }
+// law 9: the node segments of one traced collar run → [{ seg, script, status, reads, code_reads, writes, spawns, silent }].
+// MEASURED 6 Oct 2026 on the real preload (witness_v33 member 8 found it): Node's module loader shows as reads — the entry
+// script and every static or dynamic import, each a readFileSync + openSync of a .mjs file — so a script that does nothing
+// "read" its own code. A read of a code file (.mjs / .cjs / .js) is therefore counted apart as code_reads (distinct paths),
+// and `reads` counts every other file. The edge, named: a script that reads code files as DATA and touches nothing else
+// reads SILENT-SUCCESS.
+const CODE_FILE = /\.(mjs|cjs|js)$/i;
+export function nodeTrace(nodeSegs, traceRows) {
+  return nodeSegs.map(n => {
+    const rows = traceRows.filter(x => x && x.organ === n.label);
+    const c = ev => rows.filter(x => x.ev === ev).length;
+    const rd = rows.filter(x => x.ev === "read"), code = rd.filter(x => CODE_FILE.test(String(x.path || "")));
+    const t = { seg: n.seg, script: n.script, status: n.status, reads: rd.length - code.length, code_reads: new Set(code.map(x => String(x.path))).size, writes: c("write"), spawns: c("spawn") };
+    return { ...t, silent: t.status === 0 && t.reads + t.writes + t.spawns === 0 };
+  });
+}
+const readTrace = f => { try { return fs.readFileSync(f, "utf8").split(/\r?\n/).filter(l => l.trim()).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return null; } };
 
 // ---------------------------------------------------------------------------- 6 · THE AXES
 function walkFiles(dir, base = dir, acc = []) {
@@ -623,12 +714,14 @@ export function retryLocked(step, fn, named, { tries = RETRY_TRIES, baseMs = RET
   }
 }
 // one run on one axis → the run's observed fields (held is set by the caller)
-async function runAxis(axis, plan, ctx, { remove = [], check = [] } = {}) {
-  if (axis === "host") { const ab = absentReads(ctx.root, check); return ab.length ? { ...NOT_RUN, read_absent: ab } : { ...runPlan(plan, ctx.root, hostEnv(), ctx) }; }
+async function runAxis(axis, plan, ctx, { remove = [], check = [], declared = null } = {}) {
+  const o = { verbs: ctx.verbs, timeout: ctx.timeout, cap: ctx.cap, declared };
+  if (axis === "host") { const ab = absentReads(ctx.root, check); return ab.length ? { ...NOT_RUN, read_absent: ab } : { ...runPlan(plan, ctx.root, hostEnv(), o) }; }
   const collar = await collarOf(ctx);
   const retries = [], ro = ctx.deps.retryBaseMs ? { baseMs: ctx.deps.retryBaseMs } : {};
+  const hasNode = plan.some(pl => pl.some(s => s.tool === "node"));      // law 9: the trace only where a node segment runs
   let sb;
-  try { sb = retryLocked("buildSandbox", () => collar.buildSandbox({ trace: false }), retries, ro); }
+  try { sb = retryLocked("buildSandbox", () => collar.buildSandbox({ trace: hasNode }), retries, ro); }
   catch (e) { if (e instanceof CollarError) throw e; throw new CollarError(`buildSandbox threw: ${String(e && e.message || e).slice(0, 200)}`); }
   const stateDir = path.join(sb.root, STATE_REL);
   try {
@@ -642,8 +735,9 @@ async function runAxis(axis, plan, ctx, { remove = [], check = [] } = {}) {
     for (const r of remove) { const m = treePath(r, ""); if (m.ok && m.rel) fs.rmSync(joinRel(sb.root, m.rel), { recursive: true, force: true }); }
     if (axis === "fixture") { setMode(stateDir, 0o444); extra.state_sha256 = hashTree(stateDir); }
     const ab = absentReads(sb.root, check);
-    const r = ab.length ? { ...NOT_RUN, read_absent: ab } : runPlan(plan, sb.root, { ...sb.env }, ctx);
+    const r = ab.length ? { ...NOT_RUN, read_absent: ab } : runPlan(plan, sb.root, { ...sb.env }, o);
     if (axis === "fixture") { const after = hashTree(stateDir); extra.fixture_dirtied = after !== extra.state_sha256; }
+    if (hasNode && !ab.length) { const rows = sb.trace ? readTrace(sb.trace) : null; extra.node_trace = rows ? nodeTrace(r.node_segs || [], rows) : null; if (!rows) extra.node_trace_why = "the collar kept no trace"; }
     return { ...r, ...extra };
   } finally {
     setMode(stateDir, 0o644);
@@ -668,24 +762,39 @@ export function staticCheck(p, verbs) {
   const plans = {};
   for (const axis of new Set(LANES[p.lane])) {
     const c = classify(p.predicate_cmd, axis);
-    if (c.class !== "RUNNABLE") return { quarantine: Q(c.why, c.reason, c.detail, c.why === "UNPARSABLE" ? null : axis) };
+    if (c.class !== "RUNNABLE") return { quarantine: Q(c.why, c.reason, c.detail, c.why === "UNPARSABLE" || c.why === "ARGV-UNFAITHFUL" ? null : axis) };
     plans[axis] = c.plan;
   }
   for (const plan of Object.values(plans)) for (const pl of plan) for (const s of pl) if (s.tool !== "cd" && !verbs[s.tool]) return { quarantine: Q("VERB-NOT-FOUND", s.tool, `${s.tool} is not on PATH nor in the usr/bin beside git`) };
   return { plans };
 }
-const stubRun = (axis, cmd, why) => ({ axis, cmd, exit: null, stdout_sha256: null, stdout_head: "", bytes: 0, seconds: 0, timed_out: false, capped: false, crashed: null, read_absent: null, tree_written: null, other_writer: null, retries: null, held: null, skipped: why });
+const stubRun = (axis, cmd, why) => ({ axis, cmd, exit: null, stdout_sha256: null, stdout_head: "", bytes: 0, seconds: 0, timed_out: false, capped: false, crashed: null, errored: null, read_absent: null, tree_written: null, other_writer: null, retries: null, held: null, skipped: why });
 function shapeRun(axis, cmd, r, expect) {
-  const incomplete = r.timed_out || r.capped || Boolean(r.crashed) || Boolean(r.read_absent);
+  const incomplete = r.timed_out || r.capped || Boolean(r.crashed) || Boolean(r.errored) || Boolean(r.read_absent);
   const o = { axis, cmd, exit: r.exit, stdout_sha256: sha256(Buffer.from(r.stdout, "utf8")), stdout_head: Buffer.from(r.stdout, "utf8").subarray(0, HEAD_BYTES).toString("utf8"),
-    bytes: r.bytes, seconds: r.seconds, timed_out: r.timed_out, capped: r.capped, crashed: r.crashed || null, read_absent: r.read_absent || null, tree_written: null,
+    bytes: r.bytes, seconds: r.seconds, timed_out: r.timed_out, capped: r.capped, crashed: r.crashed || null, errored: r.errored || null, read_absent: r.read_absent || null, tree_written: null,
     other_writer: null, retries: r.retries && r.retries.length ? r.retries : null, held: incomplete ? null : expectHolds(expect, r) };
+  if (r.declared_absent && r.declared_absent.length) o.declared_absent = r.declared_absent;   // law 7i's one exception, named
   if ("fixture_dirtied" in r) { o.state_sha256 = r.state_sha256; o.fixture_dirtied = r.fixture_dirtied; }
+  if ("node_trace" in r) {                                                                     // law 9
+    o.node_trace = r.node_trace;
+    o.silent_success = r.node_trace ? r.node_trace.some(n => n.silent) : null;
+    if (r.node_trace_why) o.node_trace_why = r.node_trace_why;
+  }
   return o;
 }
 // why a run is incomplete (never held, never not-held), or null
 export const incompleteWhy = r => (r.timed_out ? "timed out" : r.capped ? "hit the output cap" : r.crashed ? `VERB-CRASHED ${r.crashed.verb} ${r.crashed.why}`
+  : r.errored ? `VERB-ERRORED ${r.errored.verb} exit ${r.errored.status}${r.errored.stderr ? `: ${r.errored.stderr.split(NL)[0].slice(0, 160)}` : ""}`
   : r.read_absent ? `READ-ABSENT ${r.read_absent.join(", ")}` : r.skipped ? `NOT-RUN ${r.skipped}` : null);
+// law 9 · the receipt's reading: the collar runs whose node segment exited 0 touching nothing, or null when none ran traced
+export function silentOf(runs) {
+  const traced = runs.filter(r => r && Array.isArray(r.node_trace));
+  if (!traced.length) return null;
+  const hit = traced.filter(r => r.silent_success);
+  return hit.length ? { reading: "SILENT-SUCCESS", why: `exit 0 with 0 reads, 0 writes, 0 spawns on ${hit.map(r => r.axis).join(" + ")}: ${[...new Set(hit.flatMap(r => r.node_trace.filter(n => n.silent).map(n => n.script)))].join(", ")}` }
+    : { reading: "NOT-SILENT", why: `every traced node segment read, wrote or spawned, or did not exit 0 (${traced.length} run(s))` };
+}
 export function verdictOf(runs, quarantine) {
   if (quarantine) return { verdict: "UNRUNNABLE", why: null };
   const inc = runs.map((r, i) => { const w = incompleteWhy(r); return w ? `run ${i + 1} (${r.axis}) ${w}` : null; }).filter(Boolean);
@@ -808,7 +917,7 @@ export async function runProbe(p, ctx) {
       const axis = axes[i];
       if (axis === "host" && collarCrash) { runs[i] = stubRun(axis, cmd, `COLLAR-CRASHED — the plan crashed on ${collarCrash.axis} (${collarCrash.verb} ${collarCrash.why}); a crashed verb writes into its cwd, so it is never run on --root`); continue; }
       try {
-        const w = await watched(axis, sc.plans[axis], ctx, { check });
+        const w = await watched(axis, sc.plans[axis], ctx, { check, declared: declaredAbsent });
         const run = shapeRun(axis, cmd, w.r, p.expect);
         runs[i] = run;
         if (w.other.length) run.other_writer = w.other;
@@ -831,9 +940,10 @@ export async function runProbe(p, ctx) {
     if (!reads.length) A = { reading: "NOT-APPLICABLE", why: "the probe names no reads[]" };
     else {
       try {
-        const w = await watched(axis, sc.plans[axis], ctx, { remove: reads }), r = w.r, ow = w.other.length ? { other_writer: w.other } : {};
+        // law 7i: the ablation removes reads[] ON PURPOSE, so an error those removals explain is declared, never VERB-ERRORED
+        const w = await watched(axis, sc.plans[axis], ctx, { remove: reads, declared: new Set([...reads, ...declaredAbsent]) }), r = w.r, ow = w.other.length ? { other_writer: w.other } : {};
         if (w.written.length) { quarantine = Q("TREE-WRITTEN", null, w.written.join(", "), axis); v = verdictOf(runs, quarantine); A = { reading: "NOT-APPLICABLE", why: `the ablation run on ${axis} wrote into --root: ${w.written.join(", ")}`, axis, removed: reads, ...ow }; }
-        else if (r.timed_out || r.capped || r.crashed) A = { reading: "NOT-APPLICABLE", why: `the ablation run on ${axis} was incomplete${r.crashed ? ` (VERB-CRASHED ${r.crashed.verb} ${r.crashed.why})` : ""}`, axis, removed: reads, ...ow };
+        else if (r.timed_out || r.capped || r.crashed || r.errored) A = { reading: "NOT-APPLICABLE", why: `the ablation run on ${axis} was incomplete${r.crashed || r.errored ? ` (${incompleteWhy(r)})` : ""}`, axis, removed: reads, ...ow };
         else {
           const held = expectHolds(p.expect, r), was = v.verdict === "CONFIRMED";
           A = held === was ? { reading: "VACUOUS", why: `held stayed ${held} on ${axis} with every reads[] path removed`, axis, removed: reads, ...ow }
@@ -847,7 +957,7 @@ export async function runProbe(p, ctx) {
     }
   }
   return { probe_id: p && typeof p.id === "string" ? p.id : null, tree_sha: ctx.tree_sha, dirty_reads, runs, verdict: v.verdict, ...(v.why ? { verdict_why: v.why } : {}),
-    lenses: { A, B: lensB(p && p.source, v.verdict), C: lensC(runs) }, quarantine, at };
+    lenses: { A, B: lensB(p && p.source, v.verdict), C: lensC(runs) }, silent: silentOf(runs), quarantine, at };
 }
 
 // ---------------------------------------------------------------------------- 7b · VACUITY (law 8 · Stage 3.2, forks rows 523 / 524)
@@ -951,7 +1061,8 @@ async function vacuityInCollar(p, plan, axis, ctx, cites, was, onArmed) {
     }
     const declaredAbsent = new Set(p.expect && Array.isArray(p.expect.reads_absent) ? p.expect.reads_absent.map(readsPath) : []);
     const check = [...new Set(p.reads.map(readsPath))].filter(r => !declaredAbsent.has(r));
-    const once = () => { const ab = absentReads(sb.root, check); return ab.length ? { ...NOT_RUN, read_absent: ab } : runPlan(plan, sb.root, { ...sb.env }, ctx); };
+    const po = { verbs: ctx.verbs, timeout: ctx.timeout, cap: ctx.cap, declared: declaredAbsent };   // law 7i on every mutant run too
+    const once = () => { const ab = absentReads(sb.root, check); return ab.length ? { ...NOT_RUN, read_absent: ab } : runPlan(plan, sb.root, { ...sb.env }, po); };
     const b = once(), bw = incompleteWhy(b);
     const baseline = { exit: b.exit, held: bw ? null : expectHolds(p.expect, b), stdout_sha256: sha256(Buffer.from(b.stdout, "utf8")), seconds: b.seconds, ...(bw ? { incomplete: bw } : {}) };
     if (bw) return { reading: "INCOMPLETE", why: `the unmutated baseline run was incomplete: ${bw} — nothing mutated`, baseline, ...extra };
@@ -1102,11 +1213,15 @@ export function face(receipts, { stale = null } = {}) {
   const fmt = m => [...m].sort((x, y) => y[1] - x[1] || (x[0] < y[0] ? -1 : 1)).map(([k, n]) => `${k} ${n}`).join(" · ") || "none";
   const nq = [...by.values()].reduce((s, n) => s + n, 0);
   const ow = receipts.filter(r => otherWriters(r).length).length;
+  const er = receipts.filter(r => (r.runs || []).some(x => x && x.errored)).length;
+  const si = receipts.filter(r => r.silent && r.silent.reading === "SILENT-SUCCESS").length;
   return [
     `QUARANTINE ${nq} of ${receipts.length}${nq ? ` · by why: ${fmt(by)}` : ""}`,
     `VERDICTS ${fmt(v)}`,
     `LENSES A: ${fmt(a)} | B: ${fmt(b)} | C: ${fmt(c)}`,
     ...(ow ? [`OTHER-WRITER ${ow} of ${receipts.length} · another writer changed --root during a run, named on the run and graded (law 7f, rows 494 / 495)`] : []),
+    ...(er ? [`VERB-ERRORED ${er} of ${receipts.length} · a run ended in its verb's error status, so it read nothing it could grade (law 7i, row 545)`] : []),
+    ...(si ? [`SILENT-SUCCESS ${si} of ${receipts.length} · a node segment exited 0 with 0 reads, 0 writes, 0 spawns (law 9, row 545)`] : []),
   ];
 }
 // law 7f: every other_writer a receipt names (its runs', and lens A's ablation run's)
@@ -1273,14 +1388,17 @@ async function selftest() {
     const makeCollar = (root, o = {}) => {
       const log = [];
       return { log, ROOT: root,
-        buildSandbox() {
+        buildSandbox(bo = {}) {
           if (o.leakTo) fs.writeFileSync(o.leakTo, "a collar build that wrote outside its own temp dir\n");
           if (o.during) o.during();                                    // another writer, acting while this collar axis runs
           if (o.lockFirst && !log.some(e => e.ev === "locked")) { log.push({ ev: "locked" }); const e = new Error(`${o.lockFirst}, The process cannot access the file because another process has locked a portion of the file.`); e.code = o.lockFirst; throw e; }
           const sb = fs.mkdtempSync(path.join(T, "sb-"));
           for (const rel of String(git(root, "ls-files", "-z").stdout).split("\0").filter(Boolean)) { const src = path.join(root, rel); if (!fs.existsSync(src)) continue; fs.mkdirSync(path.dirname(path.join(sb, rel)), { recursive: true }); fs.copyFileSync(src, path.join(sb, rel)); }
-          log.push({ ev: "build", root: sb });
-          return { root: sb, env: { ...hostEnv(), FAKE_COLLAR: "collared" } };
+          // law 9: like the real collar, a trace file only when asked; the planted node scripts write the preload's rows themselves
+          const trace = bo.trace ? path.join(sb, ".trace.jsonl") : "";
+          if (trace) fs.writeFileSync(trace, "");
+          log.push({ ev: "build", root: sb, ...(trace ? { trace: true } : {}) });
+          return { root: sb, env: { ...hostEnv(), FAKE_COLLAR: "collared", ...(trace ? { ARSENAL_AUDIT_TRACE: trace } : {}) }, ...(trace ? { trace } : {}) };
         },
         assertArmed(sb) { if (o.disarmed) { log.push({ ev: "refused", root: sb.root }); throw new Error("sandbox: REFUSING — the collar did not load (no heartbeat)"); } log.push({ ev: "armed", root: sb.root }); return true; },
         destroy(sb) { fs.rmSync(sb.root, { recursive: true, force: true }); log.push({ ev: "destroy", root: sb.root }); },
@@ -1409,8 +1527,10 @@ async function selftest() {
       });
     }
     await tc("L4 AXES DIFFER · the gitignored state is on host and fixture, absent on sandbox (tracked files only)", async () => {
+      // law 7i (row 545): grep's exit 2 on the absent file is no longer 'not held' — the sandbox run read nothing, VERB-ERRORED
       const { r } = await run1(P("st", "grep -c STATE_MARK dressing-room/state/bus.json", { exit: 0 }, "host"));
-      return r.runs.map(x => x.held).join(",") === "true,false,true" || why(r.runs.map(x => [x.axis, x.exit]));
+      const { r: r2 } = await run1(P("st2", "grep -r -l STATE_MARK .", { exit: 0 }, "host"));
+      return r.runs.map(x => x.held).join(",") === "true,,true" && r.runs[1].errored && r.runs[1].errored.status === 2 && r2.runs.map(x => x.held).join(",") === "true,false,true" || why({ r: r.runs.map(x => [x.axis, x.exit, x.errored]), r2: r2.runs.map(x => [x.axis, x.exit]) });
     });
     await tc("L4 FIXTURE · the copy is hashed before and after: a node run that births a file there is fixture_dirtied; a read-only run is not", async () => {
       const { r } = await run1(P("dirt", "node scripts/dirty.mjs", { stdout_includes: ["wrote"] }, "FIXTURE"));
@@ -1443,7 +1563,8 @@ async function selftest() {
     // ================= LAW 5 · VERDICTS, THE REGISTER, STALE
     await tc("VERDICT CONFIRMED · all three held", async () => { const { r } = await run1(P("vc", "grep -c three docs/notes.md", { exit: 0, stdout_includes: ["1"] })); return r.verdict === "CONFIRMED" || why(r); });
     await tc("VERDICT REFUTED · all three not held", async () => { const { r } = await run1(P("vr", "grep -c three docs/notes.md", { exit: 1 })); return r.verdict === "REFUTED" || why(r); });
-    await tc("VERDICT NON-DETERMINISTIC · mixed runs are named", async () => { const { r } = await run1(P("vn", "grep -c STATE_MARK dressing-room/state/bus.json", { exit: 0 })); return r.verdict === "NON-DETERMINISTIC" && /^mixed: host=held sandbox=not fixture=held/.test(r.verdict_why) || why(r); });
+    // law 7i (row 545): the mixed plant no longer rides grep's exit 2 on a file absent on the sandbox — a recursive grep says 'no match' there
+    await tc("VERDICT NON-DETERMINISTIC · mixed runs are named", async () => { const { r } = await run1(P("vn", "grep -r -l STATE_MARK .", { exit: 0 })); return r.verdict === "NON-DETERMINISTIC" && /^mixed: host=held sandbox=not fixture=held/.test(r.verdict_why) || why(r); });
     await tc("VERDICT UNRUNNABLE · the register row carries {why, runnable_if} (planted in every refusal case above)", async () => { const { r } = await run1(P("vu", null, null)); return r.verdict === "UNRUNNABLE" && r.quarantine.why === "UNAUTHORED" && typeof r.quarantine.runnable_if === "string" && r.quarantine.runnable_if.length > 0 || why(r); });
     await tc("VERDICT pure · verdictOf all-true / all-false / mixed / incomplete / quarantined", async () => {
       const h = b => ({ axis: "host", held: b, timed_out: false, capped: false });
@@ -1465,8 +1586,9 @@ async function selftest() {
       const { r } = await run1(P("rc", "node scripts/loud.mjs", { exit: 0 }, "sandbox", ["scripts/loud.mjs"]));
       const keys = Object.keys(r).sort().join(","), rk = Object.keys(r.runs[0]).sort().join(",");
       const full = "x".repeat(5000) + "\n";
-      return keys === "at,dirty_reads,lenses,probe_id,quarantine,runs,tree_sha,verdict" && r.tree_sha === HEAD1 && rk === "axis,bytes,capped,cmd,crashed,exit,held,other_writer,read_absent,retries,seconds,stdout_head,stdout_sha256,timed_out,tree_written"
-        && r.runs.every(x => x.crashed === null && x.read_absent === null && x.tree_written === null && x.other_writer === null && x.retries === null)
+      // row 545: the receipt gains `silent` (law 9); every run `errored` (law 7i); a run with a node segment its node_trace and silent_success
+      return keys === "at,dirty_reads,lenses,probe_id,quarantine,runs,silent,tree_sha,verdict" && r.tree_sha === HEAD1 && rk === "axis,bytes,capped,cmd,crashed,errored,exit,held,node_trace,other_writer,read_absent,retries,seconds,silent_success,stdout_head,stdout_sha256,timed_out,tree_written"
+        && r.runs.every(x => x.crashed === null && x.errored === null && x.read_absent === null && x.tree_written === null && x.other_writer === null && x.retries === null && Array.isArray(x.node_trace) && typeof x.silent_success === "boolean")
         && Buffer.byteLength(r.runs[0].stdout_head) === 2048 && r.runs[0].bytes === 5001 && r.runs[0].stdout_sha256 === sha256(Buffer.from(full)) && Object.keys(r.lenses).join(",") === "A,B,C" || why({ keys, rk });
     });
 
@@ -1487,8 +1609,10 @@ async function selftest() {
       lensB({ verdict_claimed: "CONFIRM", aj_final: "UPHELD" }, "REFUTED").reading === "ALREADY-FIXED" && lensB({ verdict_claimed: "CONFIRM" }, "CONFIRMED").reading === null
       && lensB({ verdict_claimed: "REFUTE" }, "REFUTED").reading === null && lensB({ verdict_claimed: "EXTEND", aj_final: "X" }, "REFUTED").aj === "X");
     await tc("LENS B · end to end: a planted CONFIRM claim the tree now refutes reads ALREADY-FIXED", async () => { const { r } = await run1(P("bf", "grep -c three docs/notes.md", { exit: 1 })); return r.lenses.B.reading === "ALREADY-FIXED" && r.lenses.B.seed === "CONFIRM" && r.lenses.B.now === "REFUTED" || why(r.lenses); });
-    await tc("LENS C HOST-ONLY · the gitignored state holds on host, not on the tracked-only sandbox", async () => { const { r } = await run1(P("ch", "grep -c STATE_MARK dressing-room/state/bus.json", { exit: 0 }, "host")); return r.lenses.C.split === "HOST-ONLY" || why(r.lenses.C); });
-    await tc("LENS C COLLAR-ONLY · a missing-file expectation holds on the sandbox only", async () => { const { r } = await run1(P("cc", "wc -l dressing-room/state/bus.json", { exit: 1 }, "host")); return r.lenses.C.split === "COLLAR-ONLY" || why(r.lenses.C); });
+    // law 7i (row 545): neither split rides a verb's error status any more — HOST-ONLY by a recursive grep's 'no match' on the sandbox,
+    // COLLAR-ONLY by the one sanctioned missing-file expectation, the absence DECLARED in reads_absent
+    await tc("LENS C HOST-ONLY · the gitignored state holds on host, not on the tracked-only sandbox", async () => { const { r } = await run1(P("ch", "grep -r -l STATE_MARK .", { exit: 0 }, "host")); return r.lenses.C.split === "HOST-ONLY" || why(r.lenses.C); });
+    await tc("LENS C COLLAR-ONLY · a missing-file expectation holds on the sandbox only", async () => { const { r } = await run1(P("cc", "wc -l dressing-room/state/bus.json", { exit: 1, reads_absent: ["dressing-room/state/bus.json"] }, "host", ["dressing-room/state/bus.json"])); return r.lenses.C.split === "COLLAR-ONLY" || why(r.lenses.C); });
     await tc("LENS C AGREE · host and collar agree; a lane with no host run names no split", async () => {
       const { r } = await run1(P("ca", "wc -l docs/notes.md", { exit: 0 }, "host")); const { r: r2 } = await run1(P("cn", "wc -l docs/notes.md", { exit: 0 }, "sandbox"));
       return r.lenses.C.split === "AGREE" && r2.lenses.C.split === null || why([r.lenses.C, r2.lenses.C]);
@@ -1611,9 +1735,10 @@ async function selftest() {
       } finally { rmW("grep.exe.stackdump"); }
     });
     await tc("L7e COLLAR FIRST · a host-lane plan that crashes on the collar (exit 200) spawns nothing on the host; one that does not crash (an in-set exit 1) IS run there and graded", async () => {
-      const v = { ...verbs, head: process.execPath };
+      // law 7i (row 545): head's 1 is its error status now, so the in-set non-crash exit is grep's 1 (no match), node standing in
+      const v = { ...verbs, head: process.execPath, grep: process.execPath };
       const n0 = SPAWNS.count; const { r } = await run1(P("ecrash", "head scripts/exit.mjs 200", { exit: 0 }, "host"), { verbs: v }); const n1 = SPAWNS.count;
-      const { r: r2 } = await run1(P("eok", "head scripts/exit.mjs 1", { exit: 1 }, "host"), { verbs: v }); const n2 = SPAWNS.count;
+      const { r: r2 } = await run1(P("eok", "grep scripts/exit.mjs 1", { exit: 1 }, "host"), { verbs: v }); const n2 = SPAWNS.count;
       return r.verdict === "NON-DETERMINISTIC" && n1 - n0 === 2 && r.runs[0].skipped && /COLLAR-CRASHED/.test(r.runs[0].skipped) && r.runs[1].crashed && r.runs[2].crashed && /run 1 \(host\) NOT-RUN COLLAR-CRASHED/.test(r.verdict_why)
         && r2.verdict === "CONFIRMED" && n2 - n1 === 3 && r2.runs[0].held === true || why({ spawned: [n1 - n0, n2 - n1], r: r.runs.map(x => [x.axis, x.skipped, x.crashed && x.crashed.status]), r2: r2.verdict });
     });
@@ -2021,6 +2146,112 @@ async function selftest() {
       const rows = [{ reading: "NOT-VACUOUS", verdict: "CONFIRMED", mutants_tried: 3, mutants_complete: 3, flips: [1, 2], lines_resting: 1 }, { reading: "VACUOUS", verdict: "CONFIRMED", mutants_tried: 2, mutants_complete: 1, flips: [], lines_resting: 0 }, { reading: "NOT-APPLICABLE", verdict: "UNRUNNABLE" }];
       const f = vacuityFace(rows);
       return f[0] === "VACUITY NOT-APPLICABLE 1 · NOT-VACUOUS 1 · VACUOUS 1 (of 3)" && f[1] === "BY VERDICT OF RECORD CONFIRMED NOT-VACUOUS 1 · CONFIRMED VACUOUS 1" && f[2] === "MUTANTS tried 5 · complete 4 · flips 2 · cited lines resting 1" || why(f);
+    });
+    // ================= LAW 7h · 7i · 9 · STAGE 3.3 (row 545) — its OWN fixture repo
+    const SREPO = path.join(T, "srepo"), NB = "dressing-room/state/never.jsonl";
+    w(path.join(SREPO, "docs", "f.txt"), "write(GSTATE)\nabc\n");
+    w(path.join(SREPO, "abc"), "a file in the cwd that an MSYS glob of [a-c]* would match\n");
+    w(path.join(SREPO, "scripts", "idle.mjs"), "// exits 0 having touched nothing\n");
+    w(path.join(SREPO, "scripts", "touch.mjs"), "import fs from 'node:fs';\nconst t = process.env.ARSENAL_AUDIT_TRACE;\nconst body = fs.readFileSync('docs/f.txt', 'utf8');\nif (t) fs.appendFileSync(t, JSON.stringify({ organ: process.env.ARSENAL_AUDIT_LABEL, ev: 'read', path: 'docs/f.txt' }) + '\\n');\nconsole.log(body.length);\n");
+    w(path.join(SREPO, "scripts", "touchw.mjs"), "import fs from 'node:fs';\nconst t = process.env.ARSENAL_AUDIT_TRACE;\nif (t) fs.appendFileSync(t, JSON.stringify({ organ: process.env.ARSENAL_AUDIT_LABEL, ev: 'write', path: 'docs/w.txt' }) + '\\n');\n");
+    w(path.join(SREPO, "scripts", "quit.mjs"), "process.exit(3);\n");
+    // the real preload's rows for a module load (measured 6 Oct: readFileSync + openSync of the entry .mjs), written by hand here
+    w(path.join(SREPO, "scripts", "loadonly.mjs"), "import fs from 'node:fs';\nimport path from 'node:path';\nconst t = process.env.ARSENAL_AUDIT_TRACE, me = path.resolve('scripts/loadonly.mjs').split(path.sep).join('/');\nif (t) for (const verb of ['readFileSync', 'openSync']) fs.appendFileSync(t, JSON.stringify({ organ: process.env.ARSENAL_AUDIT_LABEL, ev: 'read', verb, path: me }) + '\\n');\n");
+    w(path.join(SREPO, ".gitignore"), "dressing-room/state/\n");
+    git(SREPO, "init", "-q"); git(SREPO, "config", "core.autocrlf", "false"); git(SREPO, "add", "-A"); git(SREPO, "commit", "-q", "-m", "stage 3.3 fixture");
+    const srun = async p => { const collar = makeCollar(SREPO); const ctx = await makeCtx({ root: SREPO }, { sandbox: collar, verbs }); return { r: await runProbe(p, ctx), collar }; };
+    // an oracle written apart from winQuote: the CommandLineToArgvW rule (2n backslashes + quote = n and a delimiter; 2n+1 = n and a quote)
+    const argvParse = s => {
+      const out = []; let cur = "", inQ = false, any = false;
+      for (let i = 0; i < s.length;) {
+        if (s[i] === "\\") { let n = 0; while (s[i] === "\\") { n++; i++; } if (s[i] === '"') { cur += "\\".repeat(n >> 1); if (n & 1) { cur += '"'; i++; } } else cur += "\\".repeat(n); any = true; continue; }
+        if (s[i] === '"') { inQ = !inQ; any = true; i++; continue; }
+        if (!inQ && (s[i] === " " || s[i] === "\t")) { if (any) { out.push(cur); cur = ""; any = false; } i++; continue; }
+        cur += s[i]; any = true; i++;
+      }
+      if (any) out.push(cur);
+      return out;
+    };
+    const PLANT = ["plain", "two words", 'a"q', "write\\(GSTATE", "password\\s*[:=]", "[a-c]*", "x\\", "x\\\\", '\\"\\', "", "tab\there", "C:\\x\\y", "100%"];
+    await tc("V33-01 ARGV FIDELITY · winQuote: every planted word parses back byte-equal by the Windows rule (an oracle written apart), and spawnForm quotes only on win32", async () => {
+      const back = argvParse(PLANT.map(winQuote).join(" "));
+      const f = spawnForm("C:/x/grep.exe", ["a b", "c"], true), g = spawnForm("/usr/bin/grep", ["a b", "c"], false);
+      return back.length === PLANT.length && back.every((x, i) => x === PLANT[i]) && f.extra.windowsVerbatimArguments === true && f.extra.argv0 === '"C:/x/grep.exe"' && f.argv.join(" ") === '"a b" "c"'
+        && g.argv.join(" ") === "a b c" && Object.keys(g.extra).length === 0 || why({ back, f, g });
+    });
+    const PRINTF = verbs.grep ? path.join(path.dirname(verbs.grep), "printf.exe") : null;
+    if (WIN && PRINTF && fs.existsSync(PRINTF)) {
+      await tc("V33-02 ARGV FIDELITY · THE INSTRUMENT, both ways: the MSYS printf beside grep prints back every planted word byte-equal under spawnForm; node's own quoting loses \\( \\s and globs [a-c]* against the cwd", async () => {
+        const words = ["write\\(GSTATE", "password\\s*[:=]", "[a-c]*", 'a"q', "two words", "x\\", '\\"\\', "tab\there"], FMT = "%s\\0";
+        const back = r => { const s = (r.stdout || Buffer.alloc(0)).toString("utf8").split("\0"); s.pop(); return s; };
+        const f = spawnForm(PRINTF, [FMT, ...words]);
+        const law = back(spawnSync(PRINTF, f.argv, { cwd: SREPO, env: hostEnv(), windowsHide: true, ...f.extra }));
+        const today = back(spawnSync(PRINTF, [FMT, ...words], { cwd: SREPO, env: hostEnv(), windowsHide: true }));
+        const lawOk = law.length === words.length && law.every((x, i) => x === words[i]);
+        const mangled = words.slice(0, 3).every((x, i) => today[i] !== x);
+        return lawOk && mangled || why({ law, today });
+      });
+    } else console.log("NOTE  V33-02 NOT RUN: no MSYS printf.exe beside grep on this machine (the instrument is Git for Windows')");
+    await tc("V33-03 ARGV FIDELITY · THE ENGINE'S OWN PATH: grep -E 'write\\(GSTATE' finds its line and '[a-c]*' counts both lines with a cwd file named abc; the spawn is verbatim on win32", async () => {
+      const a = runPlan(classify("grep -c -E 'write\\(GSTATE' docs/f.txt", "host").plan, SREPO, hostEnv(), { verbs }), lastA = SPAWNS.last;
+      const b = runPlan(classify("grep -c '[a-c]*' docs/f.txt", "host").plan, SREPO, hostEnv(), { verbs });
+      return a.exit === 0 && a.stdout.trim() === "1" && a.errored === null && b.exit === 0 && b.stdout.trim() === "2" && lastA.verbatim === WIN && lastA.shell === false && lastA.windowsHide === true || why({ a, b, lastA });
+    });
+    await tc("V33-04 ARGV-UNFAITHFUL · a text-verb word OPENING with two backslashes is UNRUNNABLE by name on every axis (register axis null); inside a word it is admitted; git and node words are not text-verb words", async () => {
+      const bad = classify("grep -c '\\\\srv' docs/f.txt", "host"), badS = classify("sed -n '1p' '\\\\srv'", "sandbox"), ok1 = classify("grep -c 'a\\\\srv' docs/f.txt", "host");
+      const sc = staticCheck(P("uf", "grep -c '\\\\srv' docs/f.txt", { exit: 0 }), verbs);
+      return bad.class === "UNRUNNABLE" && bad.why === "ARGV-UNFAITHFUL" && bad.detail === "grep \\\\srv" && badS.why === "ARGV-UNFAITHFUL" && ok1.class === "RUNNABLE"
+        && argvUnfaithful("git", [{ text: "\\\\x" }]) === null && argvUnfaithful("node", [{ text: "\\\\x" }]) === null
+        && sc.quarantine && sc.quarantine.why === "ARGV-UNFAITHFUL" && sc.quarantine.axis === null && /two backslashes/.test(sc.quarantine.runnable_if) || why({ bad, badS, ok1, sc });
+    });
+    await tc("V33-05 VERB-ERRORED · grep exit 2 (a pattern that never compiled) is incomplete on every axis, held null, named in the verdict; grep exit 1 (no match) is still REFUTED", async () => {
+      const { r } = await srun(P("e2", "grep -c -E '(' docs/f.txt", { exit: 0 }));
+      const { r: r2 } = await srun(P("e1", "grep -c NOPE_ABSENT docs/f.txt", { exit: 0 }));
+      return r.verdict === "NON-DETERMINISTIC" && /VERB-ERRORED grep exit 2/.test(r.verdict_why || "") && r.runs.every(x => x.held === null && x.errored && x.errored.verb === "grep" && x.errored.status === 2 && x.errored.stderr.length > 0)
+        && r2.verdict === "REFUTED" && r2.runs.every(x => x.errored === null && x.exit === 1 && x.held === false) || why({ r: [r.verdict, r.verdict_why, r.runs.map(x => x.errored)], r2: r2.verdict });
+    });
+    await tc("V33-06 VERB-ERRORED UPSTREAM IN A PIPE · wc of a missing file piped into wc used to exit 0 and hold; now VERB-ERRORED at segment 0; the same pipe over a real file holds", async () => {
+      const { r } = await srun(P("p1", "wc -l docs/missing.txt | wc -l", { exit: 0 }));
+      const { r: r2 } = await srun(P("p2", "wc -l docs/f.txt | wc -l", { exit: 0, stdout_includes: ["1"] }));
+      return r.verdict === "NON-DETERMINISTIC" && r.runs.every(x => x.held === null && x.errored && x.errored.verb === "wc" && x.errored.status === 1 && x.errored.segment === 0)
+        && r2.verdict === "CONFIRMED" && r2.runs.every(x => x.errored === null) || why({ r: r.runs.map(x => [x.exit, x.held, x.errored]), r2: r2.verdict });
+    });
+    await tc("V33-07 THE ONE EXCEPTION · wc of a never-born file DECLARED in reads_absent is the claim's evidence (CONFIRMED, declared_absent named); undeclared, or a different missing path, is VERB-ERRORED", async () => {
+      const { r } = await srun(P("x1", `wc -l ${NB}`, { exit: 1, stdout_lines: { op: "==", n: 0 }, reads_absent: [NB] }, "host", [NB]));
+      const { r: r2 } = await srun(P("x2", `wc -l ${NB}`, { exit: 1, stdout_lines: { op: "==", n: 0 } }));
+      const { r: r3 } = await srun(P("x3", `wc -l docs/gone.txt ${NB}`, { exit: 1, reads_absent: [NB] }, "host", [NB]));
+      return r.verdict === "CONFIRMED" && r.runs.every(x => x.errored === null && JSON.stringify(x.declared_absent) === JSON.stringify([NB]))
+        && r2.verdict === "NON-DETERMINISTIC" && r2.runs.every(x => x.errored && x.errored.verb === "wc")
+        && r3.verdict === "NON-DETERMINISTIC" && r3.runs.every(x => x.errored && x.errored.verb === "wc") || why({ r: [r.verdict, r.runs.map(x => [x.errored, x.declared_absent])], r2: r2.verdict, r3: [r3.verdict, r3.runs.map(x => x.errored)] });
+    });
+    await tc("V33-08 LENS A UNCHANGED · the ablation removes reads[] on purpose: grep's exit 2 on the removed file is declared, so a CONFIRMED probe still reads 'held flipped', never incomplete", async () => {
+      const { r } = await srun(P("a1", "grep -c GSTATE docs/f.txt", { exit: 0 }, "host", ["docs/f.txt"]));
+      return r.verdict === "CONFIRMED" && r.lenses.A.reading === "NOT-APPLICABLE" && /held flipped true → false/.test(r.lenses.A.why) || why(r.lenses.A);
+    });
+    await tc("V33-09 SILENT-SUCCESS · a node segment exiting 0 with 0 reads / writes / spawns reads SILENT-SUCCESS (the collar built with its trace; its loader's .mjs reads counted apart); one that reads, one that writes, one that exits 3 do not; a plan with no node segment builds no trace and reads null", async () => {
+      const a = await srun(P("s1", "node scripts/idle.mjs", { exit: 0 }, "sandbox"));
+      const b = await srun(P("s2", "node scripts/touch.mjs", { exit: 0 }, "sandbox"));
+      const c = await srun(P("s3", "node scripts/touchw.mjs", { exit: 0 }, "sandbox"));
+      const d = await srun(P("s4", "node scripts/quit.mjs", { exit: 3 }, "sandbox"));
+      const e = await srun(P("s5", "grep -c GSTATE docs/f.txt", { exit: 0 }, "sandbox"));
+      const lo = await srun(P("s6", "node scripts/loadonly.mjs", { exit: 0 }, "sandbox"));
+      const builds = x => x.collar.log.filter(l => l.ev === "build");
+      if (!(lo.r.silent && lo.r.silent.reading === "SILENT-SUCCESS" && lo.r.runs.every(x => x.node_trace[0].reads === 0 && x.node_trace[0].code_reads === 1))) return why({ loadonly: [lo.r.silent, lo.r.runs.map(x => x.node_trace)] });
+      return a.r.verdict === "CONFIRMED" && a.r.silent && a.r.silent.reading === "SILENT-SUCCESS" && /scripts\/idle\.mjs/.test(a.r.silent.why) && a.r.runs.every(x => x.silent_success === true && x.node_trace.length === 1 && x.node_trace[0].reads === 0) && builds(a).length === 3 && builds(a).every(l => l.trace === true)
+        && b.r.silent.reading === "NOT-SILENT" && b.r.runs.every(x => x.silent_success === false && x.node_trace[0].reads === 1)
+        && c.r.silent.reading === "NOT-SILENT" && c.r.runs.every(x => x.node_trace[0].writes === 1 && x.silent_success === false)
+        && d.r.verdict === "CONFIRMED" && d.r.silent.reading === "NOT-SILENT" && d.r.runs.every(x => x.node_trace[0].status === 3)
+        && e.r.silent === null && builds(e).every(l => !l.trace) && e.r.runs.every(x => !("node_trace" in x)) || why({ a: [a.r.verdict, a.r.silent, a.r.runs.map(x => x.node_trace)], b: b.r.silent, c: c.r.silent, d: [d.r.verdict, d.r.silent], e: e.r.silent });
+    });
+    await tc("V33-10 THE FACE · a VERB-ERRORED line and a SILENT-SUCCESS line when present, neither when absent", async () => {
+      const R = (verdict, runs, silent = null) => ({ verdict, runs, silent, quarantine: null, lenses: {} });
+      const f = face([R("NON-DETERMINISTIC", [{ errored: { verb: "grep", status: 2 } }]), R("CONFIRMED", [{}], { reading: "SILENT-SUCCESS" }), R("CONFIRMED", [{}])]), g = face([R("CONFIRMED", [{}], { reading: "NOT-SILENT" })]);
+      return f.some(l => /^VERB-ERRORED 1 of 3 · /.test(l)) && f.some(l => /^SILENT-SUCCESS 1 of 3 · /.test(l)) && !g.some(l => /^(VERB-ERRORED|SILENT-SUCCESS)/.test(l)) || why({ f, g });
+    });
+    await tc("V33-11 VACUITY KEEPS LAW 7i · an erroring baseline is INCOMPLETE naming VERB-ERRORED (nothing mutated); a declared absence's baseline holds and reads NO-WINDOW", async () => {
+      const { r } = await vac(VP("v33a", "grep -c -E '(' docs/notes.md", { exit: 0 }, ["docs/notes.md:1"]));
+      const { r: r2 } = await vac(VP("v33b", `wc -l ${NB}`, { exit: 1, reads_absent: [NB] }, [NB]));
+      return r.reading === "INCOMPLETE" && /VERB-ERRORED grep exit 2/.test(r.why) && r2.reading === "NO-WINDOW" && r2.baseline.held === true || why({ r: [r.reading, r.why], r2: [r2.reading, r2.why] });
     });
     await tc("CLI · an unknown verb is usage (exit 2), never a run", async () => { const r = spawnSync(process.execPath, [SELF, "frobnicate"], { encoding: "utf8", shell: false, windowsHide: true, timeout: 60000 }); return r.status === 2 && /usage/.test(String(r.stderr)) || why({ code: r.status }); });
   } catch (e) {
