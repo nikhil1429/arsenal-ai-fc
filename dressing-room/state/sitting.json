@@ -1,24 +1,24 @@
 {
-  "id": "sit_20261006_1955_0a9f",
+  "id": "sit_20261006_1738_b500",
   "captain": "Nikhil (#14)",
   "surfaces": [
     "code"
   ],
-  "task": "tokenization",
+  "task": "embeddings",
   "task_id": "1-04",
   "track": "concept",
   "route": "FORGE",
-  "concept": "tokenization",
+  "concept": "embeddings",
   "route_why": "forge session open @ step 3 — resume, kuch dobara nahi",
   "claude_session_id": null,
-  "host_session_id": "69927553-00ec-4810-938f-9d5206fc4e6c",
-  "host_transcript_path": "C:\\Users\\nikhi\\.claude\\projects\\C--Users-nikhi-GitHub-arsenal-ai-fc\\69927553-00ec-4810-938f-9d5206fc4e6c.jsonl",
-  "host_source": "hook-payload (harness env agrees)",
-  "host_bound_at": "2026-10-05T19:55:54.425Z",
+  "host_session_id": "7480209a-865b-4258-9513-4927a8a22a17",
+  "host_transcript_path": "C:\\Users\\nikhi\\.claude\\projects\\C--Users-nikhi-GitHub-arsenal-ai-fc\\7480209a-865b-4258-9513-4927a8a22a17.jsonl",
+  "host_source": "harness-env",
+  "host_bound_at": "2026-10-06T17:38:06.733Z",
   "transport": "code",
-  "opened_at": "2026-10-05T19:55:54.424Z",
-  "last_turn_at": "2026-10-05T19:58:17.359Z",
-  "closed_at": "2026-10-05T20:18:38.666Z",
+  "opened_at": "2026-10-06T17:38:06.732Z",
+  "last_turn_at": "2026-10-06T17:51:25.858Z",
+  "closed_at": "2026-10-07T00:09:07.420Z",
   "close_reason": "idle",
   "plan": [],
   "plan_source": null,
@@ -27,7 +27,7 @@
   "unit_seq": 0,
   "pending_question": null,
   "forge_step": 3,
-  "forge_axis": "h",
+  "forge_axis": "a",
   "effort": {
     "compose": "high",
     "respond": "high",
@@ -57,7 +57,7 @@
       "respond": [],
       "compose": [],
       "judge": [
-        20650
+        28818
       ]
     },
     "units_composed": 0,

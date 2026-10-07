@@ -114,6 +114,16 @@
       "staged_at": "2026-09-02T21:04:21.928Z",
       "ingested_at": null,
       "report": null
+    },
+    {
+      "id": "T-embeddings",
+      "type": "topic_open",
+      "cluster": null,
+      "concept": "embeddings",
+      "file": "dressing-room/missions/t-embeddings.md",
+      "staged_at": "2026-10-06T14:33:19.231Z",
+      "ingested_at": null,
+      "report": null
     }
   ],
   "syllabus_audit": {
@@ -285,6 +295,11 @@
       "ts": "2026-09-02T21:04:21.928Z",
       "kind": "stage_topic",
       "id": "T-hallucinations@2026-09-03"
+    },
+    {
+      "ts": "2026-10-06T14:33:19.231Z",
+      "kind": "stage_topic",
+      "id": "T-embeddings"
     }
   ]
 }
