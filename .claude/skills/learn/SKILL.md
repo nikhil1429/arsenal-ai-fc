@@ -50,6 +50,17 @@ description: The session-agnostic front door to the day's learning — reads the
   ```diff block written right there — it IS the crack log, never log a crack later · (3) Bolo at axis close,
   pasted verbatim · (4) the English interview line. Plus the pointer at every stop and THE BANK line at its
   three moments (the digest prints it filled in). No note block, no `build_exchanges` mid-lesson.
+- **THE AXIS RECAP ARTIFACT (9 Oct 2026, his word; acts `amuzxdtzwg4` + naming `amuzxl2g566`).** When
+  an axis is completed, teach EVERYTHING learnt in that axis in ONE place: an interactive, 10x-level Artifact
+  (publish it AND send the .html with SendUserFile so he can download it), and give him the exact file name to
+  copy-paste: `<concept>__axis-<x>-<axis-name>__<YYYY-MM-DD>.html`. Order (canon A8): his Bolo first, then the
+  recap, so his words never echo it. His reason: "we are learning in pieces" — one place helps when notes are made.
+  The recap is `[T]` mechanism; his understanding stays his Bolo. First one: embeddings axis c, 9 Oct.
+- **NAME EVERY AXIS, EVERY TIME (9 Oct 2026, his word: "i do not remember the axis names").** Never a bare
+  letter: always the letter AND its name, in chat, pointers, file names and pages — "axis c (mechanism)".
+  The nine, from `dressing-room/state/concepts.json` `.axes`: a kya + analogy · b kyun / first principles ·
+  c mechanism · d math + range · e limits / failure modes · f tradeoffs · g FinOps spot · h scale / cost ·
+  i 3 ways. Every recap Artifact carries this nine-axis map by name with the current axis marked.
 - **GAME ON (30 Aug 2026):** the pre-cyborg era is closed; the four locked capsules are re-opened as UNLEARNED
   and are the teaching RESOURCE (his own doubts, traps, calibration — the digest serves this axis's). Never a
   Re-Jirah on them; a burned strike is burned; teach from zero WITH them open.
