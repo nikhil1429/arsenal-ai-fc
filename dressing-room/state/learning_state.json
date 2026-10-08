@@ -1,6 +1,6 @@
 {
-  "date": "2026-10-06",
-  "generated_at": "2026-10-06T08:52:04.786Z",
+  "date": "2026-10-07",
+  "generated_at": "2026-10-07T03:45:13.344Z",
   "total_reps": 2,
   "status": "ok",
   "low_confidence": false,
@@ -61,27 +61,27 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 96
+      "overdue_days": 97
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 92
+      "overdue_days": 93
     },
     {
       "concept": "embeddings",
       "axis": null,
-      "overdue_days": 80
+      "overdue_days": 81
     },
     {
       "concept": "hallucinations",
       "axis": null,
-      "overdue_days": 56
+      "overdue_days": 57
     },
     {
       "concept": "tokenization",
       "axis": "a (kya+analogy)",
-      "overdue_days": 30
+      "overdue_days": 31
     }
   ],
   "core_vs_light": {
@@ -183,46 +183,39 @@
   },
   "position": {
     "session_open": true,
-    "concept": "tokenization",
+    "concept": "embeddings",
     "step": 3,
     "step_name": "SAMJHAO",
     "axes_done": [
-      "a",
+      "a"
+    ],
+    "axes_deferred": [],
+    "axes_left": [
       "b",
       "c",
       "d",
       "e",
+      "f",
       "g",
-      "h"
-    ],
-    "axes_deferred": [
-      "f"
-    ],
-    "axes_left": [
+      "h",
       "i"
     ],
     "axes_ungraded": [
-      "a",
-      "b",
-      "c",
-      "d",
-      "e",
-      "g",
-      "h"
+      "a"
     ],
-    "started_at": "2026-09-02T21:05:33.373Z",
+    "started_at": "2026-10-06T14:33:19.023Z",
     "stale": false,
-    "stale_as_of": "2026-10-06T08:52:04.786Z",
+    "stale_as_of": "2026-10-07T03:45:13.344Z",
     "last_closed": {
-      "concept": "hallucinations",
-      "ended_at": "2026-09-02T21:05:33.180Z",
+      "concept": "tokenization",
+      "ended_at": "2026-10-06T14:33:19.015Z",
       "steps_ran": [
-        0
-      ],
-      "steps_missed": [
+        0,
         1,
         2,
-        3,
+        3
+      ],
+      "steps_missed": [
         4,
         5,
         6,
@@ -232,9 +225,7 @@
         10,
         11
       ],
-      "axes_done": [],
-      "axes_deferred": [],
-      "axes_untouched": [
+      "axes_done": [
         "a",
         "b",
         "c",
@@ -242,15 +233,16 @@
         "e",
         "f",
         "g",
-        "h",
+        "h"
+      ],
+      "axes_deferred": [],
+      "axes_untouched": [
         "i"
       ],
-      "elapsed_min": 1.2,
-      "axis_marks_span_min": null,
-      "check_q_refused": 0,
-      "core_missing": [
-        "d"
-      ]
+      "elapsed_min": 48567.8,
+      "axis_marks_span_min": 46139.3,
+      "check_q_refused": 5,
+      "core_missing": []
     }
   }
 }
