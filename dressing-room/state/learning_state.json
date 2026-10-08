@@ -1,6 +1,6 @@
 {
-  "date": "2026-10-07",
-  "generated_at": "2026-10-07T03:45:13.344Z",
+  "date": "2026-10-08",
+  "generated_at": "2026-10-08T03:50:42.258Z",
   "total_reps": 2,
   "status": "ok",
   "low_confidence": false,
@@ -61,27 +61,27 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 97
+      "overdue_days": 98
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 93
+      "overdue_days": 94
     },
     {
       "concept": "embeddings",
       "axis": null,
-      "overdue_days": 81
+      "overdue_days": 82
     },
     {
       "concept": "hallucinations",
       "axis": null,
-      "overdue_days": 57
+      "overdue_days": 58
     },
     {
       "concept": "tokenization",
       "axis": "a (kya+analogy)",
-      "overdue_days": 31
+      "overdue_days": 32
     }
   ],
   "core_vs_light": {
@@ -187,13 +187,14 @@
     "step": 3,
     "step_name": "SAMJHAO",
     "axes_done": [
-      "a"
-    ],
-    "axes_deferred": [],
-    "axes_left": [
+      "a",
       "b",
-      "c",
-      "d",
+      "d"
+    ],
+    "axes_deferred": [
+      "c"
+    ],
+    "axes_left": [
       "e",
       "f",
       "g",
@@ -201,11 +202,13 @@
       "i"
     ],
     "axes_ungraded": [
-      "a"
+      "a",
+      "b",
+      "d"
     ],
     "started_at": "2026-10-06T14:33:19.023Z",
     "stale": false,
-    "stale_as_of": "2026-10-07T03:45:13.344Z",
+    "stale_as_of": "2026-10-08T03:50:42.258Z",
     "last_closed": {
       "concept": "tokenization",
       "ended_at": "2026-10-06T14:33:19.015Z",

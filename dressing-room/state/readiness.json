@@ -17,8 +17,8 @@
     "blocks": "~90-min deep-focus blocks; genuine non-screen break between; movement snack every 30–60 min"
   },
   "signals": {
-    "readiness_raw": 66,
-    "oura_sleep_score": 50,
+    "readiness_raw": 69,
+    "oura_sleep_score": 51,
     "deep_7d_h": 0.52,
     "deep_base_h": 0.69,
     "rem_7d_h": 0.48,
@@ -31,8 +31,8 @@
     "resilience_available": false,
     "contributors_today": {
       "sleep_balance": null,
-      "previous_night": 37,
-      "recovery_index": 66,
+      "previous_night": 38,
+      "recovery_index": 81,
       "body_temperature": 100,
       "hrv_balance": null,
       "resting_heart_rate": 74,
@@ -92,7 +92,7 @@
     "sleep_debt_h_14d_vs_personal": 64.2,
     "personal_sleep_need_h": 6.5,
     "oura_sleep_balance_7d": null,
-    "week_mean_readiness": 50.2,
+    "week_mean_readiness": 50.8,
     "note": "Running below your OWN sleep baseline (~6.5h) this week — worth banking sleep. (Measured vs YOUR normal, not a textbook 8h.)"
   },
   "safety": {
