@@ -53,8 +53,11 @@ description: The session-agnostic front door to the day's learning — reads the
 - **THE AXIS RECAP ARTIFACT (9 Oct 2026, his word; acts `amuzxdtzwg4` + naming `amuzxl2g566`).** When
   an axis is completed, teach EVERYTHING learnt in that axis in ONE place: an interactive, 10x-level Artifact
   (publish it AND send the .html with SendUserFile so he can download it), and give him the exact file name to
-  copy-paste: `<concept>__axis-<x>-<axis-name>__<YYYY-MM-DD>.html`. Order (canon A8): his Bolo first, then the
-  recap, so his words never echo it. His reason: "we are learning in pieces" — one place helps when notes are made.
+  copy-paste: `<concept>__axis-<x>-<axis-name>__<YYYY-MM-DD>.html`. ORDER, HIS WORD 9 Oct (it overrides
+  canon A8's Bolo-first and the first form of this line): axis sharp check → RECAP PAGE → his Bolo → the English
+  line, in every session and every topic ("recap page should always be before bolo and english line"). The sharp
+  check stays before the page so his banked answer is cold; the page carries the axis's answers. His reason:
+  "we are learning in pieces" — one place helps when notes are made.
   The recap is `[T]` mechanism; his understanding stays his Bolo. First one: embeddings axis c, 9 Oct.
 - **NAME EVERY AXIS, EVERY TIME (9 Oct 2026, his word: "i do not remember the axis names").** Never a bare
   letter: always the letter AND its name, in chat, pointers, file names and pages — "axis c (mechanism)".
