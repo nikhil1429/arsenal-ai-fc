@@ -50,6 +50,11 @@
 //   Dedup key = ts_claimed + concept + axis + question. Structurally-malformed
 //   reps are REJECTED.
 //
+//   L2 (6 Oct 2026) — THE JUDGE'S STAMP: judged_by "code"|"hand" (+ judged_by_code_at, ISO, for
+//   "code") rides ONLY the `rep` door, from gaffer_brain.mjs's judge dispatch; a pasted or pulled rep
+//   that carries one is refused whole. And the ingest reads the log RAW (fate 12): a superseded row
+//   stays on disk through every rewrite.
+//
 // OUTPUT: dressing-room/state/reps_log.jsonl (append-only JSONL, single writer).
 //   Missing/empty = valid (awaiting data). NEVER fabricates a rep.
 //
@@ -319,6 +324,14 @@ function parseCorrectFlag(raw) {
   return s === "true" ? true : s === "false" ? false : undefined;
 }
 
+// THE JUDGE FLAGS (L2 · fate 53) — the `rep` door's --judged-by / --judged-at, turned into the row's
+// stamp fields EXACTLY as given, so validateRep gives the one all-or-nothing verdict a stored row gets.
+/** @param {string|undefined} by @param {string|undefined} at */
+export function stampFromFlags(by, at) {
+  if (by === undefined && at === undefined) return null;
+  return { judged_by: by === undefined ? null : String(by), ...(at !== undefined ? { judged_by_code_at: String(at) } : {}) };
+}
+
 // opts.observedAt — the arrival instant, supplied ONLY by ingest (which is the one
 // place a rep genuinely arrives). loadReps deliberately passes nothing, so
 // re-reading the log can never restamp history as "arrived now".
@@ -429,6 +442,34 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
   // a why it is indistinguishable from a contradiction.
   if (corrects && (typeof o.why !== "string" || o.why.trim() === "")) return { ok: false, error: "a correction needs --why: this row is the only record that a verdict was walked back" };
 
+  // ── THE JUDGE'S STAMP (L2 · fate 53, 6 Oct 2026) ─────────────────────────────────────────────
+  // gaffer_brain.mjs's judge dispatches each verdict through the `rep` door with WHO FIRED THE ROUND:
+  // judged_by "code" + judged_by_code_at (the round's ISO instant) when a declared code trigger fired
+  // it, judged_by "hand" when the round was typed. The rung's witness reads it ON THE REP (forks row
+  // 551 (1)). DECLARED HERE because this validator rebuilds `rep` from a fixed list — an undeclared
+  // field is silently dropped, and every ingest rewrites the file from validated rows, so a dropped
+  // stamp would vanish from disk on the next paste (the `corrects` lesson, a third time). Two laws:
+  //   · ALL OR NOTHING: "code" needs a parseable instant; "hand" carries none.
+  //   · ONLY THE JUDGE'S DOOR WRITES ONE: a rep ARRIVING through paste or pull (opts.door) that carries
+  //     a stamp is refused whole — a stamp anyone can type would make "graded by code" a word, not a
+  //     fact. Rows already on disk (loadReps passes no door) keep theirs.
+  let judged = null;
+  const door = /** @type {{door?: string}} */ (opts).door;
+  if (o.judged_by !== undefined && o.judged_by !== null) {
+    if (door === "paste" || door === "pull") return { ok: false, error: `a judge stamp (judged_by) rides ONLY the judge's own door (capture.mjs rep --judged-by …) — a rep arriving by ${door} may not carry one` };
+    if (o.judged_by !== "code" && o.judged_by !== "hand") return { ok: false, error: `judged_by not code|hand (${o.judged_by})` };
+    const at = o.judged_by_code_at;
+    if (o.judged_by === "code") {
+      if (typeof at !== "string" || Number.isNaN(Date.parse(at))) return { ok: false, error: `judged_by "code" needs a parseable judged_by_code_at (${at})` };
+      judged = { judged_by: "code", judged_by_code_at: new Date(Date.parse(at)).toISOString() };
+    } else {
+      if (at !== undefined && at !== null) return { ok: false, error: "judged_by \"hand\" carries no judged_by_code_at — only a code-fired round has a code instant" };
+      judged = { judged_by: "hand" };
+    }
+  } else if (o.judged_by_code_at !== undefined && o.judged_by_code_at !== null) {
+    return { ok: false, error: "judged_by_code_at without judged_by — the judge's stamp is all or nothing" };
+  }
+
   // enrich: canonicalize concept + unregistered flag (unknown ⇒ soft, still logged).
   // Through THE REGISTRY GATE since 10 Aug 2026 — an unreadable canon claims nothing.
   const { canonical, unregistered } = enrichConcept(o, reg);
@@ -443,6 +484,7 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
   if (o.note !== undefined) rep.note = o.note;
   if (o.confidence === null && o.confidence_source === UNGRADED_SOURCE) rep.confidence_source = UNGRADED_SOURCE;
   if (register) rep.register = register;
+  if (judged) Object.assign(rep, judged);   // L2 — the judge's stamp, declared above (all or nothing)
   // HIS REASON IS STORED WHOLE (his order, 30 Aug 2026: "store everything what i say").
   // This was .slice(0, 300) — a correction's WHY is the most valuable sentence in the row,
   // and it was the one being cut.
@@ -501,8 +543,11 @@ export function supersedeReps(rows) {
  */
 export function correctionRow(orig, { correct, corrects, why, now = new Date() } = {}) {
   const { ts: _ts, ts_claimed: _tc, observed_at: _obs, ts_source: _src, ...content } = orig || {};
+  // L2 (6 Oct 2026) — A WALK-BACK IS HIS HAND'S VERDICT. It never inherits the judge's stamp: a
+  // correction carrying the original's judged_by "code" would claim the code-fired judge wrote it.
+  delete content.judged_by; delete content.judged_by_code_at;
   const at = now.toISOString();
-  return { ...content, ts: at, ts_claimed: at, observed_at: at, correct, corrects, why };
+  return { ...content, ts: at, ts_claimed: at, observed_at: at, correct, corrects, why, judged_by: "hand" };
 }
 
 // DEDUP KEY (audit 30 Jul 2026): was [ts, question] only. A FORGE session logs many
@@ -649,7 +694,15 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG, opts = {}) {
     ? new Date(Date.parse(opts.observedAt)).toISOString()
     : new Date().toISOString();
   const loadStats = {};
-  const existing = loadReps(path, reg, loadStats);
+  // ── L2 · fate 12 (6 Oct 2026) — THE INGEST READS THE LOG RAW (capture.txt:3) ──────────────────────
+  // This read used the SUPERSEDING loader, and the rewrite below is built from what it returns — so the
+  // first paste / rep / pull after a `correct` DELETED the corrected original from disk for good: the
+  // opposite of the append-only law in this file's header and of the sentence `correct` prints to him
+  // ("the original … is untouched on disk"). The rewrite now starts from EVERY valid row on disk,
+  // superseded ones included; supersession stays where it belongs, in what the readers ACT on
+  // (loadReps's default · supersedeReps). The dedupe set comes from the same raw rows, so a re-paste
+  // of a corrected original is a duplicate of a row that is still there, never a second copy.
+  const existing = loadReps(path, reg, loadStats, { raw: true });
   const seen = new Set(existing.map(keyOf));
   const toAppend = [];
   let rejected = 0, duplicates = 0;
@@ -660,7 +713,7 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG, opts = {}) {
   // entries in total silence. It is counted and named at the call site now.
   const unregistered = [];
   for (const c of candidates) {
-    const v = validateRep(c, reg, { observedAt });
+    const v = validateRep(c, reg, { observedAt, door: /** @type {{door?: string}} */ (opts).door });   // L2: the arrival door decides who may carry a judge stamp
     if (!v.ok) { rejected++; errors.push(v.error); continue; }
     const k = keyOf(v.rep);
     if (seen.has(k)) { duplicates++; continue; }
@@ -1018,7 +1071,7 @@ function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG, deps = {}) {
         try { cands.push(JSON.parse(s)); }
         catch (e) { rejected++; rejections.push(`${f}:L${lineNo} unreadable JSON — ${(e && e.message) || String(e)}`); }
       }
-      const r = ingest(repsPath, cands, reg);
+      const r = ingest(repsPath, cands, reg, { door: "pull" });   // L2: a pulled rep may not carry a judge stamp
       pulled += r.appended; rejected += r.rejected; duplicates += r.duplicates;
       // THE OTHER FIELD NOBODY READ (11 Aug 2026). `appended_rows` has been on the
       // ingest report since P6.1 and only the paste door ever took it, which is exactly
@@ -2476,6 +2529,53 @@ function selftest() {
     }
   }
 
+  // ── L2 · fates 12 + 53 (6 Oct 2026) — THE INGEST READ, AND THE JUDGE'S STAMP ─────────────────────
+  // capture.txt:3 — the first paste after a `correct` deleted the corrected original, because the
+  // ingest read through the SUPERSEDING loader and rewrote the file from it. Driven end to end on a
+  // log of its own, through the same ingest every door uses; then the stamp's two laws.
+  {
+    const pl = join(dir, "l2_reps_log.jsonl");
+    if (existsSync(pl)) rmSync(pl);
+    const raw = () => readFileSync(pl, "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l));
+    const A = rep({ ts: "2026-10-06T05:00:00.000Z", question: "l2 · the corrected original" });
+    ingest(pl, [A], reg, { door: "rep" });
+    const origRow = loadReps(pl, reg, {}, { raw: true }).find((/** @type {any} */ r) => r.question === A.question);
+    const fixV = validateRep(correctionRow(origRow, { correct: false, corrects: origRow.ts, why: "the verdict was wrong", now: new Date("2026-10-06T06:00:00.000Z") }), reg);
+    const fixed = ingest(pl, [fixV.rep], reg, { door: "correct" });
+    const afterPaste = ingest(pl, [rep({ ts: "2026-10-06T07:00:00.000Z", question: "l2 · the next paste" })], reg, { door: "paste" });
+    const rowsNow = raw();
+    assert("L2 · CORRECT-THEN-PASTE (capture.txt:3) · a paste after a `correct` KEEPS the corrected original on disk — the original, its walk-back and the new rep are all in the file",
+      fixed.appended === 1 && afterPaste.appended === 1
+      && rowsNow.some((r) => r.question === A.question && r.correct === true && !r.corrects)
+      && rowsNow.some((r) => r.corrects === origRow.ts && r.correct === false)
+      && rowsNow.some((r) => r.question === "l2 · the next paste"));
+    assert("L2 · …and supersession still lives where it belongs — what the readers ACT on hides the original; the file keeps it",
+      !loadReps(pl, reg).some((/** @type {any} */ r) => r.question === A.question && !r.corrects)
+      && loadReps(pl, reg, {}, { raw: true }).some((/** @type {any} */ r) => r.question === A.question && !r.corrects));
+    assert("L2 · …and a re-paste of the corrected original is a DUPLICATE of the row still on disk, never a second copy",
+      ingest(pl, [A], reg, { door: "paste" }).duplicates === 1 && raw().filter((r) => r.question === A.question && !r.corrects).length === 1);
+    const S0 = "2026-10-06T10:00:00.000Z";
+    const sr = ingest(pl, [rep({ ts: S0, question: "l2 · a rep the judge stamped", ...stampFromFlags("code", S0) })], reg, { door: "rep" });
+    ingest(pl, [rep({ ts: "2026-10-06T11:00:00.000Z", question: "l2 · a later rep, which rewrites the file" })], reg, { door: "rep" });
+    const kept = raw().find((r) => r.question === "l2 · a rep the judge stamped");
+    assert("L2 · THE JUDGE'S STAMP lands ON THE REP through the rep door (judged_by code + judged_by_code_at) and SURVIVES the next ingest's rewrite of the file",
+      sr.appended === 1 && !!kept && kept.judged_by === "code" && kept.judged_by_code_at === S0);
+    assert("L2 · a PASTED or PULLED rep may not carry a judge stamp — refused whole (a stamp anyone can type would make 'graded by code' a word, not a fact)",
+      ingest(pl, [rep({ ts: "2026-10-06T12:00:00.000Z", question: "l2 · forged", judged_by: "code", judged_by_code_at: S0 })], reg, { door: "paste" }).rejected === 1
+      && ingest(pl, [rep({ ts: "2026-10-06T12:01:00.000Z", question: "l2 · forged twice", judged_by: "code", judged_by_code_at: S0 })], reg, { door: "pull" }).rejected === 1
+      && !raw().some((r) => /forged/.test(r.question)));
+    assert("L2 · THE STAMP IS ALL OR NOTHING — code without a parseable instant, hand WITH an instant, an instant without a judge, and an unknown judge are all refused; a plain hand stamp is legal",
+      validateRep(rep(stampFromFlags("code", undefined)), reg).ok === false
+      && validateRep(rep(stampFromFlags("code", "sometime today")), reg).ok === false
+      && validateRep(rep(stampFromFlags("hand", S0)), reg).ok === false
+      && validateRep(rep(stampFromFlags(undefined, S0)), reg).ok === false
+      && validateRep(rep(stampFromFlags("model", undefined)), reg).ok === false
+      && validateRep(rep(stampFromFlags("hand", undefined)), reg).ok === true);
+    assert("L2 · A WALK-BACK NEVER INHERITS THE JUDGE'S STAMP — a `correct` of a code-stamped rep is HIS hand's verdict: judged_by hand, no code instant",
+      (() => { const c = correctionRow(kept, { correct: false, corrects: kept.ts, why: "w", now: new Date("2026-10-06T13:00:00.000Z") });
+        return c.judged_by === "hand" && !("judged_by_code_at" in c) && validateRep(c, reg).ok === true; })());
+  }
+
   rmSync(dir, { recursive: true, force: true });
   const passed = checks.every(([, ok]) => ok);
   // ── A3 · CODE_STRICT (4 Sep 2026) — the TIGHTENING half of the new surface ──
@@ -2558,7 +2658,7 @@ function main() {
     const row = correctionRow(orig, { correct: fixed, corrects: ofTs, why });  // WHOLE — never cut his reason (30 Aug 2026)
     const v = validateRep(row, reg);
     if (!v.ok) { console.error(`correct: refused by the rep validator — ${v.error}. Nothing written.`); process.exit(1); }
-    const r = ingest(REPS_LOG, [v.rep], reg);
+    const r = ingest(REPS_LOG, [v.rep], reg, { door: "correct" });
     // THE SUCCESS LINE MAY ONLY SPEAK WHEN THE ROW LANDED. The old block printed the
     // whole "CORRECTED … every organ now skips the superseded row" message
     // unconditionally, with `appended 0` sitting inside it — the number that says it
@@ -2648,6 +2748,11 @@ function main() {
         try { one.register = JSON.parse(regFlag); }
         catch { console.error("rep: --register must be JSON like {\"used\":[],\"expected\":[],\"missing\":[],\"hedges\":0}. Nothing written."); process.exit(1); }
       }
+      // --judged-by / --judged-at (L2 · fate 53, 6 Oct 2026). gaffer_brain.mjs's judge passes WHO
+      // FIRED THE ROUND through this door, so the reps_log row carries the stamp ON ITSELF (forks row
+      // 551 (1)). Written only when supplied, never defaulted; validateRep holds it all or nothing.
+      const stamp = stampFromFlags(flag("judged-by"), flag("judged-at"));
+      if (stamp) Object.assign(one, stamp);
       if (!one.concept || !one.question || !one.confidence || one.correct === undefined) {
         console.error("rep: --concept, --q, --gut and --correct are all required.");
         console.error('  node scripts/capture.mjs rep --concept hallucinations --axis a --q "kya hai" --gut shaky --correct true');
@@ -2677,7 +2782,7 @@ function main() {
     // a held file, a full disk — the captain must be told his reps are recoverable
     // by re-running, not shown a Node traceback that reads like the data is gone.
     let r;
-    try { r = ingest(REPS_LOG, cands, reg); }
+    try { r = ingest(REPS_LOG, cands, reg, { door: mode }); }   // L2: "rep" (the judge's door) or "paste" (refuses a judge stamp)
     catch (e) {
       console.error(`paste: FAILED — nothing was ingested (${(e && e.code) || "error"}: ${(e && e.message) || e}).`);
       console.error("paste:   Your reps are NOT lost: re-run the same command. If it repeats, another process is holding reps_log open.");
@@ -2842,7 +2947,7 @@ function main() {
     process.exit(0);
   }
 
-  console.log("THE SHARED CAPTURE LAYER (Agent #0)\n  node capture.mjs paste [file] [--chain]   append pasted Gem/Colab session JSON (--chain: recompute derived state now)\n  node capture.mjs rep --concept <c> --axis <a> --q \"<what was tested>\" --gut knew|shaky|guessed --correct true|false\n                                            ONE rep, as it happens — same validator as paste. --correct is never defaulted.\n  node capture.mjs pull [--no-chain]        ingest new reps from the Drive inbox (chains the heartbeat when reps land)\n  node capture.mjs quarantine [retry]       triage the reps parked out of reps_log (retry = re-ingest the recoverable ones)\n  node capture.mjs quarantine gem [retry]   triage the gemini-quality rows that missed the ledger (retry = merge them back)\n  node capture.mjs selftest                 run baked-mock checks");
+  console.log("THE SHARED CAPTURE LAYER (Agent #0)\n  node capture.mjs paste [file] [--chain]   append pasted Gem/Colab session JSON (--chain: recompute derived state now)\n  node capture.mjs rep --concept <c> --axis <a> --q \"<what was tested>\" --gut knew|shaky|guessed --correct true|false\n                                            ONE rep, as it happens — same validator as paste. --correct is never defaulted.\n                                            [--judged-by code|hand [--judged-at <ISO>]]  the judge's stamp — gaffer_brain's dispatch only\n  node capture.mjs pull [--no-chain]        ingest new reps from the Drive inbox (chains the heartbeat when reps land)\n  node capture.mjs quarantine [retry]       triage the reps parked out of reps_log (retry = re-ingest the recoverable ones)\n  node capture.mjs quarantine gem [retry]   triage the gemini-quality rows that missed the ledger (retry = merge them back)\n  node capture.mjs selftest                 run baked-mock checks");
   process.exit(0);
 }
 

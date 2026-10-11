@@ -21,7 +21,8 @@
 //          per close; Block 4 fills the LLM fields, Block 3 writes the measured ones).
 //        Everything else it touches goes THROUGH THE OWNER'S CLI, one funnel (`owner()`):
 //          forge_session.mjs step|axis|moment|start|close (the pacer) · gaffer_brain.mjs
-//          capture (the bank — model-free, judged at close by judge-round) · intent.mjs
+//          capture --json (the bank — model-free; bank() reads the write's OWN verdict line, L2) ·
+//          judge-due --trigger sitting.close (the CODE door that fires the round at close, L2) · intent.mjs
 //          close (§7.2) · captains_call.mjs file (ONE card, keyed) · brain.mjs
 //          recordConsumption (import — the gate's C, stamped when a unit is SPOKEN).
 //        WHO ELSE COULD ACT ON THIS OUTPUT? dugout.mjs (the mouth: /deep speak + /spoken +
@@ -203,9 +204,31 @@ const pct = (arr, p) => { if (!arr.length) return null; const s = [...arr].sort(
 // into his truth layer ("never waste any of my data" cuts both ways: no fake data either).
 const DRY_OWNERS = process.env.ARSENAL_SITTING_DRY_OWNERS === "1";
 function ownerCli(file, args, input) {
-  if (DRY_OWNERS) { log(`sitting: DRY owner call → ${file} ${args.join(" ")}${input ? ` (stdin ${String(input).length} chars)` : ""}`); return { ok: true, status: 0, out: `DRY ${file} ${args[0]}`, err: "" }; }
+  if (DRY_OWNERS) { log(`sitting: DRY owner call → ${file} ${args.join(" ")}${input ? ` (stdin ${String(input).length} chars)` : ""}`); return { ok: true, status: 0, out: `DRY ${file} ${args[0]}`, err: "", dry: true }; }
   const r = spawnSync(process.execPath, [join(HERE, file), ...args], { input: input == null ? undefined : String(input), encoding: "utf8", windowsHide: true, timeout: 20000, env: { ...process.env, ARSENAL_ORGAN: "1" } });
   return { ok: r.status === 0, status: r.status, out: String(r.stdout || "").trim(), err: String(r.stderr || "").trim().slice(0, 400) };
+}
+
+// ── L2 (fate 15, 6 Oct 2026) · THE BANK READS THE WRITE'S ok, NEVER THE EXIT STATUS ──────────
+// `gaffer_brain.mjs capture … --json` prints the write's own verdict as ONE JSON line. bank() used
+// to test only the child's exit status (ownerCli's ok) while the capture append sat in a bare catch
+// that exited 0 whatever happened — so a failed write counted as banked and pending_question was
+// cleared for good (gaffer-dugout-sitting.txt:5, :8). The verdict line decides now:
+//   {ok:true, captured}               → banked, whatever the exit code says
+//   {ok:false, reason:"write-failed"} → NOT banked, the question KEPT (his answer is not on disk)
+//   {ok:false, reason:<a law>}        → NOT banked (the owner refused the content; the existing
+//                                        laws decide what happens to the question)
+//   no verdict line at all            → NOT banked, the question KEPT (nothing says the row landed)
+// A DRY owner (ARSENAL_SITTING_DRY_OWNERS, the rehearsal) writes nothing by design and is read as
+// a rehearsal bank, exactly as before.
+export function bankVerdict(reply) {
+  if (reply && reply.dry) return { ok: true, dry: true };
+  const lines = String((reply && reply.out) || "").split(/\r?\n/).map((l) => l.trim()).filter((l) => l.startsWith("{"));
+  let v = null;
+  for (let i = lines.length - 1; i >= 0 && !v; i--) { try { const j = JSON.parse(lines[i]); if (j && typeof j.ok === "boolean") v = j; } catch { /* not the verdict line */ } }
+  if (!v) return { ok: false, keep: true, why: `the bank printed no verdict line — nothing says his answer landed (${clip(String((reply && (reply.err || reply.out)) || `exit ${reply && reply.status}`), 160)})` };
+  if (v.ok === true) return v.captured ? { ok: true, captured: String(v.captured) } : { ok: false, keep: true, why: "the bank said ok but named no captured row — nothing says his answer landed" };
+  return { ok: false, keep: v.reason === "write-failed", why: clip(String(v.say || v.reason || "the bank refused"), 300) };
 }
 
 // THE CHILD'S CWD + ITS TRANSCRIPT. The live claude child runs with cwd = the OS temp dir
@@ -535,7 +558,7 @@ export function createSitting(deps = {}) {
     for (const [f, a] of calls) { const r = owner(f, a); S.stats.owner_calls = (S.stats.owner_calls || 0) + 1; if (!r.ok) log(`sitting: owner ${f} ${a.join(" ")} → ${r.status} ${r.err || r.out}`); }
   };
   const bank = (hisText, gut, source) => {
-    // THE BANK — model-free, instant, judged at close by judge-round (owner CLI, gut-word law at ITS door too)
+    // THE BANK — model-free, instant, judged at close by the CODE door (owner CLI, gut-word law at ITS door too)
     if (!S || !S.pending_question) return { ok: false, why: "no pending question" };
     if (!S.pending_question.bankable) return { ok: false, why: "pending question is a start prompt (the map), not a rep" };
     if (!GUT_WORDS.includes(gut)) return { ok: false, why: `gut '${gut}' not in ${GUT_WORDS.join("|")}` };
@@ -543,11 +566,14 @@ export function createSitting(deps = {}) {
     const concept = S.concept;
     if (!concept) return { ok: false, why: "no concept on this sitting" };
     let r;
-    if (S.route === "REJIRAH" && axis) r = owner("gaffer_brain.mjs", ["capture", "axis_weld", `${concept}:${axis}`, "--gut", gut, "--note", `sitting ${S.id} · ${source}`], hisText);
-    else r = owner("gaffer_brain.mjs", ["capture", "voice_rep", concept, "--gut", gut, "--asked", clip(S.pending_question.text, 1000), ...(axis ? ["--axis", axis] : []), "--note", `sitting ${S.id} · ${source}`], hisText);
+    if (S.route === "REJIRAH" && axis) r = owner("gaffer_brain.mjs", ["capture", "axis_weld", `${concept}:${axis}`, "--gut", gut, "--note", `sitting ${S.id} · ${source}`, "--json"], hisText);
+    else r = owner("gaffer_brain.mjs", ["capture", "voice_rep", concept, "--gut", gut, "--asked", clip(S.pending_question.text, 1000), ...(axis ? ["--axis", axis] : []), "--note", `sitting ${S.id} · ${source}`, "--json"], hisText);
     S.stats.owner_calls = (S.stats.owner_calls || 0) + 1;
-    if (r.ok) { S.stats.banked = (S.stats.banked || 0) + 1; S.pending_question = null; }
-    return { ok: r.ok, why: r.ok ? null : (r.err || r.out || `exit ${r.status}`) };
+    // L2 (fate 15): the WRITE's own verdict decides (bankVerdict) — never the exit status. A write
+    // that failed leaves pending_question in place and says `keep`, so no caller moves past it.
+    const v = bankVerdict(r);
+    if (v.ok) { S.stats.banked = (S.stats.banked || 0) + 1; S.pending_question = null; }
+    return { ok: v.ok, why: v.ok ? null : v.why, keep: !v.ok && !!v.keep, dry: !!v.dry, captured: v.captured || null };
   };
   const reviewer = deps.reviewer || ((id) => { const c = spawn(process.execPath, [join(HERE, "sitting.mjs"), "review", "--sitting", id], { detached: true, stdio: "ignore", windowsHide: true, cwd: ROOT }); c.unref(); });
   const cardOnce = (line, key) => {
@@ -927,11 +953,15 @@ export function createSitting(deps = {}) {
       if (!banked.ok) log(`sitting: bank refused — ${banked.why}`);
     }
     const spokenText = spoken || "Hmm.";
+    // L2 (fate 14/15): a bank whose WRITE failed keeps the question — his answer is not on disk, so
+    // the plan does not move past it (no skip, no next unit to overwrite it); the mouth says so.
+    const keepQ = !!(banked && !banked.ok && banked.keep);
     // the model chose to move on without a bank → the pending question is DROPPED and named (never left dangling for the next line)
-    if (ctrl && ctrl.next === "deliver" && S.pending_question && S.pending_question.bankable && !(banked && banked.ok)) skipQuestion(`model tail next=deliver without a bank (turn ${job.n})`);
+    if (ctrl && ctrl.next === "deliver" && S.pending_question && S.pending_question.bankable && !(banked && banked.ok) && !keepQ) skipQuestion(`model tail next=deliver without a bank (turn ${job.n})`);
     const asksAgain = !!(ctrl && ctrl.question_asked && /[?？]/.test(spokenText)) && !(S.pending_question && S.pending_question.bankable);
     emit(spokenText, { cls: cls2, src: ["brain"], question: asksAgain, kind: asksAgain ? "question" : "unit" });
-    if (ctrl && ctrl.next === "deliver" && S.cursor < S.plan.length) deliverNext(job.surface, job.n, "model tail next=deliver");
+    if (keepQ) emit("Bank nahi hua — phir se: gut-word aur jawab, ek saath.", { src: ["driver"] });
+    else if (ctrl && ctrl.next === "deliver" && S.cursor < S.plan.length) deliverNext(job.surface, job.n, "model tail next=deliver");
     logTurn({ turn: job.n, class: cls2, surface: job.surface, chars_in: job.text.length, latency_ms: lat, tokens, model: cfg.model, effort: cfg.effort.compose, session_id: r.session_id || S.claude_session_id, had_tail, banked: banked ? banked.ok : null, bank_why: banked && !banked.ok ? banked.why : null, resumed, pacer_failed: pacer.failed, over_budget: lat > cfg.latency_budget_s[cls2] * 1000 });
     save();
   }
@@ -971,20 +1001,24 @@ export function createSitting(deps = {}) {
     //    so the count stayed 0 while unjudged rows sat in the grade queue (row 55 measured "banked 0" with rows on
     //    disk) and the day's judge never fired without a hand — the ritual his 11 Aug law forbids. The door now asks
     //    the OWNER what is outstanding (its read-only `queue` verb) and fires on THAT, or on this sitting's own count,
-    //    whichever says yes. Nothing outstanding = no Opus call (judge-round would only re-refuse the same rows).
+    //    whichever says yes. Nothing outstanding = no Opus call (the round would only re-refuse the same rows).
     let judge = null;
     const q = owner("gaffer_brain.mjs", ["queue"]); S.stats.owner_calls++;
     const qm = /(\d+) captured item\(s\) waiting/.exec(String(q.out || ""));
     const waiting = qm ? Number(qm[1]) : 0;
     if ((S.stats.banked || 0) > 0 || waiting > 0) {
-      const r = owner("gaffer_brain.mjs", ["judge-round"]); S.stats.owner_calls++; S.stats.by_class.judge++; S.stats.latency_ms.judge.push(Date.now() - t0);
+      // L2 (fate 53, 6 Oct 2026) — FIRED BY CODE, AND SAID SO ON EVERY VERDICT. This door has fired the
+      // round by code since row 68 (d); it now goes through gaffer_brain's CODE door with its declared
+      // trigger, so each settled row (and each rep it dispatches) is stamped judged_by "code" — the stamp
+      // the rung's witness reads (CLASS G, forks row 551). `judge-round` stays the TYPED door (stamped hand).
+      const r = owner("gaffer_brain.mjs", ["judge-due", "--trigger", "sitting.close"]); S.stats.owner_calls++; S.stats.by_class.judge++; S.stats.latency_ms.judge.push(Date.now() - t0);
       // §9.4 (18 Aug 2026) — THE ONE SPOKEN LINE the judge closes a round with (its
       // last stdout line, prefixed 🗣) is kept WHOLE beside the clipped output, so the
       // next head can open with it ("pichhli baar interviewer yeh shabd sunna chahta
       // tha…"). Parsed off the owner's own machine-written prefix, never off his words.
       const rl = String(r.out || "").split(/\r?\n/).map((l) => l.trim()).find((l) => l.startsWith("🗣"));
       judge = { ok: r.ok, out: clip(r.out, 300), register_line: rl ? clip(rl.replace(/^🗣\s*/, ""), 240) : null,
-        fired_on: (S.stats.banked || 0) > 0 ? "sitting-bank" : "grade-queue", queue_waiting: waiting };   // row 68 (d): which door opened, on the record
+        fired_on: (S.stats.banked || 0) > 0 ? "sitting-bank" : "grade-queue", queue_waiting: waiting, fired_by: "sitting.close" };   // row 68 (d): which door opened, on the record · L2: the code trigger that fired it
     }
     // 2. the pacer — closed through the owner ONLY when the concept reached its lock (a concept spans sittings; a stale one is boot's call)
     let forgeStatus = null;
@@ -1388,10 +1422,14 @@ async function selftest() {
   F.forge = () => P("forge_session.json"); F.sitting = () => P("sitting.json"); F.out = () => P("sitting_out.jsonl"); F.log = () => P("sitting_log.jsonl"); F.reviews = () => P("sitting_reviews.jsonl"); F.config = () => P("sitting_config.json"); F.head = () => P("brain_out/sitting/sitting_system.md"); F.prepare = (day) => P(`brain_out/prepare/${day}.json`); F.agenda = () => P("sitting_agenda.jsonl"); F.prepared = (day) => P(`brain_out/prepare_on_request/${day}.md`);   // LAW A: the two new files re-point too — the live agenda is never touched by a selftest
   const calls = [];
   let queueWaiting = 0;   // row 68 (d): what the recorded owner says the grade queue holds (0 = nothing outstanding)
+  // L2 (fate 15): the recorded bank answers the way the real one does under --json — ONE verdict line
+  // (`{ok, captured}`) — and `captureReply` lets a clause hand bank() any other reply, exit code included.
+  let captureReply = null;
   const owner = (file, args, input) => {
     calls.push({ file, args, input: input == null ? null : String(input).slice(0, 80) });
+    if (file === "gaffer_brain.mjs" && args[0] === "capture") return captureReply || { ok: true, status: 0, out: JSON.stringify({ ok: true, captured: `${args[1]}:${args[2]}:fixture` }), err: "" };
     // the judge's recorded stdout ends on its §9.4 spoken line, like the real owner's does
-    const out = file === "gaffer_brain.mjs" && args[0] === "judge-round" ? `gaffer_brain: 1 item(s) graded in ONE Opus call · types: voice_rep
+    const out = file === "gaffer_brain.mjs" && (args[0] === "judge-round" || args[0] === "judge-due") ? `gaffer_brain: 1 item(s) graded in ONE Opus call · types: voice_rep
   voice_rep     LANDED (gut guessed)  theek
   🗣 interviewer yeh shabd sunna chahega: "grounding"`
       : file === "gaffer_brain.mjs" && args[0] === "queue"
@@ -1590,7 +1628,9 @@ async function selftest() {
     assert("deliver-only: his answer with a spoken gut-word is BANKED by the regex lane (no model); plan exhausted → the close hint", S.stats.banked === bankedBefore + 1 && !S.pending_question && readRows(F.out()).some((r) => r.kind === "unit" && /Plan poora/.test(r.text)));
     // ── 8. close → judge through the owner (something was banked), review row with measured fields + NAMED null LLM fields, intent close through its owner, closed_at set ──
     const c = await P_("/close", { reason: "his_word" });
-    assert("close: judge-round ran through the owner (gaffer_brain.mjs judge-round) because reps were banked; the sitting itself never graded", c.body.ok && calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "judge-round"));
+    assert("close: the round was FIRED BY CODE through the owner's code door (gaffer_brain.mjs judge-due --trigger sitting.close) because reps were banked — never the typed judge-round; the sitting itself never graded",
+      c.body.ok && calls.some((x) => x.file === "gaffer_brain.mjs" && x.args.join(" ") === "judge-due --trigger sitting.close") && !calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "judge-round")
+      && c.body.review.judge && c.body.review.judge.fired_by === "sitting.close");
     assert("close: the review row is written (measured fields) and its LLM fields are null AND named as Block 4's", (() => { const r = readRows(F.reviews())[0]; return r && r.sitting_id === S.id && r.turns > 0 && r.drifts === null && /Block 4/.test(r._llm_fields) && r.head_tokens === 9000; })());
     assert("close (§9.4): the judge's ONE spoken line (🗣, the owner's last stdout line) is kept WHOLE on the review row as judge.register_line — so the next head can open with it", (() => { const r = readRows(F.reviews())[0]; return r && r.judge && r.judge.register_line === `interviewer yeh shabd sunna chahega: "grounding"`; })());
     assert("close: the session-intent line went through intent.mjs close --session <id> --promised … --shipped … --by sitting", calls.some((x) => x.file === "intent.mjs" && x.args[0] === "close" && x.args.includes("--session") && x.args.includes(S.id) && x.args.includes("--by")));
@@ -1709,19 +1749,76 @@ async function selftest() {
       await dq.open({ surface: "code" });
       queueWaiting = 2;
       const cq = await dq.close({ reason: "his_word" });
-      assert("row 68 (d) · a code sitting with banked 0 but 2 rows waiting in the grade queue FIRES judge-round through the owner at close, and the review row says which door opened",
+      assert("row 68 (d) · a code sitting with banked 0 but 2 rows waiting in the grade queue FIRES the round through the owner's CODE door at close (judge-due --trigger sitting.close), and the review row says which door opened",
         cq.ok && dq.state.stats.banked === 0 && calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "queue")
-        && calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "judge-round")
+        && calls.some((x) => x.file === "gaffer_brain.mjs" && x.args.join(" ") === "judge-due --trigger sitting.close")
         && cq.review.judge && cq.review.judge.fired_on === "grade-queue" && cq.review.judge.queue_waiting === 2);
       await dq.stop();
       calls.length = 0; queueWaiting = 0;
       const dz = createSitting({ ...baseDeps, session: () => { throw new Error("must not spawn for a code sitting"); } });
       await dz.open({ surface: "code" });
       const cz = await dz.close({ reason: "his_word" });
-      assert("row 68 (d) · nothing banked AND nothing waiting → the queue is asked, judge-round is NOT called (no Opus call for nothing)",
+      assert("row 68 (d) · nothing banked AND nothing waiting → the queue is asked, the round is NOT fired by either door (no Opus call for nothing)",
         cz.ok && calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "queue")
-        && !calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "judge-round") && cz.review.judge === null);
+        && !calls.some((x) => x.file === "gaffer_brain.mjs" && (x.args[0] === "judge-round" || x.args[0] === "judge-due")) && cz.review.judge === null);
       await dz.stop();
+    }
+    // ── 13a2. L2 (fate 15, 6 Oct 2026) — bank() READS THE WRITE'S ok, NEVER THE EXIT STATUS ──────
+    // gaffer-dugout-sitting.txt:5/:8: a failed capture write exited 0, bank() read the exit status,
+    // counted the rep and cleared pending_question for good. Both turn paths, fresh sittings, the
+    // owner's reply handed in whole (exit code + verdict line) so each direction is planted.
+    {
+      const failed = { ok: true, status: 0, out: JSON.stringify({ ok: false, reason: "write-failed", say: "gaffer_brain: his answer was NOT banked — the grade-queue write failed (ENOSPC: no space left on device). Nothing landed; keep the question open and bank it again." }), err: "" };
+      // (i) the deliver-only lane (a code sitting: no model, the gut-word regex banks)
+      calls.length = 0;
+      const dl = createSitting({ ...baseDeps, session: () => { throw new Error("must not spawn for a code sitting"); } });
+      await dl.open({ surface: "code" });
+      const SL = dl.state;
+      SL.pending_question = { unit_id: "u_l2_code", text: "Check: hallucination kyun hota hai — data ya training? Gut-word pehle.", axis: "a", asked_at: new Date().toISOString(), bankable: true };
+      captureReply = failed;
+      dl.turn({ text: "knew — training data ka pattern, model confident ho jaata hai", surface: "code" });
+      await flushWork();
+      assert("L2 · bank() reads the WRITE's ok: an EXIT-0 reply whose verdict is ok:false (write-failed) is NOT banked — banked stays 0, pending_question KEPT, and he is asked again",
+        SL.concept && SL.stats.banked === 0 && !!SL.pending_question && SL.pending_question.unit_id === "u_l2_code"
+        && readRows(F.out()).some((r) => r.kind === "unit" && r.sitting_id === SL.id && /Bank nahi hua/.test(r.text))
+        && calls.some((x) => x.file === "gaffer_brain.mjs" && x.args[0] === "capture" && x.args.includes("--json")), JSON.stringify({ concept: SL.concept, banked: SL.stats.banked, pq: SL.pending_question && SL.pending_question.unit_id }));
+      captureReply = { ok: true, status: 0, out: "gaffer_brain capture ok", err: "" };
+      dl.turn({ text: "knew — training data ka pattern, model confident ho jaata hai", surface: "code" });
+      await flushWork();
+      assert("L2 · bank() with NO verdict line (the owner spoke no JSON) is NOT banked either — the question is KEPT, because nothing says his answer landed",
+        SL.stats.banked === 0 && !!SL.pending_question && SL.pending_question.unit_id === "u_l2_code");
+      captureReply = { ok: false, status: 1, out: JSON.stringify({ ok: true, captured: "voice_rep:hallucinations:2026-10-06T00:00:00.000Z" }), err: "a warning on stderr after the row landed" };
+      dl.turn({ text: "knew — training data ka pattern, model confident ho jaata hai", surface: "code" });
+      await flushWork();
+      assert("L2 · …and the other direction: a NON-ZERO exit whose verdict is ok:true IS banked and the question cleared — the exit status is never read",
+        SL.stats.banked === 1 && !SL.pending_question);
+      captureReply = null;
+      await dl.close({ reason: "his_word" }); await dl.stop();
+      // (ii) the model-tail lane (a voice sitting): a failed write must not be skipped past
+      calls.length = 0;
+      const fxv = mkSession();
+      const dv = createSitting({ ...baseDeps, session: fxv });
+      await dv.open({ surface: "voice" });
+      const SV = dv.state;
+      dv.turn({ text: "haan", surface: "voice" });
+      await flushWork();
+      const pqV = SV.pending_question && SV.pending_question.unit_id;
+      const cursorV = SV.cursor;
+      captureReply = failed;
+      dv.turn({ text: "shaky — model apne aap se galat baat bana leta hai jo sahi lagti hai", surface: "voice" });
+      await flushWork();
+      assert("L2 · the MODEL-TAIL lane: the model banked and said next=deliver, the WRITE failed — the question is NOT skipped and NOT overwritten by the next unit; banked 0, the same pending_question, the cursor unmoved, and he is asked again",
+        !!pqV && SV.stats.banked === 0 && !!SV.pending_question && SV.pending_question.unit_id === pqV && SV.cursor === cursorV && (SV.stats.skipped || 0) === 0
+        && readRows(F.out()).some((r) => r.kind === "unit" && r.sitting_id === SV.id && /Bank nahi hua/.test(r.text)), JSON.stringify({ pqV, now: SV.pending_question && SV.pending_question.unit_id, cursorV, cursor: SV.cursor, banked: SV.stats.banked, skipped: SV.stats.skipped }));
+      captureReply = null;
+      dv.turn({ text: "shaky — model apne aap se galat baat bana leta hai jo sahi lagti hai", surface: "voice" });
+      await flushWork();
+      assert("L2 · …and when he says it again and the write LANDS, it is banked once and the plan moves on",
+        SV.stats.banked === 1 && SV.cursor === cursorV + 1);
+      await dv.close({ reason: "his_word" }); await dv.stop();
+      assert("L2 · bankVerdict is the one reader: a DRY owner (the rehearsal) is a rehearsal bank, as before; a verdict that says ok with no captured row is NOT banked",
+        bankVerdict({ ok: true, status: 0, out: "DRY gaffer_brain.mjs capture", dry: true }).ok === true
+        && bankVerdict({ ok: true, status: 0, out: JSON.stringify({ ok: true }) }).ok === false);
     }
     // ── 13b. A1 + A2 (4 Sep 2026) — THE OPEN CONCEPT SURVIVES THE ROUTER ──────────
     // The three ways his live session could die, each now a law with a test. The

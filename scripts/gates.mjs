@@ -46,10 +46,17 @@
 //
 // LAWS: writes nothing · measures before it judges · every RED names the file:line ·
 //   a fallen count is reported, never silently pocketed · ARSENAL_ORGAN=1 changes nothing
-//   (this organ is only ever run by a human or by npm test).
+//   (this organ is only ever run by a human or by npm test) · A DEAD INSTRUMENT IS RED (L2).
+// L2 (6 Oct 2026 · fate 35 · capability C30, honest instruments · gates.txt:15): measure() read
+//   each tool's stdout and never its exit code, so a tsc or eslint that FAILED TO RUN produced
+//   zero diagnostics, judge() printed a FALL for every baseline and returned ok — a broken
+//   toolchain scored as an improved codebase, and the commit that broke the gate was the one that
+//   disarmed it. measure() now reads the exit code beside the output (instrumentOf): a tool that
+//   exits outside its legal codes, dies on a signal, or fails while reporting nothing it measured is
+//   DEAD — a RED that names the tool, its code and its raw tail — and none of its zeros is judged.
 // WHO ELSE COULD ACT ON THIS OUTPUT? organism_test.mjs (`gates` mode — wired, so both
 //   gates ride `npm test`) · S3's law pack (ast-grep rules join the same ratchet shape).
-// CLI: node scripts/gates.mjs [report|types|lint|selftest]
+// CLI: node scripts/gates.mjs [report|types|lint|schemas|selftest]
 // ============================================================================
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -132,30 +139,36 @@ export function parseEslint(report) {
 
 // ── PURE: the ratchet itself. This is the whole law, and the selftest drives it ──
 /**
- * @param {{types:{total:number,hard:any[],checked:number}, lint:{errors:number,warnings:number,byRule:Record<string,number>,hard:any[]}}} m
+ * @param {{types:{total:number,hard:any[],checked:number}, lint:{errors:number,warnings:number,byRule:Record<string,number>,hard:any[]}, instruments?:Record<string,{tool:string,live:boolean,code:number|null,why:string|null}>}} m
  */
 export function judge(m, { typeBase = TYPE_BASELINE, lintBase = LINT_BASELINE } = {}) {
   const reds = [], falls = [];
+  // 0 · L2 (fate 35) — A DEAD INSTRUMENT IS RED, NEVER GREEN, and NONE of its zeros is judged: a
+  // tool that did not run cannot say a count fell, so it can never ask for a baseline to be lowered.
+  // Synthetic numbers with no `instruments` (the ratchet fixtures below) are a measurement by fixture.
+  const ins = m.instruments || {};
+  for (const i of Object.values(ins)) if (!i.live) reds.push(`INSTRUMENT DEAD — ${i.tool}: ${i.why}. Nothing it would have measured is judged; a dead tool's zero is not a fall.`);
+  const typesLive = !ins.tsc || ins.tsc.live, lintLive = !ins.eslint || ins.eslint.live;
   // 1 · the undefined-symbol family is 0, always
-  if (m.types.hard.length) reds.push(`TYPE HARD — ${m.types.hard.length} undefined-symbol error(s); this family must be 0:\n` +
+  if (typesLive && m.types.hard.length) reds.push(`TYPE HARD — ${m.types.hard.length} undefined-symbol error(s); this family must be 0:\n` +
     m.types.hard.slice(0, 8).map((h) => `           ${h.file}:${h.line} TS${h.code} ${h.why}`).join("\n"));
-  for (const h of m.lint.hard) reds.push(`LINT HARD — no-undef at ${h.file}:${h.line} — ${h.why}`);
-  // 2 · the checked list may only GROW
+  if (lintLive) for (const h of m.lint.hard) reds.push(`LINT HARD — no-undef at ${h.file}:${h.line} — ${h.why}`);
+  // 2 · the checked list may only GROW (read off the disk, not off a tool — it is judged either way)
   if (m.types.checked < typeBase.checked_organs) reds.push(`TYPE LIST SHRANK — ${m.types.checked} organs carry \`@ts-check\`, baseline ${typeBase.checked_organs}. The list may only grow.`);
   else if (m.types.checked > typeBase.checked_organs) falls.push(`TYPE LIST GREW — ${m.types.checked} organs checked (baseline ${typeBase.checked_organs}); tighten TYPE_BASELINE.checked_organs to ${m.types.checked}.`);
   // 3 · every frozen count may only FALL
   const soft = m.types.total - m.types.hard.length;
-  if (soft > typeBase.soft_errors) reds.push(`TYPE COUNT ROSE — ${soft} checkJs diagnostics, baseline ${typeBase.soft_errors}. A gate may only get stricter (§10-D rule 6).`);
-  else if (soft < typeBase.soft_errors) falls.push(`TYPE COUNT FELL — ${soft} (baseline ${typeBase.soft_errors}); tighten TYPE_BASELINE.soft_errors to ${soft}.`);
+  if (typesLive && soft > typeBase.soft_errors) reds.push(`TYPE COUNT ROSE — ${soft} checkJs diagnostics, baseline ${typeBase.soft_errors}. A gate may only get stricter (§10-D rule 6).`);
+  else if (typesLive && soft < typeBase.soft_errors) falls.push(`TYPE COUNT FELL — ${soft} (baseline ${typeBase.soft_errors}); tighten TYPE_BASELINE.soft_errors to ${soft}.`);
   for (const [rule, base] of Object.entries(lintBase)) {
-    if (rule === "warnings") continue;
+    if (rule === "warnings" || !lintLive) continue;
     const now = m.lint.byRule[rule] || 0;
     if (now > base) reds.push(`LINT ROSE — ${rule} ${now}, baseline ${base}. A gate may only get stricter.`);
     else if (now < base) falls.push(`LINT FELL — ${rule} ${now} (baseline ${base}); tighten LINT_BASELINE["${rule}"] to ${now}.`);
   }
-  if (m.lint.warnings > lintBase.warnings) reds.push(`LINT WARNINGS ROSE — ${m.lint.warnings}, baseline ${lintBase.warnings}.`);
+  if (lintLive && m.lint.warnings > lintBase.warnings) reds.push(`LINT WARNINGS ROSE — ${m.lint.warnings}, baseline ${lintBase.warnings}.`);
   // 4 · a rule that appears out of nowhere is a new class, not a free pass
-  for (const [rule, n] of Object.entries(m.lint.byRule)) {
+  for (const [rule, n] of Object.entries(lintLive ? m.lint.byRule : {})) {
     if (rule === "(directive)" || HARD_LINT_RULES.includes(rule) || rule in lintBase) continue;
     reds.push(`LINT NEW CLASS — ${rule} ×${n} is not in the frozen baseline; a new rule's findings are never grandfathered.`);
   }
@@ -269,19 +282,55 @@ export function checkedOrgans() {
   return n;
 }
 
-const spawn = (args) => {
-  try { return { out: execFileSync(process.execPath, args, { cwd: ROOT, encoding: "utf8", timeout: 600000, windowsHide: true, maxBuffer: 64 * 1024 * 1024 }), code: 0 }; }
-  catch (e) { return { out: `${(e && e.stdout) || ""}${(e && e.stderr) || ""}`, code: (e && e.status) || 1 }; }
+const spawn = (/** @type {string[]} */ args) => {
+  try { const o = execFileSync(process.execPath, args, { cwd: ROOT, encoding: "utf8", timeout: 600000, windowsHide: true, maxBuffer: 64 * 1024 * 1024 }); return { out: o, stdout: o, code: 0, signal: null }; }
+  catch (e) {
+    const x = /** @type {any} */ (e);
+    return { out: `${(x && x.stdout) || ""}${(x && x.stderr) || ""}`, stdout: String((x && x.stdout) || ""), code: x && typeof x.status === "number" ? x.status : null, signal: (x && x.signal) || null };
+  }
 };
 
-export function measure() {
-  const tsc = spawn([TSC, "-p", join(ROOT, "tsconfig.json"), "--noEmit"]);
+// ── L2 · THE INSTRUMENT'S OWN HEALTH, read from its EXIT CODE (fate 35, gates.txt:15) ───────────
+// The legal codes, measured on this toolchain (typescript 6.0.3 · eslint 10.8.1, 6 Oct 2026):
+//   tsc --noEmit  0 = clean · 2 = diagnostics present (a LIVE answer) — 1 is a run that never
+//                 reached the code (TS5058, the tsconfig path is missing: it prints no file:line)
+//   eslint        0 = clean · 1 = lint errors (a LIVE answer) · 2 = it crashed (a config error)
+// DEAD = a signal (killed, timed out) · an exit outside the legal set · a failing exit that reported
+// not one thing it measured · for tsc, an answer only about its own CONFIG (TS5xxx compiler-option
+// errors, TS18003 no inputs) — "the compiler could not start" is not "the code has one diagnostic"
+// · for eslint, a report that does not parse (read off STDOUT alone, so a runtime warning on stderr
+// can never break it). A dead tool's numbers are never judged (judge below).
+const TSC_LIVE = [0, 1, 2], ESLINT_LIVE = [0, 1];
+/** @param {"tsc"|"eslint"} tool @param {{out:string, code:number|null, signal?:string|null}} r @param {{measured:number, parsed:boolean, config?:number}} seen */
+export function instrumentOf(tool, r, seen) {
+  const tail = String((r && r.out) || "").trim().slice(-300) || "(no output)";
+  const code = r ? r.code : null;
+  const dead = (/** @type {string} */ why) => ({ tool, live: false, code, why: `${why} — raw tail: ${tail}` });
+  if (r && r.signal) return dead(`killed by ${r.signal}`);
+  if (code === null || code === undefined) return dead("no exit code (it never ran)");
+  const legal = tool === "tsc" ? TSC_LIVE : ESLINT_LIVE;
+  if (!legal.includes(code)) return dead(`exited ${code}, outside its legal codes (${legal.join("/")})`);
+  if (!seen.parsed) return dead(`exited ${code} and its output does not parse`);
+  if (code !== 0 && !seen.measured) return dead(`exited ${code} and reported nothing it measured`);
+  if (tool === "tsc" && seen.config && seen.config >= seen.measured) return dead(`answered only about its own configuration (${seen.config} TS5xxx/TS18003 diagnostic(s), nothing else) — it measured no code`);
+  return { tool, live: true, code, why: null };
+}
+
+/** measure — spawns the two tools (they write nothing). `deps.run` / `deps.checked` are the selftest's seams. */
+export function measure(deps = {}) {
+  const d = /** @type {{run?: (args: string[]) => {out:string, stdout?:string, code:number|null, signal?:string|null}, checked?: () => number}} */ (deps);
+  const run = d.run || spawn;
+  const tsc = run([TSC, "-p", join(ROOT, "tsconfig.json"), "--noEmit"]);
   const t = parseTsc(tsc.out);
-  const es = spawn([ESLINT, "scripts", "hooks", "--format", "json"]);
-  let report = [];
-  try { report = JSON.parse(es.out.slice(es.out.indexOf("["), es.out.lastIndexOf("]") + 1)); } catch { /* judged as zero below, and the raw tail is printed */ }
+  const es = run([ESLINT, "scripts", "hooks", "--format", "json"]);
+  let report = [], parsed = false;
+  const esOut = es.stdout !== undefined ? es.stdout : es.out;
+  try { report = JSON.parse(esOut.slice(esOut.indexOf("["), esOut.lastIndexOf("]") + 1)); parsed = Array.isArray(report); } catch { /* unparseable: instrumentOf names it DEAD and its tail is printed */ }
   const l = parseEslint(report);
-  return { types: { ...t, checked: checkedOrgans() }, lint: l, raw: { tsc: tsc.out, eslint: es.out } };
+  const configDiags = Object.entries(t.byCode).filter(([c]) => (Number(c) >= 5000 && Number(c) < 6000) || Number(c) === 18003).reduce((a, [, n]) => a + n, 0);
+  // THE EXIT CODE IS READ HERE — beside the output, never instead of it.
+  const instruments = { tsc: instrumentOf("tsc", tsc, { measured: t.total, parsed: true, config: configDiags }), eslint: instrumentOf("eslint", es, { measured: l.errors + l.warnings, parsed }) };
+  return { types: { ...t, checked: (d.checked || checkedOrgans)() }, lint: l, raw: { tsc: tsc.out, eslint: es.out }, instruments };
 }
 
 // ── SELFTEST — hermetic: the ratchet is driven on synthetic numbers, no tools spawned ──
@@ -342,6 +391,37 @@ async function selftest() {
   // the live pragma count really is at least the baseline (cheap, no tool spawn)
   assert(`LIVE — ${checkedOrgans()} organ(s) carry \`@ts-check\` on disk, baseline ${TYPE_BASELINE.checked_organs}`, checkedOrgans() >= TYPE_BASELINE.checked_organs);
   assert("BARE CHECKOUT — the gate can say whether it is measurable at all", typeof available() === "boolean");
+
+  // ── L2 · fate 35 (6 Oct 2026, gates.txt:15) — A DEAD INSTRUMENT IS RED, NEVER GREEN ──────────
+  // measure() is driven with an injected runner that returns each tool's exact stdout AND exit code
+  // (the shapes measured on this toolchain), so these clauses exercise the real exit-code read.
+  {
+    const asBase = () => TYPE_BASELINE.checked_organs;
+    /** @param {Record<string, {out:string, code:number|null, signal?:string|null}>} by */
+    const runner = (by) => (/** @type {string[]} */ args) => { const r = by[args[0] === TSC ? "tsc" : "eslint"]; return { out: r.out, code: r.code, signal: r.signal || null }; };
+    const LIVE_ES = { out: JSON.stringify([{ filePath: "scripts/a.mjs", messages: [{ ruleId: "no-empty", severity: 2, line: 3, message: "Empty block statement." }] }]), code: 1 };
+    const LIVE_TSC = { out: "scripts/a.mjs(10,5): error TS2339: Property 'x' does not exist on type '{}'.", code: 2 };
+    const dead1 = judge(measure({ run: runner({ tsc: { out: "error TS5058: The specified path does not exist: 'tsconfig.json'.", code: 1 }, eslint: LIVE_ES }), checked: asBase }));
+    assert("L2 · DEAD INSTRUMENT · a tsc that exits 1 having reported NO diagnostic (TS5058: its tsconfig is missing) is RED by name — and its zero never becomes a TYPE COUNT FELL",
+      !dead1.ok && dead1.reds.some((r) => /^INSTRUMENT DEAD — tsc: exited 1/.test(r) && /TS5058/.test(r)) && !dead1.falls.some((f) => /TYPE COUNT FELL/.test(f)), JSON.stringify(dead1.reds));
+    const dead2 = judge(measure({ run: runner({ tsc: { out: "tsconfig.json(1,24): error TS5023: Unknown compiler option 'bogus'.", code: 2 }, eslint: LIVE_ES }), checked: asBase }));
+    assert("L2 · DEAD INSTRUMENT · a tsc that answers ONLY about its own configuration (TS5023 on tsconfig.json) measured no code — RED, never 'one soft diagnostic'",
+      !dead2.ok && dead2.reds.some((r) => /^INSTRUMENT DEAD — tsc: answered only about its own configuration/.test(r)) && !dead2.falls.some((f) => /TYPE COUNT/.test(f)), JSON.stringify(dead2.reds));
+    const dead3 = judge(measure({ run: runner({ tsc: LIVE_TSC, eslint: { out: "Oops! Something went wrong! :(\nESLint couldn't find an eslint.config.(js|mjs|cjs) file.", code: 2 } }), checked: asBase }));
+    assert("L2 · DEAD INSTRUMENT · an eslint that exits 2 (its config crashed) is RED by name, and NO 'LINT FELL … tighten' line asks a session to lower a baseline toward zero",
+      !dead3.ok && dead3.reds.some((r) => /^INSTRUMENT DEAD — eslint: exited 2/.test(r)) && !dead3.falls.some((f) => /LINT FELL/.test(f)), JSON.stringify(dead3.reds));
+    const killed = judge(measure({ run: runner({ tsc: { out: "", code: null, signal: "SIGTERM" }, eslint: LIVE_ES }), checked: asBase }));
+    assert("L2 · DEAD INSTRUMENT · a tool killed on a signal (the 10-minute wall) is RED — a timed-out run measured nothing",
+      !killed.ok && killed.reds.some((r) => /^INSTRUMENT DEAD — tsc: killed by SIGTERM/.test(r)));
+    const live = measure({ run: runner({ tsc: LIVE_TSC, eslint: LIVE_ES }), checked: asBase });
+    const jl = judge(live);
+    assert("L2 · LIVE · tsc exit 2 with a file:line diagnostic and eslint exit 1 with a parseable report are MEASUREMENTS — no instrument is dead, and the ratchet judges their numbers exactly as before",
+      live.instruments.tsc.live && live.instruments.eslint.live && live.types.total === 1 && live.lint.byRule["no-empty"] === 1
+      && !jl.reds.some((r) => /INSTRUMENT DEAD/.test(r)) && jl.falls.some((f) => /TYPE COUNT FELL/.test(f)), JSON.stringify(jl));
+    const cleanUnder = (/** @type {number} */ code) => measure({ run: runner({ tsc: { out: "", code }, eslint: { out: "[]", code: 0 } }), checked: asBase }).instruments.tsc.live;
+    assert("L2 · measure() READS THE EXIT CODE, never only stdout — the SAME empty stdout is a clean tsc under exit 0 and a DEAD one under exit 1",
+      cleanUnder(0) === true && cleanUnder(1) === false);
+  }
 
   // ── S11 · THE SCHEMA GATE (ajv), judged on synthetic rows then RUN for real ──
   const okRow = (f) => ({ file: f, valid: true, errors: [], state_missing: false, schema_broken: null });

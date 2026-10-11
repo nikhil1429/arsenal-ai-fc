@@ -53,7 +53,17 @@
 // MEASURABLE HERE and exit 0. Measurability is an answer; silence is not.
 //
 // LAWS: writes nothing outside a throwaway temp dir in its own selftest · measures before
-//   it judges · every RED names file:line · a fallen count is reported, never pocketed.
+//   it judges · every RED names file:line · a fallen count is reported, never pocketed ·
+//   A DEAD INSTRUMENT IS RED, NEVER GREEN (L2).
+// L2 (6 Oct 2026 · fate 35 · capability C30, honest instruments · gates.txt:16): scan() captured
+//   ast-grep's exit code and measure() threw it away, and parseSg returns [] for any non-JSON
+//   output — so a broken rule YAML, a config error or a crash scored ZERO findings on every law,
+//   judge() returned ok and printed a FALL for each one telling the next session to tighten its
+//   baseline to 0. The same shape for dependency-cruiser: unparseable or ABSENT, it scored 0 against
+//   a baseline of 7 and asked for the import-cycle gate to be retired. measure() now reads each
+//   tool's health (sgHealth · depcruise's own parse + code) and judgeMeasured() turns a DEAD tool
+//   into a RED that names it and drops every FALL its zeros would have printed; an ABSENT
+//   dependency-cruiser is NOT MEASURED (named), never a fallen count.
 // WHO ELSE COULD ACT ON THIS OUTPUT? organism_test.mjs (`lawpack` mode — wired, so the law
 //   pack rides npm test) · xray.mjs (its IR resolves the sites this file can only see
 //   syntactically) · rung S6's registry spec (every finding here carries a witness).
@@ -157,8 +167,8 @@ export function sgBin() {
 export const available = () => Boolean(sgBin()) && existsSync(RULES_DIR) && existsSync(SGCONFIG);
 
 const runTool = (file, args, opts = {}) => {
-  try { return { out: execFileSync(file, args, { cwd: ROOT, encoding: "utf8", timeout: 600000, windowsHide: true, maxBuffer: 128 * 1024 * 1024, ...opts }), code: 0 }; }
-  catch (e) { return { out: `${(e && e.stdout) || ""}${(e && e.stderr) || ""}`, code: (e && typeof e.status === "number") ? e.status : 1 }; }
+  try { return { out: execFileSync(file, args, { cwd: ROOT, encoding: "utf8", timeout: 600000, windowsHide: true, maxBuffer: 128 * 1024 * 1024, ...opts }), code: 0, signal: null }; }
+  catch (e) { const x = /** @type {any} */ (e); return { out: `${(x && x.stdout) || ""}${(x && x.stderr) || ""}`, code: (x && typeof x.status === "number") ? x.status : 1, signal: (x && x.signal) || null }; }
 };
 
 // ── MEASURE: ast-grep → raw matches ─────────────────────────────────────────
@@ -178,9 +188,28 @@ export function parseSg(json) {
 }
 
 export function scan({ bin = sgBin(), paths = ["scripts", "hooks"], cwd = ROOT, config = SGCONFIG } = {}) {
-  if (!bin) return { matches: [], raw: "" };
+  if (!bin) return { matches: [], raw: "", code: null, signal: null };
   const r = runTool(bin, ["scan", "--config", config, "--json=compact", ...paths], { cwd });
-  return { matches: parseSg(r.out), raw: r.out, code: r.code };
+  return { matches: parseSg(r.out), raw: r.out, code: r.code, signal: r.signal };
+}
+
+// ── L2 · THE INSTRUMENT'S OWN HEALTH (fate 35, gates.txt:16) ─────────────────────────────────────
+// ast-grep's legal codes, measured on @ast-grep/cli 0.45.1 (6 Oct 2026): 0 = scanned (no
+// error-severity match) · 1 = scanned, error-severity matches found — both print a JSON array.
+// 6 = its config could not be read · 8 = a rule file does not parse — the scan never happened.
+// DEAD = a signal · an exit outside {0, 1} · output with no JSON array in it (nothing was measured).
+const SG_LIVE = [0, 1];
+/** @param {{raw?:string, code?:number|null, signal?:string|null}} sc */
+export function sgHealth(sc) {
+  const raw = String((sc && sc.raw) || "");
+  const tail = raw.trim().slice(-300) || "(no output)";
+  const code = sc && typeof sc.code === "number" ? sc.code : null;
+  if (sc && sc.signal) return { tool: "ast-grep", live: false, code, why: `killed by ${sc.signal} — raw tail: ${tail}` };
+  if (typeof code !== "number" || !SG_LIVE.includes(code)) return { tool: "ast-grep", live: false, code, why: `exited ${code}, outside its legal codes (${SG_LIVE.join("/")}) — raw tail: ${tail}` };
+  let isArray = false;
+  try { isArray = raw.includes("[") && Array.isArray(JSON.parse(raw.slice(raw.indexOf("["), raw.lastIndexOf("]") + 1))); } catch { /* not a JSON array: named below */ }
+  if (!isArray) return { tool: "ast-grep", live: false, code, why: `exited ${code} with no JSON array — it measured nothing — raw tail: ${tail}` };
+  return { tool: "ast-grep", live: true, code, why: null };
 }
 
 // ── THE ORGANISM'S OWN KNOWLEDGE ────────────────────────────────────────────
@@ -353,14 +382,17 @@ export function depcruise() {
   const bin = jsEntry("dependency-cruiser", "bin", "dependency-cruise.mjs");
   if (!bin) return { available: false, errors: [], leads: [], raw: "" };
   const r = runTool(process.execPath, [bin, "--config", ".dependency-cruiser.cjs", "--output-type", "json", "scripts", "hooks"]);
-  let v = [];
-  try { v = ((JSON.parse(r.out.slice(r.out.indexOf("{"), r.out.lastIndexOf("}") + 1)).summary) || {}).violations || []; }
-  catch { /* unparseable = the raw tail is printed below, never silently treated as zero */ }
+  let v = [], parsed = false;
+  try { v = ((JSON.parse(r.out.slice(r.out.indexOf("{"), r.out.lastIndexOf("}") + 1)).summary) || {}).violations || []; parsed = Array.isArray(v); }
+  catch { /* unparseable: L2 — judgeMeasured names it DEAD with this tail, never a silent zero */ }
   return {
     available: true,
     errors: v.filter((x) => x.rule && x.rule.severity === "error"),
     leads: v.filter((x) => x.rule && x.rule.severity !== "error"),
-    parsed: Array.isArray(v),
+    // L2: was `Array.isArray(v)` — true even when the parse FAILED (v stays []), so this field could
+    // never say no. It now says whether dependency-cruiser's answer actually parsed.
+    parsed: parsed && !r.signal,
+    code: r.code,
     raw: r.out.slice(0, 300),
   };
 }
@@ -381,8 +413,11 @@ export function knipLeads() {
 }
 
 // ── MEASURE-ALL ─────────────────────────────────────────────────────────────
-export async function measure({ withDepcruise = true } = {}) {
-  const { matches, raw } = scan();
+export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn = depcruise } = {}) {
+  // L2 (fate 35): the scan's EXIT CODE is read beside its output — sgHealth — never thrown away.
+  const sc = scanFn();
+  const { matches, raw } = sc;
+  const sg = sgHealth(sc);
   const owners = declaredOwners();
   let labels = new Set(), literalOk = "models-literal-ok";
   try {
@@ -397,7 +432,7 @@ export async function measure({ withDepcruise = true } = {}) {
   const c = judgeBareCatch(matches);
   const rt = judgeReceiptTestimony(matches);
   const tm = judgeTum(matches);
-  const dc = withDepcruise ? depcruise() : { available: false, errors: [], leads: [] };
+  const dc = withDepcruise ? depcruiseFn() : { available: false, errors: [], leads: [] };
   const counts = {
     "owners-only-state-write": o.findings.length,
     "law-m-literal-model": m.findings.length,
@@ -408,7 +443,31 @@ export async function measure({ withDepcruise = true } = {}) {
     "tum-not-tu-prose": tm.findings.length,
     depcruise_errors: dc.available ? dc.errors.length : 0,
   };
-  return { matches, counts, o, m, j, t, c, rt, tm, dc, raw, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
+  return { matches, counts, o, m, j, t, c, rt, tm, dc, raw, sg, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
+}
+
+/** judgeMeasured — L2 (fate 35): the ratchet over a REAL measurement. A dead ast-grep is a RED that names
+ *  it, and none of the seven laws it feeds may print a FALL; a dead dependency-cruiser is a RED too; an
+ *  ABSENT one is NOT MEASURED — named in `notes`, never a fallen count. Everything else is judge()'s.
+ *  @param {{counts:Record<string,number>, sg?:{tool:string, live:boolean, code:number|null, why:string|null}, dc?:{available?:boolean, parsed?:boolean, code?:number|null, raw?:string}}} m */
+export function judgeMeasured(m, base = BASELINE) {
+  const j = judge(m.counts, base);
+  const reds = [...j.reds], notes = [];
+  let falls = [...j.falls];
+  const sgKeys = Object.keys(base).filter((k) => k !== "depcruise_errors");
+  if (m.sg && !m.sg.live) {
+    reds.unshift(`INSTRUMENT DEAD — ast-grep: ${m.sg.why}. None of the ${sgKeys.length} laws it feeds is judged; a dead scan's zero is not a fall.`);
+    falls = falls.filter((f) => !sgKeys.some((k) => f.startsWith(`${k} FELL`)));
+  }
+  const dc = m.dc || {};
+  if (dc.available && !dc.parsed) {
+    reds.push(`INSTRUMENT DEAD — dependency-cruiser: exited ${dc.code} and its answer did not parse — raw: ${String(dc.raw || "").trim().slice(0, 200) || "(no output)"}. depcruise_errors is not judged.`);
+    falls = falls.filter((f) => !f.startsWith("depcruise_errors FELL"));
+  } else if (!dc.available) {
+    notes.push("depcruise_errors NOT MEASURED — dependency-cruiser is absent here; a missing tool is never a fallen count");
+    falls = falls.filter((f) => !f.startsWith("depcruise_errors FELL"));
+  }
+  return { ok: reds.length === 0, reds, falls, notes };
 }
 
 // ── THE PLANT — the rung's DONE-PROOF, and it runs on EVERY selftest ────────
@@ -524,6 +583,31 @@ async function selftest() {
     p.length === 1 && p[0].line === 42 && p[0].file === "scripts/brain.mjs", JSON.stringify(p));
   assert("PARSE — no output is no matches, never a crash", parseSg("").length === 0 && parseSg("nonsense").length === 0);
 
+  // 4b · L2 (6 Oct 2026, fate 35 · gates.txt:16) — A DEAD INSTRUMENT IS RED, NEVER GREEN. measure() is
+  // driven with an injected scan / dependency-cruiser carrying each tool's exact output AND exit code.
+  {
+    const noDc = () => ({ available: false, errors: [], leads: [], raw: "" });
+    const deadSg = await measure({ scanFn: () => ({ matches: [], raw: "Error: Cannot parse rule laws/bare-catch.yml\nHelp: The file is not a valid ast-grep rule.", code: 8, signal: null }), depcruiseFn: noDc });
+    const jd = judgeMeasured(deadSg);
+    assert("L2 · DEAD INSTRUMENT · an ast-grep that exits 8 (a rule YAML that does not parse) is RED by name — and not ONE of the seven laws prints a FALL telling a session to lower its baseline to 0",
+      !jd.ok && /^INSTRUMENT DEAD — ast-grep: exited 8/.test(jd.reds[0]) && !jd.falls.some((f) => / FELL /.test(f)), JSON.stringify(jd));
+    const cfgSg = judgeMeasured(await measure({ scanFn: () => ({ matches: [], raw: "Error: Cannot read configuration.", code: 6, signal: null }), depcruiseFn: noDc }));
+    assert("L2 · DEAD INSTRUMENT · an ast-grep that cannot read its sgconfig (exit 6) is RED too — the scan never happened",
+      !cfgSg.ok && /^INSTRUMENT DEAD — ast-grep: exited 6/.test(cfgSg.reds[0]));
+    const liveSg = await measure({ scanFn: () => ({ matches: [], raw: "[]", code: 0, signal: null }), depcruiseFn: noDc });
+    const liveErr = await measure({ scanFn: () => ({ matches: parseSg('[{"ruleId":"bare-catch","file":"scripts/x.mjs","range":{"start":{"line":1}},"text":"catch {}"}]'), raw: '[{"ruleId":"bare-catch","file":"scripts/x.mjs","range":{"start":{"line":1}},"text":"catch {}"}]', code: 1, signal: null }), depcruiseFn: noDc });
+    assert("L2 · LIVE · exit 0 with [] and exit 1 with a JSON array (error-severity matches) are MEASUREMENTS — no instrument is dead, and the ratchet judges them as before",
+      liveSg.sg.live === true && liveErr.sg.live === true && !judgeMeasured(liveSg).reds.some((r) => /INSTRUMENT DEAD/.test(r)) && !judgeMeasured(liveErr).reds.some((r) => /INSTRUMENT DEAD/.test(r)));
+    const sameOut = (/** @type {number} */ code) => sgHealth({ raw: "[]", code, signal: null }).live;
+    assert("L2 · measure() READS THE ast-grep EXIT CODE (it was captured and thrown away) — the SAME [] is a clean scan under exit 0 and a DEAD one under exit 8",
+      sameOut(0) === true && sameOut(8) === false);
+    const dcDead = judgeMeasured(await measure({ scanFn: () => ({ matches: [], raw: "[]", code: 0, signal: null }), depcruiseFn: () => ({ available: true, errors: [], leads: [], parsed: false, code: 1, raw: "ERROR: config file .dependency-cruiser.cjs not found" }) }));
+    const dcAbsent = judgeMeasured(liveSg);
+    assert("L2 · a dependency-cruiser whose answer does not parse is RED by name; an ABSENT one is NOT MEASURED — and neither prints 'depcruise_errors FELL … tighten to 0'",
+      !dcDead.ok && dcDead.reds.some((r) => /^INSTRUMENT DEAD — dependency-cruiser/.test(r)) && !dcDead.falls.some((f) => /depcruise_errors FELL/.test(f))
+      && dcAbsent.notes.some((n) => /depcruise_errors NOT MEASURED/.test(n)) && !dcAbsent.falls.some((f) => /depcruise_errors FELL/.test(f)), JSON.stringify({ dcDead, dcAbsent }));
+  }
+
   // 5 · THE PLANT — every rule proven to BITE, on every run, in a throwaway project
   if (available()) {
     const m2 = plantAndScan();
@@ -560,7 +644,7 @@ async function main() {
     return;
   }
   const miss = RULE_IDS.filter((id) => !m.rulesPresent.includes(id));
-  const j = judge(m.counts);
+  const j = judgeMeasured(m);   // L2 (fate 35): the tools' health first — a dead instrument is RED, never green
   if (miss.length) j.reds.push(`RULE MISSING — ${miss.join(", ")} — the pack IS the law, so a missing rule file is a missing law.`);
   console.log(`lawpack · ${m.matches.length} raw match(es) over ${m.rulesPresent.length}/${RULE_IDS.length} rules · findings: ` +
     Object.entries(m.counts).map(([k2, v]) => `${k2} ${v}`).join(" · "));
@@ -576,6 +660,7 @@ async function main() {
   }
   for (const r of j.reds) console.log(`  RED  ${r}`);
   for (const f of j.falls) console.log(`  ok   ${f}`);
+  for (const n of j.notes) console.log(`  --   ${n}`);
   const ok = j.ok && !miss.length;
   console.log(ok ? "lawpack: GREEN — no law's finding count rose, and every rule is on disk" : `lawpack: ${j.reds.length} RED — a gate may only get stricter (§10-D rule 6)`);
   process.exit(ok ? 0 : 1);

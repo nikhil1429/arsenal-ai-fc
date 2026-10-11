@@ -95,7 +95,9 @@
 //        node scripts/gaffer_brain.mjs status           → counts, engines, last judgment
 //        node scripts/gaffer_brain.mjs probe            → ONE live Flash call (the free-pool probe)
 //        node scripts/gaffer_brain.mjs capture <concept> <axis> --gut <word>  → bank ONE spoken answer (no model, instant)
-//        node scripts/gaffer_brain.mjs judge-round        → grade the whole round in ONE Opus call
+//        node scripts/gaffer_brain.mjs capture … --json   → the same bank, its verdict as ONE JSON line ({ok, captured} | {ok:false, reason, say}) — what sitting.mjs bank() reads
+//        node scripts/gaffer_brain.mjs judge-round        → grade the whole round in ONE Opus call (a TYPED round: stamped judged_by "hand")
+//        node scripts/gaffer_brain.mjs judge-due --trigger sitting.close|pacer  → THE CODE DOOR (organ children only, ARSENAL_ORGAN=1): fire the round when its rule says due, stamped judged_by "code"
 //        node scripts/gaffer_brain.mjs judge-night        → the night lane: judge what the day left unjudged
 //        node scripts/gaffer_brain.mjs queue              → what is captured and not yet judged
 //        node scripts/gaffer_brain.mjs selftest
@@ -207,6 +209,26 @@ function writeAtomic(p, obj) {
   const tmp = p + ".tmp" + process.pid;
   writeFileSync(tmp, JSON.stringify(obj, null, 2));
   renameSync(tmp, p);
+}
+// THE CHECKED APPEND (L2 · fate 14, 6 Oct 2026). The two appends that carry HIS SPOKEN ANSWER
+// and its verdict into the record sat in bare catches and reported ok:true whatever happened
+// (gaffer-dugout-sitting.txt:5) — so a full disk, a permission change or a removed state dir told
+// every caller the answer was banked while the row was gone. One writer now, VERIFIED ON DISK and
+// not on the absence of an exception (the law capture.mjs's quarantine wire learned on 11 Aug:
+// an append that throws and an append that silently wrote nothing read the same to a caller), so
+// the file must GROW by the row's bytes or the write did not happen. It RETURNS, never throws:
+// each caller decides what a failed write means for its own answer, out loud.
+function appendRowChecked(path, row) {
+  const line = JSON.stringify(row) + "\n";
+  const bytes = Buffer.byteLength(line, "utf8");
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+    const before = existsSync(path) ? statSync(path).size : 0;
+    appendFileSync(path, line, "utf8");
+    const after = statSync(path).size;
+    if (after < before + bytes) return { ok: false, error: `the file grew ${after - before} of ${bytes} bytes — the row is NOT fully on disk` };
+    return { ok: true };
+  } catch (e) { return { ok: false, error: `${(e && e.code) || "error"}: ${clip(String((e && e.message) || e), 160)}` }; }
 }
 
 // ---------------------------------------------------------------------------
@@ -1364,7 +1386,20 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
     // judge is later told this number exists and is not its to produce.
     hedges: countHedges(said),
   };
-  if (!deps.dry) { try { mkdirSync(dirname(GRADE_QUEUE), { recursive: true }); appendFileSync(GRADE_QUEUE, JSON.stringify(row) + "\n"); } catch { } }
+  // ── THE BANK WRITE (L2 · fate 14, 6 Oct 2026) — A FAILED WRITE OF HIS ANSWER IS ok:false ──────
+  // This line sat in a bare catch and returned ok:true whatever happened: the CLI printed
+  // "captured", sitting.mjs bank() counted it and cleared pending_question so the question could
+  // never be re-asked, and he was told it landed — with the row gone. The write is now checked ON
+  // DISK (appendRowChecked) and a failure is a refusal like every other refusal at this door:
+  // ok:false, a reason a caller can branch on, and his words handed back on `row` so the caller
+  // still holds them. LAW 1 (the brain never blocks the mouth) is kept by the caller: the mouth
+  // keeps the question open and asks again — it is never told an answer is safe when it is not.
+  // `deps.appendRow` is the selftest's seam (a writer that fails on demand); production always
+  // writes through appendRowChecked to GRADE_QUEUE.
+  if (!deps.dry) {
+    const w = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, row);
+    if (!w || !w.ok) return { ok: false, reason: "write-failed", row, say: `gaffer_brain: his answer was NOT banked — the grade-queue write failed (${(w && w.error) || "the writer gave no answer"}). Nothing landed; keep the question open and bank it again.` };
+  }
   return { ok: true, row, captured: row.id, type, has_key: !!mat.key };
 }
 
@@ -1761,6 +1796,11 @@ export function ownerCommand(s) {
     if (s.register && typeof s.register === "object") {
       argv.push("--register", JSON.stringify({ used: s.register.used || [], expected: s.register.expected || [], missing: s.register.missing || [], hedges: Number.isInteger(s.register.hedges) ? s.register.hedges : 0 }));
     }
+    // L2 (fate 53) — WHO FIRED THE ROUND rides the rep through the owner's own door, so the
+    // reps_log row carries the stamp ON ITSELF (row 551 (1)): code → --judged-by code
+    // --judged-at <the round's ISO instant>; a typed round → --judged-by hand, no instant.
+    if (s.judged_by === "code" || s.judged_by === "hand") argv.push("--judged-by", s.judged_by);
+    if (s.judged_by === "code" && s.judged_by_code_at) argv.push("--judged-at", String(s.judged_by_code_at));
     return { organ: "capture.mjs", argv };
   }
   // doubt_quality has no owner organ today — the verdict lives in this organ's own
@@ -1768,8 +1808,68 @@ export function ownerCommand(s) {
   return { organ: null, note: "no owner organ for this type — the verdict stays in gaffer_brain.jsonl for the Gate 1/2 review" };
 }
 
+// ── WHO FIRED THE ROUND — THE STAMP (L2 · fate 53, U4 · 6 Oct 2026) ─────────────────────────────
+// His 11 Aug law, as the 5 Sep ruling applied it (forks row 48 (3)): a step that fires only when
+// he remembers a ritual is a DESIGN failure, never his miss — the judge round is fired by CODE,
+// never by his hand. Row 68 (d) already made sitting.mjs close() fire the round through this organ
+// whenever the queue holds unjudged rows (his close, or the sitting's own idle close), but no row
+// on disk could tell that round from one typed at a prompt, so the rung's witness (rung_L2.mjs,
+// CLASS G of forks row 551) had nothing to read. Every verdict row now SAYS who fired it:
+//   judged_by "code" · judged_by_code_at <ISO> · fired_by <trigger> — fired through `judge-due`
+//     by a DECLARED trigger below, from an organ child (ARSENAL_ORGAN=1, the organism's own mark
+//     for "a headless child, never him" — outbox.mjs reads `witnessed` off the same mark).
+//   judged_by "hand" · judged_by_code_at null · fired_by "cli" — `judge-round` was typed (by him,
+//     by a skill's model, by the architect). It grades him exactly the same and is recorded as
+//     what it was, because a round a hand fired is the ritual the ruling retires.
+// WHERE THE STAMP LIVES (row 551 (1), append-only): on a capture, on the APPENDED settled row whose
+// `of` names it — the capture row is never rewritten; on a rep, on the rep itself — ownerCommand
+// hands it to capture.mjs `rep --judged-by … --judged-at …`, so the reps_log row carries it.
+// A MAP, NOT A LIST: each trigger is a door with its reason, and an undeclared name is refused —
+// a stamp a typo could mint would be testimony again.
+export const JUDGE_CODE_TRIGGERS = Object.freeze({
+  "sitting.close": "sitting.mjs close() — his close or the sitting's own idle close (row 68 (d)); the round is over by definition, so anything outstanding is due",
+  pacer: "a scheduled organ (the evening organ of forks row 48 (3)); due only when the NEWEST unjudged capture is older than the round's idle definition, so a live round is never judged mid-answer",
+});
+const isCodeTrigger = (t) => Object.prototype.hasOwnProperty.call(JUDGE_CODE_TRIGGERS, String(t));
+// THE ROUND'S IDLE DEFINITION — INHERITED, NEVER GUESSED (LAW 7). sitting.mjs closes a sitting after
+// DEFAULT_CONFIG.idle_close_min = 20 quiet minutes ("§6.7 — a definition"); a round with no new
+// capture for that long has stopped by the same definition. The selftest pins the two together.
+export const JUDGE_DUE_IDLE_MIN = 20;
+/** judgeDue — PURE: is the round due for the CODE door, and why. `rows` = the whole grade queue. */
+export function judgeDue(rows, { trigger, now = new Date(), idleMin = JUDGE_DUE_IDLE_MIN } = {}) {
+  if (!isCodeTrigger(trigger)) return { due: false, refused: true, why: `"${clip(trigger, 40)}" is not a declared code trigger (${Object.keys(JUDGE_CODE_TRIGGERS).join(" | ")}) — an undeclared door mints no stamp` };
+  const out = outstandingGrades(rows);
+  if (!out.length) return { due: false, why: "nothing outstanding — every captured item is already judged", outstanding: 0 };
+  if (trigger === "sitting.close") return { due: true, why: "the sitting closed — the round is over", outstanding: out.length };
+  const newest = Math.max(...out.map((r) => Date.parse(r.ts || "")).filter(Number.isFinite));
+  const quietMin = Number.isFinite(newest) ? (now.getTime() - newest) / 60000 : Infinity;
+  return quietMin >= idleMin
+    ? { due: true, why: `the newest unjudged capture is ${Math.floor(quietMin)} min old (≥ ${idleMin}, the round's idle definition)`, outstanding: out.length }
+    : { due: false, why: `the newest unjudged capture is ${Math.floor(quietMin)} min old (< ${idleMin}) — the round may still be live`, outstanding: out.length };
+}
+/** codeDoorRefusal — the code door's one guard: an organ child carries ARSENAL_ORGAN=1, a prompt does not. */
+export function codeDoorRefusal(env = process.env) {
+  return env && env.ARSENAL_ORGAN === "1" ? null
+    : "gaffer_brain: judge-due is the CODE door — organs spawn it with ARSENAL_ORGAN=1 (sitting.mjs close, the pacer). By hand, type `judge-round`: it grades the same round and is stamped judged_by \"hand\".";
+}
+/** captureVerdict — PURE: capture.mjs `rep`'s own counts line → did the rep land on disk? */
+export function captureVerdict(stdout) {
+  const m = /appended (\d+), rejected (\d+), duplicates (\d+)/.exec(String(stdout || ""));
+  if (!m) return { ok: false, error: `capture.mjs printed no verdict line — the rep is NOT known to be on disk (${clip(String(stdout || "").trim(), 120) || "no output"})` };
+  const appended = Number(m[1]), rejected = Number(m[2]), duplicates = Number(m[3]);
+  if (appended >= 1) return { ok: true };
+  if (rejected === 0 && duplicates >= 1) return { ok: true, note: "the rep was already on disk (capture counted a duplicate)" };
+  return { ok: false, error: `capture.mjs appended ${appended} (rejected ${rejected}, duplicates ${duplicates}) — the rep is NOT on disk` };
+}
+
 export async function gradeJudge(deps = {}) {
   const now = deps.now || new Date();
+  // WHO FIRED IT (see JUDGE_CODE_TRIGGERS): a declared trigger is CODE, none is a TYPED round
+  // (HAND), and an undeclared name is refused before anything is read or spent.
+  if (deps.firedBy != null && !isCodeTrigger(deps.firedBy)) return { ok: false, reason: "unknown-trigger", say: `gaffer_brain: "${clip(deps.firedBy, 40)}" is not a declared code trigger (${Object.keys(JUDGE_CODE_TRIGGERS).join(" | ")}) — nothing was judged.` };
+  const stamp = deps.firedBy != null
+    ? { judged_by: "code", judged_by_code_at: now.toISOString(), fired_by: String(deps.firedBy) }
+    : { judged_by: "hand", judged_by_code_at: null, fired_by: "cli" };
   const rows = deps.rows !== undefined ? deps.rows : readJournal(GRADE_QUEUE, 800);
   const queued = outstandingGrades(rows);
   if (!queued.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0 };
@@ -1865,6 +1965,8 @@ export async function gradeJudge(deps = {}) {
       standard: it.standard || (VERDICT_TYPES[it.type] || {}).standard || null,
       missing: Array.isArray(g.missing) ? g.missing.slice(0, 8) : [],
       why: clip(g.why, 300), engine: "opus", pass: 1,
+      // L2 — WHO FIRED THE ROUND, on the row that records the verdict (see JUDGE_CODE_TRIGGERS)
+      ...stamp,
       // §9.1 — WHAT GROUND THE VERDICT STOOD ON is part of the record: the checked
       // claims with their verdicts and sources, or null with the reason (not run,
       // lane down, nothing cited). Six months from now this is how a reader tells
@@ -1939,7 +2041,11 @@ export async function gradeJudge(deps = {}) {
       try { execFileSync(process.execPath, [join(HERE, "doubtminer.mjs"), ...cmd.argv], opt); return { ok: true }; } catch (e) { return fail(e); }
     }
     if (cmd.organ === "capture.mjs") {
-      try { execFileSync(process.execPath, [join(HERE, "capture.mjs"), ...cmd.argv], opt); return { ok: true }; } catch (e) { return fail(e); }
+      // `capture.mjs rep` EXITS 0 EVEN WHEN IT APPENDS NOTHING (named at gradeCapture's CODE_STRICT
+      // note): its verdict is the counts line on stdout — the line turnstile.mjs reads for the same
+      // reason. L2 reads it, never the exit code: a verdict marked settled while its rep (and the
+      // stamp the rep carries) never reached reps_log would be a grade with nothing on disk.
+      try { return captureVerdict(execFileSync(process.execPath, [join(HERE, "capture.mjs"), ...cmd.argv], opt)); } catch (e) { return fail(e); }
     }
     return { ok: false, error: `no such owner organ: ${cmd.organ}` };
   });
@@ -1952,19 +2058,36 @@ export async function gradeJudge(deps = {}) {
   // An INJECTED dispatch still runs under dry — that is the selftest's own stub, and
   // it is the thing being tested.
   const dispatched = [], refused = [];
+  let settleFailed = null;
   for (const s of settled) {
     const d = (deps.dry && !deps.dispatch)
       ? { ok: true, noop: true, note: "DRY RUN — the owner was NOT called and nothing was recorded" }
       : dispatch(ownerCommand(s));
-    if (d.ok) dispatched.push({ ...s, owner_noop: !!d.noop, owner_note: d.note || null });
-    else refused.push({ ref: `${s.type}:${s.ref}`, error: d.error });
+    if (!d.ok) { refused.push({ ref: `${s.type}:${s.ref}`, error: d.error }); continue; }
+    const row = { ...s, owner_noop: !!d.noop, owner_note: d.note || null };
+    // ONLY WHAT THE OWNER ACCEPTED IS MARKED SETTLED. A verdict an owner refused is not
+    // a graded item, and writing a settlement row for it would lose his spoken answer.
+    // L2 (fate 14) — AND THE SETTLED ROW IS WRITTEN PER ITEM, CHECKED, THE MOMENT ITS OWNER ACCEPTED.
+    // The batch append after this loop sat in a bare catch: one swallowed failure left every
+    // just-graded capture looking ungraded (outstandingGrades reads the ABSENCE of a settled row),
+    // so the next round re-graded the same answers, spent a second Opus call and dispatched the
+    // same reps again (gaffer-dugout-sitting.txt:5, "A LOST SETTLEMENT ROW SILENTLY DOUBLE-COUNTS
+    // HIM"). Now a lost settled row STOPS the round at that item and says so: at most ONE verdict
+    // can sit on its owner's side without its settled row, and it is named, never hidden.
+    if (!deps.dry) {
+      const w = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, row);
+      if (!w || !w.ok) { settleFailed = { ref: `${s.type}:${s.ref}`, of: s.of, error: (w && w.error) || "the writer gave no answer" }; break; }
+    }
+    dispatched.push(row);
   }
-  // ONLY WHAT THE OWNER ACCEPTED IS MARKED SETTLED. A verdict an owner refused is not
-  // a graded item, and writing a settlement row for it would lose his spoken answer.
-  if (!deps.dry) {
-    try { mkdirSync(dirname(GRADE_QUEUE), { recursive: true }); for (const s of dispatched) appendFileSync(GRADE_QUEUE, JSON.stringify(s) + "\n"); } catch { }
+  if (settleFailed) {
+    return { ok: false, reason: "settle-write-failed", settle_failed: settleFailed,
+      say: `gaffer_brain: the verdict for ${settleFailed.ref} reached its owner but its SETTLED row is NOT on disk (${settleFailed.error}) — the round stopped there, and that one item reads as unjudged until the write works (${dispatched.length} earlier item(s) are settled). Fix the write, then run the round again.`,
+      graded: dispatched.length, dispatched, refused, missed, ...stamp, outstanding: items.length - dispatched.length };
   }
   return { ok: true, graded: dispatched.length, types: [...new Set(dispatched.map((s) => s.type))], settled, dispatched, refused, missed,
+    // L2 — who fired this round, on the receipt as on every row (see JUDGE_CODE_TRIGGERS)
+    ...stamp,
     // A DISAGREEMENT IS OUTSTANDING, NOT GRADED. It stays in the queue, so if he
     // resolves it the round can be judged again — and until then nothing about it
     // has entered his record.
@@ -2170,6 +2293,16 @@ async function main() {
       surface: flag("surface"), probe: flag("probe"), register: flag("register"),
       latencyMs: lat !== undefined && Number.isFinite(Number(lat)) ? Math.trunc(Number(lat)) : undefined,
     });
+    // --json (L2 · fate 15) — THE VERDICT AS ONE MACHINE LINE. sitting.mjs bank() reads this line's
+    // `ok` — the write's own answer — and never the exit status (gaffer-dugout-sitting.txt:8). The
+    // exit code keeps its meaning for a human shell; a program reads the verdict.
+    if (process.argv.includes("--json")) {
+      console.log(JSON.stringify(r.ok
+        ? { ok: true, captured: r.captured, type: r.row.type, concept: r.row.concept, axis: r.row.axis, surface: r.row.surface }
+        : { ok: false, reason: r.reason, say: r.say }));
+      if (!r.ok) process.exit(1);
+      return;
+    }
     if (!r.ok) { console.log(r.say); process.exit(1); }
     const ground = r.has_key ? "against his own weld" : "NO answer key exists for this type — it is judged against his own capsule ground";
     console.log(`gaffer_brain: captured ${r.row.type} · ${r.row.label} · gut ${r.row.gut}`
@@ -2179,11 +2312,27 @@ async function main() {
     return;
   }
   // PASS 1 — ROUND CLOSE. One Opus call, the whole round, whatever types are in it.
-  if (mode === "judge-round") {
-    const r = await gradeJudge({ dry: process.argv.includes("--dry") });
+  // L2 (fate 53): `judge-round` is the TYPED door — its verdicts are stamped judged_by "hand".
+  // `judge-due` is the CODE door — an organ child (ARSENAL_ORGAN=1) names its declared trigger,
+  // judgeDue's rule says whether the round is due, and every verdict is stamped judged_by "code".
+  // Both grade the same round through the same gradeJudge and print it the same way.
+  if (mode === "judge-round" || mode === "judge-due") {
+    let firedBy = null;
+    if (mode === "judge-due") {
+      const refusal = codeDoorRefusal(process.env);
+      if (refusal) { console.log(refusal); process.exit(1); }
+      const ti = process.argv.indexOf("--trigger");
+      const trigger = ti > 0 ? process.argv[ti + 1] : undefined;
+      const due = judgeDue(readJournal(GRADE_QUEUE, 4000), { trigger, now: new Date() });
+      if (due.refused) { console.log(`gaffer_brain: ${due.why}`); process.exit(1); }
+      if (!due.due) { console.log(`gaffer_brain: not due (${trigger}) — ${due.why}`); return; }
+      firedBy = trigger;
+    }
+    const r = await gradeJudge({ dry: process.argv.includes("--dry"), ...(firedBy ? { firedBy } : {}) });
     if (r.skipped) { console.log("gaffer_brain: " + r.skipped); return; }
     if (!r.ok) { console.log(r.say); process.exit(1); }
     console.log(`gaffer_brain: ${r.graded} item(s) graded in ONE Opus call · types: ${r.types.join(", ") || "—"}${r.outstanding ? ` · ${r.outstanding} still outstanding` : ""}`);
+    console.log(`  stamped judged_by ${r.judged_by} · fired_by ${r.fired_by}${r.judged_by_code_at ? ` · judged_by_code_at ${r.judged_by_code_at}` : " · no code instant (a typed round)"}`);
     // §9.1 — the external check's receipt is said out loud with the round: ran or
     // not, and why; what it refuted is printed under the item it belongs to.
     if (r.external) console.log(`  external check: ${r.external.ran ? (r.external.ok ? `${r.external.claims} claim(s) checked · ${r.external.refuted} refuted${r.external.dropped ? ` · ${r.external.dropped} sourceless verdict(s) dropped by the validator` : ""}` : `LANE DOWN — ${r.external.why}; the round was judged without external ground and every row says so`) : `not run — ${r.external.why}`}`);
@@ -2230,7 +2379,7 @@ async function main() {
     return;
   }
   if (mode === "selftest") return selftest();
-  console.error("usage: gaffer_brain.mjs [judge [--dry]|note|blocks [--raw]|status|probe|capture <type> <ref> --gut <word>|judge-round|judge-night|queue|selftest]");
+  console.error("usage: gaffer_brain.mjs [judge [--dry]|note|blocks [--raw]|status|probe|capture <type> <ref> --gut <word> [--json]|judge-round|judge-due --trigger <code trigger>|judge-night|queue|selftest]");
   process.exit(1);
 }
 
@@ -2498,6 +2647,11 @@ function selftest2(stub, S) {
           // reason. It validates a slot name the MACHINE assigns and cannot test his
           // phrasing, which is what the ruling is about.
           "^[a-i]$",
+          // L2 (6 Oct 2026, fate 14) — capture.mjs `rep`'s OWN counts line ("paste: appended N,
+          // rejected N, duplicates N …"), read by captureVerdict because that door exits 0 even
+          // when it appends nothing. The identical literal is turnstile.mjs's, for the identical
+          // reason. It parses an organ's printed verdict and cannot test his phrasing.
+          "appended (\\d+), rejected (\\d+), duplicates (\\d+)",
           // OVERHAUL Block 4 §9.1, 18 Aug 2026 — the http(s) URL shape. It validates
           // the SOURCES the search lane returns in its own JSON (nightshift.mjs carries
           // the identical literal for the identical reason: a verdict with no source is
@@ -2945,6 +3099,98 @@ function selftest2(stub, S) {
           (await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: true, text: "sure!" }) })).reason === "unparseable");
         assert("PASS 1 · with nothing captured it does nothing at all — no call, no spend",
           (await gradeJudge({ dry: true, rows: [], generate: async () => { throw new Error("must not be called"); } })).skipped !== undefined);
+
+        // ── L2 · THE BANK LANDS GRADED (6 Oct 2026 · forks rows 549-552 · fates 14 + 53) ──────────
+        // The rung's own clauses, each planted both ways. Hermetic: the writer, the judge and the
+        // owners are injected; the one REAL write goes to an OS temp dir that is removed at the end
+        // (organism_test.mjs: no selftest touches dressing-room/state, and this one does not).
+        {
+          const { mkdtempSync, rmSync } = await import("node:fs");
+          const tmpL2 = mkdtempSync(join(os.tmpdir(), "gaffer-l2-"));
+          try {
+            const SP2 = "token ek number hai, uska matlab embedding mein rehta hai, ID mein nahi";
+            const ASK2 = "ID list [15496, 1917] mein 'hello' ka matlab kahan hai — number ke andar ya kahin aur?";
+            const noVerify = async () => ({ ran: false, why: "fixture", checks: {}, calls: 0 });
+            // (a) THE BANK WRITE — a failed write of his answer is ok:false, and his words come back
+            const failW = gradeCapture({ type: "voice_rep", ref: "tokenization:a", gut: "knew", spoken: SP2 },
+              { asked: ASK2, axis: "a", surface: "code", now: T0, appendRow: () => ({ ok: false, error: "ENOSPC: no space left on device" }) });
+            assert("L2 · BANK WRITE · a FAILED write of his answer is ok:false (reason write-failed) and says NOT banked — never the bare catch that returned ok:true",
+              failW.ok === false && failW.reason === "write-failed" && /NOT banked/.test(String(failW.say)) && /ENOSPC/.test(String(failW.say)), JSON.stringify({ ok: failW.ok, reason: failW.reason }));
+            assert("L2 · BANK WRITE · …and his words ride the refusal back, so the caller still holds what he said while the question stays open",
+              !!failW.row && failW.row.spoken === SP2 && failW.row.kind === "capture");
+            const wrote = [];
+            const okW = gradeCapture({ type: "voice_rep", ref: "tokenization:a", gut: "knew", spoken: SP2 },
+              { asked: ASK2, axis: "a", surface: "code", now: T0, appendRow: (p, row) => { wrote.push({ p, row }); return { ok: true }; } });
+            assert("L2 · BANK WRITE · a write that lands is ok:true, to the grade queue, and the row written IS the row returned",
+              okW.ok === true && wrote.length === 1 && wrote[0].p === GRADE_QUEUE && wrote[0].row.id === okW.captured);
+            const qp = join(tmpL2, "q.jsonl");
+            const real1 = appendRowChecked(qp, { kind: "capture", id: "x1" });
+            const blocker = join(tmpL2, "not_a_dir");
+            writeFileSync(blocker, "a FILE where the state dir should be");
+            const real2 = appendRowChecked(join(blocker, "q.jsonl"), { kind: "capture", id: "x2" });
+            assert("L2 · BANK WRITE · the real writer is VERIFIED ON DISK: a landed row is in the file, and a path it cannot write (a file where its dir should be) is ok:false with the errno — it returns, it never throws, it never claims",
+              real1.ok === true && readFileSync(qp, "utf8").includes('"id":"x1"') && real2.ok === false && /ENOTDIR|EEXIST/.test(String(real2.error)), JSON.stringify(real2));
+
+            // (b) WHO FIRED THE ROUND — the stamp, both ways, and the capture row never rewritten
+            const capA = okW.row;
+            const capBefore = JSON.stringify(capA);
+            const genA = async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: capA.id, verdict: "landed", missing: [], why: "matlab embedding mein, ID sirf pata hai" }] }) });
+            const codeRows = [], codeCmds = [];
+            const byCode = await gradeJudge({ rows: [capA], generate: genA, firedBy: "sitting.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
+              dispatch: (c) => { codeCmds.push(c); return { ok: true }; }, appendRow: (p, row) => { codeRows.push({ p, row }); return { ok: true }; } });
+            const sr = (codeRows[0] || {}).row || {};
+            assert("L2 · JUDGE BY CODE · a round fired by a DECLARED trigger stamps its settled row judged_by \"code\" + judged_by_code_at (the round's ISO instant) + fired_by — APPENDED to the grade queue with `of` = the capture's id",
+              byCode.ok === true && codeRows.length === 1 && codeRows[0].p === GRADE_QUEUE && sr.kind === "settled" && sr.of === capA.id
+              && sr.judged_by === "code" && sr.judged_by_code_at === T0.toISOString() && sr.fired_by === "sitting.close", JSON.stringify(sr).slice(0, 300));
+            const capCmd = codeCmds.find((c) => c.organ === "capture.mjs");
+            assert("L2 · JUDGE BY CODE · …and the rep it dispatches to capture.mjs carries the SAME stamp on itself (--judged-by code --judged-at <iso>), so the reps_log row is stamped where it lives",
+              !!capCmd && capCmd.argv.join(" ").includes(`--judged-by code --judged-at ${T0.toISOString()}`), capCmd ? capCmd.argv.join(" ") : "no capture dispatch");
+            assert("L2 · APPEND-ONLY · the capture row is NEVER rewritten — the stamp rides the NEW settled row, and the capture the round read is byte-for-byte what it was",
+              JSON.stringify(capA) === capBefore && !("judged_by" in capA) && !("judged_by_code_at" in capA));
+            const handRows = [], handCmds = [];
+            const byHand = await gradeJudge({ rows: [capA], generate: genA, now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
+              dispatch: (c) => { handCmds.push(c); return { ok: true }; }, appendRow: (p, row) => { handRows.push(row); return { ok: true }; } });
+            const handCap = handCmds.find((c) => c.organ === "capture.mjs");
+            assert("L2 · JUDGE BY HAND · a TYPED round grades him the same and is recorded as what it was — judged_by \"hand\", judged_by_code_at null, fired_by \"cli\" — and its rep carries --judged-by hand with no code instant",
+              byHand.ok === true && handRows.length === 1 && handRows[0].judged_by === "hand" && handRows[0].judged_by_code_at === null && handRows[0].fired_by === "cli"
+              && !!handCap && handCap.argv.join(" ").includes("--judged-by hand") && !handCap.argv.includes("--judged-at"));
+            const odd = await gradeJudge({ rows: [capA], firedBy: "a-typo", now: T0, dry: true, generate: async () => { throw new Error("must not be called"); } });
+            assert("L2 · JUDGE BY CODE · an UNDECLARED trigger is refused before anything is read or spent — a stamp a typo could mint would be testimony",
+              odd.ok === false && odd.reason === "unknown-trigger");
+
+            // (c) THE SETTLEMENT WRITE — a lost settled row stops the round and is named
+            const capB = { ...capA, id: `${capA.id}:b` };
+            const genAB = async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: capA.id, verdict: "landed", missing: [], why: "x" }, { id: capB.id, verdict: "missed", missing: [], why: "y" }] }) });
+            const sentAB = [];
+            const lost = await gradeJudge({ rows: [capA, capB], generate: genAB, firedBy: "sitting.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
+              dispatch: (c) => { sentAB.push(c); return { ok: true }; }, appendRow: () => ({ ok: false, error: "EROFS: read-only file system" }) });
+            assert("L2 · SETTLEMENT WRITE · a settled row that does not land is ok:false (settle-write-failed), NAMES the item, and the round STOPS there — the next verdict never reaches its owner, so nothing is double-counted",
+              lost.ok === false && lost.reason === "settle-write-failed" && !!lost.settle_failed && lost.settle_failed.of === capA.id && sentAB.length === 1 && /NOT on disk/.test(String(lost.say)), JSON.stringify({ ok: lost.ok, reason: lost.reason, sent: sentAB.length }));
+
+            // (d) capture's verdict LINE is read, never its exit code
+            assert("L2 · DISPATCH · capture.mjs `rep` exits 0 even when it appends nothing — its counts line is the verdict: appended 1 lands, rejected 1 is a REFUSAL (never a settled grade), a duplicate is already on disk, no line at all is a refusal",
+              captureVerdict("paste: appended 1, rejected 0, duplicates 0 → x (total 3)").ok === true
+              && captureVerdict("paste: appended 0, rejected 1, duplicates 0 → x (total 2)").ok === false
+              && captureVerdict("paste: appended 0, rejected 0, duplicates 1 → x (total 2)").ok === true
+              && captureVerdict("").ok === false);
+
+            // (e) THE CODE DOOR — its rule and its guard
+            const q0 = [capA];
+            const mins = (m) => new Date(Date.parse(capA.ts) + m * 60000);
+            assert("L2 · JUDGE-DUE · sitting.close with anything outstanding is DUE (the round is over by definition); with nothing outstanding it is not, and nothing is spent",
+              judgeDue(q0, { trigger: "sitting.close", now: mins(1) }).due === true
+              && judgeDue([capA, { kind: "settled", of: capA.id }], { trigger: "sitting.close", now: mins(1) }).due === false);
+            assert("L2 · JUDGE-DUE · the PACER fires only when the newest unjudged capture is older than the round's idle definition — a live round is never judged mid-answer",
+              judgeDue(q0, { trigger: "pacer", now: mins(JUDGE_DUE_IDLE_MIN + 1) }).due === true
+              && judgeDue(q0, { trigger: "pacer", now: mins(JUDGE_DUE_IDLE_MIN - 5) }).due === false);
+            assert("L2 · JUDGE-DUE · an undeclared trigger is REFUSED, never treated as either door",
+              judgeDue(q0, { trigger: "evening", now: mins(60) }).refused === true);
+            assert("L2 · JUDGE-DUE · the idle definition is INHERITED from sitting.mjs (DEFAULT_CONFIG.idle_close_min), never guessed — the two numbers cannot drift apart",
+              (() => { const m = /idle_close_min:\s*(\d+)/.exec(readFileSync(join(HERE, "sitting.mjs"), "utf8")); return !!m && Number(m[1]) === JUDGE_DUE_IDLE_MIN; })());
+            assert("L2 · JUDGE-DUE · the code door opens only for an organ child (ARSENAL_ORGAN=1) — a prompt is told to type judge-round, which is stamped hand",
+              codeDoorRefusal({ ARSENAL_ORGAN: "1" }) === null && /judge-round/.test(String(codeDoorRefusal({}))));
+          } finally { try { rmSync(tmpL2, { recursive: true, force: true }); } catch { /* the OS reaps its own temp dir */ } }
+        }
 
         // ── BLOCK 5 · THE SECOND JUDGE, AND THE 💎 (17 Aug 2026) ─────────────
         // MASTERPLAN §9's Dual-Judge Jury, for the three verdicts where taste
