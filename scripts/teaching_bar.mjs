@@ -269,8 +269,10 @@ export const MAX_SKELETON_LINES = 12;
 // forks row 270 (A): the [BANK] line's gut is HIS word or absent ("none spoken → no --gut") → 2,624 B.
 // forks row 276 (his words #22 / #23, 24 Sep): [ASLI NAAM] carries the TERM law on its own line (no new line: the
 // 12-line cap is full at step 4 + [BANK]); step 3's line 0 carries the picture-first order → 2,719 B (step 4 + [BANK]).
+// forks row 583 (2), 7 Oct 2026: line 0 carries the picture-first order at EVERY step, and step 4's [TRACE] puts the
+// picture before the numbered trace → 2,797 B (step 4 + [BANK]); the budget keeps its 17 B over the measurement.
 // The 12-line cap stands.
-export const SKELETON_BUDGET_BYTES = 2736;   // measured worst 2,719 B (step 4 + [BANK] "answers the sharp check…" + four long NEEV names), 24 Sep 2026
+export const SKELETON_BUDGET_BYTES = 2814;   // measured worst 2,797 B (step 4 + [BANK] "answers the sharp check…" + four long NEEV names), 7 Oct 2026 (was 2736 over 2,719 B, 24 Sep)
 export const GUT_TRIO = "pakka / shayad / pata nahi";
 // Which slot carries which teaching_contract rule (teaching_terms.mjs SKELETON_CARRIED). The cases
 // assert every carried id has a slot here AND that slot's label is on the rendered skeleton.
@@ -315,7 +317,10 @@ export function barLines(session, turn = 0, unopened = [], ctx = {}) {
   L.push(`TURN SKELETON · ${c} > axis ${axis} · step ${step ?? "?"} — fill it in this order; the [LABELS] are for you, he sees plain Hinglish (VISUAL_CONTRACT §8.1)`);
   // forks row 276 (1), his word #22 ("pictures first then text, combine them both"): at step 3 a new idea's picture is
   // the first tool — the gate's B.widget patches a check_q turn without one
-  L.push(`  0 TOOLS FIRST, TEXT LAST — every tool call before any text (Desktop replaces text above a tool) · when a tool ran, the text's first line names it: "pointer set"${step === 3 ? " · a NEW idea: its PICTURE first (show_widget), then the text, both" : ""}`);
+  // forks row 583 (2), 7 Oct 2026 (the architect, granting L4's request (c)): at EVERY step, not only 3 — the gate
+  // (rung L4) holds every new idea and its order, and his word #22's rule (act-mueywvag) is SKELETON_CARRIED, so this
+  // clause is the only per-turn line that says it. STRUCK, kept (L9): `${step === 3 ? " · a NEW idea: …" : ""}`
+  L.push(`  0 TOOLS FIRST, TEXT LAST — every tool call before any text (Desktop replaces text above a tool) · when a tool ran, the text's first line names it: "pointer set" · a NEW idea: its PICTURE first (show_widget), then the text, both`);
   if (ctx && ctx.bank) L.push(`  [BANK] his message ${ctx.bank} → the FIRST tool: node scripts/gaffer_brain.mjs capture voice_rep ${c}:${axis} --axis ${axis} --gut <HIS word: knew|shaky|guessed; none spoken → no --gut> --asked "<verbatim>" --said "<his words>" --surface code --latency_ms <the FORGE CONTRACT's latency number, or OMIT it> · the text's first line: "bank mein gaya · axis ${axis} · judge shaam ko"`);
   const teaching = step === null || (step >= 3 && step <= 6);
   if (step !== null && step >= 2 && step <= 9) {
@@ -323,7 +328,9 @@ export function barLines(session, turn = 0, unopened = [], ctx = {}) {
     // gate's own position check (namedPosition wants a capitalised path or "axis x") — row 264 (3)'s planted case
     if (step !== 2) L.push(`  [POSITION] ${c} > axis ${axis} > <the idea, BY NAME> — never a count · ONE idea, at most 4 new units in the air`);
     if (step === 2) L.push(`  [GUESS] a cold guess BEFORE any teaching — nothing taught yet; the moment is pehle_guess`);
-    if (step === 4) L.push(`  [TRACE] a NUMBERED text trace first, worked by hand; the widget only after he got it — at most ONE, DRIVEN (stepper: peeche / aage / shuru se, no autoplay)`);
+    // forks row 583 (2), 7 Oct 2026: picture first wins at step 4 too. STRUCK, kept (L9) — it read: "[TRACE] a NUMBERED
+    // text trace first, worked by hand; the widget only after he got it — at most ONE, DRIVEN (stepper: …)"
+    if (step === 4) L.push(`  [TRACE] its PICTURE first (show_widget), then a NUMBERED text trace, worked by hand — the widget at most ONE, DRIVEN (stepper: peeche / aage / shuru se, no autoplay)`);
     if (step === 7) L.push(`  [BOLO] hand him the EMPTY skeleton with blanks — he speaks first, then types it; never a written answer`);
     if (step === 8) L.push(`  [CALIBRATE] every gut-word ask names all three: ${GUT_TRIO}`);
     if (step === 9) L.push(`  [JIRAH] ONE sharp question + a trap from the capsule's traps[] + his own take + reinvent it from scratch`);
@@ -628,9 +635,18 @@ export function barSelfCheck() {
       && bankDue({}) === null);
     check("skeleton · the step adds ONE line only where the method differs (2 guess · 4 trace · 7 bolo · 8 calibrate · 9 jirah), and step 2 teaches nothing",
       /\[GUESS\]/.test(barLines({ ...S3, step: 2 }).join("\n")) && !/\[DUKAAN\]/.test(barLines({ ...S3, step: 2 }).join("\n"))
-      && /\[TRACE\] a NUMBERED text trace first/.test(barLines({ ...S3, step: 4 }).join("\n")) && /\[BOLO\] hand him the EMPTY skeleton/.test(barLines({ ...S3, step: 7 }).join("\n"))
+      && /\[TRACE\] its PICTURE first \(show_widget\), then a NUMBERED text trace/.test(barLines({ ...S3, step: 4 }).join("\n")) && /\[BOLO\] hand him the EMPTY skeleton/.test(barLines({ ...S3, step: 7 }).join("\n"))
       && /\[CALIBRATE\]/.test(barLines({ ...S3, step: 8 }).join("\n")) && /\[JIRAH\]/.test(barLines({ ...S3, step: 9 }).join("\n"))
       && !/\[EK CHECK\]/.test(barLines({ ...S3, step: 10 }).join("\n")) && /⛔ ALWAYS/.test(barLines({ ...S3, step: 10 }).join("\n")));
+    // forks row 583 (2), 7 Oct 2026 — PICTURE FIRST AT EVERY STEP, planted both ways: line 0 says it on EVERY skeleton
+    // (step 3 as before, and 0-11 now — the struck step-3-only clause would fail at step 4); [TRACE] puts the picture
+    // before the numbered trace and no longer holds the widget back until he got it
+    check("skeleton · row 583 (2): line 0 carries \"a NEW idea: its PICTURE first (show_widget), then the text, both\" ONCE on the skeleton of EVERY step 0-11, not only step 3",
+      Array.from({ length: 12 }, (_, st) => barLines({ ...S3, step: st }).join("\n")).every((t) => (t.match(/a NEW idea: its PICTURE first \(show_widget\), then the text, both/g) || []).length === 1)
+      && /^ {2}0 TOOLS FIRST, TEXT LAST .* · a NEW idea: its PICTURE first/m.test(barLines({ ...S3, step: 4 }).join("\n")));
+    check("skeleton · row 583 (2): step 4's [TRACE] puts the PICTURE first, then the numbered trace — the old 'text trace first … the widget only after he got it' is gone",
+      /\[TRACE\] its PICTURE first \(show_widget\), then a NUMBERED text trace/.test(barLines({ ...S3, step: 4 }).join("\n"))
+      && !/text trace first/.test(barLines({ ...S3, step: 4 }).join("\n")) && !/only after he got it/.test(barLines({ ...S3, step: 4 }).join("\n")));
     // forks row 258 (2)(d): [PARK] only on system talk, read on classifyPrompt's own planted prompts — both ways
     const parkOn = (prompt) => /\[PARK\]/.test(barLines(S3, 1, [], { park: parkDue({ prompt }) }).join("\n"));
     check("skeleton · [PARK] rides his system talk (e3316fbd t6, a message about the notes and the session)",

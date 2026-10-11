@@ -84,18 +84,46 @@
 // (teaching_contract.json belongs to teaching_contract.mjs) — auto-counting
 // and the checked_at heartbeat both go through teaching_contract.mjs's own CLI
 // (`autohit` / `checked`), exactly as the owners-only law requires.
+//
+// PICTURE FIRST AT EVERY NEW IDEA (6 Oct 2026 · rung L4 of the design sheet ds506 ·
+// fate 06's picture half — L5 adds the samajh half · forks rows 276, 305, 550 (1),
+// 553, 554, 561). His word #22 (24 Sep): "pictures first then text, combine them
+// both"; card rule 3 says the same. On 23 Sep (2efc490c) he was asked two check
+// questions with no picture at all and complained minutes later — and NOTHING here
+// recorded it: none of the checks above is picture-before-text, and the study
+// replay counted rail verdicts only. So every audited Stop row now also carries
+//   new_idea · picture_present · picture_first · moment   (+ picture_why, picture_recorded)
+// read from THIS turn's blocks in transcript_path (the Stop payload carries only the
+// last text), the way the teaching gate reads its tail. THE ONE DEFINITION of a new
+// idea (row 554, ruled by validation on his own transcript) is `newIdeaOf`, exported
+// ONCE below; teaching_gate.mjs and study_rail_replay.mjs IMPORT it, never copy it.
+// THE NULL PATH (row 561 (3)): a payload with no transcript_path, or one that cannot
+// be read, writes the four fields as null with a NAMED picture_why — never false,
+// because "I could not read the turn" and "there was no picture" are different facts.
+// AND widgets.json is never written here either: a new idea whose picture came FIRST
+// is named in the registry through widget.mjs's OWN exported writer (recordPicture,
+// fate 54), handed the ts of the audit row written for that turn, so `widget.mjs
+// list` reads each picture back to the very row that saw it.
+//
+// ROW 583 (7 Oct 2026, the architect's amendment of L4): widget_gate is a DISPLAY
+// moment, so a widget_gate turn that opens a term by its asli naam IS a new idea
+// (newIdeaOf); a picture-first MISS is also a measured DRIFT under his word #22's own
+// contract row, act-mueywvag, staged through autohit like every drift above (declared
+// in SEED_GAP until the contract's owner seeds it); and the selftest runs on a fixture
+// registry it writes itself, through registry.mjs's ARSENAL_REGISTRY seam — never his.
 // ---------------------------------------------------------------------------
 
 // cpSync dropped 10 Aug 2026 with the E2E hermeticity scar below — the seed is
 // now written, not copied, so the one scope-deciding field can be normalised.
 // readdirSync left with closedDerive when the vocabulary moved to teaching_terms.mjs (7 Sep 2026).
-import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdtempSync, rmSync, renameSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdtempSync, rmSync, renameSync, statSync, openSync, readSync, closeSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { subjectsOf, coreAxes } from "./registry.mjs";   // S10 #10 sources + #12 core axes — rows, never literals
-import { SCOPE_GLOBAL } from "./study_scope.mjs";   // G0 (23 Sep 2026): the dispatcher's study-scope verdict, stamped on every row
+import { subjectsOf, coreAxes, REGISTRY_PATH } from "./registry.mjs";   // S10 #10 sources + #12 core axes — rows, never literals · row 583 (5): REGISTRY_PATH, for the selftest's proof that it reads its OWN registry
+import { SCOPE_GLOBAL, humanText, SLASH_NOISE, BANKED_MOMENTS } from "./study_scope.mjs";   // G0 (23 Sep 2026): the dispatcher's study-scope verdict, stamped on every row · L4 (6 Oct 2026): his last prompt bounds the turn (the reader the gate and the replay use) and the test moments are the landed test-moment case's own set
+import { recordPicture, loadRegistry, pictureLines } from "./widget.mjs";   // L4 (fate 54): the registry's OWN writer — widget.mjs stays the sole writer of widgets.json (nobody's hook callee, so never a shim no-op)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // ARSENAL_AUDIT_STATE_DIR is the selftest's seam and NOTHING else's: it lets the
@@ -126,12 +154,17 @@ const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } ca
 // (three-layer delivery), `act-mt2kgn09` (C7 one-idea, position BY NAME) and
 // `max-intensity-check`. Until this build all three read hits=0 auto=0 for the
 // same reason: nothing measured them. See the detector block below countTables.
+// 7 Oct 2026 (forks row 583 (6), the architect granting L4's request (b)) adds
+// `act-mueywvag` — his word #22, pictures first then text, his own contract row: a
+// new idea whose picture is not FIRST is now a measured drift (pictureDrift, emitted
+// at Stop where the turn's blocks are read), auto-counted through autohit.
 export const CHECKED_RULES = [
   "one-idea", "dheema-not-lamba", "hinglish", "his-level",
   "no-system-mid-concept", "confusion-is-literal", "his-word",
   "coverage", "neev-pehle", "link-back", "terminology", "decided",
   "uncaptured-rep",
   "act-mt2kgbt7", "act-mt2kgn09", "max-intensity-check",
+  "act-mueywvag",
 ];
 
 // THE SEED GAP, DECLARED IN CODE RATHER THAN DISCOVERED LATER (7 Sep 2026).
@@ -146,7 +179,12 @@ export const CHECKED_RULES = [
 // so this declared gap is now EMPTY and the selftest tripwire below keeps it empty.
 // law-waiver:jugad — a DECLARED GAP LIST, never a subject list: it names rule ids this
 // file emits that its OWNER has not yet seeded, and its whole purpose is to shrink to [].
-export const SEED_GAP = [];
+// RE-OPENED 7 Oct 2026 (forks row 583 (6)) — ONE id, declared, not hidden: `act-mueywvag`
+// (his word #22) is a LIVE contract row on his laptop (the act lane, 24 Sep) but
+// teaching_contract.mjs's seed() at the L4 pin carries no `r(` row for it. Row 583 asked
+// for this list to stay empty; it cannot, truthfully, until the contract's OWNER (L5)
+// seeds that row — and the ratchet below goes red that day and forces it back to [].
+export const SEED_GAP = ["act-mueywvag"];
 
 // COVERAGE HONESTY, PER RULE (full-organism audit P1.1-P1.2, 7 Aug 2026). A rule
 // id in CHECKED_RULES means "a check EXISTS", never "the whole rule is machine-
@@ -164,6 +202,7 @@ export const RULE_NOTES = {
   "his-word": "machine sees ONE fingerprint: an axis marked done with zero Jirah before it. Every other his-word violation is semantic and stays his.",
   "coverage": "machine sees ONE fingerprint: a CORE axis landing in axes_deferred. The half-answer/scope-cut class is semantic and stays his.",
   "uncaptured-rep": "machine sees ONE fingerprint, and it is a COUNT, not a judgement: a legal question-moment was declared to the pacer during this turn and reps_log.jsonl grew by zero rows in the same window. It cannot see whether the moment DESERVED a rep (a widget_gate he waved through is not a bankable answer), and it cannot see a rep banked late, in a later turn — that one closes itself the moment the row lands. WHAT IT CANNOT SEE AT ALL is the session that never declares a moment: an untracked teaching turn banks nothing and is measured as nothing. That slice stays his.",
+  "act-mueywvag": "machine sees the ORDER of ONE turn's blocks, read from transcript_path at Stop: a NEW IDEA (newIdeaOf — a check_q turn, or a turn whose last message opens a term by the asli-naam anchor with no test moment and no pehle_guess) whose show_widget does not come before the turn's LAST text block (none at all, or only after it) is one drift. It CANNOT see a new idea taught with neither a check_q nor a naming act, it cannot judge whether the picture SHOWED the idea (any show_widget counts), and a turn it could not read (no transcript_path, unreadable, no prompt in the tail) is never a drift — the row says null with a named picture_why, because 'I could not read it' is not 'he got no picture'. The picture at a TEST moment is the gate's red, not this drift.",
 };
 
 // CORE-NEVER-DEFERRED's axis set, mirrored from the owner (forge_session.mjs:109;
@@ -1254,6 +1293,147 @@ export function auditTurn({ assistantText = "", userText = "", session = null, p
 // auto-counts measured drifts, stamps the heartbeat. Never prints, never throws.
 // ---------------------------------------------------------------------------
 
+// ===========================================================================
+// L4 · PICTURE FIRST AT EVERY NEW IDEA (6 Oct 2026 · forks rows 276, 305, 550 (1),
+// 553, 554, 561 · the header's last block says why). Five pieces, each defined ONCE:
+//   newIdeaOf      — THE definition (rows 554 + 583 (1)). teaching_gate.mjs and
+//                    study_rail_replay.mjs IMPORT it; a copy anywhere is a second
+//                    definition, and two definitions drift.
+//   turnMoments    — every `forge_session.mjs moment <k>` in the turn's shell
+//                    commands (the gate's own momentsOf pattern; its selftest pins
+//                    the parity).
+//   pictureOrder   — VISUAL_CONTRACT §4 ("tools first, the whole text last") as a
+//                    reading: picture_first = a show_widget call BEFORE the turn's
+//                    LAST text block. The payload's last_assistant_message is the
+//                    reply on his screen: when the transcript has not caught up with
+//                    it, it stands after the last tool (the gate's own reading).
+//   turnOf/readTurn — THIS turn = every assistant block after his LAST human
+//                    prompt (study_scope.humanText, /clear · /model · /effort ·
+//                    /compact skipped — the gate's parseTranscript and the replay
+//                    read prompts the same way), from a tail read the way the gate
+//                    reads its own (stat, then at most the last 16 MB).
+//   turnPicture    — the row's fields, or THE NULL PATH (row 561 (3)): all four null
+//                    with a NAMED picture_why — never false.
+// TIER 0: zero tokens, no state written; every failure is a named null.
+// ===========================================================================
+// forks row 583 (1), 7 Oct 2026 (ruled by the architect; validated on his 2efc490c: window 3 of 6 marked, no
+// pehle_guess-only turn marked, misses 3): widget_gate is a DISPLAY moment — VISUAL_CONTRACT §4 shows a new idea's
+// picture through it — so it no longer blocks the asli-naam half. This build's first cut (row 554 (2)) blocked that half
+// on pehle_guess · widget_gate · sharp_check · jirah. The TEST moments (sharp_check, jirah) are study_scope's
+// BANKED_MOMENTS: the very set the gate's test-moment case keys on (rows 305 (3), 583 (3)).
+/** THE new_idea DEFINITION (forks rows 554 + 583 (1), ruled by VALIDATION on 2efc490c — pic_validate.mjs): a TEST
+ *  moment (sharp_check / jirah) is NEVER a new idea, whatever else the turn declares (a test moment carries no picture,
+ *  his word, 24 Sep); otherwise the turn declares check_q to the pacer (a check question closes an idea it delivered), OR
+ *  its final message opens a term by the asli-naam anchor (asliNaamAct, above) on a turn that declares no pehle_guess
+ *  (the guess before the teaching: a term opened inside it is not the idea delivered). Pure. */
+export function newIdeaOf({ moments = [], finalText = "" } = {}) {
+  const m = Array.isArray(moments) ? moments.map((k) => String(k)) : [];
+  if (m.some((k) => BANKED_MOMENTS.includes(k))) return false;
+  if (m.includes("check_q")) return true;
+  return !m.includes("pehle_guess") && asliNaamAct(finalText);
+}
+const isShell = (b) => b && b.kind === "tool" && /^(Bash|PowerShell)$/.test(String(b.name || ""));
+const isPicture = (b) => b && b.kind === "tool" && /show_widget/.test(String(b.name || ""));
+/** Every moment the turn declared, in order — the gate's momentsOf pattern over the same shell commands. */
+export function turnMoments(blocks) {
+  const out = [];
+  for (const b of Array.isArray(blocks) ? blocks : []) {
+    if (!isShell(b)) continue;
+    const c = b.input && typeof b.input.command === "string" ? b.input.command : "";
+    for (const m of c.matchAll(/forge_session\.mjs["']?\s+moment\s+([A-Za-z_-]+)/g)) out.push(m[1]);
+  }
+  return out;
+}
+/** VISUAL_CONTRACT §4 as a reading. blocks = [{ kind: "text", text } | { kind: "tool", name, input }] in order. */
+export function pictureOrder(blocks, lastMessage = "") {
+  const turn = (Array.isArray(blocks) ? blocks : []).filter(Boolean);
+  const fin = String(lastMessage || "").trim();
+  const seq = fin && !turn.some((b) => b.kind === "text" && String(b.text || "").trim() === fin) ? [...turn, { kind: "text", text: fin }] : turn;
+  let last = -1;
+  for (let i = seq.length - 1; i >= 0; i--) if (seq[i].kind === "text") { last = i; break; }
+  const pics = seq.map((b, i) => (isPicture(b) ? i : -1)).filter((i) => i >= 0);
+  const first = pics.find((i) => i < last);
+  return {
+    picture_present: pics.length > 0,
+    picture_first: first !== undefined,
+    final_text: last >= 0 ? String(seq[last].text || "") : "",
+    title: first !== undefined && seq[first].input && seq[first].input.title != null ? String(seq[first].input.title) : null,
+  };
+}
+/** The row's four fields (+ the picture's title for the registry) from a turn's blocks. Pure. */
+export function pictureFacts(blocks, lastMessage = "") {
+  const moments = turnMoments(blocks);
+  const o = pictureOrder(blocks, lastMessage);
+  return { new_idea: newIdeaOf({ moments, finalText: o.final_text }), picture_present: o.picture_present, picture_first: o.picture_first, moment: moments.join(","), title: o.title };
+}
+/** THIS turn out of a transcript's text: the assistant blocks after his LAST human prompt. Pure. */
+export function turnOf(raw) {
+  const L = String(raw || "").split("\n");
+  let start = -1;
+  for (let i = L.length - 1; i >= 0 && start < 0; i--) {
+    if (!L[i] || L[i][0] !== "{" || !/"type":"user"/.test(L[i])) continue;
+    let o; try { o = JSON.parse(L[i]); } catch { continue; }
+    const t = humanText(o);
+    if (t !== null && !SLASH_NOISE.test(t)) start = i;
+  }
+  if (start < 0) return { blocks: null, why: "the transcript tail holds no human prompt — this turn has no start to read from" };
+  const blocks = [];
+  for (const l of L.slice(start + 1)) {
+    if (!l || l[0] !== "{" || !/"type":"assistant"/.test(l)) continue;
+    let o; try { o = JSON.parse(l); } catch { continue; }
+    const c = o && o.type === "assistant" && o.message && Array.isArray(o.message.content) ? o.message.content : [];
+    for (const b of c) {
+      if (!b) continue;
+      if (b.type === "text" && String(b.text || "").trim()) blocks.push({ kind: "text", text: b.text });
+      else if (b.type === "tool_use") blocks.push({ kind: "tool", name: String(b.name || ""), input: b.input || {} });
+    }
+  }
+  return { blocks, why: null };
+}
+const TURN_TAIL_MAX = 16 * 1024 * 1024;   // the gate's own TRANSCRIPT_MAX: the same tail, read the same way
+export function readTurn(path, max = TURN_TAIL_MAX) {
+  const p = typeof path === "string" ? path.trim() : "";
+  if (!p) return { blocks: null, why: "no transcript_path in the Stop payload" };
+  let raw;
+  try {
+    // 11 Oct 2026 (lane V's in-session §13, row 589 (2)(b)): on Windows a DIRECTORY stats size 0 and opens, so a 0-byte read
+    // returned "" and the row named "no human prompt" instead of the read failure (Linux reds it as EISDIR at the read). A path
+    // that is no regular file is refused HERE, by name, on every OS.
+    const st = statSync(p);
+    if (!st.isFile()) return { blocks: null, why: `transcript_path unreadable (${st.isDirectory() ? "EISDIR" : "not a regular file"})` };
+    const size = st.size, span = Math.min(size, max);
+    const fd = openSync(p, "r");
+    try { const buf = Buffer.alloc(span); readSync(fd, buf, 0, span, size - span); raw = buf.toString("utf8"); } finally { closeSync(fd); }
+  } catch (e) { return { blocks: null, why: `transcript_path unreadable (${String((e && e.code) || (e && e.message) || e).slice(0, 60)})` }; }
+  return turnOf(raw);
+}
+const NULL_PICTURE = Object.freeze({ new_idea: null, picture_present: null, picture_first: null, moment: null, title: null });
+/** The Stop row's picture fields for this hook payload — or THE NULL PATH with its reason named. */
+export function turnPicture(hook = {}) {
+  const t = readTurn(hook && hook.transcript_path);
+  if (!t.blocks) return { ...NULL_PICTURE, picture_why: t.why };
+  return { ...pictureFacts(t.blocks, hook.last_assistant_message), picture_why: null };
+}
+/** forks row 583 (6) (7 Oct 2026): a picture-first MISS — a new idea whose picture is not first (none, or only after its
+ *  last text) — is ONE measured drift under his word #22's own contract row, act-mueywvag, auto-counted through the same
+ *  autohit lane as every drift above. The NULL PATH is never a drift: "I could not read the turn" is not "he got no
+ *  picture". Pure. */
+export function pictureDrift(pic) {
+  if (!pic || pic.new_idea !== true || pic.picture_first !== false) return null;
+  const via = String(pic.moment || "").split(",").includes("check_q") ? "check_q declared" : "a term opened by its asli naam";
+  return {
+    rule: "act-mueywvag",
+    evidence: `a new idea (${via}) whose picture ${pic.picture_present ? "came AFTER its text" : "never came"} — his word #22: pictures first, then text, both`,
+    excerpt: `moments [${pic.moment || ""}] · picture ${pic.picture_present ? "after the text" : "none"}`,
+  };
+}
+// fate 54: the registry's own writer, called through `io` (the probe and the selftest swap it); a throw is a named
+// outcome on the row, never a broken Stop.
+const callRecord = (io, p) => {
+  try { return io && typeof io.recordPicture === "function" ? io.recordPicture(p) : { ok: null, skipped: "this io records no picture" }; }
+  catch (e) { return { ok: false, why: String((e && e.message) || e).slice(0, 160) }; }
+};
+
 // FROZEN 6 Aug 2026 — THE DEAD READER, byte-for-byte, pinned by the selftest
 // against the real live file. `.session` does not exist; the file IS the session.
 export function readForgeSessionLegacy() {
@@ -1321,7 +1501,10 @@ function appendLogReal(row) {
   try { appendFileSync(LOG, JSON.stringify(row) + "\n", "utf8"); } catch { /* never block */ }
 }
 
-const liveIO = () => ({ writeLast: writeLastReal, appendLog: appendLogReal, autoHit, stampChecked });
+// L4 (fate 54): the registry's own writer. The path rides STATE_DIR — live, that IS widget.mjs's registry; under the
+// selftest seam it is the temp dir, so the spawned chain never touches his widgets.json.
+const recordPictureReal = (p) => recordPicture(p, join(STATE_DIR, "widgets.json"));
+const liveIO = () => ({ writeLast: writeLastReal, appendLog: appendLogReal, autoHit, stampChecked, recordPicture: recordPictureReal });
 
 // His prompt, recorded the moment it exists. The Stop payload carries NO user text
 // (hooks/afferent-post.mjs:59-62 is the field map) — this write is the only reason
@@ -1429,6 +1612,16 @@ export function stopHook(hook, io) {
     prevMoments, prevReps, repsNow,
     prevMomentsByKind, intensityState: int0,
   });
+  // L4 (6 Oct 2026) — THIS turn's picture fields, read from transcript_path (the NULL PATH names why when it cannot be
+  // read); only an audited turn reads it. A throw in the reader is a named null too: this organ never breaks his Stop.
+  let pic = { ...NULL_PICTURE, picture_why: "not audited" };
+  if (res.audited) {
+    try { pic = turnPicture(hook); } catch (e) { pic = { ...NULL_PICTURE, picture_why: `the turn reader threw: ${String((e && e.message) || e).slice(0, 120)}` }; }
+  }
+  // row 583 (6): a picture-first MISS joins this turn's drifts BEFORE they are staged, so autohit counts it, the last-run
+  // record counts it and the log row carries its evidence — the one list every drift already rides.
+  const missDrift = res.audited ? pictureDrift(pic) : null;
+  if (missDrift) res.drifts.push(missDrift);
 
   const why = res.audited ? null : (readWhy || res.why);
 
@@ -1502,6 +1695,13 @@ export function stopHook(hook, io) {
   // host, and says so on a named global. The stamp is what R8's 14-day ranking counts; a row with
   // no stamp predates G0 (or came from a probe) and is classified there, never here.
   const scopeNow = globalThis[SCOPE_GLOBAL];
+  // fate 54 (row 561 (2)): a new idea whose picture came FIRST is named in the widget registry through ITS OWN writer,
+  // with THIS row's ts — so `widget.mjs list` reads the picture back to the very audit row that saw it. Never called on a
+  // picture after the text, a turn with no picture, or a turn that is not a new idea.
+  const pictureFirstNewIdea = pic.new_idea === true && pic.picture_first === true;
+  const rec = pictureFirstNewIdea ? callRecord(io, {
+    concept: session.concept, session_id: sid, audit_ts: now, title: pic.title,
+  }) : null;
   io.appendLog({
     ts: now,
     session_id: sid,
@@ -1517,6 +1717,13 @@ export function stopHook(hook, io) {
     measured: res.measured,
     user_text_source: userTextSource,
     staged,
+    // L4 — rung L4's S3 reads these four; null (never false) when the turn could not be read, and picture_why says why
+    new_idea: pic.new_idea,
+    picture_present: pic.picture_present,
+    picture_first: pic.picture_first,
+    moment: pic.moment,
+    picture_why: pic.picture_why,
+    picture_recorded: rec,   // what recordPicture answered (null = not a picture-first new idea, so never called)
   });
 
   // The heartbeat — "I looked". forge_session.mjs:378-393 has read this stamp off
@@ -1658,6 +1865,10 @@ function selftest() {
   const OPEN = { concept: "hallucinations", step: 4, closed_at: null };
 
   console.log("\n== teaching_audit selftest ==\n");
+  // L4 (6 Oct 2026) — THE CATCH-ALL (a crash is not a verdict): a throw anywhere in the body below is ONE red line that
+  // names it, and the run still reaches its summary line. It closes above the L4 block, whose cases are each caught by
+  // name; the lines inside keep their indent (never reformatted).
+  try {
 
   // ========================================================================
   // PART 1 — THE FROZEN ENGINE, pinned byte-for-byte behaviour (6 Aug). These
@@ -1818,7 +2029,8 @@ function selftest() {
       // tautological. It ships in no lane and reaches no runtime (row 68 (g), 6 Sep 2026).
       const emitted = ["one-idea", "dheema-not-lamba", "hinglish", "his-level", "no-system-mid-concept", "confusion-is-literal", "his-word", "coverage", "neev-pehle", "link-back", "terminology", "decided",
         "uncaptured-rep",   // W0-D · LR-04 — grown deliberately: this mirror is the ratchet, and it may only ever be widened alongside a real emitter
-        "act-mt2kgbt7", "act-mt2kgn09", "max-intensity-check"];   // 7 Sep 2026 — checks 12, 13 and 14, each with a real emitter above
+        "act-mt2kgbt7", "act-mt2kgn09", "max-intensity-check",   // 7 Sep 2026 — checks 12, 13 and 14, each with a real emitter above
+        "act-mueywvag"];   // 7 Oct 2026, forks row 583 (6) — widened alongside its real emitter, pictureDrift at Stop
       return emitted.every((r) => CHECKED_RULES.includes(r)) && CHECKED_RULES.every((r) => emitted.includes(r));
     })());
   assert("W0-D · LR-04 — every CHECKED_RULE that is only PARTIALLY machine-visible carries its RULE_NOTES slice, so 'no drift caught' can never widen into 'taught correctly'",
@@ -2218,9 +2430,166 @@ function selftest() {
         !a.res.audited || (rowsG[0] && rowsG[0].scope === "study" && rowsG[0].sitting_id === "sit_selftest" && (!b.res.audited || (rowsG[1] && rowsG[1].scope === null))));
     } finally { globalThis[SCOPE_GLOBAL] = saved; }
   }
+  } catch (e) { fail++; console.log(`  ✗ THROW — the selftest body threw; every case after it in the body was skipped: ${String((e && e.message) || e).slice(0, 300)}`); }
+
+  // ========================================================================
+  // L4 — PICTURE FIRST AT EVERY NEW IDEA (6 Oct 2026 · forks rows 554, 561), planted BOTH ways. Each case is caught BY
+  // NAME (a throw is that case's red, and the next case still runs). None reads his live state: transcripts go to a temp
+  // dir, and the spawned chain runs against a temp state dir under the selftest seam (no axes_deferred is seeded, so no
+  // case here can depend on his registry).
+  // ========================================================================
+  const check = (name, fn) => {
+    let ok = false, why = "";
+    try { ok = !!fn(); } catch (e) { why = ` — THREW: ${String((e && e.message) || e).slice(0, 200)}`; }
+    if (ok) { pass++; console.log(`  ✓ ${name}`); } else { fail++; console.log(`  ✗ ${name}${why}`); }
+  };
+  const J = (o) => JSON.stringify(o);
+  const H = (text) => J({ type: "user", message: { role: "user", content: text } });
+  const RES = () => J({ type: "user", message: { role: "user", content: [{ type: "tool_result", tool_use_id: "t", content: "ok" }] } });
+  const SAY = (text) => J({ type: "assistant", message: { role: "assistant", content: [{ type: "text", text }] } });
+  const RUN = (command) => J({ type: "assistant", message: { role: "assistant", content: [{ type: "tool_use", id: "t", name: "Bash", input: { command } }] } });
+  const PIC = (title = "token ID ki picture") => J({ type: "assistant", message: { role: "assistant", content: [{ type: "tool_use", id: "t", name: "mcp__visualize__show_widget", input: { title, widget_code: "<svg></svg>" } }] } });
+  const MOM = (k) => RUN(`node scripts/forge_session.mjs moment ${k}`);
+  const NAAM = "Us chhapi hui list ka asli naam **VOCABULARY** hai, aur us number ka naam token ID hai.";
+  const ASK = "Har shabd ek token ID banta hai. Samajh aaya — haan ya nahi?";
+  const OPENED = [H("padhai shuru"), RUN("node scripts/sitting.mjs open --surface code --no-spawn"), RES(), SAY("Sitting khul gayi.")];
+  const facts = (rows, last = "") => { const t = turnOf([...OPENED, ...rows].join("\n") + "\n"); return t.blocks ? pictureFacts(t.blocks, last) : null; };
+  const nulls = (x) => !!x && [x.new_idea, x.picture_present, x.picture_first, x.moment].every((v) => v === null);
+
+  check("L4 · newIdeaOf (row 554) — check_q is a new idea whatever else it declares (19:54 = check_q + pehle_guess); an asli-naam message on a turn with NO moment is one; plain text with no moment is not",
+    () => newIdeaOf({ moments: ["check_q"] }) === true && newIdeaOf({ moments: ["check_q", "pehle_guess"], finalText: ASK }) === true
+      && newIdeaOf({ moments: [], finalText: NAAM }) === true && newIdeaOf({ moments: [], finalText: ASK }) === false && newIdeaOf({}) === false);
+  check("L4 · newIdeaOf — a term opened inside a pehle_guess is not the idea delivered (row 554 (2)); a TEST moment is NEVER a new idea, not even beside check_q (sharp_check · jirah)",
+    () => newIdeaOf({ moments: ["pehle_guess"], finalText: NAAM }) === false && newIdeaOf({ moments: ["widget_gate", "pehle_guess"], finalText: NAAM }) === false
+      && newIdeaOf({ moments: ["sharp_check"], finalText: NAAM }) === false && newIdeaOf({ moments: ["jirah", "check_q"], finalText: NAAM }) === false
+      && newIdeaOf({ moments: ["check_q", "sharp_check"] }) === false);
+  check("L4 · row 583 (1) · widget_gate is a DISPLAY moment, not a question: a widget_gate turn opening a term by its asli naam IS a new idea; with no naming act it is not",
+    () => newIdeaOf({ moments: ["widget_gate"], finalText: NAAM }) === true && newIdeaOf({ moments: ["widget_gate", "widget_gate"], finalText: NAAM }) === true
+      && newIdeaOf({ moments: ["widget_gate"], finalText: ASK }) === false);
+  check("L4 · row 583 (1) · A WIDGET_GATE TURN OPENING A TERM, read from its transcript: picture first → a new idea, picture_first true; its picture after the text → picture_first false (rung L4's G1e / G1f shapes)",
+    () => { const a = facts([H("samjhao"), MOM("widget_gate"), RES(), PIC(), RES(), SAY(NAAM)]), b = facts([H("samjhao"), MOM("widget_gate"), RES(), SAY(NAAM), PIC(), RES()]);
+      return a.new_idea === true && a.picture_first === true && a.moment === "widget_gate" && b.new_idea === true && b.picture_present === true && b.picture_first === false; });
+  check("L4 · PICTURE FIRST — a check_q turn whose show_widget comes before its last text: new_idea, picture_present and picture_first all true, moment \"check_q\", the picture's title carried",
+    () => { const f = facts([H("samjhao"), MOM("check_q"), RES(), PIC(), RES(), SAY(ASK)]); return f.new_idea === true && f.picture_present === true && f.picture_first === true && f.moment === "check_q" && f.title === "token ID ki picture"; });
+  check("L4 · PICTURE AFTER THE TEXT — the same turn with its picture after its text: present, but picture_first FALSE",
+    () => { const f = facts([H("samjhao"), MOM("check_q"), RES(), SAY(ASK), PIC(), RES()]); return f.new_idea === true && f.picture_present === true && f.picture_first === false; });
+  check("L4 · NO PICTURE — a check_q turn with no show_widget: picture_present and picture_first false, still a new idea",
+    () => { const f = facts([H("samjhao"), MOM("check_q"), RES(), SAY(ASK)]); return f.new_idea === true && f.picture_present === false && f.picture_first === false; });
+  check("L4 · A TEST MOMENT WITH A PICTURE — a sharp_check turn showing a widget is NOT a new idea, and the row says the picture was present (rung L4's S3 reds it as a picture at a test moment)",
+    () => { const f = facts([H("ok"), MOM("sharp_check"), RES(), PIC(), RES(), SAY("Seedha sawaal: pehla merge kaunsa pair hoga?")]); return f.new_idea === false && f.picture_present === true && f.moment === "sharp_check"; });
+  check("L4 · A PEHLE_GUESS TURN OPENING A TERM is not a new idea (the question moment comes before the teaching, row 554 (2))",
+    () => { const f = facts([H("ok"), MOM("pehle_guess"), RES(), SAY(`${NAAM} Pehle guess karo: kitne token?`)]); return f.new_idea === false && f.moment === "pehle_guess"; });
+  check("L4 · AN ASLI-NAAM TURN WITH NO MOMENT is a new idea (the definition is more than check_q), moment \"\"",
+    () => { const f = facts([H("samjhao"), SAY(NAAM)]); return f.new_idea === true && f.moment === "" && f.picture_present === false && f.picture_first === false; });
+  check("L4 · TWO TEXT BLOCKS AROUND THE PICTURE — only the LAST text counts: text, picture, text is picture-first; text, text, picture is not",
+    () => facts([H("samjhao"), MOM("check_q"), RES(), SAY("Pehle yeh dekho."), PIC(), RES(), SAY(ASK)]).picture_first === true
+      && facts([H("samjhao"), MOM("check_q"), RES(), SAY("Pehle yeh dekho."), SAY(ASK), PIC(), RES()]).picture_first === false);
+  check("L4 · and the FINAL message is the last text: a naming act above the picture with a plain last line is no new idea; the naming act as the last text, its picture above it, is one",
+    () => facts([H("samjhao"), SAY(NAAM), PIC(), RES(), SAY("Aage chalte hain.")]).new_idea === false
+      && (() => { const f = facts([H("samjhao"), SAY("Pehle yeh dekho."), PIC(), RES(), SAY(NAAM)]); return f.new_idea === true && f.picture_first === true; })());
+  check("L4 · THE TURN starts at his LAST prompt: an earlier turn's picture never counts; a tool result or a /compact line is not his prompt and never starts a turn",
+    () => facts([H("a"), PIC(), RES(), SAY("x"), H("b"), MOM("check_q"), RES(), SAY(ASK)]).picture_present === false
+      && facts([H("a"), MOM("check_q"), RES(), PIC(), RES(), H("<command-name>/compact</command-name>"), SAY(ASK)]).picture_first === true);
+  check("L4 · THE PAYLOAD'S LAST MESSAGE stands after the last tool when the transcript has not caught up (the gate's reading); when the transcript holds it, its own position counts",
+    () => facts([H("samjhao"), MOM("check_q"), RES(), PIC(), RES()], ASK).picture_first === true
+      && facts([H("samjhao"), MOM("check_q"), RES()], ASK).picture_present === false
+      && facts([H("samjhao"), MOM("check_q"), RES(), SAY(ASK), PIC(), RES()], ASK).picture_first === false);
+  check("L4 · the writer is reached only through io: an io with no recordPicture (the probe's dry run) records nothing, and a throwing writer is a named outcome on the row, never a broken Stop",
+    () => callRecord({}, {}).ok === null && callRecord({ recordPicture: () => { throw new Error("boom"); } }, {}).ok === false
+      && /boom/.test(callRecord({ recordPicture: () => { throw new Error("boom"); } }, {}).why));
+  check("L4 · row 583 (6) · pictureDrift — a new idea with its picture AFTER the text, or with NONE, is ONE drift under act-mueywvag (his word #22's own row: a CHECKED_RULE with its RULE_NOTES slice); a picture-first new idea, a turn that is no new idea and THE NULL PATH are none",
+    () => { const after = pictureDrift({ new_idea: true, picture_present: true, picture_first: false, moment: "check_q" }), none = pictureDrift({ new_idea: true, picture_present: false, picture_first: false, moment: "" });
+      return !!after && after.rule === "act-mueywvag" && /check_q declared/.test(after.evidence) && /came AFTER its text/.test(after.evidence)
+        && !!none && /asli naam/.test(none.evidence) && /never came/.test(none.evidence)
+        && pictureDrift({ new_idea: true, picture_present: true, picture_first: true, moment: "check_q" }) === null
+        && pictureDrift({ new_idea: false, picture_present: false, picture_first: false, moment: "pehle_guess" }) === null
+        && pictureDrift({ ...NULL_PICTURE, picture_why: "unread" }) === null
+        && CHECKED_RULES.includes("act-mueywvag") && typeof RULE_NOTES["act-mueywvag"] === "string" && RULE_NOTES["act-mueywvag"].length > 80; });
+  check("L4 · ONE definition — newIdeaOf is defined exactly once, in this file (the gate and the replay import it; their selftests pin the import)",
+    () => (readFileSync(fileURLToPath(import.meta.url), "utf8").match(/^export function newIdeaOf\(/gm) || []).length === 1);
+  check("L4 · row 583 (5) · this selftest runs on ITS OWN fixture registry: registry.mjs's REGISTRY_PATH is the temp file it wrote (never his registry.json), and coreAxes reads that file's core_axes_default",
+    () => { const p = String(process.env.ARSENAL_REGISTRY || "");
+      return process.env.ARSENAL_AUDIT_SELFTEST_REGISTRY === "1" && p !== "" && REGISTRY_PATH === p && p.startsWith(tmpdir()) && /teach-audit-registry-/.test(p)
+        && JSON.stringify(coreAxes("no-such-concept-l4")) === JSON.stringify(["d"]); });
+  const l4 = mkdtempSync(join(tmpdir(), "teach-audit-l4-"));
+  try {
+    // THE NULL PATH (row 561 (3)), both ways, through the reader the Stop row uses
+    const tx = join(l4, "t.jsonl");
+    writeFileSync(tx, [...OPENED, H("samjhao"), MOM("check_q"), RES(), PIC(), RES(), SAY(ASK)].join("\n") + "\n");
+    const absent = turnPicture({ hook_event_name: "Stop", session_id: "s" });
+    const missing = turnPicture({ transcript_path: join(l4, "nope.jsonl") });
+    const isDir = turnPicture({ transcript_path: l4 });
+    const readable = turnPicture({ transcript_path: tx, last_assistant_message: ASK });
+    check("L4 · THE NULL PATH, absent — no transcript_path: the four fields NULL (never false) and picture_why names it",
+      () => nulls(absent) && /no transcript_path/.test(absent.picture_why));
+    check("L4 · THE NULL PATH, present but unreadable — a missing file and a directory: the four fields NULL and picture_why names the read failure (never the absent reason)",
+      () => nulls(missing) && /unreadable \(ENOENT\)/.test(missing.picture_why) && nulls(isDir) && /unreadable/.test(isDir.picture_why) && missing.picture_why !== absent.picture_why);
+    check("L4 · and a READABLE path gives the real values (booleans and the moment string), picture_why null",
+      () => readable.new_idea === true && readable.picture_present === true && readable.picture_first === true && readable.moment === "check_q" && readable.picture_why === null);
+    writeFileSync(join(l4, "noprompt.jsonl"), [SAY("x"), PIC(), RES()].join("\n") + "\n");
+    check("L4 · a readable tail with NO human prompt in it: NULL with a named why (a turn with no start is never guessed)",
+      () => { const x = turnPicture({ transcript_path: join(l4, "noprompt.jsonl") }); return nulls(x) && /no human prompt/.test(x.picture_why); });
+    // END TO END — this file spawned as the Stop hook (stdin → the turn reader → the row on disk → the registry's own
+    // writer), against a temp state dir under the selftest seam; recordPicture planted BOTH ways
+    const st = join(l4, "state");
+    mkdirSync(st);
+    writeFileSync(join(st, "forge_session.json"), JSON.stringify({ concept: "tokenization", started_at: "2026-10-06T04:00:00.000Z", updated_at: "2026-10-06T04:00:00.000Z", step: 3, steps_done: [0, 1, 2, 3], question_moments: { pehle_guess: 0, widget_gate: 0, check_q: 0, jirah: 0, sharp_check: 0 } }));
+    const env = { ...process.env, ARSENAL_AUDIT_STATE_DIR: st, ARSENAL_AUDIT_NO_SPAWN: "1" };
+    delete env.ARSENAL_ORGAN;
+    const sess = join(l4, "session.jsonl");
+    writeFileSync(sess, OPENED.join("\n") + "\n");
+    const SID = "selftest-l4";
+    const stop = (turnRows, last, extra = {}) => {
+      if (turnRows) appendFileSync(sess, turnRows.join("\n") + "\n");
+      const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "hook"], { input: JSON.stringify({ hook_event_name: "Stop", session_id: SID, transcript_path: sess, last_assistant_message: last, ...extra }), env, timeout: 15000 });
+      const rows = existsSync(join(st, "teaching_audit.jsonl")) ? readFileSync(join(st, "teaching_audit.jsonl"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
+      return { status: r.status, row: rows[rows.length - 1] || null, n: rows.length };
+    };
+    const pics = () => pictureLines(loadRegistry(join(st, "widgets.json")));
+    const sAbsent = stop(null, ASK, { transcript_path: undefined });
+    const sMissing = stop(null, ASK, { transcript_path: join(l4, "gone.jsonl") });
+    check("L4 · END TO END — absent and unreadable transcript_path land rows whose four fields are NULL with a named picture_why, and recordPicture is never called for them",
+      () => sAbsent.status === 0 && sMissing.status === 0 && sMissing.n === 2 && nulls(sAbsent.row) && /no transcript_path/.test(sAbsent.row.picture_why)
+        && nulls(sMissing.row) && /unreadable/.test(sMissing.row.picture_why) && sAbsent.row.picture_recorded === null && sMissing.row.picture_recorded === null && pics().length === 0);
+    const sFirst = stop([H("samjhao"), MOM("check_q"), RES(), PIC(), RES(), SAY(ASK)], ASK);
+    check("L4 · END TO END — a picture-first check_q turn: the row says new_idea / picture_present / picture_first true, moment \"check_q\"; recordPicture is CALLED with THIS row's ts, so the read-back line names the row's session and ts",
+      () => sFirst.status === 0 && sFirst.n === 3 && sFirst.row.new_idea === true && sFirst.row.picture_present === true && sFirst.row.picture_first === true
+        && sFirst.row.moment === "check_q" && sFirst.row.picture_why === null && sFirst.row.picture_recorded && sFirst.row.picture_recorded.ok === true
+        && pics().length === 1 && pics()[0] === `PICTURE tokenization · session ${SID} · audit ${sFirst.row.ts} · token ID ki picture`);
+    const sAfter = stop([H("aage"), MOM("check_q"), RES(), SAY(ASK), PIC("ID se embedding"), RES()], ASK);
+    const GUESS = `${NAAM} Pehle guess karo: kitne token?`;
+    const sGuess = stop([H("theek"), MOM("pehle_guess"), RES(), PIC("guess"), RES(), SAY(GUESS)], GUESS);
+    const sJirah = stop([H("haan"), MOM("jirah"), RES(), PIC("jirah"), RES(), SAY("Jirah: vocabulary fixed kyun hoti hai?")], "Jirah: vocabulary fixed kyun hoti hai?");
+    check("L4 · END TO END — recordPicture is NEVER called on a picture AFTER the text (a new idea, picture_first false), nor on a turn that is no new idea (a pehle_guess or a jirah turn, picture first): the registry still holds ONE picture",
+      () => sAfter.status === 0 && sAfter.row.new_idea === true && sAfter.row.picture_present === true && sAfter.row.picture_first === false && sAfter.row.picture_recorded === null
+        && sGuess.row.new_idea === false && sGuess.row.picture_first === true && sGuess.row.picture_recorded === null
+        && sJirah.row.new_idea === false && sJirah.row.moment === "jirah" && sJirah.row.picture_present === true && sJirah.row.picture_recorded === null
+        && sJirah.n === 6 && pics().length === 1);
+    check("L4 · row 583 (6) · END TO END — the picture-first MISS is a DRIFT on its row: the picture-after new idea carries act-mueywvag (its evidence quoted, its autohit staged — skipped only under the test seam); the picture-first turn, the null-path rows and the turns that are no new idea carry none",
+      () => sAfter.row.drifts.includes("act-mueywvag") && /came AFTER its text/.test(sAfter.row.evidence.join(" ")) && sAfter.row.staged.some((s) => s.rule === "act-mueywvag" && s.skipped === true)
+        && ![sFirst, sAbsent, sMissing, sGuess, sJirah].some((s) => s.row.drifts.includes("act-mueywvag")));
+  } finally { try { rmSync(l4, { recursive: true, force: true }); } catch {} }
 
   console.log(`\n${fail === 0 ? "ALL CHECKS PASSED" : "SELFTEST FAILED"} (${pass} passed, ${fail} failed)\n`);
   if (fail) process.exit(1);
+}
+
+// THE SELFTEST'S OWN REGISTRY (7 Oct 2026, forks row 583 (5)). auditTurn's COVERAGE check reads core_axes_default through
+// registry.mjs, whose REGISTRY_PATH is fixed when that module loads — a pin set inside selftest() would come too late, and
+// with no pin the default IS his live registry.json (or, on a tree that does not carry one, a throw). So the selftest
+// writes a FIXTURE registry of its own to a temp dir and re-runs itself as a child with registry.mjs's own seam,
+// ARSENAL_REGISTRY, pointed at it — never at his file. The fixture row is the oracle the V2 COVERAGE cases already assert
+// (axis d is core, axis g is not). ARSENAL_AUDIT_SELFTEST_REGISTRY marks the child: the selftest's seam and nothing else's.
+function selftestOnOwnRegistry() {
+  if (process.env.ARSENAL_AUDIT_SELFTEST_REGISTRY === "1") return selftest();
+  const dir = mkdtempSync(join(tmpdir(), "teach-audit-registry-"));
+  try {
+    const reg = join(dir, "registry.json");
+    writeFileSync(reg, JSON.stringify({ version: 1, updated_at: null, tables: { mechanisms: [{ subject: "core_axes_default", schema_owner: "teaching_audit.mjs selftest (fixture)",
+      witness: "teaching_audit.mjs selftest — the V2 COVERAGE cases' own oracle: axis d core, axis g not", subjects: ["d"] }] } }, null, 1));
+    const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "selftest"], { env: { ...process.env, ARSENAL_REGISTRY: reg, ARSENAL_AUDIT_SELFTEST_REGISTRY: "1" }, stdio: "inherit" });
+    if (r.status !== 0) process.exitCode = r.status === null ? 1 : r.status;
+  } finally { try { rmSync(dir, { recursive: true, force: true }); } catch {} }
 }
 
 // IMPORT GUARD (7 Sep 2026). Until today this dispatch ran on IMPORT as well as
@@ -2233,7 +2602,7 @@ function selftest() {
 // still dispatch exactly as before.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const cmd = process.argv[2];
-  if (cmd === "selftest") selftest();
+  if (cmd === "selftest") selftestOnOwnRegistry();
   else if (cmd === "report") report();
   else if (cmd === "probe") probe(process.argv.slice(3));
   else if (cmd === "seed-terms") {

@@ -155,8 +155,9 @@ his; only the checker's reach stays where it is. **Binds §8.3.**
 > dashboards i mean pictures first then text, combine them both."*
 > **Every new idea opens with ONE picture, then its text: both, in the same message** (tools first: the
 > `show_widget` call, then `moment widget_gate`, then the whole text last). The **Board** opens every /learn.
-> The step-4 concept widget after axis g stays exactly as below. The gate holds it: a step-3 teaching turn
-> (`check_q`) with no picture is patched with one `show_widget` call (`teaching_gate.mjs` B.widget).
+> The step-4 concept widget after axis g stays exactly as below. The gate holds it at **every new idea** (a
+> `check_q` turn, or a term opened by its asli naam), with ORDER: no picture is patched with one `show_widget` call,
+> and a picture after the turn's last text is counted (`teaching_gate.mjs` B.widget).
 > The text-first order below was a 4 Aug session gloss on HOW_HE_LEARNS rule 3, never his word. It is struck,
 > not erased (L9). *Carried to him in one line (row 276 (3)): "pictures first" is read as every new idea, not
 > once a session. If he names another cadence, this block changes, not the gate's detection.*

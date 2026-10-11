@@ -44,6 +44,16 @@
 //   an unmapped row and a mapping to a check id that does not exist. A rule not in the table does
 //   not exist for the gate — the table is checked, never remembered.
 //
+// PICTURE FIRST AT EVERY NEW IDEA (6 Oct 2026 · rung L4 · fate 11 REWRITE · forks rows 276 (3), 305, 550 (1), 554).
+//   B.widget's absence case held ONE half of a new idea (a declared check_q) at ONE step (3). It now holds EVERY new idea —
+//   row 554's ONE definition, IMPORTED from teaching_audit.mjs (newIdeaOf, never a copy: the gate, the audit's Stop row and
+//   the study replay can never disagree on what a new idea is) — and the ORDER as well as the presence: a picture AFTER
+//   the text is a red too (counted, never patched: it is already on his screen), its own fix line beside TEST_MOMENT_FIX.
+//   The landed test-moment case (row 305 (3)) stands exactly as it was; no check id is added (the rule table is unmoved).
+//   ROW 583 (7 Oct 2026, the architect's amendment): widget_gate is a display moment (a widget_gate turn that opens a term
+//   IS a new idea, newIdeaOf), and the test-moment case TIGHTENS to match rung L4's S3 — a picture at a sharp_check or
+//   jirah turn is a red even beside check_q (row 305 (3)'s check_q exemption struck, kept).
+//
 // LAWS. Fail-OPEN (a throw allows the turn and logs the error: a checker that can break his session
 //   is worse than the drift it catches) · SOLE WRITER of dressing-room/state/teaching_gate.jsonl and
 //   nothing else (it reads sitting.json, forge_session.json and the transcript; it writes no organ's
@@ -60,7 +70,9 @@ import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { studyScope, readSitting, readForge, payloadOf, classifyPrompt, unboundVerdict, GUT_BEARING_MOMENTS, BANKED_MOMENTS, bankDueAt, shellInStudySet, humanText, CANON_READ_PATH, NEVER_READ } from "./study_scope.mjs";
-import { countTables, namedPosition, countForm, opensTerm, hindiMarkerCount, technicalLine, intensityCheck } from "./teaching_audit.mjs";
+// L4 (6 Oct 2026): newIdeaOf (THE new_idea definition) and pictureOrder (the picture ORDER) are each defined ONCE, in
+// teaching_audit.mjs — the Stop row records the same two readings; turnMoments rides only the selftest's parity pin
+import { countTables, namedPosition, countForm, opensTerm, hindiMarkerCount, technicalLine, intensityCheck, newIdeaOf, pictureOrder, turnMoments } from "./teaching_audit.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -137,7 +149,9 @@ export const CHECKS = Object.freeze({
   "B.judge-once": { fam: "B", mouth: "count", fix: "judge_round ek sitting mein EK hi baar" },
   // forks row 276 (1)(d), his word #22 ("pictures first then text, combine them both"): B.widget's ABSENCE case — a new
   // idea taught at step 3 with no picture in its turn — is a patch (one show_widget call cures it); its PRESENCE cases
-  // (the widget's style, more than 12 in a session) narrow to count at their red sites and carry WIDGET_STYLE_FIX
+  // (the widget's style, more than 12 in a session) narrow to count at their red sites and carry WIDGET_STYLE_FIX.
+  // L4 (6 Oct 2026): the absence case holds EVERY new idea now (row 554's definition, at any step), and its ORDER case — a
+  // picture after the text — narrows to count with PICTURE_ORDER_FIX
   "B.widget": { fam: "B", mouth: "patch", fix: "abhi EK tool: mcp__visualize__show_widget — is naye idea ki PICTURE (pehle picture, phir text, dono); text mein kuch nahi jodna" },
   "D.digest-first": { fam: "D", mouth: "patch", fix: "abhi chalao: node scripts/learn_digest.mjs — text mein kuch nahi jodna, jab tak uski screen tumhara sawaal na badle" },
   "D.sitting-first": { fam: "D", mouth: "patch", fix: "abhi kholo: node scripts/sitting.mjs open --surface code --no-spawn --task \"<concept> axis <x>\" — text mein kuch nahi jodna" },
@@ -161,6 +175,9 @@ const rankOf = (id) => { const i = RANK.indexOf(id); return i >= 0 ? i : RANK.le
 // B.widget's presence cases carry their own fix line (the catalogue's is the absence's add-shaped one, row 276 (1)(d))
 // forks row 305 (24 Sep 2026): the test-moment presence case's own fix line, verbatim from the ruling
 export const TEST_MOMENT_FIX = "test moment: sawaal seedha, picture nahi";
+// L4 (6 Oct 2026, fate 11 REWRITE): the ORDER case's own fix line — a picture after the text is already on his screen,
+// so it rides the next new idea (its first clause is what the AGLE TURN SE line prints)
+export const PICTURE_ORDER_FIX = "naya idea: picture PEHLE, phir text — agle naye idea par show_widget sabse pehle, poora text aakhir mein";
 export const WIDGET_STYLE_FIX = "widget: Lexend 400/500, max-width 34em, stepper = peeche / aage / shuru se + arrow keys, koi autoplay nahi, answer tiles nahi";
 export const MAX_FIX_LINES = 6;
 
@@ -666,11 +683,31 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
     // call cures, so it patches; it is judged first so the presence cases below never mask it. A pehle_guess, sharp
     // check or jirah turn is a test before or after the teaching — a picture there would give the answer away.
     const pictured = T.turn.some((b) => b.kind === "tool" && /show_widget/.test(String(b.name)));
-    if (forge && forge.step === 3 && moments.includes("check_q") && !pictured) red("B.widget", "a new idea was taught (check_q declared) with no picture in its turn — picture first, then text (his word #22, row 276)", "patch");
+    // STRUCK 6 Oct 2026 by rung L4 (fate 11 REWRITE, row 550 (1)) — L9: kept, never erased. It read:
+    //   if (forge && forge.step === 3 && moments.includes("check_q") && !pictured) red("B.widget", "a new idea was taught (check_q declared) with no picture in its turn — picture first, then text (his word #22, row 276)", "patch");
+    // It saw ONE half of a new idea (check_q) at ONE step (3); row 276 (3) reads "pictures first" as EVERY new idea.
+    // L4 — THE PICTURE-FIRST CASE AT EVERY NEW IDEA. The new idea is row 554's ONE definition, imported (newIdeaOf): a
+    // check_q turn, or a turn whose final message opens a term by the asli-naam anchor and declares no pehle_guess (row 583
+    // (1), 7 Oct 2026: widget_gate is a DISPLAY moment, no longer a question); never a test moment. Two reds, one per way
+    // the picture can fail it:
+    //   PRESENCE — no picture at all in the new idea's turn: the absence one show_widget call cures → patch, the
+    //     catalogue's fix (judged first, as the struck line was, so no presence case below masks it);
+    //   ORDER — the picture came AFTER the turn's last text (VISUAL_CONTRACT §4: tools first, the whole text last; read by
+    //     teaching_audit's pictureOrder, the reading the Stop row records): already on his screen → counted, never
+    //     patched (row 272), with PICTURE_ORDER_FIX.
+    const order = pictureOrder(T.turn, finalText);
+    const newIdea = newIdeaOf({ moments, finalText: order.final_text });
+    if (newIdea && !pictured) red("B.widget", `a new idea (${moments.includes("check_q") ? "check_q declared" : "a term opened by its asli naam"}) with no picture in its turn — picture first, then text (his word #22, rows 276 / 554)`, "patch");
+    else if (newIdea && !order.picture_first) red("B.widget", "a new idea whose picture came AFTER its text — picture first, then the whole text (VISUAL_CONTRACT §4, row 554)", "count", PICTURE_ORDER_FIX);
     // forks row 305 (24 Sep 2026), his word: A TEST MOMENT CARRIES NO PICTURE — a show_widget in a turn that declares
     // sharp_check or jirah and no check_q is a PRESENCE red (already on his screen: counted). Disjoint from the absence
     // case above by construction (that one needs check_q, this one its absence), so neither masks the other.
-    if (pictured && !moments.includes("check_q") && moments.some((k) => BANKED_MOMENTS.includes(k))) red("B.widget", `a picture in a test moment (${moments.filter((k) => BANKED_MOMENTS.includes(k)).join(", ")} declared)`, "count", TEST_MOMENT_FIX);
+    // STRUCK 7 Oct 2026 by forks row 583 (3) — L9: kept, never erased. It read:
+    //   if (pictured && !moments.includes("check_q") && moments.some((k) => BANKED_MOMENTS.includes(k))) red("B.widget", `a picture in a test moment (${moments.filter((k) => BANKED_MOMENTS.includes(k)).join(", ")} declared)`, "count", TEST_MOMENT_FIX);
+    // Row 305 (3)'s check_q exemption no longer covers the picture: the gate tightens to match rung L4's S3, so a TEST
+    // moment that carries a picture is a red even when the turn also declares check_q. Still disjoint from the L4 cases
+    // above by construction: a test moment is never a new idea (newIdeaOf), so neither masks the other.
+    if (pictured && moments.some((k) => BANKED_MOMENTS.includes(k))) red("B.widget", `a picture in a test moment (${moments.filter((k) => BANKED_MOMENTS.includes(k)).join(", ")} declared)`, "count", TEST_MOMENT_FIX);
     if (T.all.filter((b) => b.kind === "tool" && /show_widget/.test(String(b.name))).length > 12) red("B.widget", "more than 12 widgets in this session (~10-12 a day, at moments)", "count", WIDGET_STYLE_FIX);
     if (judges > 1) red("B.judge-once", `${judges} judge_round calls in this session`);
     const wf = widgetFindings(T.turn);
@@ -1117,10 +1154,64 @@ async function selftest() {
   const step4NoPic = run("ok", TEACH_NO_PIC, GOOD, { forge: { ...FORGE, step: 4 } });
   assert("row 276 · a step-3 teaching turn (check_q) with NO picture → B.widget BLOCKS as a patch whose fix is one show_widget call; with its picture first → no B.widget",
     noPic.decision === "block" && (noPic.patch || []).includes("B.widget") && /show_widget/.test(noPic.reason || "") && !has(withPic, "B.widget"), JSON.stringify([noPic.reds, noPic.patch, withPic.reds]));
-  assert("row 276 · a pehle_guess turn and a step-4 turn owe no per-idea picture (a test turn must not give the answer away; step 4 has its concept widget)",
-    !has(guessNoPic, "B.widget") && !has(step4NoPic, "B.widget"), JSON.stringify([guessNoPic.reds, step4NoPic.reds]));
+  // STRUCK 6 Oct 2026 by rung L4 (fate 11 REWRITE) — L9: kept, never erased. It asserted:
+  //   "row 276 · a pehle_guess turn and a step-4 turn owe no per-idea picture (a test turn must not give the answer away; step 4 has its concept widget)"
+  //   !has(guessNoPic, "B.widget") && !has(step4NoPic, "B.widget")
+  // Its pehle_guess half stands below; its step-4 half is superseded: a check_q turn is a new idea at ANY step (row 554 (1)).
+  assert("row 276 · a pehle_guess turn owes no per-idea picture (a test turn must not give the answer away) — and, rung L4: a step-4 check_q turn with NO picture now owes one (every new idea, not only step 3; the step-4 concept widget after axis g is untouched)",
+    !has(guessNoPic, "B.widget") && has(step4NoPic, "B.widget") && (step4NoPic.patch || []).includes("B.widget"), JSON.stringify([guessNoPic.reds, step4NoPic.reds, step4NoPic.patch]));
   assert("row 276 · the widget's STYLE stays a presence: counted, never patched, and its AGLE TURN SE line carries the style fix, never the absence's",
     has(w, "B.widget") && !(w.patch || []).includes("B.widget") && (w.counted || []).includes("B.widget") && (!w.reason || /B\.widget — widget: Lexend/.test(w.reason)), JSON.stringify([w.decision, w.patch, w.counted, (w.reason || "").split("\n").filter((l) => /AGLE/.test(l))]));
+  // L4 (6 Oct 2026) — PICTURE FIRST AT EVERY NEW IDEA (fate 11 REWRITE · rows 276 (3), 550 (1), 554), planted BOTH ways.
+  // Each case is caught BY NAME (a throw is that case's FAIL; the CLI's catch-all still prints the summary for anything else).
+  {
+    const L4 = (n, f) => { let c = false, d = ""; try { const r = f(); c = r === true || (Array.isArray(r) && r[0] === true); d = Array.isArray(r) ? String(r[1] || "") : ""; } catch (e) { d = `THREW: ${String((e && e.message) || e).slice(0, 200)}`; } assert(n, c, d); };
+    const PTR = BASH("node scripts/forge_session.mjs pointer \"axis c merge\"");
+    const MOM = (k) => BASH(`node scripts/forge_session.mjs moment ${k}`);
+    // a teaching message that opens its name by the asli-naam anchor, with NO moment declared (row 554's second half)
+    const NAAM_MSG = ["pointer set", "**Tokenization › axis c › pair-merge**", "Dukaan mein sabse zyada bikne wali cheez ko ek hi shelf milti hai.",
+      "Iska asli naam: `merge` — do sabse common padosi pieces ko ek naya piece bana dena.", "In English: BPE repeatedly merges the most frequent adjacent pair into a new token."].join("\n");
+    const naamNoPic = run("ok", [PTR], NAAM_MSG), naamPic = run("ok", [PIC, PTR], NAAM_MSG);
+    L4("L4 · PRESENCE at EVERY new idea, not only check_q: an asli-naam teaching turn with NO moment and no picture → B.widget PATCH (one show_widget call); the same turn with its picture first → no B.widget",
+      () => [has(naamNoPic, "B.widget") && (naamNoPic.patch || []).includes("B.widget") && /asli naam/.test(JSON.stringify(naamNoPic.why)) && !has(naamPic, "B.widget"), JSON.stringify([naamNoPic.reds, naamNoPic.patch, naamPic.reds])]);
+    const after = run("ok", [MOM("check_q"), PTR, TXT(GOOD), PIC], null, { payload: { last_assistant_message: GOOD } });
+    L4("L4 · ORDER: a new idea whose picture came AFTER its text → B.widget COUNTED (already on his screen — never a patch), its detail naming the order",
+      () => [has(after, "B.widget") && (after.counted || []).includes("B.widget") && !(after.patch || []).includes("B.widget") && /AFTER its text/.test(JSON.stringify(after.detail || after.why)), JSON.stringify([after.decision, after.reds, after.patch, after.counted, after.detail])]);
+    const afterBlock = run("ok", [MOM("check_q"), PTR, TXT(GOOD.replace("**Tokenization › axis c › pair-merge**\n", "")), PIC], null, { payload: { last_assistant_message: GOOD.replace("**Tokenization › axis c › pair-merge**\n", "") } });
+    L4("L4 · and its fix line is the gate's own, beside TEST_MOMENT_FIX: when another red patches, the AGLE TURN SE line carries \"B.widget — naya idea: picture PEHLE, phir text\"",
+      () => [PICTURE_ORDER_FIX.startsWith("naya idea: picture PEHLE, phir text — ") && afterBlock.decision === "block" && (afterBlock.reason || "").includes(`B.widget — ${PICTURE_ORDER_FIX.split(" — ")[0]}`), afterBlock.reason || JSON.stringify(afterBlock.reds)]);
+    const twoTexts = run("ok", [MOM("check_q"), PTR, TXT("Pehle yeh dekho."), PIC], GOOD);
+    const textText = run("ok", [MOM("check_q"), PTR, TXT("Pehle yeh dekho."), TXT(GOOD), PIC], null, { payload: { last_assistant_message: GOOD } });
+    L4("L4 · TWO TEXT BLOCKS around the picture: only the LAST text counts — text, picture, text is picture-first (no B.widget); text, text, picture is the ORDER red",
+      () => [!has(twoTexts, "B.widget") && has(textText, "B.widget") && (textText.counted || []).includes("B.widget"), JSON.stringify([twoTexts.reds, textText.reds])]);
+    const notCaughtUp = run("ok", [MOM("check_q"), PTR, PIC], null, { payload: { last_assistant_message: GOOD } });
+    L4("L4 · the transcript not caught up with the reply: the payload's message stands after the last tool, so a picture before it is FIRST (no B.widget)",
+      () => [!has(notCaughtUp, "B.widget"), JSON.stringify(notCaughtUp.reds)]);
+    const guessNaam = run("ok", [MOM("pehle_guess"), PTR], `pointer set · pehle_guess declared\nTokenization › axis c › pair-merge\nIska asli naam: \`merge\` — par pehle tumhara guess: "tea tea" mein kaunsa pair pehle judega?\npehle gut-word: pakka / shayad / pata nahi`);
+    const gateNaam = run("ok", [MOM("widget_gate"), PTR], `pointer set · widget_gate declared\nTokenization › axis c › pair-merge\nIska asli naam: \`merge\` — widget mein agla pair tum chuno: kaunsa?`);
+    const gatePic = run("ok", [PIC, MOM("widget_gate"), PTR], `pointer set · widget_gate declared\nTokenization › axis c › pair-merge\nIska asli naam: \`merge\` — widget mein agla pair tum chuno: kaunsa?`);
+    L4("L4 · a term opened inside a pehle_guess is no new idea (row 554 (2)): no picture owed, no B.widget — and, row 583 (1), widget_gate is a DISPLAY moment: a widget_gate turn opening a term by its asli naam IS a new idea, so with no picture → B.widget PATCH, with its picture first → no B.widget",
+      () => [!has(guessNaam, "B.widget") && has(gateNaam, "B.widget") && (gateNaam.patch || []).includes("B.widget") && !has(gatePic, "B.widget"), JSON.stringify([guessNaam.reds, gateNaam.reds, gateNaam.patch, gatePic.reds])]);
+    const sharpCheckQ = run("ok", [MOM("sharp_check"), MOM("check_q"), PTR], GOOD);
+    const picSharp = run("ok", [PIC, MOM("sharp_check"), PTR], "moment set · pointer set\n**Tokenization › axis c › pair-merge**\nSeedha sawaal: \"tea tea teen\" mein pehla merge kaunsa pair hoga, aur kyun?\npehle gut-word: pakka / shayad / pata nahi");
+    L4("L4 · a TEST moment is never a new idea (not even beside check_q): no picture owed; the landed test-moment case still answers a picture there, with its own fix line (row 305 (3), unchanged)",
+      () => [!has(sharpCheckQ, "B.widget") && has(picSharp, "B.widget") && /test moment/.test(JSON.stringify(picSharp.detail || picSharp.why)) && (picSharp.counted || []).includes("B.widget"), JSON.stringify([sharpCheckQ.reds, picSharp.reds, picSharp.detail])]);
+    const SHARP_Q = "moment set · pointer set\n**Tokenization › axis c › pair-merge**\nSeedha sawaal: \"tea tea teen\" mein pehla merge kaunsa pair hoga, aur kyun?\npehle gut-word: pakka / shayad / pata nahi";
+    const picSharpQ = run("ok", [PIC, MOM("sharp_check"), MOM("check_q"), PTR], SHARP_Q), picJirahQ = run("ok", [PIC, MOM("jirah"), MOM("check_q"), PTR], SHARP_Q);
+    const picQOnly = run("ok", [PIC, MOM("check_q"), PTR], GOOD), noPicSharpQ = run("ok", [MOM("sharp_check"), MOM("check_q"), PTR], SHARP_Q);
+    L4("L4 · row 583 (3) · the gate tightens to rung L4's S3: a TEST moment (sharp_check / jirah) carrying a picture is B.widget, counted with TEST_MOMENT_FIX, EVEN beside check_q (row 305 (3)'s check_q exemption struck); check_q alone with its picture first, or a test moment with no picture, is clean",
+      () => [has(picSharpQ, "B.widget") && (picSharpQ.counted || []).includes("B.widget") && /test moment/.test(JSON.stringify(picSharpQ.detail || picSharpQ.why))
+        && has(picJirahQ, "B.widget") && (picJirahQ.counted || []).includes("B.widget") && !has(picQOnly, "B.widget") && !has(noPicSharpQ, "B.widget"),
+        JSON.stringify([picSharpQ.reds, picSharpQ.counted, picJirahQ.reds, picQOnly.reds, noPicSharpQ.reds])]);
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    L4("L4 · ONE definition: this gate IMPORTS newIdeaOf from ./teaching_audit.mjs and defines no new-idea predicate of its own",
+      () => /import\s*\{[^}]*\bnewIdeaOf\b[^}]*\}\s*from\s*"\.\/teaching_audit\.mjs"/.test(src) && !/function\s+newIdeaOf\b/.test(src) && !/newIdeaOf\s*=/.test(src));
+    const P = (name, command) => ({ kind: "tool", name, input: { command } });
+    const planted = [P("Bash", "node \"scripts/forge_session.mjs\" moment check_q && node scripts/forge_session.mjs moment pehle_guess"), P("PowerShell", "node scripts\\forge_session.mjs moment jirah"),
+      P("Read", "node scripts/forge_session.mjs moment sharp_check"), { kind: "text", text: "node scripts/forge_session.mjs moment widget_gate" }, P("Bash", "node scripts/forge_session.mjs pointer x")];
+    L4("L4 · PARITY: the audit's turnMoments (the Stop row's `moment`) reads exactly what this gate's momentsOf reads — chained, quoted, PowerShell; never a non-shell tool or a text block",
+      () => [JSON.stringify(turnMoments(planted)) === JSON.stringify(momentsOf(planted)) && JSON.stringify(momentsOf(planted)) === JSON.stringify(["check_q", "pehle_guess", "jirah"]), JSON.stringify([turnMoments(planted), momentsOf(planted)])]);
+  }
   const j2 = run("ok", [TOOL("mcp__organism-memory__judge_round", {}), ...TURN_OK], "set · " + GOOD, { before: [...BOOT, TOOL("mcp__organism-memory__judge_round", {})] });
   assert("B · a second judge_round in the session → B.judge-once", has(j2, "B.judge-once"));
   // 11 — system talk passes (mechanical checks only), confusion is literal

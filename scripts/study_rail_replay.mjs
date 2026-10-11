@@ -22,6 +22,21 @@
 // G3 v2 (forks row 297): a DENY names its study part to re-run alone (rails' studyRail `rerun`, the segment finder in
 //   study_scope), and `--json` carries `calls` — one { file, ts, tool, verdict, cmd_head } per DENY and captain-ordered
 //   call — so the runner can diff two replays call by call.
+// THE TEACHING PASS (6 Oct 2026 · rung L4 · fate 58 REWRITE · forks rows 276, 553, 554 (3)). The rail counts said nothing
+//   about the turn he complained about on 23 Sep (2efc490c: two check questions with no picture, then "why are not doing
+//   visualization"). A second pass over the SAME transcripts now judges every turn — the assistant blocks after his human
+//   prompt (study_scope's humanText, the prompt reader the rail pass uses) — by teaching_audit.mjs's ONE definition of a
+//   new idea (newIdeaOf, IMPORTED, never copied) and its ONE picture-order reading (pictureOrder: a show_widget before the
+//   turn's LAST text block). A new-idea turn whose picture is not first is a MISS, and the report prints ONE line beside
+//   the rail counts: `picture-first misses N`; `--json` carries it (totals.picture_first_misses, per-file counts, and one
+//   { file, ts, moment, picture } per miss). The WHOLE transcript is read, as the definition was validated
+//   (pic_validate.mjs on 2efc490c): a new idea is its own scope (check_q is only ever declared while teaching; the
+//   asli-naam anchor measured 5 of 5 genuine naming acts, 0 engineering prose), so a sitting opened in another transcript
+//   cannot hide a miss. LIMIT, SAID ONCE: an engineering transcript that performs a real asli-naam act counts like any
+//   other — the per-file lines name every file with a miss.
+//   ROW 583 (4) (7 Oct 2026): the SITTING WINDOW rides the same line as a sub-count — `picture-first misses N · sitting
+//   window M`, M <= N — counted from the rail's own `sitting.mjs open` to its `close` (the window the rail pass judges);
+//   `--json` carries both (totals.picture_first_misses, totals.sitting_window_misses; in_sitting on every miss).
 // CLI: node scripts/study_rail_replay.mjs <dir-of-.jsonl | file.jsonl> [--json] | selftest
 // ============================================================================
 import { readFileSync, readdirSync, statSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
@@ -30,6 +45,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { studyRail, studyRerunLine, SITTING_OPEN_RE, CMD_POS } from "./rails.mjs";
 import { humanText, SLASH_NOISE } from "./study_scope.mjs";
+import { newIdeaOf, pictureOrder, turnMoments } from "./teaching_audit.mjs";   // L4: THE new_idea definition + the picture order + the moments, each defined ONCE there
 
 const SITTING_CLOSE_RE = new RegExp(`${CMD_POS}node(?:\\.exe)?\\s+"?[^\\s";|&]*sitting\\.mjs"?\\s+close\\b`, "i");
 const STUDY_SCOPE = Object.freeze({ study: true, why: "replay — the transcript that opened the sitting is its host" });
@@ -66,23 +82,71 @@ export function replayTranscript(text, name = "") {
   return r;
 }
 
+/** THE TEACHING PASS over ONE transcript's text (L4). Pure. A turn = the assistant blocks after his human prompt; each is
+ *  judged by teaching_audit's newIdeaOf + pictureOrder (the readings the Stop row records), and a new idea whose picture
+ *  is not first is a MISS, named with its prompt's clock, its moments and what its picture did. */
+export function teachingPass(text, name = "") {
+  const r = { file: name, turns: 0, new_ideas: 0, picture_first: 0, misses: 0, sitting_window_misses: 0, missed: [] };
+  let cur = null, open = false;
+  const judge = (t) => {
+    if (!t) return;
+    r.turns++;
+    const moments = turnMoments(t.blocks), o = pictureOrder(t.blocks);
+    if (!newIdeaOf({ moments, finalText: o.final_text })) return;
+    r.new_ideas++;
+    if (o.picture_first) { r.picture_first++; return; }
+    r.misses++;
+    if (t.inSitting) r.sitting_window_misses++;
+    r.missed.push({ file: name, ts: t.ts, moment: moments.join(","), picture: o.picture_present ? "after the text" : "none", in_sitting: t.inSitting });
+  };
+  for (const line of String(text || "").split("\n")) {
+    if (!line || line[0] !== "{") continue;
+    let o; try { o = JSON.parse(line); } catch { continue; }
+    const h = humanText(o);
+    if (h !== null) { if (!SLASH_NOISE.test(h)) { judge(cur); cur = { ts: typeof o.timestamp === "string" ? o.timestamp : null, blocks: [], inSitting: open }; } continue; }
+    if (!cur || !o || o.type !== "assistant") continue;
+    for (const b of (o.message && Array.isArray(o.message.content) ? o.message.content : [])) {
+      if (!b) continue;
+      // row 583 (4): THE SITTING WINDOW, the rail pass's own — it opens AT a `sitting.mjs open` call and shuts after a
+      // `sitting.mjs close` call; a turn is inside it when the sitting was open at its prompt or at any of its blocks
+      const sh = b.type === "tool_use" && /^(Bash|PowerShell)$/.test(String(b.name || ""));
+      const cmd = sh && b.input && typeof b.input.command === "string" ? b.input.command : "";
+      if (sh && SITTING_OPEN_RE.test(cmd)) open = true;
+      if (open) cur.inSitting = true;
+      if (b.type === "text" && String(b.text || "").trim()) cur.blocks.push({ kind: "text", text: b.text });
+      else if (b.type === "tool_use") cur.blocks.push({ kind: "tool", name: String(b.name || ""), input: b.input || {} });
+      if (sh && SITTING_CLOSE_RE.test(cmd)) open = false;
+    }
+  }
+  judge(cur);
+  return r;
+}
+
 const share = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : null);
 export function replayDir(target) {
   let files;
   const st = statSync(target);
   if (st.isDirectory()) files = readdirSync(target).filter((f) => f.endsWith(".jsonl")).sort().map((f) => join(target, f));
   else files = [target];
-  const per = files.map((f) => { try { return replayTranscript(readFileSync(f, "utf8"), basename(f)); } catch (e) { return { file: basename(f), error: String(e.message || e) }; } });
+  // L4: the teaching pass reads the SAME text the rail pass reads — one read per file, two passes
+  const per = files.map((f) => { try { const text = readFileSync(f, "utf8"); const { missed, file, ...teaching } = teachingPass(text, basename(f)); return { ...replayTranscript(text, basename(f)), teaching, missed }; } catch (e) { return { file: basename(f), error: String(e.message || e) }; } });
   const T = { transcripts: files.length, with_sitting: 0, calls: 0, allow: 0, captain: 0, deny: 0, none: 0 };
   for (const p of per) { if (p.error) continue; if (p.opened) T.with_sitting++; for (const k of ["calls", "allow", "captain", "deny", "none"]) T[k] += p[k]; }
   T.judged = T.allow + T.captain + T.deny;
   T.model_initiated_share_pct = share(T.deny, T.deny + T.captain);
   T.deny_share_pct = share(T.deny, T.judged);
+  // L4: the teaching pass's totals — picture_first_misses is the count rung L4's G1 reads
+  T.turns = 0; T.new_ideas = 0; T.picture_first = 0; T.picture_first_misses = 0; T.sitting_window_misses = 0;
+  for (const p of per) if (p.teaching) { T.turns += p.teaching.turns; T.new_ideas += p.teaching.new_ideas; T.picture_first += p.teaching.picture_first; T.picture_first_misses += p.teaching.misses; T.sitting_window_misses += p.teaching.sitting_window_misses; }
   const calls = per.flatMap((p) => p.list || []);
-  return { totals: T, per: per.map(({ list, ...p }) => p), calls };
+  const missed = per.flatMap((p) => p.missed || []);
+  return { totals: T, per: per.map(({ list, missed: _m, ...p }) => p), calls, missed };
 }
 
-function printReport({ totals: T, per }) {
+// a miss's clock, in his zone (every lane row's clock carries its zone, row 554 (4))
+const istClock = (t) => { const d = new Date(t); return t && !Number.isNaN(d.getTime()) ? `${new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(d)} IST` : "no clock"; };
+
+function printReport({ totals: T, per, missed = [] }) {
   for (const p of per) {
     if (p.error) { console.log(`  ! ${p.file} — unreadable: ${p.error}`); continue; }
     if (!p.opened) continue;
@@ -92,12 +156,22 @@ function printReport({ totals: T, per }) {
   }
   console.log(`study_rail_replay: ${T.transcripts} transcript(s), ${T.with_sitting} opened a sitting · ${T.calls} call(s) after an open · ALLOW ${T.allow} · ALLOW-captain-ordered ${T.captain} · DENY ${T.deny} · no opinion ${T.none}`);
   console.log(`  model-initiated share (DENY / (DENY + captain-ordered)): ${T.model_initiated_share_pct === null ? "n/a" : T.model_initiated_share_pct + "%"} · deny share of judged calls: ${T.deny_share_pct === null ? "n/a" : T.deny_share_pct + "%"}`);
+  // L4 — the teaching pass, beside the rail counts: per file, then the misses by name, then ONE total line
+  for (const p of per) if (p.teaching && p.teaching.new_ideas) console.log(`  ${p.file} · teaching: ${p.teaching.new_ideas} new-idea turn(s) of ${p.teaching.turns} · picture first ${p.teaching.picture_first} · missed ${p.teaching.misses} (${p.teaching.sitting_window_misses} in the sitting window)`);
+  for (const m of missed.slice(0, 8)) console.log(`      MISS    ${m.file} · ${istClock(m.ts)} · moments [${m.moment}] · picture ${m.picture} · ${m.in_sitting ? "inside" : "outside"} the sitting window`);
+  if (missed.length > 8) console.log(`      (+${missed.length - 8} more — --json lists every one)`);
+  // row 583 (4): the WHOLE transcript's count, then the sitting window as a sub-count on the SAME line (M <= N)
+  console.log(`study_rail_replay: picture-first misses ${T.picture_first_misses} · sitting window ${T.sitting_window_misses} · ${T.new_ideas} new-idea turn(s) of ${T.turns} in ${T.transcripts} transcript(s), ${T.picture_first} with the picture first (teaching_audit's ONE definition)`);
 }
 
 // ── SELFTEST — a synthetic fixture under a temp dir ─────────────────────────
 function selftest() {
   let pass = 0, fail = 0;
   const assert = (n, c, d) => { if (c) pass++; else fail++; console.log(`  ${c ? "✓" : "✗"} ${n}${c || !d ? "" : `\n      ${d}`}`); };
+  // L4 (6 Oct 2026) — THE CATCH-ALL: a throw is a ✗ line that NAMES it and the run still reaches its summary line (a crash
+  // is never a verdict). `check` catches per case; the try below catches anything outside a named case.
+  const check = (n, f) => { let c = false, why = ""; try { c = !!f(); } catch (e) { why = `THREW: ${String((e && e.message) || e).slice(0, 200)}`; } assert(n, c, why); };
+  try {   // the catch-all opens here and closes above the summary line; the lines inside keep their indent
   const U = (content) => JSON.stringify({ type: "user", message: { content } });
   const META = (content) => JSON.stringify({ type: "user", isMeta: true, message: { content } });
   const RES = () => JSON.stringify({ type: "user", message: { content: [{ type: "tool_result", content: "x" }] } });
@@ -151,6 +225,64 @@ function selftest() {
     let j = null; try { j = JSON.parse(cli.stdout); } catch { /* asserted */ }
     assert("REPLAY CLI — `--json` prints the same totals as one JSON object, with the per-call list", j && j.totals && j.totals.deny === 3 && j.totals.captain === 3 && Array.isArray(j.calls) && j.calls.length === 6, cli.stdout + cli.stderr);
   } finally { rmSync(dir, { recursive: true, force: true }); }
+  // ── L4 · THE TEACHING PASS (fate 58 REWRITE · rows 554 (3), 561), planted BOTH ways ──
+  {
+    let k = 0;
+    const H = (text) => JSON.stringify({ type: "user", message: { role: "user", content: text }, timestamp: `2026-09-23T14:${String(15 + (k++ % 44)).padStart(2, "0")}:00.000Z` });
+    const SAY = (text) => JSON.stringify({ type: "assistant", message: { content: [{ type: "text", text }] } });
+    const MOM = (kind) => B(`node scripts/forge_session.mjs moment ${kind}`);
+    const PIC = A("mcp__visualize__show_widget", { title: "token ID", widget_code: "<svg></svg>" });
+    const NAAM = "Us chhapi hui list ka asli naam **VOCABULARY** hai, aur us number ka naam token ID hai.";
+    const ASK = "Har shabd ek token ID banta hai. Batao, `token` kya hai?";
+    const OPEN = () => [H("padhai shuru"), B("node scripts/sitting.mjs open --surface code --no-spawn"), RES(), SAY("Sitting khul gayi."), H("samjhao")];
+    const misses = (body) => teachingPass([...OPEN(), ...body].join("\n")).misses;
+    check("L4 · THE FOUR SHAPES rung L4's G1 replays, 0 1 1 0: a check_q turn, its picture before its last text = 0 · the same, the picture after = 1 · an asli-naam turn, no moment, no picture = 1 · a pehle_guess turn opening a term, no picture = 0",
+      () => misses([MOM("check_q"), RES(), PIC, RES(), SAY(ASK)]) === 0 && misses([MOM("check_q"), RES(), SAY(ASK), PIC, RES()]) === 1
+        && misses([SAY(NAAM)]) === 1 && misses([MOM("pehle_guess"), RES(), SAY(`${NAAM} Pehle guess karo: kitne token?`)]) === 0);
+    check("L4 · row 583 (1) · THE WIDGET_GATE SHAPES rung L4's G1 now replays (G1e 0 · G1f 1): widget_gate is a DISPLAY moment, so a widget_gate turn opening a term by its asli naam is a new idea — its picture first = 0 · the same, its picture after = 1",
+      () => misses([MOM("widget_gate"), RES(), PIC, RES(), SAY(NAAM)]) === 0 && misses([MOM("widget_gate"), RES(), SAY(NAAM), PIC, RES()]) === 1);
+    check("L4 · a TEST moment is never a new idea: a sharp_check turn showing a picture, or a jirah beside check_q with none = 0 misses",
+      () => misses([MOM("sharp_check"), RES(), PIC, RES(), SAY("Seedha sawaal: kitne token?")]) === 0 && misses([MOM("jirah"), MOM("check_q"), RES(), SAY(ASK)]) === 0);
+    check("L4 · TWO TEXT BLOCKS around the picture: only the LAST text counts (text, picture, text = 0 · text, text, picture = 1)",
+      () => misses([MOM("check_q"), RES(), SAY("Pehle yeh dekho."), PIC, RES(), SAY(ASK)]) === 0 && misses([MOM("check_q"), RES(), SAY("Pehle yeh dekho."), SAY(ASK), PIC, RES()]) === 1);
+    const many = teachingPass([...OPEN(), MOM("check_q"), RES(), SAY(ASK), H("haan"), MOM("check_q"), RES(), PIC, RES(), SAY(ASK), H("aage"), SAY(NAAM),
+      U("<command-name>/compact</command-name>"), H("ok"), SAY("Theek hai.")].join("\n"), "many.jsonl");
+    check("L4 · every turn is judged ONCE, between his prompts (a tool result or a /compact line is no prompt): 5 turns · 3 new ideas · 1 picture first · 2 misses, each named by its prompt's clock, its moments and what its picture did",
+      () => many.turns === 5 && many.new_ideas === 3 && many.picture_first === 1 && many.misses === 2
+        && JSON.stringify(many.missed.map((m) => [m.moment, m.picture])) === JSON.stringify([["check_q", "none"], ["", "none"]]) && many.missed.every((m) => m.file === "many.jsonl" && /^2026-09-23T14:/.test(m.ts)));
+    const d2 = mkdtempSync(join(tmpdir(), "l4-replay-"));
+    try {
+      writeFileSync(join(d2, "a.jsonl"), [...OPEN(), MOM("check_q"), RES(), SAY(ASK)].join("\n"));                                   // 1 miss
+      writeFileSync(join(d2, "b.jsonl"), [...OPEN(), SAY(NAAM), H("x"), MOM("check_q"), RES(), PIC, RES(), SAY(ASK)].join("\n"));   // 1 miss · 1 picture first
+      writeFileSync(join(d2, "c.jsonl"), [H("samjhao"), SAY(NAAM)].join("\n"));                                                        // 1 miss, never inside a sitting
+      const cp = process.getBuiltinModule("node:child_process");
+      const txt = cp.spawnSync(process.execPath, [fileURLToPath(import.meta.url), d2], { encoding: "utf8", timeout: 15000 });
+      const js = cp.spawnSync(process.execPath, [fileURLToPath(import.meta.url), d2, "--json"], { encoding: "utf8", timeout: 15000 });
+      let j = null; try { j = JSON.parse(js.stdout); } catch { /* asserted */ }
+      const hits = String(txt.stdout || "").split("\n").filter((l) => /picture-first misses/.test(l));
+      check("L4 · THE CLI prints ONE `picture-first misses N · sitting window M` line beside the rail counts (row 583 (4)) — the WHOLE directory 3, its sitting window 2; no per-file or MISS line repeats the phrase — and names each miss inside or outside the window",
+        () => txt.status === 0 && hits.length === 1 && /^study_rail_replay: picture-first misses 3 · sitting window 2 · 4 new-idea turn\(s\)/.test(hits[0])
+          && /picture-first misses ([0-9]+) · sitting window ([0-9]+)/.test(hits[0])
+          && /study_rail_replay: 3 transcript\(s\)[^\n]*ALLOW/.test(txt.stdout) && (txt.stdout.match(/^\s+MISS\s/gm) || []).length === 3
+          && (txt.stdout.match(/outside the sitting window/g) || []).length === 1);
+      check("L4 · `--json` carries both: totals.picture_first_misses 3 and totals.sitting_window_misses 2 (of 4 new ideas), every per-file entry its teaching counts, and one { file, ts, moment, picture, in_sitting } per miss",
+        () => js.status === 0 && j && j.totals.picture_first_misses === 3 && j.totals.sitting_window_misses === 2 && j.totals.new_ideas === 4 && j.totals.picture_first === 1
+          && j.per.every((p) => p.teaching && typeof p.teaching.misses === "number" && typeof p.teaching.sitting_window_misses === "number" && !("missed" in p)) && Array.isArray(j.missed) && j.missed.length === 3
+          && j.missed.every((m) => Object.keys(m).join() === "file,ts,moment,picture,in_sitting"));
+    } finally { rmSync(d2, { recursive: true, force: true }); }
+    const winText = [H("pehle"), SAY(NAAM),                                                                   // a miss before any sitting opens
+      H("padhai shuru"), B("node scripts/sitting.mjs open --surface code --no-spawn"), RES(), SAY("Sitting khul gayi."),
+      H("samjhao"), MOM("check_q"), RES(), SAY(ASK),                                                          // a miss inside the window
+      H("bas"), B("node scripts/sitting.mjs close"), RES(), SAY("Sitting band."),
+      H("ek aur"), SAY(NAAM)].join("\n");                                                                     // a miss after the close
+    const win = teachingPass(winText, "w.jsonl"), never = teachingPass([H("samjhao"), SAY(NAAM)].join("\n"), "n.jsonl");
+    check("L4 · row 583 (4) · the WHOLE transcript is N, the sitting window a sub-count M <= N from the rail's own `sitting.mjs open` to its `close`: a miss before the open and one after the close are outside it; a transcript that never opens a sitting has M = 0",
+      () => win.misses === 3 && win.sitting_window_misses === 1 && JSON.stringify(win.missed.map((m) => m.in_sitting)) === JSON.stringify([false, true, false])
+        && never.misses === 1 && never.sitting_window_misses === 0);
+    check("L4 · ONE definition: this replay IMPORTS newIdeaOf from ./teaching_audit.mjs and defines no new-idea predicate of its own",
+      () => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8"); return /import\s*\{[^}]*\bnewIdeaOf\b[^}]*\}\s*from\s*"\.\/teaching_audit\.mjs"/.test(src) && !/function\s+newIdeaOf\b/.test(src) && !/newIdeaOf\s*=/.test(src); });
+  }
+  } catch (e) { fail++; console.log(`  ✗ THROW outside a named case — ${String((e && e.stack) || e).slice(0, 300)}`); }
   console.log(`study_rail_replay selftest: ${pass} passed, ${fail} failed`);
   if (fail) process.exit(1);
 }
