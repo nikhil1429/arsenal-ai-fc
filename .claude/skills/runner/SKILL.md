@@ -98,6 +98,9 @@ scope sentence cut from row 437.
   (model 'opus'; no Sonnet, no Haiku, no Fable seat until his word) at the effort `tools/model_law.mjs
   effort <phase>` resolves — **xhigh** since his 23 Sep word *"Runner aur saare sub-agents hamesha xhigh
   pe"*. The value is read from that one home, never typed in a script, a check or this file.
+  (It moved to **max** by his #64, row 389 — the home prints it with its rows.) **LABOUR is the one
+  exception, by his words #100 / #101 (row 585):** a Sonnet 5.5 effort-max `labourer` subagent INSIDE
+  the runner — THE LABOUR LANE below. Judgement never leaves the Opus runner.
 - **THE WINDOWS ARE NOT MEASURED** (row 131), verbatim: *"the gate's five-hour and weekly arithmetic
   are NOTES; every launch at the 3,000,000 cap; fleets fly together — FLEET.lock is a LIST."*
 - **THE HOST RULE** (row 130 (2)(a), NARROWED by his word, row 248): while a fleet flies the host
@@ -155,6 +158,34 @@ ritual below it, which is what the leg replaces.
   CURRENT.md's §RETURN, all nine steps; either way **COST PER FINDING goes on the RETURNED row beside
   the total** (his word, row 136 (2)(c)), and every exported result goes THROUGH the names gate:
   `node bin/names_scrub.mjs check <file…>`.
+
+## THE LABOUR LANE — Sonnet hands, Opus head (row 585, his words #100 / #101)
+
+His ask: Sonnet 5.5 at effort max for *"pure manual labor"*, as a subagent inside the runner, with **zero
+drop in the organism's quality or intensity**. The shape holds only through these four code paths.
+
+- **THE SPLIT RULE.** Cut every item in two before any typing. JUDGEMENT stays here: reading the order,
+  designing a witness's clauses, writing the pack, diagnosing any red, every row, every commit / push /
+  launch, every irreversible act, every fork. LABOUR goes to the labourer: code from a complete spec, a
+  ruled fix, mutant copies plus their unchanged control, witness and harness runs with their last lines,
+  names_scrub, selftests from named clauses. **If you cannot write the spec completely, it is judgement —
+  keep it.**
+- **THE PACK CONTRACT.** One JSON file in this session's scratchpad; its keys and every gate are the
+  header of `tools/labour_pack.mjs`. `node tools/labour_pack.mjs check <pack>` must print PASS before the
+  spawn, and the labourer runs the same check first and writes nothing on a refusal. A pack writes only
+  your lane's OWNER FILES or scratch paths — never a state file, a ledger, POOL.json or the launch gate.
+- **THE SPAWN.** The Agent tool with `subagent_type: "labourer"` (the law file:
+  `C:/Users/nikhi/GitHub/arsenal-ai-fc/.claude/agents/labourer.md`), in the background, the ceiling
+  literal on the prompt's FIRST line (the rails fleet rail refuses a fan-out without one), the prompt =
+  the pack path and nothing else. **One labourer per lane at a time** (the RAM law). A session started
+  before `.claude/agents/` existed cannot spawn it — restart that session first.
+- **THE RETURN GATE.** The labourer's report is never evidence. Re-run every command in the pack
+  yourself and compare the last lines; read `git diff --stat` over the write list; a FORK is yours to
+  decide inside your class or carry to the architect; a MISS is yours to diagnose. Only then
+  `witness_commit`, through the same gates as your own work — the labourer gets no new door.
+- **ADOPTION IS MEASURED** (row 585): the first pack runs with the five-hour percent read before and
+  after; PASS (re-run equal, burn lower) = a pool line plus an adoption row; a quality fail = tighten the
+  pack contract and run one more unit; a cost fail = a fork to the architect.
 
 ## THE PAUSE — a code path, not a ritual (row 136 (1))
 
