@@ -147,34 +147,45 @@ export async function prompt(opts = {}) {
     // G0 — outside the study session: no pacer, no contract, no bar, no audit, no turn clock. ONE
     // pointer line, and only on a surface he studies on while a concept is open (study_scope.mjs).
     await runOrgan("study_scope.mjs", "unbound", { ...opts, call: "unboundMain" }, r);
-    await runOrgan("hippocampus.mjs", "recall-hint", opts, r);
-    return r;
+  } else {
+    // G0 LIVENESS (R7): the host's prompt touches the sitting through the owner's own verb, so its
+    // idle timer measures HIS silence. CALL shape: sitting.mjs guards its main behind argv[1].
+    // Not under the TRANSITION guard (an old-build sitting): there is no host to be, and no /touch door.
+    if (!scope.legacy) await runOrgan("sitting.mjs", "touch", { ...opts, call: "hookMain", extraArgs: ["--session", scope.session] }, r);
+    // THE PACER BY THE CALL SHAPE (forks row 639, 12 Oct 2026). sitting.mjs, one line up, imports
+    // forge_session.mjs statically (W0-D), so from 7177a88 (23 Sep 2026) the SHIM that stood here
+    // reached a module already in the cache: a silent no-op that `r.ran` still counted as a success.
+    // His transcripts carry the FORGE CONTRACT line on 0 study prompts from 24 Sep to 12 Oct, and
+    // organism_test's NO SHIM CALLEE named it RED on HEAD the whole time. The CALL awaits
+    // forge_session's own hookMain, which the module cache cannot swallow.
+    await runOrgan("forge_session.mjs", "contract", { ...opts, call: "hookMain" }, r);
+    await runOrgan("teaching_contract.mjs", "print", opts, r);
+    // ── THE TEACHING BAR (7 Sep 2026) — THE MESSAGE GRAMMAR JOINS THE ANCHOR ───
+    // The two callees above carry PACING (where you are in THE METHOD) and DRIFT
+    // (which rule he is failed on most). Neither has ever carried a single byte of
+    // MESSAGE GRAMMAR: read forge_session's contractLines() — no shape, no cap, no
+    // ban in it — and teaching_contract rotates 2 rules of 36, so a given rule
+    // reaches a turn roughly once in 35. His grammar lived in markdown that a
+    // session read ONLY on opening /learn or /forge, and there is a live route
+    // into a teaching turn that opens NEITHER: a fresh session continuing an
+    // already-open concept (forge_session.json was open on `tokenization` with
+    // three recorded resumes when this landed). THIS LINE IS THE FIX FOR THAT
+    // ROUTE, and the reason it works is one property of the wiring: the
+    // UserPromptSubmit hook carries NO `matcher` (PreToolUse is the only hook in
+    // settings.json that does), so this dispatcher fires on EVERY prompt whatever
+    // skill was or was not invoked. The selftest pins that property.
+    // It sits third deliberately: after the drift rules, before the auditor that
+    // records the turn — the two "how to speak to him" blocks read as one.
+    await runOrgan("teaching_bar.mjs", "print", opts, r);
+    await runOrgan("teaching_audit.mjs", "hook", opts, r);
   }
-  // G0 LIVENESS (R7): the host's prompt touches the sitting through the owner's own verb, so its
-  // idle timer measures HIS silence. CALL shape: sitting.mjs guards its main behind argv[1].
-  // Not under the TRANSITION guard (an old-build sitting): there is no host to be, and no /touch door.
-  if (!scope.legacy) await runOrgan("sitting.mjs", "touch", { ...opts, call: "hookMain", extraArgs: ["--session", scope.session] }, r);
-  await runOrgan("forge_session.mjs", "contract", opts, r);
-  await runOrgan("teaching_contract.mjs", "print", opts, r);
-  // ── THE TEACHING BAR (7 Sep 2026) — THE MESSAGE GRAMMAR JOINS THE ANCHOR ───
-  // The two callees above carry PACING (where you are in THE METHOD) and DRIFT
-  // (which rule he is failed on most). Neither has ever carried a single byte of
-  // MESSAGE GRAMMAR: read forge_session's contractLines() — no shape, no cap, no
-  // ban in it — and teaching_contract rotates 2 rules of 36, so a given rule
-  // reaches a turn roughly once in 35. His grammar lived in markdown that a
-  // session read ONLY on opening /learn or /forge, and there is a live route
-  // into a teaching turn that opens NEITHER: a fresh session continuing an
-  // already-open concept (forge_session.json was open on `tokenization` with
-  // three recorded resumes when this landed). THIS LINE IS THE FIX FOR THAT
-  // ROUTE, and the reason it works is one property of the wiring: the
-  // UserPromptSubmit hook carries NO `matcher` (PreToolUse is the only hook in
-  // settings.json that does), so this dispatcher fires on EVERY prompt whatever
-  // skill was or was not invoked. The selftest pins that property.
-  // It sits third deliberately: after the drift rules, before the auditor that
-  // records the turn — the two "how to speak to him" blocks read as one.
-  await runOrgan("teaching_bar.mjs", "print", opts, r);
-  await runOrgan("teaching_audit.mjs", "hook", opts, r);
-  await runOrgan("hippocampus.mjs", "recall-hint", opts, r);
+  // ONE recall hint for both scopes, after the branch (forks row 639): it used to be called once in
+  // each branch, and the NO SHIM CALLEE walk, which did not see branches, read the second call as a
+  // SHIM of a module already in the cache. One call site makes the order plain to the walk and to a reader.
+  // By the CALL shape (forks row 641 (D)): sitting.mjs, touched above, reaches acts.mjs by a dynamic
+  // import and acts.mjs imports hippocampus.mjs statically, so this module can already be in the cache
+  // whatever sitting imports tomorrow. A cached SHIM prints nothing; the CALL awaits hippocampus's own hookMain.
+  await runOrgan("hippocampus.mjs", "recall-hint", { ...opts, call: "hookMain" }, r);
   return r;
 }
 export async function start(opts = {}) {
@@ -398,6 +409,8 @@ function selftest() {
     }
     assert("contract 3 — hippocampus.mjs awaits its async main behind the argv[1] guard (no circular import there, so a top-level await is safe)",
       /pathToFileURL\(process\.argv\[1\]\)\.href\)\s*await main\(\)/.test(src("hippocampus.mjs")));
+    assert("contract 3 — hippocampus.mjs exports its main as `hookMain` for the CALL shape (forks row 641 (D): sitting reaches it through acts.mjs, so a SHIM can find it cached)",
+      /main as hookMain/.test(src("hippocampus.mjs")));
     assert("contract 3 — learnstate.mjs exports its main as `hookMain` for the CALL shape (its brief() has a circular dynamic import, so a top-level await would deadlock)",
       /main as hookMain/.test(src("learnstate.mjs")) && !/pathToFileURL\(process\.argv\[1\]\)\.href\)\s*await main\(\)/.test(src("learnstate.mjs")));
     assert("contract 3 — teaching_audit.mjs awaits its hook main at top level", /await hookMain\(\)/.test(src("teaching_audit.mjs")));
@@ -528,8 +541,8 @@ function selftest() {
       const shim = (tag) => `console.log("${tag}:" + process.argv.slice(2).join(","));\n`;
       const call = (tag, fn = "hookMain") => `export async function ${fn}() { console.log("${tag}:" + process.argv.slice(2).join(",")); }\n`;
       const FIX = {
-        prompt: { "sitting.mjs": call("SITTING"), "forge_session.mjs": shim("FORGE"), "teaching_contract.mjs": shim("TC"), "teaching_bar.mjs": shim("BAR"),
-          "teaching_audit.mjs": shim("AUDIT"), "hippocampus.mjs": shim("HIPPO"), "study_scope.mjs": call("UNBOUND", "unboundMain") },
+        prompt: { "sitting.mjs": 'import "./forge_session.mjs";\n' + call("SITTING"), "forge_session.mjs": call("FORGE"), "teaching_contract.mjs": shim("TC"), "teaching_bar.mjs": shim("BAR"),
+          "teaching_audit.mjs": shim("AUDIT"), "hippocampus.mjs": call("HIPPO"), "study_scope.mjs": call("UNBOUND", "unboundMain") },
         stop: { "teaching_audit.mjs": shim("AUDIT"), "intent.mjs": shim("INTENT"), "acts.mjs": shim("ACTS"), "session_meter.mjs": shim("METER") },
         start: { "teaching_contract.mjs": shim("TC"), "learnstate.mjs": call("LEARN"), "forge_session.mjs": call("FORGE"), "watchman.mjs": shim("WATCH"), "outbox.mjs": call("OUTBOX"), "captains_call.mjs": call("CARD") },
       };
@@ -551,6 +564,27 @@ function selftest() {
       const pl = await runSeq("prompt", true, { legacy: true });
       assert("G0 · prompt under the TRANSITION guard (an old-build sitting) keeps the study blocks but touches nothing — there is no host and no /touch door",
         JSON.stringify(pl.lines) === JSON.stringify(["FORGE:contract", "TC:print", "BAR:print", "AUDIT:hook", "HIPPO:recall-hint"]), JSON.stringify(pl.lines));
+      // forks row 639 — THE ORDER THAT KILLED THE PACER, planted both ways. The fixture's sitting.mjs imports
+      // forge_session.mjs as the organ does (W0-D), so the in-scope line above holds only by the CALL shape;
+      // here the mechanism itself: a module an earlier callee already imported prints NOTHING by SHIM (the
+      // death, 23 Sep to 12 Oct) and runs by CALL (the cure).
+      {
+        const d = mkdtempSync(join(tmpdir(), "turn_hook-r01-"));
+        writeFileSync(join(d, "pre.mjs"), `console.log("PRE:" + process.argv.slice(2).join(","));\nexport async function hookMain() { console.log("PRE-CALL:" + process.argv.slice(2).join(",")); }\n`);
+        const got = [], w0 = process.stdout.write.bind(process.stdout);
+        process.stdout.write = (chunk) => { got.push(String(chunk)); return true; };
+        let shimOut = null, callOut = null;
+        try {
+          await import(pathToFileURL(join(d, "pre.mjs")).href);   // an earlier callee's import puts it in the cache
+          got.length = 0;
+          await runOrgan("pre.mjs", "v", { dir: d, stderr: () => { } });
+          shimOut = got.join(""); got.length = 0;
+          await runOrgan("pre.mjs", "v", { dir: d, call: "hookMain", stderr: () => { } });
+          callOut = got.join("");
+        } finally { process.stdout.write = w0; rmSync(d, { recursive: true, force: true }); }
+        assert("R-01 planted both ways (forks row 639) — a module an earlier callee imported is a SILENT no-op by SHIM and runs by CALL",
+          shimOut === "" && callOut === "PRE-CALL:v\n", JSON.stringify({ shimOut, callOut }));
+      }
       const ss = await runSeq("stop", true), sn = await runSeq("stop", false);
       assert("G0 · stop — the teaching audit runs ONLY for the study session; intent, acts and the session meter stay universal",
         JSON.stringify(ss.lines) === JSON.stringify(["AUDIT:hook", "INTENT:stop", "ACTS:stop", "METER:stop"]) && JSON.stringify(sn.lines) === JSON.stringify(["INTENT:stop", "ACTS:stop", "METER:stop"]), JSON.stringify({ ss: ss.lines, sn: sn.lines }));

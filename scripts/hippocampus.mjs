@@ -1896,4 +1896,9 @@ export {
   whoLayers, layerWho, whoLayersLines, WHO_LAYERS_MAX,
   // frozen legacies (layering law) — kept readable beside their replacements
   identityCartridgeLegacy, whoCartridgeLegacy, gatherDayMaterialLegacy, NARRATOR_RE_LEGACY,
+  // hookMain (forks row 641 (D), 13 Oct 2026) — the CLI's own main, exported for scripts/turn_hook.mjs's CALL
+  // shape, the learnstate pattern. sitting.mjs reaches acts.mjs by a dynamic import and acts.mjs imports this
+  // module statically, so it can already be in the ES-module cache when the recall hint runs: a SHIM would
+  // then be a silent no-op, the CALL is not. The argv[1] guard above stays as it is for the CLI.
+  main as hookMain,
 };
