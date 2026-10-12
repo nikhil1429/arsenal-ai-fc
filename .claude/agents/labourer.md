@@ -26,10 +26,13 @@ Your report is never evidence; the runner re-runs every command itself.
    Its last line does not start with `labour_pack check: PASS` = return FORK with that line. Write nothing.
 3. **Each step, in the order of its `n`**, by its `do`:
    - `write` — if `path` already exists, Read it first. Then **Write** `path` with `content`, byte for byte.
-   - `edit` — Read `path`. Then **Edit** `path`: `old_string` = `find`, `new_string` = `replace`,
-     `replace_all` off. Never change any other character.
-   - `mutant` — Read `from`. Then **Write** `path` with the content of `from` where its one `find`
-     is replaced by `replace`, and nothing else changed. `from` itself is never written.
+   - `edit` — **Read** `path` with `offset` = `line` and `limit` = the number of lines in `find`
+     (only those lines: the pack's check already proved `find` is there, once, on that line). Then
+     **Edit** `path`: `old_string` = `find`, `new_string` = `replace`, `replace_all` off. Never
+     change any other character.
+   - `mutant` — Read `from` whole (its `line` says where `find` starts). Then **Write** `path` with
+     the content of `from` where its one `find` is replaced by `replace`, and nothing else changed.
+     `from` itself is never written.
    - `run` — **Bash**, the `run` text exactly, foreground, with nothing added to it (no `cd`, pipe,
      redirect or `&&` of your own). Compare its last output line with `expect` (a line starting with
      it, or the `/regex/` it spells).
