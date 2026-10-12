@@ -198,7 +198,10 @@ export async function start(opts = {}) {
   // argv[1] shim: its brief() dynamically imports context_manifest, which imports
   // learnstate back — a top-level `await main()` there DEADLOCKED (unsettled TLA,
   // exit 13, zero bytes). Measured 18 Aug 2026; see learnstate.mjs's guard comment.
-  await runOrgan("learnstate.mjs", "brief", { ...opts, call: "hookMain" }, r);
+  // V609 (b), forks rows 629-631 (13 Oct 2026): reached through its THIN ENTRY, which asks the ARSENAL_ORGAN
+  // question BEFORE learnstate's graph loads (a headless organ paid ~281 ms of pure import for a brief that prints
+  // nothing); on his path the entry imports learnstate and awaits the very same hookMain.
+  await runOrgan("learnstate_hook.mjs", "brief", { ...opts, call: "hookMain" }, r);
   await runOrgan("forge_session.mjs", "boot", { ...opts, call: "hookMain" }, r);   // R-01 (W0-C): CALL, not SHIM — learnstate imports this organ three lines up, so the cached body made `boot` a silent no-op
   // ── A5 (4 Sep 2026) · THE MACHINE GOES QUIET WHILE HE IS MID-CONCEPT ────────
   // The order: "`watchman.mjs brief` and `outbox.mjs brief` silent under the same
@@ -217,7 +220,9 @@ export async function start(opts = {}) {
     } catch { return false; }
   })();
   const parked = studying ? [] : null;
-  await runOrgan("watchman.mjs", "brief", { ...opts, sink: parked }, r);
+  // V609 (b): the watchman's brief through its THIN ENTRY, by the CALL shape — never an argv[1] SHIM, which the module
+  // cache would swallow (R-01); a headless organ no longer loads watchman's graph (~188 ms of pure import).
+  await runOrgan("watchman_brief.mjs", "brief", { ...opts, call: "hookMain", sink: parked }, r);
   // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE ROAD GETS ITS DRIVER. BLOCK 3 built the outbox and
   // measured that morning that `relay` had never once been called in production: 22 rows posted,
   // 6 delivered, and those 6 by a hand-run proof. The road existed and nobody drove on it.
@@ -231,8 +236,8 @@ export async function start(opts = {}) {
   // rewriting process.argv[1], but an ES module body runs ONCE per process: every later
   // `import()` returns the cache and the guard never re-evaluates. Both callees are
   // already in that cache by the time these two lines run —
-  //   · `watchman.mjs brief` (7 lines up) imports outbox.mjs at module load
-  //   · `learnstate.mjs brief` (11 lines up) imports brain.mjs, which imports captains_call.mjs
+  //   · `watchman.mjs brief` (reached through watchman_brief.mjs since V609 (b)) imports outbox.mjs at module load
+  //   · `learnstate.mjs brief` (reached through learnstate_hook.mjs) imports brain.mjs, which imports captains_call.mjs
   // — so since 18 Aug 2026 the road has never been driven and no card has ever been
   // dealt at SessionStart, while `r.ran` counted both as successes. Reproduced through
   // this very function: cold cache prints the full outbox brief, warm cache prints zero
@@ -411,6 +416,8 @@ function selftest() {
       /pathToFileURL\(process\.argv\[1\]\)\.href\)\s*await main\(\)/.test(src("hippocampus.mjs")));
     assert("contract 3 — hippocampus.mjs exports its main as `hookMain` for the CALL shape (forks row 641 (D): sitting reaches it through acts.mjs, so a SHIM can find it cached)",
       /main as hookMain/.test(src("hippocampus.mjs")));
+    assert("contract 3 — watchman.mjs exports its main as `hookMain` for the CALL shape (V609 (b): watchman_brief.mjs awaits it; the G0 fixture is a fake watchman, so only a source check sees the REAL export go missing)",
+      /main as hookMain/.test(src("watchman.mjs")));
     assert("contract 3 — learnstate.mjs exports its main as `hookMain` for the CALL shape (its brief() has a circular dynamic import, so a top-level await would deadlock)",
       /main as hookMain/.test(src("learnstate.mjs")) && !/pathToFileURL\(process\.argv\[1\]\)\.href\)\s*await main\(\)/.test(src("learnstate.mjs")));
     assert("contract 3 — teaching_audit.mjs awaits its hook main at top level", /await hookMain\(\)/.test(src("teaching_audit.mjs")));
@@ -544,7 +551,7 @@ function selftest() {
         prompt: { "sitting.mjs": 'import "./forge_session.mjs";\n' + call("SITTING"), "forge_session.mjs": call("FORGE"), "teaching_contract.mjs": shim("TC"), "teaching_bar.mjs": shim("BAR"),
           "teaching_audit.mjs": shim("AUDIT"), "hippocampus.mjs": call("HIPPO"), "study_scope.mjs": call("UNBOUND", "unboundMain") },
         stop: { "teaching_audit.mjs": shim("AUDIT"), "intent.mjs": shim("INTENT"), "acts.mjs": shim("ACTS"), "session_meter.mjs": shim("METER") },
-        start: { "teaching_contract.mjs": shim("TC"), "learnstate.mjs": call("LEARN"), "forge_session.mjs": call("FORGE"), "watchman.mjs": shim("WATCH"), "outbox.mjs": call("OUTBOX"), "captains_call.mjs": call("CARD") },
+        start: { "teaching_contract.mjs": shim("TC"), "learnstate_hook.mjs": call("LEARN"), "forge_session.mjs": call("FORGE"), "watchman_brief.mjs": call("WATCH"), "outbox.mjs": call("OUTBOX"), "captains_call.mjs": call("CARD") },
       };
       const runSeq = async (seq, study, extra = {}) => {
         const d = mkdtempSync(join(tmpdir(), `turn_hook-g0-${seq}-`));
@@ -584,6 +591,34 @@ function selftest() {
         } finally { process.stdout.write = w0; rmSync(d, { recursive: true, force: true }); }
         assert("R-01 planted both ways (forks row 639) — a module an earlier callee imported is a SILENT no-op by SHIM and runs by CALL",
           shimOut === "" && callOut === "PRE-CALL:v\n", JSON.stringify({ shimOut, callOut }));
+      }
+      // V609 (b), forks rows 629-631 (13 Oct 2026) — THE THIN ENTRIES, planted both ways. learnstate_hook.mjs and
+      // watchman_brief.mjs exist only to ask the ARSENAL_ORGAN question BEFORE their organ's graph loads. Each REAL file is
+      // copied beside a fixture organ that counts its own evaluations: headless, the brief loads NOTHING and prints nothing;
+      // on his path the organ loads once and its hookMain runs with the same verb; any other verb is delegated whole (the
+      // organ's own guard decides it). One fresh dir per run: a module is evaluated once per URL.
+      {
+        const organ = `globalThis.__V609_LOADS__ = (globalThis.__V609_LOADS__ || 0) + 1;\nexport async function hookMain() { console.log("ORGAN:" + process.argv.slice(2).join(",")); }\n`;
+        const thinRun = async (entry, organFile, verb, headless) => {
+          const d = mkdtempSync(join(tmpdir(), "turn_hook-thin-"));
+          writeFileSync(join(d, entry), src(entry));
+          writeFileSync(join(d, organFile), organ);
+          const saved = process.env.ARSENAL_ORGAN, sink = [], rr = { ran: 0, failed: [] }, before = globalThis.__V609_LOADS__ || 0;
+          if (headless) process.env.ARSENAL_ORGAN = "1"; else delete process.env.ARSENAL_ORGAN;
+          try { await runOrgan(entry, verb, { dir: d, call: "hookMain", sink, stderr: () => { } }, rr); }
+          finally {
+            if (saved === undefined) delete process.env.ARSENAL_ORGAN; else process.env.ARSENAL_ORGAN = saved;
+            rmSync(d, { recursive: true, force: true });
+          }
+          return { loads: (globalThis.__V609_LOADS__ || 0) - before, out: sink.join(""), failed: rr.failed.map((f) => f.why) };
+        };
+        for (const [entry, organFile] of [["learnstate_hook.mjs", "learnstate.mjs"], ["watchman_brief.mjs", "watchman.mjs"]]) {
+          const silent = await thinRun(entry, organFile, "brief", true), his = await thinRun(entry, organFile, "brief", false), other = await thinRun(entry, organFile, "selftest", true);
+          assert(`THIN ENTRY ${entry} (V609 (b)) — headless, the brief loads NOT ${organFile} and prints nothing; on his path ${organFile} loads once and its hookMain runs with the same verb; another verb is delegated whole`,
+            src(entry) !== "" && silent.loads === 0 && silent.out === "" && silent.failed.length === 0
+            && his.loads === 1 && his.out === "ORGAN:brief\n" && his.failed.length === 0 && other.loads === 1 && other.out === "ORGAN:selftest\n",
+            JSON.stringify({ silent, his, other }));
+        }
       }
       const ss = await runSeq("stop", true), sn = await runSeq("stop", false);
       assert("G0 · stop — the teaching audit runs ONLY for the study session; intent, acts and the session meter stay universal",

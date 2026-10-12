@@ -2689,3 +2689,8 @@ else if (cmd === "brief") {
 else if (cmd === "selftest") selftest();
 else console.log("watchman: run [--no-tier2] [--skip-suite] | brief | report | tmpsweep [--apply] | selftest");
 }
+
+// hookMain (V609 (b), forks rows 629-631, 13 Oct 2026) — the CLI's own main, exported for the CALL shape: scripts/watchman_brief.mjs
+// imports this file only off the ARSENAL_ORGAN path and awaits it (an argv[1] SHIM there would be swallowed by the ES-module cache,
+// R-01). The argv[1] guard above stays as it is for the CLI; nothing else in this organ changes.
+export { main as hookMain };
