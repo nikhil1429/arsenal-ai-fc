@@ -715,28 +715,51 @@ async function laws() {
     // one and this goes red. Everything else must be a DECLARED site, and the count may only fall.
     const VOCAB = /(haan|chhod|theek|thik|chalo|baad|aage|agla|samjha|\bbye\b|\bquit\b|\bskip\b|full time)/i;
     const ANCHORED = /\/\^(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\\n])+\$\/[gimsuy]*/g;
-    // The one site still routing on his words, named rather than hidden. It is next after BLOCK 5.
-    const DECLARED_WORD_ROUTING = [{ file: "gaffer_state.mjs", why: "isStandingLegacy — decides if a captain line states a law that outlives the session. Live at gaffer_brain.mjs:546. Same class as the four BLOCK 5 killed; it needs a `standing` intent and is surgery in a hot path, so it is DECLARED and counted here rather than quietly left." }];
-    const wordRouting = [];
-    for (const f of readdirSync(join(ROOT, "scripts")).filter((x) => x.endsWith(".mjs") && x !== "acts.mjs" && x !== SELF)) {
-      const lines = readOrgan(f).split("\n");
+    // The sites still routing on his words, named rather than hidden. Each is DECLARED with its reason and the count may
+    // only fall; a site joins only by a forks row. A declaration names the FILE, and — when the matcher is a named const —
+    // the NAME too, so a second matcher in the same file is never covered by the first one's row.
+    const DECLARED_WORD_ROUTING = [
+      { file: "gaffer_state.mjs", why: "isStandingLegacy — decides if a captain line states a law that outlives the session. Live at gaffer_brain.mjs:546. Same class as the four BLOCK 5 killed; it needs a `standing` intent and is surgery in a hot path, so it is DECLARED and counted here rather than quietly left." },
+      { file: "study_scope.mjs", name: "ACK_ONLY", why: "forks row 641 (13 Oct 2026), branch (B): the teaching gate's ack list (25dd590, 23 Sep) — \"ok\" after a pehle-guess banks nothing. It routes on his words on the study path; asking acts.resolveIntent there is surgery in the hottest path (every prompt), so it is DECLARED with its row until that rung." },
+    ];
+    // A COMMAND-LINE FLAG MATCHER IS NOT SPEECH (forks row 641, branch (C)): an anchored regex whose body opens with a
+    // hyphen — `/^-(first|last|skip|index)$/i`, study_scope's Select-Object allowlist — matches `-skip`, a flag, and he
+    // never begins an utterance with one. The scan read `skip` there as his vocabulary. Every other anchored matcher
+    // carrying his words still counts.
+    const FLAG_MATCHER = /^\/\^-/;
+    const sitesIn = (f, text) => {
+      const out = [];
+      const lines = text.split("\n");
       lines.forEach((line, i) => {
         if (/^\s*(\/\/|\*)/.test(line)) return;
         for (const r of line.match(ANCHORED) || []) {
-          if (!VOCAB.test(r)) continue;
+          if (!VOCAB.test(r) || FLAG_MATCHER.test(r)) continue;
           const name = (/const\s+([A-Za-z0-9_]+)\s*=/.exec(line) || [])[1] || null;
           const referenced = !name || lines.some((l, j) => j !== i && new RegExp(`\\b${name}\\b`).test(l) && !/^\s*(\/\/|\*)/.test(l));
-          if (referenced) wordRouting.push(`${f}:${i + 1}`);
+          if (referenced) out.push({ at: `${f}:${i + 1}`, file: f, name });
         }
       });
-    }
-    const undeclared = wordRouting.filter((s) => !DECLARED_WORD_ROUTING.some((d) => s.startsWith(d.file)));
+      return out;
+    };
+    const declared = (s) => DECLARED_WORD_ROUTING.some((d) => d.file === s.file && (!d.name || d.name === s.name));
+    const wordRouting = readdirSync(join(ROOT, "scripts")).filter((x) => x.endsWith(".mjs") && x !== "acts.mjs" && x !== SELF)
+      .flatMap((f) => sitesIn(f, readOrgan(f)));
+    const undeclared = wordRouting.filter((s) => !declared(s)).map((s) => s.at);
     assert("LOAD ZERO BLOCK 5 · no organ tests a private word-list against HIS TEXT outside the resolver — every wording, every tone, one typed intent",
       undeclared.length === 0, `${undeclared.join(", ")} still routes on the words he happened to use. Ask acts.resolveIntent instead — it judges MEANING, and its cache makes the second utterance free.`);
-    assert("LOAD ZERO BLOCK 5 · ...and the DECLARED word-routing sites may only SHRINK (1 left: gaffer_state.isStandingLegacy)",
-      wordRouting.length <= DECLARED_WORD_ROUTING.length, `${wordRouting.join(", ")}`);
+    assert("LOAD ZERO BLOCK 5 · ...and the DECLARED word-routing sites may only SHRINK (2 left: gaffer_state.isStandingLegacy · study_scope ACK_ONLY, row 641)",
+      wordRouting.length <= DECLARED_WORD_ROUTING.length, `${wordRouting.map((s) => s.at).join(", ")}`);
+    // PLANTED BOTH WAYS (row 641 (C)) — fixture text, never his tree: a flag matcher is not a site, a speech matcher is;
+    // and a declared NAME covers only itself — a second matcher in a declared file is still a site.
+    const fx = (body) => sitesIn("fixture.mjs", body).map((s) => s.name);
+    assert("LOAD ZERO BLOCK 5 · PLANTED — a command-line flag matcher (/^-(first|skip)$/) is NOT a word-routing site",
+      fx("const F = /^-(first|skip)$/i;\nuse(F);\n").length === 0);
+    assert("LOAD ZERO BLOCK 5 · PLANTED — CONTROL: the same words held against a whole utterance (/^(skip|haan)$/) ARE a site",
+      fx("const W = /^(skip|haan)$/i;\nuse(W);\n").join() === "W");
+    assert("LOAD ZERO BLOCK 5 · PLANTED — a declaration by NAME covers only that matcher: a second one in study_scope.mjs is undeclared",
+      !declared({ file: "study_scope.mjs", name: "ACK_TWO" }) && declared({ file: "study_scope.mjs", name: "ACK_ONLY" }) && declared({ file: "gaffer_state.mjs", name: null }));
     assert("LOAD ZERO BLOCK 5 · the four sites §BLOCK 5 named are gone from the live path — sitting's two are FROZEN and unreferenced, talk and captains_call now ask the resolver",
-      !wordRouting.some((s) => s.startsWith("sitting.mjs") || s.startsWith("talk.mjs") || s.startsWith("captains_call.mjs")), wordRouting.join(", "));
+      !wordRouting.some((s) => s.file === "sitting.mjs" || s.file === "talk.mjs" || s.file === "captains_call.mjs"), wordRouting.map((s) => s.at).join(", "));
     for (const org of ["sitting.mjs", "talk.mjs", "captains_call.mjs"]) {
       assert(`LOAD ZERO BLOCK 5 · ${org} asks the ONE resolver (acts.resolveIntent), rather than keeping its own vocabulary`,
         /resolveIntent/.test(readOrgan(org)));
@@ -2260,24 +2283,17 @@ function atlas() {
 // Every FAIL still exits non-zero, ruled or not (exit 1 when all are ruled) — CI and the watchman's
 // nightly sweep see exactly the red they saw before; the list only says which reds are news.
 const KNOWN_RED = [
-  { assert: "NO SHIM CALLEE — no turn_hook callee is SHIM-reached after something already imported it (the ES-module cache would make it a silent no-op that `ran` counts as a success)",
-    // MEASURED 13 Oct under this walk: the branch shape clears the double-call, and hippocampus still reads dead by
-    // another road — sitting.mjs (touch, CALL) holds `await import("./acts.mjs")` (its DRIVER loop, not the touch path)
-    // and acts imports hippocampus statically. The walk counts every string-literal dynamic import as loaded: it may
-    // over-count, never under-count.
-    detail: "prompt: forge_session.mjs contract (already loaded — SHIM is a no-op) · prompt: hippocampus.mjs recall-hint (already loaded — SHIM is a no-op)",
-    row: 639, owner: "lane V", until: "the forge contract restore (fork 2346 branch (A)) lands, and hippocampus recall-hint rides the CALL shape or a row rules the conservative read" },
-  // MEASURED 13 Oct on HEAD c972664: the two undeclared sites are BOTH in study_scope.mjs, not the declared
-  // gaffer_state one — ACK_ONLY (an anchored ack list held against his text, teaching gate P2, 25dd590) and the
-  // PowerShell Select-Object flag matcher (`skip` is in the scan's vocabulary). The file and the count are pinned,
-  // never the line numbers: a third site anywhere reads UNRULED.
-  { assert: "LOAD ZERO BLOCK 5 · no organ tests a private word-list against HIS TEXT outside the resolver — every wording, every tone, one typed intent",
-    detailRe: "^study_scope\\.mjs:\\d+, study_scope\\.mjs:\\d+ still routes on the words he happened to use\\.",
-    row: 639, owner: "lane S", until: "study_scope's ACK_ONLY asks the resolver or is declared by a row, and the flag matcher is ruled (fork filed 13 Oct)" },
-  { assert: "LOAD ZERO BLOCK 5 · ...and the DECLARED word-routing sites may only SHRINK (1 left: gaffer_state.isStandingLegacy)",
-    detailRe: "^gaffer_state\\.mjs:\\d+, study_scope\\.mjs:\\d+, study_scope\\.mjs:\\d+$",
-    row: 639, owner: "lane S", until: "the same two study_scope sites are resolved" },
+  // EMPTY since 13 Oct 2026 (row 642): every entry of row 639 left the list in the landing that fixed it — NO SHIM
+  // CALLEE when lane V's ea8d015 put forge_session contract and hippocampus recall-hint on the CALL shape (the entry
+  // read STALE on his tree), the two LOAD ZERO BLOCK 5 lines on row 641 (B) + (C). The next entry joins only by a row.
 ];
+// RETIRED ENTRIES (L9: the record stays, the rule goes) — read them whole in 287df98's KNOWN_RED:
+//   · NO SHIM CALLEE (row 639, lane V), detail "prompt: forge_session.mjs contract · prompt: hippocampus.mjs recall-hint
+//     (already loaded — SHIM is a no-op)". The hippocampus death was read through sitting.mjs's `await import("./acts.mjs")`
+//     (its DRIVER loop) and acts' static import of hippocampus: the walk counts every string-literal dynamic import as
+//     loaded, over-count never under-count. Retired when ea8d015 (rows 639 (A) + 641 (D)) put both on the CALL shape.
+//   · LOAD ZERO BLOCK 5, both lines (row 639, lane S): study_scope's ACK_ONLY declared by row 641 (B), the Select-Object
+//     flag matcher no longer read as speech (C).
 function rulingOf(fails, passed, list = KNOWN_RED) {
   const ok = (e) => Number.isInteger(e.row) && e.row > 0 && typeof e.owner === "string" && e.owner.trim() && typeof e.assert === "string" && e.assert;
   const invalid = list.filter((e) => !ok(e)).map((e) => e.assert || "(no assert name)");
