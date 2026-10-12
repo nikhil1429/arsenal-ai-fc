@@ -21,5 +21,63 @@
       "gates_driven": 0,
       "registered_at": "2026-08-07T14:03:10.877Z"
     }
+  },
+  "pictures": {
+    "embeddings": [
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-12T08:31:08.536Z",
+        "title": "embeddings_axis_e_negation_and_vendor_false_positive",
+        "recorded_at": "2026-10-12T08:31:08.833Z"
+      },
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-12T08:31:17.394Z",
+        "title": "embeddings_axis_e_negation_and_vendor_false_positive",
+        "recorded_at": "2026-10-12T08:31:18.823Z"
+      },
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-12T12:28:27.556Z",
+        "title": "embeddings_axis_f_vector_size_storage_and_work",
+        "recorded_at": "2026-10-12T12:28:28.755Z"
+      },
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-12T12:28:43.375Z",
+        "title": "embeddings_axis_f_vector_size_storage_and_work",
+        "recorded_at": "2026-10-12T12:28:44.028Z"
+      },
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-12T14:09:53.184Z",
+        "title": "embeddings_axis_f_meaning_layers_decide_size",
+        "recorded_at": "2026-10-12T14:09:53.406Z"
+      },
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-12T14:47:08.636Z",
+        "title": "embeddings_axis_f_real_world_size_choice_flow",
+        "recorded_at": "2026-10-12T14:47:10.998Z"
+      },
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-12T14:47:17.739Z",
+        "title": "embeddings_axis_f_real_world_size_choice_flow",
+        "recorded_at": "2026-10-12T14:47:17.880Z"
+      },
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-12T14:54:32.238Z",
+        "title": "embeddings_axis_f_core_rule_two_halves",
+        "recorded_at": "2026-10-12T14:54:32.344Z"
+      },
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-12T15:01:10.165Z",
+        "title": "embeddings_axis_f_real_world_cost_and_decision_stepper",
+        "recorded_at": "2026-10-12T15:01:10.273Z"
+      }
+    ]
   }
 }
