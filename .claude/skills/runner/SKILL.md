@@ -166,21 +166,27 @@ drop in the organism's quality or intensity**. The shape holds only through thes
 
 - **THE SPLIT RULE.** Cut every item in two before any typing. JUDGEMENT stays here: reading the order,
   designing a witness's clauses, writing the pack, diagnosing any red, every row, every commit / push /
-  launch, every irreversible act, every fork. LABOUR goes to the labourer: code from a complete spec, a
-  ruled fix, mutant copies plus their unchanged control, witness and harness runs with their last lines,
-  names_scrub, selftests from named clauses. **If you cannot write the spec completely, it is judgement —
-  keep it.**
+  launch, every irreversible act, every fork. LABOUR goes to the labourer: a file whose full content you
+  have written, an exact find → replace, mutant copies plus their unchanged control, named runs with
+  their expected last lines. **If you cannot write every step's exact WHAT, WHERE, HOW and WHEN, it is
+  judgement — keep it** (row 606, his word #113: the labourer uses no brain).
 - **THE PACK CONTRACT.** One JSON file in this session's scratchpad; its keys and every gate are the
   header of `tools/labour_pack.mjs`. `node tools/labour_pack.mjs check <pack>` must print PASS before the
   spawn, and the labourer runs the same check first and writes nothing on a refusal. A pack writes only
   your lane's OWNER FILES or scratch paths — never a state file, a ledger, POOL.json or the launch gate.
+  A pack is ordered STEPS (write · edit · mutant · run), each with its exact WHAT, WHERE, HOW and WHEN;
+  the old free-text keys are refused by name, and a goal carrying a judgement verb is refused (row 606 (1)).
 - **THE SPAWN.** The Agent tool with `subagent_type: "labourer"` (the law file:
   `C:/Users/nikhi/GitHub/arsenal-ai-fc/.claude/agents/labourer.md`), in the background, the ceiling
   literal on the prompt's FIRST line (the rails fleet rail refuses a fan-out without one), the prompt =
-  the pack path and nothing else. **One labourer per lane at a time** (the RAM law). A session started
+  the pack path and nothing else. Its tools are Read, Write, Edit and Bash only (row 606 (2)). **One labourer per lane at a time** (the RAM law). A session started
   before `.claude/agents/` existed cannot spawn it — restart that session first.
-- **THE RETURN GATE.** The labourer's report is never evidence. Re-run every command in the pack
-  yourself and compare the last lines; read `git diff --stat` over the write list; a FORK is yours to
+- **THE RETURN GATE.** The labourer's report is never evidence. FIRST run
+  `node tools/labour_pack.mjs audit <pack> <transcript>` over the labourer's own transcript (the
+  agent-<id>.jsonl under the session's subagents folder in the Claude projects tree; the task output
+  file is 0 bytes on Windows): REFUSED = the return is refused, a RED row, its pack re-spelled, never
+  re-run as is (row 606 (3)); its last line also names the seat's model and effort. Then re-run every
+  run step yourself and compare the last lines; read `git diff --stat` over the write list; a FORK is yours to
   decide inside your class or carry to the architect; a MISS is yours to diagnose. Only then
   `witness_commit`, through the same gates as your own work — the labourer gets no new door.
 - **ADOPTION IS MEASURED** (row 585): the first pack runs with the five-hour percent read before and
