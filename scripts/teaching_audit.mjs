@@ -111,6 +111,30 @@
 // contract row, act-mueywvag, staged through autohit like every drift above (declared
 // in SEED_GAP until the contract's owner seeds it); and the selftest runs on a fixture
 // registry it writes itself, through registry.mjs's ARSENAL_REGISTRY seam — never his.
+//
+// "SAMAJH NAHI AAYA", TAKEN LITERALLY (11 Oct 2026 · rung L5 of the design sheet ds506 ·
+// fate 06's samajh half · forks rows 550 (1), 554, 570, 587 (3), 601). His card's rule 9:
+// stop there, restart from zero, do not advance. Until today NOTHING recorded whether that
+// happened: the census of 6 Oct found 8 genuine I-do-not-understand moments in his study
+// sessions and no row anywhere that said what the answer did. And the one place his words
+// reached this file was the SHARED prompt record, which a parallel session in this project
+// overwrites (or an earlier Stop of the same turn has already consumed): 412 of 1,519 rows
+// were audited without his words. So every audited Stop row now also carries
+//   samajh_check: { seen, restarted, marker, source }
+// read from THIS turn's own transcript_path through the L4 reader (his last human prompt
+// and the blocks that answer it) — never the shared record, which stays as it is (L9).
+// `seen` = his prompt carries a CONFUSION_MARKERS_V2 marker; `restarted` = seen and NOT
+// advanced under DEFINITION (B) of row 570 (1), ruled by validation on the census: the
+// answer ADVANCED when it runs `forge_session.mjs step <n>` or `axis <x> done`, or declares
+// a TEST moment (sharp_check / jirah); a pehle_guess, a check_q, a widget_gate, a picture
+// or a re-explanation is lawful (row 570 (2)). THE NULL PATH again: an unreadable turn is
+// `seen: null` with the reason named in `source`, never 0 — "I could not see" and "he said
+// nothing" are different facts. `replay <transcript.jsonl>` runs the SAME samajhOf over
+// every prompt of a recorded session and prints ONE line, `samajh seen N restarted M`.
+// ROW 603 (3), same day, STRICTER ONLY: a background task's <task-notification> and the client's
+// [Request interrupted by user…] marker are written as plain user lines, and the turn reader
+// took them for his prompt (329 + 105 such lines in the 142 audited sessions). The one prompt
+// predicate (promptOfLine) now refuses both, so his own prompt bounds the turn for L4 AND L5.
 // ---------------------------------------------------------------------------
 
 // cpSync dropped 10 Aug 2026 with the E2E hermeticity scar below — the seed is
@@ -1366,17 +1390,30 @@ export function pictureFacts(blocks, lastMessage = "") {
   const o = pictureOrder(blocks, lastMessage);
   return { new_idea: newIdeaOf({ moments, finalText: o.final_text }), picture_present: o.picture_present, picture_first: o.picture_first, moment: moments.join(","), title: o.title };
 }
-/** THIS turn out of a transcript's text: the assistant blocks after his LAST human prompt. Pure. */
+/** His prompt on ONE transcript line, or null: a human user line (study_scope.humanText — never a tool result, never a
+ *  harness meta line such as the Stop hook's own feedback) that is not /clear · /model · /effort · /compact noise, and not
+ *  a HARNESS line the client writes as a plain user line (below). L4's turn reader and L5's replay bound a turn with this
+ *  one predicate (11 Oct 2026, row 570 (3)). Pure. */
+// HARNESS LINES (forks row 603 (3), 11 Oct 2026 — STRICTER ONLY): measured over the 142 audited sessions, 329 human-shaped user
+// lines were a background task's `<task-notification>` and 105 were the client's `[Request interrupted by user…]` marker; neither
+// is anything he typed. Each one STARTED a new turn (so his own prompt and the blocks before it fell out of the turn) and its text
+// was read as his words. Anchored at the line's start: a prompt of his that merely mentions either string is still his.
+const HARNESS_PROMPT = [/^\s*<task-notification>/, /^\s*\[Request interrupted by user/];
+export function promptOfLine(l) {
+  if (!l || l[0] !== "{" || !/"type":"user"/.test(l)) return null;
+  let o; try { o = JSON.parse(l); } catch { return null; }
+  const t = humanText(o);
+  return t !== null && !SLASH_NOISE.test(t) && !HARNESS_PROMPT.some((rx) => rx.test(t)) ? t : null;
+}
+/** THIS turn out of a transcript's text: the assistant blocks after his LAST human prompt, and that prompt (L5). Pure. */
 export function turnOf(raw) {
   const L = String(raw || "").split("\n");
-  let start = -1;
+  let start = -1, prompt = null;
   for (let i = L.length - 1; i >= 0 && start < 0; i--) {
-    if (!L[i] || L[i][0] !== "{" || !/"type":"user"/.test(L[i])) continue;
-    let o; try { o = JSON.parse(L[i]); } catch { continue; }
-    const t = humanText(o);
-    if (t !== null && !SLASH_NOISE.test(t)) start = i;
+    const t = promptOfLine(L[i]);
+    if (t !== null) { start = i; prompt = t; }
   }
-  if (start < 0) return { blocks: null, why: "the transcript tail holds no human prompt — this turn has no start to read from" };
+  if (start < 0) return { blocks: null, why: "the transcript tail holds no human prompt — this turn has no start to read from", prompt: null };
   const blocks = [];
   for (const l of L.slice(start + 1)) {
     if (!l || l[0] !== "{" || !/"type":"assistant"/.test(l)) continue;
@@ -1388,7 +1425,14 @@ export function turnOf(raw) {
       else if (b.type === "tool_use") blocks.push({ kind: "tool", name: String(b.name || ""), input: b.input || {} });
     }
   }
-  return { blocks, why: null };
+  return { blocks, why: null, prompt };
+}
+/** Every turn of a recorded session, in order (L5's replay): each of his prompts (promptOfLine) with the blocks that
+ *  answer it, up to his next prompt — each cut read by turnOf itself, so a turn here IS the turn a Stop row reads. Pure. */
+export function turnsOf(raw) {
+  const L = String(raw || "").split("\n"), cuts = [];
+  for (let i = 0; i < L.length; i++) if (promptOfLine(L[i]) !== null) cuts.push(i);
+  return cuts.map((a, k) => turnOf(L.slice(a, k + 1 < cuts.length ? cuts[k + 1] : L.length).join("\n")));
 }
 const TURN_TAIL_MAX = 16 * 1024 * 1024;   // the gate's own TRANSCRIPT_MAX: the same tail, read the same way
 export function readTurn(path, max = TURN_TAIL_MAX) {
@@ -1408,9 +1452,10 @@ export function readTurn(path, max = TURN_TAIL_MAX) {
   return turnOf(raw);
 }
 const NULL_PICTURE = Object.freeze({ new_idea: null, picture_present: null, picture_first: null, moment: null, title: null });
-/** The Stop row's picture fields for this hook payload — or THE NULL PATH with its reason named. */
-export function turnPicture(hook = {}) {
-  const t = readTurn(hook && hook.transcript_path);
+/** The Stop row's picture fields for this hook payload — or THE NULL PATH with its reason named. `turn` = the turn the Stop
+ *  already read (L5: one read feeds both halves of the row); omitted, it is read here, as before. */
+export function turnPicture(hook = {}, turn = readTurn(hook && hook.transcript_path)) {
+  const t = turn;
   if (!t.blocks) return { ...NULL_PICTURE, picture_why: t.why };
   return { ...pictureFacts(t.blocks, hook.last_assistant_message), picture_why: null };
 }
@@ -1433,6 +1478,56 @@ const callRecord = (io, p) => {
   try { return io && typeof io.recordPicture === "function" ? io.recordPicture(p) : { ok: null, skipped: "this io records no picture" }; }
   catch (e) { return { ok: false, why: String((e && e.message) || e).slice(0, 160) }; }
 };
+
+// ===========================================================================
+// L5 · "SAMAJH NAHI AAYA", TAKEN LITERALLY (11 Oct 2026 · forks rows 550 (1), 554, 570, 587 (3), 601 · the header's
+// last block says why). Each piece is defined ONCE, and the Stop row and the replay verb call the SAME samajhOf:
+//   samajhMarker   — the marker his prompt carries: CONFUSION_MARKERS_V2 (the list above — the census cut it from this
+//                    file, so it is never re-typed), its first hit.
+//   samajhAdvanced — DEFINITION (B), row 570 (1): the answering blocks run the pacer's two advancing verbs,
+//                    `forge_session.mjs step <n>` or `axis <x> done` (matched on the WHOLE command, row 554 (4); `done`
+//                    in any case, as the pacer lowercases it), or declare a TEST moment (study_scope's BANKED_MOMENTS,
+//                    sharp_check · jirah, through L4's turnMoments). Everything else is lawful (row 570 (2)).
+//   samajhOf       — { seen, restarted, marker } of ONE turn: his prompt + the blocks that answer it.
+//   samajhCheck    — the Stop row's field from the turn L4's reader returned; THE NULL PATH: seen, restarted and marker
+//                    null, and `source` names why (rung L5's S5b reds it by name, never as a silent zero).
+//   replaySamajh   — the replay verb's line over a whole recorded session (turnsOf: every prompt, through turnOf).
+// TIER 0: zero tokens, no state read or written.
+// ===========================================================================
+/** The confusion marker his prompt carries (CONFUSION_MARKERS_V2, the first hit), or null. Pure. */
+export function samajhMarker(text) {
+  const t = norm(text);
+  return CONFUSION_MARKERS_V2.find((m) => t.includes(m)) || null;
+}
+const STEP_VERB = /forge_session\.mjs["']?\s+step\s+["']?\d/;
+const AXIS_DONE_VERB = /forge_session\.mjs["']?\s+axis\s+\S+\s+["']?[Dd][Oo][Nn][Ee]\b/;
+/** DEFINITION (B) of forks row 570 (1): did the blocks answering his prompt ADVANCE? Pure. */
+export function samajhAdvanced(blocks) {
+  const list = Array.isArray(blocks) ? blocks : [];
+  if (turnMoments(list).some((k) => BANKED_MOMENTS.includes(k))) return true;
+  return list.some((b) => isShell(b) && b.input && typeof b.input.command === "string"
+    && (STEP_VERB.test(b.input.command) || AXIS_DONE_VERB.test(b.input.command)));
+}
+/** ONE turn's samajh facts: seen = his prompt carries a marker; restarted = seen and NOT advanced; 0/0 with no marker. Pure. */
+export function samajhOf({ prompt = "", blocks = [] } = {}) {
+  const marker = samajhMarker(prompt);
+  if (!marker) return { seen: 0, restarted: 0, marker: null };
+  return { seen: 1, restarted: samajhAdvanced(blocks) ? 0 : 1, marker };
+}
+const NULL_SAMAJH = Object.freeze({ seen: null, restarted: null, marker: null });
+/** The Stop row's samajh_check from the turn readTurn returned — or THE NULL PATH, its reason named in source. Pure. */
+export function samajhCheck(turn) {
+  if (!turn || !Array.isArray(turn.blocks) || typeof turn.prompt !== "string") {
+    return { ...NULL_SAMAJH, source: `unread: ${(turn && turn.why) || "his prompt was not read from the turn"}` };
+  }
+  return { ...samajhOf(turn), source: "transcript_path" };
+}
+/** The replay verb (rung L5's G1): every prompt of a recorded session through samajhOf, summed into ONE line. Pure. */
+export function replaySamajh(raw) {
+  let seen = 0, restarted = 0;
+  for (const t of turnsOf(raw)) { const s = samajhOf(t); seen += s.seen; restarted += s.restarted; }
+  return { seen, restarted, line: `samajh seen ${seen} restarted ${restarted}` };
+}
 
 // FROZEN 6 Aug 2026 — THE DEAD READER, byte-for-byte, pinned by the selftest
 // against the real live file. `.session` does not exist; the file IS the session.
@@ -1615,8 +1710,14 @@ export function stopHook(hook, io) {
   // L4 (6 Oct 2026) — THIS turn's picture fields, read from transcript_path (the NULL PATH names why when it cannot be
   // read); only an audited turn reads it. A throw in the reader is a named null too: this organ never breaks his Stop.
   let pic = { ...NULL_PICTURE, picture_why: "not audited" };
+  // L5 (11 Oct 2026) — the samajh check of THIS turn, from the same read: his last prompt in transcript_path and the blocks
+  // that answer it (never the shared prompt record above, which a parallel session can overwrite). Null-path rule as L4's.
+  let samajh = { ...NULL_SAMAJH, source: "unread: not audited" };
   if (res.audited) {
-    try { pic = turnPicture(hook); } catch (e) { pic = { ...NULL_PICTURE, picture_why: `the turn reader threw: ${String((e && e.message) || e).slice(0, 120)}` }; }
+    let turn;
+    try { turn = readTurn(hook && hook.transcript_path); } catch (e) { turn = { blocks: null, why: `the turn reader threw: ${String((e && e.message) || e).slice(0, 120)}`, prompt: null }; }
+    try { pic = turnPicture(hook, turn); } catch (e) { pic = { ...NULL_PICTURE, picture_why: `the turn reader threw: ${String((e && e.message) || e).slice(0, 120)}` }; }
+    try { samajh = samajhCheck(turn); } catch (e) { samajh = { ...NULL_SAMAJH, source: `unread: the samajh reader threw: ${String((e && e.message) || e).slice(0, 120)}` }; }
   }
   // row 583 (6): a picture-first MISS joins this turn's drifts BEFORE they are staged, so autohit counts it, the last-run
   // record counts it and the log row carries its evidence — the one list every drift already rides.
@@ -1724,6 +1825,8 @@ export function stopHook(hook, io) {
     moment: pic.moment,
     picture_why: pic.picture_why,
     picture_recorded: rec,   // what recordPicture answered (null = not a picture-first new idea, so never called)
+    // L5 — rung L5's S5 / S5b read this: { seen, restarted, marker, source }; seen null (never 0) when his prompt was unread
+    samajh_check: samajh,
   });
 
   // The heartbeat — "I looked". forge_session.mjs:378-393 has read this stamp off
@@ -2570,6 +2673,132 @@ function selftest() {
         && ![sFirst, sAbsent, sMissing, sGuess, sJirah].some((s) => s.row.drifts.includes("act-mueywvag")));
   } finally { try { rmSync(l4, { recursive: true, force: true }); } catch {} }
 
+  // ========================================================================
+  // L5 — "SAMAJH NAHI AAYA", TAKEN LITERALLY (11 Oct 2026 · forks rows 570, 601), planted BOTH ways under L4's laws: each
+  // case is caught BY NAME, and none reads his live state (transcripts and the state dir are temp; the chain is spawned
+  // under the selftest seam).
+  // ========================================================================
+  const CONF = "yaar samajh nahi aaya, token aur word mein farak kya hai?";
+  const SHOW = "Chalo zero se: picture dekho, ek shabd kai tukdon mein toot sakta hai.";
+  const SHARP = "Seedha sawaal: strawberry mein kitne token?";
+  const FS = "node scripts/forge_session.mjs";
+  const TOOL = (command, name = "Bash") => ({ kind: "tool", name, input: { command } });
+  const PICB = { kind: "tool", name: "mcp__visualize__show_widget", input: { title: "t" } }, TEXTB = { kind: "text", text: SHOW };
+  const so = (prompt, blocks) => { const s = samajhOf({ prompt, blocks }); return `${s.seen}/${s.restarted}`; };
+  check("L5 · samajhMarker — the V2 list, first hit: 'samajh nahi aa raha', 'I am Confused in it', 'samajh nahi aaya' are seen; 'haan samajh gaya', 'samajh aaya — haan', an empty and a null prompt are not",
+    () => samajhMarker("yaar samajh nahi aa raha") === "samajh nahi aa raha" && samajhMarker("Though I am Confused in it.") === "confused"
+      && samajhMarker(CONF) === "samajh nahi aaya" && samajhMarker("haan samajh gaya, aage chalo") === null
+      && samajhMarker("samajh aaya — haan") === null && samajhMarker("") === null && samajhMarker(null) === null);
+  check("L5 · samajhAdvanced — DEFINITION (B), row 570 (1): `step <n>`, `axis <x> done` (DONE too), a sharp_check and a jirah ADVANCE, from Bash or PowerShell, chained or not; a pehle_guess, a check_q, a widget_gate, a picture, `axis <x> now` / `defer`, a bare `step`, another script's `step 4`, a command in TEXT and a non-shell tool do NOT",
+    () => [`${FS} step 4`, `node "$CLAUDE_PROJECT_DIR/scripts/forge_session.mjs" step 5`, `${FS} axis c done`, `${FS} axis c DONE`, `${FS} moment sharp_check`, `${FS} moment jirah`,
+      `cd x && ${FS} moment pehle_guess && ${FS} step 6`].every((c) => samajhAdvanced([TOOL(c)]) === true) && samajhAdvanced([TOOL(`${FS} step 4`, "PowerShell")]) === true
+      && [`${FS} moment pehle_guess`, `${FS} moment check_q`, `${FS} moment widget_gate`, `${FS} axis c now`, `${FS} axis c defer`, `${FS} step`, "node scripts/other.mjs step 4"]
+        .every((c) => samajhAdvanced([TOOL(c)]) === false)
+      && samajhAdvanced([PICB, TEXTB]) === false && samajhAdvanced([]) === false && samajhAdvanced(null) === false
+      && samajhAdvanced([{ kind: "text", text: `${FS} step 4` }]) === false && samajhAdvanced([TOOL(`${FS} step 4`, "Read")]) === false);
+  check("L5 · samajhOf — confused, then a re-explain with a picture = 1/1; a sharp_check, a jirah, a step, an axis done = 1/0; a pehle_guess = 1/1 (lawful, row 570 (2)); no marker = 0/0 even when the turn advances",
+    () => so(CONF, [PICB, TEXTB]) === "1/1" && so(CONF, [TOOL(`${FS} moment sharp_check`), TEXTB]) === "1/0" && so(CONF, [TOOL(`${FS} moment jirah`)]) === "1/0"
+      && so(CONF, [TOOL(`${FS} step 4`)]) === "1/0" && so(CONF, [TOOL(`${FS} axis d done`)]) === "1/0" && so(CONF, [TOOL(`${FS} moment pehle_guess`), TEXTB]) === "1/1"
+      && so("haan samajh gaya, aage chalo", [TOOL(`${FS} step 4`)]) === "0/0" && so("", []) === "0/0" && samajhOf({ prompt: CONF, blocks: [] }).marker === "samajh nahi aaya");
+  check("L5 · samajhCheck, THE NULL PATH — a turn the reader could not read gives seen / restarted / marker NULL (never 0) and source names the reader's why; a read turn says source transcript_path",
+    () => { const u = samajhCheck({ blocks: null, why: "transcript_path unreadable (ENOENT)", prompt: null }), n = samajhCheck(null), r = samajhCheck({ blocks: [], why: null, prompt: CONF });
+      return u.seen === null && u.restarted === null && u.marker === null && u.source === "unread: transcript_path unreadable (ENOENT)"
+        && n.seen === null && /^unread: /.test(n.source) && r.seen === 1 && r.restarted === 1 && r.source === "transcript_path"; });
+  check("L5 · ONE definition — CONFUSION_MARKERS_V2, samajhOf, samajhAdvanced and promptOfLine are each defined exactly once in this file",
+    () => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+      return (src.match(/^const CONFUSION_MARKERS_V2 = \[/gm) || []).length === 1 && (src.match(/^export function samajhOf\(/gm) || []).length === 1
+        && (src.match(/^export function samajhAdvanced\(/gm) || []).length === 1 && (src.match(/^export function promptOfLine\(/gm) || []).length === 1; });
+  const l5 = mkdtempSync(join(tmpdir(), "teach-audit-l5-"));
+  try {
+    const META = (text) => J({ type: "user", isMeta: true, message: { role: "user", content: text } });
+    const tx = (name, rows) => { const p = join(l5, name); writeFileSync(p, [...OPENED, ...rows].join("\n") + "\n"); return p; };
+    const fromFile = (p) => samajhCheck(readTurn(p));
+    const mine = fromFile(tx("mine.jsonl", [H("token kya hai"), SAY("Token text ka tukda hai."), H(CONF), PIC(), RES(), SAY(SHOW)]));
+    const earlier = fromFile(tx("earlier.jsonl", [H(CONF), PIC(), RES(), SAY(SHOW), H("haan samajh gaya, aage chalo"), MOM("check_q"), RES(), SAY(ASK)]));
+    const fed = fromFile(tx("fed.jsonl", [H(CONF), PIC(), RES(), SAY(SHOW), META("Stop hook feedback:\nPATCH — jodo EK line; nothing is lost"), SAY("Picture upar hai.")]));
+    check("L5 · READ FROM transcript_path — the marker in HIS last prompt is seen (1/1 for a re-explain); an earlier prompt's marker is not this turn's (0/0); the Stop hook's own feedback (an isMeta line, even one carrying a marker word) never replaces his prompt, so the turn after it is still his (1/1)",
+      () => mine.seen === 1 && mine.restarted === 1 && mine.marker === "samajh nahi aaya" && mine.source === "transcript_path"
+        && earlier.seen === 0 && earlier.restarted === 0 && earlier.marker === null && fed.seen === 1 && fed.restarted === 1 && fed.marker === "samajh nahi aaya");
+    writeFileSync(join(l5, "noprompt.jsonl"), [SAY("x"), PIC(), RES()].join("\n") + "\n");
+    const nAbs = samajhCheck(readTurn(undefined)), nMiss = fromFile(join(l5, "nope.jsonl")), nDir = fromFile(l5), nNone = fromFile(join(l5, "noprompt.jsonl"));
+    check("L5 · THE NULL PATH through the reader the Stop row uses — no transcript_path, a missing file, a directory, a tail with no human prompt: seen NULL (never 0), each with its own named source",
+      () => [nAbs, nMiss, nDir, nNone].every((x) => x.seen === null && x.restarted === null && x.marker === null)
+        && nAbs.source === "unread: no transcript_path in the Stop payload" && nMiss.source === "unread: transcript_path unreadable (ENOENT)"
+        && nDir.source === "unread: transcript_path unreadable (EISDIR)" && /no human prompt/.test(nNone.source));
+    // row 603 (3): the two harness lines the client writes as plain user lines (the census's shapes), planted both ways
+    const TN = "<task-notification>\n<task-id>b1</task-id>\n<status>completed</status>\n<summary>the run got lost, confused output</summary>\n</task-notification>";
+    const notifiedP = tx("notified.jsonl", [H(CONF), RUN("node long.mjs"), RES(), SAY("Chal raha hai."), H(TN), PIC(), RES(), SAY(SHOW)]);
+    const notified = readTurn(notifiedP), interrupted = fromFile(tx("interrupted.jsonl", [H(CONF), SAY("Chalo zero se"), H("[Request interrupted by user]"), SAY(SHOW)]));
+    const afterInt = readTurn(tx("afterint.jsonl", [H(CONF), SAY("x"), H("[Request interrupted by user for tool use]"), H("haan samajh gaya, aage chalo"), SAY(ASK)]));
+    check("L5 · row 603 (3) · HARNESS LINES are never his prompt — a <task-notification> (even one carrying 'lost' / 'confused') and a [Request interrupted by user…] line neither start a turn nor become his words: the turn after them is still his (seen 1, his marker, the blocks before them kept, the replay counts one turn); his NEXT real prompt after an interrupt is his; a prompt of his that merely MENTIONS either string is still his",
+      () => { const s = samajhCheck(notified);
+        return s.seen === 1 && s.marker === "samajh nahi aaya" && notified.blocks.length === 4 && interrupted.seen === 1 && interrupted.marker === "samajh nahi aaya"
+          && afterInt.prompt === "haan samajh gaya, aage chalo" && replaySamajh(readFileSync(notifiedP, "utf8")).line === "samajh seen 1 restarted 1"
+          && promptOfLine(H(TN)) === null && promptOfLine(H("[Request interrupted by user]")) === null && promptOfLine(H("[Request interrupted by user for tool use]")) === null
+          && promptOfLine(H("dekho yeh <task-notification> kya hota hai")) === "dekho yeh <task-notification> kya hota hai"
+          && promptOfLine(H("maine [Request interrupted by user] dekha")) === "maine [Request interrupted by user] dekha"; });
+    check("L5 · row 603 (3) · and L4 reads the same turn: a picture shown BEFORE a task-notification is still this turn's picture (picture_first true), where the notification used to cut it off",
+      () => { const f = facts([H("samjhao"), MOM("check_q"), RES(), PIC(), RES(), H(TN), SAY(ASK)]); return f.new_idea === true && f.picture_present === true && f.picture_first === true && f.moment === "check_q"; });
+    const rp = tx("replay.jsonl", [H(CONF), PIC(), RES(), SAY(SHOW), H("ab bhi samajh nahi aa raha"), MOM("sharp_check"), RES(), SAY(SHARP), H("haan samajh gaya"), MOM("check_q"), RES(), SAY(ASK)]);
+    check("L5 · replaySamajh over a recorded session — every prompt through samajhOf: the opener (0/0), a re-explain (1/1), a sharp_check (1/0) and a plain turn (0/0) sum to 'samajh seen 2 restarted 1'; its LAST turn is exactly the turn readTurn gives the Stop row (one turn definition)",
+      () => { const raw = readFileSync(rp, "utf8"), all = turnsOf(raw), last = readTurn(rp);
+        return replaySamajh(raw).line === "samajh seen 2 restarted 1" && all.length === 4 && JSON.stringify(all.at(-1)) === JSON.stringify(last)
+          && all.map((t) => t.prompt).join("|") === `padhai shuru|${CONF}|ab bhi samajh nahi aa raha|haan samajh gaya`; });
+    const quiet = join(l5, "replay-state");
+    mkdirSync(quiet);
+    const envR = { ...process.env, ARSENAL_AUDIT_STATE_DIR: quiet };
+    delete envR.ARSENAL_ORGAN;
+    const cli = (f) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), "replay", f], { env: envR, encoding: "utf8", timeout: 15000 });
+    const rOk = cli(rp), rMiss = cli(join(l5, "gone.jsonl")), rDir = cli(l5);
+    check("L5 · THE REPLAY VERB, both ways — a readable session prints exactly ONE stdout line 'samajh seen 2 restarted 1' (exit 0); a missing file and a directory exit 2 with a named 'unreadable' on stderr and NO samajh line; the verb writes no state",
+      () => rOk.status === 0 && rOk.stdout.trim() === "samajh seen 2 restarted 1"
+        && rMiss.status === 2 && /unreadable \(ENOENT\)/.test(rMiss.stderr) && !/samajh seen/.test(`${rMiss.stdout}${rMiss.stderr}`)
+        && rDir.status === 2 && /unreadable \(EISDIR\)/.test(rDir.stderr) && !/samajh seen/.test(`${rDir.stdout}${rDir.stderr}`)
+        && !existsSync(join(quiet, "teaching_audit.jsonl")) && !existsSync(join(quiet, "teaching_audit_last.json")));
+    // END TO END — this file spawned as the UserPromptSubmit + Stop hooks against a temp state dir under the selftest seam
+    const st = join(l5, "state");
+    mkdirSync(st);
+    writeFileSync(join(st, "forge_session.json"), JSON.stringify({ concept: "tokenization", started_at: "2026-10-11T04:00:00.000Z", updated_at: "2026-10-11T04:00:00.000Z", step: 3, steps_done: [0, 1, 2, 3], question_moments: { pehle_guess: 0, widget_gate: 0, check_q: 0, jirah: 0, sharp_check: 0 } }));
+    const env = { ...process.env, ARSENAL_AUDIT_STATE_DIR: st, ARSENAL_AUDIT_NO_SPAWN: "1" };
+    delete env.ARSENAL_ORGAN;
+    const sess = join(l5, "session.jsonl");
+    writeFileSync(sess, OPENED.join("\n") + "\n");
+    const SID = "selftest-l5";
+    const hookRun = (payload) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), "hook"], { input: JSON.stringify(payload), env, timeout: 15000 });
+    const rowsNow = () => existsSync(join(st, "teaching_audit.jsonl")) ? readFileSync(join(st, "teaching_audit.jsonl"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
+    // one turn: his prompt + its answer appended to the session file, the UserPromptSubmit the shared record sees (his own
+    // by default; a parallel session's when `shared` says so), then this session's Stop
+    const turn = (prompt, body, last, { shared = { session_id: SID, prompt }, transcript = sess } = {}) => {
+      appendFileSync(sess, [H(prompt), ...body].join("\n") + "\n");
+      const u = hookRun({ hook_event_name: "UserPromptSubmit", session_id: shared.session_id, prompt: shared.prompt });
+      const s = hookRun({ hook_event_name: "Stop", session_id: SID, transcript_path: transcript, last_assistant_message: last });
+      const rows = rowsNow();
+      return { status: u.status === 0 ? s.status : u.status, row: rows[rows.length - 1] || null, n: rows.length };
+    };
+    const sc = (e) => (e && e.row && e.row.samajh_check ? `${e.row.samajh_check.seen}/${e.row.samajh_check.restarted}` : "none");
+    const eRe = turn(CONF, [PIC(), RES(), SAY(SHOW)], SHOW);
+    const eSharp = turn("ab bhi samajh nahi aa raha", [MOM("sharp_check"), RES(), SAY(SHARP)], SHARP);
+    const ePlain = turn("haan samajh gaya", [MOM("check_q"), RES(), SAY(ASK)], ASK);
+    check("L5 · END TO END — the spawned Stop writes samajh_check on its row, read from transcript_path: a confused turn answered by a re-explain 1/1 (its marker named), by a sharp_check 1/0, a plain turn 0/0; source transcript_path on each, his prompt paired 'fresh'",
+      () => [eRe, eSharp, ePlain].every((e) => e.status === 0 && e.row && e.row.samajh_check && e.row.samajh_check.source === "transcript_path" && e.row.user_text_source === "fresh")
+        && eRe.n === 1 && ePlain.n === 3 && sc(eRe) === "1/1" && eRe.row.samajh_check.marker === "samajh nahi aaya"
+        && sc(eSharp) === "1/0" && eSharp.row.samajh_check.marker === "samajh nahi aa raha" && sc(ePlain) === "0/0" && ePlain.row.samajh_check.marker === null);
+    const eParA = turn("aage chalo", [SAY("Theek, aage.")], "Theek, aage.", { shared: { session_id: "selftest-other", prompt: "samajh nahi aaya yaar" } });
+    const eParB = turn("phir se samajh nahi aaya", [PIC(), RES(), SAY(SHOW)], SHOW, { shared: { session_id: "selftest-other", prompt: "runner ka kaam karo" } });
+    check("L5 · A PARALLEL SESSION — the shared prompt record holds ANOTHER session's 'samajh nahi aaya' while his own prompt carries none: seen 0 (the record is never the samajh reader); the inverse, his confused prompt with the record overwritten: seen 1 / restarted 1 although the row says session-mismatch (the blindness S5b names, cured)",
+      () => eParA.row && /session-mismatch/.test(eParA.row.user_text_source) && sc(eParA) === "0/0"
+        && eParB.row && /session-mismatch/.test(eParB.row.user_text_source) && sc(eParB) === "1/1" && eParB.row.samajh_check.marker === "samajh nahi aaya");
+    const eAbs = turn("aur ek baar", [SAY("Theek.")], "Theek.", { transcript: null });   // null, not undefined: undefined would take the default
+    const eDir = turn("ek aur baar", [SAY("Achha.")], "Achha.", { transcript: l5 });
+    check("L5 · END TO END, THE NULL PATH — no transcript_path, and a directory as the path, land rows whose samajh_check is NULL (never 0) with the reason in source",
+      () => eAbs.row && eAbs.row.samajh_check.seen === null && eAbs.row.samajh_check.restarted === null && eAbs.row.samajh_check.source === "unread: no transcript_path in the Stop payload"
+        && eDir.row && eDir.row.samajh_check.seen === null && eDir.row.samajh_check.source === "unread: transcript_path unreadable (EISDIR)" && eDir.n === eAbs.n + 1);
+    const rAll = cli(sess);
+    check("L5 · THE STOP ROWS AND THE REPLAY AGREE — the replay of the very session file the spawned Stops read prints the sum of what their read rows wrote (seen 3, restarted 2: one samajhOf, one turn definition)",
+      () => { const rows = rowsNow().filter((r) => r.samajh_check && typeof r.samajh_check.seen === "number"), sum = (k) => rows.reduce((a, r) => a + r.samajh_check[k], 0);
+        return rows.length === 5 && sum("seen") === 3 && sum("restarted") === 2 && rAll.status === 0 && rAll.stdout.trim() === "samajh seen 3 restarted 2"; });
+  } finally { try { rmSync(l5, { recursive: true, force: true }); } catch {} }
+
   console.log(`\n${fail === 0 ? "ALL CHECKS PASSED" : "SELFTEST FAILED"} (${pass} passed, ${fail} failed)\n`);
   if (fail) process.exit(1);
 }
@@ -2590,6 +2819,17 @@ function selftestOnOwnRegistry() {
     const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "selftest"], { env: { ...process.env, ARSENAL_REGISTRY: reg, ARSENAL_AUDIT_SELFTEST_REGISTRY: "1" }, stdio: "inherit" });
     if (r.status !== 0) process.exitCode = r.status === null ? 1 : r.status;
   } finally { try { rmSync(dir, { recursive: true, force: true }); } catch {} }
+}
+
+// L5 (11 Oct 2026) · THE REPLAY VERB — rung L5's G1 runs it over his recorded sessions. Pure over the ONE file it is
+// handed: no state read or written. ONE line on stdout. An unreadable file is a named refusal on stderr with exit 2 and
+// NO samajh line — "I could not read it" is never printed as "he never said it".
+function replayMain(file) {
+  if (!file) { console.error("teaching_audit replay: usage — replay <transcript.jsonl>"); process.exitCode = 2; return; }
+  let raw;
+  try { raw = readFileSync(file, "utf8"); }   // a directory throws EISDIR here on Windows too (a whole-file read, not L4's 0-byte tail)
+  catch (e) { console.error(`teaching_audit replay: ${file} unreadable (${String((e && e.code) || (e && e.message) || e).slice(0, 60)})`); process.exitCode = 2; return; }
+  console.log(replaySamajh(raw).line);
 }
 
 // IMPORT GUARD (7 Sep 2026). Until today this dispatch ran on IMPORT as well as
@@ -2615,5 +2855,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(`  link-back this session: ${r.linkSeen ? "a closed concept HAS been named" : "no closed concept named yet"}`);
   }
   else if (cmd === "hook") await hookMain();
-  else console.log("teaching_audit: hook | report | probe [--clean|--text \"...\"] | seed-terms [--concept <c>] | selftest");
+  else if (cmd === "replay") replayMain(process.argv[3]);
+  else console.log("teaching_audit: hook | report | probe [--clean|--text \"...\"] | seed-terms [--concept <c>] | replay <transcript.jsonl> | selftest");
 }
