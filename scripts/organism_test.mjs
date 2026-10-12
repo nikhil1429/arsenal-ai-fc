@@ -41,9 +41,9 @@ const STATE = join(ROOT, "dressing-room", "state");
 const NODE = process.execPath;
 
 let pass = 0, fail = 0;
-const fails = [];
+const fails = [], passed = [];
 const assert = (name, cond, detail) => {
-  if (cond) { pass++; console.log(`  ok   ${name}`); }
+  if (cond) { pass++; passed.push(name); console.log(`  ok   ${name}`); }
   else { fail++; fails.push({ name, detail }); console.log(`  FAIL ${name}${detail ? `\n         ${detail}` : ""}`); }
 };
 const section = (t) => console.log(`\n── ${t} ${"─".repeat(Math.max(0, 66 - t.length))}`);
@@ -796,45 +796,81 @@ async function laws() {
     // forge_session importable and had learnstate import it, which killed `boot` by the
     // identical mechanism, and no test saw that either. THAT is why this exists.
     // It is a PROPERTY, not a list: for each hook sequence, walk the callees in order,
-    // accumulate the transitive static-import closure of everything loaded so far, and
+    // accumulate the transitive import closure of everything loaded so far, and
     // fail if a SHIM callee is already in it. A callee that grows an importer tomorrow
     // fails a commit instead of dying quietly.
+    // THE CLOSURE FOLLOWS STRING-LITERAL DYNAMIC IMPORTS TOO (12 Oct 2026, forks rows
+    // 636 (6) / 637 (3) / 638 (5)). Lane V's silent-path cut puts thin entries in front of
+    // two organs: turn_hook reaches learnstate through learnstate_hook.mjs
+    // (`await import("./learnstate.mjs")`) and watchman through watchman_brief.mjs. A
+    // static-only walk sees a 1-file closure there while learnstate's whole graph loads on
+    // his real start path — the ratchet blind by construction, the checker-blindness class.
+    // A COMPUTED specifier (`import(p)`) stays invisible, the declared limit: the walk
+    // follows only what it can read. The walk is a function of its inputs so the planted
+    // fixtures below drive the SAME code his tree does.
     {
-      const src = readOrgan("turn_hook.mjs");
-      const importsOf = new Map();
-      const localImports = (file) => {
-        if (importsOf.has(file)) return importsOf.get(file);
-        let out = [];
-        try { out = [...readOrgan(file).matchAll(/^\s*import\s[^;]*?from\s+"\.\/([A-Za-z0-9_.-]+\.mjs)"/gm)].map((m) => m[1]); }
-        catch { out = []; }
-        importsOf.set(file, out);
-        return out;
-      };
-      const closure = (file, seen = new Set()) => {
-        if (seen.has(file)) return seen;
-        seen.add(file);
-        for (const dep of localImports(file)) closure(dep, seen);
-        return seen;
-      };
-      const dead = [];
-      let callsSeen = 0;
-      // the sequence names are READ FROM turn_hook's own exports, not listed here — a
-      // literal roster would be the jugad his 11-Aug law forbids AND would silently skip
-      // a fourth anchor the day one is added, which is exactly the blindness this member
-      // exists to close.
-      for (const name of [...src.matchAll(/^export async function ([a-z]+)\(opts = \{\}\)/gm)].map((m) => m[1])) {
-        const at = src.indexOf(`export async function ${name}(`);
-        if (at < 0) continue;
-        const body = src.slice(at, src.indexOf("\n}", at));
-        const loaded = new Set(["turn_hook.mjs"]);
-        for (const m of body.matchAll(/runOrgan\("([A-Za-z0-9_.-]+\.mjs)",\s*"([a-z-]+)"([^)]*)\)/g)) {
-          const [, file, verb, tail] = m;
-          callsSeen++;
-          const isCall = /\bcall\s*:/.test(tail);
-          if (!isCall && loaded.has(file)) dead.push(`${name}: ${file} ${verb} (already loaded — SHIM is a no-op)`);
-          for (const f of closure(file)) loaded.add(f);
+      const shimWalk = (src0, read) => {
+        // CR-AGNOSTIC: his working tree carries turn_hook.mjs with CRLF line ends (measured 13 Oct), and a shape
+        // keyed on `\n` would silently see no branch there while every LF fixture passed — PLANTED 6 holds it.
+        const src = String(src0).split("\r").join("");
+        const importsOf = new Map();
+        const localImports = (file) => {
+          if (importsOf.has(file)) return importsOf.get(file);
+          let out = [];
+          try {
+            const text = read(file);
+            out = [...text.matchAll(/^\s*import\s[^;]*?from\s+"\.\/([A-Za-z0-9_.-]+\.mjs)"/gm)].map((m) => m[1])
+              .concat([...text.matchAll(/\bimport\(\s*["']\.\/([A-Za-z0-9_.-]+\.mjs)["']\s*\)/g)].map((m) => m[1]));
+          }
+          catch { out = []; }
+          importsOf.set(file, out);
+          return out;
+        };
+        const closure = (file, seen = new Set()) => {
+          if (seen.has(file)) return seen;
+          seen.add(file);
+          for (const dep of localImports(file)) closure(dep, seen);
+          return seen;
+        };
+        const dead = [];
+        let callsSeen = 0;
+        // the sequence names are READ FROM turn_hook's own exports, not listed here — a
+        // literal roster would be the jugad his 11-Aug law forbids AND would silently skip
+        // a fourth anchor the day one is added, which is exactly the blindness this member
+        // exists to close.
+        for (const name of [...src.matchAll(/^export async function ([a-z]+)\(opts = \{\}\)/gm)].map((m) => m[1])) {
+          const at = src.indexOf(`export async function ${name}(`);
+          if (at < 0) continue;
+          const body = src.slice(at, src.indexOf("\n}", at));
+          // AN EARLY-RETURN BRANCH IS EXCLUSIVE (row 639 (ii)): a top-level `if (…) {` block whose
+          // last statement is `return` never runs together with what follows it, so its calls are
+          // checked against the set loaded at its entry and what it loads is DROPPED at its close.
+          // Without this, prompt()'s two hippocampus recall-hint calls (one in the non-study branch
+          // that returns, one on the study path) read as a death that cannot happen. Every other
+          // shape — a one-line `if`, a branch that falls through — is walked straight, as before:
+          // the walk may only over-count loads, never under-count them.
+          const branches = [];
+          for (const b of body.matchAll(/\n  if \([^\n]*\) \{\n([\s\S]*?)\n  \}(?=\n)/g)) {
+            const inner = b[1].split("\n").filter((l) => l.trim());
+            if (/^    return\b/.test(inner[inner.length - 1] || "")) branches.push([b.index, b.index + b[0].length]);
+          }
+          let loaded = new Set(["turn_hook.mjs"]);
+          let open = null;
+          for (const m of body.matchAll(/runOrgan\("([A-Za-z0-9_.-]+\.mjs)",\s*"([a-z-]+)"([^)]*)\)/g)) {
+            const [, file, verb, tail] = m;
+            if (open && m.index >= open.end) { loaded = open.saved; open = null; }
+            const br = open ? null : branches.find(([s, e]) => m.index >= s && m.index < e);
+            if (br) { open = { end: br[1], saved: loaded }; loaded = new Set(loaded); }
+            callsSeen++;
+            const isCall = /\bcall\s*:/.test(tail);
+            if (!isCall && loaded.has(file)) dead.push(`${name}: ${file} ${verb} (already loaded — SHIM is a no-op)`);
+            for (const f of closure(file)) loaded.add(f);
+          }
         }
-      }
+        return { dead, callsSeen };
+      };
+      const src = readOrgan("turn_hook.mjs");
+      const { dead, callsSeen } = shimWalk(src, readOrgan);
       assert("NO SHIM CALLEE — the call list parses and every hook sequence was walked (an empty walk would make the next assert vacuously true)",
         callsSeen >= 10, `runOrgan calls found: ${callsSeen}`);
       assert("NO SHIM CALLEE — no turn_hook callee is SHIM-reached after something already imported it (the ES-module cache would make it a silent no-op that `ran` counts as a success)",
@@ -852,6 +888,58 @@ async function laws() {
         assert(`NO SHIM CALLEE — ${f} actually EXPORTS hookMain (the call shape throws without it, and a throw here is one stderr line and a lost organ)`,
           /export\s+(async\s+)?function\s+hookMain\b/.test(readOrgan(f)) || /\bmain\s+as\s+hookMain\b/.test(readOrgan(f)));
       }
+      // PLANTED BOTH WAYS — fixture call lists, never his tree. Fixture 1 is the thin-entry
+      // shape of the silent-path cut: learnstate_hook reaches learnstate ONLY by a dynamic
+      // import, learnstate imports forge_session statically, then forge_session is SHIM-run.
+      // The walk must call that dead; with the dynamic leg removed it sees nothing (the mutant).
+      const hookOf = (forgeOpts) => [
+        "export async function start(opts = {}) {",
+        '  await runOrgan("learnstate_hook.mjs", "brief", { ...opts, call: "hookMain" }, r);',
+        `  await runOrgan("forge_session.mjs", "boot", ${forgeOpts}, r);`,
+        "}",
+      ].join("\n");
+      const organsOf = (hookBody) => {
+        const files = {
+          "learnstate_hook.mjs": `export async function hookMain(o) {\n  ${hookBody}\n  return m.brief(o);\n}\n`,
+          "learnstate.mjs": 'import { boot } from "./forge_session.mjs";\nexport const brief = () => boot;\n',
+          "forge_session.mjs": "export function boot() {}\nexport const hookMain = boot;\n",
+        };
+        return (f) => (Object.prototype.hasOwnProperty.call(files, f) ? files[f] : "");
+      };
+      const literal = 'const m = await import("./learnstate.mjs");';
+      const p1 = shimWalk(hookOf("opts"), organsOf(literal));
+      assert("NO SHIM CALLEE · PLANTED 1 — a callee reached only through a string-literal DYNAMIC import is in the closure: forge_session boot SHIM-run after learnstate_hook reads DEAD",
+        p1.callsSeen === 2 && p1.dead.length === 1 && p1.dead[0].startsWith("start: forge_session.mjs boot"),
+        `calls ${p1.callsSeen} · dead ${p1.dead.join(" · ") || "none"}`);
+      const p2 = shimWalk(hookOf('{ ...opts, call: "hookMain" }'), organsOf(literal));
+      assert("NO SHIM CALLEE · PLANTED 2 — CONTROL: the same sequence with forge_session on the CALL shape reads nothing dead",
+        p2.callsSeen === 2 && p2.dead.length === 0, `calls ${p2.callsSeen} · dead ${p2.dead.join(" · ") || "none"}`);
+      const p3 = shimWalk(hookOf("opts"), organsOf('const p = "./learn" + "state.mjs"; const m = await import(p);'));
+      assert("NO SHIM CALLEE · PLANTED 3 — a COMPUTED specifier (import(p)) is NOT followed, the declared limit: nothing dead",
+        p3.callsSeen === 2 && p3.dead.length === 0, `calls ${p3.callsSeen} · dead ${p3.dead.join(" · ") || "none"}`);
+      // The exclusive-branch shape, both ways: the same organ SHIM-run in an early-return branch
+      // and again after it is NOT dead; the same pair where the branch falls through IS dead.
+      const twice = (exit) => [
+        "export async function prompt(opts = {}) {",
+        "  if (!scope.study) {",
+        '    await runOrgan("hippocampus.mjs", "recall-hint", opts, r);',
+        ...(exit ? ["    return r;"] : []),
+        "  }",
+        '  await runOrgan("hippocampus.mjs", "recall-hint", opts, r);',
+        "  return r;",
+        "}",
+      ].join("\n");
+      const hippo = (f) => (f === "hippocampus.mjs" ? "export function hookMain() {}\n" : "");
+      const p4 = shimWalk(twice(true), hippo);
+      assert("NO SHIM CALLEE · PLANTED 4 — a callee SHIM-run in an early-return branch and again after it is NOT dead (the two never share a process)",
+        p4.callsSeen === 2 && p4.dead.length === 0, `calls ${p4.callsSeen} · dead ${p4.dead.join(" · ") || "none"}`);
+      const p5 = shimWalk(twice(false), hippo);
+      assert("NO SHIM CALLEE · PLANTED 5 — CONTROL: the same pair where the branch FALLS THROUGH reads DEAD (the exception is the return, nothing wider)",
+        p5.callsSeen === 2 && p5.dead.length === 1 && p5.dead[0].startsWith("prompt: hippocampus.mjs recall-hint"),
+        `calls ${p5.callsSeen} · dead ${p5.dead.join(" · ") || "none"}`);
+      const p6 = shimWalk(twice(true).split("\n").join("\r\n"), hippo);
+      assert("NO SHIM CALLEE · PLANTED 6 — the early-return pair with CRLF line ends (his tree's turn_hook) is NOT dead: the walk reads shapes CR-agnostic",
+        p6.callsSeen === 2 && p6.dead.length === 0, `calls ${p6.callsSeen} · dead ${p6.dead.join(" · ") || "none"}`);
     }
 
     // ── THE WITNESS SURVIVES THE SEAM — W0-C (2 Sep 2026, R-04) ────────────────
@@ -2158,6 +2246,64 @@ function atlas() {
     r.code === 0, r.out.split(/\r?\n/).slice(-3).join(" | "));
 }
 
+// ── THE RULED KNOWN-RED LIST (12 Oct 2026, forks row 639 (iii); lane V's fork (C)) ──────
+// A RED on clean HEAD used to become baseline. Every landing's witness compared its cut to the
+// CONTROL, so a red already on HEAD read as nothing new: NO SHIM CALLEE sat RED for 19 days while
+// the forge contract line it names was dead on every study prompt — the gate saw the death and
+// nobody was watching the gate. Now a FAIL is allowed only when an entry here names it: the exact
+// assert name, the exact detail (or a pattern for it), the forks row that ruled it, the lane that
+// owns the fix and what retires it. Then:
+//   · a FAIL no entry names is UNRULED and fails this suite OUTRIGHT (exit 2, named);
+//   · an entry whose assert PASSED in this run is STALE — the fix landed, so the entry goes in the
+//     same landing (exit 2 until it does: a dead entry would hide the next regression of its name);
+//   · an entry without a row or an owner is INVALID (exit 2): the list grows only by a row.
+// Every FAIL still exits non-zero, ruled or not (exit 1 when all are ruled) — CI and the watchman's
+// nightly sweep see exactly the red they saw before; the list only says which reds are news.
+const KNOWN_RED = [
+  { assert: "NO SHIM CALLEE — no turn_hook callee is SHIM-reached after something already imported it (the ES-module cache would make it a silent no-op that `ran` counts as a success)",
+    // MEASURED 13 Oct under this walk: the branch shape clears the double-call, and hippocampus still reads dead by
+    // another road — sitting.mjs (touch, CALL) holds `await import("./acts.mjs")` (its DRIVER loop, not the touch path)
+    // and acts imports hippocampus statically. The walk counts every string-literal dynamic import as loaded: it may
+    // over-count, never under-count.
+    detail: "prompt: forge_session.mjs contract (already loaded — SHIM is a no-op) · prompt: hippocampus.mjs recall-hint (already loaded — SHIM is a no-op)",
+    row: 639, owner: "lane V", until: "the forge contract restore (fork 2346 branch (A)) lands, and hippocampus recall-hint rides the CALL shape or a row rules the conservative read" },
+  // MEASURED 13 Oct on HEAD c972664: the two undeclared sites are BOTH in study_scope.mjs, not the declared
+  // gaffer_state one — ACK_ONLY (an anchored ack list held against his text, teaching gate P2, 25dd590) and the
+  // PowerShell Select-Object flag matcher (`skip` is in the scan's vocabulary). The file and the count are pinned,
+  // never the line numbers: a third site anywhere reads UNRULED.
+  { assert: "LOAD ZERO BLOCK 5 · no organ tests a private word-list against HIS TEXT outside the resolver — every wording, every tone, one typed intent",
+    detailRe: "^study_scope\\.mjs:\\d+, study_scope\\.mjs:\\d+ still routes on the words he happened to use\\.",
+    row: 639, owner: "lane S", until: "study_scope's ACK_ONLY asks the resolver or is declared by a row, and the flag matcher is ruled (fork filed 13 Oct)" },
+  { assert: "LOAD ZERO BLOCK 5 · ...and the DECLARED word-routing sites may only SHRINK (1 left: gaffer_state.isStandingLegacy)",
+    detailRe: "^gaffer_state\\.mjs:\\d+, study_scope\\.mjs:\\d+, study_scope\\.mjs:\\d+$",
+    row: 639, owner: "lane S", until: "the same two study_scope sites are resolved" },
+];
+function rulingOf(fails, passed, list = KNOWN_RED) {
+  const ok = (e) => Number.isInteger(e.row) && e.row > 0 && typeof e.owner === "string" && e.owner.trim() && typeof e.assert === "string" && e.assert;
+  const invalid = list.filter((e) => !ok(e)).map((e) => e.assert || "(no assert name)");
+  const match = (f) => list.find((e) => ok(e) && e.assert === f.name
+    && (e.detailRe ? new RegExp(e.detailRe).test(f.detail || "") : (e.detail ?? "") === (f.detail ?? "")));
+  const ruled = [], unruled = [];
+  for (const f of fails) { const e = match(f); if (e) ruled.push({ ...f, entry: e }); else unruled.push(f); }
+  const stale = list.filter((e) => ok(e) && passed.includes(e.assert)).map((e) => e.assert);
+  return { ruled, unruled, stale, invalid, exit: unruled.length || stale.length || invalid.length ? 2 : fails.length ? 1 : 0 };
+}
+// PLANTED BOTH WAYS, every run, before any mode — a ruling instrument that is not itself tested is
+// a hypothesis. Fixture fails and entries only; the live list is judged by main() below.
+function rulingSelfCheck() {
+  const E = [{ assert: "A", detail: "d1", row: 1, owner: "lane X", until: "-" }, { assert: "B", detailRe: "^x\\.mjs:\\d+$", row: 2, owner: "lane Y", until: "-" }];
+  const r1 = rulingOf([{ name: "A", detail: "d1" }, { name: "B", detail: "x.mjs:40" }], [], E);
+  const r2 = rulingOf([{ name: "A", detail: "d2" }], [], E);
+  const r3 = rulingOf([], ["A"], E);
+  const r4 = rulingOf([{ name: "A", detail: "d1" }], [], [{ assert: "A", detail: "d1", owner: "lane X" }]);
+  return [
+    ["every FAIL named by an entry (exact detail · detail pattern) is RULED, exit 1", r1.ruled.length === 2 && r1.unruled.length === 0 && r1.exit === 1],
+    ["the SAME assert with a DIFFERENT detail is UNRULED, exit 2 — a new death never hides under an old entry", r2.unruled.length === 1 && r2.exit === 2],
+    ["an entry whose assert PASSED is STALE, exit 2 — the list shrinks in the fixing landing", r3.stale.length === 1 && r3.exit === 2],
+    ["an entry with no row is INVALID and rules nothing, exit 2 — the list grows only by a row", r4.invalid.length === 1 && r4.unruled.length === 1 && r4.exit === 2],
+  ];
+}
+
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive, atlas };
 async function main() {
@@ -2166,12 +2312,26 @@ async function main() {
   const chosen = mode === "all" ? Object.keys(MODES) : [mode];
   if (chosen.some((c) => !MODES[c])) { console.log(`organism_test: ${Object.keys(MODES).join(" | ")} | all`); process.exit(1); }
   console.log("=== ARSENAL AI FC — CROSS-ORGAN TEST SUITE ===");
+  section("THE RULED KNOWN-RED LIST — the instrument, planted both ways");
+  for (const [name, cond] of rulingSelfCheck()) assert(`KNOWN-RED · ${name}`, cond);
   for (const c of chosen) await MODES[c]();   // LOAD ZERO BLOCK 6: laws() is async (it imports organs to drive their pure exports on fixtures)
-  console.log(`\n${"=".repeat(70)}\norganism_test: ${pass} passed, ${fail} failed`);
+  const v = rulingOf(fails, passed);
+  // ONE machine line for the campaign's recorder (never a file: this suite writes nothing it does not own)
+  console.log(`\nORGANISM_TEST_VERDICT ${JSON.stringify({ modes: chosen, pass, fail, exit: v.exit,
+    ruled: v.ruled.map((f) => ({ assert: f.name, row: f.entry.row, owner: f.entry.owner })),
+    unruled: v.unruled.map((f) => ({ assert: f.name, detail: f.detail || null })), stale: v.stale, invalid: v.invalid })}`);
+  console.log(`\n${"=".repeat(70)}\norganism_test: ${pass} passed, ${fail} failed · ruled ${v.ruled.length} · UNRULED ${v.unruled.length}`
+    + (v.stale.length ? ` · STALE ${v.stale.length}` : "") + (v.invalid.length ? ` · INVALID ${v.invalid.length}` : ""));
   if (fail) {
     console.log("\nEach RED below is a real defect between organs — not a flaky net:");
-    for (const f of fails) console.log(`  · ${f.name}${f.detail ? `\n      ${f.detail}` : ""}`);
+    for (const f of fails) {
+      const r = v.ruled.find((x) => x === f || (x.name === f.name && x.detail === f.detail));
+      const tag = r ? `[RULED row ${r.entry.row} · ${r.entry.owner} · until ${r.entry.until}] ` : "[UNRULED] ";
+      console.log(`  · ${tag}${f.name}${f.detail ? `\n      ${f.detail}` : ""}`);
+    }
   }
-  process.exit(fail ? 1 : 0);
+  for (const s of v.stale) console.log(`  · [STALE — this ruled red PASSED; remove its KNOWN_RED entry in this landing] ${s}`);
+  for (const s of v.invalid) console.log(`  · [INVALID — a KNOWN_RED entry with no row or owner rules nothing] ${s}`);
+  process.exit(v.exit);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

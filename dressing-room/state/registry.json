@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-10-06T09:20:19.931Z",
+ "updated_at": "2026-10-12T19:08:44.320Z",
  "tables": {
   "mechanisms": [
    {
@@ -292,6 +292,7 @@
      "heartbeat.mjs",
      "hippocampus.mjs",
      "intent.mjs",
+     "learn_digest.mjs",
      "learning_state.mjs",
      "learnstate.mjs",
      "loose_balls.mjs",
@@ -312,9 +313,9 @@
      "tokenizer_play.mjs",
      "widget.mjs"
     ],
-    "updated_at": "2026-09-07T10:18:25.339Z",
+    "updated_at": "2026-10-12T19:08:44.313Z",
     "added_at": "2026-09-04T00:11:09.128Z",
-    "why": "6 Sep 2026 (row 68 (f)): tokenizer_play.mjs joins — the axis-d playground the /forge skill names; read-only, writes nothing, selftest 13/0."
+    "why": "13 Oct 2026 (forks row 639, A9 branch (a)): learn_digest.mjs joins — the /learn skill (lines 16, 32) and the /forge skill (line 14) both run `node scripts/learn_digest.mjs` as their first screen since 24 Sep (3f0dc86); a study-door reader by construction, absent from this row, so A9 read RED on HEAD c972664 (forge:learn_digest.mjs · learn:learn_digest.mjs · learn:learn_digest.mjs). PREVIOUS WHY: 6 Sep 2026 (row 68 (f)): tokenizer_play.mjs joins — the axis-d playground the /forge skill names; read-only, writes nothing, selftest 13/0."
    },
    {
     "subject": "probe_kinds",
