@@ -418,7 +418,7 @@ function selftest() {
 
 // ---------------------------------------------------------------------------
 const cmd = process.argv[2] || "run";
-if (cmd === "run") run(process.argv.slice(3));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) { if (cmd === "run") run(process.argv.slice(3));   // forks rows 661 (4) / 673: the entry-identity guard, so a library import runs nothing
 else if (cmd === "report") report();
 else if (cmd === "selftest") selftest();
-else console.log("outwork_audit: run [--json] | report | selftest");
+else console.log("outwork_audit: run [--json] | report | selftest"); }
