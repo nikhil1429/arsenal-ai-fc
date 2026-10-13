@@ -63,7 +63,10 @@
 //     BUDGET_MS (re-derived from measurement 19 Aug 2026 — see the const below).
 // CLI: node scripts/turn_hook.mjs prompt|start|stop [--time] | selftest
 //   --time → ONE line on STDERR (`turn_hook: <seq> · <n> organ(s) · <ms> ms`);
-//   stdout stays exactly the callees'.
+//   stdout stays exactly the callees'. Since V609 (d) (13 Oct 2026) the line goes on:
+//   `[ · <k> failed] · cpu <c> ms · spawns <s>[ <file:line@kind>,…]` — the sequence's own
+//   CPU time and every subprocess a callee started inside it. The old prefix is unchanged,
+//   so every reader of `· <ms> ms` still matches.
 // ============================================================================
 import { readFileSync, mkdtempSync, writeFileSync, rmSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -71,6 +74,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { tmpdir, freemem } from "node:os";
 import { performance } from "node:perf_hooks";
+import { createRequire, syncBuiltinESMExports } from "node:module";   // V609 (d): the --time spawn counter (countSpawns)
 
 // G0 (23 Sep 2026) — the study-scope predicate is a LEAF (node builtins only) and it is a CALL-shape
 // callee here (`unboundMain`), never a SHIM one, so this static import cannot poison the module cache.
@@ -118,20 +122,62 @@ export const STDIN_HANDOFF = "__ARSENAL_HOOK_STDIN__";
 // IT IS NOT A LICENCE: the two real drivers (watchman 457, learnstate 310) are named here
 // so the next session optimises THEM rather than raising this again.
 const BUDGET_MS = 450;
-// THE RAM FLOOR (forks row 270 (2), 23 Sep 2026): a timing red under RAM pressure measures the machine, not the code.
-// Derived from the clause's own readings (os.freemem() beside the in-process ms of `start`, 23 Sep 21:00–21:20 IST,
-// 8,043 MB total): every over-budget reading came at 520–845 MB free (496–762 ms: three selftest runs, five direct
-// runs); 15 of 15 readings at 896–966 MB free held the budget (237–364 ms). The floor sits ABOVE the highest
-// over-budget reading, at the lowest level where the clean sample held: 896 MB. Above it an over-budget reading REDS
-// as before; below it the reading and the RAM are printed and NOT judged. A pass below the floor (330 ms at 723 MB,
-// 21:22) says RAM is not the only load — a concurrent selftest's CPU is the other candidate, not measured. Re-derive
-// the floor from new readings, never by taste.
-const BUDGET_RAM_FLOOR_MB = 896;
-function budgetVerdict({ ms, freeMb, budget = BUDGET_MS, floor = BUDGET_RAM_FLOOR_MB } = {}) {
-  if (!Number.isFinite(ms)) return { ok: false, judged: true, why: "no reading" };
-  if (ms <= budget) return { ok: true, judged: true, why: "within budget" };
-  if (Number.isFinite(freeMb) && freeMb < floor) return { ok: true, judged: false, why: `NOT JUDGED — over budget under RAM pressure (${freeMb} MB free < floor ${floor} MB): the machine, not the code` };
-  return { ok: false, judged: true, why: `over budget with ${Number.isFinite(freeMb) ? freeMb : "?"} MB free (floor ${floor} MB)` };
+// ── THE RAM FLOOR — RETIRED 13 Oct 2026 (V609 (d), forks rows 616 (A) / 629 / 648). Kept, struck (L9): no verdict reads
+// it; the BUDGET line prints it beside the free RAM as the record. It existed because the gate read WALL-type time
+// (in-process ms), which moves with the machine; the gate below reads the sequence's own CPU time, so the machine's
+// load no longer needs an escape. The record as it stood, verbatim:
+// ~~ THE RAM FLOOR (forks row 270 (2), 23 Sep 2026): a timing red under RAM pressure measures the machine, not the code.
+// ~~ Derived from the clause's own readings (os.freemem() beside the in-process ms of `start`, 23 Sep 21:00–21:20 IST,
+// ~~ 8,043 MB total): every over-budget reading came at 520–845 MB free (496–762 ms: three selftest runs, five direct
+// ~~ runs); 15 of 15 readings at 896–966 MB free held the budget (237–364 ms). The floor sits ABOVE the highest
+// ~~ over-budget reading, at the lowest level where the clean sample held: 896 MB. Above it an over-budget reading REDS
+// ~~ as before; below it the reading and the RAM are printed and NOT judged. A pass below the floor (330 ms at 723 MB,
+// ~~ 21:22) says RAM is not the only load — a concurrent selftest's CPU is the other candidate, not measured. Re-derive
+// ~~ the floor from new readings, never by taste.
+const BUDGET_RAM_FLOOR_MB = 896;   // RETIRED (V609 (d)): printed on the BUDGET line, never judged
+// ── THE CPU GATE (V609 (d), forks rows 616 (A) / 629 (1) / 648, the mutant as amended by row 660 · 13 Oct 2026) ──
+// The budget is judged on the sequence's OWN CPU time (process.cpuUsage over the sequence window, user + system), never
+// on in-process or wall ms: those move with the machine (ledger 898: 579–644 ms in-process at 909–914 MB free on the
+// same code), CPU time does not move with contention. So a slow machine is printed, never judged, and an over-budget
+// CPU reading REDS at any RAM. ONE spawn per sequence (best-of-three retired: it hid contention instead of measuring
+// around it). A child's CPU is outside cpuUsage, so the silent start carries a second law: ZERO spawns (row 629 (1)).
+function budgetVerdict({ cpu, ms, budget = BUDGET_MS } = {}) {
+  if (!Number.isFinite(cpu)) return { ok: false, why: "no cpu reading" };
+  if (cpu <= budget) return { ok: true, why: `cpu ${cpu} ms within ${budget}${Number.isFinite(ms) && ms > budget ? ` · in-process ${ms} ms over ${budget}: contention, printed, not judged` : ""}` };
+  return { ok: false, why: `cpu ${cpu} ms over ${budget}` };
+}
+function spawnVerdict(spawns) {
+  if (!Number.isFinite(spawns)) return { ok: false, why: "no spawn reading" };
+  return spawns === 0 ? { ok: true, why: "zero spawns" } : { ok: false, why: `${spawns} spawn(s) on the silent start` };
+}
+// THE SPAWN COUNTER (V609 (d), row 629 (1)) — under --time ONLY: every subprocess a callee starts inside the sequence window
+// is counted and named by its first scripts/ frame that is not this file. node:child_process's CJS exports are wrapped and
+// syncBuiltinESMExports() pushes the wrappers into every ESM named import, the callees imported after this call included.
+// A function's own symbols (exec's promisify.custom) are wrapped too, so `promisify(exec)` keeps its shape and is counted.
+// ONE subprocess, ONE count (13 Oct, proof run 1: the plant read exec AND execFile for one exec): Node's own exec() calls
+// module.exports.execFile, the wrapped one, so a call made INSIDE a wrapped call is the same subprocess, never counted again.
+// The hook he runs (no --time) never wraps anything.
+function countSpawns() {
+  const seen = [];
+  const cp = createRequire(import.meta.url)("node:child_process");
+  const note = (kind) => {
+    const fr = String(new Error().stack).split("\n").map((s) => /scripts[\\/]([\w.-]+\.mjs):(\d+)/.exec(s)).filter(Boolean).find((m) => m[1] !== "turn_hook.mjs");
+    seen.push(`${fr ? `${fr[1]}:${fr[2]}` : "turn_hook.mjs"}@${kind}`);
+  };
+  let depth = 0;
+  const guard = (k, fn) => function (...a) { if (depth === 0) note(k); depth++; try { return fn.apply(this, a); } finally { depth--; } };
+  for (const k of ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"]) {
+    const real = cp[k];
+    if (typeof real !== "function") continue;
+    const wrapped = guard(k, real);
+    for (const s of Object.getOwnPropertySymbols(real)) {
+      const v = real[s];
+      wrapped[s] = typeof v === "function" ? guard(k, v) : v;
+    }
+    cp[k] = wrapped;
+  }
+  syncBuiltinESMExports();
+  return seen;
 }
 
 
@@ -636,36 +682,62 @@ function selftest() {
     //    measures the load FLOOR he pays on every prompt even when every callee is
     //    silent. Budget (§14.8): ≤ 300 ms for the sequence itself, node boot excluded.
     const payload = JSON.stringify({ session_id: "selftest", transcript_path: "", cwd: ROOT, hook_event_name: "UserPromptSubmit", prompt: "selftest probe" });
+    // V609 (d) — THE CPU GATE (forks rows 616 (A) / 629 (1) / 648, 13 Oct 2026). ONE spawn per sequence (best-of-three
+    // retired); the verdict reads the sequence's own cpu from the --time line; in-process ms, wall, free RAM, the power state
+    // and the clock are printed beside it, never judged. The power is read ONCE, here, outside every timed window (one
+    // PowerShell spawn, named; "unread" anywhere it cannot be read). The silent start must also start ZERO subprocesses.
+    const TIME_LINE = /turn_hook: \w+ · \d+ organ\(s\) · (\d+) ms(?: · \d+ failed)? · cpu (\d+) ms · spawns (\d+)(?: (\S+))?/;
+    const power = (() => {
+      if (process.platform !== "win32") return "unread (not Windows)";
+      const q = spawnSync("powershell", ["-NoProfile", "-Command", "$b=(Get-CimInstance Win32_Battery).BatteryStatus; $p=Get-CimInstance Win32_Processor; \"b=$b c=$($p.CurrentClockSpeed) m=$($p.MaxClockSpeed)\""], { encoding: "utf8", windowsHide: true, timeout: 20000 });
+      const m = /b=(\S*) c=(\d+)\S* m=(\d+)/.exec(String(q.stdout || ""));
+      if (q.status !== 0 || !m) return "unread";
+      return `${m[1] === "2" ? "AC" : m[1] === "1" ? "BATTERY" : `battery-status ${m[1] || "none"}`} · clock ${m[2]} of ${m[3]} MHz`;
+    })();
     for (const seq of ["prompt", "start", "stop"]) {
-      // BEST OF THREE (18 Aug 2026 evening): the floor measures CAPABILITY, not contention —
-      // under `npm test` (members in parallel + a daemon relaunching) one run read 460 ms
-      // for a sequence that costs 85 ms alone. A net that goes red on machine load is a
-      // flaky net; the minimum of three spawns is the number the law is about.
-      let best = null, wall = 0;
-      for (let i = 0; i < 3; i++) {
-        const freeMb = Math.round(freemem() / 1048576);
-        const t0 = performance.now();
-        const q = spawnSync(process.execPath, [fileURLToPath(import.meta.url), seq, "--time"], { input: payload, encoding: "utf8", cwd: ROOT, env: { ...process.env, ARSENAL_ORGAN: "1" }, timeout: 60000 });
-        const w = performance.now() - t0;
-        const mm = /turn_hook: \w+ · \d+ organ\(s\) · (\d+) ms/.exec(q.stderr || "");
-        const v = mm ? Number(mm[1]) : NaN;
-        if (best === null || (Number.isFinite(v) && v < best.ms)) { best = { p: q, ms: v, freeMb }; wall = w; }
-        if (Number.isFinite(v) && v <= BUDGET_MS) break;
-      }
-      const p = best.p, ms = best.ms;
+      const freeMb = Math.round(freemem() / 1048576);
+      const t0 = performance.now();
+      const p = spawnSync(process.execPath, [fileURLToPath(import.meta.url), seq, "--time"], { input: payload, encoding: "utf8", cwd: ROOT, env: { ...process.env, ARSENAL_ORGAN: "1" }, timeout: 60000 });
+      const wall = Math.round(performance.now() - t0);
+      const mm = TIME_LINE.exec(p.stderr || "");
+      const ms = mm ? Number(mm[1]) : NaN, cpu = mm ? Number(mm[2]) : NaN, spawns = mm ? Number(mm[3]) : NaN, who = mm && mm[4] ? ` ${mm[4]}` : "";
+      const shown = (n) => (Number.isFinite(n) ? n : "?");
       assert(`SILENCE LAW — \`${seq}\` under ARSENAL_ORGAN=1 printed ZERO bytes on stdout (every callee's own guard, through the dispatcher)`, p.status === 0 && (p.stdout || "") === "", `status ${p.status} stdout=${JSON.stringify((p.stdout || "").slice(0, 200))} stderr=${JSON.stringify((p.stderr || "").slice(0, 300))}`);
-      const bv = budgetVerdict({ ms, freeMb: best.freeMb });
-      assert(`BUDGET — \`${seq}\` sequence ran in-process in ${Number.isFinite(ms) ? ms : "?"} ms at ${best.freeMb} MB free (≤ ${BUDGET_MS} ms law; RAM floor ${BUDGET_RAM_FLOOR_MB} MB; wall incl. node boot ${Math.round(wall)} ms)${bv.judged ? "" : ` · ${bv.why}`}`, bv.ok, `${bv.why} · stderr=${JSON.stringify((p.stderr || "").slice(0, 300))}`);
+      const bv = budgetVerdict({ cpu, ms });
+      assert(`BUDGET — \`${seq}\` cpu ${shown(cpu)} ms (≤ ${BUDGET_MS} ms law, judged on CPU) · in-process ${shown(ms)} ms · wall ${wall} ms incl. node boot · ${freeMb} MB free (the ${BUDGET_RAM_FLOOR_MB} MB floor retired) · spawns ${shown(spawns)}${who} · power ${power} · clock ${new Date().toISOString()} UTC`, bv.ok, `${bv.why} · stderr=${JSON.stringify((p.stderr || "").slice(0, 300))}`);
+      if (seq === "start") {
+        const sv = spawnVerdict(spawns);
+        assert(`ZERO SPAWNS — the silent \`start\` started ${shown(spawns)} subprocess(es)${who} (row 629 (1): a child's cpu is outside the gate, so the silent start may start none)`, sv.ok, `${sv.why} · stderr=${JSON.stringify((p.stderr || "").slice(0, 300))}`);
+      }
     }
-    // forks row 270 (2), planted both ways: over budget ABOVE the floor reds; over budget BELOW it is printed, not judged;
-    // within budget passes at any RAM; no reading reds
+    // V609 (d), planted both ways (the RAM floor's plants retired with it): cpu over budget REDS at any RAM, the case the old
+    // floor printed NOT JUDGED included · at and within the budget passes · no cpu reading REDS · in-process ms over with cpu
+    // within PASSES and prints both (the ledger 898 contention case) · the silent start's spawns: 0 passes, 1 REDS, none read
+    // REDS · the --time line parses whole and keeps the old prefix every older reader matches.
     {
-      const V = (ms, freeMb) => budgetVerdict({ ms, freeMb, budget: 450, floor: 896 });
-      assert("BUDGET RAM FLOOR · 500 ms at 1,200 MB free REDS (the code, the machine had room) · 500 ms at 600 MB is NOT JUDGED (printed) · 300 ms passes at any RAM · no reading reds",
-        V(500, 1200).ok === false && V(500, 1200).judged === true && V(500, 896).ok === false
-        && V(500, 600).ok === true && V(500, 600).judged === false && /NOT JUDGED/.test(V(500, 600).why)
-        && V(300, 400).ok === true && V(300, 400).judged === true && V(NaN, 2000).ok === false,
-        JSON.stringify([V(500, 1200), V(500, 600), V(300, 400), V(NaN, 2000)]));
+      const V = (cpu, ms, freeMb) => budgetVerdict({ cpu, ms, freeMb, budget: 450 });
+      const contention = V(200, 700, 2000);
+      const line = "turn_hook: start · 7 organ(s) · 123 ms · 1 failed · cpu 78 ms · spawns 2 state.mjs:52@execFileSync,outbox.mjs:9@spawn";
+      const lm = TIME_LINE.exec(line), old = /turn_hook: \w+ · \d+ organ\(s\) · (\d+) ms/.exec(line);
+      assert("CPU GATE planted both ways · cpu 500 REDS at 600 MB free (the old floor's NOT JUDGED case) and at 2,000 MB · cpu 450 and 300 pass · no cpu reading REDS · in-process 700 with cpu 200 PASSES and prints both · spawns 0 passes, 1 REDS, none read REDS · the --time line parses whole and keeps the old prefix",
+        V(500, 500, 600).ok === false && V(500, 500, 2000).ok === false && V(450).ok === true && V(300).ok === true && V(NaN, 100).ok === false
+        && contention.ok === true && /cpu 200/.test(contention.why) && /in-process 700/.test(contention.why)
+        && spawnVerdict(0).ok === true && spawnVerdict(1).ok === false && spawnVerdict(NaN).ok === false
+        && !!lm && lm[1] === "123" && lm[2] === "78" && lm[3] === "2" && lm[4] === "state.mjs:52@execFileSync,outbox.mjs:9@spawn"
+        && !!old && old[1] === "123",
+        JSON.stringify({ low: V(500, 500, 600), high: V(500, 500, 2000), edge: V(450), none: V(NaN, 100), contention, s0: spawnVerdict(0), s1: spawnVerdict(1), lm: lm && lm.slice(1) }));
+    }
+    // THE SPAWN COUNTER planted (V609 (d)) — LAST, because it wraps this process's own child_process: this file's static
+    // named import, made BEFORE the wrap, is counted (syncBuiltinESMExports), and promisify(exec) is counted and keeps its
+    // { stdout, stderr } shape (the symbol is wrapped too); nothing else is counted.
+    {
+      const seen = countSpawns();
+      const { promisify } = await import("node:util");
+      spawnSync(process.execPath, ["-e", "0"], { windowsHide: true });
+      const cp = await import("node:child_process");
+      const pe = await promisify(cp.exec)(`"${process.execPath}" -e 0`, { windowsHide: true });
+      assert("SPAWN COUNTER planted · a named import made BEFORE the wrap is counted · promisify(exec) is counted and keeps its { stdout, stderr } shape · nothing else is counted",
+        seen.length === 2 && seen[0].endsWith("@spawnSync") && seen[1].endsWith("@exec") && !!pe && typeof pe.stdout === "string" && typeof pe.stderr === "string", JSON.stringify(seen));
     }
 
     console.log(`\nturn_hook: ${pass} passed, ${fail} failed`);
@@ -685,9 +757,12 @@ async function main() {
   }
   const time = process.argv.includes("--time");
   const stdin = readHookStdin();
+  const spawned = time ? countSpawns() : null;   // V609 (d): wrapped BEFORE the sequence imports any callee
+  const c0 = process.cpuUsage();
   const t0 = performance.now();
   const r = await seq({ stdin });
-  if (time) process.stderr.write(`turn_hook: ${mode} · ${r.ran} organ(s) · ${Math.round(performance.now() - t0)} ms${r.failed.length ? ` · ${r.failed.length} failed` : ""}\n`);
+  const cpu = process.cpuUsage(c0);
+  if (time) process.stderr.write(`turn_hook: ${mode} · ${r.ran} organ(s) · ${Math.round(performance.now() - t0)} ms${r.failed.length ? ` · ${r.failed.length} failed` : ""} · cpu ${Math.round((cpu.user + cpu.system) / 1000)} ms · spawns ${spawned.length}${spawned.length ? ` ${spawned.join(",")}` : ""}\n`);
   // Exit 0 once stdout has DRAINED (Windows pipes are async), and exit at all —
   // a callee that left a timer or socket open must not hold his prompt hostage.
   process.stdout.write("", () => process.exit(0));
