@@ -53,7 +53,7 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { subjectsOf } from "./registry.mjs";   // S10 row 14 — the doors are rows
+import { lazySubjects } from "./registry.mjs";   // S10 row 14 — the doors are rows
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -62,7 +62,7 @@ export const ACTS_LEDGER = process.env.ARSENAL_ACTS_LEDGER || join(STATE_DIR, "a
 // S10 map row 14 (F-04): DOORS is a REGISTRY ROW (a new door ADDS by row);
 // VERBS derives from the OWNER table's own keys below — one copy, structure-derived,
 // so a verb cannot exist without its owner row (the old literal could drift).
-export const DOORS = subjectsOf("act_doors");
+export const DOORS = lazySubjects("act_doors");   // read at FIRST USE (forks row 605 (1)): an importer never dies on this row
 export const ACT_TAIL_RE = /<<ACT\s*(\{[\s\S]*?\})\s*>>\s*$/;   // door 3 — a Claude Code turn's tail (schema, not keywords)
 const isFixture = () => (process.argv[2] || "") === "selftest" || !!process.env.ARSENAL_AUDIT_COLLAR;
 
@@ -312,7 +312,7 @@ export const INTENT_MEANING = {
 };
 export const INTENT_CACHE = process.env.ARSENAL_INTENT_CACHE || join(STATE_DIR, "intent_cache.json");
 export const normalizeUtterance = (t) => String(t == null ? "" : t).normalize("NFKC").toLowerCase().replace(/[.!?,;:—–-]+/g, " ").replace(/\s+/g, " ").trim();
-export const intentKey = (text, expects) => createHash("sha1").update(`${[...expects].sort().join("|")} ${normalizeUtterance(text)}`).digest("hex").slice(0, 12);
+export const intentKey = (text, expects) => createHash("sha1").update(`${[...expects].sort().join("|")}\u0000${normalizeUtterance(text)}`).digest("hex").slice(0, 12);
 
 function readCache(deps = {}) {
   if (deps.cache) return deps.cache;
@@ -555,6 +555,11 @@ async function selftest() {
   }
 
   assert("OWNERS: every verb names an EXISTING organ file and declares a reverse", VERBS.every((v) => OWNERS[v] && existsSync(join(__dirname, OWNERS[v].organ)) && typeof OWNERS[v].reverse === "function"), VERBS.filter((v) => !existsSync(join(__dirname, OWNERS[v].organ))).join(","));
+  // forks row 616 (12 Oct 2026): intentKey's separator was a RAW NUL byte in this source; it is now the
+  // \u0000 escape inside the same literal. The runtime string is unchanged, so every key on record still
+  // matches: this key was measured on the raw-byte source BEFORE the change and must read EQUAL after it.
+  assert("NUL ESCAPE — intentKey of a fixed input reads the SAME key the raw-NUL source gave (2815b0014ecb)",
+    intentKey("Haan, resume karo", ["stop", "continue"]) === "2815b0014ecb", intentKey("Haan, resume karo", ["stop", "continue"]));
   console.log(`\nacts selftest: ${pass} passed, ${fail} failed`);
   if (fail) for (const x of fails) console.log(`  · ${x.n}${x.d ? `\n      ${x.d}` : ""}`);
   process.exit(fail ? 1 : 0);

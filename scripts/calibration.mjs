@@ -48,7 +48,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, rmSync 
 import { tmpdir } from "node:os";        // selftest fixtures only — the loader is proved on a real file, never on a mock (capture.mjs:1070, fsrs.mjs:747)
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { subjectsOf } from "./registry.mjs";   // S10 row 13 — the config schema's key sets are rows
+import { lazySubjects } from "./registry.mjs";   // S10 row 13 — the config schema's key sets are rows
 import { gameOnEpoch } from "./registry.mjs";   // W0-B — THE SYLLABUS FLOOR: one reader, one row, one receipt
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
@@ -128,9 +128,9 @@ function numLeaf(src, key, dflt, path, read) {
 
 // S10 map row 13 (F-04): the config schema's key sets are REGISTRY ROWS — what
 // roots exist, what targets exist, what is dangerous. A schema key is a row edit.
-const KNOWN_ROOT    = subjectsOf("calibration_known_root");
-const KNOWN_TARGETS = subjectsOf("calibration_known_targets");
-const KNOWN_DANGER  = subjectsOf("calibration_known_danger");
+const KNOWN_ROOT    = lazySubjects("calibration_known_root");
+const KNOWN_TARGETS = lazySubjects("calibration_known_targets");
+const KNOWN_DANGER  = lazySubjects("calibration_known_danger");
 
 function normalizeConfig(j, meta = {}) {
   const d = DEFAULTS;
@@ -431,7 +431,7 @@ function knewPerTopic(reps, reg) {
   for (const r of reps) {
     if (r.confidence !== "knew") continue;
     const topic = topicOf(r, reg);
-    const key = `${r.track} ${topic}`;
+    const key = `${r.track}\u0000${topic}`;
     if (!m.has(key)) m.set(key, { track: r.track, topic, knew: 0 });
     m.get(key).knew++;
   }

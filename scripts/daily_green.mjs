@@ -63,13 +63,14 @@
 import { readFileSync, appendFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gitFacts, daemonFacts, suiteFacts, sittingFacts } from "./state.mjs";
 import { supersedeReps } from "./capture.mjs";                     // reps_log's owner defines what a correction means
 import { readLog as rejirahRows, loadCapsules, openRound, relockIndexFrom, intervalsOf } from "./rejirah.mjs";
 import { readingFor } from "./oura_coach.mjs";
 import { KAL_RE } from "./postmatch.mjs";
-import { emitRows } from "./registry.mjs";
+import { emitRows, REGISTRY_PATH } from "./registry.mjs";
 import { DAEMONS } from "./daemon_watchdog.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -543,6 +544,32 @@ async function selftest() {
   assert("streakFrom is pure over rows — [green, (no row), green] = 1; [green, non-study, green] = 2",
     streakFrom([{ date: "2026-09-01", study: true, green: true }, { date: "2026-09-03", study: true, green: true }], "2026-09-03") === 1
     && streakFrom([{ date: "2026-09-01", study: true, green: true }, { date: "2026-09-02", study: false, green: false }, { date: "2026-09-03", study: true, green: true }], "2026-09-03") === 2);
+
+  // ── AN IMPORT NEVER DIES ON A REGISTRY ROW IT DOES NOT READ (forks row 605 (1), 12 Oct 2026) ──
+  // acts.mjs, three hops away (state -> captains_call -> acts), read its doors at IMPORT, so a registry
+  // without act_doors killed this meter with a stack trace before its FAIL CLOSED path could run. Both
+  // ways, each in its own process, under a sandbox registry with NO mechanisms rows at all: the meter
+  // imports clean; a module that still reads a row at import dies (the probe can see the throw).
+  // The sandbox is the LIVE registry with EVERY mechanisms row removed and every other table kept (forks
+  // row 653 A1, 13 Oct 2026): a table this case is not about stays as it is, so gate.mjs's loud throw on an
+  // EMPTY lanes table (its owner's design) is never read as this case's red.
+  {
+    const sand = join(base, "registry_sandbox");
+    mkdirSync(sand, { recursive: true });
+    const noMechanisms = join(sand, "registry.json");
+    const live = JSON.parse(readFileSync(REGISTRY_PATH, "utf8"));
+    writeFileSync(noMechanisms, JSON.stringify({ ...live, tables: { ...(live.tables || {}), mechanisms: [] } }));
+    const readsAtImport = join(sand, "reads_at_import.mjs");
+    writeFileSync(readsAtImport, `import { subjectsOf } from ${JSON.stringify(pathToFileURL(join(HERE, "registry.mjs")).href)};\nexport const DOORS = subjectsOf("act_doors");\n`);
+    const importIn = (file) => spawnSync(process.execPath, ["--input-type=module", "-e", `await import(${JSON.stringify(pathToFileURL(file).href)}); console.log("IMPORT OK");`],
+      { encoding: "utf8", env: { ...process.env, ARSENAL_REGISTRY: noMechanisms }, timeout: 120000 });
+    const meter = importIn(fileURLToPath(import.meta.url));
+    assert("IMPORT NEVER DIES — under a registry with NO mechanisms rows the meter imports clean (exit 0, IMPORT OK, no registry throw)",
+      meter.status === 0 && /IMPORT OK/.test(String(meter.stdout)) && !/registry: no live mechanisms row/.test(String(meter.stderr)), `exit ${meter.status} · ${String(meter.stderr).slice(0, 240)}`);
+    const dies = importIn(readsAtImport);
+    assert("IMPORT NEVER DIES — RED PROOF: a module that reads act_doors at import dies under the same registry (the probe sees the throw)",
+      dies.status !== 0 && /registry: no live mechanisms row "act_doors"/.test(String(dies.stderr)), `exit ${dies.status}`);
+  }
 
   // ── HERMETIC + ONE WRITE ──
   const liveLedgerAfter = readFile(LEDGER);

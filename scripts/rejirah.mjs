@@ -652,7 +652,7 @@ export function deferredCarry(history, live, caps, rows, now = new Date()) {
 
   const last = new Map();
   for (const e of events) {
-    const k = `${e.concept} ${e.axis}`;
+    const k = `${e.concept}\u0000${e.axis}`;
     const prev = last.get(k);
     if (!prev || String(e.at) >= String(prev.at)) last.set(k, e);   // ISO strings sort as time
   }

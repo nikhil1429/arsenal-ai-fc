@@ -131,6 +131,28 @@ export function subjectsOf(mechanism, path = REGISTRY_PATH) {
   if (!row || row.retired) throw new Error(`registry: no live mechanisms row "${mechanism}" in ${path} — seed it via \`node scripts/registry.mjs set --table mechanisms --json ...\``);
   return Array.isArray(row.subjects) ? [...row.subjects] : [];
 }
+/** lazySubjects — subjectsOf, read at FIRST USE instead of at import (forks row 605 (1), 12 Oct 2026).
+ *  A module-level `const X = subjectsOf(...)` ran the read at IMPORT, so one retired row killed every
+ *  importer with a stack trace: the done-line meter imports acts.mjs three hops away and died on
+ *  act_doors, a row it never reads. The view reads on its first touch, keeps the answer for the process
+ *  (the old read-once), and throws subjectsOf's SAME loud error at the line that needs the row; a failed
+ *  read is never kept, so the next touch throws again. It is read-only: a write throws in a module.
+ *  laws/import-time-registry-read.yml (judged by scripts/lawpack.mjs) keeps the class from coming back. */
+export function lazySubjects(mechanism, path = REGISTRY_PATH) {
+  /** @type {string[]} */
+  const target = [];
+  let read = false;
+  const fill = () => { if (!read) { target.push(...subjectsOf(mechanism, path)); read = true; } return target; };
+  return new Proxy(target, {
+    get: (_t, k) => Reflect.get(fill(), k),
+    has: (_t, k) => Reflect.has(fill(), k),
+    ownKeys: () => Reflect.ownKeys(fill()),
+    getOwnPropertyDescriptor: (_t, k) => Reflect.getOwnPropertyDescriptor(fill(), k),
+    set: () => false,
+    defineProperty: () => false,
+    deleteProperty: () => false,
+  });
+}
 export function laneRows(path = REGISTRY_PATH) { return tableRows("lanes", path).filter((r) => r && !r.retired); }
 export function emitRows(path = REGISTRY_PATH) { return tableRows("emit_contract", path).filter((r) => r && !r.retired); }
 /** slotPassed — "has the producer's slot passed today?" Row shape: slot:{after:"HH:MM"}.
@@ -783,6 +805,18 @@ function selftest() {
   assert("ROW EDIT IS THE MECHANISM — adding a subject is an upsert with a receipt, never a code change", m2.op === "updated" && subjectsOf("interruption_types", P).length === 3);
   assert("THROW-LOUD READER — an absent mechanism row throws with the seeding command, never returns a silent empty list",
     (() => { try { subjectsOf("never_seeded", P); return false; } catch (e) { return /seed it via/.test(String(e.message)); } })());
+  // forks row 605 (1): the lazy view — no throw at creation, the SAME loud throw at first touch, read once
+  const lazyGone = lazySubjects("never_seeded", P);
+  assert("LAZY READER — a view of an ABSENT row is created without a throw (an importer never dies at import)", Array.isArray(lazyGone));
+  assert("LAZY READER — its FIRST TOUCH throws the same loud error, at the line that needs the row",
+    (() => { try { lazyGone.includes("x"); return false; } catch (e) { return /seed it via/.test(String(e.message)); } })());
+  upsertRow("mechanisms", { subject: "lazy_probe", schema_owner: "registry.mjs", witness: "registry.mjs selftest", subjects: ["a", "b"] }, { path: P, at: T0 });
+  const lazyLive = lazySubjects("lazy_probe", P);
+  assert("LAZY READER — a live row reads as an ordinary array (includes · length · spread · join · every)",
+    lazyLive.includes("b") && lazyLive.length === 2 && [...lazyLive].join("|") === "a|b" && lazyLive.join(",") === "a,b" && lazyLive.every((s) => typeof s === "string"));
+  upsertRow("mechanisms", { subject: "lazy_probe", schema_owner: "registry.mjs", witness: "registry.mjs selftest", subjects: ["a", "b", "c"] }, { path: P, at: T0 });
+  assert("LAZY READER — read ONCE per process, like the module-load const it replaces (a later row edit is not re-read)", lazyLive.length === 2);
+  assert("LAZY READER — the view is read-only: a push throws in a module", (() => { try { lazyLive.push("z"); return false; } catch { return lazyLive.length === 2; } })());
 
   assert("R1 · CONSUMER SET — a lanes row must declare consumers[] and a reach policy",
     upsertRow("lanes", { subject: "l1", schema_owner: "a.mjs", witness: "w" }, { path: P }).ok === false

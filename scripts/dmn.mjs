@@ -262,7 +262,7 @@ export function cutOrder(a, b) {
 
 // Identity of a dream: the same stall, on the same concept, is the same thought
 // arriving again — that is a VOTE, not a duplicate.
-const dreamKey = (e) => `${String(e.concept || "").toLowerCase()} ${String(e.stall_signature || "").toLowerCase()}`;
+const dreamKey = (e) => `${String(e.concept || "").toLowerCase()}\u0000${String(e.stall_signature || "").toLowerCase()}`;
 
 // WITHIN ONE DAY the file accumulates; a NEW day starts a clean sheet. That
 // boundary is not a guessed number — it is the same local-day boundary every

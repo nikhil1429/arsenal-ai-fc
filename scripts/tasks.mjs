@@ -52,7 +52,7 @@ import { tmpdir } from "node:os";
 import { spawnSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { subjectsOf } from "./registry.mjs";   // S10 — task kinds are ROWS now, never literals
+import { lazySubjects } from "./registry.mjs";   // S10 — task kinds are ROWS now, never literals
 
 const SELF = fileURLToPath(import.meta.url);
 const __dirname = dirname(SELF);
@@ -63,7 +63,7 @@ export const TASKS_LEDGER = process.env.ARSENAL_TASKS_LEDGER || join(STATE_DIR, 
 // S10 migration #5: the kind list is a REGISTRY ROW (task_kinds) — a new durable-
 // execution kind is a ROW ADD + a RUNNER below, never a copy of this organ. The
 // selftest bites the invariant both ways: every declared kind has a runner.
-export const KINDS = subjectsOf("task_kinds");                  // a kind exists only with a RUNNER, or as a declared INTERACTIVE kind
+export const KINDS = lazySubjects("task_kinds");                  // a kind exists only with a RUNNER, or as a declared INTERACTIVE kind
 export const STATES = ["queued", "running", "done", "failed"];
 export const LEGAL = { claim: ["queued"], progress: ["running"], finish: ["running"], fail: ["queued", "running"] };
 const DEFAULT_TTL_H = 24;                                       // the idempotency window: the same ask inside it is a replay

@@ -122,7 +122,7 @@ import { observe as observeLegacy, supervise as superviseLegacy, emptyState, isS
 // against the ground it was given. It lives in its own file, not here, because its
 // hedge regex DOES test his words — a measurement he designed, never a gate — and
 // this file's own law (selftest: "not one regex here tests HIS words") stays whole.
-import { subjectsOf } from "./registry.mjs";   // A3 (4 Sep 2026) — the probe/register vocabularies are ROWS, never literals (his 11-Aug jugad law)
+import { lazySubjects } from "./registry.mjs";   // A3 (4 Sep 2026) — the probe/register vocabularies are ROWS, never literals (his 11-Aug jugad law)
 import { countHedges, REGISTER_TYPES, validateRegister, registerLine } from "./register.mjs";
 import { generate as modelsGenerate, loadKeys as modelsLoadKeys, resolveSync as modelsResolve } from "./models.mjs";   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — the Watcher names the ROLE `text`; the resolver picks the live model + key and says why (models.mjs imports no organ — the import graph stays tiny)
 
@@ -895,11 +895,11 @@ const GRADE_QUEUE = join(STATE_DIR, "gaffer_grade_queue.jsonl");
 // EXPORTED because forge_session.mjs's axis gate reads these rows and must not
 // hand-roll this organ's path or its row shape (owners-only, read side).
 // ROWS, NOT LITERALS (his 11-Aug jugad law; the law pack ratchets every literal subject
-// list in the repo). Read once at module load and LOUD on failure: `subjectsOf` throws when
+// list in the repo). Read once at FIRST USE (lazySubjects, forks row 605 (1)) and LOUD on failure: `subjectsOf` throws when
 // the row is missing, which is the house behaviour — a vocabulary that silently read as
 // empty would make every `--probe` and `--register` value illegal and say nothing useful.
-export const PROBE_KINDS = subjectsOf("probe_kinds");
-export const REGISTERS = subjectsOf("registers");
+export const PROBE_KINDS = lazySubjects("probe_kinds");
+export const REGISTERS = lazySubjects("registers");
 /** bankRows — the capture rows this organ has banked, filtered the way a gate asks.
  *  READ-ONLY, and it is this organ's own file: one reader, so a gate can never drift
  *  from the door that wrote the row. `since` is an ISO string or null (no floor). */

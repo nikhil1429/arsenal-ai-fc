@@ -55,7 +55,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSy
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { subjectsOf, preCyborg } from "./registry.mjs";   // S10 — the build-verb ratchet's verb set is a ROW · A4 (4 Sep 2026) — preCyborg: ONE predicate for "is this proof still his", shared with rejirah/deep/learnstate
+import { lazySubjects, preCyborg } from "./registry.mjs";   // S10 — the build-verb ratchet's verb set is a ROW · A4 (4 Sep 2026) — preCyborg: ONE predicate for "is this proof still his", shared with rejirah/deep/learnstate
 import { SKELETON_CARRIED } from "./teaching_terms.mjs";   // G1 (23 Sep 2026) — the rules the TURN SKELETON carries leave the printed pool (a leaf; never teaching_bar itself — NO SHIM CALLEE)
 import { transcriptPathFor, entrypointOfTranscript, studyScope, readSitting } from "./study_scope.mjs";   // R8 (23 Sep 2026) — the transition classifier for audit rows written before G0 stamped them · THE predicate stamps each self-report (THE STAMP, below)
 import { usageOf } from "./session_meter.mjs";   // forks row 277 (a), 24 Sep 2026 — THE usage-block reader (one per transcript row); never a second parser
@@ -1751,7 +1751,7 @@ switch (cmd) {
     const line = parts.join(" ");
     let buildHit = null;
     try {
-      buildHit = subjectsOf("teaching_contract_build_verbs").find((v) => new RegExp(`(^|[^a-z])${v}([^a-z]|$)`, "i").test(line)) || null;
+      buildHit = lazySubjects("teaching_contract_build_verbs").find((v) => new RegExp(`(^|[^a-z])${v}([^a-z]|$)`, "i").test(line)) || null;
     } catch { console.error("teaching_contract: ⚠ build-verb registry row unreadable — the ratchet cannot judge this add; adding as-is"); }
     if (buildHit && !forced) {
       console.error(`teaching_contract: REFUSED — "${arg}" reads BUILD-SHAPED ("${buildHit}"), and a design/build order is not a teaching rule (the act-mszfck3c class). Route it through acts verb \`design\` → the registry rulings lane. If it truly IS a teaching rule, re-run with --force-teaching --why "..."`);

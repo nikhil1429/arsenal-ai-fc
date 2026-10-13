@@ -28,7 +28,7 @@ import { spawnSync } from "node:child_process";
 // sole writer). presence_log.jsonl now rolls monthly, so a reader that only ever
 // opened `presence_log.jsonl` would silently read a rolled month as an empty history.
 import { presenceTail } from "./presence.mjs";
-import { subjectsOf } from "./registry.mjs";   // S10 row 15 — live modality classes are rows
+import { lazySubjects } from "./registry.mjs";   // S10 row 15 — live modality classes are rows
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -75,8 +75,8 @@ const INTERACTIVE_LEGACY = ["voice", "code", "desktop-study", "note", "context",
 // S10 map row 15 (F-04): the live modality classification is REGISTRY ROWS — a
 // new producer's modality joins by row edit. INTERACTIVE_LEGACY above stays
 // frozen in code (layering law) and stays COUNTED by the jugad rule on purpose.
-const INTERACTIVE = subjectsOf("modalities_interactive");
-const AMBIENT = subjectsOf("modalities_ambient");   // sensed, carried, but never a his-words slot
+const INTERACTIVE = lazySubjects("modalities_interactive");
+const AMBIENT = lazySubjects("modalities_ambient");   // sensed, carried, but never a his-words slot
 const DOUBT_RE = /\?|kyun|kyu|samajh|confus|doubt|nahi aa|stuck|matlab|difference|kaise|why|how does/i;
 // A window caption, measured shapes from the live afferent log: "claude.exe · Claude",
 // "WindowsTerminal.exe · Terminal", "explorer.exe ·", "SearchHost.exe · Search".

@@ -82,7 +82,7 @@ const SGCONFIG = join(ROOT, "sgconfig.yml");
 const NM = join(ROOT, "node_modules");
 
 /** The five rule ids that must exist in laws/ — the pack IS the law, so a missing rule is a RED. */
-export const RULE_IDS = ["owners-only-state-write", "law-m-literal-model", "jugad-literal-subject-list", "trailing-n-slice", "bare-catch", "receipt-testimony-read", "tum-not-tu-prose"];
+export const RULE_IDS = ["owners-only-state-write", "law-m-literal-model", "jugad-literal-subject-list", "trailing-n-slice", "bare-catch", "receipt-testimony-read", "tum-not-tu-prose", "import-time-registry-read"];
 
 /** THE EIGHT PRODUCTION LANES — §14.2's own list, and it is swallow.mjs's, not a new one.
  *  (That this list is itself a literal is recorded on purpose: it is a §9 Shape-1 instance
@@ -121,6 +121,8 @@ export const WAIVER = (rule) => new RegExp("law-waiver:" + rule + "\\b");
 //   depcruise 7 — import cycles: brain↔sitting↔state and context_manifest↔learnstate↔brain.
 export const BASELINE = {
   "owners-only-state-write": 0,
+  "import-time-registry-read": 0,   // forks row 605 (1), 12 Oct 2026: a NEW law, nothing grandfathered; its eleven sites moved to lazySubjects in the same act
+  "raw-nul-in-source": 0,   // forks row 616, 12 Oct 2026: a NEW law; the four raw NUL bytes (acts, calibration, dmn, rejirah; forks row 653 A2) became the \u0000 escape in the same act
   "law-m-literal-model": 0,   // S10 §10-G: watchman.mjs:1067's live literal moved into models.mjs CLAUDE_ROLES (the resolver, where a name may live) — same resolved string, no model change
   "jugad-literal-subject-list": 91,    // S10 ratchet (a2): 102 −1 shadow(#1) −1 tasks KINDS(#5) −2 CORE_AXES twins(#12) −3 calibration(r13) −2 acts(r14) −2 distiller INTERACTIVE+AMBIENT(r15; LEGACY stays frozen AND counted — honesty over score)
   // S11 RATCHET 7 → 0 (29 Aug 2026), and the seven were SPLIT by reading every one:
@@ -359,6 +361,40 @@ export function judgeBareCatch(matches, { lanes = PRODUCTION_LANES, read = srcOf
 
 // ── THE RATCHET — gates.mjs's judge(), same law, third instrument ────────────
 /** @param {Record<string,number>} counts */
+/** judgeImportTimeRead — forks row 605 (1), 12 Oct 2026. ast-grep already found the SHAPE (subjectsOf outside
+ *  every function body, so it runs when ANY file imports the module); this law carries no waiver, because the
+ *  fix is always the same one token: lazySubjects() reads the row at first use and throws the same loud error there.
+ *  @param {{rule:string, file:string, line:number}[]} matches */
+export function judgeImportTimeRead(matches) {
+  return { findings: matches.filter((x) => x.rule === "import-time-registry-read").map((x) => ({ file: x.file, line: x.line, why: "subjectsOf runs at IMPORT — every importer dies on this row; use lazySubjects()" })) };
+}
+
+// ── RAW NUL BYTES IN SOURCE (forks row 616, 12 Oct 2026) ─────────────────────
+// acts.mjs, calibration.mjs, dmn.mjs and rejirah.mjs each carried ONE raw NUL byte inside a template literal,
+// as a key separator (the 12 Oct census named the first two; this law found the other two, forks row 653 A2).
+// Byte 0 makes ripgrep, grep and every tool built on them call the whole file BINARY and skip it: the 12 Oct
+// census of import-time registry reads missed both files that way, though ast-grep (a parser) still saw them.
+// So no tracked text file carries byte 0; a separator is written as its escape and the runtime string is the
+// same. A byte scan, not an ast-grep rule: this defect lives below the parsed tree. A git that cannot list the
+// tree is a DEAD instrument (judgeMeasured), never a clean zero.
+export const NUL_EXTS = /\.(mjs|cjs|js|ts|json|jsonl|md|yml|yaml|ps1|sh|txt|html|css)$/i;
+/** @param {{root?:string, files?:string[]|null}} [o] */
+export function rawNulFiles({ root = ROOT, files = null } = {}) {
+  let list = files;
+  if (!list) {
+    try { list = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }).split(String.fromCharCode(0)).filter(Boolean); }
+    catch (e) { return { live: false, why: `git ls-files failed (${String(e).slice(0, 120)})`, findings: [] }; }
+  }
+  const findings = [];
+  for (const f of list.filter((x) => NUL_EXTS.test(x))) {
+    let b;
+    try { b = readFileSync(join(root, f)); } catch { continue; }   // tracked but deleted in the work tree: nothing to read
+    const i = b.indexOf(0);
+    if (i >= 0) findings.push({ file: f, line: b.subarray(0, i).toString("utf8").split("\n").length, why: "a raw NUL byte — write it as the \\u0000 escape" });
+  }
+  return { live: true, why: null, findings };
+}
+
 export function judge(counts, base = BASELINE) {
   const reds = [], falls = [];
   for (const [k, b] of Object.entries(base)) {
@@ -413,7 +449,7 @@ export function knipLeads() {
 }
 
 // ── MEASURE-ALL ─────────────────────────────────────────────────────────────
-export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn = depcruise } = {}) {
+export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn = depcruise, rawNulFn = rawNulFiles } = {}) {
   // L2 (fate 35): the scan's EXIT CODE is read beside its output — sgHealth — never thrown away.
   const sc = scanFn();
   const { matches, raw } = sc;
@@ -432,6 +468,8 @@ export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn
   const c = judgeBareCatch(matches);
   const rt = judgeReceiptTestimony(matches);
   const tm = judgeTum(matches);
+  const ir = judgeImportTimeRead(matches);
+  const nul = rawNulFn();
   const dc = withDepcruise ? depcruiseFn() : { available: false, errors: [], leads: [] };
   const counts = {
     "owners-only-state-write": o.findings.length,
@@ -441,15 +479,17 @@ export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn
     "bare-catch": c.findings.length,
     "receipt-testimony-read": rt.findings.length,
     "tum-not-tu-prose": tm.findings.length,
+    "import-time-registry-read": ir.findings.length,
+    "raw-nul-in-source": nul.findings.length,
     depcruise_errors: dc.available ? dc.errors.length : 0,
   };
-  return { matches, counts, o, m, j, t, c, rt, tm, dc, raw, sg, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
+  return { matches, counts, o, m, j, t, c, rt, tm, ir, nul, dc, raw, sg, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
 }
 
 /** judgeMeasured — L2 (fate 35): the ratchet over a REAL measurement. A dead ast-grep is a RED that names
  *  it, and none of the seven laws it feeds may print a FALL; a dead dependency-cruiser is a RED too; an
  *  ABSENT one is NOT MEASURED — named in `notes`, never a fallen count. Everything else is judge()'s.
- *  @param {{counts:Record<string,number>, sg?:{tool:string, live:boolean, code:number|null, why:string|null}, dc?:{available?:boolean, parsed?:boolean, code?:number|null, raw?:string}}} m */
+ *  @param {{counts:Record<string,number>, sg?:{tool:string, live:boolean, code:number|null, why:string|null}, dc?:{available?:boolean, parsed?:boolean, code?:number|null, raw?:string}, nul?:{live:boolean, why:string|null}}} m */
 export function judgeMeasured(m, base = BASELINE) {
   const j = judge(m.counts, base);
   const reds = [...j.reds], notes = [];
@@ -458,6 +498,10 @@ export function judgeMeasured(m, base = BASELINE) {
   if (m.sg && !m.sg.live) {
     reds.unshift(`INSTRUMENT DEAD — ast-grep: ${m.sg.why}. None of the ${sgKeys.length} laws it feeds is judged; a dead scan's zero is not a fall.`);
     falls = falls.filter((f) => !sgKeys.some((k) => f.startsWith(`${k} FELL`)));
+  }
+  if (m.nul && !m.nul.live) {
+    reds.push(`INSTRUMENT DEAD — the raw-NUL byte scan: ${m.nul.why}. raw-nul-in-source is not judged; an unread tree is not a clean one.`);
+    falls = falls.filter((f) => !f.startsWith("raw-nul-in-source FELL"));
   }
   const dc = m.dc || {};
   if (dc.available && !dc.parsed) {
@@ -483,6 +527,7 @@ export const PLANTS = {
   "jugad-literal-subject-list": 'const TYPES = ["alpha", "beta", "gamma"];\nexport default TYPES;\n',
   "trailing-n-slice": "export const tail = (rows) => rows.slice(-50);\n",
   "bare-catch": "export const p = (f) => { try { f(); } catch {} };\n",
+  "import-time-registry-read": 'import { subjectsOf } from "./registry.mjs";\nexport const KINDS = subjectsOf("plant_kinds");\nexport const later = () => subjectsOf("plant_kinds");\n',   // line 2 must bite; line 3 (inside a function) must not
   "receipt-testimony-read": 'import { readFileSync } from "node:fs";\nexport const gate = () => JSON.parse(readFileSync("receipt.json", "utf8")).count;\n',
   "tum-not-tu-prose": "export const say = (x) => `Ye faisla tera hai, machine ka nahi — ${x}`;\n",   // law-waiver:tum — THE PLANT: the violation this rule must bite on (row 68 (e))
 };
@@ -608,11 +653,31 @@ async function selftest() {
       && dcAbsent.notes.some((n) => /depcruise_errors NOT MEASURED/.test(n)) && !dcAbsent.falls.some((f) => /depcruise_errors FELL/.test(f)), JSON.stringify({ dcDead, dcAbsent }));
   }
 
+  // 4b · RAW NUL BYTES (forks row 616), both ways, over a throwaway tree — never the repo
+  {
+    const nd = mkdtempSync(join(tmpdir(), "arsenal-lawpack-nul-"));
+    try {
+      writeFileSync(join(nd, "dirty.mjs"), "export const k = (a, b) => `${a}" + String.fromCharCode(0) + "${b}`;\n");
+      writeFileSync(join(nd, "clean.mjs"), "export const k = (a, b) => `${a}\\u0000${b}`;\n");
+      writeFileSync(join(nd, "image.png"), Buffer.from([137, 80, 78, 71, 0, 0, 0, 13]));
+      const n1 = rawNulFiles({ root: nd, files: ["dirty.mjs", "clean.mjs", "image.png"] });
+      assert("RAW NUL — a raw byte 0 in a text file is a finding with its file and line; its escape is not; a binary type is never read",
+        n1.live && n1.findings.length === 1 && n1.findings[0].file === "dirty.mjs" && n1.findings[0].line === 1, JSON.stringify(n1.findings));
+      const n0 = rawNulFiles({ root: nd, files: ["clean.mjs"] });
+      assert("RAW NUL — the escaped separator alone is clean (zero findings)", n0.live && n0.findings.length === 0);
+      const nDead = rawNulFiles({ root: join(nd, "not-a-repo") });
+      assert("RAW NUL — a tree git cannot list is a DEAD instrument, never a clean zero",
+        !nDead.live && judgeMeasured({ counts: { ...base }, nul: nDead }).reds.some((r) => /INSTRUMENT DEAD — the raw-NUL byte scan/.test(r)));
+    } finally { try { rmSync(nd, { recursive: true, force: true }); } catch { /* a temp dir the OS will reap anyway */ } }
+  }
+
   // 5 · THE PLANT — every rule proven to BITE, on every run, in a throwaway project
   if (available()) {
     const m2 = plantAndScan();
     const bit = new Set((m2 || []).map((x) => x.rule));
     for (const id of RULE_IDS) assert(`PLANT — ${id} BITES on a planted violation (the rung's DONE-proof, run every time)`, bit.has(id), `rules that bit: ${[...bit].join(", ") || "none"}`);
+    const irLines = (m2 || []).filter((x) => x.rule === "import-time-registry-read").map((x) => x.line);
+    assert("PLANT — import-time-registry-read bites the module-level read ONLY (line 2), never the read inside a function (line 3)", irLines.join(",") === "2", `lines that bit: ${irLines.join(",") || "none"}`);
   } else {
     assert("BARE CHECKOUT — no ast-grep binary, so the plant test is skipped and SAID (measurability is an answer)", true);
   }
@@ -656,6 +721,8 @@ async function main() {
     top("JUGAD", m.j.findings.filter((f) => f.lane));
     top("TRAILING-N", m.t.findings);
     top("BARE CATCH", m.c.findings);
+    top("IMPORT-TIME REGISTRY READ", m.ir.findings);
+    top("RAW NUL", m.nul.findings);
     if (m.dc.available) for (const e of m.dc.errors.slice(0, 8)) console.log(`      DEPCRUISE ${e.rule.name} · ${e.from} → ${e.to}`);
   }
   for (const r of j.reds) console.log(`  RED  ${r}`);

@@ -1,0 +1,30 @@
+id: import-time-registry-read
+language: JavaScript
+severity: warning
+message: a registry read at IMPORT time — one retired row kills every importer with a stack trace; use lazySubjects() or read it inside the function that needs it
+note: |
+  forks row 605 (1), 12 Oct 2026. A module-level `const X = subjectsOf("row")` runs the registry
+  read the moment ANY file imports the module. The done-line meter (daily_green.mjs) imports
+  state.mjs -> captains_call.mjs -> acts.mjs, whose `DOORS = subjectsOf("act_doors")` ran at
+  import: a registry without that row killed the meter with a stack trace, against its own
+  FAIL CLOSED law, for a row it never reads. Every such read moved to registry.mjs's
+  lazySubjects(), which reads at first touch and throws the SAME loud error at the line that
+  needs the row. THIS RULE finds the shape (subjectsOf called outside every function body, so
+  at module evaluation) and scripts/lawpack.mjs freezes it at 0 with nothing grandfathered.
+rule:
+  pattern: subjectsOf($$$ARGS)
+  not:
+    inside:
+      stopBy: end
+      any:
+        - kind: function_declaration
+        - kind: function_expression
+        - kind: arrow_function
+        - kind: method_definition
+        - kind: generator_function_declaration
+        - kind: generator_function
+files:
+  - "scripts/**/*.mjs"
+  - "hooks/**/*.mjs"
+ignores:
+  - "scripts/legacy/**"
