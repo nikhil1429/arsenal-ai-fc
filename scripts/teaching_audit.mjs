@@ -2512,7 +2512,7 @@ function selftest() {
         p1.status === 0 && s2.status === 0 && rows2.length === 2 && rows2[1].user_text_source === "fresh"
         && lastJ2 && lastJ2.prompt && typeof lastJ2.prompt.consumed_at === "string");
     } finally {
-      try { rmSync(tmp, { recursive: true, force: true }); } catch {}
+      try { rmSync(tmp, { recursive: true, force: true }); } catch { /* a temp dir that outlives the test is litter, not a failure */ }
     }
   }
 
@@ -2672,7 +2672,7 @@ function selftest() {
     check("L4 · row 583 (6) · END TO END — the picture-first MISS is a DRIFT on its row: the picture-after new idea carries act-mueywvag (its evidence quoted, its autohit staged — skipped only under the test seam); the picture-first turn, the null-path rows and the turns that are no new idea carry none",
       () => sAfter.row.drifts.includes("act-mueywvag") && /came AFTER its text/.test(sAfter.row.evidence.join(" ")) && sAfter.row.staged.some((s) => s.rule === "act-mueywvag" && s.skipped === true)
         && ![sFirst, sAbsent, sMissing, sGuess, sJirah].some((s) => s.row.drifts.includes("act-mueywvag")));
-  } finally { try { rmSync(l4, { recursive: true, force: true }); } catch {} }
+  } finally { try { rmSync(l4, { recursive: true, force: true }); } catch { /* a temp dir that outlives the test is litter, not a failure */ } }
 
   // ========================================================================
   // L5 — "SAMAJH NAHI AAYA", TAKEN LITERALLY (11 Oct 2026 · forks rows 570, 601), planted BOTH ways under L4's laws: each
@@ -2798,7 +2798,7 @@ function selftest() {
     check("L5 · THE STOP ROWS AND THE REPLAY AGREE — the replay of the very session file the spawned Stops read prints the sum of what their read rows wrote (seen 3, restarted 2: one samajhOf, one turn definition)",
       () => { const rows = rowsNow().filter((r) => r.samajh_check && typeof r.samajh_check.seen === "number"), sum = (k) => rows.reduce((a, r) => a + r.samajh_check[k], 0);
         return rows.length === 5 && sum("seen") === 3 && sum("restarted") === 2 && rAll.status === 0 && rAll.stdout.trim() === "samajh seen 3 restarted 2"; });
-  } finally { try { rmSync(l5, { recursive: true, force: true }); } catch {} }
+  } finally { try { rmSync(l5, { recursive: true, force: true }); } catch { /* a temp dir that outlives the test is litter, not a failure */ } }
 
   console.log(`\n${fail === 0 ? "ALL CHECKS PASSED" : "SELFTEST FAILED"} (${pass} passed, ${fail} failed)\n`);
   if (fail) process.exit(1);
@@ -2819,7 +2819,7 @@ function selftestOnOwnRegistry() {
       witness: "teaching_audit.mjs selftest — the V2 COVERAGE cases' own oracle: axis d core, axis g not", subjects: ["d"] }] } }, null, 1));
     const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "selftest"], { env: { ...process.env, ARSENAL_REGISTRY: reg, ARSENAL_AUDIT_SELFTEST_REGISTRY: "1" }, stdio: "inherit" });
     if (r.status !== 0) process.exitCode = r.status === null ? 1 : r.status;
-  } finally { try { rmSync(dir, { recursive: true, force: true }); } catch {} }
+  } finally { try { rmSync(dir, { recursive: true, force: true }); } catch { /* a temp dir that outlives the test is litter, not a failure */ } }
 }
 
 // L5 (11 Oct 2026) · THE REPLAY VERB — rung L5's G1 runs it over his recorded sessions. Pure over the ONE file it is

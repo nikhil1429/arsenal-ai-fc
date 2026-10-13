@@ -129,7 +129,7 @@ export function replayDir(target) {
   if (st.isDirectory()) files = readdirSync(target).filter((f) => f.endsWith(".jsonl")).sort().map((f) => join(target, f));
   else files = [target];
   // L4: the teaching pass reads the SAME text the rail pass reads — one read per file, two passes
-  const per = files.map((f) => { try { const text = readFileSync(f, "utf8"); const { missed, file, ...teaching } = teachingPass(text, basename(f)); return { ...replayTranscript(text, basename(f)), teaching, missed }; } catch (e) { return { file: basename(f), error: String(e.message || e) }; } });
+  const per = files.map((f) => { try { const text = readFileSync(f, "utf8"); const { missed, file: _file, ...teaching } = teachingPass(text, basename(f)); return { ...replayTranscript(text, basename(f)), teaching, missed }; } catch (e) { return { file: basename(f), error: String(e.message || e) }; } });
   const T = { transcripts: files.length, with_sitting: 0, calls: 0, allow: 0, captain: 0, deny: 0, none: 0 };
   for (const p of per) { if (p.error) continue; if (p.opened) T.with_sitting++; for (const k of ["calls", "allow", "captain", "deny", "none"]) T[k] += p[k]; }
   T.judged = T.allow + T.captain + T.deny;

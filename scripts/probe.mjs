@@ -606,7 +606,7 @@ export function runPlan(plan, tree, env, o) {
   const nodeSegs = [];
   outer: for (const pipeline of plan) {
     if (pipeline.length === 1 && pipeline[0].tool === "cd") {
-      let isDir = false; try { isDir = fs.statSync(joinRel(tree, pipeline[0].cwd)).isDirectory(); } catch {}
+      let isDir = false; try { isDir = fs.statSync(joinRel(tree, pipeline[0].cwd)).isDirectory(); } catch { /* an unstatable cd target is no directory: isDir stays false and the cd exits 1 */ }
       if (!isDir) { exit = 1; break; }
       cwd = pipeline[0].cwd; exit = 0; continue;
     }
@@ -671,9 +671,9 @@ export function hashTree(dir) {
   const lines = walkFiles(dir).map(p => `${fwd(path.relative(dir, p))}\0${sha256(fs.readFileSync(p))}`);
   return sha256(Buffer.from(lines.join("\n"), "utf8"));
 }
-function setMode(dir, mode) { for (const p of walkFiles(dir)) { try { fs.chmodSync(p, mode); } catch {} } }
-const samePath = (a, b) => { const n = p => { let r = path.resolve(p); try { r = fs.realpathSync.native(r); } catch {} return WIN ? r.toLowerCase() : r; }; return n(a) === n(b); };
-const inside = (child, parent) => { const n = p => { let r = path.resolve(p); try { r = fs.realpathSync.native(r); } catch {} return WIN ? r.toLowerCase() : r; }; const rel = path.relative(n(parent), n(child)); return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel)); };
+function setMode(dir, mode) { for (const p of walkFiles(dir)) { try { fs.chmodSync(p, mode); } catch { /* a file chmod refuses keeps its mode; the fixture hash, not the mode, is what the probe judges */ } } }
+const samePath = (a, b) => { const n = p => { let r = path.resolve(p); try { r = fs.realpathSync.native(r); } catch { /* an unresolvable path (absent, no rights) compares as path.resolve gave it */ } return WIN ? r.toLowerCase() : r; }; return n(a) === n(b); };
+const inside = (child, parent) => { const n = p => { let r = path.resolve(p); try { r = fs.realpathSync.native(r); } catch { /* an unresolvable path (absent, no rights) compares as path.resolve gave it */ } return WIN ? r.toLowerCase() : r; }; const rel = path.relative(n(parent), n(child)); return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel)); };
 
 async function collarOf(ctx) {
   if (!ctx._collar) {
@@ -743,7 +743,7 @@ async function runAxis(axis, plan, ctx, { remove = [], check = [], declared = nu
     return { ...r, ...extra };
   } finally {
     setMode(stateDir, 0o644);
-    try { collar.destroy(sb); } catch {}
+    try { collar.destroy(sb); } catch { /* a sandbox the collar cannot remove stays as temp litter; the verdict above already stands */ }
   }
 }
 
@@ -1116,7 +1116,7 @@ async function vacuityInCollar(p, plan, axis, ctx, cites, was, onArmed) {
     return { reading, why, baseline, cited, ...(no_window.length ? { no_window } : {}), mutants_tried: tried, mutants_complete: complete, lines_resting: resting, flips, first_flip: flips[0] || null, incomplete, ...(skipped.length ? { skipped } : {}), deletion_can_flip: decidable, ...extra };
   } finally {
     setMode(stateDir, 0o644);
-    try { collar.destroy(sb); } catch {}
+    try { collar.destroy(sb); } catch { /* a sandbox the collar cannot remove stays as temp litter; the verdict above already stands */ }
   }
 }
 // one probe + its receipt of record → its VACUITY receipt. `moved` = the paths changed between the receipt's tree and HEAD
@@ -1174,7 +1174,7 @@ export function treeView(ctx, dirs) {
     for (const e of ents) {
       const rel = d ? `${d}/${e.name}` : e.name;
       if (e.isDirectory()) { v.set(`ls:${rel}/`, "dir"); continue; }
-      let st = null; try { st = fs.statSync(joinRel(ctx.root, rel)); } catch {}
+      let st = null; try { st = fs.statSync(joinRel(ctx.root, rel)); } catch { /* an entry gone or locked between readdir and stat is recorded "unstatable" below */ }
       v.set(`ls:${rel}`, st ? `${st.size}:${st.mtimeMs}` : "unstatable");
     }
   }
@@ -1860,7 +1860,7 @@ async function selftest() {
         return code === 0 && !lines.some(l => /^RED/.test(l)) && lines.some(l => l.startsWith(`NOTE: frun saw another writer in --root (law 7f rule A, graded): ${rel} · pid ${DAEMON}`)) && lines[3] && lines[3].startsWith("OTHER-WRITER 1 of 1") || why({ code, lines });
       } finally { rmW(rel); }
     });
-    try { process.kill(DAEMON); } catch {}
+    try { process.kill(DAEMON); } catch { /* the orphan already exited: nothing left to kill */ }
     // (g) A LOCKED FILE — retried, bounded, named
     await tc("L7g-P0 pure · retryLocked: locked twice then fine = the value + 2 named + waits 250/500; locked past the bound = CollarError after 4 (waits 250/500/1000); any other error thrown at once, unnamed; EDOM read from the message too", async () => {
       const mk = code => Object.assign(new Error(`${code}, locked`), { code });
@@ -2258,7 +2258,7 @@ async function selftest() {
     await tc("CLI · an unknown verb is usage (exit 2), never a run", async () => { const r = spawnSync(process.execPath, [SELF, "frobnicate"], { encoding: "utf8", shell: false, windowsHide: true, timeout: 60000 }); return r.status === 2 && /usage/.test(String(r.stderr)) || why({ code: r.status }); });
   } catch (e) {
     ok(false, "selftest threw outside a case", e && e.stack ? e.stack.split(NL).slice(0, 3).join(" | ") : String(e));
-  } finally { try { fs.rmSync(T, { recursive: true, force: true }); } catch {} }
+  } finally { try { fs.rmSync(T, { recursive: true, force: true }); } catch { /* a temp dir that outlives the selftest is litter, not a failure */ } }
   if (ONLY) console.log(`NOTE  PROBE_SELFTEST_ONLY="${ONLY}": ${skippedCases} case(s) NOT run — this is not the whole selftest`);
   console.log(`probe selftest: ${good}/${ran} ok${good === ran ? " · GREEN" : " · RED"}`);
   return good === ran ? 0 : 1;

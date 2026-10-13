@@ -2614,6 +2614,7 @@ function ntfyHeaderSafe(s) {
   const str = String(s || "");
   return /^[\x00-\xFF]*$/.test(str) ? str : `=?UTF-8?B?${Buffer.from(str, "utf8").toString("base64")}?=`;
 }
+/** @param {(url: string, init: { method: string, body: string, headers: Record<string, string>, signal: AbortSignal }) => Promise<{ ok: boolean, status: number }>} [fetchFn=fetch] the wire: the real fetch, or a selftest's double answering { ok, status } */
 async function pushNtfy(cfg, title, body, fetchFn = fetch, opts = {}) {
   if (!cfg.ntfy || !cfg.ntfy.enabled) return { sent: false, why: "disabled" };
   const topic = resolveNtfyTopic(cfg);
