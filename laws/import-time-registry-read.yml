@@ -10,7 +10,8 @@ note: |
   FAIL CLOSED law, for a row it never reads. Every such read moved to registry.mjs's
   lazySubjects(), which reads at first touch and throws the SAME loud error at the line that
   needs the row. THIS RULE finds the shape (subjectsOf called outside every function body, so
-  at module evaluation) and scripts/lawpack.mjs freezes it at 0 with nothing grandfathered.
+  at module evaluation) and scripts/lawpack.mjs judges it beside its acorn judge importReads (forks row 661: any derived
+  reader, any alias, same-file wrappers; one site counted once), frozen at 2 by name; a dispatch on process.argv is unguarded-dispatch.
 rule:
   pattern: subjectsOf($$$ARGS)
   not:

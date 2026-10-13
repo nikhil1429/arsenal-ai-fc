@@ -74,6 +74,7 @@ import { execFileSync } from "node:child_process";
 import { join, dirname, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -121,7 +122,8 @@ export const WAIVER = (rule) => new RegExp("law-waiver:" + rule + "\\b");
 //   depcruise 7 — import cycles: brain↔sitting↔state and context_manifest↔learnstate↔brain.
 export const BASELINE = {
   "owners-only-state-write": 0,
-  "import-time-registry-read": 0,   // forks row 605 (1), 12 Oct 2026: a NEW law, nothing grandfathered; its eleven sites moved to lazySubjects in the same act
+  "import-time-registry-read": 2,   // forks row 661 (2), 13 Oct 2026: EXTENDED past the literal subjectsOf (ast-grep) to ANY derived reader, any alias and same-file wrappers (importReads), frozen at 2 by name: bootroom.mjs:60 rowOf (a loud refusal by its owner's design) + gate.mjs:158 LANE_CONSUMERS via laneConsumersFromRegistry -> laneRows (row 653's MISS 1); may only fall · forks row 605 (1), 12 Oct 2026: born at 0, its eleven subjectsOf sites moved to lazySubjects in the same act
+  "unguarded-dispatch": 4,   // forks row 661 (2) / (4), 13 Oct 2026: a NEW law beside it, frozen at 4 by name: a module-level CLI switch on process.argv runs at IMPORT with the importer's argv: outwork_audit.mjs:421 (run -> gather -> slotPassed) + teaching_contract.mjs:1701 / 1713 / 1903 (doneConcepts -> preCyborg); each moves under the entry-identity main guard by its owner, 4 to 0
   "raw-nul-in-source": 0,   // forks row 616, 12 Oct 2026: a NEW law; the four raw NUL bytes (acts, calibration, dmn, rejirah; forks row 653 A2) became the \u0000 escape in the same act
   "law-m-literal-model": 0,   // S10 §10-G: watchman.mjs:1067's live literal moved into models.mjs CLAUDE_ROLES (the resolver, where a name may live) — same resolved string, no model change
   "jugad-literal-subject-list": 90,    // forks rows 649 (0) / 658 (13 Oct 2026): 97 measured at 0964b97 (7 new since 4aa426d froze 91, 1 gone) − the 7 fixed at their sites = 90, frozen DOWN · S10 ratchet (a2): 102 −1 shadow(#1) −1 tasks KINDS(#5) −2 CORE_AXES twins(#12) −3 calibration(r13) −2 acts(r14) −2 distiller INTERACTIVE+AMBIENT(r15; LEGACY stays frozen AND counted — honesty over score)
@@ -365,8 +367,167 @@ export function judgeBareCatch(matches, { lanes = PRODUCTION_LANES, read = srcOf
  *  every function body, so it runs when ANY file imports the module); this law carries no waiver, because the
  *  fix is always the same one token: lazySubjects() reads the row at first use and throws the same loud error there.
  *  @param {{rule:string, file:string, line:number}[]} matches */
-export function judgeImportTimeRead(matches) {
-  return { findings: matches.filter((x) => x.rule === "import-time-registry-read").map((x) => ({ file: x.file, line: x.line, why: "subjectsOf runs at IMPORT — every importer dies on this row; use lazySubjects()" })) };
+export function judgeImportTimeRead(matches, ig = null) {
+  // forks row 661 (2), 13 Oct 2026: the law now counts the acorn judge's sites too (importReads below: ANY derived reader,
+  // any alias, same-file wrappers), and the ast-grep subjectsOf rule stays beside it. One site is counted once: an ast-grep
+  // match at a file:line the judge already holds (as a read or as an unguarded dispatch) is that site, never a second one.
+  const own = (ig && ig.findings) || [], dispatch = (ig && ig.dispatch) || [];
+  const held = new Set([...own, ...dispatch].map((x) => `${x.file}:${x.line}`));
+  const sg = matches.filter((x) => x.rule === "import-time-registry-read" && !held.has(`${x.file}:${x.line}`))
+    .map((x) => ({ file: x.file, line: x.line, via: "subjectsOf", reader: "subjectsOf", why: "subjectsOf runs at IMPORT — every importer dies on this row; use lazySubjects()" }));
+  return { findings: [...own, ...sg], dispatch };
+}
+
+// ── IMPORT-TIME READS THROUGH ANY DOOR (forks rows 653 / 660 / 661, 13 Oct 2026) ─────────────
+// The ast-grep rule sees one literal name, subjectsOf. A read through rowOf, laneRows or any other registry reader, under an
+// alias (`rowOf as r`), or through a same-file wrapper (`const X = w()` where w calls laneRows) runs at import just the same:
+// gate.mjs:158's LANE_CONSUMERS threw on every importer that way (row 653's MISS 1) and no rule saw it. The census
+// (artifacts cloud/s660/wrapper_census.mjs) measured the class at his HEAD 1ea62c3: six sites. This judge is LAW T's
+// hand-rolled half: the parse is acorn's (a real AST; acorn and acorn-walk are both in package.json), the knowledge is ours —
+//   · READERS are DERIVED from registry.mjs at judge time, never listed (registryReaders);
+//   · THE MAIN GUARD is the entry-identity check, ruled as written (row 661 (1)): an `if` whose test reads import.meta or
+//     process.argv[1], inline or through a top-level const that holds it (forge_session's INVOKED_DIRECTLY). Code behind it
+//     runs only when the file is the entry, so its reads are not import-time;
+//   · A DISPATCH on process.argv (inline, or through a top-level const bound from it: `const cmd = process.argv[2]`) is NOT a
+//     guard: it runs at import with the IMPORTER's argv. Its reads are their own law, unguarded-dispatch (row 661 (2)), because
+//     the fix is different: the switch moves under the entry-identity guard (row 661 (4)).
+// A DEAD INSTRUMENT IS RED (L2): no acorn, an unreadable registry.mjs, or a file naming registry.mjs that acorn cannot parse is
+// named by judgeMeasured, never scored as a clean zero.
+
+/** acornKit — acorn + acorn-walk, loaded at first use, so a bare checkout still imports this file (no node_modules: NOT MEASURABLE).
+ *  @returns {{acorn:any, walk:any, why:string|null}} */
+export function acornKit() {
+  try {
+    const req = createRequire(import.meta.url);
+    return { acorn: req("acorn"), walk: req("acorn-walk"), why: null };
+  } catch (e) { return { acorn: null, walk: null, why: `acorn could not load (${String(e).slice(0, 120)})` }; }
+}
+const parseModule = (/** @type {any} */ acorn, /** @type {string} */ src) => acorn.parse(src, { ecmaVersion: "latest", sourceType: "module", locations: true, allowHashBang: true, allowAwaitOutsideFunction: true });
+const GUARD_TEXT = /import\.meta|process\.argv\[1\]/;
+const ARGV_TEXT = /process\.argv/;
+/** A body runs at its call, never at import: the module-level walk and the reader derivation never descend into one. */
+const SKIP_FN = {
+  FunctionDeclaration() { /* not descended */ },
+  FunctionExpression() { /* not descended */ },
+  ArrowFunctionExpression() { /* not descended */ },
+  MethodDefinition() { /* not descended */ },
+  ClassBody() { /* not descended */ },
+};
+
+/** registryReaders — the reader set, DERIVED from registry.mjs at judge time (row 661 (3)): every exported function whose
+ *  parameter defaults read REGISTRY_PATH AND whose own body, outside its nested functions, makes a call. A lazy view that only
+ *  builds a closure (lazySubjects) reads nothing at the call, so it is not a reader: by its shape, never by its name.
+ *  @param {{root?:string, kit?:{acorn:any, walk:any, why:string|null}}} [o] @returns {Set<string>} */
+export function registryReaders({ root = ROOT, kit = acornKit() } = {}) {
+  const src = readFileSync(join(root, "scripts", "registry.mjs"), "utf8");
+  const out = new Set();
+  for (const n of parseModule(kit.acorn, src).body) {
+    const d = n.type === "ExportNamedDeclaration" ? n.declaration : null;
+    if (!d || d.type !== "FunctionDeclaration" || !d.id) continue;
+    if (!/REGISTRY_PATH/.test(src.slice(d.params.length ? d.params[0].start : d.start, d.body.start))) continue;
+    let calls = 0;
+    kit.walk.recursive(d.body, null, { ...SKIP_FN, CallExpression(/** @type {any} */ c, /** @type {any} */ st, /** @type {any} */ go) { calls++; go(c.callee, st); for (const a of c.arguments) go(a, st); } });
+    if (calls) out.add(d.id.name);
+  }
+  return out;
+}
+
+/** importReads — every MODULE-LEVEL call (outside every function body, outside the entry-identity main guard) that reaches a
+ *  registry reader: directly by any reader name or alias, through a namespace import, or through a same-file local function
+ *  that calls one (transitively). A call inside a top-level dispatch on process.argv goes to `dispatch`, never to `findings`.
+ *  @param {{root?:string, dirs?:string[], readers?:Set<string>|null, kit?:{acorn:any, walk:any, why:string|null}}} [o] */
+export function importReads({ root = ROOT, dirs = ["scripts", "hooks"], readers = null, kit = acornKit() } = {}) {
+  const dead = (/** @type {string} */ why) => ({ live: false, why, readers: [], files: 0, parseErrors: [], findings: [], dispatch: [] });
+  if (!kit.acorn) return dead(kit.why || "acorn absent");
+  let R = readers;
+  if (!R) {
+    try { R = registryReaders({ root, kit }); }
+    catch (e) { return dead(`registry.mjs could not be read for its readers (${String(e).slice(0, 120)})`); }
+  }
+  /** @type {string[]} */
+  const list = [];
+  const walkDir = (/** @type {string} */ d) => {
+    for (const e of readdirSync(join(root, d), { withFileTypes: true })) {
+      const p = `${d}/${e.name}`;
+      if (e.isDirectory()) { if (e.name !== "legacy" && e.name !== "node_modules") walkDir(p); }
+      else if (e.name.endsWith(".mjs")) list.push(p);
+    }
+  };
+  for (const d of dirs) if (existsSync(join(root, d))) walkDir(d);
+  const findings = [], dispatch = [], parseErrors = [];
+  let files = 0;
+  for (const rel of list) {
+    if (rel === "scripts/registry.mjs") continue;
+    const src = readFileSync(join(root, rel), "utf8");
+    if (!/registry\.mjs/.test(src)) continue;   // a static import names the file: no name, no import to judge
+    let ast;
+    try { ast = parseModule(kit.acorn, src); }
+    catch (e) { parseErrors.push(`${rel} · ${String((e && e.message) || e).slice(0, 120)}`); continue; }
+    files++;
+    const local = new Map(), ns = new Set();   // local name -> the reader it imports · namespace imports of registry.mjs
+    for (const n of ast.body) if (n.type === "ImportDeclaration" && /(^|\/)registry\.mjs$/.test(n.source.value)) for (const s of n.specifiers) {
+      if (s.type === "ImportSpecifier" && R.has(s.imported.name)) local.set(s.local.name, s.imported.name);
+      if (s.type === "ImportNamespaceSpecifier") ns.add(s.local.name);
+    }
+    if (!local.size && !ns.size) continue;
+    const guards = new Set(), argv = new Set();   // top-level consts holding the entry identity · top-level consts bound from process.argv
+    for (const n of ast.body) if (n.type === "VariableDeclaration") for (const v of n.declarations) if (v.id.type === "Identifier" && v.init) {
+      const t = src.slice(v.init.start, v.init.end);
+      if (GUARD_TEXT.test(t)) guards.add(v.id.name); else if (ARGV_TEXT.test(t)) argv.add(v.id.name);
+    }
+    const isGuard = (/** @type {any} */ s) => s.type === "IfStatement" && (GUARD_TEXT.test(src.slice(s.test.start, s.test.end)) || (s.test.type === "Identifier" && guards.has(s.test.name)));
+    const isDispatch = (/** @type {any} */ s) => {
+      const t = s.type === "IfStatement" ? s.test : s.type === "SwitchStatement" ? s.discriminant : null;
+      if (!t) return false;
+      if (ARGV_TEXT.test(src.slice(t.start, t.end))) return true;
+      let hit = false;
+      kit.walk.simple(t, { Identifier(/** @type {any} */ i) { if (argv.has(i.name)) hit = true; } });
+      return hit;
+    };
+    const readerOf = (/** @type {any} */ c) => c.type === "Identifier" && local.has(c.name) ? local.get(c.name)
+      : (c.type === "MemberExpression" && c.object.type === "Identifier" && ns.has(c.object.name) && c.property.type === "Identifier" && R.has(c.property.name) ? c.property.name : null);
+    const fns = new Map();   // same-file local functions: declarations, and top-level const f = () => … / function () {}
+    for (const n of ast.body) {
+      const d = n.type === "ExportNamedDeclaration" && n.declaration ? n.declaration : n;
+      if (d.type === "FunctionDeclaration" && d.id) fns.set(d.id.name, d);
+      if (d.type === "VariableDeclaration") for (const v of d.declarations) if (v.id.type === "Identifier" && v.init && (v.init.type === "ArrowFunctionExpression" || v.init.type === "FunctionExpression")) fns.set(v.id.name, v.init);
+    }
+    const calls = new Map();   // function name -> { r: the readers it calls, l: the local functions it calls }
+    for (const [name, f] of fns) {
+      const r = new Set(), l = new Set();
+      kit.walk.full(f.body, (/** @type {any} */ n) => { if (n.type === "CallExpression") { const x = readerOf(n.callee); if (x) r.add(x); else if (n.callee.type === "Identifier" && fns.has(n.callee.name)) l.add(n.callee.name); } });
+      calls.set(name, { r, l });
+    }
+    /** @type {(name: string, seen?: Set<string>) => string[]|null} */
+    const reaches = (name, seen = new Set()) => {
+      if (seen.has(name)) return null;
+      seen.add(name);
+      const c = calls.get(name);
+      if (!c) return null;
+      if (c.r.size) return [name, [...c.r][0]];
+      for (const l of c.l) { const p = reaches(l, seen); if (p) return [name, ...p]; }
+      return null;
+    };
+    for (const stmt of ast.body) {
+      if (isGuard(stmt)) continue;
+      const d = stmt.type === "ExportNamedDeclaration" && stmt.declaration ? stmt.declaration : stmt;
+      if (d.type === "FunctionDeclaration" || d.type === "ImportDeclaration") continue;
+      const into = isDispatch(stmt) ? dispatch : findings;
+      kit.walk.recursive(d, null, { ...SKIP_FN, CallExpression(/** @type {any} */ n, /** @type {any} */ st, /** @type {any} */ go) {
+        const x = readerOf(n.callee);
+        const p = x ? null : (n.callee.type === "Identifier" && fns.has(n.callee.name) ? reaches(n.callee.name) : null);
+        if (x || p) {
+          const via = x ? src.slice(n.callee.start, n.callee.end) : p.join(" -> ");
+          into.push({ file: rel, line: n.loc.start.line, via, reader: x || p[p.length - 1],
+            why: into === dispatch ? `a module-level CLI dispatch on process.argv runs at IMPORT with the importer's argv and reaches ${via}; move it under the entry-identity main guard`
+              : `a registry read at IMPORT through ${via} — every importer runs it; read it inside the function that needs it, or lazySubjects()` });
+        }
+        go(n.callee, st);
+        for (const a of n.arguments) go(a, st);
+      } });
+    }
+  }
+  return { live: true, why: null, readers: [...R].sort(), files, parseErrors, findings, dispatch };
 }
 
 // ── RAW NUL BYTES IN SOURCE (forks row 616, 12 Oct 2026) ─────────────────────
@@ -449,7 +610,7 @@ export function knipLeads() {
 }
 
 // ── MEASURE-ALL ─────────────────────────────────────────────────────────────
-export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn = depcruise, rawNulFn = rawNulFiles } = {}) {
+export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn = depcruise, rawNulFn = rawNulFiles, importFn = importReads } = {}) {
   // L2 (fate 35): the scan's EXIT CODE is read beside its output — sgHealth — never thrown away.
   const sc = scanFn();
   const { matches, raw } = sc;
@@ -468,7 +629,8 @@ export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn
   const c = judgeBareCatch(matches);
   const rt = judgeReceiptTestimony(matches);
   const tm = judgeTum(matches);
-  const ir = judgeImportTimeRead(matches);
+  const ig = importFn();   // forks row 661: the acorn judge over scripts/ and hooks/ (any reader, alias or wrapper; dispatches apart)
+  const ir = judgeImportTimeRead(matches, ig);
   const nul = rawNulFn();
   const dc = withDepcruise ? depcruiseFn() : { available: false, errors: [], leads: [] };
   const counts = {
@@ -480,16 +642,17 @@ export async function measure({ withDepcruise = true, scanFn = scan, depcruiseFn
     "receipt-testimony-read": rt.findings.length,
     "tum-not-tu-prose": tm.findings.length,
     "import-time-registry-read": ir.findings.length,
+    "unguarded-dispatch": ir.dispatch.length,
     "raw-nul-in-source": nul.findings.length,
     depcruise_errors: dc.available ? dc.errors.length : 0,
   };
-  return { matches, counts, o, m, j, t, c, rt, tm, ir, nul, dc, raw, sg, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
+  return { matches, counts, o, m, j, t, c, rt, tm, ir, ig, nul, dc, raw, sg, rulesPresent: RULE_IDS.filter((id) => existsSync(join(RULES_DIR, `${id}.yml`))) };
 }
 
 /** judgeMeasured — L2 (fate 35): the ratchet over a REAL measurement. A dead ast-grep is a RED that names
  *  it, and none of the seven laws it feeds may print a FALL; a dead dependency-cruiser is a RED too; an
  *  ABSENT one is NOT MEASURED — named in `notes`, never a fallen count. Everything else is judge()'s.
- *  @param {{counts:Record<string,number>, sg?:{tool:string, live:boolean, code:number|null, why:string|null}, dc?:{available?:boolean, parsed?:boolean, code?:number|null, raw?:string}, nul?:{live:boolean, why:string|null}}} m */
+ *  @param {{counts:Record<string,number>, sg?:{tool:string, live:boolean, code:number|null, why:string|null}, dc?:{available?:boolean, parsed?:boolean, code?:number|null, raw?:string}, nul?:{live:boolean, why:string|null}, ig?:{live:boolean, why:string|null, parseErrors:string[]}}} m */
 export function judgeMeasured(m, base = BASELINE) {
   const j = judge(m.counts, base);
   const reds = [...j.reds], notes = [];
@@ -504,6 +667,14 @@ export function judgeMeasured(m, base = BASELINE) {
     falls = falls.filter((f) => !f.startsWith("raw-nul-in-source FELL"));
   }
   const dc = m.dc || {};
+  if (m.ig && (!m.ig.live || (m.ig.parseErrors || []).length)) {
+    // forks row 661: the import-graph judge feeds two laws; dead (no acorn, no registry.mjs) or blind (a file naming registry.mjs
+    // that acorn cannot parse), it is RED by name, and neither law may print a FALL its missing sites would have made.
+    reds.push(!m.ig.live
+      ? `INSTRUMENT DEAD — the import-graph judge: ${m.ig.why}. import-time-registry-read and unguarded-dispatch are not judged; an unparsed tree is not a clean one.`
+      : `INSTRUMENT BLIND — acorn could not parse ${m.ig.parseErrors.length} file(s) that name registry.mjs (${m.ig.parseErrors.slice(0, 3).join(" | ")}); their import-time reads are unseen, never zero.`);
+    falls = falls.filter((f) => !f.startsWith("import-time-registry-read FELL") && !f.startsWith("unguarded-dispatch FELL"));
+  }
   if (dc.available && !dc.parsed) {
     reds.push(`INSTRUMENT DEAD — dependency-cruiser: exited ${dc.code} and its answer did not parse — raw: ${String(dc.raw || "").trim().slice(0, 200) || "(no output)"}. depcruise_errors is not judged.`);
     falls = falls.filter((f) => !f.startsWith("depcruise_errors FELL"));
@@ -530,6 +701,17 @@ export const PLANTS = {
   "import-time-registry-read": 'import { subjectsOf } from "./registry.mjs";\nexport const KINDS = subjectsOf("plant_kinds");\nexport const later = () => subjectsOf("plant_kinds");\n',   // line 2 must bite; line 3 (inside a function) must not
   "receipt-testimony-read": 'import { readFileSync } from "node:fs";\nexport const gate = () => JSON.parse(readFileSync("receipt.json", "utf8")).count;\n',
   "tum-not-tu-prose": "export const say = (x) => `Ye faisla tera hai, machine ka nahi — ${x}`;\n",   // law-waiver:tum — THE PLANT: the violation this rule must bite on (row 68 (e))
+};
+
+/** THE IMPORT-GRAPH PLANTS (forks row 661 (3)) — the census's five fixture modules, verbatim (artifacts cloud/s660/wrapper_census.mjs).
+ *  Every selftest writes them into a throwaway tree and judges them with importReads, against the readers derived from the REAL
+ *  registry.mjs: a wrapper read bites, an alias read bites, a dispatch read is a dispatch, and the guarded and lazy reads do not. */
+export const IMPORT_PLANTS = {
+  "a_wrapper.mjs": 'import { laneRows } from "./registry.mjs";\nfunction w() { return laneRows(); }\nexport const X = w();\n',
+  "b_guarded.mjs": 'import { laneRows } from "./registry.mjs";\nfunction main() { return laneRows(); }\nif (process.argv[1] && import.meta.url.endsWith(process.argv[1])) main();\n',
+  "c_dispatch.mjs": 'import { preCyborg } from "./registry.mjs";\nfunction run() { return preCyborg({}); }\nconst cmd = process.argv[2];\nif (cmd === "run") run();\n',
+  "d_lazy.mjs": 'import { lazySubjects } from "./registry.mjs";\nexport const D = lazySubjects("act_doors");\nexport function f() { return D.length; }\n',
+  "e_alias.mjs": 'import { rowOf as r } from "./registry.mjs";\nexport const M = r("mechanisms", "x");\n',
 };
 
 export function plantAndScan({ bin = sgBin() } = {}) {
@@ -671,6 +853,45 @@ async function selftest() {
     } finally { try { rmSync(nd, { recursive: true, force: true }); } catch { /* a temp dir the OS will reap anyway */ } }
   }
 
+  // 4c · IMPORT-TIME READS THROUGH ANY DOOR (forks row 661 (3)) — the census's six claims, planted both ways, on every run
+  {
+    const kit = acornKit();
+    if (kit.acorn) {
+      const R = registryReaders({ kit });
+      assert("IMPORT GRAPH — READERS are derived from registry.mjs at judge time: laneRows, rowOf, preCyborg and slotPassed in, the lazy view lazySubjects out (by its shape, never its name)",
+        R.has("laneRows") && R.has("rowOf") && R.has("preCyborg") && R.has("slotPassed") && !R.has("lazySubjects"), [...R].join(", "));
+      const gd = mkdtempSync(join(tmpdir(), "arsenal-lawpack-ig-"));
+      try {
+        mkdirSync(join(gd, "scripts"), { recursive: true });
+        for (const [f, code] of Object.entries(IMPORT_PLANTS)) writeFileSync(join(gd, "scripts", f), code);
+        const ig = importReads({ root: gd, readers: R, kit });
+        const at = (/** @type {string} */ f) => ig.findings.filter((x) => x.file === `scripts/${f}`);
+        const dp = (/** @type {string} */ f) => ig.dispatch.filter((x) => x.file === `scripts/${f}`);
+        assert("IMPORT GRAPH — a module-level call through a same-file wrapper IS a read (w -> laneRows)",
+          at("a_wrapper.mjs").length === 1 && at("a_wrapper.mjs")[0].via === "w -> laneRows" && dp("a_wrapper.mjs").length === 0, JSON.stringify(ig.findings));
+        assert("IMPORT GRAPH — the same read behind the entry-identity main guard is NOT (0)",
+          at("b_guarded.mjs").length === 0 && dp("b_guarded.mjs").length === 0);
+        assert("IMPORT GRAPH — a dispatch on process.argv is not a guard: its read is an unguarded-dispatch, never an import-time read",
+          dp("c_dispatch.mjs").length === 1 && at("c_dispatch.mjs").length === 0, JSON.stringify(ig.dispatch));
+        assert("IMPORT GRAPH — a module-level lazySubjects view reads nothing at import (0)",
+          at("d_lazy.mjs").length === 0 && dp("d_lazy.mjs").length === 0);
+        assert("IMPORT GRAPH — a direct read by another reader name under an ALIAS counts (rowOf as r)",
+          at("e_alias.mjs").length === 1 && at("e_alias.mjs")[0].reader === "rowOf");
+        const u = judgeImportTimeRead([{ rule: "import-time-registry-read", file: "scripts/c_dispatch.mjs", line: 4 }, { rule: "import-time-registry-read", file: "scripts/z.mjs", line: 2 }], ig);
+        assert("IMPORT GRAPH — one site is counted once: an ast-grep subjectsOf match at a site the judge holds as a dispatch is not a second read; one it does not hold is",
+          u.findings.length === ig.findings.length + 1 && u.findings.some((x) => x.file === "scripts/z.mjs") && !u.findings.some((x) => x.file === "scripts/c_dispatch.mjs") && u.dispatch.length === ig.dispatch.length, JSON.stringify(u));
+      } finally { try { rmSync(gd, { recursive: true, force: true }); } catch { /* a temp dir the OS will reap anyway */ } }
+      const igDead = judgeMeasured({ counts: { ...base, "import-time-registry-read": 0, "unguarded-dispatch": 0 }, ig: { live: false, why: "acorn could not load (planted)", parseErrors: [] } });
+      assert("IMPORT GRAPH — a judge with no acorn is a DEAD instrument: RED by name, and neither of its laws prints a FALL to 0",
+        !igDead.ok && igDead.reds.some((r) => /INSTRUMENT DEAD — the import-graph judge/.test(r)) && !igDead.falls.some((f) => /import-time-registry-read FELL|unguarded-dispatch FELL/.test(f)), JSON.stringify(igDead));
+      const igBlind = judgeMeasured({ counts: { ...base }, ig: { live: true, why: null, parseErrors: ["scripts/x.mjs · Unexpected token (1:4)"] } });
+      assert("IMPORT GRAPH — a file naming registry.mjs that acorn cannot parse is a BLIND instrument, RED by name, never a clean zero",
+        !igBlind.ok && igBlind.reds.some((r) => /INSTRUMENT BLIND — acorn could not parse 1 file/.test(r)), JSON.stringify(igBlind));
+    } else {
+      assert("BARE CHECKOUT — no acorn, so the import-graph plants are skipped and SAID (measurability is an answer)", true);
+    }
+  }
+
   // 5 · THE PLANT — every rule proven to BITE, on every run, in a throwaway project
   if (available()) {
     const m2 = plantAndScan();
@@ -722,6 +943,7 @@ async function main() {
     top("TRAILING-N", m.t.findings);
     top("BARE CATCH", m.c.findings);
     top("IMPORT-TIME REGISTRY READ", m.ir.findings);
+    top("UNGUARDED DISPATCH", m.ir.dispatch);
     top("RAW NUL", m.nul.findings);
     if (m.dc.available) for (const e of m.dc.errors.slice(0, 8)) console.log(`      DEPCRUISE ${e.rule.name} · ${e.from} → ${e.to}`);
   }
