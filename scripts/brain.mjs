@@ -7099,6 +7099,7 @@ function buildDeps(now, argv = process.argv) {
  *  plus `tick` (the empty-argv default) and `help`. EXPORTED so the selftest can bite it against
  *  the source itself: a branch added below without a row here is a verb nobody can reach, and a
  *  row here with no branch is a verb that quietly means `tick` — which is the 28,120-token bug. */
+// law-waiver:jugad the dispatch VERB TABLE, bitten by its own selftest against main()'s branches, never a subject list (forks row 649 (0))
 export const BRAIN_MODES = ["tick", "help", "selftest", "bell", "trigger", "gate", "hold", "consumed", "tokens", "spend", "status", "run", "pulse", "daemon"];   // `hold` — the captain's hold (4 Sep 2026), the H letter's one door
 /** isKnownMode — PURE, so the suite drives every branch without spawning anything.
  *  A leading `-` is a FLAG, never a verb: `--dry` and `--daemon` must keep reaching the dispatch. */

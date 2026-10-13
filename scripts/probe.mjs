@@ -508,6 +508,7 @@ export function resolveVerbs({ env = process.env, platform = process.platform } 
 }
 
 // ---------------------------------------------------------------------------- 4 · THE EXPECTATION
+// law-waiver:jugad the expectation SCHEMA's own keys, a closed wire format the parser checks, never a subject list (forks row 649 (0))
 const OUT_KEYS = ["exit", "stdout_includes", "stdout_excludes", "stdout_lines"];
 const EXPECT_KEYS = [...OUT_KEYS, "reads_absent"];
 // → null when well-formed, else the reason. reads_absent is a DECLARATION (row 471 (1)(c)), never an expectation alone.
@@ -587,6 +588,7 @@ export function declaredAbsence(spec, tree, declared) {
   return gone.length && gone.every(p => declared.has(p)) ? gone : null;
 }
 export const nodeLabel = k => `probe-seg-${k}`;
+// law-waiver:jugad the OS's own environment names an isolated child keeps, a closed platform set, never a subject list (forks row 649 (0))
 const ENV_KEEP = ["PATH", "Path", "PATHEXT", "SYSTEMROOT", "SystemRoot", "WINDIR", "COMSPEC", "TEMP", "TMP", "TMPDIR", "HOME", "USERPROFILE", "LANG", "LC_ALL", "LC_CTYPE"];
 function hostEnv() { const env = {}; for (const k of ENV_KEEP) if (process.env[k] !== undefined) env[k] = process.env[k]; return env; }
 const joinRel = (base, rel) => (rel ? path.join(base, ...rel.split("/")) : base);

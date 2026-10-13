@@ -98,7 +98,7 @@ const REPS      = join(STATE_DIR, "reps_log.jsonl");           // READ-ONLY here
 const RELOCKS   = join(STATE_DIR, "relocks.jsonl");
 
 // THE METHOD — PER-CONCEPT PIPELINE, verbatim order (PROJECT_OS.md).
-const STEPS = [
+export const STEPS = [   // exported for learn_digest.mjs (forks row 649 (0)): the step names have ONE home
   "TIME-BOX",       // 0  core concept ≈ max 1 din; budget khatam → bache axes DEFER
   // AUDIT #4 (4 Aug 2026) — THE NAME IS USED AT TWO DIFFERENT MOMENTS.
   // At step 1 NOTHING is cracked yet: these are the 9 ANGLES TO COVER, shown

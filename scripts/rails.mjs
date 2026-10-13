@@ -171,6 +171,7 @@ export function factoryDecide(payload = {}) {
 }
 
 // ── G3 · THE STUDY RAIL ─────────────────────────────────────────────────────
+// law-waiver:jugad the harness's own shell TOOL names, a closed wire vocabulary, never a subject list (forks row 649 (0))
 export const SHELL_TOOLS = ["Bash", "PowerShell"];
 export const STUDY_DENY = "park it: ek line, phir micro-question wapas";
 /** What the study rail needs, read live: the scope verdict and — only in scope — his last prompt. FAIL-OPEN: null on any throw. */

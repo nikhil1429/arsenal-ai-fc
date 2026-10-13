@@ -255,6 +255,8 @@ async function main() {
   console.log(`turnstile: watching the clipboard (${CADENCE_MS / 1000}s cadence) — copy a capture-contract JSON anywhere and it's in. Everything else is ignored by shape.`);
   // the ring survives restarts (hashes only) — a respawn with the session
   // still on the clipboard must not re-ingest it as fresh-stamped duplicates
+  // law-waiver:trailing-n the seen ring is a DEDUPE SET of capture hashes (makeGate caps it at CAP = 20), never a window of
+  // rows read as recent: a clipboard blob seen once is a duplicate at any age (forks row 649 (0), lawpack trailing-n-slice)
   let seenRing = []; try { seenRing = JSON.parse(readFileSync(SEEN_FILE, "utf8")).slice(-20); } catch { }
   const gate = makeGate({ seen: seenRing, persist: (ring) => writeFileSync(SEEN_FILE, JSON.stringify(ring)), park: (row) => parkBatch(row) });
   let lastHash = "";

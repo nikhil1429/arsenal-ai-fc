@@ -124,7 +124,7 @@ export const BASELINE = {
   "import-time-registry-read": 0,   // forks row 605 (1), 12 Oct 2026: a NEW law, nothing grandfathered; its eleven sites moved to lazySubjects in the same act
   "raw-nul-in-source": 0,   // forks row 616, 12 Oct 2026: a NEW law; the four raw NUL bytes (acts, calibration, dmn, rejirah; forks row 653 A2) became the \u0000 escape in the same act
   "law-m-literal-model": 0,   // S10 §10-G: watchman.mjs:1067's live literal moved into models.mjs CLAUDE_ROLES (the resolver, where a name may live) — same resolved string, no model change
-  "jugad-literal-subject-list": 91,    // S10 ratchet (a2): 102 −1 shadow(#1) −1 tasks KINDS(#5) −2 CORE_AXES twins(#12) −3 calibration(r13) −2 acts(r14) −2 distiller INTERACTIVE+AMBIENT(r15; LEGACY stays frozen AND counted — honesty over score)
+  "jugad-literal-subject-list": 90,    // forks rows 649 (0) / 658 (13 Oct 2026): 97 measured at 0964b97 (7 new since 4aa426d froze 91, 1 gone) − the 7 fixed at their sites = 90, frozen DOWN · S10 ratchet (a2): 102 −1 shadow(#1) −1 tasks KINDS(#5) −2 CORE_AXES twins(#12) −3 calibration(r13) −2 acts(r14) −2 distiller INTERACTIVE+AMBIENT(r15; LEGACY stays frozen AND counted — honesty over score)
   // S11 RATCHET 7 → 0 (29 Aug 2026), and the seven were SPLIT by reading every one:
   //   THREE WERE REAL §9 SHAPE 4 and are now GATED by daykey.withinDays/recentRows —
   //     viz:383 the wall's kal-lines · postmatch:178 the season form strip ·

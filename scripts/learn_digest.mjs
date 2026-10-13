@@ -25,7 +25,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 // the legal moment kinds are the pacer's OWN list (forks row 266): printed from it, never typed here
-import { MOMENTS } from "./forge_session.mjs";
+import { MOMENTS, STEPS } from "./forge_session.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const STATE = path.join(ROOT, "dressing-room", "state");
@@ -33,8 +33,7 @@ const CAPSULES = path.join(STATE, "capsules");
 const CRASH_BELT = "C:/Users/nikhi/arsenal-samjhao"; // out of repo by his 14 Aug privacy law; optional here
 const CAP_BYTES = 16384;
 
-const STEP_NAMES = ["0 TIME-BOX", "1 DARAAR-MAP", "2 PEHLE-GUESS", "3 SAMJHAO", "4 DIKHAO", "5 SAATH-KARO",
-  "6 AKELE-KARO", "7 BOLO", "8 CALIBRATE", "9 JIRAH", "10 LOCK", "11 RE-JIRAH"];
+const STEP_NAMES = STEPS.map((s, i) => `${i} ${s}`);   // forks row 649 (0): read from THE METHOD's one home, never a copy
 const AXES = "abcdefghi".split("");
 
 const readJson = (p) => { try { return JSON.parse(fs.readFileSync(p, "utf8").replace(/^\uFEFF/, "")); } catch { return null; } };

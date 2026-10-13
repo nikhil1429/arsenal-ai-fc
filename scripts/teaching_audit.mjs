@@ -201,13 +201,14 @@ export const CHECKED_RULES = [
 // exits 1 and the measured drift is dropped — silently, in a jsonl field.
 // CLOSED 7 Sep 2026 — the three `r(...)` rows landed in teaching_contract.mjs seed(),
 // so this declared gap is now EMPTY and the selftest tripwire below keeps it empty.
-// law-waiver:jugad — a DECLARED GAP LIST, never a subject list: it names rule ids this
-// file emits that its OWNER has not yet seeded, and its whole purpose is to shrink to [].
 // RE-OPENED 7 Oct 2026 (forks row 583 (6)) — ONE id, declared, not hidden: `act-mueywvag`
 // (his word #22) is a LIVE contract row on his laptop (the act lane, 24 Sep) but
 // teaching_contract.mjs's seed() at the L4 pin carries no `r(` row for it. Row 583 asked
 // for this list to stay empty; it cannot, truthfully, until the contract's OWNER (L5)
 // seeds that row — and the ratchet below goes red that day and forces it back to [].
+// (forks row 649 (0): this note sat between the waiver and the list and pushed the waiver out of lawpack's six-line window.)
+// law-waiver:jugad — a DECLARED GAP LIST, never a subject list: it names rule ids this
+// file emits that its OWNER has not yet seeded, and its whole purpose is to shrink to [].
 export const SEED_GAP = ["act-mueywvag"];
 
 // COVERAGE HONESTY, PER RULE (full-organism audit P1.1-P1.2, 7 Aug 2026). A rule
