@@ -54,7 +54,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync, renameSync, rmSync, openSync, readSync, closeSync, mkdtempSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { lazySubjects, preCyborg } from "./registry.mjs";   // S10 — the build-verb ratchet's verb set is a ROW · A4 (4 Sep 2026) — preCyborg: ONE predicate for "is this proof still his", shared with rejirah/deep/learnstate
 import { SKELETON_CARRIED } from "./teaching_terms.mjs";   // G1 (23 Sep 2026) — the rules the TURN SKELETON carries leave the printed pool (a leaf; never teaching_bar itself — NO SHIM CALLEE)
 import { transcriptPathFor, entrypointOfTranscript, studyScope, readSitting } from "./study_scope.mjs";   // R8 (23 Sep 2026) — the transition classifier for audit rows written before G0 stamped them · THE predicate stamps each self-report (THE STAMP, below)
@@ -1636,10 +1636,10 @@ const USAGE = "teaching_contract: print | list | add <id> <line...> | hit <id>"
   + " | autohit <id> --why \"...\" | unhit-auto <id> [--n <k>] | checked"
   + " | drop <id> | reset-turns | reset-pct <1-100> (HIS study reset number) | selftest";
 
-const cmd = process.argv[2];
-const arg = process.argv[3];
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) hookMain();   // forks rows 661 (4) / 673: the entry-identity guard (the CLI and turn_hook's SHIM enter here; sitting.mjs's pacer enters by CALL; a library import runs nothing)
+// hookMain is a function declaration, so the guard above may call it before its text; cmd and arg are read inside it, at call time.
 
-switch (cmd) {
+export function hookMain() { const cmd = process.argv[2], arg = process.argv[3]; switch (cmd) {
   case "print": {                               // HOOK PATH — never throws, never blocks
     // SELF-INJECTION GUARD — same scar as forge_session.mjs:808. Headless organs run
     // `claude -p` inside this repo; without this they would be handed (and would bump
@@ -1902,5 +1902,5 @@ switch (cmd) {
   }
   case "selftest": selftest(); break;
   default:
-    console.log(USAGE);
+    console.log(USAGE); }   // the switch closes here; the next line closes hookMain
 }

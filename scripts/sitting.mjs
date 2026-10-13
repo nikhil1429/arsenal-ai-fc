@@ -247,7 +247,7 @@ export function childTranscriptPath(sessionId, cwd = CHILD_CWD) {
 // ── THE PACER, in-process (turn_hook.runOrgan — the same three callees the Claude Code
 // prompt hook runs, byte-for-byte the same code path). A daemon calls it every turn, and
 // an ES module is evaluated ONCE per URL, so the importer busts the cache with a query
-// (`?turn=n`) — the callee's own imports stay cached; only its top-level run repeats.
+// (`?turn=n`) — the callee's own imports stay cached; only its top-level run repeats. Since forks row 673 each callee is entered by CALL (hookMain), as turn_hook does: under the query an entry-identity guard is FALSE, so the SHIM shape printed nothing for a guarded callee.
 // ARSENAL_ORGAN is LIFTED for the call: the sitting IS his surface, and the pacer's own
 // organ-guard would silence it (turn_hook's floors run under ARSENAL_ORGAN=1 by design).
 async function pacerBlock(hisText, sittingId, turnNo, deps = {}, claudeSessionId = null) {
@@ -264,9 +264,9 @@ async function pacerBlock(hisText, sittingId, turnNo, deps = {}, claudeSessionId
   const stdin = JSON.stringify({ prompt: String(hisText || ""), session_id: sittingId, hook_event_name: "UserPromptSubmit", surface: "sitting", ...(tp && existsSync(tp) ? { transcript_path: tp } : {}) });
   const importer = (href) => import(`${href}?turn=${turnNo}_${Date.now()}`);
   try {
-    await th.runOrgan("forge_session.mjs", "contract", { stdin, importer, stderr: () => { } }, r);
-    await th.runOrgan("teaching_contract.mjs", "print", { stdin, importer, stderr: () => { } }, r);
-    await th.runOrgan("hippocampus.mjs", "recall-hint", { stdin, importer, stderr: () => { } }, r);
+    await th.runOrgan("forge_session.mjs", "contract", { stdin, importer, call: "hookMain", stderr: () => { } }, r);
+    await th.runOrgan("teaching_contract.mjs", "print", { stdin, importer, call: "hookMain", stderr: () => { } }, r);
+    await th.runOrgan("hippocampus.mjs", "recall-hint", { stdin, importer, call: "hookMain", stderr: () => { } }, r);
   } finally {
     process.stdout.write = realWrite;
     if (savedOrgan !== undefined) process.env.ARSENAL_ORGAN = savedOrgan;
