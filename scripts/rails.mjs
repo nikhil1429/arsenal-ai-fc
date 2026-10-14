@@ -121,6 +121,25 @@ const OVERRIDE_RE = /ARSENAL_RAILS_OVERRIDE=([A-Za-z0-9_.-]+):([a-z-]+)/;
 const textOf = (v) => { try { return typeof v === "string" ? v : JSON.stringify(v ?? ""); } catch { return String(v); } };
 
 // PURE — the factory's decision, over a PreToolUse payload (the three rails of S1).
+// RAIL 4 — THE WORKTREE LAW (forks rows 617 / 618, his word #117 "ok done", 12 Oct 2026). On 12 Oct his repo carried 13 scratch
+// checkouts that no record named and whose sessions were gone (artifacts ledger 904). Every worktree of the organism is made
+// THROUGH the tool, which records the hand and the purpose (WORKTREE_TOOL register --create) and removes it behind a gate.
+// A bare add is refused in COMMAND POSITION only (prose about the rail passes: the CLAUDE-P lesson), whatever -c / -C / --flag
+// options ride before the verb. It is refused when it targets the organism: its -C names an arsenal-ai-fc path, or with no -C
+// the command names one or the shell's cwd is in it (or unknown: fail toward the law). An add on ANOTHER repo passes.
+export const WORKTREE_TOOL = "C:/Users/nikhi/arsenal-audit-artifacts/campaign-2026-09/tools/v/worktree.mjs";
+export const WORKTREE_ADD_RE = new RegExp(CMD_POS + "git(?:\\.exe)?(?:\\s+(?:-C\\s+(?:\"([^\"]*)\"|'([^']*)'|(\\S+))|-c\\s+\\S+|--[\\w-]+(?:=\\S+)?))*\\s+worktree\\s+add\\b", "i");
+const ORGANISM_PATH_RE = /arsenal-ai-fc(?![\w-])/i;
+const slashed = (s) => String(s || "").split(String.fromCharCode(92)).join("/");
+export function worktreeAddOnOrganism(cmd, cwd) {
+  const m = WORKTREE_ADD_RE.exec(String(cmd || ""));
+  if (!m) return false;
+  const dashC = m[1] ?? m[2] ?? m[3];
+  if (dashC !== undefined) return ORGANISM_PATH_RE.test(slashed(dashC));
+  if (ORGANISM_PATH_RE.test(slashed(cmd))) return true;
+  return !cwd || ORGANISM_PATH_RE.test(slashed(cwd));
+}
+
 export function factoryDecide(payload = {}) {
   const tool = String(payload.tool_name || "");
   const input = payload.tool_input || {};
@@ -163,6 +182,11 @@ export function factoryDecide(payload = {}) {
     if (STATE_DIR_RE.test(cmd) && STATE_WRITE_RE.test(cmd)) {
       return deny("state", "a shell command writes/moves/deletes under dressing-room/state — same breach as an editor write, one layer down",
         "go through the owner organ's CLI (`grep -rn \"SOLE WRITER\" scripts/*.mjs`); reads are always fine");
+    }
+    // RAIL 4 — a bare git worktree add on the organism (the worktree law, forks rows 617 / 618)
+    if (worktreeAddOnOrganism(cmd, payload.cwd)) {
+      return deny("worktree", "a bare git worktree add on the organism repo: a checkout no record names outlives the session that made it (13 orphans found 12 Oct 2026, artifacts ledger 904; the worktree law, forks rows 617 / 618, his word #117)",
+        "make it through the tool, which records the hand and the purpose: node " + WORKTREE_TOOL + " register --create <ref> --path <dir> --hand \"<name [ref]>\" --purpose \"<why>\" (and remove it with: node " + WORKTREE_TOOL + " remove --path <dir>)");
     }
     return allow("shell command clears every rail");
   }
@@ -449,6 +473,22 @@ function selftest() {
   assert("CLAUDE-P — a PowerShell call is the same call", D("PowerShell", { command: "claude -p 'go'" }).decision === "deny");
   assert("CLAUDE-P — the word `claude` in a path is NOT a call", D("Bash", { command: "ls ~/.claude/projects" }).decision === "allow");
   assert("CLAUDE-P — an organ's own CLI is never touched", D("Bash", { command: "node scripts/brain.mjs status" }).decision === "allow");
+
+  // RAIL 4 — THE WORKTREE LAW (forks rows 617 / 618, his word #117), planted both ways
+  assert("WORKTREE — a bare git worktree add (no -C, no cwd known) is DENIED", D("Bash", { command: "git worktree add --detach C:/tmp/wt HEAD" }).decision === "deny");
+  assert("WORKTREE — git -C <the organism> worktree add is DENIED", D("Bash", { command: "git -C C:/Users/nikhi/GitHub/arsenal-ai-fc worktree add C:/tmp/wt main" }).decision === "deny");
+  assert("WORKTREE — a -c option and a quoted -C do not smuggle it past", D("Bash", { command: 'git -c core.longpaths=true -C "C:/Users/nikhi/GitHub/arsenal-ai-fc" worktree add --detach C:/tmp/wt main' }).decision === "deny");
+  assert("WORKTREE — a PowerShell call is the same call", D("PowerShell", { command: "git worktree add C:/tmp/wt main" }).decision === "deny");
+  assert("WORKTREE — after cd into the organism in a chain it is still a call", D("Bash", { command: "cd C:/Users/nikhi/GitHub/arsenal-ai-fc && git worktree add ../wt main" }).decision === "deny");
+  const wtd = D("Bash", { command: "git worktree add C:/tmp/wt main" });
+  assert("WORKTREE — the deny names the rail and the tool's register verb", wtd.rail === "worktree" && /RAIL worktree/.test(wtd.reason) && /tools\/v\/worktree\.mjs register --create/.test(wtd.reason), JSON.stringify(wtd));
+  assert("WORKTREE — the tool itself is never touched", D("Bash", { command: 'node C:/Users/nikhi/arsenal-audit-artifacts/campaign-2026-09/tools/v/worktree.mjs register --create main --path C:/tmp/wt --hand "x [aaaaaa]" --purpose "p"' }).decision === "allow");
+  assert("WORKTREE — list and prune are not an add", D("Bash", { command: "git worktree list --porcelain" }).decision === "allow" && D("Bash", { command: "git worktree prune" }).decision === "allow");
+  assert("WORKTREE — an add on ANOTHER repo (-C outside the organism) passes", D("Bash", { command: "git -C C:/Users/nikhi/arsenal-audit-artifacts worktree add C:/tmp/wt main" }).decision === "allow");
+  assert("WORKTREE — the shell's cwd in another repo with no organism path passes", decide({ tool_name: "Bash", tool_input: { command: "git worktree add C:/tmp/wt main" }, cwd: "C:/Users/nikhi/arsenal-audit-artifacts" }, null).decision === "allow");
+  assert("WORKTREE — the shell's cwd in the organism is DENIED", decide({ tool_name: "Bash", tool_input: { command: "git worktree add C:/tmp/wt main" }, cwd: "C:/Users/nikhi/GitHub/arsenal-ai-fc" }, null).decision === "deny");
+  assert("WORKTREE — PROSE about the rail is NOT a call", D("Bash", { command: 'echo "the rail refuses git worktree add on the organism"' }).decision === "allow");
+  assert("WORKTREE — the declared override opens this rail the same way", D("Bash", { command: "ARSENAL_RAILS_OVERRIDE=S12:worktree git worktree add C:/tmp/wt main" }).decision === "allow");
 
   // THE OVERRIDE — declared in the call, per rail, and it SAYS so
   const ov = D("Bash", { command: "ARSENAL_RAILS_OVERRIDE=S12:claude-p claude -p 'canary'" });
