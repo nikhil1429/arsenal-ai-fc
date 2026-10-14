@@ -86,6 +86,7 @@ import { readRows as outboxRows, fold as outboxFold } from "./outbox.mjs";   // 
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: a chain child (the morning sheet tick) keys the CHAIN's day; overnight jobs keep their wall-clock shift (shiftDay/serveDate untouched)
 import { digestInput as intentDigestInput, validateDigest as intentValidateDigest } from "./intent.mjs";   // Block 2 §7.2 (18 Aug 2026): the intent_digest job's food + its validator — brain never writes the intent lane
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
+import { keep, KEEP_EXIT } from "./keeper.mjs";   // 15 Oct 2026 (forks rows 746 (2) / 753 (2)): `daemon` is the KEEPER over `daemon-worker`; a resident never exits on its own
 import { jobInputClass, inputCadenceDefaultH } from "./registry.mjs";   // rung S13 (29 Aug 2026): THE INPUT GUARD reads its declarations from the registry — the six code-computed lanes’ input classes and the DECLARED cadence seed. registry.mjs imports nothing of ours, so there is no cycle (gate.mjs already reads it the same way).
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -5613,6 +5614,13 @@ async function selftest() {
         const missing = [...new Set(dispatched)].filter((m) => !BRAIN_MODES.includes(m));
         assert(`S12 SPEND-GUARD — BRAIN_MODES covers every verb main() actually dispatches (unlisted: ${missing.join(", ") || "none"})`,
           missing.length === 0 && dispatched.length > 0);
+        // THE KEEPER (15 Oct 2026, rows 746 (2) / 753 (2)): `daemon` runs keep() over `daemon-worker`, the worker exits by
+        // every non-clean KEEP_EXIT code, and the retire line names the keeper, never the watchdog arm removed on 28 Aug,
+        // whose promise left :4116 dark on 11 Oct and 15 Oct.
+        assert("THE KEEPER — `daemon` runs keep() from scripts/keeper.mjs over `daemon-worker`, the worker exits by every non-clean KEEP_EXIT code, and no line promises the removed watchdog relaunch",
+          dispatched.includes("daemon-worker") && /await keep\(\{ name: "brain", worker: \[[^\]]*"daemon-worker"/.test(src)
+          && Object.keys(KEEP_EXIT).filter((k) => k !== "CLEAN").every((k) => src.includes(`KEEP_EXIT.${k}`))
+          && !/watchdog\.mjs relaunches this daemon/.test(src));
       }
 
       // ── THE KILL IS READ TOO (wiring pass, 11 Aug 2026) ───────────────────
@@ -7023,10 +7031,11 @@ async function withTickLock(fn, deps = {}) {
 // re-reading state can refresh code. The only honest move is to retire.
 //
 // RETIRING IS SAFE, because two organs already cover the gap and both are live:
-//   · daemon_watchdog.mjs (every 10 min, LADDER D2) probes :4116, finds it DOWN
-//     and relaunches `brain.mjs daemon` through the VBS cloak — on the NEW code.
-//     Its "never kills anything, relaunch only" law is exactly why the resident
-//     has to be the one that steps down.
+//   · scripts/keeper.mjs (15 Oct 2026, forks rows 746 (2) / 753 (2)): `daemon` is
+//     the KEEPER and this loop runs under it as `daemon-worker`. A retire exits 75
+//     and the keeper respawns the worker AT ONCE, on the NEW code. (Until 28 Aug the
+//     watchdog's arm relaunched it; S9 made daemon_watchdog.mjs a reporter, and from
+//     then until the keeper a retire left :4116 dark: measured 11 Oct and 15 Oct.)
 //   · ArsenalFC-BrainTick spawns a FRESH `brain.mjs tick` every 30 min, and has
 //     always been immune to this because it is a new process every time.
 // So this is not "stop the brain" — it is "hand the brain to a process that can
@@ -7037,7 +7046,7 @@ async function withTickLock(fn, deps = {}) {
 // process's own boot instant (Date.now() - process.uptime()*1000) against each
 // source file's mtime, compared strictly. A grace period would be a guessed
 // number; the price of strictness is one extra relaunch during an editing
-// session, which the watchdog absorbs on its own schedule.
+// session, which the keeper absorbs at once (a respawn, never a gap).
 //
 // The graph is walked, not hardcoded: brain.mjs imports nikhil_model, scoreboard,
 // manager, captains_call and validators today, and a repair landing in any of
@@ -7101,7 +7110,7 @@ function buildDeps(now, argv = process.argv) {
  *  the source itself: a branch added below without a row here is a verb nobody can reach, and a
  *  row here with no branch is a verb that quietly means `tick` — which is the 28,120-token bug. */
 // law-waiver:jugad the dispatch VERB TABLE, bitten by its own selftest against main()'s branches, never a subject list (forks row 649 (0))
-export const BRAIN_MODES = ["tick", "help", "selftest", "bell", "trigger", "gate", "hold", "consumed", "tokens", "spend", "status", "run", "pulse", "daemon"];   // `hold` — the captain's hold (4 Sep 2026), the H letter's one door
+export const BRAIN_MODES = ["tick", "help", "selftest", "bell", "trigger", "gate", "hold", "consumed", "tokens", "spend", "status", "run", "pulse", "daemon", "daemon-worker"];   // `hold` — the captain's hold (4 Sep 2026), the H letter's one door
 /** isKnownMode — PURE, so the suite drives every branch without spawning anything.
  *  A leading `-` is a FLAG, never a verb: `--dry` and `--daemon` must keep reaching the dispatch. */
 export const isKnownMode = (m) => { const s = String(m == null ? "" : m).toLowerCase(); return s === "" || s.startsWith("-") || BRAIN_MODES.includes(s); };
@@ -7606,6 +7615,15 @@ async function main() {
     return;
   }
   if (mode === "daemon" || mode === "--daemon") {
+    // THE KEEPER (15 Oct 2026, forks rows 746 (2) / 753 (2), cloud/V746/SPEC_KEEPER.md). What the OS launches (the
+    // ArsenalFC-Brain service, the ArsenalFC-BrainDaemon task) is no longer the loop: keep() spawns `daemon-worker`
+    // (the loop below) and never exits on its own. Measured: the 11 Oct retire left the WinSW wrapper a zombie
+    // ("Failed to open the service control manager database"), and the 15 Oct 01:16 IST retire (acts.mjs landed)
+    // left :4116 dark, because the relaunch arm the retire line promised had been removed on 28 Aug.
+    await keep({ name: "brain", worker: [process.execPath, fileURLToPath(import.meta.url), "daemon-worker", ...process.argv.slice(3)], port: 4116, pollMs: (cfg.daemon && cfg.daemon.poll_ms) || 75000 });
+    return;
+  }
+  if (mode === "daemon-worker") {
     // THE RESIDENT PACEMAKER (P3) — the old 15-30min cron, folded into brain.mjs as a
     // ~60-90s poll. Each beat: compute the burn pace, run a tick (which self-gates every
     // job on headroom), report. It NEVER writes wake_queue — the thalamus stays the SOLE
@@ -7621,9 +7639,9 @@ async function main() {
     const { createServer: createSingleton } = await import("node:http");
     const resident = createSingleton(() => {});
     const isFirst = await new Promise((res) => { resident.once("error", () => res(false)); resident.listen(4116, "127.0.0.1", () => res(true)); });
-    if (!isFirst) { console.log("brain: --daemon ALREADY RESIDENT (:4116 held) — this instance exits instead of piling up."); return; }
+    if (!isFirst) { console.log("brain: --daemon ALREADY RESIDENT (:4116 held) — this instance exits instead of piling up."); process.exitCode = KEEP_EXIT.ALREADY_RESIDENT; return; }
     const pollMs = (cfg.daemon && cfg.daemon.poll_ms) || 75000;
-    let stop = false, beats = 0, lastPulseAt = 0;   // G5 — the pulse's seconds-pinned clock
+    let stop = false, beats = 0, lastPulseAt = 0, retired = false, apiRefused = false;   // G5 — the pulse's seconds-pinned clock
     const onSig = () => { stop = true; };
     process.on("SIGINT", onSig); process.on("SIGTERM", onSig);
     console.log(`brain: --daemon up (poll ~${Math.round(pollMs / 1000)}s) — the resident pacer. It never writes wake_queue. Ctrl-C to stop.`);
@@ -7653,7 +7671,8 @@ async function main() {
       // runs one more job with code the repo has already moved past.
       const stale = staleSources(SOURCES, BOOT_MS, (p) => statSync(p).mtimeMs);
       if (stale.length) {
-        console.log(`brain: --daemon RETIRING — booted ${new Date(BOOT_MS).toISOString()}, and ${stale.length} of its own source file(s) changed AFTER that: ${stale.map((s) => `${basename(s.path)} @ ${new Date(s.mtime_ms).toISOString()}`).join(" · ")}. An ESM process cannot reload its code, so staying up means running the OLD brain. Releasing :4116 — daemon_watchdog.mjs relaunches this daemon on the new code within its next pass (≤10 min), and ArsenalFC-BrainTick covers the 30-min lane meanwhile.`);
+        console.log(`brain: --daemon RETIRING — booted ${new Date(BOOT_MS).toISOString()}, and ${stale.length} of its own source file(s) changed AFTER that: ${stale.map((s) => `${basename(s.path)} @ ${new Date(s.mtime_ms).toISOString()}`).join(" · ")}. An ESM process cannot reload its code, so staying up means running the OLD brain. Releasing :4116 — its keeper (scripts/keeper.mjs) respawns the worker on the new code at once; run with no keeper, ArsenalFC-BrainTick covers the 30-min lane.`);
+        retired = true;
         break;
       }
       const bnow = new Date();
@@ -7670,7 +7689,7 @@ async function main() {
         const hr = headroom(cfg, readLines(LEDGER), readJson(QUEUE) || {}, bnow, bdeps.signals);
         const pace = targetBurn(cfg, hr, bnow);
         const t = await withTickLock(() => tick(cfg, bdeps));
-        if (t.refused) { console.log("brain: --daemon halting — ANTHROPIC_API_KEY refusal. Unset it and restart."); break; }
+        if (t.refused) { console.log("brain: --daemon halting — ANTHROPIC_API_KEY refusal. Unset it and restart."); apiRefused = true; break; }
         if (t.skipped) {
           console.log(`brain: beat skipped — ${t.skipped}`);   // another tick owns the window this beat
         } else {
@@ -7713,6 +7732,7 @@ async function main() {
     }
     try { resident.close(); } catch {}                 // release the singleton for the next start
     console.log(`brain: --daemon stopped after ${beats} beat(s).`);
+    process.exitCode = retired ? KEEP_EXIT.RETIRED : apiRefused ? KEEP_EXIT.REFUSED : 0;   // what the keeper reads: 75 respawn now · 78 stop · 0 a clean stop
     return;
   }
 

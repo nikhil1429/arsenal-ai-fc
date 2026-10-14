@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-10-12T19:08:44.320Z",
+ "updated_at": "2026-10-14T22:11:41.476Z",
  "tables": {
   "mechanisms": [
    {
@@ -854,6 +854,24 @@
     "consumer_kind": "organ",
     "updated_at": "2026-08-29T20:45:32.062Z",
     "added_at": "2026-08-29T20:45:32.062Z"
+   },
+   {
+    "subject": "ns_field_probes",
+    "schema_owner": "nightshift.mjs",
+    "witness": "scripts/nightshift.mjs:339 fieldProbes genLedgered(p, \"sonnet\", \"ns_field_probes\", [\"--allowedTools\", \"WebSearch\"]) · JOB 1c at :1245 · its gate header :1121-1135 lists it NOT gated (overhaul 18 Aug 2026 §5.3) · first spend 2026-10-15 02:40 IST (brain_ledger 1552-1554)",
+    "why": "feeds dugout.mjs / gaffer_brain.mjs — the sourced field bank field_probes.json: get_rejirah rides its questions beside each due concept, and the external check judges on it (§9.1). Its organ's gate header, word for word: \"NOT gated, on purpose: field_probes (its own refresh law; the sourced ground §9.1 needs)\". Whether THE GATE (L5) should reach it is an open question for his sitting (rows 764-768), not decided here.",
+    "consumers": [
+     {
+      "name": "dugout.mjs"
+     },
+     {
+      "name": "gaffer_brain.mjs"
+     }
+    ],
+    "reach": "any",
+    "consumer_kind": "organ",
+    "updated_at": "2026-10-14T22:11:41.380Z",
+    "added_at": "2026-10-14T22:11:41.380Z"
    }
   ],
   "emit_contract": [
@@ -1265,6 +1283,16 @@
     "text": "THE SITTING, 6 Oct 2026 (his answers via the question tool, one go, on the sheet of record ds506): (1) RAASTA = Poora design, all seven rungs L1-L7 plus the ten unwitnessed capabilities; (2) NOTES = now, with the others (his 'option 1 or 2, which one is best?? i do not want to compromise on quality and intensity of organism anywherre' answered by the architect: option 2; his plan haan carries it); (3) SACRIFICES = keep both: no FREEZE anywhere, the wall stays, the away-brain stays with a visible",
     "updated_at": "2026-10-06T09:20:19.926Z",
     "added_at": "2026-10-06T09:20:19.926Z"
+   },
+   {
+    "id": "rul-mv84yi1w12",
+    "at": "2026-10-14T13:18:40.097Z",
+    "scope": "architecture",
+    "by": "captain",
+    "source": "acts.design",
+    "text": "14 Oct 2026, embeddings axis f, his words: 'thoda thoda clear hua hain, will more will be cleared once we start making the project?? if yes then let's move forward'. The 1-08 FinOps repo + Supabase build must include a hands-on run: embed his vendor names with a small and a large embedding model, measure recall@k on a labelled golden set, and pick the smallest model that clears the bar — so axis f (vector size tradeoff) is cemented by doing.",
+    "updated_at": "2026-10-14T13:18:40.100Z",
+    "added_at": "2026-10-14T13:18:40.100Z"
    }
   ],
   "job_inputs": [
@@ -1602,6 +1630,27 @@
     ],
     "updated_at": "2026-08-29T20:45:32.108Z",
     "added_at": "2026-08-29T20:45:32.108Z"
+   },
+   {
+    "subject": "ns_field_probes",
+    "witness": "scripts/nightshift.mjs:343 fieldProbes — `const concepts = (deps.concepts || drillConcepts(deps))`; drillConcepts (:259) unions calibration.json's danger zone (:262) and learning_state.json (:266)",
+    "why": "THE FIELD PROBES (sonnet + WebSearch). The concepts it researches come from drillConcepts, the same two live sources the ns_probe_bank row cites and requires: calibration.json (his measured danger zone) and learning_state.json (the trends off his reps). Its own cumulative bank brain_out/nightshift/field_probes.json is read only to skip a concept fetched inside the refresh window, so it is context, never liveness.",
+    "input_class": [
+     {
+      "path": "calibration.json",
+      "required": true
+     },
+     {
+      "path": "learning_state.json",
+      "required": true
+     },
+     {
+      "path": "brain_out/nightshift/field_probes.json",
+      "required": false
+     }
+    ],
+    "updated_at": "2026-10-14T22:11:41.472Z",
+    "added_at": "2026-10-14T22:11:41.472Z"
    }
   ]
  }

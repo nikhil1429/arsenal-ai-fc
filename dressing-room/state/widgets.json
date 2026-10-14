@@ -77,6 +77,30 @@
         "audit_ts": "2026-10-12T15:01:10.165Z",
         "title": "embeddings_axis_f_real_world_cost_and_decision_stepper",
         "recorded_at": "2026-10-12T15:01:10.273Z"
+      },
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-14T12:01:04.617Z",
+        "title": "embeddings_axis_f_meaning_layers_not_computed_recall_is",
+        "recorded_at": "2026-10-14T12:01:06.301Z"
+      },
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-14T15:33:52.417Z",
+        "title": "embeddings_axis_f_sharp_check_answer_frame",
+        "recorded_at": "2026-10-14T15:33:53.279Z"
+      },
+      {
+        "session_id": "69b52e60-00a4-449d-9e68-7c4d418df3fa",
+        "audit_ts": "2026-10-14T15:34:04.145Z",
+        "title": "embeddings_axis_f_sharp_check_answer_frame",
+        "recorded_at": "2026-10-14T15:34:04.460Z"
+      },
+      {
+        "session_id": "f0ad95c1-b314-4a5c-93ed-329a0a7ab442",
+        "audit_ts": "2026-10-14T20:41:50.960Z",
+        "title": "vendor_matching_exact_vs_embedding",
+        "recorded_at": "2026-10-14T20:41:52.158Z"
       }
     ]
   }
