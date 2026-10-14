@@ -46,6 +46,10 @@
 // OWNER DISCIPLINE: this file is the sole writer of state/teaching_contract.json.
 // `print` is HOOK-SAFE — it fails silent and always exits 0. A broken teaching contract
 // must never be able to block his prompt.
+// AMENDED (rung L3, 15 Oct 2026 · forks row 550 (1)): a write that did not land is never
+// SILENT any more — every CLI verb says REFUSED on stderr and exits 1, and the two hook
+// verbs (`print`, `reset-turns`) say it on stderr while keeping exit 0 and their stdout.
+// See refusedSave() beside save().
 //
 // CLI: see USAGE at the bottom of this file — one string, printed by `default` and
 // asserted by the selftest, so a command can never again exist in the switch and be
@@ -968,6 +972,31 @@ function save(s) {
   } catch { return false; }
 }
 
+// ── THE SAVE→EXIT PAIR, FIXED (rung L3, 15 Oct 2026 · fate 05 · forks row 550 (1): "the save-then-exit
+// defect is FIXED, not kept: R's sacrifice 3 refused under fix-and-connect"; evidence learning-loop.txt:58).
+// THE SAVE HALF. save() has always answered false on a refused write — a state marked _unreadable, or an
+// atomic write that threw — and not one mutating verb read it: each printed a success line built from the
+// object it had just failed to persist, and exited 0 (only reset-pct, the newest verb, checked). So one torn
+// teaching_contract.json froze the drift lane with every surface saying it was working, and `checked`, the
+// heartbeat teaching_audit spawns, was silent even when it failed. ONE door now: a CLI verb whose write did
+// not land says REFUSED on stderr, prints NO success line, and exits 1; a hook verb (print · reset-turns)
+// says it on stderr and keeps exit 0 and its stdout — the hook-safe law above is not traded away.
+/** refusedSave — the one sentence every refused write says; the why is read off the state that was refused.
+ *  A hook verb (`{hook:true}`) keeps its own output and its exit 0, and the sentence says exactly that. */
+function refusedSave(verb, s, { hook = false } = {}) {
+  const why = s && s._unreadable ? "the file on disk could not be read, so it was not overwritten" : "the atomic write failed";
+  console.error(`teaching_contract: REFUSED — \`${verb}\` did not land on disk (${why}); nothing changed${hook ? " — the hook's own output and its exit 0 are kept (hook-safe)" : " and no success line is printed"}`);
+}
+// THE EXIT HALF. `print`'s fill gauge fell back to the HELD anchor's transcript whenever this turn's own
+// transcript could not be read — even when this turn NAMED one. A held anchor from ANOTHER session (left by a
+// reset-turns whose save was refused: the save half) then made a fresh session open at "context 811%" with the
+// line ordering the teacher to save the pointer and EXIT the session (the edge recorded inside `print`, parked
+// there as "Captain's ruling"; row 550 (1) is that ruling). The fallback now fires only on the drained-payload
+// turn it exists for: NO transcript path this turn, so the held anchor is this session's own file. A turn
+// whose own transcript is named but unreadable says "context fill UNKNOWN" out loud instead.
+/** fallbackTx — the held anchor's transcript, ONLY when this turn carries no transcript path of its own. PURE. */
+const fallbackTx = (tx, heldTx) => (!tx && heldTx ? heldTx : null);
+
 // AUDIT #107 — CLOSED MEANS LOCKED, NOT JUST TICKED ON THE SHEET.
 // This read only sprint.progress.done, and the live Sheet lists 1-01 Embeddings ·
 // 1-02 Inference · 1-03 Context — while `tokenization` has been a LOCKED, TEMPERED
@@ -1618,6 +1647,36 @@ function selftest() {
                return /preCyborg\(/.test(code) && /done_pre_restart/.test(code)
                  && !/"tokenization"|"embeddings"|"inference"|"context"/.test(code); })());
   }
+
+  // ── L3 (15 Oct 2026) · THE SAVE→EXIT PAIR, FIXED (fate 05 · forks row 550 (1); learning-loop.txt:58) ─────────
+  // Read out of this file's own dispatch (the FORCE DISCARD WIRE technique: a door can be green while the CLI stops
+  // using it), plus the two pure pieces driven both ways. Nothing here touches his teaching_contract.json.
+  {
+    const srcL3 = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const dsp = srcL3.slice(srcL3.indexOf("export function hookMain" + "() {"));
+    const calls = [...dsp.matchAll(/^.*\bsave\(.*$/gm)].map((m) => m[0]).filter((l) => !/^\s*\/\//.test(l));
+    assert("L3 · SAVE→EXIT · THE SAVE HALF — every save( in the dispatch READS its verdict (ten mutating CLI verbs, print, reset-turns, reset-pct): not one bare `save(…);` statement is left",
+      calls.length === 13 && calls.every((l) => /if \(!save\(/.test(l) || /const savedReset = save\(/.test(l)));
+    // comment lines are dropped first: `flag` keeps its FROZEN 7 Aug dispatch verbatim as a comment (L9), old console.log and all
+    const blockOf = (v) => { const a = dsp.indexOf(`  case "${v}":`); return a < 0 ? "" : dsp.slice(a, dsp.indexOf("\n  case ", a + 5)).split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n"); };
+    assert("L3 · SAVE→EXIT · a refused CLI write goes through ONE door: each mutating verb names itself to refusedSave, sets exitCode 1 and breaks BEFORE its first success line",
+      ["add", "hit", "flag", "promote-staged", "confirm", "dismiss", "autohit", "unhit-auto", "checked", "drop"].every((v) => {
+        const blk = blockOf(v); const i = blk.indexOf(`refusedSave("${v}"`); const firstLog = blk.indexOf("console.log(");
+        return i >= 0 && /^refusedSave\("[a-z-]+", res(\.state)?\); process\.exitCode = 1; break; \}/.test(blk.slice(i)) && (firstLog === -1 || firstLog > i); }));
+    assert("L3 · SAVE→EXIT · the HOOK verbs keep the hook-safe law: print and reset-turns say a refusal on stderr and never touch the exit code",
+      (() => { const p = dsp.slice(dsp.indexOf('case "print":'), dsp.indexOf('case "show":')); const r = blockOf("reset-turns");
+               return /refusedSave\("print/.test(p) && !/exitCode/.test(p) && /refusedSave\("reset-turns"/.test(r) && !/exitCode/.test(r) && /isTTY && savedReset/.test(r); })());
+    const errs = []; const ce = console.error; console.error = (m) => errs.push(String(m));
+    try { refusedSave("hit", { _unreadable: true }); refusedSave("checked", { rules: [] }); refusedSave("print (the turn clock)", { _unreadable: true }, { hook: true }); } finally { console.error = ce; }
+    assert("L3 · SAVE→EXIT · the refusal names the verb and WHY — an unreadable file is never overwritten; a failed atomic write is named as one; a CLI verb prints no success line, a hook verb says it keeps its output and exit 0",
+      errs.length === 3 && /REFUSED — `hit` did not land on disk \(the file on disk could not be read/.test(errs[0])
+      && /REFUSED — `checked` did not land on disk \(the atomic write failed\)/.test(errs[1]) && /no success line is printed/.test(errs[0]) && /no success line is printed/.test(errs[1])
+      && /REFUSED — `print \(the turn clock\)` did not land/.test(errs[2]) && /hook's own output and its exit 0 are kept/.test(errs[2]) && !/no success line/.test(errs[2]));
+    assert("L3 · SAVE→EXIT · THE EXIT HALF — fallbackTx borrows the held transcript ONLY on a turn with no transcript path of its own (the drained payload); a turn that names its own, unreadable, gets null → 'context fill UNKNOWN', never another session's 811 %",
+      fallbackTx(null, "/held.jsonl") === "/held.jsonl" && fallbackTx("/this.jsonl", "/held.jsonl") === null && fallbackTx("/this.jsonl", "/this.jsonl") === null && fallbackTx(null, null) === null);
+    assert("L3 · SAVE→EXIT · and `print` reads its fill through fallbackTx — the old `heldTx !== tx` borrow is gone from the live path",
+      (() => { const p = dsp.slice(dsp.indexOf('case "print":'), dsp.indexOf('case "show":')); return /fallbackTx\(tx, heldTx\)/.test(p) && !/heldTx && heldTx !== tx/.test(p); })());
+  }
   console.log(`\nteaching_contract selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
@@ -1655,7 +1714,7 @@ export function hookMain() { const cmd = process.argv[2], arg = process.argv[3];
       const held = storedAnchorOf(st.turns);
       const anchor = resolveAnchor(held, { tx, cc: hookSessionId(), forge: forgeStartedAt() });
       const s = bumpTurn(st, anchor);
-      save(s);
+      if (!save(s)) refusedSave("print (the turn clock)", s, { hook: true });   // L3 — said on stderr; the hook-safe exit 0 and the block below are unchanged
       // The warning rides the FILL GAUGE, not the anchor — a fork resets the anchor
       // at exactly the moment the context is fullest (audit #107).
       //
@@ -1690,9 +1749,11 @@ export function hookMain() { const cmd = process.argv[2], arg = process.argv[3];
       // "always fires" failure mode coming back. Narrowing the fallback to fire only when
       // `!tx` closes it and loses nothing that works today — NOT done here, because it is a
       // behaviour change outside the four assigned repairs. Captain's ruling.
+      // ↳ DONE 15 Oct 2026 (rung L3 · forks row 550 (1) is that ruling): fallbackTx(), beside save().
       const heldTx = (held && held.startsWith(TX_PREFIX)) ? held.slice(TX_PREFIX.length) : null;
       let fill = transcriptFill(tx, st.transcript_warn_bytes), fillPath = tx;
-      if (!fill && heldTx && heldTx !== tx) { fill = transcriptFill(heldTx, st.transcript_warn_bytes); fillPath = heldTx; }
+      const fbTx = fallbackTx(tx, heldTx);   // L3 — the save→exit pair's exit half: never another session's transcript when this turn names its own
+      if (!fill && fbTx) { fill = transcriptFill(fbTx, st.transcript_warn_bytes); fillPath = fbTx; }
       if (fill) fill.tokens = lastContextTokens(fillPath);   // forks row 277 (a) — the meter's own figure, or null ⇒ the labelled bytes proxy
       const fillUnknown = !fill && !!(tx || heldTx);   // we had something to measure and still failed
       // The staged-drift line is built INSIDE blockLines now and paid for out of the
@@ -1763,14 +1824,14 @@ export function hookMain() { const cmd = process.argv[2], arg = process.argv[3];
     }
     const res = addRule(load(), arg, line);
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
-    save(res.state);
+    if (!save(res.state)) { refusedSave("add", res.state); process.exitCode = 1; break; }   // L3 — the save→exit pair reads the verdict
     console.log(`teaching_contract: added "${arg}" (${res.state.rules.length} rules)`);
     break;
   }
   case "hit": {
     const res = hitRule(load(), arg);
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
-    save(res.state);
+    if (!save(res.state)) { refusedSave("hit", res.state); process.exitCode = 1; break; }
     const r = res.state.rules.find((x) => x.id === arg);
     console.log(`teaching_contract: "${arg}" now ${r.hits}× — it moves up the injection order`);
     break;
@@ -1782,14 +1843,14 @@ export function hookMain() { const cmd = process.argv[2], arg = process.argv[3];
     const wi = process.argv.indexOf("--why");
     const res = selfReport(load(), arg, wi >= 0 ? process.argv[wi + 1] : "", new Date(), flagStamp({ env: process.env, sitting: readSitting() }));   // THE STAMP
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
-    save(res.state);
+    if (!save(res.state)) { refusedSave("flag", res.state); process.exitCode = 1; break; }
     const r = res.state.rules.find((x) => x.id === arg);
     console.log(`teaching_contract: "${arg}" self-report auto-counted → ${r.auto_hits}× auto (${ruleWeight(r)}× total) — his 7 Aug ruling ("ok do it"): nobody is asked. Why preserved in self_reports; revert: unhit-auto ${arg}`);
     break;
   }
   case "promote-staged": {                      // one-time migration of the pre-ruling queue
     const res = promoteStaged(load());
-    save(res.state);
+    if (!save(res.state)) { refusedSave("promote-staged", res.state); process.exitCode = 1; break; }
     console.log(`teaching_contract: ${res.promoted} staged report(s) promoted as filed → auto lane (whys preserved in self_reports)${res.left ? ` · ${res.left} left (unknown rule id)` : ""}`);
     break;
   }
@@ -1797,7 +1858,7 @@ export function hookMain() { const cmd = process.argv[2], arg = process.argv[3];
     const atIdx = process.argv.indexOf("--at");  // A1: captains_call names the exact entry
     const res = confirmFlag(load(), arg, new Date(), atIdx > -1 ? process.argv[atIdx + 1] : null);
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
-    save(res.state);
+    if (!save(res.state)) { refusedSave("confirm", res.state); process.exitCode = 1; break; }
     const r = res.state.rules.find((x) => x.id === arg);
     console.log(`teaching_contract: "${arg}" confirmed → ${r.hits}× — it moves up the injection order`);
     break;
@@ -1806,7 +1867,7 @@ export function hookMain() { const cmd = process.argv[2], arg = process.argv[3];
     const atIdx = process.argv.indexOf("--at");
     const res = dismissFlag(load(), arg, atIdx > -1 ? process.argv[atIdx + 1] : null);
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
-    save(res.state);
+    if (!save(res.state)) { refusedSave("dismiss", res.state); process.exitCode = 1; break; }
     console.log(`teaching_contract: "${arg}" dismissed — a wrong self-report costs nothing`);
     break;
   }
@@ -1829,16 +1890,16 @@ export function hookMain() { const cmd = process.argv[2], arg = process.argv[3];
     const wi = process.argv.indexOf("--why");
     const res = autoHitRule(load(), arg, wi >= 0 ? process.argv[wi + 1] : "");
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
-    save(res.state);
+    if (!save(res.state)) { refusedSave("autohit", res.state); process.exitCode = 1; break; }
     const r = res.state.rules.find((x) => x.id === arg);
-    console.log(`teaching_contract: "${arg}" auto-counted → ${r.auto_hits}× auto (${ruleWeight(r)}× total) — code measured it, nobody was asked (his 6 Aug ruling). Revert: unhit-auto ${arg}`);
+    console.log(`teaching_contract: "${arg}" auto-counted →${r.auto_hits}× auto (${ruleWeight(r)}× total) — code measured it, nobody was asked (his 6 Aug ruling). Revert: unhit-auto ${arg}`);
     break;
   }
   case "unhit-auto": {                          // §7.1 reversibility — one command walks it back
     const ni = process.argv.indexOf("--n");
     const res = unhitAutoRule(load(), arg, ni >= 0 ? Number(process.argv[ni + 1]) : 1);
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
-    save(res.state);
+    if (!save(res.state)) { refusedSave("unhit-auto", res.state); process.exitCode = 1; break; }
     const r = res.state.rules.find((x) => x.id === arg);
     console.log(`teaching_contract: "${arg}" auto-count walked back → ${r.auto_hits || 0}× auto (${ruleWeight(r)}× total)`);
     break;
@@ -1846,14 +1907,17 @@ export function hookMain() { const cmd = process.argv[2], arg = process.argv[3];
   case "checked": {                             // THE HEARTBEAT — "I looked", stamped by the audit every audited turn
     const st = load();
     const res = checkedStamp(st);
-    save(res);
+    // L3 — the heartbeat was the one verb silent even when its write failed (stdout is TTY-only on the audited
+    // path): the refusal now rides stderr ALWAYS and the exit code says it, so "nothing looked" and "the disk
+    // said no" stop reading the same downstream.
+    if (!save(res)) { refusedSave("checked", res); process.exitCode = 1; break; }
     if (process.stdin.isTTY) console.log(`teaching_contract: checked_at stamped ${res.checked_at}`);
     break;
   }
   case "drop": {
     const res = dropRule(load(), arg);
     if (!res.ok) { console.error(`teaching_contract: ${res.why}`); process.exit(1); }
-    save(res.state);
+    if (!save(res.state)) { refusedSave("drop", res.state); process.exitCode = 1; break; }
     console.log(`teaching_contract: dropped "${arg}"`);
     break;
   }
@@ -1881,12 +1945,16 @@ export function hookMain() { const cmd = process.argv[2], arg = process.argv[3];
     const tx = hookTranscriptPath();
     const cc = hookSessionId();
     const id = tx ? TX_PREFIX + tx : CC_PREFIX + (cc || `local-${new Date().toISOString()}`);
-    save({ ...load(), turns: { anchor: id, anchor_kind: tx ? "tx" : "cc", count: 0, session_started_at: null, since: new Date().toISOString() } });
+    const next = { ...load(), turns: { anchor: id, anchor_kind: tx ? "tx" : "cc", count: 0, session_started_at: null, since: new Date().toISOString() } };
+    // L3 — a HOOK verb (SessionStart): a refused reset is said on stderr, exit 0 kept. This is the save half of
+    // the pair: an anchor left stale here is what the `print` fallback used to read as this session's fill.
+    const savedReset = save(next);
+    if (!savedReset) refusedSave("reset-turns", next, { hook: true });
     // SILENT IN HOOK MODE. A SessionStart hook's stdout is injected as context, and
     // "turn clock reset" is bookkeeping, not orientation — the same law
     // hooks/afferent-post.mjs:12-13 states for its own hook. A human running this by
     // hand (TTY) still gets the confirmation, and the anchor is on disk either way.
-    if (process.stdin.isTTY) {
+    if (process.stdin.isTTY && savedReset) {
       console.log(`teaching_contract: turn clock reset · anchor ${id}${(tx || cc) ? "" : " (no transcript_path or session_id on stdin — minted a local one)"}`);
     }
     break;

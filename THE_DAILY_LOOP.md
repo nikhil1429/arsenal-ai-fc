@@ -1,4 +1,5 @@
 # ⚪🔴 THE DAILY LOOP — the sitting edition
+> **Printed by code since 15 Oct 2026 (rung L3, fate 20 FOLD-INTO learnstate):** open · where am I · resume is the first act `node scripts/learnstate.mjs brief` prints at every SessionStart (its `PEHLA KAAM` line, read-only off `node scripts/resume_pointer.mjs latest`); `forge_session.mjs` writes the pointer at each stop and consumes it at `resume` / `start`. This page stays as the record; the code is the truth.
 
 > Rewritten 18 Aug 2026 (OVERHAUL Block 1, §13). The 16 KB "zero-tax edition" is verbatim at
 > `docs/archive/THE_DAILY_LOOP_2026-08-18.md` — a record, not a work order.

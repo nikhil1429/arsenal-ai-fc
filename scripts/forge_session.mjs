@@ -25,6 +25,13 @@
 //     SIDECAR, append-only. His default: a re-lock never edits a capsule (immutable,
 //     mirror.mjs is their sole writer), so the fact lives beside them and rejirah.mjs's
 //     loadCapsules layers it in memory for every reader of a capsule.
+//   · CALLS, NEVER WRITES, THE POINTER LEDGER (rung L3, 15 Oct 2026 · fate 19 KEEP, additive).
+//     resume_pointer.mjs is the SOLE WRITER of dressing-room/state/resume_pointer.jsonl. Its
+//     `write` is handed the session's own pointer at every STOP this organ has (`pointer "<q>"`,
+//     `close`, `start --force`); its `consume` runs at every OPEN (`resume`, and `start` when a
+//     pointer is open for that concept), and the consumed question is the session's FIRST line.
+//     A failed ledger write is said out loud and never changes an exit code (the history law
+//     below); forge_session.json's own `resume_pointer` is untouched by any of it.
 //   · NEVER teaches, never grades, never touches reps_log — capture.mjs owns reps.
 //     AMENDED (audit #108, 6 Aug 2026): "never touches" is now exactly NEVER WRITES.
 //     `close` READS reps_log.jsonl, one direction only, to say whether this session
@@ -83,6 +90,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";   // W0-D: pathToFileUR
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";   // LOCK-chain + topic-open spawns (outward loop, 8 Aug 2026)
 import { coreAxes } from "./registry.mjs";   // S10 #12 — per-concept core axes, ONE reader (twin literal died)
+import { write as writePointerRow, consume as consumePointerRow } from "./resume_pointer.mjs";   // L3 — the pointer ledger's SOLE WRITER; this organ only calls it
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -402,6 +410,42 @@ function setPointer(s, text, now = new Date()) {
 const pointerLine = (s) => (s && s.resume_pointer && s.resume_pointer.text)
   ? `  pointer: ${s.resume_pointer.text} (${s.resume_pointer.axis ? `axis ${s.resume_pointer.axis} · ` : ""}step ${s.resume_pointer.step} · ${s.resume_pointer.at})`
   : null;
+
+// ── L3 (15 Oct 2026) · THE STOP WRITES THE LEDGER, THE OPEN CONSUMES IT ─────────────────
+// The pointer above stays exactly what it was: forge_session.json, newest plus a capped history,
+// and daily_green's pointer step reads it there. What it never had is a RECORD — an id an open can
+// name, and a row saying an open consumed it — so a day he stopped and came back left nothing a
+// witness could count (rung L3: `RED S7 no pointer consumed`). Both now live in resume_pointer.jsonl,
+// whose SOLE WRITER is resume_pointer.mjs; this organ hands it the session's own pointer and never
+// touches the file. The writer/consumer are injectable, so the selftest never reaches his disk.
+/** ledgerPointer — the session's own pointer in the ledger's written-row shape, or null (none is invented). */
+export function ledgerPointer(s) {
+  const p = s && s.resume_pointer;
+  if (!s || !s.concept || !p || typeof p.text !== "string" || !p.text.trim()) return null;
+  return { concept: s.concept, step: Number.isInteger(p.step) ? p.step : null, axis: p.axis ?? null, question: p.text,
+    session_id: typeof s.started_at === "string" ? `forge:${s.started_at}` : null };
+}
+/** pointerAtStop — at a STOP, hand the session's own pointer to the ledger ONCE: a pointer already on the
+ *  ledger (its ledger_id stamped by the `pointer` verb) is never written a second time. */
+export function pointerAtStop(s, deps = {}) {
+  const lp = ledgerPointer(s);
+  if (!lp) return { wrote: false, why: "no pointer on this session — nothing to write (none is invented)" };
+  if (s.resume_pointer.ledger_id) return { wrote: false, why: `already on the ledger (${s.resume_pointer.ledger_id})`, id: s.resume_pointer.ledger_id };
+  const r = (deps.write || writePointerRow)(lp, deps.opts || {});
+  return r && r.ok ? { wrote: true, id: r.row.id, row: r.row } : { wrote: false, failed: true, why: (r && r.why) || "the ledger write returned nothing" };
+}
+/** pointerAtOpen — at an OPEN, consume the open pointer for THIS concept; its line is the session's first. */
+export function pointerAtOpen(concept, by, deps = {}) {
+  const r = (deps.consume || consumePointerRow)({ concept, by }, deps.opts || {});
+  if (r && r.ok && r.wrote && r.pointer) {
+    const p = r.pointer;
+    return { consumed: true, id: p.id, line: `forge_session: AGLA SAWAAL — "${p.question}" (pointer ${p.id} consumed${p.axis ? ` · axis ${p.axis}` : ""}${Number.isInteger(p.step) ? ` · step ${p.step}` : ""} · written ${p.written_at}) — ask THIS first, word for word; nothing is re-taught.` };
+  }
+  return { consumed: false, why: (r && r.why) || "the ledger consume returned nothing", line: null };
+}
+export const ledgerStopLine = (lw) => lw.wrote ? `forge_session: pointer on the ledger — ${lw.id} (the next open consumes it)`
+  : lw.failed ? `forge_session: pointer ledger write FAILED (${lw.why}) — the pointer is on forge_session.json only; no open can consume it until it lands`
+  : `forge_session: pointer ledger — ${lw.why}`;
 
 // ---------------------------------------------------------------------------
 // RESUME — the door back IN (W0-D, 2 Sep 2026 · SD-04). Canon ratified "RESUME
@@ -2434,6 +2478,63 @@ function selftest() {
                  && !/latency/.test(absent); })());
   }
 
+  // ── L3 (15 Oct 2026) · THE POINTER LEDGER — the stop writes it, the open consumes it ──────
+  // Injected writer/consumer first (no disk), then the real owner against a TEMP ledger (never his
+  // file), then the WIRE read out of this file's own source — the FORCE DISCARD WIRE technique: the
+  // helpers can be green while the CLI stops calling them, which is exactly how a pointer goes unwritten.
+  {
+    const T = new Date("2026-10-06T03:00:00.000Z");
+    const S = { ...blank("tokenization", T), step: 3, current_axis: "a" };
+    const withP = setPointer(S, "token ka id kaun deta hai — tokenizer ya model?", T).session;
+    const seen = [];
+    const fakeWrite = (row) => { seen.push(row); return { ok: true, row: { v: 1, kind: "written", id: "p-fixture", written_at: T.toISOString(), ...row } }; };
+    assert("L3 · STOP — the session's OWN pointer reaches the ledger's writer in the written-row shape: concept, step, axis, the question verbatim, session_id forge:<started_at>",
+      (() => { const r = pointerAtStop(withP, { write: fakeWrite }); const x = seen[0] || {};
+               return r.wrote === true && r.id === "p-fixture" && seen.length === 1 && x.concept === "tokenization" && x.step === 3 && x.axis === "a"
+                 && x.question === "token ka id kaun deta hai — tokenizer ya model?" && x.session_id === `forge:${T.toISOString()}`; })());
+    assert("L3 · STOP — a session with NO pointer writes nothing (none is invented), and a pointer already on the ledger is never written twice",
+      (() => { const n = seen.length; const a = pointerAtStop(S, { write: fakeWrite });
+               const b = pointerAtStop({ ...withP, resume_pointer: { ...withP.resume_pointer, ledger_id: "p-earlier" } }, { write: fakeWrite });
+               return a.wrote === false && /none is invented/.test(a.why) && b.wrote === false && /already on the ledger \(p-earlier\)/.test(b.why) && seen.length === n; })());
+    assert("L3 · STOP — a FAILED ledger write is said out loud, never reported as landed",
+      (() => { const r = pointerAtStop(withP, { write: () => ({ ok: false, why: "append failed (EACCES)" }) });
+               return r.wrote === false && r.failed === true && /FAILED \(append failed \(EACCES\)\)/.test(ledgerStopLine(r)) && !/on the ledger —/.test(ledgerStopLine(r)); })());
+    assert("L3 · OPEN — a consumed pointer becomes the session's first line: the question verbatim, its id, axis and step named",
+      (() => { const o = pointerAtOpen("tokenization", "forge_session resume", { consume: (q) => ({ ok: true, wrote: true, pointer: { id: "p-7", concept: q.concept, step: 3, axis: "a", question: "subword kyun?", written_at: T.toISOString() }, row: { of: "p-7" } }) });
+               return o.consumed && o.id === "p-7" && /^forge_session: AGLA SAWAAL — "subword kyun\?" \(pointer p-7 consumed · axis a · step 3/.test(o.line); })());
+    assert("L3 · OPEN — nothing open ⇒ NO line (no invented question) and the owner's why is kept to be said",
+      (() => { const o = pointerAtOpen("tokenization", "forge_session start", { consume: () => ({ ok: false, wrote: false, why: "no-pointer — no pointer was ever written" }) });
+               return o.consumed === false && o.line === null && /^no-pointer/.test(o.why); })());
+    // the REAL owner, on a temp ledger — end to end, no live file
+    const lp = join(tmpdir(), `forge_pointer_ledger_selftest_${process.pid}.jsonl`);
+    rmSync(lp, { force: true });
+    const w = pointerAtStop(withP, { opts: { path: lp, now: T } });
+    const o1 = pointerAtOpen("tokenization", "forge_session resume", { opts: { path: lp, now: new Date(T.getTime() + 60000) } });
+    const o2 = pointerAtOpen("tokenization", "forge_session start", { opts: { path: lp, now: new Date(T.getTime() + 120000) } });
+    const rows = existsSync(lp) ? readFileSync(lp, "utf8").trim().split("\n").map((l) => JSON.parse(l)) : [];
+    assert("L3 · END TO END (resume_pointer.mjs on a temp ledger) — the stop writes ONE row, the open consumes it with the question first, a second open consumes NOTHING; the ledger is exactly written + consumed, append-only",
+      w.wrote && o1.consumed && /AGLA SAWAAL — "token ka id kaun deta hai — tokenizer ya model\?"/.test(o1.line) && o2.consumed === false && /^already-consumed/.test(o2.why)
+      && rows.length === 2 && rows[0].kind === "written" && rows[0].id === w.id && rows[1].kind === "consumed" && rows[1].of === rows[0].id && rows[1].by === "forge_session resume"
+      && !rows.some((r) => "written_at" in r && "consumed_at" in r));
+    rmSync(lp, { force: true });
+    // THE WIRE — each case block of the dispatch, read out of this file's own source
+    const srcL3 = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const dsp = srcL3.slice(srcL3.indexOf("switch (mode" + ") {"));
+    const caseOf = (verb) => { const a = dsp.indexOf(`    case "${verb}":`); if (a < 0) return ""; const b = dsp.indexOf('\n    case "', a + 8); return dsp.slice(a, b < 0 ? undefined : b); };
+    const before = (blk, x, y) => blk.indexOf(x) >= 0 && blk.indexOf(y) > blk.indexOf(x);
+    assert("L3 · WIRE — the three STOPS call pointerAtStop: `pointer` (and stamps the ledger id), `close` (on the recording close), `start --force` (the discarded session's own pointer)",
+      /pointerAtStop\(sP\)/.test(caseOf("pointer")) && /ledger_id: lw\.id/.test(caseOf("pointer"))
+      && /lwClose = pointerAtStop\(s\)/.test(caseOf("close")) && /pointerAtStop\(prev\)/.test(caseOf("start")));
+    assert("L3 · WIRE — the two OPENS consume and print the question BEFORE the session's oneLine: `resume` and `start`",
+      before(caseOf("resume"), 'pointerAtOpen(r.session.concept, "forge_session resume")', "console.log(oneLine(r.session))")
+      && before(caseOf("resume"), "if (po.line) console.log(po.line)", "console.log(oneLine(r.session))")
+      && before(caseOf("start"), 'pointerAtOpen(s.concept, "forge_session start")', "console.log(oneLine(s))")
+      && before(caseOf("start"), "if (po.line) console.log(po.line)", "console.log(oneLine(s))"));
+    assert("L3 · THE SOLE-WRITER LINE STAYS TRUE — this file never builds the ledger's path or appends to it; it imports the owner's write/consume and nothing else of it",
+      !/join\([^)]*["'`]resume_pointer\.jsonl["'`]/.test(srcL3) && /import \{ write as writePointerRow, consume as consumePointerRow \} from "\.\/resume_pointer\.mjs"/.test(srcL3)
+      && srcL3.includes("SOLE WRITER of dressing-room/state/forge_session.json. Nothing else writes it."));
+  }
+
   console.log(`\nforge_session selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
@@ -2662,9 +2763,12 @@ export async function hookMain() {
           ...(d ? { teaching_drifts: d } : {}),
         }, HISTORY, new Date(), fbank);
         for (const l of forceDiscardLines(prev, recorded, cov)) console.log(l);
+        console.log(ledgerStopLine(pointerAtStop(prev)));   // L3 — a discard is a STOP: the discarded session's own pointer reaches the ledger first
       }
       const s = blank(concept);
       save(s);
+      const po = pointerAtOpen(s.concept, "forge_session start");   // L3 — an OPEN: a pointer open for THIS concept is consumed…
+      if (po.line) console.log(po.line);                            // …and its question is the session's first line
       console.log(oneLine(s));
       // TOPIC-OPEN SCOUTING (Ruling 6 layer 2, 8 Aug 2026): stage the T-mission
       // the moment a concept opens — prevent at open, validate at lock. Fail-silent:
@@ -2800,6 +2904,11 @@ export async function hookMain() {
       const sP = apply(setPointer(cur, text));
       console.log(oneLine(sP));
       console.log(pointerLine(sP));
+      // L3 — this IS the stop: the session's own pointer goes to the ledger's sole writer, and its id is
+      // stamped on the pointer so `close` / `start --force` never write the same stop a second time.
+      const lw = pointerAtStop(sP);
+      if (lw.wrote) save({ ...sP, resume_pointer: { ...sP.resume_pointer, ledger_id: lw.id } });
+      console.log(ledgerStopLine(lw));
       break;
     }
     case "lockchain": {
@@ -2818,6 +2927,8 @@ export async function hookMain() {
       if (!r.ok) { console.error("forge_session: " + r.error); process.exit(1); }
       save(r.session);
       const last = r.session.resumes[r.session.resumes.length - 1];
+      const po = pointerAtOpen(r.session.concept, "forge_session resume");   // L3 — the open consumes the pointer…
+      if (po.line) console.log(po.line);                                      // …and its question is the session's FIRST line
       console.log(oneLine(r.session));
       console.log(`forge_session: RESUMED '${r.session.concept}' after ${last.after_h === null ? "an unmeasurable gap" : last.after_h + "h"} — the pacer is speaking again.`);
       // The pointer is the whole point of the verb: it says where he was, in the
@@ -2827,6 +2938,7 @@ export async function hookMain() {
         + (r.session.current_axis ? ` · ON axis ${r.session.current_axis}` : "")
         + ` · left ${left.join("") || "—"} — do NOT re-teach ${r.session.axes_done.join("") || "the done axes"}.`);
       { const pl = pointerLine(r.session); if (pl) console.log(pl); }   // row 68 (b): the exact question where he stopped, if the teacher wrote it
+      if (!po.consumed) console.log(`  pointer ledger: nothing consumed — ${po.why}`);   // L3 — said, never silent
       break;
     }
     case "status": { const s = load(); if (s) { console.log(oneLine(s)); const pl = pointerLine(s); if (pl) console.log(pl); } break; }
@@ -2933,6 +3045,7 @@ export async function hookMain() {
       const reps = repsBanked(s.started_at);
       console.log(JSON.stringify(cov, null, 2));
       let recorded = null;                  // F5 (9 Aug): the "recorded" line stops asserting what it never checked
+      let lwClose = null;                   // L3 — the close is a STOP: its pointer-ledger verdict, said with the report
       if (shouldRecordClose(s)) {           // RECORD BEFORE REFUSE · double-close appends once
         // LR-04 (W0-D, 2 Sep 2026): the rep count was computed right here and printed to
         // a terminal, and that was the whole of it — forge_sessions.jsonl carried no rep
@@ -2948,6 +3061,7 @@ export async function hookMain() {
           reps_log_present: !!(reps && reps.present),
         }, HISTORY, new Date(), bank);
         save({ ...s, closed_at: nowISO() });
+        lwClose = pointerAtStop(s);         // L3 — once, on the recording close only (a double close writes nothing new)
       }
       // ALWAYS printed — never gated on failure. The draft printed this block only
       // when something was wrong, which quietly made "make the report say clean" the
@@ -2996,6 +3110,7 @@ export async function hookMain() {
         : recorded === null
           ? `forge_session: already closed earlier — nothing re-recorded (the history line exists)`
           : `forge_session: recorded to ${HISTORY}`);
+      if (lwClose) R.push(ledgerStopLine(lwClose));
       console.log(R.join("\n"));
       break;
     }

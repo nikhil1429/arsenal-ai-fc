@@ -11,6 +11,8 @@
 // READS (all read-only, defensive): sprint.json (curriculum + live progress),
 //   working_set.json (the distiller's 4-slot memory), weaknesses.json (watch-list).
 //   Writes NOTHING (single-writer law intact).
+//   L3 (15 Oct 2026): also READS dressing-room/state/resume_pointer.jsonl through its owner
+//   (resume_pointer.mjs `latest`) for the first act — never `consume`; every day key here is IST.
 // ROUTING: current.track 'concept' -> FORGE (9-axis) · 'skill' (Python) -> the
 //   JS->Python 5-phase loop (Claude learn -> Colab -> Coach Gem + CLOSE-PACKET).
 // MODES: brief (default — for the SessionStart hook) · json · selftest
@@ -23,7 +25,8 @@ import { courseBrief, fmtStamp } from "./course.mjs";   // audit #35 — the cou
 import { pythonBrief } from "./python_state.mjs";   // audit #107 #26 — the Python track's one reader
 import { loadCapsules, readLog, pendingCloses, openRound, intervalsOf } from "./rejirah.mjs";   // #107 pass 2 — un-pasted rounds; P7.B — the arbiter's live overdue read
 import { loadFreshDrill } from "./examiner.mjs";   // 11 Aug 2026 dead-wire sweep — the drill's age gate belongs to its owner (see nextup)
-import { isStale as forgeIsStale } from "./forge_session.mjs";   // W0-D — the PEHLA KAAM line asks the pacer whether its session is stale, instead of re-deriving it
+import { isStale as forgeIsStale, STEPS as FORGE_STEPS } from "./forge_session.mjs";   // W0-D — the PEHLA KAAM line asks the pacer whether its session is stale, instead of re-deriving it · L3 — "STEP n/N" from the pacer's own list
+import { latest as latestPointer, istDay } from "./resume_pointer.mjs";   // L3 (15 Oct 2026) — the pointer ledger, READ-ONLY here (`latest`, never `consume`) · the ONE IST day key
 import { derivedFloor } from "./sprintsync.mjs";   // A4 (4 Sep 2026) — the SYLLABUS FLOOR belongs to sprint.json's owner; this file reads it, it does not re-derive it
 import { starvedNightFor, recordConsumption, consumptionRows } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep — WHY the diary page is blank, in the brain's own words (see diaryLine) · recordConsumption: THE GATE's "briefed" stamp (18 Aug 2026), owner-held
 
@@ -496,7 +499,50 @@ function gather(dir = STATE, now = Date.now()) {
   const modeLine = cur
     ? (MODE_BY_TRACK[cur.track] || "SESSION — read the task and decide what it needs; force no ritual.")
     : "no current task in sprint.json";
-  return { sprint, ws, cur, watch, modeLine, wsAge };
+  // L3 · fate 07 — the json door (`learnstate.mjs json`, which the learn skill's orient step reads) serves the honest
+  // split beside the sheet's own record: `done` is never rewritten; `learned` is `done` minus the sheet's own label.
+  return { sprint, ws, cur, watch, modeLine, wsAge, learned: learnedOf(sprint), pre_restart: preRestartOf(sprint) };
+}
+
+// ── L3 (15 Oct 2026) · OPEN, WHERE AM I, RESUME — the first act, from code ──────────────
+// EVERY DAY KEY THIS FILE COMPUTES IS IST (Asia/Kolkata), NEVER UTC (fate 18, learning-loop.txt:47): the briefed
+// stamp and the FSRS freshness check keyed `toISOString().slice(0, 10)`, so between 00:00 and 05:30 IST "today"
+// was yesterday — a lane briefed at 00:10 and again at 06:00 wrote two rows. ONE home for the key: resume_pointer.mjs
+// istDay, the rung witness's own K. (`ncLocalDate` below is not a UTC key: it follows its producers' local-date
+// file names and is left as it is.)
+const dayKeyIST = (/** @type {*} */ t) => istDay(t);
+const isDayKey = (/** @type {*} */ s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ""));
+// THE POINTER LEDGER, READ-ONLY: `latest`, NEVER `consume`. SessionStart also opens engineering sessions, so a
+// kickoff that consumed would spend his question on a session that never asked it; the opens that consume are
+// forge_session's (`resume`, `start`). Read through the owner, never a second reader of the file.
+const pointerOf = (/** @type {string} */ dir, /** @type {string|null} */ concept) => latestPointer({ path: join(dir, "resume_pointer.jsonl"), concept });
+/** whereLine — "you are here, this much is left", from code: STEP n/N and its name, the current axis, axes done / left. PURE.
+ *  @param {{concept?: string, step?: number, current_axis?: string|null, axes_done?: string[], axes_deferred?: string[]}} pos */
+export function whereLine(pos) {
+  const AX = "abcdefghi".split("");
+  const st = pos ? pos.step : undefined;
+  const step = typeof st === "number" && Number.isInteger(st) && st >= 0 && st < FORGE_STEPS.length ? st : null;
+  const ad = pos && Array.isArray(pos.axes_done) ? pos.axes_done : null;
+  const known = !!ad;
+  const done = ad ? ad.filter((a) => AX.includes(a)) : [];
+  const def = pos && Array.isArray(pos.axes_deferred) ? pos.axes_deferred.filter((a) => AX.includes(a)) : [];
+  const left = AX.filter((a) => !done.includes(a));
+  return `you are here: ${(pos && pos.concept) || "?"} · STEP ${step === null ? "?" : `${step}/${FORGE_STEPS.length - 1} ${FORGE_STEPS[step]}`}`
+    + (pos && pos.current_axis ? ` · ON axis ${pos.current_axis}` : "")
+    + (known ? ` · this much is left: axes done ${done.length}/${AX.length} (${done.join("") || "—"}) · left ${left.length} (${left.join("") || "—"})${def.length ? ` · deferred ${def.join("")}` : ""}`
+      : " · this much is left: UNKNOWN (no axis record)");
+}
+// fate 07 — THE SHEET'S OWN LABEL IS READ HERE. sprintsync's `done_pre_restart` (W0-B) names the done-claims GAME ON
+// withdrew, in the sheet's own words, and until L3 learnstate never read it (outward.txt:11). It is a subset of
+// `done`, string for string, so it is read as written: what may be served as LEARNED is `done` minus the label.
+const preRestartOf = (/** @type {*} */ sprint) => { const p = sprint && sprint.progress; return Array.isArray(p && p.done_pre_restart) ? /** @type {unknown[]} */ (p.done_pre_restart).map((d) => String(d).trim()).filter(Boolean) : []; };
+const learnedOf = (/** @type {*} */ sprint) => { const p = sprint && sprint.progress; const pre = new Set(preRestartOf(sprint)); return /** @type {unknown[]} */ (Array.isArray(p && p.done) ? p.done : []).map((d) => String(d).trim()).filter((d) => d && !pre.has(d)); };
+/** briefedOn — PURE: the lanes already stamped `briefed` on IST day `day` (recordBriefed's one-row-per-lane-per-day rule).
+ *  @param {any[]} rows @param {string|null} day */
+export function briefedOn(rows, day) {
+  const s = new Set();
+  for (const r of rows || []) { if (!r || r.kind !== "briefed" || dayKeyIST(r.ts) !== day) continue; const k = r.job || r.lane; if (k) s.add(k); }
+  return s;
 }
 
 // ---------------------------------------------------------------------------
@@ -591,9 +637,18 @@ export function nextup(dir = STATE, now = Date.now()) {
     // micro-question at every stop; the ONE line he reads at kickoff carries it, so PEHLA KAAM
     // names the question and not just the step (his 11 Aug law: nothing he must remember).
     // Read, never derived; no pointer on disk = nothing invented. Capped like the boot line.
-    const ptr = forge.resume_pointer && typeof forge.resume_pointer.text === "string" ? forge.resume_pointer.text.trim() : "";
+    // L3 (15 Oct 2026) — THE FIRST ACT READS THE POINTER LEDGER FIRST, READ-ONLY. A pointer the ledger holds OPEN
+    // is the question; a newest pointer the ledger shows CONSUMED is never re-served (nothing repeated — not even
+    // the session file's copy of it); the session file's own pointer answers only for a concept the ledger has
+    // never seen (a session older than the ledger). Then "you are here, this much is left", from code.
+    const led = pointerOf(dir, forge.concept);
+    const legacy = forge.resume_pointer && typeof forge.resume_pointer.text === "string" ? forge.resume_pointer.text.trim() : "";
+    const ptr = led.pointer ? led.pointer.question : (led.newest ? "" : legacy);
     const ptrTag = ptr ? ` · agla sawaal: "${ptr.length > 140 ? ptr.slice(0, 137) + "…" : ptr}"` : "";
-    return winnerOf("forge-open", line + ptrTag, "ek khula loop sab kuch rok deta hai — pehle woh", losers);
+    const ledTag = led.pointer
+      ? ` (ledger pointer ${led.pointer.id} — the open consumes it: ${stale ? "`resume` prints it as its first line" : `\`node scripts/resume_pointer.mjs consume --concept ${forge.concept} --by learn\``})`
+      : led.newest && led.consumed ? ` · ledger pointer ${led.newest.id} was consumed ${dayKeyIST(led.consumed.consumed_at)} — never ask it again; open with ONE fresh micro-question where he stopped` : "";
+    return winnerOf("forge-open", line + ptrTag + ledTag + ` · ${whereLine(forge)}`, "ek khula loop sab kuch rok deta hai — pehle woh", losers);
   }
   if (pend.length) {
     return winnerOf("rejirah-pending", `gist paste: ${pend.slice(0, 2).map((p) => `${p.concept} R${p.round}`).join(" · ")} — \`node scripts/rejirah.mjs pending\` se patch lo`,
@@ -604,8 +659,20 @@ export function nextup(dir = STATE, now = Date.now()) {
     return winnerOf("rejirah-due", `Re-Jirah R${o.round} '${o.concept}' (${o.overdue_days}d ripe) — shuru: \`node scripts/deep.mjs due\`, grade: \`node scripts/rejirah.mjs grade\``,
       "proof purana ho raha hai — jo June mein seekha uska aakhri saboot lock-day ka hai", losers.filter((l) => l.name !== "rejirah-due"));
   }
+  // L3 · fate 07 — A PRE-RESTART TOPIC IS NEVER SERVED AS LEARNED. Until L3 this rung named the sheet's next topic
+  // as "plan of record" while the headline (A4) named the FLOOR on the same screen, so the first act stepped past
+  // the topics GAME ON re-opened as if they were learned. A4's own law is applied here too: the floor (his override,
+  // else the capsules — floorOf) outranks the sheet's row, and the sheet's OWN label (`done_pre_restart`, read since
+  // L3) is named as NOT learned. With no floor and no label this rung is silent and the sheet's rung is unchanged.
+  const pre = preRestartOf(sprint);
+  const preTag = pre.length ? ` · sheet ke DONE mein pre-restart, seekhe hue NAHI (GAME ON 30 Aug): ${pre.join(" · ")}` : "";
+  const fl = floorOf(dir, sprint);
+  if (fl) {
+    return winnerOf("floor", `FLOOR ${fl.concept} [${fl.why}] — \`node scripts/forge_session.mjs start ${fl.concept}\`${cur ? ` · uske baad sheet ka ${cur.id} ${cur.task}` : ""}${preTag}`,
+      "jo re-open hua woh seekha hua nahi — pehle floor, phir sheet ka agla", losers);
+  }
   if (cur) {
-    return winnerOf("sprint", `${cur.id} ${cur.task} [${cur.track}] — plan of record`, "koi khula loop nahi, koi overdue proof nahi — ab aage ka kaam", losers.filter((l) => l.name !== "sprint"));
+    return winnerOf("sprint", `${cur.id} ${cur.task} [${cur.track}] — plan of record${preTag}`, "koi khula loop nahi, koi overdue proof nahi — ab aage ka kaam", losers.filter((l) => l.name !== "sprint"));
   }
   if (exam && exam.concept) {
     // the date rides ON the card now: this slot dispatches him to work, and the one
@@ -664,8 +731,9 @@ function fsrsDue(dir, now = Date.now()) {
   try {
     const c = JSON.parse(readStateText(dir, "cards.json"));
     if (!c || typeof c.due_today !== "number") return null;
-    const day = new Date(now).toISOString().slice(0, 10);
-    return { due: c.due_today, overdue: typeof c.overdue === "number" ? c.overdue : null, stale: String(c.date || "").slice(0, 10) !== day, date: c.date || null };
+    const day = dayKeyIST(now);   // L3 — IST, never the UTC slice (between 00:00 and 05:30 IST that called today's count stale)
+    const cday = isDayKey(c.date) ? String(c.date) : dayKeyIST(c.date);   // a bare day key is taken as written; an instant is keyed to IST
+    return { due: c.due_today, overdue: typeof c.overdue === "number" ? c.overdue : null, stale: cday !== day, date: c.date || null };
   } catch { return null; }
 }
 /** studyBlock — the lines a session that is MID-CONCEPT needs, in the order it needs
@@ -733,10 +801,23 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   // "FLOOR tokenization" on line 1 and "ON axis a of embeddings" three lines later.
   const HEADLINE = STUDYING ? { concept: STUDYING.concept, why: "khuli hui session — wahin se aage" } : FLOOR;
   L.push("=== ARSENAL — SESSION KICKOFF (auto · session-agnostic · read from state, not chat) ===");
+  // L3 (15 Oct 2026) — THE ARBITER NO LONGER RUNS ONLY INSIDE `if (cur)` (learning-loop.txt:47: "THE ARBITER IS
+  // UNREACHABLE WITHOUT A SPRINT"). Its own rung 1 is the open forge session, so a morning with no sheet row was
+  // exactly the morning the first act went silent. Decided ONCE here, placed by the branches below: one PEHLA KAAM
+  // line whatever the sheet says, and it is the pointer's question when one is open (nextup reads the ledger).
+  const FIRST_ACT = (() => {
+    try {
+      const nu = nextup(dir, now);
+      return nu && nu.winner && nu.winner.name !== "none"
+        ? `  ▶ PEHLA KAAM: ${nu.winner.line}  (kyun: ${nu.winner.why}${nu.contenders.length ? ` · haara: ${nu.contenders.map((c) => c.name).join(", ")} — poora: \`node scripts/learnstate.mjs nextup\`` : ""})`
+        : null;
+    } catch { return null; }   // a brief must never be the thing that breaks SessionStart
+  })();
   if (!cur && HEADLINE) {
     // The sheet has no current task, but HE does. Before today this branch printed
     // "sprint.json has no current task — run the sprint sync" and nothing else.
     L.push(`LEARNING NOW: ${STUDYING ? "" : "FLOOR "}${HEADLINE.concept} [${HEADLINE.why}] — sheet pe koi current task nahi hai (\`node scripts/sprintsync.mjs\`), par yeh khula hai`);
+    if (FIRST_ACT) L.push(FIRST_ACT);   // L3 — the first act speaks with no sheet row
     try { for (const l of studyBlock(STUDYING || { step: 0, axes_done: [], axes_deferred: [] }, fsrsDue(dir, now))) L.push(l); } catch { /* orientation, never a crash */ }
   }
   if (cur) {
@@ -755,10 +836,8 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     L.push(`  MODE: ${modeLine}`);
     // P7.B (7 Aug 2026) — ONE decision, made in code, so the kickoff never again
     // hands him a menu of six competing opinions. Fail-silent like every splice here.
-    try {
-      const nu = nextup(dir, now);
-      if (nu && nu.winner && nu.winner.name !== "none") L.push(`  ▶ PEHLA KAAM: ${nu.winner.line}  (kyun: ${nu.winner.why}${nu.contenders.length ? ` · haara: ${nu.contenders.map((c) => c.name).join(", ")} — poora: \`node scripts/learnstate.mjs nextup\`` : ""})`);
-    } catch { /* a brief must never be the thing that breaks SessionStart */ }
+    // L3: decided once above the branches (FIRST_ACT); its place in this branch is unchanged.
+    if (FIRST_ACT) L.push(FIRST_ACT);
     // A5 — THE STUDY BLOCK SITS HERE, directly under "where he is" and above every
     // sheet/course/python line, because a session that is MID-CONCEPT needs step, axis
     // and what is left before it needs anything else on this screen.
@@ -867,6 +946,7 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
     }
   } else {
     L.push("LEARNING NOW: (sprint.json has no current task — run the sprint sync)");
+    if (FIRST_ACT && !HEADLINE) L.push(FIRST_ACT);   // L3 — no sheet row and no headline: the arbiter still speaks, once
   }
   if (ws.where_left_off) L.push(`LAST SESSION${wsTag}: ${clip(ws.where_left_off, 180)}`);
   if (ws.open_loop) L.push(`OPEN LOOP (still hanging)${wsTag}: ${clip(ws.open_loop, 180)}`);
@@ -1578,6 +1658,70 @@ function selftest() {
       (() => { for (const id of ["tokenization", "embeddings"]) W(`capsules/${id}.json`, { id, num: id === "tokenization" ? "01" : "02", title: id, lockedOn: "2026-06-15", relockedOn: "2026-09-03", faultLines: [], doubts: [] });
                const o = brief(d, NOW); return !/FLOOR/.test(o) && /LEARNING NOW: 1-04 Hallucinations/.test(o); })());
   }
+
+  // ── L3 (15 Oct 2026) · OPEN, WHERE AM I, RESUME — on FIXTURE state dirs, never his ──────────────
+  {
+    const d = mkdtempSync(join(tmpdir(), "ls-l3-"));
+    const W = (/** @type {string} */ n, /** @type {*} */ o) => { mkdirSync(dirname(join(d, n)), { recursive: true }); writeFileSync(join(d, n), typeof o === "string" ? o : JSON.stringify(o)); };
+    const NOW = Date.parse("2026-10-06T03:00:00.000Z");   // 08:30 IST, 6 Oct
+    const hAgo = (/** @type {number} */ h) => new Date(NOW - h * 3600000).toISOString();
+    const LIVE = { concept: "tokenization", step: 3, current_axis: "b", closed_at: null, started_at: hAgo(30), updated_at: hAgo(20),
+      steps_done: [0, 1, 2, 3], axes_done: ["a"], axes_deferred: ["c"], question_moments: {},
+      resume_pointer: { text: "the session file's own copy", step: 3, axis: "b", at: hAgo(21) } };
+    W("forge_session.json", LIVE);
+    W("sprint.json", { sprints: [], progress: { synced_at: new Date(NOW).toISOString(), current: null, done: [], next_up: [] } });
+    const ledger = join(d, "resume_pointer.jsonl");
+    const written = JSON.stringify({ v: 1, kind: "written", id: "p-open", written_at: hAgo(21), concept: "tokenization", step: 3, axis: "b", question: "Word-level itna simple hai — toh subword kyun?", session_id: `forge:${hAgo(30)}` }) + "\n";
+    W("resume_pointer.jsonl", written);
+    const b = brief(d, NOW);
+    const pk = b.split("\n").filter((l) => l.includes("PEHLA KAAM"));
+    assert("L3 · THE ARBITER IS NO LONGER ONLY INSIDE if (cur) — with NO sheet row and an open session, brief() prints exactly ONE PEHLA KAAM line (learning-loop.txt:47)",
+      pk.length === 1 && /resume/.test(pk[0]));
+    assert("L3 · THE FIRST ACT IS THE POINTER — the ledger's OPEN question (never the session file's copy) and its id, then 'you are here … this much is left' from code: STEP n/11 and its name, the axis, axes done k/9 and left",
+      pk.length === 1 && pk[0].includes('agla sawaal: "Word-level itna simple hai — toh subword kyun?"') && pk[0].includes("ledger pointer p-open") && !pk[0].includes("the session file's own copy")
+      && /you are here: tokenization · STEP 3\/11 SAMJHAO · ON axis b · this much is left: axes done 1\/9 \(a\) · left 8 \(bcdefghi\) · deferred c/.test(pk[0]));
+    assert("L3 · THE KICKOFF NEVER CONSUMES — brief() and nextup() leave the ledger byte-identical, no consumed row (SessionStart also opens engineering sessions)",
+      readFileSync(ledger, "utf8") === written && (nextup(d, NOW), readFileSync(ledger, "utf8") === written) && !/"kind":"consumed"/.test(readFileSync(ledger, "utf8")));
+    // an open consumed it (forge_session's verb appends that row; here a fixture of its shape) → nothing is repeated
+    W("resume_pointer.jsonl", written + JSON.stringify({ v: 1, kind: "consumed", id: "c-1", of: "p-open", consumed_at: hAgo(1), by: "forge_session resume" }) + "\n");
+    const after = nextup(d, NOW).winner.line;
+    assert("L3 · NOTHING REPEATED — once the ledger's newest pointer is consumed, the first act re-serves neither it nor the session file's copy, and says to open with a fresh micro-question",
+      !after.includes("agla sawaal") && /ledger pointer p-open was consumed 2026-10-06/.test(after) && /fresh micro-question/.test(after));
+    W("resume_pointer.jsonl", "");
+    assert("L3 · A SESSION OLDER THAN THE LEDGER — with no ledger row for the concept, the session file's own pointer still answers (row 69 (3) unchanged)",
+      nextup(d, NOW).winner.line.includes('agla sawaal: "the session file\'s own copy"'));
+    // IST, never UTC
+    const IST0010 = Date.parse("2026-10-05T18:40:00.000Z");   // 00:10 IST on 6 Oct; the UTC slice says 5 Oct
+    const rowsB = [{ kind: "briefed", job: "diary", ts: "2026-10-05T18:20:00.000Z" }, { kind: "briefed", job: "night_coach", ts: "2026-10-05T18:40:00.000Z" }];
+    assert("L3 · EVERY DAY KEY IS IST — briefedOn keys 18:40Z (00:10 IST) to 6 Oct and 18:20Z (23:50 IST) to 5 Oct; the old UTC slice called both 5 Oct",
+      [...briefedOn(rowsB, "2026-10-06")].join() === "night_coach" && [...briefedOn(rowsB, "2026-10-05")].join() === "diary");
+    W("cards.json", { date: "2026-10-06", total_cards: 9, due_today: 2, overdue: 0 });
+    assert("L3 · EVERY DAY KEY IS IST — at 00:10 IST the FSRS count written for that IST day reads as TODAY's, not stale (the UTC key called it yesterday's)",
+      (() => { const f = fsrsDue(d, IST0010); return !!f && f.stale === false && f.due === 2; })());
+    // fate 07 — the sheet's own label is READ
+    const SP3 = { sprints: [], progress: { synced_at: new Date(NOW).toISOString(), current: { id: "1-04", task: "Hallucinations", track: "concept" }, next_up: [],
+      done: ["1-01 Embeddings (finish)", "1-02 Inference & sampling", "1-00 Python warmup"], done_pre_restart: ["1-01 Embeddings (finish)", "1-02 Inference & sampling"] } };
+    W("sprint.json", SP3);
+    W("forge_session.json", { ...LIVE, closed_at: hAgo(2) });
+    W("capsules/embeddings.json", { id: "embeddings", num: "02", title: "Embeddings", lockedOn: "2026-06-21", faultLines: [], doubts: [] });
+    const g = gather(d, NOW);
+    const nf = nextup(d, NOW);
+    assert("L3 · fate 07 — the sheet's OWN done_pre_restart is READ: gather() serves learned = done minus the label, his `done` untouched beside it",
+      JSON.stringify(g.learned) === JSON.stringify(["1-00 Python warmup"]) && g.pre_restart.length === 2 && g.sprint.progress.done.length === 3);
+    assert("L3 · fate 07 — A PRE-RESTART TOPIC IS NEVER SERVED AS LEARNED: the first act is the FLOOR (A4's law), not the sheet's next topic, and it names the label's topics as NOT learned",
+      nf.winner.name === "floor" && /FLOOR embeddings/.test(nf.winner.line) && /seekhe hue NAHI/.test(nf.winner.line) && nf.winner.line.includes("1-01 Embeddings (finish)")
+      && nf.contenders.some((/** @type {*} */ c) => c.name === "sprint"));
+    // re-locked YESTERDAY, so its R1 (3 days on) is not yet due and no Re-Jirah round outranks the sheet's rung
+    W("capsules/embeddings.json", { id: "embeddings", num: "02", title: "Embeddings", lockedOn: "2026-06-21", relockedOn: "2026-10-05", faultLines: [], doubts: [] });
+    assert("L3 · fate 07 — with no floor (the capsule re-locked), the sheet's own label still reaches the plan-of-record line — never silently stepped past",
+      (() => { const n = nextup(d, NOW); return n.winner.name === "sprint" && /plan of record/.test(n.winner.line) && /seekhe hue NAHI/.test(n.winner.line); })());
+    // THE WIRE — what this file imports from the ledger, and the UTC keys that are gone (comments stripped)
+    const srcL3 = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const code = srcL3.slice(0, srcL3.indexOf("function selftest()")).split("\n").map((l) => l.replace(/\/\/.*$/, "")).join("\n");
+    const imp = (code.match(/import \{[^}]*\} from "\.\/resume_pointer\.mjs";/) || [""])[0];
+    assert("L3 · WIRE — learnstate imports ONLY `latest` (and istDay) from the pointer ledger, never `consume`; no UTC day key (toISOString().slice(0, 10)) is left in its code",
+      /latest as latestPointer/.test(imp) && !/consume/.test(imp) && !/toISOString\(\)\.slice\(0, ?10\)/.test(code) && !/String\(r\.ts \|\| ""\)\.slice\(0, ?10\)/.test(code));
+  }
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -1677,14 +1821,11 @@ function recordBriefed(text) {
   try {
     if (process.env.ARSENAL_ORGAN === "1") return;        // an organ certifying itself is not evidence
     const t = String(text || "");
-    const day = new Date().toISOString().slice(0, 10);
+    const day = dayKeyIST(Date.now());   // L3 — the IST day (learning-loop.txt:47: the UTC key rolled at 05:30 IST and doubled early-morning rows)
     // read-only; brain.mjs stays the sole writer of consumption.jsonl
-    const already = new Set();
+    let already = new Set();
     try {
-      for (const r of consumptionRows()) {
-        if (!r || r.kind !== "briefed" || String(r.ts || "").slice(0, 10) !== day) continue;
-        const k = r.job || r.lane; if (k) already.add(k);
-      }
+      already = briefedOn(consumptionRows(), day);
     } catch { /* an unreadable ledger must not stop the stamp — it degrades to the old behaviour */ }
     const once = (evt) => { const k = evt.job || evt.lane; if (k && already.has(k)) return; if (k) already.add(k); recordConsumption({ ...evt, by: "learnstate brief (SessionStart · interactive)" }); };
     if (t.includes("🌙 NIGHT COACH")) once({ job: "night_coach", kind: "briefed" });
