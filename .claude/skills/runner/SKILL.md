@@ -109,6 +109,7 @@ scope sentence cut from row 437.
   own output, so keep the build well under the fleet's cap.
 - **THE PAUSE** (row 136 (1)) — a code path, below.
 - **THE POOL IS HIS PANEL** — recorded whenever he posts one, never asked inside a window.
+- **THE HEARTBEAT** (rows 628 (3) / 684 (4) / 693) — `node tools/roles.mjs heartbeat runner --me "<name>"` (lanes V and M add `--lane V` / `--lane M`) at every ledger row this session writes and every 20 min in a hold, so a STALE line means absent, not busy; the 20-min loop is a background shell that Claude Code can reap on low memory, and then a heartbeat by hand with each row is the ruled fallback.
 - **HIS WORD OUTRANKS EVERYTHING HERE**; a fork OUTSIDE the runner's class (below) is the architect's.
 
 ## DECISION CLASSES — row 247, his word "ok, let's do it" (23 Sep 2026)
