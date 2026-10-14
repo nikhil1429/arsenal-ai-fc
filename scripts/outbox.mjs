@@ -330,11 +330,20 @@ export function ingest(deps = {}, days = 3) {
   const since = now.getTime() - days * 86400000;
   const runs = lines.filter((r) => r && r.ok && r.job && Date.parse(r.ts || "") >= since);
   const made = [];
+  // THE START-PATH CUT (lane V, forks rows 705 (a) / 706): ONE read + fold of the outbox per ingest, never one per run. post()
+  // answers `duplicate` with NO side effect when an unacked row carries the key, so a key already on the road in this snapshot is
+  // skipped here; a key not in it goes through post() unchanged (its lock, its fresh read, its own check) and joins the snapshot.
+  // Named and ruled (row 706, F-a1): an ack() of a skipped key landing inside this one ingest delays its re-post by one start,
+  // never a loss (the ledger is append-only). Measured before the cut: 50 post calls per start, 49 of them duplicates.
+  const onRoad = new Set([...fold(rowsOf(deps)).values()].filter((o) => !o.acked_at).map((o) => o.idempotency_key));
   for (const r of runs) {
     const m = meta.get(r.job);
     if (!m || !m.forHim) continue;                                // job_input feeds a JOB, not him
     const day = String(r.ts).slice(0, 10);
-    const res = post({ producedBy: `brain:${r.job}`, kind: "material", subject: `${r.job} — ${day} ka taiyaar material`, bodyRef: `brain_out/${m.out}/${day}.md`, priority: m.priority, key: keyOf(`brain:${r.job}`, "material", day), closeRef: r.act ? `act:${r.act}` : null }, deps);
+    const key = keyOf(`brain:${r.job}`, "material", day);
+    if (onRoad.has(key)) continue;                                // post() would answer `duplicate` and write nothing
+    const res = post({ producedBy: `brain:${r.job}`, kind: "material", subject: `${r.job} — ${day} ka taiyaar material`, bodyRef: `brain_out/${m.out}/${day}.md`, priority: m.priority, key, closeRef: r.act ? `act:${r.act}` : null }, deps);
+    if (res.ok) onRoad.add(key);
     if (res.ok && !res.duplicate) made.push(res.row.id);
   }
   return { ok: true, scanned: runs.length, posted: made.length, ids: made, for_him_jobs: [...meta.values()].filter((m) => m.forHim).length, not_for_him: [...meta.values()].filter((m) => !m.forHim).length };
@@ -542,6 +551,15 @@ function selftest() {
     irows.some((r) => r.ev === "post" && r.body_ref === "brain_out/prepare_on_request/2026-08-19.md" && r.close_ref === "act:amsz3vaiyof"));
   const again = ingest(ideps, 3);
   assert("INGEST IS IDEMPOTENT — running it on every surface touch posts nothing new", again.ok && again.posted === 0);
+  // THE START-PATH CUT (rows 705 (a) / 706), planted both ways: the first case REDS on the per-run read it replaced
+  let ikReads = 0; const ikDeps = { get rows() { ikReads++; return irows; }, append: (r) => { irows.push(r); return true; }, now, cfg, brainRows: brainRows.concat(brainRows) };
+  const ikCut = ingest(ikDeps, 3);
+  assert("CUT · N runs already on the road read the outbox rows ONCE per ingest (before the cut: once per run)", ikCut.ok && ikCut.posted === 0 && ikReads <= 2, `reads ${ikReads}`);
+  assert("CUT · the return keeps its shape: every in-window run scanned, the for-him and job_input counts unchanged", ikCut.scanned === 6 && ikCut.for_him_jobs === 2 && ikCut.not_for_him === 1, JSON.stringify(ikCut));
+  const ikRows = []; const ikTwo = ingest({ rows: ikRows, append: (r) => { ikRows.push(r); return true; }, now, cfg, brainRows: [brainRows[0], { ...brainRows[0], ts: "2026-08-19T03:00:00Z" }] }, 3);
+  assert("CUT · two runs of one job on one day, key not on the road: exactly ONE new row", ikTwo.posted === 1 && ikRows.filter((r) => r.ev === "post").length === 1);
+  const ikAcked = ikRows.concat([{ ev: "ack", of: ikRows[0].id, ts: "2026-08-19T03:30:00Z" }]);
+  assert("CUT · an ACKED key is off the road: ingest posts it again (the snapshot holds unacked keys only)", ingest({ rows: ikAcked, append: (r) => { ikAcked.push(r); return true; }, now, cfg, brainRows: [brainRows[0]] }, 3).posted === 1);
 
   // a real file, and hermeticity
   const dir = mkdtempSync(join(tmpdir(), "arsenal_outbox_"));
