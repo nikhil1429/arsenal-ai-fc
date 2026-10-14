@@ -206,7 +206,12 @@ if ($wp) { $wp.Settings.WakeToRun = $true; $wp.Settings.StartWhenAvailable = $fa
 # this line now matches what is installed, so a re-run cannot diverge from it.
 schtasks /Create /F /TN "ArsenalFC-Audit" /TR "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c $repo\setup\run_logged.cmd scripts\audit.mjs run" /SC DAILY /ST 13:10 | Out-Null
 $au = Get-ScheduledTask -TaskName "ArsenalFC-Audit" -ErrorAction SilentlyContinue
-if ($au) { $au.Settings.StartWhenAvailable = $false; $au | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-Audit (13:10 daily, NO catch-up - one health number, at most one card)" }
+# 15 Oct 2026 (forks ruling row 750, his 30 Aug everything-on order): REVERSED - catch-up ON. pulse's
+# own 48 h law wants one audit row every two days, and a laptop asleep or unplugged at 13:10 missed it for
+# six days (147 h). The battery flags too: this block ran AFTER the POWER CONDITIONS sweep, so the task
+# kept the schtasks defaults and every unplugged 13:10 read 0x800710E0 (refused). It sets all three here;
+# the final power sweep at the end of this file holds the battery half for every block.
+if ($au) { $au.Settings.StartWhenAvailable = $true; $au.Settings.DisallowStartIfOnBatteries = $false; $au.Settings.StopIfGoingOnBatteries = $false; $au | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-Audit (13:10 daily, catch-up ON + battery-safe since row 750 - one health number, at most one card)" }
 
 # THE BUG MUSEUM, weekly. Every real historical bug is re-introduced into a
 # sandbox and the system must still catch it. It costs minutes, so it runs once a
@@ -235,6 +240,20 @@ if ($mf) { $mf.Settings.StartWhenAvailable = $false; $mf | Set-ScheduledTask | O
 schtasks /Create /F /TN "ArsenalFC-Horizon" /TR "wscript.exe `"$repo\setup\hidden_task.vbs`" cmd /c node `"$repo\scripts\mutagen.mjs`" horizon >> $repo\scripts\audit.log 2>&1" /SC WEEKLY /D SAT /ST 18:40 | Out-Null
 $hz = Get-ScheduledTask -TaskName "ArsenalFC-Horizon" -ErrorAction SilentlyContinue
 if ($hz) { $hz.Settings.StartWhenAvailable = $false; $hz | Set-ScheduledTask | Out-Null; Write-Host "  + ArsenalFC-Horizon (SAT 18:40 - 10-20x scale, 90 days aged)" }
+
+# THE FINAL POWER SWEEP (15 Oct 2026, forks ruling row 750). The POWER CONDITIONS sweep above runs
+# BEFORE every hand-added block below it (WakeProbe, Audit, Mutants, MutantsFull, Horizon), so each of
+# those kept the schtasks battery defaults: the Audit lane was refused on battery (0x800710E0) for six
+# days. Clearing both flags LAST covers every task this file registers, whatever its place. Catch-up is
+# NOT touched here: WakeProbe, Mutants, MutantsFull and Horizon keep theirs OFF by design. pulse.mjs
+# names any enabled task still gated on battery (class battery-gated), so an installer that skips this
+# is seen on the next pulse run.
+Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object {
+  $_.Settings.DisallowStartIfOnBatteries = $false
+  $_.Settings.StopIfGoingOnBatteries = $false
+  $_ | Set-ScheduledTask | Out-Null
+}
+Write-Host "  ~ battery kill-conditions cleared on all ArsenalFC-* tasks (the final sweep, after every block)"
 
 Write-Host ""
 Write-Host "Done. Verify with: schtasks /Query /FO TABLE | findstr ArsenalFC"

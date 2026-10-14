@@ -77,7 +77,7 @@ export function liveTasks() {
     // PowerShell, not schtasks /fo csv — the csv encoding mangles under Git Bash
     // (herd.mjs measured 0 tasks on a box that has 50). DateTimes are stringified
     // IN PowerShell because ConvertTo-Json on PS5.1 emits \/Date(ms)\/ otherwise.
-    const ps = `Get-ScheduledTask | Where-Object { $_.TaskName -like 'ArsenalFC*' } | ForEach-Object { $t=$_; $i=($t | Get-ScheduledTaskInfo); $tr=($t.Triggers | Select-Object -First 1); [pscustomobject]@{ name=$t.TaskName; state=[string]$t.State; last=$(if($i.LastRunTime -and $i.LastRunTime.Year -gt 2000){$i.LastRunTime.ToString('yyyy-MM-ddTHH:mm:ss')}else{''}); next=$(if($i.NextRunTime){$i.NextRunTime.ToString('yyyy-MM-ddTHH:mm:ss')}else{''}); result=$i.LastTaskResult; rep=[string]$tr.Repetition.Interval; di=$(if($tr -and $tr.PSObject.Properties['DaysInterval']){[int]$tr.DaysInterval}else{0}); wi=$(if($tr -and $tr.PSObject.Properties['WeeksInterval']){[int]$tr.WeeksInterval}else{0}) } } | ConvertTo-Json -Compress -Depth 3`;
+    const ps = `Get-ScheduledTask | Where-Object { $_.TaskName -like 'ArsenalFC*' } | ForEach-Object { $t=$_; $i=($t | Get-ScheduledTaskInfo); $tr=($t.Triggers | Select-Object -First 1); [pscustomobject]@{ name=$t.TaskName; state=[string]$t.State; last=$(if($i.LastRunTime -and $i.LastRunTime.Year -gt 2000){$i.LastRunTime.ToString('yyyy-MM-ddTHH:mm:ss')}else{''}); next=$(if($i.NextRunTime){$i.NextRunTime.ToString('yyyy-MM-ddTHH:mm:ss')}else{''}); result=$i.LastTaskResult; rep=[string]$tr.Repetition.Interval; di=$(if($tr -and $tr.PSObject.Properties['DaysInterval']){[int]$tr.DaysInterval}else{0}); wi=$(if($tr -and $tr.PSObject.Properties['WeeksInterval']){[int]$tr.WeeksInterval}else{0}); nobat=[bool]$t.Settings.DisallowStartIfOnBatteries; stopbat=[bool]$t.Settings.StopIfGoingOnBatteries } } | ConvertTo-Json -Compress -Depth 3`;
     const out = execFileSync("powershell", ["-NoProfile", "-NonInteractive", "-Command", ps], { encoding: "utf8", timeout: 60000, windowsHide: true });
     const j = JSON.parse(out.trim() || "[]");
     return { source: "live schtasks", rows: (Array.isArray(j) ? j : [j]).filter(Boolean) };
@@ -135,6 +135,20 @@ export function taskVerdict(row, expectedDisabled, now = Date.now(), awake = nul
     return { name: row.name, class: "stale", violation: true, age_h: +ageH.toFixed(1), awake_h: awakeH === null ? null : +awakeH.toFixed(1), period_h: p, deadline_h: 2 * p, detail: awakeH === null ? `${ageH.toFixed(0)}h since last run by the CLOCK (no awake log here — clock rule)` : `${ageH.toFixed(0)}h since last run, of which the laptop was AWAKE ${awakeH.toFixed(1)}h ≥ one period (${p}h) — a catch-up slot came and it did not fire` };
   }
   return { name: row.name, class: "alive", age_h: +ageH.toFixed(1), period_h: p };
+}
+
+// THE POWER LAW (15 Oct 2026, forks ruling row 750). An enabled task that won't start on battery
+// (DisallowStartIfOnBatteries) or is killed on unplug (StopIfGoingOnBatteries) silently skips every
+// slot the laptop spends unplugged: ArsenalFC-Audit read 0x800710E0 (refused) and the audit lane went
+// 147 h STALE, because its installer block ran AFTER INSTALL_TASKS.ps1's power sweep and kept the
+// schtasks defaults. Every installer clears both flags; this names any enabled task that still carries
+// one. A row with neither field (a fixture of the older shape) is no verdict, and a disabled task is
+// the off-unexpected lane's (taskVerdict above).
+export function powerVerdict(row) {
+  if (String(row.state) === "Disabled") return null;
+  if (row.nobat !== true && row.stopbat !== true) return null;
+  const flags = [row.nobat === true ? "won't start on battery" : "", row.stopbat === true ? "killed on unplug" : ""].filter(Boolean).join(" + ");
+  return { name: row.name, class: "battery-gated", violation: true, detail: `${flags} — every installer clears both flags on ArsenalFC tasks (INSTALL_TASKS.ps1 POWER CONDITIONS); this lane skips whenever the laptop is unplugged` };
 }
 
 // ── BRAIN LANES via reconcile (the owner of that verdict) ────────────────────
@@ -223,6 +237,7 @@ export function model({ skipReconcile = false } = {}) {
   const awake = awakeModel({ sinceMs: now - 21 * 24 * HOUR, now });
   const tasks = (sched.rows || []).map((r) => taskVerdict(r, expectedDisabled, now, awake));
   const violations = tasks.filter((t) => t.violation);
+  violations.push(...(sched.rows || []).map(powerVerdict).filter(Boolean));   // row 750 — THE POWER LAW
   if (!sched.rows && haveWatchmanState) {
     violations.push({ name: "schedule", class: "schedule-unreadable", violation: true, detail: `live state present but Get-ScheduledTask failed (${sched.error || "unknown"}) — fail-closed: an unverifiable schedule is not a green one` });
   }
@@ -236,7 +251,7 @@ export function model({ skipReconcile = false } = {}) {
   return { measurable: true, source: sched.source, awake: { source: awake.source, available: awake.available, awake_now: awake.awake_now }, tasks, brain, queue, watchers, violations };
 }
 
-const fmt = (v) => `  [${/never/.test(v.class) ? "NEVER" : v.class === "queue-diverging" ? "QUEUE" : "STALE"}] ${v.name} — ${v.detail || v.class}${v.age_h ? ` (age ${v.age_h}h)` : ""}${v.consumers ? ` · ${v.consumers} wired reader(s)` : ""}`;
+const fmt = (v) => `  [${/never/.test(v.class) ? "NEVER" : v.class === "queue-diverging" ? "QUEUE" : v.class === "battery-gated" ? "POWER" : "STALE"}] ${v.name} — ${v.detail || v.class}${v.age_h ? ` (age ${v.age_h}h)` : ""}${v.consumers ? ` · ${v.consumers} wired reader(s)` : ""}`;
 
 function report(m) {
   console.log("== THE PULSE — ◇≤T liveness over every lane ==");
@@ -293,6 +308,16 @@ function selftest() {
   assert("DESIGNED-OFF — an expected_disabled task is a decision, not a defect; an UNexpected disabled one is named",
     taskVerdict({ name: "ArsenalFC-Mirror", state: "Disabled", last: "", next: "", rep: "", di: 1, wi: 0 }, ed, NOW).class === "designed-off"
     && taskVerdict({ name: "X", state: "Disabled", last: "", next: "", rep: "", di: 1, wi: 0 }, ed, NOW).class === "off-unexpected");
+
+  assert("POWER LAW — an enabled task that won't start on battery, or is killed on unplug, is battery-gated (a violation, each flag named); both flags clear is no verdict",
+    powerVerdict({ name: "A", state: "Ready", nobat: true, stopbat: false }).class === "battery-gated"
+    && powerVerdict({ name: "A", state: "Ready", nobat: true, stopbat: false }).violation === true
+    && /won't start on battery/.test(powerVerdict({ name: "A", state: "Ready", nobat: true, stopbat: true }).detail)
+    && /killed on unplug/.test(powerVerdict({ name: "W", state: "Ready", nobat: false, stopbat: true }).detail)
+    && powerVerdict({ name: "B", state: "Ready", nobat: false, stopbat: false }) === null);
+  assert("POWER LAW — a disabled task is the off-unexpected lane's, and a row of the older shape (no power fields) is no verdict, never a guess",
+    powerVerdict({ name: "D", state: "Disabled", nobat: true, stopbat: true }) === null
+    && powerVerdict({ name: "O", state: "Ready", last: "", next: "", rep: "", di: 1, wi: 0 }) === null);
 
   const mkCard = (fA, sA) => ({ filed_at: iso(fA), ...(sA != null ? { retired_at: iso(sA) } : {}) });
   assert("QUEUE LAW — open cards + arrivals + ZERO service in 7d = diverging (λ>0, μ=0)",
