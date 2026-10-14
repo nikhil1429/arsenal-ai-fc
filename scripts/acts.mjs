@@ -45,7 +45,7 @@
 //     outside an owner's CLI · a "done" without a receipt.
 // LEDGER ROW: {id, ts, door, verb, args, owner, argv, ok, receipt|error, ms, undone_at, reverse}
 // CLI: node scripts/acts.mjs do <verb> --door <d> --text "…" [--kind k --axis a --id i --job j]
-//      | undo <id> | status [days] | parse-ball "<text>" | selftest
+//      | undo <id> | resolve <failed-id> --by <ok-id> | status [days] | parse-ball "<text>" | selftest
 // ============================================================================
 import { readFileSync, appendFileSync, existsSync, mkdirSync, statSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -229,17 +229,41 @@ export function undo(id, deps = {}) {
   return { ok: !!r.ok, why: r.ok ? null : u.error, row: u };
 }
 
+// ── resolve: a failed act SUPERSEDED by a later ok act (15 Oct 2026, forks ruling row 750) ──
+// stats() counts a failure fixed only by a later ok act with the SAME verb + text. A refused act re-sent
+// with edited text that then LANDED read act-failed forever: amv16hpgk5k (9 Oct, refused as build-shaped)
+// → amv16hv27qc (7 s later, the same rule, trimmed text). The supersession is RECORDED with both ids,
+// never inferred from similar text; the ledger stays append-only (the resolve is its own row).
+export function resolveFailed(id, by, deps = {}) {
+  const rows = deps.rows || readRows();
+  const now = deps.now || new Date();
+  const isAct = (r) => r.verb && r.verb !== "undo" && r.verb !== "resolve";
+  const failed = rows.find((r) => r.id === id && isAct(r));
+  if (!failed) return { ok: false, why: `no act ${id}` };
+  if (failed.ok) return { ok: false, why: `act ${id} succeeded — nothing to resolve` };
+  const fix = rows.find((r) => r.id === by && isAct(r));
+  if (!fix) return { ok: false, why: `no act ${by}` };
+  if (!fix.ok) return { ok: false, why: `act ${by} did not succeed — it cannot supersede ${id}` };
+  if (fix.verb !== failed.verb) return { ok: false, why: `act ${by} is a ${fix.verb}, ${id} a ${failed.verb} — a supersession keeps the verb` };
+  if (!(Date.parse(fix.ts) > Date.parse(failed.ts))) return { ok: false, why: `act ${by} is not later than ${id}` };
+  if (rows.some((r) => r.verb === "resolve" && r.of === id && r.ok)) return { ok: false, why: `act ${id} already resolved` };
+  const row = { id: `${id}-resolve`, ts: now.toISOString(), door: "cli", verb: "resolve", of: id, by, owner: "acts.mjs", ok: true, receipt: `${id} superseded by ${by}${fix.receipt ? ` (${clip(fix.receipt, 80)})` : ""}` };
+  appendRow(row, deps);
+  return { ok: true, row };
+}
+
 // ── the board (state week · watchman · CLI) ──
 export function stats(days = 7, rows = readRows(), now = Date.now()) {
   const since = now - days * 86400000;
   const inWin = rows.filter((r) => Date.parse(r.ts || "") >= since);
-  const acts = inWin.filter((r) => r.verb && r.verb !== "undo");
+  const acts = inWin.filter((r) => r.verb && r.verb !== "undo" && r.verb !== "resolve");
+  const resolved = new Set(rows.filter((r) => r.verb === "resolve" && r.ok).map((r) => r.of));   // row 750: a failure SUPERSEDED by a named later ok act
   const undone = new Set(inWin.filter((r) => r.verb === "undo" && r.ok).map((r) => r.of));
   const failed = acts.filter((r) => !r.ok);
   const byDoor = {}, byVerb = {};
   for (const r of acts) { byDoor[r.door] = (byDoor[r.door] || 0) + 1; byVerb[r.verb] = (byVerb[r.verb] || 0) + 1; }
-  // act-failed: a dispatched act whose owner errored and that is still unfixed after 24 h (no later ok act with the same verb+text)
-  const stale = failed.filter((r) => now - Date.parse(r.ts) > 24 * 3600000 && !acts.some((x) => x.ok && x.verb === r.verb && x.args && r.args && x.args.text === r.args.text && Date.parse(x.ts) > Date.parse(r.ts)));
+  // act-failed: a dispatched act whose owner errored and that is still unfixed after 24 h (no later ok act with the same verb+text, and no resolve row naming the later ok act that superseded it, row 750)
+  const stale = failed.filter((r) => now - Date.parse(r.ts) > 24 * 3600000 && !resolved.has(r.id) && !acts.some((x) => x.ok && x.verb === r.verb && x.args && r.args && x.args.text === r.args.text && Date.parse(x.ts) > Date.parse(r.ts)));
   return { days, n: acts.length, ok: acts.filter((r) => r.ok).length, failed: failed.length, undone: undone.size, by_door: byDoor, by_verb: byVerb, stale_failed: stale.map((r) => ({ id: r.id, verb: r.verb, error: r.error, ts: r.ts })), last: acts.slice(-1)[0] || null };
 }
 export const boardLine = (s = stats()) => `acts ${s.n} · ok ${s.ok} · failed ${s.failed} · undone ${s.undone}${s.n ? ` · doors ${Object.entries(s.by_door).map(([k, v]) => `${k}:${v}`).join(" ")}` : ""}`;
@@ -473,6 +497,38 @@ async function selftest() {
       && rows[r0].args.text === "study week — weekly pool reset" && typeof rows[r0].ms === "number" && rows[r0].receipt);
   }
 
+  // ── RESOLVE (15 Oct 2026, forks ruling row 750) — a failure SUPERSEDED by a later ok act with edited text.
+  // The live case: amv16hpgk5k (9 Oct) was refused as build-shaped, amv16hv27qc landed the same rule 7 s later
+  // with the trimmed text, and act-failed read RED for six days because stats() matched only the SAME text.
+  {
+    const rr = [];
+    const T0 = Date.parse("2026-10-09T16:27:12Z");
+    const at = (ms) => new Date(T0 + ms).toISOString();
+    const fl = { id: "aF1", ts: at(0), door: "cli", verb: "rule", args: { text: "rule text, please create one" }, owner: "teaching_contract.mjs", ok: false, error: "REFUSED — build-shaped" };
+    const pv = { id: "aP1", ts: at(3000), door: "cli", verb: "pref", args: { text: "p" }, owner: "gaffer_state.mjs", ok: true, receipt: "ok" };
+    const fx = { id: "aK1", ts: at(7000), door: "cli", verb: "rule", args: { text: "rule text" }, owner: "teaching_contract.mjs", ok: true, receipt: "added" };
+    const f2 = { id: "aF2", ts: at(9000), door: "cli", verb: "rule", args: { text: "another" }, owner: "teaching_contract.mjs", ok: false, error: "x" };
+    const ledger = [fl, pv, fx, f2];
+    const rdeps = { rows: ledger, append: (r) => { rr.push(r); return true; }, now: new Date(T0 + 30 * 3600000) };
+    const later = T0 + 48 * 3600000;
+    const before = stats(7, ledger, later);
+    const r1 = resolveFailed("aF1", "aK1", rdeps);
+    const after = stats(7, [...ledger, ...rr], later);
+    assert("RESOLVE — a failure the edited-text retry fixed reads act-failed BEFORE; resolve aF1 --by aK1 writes ONE row carrying both ids; AFTER it is fixed (aF2 still red), and the resolve row is never counted as an act",
+      before.stale_failed.some((x) => x.id === "aF1") && r1.ok && rr.length === 1 && rr[0].verb === "resolve" && rr[0].of === "aF1" && rr[0].by === "aK1"
+      && !after.stale_failed.some((x) => x.id === "aF1") && after.stale_failed.some((x) => x.id === "aF2") && after.n === before.n, JSON.stringify({ before: before.stale_failed, after: after.stale_failed, r1 }));
+    const twice = resolveFailed("aF1", "aK1", { ...rdeps, rows: [...ledger, ...rr] });
+    const okOne = resolveFailed("aK1", "aK1", rdeps);
+    const byFail = resolveFailed("aF2", "aF1", rdeps);
+    const otherVerb = resolveFailed("aF1", "aP1", rdeps);
+    const earlier = resolveFailed("aF2", "aK1", rdeps);
+    const none = resolveFailed("aZZ", "aK1", rdeps);
+    assert("RESOLVE — refused with NO row: twice · an act that never failed · a fixer that did not succeed · a different verb · a fixer EARLIER than the failure · an unknown id",
+      !twice.ok && /already resolved/.test(twice.why) && !okOne.ok && /nothing to resolve/.test(okOne.why) && !byFail.ok && /did not succeed/.test(byFail.why)
+      && !otherVerb.ok && /keeps the verb/.test(otherVerb.why) && !earlier.ok && /not later/.test(earlier.why) && !none.ok && /no act aZZ/.test(none.why) && rr.length === 1,
+      JSON.stringify({ twice, okOne, byFail, otherVerb, earlier, none }));
+  }
+
   // hermetic
   const liveStat2 = existsSync(ACTS_LEDGER) ? (() => { const s = statSync(ACTS_LEDGER); return `${s.size}:${s.mtimeMs}`; })() : "absent";
   assert("HERMETIC: the live acts.jsonl is untouched (size:mtime unchanged) — every row above went to the injected append", liveStat === liveStat2);
@@ -597,16 +653,17 @@ async function main() {
     process.exit(row.ok ? 0 : 1);
   }
   if (mode === "undo") { const r = undo(process.argv[3]); console.log(r.ok ? `acts: undone ${process.argv[3]} — ${r.row.receipt || ""}` : `acts: not undone — ${r.why}`); process.exit(r.ok ? 0 : 1); }
+  if (mode === "resolve") { const r = resolveFailed(process.argv[3], flag("by")); console.log(r.ok ? `acts: resolved ${process.argv[3]} — ${r.row.receipt}` : `acts: not resolved — ${r.why}`); process.exit(r.ok ? 0 : 1); }
   if (mode === "parse-ball") { const r = await parseBall(process.argv.slice(3).join(" ")); console.log(JSON.stringify(r, null, 1)); return; }
   if (mode === "status") {
     const days = Number(process.argv[3]) || 7;
     const s = stats(days);
     console.log(boardLine(s) + ` (${days} d)`);
-    for (const r of readRows().filter((r) => Date.parse(r.ts) >= Date.now() - days * 86400000).slice(-25)) console.log(`  ${r.ts.slice(0, 16)} ${r.id.padEnd(12)} ${String(r.door || "").padEnd(7)} ${String(r.verb).padEnd(8)} ${r.ok ? "✓" : "✗"} ${r.owner || ""} ${r.verb === "undo" ? `of ${r.of}` : ""} — ${clip(r.ok ? r.receipt : r.error, 110)}${r.undone_at ? " (undone)" : ""}`);
+    for (const r of readRows().filter((r) => Date.parse(r.ts) >= Date.now() - days * 86400000).slice(-25)) console.log(`  ${r.ts.slice(0, 16)} ${r.id.padEnd(12)} ${String(r.door || "").padEnd(7)} ${String(r.verb).padEnd(8)} ${r.ok ? "✓" : "✗"} ${r.owner || ""} ${r.verb === "undo" ? `of ${r.of}` : r.verb === "resolve" ? `of ${r.of} by ${r.by}` : ""} — ${clip(r.ok ? r.receipt : r.error, 110)}${r.undone_at ? " (undone)" : ""}`);
     for (const f of findings(s)) console.log(`  [${f.level}] ${f.id} — ${f.finding}`);
     return;
   }
-  console.log("acts: do <verb> --door d --text … [--kind --axis --id --job --until --why --clear --json] | undo <id> | status [days] | parse-ball <text> | selftest");
+  console.log("acts: do <verb> --door d --text … [--kind --axis --id --job --until --why --clear --json] | undo <id> | resolve <failed-id> --by <ok-id> | status [days] | parse-ball <text> | selftest");
   process.exit(2);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
