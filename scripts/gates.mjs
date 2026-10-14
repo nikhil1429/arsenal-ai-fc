@@ -87,9 +87,9 @@ export const HARD_TYPE_CODES = [2304, 2552, 2307, 2686, 2662, 2663];
 // `// @ts-check` and produced ZERO new diagnostics, so the checked list grew and the soft count
 // did not move. The gate ASKED for this constant to be raised and a session raised it, in the
 // same commit — which is the whole design: the gate never edits its own baseline.
-export const TYPE_BASELINE = { checked_organs: 14, soft_errors: 298 };   // RUNG A (30 Aug 2026): 303 -> 298. Giving `decide()`, `setGateForce` and `journalForce` explicit defaults for their no-default params fixed five diagnostics of the SAME class (a destructured param with no default vanishes from the `= {}` type, so every call site that passes it is a phantom "unknown property"). Ratcheted on the spot: slack a later edit could spend is not a gate.
+export const TYPE_BASELINE = { checked_organs: 14, soft_errors: 296 };   // 14 Oct 2026 (forks rows 708 / 715): 298 to 296, the gate's printed count after 80e1e35 + 835c20f. RUNG A (30 Aug 2026): 303 -> 298. Giving `decide()`, `setGateForce` and `journalForce` explicit defaults for their no-default params fixed five diagnostics of the SAME class (a destructured param with no default vanishes from the `= {}` type, so every call site that passes it is a phantom "unknown property"). Ratcheted on the spot: slack a later edit could spend is not a gate.
 export const HARD_LINT_RULES = ["no-undef"];
-export const LINT_BASELINE = { "no-empty": 267, "no-unused-vars": 83, warnings: 2 };   // 14 Oct 2026 (forks rows 707-709): no-unused-vars 87 to 83, the count the gates census measured at 5369c71 (campaign cloud/s699/CENSUS_699.txt). A baseline only falls.
+export const LINT_BASELINE = { "no-empty": 262, "no-unused-vars": 82, warnings: 2 };   // 14 Oct 2026 (forks rows 707-709 / 715): no-unused-vars 87 to 83 (the gates census at 5369c71, campaign cloud/s699/CENSUS_699.txt), then no-empty 267 to 262 and no-unused-vars 83 to 82, the gate's printed counts after 80e1e35 + 835c20f. A baseline only falls.
 // ── S11 · THE THIRD TIER-0 TOOL: ajv, JSON-Schema per state file ────────────
 // The owners-only law answers WHO may write each state file. Nothing answered WHAT
 // lands there — so a sole writer with a bug writes valid JSON that is not a valid
