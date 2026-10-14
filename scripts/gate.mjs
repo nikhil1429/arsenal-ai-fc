@@ -779,7 +779,7 @@ function selftest() {
   //     and a why — which is a PREDICATE, not a list of names (THE JUGAD RULE: a literal array
   //     of the instances that existed the day the pin was written becomes the pin's ceiling).
   //     The extras are still printed on every run, by the assert's own detail line.
-  const OFF_ROAD_SINCE_S7 = 1;   // RUNG A · `dmn_bg_drain`, the third DMN lane, registered at last
+  const OFF_ROAD_SINCE_S7 = 2;   // RUNG A · `dmn_bg_drain`, the third DMN lane, registered at last · row 764 (15 Oct 2026) · `ns_field_probes`, NightShift's JOB 1c, the second: it spent on the shift's first fire since August, and its registry row declares it (ungated by its organ's own header, by design)
   const extras = Object.keys(LANE_CONSUMERS).filter((k) => !(k in LANE_CONSUMERS_S7_LAYER));
   assert("S7 TABLE — it holds ONLY lanes that declare no surface of their own (it is outbox's off-road CONSUMER MAP, moved — never a second copy of brain_config's 34 surfaces)",
     Object.keys(LANE_CONSUMERS).length === 15 + OFF_ROAD_SINCE_S7 && !Object.keys(LANE_CONSUMERS).includes("diary") && !Object.keys(LANE_CONSUMERS).includes("night_coach"));
