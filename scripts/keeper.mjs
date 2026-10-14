@@ -69,7 +69,10 @@ const nap = (ms, cut) => new Promise((res) => {
 });
 
 /** keep: run `worker` (an argv, [0] the executable) for ever under the contract above.
- *  Every effect is injected, so the selftest drives each branch with a FAKE spawn. */
+ *  Every effect is injected, so the selftest drives each branch with a FAKE spawn.
+ *  @param {{ name: string, worker: string[], port?: number | null, pollMs?: number, log?: (line: string) => void,
+ *    spawn?: (argv: string[]) => any, sleep?: (ms: number, cut: () => boolean) => Promise<void>,
+ *    portIsFree?: (port: number) => Promise<boolean>, now?: () => number, platform?: string, signals?: any }} [opts] */
 export async function keep({ name, worker, port = null, pollMs = 75000, log = console.log,
   spawn = (argv) => nodeSpawn(argv[0], argv.slice(1), { stdio: "inherit" }),
   sleep = nap, portIsFree = portFree, now = Date.now, platform = process.platform, signals = process } = {}) {
