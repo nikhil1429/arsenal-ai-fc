@@ -115,9 +115,13 @@ function mayTick(hostId, role, deps = {}) {
 //      push. Lock 2 catches what lock 1 can't: paths left staged in the index
 //      before this pass ever ran. Fail closed — it reports and idles.
 // ---------------------------------------------------------------------------
+// ROW 769 (15 Oct 2026) — STATE ONLY. This list reached scripts/, setup/, hooks/ and package.json, so at 03:45 IST the
+// unattended push (dcd23ff) swept a runner's UNCOMMITTED scripts/brain.mjs to origin/main without the keeper.mjs it
+// imports: lock 1's `-u` stops a NEW file, never a half-landed edit of a TRACKED one. Machinery reaches origin only by
+// a deliberate commit at the laptop (the campaign's witnessed landings); this loop publishes his tracked state and
+// nothing else. Every other entry it carried is machinery (code, setup, hooks, manifests, docs), never a night output.
 const PUBLISH_ALLOWLIST = [
-  "scripts/", "setup/", "hooks/", "dressing-room/state/",
-  "package.json", "package-lock.json", "ci_manifest.json", "README.md",
+  "dressing-room/state/",
 ];
 function isPublishablePath(p) {
   const path = String(p == null ? "" : p).trim().replace(/^"(.*)"$/, "$1").replace(/\\/g, "/");
@@ -285,7 +289,7 @@ async function selftest() {
     const calls = [];
     // the mock must now answer BOTH diff calls: --name-only returns the staged
     // set (the allowlist gate reads it), --quiet returns exit 1 = changes exist
-    const mkSh = (fail = {}, stagedNames = "scripts/brain.mjs\n") => (c, a) => {
+    const mkSh = (fail = {}, stagedNames = "dressing-room/state/brain_config.json\n") => (c, a) => {
       calls.push(c + " " + a.join(" "));
       if (fail[c]) return { ok: false, out: "boom" };
       if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: stagedNames };
@@ -302,8 +306,10 @@ async function selftest() {
 
     // THE PUBLISH ALLOWLIST — the E2E audit's critical find (25 Jul 2026):
     // `git add -A` + push to a PUBLIC remote, on an unattended 30-min loop.
-    assert("allowlist: machinery + the tracked bus files are publishable",
-      isPublishablePath("scripts/brain.mjs") && isPublishablePath("dressing-room/state/brain_config.json") && isPublishablePath("README.md"));
+    assert("allowlist (row 769): the tracked bus files are publishable, and NO machinery is — scripts/, skills, setup/, hooks/, package.json, README.md all refuse",
+      isPublishablePath("dressing-room/state/brain_config.json") && isPublishablePath("dressing-room/state/registry.json")
+      && !isPublishablePath("scripts/brain.mjs") && !isPublishablePath(".claude/skills/learn/SKILL.md") && !isPublishablePath("setup/INSTALL_TASKS.ps1")
+      && !isPublishablePath("hooks/pre-commit") && !isPublishablePath("package.json") && !isPublishablePath("README.md"));
     assert("allowlist: a personal file nobody enumerated is NOT publishable",
       !isPublishablePath("THE_DOCTORS_LETTER.md") && !isPublishablePath("dressing-room/hippocampus/episodes.jsonl") && !isPublishablePath("Jarvis/mood.md") && !isPublishablePath("../outside.md"));
     assert("the night-shift stages TRACKED files on the list only — never `git add -A`",
@@ -342,13 +348,25 @@ async function selftest() {
     });
     assert("D3: the SAME allowlist locks hold — one off-list path refuses the whole push",
       r7.pushed === false && r7.refused === true && !c7.some(x => x.includes("commit")));
+    // ROW 769 — STATE ONLY, planted both ways: a machinery path staged ALONE (the dcd23ff shape: one dirty tracked
+    // script and nothing personal) refuses the whole push; the state path above (r6) still pushes.
+    for (const machinery of ["scripts/brain.mjs", ".claude/skills/learn/SKILL.md", "package.json", "setup/INSTALL_TASKS.ps1", "hooks/pre-commit"]) {
+      const cm = [];
+      const rm = await pushOnlyPass("laptop", {
+        sh: (c, a) => { cm.push(c + " " + a.join(" ")); if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: machinery + String.fromCharCode(10) }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
+      });
+      assert(`ROW 769 · STATE ONLY — ${machinery} staged alone REFUSES the unattended push (no commit, no push)`,
+        rm.pushed === false && rm.refused === true && !cm.some(x => x.includes("commit")) && !cm.some(x => x.startsWith("git push")));
+    }
+    assert("ROW 769 · STATE ONLY — lock 1 stages dressing-room/state/ and nothing else",
+      c6.some(x => x === "git add -u -- dressing-room/state/") && !c6.some(x => x.startsWith("git add") && /scripts|setup|hooks|package|README/.test(x)));
     const r8 = await pushOnlyPass("laptop", {
       sh: (c, a) => { if (c === "git" && a[0] === "diff" && !a.includes("--name-only")) return { ok: true, out: "" }; return { ok: true, out: "" }; },
     });
     assert("D3: a clean index is 'nothing public to push', never an empty commit",
       r8.pushed === false && /nothing public/.test(r8.why));
     const r9 = await pushOnlyPass("laptop", {
-      sh: (c, a) => { if (c === "git" && a[0] === "push") return { ok: false, out: "rejected (fetch first)" }; if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: "scripts/brain.mjs\n" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
+      sh: (c, a) => { if (c === "git" && a[0] === "push") return { ok: false, out: "rejected (fetch first)" }; if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: "dressing-room/state/brain_config.json\n" }; if (c === "git" && a[0] === "diff") return { ok: false, out: "" }; return { ok: true, out: "" }; },
     });
     assert("D3: a rejected push is reported honestly and NEVER forced (tomorrow retries)",
       r9.pushed === false && /retries/.test(r9.why) && /nothing forced/.test(r9.why));
