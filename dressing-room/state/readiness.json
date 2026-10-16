@@ -1,59 +1,59 @@
 {
   "ok": true,
   "engine": "v2-recalibrated",
-  "day": "2026-10-12",
+  "day": "2026-10-15",
   "mode": "full-coach",
-  "nights": 34,
+  "nights": 35,
   "verdict": "AMBER",
   "ceiling": "MODERATE",
   "workType": [
     "RETRIEVE/REVIEW known material (encoding capacity reduced) — favour consolidation over first-exposure learning"
   ],
   "timing": {
-    "wake": "10:13",
-    "peak1": "14:13–17:13  (hardest adversarial work: mocks, timed system-design, novel problems)",
-    "dip": "18:13–19:43  (admin, email, easy review, MOVEMENT)",
-    "peak2": "20:13–23:13  (second hard block)",
+    "wake": "08:08",
+    "peak1": "12:08–15:08  (hardest adversarial work: mocks, timed system-design, novel problems)",
+    "dip": "16:08–17:38  (admin, email, easy review, MOVEMENT)",
+    "peak2": "18:08–21:08  (second hard block)",
     "blocks": "~90-min deep-focus blocks; genuine non-screen break between; movement snack every 30–60 min"
   },
   "signals": {
-    "readiness_raw": null,
-    "oura_sleep_score": null,
-    "deep_7d_h": 0.58,
-    "deep_base_h": 0.57,
-    "rem_7d_h": 0.64,
-    "rem_base_h": 0.53,
-    "total_sleep_today_h": 0.13,
-    "total_sleep_7d_h": 3.29,
+    "readiness_raw": 54,
+    "oura_sleep_score": 46,
+    "deep_7d_h": 0.72,
+    "deep_base_h": 0.59,
+    "rem_7d_h": 0.58,
+    "rem_base_h": 0.57,
+    "total_sleep_today_h": 3.39,
+    "total_sleep_7d_h": 3.55,
     "personal_sleep_need_h": 6.5,
-    "oura_sleep_balance_7d": 27,
+    "oura_sleep_balance_7d": 21.7,
     "resilience_today": null,
     "resilience_available": false,
     "contributors_today": {
-      "sleep_balance": null,
-      "previous_night": null,
-      "recovery_index": null,
-      "body_temperature": null,
-      "hrv_balance": null,
-      "resting_heart_rate": null,
-      "activity_balance": null,
-      "previous_day_activity": null,
-      "sleep_regularity": null
+      "sleep_balance": 15,
+      "previous_night": 30,
+      "recovery_index": 35,
+      "body_temperature": 100,
+      "hrv_balance": 62,
+      "resting_heart_rate": 83,
+      "activity_balance": 85,
+      "previous_day_activity": 75,
+      "sleep_regularity": 55
     },
-    "hrv_today": null,
-    "hrv_7d": 21.7,
-    "hrv_60d": 18.6,
-    "SWC": 2.44,
-    "rhr": 99,
-    "rhr_baseline": 82.7,
-    "rr": null,
-    "rr_baseline": 15.3,
-    "temp_dev": null,
-    "temp_trend": null,
-    "efficiency": 16,
-    "latency_min": 0,
-    "spo2": null,
-    "bdi": null,
+    "hrv_today": 18,
+    "hrv_7d": 21.6,
+    "hrv_60d": 18.9,
+    "SWC": 2.51,
+    "rhr": 73,
+    "rhr_baseline": 81.4,
+    "rr": 16.125,
+    "rr_baseline": 15.4,
+    "temp_dev": -0.11,
+    "temp_trend": 0.08,
+    "efficiency": 83,
+    "latency_min": 19,
+    "spo2": 97.683,
+    "bdi": 2,
     "vo2max": null,
     "vascular_age": null
   },
@@ -67,7 +67,7 @@
       },
       "sleep_vs_personal_baseline": {
         "short": true,
-        "oura_sleep_balance_7d": 27
+        "oura_sleep_balance_7d": 21.7
       },
       "resilience": {
         "available": false,
@@ -78,9 +78,7 @@
       "rr_sustained_days": 0,
       "fired": false
     },
-    "low_confidence_med_informational": [
-      "RHR +16.3bpm vs baseline — medication-influenced, low weight (not counted)."
-    ],
+    "low_confidence_med_informational": [],
     "verdict_driver": "one sustained HIGH-confidence deviation (or two mixed) — not a red day"
   },
   "medication": {
@@ -91,10 +89,10 @@
     "intake_today": {}
   },
   "periodization": {
-    "sleep_debt_h_14d_vs_personal": 55,
+    "sleep_debt_h_14d_vs_personal": 49.9,
     "personal_sleep_need_h": 6.5,
-    "oura_sleep_balance_7d": 27,
-    "week_mean_readiness": 61.2,
+    "oura_sleep_balance_7d": 21.7,
+    "week_mean_readiness": 59.8,
     "note": "Running below your OWN sleep baseline (~6.5h) this week — worth banking sleep. (Measured vs YOUR normal, not a textbook 8h.)"
   },
   "safety": {
