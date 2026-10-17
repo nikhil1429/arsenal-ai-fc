@@ -18,7 +18,7 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
 > SCREEN: position · the exact unanswered micro-question, verbatim · this axis's capsule doubts/traps/calibration
 > · the four live duties · every command with the live concept:axis filled in · the turn shape · where the full
 > wording lives. **Do not read `REFERENCE.md` whole, ever** — open the one section the current step needs, by
-> grep, when that step arrives. The hook prints the live teaching contract every turn; obey it.
+> grep, when that step arrives. The hook prints the live teaching contract every turn; obey it. If the digest shows an OPEN forge session, the open CONSUMES the pointer first: a STALE session → `node scripts/forge_session.mjs resume` (its first line is the consumed question); a LIVE one → `node scripts/resume_pointer.mjs consume --concept <concept> --by forge`. Your first message to him is THAT consumed question, word for word — no recap, no summary of yesterday, no "you already know this" (HOW_HE_LEARNS #10). Then teach. If nothing is consumed (the line says why), open with ONE fresh micro-question where he stopped.
 
 ## The spine (unchanged in substance; full text in REFERENCE.md by the section names given)
 

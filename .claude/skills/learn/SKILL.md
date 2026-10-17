@@ -32,10 +32,10 @@ description: The session-agnostic front door to the day's learning — reads the
 1. `node scripts/learn_digest.mjs` — the screen. Read it whole; it is ≤ 16 KB by contract (selftest).
 2. `node scripts/sitting.mjs open --surface code --no-spawn --task "<what the digest says>"` — the day's
    container. Without it nothing lands at full-time (his 7 Aug captain's-call law).
-3. If the digest shows an OPEN forge session: your **first message to him is the pointer question, word for
-   word** — no recap, no summary of yesterday, no "you already know this" (HOW_HE_LEARNS #10). Then teach.
-   If it shows NO open session: follow its route line (`forge_session.mjs start <concept>` for a concept task;
-   `REFERENCE.md §1` by track for Python/course/domain tasks).
+3. If the digest shows an OPEN forge session, the open CONSUMES the pointer first: a STALE session → `node scripts/forge_session.mjs resume` (its first line is the consumed question); a LIVE one →
+   `node scripts/resume_pointer.mjs consume --concept <concept> --by learn`. Your first message to him is THAT consumed question, word for word — no recap, no summary of yesterday, no "you already know this" (HOW_HE_LEARNS #10). Then teach.
+   If nothing is consumed (the line says why), open with ONE fresh micro-question where he stopped.
+   If it shows NO open session: follow its route line (`forge_session.mjs start <concept>` consumes a pointer open for that concept and prints it first; `REFERENCE.md §1` by track for Python/course/domain tasks).
 4. **Every stop** (axis end, mid-axis exit, his "bas", context near the line): `node scripts/forge_session.mjs
    pointer "<the exact unanswered micro-question + the gut-word ask + where in the axis>"` BEFORE anything else.
 5. Day end: `node scripts/gaffer_brain.mjs judge-round` → `node scripts/sitting.mjs close --reason fulltime` →
