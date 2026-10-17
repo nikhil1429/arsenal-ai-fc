@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-10-17T12:11:13.366Z",
+ "updated_at": "2026-10-17T15:03:40.040Z",
  "tables": {
   "mechanisms": [
    {
@@ -908,6 +908,35 @@
     "updated_at": "2026-10-17T12:11:13.357Z",
     "added_at": "2026-10-17T11:29:17.512Z",
     "why": "the live corrections lane: notes_compiler.mjs reads it FIRST, before any compile, so a corrected claim is never served as truth; HE reads it before a capsule is taught"
+   },
+   {
+    "subject": "capsule_backups",
+    "schema_owner": "mirror.mjs",
+    "witness": "scripts/mirror.mjs:338-357 (LADDER E9: capsule_backups/<dayKey>/ snapshotted after every good pull)",
+    "consumers": [
+     {
+      "kind": "him"
+     }
+    ],
+    "reach": "any",
+    "why": "mirror.mjs THIRD write lane, DECLARED (forks row 550 (1) fate 28: KEEP + DECLARED; capsules IMMUTABLE, nothing touched). Its one consumer is HIS hand on a restore (deep.mjs:92, doubtminer.mjs:123 name it). No writes_to on purpose: the lane is a dated directory of capsule copies, and the meter reads a dir writes_to as top-level *.json only (registry.mjs:488-503), so it would report a lane fed every morning as never fed (neverFedLines :582-593).",
+    "updated_at": "2026-10-17T15:03:39.849Z",
+    "added_at": "2026-10-17T15:03:39.849Z"
+   },
+   {
+    "subject": "brief_log",
+    "schema_owner": "learnstate.mjs",
+    "writes_to": "brief_log.jsonl",
+    "witness": "scripts/learnstate.mjs recordBrief (L6 fate 18, the SOLE WRITER header)",
+    "consumers": [
+     {
+      "kind": "him"
+     }
+    ],
+    "reach": "any",
+    "why": "the RECORDED SessionStart brief: one row per brief his session printed (rung L6; read by cloud/ml6/witness/rung_L6.mjs)",
+    "updated_at": "2026-10-17T15:03:40.033Z",
+    "added_at": "2026-10-17T15:03:40.033Z"
    }
   ],
   "emit_contract": [

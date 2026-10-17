@@ -69,6 +69,7 @@ import { fsrs, generatorParameters, createEmptyCard, Rating } from "ts-fsrs";
 import { ungradedSplit, ungradedLine } from "./capture.mjs";   // S10 — the samjhao-era skip is SAID, from the owner's one counter
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — the SOLE WRITER of reps_log owns what supersession means
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
+import { supersede } from "./rejirah.mjs";   // L6 · fate 26 — THE SUPERSEDING DOOR: rejirah.mjs (rejirah_log's sole writer) owns what a correction means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -194,7 +195,9 @@ function writeAtomic(path, obj) {
 // ADDITIVE, never a replacement (LAYERING law): the return value and every branch are
 // byte-for-byte what they were, and the default `[]` means every existing caller and
 // every frozen selftest fixture behaves exactly as before.
-function readRejirahRounds(path = join(STATE_DIR, "rejirah_log.jsonl"), faults = []) {
+// L6 · fate 26 (15 Oct 2026): this body is now readRejirahRoundsLegacy — FROZEN byte-for-byte (L9), referenced by no
+// caller. It parsed the log RAW, so a correction was never honoured here. The live reader is right below it.
+function readRejirahRoundsLegacy(path = join(STATE_DIR, "rejirah_log.jsonl"), faults = []) {
   const grades = [];               // {ts, concept, axis, result, gut, round}
   const closes = [];               // {ts, concept, round, due, axes_graded}
   const why = (e) => String((e && e.message) || e).slice(0, 140);
@@ -259,6 +262,82 @@ function readRejirahRounds(path = join(STATE_DIR, "rejirah_log.jsonl"), faults =
     // WORST gut wins, same principle as the worst grade. Never inferred: a round
     // with no committed gut-word stays null and the caller keeps "knew" rather than
     // inventing a confidence he did not state.
+    const rank = { guessed: 3, shaky: 2, knew: 1 };
+    const worstGut = mine.map((g) => g.gut).filter(Boolean)
+      .sort((a, b) => (rank[b] || 0) - (rank[a] || 0))[0] || null;
+    out.set(`${concept}|${day}`, { ts: c.ts, cracked, worstGut, graded: mine.length });
+  }
+  return out;
+}
+
+// ── L6 · fate 26 (15 Oct 2026) · THROUGH THE SUPERSEDING DOOR, NEVER RAW ─────────────────────────────
+// THE DEFECT (learning-loop.txt:45, :53): the reader above parsed rejirah_log.jsonl raw. rejirah.mjs's way back —
+// `correct`, a NEW row that names the old one by `corrects: <its ts>` (BLOCK 4) — was therefore never honoured here:
+// the walked-back verdict still graded its round (a crack he was cleared of still lapsed the card), and the
+// correction itself, stamped with the LATER time it was made, landed as a fresh grade in whatever round its own ts
+// fell in. rejirah.mjs keeps ONE door for this, supersede(), applied inside its readLog — "the single door every
+// consumer of this log already comes through" (rejirah.mjs:140-146). This reader:
+//   1. parses EXACTLY as before — same row kinds, the same `faults` out-param, an absent log still an honest absence;
+//   2. passes every row through that SAME exported supersede (never a second definition of what a correction is);
+//   3. stands each surviving correction where the verdict it replaces stood — the round window is the ORIGINAL's ts,
+//      followed down a chain of corrections — so the corrected verdict grades the round it was about. The real
+//      sitting time is not lost: the correction row on disk keeps its own ts, and the original survives as record.
+// An uncorrected log derives byte-for-byte what the legacy reader derives (asserted in the selftest).
+function readRejirahRounds(path = join(STATE_DIR, "rejirah_log.jsonl"), faults = []) {
+  const rows = [];
+  const why = (e) => String((e && e.message) || e).slice(0, 140);
+  try {
+    if (!existsSync(path)) return new Map();   // absent log = honest absence, never a fault
+    for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+      const s = line.trim(); if (!s) continue;
+      try {
+        const j = JSON.parse(s);
+        if (j && j.concept) rows.push(j);
+      } catch (e) { faults.push({ file: "rejirah_log.jsonl", why: `unparseable row: ${why(e)}`, blocking: false }); }
+    }
+  } catch (e) { faults.push({ file: "rejirah_log.jsonl", why: `unreadable: ${why(e)}`, blocking: true }); return new Map(); }
+  const byTs = new Map(rows.filter((r) => typeof r.ts === "string").map((r) => [r.ts, r]));
+  const standsAt = (r) => {
+    let cur = r; const seen = new Set();
+    while (cur && typeof cur.corrects === "string" && byTs.has(cur.corrects) && !seen.has(cur.corrects)) { seen.add(cur.corrects); cur = byTs.get(cur.corrects); }
+    return cur ? cur.ts : r.ts;
+  };
+  const live = supersede(rows);   // THE DOOR — rejirah.mjs's own
+  const closes = live.filter((j) => j.kind === "round-close");
+  const grades = live.filter((j) => j.kind !== "round-close" && j.axis).map((g) => (typeof g.corrects === "string" ? { ...g, ts: standsAt(g) } : g));
+  return roundsOf(grades, closes);
+}
+/** roundsOf — the round-window derivation (the legacy reader's own, unchanged): concept + the DUE date's day → the
+ *  round's real result. A round is a TIME WINDOW, not an axis name: rows after the previous close of the concept, up to
+ *  and including this one (see the legacy reader's verify-pass note for why). */
+function roundsOf(grades, closes) {
+  const dayOf = (d) => { const t = Date.parse(d); return Number.isNaN(t) ? null : new Date(t).toISOString().slice(0, 10); };
+  const out = new Map();
+  const closesByConcept = new Map();
+  for (const c of closes) {
+    if (Number.isNaN(Date.parse(c.ts))) continue;
+    const k = String(c.concept).toLowerCase().trim();
+    if (!closesByConcept.has(k)) closesByConcept.set(k, []);
+    closesByConcept.get(k).push(c);
+  }
+  for (const list of closesByConcept.values()) list.sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
+  for (const c of closes) {
+    const day = dayOf(c.due);
+    if (!day || Number.isNaN(Date.parse(c.ts))) continue;
+    const concept = String(c.concept).toLowerCase().trim();
+    const siblings = closesByConcept.get(concept) || [];
+    const idx = siblings.indexOf(c);
+    const since = idx > 0 ? Date.parse(siblings[idx - 1].ts) : -Infinity;
+    const until = Date.parse(c.ts);
+    const named = new Set(Array.isArray(c.axes_graded) ? c.axes_graded : []);
+    const mine = grades.filter((g) => {
+      if (String(g.concept).toLowerCase().trim() !== concept) return false;
+      const t = Date.parse(g.ts);
+      if (Number.isNaN(t) || t <= since || t > until) return false;
+      if (c.round != null && g.round != null) return g.round === c.round;
+      return named.size ? named.has(g.axis) : true;
+    });
+    const cracked = mine.some((g) => g.result === "cracked");
     const rank = { guessed: 3, shaky: 2, knew: 1 };
     const worstGut = mine.map((g) => g.gut).filter(Boolean)
       .sort((a, b) => (rank[b] || 0) - (rank[a] || 0))[0] || null;
@@ -893,6 +972,34 @@ function selftest() {
       r1 && r1.cracked === true && r1.worstGut === "guessed" && r1.graded === 2);
     assert("#108 each round sees ONLY its own window (2 grades each, never all 4)",
       r1.graded === 2 && r2.graded === 2);
+
+    // ── L6 · fate 26 (15 Oct 2026) · A CORRECTION IS HONOURED HERE TOO — through rejirah.mjs's own door ──
+    // R1: he cracked b and the round closed; a WEEK LATER the verdict was walked back (`rejirah.mjs correct`: a NEW row,
+    // a later ts, `corrects` naming the original). R2 then closes with nothing graded in its window but the correction's
+    // own timestamp. Driven both ways: the live reader honours the correction in R1 and keeps it out of R2; the frozen raw
+    // reader still lapses R1 and leaks the correction into R2 — the defect, kept visible.
+    const corrLog = join(tmp, "corrected.jsonl");
+    writeFileSync(corrLog, [
+      { ts: "2026-09-10T10:00:00.000Z", concept: "fix", axis: "a", result: "held", gut: "knew", round: null },
+      { ts: "2026-09-10T10:05:00.000Z", concept: "fix", axis: "b", result: "cracked", gut: "shaky", round: null },
+      { ts: "2026-09-10T18:00:00.000Z", concept: "fix", kind: "round-close", round: null, due: "2026-09-11", axes_graded: ["a", "b"] },
+      { ts: "2026-09-17T09:00:00.000Z", concept: "fix", axis: "b", result: "held", gut: "shaky", cold: true, round: null, source: "correction", corrects: "2026-09-10T10:05:00.000Z", why: "he named the mechanism; the judge marked the wording" },
+      { ts: "2026-09-24T18:00:00.000Z", concept: "fix", kind: "round-close", round: null, due: "2026-09-25", axes_graded: ["b"] },
+    ].map(r => JSON.stringify(r)).join("\n") + "\n");
+    const cr = readRejirahRounds(corrLog), crRaw = readRejirahRoundsLegacy(corrLog);
+    assert("fate 26 — a CORRECTED crack no longer lapses its round: through the door R1 reads clean, graded on the corrected verdict (2 axes), the gut carried from the original",
+      cr.get("fix|2026-09-11").cracked === false && cr.get("fix|2026-09-11").graded === 2 && cr.get("fix|2026-09-11").worstGut === "shaky");
+    assert("fate 26 — …and the correction is NOT a fresh grade of the next round (its own later ts no longer drops it into R2's window)",
+      cr.get("fix|2026-09-25").graded === 0 && cr.get("fix|2026-09-25").cracked === false);
+    assert("fate 26 — planted both ways: the frozen RAW reader still lapses R1 on the walked-back crack and leaks the correction into R2 (the defect the door closes)",
+      crRaw.get("fix|2026-09-11").cracked === true && crRaw.get("fix|2026-09-25").graded === 1);
+    assert("fate 26 — an UNCORRECTED log derives byte-for-byte what the legacy reader derives (strictly additive)",
+      JSON.stringify([...readRejirahRounds(twoRoundLog)]) === JSON.stringify([...readRejirahRoundsLegacy(twoRoundLog)])
+      && JSON.stringify([...readRejirahRounds(rjLog)]) === JSON.stringify([...readRejirahRoundsLegacy(rjLog)]));
+    assert("fate 26 — the door is rejirah.mjs's own: fsrs imports supersede from ./rejirah.mjs and the live reader calls it; no second definition of a correction here",
+      (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8"); const body = src.slice(0, src.indexOf("function selftest("));
+               const live = body.slice(body.indexOf("function readRejirahRounds("), body.indexOf("function roundsOf("));
+               return /import \{ supersede \} from "\.\/rejirah\.mjs"/.test(body) && /supersede\(rows\)/.test(live) && !/corrected\.has/.test(body); })());
 
     // The whole point: the cracked card must now be due SOONER than the held one.
     const crackedCard = buildStore(seedFor("cracked"), f)[0];

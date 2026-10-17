@@ -64,7 +64,7 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, rea
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { preCyborg } from "./registry.mjs";   // W0-B — THE GAME-ON EPOCH: one reader, one predicate, no organ keeps its own copy
+import { preCyborg, gameOnEpoch } from "./registry.mjs";   // W0-B — THE GAME-ON EPOCH: one reader, one predicate, no organ keeps its own copy · L6 — gameOnEpoch: the axis reader's gate reads the instant, never re-types it
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATE = join(HERE, "..", "dressing-room", "state");
@@ -395,7 +395,7 @@ export function pendingCloses(caps, rows) {
 // criterion is one clean cold retrieval, not one attempt). Axes that were not due are not
 // owed anything, so they are never listed — a criterion that nags about ground that was
 // never scheduled is just noise.
-export function successiveRelearning(capsule, rows, intervals, since = "", now = new Date()) {
+export function successiveRelearning(capsule, rows, intervals, since = "", now = new Date(), opts = {}) {   // L6 · fate 24: opts.anyway = his --anyway, passed through to the gated axis reader
   const mine = rows.filter((r) => isGrade(r) && r.concept === capsule.id);
   // DUE-NESS IS MEASURED BEFORE THIS ROUND, NOT AFTER — found by its own selftest, 5 Aug.
   // Deriving it from ALL rows lets this round's own grades answer the question: a crack
@@ -406,7 +406,7 @@ export function successiveRelearning(capsule, rows, intervals, since = "", now =
   const thisRound = mine.filter((r) => String(r.ts) > since);
   const owed = [], missing = [];
   for (const axis of AXES) {
-    const st = axisState(capsule, axis, prior, intervals, now);
+    const st = axisState(capsule, axis, prior, intervals, now, opts);
     if (!(st.overdueDays !== null && st.overdueDays > 0)) continue;   // not due → not owed
     owed.push(axis);
     if (!thisRound.some((r) => r.axis === axis && r.result === "held")) missing.push(axis);
@@ -430,7 +430,10 @@ export function gistPatch(capsule, dueDates) {
 // is replaced per axis, which is the whole point of the knob. With no history at all
 // the axis inherits the capsule's own lockedOn schedule, so a never-graded axis is
 // never silently treated as fresh.
-export function axisState(capsule, axis, rows, intervals, now = new Date()) {
+// L6 · fate 24 (15 Oct 2026): this body is now axisStateLegacy — the UNGATED reader, FROZEN as it stood (L9: "the legacy
+// Re-Jirah readers kept frozen as today"). Every consumer reads the gated axisState right below it, which computes
+// THROUGH this body, so the ladder arithmetic is never derived twice.
+export function axisStateLegacy(capsule, axis, rows, intervals, now = new Date()) {
   // isGrade() is belt-and-braces beside `r.axis === axis`: a close row has no axis and is
   // already excluded, but stating the row KIND means a future row shape can never drift
   // into the ladder maths by accident.
@@ -521,8 +524,33 @@ export function axisState(capsule, axis, rows, intervals, now = new Date()) {
   };
 }
 
-export function conceptState(capsule, rows, intervals, now = new Date()) {
-  const axes = AXES.map((a) => axisState(capsule, a, rows, intervals, now));
+// ── L6 · fate 24 (15 Oct 2026) · THE EPOCH GATE IN THE AXIS READER ───────────────────────────────────
+// W0-B put GAME ON into openRound alone, so `close` refused a withdrawn proof while THIS file's own queue — `due`
+// (dueReport → conceptState → here), `state`, successiveRelearning — kept serving every pre-epoch capsule's nine axes
+// as overdue: the ungraded branch above takes roundSchedule().rounds and never reads its pre_cyborg flag, and the
+// graded branch never asks (learning-loop.txt:53). The owner of the schedule was the one surface of four still
+// serving the withdrawn queue. The gate now lives in the reader every one of them comes through.
+// THE RECORD STAYS, ONLY THE QUEUE CLOSES (roundSchedule's own law, W0-B): for a capsule registry.preCyborg calls
+// withdrawn, rounds / streak / lastResult / fluency / calibration are the legacy reader's, returned as RECORD and
+// labelled pre_cyborg:true. The QUEUE fields — nextDue, overdueDays, the two dueReport and successiveRelearning act on —
+// come ONLY from cold grades sat at or after the epoch: registry.gameOnEpoch(), read, never re-typed here. With no
+// such grade the axis carries no date (withdrawn:true); with one, it schedules from post-epoch history alone, so a
+// streak earned on the withdrawn instrument never lengthens an interval. A capsule locked (or re-locked) after the
+// epoch is untouched. An unreadable epoch THROWS — loud, never a silent "everything is due" (roundSchedule's law).
+// HIS WORD REOPENS IT: opts.anyway, openRound's own door, returns the legacy queue (still labelled).
+export function axisState(capsule, axis, rows, intervals, now = new Date(), opts = {}) {
+  const st = axisStateLegacy(capsule, axis, rows, intervals, now);
+  const pre = preCyborg(capsule);
+  if (!pre || (opts && opts.anyway)) return { ...st, pre_cyborg: pre };
+  const epoch = gameOnEpoch();
+  const mine = (r) => isGrade(r) && r.concept === capsule.id && r.axis === axis;
+  const post = (rows || []).filter((r) => !mine(r) || Date.parse(r.ts) >= epoch);
+  const q = post.some(mine) ? axisStateLegacy(capsule, axis, post, intervals, now) : null;
+  return { ...st, nextDue: q ? q.nextDue : null, overdueDays: q ? q.overdueDays : null, pre_cyborg: true, withdrawn: !q };
+}
+
+export function conceptState(capsule, rows, intervals, now = new Date(), opts = {}) {   // L6 · fate 24: opts → the gated axis reader
+  const axes = AXES.map((a) => axisState(capsule, a, rows, intervals, now, opts));
   // EDGE-MAP — the honest knowledge boundary, DERIVED: an axis he has held cold is one
   // he can defend; one never graded is not a weakness, it is simply unmeasured, and
   // saying so is the difference between an edge-map and a shame-list.
@@ -548,11 +576,11 @@ export function conceptState(capsule, rows, intervals, now = new Date()) {
 // FSRS says WHEN. This says WHICH AXES and HOW HARD. It reads cards.json but never
 // writes a concept-level date of its own, so the two worlds can no longer disagree —
 // they answer different questions by construction.
-export function dueReport(caps, rows, intervals, cards, now = new Date()) {
+export function dueReport(caps, rows, intervals, cards, now = new Date(), opts = {}) {   // L6 · fate 24: opts → the gated axis reader
   const byConcept = new Map();
   const hardest = (cards && Array.isArray(cards.hardest_due)) ? cards.hardest_due : [];
   for (const c of caps) {
-    const st = conceptState(c, rows, intervals, now);
+    const st = conceptState(c, rows, intervals, now, opts);
     const axes = st.axes.filter((a) => a.overdueDays !== null && a.overdueDays > 0)
       .sort((a, b) => (b.escalate - a.escalate) || (b.overdueDays - a.overdueDays));
     if (axes.length) byConcept.set(c.id, { concept: c.id, axes, fsrs_rank: hardest.indexOf(c.id) });
@@ -707,6 +735,11 @@ function selftest() {
   const NOW = new Date("2026-08-05T12:00:00Z");
   const cap = { id: "embeddings", lockedOn: "2026-06-21" };
   const row = (axis, result, gut, ts) => ({ concept: "embeddings", axis, result, gut, cold: true, ts });
+  // L6 · fate 24 (15 Oct 2026): every fixture below is PRE-EPOCH (June locks, July grades, an August clock — chosen when
+  // it was written), and the axis reader now closes the queue on such a capsule. The assertions that ask the LADDER /
+  // SCHEDULE ARITHMETIC therefore pass AW = { anyway: true } — his own override door, the exact precedent W0-B set for
+  // openRound below — to keep asking their own question. The gate itself is asserted on its own (the fate 24 block).
+  const AW = { anyway: true };
 
   assert("VALIDATION — a good row is built and stamped",
     buildRow({ concept: "embeddings", axis: "a", result: "held", gut: "shaky" }, { capsuleIds: ["embeddings"] }).ok);
@@ -732,8 +765,8 @@ function selftest() {
     axisState(cap, "a", [...clean2, row("a", "cracked", "knew", "2026-08-01T00:00:00Z")], IV, NOW).fluencyState.startsWith("🔴"));
   assert("KNOB 3 — a clean hold EXPANDS the interval, a crack RESETS it to the first rung",
     (() => {
-      const held = axisState(cap, "a", clean2, IV, NOW).nextDue;
-      const crk = axisState(cap, "a", [...clean2, row("a", "cracked", "shaky", "2026-08-01T00:00:00Z")], IV, NOW).nextDue;
+      const held = axisState(cap, "a", clean2, IV, NOW, AW).nextDue;
+      const crk = axisState(cap, "a", [...clean2, row("a", "cracked", "shaky", "2026-08-01T00:00:00Z")], IV, NOW, AW).nextDue;
       return held === "2026-08-03" && crk === "2026-08-04";   // 20 Jul +14 vs 1 Aug +3
     })());
   assert("KNOB 2 — axis typing comes off the axis definitions (d reconstructs, f defends, a recalls)",
@@ -762,7 +795,7 @@ function selftest() {
   assert("INTENSITY (his 11 Aug ruling) — no round is described as gentle, and round one asks it as an interviewer would",
     !/gentle/i.test(ROUND_MODE.join(" ")) && /interviewer would ask/i.test(ROUND_MODE[0]));
   assert("NEVER-GRADED — an ungraded axis inherits the capsule's own lockedOn schedule, never 'fresh'",
-    (() => { const s = axisState(cap, "b", [], IV, NOW); return s.rounds === 0 && s.nextDue === "2026-06-24" && s.overdueDays > 40; })());
+    (() => { const s = axisState(cap, "b", [], IV, NOW, AW); return s.rounds === 0 && s.nextDue === "2026-06-24" && s.overdueDays > 40; })());
 
   const cs = conceptState(cap, clean2, IV, NOW);
   assert("EDGE-MAP — derived: what he can defend, what cracked, what is simply UNMEASURED",
@@ -773,22 +806,22 @@ function selftest() {
     JSON.stringify(cap) === JSON.stringify({ id: "embeddings", lockedOn: "2026-06-21" }));
 
   const caps = [cap, { id: "inference", lockedOn: "2026-06-24" }];
-  const rep = dueReport(caps, clean2, IV, { hardest_due: ["inference", "embeddings"] }, NOW);
+  const rep = dueReport(caps, clean2, IV, { hardest_due: ["inference", "embeddings"] }, NOW, AW);
   assert("ARBITER — FSRS owns the ORDER of concepts; this organ only supplies axes + mode",
     rep[0].concept === "inference" && rep.every((r) => !("nextDue" in r)));
   assert("A FRESH CRACK IS NOT INSTANTLY OVERDUE — the reset schedules it TIGHT (3d), it does not nag today",
-    (() => { const s = axisState(cap, "c", [row("c", "cracked", "knew", "2026-08-04T00:00:00Z")], IV, NOW);
+    (() => { const s = axisState(cap, "c", [row("c", "cracked", "knew", "2026-08-04T00:00:00Z")], IV, NOW, AW);
       return s.nextDue === "2026-08-07" && s.overdueDays === 0 && s.escalate === true; })());
   assert("ARBITER — within a concept, an escalated (confident-crack) axis outranks a MORE overdue but unmeasured one",
     (() => { const rows = [row("c", "cracked", "knew", "2026-07-01T00:00:00Z")];
-      const r = dueReport([cap], rows, IV, {}, NOW);           // axis b is 42d overdue, axis c is 32d + escalated
+      const r = dueReport([cap], rows, IV, {}, NOW, AW);           // axis b is 42d overdue, axis c is 32d + escalated
       const b = r[0].axes.find((x) => x.axis === "b");
       return r[0].axes[0].axis === "c" && b && b.overdueDays > r[0].axes[0].overdueDays; })());
   assert("EMPTY LOG — no rows means every axis falls back to the capsule schedule, never a crash",
-    dueReport(caps, [], IV, null, NOW).length === 2);
+    dueReport(caps, [], IV, null, NOW, AW).length === 2);
   // audit #108 — the `due` screen renders only 4 axes; the other 5 must be COUNTED and NAMED.
   assert("DUE SCREEN — the axes past the 4-line cap are counted and named, never silently dropped",
-    (() => { const r = dueReport([cap], [], IV, {}, NOW)[0];
+    (() => { const r = dueReport([cap], [], IV, {}, NOW, AW)[0];
       const line = moreAxesLine(r.axes, r.concept, 4);
       return r.axes.length === 9 && /\+5 more due/.test(line)
         && ["e", "f", "g", "h", "i"].every((x) => line.includes(`${x}·`))
@@ -802,10 +835,10 @@ function selftest() {
   assert("THE BACK EDGE — a graded round is appended, read back, and CHANGES the derived state",
     (() => {
       const p = join(mkdtempSync(join(tmpdir(), "rejirah-")), "log.jsonl");
-      const before = axisState(cap, "a", readLog(p), IV, NOW);
+      const before = axisState(cap, "a", readLog(p), IV, NOW, AW);
       const b1 = buildRow({ concept: "embeddings", axis: "a", result: "held", gut: "shaky" }, { capsuleIds: ["embeddings"], now: "2026-08-05T10:00:00Z" });
       append(b1.row, p);
-      const after = axisState(cap, "a", readLog(p), IV, NOW);
+      const after = axisState(cap, "a", readLog(p), IV, NOW, AW);
       return before.rounds === 0 && before.lastResult === null
         && after.rounds === 1 && after.lastResult === "held" && after.nextDue === "2026-08-08"
         && readLog(p).length === 1;
@@ -835,15 +868,15 @@ function selftest() {
   // round line on the SAME screen. Pinned on the real tokenization capsule, because that is
   // the one that contradicted itself in production.
   assert("ANCHOR — an ungraded axis on a capsule with SERVED rounds schedules the open round (R3), not R1 all over again",
-    (() => { const s = axisState(TOK, "a", [], IV, NOW);
+    (() => { const s = axisState(TOK, "a", [], IV, NOW, AW);
       return s.rounds === 0 && s.nextDue === "2026-07-27" && s.overdueDays === 9; })());   // capsule_map.json says 9 too
   assert("ANCHOR — reJirahDone [] is UNCHANGED: still R1 = lockedOn + the first interval",
-    axisState({ id: "x", lockedOn: "2026-06-21", reJirahDone: [] }, "a", [], IV, NOW).nextDue === "2026-06-24");
+    axisState({ id: "x", lockedOn: "2026-06-21", reJirahDone: [] }, "a", [], IV, NOW, AW).nextDue === "2026-06-24");
   assert("ANCHOR — junk dates cannot move it (ISO_DAY guard), and a real grade still outranks the capsule schedule",
-    axisState({ ...TOK, reJirahDone: ["kal", "", "2026-13-45"] }, "a", [], IV, NOW).nextDue === "2026-06-18"
-    && axisState(TOK, "a", [{ concept: "tokenization", axis: "a", result: "held", gut: "shaky", cold: true, ts: "2026-07-20T00:00:00Z" }], IV, NOW).nextDue === "2026-07-23");
+    axisState({ ...TOK, reJirahDone: ["kal", "", "2026-13-45"] }, "a", [], IV, NOW, AW).nextDue === "2026-06-18"
+    && axisState(TOK, "a", [{ concept: "tokenization", axis: "a", result: "held", gut: "shaky", cold: true, ts: "2026-07-20T00:00:00Z" }], IV, NOW, AW).nextDue === "2026-07-23");
   assert("ANCHOR — all three rounds served and never graded = NO date, never a fabricated 4th round",
-    (() => { const s = axisState({ ...TOK, reJirahDone: ["2026-06-18", "2026-06-29", "2026-07-27"] }, "a", [], IV, NOW);
+    (() => { const s = axisState({ ...TOK, reJirahDone: ["2026-06-18", "2026-06-29", "2026-07-27"] }, "a", [], IV, NOW, AW);
       return s.nextDue === null && s.overdueDays === null; })());
 
   // W0-B (2 Sep 2026): these five ask about the SCHEDULE ARITHMETIC, and every fixture
@@ -913,6 +946,41 @@ function selftest() {
       openRound({ ...pre, id: "fresh" }, IV).ok === false && openRound({ ...post, id: "tokenization" }, IV).ok === true);
   }
 
+  // ── L6 · fate 24 (15 Oct 2026) · THE EPOCH GATE IN THE AXIS READER, PLANTED BOTH WAYS ─────────────
+  // Driven on a clock PAST the epoch, so every answer below is the one his real morning gets.
+  {
+    const preCap = { id: "tokenization", lockedOn: "2026-06-15", reJirahDone: [] };    // locked before GAME ON
+    const postCap = { id: "fresh", lockedOn: "2026-09-05", reJirahDone: [] };          // locked after it
+    const relockCap = { id: "again", lockedOn: "2026-06-15", relockedOn: "2026-09-01", reJirahDone: [] };
+    const NOW6 = new Date("2026-10-15T06:00:00Z");
+    const gr = (c, axis, result, ts) => ({ concept: c, axis, result, gut: "shaky", cold: true, ts });
+    const s0 = axisState(preCap, "b", [], IV, NOW6);
+    assert("fate 24 — a capsule locked before GAME ON is NOT due on its own reader: the ungraded axis carries no date (withdrawn), never the June schedule",
+      s0.pre_cyborg === true && s0.withdrawn === true && s0.nextDue === null && s0.overdueDays === null
+      && axisStateLegacy(preCap, "b", [], IV, NOW6).overdueDays > 100);   // the legacy reader still serves it: the defect, kept visible
+    assert("fate 24 — THE RECORD STAYS: a pre-epoch grade is still history (rounds, lastResult) while it schedules nothing",
+      (() => { const s = axisState(preCap, "a", [gr("tokenization", "a", "held", "2026-07-20T00:00:00Z")], IV, NOW6);
+               return s.rounds === 1 && s.lastResult === "held" && s.nextDue === null && s.overdueDays === null && s.withdrawn === true; })());
+    assert("fate 24 — a cold grade sat AFTER the epoch is a real proof: it schedules the axis from post-epoch history alone (a streak earned before GAME ON never lengthens the interval)",
+      (() => { const rows = [gr("tokenization", "a", "held", "2026-07-20T00:00:00Z"), gr("tokenization", "a", "held", "2026-10-01T00:00:00Z")];
+               const s = axisState(preCap, "a", rows, IV, NOW6), legacy = axisStateLegacy(preCap, "a", rows, IV, NOW6);
+               return s.nextDue === "2026-10-04" && s.overdueDays === 11 && s.withdrawn === false && s.rounds === 2 && legacy.nextDue === "2026-10-15"; })());
+    assert("fate 24 — a capsule locked AFTER the epoch, or RE-LOCKED after it, is untouched: the legacy reader's answer plus pre_cyborg:false",
+      [postCap, relockCap].every((c) => { const a = axisState(c, "c", [], IV, NOW6), b = axisStateLegacy(c, "c", [], IV, NOW6);
+        return a.pre_cyborg === false && !("withdrawn" in a) && JSON.stringify({ ...a, pre_cyborg: undefined }) === JSON.stringify(b) && b.nextDue !== null; }));
+    assert("fate 24 — `due` (dueReport) serves NOTHING off a withdrawn proof and still serves the post-epoch capsule",
+      (() => { const r = dueReport([preCap, postCap], [], IV, null, NOW6); return r.length === 1 && r[0].concept === "fresh" && r[0].axes.length === 9; })());
+    assert("fate 24 — HIS WORD REOPENS IT: { anyway: true } returns the legacy reader's queue, still labelled pre_cyborg",
+      (() => { const s = axisState(preCap, "b", [], IV, NOW6, { anyway: true }); return s.pre_cyborg === true && s.nextDue === "2026-06-18" && s.overdueDays > 100; })());
+    assert("fate 24 — successiveRelearning owes nothing off a withdrawn proof, and a round his --anyway opened still owes all nine",
+      successiveRelearning(preCap, [], IV, "2026-10-15T00:00:00Z", NOW6).owed.length === 0
+      && successiveRelearning(preCap, [], IV, "2026-10-15T00:00:00Z", NOW6, { anyway: true }).owed.length === 9);
+    assert("fate 24 — the epoch is READ from the registry (gameOnEpoch, preCyborg), never re-typed in this file; the ungated reader is kept FROZEN as axisStateLegacy (L9)",
+      (() => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8"); const body = src.slice(0, src.indexOf("function selftest("));
+               return /import \{ preCyborg, gameOnEpoch \} from "\.\/registry\.mjs"/.test(body) && !/2026-08-30|08-30T/.test(body)
+                 && (body.match(/export function axisStateLegacy\(/g) || []).length === 1 && /export function axisState\(capsule, axis, rows, intervals, now = new Date\(\), opts = \{\}\)/.test(body); })());
+  }
+
   assert("PENDING — a closed round whose date is NOT in the capsule reads PENDING",
     (() => { const p = pendingCloses([cap], [closeRow]);
       return p.length === 1 && p[0].round === 1 && p[0].due === "2026-06-24" && p[0].known_capsule === true; })());
@@ -939,22 +1007,22 @@ function selftest() {
   const SINCE = "2026-08-05T00:00:00Z";
   const rnd = (axis, result) => row(axis, result, "shaky", "2026-08-05T09:00:00Z");
   assert("SUCCESSIVE-RELEARNING — every one of the 9 axes is overdue here, so all 9 are OWED",
-    successiveRelearning(cap, [], IV, SINCE, NOW).owed.length === 9);
+    successiveRelearning(cap, [], IV, SINCE, NOW, AW).owed.length === 9);
   assert("SUCCESSIVE-RELEARNING — an axis HELD cold this round satisfies its debt",
-    !successiveRelearning(cap, [rnd("a", "held")], IV, SINCE, NOW).missing.includes("a"));
+    !successiveRelearning(cap, [rnd("a", "held")], IV, SINCE, NOW, AW).missing.includes("a"));
   assert("SUCCESSIVE-RELEARNING — a CRACK does not satisfy it (the criterion is one CLEAN retrieval)",
-    successiveRelearning(cap, [rnd("b", "cracked")], IV, SINCE, NOW).missing.includes("b"));
+    successiveRelearning(cap, [rnd("b", "cracked")], IV, SINCE, NOW, AW).missing.includes("b"));
   assert("SUCCESSIVE-RELEARNING — a hold from BEFORE this round does not pay this round's debt",
-    successiveRelearning(cap, clean2, IV, SINCE, NOW).missing.includes("a"));   // clean2 is July
+    successiveRelearning(cap, clean2, IV, SINCE, NOW, AW).missing.includes("a"));   // clean2 is July
   assert("SUCCESSIVE-RELEARNING — MET only when every owed axis held clean, never partially",
     (() => { const all = AXES.map((x) => rnd(x, "held"));
       const one = AXES.slice(0, 8).map((x) => rnd(x, "held"));
-      return successiveRelearning(cap, all, IV, SINCE, NOW).met === true
-        && successiveRelearning(cap, one, IV, SINCE, NOW).met === false
-        && successiveRelearning(cap, one, IV, SINCE, NOW).missing.join("") === "i"; })());
+      return successiveRelearning(cap, all, IV, SINCE, NOW, AW).met === true
+        && successiveRelearning(cap, one, IV, SINCE, NOW, AW).met === false
+        && successiveRelearning(cap, one, IV, SINCE, NOW, AW).missing.join("") === "i"; })());
   assert("SUCCESSIVE-RELEARNING — an axis that was never DUE is never listed as owed (no noise)",
     (() => { const fresh = { id: "embeddings", lockedOn: "2026-08-04" };   // locked yesterday, nothing due
-      const s = successiveRelearning(fresh, [], IV, SINCE, NOW);
+      const s = successiveRelearning(fresh, [], IV, SINCE, NOW, AW);
       return s.owed.length === 0 && s.met === false; })());
 
   assert("GIST PATCH — merges into the EXISTING array, sorted, and never drops a served round",
@@ -1248,7 +1316,7 @@ function main() {
     // Canon's criterion, reported honestly at the one moment it means something. It does not
     // block: an interrupted round is a real round, and a machine that refuses to let him
     // close one teaches him to stop closing them.
-    const sr = successiveRelearning(cap, [...rows, ...graded], intervals, since, now);
+    const sr = successiveRelearning(cap, [...rows, ...graded], intervals, since, now, { anyway });   // L6 · fate 24: a round his --anyway opened still owes its axes
     if (sr.owed.length) {
       console.log(sr.met
         ? `   ✅ successive-relearning MET — every due axis (${sr.owed.join(" ")}) held cold at least once.`
@@ -1319,7 +1387,7 @@ rejirah: no capsule named "${want}" in the mirror — maujood: ${caps.map((c) =>
       console.log(`\n${c.id}  (locked ${st.lockedOn})`);
       for (const a of st.axes) {
         console.log(`  ${a.axis} ${String(a.axisType).padEnd(11)} rounds ${a.rounds} · ${a.lastResult || "ungraded"}`
-          + ` · ${a.fluencyState.split(" ")[0]} · due ${a.nextDue || "?"}${a.overdueDays ? ` (${a.overdueDays}d overdue)` : ""}`
+          + ` · ${a.fluencyState.split(" ")[0]} · due ${a.nextDue || (a.withdrawn ? "— (GAME ON: proof withdrawn)" : "?")}${a.overdueDays ? ` (${a.overdueDays}d overdue)` : ""}`
           + (a.escalate ? "  ⛔" : ""));
       }
       console.log(`  edge-map → defend ${st.edgeMap.can_defend.join("") || "—"} · cracked ${st.edgeMap.cracked.join("") || "—"} · unmeasured ${st.edgeMap.unmeasured.join("") || "—"}`);
@@ -1344,6 +1412,9 @@ rejirah: no capsule named "${want}" in the mirror — maujood: ${caps.map((c) =>
     // exact reading that let `defer` mean `drop` for weeks.
     const carry = deferredCarry(readSessions(), readJson(join(STATE, "forge_session.json")), caps, rows, now);
     for (const l of carryLines(carry)) console.log(l);
+    // L6 · fate 24 — THE WITHDRAWN PROOFS ARE SAID OUT LOUD, never silently dropped from the queue (deep.mjs `due`'s law).
+    const withdrawn = caps.filter((c) => preCyborg(c)).map((c) => c.id);
+    if (withdrawn.length) console.log(`\n⚑ GAME ON (30 Aug): ${withdrawn.join(" · ")} ka lock-proof withdrawn hai — inke axes sirf GAME ON ke baad ke cold grade se due hote hain. Notes poore rakhe hain. Phir bhi round baithna ho: \`node scripts/rejirah.mjs close <concept> --anyway\`.`);
     const rep = dueReport(caps, rows, intervals, readJson(CARDS), now);
     if (!rep.length) {
       console.log(carry.length

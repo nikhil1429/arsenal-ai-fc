@@ -13,20 +13,30 @@
 //   Writes NOTHING (single-writer law intact).
 //   L3 (15 Oct 2026): also READS dressing-room/state/resume_pointer.jsonl through its owner
 //   (resume_pointer.mjs `latest`) for the first act — never `consume`; every day key here is IST.
+//   L6 (15 Oct 2026) — "Writes NOTHING" above is SUPERSEDED, kept and dated, not cut: learnstate is the
+//   SOLE WRITER of dressing-room/state/brief_log.jsonl. APPEND-ONLY (a row is never rewritten, never
+//   back-filled), ONE row per brief HIS session printed, written AFTER the print off the FINAL text, from
+//   main() only — never from brief(), which the suite calls on fixture dirs — under recordBriefed's guards
+//   (ARSENAL_ORGAN=1 records nothing; the same named residual: an agent that never sets it still records).
+//   Row: {v:1, id, ts, day, pehla_kaam, carries_from, carry, rejirah[], asked_first}; every day key IST.
+//   It also READS compiled_notes.jsonl (L1's compiler is its SOLE WRITER — asked-first, C22), never writes it.
 // ROUTING: current.track 'concept' -> FORGE (9-axis) · 'skill' (Python) -> the
 //   JS->Python 5-phase loop (Claude learn -> Colab -> Coach Gem + CLOSE-PACKET).
-// MODES: brief (default — for the SessionStart hook) · json · selftest
+// MODES: brief (default — for the SessionStart hook) · json · selftest · born (brief_log.jsonl's birth at its landing,
+//   forks row 787 (1): created EMPTY iff absent, never truncated, never written once it exists)
 // ============================================================================
-import { readFileSync, existsSync, mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, existsSync, mkdtempSync, writeFileSync, mkdirSync, appendFileSync } from "node:fs";   // appendFileSync: L6 — brief_log.jsonl, this file's one write
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
+import { randomBytes } from "node:crypto";   // L6 — a brief row's own id
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { courseBrief, fmtStamp } from "./course.mjs";   // audit #35 — the course tracker's one reader (fmtStamp: 11 Aug sweep, the resume address)
 import { pythonBrief } from "./python_state.mjs";   // audit #107 #26 — the Python track's one reader
 import { loadCapsules, readLog, pendingCloses, openRound, intervalsOf } from "./rejirah.mjs";   // #107 pass 2 — un-pasted rounds; P7.B — the arbiter's live overdue read
 import { loadFreshDrill } from "./examiner.mjs";   // 11 Aug 2026 dead-wire sweep — the drill's age gate belongs to its owner (see nextup)
 import { isStale as forgeIsStale, STEPS as FORGE_STEPS } from "./forge_session.mjs";   // W0-D — the PEHLA KAAM line asks the pacer whether its session is stale, instead of re-deriving it · L3 — "STEP n/N" from the pacer's own list
-import { latest as latestPointer, istDay } from "./resume_pointer.mjs";   // L3 (15 Oct 2026) — the pointer ledger, READ-ONLY here (`latest`, never `consume`) · the ONE IST day key
+import { latest as latestPointer, istDay, readRows as pointerRows } from "./resume_pointer.mjs";   // L3 (15 Oct 2026) — the pointer ledger, READ-ONLY here (`latest`, never `consume`) · the ONE IST day key · L6 — readRows: its stamps key "the day before" (the witness's CLASS D), read through the owner
+import { preCyborg, gameOnEpoch } from "./registry.mjs";   // L6 · fate 18 — THE GAME-ON EPOCH: the ONE predicate (a date, never a list of names) gates every Re-Jirah name this brief serves
 import { derivedFloor } from "./sprintsync.mjs";   // A4 (4 Sep 2026) — the SYLLABUS FLOOR belongs to sprint.json's owner; this file reads it, it does not re-derive it
 import { starvedNightFor, recordConsumption, consumptionRows } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep — WHY the diary page is blank, in the brain's own words (see diaryLine) · recordConsumption: THE GATE's "briefed" stamp (18 Aug 2026), owner-held
 
@@ -87,7 +97,8 @@ function rejirahPendingLine(dir) {
 // boundary the working_set tag already uses (`wsAge >= 1`), and a MISSING generated_at is
 // CALLED OUT rather than assumed fresh — an untimestamped map is the one you can least
 // afford to trust silently. No new threshold is invented here.
-function rejirahDueLine(dir, now = Date.now()) {
+// L6 · fate 18 (15 Oct 2026): FROZEN as it stood (L9), referenced by no caller — the gated reader is right below it.
+function rejirahDueLineLegacy(dir, now = Date.now()) {
   const p = join(dir, "capsule_map.json");
   if (!existsSync(p)) return null;
   const m = JSON.parse(readFileSync(p, "utf8"));
@@ -128,6 +139,84 @@ function rejirahDueLine(dir, now = Date.now()) {
     + `  Overdue = RIPE, late nahi. Queue: \`node scripts/deep.mjs due\` (cold, sirf sawaal).`
     + ownLine
     + mapTag;
+}
+
+// ── L6 · fate 18 (15 Oct 2026) · THE OVERDUE LINE PASSES THE EPOCH GATE (C23 — the one schedule) ──────────────
+// The body above named capsule_map.json's overdue list as written. The map's rows carry no lock date ({concept,
+// overdue_days, next_due, rounds_done}, capsule_bridge.mjs:293), so a map written by older code or on an older morning
+// named a capsule GAME ON withdrew as "overdue", and this screen served it to him (fate 18; the producer itself is gated
+// since W0-B, its reader was not). Now every name is checked against its OWN capsule's proof date through
+// registry.preCyborg — the ONE predicate, a DATE, never a list of names; the epoch is the registry's row, never re-typed
+// here. A name with no capsule to prove it cannot pass (fail closed). The owner's `line` names the map's worst-overdue
+// concept, so it rides only when THAT concept passed. A withheld name is SAID once, never silently dropped, and an
+// unreadable epoch names nothing and says why. Nothing else in the line moved: same counts, same age tag, same order.
+/** proofOf — the epoch reading of ONE capsule: {concept, anchored_at, epoch_ok}. `anchored_at` is the instant its proof
+ *  stands on (the later of the lock and the re-lock, measured the way registry.preCyborg measures them); `epoch_ok` is
+ *  "a readable anchor AND not preCyborg". Throws only when the registry's epoch is unreadable (preCyborg's own law).
+ *  @param {*} c */
+export function proofOf(c) {
+  const lock = Date.parse(String((c && c.lockedOn) || "") + "T00:00:00Z");
+  const re = Date.parse(String((c && c.relockedOn) || ""));
+  const at = Number.isFinite(lock) ? (Number.isFinite(re) && re > lock ? re : lock) : null;
+  return { concept: String((c && c.id) || ""), anchored_at: at === null ? null : new Date(at).toISOString(), epoch_ok: at !== null && !preCyborg(c) };
+}
+/** rejirahDue — the gated overdue line AND what it serves: {line, served: proofOf()[], withheld: string[]} | null.
+ *  @param {string} dir @param {number} [now] */
+function rejirahDue(dir, now = Date.now()) {
+  const m = readJson(join(dir, "capsule_map.json"));
+  if (!m) return null;
+  const od = (Array.isArray(m.rejirah_overdue) ? m.rejirah_overdue : []).filter((/** @type {*} */ r) => (r.overdue_days || 0) > 0)
+    .sort((/** @type {*} */ a, /** @type {*} */ b) => (b.overdue_days || 0) - (a.overdue_days || 0));
+  if (!od.length) return null;
+  /** @type {any[]} */
+  let caps = [];
+  try { caps = loadCapsules(join(dir, "capsules")); } catch { caps = []; }   // an unreadable mirror proves nothing: every name is withheld
+  const byId = new Map(caps.map((c) => [String(c.id).toLowerCase(), c]));
+  /** @type {{row: any, proof: any}[]} */
+  const served = [];
+  /** @type {string[]} */
+  const withheld = [];
+  try {
+    for (const r of od) {
+      const c = byId.get(String(r.concept || "").toLowerCase());
+      const p = c ? proofOf(c) : null;
+      if (p && p.epoch_ok) served.push({ row: r, proof: p }); else withheld.push(String(r.concept || "?"));
+    }
+  } catch (e) {
+    return { line: `RE-JIRAH GATE: GAME ON ka epoch padha nahi gaya (${clip(String((e && /** @type {*} */ (e).message) || e), 90)}) — koi Re-Jirah naam nahi diya. Registry row: \`node scripts/registry.mjs get --table mechanisms --subject game_on_epoch\``,
+      served: [], withheld: od.map((/** @type {*} */ r) => String(r.concept || "?")) };
+  }
+  if (!served.length) {
+    return { line: `RE-JIRAH GATE: map ke ${withheld.length} overdue naam GAME ON gate pe ruke (${withheld.join(" · ")}) — proof 30 Aug 2026 se pehle ka, ya capsule hi nahi. Map dobara: \`node scripts/capsule_bridge.mjs\``,
+      served: [], withheld };
+  }
+  const list = served.map((s) => s.row);
+  const never = list.filter((r) => (r.rounds_done || 0) === 0).length;
+  const head = list.slice(0, 3).map((r) => `${r.concept} ${r.overdue_days}d`).join(" · ");
+  const ownLine = typeof m.line === "string" && m.line.trim() && served.some((s) => s.row === od[0]) ? `  ${m.line.trim()}` : "";
+  const mapAge = ageDays(m.generated_at, now);
+  const mapTag = mapAge === null
+    ? `  (is map pe koi generated_at nahi — ye din-ginti kitni purani hai, pata nahi: \`node scripts/capsule_bridge.mjs\`)`
+    : mapAge >= 1
+      ? `  (MAP ${Math.floor(mapAge)}d purana — ye din-ginti us din ki hai, aaj ki nahi: \`node scripts/capsule_bridge.mjs\`)`
+      : "";
+  const gateTag = withheld.length ? `  (GAME ON gate: ${withheld.join(" · ")} roke — proof 30 Aug 2026 se pehle ka, ya capsule hi nahi; map dobara: \`node scripts/capsule_bridge.mjs\`)` : "";
+  return {
+    line: `RE-JIRAH OVERDUE (${list.length}): ${head}${list.length > 3 ? " …" : ""}`
+      + (never ? ` — ${never} ka ek bhi round nahi hua.` : "")
+      + `  Overdue = RIPE, late nahi. Queue: \`node scripts/deep.mjs due\` (cold, sirf sawaal).`
+      + ownLine
+      + mapTag
+      + gateTag,
+    served: served.map((s) => s.proof),
+    withheld,
+  };
+}
+/** rejirahDueLine — the brief's slot, its old signature (string | null), now the GATED line.
+ *  @param {string} dir @param {number} [now] */
+function rejirahDueLine(dir, now = Date.now()) {
+  const r = rejirahDue(dir, now);
+  return r ? r.line : null;
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -545,6 +634,196 @@ export function briefedOn(rows, day) {
   return s;
 }
 
+// ── L6 (15 Oct 2026) · THE MORNING REFLECTS THE DAY BEFORE ─────────────────────────────────────────────────
+// Rung L6 of the sheet of record: "the brief recorded on the latest study day names a first act, carries the previous
+// study day, and every Re-Jirah name it served passed the epoch gate". Until L6 no brief was RECORDED (brief_log.jsonl had
+// no writer — recordBriefed stamps only consumption.jsonl, through brain) and nothing on this screen named the day before.
+//
+// THE STUDY DAY IS READ EXACTLY AS THE RUNG WITNESS READS IT — its CLASS D (forks row 551 (2); cloud/ml6/witness/
+// rung_L6.mjs:32-41): the stamps (ts || at || updated_at || started_at || created_at) of forge_sessions.jsonl and
+// gaffer_grade_queue.jsonl; resume_pointer.jsonl's (that, written_at, consumed_at — through its owner's own reader); and
+// the OPEN forge_session.json (no ended_at: its updated_at and every resumes[].at). brief_log.jsonl is NEVER a day key:
+// SessionStart prints the brief for engineering sessions too. One reading, so the row and the rung can never disagree
+// about which day was "the day before". Every day key is IST (dayKeyIST), never UTC. Every read here is READ-ONLY and
+// rides the readStateText door (no new read site on a computed path).
+const CARRY_TAG = "CARRIED FROM";
+const PK_TAG = "▶ PEHLA KAAM: ";
+const BRIEF_LOG = "brief_log.jsonl";
+const stampOf = (/** @type {*} */ x) => x && (x.ts || x.at || x.updated_at || x.started_at || x.created_at);
+const jsonlOf = (/** @type {string} */ dir, /** @type {string} */ name) => readStateText(dir, name).split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return {}; } });
+const pointerRowsOf = (/** @type {string} */ dir) => { try { return pointerRows(join(dir, "resume_pointer.jsonl")); } catch { return []; } };
+/** studyStamps — every CLASS D stamp in `dir`, unfiltered (the witness's ledgerStamps + openStamps). @param {string} dir */
+export function studyStamps(dir) {
+  const ptr = pointerRowsOf(dir);
+  /** @type {*} */
+  let open = null;
+  try { open = JSON.parse(readStateText(dir, "forge_session.json")); } catch { open = null; }
+  return [
+    ...jsonlOf(dir, "forge_sessions.jsonl").map(stampOf),
+    ...jsonlOf(dir, "gaffer_grade_queue.jsonl").map(stampOf),
+    ...ptr.flatMap((x) => [stampOf(x), x.written_at, x.consumed_at]),
+    ...(open && !open.ended_at ? [open.updated_at, ...(Array.isArray(open.resumes) ? open.resumes.map((/** @type {*} */ r) => r && r.at) : [])] : []),
+  ];
+}
+/** carriedDay — the latest IST study day BEFORE the brief's own IST day, among the CLASS D stamps that stood at or before
+ *  the brief (`nowMs`); null when no ledger holds an earlier study day. @param {string} dir @param {number} nowMs */
+export function carriedDay(dir, nowMs) {
+  const today = dayKeyIST(nowMs);
+  const days = studyStamps(dir)
+    .filter((t) => { const d = new Date(t); return !Number.isNaN(d.getTime()) && d.getTime() <= nowMs; })
+    .map((t) => dayKeyIST(t))
+    .filter((d) => isDayKey(d) && String(d) < String(today));
+  return /** @type {string|null} */ (days.sort().at(-1) || null);
+}
+/** carryOf — ONE line of what `day` left open, READ ONLY: the newest pointer the ledger shows WRITTEN that IST day (where he
+ *  stopped, named by id and place — its question is never re-printed here: an open one is the first act's already, and a
+ *  consumed one is never re-served, L3), else the forge session closed that day (the axes its coverage left).
+ *  @param {string} dir @param {string|null} day @returns {{line: string, concept: string|null}|null} */
+export function carryOf(dir, day) {
+  if (!day) return null;
+  const ptr = pointerRowsOf(dir);
+  const w = ptr.filter((r) => r && r.kind === "written" && dayKeyIST(r.written_at) === day).at(-1);
+  if (w) {
+    const c = ptr.find((r) => r && r.kind === "consumed" && r.of === w.id);
+    const at = [w.step !== null && w.step !== undefined ? `STEP ${w.step}` : "", w.axis ? `axis ${w.axis}` : ""].filter(Boolean).join(" · ");
+    return { concept: String(w.concept || "") || null,
+      line: `${w.concept}${at ? ` (${at})` : ""} pe ruka — pointer ${w.id}${c ? `, open ne consume kiya ${dayKeyIST(c.consumed_at)} (wahi sawaal dobara nahi)` : ", abhi khula — agla open isi pe khulega"}` };
+  }
+  const s = jsonlOf(dir, "forge_sessions.jsonl").filter((r) => r && r.concept && dayKeyIST(stampOf(r)) === day).at(-1);
+  if (s) {
+    const left = [...(Array.isArray(s.axes_deferred) ? s.axes_deferred : []), ...(Array.isArray(s.axes_untouched) ? s.axes_untouched : [])];
+    return { concept: String(s.concept), line: `${s.concept} ka session band hua (${s.ended_by || "close"}) — axes baaki: ${left.join("") || "koi nahi"}` };
+  }
+  return { concept: null, line: "us din ka koi pointer ya band session ledger pe nahi" };
+}
+
+// ── L6 · C22 (forks row 550 (2) F3) · ASKED-FIRST — THE STRIKE, THEN THE NOTE ON FAILURE ─────────────────────
+// compiled_notes.jsonl is READ ONLY here: L1's compiler is its SOLE WRITER (row 550 (2) F4), and its two row kinds are the
+// ones cloud/ml1/witness/rung_L1.mjs fixes — {kind:"compiled", id, ts, concept, axis, compiler, sources[] (, supersedes)}
+// and {kind:"cold_gate", id, of, ts, verdict:"pass"|"fail", traps_named[], reader}. A note serves ONE strike only when its
+// LATEST cold gate written at or before the brief PASSED with its traps named — never a failed note, never an ungated one,
+// never one a recompile superseded. The strike is built from that gate's first named trap (a field the contract fixes;
+// the note's body is never read first) and asked COLD; the note opens only if the strike fails. With no such note the
+// brief prints, and the row records, ONE named absence.
+/** askedFirst — {note_id, strike} | {absent}. `prefer` (the carried day's concept) wins a tie over the newest pass.
+ *  @param {string} dir @param {number} nowMs @param {string|null} [prefer] @returns {{note_id: string, strike: string}|{absent: string}} */
+export function askedFirst(dir, nowMs, prefer = null) {
+  const text = readStateText(dir, "compiled_notes.jsonl");
+  if (!text.trim()) return { absent: "compiled_notes.jsonl absent or empty — L1's compiler (its sole writer) has written no note yet" };
+  /** @type {any[]} */
+  const rows = text.split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((x) => x && typeof x === "object");
+  const compiled = rows.filter((x) => x.kind === "compiled" && typeof x.id === "string" && x.id !== "");
+  if (!compiled.length) return { absent: "compiled_notes.jsonl holds no compiled note yet" };
+  const superseded = new Set(compiled.map((x) => x.supersedes).filter((s) => typeof s === "string" && s !== ""));
+  const t = (/** @type {*} */ x) => Date.parse(x && x.ts);
+  const cands = [];
+  for (const n of compiled) {
+    if (superseded.has(n.id) || !(t(n) <= nowMs)) continue;
+    const last = rows.filter((g) => g.kind === "cold_gate" && g.of === n.id && t(g) <= nowMs).at(-1);
+    const traps = last && Array.isArray(last.traps_named) ? last.traps_named.filter((/** @type {*} */ s) => typeof s === "string" && s.trim() !== "") : [];
+    if (last && last.verdict === "pass" && traps.length) cands.push({ n, last, traps });
+  }
+  if (!cands.length) return { absent: `no compiled note's latest cold gate has PASSED with its traps named by ${new Date(nowMs).toISOString()} — nothing is asked from a failed or ungated note` };
+  cands.sort((a, b) => (Number(!!prefer && b.n.concept === prefer) - Number(!!prefer && a.n.concept === prefer)) || (t(b.last) - t(a.last)));
+  const { n, traps } = cands[0];
+  return { note_id: n.id, strike: `${n.concept}${n.axis ? ` · axis ${n.axis}` : ""} — "${clip(traps[0], 160)}" — yeh kahan tootta hai, aur kyun? pehle khud jawab` };
+}
+/** morningOf — the brief's first lines over `dir` at `now`: the carried study day, what it left open, the asked-first line.
+ *  @param {string} dir @param {number} [now] */
+export function morningOf(dir, now = Date.now()) {
+  const carries_from = carriedDay(dir, now);
+  const carry = carryOf(dir, carries_from);
+  return { carries_from, carry: carry ? carry.line : null, asked_first: askedFirst(dir, now, carry ? carry.concept : null) };
+}
+/** briefFactsOf — what a brief built at `now` over `dir` carries and serves, from the SAME readers brief() renders with:
+ *  morningOf + every Re-Jirah name it serves (the gated overdue line, and the first act when the arbiter's winner is a
+ *  rejirah-due round), each with its epoch reading. READ-ONLY. @param {string} dir @param {number} [now] */
+export function briefFactsOf(dir, now = Date.now()) {
+  const m = morningOf(dir, now);
+  /** @type {{concept: string, anchored_at: string|null, epoch_ok: boolean}[]} */
+  const served = [];
+  const add = (/** @type {*} */ p) => { if (p && p.concept && !served.some((s) => s.concept === p.concept)) served.push(p); };
+  try { const rj = rejirahDue(dir, now); for (const p of (rj && rj.served) || []) add(p); } catch { /* the line it feeds is fail-silent too */ }
+  try {
+    const nu = /** @type {*} */ (nextup(dir, now));
+    if (nu && nu.winner && nu.winner.name === "rejirah-due" && nu.winner.concept) {
+      const want = String(nu.winner.concept).toLowerCase();
+      const c = loadCapsules(join(dir, "capsules")).find((x) => String(x.id).toLowerCase() === want);
+      add(c ? proofOf(c) : { concept: String(nu.winner.concept), anchored_at: null, epoch_ok: false });
+    }
+  } catch { /* the first act is fail-silent in brief() too */ }
+  return { ...m, rejirah: served };
+}
+/** briefRowOf — PURE: the brief_log row for the text a session PRINTED (its state line included), OFF THE FINAL TEXT: the
+ *  PEHLA KAAM is cut from the printed line verbatim, and a carried day, a Re-Jirah name or an asked-first strike the
+ *  printed text does not carry is never recorded as carried or served. @param {string} printed @param {*} facts
+ *  @param {number} nowMs @param {string} id */
+export function briefRowOf(printed, facts, nowMs, id) {
+  const t = String(printed || "");
+  const lines = t.split("\n");
+  const pkLine = lines.find((l) => l.includes(PK_TAG)) || "";
+  const rest = pkLine ? pkLine.slice(pkLine.indexOf(PK_TAG) + PK_TAG.length) : "";
+  const k = rest.lastIndexOf("  (kyun: ");
+  const pehla_kaam = (k >= 0 ? rest.slice(0, k) : rest).trim() || null;
+  const f = facts || {};
+  // a name counts as SERVED only where the brief serves it: the overdue line's head (`<concept> <n>d`, before its gate
+  // note) or a rejirah-due first act (`Re-Jirah R<n> '<concept>'`) — never a concept id that happens to be a word elsewhere
+  const esc = (/** @type {string} */ s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const overdue = (lines.find((l) => l.startsWith("RE-JIRAH OVERDUE")) || "").split("  (GAME ON gate:")[0];
+  const named = (/** @type {string} */ c) => new RegExp(`(^|[^A-Za-z0-9_-])${esc(c)} \\d+d`).test(overdue) || new RegExp(`Re-Jirah R\\d+ '${esc(c)}'`).test(pkLine);
+  const carried = typeof f.carries_from === "string" && t.includes(`${CARRY_TAG} ${f.carries_from} `);
+  const af = f.asked_first || {};
+  const asked_first = typeof af.strike === "string" && af.strike && t.includes(af.strike) ? { note_id: af.note_id, strike: af.strike }
+    : typeof af.absent === "string" && af.absent && t.includes(af.absent) ? { absent: af.absent }
+    : { absent: "the asked-first line did not reach the printed brief" };
+  return {
+    v: 1, id, ts: new Date(nowMs).toISOString(), day: dayKeyIST(nowMs),
+    pehla_kaam,
+    carries_from: carried ? f.carries_from : null,
+    carry: carried ? (f.carry || null) : null,
+    rejirah: (Array.isArray(f.rejirah) ? f.rejirah : []).filter((/** @type {*} */ r) => r && r.concept && named(r.concept)),
+    asked_first,
+  };
+}
+/** recordBrief — THE SOLE WRITER of brief_log.jsonl. Called from main() ONLY, AFTER the print, with the text that printed.
+ *  APPEND-ONLY: the row is appended, read back off the disk, and only then ok:true; a row dated before the last recorded
+ *  row is a BACK-FILL and is refused (the witness's CLASS A); a failed append is ok:false with its why — never a bare
+ *  catch that reports ok. recordBriefed's guard: an organ session records nothing.
+ *  @param {string} printed @param {{dir?: string, now?: number}} [opts]
+ *  @returns {{ok: true, row: any}|{ok: false, why: string}} */
+export function recordBrief(printed, { dir = STATE, now = Date.now() } = {}) {
+  if (process.env.ARSENAL_ORGAN === "1") return { ok: false, why: "an organ session (ARSENAL_ORGAN=1) — not his brief; nothing recorded" };
+  const msg = (/** @type {*} */ e) => String((e && e.message) || e).slice(0, 160);
+  let row;
+  try { row = briefRowOf(printed, briefFactsOf(dir, now), now, `b-${now.toString(36)}-${randomBytes(3).toString("hex")}`); }
+  catch (e) { return { ok: false, why: `the row could not be built (${msg(e)}) — nothing written` }; }
+  const before = readStateText(dir, BRIEF_LOG);
+  const last = before.split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean).at(-1);
+  if (last && typeof last.ts === "string" && Date.parse(last.ts) > now) {
+    return { ok: false, why: `back-fill refused — the last brief row (${last.id}) is dated ${last.ts}, after this brief (${row.ts}); nothing written` };
+  }
+  const line = JSON.stringify(row);
+  try { appendFileSync(join(dir, BRIEF_LOG), (before && !before.endsWith("\n") ? "\n" : "") + line + "\n", "utf8"); }
+  catch (e) { return { ok: false, why: `append failed (${msg(e)})` }; }
+  const back = readStateText(dir, BRIEF_LOG).split("\n").filter((l) => l.trim());
+  if (back[back.length - 1] !== line) return { ok: false, why: "the row is not on disk after the append (read-back mismatch)" };
+  return { ok: true, row };
+}
+/** bornBriefLog — THE BIRTH of brief_log.jsonl at its landing (forks row 787 (1): every state file a landing gives birth to
+ *  is BORN by its sole writer, an empty JSONL being lawful, and ADDED by pathspec, so the groundsman's `add -u` carries it).
+ *  Exclusive create through the same append door (flag "ax"): EMPTY, never truncates, and a ledger that already exists is
+ *  never written — its rows are the record.
+ *  @param {{dir?: string}} [opts] @returns {{ok: boolean, op: string, path: string, why?: string}} */
+export function bornBriefLog({ dir = STATE } = {}) {
+  const p = join(dir, BRIEF_LOG), msg = (/** @type {*} */ e) => String((e && e.message) || e).slice(0, 160);
+  if (existsSync(p)) return { ok: false, op: "refused", path: p, why: "brief_log.jsonl already exists — born never truncates and never writes a ledger that exists" };
+  try { appendFileSync(p, "", { encoding: "utf8", flag: "ax" }); }
+  catch (e) { return { ok: false, op: "refused", path: p, why: `exclusive create failed (${msg(e)})` }; }
+  let size = -1;
+  try { size = readFileSync(p).length; } catch (e) { return { ok: false, op: "refused", path: p, why: `read-back failed (${msg(e)})` }; }
+  return size === 0 ? { ok: true, op: "born", path: p } : { ok: false, op: "refused", path: p, why: `read-back: ${size} byte(s), not an empty ledger` };
+}
+
 // ---------------------------------------------------------------------------
 // THE ARBITER (P7.B, full-organism audit 7 Aug 2026). Six organs hold opinions
 // about what he should do next — the open forge session, Re-Jirah (pending paste
@@ -565,7 +844,7 @@ export function briefedOn(rows, day) {
 // thing. Nemesis feeds WHICH drill, not WHETHER — it rides inside 4/5, not beside
 // them. Every read is fail-silent: this rides the SessionStart hook via brief().
 export function nextup(dir = STATE, now = Date.now()) {
-  const winnerOf = (name, line, why, rest) => ({ winner: { name, line, why }, contenders: rest });
+  const winnerOf = (name, line, why, rest, extra = {}) => ({ winner: { name, line, why, ...extra }, contenders: rest });   // L6: `extra` — a rejirah-due winner names its concept, so the recorded brief can gate what it served
   const losers = [];
   let forge = null;
   try { forge = readJson(join(dir, "forge_session.json")); } catch {}
@@ -657,7 +936,7 @@ export function nextup(dir = STATE, now = Date.now()) {
   if (overdue.length) {
     const o = overdue[0];
     return winnerOf("rejirah-due", `Re-Jirah R${o.round} '${o.concept}' (${o.overdue_days}d ripe) — shuru: \`node scripts/deep.mjs due\`, grade: \`node scripts/rejirah.mjs grade\``,
-      "proof purana ho raha hai — jo June mein seekha uska aakhri saboot lock-day ka hai", losers.filter((l) => l.name !== "rejirah-due"));
+      "proof purana ho raha hai — jo June mein seekha uska aakhri saboot lock-day ka hai", losers.filter((l) => l.name !== "rejirah-due"), { concept: o.concept });
   }
   // L3 · fate 07 — A PRE-RESTART TOPIC IS NEVER SERVED AS LEARNED. Until L3 this rung named the sheet's next topic
   // as "plan of record" while the headline (A4) named the FLOOR on the same screen, so the first act stepped past
@@ -801,6 +1080,16 @@ function brief(dir = STATE, now = Date.now(), memory = null, card = null) {
   // "FLOOR tokenization" on line 1 and "ON axis a of embeddings" three lines later.
   const HEADLINE = STUDYING ? { concept: STUDYING.concept, why: "khuli hui session — wahin se aage" } : FLOOR;
   L.push("=== ARSENAL — SESSION KICKOFF (auto · session-agnostic · read from state, not chat) ===");
+  // L6 (15 Oct 2026) — THE MORNING REFLECTS THE DAY BEFORE, in the brief's FIRST lines: the carried study day and what it
+  // left open, then the asked-first line (C22: one cold strike from a gate-passed note, or its named absence). READ-ONLY
+  // like every splice here, and fail-silent: a brief must never be the thing that breaks SessionStart. The recorded row
+  // (main → recordBrief) is built from these same readers and checked against the text that printed.
+  try {
+    const mo = morningOf(dir, now);
+    L.push(mo.carries_from ? `${CARRY_TAG} ${mo.carries_from} (pichhla study din, IST): ${mo.carry}` : `${CARRY_TAG}: koi pichhla study din ledger pe nahi — aaj se shuru`);
+    const af = /** @type {*} */ (mo.asked_first);
+    L.push(af.strike ? `  ASKED-FIRST (C22) — cold, note ${af.note_id} band: ${af.strike} (galat ho tabhi note khulega)` : `  ASKED-FIRST (C22) — koi strike nahi: ${af.absent}`);
+  } catch { /* a brief must never be the thing that breaks SessionStart */ }
   // L3 (15 Oct 2026) — THE ARBITER NO LONGER RUNS ONLY INSIDE `if (cur)` (learning-loop.txt:47: "THE ARBITER IS
   // UNREACHABLE WITHOUT A SPRINT"). Its own rung 1 is the open forge session, so a morning with no sheet row was
   // exactly the morning the first act went silent. Decided ONCE here, placed by the branches below: one PEHLA KAAM
@@ -1490,12 +1779,17 @@ function selftest() {
   // Same defect the working_set and the sprint spine were both repaired for, on the one
   // slot that never got it: capsule_map.json is regenerated only by the morning conductor,
   // so its `42d` is as old as the map. Fixtures only — the live bus is never touched.
+  // L6 · fate 18 (15 Oct 2026): the overdue line now names only a concept whose OWN capsule passed the GAME ON gate, so
+  // these map fixtures carry that capsule, locked after the epoch — the assertions below keep asking their own question
+  // (the map's age, the owner's sentence); the gate itself is asserted on its own in the L6 block.
+  const passedCapsule = (/** @type {string} */ d) => { mkdirSync(join(d, "capsules"), { recursive: true }); writeFileSync(join(d, "capsules", "embeddings.json"), JSON.stringify({ id: "embeddings", num: "02", title: "Embeddings", lockedOn: "2026-09-13", faultLines: [], doubts: [] })); };
   const mapDir = (genAt) => {
     const d = mkdtempSync(join(tmpdir(), "learnstate-map-"));
     writeFileSync(join(d, "capsule_map.json"), JSON.stringify({
       ...(genAt === null ? {} : { generated_at: genAt }),
       rejirah_overdue: [{ concept: "embeddings", overdue_days: 42, rounds_done: 0 }],
     }));
+    passedCapsule(d);
     return d;
   };
   const freshMap = brief(mapDir(iso(0.2)), NOW);
@@ -1527,6 +1821,7 @@ function selftest() {
     rejirah_overdue: [{ concept: "embeddings", overdue_days: 47, rounds_done: 0 }],
     line: OWN_LINE,
   }));
+  passedCapsule(lineDir);   // L6 · fate 18 — see the note on mapDir above
   const withLine = brief(lineDir, NOW);
   assert("SWEEP capsule_bridge's own headline reaches the kickoff VERBATIM — strike count and all",
     withLine.includes(OWN_LINE) && /9 strike sawaal/.test(withLine));
@@ -1719,9 +2014,160 @@ function selftest() {
     const srcL3 = readFileSync(fileURLToPath(import.meta.url), "utf8");
     const code = srcL3.slice(0, srcL3.indexOf("function selftest()")).split("\n").map((l) => l.replace(/\/\/.*$/, "")).join("\n");
     const imp = (code.match(/import \{[^}]*\} from "\.\/resume_pointer\.mjs";/) || [""])[0];
-    assert("L3 · WIRE — learnstate imports ONLY `latest` (and istDay) from the pointer ledger, never `consume`; no UTC day key (toISOString().slice(0, 10)) is left in its code",
+    assert("L3 · WIRE — learnstate imports only the pointer ledger's READ verbs (`latest`, istDay — and since L6 `readRows`), never `consume`; no UTC day key (toISOString().slice(0, 10)) is left in its code",
       /latest as latestPointer/.test(imp) && !/consume/.test(imp) && !/toISOString\(\)\.slice\(0, ?10\)/.test(code) && !/String\(r\.ts \|\| ""\)\.slice\(0, ?10\)/.test(code));
   }
+  // ── L6 (15 Oct 2026) · THE MORNING REFLECTS THE DAY BEFORE — on FIXTURE state dirs, never his ──────────────
+  {
+    const d = mkdtempSync(join(tmpdir(), "ls-l6-"));
+    const W = (/** @type {string} */ n, /** @type {*} */ o) => { mkdirSync(dirname(join(d, n)), { recursive: true }); writeFileSync(join(d, n), typeof o === "string" ? o : JSON.stringify(o)); };
+    const WL = (/** @type {string} */ n, /** @type {any[]} */ rows) => W(n, rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
+    const NOW6 = Date.parse("2026-10-06T04:00:00.000Z");   // 09:30 IST, 6 Oct
+    const srcL6 = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    // his study, on the CLASS D sources: 3 Oct and 4 Oct on the voice queue, and 00:30 IST TODAY (18:30Z+ the day before in UTC)
+    WL("gaffer_grade_queue.jsonl", [{ v: 2, kind: "capture", id: "q1", ts: "2026-10-03T09:00:00.000Z" }, { v: 2, kind: "capture", id: "q2", ts: "2026-10-04T10:00:00.000Z" },
+      { v: 2, kind: "capture", id: "q3", ts: "2026-10-05T19:00:00.000Z" }]);
+    // the stop on 4 Oct (a pointer), consumed by this morning's open
+    WL("resume_pointer.jsonl", [{ v: 1, kind: "written", id: "p-l6", written_at: "2026-10-04T12:00:00.000Z", concept: "embeddings", step: 3, axis: "g", question: "Q-L6 never re-served", session_id: null },
+      { v: 1, kind: "consumed", id: "c-l6", of: "p-l6", consumed_at: "2026-10-06T03:30:00.000Z", by: "forge_session resume" }]);
+    W("forge_session.json", { concept: "embeddings", step: 3, current_axis: "g", closed_at: null, started_at: "2026-10-04T08:00:00.000Z", updated_at: "2026-10-06T03:30:00.000Z",
+      steps_done: [0, 1, 2, 3], axes_done: ["a"], axes_deferred: [], question_moments: {}, resumes: [{ at: "2026-10-06T03:30:00.000Z" }] });
+    // capsules are INPUTS (mirror's copies): one locked before GAME ON, one after, one re-locked after
+    W("capsules/tokenization.json", { id: "tokenization", num: "01", title: "Tokenization", lockedOn: "2026-06-15", faultLines: [], doubts: [] });
+    W("capsules/fresh.json", { id: "fresh", num: "05", title: "Fresh", lockedOn: "2026-09-05", faultLines: [], doubts: [] });
+    W("capsules/again.json", { id: "again", num: "03", title: "Again", lockedOn: "2026-06-15", relockedOn: "2026-09-04", faultLines: [], doubts: [] });
+    // a map written by older code: it lists the withdrawn capsule and a name with no capsule at all
+    W("capsule_map.json", { generated_at: new Date(NOW6 - 3600000).toISOString(),
+      rejirah_overdue: [{ concept: "tokenization", overdue_days: 110, rounds_done: 0 }, { concept: "fresh", overdue_days: 28, rounds_done: 0 },
+        { concept: "ghost", overdue_days: 20, rounds_done: 0 }, { concept: "again", overdue_days: 10, rounds_done: 0 }],
+      line: "tokenization ka Re-Jirah 110 din overdue hai — aur uske 9 strike sawaal already likhe rakhe hain." });
+
+    assert("L6 · the header says it in the organism's own words: SOLE WRITER of dressing-room/state/brief_log.jsonl, APPEND-ONLY, one row per brief HIS session printed",
+      (() => { const head = srcL6.slice(0, srcL6.indexOf("\nimport ")); return head.includes("SOLE WRITER of dressing-room/state/brief_log.jsonl") && head.includes("APPEND-ONLY") && head.includes("HIS session printed"); })());
+    assert("L6 · THE DAY BEFORE IS KEYED IN IST, NEVER UTC — 19:00Z on 5 Oct is 00:30 IST TODAY, so the carried day is 4 Oct (the UTC slice would carry 5 Oct, a day he never studied)",
+      carriedDay(d, NOW6) === "2026-10-04" && "2026-10-05T19:00:00.000Z".slice(0, 10) === "2026-10-05");
+    assert("L6 · CLASS D, the witness's own reading — forge_sessions, the grade queue, the pointer ledger (written AND consumed) and the OPEN session (updated_at + resumes[].at, not once it carries ended_at) each key a study day; brief_log never does",
+      (() => { const one = (/** @type {Record<string, any>} */ files) => { const x = mkdtempSync(join(tmpdir(), "ls-l6d-")); for (const [n, v] of Object.entries(files)) writeFileSync(join(x, n), typeof v === "string" ? v : v.map((/** @type {*} */ r) => JSON.stringify(r)).join("\n") + "\n"); return carriedDay(x, NOW6); };
+               return one({ "forge_sessions.jsonl": [{ concept: "x", updated_at: "2026-10-02T09:00:00.000Z" }] }) === "2026-10-02"
+                 && one({ "resume_pointer.jsonl": [{ v: 1, kind: "consumed", id: "c", of: "p", consumed_at: "2026-10-01T09:00:00.000Z", by: "t" }] }) === "2026-10-01"
+                 && one({ "forge_session.json": JSON.stringify({ concept: "x", updated_at: "2026-10-06T03:00:00.000Z", resumes: [{ at: "2026-09-30T09:00:00.000Z" }] }) }) === "2026-09-30"
+                 && one({ "forge_session.json": JSON.stringify({ concept: "x", updated_at: "2026-09-29T09:00:00.000Z", ended_at: "2026-09-29T10:00:00.000Z" }) }) === null
+                 && one({ "brief_log.jsonl": [{ v: 1, id: "b", ts: "2026-10-03T09:00:00.000Z" }] }) === null; })());
+
+    const b6 = brief(d, NOW6);
+    const lines6 = b6.split("\n");
+    const iCarry = lines6.findIndex((l) => l.startsWith(`${CARRY_TAG} 2026-10-04 `));
+    assert("L6 · brief() WRITES NOTHING — the suite calls it on fixture dirs, so the row is never written from here (no brief_log.jsonl after it)",
+      !existsSync(join(d, BRIEF_LOG)));
+    assert("L6 · the brief PRINTS the carried day in its FIRST lines — the IST day and what it left open, the pointer named by id and place; a consumed pointer's question is never re-served (L3)",
+      iCarry === 1 && /embeddings \(STEP 3 · axis g\) pe ruka — pointer p-l6, open ne consume kiya 2026-10-06/.test(lines6[iCarry]) && !b6.includes("Q-L6"));
+    const rj6 = lines6.find((l) => l.startsWith("RE-JIRAH OVERDUE")) || "";
+    assert("L6 · fate 18 — the overdue line names ONLY epoch-passed concepts: a capsule locked before GAME ON, and a name with no capsule, are never named due; a post-epoch lock and a re-lock after GAME ON pass",
+      /^RE-JIRAH OVERDUE \(2\): fresh 28d · again 10d/.test(rj6) && !/tokenization \d+d/.test(b6) && !/ghost \d+d/.test(b6));
+    assert("L6 · fate 18 — the owner's sentence names the map's worst concept, so it rides only when THAT concept passed; the withheld names are SAID once, never silently dropped",
+      !b6.includes("tokenization ka Re-Jirah") && /GAME ON gate: tokenization · ghost roke/.test(rj6) && lines6.filter((l) => l.startsWith("RE-JIRAH")).length === 1);
+    assert("L6 · fate 18 — what the brief SERVED is {concept, anchored_at, epoch_ok}: every entry epoch_ok, anchored at or after the registry's GAME ON (a re-lock anchors on the re-lock)",
+      (() => { const f = briefFactsOf(d, NOW6).rejirah; const ep = gameOnEpoch();
+               return f.length === 2 && f.every((r) => r.epoch_ok === true && Date.parse(String(r.anchored_at)) >= ep)
+                 && (f.find((r) => r.concept === "again") || {}).anchored_at === "2026-09-04T00:00:00.000Z" && (f.find((r) => r.concept === "fresh") || {}).anchored_at === "2026-09-05T00:00:00.000Z"; })());
+    assert("L6 · fate 18 — the ungated reader is kept FROZEN beside it (L9), referenced by no caller; on the same map it would have served the withdrawn capsule first",
+      (() => { const body = srcL6.slice(0, srcL6.indexOf("function selftest()")); return (body.match(/rejirahDueLineLegacy/g) || []).length === 1; })()
+      && /^RE-JIRAH OVERDUE \(4\): tokenization 110d/.test(rejirahDueLineLegacy(d, NOW6) || ""));
+
+    // ASKED-FIRST (C22), on L1's two row kinds
+    const nFail = { v: 1, kind: "compiled", id: "n-fail", ts: "2026-10-04T13:00:00.000Z", concept: "embeddings", axis: "g", compiler: "notes_compiler@1", sources: ["arc:1"] };
+    const gFail = { v: 1, kind: "cold_gate", id: "g-fail", of: "n-fail", ts: "2026-10-04T14:00:00.000Z", verdict: "fail", traps_named: ["t-fail"], reader: "role:cold_reader" };
+    const nPass = { v: 1, kind: "compiled", id: "n-pass", ts: "2026-10-05T09:00:00.000Z", concept: "fresh", axis: "c", compiler: "notes_compiler@1", sources: ["arc:2"] };
+    const gPass = { v: 1, kind: "cold_gate", id: "g-pass", of: "n-pass", ts: "2026-10-05T10:00:00.000Z", verdict: "pass", traps_named: ["cosine ko distance samajh liya"], reader: "role:cold_reader" };
+    assert("L6 · C22 — no compiled note at all: ONE named absence, printed once",
+      typeof (/** @type {*} */ (askedFirst(d, NOW6))).absent === "string" && lines6.filter((l) => l.includes("ASKED-FIRST (C22) — koi strike nahi:")).length === 1);
+    WL("compiled_notes.jsonl", [nFail, gFail]);
+    assert("L6 · C22 — NEVER A STRIKE FROM A FAILED NOTE: a note whose latest cold gate FAILED serves nothing, and the brief names the absence once",
+      (() => { const a = /** @type {*} */ (askedFirst(d, NOW6)); return !a.note_id && !a.strike && typeof a.absent === "string" && /PASSED/.test(a.absent)
+                 && brief(d, NOW6).split("\n").filter((l) => l.includes("ASKED-FIRST (C22)")).length === 1; })());
+    WL("compiled_notes.jsonl", [nFail, gFail, nPass, gPass]);
+    assert("L6 · C22 — ASKED FIRST: a note whose latest cold gate PASSED with its traps named, at or before the brief, serves ONE cold strike built from a named trap, the note shut",
+      (() => { const a = /** @type {*} */ (askedFirst(d, NOW6)); const o = brief(d, NOW6);
+               return a.note_id === "n-pass" && typeof a.strike === "string" && a.strike.includes("cosine ko distance samajh liya") && o.includes(`ASKED-FIRST (C22) — cold, note n-pass band: ${a.strike}`)
+                 && o.split("\n").filter((l) => l.includes("ASKED-FIRST (C22)")).length === 1; })());
+    WL("compiled_notes.jsonl", [nFail, gFail, nPass, gPass, { ...gFail, id: "g-late", of: "n-pass", ts: "2026-10-06T05:00:00.000Z" }]);
+    assert("L6 · C22 — a gate written AFTER the brief does not count: the gates are read as they stood at the brief's ts",
+      (/** @type {*} */ (askedFirst(d, NOW6))).note_id === "n-pass");
+    WL("compiled_notes.jsonl", [nFail, gFail, nPass, gPass, { ...gFail, id: "g-refail", of: "n-pass", ts: "2026-10-05T12:00:00.000Z" }]);
+    assert("L6 · C22 — the LATEST gate decides: a note that passed and then FAILED its next cold gate serves nothing",
+      !(/** @type {*} */ (askedFirst(d, NOW6))).note_id);
+    WL("compiled_notes.jsonl", [nFail, gFail, nPass, gPass, { ...nPass, id: "n-new", ts: "2026-10-05T11:00:00.000Z", supersedes: "n-pass" }]);
+    assert("L6 · C22 — a SUPERSEDED note leaves the set (a recompile appended its successor), and the ungated successor never serves",
+      !(/** @type {*} */ (askedFirst(d, NOW6))).note_id);
+    WL("compiled_notes.jsonl", [nFail, gFail, nPass, gPass]);
+
+    // THE RECORDED BRIEF
+    const printed1 = "STATE · fixture line one\n" + brief(d, NOW6);
+    const r1 = /** @type {*} */ (recordBrief(printed1, { dir: d, now: NOW6 }));
+    const bytes1 = existsSync(join(d, BRIEF_LOG)) ? readFileSync(join(d, BRIEF_LOG), "utf8") : "";
+    const r2 = /** @type {*} */ (recordBrief("STATE · fixture line one\n" + brief(d, NOW6 + 3600000), { dir: d, now: NOW6 + 3600000 }));
+    const bytes2 = existsSync(join(d, BRIEF_LOG)) ? readFileSync(join(d, BRIEF_LOG), "utf8") : "";
+    const rows2 = bytes2.split("\n").filter(Boolean).map((l) => JSON.parse(l));
+    assert("L6 · fate 18 — THE RECORDED BRIEF IS APPEND-ONLY (the witness's CLASS A): the ledger before is a byte-prefix of the ledger after; two briefs, two rows, two ids; the first row byte-identical; no ts earlier than the row above",
+      r1.ok === true && r2.ok === true && bytes1.length > 0 && bytes2.startsWith(bytes1) && rows2.length === 2 && rows2[0].id !== rows2[1].id
+      && JSON.stringify(rows2[0]) === JSON.stringify(r1.row) && Date.parse(rows2[1].ts) >= Date.parse(rows2[0].ts));
+    const row = r1.row || {};
+    assert("L6 · fate 18 — the row is {v:1, id, ts, day, pehla_kaam, carries_from, carry, rejirah[], asked_first}: the ONE first act VERBATIM off the printed text, the carried IST day and what it left open, every Re-Jirah it served (epoch-gated), the asked-first strike",
+      row.v === 1 && /^b-/.test(String(row.id)) && row.ts === new Date(NOW6).toISOString() && row.day === "2026-10-06"
+      && typeof row.pehla_kaam === "string" && row.pehla_kaam.length > 0 && printed1.includes(`${PK_TAG}${row.pehla_kaam}  (kyun: `) && /^resume 'embeddings' @ STEP 3/.test(row.pehla_kaam)
+      && row.carries_from === "2026-10-04" && typeof row.carry === "string" && row.carry.includes("p-l6") && !row.carry.includes("Q-L6")
+      && Array.isArray(row.rejirah) && row.rejirah.map((/** @type {*} */ r) => r.concept).join() === "fresh,again" && row.rejirah.every((/** @type {*} */ r) => r.epoch_ok === true)
+      && row.asked_first && row.asked_first.note_id === "n-pass" && typeof row.asked_first.strike === "string");
+    const before3 = readFileSync(join(d, BRIEF_LOG), "utf8");
+    const r3 = /** @type {*} */ (recordBrief(printed1, { dir: d, now: NOW6 - 3600000 }));
+    assert("L6 · fate 18 — NEVER A BACK-FILL: a brief dated before the last recorded row is refused (ok:false, with its why) and the ledger stays byte-identical",
+      r3.ok === false && /back-fill/.test(String(r3.why)) && readFileSync(join(d, BRIEF_LOG), "utf8") === before3);
+    W("blocker", "a file, not a directory");
+    const r4 = /** @type {*} */ (recordBrief(printed1, { dir: join(d, "blocker"), now: NOW6 }));
+    assert("L6 · fate 18 — A FAILED APPEND IS ok:false with its why — never a bare catch that reports ok (the brief has already printed; main says it on stderr)",
+      r4.ok === false && /append failed/.test(String(r4.why)) && !("row" in r4));
+    const savedOrgan = process.env.ARSENAL_ORGAN;
+    process.env.ARSENAL_ORGAN = "1";
+    const r5 = /** @type {*} */ (recordBrief(printed1, { dir: d, now: NOW6 + 7200000 }));
+    if (savedOrgan === undefined) delete process.env.ARSENAL_ORGAN; else process.env.ARSENAL_ORGAN = savedOrgan;
+    assert("L6 · fate 18 — recordBriefed's guard holds: an organ session (ARSENAL_ORGAN=1) records nothing",
+      r5.ok === false && /organ/.test(String(r5.why)) && readFileSync(join(d, BRIEF_LOG), "utf8") === before3);
+    const trimmed = printed1.split("\n").filter((l) => !l.startsWith(CARRY_TAG) && !l.includes("ASKED-FIRST (C22)") && !l.startsWith("RE-JIRAH")).join("\n");
+    const rt = briefRowOf(trimmed, briefFactsOf(d, NOW6), NOW6, "b-trim");
+    assert("L6 · fate 18 — OFF THE FINAL TEXT: a line that never reached the printed brief is never recorded as carried or served (the carried day, the Re-Jirah names, the strike) — and a concept id that is also a plain word ('fresh' in the first act's 'fresh micro-question') is never mistaken for a served name",
+      rt.carries_from === null && rt.carry === null && rt.rejirah.length === 0 && /did not reach/.test(String((/** @type {*} */ (rt.asked_first)).absent)) && rt.pehla_kaam === row.pehla_kaam
+      && /fresh micro-question/.test(trimmed));
+    // the first act that IS a Re-Jirah round is served too, and gated
+    const e = mkdtempSync(join(tmpdir(), "ls-l6e-"));
+    mkdirSync(join(e, "capsules"), { recursive: true });
+    writeFileSync(join(e, "capsules", "fresh.json"), JSON.stringify({ id: "fresh", num: "05", title: "Fresh", lockedOn: "2026-09-05", faultLines: [], doubts: [] }));
+    const pe = brief(e, NOW6), re6 = briefRowOf(pe, briefFactsOf(e, NOW6), NOW6, "b-e");
+    assert("L6 · fate 18 — a Re-Jirah the FIRST ACT serves is recorded too, epoch-gated: the arbiter's rejirah-due winner names its concept and the row carries it; no earlier study day ⇒ carries_from null",
+      /▶ PEHLA KAAM: Re-Jirah R1 'fresh'/.test(pe) && re6.rejirah.length === 1 && re6.rejirah[0].concept === "fresh" && re6.rejirah[0].epoch_ok === true
+      && re6.carries_from === null && pe.includes(`${CARRY_TAG}: koi pichhla study din`));
+    assert("L6 · fate 18 — the writer is called from main() ONLY, after the print, off the printed text — never from brief() (which the suite calls on fixture dirs)",
+      (() => { const code = srcL6.split("\n").map((l) => l.replace(/\/\/.*$/, "")).join("\n");
+               const bb = code.slice(code.indexOf("function brief("), code.indexOf("function selftest()")), mm = code.slice(code.search(/^async function main\(\) \{$/m));
+               return !/recordBrief\(/.test(bb) && /console\.log\(p\);\s*printed = p;/.test(mm) && /recordBrief\(printed, \{ now \}\)/.test(mm)
+                 && mm.indexOf("recordBrief(printed") > mm.lastIndexOf("console.log(p)"); })());
+  }
+
+  // ── BORN (forks row 787 (1), 17 Oct 2026) — brief_log.jsonl's birth at its landing, planted both ways ──
+  {
+    const bd = mkdtempSync(join(tmpdir(), "ls-born-"));
+    const b1 = bornBriefLog({ dir: bd });
+    assert("BORN — an absent brief_log.jsonl is born EMPTY (0 bytes) by its sole writer, and says so",
+      b1.ok && b1.op === "born" && existsSync(join(bd, BRIEF_LOG)) && readFileSync(join(bd, BRIEF_LOG)).length === 0);
+    const b2 = bornBriefLog({ dir: bd });
+    assert("BORN — a brief_log.jsonl that exists (even empty) is REFUSED, never written again",
+      b2.ok === false && b2.op === "refused" && /already exists/.test(String(b2.why)) && readFileSync(join(bd, BRIEF_LOG)).length === 0);
+    const br = mkdtempSync(join(tmpdir(), "ls-born-rows-")), rowText = JSON.stringify({ v: 1, id: "b-x", ts: "2026-10-06T03:00:00.000Z" }) + "\n";
+    writeFileSync(join(br, BRIEF_LOG), rowText);
+    const b3 = bornBriefLog({ dir: br });
+    assert("BORN NEVER TRUNCATES — a brief_log.jsonl holding a row is refused and stays byte-identical",
+      b3.ok === false && b3.op === "refused" && readFileSync(join(br, BRIEF_LOG), "utf8") === rowText);
+  }
+
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -1740,6 +2186,12 @@ async function main() {
   // `json` and `selftest` stay reachable: they are read paths, not injection paths.
   if (process.env.ARSENAL_ORGAN === "1" && mode !== "json") return;
   if (mode === "json") { console.log(JSON.stringify(gather(), null, 2)); return; }
+  if (mode === "born") {   // forks row 787 (1) — the ledger's birth at its landing; never from the hook, never from brief()
+    const b = bornBriefLog();
+    if (b.ok) console.log(`learnstate: born ${b.path} (0 bytes) — add it by pathspec in the landing commit (forks row 787 (1))`);
+    else { console.error(`learnstate: born REFUSED — ${b.why} (${b.path})`); process.exitCode = 1; }
+    return;
+  }
   if (mode === "nextup") {
     // P7.B — the full arbitration, on demand: winner, why, and every loser named.
     const nu = nextup(STATE, Date.now());
@@ -1764,9 +2216,13 @@ async function main() {
   // never be the thing that breaks SessionStart, and a missing line is not a wrong one.
   const stateLine = await (async () => { try { const { liveState } = await import("./state.mjs"); return (await liveState()).line; } catch { return null; } })();
   const withState = (t) => (stateLine ? stateLine + "\n" : "") + t;
+  // L6 (15 Oct 2026) — ONE instant for the brief and its recorded row: the row's ts is the moment this brief was built, so
+  // "the day before" is read as the ledgers stood at it (before L6 every assemble and the fallback each read their own clock).
+  const now = Date.now();
+  let printed = null;
   try {
     const { assemble, CEILING } = await import("./context_manifest.mjs");
-    let out = await assemble({ dir: STATE, now: Date.now() });
+    let out = await assemble({ dir: STATE, now });
     // THE BYTE GUARD (18 Aug 2026, OVERHAUL Block 4 close). The DoD is measured on the
     // WHOLE printed brief — `learnstate.mjs brief | wc -c` < 6,000 — but the manifest's
     // 5,300-char ceiling was DERIVED from two measured, LIVE numbers: the state line
@@ -1779,14 +2235,23 @@ async function main() {
     if (out && typeof out.text === "string" && out.text) {
       const over = Buffer.byteLength(withState(out.text), "utf8") - (BRIEF_BYTES_BOUND - 1);
       if (over > 0) {
-        try { const tighter = await assemble({ dir: STATE, now: Date.now(), ceiling: Math.max(1000, CEILING - over - 64) }); if (tighter && typeof tighter.text === "string" && tighter.text) out = tighter; } catch { /* keep the first */ }
+        try { const tighter = await assemble({ dir: STATE, now, ceiling: Math.max(1000, CEILING - over - 64) }); if (tighter && typeof tighter.text === "string" && tighter.text) out = tighter; } catch { /* keep the first */ }
       }
     }
-    if (out && typeof out.text === "string" && out.text) { console.log(withState(out.text)); recordBriefed(out.text); return; }
+    if (out && typeof out.text === "string" && out.text) { const p = withState(out.text); console.log(p); printed = p; recordBriefed(out.text); }
   } catch { /* fall through to the frozen path */ }
-  const text = brief(STATE, Date.now(), await loadMemory(), loadTeachingCard());
-  console.log(withState(text));
-  recordBriefed(text);
+  if (printed === null) {
+    const text = brief(STATE, now, await loadMemory(), loadTeachingCard());
+    const p = withState(text);
+    console.log(p);
+    printed = p;
+    recordBriefed(text);
+  }
+  // L6 · fate 18 — THE RECORDED BRIEF: AFTER the print, off the FINAL text that printed, from here and nowhere else. A
+  // failed append is SAID on stderr (stdout is the session's context) and the brief has already printed — never a bare
+  // catch that reports ok.
+  const rec = recordBrief(printed, { now });
+  if (!rec.ok && "why" in rec) console.error(`learnstate: brief_log NOT recorded — ${rec.why}`);   // `in` narrows the union under checkJs (gates types, baseline 296)
 }
 // THE GATE (overhaul §5.2 "briefed", 18 Aug 2026). A SessionStart brief that a
 // session actually printed is a place the brain's night work reached — the night

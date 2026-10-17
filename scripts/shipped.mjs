@@ -29,13 +29,16 @@
 // WRITER OF: dressing-room/state/shipped.json
 // READS:     git (local, read-only) · shipped_config.json (optional, machine-local)
 //            · dressing-room/state/capsules/ + post_match/ for artifact events
+//            · rejirah_log.jsonl ONLY through rejirah.mjs's own door, readLog (L6 · ml6 F4)
 // MODES: (default) write · show · selftest
 // ============================================================================
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, mkdtempSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW
+import { readLog as readRejirahLog } from "./rejirah.mjs";   // L6 · ml6 F4 — THE SUPERSEDING DOOR: rejirah.mjs (rejirah_log's sole writer) owns what a correction means
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(join(__dirname, ".."));
@@ -154,6 +157,36 @@ function readRepo(repo, day) {
   }
 }
 
+// L6 · ml6 F4 (forks rows 777 (4) / 780, 17 Oct 2026) — THE SUPERSEDING DOOR. This reader used to parse
+// rejirah_log.jsonl RAW (learning-loop.txt:53): a walked-back verdict's correction (`rejirah.mjs correct` writes a
+// NEW row at its own later ts, carrying `corrects: <the replaced row's ts>`) counted as a Re-Jirah SERVED on the day
+// of the correction. It now reads through rejirah.mjs's own door, readLog (supersede applied; the log's sole writer
+// owns what a correction means — fsrs.mjs's pattern), and a surviving correction stands at the ts of the row it
+// replaces: a correction is never a serve. The Legacy raw parse is kept frozen below (L9).
+// Returns the concepts served on `day`, each once, in log order.
+export function rejirahServedOn(day, logPath = join(STATE_DIR, "rejirah_log.jsonl")) {
+  const served = [];
+  for (const r of readRejirahLog(logPath)) {
+    const at = String(r.corrects || r.ts || "");
+    if (at.slice(0, 10) === day && r.concept && !served.includes(r.concept)) served.push(r.concept);
+  }
+  return served;
+}
+// Frozen verbatim (L9 — the raw reader never leaves the file); not called at runtime since L6 · ml6 F4.
+export function rejirahServedOnLegacy(day, rjLog = join(STATE_DIR, "rejirah_log.jsonl")) {
+  const rjServed = new Set();
+  if (existsSync(rjLog)) {
+    for (const ln of readFileSync(rjLog, "utf8").split("\n")) {
+      if (!ln.trim()) continue;
+      try {
+        const r = JSON.parse(ln);
+        if (String(r.ts || "").slice(0, 10) === day && r.concept && !rjServed.has(r.concept)) rjServed.add(r.concept);
+      } catch {}
+    }
+  }
+  return [...rjServed];
+}
+
 // Artifact events the bus itself can prove — the non-git half of "something exists
 // now that did not this morning".
 function artifactEvents(day) {
@@ -164,18 +197,7 @@ function artifactEvents(day) {
   // event was unreachable in practice. The round's own log carries the SERVE date;
   // the capsule check stays as the mirror-confirmed fallback for on-time rounds.
   const rjServed = new Set();
-  const rjLog = join(STATE_DIR, "rejirah_log.jsonl");
-  if (existsSync(rjLog)) {
-    for (const ln of readFileSync(rjLog, "utf8").split("\n")) {
-      if (!ln.trim()) continue;
-      try {
-        const r = JSON.parse(ln);
-        if (String(r.ts || "").slice(0, 10) === day && r.concept && !rjServed.has(r.concept)) {
-          rjServed.add(r.concept); events.push({ kind: "rejirah_served", what: r.concept });
-        }
-      } catch {}
-    }
-  }
+  for (const concept of rejirahServedOn(day)) { rjServed.add(concept); events.push({ kind: "rejirah_served", what: concept }); }
   const capsDir = join(STATE_DIR, "capsules");
   if (existsSync(capsDir)) {
     for (const f of readdirSync(capsDir).filter(x => x.endsWith(".json"))) {
@@ -303,6 +325,26 @@ function selftest() {
     (() => { const b = build("2026-07-30", ["__no_such_repo__"]); return b.status === "unreadable" && b.shipped === null && b.repos[0].ok === false; })());
   assert("the emitted envelope matches timeaudit's dataOk contract (dark ≠ zero downstream)",
     "dataOk" in live && "status" in live && "line" in live);
+
+  // L6 · ml6 F4 — A CORRECTION IS NEVER A SERVE. R1 of inference sat on 1 Oct and was walked back a week later
+  // (`rejirah.mjs correct`: a NEW row at its own ts, `corrects` naming the original). Read through rejirah.mjs's door,
+  // the round stays served on 1 Oct and the correction's own day (8 Oct) shows no serve; the frozen raw reader shows
+  // the 8 Oct serve — the defect, kept auditable.
+  {
+    const tmp = mkdtempSync(join(tmpdir(), "shipped-rj-"));
+    const p = join(tmp, "rejirah_log.jsonl");
+    writeFileSync(p, [
+      { ts: "2026-10-01T10:00:00.000Z", concept: "inference", axis: "b", result: "miss" },
+      { ts: "2026-10-08T10:00:00.000Z", concept: "inference", axis: "b", result: "hit", corrects: "2026-10-01T10:00:00.000Z" },
+    ].map((r) => JSON.stringify(r)).join("\n") + "\n");
+    assert("L6 · ml6 F4 — a walked-back verdict's correction is NEVER a serve on its own day; the round stays served on the day it was sat",
+      rejirahServedOn("2026-10-08", p).length === 0 && rejirahServedOn("2026-10-01", p).join() === "inference");
+    assert("L6 · ml6 F4 — the frozen raw reader still shows the defect (the 8 Oct serve), so the fix stays auditable",
+      rejirahServedOnLegacy("2026-10-08", p).join() === "inference");
+    assert("L6 · ml6 F4 — the door is rejirah.mjs's own: the live reader reads through readLog with supersede ON (never raw), no second parse of the log",
+      /readRejirahLog\(logPath\)/.test(rejirahServedOn.toString()) && !/raw|JSON\.parse|readFileSync/.test(rejirahServedOn.toString()));
+    rmSync(tmp, { recursive: true, force: true });
+  }
 
   console.log(`\nshipped selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

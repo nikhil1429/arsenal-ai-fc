@@ -1148,7 +1148,7 @@ function capsuleDigest(dir = join(STATE_DIR, "capsules")) {
       } catch (e) { swallow("capsuleDigest: readFileSync(join(dir, f)) unreadable → ignored", e); }
     }
     if (!rows.length) return "";
-    return `\nTHE LOCKED BOOK — concepts he has ALREADY MASTERED (his own capsules; never teach these from zero, never act like he doesn't know them — probe for decay, build on them, reference HIS bolo):\n${rows.join("\n")}\nWhen the talk touches any of these, call get_capsule for the full book — his mechanism, fault-lines, and every doubt he already fought.\n`;
+    return `\nTHE LOCKED BOOK — the MAP OF HIS CRACKS (his own capsules: where he will break — their doubts, traps and fault-lines say it in advance; GAME ON (30 Aug 2026) re-opened every topic locked before it, so teach it FROM ZERO with its capsule OPEN, building on HIS bolo — never as something he already holds):\n${rows.join("\n")}\nWhen the talk touches any of these, call get_capsule for the full book — his mechanism, fault-lines, and every doubt he already fought.\n`;
   } catch (e) { swallow("capsuleDigest: readdirSync(dir) unreadable → \"\"", e); return ""; }
 }
 
@@ -1907,7 +1907,7 @@ const TOOL_DECLS = [
   { name: "get_calibration", description: "His live calibration book: gap, trend, danger topics.", parameters: { type: "OBJECT", properties: {} } },
   // #92 — the id list + count are READ off disk at load (lockedCapsuleIds), not
   // typed. Prose that names a number must name the real one or name none.
-  { name: "get_capsule", description: `OPEN A LOCKED BOOK — his own capsule for a concept he has MASTERED (${lockedCapsuleIds().length ? `${lockedCapsuleIds().length} locked right now: ${lockedCapsuleIds().join("/")}` : "none locked on this machine — say so plainly, never name a capsule you were not given"}). Call with id ALONE for the MAP: his bolo, hook and mechanism whole, plus a row per fault-line carrying its spoken length. Then call again with 'open' for ONE page, VERBATIM and uncut — open:"a".."i" = that axis's strike + weld (the read unit, ~48s) · open:"<a-i>.deep" with seg:N = one ~2-minute segment of his re-learn layer · open:"deep" + seg:N = the capsule-level deep · open:"doubts" = every doubt question · open:"doubt" + seg:N = one doubt with its answer · open:"traps" · open:"threeways" · open:"lines". Every page returns est_seconds — SAY THE PRICE BEFORE YOU READ IT. Never recite a page he did not ask for. Build on HIS words, never reteach from zero. If an id is not in that list, get_capsule will tell you what IS locked; never invent one.`, parameters: { type: "OBJECT", properties: { id: { type: "STRING" }, open: { type: "STRING" }, seg: { type: "NUMBER" } }, required: ["id"] } },
+  { name: "get_capsule", description: `OPEN A LOCKED BOOK — his own capsule for a concept, the MAP OF HIS CRACKS: its doubts and traps say in advance where he will break (${lockedCapsuleIds().length ? `${lockedCapsuleIds().length} locked right now: ${lockedCapsuleIds().join("/")}` : "none locked on this machine — say so plainly, never name a capsule you were not given"}). Call with id ALONE for the MAP: his bolo, hook and mechanism whole, plus a row per fault-line carrying its spoken length. Then call again with 'open' for ONE page, VERBATIM and uncut — open:"a".."i" = that axis's strike + weld (the read unit, ~48s) · open:"<a-i>.deep" with seg:N = one ~2-minute segment of his re-learn layer · open:"deep" + seg:N = the capsule-level deep · open:"doubts" = every doubt question · open:"doubt" + seg:N = one doubt with its answer · open:"traps" · open:"threeways" · open:"lines". Every page returns est_seconds — SAY THE PRICE BEFORE YOU READ IT. Never recite a page he did not ask for. GAME ON (30 Aug 2026) re-opened every topic locked before it: teach it FROM ZERO with the capsule OPEN, building on HIS words, never as something he already holds. If an id is not in that list, get_capsule will tell you what IS locked; never invent one.`, parameters: { type: "OBJECT", properties: { id: { type: "STRING" }, open: { type: "STRING" }, seg: { type: "NUMBER" } }, required: ["id"] } },
   { name: "get_rejirah", description: "Due Re-Jirah (decay-guard) reviews to conduct BY VOICE — recall probes over due concepts, gut-word first, each answer banked with bank_answer. Call when he says re-jirah / review / 'kya due hai'. The queue gives you CONCEPTS, not questions: open his own capsule with get_capsule and probe HIS fault-lines a-i — never invent a question when his is on disk. Bank each axis with bank_answer, type axis_weld, the moment he finishes answering it; the verdict comes at judge_round, graded against HIS OWN WELD — the prose you are deliberately not shown.", parameters: { type: "OBJECT", properties: {} } },
   // grade_rejirah lived here and carried `result: held|cracked` — this surface
   // deciding an axis. A Re-Jirah axis is now banked with bank_answer(type
@@ -4624,6 +4624,18 @@ async function selftest() {
     // home, honest-dormant on an away day — never a phantom capsule invented.
     const haveCapsules = (() => { try { return readdirSync(join(STATE_DIR, "capsules")).some(f => f.endsWith(".json")); } catch (e) { swallow("readdirSync(join(STATE_DIR, \"capsules\")) unreadable → false", e); return false; } })();
     const digest = capsuleDigest();
+    // L6 · fate 30 (15 Oct 2026) — THE SENTENCE'S LAW, IN BOTH WORLDS. The home-world assertion below needs his real
+    // book; this one feeds capsuleDigest a one-capsule fixture dir, so the away day (and the cloud) checks the very
+    // words the model is given: the map of his cracks, taught from zero with the capsule open — never "already mastered".
+    {
+      const { mkdtempSync } = await import("node:fs");
+      const fx = mkdtempSync(join(os.tmpdir(), "dugout-digest-"));
+      writeFileSync(join(fx, "tokenization.json"), JSON.stringify({ id: "tokenization", title: "Tokenization", lockedOn: "2026-06-15", bolo: "token ek tukda hai jo model padhta hai", doubts: [{ q: "q" }], reJirahDone: [] }));
+      const fd = capsuleDigest(fx);
+      assert("fate 30 — THE LOCKED BOOK is the MAP OF HIS CRACKS: taught FROM ZERO with the capsule open (the GAME ON ruling), never 'ALREADY MASTERED', never 'never teach these from zero'",
+        fd.includes("THE LOCKED BOOK") && fd.includes("MAP OF HIS CRACKS") && fd.includes("FROM ZERO") && fd.includes("TOKENIZATION") && fd.includes("his bolo:")
+        && !fd.includes("ALREADY MASTERED") && !/never teach these from zero/i.test(fd));
+    }
     if (haveCapsules) {
       // E2E audit (25 Jul 2026): this check was VACUOUS. `?:` binds looser than
       // `&&`, so the whole includes-chain was the ternary CONDITION — the instant
@@ -4633,7 +4645,8 @@ async function selftest() {
       // conjunction: the digest must actually carry the header, a capsule title,
       // his verbatim bolo, and the never-teach-from-zero law.
       // #92 — the label said "4 capsules" as a literal; it now counts them.
-      assert(`THE LOCKED BOOK rides the constitution (${lockedCapsuleIds().length} capsule(s) counted off disk, his bolo, decay law)`, digest.includes("LOCKED BOOK") && digest.includes("TOKENIZATION") && digest.includes("his bolo:") && digest.includes("never teach"));
+      // L6 · fate 30 (15 Oct 2026): the sentence moved, so its law moved with it — the map of his cracks, taught from zero.
+      assert(`THE LOCKED BOOK rides the constitution (${lockedCapsuleIds().length} capsule(s) counted off disk, his bolo, the map-of-his-cracks law)`, digest.includes("LOCKED BOOK") && digest.includes("TOKENIZATION") && digest.includes("his bolo:") && digest.includes("MAP OF HIS CRACKS") && digest.includes("FROM ZERO") && !digest.includes("ALREADY MASTERED") && !digest.includes("never teach these from zero"));
       assert("the digest is LEGACY in the constitution and LIVE in the sitting head (Block 3): capsuleDigest() still builds THE LOCKED BOOK, the frozen body carries it, the ≤ 2k live constitution does not", capsuleDigest().includes("THE LOCKED BOOK") && buildSystemInstructionLegacy().includes("THE LOCKED BOOK") && !buildSystemInstruction().includes("THE LOCKED BOOK"));
       const cap = execTool("get_capsule", { id: "tokenization" }, { sh });
       assert("get_capsule opens the locked book (bolo + fault-lines + his doubts)", cap.ok && cap.bolo.length > 50 && cap.fault_lines.length === 9 && cap.doubt_count >= 20 && cap.doubts[0].q.length > 5);
@@ -5119,6 +5132,12 @@ async function selftest() {
       ids.length
         ? (typeof named === "string" && named.split("/").slice().sort().join("|") === ids.slice().sort().join("|"))
         : named === undefined);
+    // L6 · ml6 F2 (forks rows 777 (4) / 780, 17 Oct 2026) — the get_capsule description the voice model is GIVEN carries
+    // the 30 Aug frame, in both worlds: the capsule is the map of his cracks, taught FROM ZERO with it open; never
+    // "a concept he has MASTERED", never "never reteach from zero" (his GAME ON word struck both).
+    assert("L6 · ml6 F2 — get_capsule's live description is the MAP OF HIS CRACKS taught FROM ZERO with the capsule OPEN; never 'MASTERED', never 'reteach from zero'",
+      decl.description.includes("MAP OF HIS CRACKS") && decl.description.includes("FROM ZERO") && decl.description.includes("capsule OPEN")
+      && !/MASTERED/.test(decl.description) && !/reteach from zero/i.test(decl.description));
   }
 
   // ── NO ORPHAN IMPORTS (10 Aug 2026) ──────────────────────────────────────

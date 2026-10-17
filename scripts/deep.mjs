@@ -278,7 +278,10 @@ function overview(caps, intervals, now) {
 }
 
 // ALWAYS-COLD: questions only. The weld is one deliberate command away.
-function due(caps, intervals, now) {
+// L6 · fate 25 (15 Oct 2026): `deps.burnedAxes` is the burn reader, injectable ONLY so the selftest can make it throw;
+// every real caller passes nothing and gets samjhao.mjs's own.
+function due(caps, intervals, now, deps = {}) {
+  const readBurned = typeof deps.burnedAxes === "function" ? deps.burnedAxes : burnedAxes;
   const scored = caps.map((c) => ({ c, r: rejirahStatus(c, intervals, now) }));
   const rows = scored
     .filter(({ r }) => r.status === "overdue" || r.status === "due")
@@ -334,8 +337,18 @@ function due(caps, intervals, now) {
     // calling itself COLD, which is the worst of both. So a burned axis is NOT served: it is
     // named, with the date, and the round is told to generate a FRESH question on the
     // re-activated material. samjhao.mjs holds the fact; this screen decides what to serve.
-    let burnedOf = new Map();
-    try { burnedOf = new Map(burnedAxes(c.id).map((b) => [b.axis, b.at])); } catch { burnedOf = new Map(); }
+    // ── L6 · fate 25 (15 Oct 2026) · A THROW IS LOUD AND FAILS CLOSED ──
+    // This read `catch { burnedOf = new Map(); }`: a throw from burnedAxes left the map EMPTY, so the loop below printed
+    // EVERY axis's stored strike as a COLD question — a burned axis served as cold, with no line on screen
+    // (learning-loop.txt:41), against this file's own law NEVER SWALLOW A FILE. With the burn record unreadable no
+    // stored strike of this capsule can be proven cold, so NONE is served as one: the throw is SAID, the axes withheld
+    // are NAMED, and the round is told to ask fresh questions. The burn itself (below) is unchanged.
+    let burnedOf = new Map(), burnErr = null;
+    try { burnedOf = new Map(readBurned(c.id).map((b) => [b.axis, b.at])); } catch (e) { burnErr = String((e && e.message) || e).slice(0, 160); }
+    if (burnErr !== null) {
+      console.log(`\n  ⚠ samjhao ka burn-record padha nahi gaya (${burnErr}) — is capsule ka KOI stored strike COLD sabit nahi hota, isliye ek bhi serve nahi hua: ${(c.faultLines || []).map((a) => a.axis).join(" ") || "—"} roke gaye.`);
+      console.log("        Har due axis pe FRESH sawaal chahiye. samjhao.mjs ka burn-record theek hone tak purane strike mat poochho.");
+    }
     // ── A8b · "FRESH STRIKES AFTER A RE-LOCK" IS **NOT DONE**, AND ON PURPOSE ──
     // The study order asks for it: "rejirah serves only FRESH strikes for a re-locked topic
     // (stored strikes are burned, ruling ②)". It was BUILT here on 4 Sep 2026 as a burn —
@@ -354,6 +367,7 @@ function due(caps, intervals, now) {
     // is unchanged and still does the honest half of this for any axis actually re-taught.
     for (const a of c.faultLines || []) {
       const strike = (a.strike || "").trim();
+      if (burnErr !== null) continue;   // fate 25 — failed CLOSED: withheld and named above, never served as cold
       if (burnedOf.has(a.axis)) {
         console.log(`\n  ${a.axis})  is axis ka strike SAMJHAO mein khul chuka (${String(burnedOf.get(a.axis)).slice(0, 10)}) — purana sawaal ab COLD nahi hai.`);
         console.log("        FRESH sawaal chahiye, re-activated material pe. Purana strike dobara mat poochho.");
@@ -624,6 +638,21 @@ function selftest() {
   ok("ALWAYS-COLD: `due` NEVER prints the weld (notes band — struggle is the feature)",
     !/\bW\b/.test(text.replace(/[═─]/g, "")));
   ok("`due` names the exact command that opens the answer", /deep\.mjs x <axis>/.test(text));
+
+  // ── L6 · fate 25 (15 Oct 2026) · THE BURN READ, BOTH WAYS ─────────────────────────────────
+  // The coldness guarantee was the one law of this file its selftest never ran (learning-loop.txt:41). Driven through
+  // the real `due` with the burn reader injected: a THROW must be said and must serve nothing; a real burn is unchanged.
+  const grabDue = (deps) => { const o = []; console.log = (...a) => o.push(a.join(" ")); try { due([cap], iv, now, deps); } finally { console.log = realLog; } return o.join("\n"); };
+  const thrown = grabDue({ burnedAxes: () => { throw new Error("samjhao ledger torn"); } });
+  ok("fate 25 — a burnedAxes THROW is LOUD: `due` says the burn record could not be read, with the reason and the axes it withheld",
+    /burn-record padha nahi gaya \(samjhao ledger torn\)/.test(thrown) && /a roke gaye/.test(thrown));
+  ok("fate 25 — …and it FAILS CLOSED: while the burn record is unreadable not one stored strike is served as a COLD question",
+    !/S\?/.test(thrown) && /FRESH sawaal/.test(thrown));
+  const burnt = grabDue({ burnedAxes: () => [{ axis: "a", at: "2026-11-01T09:00:00.000Z" }] });
+  ok("fate 25 — the burn itself is unchanged: a burned axis is named with its date, its stored strike withheld, and no failure is claimed",
+    /SAMJHAO mein khul chuka \(2026-11-01\)/.test(burnt) && !/S\?/.test(burnt) && !/padha nahi gaya/.test(burnt));
+  ok("fate 25 — an EMPTY burn record serves the strike cold, exactly as before",
+    /S\?/.test(grabDue({ burnedAxes: () => [] })));
 
   // ── THE RETURN LEG (wired 11 Aug 2026) ────────────────────────────────────
   // These go red the moment this file stops naming the recorder — the state it was in
