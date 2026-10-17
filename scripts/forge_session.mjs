@@ -231,6 +231,16 @@ const blank = (concept, now = new Date()) => ({
   // pictures_by_axis — forks row 276 (1)(a): the per-idea pictures (a widget_gate before axis g),
   // counted per axis; absent on a session written before it, and every reader tolerates that.
   pictures_by_axis: {},
+  // ── RUNG L1 (ml1 F-5, forks row 777, 17 Oct 2026) · THE TWO APPEND-ONLY LOGS ─────────────────
+  // axes_now_at keeps only the FIRST `axis x now` (the evidence floor, A3) and moments_by_axis keeps
+  // COUNTS, so a return to an axis after another was declared could not be told apart from never
+  // leaving it: notes_compiler.mjs's axisWindows compiled those turns to the axis declared in between.
+  //   axes_now_history — {axis, at} pushed at EVERY `axis x now`, re-declares included.
+  //   moments_log      — {kind, axis, at} pushed at every `moment` (axis null when none was current;
+  //                      a refused check-question is logged with refused:true, never dropped).
+  // Both only ever grow; neither feeds a gate (the floor and the counts above stay the gates' inputs).
+  axes_now_history: [],
+  moments_log: [],
 });
 
 // STRICT — Number("") and Number(" ") are 0, and Number(true) is 1, so a bare
@@ -312,7 +322,9 @@ function setCurrentAxis(s, axis, now = new Date()) {
   // SAME axis keeps the spent counter: otherwise "re-declare" would be a one-command second
   // question, the quiz-dump law's back door.
   const pass = s.current_axis === a ? (s.check_q_this_pass || 0) : 0;
-  return { ok: true, session: { ...s, current_axis: a, axes_now_at: marks, check_q_this_pass: pass, updated_at: nowISO(now) } };
+  // RUNG L1 (ml1 F-5): EVERY declaration is logged, re-declares included — the first stamp above stays the floor.
+  const hist = [...(Array.isArray(s.axes_now_history) ? s.axes_now_history : []), { axis: a, at: nowISO(now) }];
+  return { ok: true, session: { ...s, current_axis: a, axes_now_at: marks, axes_now_history: hist, check_q_this_pass: pass, updated_at: nowISO(now) } };
 }
 
 // ROW 68 (a), 6 Sep 2026 — THE ONE-CHECK ALLOWANCE IS PER AXIS, DERIVED, NEVER MIGRATED.
@@ -329,6 +341,9 @@ const checkSpent = (s) => {
 function addMoment(s, kind, now = new Date()) {
   const m = String(kind || "").trim().toLowerCase();
   if (!MOMENTS.includes(m)) return { ok: false, error: `moment not ${MOMENTS.join("|")} (${kind})`, session: s };
+  // RUNG L1 (ml1 F-5): the moment with its axis and clock, appended on every path below
+  const logged = (extra = {}) => [...(Array.isArray(s.moments_log) ? s.moments_log : []),
+    { kind: m, axis: s.current_axis && AXES.includes(s.current_axis) ? s.current_axis : null, at: nowISO(now), ...extra }];
   // THE ONE-CHECK-QUESTION LAW, ENFORCED (audit 30 Jul 2026): the contract used to
   // only WARN here while SKILL.md claimed "the pacer hard-stops the second one" —
   // a claim the code did not honour. It does now: in phases 3-6 the second
@@ -341,7 +356,7 @@ function addMoment(s, kind, now = new Date()) {
     return {
       ok: false,
       error: `ONE check-question already spent on STEP ${s.step} ${STEPS[s.step]} — teach, or advance the step. (canon: max EK sharp check-question during phases 3-6)`,
-      session: { ...s, check_q_refused: (s.check_q_refused || 0) + 1, updated_at: nowISO(now) },
+      session: { ...s, check_q_refused: (s.check_q_refused || 0) + 1, moments_log: logged({ refused: true }), updated_at: nowISO(now) },
       record: true,
     };
   }
@@ -362,7 +377,7 @@ function addMoment(s, kind, now = new Date()) {
     const pba = { ...(s.pictures_by_axis || {}), [pa]: ((s.pictures_by_axis || {})[pa] || 0) + 1 };
     const mbaP = { ...(s.moments_by_axis || {}) };
     if (pa !== "concept") mbaP[pa] = { ...(mbaP[pa] || {}), widget_gate: ((mbaP[pa] || {}).widget_gate || 0) + 1 };
-    return { ok: true, picture: true, session: { ...s, pictures_by_axis: pba, moments_by_axis: mbaP, updated_at: nowISO(now) } };
+    return { ok: true, picture: true, session: { ...s, pictures_by_axis: pba, moments_by_axis: mbaP, moments_log: logged({ picture: true }), updated_at: nowISO(now) } };
   }
   const qm = { ...s.question_moments, [m]: (s.question_moments[m] || 0) + 1 };
   // A3 — A MOMENT NOW REMEMBERS WHICH AXIS IT WAS ABOUT. The global counter cannot
@@ -381,6 +396,7 @@ function addMoment(s, kind, now = new Date()) {
       ...s,
       question_moments: qm,
       moments_by_axis: mba,
+      moments_log: logged(),
       check_q_this_pass: m === "check_q" ? (s.check_q_this_pass || 0) + 1 : (s.check_q_this_pass || 0),
       updated_at: nowISO(now),
     },
@@ -916,6 +932,8 @@ function coverage(s, now = new Date(), bank = null) {
     bypass_count: (s.bypasses || []).length,
     moments_by_axis: { ...(s.moments_by_axis || {}) },
     axes_now_at: { ...(s.axes_now_at || {}) },
+    axes_now_history: [...(Array.isArray(s.axes_now_history) ? s.axes_now_history : [])],   // RUNG L1 (ml1 F-5)
+    moments_log: [...(Array.isArray(s.moments_log) ? s.moments_log : [])],
     // FROZEN VERBATIM (30 Jul semantics — layering, never replace). `honest` answers
     // exactly one question: did every step run and was every axis touched. It stays
     // byte-for-byte what it was, so a comparison across old and new rows is valid.
@@ -1143,6 +1161,11 @@ function load(path = SESSION) {
             }]))
         : {},
       question_moments: { ...blank(j.concept).question_moments, ...(j.question_moments || {}) },
+      // RUNG L1 (ml1 F-5): same drop-the-malformed rule — a junk entry is dropped, a missing log is [] (an older session)
+      axes_now_history: (Array.isArray(j.axes_now_history) ? j.axes_now_history : [])
+        .filter((h) => h && typeof h === "object" && !Array.isArray(h) && AXES.includes(h.axis) && typeof h.at === "string"),
+      moments_log: (Array.isArray(j.moments_log) ? j.moments_log : [])
+        .filter((x) => x && typeof x === "object" && !Array.isArray(x) && MOMENTS.includes(x.kind) && typeof x.at === "string"),
     };
   } catch { return null; }
 }
@@ -2406,6 +2429,35 @@ function selftest() {
       (() => { const one = setCurrentAxis({ ...base, axes_now_at: {} }, "b", new Date(T));
                const two = setCurrentAxis(one.session, "b", new Date(later(90)));
                return one.session.axes_now_at.b === T && two.session.axes_now_at.b === T; })());
+    assert("RUNG L1 (ml1 F-5) — EVERY `axis x now` is logged in axes_now_history, re-declares and returns included, while the first-now floor never moves",
+      (() => { const one = setCurrentAxis({ ...base, axes_now_at: {}, axes_now_history: [] }, "a", new Date(T));
+               const two = setCurrentAxis(one.session, "b", new Date(later(10)));
+               const three = setCurrentAxis(two.session, "a", new Date(later(20)));
+               const four = setCurrentAxis(three.session, "a", new Date(later(25)));
+               const h = four.session.axes_now_history.map((x) => `${x.axis}@${x.at === T ? 0 : x.at === later(10) ? 10 : x.at === later(20) ? 20 : x.at === later(25) ? 25 : "?"}`).join(" ");
+               return h === "a@0 b@10 a@20 a@25" && four.session.axes_now_at.a === T && four.session.axes_now_at.b === later(10)
+                 && one.session.axes_now_history.length === 1; })());
+    assert("RUNG L1 (ml1 F-5) — every moment is logged with its axis and clock: counted, a picture before g, a refused second check (refused:true), and one fired with no axis (axis null)",
+      (() => { const s0 = { ...base, step: 3, current_axis: "a", axes_done: [], moments_by_axis: {}, question_moments: { jirah: 0, check_q: 0, widget_gate: 0 }, check_q_this_pass: 0, moments_log: [] };
+               const a1 = addMoment(s0, "check_q", new Date(later(2)));
+               const a2 = addMoment(a1.session, "check_q", new Date(later(3)));
+               const a3 = addMoment(a2.session, "widget_gate", new Date(later(4)));
+               const a4 = addMoment({ ...a3.session, current_axis: null }, "jirah", new Date(later(5)));
+               const L = a4.session.moments_log;
+               return a1.ok && a2.ok === false && a3.ok && a4.ok && L.length === 4
+                 && L[0].kind === "check_q" && L[0].axis === "a" && L[0].at === later(2) && !L[0].refused
+                 && L[1].kind === "check_q" && L[1].refused === true && L[2].picture === true && L[3].kind === "jirah" && L[3].axis === null; })());
+    assert("RUNG L1 (ml1 F-5) — load() keeps a well-formed log, DROPS a malformed entry, and reads an older session (no logs) as []",
+      (() => { const p = join(tmpdir(), `forge_l1_logs_selftest_${process.pid}.json`);
+               try {
+                 writeFileSync(p, JSON.stringify({ concept: "x", started_at: T, updated_at: T, step: 3,
+                   axes_now_history: [{ axis: "a", at: T }, { axis: "z", at: T }, "junk", { axis: "b" }], moments_log: [{ kind: "jirah", axis: "a", at: T }, { kind: "nope", at: T }, null] }));
+                 const got = load(p);
+                 writeFileSync(p, JSON.stringify({ concept: "x", started_at: T, updated_at: T, step: 3 }));
+                 const old = load(p);
+                 return got.axes_now_history.length === 1 && got.axes_now_history[0].axis === "a" && got.moments_log.length === 1
+                   && Array.isArray(old.axes_now_history) && old.axes_now_history.length === 0 && Array.isArray(old.moments_log) && old.moments_log.length === 0;
+               } finally { rmSync(p, { force: true }); } })());
 
     // ── THE LOCK GATE, after his 4 Sep ruling (row 45) ────────────────────────
     // Three terms now, and the fixtures below plant exactly one violation each.

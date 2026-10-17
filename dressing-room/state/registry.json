@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-10-14T22:11:41.476Z",
+ "updated_at": "2026-10-17T11:29:17.693Z",
  "tables": {
   "mechanisms": [
    {
@@ -872,6 +872,40 @@
     "consumer_kind": "organ",
     "updated_at": "2026-10-14T22:11:41.380Z",
     "added_at": "2026-10-14T22:11:41.380Z"
+   },
+   {
+    "subject": "compiled_notes",
+    "schema_owner": "notes_compiler.mjs",
+    "witness": "scripts/notes_compiler.mjs SOLE WRITER header · forks row 550 (2) F4",
+    "consumers": [
+     {
+      "name": "daily_green.mjs"
+     },
+     {
+      "kind": "him"
+     }
+    ],
+    "reach": "any",
+    "writes_to": "compiled_notes.jsonl",
+    "updated_at": "2026-10-17T11:29:17.345Z",
+    "added_at": "2026-10-17T11:29:17.345Z"
+   },
+   {
+    "subject": "notes_corrections",
+    "schema_owner": "notes_corrections.mjs",
+    "witness": "scripts/notes_corrections.mjs SOLE WRITER header · NOTES_DESIGN §6 · forks row 277 (b)",
+    "consumers": [
+     {
+      "name": "notes_compiler.mjs"
+     },
+     {
+      "kind": "him"
+     }
+    ],
+    "reach": "any",
+    "writes_to": "notes_corrections.jsonl",
+    "updated_at": "2026-10-17T11:29:17.512Z",
+    "added_at": "2026-10-17T11:29:17.512Z"
    }
   ],
   "emit_contract": [
@@ -950,6 +984,16 @@
     "ruling": "RULING__2026-09-03_0300-stage0-forks",
     "updated_at": "2026-09-04T01:07:40.537Z",
     "added_at": "2026-09-04T01:07:40.537Z"
+   },
+   {
+    "subject": "note_blocks",
+    "surface": "scripts/notes_compiler.mjs",
+    "writes_to": "compiled_notes.jsonl",
+    "fired_by": "him",
+    "witness": "campaign-2026-09/cloud/ml1/witness/rung_L1.mjs · scripts/notes_compiler.mjs selftest",
+    "ruling": "RULING__2026-09-03_0300-stage0-forks",
+    "updated_at": "2026-10-17T11:29:17.686Z",
+    "added_at": "2026-10-17T11:29:17.686Z"
    }
   ],
   "checks": [

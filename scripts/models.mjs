@@ -432,6 +432,10 @@ export function isFixture() { return (process.argv[2] || "") === "selftest" || !
 // (law-m-literal-model baseline 1 → 0 at S10).
 export const CLAUDE_ROLES = {
   tier2_repair: { model: "claude-opus-5", effort: "max", env: "ARSENAL_CLAUDE_TIER2" },
+  // RUNG L1 (forks row 774 (2), 17 Oct 2026): notes_compiler.mjs's COLD READER — judgement on his compiled
+  // notes (TIER 2 by LAW T), ONE fresh claude -p per un-gated note at full-time on the Max subscription,
+  // never a key. A read that cannot run writes a NAMED absence row (notes_compiler.mjs gateDay), never silence.
+  cold_reader: { model: "claude-opus-5-5", effort: "high", env: "ARSENAL_CLAUDE_COLD_READER" },
 };
 export function resolveClaudeRole(role) {
   const r = CLAUDE_ROLES[role];

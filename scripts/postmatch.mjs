@@ -372,6 +372,16 @@ async function selftest() {
     assert("FULL-TIME EVENT — `brain.mjs trigger fulltime` is armed AFTER season/post_match are written and after the dry-run return (a dry close arms nothing), through the owner's CLI, best-effort",
       iArm > iWrite && iWrite > iDry && iDry > 0 && /try \{\s*const \{ execFileSync \} = await import\("node:child_process"\);\s*execFileSync\(process\.execPath, \[join\(__dirname, "brain\.mjs"\), "trigger", "fulltime"[^\n]*\n\s*\} catch \{ \}/.test(src));
   }
+  // RUNG L1 (15 Oct 2026) — THE NOTES ANCHOR: the close fires the compiler's OWN `fulltime` for the day it closed, AFTER
+  // post_match/<date>.md is written and after the dry-run return, and a notes failure is LOUD — never a bare catch.
+  {
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const iCall = src.lastIndexOf('[join(__dirname, "notes_compiler.mjs"), "fulltime", "--date", dateStr]');   // the runtime call, not this assertion's literal
+    const iPm = src.lastIndexOf('writeAtomic(join(PM_DIR, dateStr + ".md"), md)'), iDryRet = src.lastIndexOf('console.log("--- DRY RUN (nothing written) ---');
+    const block = iCall > 0 ? src.slice(iCall, src.indexOf("const routedTonight", iCall)) : "";
+    assert("NOTES ANCHOR — notes_compiler.mjs `fulltime --date <the closed day>` fires AFTER post_match/<date>.md is written and after the dry return, through the compiler's own CLI; a failure says NOTES NOT DONE out loud and on the close line, never a bare catch",
+      iCall > iPm && iPm > iDryRet && iDryRet > 0 && block.includes("NOTES NOT DONE") && !/catch \{ \}/.test(block) && /\$\{notesLine\} → /.test(src));
+  }
   assert("DISCLOSURE LAW — withheld adaptations always render", md.includes("QUIET ADAPTATIONS") && md.includes("nemesis headline withheld"));
   assert("pending throw-ins shown verbatim, never auto-routed", md.includes("dot vs cosine same cheez?") && md.includes("one word routes them"));
   assert("null twin voice renders nothing (win-only respected)", !md.includes("THE BOOK:"));
@@ -702,6 +712,27 @@ async function main() {
     const { execFileSync } = await import("node:child_process");
     execFileSync(process.execPath, [join(__dirname, "shadow.mjs"), "score"], { windowsHide: true, timeout: 30000 });
   } catch { }
+  // THE NOTES ANCHOR (rung L1 · fates 22 / 51, 15 Oct 2026): the day is CLOSED by his word, so its notes are
+  // compiled and cold-gated now — through the compiler's OWN CLI (scripts/notes_compiler.mjs, the sole writer of
+  // compiled_notes.jsonl), AFTER post_match/<date>.md is written and never on --dry. NOT best-effort: the close is
+  // already recorded (its exit code stays the close's), but a notes failure is said OUT LOUD on stderr and on the
+  // close line — never a bare catch. The skill is never edited for this; the code path is here.
+  let notesLine = "";
+  try {
+    const { spawnSync } = await import("node:child_process");
+    const nc = spawnSync(process.execPath, [join(__dirname, "notes_compiler.mjs"), "fulltime", "--date", dateStr], { encoding: "utf8", windowsHide: true, timeout: 20 * 60000 });
+    if (nc.stdout) process.stdout.write(nc.stdout);
+    if (nc.stderr) process.stderr.write(nc.stderr);
+    const sum = String(nc.stdout || "").split(/\r?\n/).find((l) => l.startsWith("notes_compiler:"));
+    if (nc.status === 0 && sum) notesLine = ` · notes: ${sum.replace(/^notes_compiler:\s*/, "")}`;
+    else {
+      console.error(`postmatch: NOTES NOT DONE — notes_compiler.mjs fulltime ${nc.status === null ? `did not finish (${(nc.error && nc.error.code) || nc.signal || "?"})` : `exit ${nc.status}`} (its own lines above say which step); the close itself is recorded. Finish or back-fill: node scripts/notes_compiler.mjs fulltime --date ${dateStr}`);
+      notesLine = ` · NOTES NOT DONE${sum ? ` (${sum.replace(/^notes_compiler:\s*/, "")})` : " (see above)"}`;
+    }
+  } catch (e) {
+    console.error(`postmatch: NOTES NOT DONE — ${String((e && e.message) || e).slice(0, 200)}; the close itself is recorded. Finish or back-fill: node scripts/notes_compiler.mjs fulltime --date ${dateStr}`);
+    notesLine = " · NOTES NOT DONE (see above)";
+  }
   const routedTonight = route === "all" && pendingBalls.length > 0 && ledger.readable;
   if (routedTonight) {
     writeAtomic(ROUTED, { routed: ledger.rows.concat(pendingBalls.map(b => ({ id: b.id, routed_on: dateStr }))) });
@@ -713,7 +744,7 @@ async function main() {
   const routeNote = route !== "all" ? ""
     : ledger.readable ? ` · ${pendingBalls.length} throw-in(s) routed`
     : " · throw-ins NOT routed (routing ledger unreadable — see above)";
-  console.log(`postmatch: ${hit} · Matchday ${matchday} · ${kal ? "KAL-line locked" : "no KAL-line (declined)"}${routeNote} → ${join(PM_DIR, dateStr + ".md")}`);
+  console.log(`postmatch: ${hit} · Matchday ${matchday} · ${kal ? "KAL-line locked" : "no KAL-line (declined)"}${routeNote}${notesLine} → ${join(PM_DIR, dateStr + ".md")}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
