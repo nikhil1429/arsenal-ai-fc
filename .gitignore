@@ -529,3 +529,4 @@ dressing-room/state/claims.jsonl
 gitleaks_*.json
 gitleaks-report*.json
 GITLEAKS_HISTORY__*.md
+dressing-room/state/*.lock
