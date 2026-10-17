@@ -87,7 +87,8 @@
 //   note, C22) · the full-time skill (the glance, lane S) · a future re-teach / interview render (same source).
 // CLI: node scripts/notes_compiler.mjs compile [--date D] [--concept c] [--axis x] [--session <id>]…
 //        | gate [--date D] [--stub] [--again] | fulltime [--date D] [--stub] [--no-archive-run]
-//        | glance [--date D] | status | selftest          (D = an IST day YYYY-MM-DD, default today)
+//        | glance [--date D] | status | born | selftest          (D = an IST day YYYY-MM-DD, default today)
+//   born = the ledger's birth at its landing (forks row 787 (1)): created EMPTY iff absent, never truncated.
 // ============================================================================
 import { readFileSync, appendFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname, basename } from "node:path";
@@ -169,6 +170,19 @@ function appendChecked(path, row) {
     return { ok: false, why: `read-back failed (${String((e && e.message) || e).slice(0, 160)})` };
   }
   return { ok: true };
+}
+// BORN (forks row 787 (1), 17 Oct 2026) — every state file a landing gives birth to is BORN by its sole writer at the
+// landing (an empty JSONL is lawful) and ADDED by pathspec, so the groundsman's `add -u` carries it from then on; a file
+// nobody adds is a file the remote never sees. Exclusive create (flag "wx"): EMPTY, never truncates, and a ledger that
+// already exists is never written — its rows are the record.
+/** born — create the ledger EMPTY iff absent: {ok, op:"born"|"refused", path, why?}. */
+export function born(path = LEDGER) {
+  if (existsSync(path)) return { ok: false, op: "refused", path, why: "the ledger already exists — born never truncates and never writes a ledger that exists" };
+  try { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, "", { encoding: "utf8", flag: "wx" }); }
+  catch (e) { return { ok: false, op: "refused", path, why: `exclusive create failed (${clip((e && e.message) || e, 160)})` }; }
+  let size = -1;
+  try { size = readFileSync(path).length; } catch (e) { return { ok: false, op: "refused", path, why: `read-back failed (${clip((e && e.message) || e, 160)})` }; }
+  return size === 0 ? { ok: true, op: "born", path } : { ok: false, op: "refused", path, why: `read-back: ${size} byte(s), not an empty ledger` };
 }
 /** runGitleaks — the organism's names guard over ONE row, through stdin; its output is never printed. */
 function runGitleaks(text, config) {
@@ -815,6 +829,16 @@ async function selftest() {
     const noCorr = compileDay({ ...base, path: join(tmp, "x.jsonl"), correctionsPath: join(tmp, "corr-as-dir"), date: "2026-10-06", now: T(24) });
     assert("CORRECTIONS UNREADABLE ⇒ NO COMPILE — they are read FIRST, and a compile that cannot read them refuses", noCorr.ok === false && /corrections lane/.test(noCorr.why) && !existsSync(join(tmp, "x.jsonl")));
 
+    // ── BORN (forks row 787 (1)) — the ledger's birth at its landing, planted both ways ──────────────────────
+    const LB = join(tmp, "born", "compiled_notes.jsonl");
+    const b1 = born(LB);
+    assert("BORN — an absent ledger is born EMPTY (0 bytes) by its sole writer, and says so", b1.ok && b1.op === "born" && existsSync(LB) && readFileSync(LB).length === 0);
+    const b2 = born(LB);
+    assert("BORN — a ledger that exists (even empty) is REFUSED, never written again", b2.ok === false && b2.op === "refused" && /already exists/.test(b2.why) && readFileSync(LB).length === 0);
+    const LR = join(tmp, "born-rows.jsonl"); writeFileSync(LR, JSON.stringify({ v: 1, kind: "compiled", id: "n-x" }) + "\n");
+    const shaR = sha256(readFileSync(LR, "utf8")), b3 = born(LR);
+    assert("BORN NEVER TRUNCATES — a ledger holding a row is refused and stays byte-identical", b3.ok === false && b3.op === "refused" && sha256(readFileSync(LR, "utf8")) === shaR && readRows(LR).length === 1);
+
     // ── THE RUNG WITNESS'S CLASS A over the ledger this selftest wrote ───────
     const all = readRows(L), ids = all.map((r) => r.id), comp = all.filter((r) => r.kind === "compiled"), gates = all.filter((r) => r.kind === "cold_gate");
     assert("CLASS A — no id repeats; no compiled row carries a verdict; every gate names a note compiled at or before it",
@@ -879,9 +903,15 @@ async function main() {
       console.log(`notes_compiler: ${s.compiled.length} compiled row(s) · ${s.live.length} live · ${s.superseded.size} superseded · ${s.gates.length} gate row(s) · ${s.live.filter((n) => (s.lastGate(n.id) || {}).verdict === "pass").length} live note(s) gate-passed · ${COMPILER}`);
       break;
     }
+    case "born": {
+      const b = born();
+      if (b.ok) console.log(`notes_compiler: born ${b.path} (0 bytes) — add it by pathspec in the landing commit (forks row 787 (1))`);
+      else { console.error(`notes_compiler: born REFUSED — ${b.why} (${b.path})`); process.exitCode = 1; }
+      break;
+    }
     case "selftest": await selftest(); break;
     default:
-      console.log("notes_compiler: compile [--date D] [--concept c] [--axis x] [--session <id>]… | gate [--date D] [--stub] [--again] | fulltime [--date D] [--stub] [--no-archive-run] | glance [--date D] | status | selftest   (D = IST day; ARSENAL_COLD_READER=stub stubs the reader)");
+      console.log("notes_compiler: compile [--date D] [--concept c] [--axis x] [--session <id>]… | gate [--date D] [--stub] [--again] | fulltime [--date D] [--stub] [--no-archive-run] | glance [--date D] | status | born | selftest   (D = IST day; ARSENAL_COLD_READER=stub stubs the reader)");
       if (mode) process.exitCode = 2;
   }
 }

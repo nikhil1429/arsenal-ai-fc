@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-10-17T11:29:17.693Z",
+ "updated_at": "2026-10-17T12:11:13.366Z",
  "tables": {
   "mechanisms": [
    {
@@ -887,8 +887,9 @@
     ],
     "reach": "any",
     "writes_to": "compiled_notes.jsonl",
-    "updated_at": "2026-10-17T11:29:17.345Z",
-    "added_at": "2026-10-17T11:29:17.345Z"
+    "updated_at": "2026-10-17T12:11:13.069Z",
+    "added_at": "2026-10-17T11:29:17.345Z",
+    "why": "the compiled axis notes of each study day: daily_green.mjs reads them for its step 3 (notes), and HE reads them at full-time through notes_compiler.mjs glance (his ONE haan)"
    },
    {
     "subject": "notes_corrections",
@@ -904,8 +905,9 @@
     ],
     "reach": "any",
     "writes_to": "notes_corrections.jsonl",
-    "updated_at": "2026-10-17T11:29:17.512Z",
-    "added_at": "2026-10-17T11:29:17.512Z"
+    "updated_at": "2026-10-17T12:11:13.357Z",
+    "added_at": "2026-10-17T11:29:17.512Z",
+    "why": "the live corrections lane: notes_compiler.mjs reads it FIRST, before any compile, so a corrected claim is never served as truth; HE reads it before a capsule is taught"
    }
   ],
   "emit_contract": [
