@@ -606,12 +606,22 @@ export function studyRerun(cmd) {
 // another session's scratchpad, a path that climbs out of the folder, a payload with no session id. A new lesson-output
 // root or page type is ONE measured line here, never a widening by taste.
 export const LESSON_EXT = /\.(html?|md|svg)$/i;
+// forks row 812 (2): the harness tools that HAND that page to him, measured on the same day b2409cd2 right after the Write —
+// Artifact (05:50:31Z, file_path = the page) and SendUserFile (05:50:33Z, files = [the page]). The Stop gate reads them with
+// the editor tools; the PreToolUse rail never sees them (outside its matcher). A new one is ONE measured name here.
+export const LESSON_PUBLISH_TOOLS = Object.freeze(["Artifact", "SendUserFile"]);
 const fwd = (p) => String(p).split(String.fromCharCode(92)).join("/");
-/** { path, session, why } when this editor payload writes a lesson page into its own session's scratchpad, else null. */
-export function lessonArtifactOf(payload = {}, { tmp = tmpdir(), win = process.platform === "win32" } = {}) {
+/** { path, session, why } when this payload writes (or hands him) a lesson page in its own session's scratchpad, else null.
+ *  A `files` list (SendUserFile) counts only when EVERY file is such a page. */
+export function lessonArtifactOf(payload = {}, opts = {}) {
+  const { tmp = tmpdir(), win = process.platform === "win32" } = opts;
   const sid = payload && typeof payload.session_id === "string" ? payload.session_id : "";
   if (!/^[0-9a-f-]{36}$/i.test(sid)) return null;
   const input = (payload && payload.tool_input) || {};
+  if (Array.isArray(input.files)) {
+    const each = input.files.map((f) => lessonArtifactOf({ session_id: sid, tool_input: { file_path: String(f) } }, opts));
+    return each.length && each.every(Boolean) ? each[0] : null;
+  }
   const raw = String(input.file_path || input.path || input.notebook_path || "");
   if (!raw || !LESSON_EXT.test(raw)) return null;
   const target = fwd(resolve(raw)), base = fwd(resolve(tmp)).replace(/\/+$/, "");
@@ -905,6 +915,11 @@ export function scopeSelfCheck() {
       && !LA(`${PAD}/../../../../evil.html`) && !LA(`${REPO}/scripts/recap.html`) && !LA(`${REPO}/.claude/skills/learn/SKILL.md`)
       && !LA(`${REPO}/dressing-room/state/recap.md`) && !LA(`${TMP}/r.html`) && !LA(`${TMP}/claude/p/${SID}/r.html`)
       && !LA(`${PAD}/r.html`, "") && !LA(`${PAD}/r.html`, "not-a-session") && lessonArtifactOf({ tool_input: { file_path: `${PAD}/r.html` } }, { tmp: TMP, win: true }) === null);
+    const FL = (files) => lessonArtifactOf({ session_id: SID, tool_input: { files } }, { tmp: TMP, win: true });
+    check("LESSON ARTIFACT (row 812 (2)) · FILES — a SendUserFile list counts only when EVERY file is a lesson page in the session's own scratchpad (one page · two pages IN; a page beside a script, a page of another session, an empty list OUT); the two publish tools are the measured Artifact and SendUserFile",
+      !!FL([`${PAD}/r.html`]) && !!FL([`${PAD}/r.html`, `${PAD}/notes.md`]) && !FL([`${PAD}/r.html`, `${PAD}/x.mjs`])
+      && !FL([`${TMP}/claude/C--Users-x-GitHub-arsenal-ai-fc/${OTHER2}/scratchpad/r.html`]) && !FL([])
+      && JSON.stringify(LESSON_PUBLISH_TOOLS) === JSON.stringify(["Artifact", "SendUserFile"]));
     check("LESSON ARTIFACT (row 811) · CASE — the tmp root upper-cased matches only where paths fold (win true), never on a case-sensitive host (win false)",
       !!LA(`${TMP.toUpperCase()}${PAD.slice(TMP.length)}/r.html`, SID, { tmp: TMP, win: true }) && LA(`${TMP.toUpperCase()}${PAD.slice(TMP.length)}/r.html`, SID, { tmp: TMP, win: false }) === null);
   }

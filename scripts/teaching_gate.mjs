@@ -69,7 +69,8 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
-import { studyScope, readSitting, readForge, payloadOf, classifyPrompt, unboundVerdict, GUT_BEARING_MOMENTS, BANKED_MOMENTS, bankDueAt, shellInStudySet, humanText, CANON_READ_PATH, NEVER_READ } from "./study_scope.mjs";
+import { studyScope, readSitting, readForge, payloadOf, classifyPrompt, unboundVerdict, GUT_BEARING_MOMENTS, BANKED_MOMENTS, bankDueAt, shellInStudySet, humanText, CANON_READ_PATH, NEVER_READ, lessonArtifactOf, LESSON_PUBLISH_TOOLS } from "./study_scope.mjs";
+import { EDIT_TOOLS } from "./rails.mjs";   // forks row 812 (2): the rail's own editor-tool list, never a second copy here
 // L4 (6 Oct 2026): newIdeaOf (THE new_idea definition) and pictureOrder (the picture ORDER) are each defined ONCE, in
 // teaching_audit.mjs — the Stop row records the same two readings; turnMoments rides only the selftest's parity pin
 import { countTables, namedPosition, countForm, opensTerm, hindiMarkerCount, technicalLine, intensityCheck, newIdeaOf, pictureOrder, turnMoments } from "./teaching_audit.mjs";
@@ -396,13 +397,19 @@ export const MOMENT_KINDS = Object.freeze(["pehle_guess", "check_q", "widget_gat
 const FORGE_SKILL = /forge[\\/]SKILL\.md$/i;
 const WHOLE_READ_NAMED = /(REFERENCE\.md|SAMJHAO_MERGED__2026-08-30\.md|VISUAL_CONTRACT\.md|forge[\\/]SKILL\.md)$/i;
 const FREE_TOOLS = /^(ToolSearch|TodoWrite|Skill|mcp__visualize__read_me|mcp__visualize__show_widget)$|bank_answer|judge_round/;
-/** Every tool call of the turn outside the study set, and every whole-file read of a named canon file. */
-export function toolFindings(turn, { step = null } = {}) {
-  const outside = []; const whole = [];
+// FORKS ROW 812 (2) (18 Oct 2026, after his #150): THE LESSON-ARTIFACT DOOR reaches Stop. The rail let his recap page through
+// (row 811) but this gate still counted its Write, its Artifact publish and its SendUserFile as tools outside the study set
+// (measured on b2409cd2, 05:46:26Z-05:50:33Z). The SAME predicate, by import (study_scope's lessonArtifactOf over the rail's
+// EDIT_TOOLS and study_scope's LESSON_PUBLISH_TOOLS): a page for him written into, or handed from, the Stop payload's OWN
+// session scratchpad is `lesson`, never B.tools; every other editor or publish call stays outside.
+/** Every tool call of the turn outside the study set, every whole-file read of a named canon file, and every lesson artifact. */
+export function toolFindings(turn, { step = null, sessionId = null } = {}) {
+  const outside = []; const whole = []; const lesson = [];
   for (const b of turn) {
     if (b.kind !== "tool") continue;
     const name = String(b.name || "");
     if (FREE_TOOLS.test(name)) continue;
+    if ((EDIT_TOOLS.includes(name) || LESSON_PUBLISH_TOOLS.includes(name)) && lessonArtifactOf({ session_id: sessionId, tool_input: b.input || {} })) { lesson.push(name); continue; }
     if (shell(b)) {
       const c = cmdOf(b);
       if (shellInStudySet(c)) continue;
@@ -422,7 +429,7 @@ export function toolFindings(turn, { step = null } = {}) {
     }
     outside.push(name);
   }
-  return { outside, whole };
+  return { outside, whole, lesson };
 }
 /** VISUAL_CONTRACT's checkable half on a show_widget call (the rest is the judge's). */
 export function widgetFindings(turn) {
@@ -502,7 +509,7 @@ export function decide({ payload = {}, sitting = null, forge = null, transcript 
       : `a text block sits above a tool call; the lesson stands after the last tool (${postWords} words after, ${aboveWords} above) — counted, never patched (row 275)`, vanished ? "patch" : "count");
     mechanical.add("A.text-last");
   }
-  const tf = toolFindings(T.turn, { step: forge && Number.isInteger(forge.step) ? forge.step : null });
+  const tf = toolFindings(T.turn, { step: forge && Number.isInteger(forge.step) ? forge.step : null, sessionId: sid });
   if (T.turn.some((b) => b.kind === "tool" && b.name === "AskUserQuestion")) red("B.askuser", "AskUserQuestion was called");
   // forks row 267: his prompt is a CLOSING (/full-time, "post match") → the close organs run; B.tools stands down, as G3 does
   if (tf.outside.length && !cls.closing) red("B.tools", tf.outside.slice(0, 3).join(" · "));
@@ -1133,6 +1140,17 @@ async function selftest() {
     !has(closeTurn, "B.tools") && has(organsMidStudy, "B.tools"), JSON.stringify([closeTurn.reds, organsMidStudy.reds]));
   const canon = run("ok", [TOOL("Read", { file_path: "C:/r/learning-layer/VISUAL_CONTRACT.md", offset: 100, limit: 30 }), ...TURN_OK], "padh liya · " + GOOD);
   assert("learn:R3 · a canon SECTION read (offset + limit) is inside the study set", !has(canon, "B.tools") && !has(canon, "B.whole-read"), JSON.stringify(canon.reds));
+  // forks row 812 (2) — THE LESSON-ARTIFACT DOOR at Stop, both ways, on THIS host's tmp root and the HOST session's own scratchpad
+  const PADH = `${String(tmpdir()).split(String.fromCharCode(92)).join("/")}/claude/C--Users-nikhi-GitHub-arsenal-ai-fc/${HOST}/scratchpad`;
+  const PAGE = `${PADH}/inference__axis-a-kya-analogy__2026-10-18.html`;
+  const recapTurn = run("ok", [TOOL("Write", { file_path: PAGE, content: "<html></html>" }), TOOL("Artifact", { file_path: PAGE, icon: "book" }), TOOL("SendUserFile", { files: [PAGE] }), ...TURN_OK], "recap page tumhare liye · " + GOOD);
+  const repoPage = run("ok", [TOOL("Write", { file_path: "C:/Users/nikhi/GitHub/arsenal-ai-fc/scripts/recap.html", content: "x" }), ...TURN_OK], "page likha · " + GOOD);
+  const otherPad = run("ok", [TOOL("Artifact", { file_path: PAGE.replace(HOST, ARCH) }), ...TURN_OK], "publish kiya · " + GOOD);
+  const sentWithCode = run("ok", [TOOL("SendUserFile", { files: [PAGE, `${PADH}/run.mjs`] }), ...TURN_OK], "bheja · " + GOOD);
+  assert("row 812 (2) · his recap page Written, published by Artifact and sent by SendUserFile from THIS session's own scratchpad → no B.tools; a scripts/ page, a page published from another session's scratchpad, a SendUserFile carrying a script beside it → B.tools (planted both ways)",
+    !has(recapTurn, "B.tools") && has(repoPage, "B.tools") && has(otherPad, "B.tools") && has(sentWithCode, "B.tools")
+    && JSON.stringify(toolFindings([{ kind: "tool", name: "Write", input: { file_path: PAGE } }, { kind: "tool", name: "Artifact", input: { file_path: PAGE } }], { sessionId: HOST }).lesson) === JSON.stringify(["Write", "Artifact"]),
+    JSON.stringify([recapTurn.reds, repoPage.reds, otherPad.reds, sentWithCode.reds]));
   const whole = run("ok", [TOOL("Read", { file_path: "C:/r/learning-layer/VISUAL_CONTRACT.md" }), ...TURN_OK], "padh liya · " + GOOD);
   assert("learn:R2 · a WHOLE read of VISUAL_CONTRACT → B.whole-read (db82184b t12)", has(whole, "B.whole-read"));
   const ask = run("ok", [TOOL("AskUserQuestion", { questions: [] }), ...TURN_OK], "set · " + GOOD);
