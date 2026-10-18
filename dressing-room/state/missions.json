@@ -124,6 +124,16 @@
       "staged_at": "2026-10-06T14:33:19.231Z",
       "ingested_at": null,
       "report": null
+    },
+    {
+      "id": "T-inference",
+      "type": "topic_open",
+      "cluster": null,
+      "concept": "inference",
+      "file": "dressing-room/missions/t-inference.md",
+      "staged_at": "2026-10-16T16:26:49.207Z",
+      "ingested_at": null,
+      "report": null
     }
   ],
   "syllabus_audit": {
@@ -300,6 +310,11 @@
       "ts": "2026-10-06T14:33:19.231Z",
       "kind": "stage_topic",
       "id": "T-embeddings"
+    },
+    {
+      "ts": "2026-10-16T16:26:49.207Z",
+      "kind": "stage_topic",
+      "id": "T-inference"
     }
   ]
 }

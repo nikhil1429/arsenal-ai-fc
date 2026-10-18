@@ -102,6 +102,50 @@
         "title": "vendor_matching_exact_vs_embedding",
         "recorded_at": "2026-10-14T20:41:52.158Z"
       }
+    ],
+    "inference": [
+      {
+        "session_id": "54436ed3-6f64-4348-b4e6-5502c1d17eb7",
+        "audit_ts": "2026-10-16T16:47:47.300Z",
+        "title": "inference_axis_a_one_token_at_a_time_loop",
+        "recorded_at": "2026-10-16T16:47:48.481Z"
+      },
+      {
+        "session_id": "54436ed3-6f64-4348-b4e6-5502c1d17eb7",
+        "audit_ts": "2026-10-16T16:47:57.694Z",
+        "title": "inference_axis_a_one_token_at_a_time_loop",
+        "recorded_at": "2026-10-16T16:47:57.813Z"
+      },
+      {
+        "session_id": "54436ed3-6f64-4348-b4e6-5502c1d17eb7",
+        "audit_ts": "2026-10-17T12:14:49.958Z",
+        "title": "inference_axis_b_greedy_repetition_trap",
+        "recorded_at": "2026-10-17T12:14:51.625Z"
+      },
+      {
+        "session_id": "54436ed3-6f64-4348-b4e6-5502c1d17eb7",
+        "audit_ts": "2026-10-17T17:35:31.504Z",
+        "title": "inference_axis_c_logits_raw_scores",
+        "recorded_at": "2026-10-17T17:35:33.536Z"
+      },
+      {
+        "session_id": "54436ed3-6f64-4348-b4e6-5502c1d17eb7",
+        "audit_ts": "2026-10-17T17:35:43.556Z",
+        "title": "inference_axis_c_logits_raw_scores",
+        "recorded_at": "2026-10-17T17:35:43.736Z"
+      },
+      {
+        "session_id": "b2409cd2-4663-4d4a-9013-5c62f8fe8118",
+        "audit_ts": "2026-10-17T18:42:43.234Z",
+        "title": "inference_axis_a_training_vs_inference",
+        "recorded_at": "2026-10-17T18:42:43.923Z"
+      },
+      {
+        "session_id": "b2409cd2-4663-4d4a-9013-5c62f8fe8118",
+        "audit_ts": "2026-10-17T18:42:52.295Z",
+        "title": "inference_axis_a_training_vs_inference",
+        "recorded_at": "2026-10-17T18:42:52.403Z"
+      }
     ]
   }
 }

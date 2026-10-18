@@ -1,6 +1,6 @@
 {
-  "date": "2026-10-16",
-  "generated_at": "2026-10-16T10:27:10.130Z",
+  "date": "2026-10-18",
+  "generated_at": "2026-10-18T03:41:57.423Z",
   "total_reps": 2,
   "status": "ok",
   "low_confidence": false,
@@ -61,27 +61,27 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 106
+      "overdue_days": 108
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 102
+      "overdue_days": 104
     },
     {
       "concept": "embeddings",
       "axis": null,
-      "overdue_days": 90
+      "overdue_days": 92
     },
     {
       "concept": "hallucinations",
       "axis": null,
-      "overdue_days": 66
+      "overdue_days": 68
     },
     {
       "concept": "tokenization",
       "axis": "a (kya+analogy)",
-      "overdue_days": 40
+      "overdue_days": 42
     }
   ],
   "core_vs_light": {
@@ -183,35 +183,29 @@
   },
   "position": {
     "session_open": true,
-    "concept": "embeddings",
+    "concept": "inference",
     "step": 3,
     "step_name": "SAMJHAO",
-    "axes_done": [
+    "axes_done": [],
+    "axes_deferred": [],
+    "axes_left": [
       "a",
       "b",
-      "d"
-    ],
-    "axes_deferred": [
       "c",
+      "d",
       "e",
-      "f"
-    ],
-    "axes_left": [
+      "f",
       "g",
       "h",
       "i"
     ],
-    "axes_ungraded": [
-      "a",
-      "b",
-      "d"
-    ],
-    "started_at": "2026-10-06T14:33:19.023Z",
-    "stale": true,
-    "stale_as_of": "2026-10-16T10:27:10.130Z",
+    "axes_ungraded": [],
+    "started_at": "2026-10-17T18:30:52.257Z",
+    "stale": false,
+    "stale_as_of": "2026-10-18T03:41:57.423Z",
     "last_closed": {
-      "concept": "tokenization",
-      "ended_at": "2026-10-06T14:33:19.015Z",
+      "concept": "inference",
+      "ended_at": "2026-10-17T18:30:52.240Z",
       "steps_ran": [
         0,
         1,
@@ -230,22 +224,24 @@
       ],
       "axes_done": [
         "a",
-        "b",
+        "b"
+      ],
+      "axes_deferred": [],
+      "axes_untouched": [
         "c",
         "d",
         "e",
         "f",
         "g",
-        "h"
-      ],
-      "axes_deferred": [],
-      "axes_untouched": [
+        "h",
         "i"
       ],
-      "elapsed_min": 48567.8,
-      "axis_marks_span_min": 46139.3,
-      "check_q_refused": 5,
-      "core_missing": []
+      "elapsed_min": 1564.1,
+      "axis_marks_span_min": 353.1,
+      "check_q_refused": 0,
+      "core_missing": [
+        "d"
+      ]
     }
   }
 }
