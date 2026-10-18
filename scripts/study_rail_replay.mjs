@@ -14,6 +14,9 @@
 //     ALLOW                    inside the study set
 //     ALLOW-captain-ordered    outside the set, his last prompt classified "system" — counted, never blocked
 //     DENY                     outside the set, model-initiated
+//     ALLOW-lesson-artifact    a page for him written into the row's own session scratchpad (rails' lesson-artifact door,
+//                              forks row 811, his #150); its own verdict, never folded into ALLOW; the row's sessionId
+//                              rides the replayed payload as the hook's session_id does
 //     none                     no opinion (a tool outside the rail's matcher, a CLOSING prompt, no prompt yet)
 //   model-initiated share = DENY / (DENY + ALLOW-captain-ordered): of the system work done mid-lesson, how much
 //   the model started. deny share = DENY / every call judged.
@@ -52,7 +55,7 @@ const STUDY_SCOPE = Object.freeze({ study: true, why: "replay — the transcript
 
 /** Replay ONE transcript's text. Pure. */
 export function replayTranscript(text, name = "") {
-  const r = { file: name, opened: false, calls: 0, allow: 0, captain: 0, deny: 0, none: 0, denied: [], ordered: [], list: [] };
+  const r = { file: name, opened: false, calls: 0, allow: 0, captain: 0, lesson: 0, deny: 0, none: 0, denied: [], ordered: [], list: [] };
   let open = false, prompt = null;
   for (const line of String(text || "").split("\n")) {
     if (!line || line[0] !== "{") continue;
@@ -63,7 +66,8 @@ export function replayTranscript(text, name = "") {
     const content = o.message && Array.isArray(o.message.content) ? o.message.content : [];
     for (const b of content) {
       if (!b || b.type !== "tool_use") continue;
-      const payload = { tool_name: String(b.name || ""), tool_input: b.input || {} };
+      // row 811: the row's own session id rides the payload, as the hook's does — the lesson-artifact door reads it
+      const payload = { tool_name: String(b.name || ""), tool_input: b.input || {}, ...(typeof o.sessionId === "string" ? { session_id: o.sessionId } : {}) };
       const cmd = String((payload.tool_input || {}).command || "");
       const opens = /^(Bash|PowerShell)$/.test(payload.tool_name) && SITTING_OPEN_RE.test(cmd);
       if (!open && !opens) continue;
@@ -71,10 +75,13 @@ export function replayTranscript(text, name = "") {
       r.calls++;
       const d = studyRail(payload, { scope: STUDY_SCOPE, prompt });
       const what = `${payload.tool_name}${cmd ? `: ${cmd.slice(0, 80)}` : ""}`;
-      const row = (verdict) => r.list.push({ file: name, ts: typeof o.timestamp === "string" ? o.timestamp : null, tool: payload.tool_name, verdict, cmd_head: cmd.slice(0, 120) });
+      // row 811: an editor call's head is its TARGET (it has no command), so a DENY Write names what it was writing
+      const head = cmd || String((payload.tool_input || {}).file_path || "");
+      const row = (verdict) => r.list.push({ file: name, ts: typeof o.timestamp === "string" ? o.timestamp : null, tool: payload.tool_name, verdict, cmd_head: head.slice(0, 120) });
       if (!d) r.none++;
       else if (d.decision === "deny") { r.deny++; r.denied.push(d.rerun && d.rerun.length ? `${what}\n        ↳ ${studyRerunLine(d.rerun)}` : what); row("DENY"); }
       else if (d.captain) { r.captain++; r.ordered.push(what); row("ALLOW-captain-ordered"); }
+      else if (d.lesson) { r.lesson++; row("ALLOW-lesson-artifact"); }   // row 811: its own verdict, never folded into ALLOW
       else r.allow++;
       if (/^(Bash|PowerShell)$/.test(payload.tool_name) && SITTING_CLOSE_RE.test(cmd)) open = false;
     }
@@ -130,9 +137,9 @@ export function replayDir(target) {
   else files = [target];
   // L4: the teaching pass reads the SAME text the rail pass reads — one read per file, two passes
   const per = files.map((f) => { try { const text = readFileSync(f, "utf8"); const { missed, file: _file, ...teaching } = teachingPass(text, basename(f)); return { ...replayTranscript(text, basename(f)), teaching, missed }; } catch (e) { return { file: basename(f), error: String(e.message || e) }; } });
-  const T = { transcripts: files.length, with_sitting: 0, calls: 0, allow: 0, captain: 0, deny: 0, none: 0 };
-  for (const p of per) { if (p.error) continue; if (p.opened) T.with_sitting++; for (const k of ["calls", "allow", "captain", "deny", "none"]) T[k] += p[k]; }
-  T.judged = T.allow + T.captain + T.deny;
+  const T = { transcripts: files.length, with_sitting: 0, calls: 0, allow: 0, captain: 0, lesson: 0, deny: 0, none: 0 };
+  for (const p of per) { if (p.error) continue; if (p.opened) T.with_sitting++; for (const k of ["calls", "allow", "captain", "lesson", "deny", "none"]) T[k] += p[k]; }
+  T.judged = T.allow + T.captain + T.lesson + T.deny;
   T.model_initiated_share_pct = share(T.deny, T.deny + T.captain);
   T.deny_share_pct = share(T.deny, T.judged);
   // L4: the teaching pass's totals — picture_first_misses is the count rung L4's G1 reads
@@ -150,11 +157,11 @@ function printReport({ totals: T, per, missed = [] }) {
   for (const p of per) {
     if (p.error) { console.log(`  ! ${p.file} — unreadable: ${p.error}`); continue; }
     if (!p.opened) continue;
-    console.log(`  ${p.file} · ${p.calls} call(s) after the open · ALLOW ${p.allow} · ALLOW-captain-ordered ${p.captain} · DENY ${p.deny} · no opinion ${p.none}`);
+    console.log(`  ${p.file} · ${p.calls} call(s) after the open · ALLOW ${p.allow} · ALLOW-captain-ordered ${p.captain} · ALLOW-lesson-artifact ${p.lesson} · DENY ${p.deny} · no opinion ${p.none}`);
     for (const d of p.denied.slice(0, 5)) console.log(`      DENY    ${d}`);
     for (const d of p.ordered.slice(0, 3)) console.log(`      CAPTAIN ${d}`);
   }
-  console.log(`study_rail_replay: ${T.transcripts} transcript(s), ${T.with_sitting} opened a sitting · ${T.calls} call(s) after an open · ALLOW ${T.allow} · ALLOW-captain-ordered ${T.captain} · DENY ${T.deny} · no opinion ${T.none}`);
+  console.log(`study_rail_replay: ${T.transcripts} transcript(s), ${T.with_sitting} opened a sitting · ${T.calls} call(s) after an open · ALLOW ${T.allow} · ALLOW-captain-ordered ${T.captain} · ALLOW-lesson-artifact ${T.lesson} · DENY ${T.deny} · no opinion ${T.none}`);
   console.log(`  model-initiated share (DENY / (DENY + captain-ordered)): ${T.model_initiated_share_pct === null ? "n/a" : T.model_initiated_share_pct + "%"} · deny share of judged calls: ${T.deny_share_pct === null ? "n/a" : T.deny_share_pct + "%"}`);
   // L4 — the teaching pass, beside the rail counts: per file, then the misses by name, then ONE total line
   for (const p of per) if (p.teaching && p.teaching.new_ideas) console.log(`  ${p.file} · teaching: ${p.teaching.new_ideas} new-idea turn(s) of ${p.teaching.turns} · picture first ${p.teaching.picture_first} · missed ${p.teaching.misses} (${p.teaching.sitting_window_misses} in the sitting window)`);
@@ -224,6 +231,15 @@ function selftest() {
     const cli = process.getBuiltinModule("node:child_process").spawnSync(process.execPath, [fileURLToPath(import.meta.url), dir, "--json"], { encoding: "utf8", timeout: 15000 });
     let j = null; try { j = JSON.parse(cli.stdout); } catch { /* asserted */ }
     assert("REPLAY CLI — `--json` prints the same totals as one JSON object, with the per-call list", j && j.totals && j.totals.deny === 3 && j.totals.captain === 3 && Array.isArray(j.calls) && j.calls.length === 6, cli.stdout + cli.stderr);
+    // forks row 811 (his #150) — THE LESSON-ARTIFACT DOOR, replayed: the row's sessionId is the payload's session_id
+    const SID = "b2409cd2-4663-4d4a-9013-5c62f8fe8118", PAD = `${tmpdir().split(String.fromCharCode(92)).join("/")}/claude/C--Users-nikhi-GitHub-arsenal-ai-fc/${SID}/scratchpad`;
+    const W = (file_path, sid = SID) => JSON.stringify({ type: "assistant", sessionId: sid, timestamp: "2026-10-18T05:46:26.139Z", message: { content: [{ type: "tool_use", name: "Write", input: { file_path, content: "<html></html>" } }] } });
+    const la = replayTranscript([U("padhai"), B("node scripts/sitting.mjs open --surface code --no-spawn"), RES(), U("pakka - x"),
+      W(`${PAD}/inference__axis-a-kya-analogy__2026-10-18.html`), RES(), W("scripts/recap.html"), RES(), W(`${PAD}/r.html`, "64803bd4-8789-4567-a962-503473323b64"), RES()].join("\n"), "lesson.jsonl");
+    assert("REPLAY (row 811) — his recap page into the row's own session scratchpad is ALLOW-lesson-artifact, its own verdict and its own `calls` row naming the target; a scripts/ page and another session's scratchpad stay DENY",
+      la.lesson === 1 && la.deny === 2 && la.allow === 1 && la.captain === 0
+      && la.list.filter((c) => c.verdict === "ALLOW-lesson-artifact").length === 1 && la.list.find((c) => c.verdict === "ALLOW-lesson-artifact").cmd_head === `${PAD}/inference__axis-a-kya-analogy__2026-10-18.html`.slice(0, 120)
+      && la.list.filter((c) => c.verdict === "DENY").map((c) => c.cmd_head).includes("scripts/recap.html"), JSON.stringify(la.list));
   } finally { rmSync(dir, { recursive: true, force: true }); }
   // ── L4 · THE TEACHING PASS (fate 58 REWRITE · rows 554 (3), 561), planted BOTH ways ──
   {

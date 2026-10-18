@@ -64,7 +64,10 @@
 //   session HOSTS the open sitting (study_scope's R7 predicate: payload.session_id === sitting.host_session_id;
 //   another terminal with the same sitting open gets no opinion) ∧ the sitting is not a pre-G0 legacy one ∧ his
 //   last prompt is not a CLOSING. A shell call passes iff shellInStudySet (ONE home: study_scope.mjs); Write /
-//   Edit / Agent / Task / Workflow are never in the set; every other tool gets no opinion. The rail id is
+//   Edit / Agent / Task / Workflow are never in the set, with ONE door on the TARGET since forks row 811 (18 Oct 2026,
+//   his word #150, the recap page G3 denied him): an editor call writing a lesson page into its OWN session's
+//   scratchpad is a LESSON ARTIFACT (study_scope's lessonArtifactOf), allowed, said on stderr and counted by
+//   study_rail_replay.mjs as its own verdict; every other Write / Edit stays out; every other tool gets no opinion. The rail id is
 //   `study` and it is NOT overridable. THE ARCHITECT'S RULING ON THE 480 DENIES (row 283 (2), binding): the
 //   replay over his study transcripts found 480 DENY of 634 calls, mostly engineering HE ORDERED mid-lesson —
 //   so when his LAST PROMPT classifies "system" (the gate's own classifyPrompt, never a second one) the call is
@@ -85,7 +88,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { readStdinWithDeadline } from "./session_meter.mjs";
 // G3 — the study scope, the study set and his prompt's class, from the LEAF (never the gate or the pacer: heavy,
 // and a forge_session import before turn_hook's shim makes the shim a silent no-op — study_scope's own note)
-import { readSitting, studyScope, classifyPrompt, shellInStudySet, studyRerun, lastHumanPrompt } from "./study_scope.mjs";
+import { readSitting, studyScope, classifyPrompt, shellInStudySet, studyRerun, lastHumanPrompt, lessonArtifactOf } from "./study_scope.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -220,6 +223,10 @@ export function studyRail(payload = {}, ctx = null) {
   if (cls.closing) return null;                                                          // /full-time's close organs run
   const cmd = shell ? String((payload.tool_input || {}).command || "") : "";
   if (shell && shellInStudySet(cmd)) return { decision: "allow", rail: "study", why: "inside the study set" };
+  // forks row 811 (his #150): THE LESSON-ARTIFACT DOOR — a page FOR HIM in this session's own scratchpad is teaching, judged
+  // on the TARGET by study_scope's one predicate; the factory's state rail has already run (decide), so state never gets here
+  const lesson = !shell && EDIT_TOOLS.includes(tool) ? lessonArtifactOf(payload) : null;
+  if (lesson) return { decision: "allow", rail: "study", lesson: true, why: lesson.why };
   const what = shell ? `\`${cmd.slice(0, 60)}\`` : tool;
   if (cls.kind === "system") return { decision: "allow", rail: "study", captain: true, why: `captain's mid-lesson engineering — his last prompt ordered it (class system), so ${what} runs; counted, never blocked (row 283 (2))` };
   const why = `${what} is system work mid-lesson and his last prompt did not order it (class ${cls.kind}) — HOW_HE_LEARNS #12 binds the model`;
@@ -293,7 +300,7 @@ export function pretooluse({ raw = null, handoff = spawnHandoff, ctx = undefined
     return d;
   }
   if (d.override) process.stderr.write(`rails: ${d.why}\n`);
-  if (d.study && d.study.captain) process.stderr.write(`rails: study · ${d.study.why}\n`);
+  if (d.study && (d.study.captain || d.study.lesson)) process.stderr.write(`rails: study · ${d.study.why}\n`);
   // G0 — only on an ALLOWED call (a denied one never runs, so it opens nothing).
   try { const h = hostHandoff(payload); if (h) { handoff(h); d.handoff = h; } } catch { /* fail-open: the call proceeds either way */ }
   return d;   // silence = the tool proceeds under the normal permission flow
@@ -581,9 +588,31 @@ function selftest() {
       && S("Bash", { command: "node scripts/learn_digest.mjs | sed -i s/a/b/" }, IN(ANSWER)).decision === "deny");
     const never = [["Write", { file_path: "scripts/foo.mjs", content: "x" }], ["Edit", { file_path: "learning-layer/NOTES.md" }], ["MultiEdit", { file_path: "scripts/a.mjs" }],
       ["Agent", { prompt: "read it — ceiling 2 agents" }], ["Task", { prompt: "go — ceiling 1 agent" }], ["Workflow", { script: "x — ceiling: 3 agents" }]];
-    assert("STUDY — Write / Edit / MultiEdit / Agent / Task / Workflow are NEVER in the set (a fleet WITH its ceiling clears the factory and is still denied mid-lesson)",
+    // ~~ (24 Sep 2026, rewritten by forks row 811 on 18 Oct 2026; kept, struck — L9) "STUDY — Write / Edit / MultiEdit / Agent / Task /
+    // ~~ Workflow are NEVER in the set (a fleet WITH its ceiling clears the factory and is still denied mid-lesson)"
+    assert("STUDY — Write / Edit / MultiEdit / Agent / Task / Workflow are NEVER in the set outside the lesson-artifact door of row 811 (a fleet WITH its ceiling clears the factory and is still denied mid-lesson; a Write into his repo or an Edit of his notes is still denied)",
       never.every(([t, i]) => S(t, i, IN(ANSWER)).decision === "deny" && S(t, i, IN(ANSWER)).rail === "study") && never.every(([t, i]) => S(t, i, null).decision === "allow"),
       JSON.stringify(never.map(([t, i]) => [t, S(t, i, IN(ANSWER)).decision])));
+    // forks row 811 (his #150) — THE LESSON-ARTIFACT DOOR at the rail, both ways, on the measured recap page's shape
+    {
+      const TMPF = String(process.getBuiltinModule("node:os").tmpdir()).split(String.fromCharCode(92)).join("/");
+      const PAD = (sid) => `${TMPF}/claude/C--Users-nikhi-GitHub-arsenal-ai-fc/${sid}/scratchpad`;
+      const RECAP = { file_path: `${PAD(SID)}/inference__axis-a-kya-analogy__2026-10-18.html`, content: "<html>seven ideas</html>" };
+      const dR = S("Write", RECAP, IN(ANSWER)), dE = S("Edit", { file_path: RECAP.file_path, old_string: "a", new_string: "b" }, IN(ANSWER));
+      assert("STUDY · LESSON ARTIFACT (row 811) — his recap page written into THIS session's own scratchpad after his ANSWER is ALLOWED (rail study, the lesson flag, no captain flag), and so is an Edit of it",
+        dR.decision === "allow" && dR.study && dR.study.rail === "study" && dR.study.lesson === true && !dR.study.captain && /lesson artifact/.test(dR.study.why)
+        && dE.decision === "allow" && dE.study && dE.study.lesson === true, JSON.stringify([dR, dE]));
+      assert("STUDY · LESSON ARTIFACT (row 811) — …both ways: the same page in ANOTHER session's scratchpad, a .mjs in his own scratchpad, a scripts/ page and a path climbing out are DENIED by the study rail; a state path is DENIED by the factory's state rail first",
+        S("Write", { file_path: `${PAD(OTHER)}/r.html` }, IN(ANSWER)).rail === "study" && S("Write", { file_path: `${PAD(OTHER)}/r.html` }, IN(ANSWER)).decision === "deny"
+        && S("Write", { file_path: `${PAD(SID)}/run.mjs` }, IN(ANSWER)).decision === "deny" && S("Write", { file_path: "scripts/recap.html" }, IN(ANSWER)).decision === "deny"
+        && S("Write", { file_path: `${PAD(SID)}/../../../x.html` }, IN(ANSWER)).decision === "deny"
+        && S("Write", { file_path: "dressing-room/state/recap.md" }, IN(ANSWER)).rail === "state");
+      const errs = [], we = process.stderr.write, wo = process.stdout.write, outs = [];
+      process.stderr.write = (s) => { errs.push(String(s)); return true; }; process.stdout.write = (s) => { outs.push(String(s)); return true; };
+      try { pretooluse({ raw: JSON.stringify(P("Write", RECAP)), handoff: () => {}, ctx: IN(ANSWER) }); } finally { process.stderr.write = we; process.stdout.write = wo; }
+      assert("STUDY · LESSON ARTIFACT (row 811) — THE HOOK says the door on stderr in ONE line and writes no decision on stdout (the Write proceeds)",
+        outs.length === 0 && errs.length === 1 && /^rails: study · lesson artifact: inference__axis-a-kya-analogy__2026-10-18\.html/.test(errs[0]), JSON.stringify({ errs, outs }));
+    }
     assert("STUDY — a tool outside the rail's matcher gets NO opinion (Read, Grep, Glob, WebSearch, TodoWrite, an MCP tool)",
       ["Read", "Grep", "Glob", "WebSearch", "TodoWrite", "mcp__organism-memory__recall"].every((t) => studyRail(P(t, {}), IN(ANSWER)) === null && S(t, {}, IN(ANSWER)).decision === "allow"));
     // forks row 305 (24 Sep 2026) — the drift law's verbs in, the rest out; learnstate's deny names the digest; parking rides MCP note

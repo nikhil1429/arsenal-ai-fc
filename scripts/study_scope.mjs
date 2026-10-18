@@ -44,7 +44,7 @@
 //   `unbound`, are read-only hand checks (the architect's adoption re-run uses them).
 // ============================================================================
 import { readFileSync, openSync, readSync, closeSync, statSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -594,6 +594,35 @@ export function studyRerun(cmd) {
   return shellInStudySet(parts.join("; ")) ? parts : parts.filter((p) => shellInStudySet(p));
 }
 
+// ── THE LESSON-ARTIFACT DOOR — ONE predicate on the TARGET, for G3's rail (forks row 811, his word #150, 18 Oct 2026) ──
+// His teacher went to write his RECAP PAGE mid-lesson (seven ideas, every widget, the interview lines) and G3 denied it:
+// the rail keys on the TOOL (Write is never in the study set), so a page written FOR HIM read as system work, and he had
+// to type a system word to get his own recap page. Measured on his Desktop study transcript b2409cd2 (18 Oct 2026,
+// study_rail_replay --json): both denied calls were a Write of inference__axis-a-kya-analogy__2026-10-18.html into
+// THAT session's own scratchpad, the folder the harness gives a session for the pages it publishes. So the door is the
+// TARGET, never the tool: an editor call whose resolved path is a page file (LESSON_EXT) inside
+// <os tmp>/claude/<project>/<the payload's OWN session_id>/scratchpad/ is a lesson artifact. Everything else stays out:
+// any path in his repo (scripts/, hooks/, .claude/, setup/, package files, dressing-room/state/), a code or data file,
+// another session's scratchpad, a path that climbs out of the folder, a payload with no session id. A new lesson-output
+// root or page type is ONE measured line here, never a widening by taste.
+export const LESSON_EXT = /\.(html?|md|svg)$/i;
+const fwd = (p) => String(p).split(String.fromCharCode(92)).join("/");
+/** { path, session, why } when this editor payload writes a lesson page into its own session's scratchpad, else null. */
+export function lessonArtifactOf(payload = {}, { tmp = tmpdir(), win = process.platform === "win32" } = {}) {
+  const sid = payload && typeof payload.session_id === "string" ? payload.session_id : "";
+  if (!/^[0-9a-f-]{36}$/i.test(sid)) return null;
+  const input = (payload && payload.tool_input) || {};
+  const raw = String(input.file_path || input.path || input.notebook_path || "");
+  if (!raw || !LESSON_EXT.test(raw)) return null;
+  const target = fwd(resolve(raw)), base = fwd(resolve(tmp)).replace(/\/+$/, "");
+  const fold = (s) => (win ? s.toLowerCase() : s);
+  if (!fold(target).startsWith(fold(base) + "/")) return null;
+  // claude / <project slug> / <session id> / scratchpad / … / <the page>
+  const parts = target.slice(base.length + 1).split("/");
+  if (parts.length < 5 || fold(parts[0]) !== "claude" || parts[2].toLowerCase() !== sid.toLowerCase() || fold(parts[3]) !== "scratchpad") return null;
+  return { path: target, session: sid, why: `lesson artifact: ${parts.slice(4).join("/")} is a page for him in this session's own scratchpad, so it is teaching, not system work; counted, never blocked (row 811)` };
+}
+
 // ── HIS LAST PROMPT, read from the transcript's TAIL — for a hook that has only the payload (rails, G3) ──
 /** The text of a HUMAN user line (never a tool result, never a harness meta line). */
 export const humanText = (o) => {
@@ -861,5 +890,23 @@ export function scopeSelfCheck() {
   check("CLOSING · /full-time's command tag, \"post match\" and \"full time\" are a CLOSING (G3 and B.tools stand down for the close organs, row 267); a study answer is not",
     classifyPrompt("<command-message>full-time</command-message>\n<command-name>/full-time</command-name>").closing === true && classifyPrompt("post match").closing === true
     && classifyPrompt("post-match karo").closing === true && classifyPrompt("ok full time").closing === true && classifyPrompt("pakka - pay kyunki repeat").closing === false);
+  // forks row 811 (18 Oct 2026, his #150) — THE LESSON-ARTIFACT DOOR, planted both ways on THIS host's own tmp root (pure)
+  {
+    const SID = "b2409cd2-4663-4d4a-9013-5c62f8fe8118", OTHER2 = "64803bd4-8789-4567-a962-503473323b64";
+    const TMP = fwd(tmpdir()).replace(/\/+$/, ""), REPO = fwd(ROOT), PAD = `${TMP}/claude/C--Users-x-GitHub-arsenal-ai-fc/${SID}/scratchpad`;
+    const LA = (file_path, sid = SID, o = { tmp: TMP, win: true }) => lessonArtifactOf({ session_id: sid, tool_input: { file_path } }, o);
+    const page = LA(`${PAD}/inference__axis-a-kya-analogy__2026-10-18.html`);
+    const BS = String.fromCharCode(92), winForm = process.platform === "win32" ? `${PAD}/r.html`.split("/").join(BS) : `${PAD}/r.html`;
+    check("LESSON ARTIFACT (row 811) · IN — the measured recap page, an .md note in a sub-folder and an .svg picture in the payload session's OWN scratchpad (backslashed as Windows writes it)",
+      !!page && page.session === SID && /lesson artifact: inference__axis-a-kya-analogy__2026-10-18\.html/.test(page.why)
+      && !!LA(`${PAD}/notes/axis-a.md`) && !!LA(`${PAD}/pic.svg`) && !!LA(winForm));
+    check("LESSON ARTIFACT (row 811) · OUT — another session's scratchpad, a code or data file there, a path that climbs out, his repo's scripts / skills / state, a tmp file outside claude/<project>/<session>/scratchpad, no or a malformed session id",
+      !LA(`${TMP}/claude/C--Users-x-GitHub-arsenal-ai-fc/${OTHER2}/scratchpad/r.html`) && !LA(`${PAD}/x.mjs`) && !LA(`${PAD}/x.json`)
+      && !LA(`${PAD}/../../../../evil.html`) && !LA(`${REPO}/scripts/recap.html`) && !LA(`${REPO}/.claude/skills/learn/SKILL.md`)
+      && !LA(`${REPO}/dressing-room/state/recap.md`) && !LA(`${TMP}/r.html`) && !LA(`${TMP}/claude/p/${SID}/r.html`)
+      && !LA(`${PAD}/r.html`, "") && !LA(`${PAD}/r.html`, "not-a-session") && lessonArtifactOf({ tool_input: { file_path: `${PAD}/r.html` } }, { tmp: TMP, win: true }) === null);
+    check("LESSON ARTIFACT (row 811) · CASE — the tmp root upper-cased matches only where paths fold (win true), never on a case-sensitive host (win false)",
+      !!LA(`${TMP.toUpperCase()}${PAD.slice(TMP.length)}/r.html`, SID, { tmp: TMP, win: true }) && LA(`${TMP.toUpperCase()}${PAD.slice(TMP.length)}/r.html`, SID, { tmp: TMP, win: false }) === null);
+  }
   return { pass: cases.filter((c) => c.ok).length, fail: cases.filter((c) => !c.ok).length, cases };
 }
