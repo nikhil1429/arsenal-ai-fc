@@ -132,6 +132,39 @@ function isPublishablePath(p) {
 // ---------------------------------------------------------------------------
 // THE NIGHT LOOP (Kennel side) — pull → lease → tick → push public-safe only
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ROW 808 (2) (19 Oct 2026) — THE HELD-LANDING REFUSAL. At 03:45 IST on 18 Oct this lane's push (04071ab) carried THREE
+// commits a runner had landed on main and was HOLDING for the architect's re-run (6826d2ab, 87dab91, 5049da33): `git push`
+// sends every commit in origin..HEAD, not only tonight's state commit, so the state-only allowlist (row 769) guarded the
+// INDEX and never the RANGE. The content was lawful and adopted after the fact; the road was wrong. So the unattended push
+// reads origin..HEAD FIRST: a commit in it that is not this lane's own state commit (its own subject AND every path on the
+// publish allowlist; a subject alone never passes) is a HELD LANDING, and the pass refuses before it stages anything,
+// cards him ONCE (keyed by the first held sha, so the same hold never re-mints; no --why-code-cannot-decide, so the
+// decision gate deals it as news, not homework) and never pushes. A landing reaches origin only by its runner's deliberate
+// push after the re-run. A range that cannot be read (no upstream: a hold branch checked out) fails closed, like lock 2.
+// ---------------------------------------------------------------------------
+const OWN_SUBJECTS = ["groundsman: unattended state push (", "kennel: night-shift outputs ("];
+function heldCommits(run) {
+  const RS = String.fromCharCode(30), NL = String.fromCharCode(10);
+  const log = run("git", ["log", "--reverse", "--format=%x1e%H %s", "--name-only", "@{u}..HEAD"]);
+  if (!log.ok) return { ok: false, held: [], why: `refused: could not read origin..HEAD (${String(log.out || "").split(NL)[0].slice(0, 100)}) — fail closed, nothing staged, nothing pushed` };
+  const held = [];
+  for (const rec of String(log.out || "").split(RS).slice(1)) {
+    const lines = rec.split(NL).map((s) => s.trim()).filter(Boolean);
+    const head = lines.shift() || "";
+    const sha = head.slice(0, 40), subject = head.slice(41);
+    const own = OWN_SUBJECTS.some((p) => subject.startsWith(p)) && lines.length > 0 && lines.every(isPublishablePath);
+    if (!own) held.push({ sha, subject, paths: lines });
+  }
+  return { ok: true, held };
+}
+function refuseHeld(run, h, extra = {}) {
+  const first = h.held[0];
+  const line = `Raat ka auto-push ruka: main par ${h.held.length} commit review mein hain (pehla ${first.sha.slice(0, 7)}). Runner push karega; tab tak state push band.`;
+  run("node", [join(__dirname, "captains_call.mjs"), "file", "--line", line, "--key", `groundsman:held:${first.sha.slice(0, 12)}`]);
+  return { ok: true, ...extra, pushed: false, refused: true, held: h.held.map((x) => x.sha),
+    why: `refused: ${h.held.length} held commit(s) in origin..HEAD that are not this lane's own (first ${first.sha.slice(0, 7)} "${first.subject.slice(0, 60)}") — a held landing reaches origin by its runner's push, never by the night` };
+}
 // OVERHAUL Block 6 (18 Aug 2026) — THE DAY-KEY LAW for the push lane. This lane
 // is scheduled (ArsenalFC-Groundsman-Push 03:45) and runs one-shots of its own
 // (awayday check, brain tick in the night loop): they take THIS lane's day, so a
@@ -165,6 +198,9 @@ async function nightPass(hostId, deps = {}) {
   // `git add -A` into a PUBLIC remote). Lock 1: tracked files, on the list only.
   // If a listed path has vanished git calls the whole pathspec fatal → nothing
   // stages → we stop before the index gate. Fail closed, and say so out loud.
+  const h = heldCommits(run);                       // ROW 808 (2): the RANGE first — a held landing refuses before anything stages
+  if (!h.ok) return { ok: true, ticked: true, pushed: false, refused: true, why: h.why };
+  if (h.held.length) return refuseHeld(run, h, { ticked: true });
   const add = run("git", ["add", "-u", "--", ...PUBLISH_ALLOWLIST]);
   if (!add.ok) return { ok: true, ticked: true, pushed: false, why: `staging refused: ${add.out}` };
   const diff = run("git", ["diff", "--cached", "--quiet"]);
@@ -241,6 +277,9 @@ async function pushOnlyPass(hostId, deps = {}) {
   // orphan again the first night the staging gate refuses — and a refusing night
   // is precisely a night somebody is reading this log.
   const withVerdict = (o) => ({ ...o, readback });
+  const h = heldCommits(run);                       // ROW 808 (2): the RANGE first — after the read-back, before staging
+  if (!h.ok) return withVerdict({ ok: true, pushed: false, refused: true, why: h.why });
+  if (h.held.length) return withVerdict(refuseHeld(run, h));
   const add = run("git", ["add", "-u", "--", ...PUBLISH_ALLOWLIST]);
   if (!add.ok) return withVerdict({ ok: true, pushed: false, why: `staging refused: ${add.out}` });
   const diff = run("git", ["diff", "--cached", "--quiet"]);
@@ -422,6 +461,51 @@ async function selftest() {
                return /r\.readback/.test(tail) && /console\.log/.test(tail); })());
   }
 
+  // ROW 808 (2) — THE HELD-LANDING REFUSAL, planted both ways. The mock answers `git log … @{u}..HEAD` with the range a
+  // runner's held landings left on main on 18 Oct (a skill landing, then a state-only birth commit).
+  {
+    const RS = String.fromCharCode(30), NL = String.fromCharCode(10);
+    const rec = (sha, subject, paths) => RS + sha + " " + subject + NL + NL + paths.join(NL) + NL;
+    const DOOR = "6826d2ab6d5f45c719a48f7a5a82cc623b23e68a", BIRTH = "5049da33baf497150eb431303479d18774a20081", OWN = "04071ab000000000000000000000000000000aaa";
+    const mk = (range, calls, logFails = false) => (c, a) => {
+      calls.push(c + " " + a.join(" "));
+      if (c === "git" && a[0] === "log") return logFails ? { ok: false, out: "fatal: no upstream configured for branch" } : { ok: true, out: range };
+      if (c === "git" && a[0] === "diff" && a.includes("--name-only")) return { ok: true, out: "dressing-room/state/brain_config.json" + NL };
+      if (c === "git" && a[0] === "diff") return { ok: false, out: "" };
+      return { ok: true, out: "" };
+    };
+    const birth = rec(BIRTH, "state: the three UNTRACKED state files are added by pathspec", ["dressing-room/state/daily_green.jsonl"]);
+    const heldRange = rec(DOOR, "rung L3 THE DOOR: the learn and forge skills CONSUME the resume pointer", [".claude/skills/forge/SKILL.md", ".claude/skills/learn/SKILL.md"]) + birth;
+    const c1 = [];
+    const r1 = await pushOnlyPass("laptop", { sh: mk(heldRange, c1) });
+    const cards = c1.filter((x) => x.includes("captains_call.mjs") && x.includes(" file "));
+    assert("ROW 808 (2) · A HELD LANDING IN origin..HEAD REFUSES the unattended push before anything stages: no add, no commit, no push, both held shas named",
+      r1.pushed === false && r1.refused === true && (r1.held || []).join(" ") === DOOR + " " + BIRTH
+      && !c1.some((x) => x.startsWith("git add")) && !c1.some((x) => x.startsWith("git commit")) && !c1.some((x) => x.startsWith("git push")));
+    assert("ROW 808 (2) · it cards him ONCE: one captains_call file keyed by the first held sha (the same hold never re-mints), and the read-back still rides the refusal",
+      cards.length === 1 && cards[0].includes("--key groundsman:held:" + DOOR.slice(0, 12)) && !!r1.readback);
+    const c2 = [];
+    const r2 = await pushOnlyPass("laptop", { sh: mk(birth, c2) });
+    assert("ROW 808 (2) · a STATE-ONLY commit that is not this lane's own is still held (the 5049da33 shape): refused, no push",
+      r2.refused === true && r2.pushed === false && !c2.some((x) => x.startsWith("git push")));
+    const c3 = [];
+    const r3 = await pushOnlyPass("laptop", { sh: mk(rec(OWN, "groundsman: unattended state push (laptop) — his 9 Aug 2026 ruling", ["scripts/brain.mjs"]), c3) });
+    assert("ROW 808 (2) · this lane's own SUBJECT on a machinery path is held too (a subject alone never passes)",
+      r3.refused === true && r3.pushed === false && !c3.some((x) => x.startsWith("git push")));
+    const c4 = [];
+    const r4 = await pushOnlyPass("laptop", { sh: mk(rec(OWN, "groundsman: unattended state push (laptop) — his 9 Aug 2026 ruling", ["dressing-room/state/audit_ledger.jsonl"]), c4) });
+    const r4e = await pushOnlyPass("laptop", { sh: mk("", []) });
+    assert("ROW 808 (2) · the other way: this lane's OWN unpushed state commit (yesterday's rejected push) and an empty range both still push, and card nothing",
+      r4.pushed === true && c4.some((x) => x.startsWith("git push")) && !c4.some((x) => x.includes("captains_call.mjs")) && r4e.pushed === true);
+    const c5 = [];
+    const r5 = await pushOnlyPass("laptop", { sh: mk("", c5, true) });
+    assert("ROW 808 (2) · a range that cannot be read FAILS CLOSED: refused, nothing staged, nothing pushed",
+      r5.refused === true && r5.pushed === false && !c5.some((x) => x.startsWith("git add")) && !c5.some((x) => x.startsWith("git push")));
+    const c6n = [];
+    const r6n = await nightPass("pi1", { sh: mk(heldRange, c6n), read: () => mkLease("laptop", "lap1", 25), write: () => {}, now });
+    assert("ROW 808 (2) · the Kennel's night pass carries the same refusal after its tick: no commit, no push",
+      r6n.refused === true && r6n.pushed === false && r6n.ticked === true && !c6n.some((x) => x.startsWith("git commit")) && !c6n.some((x) => x.startsWith("git push")));
+  }
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
