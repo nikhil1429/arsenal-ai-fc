@@ -145,6 +145,50 @@
         "audit_ts": "2026-10-17T18:42:52.295Z",
         "title": "inference_axis_a_training_vs_inference",
         "recorded_at": "2026-10-17T18:42:52.403Z"
+      },
+      {
+        "session_id": "b2409cd2-4663-4d4a-9013-5c62f8fe8118",
+        "audit_ts": "2026-10-18T04:15:37.456Z",
+        "title": "inference_axis_a_one_token_loop_stepper",
+        "recorded_at": "2026-10-18T04:15:38.124Z"
+      },
+      {
+        "session_id": "b2409cd2-4663-4d4a-9013-5c62f8fe8118",
+        "audit_ts": "2026-10-18T04:15:43.007Z",
+        "title": "inference_axis_a_one_token_loop_stepper",
+        "recorded_at": "2026-10-18T04:15:43.213Z"
+      },
+      {
+        "session_id": "b2409cd2-4663-4d4a-9013-5c62f8fe8118",
+        "audit_ts": "2026-10-18T05:54:30.419Z",
+        "title": "inference_axis_b_next_token_prediction_root",
+        "recorded_at": "2026-10-18T05:54:32.272Z"
+      },
+      {
+        "session_id": "b2409cd2-4663-4d4a-9013-5c62f8fe8118",
+        "audit_ts": "2026-10-18T05:54:43.164Z",
+        "title": "inference_axis_b_next_token_prediction_root",
+        "recorded_at": "2026-10-18T05:54:43.314Z"
+      },
+      {
+        "session_id": "b2409cd2-4663-4d4a-9013-5c62f8fe8118",
+        "audit_ts": "2026-10-18T06:07:03.849Z",
+        "title": "inference_axis_b_greedy_vs_sampling_stepper",
+        "recorded_at": "2026-10-18T06:07:05.173Z"
+      }
+    ],
+    "neuralnet": [
+      {
+        "session_id": "7fb7203e-3f58-4c27-9b28-6a79d630c7f4",
+        "audit_ts": "2026-10-18T15:44:09.802Z",
+        "title": "neuralnet_one_weight_knob",
+        "recorded_at": "2026-10-18T15:44:10.968Z"
+      },
+      {
+        "session_id": "7fb7203e-3f58-4c27-9b28-6a79d630c7f4",
+        "audit_ts": "2026-10-18T15:44:22.854Z",
+        "title": "neuralnet_one_weight_knob",
+        "recorded_at": "2026-10-18T15:44:23.018Z"
       }
     ]
   }

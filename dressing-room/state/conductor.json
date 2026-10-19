@@ -1,14 +1,14 @@
 {
-  "started": "2026-10-17T10:13:29.261Z",
-  "finished": "2026-10-17T10:16:26.970Z",
-  "day_key": "2026-10-17",
+  "started": "2026-10-18T03:45:02.570Z",
+  "finished": "2026-10-18T03:45:18.996Z",
+  "day_key": "2026-10-18",
   "day_source": "slot",
   "slot": "09:15",
-  "late_min": 388,
-  "total_ms": 170864,
+  "late_min": 0,
+  "total_ms": 16386,
   "ran": 16,
-  "ok": 15,
-  "failed": 1,
+  "ok": 16,
+  "failed": 0,
   "order": [
     "mirror",
     "sprintsync",
@@ -30,22 +30,22 @@
   "steps": [
     {
       "id": "mirror",
-      "ok": false,
-      "ms": 1771,
-      "exit": 1,
+      "ok": true,
+      "ms": 2071,
+      "exit": 0,
       "wrote": null,
       "produced": null,
       "stale": null,
-      "log": null,
+      "log": "scripts/mirror.log",
       "error": null,
-      "stderr": "Error: EPERM: operation not permitted, rename 'C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\dressing-room\\state\\capsules\\embeddings.json.20868.tmp' -> 'C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\dressing-room\\state\\capsules\\embeddings.json'\n… [conductor: 505 of 866 chars cut] …\non.20868.tmp',\r\n  dest: 'C:\\\\Users\\\\nikhi\\\\GitHub\\\\arsenal-ai-fc\\\\dressing-room\\\\state\\\\capsules\\\\embeddings.json'\r\n}\r\n\r\nNode.js v24.19.0",
-      "stderr_bytes": 866,
+      "stderr": null,
+      "stderr_bytes": null,
       "degraded": null
     },
     {
       "id": "sprintsync",
       "ok": true,
-      "ms": 2872,
+      "ms": 1992,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -59,28 +59,28 @@
     {
       "id": "thalamus",
       "ok": true,
-      "ms": 176,
+      "ms": 158,
       "port": 4113,
       "daemon": "already running (build current)"
     },
     {
       "id": "cortex",
       "ok": true,
-      "ms": 6971,
+      "ms": 2305,
       "port": 4112,
       "daemon": "already running (build unverified — no /status stamp and no process match)"
     },
     {
       "id": "turnstile",
       "ok": true,
-      "ms": 5663,
+      "ms": 1962,
       "port": 4111,
-      "daemon": "already running (build unverified — no /status stamp and no process match)"
+      "daemon": "already running (build current — via process table)"
     },
     {
       "id": "physio",
       "ok": true,
-      "ms": 63595,
+      "ms": 356,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -94,7 +94,7 @@
     {
       "id": "goalkeeper",
       "ok": true,
-      "ms": 53378,
+      "ms": 2052,
       "exit": 0,
       "wrote": "readiness.json",
       "produced": true,
@@ -108,7 +108,7 @@
     {
       "id": "twin",
       "ok": true,
-      "ms": 2599,
+      "ms": 255,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -122,7 +122,7 @@
     {
       "id": "heartbeat",
       "ok": true,
-      "ms": 15659,
+      "ms": 2673,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -136,7 +136,7 @@
     {
       "id": "fsrs",
       "ok": true,
-      "ms": 1146,
+      "ms": 289,
       "exit": 0,
       "wrote": "cards.json",
       "produced": true,
@@ -150,7 +150,7 @@
     {
       "id": "calibration",
       "ok": true,
-      "ms": 723,
+      "ms": 266,
       "exit": 0,
       "wrote": "calibration.json",
       "produced": true,
@@ -164,7 +164,7 @@
     {
       "id": "nemesis",
       "ok": true,
-      "ms": 622,
+      "ms": 282,
       "exit": 0,
       "wrote": "weaknesses.json",
       "produced": true,
@@ -178,7 +178,7 @@
     {
       "id": "learningstate",
       "ok": true,
-      "ms": 2827,
+      "ms": 277,
       "exit": 0,
       "wrote": "learning_state.json",
       "produced": true,
@@ -192,14 +192,14 @@
     {
       "id": "signals",
       "ok": true,
-      "ms": 416,
+      "ms": 10,
       "armed": "morning_signals",
       "error": null
     },
     {
       "id": "sheet",
       "ok": true,
-      "ms": 10729,
+      "ms": 998,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -213,7 +213,7 @@
     {
       "id": "wall",
       "ok": true,
-      "ms": 1717,
+      "ms": 440,
       "exit": 0,
       "wrote": null,
       "produced": null,

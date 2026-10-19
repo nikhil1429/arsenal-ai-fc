@@ -134,6 +134,16 @@
       "staged_at": "2026-10-16T16:26:49.207Z",
       "ingested_at": null,
       "report": null
+    },
+    {
+      "id": "T-neuralnet",
+      "type": "topic_open",
+      "cluster": null,
+      "concept": "neuralnet",
+      "file": "dressing-room/missions/t-neuralnet.md",
+      "staged_at": "2026-10-18T10:46:37.111Z",
+      "ingested_at": null,
+      "report": null
     }
   ],
   "syllabus_audit": {
@@ -315,6 +325,11 @@
       "ts": "2026-10-16T16:26:49.207Z",
       "kind": "stage_topic",
       "id": "T-inference"
+    },
+    {
+      "ts": "2026-10-18T10:46:37.111Z",
+      "kind": "stage_topic",
+      "id": "T-neuralnet"
     }
   ]
 }
