@@ -189,6 +189,12 @@
         "audit_ts": "2026-10-18T15:44:22.854Z",
         "title": "neuralnet_one_weight_knob",
         "recorded_at": "2026-10-18T15:44:23.018Z"
+      },
+      {
+        "session_id": "9f365720-8d4f-42b2-805c-4ac9b57e50f4",
+        "audit_ts": "2026-10-19T14:14:04.754Z",
+        "title": "neuralnet_board_axis_a_weight_knob",
+        "recorded_at": "2026-10-19T14:14:05.783Z"
       }
     ]
   }
