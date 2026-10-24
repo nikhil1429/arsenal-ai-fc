@@ -1,14 +1,14 @@
 {
-  "started": "2026-10-22T04:44:23.570Z",
-  "finished": "2026-10-22T04:44:54.510Z",
-  "day_key": "2026-10-22",
+  "started": "2026-10-23T04:25:17.890Z",
+  "finished": "2026-10-23T04:25:38.120Z",
+  "day_key": "2026-10-23",
   "day_source": "slot",
   "slot": "09:15",
-  "late_min": 59,
-  "total_ms": 30903,
+  "late_min": 40,
+  "total_ms": 20174,
   "ran": 16,
-  "ok": 14,
-  "failed": 2,
+  "ok": 16,
+  "failed": 0,
   "order": [
     "mirror",
     "sprintsync",
@@ -31,7 +31,7 @@
     {
       "id": "mirror",
       "ok": true,
-      "ms": 595,
+      "ms": 5592,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -45,7 +45,7 @@
     {
       "id": "sprintsync",
       "ok": true,
-      "ms": 20304,
+      "ms": 2023,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -59,28 +59,28 @@
     {
       "id": "thalamus",
       "ok": true,
-      "ms": 84,
+      "ms": 91,
       "port": 4113,
       "daemon": "already running (build current)"
     },
     {
       "id": "cortex",
       "ok": true,
-      "ms": 1625,
+      "ms": 1777,
       "port": 4112,
       "daemon": "already running (build unverified — no /status stamp and no process match)"
     },
     {
       "id": "turnstile",
       "ok": true,
-      "ms": 1960,
+      "ms": 2157,
       "port": 4111,
       "daemon": "already running (build current — via process table)"
     },
     {
       "id": "physio",
       "ok": true,
-      "ms": 328,
+      "ms": 350,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -93,22 +93,22 @@
     },
     {
       "id": "goalkeeper",
-      "ok": false,
-      "ms": 402,
-      "exit": 1,
+      "ok": true,
+      "ms": 1302,
+      "exit": 0,
       "wrote": "readiness.json",
-      "produced": null,
+      "produced": true,
       "stale": null,
       "log": "scripts/coach.log",
       "error": null,
-      "stderr": "Could not fetch Oura data: core Oura endpoint(s) failed: daily_readiness (fetch failed), sleep (fetch failed). Refusing to compute a verdict from partial data. \n\n(C:\\Users\\nikhi\\GitHub\\arsenal-ai-fc\\dressing-room\\state\\readiness.json left UNTOUCHED — stale-but-real beats fresh-but-fabricated.)",
+      "stderr": null,
       "stderr_bytes": null,
       "degraded": null
     },
     {
       "id": "twin",
       "ok": true,
-      "ms": 326,
+      "ms": 271,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -122,7 +122,7 @@
     {
       "id": "heartbeat",
       "ok": true,
-      "ms": 3059,
+      "ms": 3462,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -136,7 +136,7 @@
     {
       "id": "fsrs",
       "ok": true,
-      "ms": 293,
+      "ms": 346,
       "exit": 0,
       "wrote": "cards.json",
       "produced": true,
@@ -150,7 +150,7 @@
     {
       "id": "calibration",
       "ok": true,
-      "ms": 280,
+      "ms": 300,
       "exit": 0,
       "wrote": "calibration.json",
       "produced": true,
@@ -164,7 +164,7 @@
     {
       "id": "nemesis",
       "ok": true,
-      "ms": 355,
+      "ms": 319,
       "exit": 0,
       "wrote": "weaknesses.json",
       "produced": true,
@@ -178,7 +178,7 @@
     {
       "id": "learningstate",
       "ok": true,
-      "ms": 352,
+      "ms": 354,
       "exit": 0,
       "wrote": "learning_state.json",
       "produced": true,
@@ -191,14 +191,15 @@
     },
     {
       "id": "signals",
-      "ok": false,
-      "ms": 0,
-      "skipped": "not armed — upstream failed: goalkeeper"
+      "ok": true,
+      "ms": 17,
+      "armed": "morning_signals",
+      "error": null
     },
     {
       "id": "sheet",
       "ok": true,
-      "ms": 524,
+      "ms": 961,
       "exit": 0,
       "wrote": null,
       "produced": null,
@@ -207,12 +208,12 @@
       "error": null,
       "stderr": null,
       "stderr_bytes": null,
-      "degraded": "ran on stale input — goalkeeper failed"
+      "degraded": null
     },
     {
       "id": "wall",
       "ok": true,
-      "ms": 416,
+      "ms": 852,
       "exit": 0,
       "wrote": null,
       "produced": null,
