@@ -444,6 +444,42 @@ export function resolveClaudeRole(role) {
   return { role, model: envv || r.model, effort: r.effort || null, via: envv ? `env:${r.env}` : "roster" };
 }
 
+// ── THE CONTEXT WINDOWS (rung L7 · forks row 779 (4), 17 Oct 2026: lane V's one-landing grant) ──
+// LAW M's window half: the model id -> context window table lives HERE and nowhere else. turn_hook's
+// thread call measures a response's context against contextWindowOf(<the model id on that same row>) and
+// names no model and no window itself. PROVENANCE: Anthropic's published per-model context windows, as
+// carried by the campaign meter's table (tools/context_estimate.mjs MODEL_WINDOWS_BUILTIN in the audit
+// artifacts: the claude-api skill model table cached 2026-06-24, read 2026-09-20); copied, because an organ
+// never imports from the artifacts repo, and read from no API (the Max subscription holds no key, so the
+// Models API's max_input_tokens is not reachable). A new model is ONE row here, in a version commit.
+// THE DERIVATION, never a default: a "[1m]" on the id names a 1,000,000-token window; else the LONGEST row
+// whose key IS the id or is its FAMILY (the id = the key + "-" + more: a point release or a dated id), and
+// the why says which; else NO window (null), so the caller fires nothing and says why.
+/** @type {Record<string, number>} */
+export const CONTEXT_WINDOWS = {
+  "claude-fable-5-1": 1000000,
+  "claude-mythos-5-1": 1000000,
+  "claude-fable-5": 1000000,
+  "claude-opus-5": 1000000,
+  "claude-opus-4-8": 1000000,
+  "claude-opus-4-7": 1000000,
+  "claude-opus-4-6": 1000000,
+  "claude-sonnet-5": 1000000,
+  "claude-sonnet-4-6": 1000000,
+  "claude-haiku-4-5": 200000,
+};
+export const CONTEXT_WINDOWS_SOURCE = "Anthropic's published per-model context windows, via the campaign meter's table (claude-api skill model table cached 2026-06-24, read 2026-09-20; no API key, no live lookup)";
+const WINDOW_1M_SUFFIX = "[1m]";
+/** @param {string | null | undefined} modelId @param {Record<string, number>} [table] */
+export function contextWindowOf(modelId, table = CONTEXT_WINDOWS) {
+  if (!modelId) return { window: null, key: null, why: "no model id, so no window can be derived" };
+  const s = String(modelId);
+  if (s.includes(WINDOW_1M_SUFFIX)) return { window: 1000000, key: WINDOW_1M_SUFFIX, why: `the id carries ${WINDOW_1M_SUFFIX}, which names a 1,000,000-token window` };
+  const key = Object.keys(table).filter((k) => s === k || s.startsWith(`${k}-`)).sort((a, b) => b.length - a.length)[0];
+  if (!key) return { window: null, key: null, why: `no window on record for ${JSON.stringify(s)}: never guessed` };
+  return { window: table[key], key, why: `${s === key ? "its own row" : `the family row ${key}`}, from ${CONTEXT_WINDOWS_SOURCE}` };
+}
+
 // ── the board line (state week · watchman) ──
 export function boardLine(b = board()) {
   if (!b) return "gemini: never probed — `node scripts/models.mjs probe`";
@@ -715,6 +751,22 @@ async function selftest() {
     assert("S11 KEYS · never measured is NULL, not false — \"we never looked\" and \"we looked and it went stale\" are different states and only one of them is a finding",
       board(write({ at: "not-a-date", roles: {}, keys: { ok: [], quota: [], bad: [], n: 3 } })).keys_fresh === null);
   }
+  // ── RUNG L7 · THE CONTEXT WINDOWS (forks row 779 (4)): the id -> window table, its derivation planted both ways ──
+  {
+    const W = contextWindowOf;
+    assert("L7 WINDOWS · a row answers its own id: claude-opus-5 1,000,000 and claude-haiku-4-5 200,000, each keyed by itself",
+      W("claude-opus-5").window === 1000000 && W("claude-opus-5").key === "claude-opus-5" && W("claude-haiku-4-5").window === 200000 && /its own row/.test(W("claude-haiku-4-5").why));
+    const T = { "fx-a": 100, "fx-a-b": 200 };
+    assert("L7 WINDOWS · a point release or a dated id is answered by its FAMILY and the why says so; the LONGEST family wins (fx-a-b-c is fx-a-b's, never fx-a's)",
+      W("claude-opus-5-5").key === "claude-opus-5" && /family row claude-opus-5/.test(W("claude-opus-5-5").why) && W("claude-haiku-4-5-20251001").window === 200000
+      && W("fx-a-b-c", T).key === "fx-a-b" && W("fx-a-b-c", T).window === 200 && W("fx-a-c", T).key === "fx-a");
+    assert("L7 WINDOWS · a family is cut at a dash: claude-opus-50 and fx-ab are NOBODY's family (null, never a neighbour's window)",
+      W("claude-opus-50").window === null && W("fx-ab", T).window === null);
+    assert("L7 WINDOWS · [1m] on the id names 1,000,000 whatever the table says (fx-a[1m] is 1,000,000, not fx-a's 100)",
+      W("fx-a[1m]", T).window === 1000000 && W("claude-haiku-4-5[1m]").window === 1000000);
+    assert("L7 WINDOWS · an unknown id, an empty id and no id answer NO window (null) with a why, never a default",
+      [W("gpt-9"), W(""), W(null), W(undefined)].every((r) => r.window === null && r.key === null && r.why.length > 10));
+  }
   console.log(`\nmodels selftest: ${pass} passed, ${fail} failed`);
   if (fail) for (const x of fails) console.log(`  · ${x.n}${x.d ? `\n      ${x.d}` : ""}`);
   process.exit(fail ? 1 : 0);
@@ -738,6 +790,7 @@ async function main() {
     if (p.unranked.length) console.log(`  unranked (listed, never chosen until the seed names them): ${p.unranked.join(", ")}`);
     return;
   }
+  if (mode === "window") { const w = contextWindowOf(process.argv[3]); console.log(`models window: ${w.window === null ? "NONE" : w.window} · ${w.why}`); process.exit(w.window === null ? 1 : 0); }
   if (mode === "resolve") { const role = process.argv[3]; console.log(JSON.stringify(resolveSync(role), null, 1)); return; }
   if (mode === "status") {
     const b = board();
@@ -748,7 +801,7 @@ async function main() {
     const F = findings(b); for (const x of F) console.log(`  [${x.level}] ${x.id} — ${x.finding}`);
     return;
   }
-  console.log("models: status | probe | check | resolve <role> | selftest");
+  console.log("models: status | probe | check | resolve <role> | window <model-id> | selftest");
   process.exit(2);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
