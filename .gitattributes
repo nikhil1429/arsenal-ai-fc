@@ -3,3 +3,7 @@
 # hooks are POSIX shell scripts run by git-sh: CRLF breaks them (Block 8, 18 Aug 2026)
 hooks/pre-commit text eol=lf
 hooks/commit-msg text eol=lf
+# state files are LF on every checkout, worktree and archive (forks row 847 (3), 13 Nov 2026): under text=auto + core.autocrlf=true
+# a landing's checkout wrote CRLF into a LIVE state config; these two rules override text=auto for dressing-room/state only
+dressing-room/state/*.json text eol=lf
+dressing-room/state/*.jsonl text eol=lf
