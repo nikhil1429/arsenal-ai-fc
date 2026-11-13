@@ -57,6 +57,13 @@
 //               first run. THIS scan keeps the KNOWLEDGE: the LABELS allowlist, the
 //               `models-literal-ok` declaration, the roster, and brain_config's aliases.
 //               Both still run, on every commit. Where they disagree, the AST tool wins.
+//   · UNIT 818 (13 Nov 2026, forks rows 818 / 826 / 834) — THE CONFIG SCAN: `check` was blind to every
+//               state config but brain_config, and two of them named models (thalamus_config's
+//               adjudicator, fuelboard_config's eight tanks). `configCheck` walks every
+//               dressing-room/state/*_config.json (the class, not the instance — row 834 (2)) with the
+//               SAME token rule the code scan uses; fuelboard carries a DECLARED baseline of 8 that may
+//               only fall (CONFIG_BASELINE). The Claude roster gains `thalamus_adjudicator` (haiku: what
+//               that call site has spent since 17 Jul — row 826 (iii), no new model choice).
 // LAWS: hermetic in a fixture (selftest / ARSENAL_AUDIT_COLLAR ⇒ probe writes to a
 //   scratch path or nowhere, never the live file) · owners-only (this file is the one
 //   writer of models.json) · never throws from generate/embed/resolve · no key material
@@ -436,6 +443,11 @@ export const CLAUDE_ROLES = {
   // notes (TIER 2 by LAW T), ONE fresh claude -p per un-gated note at full-time on the Max subscription,
   // never a key. A read that cannot run writes a NAMED absence row (notes_compiler.mjs gateDay), never silence.
   cold_reader: { model: "claude-opus-5-5", effort: "high", env: "ARSENAL_CLAUDE_COLD_READER" },
+  // UNIT 818 (forks rows 818 / 826 / 834, 13 Nov 2026): thalamus.mjs's ε-band ADJUDICATOR — the one paid
+  // call inside the capture daemon, still DISABLED by his 20 Aug zero-token order (thalamus_config
+  // `enabled: false`, and since unit 818 the code default too). Its config names this ROLE, never a model.
+  // haiku is what that call site has spent since 17 Jul (row 826 (iii)): moved here, not chosen here.
+  thalamus_adjudicator: { model: "haiku", effort: null, env: "ARSENAL_CLAUDE_THALAMUS_ADJ" },
 };
 export function resolveClaudeRole(role) {
   const r = CLAUDE_ROLES[role];
@@ -531,11 +543,29 @@ export function findings(b = board(), now = Date.now()) {
 }
 
 // ── THE MECHANICAL LAW: no literal model name outside this file ──
-export function check({ dir = __dirname, files = null } = {}) {
+// ONE TOKEN RULE (unit 818): the model-shaped gemini tokens in a piece of text. The code scan below reads
+// every line with it and configCheck reads every config value with it — one function, so the two scans
+// can never drift apart. Lifted out of check()'s loop unchanged (same RE, same trailing-punctuation trim,
+// same LABELS, same shape test).
+function modelTokens(text) {
+  const out = [];
+  const RE = /gemini-[0-9a-z][0-9a-z.\-]*/g;
+  let m;
+  while ((m = RE.exec(String(text)))) {
+    const tok = m[0].replace(/[.\-]+$/, "");
+    if (LABELS.has(tok)) continue;
+    if (!/^gemini-(\d|flash|pro|embedding|exp|live)/.test(tok)) continue;   // gemini-quality etc. handled by LABELS; only model-shaped tokens count
+    out.push(tok);
+  }
+  return out;
+}
+// `stateDir` (unit 818) is the state directory this check reads — brain_config for the Claude side and
+// every *_config.json for the config scan. The default is the live tree's, exactly as before; a fixture
+// passes its own, so a selftest never depends on what his live configs say today.
+export function check({ dir = __dirname, files = null, stateDir = STATE_DIR, configFiles = null } = {}) {
   const self = basename(fileURLToPath(import.meta.url));
   const list = files || readdirSync(dir).filter((f) => f.endsWith(".mjs") && f !== self).map((f) => join(dir, f));
   const hits = [], declared = [];
-  const RE = /gemini-[0-9a-z][0-9a-z.\-]*/g;
   for (const f of list) {
     let src = ""; try { src = readFileSync(f, "utf8"); } catch { continue; }
     const orig = src.split("\n");                                             // the pragma may sit inside a block comment
@@ -545,11 +575,7 @@ export function check({ dir = __dirname, files = null } = {}) {
       let line = lines[i];
       if (/^\s*\/\//.test(line)) continue;                       // a comment line is history, not a call
       const cut = line.indexOf(" //"); if (cut > 0) line = line.slice(0, cut);   // trailing comment
-      let m; RE.lastIndex = 0;
-      while ((m = RE.exec(line))) {
-        const tok = m[0].replace(/[.\-]+$/, "");
-        if (LABELS.has(tok)) continue;
-        if (!/^gemini-(\d|flash|pro|embedding|exp|live)/.test(tok)) continue;   // gemini-quality etc. handled by LABELS; only model-shaped tokens count
+      for (const tok of modelTokens(line)) {
         const row = { file: basename(f), line: i + 1, literal: tok, text: lines[i].trim().slice(0, 140) };
         if (orig[i].includes(LITERAL_OK)) declared.push(row); else hits.push(row);
       }
@@ -558,12 +584,80 @@ export function check({ dir = __dirname, files = null } = {}) {
   // Claude side: brain_config names only opus|sonnet|haiku
   let claude = { ok: true, offenders: [] };
   try {
-    const cfg = readJson(join(STATE_DIR, "brain_config.json"));
+    const cfg = readJson(join(stateDir, "brain_config.json"));
     const walk = (o, path) => { if (!o || typeof o !== "object") return; for (const [k, v] of Object.entries(o)) { if (/^model$/i.test(k) && typeof v === "string" && !/^(opus|sonnet|haiku)$/.test(v)) claude.offenders.push(`${path}.${k}=${v}`); walk(v, `${path}.${k}`); } };
     if (cfg) walk(cfg, "brain_config");
     claude.ok = claude.offenders.length === 0;
   } catch { /* unreadable brain_config → not this check's finding */ }
-  return { ok: hits.length === 0 && claude.ok, hits, declared, claude, files: list.length };
+  // UNIT 818 · the config scan FOLDS IN: `ok` needs the code, brain_config AND every *_config.json.
+  const config = configCheck({ stateDir, files: configFiles });
+  return { ok: hits.length === 0 && claude.ok && config.ok, hits, declared, claude, config, files: list.length };
+}
+
+// ── UNIT 818 · THE CONFIG SCAN (forks rows 818 / 826 / 834 — 13 Nov 2026) ───────────────────────
+// LAW M's checker read scripts/*.mjs and brain_config.json and nothing else, so two state configs named
+// models it could not see: thalamus_config (adjudicator.model = a gemini name `claude -p` cannot spawn)
+// and fuelboard_config (eight tank models). Row 834 (2) ruled the REACH: the class, not the instance —
+// every dressing-room/state/*_config.json, walked whole.
+//   · a key starting with `_` is HISTORY (a dated receipt quoting the name it retired): skipped whole,
+//     with everything under it, at any depth;
+//   · ONE finding per (file, path) however many rules its value breaks — { file, path, value, why };
+//   · three kinds are hits: (1) a model-shaped gemini literal in ANY value (modelTokens — the code scan's
+//     own rule); (2) a `model` key whose value is not opus|sonnet|haiku (the brain_config rule, now over
+//     every config); (3) a `role` key that names no CLAUDE_ROLES key and no ROLES member.
+// CONFIG_BASELINE declares what is KNOWN and owned elsewhere: fuelboard's tanks get their own owner unit
+// (row 834 (2)), and until it lands a file's hits are DECLARED (counted, not failed) while their count is
+// at or below its baseline — one above and they ALL fail. The baseline may only fall: a file below it is
+// printed with its new count, so the next edit lowers the number (a gate only gets stricter).
+// A config the scan cannot parse is a hit OUTSIDE any baseline — a scan that cannot see inside a file is
+// never a pass for it.
+export const CONFIG_BASELINE = { "fuelboard_config.json": 8 };
+const CONFIG_SUFFIX = "_config.json";
+const CLAUDE_ALIAS = /^(opus|sonnet|haiku)$/;
+export function configCheck({ stateDir = STATE_DIR, files = null } = {}) {
+  let list = files;
+  if (!list) { try { list = readdirSync(stateDir).filter((f) => f.endsWith(CONFIG_SUFFIX)).sort().map((f) => join(stateDir, f)); } catch { list = []; } }
+  const roleNames = new Set([...Object.keys(CLAUDE_ROLES), ...ROLES]);
+  const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+  const hits = [], declared = [], baselines = [], seen = new Set();
+  for (const f of list) {
+    const file = basename(f);
+    seen.add(file);
+    let o, rows, fatal = false;
+    try { o = JSON.parse(readFileSync(f, "utf8")); }
+    catch (e) { fatal = true; rows = [{ file, path: "(file)", value: null, why: `unreadable or unparsable (${String((e && e.message) || e).slice(0, 90)}) — the scan cannot see inside it` }]; }
+    if (!fatal) {
+      const found = new Map();   // path → { value, why[] }
+      const note = (path, value, why) => { if (!found.has(path)) found.set(path, { value, why: [] }); found.get(path).why.push(why); };
+      const walk = (v, path) => {
+        if (typeof v === "string") { for (const tok of modelTokens(v)) note(path, v, `gemini literal ${tok}`); return; }
+        if (!v || typeof v !== "object") return;
+        if (Array.isArray(v)) { v.forEach((x, i) => walk(x, `${path}[${i}]`)); return; }
+        for (const [k, x] of Object.entries(v)) {
+          if (k.startsWith("_")) continue;                                   // history: skipped WHOLE
+          const p = path ? `${path}.${k}` : k;
+          if (/^model$/i.test(k) && typeof x === "string" && !CLAUDE_ALIAS.test(x)) note(p, x, `model "${x}" is not opus|sonnet|haiku`);
+          if (/^role$/i.test(k) && !(typeof x === "string" && roleNames.has(x))) note(p, x, `role ${JSON.stringify(x)} names no CLAUDE_ROLES key and no ROLES member`);
+          walk(x, p);
+        }
+      };
+      walk(o, "");
+      rows = [...found].map(([path, x]) => ({ file, path, value: x.value, why: x.why.join(" · ") }));
+    }
+    const base = has(CONFIG_BASELINE, file) ? CONFIG_BASELINE[file] : null;
+    if (base !== null) baselines.push({ file, count: fatal ? null : rows.length, baseline: base, state: fatal ? "unparsable" : rows.length > base ? "over" : rows.length < base ? "falls" : "at" });
+    if (base !== null && !fatal && rows.length <= base) declared.push(...rows); else hits.push(...rows);
+  }
+  for (const [file, base] of Object.entries(CONFIG_BASELINE)) if (!seen.has(file)) baselines.push({ file, count: 0, baseline: base, state: "absent" });
+  return { ok: hits.length === 0, hits, declared, files: list.length, baselines };
+}
+// the ONE more line `models check` prints (unit 818): `models check · config scan: <n> file(s) · hits <h> ·
+// declared <d> (fuelboard_config.json <k> of baseline 8)`; a baseline that may fall names its new count.
+function configLine(c) {
+  const b = (x) => x.state === "absent" ? `${x.file} absent of baseline ${x.baseline} · the baseline may fall to 0`
+    : x.state === "unparsable" ? `${x.file} UNPARSABLE of baseline ${x.baseline} · it fails whole`
+    : `${x.file} ${x.count} of baseline ${x.baseline}${x.state === "falls" ? ` · the baseline may fall to ${x.count}` : x.state === "over" ? ` · OVER: all ${x.count} fail` : ""}`;
+  return `models check · config scan: ${c.files} file(s) · hits ${c.hits.length} · declared ${c.declared.length}${c.baselines.length ? ` (${c.baselines.map(b).join(", ")})` : ""}`;
 }
 
 // ── SELFTEST — hermetic: a scripted fetch, a scratch models.json, the live file untouched ──
@@ -720,12 +814,15 @@ async function selftest() {
     assert("BOARD LINE with no board: names the probe command", /never probed/.test(boardLine(null)));
     // check() on a fixture dir
     const cdir = join(scratch, "scripts"); mkdirSync(cdir);
+    // unit 818: check() now also reads a STATE dir (brain_config + every *_config.json). The fixture hands it an
+    // empty one of its own, so these two asserts test the code scan alone and never his live configs.
+    const cstate = join(scratch, "state"); mkdirSync(cstate);
     writeFileSync(join(cdir, "a.mjs"), `const m = "gemini-3.5-flash";\n// gemini-2.0-flash in a comment is history\nconst label = "gemini-study";\nconst fx = "gemini-flash-lite-latest"; // ${LITERAL_OK}: a retired name the selftest feeds on purpose\nconst z = 1; // gemini-2.5-flash trailing comment\n`);
     writeFileSync(join(cdir, "b.mjs"), `import { generate } from "./models.mjs";\nawait generate("text", {});\n`);
-    const c1 = check({ dir: cdir });
+    const c1 = check({ dir: cdir, stateDir: cstate });
     assert("CHECK: ONE literal model name in code = FAIL, naming file:line; comment lines, trailing comments, labels and a `models-literal-ok` fixture line do not count (declared: 1)", !c1.ok && c1.hits.length === 1 && c1.hits[0].line === 1 && c1.declared.length === 1 && c1.hits[0].literal === "gemini-3.5-flash", JSON.stringify({ hits: c1.hits, declared: c1.declared }));
     writeFileSync(join(cdir, "a.mjs"), `import { resolveSync } from "./models.mjs";\nconst m = resolveSync("text").model;\nconst label = "gemini-study";\n`);
-    assert("CHECK: rewired to a role → ok:true", check({ dir: cdir }).ok === true);
+    assert("CHECK: rewired to a role → ok:true", check({ dir: cdir, stateDir: cstate }).ok === true);
   } finally { rmSync(scratch, { recursive: true, force: true }); }
   _resetMemory();
   const liveStat2 = existsSync(MODELS_JSON) ? (() => { const s = statSync(MODELS_JSON); return `${s.size}:${s.mtimeMs}`; })() : "absent";
@@ -767,6 +864,72 @@ async function selftest() {
     assert("L7 WINDOWS · an unknown id, an empty id and no id answer NO window (null) with a why, never a default",
       [W("gpt-9"), W(""), W(null), W(undefined)].every((r) => r.window === null && r.key === null && r.why.length > 10));
   }
+  // ── UNIT 818 · THE ROSTER ROW + THE CONFIG SCAN, planted both ways (fixtures in a scratch dir; the live
+  //    configs are read by the LAST assert only, as an invariant, never as a value) ──────────────────────
+  {
+    const ENV = (CLAUDE_ROLES.thalamus_adjudicator || {}).env;
+    const saved = ENV ? process.env[ENV] : undefined;
+    try {
+      if (ENV) delete process.env[ENV];
+      const r0 = resolveClaudeRole("thalamus_adjudicator");
+      assert("818 ROSTER: thalamus_adjudicator = haiku · effort null · env ARSENAL_CLAUDE_THALAMUS_ADJ — the alias that call site has spent since 17 Jul, no new model choice (row 826 (iii))",
+        JSON.stringify(CLAUDE_ROLES.thalamus_adjudicator) === JSON.stringify({ model: "haiku", effort: null, env: "ARSENAL_CLAUDE_THALAMUS_ADJ" })
+        && !!r0 && r0.model === "haiku" && r0.via === "roster" && r0.effort === null, JSON.stringify(r0));
+      if (ENV) process.env[ENV] = "sonnet";
+      const r1 = resolveClaudeRole("thalamus_adjudicator");
+      if (ENV) delete process.env[ENV];
+      const r2 = resolveClaudeRole("thalamus_adjudicator");
+      assert("818 ROSTER: the env override leads and SAYS so (via env:ARSENAL_CLAUDE_THALAMUS_ADJ); unset, the roster answers again; an unknown role is null, never a guess",
+        !!r1 && r1.model === "sonnet" && r1.via === "env:ARSENAL_CLAUDE_THALAMUS_ADJ" && !!r2 && r2.model === "haiku" && r2.via === "roster" && resolveClaudeRole("no_such_role") === null, JSON.stringify({ r1, r2 }));
+    } finally { if (ENV) { if (saved === undefined) delete process.env[ENV]; else process.env[ENV] = saved; } }
+    const sdir = mkdtempSync(join(tmpdir(), "arsenal-cfgscan-"));
+    try {
+      const put = (sub, name, obj) => { const d = join(sdir, sub); mkdirSync(d, { recursive: true }); const p = join(d, name); writeFileSync(p, typeof obj === "string" ? obj : JSON.stringify(obj, null, 1)); return p; };
+      const scan = (sub, name, obj) => configCheck({ files: [put(sub, name, obj)] });
+      const a = scan("a", "a_config.json", { engine: { name: "gemini-3.5-flash" }, source: "gemini-study", list: ["opus", "gemini-2.5-flash-lite"] });
+      assert("818 CONFIG SCAN: a model-shaped gemini literal in ANY value reds, naming file + path (the code scan's own token rule — a label like gemini-study stays a label, a bare alias outside `model` is no hit)",
+        !a.ok && a.hits.length === 2 && a.hits.map((h) => h.path).join(",") === "engine.name,list[1]" && a.hits.every((h) => h.file === "a_config.json" && /gemini literal/.test(h.why)), JSON.stringify(a.hits));
+      const m = scan("m", "m_config.json", { a: { model: "opus-via-cortex" }, b: { model: "sonnet" }, c: { model: "haiku" }, d: { model: "opus" } });
+      assert("818 CONFIG SCAN: a `model` key whose value is not opus|sonnet|haiku reds (the brain_config rule, now over every config); the three aliases pass",
+        !m.ok && m.hits.length === 1 && m.hits[0].path === "a.model" && m.hits[0].value === "opus-via-cortex", JSON.stringify(m.hits));
+      const r = scan("r", "r_config.json", { a: { role: "thalamus_adjudicator" }, b: { role: "lite" }, c: { role: "the_captain" }, d: { role: null } });
+      assert("818 CONFIG SCAN: a `role` key must name a CLAUDE_ROLES key or a ROLES member — a stray role reds (so does a role that is no name at all); a Claude role and a Gemini role pass",
+        !r.ok && r.hits.length === 2 && r.hits.map((h) => h.path).join(",") === "c.role,d.role", JSON.stringify(r.hits));
+      const u = scan("u", "u_config.json", { _adjudicator_off_receipt: "enabled true -> false; gemini-flash-lite-latest named here is history", adjudicator: { role: "thalamus_adjudicator", enabled: false, _note: { model: "gemini-3.5-flash", role: "nobody" } } });
+      assert("818 CONFIG SCAN: a literal inside a `_` receipt is HISTORY and passes — a `_` key is skipped whole, nested `_` keys and everything under them too",
+        u.ok && u.hits.length === 0 && u.declared.length === 0, JSON.stringify(u.hits));
+      const t = scan("t", "thalamus_config.json", { adjudicator: { model: "gemini-flash-lite-latest", enabled: false } });
+      assert("818 CONFIG SCAN: ONE finding per path — the live thalamus shape (a gemini name under `model`) is ONE hit carrying both reasons, file thalamus_config.json, path adjudicator.model (lane V's per-path count)",
+        !t.ok && t.hits.length === 1 && t.hits[0].file === "thalamus_config.json" && t.hits[0].path === "adjudicator.model" && /not opus\|sonnet\|haiku/.test(t.hits[0].why) && /gemini literal gemini-flash-lite-latest/.test(t.hits[0].why), JSON.stringify(t.hits));
+      const tanks = (n) => ({ _doc: "fixture tanks", tanks: Array.from({ length: n }, (_, i) => ({ id: `T${i + 1}`, model: i === 3 ? "opus-via-cortex" : "gemini-3.1-pro-preview", enabled: true })) });
+      const at8 = scan("f8", "fuelboard_config.json", tanks(8)), over9 = scan("f9", "fuelboard_config.json", tanks(9));
+      assert("818 BASELINE: fuelboard at its declared 8 is COUNTED, not failed; one more and ALL nine fail (a gate only gets stricter)",
+        at8.ok && at8.declared.length === 8 && at8.hits.length === 0 && at8.baselines[0].state === "at"
+        && !over9.ok && over9.hits.length === 9 && over9.declared.length === 0 && over9.baselines[0].state === "over", JSON.stringify({ at8: at8.baselines, over9: over9.baselines }));
+      const at7 = scan("f7", "fuelboard_config.json", tanks(7));
+      assert("818 BASELINE may only fall: at 7 of 8 the scan passes and PRINTS the new count, so the next edit lowers the number",
+        at7.ok && at7.declared.length === 7 && at7.baselines[0].state === "falls" && /fuelboard_config\.json 7 of baseline 8 · the baseline may fall to 7/.test(configLine(at7)), configLine(at7));
+      const bad = scan("fx", "fuelboard_config.json", "{ \"tanks\": [ not json");
+      assert("818 CONFIG SCAN: an unparsable config is a HIT outside any baseline — a scan that cannot see inside a file never passes it",
+        !bad.ok && bad.hits.length === 1 && bad.hits[0].path === "(file)" && bad.declared.length === 0 && bad.baselines[0].state === "unparsable", JSON.stringify(bad.hits));
+      // check() FOLDS the scan in: a clean code dir, a dirty state dir → FAIL; the same code, a clean state dir → ok.
+      const code = join(sdir, "code"); mkdirSync(code);
+      writeFileSync(join(code, "ok.mjs"), `import { resolveClaudeRole } from "./models.mjs";\nconst m = resolveClaudeRole("thalamus_adjudicator").model;\n`);
+      put("dirty", "thalamus_config.json", { adjudicator: { model: "gemini-flash-lite-latest", enabled: false } });
+      put("clean", "thalamus_config.json", { adjudicator: { role: "thalamus_adjudicator", enabled: false }, "_adjudicator_model_retired_2026-11-13": "gemini-flash-lite-latest — retired" });
+      put("clean", "notes.json", { model: "gemini-3.5-flash" });   // not a *_config.json: never walked
+      const dirty = check({ dir: code, stateDir: join(sdir, "dirty") }), clean = check({ dir: code, stateDir: join(sdir, "clean") });
+      assert("818 CHECK folds the config scan in: clean code + a config carrying a literal = FAIL (`ok` needs both); the same code + a clean state dir = ok, and only *_config.json files are walked",
+        !dirty.ok && dirty.hits.length === 0 && dirty.config.hits.length === 1 && dirty.config.hits[0].path === "adjudicator.model"
+        && clean.ok && clean.config.files === 1 && clean.config.hits.length === 0, JSON.stringify({ dirty: dirty.config, clean: clean.config }));
+      assert("818 CHECK CLI: ONE more line — `models check · config scan: <n> file(s) · hits <h> · declared <d> (fuelboard_config.json <k> of baseline 8)`",
+        configLine(at8) === "models check · config scan: 1 file(s) · hits 0 · declared 8 (fuelboard_config.json 8 of baseline 8)"
+        && configLine(clean.config) === "models check · config scan: 1 file(s) · hits 0 · declared 0 (fuelboard_config.json absent of baseline 8 · the baseline may fall to 0)", `${configLine(at8)} | ${configLine(clean.config)}`);
+    } finally { rmSync(sdir, { recursive: true, force: true }); }
+    const lc = configCheck();
+    assert(`818 THE LAW (configs, live tree): the scan reads every *_config.json in the live state dir without throwing (${lc.files} file(s) · ${lc.hits.length} hit(s) · ${lc.declared.length} declared) and names each finding by file + path + why — \`models check\` is the GATE; this line is the invariant, green before AND after his live act`,
+      lc.files > 0 && [...lc.hits, ...lc.declared].every((h) => h.file && h.path && h.why), configLine(lc));
+  }
   console.log(`\nmodels selftest: ${pass} passed, ${fail} failed`);
   if (fail) for (const x of fails) console.log(`  · ${x.n}${x.d ? `\n      ${x.d}` : ""}`);
   process.exit(fail ? 1 : 0);
@@ -781,6 +944,8 @@ async function main() {
     console.log(`models check: ${c.files} file(s) · literal model names outside models.mjs: ${c.hits.length} · declared fixture lines: ${c.declared.length} · brain_config claude aliases ${c.claude.ok ? "ok" : "OFFENDERS " + c.claude.offenders.join(", ")}`);
     for (const h of c.hits) console.log(`  ✗ ${h.file}:${h.line} ${h.literal} — ${h.text}`);
     for (const d of c.declared) console.log(`  · declared ${d.file}:${d.line} ${d.literal}`);
+    console.log(configLine(c.config));                                                     // unit 818: the ONE more line
+    for (const h of c.config.hits) console.log(`  ✗ ${h.file} ${h.path} ${JSON.stringify(h.value).slice(0, 120)} — ${h.why}`);
     process.exit(c.ok ? 0 : 1);
   }
   if (mode === "probe") {

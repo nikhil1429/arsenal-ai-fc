@@ -34,9 +34,10 @@
   }
  },
  "adjudicator": {
-  "model": "gemini-flash-lite-latest",
+  "role": "thalamus_adjudicator",
   "enabled": false
  },
+ "_adjudicator_model_retired_2026-11-13": "gemini-flash-lite-latest — unit 818 (forks rows 818 / 834 / 843 L1): LAW M, the adjudicator names a ROLE resolved by models.mjs; the act rides inside its landing commit; enabled stays false by his 20 Aug zero-token order",
  "_self_sources_doc": "#1 — WHO SPOKE, not which pipe. Live voice afferents carry no 'source' field at all (measured across all 271), so a voice modality is its own provenance. 'claude-code' is hooks/afferent-post.mjs UserPromptSubmit = his words; 'organism-memory' is the MCP note tool = his words. The deny list WINS: 'claude-code-teaching' is the Stop hook, i.e. the organism's own answers coming back through the door — scoring the machine's talk about 'confusion' as HIS doubt is the same self-talk scar the capture guard was built to close. Verified on the live bus: of 237 claude-code rows since the 25 Jul capture-guard fix, exactly 6 fire a self_marker and all 6 are genuinely his.",
  "_gemini_lane_2026_08_09": "P7 of THE PEAK PLAN, his verbatim word: 'yes lets build p1 p2 p3 p7 to the peak of its powers and make sure data flows everywhere wherever it is required.' The /harvest lane (scripts/harvest.mjs) posts his Gemini study sittings through the door as modality 'gemini' — 'gemini-study' is HIS turns (joins self_sources, or every harvested doubt scores self=0/nov=0, the exact 3,099-moment scar #1 records), 'gemini-study-teaching' is the Gem's answers (joins the deny list, same law as claude-code-teaching). This file is approval-gated; that ruling IS the approval, and this note is the receipt.",
  "self_sources": [

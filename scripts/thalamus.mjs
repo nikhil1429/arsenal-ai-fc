@@ -52,9 +52,19 @@
 //        header naming an engine the code had stopped using. WHICH model it
 //        spends is the config's to choose now (adjudicator.model, live since that
 //        repair). The deep lane is claude -p (Max) in cortex.mjs. Localhost only.
+//        UNIT 818 (13 Nov 2026, LAW M — forks rows 818 / 826 / 834): the config
+//        names a ROLE now, never a model — adjudicator.role, resolved by
+//        scripts/models.mjs CLAUDE_ROLES (thalamus_adjudicator = haiku, env
+//        ARSENAL_CLAUDE_THALAMUS_ADJ). A leftover adjudicator.model is IGNORED
+//        and `models check` reds it; the block's one writer is the owner setter
+//        below. The lane stays OFF by his 20 Aug zero-token order — the file's
+//        `enabled: false` and, since this unit, the code's DEFAULT too.
 // MODES: node scripts/thalamus.mjs            → daemon on http://127.0.0.1:4113
 //        node scripts/thalamus.mjs selftest   → deterministic bar (§4.7)
 //        node scripts/thalamus.mjs status     → workspace + today's gate ledger
+//        node scripts/thalamus.mjs config adjudicator-role <role> --why "<text>" [--config <path>]
+//                                             → THE OWNER SETTER (unit 818): the SOLE writer of the
+//                                               adjudicator block; it never writes `enabled`
 // ----------------------------------------------------------------------------
 // ORGANISM REPAIR 4 Aug 2026 — THE NUCLEUS HEARS HIM (issues #1 #2 #6 #9 #10 #106).
 // Five cuts, all in this file, all layered (the old engine is frozen beside the
@@ -92,9 +102,10 @@
 
 import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, statSync, watch, rmSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
+import { join, dirname, basename } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";   // unit 818 — the owner setter prints the file's sha256 before and after
 // M8-FIX 1 Aug 2026 — the canon matcher itself, not a copy of it (see THE
 // DOSSIER TAKES ONLY CANON below). capture.mjs owns concepts.json; this is a
 // read-only borrow of its two pure resolvers, so the normalisation scars baked
@@ -109,6 +120,11 @@ import { loadRegistry, canonicalize } from "./capture.mjs";
 import { ledgerForensics } from "./claudegen.mjs";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
+// UNIT 818 (13 Nov 2026) — LAW M: the adjudicator names a ROLE and the one resolver answers it. models.mjs
+// imports node builtins only and its module body has no side effects (its main guard is
+// `import.meta.url === argv[1]`), so this static import costs the daemon nothing at boot — the same
+// reasoning as the claudegen borrow above. resolveAdjModel stays SYNCHRONOUS (buildStatus is pure).
+import { resolveClaudeRole, CLAUDE_ROLES } from "./models.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Captured ONCE, at module load — this is the mtime of the code actually running in
@@ -193,7 +209,13 @@ const DEFAULT_CONFIG = {
   // 17 Jul, moved here verbatim. thalamus_config.json is approval-gated and still
   // names the retired engine — that value is HIS to change, and until he does the
   // resolver falls back here and says so in the ledger row and in `status`.
-  adjudicator: { model: "haiku", enabled: true },
+  // UNIT 818 (13 Nov 2026, forks rows 818 / 826 / 834): the knob is a ROLE, resolved by models.mjs (LAW M:
+  // no organ names a model). This line read `{ model: "haiku", enabled: true }` until today, and because
+  // loadConfig replaces the block wholesale, a config file WITHOUT an adjudicator block inherited that
+  // `enabled: true` — the one paid call inside the capture daemon was ON by default. Row 834 (4): his
+  // 20 Aug zero-token order is the DEFAULT, not the live file alone. DEFAULT_ADJUDICATOR (just below this
+  // object) is the frozen copy importers read.
+  adjudicator: { role: "thalamus_adjudicator", enabled: false },
   deep: { deadline_ms: 45000, min_headroom_tokens: 50000, max_thinking_tokens: 16000, timeout_ms: 300000, concurrency: 2, est_tokens_per_wake: 40000, queue_ttl_min: 30 },
   // M17 — the pre-answer serve side: cosine bar, the free overlap floor, and
   // the one embed call's hard timeout (dry/slow → the floor, never a stall).
@@ -230,8 +252,12 @@ const DEFAULT_CONFIG = {
   // voice, both scripts:
   self_markers: ["i don't get", "don't understand", "samajh nahi", "samajh nahin", "samajh mein nahi", "samajh na", "clear nahi", "confus", "kyun nahi aata", "kaise kaam", "kaise hota", "kya hota", "matlab kya", "stuck hoon", "atka hua", "doubt hai", "doubt aa", "yeh kaise", "wait, why", "wait why", "makes no sense", "समझ नहीं", "समझ में नहीं", "नहीं समझ", "समझा नहीं", "कैसे काम", "क्यों नहीं", "मतलब क्या", "डाउट"],
 };
-function loadConfig() {
-  const c = readJson(CONFIG);
+// unit 818 — a FROZEN COPY of the default block (exported): his zero-token order, readable, never mutable.
+const DEFAULT_ADJUDICATOR = Object.freeze({ ...DEFAULT_CONFIG.adjudicator });
+// unit 818 — `path` is the file read (default: the live config). The merge is unchanged: the file's
+// adjudicator block still REPLACES the default wholesale, so a block {role, enabled} is the whole truth.
+function loadConfig(path = CONFIG) {
+  const c = readJson(path);
   if (!c) return DEFAULT_CONFIG;
   return {
     ...DEFAULT_CONFIG, ...c,
@@ -1249,7 +1275,11 @@ async function captainHoldFact(deps = {}) {
 // through because the CLI takes them verbatim.
 const ADJ_MODEL_FALLBACK = "haiku";        // what this call site has actually spent since 17 Jul
 const CLAUDE_MODEL_ALIASES = new Set(["opus", "sonnet", "haiku"]);
-function resolveAdjModel(cfg) {
+// L9 · FROZEN, NEVER DELETED (unit 818, 13 Nov 2026): the 10 Aug resolver, kept verbatim under its own
+// name — unexported and never called. It read `adjudicator.model` and substituted haiku for any name
+// `claude -p` cannot spawn; that substitution is exactly what unit 818 retires, because no config names a
+// model any more. The live resolver is resolveAdjModel, just below.
+function resolveAdjModelLegacy(cfg) {
   const requested = String(((cfg || {}).adjudicator || {}).model || "").trim();
   const alias = requested.toLowerCase();
   if (CLAUDE_MODEL_ALIASES.has(alias)) return { model: alias, requested, fallback: null };
@@ -1261,16 +1291,45 @@ function resolveAdjModel(cfg) {
       : "no adjudicator.model configured",
   };
 }
+// ── UNIT 818 · THE ADJUDICATOR NAMES A ROLE (13 Nov 2026 — forks rows 818 / 826 / 834) ─────────────
+// LAW M (18 Aug 2026): no organ names a model; it names a ROLE and scripts/models.mjs resolves it. The
+// 10 Aug wire above made the config's `model` live — and the live file named gemini-flash-lite-latest, a
+// name `claude -p` cannot spawn, so the knob's one honest answer was a fallback. The knob is the ROLE now:
+//   · reads `cfg.adjudicator.role` ONLY. A leftover `model` key is IGNORED here — `models check` reds it
+//     (the config scan) and the owner setter retires it into a dated receipt;
+//   · returns { role, model, via, fallback }: `via` is how the roster answered ("roster" | "env:<NAME>");
+//   · a role that resolves to NOTHING (none named, unknown to the roster, a resolver that throws) is
+//     model:null with a NAMED fallback — adjudicateLive then pays nothing and says why on its meter row
+//     (the SILENT WALL law). An unnamed role is never guessed: there is no literal left to fall back to.
+//   · `resolve` is a door (injected in the selftest); the default is the roster itself.
+function resolveAdjModel(cfg, { resolve = resolveClaudeRole } = {}) {
+  const blk = ((cfg || {}).adjudicator) || {};
+  const role = typeof blk.role === "string" && blk.role ? blk.role : null;
+  if (!role) return { role: null, model: null, via: null, fallback: "no adjudicator.role configured — nothing is spent (fail closed: an unnamed role is never guessed)" };
+  let r = null, err = null;
+  try { r = resolve(role); } catch (e) { err = String((e && e.message) || e).slice(0, 120); r = null; }   // named in the fallback below, never silent
+  const model = r && typeof r.model === "string" && r.model ? r.model : null;
+  if (!model) return { role, model: null, via: null, fallback: err ? `role "${role}" could not be resolved (${err}) — nothing is spent (fail closed)` : `role "${role}" resolves to no model in models.mjs CLAUDE_ROLES — nothing is spent (fail closed)` };
+  return { role, model, via: (r && r.via) || null, fallback: null };
+}
+// ONE predicate for "on" (unit 818): the spend path and `status` read the same one. Only a literal `true`
+// wakes the lane — a cfg with no block reads the DEFAULT (false), and a missing key or a truthy
+// non-boolean ("yes", 1) is not his word, so it is OFF.
+const adjudicatorEnabled = (cfg) => ((((cfg || {}).adjudicator) || DEFAULT_ADJUDICATOR).enabled === true);
 
-function meterAdjudication(r, deps = {}, mdl = { model: ADJ_MODEL_FALLBACK, requested: null, fallback: null }) {
+function meterAdjudication(r, deps = {}, mdl = { role: null, model: null, via: null, fallback: null }) {
   const row = {
     ts: new Date().toISOString(), job: "thalamus_adjudicator", engine: "claude",
     // the row records what was SPENT — and, only when the two differ, what the
     // config ASKED for and why the ask was refused. A ledger that bills a Gemini
     // name for a Claude call is the misbilling the E2E audit killed in nightshift;
     // a substitution nobody can see is the same lie one layer up.
-    model: mdl.model,
-    ...(mdl.requested && mdl.requested !== mdl.model ? { model_requested: mdl.requested, model_fallback: mdl.fallback } : {}),
+    // UNIT 818: the ask is a ROLE now, so the row names the role it spent under and how the roster
+    // answered (`via`: roster | env:<NAME>); `model_fallback` rides only when the role resolved to
+    // NOTHING — the row of a call that was never made, saying why (model null, zero tokens).
+    model: mdl.model ?? null,
+    role: mdl.role ?? null, via: mdl.via ?? null,
+    ...(mdl.fallback ? { model_fallback: mdl.fallback } : {}),
     input_tokens: r.input_tokens ?? null, output_tokens: r.output_tokens ?? null,
     cache_creation_tokens: r.cache_creation_tokens ?? null, cache_read_tokens: r.cache_read_tokens ?? null,
     total_tokens: r.total_tokens || 0,
@@ -1307,7 +1366,10 @@ function meterAdjudication(r, deps = {}, mdl = { model: ADJ_MODEL_FALLBACK, requ
 // the ONLY sub-Opus paid thought: one Flash-Lite adjudication in the ε-band
 async function adjudicateLive(evt, S, deps = {}) {
   const cfg = deps.cfg || loadConfig();
-  if (!cfg.adjudicator.enabled) return false;
+  // unit 818: ONE predicate (adjudicatorEnabled) — only a literal `true` spends; a cfg with no block is the
+  // DEFAULT, enabled false (his zero-token order, row 834 (4)). The old line dereferenced cfg.adjudicator
+  // unguarded, so a cfg without the block threw instead of answering "no".
+  if (!adjudicatorEnabled(cfg)) return false;
   // ── H · THE CAPTAIN'S HOLD (4 Sep 2026) ───────────────────────────────────
   // HIS WORD: "close every API call the organism is doing and just keep on noting down data."
   // THIS IS THE ONE PAID CALL INSIDE THE CAPTURE DAEMON, and it is the only thing here the hold
@@ -1333,7 +1395,16 @@ async function adjudicateLive(evt, S, deps = {}) {
   // 10 Aug 2026: the model is the CONFIG's now, not a literal (see THE MODEL KNOB
   // IS LIVE). With the live file as it stands this still spends haiku, byte for
   // byte what it spent yesterday — the difference is that the knob now works.
+  // 13 Nov 2026 (unit 818): the config names a ROLE and models.mjs resolves it (see THE ADJUDICATOR NAMES
+  // A ROLE). The roster row is haiku — what this line spent through the old fallback — so a role the roster
+  // knows spends byte for byte what it spent before; a role it does NOT know spends nothing at all.
   const mdl = resolveAdjModel(cfg);
+  if (!mdl.model) {
+    // THE SILENT WALL, one door earlier: a role that resolves to nothing never reaches the engine, and the
+    // meter row still lands — model null, zero tokens MEASURED (no call was made), the reason named.
+    meterAdjudication({ ok: false, text: null, total_tokens: 0, input_tokens: 0, output_tokens: 0, cache_creation_tokens: 0, cache_read_tokens: 0, tokens_estimated: false, duration_ms: 0, limit_hit: false, error: `not called — ${mdl.fallback}` }, deps, mdl);
+    return false;
+  }
   try {
     const gen = deps.gen || (await import("./claudegen.mjs")).claudeGenAsync;
     const r = await gen(q, mdl.model, 15000);
@@ -1633,9 +1704,16 @@ async function selftest() {
   // ledger sink, which is the only way a broken meter goes red instead of silent.
   // MEASURED BEFORE THE FIX: 4,558 live brain_ledger rows, 0 from this organ,
   // against 8 salience rows carrying adjudicated:true.
+  // UNIT 818 — the adjudicator resolves its ROLE through models.mjs, whose env override would let HIS shell
+  // steer the checks from here to (6d): they run with it UNSET, and it is put back exactly as found after (6d).
+  const ADJ_ENV = (CLAUDE_ROLES.thalamus_adjudicator || {}).env;
+  const adjEnvSaved = ADJ_ENV ? process.env[ADJ_ENV] : undefined;
+  if (ADJ_ENV) delete process.env[ADJ_ENV];
   {
     const evt = { modality: "voice", text: "i don't get attention", event_key: "voice:doubt" };
-    const bandCfg = { adjudicator: { model: "haiku", enabled: true } };
+    // unit 818: the fixture names the ROLE (the roster answers haiku, as the literal here used to); a
+    // bare `model` would now resolve to nothing and pay nothing — (6c) proves exactly that.
+    const bandCfg = { adjudicator: { role: "thalamus_adjudicator", enabled: true } };
     // the shape claudegen G1 actually returns on a good call
     const rows = [];
     const yes = await adjudicateLive(evt, 0.44, {
@@ -1728,26 +1806,47 @@ async function selftest() {
   // the model argument it was handed — that recording is what goes red the moment a
   // future edit re-hardcodes the literal, which is the only failure mode that hid
   // for three weeks last time.
+  // UNIT 818 (13 Nov 2026): THE KNOB IS A ROLE. The six checks below pinned the 10 Aug model knob — sonnet
+  // passed, a gemini name fell back to haiku, a missing model meant haiku, a claude-* id passed verbatim, the
+  // live file could only spawn what claude -p takes, and `status` told the truth. Each keeps its job against
+  // the ROLE, and the generator still RECORDS the model it was handed — so a re-hardcoded literal still goes
+  // red in the same second, and a leftover `model` key is now the thing that must NOT reach it.
   {
     const evt = { modality: "voice", text: "i don't get attention", event_key: "voice:doubt" };
     const okGen = (seen) => async (_q, model) => { seen.push(model); return { ok: true, text: "yes", total_tokens: 10, duration_ms: 1 }; };
+    const ROLE_CFG = { adjudicator: { role: "thalamus_adjudicator", enabled: true } };
     const seen = [], rows = [];
-    await adjudicateLive(evt, 0.44, { cfg: { adjudicator: { model: "sonnet", enabled: true } }, gen: okGen(seen), appendBrainLedger: (o) => rows.push(o) });
-    assert("KNOB: the CONFIGURED adjudicator model reaches the engine AND the ledger row (it reached neither before)",
-      seen.length === 1 && seen[0] === "sonnet" && rows[0].model === "sonnet" && rows[0].model_requested === undefined);
-    // the live file's own value on the day of the repair
+    await adjudicateLive(evt, 0.44, { cfg: ROLE_CFG, gen: okGen(seen), appendBrainLedger: (o) => rows.push(o) });
+    assert("ROLE: the configured ROLE resolves through models.mjs and its model reaches the engine AND the ledger row — which now names the role and how it resolved (roster)",
+      seen.length === 1 && seen[0] === "haiku" && rows.length === 1 && rows[0].model === "haiku" && rows[0].role === "thalamus_adjudicator" && rows[0].via === "roster" && rows[0].model_fallback === undefined && rows[0].model_requested === undefined);
+    // the live file's own leftover on the day of unit 818
     const seen2 = [], rows2 = [];
-    await adjudicateLive(evt, 0.44, { cfg: { adjudicator: { model: "gemini-flash-lite-latest", enabled: true } }, gen: okGen(seen2), appendBrainLedger: (o) => rows2.push(o) });   /* models-literal-ok: the RETIRED name on purpose — this fixture proves the fallback */
-    assert("KNOB: a name `claude -p` cannot spawn falls back to the live-proven default — and the row NAMES the substitution instead of hiding it",
-      seen2[0] === "haiku" && rows2[0].model === "haiku" && rows2[0].model_requested === "gemini-flash-lite-latest" && /claude -p/.test(String(rows2[0].model_fallback)));   /* models-literal-ok: fixture */
-    assert("KNOB: an empty/missing model never blanks the --model flag", resolveAdjModel({ adjudicator: { enabled: true } }).model === "haiku" && resolveAdjModel({}).model === "haiku");
-    assert("KNOB: a full claude-* model id passes through untouched (the CLI takes them verbatim)",
-      resolveAdjModel({ adjudicator: { model: "claude-haiku-4-5-20251001" } }).model === "claude-haiku-4-5-20251001");   // models-literal-ok — selftest fixture: the CLI takes a full id verbatim, and that is the invariant under test
+    await adjudicateLive(evt, 0.44, { cfg: { adjudicator: { model: "gemini-flash-lite-latest", role: "thalamus_adjudicator", enabled: true } }, gen: okGen(seen2), appendBrainLedger: (o) => rows2.push(o) });   /* models-literal-ok: the RETIRED name on purpose — this fixture proves a leftover model key is ignored */
+    assert("ROLE: a leftover adjudicator.model is IGNORED — the gemini name his file still carries reaches neither the engine nor the row (`models check` reds the file; the owner setter retires it)",
+      seen2.length === 1 && seen2[0] === "haiku" && rows2[0].model === "haiku" && !JSON.stringify(rows2[0]).includes("gemini-flash-lite-latest"));   /* models-literal-ok: fixture */
+    // THE SILENT WALL, at the resolver: no role named, or one the roster does not know → model null, a NAMED
+    // reason, no engine call, and still a meter row that says why
+    const noRole = resolveAdjModel({ adjudicator: { enabled: true } }), stray = resolveAdjModel({ adjudicator: { role: "no_such_role", enabled: true } });
+    const wallRows = []; let wallCalls = 0;
+    const walledRole = await adjudicateLive(evt, 0.44, { cfg: { adjudicator: { role: "no_such_role", enabled: true } }, gen: async () => { wallCalls++; return { ok: true, text: "yes", total_tokens: 10 }; }, appendBrainLedger: (o) => wallRows.push(o) });
+    assert("ROLE · THE SILENT WALL: a role that resolves to nothing (none named, or unknown to the roster) is model:null with a NAMED fallback — adjudicateLive pays nothing, never reaches the engine, and its meter row says why",
+      noRole.model === null && /no adjudicator\.role/.test(noRole.fallback) && resolveAdjModel({}).model === null && stray.model === null && /no_such_role/.test(stray.fallback)
+      && walledRole === false && wallCalls === 0 && wallRows.length === 1 && wallRows[0].model === null && wallRows[0].role === "no_such_role" && wallRows[0].via === null
+      && /no_such_role/.test(String(wallRows[0].model_fallback)) && wallRows[0].ok === false && wallRows[0].total_tokens === 0 && wallRows[0].tokens_estimated === false && /not called/.test(String(wallRows[0].error)));
+    // THE ENV DOOR: the roster's override leads, and a full claude-* id rides it verbatim (the CLI takes them)
+    const seenEnv = [], rowsEnv = [];
+    if (ADJ_ENV) process.env[ADJ_ENV] = "sonnet";
+    await adjudicateLive(evt, 0.44, { cfg: ROLE_CFG, gen: okGen(seenEnv), appendBrainLedger: (o) => rowsEnv.push(o) });
+    if (ADJ_ENV) process.env[ADJ_ENV] = "claude-haiku-4-5-20251001";   // models-literal-ok — selftest fixture: a full id rides the env verbatim, and that is the invariant under test
+    const fullId = resolveAdjModel(ROLE_CFG);
+    if (ADJ_ENV) delete process.env[ADJ_ENV];
+    assert("ROLE · ENV: the roster's env override leads and the row SAYS so (via env:ARSENAL_CLAUDE_THALAMUS_ADJ); a full claude-* id passes verbatim (the CLI takes them); unset, the roster answers again",
+      seenEnv.length === 1 && seenEnv[0] === "sonnet" && rowsEnv[0].via === `env:${ADJ_ENV}` && fullId.model === "claude-haiku-4-5-20251001" && resolveAdjModel(ROLE_CFG).model === "haiku" && resolveAdjModel(ROLE_CFG).via === "roster");   // models-literal-ok — selftest fixture
     // THE LIVE FILE, not a fixture — and stated as an invariant, not a value, so it
-    // survives him legitimately turning the knob tomorrow.
+    // survives him legitimately turning the knob tomorrow (or never running the setter at all).
     const live = resolveAdjModel(loadConfig());
-    assert(`KNOB: whatever thalamus_config.json names (${JSON.stringify(live.requested)}), the daemon only ever spawns a model claude -p can take (${live.model})`,
-      CLAUDE_MODEL_ALIASES.has(live.model) || /^claude-/i.test(live.model));
+    assert(`ROLE: whatever thalamus_config.json names (role ${JSON.stringify(live.role)}), the daemon spends only what the ROSTER resolves for that role (${live.model}) — or nothing at all`,
+      live.model === null || live.model === (resolveClaudeRole(live.role) || {}).model);
     // and the knob must be READABLE — a live knob nobody can see is how the last
     // three weeks happened
     const st = buildStatus([], [{ day: "d", tier: 2, S: 0.5, key: "voice:x", comps: { self: 1 }, adjudicated: true, outcome: "adjudicated_up" }], {}, loadConfig());
@@ -1758,15 +1857,116 @@ async function selftest() {
     // moment the knob legitimately turned off, which is a false red, and a false red is how a
     // real one gets ignored. Now it pins BOTH branches against the live config — stricter, not
     // kinder: the line must report whichever state the knob is actually in, and never the other.
-    const knobOn = (loadConfig().adjudicator || {}).enabled !== false;
-    const stOff = buildStatus([], [{ day: "d", tier: 2, S: 0.5, key: "voice:x", comps: { self: 1 }, adjudicated: true, outcome: "adjudicated_up" }], {}, { ...loadConfig(), adjudicator: { ...(loadConfig().adjudicator || {}), enabled: false } });
-    const stOn = buildStatus([], [{ day: "d", tier: 2, S: 0.5, key: "voice:x", comps: { self: 1 }, adjudicated: true, outcome: "adjudicated_up" }], {}, { ...loadConfig(), adjudicator: { ...(loadConfig().adjudicator || {}), enabled: true } });
-    assert("KNOB: `status` reports the adjudicator's REAL state — OFF when off, on when on, never the other — plus its engine and any refused config value (1/1 verdicts bought)",
-      /adjudicator\s+: OFF · spends /.test(stOff) && !/adjudicator\s+: on · /.test(stOff)
-      && /adjudicator\s+: on · spends /.test(stOn) && !/adjudicator\s+: OFF · /.test(stOn)
+    // unit 818: knobOn reads the SAME predicate the spend path does (adjudicatorEnabled), and the line must
+    // now NAME the role and the model the roster resolves for it.
+    const knobOn = adjudicatorEnabled(loadConfig());
+    const stOff = buildStatus([], [{ day: "d", tier: 2, S: 0.5, key: "voice:x", comps: { self: 1 }, adjudicated: true, outcome: "adjudicated_up" }], {}, { ...loadConfig(), adjudicator: { role: "thalamus_adjudicator", enabled: false } });
+    const stOn = buildStatus([], [{ day: "d", tier: 2, S: 0.5, key: "voice:x", comps: { self: 1 }, adjudicated: true, outcome: "adjudicated_up" }], {}, { ...loadConfig(), adjudicator: { role: "thalamus_adjudicator", enabled: true } });
+    assert("KNOB: `status` reports the adjudicator's REAL state — OFF when off, on when on, never the other — and NAMES the role and the model the roster resolves for it (1/1 verdicts bought)",
+      /adjudicator\s+: OFF · spends haiku /.test(stOff) && !/adjudicator\s+: on · /.test(stOff)
+      && /adjudicator\s+: on · spends haiku /.test(stOn) && !/adjudicator\s+: OFF · /.test(stOn)
+      && /role thalamus_adjudicator → haiku \(models\.mjs roster\)/.test(stOn) && /role thalamus_adjudicator → haiku/.test(stOff)
       && new RegExp(`adjudicator\\s+: ${knobOn ? "on" : "OFF"} · spends `).test(st)
       && /1\/1 ε-band verdict/.test(st));
   }
+
+  // (6d) UNIT 818 · THE DEFAULT, THE DOORS AND THE OWNER SETTER (13 Nov 2026 — forks rows 818 / 826 / 834).
+  // Every change planted both ways. Temp files only (tmpdir), through this organ's own writer and reader —
+  // no new fs site — and no adjudicateLive call here can bill anything: each injects its ledger sink.
+  {
+    const evt = { modality: "voice", text: "i don't get attention", event_key: "voice:doubt" };
+    assert("818 DEFAULT (row 834 (4)): the default block is { role: thalamus_adjudicator, enabled: false } — his zero-token order is the DEFAULT, not the live file alone — and DEFAULT_ADJUDICATOR is a frozen copy of it",
+      JSON.stringify(DEFAULT_CONFIG.adjudicator) === JSON.stringify({ role: "thalamus_adjudicator", enabled: false })
+      && Object.isFrozen(DEFAULT_ADJUDICATOR) && DEFAULT_ADJUDICATOR !== DEFAULT_CONFIG.adjudicator
+      && JSON.stringify(DEFAULT_ADJUDICATOR) === JSON.stringify(DEFAULT_CONFIG.adjudicator) && adjudicatorEnabled(DEFAULT_CONFIG) === false);
+    const tdir = join(tmpdir(), `thalamus_818_${process.pid}`);
+    wipe(tdir);
+    const tcfg = join(tdir, "thalamus_config.json");
+    writeAtomic(tcfg, JSON.stringify({ wake_cap_per_day: 7, tiers: { tau0: 0.25 } }, null, 1));   // a config WITHOUT an adjudicator block
+    const noBlock = loadConfig(tcfg); let nbCalls = 0; const nbRows = [];
+    const nbSpent = await adjudicateLive(evt, 0.44, { cfg: noBlock, gen: async () => { nbCalls++; return { ok: true, text: "yes", total_tokens: 1 }; }, appendBrainLedger: (o) => nbRows.push(o) });
+    assert("818 NO BLOCK → NO SPEND: loadConfig(path) reads the file it is handed, a config WITHOUT an adjudicator block loads DISABLED, and adjudicateLive reaches the engine 0 times and bills nothing",
+      noBlock.wake_cap_per_day === 7 && noBlock.adjudicator.enabled === false && noBlock.adjudicator.role === "thalamus_adjudicator" && nbSpent === false && nbCalls === 0 && nbRows.length === 0);
+    let truthyCalls = 0;
+    const truthyGen = async () => { truthyCalls++; return { ok: true, text: "yes", total_tokens: 1 }; };
+    const truthy = await adjudicateLive(evt, 0.44, { cfg: { adjudicator: { role: "thalamus_adjudicator", enabled: "yes" } }, gen: truthyGen, appendBrainLedger: () => {} });
+    const bare = await adjudicateLive(evt, 0.44, { cfg: {}, gen: truthyGen, appendBrainLedger: () => {} });
+    assert("818 ON MEANS `true`: a truthy non-boolean (\"yes\") or a cfg with no block at all never wakes the lane, and `status` reads the SAME predicate (OFF)",
+      truthy === false && bare === false && truthyCalls === 0
+      && /adjudicator\s+: OFF · /.test(buildStatus([], [], {}, { ...DEFAULT_CONFIG, adjudicator: { role: "thalamus_adjudicator", enabled: "yes" } })));
+    const viaNull = resolveAdjModel({ adjudicator: { role: "thalamus_adjudicator" } }, { resolve: () => null });
+    const viaThrow = resolveAdjModel({ adjudicator: { role: "thalamus_adjudicator" } }, { resolve: () => { throw new Error("roster unreadable"); } });
+    const viaDoor = resolveAdjModel({ adjudicator: { role: "x_role" } }, { resolve: (r) => ({ role: r, model: "opus", via: "door" }) });
+    assert("818 THE RESOLVE DOOR: resolveAdjModel takes its resolver by injection; a resolver that answers nothing or THROWS fails closed with a NAMED fallback, never a guessed model",
+      viaNull.model === null && /resolves to no model/.test(viaNull.fallback) && viaThrow.model === null && /roster unreadable/.test(viaThrow.fallback)
+      && viaDoor.model === "opus" && viaDoor.via === "door" && viaDoor.role === "x_role" && viaDoor.fallback === null);
+    const src = afferentRawLines(fileURLToPath(import.meta.url)).join("\n");    // the roll's own raw reader — no new fs site
+    const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    const exportList = (code.match(/^export \{[^}]*\};?$/m) || [""])[0];
+    assert("818 L9: the 10 Aug resolver is FROZEN as resolveAdjModelLegacy — defined once, unexported, never called",
+      (code.match(/function resolveAdjModelLegacy\(/g) || []).length === 1 && (code.match(/resolveAdjModelLegacy\(/g) || []).length === 1 && exportList.length > 0 && !/resolveAdjModelLegacy/.test(exportList));
+    const self = await import(import.meta.url);
+    assert("818 EXPORTS: resolveAdjModel, adjudicateLive and DEFAULT_ADJUDICATOR leave the module, and an import stays side-effect free (the main guard still keys on argv[1])",
+      self.resolveAdjModel === resolveAdjModel && self.adjudicateLive === adjudicateLive && self.DEFAULT_ADJUDICATOR === DEFAULT_ADJUDICATOR && self.loadConfig === loadConfig
+      && /^if \(process\.argv\[1\] && import\.meta\.url === pathToFileURL\(process\.argv\[1\]\)\.href\) main\(\);$/m.test(src));
+    // ── THE OWNER SETTER, on a temp copy (never his file) ──
+    const NOW = new Date(2026, 10, 13);                      // a fixed LOCAL day → a fixed receipt key
+    const RKEY = "_adjudicator_model_retired_2026-11-13";
+    const fixture = (blk) => JSON.stringify({ _doc: "fixture — the setter's selftest", weights: { pe: 0.35 }, adjudicator: blk, _receipt: "kept", deep: { deadline_ms: 45000 }, self_markers: ["confus"] }, null, 1);
+    const said = [];
+    const run = (args, text) => { if (text !== undefined) writeAtomic(tcfg, text); said.length = 0; const c = configMain([...args, "--config", tcfg], { say: (m) => said.push(m), now: NOW }); return { code: c, last: said[said.length - 1] || "" }; };
+    const bytes = () => readConfigBytes(tcfg).toString("utf8");
+    const minus = (x, y) => { const m = new Map(); for (const l of y) m.set(l, (m.get(l) || 0) + 1); return x.filter((l) => { const n = m.get(l) || 0; if (n) { m.set(l, n - 1); return false; } return true; }); };
+    const base1 = fixture({ model: "retired-model-x", enabled: false });
+    const r1 = run(["adjudicator-role", "thalamus_adjudicator", "--why", "unit 818 — the knob names a role"], base1);
+    const after1 = bytes(), o1 = JSON.parse(after1), la = base1.split("\n"), lb = after1.split("\n");
+    const removed = minus(la, lb), added = minus(lb, la);
+    assert("818 SETTER PASS (temp copy): the role is written, the retired model moves into _adjudicator_model_retired_<date> DIRECTLY after the block, enabled stays untouched, the diff is the block plus ONE line, and the last line prints the sha before and after",
+      r1.code === 0 && o1.adjudicator.role === "thalamus_adjudicator" && !("model" in o1.adjudicator) && o1.adjudicator.enabled === false
+      && Object.keys(o1).indexOf(RKEY) === Object.keys(o1).indexOf("adjudicator") + 1 && o1[RKEY] === "retired-model-x — unit 818 — the knob names a role"
+      && removed.length === 1 && /"model": "retired-model-x"/.test(removed[0]) && added.length === 2 && /"role": "thalamus_adjudicator"/.test(added[0]) && added[1].startsWith(` "${RKEY}": `)
+      && JSON.stringify(lb.filter((l) => !added.includes(l))) === JSON.stringify(la.filter((l) => !removed.includes(l))) && after1 === JSON.stringify(o1, null, 1)
+      && /^thalamus config: adjudicator\.role none -> thalamus_adjudicator · enabled false · sha [0-9a-f]{12} -> [0-9a-f]{12}$/.test(r1.last));
+    const rOn = run(["adjudicator-role", "thalamus_adjudicator", "--why", "x"], fixture({ model: "retired-model-x", enabled: true })), oOn = JSON.parse(bytes());
+    const rAbsent = run(["adjudicator-role", "thalamus_adjudicator", "--why", "x"], fixture({ model: "retired-model-x" })), oAbsent = JSON.parse(bytes());
+    assert("818 SETTER never writes `enabled`: true stays true, a block without the key stays without it — it renames the knob, it never wakes or sleeps the lane",
+      rOn.code === 0 && oOn.adjudicator.enabled === true && / · enabled true · /.test(rOn.last) && rAbsent.code === 0 && !("enabled" in oAbsent.adjudicator) && / · enabled absent · /.test(rAbsent.last));
+    const good = fixture({ model: "retired-model-x", enabled: false });
+    const refusals = [
+      ["unknown role", ["adjudicator-role", "the_captains_favourite", "--why", "x"], good],
+      ["no --why", ["adjudicator-role", "thalamus_adjudicator"], good],
+      ["re-indented by 2", ["adjudicator-role", "thalamus_adjudicator", "--why", "x"], JSON.stringify(JSON.parse(good), null, 2)],
+      ["unparsable", ["adjudicator-role", "thalamus_adjudicator", "--why", "x"], good.replace(/\}$/, "")],
+    ].map(([name, args, text]) => { const r = run(args, text); return { name, code: r.code, last: r.last, untouched: bytes() === text }; });
+    assert("818 SETTER REFUSES with exit 2 and a NAMED line — an unknown role · a missing --why · a copy re-indented by 2 (not byte-equal) · an unparsable file — and leaves the file byte-for-byte as it was",
+      refusals.every((x) => x.code === 2 && x.untouched && /^thalamus config: REFUSED — /.test(x.last))
+      && /unknown role/.test(refusals[0].last) && /--why/.test(refusals[1].last) && /round trip/.test(refusals[2].last) && /unparsable/.test(refusals[3].last));
+    const rVerb = run(["weights", "pe", "0.5", "--why", "x"]);
+    said.length = 0;
+    const rPath = configMain(["adjudicator-role", "thalamus_adjudicator", "--why", "x", "--config", join(tdir, "brain_config.json")], { say: (m) => said.push(m), now: NOW });
+    assert("818 SETTER is NARROW (row 834 (3)): any verb but adjudicator-role is refused, and it writes no file but a thalamus_config.json",
+      rVerb.code === 2 && /the one verb/.test(rVerb.last) && rPath === 2 && /must name a thalamus_config\.json/.test(said[said.length - 1] || ""));
+    // L8 (row 850): the first form sliced from the first "async function main()" in the file, which was THIS assert's own literal,
+    // so both needles matched on its own line and it passed whatever main() did (the dispatch moved below the import, or deleted).
+    // Now the REAL main() by its line-start definition, cut at its closing brace, both needles line-anchored inside that body.
+    const mainAt = code.search(/^async function main\(\) \{$/m);
+    const mainBody = mainAt < 0 ? "" : code.slice(mainAt, mainAt + code.slice(mainAt).search(/^\}$/m));
+    const dispatchAt = mainBody.search(/^\s*if \(mode === "config"\) \{ process\.exit\(configMain\(/m), importAt = mainBody.search(/await import\(/);
+    assert("818 SETTER is dispatched BEFORE the daemon's imports: `config` leaves the REAL main() (its line-start definition, cut at its closing brace) above main's first dynamic import",
+      mainAt > 0 && mainBody.length > 0 && dispatchAt > 0 && importAt > 0 && dispatchAt < importAt);
+    const withReceipt = JSON.stringify({ adjudicator: { model: "retired-model-x", enabled: false }, [RKEY]: "an earlier receipt, same day" }, null, 1);
+    const r7 = run(["adjudicator-role", "thalamus_adjudicator", "--why", "x"], withReceipt);
+    assert("818 SETTER never overwrites a receipt: a same-day _adjudicator_model_retired_<date> already present → refused (exit 2), the file untouched",
+      r7.code === 2 && /never overwritten/.test(r7.last) && bytes() === withReceipt);
+    run(["adjudicator-role", "thalamus_adjudicator", "--why", "first"], good);
+    const once = bytes();
+    const r8 = run(["adjudicator-role", "thalamus_adjudicator", "--why", "again"]);
+    assert("818 SETTER re-run: the same role with nothing left to retire writes NOTHING — sha X -> X, the file byte-for-byte as it was",
+      r8.code === 0 && bytes() === once && /nothing to change/.test(said.join("\n"))
+      && /^thalamus config: adjudicator\.role thalamus_adjudicator -> thalamus_adjudicator · enabled false · sha ([0-9a-f]{12}) -> \1$/.test(r8.last));
+    wipe(tdir);
+  }
+  if (ADJ_ENV) { if (adjEnvSaved === undefined) delete process.env[ADJ_ENV]; else process.env[ADJ_ENV] = adjEnvSaved; }   // unit 818: his env, exactly as found
 
   // the door + the gates
   {
@@ -2437,8 +2637,14 @@ function buildStatus(rows, allRows, w, cfg) {
   const adj = resolveAdjModel(cfg);
   const adjBought = allRows.filter(r => r.adjudicated === true).length;
   const adjBand = allRows.filter(r => r.outcome === "adjudicated_up" || r.outcome === "adjudicated_down" || r.adjudicated === true).length;
-  L.push(`  adjudicator    : ${((cfg.adjudicator || {}).enabled === false) ? "OFF" : "on"} · spends ${adj.model} via claude -p`
-    + (adj.fallback ? ` — thalamus_config asks "${adj.requested}", REFUSED: ${adj.fallback}; the live-proven default is spent instead (his call to change)` : ` (straight from thalamus_config.json)`)
+  // UNIT 818: the line names the ROLE and the model the roster resolves for it, reads the SAME on/off
+  // predicate the spend path does, and says out loud when the file still carries a model it now ignores.
+  const adjBlock = (cfg || {}).adjudicator || DEFAULT_ADJUDICATOR;
+  const leftover = Object.prototype.hasOwnProperty.call(adjBlock, "model")
+    ? ` · thalamus_config still carries adjudicator.model ${JSON.stringify(adjBlock.model)} — IGNORED (\`models check\` reds it; \`node scripts/thalamus.mjs config adjudicator-role <role> --why "…"\` retires it)` : "";
+  L.push(`  adjudicator    : ${adjudicatorEnabled(cfg) ? "on" : "OFF"} · spends ${adj.model || "nothing"} via claude -p`
+    + (adj.model ? ` · role ${adj.role} → ${adj.model} (${adj.via === "roster" ? "models.mjs roster" : adj.via})` : ` · role ${adj.role ? JSON.stringify(adj.role) : "none"} resolves to NO model: ${adj.fallback}`)
+    + leftover
     + ` · ${adjBought}/${adjBand} ε-band verdict(s) bought lifetime`);
   // #10 — is the log actually landing?
   let logState = "MISSING — no diagnostic has been written yet";
@@ -2452,6 +2658,104 @@ function statusReport() {
   const all = readLines(SLEDGER);
   const rows = all.filter(r => (r.day || String(r.ts || "").slice(0, 10)) === localDate());
   return buildStatus(rows, all, w, cfg);
+}
+
+// ---------------------------------------------------------------------------
+// UNIT 818 · THE OWNER SETTER (13 Nov 2026 — forks rows 826 (ii) / 834 (3))
+//   node scripts/thalamus.mjs config adjudicator-role <role> --why "<text>" [--config <path>]
+// The 29 Aug receipt in thalamus_config.json names the hole: this organ had NO config-setter, so an
+// approval-gated file only a hand-edit could change was a rule-4 hole by construction. This verb closes it
+// for ONE knob and no other (row 834 (3): NARROW — every attention weight stays under his approval law,
+// and no general setter is born). It is the SOLE WRITER of the adjudicator block, dispatched in main()
+// BEFORE the daemon's imports, and:
+//   · REFUSES with exit 2 and a named line: a role models.mjs CLAUDE_ROLES does not know · a missing --why ·
+//     an unparsable file · a file that is not byte-equal on the JSON.stringify(o, null, 1) round trip (it
+//     never reformats his file) — plus the narrow fences: any other verb, any file not named
+//     thalamus_config.json, a file with no adjudicator block, a receipt key that already exists;
+//   · writes `adjudicator.role` and NEVER `enabled` (it renames the knob; it never wakes or sleeps the lane);
+//   · moves a retired `model` into `_adjudicator_model_retired_<YYYY-MM-DD>` = "<old model> — <why>",
+//     inserted DIRECTLY AFTER the `adjudicator` key, so the diff is the block plus one line;
+//   · proves that before it writes (the post-condition below), writes atomically (tmp + rename, the
+//     organ's own writeAtomic), and ends on ONE line: the role before and after, `enabled` as it stands
+//     (unchanged), and the file's sha256 (12) before and after.
+// ---------------------------------------------------------------------------
+const SETTER_USAGE = `node scripts/thalamus.mjs config adjudicator-role <role> --why "<text>" [--config <path>]`;
+const sha12 = (buf) => createHash("sha256").update(buf).digest("hex").slice(0, 12);
+// the setter's ONE raw read — BYTES, never a parse: the round trip is judged on what is on disk
+const readConfigBytes = (path) => readFileSync(path);
+// PURE: the text the setter would write, or the named reason it refuses. No fs here.
+function adjudicatorRoleEdit(text, role, why, now = new Date()) {
+  let o;
+  try { o = JSON.parse(text); } catch (e) { return { ok: false, why: `the file is unparsable JSON (${String((e && e.message) || e).slice(0, 160)}) — nothing written` }; }
+  if (!o || typeof o !== "object" || Array.isArray(o)) return { ok: false, why: "the file is not a JSON object — nothing written" };
+  if (JSON.stringify(o, null, 1) !== text) return { ok: false, why: "the file is not byte-equal on the JSON.stringify(o, null, 1) round trip — this setter never reformats his file; nothing written" };
+  const has = (x, k) => Object.prototype.hasOwnProperty.call(x, k);
+  const blk = o.adjudicator;
+  if (!blk || typeof blk !== "object" || Array.isArray(blk)) return { ok: false, why: "the file has no adjudicator block — this verb edits the block, it never invents one (the code default is role thalamus_adjudicator, enabled false); nothing written" };
+  const oldRole = typeof blk.role === "string" ? blk.role : null;
+  const retiring = has(blk, "model");
+  const receiptKey = retiring ? `_adjudicator_model_retired_${localDate(now)}` : null;
+  if (receiptKey && has(o, receiptKey)) return { ok: false, why: `the receipt key ${receiptKey} already exists — a receipt is never overwritten; nothing written` };
+  // the block: the role takes the retired model's seat (or its own); every other key keeps its value AND its place
+  const nb = {};
+  if (!has(blk, "role") && !retiring) nb.role = role;
+  for (const [k, v] of Object.entries(blk)) {
+    if (k === "role") { nb.role = role; continue; }
+    if (k === "model") { if (!has(blk, "role")) nb.role = role; continue; }   // retired: it leaves the block for the receipt
+    nb[k] = v;                                                                // `enabled` rides through untouched — never written
+  }
+  const out = {};
+  for (const [k, v] of Object.entries(o)) {
+    out[k] = k === "adjudicator" ? nb : v;
+    if (k === "adjudicator" && receiptKey) out[receiptKey] = `${typeof blk.model === "string" ? blk.model : JSON.stringify(blk.model)} — ${why}`;
+  }
+  // THE POST-CONDITION, checked before any byte moves: every other key byte-identical and in place, the
+  // receipt directly after the block, `enabled` exactly as it was (value AND presence) in what is written.
+  const keys = Object.keys(o), at = keys.indexOf("adjudicator");
+  const expectKeys = receiptKey ? [...keys.slice(0, at + 1), receiptKey, ...keys.slice(at + 1)] : keys;
+  const wrote = out.adjudicator;
+  const held = JSON.stringify(Object.keys(out)) === JSON.stringify(expectKeys)
+    && keys.every((k) => k === "adjudicator" || JSON.stringify(out[k]) === JSON.stringify(o[k]))
+    && has(wrote, "enabled") === has(blk, "enabled") && JSON.stringify(wrote.enabled) === JSON.stringify(blk.enabled)
+    && wrote.role === role && !has(wrote, "model");
+  if (!held) return { ok: false, why: "the rewrite would touch more than the adjudicator block plus its receipt — nothing written" };
+  return { ok: true, out: JSON.stringify(out, null, 1), oldRole, receiptKey, hasEnabled: has(blk, "enabled"), enabled: blk.enabled };
+}
+// the CLI around it: parse, refuse by name, write atomically, one last line. Returns the exit code.
+function configMain(args, io = {}) {
+  const say = io.say || ((m) => console.log(m));
+  const refuse = (why) => { say(`thalamus config: REFUSED — ${why}`); return 2; };
+  const a = Array.isArray(args) ? args.slice() : [];
+  if (a[0] !== "adjudicator-role") return refuse(`the one verb is \`${SETTER_USAGE}\` — narrow by row 834 (3): every other weight in this file stays under his approval law`);
+  a.shift();
+  let role = null, why = null, path = CONFIG, bad = null;
+  for (let i = 0; i < a.length && !bad; i++) {
+    const x = String(a[i]);
+    if (x === "--why") { why = a[++i]; continue; }
+    if (x === "--config") { path = a[++i]; continue; }
+    if (x.startsWith("--")) { bad = `unknown flag ${x}`; continue; }
+    if (role === null) role = x; else bad = `a second role "${x}"`;
+  }
+  if (bad) return refuse(`${bad} — usage: ${SETTER_USAGE}`);
+  if (!role) return refuse(`no role named — usage: ${SETTER_USAGE}`);
+  if (!resolveClaudeRole(role)) return refuse(`unknown role "${role}" — models.mjs CLAUDE_ROLES knows: ${Object.keys(CLAUDE_ROLES).join(", ")}; nothing written`);
+  if (typeof why !== "string" || !why.trim()) return refuse(`--why "<text>" is required — the retired value's receipt carries it; nothing written`);
+  if (typeof path !== "string" || !path) return refuse(`--config needs a path — usage: ${SETTER_USAGE}`);
+  if (basename(path) !== basename(CONFIG)) return refuse(`--config must name a ${basename(CONFIG)} (got ${basename(path)}) — this verb writes that one file and no other; nothing written`);
+  let buf;
+  try { buf = readConfigBytes(path); } catch (e) { return refuse(`cannot read ${path} (${(e && e.code) || e}); nothing written`); }
+  const text = buf.toString("utf8");
+  if (!Buffer.from(text, "utf8").equals(buf)) return refuse(`${path} is not valid UTF-8, so no round trip can be byte-equal; nothing written`);
+  const ed = adjudicatorRoleEdit(text, role, why.trim(), io.now || new Date());
+  if (!ed.ok) return refuse(ed.why);
+  const before = sha12(buf), after = sha12(Buffer.from(ed.out, "utf8"));
+  if (ed.out === text) say(`thalamus config: nothing to change — ${path} not written`);
+  else {
+    try { writeAtomic(path, ed.out); } catch (e) { say(`thalamus config: WRITE FAILED — ${(e && e.message) || e} (tmp + rename: the file is as it was)`); return 1; }
+    if (ed.receiptKey) say(`thalamus config: retired adjudicator.model into ${ed.receiptKey} (directly after the block)`);
+  }
+  say(`thalamus config: adjudicator.role ${ed.oldRole || "none"} -> ${role} · enabled ${ed.hasEnabled ? JSON.stringify(ed.enabled) : "absent"} · sha ${before} -> ${after}`);
+  return 0;
 }
 
 
@@ -2586,6 +2890,9 @@ async function main() {
   const mode = (process.argv[2] || "").toLowerCase();
   if (mode === "selftest") { process.exit((await selftest()) ? 0 : 1); }
   if (mode === "status") { console.log(statusReport()); return; }
+  // UNIT 818 · THE OWNER SETTER is dispatched HERE — BEFORE the daemon's imports (brain.mjs just below, the
+  // spool at listen): a config write never boots, imports or touches the nucleus.
+  if (mode === "config") { process.exit(configMain(process.argv.slice(3))); }
   brainMod = await import("./brain.mjs");
   const cfg = loadConfig();
   // #10 — console.log alone went to a closed handle under hidden_run.vbs. Both,
@@ -2764,4 +3071,4 @@ export function afferentLiveness(rows, now = new Date(), reg = AFFERENT_SOURCES)
   return F;
 }
 
-export { rollAfferent, afferentFiles, monthOfLine, computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, pendingBg, matchBg, wakeCapToday, dossierKey, conceptRegistry, baseRateFor, provenanceOf, isHisVoice, selfLegacy, buildStatus, statusReport };
+export { rollAfferent, afferentFiles, monthOfLine, computeComponents, salience, tau1Effective, signalKey, sanitizeAfferent, createNucleus, createBusWatcher, surprisalPE, loadConfig, phashHamming, matchPreAnswer, pendingWakes, pendingBg, matchBg, wakeCapToday, dossierKey, conceptRegistry, baseRateFor, provenanceOf, isHisVoice, selfLegacy, buildStatus, statusReport, resolveAdjModel, adjudicateLive, DEFAULT_ADJUDICATOR };
