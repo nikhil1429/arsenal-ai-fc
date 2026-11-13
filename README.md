@@ -1,5 +1,85 @@
 # Arsenal AI FC ⚪🔴
 
+> A personal multi-agent system that runs my study and daily execution, built almost entirely
+> with Claude Code since July 2026.
+
+## In one minute
+
+- **What it does.** I'm retraining as an AI product engineer, and I have ADHD. This repo is the system
+  that plans my day, paces my study sessions, schedules spaced-repetition reviews, reads my sleep
+  data, sends me one-line nudges on my phone, and audits its own health.
+- **How it's built.** About 130 Node.js (ESM) scripts, roughly 136k lines, running on Windows with
+  Task Scheduler. They share a JSON state store in `dressing-room/state/` under one rule: **every
+  state file has exactly one writer**, and that writer is named in its script header.
+- **How it uses AI.** Work is routed to the cheapest tier that gives the same quality:
+  deterministic code first, Gemini for wide reading, and Claude (via `claude -p` on a subscription,
+  never an API key) for judgement. Every LLM lane is gated: it runs only when there is fresh input
+  *and* its last output actually reached me. Otherwise it sleeps and wakes itself up later.
+- **How it was built.** 900+ commits since 8 Jul 2026, pair-programmed with Claude Code. Every new
+  session starts with context from a local MCP memory server (`scripts/mcp-memory.mjs`), and the
+  study surfaces are Claude Code skills (`.claude/skills/`).
+
+> Most docs are written in **Hinglish** (Hindi + English), because I'm the only user. The code and
+> its comments are in English.
+
+## Architecture
+
+```
+ inputs                       relay                     runtime                     outputs
+ ───────                      ─────                     ───────                     ───────
+ Oura sleep data   ─┐                                ┌─ scheduled organs ─┐     ┌─ phone push (ntfy)
+ ActivityWatch     ─┼─▶  thalamus (localhost :4113) ─┤  (Task Scheduler)  ├──▶  ├─ one-line `state`
+ study sessions    ─┤    scores salience, decides    └─ brain.mjs ────────┘     ├─ study sessions
+ my own words      ─┘    what is worth thinking about   LLM job runtime +        │  (Claude Code skills)
+                                                        token-spend ledger       └─ one question card
+                                     all of it reads/writes  dressing-room/state/*.json  (one writer each)
+```
+
+## Engineering guardrails
+
+- **Every script has a `selftest` mode.** `npm test` (`scripts/organism_test.mjs`) runs every member
+  independently and reports all of them, so one red script never hides the rest.
+- **Static gates:** TypeScript `checkJs`, ESLint, dependency-cruiser, knip, and 8
+  [ast-grep](https://ast-grep.github.io/) rules in `laws/` that encode the system's own design rules
+  (owners-only state writes, no hard-coded model names, no bare `catch`, …).
+- **Secrets:** a `.gitleaks.toml` belt plus a `hooks/pre-commit` tripwire. Credentials stay in
+  gitignored files and are read at runtime.
+- **Honest status:** this is a personal rig under active rebuild, and the suite is **not** all green
+  today. Run `npm test` for the live state. No number in a doc is trusted over a command.
+
+## Repo map
+
+| Path | What lives there |
+|---|---|
+| `scripts/` | the organs: one `.mjs` per job, each with its own selftest |
+| `dressing-room/state/` | the shared state store (only the non-private minority is tracked) |
+| `learning-layer/` | the study method: how sessions run, the spaced-repetition and test rules |
+| `laws/` · `sgconfig.yml` | the ast-grep rule pack that checks the system's own laws |
+| `setup/` | Task Scheduler installers and runbooks |
+| `.claude/skills/` | Claude Code skills, the surfaces I actually use day to day |
+| `docs/archive/` | the build log, audits and decision records |
+
+## Glossary (the football names)
+
+| In the code | What it is |
+|---|---|
+| organ | a script with one job |
+| captain | me, the only user |
+| thalamus | the input relay daemon that decides what is worth thinking about |
+| brain | the LLM job runtime and its token-spend ledger |
+| Gaffer | the live watcher that sits beside a study session |
+| Goalkeeper | the sleep/readiness analyst. It reads Oura data and never gives medical advice |
+| groundsman | the bot that commits and pushes state |
+| forge / samjhao | the study-session pipeline: teach, question, capture |
+| Re-Jirah | a cold re-test of a topic I already closed |
+| card | one one-line question to me at a moment I already check in |
+
+---
+
+## The original README (kept as written)
+
+### Arsenal AI FC: the original overview
+
 **Arsenal AI FC** is a football-club-themed multi-agent personal accountability and execution system built for one specific user. Built for **Node 22**, using **ESM** modules on **Windows**, it runs entirely as a set of deterministic `.mjs` organs. These components communicate asynchronously over a git-based, single-writer JSON state bus located in `dressing-room/state`.
 
 > **Three precisions on the paragraph above (added 10 Aug 2026 — none of it was rewritten, all of it was checked against the code; this file had not been touched since `caa8dea`, 15 Jul 2026).**

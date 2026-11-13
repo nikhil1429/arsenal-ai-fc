@@ -38,7 +38,7 @@
 //     · "I want you to explain it in detail. I don't know what we are talking about"
 //     · "So what are these papers actually? I I I don't remember it."
 //     · "Jaffo, sorry to interrupt you but my dearest and my lovable friend
-//        Adhikari is watching you for the first time."
+//        [name withheld] is watching you for the first time."
 //     · "I don't want to know it right now."
 //   Every one of them passed the 3-gate word list the same way: DIRECTIVE via
 //   "i want you to", PERMANENCE/PROHIBITION via the "don't" inside "I don't know".
@@ -2414,7 +2414,7 @@ function selftest() {
   const NOISE = [
     "I want you to explain it in detail. I don't know what we are talking about to be honest.",
     "So what are these papers actually? I I I don't remember it. What are these? One second, I am getting a call. So yeah, what are these papers actually? I I don't remember it.",
-    "Jaffo, sorry to interrupt you but my dearest and my lovable friend Adhikari is watching you for the first time. And he is watching the entire cyborg organism for the first time. So, is there any way I I don't think so is there any way right now but but can you like would you like to explain yourself to him and like in detail? He is watching you for the first time.",
+    "Jaffo, sorry to interrupt you but my dearest and my lovable friend [name withheld] is watching you for the first time. And he is watching the entire cyborg organism for the first time. So, is there any way I I don't think so is there any way right now but but can you like would you like to explain yourself to him and like in detail? He is watching you for the first time.",
     "I don't want to know it right now. I because you told me in that call. I just wanted to check if you remember it. And you don't remember it. So that is a bit weird. But it's okay. Yeah.",
   ];
 
@@ -2667,7 +2667,7 @@ function selftest2(stub, S) {
         assert(`HIS RULING · VOCAB-AGNOSTIC, held by source: all ${rx.length} regex literals in the production half parse the MACHINE's own markers — not one tests HIS words`,
           suspect.length === 0, `these test something else: ${suspect.map((p) => "/" + p + "/").join(" · ")}`);
         assert("HIS RULING · SESSION-AGNOSTIC: the 15 Aug sitting appears as EVIDENCE in the header and as a FIXTURE in the selftest, and nowhere in the production code",
-          !prodCode.includes("15th of August") && !prodCode.includes("Adhikari") && !prodCode.includes("that is a bit weird") && !prodCode.includes("बिफोर"),
+          !prodCode.includes("15th of August") && !prodCode.includes("[name withheld]") && !prodCode.includes("that is a bit weird") && !prodCode.includes("बिफोर"),
           "one of his 15 Aug lines has leaked into executable code");
         assert("THE BRAIN NEVER BLOCKS THE MOUTH · every path out of `judge` exits 0 — a failure lands in the journal, never on the hot path",
           /if \(mode === "judge"\)[\s\S]{0,2400}?journalRow\(\{ engine: "none", error/.test(src) && !/if \(mode === "judge"\)[\s\S]{0,2400}?process\.exit\(1\)/.test(src));
