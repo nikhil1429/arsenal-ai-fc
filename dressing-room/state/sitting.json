@@ -1,268 +1,29 @@
 {
-  "id": "sit_20261108_0901_bc9f",
+  "id": "sit_20261113_0755_7571",
   "captain": "Nikhil (#14)",
   "surfaces": [
-    "voice"
+    "code"
   ],
-  "task": "Context Window",
-  "task_id": "2-12",
-  "route": "REVISION",
-  "concept": "context",
-  "route_why": "koi khula loop nahi — aakhri locked capsule 'context' pe samjhao",
+  "task": "neuralnet",
+  "task_id": "5-41",
+  "route": "FORGE",
+  "concept": "neuralnet",
+  "route_why": "forge session open @ step 3 — resume, kuch dobara nahi",
   "claude_session_id": null,
-  "host_session_id": null,
-  "host_transcript_path": null,
-  "host_source": null,
-  "host_bound_at": null,
-  "transport": "stream",
-  "opened_at": "2026-11-08T09:01:56.131Z",
-  "last_turn_at": "2026-11-08T09:01:56.131Z",
-  "closed_at": "2026-11-08T09:22:05.494Z",
+  "host_session_id": "5d17150f-fc93-44f8-b209-2a8dafc64ddd",
+  "host_transcript_path": "C:\\Users\\nikhi\\.claude\\projects\\C--Users-nikhi-GitHub-arsenal-ai-fc\\5d17150f-fc93-44f8-b209-2a8dafc64ddd.jsonl",
+  "host_source": "harness-env",
+  "host_bound_at": "2026-11-13T07:55:17.635Z",
+  "transport": "code",
+  "opened_at": "2026-11-13T07:55:17.618Z",
+  "last_turn_at": "2026-11-13T09:17:57.037Z",
+  "closed_at": "2026-11-13T09:38:18.049Z",
   "close_reason": "idle",
-  "plan": [
-    {
-      "i": 0,
-      "kind": "map",
-      "step": null,
-      "axis": null,
-      "question": true,
-      "est_seconds": 15,
-      "src": [
-        "capsule"
-      ],
-      "text": "Aaj samjhao-revision — Context Window. 9 axis, har axis pe pehle tumhara ek-line jawab, phir tumhara locked weld verbatim, phir ek check-question. Chalein?"
-    },
-    {
-      "i": 1,
-      "kind": "question",
-      "step": null,
-      "axis": "a",
-      "question": true,
-      "est_seconds": 12,
-      "src": [
-        "capsule"
-      ],
-      "text": "Axis a — Kya hai + analogy. Gut-word, phir ek line mein: Context window exactly kya hai? Yeh model ki 'memory' hai? Do alag messages ke beech model purani baat kaise yaad rakhta?"
-    },
-    {
-      "i": 2,
-      "kind": "recital",
-      "step": null,
-      "axis": "a",
-      "question": false,
-      "est_seconds": 45,
-      "src": [
-        "capsule"
-      ],
-      "text": "Context window = woh max BUNDLE (tokens mein) jo model HAR call pe ek saath padh sakta. Memory NAHI - RE-FEEDING. Model stateless: do calls ke beech ZERO memory. Analogy: AMNESIAC GENIUS - har 5 sec memory wipe; baat aage badhane ka ek hi tarika = use poora folder (ab tak ki saari baat) HAR baar dobara padhao. Folder = context = system rules + saare pichhle turns (tere + AI ke dono) + naya sawaal. Folder ki motai = tokens. [Stuck: pehle laga 'model ko yaad rehta hai' -> Jirah ne khola yaad nahi rehta, har baar re-feed hota.]"
-    },
-    {
-      "i": 3,
-      "kind": "question",
-      "step": null,
-      "axis": "b",
-      "question": true,
-      "est_seconds": 12,
-      "src": [
-        "capsule"
-      ],
-      "text": "Axis b — Kyun bounded (3 dushman) + first-principles. Gut-word, phir ek line mein: Window infinite kyun nahi? Bas RAM/GPU badha do na - phir? Need ko scratch se reinvent kar: kya rok raha hai use unbounded hone se?"
-    },
-    {
-      "i": 4,
-      "kind": "recital",
-      "step": null,
-      "axis": "b",
-      "question": false,
-      "est_seconds": 45,
-      "src": [
-        "capsule"
-      ],
-      "text": "3 DUSHMAN, do family. MACHINE-LIMITS (hardware se solvable): #1 KV-CACHE MEMORY (bada folder -> zyada GPU VRAM), #2 PER-STEP COMPUTE (har naya token poore folder ke KV pe re-attend). QUALITY-LIMIT (hardware se NAHI theek hota): #3 LOST-IN-THE-MIDDLE - U-shaped: start+end strong, BEECH ka maal model miss karta CHAHE wahin maujood ho (gayab nahi, ignored); kyun = attention lambe context mein patli phailti, beech ka signal doob jaata (2023 paper). SENIOR SIGNAL: infinite RAM+compute aa bhi jaye -> #1,#2 solve, par #3 PHIR BHI rehta. Bada window != behtar jawab. [attention ka faster-than-linear ka asli math = NN-internals (#4), park.]"
-    },
-    {
-      "i": 5,
-      "kind": "question",
-      "step": null,
-      "axis": "c",
-      "question": true,
-      "est_seconds": 12,
-      "src": [
-        "capsule"
-      ],
-      "text": "Axis c — Mechanism - NAME it (FIFO sliding window). Gut-word, phir ek line mein: Window full ho gaya - ab kya hota? Mechanism ko NAME kar. Kya model khud decide karta kaunsi baat girni hai?"
-    },
-    {
-      "i": 6,
-      "kind": "recital",
-      "step": null,
-      "axis": "c",
-      "question": false,
-      "est_seconds": 47,
-      "src": [
-        "capsule"
-      ],
-      "text": "SLIDING WINDOW = FIFO on the context folder. Folder full -> sabse PURANI cheez bahar (chahe user sawaal ho ya AI jawab - speaker matter NAHI, sirf 'oldest' matter) -> nayi cheez andar. Box hamesha latest pe khiska. MYTH TOD: model DECIDE nahi karta kya girega - yeh mechanical CHOP hai, CODE mein, model ke chalne se PEHLE (`if tokens>limit: drop oldest`). SILENT DATA LOSS: no error/warning - turn-20 pe model turn-2 wali baat 'bhool' jaata (truncate ho chuki). FinOps demo-killer. [Stuck: pehle laga 'user prompt protected, AI reply girti' -> ULTA: FIFO oldest-first, speaker irrelevant; tera apna purana sawaal bhi nikal sakta.]"
-    },
-    {
-      "i": 7,
-      "kind": "question",
-      "step": null,
-      "axis": "d",
-      "question": true,
-      "est_seconds": 12,
-      "src": [
-        "capsule"
-      ],
-      "text": "Axis d — Math + range + COST (kaun bharta). Gut-word, phir ek line mein: Window ka size numbers mein? 4k/128k/200k/1M ka insaani matlab? Aur compute kahan chalta, paisa kaun deta - user ya company?"
-    },
-    {
-      "i": 8,
-      "kind": "recital",
-      "step": null,
-      "axis": "d",
-      "question": false,
-      "est_seconds": 60,
-      "src": [
-        "capsule"
-      ],
-      "text": "1 token ~ 3/4 word (~4 chars Eng). 4k~3k words(~6pg) | 128k~75k(ek novel, sweet spot) | 200k~2 novels | 1M~750k(~10 novels). Real ranges (interview): ~4k(GPT-3.5 era) | ~128k(GPT-4 class, common) | ~200k(Claude) | ~1M+(Gemini frontier). FinOps: invoice~500-1000 tok -> 128k ~150 invoices/call; chat turn~100-500 tok. KEY DISTINCTION: 300k doc vs 128k window = #1 'FIT NAHI HUA' (capacity; ~172k ghuste hi nahi, model DEKHTA hi nahi) != #2 lost-in-middle (quality; content andar par beech under-weighted, sirf ANDAR ke maal pe). 'Pehle fit, PHIR beech.' COST: compute COMPANY ki GPU pe (VRAM/bijli unka) PAR paisa USER deta PER-TOKEN (API = per-token billing, GPU-seconds NAHI; GPU efficiency = compa…"
-    },
-    {
-      "i": 9,
-      "kind": "question",
-      "step": null,
-      "axis": "e",
-      "question": true,
-      "est_seconds": 12,
-      "src": [
-        "capsule"
-      ],
-      "text": "Axis e — Limits - truncation (silent loss). Gut-word, phir ek line mein: Truncation exactly kaise hota? Model padhta hai phir jitne tokens/logits fit karta utne store karta - aisa hota hai?"
-    },
-    {
-      "i": 10,
-      "kind": "recital",
-      "step": null,
-      "axis": "e",
-      "question": false,
-      "est_seconds": 39,
-      "src": [
-        "capsule"
-      ],
-      "text": "TRUNCATION = `if tokens > limit: drop oldest` - CODE mein, TOKENS pe, model CHALNE se PEHLE. Cut tokens model tak pahunchte hi NAHI -> un pe logits bante hi NAHI. LOGITS ka truncation mein ROLE NAHI. SILENT LOSS: no error/warning, turn-20 pe turn-2 'bhool'. FinOps demo-killer. [Stuck: pehle laga 'model top-to-bottom read -> har token ke logits -> jitne fit store -> baaki cut' -> GALAT: chop CODE mein hota model se pehle; logits ka role nahi.] ('kab NAHI' + truncate-vs-summarize-vs-RAG tradeoff -> axis-f.)"
-    },
-    {
-      "i": 11,
-      "kind": "question",
-      "step": null,
-      "axis": "f",
-      "question": true,
-      "est_seconds": 12,
-      "src": [
-        "capsule"
-      ],
-      "text": "Axis f — Tradeoffs - truncate vs summarize vs RAG. Gut-word, phir ek line mein: Folder bhar gaya - sirf chop hi raasta hai? Aur kya options hain, aur kab kaunsa use karega?"
-    },
-    {
-      "i": 12,
-      "kind": "recital",
-      "step": null,
-      "axis": "f",
-      "question": false,
-      "est_seconds": 60,
-      "src": [
-        "capsule"
-      ],
-      "text": "3 RAASTE jab folder bhare: (1) TRUNCATE/CHOP - FIFO oldest drop, KV free. +simple/sasta/instant -chopped baat HAMESHA gayi, silent loss, 'dumbest' (kya chop kar raha dekhta tak nahi). (2) SUMMARIZE/NICHOD - purane tokens -> chhota summary, context mein rakho. +matlab zinda+jagah bachi -ek EXTRA AI call (paisa+latency), detail kho sakti, lossy par chop se kam. (3) RAG - purana data vector DB mein BAHAR, per-query sirf relevant chunk retrieve. +context chhota+focused, kuch permanently nahi khota, lost-in-middle ka bhi ilaaj -sabse zyada machinery (embeddings+vector search+chunking, Sprint 5), galat retrieval=galat context. KAB: chop->purani baat sach mein bekaar (casual). summarize->gist chah…"
-    },
-    {
-      "i": 13,
-      "kind": "question",
-      "step": null,
-      "axis": "g",
-      "question": true,
-      "est_seconds": 12,
-      "src": [
-        "capsule"
-      ],
-      "text": "Axis g — FinOps spot + defend-able decision. Gut-word, phir ek line mein: FinOps chat-copilot mein context kaise manage karega? Ek decision do jo tu interview mein KHUD defend kare."
-    },
-    {
-      "i": 14,
-      "kind": "recital",
-      "step": null,
-      "axis": "g",
-      "question": false,
-      "est_seconds": 54,
-      "src": [
-        "capsule"
-      ],
-      "text": "chat-copilot context = LAYERED (ek hathoda sab pe NAHI): (1) Recent ~5-10 turns -> VERBATIM (koi tool nahi; sabse relevant, exact). (2) Beech ki purani chat -> SUMMARIZE (gist kaam ka, jagah bachi). (3) Bada vendor-data (saare invoices, past allocations) -> RAG (chat ka hissa hi nahi - files/DB, bahut bada, context mein poora aata hi nahi; 'Noida last time?' -> vector search se woh record retrieve). DEFEND LINE: 'recent verbatim + beech summarize + vendor-data RAG - kyun? Har turn poora folder re-attend karta (cost+latency), aur sab thoonsne se lost-in-middle quality girti. Recent exact, old compress, bada data fetch-on-demand -> cost+capacity+quality teeno balance.' BONUS: layering sirf ja…"
-    },
-    {
-      "i": 15,
-      "kind": "question",
-      "step": null,
-      "axis": "h",
-      "question": true,
-      "est_seconds": 12,
-      "src": [
-        "capsule"
-      ],
-      "text": "Axis h — Scale/cost/gotcha + KV cache CONCRETE. Gut-word, phir ek line mein: KV cache dikhta kaisa hai? 100k+ tokens pe kya tootta? Har layer pe same KV? Reply ke baad uski KV remove hoti?"
-    },
-    {
-      "i": 16,
-      "kind": "recital",
-      "step": null,
-      "axis": "h",
-      "question": false,
-      "est_seconds": 60,
-      "src": [
-        "capsule"
-      ],
-      "text": "KV CACHE = box-of-cards: har TOKEN = ek CARD (uske Key+Value vectors). Ek box nahi - har LAYER ka apna box (e.g. 32 stacked); har layer us token ka apna ALAG K/V banati (same token, 32 ALAG cards). Naya word -> 1 naya card (COMPUTE=1 constant) PAR saare cards padhta (READS=N badhta, re-attention). SIZE: ~0.5 MB/token (32 layers, fp16, hidden~4096, illustrative) -> LINEAR (tokens x 0.5MB) -> 128k = ~64 GB VRAM, weights ke ALAG+UPAR. = dushman #1, window hardware-bounded. INTERVIEW: linear+64GB+memory-bound INTUITION chahiye; derivation RECITE nahi karni. REPLY KV STAYS: ek chat ke ANDAR cards sirf ADD (sawaal+reply dono), hatte tab jab window FULL (FIFO) ya chat khatam. Naya API call = fresh…"
-    },
-    {
-      "i": 17,
-      "kind": "question",
-      "step": null,
-      "axis": "i",
-      "question": true,
-      "est_seconds": 12,
-      "src": [
-        "capsule"
-      ],
-      "text": "Axis i — Samjhao 3 ways - CEO / junior / skeptic. Gut-word, phir ek line mein: Context window CEO ko, junior dev ko, aur skeptical senior ko - teen alag register mein samjha. (Register-switching = 'Product' muscle.)"
-    },
-    {
-      "i": 18,
-      "kind": "recital",
-      "step": null,
-      "axis": "i",
-      "question": false,
-      "est_seconds": 49,
-      "src": [
-        "capsule"
-      ],
-      "text": "CEO = business (model kitni data ek baari dimag mein rakhe; choti window=truncate, badi=paisa+time; utni do ki quality bhi na gire aur cost bhi na badhe). JUNIOR = mechanics (stateless, folder har prompt re-fed, folder ki KV GPU pe, next word se pehle KV READ = re-attention NOT re-computation; window full -> CODE FIFO truncate, model+GPU ko bhejne se PEHLE; sirf chopped tokens permanently gaye). SKEPTIC = tradeoffs (3 options se pehle - bada window FREE NAHI: KV linear 128k~64GB VRAM memory-bound + lost-in-the-middle quality girti; isliye andha bada-window nahi - recent verbatim + old summarize + bada data RAG, cost/capacity/quality balance). [exact words threeWays mein - SACRED.]"
-    },
-    {
-      "i": 19,
-      "kind": "unit",
-      "step": null,
-      "axis": null,
-      "question": false,
-      "est_seconds": 6,
-      "src": [],
-      "text": "Revision poori — 'full time' bolo to band karta hoon."
-    }
-  ],
-  "plan_source": "capsule",
-  "plan_map": "Aaj samjhao-revision — Context Window. 9 axis, har axis pe pehle tumhara ek-line jawab, phir tumhara locked weld verbatim, phir ek check-question. Chalein?",
-  "cursor": 1,
-  "unit_seq": 2,
+  "plan": [],
+  "plan_source": null,
+  "plan_map": null,
+  "cursor": 0,
+  "unit_seq": 0,
   "pending_question": null,
   "forge_step": 3,
   "forge_axis": "a",
@@ -273,20 +34,13 @@
     "_note": "one live child = ONE effort (a per-spawn flag, probed 18 Aug); the child runs at effort.compose. respond latency is MEASURED into sitting_log — §18: if p50 > 10 s, move respond down; never before the numbers."
   },
   "model": "opus",
-  "head_chars": 33765,
-  "head_footer": "[sitting_system: role 2717 · how_he_learns 1669 · gaffer_law 16168 · captain 154 · agenda EMPTY · kickoff 1191 · plan 125 · capsule 10867 · review_of_last 167 · intents EMPTY · standing EMPTY · night_coach EMPTY · pacer_note 437 · assembled 33765/60000]",
-  "inputs_read": [
-    "learning-layer/HOW_HE_LEARNS.md",
-    "THE_GAFFER.md",
-    "dressing-room/state/captain.json",
-    "learnstate json",
-    "dressing-room/state/capsules/context.json",
-    "dressing-room/state/sitting_reviews.jsonl"
-  ],
+  "head_chars": 0,
+  "head_footer": null,
+  "inputs_read": [],
   "stats": {
-    "turns": 1,
+    "turns": 0,
     "by_class": {
-      "deliver": 1,
+      "deliver": 0,
       "respond": 0,
       "compose": 0,
       "judge": 1
@@ -302,10 +56,10 @@
       "respond": [],
       "compose": [],
       "judge": [
-        7550
+        20627
       ]
     },
-    "units_composed": 2,
+    "units_composed": 0,
     "units_delivered": 0,
     "banked": 0,
     "owner_calls": 3,

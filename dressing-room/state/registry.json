@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-10-17T15:03:40.040Z",
+ "updated_at": "2026-11-13T21:35:17.731Z",
  "tables": {
   "mechanisms": [
    {
@@ -1368,6 +1368,16 @@
     "text": "14 Oct 2026, embeddings axis f, his words: 'thoda thoda clear hua hain, will more will be cleared once we start making the project?? if yes then let's move forward'. The 1-08 FinOps repo + Supabase build must include a hands-on run: embed his vendor names with a small and a large embedding model, measure recall@k on a labelled golden set, and pick the smallest model that clears the bar — so axis f (vector size tradeoff) is cemented by doing.",
     "updated_at": "2026-10-14T13:18:40.100Z",
     "added_at": "2026-10-14T13:18:40.100Z"
+   },
+   {
+    "id": "rul-mwfhwq1rhs",
+    "at": "2026-11-13T21:35:17.725Z",
+    "scope": "architecture",
+    "by": "captain",
+    "source": "acts.reroute",
+    "text": "17 Oct 2026, his word, verbatim: 'please create the revision page for this axis B, i am explicitly saying'. The axis recap page (9 Oct ruling) is ordered by him; the study rail refused the Write twice.",
+    "updated_at": "2026-11-13T21:35:17.727Z",
+    "added_at": "2026-11-13T21:35:17.727Z"
    }
   ],
   "job_inputs": [
