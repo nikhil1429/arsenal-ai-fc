@@ -2,8 +2,12 @@
 // ============================================================================
 // rails.mjs · ARSENAL AI FC — THE FACTORY GETS THE ORGANISM'S OWN DISCIPLINE
 //   (THE ORGANISM AUDIT §10-C · rung S1(b)+(c), 20 Aug 2026)
-//   SOLE WRITER of: NOTHING. This organ writes no file, ever — like turn_hook.mjs.
-//   A rail that can write is a rail that can be part of the accident.
+//   SOLE WRITER of: dressing-room/state/rails_blind.jsonl — append-only, ONE row per blind call (forks rows 814 (1), 827 (1)).
+//   SUPERSEDED BY ROW 814, kept as the record (L9: layered, never replaced): "This organ writes no file, ever — like
+//   turn_hook.mjs. A rail that can write is a rail that can be part of the accident." Row 814 found the one file it must
+//   write: on his Desktop day b2409cd2 this rail was BLIND on 20 of 56 calls and said so only on a stderr nobody reads, and a
+//   gate that cannot count its own blindness is a mirror. It writes that count and nothing else, ever: no decision, no
+//   payload, no other organ's state.
 // ----------------------------------------------------------------------------
 // THE ROOT THIS SERVES (§10, root B): **THE FACTORY IS LESS GUARDED THAN THE PRODUCT.**
 //   Both token disasters happened in SESSIONS, not in the organism — the 16-agent fleet,
@@ -50,7 +54,7 @@
 //     <!-- order-check:absent-ok scripts/ghost.mjs -->
 //   (ghost.mjs is a FINDING — a file named six times that does not exist — not a path.)
 //
-// LAWS: writes nothing · never rewrites a command · fail-open on its own error ·
+// LAWS: writes ONE file, its own blind ledger, and nothing else (row 814; "writes nothing" until then) · never rewrites a command · fail-open on its own error ·
 //   every deny names the rail id, the reason, and the compliant form.
 // THE ONE HAND-OFF (23 Sep 2026 · THE TEACHING GATE P1 · G0, architect ruling R7, forks row 255):
 //   when a Bash/PowerShell call runs `sitting.mjs open` in COMMAND POSITION, this hook hands the
@@ -74,18 +78,32 @@
 //   ALLOWED as "captain's mid-lesson engineering": said on stderr and counted by study_rail_replay.mjs, never
 //   blocked. #12 binds the model, not his order. The context read is FAIL-OPEN: any read error, no transcript,
 //   no prompt in the tail → no opinion, never a deny.
+// ROW 814 · THE BLIND RAIL IS COUNTED (13 Nov 2026 · forks rows 814, 822, 823; the design fixed by row 827 (1)). THE READ: the
+//   hook's payload is read IN-PROCESS and bounded by SILENCE (session_meter's readStdinUntilSilence, zero spawns), because row
+//   822 measured the old 300 ms deadline being spent by the drainer child's own node boot (14 of 50 payloads refused alone, 34
+//   of 50 beside the hookify hook, the payload already in the pipe). THE COUNT: a call that still reads no payload is a BLIND
+//   call — the same refusal line, the same fail-open allow, and ONE row { ts, why, read_ms, rail_ms (this process's uptime),
+//   free_mb } appended to rails_blind.jsonl (recordBlind), so the blindness has a number and the rail's own duration beside it.
+//   The ledger is BORN once (`rails.mjs born`: an exclusive create that never truncates) and a blind row never gives birth to
+//   it: an unborn ledger refuses the row on one stderr line and the call proceeds. ARSENAL_RAILS_BLIND_FILE moves it ONLY
+//   under the OS temp dir (the selftests' door); any other value is ignored. Target on a Desktop day: 0 rows.
 // WHO ELSE COULD ACT ON THIS OUTPUT? .claude/settings.json PreToolUse (wired) ·
 //   hooks/pre-commit (wired — tripwire first, then `orders`) · xray.mjs (reads this file
-//   like any organ; it has no state edges by design).
-// CLI: node scripts/rails.mjs pretooluse | orders [--quiet] | decide <json> | selftest
+//   like any organ; it had no state edges by design until row 814 gave it its ledger) ·
+//   study_rail_replay.mjs (reads rails_blind.jsonl: the blind calls per IST day beside its counts — wired, row 814) ·
+//   organism_test.mjs laws (THE BLIND IS COUNTED · ONE WRITER — wired, row 814).
+// CLI: node scripts/rails.mjs pretooluse | born | orders [--quiet] | decide <json> | selftest
 // ============================================================================
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, openSync, writeSync, closeSync, constants as FS } from "node:fs";   // row 814: the write half serves rails_blind.jsonl alone
 import { execFileSync, spawnSync } from "node:child_process";
 import { join, dirname, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { freemem, tmpdir } from "node:os";
 // THE STDIN DEADLINE (rung S5-R, 20 Aug 2026): session_meter's proven guard, imported —
 // never a second implementation (§2: a universal need solved twice is the disease).
-import { readStdinWithDeadline } from "./session_meter.mjs";
+// ROW 827 (1): the hook's read is session_meter's silence-bounded reader, imported the same way; the deadline read stays for
+// a direct in-process caller that hands nothing (pretooluse below), never on the hook path.
+import { readStdinWithDeadline, readStdinUntilSilence } from "./session_meter.mjs";
 // G3 — the study scope, the study set and his prompt's class, from the LEAF (never the gate or the pacer: heavy,
 // and a forge_session import before turn_hook's shim makes the shim a silent no-op — study_scope's own note)
 import { readSitting, studyScope, classifyPrompt, shellInStudySet, studyRerun, lastHumanPrompt, lessonArtifactOf } from "./study_scope.mjs";
@@ -267,6 +285,61 @@ export function hostHandoff(payload = {}) {
 const SITTING_CLI = join(HERE, "sitting.mjs");
 const spawnHandoff = (args) => spawnSync(process.execPath, [SITTING_CLI, ...args], { cwd: ROOT, timeout: 5000, stdio: ["ignore", "ignore", "ignore"], windowsHide: true });
 
+// ── ROW 814 · THE BLIND LEDGER — rails' one file (forks rows 814 (1), 822 (2), 827 (1)) ──────────────
+// One row per BLIND call (a call the rail read no payload for): { ts, why, read_ms, rail_ms, free_mb } — the refusal's own why,
+// how long the read waited, how long this process had lived (the rail's own duration, boot included: row 822 (2)), and the
+// free memory at that instant (no organ logged it at runtime, so row 822 could not read the minutes of his 39 refusals).
+export const RAILS_BLIND_FILE = join(ROOT, "dressing-room", "state", "rails_blind.jsonl");
+export const RAILS_BLIND_ENV = "ARSENAL_RAILS_BLIND_FILE";
+// PURE — which file a blind row goes to. The env door is honoured ONLY when it resolves strictly under the OS temp dir (the
+// selftests' door; lexical, after resolve(), so `..` cannot climb out); any other value is ignored and the real ledger stands.
+export function railsBlindFile(env = process.env) {
+  const v = env && typeof env[RAILS_BLIND_ENV] === "string" ? env[RAILS_BLIND_ENV].trim() : "";
+  if (!v) return RAILS_BLIND_FILE;
+  const fold = (p) => (process.platform === "win32" ? p.toLowerCase() : p);
+  const want = resolve(v);
+  return fold(want).startsWith(fold(resolve(tmpdir())) + sep) ? want : RAILS_BLIND_FILE;
+}
+// ONE DOOR for the ledger's two writes, the birth and the append: one open, one write, one close.
+function blindDoor(file, flag, text) {
+  const fd = openSync(file, flag);
+  try { if (text) writeSync(fd, text); } finally { closeSync(fd); }
+}
+const APPEND_NEVER_CREATE = FS.O_WRONLY | FS.O_APPEND;   // no O_CREAT: a blind row never gives birth to the ledger
+const rowsOf = (file) => { try { return readFileSync(file, "utf8").split("\n").filter((l) => l.trim()).length; } catch { return null; } };
+// Appends ONE row; NEVER throws — a failed write is one stderr line and the call proceeds (this rail's declared fail-open).
+export function recordBlind({ why, readMs, env = process.env } = {}) {
+  const file = railsBlindFile(env);
+  try {
+    const row = { ts: new Date().toISOString(), why: String(why || ""), read_ms: Number.isFinite(readMs) ? Math.round(readMs) : null, rail_ms: Math.round(process.uptime() * 1000), free_mb: Math.round(freemem() / 1048576) };
+    blindDoor(file, APPEND_NEVER_CREATE, JSON.stringify(row) + "\n");
+    return { ok: true, file, row };
+  } catch (e) {
+    const why2 = e && e.code === "ENOENT" ? "the ledger is not born — `node scripts/rails.mjs born`" : String((e && e.message) || e).slice(0, 160);
+    try { process.stderr.write(`rails: blind row NOT recorded (${why2}) · ${file}\n`); } catch { /* the call proceeds either way */ }
+    return { ok: false, file, why: why2 };
+  }
+}
+// The ledger's BIRTH: created EMPTY by an exclusive create, never truncated — a second birth says `already born` and changes
+// nothing. The CLI `born` prints this one line; exit 0 both ways (1 only when the birth itself fails, e.g. no state dir).
+export function bornBlind({ env = process.env } = {}) {
+  const file = railsBlindFile(env);
+  try {
+    blindDoor(file, "wx", "");
+    return { born: true, file, line: `rails: born ${file} — empty, by an exclusive create (one row per blind call from here on, row 814)` };
+  } catch (e) {
+    if (e && e.code === "EEXIST") return { born: false, file, line: `rails: already born ${file} — ${rowsOf(file) ?? "?"} row(s), untouched (a birth never truncates)` };
+    return { born: false, file, error: (e && e.code) || "error", line: `rails: born REFUSED — ${String((e && e.message) || e).slice(0, 160)}` };
+  }
+}
+// A BLIND CALL (row 814): no payload ⇒ no decision, this rail's declared fail-open, now COUNTED. The refusal line is written
+// FIRST — study_rail_replay counts a hook row blind by its stderr's first words — then the ledger row.
+function blindCall(why, readMs) {
+  process.stderr.write(`rails: REFUSED — ${why}. No payload ⇒ no decision; the tool call proceeds under the normal permission flow (this rail's declared fail-open). To exercise a rail by hand use \`node scripts/rails.mjs decide '<json>'\`.\n`);
+  recordBlind({ why, readMs });
+  return { decision: "allow", rail: null, why: `stdin refusal: ${why}` };
+}
+
 // THE HOOK — Claude Code's PreToolUse contract: a JSON decision on stdout, exit 0.
 // ⛔ fd 0 IS NEVER READ BLINDLY (rung S5-R, 20 Aug 2026). The first version called
 //   `readFileSync(0)` whenever stdin was not a TTY — the EXACT defect S5 STEP 0 fixed in
@@ -276,20 +349,23 @@ const spawnHandoff = (args) => spawnSync(process.execPath, [SITTING_CLI, ...args
 //   only the hang case changes, from a forever-block into a LOUD fast refusal that
 //   fail-opens — which is this rail's declared failure mode ("if this organ throws, the
 //   tool proceeds"), now reached in 300 ms instead of never.
-export function pretooluse({ raw = null, handoff = spawnHandoff, ctx = undefined } = {}) {
+// ROW 827 (1): the HOOK no longer reads here. main()'s `pretooluse` reads fd 0 in-process, bounded by silence, and hands the
+//   bytes on as `raw` — or the refusal as `refused` (its why names the silence bound) with `readMs`, which this function counts
+//   as a BLIND call (blindCall: the same line, ONE ledger row, the same fail-open allow). It stays SYNCHRONOUS. The deadline
+//   read below is kept for a direct caller that hands nothing (L9), and a refusal there is counted the same way.
+export function pretooluse({ raw = null, refused = null, readMs = null, handoff = spawnHandoff, ctx = undefined } = {}) {
   let payload = {};
   try {
     const handed = globalThis.__ARSENAL_HOOK_STDIN__;
     let text;
     if (raw !== null) text = raw;
+    else if (typeof refused === "string") return blindCall(refused, readMs);
     else if (typeof handed === "string") text = handed;
     else if (process.stdin.isTTY) text = "";
     else {
+      const t0 = performance.now();
       const r = readStdinWithDeadline();
-      if (!r.ok) {
-        process.stderr.write(`rails: REFUSED — ${r.why}. No payload ⇒ no decision; the tool call proceeds under the normal permission flow (this rail's declared fail-open). To exercise a rail by hand use \`node scripts/rails.mjs decide '<json>'\`.\n`);
-        return { decision: "allow", rail: null, why: `stdin refusal: ${r.why}` };
-      }
+      if (!r.ok) return blindCall(r.why, performance.now() - t0);
       text = r.raw;
     }
     payload = text && text.trim() ? JSON.parse(text) : {};
@@ -740,6 +816,17 @@ function selftest() {
   // rail organ). `pretooluse` on a non-TTY fd 0 that never closes must REFUSE fast, never
   // block: the un-guarded read blocked the full timeout window when proven live at S5-R.
   // If this assertion ever goes red again, the deadline has been removed.
+  // ROW 814 / 827 (1): the same pipe now ALSO leaves ONE blind row — in a TEMP ledger born first through the CLI and reached
+  // by the env door under the OS temp dir. A selftest never touches his real ledger.
+  const TMPD = process.getBuiltinModule("node:os").tmpdir();
+  const blindTmp = mkdtempSync(join(TMPD, "rails-blind-"));
+  const RAILS = fileURLToPath(import.meta.url);
+  const ledgerAt = (name) => join(blindTmp, name);
+  const cliBorn = (file) => spawnSync(process.execPath, [RAILS, "born"], { encoding: "utf8", timeout: 15000, windowsHide: true, env: { ...process.env, ARSENAL_RAILS_BLIND_FILE: file } });
+  const ledgerRows = (f) => { try { return readFileSync(f, "utf8").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return { torn: l }; } }); } catch { return null; } };
+  const check = (n, f) => { let c = false, why = ""; try { c = !!f(); } catch (e) { why = `THREW: ${String((e && e.message) || e).slice(0, 200)}`; } assert(n, c, why); };
+  const HANG_LEDGER = ledgerAt("hang.jsonl");
+  cliBorn(HANG_LEDGER);
   const wrap = `const {spawn}=require("node:child_process");
 const c=spawn(process.execPath,[process.env.__RAILS,"pretooluse"],{stdio:["pipe","ignore","ignore"]});
 let done=false;const t0=Date.now();
@@ -747,21 +834,118 @@ c.on("exit",()=>{done=true;console.log(String(Date.now()-t0));process.exit(0)});
 setTimeout(()=>{if(!done){try{c.kill()}catch{}console.log("HUNG");process.exit(0)}},5000);`;
   const hangProbe = spawnSync(process.execPath, ["-e", wrap], {
     encoding: "utf8", timeout: 15000, windowsHide: true,
-    env: { ...process.env, __RAILS: fileURLToPath(import.meta.url) },
+    env: { ...process.env, __RAILS: fileURLToPath(import.meta.url), ARSENAL_RAILS_BLIND_FILE: HANG_LEDGER },
   });
   const hangMs = Number((hangProbe.stdout || "").trim());
   assert("NO HANG — `pretooluse` on a non-TTY pipe that never closes REFUSES instead of blocking forever (S5-R, pinned)",
     Number.isFinite(hangMs) && hangMs < 3000, `wrapper said: ${JSON.stringify((hangProbe.stdout || "").trim())}${hangProbe.error ? " · " + hangProbe.error.code : ""}`);
+  check("BLIND COUNTED (row 814) — that never-closing pipe left exactly ONE row in the temp ledger, all five fields: ts · a why naming the silence bound · read_ms · rail_ms · free_mb",
+    () => {
+      const rows = ledgerRows(HANG_LEDGER), r = rows && rows[0];
+      return rows.length === 1 && Object.keys(r).join() === "ts,why,read_ms,rail_ms,free_mb" && !Number.isNaN(Date.parse(r.ts))
+        && /^no payload on fd 0 after 1000 ms of silence \(non-TTY, stdin never closed/.test(r.why)
+        && [r.read_ms, r.rail_ms, r.free_mb].every(Number.isInteger) && r.read_ms >= 990 && r.rail_ms >= r.read_ms && r.free_mb > 0;
+    });
+  // THE SLOW WRITER (rows 814 (3), 822 (1)): the payload arrives at 800 ms and the writer HOLDS the pipe open — it must be READ
+  const SLOW_LEDGER = ledgerAt("slow.jsonl");
+  cliBorn(SLOW_LEDGER);
+  const slow = `const {spawn}=require("node:child_process");
+const c=spawn(process.execPath,[process.env.__RAILS,"pretooluse"],{stdio:["pipe","pipe","pipe"]});
+let o="",e="";const t0=Date.now();c.stdout.on("data",(d)=>{o+=d});c.stderr.on("data",(d)=>{e+=d});
+setTimeout(()=>{c.stdin.write(process.env.__PAYLOAD)},800);
+c.on("close",()=>{console.log(JSON.stringify({ms:Date.now()-t0,o,e}));process.exit(0)});
+setTimeout(()=>{try{c.kill()}catch{}console.log(JSON.stringify({hung:true,o,e}));process.exit(0)},6000);`;
+  const slowProbe = spawnSync(process.execPath, ["-e", slow], {
+    encoding: "utf8", timeout: 15000, windowsHide: true,
+    env: { ...process.env, __RAILS: RAILS, ARSENAL_RAILS_BLIND_FILE: SLOW_LEDGER, __PAYLOAD: JSON.stringify({ hook_event_name: "PreToolUse", tool_name: "Agent", tool_input: { prompt: "go" } }) },
+  });
+  check("SLOW WRITER (row 814 (3)) — a payload sent at 800 ms on a pipe held OPEN is READ: the fleet deny JSON reaches stdout, nothing is refused, the temp ledger stays empty",
+    () => {
+      const w = JSON.parse(String(slowProbe.stdout || "").trim()), j = JSON.parse(w.o);
+      return !w.hung && w.ms >= 800 && j.hookSpecificOutput.permissionDecision === "deny" && /RAIL fleet/.test(j.hookSpecificOutput.permissionDecisionReason)
+        && !/REFUSED/.test(w.e) && ledgerRows(SLOW_LEDGER).length === 0;
+    });
+  check("BORN (row 814) — a birth is an exclusive create that never truncates: born, one row appended, born again says `already born` and the row is still there",
+    () => {
+      const env = { ARSENAL_RAILS_BLIND_FILE: ledgerAt("born.jsonl") };
+      const b1 = bornBlind({ env }), rec = recordBlind({ why: "planted", readMs: 7, env }), b2 = bornBlind({ env });
+      const rows = ledgerRows(env.ARSENAL_RAILS_BLIND_FILE);
+      return b1.born === true && rec.ok === true && b2.born === false && /^rails: already born .* — 1 row\(s\), untouched/.test(b2.line)
+        && rows.length === 1 && rows[0].why === "planted" && rows[0].read_ms === 7;
+    });
+  check("BORN CLI — `rails.mjs born` prints ONE line and exits 0 both ways (born, then already born), and the file it made is empty",
+    () => {
+      const f = ledgerAt("cli.jsonl"), r1 = cliBorn(f), r2 = cliBorn(f);
+      const lines = (r) => String(r.stdout || "").split("\n").filter((l) => l.trim());
+      return r1.status === 0 && r2.status === 0 && lines(r1).length === 1 && lines(r2).length === 1
+        && /^rails: born /.test(lines(r1)[0]) && /^rails: already born /.test(lines(r2)[0]) && readFileSync(f, "utf8") === "";
+    });
+  check("UNBORN — a blind row never gives birth to the ledger: recordBlind on an unborn file refuses on ONE stderr line, creates nothing, never throws",
+    () => {
+      const f = ledgerAt("unborn.jsonl"), errs = [], we = process.stderr.write.bind(process.stderr);
+      process.stderr.write = (s) => { errs.push(String(s)); return true; };
+      let rec;
+      try { rec = recordBlind({ why: "x", readMs: 1, env: { ARSENAL_RAILS_BLIND_FILE: f } }); } finally { process.stderr.write = we; }
+      return rec.ok === false && errs.length === 1 && /^rails: blind row NOT recorded \(the ledger is not born/.test(errs[0]) && !existsSync(f);
+    });
+  check("BLIND FILE — ARSENAL_RAILS_BLIND_FILE is honoured ONLY under the OS temp dir; outside it, through `..`, beside it, or the temp dir itself, the real ledger stands (a pure resolver: nothing written)",
+    () => {
+      // "outside" is anchored at the filesystem root: the tree itself may live under the temp dir (a sandbox copy does)
+      const inside = join(TMPD, "s814-x", "b.jsonl"), outside = resolve(sep, "s814-outside-the-temp-dir", "b.jsonl");
+      return railsBlindFile({ ARSENAL_RAILS_BLIND_FILE: inside }) === resolve(inside)
+        && railsBlindFile({ ARSENAL_RAILS_BLIND_FILE: outside }) === RAILS_BLIND_FILE
+        && railsBlindFile({ ARSENAL_RAILS_BLIND_FILE: `${TMPD}${sep}..${sep}escape.jsonl` }) === RAILS_BLIND_FILE
+        && railsBlindFile({ ARSENAL_RAILS_BLIND_FILE: `${TMPD}evil${sep}x.jsonl` }) === RAILS_BLIND_FILE
+        && railsBlindFile({ ARSENAL_RAILS_BLIND_FILE: TMPD }) === RAILS_BLIND_FILE
+        && railsBlindFile({}) === RAILS_BLIND_FILE && railsBlindFile({ ARSENAL_RAILS_BLIND_FILE: "  " }) === RAILS_BLIND_FILE
+        && RAILS_BLIND_FILE === join(ROOT, "dressing-room", "state", "rails_blind.jsonl");
+    });
+  check("HOOK (row 827 (1)) — given `refused`, pretooluse (still synchronous) prints the refusal line naming the silence bound, records ONE blind row, and returns today's fail-open allow",
+    () => {
+      const f = ledgerAt("hook.jsonl"), WHY = "no payload on fd 0 after 1000 ms of silence (non-TTY, stdin never closed)";
+      bornBlind({ env: { ARSENAL_RAILS_BLIND_FILE: f } });
+      const errs = [], outs = [], we = process.stderr.write.bind(process.stderr), wo = process.stdout.write.bind(process.stdout), prev = process.env.ARSENAL_RAILS_BLIND_FILE;
+      process.env.ARSENAL_RAILS_BLIND_FILE = f;
+      process.stderr.write = (s) => { errs.push(String(s)); return true; };
+      process.stdout.write = (s) => { outs.push(String(s)); return true; };
+      let d;
+      try { d = pretooluse({ refused: WHY, readMs: 1003, handoff: () => { throw new Error("a blind call hands nothing off"); } }); }
+      finally { process.stderr.write = we; process.stdout.write = wo; if (prev === undefined) delete process.env.ARSENAL_RAILS_BLIND_FILE; else process.env.ARSENAL_RAILS_BLIND_FILE = prev; }
+      const rows = ledgerRows(f);
+      return d && typeof d.then !== "function" && d.decision === "allow" && d.rail === null && d.why === `stdin refusal: ${WHY}`
+        && errs.length === 1 && errs[0].startsWith(`rails: REFUSED — ${WHY}. No payload ⇒ no decision;`) && outs.join("") === ""
+        && rows.length === 1 && rows[0].why === WHY && rows[0].read_ms === 1003;
+    });
+  try { rmSync(blindTmp, { recursive: true, force: true }); } catch { /* temp */ }
 
   console.log(`rails selftest: ${pass} passed, ${fail} failed`);
   if (fail) process.exit(1);
 }
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
+// THE HOOK'S READ (row 827 (1)) — the ONE async verb. The handed global or a TTY reads nothing (pretooluse takes them as
+// before); otherwise fd 0 is read IN-PROCESS until EOF, the first whole JSON object, or STDIN_SILENCE_MS of silence — zero
+// spawns — and handed on as `raw`, or as `refused` (a blind call, counted). Then the process EXITS once stdout and stderr
+// are flushed (each wait capped at 2 s): a pipe that never closes must not hold it.
+async function hook() {
+  try {
+    let r = null;
+    if (typeof globalThis.__ARSENAL_HOOK_STDIN__ !== "string" && !process.stdin.isTTY) r = await readStdinUntilSilence();
+    if (!r) pretooluse({});
+    else if (r.ok) pretooluse({ raw: r.raw, readMs: r.ms });
+    else pretooluse({ refused: r.why, readMs: r.ms });
+  } catch { /* fail-open: the tool call proceeds under the normal permission flow */ }
+  const flushed = (s) => new Promise((done) => { const cap = setTimeout(done, 2000); try { s.write("", () => { clearTimeout(cap); done(); }); } catch { clearTimeout(cap); done(); } });
+  await flushed(process.stdout);
+  await flushed(process.stderr);
+  process.exit(0);
+}
+
 function main() {
   const mode = process.argv[2] || "";
   if (mode === "selftest") return selftest();
-  if (mode === "pretooluse") { pretooluse({}); return; }
+  if (mode === "pretooluse") { hook(); return; }
+  if (mode === "born") { const b = bornBlind(); console.log(b.line); if (b.error) process.exitCode = 1; return; }
   if (mode === "decide") { console.log(JSON.stringify(decide(JSON.parse(process.argv[3] || "{}")), null, 1)); return; }
   if (mode === "orders") {
     const quiet = process.argv.includes("--quiet");
@@ -789,7 +973,7 @@ function main() {
     if (!quiet) console.log(`rails: ${c.files} order file(s) checked · open order clean · ${c.problems - c.blocking} lead(s) in closed records`);
     return;
   }
-  console.log("rails: pretooluse | orders [--quiet] | decide <json> | selftest");
+  console.log("rails: pretooluse | born | orders [--quiet] | decide <json> | selftest");
   process.exit(2);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

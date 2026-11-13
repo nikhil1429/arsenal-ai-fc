@@ -456,6 +456,104 @@ function argvModes(src) {
   return out;
 }
 
+// ── ONE WRITER, READ FROM THE SOURCE (row 814, 13 Nov 2026) ─────────────────────────────────────────
+/** writersOf — which of `sources` ({ file: text }) WRITE a state file, named by its file name. PURE: text in, sorted
+ *  file names out; laws() plants it both ways every run (an instrument that is not itself tested is a hypothesis).
+ *  A NAME of the file: its file name inside a string, or, to a fixpoint, an identifier bound to an expression that holds a
+ *  name (`const X = …`, a parameter default; each declarator's own expression, never an arrow function's body), or a
+ *  top-level function whose `return` hands one back. An EXPORTED name crosses into another file only through that file's
+ *  own import of it — a static import (an `as` alias too), or a namespace or dynamic import of its module, after which
+ *  `.name` counts — so a namesake that merely shares a function's name is never taken for it.
+ *  A WRITE: a line that calls an fs write sink, or this file's own write door (a function or one-line arrow around a
+ *  sink), with a name on it, or a line that calls a function whose own body writes (an imported one too: an organ
+ *  calling the owner's writer is a writer). Comments are dropped and identifiers are matched in CODE only (string
+ *  text blanked, column for column), so prose about the file is never a name. It may over-reach — a line that writes a
+ *  message carrying the file's name counts — and that red is the stricter one; a reader that hands the path to
+ *  readFileSync writes nothing. */
+export function writersOf(fileName, sources) {
+  const SINK = /\b(?:appendFileSync|writeFileSync|appendFile|writeFile|openSync|createWriteStream|renameSync|copyFileSync|cpSync|truncateSync|rmSync|unlinkSync|writeSync)\s*\(/;
+  const esc = (s) => s.replace(/\$/g, "\\$");
+  const alt = (set) => [...set].map(esc).join("|");
+  // a set of names as ONE pattern: `own` names never follow a dot (x.file is not `file`); names `via` a module namespace may
+  const re = (own, via, call) => (own.size || via.size ? new RegExp(`(?:${own.size ? `(?:^|[^\\w$.])(?:${alt(own)})` : "(?!)"}|${via.size ? `(?:^|[^\\w$])(?:${alt(via)})` : "(?!)"})${call ? "\\s*\\(" : "(?![\\w$])"}`) : null);
+  const codeOf = (s) => {
+    let out = "", q = null; const st = [];
+    const skip = (i) => (i + 1 < s.length ? "  " : " ");
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i], top = st[st.length - 1];
+      if (q) { if (c === "\\") { out += skip(i); i++; } else if (c === q) { q = null; out += c; } else out += " "; continue; }
+      if (top === "`") { if (c === "\\") { out += skip(i); i++; } else if (c === "`") { st.pop(); out += c; } else if (c === "$" && s[i + 1] === "{") { st.push("{"); i++; out += "  "; } else out += " "; continue; }
+      if (c === "'" || c === '"') { q = c; out += c; continue; }
+      if (c === "`") { st.push("`"); out += c; continue; }
+      if (st.length && c === "{") st.push("{");
+      else if (st.length && c === "}") { st.pop(); if (st[st.length - 1] === "`") { out += " "; continue; } }
+      out += c;
+    }
+    return out;
+  };
+  const exprAt = (s) => { let d = 0; for (let i = 0; i < s.length; i++) { const c = s[i]; if ("([{".includes(c)) d++; else if (")]}".includes(c)) { if (!d) return s.slice(0, i); d--; } else if ((c === "," || c === ";") && !d) return s.slice(0, i); } return s; };
+  const bare = (s) => { let t = s, u; do { u = t; t = t.replace(/\([^()]*\)|\{[^{}]*\}|\[[^[\]]*\]/g, ""); } while (t !== u); return t; };
+  const ARROW = /^\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/;
+  const base = (spec) => String(spec).split(/[\\/]/).pop();
+  const files = Object.entries(sources).map(([f, t]) => {
+    const flat = String(t).replace(/\/\*[\s\S]*?\*\//g, "");
+    const raw = flat.split("\n").map((l) => l.replace(/(^|[\s;,(){}[\]])\/\/.*$/, "$1"));
+    const code = raw.map(codeOf);
+    const exp = new Set(), doors = new Set(), bodies = [];
+    code.forEach((l, i) => {
+      const e = /^export\s+(?:async\s+)?(?:function\*?|const|let|var|class)\s+([A-Za-z_$][\w$]*)/.exec(l); if (e) exp.add(e[1]);
+      const fn = /^(?:export\s+)?(?:async\s+)?function\*?\s+([A-Za-z_$][\w$]*)\s*\(/.exec(l);
+      if (fn) { let j = i + 1; while (j < code.length && code[j] !== "}") j++; bodies.push([fn[1], i, j]); if (code.slice(i, j + 1).some((b) => SINK.test(b))) doors.add(fn[1]); }
+      const ar = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>(.*)$/.exec(l); if (ar && SINK.test(ar[2])) doors.add(ar[1]);
+    });
+    // what this file takes from which module: static `import { a, b as c } from "./m.mjs"` (local name → its export name),
+    // and a whole module through `import * as NS` or a dynamic import() naming it (its exports then count after a dot)
+    const named = new Map(), whole = new Set();
+    for (const m of raw.join("\n").matchAll(/import\s*\{([^}]*)\}\s*from\s*["'`]([^"'`]+)["'`]/g)) {
+      const map = named.get(base(m[2])) || new Map();
+      for (const s of m[1].split(",")) { const p = s.trim().split(/\s+as\s+/); if (p[0]) map.set((p[1] || p[0]).trim(), p[0].trim()); }
+      named.set(base(m[2]), map);
+    }
+    for (const m of raw.join("\n").matchAll(/import\s*\*\s*as\s+[A-Za-z_$][\w$]*\s+from\s*["'`]([^"'`]+)["'`]/g)) whole.add(base(m[1]));
+    for (const l of raw) if (/\bimport\s*\(/.test(l)) for (const m of l.matchAll(/["'`]([^"'`]*?([\w.-]+\.mjs))["'`]/g)) whole.add(m[2]);
+    return { f, raw, code, text: code.join("\n"), lit: String(t).includes(fileName), exp, doors, bodies, named, whole, local: new Set(), wfn: new Set() };
+  });
+  const byFile = new Map(files.map((x) => [x.f, x]));
+  // what x sees of other files' exported names and writers: by its own imports, never by a bare coincidence of names
+  const seen = (x, pick) => {
+    const own = new Set(pick(x)), via = new Set();
+    for (const [mod, map] of x.named) { const y = byFile.get(mod); if (y && y !== x) for (const [loc, orig] of map) if (pick(y).has(orig) && y.exp.has(orig)) own.add(loc); }
+    for (const mod of x.whole) { const y = byFile.get(mod); if (y && y !== x) for (const n of pick(y)) if (y.exp.has(n)) via.add(n); }
+    return { own, via };
+  };
+  const judge = (x) => {
+    const N = seen(x, (y) => y.local), W = seen(x, (y) => y.wfn);
+    const NAME = re(N.own, N.via, false), DOOR = re(x.doors, new Set(), true), WFN = re(W.own, W.via, true);
+    const writes = (i) => ((SINK.test(x.code[i]) || (!!DOOR && DOOR.test(x.code[i]))) && (x.raw[i].includes(fileName) || (!!NAME && NAME.test(x.code[i])))) || (!!WFN && WFN.test(x.code[i]));
+    return { NAME, writes };
+  };
+  for (let round = 0, grew = true; grew && round < 12; round++) {
+    grew = false;
+    for (const x of files) {
+      // a file can name the ledger only through its literal, its own names so far, or a module it imports that has some
+      if (!x.lit && !x.local.size && !x.wfn.size && ![...x.named.keys(), ...x.whole].some((m) => { const y = byFile.get(m); return y && y !== x && (y.local.size || y.wfn.size); })) continue;
+      const { NAME, writes } = judge(x);
+      const add = (set, n) => { if (!set.has(n)) { set.add(n); grew = true; } };
+      x.code.forEach((l, i) => {
+        for (const m of l.matchAll(/([A-Za-z_$][\w$]*)\s*=(?![=>])/g)) {
+          const at = m.index + m[0].length, rc = exprAt(l.slice(at));
+          if (!ARROW.test(rc) && (x.raw[i].slice(at, at + rc.length).includes(fileName) || (!!NAME && NAME.test(rc)))) add(x.local, m[1]);
+        }
+      });
+      for (const [fn, a, b] of x.bodies) {
+        for (let i = a; i <= b; i++) { const k = x.code[i].search(/\breturn\b/); if (k >= 0 && (x.raw[i].slice(k).includes(fileName) || (!!NAME && NAME.test(bare(x.code[i].slice(k + 6)))))) { add(x.local, fn); break; } }
+        for (let i = a; i <= b; i++) if (writes(i)) { add(x.wfn, fn); break; }
+      }
+    }
+  }
+  return files.filter((x) => { const { writes } = judge(x); return x.code.some((_, i) => writes(i)); }).map((x) => x.f).sort();
+}
+
 // ── 3. CROSS-ORGAN LAW CONSISTENCY ───────────────────────────────────────────
 // One law, two writers. Each organ's own selftest is green; the LAW can still be broken.
 async function laws() {
@@ -477,6 +575,46 @@ async function laws() {
 
     const badGutGrade = run([join(sb, "scripts", "rejirah.mjs"), "grade", "embeddings", "a", "held", "--gut", "maybe"], { cwd: sb });
     assert("GUT-WORD LAW · rejirah.mjs rejects an out-of-vocabulary gut-word", badGutGrade.code !== 0);
+
+    // ── ROW 814 (13 Nov 2026) · THE BLIND RAIL IS COUNTED — one ledger, ONE writer, a count the replay reads ─────────
+    // Beside the gut-word law because it is the same shape — one law, held the same way by every writer. Its subject is the
+    // rail's own blindness (20 of 56 PreToolUse Bash calls of his Desktop day b2409cd2 ran with NO decision and said so only
+    // on a stderr): the replay must COUNT a refused hook row, and rails.mjs must stay the ONE writer of the ledger that
+    // counts it. Both read only code and one planted dir, so they hold on a bare checkout too, before the first lane below
+    // that needs live state.
+    {
+      const blindDir = join(sb, "s814-blind");
+      const hookRow = (ts, stderr) => JSON.stringify({ type: "attachment", timestamp: ts, attachment: { type: "hook_success", hookName: "PreToolUse:Bash", hookEvent: "PreToolUse", stdout: "", stderr, exitCode: 0, command: 'node "$CLAUDE_PROJECT_DIR/scripts/rails.mjs" pretooluse', durationMs: 1031 } });
+      mkdirSync(blindDir, { recursive: true });
+      writeFileSync(join(blindDir, "desktop.jsonl"), [hookRow("2026-10-17T18:27:51.892Z", "rails: REFUSED — no payload on fd 0 within 300ms (non-TTY, stdin never closed). No payload ⇒ no decision; …"), hookRow("2026-10-17T18:31:00.000Z", "")].join("\n") + "\n");
+      const rep = run([join(sb, "scripts", "study_rail_replay.mjs"), blindDir, "--json"], { cwd: sb });
+      let rj = null; try { rj = JSON.parse(rep.out.split("\n").find((l) => l.startsWith("{")) || ""); } catch { /* asserted below */ }
+      assert("BLIND RAIL (row 814) · THE BLIND IS COUNTED — study_rail_replay --json over a planted dir (two rail hook rows, one REFUSED) reads totals.rails_blind 1 of totals.rails_calls 2",
+        !!rj && !!rj.totals && rj.totals.rails_blind === 1 && rj.totals.rails_calls === 2, `exit ${rep.code} · ${rep.out.slice(0, 300)}`);
+
+      // ONE WRITER — read from the SOURCE of every organ (scripts(): every scripts/*.mjs but this suite), never a typed list;
+      // the instrument is planted both ways first: a second writer by an alias, through the owner's resolver, by calling the
+      // owner's writer (named, or after a dynamic import) is found; a reader whose fixture writes name no ledger, and a
+      // namesake with its own function of the writer's name, are not.
+      const LEDGER = "rails_blind.jsonl";
+      const planted = writersOf(LEDGER, {
+        "own.mjs": `export const F = join(R, "${LEDGER}");\nexport function fileOf() {\n  return F;\n}\nfunction door(p, t) {\n  appendFileSync(p, t);\n}\nexport function record(x) {\n  door(fileOf(), x);\n}\n`,
+        "alias.mjs": `const L = join(ROOT, "dressing-room", "state", "${LEDGER}");\nexport function note(r) {\n  appendFileSync(L, r);\n}\n`,
+        "resolver.mjs": `import { fileOf } from "./own.mjs";\nconst f = fileOf();\nconst put = (p, t) => writeFileSync(p, t);\nput(\`\${f}\`, "");\n`,
+        "caller.mjs": `import { record as rec } from "./own.mjs";\nrec({ why: "x" });\n`,
+        "dynamic.mjs": `const O = await import("./own.mjs");\nO.record({ why: "x" });\n`,
+        "reader.mjs": `import { fileOf } from "./own.mjs";\nexport function read() {\n  return readFileSync(fileOf(), "utf8");\n}\nfunction selftest() {\n  writeFileSync(join(tmp, "x.jsonl"), "{}");   // appendFileSync(${LEDGER}) — prose\n}\n`,
+        "namesake.mjs": `function record(x) {\n  writeFileSync(join(tmp, "log.txt"), x);\n}\nrecord("its own record, not the owner's");\n`,
+      });
+      const writers = writersOf(LEDGER, Object.fromEntries(scripts().map((f) => [f, readOrgan(f)])));
+      const head = readOrgan("rails.mjs").split("\n");
+      const header = head.slice(0, Math.max(0, head.findIndex((l) => /^import\s/.test(l))));
+      const soleLine = header.find((l) => /^\/\/\s+SOLE WRITER of:?\s/.test(l)) || "";
+      assert("BLIND RAIL (row 814) · ONE WRITER — across scripts/*.mjs only rails.mjs WRITES rails_blind.jsonl (read from the source, the instrument planted both ways), and its header names the file on its SOLE WRITER line",
+        JSON.stringify(planted) === JSON.stringify(["alias.mjs", "caller.mjs", "dynamic.mjs", "own.mjs", "resolver.mjs"])
+          && JSON.stringify(writers) === JSON.stringify(["rails.mjs"]) && soleLine.includes(LEDGER) && !header.some((l) => /SOLE WRITER of:?\s+NOTHING/i.test(l)),
+        `planted ${JSON.stringify(planted)} · writers ${JSON.stringify(writers)} · SOLE WRITER line ${JSON.stringify(soleLine.slice(0, 120))}`);
+    }
 
     // ── A9 (4 Sep 2026) · THE STUDY ENTRY POINTS ARE AN ALLOWLIST ─────────────
     // TIER 0, and it is the cheapest gate in this rung: the two skills he actually

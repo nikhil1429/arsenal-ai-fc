@@ -414,6 +414,69 @@ export function readStdinWithDeadline(ms = STDIN_DEADLINE_MS) {
   return { ok: true, raw };
 }
 
+// ── THE SILENCE-BOUNDED READ (forks rows 814 (3) · 822 (1) · 827 (1), 13 Nov 2026) — the rail's read, beside the one above ──
+// THE NUMBER THAT MOVED IT (row 822, lane S: 50 PreToolUse payloads from his Desktop day b2409cd2, each written to the hook's
+//   pipe and CLOSED before the spawn). The payload is already in the pipe when a hook starts, so arrival costs nothing; the
+//   300 ms above is spent by the drainer CHILD's own node boot. The shipped read refused 14 of 50 alone and 34 of 50 beside the
+//   hookify hook that Claude Code starts at the same instant, and the worst first byte through a node boot was 990 ms. On his
+//   Desktop day that was 20 of 56 rail calls blind (row 814). So this read is IN-PROCESS: data / end listeners on the stream
+//   and ONE timer that every chunk re-arms. ZERO spawns.
+// IT COMPLETES on EOF, or the moment the bytes so far parse as ONE whole JSON object (a writer that sends the payload and holds
+//   the pipe open is answered at once, never by a clock alone). It REFUSES only when `silenceMs` pass with no byte and nothing
+//   usable has arrived, and the why names the bound. The bound is on SILENCE, never on completion: a payload still arriving
+//   is never cut.
+// STDIN_SILENCE_MS = 1000, AND WHERE IT COMES FROM (never typed from taste): above the 800 ms slow writer the ruling plants
+//   (rows 814 (3), 822 (1)) and above the worst first byte measured through a node boot, 990 ms (row 822, drainer run 2,
+//   610-1697 MB free). Stricter, never looser: a longer silence lets the rail judge the calls it used to wave through blind,
+//   and bringing it back toward 300 ms brings the blindness back (the 300 ms copy of this line refuses the 800 ms writer).
+// It detaches its listeners and pauses the stream when it resolves, so the caller's process can still exit on a pipe that
+//   never closes. readStdinWithDeadline above stays byte-for-byte (L9): hookPayload, the Stop hook's reader, keeps it.
+export const STDIN_SILENCE_MS = 1000;
+// Resolves { ok: true, raw, ms, how: "eof" | "json" } | { ok: false, why, ms } — never rejects, never spawns.
+export function readStdinUntilSilence({ silenceMs = STDIN_SILENCE_MS, stream = process.stdin } = {}) {
+  const t0 = performance.now();
+  return new Promise((resolve) => {
+    const chunks = [];
+    let bytes = 0, timer = null, done = false;
+    const text = () => Buffer.concat(chunks).toString("utf8");
+    // ONE whole JSON object: only when the last non-blank byte closes a brace is a parse tried (a large payload in many
+    // chunks is not re-parsed per chunk); an array, a string or a number is not the hook's payload, so it never completes here.
+    const whole = () => {
+      const all = Buffer.concat(chunks);
+      let i = all.length - 1;
+      while (i >= 0 && (all[i] === 0x20 || all[i] === 0x0a || all[i] === 0x0d || all[i] === 0x09)) i--;
+      if (i < 0 || all[i] !== 0x7d) return false;
+      try { const j = JSON.parse(all.toString("utf8")); return !!j && typeof j === "object" && !Array.isArray(j); } catch { return false; }
+    };
+    const finish = (r) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      stream.removeListener("data", onData);
+      stream.removeListener("end", onEnd);
+      stream.removeListener("error", onError);
+      try { stream.pause(); } catch { /* a stream that cannot pause has already let go of its listeners */ }
+      resolve({ ...r, ms: Math.round(performance.now() - t0) });
+    };
+    const onSilence = () => finish({ ok: false, why: `no payload on fd 0 after ${silenceMs} ms of silence (non-TTY, stdin never closed${bytes ? `; ${bytes} byte(s) arrived, not one whole JSON object` : ""})` });
+    const arm = () => { clearTimeout(timer); timer = setTimeout(onSilence, silenceMs); };
+    function onData(c) {
+      const b = Buffer.isBuffer(c) ? c : Buffer.from(String(c), "utf8");
+      chunks.push(b);
+      bytes += b.length;
+      if (whole()) return finish({ ok: true, raw: text(), how: "json" });
+      arm();
+    }
+    function onEnd() { finish({ ok: true, raw: text(), how: "eof" }); }
+    function onError(e) { finish({ ok: false, why: `fd 0 read failed (${(e && e.code) || String(e)})` }); }
+    if (stream.readableEnded) return finish({ ok: true, raw: "", how: "eof" });
+    stream.on("data", onData);
+    stream.on("end", onEnd);
+    stream.on("error", onError);
+    arm();
+  });
+}
+
 let _payload;
 let _refusal = null;
 export const payloadRefusal = () => _refusal;
@@ -474,7 +537,8 @@ export function live({ days = WINDOW_DAYS, now = new Date(), cacheFile = CACHE }
 }
 
 // ── SELFTEST — hermetic: a temp projects dir, a temp cache, no real transcripts ──
-function selftest() {
+// async since 13 Nov 2026 (row 827 (1)): case 17 awaits the silence-bounded reader; every case before it is unchanged.
+async function selftest() {
   let pass = 0, fail = 0;
   const assert = (n, c, d) => { if (c) pass++; else fail++; console.log(`  ${c ? "✓" : "✗"} ${n}${c || !d ? "" : `\n      ${d}`}`); };
   const tmp = mkdtempSync(join(tmpdir(), "meter-"));
@@ -681,6 +745,64 @@ setTimeout(()=>{if(!done){try{c.kill()}catch{}console.log("HUNG");process.exit(0
     assert("S11 CACHE · an unreadable file yields a NULL identity and claims nothing (never a silent \"unchanged\")",
       headSha(join(sb, "no-such-file.jsonl")) === null);
     try { rmSync(sb, { recursive: true, force: true }); } catch { /* best effort */ }
+  }
+
+  // ── 17 · THE SILENCE-BOUNDED READ (forks rows 814 (3) · 822 (1) · 827 (1)), the four shapes and a real pipe ──
+  // The four reader cases run on a PLANTED stream (a PassThrough written by hand, short bounds, under a second together);
+  // the fifth runs a REAL child on a REAL pipe that is never written or closed, through the wrapper idiom of case 16. Each
+  // case catches its own throw, so a missing reader is a ✗ line that names it, never a crash that hides the cases after it.
+  {
+    const check = async (n, f) => { let c = false, why = ""; try { c = !!(await f()); } catch (e) { why = `THREW: ${String((e && e.message) || e).slice(0, 200)}`; } assert(n, c, why); };
+    const { PassThrough } = process.getBuiltinModule("node:stream");
+    const PAYLOAD = JSON.stringify({ session_id: "s", hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: { command: "git status" } });
+    const held = (s) => s.listenerCount("data") + s.listenerCount("end") + s.listenerCount("error");
+    await check("SILENCE · EOF — a CLOSED pipe completes on its end whatever it carried: junk is handed on whole and an empty pipe reads \"\" (`how: eof`, the caller's parse fails open); the hook's own shape, a payload written and closed, is read whole; each lets go of its stream", async () => {
+      const close = async (text) => { const s = new PassThrough(); const p = readStdinUntilSilence({ silenceMs: 400, stream: s }); s.end(text); const r = await p; return { ...r, held: held(s) }; };
+      const junk = await close("not json at all"), empty = await close(""), hook = await close(PAYLOAD);
+      return junk.ok === true && junk.how === "eof" && junk.raw === "not json at all" && Number.isInteger(junk.ms)
+        && empty.ok === true && empty.how === "eof" && empty.raw === ""
+        && hook.ok === true && hook.raw === PAYLOAD && (hook.how === "json" || hook.how === "eof")
+        && junk.held + empty.held + hook.held === 0;
+    });
+    await check("SILENCE · a WHOLE OBJECT HELD OPEN (the writer never ends the pipe) is read the moment it parses (`how: json`) — in four pieces 120 ms apart, past a 200 ms bound, because every chunk re-arms the clock (a bound on silence, never on completion)", async () => {
+      const s = new PassThrough();
+      const p = readStdinUntilSilence({ silenceMs: 200, stream: s });
+      const q = Math.ceil(PAYLOAD.length / 4);
+      for (let i = 0; i < 4; i++) setTimeout(() => s.write(PAYLOAD.slice(i * q, (i + 1) * q)), i * 120);
+      const r = await p;
+      return r.ok === true && r.how === "json" && r.raw === PAYLOAD && r.ms >= 300 && r.ms < 2000 && held(s) === 0;
+    });
+    await check("SILENCE · a PARTIAL OBJECT then silence is REFUSED, the why naming the bound and the bytes that came", async () => {
+      const s = new PassThrough();
+      const p = readStdinUntilSilence({ silenceMs: 150, stream: s });
+      s.write('{"tool_name":"Ba');
+      const r = await p;
+      return r.ok === false && r.why === "no payload on fd 0 after 150 ms of silence (non-TTY, stdin never closed; 16 byte(s) arrived, not one whole JSON object)" && r.ms >= 140 && held(s) === 0;
+    });
+    await check("SILENCE · silence with NOTHING is REFUSED at the bound, and the why names it", async () => {
+      const s = new PassThrough();
+      const r = await readStdinUntilSilence({ silenceMs: 150, stream: s });
+      return r.ok === false && r.why === "no payload on fd 0 after 150 ms of silence (non-TTY, stdin never closed)" && r.ms >= 140 && r.ms < 1500 && held(s) === 0;
+    });
+    await check("SILENCE · the bound is 1000 ms — above the 800 ms slow writer and the 990 ms worst first byte through a node boot (row 822)", () => STDIN_SILENCE_MS === 1000);
+    const dir = mkdtempSync(join(tmpdir(), "meter-silence-"));
+    try {
+      const kid = join(dir, "kid.mjs");
+      // the fixture's one write goes through the builtin handle (rails' selftest idiom), so a temp file adds no sink to this organ
+      process.getBuiltinModule("node:fs").writeFileSync(kid, `import { readStdinUntilSilence } from ${JSON.stringify(import.meta.url)};\nconst r = await readStdinUntilSilence({ silenceMs: 250 });\nprocess.stdout.write(JSON.stringify(r));\n`);
+      // the kid never calls process.exit: if the reader kept its listeners or its flowing pipe, the kid would hang here
+      const wrapKid = `const {spawn}=require("node:child_process");
+const c=spawn(process.execPath,[process.env.__KID],{stdio:["pipe","pipe","ignore"]});
+let o="";const t0=Date.now();c.stdout.on("data",(d)=>{o+=d});
+c.on("close",()=>{console.log(JSON.stringify({ms:Date.now()-t0,o}));process.exit(0)});
+setTimeout(()=>{try{c.kill()}catch{}console.log(JSON.stringify({hung:true,o}));process.exit(0)},5000);`;
+      const probe = spawnSync(process.execPath, ["-e", wrapKid], { encoding: "utf8", timeout: 15000, windowsHide: true, env: { ...process.env, __KID: kid } });
+      await check("SILENCE · a REAL PIPE THAT NEVER CLOSES — a child reading its own fd 0 refuses after the bound and EXITS BY ITSELF (no process.exit: the reader let go)", () => {
+        const w = JSON.parse(String(probe.stdout || "").trim());
+        const r = JSON.parse(w.o);
+        return !w.hung && w.ms < 3000 && r.ok === false && /^no payload on fd 0 after 250 ms of silence/.test(r.why);
+      });
+    } finally { try { rmSync(dir, { recursive: true, force: true }); } catch { /* temp */ } }
   }
 
   console.log(`session_meter selftest: ${pass} passed, ${fail} failed`);

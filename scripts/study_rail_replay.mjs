@@ -40,6 +40,16 @@
 //   ROW 583 (4) (7 Oct 2026): the SITTING WINDOW rides the same line as a sub-count — `picture-first misses N · sitting
 //   window M`, M <= N — counted from the rail's own `sitting.mjs open` to its `close` (the window the rail pass judges);
 //   `--json` carries both (totals.picture_first_misses, totals.sitting_window_misses; in_sitting on every miss).
+// THE BLIND PASS (13 Nov 2026 · forks rows 814 (1), 822 (2), 827 (1)). The study rail was BLIND on 20 of 56 PreToolUse Bash
+//   calls of his Desktop day b2409cd2 and said so only on a stderr nobody reads. A third pass counts it over the WHOLE
+//   transcript — the blind rail is a property of the HOOK, not of a sitting, so no sitting window applies: every attachment
+//   row with hookEvent PreToolUse whose command names rails.mjs and pretooluse is a RAIL CALL, one whose stderr starts
+//   `rails: REFUSED` is BLIND, and each is counted on its IST day (the row's timestamp + 5:30, session_meter's istDay — ONE
+//   definition). Beside it, rails' own ledger (rails its sole writer) is read per IST day: NOT-BORN when the file is absent, a
+//   malformed line counted `bad`, never thrown. The report prints ONE line, `study_rail_replay: rails blind B of C rail
+//   call(s) · <day B/C, …> · ledger <NOT-BORN | day n, …>`; `--json` carries totals.rails_calls, totals.rails_blind,
+//   totals.blind_by_day, totals.blind_ledger (null when not born) and each per[] entry its own rails_calls / rails_blind.
+//   It reads each file once more, on its own, so the two passes above keep their one shared read untouched. Target: 0 blind.
 // CLI: node scripts/study_rail_replay.mjs <dir-of-.jsonl | file.jsonl> [--json] | selftest
 // ============================================================================
 import { readFileSync, readdirSync, statSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
@@ -49,6 +59,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { studyRail, studyRerunLine, SITTING_OPEN_RE, CMD_POS } from "./rails.mjs";
 import { humanText, SLASH_NOISE } from "./study_scope.mjs";
 import { newIdeaOf, pictureOrder, turnMoments } from "./teaching_audit.mjs";   // L4: THE new_idea definition + the picture order + the moments, each defined ONCE there
+import { istDay } from "./session_meter.mjs";   // row 814: THE IST day (timestamp + 5:30), defined ONCE there
+import { railsBlindFile } from "./rails.mjs";   // row 814: where rails' blind ledger lives, its sole writer's ONE answer
 
 const SITTING_CLOSE_RE = new RegExp(`${CMD_POS}node(?:\\.exe)?\\s+"?[^\\s";|&]*sitting\\.mjs"?\\s+close\\b`, "i");
 const STUDY_SCOPE = Object.freeze({ study: true, why: "replay — the transcript that opened the sitting is its host" });
@@ -129,6 +141,43 @@ export function teachingPass(text, name = "") {
   return r;
 }
 
+/** THE BLIND PASS over ONE transcript's text (row 814). Pure. A rail call = an attachment row with hookEvent PreToolUse whose
+ *  command names rails.mjs and pretooluse; BLIND = its stderr starts `rails: REFUSED`. The WHOLE transcript (a property of the
+ *  hook, not of a sitting), per IST day; a row with no clock is counted under `no-day`, never dropped. */
+export function blindPass(text, name = "") {
+  const r = { file: name, rails_calls: 0, rails_blind: 0, by_day: {} };
+  for (const line of String(text || "").split("\n")) {
+    if (!line || line[0] !== "{" || !line.includes("pretooluse")) continue;   // a cheap gate before the parse: the command must name it
+    let o; try { o = JSON.parse(line); } catch { continue; }
+    const a = o && o.type === "attachment" && o.attachment && typeof o.attachment === "object" ? o.attachment : null;
+    if (!a || a.hookEvent !== "PreToolUse") continue;
+    const cmd = String(a.command || "");
+    if (!/rails\.mjs/.test(cmd) || !/\bpretooluse\b/.test(cmd)) continue;
+    const blind = String(a.stderr || "").startsWith("rails: REFUSED");
+    const day = istDay(o.timestamp) || "no-day";
+    const d = r.by_day[day] || (r.by_day[day] = { blind: 0, calls: 0 });
+    r.rails_calls++; d.calls++;
+    if (blind) { r.rails_blind++; d.blind++; }
+  }
+  return r;
+}
+
+/** RAILS' OWN LEDGER, per IST day (row 814). null when the file is absent: NOT-BORN. Else { rows, by_day: { day: n }, bad } —
+ *  a line that is not one object with a readable `ts` is counted `bad`, never thrown; an unreadable file says so. */
+export function blindLedgerByDay(file) {
+  let text;
+  try { text = readFileSync(file, "utf8"); } catch (e) { return e && e.code === "ENOENT" ? null : { rows: 0, by_day: {}, bad: 0, unreadable: (e && e.code) || "error" }; }
+  const L = { rows: 0, by_day: {}, bad: 0 };
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    let o = null; try { o = JSON.parse(line); } catch { /* counted below */ }
+    const day = o && typeof o === "object" && !Array.isArray(o) ? istDay(o.ts) : null;
+    if (!day) { L.bad++; continue; }
+    L.rows++; L.by_day[day] = (L.by_day[day] || 0) + 1;
+  }
+  return L;
+}
+
 const share = (n, d) => (d ? Math.round((n / d) * 1000) / 10 : null);
 export function replayDir(target) {
   let files;
@@ -145,6 +194,18 @@ export function replayDir(target) {
   // L4: the teaching pass's totals — picture_first_misses is the count rung L4's G1 reads
   T.turns = 0; T.new_ideas = 0; T.picture_first = 0; T.picture_first_misses = 0; T.sitting_window_misses = 0;
   for (const p of per) if (p.teaching) { T.turns += p.teaching.turns; T.new_ideas += p.teaching.new_ideas; T.picture_first += p.teaching.picture_first; T.picture_first_misses += p.teaching.misses; T.sitting_window_misses += p.teaching.sitting_window_misses; }
+  // row 814: THE BLIND PASS — its own read of each readable file; each per[] entry carries its own counts, the totals the days
+  T.rails_calls = 0; T.rails_blind = 0;
+  const byDay = {};
+  files.forEach((f, i) => {
+    if (!per[i] || per[i].error) return;
+    let b; try { b = blindPass(readFileSync(f, "utf8"), basename(f)); } catch { return; }
+    per[i].rails_calls = b.rails_calls; per[i].rails_blind = b.rails_blind;
+    T.rails_calls += b.rails_calls; T.rails_blind += b.rails_blind;
+    for (const [d, v] of Object.entries(b.by_day)) { const t = byDay[d] || (byDay[d] = { blind: 0, calls: 0 }); t.blind += v.blind; t.calls += v.calls; }
+  });
+  T.blind_by_day = Object.fromEntries(Object.keys(byDay).sort().map((d) => [d, byDay[d]]));
+  T.blind_ledger = blindLedgerByDay(railsBlindFile());
   const calls = per.flatMap((p) => p.list || []);
   const missed = per.flatMap((p) => p.missed || []);
   return { totals: T, per: per.map(({ list, missed: _m, ...p }) => p), calls, missed };
@@ -169,6 +230,9 @@ function printReport({ totals: T, per, missed = [] }) {
   if (missed.length > 8) console.log(`      (+${missed.length - 8} more — --json lists every one)`);
   // row 583 (4): the WHOLE transcript's count, then the sitting window as a sub-count on the SAME line (M <= N)
   console.log(`study_rail_replay: picture-first misses ${T.picture_first_misses} · sitting window ${T.sitting_window_misses} · ${T.new_ideas} new-idea turn(s) of ${T.turns} in ${T.transcripts} transcript(s), ${T.picture_first} with the picture first (teaching_audit's ONE definition)`);
+  // row 814: THE BLIND RAIL — ONE line, the whole transcripts per IST day, then rails' own ledger per IST day
+  const L = T.blind_ledger;
+  console.log(`study_rail_replay: rails blind ${T.rails_blind} of ${T.rails_calls} rail call(s) · ${Object.entries(T.blind_by_day || {}).map(([d, v]) => `${d} ${v.blind}/${v.calls}`).join(", ") || "no rail call"} · ledger ${L === null || L === undefined ? "NOT-BORN" : L.unreadable ? `UNREADABLE (${L.unreadable})` : `${Object.entries(L.by_day).map(([d, n]) => `${d} ${n}`).join(", ") || "born, 0 row(s)"}${L.bad ? ` (bad ${L.bad})` : ""}`}`);
 }
 
 // ── SELFTEST — a synthetic fixture under a temp dir ─────────────────────────
@@ -297,6 +361,45 @@ function selftest() {
         && never.misses === 1 && never.sitting_window_misses === 0);
     check("L4 · ONE definition: this replay IMPORTS newIdeaOf from ./teaching_audit.mjs and defines no new-idea predicate of its own",
       () => { const src = readFileSync(fileURLToPath(import.meta.url), "utf8"); return /import\s*\{[^}]*\bnewIdeaOf\b[^}]*\}\s*from\s*"\.\/teaching_audit\.mjs"/.test(src) && !/function\s+newIdeaOf\b/.test(src) && !/newIdeaOf\s*=/.test(src); });
+  }
+  // ── row 814 · THE BLIND PASS and rails' ledger, planted both ways ──
+  {
+    const RAIL = 'node "$CLAUDE_PROJECT_DIR/scripts/rails.mjs" pretooluse';
+    const HOOK = (ts, command, stderr = "", stdout = "") => JSON.stringify({ type: "attachment", timestamp: ts, sessionId: "s", entrypoint: "claude-desktop",
+      attachment: { type: "hook_success", hookName: "PreToolUse:Bash", hookEvent: "PreToolUse", toolUseID: "t", content: "", stdout, stderr, exitCode: 0, command, durationMs: 1031 } });
+    const REFUSED = "rails: REFUSED — no payload on fd 0 within 300ms (non-TTY, stdin never closed). No payload ⇒ no decision; …";
+    const tx = [
+      HOOK("2026-10-17T18:27:51.892Z", RAIL, REFUSED),                                                        // 23:57 IST, 17 Oct — BLIND
+      HOOK("2026-10-17T18:31:00.000Z", RAIL),                                                                 // 00:01 IST, 18 Oct (the 17th in UTC) — read
+      HOOK("2026-10-18T05:00:00.000Z", RAIL, REFUSED),                                                        // 10:30 IST, 18 Oct — BLIND
+      HOOK("2026-10-18T05:00:01.000Z", 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/pretooluse.py"', REFUSED, "{}"), // another PreToolUse hook — ignored, whatever it prints
+      U("a prompt that quotes rails.mjs pretooluse and rails: REFUSED"),                                       // not an attachment row — ignored
+    ].join("\n");
+    check("BLIND (row 814) — three rail rows over two IST days (two REFUSED) beside another hook's PreToolUse row read 2 of 3: 17 Oct 1/1 · 18 Oct 1/2 (the 18:31Z row is the 18th in IST); the other hook and a prompt quoting the words count nothing",
+      () => { const b = blindPass(tx, "b.jsonl"); return b.rails_calls === 3 && b.rails_blind === 2 && JSON.stringify(b.by_day) === JSON.stringify({ "2026-10-17": { blind: 1, calls: 1 }, "2026-10-18": { blind: 1, calls: 2 } }); });
+    const led = mkdtempSync(join(tmpdir(), "s814-ledger-")), txd = mkdtempSync(join(tmpdir(), "s814-tx-"));
+    try {
+      const LEDGER = join(led, "blind.jsonl"), ABSENT = join(led, "absent.jsonl");
+      const row = (ts) => JSON.stringify({ ts, why: "no payload on fd 0 after 1000 ms of silence (non-TTY, stdin never closed)", read_ms: 1000, rail_ms: 1400, free_mb: 610 });
+      writeFileSync(LEDGER, [row("2026-10-17T18:27:52.000Z"), row("2026-10-17T18:31:00.000Z"), "{torn", "", row("2026-10-18T05:00:00.000Z"), JSON.stringify({ ts: "not a clock" })].join("\n") + "\n");
+      check("BLIND LEDGER (row 814) — rails' ledger per IST day: 3 rows (17 Oct 1 · 18 Oct 2), a torn line and a row with no readable ts are `bad` 2, never thrown; an ABSENT file is null (NOT-BORN)",
+        () => { const L = blindLedgerByDay(LEDGER); return L.rows === 3 && L.bad === 2 && JSON.stringify(L.by_day) === JSON.stringify({ "2026-10-17": 1, "2026-10-18": 2 }) && blindLedgerByDay(ABSENT) === null; });
+      writeFileSync(join(txd, "b.jsonl"), tx);
+      const cp = process.getBuiltinModule("node:child_process");
+      const cli = (args, ledger) => cp.spawnSync(process.execPath, [fileURLToPath(import.meta.url), txd, ...args], { encoding: "utf8", timeout: 15000, env: { ...process.env, ARSENAL_RAILS_BLIND_FILE: ledger } });
+      const txt = cli([], LEDGER), js = cli(["--json"], LEDGER), txtNB = cli([], ABSENT), jsNB = cli(["--json"], ABSENT);
+      const blindLines = (r) => String(r.stdout || "").split("\n").filter((l) => /rails blind/.test(l));
+      check("BLIND CLI (row 814) — the report gains EXACTLY ONE `rails blind` line (`rails blind 2 of 3 rail call(s) · 2026-10-17 1/1, 2026-10-18 1/2 · ledger 2026-10-17 1, 2026-10-18 2 (bad 2)`, or `ledger NOT-BORN`); `--json` carries totals.rails_calls · rails_blind · blind_by_day · blind_ledger (null when not born) and each per[] entry its own counts",
+        () => {
+          const j = JSON.parse(js.stdout), n = JSON.parse(jsNB.stdout), p = j.per.find((x) => x.file === "b.jsonl");
+          return txt.status === 0 && blindLines(txt).length === 1
+            && blindLines(txt)[0] === "study_rail_replay: rails blind 2 of 3 rail call(s) · 2026-10-17 1/1, 2026-10-18 1/2 · ledger 2026-10-17 1, 2026-10-18 2 (bad 2)"
+            && blindLines(txtNB).length === 1 && / · ledger NOT-BORN$/.test(blindLines(txtNB)[0])
+            && j.totals.rails_calls === 3 && j.totals.rails_blind === 2 && JSON.stringify(j.totals.blind_by_day) === JSON.stringify({ "2026-10-17": { blind: 1, calls: 1 }, "2026-10-18": { blind: 1, calls: 2 } })
+            && j.totals.blind_ledger && j.totals.blind_ledger.rows === 3 && j.totals.blind_ledger.bad === 2 && n.totals.blind_ledger === null
+            && p && p.rails_calls === 3 && p.rails_blind === 2;
+        });
+    } finally { rmSync(led, { recursive: true, force: true }); rmSync(txd, { recursive: true, force: true }); }
   }
   } catch (e) { fail++; console.log(`  ✗ THROW outside a named case — ${String((e && e.stack) || e).slice(0, 300)}`); }
   console.log(`study_rail_replay selftest: ${pass} passed, ${fail} failed`);
