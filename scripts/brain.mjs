@@ -5428,7 +5428,7 @@ async function selftest() {
       assert("HOME PIN — a FOREIGN checkout never reaches the phone: zero bytes on the wire, why foreign-checkout (forks row 328)", foreign.sent === false && foreign.why === "foreign-checkout" && wire === 0);
       const home = await pushNtfy({ ntfy: { enabled: true, topic: "t1" } }, "t", "b", countFetch, { home: { repo: A, archive: arc } });
       assert("HOME PIN — …and the pinned home checkout pushes exactly as before", home.sent === true && wire === 1);
-    } finally { try { fsx.rmSync(t, { recursive: true, force: true }); } catch { /* windows locks */ } }
+    } finally { try { fsx.rmSync(t, { recursive: true, force: true }); } catch (e) { swallow("the home-pin fixture's temp dir, held by a Windows lock", e); } }
   }
 
   // ---- THE MORNING SLOT: one utterance, whoever claims it (1 Aug 2026 audit) ----
