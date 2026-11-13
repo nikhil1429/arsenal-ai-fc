@@ -45,7 +45,7 @@
 //     outside an owner's CLI · a "done" without a receipt.
 // LEDGER ROW: {id, ts, door, verb, args, owner, argv, ok, receipt|error, ms, undone_at, reverse}
 // CLI: node scripts/acts.mjs do <verb> --door <d> --text "…" [--kind k --axis a --id i --job j]
-//      | undo <id> | resolve <failed-id> --by <ok-id> | status [days] | parse-ball "<text>" | selftest
+//      | undo <id> | resolve <failed-id> --by <ok-id> | reroute <failed-id> [--by <ok-id>] | status [days] | parse-ball "<text>" | selftest
 // ============================================================================
 import { readFileSync, appendFileSync, existsSync, mkdirSync, statSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -82,7 +82,10 @@ export const OWNERS = {
               reverse: (a, r) => { const at = r && /"at":"([^"]+)"/.exec(r); return at ? { argv: ["drop-pending", "--at", at[1]] } : { argv: null, why: "the staged fact carried no `at` in its receipt" }; } },
   pref:     { organ: "gaffer_state.mjs",      argv: (a) => ["standing", "add", "--axis", a.axis || "how_to_speak", "--text", a.text],
               reverse: (a) => ({ argv: ["forget", a.axis || "how_to_speak"] }) },
-  rule:     { organ: "teaching_contract.mjs", argv: (a) => ["add", a.id || `act-${Date.now().toString(36)}`, a.text],
+  // `reroute`: the consumers this owner may NAME in a refusal (forks rows 817 / 819). teaching_contract refuses a
+  // BUILD-SHAPED word ("Route it through acts verb `design`") and that refusal is RIGHT; what was missing is the
+  // second door, so his word reaches the consumer the owner named instead of staying act-failed for days.
+  rule:     { organ: "teaching_contract.mjs", argv: (a) => ["add", a.id || `act-${Date.now().toString(36)}`, a.text], reroute: ["design"],
               reverse: (a, r, id, row) => ({ argv: ["drop", (row && row.argv && row.argv[1]) || a.id || ""] }) },
   agenda:   { organ: "sitting.mjs",           argv: (a) => ["agenda", "add", "--text", a.text],
               reverse: (a, r) => { const id = r && /agenda (?:added|row) ([A-Za-z0-9_-]+)/.exec(r); return id ? { argv: ["agenda", "drop", id[1]] } : { argv: null, why: "the agenda row carried no id in its receipt" }; } },
@@ -109,8 +112,9 @@ export const OWNERS = {
   // filed by the owner) instead of being filed into the nearest wrong bucket
   // (act-mszfck3c, a pipeline order graded as a teaching rule, is the witness).
   // C2 (21 Aug): scope is a FIELD — architecture | learning-method — never a
-  // second lane.
-  design:   { organ: "registry.mjs",          argv: (a) => ["rulings", "add", "--scope", a.scope === "learning-method" ? "learning-method" : "architecture", "--source", "acts.design", "--by", "captain"], stdin: (a) => a.text,
+  // second lane. A RE-ROUTED word (forks row 819) carries source acts.reroute, which the campaign's
+  // inbox reads, and deals NO card: his word is honoured there, never asked for again.
+  design:   { organ: "registry.mjs",          argv: (a) => ["rulings", "add", "--scope", a.scope === "learning-method" ? "learning-method" : "architecture", "--source", a.rerouted_from ? "acts.reroute" : "acts.design", "--by", "captain", ...(a.rerouted_from ? ["--no-card"] : [])], stdin: (a) => a.text,
               reverse: () => ({ argv: null, why: "his word is on the record — a later ruling SUPERSEDES it with a new row; nothing unsays a ruling" }) },
   // THE CAPTAIN'S HOLD (4 Sep 2026) — his word "close every API call the organism is doing"
   // becomes a RECEIPT in the same turn, and the thing it arms is a gate LETTER (H), not a switch.
@@ -186,6 +190,11 @@ export function dispatch(act, deps = {}) {
   const receipt = clip((r.out || "").trim() || (r.err || "").trim(), 300);
   const row = { id, ts: now.toISOString(), door, verb: v.verb, args: v.args, owner: o.organ, argv, ok: !!r.ok, receipt: r.ok ? receipt : null, error: r.ok ? null : (receipt || `exit ${r.status}`), ms: Date.now() - t0 };
   appendRow(row, deps);
+  // forks rows 817 / 819: a refusal that NAMES a declared consumer sends his word there in the same turn (one hop)
+  if (!row.ok && o.reroute && !v.args.rerouted_from) {
+    const rr = rerouteFailed(id, null, { ...deps, now, rows: [row] });
+    if (rr.row) return { ...row, rerouted: { to: rr.to ? rr.to.verb : null, by: rr.to ? rr.to.id : null, ok: rr.ok } };
+  }
   return row;
 }
 export function dispatchAll(acts, door, deps = {}) { return (Array.isArray(acts) ? acts : []).map((a) => dispatch({ ...a, door }, deps)); }
@@ -237,7 +246,7 @@ export function undo(id, deps = {}) {
 export function resolveFailed(id, by, deps = {}) {
   const rows = deps.rows || readRows();
   const now = deps.now || new Date();
-  const isAct = (r) => r.verb && r.verb !== "undo" && r.verb !== "resolve";
+  const isAct = (r) => r.verb && r.verb !== "undo" && r.verb !== "resolve" && r.verb !== "reroute";
   const failed = rows.find((r) => r.id === id && isAct(r));
   if (!failed) return { ok: false, why: `no act ${id}` };
   if (failed.ok) return { ok: false, why: `act ${id} succeeded — nothing to resolve` };
@@ -252,19 +261,62 @@ export function resolveFailed(id, by, deps = {}) {
   return { ok: true, row };
 }
 
+// ── reroute: AN ACT OF HIS REFUSED AT ONE OWNER IS RE-ROUTED, NEVER LEFT FAILED (19 Oct 2026, forks rows 817 / 819) ──
+// amv84yb9j62 (14 Oct) and amvco5jf6fx (17 Oct): his words, verb rule, refused by teaching_contract as BUILD-SHAPED,
+// which is RIGHT (a build order is never a teaching rule), and then nothing sent them on: act-failed for days. The
+// owner's refusal already NAMES the consumer ("Route it through acts verb `design`"); this follows that name ONCE,
+// only to a consumer the owner's row declares (`reroute`), never a chain (a re-routed act is never re-routed). A
+// refusal that names no consumer (a job guard, a validation refusal, a save failure) stays failed and red. The
+// reroute row carries both ids; stats() counts the failure ROUTED, never act-failed. Live: dispatch() calls this
+// the moment the owner refuses; for a past refusal, `acts.mjs reroute <failed-id>`. A word that ALREADY reached the
+// named consumer by hand (amv84yb9j62 → design amv84yhvy4z 8.6 s later, re-worded) is LINKED, never re-dispatched (a
+// second ruling would be a duplicate): `acts.mjs reroute <failed-id> --by <ok-id>`, the pair named by ids, never
+// inferred from similar text (row 750's law), and only to an ok act of the very consumer the owner named.
+export const REROUTE_NAMED_RE = /acts verb `([a-z]+)`/;
+export function rerouteFailed(id, by = null, deps = {}) {
+  const rows = deps.rows || readRows();
+  const now = deps.now || new Date();
+  const failed = rows.find((r) => r.id === id && VERBS.includes(r.verb));
+  if (!failed) return { ok: false, why: `no act ${id}` };
+  if (failed.ok) return { ok: false, why: `act ${id} succeeded — nothing to re-route` };
+  if (failed.args && failed.args.rerouted_from) return { ok: false, why: `act ${id} is itself a re-route of ${failed.args.rerouted_from} — one hop, never a chain` };
+  if (rows.some((r) => r.verb === "reroute" && r.of === id && r.ok)) return { ok: false, why: `act ${id} already re-routed` };
+  const o = OWNERS[failed.verb];
+  const named = (REROUTE_NAMED_RE.exec(String(failed.error || "")) || [])[1];
+  if (!named) return { ok: false, why: `${o.organ}'s refusal of ${id} names no consumer — it stays failed` };
+  if (!(o.reroute || []).includes(named)) return { ok: false, why: `${o.organ} named \`${named}\`, which the ${failed.verb} row does not declare as a re-route — it stays failed` };
+  if (by) {
+    const fix = rows.find((r) => r.id === by && VERBS.includes(r.verb));
+    if (!fix) return { ok: false, why: `no act ${by}` };
+    if (!fix.ok || fix.verb !== named) return { ok: false, why: `act ${by} is ${fix.ok ? `a ${fix.verb}` : "a failure"}; only an ok ${named} act (the consumer ${o.organ} named) can be the one ${id} reached` };
+    if (!(Date.parse(fix.ts) > Date.parse(failed.ts))) return { ok: false, why: `act ${by} is not later than ${id}` };
+    const link = { id: `${id}-reroute`, ts: now.toISOString(), door: "cli", verb: "reroute", of: id, by, owner: "acts.mjs", ok: true,
+      receipt: `${id} (${failed.verb}, refused by ${o.organ}) had ALREADY reached ${named} as ${by} at ${fix.ts} · linked, nothing re-dispatched` };
+    appendRow(link, deps);
+    return { ok: true, why: null, row: link, to: fix };
+  }
+  const to = dispatch({ door: failed.door, verb: named, args: { ...(failed.args || {}), rerouted_from: id } }, { ...deps, now: new Date(now.getTime() + 1) });   // +1 ms: its own id, never the refused act's
+  const row = { id: `${id}-reroute`, ts: now.toISOString(), door: failed.door, verb: "reroute", of: id, by: to.id, owner: "acts.mjs", ok: !!to.ok,
+    receipt: to.ok ? `${id} (${failed.verb}, refused by ${o.organ}) ROUTED to ${named} as ${to.id} · ${clip(to.receipt, 80)}` : null,
+    error: to.ok ? null : `the re-route to ${named} failed: ${clip(to.error, 120)}` };
+  appendRow(row, deps);
+  return { ok: !!to.ok, why: to.ok ? null : row.error, row, to };
+}
+
 // ── the board (state week · watchman · CLI) ──
 export function stats(days = 7, rows = readRows(), now = Date.now()) {
   const since = now - days * 86400000;
   const inWin = rows.filter((r) => Date.parse(r.ts || "") >= since);
-  const acts = inWin.filter((r) => r.verb && r.verb !== "undo" && r.verb !== "resolve");
+  const acts = inWin.filter((r) => r.verb && r.verb !== "undo" && r.verb !== "resolve" && r.verb !== "reroute");
   const resolved = new Set(rows.filter((r) => r.verb === "resolve" && r.ok).map((r) => r.of));   // row 750: a failure SUPERSEDED by a named later ok act
+  const routed = new Set(rows.filter((r) => r.verb === "reroute" && r.ok).map((r) => r.of));     // rows 817 / 819: a refusal ROUTED to the consumer its owner named
   const undone = new Set(inWin.filter((r) => r.verb === "undo" && r.ok).map((r) => r.of));
   const failed = acts.filter((r) => !r.ok);
   const byDoor = {}, byVerb = {};
   for (const r of acts) { byDoor[r.door] = (byDoor[r.door] || 0) + 1; byVerb[r.verb] = (byVerb[r.verb] || 0) + 1; }
-  // act-failed: a dispatched act whose owner errored and that is still unfixed after 24 h (no later ok act with the same verb+text, and no resolve row naming the later ok act that superseded it, row 750)
-  const stale = failed.filter((r) => now - Date.parse(r.ts) > 24 * 3600000 && !resolved.has(r.id) && !acts.some((x) => x.ok && x.verb === r.verb && x.args && r.args && x.args.text === r.args.text && Date.parse(x.ts) > Date.parse(r.ts)));
-  return { days, n: acts.length, ok: acts.filter((r) => r.ok).length, failed: failed.length, undone: undone.size, by_door: byDoor, by_verb: byVerb, stale_failed: stale.map((r) => ({ id: r.id, verb: r.verb, error: r.error, ts: r.ts })), last: acts.slice(-1)[0] || null };
+  // act-failed: a dispatched act whose owner errored and that is still unfixed after 24 h (no later ok act with the same verb+text, no resolve row naming the later ok act that superseded it, row 750, and no reroute row naming the consumer it reached, rows 817 / 819)
+  const stale = failed.filter((r) => now - Date.parse(r.ts) > 24 * 3600000 && !resolved.has(r.id) && !routed.has(r.id) && !acts.some((x) => x.ok && x.verb === r.verb && x.args && r.args && x.args.text === r.args.text && Date.parse(x.ts) > Date.parse(r.ts)));
+  return { days, n: acts.length, ok: acts.filter((r) => r.ok).length, failed: failed.length, routed: failed.filter((r) => routed.has(r.id)).length, undone: undone.size, by_door: byDoor, by_verb: byVerb, stale_failed: stale.map((r) => ({ id: r.id, verb: r.verb, error: r.error, ts: r.ts })), last: acts.slice(-1)[0] || null };
 }
 export const boardLine = (s = stats()) => `acts ${s.n} · ok ${s.ok} · failed ${s.failed} · undone ${s.undone}${s.n ? ` · doors ${Object.entries(s.by_door).map(([k, v]) => `${k}:${v}`).join(" ")}` : ""}`;
 export function findings(s = stats(7), now = Date.now()) {
@@ -610,6 +662,64 @@ async function selftest() {
     } finally { try { rmSync(tmp, { recursive: true, force: true }); } catch { /* best-effort cleanup of the selftest's own temp dir: a file Windows still holds stays for the OS to reap, and a cleanup miss must never turn a verdict red */ } }
   }
 
+  // ── REROUTE (forks rows 817 / 819): a refusal that NAMES a declared consumer reaches it; nothing else does ──
+  {
+    const REFUSE = 'teaching_contract: REFUSED — "act-x" reads BUILD-SHAPED ("create"), and a design/build order is not a teaching rule (the act-mszfck3c class). Route it through acts verb `design` → the registry rulings lane.';
+    const mk = (refusal) => {
+      const rows = [], calls = [];
+      return { rows, calls, deps: { append: (r) => { rows.push(r); return true; }, now: new Date("2026-10-19T12:00:00Z"),
+        exec: (organ, argv, stdin) => {
+          calls.push({ organ, argv, stdin });
+          if (organ === "teaching_contract.mjs") return refusal ? { ok: false, status: 1, out: "", err: refusal } : { ok: true, status: 0, out: "teaching_contract: added", err: "" };
+          if (organ === "registry.mjs") return { ok: true, status: 0, out: '{"ok":true,"id":"rul-x","card":null}', err: "" };
+          return { ok: false, status: 2, out: "", err: "unexpected organ" };
+        } } };
+    };
+    const t = mk(null), taught = dispatch({ door: "cli", verb: "rule", args: { text: "ek message ek idea" } }, t.deps);
+    assert("REROUTE · a teaching-worded rule LANDS at teaching_contract: one row, ok, no re-route, the registry never called",
+      taught.ok && !taught.rerouted && t.rows.length === 1 && t.calls.every((c) => c.organ === "teaching_contract.mjs"));
+    const b = mk(REFUSE), built = dispatch({ door: "cli", verb: "rule", args: { text: "please create the revision page" } }, b.deps);
+    const [ruleRow, designRow, rrRow] = b.rows, reg = b.calls.find((c) => c.organ === "registry.mjs");
+    assert("REROUTE · a build-worded rule is REFUSED at teaching_contract (never forced) and RE-DISPATCHED to design in the same call: rule ✗ · design ✓ (rerouted_from = the rule's id) · ONE reroute row carrying both ids",
+      !built.ok && built.rerouted && built.rerouted.to === "design" && built.rerouted.ok && b.rows.length === 3 && ruleRow.verb === "rule" && !ruleRow.ok
+      && designRow.verb === "design" && designRow.ok && designRow.args.rerouted_from === ruleRow.id && designRow.args.text === "please create the revision page"
+      && rrRow.verb === "reroute" && rrRow.of === ruleRow.id && rrRow.by === designRow.id && rrRow.ok && designRow.id !== ruleRow.id, JSON.stringify(b.rows).slice(0, 400));
+    assert("REROUTE · the re-routed ruling deals NO card and names its road: the registry argv carries --source acts.reroute and --no-card; a plain design act keeps acts.design and its card",
+      !!reg && reg.argv.includes("acts.reroute") && reg.argv.includes("--no-card") && reg.stdin === "please create the revision page"
+      && (() => { const p = mk(null); dispatch({ door: "cli", verb: "design", args: { text: "x y z" } }, p.deps); const c = p.calls[0]; return c.argv.includes("acts.design") && !c.argv.includes("--no-card"); })());
+    const later = Date.parse("2026-10-21T12:00:00Z");
+    const sR = stats(7, b.rows, later);
+    assert("REROUTE · stats(): the routed refusal reads ROUTED (routed 1), never act-failed, and the reroute row is never counted as an act",
+      sR.routed === 1 && sR.stale_failed.length === 0 && sR.n === 2 && !findings(sR).some((f) => f.id === "act-failed"));
+    const n = mk("teaching_contract: rule one-idea already exists");
+    const lane = dispatch({ door: "cli", verb: "rule", args: { text: "ek message ek idea" } }, n.deps);
+    const sN = stats(7, n.rows, later);
+    assert("REROUTE · a refusal that names NO consumer stays failed: no re-route row, and after 24 h it reads RED act-failed",
+      !lane.ok && !lane.rerouted && n.rows.length === 1 && sN.stale_failed.length === 1 && findings(sN).some((f) => f.id === "act-failed" && f.level === "RED"));
+    const u = mk(REFUSE.replace("acts verb `design`", "acts verb `job`"));
+    const undeclared = dispatch({ door: "cli", verb: "rule", args: { text: "build the pipeline" } }, u.deps);
+    assert("REROUTE · an owner naming a consumer its row does NOT declare is refused: nothing dispatched, the act stays failed",
+      !undeclared.ok && !undeclared.rerouted && u.rows.length === 1 && /does not declare/.test(rerouteFailed(u.rows[0].id, null, { ...u.deps, rows: u.rows }).why || ""));
+    // every plant hands a FAKE owner: a mutant that dispatches where it must not spawns nothing real (a real registry.mjs
+    // would write the live registry; measured 19 Oct on the clone, when this plant had no exec)
+    const h = mk(null), hop = { id: "aHOP", ts: "2026-10-19T12:00:00Z", door: "cli", verb: "rule", args: { text: "t", rerouted_from: "aX" }, ok: false, error: REFUSE };
+    assert("REROUTE · ONE hop: an act carrying rerouted_from is never re-routed again (nothing dispatched)",
+      /one hop, never a chain/.test(rerouteFailed("aHOP", null, { ...h.deps, rows: [hop] }).why || "") && h.calls.length === 0 && h.rows.length === 0);
+    const p = mk(null), past = { id: "aPAST", ts: "2026-10-14T13:18:31Z", door: "cli", verb: "rule", args: { text: "build it on the project" }, ok: false, error: REFUSE };
+    const rp = rerouteFailed("aPAST", null, { ...p.deps, rows: [past] });
+    const again = rerouteFailed("aPAST", null, { ...p.deps, rows: [past, ...p.rows] });
+    assert("REROUTE · a PAST refusal (acts.mjs reroute <id>): routed once to design with both ids, then refused as already re-routed",
+      rp.ok && rp.to.verb === "design" && rp.row.of === "aPAST" && rp.row.by === rp.to.id && !again.ok && /already re-routed/.test(again.why || ""), JSON.stringify(rp).slice(0, 300));
+    const L = mk(null), fixAct = { id: "aFIX", ts: "2026-10-14T13:18:40Z", door: "cli", verb: "design", args: { text: "the same order, re-worded" }, ok: true, receipt: "{}" };
+    const lk = rerouteFailed("aPAST", "aFIX", { ...L.deps, rows: [past, fixAct] });
+    assert("REROUTE · a word that ALREADY reached design by hand is LINKED by ids (--by), never re-dispatched: one reroute row, no owner called, and stats() reads it ROUTED",
+      lk.ok && lk.row.of === "aPAST" && lk.row.by === "aFIX" && /linked, nothing re-dispatched/.test(lk.row.receipt) && L.calls.length === 0 && L.rows.length === 1
+      && stats(7, [past, fixAct, lk.row], Date.parse("2026-10-17T12:00:00Z")).routed === 1, JSON.stringify(lk).slice(0, 300));
+    const R = mk(null), early = { ...fixAct, id: "aEARLY", ts: "2026-10-14T13:18:00Z" }, bad = { ...fixAct, id: "aBAD", ok: false }, other = { ...fixAct, id: "aRULE", verb: "rule" };
+    const refusals = ["aEARLY", "aBAD", "aRULE", "aNONE"].map((b2) => rerouteFailed("aPAST", b2, { ...R.deps, rows: [past, early, bad, other] }));
+    assert("REROUTE · a link is refused with NO row when its --by is earlier than the refusal, a failure, a verb other than the one the owner named, or absent",
+      refusals.every((x) => !x.ok && x.why) && R.rows.length === 0 && R.calls.length === 0, refusals.map((x) => x.why).join(" | "));
+  }
   assert("OWNERS: every verb names an EXISTING organ file and declares a reverse", VERBS.every((v) => OWNERS[v] && existsSync(join(__dirname, OWNERS[v].organ)) && typeof OWNERS[v].reverse === "function"), VERBS.filter((v) => !existsSync(join(__dirname, OWNERS[v].organ))).join(","));
   // forks row 616 (12 Oct 2026): intentKey's separator was a RAW NUL byte in this source; it is now the
   // \u0000 escape inside the same literal. The runtime string is unchanged, so every key on record still
@@ -654,6 +764,7 @@ async function main() {
   }
   if (mode === "undo") { const r = undo(process.argv[3]); console.log(r.ok ? `acts: undone ${process.argv[3]} — ${r.row.receipt || ""}` : `acts: not undone — ${r.why}`); process.exit(r.ok ? 0 : 1); }
   if (mode === "resolve") { const r = resolveFailed(process.argv[3], flag("by")); console.log(r.ok ? `acts: resolved ${process.argv[3]} — ${r.row.receipt}` : `acts: not resolved — ${r.why}`); process.exit(r.ok ? 0 : 1); }
+  if (mode === "reroute") { const r = rerouteFailed(process.argv[3], flag("by") || null); console.log(r.ok ? `acts: re-routed ${process.argv[3]} — ${r.row.receipt}` : `acts: not re-routed — ${r.why}`); process.exit(r.ok ? 0 : 1); }
   if (mode === "parse-ball") { const r = await parseBall(process.argv.slice(3).join(" ")); console.log(JSON.stringify(r, null, 1)); return; }
   if (mode === "status") {
     const days = Number(process.argv[3]) || 7;
@@ -663,7 +774,7 @@ async function main() {
     for (const f of findings(s)) console.log(`  [${f.level}] ${f.id} — ${f.finding}`);
     return;
   }
-  console.log("acts: do <verb> --door d --text … [--kind --axis --id --job --until --why --clear --json] | undo <id> | resolve <failed-id> --by <ok-id> | status [days] | parse-ball <text> | selftest");
+  console.log("acts: do <verb> --door d --text … [--kind --axis --id --job --until --why --clear --json] | undo <id> | resolve <failed-id> --by <ok-id> | reroute <failed-id> [--by <ok-id>] | status [days] | parse-ball <text> | selftest");
   process.exit(2);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
