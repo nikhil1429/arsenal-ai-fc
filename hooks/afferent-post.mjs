@@ -19,7 +19,8 @@
 //     the credential and KEEPING his words, not by dropping the whole turn
 //     (see THE SCRUBBER below; the drop path survives for the two cases where a
 //     redaction cannot be bounded).
-//   · ONLY HIS WORDS — never the organism's own (see SELF-CAPTURE GUARD below).
+//   · ONLY HIS WORDS — never the organism's own (see SELF-CAPTURE GUARD below),
+//     never the harness's wrappers (see THE HARNESS-TEXT GUARD below).
 // WIRED BY: .claude/settings.json → hooks.UserPromptSubmit
 // ============================================================================
 import { readFileSync } from "node:fs";
@@ -166,6 +167,31 @@ const ORGAN_PREAMBLE_RE = /^\s*You are\b/i;
 const ORGAN_MARKER_RE = /ARSENAL AI FC|exocortex|the captain\b|STRICT JSON|personal learning brain/i;
 const isSelfTalk = (text) =>
   process.env.ARSENAL_ORGAN === "1" || (ORGAN_PREAMBLE_RE.test(text) && ORGAN_MARKER_RE.test(text));
+// THE HARNESS-TEXT GUARD (rows 852 (2) · 858, 13 Nov 2026). The guard above knows only the organism's own preamble, so
+// text the Claude Code HARNESS writes into a session as a user turn — a background task's completion, another session's
+// message, a reminder, the client's interrupted marker — was logged as HIS words: his 13 Nov Desktop study had 2 such
+// blocks in 18 firings. THE NAMES ARE NOT IN THIS FILE: they live once, in scripts/harness_text.mjs, and this guard builds
+// its own shape from them (row 858 (1)): remove every COMPLETE element of a wrapper name (`<name …>` through `</name>`,
+// attributes allowed, any number of lines) and every line that starts with a marker; if something was removed and fewer
+// than 3 non-space characters remain, the text is the harness's and NOTHING of it is written anywhere.
+// NEVER LOSE HIS WORDS: a name he types in a sentence (no closing element) is not an element, and his words around a whole
+// wrapper keep the WHOLE text, unchanged — a reader strips blocks; this writer never does. The module is loaded INSIDE
+// main() and guarded, like the spool: a checkout without it (home_pin's selftest fixture copies only POSTER_FILES) knows no
+// names and keeps every turn, exactly as before this guard.
+const reEscape = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function isHarnessText(text, { wrappers = [], markers = [] } = {}) {
+  let rest = String(text || ""), removed = false;
+  for (const name of wrappers) {
+    const element = new RegExp(`<${reEscape(name)}(?:\\s[^>]*)?>[\\s\\S]*?</${reEscape(name)}\\s*>`, "g");
+    rest = rest.replace(element, () => { removed = true; return " "; });
+  }
+  if (markers.length) rest = rest.split(/\r?\n/).filter((line) => { const hit = markers.some((m) => line.trimStart().startsWith(m)); if (hit) removed = true; return !hit; }).join("\n");
+  return removed && rest.replace(/\s+/g, "").length < 3;
+}
+async function harnessNames() {
+  try { const m = await import("../scripts/harness_text.mjs"); return { wrappers: m.HARNESS_WRAPPERS || [], markers: m.HARNESS_MARKERS || [] }; }
+  catch { /* no names module in this checkout → no names → every turn is kept, exactly as before this guard */ return { wrappers: [], markers: [] }; }
+}
 const die = () => process.exit(0);   // every path out is a clean, silent exit
 
 async function main() {
@@ -192,6 +218,7 @@ async function main() {
   else return die();
   if (text.length < 3) return die();
   if (isSelfTalk(text)) return die();      // the organism never mistakes itself for him
+  if (isHarnessText(text, await harnessNames())) return die();   // …nor the harness's wrapper for his words — before the spool write
   if (BLOCK_RE.test(text)) return die();   // a PEM body cannot be bounded by a token regex
   const scrubbed = scrub(text);
   text = scrubbed.text;

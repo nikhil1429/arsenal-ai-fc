@@ -1476,6 +1476,71 @@ function createBusWatcher(nucleus, deps = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// S8 · THE DRAIN WHILE ALIVE (unit mcap, rows 847 (4) · 852 (1), 13 Nov 2026)
+// ---------------------------------------------------------------------------
+// THE DEFECT, measured on his study day of 13 Nov: the spool was drained ONLY in server.listen's boot callback. The daemon
+// booted 30 Oct, so for 14 days every row whose POST the nerve cut at its 250 ms abort stayed PENDING: that day 28 rows
+// were pending, 22 had reached this nucleus anyway, 6 never did — 2 of his 16 Desktop turns (one a rep answer) and 1
+// teaching message missing from the record while the daemon was up the whole time. Pending was never lost; it was never READ.
+// THE FIX: the spool drains while the daemon is UP — at boot, every SPOOL_DRAIN_EVERY_MS, and soon after each POST
+// /afferent (a poke) — through the SAME door the boot drain always used: ingest(), whose S8 consumer refuses an event_id it
+// has already written. A row that reached the record before its POST was cut is MARKED DELIVERED and never written twice;
+// a row that never reached it lands once, stamped with his own ts.
+//   · ONE drain at a time: a drain that finds one in flight returns { skipped: "in-flight" } and touches nothing.
+//   · an empty spool costs one stats() read and no log line; a failure is one log line and the rows stay pending —
+//     drain() never throws (spool.drain stops at the first failure; the next drain resumes there).
+//   · poke() coalesces: any number of pokes before the drain they scheduled runs = ONE drain.
+//   · every timer is unref'd: the drainer never keeps a process alive on its own.
+// THE CADENCE IS THIS FILE'S OWN MINUTE: createBusWatcher's poll just above (`setInterval(fire, 60000)`, the 60 s safety
+// net) — nothing new is invented for it.
+export const SPOOL_DRAIN_EVERY_MS = 60000;
+// A POKE WAITS FOR THE NERVE TO MARK ITS OWN ROW. The nerve marks its row delivered the moment its 200 lands, and stops
+// waiting at 250 ms (hooks/afferent-post.mjs, its abort, unchanged). A poke drains one second after the POST that asked
+// (four of those aborts), so an answered turn has already marked itself and the drain finds only the rows that were cut;
+// and never later than the timer would (min with everyMs).
+const SPOOL_POKE_SETTLE_MS = 1000;
+// createSpoolDrainer({ ingest, spool, log, everyMs }) → { drain, poke, start, stop }. `spool` is the spool module (its
+// stats() and drain()) or a function that loads it: main() passes `() => import("./spool.mjs")`, so the import stays where
+// it always was, at listen and inside the drain's own catch — a spool that cannot load is a log line, never a dead boot.
+/** @param {{ ingest?: (evt: any) => any, spool?: any, log?: (line: string) => void, everyMs?: number }} [opts] */
+export function createSpoolDrainer({ ingest, spool, log = () => {}, everyMs = SPOOL_DRAIN_EVERY_MS } = {}) {
+  let inFlight = false, timer = null, pokeTimer = null;
+  async function drain() {
+    if (inFlight) return { skipped: "in-flight" };
+    inFlight = true;
+    try {
+      const sp = typeof spool === "function" ? await spool() : spool;
+      const s = sp.stats();
+      if (!s.available) { log(`thalamus: spool unavailable (${s.why}) — capture is POST-and-hope until it opens`); return { available: false, why: s.why || null, attempted: 0, delivered: 0, failed: 0 }; }
+      if (!s.pending) return { pending: 0, attempted: 0, delivered: 0, failed: 0 };
+      log(`thalamus: draining ${s.pending} spooled event(s) the nerve could not deliver…`);
+      const r = await sp.drain({ post: async (evt) => { await ingest(evt); return true; } });
+      log(`thalamus: spool drained — ${r.delivered} replayed${r.failed ? ` · ${r.failed} failed (kept pending)` : ""}`);
+      return { pending: s.pending, ...r };
+    } catch (e) {
+      log(`thalamus: spool drain failed — ${(e && e.message) || e} (rows stay pending; the next drain retries)`);
+      return { error: String((e && e.message) || e).slice(0, 160), attempted: 0, delivered: 0, failed: 0 };
+    } finally { inFlight = false; }
+  }
+  function poke() {
+    if (pokeTimer) return false;                   // a drain is already scheduled: this poke rides it
+    pokeTimer = setTimeout(() => { pokeTimer = null; drain(); }, Math.min(SPOOL_POKE_SETTLE_MS, everyMs));
+    if (pokeTimer.unref) pokeTimer.unref();
+    return true;
+  }
+  function start() {
+    if (!timer) { timer = setInterval(() => { drain(); }, everyMs); if (timer.unref) timer.unref(); }
+    return drain();                                // at once, as the boot drain always did
+  }
+  function stop() {
+    if (timer) clearInterval(timer);
+    if (pokeTimer) clearTimeout(pokeTimer);
+    timer = null; pokeTimer = null;
+  }
+  return { drain, poke, start, stop };
+}
+
+// ---------------------------------------------------------------------------
 // selftest — the §4.7 bar, deterministic, injected afferents, zero network
 // ---------------------------------------------------------------------------
 async function selftest() {
@@ -1575,6 +1640,97 @@ async function selftest() {
     const b = await n.ingest({ modality: "bus", event_key: "k9", market_id: "m1", observed: true });
     assert("S8 IDEMPOTENT CONSUMER — a lane with NO event_id is untouched by the guard (it was never spooled, so it has nothing to replay)",
       a.ok === true && b.ok === true && !b.duplicate);
+  }
+
+  // (1c) S8 · THE DRAIN WHILE ALIVE (unit mcap, row 852 (1)) — createSpoolDrainer over a TEMP spool (spool.mjs `path`, never
+  // the live lane) and this rig's hermetic nucleus: no boot, no port. spool.mjs opens ONE db per process (the first path
+  // wins), so every case resets it before and after. Each case is RED on a thalamus without the drainer.
+  {
+    const SP = await import("./spool.mjs");
+    const sdir = join(tmpdir(), `thalamus_drain_${process.pid}`);
+    wipe(sdir); mkdirSync(sdir, { recursive: true });
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const turn = (id, text) => ({ event_id: id, modality: "code", source: "claude-code", surface: "claude-code", session_id: "s-drain", text, ts: new Date(999000).toISOString() });
+    // a temp spool bound by `path`, counting its stats() reads — one per drain that RUNS (a skipped drain reads nothing)
+    const onSpool = (name) => {
+      SP._reset();
+      const path = join(sdir, `${name}.db`), c = { stats: 0 };
+      return { path, c, mod: { stats: () => { c.stats++; return SP.stats({ path }); }, drain: (o = {}) => SP.drain({ ...o, path }) },
+        state: () => SP.stats({ path }), write: (e) => SP.write(e, { path }) };
+    };
+    const rows = (wr, id) => wr.afferents.filter((r) => r.event_id === id).length;
+    try {
+      {
+        const { n, wr } = rig({});
+        const sp = onSpool("alive"), logs = [];
+        let atTick = null;
+        const d = createSpoolDrainer({ ingest: async (e) => { if (e.event_id === "e-alive-1") atTick = sp.c.stats; return n.ingest(e); }, spool: sp.mod, log: (m) => logs.push(m), everyMs: 30 });
+        const boot = await d.start();
+        sp.write(turn("e-alive-1", "a turn whose POST the nerve cut at 250 ms"));
+        const wroteAt = sp.c.stats;
+        for (let i = 0; i < 200 && atTick === null; i++) await sleep(10);
+        d.stop();
+        const stopped = sp.c.stats;
+        await sleep(120);
+        assert("S8 DRAIN WHILE ALIVE — after start() a row written PENDING reaches appendAfferent on the drainer's very NEXT tick (no boot, no POST), ends delivered, and stop() ends the ticks",
+          boot.pending === 0 && atTick === wroteAt + 1 && rows(wr, "e-alive-1") === 1 && sp.state().pending === 0 && sp.state().delivered === 1 && sp.c.stats === stopped);
+        assert("S8 DRAIN WHILE ALIVE — the empty ticks said nothing; the one drain that carried a row said it in two lines",
+          logs.length === 2 && /draining 1 spooled event/.test(logs[0]) && /spool drained — 1 replayed$/.test(logs[1]));
+      }
+      {
+        const { n, wr } = rig({});
+        const sp = onSpool("dup");
+        const e = turn("e-dup-live", "a turn the nucleus wrote before the nerve's abort");
+        await n.ingest(e);                               // the POST was read and ingested; its 200 never reached the nerve
+        sp.write(e);                                     // …so its row is still pending
+        const before = wr.afferents.length;
+        const r = await createSpoolDrainer({ ingest: n.ingest, spool: sp.mod }).drain();
+        assert("S8 DRAIN WHILE ALIVE — a row ALREADY INGESTED and still pending ends DELIVERED with ZERO new afferent rows (the S8 consumer refuses it: never written twice)",
+          r.delivered === 1 && wr.afferents.length === before && rows(wr, "e-dup-live") === 1 && sp.state().pending === 0 && sp.state().delivered === 1);
+      }
+      {
+        const { n, wr } = rig({});
+        const sp = onSpool("overlap");
+        sp.write(turn("e-ov-1", "one pending turn, two drains reaching for it"));
+        let ingests = 0;
+        const d = createSpoolDrainer({ ingest: (e) => { ingests++; return n.ingest(e); }, spool: sp.mod });
+        const [a, b] = await Promise.all([d.drain(), d.drain()]);
+        assert("S8 DRAIN WHILE ALIVE — two OVERLAPPING drain() calls deliver ONCE: the second returns { skipped: \"in-flight\" } and reads nothing; ingest runs once, one row",
+          a.delivered === 1 && b.skipped === "in-flight" && ingests === 1 && rows(wr, "e-ov-1") === 1 && sp.state().pending === 0 && sp.c.stats === 1);
+      }
+      {
+        const { n } = rig({});
+        const sp = onSpool("poke");
+        const d = createSpoolDrainer({ ingest: n.ingest, spool: sp.mod, everyMs: 30 });
+        const said = Array.from({ length: 10 }, () => d.poke());
+        for (let i = 0; i < 300 && sp.c.stats < 1; i++) await sleep(10);   // the one drain they scheduled (polled: a busy machine is slow, never wrong)
+        await sleep(150);                                                   // …and no second drain after it
+        const afterTen = sp.c.stats;
+        const again = d.poke();
+        for (let i = 0; i < 300 && sp.c.stats < 2; i++) await sleep(10);
+        d.stop();
+        assert("S8 DRAIN WHILE ALIVE — ten poke() calls make ONE drain (the first schedules it, nine ride it); a poke after it ran schedules the next",
+          said[0] === true && said.slice(1).every((x) => x === false) && afterTen === 1 && again === true && sp.c.stats === 2);
+      }
+      {
+        const sp = onSpool("throws"), logs = [];
+        sp.write(turn("e-throw-1", "a turn that meets a held afferent file"));
+        let threw = false, r = null, r2 = null;
+        try {
+          r = await createSpoolDrainer({ ingest: async () => { throw new Error("EPERM: afferent.jsonl held open"); }, spool: sp.mod, log: (m) => logs.push(m) }).drain();
+          r2 = await createSpoolDrainer({ ingest: async () => true, spool: async () => { throw new Error("Cannot find module spool.mjs"); }, log: (m) => logs.push(m) }).drain();
+        } catch { threw = true; }
+        assert("S8 DRAIN WHILE ALIVE — an ingest that THROWS leaves the row PENDING (its attempt recorded) and drain() does not throw; a spool that cannot load is ONE log line, never a crash",
+          !threw && r.failed === 1 && r.delivered === 0 && sp.state().pending === 1 && SP.pending({ path: sp.path })[0].attempts === 1
+          && /1 failed \(kept pending\)/.test(logs[1] || "") && !!r2.error && logs.length === 3 && /spool drain failed — Cannot find module/.test(logs[2]));
+      }
+      {
+        const sp = onSpool("empty"), logs = [];
+        const r = await createSpoolDrainer({ ingest: async () => { throw new Error("never called"); }, spool: sp.mod, log: (m) => logs.push(m) }).drain();
+        assert("S8 DRAIN WHILE ALIVE — an EMPTY spool costs ONE stats() read and NO log line", r.pending === 0 && sp.c.stats === 1 && logs.length === 0);
+      }
+      assert("S8 DRAIN WHILE ALIVE — the cadence is this file's own minute, createBusWatcher's 60 s poll", SPOOL_DRAIN_EVERY_MS === 60000);
+    } finally { SP._reset(); wipe(sdir); }
   }
 
   // (2) a repeated event is refractory-suppressed — no double-wake
@@ -2959,6 +3115,9 @@ async function main() {
   } catch (e) { swallow("the previous-month seed is a bonus, never a blocker", e); }
   nucleus.state.wakesToday = readLines(SLEDGER).filter(r => (r.day || String(r.ts || "").slice(0, 10)) === localDate() && r.tier === 2).length;
   createBusWatcher(nucleus);
+  // S8 · THE DRAIN WHILE ALIVE (unit mcap, row 852 (1)): one drainer for this daemon's life — started in the listen
+  // callback below (drainSpool), poked by every POST /afferent, ticking every SPOOL_DRAIN_EVERY_MS on an unref'd timer.
+  const drainer = createSpoolDrainer({ ingest: nucleus.ingest, spool: () => import("./spool.mjs"), log });
   const server = createServer(async (req, res) => {
     const send = (code, body) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(body)); };
     try {
@@ -2979,7 +3138,7 @@ async function main() {
       if (req.method === "POST") {
         let raw = ""; for await (const c of req) raw += c;
         const body = raw ? JSON.parse(raw) : {};
-        if (req.url === "/afferent") return send(200, await nucleus.ingest(body));
+        if (req.url === "/afferent") { const r = await nucleus.ingest(body); drainer.poke(); return send(200, r); }   // mcap: a live POST says the nerve can reach us — drain what it could not, soon
         if (req.url === "/deep-answer") return send(200, nucleus.foldDeepAnswer(body));
         if (req.url === "/bg-drained") return send(200, nucleus.foldBgDrained(body));   // M22
       }
@@ -3000,17 +3159,10 @@ async function main() {
   //     idempotence set is the same object, so a row already in afferent.jsonl is refused.
   //   · never blocks the boot and never crashes it: the drain is fire-and-forget and its
   //     failure is a log line. A sense that cannot replay is worse than one that says so.
-  const drainSpool = async () => {
-    try {
-      const spool = await import("./spool.mjs");
-      const s = spool.stats();
-      if (!s.available) return log(`thalamus: spool unavailable (${s.why}) — capture is POST-and-hope until it opens`);
-      if (!s.pending) return;
-      log(`thalamus: draining ${s.pending} spooled event(s) the nerve wrote while nothing was listening…`);
-      const r = await spool.drain({ post: async (evt) => { await nucleus.ingest(evt); return true; } });
-      log(`thalamus: spool drained — ${r.delivered} replayed${r.failed ? ` · ${r.failed} failed (kept pending)` : ""}`);
-    } catch (e) { log(`thalamus: spool drain failed — ${(e && e.message) || e} (rows stay pending; the next boot retries)`); }
-  };
+  // UNIT mcap (row 852 (1), 13 Nov 2026): the body FOLDED INTO createSpoolDrainer (its log lines with it), so the same
+  // drain also runs WHILE ALIVE — every SPOOL_DRAIN_EVERY_MS and after each POST /afferent. drainSpool keeps its name and
+  // its one call in the listen callback (organism_test.mjs's S8 law pins both): it is now the drainer's start().
+  const drainSpool = async () => drainer.start();
   server.listen(PORT, "127.0.0.1", () => { drainSpool(); return log(`thalamus: relay nucleus LIVE on http://127.0.0.1:${PORT} — τ0=${cfg.tiers.tau0} τ1=${cfg.tiers.tau1_base}+${cfg.tiers.budget_k}·(1−headroom) ε=${cfg.tiers.epsilon} · B=${cfg.binding_ms}ms · wake cap ${cfg.wake_cap_per_day}/day · SELF on provenance [${(cfg.self_sources || []).join(", ")}], never [${(cfg.self_deny_sources || []).join(", ")}]`); });
 }
 

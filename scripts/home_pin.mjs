@@ -81,7 +81,7 @@ export function mayPostHome(who, opts = {}) {
 // What a checkout needs for hooks/afferent-post.mjs to run in a selftest fixture: the
 // hook, the guard, the pin core and its two imports, and the spool it writes ahead to.
 // law-waiver:jugad a selftest fixture's FILE CLOSURE (the hook and the modules it imports), never a subject list (forks row 649 (0))
-const POSTER_FILES = ["hooks/afferent-post.mjs", "scripts/home_pin.mjs", "scripts/archivist.mjs", "scripts/captain.mjs", "scripts/daykey.mjs", "scripts/spool.mjs"];
+const POSTER_FILES = ["hooks/afferent-post.mjs", "scripts/home_pin.mjs", "scripts/archivist.mjs", "scripts/captain.mjs", "scripts/daykey.mjs", "scripts/spool.mjs", "scripts/harness_text.mjs"];
 
 // ── SELFTEST (hermetic: temp dirs only; never reads or writes a real home archive) ──
 async function selftest() {

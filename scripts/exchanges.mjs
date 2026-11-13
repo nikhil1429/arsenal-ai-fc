@@ -42,6 +42,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { archiveRoot, istDayKey } from "./archivist.mjs";
+import { HARNESS_WRAPPERS, HARNESS_MARKERS } from "./harness_text.mjs";   // row 858 (1): the harness's wrapper names, one home
 
 export const WORD_LANE = "afferent";
 export const BANK_LANE = "gaffer_grade_queue";
@@ -49,8 +50,12 @@ export const BANK_LANE = "gaffer_grade_queue";
 // so the voice modality IS its provenance (thalamus.mjs provenanceOf).
 export const HIS_SOURCES = Object.freeze(["claude-code"]);
 export const TEACHER_SOURCES = Object.freeze(["claude-code-teaching", "dugout-gaffer-teaching"]);
-// build_exchanges.mjs:47-48, verbatim pattern — applied to ONE block's own text, never to its whole message.
-export const isSystemBlock = (t) => /^\s*(<(task-notification|system-reminder)|\[Request interrupted)/.test(String(t || ""));
+// build_exchanges.mjs:47-48's shape — applied to ONE block's own text, never to its whole message: start-anchored, `<name`
+// for each harness wrapper, the prefix for each marker. THE NAMES ARE scripts/harness_text.mjs's (row 858 (1)): this reader
+// keeps none of its own, so it knows cross-session-message (row 852 (2)) and every next wrapper the day the module does.
+const reEscape = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const SYSTEM_BLOCK_RE = new RegExp(`^\\s*(${[...HARNESS_WRAPPERS.map((n) => `<${reEscape(n)}`), ...HARNESS_MARKERS.map(reEscape)].join("|")})`);
+export const isSystemBlock = (t) => SYSTEM_BLOCK_RE.test(String(t || ""));
 
 /** dayPath — the bag's documented layout (archivist.mjs:529-532). */
 export function dayPath(root, lane, day) {
@@ -178,6 +183,17 @@ async function selftest() {
     const ex = exchanges(read.records, { sessions: [S] });
     assert("SCOPE — the study session only: another session's prompt in the same minutes is NOT his study word", ex.every((x) => x.session_id === S) && !ex.some((x) => /fleet/.test(x.text)));
     assert("FIXED :75 — a system block is skipped as ONE block; his own words around it survive", !ex.some((x) => isSystemBlock(x.text)) && ex.filter((x) => x.role === "him").length === 2);
+    // rows 852 (2) / 858: EVERY name of scripts/harness_text.mjs at the START of a block is the harness's; a sentence of his that
+    // names one mid-text is HIS. Built from the module's own lists (the next wrapper is planted the day it is added), plus the
+    // one name row 852 (2) ruled this reader must gain, typed, so a module that lost it reds here too.
+    const atStart = [...HARNESS_WRAPPERS.map((n) => `<${n} id="x1">\nnot his words\n</${n}>`), ...HARNESS_MARKERS.map((m) => `${m} by user]`)];
+    const midText = [...HARNESS_WRAPPERS.map((n) => `dekho yeh <${n}> kya hota hai`), ...HARNESS_MARKERS.map((m) => `maine ${m} by user] dekha`)];
+    assert("HARNESS NAMES (row 858) — every name of scripts/harness_text.mjs at the START of a block is a system block (each wrapper, attributes allowed, and each marker)",
+      HARNESS_WRAPPERS.length > 0 && HARNESS_MARKERS.length > 0 && atStart.every((x) => isSystemBlock(x)), atStart.filter((x) => !isSystemBlock(x)).join(" | "));
+    assert("HARNESS NAMES (row 858 (3)) — a sentence of his that only NAMES one mid-text is NOT a system block: his words stay his",
+      midText.every((x) => !isSystemBlock(x)), midText.filter((x) => isSystemBlock(x)).join(" | "));
+    assert("ROW 852 (2) — a <cross-session-message …> block (another session's message, attributes and all) is a system block: the name every list missed on 13 Nov",
+      isSystemBlock('<cross-session-message from="session_b2">\nlane V asks: is the unit landed?\n</cross-session-message>') && !isSystemBlock("maine <cross-session-message> ka matlab poocha"));
     assert("FIXED :132 — a repeated \"haan\" is a datum, never a de-dup casualty (the key is the archive's rid, never the text)",
       ex.filter((x) => x.text === "haan").length === 2 && new Set(ex.map((x) => x.rid)).size === ex.length);
     assert("ROLES — provenance, never modality: an activitywatch row is nobody's word", ex.every((x) => x.role === "him" || x.role === "teacher") && !ex.some((x) => /claude\.exe/.test(x.text)));

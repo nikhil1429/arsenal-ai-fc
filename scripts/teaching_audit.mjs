@@ -148,6 +148,7 @@ import { tmpdir } from "node:os";
 import { subjectsOf, coreAxes, REGISTRY_PATH } from "./registry.mjs";   // S10 #10 sources + #12 core axes — rows, never literals · row 583 (5): REGISTRY_PATH, for the selftest's proof that it reads its OWN registry
 import { SCOPE_GLOBAL, humanText, SLASH_NOISE, BANKED_MOMENTS } from "./study_scope.mjs";   // G0 (23 Sep 2026): the dispatcher's study-scope verdict, stamped on every row · L4 (6 Oct 2026): his last prompt bounds the turn (the reader the gate and the replay use) and the test moments are the landed test-moment case's own set
 import { recordPicture, loadRegistry, pictureLines } from "./widget.mjs";   // L4 (fate 54): the registry's OWN writer — widget.mjs stays the sole writer of widgets.json (nobody's hook callee, so never a shim no-op)
+import { HARNESS_WRAPPERS, HARNESS_MARKERS } from "./harness_text.mjs";   // row 858 (1)-(2), LENT by lane V: HARNESS_PROMPT's names, one home
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // ARSENAL_AUDIT_STATE_DIR is the selftest's seam and NOTHING else's: it lets the
@@ -1399,7 +1400,12 @@ export function pictureFacts(blocks, lastMessage = "") {
 // lines were a background task's `<task-notification>` and 105 were the client's `[Request interrupted by user…]` marker; neither
 // is anything he typed. Each one STARTED a new turn (so his own prompt and the blocks before it fell out of the turn) and its text
 // was read as his words. Anchored at the line's start: a prompt of his that merely mentions either string is still his.
-const HARNESS_PROMPT = [/^\s*<task-notification>/, /^\s*\[Request interrupted by user/];
+// ROW 858 (2), 13 Nov 2026 — STRICTER ONLY, lent by lane V for unit mcap: THE NAMES ARE scripts/harness_text.mjs's, and this
+// reader keeps none of its own. Each wrapper is start-anchored as `<name` followed by whitespace or `>` (an element with
+// attributes is the harness's too), each marker as its prefix. Every line refused before is still refused (`<task-notification>`
+// ends in `>`; the module's marker is a prefix of the old one), and it now also knows cross-session-message and system-reminder.
+const harnessEscape = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const HARNESS_PROMPT = [...HARNESS_WRAPPERS.map((n) => new RegExp(`^\\s*<${harnessEscape(n)}[\\s>]`)), ...HARNESS_MARKERS.map((m) => new RegExp(`^\\s*${harnessEscape(m)}`))];
 export function promptOfLine(l) {
   if (!l || l[0] !== "{" || !/"type":"user"/.test(l)) return null;
   let o; try { o = JSON.parse(l); } catch { return null; }
@@ -2740,6 +2746,15 @@ function selftest() {
           && promptOfLine(H("maine [Request interrupted by user] dekha")) === "maine [Request interrupted by user] dekha"; });
     check("L5 · row 603 (3) · and L4 reads the same turn: a picture shown BEFORE a task-notification is still this turn's picture (picture_first true), where the notification used to cut it off",
       () => { const f = facts([H("samjhao"), MOM("check_q"), RES(), PIC(), RES(), H(TN), SAY(ASK)]); return f.new_idea === true && f.picture_present === true && f.picture_first === true && f.moment === "check_q"; });
+    // row 858 (2): ONE plant per NEW name scripts/harness_text.mjs gave this reader, planted both ways like row 603 (3)'s
+    const CSM = "<cross-session-message from=\"session_b2\" to=\"session_a1\">\nlane V asks: is the unit landed? the run got lost, confused\n</cross-session-message>";
+    check("L5 · row 858 (2) · a <cross-session-message …> (another session's message, attributes and all, even one carrying 'lost' / 'confused') is never his prompt and never starts a turn; a prompt of his that merely MENTIONS it is still his",
+      () => promptOfLine(H(CSM)) === null && ((c) => c.seen === 1 && c.marker === "samajh nahi aaya")(samajhCheck(readTurn(tx("crossmsg.jsonl", [H(CONF), PIC(), RES(), H(CSM), SAY(SHOW)]))))
+        && promptOfLine(H("dekho yeh <cross-session-message> kya hota hai")) === "dekho yeh <cross-session-message> kya hota hai");
+    const SR = "<system-reminder>\nthe run got lost, confused output — not his words\n</system-reminder>";
+    check("L5 · row 858 (2) · a <system-reminder> line (even one carrying 'lost' / 'confused') is never his prompt and never starts a turn; a prompt of his that merely MENTIONS it is still his",
+      () => promptOfLine(H(SR)) === null && ((c) => c.seen === 1 && c.marker === "samajh nahi aaya")(samajhCheck(readTurn(tx("reminder.jsonl", [H(CONF), PIC(), RES(), H(SR), SAY(SHOW)]))))
+        && promptOfLine(H("maine <system-reminder> pehli baar dekha")) === "maine <system-reminder> pehli baar dekha");
     const rp = tx("replay.jsonl", [H(CONF), PIC(), RES(), SAY(SHOW), H("ab bhi samajh nahi aa raha"), MOM("sharp_check"), RES(), SAY(SHARP), H("haan samajh gaya"), MOM("check_q"), RES(), SAY(ASK)]);
     check("L5 · replaySamajh over a recorded session — every prompt through samajhOf: the opener (0/0), a re-explain (1/1), a sharp_check (1/0) and a plain turn (0/0) sum to 'samajh seen 2 restarted 1'; its LAST turn is exactly the turn readTurn gives the Stop row (one turn definition)",
       () => { const raw = readFileSync(rp, "utf8"), all = turnsOf(raw), last = readTurn(rp);
