@@ -1,13 +1,92 @@
 {
   "_doc": "THE TANK REGISTRY (CYBORG_BRAIN.md §5) — eight accounts, eight parallel regions (§5's seven + T8 Distiller from the working-memory build), each pinned to a DIFFERENT model so the marquee senses stop being mutually exclusive. key_index maps into the same ~/.gemini/.env numbered-key pool the Dugout loads (0-based). quota_est is a conservative daily unit estimate; the fuelboard self-tunes observed ceilings on 429s with the starvation guard (never below the estimate). T3 Cochlea ships DISABLED: a preview affective surface whose only legal output is a mouth-timing hint (the affect firewall is live in thalamus.mjs); flip enabled when the captain wants the empirical probe. T4 Bridge has no Gemini key — its budget is the brain ledger (Opus window).",
   "tanks": [
-    { "id": "T1", "name": "Gaffer",      "region": "mouth",        "key_index": 0,    "model": "gemini-3.1-flash-live-preview",        "quota_est": 90,   "enabled": true },
-    { "id": "T2", "name": "Watcher",     "region": "vision",       "key_index": 1,    "model": "gemini-3.1-flash-live-preview",        "quota_est": 90,   "enabled": true },
-    { "id": "T3", "name": "Cochlea",     "region": "ears",         "key_index": 2,    "model": "gemini-2.5-flash-native-audio-latest", "quota_est": 60,   "enabled": false },
-    { "id": "T4", "name": "Bridge",      "region": "prefrontal",   "key_index": null, "model": "opus-via-cortex",                      "quota_est": 0,    "enabled": true },
-    { "id": "T5", "name": "Scout",       "region": "research",     "key_index": 3,    "model": "gemini-3.1-pro-preview",               "quota_est": 50,   "enabled": true },
-    { "id": "T6", "name": "Hippocampus", "region": "memory",       "key_index": 4,    "model": "gemini-embedding-001",                 "quota_est": 1000, "enabled": true },
-    { "id": "T7", "name": "DMN",         "region": "default-mode", "key_index": 5,    "model": "gemini-flash-latest",                  "quota_est": 250,  "enabled": true },
-    { "id": "T8", "name": "Distiller",   "region": "working-set",  "key_index": 6,    "model": "gemini-flash-latest",                  "quota_est": 250,  "enabled": true }
-  ]
+    {
+      "id": "T1",
+      "name": "Gaffer",
+      "region": "mouth",
+      "key_index": 0,
+      "role": "live",
+      "quota_est": 90,
+      "enabled": true
+    },
+    {
+      "id": "T2",
+      "name": "Watcher",
+      "region": "vision",
+      "key_index": 1,
+      "role": "live",
+      "quota_est": 90,
+      "enabled": true
+    },
+    {
+      "id": "T3",
+      "name": "Cochlea",
+      "region": "ears",
+      "key_index": 2,
+      "role": "live",
+      "quota_est": 60,
+      "enabled": false
+    },
+    {
+      "id": "T4",
+      "name": "Bridge",
+      "region": "prefrontal",
+      "key_index": null,
+      "engine": "opus-via-cortex",
+      "quota_est": 0,
+      "enabled": true
+    },
+    {
+      "id": "T5",
+      "name": "Scout",
+      "region": "research",
+      "key_index": 3,
+      "role": "pro",
+      "quota_est": 50,
+      "enabled": true
+    },
+    {
+      "id": "T6",
+      "name": "Hippocampus",
+      "region": "memory",
+      "key_index": 4,
+      "role": "embed",
+      "quota_est": 1000,
+      "enabled": true
+    },
+    {
+      "id": "T7",
+      "name": "DMN",
+      "region": "default-mode",
+      "key_index": 5,
+      "role": "text",
+      "quota_est": 250,
+      "enabled": true
+    },
+    {
+      "id": "T8",
+      "name": "Distiller",
+      "region": "working-set",
+      "key_index": 6,
+      "role": "text",
+      "quota_est": 250,
+      "enabled": true
+    }
+  ],
+  "_tank_models_retired_2026-11-13": {
+    "why": "unit FUEL (forks rows 841 / 855): LAW M, the fuelboard's tanks name ROLES resolved by models.mjs; this verb is the file's sole writer; the act rides inside its landing commit (row 843 L1); no tank enabled or disabled",
+    "models": {
+      "T1": "gemini-3.1-flash-live-preview",
+      "T2": "gemini-3.1-flash-live-preview",
+      "T3": "gemini-2.5-flash-native-audio-latest",
+      "T4": "opus-via-cortex",
+      "T5": "gemini-3.1-pro-preview",
+      "T6": "gemini-embedding-001",
+      "T7": "gemini-flash-latest",
+      "T8": "gemini-flash-latest"
+    },
+    "format": "hand-aligned table (one tank per line, padded columns; it round-trips under no JSON.stringify form) -> the verb's own form JSON.stringify(o, null, 2) + \"\\n\" (fuelboard.mjs writeAtomic, tanks.json's form); from this write on the file round-trips under it",
+    "by": "node scripts/fuelboard.mjs config migrate-roles (unit FUEL, forks row 841)"
+  }
 }

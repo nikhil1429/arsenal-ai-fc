@@ -64,6 +64,10 @@
 //               SAME token rule the code scan uses; fuelboard carries a DECLARED baseline of 8 that may
 //               only fall (CONFIG_BASELINE). The Claude roster gains `thalamus_adjudicator` (haiku: what
 //               that call site has spent since 17 Jul — row 826 (iii), no new model choice).
+//   · UNIT FUEL (13 Nov 2026, forks row 841) — fuelboard's tanks name ROLES and `fuelboard.mjs config
+//               migrate-roles` is that file's sole writer, so CONFIG_BASELINE's one entry FELL 8 → 0 (kept,
+//               at 0). `configCheck` IGNORES `engine` keys: a string under `engine` is a LABEL (T4 Bridge
+//               opus-via-cortex, brain_config's claude) that no key rule reads; the token rule reads every value.
 // LAWS: hermetic in a fixture (selftest / ARSENAL_AUDIT_COLLAR ⇒ probe writes to a
 //   scratch path or nowhere, never the live file) · owners-only (this file is the one
 //   writer of models.json) · never throws from generate/embed/resolve · no key material
@@ -611,9 +615,21 @@ export function check({ dir = __dirname, files = null, stateDir = STATE_DIR, con
 // printed with its new count, so the next edit lowers the number (a gate only gets stricter).
 // A config the scan cannot parse is a hit OUTSIDE any baseline — a scan that cannot see inside a file is
 // never a pass for it.
-export const CONFIG_BASELINE = { "fuelboard_config.json": 8 };
+// UNIT FUEL (forks row 841 (3), 13 Nov 2026): fuelboard's owner unit LANDED — its tanks name roles and
+// `fuelboard.mjs config migrate-roles` is the file's sole writer — so its baseline FELL 8 → 0. The key is
+// KEPT at 0, not removed: every `models check` line keeps naming the one file whose debt was declared, now
+// paid ("fuelboard_config.json 0 of baseline 0"), and its over / unparsable / absent states stay read
+// through the real table; at 0 a single literal is OVER and fails whole. Raising it again is a diff against 0.
+export const CONFIG_BASELINE = { "fuelboard_config.json": 0 };
 const CONFIG_SUFFIX = "_config.json";
 const CLAUDE_ALIAS = /^(opus|sonnet|haiku)$/;
+// UNIT FUEL (row 841 (2)): an `engine` key holding a STRING is a LABEL — it names WHAT runs a thing, never which
+// model: fuelboard's T4 Bridge `engine: "opus-via-cortex"` (the Opus window), brain_config's seats `engine:
+// "claude"`. The scan IGNORES engine keys: neither key rule — (2) `model`, (3) `role` — reads one, so a label is
+// never judged as a model name, nor can a later widening of those rules reach one. The TOKEN rule (1) still reads
+// its value: a model-shaped gemini literal is a literal under any key, so ignoring the KEY never hides a model
+// name (a gate only gets stricter). An `engine` holding an object or array is no label: it is walked as before.
+const ENGINE_KEY = /^engine$/i;
 export function configCheck({ stateDir = STATE_DIR, files = null } = {}) {
   let list = files;
   if (!list) { try { list = readdirSync(stateDir).filter((f) => f.endsWith(CONFIG_SUFFIX)).sort().map((f) => join(stateDir, f)); } catch { list = []; } }
@@ -636,6 +652,7 @@ export function configCheck({ stateDir = STATE_DIR, files = null } = {}) {
         for (const [k, x] of Object.entries(v)) {
           if (k.startsWith("_")) continue;                                   // history: skipped WHOLE
           const p = path ? `${path}.${k}` : k;
+          if (ENGINE_KEY.test(k) && typeof x === "string") { walk(x, p); continue; }   // UNIT FUEL (row 841 (2)): an engine LABEL — no key rule reads it; the token rule still does
           if (/^model$/i.test(k) && typeof x === "string" && !CLAUDE_ALIAS.test(x)) note(p, x, `model "${x}" is not opus|sonnet|haiku`);
           if (/^role$/i.test(k) && !(typeof x === "string" && roleNames.has(x))) note(p, x, `role ${JSON.stringify(x)} names no CLAUDE_ROLES key and no ROLES member`);
           walk(x, p);
@@ -652,7 +669,8 @@ export function configCheck({ stateDir = STATE_DIR, files = null } = {}) {
   return { ok: hits.length === 0, hits, declared, files: list.length, baselines };
 }
 // the ONE more line `models check` prints (unit 818): `models check · config scan: <n> file(s) · hits <h> ·
-// declared <d> (fuelboard_config.json <k> of baseline 8)`; a baseline that may fall names its new count.
+// declared <d> (fuelboard_config.json <k> of baseline <b>)`; a baseline that may fall names its new count
+// (unit FUEL: <b> is 0, so that file now reads `0 of baseline 0`, and any literal in it is OVER).
 function configLine(c) {
   const b = (x) => x.state === "absent" ? `${x.file} absent of baseline ${x.baseline} · the baseline may fall to 0`
     : x.state === "unparsable" ? `${x.file} UNPARSABLE of baseline ${x.baseline} · it fails whole`
@@ -902,13 +920,28 @@ async function selftest() {
       assert("818 CONFIG SCAN: ONE finding per path — the live thalamus shape (a gemini name under `model`) is ONE hit carrying both reasons, file thalamus_config.json, path adjudicator.model (lane V's per-path count)",
         !t.ok && t.hits.length === 1 && t.hits[0].file === "thalamus_config.json" && t.hits[0].path === "adjudicator.model" && /not opus\|sonnet\|haiku/.test(t.hits[0].why) && /gemini literal gemini-flash-lite-latest/.test(t.hits[0].why), JSON.stringify(t.hits));
       const tanks = (n) => ({ _doc: "fixture tanks", tanks: Array.from({ length: n }, (_, i) => ({ id: `T${i + 1}`, model: i === 3 ? "opus-via-cortex" : "gemini-3.1-pro-preview", enabled: true })) });
-      const at8 = scan("f8", "fuelboard_config.json", tanks(8)), over9 = scan("f9", "fuelboard_config.json", tanks(9));
-      assert("818 BASELINE: fuelboard at its declared 8 is COUNTED, not failed; one more and ALL nine fail (a gate only gets stricter)",
-        at8.ok && at8.declared.length === 8 && at8.hits.length === 0 && at8.baselines[0].state === "at"
-        && !over9.ok && over9.hits.length === 9 && over9.declared.length === 0 && over9.baselines[0].state === "over", JSON.stringify({ at8: at8.baselines, over9: over9.baselines }));
-      const at7 = scan("f7", "fuelboard_config.json", tanks(7));
-      assert("818 BASELINE may only fall: at 7 of 8 the scan passes and PRINTS the new count, so the next edit lowers the number",
-        at7.ok && at7.declared.length === 7 && at7.baselines[0].state === "falls" && /fuelboard_config\.json 7 of baseline 8 · the baseline may fall to 7/.test(configLine(at7)), configLine(at7));
+      // UNIT FUEL (row 841 (3)): the baseline FELL 8 → 0 — planted both ways on the two shapes the owner verb turns one into the other
+      const roled = { _doc: "fixture tanks", tanks: Array.from({ length: 8 }, (_, i) => i === 3 ? { id: "T4", engine: "opus-via-cortex", enabled: true } : { id: `T${i + 1}`, role: "pro", enabled: true }),
+        "_tank_models_retired_2026-11-13": { why: "fixture", models: { T1: "gemini-3.1-pro-preview", T4: "opus-via-cortex" }, format: "hand -> JSON.stringify(o, null, 2)" } };
+      const july8 = scan("f8", "fuelboard_config.json", tanks(8)), mig = scan("fm", "fuelboard_config.json", roled);
+      assert("FUEL BASELINE 8 → 0 (row 841 (3), the key KEPT at 0): fuelboard's July shape — 7 gemini literals + opus-via-cortex under `model` — now FAILS, all 8 hits, none declared (state over); the same tanks migrated (roles + T4 engine, the literals in a `_` receipt) pass at 0 of 0 (state at)",
+        CONFIG_BASELINE["fuelboard_config.json"] === 0 && Object.keys(CONFIG_BASELINE).length === 1
+        && !july8.ok && july8.hits.length === 8 && july8.declared.length === 0 && july8.baselines[0].state === "over"
+        && july8.hits.filter((h) => /gemini literal/.test(h.why)).length === 7 && july8.hits.some((h) => h.path === "tanks[3].model" && h.value === "opus-via-cortex")
+        && mig.ok && mig.hits.length === 0 && mig.declared.length === 0 && mig.baselines[0].state === "at" && mig.baselines[0].count === 0, JSON.stringify({ july8: july8.baselines, mig: mig.baselines, hits: mig.hits }));
+      const one = scan("f1", "fuelboard_config.json", tanks(1));
+      assert("FUEL BASELINE is the floor (a gate only gets stricter): at 0 ONE literal is OVER and fails whole, and the line names no count to fall to — the `falls` state is unreachable with nothing declared",
+        !one.ok && one.hits.length === 1 && one.declared.length === 0 && one.baselines[0].state === "over"
+        && configLine(one) === "models check · config scan: 1 file(s) · hits 1 · declared 0 (fuelboard_config.json 1 of baseline 0 · OVER: all 1 fail)", configLine(one));
+      // UNIT FUEL (row 841 (2)): `engine` keys are IGNORED by the key rules — planted both ways
+      const e = scan("e", "e_config.json", { tanks: [{ id: "T4", engine: "opus-via-cortex", enabled: true }], seat: { engine: "claude", model: "opus" } });
+      const eAsModel = scan("em", "em_config.json", { tanks: [{ id: "T4", model: "opus-via-cortex", enabled: true }], seat: { model: "claude" } });
+      const eTok = scan("et", "et_config.json", { box: { engine: "gemini-3.5-flash" }, nest: { engine: { model: "opus-via-cortex" } } });
+      assert("FUEL CONFIG SCAN: `engine` is a LABEL (row 841 (2)) — T4's `engine: opus-via-cortex` and a seat's `engine: claude` are NO hit while the SAME values under `model` red; a gemini literal under `engine` still reds by the token rule alone (ignoring the key never hides a model name), and an `engine` OBJECT is walked as before (its `model` reds)",
+        e.ok && e.hits.length === 0 && e.declared.length === 0
+        && !eAsModel.ok && eAsModel.hits.map((h) => h.path).join(",") === "tanks[0].model,seat.model"
+        && !eTok.ok && eTok.hits.map((h) => h.path).join(",") === "box.engine,nest.engine.model" && /^gemini literal gemini-3\.5-flash$/.test(eTok.hits[0].why) && /not opus\|sonnet\|haiku/.test(eTok.hits[1].why),
+        JSON.stringify({ e: e.hits, eAsModel: eAsModel.hits, eTok: eTok.hits }));
       const bad = scan("fx", "fuelboard_config.json", "{ \"tanks\": [ not json");
       assert("818 CONFIG SCAN: an unparsable config is a HIT outside any baseline — a scan that cannot see inside a file never passes it",
         !bad.ok && bad.hits.length === 1 && bad.hits[0].path === "(file)" && bad.declared.length === 0 && bad.baselines[0].state === "unparsable", JSON.stringify(bad.hits));
@@ -922,9 +955,10 @@ async function selftest() {
       assert("818 CHECK folds the config scan in: clean code + a config carrying a literal = FAIL (`ok` needs both); the same code + a clean state dir = ok, and only *_config.json files are walked",
         !dirty.ok && dirty.hits.length === 0 && dirty.config.hits.length === 1 && dirty.config.hits[0].path === "adjudicator.model"
         && clean.ok && clean.config.files === 1 && clean.config.hits.length === 0, JSON.stringify({ dirty: dirty.config, clean: clean.config }));
-      assert("818 CHECK CLI: ONE more line — `models check · config scan: <n> file(s) · hits <h> · declared <d> (fuelboard_config.json <k> of baseline 8)`",
-        configLine(at8) === "models check · config scan: 1 file(s) · hits 0 · declared 8 (fuelboard_config.json 8 of baseline 8)"
-        && configLine(clean.config) === "models check · config scan: 1 file(s) · hits 0 · declared 0 (fuelboard_config.json absent of baseline 8 · the baseline may fall to 0)", `${configLine(at8)} | ${configLine(clean.config)}`);
+      assert("818/FUEL CHECK CLI: ONE more line, at baseline 0 — `… hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)` for the migrated tanks, `… hits 8 · declared 0 (fuelboard_config.json 8 of baseline 0 · OVER: all 8 fail)` for July's, and 818's absent wording for a state dir without the file",
+        configLine(mig) === "models check · config scan: 1 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)"
+        && configLine(july8) === "models check · config scan: 1 file(s) · hits 8 · declared 0 (fuelboard_config.json 8 of baseline 0 · OVER: all 8 fail)"
+        && configLine(clean.config) === "models check · config scan: 1 file(s) · hits 0 · declared 0 (fuelboard_config.json absent of baseline 0 · the baseline may fall to 0)", `${configLine(mig)} | ${configLine(july8)} | ${configLine(clean.config)}`);
     } finally { rmSync(sdir, { recursive: true, force: true }); }
     const lc = configCheck();
     assert(`818 THE LAW (configs, live tree): the scan reads every *_config.json in the live state dir without throwing (${lc.files} file(s) · ${lc.hits.length} hit(s) · ${lc.declared.length} declared) and names each finding by file + path + why — \`models check\` is the GATE; this line is the invariant, green before AND after his live act`,
