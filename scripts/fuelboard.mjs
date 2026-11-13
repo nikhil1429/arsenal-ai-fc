@@ -38,6 +38,7 @@ import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";   // unit FUEL — the owner verb prints the file's sha256 before and after
 import { resolveSync as modelsResolve, SEED } from "./models.mjs";   // LAW M (18 Aug 2026): tanks name roles; the resolver names the model
+import { swallow } from "./swallow.mjs";   // Vgates (forks rows 871 / 873): the selftest's temp-dir cleanup is declared, never silent (Block 7)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -630,7 +631,7 @@ async function selftest() {
       const afterScan = configCheck({ files: [tcfg] });
       assert("FUEL × LAW M: the July file's eight `model` values are eight findings of the config scan; the migrated file has NONE — 0 hits, 0 declared (the old values sit in a `_` receipt, which the scan reads as history)",
         before.hits.length + before.declared.length === 8 && afterScan.ok && afterScan.hits.length === 0 && afterScan.declared.length === 0);
-    } finally { try { rmSync(tdir, { recursive: true, force: true }); } catch {} }
+    } finally { try { rmSync(tdir, { recursive: true, force: true }); } catch (e) { swallow("fuelboard selftest: the FUEL temp dir, held by a Windows lock", e); } }
   }
   assert("FUEL: the selftest left the live fuelboard_config.json byte-for-byte as it found it (every verb run above was on a temp copy)",
     (existsSync(CONFIG) ? sha12(readFileSync(CONFIG)) : null) === liveBefore);

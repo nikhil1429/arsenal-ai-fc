@@ -1276,10 +1276,13 @@ async function captainHoldFact(deps = {}) {
 const ADJ_MODEL_FALLBACK = "haiku";        // what this call site has actually spent since 17 Jul
 const CLAUDE_MODEL_ALIASES = new Set(["opus", "sonnet", "haiku"]);
 // L9 · FROZEN, NEVER DELETED (unit 818, 13 Nov 2026): the 10 Aug resolver, kept verbatim under its own
-// name — unexported and never called. It read `adjudicator.model` and substituted haiku for any name
+// name and never called. It read `adjudicator.model` and substituted haiku for any name
 // `claude -p` cannot spawn; that substitution is exactly what unit 818 retires, because no config names a
 // model any more. The live resolver is resolveAdjModel, just below.
-function resolveAdjModelLegacy(cfg) {
+// EXPORTED by unit Vgates (forks rows 871 / 873, way X): unexported, lint's no-unused-vars counted it and
+// gates lint went red (SPEC_PROBESUITE section 5's precedent: a frozen body is exported). Its guard is the
+// selftest's L9 assert: defined once, called nowhere, named by NO other tracked source file.
+export function resolveAdjModelLegacy(cfg) {
   const requested = String(((cfg || {}).adjudicator || {}).model || "").trim();
   const alias = requested.toLowerCase();
   if (CLAUDE_MODEL_ALIASES.has(alias)) return { model: alias, requested, fallback: null };
@@ -1896,15 +1899,35 @@ async function selftest() {
       && /adjudicator\s+: OFF · /.test(buildStatus([], [], {}, { ...DEFAULT_CONFIG, adjudicator: { role: "thalamus_adjudicator", enabled: "yes" } })));
     const viaNull = resolveAdjModel({ adjudicator: { role: "thalamus_adjudicator" } }, { resolve: () => null });
     const viaThrow = resolveAdjModel({ adjudicator: { role: "thalamus_adjudicator" } }, { resolve: () => { throw new Error("roster unreadable"); } });
-    const viaDoor = resolveAdjModel({ adjudicator: { role: "x_role" } }, { resolve: (r) => ({ role: r, model: "opus", via: "door" }) });
+    const viaDoor = resolveAdjModel({ adjudicator: { role: "x_role" } }, { resolve: (r) => ({ role: r, model: "opus", effort: null, via: "door" }) });
     assert("818 THE RESOLVE DOOR: resolveAdjModel takes its resolver by injection; a resolver that answers nothing or THROWS fails closed with a NAMED fallback, never a guessed model",
       viaNull.model === null && /resolves to no model/.test(viaNull.fallback) && viaThrow.model === null && /roster unreadable/.test(viaThrow.fallback)
       && viaDoor.model === "opus" && viaDoor.via === "door" && viaDoor.role === "x_role" && viaDoor.fallback === null);
     const src = afferentRawLines(fileURLToPath(import.meta.url)).join("\n");    // the roll's own raw reader — no new fs site
     const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-    const exportList = (code.match(/^export \{[^}]*\};?$/m) || [""])[0];
-    assert("818 L9: the 10 Aug resolver is FROZEN as resolveAdjModelLegacy — defined once, unexported, never called",
-      (code.match(/function resolveAdjModelLegacy\(/g) || []).length === 1 && (code.match(/resolveAdjModelLegacy\(/g) || []).length === 1 && exportList.length > 0 && !/resolveAdjModelLegacy/.test(exportList));
+    // Vgates (forks rows 871 / 873, way X): the frozen body is EXPORTED so lint's no-unused-vars does not count it.
+    // Its old sub-clause "unexported" read only the export LIST, so an `export function` never reached it: that
+    // clause went blind the day the export landed. It is now: defined once, called nowhere, exported, and NAMED BY
+    // NO OTHER TRACKED SOURCE FILE (every .mjs / .js / .cjs that git ls-files lists, read whole). The needle is
+    // joined at run time, so no literal in this file can satisfy or trip the scan; a scan that sees fewer than
+    // 100 files is blind and RED; an unreadable file counts as a namer, never as skipped.
+    const LEG = ["resolveAdjModel", "Legacy"].join("");
+    const legCalls = (text) => text.split(LEG + "(").length - 1;
+    const legNamers = (files) => files.filter((f) => new RegExp("\\b" + LEG + "\\b").test(f.text)).map((f) => f.path);
+    const { spawnSync: legSpawn } = await import("node:child_process");
+    const legRoot = join(__dirname, "..");
+    const legLs = legSpawn("git", ["-C", legRoot, "ls-files", "-z", "--", "*.mjs", "*.js", "*.cjs"], { encoding: "utf8", windowsHide: true, maxBuffer: 64 << 20 });
+    const legTracked = legLs.status === 0 ? String(legLs.stdout).split("\0").filter(Boolean) : [];
+    const legNamed = legNamers(legTracked.filter((p) => p !== "scripts/thalamus.mjs").map((p) => {
+      try { return { path: p, text: readFileSync(join(legRoot, p), "utf8") }; } catch (e) { swallow(`818 L9 scan: ${p} unreadable, counted as a namer`, e); return { path: p, text: LEG }; }
+    }));
+    assert(`818 L9: the 10 Aug resolver is FROZEN under its own name — defined once, called nowhere, exported, and named by NO other tracked source file (${legTracked.length} tracked .mjs/.js/.cjs read; namers: ${legNamed.join(", ") || "none"})`,
+      (code.match(/function resolveAdjModelLegacy\(/g) || []).length === 1 && legCalls(code) === 1 && /^export function resolveAdjModelLegacy\(/m.test(code)
+      && legTracked.length >= 100 && legNamed.length === 0);
+    assert("818 L9 BITES (Vgates): a planted file that imports the frozen resolver is a namer, a near-miss import of resolveAdjModel is not, and a call added inside this file makes two where one is allowed",
+      legNamers([{ path: "plant/importer.mjs", text: `import { ${LEG} } from "../scripts/thalamus.mjs";` }]).length === 1
+      && legNamers([{ path: "plant/clean.mjs", text: "import { resolveAdjModel } from \"../scripts/thalamus.mjs\";" }]).length === 0
+      && legCalls(code + "\n" + LEG + "({});") === 2 && legCalls(code) === 1);
     const self = await import(import.meta.url);
     assert("818 EXPORTS: resolveAdjModel, adjudicateLive and DEFAULT_ADJUDICATOR leave the module, and an import stays side-effect free (the main guard still keys on argv[1])",
       self.resolveAdjModel === resolveAdjModel && self.adjudicateLive === adjudicateLive && self.DEFAULT_ADJUDICATOR === DEFAULT_ADJUDICATOR && self.loadConfig === loadConfig
