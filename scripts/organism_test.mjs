@@ -170,19 +170,43 @@ function suiteMembers(pkg) {
   return out;
 }
 
+// ── ONE RUN PER SELFTEST (forks row 880 (1), branch A · 14 Nov 2026) ─────────
+// hermetic() spawns every organ that has a selftest inside its forensics window, and suites()
+// used to spawn the package.json members AGAIN in the same `all`: lane S measured 19 of the last
+// 25 nightly sweeps dead at watchman's 15-minute ceiling (spawnSync ETIMEDOUT), while the hermetic
+// window alone ran 321 to 503 s for 121 selftests. So hermetic()'s loop KEEPS the result run()
+// returned, and suites() takes it for a member ONLY when its own call is the IDENTICAL command —
+// the key is the argv array, the cwd and the timeout as run() resolves them, and the env override
+// (null when run() is given none). Every other call spawns as before: test_coach_v2 (bare here,
+// `selftest` in hermetic), a member hermetic never ran, and every member of `suites` run alone,
+// because the store lives in this process only. A kept failure is the very { code, out } a fresh
+// spawn returns, so it reds exactly as that spawn would, with its tail.
+/** runKey — the identical-command key of one run() call. PURE: exported so a fixture can bite it.
+ *  @param {string[]} args @param {{ cwd?: string, timeout?: number, env?: object }} [opts] @returns {string} */
+export function runKey(args, opts = {}) {
+  return JSON.stringify([args, opts.cwd || ROOT, opts.timeout || 120000, opts.env || null]);
+}
+const hermeticRuns = new Map();   // runKey → { code, out } as run() returned it · set by hermetic()'s loop, taken once by suites()
+
 // ── 1b. THE RUNNER — every member, independently, all results reported ───────
 function suites() {
   section("SUITES — every member run INDEPENDENTLY (one red never hides the rest)");
   const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
   const members = suiteMembers(pkg);
   const red = [];
+  let reused = 0;
   for (const m of members) {
     const file = join(ROOT, "scripts", m + ".mjs");
     // test_coach_v2 is itself a harness and is invoked bare (package.json documents this)
-    const r = run(m === "test_coach_v2" ? [file] : [file, "selftest"]);
+    const args = m === "test_coach_v2" ? [file] : [file, "selftest"];
+    // ONE RUN PER SELFTEST (row 880 (1)): hermetic()'s result when this is its IDENTICAL command, else a spawn
+    const key = runKey(args), kept = hermeticRuns.get(key);
+    if (kept) { hermeticRuns.delete(key); reused++; }
+    const r = kept || run(args);
     if (r.code !== 0) red.push({ m, tail: r.out.split(/\r?\n/).filter(Boolean).slice(-3).join(" | ") });
     console.log(`  ${r.code === 0 ? "ok  " : "FAIL"} ${m}`);
   }
+  console.log(`  suites: reused ${reused} of ${members.length} member result(s) from hermetic (identical command), ran ${members.length - reused}`);
   assert(`all ${members.length} suite members pass (every one RUN, not chained)`, red.length === 0,
     red.map((r) => `${r.m}: ${r.tail}`).join("\n         "));
 }
@@ -1962,7 +1986,9 @@ function hermetic() {
   const before = snap(), beforeH = hashes();
   const targets = scripts().filter(hasSelftest);
   const timeline = [];                       // F-6's attribution side, free: the spawn loop already runs
-  for (const f of targets) { const t0 = Date.now(); run([join(ROOT, "scripts", f), "selftest"]); timeline.push({ organ: f, start: t0, end: Date.now() }); }
+  // ONE RUN PER SELFTEST (row 880 (1)): the result run() returns is KEPT for suites() under its identical-command key,
+  // after the window's end is stamped — the same spawns, the same order, the same window; the trip metric is untouched.
+  for (const f of targets) { const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args), r); }
   const after = snap(), afterH = hashes();
 
   // THE TRIP METRIC IS UNCHANGED (rule 6): size:mtimeMs, exactly as before. The
