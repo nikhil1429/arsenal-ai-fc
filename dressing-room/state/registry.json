@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-11-13T21:35:17.731Z",
+ "updated_at": "2026-11-14T08:37:10.388Z",
  "tables": {
   "mechanisms": [
    {
@@ -368,6 +368,17 @@
     ],
     "updated_at": "2026-09-04T01:25:11.423Z",
     "added_at": "2026-09-04T01:25:11.423Z"
+   },
+   {
+    "subject": "timeaudit",
+    "schema_owner": "timeaudit.mjs",
+    "witness": "dressing-room/state/tasks_expected.json slots.ArsenalFC-TimeAuditor-Pulse.at[0] - the first ArsenalFC-TimeAuditor trigger of the day, 12:00 (Full 22:00, Pulse 12:00/15:00/18:00)",
+    "slot": {
+     "after": "12:00"
+    },
+    "notes": "forks row 880 (4)(a) - o4 takes the o2 slot guard: before the TimeAuditor first slot a timeaudit.json not dated today is EXPECTED, not a time-unmeasured RED (outwork_audit reads slotPassed, never re-implements)",
+    "updated_at": "2026-11-14T08:37:10.381Z",
+    "added_at": "2026-11-14T08:37:10.381Z"
    }
   ],
   "sandbox_subjects": [

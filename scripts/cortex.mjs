@@ -156,6 +156,15 @@ const UNSENT    = join(STATE_DIR, "cortex_unsent.jsonl");
 const BLEDGER   = join(STATE_DIR, "brain_ledger.jsonl");
 const THALAMUS  = "http://127.0.0.1:4113";
 const LIMIT_RE  = /limit|overloaded|rate.?limit|resets \d/i;
+// THE TAIL (14 Nov 2026 · forks row 880 (3)(a) · lane S). Every `error:` the
+// meter keeps goes through this ONE helper, which keeps the LAST n chars and
+// prefixes "…" when it cuts. A thrown `claude -p` error reads "Command failed:
+// <the whole command line>\n<stderr>", and the command line carries CORTEX_LEAN's
+// system prompt (387 chars in all). So the old head cut, slice(0, 200), kept the
+// command line alone and cut the CAUSE from all 3 cortex_consolidate rows the live
+// ledger held (9 / 11 / 13 Nov 2026). The cause sits at the end of the message,
+// and the tail keeps it.
+const errTail = (msg, n) => { const s = String(msg ?? ""); return s.length > n ? `…${s.slice(-n)}` : s; };
 // E2E audit 25 Jul 2026: this used to be an unguarded fetch. If the thalamus was
 // down or slow, the POST threw, the exception escaped serveOne, and the Opus
 // answer the captain had ALREADY PAID FOR was discarded — the wake stayed pending
@@ -168,7 +177,7 @@ const defaultPost = async (path, body) => {
     const r = await fetch(THALAMUS + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!r.ok) return { ok: false, error: `thalamus ${r.status}` };
     try { return { ok: true, ...(await r.json()) }; } catch { return { ok: true }; }
-  } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 160) }; }
+  } catch (e) { return { ok: false, error: errTail((e && e.message) || e, 160) }; }
 };
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e);} return null; };
@@ -587,10 +596,17 @@ function claudeDeep(prompt, cfg, deps = {}) {
     // an ordinary error, the window never learned it was locked, and the wake burned
     // both its attempts inside the lockout. brain.mjs:507 has always read the
     // envelope (`isErr && LIMIT_RE.test(text)`); the cortex now reads it the same way.
-    return { ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cc, cache_read_tokens: cr, total_tokens: (inTok + outTok + cc + cr) || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? String(j.result).slice(0, 200) : null };
+    return { ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cc, cache_read_tokens: cr, total_tokens: (inTok + outTok + cc + cr) || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? errTail(String(j.result), 200) : null };
   } catch (e) {
-    const msg = String((e && e.message) || e).slice(0, 200);
-    return { ok: false, text: "", input_tokens: 0, output_tokens: 0, total_tokens: Math.ceil(prompt.length / 4), duration_ms: Date.now() - t0, limit_hit: /limit|overloaded|rate.?limit|resets \d/i.test(msg), error: msg };
+    const msg = String((e && e.message) || e);
+    // row 880 (3)(a): a call that THREW can still carry claude's own envelope on
+    // its stdout. When it does, the envelope's `result` names the cause.
+    // limit_hit reads the same 200-char head it always read (no change to what
+    // runs, or when).
+    let cause = msg;
+    try { const j = JSON.parse(String((e && e.stdout) || "")); if (j && j.is_error === true && j.result != null) cause = String(j.result); }
+    catch { cause = msg; }   // no envelope on stdout: the message itself (the command line, then stderr) carries the cause
+    return { ok: false, text: "", input_tokens: 0, output_tokens: 0, total_tokens: Math.ceil(prompt.length / 4), duration_ms: Date.now() - t0, limit_hit: /limit|overloaded|rate.?limit|resets \d/i.test(msg.slice(0, 200)), error: errTail(cause, 200) };
   }
 }
 
@@ -604,7 +620,7 @@ function claudeDeepAsync(prompt, cfg, deps = {}) {
   const model = deps.model || "opus";
   const resumeArgs = deps.resume ? ["--resume", String(deps.resume)] : [];
   return new Promise((resolve) => {
-    const fail = (msg) => resolve({ ok: false, text: "", input_tokens: 0, output_tokens: 0, total_tokens: Math.ceil(prompt.length / 4), duration_ms: Date.now() - t0, limit_hit: LIMIT_RE.test(msg), error: msg.slice(0, 200), resumed: !!deps.resume, model });
+    const fail = (msg) => resolve({ ok: false, text: "", input_tokens: 0, output_tokens: 0, total_tokens: Math.ceil(prompt.length / 4), duration_ms: Date.now() - t0, limit_hit: LIMIT_RE.test(msg), error: errTail(msg, 200), resumed: !!deps.resume, model });
     try {
       const execFn = deps.execAsync || execFile;
       const child = execFn("claude", ["-p", "--output-format", "json", "--model", model, ...resumeArgs, ...CORTEX_LEAN], {   // G0 — same lean flags as the sync lane
@@ -620,7 +636,7 @@ function claudeDeepAsync(prompt, cfg, deps = {}) {
           // E2E audit 25 Jul 2026: same envelope blindness as claudeDeep above — the
           // async lane is the one the daemon actually uses, so THIS is where a plan
           // limit was being ledgered as limit_hit:false and killing queued wakes.
-          resolve({ ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cc, cache_read_tokens: cr, total_tokens: (inTok + outTok + cc + cr) || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? String(j.result).slice(0, 200) : null,
+          resolve({ ok: j.is_error !== true && !!text, text, input_tokens: inTok, output_tokens: outTok, cache_creation_tokens: cc, cache_read_tokens: cr, total_tokens: (inTok + outTok + cc + cr) || Math.ceil((prompt.length + text.length) / 4), duration_ms: Date.now() - t0, limit_hit: j.is_error === true && LIMIT_RE.test(text), error: j.is_error ? errTail(String(j.result), 200) : null,
             // Phase 7.4 — the CLI's own conversation id, the only way to attach
             // the next wake of this sitting to this one. Additive; null when the
             // reply carries none, never invented.
@@ -1191,6 +1207,28 @@ async function selftest() {
     const ra = await claudeDeepAsync("p", tinyCfg, { execAsync: (_f, _a, _o, cb) => { cb(null, JSON.stringify({ is_error: true, result: "5-hour limit reached · resets 3am" })); return null; } });
     assert("ENVELOPE: the ASYNC lane (the one the daemon uses) reads it too", ra.ok === false && ra.limit_hit === true);
   }
+  // THE TAIL (row 880 (3)(a)): a failure's CAUSE sits at the END of the message; the meter keeps the end
+  {
+    const tinyCfg = { deep: { timeout_ms: 1000, max_thinking_tokens: 1000 } };
+    const cmdLine = `claude -p --output-format json ${CORTEX_LEAN.join(" ")}`;
+    const thrown = (stdout = "") => () => { throw Object.assign(new Error(`Command failed: ${cmdLine}\n${"x".repeat(1000)} CAUSE: not logged in`), { stdout, status: 1 }); };
+    assert("TAIL · errTail keeps the LAST n chars and says it cut ('…'); a message that fits comes back whole",
+      errTail("abcdef", 3) === "…def" && errTail("abc", 3) === "abc" && errTail("", 200) === "");
+    const rs = claudeDeep("p", tinyCfg, { exec: thrown() });
+    assert("TAIL · SYNC lane: a thrown `Command failed: <the whole command line>\\n<stderr>` keeps the CAUSE, not the command line (the 9-13 Nov cut)",
+      rs.ok === false && rs.error.endsWith("CAUSE: not logged in") && rs.error.startsWith("…") && rs.error.length === 201 && !rs.error.includes("Command failed") && rs.limit_hit === false);
+    const re = claudeDeep("p", tinyCfg, { exec: thrown(JSON.stringify({ is_error: true, result: `${"y".repeat(400)} ENVELOPE CAUSE: credit balance too low` })) });
+    assert("TAIL · SYNC lane: a throw whose stdout carries claude's own {is_error} envelope keeps the TAIL of its result",
+      re.ok === false && re.error.endsWith("ENVELOPE CAUSE: credit balance too low") && !re.error.includes("x".repeat(20)));
+    const rn = claudeDeep("p", tinyCfg, { exec: thrown("not json") });
+    assert("TAIL · SYNC lane: stdout that is no envelope leaves the message's own tail as the cause",
+      rn.error.endsWith("CAUSE: not logged in"));
+    const raf = await claudeDeepAsync("p", tinyCfg, { execAsync: (_f, _a, _o, cb) => { cb(new Error(`Command failed: ${cmdLine}\n${"x".repeat(1000)} ASYNC CAUSE: spawn EPERM`), ""); return null; } });
+    const rae = await claudeDeepAsync("p", tinyCfg, { execAsync: (_f, _a, _o, cb) => { cb(null, JSON.stringify({ is_error: true, result: `${"z".repeat(400)} ASYNC ENVELOPE CAUSE` })); return null; } });
+    assert("TAIL · ASYNC lane: the failed exec and the {is_error} envelope both keep their tail",
+      raf.ok === false && raf.error.endsWith("ASYNC CAUSE: spawn EPERM") && raf.error.startsWith("…")
+      && rae.ok === false && rae.error.endsWith("ASYNC ENVELOPE CAUSE") && rae.error.startsWith("…"));
+  }
   // consumed / absent wakes are idle
   {
     const { deps } = mkDeps({ deps: { readWake: () => ({ consumed: { moment_id: "m_0" } }) } });
@@ -1687,6 +1725,13 @@ async function selftest() {
     let m2 = [];
     const bad = await runConsolidation({ ...base, appendLedger: (o) => m2.push(o), write: () => { throw new Error("no write on malformed"); }, call: async () => ({ ok: true, text: "not json at all", total_tokens: 500 }) });
     assert("CONSOLIDATE — malformed graph → metered but NOT written (a bad graph never lands)", bad.ok === false && m2.length === 1);
+    // THE TAIL on the meter path itself (row 880 (3)(a)): the ledger row a failed pass leaves carries the cause
+    const mTail = [];
+    const tailRun = await runConsolidation({ ...base, appendLedger: (o) => mTail.push(o), write: () => { throw new Error("no write on a failed call"); },
+      call: (p) => claudeDeep(p, { deep: { timeout_ms: 1000, max_thinking_tokens: 1000 } }, { exec: () => { throw new Error(`Command failed: claude -p ${"a".repeat(400)}\n${"b".repeat(1000)} the cause at the end`); } }) });
+    assert("TAIL · CONSOLIDATE — a failed call's cortex_consolidate ledger row carries the CAUSE at the end of its error, never the command line alone",
+      tailRun.ok === false && mTail.length === 1 && mTail[0].ran === true && mTail[0].ok === false
+      && String(mTail[0].error).endsWith("the cause at the end") && !String(mTail[0].error).includes("Command failed"));
     const realShape = gatherCorpus({ concepts: { version: 1, _comment: "x", axes: { a: "..." }, concepts: { tokenization: {}, embeddings: {} }, skills: { pydantic: {} } }, lstate: null });
     assert("CONSOLIDATE — reads the REAL concepts.json shape (concepts+skills objects), NOT its metadata keys", realShape.concepts.includes("tokenization") && realShape.concepts.includes("pydantic") && !realShape.concepts.includes("_comment") && !realShape.concepts.includes("axes"));
 

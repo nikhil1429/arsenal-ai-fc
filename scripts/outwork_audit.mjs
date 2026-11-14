@@ -117,6 +117,11 @@ export function gather(now = new Date()) {
     // never this organ's re-implementation. true|false|null (null = no row
     // declares the slot; checks() then keeps the old always-on behaviour).
     team_sheet_slot_passed: slotPassed("team_sheet", now),
+    // row 880 (4)(a): o4 takes the SAME lookup. The producer of timeaudit.json is
+    // the TimeAuditor (timeaudit.mjs); registry row `timeaudit` declares its FIRST
+    // slot of the day, read from tasks_expected.json's ArsenalFC-TimeAuditor-*
+    // triggers. true|false|null exactly as above.
+    timeaudit_slot_passed: slotPassed("timeaudit", now),
     timeaudit: readJson(join(STATE_DIR, "timeaudit.json")),
     season_last_date: null,
   };
@@ -212,11 +217,17 @@ export function checks(w) {
   }
 
   // o4 — a live day whose time went unmeasured (the 3-bucket split dark).
-  if (w.afferents_today > 0 && !(w.timeaudit && w.timeaudit.date === w.today)) {
+  // Row 880 (4)(a): o4 takes o2's slot guard. BEFORE the TimeAuditor's first
+  // registry-declared slot (row timeaudit) a timeaudit.json not dated today is
+  // EXPECTED, not a RED. 8 of the last 10 time-unmeasured reds were late catch-up
+  // sweeps that ran before that slot. An undeclared slot (null) keeps the old
+  // always-on behaviour, and its evidence says so.
+  if (w.afferents_today > 0 && !(w.timeaudit && w.timeaudit.date === w.today) && w.timeaudit_slot_passed !== false) {
     F.push({
       id: "time-unmeasured", level: "RED",
       finding: "afferents landed today but timeaudit.json is not dated today — the 3-bucket time split went dark on a live day",
-      evidence: `afferents today ${w.afferents_today} · timeaudit.date ${w.timeaudit ? w.timeaudit.date : "(no file)"} — ArsenalFC-TimeAuditor tasks own this`,
+      evidence: `afferents today ${w.afferents_today} · timeaudit.date ${w.timeaudit ? w.timeaudit.date : "(no file)"} — ArsenalFC-TimeAuditor tasks own this`
+        + (w.timeaudit_slot_passed == null ? " · no registry row declares the TimeAuditor's slot (mechanisms row timeaudit), so this check runs at every hour" : ""),
     });
   }
 
@@ -353,6 +364,10 @@ function selftest() {
   assert("o4 — afferents today + timeaudit not dated today = time-unmeasured; a dead-quiet day is exempt",
     checks({ ...base, timeaudit: { date: YDAY } }).some((x) => x.id === "time-unmeasured")
     && !checks({ ...base, afferents_today: 0, teaching_today: 0, reps_today: 0, timeaudit: { date: YDAY }, post_match_today: true }).some((x) => x.id === "time-unmeasured"));
+  assert("o4 SLOT-AWARE (row 880 (4)(a)) — BEFORE the TimeAuditor's registry-declared first slot a timeaudit.json not dated today is EXPECTED (no RED); after it the RED stands; an UNDECLARED slot keeps the old always-on behaviour and says so",
+    !checks({ ...base, timeaudit: { date: YDAY }, timeaudit_slot_passed: false }).some((x) => x.id === "time-unmeasured")
+    && checks({ ...base, timeaudit: { date: YDAY }, timeaudit_slot_passed: true }).some((x) => x.id === "time-unmeasured" && x.level === "RED" && !/no registry row/.test(x.evidence))
+    && checks({ ...base, timeaudit: { date: YDAY }, timeaudit_slot_passed: null }).some((x) => x.id === "time-unmeasured" && /no registry row declares/.test(x.evidence)));
   assert("o5 — season older than newest post_match = season-desync; in-sync is silent",
     checks({ ...base, season_last_date: "2026-08-01" }).some((x) => x.id === "season-desync")
     && !checks(base).some((x) => x.id === "season-desync"));

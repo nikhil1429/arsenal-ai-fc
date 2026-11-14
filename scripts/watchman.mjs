@@ -855,6 +855,30 @@ export function missedDailyTasks(rows, today, yesterday) {
     && t.last < yesterday);
 }
 
+// THE WAKE PROBE IS A MEASUREMENT, NOT AN ORGAN (14 Nov 2026, forks row 880
+// (3)(a), lane S). ArsenalFC-WakeProbe only appends "woke <date> <time>" to
+// scripts\wakeprobe.log. A run the scheduler REFUSED (0x800710E0, in 20 of the
+// last 25 sweeps) says the laptop was not awake at the probe's slot, which is
+// exactly what the probe exists to find out. So it never enters task-errors:
+// a failed result is its own finding, wake-probe-missed, at WARN, with the code
+// in hex and the last run; a clean result (0, or a not-an-error status above)
+// is no finding at all. ONE declared name keys the split, never a result code:
+// the same 0x800710E0 on any other task is still a task-errors RED. Pure, like
+// missedDailyTasks, so the selftest drives it with fixtures.
+const WAKE_PROBE_TASK = "ArsenalFC-WakeProbe";   // row 880 (3)(a): its own WARN finding, never task-errors
+export function splitTaskRows(rows) {
+  const failed = (Array.isArray(rows) ? rows : []).filter((t) => t && typeof t.result === "number" && !TASK_STATUS_NOT_ERRORS.has(t.result));
+  const hex = (n) => `0x${(n >>> 0).toString(16).toUpperCase()}`;
+  return {
+    errors: failed.filter((t) => t.name !== WAKE_PROBE_TASK),
+    wake: failed.filter((t) => t.name === WAKE_PROBE_TASK).map((t) => ({
+      id: "wake-probe-missed", level: "WARN",
+      finding: `${WAKE_PROBE_TASK} did not run at its last slot (result ${hex(t.result)}) — the laptop was not awake then; this is the probe's own measurement, not an organ that errored`,
+      evidence: `${t.name}: result ${hex(t.result)} (${t.result}) · last run ${t.last} · the task only appends "woke" to scripts\\wakeprobe.log`,
+    })),
+  };
+}
+
 function probeTasks(today, yesterday) {
   try {
     const ps = spawnSync("powershell", ["-NoProfile", "-Command",
@@ -864,7 +888,7 @@ function probeTasks(today, yesterday) {
     let rows = [];
     try { const j = JSON.parse(String(ps.stdout || "").trim() || "[]"); rows = Array.isArray(j) ? j : [j]; } catch { return []; }
     const out = [];
-    const bad = rows.filter((t) => t && typeof t.result === "number" && !TASK_STATUS_NOT_ERRORS.has(t.result));
+    const { errors: bad, wake } = splitTaskRows(rows);   // row 880 (3)(a): the wake probe files its own WARN below
     if (bad.length) {
       out.push({
         id: "task-errors", level: "RED",
@@ -872,6 +896,7 @@ function probeTasks(today, yesterday) {
         evidence: bad.map((t) => `${t.name}: result ${t.result} (last ${t.last})`).join(" · "),
       });
     }
+    out.push(...wake);
     const missed = missedDailyTasks(rows, today, yesterday);
     if (missed.length) {
       out.push({
@@ -2768,6 +2793,22 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
       return m.length === 1 && m[0].name === "A-Daily-Missed"; })());
   assert("MISSED-DAILY — yesterday's run still counts as on-schedule (nightly cadence, date compare, no invented number)",
     missedDailyTasks([{ name: "X", result: 0, last: YDAY, daily: true }], TODAY, YDAY).length === 0);
+
+  // THE WAKE PROBE (row 880 (3)(a)) — the split, pure and fixture-driven, planted both ways
+  {
+    const REFUSED = 2147946720;   // 0x800710E0, the way PowerShell hands LastTaskResult over
+    const s1 = splitTaskRows([{ name: WAKE_PROBE_TASK, result: REFUSED, last: YDAY, daily: true }]);
+    assert("WAKE PROBE — a refused run (0x800710E0) is its own finding, wake-probe-missed at WARN, with the code in hex and its last run, and it is ABSENT from task-errors",
+      s1.errors.length === 0 && s1.wake.length === 1 && s1.wake[0].id === "wake-probe-missed" && s1.wake[0].level === "WARN"
+      && /0x800710E0/.test(s1.wake[0].evidence) && s1.wake[0].evidence.includes(YDAY));
+    const s2 = splitTaskRows([{ name: "ArsenalFC-ConceptGraph", result: REFUSED, last: YDAY, daily: true }]);
+    assert("WAKE PROBE — ANOTHER task with the very same code is still task-errors: the split keys on the TASK, never on the result code",
+      s2.errors.length === 1 && s2.errors[0].name === "ArsenalFC-ConceptGraph" && s2.wake.length === 0);
+    assert("WAKE PROBE — a probe that ran (result 0) is no finding, and an all-clean list yields nothing on either side",
+      (() => { const a = splitTaskRows([{ name: WAKE_PROBE_TASK, result: 0, last: YDAY, daily: true }]);
+        const b = splitTaskRows([{ name: "A-Daily", result: 0, last: YDAY, daily: true }, { name: "B-NeverRan", result: 0x41303, last: "1999-11-30", daily: false }]);
+        return a.errors.length === 0 && a.wake.length === 0 && b.errors.length === 0 && b.wake.length === 0; })());
+  }
 
   // c9 — the repair arm's own liveness (from the maiden live-fire)
   const trail = (last_start, exit, journal) => ({ ...base, tier2_trail: { last_start, exit_after_start: exit, journal_after_start: journal } });

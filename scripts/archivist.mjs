@@ -1154,6 +1154,92 @@ export function dedupeLane(lane, opts = {}) {
   } finally { lock.release(); }
 }
 
+// ── THE RULED KNOWN-BREAKS LIST (14 Nov 2026 · forks row 880 (3)(a) · lane S) ──
+// MEASURED (his archivist.log line 7598, the 1 Nov 2026 ArsenalFC-ArchiveFixity
+// run): `verify` read 257,723 records across 98 lanes and found 12 BREAKS, every
+// one in a 15 Aug 2026 day file. Each is a DUPLICATE SEQ: two writers read one
+// checkpoint and both appended head+1. That is the scar THE LOCK above names
+// (14 Aug), one day later: brain_ledger seq 6329, presence_log seqs 11961 /
+// 11962 / 12801 / 12802. An append-only archive does not repair that, because
+// re-seqing a lane IS a rewrite. So the 12 are RULED, by name, and `verify` keeps
+// judging everything else:
+//   · a break matching an entry on ALL FOUR keys (kind, lane, seq, rid) is RULED
+//     and prints as `RULED row <row> · <the line it printed before>`. One entry
+//     rules ONE break, never a second one with the same keys;
+//   · a break no entry names is UNRULED and reds exactly as before;
+//   · an entry whose break a COVERING walk did not find is STALE and RED. An
+//     append-only archive cannot lose a break; if it did, someone rewrote it. A
+//     walk covers an entry when it walked the entry's lane in full, or (`--month`)
+//     when the entry's seq lies after the first and within the last seq that the
+//     window walked (a partial walk never judges its first record; see the
+//     `prev === null` branch in verifyArchive below);
+//   · an entry with no row or owner, or without all four keys, is INVALID and
+//     rules nothing.
+// `verify` exits 0 only when every break is RULED and nothing is STALE or
+// INVALID. It still READS ONLY: nothing here writes, moves or dedupes a record,
+// and the list grows only by a row. The PATTERN is organism_test.mjs's KNOWN_RED
+// (rulingOf + rulingSelfCheck), copied here, never imported.
+const KNOWN_BREAKS = Object.freeze([
+  { kind: "seq-gap",     lane: "brain_ledger", seq: 6329,  rid: "01M036SRK670FXBY9Y8WGMJB52", row: 880, owner: "lane S" },
+  { kind: "chain-break", lane: "brain_ledger", seq: 6329,  rid: "01M036SRK670FXBY9Y8WGMJB52", row: 880, owner: "lane S" },
+  { kind: "seq-gap",     lane: "presence_log", seq: 11961, rid: "01M02EQWKBR0GJWR1VW810THY7", row: 880, owner: "lane S" },
+  { kind: "chain-break", lane: "presence_log", seq: 11961, rid: "01M02EQWKBR0GJWR1VW810THY7", row: 880, owner: "lane S" },
+  { kind: "chain-break", lane: "presence_log", seq: 11962, rid: "01M02EQWKB888P3V5YKGE2Q2WV", row: 880, owner: "lane S" },
+  { kind: "seq-gap",     lane: "presence_log", seq: 11962, rid: "01M02EQWKBRBV456Q4GF9C7KC4", row: 880, owner: "lane S" },
+  { kind: "chain-break", lane: "presence_log", seq: 11962, rid: "01M02EQWKBRBV456Q4GF9C7KC4", row: 880, owner: "lane S" },
+  { kind: "seq-gap",     lane: "presence_log", seq: 12801, rid: "01M036SBQ5BS2G2C3B79CY012G", row: 880, owner: "lane S" },
+  { kind: "chain-break", lane: "presence_log", seq: 12801, rid: "01M036SBQ5BS2G2C3B79CY012G", row: 880, owner: "lane S" },
+  { kind: "chain-break", lane: "presence_log", seq: 12802, rid: "01M036SBQ579E3KYJQD0PPQTRR", row: 880, owner: "lane S" },
+  { kind: "seq-gap",     lane: "presence_log", seq: 12802, rid: "01M036SBQ5YAZYWA1DV82HXTXV", row: 880, owner: "lane S" },
+  { kind: "chain-break", lane: "presence_log", seq: 12802, rid: "01M036SBQ5YAZYWA1DV82HXTXV", row: 880, owner: "lane S" },
+]);
+const knownBreakValid = (e) => !!e && typeof e === "object"
+  && Number.isInteger(e.row) && e.row > 0 && typeof e.owner === "string" && !!e.owner.trim()
+  && typeof e.kind === "string" && !!e.kind && typeof e.lane === "string" && !!e.lane
+  && Number.isInteger(e.seq) && typeof e.rid === "string" && !!e.rid;
+// breakRulingOf(breaks, list, covers) → { ruled: [{ brk, entry }], unruled, stale, invalid }
+//   covers(entry): did the walk that found `breaks` reach the place this entry's
+//   break lives? Only a covered entry can read STALE.
+function breakRulingOf(breaks, list = KNOWN_BREAKS, covers = () => true) {
+  const invalid = list.filter((e) => !knownBreakValid(e));
+  const live = list.filter(knownBreakValid);
+  const used = new Set();
+  const ruled = [], unruled = [];
+  for (const brk of breaks) {
+    const entry = live.find((e) => !used.has(e) && e.kind === brk.kind && e.lane === brk.lane && e.seq === brk.seq && e.rid === brk.rid);
+    if (entry) { used.add(entry); ruled.push({ brk, entry }); } else unruled.push(brk);
+  }
+  return { ruled, unruled, stale: live.filter((e) => !used.has(e) && covers(e)), invalid };
+}
+// PLANTED BOTH WAYS, at every verify call, before any break is ruled. A ruling
+// instrument that is not itself tested is a hypothesis (organism_test.mjs
+// rulingSelfCheck's law). Fixture breaks and entries only; the live list is
+// judged by verifyArchive below.
+function breakRulingSelfCheck() {
+  const E = [{ kind: "seq-gap", lane: "L", seq: 5, rid: "R1", row: 1, owner: "lane X" }];
+  const b = (o = {}) => ({ kind: "seq-gap", lane: "L", seq: 5, rid: "R1", ...o });
+  const r1 = breakRulingOf([b()], E);
+  const r2 = breakRulingOf([b({ rid: "R2" })], E);
+  const r3 = breakRulingOf([b({ kind: "chain-break" }), b({ lane: "M" }), b({ seq: 6 })], E);
+  const r4 = breakRulingOf([], E), r4b = breakRulingOf([], E, () => false);
+  const r5 = breakRulingOf([b()], [{ kind: "seq-gap", lane: "L", seq: 5, rid: "R1", owner: "lane X" }]);
+  const r6 = breakRulingOf([b(), b()], E);
+  return [
+    ["a break that matches an entry on all four keys (kind · lane · seq · rid) is RULED, and nothing reads stale",
+      r1.ruled.length === 1 && r1.unruled.length === 0 && r1.stale.length === 0],
+    ["the SAME kind, lane and seq with ANOTHER rid is UNRULED, and the entry it did not match reads STALE (a new break never hides under an old entry)",
+      r2.ruled.length === 0 && r2.unruled.length === 1 && r2.stale.length === 1],
+    ["each key binds: another kind, another lane, another seq are all UNRULED",
+      r3.ruled.length === 0 && r3.unruled.length === 3],
+    ["an entry whose break a covering walk did not find is STALE; a walk that did not cover it judges nothing",
+      r4.stale.length === 1 && r4b.stale.length === 0],
+    ["an entry with no row is INVALID and rules nothing (the list grows only by a row)",
+      r5.invalid.length === 1 && r5.ruled.length === 0 && r5.unruled.length === 1],
+    ["one entry rules ONE break: a second break on the same four keys is UNRULED",
+      r6.ruled.length === 1 && r6.unruled.length === 1],
+  ];
+}
+
 // ── VERIFY (fixity + the chain) ──────────────────────────────────────────────
 // Recompute every hash, walk every chain. THE ORDER IS seq, NOT file position: a
 // batch can legitimately append to an earlier IST day than the record before it
@@ -1165,6 +1251,7 @@ export function verifyArchive(opts = {}) {
   const log = opts.quiet ? () => {} : console.log;
   const lanes = opts.lane ? [opts.lane] : archivedLanes(root);
   const report = { at: new Date().toISOString(), month, lanes: [], records: 0, breaks: [] };
+  const walked = new Map();   // row 880: lane → the first and last seq this walk judged (what a STALE entry is measured against)
   for (const lane of lanes) {
     const rows = [];
     for (const r of laneRecords(root, lane)) {
@@ -1173,6 +1260,7 @@ export function verifyArchive(opts = {}) {
       rows.push(r);
     }
     rows.sort((a, b) => (a.rec.seq ?? 0) - (b.rec.seq ?? 0));
+    if (rows.length) walked.set(lane, { first: rows[0].rec.seq, last: rows[rows.length - 1].rec.seq });
     let prev = null;
     let hashBad = 0, linkBad = 0, seqBad = 0;
     for (const r of rows) {
@@ -1205,11 +1293,32 @@ export function verifyArchive(opts = {}) {
     report.records += rows.length;
     report.lanes.push({ lane, records: rows.length, hash_mismatch: hashBad, chain_break: linkBad, seq_gap: seqBad, head_seq: prev ? prev.seq : 0 });
   }
-  report.ok = report.breaks.length === 0;
+  // row 880 · THE RULING: the instrument first (planted both ways), then the live
+  // list over the breaks this walk found. Every break stays in report.breaks; a
+  // ruled one only gains `ruled: {row, owner}`.
+  const selfFailed = breakRulingSelfCheck().filter(([, cond]) => !cond).map(([name]) => name);
+  const covers = (e) => { const w = walked.get(e.lane); return !!w && (!month || (e.seq > w.first && e.seq <= w.last)); };
+  const ruling = breakRulingOf(report.breaks, opts.knownBreaks ?? KNOWN_BREAKS, covers);
+  for (const { brk, entry } of ruling.ruled) brk.ruled = { row: entry.row, owner: entry.owner };
+  report.ruled = ruling.ruled.length;
+  report.unruled = ruling.unruled.length;
+  report.stale = ruling.stale.map(({ kind, lane, seq, rid, row, owner }) => ({ kind, lane, seq, rid, row, owner }));
+  report.invalid = ruling.invalid;
+  report.self_check_failed = selfFailed;
+  report.ok = report.unruled === 0 && report.stale.length === 0 && report.invalid.length === 0 && selfFailed.length === 0;
   if (existsSync(P(root).root)) appendHealth(root, "fixity", report);
-  log(`archivist verify${month ? ` (${month})` : ""}: ${report.records} record(s) across ${report.lanes.length} lane(s) — ${report.ok ? "ALL CHAINS INTACT" : `${report.breaks.length} BREAK(S)`}`);
-  for (const b of report.breaks.slice(0, 20)) log(`  ! ${b.kind} · ${b.lane} · seq ${b.seq ?? "?"} · rid ${b.rid || "-"} · ${b.file ? relative(root, b.file) : ""}${b.note ? ` · ${b.note}` : ""}`);
-  if (report.breaks.length > 20) log(`  … ${report.breaks.length - 20} more`);
+  log(`archivist verify${month ? ` (${month})` : ""}: ${report.records} record(s) across ${report.lanes.length} lane(s) — ${report.breaks.length === 0 ? "ALL CHAINS INTACT" : `${report.breaks.length} BREAK(S)`} · ruled ${report.ruled}`
+    + `${report.stale.length ? ` · STALE ${report.stale.length}` : ""}${report.invalid.length ? ` · INVALID ${report.invalid.length}` : ""}${selfFailed.length ? ` · SELF-CHECK FAILED ${selfFailed.length}` : ""}`);
+  const lineOf = (b) => `! ${b.kind} · ${b.lane} · seq ${b.seq ?? "?"} · rid ${b.rid || "-"} · ${b.file ? relative(root, b.file) : ""}${b.note ? ` · ${b.note}` : ""}`;
+  let shown = 0;   // the first 20 UNRULED breaks print exactly as before; a ruled one never takes an unruled one's place
+  for (const b of report.breaks) {
+    if (b.ruled) log(`  RULED row ${b.ruled.row} · ${lineOf(b)}`);
+    else if (shown < 20) { shown++; log(`  ${lineOf(b)}`); }
+  }
+  if (report.unruled > 20) log(`  … ${report.unruled - 20} more`);
+  for (const e of report.stale) log(`  ! STALE · row ${e.row} · ${e.owner} · ${e.kind} · ${e.lane} · seq ${e.seq} · rid ${e.rid} — ruled, and NOT found by a walk that covers it: an append-only archive cannot lose a break; if it did, someone rewrote it`);
+  for (const e of report.invalid) log(`  ! INVALID · a KNOWN_BREAKS entry with no row or owner, or without all four keys, rules nothing · ${JSON.stringify(e)}`);
+  for (const n of selfFailed) log(`  ! SELF-CHECK FAILED · ${n} — the ruling instrument failed its own planted case, so this verify cannot be green`);
   return report;
 }
 
@@ -2636,6 +2745,33 @@ function selftest() {
     ok("3b. …and the restored file verifies clean again (the detector is not simply always-red)", verifyArchive({ root: arc, quiet: true }).ok);
     ok("FIXITY · every verification run is journalled to health/fixity-*.jsonl (LAW 6: a check nobody records is a hypothesis)",
       readdirSync(join(arc, "health")).some((f) => f.startsWith("fixity-")));
+
+    // ── row 880 · THE RULED KNOWN-BREAKS LIST — the instrument planted both ways, then the REAL walk ──
+    for (const [name, cond] of breakRulingSelfCheck()) ok(`KNOWN-BREAKS · ${name}`, cond);
+    writeFileSync(tamperFile, gapped.join("\n") + "\n", "utf8");          // the deletion again: a real seq-gap + chain-break
+    const kbAll = verifyArchive({ root: arc, quiet: true, knownBreaks: [] }).breaks
+      .map((b) => ({ kind: b.kind, lane: b.lane, seq: b.seq, rid: b.rid, row: 1, owner: "lane X" }));
+    const kbR = verifyArchive({ root: arc, quiet: true, knownBreaks: kbAll });
+    ok("KNOWN-BREAKS · a real walk whose every break an entry names on all four keys is GREEN, each break RULED and still reported (ruled, never repaired)",
+      kbAll.length >= 2 && kbR.ok === true && kbR.ruled === kbAll.length && kbR.breaks.length === kbAll.length && kbR.breaks.every((b) => b.ruled && b.ruled.row === 1),
+      JSON.stringify({ n: kbAll.length, ruled: kbR.ruled, ok: kbR.ok }));
+    const kbU = verifyArchive({ root: arc, quiet: true, knownBreaks: kbAll.slice(1) });
+    ok("KNOWN-BREAKS · a break the list does not name stays UNRULED and reds exactly as before",
+      kbU.ok === false && kbU.unruled === 1 && kbU.ruled === kbAll.length - 1);
+    const kbGhost = { ...kbAll[0], seq: kbAll[0].seq + 1, rid: "01ZZZZZZZZZZZZZZZZZZZZZZZZ" };
+    const kbS = verifyArchive({ root: arc, quiet: true, knownBreaks: [...kbAll, kbGhost] });
+    ok("KNOWN-BREAKS · an entry whose break the walk did not find is STALE and RED (an append-only archive cannot lose a break)",
+      kbS.ok === false && kbS.unruled === 0 && kbS.stale.length === 1 && kbS.stale[0].rid === kbGhost.rid);
+    const kbI = verifyArchive({ root: arc, quiet: true, knownBreaks: [...kbAll.slice(1), { ...kbAll[0], row: undefined }] });
+    ok("KNOWN-BREAKS · an entry with no row is INVALID and rules nothing: its break stays UNRULED",
+      kbI.ok === false && kbI.invalid.length === 1 && kbI.unruled === 1);
+    ok("KNOWN-BREAKS · --month: the window that holds the breaks rules them; a window that walked none of them judges nothing (no STALE outside the walk)",
+      verifyArchive({ root: arc, quiet: true, month: "2026-08", knownBreaks: kbAll }).ruled === kbAll.length
+      && verifyArchive({ root: arc, quiet: true, month: "2026-07", knownBreaks: [...kbAll, kbGhost] }).stale.length === 0);
+    writeFileSync(tamperFile, saved.join("\n") + "\n", "utf8");
+    const kbLive = verifyArchive({ root: arc, quiet: true });
+    ok("KNOWN-BREAKS · the live list (his 12) covers nothing on a fixture that holds none of their lanes: green stays green, ruled 0",
+      kbLive.ok === true && kbLive.ruled === 0 && kbLive.stale.length === 0 && kbLive.invalid.length === 0);
 
     // ── 11. VITALS: SILENCE DETECTION ──
     const counts = new Map();
