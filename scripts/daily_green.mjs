@@ -55,6 +55,8 @@
 //   · clause 9: the only daemon with an input gate on disk is the sitting brain
 //     (watchman.mjs probeSitting: down with no sitting open is INFO, not RED). Any other
 //     daemon down is unexplained and RED.
+//     ROW 880 (2) (14 Nov 2026): a daemon the watchdog could NOT READ (its `unknown` list) is
+//     never green and never gated, and its why names it apart: `down: <names>` · `unknown: <names>`.
 //   · clauses 9-11 read the machine NOW; on a past --date they say so.
 // WHO ELSE COULD ACT ON THIS OUTPUT? state.mjs (a future field) · /full-time · the runner.
 // MODES: line (default) | --json | --date YYYY-MM-DD | selftest
@@ -267,11 +269,20 @@ function cDaemons({ st, day, now, today }) {
   const passDay = d.age_min === null ? null : istDay(new Date(now.getTime() - d.age_min * 60000).toISOString());
   if (day === today && passDay !== day) return R(`stale pass (${passDay || "?"})`);
   const missing = DAEMONS.map((x) => x.name).filter((n) => !(n in (w.json.ports || {})));
-  const down = [...d.down, ...missing];
+  // ROW 880 (2) (s880b, 14 Nov 2026) — AN UNKNOWN DAEMON IS NEVER GREEN, AND IS NAMED APART FROM A DOWN
+  // ONE. daemonFacts (state.mjs:63, lane V's file, not edited here) counts every port that is not `true`
+  // as down, and decidePass writes a daemon it could not READ as `ports:false` + `unknown:[name]`, so an
+  // unread bridge used to print `down:` exactly like a dead one. The watchdog's own `unknown` list splits
+  // them. No input gate explains an unknown one: a gate says why a daemon may rest, and an unread daemon
+  // was never seen resting.
+  const unread = new Set(Array.isArray(w.json.unknown) ? w.json.unknown.map(String) : []);
+  const notUp = [...d.down, ...missing];
+  const unknown = notUp.filter((n) => unread.has(n));
+  const down = notUp.filter((n) => !unread.has(n));
   const unexplained = down.filter((n) => !(INPUT_GATES[n] && INPUT_GATES[n](st)));
   const asOf = day === today ? "" : " (as of now)";
-  if (!unexplained.length) return G(`${d.up}/${DAEMONS.length} up${down.length ? ` · gated: ${down.join(",")}` : ""}${asOf}`);
-  return R(`down: ${unexplained.join(",")}${asOf}`);
+  if (!unexplained.length && !unknown.length) return G(`${d.up}/${DAEMONS.length} up${down.length ? ` · gated: ${down.join(",")}` : ""}${asOf}`);
+  return R(`${[unexplained.length ? `down: ${unexplained.join(",")}` : "", unknown.length ? `unknown: ${unknown.join(",")}` : ""].filter(Boolean).join(" · ")}${asOf}`);
 }
 // 10 · the suite — the watchman's nightly sweep (state.mjs suiteFacts). RUNNABLE, not green:
 // only its `suite-unrunnable` finding reds this clause. A sweep older than the night before
@@ -570,6 +581,35 @@ async function selftest() {
     assert("IMPORT NEVER DIES — RED PROOF: a module that reads act_doors at import dies under the same registry (the probe sees the throw)",
       dies.status !== 0 && /registry: no live mechanisms row "act_doors"/.test(String(dies.stderr)), `exit ${dies.status}`);
   }
+
+  // ── S880B SELFTESTS (row 880 (2), 14 Nov 2026): AN UNKNOWN DAEMON IS NEVER GREEN, AND IS NAMED APART ──
+  // Every predicate runs inside held() (a throw reads ✗), so this block also runs against $BASE's code
+  // (cloud/s880b/fix/witness/selftest_on_base.mjs) and reds there by name. The watchdog files below are
+  // decidePass's own shape: an unread daemon is `ports:false` AND listed in `unknown`.
+  {
+    const held = (f) => { try { return !!f(); } catch { return false; } };
+    const wd = (ports, unknown) => ({ "daemon_watchdog.json": JSON.stringify({ at: NOW.toISOString(), ports: { ...Object.fromEntries(DAEMONS.map((d) => [d.name, true])), ...ports }, unknown, launched: [] }) });
+    const c9 = {};
+    try {
+      c9.unknownCtx = await run(wd({ context: false }, ["context"]));
+      c9.upCtx = await run(wd({ context: true }, []));
+      c9.downPort = await run(wd({ cortex: false }, []));
+      c9.both = await run(wd({ cortex: false, context: false }, ["context"]));
+      c9.unknownSitting = await run(wd({ sitting: false }, ["sitting"]));   // the base fixture has NO sitting open
+      c9.downSitting = await run(wd({ sitting: false }, []));
+    } catch { /* a throw leaves a case unset, and the asserts below read ✗ */ }
+    assert("S880B CLAUSE 9 — context UNKNOWN → RED `unknown: context` (never `down: context`); context true → GREEN; a port daemon down → `down: cortex` as today; both at once → `down: cortex · unknown: context`",
+      held(() => c9.unknownCtx.by.daemons.status === "RED" && c9.unknownCtx.by.daemons.why === "unknown: context" && c9.unknownCtx.row.green === false
+        && c9.upCtx.by.daemons.status === "GREEN" && c9.upCtx.by.daemons.why === `${DAEMONS.length}/${DAEMONS.length} up`
+        && c9.downPort.by.daemons.status === "RED" && c9.downPort.by.daemons.why === "down: cortex"
+        && c9.both.by.daemons.status === "RED" && c9.both.by.daemons.why === "down: cortex · unknown: context"),
+      JSON.stringify(Object.fromEntries(Object.entries(c9).map(([k, v]) => [k, v && v.by && v.by.daemons]))));
+    assert("S880B CLAUSE 9 — no input gate explains an UNKNOWN daemon: the sitting brain UNREAD with no sitting open is RED `unknown: sitting`, while the same brain DOWN is still gated GREEN as today",
+      held(() => c9.unknownSitting.by.daemons.status === "RED" && c9.unknownSitting.by.daemons.why === "unknown: sitting"
+        && c9.downSitting.by.daemons.status === "GREEN" && /gated: sitting/.test(c9.downSitting.by.daemons.why)),
+      JSON.stringify({ unknownSitting: c9.unknownSitting && c9.unknownSitting.by.daemons, downSitting: c9.downSitting && c9.downSitting.by.daemons }));
+  }
+  // ── /S880B ──
 
   // ── HERMETIC + ONE WRITE ──
   const liveLedgerAfter = readFile(LEDGER);

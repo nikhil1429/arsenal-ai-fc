@@ -14,7 +14,17 @@
 // LAWS: single-writer — owns ONLY context_state.json (last window + emit stamp).
 //   The thalamus stays the SOLE writer of afferent (context.mjs only POSTs the
 //   door). Fail-silent: AW down or thalamus down → no emit, no crash, no tax.
+//   ROW 880 (2) (s880b, 14 Nov 2026): the same file also carries the resident's
+//   PER-POLL STAMP (poll_ts, pid, boot_ts), written on every poll beside the delta
+//   fields and never moving them. Still one file, still this one writer.
+//   ROW 897 (s893, 14 Nov 2026): `status` reads the resident off that same stamp
+//   (fresh = running, stale = down, missing = unknown), never the process table.
 // MODES: node scripts/context.mjs daemon   → THE SANCTIONED PATH: one resident ~60s poll
+//                                            ROW 880 (2): `daemon` is now the KEEPER
+//                                            (scripts/keeper.mjs, the brain shape) over
+//                                            `daemon-worker`, which IS that poll; it
+//                                            never exits on its own (see main())
+//        node scripts/context.mjs daemon-worker → the poll itself, the keeper's child
 //        node scripts/context.mjs once     → one delta check — the manual probe and the
 //                                            fallback (its per-minute schtask was DELETED
 //                                            9 Aug 2026; see D7 below)
@@ -43,8 +53,9 @@
 //   lists the task designed-ABSENT, so the watchman REDs its resurrection.
 //   `status` therefore no longer describes a swap to perform — it READS the live lane.
 // ============================================================================
-import { readFileSync, existsSync, writeFileSync, renameSync, mkdirSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { readFileSync, existsSync, writeFileSync, renameSync, mkdirSync, realpathSync } from "node:fs";
+import { join, dirname, relative, isAbsolute } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 // #22/#6 — the ONE concept canon (concepts.json via capture.mjs's registry), reused
 // from presence.mjs rather than copied a third time. A window TITLE is the only place
@@ -63,23 +74,132 @@ import { canonToken, conceptRegistry, presenceTailReport as jsonlTailReport } fr
 // PROBE HONESTY (11 Aug 2026) — processStartRead is the SAME probe processStartMs has
 // always run, reporting whether it actually got to look. See lane() and conductor's own
 // block: a killed shell used to arrive here as a bare null and print as a dark bridge.
-import { processStartRead, newestGraphMtime } from "./conductor.mjs";
+// ROW 897 (s893, 14 Nov 2026) — SUPERSEDED, kept as history: processStartRead is no longer
+// imported. `status`'s lane reads the bridge's OWN per-poll stamp (see lane()), so this file reads
+// no process table at all, on any platform. The import was `{ processStartRead, newestGraphMtime }`.
+import { newestGraphMtime } from "./conductor.mjs";
+// ROW 880 (2) F2 (s880b, 14 Nov 2026) — THE KEEPER, adopted exactly as brain.mjs adopted it
+// (brain.mjs:89; forks rows 746 (2) / 753 (2): every resident adopts it "when next touched").
+import { keep, KEEP_EXIT } from "./keeper.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
+// THE TEST DOOR (row 880 (2), s880b) — ONE door, for a witness's fixture, and it opens ONLY under
+// the OS temp dir. ARSENAL_CONTEXT_STATE_DIR moves this bridge's state dir to a fixture and, only
+// then, ARSENAL_CONTEXT_POLL_MS shortens the poll (never below the wait's own 500 ms step). A dir
+// that does not resolve under os.tmpdir() is IGNORED, so no env var can re-point or speed up his
+// live organ: on his tree the dir is dressing-room/state and the cadence is FLOOR_MS. PURE, so the
+// selftest drives it both ways.
+export function contextDoor(env = process.env, tmp = tmpdir()) {
+  let stateDir = null;
+  if (env.ARSENAL_CONTEXT_STATE_DIR) {
+    try {
+      const real = realpathSync(env.ARSENAL_CONTEXT_STATE_DIR);
+      const rel = relative(realpathSync(tmp), real);
+      if (rel && rel.split(/[\\/]/)[0] !== ".." && !isAbsolute(rel)) stateDir = real;
+    } catch { stateDir = null; }   // a dir that does not exist opens nothing
+  }
+  const pollMs = stateDir && /^\d+$/.test(String(env.ARSENAL_CONTEXT_POLL_MS || "")) ? Math.max(500, Number(env.ARSENAL_CONTEXT_POLL_MS)) : null;
+  return { stateDir, pollMs };
+}
+const DOOR = contextDoor();
+const STATE_DIR = DOOR.stateDir || join(__dirname, "..", "dressing-room", "state");
 const CONTEXT_STATE = join(STATE_DIR, "context_state.json");        // own file (gitignored)
 const AFFERENT = join(STATE_DIR, "afferent.jsonl");                 // READ-ONLY here (the thalamus owns it)
 const LEDGER = join(STATE_DIR, "salience_ledger.jsonl");            // READ-ONLY here (the thalamus owns it) — see fate()
 const TASKS_EXPECTED = join(STATE_DIR, "tasks_expected.json");      // READ-ONLY (the watchman's snapshot)
 const DAEMONS_VBS = join(__dirname, "..", "setup", "START_DAEMONS.vbs"); // READ-ONLY (the manual restart verb)
 const RESIDENT_MATCH = "context.mjs daemon";                        // the full command line, so a `status` run can't detect itself
+// ROW 880 (2): under the keeper TWO processes carry RESIDENT_MATCH: the keeper (`context.mjs daemon`,
+// which never retires) and its worker (`context.mjs daemon-worker`, the poll). conductor's probe takes
+// the FIRST match (conductor.mjs:453), so `status`'s lane probes the WORKER by its own verb: its boot is
+// the one D9's build line must compare. The restart-verb check still reads RESIDENT_MATCH off the .vbs.
+// ROW 897 (s893, 14 Nov 2026) — SUPERSEDED, kept as history: `const WORKER_MATCH = "context.mjs
+// daemon-worker"` is gone with the probe it fed. The lane now reads the stamp, and only the WORKER
+// writes the stamp (stampPoll in `daemon-worker`), so its pid and boot_ts are the worker's by birth.
 const AW = process.env.ARSENAL_AW || "http://localhost:5600";
 const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
 const FLOOR_MS = 60000;                                             // resident poll cadence (~60s floor)
+// ROW 880 (2) F1 — the bridge's OWN cadence, exported, and ONE freshness rule derived from it. The
+// watchdog imports both (derive, never type): a stamp no older than three polls is FRESH (UP), an
+// older one is STALE (DOWN), and an absent / unparseable / poll_ts-less stamp is UNKNOWN, never green.
+export const CONTEXT_POLL_MS = DOOR.pollMs || FLOOR_MS;
+export const STAMP_FRESH_MS = 3 * CONTEXT_POLL_MS;
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch {} return null; };
 function writeAtomic(p, obj) { mkdirSync(dirname(p), { recursive: true }); const tmp = p + "." + process.pid + ".tmp"; writeFileSync(tmp, JSON.stringify(obj, null, 2)); renameSync(tmp, p); }
 const clip = (s, n) => String(s || "").replace(/\s+/g, " ").trim().slice(0, n);
+
+// ---------------------------------------------------------------------------
+// ROW 880 (2) F1 (s880b, 14 Nov 2026) — THE BRIDGE IS SEEN BY ITS OWN STAMP
+// ---------------------------------------------------------------------------
+// MEASURED (row 880, lane S): daemon_watchdog read this portless bridge off the Win32_Process
+// COMMAND LINE, and to his non-elevated account the command line of a process owned by the
+// service account `.\arsenal-svc` reads NULL (the 14 Nov query found nothing for the live
+// cortex and thalamus either). So the bridge read DOWN alive or dead. The one reader that is
+// never blind to this process is this process: every poll it stamps its own file with
+// `poll_ts` (ISO), `pid` and `boot_ts`, emit or no emit, and the watchdog reads the stamp.
+// The delta law is untouched: app / title / emit_ts move only on a window CHANGE (sense()).
+// context_state.json is gitignored on his tree (checked 14 Nov), so a per-poll write moves
+// nothing in git.
+// law-waiver:jugad the bridge stamp's own three KEYS, a closed schema stampOf / withStamp read and the S880B asserts pin, never a subject list (forks row 649 (0))
+const STAMP_KEYS = ["poll_ts", "pid", "boot_ts"];
+
+// PURE. The stamp ONLY, never app/title: a reader of liveness has no business with his window.
+export function stampOf(st) {
+  if (!st || typeof st !== "object" || !STAMP_KEYS.some((k) => st[k] !== undefined)) return null;
+  return { poll_ts: st.poll_ts ?? null, pid: st.pid ?? null, boot_ts: st.boot_ts ?? null };
+}
+// The stamp as it stands on disk; null for no file, an unparseable file, or a file with no stamp.
+export const readStamp = (file = CONTEXT_STATE) => stampOf(readJson(file));
+
+// PURE. A NEW object: the stamp keys replaced, every other field (app, title, emit_ts,
+// daemon_fault) carried through verbatim. `stamp` null strips the keys.
+export function withStamp(prev, stamp) {
+  const base = prev && typeof prev === "object" ? { ...prev } : {};
+  for (const k of STAMP_KEYS) delete base[k];
+  return stamp ? { ...base, poll_ts: stamp.poll_ts, pid: stamp.pid, boot_ts: stamp.boot_ts } : base;
+}
+
+// THE ONE FRESHNESS RULE. true = FRESH (UP) · false = STALE (DOWN) · null = UNKNOWN, never green:
+// no stamp, no poll_ts, an unreadable poll_ts, or one further in the FUTURE than the bound (a
+// clock that moved is not a reading). `now` is a Date or epoch ms.
+export function stampLiveness(stamp, now = Date.now()) {
+  const t = stamp && typeof stamp.poll_ts === "string" ? Date.parse(stamp.poll_ts) : NaN;
+  const n = now instanceof Date ? now.getTime() : Number(now);
+  if (!Number.isFinite(t) || !Number.isFinite(n)) return null;
+  const age = n - t;
+  if (age < -STAMP_FRESH_MS) return null;
+  return age <= STAMP_FRESH_MS;
+}
+
+// ALIVE by the brief's rule: process.kill(pid, 0) succeeds, or throws EPERM (a process another
+// account owns, e.g. the service's) → alive; ESRCH, or anything else → dead.
+export function pidAlive(pid, kill = (p, s) => process.kill(p, s)) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try { kill(pid, 0); return true; } catch (e) { return !!(e && e.code === "EPERM"); }
+}
+
+// THE PORTLESS SINGLETON. This bridge holds no port, so its keeper cannot bind-test it
+// (keeper.mjs:91 skips the test when port is null), and START_DAEMONS.vbs:33 can start a second
+// keeper beside the service's. Another resident IS the bridge iff its stamp is FRESH, its pid is
+// not this process, and that pid is ALIVE: then this worker exits KEEP_EXIT.ALREADY_RESIDENT (69)
+// and its keeper waits a poll (keeper.mjs:54). A fresh stamp of a DEAD pid (the worker that just
+// retired) or this process's own stamp → this worker runs. Returns the other pid, or null.
+export function otherResident(stamp, { now = Date.now(), pid = process.pid, alive = pidAlive } = {}) {
+  if (stampLiveness(stamp, now) !== true) return null;
+  const p = Number(stamp.pid);
+  if (!Number.isInteger(p) || p <= 0 || p === pid) return null;
+  return alive(p) ? p : null;
+}
+
+// One poll's stamp, deps-injected so the selftest drives it with no disk. The worker calls it on
+// EVERY poll, after the poll's own try/catch, so a faulting poll stamps too: the stamp says the
+// loop TURNS, D10's daemon_fault block says whether it WORKS.
+function stampPoll({ bootMs, now = new Date(), pid = process.pid, load = () => readJson(CONTEXT_STATE), save = (o) => writeAtomic(CONTEXT_STATE, o) } = {}) {
+  const next = withStamp(load(), { poll_ts: now.toISOString(), pid, boot_ts: new Date(bootMs).toISOString() });
+  save(next);
+  return next;
+}
 
 // ---------------------------------------------------------------------------
 // D8 (WIRING AUDIT, 10 Aug 2026) — A CUT MUST NAME ITSELF AT THE DOOR
@@ -198,7 +318,10 @@ async function sense(deps = {}) {
   // change and retries — self-healing (e.g. a daemon that booted before the thalamus).
   // Advancing on a failed post would drop that window's context afferent forever.
   const state = { app: win.app, title: win.title, emit_ts: now.toISOString() };
-  if (posted) (deps.save || ((o) => writeAtomic(CONTEXT_STATE, o)))(state);
+  // ROW 880 (2): the default save carries the resident's per-poll stamp through, so an emit (or a
+  // `once` run beside the resident) never blanks the liveness the watchdog reads. `state` is still
+  // exactly the delta fields, and an emit still drops daemon_fault (D10).
+  if (posted) (deps.save || ((o) => writeAtomic(CONTEXT_STATE, withStamp(o, stampOf(readJson(CONTEXT_STATE))))))(state);
   return { emitted: posted, posted, evt, state, reason: posted ? undefined : "post-failed-will-retry" };
 }
 
@@ -228,6 +351,9 @@ const SCAN_ROWS = 2000;
 //   · tasks_expected.json `designed_absent` — the same snapshot watchman.mjs:826 REDs
 //     the task's resurrection from. Read-only in all three; this organ owns only
 //     context_state.json.
+// ROW 897 (s893, 14 Nov 2026) — SUPERSEDED, kept as history: the first authority above is now the
+// bridge's OWN STAMP (context_state.json poll_ts / pid / boot_ts, judged by stampLiveness), never
+// the process table. See the ROW 897 block in lane().
 // Facts only, never an imperative: selftest asserts the printed lines carry no command.
 // ---------------------------------------------------------------------------
 // D9 (WIRING AUDIT, 11 Aug 2026) — A RESIDENT THAT OUTLIVES ITS OWN CODE
@@ -263,6 +389,15 @@ const SCAN_ROWS = 2000;
 // ambient sight after a retire, against days of a frozen bridge. And an edit to ANY file
 // in the graph retires it, not just this one: watching only the entry file is precisely
 // the defect audit #108 found in the conductor's first cut.
+//
+// SUPERSEDED BY ROW 880 (2) (s880b, 14 Nov 2026), kept as history: the two relaunch sentences
+// above ("daemon_watchdog.mjs relaunches it on the new code", "up to ~20 min without ambient
+// sight") stopped being true on 28 Aug, when S9 made the watchdog a reporter. MEASURED since:
+// 12 retires, each followed by WinSW's "Failed to open the service control manager database.
+// Access is denied" and a wrapper with no child, 544.5 h dark in total. Now the retiring worker
+// exits KEEP_EXIT.RETIRED (75) and its keeper (scripts/keeper.mjs) respawns it AT ONCE on the
+// new code; the process the OS launched (`daemon`) never exits on its own. The retire rule
+// itself (the whole graph, conductor's `>`, no tolerance) is unchanged.
 //
 // IT NEVER ASKS, AND THE ONLY PROCESS IT EVER STOPS IS ITSELF.
 const SELF_REL = "scripts/context.mjs";     // the graph root, in the repo-relative shape conductor's probes take
@@ -358,23 +493,41 @@ function lane(deps = {}) {
   // straddles that probe's 5s cap — see conductor.mjs's D10 block for the measurements).
   // `looked:false` folds into the SAME UNKNOWN this function already reports off Windows,
   // with the reason carried so the surface can say which unknown it is.
-  let startedMs = null, probed = process.platform === "win32", probeReason = null;
-  if (deps.residentStartMs !== undefined) { startedMs = deps.residentStartMs; probed = true; }
-  else if (probed) {
-    let r; try { r = (deps.procRead || processStartRead)(RESIDENT_MATCH); }
-    catch { r = { ms: null, looked: false, reason: "throw" }; }
-    startedMs = r && r.ms != null ? r.ms : null;
-    if (!r || r.looked === false) { probed = false; probeReason = (r && r.reason) || "unreadable"; }
-  }
+  // ROW 897 (s893, 14 Nov 2026) — F1 FOLDED (s880b's FORK F1): THE LANE READS THE BRIDGE'S OWN STAMP.
+  // SUPERSEDED, kept as history (layer, never replace): until today the block here read the PROCESS
+  // TABLE, `processStartRead("context.mjs daemon-worker")` on win32 only, with `residentStartMs` and
+  // `procRead` as its test doors. MEASURED (row 880, lane S): to his non-elevated account the command
+  // line of a process owned by the service account `.\arsenal-svc` reads NULL, so the service-run
+  // bridge printed "NOT IN THE PROCESS TABLE" alive or dead, and off Windows this line could never
+  // look at all. The worker stamps context_state.json on EVERY poll (stampPoll: poll_ts, pid,
+  // boot_ts) and daemon_watchdog already judges that stamp by the ONE freshness rule; `status` now
+  // reads the same stamp by the same rule (stampLiveness), so the health surface and the watchdog
+  // can never hold two answers: FRESH = running (UP since its boot_ts) · STALE = down · missing / no
+  // readable poll_ts / a clock that moved = UNKNOWN, never green and never down. PURE when `stamp`
+  // and `now` are injected (the selftest's doors). No process table is read here, on any platform.
+  const nowMs = deps.now !== undefined ? new Date(deps.now).getTime() : Date.now();
+  const stamp = deps.stamp !== undefined ? deps.stamp : readStamp();
+  const live = stampLiveness(stamp, nowMs);
+  const pollMs = stamp && typeof stamp.poll_ts === "string" ? Date.parse(stamp.poll_ts) : NaN;
+  const bootMs = live === true && typeof stamp.boot_ts === "string" && Number.isFinite(Date.parse(stamp.boot_ts)) ? Date.parse(stamp.boot_ts) : null;
   const vbs = deps.vbs !== undefined ? deps.vbs
     : (existsSync(DAEMONS_VBS) ? (() => { try { return readFileSync(DAEMONS_VBS, "utf8"); } catch { return null; } })() : null);
   return {
     platform: process.platform,
-    resident_running: probed ? startedMs != null : null,
-    resident_since: startedMs != null ? new Date(startedMs).toISOString() : null,
-    // WHICH unknown this is: null off Windows (no table to read at all), otherwise the
-    // spawnSync reason the look never happened (ETIMEDOUT is the measured one).
-    probe_reason: probeReason,
+    probe: "stamp",
+    resident_running: live,
+    resident_since: bootMs != null ? new Date(bootMs).toISOString() : null,
+    resident_pid: live === true && Number.isInteger(stamp.pid) ? stamp.pid : null,
+    stamp_poll_ts: Number.isFinite(pollMs) ? stamp.poll_ts : null,
+    stamp_age_s: Number.isFinite(pollMs) && Number.isFinite(nowMs) ? Math.round((nowMs - pollMs) / 1000) : null,
+    stamp_bound_s: STAMP_FRESH_MS / 1000,
+    // WHICH unknown this is (null unless resident_running is null). Until row 897 it was the process
+    // probe's spawnSync reason (ETIMEDOUT the measured one), or null off Windows.
+    probe_reason: live !== null ? null
+      : !stamp ? "context_state.json holds no stamp"
+        : !Number.isFinite(pollMs) ? "its stamp has no readable poll_ts"
+          : !Number.isFinite(nowMs) ? "there is no readable clock to judge it by"
+            : "its poll_ts lies further in the future than the bound (a clock moved)",
     restart_verb_wired: vbs == null ? null : vbs.includes(RESIDENT_MATCH),
     per_minute_task_designed_absent: !!note,
     designed_absent_note: note,
@@ -384,7 +537,10 @@ function lane(deps = {}) {
     // whose loop is wedged and can never retire itself. The boot stamp is the same process
     // table reading this lane already took, so the answer costs one graph walk and no new
     // probe. UNVERIFIED whenever either side is unreadable, never a fabricated all-clear.
-    build: buildVerdict(startedMs, graphNow(deps)),
+    // ROW 897 (s893): the boot is the STAMP's boot_ts now (the worker's own BOOT_MS, the instant D9
+    // always meant), read only off a FRESH stamp: a stale one has no running build to compare, and
+    // an unknown one is UNVERIFIED. It was the process table's start stamp (`startedMs`).
+    build: buildVerdict(bootMs, graphNow(deps)),
   };
 }
 
@@ -476,25 +632,34 @@ function statusLines(s) {
   l.push(`  ${s.rows_title_or_text_cut} emit(s) shipped a CUT title/text (cap ${s.title_cap}/${s.text_cap}, longest raw title seen ${s.longest_raw_title_len || "—"})` +
     (s.rows_cut_unknown ? ` · ${s.rows_cut_unknown} older row(s) predate the flag — whether they were cut is UNKNOWN` : ""));
   l.push(`  LANE: the resident daemon is the live path (\`node scripts/context.mjs daemon\`); \`once\` is the manual probe + fallback.`);
+  // ROW 897 (s893, 14 Nov 2026) — read off the bridge's OWN STAMP (lane()), never the process table.
+  // SUPERSEDED, kept as history (layer, never replace): this line printed the process probe's two
+  // UNKNOWNs, "UNKNOWN — the process probe never got to look (<reason>); a probe that could not run is
+  // not a DOWN reading" and "UNKNOWN — the process probe is Windows-only (platform=<p>)", then "UP since
+  // <the process table's start stamp>" and "NOT IN THE PROCESS TABLE — the bridge is dark, nothing is
+  // emitting ambient context". PROBE HONESTY's law stands over the stamp: a reading that could not be
+  // taken is UNKNOWN with its reason, never DOWN, and DOWN is a stale stamp, never a missing one.
   l.push(`    resident process: ` + (ln.resident_running === null
-    ? (ln.probe_reason
-      // PROBE HONESTY — the two UNKNOWNs are different facts and must never share a
-      // sentence: off Windows there is no table, here the table was never reached.
-      ? `UNKNOWN — the process probe never got to look (${ln.probe_reason}); a probe that could not run is not a DOWN reading`
-      : `UNKNOWN — the process probe is Windows-only (platform=${ln.platform})`)
-    : ln.resident_running ? `UP since ${ln.resident_since}`
-      : `NOT IN THE PROCESS TABLE — the bridge is dark, nothing is emitting ambient context`));
+    ? `UNKNOWN — ${ln.probe_reason || "its own stamp could not be read"}; a stamp that cannot be read is not a DOWN reading`
+    : ln.resident_running
+      ? `UP since ${ln.resident_since || "an unreadable boot_ts"} — its own stamp is fresh (last poll ${ln.stamp_poll_ts}, ${ln.stamp_age_s} s ago, pid ${ln.resident_pid}; the bound is ${ln.stamp_bound_s} s)`
+      : `DOWN — its own stamp is STALE (last poll ${ln.stamp_poll_ts}, ${ln.stamp_age_s} s ago, past the ${ln.stamp_bound_s} s bound): the bridge is dark, nothing is emitting ambient context`));
   // D9 — the stale-build word this organ could never say. Facts and two stamps, no verdict
   // adjective and no threshold: the reader draws the conclusion, same law as DOWNSTREAM.
+  // ROW 897 (s893): the UNVERIFIED reasons follow the stamp; they named the process probe until then
+  // ("the process probe never got to look (<reason>)" · "the process probe is Windows-only (…)").
   const bd = ln.build || {};
   l.push(`    running build: ` + (bd.checked !== true
     ? `UNVERIFIED — ` + (ln.resident_running === null
-      ? (ln.probe_reason ? `the process probe never got to look (${ln.probe_reason})`
-        : `the process probe is Windows-only (platform=${ln.platform})`)
+      ? `its own stamp could not be read (${ln.probe_reason || "unknown"})`
       : ln.resident_running === false ? `nothing is running, so there is no build to compare`
-        : `its module graph could not be read from here`)
+        : bd.booted_ms == null ? `its stamp carries no readable boot_ts`
+          : `its module graph could not be read from here`)
     : bd.stale
-      ? `STALE — booted ${new Date(bd.booted_ms).toISOString()}, but ${bd.newest_file} was written ${new Date(bd.newest_ms).toISOString()}. An ESM process cannot reload its code; this resident retires itself on its next poll and daemon_watchdog.mjs relaunches it on the new code.`
+      // SUPERSEDED BY ROW 880 (2), kept as history (layer, never replace): this line ended
+      // "…this resident retires itself on its next poll and daemon_watchdog.mjs relaunches it on
+      // the new code." The watchdog has only reported since S9 (28 Aug); the keeper respawns now.
+      ? `STALE — booted ${new Date(bd.booted_ms).toISOString()}, but ${bd.newest_file} was written ${new Date(bd.newest_ms).toISOString()}. An ESM process cannot reload its code; this resident retires itself on its next poll and its keeper (scripts/keeper.mjs) respawns it on the new code at once.`
       : `current — nothing in its module graph has been written since it booted (newest: ${bd.newest_file} @ ${new Date(bd.newest_ms).toISOString()})`));
   l.push(`    restart verb: ` + (ln.restart_verb_wired === null
     ? `setup/START_DAEMONS.vbs not readable from here`
@@ -659,18 +824,26 @@ async function selftest() {
   // errors, weeks after that task was deleted. These fail if either comes back, and if
   // the lane ever stops being DERIVED from the process table / restart verb /
   // tasks_expected.json.
+  // ROW 897 (s893, 14 Nov 2026): the first authority is the bridge's OWN STAMP now, never the process
+  // table, so these fixtures hand lane() a stamp and a clock where they handed it a process-table boot
+  // (`residentStartMs`) or a process probe (`procRead`). The SAME facts: a FRESH stamp whose boot_ts is
+  // the old fixture's start instant is the resident that was UP; a STALE stamp is the dark bridge. The
+  // stamps are placed by STAMP_FRESH_MS (a second inside the bound, a minute past it), never a typed age.
   // ------------------------------------------------------------------------
   // (D9 injects `graph` from here on, so the lane's build word is a fixture and never the
   // mtimes of whatever the captain happened to edit this minute.)
+  const D7_NOW = "2026-08-10T05:00:00Z";
+  const freshAt = (now, bootMs) => ({ poll_ts: new Date(Date.parse(now) - 1000).toISOString(), pid: 21308, boot_ts: new Date(bootMs).toISOString() });
+  const staleAt = (now, bootMs) => ({ poll_ts: new Date(Date.parse(now) - STAMP_FRESH_MS - 60000).toISOString(), pid: 21308, boot_ts: new Date(bootMs).toISOString() });
   const laneUp = lane({ expected: { designed_absent: { "ArsenalFC-Context": "the bridge rides the resident daemon now" } },
-    residentStartMs: Date.parse("2026-08-10T04:00:00Z"), vbs: 'sh.Run "…hidden_run.vbs"" node scripts\\context.mjs daemon", 0, False',
+    stamp: freshAt(D7_NOW, Date.parse("2026-08-10T04:00:00Z")), now: D7_NOW, vbs: 'sh.Run "…hidden_run.vbs"" node scripts\\context.mjs daemon", 0, False',
     graph: { ms: Date.parse("2026-08-09T22:00:00Z"), file: "scripts/presence.mjs" } });
-  assert("D7 the lane is DERIVED — process table + restart verb + tasks_expected, never prose",
+  assert("D7 the lane is DERIVED — its own stamp (row 897; the process table until then) + restart verb + tasks_expected, never prose",
     laneUp.resident_running === true && laneUp.resident_since === "2026-08-10T04:00:00.000Z" &&
     laneUp.restart_verb_wired === true && laneUp.per_minute_task_designed_absent === true);
-  const laneDark = lane({ expected: { designed_absent: {} }, residentStartMs: null, vbs: "' this restart verb forgot the bridge",
+  const laneDark = lane({ expected: { designed_absent: {} }, stamp: staleAt(D7_NOW, Date.parse("2026-08-09T07:38:39Z")), now: D7_NOW, vbs: "' this restart verb forgot the bridge",
     graph: { ms: null, file: null } });
-  assert("D7 a dark bridge is NAMED, not silent (no process · unwired restart verb · unrecorded retirement)",
+  assert("D7 a dark bridge is NAMED, not silent (a stale stamp · unwired restart verb · unrecorded retirement)",
     laneDark.resident_running === false && laneDark.restart_verb_wired === false && laneDark.per_minute_task_designed_absent === false);
   // ------------------------------------------------------------------------
   // PROBE HONESTY REGRESSION (11 Aug 2026) — A KILLED PROBE IS NOT A DARK BRIDGE.
@@ -682,22 +855,29 @@ async function selftest() {
   // attribution disappears, so the surface loses BOTH halves at once.
   // These fail if a could-not-look reading is ever printed as a down bridge again, or if
   // the two different UNKNOWNs (off-Windows vs killed shell) get folded into one sentence.
+  // ROW 897 (s893, 14 Nov 2026): the process probe is gone from lane(), and with it both of its
+  // UNKNOWNs (no Windows-only reading is left, and no shell to kill). The SAME honesty now holds over
+  // the STAMP, and these four hold it: a stamp that cannot be read (no file, no readable poll_ts, a
+  // clock that moved) is UNKNOWN with its reason, never `false`, never a borrowed boot stamp, never
+  // "the bridge is dark"; DOWN is a STALE stamp and only that. Until today these four drove
+  // `procRead` ({ looked:false, reason:"ETIMEDOUT" } and { looked:true, reason:"absent" }).
   // ------------------------------------------------------------------------
   const laneKilled = lane({ expected: { designed_absent: {} }, vbs: "", graph: { ms: 1, file: "scripts/context.mjs" },
-    procRead: () => ({ ms: null, looked: false, reason: "ETIMEDOUT" }) });
-  assert("PROBE HONESTY — a probe that never got to look is UNKNOWN with its reason, never `false`, and never invents a boot stamp",
-    laneKilled.resident_running === null && laneKilled.probe_reason === "ETIMEDOUT" && laneKilled.resident_since === null);
+    stamp: { poll_ts: "not a time", pid: 21308, boot_ts: "2026-08-09T07:38:39.000Z" }, now: D7_NOW });
+  assert("PROBE HONESTY — a stamp that cannot be read is UNKNOWN with its reason, never `false`, and never invents a boot stamp (row 897: the stamp, not the process probe)",
+    laneKilled.resident_running === null && laneKilled.probe_reason === "its stamp has no readable poll_ts" && laneKilled.resident_since === null);
   const killedLines = statusLines(status({ rep: REP, lane: laneKilled, state: null, fate: FATE }));
-  assert("PROBE HONESTY — the surface says the probe never looked, and NEVER says the bridge is dark off a reading it could not take",
-    killedLines.some(l => /resident process: UNKNOWN — the process probe never got to look \(ETIMEDOUT\); a probe that could not run is not a DOWN reading/.test(l)) &&
+  assert("PROBE HONESTY — the surface says the stamp could not be read, and NEVER says the bridge is dark off a reading it could not take",
+    killedLines.some(l => /resident process: UNKNOWN — its stamp has no readable poll_ts; a stamp that cannot be read is not a DOWN reading/.test(l)) &&
     killedLines.every(l => !/the bridge is dark/.test(l)) &&
-    killedLines.every(l => !/NOT IN THE PROCESS TABLE/.test(l)));
-  assert("PROBE HONESTY — the D9 build word degrades HONESTLY on a killed probe: UNVERIFIED naming the probe, never 'nothing is running'",
-    killedLines.some(l => /running build: UNVERIFIED — the process probe never got to look \(ETIMEDOUT\)/.test(l)) &&
+    killedLines.every(l => !/resident process: DOWN/.test(l)));
+  assert("PROBE HONESTY — the D9 build word degrades HONESTLY on an unreadable stamp: UNVERIFIED naming the stamp, never 'nothing is running'",
+    killedLines.some(l => /running build: UNVERIFIED — its own stamp could not be read \(its stamp has no readable poll_ts\)/.test(l)) &&
     killedLines.every(l => !/nothing is running, so there is no build to compare/.test(l)));
-  assert("PROBE HONESTY — the two UNKNOWNs stay different facts: a completed look that finds nothing is still a DARK bridge, and off-Windows still reads Windows-only",
-    lane({ expected: {}, vbs: "", graph: { ms: null, file: null }, procRead: () => ({ ms: null, looked: true, reason: "absent" }) }).resident_running === false &&
-    statusLines(status({ rep: REP, lane: laneDark, state: null, fate: FATE })).some(l => /NOT IN THE PROCESS TABLE/.test(l)) &&
+  assert("PROBE HONESTY — UNKNOWN and DOWN stay different facts: a STALE stamp is still a DARK bridge, a missing stamp is UNKNOWN (never false), on every platform (row 897: no Windows-only reading is left)",
+    lane({ expected: {}, vbs: "", graph: { ms: null, file: null }, stamp: null, now: D7_NOW }).resident_running === null &&
+    lane({ expected: {}, vbs: "", graph: { ms: null, file: null }, stamp: null, now: D7_NOW }).probe_reason === "context_state.json holds no stamp" &&
+    statusLines(status({ rep: REP, lane: laneDark, state: null, fate: FATE })).some(l => /resident process: DOWN — its own stamp is STALE/.test(l)) &&
     laneDark.probe_reason == null);
   const upLines = statusLines(status({ rep: REP, lane: laneUp, now: "2026-08-10T05:00:00Z", fate: FATE,
     state: { app: "chrome.exe", title: "Embeddings 101", emit_ts: "2026-08-10T04:45:00Z" } }));
@@ -728,8 +908,9 @@ async function selftest() {
     fate({ ledgerRep: { rows: [], complete: true } }).max_S === null &&
     statusLines(status({ rep: REP, lane: laneDark, state: null, fate: fate({ ledgerRep: { rows: [], complete: true } }) }))
       .some(l => /DOWNSTREAM: 0\/0/.test(l)));
+  // ROW 897 (s893): the bridge-down word is the stale stamp's now ("NOT IN THE PROCESS TABLE" until then).
   assert("D7 the dark case speaks in full — bridge down, restart verb unwired, no emit stamp",
-    darkLines.some(l => /NOT IN THE PROCESS TABLE/.test(l)) &&
+    darkLines.some(l => /resident process: DOWN — its own stamp is STALE/.test(l)) &&
     darkLines.some(l => /has NO `context\.mjs daemon` line/.test(l)) &&
     darkLines.some(l => /holds no emit stamp yet/.test(l)));
   // ------------------------------------------------------------------------
@@ -754,7 +935,8 @@ async function selftest() {
   assert("D9 graphNow() takes the injected graph verbatim, and the LIVE walk answers with a real file + stamp (conductor's newestGraphMtime, not a bare mtime of this file)",
     graphNow({ graph: { ms: 7, file: "scripts/z.mjs" } }).file === "scripts/z.mjs" &&
     /\.mjs$/.test(String(graphNow().file || "")) && Number.isFinite(graphNow().ms));
-  const laneStale = lane({ expected: { designed_absent: {} }, residentStartMs: BOOT, vbs: "",
+  // ROW 897 (s893): the running bridge's boot is its FRESH stamp's boot_ts (it was `residentStartMs: BOOT`).
+  const laneStale = lane({ expected: { designed_absent: {} }, stamp: freshAt("2026-08-11T00:30:00Z", BOOT), now: "2026-08-11T00:30:00Z", vbs: "",
     graph: { ms: Date.parse("2026-08-11T00:23:56Z"), file: "scripts/conductor.mjs" } });
   const staleLines = statusLines(status({ rep: REP, lane: laneStale, state: null, fate: FATE }));
   assert("D9 the health surface SAYS it — a running-but-stale bridge is named with BOTH stamps and the file that moved",
@@ -772,7 +954,9 @@ async function selftest() {
   // Split on the arm's own head as a REGEX — a plain-string split would also cut on this
   // assertion's own copy of that literal and hand the check a slice of the selftest.
   // (Found by this assertion failing on its first run, 11 Aug 2026.)
-  const arm = ((SELF.split(/if \(mode === "daemon" \|\| mode === "--daemon"\) \{/)[1]) || "").split("--daemon stopped")[0];
+  // ROW 880 (2) (s880b): the loop moved under `daemon-worker` (the `daemon` arm is now the keeper),
+  // so the slice follows the LOOP to its new head. Same meaning: the loop really runs the check.
+  const arm = ((SELF.split(/if \(mode === "daemon-worker"\) \{/)[1]) || "").split("--daemon stopped")[0];
   assert("D9 the daemon loop REALLY runs the check — buildVerdict(BOOT_MS, graphNow()) sits in the arm, ahead of sense(), and breaks the loop with a RETIRING line",
     /const BOOT_MS = Date\.now\(\) - process\.uptime\(\) \* 1000;/.test(arm) &&
     /buildVerdict\(BOOT_MS, graphNow\(\)\)/.test(arm) &&
@@ -860,6 +1044,200 @@ async function selftest() {
   assert("D10 the doctor is pointed at the new line, and the surface really prints that label — a two-ended wire, both ends here",
     /loop faults:/.test(doctorMd) && faultLines.some(l => /^\s+loop faults: /.test(l)));
 
+  // ------------------------------------------------------------------------
+  // ── S880B SELFTESTS (row 880 (2), 14 Nov 2026): THE KEEPER, THE STAMP, THE SINGLETON ──
+  // Each holds by BEHAVIOUR where the behaviour is reachable without a process, and by SOURCE
+  // where the defect was a SHAPE (the D9/D10 nets above). Every predicate runs inside held():
+  // a predicate that THROWS reads ✗, so this same block, transplanted onto $BASE's code
+  // (cloud/s880b/fix/witness/selftest_on_base.mjs), reds there by name instead of crashing.
+  // The live end-to-end (a real keeper, a real retire, a real second keeper) is the witness's.
+  // ------------------------------------------------------------------------
+  {
+    const held = (f) => { try { return !!f(); } catch { return false; } };
+    const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    // the PRINTED source: a comment may quote history, a live line may not promise it
+    const code = SRC.split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*)/.test(l)).join("\n");
+    const keeperArm = ((SRC.split(/if \(mode === "daemon" \|\| mode === "--daemon"\) \{/)[1]) || "").split(/if \(mode === "daemon-worker"\) \{/)[0];
+    const workerAll = (SRC.split(/if \(mode === "daemon-worker"\) \{/)[1]) || "";
+    const workerArm = workerAll.split("--daemon stopped")[0];
+    const workerTail = workerAll.split(/\n {2}const r = await sense\(\);/)[0];
+    const T0 = Date.parse("2026-11-14T00:00:00Z"), at = (ms) => new Date(T0 + ms).toISOString();
+
+    assert("S880B THE KEEPER — `daemon` runs keep() from scripts/keeper.mjs over `daemon-worker` (the brain shape: port null, pollMs = the bridge's own CONTEXT_POLL_MS) and holds no loop of its own; `daemon-worker` is an allowed mode",
+      held(() => /import \{ keep, KEEP_EXIT \} from "\.\/keeper\.mjs";/.test(SRC)
+        && /await keep\(\{ name: "context", worker: \[process\.execPath, fileURLToPath\(import\.meta\.url\), "daemon-worker", \.\.\.process\.argv\.slice\(3\)\], port: null, pollMs: CONTEXT_POLL_MS \}\);\s*\n\s*return;/.test(keeperArm)
+        && !/await sense\(|while \(!stop\)/.test(keeperArm)
+        && MODES.has("daemon-worker") && MODES.has("daemon") && MODES.has("--daemon")));
+
+    assert("S880B A RETIRE EXITS 75 — the worker exits KEEP_EXIT.RETIRED after a retire, ALREADY_RESIDENT (69) when it yields, CLEAN (0) on a signal; the RETIRING line names the keeper, and no printed line promises the watchdog relaunch",
+      held(() => KEEP_EXIT.RETIRED === 75 && KEEP_EXIT.ALREADY_RESIDENT === 69 && KEEP_EXIT.CLEAN === 0
+        && /--daemon RETIRING[\s\S]*?retired = true;\s*\n\s*break;/.test(workerArm)
+        && /process\.exitCode = retired \? KEEP_EXIT\.RETIRED : yielded \? KEEP_EXIT\.ALREADY_RESIDENT : KEEP_EXIT\.CLEAN;/.test(workerTail)
+        && code.split("\n").filter((l) => /console\.log\(`context: --daemon RETIRING/.test(l)).length === 1
+        && code.split("\n").filter((l) => /console\.log\(`context: --daemon RETIRING/.test(l)).every((l) => /its keeper \(scripts\/keeper\.mjs\) respawns the worker on the new code at once/.test(l))
+        && !/daemon_watchdog\.mjs relaunches/.test(code)));
+
+    // THE STAMP MOVES ON A QUIET POLL: two polls, the SAME window, a fake disk. sense() must not
+    // post or write (delta-only), stampPoll() must move poll_ts, and emit_ts must not move.
+    let quiet = null;
+    try {
+      let disk = { app: "Code.exe", title: "drill.py", emit_ts: "2026-11-13T23:00:00.000Z" };
+      const load = () => JSON.parse(JSON.stringify(disk)), save = (o) => { disk = JSON.parse(JSON.stringify(o)); };
+      const poll = async (iso) => {
+        const r = await sense({ now: new Date(iso), registry: REG, window: { app: "Code.exe", title: "drill.py" }, prev: load(),
+          post: async () => { throw new Error("must not post on no-change"); }, save: () => { throw new Error("must not write the delta on no-change"); } });
+        stampPoll({ bootMs: T0, now: new Date(iso), pid: 4242, load, save });
+        return { r, disk: load() };
+      };
+      quiet = [await poll(at(60000)), await poll(at(120000))];
+    } catch { quiet = null; }
+    assert("S880B THE STAMP MOVES ON A POLL WITH NO WINDOW CHANGE — poll_ts moves, emit_ts/app/title do not, pid + boot_ts ride along; and the worker stamps on EVERY poll (after the poll's catch, never only on an emit)",
+      held(() => quiet && quiet.every((q) => q.r.emitted === false && q.r.reason === "no-change")
+        && quiet[0].disk.poll_ts === at(60000) && quiet[1].disk.poll_ts === at(120000)
+        && quiet[0].disk.emit_ts === "2026-11-13T23:00:00.000Z" && quiet[1].disk.emit_ts === "2026-11-13T23:00:00.000Z"
+        && quiet[1].disk.app === "Code.exe" && quiet[1].disk.title === "drill.py"
+        && quiet[1].disk.pid === 4242 && quiet[1].disk.boot_ts === at(0)
+        && /\n {6}\}\n(?: {6}\/\/[^\n]*\n)* {6}try \{ stampPoll\(\{ bootMs: BOOT_MS \}\); \}/.test(workerArm)
+        && workerArm.indexOf("try { stampPoll({ bootMs: BOOT_MS }); }") > workerArm.indexOf("--daemon poll FAULTED")
+        && workerArm.indexOf("try { stampPoll({ bootMs: BOOT_MS }); }") < workerArm.indexOf("await new Promise((res) => { const step = 500;")
+        && !/if \(r\.emitted\) \{[^\n]*stampPoll\(/.test(workerArm)));
+
+    assert("S880B ONE FRESHNESS RULE — stampLiveness: fresh → true (UP), stale → false (DOWN), missing / unparseable / no poll_ts / beyond-the-bound future → null (UNKNOWN); the bound is STAMP_FRESH_MS = 3 × CONTEXT_POLL_MS, written as that expression",
+      held(() => STAMP_FRESH_MS === 3 * CONTEXT_POLL_MS
+        && /export const STAMP_FRESH_MS = 3 \* CONTEXT_POLL_MS;/.test(SRC)
+        && /export const CONTEXT_POLL_MS = DOOR\.pollMs \|\| FLOOR_MS;/.test(SRC)
+        && stampLiveness({ poll_ts: at(0) }, T0) === true
+        && stampLiveness({ poll_ts: at(0) }, T0 + STAMP_FRESH_MS) === true
+        && stampLiveness({ poll_ts: at(0) }, new Date(T0 + STAMP_FRESH_MS + 1)) === false
+        && stampLiveness({ poll_ts: at(0) }, T0 + 10 * STAMP_FRESH_MS) === false
+        && stampLiveness(null, T0) === null && stampLiveness({}, T0) === null
+        && stampLiveness({ pid: 4242, boot_ts: at(0) }, T0) === null
+        && stampLiveness({ poll_ts: "not a time" }, T0) === null
+        && stampLiveness({ poll_ts: at(2 * STAMP_FRESH_MS) }, T0) === null));
+
+    const fresh = (pid) => ({ poll_ts: at(0), pid, boot_ts: at(-60000) });
+    const errWith = (code) => () => { const e = new Error(code); e.code = code; throw e; };
+    assert("S880B THE PORTLESS SINGLETON — a FRESH stamp of a foreign LIVE pid → that pid (the worker exits 69); a fresh stamp of a DEAD pid → runs; its OWN pid → runs; a STALE or absent stamp → runs; alive = kill(pid, 0) succeeds or EPERM, ESRCH = dead",
+      held(() => otherResident(fresh(4242), { now: T0, pid: 777, alive: () => true }) === 4242
+        && otherResident(fresh(4242), { now: T0, pid: 777, alive: () => false }) === null
+        && otherResident(fresh(777), { now: T0, pid: 777, alive: () => true }) === null
+        && otherResident(fresh(4242), { now: T0 + STAMP_FRESH_MS + 1, pid: 777, alive: () => true }) === null
+        && otherResident(null, { now: T0, pid: 777, alive: () => true }) === null
+        && pidAlive(4242, () => true) === true && pidAlive(4242, errWith("EPERM")) === true
+        && pidAlive(4242, errWith("ESRCH")) === false && pidAlive(0, () => true) === false
+        && pidAlive(process.pid) === true));
+
+    assert("S880B THE SINGLETON IS WIRED — the worker asks otherResident(readStamp()) at BOOT (exit KEEP_EXIT.ALREADY_RESIDENT before the loop) and before EVERY poll's sense(), and a yielder breaks out before it posts or stamps",
+      held(() => /const resident = otherResident\(readStamp\(\), \{ now: Date\.now\(\) \}\);\s*\n\s*if \(resident\) \{[\s\S]*?process\.exitCode = KEEP_EXIT\.ALREADY_RESIDENT;\s*\n\s*return;/.test(workerArm)
+        && workerArm.indexOf("const resident = otherResident(") > -1
+        && workerArm.indexOf("const resident = otherResident(") < workerArm.indexOf("while (!stop)")
+        && workerArm.indexOf("const rival = otherResident(readStamp()") > workerArm.indexOf("while (!stop)")
+        && workerArm.indexOf("const rival = otherResident(readStamp()") < workerArm.indexOf("await sense(")
+        && /if \(rival\) \{[\s\S]*?yielded = true;\s*\n\s*break;/.test(workerArm)));
+
+    const before = { app: "chrome.exe", title: "Embeddings 101", emit_ts: "2026-08-10T04:45:00Z", daemon_fault: { consecutive: 1 } };
+    assert("S880B THE STAMP RIDES BESIDE THE DELTA — withStamp never moves app/title/emit_ts/daemon_fault; stampOf/readStamp hand a liveness reader the stamp ONLY (never his window); an emit's default save carries the stamp through",
+      held(() => {
+        const s = withStamp(before, { poll_ts: at(0), pid: 4242, boot_ts: at(-60000) });
+        return s.app === before.app && s.title === before.title && s.emit_ts === before.emit_ts && s.daemon_fault.consecutive === 1
+          && s.poll_ts === at(0) && s.pid === 4242 && s.boot_ts === at(-60000)
+          && withStamp(s, null).poll_ts === undefined && withStamp(s, null).emit_ts === before.emit_ts
+          && Object.keys(stampOf(s)).sort().join() === "boot_ts,pid,poll_ts"
+          && stampOf({ app: "x", title: "y", emit_ts: "z" }) === null && stampOf(null) === null
+          && readStamp(join(tmpdir(), `s880b-no-such-state-${process.pid}.json`)) === null
+          && /if \(posted\) \(deps\.save \|\| \(\(o\) => writeAtomic\(CONTEXT_STATE, withStamp\(o, stampOf\(readJson\(CONTEXT_STATE\)\)\)\)\)\)\(state\);/.test(SRC);
+      }));
+
+    // ROW 897 (s893, 14 Nov 2026) — SUPERSEDED, kept as history: this assert pinned the lane's
+    // process-table call on the worker's verb (`(deps.procRead || processStartRead)(WORKER_MATCH)`, and
+    // never on RESIDENT_MATCH). Its meaning holds over the stamp: only the WORKER stamps, so the lane's
+    // pid and boot_ts are the worker's, the boot D9 compares; the restart verb is still the .vbs's.
+    assert("S880B STATUS KEEPS ITS MEANING — under the keeper two processes carry `context.mjs daemon`; the lane reads the WORKER's own stamp (row 897: never the process table), whose boot_ts is the worker's BOOT_MS that D9 compares, and the restart verb is still read off the .vbs's `daemon` line",
+      held(() => RESIDENT_MATCH === "context.mjs daemon"
+        && /try \{ stampPoll\(\{ bootMs: BOOT_MS \}\); \}/.test(workerArm)
+        && !/stampPoll\(/.test(keeperArm)
+        && /const stamp = deps\.stamp !== undefined \? deps\.stamp : readStamp\(\);/.test(SRC)
+        && /vbs\.includes\(RESIDENT_MATCH\)/.test(SRC)));
+
+    const orgDir = dirname(__dirname);
+    assert("S880B THE TEST DOOR — ARSENAL_CONTEXT_STATE_DIR opens only for an existing dir UNDER the temp root (else ignored), the poll door only with it (floored at the 500 ms wait step), and no env leaves his live dir and the 60 s floor",
+      held(() => {
+        const inDoor = contextDoor({ ARSENAL_CONTEXT_STATE_DIR: __dirname, ARSENAL_CONTEXT_POLL_MS: "1000" }, orgDir);
+        const floor = contextDoor({ ARSENAL_CONTEXT_STATE_DIR: __dirname, ARSENAL_CONTEXT_POLL_MS: "50" }, orgDir);
+        const outside = contextDoor({ ARSENAL_CONTEXT_STATE_DIR: orgDir, ARSENAL_CONTEXT_POLL_MS: "1000" }, __dirname);
+        const itself = contextDoor({ ARSENAL_CONTEXT_STATE_DIR: orgDir, ARSENAL_CONTEXT_POLL_MS: "1000" }, orgDir);
+        const pollOnly = contextDoor({ ARSENAL_CONTEXT_POLL_MS: "1000" }, orgDir);
+        const missing = contextDoor({ ARSENAL_CONTEXT_STATE_DIR: join(__dirname, "no-such-dir-s880b"), ARSENAL_CONTEXT_POLL_MS: "1000" }, orgDir);
+        const none = contextDoor({}, orgDir);
+        return inDoor.stateDir === realpathSync(__dirname) && inDoor.pollMs === 1000 && floor.pollMs === 500
+          && outside.stateDir === null && outside.pollMs === null && itself.stateDir === null
+          && pollOnly.stateDir === null && pollOnly.pollMs === null && missing.stateDir === null
+          && none.stateDir === null && none.pollMs === null && FLOOR_MS === 60000
+          && /const STATE_DIR = DOOR\.stateDir \|\| join\(__dirname, "\.\.", "dressing-room", "state"\);/.test(SRC);
+      }));
+  }
+  // ── /S880B ──
+
+  // ------------------------------------------------------------------------
+  // ── S893 SELFTESTS (row 897, F1 folded, 14 Nov 2026): STATUS READS ITS OWN STAMP, NEVER THE PROCESS TABLE ──
+  // Planted both ways, as the brief orders: a FRESH stamp with NO process-table line reads running,
+  // and a STALE stamp WITH a process-table line reads down. Every reading hands lane() a `procRead`
+  // that says the OPPOSITE of the stamp and counts its calls, so a lane that still consulted the
+  // process table would follow it (or, off Windows, read UNKNOWN) and red here. Every predicate runs
+  // inside held(): this block, transplanted onto s880b's context.mjs (cloud/s893/fix/mutants/
+  // f1_on_s880b.mjs), reds there BY NAME instead of crashing.
+  // ------------------------------------------------------------------------
+  {
+    const held = (f) => { try { return !!f(); } catch { return false; } };
+    const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const codeOf = (s) => s.split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*)/.test(l)).join("\n");
+    const laneCode = codeOf((SRC.split(/\nfunction lane\(deps = \{\}\) \{\n/)[1] || "").split(/\n\}\n/)[0]);
+    const NOW = Date.parse("2026-11-14T06:00:00Z"), iso = (ms) => new Date(NOW + ms).toISOString();
+    const BOOT_ISO = iso(-3600000);
+    const FRESH = { poll_ts: iso(-1000), pid: 4242, boot_ts: BOOT_ISO };
+    const STALE = { poll_ts: iso(-(STAMP_FRESH_MS + 60000)), pid: 4242, boot_ts: BOOT_ISO };
+    let tableCalls = 0;
+    const noLine = () => { tableCalls++; return { ms: null, looked: true, reason: "absent" }; };          // the table holds NO line for the bridge
+    const aLine = () => { tableCalls++; return { ms: NOW - 600000, looked: true, reason: "found" }; };   // the table DOES hold one
+    const OLDER = { ms: NOW - 7200000, file: "scripts/presence.mjs" }, NEWER = { ms: NOW - 60000, file: "scripts/presence.mjs" };
+    const laneOf = (d) => { try { return lane({ expected: {}, vbs: "", now: NOW, ...d }); } catch { return null; } };
+    const fresh = laneOf({ stamp: FRESH, procRead: noLine, graph: OLDER });
+    const freshNewer = laneOf({ stamp: FRESH, procRead: noLine, graph: NEWER });
+    const stale = laneOf({ stamp: STALE, procRead: aLine, graph: OLDER });
+    const missing = laneOf({ stamp: null, procRead: aLine, graph: OLDER });
+    const unreadable = laneOf({ stamp: { poll_ts: "not a time", pid: 4242, boot_ts: BOOT_ISO }, procRead: aLine, graph: OLDER });
+    const linesOf = (ln) => { try { return statusLines(status({ rep: REP, lane: ln, state: null, fate: FATE })); } catch { return []; } };
+
+    assert("S893 F1 A FRESH STAMP WITH NO PROCESS-TABLE LINE READS RUNNING — resident_running true, UP since the stamp's boot_ts, and the D9 build line compares THAT boot (current before it, STALE after it)",
+      held(() => fresh.resident_running === true && fresh.resident_since === BOOT_ISO && fresh.resident_pid === 4242
+        && fresh.build.checked === true && fresh.build.booted_ms === Date.parse(BOOT_ISO) && fresh.build.stale === false
+        && freshNewer.build.stale === true && freshNewer.build.booted_ms === Date.parse(BOOT_ISO)));
+    assert("S893 F1 A STALE STAMP READS DOWN, even with a process-table line — resident_running false, no boot borrowed, the build UNVERIFIED (nothing running)",
+      held(() => stale.resident_running === false && stale.resident_since === null && stale.resident_pid === null
+        && stale.build.checked === false && stale.probe_reason === null));
+    assert("S893 F1 A MISSING OR UNREADABLE STAMP READS UNKNOWN (never green, never down), with its reason, even with a process-table line",
+      held(() => missing.resident_running === null && missing.probe_reason === "context_state.json holds no stamp"
+        && unreadable.resident_running === null && unreadable.probe_reason === "its stamp has no readable poll_ts"
+        && missing.resident_since === null && unreadable.resident_since === null));
+    assert("S893 F1 NEVER THE PROCESS TABLE — across these readings the process probe was called 0 times; lane()'s code reads readStamp() and judges by stampLiveness(); none of its code names a process probe, and context.mjs imports none",
+      held(() => tableCalls === 0 && !!fresh && !!stale && !!missing && !!unreadable
+        && /readStamp\(\)/.test(laneCode) && /stampLiveness\(stamp, nowMs\)/.test(laneCode)
+        && !/processStart|procRead|Win32_Process|powershell/i.test(laneCode)
+        && !/import \{[^}]*processStartRead[^}]*\} from "\.\/conductor\.mjs";/.test(SRC)));
+    assert("S893 F1 THE SURFACE SAYS IT — UP names the fresh stamp and its boot; DOWN names the STALE stamp past its bound; UNKNOWN names its reason and never says the bridge is dark; the STALE build word carries the stamp's boot",
+      held(() => linesOf(fresh).some((l) => l.includes(`resident process: UP since ${BOOT_ISO} — its own stamp is fresh`))
+        && linesOf(stale).some((l) => /resident process: DOWN — its own stamp is STALE \(last poll [^,]+, \d+ s ago, past the \d+(\.\d+)? s bound\)/.test(l))
+        && linesOf(stale).some((l) => /running build: UNVERIFIED — nothing is running/.test(l))
+        && linesOf(missing).some((l) => /resident process: UNKNOWN — context_state\.json holds no stamp; a stamp that cannot be read is not a DOWN reading/.test(l))
+        && linesOf(missing).every((l) => !/the bridge is dark/.test(l))
+        && linesOf(freshNewer).some((l) => l.includes(`running build: STALE — booted ${BOOT_ISO}`))));
+    assert("S893 F1 status() WIRES IT — with no lane injected, status() hands lane() its own deps, so the stamp it is given (else readStamp() off disk) decides resident_running",
+      held(() => status({ rep: REP, state: null, fate: FATE, expected: {}, vbs: "", graph: OLDER, now: NOW, stamp: FRESH, procRead: noLine }).lane.resident_running === true
+        && status({ rep: REP, state: null, fate: FATE, expected: {}, vbs: "", graph: OLDER, now: NOW, stamp: STALE, procRead: aLine }).lane.resident_running === false
+        && tableCalls === 0));
+  }
+  // ── /S893 ──
+
   const passed = checks.every(Boolean);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -880,8 +1258,10 @@ async function selftest() {
 // and no live caller passes it (START_DAEMONS.vbs and ArsenalFC-Brain.bat both
 // pass `daemon`; package.json passes `selftest`). Nothing is replaced here, so
 // nothing is frozen *Legacy.
-const MODES = new Set(["once", "status", "daemon", "--daemon", "selftest"]);
-const USAGE = "usage: node scripts/context.mjs [once | status | daemon | selftest]   (bare = once, which EMITS — `status` is the read-only one)";
+// ROW 880 (2) (s880b): `daemon-worker` joins the allowlist, the loop the keeper spawns. It is still an
+// allowlist: an unknown mode refuses before anything is read, posted or written.
+const MODES = new Set(["once", "status", "daemon", "--daemon", "daemon-worker", "selftest"]);
+const USAGE = "usage: node scripts/context.mjs [once | status | daemon | daemon-worker | selftest]   (bare = once, which EMITS — `status` is the read-only one; `daemon` is the keeper, `daemon-worker` its poll)";
 
 async function main() {
   const mode = (process.argv[2] || "once").toLowerCase().trim();
@@ -892,7 +1272,39 @@ async function main() {
     return;
   }
   if (mode === "daemon" || mode === "--daemon") {
-    let stop = false, emits = 0;
+    // THE KEEPER (row 880 (2) F2; scripts/keeper.mjs, forks rows 746 (2) / 753 (2)), the brain shape
+    // exactly (brain.mjs:7617-7625). What the OS launches (the ArsenalFC-Context service, whose
+    // <arguments> stay `scripts/context.mjs daemon`, and START_DAEMONS.vbs:33) is no longer the loop:
+    // keep() spawns `daemon-worker` (the loop below) and never exits on its own, so the WinSW wrapper
+    // never sees its child end. MEASURED (row 880, cloud/s880b/measure): 12 times since 30 Aug a retire
+    // ended this process, WinSW's report of the exit to the SCM was refused ("Failed to open the
+    // service control manager database. Access is denied"), and the wrapper stayed a zombie reading
+    // Running with no child: 544.5 h dark, dark again since 13 Nov 22:47. brain.mjs's wrapper, kept
+    // by the keeper since 15 Oct, logged 11 such deaths before it and ZERO after. `port: null`
+    // because this bridge holds no port: the worker brings its own singleton (otherResident) and
+    // exits 69 so that a second keeper waits a poll instead of minting a second bridge.
+    await keep({ name: "context", worker: [process.execPath, fileURLToPath(import.meta.url), "daemon-worker", ...process.argv.slice(3)], port: null, pollMs: CONTEXT_POLL_MS });
+    return;
+  }
+  if (mode === "daemon-worker") {
+    // THE RESIDENT POLL, run under the keeper (row 880 (2)). Until row 880 this loop WAS `daemon`.
+    // Every exit follows KEEP_EXIT (keeper.mjs:44): 75 RETIRED (its graph moved: respawn now) ·
+    // 69 ALREADY RESIDENT (another live worker's fresh stamp: wait a poll) · 0 a clean stop by
+    // signal. REFUSED (78) has no cause here: this bridge never reads ANTHROPIC_API_KEY and never
+    // spends. A throw outside the poll's own catch is a crash, which the keeper backs off 10/30/60 s.
+    // D9 — the boot instant, by brain.mjs's own formula (now minus uptime), so the stamp is
+    // the PROCESS's start and not the moment this line executed. Measured once at boot; the
+    // graph is re-read every poll, BEFORE the poll emits anything — an out-of-date resident
+    // must not ship one more afferent on code the repo has moved past.
+    const BOOT_MS = Date.now() - process.uptime() * 1000;
+    // THE PORTLESS SINGLETON, at boot: before AW is read or the thalamus door is touched.
+    const resident = otherResident(readStamp(), { now: Date.now() });
+    if (resident) {
+      console.log(`context: --daemon ALREADY RESIDENT — pid ${resident} stamped context_state.json within ${STAMP_FRESH_MS / 1000} s and is alive; this worker (pid ${process.pid}) exits ${KEEP_EXIT.ALREADY_RESIDENT} instead of a second bridge POSTing the door, and its keeper asks again in ${CONTEXT_POLL_MS / 1000} s.`);
+      process.exitCode = KEEP_EXIT.ALREADY_RESIDENT;
+      return;
+    }
+    let stop = false, emits = 0, retired = false, yielded = false;
     // D10 — this resident's own fault streak, plus whether a PREVIOUS resident left a block
     // behind: a fault from a process that no longer exists must not read as live, so the
     // first clean poll of a fresh daemon clears it too.
@@ -900,18 +1312,29 @@ async function main() {
     let faultOnDisk = !!(readJson(CONTEXT_STATE) || {}).daemon_fault;
     const onSig = () => { stop = true; };
     process.on("SIGINT", onSig); process.on("SIGTERM", onSig);
-    // D9 — the boot instant, by brain.mjs's own formula (now minus uptime), so the stamp is
-    // the PROCESS's start and not the moment this line executed. Measured once at boot; the
-    // graph is re-read every poll, BEFORE the poll emits anything — an out-of-date resident
-    // must not ship one more afferent on code the repo has moved past.
-    const BOOT_MS = Date.now() - process.uptime() * 1000;
-    console.log(`context: --daemon up (poll ~${FLOOR_MS / 1000}s) — ambient AW → :4113 on window change. Booted ${new Date(BOOT_MS).toISOString()}; retires itself if any file in its own module graph is written after that (D9). Ctrl-C to stop.`);
+    console.log(`context: --daemon up (pid ${process.pid}, poll ~${CONTEXT_POLL_MS / 1000}s) — ambient AW → :4113 on window change, its liveness stamped on context_state.json every poll (row 880). Booted ${new Date(BOOT_MS).toISOString()}; retires itself if any file in its own module graph is written after that (D9), and its keeper respawns it. Ctrl-C to stop.`);
     while (!stop) {
       const bv = buildVerdict(BOOT_MS, graphNow());
       if (bv.checked && bv.stale) {
         // The console is not a void: the VBS cloak redirects it to scripts/context.log
         // (audit finding #10), which is the same lane brain.mjs's retirement prints to.
-        console.log(`context: --daemon RETIRING — booted ${new Date(bv.booted_ms).toISOString()}, and ${bv.newest_file} was written ${new Date(bv.newest_ms).toISOString()}. An ESM process cannot reload its code, so staying up means emitting on the OLD bridge. Releasing the lane: daemon_watchdog.mjs relaunches it on the new code (portless ⇒ after two consecutive down passes, ≤~20 min), and \`node scripts/context.mjs once\` is the manual probe meanwhile.`);
+        // SUPERSEDED BY ROW 880 (2), kept as history (layer, never replace): until 14 Nov this line
+        // ended "Releasing the lane: daemon_watchdog.mjs relaunches it on the new code (portless ⇒
+        // after two consecutive down passes, ≤~20 min), and `node scripts/context.mjs once` is the
+        // manual probe meanwhile." That relaunch had not existed since S9 (28 Aug): each of the 12
+        // measured retires left the WinSW wrapper a zombie. The keeper respawns at once now.
+        console.log(`context: --daemon RETIRING — booted ${new Date(bv.booted_ms).toISOString()}, and ${bv.newest_file} was written ${new Date(bv.newest_ms).toISOString()}. An ESM process cannot reload its code, so staying up means emitting on the OLD bridge. Releasing the lane: its keeper (scripts/keeper.mjs) respawns the worker on the new code at once (exit ${KEEP_EXIT.RETIRED}); run with no keeper, \`node scripts/context.mjs once\` is the manual probe meanwhile.`);
+        retired = true;
+        break;
+      }
+      // THE PORTLESS SINGLETON, every poll, before anything is read or posted. Two workers that
+      // boot within one poll of each other both pass the boot check (neither has stamped yet);
+      // at the next poll the one that reads the other's fresh live stamp yields, and a yielder
+      // writes nothing, so exactly one stays (row 880 (2): never a second bridge on the door).
+      const rival = otherResident(readStamp(), { now: Date.now() });
+      if (rival) {
+        console.log(`context: --daemon ALREADY RESIDENT — pid ${rival} stamped context_state.json after this worker (pid ${process.pid}) did and is alive; this one yields (exit ${KEEP_EXIT.ALREADY_RESIDENT}) so ONE bridge POSTs the door.`);
+        yielded = true;
         break;
       }
       try {
@@ -941,9 +1364,17 @@ async function main() {
         try { writeAtomic(CONTEXT_STATE, withFault(readJson(CONTEXT_STATE), note)); faultOnDisk = true; } catch {}
         console.log(`context: --daemon poll FAULTED — ${faults} in a row in this resident, ${note.consecutive} on disk since ${note.since} (continuing; the health surface carries the streak): ${note.last_error}`);
       }
-      await new Promise((res) => { const step = 500; let el = 0; const iv = setInterval(() => { el += step; if (stop || el >= FLOOR_MS) { clearInterval(iv); res(); } }, step); });
+      // F1 · THE PER-POLL STAMP (row 880 (2)) — on EVERY poll: emit or no emit, fault or no fault.
+      // It is how daemon_watchdog sees this bridge (fresh UP, stale DOWN, missing UNKNOWN). A stamp
+      // that cannot be written goes stale, and DOWN is then the truth about a bridge that cannot
+      // write its own file; the line below is the forensic trace.
+      try { stampPoll({ bootMs: BOOT_MS }); }
+      catch (e) { console.log(`context: --daemon stamp write FAILED (it will read stale, so DOWN): ${String((e && e.message) || e).replace(/\s+/g, " ").trim().slice(0, FAULT_MSG_CAP)}`); }
+      await new Promise((res) => { const step = 500; let el = 0; const iv = setInterval(() => { el += step; if (stop || el >= CONTEXT_POLL_MS) { clearInterval(iv); res(); } }, step); });
     }
     console.log(`context: --daemon stopped (${emits} emit(s)).`);
+    // What the keeper reads (keeper.mjs decide, :49-57): 75 respawn now · 69 wait a poll · 0 a clean stop.
+    process.exitCode = retired ? KEEP_EXIT.RETIRED : yielded ? KEEP_EXIT.ALREADY_RESIDENT : KEEP_EXIT.CLEAN;
     return;
   }
   const r = await sense();

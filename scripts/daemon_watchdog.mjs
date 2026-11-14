@@ -55,6 +55,9 @@ import { execFileSync } from "node:child_process";
 // future session cannot re-grow the arm by typing one line, it has to reach for the
 // door on purpose, and the lint gate names it the moment it is imported unused.
 import { portOpen, processStartMs, processStartRead, clipStderr } from "./conductor.mjs";
+// ROW 880 (2) F1 (s880b, 14 Nov 2026) — the portless bridge is read off its OWN per-poll stamp, by the
+// rule its sole writer exports (derive, never type): no freshness number lives in this file.
+import { stampLiveness, readStamp, STAMP_FRESH_MS } from "./context.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO = join(__dirname, "..");
@@ -107,7 +110,13 @@ export const DAEMONS = [
   { name: "thalamus",  port: 4113, args: ["scripts/thalamus.mjs"], surface: "headless" },
   { name: "brain",     port: 4116, args: ["scripts/brain.mjs", "daemon"], surface: "headless" },   // :4115 is the tick LOCK; :4116 is the daemon singleton
   { name: "sitting",   port: 4117, args: ["scripts/sitting.mjs", "daemon"], surface: "headless" },   // Block 3 (18 Aug 2026): THE SITTING BRAIN — one mind behind every mouth; NOT excluded like the Dugout, because it is the being, not the mouth
-  { name: "context",   port: null, match: "context.mjs daemon", args: ["scripts/context.mjs", "daemon"], surface: "headless" },
+  // ROW 880 (2) F1 (s880b, 14 Nov 2026) — THE PROCESS TABLE WAS BLIND; THE STAMP IS NOT. Measured on his
+  // box: to his non-elevated account the Win32_Process CommandLine of a process owned by the service
+  // account `.\arsenal-svc` reads NULL (the same query found nothing for the live cortex and thalamus),
+  // so this row read DOWN alive or dead. `probe: "stamp"` reads the bridge's own per-poll stamp instead
+  // (stampProbe below). `match` and `args` stay (L9): services.mjs emits from `args`, and processProbe
+  // still serves any portless row that declares no stamp.
+  { name: "context",   port: null, match: "context.mjs daemon", probe: "stamp", args: ["scripts/context.mjs", "daemon"], surface: "headless" },
 ];
 
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
@@ -168,6 +177,17 @@ export function processProbe(match, deps = {}) {
     if (!r || r.looked === false) return null;   // could not look → UNKNOWN, never DOWN
     return r.ms != null;
   } catch { return false; }
+}
+
+// ROW 880 (2) F1 — liveness for a STAMPED portless resident (the context bridge): its own per-poll stamp
+// in context_state.json, read through context.mjs's readStamp (the stamp ONLY, never his window) and
+// judged by context.mjs's stampLiveness, whose bound is STAMP_FRESH_MS = 3 polls. true = UP · false =
+// DOWN · null = UNKNOWN (no file, unparseable, no poll_ts), which decidePass already keeps out of every
+// verdict (an unread probe is not a verdict). It reads no process table, so the service account's NULL
+// command line cannot blind it. `stampRead` is the injection door: a hermetic pass never reads his file.
+export function stampProbe(_match, deps = {}) {
+  const stamp = deps.stampRead ? deps.stampRead() : readStamp();
+  return stampLiveness(stamp, deps.now || new Date());
 }
 
 // ── PURE CORE — one pass, fully injected ────────────────────────────────────
@@ -736,9 +756,12 @@ async function pass(deps = {}) {
   for (const d of DAEMONS) {
     // Two probes, one table: a port answers, or the process table names it. Both are
     // borrowed from conductor.mjs — this repair added no new instrument.
+    // ROW 880 (2): a portless row that declares `probe: "stamp"` is read off its own stamp; one that
+    // declares nothing still takes the process table. `procProbe` stays the injection door every
+    // existing fixture uses for the portless row's reading, whichever probe is the live one.
     probes[d.name] = d.port != null
       ? await (deps.probe || portOpen)(d.port)
-      : (deps.procProbe || processProbe)(d.match, deps);
+      : (deps.procProbe || (d.probe === "stamp" ? stampProbe : processProbe))(d.match, deps);
   }
   const prev = deps.prev !== undefined ? deps.prev : readJson(STATE());
   const { state, actions } = decidePass(prev, probes, nowIso);
@@ -779,9 +802,12 @@ async function pass(deps = {}) {
     state.findings.push({
       name,
       finding: `${name} is DOWN and nothing here restarts it`,
+      // ROW 880 (2): the reading behind a stamped row's finding is its STAMP, never the process table.
       witness: d.port != null
         ? `port ${d.port} refused a TCP connect on this pass (${nowIso})`
-        : `the process table held no "${d.match}" on this pass and the previous one (${nowIso})`,
+        : d.probe === "stamp"
+          ? `its own per-poll stamp (context_state.json poll_ts) was older than ${STAMP_FRESH_MS / 1000} s on this pass and the previous one (${nowIso})`
+          : `the process table held no "${d.match}" on this pass and the previous one (${nowIso})`,
       // S12: read off the `surface` column, not re-derived from port+name. That predicate
       // was a SECOND copy of what the row already declares and what services.mjs generates
       // from — one truth, one place, so a sixth daemon cannot be classed two ways.
@@ -1038,7 +1064,7 @@ async function main() {
     // the resync clause moved OUT of this line into resyncLine: "N resync(s) ever"
     // counted dispatches, which is not the same claim as "the outage's dropped
     // deliveries got re-driven" — the very conflation this repair exists to end.
-    console.log(`daemon_watchdog: last pass ${s.at} · ${DAEMONS.map((d) => `${d.name} ${upWord(s, d.name)}${d.port == null ? " (process table)" : ""}`).join(" · ")}`);
+    console.log(`daemon_watchdog: last pass ${s.at} · ${DAEMONS.map((d) => `${d.name} ${upWord(s, d.name)}${d.port == null ? (d.probe === "stamp" ? " (its own stamp)" : " (process table)") : ""}`).join(" · ")}`);
     if (launchLine(s)) console.log(`daemon_watchdog: ${launchLine(s)}`);
     // `status` is the asked-for read, so the outage answers unconditionally here —
     // "none on record" is itself the answer to "how long was the nerve out".
@@ -1484,6 +1510,7 @@ async function selftest() {
     const r = await pass({
       dry: true, cortexRow: null, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: rep,
       probe: async () => true, launch: () => { throw new Error("a stale daemon must never be relaunched — the double-ingest law"); },
+      stampRead: () => null,   // ROW 880 (2): the context row reads a STAMP now; a hermetic pass never reads his file
       procStart: (rel) => (rel === "scripts/cortex.mjs" ? Date.parse(rep.started) + 3600000 : Date.parse(rep.started) - 3600000),
       exec: (a) => { calls.push(a.join(" ")); return "captains_call: filed c99"; },
     });
@@ -1503,7 +1530,7 @@ async function selftest() {
       && /cleared by restart since the report: cortex/.test(morningLine(r.state.morning_chain)));
     assert("MORNING WIRE — an unverifiable boot time is marked UNVERIFIED and still asks (never a fabricated all-clear)",
       (await pass({ dry: true, cortexRow: null, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: rep,
-        probe: async () => true, launch: () => {}, procStart: () => null, exec: () => "ok" }))
+        probe: async () => true, launch: () => {}, procStart: () => null, stampRead: () => null, exec: () => "ok" }))
         .state.morning_chain.stale.every((s) => s.cleared === false && s.verified === false));
     assert("MORNING WIRE — it reads the REAL receipt path (a rename of conductor.json must break this, loudly)",
       MORNING_REPORT().replace(/\\/g, "/").endsWith("/dressing-room/state/conductor.json"));
@@ -1539,7 +1566,7 @@ async function selftest() {
     const degCalls = [];
     const dr = await pass({
       dry: true, cortexRow: null, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: degRep,
-      probe: async () => true, launch: () => {}, procStart: () => null,
+      probe: async () => true, launch: () => {}, procStart: () => null, stampRead: () => null,
       exec: (a) => { degCalls.push(a.join(" ")); return "captains_call: filed c99"; },
     });
     assert("DEGRADED WIRE — pass() carries it onto disk in state.morning_chain (the whole defect: conductor wrote it, nobody read it)",
@@ -1578,7 +1605,7 @@ async function selftest() {
     const unpCalls = [];
     const ur = await pass({
       dry: true, cortexRow: null, prev: null, now: new Date(`${DAY}T18:00:00+05:30`), today: DAY, report: unpRep,
-      probe: async () => true, launch: () => {}, procStart: () => null,
+      probe: async () => true, launch: () => {}, procStart: () => null, stampRead: () => null,
       exec: (a) => { unpCalls.push(a.join(" ")); return "captains_call: filed c99"; },
     });
     assert("UNPRODUCED WIRE — pass() carries it to disk in state.morning_chain (the whole defect: conductor wrote the sentence, nobody read it)",
@@ -1740,6 +1767,76 @@ async function selftest() {
       /MODES\.includes\(mode\)/.test(mainSrc9) && /process\.exit\(2\)/.test(mainSrc9)
       && MODES.includes("help") && !MODES.includes("--help"));
   }
+
+  // ── S880B SELFTESTS (row 880 (2), 14 Nov 2026): THE CONTEXT ROW IS READ OFF ITS OWN STAMP, AND NEVER LAUNCHED ──
+  // Every predicate runs inside held() (a throw reads ✗), so this block also runs against $BASE's code
+  // (cloud/s880b/fix/witness/selftest_on_base.mjs) and reds there by name. The fixtures set platform
+  // win32 and a process table that NAMES the bridge (procStart), and inject NO procProbe: a build that
+  // still reads the process table answers UP in every case, so only a build that reads the stamp can
+  // answer fresh UP · stale DOWN · missing UNKNOWN. A throwing launch spy proves no launcher is reached.
+  {
+    const held = (f) => { try { return !!f(); } catch { return false; } };
+    const NOW = new Date("2026-11-14T01:00:00.000Z");
+    const ago = (ms) => new Date(NOW.getTime() - ms).toISOString();
+    const BOUND = (() => { try { return STAMP_FRESH_MS; } catch { return 3 * 60000; } })();   // the transplant onto $BASE has no import
+    const runCase = async (stamp, prevCtx) => {
+      const launches = [], execs = [];
+      const r = await pass({
+        dry: true, cortexRow: null, report: null, now: NOW, platform: "win32",
+        procStart: () => 1754800000000,           // the process table NAMES the bridge: a table-reading build says UP
+        stampRead: () => stamp,
+        prev: { ports: { turnstile: true, cortex: true, thalamus: true, brain: true, sitting: true, context: prevCtx }, unknown: [], thalamus_down_since: null, resync_pending: false, resyncs: [], launched: [], findings: [] },
+        probe: async () => true,
+        launch: (a) => { launches.push(a.join(" ")); throw new Error("S880B VIOLATION — the watchdog reached for a launcher"); },
+        exec: (a) => { execs.push(a.join(" ")); return "captains_call: filed c99"; },
+      });
+      return { r, launches, execs };
+    };
+    const noLaunch = (c) => c.launches.length === 0 && (c.r.state.launched || []).length === 0 && c.execs.every((x) => !/context\.mjs/.test(x));
+    const cases = {};
+    try {
+      cases.fresh = await runCase({ poll_ts: ago(1000), pid: 4242, boot_ts: ago(3600000) }, true);
+      cases.stale = await runCase({ poll_ts: ago(BOUND + 1000), pid: 4242, boot_ts: ago(3600000) }, true);
+      cases.staleTwice = await runCase({ poll_ts: ago(BOUND + 1000), pid: 4242, boot_ts: ago(3600000) }, false);
+      cases.missing = await runCase(null, true);
+      cases.noPollTs = await runCase({ pid: 4242, boot_ts: ago(3600000) }, true);
+    } catch { /* a throw leaves a case unset, and every assert below then reads ✗ */ }
+    assert("S880B THE CONTEXT ROW READS ITS OWN STAMP — through pass(): fresh → UP, stale → DOWN, missing / no poll_ts → UNKNOWN (never DOWN), with a process table that NAMES it in every case; and NO launch action for context in any of them",
+      held(() => cases.fresh.r.state.ports.context === true && !cases.fresh.r.state.unknown.includes("context")
+        && cases.stale.r.state.ports.context === false && !cases.stale.r.state.unknown.includes("context")
+        && cases.missing.r.state.ports.context === false && cases.missing.r.state.unknown.includes("context")
+        && cases.noPollTs.r.state.unknown.includes("context")
+        && upWord(cases.fresh.r.state, "context") === "UP" && upWord(cases.stale.r.state, "context") === "DOWN"
+        && upWord(cases.missing.r.state, "context") === "UNKNOWN"
+        && Object.keys(cases).length === 5 && Object.values(cases).every(noLaunch)));
+    const fs2 = (cases.staleTwice && (cases.staleTwice.r.state.findings || []).find((f) => f.name === "context")) || null;
+    assert("S880B REPORT-ONLY — two stale passes in a row: the decision names context and it becomes a FINDING whose witness is its STAMP (never the process table), while the CLI launches NOTHING (`launched` empty, the launcher door never reached)",
+      held(() => cases.staleTwice.r.actions.launch.includes("context") && !!fs2
+        && /its own per-poll stamp \(context_state\.json poll_ts\) was older than \d+ s on this pass and the previous one/.test(fs2.witness)
+        && !/process table/.test(fs2.witness)
+        && noLaunch(cases.staleTwice)));
+    assert("S880B DERIVE, NEVER TYPE — the watchdog imports stampLiveness / readStamp / STAMP_FRESH_MS from context.mjs, the context row (and only it) declares `probe: \"stamp\"` with its `match` and `args` unchanged, stampProbe judges by stampLiveness alone, and no freshness number is typed in this organ's code",
+      held(() => {
+        const src = readFileSync(join(__dirname, "daemon_watchdog.mjs"), "utf8");
+        const prod = src.slice(0, src.indexOf("// ── SELFTEST")).split(/\r?\n/).filter((l) => !/^\s*\/\//.test(l)).join("\n");
+        const ctx = DAEMONS.find((d) => d.name === "context");
+        return /import \{ stampLiveness, readStamp, STAMP_FRESH_MS \} from "\.\/context\.mjs";/.test(src)
+          && ctx.probe === "stamp" && ctx.match === "context.mjs daemon" && ctx.args.join(" ") === "scripts/context.mjs daemon"
+          && DAEMONS.filter((d) => d.probe === "stamp").map((d) => d.name).join() === "context"
+          && stampProbe("x", { stampRead: () => ({ poll_ts: ago(1000) }), now: NOW }) === stampLiveness({ poll_ts: ago(1000) }, NOW)
+          && stampProbe("x", { stampRead: () => ({ poll_ts: ago(BOUND + 1) }), now: NOW }) === false
+          && stampProbe("x", { stampRead: () => null, now: NOW }) === null
+          && !/\b(180000|180_000)\b|3 \* 60_?000/.test(prod);
+      }));
+    assert("S880B THE STATUS LINE NAMES ITS PROBE — the stamped row is labelled by its stamp, never `(process table)`; pass() picks the stamp only for a row that declares it, and processProbe stays for any portless row that declares none (L9)",
+      held(() => {
+        const src = readFileSync(join(__dirname, "daemon_watchdog.mjs"), "utf8");
+        return /d\.probe === "stamp" \? " \(its own stamp\)" : " \(process table\)"/.test(src)
+          && /\(deps\.procProbe \|\| \(d\.probe === "stamp" \? stampProbe : processProbe\)\)\(d\.match, deps\)/.test(src)
+          && typeof processProbe === "function";
+      }));
+  }
+  // ── /S880B ──
 
   console.log(`\ndaemon_watchdog selftest: ${pass2} passed, ${fail} failed`);
   return fail === 0;
