@@ -183,7 +183,7 @@ function cNotes({ st, day }) {
   const f = readJsonl(join(st, row.writes_to));
   if (!f.born) return NOT_BORN(`${row.writes_to}`);
   if (f.error) return UNREADABLE(`${row.writes_to} (${f.error})`);
-  const n = f.rows.filter((r) => r && istDay(r.ts || r.at) === day).length;
+  const n = f.rows.filter((r) => r && (r.day || istDay(r.ts || r.at)) === day).length;   // row 883 (1): a row about a day carries that day; without one, its ts
   return n ? G(`${n} block(s) extracted`) : R(`no block extracted on ${day}`);
 }
 // 4 · the examiner — the full-time retrieval test is gaffer_brain.mjs `judge-round`: ONE

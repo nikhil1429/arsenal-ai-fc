@@ -13,9 +13,11 @@
 //   · SOLE WRITER of dressing-room/state/compiled_notes.jsonl (row 550 (2) F4: the organism repo, ONE sole
 //     writer = this file, git-versioned). APPEND-ONLY in the rung witness's two row kinds (forks row 551 (1),
 //     cloud/ml1/witness/rung_L1.mjs CLASS A):
-//       {v:1, kind:"compiled",  id, ts, concept, axis, compiler, sources[], note, content_sha, supersedes?}
-//       {v:1, kind:"cold_gate", id, of, ts, verdict:"pass"|"fail", traps_named[], reader, role, model, effort, via, …}
-//       {v:1, kind:"cold_gate", id, of, ts, verdict:"absent", traps_named:[], reader, role, cause, why}   (row 774 (2))
+//       {v:1, kind:"compiled",  id, ts, day, concept, axis, compiler, sources[], note, content_sha, supersedes?}
+//       {v:1, kind:"cold_gate", id, of, ts, day, verdict:"pass"|"fail", traps_named[], reader, role, model, effort, via, …}
+//       {v:1, kind:"cold_gate", id, of, ts, day, verdict:"absent", traps_named:[], reader, role, cause, why}   (row 774 (2))
+//     `day` (row 883 (1), A ROW ABOUT A DAY CARRIES THAT DAY): a compiled row's is the IST day it was compiled FOR, a gate
+//     row's is its note's; ts stays the clock. Every day reader keys by noteDay(), a row without `day` by the IST day of ts.
 //     An ABSENT row is a named non-verdict: the cold read could not run (cause ∈ ABSENT_CAUSES). It is never a
 //     pass, the rung reads it RED, and the next gate reads that note again.
 //     No id repeats. A compiled row NEVER carries a verdict: the gate APPENDS its own row naming the note
@@ -65,7 +67,8 @@
 //             of a teaching turn, :345) and his answer · the bank receipts (asked · said · gut · latency · verdict).
 //   TRAPS   — the cracks, the live corrections, then the capsule's traps — numbered T1…Tn; the cold reader maps
 //             its seductive wrong answers onto these ids.
-//   A note whose content is unchanged since its live row (same content_sha) is not appended again.
+//   A note whose content AND day are unchanged since its live row (same content_sha, same day) is not appended again;
+//   the same content asked for another day is RE-KEYED by a superseding row (row 883 (1)).
 //
 // THE COLD GATE (G-A with G-C, fate 50): ONE fresh-model reader given ONLY the rendered note: (1) answer the
 //   axis strike; (2) name the three most seductive WRONG answers, each mapped to the trap of the note that
@@ -122,6 +125,9 @@ const sha256 = (s) => createHash("sha256").update(String(s), "utf8").digest("hex
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
 const readJsonl = (p) => { if (!existsSync(p)) return []; const out = []; for (const l of readFileSync(p, "utf8").split(/\r?\n/)) { if (!l.trim()) continue; try { const o = JSON.parse(l); if (o && typeof o === "object") out.push(o); } catch { /* torn */ } } return out; };
 export const istDay = (iso) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? null : istDayKey(d); };
+/** noteDay — the IST study day a row is ABOUT (row 883 (1): a row about a day carries that day): its `day`, else, for a row
+ *  written before `day` existed, the IST day of its ts. Every day reader of the ledger keys by this, never by the clock alone. */
+export const noteDay = (r) => (r && typeof r.day === "string" && r.day) || istDay(r && r.ts);
 /** "YYYY-MM-DD HH:MM:SS IST" — the wall clock of an archive instant (IST is +05:30, no DST). */
 export const istStampOf = (iso) => { const t = Date.parse(String(iso || "")); return Number.isFinite(t) ? new Date(t + 330 * 60000).toISOString().replace("T", " ").slice(0, 19) + " IST" : null; };
 const todayIst = () => istDayKey(new Date());
@@ -451,9 +457,9 @@ export function compileDay({ date = todayIst(), stateDir = STATE_DIR, path = nul
     const sources = [...new Set([...ex.map((x) => x.rid), ...bank.map((b) => b.rid)].filter((x) => typeof x === "string" && x))];
     if (!sources.length) { results.push({ concept: c, axis: a, op: "skipped", why: "no archive record id to cite — a note without sources is never written" }); continue; }
     const content_sha = sha256(JSON.stringify({ compiler: COMPILER, note, sources }));
-    if (prev && prev.content_sha === content_sha) { results.push({ concept: c, axis: a, op: "unchanged", id: prev.id }); continue; }
+    if (prev && prev.content_sha === content_sha && noteDay(prev) === date) { results.push({ concept: c, axis: a, op: "unchanged", id: prev.id }); continue; }
     const t = now();
-    const row = { v: 1, kind: "compiled", id: newId("n", t), ts: t.toISOString(), concept: c, axis: a, compiler: COMPILER, sources, note, content_sha, ...(prev ? { supersedes: prev.id } : {}) };
+    const row = { v: 1, kind: "compiled", id: newId("n", t), ts: t.toISOString(), day: date, concept: c, axis: a, compiler: COMPILER, sources, note, content_sha, ...(prev ? { supersedes: prev.id } : {}) };
     const w = recordCompiled(ledger, row, prev, guard);
     lastGuard = w.guard || lastGuard;
     if (!w.ok) { ok = false; results.push({ concept: c, axis: a, op: "refused", why: w.why }); continue; }
@@ -522,7 +528,7 @@ const parseReply = (text) => {
 };
 /** liveReader — models.mjs's role through claudegen.mjs (a fresh `claude -p`, no tools).
  *  {ok, reply, reader, role} | {ok:false, cause, why, reader} — the cause is one of ABSENT_CAUSES. */
-export const ABSENT_CAUSES = Object.freeze(["role-unresolved", "claude-refused", "window-closed", "call-failed", "no-reply-json"]);
+export const ABSENT_CAUSES = Object.freeze(["role-unresolved", "claude-refused", "window-closed", "call-failed", "no-reply-json", "day-unmatched"]);
 export async function liveReader(note, { resolve = null, gen = null, timeoutMs = 600000 } = {}) {
   const res = resolve || (await import("./models.mjs")).resolveClaudeRole;
   const role = res(READER_ROLE);
@@ -541,13 +547,13 @@ export async function liveReader(note, { resolve = null, gen = null, timeoutMs =
   return { ok: true, reply, reader, role: rec };
 }
 /** gateDay — ONE gate per live note of `date` that has no verdict yet (or every live note with `again`). */
-export async function gateDay({ date = todayIst(), stateDir = STATE_DIR, path = null, stub = false, again = false, reader = null, now = () => new Date(), guard = (t) => namesGuard(t) } = {}) {
+export async function gateDay({ date = todayIst(), stateDir = STATE_DIR, path = null, stub = false, again = false, expect = [], reader = null, now = () => new Date(), guard = (t) => namesGuard(t) } = {}) {
   const ledger = path || join(stateDir, "compiled_notes.jsonl");
   let rows;
   try { rows = readRows(ledger); } catch (e) { return { ok: false, date, results: [], why: `compiled_notes.jsonl cannot be read (${clip(e && e.message, 120)})` }; }
   const st = noteState(rows);
   // an ABSENT row is not a verdict: the note stays un-judged and the next gate reads it again
-  const targets = st.live.filter((n) => istDay(n.ts) === date && (again || !st.gates.some((g) => g.of === n.id && g.verdict !== "absent")));
+  const targets = st.live.filter((n) => noteDay(n) === date && (again || !st.gates.some((g) => g.of === n.id && g.verdict !== "absent")));
   const results = [];
   let ok = true;
   for (const n of targets) {
@@ -558,7 +564,7 @@ export async function gateDay({ date = todayIst(), stateDir = STATE_DIR, path = 
       ok = false;
       const t = now();
       const cause = ABSENT_CAUSES.includes(r.cause) ? r.cause : "call-failed";
-      const row = { v: 1, kind: "cold_gate", id: newId("g", t), of: n.id, ts: t.toISOString(), verdict: "absent", traps_named: [], reader: r.reader || `role:${READER_ROLE}/unresolved`, ...(r.role || { role: READER_ROLE }), cause, why: clip(r.why, 300) };
+      const row = { v: 1, kind: "cold_gate", id: newId("g", t), of: n.id, ts: t.toISOString(), day: noteDay(n), verdict: "absent", traps_named: [], reader: r.reader || `role:${READER_ROLE}/unresolved`, ...(r.role || { role: READER_ROLE }), cause, why: clip(r.why, 300) };
       const w = recordGate(ledger, row, guard);
       results.push(w.ok ? { of: n.id, concept: n.concept, axis: n.axis, op: "absent", id: row.id, cause, why: r.why }
         : { of: n.id, concept: n.concept, axis: n.axis, op: "refused", why: `${r.why} · the absence row itself was not written: ${w.why}` });
@@ -566,12 +572,24 @@ export async function gateDay({ date = todayIst(), stateDir = STATE_DIR, path = 
     }
     const v = verdictOf(n.note, r.reply);
     const t = now();
-    const row = { v: 1, kind: "cold_gate", id: newId("g", t), of: n.id, ts: t.toISOString(), verdict: v.verdict, traps_named: v.traps_named, reader: r.reader,
+    const row = { v: 1, kind: "cold_gate", id: newId("g", t), of: n.id, ts: t.toISOString(), day: noteDay(n), verdict: v.verdict, traps_named: v.traps_named, reader: r.reader,
       ...(r.role || {}),
       answer_from_note: v.answer_from_note, rebuild: v.rebuild, answer: clip(r.reply.answer, 600), wrong: v.wrong, missing: v.missing, why: v.why };
     const w = recordGate(ledger, row, guard);
     if (!w.ok) { ok = false; results.push({ of: n.id, concept: n.concept, axis: n.axis, op: "refused", why: w.why }); continue; }
     results.push({ of: n.id, concept: n.concept, axis: n.axis, op: "gated", id: row.id, verdict: v.verdict, traps: v.traps_named.length, reader: r.reader, why: v.why });
+  }
+  // ROW 883 (2): THE GATE NEVER ENDS SILENT. A note the day's compile wrote or kept (`expect`) that the day key above did not
+  // reach gets a NAMED absent row, cause day-unmatched, so a key drift reads RED by name, never as 0 / 0 / 0 / 0.
+  for (const id of expect) {
+    const n = st.live.find((x) => x.id === id);
+    if (!n || targets.includes(n) || st.gates.some((g) => g.of === id && g.verdict !== "absent")) continue;
+    ok = false;
+    const t = now(), why = `the compile for ${date} wrote or kept this note, and the gate's day key (${noteDay(n)}) did not reach it`;
+    const row = { v: 1, kind: "cold_gate", id: newId("g", t), of: id, ts: t.toISOString(), day: noteDay(n), verdict: "absent", traps_named: [], reader: `role:${READER_ROLE}/not-reached`, role: READER_ROLE, cause: "day-unmatched", why };
+    const w = recordGate(ledger, row, guard);
+    results.push(w.ok ? { of: id, concept: n.concept, axis: n.axis, op: "absent", id: row.id, cause: "day-unmatched", why }
+      : { of: id, concept: n.concept, axis: n.axis, op: "refused", why: `${why} · the absence row itself was not written: ${w.why}` });
   }
   return { ok, date, results };
 }
@@ -581,7 +599,7 @@ export async function gateDay({ date = todayIst(), stateDir = STATE_DIR, path = 
 // ---------------------------------------------------------------------------
 export function glanceLines({ date = todayIst(), rows = [] } = {}) {
   const st = noteState(rows);
-  const live = st.live.filter((n) => istDay(n.ts) === date);
+  const live = st.live.filter((n) => noteDay(n) === date);
   const verdicts = live.map((n) => st.lastGate(n.id));
   const L = [`NOTES · ${date} IST · ${live.length} axis note(s) compiled by code · cold gate: ${verdicts.filter((g) => g && g.verdict === "pass").length} pass · ${verdicts.filter((g) => g && g.verdict === "fail").length} fail · ${verdicts.filter((g) => g && g.verdict === "absent").length} absent (could not run, named) · ${verdicts.filter((g) => !g).length} not gated`];
   const hhmm = (iso) => (istStampOf(iso) || "?").slice(11, 16);
@@ -608,15 +626,18 @@ export function glanceLines({ date = todayIst(), rows = [] } = {}) {
 // ---------------------------------------------------------------------------
 // THE ANCHOR — full-time: the archive's own run, the compile, the gate
 // ---------------------------------------------------------------------------
-export async function fullTime({ date = todayIst(), stub = false, archiveRun = true } = {}) {
+/** fullTime — the archive's run, the compile, the gate. `compile` and `gate` are injected only by this file's selftest (row 883 (2)'s plant). */
+export async function fullTime({ date = todayIst(), stub = false, archiveRun = true, compile = compileDay, gate = gateDay } = {}) {
   const lines = [];
   if (archiveRun) {
     const r = spawnSync(process.execPath, [join(HERE, "archivist.mjs"), "run"], { cwd: ROOT, encoding: "utf8", timeout: 300000, windowsHide: true });
     const last = `${r.stdout || ""}${r.stderr || ""}`.split(/\r?\n/).filter(Boolean).at(-1) || "";
     lines.push(r.status === 0 ? `archive caught up (archivist run: ${clip(last, 100)})` : `ARCHIVE NOT CAUGHT UP (archivist run exit ${r.status}: ${clip(last, 120)}) — compiling from what the archive holds`);
   }
-  const c = compileDay({ date });
-  const g = c.ok || c.results.length ? await gateDay({ date, stub }) : { ok: false, results: [], why: "no compile" };
+  const c = compile({ date });
+  // ROW 883 (2): the gate is told which notes this compile wrote or kept, so a note its day key misses is named absent, never silent
+  const expect = (c.results || []).filter((r) => r.id && ["compiled", "recompiled", "unchanged"].includes(r.op)).map((r) => r.id);
+  const g = c.ok || c.results.length ? await gate({ date, stub, expect }) : { ok: false, results: [], why: "no compile" };
   return { ok: c.ok && g.ok, compile: c, gate: g, lines };
 }
 const summary = (date, c, g, stub) => {
@@ -838,6 +859,28 @@ async function selftest() {
     const LR = join(tmp, "born-rows.jsonl"); writeFileSync(LR, JSON.stringify({ v: 1, kind: "compiled", id: "n-x" }) + "\n");
     const shaR = sha256(readFileSync(LR, "utf8")), b3 = born(LR);
     assert("BORN NEVER TRUNCATES — a ledger holding a row is refused and stays byte-identical", b3.ok === false && b3.op === "refused" && sha256(readFileSync(LR, "utf8")) === shaR && readRows(LR).length === 1);
+
+    // ── ROW 883: A ROW ABOUT A DAY CARRIES THAT DAY, AND THE GATE NEVER ENDS SILENT ──
+    const lateNow = () => new Date("2026-10-06T21:26:43.434Z"), LD = join(tmp, "day.jsonl");   // 7 Oct 02:56 IST: a compile for 6 Oct run after IST midnight (the 13 Nov case)
+    const late = compileDay({ ...base, path: LD, date: "2026-10-06", now: lateNow }), nd = readRows(LD)[0];
+    const gd = await gateDay({ stateDir: st, path: LD, date: "2026-10-06", stub: true, now: lateNow, guard: NOGUARD, expect: [nd.id] });
+    assert("ROW 883 — a compile for D run after IST midnight carries day D: the gate gates it on D with no absent row beside it, its gate row and the glance read D, never D+1",
+      late.ok && nd.day === "2026-10-06" && istDay(nd.ts) === "2026-10-07" && noteDay(nd) === "2026-10-06" && gd.ok && gd.results.length === 1 && gd.results[0].op === "gated"
+      && readRows(LD).at(-1).day === "2026-10-06" && /1 axis note\(s\)/.test(glanceLines({ date: "2026-10-06", rows: readRows(LD) })[0]) && /0 axis note\(s\)/.test(glanceLines({ date: "2026-10-07", rows: readRows(LD) })[0]),
+      JSON.stringify(gd.results));
+    const legacy = { ...nd }; delete legacy.day;
+    const LG = join(tmp, "legacy.jsonl"); writeFileSync(LG, JSON.stringify(legacy) + "\n");
+    const preLG = bytes(LG), rk = compileDay({ ...base, path: LG, date: "2026-10-06", now: T(25) }), rkRows = readRows(LG);
+    assert("ROW 883 — a row with no day keys by the IST day of its ts; unchanged means content AND day, so the same note asked for its study day is RE-KEYED by a superseding row, the old row byte-identical",
+      noteDay(legacy) === "2026-10-07" && rk.ok && rk.results[0].op === "recompiled" && rkRows.length === 2 && bytes(LG).startsWith(preLG)
+      && rkRows[1].supersedes === legacy.id && rkRows[1].day === "2026-10-06" && rkRows[1].content_sha === legacy.content_sha, JSON.stringify(rk.results));
+    const preNs = bytes(LG);
+    const ns = await fullTime({ date: "2026-10-08", stub: true, archiveRun: false, compile: () => compileDay({ ...base, path: LG, date: "2026-10-06", now: T(26) }),
+      gate: (o) => gateDay({ ...o, stateDir: st, path: LG, now: T(26), guard: NOGUARD }) });
+    const nsRow = readRows(LG).at(-1);
+    assert("ROW 883 (2) — THE GATE NEVER ENDS SILENT: a note full-time's compile kept that the gate's day key did not reach gets ONE named absent row (cause day-unmatched), never 0 / 0 / 0 / 0",
+      ns.ok === false && ns.compile.results[0].op === "unchanged" && ns.gate.results.length === 1 && ns.gate.results[0].op === "absent" && bytes(LG).startsWith(preNs) && readRows(LG).length === 3
+      && nsRow.kind === "cold_gate" && nsRow.verdict === "absent" && nsRow.cause === "day-unmatched" && nsRow.of === rkRows[1].id && nsRow.day === "2026-10-06", JSON.stringify(ns.gate.results));
 
     // ── THE RUNG WITNESS'S CLASS A over the ledger this selftest wrote ───────
     const all = readRows(L), ids = all.map((r) => r.id), comp = all.filter((r) => r.kind === "compiled"), gates = all.filter((r) => r.kind === "cold_gate");
