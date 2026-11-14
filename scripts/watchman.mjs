@@ -80,11 +80,23 @@
 // writer of watchman_last.json + watchman.jsonl + watchman_repairs.jsonl +
 // watchman_tier2_prompt.txt. READ-ONLY on everything else. `brief` is hook-safe:
 // fail-silent, exit 0, ARSENAL_ORGAN-guarded.
+// SOLE WRITER of dressing-room/state/tasks_expected.json (rows 829 (4) / 865, 13 Nov 2026), by `expect` only:
+//   the snapshot's owner verb, so no other organ and no hand writes it. LAYERED (L9), never replacing: the
+//   "READ-ONLY on everything else" above stays as written, SUPERSEDED BY ROW 865 for this one file. NARROW: one
+//   live read (readLiveTasks, the read probeExpectedTasks makes) · one name added to or moved between the three
+//   name lists by its live State · as_of stamped · every other byte equal · temp file + rename · it refuses
+//   (exit 2, nothing written) a name the live read does not show, an empty why, a name outside ArsenalFC-*.
+//   ROW 874 (2) LAYERS a second MODE of the same verb, `expect-absent`: it ADDS name -> reason to designed_absent
+//   for a task a setup script registers and the live read does not show (refused: a live name, a name no installer
+//   carries, a blank reason, a name already in a list; a stored reason is never overwritten). The installer reader
+//   both the verb and organism_test's assert use is ONE export here: installerRegistrations().
 // MODES: run [--no-tier2] [--skip-suite] | brief | report | selftest
+//   | expect <TaskName> --why "<why>"   (row 865: the snapshot's owner verb, see SOLE WRITER above)
+//   | expect-absent <TaskName> --why "<reason>"   (row 874 (2): designed_absent, through the same owner verb)
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, appendFileSync, mkdirSync, statSync, renameSync, readdirSync, mkdtempSync, rmSync, utimesSync } from "node:fs";   // S11 — the torn-write sweep is proven in a REAL sandbox tree, not on fixtures alone
-import { join, dirname, basename } from "node:path";   // S11 — basename for the torn-write sweep
+import { join, dirname, basename, resolve as resolvePath, relative, isAbsolute, sep } from "node:path";   // S11 — basename for the torn-write sweep · row 865 — resolvePath/relative/isAbsolute/sep for the expect verb's tmpdir-only doors
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 import net from "node:net";
@@ -1401,18 +1413,12 @@ export function probeExpectedTasks(deps = {}) {
   // the repetition interval, so the DAY-KEY LAW's slot snapshot can be diffed too.
   let liveSlots = deps.liveSlots !== undefined ? deps.liveSlots : null;
   const live = deps.live !== undefined ? deps.live : (() => {
-    const ps = spawnSync("powershell", ["-NoProfile", "-Command",
-      'Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object { $st = @($_.Triggers | ForEach-Object { ([string]$_.StartBoundary) -replace \'^.*T(\\d\\d:\\d\\d).*$\', \'$1\' }) -join \',\'; $ri = [string]($_.Triggers | Select-Object -First 1).Repetition.Interval; "$($_.TaskName)|$($_.State)|$st|$ri" }'],
-      { encoding: "utf8", timeout: 30000, windowsHide: true });
-    if (ps.status !== 0) return null;
-    const m = new Map(); liveSlots = new Map();
-    for (const l of String(ps.stdout || "").split("\n")) {
-      const [n, s, st, ri] = l.trim().split("|");
-      if (!n) continue;
-      m.set(n, s);
-      liveSlots.set(n, { at: String(st || "").split(",").filter(Boolean).sort(), interval: ri || null });
-    }
-    return m;
+    // row 865 (13 Nov 2026): the read moved, command and parse unchanged, into readLiveTasks()
+    // below, so the snapshot's owner verb (`expect`) makes this SAME read: one command shape, never two.
+    const r = readLiveTasks();
+    if (!r) return null;
+    liveSlots = r.liveSlots;
+    return r.live;
   })();
   if (!live) return [{ id: "tasks-expected-unrunnable", level: "INFO", finding: "Get-ScheduledTask failed — the schedule diff measured nothing tonight", evidence: "spawnSync powershell Get-ScheduledTask" }];
   const out = [];
@@ -1444,6 +1450,352 @@ export function probeExpectedTasks(deps = {}) {
     if (!known.has(n)) out.push({ id: `task-unlisted-${n}`, level: "INFO", finding: `${n} exists live but tasks_expected.json has never heard of it — a new build should update the snapshot in its own commit`, evidence: "live Get-ScheduledTask vs tasks_expected.json" });
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// THE SNAPSHOT'S OWNER VERB (rows 816 (4) / 829 (4) / 865, 13 Nov 2026).
+// tasks_expected.json had NO script writer: its _doc ordered a hand update in the
+// commit that registers a task, and that hand was skipped: the L6 build registered
+// ArsenalFC-Dugout and the snapshot never heard of it (row 816 (d)). Row 829 (4)
+// ruled an OWNER VERB here, never a hand edit; row 865 made this organ the file's
+// SOLE WRITER and kept the verb NARROW:
+//     node scripts/watchman.mjs expect <TaskName> --why "<why>"
+//   · ONE live read, readLiveTasks(): the read probeExpectedTasks makes.
+//   · REFUSES, exit 2, nothing written: a name outside ArsenalFC-*, an empty or
+//     missing why, a name the live read does not show (or no live read at all), a
+//     snapshot that no longer round-trips byte-equal (it does today: STEP 1), and
+//     a live FIXTURE aimed at a snapshot that came through no door.
+//   · The LIVE STATE picks the list: Disabled -> expected_disabled, any other State
+//     -> expected_enabled. The name is ADDED there, or MOVED there from the other
+//     list or from designed_absent. Nothing else moves. A new name goes in before
+//     the first entry that sorts after it (code-unit), so a sorted list stays
+//     sorted and an unsorted one (expected_disabled: Wallpaper sits before Wall-PM)
+//     is never re-ordered.
+//   · as_of is stamped (the IST day, YYYY-MM-DD); every other key stays BYTE-EQUAL.
+//   · THE ONE MIGRATION (row 865 (3)): the _doc's hand-update clause becomes the
+//     verb's name, once; a later run finds it gone and changes nothing there.
+//   · ATOMIC: <file>.<pid>.tmp in the same dir, then rename (S11's shape B, so a
+//     torn write is a tmpsweep finding, never a silent orphan).
+//   · Nothing to learn -> NOTHING written (no rename, mtime unchanged), and it says so.
+//   · The why is printed on the one output line and never stored: the file has no
+//     key for it (designed_absent's name -> why says why a task is ABSENT).
+// Its two fixture DOORS, ARSENAL_TASKS_EXPECTED_FILE (the snapshot) and
+// ARSENAL_TASKS_LIVE_FILE (the one read's parsed shape, {"<TaskName>": "<State>"}),
+// are honoured ONLY when they resolve under os.tmpdir(); any other value is ignored.
+// The live schedule itself is read on his laptop alone.
+// ---------------------------------------------------------------------------
+export const EXPECT_DOC_OLD = "update this file in the same commit that registers a task";
+export const EXPECT_DOC_NEW = 'update it through node scripts/watchman.mjs expect <TaskName> --why "…"';
+
+/** @typedef {{ live: Map<string, string>, liveSlots: Map<string, { at: string[], interval: string|null }> }} LiveTasks */
+/** A plan of either mode (row 874 (2) added `stored`: the reason designed_absent already holds).
+ *  @typedef {{ ok: false, why: string } | { ok: true, list: string, learned: boolean, text: string|null, as_of: string, stored?: string }} ExpectPlan */
+
+/** parseLiveTasks — the one read's own line shape, `name|State|HH:MM,…|interval`, into
+ *  the two Maps its callers consume. PURE.
+ *  @param {string} stdout @returns {LiveTasks} */
+export function parseLiveTasks(stdout) {
+  const live = new Map(), liveSlots = new Map();
+  for (const l of String(stdout || "").split("\n")) {
+    const [n, s, st, ri] = l.trim().split("|");
+    if (!n) continue;
+    live.set(n, s);
+    liveSlots.set(n, { at: String(st || "").split(",").filter(Boolean).sort(), interval: ri || null });
+  }
+  return { live, liveSlots };
+}
+
+/** readLiveTasks — THE ONE LIVE READ of the schedule, moved unchanged out of
+ *  probeExpectedTasks (row 865): null when the scheduler cannot be read.
+ *  @returns {LiveTasks|null} */
+export function readLiveTasks() {
+  const ps = spawnSync("powershell", ["-NoProfile", "-Command",
+    'Get-ScheduledTask | Where-Object { $_.TaskName -like "ArsenalFC*" } | ForEach-Object { $st = @($_.Triggers | ForEach-Object { ([string]$_.StartBoundary) -replace \'^.*T(\\d\\d:\\d\\d).*$\', \'$1\' }) -join \',\'; $ri = [string]($_.Triggers | Select-Object -First 1).Repetition.Interval; "$($_.TaskName)|$($_.State)|$st|$ri" }'],
+    { encoding: "utf8", timeout: 30000, windowsHide: true });
+  if (ps.status !== 0) return null;
+  return parseLiveTasks(ps.stdout);
+}
+
+/** tmpDoor — a fixture door's value, honoured ONLY when it resolves strictly under
+ *  `root` (os.tmpdir()). Unset, empty, the root itself, or anything that climbs out
+ *  of it is null, i.e. ignored. PURE (no disk).
+ *  @param {unknown} value @param {string} [root] @returns {string|null} */
+export function tmpDoor(value, root = tmpdir()) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const p = resolvePath(value), rel = relative(resolvePath(root), p);
+  return rel && rel !== ".." && !rel.startsWith(".." + sep) && !isAbsolute(rel) ? p : null;
+}
+
+/** istDate — the IST calendar day of `now`, in as_of's own YYYY-MM-DD shape, whatever
+ *  zone the machine runs in. PURE.
+ *  @param {Date} [now] @returns {string} */
+export function istDate(now = new Date()) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" })
+    .formatToParts(now).map((x) => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
+/** expectRefusal — the two refusals that need no scheduler, so they are checked BEFORE
+ *  the read. PURE.
+ *  @param {unknown} name @param {unknown} why @returns {string|null} */
+export function expectRefusal(name, why) {
+  if (typeof name !== "string" || !name.startsWith("ArsenalFC-")) return `"${typeof name === "string" ? name : ""}" does not start ArsenalFC- (the snapshot holds the organism's own tasks only)`;
+  if (typeof why !== "string" || !why.trim()) return "no --why, or an empty one (the snapshot learns nothing it cannot explain)";
+  return null;
+}
+
+/** expectPlan — THE WHOLE DECISION, PURE: the snapshot's bytes and the live Map in,
+ *  what (if anything) the verb writes out. A refusal is { ok: false, why }.
+ *  @param {{ raw: string, live: Map<string, string>|null, name: string, why: string, now?: Date }} a
+ *  @returns {ExpectPlan} */
+export function expectPlan({ raw, live, name, why, now = new Date() }) {
+  const r0 = expectRefusal(name, why);
+  if (r0) return { ok: false, why: r0 };
+  if (!live) return { ok: false, why: "the live schedule could not be read (there is nothing to learn from)" };
+  if (!live.has(name)) return { ok: false, why: `${name} is not in the live schedule (the snapshot learns only what the live read shows)` };
+  /** @type {any} */ let o;
+  try { o = JSON.parse(raw); } catch (e) { return { ok: false, why: `the snapshot does not parse (${e instanceof Error ? e.message : String(e)})` }; }
+  const absent = o && typeof o === "object" && o.designed_absent !== undefined ? o.designed_absent : {};
+  if (!o || typeof o !== "object" || !Array.isArray(o.expected_enabled) || !Array.isArray(o.expected_disabled)
+    || !absent || typeof absent !== "object" || Array.isArray(absent))
+    return { ok: false, why: "the snapshot is not the schedule's shape (two name lists and designed_absent)" };
+  if (JSON.stringify(o, null, 2) + "\n" !== raw) return { ok: false, why: "the snapshot no longer round-trips byte-equal through JSON.stringify(o, null, 2) (the verb rewrites no byte it does not own)" };
+  const list = live.get(name) === "Disabled" ? "expected_disabled" : "expected_enabled";
+  const other = list === "expected_enabled" ? "expected_disabled" : "expected_enabled";
+  const inList = o[list].includes(name), inOther = o[other].includes(name), inAbsent = Object.prototype.hasOwnProperty.call(absent, name);
+  const migrate = typeof o._doc === "string" && o._doc.includes(EXPECT_DOC_OLD);
+  if (inList && !inOther && !inAbsent && !migrate) return { ok: true, list, learned: false, text: null, as_of: String(o.as_of) };
+  if (inOther) o[other] = o[other].filter((/** @type {string} */ x) => x !== name);
+  if (inAbsent) delete absent[name];
+  if (!inList) { const at = o[list].findIndex((/** @type {string} */ x) => x > name); o[list].splice(at < 0 ? o[list].length : at, 0, name); }
+  o.as_of = istDate(now);
+  if (migrate) o._doc = o._doc.replace(EXPECT_DOC_OLD, EXPECT_DOC_NEW);
+  return { ok: true, list, learned: true, text: JSON.stringify(o, null, 2) + "\n", as_of: o.as_of };
+}
+
+/** expectCli — `expect <TaskName> --why "<why>"` and, row 874 (2), `expect-absent <TaskName> --why "<reason>"`:
+ *  argv and env in, { code, line } out. Every disk touch of the verb is here; every decision is a plan's
+ *  (expectPlan, expectAbsentPlan); both modes share the doors, the one live read and the one atomic write.
+ *  @param {string[]} argv @param {Record<string, string|undefined>} env @param {Date} [now] @param {string} [mode]
+ *  @returns {{ code: number, line: string }} */
+export function expectCli(argv, env, now = new Date(), mode = "expect") {
+  const absentMode = mode === "expect-absent";
+  const name = argv[0] && !argv[0].startsWith("--") ? argv[0] : "";
+  const wi = argv.indexOf("--why"), why = wi >= 0 ? (argv[wi + 1] ?? "") : "";
+  const say = why.replace(/\s+/g, " ").trim();
+  const refuse = (/** @type {string} */ w) => ({ code: 2, line: `${mode} · REFUSED · ${name || "<no TaskName>"} · ${w} · nothing written` });
+  const snapDoor = tmpDoor(env.ARSENAL_TASKS_EXPECTED_FILE), liveDoor = tmpDoor(env.ARSENAL_TASKS_LIVE_FILE);
+  if (liveDoor && !snapDoor) return refuse("a live-read FIXTURE may never teach the LIVE snapshot (point ARSENAL_TASKS_EXPECTED_FILE under the temp dir too)");
+  const r0 = expectRefusal(name, why);
+  if (r0) return refuse(r0);
+  /** @type {Map<string, string>|null} */ let live = null;
+  if (liveDoor) {
+    try {
+      const j = JSON.parse(readFileSync(liveDoor, "utf8"));
+      if (j && typeof j === "object" && !Array.isArray(j)) live = new Map(Object.entries(j).map(([k, v]) => /** @type {[string, string]} */ ([k, String(v)])));
+    } catch (e) { swallow("expect: the live-read fixture is unreadable → no live read → refused", e); }
+  } else {
+    const r = readLiveTasks();
+    live = r ? r.live : null;
+  }
+  const file = snapDoor || TASKS_EXPECTED;
+  let raw = "";
+  try { raw = readFileSync(file, "utf8"); } catch (e) { swallow("expect: the snapshot is unreadable → refused", e); return refuse(`the snapshot ${file} is unreadable`); }
+  const plan = absentMode
+    ? expectAbsentPlan({ raw, live, registered: new Set(installerRegistrations(setupScripts()).regs.map((r) => r.name)), name, why, now })
+    : expectPlan({ raw, live, name, why, now });
+  if (plan.ok === false) return refuse(plan.why);
+  if (!plan.learned || plan.text === null) return { code: 0, line: absentMode
+    ? `${mode} · ${name} -> ${plan.list} · already there, its stored reason kept: ${plan.stored ?? ""} · as_of ${plan.as_of} · learned nothing · nothing written`
+    : `${mode} · ${name} -> ${plan.list} · ${say} · as_of ${plan.as_of} · learned nothing: already in ${plan.list} and the _doc already migrated · nothing written` };
+  const tmp = `${file}.${process.pid}.tmp`;
+  try { writeFileSync(tmp, plan.text); renameSync(tmp, file); }
+  catch (e) {
+    try { rmSync(tmp, { force: true }); } catch (e2) { swallow("expect: the temp file could not be removed after a failed write", e2); }
+    return refuse(`the write failed (${e instanceof Error ? e.message : String(e)})`);
+  }
+  return { code: 0, line: `${mode} · ${name} -> ${plan.list} · ${say} · as_of ${plan.as_of}` };
+}
+
+// ---------------------------------------------------------------------------
+// ROW 874 (2), 13 Nov 2026 — THE INSTALLERS' OWN NAMES. FORK 2 of the mdug unit: four mutagen
+// tasks (ArsenalFC-BugMuseum, -Mutants, -MutantsFull, -Horizon) are REGISTERED by
+// setup/INSTALL_TASKS.ps1 and designed NOT to run (the snapshot's own _audit_note), so the
+// snapshot-rides-the-build assert had no lawful green. The ruling: the snapshot already has
+// their home, designed_absent (name -> reason; the nightly diff REDs the name if it goes live),
+// and they go there THROUGH THE OWNER VERB, as a second MODE of it:
+//     node scripts/watchman.mjs expect-absent <TaskName> --why "<reason>"
+//   · ADDS name -> reason to designed_absent; the reason IS the stored value (the map's shape).
+//   · REFUSES, exit 2, nothing written: a name the ONE live read shows (live, so not absent) ·
+//     a name no setup script registers (read by installerRegistrations: the installer does not
+//     carry it) · a missing, empty or blank reason · a name outside ArsenalFC- · a name already
+//     in expected_enabled or expected_disabled (moving it is a move the ruling did not name).
+//   · A name already in designed_absent writes NOTHING and prints its stored reason: a reason is
+//     never overwritten.
+//   · as_of stamped, every other key byte-equal (the _doc migration stays expect's), atomic, the
+//     same two tmpdir-only doors, ONE line: expectCli carries both modes.
+// The installer reader is ONE export, installerRegistrations(). organism_test.mjs's assert imports
+// it, and no other file under scripts/ carries a registration-form pattern of its own.
+// ---------------------------------------------------------------------------
+/** setupScripts — every *.ps1 under <root>/setup, recursively, as { rel, src }, READ-ONLY: the
+ *  installers the snapshot answers to.
+ *  @param {string} [root] @returns {{ rel: string, src: string }[]} */
+export function setupScripts(root = ROOT) {
+  const dir = join(root, "setup");
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { recursive: true }).map(String).filter((f) => f.endsWith(".ps1")).sort()
+    .map((f) => ({ rel: f.replace(/\\/g, "/"), src: readFileSync(join(dir, f), "utf8") }));
+}
+
+/** installerRegistrations — THE ONE HOME of the installer-registration reader (row 874 (2); it
+ *  moved here from organism_test.mjs's snapshot assert, logic unchanged): which scheduled-task
+ *  NAMES do these PowerShell setup scripts register? PowerShell is lexed just enough that comments
+ *  and printed strings are not code, then the forms: `schtasks /Create … /TN <x>` and
+ *  `Register-ScheduledTask -TaskName <x>` (also `-TaskName:<x>`). A `$v` resolves as a parameter of
+ *  the function it sits in (that function is then a REGISTRAR, and its call sites give the name,
+ *  followed through further registrars, positional or -param), else the foreach it sits in, else the
+ *  nearest `$v = "<literal>"` above it. A WinSW service install is never read as a task. A
+ *  registration whose name cannot be read is a HOLE, returned as one, never dropped. PURE.
+ *  @param {{ rel: string, src: string }[]} files
+ *  @returns {{ regs: { name: string, at: string }[], holes: string[] }} */
+export function installerRegistrations(files) {
+  // PowerShell, lexed just enough: comments become spaces and string bodies "_", one output char per input
+  // char (newlines kept), so an index means the same in both; a $( … ) inside "…" is code again.
+  const psCode = (/** @type {string} */ src) => {
+    // law-waiver:jugad the PowerShell lexer's state STACK seeded with its start state, pushed and popped per string body, never a subject list (row 887, row 649 (0))
+    /** @type {string[]} */ const out = []; const st = ["c"]; /** @type {number[]} */ const depth = [];
+    for (let i = 0; i < src.length; i++) {
+      const ch = src[i], nx = src[i + 1] ?? "", m = st[st.length - 1];
+      if (m === "d" || m === "s") {
+        const q = m === "d" ? '"' : "'";
+        if (m === "d" && ch === "`") { out.push("_", nx === "\n" ? "\n" : nx ? "_" : ""); i++; continue; }
+        if (ch === q && nx === q) { out.push("__"); i++; continue; }
+        if (ch === q) { st.pop(); out.push(ch); continue; }
+        if (m === "d" && ch === "$" && nx === "(") { st.push("x"); depth.push(1); out.push("_("); i++; continue; }
+        out.push(ch === "\n" ? "\n" : "_"); continue;
+      }
+      if (ch === "`") { out.push(ch, nx); i++; continue; }
+      if (ch === "<" && nx === "#") { const e = src.indexOf("#>", i + 2), end = e < 0 ? src.length : e + 2; for (let j = i; j < end; j++) out.push(src[j] === "\n" ? "\n" : " "); i = end - 1; continue; }
+      if (ch === "#" && (i === 0 || /[\s;{}()|&]/.test(src[i - 1]))) { let e = src.indexOf("\n", i); if (e < 0) e = src.length; for (let j = i; j < e; j++) out.push(" "); i = e - 1; continue; }
+      if (ch === "@" && (nx === '"' || nx === "'") && /^[ \t]*\r?\n/.test(src.slice(i + 2, i + 66))) {
+        const close = "\n" + nx + "@", e = src.indexOf(close, i + 2), end = e < 0 ? src.length : e + close.length;
+        for (let j = i; j < end; j++) out.push(j < i + 2 || (e >= 0 && j >= end - 2) || src[j] === "\n" ? src[j] : "_"); i = end - 1; continue;
+      }
+      if (ch === '"' || ch === "'") { st.push(ch === '"' ? "d" : "s"); out.push(ch); continue; }
+      if (m === "x") { if (ch === "(") depth[depth.length - 1]++; else if (ch === ")" && --depth[depth.length - 1] === 0) { depth.pop(); st.pop(); } }
+      out.push(ch);
+    }
+    return out.join("");
+  };
+  /** @type {{ name: string, at: string }[]} */
+  const regs = [];
+  /** @type {string[]} */
+  const holes = [];
+  for (const { rel, src } of files) {
+    const code = psCode(src), lineAt = (/** @type {number} */ k) => `setup/${rel}:${src.slice(0, k).split("\n").length}`;
+    const close = (/** @type {number} */ o, /** @type {string} */ a, /** @type {string} */ b) => { let d = 0; for (let j = o; j < code.length; j++) { if (code[j] === a) d++; else if (code[j] === b && --d === 0) return j; } return code.length; };
+    // the statement's tokens from k: whitespace splits only outside ( ) { } [ ]; a newline (not a ` continuation), ; | } ) ends it
+    const toks = (/** @type {number} */ k) => {
+      /** @type {{ c: string, s: string, at: number }[]} */ const t = []; let d = 0, a = -1, i = k;
+      const cut = () => { if (a >= 0) t.push({ c: code.slice(a, i), s: src.slice(a, i), at: a }); a = -1; };
+      for (; i < code.length; i++) {
+        const c = code[i];
+        if (c === "`" && /^`\r?\n/.test(code.slice(i, i + 3))) { if (d === 0) cut(); i += code[i + 1] === "\r" ? 2 : 1; continue; }
+        if (d === 0 && /[\n;|})]/.test(c)) break;
+        if (d === 0 && /\s/.test(c)) { cut(); continue; }
+        if (a < 0) a = i;
+        if (/[({[]/.test(c)) d++; else if (/[)}\]]/.test(c) && d > 0) d--;
+      }
+      cut(); return t;
+    };
+    const fns = [...code.matchAll(/(?<![\w-])function\s+([\w-]+)\s*(\(([^)]*)\))?\s*\{/gi)].map((m) => {
+      const o = (m.index ?? 0) + m[0].length - 1, to = close(o, "{", "}");
+      const pl = m[3] ?? ((code.slice(o + 1, to).match(/^\s*param\s*\(([^)]*)\)/i) || [])[1] ?? "");
+      return { name: m[1], from: o, to, params: pl.split(",").map((x) => (x.match(/\$(\w+)/) || [])[1]).filter(Boolean).map((x) => x.toLowerCase()) };
+    });
+    const loops = [...code.matchAll(/(?<![\w-])foreach\s*\(\s*\$(\w+)\s+in\s+/gi)].map((m) => {
+      const po = code.indexOf("(", m.index), pc = close(po, "(", ")"), list = src.slice((m.index ?? 0) + m[0].length, pc);
+      const names = [...list.matchAll(/"([^"`$]*)"|'([^']*)'/g)].map((x) => x[1] ?? x[2]);
+      const bo = code.indexOf("{", pc);
+      return { v: m[1].toLowerCase(), from: bo, to: close(bo, "{", "}"), names: list.replace(/"[^"`$]*"|'[^']*'/g, "").replace(/[\s,@()]/g, "") === "" && names.length ? names : null };
+    });
+    /** @template {{ from: number, to: number }} X @param {X[]} xs @param {number} k @returns {X | undefined} */
+    const inner = (xs, k) => xs.filter((x) => x.from < k && k < x.to).sort((p, q) => q.from - p.from)[0];
+    // a name token → [names] | { fn, idx } (a registrar parameter) | null (unreadable)
+    /** @returns {string[] | { fn: { name: string, from: number, to: number, params: string[] }, idx: number } | null} */
+    const nameOf = (/** @type {{ c: string, s: string, at: number } | undefined} */ t) => {
+      if (!t) return null;
+      if (/^"[^"`$]*"$|^'[^']*'$/.test(t.s)) return [t.s.slice(1, -1)];
+      if (/^[A-Za-z][\w.-]*$/.test(t.s)) return [t.s];
+      const v = (t.s.match(/^\$(?:\{(\w+)\}|(\w+))$/) || []).slice(1).find(Boolean);
+      if (!v) return null;
+      const fn = inner(fns, t.at);
+      if (fn && fn.params.includes(v.toLowerCase())) return { fn, idx: fn.params.indexOf(v.toLowerCase()) };
+      const lp = inner(loops.filter((x) => x.v === v.toLowerCase()), t.at);
+      if (lp) return lp.names;
+      let as = null;
+      for (const m of code.matchAll(new RegExp(`\\$${v}\\s*=\\s*(["'])`, "gi"))) if ((m.index ?? 0) < t.at) as = m;
+      if (!as) return null;
+      const q = (as.index ?? 0) + as[0].length - 1, e = code.indexOf(as[1], q + 1), val = src.slice(q + 1, e);
+      return e > q && !(as[1] === '"' && /[$`]/.test(val)) ? [val] : null;
+    };
+    /** @type {{ fn: { name: string, from: number, to: number, params: string[] }, idx: number }[]} */ const work = []; const seen = new Set();
+    const take = (/** @type {ReturnType<typeof nameOf>} */ r, /** @type {number} */ k, /** @type {string} */ form) => {
+      if (Array.isArray(r)) for (const n of r) regs.push({ name: n, at: lineAt(k) });
+      else if (r) { if (!seen.has(r.fn.name + "#" + r.idx)) { seen.add(r.fn.name + "#" + r.idx); work.push(r); } }
+      else holes.push(`${lineAt(k)} (${form})`);
+    };
+    for (const m of code.matchAll(/(?<![\w$.-])(schtasks(?:\.exe)?|Register-ScheduledTask)(?![\w-])/gi)) {
+      const k = m.index ?? 0, t = toks(k);
+      if (/^schtasks/i.test(m[1])) {
+        if (!t.some((x) => /^\/create$/i.test(x.c))) continue;
+        const j = t.findIndex((x) => /^\/tn$/i.test(x.c));
+        take(j < 0 ? null : nameOf(t[j + 1]), k, "schtasks /Create with no readable /TN");
+      } else {
+        const j = t.findIndex((x) => /^-taskn(a(me?)?)?(:|$)/i.test(x.c)), c = j < 0 ? -1 : t[j].c.indexOf(":") + 1;
+        const v = j < 0 ? undefined : c > 0 ? { c: t[j].c.slice(c), s: t[j].s.slice(c), at: t[j].at + c } : t[j + 1];
+        take(nameOf(v), k, "Register-ScheduledTask with no readable -TaskName");
+      }
+    }
+    while (work.length) {
+      const w = /** @type {{ fn: { name: string, from: number, to: number, params: string[] }, idx: number }} */ (work.shift());
+      for (const m of code.matchAll(new RegExp(`(?<![\\w$.-])${w.fn.name.replace(/[-]/g, "\\-")}(?![\\w-])`, "gi"))) {
+        const k = m.index ?? 0;
+        if (/function\s+$/i.test(code.slice(Math.max(0, k - 30), k))) continue;
+        const args = toks(k).slice(1); let pos = 0, hit;
+        for (let j = 0; j < args.length && !hit; j++) {
+          if (/^-[A-Za-z_]\w*:?$/.test(args[j].c)) { if (args[j].c.replace(/^-|:$/g, "").toLowerCase() === w.fn.params[w.idx]) hit = args[j + 1]; j++; continue; }
+          if (pos++ === w.idx) hit = args[j];
+        }
+        take(nameOf(hit), k, `${w.fn.name} called with no readable task name`);
+      }
+    }
+  }
+  return { regs, holes };
+}
+
+/** expectAbsentPlan — row 874 (2), THE WHOLE DECISION of `expect-absent`, PURE: may <name> join
+ *  designed_absent with <why> as its stored reason?
+ *  @param {{ raw: string, live: Map<string, string>|null, registered: Set<string>, name: string, why: string, now?: Date }} a
+ *  @returns {ExpectPlan} */
+export function expectAbsentPlan({ raw, live, registered, name, why, now = new Date() }) {
+  const r0 = expectRefusal(name, why);
+  if (r0) return { ok: false, why: r0 };
+  if (!live) return { ok: false, why: "the live schedule could not be read (absence is never told from an unread schedule)" };
+  if (live.has(name)) return { ok: false, why: `${name} is in the live schedule (${live.get(name)}): it is live, so it is not absent` };
+  /** @type {any} */ let o;
+  try { o = JSON.parse(raw); } catch (e) { return { ok: false, why: `the snapshot does not parse (${e instanceof Error ? e.message : String(e)})` }; }
+  if (!o || typeof o !== "object" || !Array.isArray(o.expected_enabled) || !Array.isArray(o.expected_disabled)
+    || !o.designed_absent || typeof o.designed_absent !== "object" || Array.isArray(o.designed_absent))
+    return { ok: false, why: "the snapshot is not the schedule's shape (two name lists and the designed_absent map)" };
+  if (JSON.stringify(o, null, 2) + "\n" !== raw) return { ok: false, why: "the snapshot no longer round-trips byte-equal through JSON.stringify(o, null, 2) (the verb rewrites no byte it does not own)" };
+  const inList = ["expected_enabled", "expected_disabled"].find((k) => o[k].includes(name));
+  if (inList) return { ok: false, why: `${name} is in ${inList} (moving it to designed_absent is a move row 874 (2) did not name)` };
+  if (Object.prototype.hasOwnProperty.call(o.designed_absent, name)) return { ok: true, list: "designed_absent", learned: false, text: null, as_of: String(o.as_of), stored: String(o.designed_absent[name]) };
+  if (!registered.has(name)) return { ok: false, why: `no setup script registers ${name} (the installer does not carry it, so there is nothing for designed_absent to hold back)` };
+  o.designed_absent[name] = why;
+  o.as_of = istDate(now);
+  return { ok: true, list: "designed_absent", learned: true, text: JSON.stringify(o, null, 2) + "\n", as_of: o.as_of };
 }
 
 // ---------------------------------------------------------------------------
@@ -2551,6 +2903,211 @@ async function selftest() {   // async since LADDER E8 — probeSentinel checks 
     try { rmSync(sb, { recursive: true, force: true }); } catch (e) { swallow("selftest sandbox cleanup", e); }
   }
 
+  // ── mdug · THE SNAPSHOT'S OWNER VERB (rows 829 (4) / 865), driven in a SANDBOX through BOTH doors ──
+  // A temp snapshot and a planted live read, never his file and never his scheduler. Every case
+  // goes through expectCli with the two door variables, so the door resolution, both reads and
+  // the atomic write are the real ones; the last case is a real child through main().
+  {
+    const sb = mkdtempSync(join(tmpdir(), "watchman-expect-"));
+    const NOW = new Date("2026-11-13T10:00:00Z"), DAY = "2026-11-13";
+    const SNAP = join(sb, "tasks_expected.json"), LIVE = join(sb, "live.json");
+    const env = { ARSENAL_TASKS_EXPECTED_FILE: SNAP, ARSENAL_TASKS_LIVE_FILE: LIVE };
+    const BASE = {
+      _doc: `fixture: an unlisted ArsenalFC-* task is an INFO (a new build not yet recorded here — ${EXPECT_DOC_OLD}). The rest of the doc stays.`,
+      as_of: "2026-08-18",
+      expected_enabled: ["ArsenalFC-Audit", "ArsenalFC-Tone", "ArsenalFC-Watchman"],
+      expected_disabled: ["ArsenalFC-Scorer", "ArsenalFC-Wall-AM", "ArsenalFC-Wallpaper", "ArsenalFC-Wall-PM"],
+      designed_absent: { "ArsenalFC-Context": "rides the brain daemon now", "ArsenalFC-Speak": "never installed" },
+      _audit_note: "fixture note: this file should gain them in that same commit.",
+      _slots_doc: "fixture: dow ([\"sun\"…] for WEEKLY rows) stays escaped",
+      slots: { "ArsenalFC-Tone": { organ: "tone.mjs", verb: null, at: "23:20", interval: "PT5M", dow: null, daemon: false, enabled: true },
+        "ArsenalFC-TimeAuditor-Pulse": { organ: "timeaudit.mjs", verb: "pulse", at: ["12:00", "15:00", "18:00"], interval: null, dow: ["sun"], daemon: false, enabled: true } },
+      slots_as_of: "2026-08-18T10:05:00Z",
+    };
+    const LIVE0 = { "ArsenalFC-Audit": "Ready", "ArsenalFC-Tone": "Running", "ArsenalFC-Watchman": "Ready", "ArsenalFC-Scorer": "Disabled",
+      "ArsenalFC-Wall-AM": "Disabled", "ArsenalFC-Wallpaper": "Disabled", "ArsenalFC-Wall-PM": "Ready", "ArsenalFC-Dugout": "Disabled",
+      "ArsenalFC-NewLane": "Ready", "ArsenalFC-Speak": "Ready", "NotOurs-Task": "Ready" };
+    const seed = () => { writeFileSync(SNAP, JSON.stringify(BASE, null, 2) + "\n"); writeFileSync(LIVE, JSON.stringify(LIVE0)); };
+    const bytes = () => readFileSync(SNAP, "utf8");
+    const snap = () => JSON.parse(bytes());
+    const go = (/** @type {string[]} */ argv) => expectCli(argv, env, NOW);
+    const aged = () => { const old = new Date(Date.now() - 3600e3); utimesSync(SNAP, old, old); return statSync(SNAP).mtimeMs; };
+    // the raw text of ONE top-level key: the file is 2-space canonical, so a top-level key opens a line with exactly two spaces
+    const span = (/** @type {string} */ text, /** @type {string} */ k) => {
+      const a = text.indexOf(`\n  "${k}": `); if (a < 0) return null;
+      const b = text.slice(a + 1).search(/\n {2}"[^"]+": |\n\}\n$/); return text.slice(a, b < 0 ? text.length : a + 1 + b);
+    };
+    const MIGRATED = BASE._doc.replace(EXPECT_DOC_OLD, EXPECT_DOC_NEW);
+
+    assert("MDUG · a NEW name joins the list its LIVE state picks, at its sorted place: Disabled → expected_disabled, Ready → expected_enabled, and the one line names the list, the why and as_of",
+      (() => {
+        seed();
+        const a = go(["ArsenalFC-Dugout", "--why", "the L6 Dugout task"]), b = go(["ArsenalFC-NewLane", "--why", "a fixture lane"]), s = snap();
+        return a.code === 0 && a.line === `expect · ArsenalFC-Dugout -> expected_disabled · the L6 Dugout task · as_of ${DAY}`
+          && b.code === 0 && b.line === `expect · ArsenalFC-NewLane -> expected_enabled · a fixture lane · as_of ${DAY}`
+          && s.expected_disabled.join() === "ArsenalFC-Dugout,ArsenalFC-Scorer,ArsenalFC-Wall-AM,ArsenalFC-Wallpaper,ArsenalFC-Wall-PM"
+          && s.expected_enabled.join() === "ArsenalFC-Audit,ArsenalFC-NewLane,ArsenalFC-Tone,ArsenalFC-Watchman" && s.as_of === DAY;
+      })());
+    assert("MDUG · a name MOVES from expected_disabled to expected_enabled when the live read says Ready, and every entry it did not move keeps its place (the unsorted Wallpaper / Wall-PM order is never re-sorted)",
+      (() => {
+        seed();
+        const r = go(["ArsenalFC-Wall-PM", "--why", "re-enabled on his word"]), s = snap();
+        return r.code === 0 && r.line.includes(" -> expected_enabled · ")
+          && s.expected_disabled.join() === "ArsenalFC-Scorer,ArsenalFC-Wall-AM,ArsenalFC-Wallpaper"
+          && s.expected_enabled.join() === "ArsenalFC-Audit,ArsenalFC-Tone,ArsenalFC-Wall-PM,ArsenalFC-Watchman";
+      })());
+    assert("MDUG · a name LEAVES designed_absent when the live read shows it, and the other designed_absent rows keep their why",
+      (() => {
+        seed();
+        const r = go(["ArsenalFC-Speak", "--why", "the voice lane, installed on his word"]), s = snap();
+        return r.code === 0 && r.line.includes(" -> expected_enabled · ") && s.expected_enabled.includes("ArsenalFC-Speak")
+          && JSON.stringify(s.designed_absent) === JSON.stringify({ "ArsenalFC-Context": "rides the brain daemon now" });
+      })());
+    assert("MDUG · it REFUSES with exit 2 and leaves the bytes AND the mtime alone: a name the live read does not show, an empty why, a blank why, no why, a name outside ArsenalFC- (even one the live read shows)",
+      (() => {
+        seed();
+        const m0 = aged(), b0 = bytes();
+        const rs = [go(["ArsenalFC-Ghost", "--why", "w"]), go(["ArsenalFC-Dugout", "--why", ""]), go(["ArsenalFC-Dugout", "--why", "   "]),
+          go(["ArsenalFC-Dugout"]), go(["NotOurs-Task", "--why", "w"])];
+        return rs.every((r) => r.code === 2 && r.line.startsWith("expect · REFUSED · ") && r.line.endsWith("nothing written"))
+          && rs[0].line.includes("not in the live schedule") && rs[4].line.includes("does not start ArsenalFC-")
+          && bytes() === b0 && statSync(SNAP).mtimeMs === m0;
+      })());
+    assert("MDUG · NOTHING TO LEARN WRITES NOTHING: the second identical run exits 0, says it learned nothing, and leaves the bytes AND the mtime as they were (no rename)",
+      (() => {
+        seed();
+        const first = go(["ArsenalFC-Dugout", "--why", "w"]);
+        const m1 = aged(), b1 = bytes();
+        const second = go(["ArsenalFC-Dugout", "--why", "w"]);
+        return first.code === 0 && !first.line.includes("learned nothing") && second.code === 0 && second.line.includes("learned nothing")
+          && bytes() === b1 && statSync(SNAP).mtimeMs === m1;
+      })());
+    assert("MDUG · every key the verb does not own stays BYTE-EQUAL across three learns (slots, _slots_doc, slots_as_of, _audit_note), and no temp file is left beside the snapshot",
+      (() => {
+        seed();
+        const b0 = bytes();
+        go(["ArsenalFC-Wall-PM", "--why", "w"]); go(["ArsenalFC-Speak", "--why", "w"]); go(["ArsenalFC-Dugout", "--why", "w"]);
+        const b1 = bytes();
+        return b1 !== b0 && ["slots", "_slots_doc", "slots_as_of", "_audit_note"].every((k) => span(b0, k) !== null && span(b0, k) === span(b1, k))
+          && readdirSync(sb).every((f) => !f.endsWith(".tmp"));
+      })());
+    assert("MDUG · THE ONE MIGRATION: the _doc's hand-update clause becomes the verb's name exactly once (alone, when the name is already known), everything around it unchanged, and no later run touches it again",
+      (() => {
+        seed();
+        const m1 = go(["ArsenalFC-Audit", "--why", "w"]), s1 = snap();   // already in its list: the migration IS the learning
+        const m2 = go(["ArsenalFC-Audit", "--why", "w"]);
+        go(["ArsenalFC-Dugout", "--why", "w"]);
+        const d3 = snap()._doc;
+        return m1.code === 0 && !m1.line.includes("learned nothing") && s1._doc === MIGRATED && s1._doc.split(EXPECT_DOC_NEW).length === 2
+          && !s1._doc.includes(EXPECT_DOC_OLD) && s1.expected_enabled.join() === BASE.expected_enabled.join()
+          && m2.line.includes("learned nothing") && d3 === MIGRATED;
+      })());
+    assert("MDUG · a DOOR pointed outside the temp dir is IGNORED (tmpDoor is pure: unset, empty, the temp dir itself and a climb out of it are null), and a live FIXTURE never teaches a snapshot that came through no door",
+      (() => {
+        const t = tmpdir(), outside = resolvePath(t, "..", "mdug-outside", "tasks_expected.json");
+        const doors = tmpDoor(join(t, "x", "y.json")) === resolvePath(t, "x", "y.json") && tmpDoor(join(t, "..x", "y.json")) === resolvePath(t, "..x", "y.json")
+          && tmpDoor(undefined) === null && tmpDoor("") === null && tmpDoor("  ") === null && tmpDoor(t) === null && tmpDoor(outside) === null;
+        seed();
+        const b0 = bytes();
+        // a name the fixture does not hold: even an organ with this guard cut out could only refuse, never write his file
+        const g = expectCli(["ArsenalFC-Ghost", "--why", "w"], { ARSENAL_TASKS_LIVE_FILE: LIVE, ARSENAL_TASKS_EXPECTED_FILE: outside }, NOW);
+        return doors && g.code === 2 && g.line.includes("live-read FIXTURE may never teach the LIVE snapshot") && bytes() === b0;
+      })());
+    assert("MDUG · THE ONE READ: parseLiveTasks reads the scheduler's own line shape, and this file carries ONE Get-ScheduledTask command for the snapshot, shared by probeExpectedTasks and expect",
+      (() => {
+        const p = parseLiveTasks("ArsenalFC-Dugout|Disabled||\r\nArsenalFC-Tone|Ready|23:20|PT5M\nArsenalFC-TimeAuditor-Pulse|Ready|18:00,12:00,15:00|\n\n");
+        const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+        const cmd = ["Get-ScheduledTask | Where-Object { $_.TaskName -like ", '"ArsenalFC*" }'].join("");   // assembled, so this line is not a second copy
+        const body = (/** @type {string} */ f) => { const a = src.indexOf(`export function ${f}(`); return a < 0 ? "" : src.slice(a, src.indexOf("\n}\n", a)); };
+        const pulse = p.liveSlots.get("ArsenalFC-TimeAuditor-Pulse"), tone = p.liveSlots.get("ArsenalFC-Tone");
+        return p.live.size === 3 && p.live.get("ArsenalFC-Dugout") === "Disabled" && p.live.get("ArsenalFC-Tone") === "Ready"
+          && !!pulse && pulse.at.join() === "12:00,15:00,18:00" && !!tone && tone.interval === "PT5M"
+          && src.split(cmd).length === 2 && body("probeExpectedTasks").includes("readLiveTasks()") && body("expectCli").includes("readLiveTasks()");
+      })());
+    assert("MDUG · as_of is the IST day whatever zone the machine runs in: 18:29:59Z is still the 13th in IST, 18:30:00Z is already the 14th",
+      istDate(new Date("2026-11-13T18:29:59Z")) === "2026-11-13" && istDate(new Date("2026-11-13T18:30:00Z")) === "2026-11-14");
+    // ── row 874 (2) · THE ONE READER and the verb's second mode, `expect-absent` ──
+    assert("MDUG · THE ONE READER: installerRegistrations reads a registrar's call, an $id-fed Register-ScheduledTask and a literal /TN, never a printed string or a comment, and hands back an unreadable name as a HOLE (never a pass)",
+      (() => {
+        const r = installerRegistrations([{ rel: "T.ps1", src: [
+          "function Mk($name, $a) { schtasks /Create /F /TN $name /TR $a | Out-Null }",
+          'Mk "ArsenalFC-PlantA" "a.mjs"',
+          '$id = "ArsenalFC-PlantB"',
+          "Register-ScheduledTask -TaskName $id -Force | Out-Null",
+          'schtasks /Create /F /TN "ArsenalFC-PlantC" /SC DAILY',
+          'Say "would run: schtasks /Create /F /TN ArsenalFC-Printed"',
+          '# Mk "ArsenalFC-Commented" "c.mjs"',
+          "schtasks /Create /F /TN $nobodyKnows", ""].join("\n") }]);
+        return r.regs.map((x) => `${x.name}@${x.at}`).sort().join() === "ArsenalFC-PlantA@setup/T.ps1:2,ArsenalFC-PlantB@setup/T.ps1:4,ArsenalFC-PlantC@setup/T.ps1:5"
+          && r.holes.length === 1 && r.holes[0].startsWith("setup/T.ps1:8");
+      })());
+    // a task THIS tree's own installers register, unknown to the fixture and absent from its live read
+    const known0 = [...BASE.expected_enabled, ...BASE.expected_disabled, ...Object.keys(BASE.designed_absent)];
+    const HELD = [...new Set(installerRegistrations(setupScripts()).regs.map((r) => r.name))].sort()
+      .find((n) => n.startsWith("ArsenalFC-") && !(n in LIVE0) && !known0.includes(n)) || "";
+    const ab = (/** @type {string[]} */ argv) => expectCli(argv, env, NOW, "expect-absent");
+    assert("MDUG · expect-absent ADDS name → reason to designed_absent (the reason IS the stored value, appended after the rows already there), stamps as_of, one line",
+      (() => {
+        seed();
+        const r = ab([HELD, "--why", "held back on purpose: a planted reason"]), s = snap();
+        return !!HELD && r.code === 0 && r.line === `expect-absent · ${HELD} -> designed_absent · held back on purpose: a planted reason · as_of ${DAY}`
+          && s.designed_absent[HELD] === "held back on purpose: a planted reason"
+          && Object.keys(s.designed_absent).join() === [...Object.keys(BASE.designed_absent), HELD].join() && s.as_of === DAY;
+      })());
+    assert("MDUG · expect-absent REFUSES with exit 2, bytes AND mtime unchanged: (a) a name the live read shows, (b) a name no setup script registers, (c) a missing, empty or blank reason, and a name outside ArsenalFC-; a name already in a list is refused too",
+      (() => {
+        seed();
+        const m0 = aged(), b0 = bytes();
+        const rs = [ab(["ArsenalFC-Dugout", "--why", "r"]), ab(["ArsenalFC-NoInstallerCarriesThis", "--why", "r"]),
+          ab([HELD]), ab([HELD, "--why", ""]), ab([HELD, "--why", "   "]), ab(["NotOurs-Task", "--why", "r"])];
+        const listed = expectAbsentPlan({ raw: bytes(), live: new Map(), registered: new Set(["ArsenalFC-Watchman"]), name: "ArsenalFC-Watchman", why: "r", now: NOW });
+        return !!HELD && rs.every((r) => r.code === 2 && r.line.startsWith("expect-absent · REFUSED · ") && r.line.endsWith("nothing written"))
+          && rs[0].line.includes("it is live, so it is not absent") && rs[1].line.includes("no setup script registers")
+          && rs.slice(2, 5).every((r) => r.line.includes("no --why")) && rs[5].line.includes("does not start ArsenalFC-")
+          && listed.ok === false && listed.why.includes("is in expected_enabled")
+          && bytes() === b0 && statSync(SNAP).mtimeMs === m0;
+      })());
+    assert("MDUG · expect-absent: a name already in designed_absent writes NOTHING and prints its stored reason, which is never overwritten (a second run with another reason, and a row that was there before)",
+      (() => {
+        seed();
+        const first = ab([HELD, "--why", "the first reason"]);
+        const m1 = aged(), b1 = bytes();
+        const again = ab([HELD, "--why", "a different reason"]), old = ab(["ArsenalFC-Context", "--why", "x"]);
+        return first.code === 0 && again.code === 0 && again.line.includes("learned nothing") && again.line.includes("the first reason")
+          && old.code === 0 && old.line.includes("rides the brain daemon now")
+          && bytes() === b1 && statSync(SNAP).mtimeMs === m1 && snap().designed_absent[HELD] === "the first reason";
+      })());
+    assert("MDUG · expect-absent keeps every other key BYTE-EQUAL (the _doc, both lists, _audit_note, _slots_doc, slots, slots_as_of) and leaves no temp file",
+      (() => {
+        seed();
+        const b0 = bytes();
+        ab([HELD, "--why", "r"]);
+        const b1 = bytes();
+        return b1 !== b0 && ["_doc", "expected_enabled", "expected_disabled", "_audit_note", "_slots_doc", "slots", "slots_as_of"]
+          .every((k) => span(b0, k) !== null && span(b0, k) === span(b1, k)) && readdirSync(sb).every((f) => !f.endsWith(".tmp"));
+      })());
+    // …and the CLI really reaches the verb: one REAL child through main(), both doors in its env.
+    // join(__dirname, …) as the ENTRYPOINT assert does, so the spawn stays visible to xray.
+    {
+      seed();
+      const child = spawnSync(process.execPath, [join(__dirname, "watchman.mjs"), "expect", "ArsenalFC-Dugout", "--why", "through main()"],
+        { encoding: "utf8", timeout: 60000, env: { ...process.env, ...env } });
+      assert("MDUG · the CLI reaches the verb: `node scripts/watchman.mjs expect ArsenalFC-Dugout --why …` in a child, through both doors: exit 0, one line, the snapshot learned",
+        child.status === 0 && /^expect · ArsenalFC-Dugout -> expected_disabled · through main\(\) · as_of \d{4}-\d{2}-\d{2}\n$/.test(String(child.stdout))
+        && snap().expected_disabled.includes("ArsenalFC-Dugout"));
+    }
+    {
+      seed();
+      const child = spawnSync(process.execPath, [join(__dirname, "watchman.mjs"), "expect-absent", HELD || "ArsenalFC-NoHeldName", "--why", "through main()"],
+        { encoding: "utf8", timeout: 60000, env: { ...process.env, ...env } });
+      const out = String(child.stdout);
+      assert("MDUG · …and its second mode: `node scripts/watchman.mjs expect-absent <TaskName> --why …` in a child, through both doors: exit 0, one line, designed_absent learned",
+        !!HELD && child.status === 0 && out.startsWith(`expect-absent · ${HELD} -> designed_absent · through main() · as_of `) && /as_of \d{4}-\d{2}-\d{2}\n$/.test(out)
+        && out.split("\n").length === 2 && snap().designed_absent[HELD] === "through main()");
+    }
+    try { rmSync(sb, { recursive: true, force: true }); } catch (e) { swallow("selftest expect sandbox cleanup", e); }
+  }
+
   console.log(`\n${fail === 0 ? "ALL CHECKS PASSED" : "SELFTEST FAILED"} (${pass} passed, ${fail} failed)\n`);
   if (fail) process.exit(1);
 }
@@ -2687,7 +3244,19 @@ else if (cmd === "brief") {
   for (const f of r.found) console.log(`  ${f.action.toUpperCase().padEnd(10)} ${f.tmp.replace(STATE_DIR, "state")}  (${f.age_min} min old, pid ${f.pid})\n     ${f.why}${f.applied ? "  → DONE" + (f.quarantined_to ? ` (kept at ${basename(f.quarantined_to)})` : "") : r.applied ? "" : "  → not applied (report only; pass --apply)"}`);
 } else if (cmd === "report") report();
 else if (cmd === "selftest") selftest();
-else console.log("watchman: run [--no-tier2] [--skip-suite] | brief | report | tmpsweep [--apply] | selftest");
+else if (cmd === "expect") {
+  // row 865 — the snapshot's owner verb: ONE line, exit 0 (learned, or nothing to learn) or 2 (refused, nothing written)
+  const r = expectCli(process.argv.slice(3), process.env);
+  if (r.code === 0) console.log(r.line); else console.error(r.line);
+  process.exitCode = r.code;
+}
+else if (cmd === "expect-absent") {
+  // row 874 (2) — the same owner verb's second mode: name -> reason into designed_absent; ONE line, exit 0 or 2
+  const r = expectCli(process.argv.slice(3), process.env, new Date(), "expect-absent");
+  if (r.code === 0) console.log(r.line); else console.error(r.line);
+  process.exitCode = r.code;
+}
+else console.log("watchman: run [--no-tier2] [--skip-suite] | brief | report | tmpsweep [--apply] | selftest | expect <TaskName> --why \"<why>\" | expect-absent <TaskName> --why \"<reason>\"");
 }
 
 // hookMain (V609 (b), forks rows 629-631, 13 Oct 2026) — the CLI's own main, exported for the CALL shape: scripts/watchman_brief.mjs
