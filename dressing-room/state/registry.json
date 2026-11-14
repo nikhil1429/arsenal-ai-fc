@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-11-14T08:37:10.388Z",
+ "updated_at": "2026-11-14T11:52:26.471Z",
  "tables": {
   "mechanisms": [
    {
@@ -898,9 +898,9 @@
     ],
     "reach": "any",
     "writes_to": "compiled_notes.jsonl",
-    "updated_at": "2026-10-17T12:11:13.069Z",
+    "updated_at": "2026-11-14T11:52:26.068Z",
     "added_at": "2026-10-17T11:29:17.345Z",
-    "why": "the compiled axis notes of each study day: daily_green.mjs reads them for its step 3 (notes), and HE reads them at full-time through notes_compiler.mjs glance (his ONE haan)"
+    "why": "the compiled axis notes of each study day: daily_green.mjs reads them for its step 3 (notes), and HE reads them at full-time through the glance of the note compiler (his ONE haan)"
    },
    {
     "subject": "notes_corrections",
@@ -930,8 +930,8 @@
      }
     ],
     "reach": "any",
-    "why": "mirror.mjs THIRD write lane, DECLARED (forks row 550 (1) fate 28: KEEP + DECLARED; capsules IMMUTABLE, nothing touched). Its one consumer is HIS hand on a restore (deep.mjs:92, doubtminer.mjs:123 name it). No writes_to on purpose: the lane is a dated directory of capsule copies, and the meter reads a dir writes_to as top-level *.json only (registry.mjs:488-503), so it would report a lane fed every morning as never fed (neverFedLines :582-593).",
-    "updated_at": "2026-10-17T15:03:39.849Z",
+    "why": "the THIRD write lane of the capsule mirror, DECLARED (forks row 550 (1) fate 28: KEEP + DECLARED; capsules IMMUTABLE, nothing touched). Its one consumer is HIS hand on a restore (the Re-Jirah reader and the doubt miner name it at their restore sites). No writes_to on purpose: the lane is a dated directory of capsule copies, and the registry meter reads a dir writes_to as top-level *.json only, so it would report a lane fed every morning as never fed.",
+    "updated_at": "2026-11-14T11:52:26.286Z",
     "added_at": "2026-10-17T15:03:39.849Z"
    },
    {
@@ -945,8 +945,8 @@
      }
     ],
     "reach": "any",
-    "why": "the RECORDED SessionStart brief: one row per brief his session printed (rung L6; read by cloud/ml6/witness/rung_L6.mjs)",
-    "updated_at": "2026-10-17T15:03:40.033Z",
+    "why": "the RECORDED SessionStart brief: one row per brief his session printed (rung L6); HE is its consumer, and the rung L6 landing witness reads it back as its proof",
+    "updated_at": "2026-11-14T11:52:26.467Z",
     "added_at": "2026-10-17T15:03:40.033Z"
    }
   ],

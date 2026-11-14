@@ -779,7 +779,11 @@ function selftest() {
   //     and a why — which is a PREDICATE, not a list of names (THE JUGAD RULE: a literal array
   //     of the instances that existed the day the pin was written becomes the pin's ceiling).
   //     The extras are still printed on every run, by the assert's own detail line.
-  const OFF_ROAD_SINCE_S7 = 2;   // RUNG A · `dmn_bg_drain`, the third DMN lane, registered at last · row 764 (15 Oct 2026) · `ns_field_probes`, NightShift's JOB 1c, the second: it spent on the shift's first fire since August, and its registry row declares it (ungated by its organ's own header, by design)
+  // ROW 924 (B3), 14 Nov 2026 · 2 to 6: rung L1 (60de81f; its whys by row 788 (1)(a)) added `compiled_notes` + `notes_corrections`
+  // and rung L6 (4e36497) added `capsule_backups` + `brief_log`, four lanes rows that declare no surface of their own; the count is
+  // re-pinned to the rows the registry holds, every lock as strict, and the three whys that named non-consumers were re-set by the
+  // registry's own set verb to name only declared consumers. The two before them, as written at RUNG A and row 764:
+  const OFF_ROAD_SINCE_S7 = 6;   // RUNG A · `dmn_bg_drain`, the third DMN lane, registered at last · row 764 (15 Oct 2026) · `ns_field_probes`, NightShift's JOB 1c, the second: it spent on the shift's first fire since August, and its registry row declares it (ungated by its organ's own header, by design)
   const extras = Object.keys(LANE_CONSUMERS).filter((k) => !(k in LANE_CONSUMERS_S7_LAYER));
   assert("S7 TABLE — it holds ONLY lanes that declare no surface of their own (it is outbox's off-road CONSUMER MAP, moved — never a second copy of brain_config's 34 surfaces)",
     Object.keys(LANE_CONSUMERS).length === 15 + OFF_ROAD_SINCE_S7 && !Object.keys(LANE_CONSUMERS).includes("diary") && !Object.keys(LANE_CONSUMERS).includes("night_coach"));
