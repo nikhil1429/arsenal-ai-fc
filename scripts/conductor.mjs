@@ -450,7 +450,12 @@ export function processStartRead(relPath, deps = {}) {
   const run = deps.run || spawnSync;
   try {
     const leaf = relPath.split("/").pop();
-    const ps = `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match '${leaf.replace(".", "\\.")}' } | Select-Object -First 1 -ExpandProperty CreationDate | ForEach-Object { $_.ToUniversalTime().ToString('o') }`;
+    // ROW 925 (1), 14 Nov 2026: under keep() the keeper AND its worker both match the leaf, and the older keeper is normally
+    // first, so after a landing tier 2 and the watchdog read the keeper's unmoved CreationDate as a false STALE BUILD. The read
+    // sorts a `<leaf> worker` / `<leaf> daemon-worker` line first (the verbs keep() spawns); a daemon that is not kept has no such
+    // line and falls back to the plain leaf match. The mstamp unit removes this when every kept worker writes its own stamp.
+    const workerFirst = `Sort-Object { $_.CommandLine -notmatch '${leaf.replace(".", "\\.")}"?\\s+(daemon-)?worker' }`;
+    const ps = `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match '${leaf.replace(".", "\\.")}' } | ${workerFirst} | Select-Object -First 1 -ExpandProperty CreationDate | ForEach-Object { $_.ToUniversalTime().ToString('o') }`;
     const r = run("powershell", ["-NoProfile", "-NonInteractive", "-Command", ps], { encoding: "utf8", timeout: 5000 });
     const t = Date.parse(String((r && r.stdout) || "").trim());
     if (Number.isFinite(t)) return { ms: t, looked: true, reason: "found" };
@@ -901,6 +906,12 @@ async function selftest() {
           processStartMs("scripts/x.mjs", { run: () => ({ status: 0, signal: null, stdout: "2026-08-09T07:38:39.399Z" }) }) === Date.parse("2026-08-09T07:38:39.399Z"));
         ok("PROBE HONESTY — a throwing shell is could-not-look too, and never crashes the caller",
           processStartRead("scripts/x.mjs", { run: () => { throw Object.assign(new Error("nope"), { code: "ENOENT" }); } }).looked === false);
+        // ROW 925 (1): under keep() the keeper AND its worker match the leaf, so the read sorts the worker line ahead of the first match
+        const seen = [];
+        processStartRead("scripts/turnstile.mjs", { run: (c, a) => { seen.push(String(a[a.length - 1])); return { status: 0, signal: null, stdout: "", stderr: "" }; } });
+        const q = seen[0] || "", BS = String.fromCharCode(92), sortAt = q.indexOf("Sort-Object"), firstAt = q.indexOf("Select-Object -First 1");
+        ok("ROW 925 — the process-table read sorts a `<leaf> worker` / `<leaf> daemon-worker` line AHEAD of the first match, so a kept daemon reads its worker, never its keeper",
+          sortAt > 0 && firstAt > sortAt && q.includes("turnstile" + BS + ".mjs" + String.fromCharCode(34) + "?" + BS + "s+(daemon-)?worker"));
       }
 
       // EXACT match ⇒ current. Measured live: both sides statSync the same file and
