@@ -1,6 +1,6 @@
 {
-  "date": "2026-11-13",
-  "generated_at": "2026-11-13T05:12:04.805Z",
+  "date": "2026-11-14",
+  "generated_at": "2026-11-14T03:45:46.669Z",
   "total_reps": 2,
   "status": "ok",
   "low_confidence": false,
@@ -61,27 +61,27 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 134
+      "overdue_days": 135
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 130
+      "overdue_days": 131
     },
     {
       "concept": "embeddings",
       "axis": null,
-      "overdue_days": 118
+      "overdue_days": 119
     },
     {
       "concept": "hallucinations",
       "axis": null,
-      "overdue_days": 94
+      "overdue_days": 95
     },
     {
       "concept": "tokenization",
       "axis": "a (kya+analogy)",
-      "overdue_days": 68
+      "overdue_days": 69
     }
   ],
   "core_vs_light": {
@@ -200,19 +200,19 @@
       "i"
     ],
     "axes_ungraded": [],
-    "started_at": "2026-10-18T10:46:36.803Z",
+    "started_at": "2026-11-13T08:06:30.681Z",
     "stale": true,
-    "stale_as_of": "2026-11-13T05:12:04.805Z",
+    "stale_as_of": "2026-11-14T03:45:46.669Z",
     "last_closed": {
-      "concept": "inference",
-      "ended_at": "2026-10-18T10:46:36.786Z",
+      "concept": "neuralnet",
+      "ended_at": "2026-11-13T08:06:29.818Z",
       "steps_ran": [
         0,
-        1,
         2,
         3
       ],
       "steps_missed": [
+        1,
         4,
         5,
         6,
@@ -222,12 +222,11 @@
         10,
         11
       ],
-      "axes_done": [
-        "a",
-        "b"
-      ],
+      "axes_done": [],
       "axes_deferred": [],
       "axes_untouched": [
+        "a",
+        "b",
         "c",
         "d",
         "e",
@@ -236,8 +235,8 @@
         "h",
         "i"
       ],
-      "elapsed_min": 975.7,
-      "axis_marks_span_min": 292.7,
+      "elapsed_min": 37279.9,
+      "axis_marks_span_min": null,
       "check_q_refused": 1,
       "core_missing": [
         "d"
