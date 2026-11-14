@@ -59,6 +59,25 @@ description: The session-agnostic front door to the day's learning — reads the
   check stays before the page so his banked answer is cold; the page carries the axis's answers. His reason:
   "we are learning in pieces" — one place helps when notes are made.
   The recap is `[T]` mechanism; his understanding stays his Bolo. First one: embeddings axis c, 9 Oct.
+- **THE RECAP IS A DECK, NOT A SCROLL PAGE (14 Nov 2026, his word, act `amwfwn73mxj`).** Verbatim: "always make
+  it in the best ADHD and autistic way you possibly can, it is so boring right now and i have to scroll up and down
+  so much to understand what is happening in the visualization and images ... save this thing in such a way that no
+  further session do the same mistake in any axis." Every axis recap, every topic, is built like this:
+  (1) ONE idea per screen; Aage / Peeche buttons + arrow keys; a rail of NAMED ideas; position line by name.
+  (2) The picture stays FIXED at the top of the card and the text steps beneath it; each text step LIGHTS the exact
+  part of the picture it names and dims the rest. Picture and its words are one glance apart: never a scroll between.
+  (3) The same zones in the same places on every card (position · title · picture · text · nav): predictable.
+  (4) Colour = ONE fixed meaning for the whole deck (input · weight · bias · output · galti), legend in the header.
+  (5) Each idea's beats: dukaan → asli naam → ⭐ technical line → khud karo, where khud karo is a TYPED number box
+  with instant ✅ / ❌ (a reveal button for concept answers); never tap-to-answer tiles.
+  (6) Lexend, max-width 34em, no tables, no autoplay, theme tokens for light + dark.
+  Template: `learning-layer/AXIS_RECAP_DECK_TEMPLATE.html` (neuralnet axis a, 14 Nov). Copy its ENGINE, replace its
+  `I` array of ideas. A long scroll page with pictures far from their text is the failure this line exists to stop.
+- **COVERAGE SWEEP BEFORE ANY RECAP (14 Nov 2026, his three catches on neuralnet axis a in one day).** Before
+  building, list every term the axis USED anywhere (chat, pictures, examples) and open each one in the deck: what the
+  input numbers ARE (in the LLM case too), every "do chhoti cheezein baad mein" that was deferred, and the industry
+  name of every everyday word used (galti → error / loss, kitna ghumana → learning rate, shuru ka andaaza →
+  initialization). He must never be the one who finds the gap (SAMJHAO_MERGED §3 C1).
 - **NAME EVERY AXIS, EVERY TIME (9 Oct 2026, his word: "i do not remember the axis names").** Never a bare
   letter: always the letter AND its name, in chat, pointers, file names and pages — "axis c (mechanism)".
   The nine, from `dressing-room/state/concepts.json` `.axes`: a kya + analogy · b kyun / first principles ·
