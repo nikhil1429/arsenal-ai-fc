@@ -68,6 +68,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash, randomBytes } from "node:crypto";
 import { homedir, tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
+import { createRequire, syncBuiltinESMExports } from "node:module";   // ROW 934: hermeticGuard wraps the CJS fs / child_process verbs and re-syncs the named imports
 import { captain } from "./captain.mjs";   // Block 2 §7.3 (18 Aug 2026): bag-info + README + LEXICON name him from the profile
 import { launchContext, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW (vitals 23:40: the SLOT's day in a catch-up burst; IST partitioning untouched otherwise)
 
@@ -2413,6 +2414,62 @@ const LEXICON_SEED = [
   T("3-2-1", "The archival storage standard: 3 copies, on 2 different media types, 1 kept off-site. One disk is one copy, and one copy is not a backup.", "ARCHIVE__DAY_ONE_SPEC.md §12"),
 ];
 
+// ── HERMETIC GUARD (ROW 934, 14 Nov 2026) ───────────────────────────────────
+// The selftest's HERMETIC check used to snapshot the LIVE state folder around one fixture run and red on a change by
+// ANYONE; a daemon writes two state files about every 15 s, so it redded about once in 20 runs on the organism being
+// alive, with nothing wrong here (lane S's 20-run hunt, 14 Nov). This guard checks the law by EFFECT and by a PREDICATE,
+// never a list (THE JUGAD RULE): while armed it wraps EVERY function node:fs, its promises API and node:child_process
+// expose (read off the modules, so a verb Node adds later is wrapped the day it ships) and records each call whose path
+// argument, open fd, cwd or command lands under `liveRoot`. Reads count too: lane S's census (14 Nov, row 934 (2)) saw
+// 2,444 calls inside the window, no child, and 0 touches of the live root with reads included, so ANY touch is a break.
+// It never blocks a call; restore() puts every function back and re-syncs the named imports.
+function hermeticGuard(liveRoot) {
+  const req = createRequire(import.meta.url);
+  const F = req("node:fs"), C = req("node:child_process");
+  const base = resolve(liveRoot).toLowerCase();
+  const under = (p, from) => {
+    const s = typeof p === "string" ? p : p instanceof URL ? fileURLToPath(p) : Buffer.isBuffer(p) ? p.toString() : null;
+    if (!s || s.length > 1024 || s.includes(String.fromCharCode(10))) return false;
+    const r = resolve(from || ".", s).toLowerCase();
+    return r === base || r.startsWith(base + sep);
+  };
+  const hits = [], fds = new Set(), saved = [];
+  const touch = (prefix, args) => {
+    const opts = args.find((a) => a && typeof a === "object" && !Array.isArray(a) && !Buffer.isBuffer(a) && !(a instanceof URL)) || {};
+    const cwd = typeof opts.cwd === "string" ? opts.cwd : undefined;
+    if (cwd && under(cwd)) return `cwd ${cwd}`;
+    const rest = args.slice(1).flatMap((a) => (Array.isArray(a) ? a : [a])).filter((a) => typeof a === "string");
+    const p = [args[0], ...rest].find((a) => under(a, cwd));
+    if (p !== undefined) return String(p);
+    if (typeof args[0] === "number" && fds.has(args[0])) return `fd ${args[0]}`;
+    if (prefix === "child." && typeof args[0] === "string" && args[0].split("/").join(sep).toLowerCase().includes(base)) return "a command naming the root";
+    return null;
+  };
+  const wrapAll = (obj, prefix) => {
+    for (const name of Object.keys(obj)) {
+      if (/^[A-Z_]/.test(name)) continue;   // classes (Stats, WriteStream, ChildProcess) and internals are left as they are
+      const orig = obj[name];
+      if (typeof orig !== "function") continue;
+      saved.push([obj, name, orig]);
+      obj[name] = Object.assign(function (...args) {
+        const at = touch(prefix, args);
+        if (at !== null) hits.push(`${prefix}${name} ${at}`);
+        const out = orig.apply(this, args);
+        if (at !== null && typeof out === "number" && name.startsWith("open")) fds.add(out);
+        return out;
+      }, orig);
+    }
+  };
+  wrapAll(F, "");
+  wrapAll(F.promises, "promises.");
+  wrapAll(C, "child.");
+  syncBuiltinESMExports();
+  return {
+    hits,
+    restore() { for (const [obj, name, orig] of saved.reverse()) obj[name] = orig; saved.length = 0; syncBuiltinESMExports(); },
+  };
+}
+
 // ── SELFTEST (spec §11 — all thirteen acceptance tests) ──────────────────────
 // HERMETIC: every test runs in a temp archive + a temp fake repo. This organ is
 // READ-ONLY on dressing-room/ and its own test must prove that, not assume it.
@@ -2783,7 +2840,10 @@ function selftest() {
       silenceVerdict(counts, "2026-07-25").state === "ok");
     ok("11c. …and a YOUNG lane is never called silent — too little history to judge is an answer, not a red",
       silenceVerdict(new Map([["2026-07-10", 3]]), "2026-08-01").state === "young");
-    const vit = vitalsArchive({ root: arc, quiet: true });
+    // ROW 924 (3), 14 Nov 2026: the fixture's rows are dated 2026-08-14 and vitals reads a 45-day window back from `now`, so on the
+    // real clock 11e read red from 28 Sep (no row in the window, fill_pct null) with nothing broken. The clock is handed in, fixed on
+    // the fixture's own day; 11g's never-ran fixity below keeps the real clock.
+    const vit = vitalsArchive({ root: arc, quiet: true, now: new Date("2026-08-14T12:00:00+05:30") });
     ok("11d. VITALS · runs over the real archive, counts every lane, and journals to health/vitals-*.jsonl",
       vit.lanes.length >= 2 && vit.lanes.every((l) => l.records > 0) && readdirSync(join(arc, "health")).some((f) => f.startsWith("vitals-")));
     ok("11e. VITALS · fill rates are real percentages, not a guess (ts_local is 100% on a lane whose rows all carry ts)",
@@ -2983,13 +3043,39 @@ function selftest() {
       [...laneRecords(arc, "reps_log")].map((r) => r.rec.seq).join(",") === "1,2,3,4");
 
     // ── HERMETICITY: this organ never writes to dressing-room/ ──
-    const stateSnap = (d) => readdirSync(d).map((f) => { const s = statSync(join(d, f)); return `${f}:${s.size}:${s.mtimeMs}`; }).join("|");
+    // ROW 934, 14 Nov 2026: BY EFFECT, never by who else touched the folder (hermeticGuard's header says why). The guard is
+    // fired at a temp stand-in root FIRST, so an instrument that cannot see reds here instead of passing everything below.
+    const standIn = join(tmp, "hermetic-stand-in", "dressing-room");
+    mkdirSync(join(standIn, "state"), { recursive: true });
+    const cjsFs = createRequire(import.meta.url)("node:fs");
+    const probe = hermeticGuard(standIn);
+    try {
+      writeFileSync(join(standIn, "state", "planted.json"), "x");
+      renameSync(join(standIn, "state", "planted.json"), join(standIn, "state", "moved.json"));
+      mkdirSync(join(standIn, "more"), { recursive: true });
+      cjsFs.promises.writeFile(join(standIn, "state", "promised.json"), "x").catch(() => {});
+      cjsFs.createWriteStream(join(standIn, "state", "streamed.json")).on("error", () => {}).end("x");
+      spawnSync(process.execPath, ["-e", "0"], { cwd: standIn });
+      writeFileSync(join(tmp, "hermetic-stand-in", "beside.json"), "x");
+    } finally { probe.restore(); }
+    const seen = probe.hits.map((h) => h.split(" ")[0]);
+    ok("HERMETIC · the guard SEES a planted sync write, rename, mkdir, promises write, stream and child under a stand-in root, and NOT a write beside it",
+      ["writeFileSync", "renameSync", "mkdirSync", "promises.writeFile", "createWriteStream", "child.spawnSync"].every((v) => seen.includes(v))
+        && !probe.hits.some((h) => h.includes("beside.json")), probe.hits.join(" | ") || "it saw nothing");
     const liveState = join(ROOT, "dressing-room", "state");
-    const snapBefore = existsSync(liveState) ? stateSnap(liveState) : "";
-    runArchive({ root: arc, repo, quiet: true });
-    verifyArchive({ root: arc, quiet: true });
-    ok("HERMETIC · the archivist is READ-ONLY on dressing-room/ — the live state is byte-identical after a run",
-      !snapBefore || snapBefore === stateSnap(liveState));
+    const stateSnap = (d) => new Map(readdirSync(d).map((f) => { try { const s = statSync(join(d, f)); return [f, `${s.size}:${s.mtimeMs}`]; } catch { return [f, "gone"]; } }));
+    const snapBefore = existsSync(liveState) ? stateSnap(liveState) : null;
+    const guard = hermeticGuard(join(ROOT, "dressing-room"));
+    try {
+      runArchive({ root: arc, repo, quiet: true });
+      verifyArchive({ root: arc, quiet: true });
+    } finally { guard.restore(); }
+    ok("HERMETIC · the archivist is READ-ONLY on dressing-room/ — nothing it asked of the file system or a child during a run, a read included, touched the live root",
+      guard.hits.length === 0, guard.hits.join(" | "));
+    // The live snapshot STAYS as a NOTE, never a verdict (row 934 (4)), so the next reader sees the organism moving.
+    const snapAfter = snapBefore && existsSync(liveState) ? stateSnap(liveState) : null;
+    const moved = snapBefore && snapAfter ? [...new Set([...snapBefore.keys(), ...snapAfter.keys()])].filter((f) => snapBefore.get(f) !== snapAfter.get(f)) : [];
+    if (moved.length) console.log(`  note HERMETIC · the live state moved while the run executed (the organism is alive; a note, never a verdict): ${moved.join(", ")}`);
 
     // ── TWO LAWS THIS ORGAN OWNS, HELD STATICALLY ────────────────────────────
     // These read OTHER files, which normally makes them organism_test.mjs's job —
@@ -3030,11 +3116,8 @@ function selftest() {
     // filename whitelist — a name in a list is exactly how a guard goes quietly
     // dead. Any organ that knows the path must PROVE it is read-only, and the
     // proof below is dynamic: it runs the thing and diffs the tree.
-    const READERS = new Set(["archive_audit.mjs"]);
-    const others = readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs") && f !== "archivist.mjs"
-      && /ARSENAL_ARCHIVE|CyborgArchive/.test(readFileSync(join(ROOT, "scripts", f), "utf8")));
-    ok("SINGLE WRITER · no organ other than the archivist and the declared READ-ONLY auditor even knows where the archive lives (a second appender breaks seq and the chain)",
-      others.every((f) => READERS.has(f)), others.filter((f) => !READERS.has(f)).join(", "));
+    // ROW 924 (3), 14 Nov 2026: the READERS list and its assert run BELOW, after every reader's dynamic proof, so a name joins the
+    // list only by its own passing proof (exchanges.mjs, rung L1's archive reader, is the second).
 
     // …AND THE READER IS PROVEN READ-ONLY BY RUNNING IT, not by trusting its
     // header. The copy sealed into VERIFIER/ is the one spawned, which settles
@@ -3053,6 +3136,25 @@ function selftest() {
       treeHash(arc) === beforeAudit);
     ok("SINGLE WRITER · …and with no dressing-room/ beside it, the verdict is printed and the missing journal is NAMED, never silently dropped",
       /journal: NOT WRITTEN/.test(String(auditRun.stdout)));
+
+    // ROW 924 (3), 14 Nov 2026: exchanges.mjs (rung L1, R1's archive reader for the note compiler; READ-ONLY by its header) is the
+    // second organ that knows where the archive lives. It gets the auditor's proof, never a name: RUN over this fixture archive by
+    // $ARSENAL_ARCHIVE, it must read its words (so the proof is not vacuous) and leave the tree byte-identical. Only a passing proof
+    // puts it on READERS; a failed one leaves it off, and the SINGLE WRITER assert below names it.
+    const beforeEx = treeHash(arc);
+    const exRun = spawnSync(process.execPath, [join(HERE, "exchanges.mjs"), "day", "2026-08-14", "--json"],
+      { encoding: "utf8", env: { ...process.env, ARSENAL_ARCHIVE: arc } });
+    let exOut = null; try { exOut = JSON.parse(String(exRun.stdout || "")); } catch { exOut = null; }
+    const exRead = exRun.status === 0 && !!exOut && resolve(String(exOut.root)) === resolve(arc) && Array.isArray(exOut.exchanges) && exOut.exchanges.length > 0;
+    const exSame = treeHash(arc) === beforeEx;
+    ok("SINGLE WRITER · exchanges.mjs, RUN over the fixture archive, reads its words and leaves the archive BYTE-IDENTICAL — the auditor's proof, by diffing the tree, never a name",
+      exRead && exSame, `exit ${exRun.status} · root ${exOut ? exOut.root : "unparsed"} · ${exOut && Array.isArray(exOut.exchanges) ? exOut.exchanges.length : 0} word(s) · tree ${exSame ? "identical" : "CHANGED"}`);
+    // ONE LIST, BUILT FROM THE PROOFS: archive_audit.mjs by the three VERIFIER asserts above, exchanges.mjs by its own.
+    const READERS = new Set(["archive_audit.mjs", ...(exRead && exSame ? ["exchanges.mjs"] : [])]);
+    const others = readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs") && f !== "archivist.mjs"
+      && /ARSENAL_ARCHIVE|CyborgArchive/.test(readFileSync(join(ROOT, "scripts", f), "utf8")));
+    ok("SINGLE WRITER · no organ other than the archivist and its PROVEN read-only readers even knows where the archive lives (a second appender breaks seq and the chain)",
+      others.every((f) => READERS.has(f)), others.filter((f) => !READERS.has(f)).join(", "));
 
     // ── THE COMMIT TRIPWIRE (§7.5) ──
     const twTracked = new Set(["dressing-room/state/reps_log.jsonl", "scripts/archivist.mjs"]);
