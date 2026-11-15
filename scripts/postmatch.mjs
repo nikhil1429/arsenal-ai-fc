@@ -33,6 +33,9 @@
 //   Claude fills 100%, he writes ZERO)
 // MODES:  --hit HIT|MISS|PARTIAL|REST --signal "…" --kal "…" [--diag start|block|sleep]
 //         [--route all|none] [--dry] · route [all|<id>…] (route-only, no ledger)
+//         · autoclose --date <YYYY-MM-DD|chain|chain-1> --anchor evening|morning [--dry]
+//           (THE DAY CLOSES ITSELF, mclose · rows 873 (2) / 877 / 883 / 891 — the MACHINE half of his
+//           full time, fired by the conductor's dayclose steps; see autoclose() below)
 //         · season (regen SEASON.md only — no ledger, no matchday)
 //         · interview --date YYYY-MM-DD [--drop] (season.json's interview_dates —
 //           D14's lawful writer, which scout's war-room reads; dispatched at :408 and
@@ -49,9 +52,9 @@
 //   · viz wall · twin (bets read season.json) · outwork_audit o5 (sync watch).
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, mkdtempSync, rmSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";                      // selftest only — the on-disk seam (benchmark.mjs:644 precedent)
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, mkdtempSync, rmSync, realpathSync } from "node:fs";
+import { join, dirname, resolve, relative, isAbsolute } from "node:path";
+import { tmpdir } from "node:os";                      // selftest's on-disk seam (benchmark.mjs:644 precedent) · mclose: the clock door's "only under tmpdir" test
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -66,7 +69,9 @@ const KAL_RE = /KAL-?LINE\s*→\s*(.+)/i;      // manager.mjs's exact parser con
 const BADGE = "⚪🔴";
 
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-import { recentRows } from "./daykey.mjs";   // S11 — the recency gate (the form strip is a window of NOW, not the last 7 rows)
+import { READER_BUDGET_MS } from "./notes_compiler.mjs";   // mclose row 914 G — the cold reader's ONE budget, read from its owner
+import { JUDGE_BUDGET_MS } from "./gaffer_brain.mjs";       // mclose row 914 G — the judge call's ONE budget, read from its owner
+import { recentRows, launchContext, addDays } from "./daykey.mjs";   // S11 — the recency gate (the form strip is a window of NOW, not the last 7 rows) · mclose — the chain's day-key (autoclose --date chain|chain-1)
 
 function writeAtomic(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
@@ -334,6 +339,350 @@ function pendingThrowIns(routedIds, { dugoutSuffix = "" } = {}, dir = STATE_DIR)
 }
 
 // ---------------------------------------------------------------------------
+// THE DAY CLOSES ITSELF — autoclose (mclose · rows 873 (2) / 877 F1-F6 / 883 / 891 · lane M's file by F6)
+// ---------------------------------------------------------------------------
+// WHY: his day was closed ONLY by his spoken full time (the close in main(), fired by the full-time skill alone), and his
+//   last spoken close was 18 Aug — so the notes compile (this file's NOTES ANCHOR is the compiler's ONE runtime caller),
+//   the judge round and three rungs of his day hung on a word he had not said since. Row 873 (2), as row 877 ruled it:
+//   THE MACHINE HALF of the close is fired by CODE, once per day, for a day that holds captured study turns and no close —
+//   at the EVENING anchor (conductor EVENING `dayclose`) and at the next MORNING anchor for a day the laptop slept through
+//   (MORNING `dayclose-prev`); idempotent by day; no evidence, no run (L5). HIS half stays his and is never required.
+// THE PATH, in this order:
+//   (i)    archivist.mjs run, its OWN CLI — the archive catches up (best effort; its line is kept on the record)
+//   (ii)   THE EVIDENCE: study_scope.studySessionsOfDay(D) — handed the sessions the archive names that day
+//          (exchanges.sessionsNamedOn: the leaf never learns where the archive lives) — then exchanges.studyTurnsOfDay(D,
+//          sessions); no study session or no captured turn = ONE line, exit 0, NOTHING written (F5)
+//   (iii)  THE QUIET RULE (F3): at the EVENING anchor, a last captured study turn under 30 min older than the step's clock
+//          DEFERS the close — nothing written; the morning step closes that day
+//   (iv)   IDEMPOTENT BY DAY (autocloseDecision): HIS RESULT on post_match/D.md is never touched; a MACHINE record whose
+//          turns_until ≥ last_ts with its compile DONE and its judge SETTLED is nothing new — nothing written (bytes and
+//          mtime); a current record with an UNSETTLED line (the judge NOT DUE inside the round's idle definition, a dead
+//          lane, a compile not done or interrupted) re-runs ONLY that step and refreshes ONLY that line, even with no new
+//          turn (row 891 (1): a day.close that could never be due is the never-fires class); a newer turn refreshes it whole
+//   (v)    THE MACHINE RECORD, post_match/D.md: CLOSED-BY · RESULT absent · KAL-LINE absent (a COLON, so KAL_RE never matches
+//          it, F1) · the evidence · the compile line · the judge line — written BEFORE the compile (the NOTES ANCHOR's order)
+//   (vi)   notes_compiler.mjs, its own CLI: `compile --date D --session <each study session>` FIRST — the compiler's own
+//          back-fill door, because its own scope is sitting.json's host (notes_compiler.mjs:265-272), which on a past or slept
+//          day is not that day's session — THEN `fulltime --date D --no-archive-run` (its scope now carries the sessions the
+//          note used, so the compile reads "unchanged" and the cold gate runs on it); every compiled row carries day D,
+//          whatever the clock (row 883)
+//   (vii)  gaffer_brain.mjs judge-due --trigger day.close with ARSENAL_ORGAN=1 — judgeDue's rule decides (the PACER's idle rule)
+//   (viii) after an EVENING close only, ONE card through captains_call.mjs `file`, KEYED (a loop must key its card,
+//          captains_call.mjs:339-344; the rolling day-key keeps ONE live ask) — the morning files none
+//   (ix)   ONE summary line.
+// IT NEVER writes season.json, notebook.json, routed_balls.json or SEASON.md (matches_played counts HIS result) and NEVER
+//   arms `brain.mjs trigger fulltime` (F2: the evening voice lanes ride HIS close and spend a model). Rung 8 stays RED on a
+//   machine-closed day by daily_green's own code (F1). His later full time upgrades the record (the close in main()).
+const AUTOCLOSE_QUIET_MIN = 30;                                     // F3, as ruled (row 877): "under 30 minutes old"
+const AUTOCLOSE_CLOCK_ENV = "ARSENAL_AUTOCLOSE_CLOCK";        // the step's clock — honoured ONLY for a copy under os.tmpdir()
+const CHAIN_DAY_FORMS = Object.freeze({ chain: 0, "chain-1": -1 });  // conductor EVENING dayclose / MORNING dayclose-prev
+const ANCHORS = Object.freeze(["evening", "morning"]);
+// mclose row 914 G-n (b) — THE CLOSE RUNS UNDER A DEADLINE, ITS BUDGET SUMMED IN CODE: one cold-reader budget (notes_compiler's
+// export), one judge budget (gaffer_brain's export) and one child budget per organ the close runs besides them (the archive, the
+// compile's scope seed, the card). No typed total anywhere: the conductor's two close steps declare `budget: autocloseBudget()`.
+export const CHILD_TIMEOUT_MS = 300000;
+export const AUTOCLOSE_CHILDREN = Object.freeze(["archive", "compile", "card"]);
+export function autocloseBudget() { return READER_BUDGET_MS + JUDGE_BUDGET_MS + AUTOCLOSE_CHILDREN.length * CHILD_TIMEOUT_MS; }
+const AUTOCLOSE_DEADLINE_ENV = "ARSENAL_AUTOCLOSE_DEADLINE";   // the close's deadline — honoured ONLY for a copy under os.tmpdir()
+const MACHINE_KEPT = "MACHINE CLOSE (kept, L9)";
+// HIS RESULT: the four legal results, as daily_green.mjs:250 reads them (REST renders as LOAD-MANAGED, renderPostMatch above)
+const HIS_RESULT_RE = /^RESULT:\s*(HIT|MISS|PARTIAL|LOAD-MANAGED)/m;
+const CLOSED_BY_RE = /^CLOSED-BY: code · (evening|morning) anchor · (\S+)$/m;
+const PENDING_COMPILE = "COMPILE: pending — the close is still writing (an interrupted close is finished by the next anchor)";
+const PENDING_JUDGE = "JUDGE: pending — the close is still writing (an interrupted close is finished by the next anchor)";
+const oneLine = (s, n = 240) => { const t = String(s == null ? "" : s).replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
+const lastLineOf = (r) => `${(r && r.stdout) || ""}${(r && r.stderr) || ""}`.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).at(-1) || "";
+const exitOf = (r) => (!r ? "not run" : r.status === null ? `did not finish (${(r.error && r.error.code) || r.signal || "?"})` : `exit ${r.status}`);
+
+/** resolveAutocloseDay — the IST day to close: a literal YYYY-MM-DD, or the CHAIN's own day (`chain`, `chain-1` = the slept
+ *  day) read off its ARSENAL_DAY_KEY token through daykey.mjs. Never now(): with no valid token the chain forms are REFUSED. */
+function resolveAutocloseDay(arg, { env = process.env, now = new Date() } = {}) {
+  const a = String(arg == null ? "" : arg).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(a)) return { day: a, source: "literal" };
+  if (!Object.prototype.hasOwnProperty.call(CHAIN_DAY_FORMS, a)) return { error: `--date must be YYYY-MM-DD, chain or chain-1 (got "${oneLine(a, 40)}")` };
+  const ctx = launchContext({ env, now, realNow: now });
+  if (ctx.source !== "token") return { error: `--date ${a} is the chain's day and no chain day-key token is valid here (${ctx.why}) — a hand run passes --date YYYY-MM-DD` };
+  const off = CHAIN_DAY_FORMS[a];
+  return { day: off ? addDays(ctx.day, off) : ctx.day, source: `chain token ${ctx.day}${off ? " minus one" : ""}` };
+}
+
+const realOr = (p) => { try { return realpathSync(p); } catch { return resolve(p); } };
+const underDir = (p, root) => { const rel = relative(realOr(root), realOr(p)); return !!rel && !rel.startsWith("..") && !isAbsolute(rel); };
+/** autocloseClock — THE STEP'S CLOCK. His tree runs on the real clock, always; a COPY of the tree under os.tmpdir() (the
+ *  witness's) may hand it one instant through ARSENAL_AUTOCLOSE_CLOCK. ONE door, planted both ways (F3). */
+function autocloseClock({ env = process.env, here = __dirname, tmp = tmpdir(), now = () => new Date() } = {}) {
+  const raw = env ? env[AUTOCLOSE_CLOCK_ENV] : null;
+  if (!raw) return { at: now(), door: null };
+  if (!underDir(here, tmp)) return { at: now(), door: `REFUSED — ${AUTOCLOSE_CLOCK_ENV} is honoured only for a copy under ${tmp}; this tree runs on the real clock` };
+  const t = Date.parse(String(raw));
+  if (!Number.isFinite(t)) return { at: now(), door: `REFUSED — ${AUTOCLOSE_CLOCK_ENV}=${oneLine(raw, 40)} is not an instant; the real clock stands` };
+  return { at: new Date(t), door: `honoured (${new Date(t).toISOString()}) — a copy under ${tmp}` };
+}
+
+/** autocloseDeadline — row 914 G-n (b): the close's deadline = the process's boot instant on the step's clock plus autocloseBudget().
+ *  A COPY under os.tmpdir() (the witness's) may hand it one instant through ARSENAL_AUTOCLOSE_DEADLINE. ONE door, planted both ways. */
+function autocloseDeadline({ at, env = process.env, here = __dirname, tmp = tmpdir(), uptimeS = process.uptime() } = {}) {
+  const own = at.getTime() - Math.round(uptimeS * 1000) + autocloseBudget();   // a WHOLE ms: process.uptime() is fractional (row 932)
+  const raw = env ? env[AUTOCLOSE_DEADLINE_ENV] : null;
+  if (!raw) return { ms: own, door: null };
+  if (!underDir(here, tmp)) return { ms: own, door: `REFUSED — ${AUTOCLOSE_DEADLINE_ENV} is honoured only for a copy under ${tmp}; the summed budget stands` };
+  const t = Date.parse(String(raw));
+  if (!Number.isFinite(t)) return { ms: own, door: `REFUSED — ${AUTOCLOSE_DEADLINE_ENV}=${oneLine(raw, 40)} is not an instant; the summed budget stands` };
+  return { ms: t, door: `honoured (${new Date(t).toISOString()}) — a copy under ${tmp}` };
+}
+
+/** closeTimer — THE CLOSE'S ONE CLOCK AND ITS SPAWN VALUES (row 925 (5); ruled row 932 on lane M's m914c diagnosis). stepNow() is the
+ *  step's clock now: the clock door's instant when the door is set, else the real boot instant, moved on by real elapsed time; every
+ *  deadline sum of the close reads it and nothing else. fits(need) says whether the time left covers `need`; below it the child is
+ *  not started and its line says "not reached". spawnMs(f, reserve) is the timeout handed to spawn: the time left minus the reserve
+ *  for the calls after it, and ONLY a safe positive whole number of milliseconds; anything else (a fraction, zero, a negative, NaN)
+ *  starts nothing and the line reads UNSETTLED by name, retried at the next anchor (row 914 (2)). */
+function closeTimer({ at, dlMs, realNow = () => Date.now() }) {
+  const realStart = realNow();
+  const stepNow = () => at.getTime() + (realNow() - realStart);
+  const fits = (need) => {
+    const left = dlMs - stepNow();
+    return left >= need ? { ok: true, left } : { ok: false, left, line: `not reached · ${Math.max(0, Math.floor(left / 1000))} s left, ${Math.ceil(need / 1000)} s needed` };
+  };
+  const spawnMs = (f, reserve) => {
+    const ms = f.left - reserve;
+    return Number.isSafeInteger(ms) && ms > 0 ? { ok: true, ms } : { ok: false, ms, line: `not started · the spawn timeout ${ms} ms is not a positive whole number of milliseconds` };
+  };
+  return { stepNow, fits, spawnMs };
+}
+
+/** quietVerdict — F3: the EVENING close waits while study turns may still be arriving; the morning never defers. */
+function quietVerdict({ anchor, lastTs, at }) {
+  const age = (at.getTime() - Date.parse(String(lastTs))) / 60000;
+  return { defer: anchor === "evening" && !(age >= AUTOCLOSE_QUIET_MIN), age_min: Number.isFinite(age) ? Math.floor(age) : null };
+}
+
+/** hisResultOf — HIS result on a post_match file (the first legal RESULT line, daily_green's own reading), or null. */
+const hisResultOf = (text) => (String(text == null ? "" : text).match(HIS_RESULT_RE) || [])[1] || null;
+
+/** parseMachineRecord — the state of a MACHINE record, or null when the text is not one (or already carries HIS result). */
+function parseMachineRecord(text) {
+  const t = String(text == null ? "" : text);
+  if (hisResultOf(t)) return null;
+  const cb = CLOSED_BY_RE.exec(t);
+  if (!cb) return null;
+  const ev = /^EVIDENCE: (\d+) captured study turn\(s\) · turns_until (\S+)/m.exec(t);
+  const compile = (/^COMPILE: .*$/m.exec(t) || [""])[0], judge = (/^JUDGE: .*$/m.exec(t) || [""])[0];
+  return { anchor: cb[1], at: cb[2], turns: ev ? Number(ev[1]) : null, turns_until: ev ? ev[2] : null,
+    compile_line: compile, compile_done: /^COMPILE: DONE\b/.test(compile), judge_line: judge, judge_settled: /^JUDGE: SETTLED\b/.test(judge) };
+}
+
+/** machineBlockOf — the machine record a post_match file keeps: the whole file when it IS one, the block under MACHINE CLOSE
+ *  (kept, L9) when his close already sits on top of one, else null. Byte-for-byte (L9). */
+function machineBlockOf(text) {
+  if (text == null) return null;
+  const t = String(text), mark = `\n${MACHINE_KEPT}\n`, i = t.indexOf(mark);
+  if (i >= 0) return t.slice(i + mark.length);
+  return parseMachineRecord(t) ? t : null;
+}
+/** keptBlock — what HIS close appends below his own record: the header, then the machine record verbatim (L9). */
+const keptBlock = (machine) => (machine ? `\n${MACHINE_KEPT}\n${machine}` : "");
+
+/** autocloseDecision — (iv), PURE: what the close may do with the post_match file it finds for its day. */
+function autocloseDecision(prior, lastTs) {
+  if (prior == null) return { act: "write", prev: null };
+  const his = hisResultOf(prior);
+  if (his) return { act: "his", result: his };
+  const prev = parseMachineRecord(prior);
+  if (!prev) return { act: "foreign" };
+  const current = !!prev.turns_until && Date.parse(prev.turns_until) >= Date.parse(String(lastTs));
+  if (!current) return { act: "refresh", prev };
+  if (prev.compile_done && prev.judge_settled) return { act: "nothing-new", prev };
+  return { act: "unsettled", prev, redo: [...(prev.compile_done ? [] : ["compile"]), ...(prev.judge_settled ? [] : ["judge"])] };
+}
+
+/** renderMachineRecord — post_match/D.md written by CODE: his two lines NAMED absent, never fabricated (F1: no legal RESULT;
+ *  the KAL-LINE carries a colon, so KAL_RE — manager.mjs's and daily_green's parser — never matches it). */
+function renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine, judgeLine }) {
+  const L = [];
+  L.push(`${BADGE} POST-MATCH · ${day} · closed by code — his word not given`);
+  L.push("");
+  L.push(`CLOSED-BY: code · ${anchor} anchor · ${at}`);
+  L.push("RESULT: absent (his word not given; the day closed itself)");
+  L.push("KAL-LINE: absent");
+  L.push("");
+  L.push(`EVIDENCE: ${tt.turns} captured study turn(s) · turns_until ${tt.last_ts} · ${tt.outside} row(s) of his other sessions that day counted apart`);
+  for (const s of ev.sessions) L.push(`  · session ${s.id} · source ${s.sources.join(" + ")} · ${(tt.per_session && tt.per_session[s.id]) || 0} captured turn(s)`);
+  for (const m of ev.misses.slice(0, 10)) L.push(`  · miss: the ${m.source} of ${m.session} — ${oneLine(m.why, 160)}`);
+  if (ev.misses.length > 10) L.push(`  · miss: … +${ev.misses.length - 10} more named misses`);
+  L.push(`  · read: teaching_audit ${oneLine(ev.read.teaching_audit || "—", 80)} · sitting ${oneLine(ev.read.sitting || "—", 90)} · transcript ${oneLine(ev.read.transcript || "—", 110)}`);
+  L.push(`ARCHIVE: ${oneLine(archiveLine, 220)}`);
+  L.push(compileLine);
+  L.push(judgeLine);
+  L.push("");
+  L.push("His half stays his: his full time (/full-time) writes his RESULT and KAL-line on top of this record, and this block stays below it (L9).");
+  return L.join("\n") + "\n";
+}
+
+/** compileLineOf — the record's compile line from the compiler's own two runs: the scope seed (`compile --session`), then
+ *  `fulltime`. DONE only when both exit 0; anything else says NOTES NOT DONE, out loud, and stays UNSETTLED. */
+function compileLineOf(seed, full) {
+  const sum = (r) => (String((r && r.stdout) || "").split(/\r?\n/).find((l) => l.startsWith("notes_compiler:")) || "").replace(/^notes_compiler:\s*/, "");
+  if (!seed || seed.status !== 0) return `COMPILE: NOTES NOT DONE · compile --session ${exitOf(seed)}: ${oneLine(sum(seed) || lastLineOf(seed), 160)}`;
+  // row 914 G6: notes the deadline did not reach keep the compile UNSETTLED by count (the next anchor's gate takes them), never DONE
+  const unreached = Number((/(\d+) note\(s\) not reached by the deadline/.exec(sum(full)) || [])[1] || 0);
+  if (full && unreached > 0) return `COMPILE: UNSETTLED · ${unreached} note(s) not reached by the deadline — the next anchor gates them · notes_compiler: ${oneLine(sum(full), 160)}`;
+  if (!full || full.status !== 0) return `COMPILE: NOTES NOT DONE · fulltime ${exitOf(full)}: ${oneLine(sum(full) || lastLineOf(full), 160)}`;
+  return `COMPILE: DONE · notes_compiler: ${oneLine(sum(full), 200)} · scope seeded by compile --session ×${seed.sessions || 0} (${oneLine(sum(seed), 90)})`;
+}
+
+/** judgeLineOf — the record's judge line, read off `gaffer_brain.mjs judge-due`'s own printed lines (gaffer_brain.mjs:2327-
+ *  2334). SETTLED = the round banked, or nothing outstanding; every other answer is UNSETTLED: the next anchor runs it again. */
+function judgeLineOf(r) {
+  const first = String((r && r.stdout) || "").split(/\r?\n/).find((l) => l.startsWith("gaffer_brain:")) || lastLineOf(r) || "no output";
+  const line = oneLine(first, 220);
+  if (!r || r.status !== 0) return `JUDGE: NOT BANKED · ${exitOf(r)} · ${line}`;
+  if (/^gaffer_brain: not due \(day\.close\) — nothing outstanding/.test(first) || /^gaffer_brain: nothing captured since the last judge/.test(first)) return `JUDGE: SETTLED · nothing outstanding · ${line}`;
+  if (/^gaffer_brain: not due /.test(first)) return `JUDGE: NOT DUE · ${line}`;
+  if (/^gaffer_brain: \d+ item\(s\) graded in ONE Opus call/.test(first)) return /still outstanding/.test(first) ? `JUDGE: NOT BANKED · partly graded · ${line}` : `JUDGE: SETTLED · banked · ${line}`;
+  return `JUDGE: NOT BANKED · ${line}`;
+}
+
+/** autoclose — the machine half of the close (see the header above). Returns the exit code; never process.exit (a piped
+ *  stdout on Windows is asynchronous, and the conductor tees this organ's voice into its log). */
+async function autoclose(argv) {
+  const opt = (k) => { const i = argv.indexOf(k); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[i + 1] : null; };
+  const dry = argv.includes("--dry");
+  const anchor = opt("--anchor");
+  if (!ANCHORS.includes(anchor)) { console.error("postmatch: autoclose --date <YYYY-MM-DD|chain|chain-1> --anchor <evening|morning> [--dry] — the conductor's dayclose steps pass both; a hand back-fill passes its day and --anchor morning"); return 2; }
+  const dres = resolveAutocloseDay(opt("--date"));
+  if (dres.error) { console.error(`postmatch: autoclose REFUSED — ${dres.error}`); return 2; }
+  const day = dres.day;
+  const clock = autocloseClock();
+  if (clock.door) console.error(`postmatch: autoclose clock door ${clock.door}`);
+  // row 914 G-n (b): THE DEADLINE, on the step's clock. A child starts only when the time left covers its own budget plus the
+  // budgets reserved for the calls after it; its spawn timeout is the time left minus that reserve, so a hung child never eats a
+  // later child's slot. A call that does not fit is not started, and its line says so: UNSETTLED, not reached.
+  const dl = autocloseDeadline({ at: clock.at });
+  if (dl.door) console.error(`postmatch: autoclose deadline door ${dl.door}`);
+  const { fits, spawnMs } = closeTimer({ at: clock.at, dlMs: dl.ms });   // the ONE clock: every time left below is read through it
+  const { spawnSync } = await import("node:child_process");
+  const run = (file, args, { env = process.env, timeout = CHILD_TIMEOUT_MS } = {}) => spawnSync(process.execPath, [join(__dirname, file), ...args],
+    { cwd: join(__dirname, ".."), encoding: "utf8", windowsHide: true, timeout, env });
+  const voice = (r) => { if (r && r.stdout) process.stdout.write(r.stdout); if (r && r.stderr) process.stderr.write(r.stderr); };
+
+  // (i) THE ARCHIVE CATCHES UP — archivist's own CLI (notes_compiler fullTime's own first step and number, :633), best effort
+  let archiveLine = "not run (--dry)";
+  if (!dry) {
+    const a = run("archivist.mjs", ["run"]);
+    archiveLine = a.status === 0 ? `caught up (archivist run: ${oneLine(lastLineOf(a), 140)})`
+      : `NOT CAUGHT UP (archivist run ${exitOf(a)}: ${oneLine(lastLineOf(a), 140)}) — the close reads what the archive holds`;
+  }
+
+  // (ii) THE EVIDENCE — no study session, or no captured study turn: ONE line, nothing run, nothing written (F5)
+  const { sessionsNamedOn, studyTurnsOfDay } = await import("./exchanges.mjs");
+  const { studySessionsOfDay } = await import("./study_scope.mjs");
+  const named = sessionsNamedOn(day);
+  const ev = studySessionsOfDay(day, { archiveSessions: named.sessions });
+  const ids = ev.sessions.map((s) => s.id);
+  const tt = studyTurnsOfDay(day, ids);
+  if (!ids.length || tt.turns < 1) {
+    console.log(`autoclose · ${day} · no evidence · nothing run (${ids.length} study session(s) · ${tt.turns} captured study turn(s) · teaching_audit ${oneLine(ev.read.teaching_audit || "—", 70)} · archive ${oneLine(archiveLine, 90)})`);
+    return 0;
+  }
+
+  // (iii) THE QUIET RULE (F3) — the evening waits while study may still be arriving; the morning step closes that day
+  const quiet = quietVerdict({ anchor, lastTs: tt.last_ts, at: clock.at });
+  if (quiet.defer) {
+    console.log(`autoclose · ${day} · deferred · last study turn ${quiet.age_min} min ago (under ${AUTOCLOSE_QUIET_MIN}; the morning step closes it) · nothing written`);
+    return 0;
+  }
+
+  // (iv) IDEMPOTENT BY DAY
+  const pmFile = join(PM_DIR, `${day}.md`);
+  let prior = null;
+  try { if (existsSync(pmFile)) prior = readFileSync(pmFile, "utf8"); }
+  catch (e) { console.error(`postmatch: autoclose — ${pmFile} exists and cannot be read (${oneLine((e && e.code) || (e && e.message) || e, 60)}) — nothing written`); return 1; }
+  const dec = autocloseDecision(prior, tt.last_ts);
+  if (dec.act === "his") { console.log(`autoclose · ${day} · closed by his word (RESULT ${dec.result}) · never touched`); return 0; }
+  if (dec.act === "foreign") { console.error(`autoclose · ${day} · post_match/${day}.md is neither his close nor a machine record — never touched (a hand's file is not code's to overwrite)`); return 0; }
+  if (dec.act === "nothing-new") { console.log(`autoclose · ${day} · nothing new (turns_until ${dec.prev.turns_until} ≥ the last study turn ${tt.last_ts}; the compile done, the judge settled) · nothing written`); return 0; }
+
+  // the compiler's own CLI, twice — the scope seed, then fulltime — keyed to THE CLOSED DAY, never the clock's (row 883)
+  const noteDay = day;
+  const compileRun = () => {
+    // row 914 G5: the compile starts only when the time left covers its seed, one reader budget, the judge and the card after it
+    const f0 = fits(CHILD_TIMEOUT_MS + READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS);
+    if (!f0.ok) return `COMPILE: UNSETTLED · ${f0.line} (the compile's seed, one reader budget, the judge and the card)`;
+    const s0 = spawnMs(f0, READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS);
+    if (!s0.ok) return `COMPILE: UNSETTLED · ${s0.line} (the compile's seed)`;
+    const seed = run("notes_compiler.mjs", ["compile", "--date", noteDay, ...ids.flatMap((s) => ["--session", s])], { timeout: s0.ms });
+    voice(seed);
+    let full = null;
+    if (seed.status === 0) {
+      // row 914 G6: fulltime carries the GATE's deadline — the close's, minus the judge's budget and the card's — so the notes never
+      // eat the judge's slot; handed as a real-clock instant (the time left, translated), so a child on the real clock agrees
+      const f1 = fits(READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS);
+      if (!f1.ok) return `COMPILE: UNSETTLED · fulltime ${f1.line} (one reader budget, the judge and the card)`;
+      const s1 = spawnMs(f1, JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS);
+      if (!s1.ok) return `COMPILE: UNSETTLED · fulltime ${s1.line}`;
+      const gateLeft = s1.ms;
+      full = run("notes_compiler.mjs", ["fulltime", "--date", noteDay, "--no-archive-run", "--deadline", new Date(Date.now() + gateLeft).toISOString()], { timeout: gateLeft });
+      voice(full);
+    }
+    return compileLineOf({ status: seed.status, stdout: seed.stdout, stderr: seed.stderr, error: seed.error, signal: seed.signal, sessions: ids.length }, full);
+  };
+  // the judge round through its own CODE door — judgeDue's rule (the PACER's idle rule) decides; nothing banked = not due
+  const judgeRun = () => {
+    const f = fits(JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS);   // row 914 G5: the judge's own budget plus the card's after it
+    if (!f.ok) return `JUDGE: UNSETTLED · ${f.line} (the judge and the card)`;
+    const s = spawnMs(f, CHILD_TIMEOUT_MS);
+    if (!s.ok) return `JUDGE: UNSETTLED · ${s.line} (the judge)`;
+    const r = run("gaffer_brain.mjs", ["judge-due", "--trigger", "day.close"], { env: { ...process.env, ARSENAL_ORGAN: "1" }, timeout: s.ms });
+    voice(r);
+    return judgeLineOf(r);
+  };
+  const shortJudge = (l) => l.replace(/^JUDGE: /, "judge ").split(" · ").slice(0, 2).join(" · ");
+
+  if (dec.act === "unsettled") {
+    // row 891 (1): re-run ONLY what did not finish and refresh ONLY its line — the record's other bytes stay as they are
+    if (dry) { console.log(`autoclose · ${day} · unsettled (${dec.redo.join(" + ")}) · --dry: would re-run ${dec.redo.join(" + ")} and refresh only that line · nothing written`); return 0; }
+    let text = prior;
+    if (dec.redo.includes("compile")) { const l = compileRun(); text = text.replace(dec.prev.compile_line, () => l); }
+    if (dec.redo.includes("judge")) { const l = judgeRun(); text = text.replace(dec.prev.judge_line, () => l); }
+    if (text === prior) { console.log(`autoclose · ${day} · unsettled (${dec.redo.join(" + ")}) · re-run, the same answer · nothing written`); return 0; }
+    try { writeAtomic(pmFile, text); } catch (e) { console.error(`postmatch: autoclose — the refreshed line could NOT be written (${oneLine((e && e.message) || e, 120)})`); return 1; }
+    const after = parseMachineRecord(text) || {};
+    console.log(`autoclose · ${day} · refreshed ${dec.redo.join(" + ")} line(s) (${anchor} anchor, no new study turn) · compile ${after.compile_done ? "DONE" : "NOT DONE"} · ${shortJudge(after.judge_line || "")} → ${pmFile}`);
+    return 0;
+  }
+
+  // (v) THE MACHINE RECORD — written first; the compile and the judge fill their lines as they finish
+  const at = clock.at.toISOString();
+  const record = (compileLine, judgeLine) => renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine, judgeLine });
+  if (dry) { console.log("--- AUTOCLOSE DRY RUN (nothing written) ---\n" + record(PENDING_COMPILE, PENDING_JUDGE)); return 0; }
+  const did = dec.act === "refresh" ? "refreshed" : "closed";
+  try { writeAtomic(pmFile, record(PENDING_COMPILE, PENDING_JUDGE)); }
+  catch (e) { console.error(`postmatch: autoclose — the machine record could NOT be written (${oneLine((e && e.message) || e, 120)}) — the day is NOT closed`); return 1; }
+  // (vi) THE NOTES
+  const compileLine = compileRun();
+  // (vii) THE JUDGE ROUND
+  let judgeLine = PENDING_JUDGE;
+  try {
+    writeAtomic(pmFile, record(compileLine, PENDING_JUDGE));
+    judgeLine = judgeRun();
+    writeAtomic(pmFile, record(compileLine, judgeLine));
+  } catch (e) { console.error(`postmatch: autoclose — a line of the record could NOT be written (${oneLine((e && e.message) || e, 120)}); the next anchor finishes it`); return 1; }
+  // (viii) HIS HALF — ONE card, after an evening close only
+  let card = "no card (the morning anchor files none)";
+  const fc = fits(CHILD_TIMEOUT_MS);   // row 914 G5: the card starts only with its own budget left
+  if (anchor === "evening" && !fc.ok) card = `CARD NOT FILED (${fc.line} — the card)`;
+  else if (anchor === "evening") {
+    const c = run("captains_call.mjs", ["file", "--line", `${day}: the day closed itself — your HIT/MISS and tomorrow's line, if you want (/full-time)`,
+      "--key", `dayclose:${day}`, "--why-code-cannot-decide", "his HIT/MISS and his KAL-line are his own words: code closed the machine half of the day and may never speak them (rows 873 (3) / 877 F1-F2)"], { timeout: 30000 });
+    card = c.status === 0 ? oneLine(lastLineOf(c).replace(/^captains_call:\s*/, "card "), 120) : `CARD NOT FILED (captains_call ${exitOf(c)}: ${oneLine(lastLineOf(c), 100)})`;
+  }
+  // (ix) ONE summary line
+  console.log(`autoclose · ${day} · ${did} by code (${anchor} anchor) · ${tt.turns} captured study turn(s) in ${ids.length} session(s) · ${compileLine.startsWith("COMPILE: DONE") ? "notes DONE" : "NOTES NOT DONE"} · ${shortJudge(judgeLine)} · ${card} → ${pmFile}`);
+  return 0;
+}
+
+// ---------------------------------------------------------------------------
 // selftest — fixtures only, everything in-memory
 // ---------------------------------------------------------------------------
 async function selftest() {
@@ -541,6 +890,93 @@ async function selftest() {
     }
   }
 
+  // ── mclose (rows 873 (2) / 877 F1-F3 / 891) — THE DAY CLOSES ITSELF: the machine half, pure and in-memory ──
+  {
+    const SID = "5d17150f-fc93-44f8-b209-2a8dafc64ddd";
+    const tt = { turns: 3, last_ts: "2026-11-13T09:17:57.037Z", outside: 5, per_session: { [SID]: 3 } };
+    const ev = { sessions: [{ id: SID, sources: ["teaching_audit", "sitting"] }], misses: [{ session: "x", source: "transcript", why: "transcript absent (p)" }],
+      read: { teaching_audit: "3 study row(s)", sitting: "sit_x · host bound", transcript: "1 archive-named session(s)" } };
+    const recWith = (judgeLine, compileLine = "COMPILE: DONE · notes_compiler: 2026-11-13 IST · compiled 1") => renderMachineRecord({ day: "2026-11-13", anchor: "evening",
+      at: "2026-11-13T16:57:00.000Z", ev, tt, archiveLine: "caught up", compileLine, judgeLine });
+    const rec = recWith("JUDGE: NOT DUE · gaffer_brain: not due (day.close) — the newest unjudged capture is 5 min old (< 20) — the round may still be live");
+    const settledRec = recWith("JUDGE: SETTLED · banked · gaffer_brain: 1 item(s) graded in ONE Opus call · types: doubt_quality");
+    assert("AUTOCLOSE (F1) — the machine record NAMES his two lines absent: daily_green's RESULT regex and KAL_RE (manager.mjs's parser) both find NOTHING, so rung 8 stays RED by its own code",
+      /^RESULT: absent \(his word not given; the day closed itself\)$/m.test(rec) && /^KAL-LINE: absent$/m.test(rec) && hisResultOf(rec) === null && !KAL_RE.test(rec)
+      && /^CLOSED-BY: code · evening anchor · 2026-11-13T16:57:00\.000Z$/m.test(rec));
+    const p = parseMachineRecord(rec);
+    assert("AUTOCLOSE — the record reads back: anchor, turns, turns_until, the compile DONE, the judge NOT DUE = UNSETTLED (row 891 (1): the next anchor runs the judge again)",
+      !!p && p.anchor === "evening" && p.turns === 3 && p.turns_until === tt.last_ts && p.compile_done === true && p.judge_settled === false && parseMachineRecord(settledRec).judge_settled === true);
+    assert("AUTOCLOSE — the judge line: banked and nothing-outstanding are SETTLED; not due inside the idle definition, a dead lane, an undeclared door, a partial round are UNSETTLED",
+      /^JUDGE: SETTLED · banked/.test(judgeLineOf({ status: 0, stdout: "gaffer_brain: 1 item(s) graded in ONE Opus call · types: doubt_quality\n" }))
+      && /^JUDGE: SETTLED · nothing outstanding/.test(judgeLineOf({ status: 0, stdout: "gaffer_brain: not due (day.close) — nothing outstanding — every captured item is already judged\n" }))
+      && /^JUDGE: NOT DUE/.test(judgeLineOf({ status: 0, stdout: "gaffer_brain: not due (day.close) — the newest unjudged capture is 5 min old (< 20) — the round may still be live\n" }))
+      && /^JUDGE: NOT BANKED/.test(judgeLineOf({ status: 1, stdout: "gaffer_brain: the judge lane did not answer (x) — the round STAYS in the queue and nothing was invented. Run judge-round again.\n" }))
+      && /^JUDGE: NOT BANKED/.test(judgeLineOf({ status: 1, stdout: "gaffer_brain: \"day.close\" is not a declared code trigger (sitting.close | pacer) — an undeclared door mints no stamp\n" }))
+      && /^JUDGE: NOT BANKED · partly/.test(judgeLineOf({ status: 0, stdout: "gaffer_brain: 1 item(s) graded in ONE Opus call · types: x · 1 still outstanding\n" })));
+    assert("AUTOCLOSE — the compile line is DONE only when BOTH of the compiler's own runs (the --session seed, then fulltime) exit 0; anything else says NOTES NOT DONE",
+      /^COMPILE: DONE/.test(compileLineOf({ status: 0, stdout: "notes_compiler: 2026-11-13 IST · compiled 1\n", sessions: 1 }, { status: 0, stdout: "notes_compiler: 2026-11-13 IST · compiled 0 · unchanged 1\n" }))
+      && /^COMPILE: NOTES NOT DONE · fulltime exit 1/.test(compileLineOf({ status: 0, stdout: "", sessions: 1 }, { status: 1, stdout: "notes_compiler: x\n" }))
+      && /^COMPILE: NOTES NOT DONE · compile --session did not finish/.test(compileLineOf({ status: null, signal: "SIGTERM", sessions: 1 }, null)));
+    const TOK = `2026-11-13|${new Date().toISOString()}`;
+    assert("AUTOCLOSE — the chain's day comes off ITS day-key token: `chain` = the token's day, `chain-1` = the slept day before it; a literal day is itself; no token = REFUSED by name, never now()",
+      resolveAutocloseDay("chain", { env: { ARSENAL_DAY_KEY: TOK } }).day === "2026-11-13" && resolveAutocloseDay("chain-1", { env: { ARSENAL_DAY_KEY: TOK } }).day === "2026-11-12"
+      && resolveAutocloseDay("2026-10-18", { env: {} }).day === "2026-10-18" && /no chain day-key token/.test(resolveAutocloseDay("chain", { env: {} }).error || "")
+      && !!resolveAutocloseDay("tomorrow", { env: {} }).error);
+    const T0 = "2026-11-13T16:20:00.000Z";
+    const inside = autocloseClock({ env: { [AUTOCLOSE_CLOCK_ENV]: T0 }, here: join(tmpdir(), "mclose-copy", "scripts"), now: () => new Date(0) });
+    const outside = autocloseClock({ env: { [AUTOCLOSE_CLOCK_ENV]: T0 }, here: resolve(tmpdir(), "..", `not-tmp-${process.pid}`, "scripts"), now: () => new Date(0) });
+    assert("AUTOCLOSE (F3) — THE CLOCK DOOR, planted both ways: honoured for a copy under os.tmpdir(); a tree outside it runs on the real clock and SAYS the door was refused; no door, no line",
+      inside.at.toISOString() === T0 && /honoured/.test(inside.door || "") && outside.at.getTime() === 0 && /REFUSED/.test(outside.door || "")
+      && autocloseClock({ env: {}, now: () => new Date(0) }).door === null);
+    // row 914 G-n (b): THE DEADLINE — the budget summed from its owners, the deadline door planted both ways, the unreached named
+    assert("AUTOCLOSE (row 914 G) — THE BUDGET IS SUMMED IN CODE: one reader budget + one judge budget + one child budget per child (archive · compile · card), each read from its owner",
+      autocloseBudget() === READER_BUDGET_MS + JUDGE_BUDGET_MS + AUTOCLOSE_CHILDREN.length * CHILD_TIMEOUT_MS && AUTOCLOSE_CHILDREN.join() === "archive,compile,card");
+    const atD = new Date(T0), D1 = "2026-11-13T17:00:00.000Z";
+    const dIn = autocloseDeadline({ at: atD, env: { [AUTOCLOSE_DEADLINE_ENV]: D1 }, here: join(tmpdir(), "mclose-copy", "scripts"), uptimeS: 0 });
+    const dOut = autocloseDeadline({ at: atD, env: { [AUTOCLOSE_DEADLINE_ENV]: D1 }, here: resolve(tmpdir(), "..", `not-tmp-${process.pid}`, "scripts"), uptimeS: 0 });
+    assert("AUTOCLOSE (row 914 G) — THE DEADLINE DOOR, planted both ways: honoured for a copy under os.tmpdir(); outside it the boot instant plus the summed budget stands and the refusal is said",
+      dIn.ms === Date.parse(D1) && /honoured/.test(dIn.door || "") && dOut.ms === atD.getTime() + autocloseBudget() && /REFUSED/.test(dOut.door || "")
+      && autocloseDeadline({ at: atD, env: {}, uptimeS: 2 }).ms === atD.getTime() - 2000 + autocloseBudget());
+    // row 932 (lane M's m914c diagnosis): every value the close hands to spawn is a safe positive integer, planted with a FRACTIONAL
+    // uptime (the kind process.uptime() returns), so this selftest alone catches the fraction that killed the build witness
+    {
+      const dlF = autocloseDeadline({ at: atD, env: {}, uptimeS: 0.0829779 });
+      const tm = closeTimer({ at: atD, dlMs: dlF.ms, realNow: () => 0 });
+      const vals = [[CHILD_TIMEOUT_MS + READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS, READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS],
+        [READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS, JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS], [JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS, CHILD_TIMEOUT_MS]]
+        .map(([need, reserve]) => { const f = tm.fits(need); return f.ok ? tm.spawnMs(f, reserve) : { ok: false, ms: null }; });
+      assert("AUTOCLOSE (row 932) — THE SPAWN VALUE: under a fractional uptime the compile's seed, fulltime and the judge each get a safe positive whole number of ms; a fraction, zero or a negative starts nothing and says so; the one clock reads the step's instant",
+        vals.every((v) => v.ok && Number.isSafeInteger(v.ms) && v.ms > 0)
+        && tm.spawnMs({ left: 1000.5 }, 0).ok === false && tm.spawnMs({ left: 0 }, 0).ok === false && tm.spawnMs({ left: 5 }, 10).ok === false
+        && /^not started · /.test(tm.spawnMs({ left: 1000.5 }, 0).line) && tm.stepNow() === atD.getTime());
+    }
+    assert("AUTOCLOSE (row 914 G6) — notes the deadline did not reach make the compile line UNSETTLED by count, never DONE",
+      /^COMPILE: UNSETTLED · 1 note\(s\) not reached by the deadline/.test(compileLineOf({ status: 0, stdout: "notes_compiler: x\n", sessions: 1 }, { status: 1, stdout: "notes_compiler: 2026-11-13 IST · compiled 0 (0 superseding) · unchanged 2 · refused 0 · gate 1 pass / 0 fail / 0 absent (named) / 0 not run (reader stub) · names guard OFF · 1 note(s) not reached by the deadline\n" })));
+    {
+      const own = readFileSync(fileURLToPath(import.meta.url), "utf8"), a0 = own.indexOf("async function autoclose("), body = a0 < 0 ? "" : own.slice(a0, own.indexOf("\n}\n", a0));
+      assert("AUTOCLOSE (row 914 G5) — no child of the close carries a typed 20-minute timeout: each starts on the deadline's time left",
+        !!body && !/20\s*\*\s*60000/.test(body) && /timeout: s\.ms/.test(body));
+    }
+    const last = "2026-11-13T16:00:00.000Z", plus = (m) => new Date(Date.parse(last) + m * 60000);
+    assert("AUTOCLOSE (F3) — THE QUIET RULE: an EVENING close 29 min after the last study turn is DEFERRED, at 31 min it closes; the MORNING never defers",
+      quietVerdict({ anchor: "evening", lastTs: last, at: plus(29) }).defer === true && quietVerdict({ anchor: "evening", lastTs: last, at: plus(31) }).defer === false
+      && quietVerdict({ anchor: "morning", lastTs: last, at: plus(1) }).defer === false && quietVerdict({ anchor: "evening", lastTs: last, at: plus(29) }).age_min === 29);
+    const his = renderPostMatch({ hit: "HIT", signal: "s", kal: "kal axis b pehle", diag: null, disclosures: [], twinVoice: null, pendingBalls: [], matchday: 9, dateStr: "2026-11-13" });
+    const up = his + keptBlock(machineBlockOf(rec));
+    assert("--hit UPGRADE (row 873 (3)) — a MACHINE record lets his close through: HIS RESULT + KAL on top (the first legal RESULT and KAL_RE read HIS), the machine record byte-for-byte below MACHINE CLOSE (kept, L9)",
+      machineBlockOf(rec) === rec && up.startsWith(his) && up.endsWith(`\n${MACHINE_KEPT}\n${rec}`) && hisResultOf(up) === "HIT" && up.match(KAL_RE)[1].includes("kal axis b pehle")
+      && parseMachineRecord(up) === null && machineBlockOf(up) === rec && machineBlockOf(his) === null && machineBlockOf(null) === null);
+    assert("AUTOCLOSE (iv) — IDEMPOTENT BY DAY: HIS result is never touched; a current SETTLED record is nothing new; a current UNSETTLED one re-runs ONLY its unfinished step; a newer study turn refreshes it; a hand's file is never overwritten",
+      autocloseDecision(up, tt.last_ts).act === "his" && autocloseDecision(null, tt.last_ts).act === "write" && autocloseDecision(settledRec, tt.last_ts).act === "nothing-new"
+      && autocloseDecision(rec, tt.last_ts).act === "unsettled" && autocloseDecision(rec, tt.last_ts).redo.join() === "judge"
+      && autocloseDecision(recWith(PENDING_JUDGE, PENDING_COMPILE), tt.last_ts).redo.join() === "compile,judge"
+      && autocloseDecision(settledRec, "2026-11-13T23:00:00.000Z").act === "refresh" && autocloseDecision("a note of his, no result line\n", tt.last_ts).act === "foreign");
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8"), at0 = src.indexOf("async function autoclose(");
+    const body = at0 > 0 ? src.slice(at0, src.indexOf("\n}\n", at0)) : "";
+    assert("AUTOCLOSE (F2) — its body never writes season.json, notebook.json, routed_balls.json or SEASON.md and never arms a brain trigger (the evening voice rides HIS close)",
+      body.length > 2000 && /writeAtomic\(pmFile/.test(body) && !/writeAtomic\((SEASON|NOTEBOOK|ROUTED|SEASON_MD)\b/.test(body) && !/["/\\]brain\.mjs"/.test(body) && !/"trigger"/.test(body));
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -610,13 +1046,23 @@ async function main() {
     console.log(`postmatch: routed ${pick.length} throw-in(s) [${pick.map(b => b.id).join(", ")}]`);
     return;
   }
+  if (mode === "autoclose") {
+    // THE DAY CLOSES ITSELF (mclose) — the conductor's dayclose steps; exitCode, never process.exit (see autoclose())
+    process.exitCode = await autoclose(process.argv.slice(3));
+    return;
+  }
   const dry = process.argv.includes("--dry");
   const now = new Date();
   const dateStr = localDate(now);
 
+  // THE --hit UPGRADE (mclose · row 873 (3)): a day the MACHINE closed (autoclose) was never closed by HIM. His full time goes
+  // through, writes his RESULT + KAL on top, and keeps the machine record byte-for-byte below MACHINE CLOSE (kept, L9); a
+  // --force over his own upgraded close keeps it too. A file that cannot be read is never overwritten (the guard refuses).
+  const priorPm = (() => { try { return existsSync(join(PM_DIR, dateStr + ".md")) ? readFileSync(join(PM_DIR, dateStr + ".md"), "utf8") : null; } catch { return null; } })();
+  const machineKept = machineBlockOf(priorPm);
   // double-click guard: one full-time per day (a second click must never
   // double a matchday). --force is the deliberate override.
-  if (!dry && !process.argv.includes("--force") && existsSync(join(PM_DIR, dateStr + ".md"))) {
+  if (!dry && !process.argv.includes("--force") && existsSync(join(PM_DIR, dateStr + ".md")) && !parseMachineRecord(priorPm)) {
     const s = readJson(SEASON) || {};
     console.log(`postmatch: today is already closed (Matchday ${s.matches_played ?? "?"}). Nothing written. (--force to redo, if you really mean it)`);
     return;
@@ -661,7 +1107,7 @@ async function main() {
 
   const season = readJson(SEASON);
   const matchday = ((season && season.matches_played) || 0) + 1;
-  const md = renderPostMatch({ hit, signal, kal, diag, disclosures, twinVoice: twin && twin.voice, pendingBalls, matchday, dateStr });
+  const md = renderPostMatch({ hit, signal, kal, diag, disclosures, twinVoice: twin && twin.voice, pendingBalls, matchday, dateStr }) + keptBlock(machineKept);
 
   if (dry) {
     console.log("--- DRY RUN (nothing written) ---\n" + md);
@@ -744,7 +1190,7 @@ async function main() {
   const routeNote = route !== "all" ? ""
     : ledger.readable ? ` · ${pendingBalls.length} throw-in(s) routed`
     : " · throw-ins NOT routed (routing ledger unreadable — see above)";
-  console.log(`postmatch: ${hit} · Matchday ${matchday} · ${kal ? "KAL-line locked" : "no KAL-line (declined)"}${routeNote}${notesLine} → ${join(PM_DIR, dateStr + ".md")}`);
+  console.log(`postmatch: ${hit} · Matchday ${matchday} · ${kal ? "KAL-line locked" : "no KAL-line (declined)"}${routeNote}${machineKept ? " · the machine close kept below (L9)" : ""}${notesLine} → ${join(PM_DIR, dateStr + ".md")}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

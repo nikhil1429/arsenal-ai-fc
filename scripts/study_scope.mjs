@@ -43,7 +43,7 @@
 //   law is met by the entry that is already in organism:selftest). Its two CLI verbs, `scope` and
 //   `unbound`, are read-only hand checks (the architect's adoption re-run uses them).
 // ============================================================================
-import { readFileSync, openSync, readSync, closeSync, statSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { readFileSync, openSync, readSync, closeSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -665,6 +665,71 @@ export function lastHumanPrompt(path, tailBytes = 262144) {
   return null;
 }
 
+// ── THE DAY'S STUDY SESSIONS (mclose · THE DAY CLOSES ITSELF, row 873 (2); LENT by lane S to lane M, row 877 F6) ──
+// postmatch.mjs autoclose asks which sessions were STUDY on a past IST day — a day that is over has no open sitting, so the
+// live predicate above cannot answer it. Three sources, each NAMED on the session it found (F5: teaching_audit is the
+// durable one; a transcript can be deleted by Claude Code's retention, and sitting.json holds only the newest sitting):
+//   (a) teaching_audit.jsonl — that IST day's rows stamped scope "study" (the dispatcher's G0 verdict, teaching_audit.mjs:1818)
+//   (b) sitting.json — its host_session_id, when the sitting's open interval touches the day
+//   (c) a transcript — of each session the ARCHIVE names that day (HANDED IN by the caller: this leaf never learns where the
+//       archive lives) that reads entrypoint claude-desktop AND whose first human prompt is a learn opener (row 256, the
+//       unbound Desktop study). A named session whose transcript is absent is a NAMED miss. No folder is ever scanned.
+// Fail-closed like the predicate: a source that cannot be read finds nobody and says why. Writes nothing.
+export function studySessionsOfDay(day, { dir = STATE_DIR, archiveSessions = null, root = ROOT, home = homedir(), now = new Date() } = {}) {
+  const res = { day, sessions: [], misses: [], read: {} };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(day || ""))) return { ...res, why: `not an IST day: ${day}` };
+  const d0 = Date.parse(`${day}T00:00:00+05:30`), d1 = d0 + 86400000 - 1;   // IST is +05:30, no DST (notes_compiler.mjs dayBounds' shape)
+  const inDay = (iso) => { const t = Date.parse(String(iso || "")); return Number.isFinite(t) && t >= d0 && t <= d1; };
+  const found = new Map();
+  const add = (id, source, sittingId = null) => {
+    const s = found.get(id) || { id, sources: [], audit_rows: 0, sitting_ids: [] };
+    if (!s.sources.includes(source)) s.sources.push(source);
+    if (source === "teaching_audit") s.audit_rows++;
+    if (sittingId && !s.sitting_ids.includes(sittingId)) s.sitting_ids.push(sittingId);
+    found.set(id, s);
+  };
+  // (a) THE DURABLE SOURCE — teaching_audit.mjs is its sole writer; read only
+  let text = null;
+  try { text = readFileSync(join(dir, "teaching_audit.jsonl"), "utf8"); }
+  catch (e) { res.read.teaching_audit = e && e.code === "ENOENT" ? "absent" : `UNREADABLE (${(e && e.code) || "?"}) — finds nobody`; }
+  if (text !== null) {
+    let rows = 0, study = 0, torn = 0;
+    for (const l of text.split(/\r?\n/)) {
+      if (!l.trim()) continue;
+      let r; try { r = JSON.parse(l); } catch { torn++; continue; }
+      rows++;
+      if (!r || r.scope !== "study" || typeof r.session_id !== "string" || !r.session_id || !inDay(r.ts)) continue;
+      study++; add(r.session_id, "teaching_audit", typeof r.sitting_id === "string" ? r.sitting_id : null);
+    }
+    res.read.teaching_audit = `${study} study row(s) on ${day} of ${rows}${torn ? ` · ${torn} torn line(s) skipped` : ""}`;
+  }
+  // (b) THE SITTING — the newest one only, so a past day's host usually lives in (a) alone
+  const s = readSitting(dir);
+  if (!s || typeof s !== "object") res.read.sitting = "absent or unreadable";
+  else if (typeof s.host_session_id !== "string" || !s.host_session_id) res.read.sitting = `${s.id || "?"} · no host bound`;
+  else {
+    const a = Date.parse(String(s.opened_at || "")), b = s.closed_at ? Date.parse(String(s.closed_at)) : now.getTime();
+    if (Number.isFinite(a) && Number.isFinite(b) && a <= d1 && b >= d0) { add(s.host_session_id, "sitting", s.id || null); res.read.sitting = `${s.id || "?"} · host bound · its open interval touches ${day}`; }
+    else res.read.sitting = `${s.id || "?"} · its open interval does not touch ${day}`;
+  }
+  // (c) THE TRANSCRIPT — only of a session the archive names that day; never a folder scan
+  if (!Array.isArray(archiveSessions)) res.read.transcript = "not read — no archive-named sessions were handed in";
+  else {
+    const trig = learnTriggers();
+    let study = 0;
+    for (const id of archiveSessions) {
+      const tx = transcriptPathFor(id, { root, home });
+      if (!tx) { res.misses.push({ session: String(id), source: "transcript", why: "not a session id" }); continue; }
+      try { statSync(tx); } catch { res.misses.push({ session: id, source: "transcript", why: `transcript absent (${tx})` }); continue; }
+      if (entrypointOfTranscript(tx) !== "claude-desktop" || !isLearnOpener(firstHumanPrompt(tx) ?? "", trig)) continue;
+      study++; add(id, "transcript");
+    }
+    res.read.transcript = `${archiveSessions.length} archive-named session(s) · ${study} Desktop with a learn opener · ${res.misses.length} transcript(s) absent (named)`;
+  }
+  res.sessions = [...found.values()];
+  return res;
+}
+
 // ── CLI — by hand only (the hook path is the CALL shape above); read-only, prints one JSON line ──
 //   node scripts/study_scope.mjs scope   --session <id>                              → the predicate's verdict for that session
 //   node scripts/study_scope.mjs unbound --session <id> [--transcript p] [--prompt "…"] [--entrypoint claude-desktop|cli]
@@ -922,6 +987,49 @@ export function scopeSelfCheck() {
       && JSON.stringify(LESSON_PUBLISH_TOOLS) === JSON.stringify(["Artifact", "SendUserFile"]));
     check("LESSON ARTIFACT (row 811) · CASE — the tmp root upper-cased matches only where paths fold (win true), never on a case-sensitive host (win false)",
       !!LA(`${TMP.toUpperCase()}${PAD.slice(TMP.length)}/r.html`, SID, { tmp: TMP, win: true }) && LA(`${TMP.toUpperCase()}${PAD.slice(TMP.length)}/r.html`, SID, { tmp: TMP, win: false }) === null);
+  }
+  // mclose (row 873 (2), LENT by lane S) — THE DAY'S STUDY SESSIONS, planted both ways on a temp state dir and a temp home
+  {
+    const dir = mkdtempSync(join(tmpdir(), "study_scope-day-")), home = join(dir, "home"), R0 = "C:\\r";
+    const DAY = "2026-11-13", A = "5d17150f-0000-4000-8000-00000000000a", B = "b2409cd2-0000-4000-8000-00000000000b";
+    const DESK = "c1d9abce-0000-4000-8000-00000000000c", CLI = "e3316fbd-0000-4000-8000-00000000000d", ARCH = "9e29b88c-0000-4000-8000-00000000000e", GONE = "db82184b-0000-4000-8000-00000000000f";
+    const proj = join(home, ".claude", "projects", projectSlug(R0));
+    const tx = (id, entrypoint, first) => writeFileSync(join(proj, `${id}.jsonl`), [
+      JSON.stringify({ type: "user", isMeta: true, entrypoint, message: { content: "<local-command-caveat>x</local-command-caveat>" } }),
+      JSON.stringify({ type: "user", entrypoint, message: { content: [{ type: "text", text: first }] } }),
+    ].join("\n") + "\n");
+    const audit = (ts, session_id, scope, sitting_id = scope ? "sit_x" : null) => JSON.stringify({ ts, session_id, scope, sitting_id, concept: "neuralnet", step: 3, drifts: [] });
+    try {
+      mkdirSync(proj, { recursive: true });
+      writeFileSync(join(dir, "teaching_audit.jsonl"), [
+        audit("2026-11-13T03:00:00.000Z", A, "study", "sit_20261113"),
+        audit("2026-11-13T18:29:00.000Z", B, "study"),            // 23:59 IST on the 13th — that day
+        audit("2026-11-13T18:31:00.000Z", OTHER, "study"),        // 00:01 IST on the 14th — NOT that day
+        audit("2026-11-13T04:00:00.000Z", CLI, null),             // an unstamped row (engineering, or pre-G0) — never study
+        "{torn",
+      ].join("\n") + "\n");
+      writeFileSync(join(dir, "sitting.json"), JSON.stringify({ id: "sit_20261113", host_session_id: A, opened_at: "2026-11-13T02:25:00.000Z", closed_at: "2026-11-13T04:08:00.000Z" }));
+      tx(A, "claude-desktop", "learn"); tx(DESK, "claude-desktop", "<command-message>learn</command-message>\n<command-name>/learn</command-name>");
+      tx(CLI, "cli", "learn"); tx(ARCH, "claude-desktop", "architect");
+      const r = studySessionsOfDay(DAY, { dir, archiveSessions: [A, DESK, CLI, ARCH, GONE], root: R0, home });
+      const of = (id) => r.sessions.find((x) => x.id === id) || null;
+      check("DAY SESSIONS (mclose) · (a) teaching_audit — that IST day's scope:\"study\" rows find their sessions, the IST boundary held both ways (23:59 in, 00:01 out); an unstamped row never",
+        !!of(A) && !!of(B) && !of(OTHER) && of(B).sources.join() === "teaching_audit" && /2 study row\(s\) on 2026-11-13 of 4 · 1 torn/.test(r.read.teaching_audit), JSON.stringify(r.read));
+      check("DAY SESSIONS (mclose) · THE SOURCES AGREE — the host the sitting bound, the audit rows and its Desktop learn-opener transcript name ONE session, each source on it",
+        of(A) && of(A).sources.join() === "teaching_audit,sitting,transcript" && of(A).sitting_ids.includes("sit_20261113"), JSON.stringify(of(A)));
+      check("DAY SESSIONS (mclose) · (c) only a session the archive names, read off its OWN transcript: Desktop + a learn opener is study; a CLI 'learn', a Desktop 'architect' are not; an absent transcript is a NAMED miss",
+        !!of(DESK) && of(DESK).sources.join() === "transcript" && !of(CLI) && !of(ARCH) && !of(GONE)
+        && r.misses.length === 1 && r.misses[0].session === GONE && /transcript absent/.test(r.misses[0].why), JSON.stringify({ sessions: r.sessions.map((x) => x.id), misses: r.misses }));
+      const prev = studySessionsOfDay("2026-11-12", { dir, root: R0, home });
+      check("DAY SESSIONS (mclose) · (b) a sitting whose open interval does not touch the day finds nobody; with no archive list handed in, (c) is NOT READ and says so — never a folder scan",
+        prev.sessions.length === 0 && /does not touch 2026-11-12/.test(prev.read.sitting) && /not read/.test(prev.read.transcript), JSON.stringify(prev.read));
+      rmSync(join(dir, "teaching_audit.jsonl")); mkdirSync(join(dir, "teaching_audit.jsonl"));   // present but unreadable
+      writeFileSync(join(dir, "sitting.json"), "{torn");
+      const shut = studySessionsOfDay(DAY, { dir, archiveSessions: [], root: R0, home });
+      check("DAY SESSIONS (mclose) · FAIL-CLOSED — an unreadable audit file and a torn sitting find nobody and SAY so; a bad day key is refused by name",
+        shut.sessions.length === 0 && /UNREADABLE/.test(shut.read.teaching_audit) && /absent or unreadable/.test(shut.read.sitting)
+        && /not an IST day/.test(studySessionsOfDay("13-11-2026", { dir }).why || ""), JSON.stringify(shut.read));
+    } finally { rmSync(dir, { recursive: true, force: true }); }
   }
   return { pass: cases.filter((c) => c.ok).length, fail: cases.filter((c) => !c.ok).length, cases };
 }

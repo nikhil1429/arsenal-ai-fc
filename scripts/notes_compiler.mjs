@@ -93,8 +93,8 @@
 //        | glance [--date D] | status | born | selftest          (D = an IST day YYYY-MM-DD, default today)
 //   born = the ledger's birth at its landing (forks row 787 (1)): created EMPTY iff absent, never truncated.
 // ============================================================================
-import { readFileSync, appendFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
-import { join, dirname, basename } from "node:path";
+import { readFileSync, appendFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync, realpathSync } from "node:fs";
+import { join, dirname, basename, relative, isAbsolute, resolve as resolvePath } from "node:path";
 import { tmpdir } from "node:os";
 import { createHash, randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
@@ -113,6 +113,10 @@ export const COMPILER = `notes_compiler.mjs@${VERSION}`;
 export const READER_ROLE = "cold_reader";        // the models.mjs CLAUDE_ROLES row this gate asks for (LAW M)
 export const STUB_ENV = "ARSENAL_COLD_READER";   // "stub" ⇒ the stubbed reader, reader:"stub" on the row
 export const GITLEAKS_CONFIGS = Object.freeze([".gitleaks.local.toml", ".gitleaks.toml"]);   // hooks/pre-commit BELT 3's precedence
+// mclose row 914 G — THE COLD READER'S ONE BUDGET. liveReader's call and the day close's deadline (postmatch.mjs autocloseBudget)
+// both read this export, so the reader's timeout and the close's sum can never drift apart.
+export const READER_BUDGET_MS = 600000;
+export const CLOCK_ENV = "ARSENAL_NOTES_CLOCK";  // row 914 G6: the gate's deadline clock — honoured ONLY for a copy under os.tmpdir()
 const AXES = "abcdefghi".split("");
 const GUT_RE = /\b(knew|shaky|guessed)\b/i;
 const DIFF_RE = /```diff[^\n]*\n([\s\S]*?)```/g;
@@ -529,7 +533,7 @@ const parseReply = (text) => {
 /** liveReader — models.mjs's role through claudegen.mjs (a fresh `claude -p`, no tools).
  *  {ok, reply, reader, role} | {ok:false, cause, why, reader} — the cause is one of ABSENT_CAUSES. */
 export const ABSENT_CAUSES = Object.freeze(["role-unresolved", "claude-refused", "window-closed", "call-failed", "no-reply-json", "day-unmatched"]);
-export async function liveReader(note, { resolve = null, gen = null, timeoutMs = 600000 } = {}) {
+export async function liveReader(note, { resolve = null, gen = null, timeoutMs = READER_BUDGET_MS } = {}) {
   const res = resolve || (await import("./models.mjs")).resolveClaudeRole;
   const role = res(READER_ROLE);
   if (!role || !role.model) return { ok: false, cause: "role-unresolved", reader: `role:${READER_ROLE}/unresolved`, why: `models.mjs has no "${READER_ROLE}" role in CLAUDE_ROLES (LAW M: no model literal outside it) — nothing judged` };
@@ -546,8 +550,10 @@ export async function liveReader(note, { resolve = null, gen = null, timeoutMs =
   if (!reply) return { ok: false, cause: "no-reply-json", reader, role: rec, why: "the cold reader returned no JSON object — nothing judged" };
   return { ok: true, reply, reader, role: rec };
 }
-/** gateDay — ONE gate per live note of `date` that has no verdict yet (or every live note with `again`). */
-export async function gateDay({ date = todayIst(), stateDir = STATE_DIR, path = null, stub = false, again = false, expect = [], reader = null, now = () => new Date(), guard = (t) => namesGuard(t) } = {}) {
+/** gateDay — ONE gate per live note of `date` that has no verdict yet (or every live note with `again`). With a `deadline` (ms
+ *  epoch, row 914 G6) a note starts only while `clock()` leaves at least one READER_BUDGET_MS before it; without one, as before. */
+export async function gateDay({ date = todayIst(), stateDir = STATE_DIR, path = null, stub = false, again = false, expect = [], reader = null, now = () => new Date(), guard = (t) => namesGuard(t),
+  deadline = null, clock = () => Date.now() } = {}) {
   const ledger = path || join(stateDir, "compiled_notes.jsonl");
   let rows;
   try { rows = readRows(ledger); } catch (e) { return { ok: false, date, results: [], why: `compiled_notes.jsonl cannot be read (${clip(e && e.message, 120)})` }; }
@@ -557,6 +563,16 @@ export async function gateDay({ date = todayIst(), stateDir = STATE_DIR, path = 
   const results = [];
   let ok = true;
   for (const n of targets) {
+    // ROW 914 G6: under a deadline a note starts only when one whole reader budget is left, so no call is cut mid-note. A note
+    // not reached is written NOWHERE — it stays un-gated, the next anchor's gate takes it — and is named in the result.
+    if (deadline != null) {
+      const left = deadline - clock();
+      if (!(left >= READER_BUDGET_MS)) {
+        ok = false;
+        results.push({ of: n.id, concept: n.concept, axis: n.axis, op: "unreached", why: `not reached · ${Math.max(0, Math.floor(left / 1000))} s left to the deadline, ${READER_BUDGET_MS / 1000} s needed — un-gated, the next anchor takes it` });
+        continue;
+      }
+    }
     const r = stub ? { ok: true, reply: stubReader(n.note), reader: "stub" } : await (reader || liveReader)(n.note);
     if (!r.ok) {
       // ROW 774 (2): a cold read that cannot run (role unresolved, claude -p refused, window closed) writes a NAMED absence
@@ -627,7 +643,7 @@ export function glanceLines({ date = todayIst(), rows = [] } = {}) {
 // THE ANCHOR — full-time: the archive's own run, the compile, the gate
 // ---------------------------------------------------------------------------
 /** fullTime — the archive's run, the compile, the gate. `compile` and `gate` are injected only by this file's selftest (row 883 (2)'s plant). */
-export async function fullTime({ date = todayIst(), stub = false, archiveRun = true, compile = compileDay, gate = gateDay } = {}) {
+export async function fullTime({ date = todayIst(), stub = false, archiveRun = true, compile = compileDay, gate = gateDay, deadline = null, clock = undefined } = {}) {
   const lines = [];
   if (archiveRun) {
     const r = spawnSync(process.execPath, [join(HERE, "archivist.mjs"), "run"], { cwd: ROOT, encoding: "utf8", timeout: 300000, windowsHide: true });
@@ -637,15 +653,32 @@ export async function fullTime({ date = todayIst(), stub = false, archiveRun = t
   const c = compile({ date });
   // ROW 883 (2): the gate is told which notes this compile wrote or kept, so a note its day key misses is named absent, never silent
   const expect = (c.results || []).filter((r) => r.id && ["compiled", "recompiled", "unchanged"].includes(r.op)).map((r) => r.id);
-  const g = c.ok || c.results.length ? await gate({ date, stub, expect }) : { ok: false, results: [], why: "no compile" };
+  const g = c.ok || c.results.length ? await gate({ date, stub, expect, ...(deadline != null ? { deadline, ...(clock ? { clock } : {}) } : {}) }) : { ok: false, results: [], why: "no compile" };
   return { ok: c.ok && g.ok, compile: c, gate: g, lines };
+}
+/** gateClock — THE GATE'S DEADLINE CLOCK (row 914 G6). His tree runs on the real clock, always; a COPY under os.tmpdir() (the
+ *  witness's) may hand it `<instant>` or `<instant>;<step ms>` through ARSENAL_NOTES_CLOCK, each read then advancing by the step,
+ *  so a witness can spend one reader budget per note. ONE door, planted both ways (postmatch.mjs autocloseClock's pattern). */
+export function gateClock({ env = process.env, here = HERE, tmp = tmpdir(), now = () => Date.now() } = {}) {
+  const raw = env ? env[CLOCK_ENV] : null;
+  if (!raw) return { clock: now, door: null };
+  const real = (p) => { try { return realpathSync(p); } catch { return resolvePath(p); } };
+  const rel = relative(real(tmp), real(here));
+  if (!rel || rel.startsWith("..") || isAbsolute(rel)) return { clock: now, door: `REFUSED — ${CLOCK_ENV} is honoured only for a copy under ${tmp}; this tree runs on the real clock` };
+  const [at, step] = String(raw).split(";");
+  const t0 = Date.parse(at), st = step === undefined ? 0 : Number(step);
+  if (!Number.isFinite(t0) || !Number.isFinite(st) || st < 0) return { clock: now, door: `REFUSED — ${CLOCK_ENV}=${clip(raw, 40)} is not an instant[;step ms]; the real clock stands` };
+  let k = 0;
+  return { clock: () => t0 + st * k++, door: `honoured (${new Date(t0).toISOString()}, +${st} ms a read) — a copy under ${tmp}` };
 }
 const summary = (date, c, g, stub) => {
   const n = (op) => c.results.filter((r) => r.op === op).length;
   const gated = (g.results || []).filter((r) => r.op === "gated");
+  const unreached = (g.results || []).filter((r) => r.op === "unreached").length;   // row 914 G6: only a deadline makes one
   return `notes_compiler: ${date} IST · compiled ${n("compiled") + n("recompiled")} (${n("recompiled")} superseding) · unchanged ${n("unchanged")} · refused ${n("refused")}`
-    + ` · gate ${gated.filter((r) => r.verdict === "pass").length} pass / ${gated.filter((r) => r.verdict === "fail").length} fail / ${(g.results || []).filter((r) => r.op === "absent").length} absent (named) / ${(g.results || []).filter((r) => r.op !== "gated" && r.op !== "absent").length} not run (reader ${stub ? "stub" : `role:${READER_ROLE}`})`
-    + ` · names guard ${c.guard ? (c.guard.ran ? "ran" : "OFF") : "not reached"}`;
+    + ` · gate ${gated.filter((r) => r.verdict === "pass").length} pass / ${gated.filter((r) => r.verdict === "fail").length} fail / ${(g.results || []).filter((r) => r.op === "absent").length} absent (named) / ${(g.results || []).filter((r) => r.op !== "gated" && r.op !== "absent" && r.op !== "unreached").length} not run (reader ${stub ? "stub" : `role:${READER_ROLE}`})`
+    + ` · names guard ${c.guard ? (c.guard.ran ? "ran" : "OFF") : "not reached"}`
+    + (unreached ? ` · ${unreached} note(s) not reached by the deadline` : "");
 };
 
 // ---------------------------------------------------------------------------
@@ -780,6 +813,25 @@ async function selftest() {
     assert("THE STUB FAILS A NOTE WITH FEWER THAN THREE TRAPS — even the seat's reader cannot pass what the note does not name",
       verdictOf({ ...n3.note, traps: n3.note.traps.slice(0, 2) }, stubReader({ ...n3.note, traps: n3.note.traps.slice(0, 2) })).verdict === "fail");
 
+    // ── row 914 G6: THE DEADLINE — a note starts only with one whole reader budget left; the unreached one is written nowhere ──
+    const LDL = join(tmp, "deadline.jsonl");
+    const twinNote = { ...n1, id: `${n1.id}-g6`, axis: n1.axis === "b" ? "c" : "b" };
+    writeFileSync(LDL, JSON.stringify(n1) + "\n" + JSON.stringify(twinNote) + "\n");
+    let tick = 0;
+    const t0 = Date.parse("2026-10-06T12:00:00Z"), stepClock = () => t0 + READER_BUDGET_MS * tick++;
+    const gDl = await gateDay({ path: LDL, stateDir: st, date: "2026-10-06", stub: true, now: T(18), guard: NOGUARD, deadline: t0 + 2 * READER_BUDGET_MS - 1, clock: stepClock });
+    const afterDl = readRows(LDL);
+    assert("DEADLINE (row 914 G6) — one whole reader budget left gates the first note; the second is UNREACHED by name and written nowhere (no gate row, no absent row), the result not ok",
+      gDl.ok === false && gDl.results.length === 2 && gDl.results[0].op === "gated" && gDl.results[1].op === "unreached" && /not reached/.test(gDl.results[1].why)
+      && afterDl.filter((r) => r.kind === "cold_gate").length === 1 && !afterDl.some((r) => r.of === gDl.results[1].of));
+    const gDl2 = await gateDay({ path: LDL, stateDir: st, date: "2026-10-06", stub: true, now: T(19), guard: NOGUARD });
+    assert("DEADLINE (row 914 G6) — the next gate with no deadline takes exactly the unreached note, as before",
+      gDl2.ok && gDl2.results.length === 1 && gDl2.results[0].of === gDl.results[1].of && gDl2.results[0].op === "gated");
+    const ownSrc = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    assert("DEADLINE (row 914 G6) — liveReader's default call budget IS the exported READER_BUDGET_MS, and its value is typed ONCE in this file",
+      /export async function liveReader\(note, \{ resolve = null, gen = null, timeoutMs = READER_BUDGET_MS \} = \{\}\)/.test(ownSrc)
+      && (ownSrc.match(new RegExp(`\\b${READER_BUDGET_MS}\\b`, "g")) || []).length === 1);
+
     // ── THE LIVE READER: models.mjs's role or nothing ────────────────────────
     const L2 = join(tmp, "live.jsonl");
     writeFileSync(L2, JSON.stringify(n1) + "\n");
@@ -907,7 +959,7 @@ async function main() {
   const date = flag(rest, "--date") || todayIst();
   const stub = rest.includes("--stub") || String(process.env[STUB_ENV] || "").toLowerCase() === "stub";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { console.error(`notes_compiler: --date is an IST day YYYY-MM-DD (${date})`); process.exitCode = 2; return; }
-  const say = (r) => { const line = `  ${r.concept}/${r.axis} ${r.op}${r.id ? ` ${r.id}` : ""}${r.supersedes ? ` (supersedes ${r.supersedes})` : ""}${r.verdict ? ` · ${r.verdict.toUpperCase()}` : ""}${r.cause ? ` · ABSENT (${r.cause})` : ""}${r.why ? ` — ${r.why}` : ""}`; (r.op === "refused" || r.op === "not-run" || r.op === "absent" ? console.error : console.log)(line); };
+  const say = (r) => { const line = `  ${r.concept}/${r.axis} ${r.op}${r.id ? ` ${r.id}` : ""}${r.supersedes ? ` (supersedes ${r.supersedes})` : ""}${r.verdict ? ` · ${r.verdict.toUpperCase()}` : ""}${r.cause ? ` · ABSENT (${r.cause})` : ""}${r.why ? ` — ${r.why}` : ""}`; (r.op === "refused" || r.op === "not-run" || r.op === "absent" || r.op === "unreached" ? console.error : console.log)(line); };
   switch (mode) {
     case "compile": {
       const c = compileDay({ date, concept: flag(rest, "--concept"), axis: flag(rest, "--axis"), sessions: flags(rest, "--session") });
@@ -926,7 +978,12 @@ async function main() {
       break;
     }
     case "fulltime": {
-      const f = await fullTime({ date, stub, archiveRun: !rest.includes("--no-archive-run") });
+      // row 914 G6: `--deadline <instant>` is the day close's (postmatch autoclose); his hand's fulltime passes none and runs as before
+      const dl = flag(rest, "--deadline"), deadline = dl == null ? null : Date.parse(dl);
+      if (dl != null && !Number.isFinite(deadline)) { console.error(`notes_compiler: --deadline is an instant (${dl})`); process.exitCode = 2; break; }
+      const gc = deadline == null ? null : gateClock();
+      if (gc && gc.door) console.error(`notes_compiler: gate clock door ${gc.door}`);
+      const f = await fullTime({ date, stub, archiveRun: !rest.includes("--no-archive-run"), ...(gc ? { deadline, clock: gc.clock } : {}) });
       for (const l of f.lines) (/NOT CAUGHT UP/.test(l) ? console.error : console.log)(`  ${l}`);
       if (f.compile.why) console.error(`notes_compiler: NOTHING COMPILED — ${f.compile.why}`);
       f.compile.results.forEach(say); (f.gate.results || []).forEach(say);
@@ -954,7 +1011,7 @@ async function main() {
     }
     case "selftest": await selftest(); break;
     default:
-      console.log("notes_compiler: compile [--date D] [--concept c] [--axis x] [--session <id>]… | gate [--date D] [--stub] [--again] | fulltime [--date D] [--stub] [--no-archive-run] | glance [--date D] | status | born | selftest   (D = IST day; ARSENAL_COLD_READER=stub stubs the reader)");
+      console.log("notes_compiler: compile [--date D] [--concept c] [--axis x] [--session <id>]… | gate [--date D] [--stub] [--again] | fulltime [--date D] [--stub] [--no-archive-run] [--deadline <instant>] | glance [--date D] | status | born | selftest   (D = IST day; ARSENAL_COLD_READER=stub stubs the reader)");
       if (mode) process.exitCode = 2;
   }
 }

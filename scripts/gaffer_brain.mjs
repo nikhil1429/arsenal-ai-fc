@@ -170,6 +170,9 @@ const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
 // died at 13:42 IST reading "flash pool dry" and the Gaffer forgot Hinglish, greeting-first,
 // Day 1. The role is `text`; GAFFER_WATCHER_MODEL still leads when set (LEGACY_ENV).
 const WATCHER_ROLE = "text";
+// mclose row 914 G (LENT by lane S, row 914 (4)) — THE JUDGE CALL'S ONE BUDGET: both Opus judge calls pass it, and the day
+// close's deadline (postmatch.mjs autocloseBudget) sums it, so the call's timeout and the close's sum can never drift apart.
+export const JUDGE_BUDGET_MS = 300000;
 const WATCHER_ENV = "GAFFER_WATCHER_MODEL";
 const watcherModel = () => modelsResolve(WATCHER_ROLE, { env: WATCHER_ENV }).model;   // for display: the model the next call will try FIRST
 // 20s. NOT a guess and NOT a latency target: it is the ceiling past which a
@@ -1829,6 +1832,8 @@ export function ownerCommand(s) {
 export const JUDGE_CODE_TRIGGERS = Object.freeze({
   "sitting.close": "sitting.mjs close() — his close or the sitting's own idle close (row 68 (d)); the round is over by definition, so anything outstanding is due",
   pacer: "a scheduled organ (the evening organ of forks row 48 (3)); due only when the NEWEST unjudged capture is older than the round's idle definition, so a live round is never judged mid-answer",
+  // mclose (rows 873 (2) / 877 F4 / 891 (1)) — LENT by lane S to lane M: its own door, the PACER's idle rule, never sitting.close's
+  "day.close": "postmatch.mjs autoclose — THE DAY CLOSES ITSELF at the evening anchor and, for a day the laptop slept through, the next morning's; the pacer's idle rule (a gate only gets stricter), and the morning anchor is the one that finds a round the evening found live",
 });
 const isCodeTrigger = (t) => Object.prototype.hasOwnProperty.call(JUDGE_CODE_TRIGGERS, String(t));
 // THE ROUND'S IDLE DEFINITION — INHERITED, NEVER GUESSED (LAW 7). sitting.mjs closes a sitting after
@@ -1841,6 +1846,7 @@ export function judgeDue(rows, { trigger, now = new Date(), idleMin = JUDGE_DUE_
   const out = outstandingGrades(rows);
   if (!out.length) return { due: false, why: "nothing outstanding — every captured item is already judged", outstanding: 0 };
   if (trigger === "sitting.close") return { due: true, why: "the sitting closed — the round is over", outstanding: out.length };
+  // pacer AND day.close (mclose, row 891 (1)): the IDLE rule below — never the unconditional branch above
   const newest = Math.max(...out.map((r) => Date.parse(r.ts || "")).filter(Number.isFinite));
   const quietMin = Number.isFinite(newest) ? (now.getTime() - newest) / 60000 : Infinity;
   return quietMin >= idleMin
@@ -1905,7 +1911,7 @@ export async function gradeJudge(deps = {}) {
   // shared append lane whose SCHEMA belongs to brain.mjs and to no appender.
   const gen = deps.generate || (async (p) => {
     const { claudeGen, ledgerForensics } = await import("./claudegen.mjs");
-    const r = await claudeGen(p, "opus", 300000, ["--effort", "max"], rides ? head : null);
+    const r = await claudeGen(p, "opus", JUDGE_BUDGET_MS, ["--effort", "max"], rides ? head : null);
     try {
       appendFileSync(BRAIN_LEDGER, JSON.stringify({
         ts: new Date().toISOString(), job: JUDGE_JOB, engine: "claude", model: "opus",
@@ -2146,7 +2152,7 @@ export async function gradeNight(deps = {}) {
     : readDugoutDay(day);
   const gen = deps.generate || (async (p) => {
     const { claudeGen } = await import("./claudegen.mjs");
-    return claudeGen(p, "opus", 300000, ["--effort", "max"]);
+    return claudeGen(p, "opus", JUDGE_BUDGET_MS, ["--effort", "max"]);
   });
   const r = await gen(buildNightPrompt(settled, transcript));
   if (!r || !r.ok) return { ok: false, reason: "lane-down", say: `gaffer_brain: the night read did not answer (${(r && r.error) || "no reply"}) — nothing was written and nothing was invented.` };
@@ -3189,6 +3195,22 @@ function selftest2(stub, S) {
               (() => { const m = /idle_close_min:\s*(\d+)/.exec(readFileSync(join(HERE, "sitting.mjs"), "utf8")); return !!m && Number(m[1]) === JUDGE_DUE_IDLE_MIN; })());
             assert("L2 · JUDGE-DUE · the code door opens only for an organ child (ARSENAL_ORGAN=1) — a prompt is told to type judge-round, which is stamped hand",
               codeDoorRefusal({ ARSENAL_ORGAN: "1" }) === null && /judge-round/.test(String(codeDoorRefusal({}))));
+            // (f) mclose — THE DECLARED TRIGGER day.close (rows 877 F4 / 891 (1), LENT by lane S): its own door, the PACER's idle rule
+            assert("mclose · DAY.CLOSE · a DECLARED door of its own (the day closes itself), named with its reason in the frozen map beside sitting.close and the pacer",
+              Object.isFrozen(JUDGE_CODE_TRIGGERS) && /autoclose/.test(String(JUDGE_CODE_TRIGGERS["day.close"] || "")) && judgeDue(q0, { trigger: "day.close", now: mins(60) }).refused !== true
+              && Object.keys(JUDGE_CODE_TRIGGERS).join() === "sitting.close,pacer,day.close");
+            assert("mclose · DAY.CLOSE · takes the PACER's idle rule, never sitting.close's unconditional one: at the same moment, inside the idle definition, sitting.close is due and day.close is NOT (a gate only gets stricter)",
+              judgeDue(q0, { trigger: "sitting.close", now: mins(JUDGE_DUE_IDLE_MIN - 5) }).due === true
+              && judgeDue(q0, { trigger: "day.close", now: mins(JUDGE_DUE_IDLE_MIN - 5) }).due === false
+              && /may still be live/.test(judgeDue(q0, { trigger: "day.close", now: mins(JUDGE_DUE_IDLE_MIN - 5) }).why));
+            assert("mclose · DAY.CLOSE · THE STRICTER DOOR STILL OPENS (row 891 (1)'s clause): the capture the evening found live reads DUE at the next morning's anchor; nothing outstanding is never due",
+              judgeDue(q0, { trigger: "day.close", now: mins(10 * 60) }).due === true
+              && judgeDue([capA, { kind: "settled", of: capA.id }], { trigger: "day.close", now: mins(10 * 60) }).due === false);
+            const dcRows = [];
+            const byDay = await gradeJudge({ rows: [capA], generate: genA, firedBy: "day.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
+              dispatch: () => ({ ok: true }), appendRow: (p, row) => { dcRows.push(row); return { ok: true }; } });
+            assert("mclose · DAY.CLOSE · a round it fires is stamped judged_by code · fired_by day.close on its settled row (the door names itself)",
+              byDay.ok === true && dcRows.length === 1 && dcRows[0].judged_by === "code" && dcRows[0].fired_by === "day.close", JSON.stringify(dcRows[0] || {}).slice(0, 200));
           } finally { try { rmSync(tmpL2, { recursive: true, force: true }); } catch { /* the OS reaps its own temp dir */ } }
         }
 
@@ -3321,11 +3343,11 @@ function selftest2(stub, S) {
         {
           const src2 = readFileSync(new URL(import.meta.url), "utf8");
           assert("BOTH PASSES ride claudeGen, which REFUSES outright when ANTHROPIC_API_KEY is set — Max subscription, never an API key, and no new vendor anywhere",
-            (src2.match(/claudeGen\(p, "opus", \d+, \["--effort", "max"\](?:, [^)]*)?\)/g) || []).length === 2
+            (src2.match(/claudeGen\(p, "opus", JUDGE_BUDGET_MS, \["--effort", "max"\](?:, [^)]*)?\)/g) || []).length === 2
             && /if \(process\.env\.ANTHROPIC_API_KEY\) return refuse\(\);/.test(readFileSync(join(HERE, "claudegen.mjs"), "utf8")));
           // …and PASS 1 is the one that hands over a head, which is the whole of BLOCK 1.
           assert("PASS 1 rides the SPLIT — the head is handed to claudeGen's fifth parameter, and only when this box can actually carry it",
-            /claudeGen\(p, "opus", 300000, \["--effort", "max"\], rides \? head : null\)/.test(src2));
+            /claudeGen\(p, "opus", JUDGE_BUDGET_MS, \["--effort", "max"\], rides \? head : null\)/.test(src2));
           // §9.1 (18 Aug 2026) — the two source-level halves of the external check, held
           // on the SAME read of this file (see the note in the §9.1 block above).
           assert("§9.1 · the search lane is claudeGen with the TOOL GRANT (the 11 Aug proof) — same door, same API-key refusal, never a new vendor",

@@ -42,6 +42,7 @@ import { armTrigger as brainArmTrigger } from "./brain.mjs";   // Block 1 (18 Au
 // SLOT; every one-shot it runs takes the chain's day, never its own now(). See
 // daykey.mjs's header for the two measured incidents (12 Aug 02:36 · 15 Aug 02:04).
 import { slotDate, dayKey, launchContext, issueDayKeyToken, stripDayKeyEnv, ENV_TOKEN, readSlots } from "./daykey.mjs";
+import { autocloseBudget } from "./postmatch.mjs";   // mclose row 914 G (LENT by lane S, row 914 (4)) — the day close's budget, summed by its owner
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 export { slotDate };   // the plan's export lives here too: `import { slotDate } from "./conductor.mjs"`
 
@@ -96,6 +97,13 @@ export const MORNING = [
   { id: "thalamus",      at: "07:00", args: ["scripts/thalamus.mjs"],  daemon: { port: 4113 } },
   { id: "cortex",        at: "07:02", args: ["scripts/cortex.mjs"],    daemon: { port: 4112 } },
   { id: "turnstile",     at: "07:04", args: ["scripts/turnstile.mjs"], daemon: { port: 4111 } },
+  // mclose (row 873 (2), LENT by lane S, rows 877 F6 / 914 / 919) — THE SLEPT DAY CLOSES ITSELF: the evening's dayclose for the
+  // chain's day minus one, read off the chain's day-key token (`chain-1`), never now(). Row 919 (A): BEFORE EVERY READER of
+  // reps_log, because the close's judge writes graded reps there (capture.mjs rep): physio reads it by import (physio.mjs:33,
+  // :1073), heartbeat by its spawned children (capture pull · fsrs · calibration · nemesis · learning_state), then the standalone
+  // fsrs · calibration · nemesis · learningstate the sheet needs. No `needs` on it and none on any later step: a killed, refused
+  // or over-deadline close fails ITS OWN step only. Its budget is the close's own sum (postmatch.mjs autocloseBudget).
+  { id: "dayclose-prev", at: "07:05", args: ["scripts/postmatch.mjs", "autoclose", "--date", "chain-1", "--anchor", "morning"], budget: autocloseBudget() },
   { id: "physio",        at: "07:30", args: ["scripts/physio.mjs"] },
   // ---- the body read. EVERYTHING below depends on this file existing and being today's.
   // (network flag removed 9 Aug F6 — nothing ever read it; the chain treats every step alike)
@@ -144,6 +152,10 @@ export const EVENING = [
   { id: "doubtminer", at: "22:45", args: ["scripts/doubtminer.mjs"] },
   { id: "physio-pm",  at: "22:50", args: ["scripts/physio.mjs"] },
   { id: "examiner",   at: "22:55", args: ["scripts/examiner.mjs", "stage"], needs: ["setpiece"] },
+  // mclose (row 873 (2), LENT by lane S, row 877 F6) — THE DAY CLOSES ITSELF: postmatch.mjs autoclose for the CHAIN'S day (the
+  // day-key token, `chain`), after the examiner and before the wall, so the wall shows the close. Born in chain, `at` derived
+  // from its neighbours; no `needs` (nothing above writes what it reads). A failed close is this step's failure, never the chain's.
+  { id: "dayclose",   at: "22:57", args: ["scripts/postmatch.mjs", "autoclose", "--date", "chain", "--anchor", "evening"], budget: autocloseBudget() },
   { id: "wall-pm",    at: "23:00", args: ["scripts/viz.mjs"], needs: ["scorer", "setpiece"] },
   { id: "scout",      at: "23:05", args: ["scripts/scout.mjs"] },
   // the one non-node step: WALLPAPER.ps1 paints the wall's render onto the desktop.
@@ -523,7 +535,9 @@ export function launchDetached(args) {
 // per-step metadata shape the chain already uses for `daemon` / `writes` /
 // `needs` / `log`, so nothing new is being invented here.
 const STEP_BUDGET = { heartbeat: 420000, mirror: 300000 };
-const budgetFor = (step, opts = {}) => opts.timeoutMs || STEP_BUDGET[step && step.id] || STEP_TIMEOUT_MS;
+// mclose row 914 G — A STEP MAY DECLARE ITS OWN BUDGET (`budget:`), read after an explicit opts.timeoutMs and before the map: the
+// two day-close steps declare the close's own sum (postmatch.mjs autocloseBudget), so no total is typed in this file.
+const budgetFor = (step, opts = {}) => opts.timeoutMs || (step && step.budget) || STEP_BUDGET[step && step.id] || STEP_TIMEOUT_MS;
 
 export async function conduct(chain = MORNING, opts = {}) {
   // ---- Block 6: THE DAY THIS RUN IS FOR ------------------------------------
@@ -1373,8 +1387,10 @@ async function selftest() {
     // world names the TWO born-in-chain additions exactly (scoreboard 22:38
     // then nikhil-model 22:39, pinned scorer ← scoreboard ← nikhil-model ←
     // setpiece) — a length check alone would pass with ANY extra step.
-    ok("EVENING — the nine retired rows are all here, the TWO additions are exactly scoreboard→nikhil-model, and no step is a daemon or a gate",
-      EVENING.length === 11 && EVENING.every(s => !s.daemon && !s.arm)
+    // mclose (row 873 (2)) RE-STATES the closed world, never erases it: a THIRD born-in-chain addition, dayclose, pinned below.
+    ok("EVENING — the nine retired rows are all here, the born-in-chain additions are exactly scoreboard→nikhil-model and dayclose (mclose), and no step is a daemon or a gate",
+      EVENING.length === 12 && EVENING.every(s => !s.daemon && !s.arm)
+      && (() => { const i = EVENING.findIndex(s => s.id === "dayclose"); return i > 0 && EVENING[i - 1].id === "examiner" && EVENING[i + 1].id === "wall-pm"; })()
       && ["bell", "scorer", "setpiece", "doubtminer", "physio-pm", "examiner", "wall-pm", "scout", "wallpaper"].every(id => EVENING.some(s => s.id === id))
       && (() => {
         const sb = EVENING.find(s => s.id === "scoreboard");
@@ -1396,6 +1412,39 @@ async function selftest() {
       repFail.steps.find(s => s.id === "wallpaper").ok === true
       && /wall-pm/.test(repFail.steps.find(s => s.id === "wallpaper").degraded || "")
       && repFail.steps.find(s => s.id === "examiner").degraded === null);
+    // mclose (row 873 (2) / 877, LENT by lane S) — THE DAY CLOSES ITSELF, at both anchors, keyed by the chain's day-key token
+    const dc = EVENING.find(s => s.id === "dayclose"), dp = MORNING.find(s => s.id === "dayclose-prev");
+    ok("DAYCLOSE (mclose) — the EVENING closes the CHAIN'S day: right after the examiner, right before wall-pm (the wall shows the close), postmatch.mjs autoclose --date chain --anchor evening — the token's day, never now()",
+      !!dc && (dc.args || []).join(" ") === "scripts/postmatch.mjs autoclose --date chain --anchor evening" && !dc.needs && !dc.daemon && !dc.arm
+      && rep.order.indexOf("dayclose") === rep.order.indexOf("examiner") + 1 && rep.order.indexOf("wall-pm") === rep.order.indexOf("dayclose") + 1
+      && seen.includes("scripts/postmatch.mjs autoclose --date chain --anchor evening"));
+    ok("DAYCLOSE (mclose, row 919 (A)) — the MORNING closes the SLEPT day: dayclose-prev, postmatch.mjs autoclose --date chain-1 --anchor morning, right after the three daemons and before physio, the first reader of reps_log — outside the signals→sheet gate",
+      !!dp && (dp.args || []).join(" ") === "scripts/postmatch.mjs autoclose --date chain-1 --anchor morning" && !dp.needs && !dp.daemon && !dp.arm
+      && MORNING.indexOf(dp) === MORNING.findIndex(s => s.id === "turnstile") + 1 && MORNING[MORNING.indexOf(dp) + 1].id === "physio");
+    const repClose = await conduct(EVENING, {
+      ...base,
+      run: (a) => (a.join(" ").includes("postmatch.mjs autoclose") ? { status: 1, stderr: "autoclose: the record could not be written" } : { status: 0, stderr: "" }),
+      runExec: () => ({ status: 0, stderr: "" }),
+    });
+    ok("DAYCLOSE (mclose) — a failed close fails ITS OWN step only: wall-pm, scout and the wallpaper still run green, nothing degraded for its sake, the chain counts one failure",
+      repClose.steps.find(s => s.id === "dayclose").ok === false && repClose.failed === 1
+      && ["wall-pm", "scout", "wallpaper"].every(id => { const s = repClose.steps.find(x => x.id === id); return s && s.ok === true && s.degraded === null; }));
+    // row 914 F / row 919 (A): a killed (ETIMEDOUT) or refused (exit 2) morning close fails ITS OWN step only — every later step
+    // runs, none degraded for its sake, the signals gate arms and the sheet is built
+    for (const [how, ans] of [["killed", { status: null, error: new Error("spawnSync ETIMEDOUT") }], ["refused", { status: 2, stderr: "postmatch: autoclose REFUSED" }]]) {
+      const repM = await conduct(MORNING, { ...base, run: (a) => (a.join(" ").includes("postmatch.mjs autoclose") ? ans : { status: 0, stderr: "" }), arm: () => true });
+      const later = MORNING.slice(MORNING.indexOf(dp) + 1).map(s => s.id);
+      const sheetStep = repM.steps.find(s => s.id === "sheet");
+      ok(`DAYCLOSE (row 919 (A)) — a ${how} morning close fails its own step only: all ${later.length} later steps run green, none degraded, the gate arms, the sheet is built`,
+        repM.steps.find(s => s.id === "dayclose-prev").ok === false && repM.failed === 1
+        && later.every(id => { const s = repM.steps.find(x => x.id === id); return s && s.ok === true && !s.degraded; })
+        && !!sheetStep && sheetStep.ok === true);
+    }
+    // row 914 G: the two close steps declare the close's own summed budget — it reaches the runner, exceeds the organ default, no number typed
+    const src914 = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    ok("BUDGET (row 914 G) — both day-close steps declare budget: autocloseBudget(), which reaches budgetFor and exceeds the 3-minute organ default; no `budget:` in MORNING or EVENING carries a numeric literal",
+      [dc, dp].every(s => s.budget === autocloseBudget() && budgetFor(s) === autocloseBudget() && budgetFor(s) > STEP_TIMEOUT_MS)
+      && !/budget:\s*[\d(]/.test(src914.slice(src914.indexOf("export const MORNING = ["), src914.indexOf("const STEP_TIMEOUT_MS = "))));
   }
 
   // ---- THE SCHEDULE CONTRACT (11 Aug 2026) — an installer may never re-arm a

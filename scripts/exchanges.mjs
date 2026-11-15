@@ -33,8 +33,10 @@
 // LAWS: READ-ONLY — this file writes nothing, anywhere. TIER 0: no model, no network, no key. Never throws
 //   past its door: an unreadable day file is NAMED in the result, a missing one is counted, a torn line is
 //   skipped and counted.
-// WHO ELSE COULD ACT ON THIS OUTPUT? notes_compiler.mjs (its only caller today) · any future reader of his
-//   study words (the re-teach render, the interview layer) — through here, never a second reader.
+// WHO ELSE COULD ACT ON THIS OUTPUT? notes_compiler.mjs · postmatch.mjs autoclose (THE DAY CLOSES ITSELF, row 873 (2):
+//   sessionsNamedOn hands study_scope the sessions the archive names on a day, studyTurnsOfDay counts the CAPTURED STUDY
+//   TURNS that decide whether a day closes at all) · any future reader of his study words (the re-teach render, the
+//   interview layer) — through here, never a second reader.
 // CLI: node scripts/exchanges.mjs day <YYYY-MM-DD> [--session <id>] [--json] | selftest
 // ============================================================================
 import { readFileSync, existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
@@ -148,6 +150,51 @@ export function exchanges(records, { from = null, to = null, sessions = null, co
 }
 
 // ---------------------------------------------------------------------------
+// THE DAY'S STUDY EVIDENCE (mclose · row 873 (2), SPEC §1 items 2-3, ruled by row 877)
+// ---------------------------------------------------------------------------
+/** sessionsNamedOn — PURE READ. The Claude Code sessions the archive NAMES on one IST day: every session_id on one of HIS
+ *  rows (HIS_SOURCES) in that day's afferent file. Evidence (c) of study_scope.studySessionsOfDay is handed this list — the
+ *  leaf never learns where the archive lives. Never throws: { day, sessions, missing, unreadable, torn }. */
+export function sessionsNamedOn(day, { root = archiveRoot() } = {}) {
+  const r = readLaneDays(WORD_LANE, [day], { root });
+  const ids = new Set();
+  for (const rec of r.records) {
+    const p = rec && rec.payload;
+    if (p && HIS_SOURCES.includes(p.source) && typeof p.session_id === "string" && p.session_id) ids.add(p.session_id);
+  }
+  return { day, sessions: [...ids], missing: r.missing, unreadable: r.unreadable, torn: r.torn };
+}
+
+/** studyTurnsOfDay — PURE READ. THE CAPTURED STUDY TURNS of one IST day: his rows of lane afferent in that day's file (source
+ *  claude-code), whose session is in `sessions`, whose own text is not a system block (scripts/harness_text.mjs's names, the
+ *  isSystemBlock above) and carries at least 3 non-space characters (the capture hook's own floor for his text). A day closes
+ *  itself only on at least one (L5: no evidence, no run). The rows of his OTHER sessions that day are counted apart
+ *  (`outside`), never folded in. Never throws: { day, turns, last_ts, per_session, outside, system_blocks, short, undated,
+ *  missing, unreadable, torn } — last_ts is the newest kept turn's archive instant (ISO), null when there is none. */
+export function studyTurnsOfDay(day, sessions, { root = archiveRoot() } = {}) {
+  const set = new Set((Array.isArray(sessions) ? sessions : []).filter((s) => typeof s === "string" && s));
+  const r = readLaneDays(WORD_LANE, [day], { root });
+  const per = {};
+  for (const s of set) per[s] = 0;
+  let turns = 0, last = null, outside = 0, systemBlocks = 0, short = 0, undated = 0;
+  for (const rec of r.records) {
+    const p = rec && rec.payload;
+    if (!p || !HIS_SOURCES.includes(p.source)) continue;
+    if (!set.has(p.session_id)) { outside++; continue; }
+    const text = typeof p.text === "string" ? p.text : "";
+    if (isSystemBlock(text)) { systemBlocks++; continue; }
+    if (text.replace(/\s+/g, "").length < 3) { short++; continue; }
+    turns++;
+    per[p.session_id]++;
+    const t = ms(rec.ts_utc || p.ts);
+    if (t === null) { undated++; continue; }
+    if (last === null || t > last) last = t;
+  }
+  return { day, turns, last_ts: last === null ? null : new Date(last).toISOString(), per_session: per, outside, system_blocks: systemBlocks, short, undated,
+    missing: r.missing, unreadable: r.unreadable, torn: r.torn };
+}
+
+// ---------------------------------------------------------------------------
 // SELFTEST — a temp archive written by archivist's OWN writer, never his
 // ---------------------------------------------------------------------------
 async function selftest() {
@@ -208,6 +255,38 @@ async function selftest() {
     const win = exchanges(read.records, { sessions: [S], from: at(1), to: at(3) });
     assert("WINDOW — [from, to] bounds are inclusive and exact", win.length === 2 && !!win[0]?.text?.startsWith("token") && win[1]?.text === "haan");
     assert("NEVER THROWS — an absent archive root reads as missing days", (() => { const r = readLaneDays(WORD_LANE, ["2026-10-06"], { root: join(tmp, "nope") }); return r.records.length === 0 && r.missing.length === 1; })());
+    // ── mclose (row 873 (2)) — THE DAY'S STUDY EVIDENCE: a second day, seeded and archived by archivist's OWN writer ──
+    const S2 = "f1c7e000-0000-4000-8000-0000000000bb", E2 = "f1c7e000-0000-4000-8000-0000000000cc";
+    const at7 = (m) => new Date(Date.UTC(2026, 9, 7, 4, m, 0)).toISOString();   // 7 Oct, 09:30 IST onwards
+    const day7 = [
+      row(100, "claude-code", "ok", S2, { ts: at7(0) }),                                                         // 2 non-space characters: under the floor
+      row(101, "claude-code", "<task-notification>\n<task-id>x1</task-id>\n</task-notification>", S2, { ts: at7(1) }),   // the harness's, never his
+      row(102, "claude-code", "embeddings kya hote hain, ek vector?", S2, { ts: at7(2) }),
+      row(103, "claude-code-teaching", "haan — ek vector, har token ka.", S2, { ts: at7(3) }),                    // the teacher's: never a turn of his
+      row(104, "claude-code", "runner, land the unit", E2, { ts: at7(4) }),                                        // his ENGINEERING session, same day
+      row(105, "claude-code", "  h i  ", S2, { ts: at7(5) }),                                                     // 2 non-space characters, spaced out
+      row(106, "claude-code", "abc", S2, { ts: at7(6) }),                                                         // exactly 3: kept
+    ];
+    writeFileSync(lane, [...rows, ...day7].map((r) => JSON.stringify(r)).join("\n") + "\n");
+    runArchive({ root: arc, repo, quiet: true, warn: () => {} });
+    const t7 = studyTurnsOfDay("2026-10-07", [S2], { root: arc });
+    assert("STUDY TURNS (mclose) — his rows of the day in the session set, not a system block, ≥ 3 non-space characters; the floor, the harness block and the teacher counted apart",
+      t7.turns === 2 && t7.short === 2 && t7.system_blocks === 1 && t7.per_session[S2] === 2, JSON.stringify(t7));
+    assert("STUDY TURNS (mclose) — last_ts is the newest KEPT turn's archive instant; his engineering session that day is counted apart (outside), never folded in",
+      t7.last_ts === at7(6) && t7.outside === 1 && !t7.missing.length, JSON.stringify(t7));
+    const named7 = sessionsNamedOn("2026-10-07", { root: arc });
+    assert("SESSIONS NAMED (mclose) — every session his rows name that day, study and engineering alike (the transcript decides, not this reader)",
+      named7.sessions.length === 2 && named7.sessions.includes(S2) && named7.sessions.includes(E2), JSON.stringify(named7));
+    const drained = row(107, "claude-code", "aur dimension kitni hoti hai?", S2, { ts: at7(7) });   // a turn the hook lost, archived later (mcap's drain)
+    writeFileSync(lane, [...rows, ...day7, drained].map((r) => JSON.stringify(r)).join("\n") + "\n");
+    runArchive({ root: arc, repo, quiet: true, warn: () => {} });
+    const t7b = studyTurnsOfDay("2026-10-07", [S2], { root: arc });
+    assert("STUDY TURNS (mclose) — ONE drained turn, archived later, raises the count by exactly one and moves last_ts to it",
+      t7b.turns === t7.turns + 1 && t7b.last_ts === at7(7), JSON.stringify({ before: t7.turns, after: t7b.turns, last: t7b.last_ts }));
+    const his7 = [...day7, drained].filter((r) => HIS_SOURCES.includes(r.source)).length;   // DERIVED from the plant, never typed
+    const none7 = studyTurnsOfDay("2026-10-07", [], { root: arc }), gone = studyTurnsOfDay("2026-10-07", [S2], { root: join(tmp, "nope") });
+    assert("STUDY TURNS (mclose) — no session, no turn (every row of his is outside); an absent root is a missing day, never a throw",
+      none7.turns === 0 && none7.last_ts === null && none7.outside === his7 && gone.turns === 0 && gone.missing.join() === "2026-10-07", JSON.stringify({ his7, none7, gone }));
   } catch (e) { fail++; console.log(`  CRASH the selftest threw — ${String((e && e.message) || e).slice(0, 200)} (a crash is never a pass)`); }
   finally { rmSync(tmp, { recursive: true, force: true }); }
   console.log(`\nexchanges selftest: ${pass} passed, ${fail} failed`);
