@@ -213,6 +213,18 @@
         "audit_ts": "2026-11-15T20:10:22.923Z",
         "title": "neuralnet_axis_b_rules_double_per_factor",
         "recorded_at": "2026-11-15T20:10:23.133Z"
+      },
+      {
+        "session_id": "2339cc4b-da90-46a8-a7aa-b4012fcbbbb1",
+        "audit_ts": "2026-11-16T04:54:06.052Z",
+        "title": "neuralnet_axis_b_why_now_timeline",
+        "recorded_at": "2026-11-16T04:54:07.809Z"
+      },
+      {
+        "session_id": "2339cc4b-da90-46a8-a7aa-b4012fcbbbb1",
+        "audit_ts": "2026-11-16T04:54:17.390Z",
+        "title": "neuralnet_axis_b_why_now_timeline",
+        "recorded_at": "2026-11-16T04:54:17.724Z"
       }
     ]
   }
