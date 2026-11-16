@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-11-14T11:52:26.471Z",
+ "updated_at": "2026-11-14T22:53:06.207Z",
  "tables": {
   "mechanisms": [
    {
@@ -1389,6 +1389,26 @@
     "text": "17 Oct 2026, his word, verbatim: 'please create the revision page for this axis B, i am explicitly saying'. The axis recap page (9 Oct ruling) is ordered by him; the study rail refused the Write twice.",
     "updated_at": "2026-11-13T21:35:17.727Z",
     "added_at": "2026-11-13T21:35:17.727Z"
+   },
+   {
+    "id": "rul-mwh048y1ca",
+    "at": "2026-11-14T22:52:48.071Z",
+    "scope": "architecture",
+    "by": "captain",
+    "source": "acts.reroute",
+    "text": "additionally for all revision decks note this for future sessions as well that you have to go in my downloads and then AI folder and then put the files in the accurate subfolders and if subfolder does not exist then create one because i am on video calls mostly when studying so i do not want my repo name to be seen",
+    "updated_at": "2026-11-14T22:52:48.074Z",
+    "added_at": "2026-11-14T22:52:48.074Z"
+   },
+   {
+    "id": "rul-mwh04mxn0a",
+    "at": "2026-11-14T22:53:06.201Z",
+    "scope": "architecture",
+    "by": "captain",
+    "source": "acts.design",
+    "text": "additionally for all revision decks note this for future sessions as well that you have to go in my downloads and then AI folder and then put the files in the accurate subfolders and if subfolder does not exist then create one because i am on video calls mostly when studying so i do not want my repo name to be seen",
+    "updated_at": "2026-11-14T22:53:06.203Z",
+    "added_at": "2026-11-14T22:53:06.203Z"
    }
   ],
   "job_inputs": [

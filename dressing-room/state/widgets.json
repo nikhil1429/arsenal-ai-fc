@@ -195,6 +195,24 @@
         "audit_ts": "2026-10-19T14:14:04.754Z",
         "title": "neuralnet_board_axis_a_weight_knob",
         "recorded_at": "2026-10-19T14:14:05.783Z"
+      },
+      {
+        "session_id": "146963ae-2a83-4108-8566-0aad96e7bd18",
+        "audit_ts": "2026-11-15T03:22:23.086Z",
+        "title": "dark_store_network_neuron_check",
+        "recorded_at": "2026-11-15T03:22:25.087Z"
+      },
+      {
+        "session_id": "1d932603-c154-4da0-9e17-ae4465ea2fdc",
+        "audit_ts": "2026-11-15T20:10:18.881Z",
+        "title": "neuralnet_axis_b_rules_double_per_factor",
+        "recorded_at": "2026-11-15T20:10:19.835Z"
+      },
+      {
+        "session_id": "1d932603-c154-4da0-9e17-ae4465ea2fdc",
+        "audit_ts": "2026-11-15T20:10:22.923Z",
+        "title": "neuralnet_axis_b_rules_double_per_factor",
+        "recorded_at": "2026-11-15T20:10:23.133Z"
       }
     ]
   }
