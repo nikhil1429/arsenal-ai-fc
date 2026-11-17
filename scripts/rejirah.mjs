@@ -59,6 +59,10 @@
 //   it — none is invented.
 // CLI: node scripts/rejirah.mjs [grade <concept> <axis> held|cracked [--gut w] [--cold false]|correct <concept> <axis> held|cracked --of <ts> --why "…"|close <concept> [--anyway]|pending|state [concept]|due|selftest]
 //   (correct = a NEW row naming the old one — every verdict has a way back; due is the default)
+// ── MRJB · ROW 938 (1) (15 Nov 2026) · THE BIRTH DOOR ───────────────────────────────────────────
+//   born = `node scripts/rejirah.mjs born` — creates rejirah_log.jsonl EMPTY when it is absent, and
+//   refuses, changing nothing, when it exists (any row in it). It writes no round (bornLog below).
+// ── /MRJB ──
 // ============================================================================
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, readdirSync, mkdtempSync } from "node:fs";   // writeFileSync: A8 sidecar fixtures in the selftest only
 import { join, dirname } from "node:path";
@@ -272,6 +276,39 @@ export function append(row, path = LOG) {
   appendFileSync(path, JSON.stringify(row) + "\n");
   return true;
 }
+// ── MRJB · ROW 938 (1) (15 Nov 2026) · THE BIRTH DOOR — the log is born by its own writer ──────────
+// WHY A DOOR AND NOT A ROUND. Every reader treats an absent log as zero rows, and for all of them
+// that is right — but daily_green.mjs clause 5 reads "a log never born is RED whatever is due"
+// (daily_green.mjs:206), and his 30 Aug ruling (GAME ON) keeps every pre-cyborg round closed
+// (openRound, below), so no round is lawfully due and no `grade` may be asked of him just to bring
+// the file into being. The log can only be born by a write that is not a round, and that write
+// belongs HERE: this file is the log's single writer (LAWS, above), and a birth by any other hand
+// would be a second writer.
+// THE LAW. Absent → created EMPTY: zero bytes, zero rows — no header, no marker row (a marker is a
+// row every reader would have to learn to skip). Present → REFUSED, nothing written, whatever it
+// holds: an existing log, any row in it, is never rewritten. The create is EXCLUSIVE (flag "wx"),
+// so a hand that wins the race between the look and the write makes the open itself refuse.
+// SPLIT PURE/SHELL, for relockIndex's measured reason (xray's per-organ sink ratchet, above): the
+// shell touches only the two literal consts this organ already owns, LOG and its state dir STATE,
+// and takes no path argument. `deps` is the selftest's lever on the DECISION, never a path; a test
+// that wants the real create on a temp dir runs a COPY of the tree, as for every verb of this CLI.
+export function birthVerdict(present, rows = 0) {
+  return present
+    ? { create: false, why: `already exists (${rows} row(s)) — an existing log is never rewritten, so nothing was written` }
+    : { create: true, why: "born EMPTY — zero rows, no round written" };
+}
+export function bornLog(deps = {}) {
+  const present = deps.present || (() => existsSync(LOG));
+  const rows = deps.rows || (() => readLog(LOG, { raw: true }).length);
+  const create = deps.create || (() => { mkdirSync(STATE, { recursive: true }); appendFileSync(LOG, "", { flag: "wx" }); });
+  if (present()) return { ok: false, ...birthVerdict(true, rows()) };
+  try { create(); } catch (e) {
+    if (e && e.code === "EEXIST") return { ok: false, raced: true, ...birthVerdict(true, rows()) };
+    throw e;   // an unwritable state dir is not a refusal: it is LOUD
+  }
+  return { ok: true, ...birthVerdict(false) };
+}
+// ── /MRJB ──
 
 // ── THE ROUND CLOSE (captain's ruling A, 5 Aug 2026) ─────────────────────────
 // A round's due-dates are NOT stored anywhere — FORGE_SPEC §4 says "engine new Date() se
@@ -1160,6 +1197,38 @@ function selftest() {
                const b = buildRow({ concept: "tokenization", axis: "a", result: "cracked", gut: "knew" }, { capsuleIds: ["tokenization"] });
                return a.ok && a.row.error_shape === "sub-word ko word samajh liya" && b.ok && b.row.error_shape === undefined; })());
   }
+  // ── MRJB · ROW 938 (1) (15 Nov 2026) · THE BIRTH DOOR, PLANTED BOTH WAYS ───────────────────────────
+  // The DECISION is driven through `deps` (no fs call on a computed path: the xray ratchet's law for
+  // this file) and the shell's one write is pinned off this file's own source. The real create on a
+  // real temp state dir is the unit's witness (W1 born · W2 the writer writes · W4 never rewritten),
+  // run on a COPY of the tree: this block proves the logic, the witness proves the file.
+  {
+    const made = [];
+    const door = (present, rows, create) => bornLog({ present: () => present, rows: () => rows, create: create || (() => made.push(1)) });
+    const throwing = (code) => () => { const e = new Error(code); e.code = code; throw e; };
+    const born = door(false, 0);
+    assert("MRJB · BORN — an ABSENT log is created once, and the door says so: zero rows, no round written",
+      born.ok === true && born.create === true && made.length === 1 && /zero rows, no round written/.test(born.why));
+    made.length = 0;
+    const empty = door(true, 0), full = door(true, 3);
+    assert("MRJB · REFUSED — a log that EXISTS, empty or full, is never touched: no create is even attempted, and the refusal names its rows",
+      empty.ok === false && full.ok === false && made.length === 0 && /\(0 row\(s\)\)/.test(empty.why) && /\(3 row\(s\)\)/.test(full.why) && /never rewritten/.test(full.why));
+    const raced = door(false, 1, throwing("EEXIST"));
+    assert("MRJB · RACED — the exclusive create refusing (another hand was first) reads as a REFUSAL, never a throw and never an overwrite",
+      raced.ok === false && raced.raced === true && /\(1 row\(s\)\)/.test(raced.why));
+    assert("MRJB · LOUD — any other create failure THROWS: an unwritable state dir is not a refusal and may not be reported as one",
+      (() => { try { door(false, 0, throwing("EACCES")); return false; } catch (e) { return !!(e && e.code === "EACCES"); } })());
+    let src = ""; try { src = readFileSync(fileURLToPath(import.meta.url), "utf8"); } catch { src = ""; }
+    const at = src.indexOf("export function born" + "Log(");
+    const shell = at > 0 ? src.slice(at, src.indexOf("// ── /MR" + "JB", at)) : "";
+    assert("MRJB · THE SHELL writes only through this organ's own consts — ONE exclusive, EMPTY create of LOG in STATE: no path argument, no row, no second write",
+      /appendFileSync\(LOG, "", \{ flag: "wx" \}\)/.test(shell) && /mkdirSync\(STATE, \{ recursive: true \}\)/.test(shell) && /existsSync\(LOG\)/.test(shell)
+      && (shell.match(/\b(writeFileSync|appendFileSync|renameSync|rmSync|unlinkSync|copyFileSync|truncateSync|openSync)\(/g) || []).length === 1
+      && !/JSON\.stringify/.test(shell) && /^export function bornLog\(deps = \{\}\) \{/.test(shell));
+    assert("MRJB · the verb is WIRED and DISCOVERABLE — a real mode in main(), dispatched BEFORE the log is read, and named in the usage",
+      (() => { const m = src.indexOf('mode === "bo' + 'rn"'), r = src.indexOf("const rows = read" + "Log();"); return m > 0 && r > m && src.includes("| bo" + "rn "); })());
+  }
+  // ── /MRJB ──
   console.log(`\nrejirah selftest: ${pass} passed, ${fail} failed`);
   return fail === 0;
 }
@@ -1169,6 +1238,16 @@ function main() {
   const [cmd, ...rest] = process.argv.slice(2);
   const mode = String(cmd || "").toLowerCase();
   if (mode === "selftest") process.exit(selftest() ? 0 : 1);
+  // ── MRJB · ROW 938 (1) · `born` is dispatched BEFORE the capsules, the intervals and the log are
+  // read: a birth needs nothing but the state dir, and must never depend on the file it creates.
+  if (mode === "born") {
+    const b = bornLog();
+    if (!b.ok) { console.error(`rejirah: born REFUSED — rejirah_log.jsonl ${b.why}.`); process.exit(1); }
+    console.log(`rejirah: dressing-room/state/rejirah_log.jsonl ${b.why}.`);
+    console.log("  Its first row comes from grade / correct / close, through append (the one write path); daily_green clause 5 reads the log as born from here.");
+    return;
+  }
+  // ── /MRJB ──
 
   const intervals = intervalsOf();
   const caps = loadCapsules();
@@ -1486,6 +1565,9 @@ rejirah: no capsule named "${want}" in the mirror — maujood: ${caps.map((c) =>
          | pending   (closed par gist mein abhi tak nahi)
          | held      (kya PROVEN hai — P7.A ka jawab, evidence se)
          | state [concept] | due | selftest`);
+  // ── MRJB · ROW 938 (1) · a door nobody is told about is a dead door (BLOCK 4's law, in the selftest)
+  console.log(`         | born      (the log's birth: rejirah_log.jsonl created EMPTY when absent, refused when it exists — never a round)`);
+  // ── /MRJB ──
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

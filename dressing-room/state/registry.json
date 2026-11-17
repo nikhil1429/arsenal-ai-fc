@@ -1,6 +1,6 @@
 {
  "version": 1,
- "updated_at": "2026-11-14T22:53:06.207Z",
+ "updated_at": "2026-11-17T00:50:26.880Z",
  "tables": {
   "mechanisms": [
    {
@@ -948,6 +948,39 @@
     "why": "the RECORDED SessionStart brief: one row per brief his session printed (rung L6); HE is its consumer, and the rung L6 landing witness reads it back as its proof",
     "updated_at": "2026-11-14T11:52:26.467Z",
     "added_at": "2026-10-17T15:03:40.033Z"
+   },
+   {
+    "subject": "rejirah_log",
+    "schema_owner": "rejirah.mjs",
+    "writes_to": "rejirah_log.jsonl",
+    "witness": "scripts/rejirah.mjs SOLE WRITER (its LAWS header: single writer of rejirah_log.jsonl) · born EMPTY by its own door `node scripts/rejirah.mjs born` (forks row 938 (1), unit mrjb)",
+    "consumers": [
+     {
+      "name": "rejirah.mjs"
+     },
+     {
+      "name": "daily_green.mjs"
+     },
+     {
+      "name": "learnstate.mjs"
+     },
+     {
+      "name": "captains_call.mjs"
+     },
+     {
+      "name": "forge_session.mjs"
+     },
+     {
+      "name": "nightshift.mjs"
+     },
+     {
+      "name": "brain.mjs"
+     }
+    ],
+    "reach": "any",
+    "why": "the Re-Jirah back edge, one row per graded axis or closed round: rejirah.mjs derives due, state, held and pending from it; daily_green.mjs reads it for clause 5 (born, and written when a round was due); learnstate.mjs for the pending gist-write line of the brief; captains_call.mjs for the card of rounds closed but not in the gist; forge_session.mjs for its data-gates; nightshift.mjs for the round read; brain.mjs for the cracked-axes inventory behind dreams",
+    "updated_at": "2026-11-17T00:50:26.875Z",
+    "added_at": "2026-11-17T00:50:26.875Z"
    }
   ],
   "emit_contract": [
