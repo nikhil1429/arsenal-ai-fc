@@ -225,6 +225,18 @@
         "audit_ts": "2026-11-16T04:54:17.390Z",
         "title": "neuralnet_axis_b_why_now_timeline",
         "recorded_at": "2026-11-16T04:54:17.724Z"
+      },
+      {
+        "session_id": "e915458c-dffa-4f95-a1b4-62c9cc107c26",
+        "audit_ts": "2026-11-17T04:28:06.882Z",
+        "title": "neuralnet_axis_c_slope_fast_vs_slow",
+        "recorded_at": "2026-11-17T04:28:10.924Z"
+      },
+      {
+        "session_id": "e915458c-dffa-4f95-a1b4-62c9cc107c26",
+        "audit_ts": "2026-11-17T04:28:20.057Z",
+        "title": "neuralnet_axis_c_slope_fast_vs_slow",
+        "recorded_at": "2026-11-17T04:28:20.262Z"
       }
     ]
   }

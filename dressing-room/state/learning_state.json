@@ -1,6 +1,6 @@
 {
-  "date": "2026-11-16",
-  "generated_at": "2026-11-16T03:45:15.357Z",
+  "date": "2026-11-17",
+  "generated_at": "2026-11-17T03:50:30.624Z",
   "total_reps": 2,
   "status": "ok",
   "low_confidence": false,
@@ -61,27 +61,27 @@
     {
       "concept": "inference",
       "axis": null,
-      "overdue_days": 137
+      "overdue_days": 138
     },
     {
       "concept": "context",
       "axis": null,
-      "overdue_days": 133
+      "overdue_days": 134
     },
     {
       "concept": "embeddings",
       "axis": null,
-      "overdue_days": 121
+      "overdue_days": 122
     },
     {
       "concept": "hallucinations",
       "axis": null,
-      "overdue_days": 97
+      "overdue_days": 98
     },
     {
       "concept": "tokenization",
       "axis": "a (kya+analogy)",
-      "overdue_days": 71
+      "overdue_days": 72
     }
   ],
   "core_vs_light": {
@@ -205,7 +205,7 @@
     ],
     "started_at": "2026-11-13T08:06:30.681Z",
     "stale": false,
-    "stale_as_of": "2026-11-16T03:45:15.357Z",
+    "stale_as_of": "2026-11-17T03:50:30.624Z",
     "last_closed": {
       "concept": "neuralnet",
       "ended_at": "2026-11-13T08:06:29.818Z",
