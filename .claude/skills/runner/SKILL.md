@@ -103,12 +103,14 @@ scope sentence cut from row 437.
   the runner — THE LABOUR LANE below. Judgement never leaves the Opus runner.
 - **THE WINDOWS ARE NOT MEASURED** (row 131), verbatim: *"the gate's five-hour and weekly arithmetic
   are NOTES; every launch at the 3,000,000 cap; fleets fly together — FLEET.lock is a LIST."*
+  **THE POOL IS NOW READ, NOT RECALLED** (unit mpool, row 1062 F8 C): `node scripts/usage_tap.mjs verdict` in the organism repo, with `ARSENAL_CAMPAIGN_ROOT` set to the campaign root, reads the statusLine reading — exit 0 GO, exit 3 WAIT, by exit code (F6 B); it REPORTS, the gate decides (F5 B), and a stale, half or rolled reading is WAIT.
 - **THE HOST RULE** (row 130 (2)(a), NARROWED by his word, row 248): while a fleet flies the host
   builds anything EXCEPT the return path — campaign.mjs, the return watcher, the export, any
   `witness_*return*`, the belt, verifiers and the freeze set. The in-code counter still reads the host's
   own output, so keep the build well under the fleet's cap.
 - **THE PAUSE** (row 136 (1)) — a code path, below.
 - **THE POOL IS HIS PANEL** — recorded whenever he posts one, never asked inside a window.
+  **HIS PANEL IS THE FALLBACK CARD** (row 1062 F7 B / F8 C / F10 A): when the gate reads WAIT for want of a source, run `node scripts/usage_tap.mjs need` — ONE keyed card at his learn start; his SPOKEN two numbers become a reading only by the session running `usage_tap.mjs panel`. He types nothing.
 - **THE HEARTBEAT** (rows 628 (3) / 684 (4) / 693) — `node tools/roles.mjs heartbeat runner --me "<name>"` (lanes V and M add `--lane V` / `--lane M`) at every ledger row this session writes and every 20 min in a hold, so a STALE line means absent, not busy; the 20-min loop is a background shell that Claude Code can reap on low memory, and then a heartbeat by hand with each row is the ruled fallback.
 - **HIS WORD OUTRANKS EVERYTHING HERE**; a fork OUTSIDE the runner's class (below) is the architect's.
 

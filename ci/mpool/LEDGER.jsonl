@@ -1,0 +1,4 @@
+{"ts":"2026-11-18T21:41:35.603Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mpool-build origin/main","last_line":"base b1fc984a3c14dcafb907f8acc71853a9c24f7665"}
+{"ts":"2026-11-18T21:41:35.603Z","act":"measure-f8","cmd":"ls scripts/day.mjs (at base)","last_line":"No such file or directory — F8 builds C alone; A owed"}
+{"ts":"2026-11-18T21:41:35.603Z","act":"measure-base-suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (base, before npm ci)","last_line":"organism_test: 136 passed, 4 failed · ruled 0 · UNRULED 4 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-18T21:41:35.603Z","act":"selftest-new","cmd":"node scripts/usage_tap.mjs selftest","last_line":"usage_tap selftest 31/31 — all clauses hold"}
