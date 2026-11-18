@@ -1028,7 +1028,7 @@ async function selftest() {
     assert("AUTOCLOSE (row 914 G6) — notes the deadline did not reach make the compile line UNSETTLED by count, never DONE",
       /^COMPILE: UNSETTLED · 1 note\(s\) not reached by the deadline/.test(compileLineOf({ status: 0, stdout: "notes_compiler: x\n", sessions: 1 }, { status: 1, stdout: "notes_compiler: 2026-11-13 IST · compiled 0 (0 superseding) · unchanged 2 · refused 0 · gate 1 pass / 0 fail / 0 absent (named) / 0 not run (reader stub) · names guard OFF · 1 note(s) not reached by the deadline\n" })));
     {
-      const own = readFileSync(fileURLToPath(import.meta.url), "utf8"), a0 = own.indexOf("async function autoclose("), body = a0 < 0 ? "" : own.slice(a0, own.indexOf("\n}\n", a0));
+      const own = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n"), a0 = own.indexOf("async function autoclose("), body = a0 < 0 ? "" : own.slice(a0, own.indexOf("\n}\n", a0));
       assert("AUTOCLOSE (row 914 G5) — no child of the close carries a typed 20-minute timeout: each starts on the deadline's time left",
         !!body && !/20\s*\*\s*60000/.test(body) && /timeout: s\.ms/.test(body));
     }
@@ -1046,7 +1046,7 @@ async function selftest() {
       && autocloseDecision(rec, tt.last_ts).act === "unsettled" && autocloseDecision(rec, tt.last_ts).redo.join() === "judge"
       && autocloseDecision(recWith(PENDING_JUDGE, PENDING_COMPILE), tt.last_ts).redo.join() === "compile,judge"
       && autocloseDecision(settledRec, "2026-11-13T23:00:00.000Z").act === "refresh" && autocloseDecision("a note of his, no result line\n", tt.last_ts).act === "foreign");
-    const src = readFileSync(fileURLToPath(import.meta.url), "utf8"), at0 = src.indexOf("async function autoclose(");
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n"), at0 = src.indexOf("async function autoclose(");
     const body = at0 > 0 ? src.slice(at0, src.indexOf("\n}\n", at0)) : "";
     assert("AUTOCLOSE (F2) — its body never writes season.json, notebook.json, routed_balls.json or SEASON.md and never arms a brain trigger (the evening voice rides HIS close)",
       body.length > 2000 && /writeAtomic\(pmFile/.test(body) && !/writeAtomic\((SEASON|NOTEBOOK|ROUTED|SEASON_MD)\b/.test(body) && !/["/\\]brain\.mjs"/.test(body) && !/"trigger"/.test(body));
@@ -1095,7 +1095,7 @@ async function selftest() {
       && !CC.relineTarget([{ ...keptCard, answer: "haan", retired_at: "2026-11-14T03:00:00.000Z" }], { family: DAYCLOSE_FAMILY }).card
       && !CC.relineTarget([{ ...keptCard, key: "canon:OPS_STATE.md:2026-11-13" }], { family: DAYCLOSE_FAMILY }).card
       && dayCloseLine(["2026-11-13", "2026-11-14"], B).length <= B && !CC.relineCard({ cards: [keptCard] }, { family: DAYCLOSE_FAMILY, line: dayCloseLine(["2026-11-13", "2026-11-14"], B) }).refuse);
-    const own = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const own = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n");
     const a0 = own.indexOf("async function autoclose("), ac = a0 < 0 ? "" : own.slice(a0, own.indexOf("\n}\n", a0));
     const d0 = own.indexOf("async function dayCloseCard("), dc = d0 < 0 ? "" : own.slice(d0, own.indexOf("\n}\n", d0));
     assert("mcard — step (viii) reaches the card ONLY on the evening path (the morning files none and rewrites nothing), through ONE call",
