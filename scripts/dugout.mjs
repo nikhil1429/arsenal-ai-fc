@@ -103,7 +103,7 @@ import { observeAndSave as observeAndSaveTurn, renderBrief as renderGafferBrief,
 // THE WATCHER (15 Aug 2026) — gaffer_brain.mjs is the SOLE WRITER of its journal
 // and its memory blocks; this file only READS them and only ever SPAWNS the organ.
 // Read-only imports, exactly like the hippocampus/fuelboard/examiner lines above.
-import { freshNote as gafferFreshNote, readJournal as gafferJournal, renderBlocks as renderGafferBlocks } from "./gaffer_brain.mjs";
+import { freshNote as gafferFreshNote, readJournal as gafferJournal, renderBlocks as renderGafferBlocks, JUDGE_BUDGET_MS, JUDGE_DISPATCH_MS } from "./gaffer_brain.mjs";   // JUDGE_*: unit mjud · msit (shTimeoutMs)
 // THE HEDGE METER (18 Aug 2026, OVERHAUL Block 4 §9.4) — the scrimmage's own regex,
 // MOVED to register.mjs so one definition counts hedges here (off-mic) and on every
 // banked answer in the truth layer. Pure module: reads nothing, writes nothing.
@@ -2054,8 +2054,17 @@ function autoOpenSitting(spawnFn = spawn) {
     return { ok: true, dispatched: "sitting.mjs open --surface voice" };
   } catch (e) { return { ok: false, error: String(e && e.message || e).slice(0, 160) }; }
 }
+// unit mjud · msit (row 1008 (2)) — THE TOOL FUNNEL NEVER KILLS A JUDGE ROUND INSIDE ITS OWN BUDGET. Every organ the tools reach
+// is killed at 60 s, as it always was — EXCEPT a verb of gaffer_brain.mjs that reaches gradeJudge (judge-round, judge-due): the
+// judge_round tool's round runs batches inside JUDGE_BUDGET_MS and then dispatches, so it waits JUDGE_BUDGET_MS +
+// JUDGE_DISPATCH_MS, both read from gaffer_brain.mjs by import (MEASURED at BASE: 60 s, a fifth of the round's budget). PURE.
+const JUDGE_VERBS = Object.freeze(["judge-round", "judge-due"]);
+const TOOL_TIMEOUT_MS = 60000;
+export function shTimeoutMs(script, argv) {
+  return script === "gaffer_brain.mjs" && Array.isArray(argv) && JUDGE_VERBS.includes(argv[0]) ? JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS : TOOL_TIMEOUT_MS;
+}
 function execTool(name, args, deps = {}) {
-  const sh = deps.sh || ((script, argv, input) => execFileSync(process.execPath, [join(__dirname, script), ...argv], { input, encoding: "utf8", timeout: 60000, windowsHide: true }));
+  const sh = deps.sh || ((script, argv, input) => execFileSync(process.execPath, [join(__dirname, script), ...argv], { input, encoding: "utf8", timeout: shTimeoutMs(script, argv), windowsHide: true }));
   const append = deps.append || appendFileSync;
   const now = deps.now || new Date();
   try {
@@ -5217,6 +5226,17 @@ async function selftest() {
     assert("MOUTH CONTRACT (page): his whole utterance (the 2 s afferent quiet) is relayed to the brain's /turn while a sitting is open — GAFFER lines never are", PAGE.includes("if(sittingOpen)fetch('/sitting-turn'") && !PAGE.includes("affGBuf})}).catch(()=>{});\n if(sittingOpen)"));
     assert("MOUTH CONTRACT (page): the sitting's OPEN/CLOSED flips are announced ONCE each way, non-spoken, and the SPEAK unit sits right after the supervisor + opening in the poll (B3's order kept)", PAGE.includes("[SITTING OPEN id=") && PAGE.includes("[SITTING CLOSED]") && PAGE.indexOf("if(d.speak&&") > PAGE.indexOf("if(d.supervisor&&") && PAGE.indexOf("if(d.speak&&") > PAGE.indexOf("if(d.opening&&") && PAGE.indexOf("if(d.speak&&") < PAGE.indexOf("if(d.pending&&"));
     assert("MOUTH CONTRACT: the Dugout boots the sitting brain beside the brain (sitting.mjs daemon, detached) and the constitution carries THE SPEAK LAW with the exact text of §6.4", readFileSync(fileURLToPath(import.meta.url), "utf8").includes('[join(__dirname, "sitting.mjs"), "daemon"]') && buildSystemInstruction().includes("say EXACTLY its text — his Hinglish, his pace, no additions, no summary, no \"shall I continue\" — then stop and wait. Everything with content comes this way; you never compose a lesson yourself."));
+  }
+  // ── unit mjud · msit — the judge_round tool waits the judge's own budget plus its dispatch; every other tool spawn keeps 60 s ──
+  {
+    const need = JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS;
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n");
+    const at = src.indexOf("function execTool(name, args, deps = {}) {");
+    assert("mjud msit · a judge verb (judge-round, judge-due) through the tool funnel waits JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS (both imported from gaffer_brain.mjs); every non-judge tool spawn keeps its 60 s, and the default sh reads shTimeoutMs",
+      JUDGE_VERBS.every((v) => shTimeoutMs("gaffer_brain.mjs", [v]) === need) && need > JUDGE_BUDGET_MS
+      && shTimeoutMs("gaffer_brain.mjs", ["capture", "voice_rep", "x"]) === TOOL_TIMEOUT_MS && shTimeoutMs("doubtminer.mjs", ["retire"]) === TOOL_TIMEOUT_MS
+      && shTimeoutMs("capture.mjs", ["judge-round"]) === TOOL_TIMEOUT_MS
+      && /timeout: shTimeoutMs\(script, argv\)/.test(src.slice(at, at + 400)) && /sh\("gaffer_brain\.mjs", \["judge-round"\]\)/.test(src));
   }
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");

@@ -1,0 +1,31 @@
+lawpack · 1882 raw match(es) over 8/8 rules · findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 90 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 7
+  frozen: owners-only-state-write 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · law-m-literal-model 0 · jugad-literal-subject-list 90 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · depcruise_errors 7
+  JUGAD
+      scripts/samjhao.mjs:81 — const GUT_WORDS = [3 literal name(s)] — his law: "do not create jugad, do permanent stuff"
+      scripts/samjhao.mjs:82 — const THE_FOUR = [4 literal name(s)] — his law: "do not create jugad, do permanent stuff"
+      scripts/samjhao.mjs:98 — const AGENT_MARKERS = [3 literal name(s)] — his law: "do not create jugad, do permanent stuff"
+      scripts/lawpack.mjs:86 — const RULE_IDS = [8 literal name(s)] — his law: "do not create jugad, do permanent stuff"
+      scripts/lawpack.mjs:92 — const PRODUCTION_LANES = [8 literal name(s)] — his law: "do not create jugad, do permanent stuff"
+      scripts/nightshift.mjs:146 — const PROBE_TYPES = [5 literal name(s)] — his law: "do not create jugad, do permanent stuff"
+      … 57 more
+  BARE CATCH
+      scripts/cortex.mjs:184 — cortex is a production lane and this catch guards fs I/O — §14.2 says swallow("why", e)
+      scripts/cortex.mjs:299 — cortex is a production lane and this catch guards fs I/O — §14.2 says swallow("why", e)
+      scripts/cortex.mjs:1967 — cortex is a production lane and this catch guards fs I/O — §14.2 says swallow("why", e)
+      scripts/nightshift.mjs:132 — nightshift is a production lane and this catch guards fs I/O — §14.2 says swallow("why", e)
+      scripts/nightshift.mjs:2046 — nightshift is a production lane and this catch guards fs I/O — §14.2 says swallow("why", e)
+      scripts/watchman.mjs:248 — watchman is a production lane and this catch guards fs I/O — §14.2 says swallow("why", e)
+      … 31 more
+  IMPORT-TIME REGISTRY READ
+      scripts/bootroom.mjs:60 — a registry read at IMPORT through rowOf — every importer runs it; read it inside the function that needs it, or lazySubjects()
+      scripts/gate.mjs:158 — a registry read at IMPORT through laneConsumersFromRegistry -> laneRows — every importer runs it; read it inside the function that needs it, or lazySubjects()
+      DEPCRUISE no-circular · scripts/brain.mjs → scripts/sitting.mjs
+      DEPCRUISE no-circular · scripts/brain.mjs → scripts/state.mjs
+      DEPCRUISE no-circular · scripts/context_manifest.mjs → scripts/learnstate.mjs
+      DEPCRUISE no-circular · scripts/context_manifest.mjs → scripts/sitting.mjs
+      DEPCRUISE no-circular · scripts/learnstate.mjs → scripts/brain.mjs
+      DEPCRUISE no-circular · scripts/learnstate.mjs → scripts/state.mjs
+      DEPCRUISE no-circular · scripts/sitting.mjs → scripts/state.mjs
+lawpack: GREEN — no law's finding count rose, and every rule is on disk
+
+exit 0

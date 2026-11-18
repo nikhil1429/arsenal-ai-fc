@@ -81,6 +81,7 @@ import { randomBytes } from "node:crypto";
 import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE intent door — no organ keeps its own word list
 import { isStale as forgeIsStale } from "./forge_session.mjs";   // W0-D — the route asks the pacer whether its session is stale; it used to re-derive it from started_at with a bare 18
 import { transcriptPathFor } from "./study_scope.mjs";   // G0 (23 Sep) — the leaf's one derivation of where a session's transcript lives
+import { JUDGE_BUDGET_MS, JUDGE_DISPATCH_MS } from "./gaffer_brain.mjs";   // unit mjud · msit — a judge verb is waited on for the judge's OWN budget plus its dispatch, read from its owner (ownerTimeoutMs)
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -203,9 +204,19 @@ const pct = (arr, p) => { if (!arr.length) return null; const s = [...arr].sort(
 // real latencies — but every owner write is LOGGED, not executed, so a rehearsal never banks a rep
 // into his truth layer ("never waste any of my data" cuts both ways: no fake data either).
 const DRY_OWNERS = process.env.ARSENAL_SITTING_DRY_OWNERS === "1";
-function ownerCli(file, args, input) {
+// unit mjud · msit (row 1008 (2)) — A JUDGE VERB IS NEVER KILLED INSIDE THE JUDGE'S OWN BUDGET. Every owner call is killed at
+// 20 s, as it always was — EXCEPT a verb of gaffer_brain.mjs that reaches gradeJudge (judge-round, judge-due), which the close
+// fires: that round runs batches inside JUDGE_BUDGET_MS and then dispatches, so it is waited on JUDGE_BUDGET_MS +
+// JUDGE_DISPATCH_MS, both read from gaffer_brain.mjs by import (MEASURED at BASE: the close's judge-due died at 20 s, a fifteenth
+// of the budget the round is allowed). PURE: the selftest and ci/mjud's witness drive it.
+const JUDGE_VERBS = Object.freeze(["judge-round", "judge-due"]);
+const OWNER_TIMEOUT_MS = 20000;
+export function ownerTimeoutMs(file, args) {
+  return file === "gaffer_brain.mjs" && Array.isArray(args) && JUDGE_VERBS.includes(args[0]) ? JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS : OWNER_TIMEOUT_MS;
+}
+export function ownerCli(file, args, input) {
   if (DRY_OWNERS) { log(`sitting: DRY owner call → ${file} ${args.join(" ")}${input ? ` (stdin ${String(input).length} chars)` : ""}`); return { ok: true, status: 0, out: `DRY ${file} ${args[0]}`, err: "", dry: true }; }
-  const r = spawnSync(process.execPath, [join(HERE, file), ...args], { input: input == null ? undefined : String(input), encoding: "utf8", windowsHide: true, timeout: 20000, env: { ...process.env, ARSENAL_ORGAN: "1" } });
+  const r = spawnSync(process.execPath, [join(HERE, file), ...args], { input: input == null ? undefined : String(input), encoding: "utf8", windowsHide: true, timeout: ownerTimeoutMs(file, args), env: { ...process.env, ARSENAL_ORGAN: "1" } });
   return { ok: r.status === 0, status: r.status, out: String(r.stdout || "").trim(), err: String(r.stderr || "").trim().slice(0, 400) };
 }
 
@@ -1951,6 +1962,18 @@ async function selftest() {
   } finally {
     Object.assign(F, F0);
     try { rmSync(tmp, { recursive: true, force: true }); } catch { }
+  }
+  // ── unit mjud · msit — the judge verbs are waited on for the judge's own budget plus its dispatch; every other owner keeps 20 s ──
+  {
+    const need = JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS;
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n");
+    assert("mjud msit · a judge verb (judge-due, judge-round) through the owner funnel waits JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS (both imported from gaffer_brain.mjs); every non-judge owner call keeps its 20 s",
+      JUDGE_VERBS.every((v) => ownerTimeoutMs("gaffer_brain.mjs", [v, "--trigger", "sitting.close"]) === need) && need > JUDGE_BUDGET_MS
+      && ownerTimeoutMs("gaffer_brain.mjs", ["queue"]) === OWNER_TIMEOUT_MS && ownerTimeoutMs("gaffer_brain.mjs", ["capture"]) === OWNER_TIMEOUT_MS
+      && ownerTimeoutMs("capture.mjs", ["judge-due"]) === OWNER_TIMEOUT_MS && ownerTimeoutMs("forge_session.mjs", ["close"]) === OWNER_TIMEOUT_MS
+      && /timeout: ownerTimeoutMs\(file, args\)/.test(src.slice(src.indexOf("export function ownerCli"), src.indexOf("export function ownerCli") + 700))
+      && /owner\("gaffer_brain\.mjs", \["judge-due", "--trigger", "sitting\.close"\]\)/.test(src),
+      `need ${need} · judge-due ${ownerTimeoutMs("gaffer_brain.mjs", ["judge-due"])} · queue ${ownerTimeoutMs("gaffer_brain.mjs", ["queue"])}`);
   }
   console.log(`\nsitting selftest: ${pass} passed, ${fail} failed`);
   return fail === 0;

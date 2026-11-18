@@ -173,6 +173,11 @@ const WATCHER_ROLE = "text";
 // mclose row 914 G (LENT by lane S, row 914 (4)) — THE JUDGE CALL'S ONE BUDGET: both Opus judge calls pass it, and the day
 // close's deadline (postmatch.mjs autocloseBudget) sums it, so the call's timeout and the close's sum can never drift apart.
 export const JUDGE_BUDGET_MS = 300000;
+// unit mjud · msit (row 1008 (2)) — THE JUDGE'S OWNER-SPAWN TIMEOUT, ONE NAME: the judge's own children after a batch returns
+// (its captain's-call card and its owner dispatch) are each killed at this. It was two bare `timeout: 30000` literals inside
+// gradeJudge; the value is theirs, unchanged, only named. A CALLER that spawns a judge verb (judge-round / judge-due) waits
+// JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS, both read by import, so no caller can kill a round its own budget still allows.
+export const JUDGE_DISPATCH_MS = 30000;
 const WATCHER_ENV = "GAFFER_WATCHER_MODEL";
 const watcherModel = () => modelsResolve(WATCHER_ROLE, { env: WATCHER_ENV }).model;   // for display: the model the next call will try FIRST
 // 20s. NOT a guess and NOT a latency target: it is the ceiling past which a
@@ -1548,6 +1553,8 @@ Return the JSON now — one entry per item, ids copied exactly, and nothing for 
 export const VERIFY_TYPES = ["hidden_test", "adversarial"];
 export const VERIFY_JOB = "gaffer_verify";
 export const VERIFY_MAX_CLAIMS = 3;
+// the search call's own kill, 180 s (the value the call carried inline before mjud; only named): see verifyCitedFacts
+const VERIFY_TIMEOUT_MS = 180000;
 const isHttpUrl = (s) => typeof s === "string" && /^https?:\/\/\S+$/i.test(s.trim());
 
 export function buildVerifyPrompt(items) {
@@ -1600,11 +1607,17 @@ export function renderExternalCheck(check) {
 export async function verifyCitedFacts(items, deps = {}) {
   const eligible = (items || []).filter((i) => i && VERIFY_TYPES.includes(i.type));
   if (!eligible.length) return { ran: false, why: "no hidden_test/adversarial item in the round", checks: {}, calls: 0 };
-  const gen = deps.verifyGenerate || (async (p) => {
+  // unit mjud · F3 (row 1008 (4)) — THE CHECK RIDES INSIDE THE ROUND'S ONE BUDGET. gradeJudge hands what remains of
+  // JUDGE_BUDGET_MS as `verifyBudgetMs`; the call is killed at the smaller of its own 180 s and that, and with nothing
+  // left it is not started at all (named, never a silent skip). Called alone (no budget handed), its own 180 s stands.
+  const budgetMs = Number.isFinite(deps.verifyBudgetMs) ? Math.floor(deps.verifyBudgetMs) : null;
+  if (budgetMs !== null && budgetMs < 1) return { ran: false, why: "no budget remained for the external check — the round's ONE judge budget was already spent", checks: {}, calls: 0 };
+  const gen = deps.verifyGenerate || (async (p, call = {}) => {
     const { claudeGen, ledgerForensics } = await import("./claudegen.mjs");
     // 180 s: a search call is slower than a judge call and nothing waits on it but the
-    // round close, which is already the slow moment by design.
-    const r = await claudeGen(p, "sonnet", 180000, ["--allowedTools", "WebSearch"]);
+    // round close, which is already the slow moment by design. (mjud: clipped to what the round has left.)
+    const verifyMs = Number.isFinite(call.budget_ms) ? Math.max(1, Math.min(VERIFY_TIMEOUT_MS, Math.floor(call.budget_ms))) : VERIFY_TIMEOUT_MS;
+    const r = await claudeGen(p, "sonnet", verifyMs, ["--allowedTools", "WebSearch"]);
     try {
       appendFileSync(BRAIN_LEDGER, JSON.stringify({
         ts: new Date().toISOString(), job: VERIFY_JOB, engine: "claude", model: "sonnet",
@@ -1618,11 +1631,12 @@ export async function verifyCitedFacts(items, deps = {}) {
     } catch { /* an unmetered call is still a made call — never fail the round on the meter */ }
     return r;
   });
-  const r = await gen(buildVerifyPrompt(eligible));
-  if (!r || !r.ok) return { ran: true, ok: false, why: `search lane did not answer (${(r && r.error) || "no reply"})`, checks: {}, calls: 1 };
+  const r = await gen(buildVerifyPrompt(eligible), budgetMs !== null ? { budget_ms: budgetMs } : {});
+  const duration_ms = r && Number.isFinite(r.duration_ms) && r.duration_ms > 0 ? r.duration_ms : 0;   // mjud — the round charges it to its ONE budget
+  if (!r || !r.ok) return { ran: true, ok: false, why: `search lane did not answer (${(r && r.error) || "no reply"})`, checks: {}, calls: 1, duration_ms };
   const p = parseVerify(r.text, eligible);
-  if (!p.ok) return { ran: true, ok: false, why: "search lane answered in a shape this organ will not act on", checks: {}, calls: 1 };
-  return { ran: true, ok: true, checks: p.checks, dropped: p.dropped, droppedById: p.droppedById, calls: 1,
+  if (!p.ok) return { ran: true, ok: false, why: "search lane answered in a shape this organ will not act on", checks: {}, calls: 1, duration_ms };
+  return { ran: true, ok: true, checks: p.checks, dropped: p.dropped, droppedById: p.droppedById, calls: 1, duration_ms,
     claims: Object.values(p.checks).reduce((a, c) => a + c.length, 0),
     refuted: Object.values(p.checks).reduce((a, c) => a + c.filter((x) => x.verdict === "false").length, 0) };
 }
@@ -1925,6 +1939,8 @@ function captureDay(it) {
 //     AUTH_FAIL_RE (not exported) holds the observed "Not logged in · Please run /login" (brain.mjs:937, 732 live rows) and
 //     "Failed to authenticate" (daemon_watchdog.mjs:786), restated here word for word; plus row 963's live judge refusal
 //     "OAuth session expired and could not be refreshed", which brain.mjs:961 does NOT match (a FORK on brain.mjs, PROOF.md).
+//   · unit mjud · mauth (row 1008 (2) F1): THIS IS NOW THE ONE HOME of the pattern. brain.mjs's AUTH_FAIL_RE is this RegExp,
+//     imported, no longer a restatement (the direction of the import is named in ci/mjud/PROOF.md: the other way closes cycles).
 const JUDGE_KILL_RE = /KILLED \((?:SIG[A-Z]+|no-signal)\) after \d+ms|ETIMEDOUT|turn timed out after \d+ ms/;
 export const JUDGE_AUTH_RE = /not logged in|please run \/login|invalid api key|authenticat|unauthorized|oauth session expired|could not be refreshed/i;
 /** judgeRates — PURE: the per-capture ms of every judge ledger row that returned ok (job JUDGE_JOB, ok true, duration and items measured). */
@@ -1933,20 +1949,39 @@ export function judgeRates(ledgerRows) {
     && Number.isFinite(r.duration_ms) && r.duration_ms > 0 && Number.isInteger(r.items) && r.items > 0)
     .map((r) => r.duration_ms / r.items);
 }
-/** judgeBatchSize — PURE: how many captures the next batch may hold inside `remainingMs`, derived from `rates` (judgeRates). */
-export function judgeBatchSize({ rates = [], remainingMs, left }) {
-  if (!(left > 0)) return { size: 0, from_rows: rates.length, rate_ms: null, margin_ms: null, per_capture_ms: null, remaining_ms: remainingMs, why: "the queue is empty" };
-  if (!rates.length) {
+// ── mjd2 · A KILLED BATCH TEACHES THE SIZE (row 1008 (3)) ──
+// MEASURED at BASE: judgeRates reads ok rows only, so a batch killed at its budget left the size exactly where it was and the
+// next round sent the same size into the same kill. A killed judge row (job JUDGE_JOB, ok false, the lane's own kill: the
+// row's `killed` / `timed_out` field, or its error text by JUDGE_KILL_RE) proves its captures took LONGER than duration_ms /
+// items each — a FLOOR on the per-capture time, strict, never an estimate. judgeBatchSize then (a) counts the floors with the
+// ok rates in the slowest-rate-plus-spread estimate, and (b) caps the size strictly below remaining / floor, so a size that
+// keeps dying shrinks by at least one capture each time, down to the RED of "not even ONE capture fits". Read from fields
+// the row already carries (duration_ms, items, killed, error): no field is added to the ledger.
+/** judgeFloors — PURE: the per-capture ms of every judge ledger row the lane KILLED (a strict lower bound on that row's rate). */
+export function judgeFloors(ledgerRows) {
+  return (ledgerRows || []).filter((r) => r && r.job === JUDGE_JOB && r.ok === false
+    && Number.isFinite(r.duration_ms) && r.duration_ms > 0 && Number.isInteger(r.items) && r.items > 0
+    && (r.killed === true || r.timed_out === true || JUDGE_KILL_RE.test(String(r.error_envelope || r.error || ""))))
+    .map((r) => r.duration_ms / r.items);
+}
+/** judgeBatchSize — PURE: how many captures the next batch may hold inside `remainingMs`, derived from `rates` (judgeRates)
+ *  and `floors` (judgeFloors). With no floors it is the pre-mjd2 rule, unchanged. */
+export function judgeBatchSize({ rates = [], floors = [], remainingMs, left }) {
+  if (!(left > 0)) return { size: 0, from_rows: rates.length, from_floors: floors.length, rate_ms: null, margin_ms: null, per_capture_ms: null, floor_ms: null, remaining_ms: remainingMs, why: "the queue is empty" };
+  if (!rates.length && !floors.length) {
     const size = remainingMs > 0 ? 1 : 0;
-    return { size, from_rows: 0, rate_ms: null, margin_ms: null, per_capture_ms: null, remaining_ms: remainingMs,
+    return { size, from_rows: 0, from_floors: 0, rate_ms: null, margin_ms: null, per_capture_ms: null, floor_ms: null, remaining_ms: remainingMs,
       why: size ? "no judge row has returned ok — the batch is ONE capture (row 999 (2))" : "no budget remains" };
   }
-  const slow = Math.max(...rates), fast = Math.min(...rates);
+  const seen = [...rates, ...floors];
+  const slow = Math.max(...seen), fast = Math.min(...seen);
   const margin = slow - fast;
   const per = slow + margin;
-  const size = Math.max(0, Math.min(left, Math.floor(remainingMs / per)));
-  return { size, from_rows: rates.length, rate_ms: Math.round(slow), margin_ms: Math.round(margin), per_capture_ms: Math.round(per), remaining_ms: remainingMs,
-    why: `${rates.length} ok judge row(s): slowest ${Math.round(slow)} ms/capture + margin ${Math.round(margin)} ms (the rows' own spread) against ${Math.round(remainingMs)} ms left` };
+  let size = Math.max(0, Math.min(left, Math.floor(remainingMs / per)));
+  const floor = floors.length ? Math.max(...floors) : null;
+  if (floor !== null) size = Math.min(size, Math.max(0, Math.ceil(remainingMs / floor) - 1));   // strictly below remaining / floor
+  return { size, from_rows: rates.length, from_floors: floors.length, rate_ms: Math.round(slow), margin_ms: Math.round(margin), per_capture_ms: Math.round(per), floor_ms: floor === null ? null : Math.round(floor), remaining_ms: remainingMs,
+    why: `${rates.length} ok judge row(s)${floors.length ? ` + ${floors.length} killed row(s) as floors (slowest floor ${Math.round(floor)} ms/capture, the size held strictly below it)` : ""}: slowest ${Math.round(slow)} ms/capture + margin ${Math.round(margin)} ms (the rows' own spread) against ${Math.round(remainingMs)} ms left` };
 }
 /** judgeOrder — PURE: the round's captures OLDEST DAY FIRST, by the capture's own instant (captureDay); a capture with only a day
  *  sorts at that IST day's start, one with neither sorts last; ties keep the queue's own order. */
@@ -1977,9 +2012,16 @@ export async function gradeJudge(deps = {}) {
   // never a second opinion it hears afterwards. One search call per round at most;
   // none at all when the round holds no hidden_test/adversarial item. Its outcome
   // rides each item as `external_check` (null = not run / lane down / nothing cited).
+  // unit mjud · F3 (row 1008 (4)) — THE ROUND'S ONE CLOCK STARTS HERE, BEFORE THE CHECK: the check is part of the round, so it
+  // is charged to JUDGE_BUDGET_MS (its timeout clipped to what remains, verifyCitedFacts) and every batch after it is sized
+  // against what the check left. The day close's sum (postmatch.mjs autocloseBudget) still counts ONE JUDGE_BUDGET_MS.
+  const clock = deps.clock || (() => Date.now());
+  const t0 = clock();
+  const vdeps = { ...deps, verifyBudgetMs: JUDGE_BUDGET_MS - (clock() - t0) };
   const ext = deps.verify !== undefined
-    ? await deps.verify(queued, deps)
-    : (deps.dry && !deps.verifyGenerate ? { ran: false, why: "DRY RUN — the search lane was not called", checks: {}, calls: 0 } : await verifyCitedFacts(queued, deps));
+    ? await deps.verify(queued, vdeps)
+    : (deps.dry && !deps.verifyGenerate ? { ran: false, why: "DRY RUN — the search lane was not called", checks: {}, calls: 0 } : await verifyCitedFacts(queued, vdeps));
+  const extMs = ext && Number.isFinite(ext.duration_ms) && ext.duration_ms > 0 ? ext.duration_ms : 0;
   const items = queued.map((it) => ({ ...it, external_check: (ext && ext.checks && ext.checks[it.id] && ext.checks[it.id].length) ? ext.checks[it.id] : null }));
 
   // THE SPLIT, decided before the prompt is built (BLOCK 1). If the head cannot
@@ -2029,7 +2071,7 @@ export async function gradeJudge(deps = {}) {
   const second = deps.secondOpinion || ((it) => secondOpinion(it, deps));
   const cardFile = deps.fileCard || ((line, key, why = null) => {
     try {
-      const out = execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), "file", "--line", line, "--key", key, ...(why ? ["--why-code-cannot-decide", why] : [])], { encoding: "utf8", timeout: 30000, windowsHide: true });
+      const out = execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), "file", "--line", line, "--key", key, ...(why ? ["--why-code-cannot-decide", why] : [])], { encoding: "utf8", timeout: JUDGE_DISPATCH_MS, windowsHide: true });
       return { ok: true, out: String(out || "") };
     } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
   });
@@ -2041,7 +2083,7 @@ export async function gradeJudge(deps = {}) {
   const dispatch = deps.dispatch || ((cmd) => {
     if (!cmd || !cmd.organ) return { ok: true, noop: true, note: cmd && cmd.note };
     const fail = (e) => ({ ok: false, error: String((e && e.message) || e).slice(0, 200) });
-    const opt = { encoding: "utf8", timeout: 30000, windowsHide: true };
+    const opt = { encoding: "utf8", timeout: JUDGE_DISPATCH_MS, windowsHide: true };
     if (cmd.organ === "rejirah.mjs") {
       try { execFileSync(process.execPath, [join(HERE, "rejirah.mjs"), ...cmd.argv], opt); return { ok: true }; } catch (e) { return fail(e); }
     }
@@ -2194,16 +2236,20 @@ export async function gradeJudge(deps = {}) {
   // ── THE ROUND: batch after batch, oldest day first, inside ONE budget, no retry ──
   const ledger = deps.judgeHistory !== undefined ? deps.judgeHistory : readJournal(BRAIN_LEDGER, Infinity);
   const rates = judgeRates(ledger);
-  const clock = deps.clock || (() => Date.now());
-  const t0 = clock();
-  let spent = 0, at = 0, stop = null;
+  const floors = judgeFloors(ledger);   // mjd2 — a killed judge row is a FLOOR on its per-capture time (judgeFloors)
+  let spent = extMs, at = 0, stop = null;   // mjud F3 — the check's own time is already spent from the ONE budget
   const batches = [];
   const all = { settled: [], dispatched: [], refused: [], missed: [], diamonds: [], keyDoubts: [] };
-  const sizing0 = judgeBatchSize({ rates, remainingMs: JUDGE_BUDGET_MS, left: items.length });
+  const sizing0 = judgeBatchSize({ rates, floors, remainingMs: JUDGE_BUDGET_MS - Math.max(clock() - t0, spent), left: items.length });
   while (at < items.length) {
     const remaining = JUDGE_BUDGET_MS - Math.max(clock() - t0, spent);
-    const sz = judgeBatchSize({ rates, remainingMs: remaining, left: items.length - at });
-    if (sz.size < 1) { stop = { kind: batches.length ? "budget" : "cannot-fit", sizing: sz }; break; }
+    const sz = judgeBatchSize({ rates, floors, remainingMs: remaining, left: items.length - at });
+    if (sz.size < 1) {
+      // mjud F3 — no batch started, and a full budget WOULD have started one: the check ate it, and the round says so
+      const ate = !batches.length && Math.max(clock() - t0, spent) > 0 && judgeBatchSize({ rates, floors, remainingMs: JUDGE_BUDGET_MS, left: items.length - at }).size >= 1;
+      stop = { kind: batches.length ? "budget" : ate ? "external-check-ate-budget" : "cannot-fit", sizing: sz };
+      break;
+    }
     const batch = items.slice(at, at + sz.size);
     const prompt = buildJudgePrompt(batch, { ...deps, inlineHead: !rides });
     const r = await gen(prompt, { items: batch.length, budget_ms: remaining, batch: batches.length + 1 });
@@ -2250,6 +2296,12 @@ export async function gradeJudge(deps = {}) {
     const trace = { batch: stop.batch.n, size: 1, capture: { id: it.id, type: it.type, ref: it.ref, day: cap.day }, budget_ms: stop.batch.budget_ms, duration_ms: stop.batch.duration_ms, killed: true, error: clip(stop.error, 300) };
     return { ok: false, reason: "judge-one-capture-past-budget", red: "RED · ONE CAPTURE PAST THE BUDGET", trace,
       say: `gaffer_brain: RED · ONE CAPTURE PAST THE BUDGET — batch ${trace.batch} held ONE capture (${it.type}:${it.ref}, day ${cap.day || "unknown"}) and the lane died at its ${Math.round(trace.budget_ms)} ms budget (${clip(stop.error, 160)}). The round stopped: no further call was made, nothing was invented${earlier}. This is a budget or effort question for the architect (row 963 (1)), never a retry.`,
+      ...carried };
+  }
+  if (stop && stop.kind === "external-check-ate-budget") {
+    const usedMs = JUDGE_BUDGET_MS - stop.sizing.remaining_ms;
+    return { ok: false, reason: "judge-budget-spent-by-external-check", red: "RED · THE EXTERNAL CHECK ATE THE BUDGET", trace: { sizing: stop.sizing, external_ms: extMs, used_ms: usedMs },
+      say: `gaffer_brain: RED · THE EXTERNAL CHECK ATE THE BUDGET — the round's ONE budget (${JUDGE_BUDGET_MS} ms) had ${Math.max(0, Math.round(stop.sizing.remaining_ms))} ms left after the external check (${Math.round(extMs)} ms on its own clock): ${stop.sizing.why}, so NO batch was started and nothing was judged or invented. The round stays in the queue for the next door.`,
       ...carried };
   }
   if (stop && stop.kind === "cannot-fit") {
@@ -3331,6 +3383,42 @@ function selftest2(stub, S) {
             auth.ok === false && auth.reason === "judge-auth-refused" && /RED/.test(auth.say) && cards.length === 1 && cards[0] === `judge:auth:${istDay(T0)}` && auth.batches.length === 1);
           assert("mjdg · OLDEST DAY FIRST: the queue is ordered by the capture's own instant, never by where it sits in the file",
             judgeOrder([{ id: "b", ts: "2026-08-15T10:00:00.000Z" }, { id: "a", ts: "2026-08-14T10:00:00.000Z" }, { id: "c" }]).map((x) => x.id).join() === "a,b,c");
+
+          // ── unit mjud · F3 — the external check rides INSIDE the round's ONE budget (row 1008 (4)) ──
+          const handed = [];
+          const ate = await gradeJudge({ dry: true, rows: items, judgeHistory: [], verify: async (q, d) => { handed.push(d.verifyBudgetMs); return { ran: true, ok: true, checks: {}, calls: 1, duration_ms: JUDGE_BUDGET_MS }; },
+            generate: async () => { throw new Error("must not be called"); }, now: T0, clock: () => 0 });
+          assert("mjud F3 · a check that EATS the budget starts NO batch and says so in its reason, RED — the check was handed the whole budget, no more",
+            ate.ok === false && ate.reason === "judge-budget-spent-by-external-check" && /EXTERNAL CHECK ATE THE BUDGET/.test(ate.say) && ate.batches.length === 0
+            && handed.length === 1 && handed[0] === JUDGE_BUDGET_MS);
+          const part = await gradeJudge({ dry: true, rows: items, judgeHistory: [{ job: JUDGE_JOB, ok: true, duration_ms: 1000, items: 1 }],
+            verify: async () => ({ ran: true, ok: true, checks: {}, calls: 1, duration_ms: JUDGE_BUDGET_MS / 3 }), generate: grade3([]), dispatch: () => ({ ok: true }), now: T0, clock: () => 0 });
+          assert("mjud F3 · the first batch is killed at what the CHECK left (JUDGE_BUDGET_MS − the check's time), never at a fresh budget",
+            part.ok && part.batches[0].budget_ms === JUDGE_BUDGET_MS - JUDGE_BUDGET_MS / 3 && part.sizing.remaining_ms === JUDGE_BUDGET_MS - JUDGE_BUDGET_MS / 3);
+          let clipped = null, called = 0;
+          const vc = await verifyCitedFacts([{ id: "v1", type: "hidden_test", spoken: "x" }], { verifyBudgetMs: 4321, verifyGenerate: async (p, call) => { called++; clipped = call.budget_ms; return { ok: true, text: '{"items":[]}', duration_ms: 7 }; } });
+          const v0 = await verifyCitedFacts([{ id: "v1", type: "hidden_test", spoken: "x" }], { verifyBudgetMs: 0, verifyGenerate: async () => { called++; return { ok: true, text: "{}" }; } });
+          assert("mjud F3 · the check's call is handed what the round has left and reports its own time; with nothing left it is not started, and says why",
+            clipped === 4321 && vc.duration_ms === 7 && v0.ran === false && /no budget remained/.test(v0.why) && called === 1);
+
+          // ── unit mjud · mjd2 — a KILLED judge row is a floor on its per-capture time (row 1008 (3)) ──
+          const killed10 = { job: JUDGE_JOB, ok: false, duration_ms: 300000, items: 10, error: "spawnSync claude ETIMEDOUT" };
+          const killed9 = { job: JUDGE_JOB, ok: false, duration_ms: 300000, items: 9, killed: true, error: "KILLED (SIGTERM) after 300000ms" };
+          const refusedAuth = { job: JUDGE_JOB, ok: false, duration_ms: 3000, items: 1, error: "OAuth session expired and could not be refreshed" };
+          const f1 = judgeFloors([killed10, refusedAuth, { job: "x", ok: false, killed: true, duration_ms: 9, items: 1 }]);
+          const s1 = judgeBatchSize({ rates: [], floors: f1, remainingMs: 300000, left: 59 });
+          const s2 = judgeBatchSize({ rates: [], floors: judgeFloors([killed10, killed9]), remainingMs: 300000, left: 59 });
+          assert("mjud mjd2 · a batch KILLED at its budget teaches the size: duration/items is a strict floor, so the next size is below the one that died, and a size that keeps dying keeps shrinking",
+            f1.join() === "30000" && s1.size === 9 && s1.from_floors === 1 && s2.size < s1.size && s2.size > 0);
+          assert("mjud mjd2 · …planted the other way: a refusal is not a kill (no floor), and with no killed row the size is the pre-mjd2 rule byte for byte",
+            judgeFloors([refusedAuth, { job: JUDGE_JOB, ok: false, duration_ms: 300000, items: 59 }]).length === 0
+            && judgeBatchSize({ rates: [10000, 20000], floors: [], remainingMs: 300000, left: 59 }).size === judgeBatchSize({ rates: [10000, 20000], remainingMs: 300000, left: 59 }).size);
+
+          // ── unit mjud · mauth — ONE home for the auth refusal pattern (row 1008 (2) F1) ──
+          const brainSrc = (() => { try { return readFileSync(join(HERE, "brain.mjs"), "utf8"); } catch { return ""; } })();
+          assert("mauth · the ONE pattern matches every observed refusal (the CLI's login text, the watchdog's, the judge's OAuth text) and brain.mjs takes it by import, restating none",
+            ["Not logged in · Please run /login", "Failed to authenticate", "OAuth session expired and could not be refreshed"].every((t) => JUDGE_AUTH_RE.test(t))
+            && /import \{ JUDGE_AUTH_RE \} from "\.\/gaffer_brain\.mjs";/.test(brainSrc) && /const AUTH_FAIL_RE = JUDGE_AUTH_RE;/.test(brainSrc) && !/AUTH_FAIL_RE = \//.test(brainSrc));
         }
 
         // ── L2 · THE BANK LANDS GRADED (6 Oct 2026 · forks rows 549-552 · fates 14 + 53) ──────────
@@ -3616,7 +3704,9 @@ function selftest2(stub, S) {
           // §9.1 (18 Aug 2026) — the two source-level halves of the external check, held
           // on the SAME read of this file (see the note in the §9.1 block above).
           assert("§9.1 · the search lane is claudeGen with the TOOL GRANT (the 11 Aug proof) — same door, same API-key refusal, never a new vendor",
-            /claudeGen\(p, "sonnet", 180000, \["--allowedTools", "WebSearch"\]\)/.test(src2));
+            /claudeGen\(p, "sonnet", verifyMs, \["--allowedTools", "WebSearch"\]\)/.test(src2)
+            // mjud F3 — the search call is killed at the smaller of its own 180 s and what the round's ONE budget has left
+            && /const verifyMs = Number\.isFinite\(call\.budget_ms\) \? Math\.max\(1, Math\.min\(VERIFY_TIMEOUT_MS, /.test(src2) && /const VERIFY_TIMEOUT_MS = 180000;/.test(src2));
           assert("§9.1 · the plan-vs-code correction is HELD, not just written: the source is the SOURCED bank (field_probes.json), and the invented probe_bank_ files are not read here at all",
             /field_probes\.json/.test(src2.split("function selftest()")[0]) && !/probe_bank_/.test(src2.split("function selftest()")[0]));
           // LAYERING (his instruction): the Cerebras reader is FROZEN, not deleted —

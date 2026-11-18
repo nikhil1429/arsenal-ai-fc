@@ -1,0 +1,196 @@
+  ✓ THE FAULT · LEGACY forgot_flags on his five CALM corrections = 0 (the word list is tuned to his ANGRY vocabulary, and he was not angry)
+  ✓ THE FAULT · …so the highest-priority intervention in the surface fired ZERO times in the sitting it exists for
+  ✓ THE FAULT · the 13 Aug greeting instruction dies the word gate (a DIRECTIVE with no permanence word is not a law to a regex)
+  ✓ THE FAULT · and the SAME gate stores plain conversation as permanent law — every one of these four is live in gaffer_standing.json today
+  ✓ THE WATCHER · a judgment is a validated SHAPE, never whatever the model returned
+  ✓ THE WATCHER · an invented signal kind is DISCARDED, never acted on (law 3)
+  ✓ THE WATCHER · a signal with no REASON is a guess and is dropped
+  ✓ THE WATCHER · garbage in, null-or-legal out — normalizeJudgment is total and never throws
+  ✓ THE PASS · the Watcher's verdict is what the surface acts on when it answers
+  ✓ THE PASS · …and it CAUGHT what the word list missed: a forgot note, from five calm corrections that scored zero
+  ✓ THE PASS · the note forbids the guess and hands back the agreed plan, exactly as the frozen engine's did
+  ✓ THE PASS · the note carries WHAT WAS SEEN and HIS WORDS, so a wrong correction is arguable instead of mysterious
+  ✓ BLOCK 4 · the 13 Aug greeting instruction — no permanence word anywhere in it — IS STORED
+  ✓ BLOCK 4 · …with the RECEIPT beside it: the quote that produced it, so a wrong block can be argued with
+  ✓ THE PASS · a block is REPLACED, never appended to — that is the whole difference from the list it retires
+  ✓ THE PASS · when the Watcher rewrites a block AND names a standing line for the SAME block, the rewrite wins — its own prompt asks for the WHOLE block, so appending on top is the same instruction twice
+  ✓ THE PASS · …but a standing line for a block the Watcher did NOT rewrite still lands, or the loop would leak instructions
+  ✓ THE PASS · the cursor advanced, so the same turns are never judged twice (and never re-billed)
+  ✓ THE JOURNAL · the row records the ENGINE, the model, the latency and the input size — his 'everything must be analyzable' ruling
+  ✓ LAYERING · with the Watcher unavailable the FROZEN word-list engine answers — a dry pool is a degradation, never a crash
+  ✓ LAYERING · …and the journal SAYS it was degraded, with the reason, so a silent fallback can never be mistaken for a judgment
+  ✓ LAYERING · the degraded path still produces the OLD behaviour it froze — same verdict, same words
+  ✓ §11 SITTING GATE · no open sitting (closed, or none on disk) ⇒ the pass is SKIPPED before the model — nothing spent, the reason names the law, the unjudged count is reported
+  ✓ §11 SITTING GATE · a skipped pass MOVES THE CURSOR past what it did not judge (the next sitting's first pass reads the sitting, not a day of coach chatter)
+  ✓ §11 SITTING GATE · `--force` (his hand) judges anyway; an open sitting judges as before (the fixture above ran with one open)
+  ✓ ONE NOTE PER TURN, EVER · four signals fire at once and exactly one is delivered — the loudest
+  ✓ …and the other three are RECORDED rather than discarded (they are evidence, just not this turn's note)
+  ✓ SILENCE IS THE DEFAULT · a judgment with no signal produces no note at all
+  ✓ the note id is stable within a turn, so the 3s poll dedupes it instead of re-injecting it every three seconds
+  ✓ DELIVERY · a monologue note followed by ANOTHER long turn is recorded as a FAILED delivery
+  ✓ DELIVERY · …and a short next turn is recorded as LANDED, measured against HIS forty-second law, not a new number
+  ✓ DELIVERY · a 'you lost it' note answered from memory in a long turn is a FAILED delivery
+  ✓ DELIVERY · …and the same note answered by going and LOOKING is landed (the bridge's own tool marker, never his words)
+  ✓ DELIVERY · UNKNOWN is a real verdict — what only his next turn can settle is never guessed as a pass
+  ✓ CACHE ORDER · two calls that differ only in the NEW turns share everything up to the new turns — the prefix is the discount
+  ✓ CACHE ORDER · the invariant rules come FIRST and the volatile turns LAST
+  ✓ HIS RULING · VOCAB-AGNOSTIC, held by source: all 26 regex literals in the production half parse the MACHINE's own markers — not one tests HIS words
+  ✓ HIS RULING · SESSION-AGNOSTIC: the 15 Aug sitting appears as EVIDENCE in the header and as a FIXTURE in the selftest, and nowhere in the production code
+  ✓ THE BRAIN NEVER BLOCKS THE MOUTH · every path out of `judge` exits 0 — a failure lands in the journal, never on the hot path
+  ✓ SOLE WRITER · this organ writes exactly three files of its own, and appends to exactly ONE documented shared lane
+  ✓ SOLE WRITER · …and the shared lane is written in brain.mjs's OWN row schema, field for field with nightshift's — no appender owns that shape
+  ✓ THE POOL · the key reader is the ONE in models.mjs — this organ and dugout.mjs both delegate to it (byte-identical delegation bodies), never a private copy
+  ✓ THE NINE · four have an answer key of his own on disk — and the other five are keyless because nothing is written, not because nobody looked
+  ✓ THE EIGHT · every type declares a CLOSED verdict set and the organ that RECORDS it — nothing here writes another organ's file
+  ✓ THE EIGHT · every type NAMES the standard it is judged against — no verdict is made against an unnamed yardstick
+  ✓ THE EIGHT · the two standards do NOT merge — recall rides his capsule, interview-facing rides the DOSSIER, and that asymmetry is deliberate
+  ✓ THE EIGHT · a verdict outside a type's set is refused, never coerced to the nearest legal word
+  ✓ MATERIAL · axis_weld is the one that carries a KEY, and it is HIS weld
+  ✓ MATERIAL · tape_doubt carries his OWN past confusion verbatim, AND the answer he wrote for it — that key was on disk the whole time
+  ✓ MATERIAL · hidden_test carries the open design probe AND the task it sits on — this is the path that used to fall over on 'no key'
+  ✓ MATERIAL · adversarial carries the drill that tells him he is wrong and asks him to defend or concede
+  ✓ MATERIAL · a ref with nothing behind it returns null, so it is REFUSED at capture rather than judged against nothing
+  ✓ MATERIAL · trap — the BAIT is the question and the TRUTH is the key, which is the exact inversion of what shipped on 15 Aug
+  ✓ MATERIAL · trap — neither the truth nor the 'wrong' note appears in what he is shown; `wrong` rides the judge's side as WHY the bait tempts him
+  ✓ MATERIAL · THE SEAL — material whose question contains the whole answer is REFUSED, not queued against his name
+  ✓ MATERIAL · THE SEAL does NOT bite a two-option question that quotes one of its own options — the standard ASKS for those
+  ✓ MATERIAL · interview — his own line is the KEY and is never shown as the question; showing it was the trap leak in a second coat
+  ✓ MATERIAL · interview — his OTHER lines ride as context, so an answer that reaches a different line of his own is not marked a miss
+  ✓ ACCEPTANCE 3 · every type DECLARED keyed really arrives with a key, and every keyless one really has none — all nine branches driven, none described
+  ✓ ACCEPTANCE 3 · …and every branch stamps the standard it will be judged against onto the material itself
+  ✓ STANDARD · the DOSSIER reaches the judge — round weights from the live projection AND the §7 red-flags from the doc it names as source
+  ✓ STANDARD · the COLD-READER bar is quoted from FORGE_SPEC, which is final on it — not restated in this file where it would rot
+  ✓ STANDARD · a source that will not parse SAYS SO and forbids substituting a private bar — an empty standard reads to a judge exactly like a permissive one
+  ✓ STANDARD · all three reach the judge in ONE head, whatever the round contains — the invariance is what makes them cacheable
+  ✓ §9.1 · `external` is the FOURTH standard name — and no verdict TYPE points at it: it is the ground rule for the keyless five, not a new yardstick
+  ✓ §9.1 · the external standard NAMES its source by file and by lane, and counts what the bank holds — never a bare 'use external knowledge'
+  ✓ §9.1 · an unreadable bank SAYS SO and forbids standing in for it from memory (an empty external standard reads like a licence)
+  ✓ §9.1 · the sourced questions for a concept ride the BODY with their URL, and a concept the bank has nothing on renders NOTHING (the head already says what silence means)
+  ✓ §9.1 · the head carries the rule, the body carries the questions — never the other way round (the head is byte-identical by contract)
+  ✓ §9.1 · THE PLANTED FALSE FACT — the search lane is asked ONLY about the checked types (the voice_rep is not in the verify prompt), and told to return nothing rather than guess
+  ✓ §9.1 · …the refutation reaches the JUDGE as ground UNDER THAT ITEM, verdict and source quoted, before it grades
+  ✓ §9.1 · …and the planted fact is REFUTED on the record: the verdict is failed, the check rides the settled row with its source, and the round's receipt counts one refutation
+  ✓ §9.1 · an item the check had nothing on says so on its row ('nothing checkable cited' / 'not a checked type') — null is never silent
+  ✓ §9.1 · an id the round does not contain is IGNORED — the search lane cannot plant a claim on an item nobody captured
+  ✓ §9.1 · a SOURCELESS true/false and an illegal verdict are DROPPED and counted; 'unverifiable' needs no source and is kept as exactly that
+  ✓ §9.1 · …and when the validator ate every claim the row says THAT, not 'nothing cited'
+  ✓ §9.1 · a DEAD search lane never blocks the round — it is judged without external ground and every row SAYS so
+  ✓ §9.1 · a round with no hidden_test/adversarial item makes NO search call at all — no spend, and the receipt says why
+  ✓ §9.1 · the search lane is metered on the shared ledger under its own job name and covers exactly the two open-ended keyless types
+  ✓ §9.4 · the head carries the register contract for the five interview-facing types — expected ONLY from the ground, and missing/hedges explicitly NOT the model's to return
+  ✓ §9.4 · the DOSSIER's probe GRAMMAR now reaches the judge (one of the register's legal sources — it was on disk and never handed over)
+  ✓ §9.4 · HEDGES are counted at CAPTURE, by code, on the row itself — three hedges (shayad · matlab · i think) before any model has seen the answer
+  ✓ §9.4 · THE DoD FIXTURE, end to end — three hedges + one missing term yields EXACTLY {hedges:3, missing:['grounding']}: the invented 'constitutional ai' was dropped (not in the ground), the unsaid 'chain-of-thought' was dropped (never said), and missing was recomputed from his transcript
+  ✓ §9.4 · the register rides the rep through the OWNER's door — capture.mjs `rep … --register <json>` — and never touches --correct
+  ✓ §9.4 · a recall type (axis_weld) gets NO register — its row says null and its argv carries no --register (the room does not hear a Re-Jirah recital)
+  ✓ §9.4 · THE ONE SPOKEN LINE closes the round — the term the room wanted and did not hear, and the hedge count
+  ✓ §9.4 · …and a round where nothing was missing speaks NO line (silence over a fabricated ask)
+  ✓ §9.4 · a judge that returns NO register block still yields a register on the row — hedges are code's and always present, the lists empty
+  ✓ §9.3 · whoHeIsText reads the consolidator's OWN keys (fingerprint · open threads · cracks), dated 'as of', and names the earlier layers by date only — never the whole layered file into a cached head
+  ✓ §9.3 · …the legacy shapes still read (a string · {text} · {who_he_is}) and nothing/garbage reads as EMPTY, never as a person
+  ✓ §9.3 · the head carries him when a fingerprint exists — 'WHO YOU ARE JUDGING:' followed by the dated fingerprint, not the absence line
+  ..  §9.3 · LIVE who_he_is check NOT RUN — no consolidated file on this checkout (dressing-room/hippocampus is gitignored)
+  ..  CARTRIDGE · 14635 chars ≈ 3659 tokens (opus caches at ≥512 · ARGS drops a head past 26,000 chars)
+  ✓ CARTRIDGE · the head clears opus's 512-token minimum with room to spare (3659 tokens) and fits the argv cap (14635 chars)
+  ✓ CAPTURE · it banks his answer with the material beside it and returns a row — no model, no network, no subprocess in this path
+  ✓ CAPTURE · a KEYLESS type captures perfectly well and says so — the old lane could not even represent this
+  ✓ CAPTURE · THE GUT-WORD LAW is held at this door too — third writer of the same law, same answer as capture.mjs and rejirah.mjs
+  ✓ CAPTURE · an EMPTY answer is refused, never banked as a failure — 'he said nothing' and 'he said the wrong thing' are different facts
+  ✓ CAPTURE · an unknown verdict type is refused at the door
+  ✓ CAPTURE · 200 captures stay trivial — this runs in the ONLY latency budget the round has
+  ✓ CAPTURE · THE 11 AUG LAW: the round is on disk item by item, so a connection that drops mid-round costs him NOTHING he already defended
+  ✓ PASS 1 · THREE DIFFERENT VERDICT TYPES graded in ONE Opus call — not three calls (this is the acceptance his spec asks for)
+  ✓ PASS 1 · the keyless hidden_test really is GRADED — the old lane could not judge it at all, so this is the path that had to work
+  ✓ PASS 1 · grades are matched BY ID, never by position — the reply above is deliberately in the WRONG order and every verdict still lands on its own item
+  ✓ PASS 1 · each verdict is dispatched through its OWN owner's CLI — rejirah for an axis, doubtminer for a broken doubt, capture for a rep
+  ✓ PASS 1 · …and every dispatched argv is the owner's REAL contract, not an invented one
+  ✓ PASS 1 · a doubt that STILL STANDS is never retired — deleting it would erase the evidence he still holds it, which is the one thing the tape room is for
+  ✓ PASS 1 · a verdict ILLEGAL for its type is refused and the item stays outstanding — 'passed' is not a legal answer for an axis weld
+  ✓ PASS 1 · a verdict the OWNER refuses is NOT marked settled and says why — his spoken answer is the one thing here that cannot be reproduced
+  ✓ PASS 1 · a dead lane keeps the whole round in the queue and invents nothing
+  ✓ PASS 1 · an unparseable answer keeps the round too — junk never becomes a verdict
+  ✓ PASS 1 · with nothing captured it does nothing at all — no call, no spend
+  ✓ mjdg · NO ok judge row on the ledger ⇒ the first batch holds exactly ONE capture (row 999 (2)), and the round still drains by the measured time
+  ✓ mjdg · the size is DERIVED, never typed: slowest rate + the rows' own spread against what is left
+  ✓ mjdg · a size that cannot fit ONE capture starts NO batch and says so, RED — no call, nothing spent
+  ✓ mjdg · ONE capture that dies at the budget stops the round RED with its trace — no further call, never a retry (row 963 (1))
+  ✓ mjdg · THE AUTH CANARY: a login refusal is RED with its own reason and ONE card keyed by the day — never a silent ok:false (row 963 (3))
+  ✓ mjdg · OLDEST DAY FIRST: the queue is ordered by the capture's own instant, never by where it sits in the file
+  ✓ mjud F3 · a check that EATS the budget starts NO batch and says so in its reason, RED — the check was handed the whole budget, no more
+  ✓ mjud F3 · the first batch is killed at what the CHECK left (JUDGE_BUDGET_MS − the check's time), never at a fresh budget
+  ✓ mjud F3 · the check's call is handed what the round has left and reports its own time; with nothing left it is not started, and says why
+  ✓ mjud mjd2 · a batch KILLED at its budget teaches the size: duration/items is a strict floor, so the next size is below the one that died, and a size that keeps dying keeps shrinking
+  ✓ mjud mjd2 · …planted the other way: a refusal is not a kill (no floor), and with no killed row the size is the pre-mjd2 rule byte for byte
+  ✓ mauth · the ONE pattern matches every observed refusal (the CLI's login text, the watchdog's, the judge's OAuth text) and brain.mjs takes it by import, restating none
+  ✓ L2 · BANK WRITE · a FAILED write of his answer is ok:false (reason write-failed) and says NOT banked — never the bare catch that returned ok:true
+  ✓ L2 · BANK WRITE · …and his words ride the refusal back, so the caller still holds what he said while the question stays open
+  ✓ L2 · BANK WRITE · a write that lands is ok:true, to the grade queue, and the row written IS the row returned
+  ✓ L2 · BANK WRITE · the real writer is VERIFIED ON DISK: a landed row is in the file, and a path it cannot write (a file where its dir should be) is ok:false with the errno — it returns, it never throws, it never claims
+  ✓ L2 · JUDGE BY CODE · a round fired by a DECLARED trigger stamps its settled row judged_by "code" + judged_by_code_at (the round's ISO instant) + fired_by — APPENDED to the grade queue with `of` = the capture's id
+  ✓ L2 · JUDGE BY CODE · …and the rep it dispatches to capture.mjs carries the SAME stamp on itself (--judged-by code --judged-at <iso>), so the reps_log row is stamped where it lives
+  ✓ L2 · APPEND-ONLY · the capture row is NEVER rewritten — the stamp rides the NEW settled row, and the capture the round read is byte-for-byte what it was
+  ✓ L2 · JUDGE BY HAND · a TYPED round grades him the same and is recorded as what it was — judged_by "hand", judged_by_code_at null, fired_by "cli" — and its rep carries --judged-by hand with no code instant
+  ✓ L2 · JUDGE BY CODE · an UNDECLARED trigger is refused before anything is read or spent — a stamp a typo could mint would be testimony
+  ✓ L2 · SETTLEMENT WRITE · a settled row that does not land is ok:false (settle-write-failed), NAMES the item, and the round STOPS there — the next verdict never reaches its owner, so nothing is double-counted
+  ✓ L2 · DISPATCH · capture.mjs `rep` exits 0 even when it appends nothing — its counts line is the verdict: appended 1 lands, rejected 1 is a REFUSAL (never a settled grade), a duplicate is already on disk, no line at all is a refusal
+  ✓ L2 · JUDGE-DUE · sitting.close with anything outstanding is DUE (the round is over by definition); with nothing outstanding it is not, and nothing is spent
+  ✓ L2 · JUDGE-DUE · the PACER fires only when the newest unjudged capture is older than the round's idle definition — a live round is never judged mid-answer
+  ✓ L2 · JUDGE-DUE · an undeclared trigger is REFUSED, never treated as either door
+  ✓ L2 · JUDGE-DUE · the idle definition is INHERITED from sitting.mjs (DEFAULT_CONFIG.idle_close_min), never guessed — the two numbers cannot drift apart
+  ✓ L2 · JUDGE-DUE · the code door opens only for an organ child (ARSENAL_ORGAN=1) — a prompt is told to type judge-round, which is stamped hand
+  ✓ mclose · DAY.CLOSE · a DECLARED door of its own (the day closes itself), named with its reason in the frozen map beside sitting.close and the pacer
+  ✓ mclose · DAY.CLOSE · takes the PACER's idle rule, never sitting.close's unconditional one: at the same moment, inside the idle definition, sitting.close is due and day.close is NOT (a gate only gets stricter)
+  ✓ mclose · DAY.CLOSE · THE STRICTER DOOR STILL OPENS (row 891 (1)'s clause): the capture the evening found live reads DUE at the next morning's anchor; nothing outstanding is never due
+  ✓ mclose · DAY.CLOSE · a round it fires is stamped judged_by code · fired_by day.close on its settled row (the door names itself)
+  ✓ mjday · THE MORNING CLOSE · a capture of D (23:40 IST) settled by the round at D+1 07:05 IST carries day D, its capture's day — never the judge's clock, which stays on the row's ts
+  ✓ mjday · THE MORNING CLOSE · …the row names its capture's instant (captured_at) and the rep it dispatches carries it as --ts, through the existing call (capture.mjs's half is the FORK)
+  ✓ mjday · ACROSS MIDNIGHT · a round over captures of D and D+1 writes each settled row with ITS OWN capture's day, and only the slept day's row and rep carry the capture's instant
+  ✓ mjday · THE EVENING PATH NEVER MOVES · a round on D at 22:57 over a capture of D writes the row it always wrote (day D, no captured_at, the same key order) and its rep gets no --ts
+  ✓ mjday · NO INSTANT, NONE INVENTED · a capture with no readable ts, settled the next morning, keeps the day it carries itself, names no captured_at, and its rep is handed no instant
+  ✓ mjday · captureDay · the capture's instant beats a disagreeing day field; no instant → the day it carries; neither, or a day that is not a calendar day → null (a row claims no day it cannot know)
+  ✓ BLOCK 5 · AGREE — one verdict, recorded, carrying BOTH judges' names (a claim about him that two model families reached separately)
+  ✓ BLOCK 5 · DISAGREE — the 💎: NOTHING is recorded, nothing reaches an owner, and the item stays outstanding to be judged again
+  ✓ BLOCK 5 · …and it becomes HIS card, carrying both readings and his own answer — 'the models NEVER resolve disagreements between themselves'
+  ✓ BLOCK 5 · IDENTITIES MASKED — neither model is named on the card, and the order is DERIVED from the item id, so the same disagreement renders the same way every time
+  ✓ BLOCK 5 · …and the masking really SWAPS — two different items put the same judge in different slots, or the mask is a label and not a mask
+  ✓ BLOCK 5 · a KEYED verdict is NOT second-judged — his own answer is on disk, so a second opinion buys nothing and doubles the cost
+  ✓ BLOCK 5 · a DEAD second reader leaves the first verdict standing, recorded honestly as ONE judge — a broken second opinion must never discard a real one
+  ✓ BLOCK 5 · key_doubt — his recall verdict STILL STANDS and is recorded; the doubt about his own page becomes a card, because only he edits a capsule
+  ✓ BLOCK 5 · the second-judge prompt is a genuinely INDEPENDENT read — it is never told what the first judge concluded
+  ✓ BLOCK 5 · …and it is a DIFFERENT MODEL FAMILY: the free Flash lane the Watcher already proves live, so a second opinion costs latency and nothing else
+  ✓ CARTRIDGE · the whole rubric is in the head, and the head is the INVARIANT half — all eight types, their legal verdicts, and the standard beside each
+  ✓ CARTRIDGE · it forbids a guessed grade outright, and says plainly that a declined item is honest
+  ✓ CARTRIDGE · his gut-word is given to the judge and explicitly excluded from the grade — it is a prediction being measured, not evidence
+  ✓ CARTRIDGE · it is BYTE-IDENTICAL on repeat, which is the entire caching mechanism — anything varying per round would silently disable it
+  ✓ CARTRIDGE · nothing about a specific round leaks into it — no item id, no concept, no answer of his
+  ✓ BODY · carries what VARIES and nothing else — his ground for this round's concepts, and his answers
+  ✓ BODY · on a lane where the head cannot ride argv it is INLINED instead, so the standard is never silently dropped
+  ✓ JUDGE PROMPT · a keyless item SAYS it has no key rather than silently looking like one that failed
+  ✓ PASS 2 · the night prompt carries EVERY verdict of the day plus the day's conversation, in one call
+  ✓ PASS 2 · it finds the CROSS-ROUND pattern by name — the same axis failing on two concepts is ONE finding, and no round-close pass can ever see it
+  ✓ PASS 2 · it may CORRECT Pass 1, and the correction is a NEW row that names the old verdict — never a rewrite, so a reader can always tell a changed mind from a right one
+  ✓ PASS 2 · one verdict is not a pattern — under two it does nothing at all, and says why rather than calling a single event a trend
+  ✓ PASS 2 · a dead lane or a junk answer writes NOTHING — a manufactured pattern is worse than none, because he acts on it
+  ✓ BOTH PASSES ride claudeGen, which REFUSES outright when ANTHROPIC_API_KEY is set — Max subscription, never an API key, and no new vendor anywhere
+  ✓ PASS 1 rides the SPLIT — the head is handed to claudeGen's fifth parameter, and only when this box can actually carry it
+  ✓ §9.1 · the search lane is claudeGen with the TOOL GRANT (the 11 Aug proof) — same door, same API-key refusal, never a new vendor
+  ✓ §9.1 · the plan-vs-code correction is HELD, not just written: the source is the SOURCED bank (field_probes.json), and the invented probe_bank_ files are not read here at all
+  ✓ LAYERING · the Cerebras key reader is FROZEN as *Legacy, not deleted — and it still parses exactly as it did
+  ✓ LAYERING · …and it is genuinely FROZEN: no production caller anywhere in the file (3 reference(s), all in this selftest)
+  ✓ LAYERING · no LIVE Cerebras lane survives anywhere — the endpoint is gone from the tree and the installer is retired
+  ✓ …and the csk-/gsk_ scrubber patterns STAY, because those are about the NEXT key anyone pastes and were never part of this lane
+  ..  JUDGE · LIVE check NOT RUN — clean checkout (dressing-room/state/ is gitignored)
+  ✓ THE BUS · what he types into Claude Code is judged by the same organ that judges what he says out loud
+  ✓ THE BUS · and the machine's OWN answers are never judged as his — the self-capture scar, held here too
+  ✓ THE BUS · the cursor is in BYTES of the real file, so a restart re-reads nothing
+  ✓ THE CURSOR · a NEW DAY resets it — yesterday's byte count must never decide what today judges
+  ✓ THE CURSOR · mid-day it reads only what is NEW, and hands the rest over as the cache prefix
+  ✓ THE CURSOR · nothing new means nothing is judged and nothing is billed
+  ✓ THE CURSOR · a pathological day cannot turn one turn into a huge bill — the prefix is bounded and says it was elided
+  ✓ THE JOURNAL · a judgment that concluded NOTHING is still written — that is what makes 'the Watcher ran' distinguishable from 'the Watcher stopped'
+  ✓ THE JOURNAL · freshNote reads the note off the journal alone — the /deep poll needs no second file
+  ✓ THE JOURNAL · …and a note older than the 60s hint window is dropped, the same law every other hint on that poll obeys
+
+gaffer_brain selftest: 189 passed, 0 failed
+
+exit 0

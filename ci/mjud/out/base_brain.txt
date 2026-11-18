@@ -1,0 +1,454 @@
+  ✓ committed brain_config.json parses with jobs
+  ✓ the suite reads the captain's real switches without obeying them
+  ✓ day cartridge job wired (L3: slow brain programs the fast brain)
+  ✓ heavy voice day → daytime gemini job steps aside
+  ✓ claude jobs untouched by the voice pool
+  ✓ quiet voice day → gemini runs as normal
+  ✓ overnight gemini runs regardless (voice is asleep)
+  ✓ minutes ledger math: missing file → 0 (never crashes)
+  ✓ pool committed to canon config
+  ✓ A2 — unarmed trigger gates the job before the fallback hour
+  ✓ A2 — armed trigger opens the gate
+  ✓ A2 — past the fallback the gate opens even unarmed
+  ✓ A2 — formation_read carries the trigger + fallback in canon config
+  ✓ A2 — an arm from a PREVIOUS shift does NOT open today's gate (ts is read, not decoration)
+  ✓ A2 — TODAY's arm still opens it
+  ✓ A2 — a stale arm still yields to the fallback hour (delay, never starve)
+  ✓ A2 — an UNDATEABLE arm fails OPEN (a ts we cannot parse must not become a new starvation)
+  ✓ A2 — an ABSENT trigger is still closed (armFresh must never answer for undefined)
+  ✓ FULL-TIME EVENT — evening_voice + teamtalk_pm declare trigger `fulltime` AND gate.event `fulltime` in canon config (they run only after his close; the arm belongs to that shift)
+  ✓ FULL-TIME EVENT — at 21:30 only ev_fx is eligible (tp_fx's at is 23:50); it runs and the SHARED arm is NOT spent (tp_fx has not run this shift)
+  ✓ FULL-TIME EVENT — at 23:55 tp_fx runs on the same arm, and only THEN is the arm spent (both lanes served by one full-time)
+  ✓ FULL-TIME EVENT — gateReport names an event lane's arm state (trigger + trigger_armed) so `status` never reads 'awake' as 'runs tonight' before his close
+  ✓ H2 AT-GATE — an after-midnight at WAITS OUT the evening half (the H6 blocker: 03:00 must not run at 23:00)
+  ✓ H2 AT-GATE — a pre-midnight at stays eligible ACROSS the wrap (22:45 is still past at 02:00)
+  ✓ H2 AT-GATE — at-less overnight jobs untouched on both sides of midnight (regression)
+  ✓ H2 SANITIZER — legal lean kept · NEVER_SKIP demotes skip→lean · invented/non-overnight/self/deep all dropped with reasons
+  ✓ H2 SANITIZER — prose-only / shapeless json → null, never a throw
+  ✓ H6 SIBLING — {date, will_change} parses; shapeless → null
+  ✓ H2 LOOKUP — an overnight job resolves tonight's sanitized allocation; a non-overnight job never can
+  ✓ H2 REST GATE — a lane rests only when its newest file is <24h old; stale or never-produced lanes refuse
+  ✓ H2/H6 CANON — both jobs committed: agenda opus/overnight/22:45/95, diary sonnet/overnight/03:00/serve, sibling parsers wired
+  ✓ teamtalk jobs wired with speak_to + no-new-numbers validator
+  ✓ morning talk compiled overnight SERVES tomorrow
+  ✓ after-midnight compile serves the same morning
+  ✓ evening talk serves the same day
+  ✓ no mp3 → no line (the push never lies)
+  ✓ mp3 present → 'team talk taiyaar' rides the sanctioned push
+  ✓ window usage sums 5h of CLAUDE tokens only
+  ✓ gemini tokens never count against the Claude window
+  ✓ WINDOW HAS TWO EDGES — a future-dated row never counts as spent
+  ✓ C1 fault 1 — a row whose total_tokens is the in+out pair only is NOT believed (the dmn under-count)
+  ✓ C1 fault 2 — an inflated written total is NOT believed either (the pulse length-guess)
+  ✓ C1 fault 3 — cache_read costs a TENTH against the ceiling, not full price
+  ✓ C1 — output is the dear one and outweighs the same count of cache_read 50×
+  ✓ C1 — a component-less row (tokens_estimated) keeps its written total at weight 1
+  ✓ C1b — model-aware spend multiplies the same row by haiku 1 / sonnet 3 / opus 5
+  ✓ C1b — the GOVERNOR's unit is UNCHANGED: windowUsage never sees the model factor (its caps are stated model-blind)
+  ✓ C1 — the frozen legacy meter still sums raw, and the two now DISAGREE by design
+  ✓ C1 — THE STARVATION: a cache-heavy window meters far lower in true cost than raw (cortex's 'no-headroom (0/50000)')
+  ✓ STUDY HOURS — cap = day_reserve_frac (protect the captain)
+  ✓ OVERNIGHT — cap = overnight_target_frac (exhaust deliberately)
+  ✓ self-tuned ceiling ABOVE estimate overrides (learns the plan is bigger)
+  ✓ STARVATION GUARD — a too-low/corrupt ceiling is floored at the estimate
+  ✓ TOKEN VITALS expose BOTH windows (5h + 7d)
+  ✓ TOKEN VITALS carry a human summary + live headroom
+  ✓ LIVE RESERVE — at the keyboard, daytime spend stays protective
+  ✓ LIVE RESERVE — idle at the desk, spend rises toward the flood
+  ✓ LIVE RESERVE — no signal ⇒ unchanged static behavior (selftests safe)
+  ✓ CEILING EWMA — blends observed toward the running ceiling
+  ✓ CEILING EWMA — floored at the estimate (a low read can't starve)
+  ✓ CEILING EWMA — self-corrects DOWN (not a one-way ratchet)
+  ✓ THINKING DEPTH — lean live, deep overnight
+  ✓ THINKING DEPTH — never budgets more than the window can pay
+  ✓ THINKING DEPTH — derives the deep-read headroom floor
+  ✓ PACING — burn rate rises with headroom, mins-to-edge floored >=5
+  ✓ PACING — zero/negative headroom → pace floored at 0, never negative
+  ✓ PULSE — escalate: metered + POSTs a 'pulse' afferent w/ concept_tokens + per-concept key (never wake_queue)
+  ✓ PULSE — cap counts by PARSED local date (today's pulse counts, a 2-day-old one does not)
+  ✓ PULSE — a HOLD is STILL metered (the meter is the whole safety story)
+  ✓ PULSE — engaged gate: idle → skip, zero call, zero meter
+  ✓ PULSE — hard daily cap: over cap → skip, no call, no meter
+  ✓ PULSE — malformed reply → HOLD, still metered, never a crash
+  ✓ SESSION — usable only for TODAY, under the turn guard, with an id, and never when PULSE_RESUME_DISABLED is set
+  ✓ DELTA — only moments NEWER than the session has seen, own output still filtered out, newest last
+  ✓ RESUMED PULSE — spawns with --resume, is shown ONLY the delta (not the whole tail), and says so on its ledger row
+  ✓ RESUMED PULSE — nothing new since the last check ⇒ NO CALL AT ALL (the cold lane re-judged the same 25 rows every 150s)
+  ✓ ROTATION — yesterday's session is NOT resumed: the pulse seeds cold with the WHOLE tail, no --resume, and the row says resume:false
+  ✓ PULSE RECEIPT — a DELIVERED escalation stamps posted:true on the ledger row and on the return
+  ✓ PULSE RECEIPT — a door that REFUSES is recorded: escalated:true + posted:FALSE (the row can no longer claim delivery)
+  ✓ PULSE RECEIPT — a poster that THROWS is a failed delivery, never a lost meter (METER EVERY PULSE holds)
+  ✓ PULSE RECEIPT — a HOLD names the absence (posted:null, key present) instead of a false zero
+  ✓ DOOR RECEIPTS — counts delivered/undelivered/unknown inside the gauge's OWN window; holds and old rows excluded
+  ✓ DOOR RIDES THE FUEL GAUGE — token_vitals.json carries `door`, and an undelivered escalation reaches the summary the doctor reads
+  ✓ PULSE tokens — today's spend is summed from the ledger, not inferred
+  ✓ PULSE tokens — a yesterday row never counts against today
+  ✓ PULSE — token budget bites where the CALL cap never could (37 calls, 1.2M tokens, cap 200)
+  ✓ PULSE — the measurement window is a FRACTION of the weekly plan, so it re-fits itself
+  ✓ PULSE — an explicit daily_token_budget in config wins over the fraction
+  ✓ MEASUREMENT — the window DOUBLED (0.05 → 0.10 of the weekly plan)
+  ✓ MEASUREMENT — frequency HALVED: the pulse rides every 2nd daemon beat by default
+  ✓ MEASUREMENT — every_n_beats is always >= 1 (0, negative, garbage and absent all stay safe: `beats % n` must never divide by zero)
+  ✓ MEASUREMENT — the arithmetic closes: window ÷ measured cost/pulse ≈ 36 observations/day
+  ✓ MEASUREMENT — 0 pulses today reports mean = null (NOT MEASURED), never a mean of 0
+  ✓ MEASUREMENT — with pulses it reports the real per-call cost off the ledger
+  ✓ #66 — headroom BELOW today's measured cost/pulse now skips (the configured 20,000 alone would have let it fire)
+  ✓ #66 — with NO measurement yet the configured floor still stands, and SAYS it is unmeasured
+  ✓ PULSE backoff — counts consecutive failures at the TAIL of today
+  ✓ PULSE backoff — one success ANYWHERE later resets the streak
+  ✓ PULSE — 3 consecutive failures → sit out, no call, no meter
+  ✓ PULSE — its OWN output is not a moment: a self-only tail reads as empty
+  ✓ PULSE — a mixed tail keeps his voice and drops the echo
+  ✓ PULSE — the row now carries the cache pair (the boot tax is finally visible)
+  ✓ CONFIG — a `pulse` block written into brain_config actually reaches pulseConfig
+  ✓ CONFIG — `enabled: false` for the pulse is reachable at last
+  ✓ PULSE — disabled ⇒ zero call, zero meter, and it SAYS why
+  ✓ PAUSE — paused ⇒ not one job is eligible, at any hour
+  ✓ PAUSE — un-paused ⇒ the job table works exactly as before
+  ✓ PAUSE — a truthy typo can never pause it (string)
+  ✓ PAUSE — a missing key can never pause it
+  ✓ OVERNIGHT TAPER — after 05:30 the cap eases to the day reserve
+  ✓ OVERNIGHT — 23:30 still floods to the overnight target
+  ✓ LIVE SIGNAL — no traces ⇒ empty (assume live, never over-spend)
+  ✓ formation_read eligible at 08:45
+  ✓ A2 — formation_read WAITS at 08:45 when the conductor has not armed its inputs
+  ✓ max_per_day dedup — second run same day blocked
+  ✓ overnight jobs ineligible mid-day
+  ✓ overnight queue rich at 23:30 (≥4 jobs)
+  ✓ Sunday-only job honors days[] (2026-07-12 IS a Sunday)
+  ✓ days[] still EXCLUDES a Sunday-only job on a Monday
+  ✓ overnight job does NOT re-run after midnight (same shift)
+  ✓ next EVENING the overnight job runs again (new shift)
+  ✓ a post-midnight success LEDGERS to the evening the shift started
+  ✓ non-overnight jobs stay calendar-keyed
+  ✓ gemini jobs skipped when gemini.enabled=false (mechanism)
+  ✓ ENGINE LAW: every committed job rides Claude (no cognition on the free pool)
+  ✓ priority ordering (formation > insights)
+  ✓ banned-phrase validator rejects hype
+  ✓ no_new_numbers rejects invented numbers
+  ✓ no_new_numbers passes grounded numbers
+  ✓ KAAM1 — a snapshot reproduces the producer's verdict on the numbers it was HANDED
+  ✓ KAAM1 — a snapshot is not a loosening: an invented number bounces under BOTH
+  ✓ KAAM1 — and the defect it cures is real: the SAME text with an empty shown is 'invented'
+  ✓ quotes_only rejects non-verbatim quotes
+  ✓ quotes_only passes verbatim quotes
+brain: REFUSING — ANTHROPIC_API_KEY is set in this shell (per-token billing risk). Unset it; the brain runs on the Max subscription only.
+  ✓ API-KEY GUARD — brain refuses when key present
+  ✓ overnight tick drains multiple jobs
+  ✓ SELF-TUNE — limit event stops the tick immediately
+  ✓ STARVED — the budget refusal is RECORDED, not discarded: one ledger row carrying the exact reason
+  ✓ STARVED — the row cannot corrupt the two meters it sits beside: not spend (engine ≠ claude), not health (no boolean ok)
+  ✓ STARVED — brain_queue.budget_starved keys the whole night by shift day and names the job
+  ✓ STARVED — one row per (shift day, job) EPISODE, never one per beat; the beats keep counting in state
+  ✓ STARVED — a wall never consumes the slot: the job is still un-run and retries when headroom returns
+  ✓ STARVED — starvation() reads it back: the shift, the job, the beats, the age
+  ✓ STARVED — it reaches token_vitals.json (physio.mjs brainFuelRead is the consumer) and the summary SAYS it
+  ✓ STARVED — and the OLD silence is exactly reproduced without it: health is computed off boolean-ok rows, so a starved night still scores 'OK'
+  ✓ STARVED — the diary's own summary counts it as a STARVATION, never as a run, and never as a failure
+  ✓ BENCH CENSUS — the diary's summary READS council_seats: three cold-vs-benched facts, counted, never derived
+  ✓ BENCH CENSUS — UNMEASURED (null) stays its own bucket; a bench nobody looked at is never written down as an empty one
+  ✓ BENCH CENSUS — convene's note rides VERBATIM and deduped-with-a-count, and a row carrying no census is not counted as a read
+  ✓ fingerprint carries his anchors verbatim
+  ✓ fingerprint carries wrong-prior shapes as machine-side design input
+  ✓ fingerprint carries measured calibration + fraying pass
+  ✓ #wire the overconfidence rate reaches the prompt WITH its denominator (his live 0 off 3 knew-reps)
+  ✓ #wire a pre-gate calibration.json degrades to buckets.knew.n rather than shipping the scalar alone
+  ✓ #wire no denominator anywhere ⇒ the line SAYS so, never an implied-solid number
+  ✓ #wire a rate below its own need is stamped provisional in the prompt
+  ✓ #wire zero knew-reps no longer deletes the whole calibration line — the silence names itself
+  ✓ fingerprint enters every analysis prompt
+  ✓ empty world → fixed-traits fingerprint only, no crash
+  ✓ SPLIT — the head goes to --system-prompt and the ## INPUT sections stay in the body
+  ✓ SPLIT — NOTHING IS LOST OR REORDERED: system+body reconstructs the exact prompt, with only the organ preamble added in front
+         · live analysis head = 1308 chars ≈ 327 tokens (sonnet caches at ≥1024, opus ≥512, haiku ≥4096)
+  ✓ SPLIT — the body carries the whole variable part and the head carries none of it (that is the only thing that makes the head stable)
+  ✓ SPLIT — a prompt with no ## INPUT section is NOT split (nothing stable to hoist), and says so with null
+  ✓ SPLIT — a head over the Windows argv cap is sent WHOLE the old way and stamped argv-capped, never truncated
+  ✓ SPLIT — a body-first prompt (mark at index 0) is left alone, no empty system prompt
+  ✓ CACHING SWITCH — a job declaring caching:false reaches the spawn as DISABLE_PROMPT_CACHING; a job that declares nothing does not
+  ✓ CACHING SWITCH — and it is set on NO lane yet: break-even reuse 0.278 is a measurement, not a hunch (the 13 Aug list had haiku_pulse at 0.43 on it)
+  ✓ ntfy topic resolves from env fallback (config stays secret-free)
+  ✓ ntfy disabled ⇒ never sends
+  ✓ full-time bell sends the postmatch cue
+  ✓ bell carries no shame/streak/hype language
+  ✓ both utterances SIGN their titles with the badge (throw-in echo filter)
+  ✓ the sheet push actually SENDS the badged title (not just declares it)
+  ✓ only two utterances exist (bell registry + push_after)
+  ✓ BELL HOUR — the fulltime bell declares its hour + grace (B3: HIS ruling, 22:00 — he is home by 10pm)
+  ✓ BELL HOUR — rings at 22:00
+  ✓ BELL HOUR — rings a little late (22:25, inside grace)
+  ✓ BELL HOUR — SILENT at 15:23, the real catch-up time that caused this
+  ✓ BELL HOUR — SILENT hours early (08:00)
+  ✓ BELL HOUR — SILENT past the grace (23:30)
+  ✓ badge title survives real fetch header rules (RFC 2047, never raw emoji)
+  ✓ encoded title decodes back to the badge on the phone
+  ✓ plain ASCII titles pass through untouched
+  ✓ HOME PIN — a FOREIGN checkout never reaches the phone: zero bytes on the wire, why foreign-checkout (forks row 328)
+  ✓ HOME PIN — …and the pinned home checkout pushes exactly as before
+  ✓ ABSENCE title signs with the badge (throw-in echo filter, same as the other two)
+  ✓ ABSENCE title survives real fetch header rules and decodes back to the badge
+  ✓ the two morning utterances are DISTINCT — he can tell a sheet from its absence
+  ✓ MOUTH open when the day has said nothing yet
+  ✓ MOUTH shut once the SHEET spoke (a retrying job cannot push twice)
+  ✓ MOUTH shut once ABSENCE spoke (the alarm never repeats on later beats)
+  ✓ MOUTH still open on the NEXT day (the slot is per shift-day, not forever)
+  ✓ MOUTH shut when ntfy is disabled
+  ✓ MOUTH shut for any job the captain did not sanction in push_after
+  ✓ MOUTH survives a queueState with no mouth_said at all (first ever run)
+  ✓ ABSENCE reads the morning window from the same map eligibleJobs uses
+  ✓ ABSENCE window map honours config for overnight (not a frozen literal)
+  ✓ sliceSheet strips preamble + epilogue chatter
+  ✓ sliceSheet passes badge-less text through to the validator
+  ✓ M-3 SOCKET — runManager import works; fallback law intact
+  ✓ LEDGER COUNTS CACHE TOKENS — the CLI's real spend is cache, not input/output
+  ✓ token accounting is defensive — no usage object ⇒ zero, never NaN
+  ✓ --dry NEVER reaches the real `claude -p` executor (preview costs nothing)
+  ✓ a dry call is a ZERO-token no-op that still looks like a success to the pipeline
+  ✓ without --dry the real executors are wired exactly as before
+  ✓ RETRY CAP — a job that burned its attempts this shift sits out (no 75s retry storm)
+  ✓ RETRY CAP — under the cap the job still retries (failure keeps its slot)
+  ✓ RETRY CAP — attempts are keyed to the SHIFT, so the next evening is a clean slate
+  ✓ a validator rejection COUNTS as an attempt (the tokens were really spent)
+  ✓ MANUAL RUN consumes the daily slot — the scheduled tick won't double-push the sheet
+  ✓ MIDNIGHT SEAM — overnight TODAY-inputs resolve to the SHIFT day, not the empty new calendar day
+  ✓ daytime jobs still read the plain calendar day (unchanged)
+  ✓ CEILING OBSERVATION includes THIS tick's own spend (a limit after a 900k drain is not 'observed 0')
+  ✓ QUEUE MERGE — a trigger armed WHILE the tick ran is not erased by the tick's write
+  ✓ QUEUE MERGE — a trigger this tick CONSUMED stays consumed
+  ✓ QUEUE MERGE — brain still owns every non-trigger key
+  ✓ QUEUE MERGE — no readable queue on disk ⇒ write ours (first run never blocks)
+  ✓ DEAD BRAIN — an all-failed tail is detected and NAMED (login, not mystery)
+  ✓ DEAD BRAIN — one success at the tail clears the alarm (an old outage never nags)
+  ✓ DEAD BRAIN — the fuel gauge carries the ok-rate, so the doctor can see a dead brain
+  ✓ DEAD BRAIN — error_envelope is READ: a 429 wall is named a PLAN WALL, not a mystery
+  ✓ DEAD BRAIN — a 500 is a SERVER fault, never excused as the plan wall
+  ✓ DEAD BRAIN — a legacy row whose status lives only in its error TEXT is still named
+  ✓ DEAD BRAIN — logged-out still wins over any status code
+  ✓ S12 SPEND-GUARD — an unknown NON-EMPTY verb is refused, so a typo can never mean `tick` (which spends)
+  ✓ S12 SPEND-GUARD — EMPTY argv still ticks: that is the SCHEDULED CONTRACT (ArsenalFC-BrainTick passes no verb) and breaking it would silence the pacemaker
+  ✓ S12 SPEND-GUARD — a leading `-` is a FLAG, never a verb, so --dry and --daemon still reach the dispatch
+  ✓ S12 SPEND-GUARD — case does not smuggle a verb past the guard, and every listed verb passes
+  ✓ S12 SPEND-GUARD — BRAIN_MODES covers every verb main() actually dispatches (unlisted: none)
+  ✓ THE KEEPER — `daemon` runs keep() from scripts/keeper.mjs over `daemon-worker`, the worker exits by every non-clean KEEP_EXIT code, and no line promises the removed watchdog relaunch
+  ✓ DEAD BRAIN — a SIGTERM'd tail is named a TIMEOUT, never the 'unknown' mystery branch
+  ✓ DEAD BRAIN — a row that names its kill only in the error TEXT is counted too (brain's own rows carry no forensics field)
+  ✓ DEAD BRAIN — a timeout is never excused as a plan wall, and never blamed on /login
+  ✓ DEAD BRAIN — a 429 tail that ALSO got axed is still a PLAN WALL (the new branch only splits 'unknown'), and the kill still rides the object
+  ✓ DEAD BRAIN — a healthy-shaped failure with no kill anywhere stays 'unknown' (no phantom timeouts)
+  ✓ DEAD BRAIN — the timeout verdict reaches the fuel gauge the doctor/watchman/card organ already open
+  ✓ CONFIG BROKEN — a malformed canon config SAYS SO and is flagged, never a silent idle brain
+  ✓ CONFIG MISSING — an absent file is still the quiet, legal first-run default
+  ✗ GEMINI SHIM — a spaced %APPDATA% path is QUOTED before cmd.exe parses it
+  ✓ GEMINI SHIM — no shell ⇒ no quotes (quotes would become part of the filename)
+  ✓ GEMINI SHIM — a config-supplied binary string can never inject into cmd.exe
+  ✓ TICK LOCK — a genuinely in-use port reads as locked
+  ✓ TICK LOCK — an UNBINDABLE port is a FAULT, not a phantom concurrent tick
+  ✓ TICK LOCK — a clean bind is acquired
+  ✓ #59 LEGACY (frozen witness) — the old validator WAVED THROUGH 'cards due: 12 (+9 overdue)'
+  ✓ #59 LIVE — the shared validator BOUNCES it, naming the invented token
+  ✓ #59 LEGACY — the old validator STRIPPED dates and clock times, so an invented deadline passed
+  ✓ #59 LIVE — an invented deadline and an invented clock window both bounce now
+  ✓ #59 — an HONEST number that traces to the inputs still passes (no honest output lost)
+  ✓ #59 — brain's allowedNumbers IS the shared one now (0–31 laundering is gone)
+  ✓ #60 LEGACY — '10,000' split into ['10','000'] and bounced a number the model was HANDED
+  ✓ #60 LIVE — comma-grouped thousands and Indian lakh grouping both survive
+  ✓ #60 — a comma-grouped number that is NOT in the data still bounces (the guard did not loosen)
+  ✓ #59 — the assembled prompt really does carry a digit that is in NO input (the 25-line law)
+  ✓ #59 — WITHOUT `shown` that digit is 'invented' (the bug this would have been)
+  ✓ #59 — WITH `shown` threaded it passes, and runJob threads it for real
+  ✓ #59 END-TO-END — runJob hands validateOutput the prompt it actually sent (not a fresh reject)
+  ✓ #61 LEGACY (the exact live failure) — a sub-12-char anchor DESYNCED the pairing and captured the annotation
+  ✓ #61 LIVE — sequential pairing accepts his real, verbatim, sub-12-char anchors
+  ✓ #61 — a genuinely non-verbatim long quote is STILL caught (the guard did not loosen)
+  ✓ #62 — 'exponential' is gone from the defaults AND from the committed config (softmax IS an exponential)
+  ✓ #62 — the real technical sentence that cost 185,983 tokens now passes
+  ✓ #62 — genuine hype is still bounced on a guarded job
+  ✓ #62 — hype_guard:false opts a machine-side job out; the default is GUARDED
+  ✓ #62 TRAP — evening_voice has neither speak_to nor validate, and KEEPS the hype guard
+  ✓ #62 — every job the captain HEARS or READS keeps the guard
+  ✓ #62 — the prompt's own LAWS line no longer orders a job not to say a word that is not banned
+  ✓ #63 — EVERY enabled job in the committed config declares a surface (have/need, not a word)
+  ✓ #63 — the DESIGNED-to-be-human-read jobs still open are ON and addressed by file path
+  ✓ #63 — every DISABLED job says WHY and names what would bring it back
+  ✓ #63/G9 — midday_reread is ON only WITH its reader: evening_voice lists brain_out/midday/TODAY.md, un-required
+  ✓ WIRING — no ENABLED job declares human_file while its own address says nothing opens it (the G9/G10 forgotten flip)
+  ✓ WIRING — capsule_premap's premap lane is named at both ends: surface cites nightshift, nightshift reads the lane
+  ✓ #63 — an undeclared surface is reported, never silently trusted
+  ✓ #63 — the run note names the FILE and the SURFACE, so a human-read file finally points at itself
+  ✓ #63 — a job with NO declared surface says so out loud on every run
+  ✓ #64 — an input may be a plain string (optional, unchanged) or {path, required}
+  ✓ #64 — absence is COUNTED and NAMED, not silently rendered as the literal `null`
+  ✓ #64 — a REQUIRED absent input skips the job BEFORE the spend, and says which file
+  ✓ #64 TRAP — teamtalk_am (4 declared, 3 optional) survives a majority of its inputs being absent BY SHAPE (a majority-ratio guard would kill it)
+  ✓ #64 TRAP — an exactly-50%-absent job is a shape no majority rule would ever catch (fixture: one tracked file + one missing)
+  ~ SKIP #64 infra net — dormant checkout (no afferent bus): required personal state is absent here by construction
+  ✓ #64 — every required brain_out/ input is produced by an ENABLED job, or DECLARES the organ outside the pipeline that writes it (a chain typo still fails; a cold pipeline does not)
+  ✓ #64 — an OPTIONAL absent input still runs, and the run reports what it was built from
+  ✓ #64 READ BACK — the ledger finally ANSWERS its own question: which job billed on absent evidence, how many runs, across how many of HIS days, and which input was missing most
+  ✓ #64 READ BACK — both honesty lanes, so neither direction lies: a manager_m3-class row (DECLARES no inputs) is not a gap, and a pre-#64 row is UNCOUNTED, never a measured zero
+  ✓ #64 READ BACK — `brain status` OPENS the history (.1-roll-aware) and SAYS it: the consumer that makes the accounting more than a black box
+  ✓ ELISION READ BACK — the ledger answers the OTHER half: which job billed on half-eaten inputs, how many rows never reached the model, worst single run, across how many of HIS days
+  ✓ ELISION READ BACK — the denominator counts the CLEAN runs too (1-in-50 must not read as 1-in-1), and both honesty lanes hold: measured-and-whole is a real zero, a pre-elision row is UNCOUNTED
+  ✓ ELISION READ BACK — absence and elision stay SEPARATE lanes: a run cut to a stump with every file present is invisible to the absent-evidence read, which is why this sibling exists
+  ✓ ELISION READ BACK — `brain status` OPENS it (.1-roll-aware) and SAYS it: the consumer that makes inputs_clipped / inputs_rows_dropped more than a black box
+  ✓ ELISION READ BACK — the MANUAL `brain run` row carries the pair too, so debugging a stumped job is not the one path that refuses to write down what it read
+  ✓ DOUBLE CUT — the READ door hands over the WHOLE .md; no second, unnamed budget upstream of clip()
+  ✓ DOUBLE CUT — the transcript's OPENING reaches the model (the head the read-cut used to eat)
+  ✓ DOUBLE CUT — the transcript's CLOSE reaches the model (the tail clipLegacy used to eat)
+  ✓ DOUBLE CUT — what IS dropped is named with a measured count, never silent
+  ✓ DOUBLE CUT — the budget did not move: still one clip() window, not a bigger one
+  ✓ DOUBLE CUT — clipLegacy is FROZEN verbatim and still drops the close (the regression witness)
+  ✓ #65 — shiftDay STILL returns yesterday for an overnight job at 02:50 (ledger key unchanged)
+  ✓ #65 — but the ARTIFACT for a `serve` job is filed under the morning it is FOR
+  ✓ #65 — an evening compile of the same job serves the NEXT morning
+  ✓ #65 — a job WITHOUT `serve` is untouched: it still files under its shift (day_cartridge's chain holds)
+  ✓ #65 — the three artifacts viz opens by calendar date now declare `serve`
+  ✓ #65 — wall_review deliberately does NOT (its consumer already loops i<=2 over recent dates)
+  ✓ #3 (live evidence) — the OLD rule produced `pulse:isko` from his own Hinglish
+  ✓ #3 — stopwords are dropped and a REGISTERED CONCEPT leads, so the key is `pulse:attention`
+  ✓ #3 (live evidence) — the OLD rule produced ['what','left','that','part'] — pure filler
+  ✓ #3 — every one of those four is now a stopword, so filler can never lead the key
+  ✓ #3 — a concept beats a non-stopword noun for the habituation key
+  ✓ #3 — an ALL-stopword moment degrades honestly to the old behaviour instead of collapsing to one bucket
+  ✓ #3 — the vocabulary really is the organism's own concept registry
+  ✓ #3 — the stopword list carries BOTH languages he actually types
+  ✓ #5 — the NEWEST mined file is read, and its quoted spans extracted by sequential pairing
+  ✓ #5 — mined anchors reach the fingerprint at the head of every analysis prompt, WITH their date
+  ✓ #5 — no mined file ⇒ no line at all (an empty dir never fabricates an anchor)
+  ✓ #29 — with NO open session (the case that dropped the whole block) the last lap still reaches the prompt
+  ✓ #29 — a STALE session is not announced as live, and last_closed speaks in its place
+  ✓ #29 — POSITION ONLY, never content: it reports axes and steps, never what was taught
+  ✓ #29 — no last_closed ⇒ no line (never a fabricated 'last session')
+  ✓ WIRE — the two clocks, the refusal count and the CORE gap all reach the analysis prompt
+  ✓ WIRE — REPORTED, NEVER JUDGED: no verdict word is invented around the clocks
+  ✓ WIRE — a pre-field row (all four null/absent) prints the old line and fabricates no zero
+  ✓ WIRE — a genuinely clean lap says nothing about refusals or CORE (0 and [] are not noise)
+  ✓ #51 — a 3,000-row log yields exactly the 6 rows the caller wanted, newest last
+  ✓ #51 — and the 200-row LLM-input slice is the same tail, not a whole-file parse
+  ✓ #51 — after a monthly ROLL the reader falls back to the archive instead of reporting an empty history
+  ✓ #51 — the archive glob finds the rolled sibling and nothing else
+  ✓ #51 — a missing file is [] and never a crash (and never a measured zero downstream)
+  ✓ #51 — brain's own readers ask for a TAIL now (liveSignal never crashes on a rolled log)
+  ✓ DOOR — the clipper does not silently drop the NEWEST rows: the last row on the bus reaches the model
+  ✓ DOOR — and it is the WHOLE row, never sheared mid-object (the newest block parses as JSON on its own)
+  ✓ DOOR — the marker NAMES the cut in ROWS (chars cannot tell him he lost 192 of 200) and stamps the machine tag
+  ✓ DOOR — the oldest end is kept too, and it is whole (the log's time-span survives)
+  ✓ DOOR — the budget did not move: the clip still fits the n it was always given
+  ✓ DOOR — an array that FITS is passed through untouched, with no marker invented
+  ✓ DOOR — one over-wide row still yields the NEWEST one and names the drop, never silence
+  ✓ DOOR — a STRING input still rides clipMiddle: both ends of a transcript intact, chars named
+  ✓ DOOR — clipLegacy stays frozen verbatim as the witness (head-only, one bare marker)
+  ✓ DOOR — the drop is visible to the LEDGER: the built prompt carries a countable rows_dropped tag
+  ✓ DOOR3 — liveRowCount counts the file's real rows (blank lines skipped like parseLines, last row without a newline still counted)
+  ✓ DOOR3 — the tail cut is MEASURED against the live file, not assumed: 50 of 250 rows never left disk
+  ✓ DOOR3 — a log SHORTER than the tail is not decorated and drops nothing (a measured zero, never a phantom cut)
+  ✓ DOOR3 — the MODEL is told: the heading names newest/total and the older rows, so the clip marker's 'of 200' can no longer read as the whole log
+  ✓ DOOR3 — and it survives into the built prompt, through the same six-builder seam the clipper's tag uses
+  ✓ DOOR3 — the door tag CANNOT be mistaken for a clipper tag: one prompt, both cuts, still exactly one rows_dropped
+  ✓ DOOR3 — runJob returns the door lane as its OWN field, never folded into the clipper's (old rows stay comparable)
+  ✓ DOOR3 — the NOTE names both cuts and states the TOTAL, which is the number that was wrong
+  ✓ DOOR3 — clippedEvidenceHistory counts the door lane: a door-only cut is a cut, and only a BOTH-lanes-zero run reads as whole
+  ✓ DOOR3 — a row written before the door was counted is UNMEASURED on that lane, never a measured zero
+  ✓ DOOR3 — BOTH ledger row literals (tick + manual `brain run`) write the door lane, so neither path is the one that forgets
+  ✓ #106 — the surface report is a have/need pair and NAMES the gap, never the bare word 'ok'
+  ✓ PREPARE TOMORROW — committed job: opus · overnight · at 03:20 · serve next_morning · kind prepare_tomorrow · out prepare · max 1/day · sprint.json REQUIRED · surface names sitting.mjs open
+  ✓ PREPARE TOMORROW — the prompt is the SITTING BRAIN's night half: route + concept named, the PLAN FILE CONTRACT's json shape, cold-round law (never the weld on REJIRAH), the register line planted as ONE unit, and it ends with the fenced-json order
+  ✓ PREPARE TOMORROW — a valid reply becomes the sibling in EXACTLY sitting.mjs's PLAN FILE CONTRACT ({task:{id,title}, route, map, units[{step,axis,kind,text,question,est_seconds,src}]}), validated by sitting's OWN validatePlan, every unit's src = the job id (so a spoken unit stamps `sat` on prepare_tomorrow)
+  ✓ PREPARE TOMORROW — a plan the sitting would refuse (map without the start-ask · one unit) is NOT written: null, and the refusal is NAMED
+  ✓ PREPARE TOMORROW — a PYTHON (or SCRIMMAGE) tomorrow is a refusal BEFORE the spend, named — no opus call for a plan no voice sitting will read
+  ✓ NIGHT COACH — committed job: opus · overnight · serve next_morning · kind night_coach · enabled
+  ✓ NIGHT COACH — reps + teaching audit REQUIRED, surface names all four consumers
+  ✓ NIGHT COACH — the machine sibling's lane is the SAME string at both ends: producer "night_coach" reaches all 5 .json readers
+  ✓ NIGHT COACH — the machine sibling parses out of the LAST fenced json block
+  ✓ NIGHT COACH — no block / broken json / shapeless json → null, never a throw
+  ✓ NIGHT COACH — the day filter reports counts beside the sample (a trimmed day never reads complete)
+  ✓ TURN CUT — the END of his long turn reaches the night coach (the tail the 600-slice ate)
+  ✓ TURN CUT — what IS dropped is named with a measured count inside the turn, never silent
+  ✓ TURN CUT — the row itself declares partial + its real length, and the day counts what it cut
+  ✓ TURN CUT — a turn inside the budget is shipped WHOLE and never marked partial
+  ✓ TURN CUT — the budget did not move: still one 600-char window per turn, not a bigger one
+  ✓ TURN CUT — the PROMPT names what a marked turn means, so a quote is never stitched across it
+  ✓ TURN CUT — nightCoachAfferentsLegacy is FROZEN verbatim and still eats the close, unmarked (the witness)
+  ✓ NIGHT COACH — rides the SHARED path: ok run, sibling named in the note, acct present
+  ✓ NIGHT COACH — a reply without the json block DEGRADES out loud, never fails the run
+  ✓ H4 — a cracking draft is REVISED once, the sibling parses from the FINAL, and all 3 execs' usage is SUMMED
+  ✓ H4 — STANDS keeps the draft (2 execs only) and says so
+  ✓ H4 — a failing revision KEEPS THE DRAFT (a passing draft is never lost to a bad rewrite)
+  ✓ H4 — his live study hours are protected: no rehearsal in the study phase (draft ships, 1 exec)
+  ✓ H4 — the measured gate: headroom under 2× the draft's own cost skips the adversary
+  ✓ H4 — canon: night_coach carries rehearse:true, formation_read does NOT (the capstone needs his word)
+  ✓ H5 SANITIZER — aliases resolve, self-bridges/unknowns/bad-axes drop with reasons, confidence is ALWAYS stamped low
+  ✓ H5 SANITIZER — no bridges array / broken json → null, never a throw
+  ✓ H5 — an EMPTY cracked-axes inventory refuses BEFORE the spend (no exec, food named)
+  ✓ H5 — a real inventory dreams: the run ships and the sanitized sibling is named in the note
+  ✓ H5 — agenda dream_pick sanitizes strings-only (bridge-reality is the consumer's check)
+  ✓ H5 WIRE — the dreams key AGREES across midnight: last shift's file is one filename, whether the reader wakes at 22:45 or 02:10, and it is the one the writer wrote
+  ✓ H5 WIRE — calendar-yesterday is NOT the key: at 02:10 it names THIS shift's unwritten file, which is the defect this replaced
+  ✓ H5 WIRE — all 2 dreams read site(s) key by prevShiftDate(today), none by now-86400000
+  ✓ SIDECAR TRIGGER — wall_insights still declares validate:no_new_numbers, the ONLY predicate that writes the <date>.allowed.json viz.mjs re-validates 'The read' against
+  ✓ STALE-CODE RETIREMENT — a source edited AFTER boot is named (this is the 10 Aug daemon: it would have written tonight's wall_insights with the pre-fix code)
+  ✓ STALE-CODE RETIREMENT — nothing newer than boot ⇒ the resident stays up (no grace window either way: the comparison is strict, both sides measured)
+  ✓ STALE-CODE RETIREMENT — an unreadable/vanished source is NOT evidence of a newer one; the pacer never retires on a read error
+  ✓ SOURCE GRAPH — transitive + dynamic imports are watched, node: builtins are not, a cycle terminates, and each file appears ONCE whatever separators it arrived with
+  ✓ SOURCE GRAPH — an unreadable specifier is NOT watched: ./ghost.mjs never enters the list (this is what kept the selftest's own fixture strings out of the LIVE watch — measured, they were in it)
+  ✓ SOURCE GRAPH — the LIVE walk finds this file and its real siblings (validators/manager/scoreboard/<name>_model/captains_call)
+  ✓ §5.5/1 TICK — a REQUIRED input outside brain_out (season.json) absent ⇒ ASLEEP on E, wakes when the file exists again
+  ✓ §5.5/1 TICK — a REQUIRED input UNDER brain_out is an upstream ordering fact, not evidence: the lane stays AWAKE on E (runJob's own refusal keeps handling the same-day absence)
+  ✓ §5.5/2 TICK — five straight ok:false rows ⇒ ASLEEP on F even though it was briefed yesterday; the wake door is named
+  ✓ §5.5/3 TICK — consumed (briefed) 20d ago ⇒ ASLEEP on C; consumed (sat) 2d ago ⇒ AWAKE
+  ✓ TRANSITIVE C — a job_input lane (digest) is consumed when the job that EATS it (cartridge, via its declared input) was consumed: awake, and the chain is named
+  ✓ FIRST RUN — a lane with no boolean-ok row ever (fresh_lane) is AWAKE on grace, marked as such
+  ✓ REPORT — asleep/awake partition adds up and every asleep row carries a wakes_when sentence
+  ✓ JOURNAL — a lane's FIRST asleep verdict writes one row {lane,state,why,detail,wakes_when} and files ONE card; the same verdict on the next beat writes NOTHING
+  ✓ CARD — the args are captains_call's own file door: --line names lane+cause+wake+the two words, --key is gate:<lane>:<day> (rolling family = one per episode), --gate-wake carries the lane for his na
+  ✓ WAKE — season.json back ⇒ verdict AWAKE ⇒ one `awake` journal row, NO card, no human action anywhere in the chain
+  ✓ FORCE — `gate wake` (or his na) puts a {until,once} force in brain_queue.gate.forced and the F-blocked lane runs ONCE; the force is named in the verdict
+  ✓ FORCE — a C-blocked lane with a live `until` force is awake for the window (his na buys 14 days, not one run)
+  ✓ MERGE — a `gate wake` written to disk mid-tick survives the tick's whole-object write; a `once` this tick spent stays spent
+  ✓ MERGE — a tick that never touched gate state still carries the disk's forces forward (and triggers merge exactly as before)
+  ✓ RUNG A · MERGE — a STATED removal actually removes (and only it): `gate clear` used to print "force dropped" and drop nothing, because disk-wins put the deleted key back every time
+  ✓ HOLD/runner — captainHold reads the ONE slot off brain_queue.gate.hold: live ⇒ held with his reason; PAST ⇒ NOT held and nothing had to clear it; absent ⇒ not held
+  ✓ HOLD/runner — ONE SLOT, so a LATER hold supersedes by ts even when it SHORTENS the first; `clear` ends it outright and leaves no trace to expire
+  ✓ HOLD/gate — EVERY gated brain lane sleeps on H under a live hold (the fixture's 4 awake lanes included), and each one's wake sentence asks him for NOTHING
+  ✓ HOLD/lane — a NON-brain lane (nightshift · dmn · dmn_bg_drain · selfknowledge) answers to the same letter through gateVerdictForLane, and his study does not
+  ✓ HOLD/journal — a held sleep journals ONE row `asleep · H✗` carrying the expiry and the reason, and files ZERO cards (`card: none (captain hold)`, the fold-transition precedent)
+  ✓ HOLD/card — a lane failing C *and* H under a live hold still deals ZERO cards; the same lane with no hold cards exactly as before (the suppression is the HOLD's, not a new silence)
+  ✓ HOLD/merge — the hold slot survives the whole-object queue write every door goes through, and `hold clear`'s absent slot is what STATES the removal
+  ✓ HOLD/modes — `hold` is a dispatched verb of brain's own vocabulary (the S12 spend-guard ratchet covers it), and it is NOT a `gate sleep`: it names no lane and cannot be selective
+  ✓ FOLD/runner — the target's artifact for the day it serves NOW (23:30 → serves 2026-08-19) exists ⇒ covered, the detail names target + day + path
+  ✓ FOLD/runner — no artifact yet, target AWAKE and its slot for that day still AHEAD (03:20 tomorrow) ⇒ covered-pending: the folded lane WAITS instead of running first
+  ✓ FOLD/runner — the target ran for that day and left no artifact (failed at 03:21) ⇒ the fold is OPEN and the folded lane is the FALLBACK; nothing was deleted, no list edited
+  ✓ FOLD/runner — the target's slot passed with NO attempt (a dead night) ⇒ OPEN, named
+  ✓ FOLD/runner — a target that is itself ASLEEP (5-fail streak) cannot cover anything ⇒ OPEN, the folded lane decides on its own E·C·F
+  ✓ FOLD/runner — folded_into a job that does not exist (and no fold_artifact) ⇒ OPEN and named; a job with no folded_into ⇒ null (no fact)
+  ✓ FOLD/runner — a fold into a NON-brain lane (round_read) is decided by the config-named fold_artifact for the calendar day: file there ⇒ covered · absent ⇒ OPEN (no 'still due' — brain does not schedule the shift)
+  ✓ FOLD/config — gaffer_claim_audit is folded into round_read (judge_night's home) with its fold_artifact named; the six night lanes fold into prepare_tomorrow
+  ✓ FOLD/runner — the folded lane's own `at` is irrelevant; the TARGET's slot for the served day decides (agenda at 23:30 waits for prepare_tomorrow's 03:20)
+  ✓ FOLD/verdict — a covered folded lane is ASLEEP on D ALONE (E·C·F hold), fold.target named, wakes_when says the fold opens by itself the night the target fails
+  ✓ FOLD/transition — a sleep on D alone JOURNALS (why.D false, fold named, card:'none (fold …)') and files NO card — the fold is his approved design, not a lane going quiet
+  ✓ FOLD/verdict — the night the target fails, the same lane reads AWAKE (D holds, fold OPEN named in D's detail) — the fallback runs with no human action
+  ✓ FOLD/report — gateReport carries fold on every folded row so `brain status` can print `folded → prepare_tomorrow: night_coach, agenda` (the DoD line)
+  ✓ CONSUMPTION — recordConsumption writes {ts,job,lane,kind,by,file,note}; an unknown kind is REFUSED (the kinds are the law, closed); no job/lane is refused
+  ✓ CARDED — a card whose `open` dispatch points into the lane and that he answered haan/na counts (Windows path too); `baad` and unanswered do not
+  ✓ PUSHED — the sheet is consumed at the newest SENT sheet push (a failed push is not a reach); the team-talk mp3s are NOT — an announcement is not a listen, and nothing records a play (R3's poster children stay asleep until a play is recorded)
+  ✓ BATCH — more than 3 lanes sleeping in ONE tick ⇒ ONE card whose na wakes EXACTLY those lanes (`--gate-wake l0,l1,…`); 3 or fewer ⇒ the per-lane cards; a threshold of 1 batches a 2-lane pass
+  ✓ TICK — asleep lanes are reported in `gated` (never in `ran`, never at the executor); awake lanes run as before; dry writes nothing
+  ✓ S13 RUNNER — vintage is the PAYLOAD's newest stamp, never mtime: a file WRITTEN NOW carrying an old row reads OLD (readiness.json's measured shape — mtime 242.5h, payload 606.3h)
+  ✓ S13 RUNNER — a stamp in the FUTURE is never vintage (serve-day artifacts are named for tomorrow), and a payload with no stamp at all reads UNMEASURABLE, not fresh
+  ✓ S13 RUNNER — NEVER BORN is separable from ABSENT: an empty file is 0 real rows, an unreadable one is null (never a measured zero)
+  ✓ S13 RUNNER — EXISTS ∧ ≥1 REAL ROW ∧ NEWEST ROW INSIDE THE CADENCE: a 2h-old input passes, a 200h-old one fails and the reason carries the measured age
+  ✓ S13 RUNNER — the dead root is NAMED from the atlas's witnessed writer, and a path no organ writes is named UNWITNESSED rather than guessed
+  ✓ S13 RUNNER — THE EMPTY-REQUIRED RATCHET: a lane that declares inputs and marks NONE required makes no liveness claim, and a claim nobody can check may not open a spend path
+  ✓ S13 RUNNER — TRANSITIVE, FAIL-CLOSED, ROOT NAMED: an unwritten brain_out input walks to the job whose `out` names that lane; a fed producer is named as the producer, a starved one hands up ITS root
+  ✓ S13 RUNNER — MANY producers, never one: four live jobs declare out:"dugout_digest" and two declare out:"day_cartridge", so the resolver returns the SET (a .find() would name one and be quietly wrong about the rest)
+  ✓ S13 RUNNER — THE MERGE MAY ONLY TIGHTEN: a registry row marks REQUIRED what brain_config left optional, adds what the code computes, and can never loosen a config-required input (brain_config is approval-gated and is never edited for this)
+  ✓ S13 RUNNER — ALL 34 brain jobs are COVERED: every one resolves a declared input class, so none reaches the spend path unguarded on its inputs (0 hitting the ratchet)
+  ✓ S13 RUNNER — the CADENCE SEED is read from the registry, not from a constant in this file: no bare 48 is written into the guard
+
+SELFTEST FAILED
+brain: ⚠ ntfy topic is set INSIDE brain_config.json — that file is COMMITTED to a public repo. Move it to env ARSENAL_NTFY_TOPIC or dressing-room/state/throwin_topic.txt (gitignored) and blank it here.
+brain: ⚠ ntfy topic is set INSIDE brain_config.json — that file is COMMITTED to a public repo. Move it to env ARSENAL_NTFY_TOPIC or dressing-room/state/throwin_topic.txt (gitignored) and blank it here.
+brain: ⚠ ntfy topic is set INSIDE brain_config.json — that file is COMMITTED to a public repo. Move it to env ARSENAL_NTFY_TOPIC or dressing-room/state/throwin_topic.txt (gitignored) and blank it here.
+brain: ⚠⚠ DEAD BRAIN — the last 5 of 10 calls ALL FAILED. every recent brain call failed and no row named a status. Last error reads: validator: banned
+
+exit 1

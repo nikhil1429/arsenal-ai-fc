@@ -1,0 +1,442 @@
+  ✓ get_today reads live bus, never crashes bloodless — and an ABSENT reading is null WITH its reason, never a fabricated GREEN
+  ✓ get_tape_room caps at 5 eligible
+  ✓ BLOCK 2 · the three self-judging doors are GONE from the live declarations — log_reps carried `correct`, grade_rejirah carried `result`, retire_doubt WAS a verdict
+  ✓ BLOCK 2 · …and no live tool takes a verdict from this surface at all — not `correct`, not `result`, under any name
+  ✓ BLOCK 2 · they are FROZEN, not deleted (layering law) — the record of what the surface used to decide for itself
+  ✓ BLOCK 2 · the banking door and the closing door both exist, because capture without judgement is a queue nobody empties
+  ✓ GUT-WORD LAW — an answer without knew/shaky/guessed is rejected AT THIS DOOR, while the Gaffer can still ask him for it
+  ✓ BLOCK 2 · a rep whose QUESTION nobody recorded is refused — it could never be judged, by anyone, now or in six months
+  ✓ BLOCK 2 · 'he said nothing' and 'he said the wrong thing' are different facts — a too-short answer is refused, never banked as a miss
+  ✓ BLOCK 2 · a voice rep goes to the JUDGE's capture door, never straight into his study record
+  ✓ BLOCK 2 · …carrying his question VERBATIM and his answer WHOLE (the answer travels on stdin, where nothing truncates it)
+  ✓ THINK-TIME rides the rep note (true latency, carried across the reroute)
+  ✓ THINK-TIME LANDS IN --latency — the field the fluency + struggle gates read
+  ✓ a stamp is consumed ONCE (runtime cleared — no stale latency on the next answer)
+  ✓ BLOCK 2 · the ref grammar is built HERE, not asked of a live model — a malformed ref is a refused capture, i.e. his answer lost
+  ✓ BLOCK 2 · an axis_weld with no axis letter is refused rather than filed against the wrong fault-line
+  ✓ BLOCK 2 · closing the round is ONE call to the judge, and this surface never grades anything itself
+  ✓ unknown tool → error not crash
+  ✓ take_note appends VERBATIM to dugout_notes (own file) — and the row's routed = an act row exists (LAW A: the flag finally has a setter, at write time)
+  ✓ take_note when the owner errors: routed:false on the row, receipt ✗ with the owner's error — never a fake done
+  ✓ the six thin act tools (set_agenda · set_preference · add_rule · queue_job · file_card · fire_mission) are declared and each is ONE dispatch with the receipt as the answer; a ✗ says what could not be done
+  ✓ checkpoint writes the match record (transcript channel)
+  ✓ spoken gate: run_postmatch normalizes + shells postmatch.mjs (owner)
+  ✓ spoken gate: bad result word rejected — asks him again
+  ✓ KAL-LINE LAW — no weld, no write
+  ✓ spoken gate: genome approval routes through bootroom (owner)
+  ✓ route_throwins → postmatch route mode (all)
+  ✓ route_throwins honors explicit ids
+  ✓ scrimmage: examiner persona + 5 probes + gut-word law travel
+  ✓ scrimmage: real-panel interruption + honest-never-cruel
+  ✓ scrimmage: every answer BANKED, the round CLOSED by the judge, and the report filed — and this surface grades none of it
+  ✓ EAR LAW — the model is never told about hedge counting
+  ✓ SERVE RECEIPT — the scrimmage /config route tells the OWNER the code round went out, named 'scrimmage-voice'
+  ✓ SERVE RECEIPT — the PROMPT BUILDER stays pure: no stamp on a path the suite walks (a rehearsal is not a serve)
+  ✓ all three personas exist; today's picked deterministically
+  ✓ hedge counter hears Hinglish + English hedges
+  ✓ scrimmage reps tagged scrimmage-voice (declared surface — the tag shadow.mjs actually reads)
+  ✓ scrimmage report filed with score + cracks + hedge line
+  ✓ SCRIMMAGE HAS A MACHINE ROW, not just a page nobody reads (setpiece is its consumer)
+  ✓ the row carries the two keys the consumer FILTERS on — kind + captain-local day
+  ✓ the cracks + grade travel as DATA, so nothing downstream has to parse prose
+  ✓ the human page is UNCHANGED beside it (layering — the .md was never replaced)
+  ✓ key-pool parses numbered keys for rotation
+  ✓ scrimmage config: examiner soul, cold start (no rehydrate)
+  ✓ page carries MODE end-to-end (config, tools, transcript)
+  ✓ scrimmage: whiteboard round wired (system design on paper)
+  ✓ vision sends realtimeInput.video (probed live; mediaChunks deprecated)
+  ✓ whiteboard = camera, commentator = getDisplayMedia, both toggles
+  ✓ frame-mode cadence (config-driven, quota-friendly, dodges video cap)
+  ✓ eyes hold the line open (no idle-park while he sketches)
+  ✓ vision errors surfaced like mic errors
+  ✓ Gaffer eyes law travels: coach short, silence is work
+  ✓ re-jirah conductor: dormant-safe pre-blood (counts + quiet note)
+  ✓ get_today drills carry modality (voice routes to the Dugout)
+  ✓ 'today' counters read HIS local day, never the raw UTC slice
+  ✓ date-only rows (notebook) and junk stamps stay safe in localDayOf
+  ✓ reminder at HH:MM lands today when still ahead
+  ✓ past HH:MM rolls to next occurrence (never fires stale)
+  ✓ in_minutes lane works
+  ✓ set_reminder stores his words VERBATIM (own file)
+  ✓ no words → no reminder (verbatim law)
+  ✓ 5.2 EVENT-DRIVEN — set_reminder arms an in-process timer for the exact due minute (timer_armed:true) when live/fire is handed; a plain call arms nothing (hermetic)
+  ✓ 5.2 EVENT-DRIVEN — …and the timer FIRES the reminder lane at the due minute (his words come back at the time he named, not at the next poll)
+  ✓ due reminder fires ONCE, in his words, marked fired
+  ✓ future reminder stays queued (not fired)
+  ✓ a reminder set DURING the TTS window survives the rewrite (his words never erased)
+  ✓ overlapping ticks can never double-speak one reminder (once, then done)
+  ✓ no ledger → NONE earned, mouth behind teeth
+  ✓ earned types listed; open door offered ONCE for ratification
+  ✓ RED mutes the proactive mouth regardless of what is earned
+  ✓ ratification routes through shadow.mjs (owner writes the ledger)
+  ✓ day phases: kickoff / ground / full-time boundaries
+  ✓ ground phase = bias-to-silence work companion
+  ✓ full-time phase walks him into the ritual
+  ✓ cosine honest: identical=1, orthogonal=0, mismatch=0
+  ✓ index dedupes his repeated words (2 of 3 indexed)
+  ✓ re-index adds nothing (idempotent)
+  ✓ recall surfaces date + his verbatim words, best first
+  ✓ a second process holding the recall lock never double-embeds his words
+  ✓ lock released → the same words index normally (no deadlock, nothing lost)
+  ✓ keys dry → honest note, never a fake answer
+  ✓ empty index → honest note
+  ✓ §14.7 constitution guard (a): buildSystemInstruction() ≤ 2000 tokens — 1993 measured
+  ✓ §14.7 constitution guard (b): every LAW line has a // LAW: marker in code — all marked
+  ✓ constitution (Block 3): DEPTH IS OBEDIENCE is LEGACY — frozen body has it, the live constitution does not, and THE SPEAK LAW rides live
+  ✓ SEASON CONTEXT rides the constitution (anti-confabulation: fresh season, pre-season book)
+  ✓ FIRST CONTACT: a bloodless season (0 reps) opens with a real hello — greet, orient, learn him; gone after the first rep
+  ✓ constitution (Block 3): the full-lecture register is LEGACY (frozen body only) — the live mouth speaks units, it does not lecture
+  ✓ set_depth rejects an unknown register
+  ✓ set_depth persists the register + returns its effect
+  ✓ all four depth registers defined (DEPTH_REGISTERS_LEGACY, frozen — Block 3)
+  ✓ depth lever is LEGACY (Block 3): not in the live constitution, set_depth NOT declared to the mouth, the declaration frozen verbatim, the legacy body still carries the lever
+  ✓ THE SITTING DOOR (Block 3): open_sitting + close_sitting are declared to the mouth and the constitution names when to call each
+  ✓ THE SITTING OPENS ITSELF — a Gaffer session start dispatches `sitting.mjs open --surface voice` DETACHED (the owner routes from state and JOINS an open one, never two); no keyword needed
+  ✓ THE SITTING OPENS ITSELF — …from the /config gaffer branch itself, and the constitution tells the mouth the map is the start — his 'nahi / bas / full time' closes
+  ✓ THE GATE, honest C (Block 5.2): the /config gaffer branch stamps NO `sat` for day_cartridge/night_coach any more — the ≤2k constitution does not carry them (composeCartridgeSection is Legacy-only), so that row was a lie since Block 3; the sitting's spoken units and the kickoff's `briefed` are the only stamps for those lanes
+  ✓ open_sitting/close_sitting relay to the OWNER (`sitting.mjs open --surface voice --task …` / `close --reason fulltime`) DETACHED and answer at once (the mouth is never held)
+  ✓ EARS: VAD hangover long enough to not cut off a thinking pause
+  ✓ EYES: sharper frames (higher jpeg quality + resolution), config-driven
+  ✓ EYES: capture requests HD from the camera + screen
+  ✓ MODEL: the live role's resolved model is the default (LAW M — the resolver names it, this file never does), swappable via prefs/env
+  ✓ session config carries GAFFER soul + fingerprint + tools
+  ✓ shadow-gate section is LEGACY (frozen body carries EARNED PROACTIVITY; the live constitution ≤ 2k tokens does not)
+  ✓ day thread is LEGACY (frozen body) — the memory tool hint (semantic_recall) still rides live
+  ✓ conductor + modality laws travel in the constitution
+  ✓ SAMJHAO — the teach mode travels, and its one-idea + slow + check-question laws with it
+  ✓ SAMJHAO — he is ASKED which mode, never guessed (the sitting that failed him was the one nobody asked about)
+  ✓ SAMJHAO — LAYERING: the verbatim law is still there, still absolute, now scoped to PADHO (Block 3: the compressed core live — 'PADHO = his prose VERBATIM as get_capsule returned it' — the full 10 Aug wording frozen in the legacy body)
+  ✓ SAMJHAO — explaining never overwrites his own words (his hook, his analogy, his Hinglish stay)
+  ✓ ONE DOOR — there is no second Gaffer: an unknown mode falls back to the same session, not a different one
+  ✓ ONE DOOR — the durable CARTRIDGE is still out of the live session (get_context fetches it live), and the Phase-8 seed stays inside its own 12k cap
+  ✓ ITEM 0 — get_context is ORDERED before the first substantive turn, not left to judgement
+  ✓ ONE DOOR — but the TRANSCRIPT TAIL stays: no tool duplicates it, and it is the only thing that walks a dropped session back
+  ✓ ONE DOOR — the ONE Gaffer keeps ALL its hands: acting on what he says is the whole point of a cyborg surface
+  ✓ ONE DOOR — and it still carries every teaching law, in the same session he does everything else in
+  ✓ 5.2 get_organism · `portrait` rides beside the live counts: the asked section by heading (memory), the toc, generated_at, and fresh:false when the tree moved (the 29 Jul portrait reads stale too)
+  ✓ 5.2 get_organism · a STALE portrait served LIVE dispatches `selfknowledge.mjs regen-if-changed` DETACHED (the consumer wakes the regen — no schedule) and stamps `sat` lane selfknowledge through the owner's seam (recorded here, never on the live lane); a fresh one dispatches nothing; absent ⇒ named, never a crash
+  ✓ 5.2 get_organism · the tool declaration offers `section` and the constitution's lecture law still names get_organism (34 tools — the same door, one more parameter)
+  ✓ 5.2 /wall-opened · the wall's lanes are stamped `opened` (job rows, file named per lane's real out dir) + lane `wall` itself; an unknown lane is DROPPED and counted, never stamped; the answer is a receipt
+  ✓ 5.2 /wall-opened · the door exists on the bridge (POST, always 202) — the page's beacon runs no-cors and never reads the answer
+  ✓ his-voice reminder law travels (verbatim, once, no advice)
+  ✓ SPOKEN GATES law travels in the constitution
+  ✓ constitution travels: no-hype + gut-word + RED law in-instruction
+  ✓ constitution wires the checkpoint match-record
+  ✓ Charon rides the config (the Gaffer's voice identity)
+  ✓ minutes ledger math safe on empty
+  ✓ ACK filler list rides the config (empty-safe)
+  ✓ rehydrate rides the config (null-safe)
+  ✓ cartridge section carries the overnight compile + date
+  ✓ think-time baseline computed from stamps (median, gated ≥5)
+  ✓ thin stamps stay SILENT (no baseline under n=5)
+  ✓ no cartridge + no stamps → empty section, constitution unchanged
+  ✓ missing cartridge dir → null, never crashes
+  ✓ P2 night-coach part rides the cartridge section, labelled + dated, spoken-from not lectured
+  ✓ P2 no night file → section unchanged (compose(null,[],null) === compose(null,[]))
+  ✓ P2 missing night dir → null, never crashes
+  ✓ THE NIGHT COACH ARRIVES WHOLE — the page's LAST line reaches the loader (the 1200-cut ate it mid-word)
+  ✓ …and the machine-face json fence never reaches the mouth (brain.mjs already parses it into the .json sibling)
+  ✓ …and the constitution carries that same last line + declares the page's length
+  ✓ LAYERING — the old 1200-cut engine stays in the file, auditable, and still truncates
+  ✓ page seeds fresh WS from today's record (clientContent, history-only)
+  ✓ ACK lines obey the no-hype law (banned-phrase check)
+  ✓ think-time stamps wired: page measures both directions
+  ✓ ACK plays on toolCall, never over live audio
+  ✓ fresh handle (same model/mode/key slot) is offered back
+  ✓ stale handle (> TTL, server side gone) → null
+  ✓ handle belongs to ONE model — mismatch → null
+  ✓ a scrimmage never resumes into the Gaffer's skin
+  ✓ handle is per-project — key slot out of pool → null
+  ✓ no file / cleared → null, never crashes
+  ✓ bank writes handle + key slot + model + mode + ts
+  ✓ bank clears on null (key rotation / resume rejection)
+  ✓ config carries resume (null-safe) + explicit compression tuning
+  ✓ page sends EXPLICIT compression (trigger + sliding window target)
+  ✓ page adopts the banked handle on start (same key slot)
+  ✓ page banks every fresh handle to the bridge
+  ✓ key rotation DROPS the handle (per-project law)
+  ✓ resume rejected by the wire → drop + fresh line + rehydrate
+  ✓ goAway → proactive stitch at a quiet beat (never mid-word)
+  ✓ B1 — the bridge serves a LIVE re-seed door
+  ✓ B1 — the page re-seeds from that door, NOT from the page-load snapshot
+  ✓ B1 — CFG.rehydrate survives as the FALLBACK, so a dead bridge costs the improvement and never the re-seed
+  ✓ B1 — and the log SAYS which of the two it got (a silent downgrade is how the first one hid)
+  ✓ B1 — the rotation path still drops the handle first (per-project law is untouched)
+  ✓ B13 — PACE is a law of the BEING, not of SAMJHAO mode (he said it in an ORDINARY conversation: 'Feels like you are talking to yourself')
+  ✓ B13 — fenced against the obvious misreading: cut the SPEED, never the substance
+  ✓ B7 — the map is declared BEFORE the walk, for EVERY kind of sitting (he was explicit it is not a samjhao rule)
+  ✓ B7 — carrying HIS reason, which is the whole justification
+  ✓ B9 — 'I don't know' is legal and a confident guess is not ('don't lie to me because I can go into the files')
+  ✓ B9 — and it names the REPAIR, not just the ban: say so, THEN go get it
+  ✓ B15 — the mouth does not COMPOSE substance: it delivers from a capsule, a tool, the night shift, or the deep brain
+  ✓ B15 — and delivery is named as a REAL job, not a demotion (a rule that reads as an insult gets argued with)
+  ✓ B12 — recall is attempted unprompted, and stays SILENT when it has nothing (no 'as you said Tuesday' theatre)
+  ✓ B4 — the opening briefing exists and is composed deterministically
+  ✓ B4 — it tells him ONE thing, never the whole list (he is ADHD-PI; a 42-card read-out is the same failure in a new coat)
+  ✓ B4 — the briefing is OUT of the system instruction: a 'say this first' imperative inside a text that is re-read every turn fires forever, which is what it did
+  ✓ B4 — it IS delivered, once, through the live channel every other hint uses (a briefing nobody sends is not a fix)
+  ✓ B4 — and the SECOND ask on the same day is refused by a fact on disk, not by a hope in a prompt — replaying 12 Aug's five briefings now yields ONE
+  ✓ B4 — a NEW DAY re-arms it, which is the cadence it was written for ('a being that watched all night opens with it')
+  ✓ B4 — the latch is stamped BEFORE the text is handed over, so a crash between the two loses one briefing rather than repeating it forever
+  ✓ B4 — nothing is delivered when there is nothing pending (an empty briefing must never burn the day's latch)
+  ✓ B4 — readDeepState is a READ: it does not consume the latch, so running the suite cannot eat his briefing
+  ✓ B4 — …and the LIVE /deep route is what serves it, so moving the write did not silently delete the delivery
+  ✓ B4 — the serving door hands back the SHAPE the page consumes, and null when the day is already spent
+  ✓ B4 — the ANSWER half stayed in the constitution, because it is a standing law and not a one-shot report (moving both out would have silently deleted it)
+  ✓ DECK — oldest-first: the card he has NEVER seen outranks one minted this morning (c2 waited three weeks under LIFO while c9 was dealt 24×)
+  ✓ DECK — and the live briefing really uses the front of the queue, not the back (this was `open[open.length - 1]`)
+  ✓ DECK — an answered card is never re-dealt, so 'oldest' means oldest OPEN
+  ✓ BLOCKS — empty blocks render NOTHING: a heading with no body under it in a live instruction invites the model to fill the gap, which is the improvisation B15 forbids
+  ✓ BLOCKS — a filled block renders with its title and its text, and an empty neighbour renders nothing at all
+  ✓ BLOCKS — they ride IN FRONT of the rolling brief: what he told the Gaffer to BE comes before where the sitting currently IS
+  ✓ BLOCKS — and this bridge only READS them; gaffer_brain.mjs is their sole writer
+  ✓ get_myself — it can SEE, and says so: on 13 Aug it told him 'mere paas koi visual sensors nahi hain' while the video lane was live in this very file
+  ✓ get_myself — hearing and voice too, each read off the page that IMPLEMENTS them rather than restated (a restated list is a second truth that rots)
+  ✓ get_myself — the tool list IS TOOL_DECLS, so a tool deleted tomorrow stops being claimed in the same commit, with nobody having to remember
+  ✓ get_myself — it names the model it is actually running on, not a remembered one
+  ✓ get_myself — and it carries the honesty law, so an absent field is 'I don't know', never an invention
+  ✓ PACE — the cap is enforced MID-TURN off the live output transcription, which is the only thing that can measure a turn while it is still running
+  ✓ PACE — the number is HIS OWN forty-second law at ~150 wpm, and it is the SAME number gaffer_state derives (they can never drift apart)
+  ✓ PACE — it fires ONCE per turn (a long turn is nudged, never nagged) and resets when HE speaks
+  ✓ PACE — it hands the turn back; it does NOT cut the audio or close the socket (being talked over by your own coach is worse than being talked at)
+  ✓ PACE — and it carries the fence, so 'you are too long' can never be read as 'say less'
+  ✓ FLUSH — a completed CAPTAIN→GAFFER pair reaches the door IMMEDIATELY, with no timer and no explicit flush (a correction lands in ~1s, not after 15s)
+  ✓ CARD — the Gaffer can finally RECORD a spoken decision (0 of 42 answered before this existed)
+  ✓ CARD — the id is OPTIONAL, because asking a man to repeat an id back to a voice is the friction this removes
+  ✓ CARD — only his three words are accepted; a fourth is ASKED about, never guessed on his behalf
+  ✓ CARD — SINGLE WRITER: the bridge SHELLS captains_call.mjs and never opens its json for writing
+  ✓ CARD — a refusal is reported as a REFUSAL: it must never tell him a decision landed when it did not
+  ✓ CARD — and the constitution ASKS for the answer, because a tool nobody is told about is a dead tool
+  ✓ CARD — one at a time, never a queue (a 27-item read-out is the same failure in a new coat)
+  ✓ CARD — an 'open' card is NOT reported as handled: the Gaffer says plainly it still has to be read
+  ✓ BRIEF · WIRING — the Re-Jirah line no longer reads rejirah_state.json, a file NOTHING creates
+  ✓ BRIEF · WIRING — the missions line no longer filters on `status`, a field a mission row has never had
+  ..   BRIEF · rendered checks NOT RUN — this is a clean checkout (missing fsrs_store.json, captains_call.json). Stated, never silent; the WIRING claims above ran.
+  ✓ B8 — the sitting state reaches EVERY session's preamble via the /rehydrate re-seed; the legacy body carries the section verbatim (Block 3 moved it out of the live constitution)
+  ✓ B8/C3.4 — and it says NOTHING when there is nothing to say (a header alone is not content)
+  ✓ B6/B11 — the sitting is prepared before he arrives, and the Gaffer is told not to improvise a plan
+  ✓ B6 — it hands the Gaffer HIS OWN material and forbids paraphrasing it from memory (B15)
+  ✓ B11 — DEFECT 1, held: the due queue is ordered by the OWNER'S REAL FIELD (rejirah.overdue_days). Written as a guessed field name, every value was 0, the sort was a no-op, and it opened on the WRONG concept — the fixture puts Context Window FIRST in the array precisely so a broken sort cannot pass
+  ✓ B11 — and overdue is framed as RIPE, not late (the kickoff's own framing, and his)
+  ✓ B6 — DEFECT 2, held: weaknesses.headline is an OBJECT; String() on it printed a literal '[object Object]' into his live preamble
+  ✓ B6 — DEFECT 3, held: an EMPTY ARRAY IS TRUTHY, so an empty danger_zone rendered a bare '[]' as if it were a finding (C3.4 — silence must be free)
+  ✓ B6/B11 — and it ends by handing the shape to B7's map law rather than starting the walk itself
+  ✓ B6/B11 — with NO capsule map on disk (every CI checkout, forever) it says NOTHING rather than half a plan
+  ✓ B6/B11 — the whole thing is deterministic assembly: no model call, which is what makes 'prepared before he arrives' free AND never stale (Block 3: the prepared sitting is THE PLAN in the sitting head now; the frozen body still carries this section)
+  ✓ B2 — the /transcript door drives the rolling state in-process (nobody has to type it)
+  ✓ B2 — the bridge is a DRIVER, not a second author: gaffer_state.mjs stays sole writer of the schema (no write to its two files anywhere in this bridge)
+  ✓ B2 — a bug in the rolling state can never cost him a transcript line (fail-silent, and the append is FIRST)
+  ✓ THE BRAIN NEVER BLOCKS THE MOUTH — the Watcher is woken from the door, fire-and-forget: never awaited, detached, stdio ignored, and a spawn that cannot start is swallowed
+  ✓ THE WATCHER'S VERDICT reaches BOTH halves of the per-turn path — which lines are laws, and what the one note says
+  ✓ B1 — the rolling state rides IN FRONT of the tail (the tail alone carries chatter, not the promise)
+  ✓ voice nerve: finished captain turns POST to the nucleus relay
+  ✓ vision nerve: 64-bit frame phash travels, pixels never persist
+  ✓ async arc: deep answers injected ONLY at a quiet beat
+  ✓ holding token offered when the deep brain wakes mid-talk
+  ✓ stale deep answers never replay on reload (primed first poll)
+  ✓ BRIDGE law travels in the constitution (never mention the machinery)
+  ✓ thalamus down = fail-silent, the reflex plays on
+  ✓ bridge /deep reads the wake QUEUE (open count, newest about)
+  ✓ bridge /deep hands back both the served answer and the pending wake
+  ✓ a DECLINED deep answer is never offered to the mouth
+  ✓ SCRIBE tool routes through hippocampus.mjs (owner writes)
+  ✓ SCRIBE: bad kind rejected at the bridge
+  ✓ remember/forget route through the owner too
+  ✓ MEMORY ORGAN law travels: Scribe silent, remember/forget gated
+  ✓ recall-hint law travels (win-only, never theatre)
+  ✓ page injects surfaced memory at a quiet beat, deduped
+  ✓ bridge /deep carries a FRESH recall hit
+  ✓ a stale recall hit expires (never late theatre)
+  ✓ F1 — get_context + recall_memory DECLARED, both shelling the hippocampus's own doors
+  ✓ H6 — get_diary DECLARED (transparency, not status) and an empty world says why it is empty
+  ✓ #WIRE — an empty get_diary reads the brain's RECORDED starvation instead of guessing that the laptop slept, and the branch is really wired to the owner's renderer
+  ✓ F2 — bus delta primes on poll 1, ships ONLY the changed projection on poll 2, quiets on poll 3
+  ✓ F2 — the page injects the delta at a quiet beat as updated ground, never a status report
+  ✓ F4 — the 600-char beheading is dead; the Gaffer's own turns post with the deny-listed teaching source
+  ✓ F6 — dropResume resets the rehydrate flag, and the tail cap derives from the compression window (no 25-line guess)
+  ✓ F7 — get_today.projected carries all four projected reads
+  ✓ F12 — default register is LECTURE (his 'as talkative and elaborative as possible' ruling)
+  ✓ REHYDRATOR: memory cartridge rides IN FRONT of the transcript tail
+  ✓ REHYDRATOR: null-safe on either part, and empty composes to null (never an empty seed)
+  ✓ REHYDRATOR: the live config carries the spliced seed — tail absent and INSIDE it; the durable cartridge is still fetched live via get_context
+  ✓ REHYDRATOR: DUGOUT_SPLICE_DISABLED=1 returns the pre-14-Aug seed byte-for-byte (the rollback is real, not a promise)
+  ✓ SPLICE: the cap cuts the OLDEST context first — today's tail and the standing line are the last things given up
+  ✓ SPLICE: every part is fail-silent, and a seed with NOTHING behind it is null — never a bare pointer claiming a memory it cannot show
+  ✓ REHYDRATOR: the tail budget derives from the very window the page is told to compress at (one number, not two)
+  ✓ REHYDRATOR: no transcript over 2000 chars on this machine (0 day-files) — the real-transcript budget check has nothing to bite on
+  ✓ REHYDRATOR: a scrimmage still starts COLD (no cartridge, no tail)
+  ✓ config carries the 8-tank fuel gauge
+  ✓ the Watcher's assignment travels (own key slot + its constitution)
+  ✓ watcher out of pool → null (a 1-key day still works)
+  ✓ page: watcher socket on ITS OWN tank, frames at half cadence
+  ✓ page: watcher observations become afferents, usage reported
+  ✓ page: the Watcher's audio is NEVER played (no playPCM in its lane)
+  ✓ page: fuel line renders from the gauge
+  ✓ page: timing hints injected as delivery-only, non-spoken
+  ✓ bridge /deep carries a live mouth hint; expired ones die
+  ✓ bridge /deep carries a FRESH pre-answer (M17); expired ones die
+  ✓ the page injects the pre-answer NON-SPOKEN, deduped by moment
+  ✓ bridge /deep carries a FRESH second spotlight (M22); expired ones die
+  ✓ the page injects the second spotlight NON-SPOKEN, deduped
+  ✓ B3 — the supervisor runs on the /transcript delta, right after the state it reads is current
+  ✓ B3 — THE BRAIN NEVER BLOCKS THE MOUTH: the note is PARKED for the poll, never sent from the door (which has no socket)
+  ✓ B3 — a fresh note reaches the poll with its kind and id
+  ✓ B3 — a STALE note is dropped: a correction arriving two minutes late lands on a different conversation and reads as a non-sequitur
+  ✓ B3 — the page injects it NON-SPOKEN and deduped, ahead of ALL 11 other hints (its notes are about a drift happening RIGHT NOW, and every branch in that poll returns — so fourth place meant silently dropped)
+  ✓ B3 — and the ONE thing allowed in front of it is the latched opening, which fires at most once a day and can never displace a live correction twice
+  ✓ B3 — and he is never told he is being corrected (a Gaffer that reads its own corrections out is a worse Gaffer)
+  ✓ B3 — the first poll PRIMES rather than replaying a note from before the page opened
+  ✓ B3 — …except the opening briefing, which the priming pass DELIVERS rather than swallows (the latch, not the poll, is what makes it once)
+  ✓ B5 — the live Gaffer can SEE what the other mouth just said (both lanes of it)
+  ✓ B5 — its OWN lines are never fed back to it (that would be an echo, not a mind)
+  ✓ B5 — a stale turn does NOT interrupt a live sitting (history belongs to get_context, not to a poke)
+  ✓ B5 — a fragment is noise, not a mind: too-short turns are dropped
+  ✓ B5 — the freshness window is REUSED from deepFresh, never a new tuned number (the two live lanes cannot drift apart)
+  ✓ B5 — the page injects it NON-SPOKEN and deduped, exactly like every other hint
+  ✓ B5 — and the FIRST poll PRIMES rather than replaying (no boot-time theatre, the bus_delta law)
+  ✓ B5 — it never announces the machinery (he must not be told the Gaffer is reading over his shoulder)
+  ✓ C1: server-VAD ships ALIGNED to his think-pauses (1500ms, probed)
+  ✓ C1: the page sends realtimeInputConfig both ways (aligned + manual)
+  ✓ C1: manual mode — the LOCAL VAD opens and closes the turn itself
+  ✓ C2: the page reads usageMetadata (token-true gauge, free on the wire)
+  ✓ C3: watcher resolution follows the pref (LOW default, high restores full)
+  ✓ C3: the strip-scar is armed (early 1007 → full-res retry, once)
+  ✓ C4: thinking is ALWAYS an explicit level (pref wins; never silent off)
+  ✓ C4: the page always sends thinkingConfig (the silent default is dead)
+  ✓ C6: read_url refuses non-http ground
+  ✓ C6: read_url firewall — local/personal ground never rides
+  ✓ C6: a dry/absent lane reports honestly, never fakes a read
+  ✓ C6: a live read answers FROM the source
+  ✓ C6: the tool is declared for the Gaffer (public ground only)
+  ✓ C5: the bridge mints a 30-min single-use token (lane proven live)
+  ✓ C5: mint dry → raw-key mode stands (honest, never half-locked)
+  ✓ fate 30 — THE LOCKED BOOK is the MAP OF HIS CRACKS: taught FROM ZERO with the capsule open (the GAME ON ruling), never 'ALREADY MASTERED', never 'never teach these from zero'
+  ✓ AWAY DAY: a bloodless checkout carries NO locked book (empty digest, nothing invented)
+  ✓ AWAY DAY: the system instruction carries no phantom book
+  ✓ AWAY DAY: get_capsule is honest-dormant (nothing locked yet, empty list)
+  ✓ 23 club tools (the locked book joined the squad)
+  ✓ a deep answer dies at 10 min (yesterday's lecture never replays)
+  ✓ a stale single-slot deep is filtered too
+  ✓ the page injects EVERY unseen deep answer (two lanes, zero loss)
+  ✓ transcript fragments coalesce per speaker (no more word-salad record)
+  ✓ PAGE · a COMPLETED TURN-PAIR flushes without blowing the stack — the crash he hit on 16 Aug, driven through the page's own code
+  ✓ PAGE · …and each turn reaches the door EXACTLY ONCE — the recursion did not merely crash, it re-pushed the same line every time round
+  ✓ PAGE · …and nothing is left stranded in the buffer after a flush (a turn that never reaches the door is a turn the organism never saw)
+  ✓ THE PAGE ACTUALLY PARSES — all 2 inline script block(s), not merely "the string is in there"
+  ✓ no RAW newline hides inside a page-code quoted string (the \n-eaten-by-the-template trap)
+  ✓ minutes bill only while the wire is up (parked tab = free)
+  ✓ CFG refreshes every 10 min (the constitution no longer freezes at START)
+  ✓ G16 — a config delta on the 10-min re-fetch arms the quiet-beat stitch
+  ✓ G16 — delta arming rides the existing goAway lane, only while a session is LIVE
+  ✓ G16 — the stitch pre-bills the part-minute before the wire drops (park-path parity)
+  ✓ recall bar: shards + transliterated garble never enter the index
+  ✓ get_today's scout-pack note is once-and-drop, never a Pro-account nag
+  ✓ SCAR: NO codeExecution on the live socket (it hangs the turn — probed)
+  ✓ search grounding honestly ABSENT (zero free quota — the wire said so)
+  ✓ CHALKBOARD: run_python is a club tool
+  ✓ thinking: explicit always — defaults minimal/medium, his pref overrides both
+  ✓ page ALWAYS sends an explicit thinkingLevel, scar-armed (C4)
+  ✓ CHALKBOARD FIREWALL: personal-data code REFUSED before any network
+  ✓ CHALKBOARD FIREWALL: subprocess/env/file patterns refused too
+  ✓ CHALKBOARD: sandbox output extracted honest (outcome + real stdout)
+  ✓ CHALKBOARD: lane dry → honest error, never a fake output
+  ✓ CHALKBOARD law travels: prove it by running it, grade code never coder
+  ✓ the Live Examiner's code round rides the scrimmage when staged
+  ✓ EARNED + GREEN + fresh → the whisper reaches the mouth
+  ✓ UNEARNED (no ratified wall_breaker) → NEVER voiced, however good
+  ✓ RED body → the whisper is MUTE regardless of what is earned
+  ✓ conserve tone → mute too (rest is the agenda)
+  ✓ expired whisper dies (the stuck→gone window closed)
+  ✓ page: whisper injected ONCE, win-framed, never shame-framed
+  ✓ get_card: no card has ever been dealt on this machine — the door says so plainly instead of composing one
+  ✓ get_card REFUSES an id that does not exist — it never describes a card it could not open
+  ✓ get_mission OPENS the real M01 brief off disk (the first mission ever staged)
+  ✓ get_mission REFUSES an unknown id rather than narrating one
+  ✓ club report: body + brain + gate + senses + memory + tanks, one call
+  ✓ club report: the dormant organs explain their own silence
+  ✓ club report: what awaits HIS word is named
+  ✓ BOARDROOM law travels: full briefing, zero invented, dormancy named
+  ✓ 40 club tools now (18 Aug MODELS + ACTS Block 2: the six LAW A act tools set_agenda · set_preference · add_rule · queue_job · file_card · fire_mission in — was 34: 18 Aug BLOCK 3: the sitting door open_sitting + close_sitting in, set_depth frozen out — 17 Aug BLOCK 2: the three self-judging doors out, bank_answer + judge_round in — 14 Aug Phase 8 added get_card + get_mission, the doors to data it was TOLD about and could never open)
+  ✓ get_today carries the night shift's staging (voice-nameable)
+  ✓ re-jirah queue rides distractors when banked (null-safe when not)
+  ✓ scrimmage pulls the banked probes when fresh (never repeats itself)
+  ✓ GUEST LAW is structural: a briefing session has NO tools at all
+  ✓ a briefing never rehydrates, never resumes, never opens the Watcher
+  ✓ the guest privacy law travels in both keynotes
+  ✓ the honest frame survives the pitch (no-magic answer scripted)
+  ✓ keynote ONE covers the club end to end
+  ✓ keynote TWO covers the brain end to end
+  ✓ both run as ~15-minute guided calls with check-ins
+  ✓ no keynote breaks the banned-phrase law
+  ✓ briefing idle window is long (she listens, he's quiet)
+  ✓ page whitelists the briefing modes + omits empty tools on the wire
+  ✓ a briefing handle can never resume into the Gaffer (mode-fenced bank)
+  ✓ gaffer + scrimmage modes unchanged by the briefings (34 tools + the six LAW A act tools, 18 Aug 2026 = 40)
+  ✓ wire shape: modalities+speechConfig NESTED in generationConfig
+  ✓ Charon travels as prebuiltVoiceConfig
+  ✓ output AudioContext at NATIVE rate (never locked to 24k)
+  ✓ local VAD + connect-on-voice + audioStreamEnd
+  ✓ outputTranscription scar armed (live auto-strip)
+  ✓ mic P0: errors surfaced, never swallowed
+  ✓ mic P0: AudioWorklet blocked → ScriptProcessor fallback
+  ✓ mic P0: permission preflight on load
+  ✓ barge-in actually stops scheduled audio
+  ✓ page HTML embeds resumption + key rotation + bench message
+  ✓ a bare 1011 is no longer misread as quota (a wire/config fault never benches the line)
+  ✓ the bench + setup-refused messages name the close code and reason (no masked error)
+  ✓ the minutes meter never lump-bills a parked span (fresh t0 per connect, meter off while down)
+  ✓ #57 the served page still gets through (same-origin, JSON)
+  ✓ #57 a charset parameter does not break the real page
+  ✓ #57 curl / a local script (no Origin at all) still works
+  ✓ #57 the LAN door survives — his phone is same-origin on the LAN ip
+  ✓ #57 A HOSTILE PAGE IS REFUSED (this is the whole point)
+  ✓ #57 a hostile Referer is refused too (Origin can be omitted)
+  ✓ #57 the preflight-free form POST is refused on content-type
+  ✓ #57 a refusal carries an HTTP code and a reason (never a silent drop)
+  ✓ #57 the guard is WIRED into the live POST router, not just defined
+  ✓ #57 every POST the page makes sets Content-Type: application/json (the guard costs the real page nothing)
+  ✓ #53 a headless reminder verb exists in main() (not only the setInterval)
+  ✓ #53 the headless verb actually fires them (calls fireReminders, not just logs)
+  ✓ #53 the header documents the headless lane (a scheduled task needs to find it)
+  ✓ #53 the constitution still promises delivery, and now something outside the window can keep it
+  ✓ #53 fireReminders speaks through speak.mjs directly (no live session needed)
+  ✓ #52 detectShadows is a named function that drives shadow.mjs detect
+  ✓ #52 a failed sample is REPORTED, not swallowed (the interval swallowed it forever)
+  ✓ #52 a headless verb exists so shadows aren't sampled only on bridge days
+  ✓ #52 the in-process interval now goes through the SAME function (one lane, two callers)
+  ✓ #54 THREE passes report as THREE, not six (the 2:1 thrash/focus split no longer doubles him)
+  ✓ #54 stall_edges_today is untouched (focus rows carry no `edge`; it was never wrong)
+  ✓ #54 the focus ledger still reads the focus rows (the fix must not eat them)
+  ✓ #51 the presence read is tail-scoped, and it says how much it scanned
+  ✓ #51 the scan reports coverage HONESTLY — a truncated window is never rendered as a total
+  ✓ #51 every row it returns really is today's (day-scoped, not just tail-sliced)
+  ✓ #51 a whole file reads whole; a cut window drops the sliced fragment and SAYS it was cut
+  ✓ #51 a missing log is an honest absence, never a measured zero
+  ✓ #51 a rolled log is tolerated — today's rows from BOTH files, in time order
+  ✓ #51 'I read the whole live file' is not accepted as proof when an archive exists
+  ✓ #106 the twin reports how far from its gate it is, not just 'warming_up'
+  ✓ #106 calibration reports reps have/need, and the need comes from calibration_config.json
+  ✓ #106 a null count is narrated as 'nothing measured', never as a zero
+  ✓ #92 get_capsule's description names the REAL locked set (no frozen list of four)
+  ✓ #92 the prose names EXACTLY the capsules on disk — no phantom, no dropped, no frozen literal
+  ✓ L6 · ml6 F2 — get_capsule's live description is the MAP OF HIS CRACKS taught FROM ZERO with the capsule OPEN; never 'MASTERED', never 'reteach from zero'
+  ✓ every sibling import is actually CALLED here — 19 import lines scanned, 0 orphans
+  ✓ the page tells the BOARD before nextKey() moves keyIdx (after the rotation, which tank ran dry is unknowable)
+  ✓ the faulted tank is DERIVED from the key that 429'd, never guessed (no mapping → no post)
+  ✓ the Watcher's own exhaustion reaches the board too (else T2 never reads COLD)
+  ✓ ONE evidence rule for 'this was really quota', shared by both sockets (a bare early 1011 is still a wire fault)
+  ✓ the fault door exists in the LIVE POST router, beside /tank-use
+  ✓ the door shells the OWNER — fuelboard writes tanks.json, this bridge never does (single writer)
+  ✓ MOUTH CONTRACT: /deep's `speak` is the brain's newest undelivered unit {id,text,est_seconds,question} and `sitting` names the open sitting {open,id,route,task}
+  ✓ MOUTH CONTRACT: a dead brain = speak:null + sitting:null — the Gaffer is the coach it was before, the poll never throws
+  ✓ MOUTH CONTRACT: relaySitting POSTs to :4117 with a 250 ms abort and reads 202 as delivered; a refused connect is false, never a throw
+  ✓ MOUTH CONTRACT: the /deep door asks the brain at the DOOR (readDeepState stays a pure read of the thalamus side) and the two page relays exist as doors
+  ✓ MOUTH CONTRACT (page): a [SPEAK id=…] block is injected verbatim, ONE in flight, never re-injected while its ack is pending, and acked through /spoken-relay after turnComplete + drained playback (or his interruption, or a generous timeout — never a stuck sitting)
+  ✓ MOUTH CONTRACT (page): his whole utterance (the 2 s afferent quiet) is relayed to the brain's /turn while a sitting is open — GAFFER lines never are
+  ✓ MOUTH CONTRACT (page): the sitting's OPEN/CLOSED flips are announced ONCE each way, non-spoken, and the SPEAK unit sits right after the supervisor + opening in the poll (B3's order kept)
+  ✓ MOUTH CONTRACT: the Dugout boots the sitting brain beside the brain (sitting.mjs daemon, detached) and the constitution carries THE SPEAK LAW with the exact text of §6.4
+  ✓ mjud msit · a judge verb (judge-round, judge-due) through the tool funnel waits JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS (both imported from gaffer_brain.mjs); every non-judge tool spawn keeps its 60 s, and the default sh reads shTimeoutMs
+
+ALL CHECKS PASSED
+
+exit 0
