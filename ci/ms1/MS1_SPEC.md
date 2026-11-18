@@ -327,5 +327,8 @@ Read through the public API with curl, no token: `GET /repos/nikhil1429/arsenal-
 **Push `28ae3b9` (18 Nov 2026), read with curl, no token:** workflow run `44373592870` (suite) · completed · **success**.
 Check runs: `135046667808` npm test · node 22 → success · `135046668307` npm test · node 24 → success.
 
+**Push `82ac1c9` (18 Nov 2026, the full spec), read with curl, no token:** workflow run `44375272961` (suite) · completed · **success**.
+Check runs: `135052656774` npm test · node 22 → success · `135052655986` npm test · node 24 → success.
+
 The push carrying this line is judged again; its run ids and verdict are in `ci/ms1/LEDGER.jsonl` (act `ci-read`) and
 in the seat's final message.
