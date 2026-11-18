@@ -1,0 +1,14 @@
+{"ts":"2026-11-18T14:37:58.540Z","act":"measure","cmd":"grep -n \"update-ref|merge|push\" scripts/rails.mjs (38dd20a)","last_line":"no line — L1 a new organ"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"measure","cmd":"read scripts/ci_verdict.mjs · sitting.mjs status · archivist.mjs tripwire · setup/services · .mcp.json","last_line":"formats named in PROOF §1"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"selftest-before","cmd":"node scripts/groundsman.mjs selftest (38dd20a)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"build","cmd":"new scripts/land.mjs · groundsman L4","last_line":"commit 6e85080"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"selftest-after","cmd":"node scripts/groundsman.mjs selftest (6e85080)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"gates","cmd":"npx tsc -p . ; npx eslint scripts/land.mjs (shared clone)","last_line":"no line for land.mjs"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"witness","cmd":"node ci/mland/witness_mland.mjs --org <archive 6e85080> --base-org <archive 38dd20a>","last_line":"GREEN MLAND landing verb · 19 clause(s)"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"mutants","cmd":"node ci/mland/run_mutants_mland.mjs --org <archive> --base-org <archive 38dd20a>","last_line":"run_mutants: 17 of 17 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"witness-prior","cmd":"node ci/mgrd/witness_mgrd.mjs --org <archive mland> --base-org <archive 15edfec>","last_line":"G1 G2 G3 GREEN · BOUND names land.mjs (expected)"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"models","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"suite-build","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (6e85080, shared clone)","last_line":"organism_test: 137 passed, 3 failed · ruled 0 · UNRULED 3 (same three names as 15edfec)"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"push","cmd":"git push -u origin claude/mland-build","last_line":"6e85080"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"ci-prior","cmd":"node scripts/ci_verdict.mjs 38dd20a (curl door)","last_line":"ci_verdict 38dd20a GREEN — node 22 run 134873293858 · node 24 run 134873294663 · 0 new red"}
+{"ts":"2026-11-18T14:37:58.540Z","act":"ci","cmd":"node scripts/ci_verdict.mjs 6e85080 (curl door)","last_line":"PENDING at read"}
