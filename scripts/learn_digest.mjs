@@ -18,7 +18,8 @@
 //
 // THE CONTRACT (selftest): rendered ≤ 16,384 bytes · the resume pointer appears VERBATIM when a session is open ·
 // no markdown table row in the render (his "no tables" ruling — the screen may be pasted to him) · the four live
-// duties are present · the bank line carries the live concept:axis · exit 0 with or without an open session.
+// duties are present · the bank line carries the live concept:axis · the day is opened and ended by code (no hand-typed
+// sitting open, no judge-round before the close — unit mday2) · exit 0 with or without an open session.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -26,6 +27,8 @@ import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 // the legal moment kinds are the pacer's OWN list (forks row 266): printed from it, never typed here
 import { MOMENTS, STEPS } from "./forge_session.mjs";
+// the day's END line is day.mjs's OWN (unit mday2, forks row 1089 (2)): printed from its one home, never a copy here
+import { END_LINE } from "./day.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const STATE = path.join(ROOT, "dressing-room", "state");
@@ -160,7 +163,7 @@ export function render(g) {
   push(`  axis    node scripts/forge_session.mjs axis ${ax} done   (gate: ≥1 Hinglish bank + ≥1 --register interview since the axis opened)  ·  contract: node scripts/forge_session.mjs contract`);
   push(`  moments node scripts/forge_session.mjs moment ${MOMENTS.join("|")}   (only these ${MOMENTS.length} are legal question-moments; the list is the pacer's own, forks row 266)`);
   push('  crack   the ```diff block in the message (the marker) · his ruling → node scripts/acts.mjs do rule --door claude-code --text "…" · your drift → node scripts/teaching_contract.mjs flag <rule-id> --why "…"');
-  push("  day end node scripts/gaffer_brain.mjs judge-round → node scripts/sitting.mjs close --reason fulltime → /full-time");
+  push("  day end " + END_LINE + " (it closes the sitting, whose close fires the judge by code, writes the machine half of the day and prints the ONE message of questions; a second end says already closed)");
   push("");
   push("THE TURN SHAPE (the hook prints the live contract every turn — obey the hook, this is the spine):");
   push("  ONE new idea per message, ONE check-question at its end · DHEEMA not LAMBA: one thing fully opened, small steps · THREE LAYERS per idea: DUKAAN (an everyday physical analogy — food, shop, house, city, his own FinOps/Blinkit data; never geometry) → ASLI NAAM (the real term, opened in one line, `backticked`) → TECHNICAL LINE (the interview-ready English sentence)");
@@ -181,7 +184,7 @@ export function render(g) {
   push("");
   push("WHERE THE FULL WORDING LIVES (open ONLY the section a step needs — never the whole file):");
   push("  step 3 turn shape + THE BANK + the three gates → .claude/skills/forge/SKILL.md §'THE BANK' · per-idea picture + Board → learning-layer/VISUAL_CONTRACT.md §4 PICTURE FIRST block · step 4 widget → §4 (one DRIVEN widget after axis g, stepper, no autoplay, ≤6 objects) · steps 9–10 (Jirah once at CONCEPT level, then LOCK) → forge SKILL 'step 10' gate line · the axis loop's substance → docs/archive/SAMJHAO_MERGED__2026-08-30.md §3 · the notes law in full → .claude/skills/learn/SKILL.md 'THE NOTES LAW' · the whole method → learning-layer/PROJECT_OS.md");
-  push("  boot: open the sitting FIRST → node scripts/sitting.mjs open --surface code --no-spawn --task \"" + (g.open ? `${g.concept} axis ${g.axis}` : "<task>") + "\"  (a sitting is the day's container; without it nothing lands at full-time)");
+  push("  boot: the day's container is ALREADY OPEN by code (unit mday: his /learn prompt or the Skill call naming learn ran day.mjs start, which opens or JOINS today's sitting) · node scripts/day.mjs status shows it · never type the open yourself");
   return L.join("\n") + "\n";
 }
 
@@ -204,6 +207,7 @@ function selftest() {
     ["the deck lint rides the render and exists on disk (his 15 Nov law as a code path)", /DECK LINT before opening/.test(out) && /deck_lint\.mjs <file>/.test(out) && fs.existsSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "deck_lint.mjs")), ""],
     ["the boot opens his newest deck in the Browser pane, unasked (his word, 15 Nov)", /OPEN AT BOOT, UNASKED/.test(out) && /navigate to http:\/\/localhost:4791\//.test(out), ""],
     ["the digest writes nothing (no write call in its own source)", !/\b(writeFileSync|appendFileSync|writeFile)\s*\(/.test(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\/\/.*$/gm, "").replace(/"the digest writes nothing[^"]*"/, "")), ""],
+    ["the day is opened and ended by code (unit mday2, forks row 1089): no hand-typed sitting open, no judge-round or hand sitting close before the close, day.mjs status and day.mjs end ride the render", !/sitting\.mjs open/.test(out) && !/judge-round/.test(out) && !/sitting\.mjs close/.test(out) && !/\/full-time/.test(out) && /day\.mjs status shows it/.test(out) && out.includes(END_LINE), ""],
     ["--json round-trips the gathered facts", (() => { try { return JSON.parse(JSON.stringify(g)).open === g.open; } catch { return false; } })(), ""],
   ];
   let ok = 0;

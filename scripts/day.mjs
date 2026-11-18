@@ -17,6 +17,8 @@
 //     harness dispatches — measured on his laptop: a typed /learn arrives inline, with no Skill call) → `start` here, CALL shape.
 //   · PreToolUse(Skill) → rails.mjs pretooluse: a Skill call naming learn (the MODEL's invoke) → `start --by hook:skill`.
 //   Both bind the host from the HOOK PAYLOAD (G0's law: the model never types an id). A second start is a JOIN, never a fork.
+//   `start` also runs usage_tap.mjs need ONCE (unit mpool, rows 1062 F8 A / 1091 (2)): the pool's ONE keyed card is filed at the
+//   learn start, by the tap's own door, only on a WAIT for want of a source. Its one line rides the start line as `pool: …`.
 // THE END is the session model's to call when it reads HIS MEANING that the study day is over — in any words. NO phrase list,
 //   no regex of his words and no model call lives here (L6); the instruction rides CLAUDE.md and the SessionStart brief (F9).
 // MODES:
@@ -32,6 +34,8 @@
 //      with reason fulltime — its close fires the judge by code (sitting.mjs close, `judge-due --trigger sitting.close`)
 //   3. postmatch.mjs autoclose --date <D> --anchor close   the MACHINE half of the day, no quiet-rule defer (ruling F3 A)
 //   4. the evening organs measured idempotent by day (EVENING_ORGANS below — ruling F4; none is, today)
+//   5a. night.mjs arm --day <D> --by day.end   the night factory is armed through its owner's CLI (unit mfac, ruling F1 A: only
+//      this real close arms it — never the already or REFUSED path); the next `start` closes it and prints its ONE line
 //   5. captains_call.mjs deal   ONE card (its own order decides which)
 //   6. ONE line, then the ONE message of questions for him — answered or not, the day is already closed (R3)
 // SAFE TWICE: a sitting closed today with reason fulltime IS the owner's "already" stamp — the second call writes nothing.
@@ -108,10 +112,14 @@ export async function start({ session = null, transcript = null, by = "hand", no
   }
   const prevHost = isOpen(readSitting()) ? readSitting().host_session_id || null : null;
   const r = await S.openDoor({ surface: "code", session, transcript, by: `day start · ${by}` });
+  // unit mpool (forks rows 1062 F8 A / 1091 (2)) — THE POOL AT THE LEARN START: ONE more owner call, usage_tap.mjs need, ONCE
+  // per start. Its own door decides (it files ONE keyed card only on a WAIT for want of a source); this file writes nothing.
+  const pool = await ownerRun("usage_tap.mjs", ["need"]);
+  const poolNote = ` · pool: ${lastLine(pool).replace(/^usage tap · need: /, "").slice(0, 120) || `usage_tap exit ${pool.status}`}`;
   const night = await closeNight();   // unit mfac (F9 A): the learn start closes the night and never waits — its ONE line rides this start
-  if (!r.ok) return { ok: false, r, night, line: `day: start ${D} — the sitting did not open: ${r.error}${r.resume ? ` → ${r.resume}` : ""}${rolled}` };
+  if (!r.ok) return { ok: false, r, night, line: `day: start ${D} — the sitting did not open: ${r.error}${r.resume ? ` → ${r.resume}` : ""}${rolled}${poolNote}` };
   const hostNote = r.joined ? (prevHost && prevHost !== session ? ` · host moved ${short(prevHost)} → ${short(r.host_session_id)} (this /learn session is the study session now)` : ` · host ${short(r.host_session_id)} (same session — JOINED, nothing new)`) : ` · host ${short(r.host_session_id)}`;
-  return { ok: true, r, night, line: `day: START ${D} · sitting ${r.id} ${r.joined ? "JOINED" : "OPEN"} (door ${r.door}, ${by})${hostNote}${rolled} · the day ends when HE means it: node scripts/day.mjs end` };
+  return { ok: true, r, night, line: `day: START ${D} · sitting ${r.id} ${r.joined ? "JOINED" : "OPEN"} (door ${r.door}, ${by})${hostNote}${rolled}${poolNote} · the day ends when HE means it: node scripts/day.mjs end` };
 }
 
 // ── END ───────────────────────────────────────────────────────────────────────────────────────────────────────────────

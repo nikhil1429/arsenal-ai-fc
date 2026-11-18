@@ -45,6 +45,9 @@ const MUTANTS = [
   { clause: "W5.4", what: "μ5.4 a line printed when nothing was armed", edits: [[N, 'if (!n) return { code: 0, out: "" };', 'if (!n) return { code: 0, out: "NIGHT none: never armed" };']] },
   { clause: "W5.5", what: "a row carries a words field", edits: [[N, 'append({ day, kind: "armed", by });', 'append({ day, kind: "armed", by, words: "planted" });']] },
   { clause: "W6.2", what: "μ6.2 the line skips launch marks", edits: [[N, 'launched: count("launch")', "launched: 0"]] },
+  { clause: "W7", what: "FORK 1 undone: night.mjs selftest leaves the package.json suite", edits: [["package.json", " && node scripts/night.mjs selftest\"", "\""]] },
+  { clause: "W8", what: "the runner skill loses THE NIGHT section's land ceiling", edits: [[".claude/skills/runner/SKILL.md", "**Never land at night**", "**Land when ready**"]] },
+  { clause: "W9", what: "the merge drops mpool's pool call from the start", edits: [[DAY, "${rolled}${poolNote} · the day ends", "${rolled} · the day ends"]] },
   { clause: "BOUND", what: "a file beyond the named ones edited (land.mjs)", edits: [["scripts/land.mjs", "#!/usr/bin/env node\n", "#!/usr/bin/env node\n// mutant\n"]] },
   { clause: "LAST", what: "a node process naming the temp root left alive", own: true, only: "W1.3", edits: [["ci/mfac/witness_mfac.mjs", "    kids.push(w);\n", '    kids.push(w);\n    spawn(process.execPath, ["-e", "setInterval(() => {}, 2147483647)", ROOT], { detached: true, stdio: "ignore" }).unref();\n']] },
 ];

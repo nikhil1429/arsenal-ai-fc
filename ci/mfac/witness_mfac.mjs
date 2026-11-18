@@ -3,7 +3,7 @@
 // ci/mfac/witness_mfac.mjs — UNIT mfac · THE NIGHT FACTORY (forks rows 1069 / 1081)
 // ----------------------------------------------------------------------------
 // USAGE: node ci/mfac/witness_mfac.mjs --org <dir> --base-org <dir> [--only <clause>[,<clause>…]]
-//   --org       the tree to witness (the build reads GREEN; the base reads RED on every clause: it carries no night)
+//   --org       the tree to witness (the build reads GREEN; the base, main 902b6cc, reads RED on every clause: it carries no night)
 //   --base-org  the BASE tree (origin/main at the cut) — BOUND needs it; absent, BOUND is RED
 //   --only      run only these clause ids (the mutant runner's door); BOUND and LAST always run
 // CONTRACT — every plant runs on a COPY of --org under os.tmpdir() (never .git, never node_modules — that rides as a link),
@@ -41,6 +41,12 @@
 //   W5.4  a day with no armed night → `day.mjs start` prints zero NIGHT lines and `night.mjs line` is silent
 //   W5.5  names-gate: every night_log row the plants wrote holds only the organ's own keys (no words field, no name key)
 //   W6.2  the ONE line counts every launch mark (a spend the runner made is visible in the morning)
+//   W7    row 1100 (2), FORK 1 ruled the package.json way: `node scripts/night.mjs selftest` sits in exactly ONE suite string
+//         of package.json, and organism_test.mjs carries no OWN_MEMBERS list
+//   W8    row 1069 F10 A / row 1100 (4): .claude/skills/runner/SKILL.md carries THE NIGHT section naming the wait, begin,
+//         `may --act launch`, the land-ready ceiling and the stops; day.mjs's header list names step 5a (row 1100 (3))
+//   W9    row 1100 (1): `day.mjs start` runs BOTH owner calls — the pool line (usage_tap.mjs need) rides the start line AND
+//         the night closes with its ONE line
 //   BOUND only the named files differ from --base-org (ci/mfac/** is this unit's own output)
 //   LAST  no node process naming the temp root survives (fake-claude spawns are counted and printed, planted)
 // LAST LINE: GREEN MFAC <what> · <n> clause(s) (exit 0) or RED MFAC · <clauses> (exit 1)
@@ -56,7 +62,7 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 && process.
 const ORG = arg("--org") ? resolve(arg("--org")) : null, BASE_ORG = arg("--base-org") ? resolve(arg("--base-org")) : null;
 const ONLY = arg("--only") ? arg("--only").split(",") : null;
 if (!ORG || !existsSync(join(ORG, "scripts", "day.mjs"))) { console.log("RED MFAC · USAGE (--org <dir> with scripts/day.mjs)"); process.exit(1); }
-const NAMED = ["scripts/night.mjs", "scripts/day.mjs", "scripts/organism_test.mjs", ".gitignore"];
+const NAMED = ["scripts/night.mjs", "scripts/day.mjs", "package.json", ".claude/skills/runner/SKILL.md", ".gitignore"];
 const SKIP_TOP = new Set([".git", "node_modules"]);
 const ROOT = mkdtempSync(join(tmpdir(), "mfac-wit-"));
 const slash = (p) => p.split(sep).join("/");
@@ -298,6 +304,29 @@ try {
     const s = startDay(randomUUID());
     const l = night("line");
     clause("W5.4", HAS_NIGHT && l.status === 0 && lines(l.stdout).length === 0 && nightLines(s.stdout).length === 0, `start NIGHT lines ${nightLines(s.stdout).length} · line exit ${l.status} · ${lines(l.stdout).length} line(s)`);
+  }
+
+  if (want("W7")) {
+    const pkg = readJ(join(COPY, "package.json")) || { scripts: {} };
+    const hits = ["organism:selftest", "squad:selftest", "audit:selftest"].map((k) => (String(pkg.scripts[k] || "").match(/node scripts\/night\.mjs selftest/g) || []).length);
+    const ot = readFileSync(join(COPY, "scripts", "organism_test.mjs"), "utf8");
+    clause("W7", hits.reduce((a, b) => a + b, 0) === 1 && !/OWN_MEMBERS/.test(ot), `night.mjs selftest in suites: ${hits.join("/")} · organism_test OWN_MEMBERS ${/OWN_MEMBERS/.test(ot) ? "PRESENT" : "absent"}`);
+  }
+  if (want("W8")) {
+    const sk = existsSync(join(COPY, ".claude", "skills", "runner", "SKILL.md")) ? readFileSync(join(COPY, ".claude", "skills", "runner", "SKILL.md"), "utf8") : "";
+    const sec = sk.slice(Math.max(0, sk.indexOf("## THE NIGHT")));
+    const body = sk.includes("## THE NIGHT") ? sec.slice(0, (sec.indexOf("\n## ", 4) + 1 || sec.length + 1) - 1) : "";
+    const need = ["night.mjs wait", "night.mjs begin", "may --act launch", "land-ready", "stop --reason", "Never land at night"];
+    const miss = need.filter((n) => !body.includes(n));
+    const hdr = /^\/\/\s+5a\. night\.mjs arm/m.test(readFileSync(join(COPY, "scripts", "day.mjs"), "utf8"));
+    clause("W8", body.length > 0 && miss.length === 0 && hdr, `THE NIGHT section ${body ? "present" : "ABSENT"}${miss.length ? ` · missing: ${miss.join(", ")}` : ""} · day.mjs header step 5a ${hdr ? "named" : "ABSENT"}`);
+  }
+  if (want("W9")) {
+    const { sid } = await armedNight();
+    night("mark", "--kind", "land-ready", "--unit", "up");
+    const s = startDay(sid);
+    const startLine = lines(s.stdout).find((l) => l.startsWith("day: START")) || "";
+    clause("W9", / · pool: /.test(startLine) && nightLines(s.stdout).length === 1 && rows().some((r) => r.kind === "closed"), `start line ${/ · pool: /.test(startLine) ? "carries the pool" : "has NO pool"} · NIGHT lines ${nightLines(s.stdout).length} · night ${rows().some((r) => r.kind === "closed") ? "closed" : "NOT closed"}`);
   }
 
   // ── BOUND — only the named files differ ───────────────────────────────────────────────────────────────────────────

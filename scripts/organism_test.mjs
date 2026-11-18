@@ -68,11 +68,6 @@ const SELF = "organism_test.mjs";
 // full sandbox and run for minutes, so `npm test` keeps them behind their own
 // name while the coverage law still holds them to the same standard as the rest.
 const SUITE_NAMES = ["organism:selftest", "squad:selftest", "audit:selftest"];
-// unit mfac (forks row 1069, build seat): THIS RUNNER'S OWN MEMBERS — an organ whose selftest joins the hermetic chain by
-// name here, because its unit's brief named this file and not package.json (the proof's FORK 1 asks where it belongs).
-// Each counts as covered EXACTLY ONCE: listed in a package.json suite as well, it is a dupe and the coverage law reds;
-// gone from disk, it is a ghost. suites() judges it like every other member.
-const OWN_MEMBERS = Object.freeze(["night"]);
 // ── B1 (b) · THE HERMETIC PROFILE (18 Nov 2026) ──────────────────────────────────────────────────────────────────────
 // `ORGANISM_TEST_PROFILE=hermetic` (or `--hermetic`) is what CI runs. A member that reads LIVE state — a file of
 // dressing-room/state (a sandbox COPY of one included: its bytes are still his), a daemon's port, the process table, the
@@ -308,7 +303,6 @@ function coverage() {
     }
   });
 
-  for (const m of OWN_MEMBERS) inSuite.set(m, (inSuite.get(m) || 0) + 1);
   const withTest = scripts().filter(hasSelftest).map((f) => f.replace(/\.mjs$/, ""));
   const orphans = withTest.filter((f) => !inSuite.has(f));
   assert("EVERY organ with a selftest is wired into a suite (package.json:_selftest_coverage_law)",
@@ -370,7 +364,7 @@ const hermeticRuns = new Map();   // runKey → { code, out } as run() returned 
 function suites() {
   section("SUITES — every member run INDEPENDENTLY (one red never hides the rest)");
   const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-  const members = [...suiteMembers(pkg), ...OWN_MEMBERS.filter((m) => !suiteMembers(pkg).includes(m))];
+  const members = suiteMembers(pkg);
   const red = [];
   let reused = 0;
   let ran = 0;
@@ -2231,6 +2225,14 @@ function hermetic() {
   // ONE RUN PER SELFTEST (row 880 (1)): the result run() returns is KEPT for suites() under its identical-command key,
   // after the window's end is stamped — the same spawns, the same order, the same window; the trip metric is untouched.
   for (const f of targets) { if (liveSelftest(f.replace(/\.mjs$/, ""))) continue; const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args), r); }
+  // unit mpool (forks rows 1062 / 1066) — THE USAGE TAP's selftest rides THIS loop (it has a selftest, so it is a target)
+  // and is JUDGED here, from the loop's own kept result (a read of the map, never a second spawn; suites() still takes it
+  // if a suite ever names it). Its package.json suite membership is a FORK the unit names in ci/mpool/PROOF.md.
+  {
+    const tap = hermeticRuns.get(runKey([join(ROOT, "scripts", "usage_tap.mjs"), "selftest"]));
+    assert("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", !!tap && tap.code === 0,
+      tap ? String(tap.out).trim().split("\n").filter((l) => /FAIL|selftest/.test(l)).slice(-4).join(" | ") : "usage_tap.mjs selftest never ran");
+  }
   if (!tripLive) {
   const after = snap(), afterH = hashes();
 
