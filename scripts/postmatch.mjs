@@ -37,7 +37,7 @@
 //           for a malformed date, a future day, a day with no machine record, his own closed day; every OLDER named
 //           day gets ONE appended line recording the ABSENCE of his word, read as closed, never re-asked)
 //         · named (READ-ONLY, for /full-time: the day his line closes, the older named days, whether the KAL is asked)
-//         · autoclose --date <YYYY-MM-DD|chain|chain-1> --anchor evening|morning [--dry]
+//         · autoclose --date <YYYY-MM-DD|chain|chain-1> --anchor evening|morning|close [--dry]   (close: day.mjs end, unit mday)
 //           (THE DAY CLOSES ITSELF, mclose · rows 873 (2) / 877 / 883 / 891 — the MACHINE half of his
 //           full time, fired by the conductor's dayclose steps; see autoclose() below)
 //         · season (regen SEASON.md only — no ledger, no matchday)
@@ -389,7 +389,12 @@ function pendingThrowIns(routedIds, { dugoutSuffix = "" } = {}, dir = STATE_DIR)
 const AUTOCLOSE_QUIET_MIN = 30;                                     // F3, as ruled (row 877): "under 30 minutes old"
 const AUTOCLOSE_CLOCK_ENV = "ARSENAL_AUTOCLOSE_CLOCK";        // the step's clock — honoured ONLY for a copy under os.tmpdir()
 const CHAIN_DAY_FORMS = Object.freeze({ chain: 0, "chain-1": -1 });  // conductor EVENING dayclose / MORNING dayclose-prev
-const ANCHORS = Object.freeze(["evening", "morning"]);
+const ANCHORS = Object.freeze(["evening", "morning", "close"]);
+// unit mday (forks rows 1044 / 1050 F3 A) — THE CLOSE ANCHOR: `day.mjs end` runs the machine half the moment HE means the day is
+// over. It is a close like the evening's (the record, the compile, the judge, ONE day-close card) but it never defers on the quiet
+// rule (quietVerdict defers the EVENING only — he closed, so no study turn is still arriving), and a record it writes is read as
+// a close by autocloseDecision, so the evening and morning steps after it write nothing (bytes and mtime).
+const CARD_ANCHORS = Object.freeze(["evening", "close"]);
 // mclose row 914 G-n (b) — THE CLOSE RUNS UNDER A DEADLINE, ITS BUDGET SUMMED IN CODE: one cold-reader budget (notes_compiler's
 // export), one judge budget (gaffer_brain's export) and one child budget per organ the close runs besides them (the archive, the
 // compile's scope seed, the card). No typed total anywhere: the conductor's two close steps declare `budget: autocloseBudget()`.
@@ -406,7 +411,7 @@ const AUTOCLOSE_DEADLINE_ENV = "ARSENAL_AUTOCLOSE_DEADLINE";   // the close's de
 const MACHINE_KEPT = "MACHINE CLOSE (kept, L9)";
 // HIS RESULT: the four legal results, as daily_green.mjs:250 reads them (REST renders as LOAD-MANAGED, renderPostMatch above)
 const HIS_RESULT_RE = /^RESULT:\s*(HIT|MISS|PARTIAL|LOAD-MANAGED)/m;
-const CLOSED_BY_RE = /^CLOSED-BY: code · (evening|morning) anchor · (\S+)$/m;
+const CLOSED_BY_RE = /^CLOSED-BY: code · (evening|morning|close) anchor · (\S+)$/m;
 const PENDING_COMPILE = "COMPILE: pending — the close is still writing (an interrupted close is finished by the next anchor)";
 const PENDING_JUDGE = "JUDGE: pending — the close is still writing (an interrupted close is finished by the next anchor)";
 const oneLine = (s, n = 240) => { const t = String(s == null ? "" : s).replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
@@ -758,7 +763,7 @@ async function autoclose(argv) {
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[i + 1] : null; };
   const dry = argv.includes("--dry");
   const anchor = opt("--anchor");
-  if (!ANCHORS.includes(anchor)) { console.error("postmatch: autoclose --date <YYYY-MM-DD|chain|chain-1> --anchor <evening|morning> [--dry] — the conductor's dayclose steps pass both; a hand back-fill passes its day and --anchor morning"); return 2; }
+  if (!ANCHORS.includes(anchor)) { console.error("postmatch: autoclose --date <YYYY-MM-DD|chain|chain-1> --anchor <evening|morning|close> [--dry] — the conductor's dayclose steps pass both; a hand back-fill passes its day and --anchor morning; day.mjs end passes --anchor close"); return 2; }
   const dres = resolveAutocloseDay(opt("--date"));
   if (dres.error) { console.error(`postmatch: autoclose REFUSED — ${dres.error}`); return 2; }
   const day = dres.day;
@@ -887,8 +892,8 @@ async function autoclose(argv) {
   // (viii) HIS HALF — ONE card, after an evening close only; a KEPT card names every day still open (mcard, dayCloseCard)
   let card = "no card (the morning anchor files none)";
   const fc = fits(CHILD_TIMEOUT_MS);   // row 914 G5: the card starts only with its own budget left
-  if (anchor === "evening" && !fc.ok) card = `CARD NOT FILED (${fc.line} — the card)`;
-  else if (anchor === "evening") card = await dayCloseCard({ day, run });
+  if (CARD_ANCHORS.includes(anchor) && !fc.ok) card = `CARD NOT FILED (${fc.line} — the card)`;
+  else if (CARD_ANCHORS.includes(anchor)) card = await dayCloseCard({ day, run });
   // (ix) ONE summary line
   console.log(`autoclose · ${day} · ${did} by code (${anchor} anchor) · ${tt.turns} captured study turn(s) in ${ids.length} session(s) · ${compileLine.startsWith("COMPILE: DONE") ? "notes DONE" : "NOTES NOT DONE"} · ${shortJudge(judgeLine)} · ${card} → ${pmFile}`);
   return 0;
@@ -1247,8 +1252,8 @@ async function selftest() {
     const own = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n");
     const a0 = own.indexOf("async function autoclose("), ac = a0 < 0 ? "" : own.slice(a0, own.indexOf("\n}\n", a0));
     const d0 = own.indexOf("async function dayCloseCard("), dc = d0 < 0 ? "" : own.slice(d0, own.indexOf("\n}\n", d0));
-    assert("mcard — step (viii) reaches the card ONLY on the evening path (the morning files none and rewrites nothing), through ONE call",
-      /else if \(anchor === "evening"\) card = await dayCloseCard\(\{ day, run \}\);/.test(ac) && (ac.match(/dayCloseCard\(/g) || []).length === 1
+    assert("mcard — step (viii) reaches the card ONLY on the evening path and the close anchor (unit mday F3 A: `day.mjs end`) — the morning files none and rewrites nothing — through ONE call",
+      /else if \(CARD_ANCHORS\.includes\(anchor\)\) card = await dayCloseCard\(\{ day, run \}\);/.test(ac) && CARD_ANCHORS.join() === "evening,close" && (ac.match(/dayCloseCard\(/g) || []).length === 1
       && /let card = "no card \(the morning anchor files none\)";/.test(ac) && !/"reline"|"file", "--line"/.test(ac));
     assert("mcard — the card step writes the deck only through captains_call.mjs's OWN CLI: the door with family + kept key, else `file` with the rolling key and its reason, as before",
       dc.length > 0 && /run\("captains_call\.mjs", \["reline", "--family", DAYCLOSE_FAMILY, "--key", kept\.key, "--line", line\]/.test(dc)

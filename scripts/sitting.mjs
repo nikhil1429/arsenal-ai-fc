@@ -25,6 +25,9 @@
 //          judge-due --trigger sitting.close (the CODE door that fires the round at close, L2) · intent.mjs
 //          close (§7.2) · captains_call.mjs file (ONE card, keyed) · brain.mjs
 //          recordConsumption (import — the gate's C, stamped when a unit is SPOKEN).
+//        TWO DOORS, ONE OWNER (unit mday, forks rows 1044 / 1050 F10 A): the daemon's POST door, and the LOCAL door
+//          (openLocal / closeLocal — this file's own createSitting run in the caller's process, under the owner lock
+//          sitting.json.lock). Daemon up = the POST door ONLY; the local door refuses while it answers (openDoor/closeDoor).
 //        WHO ELSE COULD ACT ON THIS OUTPUT? dugout.mjs (the mouth: /deep speak + /spoken +
 //          /transcript → /turn) · state.mjs (STATE line reads sitting.json) · watchman
 //          (`sitting-daemon-down`) · Block 4's review job · Block 5's prepare_tomorrow
@@ -72,7 +75,7 @@
 // CLI:   node scripts/sitting.mjs <mode>   (env: ARSENAL_SITTING_STATE_DIR · ARSENAL_SITTING_PORT — selftest only)
 // ============================================================================
 import http from "node:http";
-import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, renameSync, statSync, mkdtempSync, rmSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, renameSync, statSync, mkdtempSync, rmSync, readdirSync, openSync, writeSync, closeSync, unlinkSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
@@ -1056,7 +1059,7 @@ export function createSitting(deps = {}) {
     }
     // 3. the review row — measured fields now, the LLM fields (Block 4) null and NAMED as such
     const delivered = undelivered().length;
-    const review = { kind: "sitting_review", sitting_id: S.id, closed_at: now().toISOString(), reason, route: S.route, concept: S.concept, task: S.task, surfaces: S.surfaces, transport: S.transport,
+    const review = { kind: "sitting_review", sitting_id: S.id, closed_at: now().toISOString(), reason, opened_at: S.opened_at || null, host_session_id: S.host_session_id || null /* unit mday F8: the two code counts read them */, route: S.route, concept: S.concept, task: S.task, surfaces: S.surfaces, transport: S.transport,
       turns: S.stats.turns, by_class: S.stats.by_class, units_composed: S.stats.units_composed, units_delivered: S.stats.units_delivered, units_undelivered_at_close: delivered, banked: S.stats.banked, cursor: S.cursor, plan_len: (S.plan || []).length, plan_source: S.plan_source,
       tokens: S.stats.tokens, head_tokens: S.stats.head_tokens, latency_p50_ms: { respond: pct(S.stats.latency_ms.respond, 0.5), compose: pct(S.stats.latency_ms.compose, 0.5) }, judge, forge: forgeStatus,
       drifts: null, his_asks: null, what_changes_next: null, plan_delta: null, _llm_fields: "null until Block 4's review job (sonnet/opus) fills them — a null is not a clean bill" };
@@ -1313,14 +1316,74 @@ async function touchVerb(session, deps = {}) {
   try { await (deps.post || post)("/touch", { session }, 800); } catch { /* a down or old daemon costs his prompt nothing */ }
   return { posted: true };
 }
+// unit mday: the two POST waits this file already used, hoisted so the POST door of openDoor reads the SAME values (no new number)
+const HOST_POST_MS = 2000, OPEN_POST_MS = 180000;
 async function hostVerb({ session, transcript, by }, deps = {}) {
   if (!(await pinSaysPost("sitting host", deps))) return null;
   if (!(await (deps.daemonUp || daemonUp)())) return `sitting: daemon down on :${PORT} — no host stamped (and \`open --no-spawn\` would register no sitting either).`;
   try {
-    const r = await (deps.post || post)("/host", { session, transcript, by }, 2000);
+    const r = await (deps.post || post)("/host", { session, transcript, by }, HOST_POST_MS);
     return r.ok ? `sitting: host ${String(r.session).slice(0, 8)} stamped PENDING (${Math.round(r.ttl_ms / 60000)} min) — the next \`open\` binds it${r.open ? ` · sitting ${r.id} is open, so it JOINS and rebinds` : ""}` : `sitting: host refused — ${r.error || "no /host door (the daemon runs an older build — restart it through the Daemon-Watchdog task)"}`;
   } catch (e) { return `sitting: host not stamped — ${String(e && e.message || e).slice(0, 120)}`; }
 }
+
+// ── unit mday (forks rows 1044 / 1050 F10 A) · THE SECOND DOOR OF THE SAME OWNER ───────────────────────────────────
+// MEASURED at main 669200d: with the daemon down, `open --no-spawn` printed one line and registered NOTHING (the A2 branch
+// below), so a /learn day had no sitting, no bound host, no study scope (study_scope.mjs studyScope) and no evidence for the
+// night close (study_scope.mjs studySessionsOfDay source (b)). The daemon has been down since 20 Aug by his order.
+// THE LOCAL DOOR runs THIS file's own createSitting in the caller's process — the same open(), the same close(), the same
+// JOIN law, the same host binding from a hook payload — so sitting.json keeps ONE writer (this file) with two doors:
+//   · the OWNER LOCK: sitting.json.lock, created exclusively ("wx") with the holder's pid; a lock whose pid is gone is
+//     stale and is taken over once; a lock held by a live pid REFUSES (nothing written, no wait, no typed bound);
+//   · DAEMON UP = THE POST DOOR ONLY: openLocal/closeLocal refuse while the daemon answers /status, and openDoor/closeDoor
+//     route to POST — never both (ruling F10's clause). A daemon's in-memory sitting and a local write cannot race.
+// The local door runs with idleMs 0 (no idle timer outlives the call); the close's review launch is the daemon's own.
+export const sittingLockPath = () => `${F.sitting()}.lock`;
+const pidAlive = (pid) => { if (!Number.isSafeInteger(pid) || pid <= 0) return false; try { process.kill(pid, 0); return true; } catch (e) { return !!(e && e.code === "EPERM"); } };
+export function takeSittingLock() {
+  const p = sittingLockPath();
+  mkdirSync(dirname(p), { recursive: true });
+  const grab = () => { try { const fd = openSync(p, "wx"); try { writeSync(fd, String(process.pid)); } finally { closeSync(fd); } return true; } catch (e) { if (e && e.code === "EEXIST") return false; throw e; } };
+  const held = () => ({ ok: true, release: () => { try { if (readFileSync(p, "utf8").trim() === String(process.pid)) unlinkSync(p); } catch { /* gone */ } } });
+  if (grab()) return held();
+  let holder = null; try { holder = Number(readFileSync(p, "utf8").trim()); } catch { /* unreadable = not a live holder */ }
+  if (pidAlive(holder)) return { ok: false, holder };
+  try { unlinkSync(p); } catch { /* another door took it over first */ }
+  return grab() ? { ...held(), stale: holder } : { ok: false, holder: "another door (a stale lock was taken over first)" };
+}
+async function localDoor(verb, run, deps = {}) {
+  if (await (deps.daemonUp || daemonUp)()) return { ok: false, status: 409, door: "refused", error: `the sitting daemon answers on :${PORT} — its POST door is the only door while it runs; the local ${verb} wrote nothing` };
+  const lock = takeSittingLock();
+  if (!lock.ok) return { ok: false, status: 423, door: "refused", error: `the owner lock is held by pid ${lock.holder} — the local ${verb} wrote nothing` };
+  try { return { ...(await run(createSitting({ ...deps, idleMs: 0 }))), door: "local" }; } finally { lock.release(); }
+}
+/** openLocal — the LOCAL door's open: the payload's session is stamped PENDING (host) and bound by open() — new or JOIN. */
+export function openLocal({ surface = "code", task = null, route = null, session = null, transcript = null, by = null } = {}, deps = {}) {
+  return localDoor("open", async (d) => {
+    if (session) { const h = d.host({ session, transcript, by }); if (!h.ok) return h; }
+    return d.open({ surface, task, route, env_session: session });
+  }, deps);
+}
+/** closeLocal — the LOCAL door's close: the daemon's own close() (judge door, pacer, review row, intent line, file). */
+export function closeLocal({ reason = "his_word" } = {}, deps = {}) { return localDoor("close", (d) => d.close({ reason }), deps); }
+/** openDoor / closeDoor — the one router: daemon up → its POST door ONLY; down → the local door (F10). */
+export async function openDoor(o = {}, deps = {}) {
+  if (!(await (deps.daemonUp || daemonUp)())) return openLocal(o, deps);
+  const p = deps.post || post;
+  if (o.session) { try { await p("/host", { session: o.session, transcript: o.transcript || null, by: o.by || null }, HOST_POST_MS); } catch { /* open's env_session still binds it */ } }
+  return { ...(await p("/open", { surface: o.surface || "code", task: o.task || null, route: o.route || null, env_session: o.session || null }, OPEN_POST_MS)), door: "post" };
+}
+export async function closeDoor({ reason = "his_word" } = {}, deps = {}) {
+  if (!(await (deps.daemonUp || daemonUp)())) return closeLocal({ reason }, deps);
+  return { ...(await (deps.post || post)("/close", { reason }, closeWaitMs())), door: "post" };
+}
+const openLine = (r) => {
+  const hostPart = !r.ok ? "" : r.host_session_id ? ` · host ${String(r.host_session_id).slice(0, 8)} (${r.host_source})`
+    : r.host_source === undefined ? " · host UNKNOWN (the daemon runs a build older than this file — restart it through the Daemon-Watchdog task)"
+      : " · host NOT BOUND (no hook stamp and no harness id) — the study organs stay silent in every session";
+  return r.ok ? `sitting: ${r.joined ? "JOINED" : "OPEN"} ${r.id} · ${r.route} '${r.task || ""}' · surfaces ${(r.surfaces || []).join("+")} · plan ${r.plan_len} unit(s) · transport ${r.transport}${hostPart}${r.door ? ` · door ${r.door}` : ""}${r.first_unit ? `\n  first unit → ${clip(r.first_unit.text, 160)}` : ""}` : `sitting: open failed — ${r.error}`;
+};
+export { openLine as sittingOpenLine };
 
 async function main() {
   const [mode, ...rest] = process.argv.slice(2);
@@ -1370,12 +1433,18 @@ async function main() {
       // So with --no-spawn: one line, exit 0, and no child is ever spawned.
       const noSpawn = rest.includes("--no-spawn");
       if (noSpawn && !(await daemonUp())) {
-        console.log(`sitting: daemon down on :${PORT} — no sitting registered (--no-spawn), and nothing was started. The study loop does not need it: the pacer, the bank and the judge all run without a daemon.`);
+        // unit mday (forks rows 1044 / 1050 F10 A) — FROZEN (L9), verbatim, the line this branch printed until today, when it
+        // registered NOTHING (no sitting, no host, no study scope, no evidence for the night close):
+        //   console.log(`sitting: daemon down on :${PORT} — no sitting registered (--no-spawn), and nothing was started. The study loop does not need it: the pacer, the bank and the judge all run without a daemon.`);
+        // Now the LOCAL door (openLocal, under the owner lock): the same open(), still no child spawned, still exit 0.
+        const r = await openLocal({ surface: opt("--surface") || "code", task: opt("--task") || null, route: opt("--route") || null, session: process.env.CLAUDE_CODE_SESSION_ID || null, by: "sitting open --no-spawn" });
+        if (!r.ok && r.resume) { console.error(`sitting: ${r.error}`); console.error(`  → ${r.resume}`); process.exit(1); }
+        console.log(openLine(r));
         return;
       }
       if (!(await ensureDaemon())) { console.error(`sitting: could not start the daemon on :${PORT}`); process.exit(1); }
       // G0: this process's own harness session id rides the body (never typed by the model) — the cross-check for rails' stamp.
-      const r = await post("/open", { surface: opt("--surface") || "code", task: opt("--task") || null, route: opt("--route") || null, env_session: process.env.CLAUDE_CODE_SESSION_ID || null }, 180000);
+      const r = await post("/open", { surface: opt("--surface") || "code", task: opt("--task") || null, route: opt("--route") || null, env_session: process.env.CLAUDE_CODE_SESSION_ID || null }, OPEN_POST_MS);
       // A1 — a 409 is not a crash: it says his concept is still open and how to get
       // back into it. Printed as two lines and exits 1, so a skill can branch on it.
       if (!r.ok && r.status === 409) {
@@ -1402,7 +1471,10 @@ async function main() {
     case "turn": { const r = await post("/turn", { text: opt("--text") || rest.filter((a) => !a.startsWith("--")).join(" "), surface: opt("--surface") || "code" }); console.log(JSON.stringify(r)); return; }
     case "next": { console.log(JSON.stringify(await get("/next"))); return; }
     case "spoken": { console.log(JSON.stringify(await post("/spoken", { id: rest[0] }))); return; }
-    case "close": { const r = await post("/close", { reason: opt("--reason") || "his_word" }, closeWaitMs()); /* unit mtail F-C: the longest close, derived */ console.log(r.ok ? `sitting: CLOSED ${r.id} — ${r.review.units_delivered}/${r.review.units_composed} units spoken · ${r.review.banked} banked · ${r.review.turns} turns${r.review.judge ? ` · judge ${r.review.judge.ok ? "ran" : "FAILED"}` : ""}` : `sitting: ${r.error}`); return; }
+    case "close": {
+      // unit mday (F10 A): the daemon down → the LOCAL door (the same close(), under the owner lock); up → its POST door only
+      if (!(await daemonUp())) { const r = await closeLocal({ reason: opt("--reason") || "his_word" }); console.log(r.ok ? `sitting: CLOSED ${r.id} — ${r.review.units_delivered}/${r.review.units_composed} units spoken · ${r.review.banked} banked · ${r.review.turns} turns${r.review.judge ? ` · judge ${r.review.judge.ok ? "ran" : "FAILED"}` : ""} · door local` : `sitting: ${r.error}`); return; }
+      const r = await post("/close", { reason: opt("--reason") || "his_word" }, closeWaitMs()); /* unit mtail F-C: the longest close, derived */ console.log(r.ok ? `sitting: CLOSED ${r.id} — ${r.review.units_delivered}/${r.review.units_composed} units spoken · ${r.review.banked} banked · ${r.review.turns} turns${r.review.judge ? ` · judge ${r.review.judge.ok ? "ran" : "FAILED"}` : ""}` : `sitting: ${r.error}`); return; }
     case "plan": { const r = (await daemonUp()) ? await get("/plan") : { units: (readJson(F.sitting()) || {}).plan || [], map: (readJson(F.sitting()) || {}).plan_map }; console.log(`map: ${r.map || "—"}`); (r.units || []).forEach((u) => console.log(`  ${String(u.i).padStart(2)} ${u.kind.padEnd(8)} s${u.step ?? "-"} ${u.axis || "-"} ${u.question ? "?" : " "} ${u.est_seconds}s · ${clip(u.text, 120)}`)); return; }
     case "stats": { console.log(stats({ days: Number(opt("--days") || 7) }).text); return; }
     case "agenda": {   // LAW A — his asks for the next sitting (acts.mjs verb agenda rides `add`)

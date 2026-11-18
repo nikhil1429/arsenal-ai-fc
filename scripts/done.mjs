@@ -15,7 +15,8 @@
 //             CLAUDE.md · laws_register.json · teaching_contract rules (the last three at the laptop only).
 //   units     open by clause (campaign) · census PENDING (campaign) — UNREAD without --campaign.
 //   reach     THE REACH READER: static reach from the xray graph (the lane's declared consumer READS its file), window
-//             reach at the laptop (its consumer consumed it inside the gate's window). The consumer map is the LIVE
+//             reach at the laptop (its consumer consumed it inside the gate's window). A lane's files are its registry
+//             row's declared `files` (unit mdn2); a row declaring none falls back to its subject name. The consumer map is the LIVE
 //             registry, so reach runs at the laptop only (D2 A). A lane with no declared consumer is NO CONSUMER, never
 //             reached.
 // THE MORNING LINE (D4 A): `line` is printed by the /matchday anchor right after the state line — read, never answered.
@@ -134,20 +135,25 @@ async function reach(ir) {
   if (HERMETIC) return { live: true };
   let gate;
   try { gate = await import(pathToFileURL(join(ROOT, "scripts", "gate.mjs")).href); } catch (e) { return { unread: `the consumer map could not be read (${String(e && e.message).slice(0, 80)})` }; }
+  // unit mdn2 (forks row 1051 (4)): a lane's files are what its registry row DECLARES (`files`, registry.mjs laneFiles);
+  // only a row that declares none falls back to the subject-name reading below. The declaration wins, never a union.
+  let declared = {};
+  try { declared = (await import(pathToFileURL(join(ROOT, "scripts", "registry.mjs")).href)).laneFiles() || {}; } catch { declared = {}; }
   const cons = readL(CONSUMPTION) || [];
   const skills = new Set((ir.roots.skills || []).map((r) => r.script));
   const now = Date.now();
   const rows = [];
   for (const [subject, l] of Object.entries(gate.LANE_CONSUMERS)) {
     const rc = /** @type {any} */ (l).right_consumer || {};
-    const files = ir.files.filter((f) => { const p = f.path; const b = `dressing-room/state/brain_out/${subject}`; return p === b || p.startsWith(b + "/") || p === `dressing-room/state/${subject}.json` || p === `dressing-room/state/${subject}.jsonl`; });
+    const decl = Array.isArray(declared[subject]) ? declared[subject] : null;
+    const files = ir.files.filter((f) => { const p = f.path; if (decl) return decl.includes(p); const b = `dressing-room/state/brain_out/${subject}`; return p === b || p.startsWith(b + "/") || p === `dressing-room/state/${subject}.json` || p === `dressing-room/state/${subject}.jsonl`; });
     const readers = new Set(files.flatMap((f) => f.readers));
     const noCons = !rc.retired && rc.kind !== "him" && !(rc.names || []).length;
     const stat = noCons || rc.retired ? false : rc.kind === "him" ? [...readers].some((r) => skills.has(r) || SURFACES.includes(r)) : (rc.names || []).some((n) => readers.has(n));
     const c = gate.consumptionOf(cons, [subject]);
     const age = c.last_at ? (now - Date.parse(c.last_at)) / 864e5 : null;
     const win = noCons ? false : gate.consumerSatisfied(rc, c, { ageDays: age }).ok;
-    rows.push({ subject, noCons, retired: !!rc.retired, stat, win, reached: stat && win, files: files.length });
+    rows.push({ subject, noCons, retired: !!rc.retired, stat, win, reached: stat && win, files: files.length, decl: !!decl });
   }
   return { rows };
 }
@@ -170,7 +176,7 @@ function lineOf(m) {
   let re;
   if (m.re.live) re = "reach LIVE (the consumer map is the live registry)";
   else if (m.re.unread) re = "reach UNREAD";
-  else { const R = m.re.rows, ok = R.filter((x) => !x.noCons && !x.retired); re = `reach ${R.filter((x) => x.reached).length}/${ok.length} (static ${R.filter((x) => x.stat).length}/${ok.length} · window ${R.filter((x) => x.win).length}/${ok.length}) · NO CONSUMER ${R.filter((x) => x.noCons).length}`; }
+  else { const R = m.re.rows, ok = R.filter((x) => !x.noCons && !x.retired); re = `reach ${R.filter((x) => x.reached).length}/${ok.length} (static ${R.filter((x) => x.stat).length}/${ok.length} · window ${R.filter((x) => x.win).length}/${ok.length} · files declared ${ok.filter((x) => x.decl).length}/${ok.length}) · NO CONSUMER ${R.filter((x) => x.noCons).length}`; }
   return `DONE · orphans lanes ${m.o.lanes.length} · orphan verbs ${m.o.verbs.length} · ${rg} · rules ${ru} · ${un} · ${ce} · ${re}`;
 }
 function reportOf(m) {
@@ -182,7 +188,7 @@ function reportOf(m) {
   out.push(m.u.read ? `DONE units    ${m.u.open} open by clause ${JSON.stringify(m.u.by)}` : `DONE units    ${m.u.why}`);
   out.push(m.c.read ? `DONE census   PENDING ${m.c.pending} · neither a fate+rung nor serves-no-step ${m.c.unfated}` : `DONE census   ${m.c.why}`);
   if (m.re.rows) {
-    for (const x of m.re.rows) out.push(`DONE reach    ${x.subject}: ${x.noCons ? "NO CONSUMER" : x.retired ? "RETIRED" : x.reached ? "REACHED" : `static ${x.stat ? "yes" : x.files ? "NO (its declared consumer reads none of its files)" : "NO (no file of it in the xray graph)"} · window ${x.win ? "yes" : "NO"}`}`);
+    for (const x of m.re.rows) out.push(`DONE reach    ${x.subject}: ${x.noCons ? "NO CONSUMER" : x.retired ? "RETIRED" : x.reached ? "REACHED" : `static ${x.stat ? "yes" : x.files ? "NO (its declared consumer reads none of its files)" : x.decl ? "NO (none of its declared files is in the xray graph)" : "NO (no file of it in the xray graph)"} · window ${x.win ? "yes" : "NO"}`}`);
   } else out.push(`DONE reach    ${m.re.live ? "LIVE (hermetic form: the consumer map is the live registry, D2 A)" : m.re.unread}`);
   // the ONE card a day per check, and only for what only his word can fix: a census PENDING is a fate nobody ruled
   if (m.c.read && m.c.pending > 0) out.push(`CARD done:census:${today()} → node scripts/captains_call.mjs file --line "Census: ${m.c.pending} piece PENDING — fate aapka faisla." --key done:census:${today()}`);

@@ -30,8 +30,9 @@ description: The session-agnostic front door to the day's learning — reads the
 ## The boot, in order (each line is a command or a rule, never a memory)
 
 1. `node scripts/learn_digest.mjs` — the screen. Read it whole; it is ≤ 16 KB by contract (selftest).
-2. `node scripts/sitting.mjs open --surface code --no-spawn --task "<what the digest says>"` — the day's
-   container. Without it nothing lands at full-time (his 7 Aug captain's-call law).
+2. The day's container is ALREADY OPEN — by code, not by you (unit mday): the /learn prompt itself (UserPromptSubmit) or a
+   Skill call naming learn (PreToolUse) runs `day.mjs start`, which opens or JOINS today's sitting and binds THIS session as
+   the host. `node scripts/day.mjs status` shows it. Never type the open yourself.
 2b. **Open his newest deck in the Browser pane, UNASKED** (his word, 15 Nov: "merko thodi yaad rahega har bari kab kya
    bolna hain"): `preview_start { name: "revision-decks" }`, then navigate to the URL on the digest's
    "▶ OPEN AT BOOT, UNASKED" line. His annotation tools live there. He never asks for it; you never ask him to.
@@ -41,8 +42,11 @@ description: The session-agnostic front door to the day's learning — reads the
    If it shows NO open session: follow its route line (`forge_session.mjs start <concept>` consumes a pointer open for that concept and prints it first; `REFERENCE.md §1` by track for Python/course/domain tasks).
 4. **Every stop** (axis end, mid-axis exit, his "bas", context near the line): `node scripts/forge_session.mjs
    pointer "<the exact unanswered micro-question + the gut-word ask + where in the axis>"` BEFORE anything else.
-5. Day end: `node scripts/gaffer_brain.mjs judge-round` → `node scripts/sitting.mjs close --reason fulltime` →
-   `/full-time`. (Full text: `REFERENCE.md §4`.)
+5. Day end — when HE means the study day is over, in ANY words (no phrase list; read his meaning): run
+   `node scripts/day.mjs end [--pointer "<the exact unanswered micro-question>"]` ONCE. It closes the sitting (its close
+   fires the judge by code), writes the machine half of the day, deals ONE card and prints the ONE message of questions —
+   ask it, never wait on it. His answer, whenever it comes: `node scripts/day.mjs answer --hit <X> …`. A second `end` is
+   safe (it says already closed). A day he never closes is closed by the night code. (Full text: `REFERENCE.md §4`.)
 
 ## The laws the digest cannot print for you (they bind the MODEL, not the screen)
 

@@ -51,6 +51,7 @@ TIER that gives the SAME quality, depth and speed; paying above it is waste, pay
 1. Call the **`organism-memory` MCP tool `get_context`** before teaching, planning or answering where he is — background context, true WHEN WRITTEN; `recall` for targeted lookups. Never ask him to re-explain what it knows.
 2. Read the **STATE line** (line 1 of the SessionStart brief; `node scripts/state.mjs`) — pushed · daemons · suite · sitting · next · needs-you — so he never asks "is everything working?".
 3. New durable facts go through `hippocampus.mjs` / MCP `note` + `remember_fact` (STAGES only; canon after he confirms). Never hand-edit state.
+4. **THE DAY (unit mday, his word 240).** `/learn` opens his day by code. When HE means the study day is over — in any words — run `node scripts/day.mjs end` once; never ask him to type a command.
 
 ## Owners-only writes — the universal rule
 Every state file has ONE writer; find it in the script header, never in a list here:
