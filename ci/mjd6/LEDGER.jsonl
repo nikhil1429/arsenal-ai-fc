@@ -6,3 +6,10 @@
 {"ts":"2026-11-18T18:45:56.141Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
 {"ts":"2026-11-18T18:45:56.141Z","act":"witness-build","cmd":"node ci/mjd6/witness_mjd6.mjs --org <build f427795> --base-org <base 4d166d3>","last_line":"GREEN MJD6 a failed retire never leaves a settled card live — the owner's sync sweeps it, once · 5 clause(s)"}
 {"ts":"2026-11-18T18:45:56.141Z","act":"witness-base","cmd":"node ci/mjd6/witness_mjd6.mjs --org <base 4d166d3> --base-org <base 4d166d3>","last_line":"RED MJD6 · S1 S3 S2"}
+{"ts":"2026-11-18T18:48:50.414Z","act":"mutants","cmd":"node ci/mjd6/run_mutants_mjd6.mjs --org <build f427795> --base-org <base 4d166d3>","last_line":"run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T18:48:50.414Z","act":"suite-build","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 139 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run) (18 Nov 2026)"}
+{"ts":"2026-11-18T18:48:50.414Z","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (scripts/captains_call.mjs at 4d166d3)","last_line":"organism_test: 139 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run) (18 Nov 2026)"}
+{"ts":"2026-11-18T18:48:50.414Z","act":"xray","cmd":"node scripts/xray.mjs report","last_line":"Q2 (0) · Q5 (0)"}
+{"ts":"2026-11-18T18:48:50.414Z","act":"ci","cmd":"curl api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/1aed66f/check-runs","last_line":"135045454904 npm test · node 22 cancelled · 135045454343 npm test · node 24 cancelled (superseded by the next push)"}
+{"ts":"2026-11-18T18:48:50.414Z","act":"ci","cmd":"curl api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/e034483/check-runs","last_line":"135046133619 npm test · node 22 in_progress · 135046134203 npm test · node 24 in_progress"}
+{"ts":"2026-11-18T18:48:50.414Z","act":"effort-receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs","last_line":"Error: Cannot find module campaign-2026-09/tools/effort_receipt.mjs (exit 1)"}
