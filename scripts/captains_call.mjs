@@ -58,6 +58,7 @@
 //   missions.json · benchmark.json · tape_room.json.
 // MODES: sync · deal · answer <id> <haan|na|baad> · file --line "…" · status ·
 //        list · reline (--family <f> | --key <k>) --line "…" · selftest
+//        · retire --key <k> --why "…" (THE AT-SOURCE RETIRE DOOR, unit mjd5: a declared key class only)
 //        (reline = THE CARD-LINE DOOR, 15 Nov 2026: a kept rolling card's words, never its identity)
 // ============================================================================
 
@@ -1579,6 +1580,35 @@ export function relineCard(state, { family = null, key = null, line = "" } = {})
   return { state: s, card: t.card, changed };
 }
 
+// ---------------------------------------------------------------------------
+// THE AT-SOURCE RETIRE DOOR (unit mjd5, forks row 1033 (2) — pure so the selftest can hold it).
+// A card that names a CONDITION (not a question) is finished when the condition is: a capture the
+// judge left in doubt (gaffer_brain.mjs, key `judge:in-doubt:<capture id>`) is one card until it is
+// re-dispatched, and once it resolves he must never be asked about a thing already settled. The
+// filing organ knows the moment it resolves; this door lets it say so through the card's OWNER.
+//   · only a key of a declared class (RETIRE_AT_SOURCE_KEYS) — a class joins only by a ruling row;
+//   · only a LIVE card (no `answer`, no `retired_at`): his word on a card is history, never rewritten;
+//   · it never mints: no card under the key (the round resolved it before any card was filed) is a
+//     no-op, and a second retire of the same key retires nothing twice (already settled → no-op);
+//   · the epitaph is the filing organ's own reason, as every other retire-at-source writes it.
+// ---------------------------------------------------------------------------
+export const RETIRE_AT_SOURCE_KEYS = [/^judge:in-doubt:[^\s:]+$/];
+/** retireCard — PURE: {state, card, changed} with ONLY the target's retired_at + resolution set, or {refuse}. */
+export function retireCard(state, { key = null, why = "", now = new Date() } = {}) {
+  const k = key == null ? "" : String(key);
+  if (!k) return { refuse: "no address — name the card's key (--key)" };
+  if (!RETIRE_AT_SOURCE_KEYS.some((re) => re.test(k))) return { refuse: `${k} is not of a key class this door may retire (${RETIRE_AT_SOURCE_KEYS.map(String).join(", ")})` };
+  const text = String(why == null ? "" : why).replace(/\s+/g, " ").trim();
+  if (!text) return { refuse: "no reason — a retire-at-source carries its epitaph (--why)" };
+  const s = { ...state, cards: ((state && state.cards) || []).map((c) => (c && typeof c === "object" ? { ...c } : c)) };
+  const c = s.cards.find((x) => x && x.key === k);
+  if (!c) return { state: s, card: null, changed: false, note: `no card keyed ${k} — nothing to retire` };
+  if (c.answer || c.retired_at) return { state: s, card: c, changed: false, note: `${c.id} (${k}) is already settled (${c.answer || "retired"}) — nothing retired twice` };
+  c.retired_at = (now instanceof Date ? now : new Date(now)).toISOString();
+  c.resolution = `resolved-at-source (${clip(text, 200)})`;
+  return { state: s, card: c, changed: true };
+}
+
 function runStagedDispatch(action) {
   // `at` is the stable identity — indexes renumber on every settle and id can repeat.
   const contract = readJson(CONTRACT);
@@ -1790,6 +1820,18 @@ async function main() {
     return;
   }
 
+  if (mode === "retire") {
+    // THE AT-SOURCE RETIRE DOOR (unit mjd5) — see retireCard's header. Refused = exit 1 and NOTHING written;
+    // a no-op (no such card, or already settled) = exit 0, named, nothing written.
+    const val = (flag) => { const i = process.argv.indexOf(flag); const v = i >= 0 ? process.argv[i + 1] : undefined; return v === undefined || String(v).startsWith("--") ? null : String(v); };
+    const r = retireCard(loadState(), { key: val("--key"), why: val("--why") || "", now });
+    if (r.refuse) { console.error(`captains_call: retire REFUSED — ${r.refuse} · nothing changed`); process.exitCode = 1; return; }
+    if (!r.changed) { console.log(`captains_call: ${r.note} · nothing written`); return; }
+    writeAtomic(CALL, r.state);
+    console.log(`captains_call: retired ${r.card.id} (${r.card.key}) at source — ${r.card.resolution}`);
+    return;
+  }
+
   if (mode === "reline") {
     // THE CARD-LINE DOOR (15 Nov 2026) — see relineCard's header. Refused = exit 1 and NOTHING written;
     // a flag with no value (or whose value is the next flag) is an absent value, as fileDispatch reads them.
@@ -1802,7 +1844,7 @@ async function main() {
     return;
   }
 
-  console.log("captains_call: sync | deal | answer <id> <haan|na|baad> | file --line \"…\" | reline (--family <f> | --key <k>) --line \"…\" | status | list | selftest");
+  console.log("captains_call: sync | deal | answer <id> <haan|na|baad> | file --line \"…\" | retire --key <k> --why \"…\" | reline (--family <f> | --key <k>) --line \"…\" | status | list | selftest");
 }
 
 // ── SELFTEST — hermetic, fixture-driven, every check can fail ────────────────
@@ -2545,6 +2587,33 @@ function selftest() {
     assert("CARD-LINE DOOR — the `reline` verb routes through relineCard, writes ONLY through writeAtomic(CALL, …), never mints, refuses with exit 1, and sits outside the `file` mode",
       doorSlice.length > 0 && /relineCard\(loadState\(\)/.test(doorSlice) && /writeAtomic\(CALL, r\.state\)/.test(doorSlice) && (doorSlice.match(/writeAtomic\(/g) || []).length === 1
       && !/\.cards\.push|next_id\+\+/.test(doorSlice) && /process\.exitCode = 1/.test(doorSlice) && !/relineCard|reline/.test(fileSlice));
+  }
+
+  {
+    // THE AT-SOURCE RETIRE DOOR (unit mjd5, forks row 1033 (2)) — retireCard + the `retire` verb.
+    const K = "judge:in-doubt:cap1", T = new Date("2026-11-18T10:00:00.000Z");
+    const live = (o = {}) => ({ id: "c4", key: K, source: "hand-filed", line: "x", dispatch: { kind: "none" }, filed_at: "2026-11-17T10:00:00.000Z",
+      dealt: [], answer: null, answered_at: null, sleep_until: null, retired_at: null, resolution: null, ...o });
+    const deck = (o) => ({ version: 1, next_id: 5, cards: [live(o), { ...live(), id: "c3", key: "judge:in-doubt:cap0" }] });
+    const J = (x) => JSON.stringify(x);
+    const r1 = retireCard(deck(), { key: K, why: "the capture landed once", now: T });
+    assert("AT-SOURCE RETIRE — a live card of the declared class retires: ONLY its retired_at + resolution change, every other card untouched",
+      r1.changed === true && r1.card.retired_at === T.toISOString() && /^resolved-at-source \(the capture landed once\)$/.test(r1.card.resolution)
+      && J({ ...r1.state.cards[0], retired_at: null, resolution: null }) === J(live()) && J(r1.state.cards[1]) === J(deck().cards[1]));
+    assert("AT-SOURCE RETIRE — a second retire of the same key retires nothing twice (no-op, the first epitaph stands)",
+      (() => { const r2 = retireCard(r1.state, { key: K, why: "again", now: new Date("2026-11-19T00:00:00.000Z") });
+        return r2.changed === false && J(r2.state) === J(r1.state) && /nothing retired twice/.test(r2.note); })());
+    assert("AT-SOURCE RETIRE — no card under the key is a no-op (it never mints), and his word on a card is never rewritten",
+      (() => { const a = retireCard({ version: 1, next_id: 1, cards: [] }, { key: K, why: "w", now: T }); const b = retireCard(deck({ answer: "baad" }), { key: K, why: "w", now: T });
+        return a.changed === false && a.state.cards.length === 0 && a.state.next_id === 1 && b.changed === false && J(b.state) === J(deck({ answer: "baad" })); })());
+    assert("AT-SOURCE RETIRE — refused (nothing returned to write): a key outside the declared class, no key, no reason",
+      [{ key: "canon:OPS_STATE.md:2026-08-11", why: "w" }, { key: "judge:auth:2026-11-18", why: "w" }, { key: null, why: "w" }, { key: K, why: "  " }]
+        .every((a) => { const r = retireCard(deck(), { ...a, now: T }); return !!r.refuse && !r.state; }));
+    const own = readFileSync(join(__dirname, "captains_call.mjs"), "utf8");
+    const slice = own.slice(own.indexOf('if (mode === "retire")'), own.indexOf('if (mode === "reline")'));
+    assert("AT-SOURCE RETIRE — the `retire` verb routes through retireCard, writes ONLY through writeAtomic(CALL, …) and only on a change, never mints, refuses with exit 1",
+      slice.length > 0 && /retireCard\(loadState\(\)/.test(slice) && /writeAtomic\(CALL, r\.state\)/.test(slice) && (slice.match(/writeAtomic\(/g) || []).length === 1
+      && slice.indexOf("if (!r.changed)") < slice.indexOf("writeAtomic(") && !/\.cards\.push|next_id\+\+/.test(slice) && /process\.exitCode = 1/.test(slice));
   }
 
   console.log(`\ncaptains_call selftest: ${pass} passed, ${fail} failed`);
