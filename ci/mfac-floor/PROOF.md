@@ -16,14 +16,14 @@ New commits only, no force push. Every line with a count is dated 19 Nov 2026 (U
 ## Measurements (19 Nov 2026)
 
 - `node scripts/night.mjs selftest` → before (a18c167) `night selftest: 22 passed, 0 failed` (with the placeholder
-  clause) · after `night selftest: 22 passed, 0 failed` (with "a non-number floor refuses").
+  clause) · after, 19 Nov 2026: `night selftest: 22 passed, 0 failed` (with "a non-number floor refuses").
 - `node ci/mfac-floor/witness_mfac_floor.mjs --org <build> --base-org <main a18c167>` →
   `GREEN MFAC-FLOOR the night's memory line is the ruled 1536 MB and a non-number floor still refuses · 5 clause(s)` (exit 0)
 - `--org <main a18c167>` → `RED MFAC-FLOOR · F4.1 F4.2 F4.3` (exit 1; BOUND and LAST GREEN)
 - `node ci/mfac-floor/run_mutants_mfac_floor.mjs --org <build> --base-org <main a18c167>` →
   `run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control GREEN` (two of them restore the placeholder:
   F4.1 and F4.2 each read it RED).
-- `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` → `organism_test: 145 passed, 1 failed · ruled 0 ·
+- 19 Nov 2026, `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` → `organism_test: 145 passed, 1 failed · ruled 0 ·
   UNRULED 1 · LIVE 126` (19 Nov 2026); `SUITE MEMBER · night selftest exits 0`; the one red is main's own coverage-orphans
   line (`deck_lint, home_pin, probe, study_scope`), detail unchanged.
 - `node scripts/models.mjs check` → exit 0, `literal model names outside models.mjs: 0`.

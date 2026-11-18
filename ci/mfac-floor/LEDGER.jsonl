@@ -6,3 +6,5 @@
 {"ts":"2026-11-18T23:52:18.669Z","act":"build-suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 145 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (main's coverage-orphans line)"}
 {"ts":"2026-11-18T23:52:18.696Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0 · literal model names outside models.mjs: 0"}
 {"ts":"2026-11-18T23:52:18.720Z","act":"old-witness","cmd":"node <claude/mfac-build>:ci/mfac/witness_mfac.mjs --only F4 --org <this branch>","last_line":"RED F4 by design — superseded by F4.1-F4.3 (row 1103)"}
+{"ts":"2026-11-18T23:58:39.992Z","act":"ci-read","cmd":"curl GET .../commits/a4b4049/check-runs + annotations (no token)","last_line":"run 44424378006 · 135225296262 node 22 failure · 135225296991 node 24 failure · NEW RED: LOAD ZERO BLOCK 7 (two undated count lines in ci/mfac-floor/PROOF.md)"}
+{"ts":"2026-11-18T23:58:40.016Z","act":"fix","cmd":"date the two count lines in ci/mfac-floor/PROOF.md; ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs laws","last_line":"ok LOAD ZERO BLOCK 7 · no canon file states a live count a command can produce"}
