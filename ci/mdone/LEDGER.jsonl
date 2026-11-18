@@ -1,0 +1,13 @@
+{"ts":"2026-11-18T14:53:38.669Z","act":"measure","cmd":"read scripts/xray.mjs exports · daily_green.mjs ledger · gate.mjs consumer map · lawpack PLANTS · matchday SKILL.md step 0 (4f86d59)","last_line":"facts in PROOF §1"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"measure-d3","cmd":"node d3.mjs <archive> (Q3 + orphan verbs, tracked vs empty state dir)","last_line":"q3 5=5 equal · orphan verbs 120=120 equal"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"build","cmd":"new scripts/done.mjs · matchday SKILL.md step 0 door","last_line":"commit 47054b6"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"gates","cmd":"npx tsc -p . ; npx eslint scripts/done.mjs (shared clone)","last_line":"no line for done.mjs"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"run","cmd":"node scripts/done.mjs line (shared clone of 47054b6)","last_line":"DONE · orphans lanes 5 · orphan verbs 123 · rungs UNREAD · … · reach 0/21 (static 3/21 · window 0/21) · NO CONSUMER 0"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"witness","cmd":"node ci/mdone/witness_mdone.mjs --org <archive 07991de> --base-org <archive 4f86d59> --node-modules <clone>/node_modules","last_line":"GREEN MDONE what is left · 13 clause(s)"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"mutants-first","cmd":"node ci/mdone/run_mutants_mdone.mjs (first D-RULE form)","last_line":"M4 D-RULE survived → clause tightened (07991de)"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"mutants","cmd":"node ci/mdone/run_mutants_mdone.mjs --org <archive 07991de> --base-org <archive 4f86d59>","last_line":"run_mutants: 10 of 10 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"models","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"suite-build","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (47054b6, shared clone)","last_line":"organism_test: 137 passed, 3 failed · ruled 0 · UNRULED 3 (same three names as 15edfec)"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"push","cmd":"git push -u origin claude/mdone-build","last_line":"47054b6 then 07991de"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"ci-prior","cmd":"node scripts/ci_verdict.mjs 4f86d59 (curl door)","last_line":"ci_verdict 4f86d59 GREEN — node 22 run 134878858223 · node 24 run 134878857484 · 0 new red"}
+{"ts":"2026-11-18T14:53:38.669Z","act":"ci","cmd":"node scripts/ci_verdict.mjs 07991de (curl door)","last_line":"PENDING at read; 47054b6 runs cancelled (superseded)"}
