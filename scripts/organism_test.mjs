@@ -277,6 +277,9 @@ const hasSelftest = (f) => { const src = readOrgan(f); return /['"`]selftest['"`
 // The meta-test package.json's own prose asks for and never got.
 function coverage() {
   section("COVERAGE LAW — a selftest nobody runs is a hypothesis, not a net");
+  // B1 WITNESS — PLANTED on claude/b1-neutral-verdict-plant ONLY, never landed: a hermetic member red at HEAD and absent
+  // at the merge base. The neutral verdict must read it RED, BY NAME, through scripts/ci_verdict.mjs.
+  assert("B1 PLANTED RED · a member red on the plant branch only", false);
   const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
   const suites = SUITE_NAMES.map((n) => pkg.scripts[n] || "");
   assert(`all ${SUITE_NAMES.length} named suites still exist in package.json`, suites.every(Boolean),
