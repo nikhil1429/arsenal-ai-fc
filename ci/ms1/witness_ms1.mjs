@@ -326,6 +326,10 @@ function files(dir) {
 }
 function boundClause() {
   const a = files(BASE), b = files(ORG), diff = [];
+  // a gitignored file (a *.log an organ wrote at run time) is no landing path: the witness's OWN repo's .gitignore says so
+  const all = [...new Set([...a.keys(), ...b.keys()])];
+  const ig = spawnSync("git", ["-C", HERE, "check-ignore", "--no-index", "--stdin"], { input: all.join("\n") + "\n", encoding: "utf8", windowsHide: true, timeout: JOB_MS });
+  for (const k of String(ig.stdout || "").split(/\r?\n/).filter(Boolean)) { a.delete(k); b.delete(k); }
   for (const k of new Set([...a.keys(), ...b.keys()])) if (a.get(k) !== b.get(k)) diff.push(k);
   const off = diff.filter((p) => !NAMED.includes(p) && !NAMED_DIRS.some((d) => p.startsWith(d)) && !p.startsWith("dressing-room/state/"));
   return { ok: off.length === 0 && diff.includes("scripts/organism_test.mjs"), why: off.length ? `off-bound: ${off.slice(0, 5).join(", ")}` : `${diff.length} differing path(s), all named` };
