@@ -36,6 +36,10 @@ let red = 0;
 for (const m of MUTANTS) {
   const d = copyOrg(`m-${m.clause}`);
   const p = join(d, m.file), s = readFileSync(p, "utf8");
+  // CRLF-PROOF (architect class note, 18 Nov 2026): a checkout under core.autocrlf=true has CRLF lines, so a
+  // multi-line edit site is matched in the file's OWN line ending, never assumed LF
+  const eol = s.includes("\r\n") ? "\r\n" : "\n";
+  m.from = m.from.replace(/\r?\n/g, eol); m.to = m.to.replace(/\r?\n/g, eol);
   if (s.split(m.from).length !== 2) { console.log(`  MUTANT ${m.clause} NOT APPLIED — the edit site is not unique in ${m.file}`); continue; }
   writeFileSync(p, s.replace(m.from, m.to));
   const r = run(d);

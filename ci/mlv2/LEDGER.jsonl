@@ -6,3 +6,6 @@
 {"ts":"2026-11-18T14:40:07.810Z","act":"selftest-after","cmd":"node scripts/cortex.mjs selftest","last_line":"ALL CHECKS PASSED"}
 {"ts":"2026-11-18T14:40:07.810Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
 {"ts":"2026-11-18T14:40:07.810Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"exit 2 · 1 UNRULED: orphaned home_pin, probe, study_scope (the same red as the base)"}
+{"ts":"2026-11-18T15:12:28.159Z","act":"crlf-witness","cmd":"node ci/mlv2/witness_mlv2.mjs --org <CRLF build> --base-org <CRLF base>","last_line":"GREEN MLV2 cortex retires on a source change only when no lane is in flight and no judge round runs, and its door is a retire · 7 clause(s)"}
+{"ts":"2026-11-18T15:12:28.159Z","act":"crlf-mutants","cmd":"node ci/mlv2/run_mutants_mlv2.mjs --org <CRLF build> --base-org <CRLF base>","last_line":"run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T15:12:28.159Z","act":"crlf-witness-base","cmd":"node ci/mlv2/witness_mlv2.mjs --org <CRLF base> --base-org <CRLF base>","last_line":"RED MLV2 · C1 IDLE, C2 LANE, C3 JUDGE, K5 DOOR"}

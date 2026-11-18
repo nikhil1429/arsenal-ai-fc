@@ -6,3 +6,6 @@
 {"ts":"2026-11-18T14:29:51.639Z","act":"selftest-after","cmd":"node scripts/{keeper,services,cortex,conductor,context,gaffer_brain,brain}.mjs selftest","last_line":"keeper 16/0 · services 19/0 · cortex ALL CHECKS PASSED · conductor 111/0 · context ALL CHECKS PASSED · gaffer_brain 194/0 · brain SELFTEST FAILED (the same GEMINI SHIM)"}
 {"ts":"2026-11-18T14:29:51.639Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
 {"ts":"2026-11-18T14:29:51.639Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"exit 2 · 1 UNRULED: orphaned home_pin, probe, study_scope (same on base by coverage)"}
+{"ts":"2026-11-18T15:11:31.137Z","act":"crlf-witness","cmd":"node ci/mlv0/witness_mlv0.mjs --org <CRLF build> --base-org <CRLF base>","last_line":"GREEN MLV0 the status line reads the closure, and the judge port defers every retire · 7 clause(s)"}
+{"ts":"2026-11-18T15:11:31.137Z","act":"crlf-mutants","cmd":"node ci/mlv0/run_mutants_mlv0.mjs --org <CRLF build> --base-org <CRLF base>","last_line":"run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T15:11:31.137Z","act":"crlf-witness-base","cmd":"node ci/mlv0/witness_mlv0.mjs --org <CRLF base> --base-org <CRLF base>","last_line":"RED MLV0 · S1 CLOSURE, S2 K6, S3 UNVERIFIED, M2 BOOT, M4 JUDGE"}

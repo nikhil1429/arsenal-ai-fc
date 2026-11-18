@@ -105,3 +105,19 @@ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all  → exit 2, o
 3. The witness's M2 brain half and M4 retire halves are SOURCE checks (the arm reads `judgeHeld()` before RETIRING),
    because a live brain or context worker in a witness would read live state. The judge port half is behavioural (a
    real process holds the real port; its death frees it).
+
+## The architect's class note: core.autocrlf (18 Nov 2026)
+
+Measured on this unit's files: **no witness here plants git** (no clone, no init; every plant is an fs copy), and every
+line it reads from a process or a log is split on `\r?\n`. Two CRLF hazards were found and closed:
+- the mutant runner matched a multi-line edit site in LF only; it now matches in the file's OWN line ending;
+- BOUND hashed raw bytes, so a CRLF checkout against an LF base read every file as changed; it now hashes text with
+  CRLF folded to LF (a line ending is not a change).
+
+Proven on copies converted to CRLF (scripts/ and setup/, the laptop's checkout shape), 18 Nov 2026:
+
+```
+witness --org <CRLF build> --base-org <CRLF base>    GREEN MLV0 the status line reads the closure, and the judge port defers every retire · 7 clause(s)
+run_mutants --org <CRLF build> --base-org <CRLF base> run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN
+witness --org <CRLF base>  --base-org <CRLF base>    RED MLV0 · S1 CLOSURE, S2 K6, S3 UNVERIFIED, M2 BOOT, M4 JUDGE
+```
