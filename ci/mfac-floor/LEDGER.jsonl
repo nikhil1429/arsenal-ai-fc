@@ -1,0 +1,8 @@
+{"ts":"2026-11-18T23:52:18.517Z","act":"cut","cmd":"git checkout -b claude/mfac-floor a18c167 (origin/main)","last_line":"a18c167 unit mfac land branch"}
+{"ts":"2026-11-18T23:52:18.551Z","act":"selftest","cmd":"node scripts/night.mjs selftest","last_line":"night selftest: 22 passed, 0 failed"}
+{"ts":"2026-11-18T23:52:18.591Z","act":"witness-build","cmd":"node ci/mfac-floor/witness_mfac_floor.mjs --org <build> --base-org <main a18c167>","last_line":"GREEN MFAC-FLOOR the night's memory line is the ruled 1536 MB and a non-number floor still refuses · 5 clause(s)"}
+{"ts":"2026-11-18T23:52:18.615Z","act":"witness-base","cmd":"node ci/mfac-floor/witness_mfac_floor.mjs --org <main a18c167> --base-org <main a18c167>","last_line":"RED MFAC-FLOOR · F4.1 F4.2 F4.3"}
+{"ts":"2026-11-18T23:52:18.646Z","act":"mutants","cmd":"node ci/mfac-floor/run_mutants_mfac_floor.mjs --org <build> --base-org <main a18c167>","last_line":"run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T23:52:18.669Z","act":"build-suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 145 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (main's coverage-orphans line)"}
+{"ts":"2026-11-18T23:52:18.696Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0 · literal model names outside models.mjs: 0"}
+{"ts":"2026-11-18T23:52:18.720Z","act":"old-witness","cmd":"node <claude/mfac-build>:ci/mfac/witness_mfac.mjs --only F4 --org <this branch>","last_line":"RED F4 by design — superseded by F4.1-F4.3 (row 1103)"}
