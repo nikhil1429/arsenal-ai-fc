@@ -16,8 +16,9 @@ const WITNESS = join(dirname(fileURLToPath(import.meta.url)), "witness_mlv2.mjs"
 const MUTANTS = [
   { clause: "C1", file: "scripts/cortex.mjs", from: "idle: () => inflight.size === 0 && !exiting,", to: "idle: () => false,", what: "the worker never reads itself idle (it never retires)" },
   { clause: "C2", file: "scripts/cortex.mjs", from: "idle: () => inflight.size === 0 && !exiting,", to: "idle: () => !exiting,", what: "the idle predicate ignores a lane in flight" },
-  { clause: "C3", file: "scripts/cortex.mjs", from: "retirer = await retireWhenIdle({ name: \"cortex\",", to: "retirer = await retireWhenIdle({ judge: async () => false, name: \"cortex\",", what: "cortex's retire stops reading the judge port" },
+  { clause: "C3", file: "scripts/cortex.mjs", from: "judge: () => judgeHeld(JUDGE_AT), idle:", to: "judge: async () => false, idle:", what: "cortex's retire stops reading the judge port" },
   { clause: "K5", file: "scripts/cortex.mjs", from: "      try { lock.close(); } catch { }\n      process.exit(KEEP_EXIT.RETIRED);", to: "      try { lock.close(); } catch { }\n      process.exit(0);", what: "the restart door exits clean again (the K5 hole)" },
+  { clause: "LIVE-SAFE", file: "scripts/cortex.mjs", from: "const THALAMUS_PORT = plantedPort(\"ARSENAL_THALAMUS_PORT\", 4113);", to: "const THALAMUS_PORT = 4113;", what: "the thalamus port door is ignored: a planted tree posts to the live :4113" },
   { clause: "XML", file: "scripts/daemon_watchdog.mjs", from: 'args: ["scripts/cortex.mjs"]', to: 'args: ["scripts/cortex.mjs", "daemon-worker"]', what: "the service arguments change shape (a reinstall by his hand)" },
 ];
 const ROOT = mkdtempSync(join(tmpdir(), "mlv2-mutants-"));
