@@ -191,7 +191,7 @@ await killTree(keeper);
 
 const walk = (root, dir, o = new Map()) => {
   let ents = []; try { ents = readdirSync(join(root, dir), { withFileTypes: true }); } catch { return o; }
-  for (const e of ents) { const rel = `${dir}/${e.name}`; if (e.isDirectory()) walk(root, rel, o); else if (/\.(mjs|js|json|ps1|xml|vbs|cmd|md)$/.test(e.name)) o.set(rel, createHash("sha256").update(readFileSync(join(root, rel))).digest("hex")); }
+  for (const e of ents) { const rel = `${dir}/${e.name}`; if (e.isDirectory()) walk(root, rel, o); else if (/\.(mjs|js|json|ps1|xml|vbs|cmd|md)$/.test(e.name)) o.set(rel, createHash("sha256").update(readFileSync(join(root, rel), "utf8").replace(/\r\n/g, "\n")).digest("hex")   /* CRLF-proof: a line ending is not a change */); }
   return o;
 };
 if (BASE) {
