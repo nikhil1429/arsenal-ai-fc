@@ -2,3 +2,6 @@
 {"ts":"2026-11-18T21:41:35.603Z","act":"measure-f8","cmd":"ls scripts/day.mjs (at base)","last_line":"No such file or directory — F8 builds C alone; A owed"}
 {"ts":"2026-11-18T21:41:35.603Z","act":"measure-base-suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (base, before npm ci)","last_line":"organism_test: 136 passed, 4 failed · ruled 0 · UNRULED 4 · LIVE 126 (hermetic: named, not run)"}
 {"ts":"2026-11-18T21:41:35.603Z","act":"selftest-new","cmd":"node scripts/usage_tap.mjs selftest","last_line":"usage_tap selftest 31/31 — all clauses hold"}
+{"ts":"2026-11-18T21:44:21.937Z","act":"suite-build","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (build 0e13338, after npm ci)","last_line":"organism_test: 140 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-18T21:44:21.937Z","act":"witness-green","cmd":"node ci/mpool/witness_mpool.mjs --org . --base-org <scratch clone of b1fc984>","last_line":"GREEN MPOOL the usage tap · 31 clause(s)"}
+{"ts":"2026-11-18T21:44:21.937Z","act":"witness-red","cmd":"node ci/mpool/witness_mpool.mjs --org <base> --base-org <base>","last_line":"RED MPOOL · W1.1, W1.2, W1.3, W1.4, W1.5, WA.i, WA.ii, W2.1, W2.2, W2.3, W2.4, W2.5, W2.6, W2.7, W2.8, W3.1, W3.2, W3.4, W4.1, W4.2, W4.3, W4.4, W4.5, W4.6, F2, F5, F9, C, J, S"}
