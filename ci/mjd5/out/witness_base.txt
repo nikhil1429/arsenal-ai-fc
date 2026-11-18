@@ -1,0 +1,6 @@
+RED   R1 · round 2 carded 3 capture(s) in doubt (must be 3) · round 3 resolved 3 (must be 3) · live in-doubt cards after 3 (must be 0)
+RED   R3 · round 4 exit 0 · a second retire of one key exit 0 · deck bytes unmoved by round 4 true and by the second retire true · each card retired exactly once with the round-3 epitaph false
+RED   R2 · live in-doubt cards after the mixed round ["jjh0","jjh1","jjh2"] (must be exactly the refused one, …jjh1) · its cards 1 (must be 1, the same id) · receipt in_doubt 1
+GREEN BOUND · differs: nothing
+GREEN LAST · 0 node process(es) naming /tmp/mjd5-u5CDya
+RED MJD5 · R1 R3 R2

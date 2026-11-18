@@ -1,0 +1,6 @@
+GREEN R1 · round 2 carded 3 capture(s) in doubt (must be 3) · round 3 resolved 3 (must be 3) · live in-doubt cards after 0 (must be 0)
+GREEN R3 · round 4 exit 0 · a second retire of one key exit 0 · deck bytes unmoved by round 4 true and by the second retire true · each card retired exactly once with the round-3 epitaph true
+GREEN R2 · live in-doubt cards after the mixed round ["0nu1"] (must be exactly the refused one, …0nu1) · its cards 1 (must be 1, the same id) · receipt in_doubt 1
+GREEN BOUND · differs: scripts/captains_call.mjs, scripts/gaffer_brain.mjs
+GREEN LAST · 0 node process(es) naming /tmp/mjd5-5dVKf7
+GREEN MJD5 the in-doubt card retires at source when its capture resolves, once · 5 clause(s)

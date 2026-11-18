@@ -1,0 +1,7 @@
+control · exit 0 · GREEN MJD5 the in-doubt card retires at source when its capture resolves, once · 5 clause(s)
+mutant R1 · RED by its clause · reds R1 R3 R2 · RED MJD5 · R1 R3 R2
+mutant R2 · RED by its clause · reds R2 · RED MJD5 · R2
+mutant R3 · RED by its clause · reds R3 · RED MJD5 · R3
+mutant BOUND · RED by its clause · reds BOUND · RED MJD5 · BOUND
+mutant LAST · RED by its clause · reds LAST · RED MJD5 · LAST
+run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN

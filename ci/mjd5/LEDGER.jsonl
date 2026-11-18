@@ -4,3 +4,8 @@
 {"ts":"2026-11-18T14:22:27.196Z","act":"build","cmd":"node scripts/captains_call.mjs selftest (build)","last_line":"captains_call selftest: 147 passed, 0 failed"}
 {"ts":"2026-11-18T14:22:27.196Z","act":"build","cmd":"node scripts/gaffer_brain.mjs selftest (build)","last_line":"gaffer_brain selftest: 194 passed, 0 failed"}
 {"ts":"2026-11-18T14:22:27.196Z","act":"gate","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts":"2026-11-18T14:28:32.451Z","act":"witness","cmd":"node ci/mjd5/witness_mjd5.mjs --org <build archive> --base-org <base archive>","last_line":"GREEN MJD5 the in-doubt card retires at source when its capture resolves, once · 5 clause(s)"}
+{"ts":"2026-11-18T14:28:32.451Z","act":"witness","cmd":"node ci/mjd5/witness_mjd5.mjs --org <base archive> --base-org <base archive>","last_line":"RED MJD5 · R1 R3 R2"}
+{"ts":"2026-11-18T14:28:32.451Z","act":"mutants","cmd":"node ci/mjd5/run_mutants_mjd5.mjs --org <build archive> --base-org <base archive>","last_line":"run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T14:28:32.451Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (base scripts)","last_line":"organism_test: 139 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-18T14:28:32.451Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (build)","last_line":"organism_test: 139 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
