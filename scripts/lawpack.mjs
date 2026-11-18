@@ -703,6 +703,22 @@ export const PLANTS = {
   "tum-not-tu-prose": "export const say = (x) => `Ye faisla tera hai, machine ka nahi — ${x}`;\n",   // law-waiver:tum — THE PLANT: the violation this rule must bite on (row 68 (e))
 };
 
+/** THE CLEAN PLANTS (unit mdn2 · forks row 1051 (4), proof fork 5 of ci/mdone/PROOF.md): one per rule id, the SAME
+ *  shape as its RED plant above, fixed — the form the rule must NOT bite on. A rule proven only on its violation is
+ *  proven one way; a rule that also bites its clean form floods, and a flooded gate gets deleted. The selftest scans
+ *  them in a throwaway project beside the RED plants and requires ZERO matches of ANY rule; done.mjs counts an id as
+ *  "planted both ways" iff it has both a RED and a CLEAN plant here. */
+export const CLEAN_PLANTS = {
+  "owners-only-state-write": 'import { writeFileSync } from "node:fs";\nexport const p = () => writeFileSync("out/brain_config.json", "{}");\n',   // a write that never reaches the state dir
+  "law-m-literal-model": 'export const M = "role:breadth";\n',   // a ROLE, never a model id
+  "jugad-literal-subject-list": "export const kinds = (rows) => rows.map((r) => r.kind);\n",   // the subjects derived, never listed
+  "trailing-n-slice": "export const last = (rows) => rows.slice(-1);\n",   // the LAST one is the freshest by definition, not a window
+  "bare-catch": 'export const p = (f) => { try { f(); } catch (e) { console.error("plant: the reason, said", e); } };\n',
+  "import-time-registry-read": 'import { subjectsOf } from "./registry.mjs";\nexport const later = () => subjectsOf("plant_kinds");\n',   // read inside a function only
+  "receipt-testimony-read": 'import { readFileSync } from "node:fs";\nexport const gate = () => JSON.parse(readFileSync("receipt.json", "utf8")).rows.length;\n',   // recomputed from the rows, not a self-declared count
+  "tum-not-tu-prose": "export const say = (x) => `Ye faisla tumhara hai, machine ka nahi — ${x}`;\n",
+};
+
 /** THE IMPORT-GRAPH PLANTS (forks row 661 (3)) — the census's five fixture modules, verbatim (artifacts cloud/s660/wrapper_census.mjs).
  *  Every selftest writes them into a throwaway tree and judges them with importReads, against the readers derived from the REAL
  *  registry.mjs: a wrapper read bites, an alias read bites, a dispatch read is a dispatch, and the guarded and lazy reads do not. */
@@ -714,7 +730,10 @@ export const IMPORT_PLANTS = {
   "e_alias.mjs": 'import { rowOf as r } from "./registry.mjs";\nexport const M = r("mechanisms", "x");\n',
 };
 
-export function plantAndScan({ bin = sgBin() } = {}) {
+/** plants defaults to the RED set; CLEAN_PLANTS is the other way (unit mdn2), scanned in its OWN throwaway project so
+ *  one set can never mask the other.
+ *  @param {{ bin?: string|null, plants?: Record<string, string> }} [o] */
+export function plantAndScan({ bin = sgBin(), plants = PLANTS } = {}) {
   if (!bin) return null;
   const dir = mkdtempSync(join(tmpdir(), "arsenal-lawpack-"));
   try {
@@ -722,7 +741,7 @@ export function plantAndScan({ bin = sgBin() } = {}) {
     mkdirSync(join(dir, "scripts"), { recursive: true });
     for (const f of readdirSync(RULES_DIR)) if (f.endsWith(".yml")) copyFileSync(join(RULES_DIR, f), join(dir, "laws", f));
     copyFileSync(SGCONFIG, join(dir, "sgconfig.yml"));
-    for (const [id, code] of Object.entries(PLANTS)) writeFileSync(join(dir, "scripts", `plant_${id.replace(/-/g, "_")}.mjs`), code);
+    for (const [id, code] of Object.entries(plants)) writeFileSync(join(dir, "scripts", `plant_${id.replace(/-/g, "_")}.mjs`), code);
     const { matches } = scan({ bin, paths: ["scripts"], cwd: dir, config: join(dir, "sgconfig.yml") });
     return matches;
   } finally { try { rmSync(dir, { recursive: true, force: true }); } catch { /* a temp dir the OS will reap anyway */ } }
@@ -899,6 +918,11 @@ async function selftest() {
     for (const id of RULE_IDS) assert(`PLANT — ${id} BITES on a planted violation (the rung's DONE-proof, run every time)`, bit.has(id), `rules that bit: ${[...bit].join(", ") || "none"}`);
     const irLines = (m2 || []).filter((x) => x.rule === "import-time-registry-read").map((x) => x.line);
     assert("PLANT — import-time-registry-read bites the module-level read ONLY (line 2), never the read inside a function (line 3)", irLines.join(",") === "2", `lines that bit: ${irLines.join(",") || "none"}`);
+    // 5b · THE OTHER WAY (unit mdn2): every rule has a CLEAN plant, and no rule bites any of them
+    const mc = plantAndScan({ plants: CLEAN_PLANTS });
+    for (const id of RULE_IDS) assert(`CLEAN PLANT — ${id} has a clean plant and no rule bites it (planted both ways, run every time)`,
+      typeof CLEAN_PLANTS[/** @type {keyof typeof CLEAN_PLANTS} */ (id)] === "string" && mc !== null && !mc.some((x) => x.file.endsWith(`plant_${id.replace(/-/g, "_")}.mjs`)),
+      `matches on clean plants: ${(mc || []).map((x) => `${x.rule}@${x.file}:${x.line}`).join(", ") || "none"}`);
   } else {
     assert("BARE CHECKOUT — no ast-grep binary, so the plant test is skipped and SAID (measurability is an answer)", true);
   }

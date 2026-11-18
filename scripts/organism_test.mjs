@@ -26,7 +26,7 @@
 // LAWS: READ-ONLY on dressing-room/state · spawns organs as CHILD PROCESSES (never
 //   imports them, so a top-level side effect cannot leak in) · every assertion NAMES
 //   the law it is holding · a RED here is a real defect, not a flaky net.
-// CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack]
+// CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack|done]
 // ============================================================================
 import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync, appendFileSync } from "node:fs";
 import { createHash } from "node:crypto";   // S11 · F-6: the content discriminator (an idempotent rewrite is not a leak)
@@ -2691,6 +2691,29 @@ function lawpack() {
     r.code === 0, reds.join("\n         ") || r.out.split(/\r?\n/).slice(-3).join(" | "));
 }
 
+// ── WHAT IS LEFT, ON THE NEUTRAL MACHINE (unit mdn2 · forks row 1051 (4), proof fork 6 of ci/mdone/PROOF.md) ──────────
+// `done.mjs --hermetic` reads no state file (reach and the three laptop rule sets print LIVE), so it is a member of BOTH
+// profiles and is never named LIVE. It is held to its own contract: exit 0, exactly ONE line, the hermetic words, and the
+// laws/*.yml rules planted BOTH ways — every id with a RED and a CLEAN plant in lawpack.mjs — so a law that arrives
+// without its clean plant is a red here (a gate may only get stricter). A checkout with no acorn (xray's parser) is
+// NOT MEASURABLE, named, like the law pack.
+function done() {
+  section("WHAT IS LEFT — done.mjs --hermetic, its one line, its rules planted both ways");
+  if (!existsSync(join(ROOT, "node_modules", "acorn"))) {
+    assert("WHAT IS LEFT — bare checkout: no acorn for xray, so done.mjs is NOT MEASURABLE here (measurability is an answer, silence is not)", true);
+    return;
+  }
+  const r = run([join(ROOT, "scripts", "done.mjs"), "line", "--hermetic"], { env: { ...process.env, ORGANISM_TEST_PROFILE: "hermetic" } });
+  const lines = r.out.split(/\r?\n/).filter(Boolean);
+  assert("WHAT IS LEFT · done.mjs --hermetic exits 0 and prints exactly ONE `DONE · ` line",
+    r.code === 0 && lines.length === 1 && /^DONE · /.test(lines[0] || ""), lines.slice(0, 3).join(" | "));
+  assert("WHAT IS LEFT · the hermetic form reads no live state: reach and the three laptop rule sets say LIVE",
+    /reach LIVE/.test(lines[0] || "") && /ten laws LIVE/.test(lines[0] || "") && /laws_register LIVE/.test(lines[0] || "") && /teaching rules LIVE/.test(lines[0] || ""), (lines[0] || "").slice(0, 300));
+  const m = /laws (\d+)\/(\d+) both ways \((\d+)\/(\d+) RED-planted\)/.exec(lines[0] || "");
+  assert("WHAT IS LEFT · every laws/*.yml rule is planted BOTH ways (a RED and a CLEAN plant in lawpack.mjs)",
+    !!m && Number(m[2]) > 0 && m[1] === m[2] && m[3] === m[2], m ? m[0] : (lines[0] || "").slice(0, 300));
+}
+
 // ── THE FLOW ATLAS (AUDIT §10-C rung S10 · acceptance (d)) ───────────────────
 // "flow_atlas check joins npm test — the atlas goes stale-proof the day the
 // registry exists." check re-derives the atlas from the live IR and compares
@@ -2762,7 +2785,7 @@ function rulingSelfCheck() {
 }
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
-const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive, atlas };
+const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive, atlas, done };
 async function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }
