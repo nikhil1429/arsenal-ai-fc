@@ -37,7 +37,7 @@ import { writeFileSync, appendFileSync, renameSync, readFileSync, existsSync, mk
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { armTrigger as brainArmTrigger } from "./brain.mjs";   // Block 1 (18 Aug 2026): the OWNER arms brain_queue.json; this chain only asks
+import { armTrigger as brainArmTrigger, sourceGraph, staleSources } from "./brain.mjs";   // Block 1 (18 Aug 2026): the OWNER arms brain_queue.json; this chain only asks
 // OVERHAUL Block 6 (18 Aug 2026) — THE DAY-KEY LAW (§10). The chain KNOWS ITS
 // SLOT; every one-shot it runs takes the chain's day, never its own now(). See
 // daykey.mjs's header for the two measured incidents (12 Aug 02:36 · 15 Aug 02:04).
@@ -638,6 +638,25 @@ export async function conduct(chain = MORNING, opts = {}) {
         // UNVERIFIED rather than healthy — an honest unknown, never a fabricated green.
         const stamp = await (opts.buildStamp || buildStamp)(step.daemon.port);
         const onDisk = opts.mtimeOf ? opts.mtimeOf(step.args[0]) : mtimeOf(step.args[0]);
+        // K6 (unit mlv0, forks row 1031; ci/mcr/MLIVE_SPEC.md §1 K6 / §3): A STAMP WITH A BOOT INSTANT IS READ AGAINST
+        // THE WHOLE CLOSURE. Measured 18 Nov 2026: tier 1 below compared the stamp's module_mtime_ms to the ENTRY file
+        // only, so a landing in an IMPORTED module read "build current". Now the unit's own booted_at is compared, strict
+        // ">", to every file of brain.sourceGraph(entry) (static + dynamic local imports) — the brain's own retire rule.
+        // The two lower tiers stay (L9) for a stamp with no boot instant and for no stamp at all.
+        const bootMs = stamp && stamp.booted_at != null ? Date.parse(stamp.booted_at) : NaN;
+        if (Number.isFinite(bootMs)) {
+          const root = opts.root || join(__dirname, "..");
+          const closure = sourceGraph(join(root, step.args[0]), (p) => readFileSync(p, "utf8"));
+          const moved = staleSources(closure, bootMs, (p) => statSync(p).mtimeMs)
+            .map((m) => ({ file: m.path.slice(root.length + 1).replace(/\\/g, "/"), ms: m.mtime_ms }));
+          steps.push(moved.length
+            ? { id: step.id, ok: false, ms: Date.now() - t0, port: step.daemon.port,
+              daemon: `STALE BUILD — ${moved.length} file(s) of its import closure moved after boot`,
+              error: `booted ${stamp.booted_at}; ${moved.map((m) => `${m.file} @ ${new Date(m.ms).toISOString()}`).join(", ")} — restart it to load the repairs` }
+            : { id: step.id, ok: true, ms: Date.now() - t0, port: step.daemon.port,
+              daemon: `already running (build current — ${closure.length} file(s) of its closure, none moved after boot)` });
+          continue;
+        }
         // TIER 2 — the daemon said nothing, so ask the OS. Covers cortex and turnstile,
         // which have no /status at all, and checks the whole import GRAPH rather than
         // just the entry file. Reported separately because it is a coarser instrument:

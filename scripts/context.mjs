@@ -81,6 +81,7 @@ import { newestGraphMtime } from "./conductor.mjs";
 // ROW 880 (2) F2 (s880b, 14 Nov 2026) — THE KEEPER, adopted exactly as brain.mjs adopted it
 // (brain.mjs:89; forks rows 746 (2) / 753 (2): every resident adopts it "when next touched").
 import { keep, KEEP_EXIT } from "./keeper.mjs";
+import { judgeHeld } from "./keeper.mjs";   // unit mlv0 (row 1031 M4 A) — the judge round's port: no retire while it is held
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // THE TEST DOOR (row 880 (2), s880b) — ONE door, for a witness's fixture, and it opens ONLY under
@@ -1304,7 +1305,7 @@ async function main() {
       process.exitCode = KEEP_EXIT.ALREADY_RESIDENT;
       return;
     }
-    let stop = false, emits = 0, retired = false, yielded = false;
+    let stop = false, emits = 0, retired = false, yielded = false, judgeDeferred = false;
     // D10 — this resident's own fault streak, plus whether a PREVIOUS resident left a block
     // behind: a fault from a process that no longer exists must not read as live, so the
     // first clean poll of a fresh daemon clears it too.
@@ -1315,7 +1316,11 @@ async function main() {
     console.log(`context: --daemon up (pid ${process.pid}, poll ~${CONTEXT_POLL_MS / 1000}s) — ambient AW → :4113 on window change, its liveness stamped on context_state.json every poll (row 880). Booted ${new Date(BOOT_MS).toISOString()}; retires itself if any file in its own module graph is written after that (D9), and its keeper respawns it. Ctrl-C to stop.`);
     while (!stop) {
       const bv = buildVerdict(BOOT_MS, graphNow());
-      if (bv.checked && bv.stale) {
+      // unit mlv0 (forks row 1031 M4 A): a judge round holds its port (keeper.mjs JUDGE_PORT) — no retire while it runs; the
+      // next poll checks again (a deferral, never a skipped retire).
+      const judgeRunning = bv.checked && bv.stale ? await judgeHeld() : false;
+      if (judgeRunning && !judgeDeferred) { console.log("context: --daemon retire DEFERRED — its graph moved after boot, but a judge round holds its port; retiring once it closes."); judgeDeferred = true; }
+      if (bv.checked && bv.stale && !judgeRunning) {
         // The console is not a void: the VBS cloak redirects it to scripts/context.log
         // (audit finding #10), which is the same lane brain.mjs's retirement prints to.
         // SUPERSEDED BY ROW 880 (2), kept as history (layer, never replace): until 14 Nov this line
