@@ -110,7 +110,8 @@ const CLAUSES = {
     const lp = join(t, "scripts", "lawpack.mjs"), lpSrc = readFileSync(lp, "utf8");
     writeFileSync(lp, lpSrc + `\nPLANTS["plant-x"] = "plantx();\\n";\n`);                       // RED-planted only: NOT both ways
     const nR = done(t, ["line", "--hermetic"]).out;
-    writeFileSync(lp, lpSrc + `\nPLANTS["plant-x"] = "plantx();\\n";\nexport const CLEAN_PLANTS = { "plant-x": "export const ok = 1;\\n" };\n`);
+    // ms1 (row 1065 (4), the one ADDED edit): a lawpack that already exports CLEAN_PLANTS (unit mdn2) gains the entry; one that does not, the export
+    writeFileSync(lp, lpSrc + `\nPLANTS["plant-x"] = "plantx();\\n";\n` + (/^export const CLEAN_PLANTS\b/m.test(lpSrc) ? `CLEAN_PLANTS["plant-x"] = "export const ok = 1;\\n";\n` : `export const CLEAN_PLANTS = { "plant-x": "export const ok = 1;\\n" };\n`));
     const n2 = done(t, ["line", "--hermetic"]).out;
     const a = num(n1, /laws \d+\/(\d+) both/) === L0 + 1 && num(n1, /laws (\d+)\/\d+ both/) === B0 && num(n1, /\((\d+)\/\d+ RED-planted\)/) === R0;
     const r = num(nR, /laws (\d+)\/\d+ both/) === B0 && num(nR, /\((\d+)\/\d+ RED-planted\)/) === R0 + 1;

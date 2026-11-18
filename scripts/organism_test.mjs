@@ -26,11 +26,12 @@
 // LAWS: READ-ONLY on dressing-room/state · spawns organs as CHILD PROCESSES (never
 //   imports them, so a top-level side effect cannot leak in) · every assertion NAMES
 //   the law it is holding · a RED here is a real defect, not a flaky net.
-// CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack|done]
+// CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack|done|witnesses]
 // ============================================================================
-import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync, appendFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync, appendFileSync, symlinkSync, unlinkSync, openSync, closeSync } from "node:fs";
 import { createHash } from "node:crypto";   // S11 · F-6: the content discriminator (an idempotent rewrite is not a leak)
-import { join, dirname } from "node:path";
+import { join, dirname, delimiter } from "node:path";
+import { createServer } from "node:net";   // unit ms1: an OS-picked free port for every port door (never a fixed one)
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -2733,6 +2734,147 @@ function atlas() {
     r.code === 0, r.out.split(/\r?\n/).slice(-3).join(" | "));
 }
 
+// ── THE WITNESSES MEMBER (unit ms1 · forks rows 1054 / 1055 / 1066 · spec ci/ms1/MS1_SPEC.md on claude/ms1-spec) ──
+// Every landed unit's witness rides the suite, judged against its OWN BASE (B1): for each dir ci/<unit>/ that holds
+// witness_<unit>.mjs, its ci/<unit>/BASE (one 40-hex line, B6) is built as an LF tree under the OS temp dir for
+// --base-org, and the HEAD commit the same way for --org (F2 A), each through a private index (core.autocrlf=false,
+// core.eol=lf), node_modules linked in, a claude and a gemini that refuse first on PATH, every port door an organ
+// exports set to an OS-picked free port (F5 B: keeper's ARSENAL_JUDGE_PORT is honoured because the tree's keeper.mjs
+// sits under the temp dir). The witness runs from a COPY of its own dir under the temp dir; it is judged on its LAST
+// line alone with every BOUND id dropped (F1 A: BOUND is a seat-time clause), so a red that is not BOUND is a RED
+// member (F11 A). B2: it runs only under the hermetic profile on the neutral machine (GITHUB_ACTIONS, F3 A); anywhere
+// else ONE named skip line and no assert. B4: a witness (or a sibling) that binds a fixed port, or names a door-less
+// port an organ exports, is refused by a static read and never spawned. B5: a seconds line per unit and one total.
+// The BASE must already be a commit in this clone: the member never reaches the network. It writes nothing outside
+// the OS temp dir, reads dressing-room/state never, and every wait is bounded by the job's own declared
+// timeout-minutes, read from .github/workflows/suite.yml (never typed here). Sole writer of nothing.
+const WITNESS_SKIP = "  SKIP WITNESSES — the witnesses member runs on the neutral machine only (B2): a witness may bind ports";
+/** the dirs ci/<unit>/ that hold witness_<unit>.mjs @param {string} root */
+function witnessUnits(root) {
+  const ci = join(root, "ci");
+  if (!existsSync(ci)) return [];
+  return readdirSync(ci).filter((d) => /^[a-z0-9-]+$/.test(d) && existsSync(join(ci, d, `witness_${d}.mjs`))).sort();
+}
+/** the ports the organs export (derived, never typed): `export const <NAME>PORT = …<literal>…`, and its env door if the
+ *  same line reads one; and every `listen(<literal>)` an organ binds @param {string} tree */
+function organPorts(tree) {
+  const named = [], literal = [];
+  const dir = join(tree, "scripts");
+  for (const f of existsSync(dir) ? readdirSync(dir).filter((x) => x.endsWith(".mjs")) : []) {
+    readFileSync(join(dir, f), "utf8").split(/\r?\n/).forEach((l, i) => {
+      const m = /^export const ([A-Z_]*PORT) = (.*)$/.exec(l);
+      if (m && /\b\d{2,5}\b/.test(m[2])) named.push({ name: m[1], door: (/process\.env\.([A-Z0-9_]+)/.exec(m[2]) || [])[1] || null, at: `scripts/${f}:${i + 1}` });
+      const n = /\blisten\(\s*([1-9]\d{1,4})\b/.exec(l);
+      if (n) literal.push({ port: n[1], at: `scripts/${f}:${i + 1}` });
+    });
+  }
+  return { named, literal };
+}
+/** B4, a static read of a witness dir: a fixed bind, or a door-less exported port named @param {string} dir @param {ReturnType<typeof organPorts>} ports */
+function fixedPortHits(dir, ports) {
+  const hits = [];
+  for (const f of readdirSync(dir).filter((x) => x.endsWith(".mjs")).sort()) {
+    readFileSync(join(dir, f), "utf8").split(/\r?\n/).forEach((l, i) => {
+      const n = /\blisten\(\s*([1-9]\d{0,4})\b/.exec(l);
+      if (n) { const o = ports.literal.find((p) => p.port === n[1]); hits.push(`listen(${n[1]} at ${f}:${i + 1}${o ? ` (the organ's ${o.at})` : ""}`); }
+      for (const p of ports.named) if (!p.door && new RegExp(`\\b${p.name}\\b`).test(l)) hits.push(`${p.name} at ${f}:${i + 1} (the organ's ${p.at}, no env door)`);
+    });
+  }
+  return hits;
+}
+/** the ids a witness's own source gives its BOUND clause: "BOUND" and every literal "<ID> BOUND" @param {string} src */
+const boundIds = (src) => [...new Set(["BOUND", ...[...src.matchAll(/["'`]((?:[A-Z][A-Z0-9-]*\s+)?BOUND)["'`]/g)].map((m) => m[1])])].sort((a, b) => b.length - a.length);
+/** F1 A: the LAST line judged, BOUND dropped @param {string} out @param {number|null} code @param {string} unit @param {string[]} bids */
+function judgeLast(out, code, unit, bids) {
+  const last = String(out).split(/\r?\n/).map((s) => s.trim()).filter(Boolean).pop() || "";
+  const U = unit.toUpperCase();
+  if (code === 0 && last.startsWith(`GREEN ${U} `)) return { ok: true, last, left: "" };
+  const m = new RegExp(`^RED ${U} · (.*)$`).exec(last);
+  if (code !== 1 || !m) return { ok: false, last, left: `the LAST line is not the witness grammar (exit ${code})` };
+  let rest = ` ${m[1]} `;
+  for (const id of bids) rest = rest.split(new RegExp(`(?<=^|[\\s,·])${id.replace(/\s+/g, "\\s+")}(?=$|[\\s,·])`)).join(" ");
+  const left = rest.replace(/[\s,·]+/g, " ").trim();
+  return { ok: left === "", last, left };
+}
+/** an LF tree of <sha> under <into>, through a private index (B1, F2 A) @param {string} root @param {string} sha @param {string} into */
+function lfTree(root, sha, into) {
+  mkdirSync(into, { recursive: true });
+  const r = spawnSync("git", ["-c", "core.autocrlf=false", "-c", "core.eol=lf", "-C", root, `--work-tree=${into}`, "checkout", "-q", sha, "--", "."],
+    { encoding: "utf8", windowsHide: true, env: { ...process.env, GIT_INDEX_FILE: `${into}.index` } });
+  return r.status === 0 ? null : String(r.stderr || "").trim().split(/\r?\n/)[0];
+}
+/** node processes whose command line names <dir> (the member's own sweep after each witness) @param {string} dir */
+function namingProcs(dir) {
+  if (process.platform === "win32") {
+    const r = spawnSync("powershell", ["-NoProfile", "-Command", "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | ForEach-Object { \"$($_.ProcessId) $($_.CommandLine)\" }"], { encoding: "utf8", windowsHide: true });
+    return String(r.stdout || "").split(/\r?\n/).filter((l) => l.toLowerCase().includes(dir.toLowerCase())).map((l) => Number(l.trim().split(" ")[0])).filter((p) => p && p !== process.pid);
+  }
+  const out = [];
+  for (const p of existsSync("/proc") ? readdirSync("/proc") : []) {
+    if (!/^\d+$/.test(p) || Number(p) === process.pid) continue;
+    try { if (readFileSync(`/proc/${p}/cmdline`, "utf8").replace(/\0/g, " ").includes(dir)) out.push(Number(p)); } catch {}
+  }
+  return out;
+}
+/** an OS-picked free port (bound to 0, read, released) — never a fixed one */
+const freePort = () => new Promise((res, rej) => { const s = createServer(); s.once("error", rej); s.listen(0, "127.0.0.1", () => { const a = s.address(); s.close(() => res(typeof a === "object" && a ? a.port : 0)); }); });
+
+async function witnesses() {
+  section("WITNESSES — every landed unit's witness, at HEAD against its own BASE (unit ms1)");
+  if (!(PROFILE === "hermetic" && process.env.GITHUB_ACTIONS === "true")) { console.log(WITNESS_SKIP); return; }
+  const units = witnessUnits(ROOT);
+  const T0 = Date.now();
+  const wf = (() => { try { return readFileSync(join(ROOT, ".github", "workflows", "suite.yml"), "utf8"); } catch { return ""; } })();
+  const jobMin = Number((/timeout-minutes:\s*(\d+)/.exec(wf) || [])[1]);
+  if (!(jobMin > 0)) { assert("WITNESSES · the member reads its bound, the job's own timeout-minutes in .github/workflows/suite.yml", false, "no timeout-minutes line"); return; }
+  const headSha = spawnSync("git", ["-C", ROOT, "rev-parse", "--verify", "-q", "HEAD"], { encoding: "utf8", windowsHide: true });
+  const head = String(headSha.stdout || "").trim();
+  const nm = join(ROOT, "node_modules");
+  for (const unit of units) {
+    const u0 = Date.now();
+    const name = (what) => `WITNESS ‹${unit}› · ${what}`;
+    const dir = join(ROOT, "ci", unit);
+    const baseText = existsSync(join(dir, "BASE")) ? readFileSync(join(dir, "BASE"), "utf8") : null;
+    if (baseText === null || !/^[0-9a-f]{40}\r?\n?$/.test(baseText)) { assert(name("carries a BASE file (B6)"), false, baseText === null ? "ci/<unit>/BASE is absent" : "ci/<unit>/BASE is not one 40-hex line"); continue; }
+    const base = baseText.trim();
+    const inClone = spawnSync("git", ["-C", ROOT, "cat-file", "-e", `${base}^{commit}`], { windowsHide: true }).status === 0;
+    if (!inClone) { assert(name("its BASE is in the clone"), false, `${base.slice(0, 7)} is not a commit here (the member never fetches)`); continue; }
+    const tmp = mkdtempSync(join(tmpdir(), `ms1-${unit}-`));
+    try {
+      const orgT = join(tmp, "org"), baseT = join(tmp, "base"), shim = join(tmp, "shim"), wd = join(tmp, "w");
+      const e1 = head ? lfTree(ROOT, head, orgT) : "HEAD is not a commit", e2 = lfTree(ROOT, base, baseT);
+      if (e1 || e2) { assert(name("its trees are built (LF, under the temp dir)"), false, String(e1 || e2)); continue; }
+      const ports = organPorts(orgT);
+      const hits = fixedPortHits(dir, ports);
+      if (hits.length) { assert(name("binds no fixed service port (B4)"), false, hits.join(" · ")); continue; }
+      if (existsSync(nm)) for (const t of [orgT, baseT]) symlinkSync(nm, join(t, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+      mkdirSync(shim);
+      for (const tool of ["claude", "gemini"]) {
+        writeFileSync(join(shim, tool), `#!/bin/sh\necho "REFUSED — no live model call in a witness (unit ms1)" >&2\nexit 1\n`, { mode: 0o755 });
+        writeFileSync(join(shim, `${tool}.cmd`), `@echo REFUSED — no live model call in a witness (unit ms1) 1>&2\r\n@exit /b 1\r\n`);
+      }
+      const env = { ...process.env };
+      const pk = Object.keys(env).find((k) => k.toUpperCase() === "PATH") || "PATH";
+      env[pk] = `${shim}${delimiter}${env[pk] || ""}`;
+      for (const p of ports.named) if (p.door) env[p.door] = String(await freePort());
+      cpSync(dir, join(wd, "ci", unit), { recursive: true });
+      const log = join(tmp, "out.txt"), fd = openSync(log, "w");
+      const left = Math.max(1, T0 + jobMin * 60000 - Date.now());
+      let r;
+      try { r = spawnSync(NODE, [join("ci", unit, `witness_${unit}.mjs`), "--org", orgT, "--base-org", baseT], { cwd: wd, env, stdio: ["ignore", fd, fd], timeout: left, windowsHide: true }); }
+      finally { closeSync(fd); }
+      for (const p of namingProcs(tmp)) { try { process.kill(p); } catch {} }
+      const j = judgeLast(readFileSync(log, "utf8"), r.status, unit, boundIds(readFileSync(join(dir, `witness_${unit}.mjs`), "utf8")));
+      console.log(`  witness ‹${unit}› ${((Date.now() - u0) / 1000).toFixed(1)} s · ${j.last}`);
+      assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
+    } finally {
+      for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
+      try { rmSync(tmp, { recursive: true, force: true }); } catch {}
+    }
+  }
+  console.log(`  witnesses · ${units.length} unit(s) · ${((Date.now() - T0) / 1000).toFixed(1)} s`);
+}
+
 // ── THE RULED KNOWN-RED LIST (12 Oct 2026, forks row 639 (iii); lane V's fork (C)) ──────
 // A RED on clean HEAD used to become baseline. Every landing's witness compared its cut to the
 // CONTROL, so a red already on HEAD read as nothing new: NO SHIM CALLEE sat RED for 19 days while
@@ -2785,7 +2927,7 @@ function rulingSelfCheck() {
 }
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
-const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive, atlas, done };
+const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive, atlas, done, witnesses };
 async function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }

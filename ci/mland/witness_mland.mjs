@@ -75,7 +75,7 @@ function sandbox(tree) {
   for (const f of ["scripts/land.mjs", "scripts/groundsman.mjs", "scripts/daykey.mjs"]) { const t = src(tree, f); if (t != null) put(seed, f, t); }
   put(seed, "scripts/ci_verdict.mjs", VERDICT); put(seed, "scripts/sitting.mjs", SITTING); put(seed, "scripts/sitlib.mjs", "export const s = 1;\n");
   put(seed, "scripts/archivist.mjs", ARCHIVIST); put(seed, "scripts/captains_call.mjs", REC); put(seed, "scripts/awayday.mjs", REC);
-  put(seed, "scripts/brain.mjs", `import { keep } from "./keeper.mjs";\nimport { s } from "./sitlib.mjs";\nkeep(s);\n`); put(seed, "scripts/keeper.mjs", "export const keep = () => 0;\n");
+  put(seed, "scripts/brain.mjs", `import { keep } from "./keeper.mjs";\nimport { s } from "./sitlib.mjs";\nkeep(s);\n`); put(seed, "scripts/keeper.mjs", "export const keep = () => 0;\nexport const JUDGE_PORT = 0;\nexport const judgeHeld = async () => false;\n");   // ms1 (row 1064 (3), the one ADDED edit): the stub answers land.mjs's judge gate (unit mlj)
   put(seed, "setup/services/ArsenalFC-Sitting.xml", "<service>\n  <arguments>scripts/sitting.mjs daemon</arguments>\n</service>\n");
   put(seed, "setup/services/ArsenalFC-Brain.xml", "<service>\n  <arguments>scripts/brain.mjs daemon</arguments>\n</service>\n");
   put(seed, `${STATE}/a.json`, "{\"a\":0}\n"); put(seed, "README.md", "seed\n"); put(seed, "notes/x.txt", "x0\n"); put(seed, "package-lock.json", "{}\n");
