@@ -125,13 +125,41 @@ Under F1 A the member drops every BOUND id. It reads them from the witness's own
 | `WITNESS ‹mjud› · GREEN at head against its BASE` | **M3 CENSUS · M5 F3-CLIP · M6 MJD2** | mtail's `fits()`/`spawnMs()` rewrite of `postmatch.mjs:848-852`; mjd3–5's batch rulings |
 | `WITNESS ‹mf2› · GREEN at head against its BASE` | **F2 · F4** (new since the spec's §0.3) | F2 names the members judged only by the build: mdn2's `WHAT IS LEFT` asserts (`organism_test.mjs` `done()`). F4 counts members too (base fewer than build), and its first difference is a sitting assert |
 
-The neutral machine's verdict on this branch is RED on exactly these members, plus whatever §5.3 records.
+The neutral machine's verdict on this branch is RED on exactly these members (§5.3, push `f98e914`, both legs).
 
 ### 5.3 The neutral machine (suite workflow, `windows-latest`, node 22 and 24)
 
-Read with curl, no token: `GET /repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`. Each push's run ids and
-verdict are in `LEDGER.jsonl` (act `ci-read`) and in the seat's final message. The member's seconds per unit on the
-runner are its own `  witness ‹unit› <s> s` lines in the job log; see the CHECKPOINT/CI lines at the end of this file.
+Read with curl, no token: `GET /repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`, the check run's
+`/annotations`, and its job log (`/actions/jobs/<id>/logs`, which answers anonymously for this public repo).
+
+| Push | Run | node 22 | node 24 | New reds (both legs) |
+|---|---|---|---|---|
+| `f052188` | `44413149704` | cancelled (superseded) | cancelled | — |
+| `3ed6c9c` | `44413918338` | `135189162294` failure | `135189162604` failure | ‹mf2› ‹mjd3› ‹mjud› ‹mtail› + **‹ms1› B4** (its own header comment spelled a literal bind; fixed in `f98e914`) |
+| `f98e914` | `44417920009` | `135202961143` failure | `135202961645` failure | **exactly ‹mf2› ‹mjd3› ‹mjud› ‹mtail›** (`B1_VERDICT … RED — 4 member(s) red that are not red at the merge base · 1 base red`) |
+
+The member's seconds per unit on the neutral machine, push `f98e914`, read from the assert lines of the job logs. The
+workflow prints assert lines only, so each judged assert carries its seconds (`keyOf` folds them):
+
+| Unit | node 22 s | node 24 s | | Unit | node 22 s | node 24 s |
+|---|---|---|---|---|---|---|
+| mcr2 | 8.0 | 10.0 | | mland | 197.1 | 196.1 |
+| mday | 22.5 | 18.4 | | mlj | 61.8 | 59.6 |
+| mdn2 | 39.0 | 32.4 | | mlv0 | 2.6 | 3.1 |
+| mdone | 99.9 | 78.9 | | mlv1 | 4.9 | 4.2 |
+| **mf2** (RED F2 F4) | 682.7 | 586.9 | | mlv2 | 5.7 | 4.6 |
+| mf4 | 7.6 | 8.2 | | mlv3 | 5.3 | 5.5 |
+| mgrd | 35.7 | 36.3 | | mpast | 20.8 | 20.1 |
+| **mjd3** (RED J4) | 25.3 | 20.7 | | mpm | 4.7 | 4.8 |
+| mjd4 | 52.0 | 62.0 | | ms1 | 61.4 | 60.6 |
+| mjd5 | 22.8 | 26.8 | | **mtail** (RED T3 AUTH; node 22 also T2 F-C) | 26.5 | 30.0 |
+| mjd6 | 23.7 | 26.8 | | **total, 22 units** | **1420.6** | **1316.7** |
+| **mjud** (RED M3 M5 M6) | 3.8 | 4.7 | | | | |
+
+The member's own Linux run (`GITHUB_ACTIONS=true ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs
+witnesses`, this container) took 472.6 s, RED on the same four, ‹ms1› GREEN.
+**ms1's own witness is GREEN on the Windows runner**, W-B1.2 LF included. That answers the spec's N3: the private-index
+checkout with `core.autocrlf=false` + `core.eol=lf` gives LF bytes there.
 
 ## 6. Witness, mutants, selftests, models
 
@@ -219,7 +247,13 @@ it.
 5. The CRLF question (spec N3): W-B1.2 measures it on the runner. On Linux it is measured by the plant's own
    `core.eol=crlf` and the `B1.2 LF` mutant.
 6. The coverage red (orphaned deck_lint, home_pin, probe, study_scope) is a base red on main. Not this unit's.
-7. The effort receipt tool `campaign-2026-09/tools/effort_receipt.mjs` is not in this repository (§8).
+7. **The member's cost on the neutral machine** (§5.3): 1316.7 s (node 24) to 1420.6 s (node 22) for one tree, mf2
+   nearly half of it. Once ms1 lands, the merge-base leg runs the member too, so a leg pays it twice inside the job's
+   60-minute `timeout-minutes` (`suite.yml:62`), with the rest of the suite on top. The architect's call: F12-style
+   (mf2 off the member, the base leg skips it, or the bound raised). This seat edits no workflow and types no budget.
+8. **mtail's clause set differs between legs**: node 22 reds `T2 F-C` beside `T3 AUTH`, node 24 only `T3 AUTH`. The
+   assert name carries the ids, so the member's key differs by leg; both legs are RED either way.
+9. The effort receipt tool `campaign-2026-09/tools/effort_receipt.mjs` is not in this repository (§8).
 
 ## 8. Effort receipt
 
