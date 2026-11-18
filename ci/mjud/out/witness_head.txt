@@ -4,7 +4,7 @@
   GREEN M4 F3-EAT — a check taking 300000 ms: 0 judge call(s), 0 batch(es), reason judge-budget-spent-by-external-check · the check was handed [300000]
   GREEN M5 F3-CLIP — a check taking 100000 ms: handed [300000] · the first batch killed at 200000 ms (owed 200000)
   GREEN M6 MJD2 — 10 captures killed at the budget beside a fast ok row ⇒ next size 6; that size killed too ⇒ 3 (was 6)
-  GREEN M7 NOFLOOR — ok-only size 12 · with an auth refusal and an un-killed failure on the ledger 12
+  GREEN M7 NOFLOOR — ok-only size 30 · with an auth refusal and an un-killed failure on the ledger 30
   GREEN M8 MAUTH — brain AUTH_FAIL_RE exported true · the judge's own object true · matches [login, authenticate, OAuth] [true,true,true] · auth-pattern literals in scripts/: 1 (gaffer_brain.mjs)
   GREEN M9 KEPT — OAuth refusal ⇒ judge-auth-refused, 1 card · ok round fields: all 21 kept
   GREEN BOUND — differs from --base-org in 4 file(s): scripts/brain.mjs, scripts/dugout.mjs, scripts/gaffer_brain.mjs, scripts/sitting.mjs

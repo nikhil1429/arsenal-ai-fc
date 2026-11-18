@@ -73,8 +73,9 @@ async function gaffer() {
   // mjd2, the other way — a refusal and an un-killed failure are no floor: the size is the ok-only size
   { const refused = { job: G.JUDGE_JOB, ok: false, duration_ms: 3000, items: 1, error: "OAuth session expired and could not be refreshed" };
     const lost = { job: G.JUDGE_JOB, ok: false, duration_ms: B, items: 59 };
-    const ra = await G.gradeJudge({ ...base, rows: plantRows(12), judgeHistory: [fast], verify: async () => ({ ran: false, why: "planted", checks: {}, calls: 0 }), generate: grade(10) });
-    const rb = await G.gradeJudge({ ...base, rows: plantRows(12), judgeHistory: [fast, refused, lost], verify: async () => ({ ran: false, why: "planted", checks: {}, calls: 0 }), generate: grade(10) });
+    // the queue (40) is longer than either size could be, so a floor that should not exist cannot hide behind `left`
+    const ra = await G.gradeJudge({ ...base, rows: plantRows(40), judgeHistory: [fast], verify: async () => ({ ran: false, why: "planted", checks: {}, calls: 0 }), generate: grade(10) });
+    const rb = await G.gradeJudge({ ...base, rows: plantRows(40), judgeHistory: [fast, refused, lost], verify: async () => ({ ran: false, why: "planted", checks: {}, calls: 0 }), generate: grade(10) });
     facts.nofloor = { a: (ra.batches || [])[0] ? ra.batches[0].size : null, b: (rb.batches || [])[0] ? rb.batches[0].size : null }; }
   // the auth canary, kept — the observed OAuth refusal stops the round RED with ONE card
   { const cards = []; const r = await G.gradeJudge({ ...base, rows: plantRows(2), judgeHistory: [], verify: async () => ({ ran: false, why: "planted", checks: {}, calls: 0 }),

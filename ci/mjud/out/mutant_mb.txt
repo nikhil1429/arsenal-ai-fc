@@ -1,0 +1,12 @@
+  GREEN M1 SITTING — close ran · judge-due spawned with timeout 330000 ms against budget 300000 + dispatch 30000 · non-judge owners gaffer_brain.mjs queue 20000, intent.mjs close 20000
+  GREEN M2 DUGOUT — judge_round spawned judge-round with timeout 330000 ms against budget 300000 + dispatch 30000 · non-judge tool spawns doubtminer.mjs retire 60000
+  GREEN M3 CENSUS — 3 judge-verb spawn site(s): scripts/dugout.mjs:2212, scripts/postmatch.mjs:715, scripts/sitting.mjs:1025 · each covered
+  GREEN M4 F3-EAT — a check taking 300000 ms: 0 judge call(s), 0 batch(es), reason judge-budget-spent-by-external-check · the check was handed [300000]
+  GREEN M5 F3-CLIP — a check taking 100000 ms: handed [300000] · the first batch killed at 200000 ms (owed 200000)
+  GREEN M6 MJD2 — 10 captures killed at the budget beside a fast ok row ⇒ next size 6; that size killed too ⇒ 3 (was 6)
+  GREEN M7 NOFLOOR — ok-only size 30 · with an auth refusal and an un-killed failure on the ledger 30
+  GREEN M8 MAUTH — brain AUTH_FAIL_RE exported true · the judge's own object true · matches [login, authenticate, OAuth] [true,true,true] · auth-pattern literals in scripts/: 1 (gaffer_brain.mjs)
+  GREEN M9 KEPT — OAuth refusal ⇒ judge-auth-refused, 1 card · ok round fields: all 21 kept
+  RED   BOUND — differs from --base-org in 5 file(s): scripts/brain.mjs, scripts/dugout.mjs, scripts/gaffer_brain.mjs, scripts/postmatch.mjs, scripts/sitting.mjs · OUTSIDE the named files: scripts/postmatch.mjs
+  GREEN LAST — fake claude spawns logged: 0 · node processes naming the temp dir: 0
+RED MJUD · BOUND

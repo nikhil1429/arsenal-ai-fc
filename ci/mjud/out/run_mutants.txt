@@ -1,0 +1,12 @@
+  m1 RED  by M1 SITTING — the owner funnel reads the wrong argv slot: judge-due falls back to 20 s · RED MJUD · M1 SITTING
+  m2 RED  by M2 DUGOUT — the tool funnel reads the wrong argv slot: judge-round falls back to 60 s · RED MJUD · M2 DUGOUT
+  m3 RED  by M3 CENSUS — a new caller spawns judge-round under its own 1 s, outside both resolvers · RED MJUD · M3 CENSUS · BOUND
+  m4 RED  by M4 F3-EAT — a check that ate the budget is reported as a plain cannot-fit, the check unnamed · RED MJUD · M4 F3-EAT
+  m5 RED  by M5 F3-CLIP — the check's own time is not charged to the ONE budget: the first batch gets a fresh budget · RED MJUD · M4 F3-EAT · M5 F3-CLIP
+  m6 RED  by M6 MJD2 — the round ignores killed rows: a killed size teaches nothing (BASE's behaviour) · RED MJUD · M6 MJD2
+  m7 RED  by M7 NOFLOOR — every failed judge row is taken as a floor: a 3 s auth refusal shrinks the size · RED MJUD · M7 NOFLOOR
+  m8 RED  by M8 MAUTH — brain restates its own narrower pattern again (BASE's line): the OAuth refusal is missed, two literals · RED MJUD · M8 MAUTH
+  m9 RED  by M9 KEPT — an ok round drops a field a caller reads (stopped) · RED MJUD · M9 KEPT
+  mb RED  by BOUND — a file outside the four named files differs from BASE · RED MJUD · BOUND
+  ml RED  by LAST — the close reaches a model call through a thread the recorder does not patch: the fake claude logs it · RED MJUD · LAST
+run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN

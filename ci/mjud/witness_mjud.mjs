@@ -150,7 +150,7 @@ const g = drive("gaffer");
 }
 {
   const n = g.nofloor || {};
-  clause("M7 NOFLOOR", !g.threw && Number.isInteger(n.a) && n.a === n.b, `ok-only size ${n.a} · with an auth refusal and an un-killed failure on the ledger ${n.b}`);
+  clause("M7 NOFLOOR", !g.threw && Number.isInteger(n.a) && n.a === n.b && n.a < 40, `ok-only size ${n.a} · with an auth refusal and an un-killed failure on the ledger ${n.b}`);
 }
 // M8 — the auth pattern's one home
 {
