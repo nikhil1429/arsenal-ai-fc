@@ -5,3 +5,5 @@
 {"ts":"2026-11-18T18:41:07Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs laws","last_line":"organism_test: 74 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 42 (hermetic: named, not run)"}
 {"ts":"2026-11-18T18:41:20Z","act":"push","cmd":"git push -u origin claude/mfac-spec","last_line":"* [new branch] claude/mfac-spec -> claude/mfac-spec @ b8694d7"}
 {"ts":"2026-11-18T18:41:20Z","act":"effort-receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs","last_line":"Error: Cannot find module '/home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs' (nothing written under campaign-2026-09/)"}
+{"ts":"2026-11-18T18:47:38Z","act":"ci-read","cmd":"curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/b8694d7/check-runs","last_line":"run 44372388585 · cancelled (node 22, node 24) — superseded, suite.yml cancel-in-progress"}
+{"ts":"2026-11-18T18:47:38Z","act":"ci-read","cmd":"curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/f35f020/check-runs","last_line":"run 44372462954 · success (135042715345 node 22, 135042714779 node 24)"}

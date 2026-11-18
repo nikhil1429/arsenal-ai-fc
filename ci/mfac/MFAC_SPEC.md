@@ -277,3 +277,11 @@ Results for each push are in `ci/mfac/LEDGER.jsonl` (act `ci-read`) and in the s
 | G8 | The campaign's pool table and pool line, and the reading-age line | `node tools/boot_digest.mjs --role runner` (campaign root) |
 | G9 | The memory MCP did not connect in this seat; no `get_context` was read, nothing rests on it | — |
 | G10 | `hooks/pre-commit` did not run on this seat's commits (`core.hooksPath` unset in the container, as the mday seat measured) | `git config core.hooksPath` on his clone |
+
+**Push `b8694d7` (18 Nov 2026):** workflow run `44372388585` (suite) · **cancelled** on both legs (`135042381294`
+node 22 · `135042381678` node 24), superseded by the next push: `suite.yml:51-53` sets
+`concurrency: suite-${{ github.ref }}` with `cancel-in-progress: true`.
+**Push `f35f020` (18 Nov 2026, the spec bytes of `b8694d7` + ledger rows), read with curl, no token:** workflow run
+`44372462954` (suite) · completed · **success**. Check runs: `135042715345` npm test · node 22 → success ·
+`135042714779` npm test · node 24 → success. The push carrying this paragraph is judged again; its run id is in the
+seat's final message and the ledger.
