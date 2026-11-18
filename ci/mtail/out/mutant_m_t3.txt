@@ -1,0 +1,8 @@
+  ok   T1 F-B · fake child runs 322500 ms (> budget 300000, < budget + margin 330000) · P1 (judge step left budget + card + ¼ margin): not started (JUDGE: UNSETTLED · not reached · 607 s left, 630 s needed (t) · P2 (left budget + margin + card + ¼ margin): spawned, timeout 337493 ms, finished · close budget 1800000 vs BASE 1800000
+  ok   T2 F-C · old wait 240000 ms · longest close 393000 ms (gaffer_brain.mjs queue + gaffer_brain.mjs judge-due + forge_session.mjs close + intent.mjs close + session grace 3000) · a close of 316500 ms: printed its result · CLI wait 393000 ms · contrast (an instant close): printed
+  RED  T3 AUTH · claudegen AUTH_REFUSAL_RE exported · gaffer_brain JUDGE_AUTH_RE is NOT it · brain AUTH_FAIL_RE IS it · matches 3/3, limit wall not matched · files carrying the OAuth words as a pattern: claudegen.mjs, gaffer_brain.mjs · depcruise no-circular 7 vs BASE 7
+  ok   T4 F1 · captureDay defined in: gaffer_brain.mjs (exported) · postmatch imports it from gaffer_brain.mjs · the queue-only close of 2099-04-10 names exactly t4-early, t4-mid, t4-dayonly · record byte-equal to BASE's
+  ok   BOUND · differs from BASE in 5 tracked file(s): scripts/brain.mjs, scripts/claudegen.mjs, scripts/gaffer_brain.mjs, scripts/postmatch.mjs, scripts/sitting.mjs
+  ok   LAST · 0 node process(es) naming the temp root survive · the fake claude logged 0 spawn(s)
+RED MTAIL · T3 AUTH
+exit 1

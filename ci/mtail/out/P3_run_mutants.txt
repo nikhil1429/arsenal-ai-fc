@@ -1,0 +1,9 @@
+  m_t1 (T1 F-B) · RED by its clause · the judge step needs only the OLD budget + card (BASE's fits), so a judge child can start without its margin · RED MTAIL · T1 F-B
+  m_t2 (T2 F-C) · RED by its clause · the CLI's close wait drops the session grace and the judge's budget (a wait below the longest close) · RED MTAIL · T2 F-C
+  m_t3 (T3 AUTH) · RED by its clause · JUDGE_AUTH_RE becomes a RESTATED pattern (an equal RegExp, another object, its own literal) · RED MTAIL · T3 AUTH
+  m_t4 (T4 F1) · RED by its clause · postmatch carries its own copy of captureDay again (the import dropped) · RED MTAIL · T4 F1
+  m_bound (BOUND) · RED by its clause · a file OUTSIDE the named five changes (one comment line) · RED MTAIL · BOUND
+  m_last (LAST) · RED by its clause · the close makes a model call (a `claude` spawn the fake claude logs) · RED MTAIL · LAST
+  control · GREEN · GREEN MTAIL the judge tail · 6 clause(s)
+run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN
+exit 0

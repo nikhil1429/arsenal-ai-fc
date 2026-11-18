@@ -1,0 +1,105 @@
+=== sitting.mjs selftest (hermetic — temp state dir, fixture child, recorded owners, port 0) ===
+
+  ok   daemon: serves on an ephemeral port in the selftest (port 0)
+  ok   /status before open: open=false, the STALE-BUILD contract fields ride (booted_at · module_mtime_ms)
+  ok   /turn with no open sitting → 409 {ok:false}
+  ok   open: routes FORGE from the sprint's current concept task (no forge session on disk) and names WHY
+  ok   open: THE PLAN is the model's (validated) — 4 units, map first, cursor moved past it, first unit returned to the mouth
+  ok   open: the forge session was STARTED through its owner (`forge_session.mjs start hallucinations`), never by writing its file
+  ok   open: the map unit declared step 1 to the pacer through the owner (`step 1`) and check_q was NOT declared for the map itself
+  ok   open: the head was assembled and written (sitting_system.md) with the CTRL grammar in it; head_chars recorded
+  ok   open: sitting.json carries what state.mjs reads — id · task · route · opened_at, and NO closed_at
+  ok   open: the compose turn was LOGGED (class compose, tokens, head_tokens = turn-1 cache_creation 9000) — the numbers §6.6 wants
+  ok   /next: the OLDEST undelivered unit first (the open ack line, before the map) with id/text/est_seconds
+  ok   /spoken: acks the unit (append-only ack row) → /next moves to the map; ack twice = {already:true}; unknown id → 404
+  ok   THE GATE: speaking the map (src night_coach) stamped ONE `sat` consumption row for that lane — spoken is reached, read is not
+  ok   append-only: sitting_out.jsonl has unit rows + ack rows and no rewrite (2 acks, 2 units: the open ack + the map)
+  ok   the map's 'shuru karein?' is a START PROMPT: pending_question armed but NOT bankable (his 'haan' is a continue, never a rep)
+  ok   /turn: answers 202 at once ({accepted:true, turn:n}) — the mouth is never blocked
+  ok   deliver: 'haan' with a plan ahead delivered unit 2 (Pehle-Guess question) with NO model call (respond count still 0) and declared `moment check_q` to the pacer
+  ok   deliver: a delivered question unit ARMS pending_question (his next line is an answer)
+  ok   respond: his answer went to the model with the PACER BLOCK on top and the DRIVER note (pending_question: YES) — and the model's tail bank was honoured through the OWNER (`gaffer_brain capture voice_rep hallucinations --gut shaky --asked …`, his words on stdin)
+  ok   respond: the tail was STRIPPED from the spoken unit; the reply unit landed; pending_question cleared; tail next=deliver delivered unit 3 too
+  ok   respond: the message the model saw carried the PACER BLOCK first (forge contract · teaching contract), then the SITTING line, then CAPTAIN:, then the DRIVER note with the CTRL grammar
+  ok   ledger: the respond turn row carries class · latency · tokens · had_tail · banked and NEVER his text
+  ok   bank law: a doubt turn with a gut-word but NO pending question banks NOTHING (a tail is a proposal; the driver holds the door) — and the model's own micro-question ARMS a bankable pending
+  ok   ONE OPEN SITTING: a second open (code) JOINS the first — same id, surfaces voice+code, nothing forked
+  ok   §6.7 child dies → resumed by id ONCE (the resume send answered), 'Ruko, wapas aa raha hoon' emitted once
+  ok   DAEMON RESTART: the new instance loads the OPEN sitting from disk with NO session (the child died with the old process)
+  ok   DAEMON RESTART: the mouth's queue is CLEANED at boot — every stale driver line (the 3 planted nags included) is acked as SUPERSEDED (append-only ack rows naming why, no spoken ack, no consumption), the PLAN unit stays queued
+  ok   DAEMON RESTART: his first line RE-ATTACHED a child (fixture factory called with the recorded session id), 'Ruko, wapas aa raha hoon' said once, and the turn went to the MODEL (the fixture saw a CAPTAIN: line) — regex-only nagging never happened
+  ok   DAEMON RESTART: the model's tail bank was honoured through the owner on the re-attached child (banked +1) — the sitting continues as if nothing died
+  ok   NAG-ONCE (deliver-only): the first gut-less answer is asked for the gut-word ONCE; the second gut-less answer DROPS the question (skipped +1, named, not banked) and the plan moves on — never the same line twice
+  ok   §6.7 limit_hit → transport DELIVER-ONLY, ONE card filed through captains_call with a key (never a second)
+  ok   skip law: 'aage' while a bankable question is pending DROPS it (counted, no rep) and delivers the next unit
+  ok   deliver-only: his answer with a spoken gut-word is BANKED by the regex lane (no model); plan exhausted → the close hint
+  ok   close: the round was FIRED BY CODE through the owner's code door (gaffer_brain.mjs judge-due --trigger sitting.close) because reps were banked — never the typed judge-round; the sitting itself never graded
+  ok   close: the review row is written (measured fields) and its LLM fields are null AND named as Block 4's
+  ok   close (§9.4): the judge's ONE spoken line (🗣, the owner's last stdout line) is kept WHOLE on the review row as judge.register_line — so the next head can open with it
+  ok   close: the session-intent line went through intent.mjs close --session <id> --promised … --shipped … --by sitting
+  ok   close: forge NOT closed (concept did not reach lock — a concept spans sittings) · sitting.json closed_at set · state.mjs would read 'none'
+  ok   close twice → 409
+  ok   route: rejirah-due wins over the sprint (the kickoff's own order) and names the concept
+  ok   route: nothing due, no task → REVISION over the last locked capsule
+  ok   route: skill track → PYTHON (a [name] Code loop; voice takes doubts only)
+  ok   route: a FRESH open forge session wins everything (one open loop first)
+  ok   skeleton REJIRAH: map + one strike-question per axis + close line, every question asks the gut-word first
+  ok   validatePlan refuses: no '?' on a question unit · steps going backwards · > max words · < 2 units
+  ok   compose: a refused first plan is sent BACK with the validator's reasons and the second is taken (source model, 2 compose turns)
+  ok   compose under the wall → the SKELETON plan (THE METHOD's steps) at deliver-only, one keyed card, mouth still has a first unit
+  ok   §6.7 idle → auto-close with a review row (reason idle)
+  ok   code surface: registers the sitting (transport code), spawns NO child, composes NO plan — the [name] Code session IS the driver (§6.5)
+  ok   state.mjs reads the code sitting as OPEN FORGE 'Hallucinations' (the STATE line's own reader)
+  ok   join: a voice mouth joining a code-only sitting ATTACHES the brain to the same id (plan composed, first unit emitted, transport stream)
+  ok   G0 · a hook-payload stamp is PENDING until `open`, and a NEW open binds it (host id + transcript + source), in the reply too
+  ok   G0 · touch from ANOTHER session is a no-op — an engineering session can never keep his sitting alive
+  ok   G0 · touch from the HOST moves last_turn_at (liveness: idle means idle)
+  ok   G0 · a JOIN from a new session with a stamp REBINDS the host (the study-reset route: new Desktop session, 'learn')
+  ok   G0 · the stamp was CONSUMED: a JOIN with no stamp and no harness id keeps the host it had
+  ok   G0 · stamp + the open CLI's own harness id agreeing → bound, and the source names both
+  ok   G0 · a pending stamp naming ANOTHER session than the open CLI's own harness id is discarded as stale; the harness id binds
+  ok   G0 · a stamp older than HOST_PENDING_TTL_MS binds nothing
+  ok   G0 · `host` refuses anything that is not a session id
+  ok   G0 · study_scope reads the WRITTEN file: the host is in scope, the previous host is not
+  ok   G0 · after close nobody is in scope, the host included
+  ok   G0 DOOR · POST /host with a planted NON-id → 400 from the host verb itself ('host needs --session'), nothing pending
+  ok   G0 DOOR · POST /host with a real id → 200 PENDING, and the next POST /open binds it (the rails hand-off path, end to end over HTTP)
+  ok   G0 DOOR · POST /touch from a non-host is a no-op; from the host it moves last_turn_at
+  ok   row 68 (d) · a code sitting with banked 0 but 2 rows waiting in the grade queue FIRES the round through the owner's CODE door at close (judge-due --trigger sitting.close), and the review row says which door opened
+  ok   row 68 (d) · nothing banked AND nothing waiting → the queue is asked, the round is NOT fired by either door (no Opus call for nothing)
+  ok   L2 · bank() reads the WRITE's ok: an EXIT-0 reply whose verdict is ok:false (write-failed) is NOT banked — banked stays 0, pending_question KEPT, and he is asked again
+  ok   L2 · bank() with NO verdict line (the owner spoke no JSON) is NOT banked either — the question is KEPT, because nothing says his answer landed
+  ok   L2 · …and the other direction: a NON-ZERO exit whose verdict is ok:true IS banked and the question cleared — the exit status is never read
+  ok   L2 · the MODEL-TAIL lane: the model banked and said next=deliver, the WRITE failed — the question is NOT skipped and NOT overwritten by the next unit; banked 0, the same pending_question, the cursor unmoved, and he is asked again
+  ok   L2 · …and when he says it again and the write LANDS, it is banked once and the plan moves on
+  ok   L2 · bankVerdict is the one reader: a DRY owner (the rehearsal) is a rehearsal bank, as before; a verdict that says ok with no captured row is NOT banked
+  ok   A1 · an explicit --task OUTRANKS the router: ctx.concept is his word, not the sheet's current task, and taskExplicit says which door it came through
+  ok   A1 · a STALE open forge + no explicit task → the sitting JOINS that concept, is LABELLED with it (not the sheet's), and makes NO forge_session owner call at all (the 3 Sep close/start pair is gone)
+  ok   A1 · an explicit task naming ANOTHER concept is REFUSED 409 with the resume line — no sitting is opened, no forge is closed, and sitting.json is byte-identical
+  ok   A2 · `open --no-spawn` returns before ensureDaemon() is ever reached — the study skills can register a sitting on a box whose daemon is deliberately down and pay nothing for it
+  ok   stats: per-class counts + p50/p90 + tokens + head from sitting_log (§6.6 numbers are PRINTED, never re-derived)
+  ok   parseCtrl: strips the tail, parses JSON; a reply without a tail is spoken whole with ctrl null
+  ok   gut regex: knew/shaky/guessed and their Hinglish tells; none → null
+  ok   close TRIGGERS the review (its own process — recorded here), once per closed sitting
+  ok   half-map is MEASURED BY CODE: a FORGE step in 3–6 with units and no check-question drifts (step 3 yes · step 4 no · step 7 outside the window · a brain reply is not a plan unit)
+  ok   his lines come out of the child's transcript (user rows → the CAPTAIN: line only; the pacer/driver lines never), a torn row is skipped, an absent file says why
+  ok   validateReview: unknown rule DROPPED and named · 'new' with a line kept · a bare id kept · an invented number ('40%') DROPPED and named · what_changes_next clipped to 3 · plan_delta with known numbers kept
+  ok   reviewSitting: the LLM row lands beside the base row (append-only, names the sitting), model sonnet (not cracked), his lines counted
+  ok   reviewSitting: a KNOWN drift → `teaching_contract.mjs autohit one-idea --why …` (his 7 Aug auto lane); a NEW drift → `teaching_contract.mjs add <slug> <line>` (the contract MUTATES) — both through the OWNER, nothing written to its file
+  ok   lastReview merges base + LLM rows for the sitting → the NEXT head's review_of_last carries what_changes_next
+  ok   reviewSitting refuses to review the same sitting twice (a way back is a NEW row on --force, never a rewrite)
+  ok   AGENDA · add appends his words verbatim with an id; the same words twice = the same open row (dup), never two
+  ok   AGENDA · served keeps the row OPEN (still his ask) and marks it served
+  ok   AGENDA · done at close closes the row; a new add reopens with a NEW id; drop closes it too
+  ok   PIN (f) · UNPINNED: touch and host POST as today (/touch + /host), one UNPINNED line each
+  ok   PIN (a)(b) · HOME and a `git worktree add` of it: touch and host both reach the (stub) daemon, silently
+  ok   PIN (c) · CLONE: touch and host send NOTHING — no POST, not even the /status probe — host returns no stdout line, and each leaves ONE stderr line naming both paths
+  ok   PIN (d)(e) · a stale worktree's name reused by an unrelated folder, and a worktree of ANOTHER repo: nothing sent
+  ok   HERMETIC: the live sitting.json is untouched (all writes went to the temp state dir)
+  ok   HERMETIC: no live owner was spawned (every owner call was recorded, none executed)
+  ok   mjud msit · a judge verb (judge-due, judge-round) through the owner funnel waits JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS (both imported from gaffer_brain.mjs); every non-judge owner call keeps its 20 s
+  ok   mtail F-C · closeWaitMs() is the sum of the close's own steps as written (every owner(...) call in close(), in order, each at ownerTimeoutMs) plus the session's close grace ([name]gen.mjs SESSION_CLOSE_MS); it covers the judge's budget plus its dispatch; the CLI's close waits exactly it, no typed wait left
+
+sitting selftest: 99 passed, 0 failed
+
+[gates.mjs] exit 0
