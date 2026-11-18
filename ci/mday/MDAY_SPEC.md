@@ -227,3 +227,7 @@ falls back to today's path. **GREEN on build** means the same plant with `day.mj
 Read through the public API with curl, no token: `GET /repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`.
 The results for the push carrying this file are recorded in `ci/mday/LEDGER.jsonl` (act `ci-read`) and in the
 seat's final message. A later push of this file names them here.
+
+**Push `2ddf436` (18 Nov 2026), read with curl, no token:** workflow run `44353157323` (suite) · completed · **success**.
+Check runs: `134974021746` npm test · node 22 → success · `134974021227` npm test · node 24 → success.
+This push (the line above) is judged again; its run ids are in the seat's final message and the ledger.

@@ -6,3 +6,6 @@
 {"ts":"2026-11-18T16:55:12.834Z","act":"measure-postmatch","cmd":"grep -n --hit scripts/postmatch.mjs","last_line":"1476: no result given -> exit 1, nothing recorded"}
 {"ts":"2026-11-18T16:55:12.834Z","act":"measure-autoclose","cmd":"grep -n dayclose scripts/conductor.mjs","last_line":"158 dayclose evening · 106 dayclose-prev morning"}
 {"ts":"2026-11-18T16:55:12.834Z","act":"measure-scope","cmd":"sed -n 71,89p scripts/study_scope.mjs","last_line":"study iff payload session === open sitting host"}
+{"ts":"2026-11-18T17:04:46.362Z","act":"push","cmd":"git push -u origin claude/mday-spec","last_line":"[new branch] claude/mday-spec · tip 2ddf436"}
+{"ts":"2026-11-18T17:04:46.362Z","act":"ci-read","cmd":"curl /commits/2ddf436/check-runs","last_line":"run 44353157323 suite success · 134974021746 node22 success · 134974021227 node24 success"}
+{"ts":"2026-11-18T17:04:46.362Z","act":"effort-receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs","last_line":"Error: Cannot find module campaign-2026-09/tools/effort_receipt.mjs (nothing written under campaign-2026-09/)"}
