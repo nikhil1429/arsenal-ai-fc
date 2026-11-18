@@ -1,0 +1,11 @@
+$ node ci/mf4/witness_mf4.mjs --org <scratch>/tree-base --base-org <scratch>/tree-base   (in BASE vs BASE trees)
+  RED   W1 CANARY · no sitting + learn session → 1:N-A 2:N-A 3:N-A 4:N-A 5:N-A
+  RED   W5 STREAK · streakFrom([green study 09-23, the canary row as written to the copy's ledger]) = 1 (want 0: the canary day breaks it)
+  GREEN W2 SITTING · sitting + learn session 1:RED(not born: reps_log.jsonl) 2:RED(not born: forge_session.json + forge_ses) 3:RED(not born: compiled_notes.jsonl) 4:RED(not born: gaffer_grade_queue.jsonl) 5:RED(not born: rejirah_log.jsonl) · equals no-archive: true
+  GREEN W3 NEITHER · non-learn sessions only → 1:N-A 2:N-A 3:N-A 4:N-A 5:N-A · study false · equals no-archive: true
+  RED   W4 SELFTEST · 68 passed, 0 failed · MF4 not ok: 7 of 7
+  GREEN W6 BOUND · 0 path(s) differ · named none · outside the named files: none
+  GREEN W7 LAST · 0 node process(es) naming the temp dir · fake claude logged 0 spawn(s)
+RED MF4 · W1 CANARY · W5 STREAK · W4 SELFTEST
+
+--- exit 1 ---
