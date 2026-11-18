@@ -1804,6 +1804,13 @@ export function ownerCommand(s) {
     // --judged-at <the round's ISO instant>; a typed round → --judged-by hand, no instant.
     if (s.judged_by === "code" || s.judged_by === "hand") argv.push("--judged-by", s.judged_by);
     if (s.judged_by === "code" && s.judged_by_code_at) argv.push("--judged-at", String(s.judged_by_code_at));
+    // mjday (row 938 (2)) — THE REPS ROW CARRIES THE SAME DAY, passed from the settled row through this existing call: a row that
+    // carries `captured_at` (its capture's day is not the judge's clock day) hands that instant to the rep as the moment it
+    // happened, so capture.mjs's three clocks can file it under the day he ANSWERED (ts_claimed = the capture, observed_at = this
+    // dispatch). The `rep` door stamps its own clock today (capture.mjs:2715, `ts: new Date().toISOString()`) and reads no such
+    // flag; capture.mjs is in no lend, so its one line (`ts: flag("ts") || new Date().toISOString()`) is a FORK of unit mjday.
+    // Until it lands this flag rides unread and the rep keeps the dispatch clock — RED by name on the landing row, never hidden.
+    if (s.captured_at) argv.push("--ts", String(s.captured_at));
     return { organ: "capture.mjs", argv };
   }
   // doubt_quality has no owner organ today — the verdict lives in this organ's own
@@ -1866,6 +1873,26 @@ export function captureVerdict(stdout) {
   if (appended >= 1) return { ok: true };
   if (rejected === 0 && duplicates >= 1) return { ok: true, note: "the rep was already on disk (capture counted a duplicate)" };
   return { ok: false, error: `capture.mjs appended ${appended} (rejected ${rejected}, duplicates ${duplicates}) — the rep is NOT on disk` };
+}
+
+// ── mjday · THE DAY A SETTLED ROW CARRIES IS ITS CAPTURE'S (rows 913 (5) / 938 (2), row 883's class · LENT by lane S, row 938 (3)) ──
+// The settled row's `day` was `istDay(now)`: the JUDGE's clock. For him the morning close is the normal case (row 913 (6)): the
+// conductor's MORNING `dayclose-prev` (07:05) closes the day the laptop slept through, and its judge step (postmatch.mjs autoclose)
+// fires `judge-due --trigger day.close` on the MORNING's clock, so every verdict of the slept day was filed under the next day and
+// daily_green's rung 4 credited the wrong day. The day is now DERIVED HERE, AT THE WRITER, FROM THE CAPTURE THE ROW SETTLES, never
+// from the judge's clock: the capture's own instant (`ts`, stamped by gradeCapture the moment he answered) through this organ's own
+// IST helper; for a capture with no readable instant, the day it carries itself; with neither, NO day (null) — a row that cannot
+// know its day claims none, and daily_green's reader falls back to the row's `ts` by its own rule (row 883 (1)). Never a typed date.
+// A round over captures of two days (a study across midnight IST) gives each settled row its own capture's day. The judge's clock
+// stays on the row in its own field, `ts` (and `judged_by_code_at` for a code round).
+/** captureDay — PURE: { day, at } of the capture a settled row settles: its IST day, and its instant (`at` null when it has none). */
+function captureDay(it) {
+  const ms = Date.parse(String((it && it.ts) || ""));
+  if (Number.isFinite(ms)) return { day: istDay(new Date(ms)), at: new Date(ms).toISOString() };
+  const carried = it && typeof it.day === "string" ? it.day : "";
+  const isDay = carried.length === 10 && Number.isFinite(Date.parse(`${carried}T00:00:00.000Z`))
+    && new Date(Date.parse(`${carried}T00:00:00.000Z`)).toISOString().slice(0, 10) === carried;
+  return { day: isDay ? carried : null, at: null };
 }
 
 export async function gradeJudge(deps = {}) {
@@ -1951,8 +1978,13 @@ export async function gradeJudge(deps = {}) {
     const g = grades.find((x) => x && String(x.id) === it.id);
     const verdict = g && isVerdict(it.type, g.verdict) ? String(g.verdict).trim().toLowerCase() : null;
     if (!verdict) { missed.push(`${it.type}:${it.ref}`); continue; }
+    const cap = captureDay(it);   // mjday — the day of ITS capture, never the judge's clock (see captureDay above)
     settled.push({
-      v: 2, kind: "settled", of: it.id, ts: now.toISOString(), day: istDay(now),
+      v: 2, kind: "settled", of: it.id, ts: now.toISOString(), day: cap.day,
+      // mjday (row 938 (2)) — the capture's instant rides the row ONLY when its day is not the judge's clock day (a round banked the
+      // next morning, or one that crossed midnight), so ownerCommand can hand it to the rep. A same-day row is byte for byte what it
+      // always was: the evening path never moves.
+      ...(cap.at && cap.day !== istDay(now) ? { captured_at: cap.at } : {}),
       type: it.type, ref: it.ref, concept: it.concept, label: it.label, gut: it.gut, verdict,
       // carried from the CAPTURE row, unchanged, so the owner receives everything the
       // old direct-to-capture door used to hand it (see the note on gradeCapture's row)
@@ -3211,6 +3243,42 @@ function selftest2(stub, S) {
               dispatch: () => ({ ok: true }), appendRow: (p, row) => { dcRows.push(row); return { ok: true }; } });
             assert("mclose · DAY.CLOSE · a round it fires is stamped judged_by code · fired_by day.close on its settled row (the door names itself)",
               byDay.ok === true && dcRows.length === 1 && dcRows[0].judged_by === "code" && dcRows[0].fired_by === "day.close", JSON.stringify(dcRows[0] || {}).slice(0, 200));
+            // (g) mjday (rows 913 (5) / 938 (2), row 883's class) — THE SETTLED ROW CARRIES ITS CAPTURE'S DAY, planted both ways on fixed clocks
+            {
+              const D = "2026-11-13", D1 = "2026-11-14";
+              const atIst = (day, hhmm) => new Date(Date.parse(`${day}T${hhmm}:00.000+05:30`));
+              const capOn = (day, hhmm, n) => ({ ...capA, id: `${capA.id}:mjday${n}`, ts: atIst(day, hhmm).toISOString(), day });
+              const c1 = capOn(D, "23:40", 1), c2 = capOn(D1, "00:10", 2), cEve = capOn(D, "22:30", 3), cBare = { ...capOn(D, "23:45", 4), ts: undefined };
+              const MORNING = atIst(D1, "07:05"), EVENING = atIst(D, "22:57");
+              const roundOf = async (caps, now) => {
+                const rows = [], cmds = [];
+                const gen = async () => ({ ok: true, text: JSON.stringify({ grades: caps.map((c) => ({ id: c.id, verdict: "landed", missing: [], why: "x" })) }) });
+                const r = await gradeJudge({ rows: caps, generate: gen, firedBy: "day.close", now, verify: noVerify, headRides: false, cartridge: "HEAD",
+                  dispatch: (c) => { cmds.push(c); return { ok: true }; }, appendRow: (p, row) => { rows.push(row); return { ok: true }; } });
+                // one capture.mjs dispatch per settled row, in the round's own order (no second judge rides a voice_rep)
+                return { r, rows, rowOf: (c) => rows.find((x) => x.of === c.id) || {}, repOf: (c) => ((cmds[rows.findIndex((x) => x.of === c.id)] || {}).argv || []) };
+              };
+              const tsArg = (argv) => { const i = argv.indexOf("--ts"); return i >= 0 ? argv[i + 1] : null; };
+              const m = await roundOf([c1], MORNING);
+              assert("mjday · THE MORNING CLOSE · a capture of D (23:40 IST) settled by the round at D+1 07:05 IST carries day D, its capture's day — never the judge's clock, which stays on the row's ts",
+                m.r.ok === true && m.rows.length === 1 && m.rowOf(c1).day === D && m.rowOf(c1).ts === MORNING.toISOString() && m.rowOf(c1).judged_by_code_at === MORNING.toISOString(), JSON.stringify(m.rowOf(c1)).slice(0, 240));
+              assert("mjday · THE MORNING CLOSE · …the row names its capture's instant (captured_at) and the rep it dispatches carries it as --ts, through the existing call (capture.mjs's half is the FORK)",
+                m.rowOf(c1).captured_at === c1.ts && tsArg(m.repOf(c1)) === c1.ts && Object.keys(m.rowOf(c1)).slice(0, 6).join() === "v,kind,of,ts,day,captured_at", m.repOf(c1).join(" "));
+              const t = await roundOf([c1, c2], MORNING);
+              assert("mjday · ACROSS MIDNIGHT · a round over captures of D and D+1 writes each settled row with ITS OWN capture's day, and only the slept day's row and rep carry the capture's instant",
+                t.rows.length === 2 && t.rowOf(c1).day === D && t.rowOf(c2).day === D1 && t.rowOf(c1).captured_at === c1.ts && !("captured_at" in t.rowOf(c2))
+                && tsArg(t.repOf(c1)) === c1.ts && tsArg(t.repOf(c2)) === null, JSON.stringify(t.rows.map((x) => [x.of, x.day, x.captured_at || null])));
+              const e = await roundOf([cEve], EVENING);
+              assert("mjday · THE EVENING PATH NEVER MOVES · a round on D at 22:57 over a capture of D writes the row it always wrote (day D, no captured_at, the same key order) and its rep gets no --ts",
+                e.rows.length === 1 && e.rowOf(cEve).day === D && !("captured_at" in e.rowOf(cEve)) && Object.keys(e.rowOf(cEve)).slice(0, 6).join() === "v,kind,of,ts,day,type"
+                && tsArg(e.repOf(cEve)) === null, JSON.stringify(e.rowOf(cEve)).slice(0, 200));
+              const b = await roundOf([cBare], MORNING);
+              assert("mjday · NO INSTANT, NONE INVENTED · a capture with no readable ts, settled the next morning, keeps the day it carries itself, names no captured_at, and its rep is handed no instant",
+                b.rows.length === 1 && b.rowOf(cBare).day === D && !("captured_at" in b.rowOf(cBare)) && tsArg(b.repOf(cBare)) === null, JSON.stringify(b.rowOf(cBare)).slice(0, 200));
+              assert("mjday · captureDay · the capture's instant beats a disagreeing day field; no instant → the day it carries; neither, or a day that is not a calendar day → null (a row claims no day it cannot know)",
+                captureDay({ ts: c1.ts, day: "2026-01-01" }).day === D && captureDay({ ts: c1.ts }).at === c1.ts && captureDay({ ts: "not an instant", day: D1 }).day === D1
+                && captureDay({ day: D }).at === null && captureDay({}).day === null && captureDay(null).day === null && captureDay({ day: "13 Nov 2026" }).day === null && captureDay({ day: "2026-02-30" }).day === null);
+            }
           } finally { try { rmSync(tmpL2, { recursive: true, force: true }); } catch { /* the OS reaps its own temp dir */ } }
         }
 

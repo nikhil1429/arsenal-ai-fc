@@ -2712,7 +2712,7 @@ function main() {
         // `ts` is stamped HERE, at the moment of capture, which is the honest value —
         // this door exists precisely so the rep is not reconstructed hours later. (v4's
         // observed_at/ts_claimed machinery still applies on ingest.)
-        ts: new Date().toISOString(),
+        ts: flag("ts") || new Date().toISOString(),
         surface: flag("surface") || (track === "skill" ? "colab" : "gem"),
         track,
         concept: flag("concept"),
