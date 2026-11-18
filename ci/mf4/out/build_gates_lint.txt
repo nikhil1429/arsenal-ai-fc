@@ -1,0 +1,4 @@
+$ node scripts/gates.mjs lint   (in BUILD)
+gates lint   · 344 error(s) · 2 warning(s) · no-empty 262 · no-unused-vars 82 · (directive) 2 (frozen: no-empty 262 · no-unused-vars 82 · warnings 2)
+
+--- exit 0 ---

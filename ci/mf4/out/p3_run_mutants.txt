@@ -1,0 +1,12 @@
+$ node ci/mf4/run_mutants.mjs --org <scratch>/tree-build --base-org <scratch>/tree-base   (in BUILD tree vs BASE tree)
+  ok   mutant W1 CANARY (the canary reads N-A instead of RED) → exit 1 · RED MF4 · W1 CANARY · W4 SELFTEST
+  ok   mutant W2 SITTING (the learn read also runs on a day WITH a sitting) → exit 1 · RED MF4 · W2 SITTING · W4 SELFTEST
+  ok   mutant W3 NEITHER (every archive-named session counts as a learn session) → exit 1 · RED MF4 · W1 CANARY · W3 NEITHER · W4 SELFTEST
+  ok   mutant W4 SELFTEST (one MF4 selftest clause is lost (renamed away)) → exit 1 · RED MF4 · W4 SELFTEST
+  ok   mutant W5 STREAK (the canary day stays non-study, so the streak skips it) → exit 1 · RED MF4 · W5 STREAK · W4 SELFTEST
+  ok   mutant W6 BOUND (a file outside the named one is edited) → exit 1 · RED MF4 · W6 BOUND
+  ok   mutant W7 LAST (the CLI spawns claude (--version only; the fake is first on PATH)) → exit 1 · RED MF4 · W7 LAST
+  ok   control (the unmutated --org) → exit 0 · GREEN MF4 learn canary: no sitting + learn session RED, sitting and neither as today · 7 clause(s)
+run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
+
+--- exit 0 ---

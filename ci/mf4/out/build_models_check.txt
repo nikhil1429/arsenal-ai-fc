@@ -1,0 +1,15 @@
+$ node scripts/models.mjs check   (in BUILD)
+models check: 129 file(s) · literal model names outside models.mjs: 0 · declared fixture lines: 10 · brain_config claude aliases ok
+  · declared lawpack.mjs:697 gemini-2.5-flash
+  · declared lawpack.mjs:769 gemini-2.5-flash
+  · declared lawpack.mjs:771 gemini-2.5-flash
+  · declared lawpack.mjs:773 gemini-2.5-flash
+  · declared lawpack.mjs:776 gemini-2.0-pro
+  · declared lawpack.mjs:776 gemini-2.0-pro
+  · declared nightshift.mjs:1972 gemini-flash-latest
+  · declared nightshift.mjs:1973 gemini-flash-latest
+  · declared thalamus.mjs:1983 gemini-flash-lite-latest
+  · declared thalamus.mjs:1985 gemini-flash-lite-latest
+models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)
+
+--- exit 0 ---
