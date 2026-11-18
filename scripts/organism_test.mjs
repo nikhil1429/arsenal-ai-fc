@@ -43,6 +43,7 @@ const NODE = process.execPath;
 let pass = 0, fail = 0;
 const fails = [], passed = [];
 const assert = (name, cond, detail) => {
+  if (liveAssert(name)) return;   // B1 (b): a LIVE member under the hermetic profile is named, never judged
   if (cond) { pass++; passed.push(name); console.log(`  ok   ${name}`); }
   else { fail++; fails.push({ name, detail }); console.log(`  FAIL ${name}${detail ? `\n         ${detail}` : ""}`); }
 };
@@ -67,6 +68,163 @@ const SELF = "organism_test.mjs";
 // full sandbox and run for minutes, so `npm test` keeps them behind their own
 // name while the coverage law still holds them to the same standard as the rest.
 const SUITE_NAMES = ["organism:selftest", "squad:selftest", "audit:selftest"];
+// ── B1 (b) · THE HERMETIC PROFILE (18 Nov 2026) ──────────────────────────────────────────────────────────────────────
+// `ORGANISM_TEST_PROFILE=hermetic` (or `--hermetic`) is what CI runs. A member that reads LIVE state — a file of
+// dressing-room/state (a sandbox COPY of one included: its bytes are still his), a daemon's port, the process table, the
+// network, or a clock it does not plant — is NAMED below with its reason, printed as `  LIVE <name> — <reason>` and not
+// run: a LIVE selftest is never spawned, a LIVE mode never entered, a LIVE assert inside a mode that also holds hermetic
+// ones is never judged (its block shares one sandbox with them — named as a FORK in ci/b1/PROOF.md). Nothing is deleted:
+// the full profile (plain `npm test`, his laptop, the watchman) runs every one of them exactly as before.
+// THE TABLE IS MEASURED, NEVER RECALLED: ci/b1/probe.mjs preloaded into one full run journalled every read of a state
+// file's bytes (content-hash equal to the checkout's), every process-table spawn and every port reached, attributed to
+// the selftest child or the assert window it fell in; a second run with the wall clock shifted +90 days named the
+// members whose verdict moves with the date; a member red under the probe's load alone times the wall clock. Keys of
+// LIVE_ASSERTS are assert names with digit runs folded to `#`, cut at 90 characters, matched as a prefix.
+const PROFILE = process.env.ORGANISM_TEST_PROFILE === "hermetic" || process.argv.includes("--hermetic") ? "hermetic" : "full";
+const LIVE_SELFTESTS = Object.freeze({
+  "acts": "reads state/registry.json, state/captain.json",
+  "archivist": "reads state/captain.json, state/archive_audit.jsonl, state/audit_ledger.jsonl … · reaches a localhost port it does not listen on",
+  "audit": "reads state/registry.json, state/xray_graph.json, state/audit_ledger.jsonl …",
+  "blackbox": "reads state/xray_graph.json · times the wall clock: red under instrumentation load alone",
+  "bootroom": "reads state/registry.json",
+  "brain": "reads state/registry.json, state/brain_config.json, state/learning_state.json …",
+  "calibration": "reads state/registry.json",
+  "capsule_bridge": "reads state/registry.json, state/forge_profile.json …",
+  "captain": "reads state/captain.json",
+  "capture": "reads state/heartbeat_config.json",
+  "conductor": "reads state/registry.json, state/captain.json, state/tasks_expected.json …",
+  "context": "reads state/registry.json, state/captain.json",
+  "context_manifest": "reads state/registry.json, state/resume_pointer.jsonl, state/compiled_notes.jsonl …",
+  "cortex": "reads state/registry.json, state/captain.json",
+  "council": "reads state/registry.json, state/council_config.json, state/brain_config.json",
+  "daemon_watchdog": "reads state/registry.json, state/captain.json, state/conductor.json …",
+  "daily_green": "reads state/captain.json, state/registry.json, state/daily_green.jsonl …",
+  "daykey": "reads state/tasks_expected.json",
+  "deep": "reads state/registry.json …",
+  "distiller": "reads state/registry.json",
+  "dmn": "reads state/registry.json, state/brain_config.json, state/concepts.json …",
+  "doubtminer": "reads state/doubtminer_config.json",
+  "dugout": "reads state/registry.json, state/captain.json, state/readiness.json … · its verdict moves with the wall clock (red under a +90-day shift, green at the true date)",
+  "examiner": "reads state/concepts.json, state/examiner_drill.json …",
+  "exchanges": "reads state/captain.json",
+  "flow_atlas": "reads state/registry.json, state/xray_graph.json, state/archive_audit.jsonl …",
+  "forge_session": "reads state/concepts.json, state/registry.json …",
+  "fuelboard": "reads state/fuelboard_config.json …",
+  "gaffer_brain": "reads state/dossier_weights.json, state/registry.json …",
+  "gate": "reads state/registry.json …",
+  "gate_tune": "reads state/registry.json",
+  "gates": "reads state/laws_register.json, state/registry.json …",
+  "heartbeat": "reads state/heartbeat_config.json",
+  "herd": "reads state/xray_graph.json · probes the process table",
+  "home_pin": "reads state/captain.json · reaches a localhost port it does not listen on",
+  "lawpack": "reads state/archive_audit.jsonl, state/audit_ledger.jsonl, state/awayday.json …",
+  "learn_digest": "reads state/learning_state.json, state/registry.json, state/forge_profile.json …",
+  "learnstate": "reads state/registry.json, state/forge_profile.json, state/python_state.json …",
+  "limits": "reads state/reps_log.jsonl, state/physio_config.json, state/nemesis_config.json …",
+  "manager": "reads state/registry.json …",
+  "mcp-memory": "reads state/registry.json",
+  "models": "reads state/brain_config.json, state/calibration_config.json, state/council_config.json …",
+  "nightshift": "reads state/registry.json, state/captain.json, state/gate_tune_ledger.jsonl …",
+  "notes_compiler": "reads state/captain.json",
+  "oura_coach": "reads state/captain.json",
+  "outbox": "reads state/registry.json",
+  "outwork_audit": "reads state/registry.json",
+  "postmatch": "reads state/captain.json",
+  "python_state": "reads state/python_state.json",
+  "rails": "reads state/sitting.json …",
+  "reconcile": "reads state/registry.json, state/brain_config.json, state/flow_atlas.json …",
+  "rejirah": "reads state/registry.json …",
+  "samjhao": "reads state/registry.json …",
+  "scout": "reads state/dossier_weights.json",
+  "selfknowledge": "reads state/captain.json",
+  "services": "reads state/registry.json, state/captain.json",
+  "setpiece": "reads state/registry.json, state/ladder_config.json, state/dossier_weights.json …",
+  "shadow": "reads state/reps_log.jsonl, state/registry.json",
+  "sitting": "reads state/captain.json",
+  "sprintsync": "reads state/registry.json …",
+  "talk": "reads state/registry.json",
+  "tasks": "reads state/registry.json …",
+  "teaching_audit": "reads state/concepts.json, state/reps_log.jsonl …",
+  "test_coach_v2": "reads state/captain.json",
+  "thalamus": "reads state/thalamus_config.json, state/registry.json …",
+  "throwin": "reads state/registry.json",
+  "timeaudit": "reads state/buckets.json",
+  "turn_hook": "reads state/sitting.json, state/registry.json … · times the wall clock: red under instrumentation load alone",
+  "viz": "reads state/captain.json",
+  "watchman": "reads state/registry.json, state/captain.json, state/unleash_baseline.json … · its verdict moves with the wall clock (red under a +90-day shift, green at the true date)",
+  "widget": "reads state/widgets.json",
+  "xray": "reads state/xray_graph.json",
+});
+const LIVE_ASSERTS = Object.freeze({
+  "A# · PLANTED VIOLATION — an off-list organ and a deny-listed one are both caught (the gate": "in the A9 block, whose sandbox run reads state copies",
+  "A# · both study skills were readable (a gate that cannot see its subject is not a gate)": "reads state/registry.json",
+  "A# · every organ the two study skills name is on the registry's study_entry_points row — a": "in the A9 block, whose sandbox run reads state copies",
+  "A# · no study skill offers a DAEMON or a transport as a runnable command — waking one from": "in the A9 block, whose sandbox run reads state copies",
+  "GUT-WORD LAW · capture.mjs REFUSES a rep with no gut-word (exit non-zero)": "reads state/concepts.json",
+  "GUT-WORD LAW · capture.mjs rejects a gut-word outside knew|shaky|guessed": "reads state/concepts.json, state/reps_log.jsonl",
+  "GUT-WORD LAW · rejirah.mjs holds the SAME law on a Re-Jirah round": "reads state/forge_profile.json",
+  "GUT-WORD LAW · rejirah.mjs rejects an out-of-vocabulary gut-word": "reads state/forge_profile.json",
+  "HIS ANSWERS ARE HIS · ...and the same call against a SANDBOX ledger is allowed — that is w": "reads state/registry.json",
+  "HIS ANSWERS ARE HIS · a FIXTURE may NEVER write a guess into his LIVE samjhao — refused, a": "reads state/registry.json",
+  "LOAD ZERO BLOCK # · RUNTIME ASSERTION: an idempotency key may never be executed twice — th": "in the LOAD ZERO BLOCK 1 block, whose sandbox run reads state copies",
+  "LOAD ZERO BLOCK # · THE # AUG REPLAY: his one ask fired #x from # processes makes ONE task": "reads state/registry.json",
+  "LOAD ZERO BLOCK # · no organ spawns work for him OUTSIDE tasks.mjs (a bare call has no id,": "in the LOAD ZERO BLOCK 1 block, whose sandbox run reads state copies",
+  "LOAD ZERO BLOCK # · the act lane's `job` verb names tasks.mjs as its owner (the door he ac": "in the LOAD ZERO BLOCK 1 block, whose sandbox run reads state copies",
+  "LOAD ZERO BLOCK # · ...and an axis he never reached is UNTOUCHED — only what was actually ": "in the LOAD ZERO BLOCK 2 block, whose sandbox run reads state copies",
+  "LOAD ZERO BLOCK # · NO NEW FACTS — every samjhao unit of all four topics asserts only what": "reads state/registry.json …",
+  "LOAD ZERO BLOCK # · PREDICT-THEN-REVEAL is a gate: an answer before the guess is refused (": "in the LOAD ZERO BLOCK 2 block, whose sandbox run reads state copies",
+  "LOAD ZERO BLOCK # · THE COLDNESS RATCHET: once samjhao OPENS an axis, the Re-Jirah may nev": "reads state/forge_profile.json, state/registry.json …",
+  "LOAD ZERO BLOCK # · THE RATCHET: close is REFUSED while units/doubts are open, and it NAME": "reads state/registry.json",
+  "LOAD ZERO BLOCK # · a concept with no locked capsule is REFUSED — samjhao is REVISION, nev": "in the LOAD ZERO BLOCK 2 block, whose sandbox run reads state copies",
+  "LOAD ZERO BLOCK # · a samjhao takes its id from the TASK layer, so it resumes on any surfa": "reads state/registry.json",
+  "LOAD ZERO BLOCK # · all four topics are RUNNABLE and every one is a #-axis revision of a L": "reads state/registry.json …",
+  "LOAD ZERO BLOCK # · before any samjhao, the cold round DOES serve the capsule's own strike": "reads state/forge_profile.json, state/registry.json …",
+  "LOAD ZERO BLOCK # · the GUT-WORD LAW holds here too — samjhao refuses knew|shaky|guessed's": "in the LOAD ZERO BLOCK 2 block, whose sandbox run reads state copies",
+  "LOAD ZERO BLOCK # · a row that would ASK him for a decision is refused unless it says why ": "reads state/registry.json",
+  "LOAD ZERO BLOCK # · output produced with NO session open reaches the next surface he touch": "reads state/registry.json",
+  "LOAD ZERO BLOCK # · the dead-man's switch exists and does NOT fire on a road he simply has": "reads state/registry.json",
+  "LOAD ZERO BLOCK # · ...and a dugout REOPEN does not restart it — the row stays closed (thi": "in the LOAD ZERO BLOCK 4 block, whose sandbox run reads state copies",
+  "LOAD ZERO BLOCK # · an ask created at the GAFFER door is open on the agenda": "in the LOAD ZERO BLOCK 4 block, whose sandbox run reads state copies",
+  "LOAD ZERO BLOCK # · no ask may be created without a CLOSE PATH — an `ask` with no close_re": "reads state/registry.json",
+  "LOAD ZERO BLOCK # · the relay's DELIVERED stamp CLOSES it — through the owner, from a door": "reads state/registry.json",
+  "ONE SCHEDULE — all THREE derivations agree that a pre-epoch capsule is not due: the owner ": "reads state/registry.json …",
+  "ONE SCHEDULE — and all three agree on the SAME open round and the SAME due date for a post": "reads state/registry.json …",
+  "S# · ...and a spool that cannot open DEGRADES rather than throws — the nerve's first law i": "in the S8 block, whose sandbox run reads state copies",
+  "S# · ...and it marks its own row delivered on a #xx, so a healthy bus never leaves work fo": "in the S8 block, whose sandbox run reads state copies",
+  "S# · ...and the idempotence set is seeded from the WHOLE afferent file at boot, not the #-": "in the S8 block, whose sandbox run reads state copies",
+  "S# · NEW LANE ONLY — the spool names spool.db and NO existing state file (the rung's FORBI": "in the S8 block, whose sandbox run reads state copies",
+  "S# · THE CONSUMER IS IDEMPOTENT — thalamus.ingest() refuses an event_id it has already wri": "in the S8 block, whose sandbox run reads state copies",
+  "S# · THE NERVE WRITES AHEAD — hooks/afferent-post.mjs spools the event BEFORE it awaits th": "reads state/brain_config.json",
+  "S# · THE THALAMUS DRAINS ON BOOT, AFTER listen() — the port must be open first, or a drain": "in the S8 block, whose sandbox run reads state copies",
+  "S# · node:sqlite IS AVAILABLE on this runtime, so the write-ahead is REAL and not silently": "in the S8 block, whose sandbox run reads state copies",
+  "SNAPSHOT RIDES THE BUILD · every scheduled task a setup script registers is KNOWN to tasks": "reads state/registry.json, state/captain.json, state/tasks_expected.json",
+  "a declared external producer is a REAL organ in this tree (# declaration(s) checked) — the": "reads state/brain_config.json",
+  "all # brain triggers armed anywhere in the organism reach live work (a declared consumer, ": "reads state/brain_config.json",
+  "every state .json parses (the bus is the contract between organs)": "reads state/archive_audit.jsonl, state/audit_ledger.jsonl, state/awayday.json …",
+  "every state .jsonl parses on every row (one bad row poisons a whole reader)": "reads every file of dressing-room/state",
+  "running all # selftests leaves live state untouched": "hashes every file of dressing-room/state",
+  "the one sanctioned selftest write lands in the organ's OWN log, never on the state bus": "snapshots dressing-room/state around thalamus selftest",
+  "…and that organ really BUILDS that brain_out directory — a producer that names the wrong f": "reads state/brain_config.json",
+});
+const LIVE_MODES = Object.freeze({
+  path: "drives forge/rejirah/samjhao/capture end to end over a sandbox COPY of dressing-room/state (registry, concepts, forge_profile, missions …) and mirror.mjs reaches the network",
+  alive: "pulse.mjs probes the process table (Get-ScheduledTask) and reads the lanes' live artifacts",
+  gates: "validates every schema-d file of dressing-room/state (ajv) and reads state/laws_register.json",
+  lawpack: "walks the whole tree, dressing-room/state included (437,917 state reads measured in one run)",
+  atlas: "re-derives the atlas from state/xray_graph.json, the live IR",
+});
+/** @type {string[]} */ const lived = [];
+const foldName = (n) => String(n).replace(/\d+/g, "#");
+const liveNamed = (name, why) => { if (!lived.includes(name)) lived.push(name); console.log(`  LIVE ${name} — not run in the hermetic profile: ${why}`); return true; };
+/** a LIVE assert under the hermetic profile is printed and not judged @param {string} name */
+function liveAssert(name) {
+  if (PROFILE !== "hermetic") return false;
+  const f = foldName(name);
+  const k = Object.keys(LIVE_ASSERTS).find((x) => f.startsWith(x) || f.slice(0, 90) === x);
+  return k ? liveNamed(name, LIVE_ASSERTS[k]) : false;
+}
+/** a LIVE selftest under the hermetic profile is printed and never spawned @param {string} organ (no extension) */
+const liveSelftest = (organ) => PROFILE === "hermetic" && Object.prototype.hasOwnProperty.call(LIVE_SELFTESTS, organ) && liveNamed(`selftest ${organ}`, LIVE_SELFTESTS[organ]);
 const scripts = () => readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs") && f !== SELF);
 // 9 Aug 2026 (launch F1): also match a bare `function selftest(` — claudegen defines
 // one and runs it as its whole CLI, and the quoted-string-only regex was blind to it.
@@ -195,7 +353,10 @@ function suites() {
   const members = suiteMembers(pkg);
   const red = [];
   let reused = 0;
+  let ran = 0;
   for (const m of members) {
+    if (liveSelftest(m)) continue;   // B1 (b)
+    ran++;
     const file = join(ROOT, "scripts", m + ".mjs");
     // test_coach_v2 is itself a harness and is invoked bare (package.json documents this)
     const args = m === "test_coach_v2" ? [file] : [file, "selftest"];
@@ -204,10 +365,11 @@ function suites() {
     if (kept) { hermeticRuns.delete(key); reused++; }
     const r = kept || run(args);
     if (r.code !== 0) red.push({ m, tail: r.out.split(/\r?\n/).filter(Boolean).slice(-3).join(" | ") });
-    console.log(`  ${r.code === 0 ? "ok  " : "FAIL"} ${m}`);
+    // B1 (c): every member is its OWN assert, so a red member is a NAME the neutral verdict can compare across trees
+    assert(`SUITE MEMBER · ${m} selftest exits 0`, r.code === 0);
   }
   console.log(`  suites: reused ${reused} of ${members.length} member result(s) from hermetic (identical command), ran ${members.length - reused}`);
-  assert(`all ${members.length} suite members pass (every one RUN, not chained)`, red.length === 0,
+  assert(`all ${PROFILE === "hermetic" ? `${ran} hermetic` : members.length} suite members pass (every one RUN, not chained)`, red.length === 0,
     red.map((r) => `${r.m}: ${r.tail}`).join("\n         "));
 }
 
@@ -520,14 +682,17 @@ export function writersOf(fileName, sources) {
   const ARROW = /^\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/;
   const base = (spec) => String(spec).split(/[\\/]/).pop();
   const files = Object.entries(sources).map(([f, t]) => {
-    const flat = String(t).replace(/\/\*[\s\S]*?\*\//g, "");
+    // B1 (a): a Windows checkout is CRLF (core.autocrlf) — the body scan below ends a function at a line that IS "}",
+    // which "}\r" never is, so j ran to code.length and code[b] was undefined: a TypeError that killed `npm test`
+    // before its headline on every CI push from 6032898 on. The source is read as LF, whatever the checkout wrote.
+    const flat = String(t).replace(/\r\n?/g, "\n").replace(/\/\*[\s\S]*?\*\//g, "");
     const raw = flat.split("\n").map((l) => l.replace(/(^|[\s;,(){}[\]])\/\/.*$/, "$1"));
     const code = raw.map(codeOf);
     const exp = new Set(), doors = new Set(), bodies = [];
     code.forEach((l, i) => {
       const e = /^export\s+(?:async\s+)?(?:function\*?|const|let|var|class)\s+([A-Za-z_$][\w$]*)/.exec(l); if (e) exp.add(e[1]);
       const fn = /^(?:export\s+)?(?:async\s+)?function\*?\s+([A-Za-z_$][\w$]*)\s*\(/.exec(l);
-      if (fn) { let j = i + 1; while (j < code.length && code[j] !== "}") j++; bodies.push([fn[1], i, j]); if (code.slice(i, j + 1).some((b) => SINK.test(b))) doors.add(fn[1]); }
+      if (fn) { let j = i + 1; while (j < code.length && code[j] !== "}") j++; bodies.push([fn[1], i, Math.min(j, code.length - 1)]); if (code.slice(i, j + 1).some((b) => SINK.test(b))) doors.add(fn[1]); }
       const ar = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>(.*)$/.exec(l); if (ar && SINK.test(ar[2])) doors.add(ar[1]);
     });
     // what this file takes from which module: static `import { a, b as c } from "./m.mjs"` (local name → its export name),
@@ -667,6 +832,16 @@ async function laws() {
         "reader.mjs": `import { fileOf } from "./own.mjs";\nexport function read() {\n  return readFileSync(fileOf(), "utf8");\n}\nfunction selftest() {\n  writeFileSync(join(tmp, "x.jsonl"), "{}");   // appendFileSync(${LEDGER}) — prose\n}\n`,
         "namesake.mjs": `function record(x) {\n  writeFileSync(join(tmp, "log.txt"), x);\n}\nrecord("its own record, not the owner's");\n`,
       });
+      // B1 (a) · THE SAME INSTRUMENT ON A CRLF CHECKOUT — the planted sources with every LF turned CRLF (what a Windows
+      // checkout under core.autocrlf hands readOrgan) must name the SAME writers; the LF run above is the control.
+      const plantedCrlf = writersOf(LEDGER, Object.fromEntries(Object.entries({
+        "own.mjs": `export const F = join(R, "${LEDGER}");\nexport function fileOf() {\n  return F;\n}\nfunction door(p, t) {\n  appendFileSync(p, t);\n}\nexport function record(x) {\n  door(fileOf(), x);\n}\n`,
+        "caller.mjs": `import { record as rec } from "./own.mjs";\nrec({ why: "x" });\n`,
+        "namesake.mjs": `function record(x) {\n  writeFileSync(join(tmp, "log.txt"), x);\n}\nrecord("its own record, not the owner's");\n`,
+        "tail.mjs": `function open(p) {\n  appendFileSync(p, "${LEDGER}");`,
+      }).map(([f, t]) => [f, t.replace(/\n/g, "\r\n")])));
+      assert("B1 (a) · CRLF-PROOF — writersOf over CRLF sources (a Windows checkout) names the same writers as over LF, and a function body left open at end of file is read, never thrown on",
+        JSON.stringify(plantedCrlf) === JSON.stringify(["caller.mjs", "own.mjs", "tail.mjs"]), `crlf ${JSON.stringify(plantedCrlf)}`);
       const writers = writersOf(LEDGER, Object.fromEntries(scripts().map((f) => [f, readOrgan(f)])));
       const head = readOrgan("rails.mjs").split("\n");
       const header = head.slice(0, Math.max(0, head.findIndex((l) => /^import\s/.test(l))));
@@ -1988,7 +2163,7 @@ function hermetic() {
   const timeline = [];                       // F-6's attribution side, free: the spawn loop already runs
   // ONE RUN PER SELFTEST (row 880 (1)): the result run() returns is KEPT for suites() under its identical-command key,
   // after the window's end is stamped — the same spawns, the same order, the same window; the trip metric is untouched.
-  for (const f of targets) { const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args), r); }
+  for (const f of targets) { if (liveSelftest(f.replace(/\.mjs$/, ""))) continue; const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args), r); }
   const after = snap(), afterH = hashes();
 
   // THE TRIP METRIC IS UNCHANGED (rule 6): size:mtimeMs, exactly as before. The
@@ -2041,7 +2216,7 @@ function hermetic() {
   const sizeOf = (p) => (existsSync(p) ? statSync(p).size : 0);
   const sBefore = snap();
   const tBefore = sizeOf(tlog);
-  run([join(ROOT, "scripts", "thalamus.mjs"), "selftest"]);
+  if (!liveSelftest("thalamus")) run([join(ROOT, "scripts", "thalamus.mjs"), "selftest"]);
   assert("the one sanctioned selftest write lands in the organ's OWN log, never on the state bus",
     sizeOf(tlog) >= tBefore && [...snap()].every(([p, v]) => LIVE_WRITERS.test(p) || sBefore.get(p) === v),
     "thalamus selftest wrote outside scripts/thalamus.log");
@@ -2531,14 +2706,23 @@ async function main() {
   console.log("=== ARSENAL AI FC — CROSS-ORGAN TEST SUITE ===");
   section("THE RULED KNOWN-RED LIST — the instrument, planted both ways");
   for (const [name, cond] of rulingSelfCheck()) assert(`KNOWN-RED · ${name}`, cond);
-  for (const c of chosen) await MODES[c]();   // LOAD ZERO BLOCK 6: laws() is async (it imports organs to drive their pure exports on fixtures)
+  // B1 (a): a mode that THROWS is a named red, never a dead runner — before this, one uncaught TypeError in laws() ended the
+  // process before the headline and every mode after it went unrun AND unreported (CI: "no headline line" on every push).
+  if (PROFILE === "hermetic") console.log("\nPROFILE hermetic — every member that reads live state is NAMED LIVE below and not run (B1 (b))");
+  for (const c of chosen) {
+    if (PROFILE === "hermetic" && LIVE_MODES[c]) { section(`${c.toUpperCase()} — LIVE`); liveNamed(`MODE ${c}`, LIVE_MODES[c]); continue; }
+    try { await MODES[c](); }   // LOAD ZERO BLOCK 6: laws() is async (it imports organs to drive their pure exports on fixtures)
+    catch (e) { assert(`MODE ${c} · ran to its end (a throw is a red, never a dead runner)`, false, e instanceof Error ? String(e.stack || e.message).split("\n").slice(0, 3).join(" | ") : String(e)); }
+  }
   const v = rulingOf(fails, passed);
   // ONE machine line for the campaign's recorder (never a file: this suite writes nothing it does not own)
   console.log(`\nORGANISM_TEST_VERDICT ${JSON.stringify({ modes: chosen, pass, fail, exit: v.exit,
     ruled: v.ruled.map((f) => ({ assert: f.name, row: f.entry.row, owner: f.entry.owner })),
-    unruled: v.unruled.map((f) => ({ assert: f.name, detail: f.detail || null })), stale: v.stale, invalid: v.invalid })}`);
+    unruled: v.unruled.map((f) => ({ assert: f.name, detail: f.detail || null })), stale: v.stale, invalid: v.invalid,
+    profile: PROFILE, reds: fails.map((f) => f.name), live: lived })}`);
   console.log(`\n${"=".repeat(70)}\norganism_test: ${pass} passed, ${fail} failed · ruled ${v.ruled.length} · UNRULED ${v.unruled.length}`
-    + (v.stale.length ? ` · STALE ${v.stale.length}` : "") + (v.invalid.length ? ` · INVALID ${v.invalid.length}` : ""));
+    + (v.stale.length ? ` · STALE ${v.stale.length}` : "") + (v.invalid.length ? ` · INVALID ${v.invalid.length}` : "")
+    + (PROFILE === "hermetic" ? ` · LIVE ${lived.length} (hermetic: named, not run)` : ""));
   if (fail) {
     console.log("\nEach RED below is a real defect between organs — not a flaky net:");
     for (const f of fails) {
