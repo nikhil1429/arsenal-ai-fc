@@ -531,7 +531,9 @@ export async function callWatcher(prompt, deps = {}) {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: { responseMimeType: "application/json", temperature: 0, thinkingConfig: { thinkingBudget: -1 } },
   };
-  const r = await modelsGenerate(WATCHER_ROLE, body, { keys, fetchFn, env: WATCHER_ENV, timeoutMs: deps.deadlineMs || WATCHER_DEADLINE_MS });
+  // mjd3 — a caller holding a deadline (the judge round's second opinion) hands its own sleep too, so the walk's retry sleeps end
+  // the moment that deadline passes; every other caller keeps models.mjs's own sleep.
+  const r = await modelsGenerate(WATCHER_ROLE, body, { keys, fetchFn, env: WATCHER_ENV, timeoutMs: deps.deadlineMs || WATCHER_DEADLINE_MS, ...(deps.sleepFn ? { sleepFn: deps.sleepFn } : {}) });
   if (!r.ok) return { ok: false, engine: "none", error: r.why, tried: r.tried, latency_ms: Date.now() - t0 };   // `why` names each candidate's class×count — "pool dry" is retired
   const text = String(r.text || "").trim();
   if (!text) return { ok: false, engine: "none", error: `${r.model} answered with no text (schema)`, model: r.model, latency_ms: Date.now() - t0 };
@@ -1415,8 +1417,20 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
 // outstandingGrades — captures with no settlement row after them. Derived, never
 // stored, so a crash between judging and recording cannot lose his spoken answer.
 export function outstandingGrades(rows) {
-  const settled = new Set((rows || []).filter((r) => r && r.kind === "settled").map((r) => r.of));
+  const settled = new Set((rows || []).filter((r) => r && (r.kind === "settled" || r.kind === DISPATCHING_KIND)).map((r) => r.of));
   return (rows || []).filter((r) => r && r.kind === "capture" && !settled.has(r.id));
+}
+// unit mjd3 (forks row 1025 (4)) — THE WRITE-AHEAD ROW. Before a verdict is handed to its owner, a `dispatching` row naming the
+// capture is appended (checked) to this organ's own queue; the `settled` row follows once the owner accepted. A process killed
+// between the owner's write and the settled row (a caller's kill mid-settle) leaves the capture with a `dispatching` row and no
+// `settled` one: it is IN DOUBT — never outstanding again, so the next round can never hand the same rep to its owner a second
+// time. At most once, and NAMED on every round's receipt (`in_doubt`), never silently re-graded.
+const DISPATCHING_KIND = "dispatching";
+/** inDoubtGrades — PURE: the captures whose dispatch began (a `dispatching` row) and never settled (no `settled` row). */
+export function inDoubtGrades(rows) {
+  const settled = new Set((rows || []).filter((r) => r && r.kind === "settled").map((r) => r.of));
+  const begun = new Set((rows || []).filter((r) => r && r.kind === DISPATCHING_KIND && !settled.has(r.of)).map((r) => r.of));
+  return (rows || []).filter((r) => r && r.kind === "capture" && begun.has(r.id));
 }
 
 // ---------------------------------------------------------------------------
@@ -1987,6 +2001,32 @@ export function judgeBatchSize({ rates = [], floors = [], remainingMs, left }) {
   return { size, from_rows: rates.length, from_floors: floors.length, rate_ms: Math.round(slow), margin_ms: Math.round(margin), per_capture_ms: Math.round(per), floor_ms: floor === null ? null : Math.round(floor), remaining_ms: remainingMs,
     why: `${rates.length} ok judge row(s)${floors.length ? ` + ${floors.length} killed row(s) as floors (slowest floor ${Math.round(floor)} ms/capture, the size held strictly below it)` : ""}: slowest ${Math.round(slow)} ms/capture + margin ${Math.round(margin)} ms (the rows' own spread) against ${Math.round(remainingMs)} ms left` };
 }
+// ── unit mjd3 (forks row 1025 (4), branch B1 of ci/mtail/FD_SPEC.md) · THE SETTLE TAIL IS RESERVED INSIDE THE BUDGET ──────
+// The settle of a batch spawns, per item, at most: ONE key_doubt card (cardFile, JUDGE_DISPATCH_MS), and then EITHER the owner
+// dispatch (JUDGE_DISPATCH_MS) OR — a second-judge type that disagrees — ONE 💎 card (JUDGE_DISPATCH_MS) instead of it (settleBatch:
+// a diamond is never dispatched); a second-judge type also makes ONE second opinion, handed a deadline of at most
+// WATCHER_DEADLINE_MS (its own per-fetch deadline) and never more than the round has left. So an item's worst tail is
+// 2·JUDGE_DISPATCH_MS (+ WATCHER_DEADLINE_MS for a second-judge type), every term a named constant, none typed here.
+/** settleReserveMs — PURE: the worst-case settle tail of `items`, in ms of the round's clock. */
+export function settleReserveMs(items) {
+  return (items || []).reduce((sum, it) => sum + 2 * JUDGE_DISPATCH_MS + (SECOND_JUDGE_TYPES.includes(it && it.type) ? WATCHER_DEADLINE_MS : 0), 0);
+}
+/** judgeBatchWithTail — PURE: the largest batch of `rest` (from its head) whose judge call AND whole settle tail fit inside
+ *  `remainingMs`: judgeBatchSize asked of what remains after the batch's own tail. The call is then killed at `call_ms`. */
+export function judgeBatchWithTail({ rates = [], floors = [], remainingMs, rest = [] }) {
+  const upper = judgeBatchSize({ rates, floors, remainingMs, left: rest.length });
+  for (let n = upper.size; n >= 1; n--) {
+    const tail = settleReserveMs(rest.slice(0, n));
+    const sz = judgeBatchSize({ rates, floors, remainingMs: remainingMs - tail, left: n });
+    if (sz.size >= n) return { ...sz, size: n, remaining_ms: remainingMs, tail_ms: tail, call_ms: remainingMs - tail,
+      why: `${sz.why} — after reserving the settle tail of ${n} capture(s) (${Math.round(tail)} ms)` };
+  }
+  if (!rest.length) return { ...upper, tail_ms: 0, call_ms: null };
+  const tail1 = settleReserveMs(rest.slice(0, 1));
+  const one = judgeBatchSize({ rates, floors, remainingMs: remainingMs - tail1, left: 1 });
+  return { ...one, size: 0, remaining_ms: remainingMs, tail_ms: tail1, call_ms: null,
+    why: `${one.why} — not even ONE capture fits with its settle tail reserved (${Math.round(tail1)} ms)` };
+}
 /** judgeOrder — PURE: the round's captures OLDEST DAY FIRST, by the capture's own instant (captureDay); a capture with only a day
  *  sorts at that IST day's start, one with neither sorts last; ties keep the queue's own order. */
 export function judgeOrder(queued) {
@@ -2010,7 +2050,9 @@ export async function gradeJudge(deps = {}) {
     : { judged_by: "hand", judged_by_code_at: null, fired_by: "cli" };
   const rows = deps.rows !== undefined ? deps.rows : readJournal(GRADE_QUEUE, 800);
   const queued = judgeOrder(outstandingGrades(rows));   // mjdg — OLDEST DAY FIRST (judgeOrder above)
-  if (!queued.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0 };
+  // mjd3 — a capture whose dispatch began and never settled (a kill mid-settle) is NAMED on every receipt and never re-dispatched
+  const inDoubt = inDoubtGrades(rows).map((r) => ({ of: r.id, ref: `${r.type}:${r.ref}` }));
+  if (!queued.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0, in_doubt: inDoubt };
 
   // §9.1 — THE EXTERNAL CHECK runs FIRST, so its result is ground the judge reads,
   // never a second opinion it hears afterwards. One search call per round at most;
@@ -2072,7 +2114,31 @@ export async function gradeJudge(deps = {}) {
     return r;
   });
 
-  const second = deps.secondOpinion || ((it) => secondOpinion(it, deps));
+  const second = deps.secondOpinion || ((it, bound = {}) => secondOpinion(it, { ...deps, ...bound }));
+  // mjd3 — THE SECOND OPINION IS HANDED A DEADLINE CLIPPED TO WHAT THE ROUND HAS LEFT. models.mjs's walk has no total deadline
+  // (candidates × keys × two attempts, each up to its per-fetch deadline), so the bound is held HERE, on the round's own timer:
+  // at the deadline every fetch in flight is aborted, every later fetch is refused at once, every retry sleep ends, and the
+  // round reads "no second reading" — the first judgement stands as one judge (the fail-open this lane already has).
+  // `deps.timer` is the round's timer ({ set(fn, ms), clear(h) }, ms of the round's clock); the default is the wall's.
+  const timer = deps.timer || { set: (fn, ms) => setTimeout(fn, Math.max(0, ms)), clear: (h) => clearTimeout(h) };
+  const secondWithin = async (item, deadlineMs) => {
+    const ctrl = new AbortController();
+    const h = timer.set(() => ctrl.abort(), deadlineMs);
+    const inner = deps.fetchFn || fetch;
+    const bound = {
+      deadlineMs,
+      fetchFn: (url, init = {}) => (ctrl.signal.aborted ? Promise.reject(new Error("the judge round's deadline passed"))
+        : inner(url, { ...init, signal: init.signal ? AbortSignal.any([init.signal, ctrl.signal]) : ctrl.signal })),
+      sleepFn: (ms) => new Promise((res) => {
+        if (ctrl.signal.aborted) return res();
+        const t = timer.set(res, ms);
+        ctrl.signal.addEventListener("abort", () => { timer.clear(t); res(); }, { once: true });
+      }),
+    };
+    const late = new Promise((res) => ctrl.signal.addEventListener("abort", () => res({ ok: false, reason: "deadline", error: `the second opinion had ${Math.round(deadlineMs)} ms of the round left and ran past it` }), { once: true }));
+    try { return await Promise.race([Promise.resolve().then(() => second(item, bound)), late]); }
+    finally { timer.clear(h); ctrl.abort(); }
+  };
   const cardFile = deps.fileCard || ((line, key, why = null) => {
     try {
       const out = execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), "file", "--line", line, "--key", key, ...(why ? ["--why-code-cannot-decide", why] : [])], { encoding: "utf8", timeout: JUDGE_DISPATCH_MS, windowsHide: true });
@@ -2180,7 +2246,15 @@ export async function gradeJudge(deps = {}) {
     // silently discard a real verdict — that would be the truth layer eating truth.
     const diamonds = [], keyDoubts = [];
     const confirmed = [];
+    // mjd3 — EVERY SETTLE STEP RE-READS WHAT REMAINS BEFORE IT SPAWNS. `owed` is the dispatch reserve of every item already
+    // confirmed and not yet dispatched; an item starts only when its whole tail fits beside it, and an item that does not fit
+    // is DEFERRED: no settled row, no dispatch, so it stays OUTSTANDING for the next round — never coerced.
+    const deferred = [];
+    let owed = 0;
+    const fits = (need) => left() >= need + owed;
     for (const s of settled) {
+      const ref = `${s.type}:${s.ref}`;
+      if (!fits(settleReserveMs([s]))) { deferred.push({ ref, of: s.of, step: "start", left_ms: Math.round(left()) }); continue; }
       // key_doubt rides ANY type and never changes the verdict — see keyDoubtCard.
       const kd = (grades.find((x) => x && String(x.id) === s.of) || {}).key_doubt;
       if (kd && String(kd).trim() && !deps.dry) {
@@ -2188,16 +2262,22 @@ export async function gradeJudge(deps = {}) {
         keyDoubts.push({ ref: `${s.type}:${s.ref}`, filed: !!c.ok });
       } else if (kd && String(kd).trim()) keyDoubts.push({ ref: `${s.type}:${s.ref}`, filed: false, dry: true });
 
-      if (!SECOND_JUDGE_TYPES.includes(s.type)) { confirmed.push(s); continue; }
+      if (!SECOND_JUDGE_TYPES.includes(s.type)) { confirmed.push(s); owed += JUDGE_DISPATCH_MS; continue; }
       const item = items.find((i) => i.id === s.of) || s;
-      const two = await second(item);
+      // the second opinion may use what remains after this item's own last step (its 💎 card or its dispatch) and the reserve owed
+      const room = left() - owed - JUDGE_DISPATCH_MS;
+      if (room <= 0) { deferred.push({ ref, of: s.of, step: "second", left_ms: Math.round(left()) }); continue; }
+      const two = await secondWithin(item, Math.min(WATCHER_DEADLINE_MS, room));
       if (!two || !two.ok || !two.verdict) {
         // named on the row, never hidden: "one judge" is a fact about this verdict
         confirmed.push({ ...s, judges: 1, agreed: null, judge2: null, judge2_note: (two && two.reason) || "no second reading" });
+        owed += JUDGE_DISPATCH_MS;
         continue;
       }
-      if (two.verdict === s.verdict) { confirmed.push({ ...s, judges: 2, agreed: true, judge2: two.engine, judge2_why: two.why }); continue; }
-      // 💎 — NOT recorded as fact. It becomes his card.
+      if (two.verdict === s.verdict) { confirmed.push({ ...s, judges: 2, agreed: true, judge2: two.engine, judge2_why: two.why }); owed += JUDGE_DISPATCH_MS; continue; }
+      // 💎 — NOT recorded as fact. It becomes his card. (mjd3: re-read before the spawn; a card that does not fit leaves the
+      // disagreement outstanding, which is what a disagreement already is.)
+      if (!deps.dry && !fits(JUDGE_DISPATCH_MS)) { deferred.push({ ref, of: s.of, step: "diamond", left_ms: Math.round(left()) }); continue; }
       const line = disagreementCard(item, { verdict: s.verdict, why: s.why }, { verdict: two.verdict, why: two.why });
       const c = deps.dry ? { ok: true, dry: true } : cardFile(line, `diamond:${s.type}:${s.ref}`);
       diamonds.push({ ref: `${s.type}:${s.ref}`, first: s.verdict, second: two.verdict, filed: !!c.ok, dry: !!deps.dry, line });
@@ -2214,6 +2294,14 @@ export async function gradeJudge(deps = {}) {
     const dispatched = [], refused = [];
     let settleFailed = null;
     for (const s of confirmed) {
+      owed -= JUDGE_DISPATCH_MS;
+      // mjd3 — re-read before the spawn: a dispatch that does not fit is deferred (outstanding), never started
+      if (left() < JUDGE_DISPATCH_MS) { deferred.push({ ref: `${s.type}:${s.ref}`, of: s.of, step: "dispatch", left_ms: Math.round(left()) }); continue; }
+      // mjd3 — THE WRITE-AHEAD ROW (see DISPATCHING_KIND): on disk BEFORE the owner is called, or the owner is not called
+      if (!deps.dry) {
+        const w0 = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, { v: 2, kind: DISPATCHING_KIND, of: s.of, ts: now.toISOString(), type: s.type, ref: s.ref, ...stamp });
+        if (!w0 || !w0.ok) { refused.push({ ref: `${s.type}:${s.ref}`, error: `the write-ahead row is not on disk (${(w0 && w0.error) || "the writer gave no answer"}) — the owner was NOT called` }); continue; }
+      }
       const d = (deps.dry && !deps.dispatch)
         ? { ok: true, noop: true, note: "DRY RUN — the owner was NOT called and nothing was recorded" }
         : dispatch(ownerCommand(s));
@@ -2234,7 +2322,8 @@ export async function gradeJudge(deps = {}) {
       }
       dispatched.push(row);
     }
-    return { settled: confirmed, dispatched, refused, missed, diamonds, keyDoubts, settleFailed };
+    const later = new Set(deferred.map((x) => x.of));
+    return { settled: confirmed.filter((s) => !later.has(s.of)), dispatched, refused, missed, diamonds, keyDoubts, deferred, settleFailed };
   };
 
   // ── THE ROUND: batch after batch, oldest day first, inside ONE budget, no retry ──
@@ -2242,24 +2331,27 @@ export async function gradeJudge(deps = {}) {
   const rates = judgeRates(ledger);
   const floors = judgeFloors(ledger);   // mjd2 — a killed judge row is a FLOOR on its per-capture time (judgeFloors)
   let spent = extMs, at = 0, stop = null;   // mjud F3 — the check's own time is already spent from the ONE budget
+  const left = () => JUDGE_BUDGET_MS - Math.max(clock() - t0, spent);   // mjd3 — what the round has left, re-read at every step
   const batches = [];
-  const all = { settled: [], dispatched: [], refused: [], missed: [], diamonds: [], keyDoubts: [] };
-  const sizing0 = judgeBatchSize({ rates, floors, remainingMs: JUDGE_BUDGET_MS - Math.max(clock() - t0, spent), left: items.length });
+  const all = { settled: [], dispatched: [], refused: [], missed: [], diamonds: [], keyDoubts: [], deferred: [] };
+  // mjd3 — RESERVE THE TAIL BEFORE SIZING: a batch starts only when its judge call AND its whole settle tail fit (judgeBatchWithTail),
+  // and the call is killed at what remains minus that tail (`call_ms`), so the settle always has its reserve inside the budget.
+  const sizing0 = judgeBatchWithTail({ rates, floors, remainingMs: left(), rest: items });
   while (at < items.length) {
-    const remaining = JUDGE_BUDGET_MS - Math.max(clock() - t0, spent);
-    const sz = judgeBatchSize({ rates, floors, remainingMs: remaining, left: items.length - at });
+    const remaining = left();
+    const sz = judgeBatchWithTail({ rates, floors, remainingMs: remaining, rest: items.slice(at) });
     if (sz.size < 1) {
       // mjud F3 — no batch started, and a full budget WOULD have started one: the check ate it, and the round says so
-      const ate = !batches.length && Math.max(clock() - t0, spent) > 0 && judgeBatchSize({ rates, floors, remainingMs: JUDGE_BUDGET_MS, left: items.length - at }).size >= 1;
+      const ate = !batches.length && Math.max(clock() - t0, spent) > 0 && judgeBatchWithTail({ rates, floors, remainingMs: JUDGE_BUDGET_MS, rest: items.slice(at) }).size >= 1;
       stop = { kind: batches.length ? "budget" : ate ? "external-check-ate-budget" : "cannot-fit", sizing: sz };
       break;
     }
     const batch = items.slice(at, at + sz.size);
     const prompt = buildJudgePrompt(batch, { ...deps, inlineHead: !rides });
-    const r = await gen(prompt, { items: batch.length, budget_ms: remaining, batch: batches.length + 1 });
+    const r = await gen(prompt, { items: batch.length, budget_ms: sz.call_ms, batch: batches.length + 1 });
     const dur = r && Number.isFinite(r.duration_ms) && r.duration_ms > 0 ? r.duration_ms : 0;
     spent += dur;
-    const rec = { n: batches.length + 1, size: batch.length, ids: batch.map((it) => it.id), budget_ms: remaining, duration_ms: dur, ok: !!(r && r.ok), sizing: sz };
+    const rec = { n: batches.length + 1, size: batch.length, ids: batch.map((it) => it.id), budget_ms: sz.call_ms, tail_ms: sz.tail_ms, duration_ms: dur, ok: !!(r && r.ok), sizing: sz };
     batches.push(rec);
     if (!r || !r.ok) {
       const errText = String((r && (r.error_envelope || r.error)) || "no reply");
@@ -2280,7 +2372,7 @@ export async function gradeJudge(deps = {}) {
   const calls = batches.length + ((ext && ext.calls) || 0);
   const outstanding = items.length - all.dispatched.length;
   const carried = { graded: all.dispatched.length, dispatched: all.dispatched, refused: all.refused, missed: all.missed, diamonds: all.diamonds, key_doubts: all.keyDoubts,
-    ...stamp, batches, sizing: sizing0, outstanding, calls };
+    ...stamp, batches, sizing: sizing0, outstanding, calls, deferred: all.deferred, in_doubt: inDoubt };
   const earlier = all.dispatched.length ? ` (${all.dispatched.length} item(s) of earlier batch(es) are settled and stay settled)` : "";
 
   if (stop && stop.kind === "auth") {
@@ -2343,6 +2435,8 @@ export async function gradeJudge(deps = {}) {
     // by whichever mouth closed the round; never a card, never a second line.
     register_line: registerLine(all.dispatched.map((s) => s.register).filter(Boolean)),
     outstanding, calls,
+    // mjd3 — the items the round's clock could not fit (outstanding, never coerced) and the captures in doubt from a kill mid-settle
+    deferred: all.deferred, in_doubt: inDoubt,
     // mjdg — the batches as they ran, the opening size's derivation, and why the round ended before the queue did (null = it did not)
     batches, sizing: sizing0, stopped: stop ? stop.kind : null, stopped_why: stop && stop.sizing ? stop.sizing.why : null, red: null };
 }
@@ -3397,7 +3491,25 @@ function selftest2(stub, S) {
           const part = await gradeJudge({ dry: true, rows: items, judgeHistory: [{ job: JUDGE_JOB, ok: true, duration_ms: 1000, items: 1 }],
             verify: async () => ({ ran: true, ok: true, checks: {}, calls: 1, duration_ms: JUDGE_BUDGET_MS / 3 }), generate: grade3([]), dispatch: () => ({ ok: true }), now: T0, clock: () => 0 });
           assert("mjud F3 · the first batch is killed at what the CHECK left (JUDGE_BUDGET_MS − the check's time), never at a fresh budget",
-            part.ok && part.batches[0].budget_ms === JUDGE_BUDGET_MS - JUDGE_BUDGET_MS / 3 && part.sizing.remaining_ms === JUDGE_BUDGET_MS - JUDGE_BUDGET_MS / 3);
+            // mjd3 (row 1025 (4)): what the check left, minus the batch's own reserved settle tail — still never a fresh budget
+            part.ok && part.batches[0].budget_ms === JUDGE_BUDGET_MS - JUDGE_BUDGET_MS / 3 - part.batches[0].tail_ms
+            && part.batches[0].tail_ms === settleReserveMs(items.filter((it) => part.batches[0].ids.includes(it.id))) && part.batches[0].tail_ms > 0
+            && part.sizing.remaining_ms === JUDGE_BUDGET_MS - JUDGE_BUDGET_MS / 3);
+          // ── unit mjd3 (forks row 1025 (4)) — the settle tail inside the budget, and the write-ahead row ──
+          assert("mjd3 · the settle reserve is 2 dispatch spawns per item, plus the second opinion's own deadline for a second-judge type — named constants only",
+            settleReserveMs([{ type: "trap" }]) === 2 * JUDGE_DISPATCH_MS && settleReserveMs([{ type: "hidden_test" }]) === 2 * JUDGE_DISPATCH_MS + WATCHER_DEADLINE_MS
+            && settleReserveMs([]) === 0);
+          const wt = judgeBatchWithTail({ rates: [1000], floors: [], remainingMs: JUDGE_BUDGET_MS, rest: Array.from({ length: 50 }, (_, i) => ({ id: `t${i}`, type: "trap" })) });
+          assert("mjd3 · a batch is sized with its tail reserved: call + tail fit inside what remains, and one more capture would not",
+            wt.size >= 1 && wt.size * 1000 + wt.tail_ms <= JUDGE_BUDGET_MS && wt.call_ms === JUDGE_BUDGET_MS - wt.tail_ms
+            && (wt.size + 1) * 1000 + settleReserveMs(Array.from({ length: wt.size + 1 }, () => ({ type: "trap" }))) > JUDGE_BUDGET_MS);
+          const nofit = judgeBatchWithTail({ rates: [], floors: [], remainingMs: 2 * JUDGE_DISPATCH_MS, rest: [{ id: "n1", type: "trap" }] });
+          assert("mjd3 · when not even ONE capture fits beside its tail, no batch starts and the reason names the tail",
+            nofit.size === 0 && /settle tail/.test(nofit.why));
+          const wa = [{ kind: "capture", id: "c1", type: "trap", ref: "x:0" }, { kind: "capture", id: "c2", type: "trap", ref: "x:1" }, { kind: "dispatching", of: "c1" }];
+          assert("mjd3 · a capture with a write-ahead row and no settled row is IN DOUBT — never outstanding again, so a kill mid-settle cannot hand its rep to the owner twice",
+            outstandingGrades(wa).map((r) => r.id).join() === "c2" && inDoubtGrades(wa).map((r) => r.id).join() === "c1"
+            && inDoubtGrades([...wa, { kind: "settled", of: "c1" }]).length === 0);
           let clipped = null, called = 0;
           const vc = await verifyCitedFacts([{ id: "v1", type: "hidden_test", spoken: "x" }], { verifyBudgetMs: 4321, verifyGenerate: async (p, call) => { called++; clipped = call.budget_ms; return { ok: true, text: '{"items":[]}', duration_ms: 7 }; } });
           const v0 = await verifyCitedFacts([{ id: "v1", type: "hidden_test", spoken: "x" }], { verifyBudgetMs: 0, verifyGenerate: async () => { called++; return { ok: true, text: "{}" }; } });
@@ -3465,7 +3577,7 @@ function selftest2(stub, S) {
             const genA = async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: capA.id, verdict: "landed", missing: [], why: "matlab embedding mein, ID sirf pata hai" }] }) });
             const codeRows = [], codeCmds = [];
             const byCode = await gradeJudgeST({ rows: [capA], generate: genA, firedBy: "sitting.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
-              dispatch: (c) => { codeCmds.push(c); return { ok: true }; }, appendRow: (p, row) => { codeRows.push({ p, row }); return { ok: true }; } });
+              dispatch: (c) => { codeCmds.push(c); return { ok: true }; }, appendRow: (p, row) => row.kind === "dispatching" ? { ok: true } : (codeRows.push({ p, row }), { ok: true }) });
             const sr = (codeRows[0] || {}).row || {};
             assert("L2 · JUDGE BY CODE · a round fired by a DECLARED trigger stamps its settled row judged_by \"code\" + judged_by_code_at (the round's ISO instant) + fired_by — APPENDED to the grade queue with `of` = the capture's id",
               byCode.ok === true && codeRows.length === 1 && codeRows[0].p === GRADE_QUEUE && sr.kind === "settled" && sr.of === capA.id
@@ -3477,7 +3589,7 @@ function selftest2(stub, S) {
               JSON.stringify(capA) === capBefore && !("judged_by" in capA) && !("judged_by_code_at" in capA));
             const handRows = [], handCmds = [];
             const byHand = await gradeJudgeST({ rows: [capA], generate: genA, now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
-              dispatch: (c) => { handCmds.push(c); return { ok: true }; }, appendRow: (p, row) => { handRows.push(row); return { ok: true }; } });
+              dispatch: (c) => { handCmds.push(c); return { ok: true }; }, appendRow: (p, row) => row.kind === "dispatching" ? { ok: true } : (handRows.push(row), { ok: true }) });
             const handCap = handCmds.find((c) => c.organ === "capture.mjs");
             assert("L2 · JUDGE BY HAND · a TYPED round grades him the same and is recorded as what it was — judged_by \"hand\", judged_by_code_at null, fired_by \"cli\" — and its rep carries --judged-by hand with no code instant",
               byHand.ok === true && handRows.length === 1 && handRows[0].judged_by === "hand" && handRows[0].judged_by_code_at === null && handRows[0].fired_by === "cli"
@@ -3491,7 +3603,7 @@ function selftest2(stub, S) {
             const genAB = async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: capA.id, verdict: "landed", missing: [], why: "x" }, { id: capB.id, verdict: "missed", missing: [], why: "y" }] }) });
             const sentAB = [];
             const lost = await gradeJudgeST({ rows: [capA, capB], generate: genAB, firedBy: "sitting.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
-              dispatch: (c) => { sentAB.push(c); return { ok: true }; }, appendRow: () => ({ ok: false, error: "EROFS: read-only file system" }) });
+              dispatch: (c) => { sentAB.push(c); return { ok: true }; }, appendRow: (p, row) => row.kind === "dispatching" ? { ok: true } : ({ ok: false, error: "EROFS: read-only file system" }) });
             assert("L2 · SETTLEMENT WRITE · a settled row that does not land is ok:false (settle-write-failed), NAMES the item, and the round STOPS there — the next verdict never reaches its owner, so nothing is double-counted",
               lost.ok === false && lost.reason === "settle-write-failed" && !!lost.settle_failed && lost.settle_failed.of === capA.id && sentAB.length === 1 && /NOT on disk/.test(String(lost.say)), JSON.stringify({ ok: lost.ok, reason: lost.reason, sent: sentAB.length }));
 
@@ -3530,7 +3642,7 @@ function selftest2(stub, S) {
               && judgeDue([capA, { kind: "settled", of: capA.id }], { trigger: "day.close", now: mins(10 * 60) }).due === false);
             const dcRows = [];
             const byDay = await gradeJudgeST({ rows: [capA], generate: genA, firedBy: "day.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
-              dispatch: () => ({ ok: true }), appendRow: (p, row) => { dcRows.push(row); return { ok: true }; } });
+              dispatch: () => ({ ok: true }), appendRow: (p, row) => row.kind === "dispatching" ? { ok: true } : (dcRows.push(row), { ok: true }) });
             assert("mclose · DAY.CLOSE · a round it fires is stamped judged_by code · fired_by day.close on its settled row (the door names itself)",
               byDay.ok === true && dcRows.length === 1 && dcRows[0].judged_by === "code" && dcRows[0].fired_by === "day.close", JSON.stringify(dcRows[0] || {}).slice(0, 200));
             // (g) mjday (rows 913 (5) / 938 (2), row 883's class) — THE SETTLED ROW CARRIES ITS CAPTURE'S DAY, planted both ways on fixed clocks
@@ -3544,7 +3656,7 @@ function selftest2(stub, S) {
                 const rows = [], cmds = [];
                 const gen = async () => ({ ok: true, text: JSON.stringify({ grades: caps.map((c) => ({ id: c.id, verdict: "landed", missing: [], why: "x" })) }) });
                 const r = await gradeJudgeST({ rows: caps, generate: gen, firedBy: "day.close", now, verify: noVerify, headRides: false, cartridge: "HEAD",
-                  dispatch: (c) => { cmds.push(c); return { ok: true }; }, appendRow: (p, row) => { rows.push(row); return { ok: true }; } });
+                  dispatch: (c) => { cmds.push(c); return { ok: true }; }, appendRow: (p, row) => row.kind === "dispatching" ? { ok: true } : (rows.push(row), { ok: true }) });
                 // one capture.mjs dispatch per settled row, in the round's own order (no second judge rides a voice_rep)
                 return { r, rows, rowOf: (c) => rows.find((x) => x.of === c.id) || {}, repOf: (c) => ((cmds[rows.findIndex((x) => x.of === c.id)] || {}).argv || []) };
               };
