@@ -84,7 +84,7 @@ SLACK; a detached hand-off waits one measured run of the same verb plus SLACK; L
 
 ```
 node ci/mday/run_mutants_mday.mjs --org . --base-org <git archive of 669200d>
-run_mutants: 25 of 25 mutant(s) RED by the clause that names them · control GREEN
+run_mutants: 26 of 26 mutant(s) RED by the clause that names them · control GREEN
 ```
 One per clause: the spec's μ1.1-μ6.2 (μ4.2 is judged by W4.3, the clause it names), plus F4, W7.0-W7.3, W8, W9, W10 for the
 clauses the rulings added. The invariant clauses W3.3, W4.2, W5.3, W6.3, BOUND and LAST carry no mutant of their own.
@@ -96,7 +96,7 @@ BOUND hashes text with CRLF folded to LF; the mutant runner matches each edit si
 ```
 witness --org <CRLF build> --base-org <CRLF base>    GREEN MDAY … · 31 clause(s)
 witness --org <CRLF base>  --base-org <CRLF base>    RED MDAY · F4, W1.1, W6.1, W1.2, W1.3, W9, W2.1, W3.1, W5.1, W5.3, W6.2, W2.2, W4.3, W3.2, W2.3, W4.1, W2.4, W7.0, W7.1, W7.3, W8, W10
-run_mutants --org <CRLF build> --base-org <CRLF base> run_mutants: 25 of 25 mutant(s) RED by the clause that names them · control GREEN
+run_mutants --org <CRLF build> --base-org <CRLF base> run_mutants: 26 of 26 mutant(s) RED by the clause that names them · control GREEN
 ```
 
 ## F4 — idempotence by day, per organ (the build's first act, witness clause F4, 18 Nov 2026 UTC)
@@ -161,6 +161,30 @@ node scripts/models.mjs check → exit 0 (before and after)
 5. The F8 transcript refinement of the missed-close count — unbuilt; the code count is a ceiling.
 6. `campaign-2026-09/tools/effort_receipt.mjs` does not exist here: `Error: Cannot find module
    '/home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs'` (exit 1). Nothing written under campaign-2026-09/.
+
+## Ruling row 1067 (2), relayed by runner M (19 Nov 2026 IST) — W7.1 waits on the detached child ITSELF
+
+The product was adopted; one witness change before the land branch. Done in ONE new commit on this branch (no force-push):
+1. **W7.1 awaits the child itself:** `waitChild()` loops in SLACK steps until NO process naming the plant root is alive AND
+   `sitting.json.lock` is gone, bounded the way LAST is (the longest single run this witness measured, plus SLACK) — never on
+   one timing sample. The old wait (one synchronous start + SLACK) reddened on his laptop under load (1.23 GB free): the
+   detached Skill-door start arrived after it and opened its sitting inside the next clause.
+2. **W7.2 starts only after W7.1's wait resolved,** and it awaits its own (absent) child the same way before judging.
+3. **The planted SLOW start proves it:** a preload handed through `NODE_OPTIONS --import` delays ONLY `day.mjs start` by the old
+   bound plus SLACK (never a typed number); the slow start is measured once synchronously so the LAST-shaped bound covers it by
+   measurement. W7.1 asserts the child settled LATER than the old bound and the sitting opened with the payload's host
+   (measured 19 Nov 2026 IST: planted 249 ms over an old bound of 228 ms; the child settled after 480 ms). The new mutant —
+   the wait removed, back to the single sample (`own`: it edits the witness, judged by the mutated copy's witness) — reds W7.1.
+
+Re-run, 19 Nov 2026 IST, by last line:
+```
+witness --org .               --base-org <669200d>   GREEN MDAY … · 31 clause(s)   (exit 0)
+witness --org <669200d>       --base-org <669200d>   RED MDAY · F4, W1.1, W6.1, W1.2, W1.3, W9, W2.1, W3.1, W5.1, W5.3, W6.2, W2.2, W4.3, W3.2, W2.3, W4.1, W2.4, W7.0, W7.1, W7.3, W8, W10   (exit 1)
+run_mutants --org .           --base-org <669200d>   run_mutants: 26 of 26 mutant(s) RED by the clause that names them · control GREEN
+witness / run_mutants on CRLF copies                 GREEN MDAY … · 31 clause(s) · run_mutants: 26 of 26 … · control GREEN
+```
+No product file changed in this commit (only `ci/mday/`). The W10 keeper is the witness's own, on its own free port, killed by
+its own pid; every plant port is a free port.
 
 ## CI (the neutral machine)
 

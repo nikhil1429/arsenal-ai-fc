@@ -3,7 +3,7 @@
 // One mutant per witness clause (the spec's μ list, plus one for each clause the rulings added): each is a COPY of --org under
 // os.tmpdir() with ONE edit, and the witness, run with --only <that clause>, must read RED on the clause that names it. The
 // control (the copy, unedited) runs the WHOLE witness and must read GREEN. The edit site is matched in the file's OWN line
-// ending (core.autocrlf, row 1036) and must be unique, or the mutant is NOT APPLIED and counts as surviving. No git is planted.
+// ending (core.autocrlf, row 1036) and must be unique (a mutant marked `own` edits the witness and is judged by the edited copy), or the mutant is NOT APPLIED and counts as surviving. No git is planted.
 // Nothing under --org is written; node_modules rides as a link; the state dir is not copied (the witness plants its own).
 // LAST LINE: run_mutants: k of n mutant(s) RED by the clause that names them · control GREEN|RED
 import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync, symlinkSync, existsSync } from "node:fs";
@@ -36,6 +36,7 @@ const MUTANTS = [
   { clause: "W6.2", file: "scripts/day.mjs", from: "  await closeSitting();\n  await machineHalf();", to: "  await machineHalf();", what: "μ6.2 the end skips the sitting's close" },
   { clause: "W7.0", file: ".claude/settings.json", from: "Agent|Task|Workflow|Skill\"", to: "Agent|Task|Workflow\"", what: "F7 the matcher loses Skill" },
   { clause: "W7.1", file: "scripts/rails.mjs", from: 'if (String(ti.skill || "") !== "learn") return null;', to: 'if (String(ti.skill || "") !== "learn-x") return null;', what: "the Skill door misses learn" },
+  { clause: "W7.1", file: "ci/mday/witness_mday.mjs", own: true, from: "const w1 = await waitChild(); const s1 = sitting();", to: "const w1 = { settled: true, ms: oldBound + 1 }; const s1 = await waitOpen(K, oldBound);", what: "row 1067 (2): the child wait removed — back to the single timing sample" },
   { clause: "W7.2", file: "scripts/rails.mjs", from: 'if (String(ti.skill || "") !== "learn") return null;', to: "", what: "a Skill that is not learn is handed off too" },
   { clause: "W7.3", file: "scripts/rails.mjs", from: "    try { const h = dayHandoff(payload); if (h) { dayHand(h); out.handoff = h; out.why = \"Skill(learn) — the day's start handed to day.mjs\"; } } catch (e) { out.why = `Skill branch failed open: ${String((e && e.message) || e).slice(0, 80)}`; }", to: "    { const h = dayHandoff(payload); if (h) { dayHand(h); out.handoff = h; out.why = \"Skill(learn) — the day's start handed to day.mjs\"; } }", what: "the Skill branch no longer fails open" },
   { clause: "W8", file: "scripts/day.mjs", from: "/^CLOSED-BY: code · (evening|morning) anchor · /m.test(", to: "/^CLOSED-BY: code · (close) anchor · /m.test(", what: "the missed-close count reads the wrong anchor" },
@@ -49,8 +50,8 @@ const copyOrg = (name) => {
   if (existsSync(join(ORG, "node_modules"))) symlinkSync(join(ORG, "node_modules"), join(d, "node_modules"), "junction");
   return d;
 };
-const run = (org, only) => {
-  const r = spawnSync(process.execPath, [WITNESS, "--org", org, "--base-org", BASE, ...(only ? ["--only", only] : [])], { encoding: "utf8" });
+const run = (org, only, witness = WITNESS) => {
+  const r = spawnSync(process.execPath, [witness, "--org", org, "--base-org", BASE, ...(only ? ["--only", only] : [])], { encoding: "utf8" });
   const lines = String(r.stdout || "").split(/\r?\n/).filter(Boolean);
   return { code: r.status, lines, last: lines[lines.length - 1] || "" };
 };
@@ -62,7 +63,8 @@ for (const m of MUTANTS) {
   const from = m.from.replace(/\r?\n/g, eol), to = m.to.replace(/\r?\n/g, eol);
   if (s.split(from).length !== 2) { console.log(`  mutant ${m.clause} NOT APPLIED — the edit site is not unique in ${m.file}`); rmSync(d, { recursive: true, force: true }); continue; }
   writeFileSync(p, s.replace(from, () => to));
-  const r = run(d, m.clause);
+  // a mutant of the WITNESS itself (row 1067 (2) item 3) is judged by the mutated copy's own witness
+  const r = run(d, m.clause, m.own ? join(d, "ci", "mday", "witness_mday.mjs") : WITNESS);
   const named = r.lines.find((l) => new RegExp(`^\\s+(GREEN|RED)\\s+${m.clause.replace(".", "\\.")} `).test(l)) || "";
   const ok = r.code === 1 && /^\s+RED\s/.test(named);
   if (ok) red++;

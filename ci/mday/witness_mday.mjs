@@ -40,8 +40,9 @@
 //   W6.2  study true before `end` (his sitting open), false after it, why "no open sitting"
 //   W6.3  a non-host session the same day → study false                                                (kept guard)
 //   W7.0  static (F7): settings.json's PreToolUse matcher carries Skill; rails' Skill branch sits before decide()
-//   W7.1  PreToolUse(Skill learn) → the sitting opens with the payload's host (detached hand-off)
-//   W7.2  PreToolUse(Skill other) → nothing printed, nothing opened (untouched)
+//   W7.1  PreToolUse(Skill learn), the start planted SLOWER than one measured start + SLACK → the detached child is awaited
+//         ITSELF (no process naming the plant root, the owner lock gone; LAST's bound) and the sitting opens with the payload's host
+//   W7.2  (after W7.1's wait resolved) PreToolUse(Skill other) → nothing printed, no child left, nothing opened (untouched)
 //   W7.3  the Skill branch's own throw → allow, nothing printed, the why says it failed open
 //   W8    the two code counts (F8 A): planted records → `day.mjs status` names missed-close and false-close exactly
 //   W9    F9: the SessionStart sequence prints the end line while today's sitting is open, and not once it is closed
@@ -157,6 +158,25 @@ function plantTurns(sid, n = 3) {
 const handCard = () => node(["scripts/captains_call.mjs", "file", "--line", "planted hand card (witness mday)", "--key", `mday-witness:${GEN}`]);
 const quietMin = () => Number((/const AUTOCLOSE_QUIET_MIN = (\d+);/.exec(readFileSync(join(COPY, "scripts", "postmatch.mjs"), "utf8")) || [])[1]);
 const autoclose = (day, anchor, clockMs) => node(["scripts/postmatch.mjs", "autoclose", "--date", day, "--anchor", anchor], { extra: { ARSENAL_AUTOCLOSE_CLOCK: new Date(clockMs).toISOString() } });
+
+// the process table (PowerShell on Windows, ps elsewhere) — every node process whose command line names the plant root
+const listing = () => (process.platform === "win32"
+  ? spawnSync("powershell.exe", ["-NoProfile", "-Command", "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | ForEach-Object { $_.CommandLine }"], { encoding: "utf8", windowsHide: true })
+  : spawnSync("ps", ["-eo", "args"], { encoding: "utf8" }));
+const survivors = () => lines(listing().stdout).filter((l) => l.includes(ROOT) && !/\bps -eo\b/.test(l));
+// ruling row 1067 (2): a DETACHED child is awaited ITSELF — no process naming the plant root alive AND the owner lock gone —
+// bounded the way LAST is (the longest single run this witness measured, plus SLACK), never on one timing sample
+async function waitChild() {
+  const t = Date.now(), end = t + MAXMS + SLACK;
+  const busy = () => survivors().length > 0 || existsSync(join(STATE, "sitting.json.lock"));
+  while (busy() && Date.now() < end) await sleep(SLACK);
+  return { settled: !busy(), ms: Date.now() - t };
+}
+// THE PLANTED SLOW START (row 1067 (2) item 3): a preload, handed through NODE_OPTIONS, delays ONLY `day.mjs start` by
+// MDAY_PLANT_START_DELAY_MS before the module runs; every other node process starts as it always does
+const DELAY_PRELOAD = join(ROOT, "slow_start.mjs");
+writeFileSync(DELAY_PRELOAD, `const ms = Number(process.env.MDAY_PLANT_START_DELAY_MS || 0);\nif (ms > 0 && /day\\.mjs$/.test(process.argv[1] || "") && process.argv[2] === "start") await new Promise((r) => setTimeout(r, ms));\n`);
+const slowEnv = (ms) => ({ NODE_OPTIONS: `--import "${pathToFileURL(DELAY_PRELOAD).href}"`, MDAY_PLANT_START_DELAY_MS: String(ms) });
 
 console.log(`witness mday · org ${ORG} · slack ${SLACK} ms (one node start, measured) · day ${istDay()} (IST)`);
 const kids = [];
@@ -326,24 +346,32 @@ try {
     const p0 = rails.indexOf("export function pretooluse("), body = rails.slice(p0, rails.indexOf("\n}\n", p0));
     const skillFirst = body.indexOf('payload.tool_name === "Skill"') > 0 && body.indexOf('payload.tool_name === "Skill"') < body.indexOf("const d = decide(payload, ctx);");
     clause("W7.0", m.split("|").includes("Skill") && skillFirst, `settings PreToolUse matcher ${m.split("|").includes("Skill") ? "carries Skill" : "LACKS Skill"} · rails' Skill branch ${skillFirst ? "sits before decide()" : "ABSENT before decide()"}`);
-    // the bound for a detached hand-off: one synchronous run of the same verb, measured on a scratch state, plus SLACK
+    // THE OLD BOUND — one synchronous run of the same verb plus SLACK (the single timing sample the ruling retired). The slow
+    // plant delays the start by MORE than it, so a wait that trusts the sample reads the sitting before the child opens it.
     await fresh();
-    let bound = SLACK;
-    if (HAS_DAY()) { const m0 = node(["scripts/day.mjs", "start", "--session", randomUUID(), "--by", "witness-measure"]); bound = m0.ms + SLACK; }
-    const rail = (pl) => node(["scripts/rails.mjs", "pretooluse"], { input: JSON.stringify(pl) });
-    const waitOpen = async (sid) => { const end = Date.now() + bound; for (;;) { const s = sitting(); if (isOpen(s) && s.host_session_id === sid) return s; if (Date.now() > end) return s; await sleep(SLACK); } };
+    let oldBound = SLACK;
+    if (HAS_DAY()) { const m0 = node(["scripts/day.mjs", "start", "--session", randomUUID(), "--by", "witness-measure"]); oldBound = m0.ms + SLACK; }
+    const delay = oldBound + SLACK;
+    // the slow start, measured once synchronously on a scratch state, so the LAST-shaped bound (MAXMS) covers it by measurement
+    await fresh();
+    if (HAS_DAY()) node(["scripts/day.mjs", "start", "--session", randomUUID(), "--by", "witness-measure-slow"], { extra: slowEnv(delay) });
+    const rail = (pl, extra = {}) => node(["scripts/rails.mjs", "pretooluse"], { input: JSON.stringify(pl), extra });
+    const waitOpen = async (sid, bound) => { const end = Date.now() + bound; for (;;) { const s = sitting(); if (isOpen(s) && s.host_session_id === sid) return s; if (Date.now() > end) return s; await sleep(SLACK); } };
+    void waitOpen;   // the retired single-sample wait, kept for the mutant that brings it back (row 1067 (2) item 3)
     await fresh();
     const K = randomUUID();
-    const r1 = rail({ hook_event_name: "PreToolUse", tool_name: "Skill", tool_input: { skill: "learn" }, session_id: K, transcript_path: join(HOME, `${K}.jsonl`) });
-    const s1 = await waitOpen(K);
-    clause("W7.1", r1.status === 0 && !/"deny"/.test(r1.stdout) && isOpen(s1) && s1.host_session_id === K, `PreToolUse(Skill learn) → exit ${r1.status} · ${isOpen(s1) ? `sitting open, host ${s1.host_session_id === K ? "= the payload's session" : "OTHER"}` : `NO sitting within ${bound} ms (one measured start + slack)`}`);
+    const r1 = rail({ hook_event_name: "PreToolUse", tool_name: "Skill", tool_input: { skill: "learn" }, session_id: K, transcript_path: join(HOME, `${K}.jsonl`) }, slowEnv(delay));
+    const w1 = await waitChild(); const s1 = sitting();
+    clause("W7.1", r1.status === 0 && !/"deny"/.test(r1.stdout) && w1.settled && w1.ms > oldBound && isOpen(s1) && s1.host_session_id === K,
+      `PreToolUse(Skill learn), the start planted SLOW by ${delay} ms (the old single-sample bound was ${oldBound} ms) → exit ${r1.status} · the detached child ${w1.settled ? `settled after ${w1.ms} ms (process gone, lock gone)` : `NOT settled within ${MAXMS + SLACK} ms`} · ${isOpen(s1) ? `sitting open, host ${s1.host_session_id === K ? "= the payload's session" : "OTHER"}` : "NO sitting"}`);
+    // W7.2 starts only after W7.1's wait has resolved (row 1067 (2) item 2)
     await fresh();
     const O = randomUUID();
     const before = snap();
     const r2 = rail({ hook_event_name: "PreToolUse", tool_name: "Skill", tool_input: { skill: "forge" }, session_id: O, transcript_path: join(HOME, `${O}.jsonl`) });
-    await sleep(bound);
+    const w2 = await waitChild();
     const diff = changed(before, snap()).filter((k) => !k.startsWith("rails_blind"));
-    clause("W7.2", r2.status === 0 && r2.stdout.trim() === "" && !sitting() && diff.length === 0, `PreToolUse(Skill forge) → exit ${r2.status} · stdout ${r2.stdout.trim() ? "PRINTED" : "empty"} · ${sitting() ? "a sitting OPENED" : "nothing opened"} · ${diff.length} state file(s) changed`);
+    clause("W7.2", r2.status === 0 && r2.stdout.trim() === "" && w2.settled && !sitting() && diff.length === 0, `PreToolUse(Skill forge) → exit ${r2.status} · stdout ${r2.stdout.trim() ? "PRINTED" : "empty"} · children ${w2.settled ? "settled" : "NOT settled"} · ${sitting() ? "a sitting OPENED" : "nothing opened"} · ${diff.length} state file(s) changed`);
     const probe = join(ROOT, "w73.mjs");
     writeFileSync(probe, `import { pathToFileURL } from "node:url";\nconst m = await import(pathToFileURL(process.argv[2]).href);\nconst out = []; const w = process.stdout.write.bind(process.stdout); process.stdout.write = (c) => { out.push(String(c)); return true; };\nlet d = null, threw = null;\ntry { d = m.pretooluse({ raw: JSON.stringify({ hook_event_name: "PreToolUse", tool_name: "Skill", tool_input: { skill: "learn" }, session_id: "${randomUUID()}" }), dayHand: () => { throw new Error("planted hand-off failure"); } }); } catch (e) { threw = String(e && e.message || e); }\nprocess.stdout.write = w;\nconsole.log(JSON.stringify({ decision: d && d.decision, why: d && d.why, printed: out.join(""), threw }));\n`);
     const r3 = spawnSync(process.execPath, [probe, join(COPY, "scripts", "rails.mjs")], { cwd: COPY, encoding: "utf8", env: env() });
@@ -425,10 +453,6 @@ try {
 
 // ── LAST ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 {
-  const listing = () => (process.platform === "win32"
-    ? spawnSync("powershell.exe", ["-NoProfile", "-Command", "Get-CimInstance Win32_Process -Filter \"Name='node.exe'\" | ForEach-Object { $_.CommandLine }"], { encoding: "utf8", windowsHide: true })
-    : spawnSync("ps", ["-eo", "args"], { encoding: "utf8" }));
-  const survivors = () => lines(listing().stdout).filter((l) => l.includes(ROOT) && !/\bps -eo\b/.test(l));
   // a detached child (the close's review launch, sitting.mjs review — its own process by design; a Skill hand-off) finishes on
   // its own: awaited in SLACK steps, bounded by the longest single run this witness measured plus SLACK — never a typed number
   let left = survivors(); const end = Date.now() + MAXMS + SLACK;
