@@ -158,7 +158,7 @@ try {
     const a1 = armed(D).length;
     if (want("W1.1")) clause("W1.1", e1.status === 0 && a1 === 1, `end exit ${e1.status} · armed rows for ${D}: ${a1}`);
     const e2 = endDay(sid);
-    if (want("W1.2")) clause("W1.2", e2.status === 0 && /already closed/.test(e2.stdout) && armed(D).length === 1, `second end ${/already closed/.test(e2.stdout) ? "already" : "not already"} · armed rows: ${armed(D).length}`);
+    if (want("W1.2")) clause("W1.2", e2.status === 0 && /already closed/.test(e2.stdout) && armed(D).length === 1, `armed after the first end: ${a1} · second end ${/already closed/.test(e2.stdout) ? "already" : "not already"} · armed rows: ${armed(D).length}`);
     if (want("W6.2")) {
       night("begin", "--runner", "runner");
       night("mark", "--kind", "launch", "--unit", "ua"); night("mark", "--kind", "launch", "--unit", "ub"); night("mark", "--kind", "launch", "--unit", "uc");
