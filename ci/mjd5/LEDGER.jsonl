@@ -1,0 +1,6 @@
+{"ts":"2026-11-18T14:22:27.196Z","act":"base","cmd":"git checkout -b claude/mjd5-build origin/main","last_line":"origin/main 15edfec"}
+{"ts":"2026-11-18T14:22:27.196Z","act":"measure","cmd":"node scripts/captains_call.mjs selftest (base)","last_line":"captains_call selftest: 142 passed, 0 failed"}
+{"ts":"2026-11-18T14:22:27.196Z","act":"measure","cmd":"node scripts/gaffer_brain.mjs selftest (base)","last_line":"gaffer_brain selftest: 194 passed, 0 failed"}
+{"ts":"2026-11-18T14:22:27.196Z","act":"build","cmd":"node scripts/captains_call.mjs selftest (build)","last_line":"captains_call selftest: 147 passed, 0 failed"}
+{"ts":"2026-11-18T14:22:27.196Z","act":"build","cmd":"node scripts/gaffer_brain.mjs selftest (build)","last_line":"gaffer_brain selftest: 194 passed, 0 failed"}
+{"ts":"2026-11-18T14:22:27.196Z","act":"gate","cmd":"node scripts/models.mjs check","last_line":"exit 0"}

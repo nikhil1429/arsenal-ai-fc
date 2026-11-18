@@ -2152,12 +2152,15 @@ export async function gradeJudge(deps = {}) {
     try { return await Promise.race([Promise.resolve().then(() => second(item, bound)), late]); }
     finally { timer.clear(h); ctrl.abort(); }
   };
-  const cardFile = deps.fileCard || ((line, key, why = null) => {
+  // ONE spawn of the card owner (captains_call.mjs), two of its verbs: `file` mints, `retire` (mjd5) retires at source.
+  const cardsOwner = (argv) => {
     try {
-      const out = execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), "file", "--line", line, "--key", key, ...(why ? ["--why-code-cannot-decide", why] : [])], { encoding: "utf8", timeout: JUDGE_DISPATCH_MS, windowsHide: true });
+      const out = execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), ...argv], { encoding: "utf8", timeout: JUDGE_DISPATCH_MS, windowsHide: true });
       return { ok: true, out: String(out || "") };
     } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
-  });
+  };
+  const cardFile = deps.fileCard || ((line, key, why = null) => cardsOwner(["file", "--line", line, "--key", key, ...(why ? ["--why-code-cannot-decide", why] : [])]));
+  const cardRetire = deps.retireCard || ((key, why) => cardsOwner(["retire", "--key", key, "--why", why]));
   // THREE NAMED SPAWNS, NOT ONE DYNAMIC ONE. `execFileSync(…, [join(HERE, cmd.organ)])`
   // is one line and it is an Unknown to the static analyser — the organ→organ edge
   // simply vanishes from the graph, and the per-organ sink ratchet charges for it.
@@ -2189,6 +2192,11 @@ export async function gradeJudge(deps = {}) {
   // Then its settled row is appended. Inside the round's ONE budget (a dispatch starts only when JUDGE_DISPATCH_MS remains).
   // A capture that cannot be resolved this round (no budget, an owner refusal, an old write-ahead row with no verdict, the
   // settled write failing) stays in doubt and is ONE card at his anchor, one key per capture — never silent.
+  // mjd5 (forks row 1033 (2)) — AND THE CARD RETIRES AT SOURCE WHEN IT RESOLVES. The moment its settled row lands (the owner
+  // wrote it now, or already had it under the key — landed once either way), the card under its key is retired through the
+  // card owner's own door (captains_call.mjs `retire`), in the same act, so he is never asked about a thing already settled.
+  // The door is a no-op when no card was ever filed (a capture resolved by the first round after its kill) and when the card
+  // is already settled, so a second resolve retires nothing twice. Its answer rides the receipt (`card_retired`), never silent.
   const resolved = [];
   for (const d of pend) {
     const ref = `${d.type}:${d.ref}`;
@@ -2203,7 +2211,11 @@ export async function gradeJudge(deps = {}) {
         const row = { ...d, kind: "settled", ts: now.toISOString(), owner_noop: !!dd.noop, owner_note: dd.note || null, resolved_from: "in-doubt" };
         const w = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, row);
         if (!w || !w.ok) why = `its settled row did not land (${(w && w.error) || "the writer gave no answer"})`;
-        else resolved.push({ of: d.of, ref, owner_note: dd.note || null });
+        else {
+          const cr = cardRetire(`judge:in-doubt:${d.of}`, "the capture in doubt resolved: its judge round re-dispatched it and its settled row landed (row 1033 (2))");
+          resolved.push({ of: d.of, ref, owner_note: dd.note || null,
+            card_retired: cr && cr.ok ? { ok: true, out: clip(String(cr.out || "").trim(), 200) } : { ok: false, error: clip((cr && cr.error) || "the card owner gave no answer", 200) } });
+        }
       }
     }
     if (why && !deps.dry) {
