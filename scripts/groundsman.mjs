@@ -239,7 +239,7 @@ function meetOrigin(run) {
       const meta = run("git", ["show", "-s", "--format=%an%x00%ae%x00%aI%x00%B", c]);
       const steps = [
         run("git", ["read-tree", o], env),
-        run("git", ["rm", "--cached", "-r", "-q", "--ignore-unmatch", "--", STATE_PREFIX.slice(0, -1)], env),
+        run("git", ["rm", "--cached", "-r", "-q", "-f", "--ignore-unmatch", "--", STATE_PREFIX.slice(0, -1)], env),
       ];
       if (run("git", ["rev-parse", "--verify", "-q", `${c}:${STATE_PREFIX.slice(0, -1)}`]).ok)
         steps.push(run("git", ["read-tree", `--prefix=${STATE_PREFIX}`, `${c}:${STATE_PREFIX.slice(0, -1)}`], env));
