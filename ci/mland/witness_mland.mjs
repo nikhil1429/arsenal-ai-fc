@@ -70,8 +70,8 @@ function sandbox(tree) {
   const dir = join(ROOT, `s${++seq}`);
   const origin = join(dir, "origin.git"), seed = join(dir, "seed"), laptop = join(dir, "laptop"), seat = join(dir, "seat"), other = join(dir, "other");
   mkdirSync(seed, { recursive: true });
-  git(dir, ["init", "-q", "--bare", "-b", "main", origin]);
-  git(seed, ["init", "-q", "-b", "main"]); cfg(seed);
+  git(dir, ["-c", "core.autocrlf=false", "init", "-q", "--bare", "-b", "main", origin]);   // autocrlf AT init/clone time: the laptop system gitconfig has core.autocrlf=true (architect, CLASS)
+  git(seed, ["-c", "core.autocrlf=false", "init", "-q", "-b", "main"]); cfg(seed);
   for (const f of ["scripts/land.mjs", "scripts/groundsman.mjs", "scripts/daykey.mjs"]) { const t = src(tree, f); if (t != null) put(seed, f, t); }
   put(seed, "scripts/ci_verdict.mjs", VERDICT); put(seed, "scripts/sitting.mjs", SITTING); put(seed, "scripts/sitlib.mjs", "export const s = 1;\n");
   put(seed, "scripts/archivist.mjs", ARCHIVIST); put(seed, "scripts/captains_call.mjs", REC); put(seed, "scripts/awayday.mjs", REC);
@@ -81,7 +81,7 @@ function sandbox(tree) {
   put(seed, `${STATE}/a.json`, "{\"a\":0}\n"); put(seed, "README.md", "seed\n"); put(seed, "notes/x.txt", "x0\n"); put(seed, "package-lock.json", "{}\n");
   git(seed, ["add", "-A"]); git(seed, ["commit", "-q", "-m", "seed"]);
   git(seed, ["remote", "add", "origin", origin]); git(seed, ["push", "-q", "origin", "main"]);
-  for (const c of [laptop, seat, other]) { git(dir, ["clone", "-q", origin, c]); cfg(c); }
+  for (const c of [laptop, seat, other]) { git(dir, ["clone", "-q", "-c", "core.autocrlf=false", origin, c]); cfg(c); }
   const log = join(dir, "calls.log");
   const env = (x = {}) => ({ ...process.env, MLAND_LOG: log, MLAND_V: "GREEN", MLAND_S: "CLOSED", ...x });
   const land = (args, x) => { const r = spawnSync(process.execPath, [join(laptop, "scripts", "land.mjs"), ...args], { cwd: laptop, encoding: "utf8", windowsHide: true, env: env(x) }); const o = ((r.stdout || "") + (r.stderr || "")).trim(); return { code: r.status, out: o, last: o.split(/\r?\n/).pop() || "" }; };

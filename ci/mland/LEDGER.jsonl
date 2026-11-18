@@ -12,3 +12,4 @@
 {"ts":"2026-11-18T14:37:58.540Z","act":"push","cmd":"git push -u origin claude/mland-build","last_line":"6e85080"}
 {"ts":"2026-11-18T14:37:58.540Z","act":"ci-prior","cmd":"node scripts/ci_verdict.mjs 38dd20a (curl door)","last_line":"ci_verdict 38dd20a GREEN — node 22 run 134873293858 · node 24 run 134873294663 · 0 new red"}
 {"ts":"2026-11-18T14:37:58.540Z","act":"ci","cmd":"node scripts/ci_verdict.mjs 6e85080 (curl door)","last_line":"PENDING at read"}
+{"ts":"2026-11-18T15:14:22.823Z","act":"fix-autocrlf (architect CLASS)","cmd":"merge claude/mgrd-build 8998e45; GIT_CONFIG_GLOBAL=<core.autocrlf=true> node ci/mland/witness_mland.mjs (old 4f86d59 witness vs fixed) --base-org <archive mgrd 8998e45>; run_mutants under the same config","last_line":"old: RED MLAND · V1…V8, CR1–CR3, L2–L4, Q4, S8 · fixed: GREEN MLAND landing verb · 19 clause(s) · mutants 17 of 17 · control GREEN · scripts/land.mjs unchanged"}

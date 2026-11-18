@@ -50,15 +50,15 @@ function sandbox(tree) {
   const dir = join(ROOT, `s${++seq}`);
   const origin = join(dir, "origin.git"), seed = join(dir, "seed"), laptop = join(dir, "laptop"), other = join(dir, "other");
   mkdirSync(seed, { recursive: true });
-  git(dir, ["init", "-q", "--bare", "-b", "main", origin]);
-  git(seed, ["init", "-q", "-b", "main"]); cfg(seed);
+  git(dir, ["-c", "core.autocrlf=false", "init", "-q", "--bare", "-b", "main", origin]);   // autocrlf AT init/clone time: the laptop system gitconfig has core.autocrlf=true (architect, CLASS)
+  git(seed, ["-c", "core.autocrlf=false", "init", "-q", "-b", "main"]); cfg(seed);
   for (const f of ["scripts/groundsman.mjs", "scripts/daykey.mjs"]) put(seed, f, readFileSync(join(tree, ...f.split("/")), "utf8"));
   put(seed, "scripts/captains_call.mjs", RECORDER); put(seed, "scripts/awayday.mjs", RECORDER);
   put(seed, `${STATE}/a.json`, "{\"a\":0}\n"); put(seed, `${STATE}/b.json`, "{\"b\":0}\n"); put(seed, `${STATE}/c.json`, "{\"c\":0}\n");
   put(seed, "README.md", "seed\n"); put(seed, "notes/x.txt", "x0\n");
   git(seed, ["add", "-A"]); git(seed, ["commit", "-q", "-m", "seed"]);
   git(seed, ["remote", "add", "origin", origin]); git(seed, ["push", "-q", "origin", "main"]);
-  for (const c of [laptop, other]) { git(dir, ["clone", "-q", origin, c]); cfg(c); }
+  for (const c of [laptop, other]) { git(dir, ["clone", "-q", "-c", "core.autocrlf=false", origin, c]); cfg(c); }
   const log = join(dir, "calls.log");
   const night = () => {
     const r = spawnSync(process.execPath, [join(laptop, "scripts", "groundsman.mjs"), "push"], { cwd: laptop, encoding: "utf8", windowsHide: true, env: { ...process.env, MGRD_LOG: log } });
