@@ -70,7 +70,7 @@ const BADGE = "⚪🔴";
 
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 import { READER_BUDGET_MS } from "./notes_compiler.mjs";   // mclose row 914 G — the cold reader's ONE budget, read from its owner
-import { JUDGE_BUDGET_MS } from "./gaffer_brain.mjs";       // mclose row 914 G — the judge call's ONE budget, read from its owner
+import { JUDGE_BUDGET_MS, outstandingBank } from "./gaffer_brain.mjs";       // mclose row 914 G — the judge call's ONE budget, read from its owner · mpm F5 — the grade queue's outstanding captures, read by its owner's own reader
 import { recentRows, launchContext, addDays } from "./daykey.mjs";   // S11 — the recency gate (the form strip is a window of NOW, not the last 7 rows) · mclose — the chain's day-key (autoclose --date chain|chain-1)
 
 function writeAtomic(path, obj) {
@@ -351,7 +351,9 @@ function pendingThrowIns(routedIds, { dugoutSuffix = "" } = {}, dir = STATE_DIR)
 //   (i)    archivist.mjs run, its OWN CLI — the archive catches up (best effort; its line is kept on the record)
 //   (ii)   THE EVIDENCE: study_scope.studySessionsOfDay(D) — handed the sessions the archive names that day
 //          (exchanges.sessionsNamedOn: the leaf never learns where the archive lives) — then exchanges.studyTurnsOfDay(D,
-//          sessions); no study session or no captured turn = ONE line, exit 0, NOTHING written (F5)
+//          sessions); no study session or no captured turn = ONE line, exit 0, NOTHING written (F5) — UNLESS the gaffer grade
+//          queue holds outstanding captures OF D (mpm F5 below, queueEvidenceOf): those are evidence the archive saw, and the
+//          day closes with its judge step; with neither, the one line, as before
 //   (iii)  THE QUIET RULE (F3): at the EVENING anchor, a last captured study turn under 30 min older than the step's clock
 //          DEFERS the close — nothing written; the morning step closes that day
 //   (iv)   IDEMPOTENT BY DAY (autocloseDecision): HIS RESULT on post_match/D.md is never touched; a MACHINE record whose
@@ -501,7 +503,7 @@ function autocloseDecision(prior, lastTs) {
 
 /** renderMachineRecord — post_match/D.md written by CODE: his two lines NAMED absent, never fabricated (F1: no legal RESULT;
  *  the KAL-LINE carries a colon, so KAL_RE — manager.mjs's and daily_green's parser — never matches it). */
-function renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine, judgeLine }) {
+function renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine, judgeLine, queueLine = null }) {
   const L = [];
   L.push(`${BADGE} POST-MATCH · ${day} · closed by code — his word not given`);
   L.push("");
@@ -510,6 +512,7 @@ function renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine
   L.push("KAL-LINE: absent");
   L.push("");
   L.push(`EVIDENCE: ${tt.turns} captured study turn(s) · turns_until ${tt.last_ts} · ${tt.outside} row(s) of his other sessions that day counted apart`);
+  if (queueLine) L.push(queueLine);   // mpm F5: a queue-only day names its captures (absent otherwise: the bytes stay as before)
   for (const s of ev.sessions) L.push(`  · session ${s.id} · source ${s.sources.join(" + ")} · ${(tt.per_session && tt.per_session[s.id]) || 0} captured turn(s)`);
   for (const m of ev.misses.slice(0, 10)) L.push(`  · miss: the ${m.source} of ${m.session} — ${oneLine(m.why, 160)}`);
   if (ev.misses.length > 10) L.push(`  · miss: … +${ev.misses.length - 10} more named misses`);
@@ -622,6 +625,39 @@ async function dayCloseCard({ day, run, dir = PM_DIR }) {
   return (c.status === 0 ? oneLine(lastLineOf(c).replace(/^captains_call:\s*/, "card "), 120) : `CARD NOT FILED (captains_call ${exitOf(c)}: ${oneLine(lastLineOf(c), 100)})`) + note;
 }
 
+// ---------------------------------------------------------------------------
+// mpm F5 · THE DAY CLOSE JUDGES ONLY A DAY THE ARCHIVE SAW — and an outstanding capture IS the archive having seen it
+// ---------------------------------------------------------------------------
+// WHY: step (ii) asked only the archive's study turns, so a day whose ONLY trace is his spoken answers waiting on the gaffer
+//   grade queue (captured by gradeCapture, never judged) read "no evidence · nothing run" and its judge step never fired for
+//   it. Those captures are evidence of D by the mjday rule: each capture keeps ITS OWN IST day (gaffer_brain.mjs captureDay —
+//   its instant through the IST helper; with no instant, the day it carries; with neither, no day). Outstanding = no settled
+//   row after it (the owner's own outstandingBank). A queue-only day closes with its judge step and NO compile (no study
+//   session names a note to compile); a day with neither stays exactly as today.
+// THE RULE'S ONE HOME is gaffer_brain.mjs, which does not export it (READ-ONLY to this file): the copy below is pinned to it
+//   byte for byte by the selftest, so the two can never drift in silence (FORK: export captureDay from its owner).
+const istDayOf = (d) => new Date(d.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);
+/** captureDay — PURE, the mjday rule as gaffer_brain.mjs writes it (pinned byte for byte by the selftest, its helper named istDayOf here). */
+function captureDay(it) {
+  const ms = Date.parse(String((it && it.ts) || ""));
+  if (Number.isFinite(ms)) return { day: istDayOf(new Date(ms)), at: new Date(ms).toISOString() };
+  const carried = it && typeof it.day === "string" ? it.day : "";
+  const isDay = carried.length === 10 && Number.isFinite(Date.parse(`${carried}T00:00:00.000Z`))
+    && new Date(Date.parse(`${carried}T00:00:00.000Z`)).toISOString().slice(0, 10) === carried;
+  return { day: isDay ? carried : null, at: null };
+}
+/** queueEvidenceOf — PURE. The outstanding captures OF `day` (each by its own IST day): their count, their ids in queue order,
+ *  and the newest instant among them (a capture with only a day stands at that IST day's start, judgeOrder's own placing). */
+function queueEvidenceOf(day, outstanding) {
+  const mine = (Array.isArray(outstanding) ? outstanding : []).filter((r) => r && r.kind === "capture" && captureDay(r).day === day);
+  const at = mine.map((r) => { const c = captureDay(r); return c.at ? Date.parse(c.at) : Date.parse(`${c.day}T00:00:00.000Z`) - 5.5 * 3600000; });
+  return { count: mine.length, ids: mine.map((r) => String(r.id)), last_ts: at.length ? new Date(Math.max(...at)).toISOString() : null };
+}
+/** queueEvidenceLine — the record's evidence sub-line on a queue-only day. */
+const queueEvidenceLine = (day, q) => `  · grade queue: ${q.count} outstanding capture(s) of ${day} (each capture's own IST day) · ${oneLine(q.ids.join(", "), 160)}`;
+/** queueCompileLine — a queue-only day has no study session, so no note to compile: DONE by name, never run. */
+const queueCompileLine = (day, q) => `COMPILE: DONE · nothing to compile — no study session on ${day}; the evidence is ${q.count} outstanding capture(s) on the grade queue`;
+
 /** autoclose — the machine half of the close (see the header above). Returns the exit code; never process.exit (a piped
  *  stdout on Windows is asynchronous, and the conductor tees this organ's voice into its log). */
 async function autoclose(argv) {
@@ -659,8 +695,13 @@ async function autoclose(argv) {
   const named = sessionsNamedOn(day);
   const ev = studySessionsOfDay(day, { archiveSessions: named.sessions });
   const ids = ev.sessions.map((s) => s.id);
-  const tt = studyTurnsOfDay(day, ids);
-  if (!ids.length || tt.turns < 1) {
+  const tt0 = studyTurnsOfDay(day, ids);
+  // mpm F5 — the grade queue's outstanding captures OF D, by the owner's reader and the mjday rule (queueEvidenceOf above)
+  const studySeen = ids.length > 0 && tt0.turns >= 1;
+  const queue = studySeen ? null : queueEvidenceOf(day, outstandingBank());
+  const queueOnly = !!queue && queue.count > 0;
+  const tt = queueOnly ? { ...tt0, last_ts: queue.last_ts } : tt0;   // a queue-only day's evidence instant is its newest capture
+  if (!studySeen && !queueOnly) {
     console.log(`autoclose · ${day} · no evidence · nothing run (${ids.length} study session(s) · ${tt.turns} captured study turn(s) · teaching_audit ${oneLine(ev.read.teaching_audit || "—", 70)} · archive ${oneLine(archiveLine, 90)})`);
     return 0;
   }
@@ -685,6 +726,7 @@ async function autoclose(argv) {
   // the compiler's own CLI, twice — the scope seed, then fulltime — keyed to THE CLOSED DAY, never the clock's (row 883)
   const noteDay = day;
   const compileRun = () => {
+    if (queueOnly) return queueCompileLine(day, queue);   // mpm F5: no study session names a note — nothing is spawned
     // row 914 G5: the compile starts only when the time left covers its seed, one reader budget, the judge and the card after it
     const f0 = fits(CHILD_TIMEOUT_MS + READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS);
     if (!f0.ok) return `COMPILE: UNSETTLED · ${f0.line} (the compile's seed, one reader budget, the judge and the card)`;
@@ -733,7 +775,7 @@ async function autoclose(argv) {
 
   // (v) THE MACHINE RECORD — written first; the compile and the judge fill their lines as they finish
   const at = clock.at.toISOString();
-  const record = (compileLine, judgeLine) => renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine, judgeLine });
+  const record = (compileLine, judgeLine) => renderMachineRecord({ day, anchor, at, ev, tt, archiveLine, compileLine, judgeLine, queueLine: queueOnly ? queueEvidenceLine(day, queue) : null });
   if (dry) { console.log("--- AUTOCLOSE DRY RUN (nothing written) ---\n" + record(PENDING_COMPILE, PENDING_JUDGE)); return 0; }
   const did = dec.act === "refresh" ? "refreshed" : "closed";
   try { writeAtomic(pmFile, record(PENDING_COMPILE, PENDING_JUDGE)); }
@@ -1105,6 +1147,38 @@ async function selftest() {
       dc.length > 0 && /run\("captains_call\.mjs", \["reline", "--family", DAYCLOSE_FAMILY, "--key", kept\.key, "--line", line\]/.test(dc)
       && /run\("captains_call\.mjs", \["file", "--line", dayClosedLine\(day\), "--key", `\$\{DAYCLOSE_FAMILY\}:\$\{day\}`, "--why-code-cannot-decide", DAYCLOSE_WHY\]/.test(dc)
       && !/writeAtomic|writeFileSync|captains_call\.json/.test(dc) && `${DAYCLOSE_FAMILY}:2026-11-13` === keptCard.key);
+  }
+
+  // ── mpm F5 · an outstanding capture of D is evidence for the close of D ──
+  {
+    const fnOf = (text, head) => { const t = String(text).replace(/\r\n/g, "\n"), i = t.indexOf(head); return i < 0 ? "" : t.slice(i, t.indexOf("\n}\n", i) + 2); };
+    const own = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const gb = readFileSync(join(__dirname, "gaffer_brain.mjs"), "utf8");
+    const mine = fnOf(own, "function captureDay(it) {"), theirs = fnOf(gb, "function captureDay(it) {");
+    assert("mpm F5 — THE mjday RULE HAS ONE HOME: this copy of captureDay is gaffer_brain.mjs's byte for byte (its IST helper named istDayOf here, defined the same)",
+      mine.length > 0 && theirs.length > 0 && mine.replace(/istDayOf\(/g, "istDay(") === theirs
+      && gb.replace(/\r\n/g, "\n").includes("const istDay = (d = new Date()) => new Date(d.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);")
+      && own.replace(/\r\n/g, "\n").includes("const istDayOf = (d) => new Date(d.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);"));
+    const D = "2026-11-14";
+    const rows = [
+      { kind: "capture", id: "g-a", ts: "2026-11-13T20:00:00.000Z" },   // 01:30 IST on D — D's, though its UTC date is D-1
+      { kind: "capture", id: "g-b", ts: "2026-11-14T19:00:00.000Z" },   // 00:30 IST on D+1 — not D's, though its UTC date is D
+      { kind: "capture", id: "g-c", day: D },                            // no instant: the day it carries
+      { kind: "capture", id: "g-d" },                                    // neither: no day, claims none
+      { kind: "settled", id: "s-x", of: "g-z" },                         // not a capture
+    ];
+    const q = queueEvidenceOf(D, rows), none = queueEvidenceOf("2026-11-16", rows);
+    assert("mpm F5 — queueEvidenceOf counts each capture by ITS OWN IST day: 01:30 IST in, 00:30 IST next day out, a carried day in, a dayless one and a settled row never",
+      q.count === 2 && q.ids.join() === "g-a,g-c" && q.last_ts === "2026-11-13T20:00:00.000Z"
+      && none.count === 0 && none.last_ts === null && queueEvidenceOf(D, null).count === 0
+      && queueEvidenceOf(D, [{ kind: "capture", id: "g-c", day: D }]).last_ts === "2026-11-13T18:30:00.000Z");
+    const a0 = own.replace(/\r\n/g, "\n").indexOf("async function autoclose("), ac = fnOf(own, "async function autoclose(");
+    assert("mpm F5 — the gate reads the queue only when the archive's study turns are absent, through the owner's own reader, and a queue-only day spawns no compile",
+      a0 > 0 && /const queue = studySeen \? null : queueEvidenceOf\(day, outstandingBank\(\)\);/.test(ac)
+      && /if \(!studySeen && !queueOnly\) \{/.test(ac) && /if \(queueOnly\) return queueCompileLine\(day, queue\);/.test(ac)
+      && parseMachineRecord(renderMachineRecord({ day: D, anchor: "morning", at: "2026-11-15T01:35:00.000Z",
+        ev: { sessions: [], misses: [], read: {} }, tt: { turns: 0, last_ts: q.last_ts, outside: 0, per_session: {} }, archiveLine: "caught up",
+        compileLine: queueCompileLine(D, q), judgeLine: "JUDGE: SETTLED · x", queueLine: queueEvidenceLine(D, q) })).compile_done === true);
   }
 
   const passed = checks.every(c => c[1]);
