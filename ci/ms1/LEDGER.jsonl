@@ -1,3 +1,7 @@
 {"ts":"2026-11-18T18:42:24.566Z","act":"branch","cmd":"git fetch origin main; git checkout -b claude/ms1-spec FETCH_HEAD","last_line":"4d166d33d16d56c1aef45ab5192373ca70faf61d"}
 {"ts":"2026-11-18T18:42:24.592Z","act":"read-mday","cmd":"git fetch origin claude/mday-spec; git show FETCH_HEAD:ci/mday/MDAY_SPEC.md","last_line":"spec tip 9421614 · mday-build tip ba842cf"}
 {"ts":"2026-11-18T18:42:24.617Z","act":"survey-ci","cmd":"for b in origin/claude/*: git ls-tree -r --name-only $b -- ci","last_line":"main carries no ci/ dir; 15 landed units carry a witness on their build branch"}
+{"ts":"2026-11-18T18:47:52.267Z","act":"read-mday-build","cmd":"git fetch origin claude/mday-build; git ls-tree -r --name-only FETCH_HEAD -- ci/mday scripts/day.mjs","last_line":"tip ba842cf · scripts/day.mjs + ci/mday/LEDGER.jsonl · no witness, no BASE"}
+{"ts":"2026-11-18T18:47:52.296Z","act":"read-bases","cmd":"git show origin/<build>:<PROOF> | grep -i base; git merge-base --is-ancestor <BASE> origin/main","last_line":"15 units · 3 BASE off main: 4f86d59 1631e22 38dd20a · deepest on-main BASE 16 behind 4d166d3"}
+{"ts":"2026-11-18T18:47:52.319Z","act":"read-keyof","cmd":"grep -n keyOf scripts/ci_verdict.mjs","last_line":"ci_verdict.mjs:46 folds digit runs: mlv0~mlv1, mjd3~mjd4~mjd5, mf2~mf4"}
+{"ts":"2026-11-18T18:47:52.346Z","act":"read-ports","cmd":"grep -nE '_PORT|listen\\(' scripts/*.mjs","last_line":"keeper.mjs:79 JUDGE_PORT 4118 no env door; mlv0 M4 + mlv1 I3 hold it"}
