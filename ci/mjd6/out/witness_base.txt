@@ -1,0 +1,6 @@
+RED   S1 · round 2 carded 3 (must be 3) · round 3 resolved 3 with every retire failed (must be 3) · live after the round 3 (the gap, 3) · live after the owner's sync 3 (must be 0) · the anchor dealt an in-doubt card true (must be false)
+RED   S3 · a second sync exit 0 and deal exit 0 · in-doubt cards unmoved true · each card retired exactly once with the sweep's epitaph false
+RED   S2 · live in-doubt cards after the mixed round and sync ["sbh0","sbh1","sbh2"] (must be exactly the refused one, …sbh1) · its cards 1 (must be 1, the same id) · receipt in_doubt 1 resolved 2
+GREEN BOUND · differs: nothing
+GREEN LAST · 0 node process(es) naming <tmp>/mjd6-*
+RED MJD6 · S1 S3 S2

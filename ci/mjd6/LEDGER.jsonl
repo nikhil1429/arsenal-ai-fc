@@ -1,0 +1,8 @@
+{"ts":"2026-11-18T18:45:56.141Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mjd6-build origin/main","last_line":"4d166d3"}
+{"ts":"2026-11-18T18:45:56.141Z","act":"selftest-base","cmd":"node scripts/captains_call.mjs selftest","last_line":"captains_call selftest: 147 passed, 0 failed"}
+{"ts":"2026-11-18T18:45:56.141Z","act":"selftest-base","cmd":"node scripts/gaffer_brain.mjs selftest","last_line":"gaffer_brain selftest: 194 passed, 0 failed"}
+{"ts":"2026-11-18T18:45:56.141Z","act":"build","cmd":"edit scripts/captains_call.mjs (sweepSettledFromDoubt + sync)","last_line":"f427795"}
+{"ts":"2026-11-18T18:45:56.141Z","act":"selftest-build","cmd":"node scripts/captains_call.mjs selftest","last_line":"captains_call selftest: 150 passed, 0 failed"}
+{"ts":"2026-11-18T18:45:56.141Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts":"2026-11-18T18:45:56.141Z","act":"witness-build","cmd":"node ci/mjd6/witness_mjd6.mjs --org <build f427795> --base-org <base 4d166d3>","last_line":"GREEN MJD6 a failed retire never leaves a settled card live — the owner's sync sweeps it, once · 5 clause(s)"}
+{"ts":"2026-11-18T18:45:56.141Z","act":"witness-base","cmd":"node ci/mjd6/witness_mjd6.mjs --org <base 4d166d3> --base-org <base 4d166d3>","last_line":"RED MJD6 · S1 S3 S2"}
