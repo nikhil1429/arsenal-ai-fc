@@ -72,3 +72,19 @@ The hermetic suite line is in `LEDGER.jsonl` (act `suite`).
 2. The witness binds cortex's own fixed ports (:4112, and :4113 for the planted thalamus). On a box where a live cortex
    or thalamus holds them, the plants cannot run (C2 says so by name); in CI and in this container both are free.
 3. The invariant clauses BOUND and LAST carry no mutant of their own.
+
+## The architect's class note: core.autocrlf (18 Nov 2026)
+
+Measured on this unit's files: **no witness here plants git** (no clone, no init; every plant is an fs copy), and every
+line it reads from a process or a log is split on `\r?\n`. Two CRLF hazards were found and closed:
+- the mutant runner matched a multi-line edit site in LF only; it now matches in the file's OWN line ending;
+- BOUND hashed raw bytes, so a CRLF checkout against an LF base read every file as changed; it now hashes text with
+  CRLF folded to LF (a line ending is not a change).
+
+Proven on copies converted to CRLF (scripts/ and setup/, the laptop's checkout shape), 18 Nov 2026:
+
+```
+witness --org <CRLF build> --base-org <CRLF base>    GREEN MLV2 cortex retires on a source change only when no lane is in flight and no judge round runs, and its door is a retire · 7 clause(s)
+run_mutants --org <CRLF build> --base-org <CRLF base> run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN
+witness --org <CRLF base>  --base-org <CRLF base>    RED MLV2 · C1 IDLE, C2 LANE, C3 JUDGE, K5 DOOR
+```
