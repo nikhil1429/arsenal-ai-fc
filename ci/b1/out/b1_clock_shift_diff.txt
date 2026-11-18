@@ -1,0 +1,16 @@
+6a7
+>   FAIL blackbox
+10a12
+>   FAIL dugout
+15a18,19
+>   FAIL turn_hook
+>   FAIL watchman
+187d190
+<   ok   blackbox
+206d208
+<   ok   dugout
+292d293
+<   ok   turn_hook
+298d298
+<   ok   watchman
+clock +90d: 4 members change verdict (blackbox dugout turn_hook watchman)

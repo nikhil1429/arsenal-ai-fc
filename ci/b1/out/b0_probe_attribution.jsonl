@@ -1,0 +1,123 @@
+{"m":"ASSERT A2 · `sitting.mjs open --no-spawn` on a box with no daemon exits 0, says so in one line, and spawns no child","daemon":{"n":2,"ex":["127.0.0.1:45177"]}}
+{"m":"ASSERT A3 · ONE command banks an answer from a Code session — surface, probe and the measured latency all land on the row","state":{"n":6,"ex":["state/resume_pointer.jsonl","state/missions.json","state/concepts.json","state/registry.json"]}}
+{"m":"ASSERT A3 · STEP 10 is STILL refused while the axes he closed were never GRILLED — the refusal names them by letter and hands over the exact bank command","state":{"n":2,"ex":["state/registry.json"]}}
+{"m":"ASSERT A3 · STEP 10 opens once every done axis carries a JUDGED jirah row, the negative-space probe is banked (the dossier's #1 senior signal) and one cross_axis row exists","state":{"n":18,"ex":["state/concepts.json","state/registry.json","state/missions.json","state/mirror_config.json"]},"net":{"n":15,"ex":["api.github.com:443","api.github.com:dns","gist.githubusercontent.com:443","gist.githubusercontent.com:dns"]}}
+{"m":"ASSERT A3 · a jirah row nobody JUDGED is a question asked, not a grade — STEP 10 stays shut until the round's ONE judge call has settled them","state":{"n":6,"ex":["state/registry.json"]}}
+{"m":"ASSERT A3 · a session that banked NOTHING cannot close quietly — the refusal names what dies with the terminal","state":{"n":1,"ex":["state/concepts.json"]}}
+{"m":"ASSERT A3 · once every banked answer has a verdict the close goes through, and the report NAMES the bypass out loud with his own reason","state":{"n":5,"ex":["state/concepts.json","state/registry.json","state/reps_log.jsonl"]}}
+{"m":"ASSERT A3 · reps_log.jsonl is BYTE-IDENTICAL after every gate read — the gates count gaffer_brain's bank and capture.mjs stays reps_log's sole writer","state":{"n":8,"ex":["state/registry.json","state/reps_log.jsonl","state/concepts.json","state/dossier_weights.json"]}}
+{"m":"ASSERT A3 · the axis closes on his Bolo row + the interview line, with NO jirah moment ever declared for it","state":{"n":2,"ex":["state/registry.json"]}}
+{"m":"ASSERT A9 · both study skills were readable (a gate that cannot see its subject is not a gate)","state":{"n":3,"ex":["state/registry.json"]}}
+{"m":"ASSERT ALIVE — bare checkout: pulse answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)","ptable":{"n":1,"ex":["powershell -NoProfile -NonInteractive -Command Get-ScheduledTask | Where-Object { $_.TaskName -like 'ArsenalFC*' } | ForEach-Object { $t=$_; $i=($t | Get-ScheduledTaskInfo); $tr=($t.Triggers | Select-Object -First 1); [pscustomobject]@{ name=$t.TaskName; state=[string]$t.State; last=$(if($i.LastRunT"]},"state":{"n":1,"ex":["state/tasks_expected.json"]}}
+{"m":"ASSERT BRIEF · SessionStart still assembles and reports its byte manifest","state":{"n":75,"ex":["state/registry.json","state/sitting.json","state/forge_profile.json","state/examiner_drill.json"]}}
+{"m":"ASSERT BRIEF · the manifest's accounting is reachable AS STRUCTURE — one JSON line, parts each carrying id + state + bytes","state":{"n":46,"ex":["state/registry.json","state/compiled_notes.jsonl","state/forge_profile.json","state/examiner_drill.json"]}}
+{"m":"ASSERT CAPTURE · one valid rep lands with zero capture tax","state":{"n":2,"ex":["state/concepts.json","state/reps_log.jsonl"]}}
+{"m":"ASSERT DEEP · the cold queue serves QUESTIONS ONLY (no answers leak into a cold round)","state":{"n":13,"ex":["state/forge_profile.json","state/registry.json"]}}
+{"m":"ASSERT FLOW ATLAS — `check` re-derives the atlas from the live IR sha-identical (a code change that moves the graph demands `xray.mjs build` + `flow_atlas.mjs build` in the same commit)","state":{"n":2,"ex":["state/registry.json","state/xray_graph.json"]}}
+{"m":"ASSERT FORGE · a session opens","state":{"n":3,"ex":["state/resume_pointer.jsonl","state/missions.json","state/concepts.json"]}}
+{"m":"ASSERT FORGE · all 12 steps are recorded (0-11)","state":{"n":25,"ex":["state/concepts.json","state/registry.json","state/missions.json","state/mirror_config.json"]},"net":{"n":15,"ex":["api.github.com:443","api.github.com:dns","gist.githubusercontent.com:443","gist.githubusercontent.com:dns"]}}
+{"m":"ASSERT GATES — undefined-symbol families 0 on both sides, every schema-d state file matches, and no frozen count rose (a gate may only get stricter)","state":{"n":2,"ex":["state/laws_register.json","state/registry.json"]}}
+{"m":"ASSERT GUT-WORD LAW · capture.mjs REFUSES a rep with no gut-word (exit non-zero)","state":{"n":1,"ex":["state/concepts.json"]}}
+{"m":"ASSERT GUT-WORD LAW · capture.mjs rejects a gut-word outside knew|shaky|guessed","state":{"n":2,"ex":["state/concepts.json","state/reps_log.jsonl"]}}
+{"m":"ASSERT GUT-WORD LAW · rejirah.mjs holds the SAME law on a Re-Jirah round","state":{"n":1,"ex":["state/forge_profile.json"]}}
+{"m":"ASSERT GUT-WORD LAW · rejirah.mjs rejects an out-of-vocabulary gut-word","state":{"n":1,"ex":["state/forge_profile.json"]}}
+{"m":"ASSERT HIS ANSWERS ARE HIS · ...and the same call against a SANDBOX ledger is allowed — that is where a proof belongs","state":{"n":2,"ex":["state/registry.json"]}}
+{"m":"ASSERT HIS ANSWERS ARE HIS · a FIXTURE may NEVER write a guess into his LIVE samjhao — refused, and the live ledger does not move a byte","state":{"n":1,"ex":["state/registry.json"]}}
+{"m":"ASSERT LAW PACK — every rule file present, and no law's finding count rose (a gate may only get stricter)","state":{"n":437917,"ex":["state/archive_audit.jsonl","state/audit_ledger.jsonl","state/awayday.json","state/benchmark.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 1 · THE 18 AUG REPLAY: his one ask fired 3x from 3 processes makes ONE task — 1 run, 3 identical receipts","state":{"n":3,"ex":["state/registry.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 2 · NO NEW FACTS — every samjhao unit of all four topics asserts only what HIS OWN capsule holds (validators, not vibes)","state":{"n":4,"ex":["state/registry.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 2 · THE COLDNESS RATCHET: once samjhao OPENS an axis, the Re-Jirah may never serve that same strike again — it is named as burned and a FRESH question is demanded","state":{"n":13,"ex":["state/forge_profile.json","state/registry.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 2 · THE RATCHET: close is REFUSED while units/doubts are open, and it NAMES the count (a feeling becomes a number)","state":{"n":1,"ex":["state/registry.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 2 · a samjhao takes its id from the TASK layer, so it resumes on any surface (§4-E)","state":{"n":2,"ex":["state/registry.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 2 · all four topics are RUNNABLE and every one is a 9-axis revision of a LOCKED capsule","state":{"n":4,"ex":["state/registry.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 2 · before any samjhao, the cold round DOES serve the capsule's own strike (this is the baseline the guard must change)","state":{"n":13,"ex":["state/forge_profile.json","state/registry.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 3 · a row that would ASK him for a decision is refused unless it says why code could not decide (BLOCK 6's gate, carried from day one)","state":{"n":1,"ex":["state/registry.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 3 · output produced with NO session open reaches the next surface he touches — and EXACTLY once (the second surface gets nothing)","state":{"n":3,"ex":["state/registry.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 3 · the dead-man's switch exists and does NOT fire on a road he simply has not walked yet (BLOCK 9's false-positive ruling, applied here)","state":{"n":1,"ex":["state/registry.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 4 · no ask may be created without a CLOSE PATH — an `ask` with no close_ref is refused at the door","state":{"n":1,"ex":["state/registry.json"]}}
+{"m":"ASSERT LOAD ZERO BLOCK 4 · the relay's DELIVERED stamp CLOSES it — through the owner, from a door that is not the sitting","state":{"n":2,"ex":["state/registry.json"]}}
+{"m":"ASSERT ONE SCHEDULE — all THREE derivations agree that a pre-epoch capsule is not due: the owner refuses it, deep calls it pre_cyborg, the map carries pre_cyborg with no next_due","state":{"n":4,"ex":["state/registry.json"]}}
+{"m":"ASSERT ONE SCHEDULE — and all three agree on the SAME open round and the SAME due date for a post-epoch capsule (a drifted derivation fails here, not in production)","state":{"n":4,"ex":["state/registry.json"]}}
+{"m":"ASSERT RE-JIRAH · a DEFERRED axis on an unlocked concept reaches the Re-Jirah queue (forge LAWS: 'deferred ≠ dropped')","state":{"n":78,"ex":["state/concepts.json","state/forge_profile.json","state/registry.json"]}}
+{"m":"ASSERT RE-JIRAH · a cold round grades and schedules the next due date","state":{"n":2,"ex":["state/forge_profile.json","state/registry.json"]}}
+{"m":"ASSERT RE-JIRAH · close prints the reJirahDone gist patch (HIS paste — nothing auto-saves)","state":{"n":20,"ex":["state/forge_profile.json","state/registry.json"]}}
+{"m":"ASSERT RE-JIRAH · the closed round reads PENDING until the gist paste lands (proof, not assumption)","state":{"n":1,"ex":["state/forge_profile.json"]}}
+{"m":"ASSERT S8 · THE NERVE WRITES AHEAD — hooks/afferent-post.mjs spools the event BEFORE it awaits the POST (this is Q-11's fix; without it a 250ms timeout or a bus that has not started yet DESTROYS his turn)","state":{"n":1,"ex":["state/brain_config.json"]}}
+{"m":"ASSERT SNAPSHOT RIDES THE BUILD · every scheduled task a setup script registers is KNOWN to tasks_expected.json: in expected_enabled, expected_disabled or designed_absent (rows 816 (4) / 829 (4) / 865 / 874 (2))","state":{"n":3,"ex":["state/registry.json","state/captain.json","state/tasks_expected.json"]}}
+{"m":"ASSERT a declared external producer is a REAL organ in this tree (1 declaration(s) checked) — the escape hatch cannot excuse a brain_out path nothing writes","state":{"n":1,"ex":["state/brain_config.json"]}}
+{"m":"ASSERT all 3 brain triggers armed anywhere in the organism reach live work (a declared consumer, or the un-gated job that supersedes it)","state":{"n":1,"ex":["state/brain_config.json"]}}
+{"m":"ASSERT every state .json parses (the bus is the contract between organs)","state":{"n":55,"ex":["state/archive_audit.jsonl","state/audit_ledger.jsonl","state/awayday.json","state/benchmark.json"]}}
+{"m":"ASSERT running all 122 selftests leaves live state untouched","state":{"n":762847,"ex":["state/archive_audit.jsonl","state/awayday.json","state/benchmark.json","state/bootroom_log.jsonl"]}}
+{"m":"SELFTEST acts @ASSERT running all 122 selftests leaves live state untouched","state":{"n":2,"ex":["state/registry.json","state/captain.json"]}}
+{"m":"SELFTEST archivist @ASSERT running all 122 selftests leaves live state untouched","state":{"n":22,"ex":["state/captain.json","state/archive_audit.jsonl","state/audit_ledger.jsonl","state/bootroom_log.jsonl"]},"daemon":{"n":8,"ex":["127.0.0.1:35583"]}}
+{"m":"SELFTEST audit @ASSERT running all 122 selftests leaves live state untouched","state":{"n":14,"ex":["state/registry.json","state/xray_graph.json","state/audit_ledger.jsonl","state/brain_config.json"]}}
+{"m":"SELFTEST blackbox @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/xray_graph.json"]}}
+{"m":"SELFTEST bootroom @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/registry.json"]}}
+{"m":"SELFTEST brain @ASSERT running all 122 selftests leaves live state untouched","state":{"n":22292,"ex":["state/registry.json","state/brain_config.json","state/learning_state.json","state/concepts.json"]}}
+{"m":"SELFTEST calibration @ASSERT running all 122 selftests leaves live state untouched","state":{"n":3,"ex":["state/registry.json"]}}
+{"m":"SELFTEST capsule_bridge @ASSERT running all 122 selftests leaves live state untouched","state":{"n":21,"ex":["state/registry.json","state/forge_profile.json"]}}
+{"m":"SELFTEST captain @ASSERT running all 122 selftests leaves live state untouched","state":{"n":2,"ex":["state/captain.json"]}}
+{"m":"SELFTEST capture @ASSERT running all 122 selftests leaves live state untouched","state":{"n":2,"ex":["state/heartbeat_config.json"]}}
+{"m":"SELFTEST conductor @ASSERT running all 122 selftests leaves live state untouched","state":{"n":4,"ex":["state/registry.json","state/captain.json","state/tasks_expected.json"]}}
+{"m":"SELFTEST context @ASSERT running all 122 selftests leaves live state untouched","state":{"n":2,"ex":["state/registry.json","state/captain.json"]}}
+{"m":"SELFTEST context_manifest @ASSERT running all 122 selftests leaves live state untouched","state":{"n":43,"ex":["state/registry.json","state/resume_pointer.jsonl","state/compiled_notes.jsonl","state/forge_profile.json"]}}
+{"m":"SELFTEST cortex @ASSERT running all 122 selftests leaves live state untouched","state":{"n":3,"ex":["state/registry.json","state/captain.json"]}}
+{"m":"SELFTEST council @ASSERT running all 122 selftests leaves live state untouched","state":{"n":3,"ex":["state/registry.json","state/council_config.json","state/brain_config.json"]}}
+{"m":"SELFTEST daemon_watchdog @ASSERT running all 122 selftests leaves live state untouched","state":{"n":4,"ex":["state/registry.json","state/captain.json","state/conductor.json"]}}
+{"m":"SELFTEST daily_green @ASSERT running all 122 selftests leaves live state untouched","state":{"n":53,"ex":["state/captain.json","state/registry.json","state/daily_green.jsonl"]}}
+{"m":"SELFTEST daykey @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/tasks_expected.json"]}}
+{"m":"SELFTEST deep @ASSERT running all 122 selftests leaves live state untouched","state":{"n":28,"ex":["state/registry.json"]}}
+{"m":"SELFTEST distiller @ASSERT running all 122 selftests leaves live state untouched","state":{"n":2,"ex":["state/registry.json"]}}
+{"m":"SELFTEST dmn @ASSERT running all 122 selftests leaves live state untouched","state":{"n":22,"ex":["state/registry.json","state/brain_config.json","state/concepts.json"]}}
+{"m":"SELFTEST doubtminer @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/doubtminer_config.json"]}}
+{"m":"SELFTEST dugout @ASSERT running all 122 selftests leaves live state untouched","state":{"n":265,"ex":["state/registry.json","state/captain.json","state/readiness.json","state/reps_log.jsonl"]}}
+{"m":"SELFTEST examiner @ASSERT running all 122 selftests leaves live state untouched","state":{"n":379,"ex":["state/concepts.json","state/examiner_drill.json"]}}
+{"m":"SELFTEST exchanges @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/captain.json"]}}
+{"m":"SELFTEST flow_atlas @ASSERT running all 122 selftests leaves live state untouched","state":{"n":243434,"ex":["state/registry.json","state/xray_graph.json","state/archive_audit.jsonl","state/audit_ledger.jsonl"]}}
+{"m":"SELFTEST forge_session @ASSERT running all 122 selftests leaves live state untouched","state":{"n":180,"ex":["state/concepts.json","state/registry.json"]}}
+{"m":"SELFTEST fuelboard @ASSERT running all 122 selftests leaves live state untouched","state":{"n":5128,"ex":["state/fuelboard_config.json"]}}
+{"m":"SELFTEST gaffer_brain @ASSERT running all 122 selftests leaves live state untouched","state":{"n":42,"ex":["state/dossier_weights.json","state/registry.json"]}}
+{"m":"SELFTEST gate @ASSERT running all 122 selftests leaves live state untouched","state":{"n":10,"ex":["state/registry.json"]}}
+{"m":"SELFTEST gate_tune @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/registry.json"]}}
+{"m":"SELFTEST gates @ASSERT running all 122 selftests leaves live state untouched","state":{"n":4,"ex":["state/laws_register.json","state/registry.json"]}}
+{"m":"SELFTEST heartbeat @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/heartbeat_config.json"]}}
+{"m":"SELFTEST herd @ASSERT running all 122 selftests leaves live state untouched","ptable":{"n":1,"ex":["powershell -NoProfile -NonInteractive -Command Get-ScheduledTask | Where-Object { $_.TaskName -like 'ArsenalFC*' } | ForEach-Object { $t=$_; $i=($t | Get-ScheduledTaskInfo); $act=($t.Actions | Select-Object -First 1); [pscustomobject]@{ name=$t.TaskName; state=[string]$t.State; args=[string]$act.Arg"]},"state":{"n":1,"ex":["state/xray_graph.json"]}}
+{"m":"SELFTEST home_pin @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/captain.json"]},"daemon":{"n":10,"ex":["127.0.0.1:44523"]}}
+{"m":"SELFTEST lawpack @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1964860,"ex":["state/archive_audit.jsonl","state/audit_ledger.jsonl","state/awayday.json","state/benchmark.json"]}}
+{"m":"SELFTEST learn_digest @ASSERT running all 122 selftests leaves live state untouched","state":{"n":4,"ex":["state/learning_state.json","state/registry.json","state/forge_profile.json","state/examiner_drill.json"]}}
+{"m":"SELFTEST learnstate @ASSERT running all 122 selftests leaves live state untouched","state":{"n":244,"ex":["state/registry.json","state/forge_profile.json","state/python_state.json"]}}
+{"m":"SELFTEST limits @ASSERT running all 122 selftests leaves live state untouched","state":{"n":46,"ex":["state/reps_log.jsonl","state/physio_config.json","state/nemesis_config.json","state/learning_state_config.json"]}}
+{"m":"SELFTEST manager @ASSERT running all 122 selftests leaves live state untouched","state":{"n":5,"ex":["state/registry.json"]}}
+{"m":"SELFTEST mcp-memory @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/registry.json"]}}
+{"m":"SELFTEST models @ASSERT running all 122 selftests leaves live state untouched","state":{"n":39,"ex":["state/brain_config.json","state/calibration_config.json","state/council_config.json","state/doubtminer_config.json"]}}
+{"m":"SELFTEST nightshift @ASSERT running all 122 selftests leaves live state untouched","state":{"n":27,"ex":["state/registry.json","state/captain.json","state/gate_tune_ledger.jsonl"]}}
+{"m":"SELFTEST notes_compiler @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/captain.json"]}}
+{"m":"SELFTEST oura_coach @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/captain.json"]}}
+{"m":"SELFTEST outbox @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/registry.json"]}}
+{"m":"SELFTEST outwork_audit @ASSERT running all 122 selftests leaves live state untouched","state":{"n":2,"ex":["state/registry.json"]}}
+{"m":"SELFTEST postmatch @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/captain.json"]}}
+{"m":"SELFTEST python_state @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/python_state.json"]}}
+{"m":"SELFTEST rails @ASSERT running all 122 selftests leaves live state untouched","state":{"n":5,"ex":["state/sitting.json"]}}
+{"m":"SELFTEST reconcile @ASSERT running all 122 selftests leaves live state untouched","state":{"n":516054,"ex":["state/registry.json","state/brain_config.json","state/flow_atlas.json","state/dossier_weights.json"]}}
+{"m":"SELFTEST rejirah @ASSERT running all 122 selftests leaves live state untouched","state":{"n":492,"ex":["state/registry.json"]}}
+{"m":"SELFTEST samjhao @ASSERT running all 122 selftests leaves live state untouched","state":{"n":69,"ex":["state/registry.json"]}}
+{"m":"SELFTEST scout @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/dossier_weights.json"]}}
+{"m":"SELFTEST selfknowledge @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/captain.json"]}}
+{"m":"SELFTEST services @ASSERT running all 122 selftests leaves live state untouched","state":{"n":2,"ex":["state/registry.json","state/captain.json"]}}
+{"m":"SELFTEST setpiece @ASSERT running all 122 selftests leaves live state untouched","state":{"n":7,"ex":["state/registry.json","state/ladder_config.json","state/dossier_weights.json","state/captain.json"]}}
+{"m":"SELFTEST shadow @ASSERT running all 122 selftests leaves live state untouched","state":{"n":2,"ex":["state/reps_log.jsonl","state/registry.json"]}}
+{"m":"SELFTEST sitting @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/captain.json"]}}
+{"m":"SELFTEST sprintsync @ASSERT running all 122 selftests leaves live state untouched","state":{"n":23,"ex":["state/registry.json"]}}
+{"m":"SELFTEST talk @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/registry.json"]}}
+{"m":"SELFTEST tasks @ASSERT running all 122 selftests leaves live state untouched","state":{"n":4,"ex":["state/registry.json"]}}
+{"m":"SELFTEST teaching_audit @ASSERT running all 122 selftests leaves live state untouched","state":{"n":21,"ex":["state/concepts.json","state/reps_log.jsonl"]}}
+{"m":"SELFTEST test_coach_v2 @ASSERT test_coach_v2","state":{"n":1,"ex":["state/captain.json"]}}
+{"m":"SELFTEST thalamus @ASSERT running all 122 selftests leaves live state untouched","state":{"n":11,"ex":["state/thalamus_config.json","state/registry.json"]}}
+{"m":"SELFTEST thalamus @ASSERT the one sanctioned selftest write lands in the organ's OWN log, never on the state bus","state":{"n":11,"ex":["state/thalamus_config.json","state/registry.json"]}}
+{"m":"SELFTEST throwin @ASSERT running all 122 selftests leaves live state untouched","state":{"n":2,"ex":["state/registry.json"]}}
+{"m":"SELFTEST timeaudit @ASSERT running all 122 selftests leaves live state untouched","state":{"n":2,"ex":["state/buckets.json"]}}
+{"m":"SELFTEST turn_hook @ASSERT running all 122 selftests leaves live state untouched","state":{"n":4,"ex":["state/sitting.json","state/registry.json"]}}
+{"m":"SELFTEST viz @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/captain.json"]}}
+{"m":"SELFTEST watchman @ASSERT running all 122 selftests leaves live state untouched","state":{"n":11,"ex":["state/registry.json","state/captain.json","state/unleash_baseline.json"]}}
+{"m":"SELFTEST widget @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/widgets.json"]}}
+{"m":"SELFTEST xray @ASSERT running all 122 selftests leaves live state untouched","state":{"n":1,"ex":["state/xray_graph.json"]}}

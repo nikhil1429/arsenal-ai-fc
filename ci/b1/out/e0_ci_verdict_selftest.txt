@@ -1,0 +1,16 @@
+  ✓ parseSuite reads the machine line; a run with no machine line is null (no headline)
+  ✓ keyOf folds digit runs: a tree that gains a file keeps an old red old
+  ✓ judge: every head red red at the base too is GREEN, and a base red now passing is counted, never hidden
+  ✓ judge: a red absent at the base is RED BY NAME
+  ✓ judge: no head headline is RED; no base headline is RED (no silent pass on a dead base)
+  ✓ annotate: 14 reds ride 10 annotations, the tenth carrying the last five — every red emitted
+  ✓ annotate escapes the workflow-command specials (a name never breaks its own line)
+  ✓ compare: RED prints the new red as an error, the base red as a warning, ONE verdict error, exit RED
+  ✓ reader: two GREEN legs read GREEN in exactly 3 calls
+  ✓ reader: one RED leg reads RED and NAMES the new red
+  ✓ reader: a leg still running is PENDING after ONE call (it never polls)
+  ✓ reader: no leg is NONE after ONE call
+  ✓ reader: a leg with no verdict annotation is RED, never GREEN by absence
+
+ci_verdict selftest: 13 passed, 0 failed
+ALL CHECKS PASSED
