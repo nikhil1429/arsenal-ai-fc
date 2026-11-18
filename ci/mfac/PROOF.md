@@ -156,3 +156,38 @@ For lane S to land in `.claude/skills/runner/SKILL.md` (this seat did not edit i
 4. The witness and the mutants ran on Linux (node 22) only; the Windows path (`powershell.exe` process listing,
    `claude.cmd`) is written but not measured here. The neutral machine runs the suite, not this witness.
 5. The memory MCP did not connect in this seat; nothing here rests on it.
+
+## 11. FOLLOW-UP — forks row 1100 (19 Nov 2026, UTC)
+
+Tip `c073089` adopted (the architect's Windows re-run: witness GREEN 25, base RED 22). Then, on this branch, new commits
+only, never a force push:
+
+1. **Merge.** `git merge 902b6cc` (unit mpool on main) → merge commit `1371611` (parents `c073089`, `902b6cc`). The one
+   conflict was `scripts/day.mjs` `start()`: both owner calls run — mpool's `usage_tap.mjs need` first (its `pool:` note
+   rides the start line), then the night's `close` (its ONE line rides as the second line). mpool's own witness
+   (`ci/mpool/witness_mpool.mjs` from `claude/mpool-build`, `--base-org` main `3824171`) on this build: **clause D GREEN**;
+   its `WA.i` and `S` read RED on this build AND on main `902b6cc` alike (they need the settings line, which is not on
+   main), so they are not this merge's.
+2. **FORK 1 ruled the package.json way.** `node scripts/night.mjs selftest` joins the `organism:selftest` string of
+   `package.json` (after mpool's `usage_tap.mjs`); `OWN_MEMBERS` is gone and `scripts/organism_test.mjs` is byte-equal to
+   main's again. Witness W7.
+3. **FORK 8.** `scripts/day.mjs`'s header list names step 5a (`scripts/day.mjs:37-38`). Witness W8.
+4. **THE NIGHT** (the text of §8) is in `.claude/skills/runner/SKILL.md` as `## THE NIGHT`, before CLOSE / ROTATION,
+   merged onto main's copy with mpool's two lines kept. Witness W8.
+5. Forks 2, 4, 5, 6, 7 stand as built; the F4 floor stays the refusing placeholder `FLOOR_UNSET`.
+
+**Named files now:** `scripts/night.mjs`, `scripts/day.mjs`, `package.json`, `.claude/skills/runner/SKILL.md`,
+`.gitignore`, `ci/mfac/` (`scripts/organism_test.mjs` no longer differs from main).
+
+**Witness both ways (19 Nov 2026), base = main `902b6cc`:**
+- Build: `GREEN MFAC the night armed by the day end, held to its stops, closed by the learn start in ONE line · 28 clause(s)`
+- Base: `RED MFAC · F4 W1.1 W1.2 W6.2 W1.3 W1.4 W1.5 W2.1 W2.4 W2.2 W2.3 W3.1 W3.2 W4.1 W4.2 W4.3 W4.4 W4.5 W5.1 W5.2 W5.5 W5.3 W5.4 W7 W8 W9`
+  (BOUND and LAST GREEN on both sides).
+
+**Mutants (19 Nov 2026):** `run_mutants: 28 of 28 mutant(s) RED by the clause that names them · control GREEN`
+(new: W7 the suite link dropped · W8 the skill's land ceiling reworded · W9 the merge drops the pool note).
+
+**Suite (19 Nov 2026, hermetic, this build):** `organism_test: 145 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126` —
+`SUITE MEMBER · night selftest exits 0` and `MPOOL · usage_tap selftest … exits 0` both pass; the one red is the base's
+coverage orphans line with its detail unchanged. `node scripts/night.mjs selftest` → `22 passed, 0 failed`.
+CI for the pushes of this follow-up: `ci/mfac/LEDGER.jsonl` (act `ci-read`) and the reply to the architect.
