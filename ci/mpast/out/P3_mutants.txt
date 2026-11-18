@@ -1,0 +1,17 @@
+  RED by name MP1 · his close drops the machine block below his record (L9 broken) · witness exit 1 · RED MPAST · MP1
+  RED by name MP2 · the absence line no longer reads as closed (parseMachineRecord ignores it) · witness exit 1 · RED MPAST · MP2 MP7
+  RED by name MP3 · a future day is no longer refused · witness exit 1 · RED MPAST · MP3
+  RED by name MP4 · the absence line carries a legal RESULT · witness exit 1 · RED MPAST · MP1 MP4 MP2
+  RED by name MP5 · season.json's row appended in close order, not inserted by date · witness exit 1 · RED MPAST · MP5
+  RED by name MP6 · the KAL-line asked for every day · witness exit 1 · RED MPAST · MP6
+  RED by name MP7 · a na on the card closes nothing · witness exit 1 · RED MPAST · MP7
+  RED by name MB1 · the morning close reaches the card step · witness exit 1 · RED MPAST · MB1 MB2 MB4
+  RED by name MB2 · the B1 window shut: the no-kept card names its own day only · witness exit 1 · RED MPAST · MB2 MB4
+  RED by name MB3 · the kept card's reline window moved off its own key's day · witness exit 1 · RED MPAST · MP7 MB3
+  RED by name MB4 · the days that do not fit are dropped, never counted · witness exit 1 · RED MPAST · MB4
+  RED by name BOUND · a byte outside the two named files · witness exit 1 · RED MPAST · BOUND
+  RED by name LAST · his full time spawns claude · witness exit 1 · RED MPAST · LAST
+  control · the build tree unmutated · witness exit 0 · GREEN MPAST his full time closes the newest named day · 13 clause(s)
+run_mutants: 13 of 13 mutant(s) RED by the clause that names them · control GREEN
+
+--- exit 0

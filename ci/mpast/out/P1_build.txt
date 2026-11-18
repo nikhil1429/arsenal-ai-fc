@@ -1,0 +1,16 @@
+  ok   MP1 · setup card names A, B · --date B exit 0 · B.md HIS RESULT on top, machine block kept byte for byte · A.md +1 absence line · T.md untouched
+  ok   MP4 · rung 8's regex read from daily_green.mjs · A.md no legal RESULT (the absence line on it) · KAL none · B.md HIT · matches_played 1 · rows 2099-03-02
+  ok   MP6 · at T: · card c1 (kept) · his line closes 2099-03-02 (--date 2099-03-02) · older, closed with no line of his: 2099-03-01 · KAL aske · at T+2: KAL not asked
+  ok   MP3 · the accepted --date B exit 0 · 6 of 6 refused by name · state byte-equal
+  ok   MP2 · A re-closed: read closed, untouched · T evening exit 0 · 1 live card(s), line "2099-03-03: the day closed itself — your" · named: · card c1 (kept) · his line closes 2099-03-03 (--date 2099-03-03
+  ok   MP5 · --date B exit 0 · rows 2099-02-27|2099-03-02|2099-03-03 (close order would be 02-27|T|B) · current run 0 · SEASON.md reads 0 · last_played 2099-03-03
+  ok   MP7 · na: answer exit 0 · A closed, B closed by the na absence line · the next card "2099-03-03: the day closed itself — " · baad: answer exit 0 · A, B still open · card "2099-03-01, 2099-03-02, 2099-03-03: the days c"
+  ok   MB1 · answer haan exit 0 · morning close of B exit 0, B.md written · deck byte-equal (nothing minted, nothing rewritten)
+  ok   MB2 · evening of T exit 0 · cards 1 → 2 · dayclose:2099-03-03 line "2099-03-02, 2099-03-03: the days closed themselves — your HI"
+  ok   MB3 · 1 card(s), line "2099-03-01, 2099-03-02, 2099-03-03: the days closed themselv" · equals BASE's
+  ok   MB4 · bound 140 (read from captains_call.mjs) · line 132 chars: "2099-04-02, 2099-04-03, 2099-04-04 +2 more: the days clo" · named 3 + counted 2 of 5 open day(s)
+  ok   BOUND · differs in 2 file(s): .claude/skills/full-time/SKILL.md, scripts/postmatch.mjs
+  ok   LAST · process list read · 0 node process(es) naming the temp root · fake claude logged no spawn
+GREEN MPAST his full time closes the newest named day · 13 clause(s)
+
+--- exit 0

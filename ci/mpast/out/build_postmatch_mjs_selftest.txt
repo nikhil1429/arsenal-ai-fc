@@ -1,0 +1,86 @@
+  ✓ KAL-LINE matches manager.mjs parser regex
+  ✓ DECLINED KAL: the parser finds NOTHING (so kal_line reads null downstream, not a fake line)
+  ✓ DECLINED KAL: the file still says out loud that the prompt was declined
+  ✓ DECLINED KAL: the old fabricated sentence appears nowhere in the tree's output
+  ✓ badge + matchday + COYG present
+  ✓ FULL-TIME EVENT — `brain.mjs trigger fulltime` is armed AFTER season/post_match are written and after the dry-run return (a dry close arms nothing), through the owner's CLI, best-effort
+  ✓ NOTES ANCHOR — notes_compiler.mjs `fulltime --date <the closed day>` fires AFTER post_match/<date>.md is written and after the dry return, through the compiler's own CLI; a failure says NOTES NOT DONE out loud and on the close line, never a bare catch
+  ✓ DISCLOSURE LAW — withheld adaptations always render
+  ✓ pending throw-ins shown verbatim, never auto-routed
+  ✓ null twin voice renders nothing (win-only respected)
+  ✓ earned twin voice renders
+  ✓ MISS gets warm-diagnostic + 3-choice
+  ✓ NO SHAME LAW — no failure/streak language on MISS
+  ✓ REST = LOAD-MANAGED, a won day
+  ✓ season skeleton created; HIT increments matches_played
+  ✓ REST increments (conscious rest = won day)
+  ✓ MISS does NOT increment (but never shames)
+  ✓ first post-match is season day 1
+  ✓ season_day always advances
+  ✓ notebook records real moments
+  ✓ notebook stays compressed (~45 moments)
+  ✓ route picker: 'all' takes everything
+  ✓ route picker: explicit ids take the subset only
+  ✓ route picker: unknown id routes nothing (safe no-op)
+  ✓ ROUTING LEDGER: an ABSENT file is legitimately empty — nothing routed yet, and safe to write
+  ✓ ROUTING GATE: the LEDGER — not the inert routed:false flag — is what drops a routed ball from pending
+  ✓ ROUTING LEDGER: a TORN file is present-but-UNREADABLE, never a silent empty (the old readJson swallowed it and the next write wiped the history)
+  ✓ ROUTING LEDGER: a WRONG-SHAPED file is unreadable too — shape is checked, not just parseability
+  ✓ ROUTING LEDGER: on an unreadable ledger nothing is subtracted — every throw-in shows as pending, which is the honest read when we cannot know
+  ✓ ROUTING GATE: one filter, two callers — the 〔dugout〕 suffix rides only where it is asked for (the two copies had drifted apart)
+  ✓ SEASON rows: one row per close, MISS days included (data, not a verdict)
+  ✓ SEASON rows: won days carry their matchday number; KAL + signal ride the row
+  ✓ SEASON.md: standings carry day/matchdays/run + form glyphs (rest-dot neutral)
+  ✓ SEASON.md: KAL→KICKOFF weld shows the LAST recorded KAL verbatim
+  ✓ SEASON.md: match rows newest-first with REST labelled load-managed
+  ✓ SEASON.md: benchmark gate line passes through honestly
+  ✓ SEASON.md: the benchmark's NEED NAMES enter the logbook whole (a logbook that summarises lies)
+  ✓ SEASON.md: the benchmark's DIFFERENTIATORS get their own permanent row, counts + interview weight (never folded into the bucket row)
+  ✓ SEASON.md: a pre-wire benchmark (no differentiators_line) writes no differentiators row (absence, not a zero)
+  ✓ SEASON.md: the benchmark's HAVE lines enter the logbook whole — the credit column (cold re-proof, skills with reps), which lived on no surface at all
+  ✓ SEASON.md: a benchmark with no haves[] writes no have row (absence, not a zero)
+  ✓ SEASON.md: a benchmark with no needs[] writes no need row (absence, not a zero)
+  ✓ NO SHAME LAW on the logbook — no failure/broken-streak words, MISS renders a neutral dot
+  ✓ NO-COUNTDOWN LAW on the logbook — no deadline/days-left language
+  ✓ SEASON.md: empty season renders the honest scaffold (starts when he plays, not a date)
+  ✓ SEASON.md: he writes ZERO — the file says who writes it
+  ✓ SEASON.md: an INCOMPLETE capsule_map never writes a bare locked count into the permanent logbook
+  ✓ SEASON.md: a COMPLETE capsule_map writes the row exactly as before (no noise on the healthy path)
+  ✓ AUTOCLOSE (F1) — the machine record NAMES his two lines absent: daily_green's RESULT regex and KAL_RE (manager.mjs's parser) both find NOTHING, so rung 8 stays RED by its own code
+  ✓ AUTOCLOSE — the record reads back: anchor, turns, turns_until, the compile DONE, the judge NOT DUE = UNSETTLED (row 891 (1): the next anchor runs the judge again)
+  ✓ AUTOCLOSE — the judge line: banked and nothing-outstanding are SETTLED; not due inside the idle definition, a dead lane, an undeclared door, a partial round are UNSETTLED
+  ✓ AUTOCLOSE — the compile line is DONE only when BOTH of the compiler's own runs (the --session seed, then fulltime) exit 0; anything else says NOTES NOT DONE
+  ✓ AUTOCLOSE — the chain's day comes off ITS day-key token: `chain` = the token's day, `chain-1` = the slept day before it; a literal day is itself; no token = REFUSED by name, never now()
+  ✓ AUTOCLOSE (F3) — THE CLOCK DOOR, planted both ways: honoured for a copy under os.tmpdir(); a tree outside it runs on the real clock and SAYS the door was refused; no door, no line
+  ✓ AUTOCLOSE (row 914 G) — THE BUDGET IS SUMMED IN CODE: one reader budget + one judge budget + one child budget per child (archive · compile · card), each read from its owner
+  ✓ AUTOCLOSE (row 914 G) — THE DEADLINE DOOR, planted both ways: honoured for a copy under os.tmpdir(); outside it the boot instant plus the summed budget stands and the refusal is said
+  ✓ AUTOCLOSE (row 932) — THE SPAWN VALUE: under a fractional uptime the compile's seed, fulltime and the judge each get a safe positive whole number of ms; a fraction, zero or a negative starts nothing and says so; the one clock reads the step's instant
+  ✓ AUTOCLOSE (row 914 G6) — notes the deadline did not reach make the compile line UNSETTLED by count, never DONE
+  ✓ AUTOCLOSE (row 914 G5) — no child of the close carries a typed 20-minute timeout: each starts on the deadline's time left
+  ✓ AUTOCLOSE (F3) — THE QUIET RULE: an EVENING close 29 min after the last study turn is DEFERRED, at 31 min it closes; the MORNING never defers
+  ✓ --hit UPGRADE (row 873 (3)) — a MACHINE record lets his close through: HIS RESULT + KAL on top (the first legal RESULT and KAL_RE read HIS), the machine record byte-for-byte below MACHINE CLOSE (kept, L9)
+  ✓ AUTOCLOSE (iv) — IDEMPOTENT BY DAY: HIS result is never touched; a current SETTLED record is nothing new; a current UNSETTLED one re-runs ONLY its unfinished step; a newer study turn refreshes it; a hand's file is never overwritten
+  ✓ AUTOCLOSE (F2) — its body never writes season.json, notebook.json, routed_balls.json or SEASON.md and never arms a brain trigger (the evening voice rides HIS close)
+  ✓ mcard — ONE open day is the line step (viii) has always filed, byte for byte (and the `file` call still files it)
+  ✓ mcard — more open days are ALL named, oldest first and once each, in one line inside the deck's bound
+  ✓ mcard — when they do not fit, the OLDEST that fit are named and the rest COUNTED (named + counted = every open day), never over the bound, for 1 to 60 days
+  ✓ mcard — nothing to name, or a bound that cannot hold one day, is null (the step then rewrites nothing)
+  ✓ mcard — an OPEN day is a machine record with no result of his, from the kept card's own day on: his close on top, a hand's file, his own close and a day before the window are not
+  ✓ mcard — KEPT is the deck's own rule (captains_call relineTarget): the live day-close card is found; an answered one and another family's are not
+  ✓ mcard — step (viii) reaches the card ONLY on the evening path (the morning files none and rewrites nothing), through ONE call
+  ✓ mcard — the card step writes the deck only through captains_call.mjs's OWN CLI: the door with family + kept key, else `file` with the rolling key and its reason, as before
+  ✓ mpm F5 — THE mjday RULE HAS ONE HOME: this copy of captureDay is gaffer_brain.mjs's byte for byte (its IST helper named istDayOf here, defined the same)
+  ✓ mpm F5 — queueEvidenceOf counts each capture by ITS OWN IST day: 01:30 IST in, 00:30 IST next day out, a carried day in, a dayless one and a settled row never
+  ✓ mpm F5 — the gate reads the queue only when the archive's study turns are absent, through the owner's own reader, and a queue-only day spawns no compile
+  ✓ mpast — THE ABSENCE LINE reads as absence, never as his word: no legal RESULT (daily_green's reading), no KAL_RE match, and the record it closes is no longer open, never re-closed by code
+  ✓ mpast — season.json's row is INSERTED BY DATE (the streak reads days, never close order); a newest day still appends, and last_played is the newest day
+  ✓ mpast — the KAL-line is asked only when the closed day is yesterday or today
+  ✓ mpast — a real day only: malformed or impossible dates are not days
+  ✓ mpast — a card's NAMED days are the days its line spells plus its `+k more` counted open days after them, only those still open
+  ✓ mpast — appendAbsence adds exactly ONE line below the machine record's bytes (L9), and a closed day is never written twice
+  ✓ mpast — na closes every day the card named by the recorded absence (its own wording); baad closes nothing
+  ✓ mpast — main's --date refusals come BEFORE any write, each by name, and the double-click guard reads the day closed (dateStr), never the clock's today
+
+ALL CHECKS PASSED
+
+--- exit 0

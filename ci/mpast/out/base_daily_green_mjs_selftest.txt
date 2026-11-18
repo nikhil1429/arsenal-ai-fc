@@ -1,0 +1,72 @@
+  ok   ALL GREEN — a fully-fed study day is 11/11, study:true, green:true
+  ok   the line is ONE line, and it opens with the contract: DAILY GREEN <date> IST · n/11 · streak k
+  ok   clause 1 (reps) planted GREEN
+  ok   clause 2 (pointer) planted GREEN
+  ok   clause 3 (notes) planted GREEN
+  ok   clause 4 (examiner) planted GREEN
+  ok   clause 5 (rejirah) planted GREEN
+  ok   clause 6 (cards) planted GREEN
+  ok   clause 7 (readiness) planted GREEN
+  ok   clause 8 (fulltime) planted GREEN
+  ok   clause 9 (daemons) planted GREEN
+  ok   clause 10 (suite) planted GREEN
+  ok   clause 11 (pushed) planted GREEN
+  ok   clause reps RED — /0 reps/
+  ok   clause reps RED — /^not born/
+  ok   clause pointer RED — /did not move \(last 2026-09-20\)/
+  ok   clause pointer RED — /^not born/
+  ok   clause pointer RED — /^not born: no resume_pointer/
+  ok   clause notes RED — /^not born: no note-extraction organ/
+  ok   clause notes RED — /no block extracted/
+  ok   clause examiner RED — /did not run/
+  ok   clause examiner RED — /^not born/
+  ok   clause rejirah RED — /^not born: rejirah_log/
+  ok   clause rejirah RED — /^due tokenization R1 · no row/
+  ok   clause cards RED — /re-dealt same day: c1 2×/
+  ok   clause cards RED — /^not born/
+  ok   clause readiness RED — /no reading for 2026-09-24 \(newest 2026-09-22\)/
+  ok   clause readiness RED — /^unreadable: readiness\.json/
+  ok   clause fulltime RED — /not closed/
+  ok   clause fulltime RED — /MISS · no KAL-line/
+  ok   clause daemons RED — /down: cortex/
+  ok   clause daemons RED — /^not born/
+  ok   clause daemons RED — /stale pass/
+  ok   clause suite RED — /unrunnable/
+  ok   clause suite RED — /^not born/
+  ok   clause suite RED — /stale sweep/
+  ok   clause pushed RED — 2 committed-but-unpushed
+  ok   clause pushed RED — no upstream is UNREADABLE, never zero
+  ok   clause pushed GREEN with a dirty tree — dirt is not committed, and its count stays out of the row (idempotency)
+  ok   daemons GREEN — sitting brain down with NO sitting open is explained by its input gate
+  ok   daemons RED — the same down sitting brain WHILE a sitting is open is not explained
+  ok   …and an open sitting is itself a study day
+  ok   daemons RED — a daemon the pass never named is counted DOWN against the roster, not skipped
+  ok   rejirah GREEN — born, and a pre-cyborg lock is never 'due' (rejirah.mjs openRound owns GAME ON)
+  ok   READINESS — the verdict's content, and any medication/diagnosis field, never reaches the line or the ledger
+  ok   NON-STUDY DAY — clauses 1-5 are N-A 'not a study day'
+  ok   NON-STUDY DAY — clauses 6-11 still judge (N-A is legal nowhere else)
+  ok   STUDY DAY — a sitting CLOSED on the day (the sitting organ's close row) makes it a study day
+  ok   UNKNOWN STUDY DAY — sitting.json not born fails clauses 1-5 CLOSED (RED), never N-A
+  ok   UNREADABLE sitting.json — RED 'unreadable', never a throw
+  ok   FAIL CLOSED — a clause whose reader throws prints RED unreadable, the witness never throws
+  ok   IDEMPOTENT — re-running the same date with identical facts appends nothing
+  ok   CHANGED FACTS — a different row for the same date is APPENDED (never rewritten), and it is the one that counts
+  ok   write:false (the selftest's own lever) appends nothing
+  ok   STREAK — green study day 1 → streak 1
+  ok   STREAK — a NON-study day in between is skipped (counts study days, not calendar days)
+  ok   STREAK — three green study days in a row → streak 3 (the done-line)
+  ok   BROKEN STREAK — a RED study day resets the streak to 0
+  ok   BROKEN STREAK — a day with NO ledger row (unwitnessed) ends the walk: streak 1, not carried across the gap
+  ok   streakFrom is pure over rows — [green, (no row), green] = 1; [green, non-study, green] = 2
+  ok   IMPORT NEVER DIES — under a registry with NO mechanisms rows the meter imports clean (exit 0, IMPORT OK, no registry throw)
+  ok   IMPORT NEVER DIES — RED PROOF: a module that reads act_doors at import dies under the same registry (the probe sees the throw)
+  ok   S880B CLAUSE 9 — context UNKNOWN → RED `unknown: context` (never `down: context`); context true → GREEN; a port daemon down → `down: cortex` as today; both at once → `down: cortex · unknown: context`
+  ok   S880B CLAUSE 9 — no input gate explains an UNKNOWN daemon: the sitting brain UNREAD with no sitting open is RED `unknown: sitting`, while the same brain DOWN is still gated GREEN as today
+  ok   HERMETIC — the live ledger is byte-identical after the whole selftest
+  ok   ONE WRITE — outside the selftest the only write call is the ledger append
+  ok   NO MODEL, NO NETWORK, NO ENV OVERRIDE — no claude/gemini call, no fetch, no process.env read in the witness
+  ok   the root override is not exported — only this file's selftest can pass it
+
+daily_green selftest: 68 passed, 0 failed
+
+--- exit 0

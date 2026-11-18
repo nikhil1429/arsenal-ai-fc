@@ -1,0 +1,16 @@
+  RED  MP1 · setup card names A, B · --date B exit 0 · B.md no result of his, machine block NOT kept · A.md NOT closed by one absence line · T.md untouched
+  RED  MP4 · rung 8's regex read from daily_green.mjs · A.md no legal RESULT (NO absence line) · KAL none · B.md no RESULT · matches_played 1 · rows 2026-11-18
+  RED  MP6 · at T: ch: no result given — pass --hit HIT|MISS|PARTIAL|REST (nothing recorded, nothing fabricated) · at T+2: ch: no result given — pass --hit HIT|MISS|PARTIAL|REST (nothing recorded, nothing fa
+  RED  MP3 · the accepted --date B exit 0 · 0 of 6 refused by name — NOT refused: no record (exit 0), future (its machine record planted) (exit 0), his own day (exit 0), his own day --force (exit 0), malformed (exit 0), impossible (exit 0) · state CHANGED
+  RED  MP2 · A re-closed: autoclose · 2099-03-01 · unsettled (judge) · re-run, the same answer · · T evening exit 0 · 1 live card(s), line "2099-03-01, 2099-03-02, 2099-03-03: the " · named: 
+  RED  MP5 · --date B exit 0 · rows 2099-02-27|2099-03-03|2026-11-18 (close order would be 02-27|T|B) · current run 1 · SEASON.md does NOT read 0 · last_played 2026-11-18
+  RED  MP7 · na: answer exit 0 · A OPEN, B OPEN by the na absence line · the next card "2099-03-03: the day closed itself — " · baad: answer exit 0 · A, B still open · card "2099-03-01, 2099-03-02, 2099-03-03: the days c"
+  ok   MB1 · answer haan exit 0 · morning close of B exit 0, B.md written · deck byte-equal (nothing minted, nothing rewritten)
+  RED  MB2 · evening of T exit 0 · cards 1 → 2 · dayclose:2099-03-03 line "2099-03-03: the day closed itself — your HIT/MISS and tomorr"
+  ok   MB3 · 1 card(s), line "2099-03-01, 2099-03-02, 2099-03-03: the days closed themselv" · equals BASE's
+  RED  MB4 · bound 140 (read from captains_call.mjs) · line 95 chars: "2099-04-06: the day closed itself — your HIT/MISS and to" · named 1 + counted 0 of 5 open day(s)
+  RED  BOUND · differs in 0 file(s): none
+  ok   LAST · process list read · 0 node process(es) naming the temp root · fake claude logged no spawn
+RED MPAST · MP1 MP4 MP6 MP3 MP2 MP5 MP7 MB2 MB4 BOUND
+
+--- exit 1
