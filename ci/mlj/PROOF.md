@@ -24,8 +24,10 @@ keeper judgeHeld, after mland and mlv0 are both in main.*
   (exit 1). A keeper that cannot answer → `REFUSED JUDGE-UNREADABLE` (fail closed). `HUMAN_STOPS` is unchanged, so a
   JUDGE-HELD refusal is a wait (ledger row `human:false`) and never resets the count. `land` became `async`; `main()`'s
   code reaches `process.exitCode` through a promise. The header carries the refusal.
-- `scripts/keeper.mjs` — `JUDGE_PORT` gains the env door `ARSENAL_JUDGE_PORT` (the sitting precedent): a port 1-65535
-  is read, anything else reads 4118. Every reader and the holder read the same constant. Nothing else changes.
+- `scripts/keeper.mjs` — `JUDGE_PORT` gains the env door `ARSENAL_JUDGE_PORT` (the sitting precedent), **honoured ONLY
+  when keeper.mjs's own file sits under the OS temp dir** (row 1064 rework of row 1053 (1): both paths through realpath,
+  case-insensitive on win32). In his tree it reads 4118 whatever the env says; a non-port reads 4118 too. Every reader
+  and the holder read the same constant. Nothing else changes.
 - `ci/mlj/witness_mlj.mjs`, `ci/mlj/run_mutants_mlj.mjs`, `ci/mlj/LEDGER.jsonl`, this file.
 
 ## Witness, both ways (by last line, 18 Nov 2026)
@@ -41,7 +43,8 @@ RED MLJ · J1, J2, J3, J4, J5, K1, BOUND                                        
 Clauses: J1 HELD (held refuses, his main and origin unmoved; the round closes and the SAME branch lands) · J2 DRY ·
 J3 COUNT (1 of N survives a JUDGE-HELD; its row is `human:false`) · J4 LAST (a round opened by the planted sitting at
 step 7 is still caught) · J5 KEEPER (the predicate IS keeper's export; a keeper with no `judgeHeld` fails closed while
-`count` still answers) · K1 DOOR · BOUND · LAST.
+`count` still answers) · K1 DOOR (under the temp dir the planted port is read, a non-port or unset reads 4118; the
+SAME keeper bytes OUTSIDE the temp dir with a planted port read 4118 — row 1064) · BOUND · LAST.
 
 The port class (row 1053): no fixed port is bound. Each round is a planted HOLDER process running the sandbox's own
 keeper `holdJudgePort` on an OS-picked port, reaching land only through `ARSENAL_JUDGE_PORT`. The holder lives until a
@@ -58,7 +61,8 @@ node ci/mlj/run_mutants_mlj.mjs --org . --base-org <base>
   M4 J4 the judge is read FIRST (before the verdict and the sitting), not last         → RED MLJ · J4
   M5 J5 the verb bind-tests its own fixed port instead of keeper's judgeHeld           → RED MLJ · J5
   M6 K1 keeper's JUDGE_PORT ignores its env door                                       → RED MLJ · K1
-run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN
+  M7 K1 the temp-dir guard removed (the door honoured in his tree too, row 1064)       → RED MLJ · K1
+run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
 ```
 
 CRLF (the laptop's checkout shape; scripts/, setup/, ci/mlj/ converted by a node script under the scratchpad), 18 Nov 2026:
@@ -66,7 +70,7 @@ CRLF (the laptop's checkout shape; scripts/, setup/, ci/mlj/ converted by a node
 ```
 witness --org <CRLF build> --base-org <CRLF base>     GREEN MLJ the judge-held refusal · 8 clause(s)
 witness --org <CRLF base>  --base-org <CRLF base>     RED MLJ · J1, J2, J3, J4, J5, K1, BOUND
-run_mutants --org <CRLF build> --base-org <CRLF base> run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN
+run_mutants --org <CRLF build> --base-org <CRLF base> run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
 ```
 
 ## Each touched selftest, before → after (headline lines, run 18 Nov 2026 in this container)
@@ -101,10 +105,10 @@ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all, 18 Nov 2026, 
    scratch copy: with `export const JUDGE_PORT = 0;` and `export const judgeHeld = async () => false;` added to that stub,
    every mland clause's build side reads GREEN at this build. That file is not mine. The edit belongs to mland's home,
    or to ms1 (row 1043 (2) F3) when it lands.
-2. **The env door is in keeper.mjs, not in land.mjs.** Row 1053 wants a port planted only through an env door. A door on
-   land alone would let land and the holder read different ports. So the door is keeper's `ARSENAL_JUDGE_PORT`
-   (precedent `ARSENAL_SITTING_PORT`), read by every reader. The ruling's "points under the temp dir" fits a path
-   door. A port cannot point under a directory, so the port is OS-picked in the run and passed through the door.
+2. **The env door is in keeper.mjs, not in land.mjs** (row 1064 (3) keeps it there). Row 1064 (1) RULED the reading
+   of "under the temp dir": the door is honoured only for a keeper.mjs whose own path is under `os.tmpdir()`; his tree
+   reads 4118 whatever its env says. K1's OUTSIDE case plants the same bytes in a dir outside the temp dir (his home,
+   else the witness's own repo) and removes it before the clause returns.
 3. **`land.mjs push <unit>` does not read the judge.** L4's retry moves no byte in his tree (main already holds T), so it
    cannot disturb a running round. If the architect wants it gated too, that is a stricter gate for a later unit.
 4. **The check-to-move window is not closed.** A round that opens between `judgeHeld()` and `git merge --ff-only` (one
@@ -116,3 +120,11 @@ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all, 18 Nov 2026, 
 
 `node campaign-2026-09/tools/effort_receipt.mjs` — this repository does not carry that file. The error is in the FINAL
 MESSAGE. Nothing is written under `campaign-2026-09/`.
+
+## Row 1064 rework (18 Nov 2026)
+
+Relayed by runner M: one defect, the door was honoured anywhere. Fixed in keeper.mjs only; K1 gained the OUTSIDE case
+and mutant M7. The mland witness's keeper stub is NOT touched (unit ms1's landing). Re-run, 18 Nov 2026: witness build
+GREEN (8 clauses), base RED (J1, J2, J3, J4, J5, K1, BOUND), mutants 7 of 7 with control GREEN, the same on CRLF copies;
+`node scripts/keeper.mjs selftest` headline unchanged; `node scripts/models.mjs check` exit 0; the hermetic suite line is
+the base's line (same four unruled reds, by `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`).

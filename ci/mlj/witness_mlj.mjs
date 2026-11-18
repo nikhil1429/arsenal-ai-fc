@@ -23,15 +23,17 @@
 //   J5 KEEPER   the predicate IS keeper's export: a keeper.mjs whose judgeHeld answers held (no port bound at all) →
 //               REFUSED JUDGE-HELD · a keeper with no judgeHeld → REFUSED JUDGE-UNREADABLE (fail closed) while `count`
 //               still answers (keeper is read at the gate, not at load) · the tree's own keeper, nothing held → lands
-//   K1 DOOR     keeper's JUDGE_PORT reads ARSENAL_JUDGE_PORT: a planted port → that port · a non-port → 4118 · unset → 4118
+//   K1 DOOR     keeper's JUDGE_PORT reads ARSENAL_JUDGE_PORT ONLY for a keeper.mjs under the OS temp dir (row 1053 (1),
+//               row 1064): under it, a planted port → that port · a non-port → 4118 · unset → 4118; the SAME bytes
+//               OUTSIDE the temp dir with a planted port → 4118
 // Each clause runs on --base-org (must be RED) and on --org (must be GREEN). BOUND: only scripts/land.mjs,
 // scripts/keeper.mjs and ci/mlj/ differ (text, CRLF folded to LF). LAST: no node process naming the temp dir survives.
 // LAST LINE: GREEN MLJ the judge-held refusal · <n> clause(s)  (exit 0)  ·  RED MLJ · <clauses>  (exit 1)
 // ============================================================================
 import { spawnSync } from "node:child_process";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, rmSync, existsSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, rmSync, existsSync, realpathSync } from "node:fs";
+import { join, relative, sep, isAbsolute } from "node:path";
 import { createServer } from "node:net";
 import { createHash } from "node:crypto";
 import os from "node:os";
@@ -191,12 +193,26 @@ const CLAUSES = {
   },
   async K1(tree) {
     const k = join(tree, "scripts", "keeper.mjs"); if (!existsSync(k)) return { ok: false, why: "no keeper.mjs" };
-    const port = await pickPort();
-    const read = (v) => { const env = { ...process.env }; if (v == null) delete env.ARSENAL_JUDGE_PORT; else env.ARSENAL_JUDGE_PORT = v;
-      const r = spawnSync(process.execPath, ["--input-type=module", "-e", `const m = await import(${JSON.stringify(pathToFileURL(k).href)}); console.log(m.JUDGE_PORT);`], { encoding: "utf8", windowsHide: true, env });
-      return (r.stdout || "").trim(); };
-    const a = read(String(port)), b = read("not-a-port"), c = read(null);
-    return { ok: a === String(port) && b === "4118" && c === "4118", why: `door ${a} (planted ${port}) · non-port ${b} · unset ${c}` };
+    const body = readFileSync(k);
+    // INSIDE: the tree's keeper copied under the OS temp dir (a planted tree) · OUTSIDE: the same bytes in a dir that is NOT
+    //   under it (his home, else this witness's own repo), removed again before the clause returns
+    const tmpReal = realpathSync(os.tmpdir()), fold = (x) => (process.platform === "win32" ? x.toLowerCase() : x);
+    const underTmp = (d) => { const r = relative(fold(tmpReal), fold(realpathSync(d))); return !!r && !r.startsWith("..") && !isAbsolute(r); };
+    const inDir = join(ROOT, `k1-${++seq}`); mkdirSync(inDir, { recursive: true }); writeFileSync(join(inDir, "keeper.mjs"), body);
+    const here = join(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
+    const home = [os.homedir(), here].find((d) => { try { return existsSync(d) && !underTmp(d); } catch { return false; } });
+    if (!home) return { ok: false, why: "no directory outside the temp dir to plant the OUTSIDE case in (named, not guessed)" };
+    const outDir = mkdtempSync(join(home, ".mlj-k1-"));
+    try {
+      writeFileSync(join(outDir, "keeper.mjs"), body);
+      const port = await pickPort();
+      const read = (dir, v) => { const env = { ...process.env }; if (v == null) delete env.ARSENAL_JUDGE_PORT; else env.ARSENAL_JUDGE_PORT = v;
+        const r = spawnSync(process.execPath, ["--input-type=module", "-e", `const m = await import(${JSON.stringify(pathToFileURL(join(dir, "keeper.mjs")).href)}); console.log(m.JUDGE_PORT);`], { encoding: "utf8", windowsHide: true, env });
+        return (r.stdout || "").trim(); };
+      const a = read(inDir, String(port)), b = read(inDir, "not-a-port"), c = read(inDir, null), d = read(outDir, String(port));
+      return { ok: a === String(port) && b === "4118" && c === "4118" && d === "4118",
+        why: `under tmp: door ${a} (planted ${port}) · non-port ${b} · unset ${c} · outside tmp, planted ${port}: ${d}` };
+    } finally { rmSync(outDir, { recursive: true, force: true }); }
   },
 };
 

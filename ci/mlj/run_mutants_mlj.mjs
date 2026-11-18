@@ -33,7 +33,8 @@ const MUTANTS = [
   { clause: "J5", file: L, what: "the verb bind-tests its own fixed port instead of keeper's judgeHeld",
     from: 'try { const k = await import("./keeper.mjs"); jh = { held: await k.judgeHeld(), port: k.JUDGE_PORT }; }',
     to: 'try { const net = await import("node:net"); jh = { held: await new Promise((r) => { const s = net.createServer(); s.once("error", () => r(true)); s.listen(4118, "127.0.0.1", () => s.close(() => r(false))); }), port: 4118 }; }' },
-  { clause: "K1", file: K, what: "keeper's JUDGE_PORT ignores its env door", from: "(Number(process.env.ARSENAL_JUDGE_PORT))", to: "(4118)" },
+  { clause: "K1", file: K, what: "keeper's JUDGE_PORT ignores its env door", from: "(UNDER_TMP ? Number(process.env.ARSENAL_JUDGE_PORT) : NaN)", to: "(4118)" },
+  { clause: "K1", file: K, what: "the temp-dir guard removed (the door honoured in his tree too, row 1064)", from: "(UNDER_TMP ? Number(", to: "(true ? Number(" },
 ];
 const root = mkdtempSync(join(os.tmpdir(), "mutants-mlj-"));
 const runW = (org, only) => { const r = spawnSync(process.execPath, [WITNESS, "--org", org, "--base-org", BASE, ...(only ? ["--only", only] : [])], { encoding: "utf8", windowsHide: true }); const out = (r.stdout || "").trim().split(/\r?\n/); return { code: r.status, last: out[out.length - 1] || "" }; };

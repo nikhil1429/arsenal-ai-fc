@@ -39,8 +39,9 @@
 
 import { spawn as nodeSpawn } from "node:child_process";
 import { createServer } from "node:net";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, join, relative, isAbsolute } from "node:path";
+import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const KEEP_EXIT = Object.freeze({ CLEAN: 0, ALREADY_RESIDENT: 69, RETIRED: 75, REFUSED: 78 });
@@ -77,9 +78,18 @@ const nap = (ms, cut) => new Promise((res) => {
 //   Port registry: 4111 turnstile · 4112 cortex · 4113 thalamus · 4114 dugout · 4115 brain
 //   tick-lock · 4116 brain daemon-singleton · 4117 sitting · 4118 the judge round.
 //   ARSENAL_JUDGE_PORT is its env door (unit mlj, the ARSENAL_SITTING_PORT precedent at sitting.mjs:108): a witness plants
-//   an OS-picked port there, so no plant ever binds the live one. Anything that is not a port 1-65535 reads 4118, and every
-//   reader (the round's hold, services status, each retire, land.mjs) reads the SAME constant.
-export const JUDGE_PORT = ((p) => (Number.isInteger(p) && p > 0 && p < 65536 ? p : 4118))(Number(process.env.ARSENAL_JUDGE_PORT));
+//   an OS-picked port there, so no plant ever binds the live one. Row 1053 (1) / row 1064: the door is honoured ONLY when
+//   THIS file sits under the OS temp dir (both paths through realpath, case-insensitive on win32) — a planted tree; his
+//   tree reads 4118 whatever its env says. Anything that is not a port 1-65535 reads 4118 too, and every reader (the
+//   round's hold, services status, each retire, land.mjs) reads the SAME constant.
+const UNDER_TMP = (() => {
+  try {
+    const f = (s) => (process.platform === "win32" ? s.toLowerCase() : s);
+    const rel = relative(f(realpathSync(tmpdir())), f(realpathSync(fileURLToPath(import.meta.url))));
+    return !!rel && !rel.startsWith("..") && !isAbsolute(rel);
+  } catch { return false; }
+})();
+export const JUDGE_PORT = ((p) => (Number.isInteger(p) && p > 0 && p < 65536 ? p : 4118))(UNDER_TMP ? Number(process.env.ARSENAL_JUDGE_PORT) : NaN);
 /** holdJudgePort: bind JUDGE_PORT for this process's life. Resolves the server (close() it
  *  when the round ends) or null when another round already holds it (never a refusal here).
  *  @param {number} [port] */
