@@ -53,9 +53,10 @@
 //  to main()'s dispatcher by a selftest, see "THE CONTRACT HEADER IS A WIRE" below.)
 // ============================================================================
 
-import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, watch, readdirSync, statSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, watch, readdirSync, statSync, realpathSync } from "node:fs";
+import { join, dirname, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { tmpdir } from "node:os";   // unit mlv2 rework (forks row 1053): the planted-tree port door below
 import { execFileSync, execFile } from "node:child_process";
 // ledgerShiftSummary joined this import 11 Aug 2026 (wiring audit): it is the ONE
 // consumer of the bench census stamped below, and the selftest runs the real rows
@@ -73,7 +74,7 @@ import { currentWindow, AMBIENT } from "./distiller.mjs";
 import { presenceTailReport as jsonlTailReport } from "./presence.mjs";
 import { captain, captainTag } from "./captain.mjs";   // Block 2 §7.3
 import { dayKey } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: ConceptGraph 03:00 keys its SLOT's day in a catch-up burst
-import { keep, KEEP_EXIT, retireWhenIdle, judgeHeld } from "./keeper.mjs";   // unit mlv2 (forks row 1031 M0 A) — the keeper over `daemon-worker`, the deferred retire, the judge port
+import { keep, KEEP_EXIT, retireWhenIdle, judgeHeld, JUDGE_PORT } from "./keeper.mjs";   // unit mlv2 (forks row 1031 M0 A) — the keeper over `daemon-worker`, the deferred retire, the judge port
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -155,7 +156,24 @@ function writeCortexSession(obj) {
 // down / restarting) wait here instead of evaporating. Drained on the next serve.
 const UNSENT    = join(STATE_DIR, "cortex_unsent.jsonl");
 const BLEDGER   = join(STATE_DIR, "brain_ledger.jsonl");
-const THALAMUS  = "http://127.0.0.1:4113";
+// THE PLANTED-TREE PORT DOOR (unit mlv2 rework, forks row 1053). A witness runs a REAL cortex on a COPY of the tree
+// under the OS temp dir, and must never touch the live services' fixed ports (his laptop runs them). So each port this
+// file binds or addresses reads an env name — honoured ONLY when this very file sits under os.tmpdir(); anywhere else
+// (his checkout, the service) the env is ignored and the fixed port stands, byte for byte what it was.
+export function plantedPort(name, fixed, { here = fileURLToPath(import.meta.url), env = process.env, tmp = tmpdir(), platform = process.platform } = {}) {
+  const v = env[name];
+  if (v == null || v === "") return fixed;
+  let h, t;
+  try { h = realpathSync(here); t = realpathSync(tmp); } catch (e) { swallow("plantedPort: an unreal path is never a planted tree → the fixed port", e); return fixed; }
+  const fold = (x) => (platform === "win32" ? x.toLowerCase() : x);
+  const under = fold(h).startsWith(fold(t.endsWith(sep) ? t : t + sep));
+  const n = Number(v);
+  return under && Number.isInteger(n) && n > 0 && n < 65536 ? n : fixed;
+}
+const CORTEX_PORT = plantedPort("ARSENAL_CORTEX_PORT", 4112);        // the singleton lock + the restart door
+const THALAMUS_PORT = plantedPort("ARSENAL_THALAMUS_PORT", 4113);    // where every deep answer is POSTed
+const JUDGE_AT = plantedPort("ARSENAL_JUDGE_PORT", JUDGE_PORT);       // the judge round's port (keeper.mjs), read by both retires
+const THALAMUS  = `http://127.0.0.1:${THALAMUS_PORT}`;
 const LIMIT_RE  = /limit|overloaded|rate.?limit|resets \d/i;
 // THE TAIL (14 Nov 2026 · forks row 880 (3)(a) · lane S). Every `error:` the
 // meter keeps goes through this ONE helper, which keeps the LAST n chars and
@@ -1826,6 +1844,19 @@ async function selftest() {
     assert("#wire: every other request arms NOTHING and 404s — a stray probe can never retire the deep brain",
       lockRoute("GET", "/restart").arm === false && lockRoute("POST", "/status").arm === false
       && lockRoute("GET", "/").status === 404 && lockRoute(undefined, undefined).arm === false);
+    {
+      const { mkdtempSync: mkd, rmSync: rmd } = await import("node:fs");
+      const d = mkd(join(tmpdir(), "cortex-port-")), planted = join(d, "cortex.mjs");
+      writeFileSync(planted, "");
+      const env = { P: "4999" }, mine = fileURLToPath(import.meta.url);
+      const ok = plantedPort("P", 4112, { env: {}, here: planted }) === 4112          // env unset: the fixed port
+        && plantedPort("P", 4112, { env, here: planted }) === 4999                    // a planted tree under the temp dir: the env port
+        && plantedPort("P", 4112, { env: { P: "not-a-port" }, here: planted }) === 4112
+        && plantedPort("P", 4112, { env, here: join(d, "gone.mjs") }) === 4112        // an unreal path is never honoured
+        && (realpathSync(mine).startsWith(realpathSync(tmpdir()) + sep) || plantedPort("P", 4112, { env, here: mine }) === 4112);   // his tree: never
+      rmd(d, { recursive: true, force: true });
+      assert("#mlv2 rework (row 1053): the port door is honoured ONLY for a tree under the OS temp dir — env unset, a bad value, or his own tree keep the fixed port", ok);
+    }
     const st = lockRoute("GET", "/status");
     assert("#mlv0: GET /status answers the boot instant ONLY (booted_at · pid, never module_mtime_ms) and arms nothing (row 1031 M2 A)",
       st.arm === false && st.status === 200 && !Number.isNaN(Date.parse(st.body.booted_at)) && st.body.pid === process.pid && !("module_mtime_ms" in st.body));
@@ -2160,7 +2191,7 @@ async function main() {
     const held = await new Promise((resolve) => {
       const s = mkSrv(() => {});
       s.on("error", () => resolve(null));
-      s.listen(4112, "127.0.0.1", () => resolve(s));
+      s.listen(CORTEX_PORT, "127.0.0.1", () => resolve(s));
     });
     if (!held) { console.log("cortex: the daemon holds the lock (:4112) and is already serving the queue — tick stands down."); return; }
     try {
@@ -2175,7 +2206,7 @@ async function main() {
     // this argv). It kills nothing: it knocks, and reports what the daemon said.
     let said = null, err = null;
     try {
-      const r = await fetch("http://127.0.0.1:4112/restart", { method: "POST", signal: AbortSignal.timeout(RESTART_KNOCK_MS) });
+      const r = await fetch(`http://127.0.0.1:${CORTEX_PORT}/restart`, { method: "POST", signal: AbortSignal.timeout(RESTART_KNOCK_MS) });
       said = await r.json().catch(() => ({ ok: r.ok }));
     } catch (e) { err = String((e && e.message) || e); }
     if (err) {
@@ -2213,7 +2244,7 @@ async function main() {
   // `daemon-worker`, the loop below. A RETIRE (75) respawns the worker at once on the new bytes; a held :4112 makes
   // the keeper wait, never pile up. Every mode above returned already, so only the daemon path reaches here.
   if (mode !== "daemon-worker") {
-    await keep({ name: "cortex", worker: [process.execPath, fileURLToPath(import.meta.url), "daemon-worker", ...process.argv.slice(3)], port: 4112 });
+    await keep({ name: "cortex", worker: [process.execPath, fileURLToPath(import.meta.url), "daemon-worker", ...process.argv.slice(3)], port: CORTEX_PORT });
     return;
   }
   // SINGLETON LOCK — two cortexes racing one wake = double Opus spend. The
@@ -2238,7 +2269,7 @@ async function main() {
   });
   await new Promise((resolve) => {
     lock.on("error", (e) => { if (e.code === "EADDRINUSE") { console.log("cortex: another cortex holds the lock (:4112) — standing down."); process.exit(KEEP_EXIT.ALREADY_RESIDENT); } throw e; });   // unit mlv2: 69, so a keeper waits instead of stopping
-    lock.listen(4112, "127.0.0.1", resolve);
+    lock.listen(CORTEX_PORT, "127.0.0.1", resolve);
   });
   // Consulted at EVERY point the lane count can change — on arm, when a lane
   // closes, and on the existing 5s poll — so an armed restart can never sit
@@ -2250,7 +2281,7 @@ async function main() {
   // lane count is re-read after that async read, so a lane opened meanwhile is never cut.
   function retireIfArmed() {
     if (!restartReady({ armed: restartArmed, inflight: inflight.size })) return;
-    judgeHeld().then((held) => {
+    judgeHeld(JUDGE_AT).then((held) => {
       if (exiting || !restartReady({ armed: restartArmed, inflight: inflight.size })) return;
       if (held) { if (!judgeSaid) console.log("cortex: restart armed and every lane idle, but a judge round holds its port — retiring the moment it closes."); judgeSaid = true; return; }
       exiting = true;
@@ -2317,7 +2348,7 @@ async function main() {
   // THE DEFERRED RETIRE (unit mlv2, row 1031 M0 A): its idle predicate is "no lane in flight" — a lane in flight is a
   // paid Opus read or its POST home, never cut. A source change while a lane runs DEFERS; the lane's close re-checks it
   // (the two .finally sites above); a judge round holding its port defers it too (keeper.mjs retireWhenIdle).
-  retirer = await retireWhenIdle({ name: "cortex", entry: fileURLToPath(import.meta.url), idle: () => inflight.size === 0 && !exiting,
+  retirer = await retireWhenIdle({ name: "cortex", entry: fileURLToPath(import.meta.url), judge: () => judgeHeld(JUDGE_AT), idle: () => inflight.size === 0 && !exiting,
     retire: () => { exiting = true; try { lock.closeAllConnections && lock.closeAllConnections(); } catch { } try { lock.close(); } catch { } process.exit(KEEP_EXIT.RETIRED); } });
   console.log(`cortex: worker watching ${retirer.files.length} file(s) of its own closure; a change retires it only when no lane is in flight and no judge round runs.`);
   retirer.check();

@@ -223,6 +223,20 @@ function liveAssert(name) {
   const k = Object.keys(LIVE_ASSERTS).find((x) => f.startsWith(x) || f.slice(0, 90) === x);
   return k ? liveNamed(name, LIVE_ASSERTS[k]) : false;
 }
+// unit mf2 (B1 FORK 2 · rows 1022 (3)(4) / 1024 (2)) — A LIVE ASSERT IS NOT EXECUTED in the hermetic profile, never computed and
+// then ignored: the block that computes it is entered only when `skipLive(...its names)` is false. It is true only under the
+// hermetic profile and only when EVERY name it is handed is a member of LIVE_ASSERTS (the ratchet: this cannot make a member,
+// a name off the table runs its block as before); each is then printed by name as LIVE with its reason, exactly as liveAssert
+// prints it. A name whose number the block would have read off live state is handed FOLDED (`#`), since that number is
+// never computed. The full profile never skips: every block runs exactly as before.
+/** @param {...string} names @returns {boolean} true = the block is LIVE under this profile and is not entered */
+function skipLive(...names) {
+  if (PROFILE !== "hermetic" || !names.length) return false;
+  const keyOf = (n) => { const f = foldName(n); return Object.keys(LIVE_ASSERTS).find((x) => f.startsWith(x) || f.slice(0, 90) === x); };
+  if (!names.every((n) => !!keyOf(n))) return false;
+  for (const n of names) liveNamed(n, LIVE_ASSERTS[/** @type {string} */ (keyOf(n))]);
+  return true;
+}
 /** a LIVE selftest under the hermetic profile is printed and never spawned @param {string} organ (no extension) */
 const liveSelftest = (organ) => PROFILE === "hermetic" && Object.prototype.hasOwnProperty.call(LIVE_SELFTESTS, organ) && liveNamed(`selftest ${organ}`, LIVE_SELFTESTS[organ]);
 const scripts = () => readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs") && f !== SELF);
@@ -380,6 +394,7 @@ function integrity() {
   assert(`all ${scripts().length} organs parse under this Node (${process.version})`, bad.length === 0,
     bad.length ? `parse failures: ${bad.join(", ")}` : "");
 
+  if (!skipLive("every state .json parses (the bus is the contract between organs)", "every state .jsonl parses on every row (one bad row poisons a whole reader)")) {
   const badJson = [], badJsonl = [];
   for (const f of readdirSync(STATE)) {
     const p = join(STATE, f);
@@ -392,6 +407,7 @@ function integrity() {
   }
   assert("every state .json parses (the bus is the contract between organs)", badJson.length === 0, badJson.join(", "));
   assert("every state .jsonl parses on every row (one bad row poisons a whole reader)", badJsonl.length === 0, badJsonl.join(", "));
+  }
 
   // ── EVERY READER OF reps_log HONOURS A CORRECTION (17 Aug 2026, BLOCK 4) ──
   // A verdict about him can now be walked back by a new row naming the old one, and
@@ -435,7 +451,8 @@ function integrity() {
   // a new unresolved sink the moment it landed (52 -> 53, caught by xray's per-organ
   // ratchet in the same run). This suite already walks that directory for every
   // selftest it runs, so the check is free here. Move the code, never the budget.
-  {
+  if (!skipLive("a declared external producer is a REAL organ in this tree (# declaration(s) checked) — the escape hatch cannot excuse a brain_out path nothing writes",
+    "…and that organ really BUILDS that brain_out directory — a producer that names the wrong folder is the same lie one level down")) {
     const here = scripts();
     const cfgRaw = (() => { try { return JSON.parse(readFileSync(join(STATE, "brain_config.json"), "utf8")); } catch { return null; } })();
     const declared = ((cfgRaw && cfgRaw.jobs) || []).flatMap((j) => (j.inputs || [])
@@ -534,6 +551,7 @@ function integrity() {
   assert("the trigger scanner SEES brain.mjs's own verb list (a `\"trigger\", \"<verb>\"` pair inside BRAIN_MODES) and classifies it as a verb, never as an arming",
     brainVerbs.size > 0 && seenPairs.length > 0 && seenPairs.every((v) => brainVerbs.has(v)), `verbs ${brainVerbs.size} · pairs seen in brain.mjs: ${seenPairs.join(",") || "none"}`);
   for (const v of brainVerbs) if (armings.get(v) === "brain.mjs") armings.delete(v);
+  if (!skipLive(`all ${armings.size} brain triggers armed anywhere in the organism reach live work (a declared consumer, or the un-gated job that supersedes it)`)) {
   const brainJobs = JSON.parse(readFileSync(join(STATE, "brain_config.json"), "utf8")).jobs || [];
   const orphaned = [];
   for (const [name, organ] of armings) {
@@ -544,6 +562,7 @@ function integrity() {
   }
   assert(`all ${armings.size} brain triggers armed anywhere in the organism reach live work (a declared consumer, or the un-gated job that supersedes it)`,
     orphaned.length === 0, orphaned.join("\n         "));
+  }
 
   // ── 2d. THE PRODUCER-CALLER CONTRACT (dead-wire pass, 11 Aug 2026) ─────────
   // A seventh defect class, same shape as 2b/2c and invisible to every organ's own
@@ -762,7 +781,7 @@ async function laws() {
   // comes back a HOLE and is RED by itself: a hole is never a pass. It sits FIRST in laws() on purpose: it reads
   // the tree (never the sandbox) and writes nothing, so nothing that throws further down can hide it; and if
   // watchman.mjs itself cannot be imported, that is this assert's red, never a pass.
-  {
+  if (!skipLive("SNAPSHOT RIDES THE BUILD · every scheduled task a setup script registers is KNOWN to tasks_expected.json: in expected_enabled, expected_disabled or designed_absent (rows 816 (4) / 829 (4) / 865 / 874 (2))")) {
     let ok = false, detail = "";
     try {
       const { setupScripts, installerRegistrations } = await import(pathToFileURL(join(ROOT, "scripts", "watchman.mjs")).href);
@@ -787,6 +806,8 @@ async function laws() {
   const sb = sandbox();
   try {
     // THE GUT-WORD LAW. CLAUDE.md + LEARNING_LAYER_MAP.md:424: "Gut-word nahi → rep nahi."
+    if (!skipLive("GUT-WORD LAW · capture.mjs REFUSES a rep with no gut-word (exit non-zero)", "GUT-WORD LAW · capture.mjs rejects a gut-word outside knew|shaky|guessed",
+      "GUT-WORD LAW · rejirah.mjs holds the SAME law on a Re-Jirah round", "GUT-WORD LAW · rejirah.mjs rejects an out-of-vocabulary gut-word")) {
     const noGutRep = run([join(sb, "scripts", "capture.mjs"), "rep", "--concept", "x", "--axis", "a", "--q", "t", "--correct", "true"], { cwd: sb });
     assert("GUT-WORD LAW · capture.mjs REFUSES a rep with no gut-word (exit non-zero)", noGutRep.code !== 0);
 
@@ -801,6 +822,7 @@ async function laws() {
 
     const badGutGrade = run([join(sb, "scripts", "rejirah.mjs"), "grade", "embeddings", "a", "held", "--gut", "maybe"], { cwd: sb });
     assert("GUT-WORD LAW · rejirah.mjs rejects an out-of-vocabulary gut-word", badGutGrade.code !== 0);
+    }
 
     // ── ROW 814 (13 Nov 2026) · THE BLIND RAIL IS COUNTED — one ledger, ONE writer, a count the replay reads ─────────
     // Beside the gut-word law because it is the same shape — one law, held the same way by every writer. Its subject is the
@@ -867,7 +889,10 @@ async function laws() {
     // The allowlist is a REGISTRY ROW, never a literal here (LAW: an enumeration
     // lives in a row with a receipt), and the planted violation below proves the
     // check really bites rather than passing on an empty read.
-    {
+    if (!skipLive("A9 · both study skills were readable (a gate that cannot see its subject is not a gate)",
+      "A9 · every organ the two study skills name is on the registry's study_entry_points row — a skill cannot quietly grow a new door",
+      "A9 · no study skill offers a DAEMON or a transport as a runnable command — waking one from here spends outside the gate and re-enables a lane he switched off",
+      "A9 · PLANTED VIOLATION — an off-list organ and a deny-listed one are both caught (the gate is live, not vacuous)")) {
       const { subjectsOf } = await import(pathToFileURL(join(ROOT, "scripts", "registry.mjs")).href);
       // ROWS, NOT LITERALS — his 11-Aug law, and the law pack counts every literal subject
       // list in this repo against a frozen baseline. The first draft wrote all three of
@@ -931,6 +956,29 @@ async function laws() {
     const badMoment = run([join(sb, "scripts", "forge_session.mjs"), "moment", "pop_quiz"], { cwd: sb });
     assert("FOUR-MOMENTS LAW · forge_session refuses a question-moment outside the four", badMoment.code !== 0);
 
+    if (!skipLive("LOAD ZERO BLOCK 1 · no organ spawns work for him OUTSIDE tasks.mjs (a bare call has no id, no key, and no memory that it already ran)",
+      "LOAD ZERO BLOCK 1 · the act lane's `job` verb names tasks.mjs as its owner (the door he actually speaks through)",
+      "LOAD ZERO BLOCK 1 · THE 18 AUG REPLAY: his one ask fired 3x from 3 processes makes ONE task — 1 run, 3 identical receipts",
+      "LOAD ZERO BLOCK 1 · RUNTIME ASSERTION: an idempotency key may never be executed twice — the SECOND claim exits non-zero",
+      "LOAD ZERO BLOCK 2 · NO NEW FACTS — every samjhao unit of all four topics asserts only what HIS OWN capsule holds (validators, not vibes)",
+      "LOAD ZERO BLOCK 2 · all four topics are RUNNABLE and every one is a 9-axis revision of a LOCKED capsule",
+      "LOAD ZERO BLOCK 2 · a concept with no locked capsule is REFUSED — samjhao is REVISION, never teaching from zero (that is FORGE)",
+      "LOAD ZERO BLOCK 2 · a samjhao takes its id from the TASK layer, so it resumes on any surface (§4-E)",
+      "LOAD ZERO BLOCK 2 · THE RATCHET: close is REFUSED while units/doubts are open, and it NAMES the count (a feeling becomes a number)",
+      "LOAD ZERO BLOCK 2 · PREDICT-THEN-REVEAL is a gate: an answer before the guess is refused (what he retrieves sticks, what he reads does not)",
+      "LOAD ZERO BLOCK 2 · the GUT-WORD LAW holds here too — samjhao refuses knew|shaky|guessed's absence exactly as capture.mjs does",
+      "LOAD ZERO BLOCK 2 · before any samjhao, the cold round DOES serve the capsule's own strike (this is the baseline the guard must change)",
+      "LOAD ZERO BLOCK 2 · THE COLDNESS RATCHET: once samjhao OPENS an axis, the Re-Jirah may never serve that same strike again — it is named as burned and a FRESH question is demanded",
+      "LOAD ZERO BLOCK 2 · ...and an axis he never reached is UNTOUCHED — only what was actually opened is burned",
+      "LOAD ZERO BLOCK 3 · output produced with NO session open reaches the next surface he touches — and EXACTLY once (the second surface gets nothing)",
+      "LOAD ZERO BLOCK 3 · a row that would ASK him for a decision is refused unless it says why code could not decide (BLOCK 6's gate, carried from day one)",
+      "LOAD ZERO BLOCK 3 · the dead-man's switch exists and does NOT fire on a road he simply has not walked yet (BLOCK 9's false-positive ruling, applied here)",
+      "LOAD ZERO BLOCK 4 · an ask created at the GAFFER door is open on the agenda",
+      "LOAD ZERO BLOCK 4 · the relay's DELIVERED stamp CLOSES it — through the owner, from a door that is not the sitting",
+      "LOAD ZERO BLOCK 4 · ...and a dugout REOPEN does not restart it — the row stays closed (this is the 19 Aug 00:00 loop, dead)",
+      "LOAD ZERO BLOCK 4 · no ask may be created without a CLOSE PATH — an `ask` with no close_ref is refused at the door",
+      "HIS ANSWERS ARE HIS · a FIXTURE may NEVER write a guess into his LIVE samjhao — refused, and the live ledger does not move a byte",
+      "HIS ANSWERS ARE HIS · ...and the same call against a SANDBOX ledger is allowed — that is where a proof belongs")) {
     // ── LOAD ZERO BLOCK 1 (19 Aug 2026) — TASK + IDEMPOTENCY ────────────────────
     // THE LAW: no organ may spawn work for him outside tasks.mjs, and an idempotency key may
     // never be executed twice. Both halves are held here — a STATIC scan (nobody but the task
@@ -1077,6 +1125,7 @@ async function laws() {
       forbidden.code !== 0 && /FIXTURE/.test(forbidden.out) && beforeBytes === afterBytes, `exit ${forbidden.code} · ${beforeBytes}->${afterBytes} · ${forbidden.out}`);
     assert("HIS ANSWERS ARE HIS · ...and the same call against a SANDBOX ledger is allowed — that is where a proof belongs",
       run([join(sb, "scripts", "samjhao.mjs"), "open", "tokenization"], { cwd: sb, env: samEnv }).code === 0);
+    }
 
     // ── LOAD ZERO BLOCK 5 (19 Aug 2026) — INTENT ────────────────────────────────
     // HIS LAW: "i can say the same thing in different ways in different words in different tones
@@ -1147,6 +1196,7 @@ async function laws() {
     // · R2 · 71d overdue" off a proof the captain had withdrawn. This is the cross-organ
     // check that a fourth derivation, or a fix patched into two of three, cannot survive.
     {
+      if (!skipLive("ONE SCHEDULE — all THREE derivations agree that a pre-epoch capsule is not due: the owner refuses it, deep calls it pre_cyborg, the map carries pre_cyborg with no next_due", "ONE SCHEDULE — and all three agree on the SAME open round and the SAME due date for a post-epoch capsule (a drifted derivation fails here, not in production)")) {
       const owner = await import(pathToFileURL(join(ROOT, "scripts", "rejirah.mjs")).href);
       const dp = await import(pathToFileURL(join(ROOT, "scripts", "deep.mjs")).href);
       const cb = await import(pathToFileURL(join(ROOT, "scripts", "capsule_bridge.mjs")).href);
@@ -1169,6 +1219,7 @@ async function laws() {
         ownerPost.ok === true && ownerPost.round === deepPost.round
         && ownerPost.due === deepPost.nextDue && ownerPost.due === bridgePost.next_due,
         `owner=R${ownerPost.round}/${ownerPost.due} deep=R${deepPost.round}/${deepPost.nextDue} bridge=${bridgePost.next_due}`);
+      }
       // and the frozen twins stay frozen: kept for the archaeology, called by nobody
       const frozen = [["deep.mjs", "rejirahStatusLegacy"], ["capsule_bridge.mjs", "rejirahRoundsLegacy"]];
       const live = frozen.filter(([f, name]) => {
@@ -1745,7 +1796,14 @@ async function laws() {
     // are exactly the kind of line a later edit removes without noticing. So both are pinned
     // here, statically, against the real sources — the same shape nightshift's GATE assertion
     // uses for its own wire.
-    {
+    if (!skipLive("S8 · THE NERVE WRITES AHEAD — hooks/afferent-post.mjs spools the event BEFORE it awaits the POST (this is Q-11's fix; without it a 250ms timeout or a bus that has not started yet DESTROYS his turn)",
+      "S8 · ...and it marks its own row delivered on a 2xx, so a healthy bus never leaves work for a future drain",
+      "S8 · ...and a spool that cannot open DEGRADES rather than throws — the nerve's first law is that it never bites the live editor",
+      "S8 · THE CONSUMER IS IDEMPOTENT — thalamus.ingest() refuses an event_id it has already written, which is the half of at-least-once that keeps ONE turn of his from becoming two rows",
+      "S8 · ...and the idempotence set is seeded from the WHOLE afferent file at boot, not the 500-row tail (the spool can hold a row for as many days as the daemon was down)",
+      "S8 · THE THALAMUS DRAINS ON BOOT, AFTER listen() — the port must be open first, or a drain that takes seconds is a window in which a LIVE turn finds nothing listening",
+      "S8 · NEW LANE ONLY — the spool names spool.db and NO existing state file (the rung's FORBIDDEN line, and L9: nothing is migrated to sqlite)",
+      "S8 · node:sqlite IS AVAILABLE on this runtime, so the write-ahead is REAL and not silently degraded (if this ever goes red the nerve is back to POST-and-hope and `node scripts/spool.mjs status` says why)")) {
       const nerve = readOrgan("../hooks/afferent-post.mjs");
       const thal = readOrgan("thalamus.mjs");
       assert("S8 · THE NERVE WRITES AHEAD — hooks/afferent-post.mjs spools the event BEFORE it awaits the POST (this is Q-11's fix; without it a 250ms timeout or a bus that has not started yet DESTROYS his turn)",
@@ -2158,12 +2216,16 @@ function hermetic() {
     const walk = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); let s; try { s = statSync(p); } catch { continue; } if (s.isDirectory()) walk(p); else if (!LIVE_WRITERS.test(p)) { try { m.set(p, createHash("sha256").update(readFileSync(p)).digest("hex")); } catch { /* unreadable mid-run — the verdict says so */ } } } };
     walk(STATE); return m;
   };
-  const before = snap(), beforeH = hashes();
   const targets = scripts().filter(hasSelftest);
+  // mf2 — the trip metric is LIVE (it walks every file of dressing-room/state): under the hermetic profile its snapshots,
+  // its forensics and its verdict are never computed; the selftest loop below runs exactly as before either way.
+  const tripLive = skipLive(`running all ${targets.length} selftests leaves live state untouched`);
+  const before = tripLive ? new Map() : snap(), beforeH = tripLive ? new Map() : hashes();
   const timeline = [];                       // F-6's attribution side, free: the spawn loop already runs
   // ONE RUN PER SELFTEST (row 880 (1)): the result run() returns is KEPT for suites() under its identical-command key,
   // after the window's end is stamped — the same spawns, the same order, the same window; the trip metric is untouched.
   for (const f of targets) { if (liveSelftest(f.replace(/\.mjs$/, ""))) continue; const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args), r); }
+  if (!tripLive) {
   const after = snap(), afterH = hashes();
 
   // THE TRIP METRIC IS UNCHANGED (rule 6): size:mtimeMs, exactly as before. The
@@ -2192,6 +2254,7 @@ function hermetic() {
     try { appendFileSync(HERMETIC_FORENSICS, JSON.stringify({ at: new Date().toISOString(), selftests: targets.length, window_ms: timeline.length ? timeline[timeline.length - 1].end - timeline[0].start : 0, forensics }) + "\n"); } catch { /* the suite never dies for its own journal */ }
   }
   assert(`running all ${targets.length} selftests leaves live state untouched`, touched.length === 0, touched.slice(0, 8).join("\n         "));
+  }
 
   // THE INSTRUMENT IS ITSELF TESTED, every run, on planted fixtures — an unrun
   // instrument is a hypothesis, and this one exists precisely because a measurement
@@ -2212,6 +2275,7 @@ function hermetic() {
   // fileLog() IN-PROCESS — it does not reach the running daemon on :4113. So this does
   // not assert "no write"; it asserts the write stays INSIDE the organ's own gitignored,
   // size-rotated log and never touches the state bus. That is the line that matters.
+  if (!skipLive("the one sanctioned selftest write lands in the organ's OWN log, never on the state bus")) {
   const tlog = join(ROOT, "scripts", "thalamus.log");
   const sizeOf = (p) => (existsSync(p) ? statSync(p).size : 0);
   const sBefore = snap();
@@ -2220,6 +2284,7 @@ function hermetic() {
   assert("the one sanctioned selftest write lands in the organ's OWN log, never on the state bus",
     sizeOf(tlog) >= tBefore && [...snap()].every(([p, v]) => LIVE_WRITERS.test(p) || sBefore.get(p) === v),
     "thalamus selftest wrote outside scripts/thalamus.log");
+  }
   assert("…and that log is gitignored, so a test run can never reach the public remote",
     run(["-e", `process.exit(require('child_process').execSync('git check-ignore -q scripts/thalamus.log && echo y || echo n',{cwd:${JSON.stringify(ROOT)}}).toString().trim()==='y'?0:1)`]).code === 0);
 }

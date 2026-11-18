@@ -88,3 +88,46 @@ witness --org <CRLF build> --base-org <CRLF base>    GREEN MLV2 cortex retires o
 run_mutants --org <CRLF build> --base-org <CRLF base> run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN
 witness --org <CRLF base>  --base-org <CRLF base>    RED MLV2 · C1 IDLE, C2 LANE, C3 JUDGE, K5 DOOR
 ```
+
+## REWORK · forks row 1053 (18 Nov 2026): RETURNED RED BY NAME — the fixed service ports
+
+**Why it was returned (the architect's measurement):** the witness bound cortex's own fixed ports (:4112, :4113). On
+his laptop the live services hold them: the re-run hung twice with no line printed, and K5 would have POSTed /restart
+at whatever answers :4112 — his live cortex. Both are the witness's defects; the ruling's five requirements, answered:
+
+1. **Planted ports, honoured only under the OS temp dir.** `scripts/cortex.mjs` gains `plantedPort(name, fixed)`:
+   `ARSENAL_CORTEX_PORT` (the lock, the keeper, the tick lock, the restart knock), `ARSENAL_THALAMUS_PORT` (where every
+   deep answer is POSTed) and `ARSENAL_JUDGE_PORT` (both retires' judge read) are honoured ONLY when cortex.mjs itself
+   (realpath) sits under `os.tmpdir()` (realpath; case-folded on win32). Anywhere else, or with the env unset or bad,
+   the fixed port stands: service behaviour is byte for byte what it was. Its unreal-path catch is declared through
+   `swallow()` (BLOCK 7). One cortex selftest clause plants both ways.
+2. **Every wait is bounded.** First boot: two cold imports of the copy's entry plus one node start (measured in the
+   run); every later wait: the measured first boot plus one node start; a lane: cortex's own declared poll plus that.
+   Every fetch carries that bound; every child kill is bounded, then forced. A clause that cannot run says
+   `cannot run: <why>`, and the witness exits 1. The one unbounded step is the cold-import MEASUREMENT itself (a fresh
+   node that imports the entry and exits; it binds no port and runs none of the unit) — named here, not hidden.
+3. **LIVE-SAFE (new clause, with its mutant).** The real :4112 and :4113 are held by planted COUNTING listeners for the
+   whole run; the clause is GREEN only when both were planted, every behavioural clause is GREEN, zero connections
+   reached them, and the witness's own request door refused zero calls at a live port. Mutant: the thalamus port door
+   ignored (a planted tree POSTs to the live :4113) → RED by LIVE-SAFE.
+4. **Base and stack.** `origin/main` 669200d (mlv1 landed) was MERGED into this branch (no rebase, no force push);
+   against it only `scripts/cortex.mjs` differs. The base now reads RED with no hang: its cortex tries the fixed :4112,
+   finds the planted listener, and stands down.
+5. Measured 18 Nov 2026:
+
+```
+node ci/mlv2/witness_mlv2.mjs --org . --base-org <copy of 669200d>
+GREEN MLV2 cortex retires on a source change only when no lane is in flight and no judge round runs, its door is a retire, and no live port is touched · 8 clause(s)   (exit 0)
+node ci/mlv2/witness_mlv2.mjs --org <copy of 669200d> --base-org <same>
+RED MLV2 · C1 IDLE, C2 LANE, C3 JUDGE, K5 DOOR, LIVE-SAFE                                                          (exit 1)
+node ci/mlv2/run_mutants_mlv2.mjs --org . --base-org <copy of 669200d>
+run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN
+CRLF copies (build and base): GREEN MLV2 … · 8 clause(s)
+cortex selftest: ALL CHECKS PASSED · mutagen selftest: 24 passed, 0 failed · models check exit 0
+hermetic suite: the one red of main (orphaned: home_pin, probe, study_scope); none other
+```
+
+**FORK (named):** on his laptop the live services hold :4112 and :4113, so the counting listeners cannot be planted
+there and LIVE-SAFE reads RED by name ("cannot plant … held by another process"). The plants themselves never address
+those ports (planted ports, the witness's request door refuses a live port), so the other clauses can run there; the
+architect rules whether LIVE-SAFE should be a CI/container clause only.
