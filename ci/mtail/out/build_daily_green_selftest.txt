@@ -71,7 +71,7 @@
   ok   MF4 PRIVACY — the canary carries an 8-character session prefix only: no transcript text, no opener, no full session id reaches the line or the row
   ok   HERMETIC — the live ledger is byte-identical after the whole selftest
   ok   ONE WRITE — outside the selftest the only write call is the ledger append
-  ok   NO MODEL, NO NETWORK, NO ENV OVERRIDE — no [name]/gemini call, no fetch, no process.env read in the witness
+  ok   NO MODEL, NO NETWORK, NO ENV OVERRIDE — no claude/gemini call, no fetch, no process.env read in the witness
   ok   the root override is not exported — only this file's selftest can pass it
 
 daily_green selftest: 75 passed, 0 failed

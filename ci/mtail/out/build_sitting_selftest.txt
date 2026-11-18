@@ -41,14 +41,14 @@
   ok   close twice → 409
   ok   route: rejirah-due wins over the sprint (the kickoff's own order) and names the concept
   ok   route: nothing due, no task → REVISION over the last locked capsule
-  ok   route: skill track → PYTHON (a [name] Code loop; voice takes doubts only)
+  ok   route: skill track → PYTHON (a Claude Code loop; voice takes doubts only)
   ok   route: a FRESH open forge session wins everything (one open loop first)
   ok   skeleton REJIRAH: map + one strike-question per axis + close line, every question asks the gut-word first
   ok   validatePlan refuses: no '?' on a question unit · steps going backwards · > max words · < 2 units
   ok   compose: a refused first plan is sent BACK with the validator's reasons and the second is taken (source model, 2 compose turns)
   ok   compose under the wall → the SKELETON plan (THE METHOD's steps) at deliver-only, one keyed card, mouth still has a first unit
   ok   §6.7 idle → auto-close with a review row (reason idle)
-  ok   code surface: registers the sitting (transport code), spawns NO child, composes NO plan — the [name] Code session IS the driver (§6.5)
+  ok   code surface: registers the sitting (transport code), spawns NO child, composes NO plan — the Claude Code session IS the driver (§6.5)
   ok   state.mjs reads the code sitting as OPEN FORGE 'Hallucinations' (the STATE line's own reader)
   ok   join: a voice mouth joining a code-only sitting ATTACHES the brain to the same id (plan composed, first unit emitted, transport stream)
   ok   G0 · a hook-payload stamp is PENDING until `open`, and a NEW open binds it (host id + transcript + source), in the reply too
@@ -98,7 +98,7 @@
   ok   HERMETIC: the live sitting.json is untouched (all writes went to the temp state dir)
   ok   HERMETIC: no live owner was spawned (every owner call was recorded, none executed)
   ok   mjud msit · a judge verb (judge-due, judge-round) through the owner funnel waits JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS (both imported from gaffer_brain.mjs); every non-judge owner call keeps its 20 s
-  ok   mtail F-C · closeWaitMs() is the sum of the close's own steps as written (every owner(...) call in close(), in order, each at ownerTimeoutMs) plus the session's close grace ([name]gen.mjs SESSION_CLOSE_MS); it covers the judge's budget plus its dispatch; the CLI's close waits exactly it, no typed wait left
+  ok   mtail F-C · closeWaitMs() is the sum of the close's own steps as written (every owner(...) call in close(), in order, each at ownerTimeoutMs) plus the session's close grace (claudegen.mjs SESSION_CLOSE_MS); it covers the judge's budget plus its dispatch; the CLI's close waits exactly it, no typed wait left
 
 sitting selftest: 99 passed, 0 failed
 

@@ -38,13 +38,13 @@
   ✓ LEDGER PROJECTION: the kill rides the brain_ledger row, and a finished call adds nothing
   ✓ WIRE: brain.mjs still READS the kill (killed field + the KILLED text prefix) and still has a `timeout` cause
   ✓ …and the FROZEN legacy branch still reproduces the defect verbatim (ok:true, error:null, a fragment as the answer)
-  ✓ WIRE: [name]GenAsync's callback still routes through resolveChild (the async engine is the only one that can be killed mid-flush)
+  ✓ WIRE: claudeGenAsync's callback still routes through resolveChild (the async engine is the only one that can be killed mid-flush)
   ✓ SYNC DOOR: a non-zero exit beside a COMPLETE envelope keeps the HONEST 4-field meter (nightshift's whole spend rode this)
   ✓ SYNC DOOR: …and the classifier it never lost still names the wall
   ✓ …and the FROZEN legacy catch still reproduces the defect verbatim (length guess, four NULL components)
   ✓ SYNC DOOR: a killed sync child with a PARTIAL envelope is still a failure, and its stderr is not dropped by the re-route
-  ✓ WIRE: BOTH of [name]Gen's exits route through resolveChild (re-inline parseErr and this goes red in the same second)
-  ✓ WIRE: [name]Gen FORWARDS a caller's stable head into ARGS — an accepted parameter that never reaches argv is the door being open on paper only
+  ✓ WIRE: BOTH of claudeGen's exits route through resolveChild (re-inline parseErr and this goes red in the same second)
+  ✓ WIRE: claudeGen FORWARDS a caller's stable head into ARGS — an accepted parameter that never reaches argv is the door being open on paper only
   ✓ WIRE: …and the head REPLACES the lane's default system block rather than riding beside it (lean lane only; the full lanes ignore it by design)
   ✓ ARG-SET: the profile NAMES the argv it chose (lean ⇔ LEAN_ARGS present), on whatever lane this box is on
   ✓ ARG-SET: the invocation did NOT change — the frozen legacy chooser returns the identical argv
@@ -52,7 +52,7 @@
   ✓ TOOL GRANT: the caller's grant actually survives into argv
   ✓ TOOL GRANT: a caller that names no tools gets EXACTLY the old argv (the tool-less organ lane is untouched)
   ✓ TOOL GRANT: a non-tool extra arg is appended WITHOUT disarming anything
-  ✓ ARG-SET: ARSENAL_[name]GEN_FULL=1 reverts to the full CLI and SAYS `full-env` (the revert is legible, not just effective)
+  ✓ ARG-SET: ARSENAL_CLAUDEGEN_FULL=1 reverts to the full CLI and SAYS `full-env` (the revert is legible, not just effective)
   – shim-lane probe SKIPPED (BIN()'s %APPDATA% shim probe is win32-only — no lane to walk on linux)
   ✓ ARG-SET: it rides EVERY result — the answer, the failure, and the kill — while an UNMADE call carries null, never a fake lane
   ✓ LEDGER PROJECTION: the arg-set rides the row ALWAYS (a lean row that says nothing is indistinguishable from history)
@@ -60,7 +60,7 @@
   ✓ mtail · AUTH_REFUSAL_RE matches every observed refusal (the CLI's login text, the watchdog's, the judge's OAuth text) and no limit wall
   ✓ mtail · ONE literal: this file holds it once; gaffer_brain.mjs and brain.mjs import it from here and hold no auth literal of their own
   ✓ mtail F-C · the session's close grace is ONE named constant, used by close() and exported for the callers that wait on a close
-  ✓ [name] binary is resolvable ([name])
+  ✓ claude binary is resolvable (claude)
 
 ALL CHECKS PASSED
 

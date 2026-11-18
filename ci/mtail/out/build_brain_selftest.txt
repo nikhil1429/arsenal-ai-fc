@@ -2,7 +2,7 @@
   ✓ the suite reads the captain's real switches without obeying them
   ✓ day cartridge job wired (L3: slow brain programs the fast brain)
   ✓ heavy voice day → daytime gemini job steps aside
-  ✓ [name] jobs untouched by the voice pool
+  ✓ claude jobs untouched by the voice pool
   ✓ quiet voice day → gemini runs as normal
   ✓ overnight gemini runs regardless (voice is asleep)
   ✓ minutes ledger math: missing file → 0 (never crashes)
@@ -35,8 +35,8 @@
   ✓ evening talk serves the same day
   ✓ no mp3 → no line (the push never lies)
   ✓ mp3 present → 'team talk taiyaar' rides the sanctioned push
-  ✓ window usage sums 5h of [name] tokens only
-  ✓ gemini tokens never count against the [name] window
+  ✓ window usage sums 5h of CLAUDE tokens only
+  ✓ gemini tokens never count against the Claude window
   ✓ WINDOW HAS TWO EDGES — a future-dated row never counts as spent
   ✓ C1 fault 1 — a row whose total_tokens is the in+out pair only is NOT believed (the dmn under-count)
   ✓ C1 fault 2 — an inflated written total is NOT believed either (the pulse length-guess)
@@ -122,7 +122,7 @@
   ✓ a post-midnight success LEDGERS to the evening the shift started
   ✓ non-overnight jobs stay calendar-keyed
   ✓ gemini jobs skipped when gemini.enabled=false (mechanism)
-  ✓ ENGINE LAW: every committed job rides [name] (no cognition on the free pool)
+  ✓ ENGINE LAW: every committed job rides Claude (no cognition on the free pool)
   ✓ priority ordering (formation > insights)
   ✓ banned-phrase validator rejects hype
   ✓ no_new_numbers rejects invented numbers
@@ -137,7 +137,7 @@ brain: REFUSING — ANTHROPIC_API_KEY is set in this shell (per-token billing ri
   ✓ overnight tick drains multiple jobs
   ✓ SELF-TUNE — limit event stops the tick immediately
   ✓ STARVED — the budget refusal is RECORDED, not discarded: one ledger row carrying the exact reason
-  ✓ STARVED — the row cannot corrupt the two meters it sits beside: not spend (engine ≠ [name]), not health (no boolean ok)
+  ✓ STARVED — the row cannot corrupt the two meters it sits beside: not spend (engine ≠ claude), not health (no boolean ok)
   ✓ STARVED — brain_queue.budget_starved keys the whole night by shift day and names the job
   ✓ STARVED — one row per (shift day, job) EPISODE, never one per beat; the beats keep counting in state
   ✓ STARVED — a wall never consumes the slot: the job is still un-run and retries when headroom returns
@@ -202,7 +202,7 @@ brain: REFUSING — ANTHROPIC_API_KEY is set in this shell (per-token billing ri
   ✓ M-3 SOCKET — runManager import works; fallback law intact
   ✓ LEDGER COUNTS CACHE TOKENS — the CLI's real spend is cache, not input/output
   ✓ token accounting is defensive — no usage object ⇒ zero, never NaN
-  ✓ --dry NEVER reaches the real `[name] -p` executor (preview costs nothing)
+  ✓ --dry NEVER reaches the real `claude -p` executor (preview costs nothing)
   ✓ a dry call is a ZERO-token no-op that still looks like a success to the pipeline
   ✓ without --dry the real executors are wired exactly as before
   ✓ RETRY CAP — a job that burned its attempts this shift sits out (no 75s retry storm)
@@ -220,7 +220,7 @@ brain: REFUSING — ANTHROPIC_API_KEY is set in this shell (per-token billing ri
   ✓ DEAD BRAIN — an all-failed tail is detected and NAMED (login, not mystery)
   ✓ DEAD BRAIN — one success at the tail clears the alarm (an old outage never nags)
   ✓ DEAD BRAIN — the fuel gauge carries the ok-rate, so the doctor can see a dead brain
-  ✓ mtail · AUTH_FAIL_RE IS [name]gen.mjs AUTH_REFUSAL_RE (one object, no restatement) and an OAuth-expired tail reads as not logged in
+  ✓ mtail · AUTH_FAIL_RE IS claudegen.mjs AUTH_REFUSAL_RE (one object, no restatement) and an OAuth-expired tail reads as not logged in
   ✓ DEAD BRAIN — error_envelope is READ: a 429 wall is named a PLAN WALL, not a mystery
   ✓ DEAD BRAIN — a 500 is a SERVER fault, never excused as the plan wall
   ✓ DEAD BRAIN — a legacy row whose status lives only in its error TEXT is still named
@@ -392,7 +392,7 @@ brain: REFUSING — ANTHROPIC_API_KEY is set in this shell (per-token billing ri
   ✓ STALE-CODE RETIREMENT — an unreadable/vanished source is NOT evidence of a newer one; the pacer never retires on a read error
   ✓ SOURCE GRAPH — transitive + dynamic imports are watched, node: builtins are not, a cycle terminates, and each file appears ONCE whatever separators it arrived with
   ✓ SOURCE GRAPH — an unreadable specifier is NOT watched: ./ghost.mjs never enters the list (this is what kept the selftest's own fixture strings out of the LIVE watch — measured, they were in it)
-  ✓ SOURCE GRAPH — the LIVE walk finds this file and its real siblings (validators/manager/scoreboard/nikhil_model/captains_call)
+  ✓ SOURCE GRAPH — the LIVE walk finds this file and its real siblings (validators/manager/scoreboard/[name]_model/captains_call)
   ✓ §5.5/1 TICK — a REQUIRED input outside brain_out (season.json) absent ⇒ ASLEEP on E, wakes when the file exists again
   ✓ §5.5/1 TICK — a REQUIRED input UNDER brain_out is an upstream ordering fact, not evidence: the lane stays AWAKE on E (runJob's own refusal keeps handling the same-day absence)
   ✓ §5.5/2 TICK — five straight ok:false rows ⇒ ASLEEP on F even though it was briefed yesterday; the wake door is named

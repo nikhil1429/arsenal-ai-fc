@@ -31,9 +31,11 @@ const GATES = [
 mkdirSync(OUT, { recursive: true });
 // THIS REPO IS PUBLIC: a committed output carries no person's name and no state file's content. The organism names files and
 // fixtures after the person, so each word of the repo's own commit author name is masked in what is kept (read from git, never
-// typed here); stderr (the daemons' logs, which can quote a live ledger) is kept OUTSIDE the repo, under os.tmpdir().
+// typed here, never HEAD's author alone); stderr (the daemons' logs, which can quote a live ledger) is kept OUTSIDE the repo, under os.tmpdir().
 const ERR = join(tmpdir(), "mtail-gates-stderr"); mkdirSync(ERR, { recursive: true });
-const who = (() => { try { return String(spawnSync("git", ["-C", join(HERE, "..", ".."), "log", "-1", "--format=%an"], { encoding: "utf8" }).stdout || "").trim().split(/\s+/).filter((w) => w.length >= 3); } catch { return []; } })();
+// every word (≥ 3 letters) of every human commit author in the repo's recent history — a session's own "Claude" commits excluded,
+// so the mask never depends on which commit happens to be HEAD
+const who = (() => { try { return [...new Set(String(spawnSync("git", ["-C", join(HERE, "..", ".."), "log", "-500", "--format=%an"], { encoding: "utf8" }).stdout || "").split(/\r?\n/).filter((a) => a.trim() && !/claude/i.test(a)).flatMap((a) => a.trim().split(/\s+/)).filter((w) => w.length >= 3))]; } catch { return []; } })();
 const mask = (t) => who.reduce((acc, w) => acc.replace(new RegExp(w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "[name]"), String(t));
 const env = { ...process.env };
 delete env.ANTHROPIC_API_KEY;

@@ -1,4 +1,4 @@
-models check: 129 file(s) · literal model names outside models.mjs: 0 · declared fixture lines: 10 · brain_config [name] aliases ok
+models check: 129 file(s) · literal model names outside models.mjs: 0 · declared fixture lines: 10 · brain_config claude aliases ok
   · declared lawpack.mjs:697 gemini-2.5-flash
   · declared lawpack.mjs:769 gemini-2.5-flash
   · declared lawpack.mjs:771 gemini-2.5-flash

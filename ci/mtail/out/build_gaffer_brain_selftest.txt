@@ -121,7 +121,7 @@
   ✓ mjud F3 · the check's call is handed what the round has left and reports its own time; with nothing left it is not started, and says why
   ✓ mjud mjd2 · a batch KILLED at its budget teaches the size: duration/items is a strict floor, so the next size is below the one that died, and a size that keeps dying keeps shrinking
   ✓ mjud mjd2 · …planted the other way: a refusal is not a kill (no floor), and with no killed row the size is the pre-mjd2 rule byte for byte
-  ✓ mauth · the ONE pattern matches every observed refusal (the CLI's login text, the watchdog's, the judge's OAuth text); JUDGE_AUTH_RE IS [name]gen.mjs AUTH_REFUSAL_RE and brain.mjs takes that same object from [name]gen.mjs, restating none
+  ✓ mauth · the ONE pattern matches every observed refusal (the CLI's login text, the watchdog's, the judge's OAuth text); JUDGE_AUTH_RE IS claudegen.mjs AUTH_REFUSAL_RE and brain.mjs takes that same object from claudegen.mjs, restating none
   ✓ L2 · BANK WRITE · a FAILED write of his answer is ok:false (reason write-failed) and says NOT banked — never the bare catch that returned ok:true
   ✓ L2 · BANK WRITE · …and his words ride the refusal back, so the caller still holds what he said while the question stays open
   ✓ L2 · BANK WRITE · a write that lands is ok:true, to the grade queue, and the row written IS the row returned
@@ -172,16 +172,16 @@
   ✓ PASS 2 · it may CORRECT Pass 1, and the correction is a NEW row that names the old verdict — never a rewrite, so a reader can always tell a changed mind from a right one
   ✓ PASS 2 · one verdict is not a pattern — under two it does nothing at all, and says why rather than calling a single event a trend
   ✓ PASS 2 · a dead lane or a junk answer writes NOTHING — a manufactured pattern is worse than none, because he acts on it
-  ✓ BOTH PASSES ride [name]Gen, which REFUSES outright when ANTHROPIC_API_KEY is set — Max subscription, never an API key, and no new vendor anywhere
-  ✓ PASS 1 rides the SPLIT — the head is handed to [name]Gen's fifth parameter, and only when this box can actually carry it
-  ✓ §9.1 · the search lane is [name]Gen with the TOOL GRANT (the 11 Aug proof) — same door, same API-key refusal, never a new vendor
+  ✓ BOTH PASSES ride claudeGen, which REFUSES outright when ANTHROPIC_API_KEY is set — Max subscription, never an API key, and no new vendor anywhere
+  ✓ PASS 1 rides the SPLIT — the head is handed to claudeGen's fifth parameter, and only when this box can actually carry it
+  ✓ §9.1 · the search lane is claudeGen with the TOOL GRANT (the 11 Aug proof) — same door, same API-key refusal, never a new vendor
   ✓ §9.1 · the plan-vs-code correction is HELD, not just written: the source is the SOURCED bank (field_probes.json), and the invented probe_bank_ files are not read here at all
   ✓ LAYERING · the Cerebras key reader is FROZEN as *Legacy, not deleted — and it still parses exactly as it did
   ✓ LAYERING · …and it is genuinely FROZEN: no production caller anywhere in the file (3 reference(s), all in this selftest)
   ✓ LAYERING · no LIVE Cerebras lane survives anywhere — the endpoint is gone from the tree and the installer is retired
   ✓ …and the csk-/gsk_ scrubber patterns STAY, because those are about the NEXT key anyone pastes and were never part of this lane
   ..  JUDGE · LIVE check NOT RUN — clean checkout (dressing-room/state/ is gitignored)
-  ✓ THE BUS · what he types into [name] Code is judged by the same organ that judges what he says out loud
+  ✓ THE BUS · what he types into Claude Code is judged by the same organ that judges what he says out loud
   ✓ THE BUS · and the machine's OWN answers are never judged as his — the self-capture scar, held here too
   ✓ THE BUS · the cursor is in BYTES of the real file, so a restart re-reads nothing
   ✓ THE CURSOR · a NEW DAY resets it — yesterday's byte count must never decide what today judges
