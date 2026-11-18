@@ -33,8 +33,8 @@ the headline. CI dies after about 87 s, after `coverage` and `integrity` and par
 | step | command | LAST line |
 |---|---|---|
 | base, CRLF clone | `git -c core.autocrlf=true clone …; node scripts/organism_test.mjs laws` | `exit 1` (stack: `organism_test.mjs:573 TypeError`) — `out/a0_base_crlf_laws.txt` |
-| fixed, same clone | `node scripts/organism_test.mjs laws` | `organism_test: 114 passed, 2 failed · ruled 0 · UNRULED 2` — `out/a1_fixed_crlf_laws.txt` |
-| fixed, whole suite | `npm test` (CRLF clone) | `organism_test: 177 passed, 6 failed · ruled 0 · UNRULED 6` — `out/a2_fixed_crlf_all.txt` |
+| fixed, same clone, 18 Nov 2026 | `node scripts/organism_test.mjs laws` | `organism_test: 114 passed, 2 failed · ruled 0 · UNRULED 2` — `out/a1_fixed_crlf_laws.txt` |
+| fixed, whole suite, 18 Nov 2026 | `npm test` (CRLF clone) | `organism_test: 177 passed, 6 failed · ruled 0 · UNRULED 6` — `out/a2_fixed_crlf_all.txt` |
 | Windows CI | suite.yml on this branch | see THE CI RUNS READ |
 
 ## (b) the hermetic profile
@@ -59,14 +59,14 @@ only). A second run with `Date` shifted +90 days named the members whose verdict
 `watchman`). Two members went red under the probe's load alone, so they time the wall clock (`blackbox`, `turn_hook`):
 see `out/b1_clock_shift_diff.txt`.
 
-**The result:** 72 selftests, 5 modes (`path`, `alive`, `gates`, `lawpack`, `atlas`) and 49 asserts of
+**The result, measured 18 Nov 2026:** 72 selftests, 5 modes (`path`, `alive`, `gates`, `lawpack`, `atlas`) and 49 asserts of
 `laws`/`integrity`/`hermetic` are LIVE (`LIVE_SELFTESTS`, `LIVE_MODES`, `LIVE_ASSERTS` in `scripts/organism_test.mjs`).
-50 suite members run hermetic.
+As of 18 Nov 2026, 50 suite members run hermetic.
 
 | step | command | LAST line |
 |---|---|---|
-| head (CRLF clone) | `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` | `organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` — `out/b2_hermetic_head_crlf.txt` (runs in 28 s) |
-| base by head's instrument | same, on 5767e21 | `organism_test: 136 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` — `out/b3_hermetic_base_crlf.txt` |
+| head (CRLF clone), 18 Nov 2026 | `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` | `organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` — `out/b2_hermetic_head_crlf.txt` (runs in 28 s) |
+| base by head's instrument, 18 Nov 2026 | same, on 5767e21 | `organism_test: 136 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` — `out/b3_hermetic_base_crlf.txt` |
 
 ## (c) the verdict · (d) every red an annotation
 
@@ -87,7 +87,7 @@ with no headline is RED. The log prints names only.
 |---|---|---|
 | local rehearsal | `node scripts/ci_verdict.mjs compare --head … --base … --label "linux crlf"` | `B1_VERDICT linux crlf GREEN — no member red that is not red at the merge base · head 7721d59 · base 5767e21 · 0 new red · 3 base red · 0 base red now passing` — `out/c0_verdict_local_crlf.txt` |
 
-BASE REDS named by the local rehearsal (Linux): `EVERY organ with a selftest is wired into a suite` (orphans home_pin,
+BASE REDS named by the local rehearsal (Linux, 18 Nov 2026): `EVERY organ with a selftest is wired into a suite` (orphans home_pin,
 probe, study_scope), `SUITE MEMBER · sandbox selftest exits 0` (the collar canary escapes off Windows), and
 `all N hermetic suite members pass`. The Windows base reds are in THE CI RUNS READ.
 
@@ -118,15 +118,32 @@ the anonymous limit.
 Same class as unit mcrlf (02a181c): the fix is `.replace(/\r\n/g, "\n")` on the two own-source reads. context.mjs is not
 this unit's file, so it is FORK 1.
 
-## THE PLANTED RED and THE CLEAN READ
+## THE PLANTED RED and THE CLEAN READ (witnessed 18 Nov 2026, Windows runner, node 22 and 24)
 
-- Plant branch `claude/b1-neutral-verdict-plant` is this branch plus ONE assert,
-  `B1 PLANTED RED · a member red on the plant branch only` (commit 517e14b). It never lands.
-- RESULTS: see THE CI RUNS READ.
+The plant branch `claude/b1-neutral-verdict-plant` is this branch plus ONE assert,
+`B1 PLANTED RED · a member red on the plant branch only` (517e14b). It is merged forward, never rebased, and never lands.
 
-## THE CI RUNS READ
+1. **First witness, a HOLE found and closed.** With the base measured by the head's instrument, the plant read
+   `ci_verdict 517e14b GREEN`, because the planted assert rode the instrument onto the base and was red on both sides
+   (`out/w0_…`). The fix is in f89ed50: the base runs ITS OWN instrument first. Only when that instrument dies before its
+   machine line (5767e21's does) is the head's laid over the base. In that case the verdict gets the base's own source,
+   and an assert the base never had is NEW (`newInInstrument`, planted both ways in the selftest).
+2. **Second witness, f89ed50 / 49d12f0.** The plant read RED by name, and the clean branch read RED as well. The clean
+   branch's red was a GENUINE new red: `LOAD ZERO BLOCK 7 · no canon file states a live count…`. This PROOF.md, a
+   tracked `.md`, stated undated counts. The verdict caught it, and the lines were dated, which is the law's own
+   "records" exemption. The gate is unchanged.
+3. **Final witness:** see the reads below.
 
-(filled from the reader's own lines below)
+## THE CI RUNS READ (check-run ids; every read by `node scripts/ci_verdict.mjs <sha>`, ≤3 calls each)
+
+| sha | read (LAST line) |
+|---|---|
+| 5767e21 (base, main) | `RED — node 22: RED (failure; no verdict annotation — the run never reached its verdict) [run 134647547323] \| node 24: … [run 134647546909] (3 calls)` |
+| cc1b869 (branch v1) | `GREEN — node 22: GREEN (base 5767e21 · 0 new red · 1 base red · 126 live) [run 134688375121] \| node 24: GREEN (…) [run 134688375773] (3 calls)` |
+| 517e14b (plant v1) | `GREEN — … 0 new red · 2 base red … [runs 134688495108 / 134688494740]` ← THE HOLE |
+| f89ed50 (branch v2) | `RED — 1 new red: LOAD ZERO BLOCK 7 · no canon file states a live count … [runs 134695317349 / 134695316983]` ← a real red, this file's |
+| 49d12f0 (plant v2) | `RED — 2 new red: B1 PLANTED RED · a member red on the plant branch only ; LOAD ZERO BLOCK 7 … [runs 134695334936 / 134695335289]` |
+FINAL_READS_HERE
 
 ## FORKS (each needs a file this unit may not edit, or a ruling)
 
@@ -135,7 +152,7 @@ this unit's file, so it is FORK 1.
 2. **LIVE asserts inside `laws()` / `integrity()` / `hermetic()` are computed but not judged.** They share one sandbox
    with hermetic asserts. Truly not running them needs a block-level split of those modes. The brief allowed this file
    (organism_test.mjs), but the split is about 30 blocks, so it is left for a ruled unit.
-3. **The definition of live, taken literally, puts 72 of 122 selftests out of CI.** Most read config-shaped state
+3. **The definition of live, taken literally, puts 72 of 122 selftests out of CI (measured 18 Nov 2026).** Most read config-shaped state
    (`registry.json`, `captain.json`, `*_config.json`) at import. A narrower line is a RULING, not a session's call: count
    only files the laptop's unattended push rewrites (measured since 15 Sep: `examiner_drill`, `awayday`,
    `audit_ledger`, `learning_state`, `conductor*`, `readiness`, `sitting`, …), or plant a state tree per selftest.
