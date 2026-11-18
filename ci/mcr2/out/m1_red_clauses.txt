@@ -1,0 +1,26 @@
+[audit lf] exit 1 · audit: 55 passed, 2 failed
+    FAIL DoD (static): ROOT CANON cites 0 dead paths
+    FAIL DoD (static): ROOT CANON cites 0 stale grep claims (a `-c … = 0` claim is an ABSENCE PROOF
+[audit crlf] exit 1 · audit: 55 passed, 2 failed
+    FAIL DoD (static): ROOT CANON cites 0 dead paths
+    FAIL DoD (static): ROOT CANON cites 0 stale grep claims (a `-c … = 0` claim is an ABSENCE PROOF
+[brain lf] exit 1 · SELFTEST FAILED
+    ✗ GEMINI SHIM — a spaced %APPDATA% path is QUOTED before cmd.exe parses it
+[brain crlf] exit 1 · SELFTEST FAILED
+    ✗ GEMINI SHIM — a spaced %APPDATA% path is QUOTED before cmd.exe parses it
+[capture lf] exit 1 · SELFTEST FAILED
+    ✗ CONCURRENT READER: a rename blocked by a held handle throws CATCHABLY and costs NO data (o
+    ✗ CONCURRENT READER: re-running after the handle is released ingests normally — the reps wer
+[capture crlf] exit 1 · SELFTEST FAILED
+    ✗ CONCURRENT READER: a rename blocked by a held handle throws CATCHABLY and costs NO data (o
+    ✗ CONCURRENT READER: re-running after the handle is released ingests normally — the reps wer
+[context lf] exit 0 · ALL CHECKS PASSED
+[context crlf] exit 1 · SELFTEST FAILED
+    ✗ S880B THE STAMP MOVES ON A POLL WITH NO WINDOW CHANGE — poll_ts moves, emit_ts/app/title d
+    ✗ S893 F1 NEVER THE PROCESS TABLE — across these readings the process probe was called 0 tim
+[fuelboard lf] exit 0 · ALL CHECKS PASSED
+[fuelboard crlf] exit 1 · SELFTEST FAILED
+    ✗ FUEL VERB is dispatched FIRST: `config` leaves main() above every mode that writes (selfte
+[learnstate lf] exit 0 · ALL CHECKS PASSED
+[learnstate crlf] exit 1 · SELFTEST FAILED
+    ✗ L3 · WIRE — learnstate imports only the pointer ledger's READ verbs (`latest`, istDay — an

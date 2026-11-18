@@ -1,0 +1,6 @@
+  ✓ C-context — org LF exit 0 (71 checks, ALL CHECKS PASSED) · org CRLF exit 0 (71 checks, ALL CHECKS PASSED) · base CRLF exit 1 (71 checks) red by [S880B THE STAMP MOVES ON A POLL WITH NO WINDOW C | S893 F1 NEVER THE PROCESS TABLE — across these r]
+  ✓ C-fuelboard — org LF exit 0 (37 checks, ALL CHECKS PASSED) · org CRLF exit 0 (37 checks, ALL CHECKS PASSED) · base CRLF exit 1 (37 checks) red by [FUEL VERB is dispatched FIRST: `config` leaves m]
+  ✓ C-learnstate — org LF exit 0 (149 checks, ALL CHECKS PASSED) · org CRLF exit 0 (149 checks, ALL CHECKS PASSED) · base CRLF exit 1 (149 checks) red by [L3 · WIRE — learnstate imports only the pointer ]
+  ✓ BOUND — only scripts/context.mjs, scripts/fuelboard.mjs, scripts/learnstate.mjs differ, each only by .replace(/\r\n/g, "\n") on an own-source read inside selftest()
+  ✓ LAST — 92 processes listed, 0 node naming the temp root · fake claude spawns 0
+GREEN MCR2 own-source selftest reads are line-end-proof (3 files) · 5 clause(s)

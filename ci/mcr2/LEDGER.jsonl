@@ -1,0 +1,6 @@
+{"ts":"2026-11-18T10:34:32.762Z","act":"measure","cmd":"git grep -lE '<the one grep, PROOF.md section 1>' d0c8c96 -- 'scripts/*.mjs'","last_line":"58 files"}
+{"ts":"2026-11-18T10:34:32.798Z","act":"measure","cmd":"run every grep-listed selftest on an LF and a core.autocrlf=true clone of d0c8c96, sequentially","last_line":"51 GREEN both · 3 RED both (audit brain capture) · 3 RED on CRLF only (context fuelboard learnstate)"}
+{"ts":"2026-11-18T10:34:32.832Z","act":"build","cmd":"add .replace(/\\r\\n/g, \"\\n\") to context.mjs:1057,1192 fuelboard.mjs:620 learnstate.mjs:2014","last_line":"4 lines changed, all inside selftest()"}
+{"ts":"2026-11-18T10:34:32.861Z","act":"P1","cmd":"node ci/mcr2/witness_mcr2.mjs --org <build archive> --base-org <d0c8c96 archive>","last_line":"GREEN MCR2 own-source selftest reads are line-end-proof (3 files) · 5 clause(s)"}
+{"ts":"2026-11-18T10:34:32.890Z","act":"P1","cmd":"node ci/mcr2/witness_mcr2.mjs --org <d0c8c96 archive> --base-org <d0c8c96 archive>","last_line":"RED MCR2 · C-context C-fuelboard C-learnstate BOUND"}
+{"ts":"2026-11-18T10:34:32.919Z","act":"P1","cmd":"node ci/mcr2/witness_mcr2.mjs --org <build archive> --base-org <core.autocrlf=true clone of d0c8c96>","last_line":"GREEN MCR2 own-source selftest reads are line-end-proof (3 files) · 5 clause(s)"}

@@ -1054,7 +1054,7 @@ async function selftest() {
   // ------------------------------------------------------------------------
   {
     const held = (f) => { try { return !!f(); } catch { return false; } };
-    const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n");
     // the PRINTED source: a comment may quote history, a live line may not promise it
     const code = SRC.split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*)/.test(l)).join("\n");
     const keeperArm = ((SRC.split(/if \(mode === "daemon" \|\| mode === "--daemon"\) \{/)[1]) || "").split(/if \(mode === "daemon-worker"\) \{/)[0];
@@ -1189,7 +1189,7 @@ async function selftest() {
   // ------------------------------------------------------------------------
   {
     const held = (f) => { try { return !!f(); } catch { return false; } };
-    const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const SRC = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n");
     const codeOf = (s) => s.split(/\r?\n/).filter((l) => !/^\s*(\/\/|\*)/.test(l)).join("\n");
     const laneCode = codeOf((SRC.split(/\nfunction lane\(deps = \{\}\) \{\n/)[1] || "").split(/\n\}\n/)[0]);
     const NOW = Date.parse("2026-11-14T06:00:00Z"), iso = (ms) => new Date(NOW + ms).toISOString();
