@@ -146,3 +146,5 @@ hermetic suite: the one red of main (orphaned: home_pin, probe, study_scope); no
 **FORK (named):** on his laptop the live thalamus holds :4113, so the counting listener cannot be planted there and
 LIVE-SAFE reads RED by name ("cannot plant … held by another process"); the plants never address :4113 (planted port,
 the witness's request door refuses a live port). The architect rules whether LIVE-SAFE is a CI/container clause only.
+
+**Neutral CI verdict of the rework push `3b71507` (read with curl, 18 Nov 2026):** run 44372760020 — `npm test · node 22`: success · `npm test · node 24`: success.
