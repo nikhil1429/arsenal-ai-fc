@@ -1420,7 +1420,9 @@ export function stampExpiries(state, today) {
 }
 
 function sync(now = new Date()) {
-  const next = deriveCards(loadState(), gatherSources(), now);
+  // mjd6 — THE SETTLED-FROM-DOUBT SWEEP runs right after derive and BEFORE the decision gate and the write: a card whose
+  // capture already settled never reaches his anchor, and its retire lands in this pass's one write (sweepSettledFromDoubt).
+  const next = sweepSettledFromDoubt(deriveCards(loadState(), gatherSources(), now), readLinesJson(GRADE_QUEUE), now).state;
   // THE DECISION GATE runs AFTER derive, so it sees this sync's fresh mints too: a card minted and
   // gated in the same pass never reaches his lane at all. It runs BEFORE the write, so the retire
   // and the road row land together or not at all.
@@ -1607,6 +1609,37 @@ export function retireCard(state, { key = null, why = "", now = new Date() } = {
   c.retired_at = (now instanceof Date ? now : new Date(now)).toISOString();
   c.resolution = `resolved-at-source (${clip(text, 200)})`;
   return { state: s, card: c, changed: true };
+}
+
+// ---------------------------------------------------------------------------
+// THE SETTLED-FROM-DOUBT SWEEP (unit mjd6, forks row 1037 (2) F1 — pure so the selftest can hold it).
+// mjd5 retires an in-doubt card the moment its capture resolves, through ONE spawn of this owner from the judge round
+// (gaffer_brain.mjs cardRetire). If that spawn fails AFTER the settled row landed, the capture is no longer in doubt, so no
+// later round tries again: the card would stand live, asking him about a thing already settled, until his answer.
+// This sweep closes that gap IN THE OWNER'S OWN PASS: every sync (and so every deal, which syncs first) reads the judge's
+// grade queue — READ ONLY, gaffer_brain.mjs is its sole writer — and every LIVE card keyed judge:in-doubt:<id> whose capture
+// has a settled row resolved from doubt (`kind:"settled"`, `resolved_from:"in-doubt"`, `of:<id>`) is retired through
+// retireCard, the same door with the same guards: only the declared key class, only a live card (his word is history),
+// it never mints, and a settled card is never retired twice. A card whose capture is still in doubt is never touched.
+// ---------------------------------------------------------------------------
+const GRADE_QUEUE = join(STATE_DIR, "gaffer_grade_queue.jsonl");   // gaffer_brain.mjs is its SOLE WRITER; READ ONLY here (a module-level const so xray can resolve the sink)
+export const SWEEP_WHY = "the sweep: its capture's settled row resolved from doubt is in the judge's grade queue, and the round's own retire never reached this deck (row 1037 (2) F1)";
+/** sweepSettledFromDoubt — PURE: {state, retired:[{id,key}]}; only live judge:in-doubt cards of a settled-from-doubt capture change. */
+export function sweepSettledFromDoubt(state, rows, now = new Date()) {
+  const settled = new Set((rows || []).filter((r) => r && r.kind === "settled" && r.resolved_from === "in-doubt" && r.of != null).map((r) => String(r.of)));
+  let s = state;
+  const retired = [];
+  if (!settled.size) return { state: s, retired };
+  for (const c of ((state && state.cards) || [])) {
+    if (!c || c.answer || c.retired_at) continue;
+    const m = /^judge:in-doubt:(.+)$/.exec(String(c.key || ""));
+    if (!m || !settled.has(m[1])) continue;
+    const r = retireCard(s, { key: c.key, why: SWEEP_WHY, now });
+    if (r.refuse || !r.changed) continue;
+    s = r.state;
+    retired.push({ id: r.card.id, key: r.card.key });
+  }
+  return { state: s, retired };
 }
 
 function runStagedDispatch(action) {
@@ -2614,6 +2647,22 @@ function selftest() {
     assert("AT-SOURCE RETIRE — the `retire` verb routes through retireCard, writes ONLY through writeAtomic(CALL, …) and only on a change, never mints, refuses with exit 1",
       slice.length > 0 && /retireCard\(loadState\(\)/.test(slice) && /writeAtomic\(CALL, r\.state\)/.test(slice) && (slice.match(/writeAtomic\(/g) || []).length === 1
       && slice.indexOf("if (!r.changed)") < slice.indexOf("writeAtomic(") && !/\.cards\.push|next_id\+\+/.test(slice) && /process\.exitCode = 1/.test(slice));
+
+    // THE SETTLED-FROM-DOUBT SWEEP (unit mjd6, forks row 1037 (2) F1) — sweepSettledFromDoubt + its place in sync.
+    const sd = (of, o = {}) => ({ v: 2, kind: "settled", of, ts: "2026-11-18T09:00:00.000Z", resolved_from: "in-doubt", ...o });
+    const three = { version: 1, next_id: 9, cards: [live(), { ...live(), id: "c3", key: "judge:in-doubt:cap0" }, { ...live(), id: "c5", key: "judge:in-doubt:cap2" }] };
+    const sw = sweepSettledFromDoubt(three, [{ kind: "capture", id: "cap1" }, sd("cap1"), sd("cap2", { resolved_from: undefined })], T);
+    assert("SWEEP — a live in-doubt card whose capture settled FROM DOUBT retires with the sweep's epitaph; a capture still in doubt (no such row) and a plain settled row touch nothing",
+      sw.retired.length === 1 && sw.retired[0].id === "c4" && sw.state.cards[0].retired_at === T.toISOString()
+      && sw.state.cards[0].resolution === `resolved-at-source (${SWEEP_WHY})` && J(sw.state.cards.slice(1)) === J(three.cards.slice(1)));
+    assert("SWEEP — a second sweep retires nothing twice, his word on a card is never rewritten, and it never mints",
+      (() => { const a = sweepSettledFromDoubt(sw.state, [sd("cap1")], new Date("2026-11-19T00:00:00.000Z"));
+        const b = sweepSettledFromDoubt(deck({ answer: "baad" }), [sd("cap1")], T); const c = sweepSettledFromDoubt({ version: 1, next_id: 1, cards: [] }, [sd("cap1")], T);
+        return a.retired.length === 0 && J(a.state) === J(sw.state) && b.retired.length === 0 && J(b.state) === J(deck({ answer: "baad" }))
+          && c.retired.length === 0 && c.state.cards.length === 0 && c.state.next_id === 1; })());
+    const syncSrc = own.slice(own.indexOf("function sync("), own.indexOf("decisionGate(next"));
+    assert("SWEEP — sync runs it after derive and before the decision gate, on the judge's grade queue read-only, and its result is the state the one write carries",
+      /sweepSettledFromDoubt\(deriveCards\(/.test(syncSrc) && /readLinesJson\(GRADE_QUEUE\)/.test(syncSrc) && !/(writeAtomic|writeFileSync|appendFileSync|renameSync)\(\s*GRADE_QUEUE/.test(own));
   }
 
   console.log(`\ncaptains_call selftest: ${pass} passed, ${fail} failed`);
