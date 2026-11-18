@@ -1,0 +1,4 @@
+{"ts":"2026-11-18T22:25:55.970Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mgs-build FETCH_HEAD","last_line":"base 7c3c2792cafb48b618c28d24c47af9988fd720a7"}
+{"ts":"2026-11-18T22:25:55.970Z","act":"selftest-base","cmd":"node scripts/groundsman.mjs selftest (at base 7c3c279)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T22:25:55.970Z","act":"build","cmd":"edit scripts/groundsman.mjs: landHold + LAND_HOLD_MAX_H wired into pushOnlyPass and nightPass before staging","last_line":""}
+{"ts":"2026-11-18T22:25:55.970Z","act":"selftest-build","cmd":"node scripts/groundsman.mjs selftest","last_line":"ALL CHECKS PASSED"}
