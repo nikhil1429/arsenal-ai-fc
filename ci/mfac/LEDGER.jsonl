@@ -1,0 +1,5 @@
+{"ts":"2026-11-18T18:36:22Z","act":"branch","cmd":"git fetch origin main && git checkout -b claude/mfac-spec FETCH_HEAD","last_line":"Switched to a new branch 'claude/mfac-spec' @ 669200d"}
+{"ts":"2026-11-18T18:36:22Z","act":"read-mday","cmd":"git show origin/claude/mday-spec:ci/mday/MDAY_SPEC.md ; git show origin/claude/mday-build:scripts/day.mjs","last_line":"mday-spec tip 9421614 · mday-build tip ba842cf"}
+{"ts":"2026-11-18T18:41:07Z","act":"measure","cmd":"curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/branches/main","last_line":"\"protected\": false"}
+{"ts":"2026-11-18T18:41:07Z","act":"write","cmd":"Write ci/mfac/MFAC_SPEC.md","last_line":"N1-N6, forks F1-F10, named-not-guessed G1-G10"}
+{"ts":"2026-11-18T18:41:07Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs laws","last_line":"organism_test: 74 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 42 (hermetic: named, not run)"}
