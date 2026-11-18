@@ -86,7 +86,7 @@ import { readRows as outboxRows, fold as outboxFold } from "./outbox.mjs";   // 
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: a chain child (the morning sheet tick) keys the CHAIN's day; overnight jobs keep their wall-clock shift (shiftDay/serveDate untouched)
 import { digestInput as intentDigestInput, validateDigest as intentValidateDigest } from "./intent.mjs";   // Block 2 §7.2 (18 Aug 2026): the intent_digest job's food + its validator — brain never writes the intent lane
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
-import { keep, KEEP_EXIT } from "./keeper.mjs";   // 15 Oct 2026 (forks rows 746 (2) / 753 (2)): `daemon` is the KEEPER over `daemon-worker`; a resident never exits on its own
+import { keep, KEEP_EXIT, judgeHeld } from "./keeper.mjs";   // 15 Oct 2026 (forks rows 746 (2) / 753 (2)): `daemon` is the KEEPER over `daemon-worker`; a resident never exits on its own
 import { jobInputClass, inputCadenceDefaultH } from "./registry.mjs";   // rung S13 (29 Aug 2026): THE INPUT GUARD reads its declarations from the registry — the six code-computed lanes’ input classes and the DECLARED cadence seed. registry.mjs imports nothing of ours, so there is no cycle (gate.mjs already reads it the same way).
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -7653,11 +7653,18 @@ async function main() {
     // Port registry: 4111 turnstile · 4112 cortex · 4113 thalamus · 4114 dugout
     // · 4115 brain tick-lock · 4116 brain daemon-singleton.
     const { createServer: createSingleton } = await import("node:http");
-    const resident = createSingleton(() => {});
+    // unit mlv0 (forks row 1031 M2 A): the singleton answers GET /status with its boot instant ONLY (booted_at · pid),
+    // so `services.mjs status` and conductor read the whole closure against it; every other request is still answered empty.
+    const BOOTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();
+    const resident = createSingleton((req, res) => {
+      const st = req.method === "GET" && req.url === "/status";
+      res.writeHead(st ? 200 : 404, { "Content-Type": "application/json", "Connection": "close" });
+      res.end(st ? JSON.stringify({ ok: true, booted_at: BOOTED_AT, pid: process.pid }) : "");
+    });
     const isFirst = await new Promise((res) => { resident.once("error", () => res(false)); resident.listen(4116, "127.0.0.1", () => res(true)); });
     if (!isFirst) { console.log("brain: --daemon ALREADY RESIDENT (:4116 held) — this instance exits instead of piling up."); process.exitCode = KEEP_EXIT.ALREADY_RESIDENT; return; }
     const pollMs = (cfg.daemon && cfg.daemon.poll_ms) || 75000;
-    let stop = false, beats = 0, lastPulseAt = 0, retired = false, apiRefused = false;   // G5 — the pulse's seconds-pinned clock
+    let stop = false, beats = 0, lastPulseAt = 0, retired = false, apiRefused = false, judgeDeferred = false;   // G5 — the pulse's seconds-pinned clock
     const onSig = () => { stop = true; };
     process.on("SIGINT", onSig); process.on("SIGTERM", onSig);
     console.log(`brain: --daemon up (poll ~${Math.round(pollMs / 1000)}s) — the resident pacer. It never writes wake_queue. Ctrl-C to stop.`);
@@ -7686,7 +7693,10 @@ async function main() {
       // Checked BEFORE the beat spends anything, so an out-of-date resident never
       // runs one more job with code the repo has already moved past.
       const stale = staleSources(SOURCES, BOOT_MS, (p) => statSync(p).mtimeMs);
-      if (stale.length) {
+      // unit mlv0 (forks row 1031 M4 A): a judge round holds its port (keeper.mjs JUDGE_PORT) — no retire while it runs;
+      // the beat goes on, on the old code, and the very next beat checks again (a deferral, never a skip of the retire).
+      if (stale.length && await judgeHeld()) { if (!judgeDeferred) console.log(`brain: --daemon retire DEFERRED — ${stale.length} source file(s) moved after boot, but a judge round holds its port; retiring once it closes.`); judgeDeferred = true; }
+      else if (stale.length) {
         console.log(`brain: --daemon RETIRING — booted ${new Date(BOOT_MS).toISOString()}, and ${stale.length} of its own source file(s) changed AFTER that: ${stale.map((s) => `${basename(s.path)} @ ${new Date(s.mtime_ms).toISOString()}`).join(" · ")}. An ESM process cannot reload its code, so staying up means running the OLD brain. Releasing :4116 — its keeper (scripts/keeper.mjs) respawns the worker on the new code at once; run with no keeper, ArsenalFC-BrainTick covers the 30-min lane.`);
         retired = true;
         break;

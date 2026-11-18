@@ -31,7 +31,8 @@
 //   NOT forwarded, because child.kill() there is a hard kill mid-beat, and the worker
 //   shares the console, so the same Ctrl+C reaches it; the keeper waits for its clean stop.
 //
-// MODES: selftest · help (an unknown mode REFUSES, exit 2). Module: keep(), KEEP_EXIT.
+// MODES: selftest · help (an unknown mode REFUSES, exit 2). Module: keep(), KEEP_EXIT, portFree,
+//   JUDGE_PORT, holdJudgePort, judgeHeld (the judge round's port, unit mlv0).
 // WRITES: nothing. One worker at a time, one log line per decision.
 // ============================================================================
 
@@ -57,7 +58,7 @@ function decide(code, signal, { stopping = false, crashes = 0, ranMs = 0, pollMs
 }
 
 // portFree: the worker's own singleton test. Bind 127.0.0.1:<port>, release it at once.
-const portFree = (port) => new Promise((res) => {
+export const portFree = (port) => new Promise((res) => {
   const s = createServer();
   s.once("error", () => res(false));
   s.listen(port, "127.0.0.1", () => s.close(() => res(true)));
@@ -67,6 +68,24 @@ const nap = (ms, cut) => new Promise((res) => {
   let el = 0;
   const iv = setInterval(() => { el += 500; if (cut() || el >= ms) { clearInterval(iv); res(); } }, 500);
 });
+
+// THE JUDGE PORT (unit mlv0, forks row 1031 M4 A, ci/mcr/MLIVE_SPEC.md §5 M4): a judge round
+//   (`gaffer_brain.mjs judge`) HOLDS this port for its life, the brain's singleton-by-bind
+//   shape, so a killed round frees it with no marker left behind. Every retire under a keeper
+//   and `services.mjs status` read it: held = a round is running = no retire.
+//   Port registry: 4111 turnstile · 4112 cortex · 4113 thalamus · 4114 dugout · 4115 brain
+//   tick-lock · 4116 brain daemon-singleton · 4117 sitting · 4118 the judge round.
+export const JUDGE_PORT = 4118;
+/** holdJudgePort: bind JUDGE_PORT for this process's life. Resolves the server (close() it
+ *  when the round ends) or null when another round already holds it (never a refusal here).
+ *  @param {number} [port] */
+export const holdJudgePort = (port = JUDGE_PORT) => new Promise((res) => {
+  const s = createServer();
+  s.once("error", () => res(null));
+  s.listen(port, "127.0.0.1", () => { s.unref(); res(s); });
+});
+/** judgeHeld: true while a judge round holds its port. @param {number} [port] */
+export const judgeHeld = async (port = JUDGE_PORT) => !(await portFree(port));
 
 /** keep: run `worker` (an argv, [0] the executable) for ever under the contract above.
  *  Every effect is injected, so the selftest drives each branch with a FAKE spawn.
@@ -164,6 +183,12 @@ async function selftest() {
   ok("Windows: SIGTERM is NOT forwarded (a hard kill there), and nothing is respawned after it", r.killed === "" && r.spawns === 1, `killed [${r.killed}] · spawns ${r.spawns}`);
   ok("the keeper removes its signal handlers when it returns", r.left === 0, `${r.left} left`);
   ok("KEEP_EXIT is frozen and its four codes are distinct", Object.isFrozen(KEEP_EXIT) && new Set(Object.values(KEEP_EXIT)).size === 4);
+  const jh = await holdJudgePort(0);   // port 0: the OS picks a free one, so the selftest never touches the live judge port
+  const jp = jh && jh.address().port;
+  const held = jp ? await judgeHeld(jp) : null;
+  if (jh) await new Promise((r) => jh.close(r));
+  const freed = jp ? !(await judgeHeld(jp)) : null;
+  ok("THE JUDGE PORT: a held round reads held, and its close frees it (unit mlv0, row 1031 M4 A)", held === true && freed === true, `held ${held} · freed ${freed}`);
   const svc = join(dirname(fileURLToPath(import.meta.url)), "services.mjs");
   const xml = existsSync(svc) ? readFileSync(svc, "utf8") : "";
   const delays = [...xml.matchAll(/<onfailure action="restart" delay="(\d+) sec"\/>/g)].map((m) => Number(m[1]) * 1000);

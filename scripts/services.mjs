@@ -45,7 +45,7 @@
 // SOLE WRITER of setup/services/* — nothing else generates those files.
 // ============================================================================
 
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -1071,6 +1071,63 @@ export function statusLine(rows) {
       : " · no OS unit running (this says NOTHING about bare node processes — `node scripts/daemon_watchdog.mjs status` reads those)");
 }
 
+// ---- THE STATUS LINE PER UNIT (unit mlv0, forks row 1031 M1 A / M2 A / M3 A; ci/mcr/MLIVE_SPEC.md §3) ----
+// WHY: the summary line above says whether the OS OWNS a unit, never whether the bytes it runs are the bytes on
+//   disk. On 18 Nov 2026 a landing in an IMPORTED module read "build current" (K6: the only stale check compared
+//   the ENTRY file's mtime). So, per headless unit, one line under the summary (which stays first, unchanged):
+//     boot(u)    = the unit's OWN boot instant (its /status booted_at; context: its stamp's boot_ts), never guessed
+//     closure(u) = brain.sourceGraph(entry) — the static + dynamic local import closure
+//     moved(u)   = brain.staleSources(closure, boot, mtime) — strict ">", no tolerance
+//     STALE ⇔ boot known ∧ moved ≠ ∅ · CURRENT ⇔ boot known ∧ moved = ∅ · else UNVERIFIED — never "current".
+//   M1 A: this is `status` only — no restart verb is built here (row 1031: the keeper retires on its own).
+//   READ-ONLY: it reads sc.exe (through status()), each unit's /status, the context stamp, and file mtimes.
+/** closureVerdict: PURE but for the two injected reads. @param {{ entry: string, bootMs: number|null, root?: string,
+ *  readSrc?: (p: string) => string, mtimeOf?: (p: string) => number, graph: Function, stale: Function }} a */
+export function closureVerdict({ entry, bootMs, root = REPO, readSrc = (p) => readFileSync(p, "utf8"), mtimeOf = (p) => statSync(p).mtimeMs, graph, stale }) {
+  if (bootMs == null || !Number.isFinite(bootMs)) return { verdict: "UNVERIFIED", moved: [], files: 0 };
+  const closure = graph(join(root, entry), readSrc);
+  if (!closure.length) return { verdict: "UNVERIFIED", moved: [], files: 0, why: `its entry ${entry} is unreadable` };   // an empty walk is never "current"
+  const moved = stale(closure, bootMs, mtimeOf).map((m) => ({ file: String(m.path).slice(root.length + 1).replace(/\\/g, "/"), ms: m.mtime_ms }));
+  return { verdict: moved.length ? "STALE" : "CURRENT", moved, files: closure.length };
+}
+/** bootOf: the unit's own boot instant, read FROM the unit (M2 A). Resolves { ms, why }; ms null = unreadable, named. */
+export async function bootOf(row, deps = {}) {
+  if (row.probe === "stamp") {
+    const readStamp = deps.contextStamp || (await import("./context.mjs")).readStamp;
+    let st = null;
+    try { st = readStamp(); } catch { st = null; }
+    const ms = st && st.boot_ts != null ? Date.parse(st.boot_ts) : NaN;
+    return Number.isFinite(ms) ? { ms, why: "its stamp's boot_ts" } : { ms: null, why: "its stamp carries no boot_ts" };
+  }
+  if (row.port == null) return { ms: null, why: "it has no port and no stamp" };
+  const stamp = deps.stamp || (await import("./conductor.mjs")).buildStamp;
+  const st = await stamp(row.port);
+  const ms = st && st.booted_at != null ? Date.parse(st.booted_at) : NaN;
+  return Number.isFinite(ms) ? { ms, why: `its /status on :${row.port}` } : { ms: null, why: st ? `its /status on :${row.port} names no booted_at` : `no /status answer on :${row.port}` };
+}
+/** unitLines: one line per headless unit, then the judge port's line. @param {Array<{name: string, kind: string, installed: boolean, running: boolean}>} rows */
+export async function unitLines(rows, deps = {}) {
+  const { sourceGraph, staleSources } = deps.graph && deps.stale ? { sourceGraph: deps.graph, staleSources: deps.stale } : await import("./brain.mjs");
+  const out = [];
+  for (const r of headless()) {
+    const row = rows.find((x) => x.name === r.name && x.kind === "service");
+    const head = `  ${r.name.padEnd(9)} `;
+    if (!row || !row.installed) { out.push(`${head}NOT INSTALLED`); continue; }
+    if (!row.running) { out.push(`${head}STOPPED`); continue; }
+    const boot = await bootOf(r, deps);
+    const v = closureVerdict({ entry: r.args[0], bootMs: boot.ms, root: deps.root || REPO, readSrc: deps.readSrc, mtimeOf: deps.mtimeOf, graph: sourceGraph, stale: staleSources });
+    if (v.verdict === "UNVERIFIED") { out.push(`${head}RUNNING · booted UNVERIFIED (${v.why || `no boot instant readable: ${boot.why}`}) — never "current"`); continue; }
+    const at = new Date(boot.ms).toISOString();
+    out.push(v.verdict === "STALE"
+      ? `${head}RUNNING · booted ${at} · STALE — ${v.moved.length} file(s) moved after boot: ${v.moved.map((m) => `${m.file} @${new Date(m.ms).toISOString()}`).join(", ")}`
+      : `${head}RUNNING · booted ${at} · current (${v.files} file(s) of its import closure, none moved after boot)`);
+  }
+  const { judgeHeld, JUDGE_PORT } = await import("./keeper.mjs");
+  const held = await (deps.judgeHeld || judgeHeld)();
+  out.push(`  ${"judge".padEnd(9)} ${held ? `a round is RUNNING (:${JUDGE_PORT} held) — every retire under a keeper defers until it closes` : `no round running (:${JUDGE_PORT} free)`}`);
+  return out;
+}
+
 // ---- CLI --------------------------------------------------------------------
 // ONE SOURCE FOR THE MODES. Written first as a `MODES` array beside a separate
 // `usage()` string — two lists of the same thing, which is exactly what THE JUGAD
@@ -1103,7 +1160,9 @@ async function main() {
     for (const f of files) console.log(`  ~ ${f.path.replace(REPO + "\\", "").replace(REPO + "/", "")}`);
     return;
   }
-  console.log(statusLine(status()));
+  const rows = status();
+  console.log(statusLine(rows));
+  for (const l of await unitLines(rows)) console.log(l);   // unit mlv0 (row 1031 M1 A): the bytes each unit runs, under the summary
 }
 
 // ---- SELFTEST ---------------------------------------------------------------
@@ -1258,6 +1317,18 @@ async function selftest() {
     && /daemon_watchdog\.mjs status/.test(statusLine([{ name: "brain", kind: "service", installed: true, running: false }]))
     && !/nothing running/.test(statusLine([{ name: "brain", kind: "service", installed: true, running: false }])));
 
+  // unit mlv0 (row 1031 M3 A): the verdict walks the CLOSURE, and an unreadable boot is never "current"
+  {
+    const R = "/r", G = () => [`${R}/scripts/u.mjs`, `${R}/scripts/dep.mjs`];
+    const mt = { [`${R}/scripts/u.mjs`]: 100, [`${R}/scripts/dep.mjs`]: 300 };
+    const st = (paths, boot, m) => paths.filter((p) => m(p) > boot).map((p) => ({ path: p, mtime_ms: m(p) }));
+    const v = closureVerdict({ entry: "scripts/u.mjs", bootMs: 200, root: R, graph: G, stale: st, mtimeOf: (p) => mt[p] });
+    assert("MLV0 · an IMPORTED module moved after boot reads STALE and names that module (the entry unchanged)",
+      v.verdict === "STALE" && v.moved.length === 1 && v.moved[0].file === "scripts/dep.mjs");
+    assert("MLV0 · nothing moved after boot reads CURRENT; no boot instant reads UNVERIFIED, never current",
+      closureVerdict({ entry: "scripts/u.mjs", bootMs: 400, root: R, graph: G, stale: st, mtimeOf: (p) => mt[p] }).verdict === "CURRENT"
+      && closureVerdict({ entry: "scripts/u.mjs", bootMs: null, root: R, graph: G, stale: st, mtimeOf: (p) => mt[p] }).verdict === "UNVERIFIED");
+  }
   console.log(`\nservices selftest: ${pass} passed, ${fail} failed`);
   return fail === 0;
 }

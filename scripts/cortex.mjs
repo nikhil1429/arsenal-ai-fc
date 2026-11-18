@@ -1825,6 +1825,9 @@ async function selftest() {
     assert("#wire: every other request arms NOTHING and 404s — a stray probe can never retire the deep brain",
       lockRoute("GET", "/restart").arm === false && lockRoute("POST", "/status").arm === false
       && lockRoute("GET", "/").status === 404 && lockRoute(undefined, undefined).arm === false);
+    const st = lockRoute("GET", "/status");
+    assert("#mlv0: GET /status answers the boot instant ONLY (booted_at · pid, never module_mtime_ms) and arms nothing (row 1031 M2 A)",
+      st.arm === false && st.status === 200 && !Number.isNaN(Date.parse(st.body.booted_at)) && st.body.pid === process.pid && !("module_mtime_ms" in st.body));
     assert("#wire: an armed restart NEVER lands on a lane in flight (the paid Opus answer is not destroyed)",
       restartReady({ armed: true, inflight: 0 }) === true && restartReady({ armed: true, inflight: 1 }) === false
       && restartReady({ armed: false, inflight: 0 }) === false);
@@ -2088,6 +2091,11 @@ function graphFreshness(now = new Date(), deps = {}) {
 // cortex.mjs — so answering /status would have retired the wider instrument and
 // the detection would have MISSED. Silence is the more honest answer here until
 // conductor's tier 1 learns to read the graph too.
+// ⟶ SUPERSEDED 18 Nov 2026 (unit mlv0, forks row 1031 M2 A / K6): conductor's tier 1 now
+// reads the whole import CLOSURE against the unit's own boot instant (brain.sourceGraph /
+// staleSources), and `services.mjs status` does the same. So cortex now answers GET /status
+// with its boot instant ONLY (booted_at, pid) — never module_mtime_ms, the entry-only stamp
+// whose blindness is the K6 defect. Every other request still arms nothing and 404s.
 //
 // THE PAID ANSWER IS NEVER DESTROYED. An armed restart waits for every lane to
 // close (restartReady) — the same money this file already spools to
@@ -2100,13 +2108,19 @@ function graphFreshness(now = new Date(), deps = {}) {
 // `createServer(() => {})` — a socket that accepts and answers nothing. Pure so
 // the suite can hold the contract without binding the port (the same reason
 // laneResolved lives outside main()).
+// THE BOOT INSTANT (unit mlv0, row 1031 M2 A): measured once at load, the brain's own formula
+// (Date.now() - process.uptime()), never guessed. Read by GET /status below.
+const CORTEX_BOOTED_AT = new Date(Date.now() - process.uptime() * 1000).toISOString();
 function lockRoute(method, url) {
+  if (String(method || "").toUpperCase() === "GET" && String(url || "") === "/status") {
+    return { arm: false, status: 200, body: { ok: true, booted_at: CORTEX_BOOTED_AT, pid: process.pid } };
+  }
   if (String(method || "").toUpperCase() === "POST" && String(url || "") === "/restart") {
     return { arm: true, status: 200, body: { ok: true, armed: true,
       note: "cortex retires when no deep lane is in flight; daemon_watchdog's next pass launches the fresh build" } };
   }
   return { arm: false, status: 404, body: { ok: false,
-    error: "cortex holds :4112 as a singleton lock — the only door is POST /restart" } };
+    error: "cortex holds :4112 as a singleton lock — the only door is POST /restart (GET /status reads its boot instant)" } };
 }
 
 // An armed restart may only land on an IDLE daemon. Exported (at the foot of the

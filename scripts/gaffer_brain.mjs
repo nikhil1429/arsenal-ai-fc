@@ -110,6 +110,7 @@ import os from "node:os";
 // because that organ is the sole writer of rejirah_log.jsonl and derives nextDue,
 // fluency and the calibration gap from the row it writes itself.
 import { execFileSync } from "node:child_process";
+import { holdJudgePort } from "./keeper.mjs";   // unit mlv0 (row 1031 M4 A) — a judge round holds the judge port for its life
 import { AUTH_REFUSAL_RE } from "./claudegen.mjs";   // unit mtail (row 1017 (5) item 3) — the ONE auth refusal pattern lives at its LEAF; JUDGE_AUTH_RE below IS it
 // The legacy engine, imported rather than re-implemented: when the Watcher is
 // unavailable this organ returns the SAME verdict the surface had yesterday, so a
@@ -2726,6 +2727,10 @@ async function main() {
       if (!due.due) { console.log(`gaffer_brain: not due (${trigger}) — ${due.why}`); return; }
       firedBy = trigger;
     }
+    // unit mlv0 (forks row 1031 M4 A): THE ROUND HOLDS THE JUDGE PORT FOR ITS LIFE — this process IS the round, so the
+    // OS frees the port on any exit, a kill included. Held already = another round is running: this one still runs (the
+    // port is a READER's signal, never a lock that refuses); every retire under a keeper reads it and defers.
+    await holdJudgePort();
     const r = await gradeJudge({ dry: process.argv.includes("--dry"), ...(firedBy ? { firedBy } : {}) });
     if (r.skipped) { console.log("gaffer_brain: " + r.skipped); return; }
     if (!r.ok) { console.log(r.say); process.exit(1); }
