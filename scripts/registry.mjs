@@ -20,6 +20,9 @@
 //   S10 is "any" — the organism's measured semantics today; flipping a row to
 //   all/quorum is a RULING, never a build's quiet choice. first_real_row_at is
 //   stamped by the reach-side meter (`meter`), from payload rows, never mtime.
+//   files[] (unit mdn2, forks row 1051 (4)): OPTIONAL on a lanes row — the repo-relative
+//   paths its output lands in, so a reach reader never guesses the file from the subject
+//   (`laneFiles()` reads them; done.mjs's static reach is its first reader).
 //   BORN-RED LAW (R1): a row whose consumers are unknown/missing is a RED row
 //   demanding create-or-fix — never a silent absence.
 //
@@ -154,6 +157,11 @@ export function lazySubjects(mechanism, path = REGISTRY_PATH) {
   });
 }
 export function laneRows(path = REGISTRY_PATH) { return tableRows("lanes", path).filter((r) => r && !r.retired); }
+/** laneFiles — { subject: [repo-relative path…] } for every live lanes row that DECLARES `files` (unit mdn2); a row
+ *  that declares none is absent from the map, never mapped to []. Read at call time, never at import. */
+export function laneFiles(path = REGISTRY_PATH) {
+  return Object.fromEntries(laneRows(path).filter((r) => Array.isArray(r.files) && r.files.length).map((r) => [r.subject, r.files.filter((p) => typeof p === "string")]));
+}
 export function emitRows(path = REGISTRY_PATH) { return tableRows("emit_contract", path).filter((r) => r && !r.retired); }
 /** slotPassed — "has the producer's slot passed today?" Row shape: slot:{after:"HH:MM"}.
  *  null when no row declares it (caller keeps its old behaviour and says so). */
@@ -298,6 +306,20 @@ export function validateRow(table, row, { queueDir = QUEUE_DIR, path = REGISTRY_
     // A pointer, never a boolean: a flag is testimony, a place is checkable.
     if (row.declared_elsewhere !== undefined && (typeof row.declared_elsewhere !== "string" || !clip(row.declared_elsewhere))) {
       return { ok: false, why: "declared_elsewhere names WHERE this lane declares its consumer (a file, a site) — never true/false; a flag would be testimony again" };
+    }
+    // unit mdn2 (forks row 1051 (4), proof fork 3 of ci/mdone/PROOF.md): THE LANE → FILE FIELD. Most lanes are LLM-job
+    // lanes named by subject, not by a state path, so a reader that guesses the file from the subject finds none of
+    // them. `files` DECLARES them: the repo-relative paths (forward slashes) the lane's output lands in. Optional — a
+    // row without it keeps the subject-name reading — but a declaration that names no checkable path is refused.
+    if (row.files !== undefined) {
+      const f = row.files;
+      if (!Array.isArray(f) || !f.length) return { ok: false, why: "files[] is the lane's own files — a NON-EMPTY array of repo-relative paths; absent, never empty (an empty list reads as \"no file\", which is a claim)" };
+      for (const p of f) {
+        if (typeof p !== "string" || !p.trim() || p !== p.trim() || p.includes("\\") || p.startsWith("/") || /^[A-Za-z]:/.test(p) || p.split("/").some((s) => s === "" || s === "." || s === "..")) {
+          return { ok: false, why: `files[] entry ${JSON.stringify(clip(p, 80))} is not a repo-relative path — forward slashes, no leading slash or drive, no empty, "." or ".." segment` };
+        }
+      }
+      if (new Set(f).size !== f.length) return { ok: false, why: "files[] names a path twice — a declaration is a set" };
     }
   }
   // S13 — the input-side row shape. `input_class` is the DECLARATION the guard reads; an
@@ -827,6 +849,14 @@ function selftest() {
     && redRows(P).some((r) => r.subject === "l_orphan"));
   assert("QUORUM SHAPE — reach accepts any | all | quorum-N",
     ["any", "all", "quorum-2"].every((x) => REACH_RE.test(x)) && !REACH_RE.test("quorum-0"));
+  // unit mdn2 — the lane → file field, planted both ways
+  const lf = (files) => upsertRow("lanes", { subject: "l_files", schema_owner: "a.mjs", witness: "w", consumers: [{ name: "b.mjs" }], reach: "any", files }, { path: P }).ok;
+  assert("LANE FILES — a malformed files[] is refused (a string · empty · absolute · a drive · a backslash · a .. segment · a duplicate)",
+    ["dressing-room/state/x.json", [], ["/etc/x.json"], ["C:/x.json"], ["dressing-room\\state\\x.json"], ["dressing-room/../x.json"], ["a/x.json", "a/x.json"]].every((f) => lf(f) === false));
+  assert("LANE FILES — a well-formed files[] lands and laneFiles() reads it back; a row without files is absent from the map, never []",
+    lf(["dressing-room/state/brain_out/l_files/out.json", "dressing-room/state/l_files_log.jsonl"]) === true
+    && JSON.stringify(laneFiles(P).l_files) === JSON.stringify(["dressing-room/state/brain_out/l_files/out.json", "dressing-room/state/l_files_log.jsonl"])
+    && !("l1" in laneFiles(P)));
 
   assert("L9 · RETIRE, NEVER DELETE — a retired row survives with its why",
     retireRow("lanes", "l_orphan", "selftest retirement", { path: P }).ok === true
