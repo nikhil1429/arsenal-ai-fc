@@ -133,3 +133,5 @@ hermetic suite: the one red of main (orphaned: home_pin, probe, study_scope); no
 there and LIVE-SAFE reads RED by name ("cannot plant … held by another process"). The plants themselves never address
 those ports (planted ports, the witness's request door refuses a live port), so the other clauses can run there; the
 architect rules whether LIVE-SAFE should be a CI/container clause only.
+
+**Neutral CI verdict of the rework push `790e58c` (read with curl, 18 Nov 2026):** run 44372524066 — `npm test · node 22`: success · `npm test · node 24`: success.
