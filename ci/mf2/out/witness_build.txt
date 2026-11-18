@@ -1,0 +1,7 @@
+GREEN F1 · planted 49 LIVE call site(s) (base 49) · hermetic markers: build 0 (must be 0), base 49 · full markers: build 49, base 49 (every base one must be in the build's)
+GREEN F2 · base hermetic judged 140, build 140 · verdict moved or absent: none · judged only by the build: none
+GREEN F3 · hermetic headline LIVE: build 126 · base 126 (build ≤ base) · LIVE names printed: build 126, base 126 · named LIVE only by the build: none
+GREEN F4 · full profile: base 304 member(s), build 304 · first difference none · headline base "organism_test: 284 passed, 20 failed · ruled 0 · UNRULED 20" · build "organism_test: 284 passed, 20 failed · ruled 0 · UNRULED 20" · exit 2/2
+GREEN BOUND · differs: scripts/organism_test.mjs
+GREEN LAST · 0 node process(es) naming /tmp/mf2-Qc880x
+GREEN MF2 a LIVE assert is never executed in the hermetic profile, and the full profile runs every one as before · 6 clause(s)
