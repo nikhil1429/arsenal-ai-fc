@@ -148,15 +148,20 @@ function heldCommits(run) {
   const RS = String.fromCharCode(30), NL = String.fromCharCode(10);
   const log = run("git", ["log", "--reverse", "--format=%x1e%H %s", "--name-only", "@{u}..HEAD"]);
   if (!log.ok) return { ok: false, held: [], why: `refused: could not read origin..HEAD (${String(log.out || "").split(NL)[0].slice(0, 100)}) — fail closed, nothing staged, nothing pushed` };
-  const held = [];
+  const held = [], landed = [];
+  // ROW 1029 L4 (unit mland) — A LANDING IS LAWFUL. scripts/land.mjs fast-forwards main to a judged land/<unit> tip and,
+  // when origin refuses the push, leaves main THERE (L4): that commit is the sha judged, not a held landing. It is known
+  // by its sha being the tip of an origin/land/* ref (fetched by the verb) — the same sha, so the same tree, never a subject.
+  const tips = new Set(String(run("git", ["for-each-ref", "--format=%(objectname)", "refs/remotes/origin/land/"]).out || "").split(NL).map((s) => s.trim()).filter(Boolean));
   for (const rec of String(log.out || "").split(RS).slice(1)) {
     const lines = rec.split(NL).map((s) => s.trim()).filter(Boolean);
     const head = lines.shift() || "";
     const sha = head.slice(0, 40), subject = head.slice(41);
     const own = OWN_SUBJECTS.some((p) => subject.startsWith(p)) && lines.length > 0 && lines.every(isPublishablePath);
+    if (tips.has(sha)) { landed.push(sha); continue; }
     if (!own) held.push({ sha, subject, paths: lines });
   }
-  return { ok: true, held };
+  return { ok: true, held, landed };
 }
 function refuseHeld(run, h, extra = {}) {
   const first = h.held[0];
@@ -209,7 +214,7 @@ function dirtyOverlap(run, from, to) {
   const dirty = [...linesOf(run("git", ["diff", "--name-only", "HEAD"]).out), ...linesOf(run("git", ["ls-files", "--others", "--exclude-standard"]).out)];
   return dirty.find((p) => moved.has(p)) || null;
 }
-function meetOrigin(run) {
+function meetOrigin(run, landed = []) {
   const anc = run("git", ["merge-base", "--is-ancestor", "@{u}", "HEAD"]);
   if (anc.ok) return { ok: true, how: "even" };
   const O = run("git", ["rev-parse", "@{u}"]), H = run("git", ["rev-parse", "HEAD"]), B = run("git", ["merge-base", "HEAD", "@{u}"]);
@@ -224,6 +229,11 @@ function meetOrigin(run) {
       return { ok: false, idle: "DIRTY-PATH", card: key, why: `idle DIRTY-PATH ${p} — origin ${o.slice(0, 7)} moved a path that is dirty here; no stash, no force, nothing moved` };
     }
     return { ok: true, how: "ff", to: o };
+  }
+  const landedHere = mine.filter((c) => (landed || []).includes(c));
+  if (landedHere.length) {                                                  // ROW 1029 L4: a landing is never rewritten (the sha judged is the sha landed)
+    const key = cardOnce(run, `Raat ka state push ruka: landing ${landedHere[0].slice(0, 7)} local main par hai aur origin aage nikal gaya. Runner: node scripts/land.mjs push; kuch rewrite nahi hua.`, `groundsman:landing:${o12}`);
+    return { ok: false, idle: "LANDING-BEHIND", card: key, why: `idle LANDING-BEHIND — landing ${landedHere[0].slice(0, 7)} is unpushed and origin ${o.slice(0, 7)} moved; a landing is never rebuilt` };
   }
   const movedPaths = linesOf(run("git", ["log", "--no-renames", "--format=", "--name-only", `${base}..${o}`]).out);
   const statePath = movedPaths.find((p) => p.startsWith(STATE_PREFIX));
@@ -358,7 +368,7 @@ async function pushOnlyPass(hostId, deps = {}) {
   const h = heldCommits(run);                       // ROW 808 (2): the RANGE first — after the read-back, before staging
   if (!h.ok) return withVerdict({ ok: true, pushed: false, refused: true, why: h.why });
   if (h.held.length) return withVerdict(refuseHeld(run, h));
-  const met = meetOrigin(run);                      // ROW 1029 (3): a moved origin is met (ff, or rebuilt by plumbing) or idles with ONE card
+  const met = meetOrigin(run, h.landed);                      // ROW 1029 (3): a moved origin is met (ff, or rebuilt by plumbing) or idles with ONE card
   if (!met.ok) return withVerdict({ ok: true, pushed: false, idle: met.idle, card: met.card || null, why: met.why });
   const add = run("git", ["add", "-u", "--", ...PUBLISH_ALLOWLIST]);
   if (!add.ok) return withVerdict({ ok: true, pushed: false, why: `staging refused: ${add.out}` });
