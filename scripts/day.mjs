@@ -125,15 +125,20 @@ export async function end({ pointer = null, now = new Date(), envSession = proce
   } else steps.push(pointer ? "pointer: no open concept" : "pointer: none given");
   // 2. the sitting — its own door; its close fires the judge by code
   const S = await sitting();
-  if (isOpen(s)) {
+  const closeSitting = async () => {
+    if (!isOpen(readSitting())) { steps.push("sitting: none open"); return; }
     const c = await S.closeDoor({ reason: "fulltime" });
     steps.push(c.ok ? `sitting ${c.id} closed (door ${c.door}${c.review && c.review.judge ? `, judge ${c.review.judge.ok ? "ran" : "FAILED"}` : ""})` : `sitting NOT closed (${c.error})`);
-  } else steps.push("sitting: none open");
+  };
   // 3. the machine half of the day — the close anchor (F3 A), no quiet-rule defer
-  const pm = await import(pathToFileURL(join(HERE, "postmatch.mjs")).href).catch(() => null);
-  const a = await ownerRun("postmatch.mjs", ["autoclose", "--date", D, "--anchor", "close"], pm && pm.autocloseBudget ? pm.autocloseBudget() : undefined);
-  const al = a.stdout.split(/\r?\n/).find((l) => l.startsWith("autoclose ·")) || lastLine(a);
-  steps.push(`postmatch: ${al.replace(/^autoclose · /, "").slice(0, 160)}`);
+  const machineHalf = async () => {
+    const pm = await import(pathToFileURL(join(HERE, "postmatch.mjs")).href).catch(() => null);
+    const a = await ownerRun("postmatch.mjs", ["autoclose", "--date", D, "--anchor", "close"], pm && pm.autocloseBudget ? pm.autocloseBudget() : undefined);
+    const al = a.stdout.split(/\r?\n/).find((l) => l.startsWith("autoclose ·")) || lastLine(a);
+    steps.push(`postmatch: ${al.replace(/^autoclose · /, "").slice(0, 160)}`);
+  };
+  await closeSitting();
+  await machineHalf();
   // 4. the evening organs measured idempotent by day (F4)
   for (const o of EVENING_ORGANS.filter((x) => x.on.includes("end"))) { const r = await ownerRun(o.file, []); steps.push(`${o.file} exit ${r.status}`); }
   // 5. ONE card
