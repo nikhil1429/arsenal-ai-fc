@@ -100,9 +100,9 @@
 //   #106 `status` reports have/need counters, never a bare word.
 // ============================================================================
 
-import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, statSync, watch, rmSync, readdirSync } from "node:fs";
+import { readFileSync, existsSync, appendFileSync, mkdirSync, writeFileSync, renameSync, statSync, watch, rmSync, readdirSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, dirname, basename } from "node:path";
+import { join, dirname, basename, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer } from "node:http";
 import { createHash } from "node:crypto";   // unit 818 — the owner setter prints the file's sha256 before and after
@@ -119,7 +119,7 @@ import { loadRegistry, canonicalize } from "./capture.mjs";
 // adjudicateLive, exactly as before — only the row SHAPE moves up here.
 import { ledgerForensics } from "./claudegen.mjs";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
-import { keep, KEEP_EXIT, retireWhenIdle } from "./keeper.mjs";   // unit mlv3 (forks row 1031 M0 A) — the keeper over `daemon-worker`, retiring only when its spool is drained
+import { keep, KEEP_EXIT, retireWhenIdle, judgeHeld, JUDGE_PORT } from "./keeper.mjs";   // unit mlv3 (forks row 1031 M0 A) — the keeper over `daemon-worker`, retiring only when its spool is drained
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 // UNIT 818 (13 Nov 2026) — LAW M: the adjudicator names a ROLE and the one resolver answers it. models.mjs
 // imports node builtins only and its module body has no side effects (its main guard is
@@ -149,7 +149,22 @@ const SPRINT    = join(STATE_DIR, "sprint.json");          // #6 — the curricu
 // The adjudicator joins it below: see THE ADJUDICATOR METERS ITSELF.
 const BLEDGER   = join(STATE_DIR, "brain_ledger.jsonl");
 const LOGFILE   = join(__dirname, "thalamus.log");         // #10 — the diagnostics that had nowhere to land (*.log is gitignored)
-const PORT = 4113;                                  // one below the Dugout's 4114
+// THE PLANTED-TREE PORT DOOR (unit mlv3 rework, forks row 1053) — the same door cortex.mjs carries: a witness runs a
+// REAL thalamus on a COPY under the OS temp dir and must never touch the live :4113 (his laptop runs it, the one organ
+// left on). The env name is honoured ONLY when this very file (realpath) sits under os.tmpdir(); anywhere else, or with
+// the env unset or bad, the fixed port stands, byte for byte what it was.
+export function plantedPort(name, fixed, { here = fileURLToPath(import.meta.url), env = process.env, tmp = tmpdir(), platform = process.platform } = {}) {
+  const v = env[name];
+  if (v == null || v === "") return fixed;
+  let h, t;
+  try { h = realpathSync(here); t = realpathSync(tmp); } catch (e) { swallow("plantedPort: an unreal path is never a planted tree → the fixed port", e); return fixed; }
+  const fold = (x) => (platform === "win32" ? x.toLowerCase() : x);
+  const under = fold(h).startsWith(fold(t.endsWith(sep) ? t : t + sep));
+  const n = Number(v);
+  return under && Number.isInteger(n) && n > 0 && n < 65536 ? n : fixed;
+}
+const PORT = plantedPort("ARSENAL_THALAMUS_PORT", 4113);   // one below the Dugout's 4114
+const JUDGE_AT = plantedPort("ARSENAL_JUDGE_PORT", JUDGE_PORT);   // the judge round's port (keeper.mjs), read by the retire
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e);} return null; };
 // `raw` returns the LINE TEXT instead of the parsed row, and it exists because a rewriter
@@ -1557,6 +1572,18 @@ async function selftest() {
   // ONE removal site for the whole selftest. Four inline rmSync calls on computed paths
   // were four permanent blind spots in this organ's call graph; the work is identical.
   const wipe = (d) => { try { rmSync(d, { recursive: true, force: true }); } catch (e) { swallow("wipe: the target is already gone → ignored", e); } };
+  {
+    // unit mlv3 rework (row 1053): the port door is honoured ONLY for a tree under the OS temp dir
+    const { mkdtempSync: mkd } = await import("node:fs");
+    const d = mkd(join(tmpdir(), "thalamus-port-")), planted = join(d, "thalamus.mjs");
+    writeFileSync(planted, "");
+    const env = { P: "4999" }, mine = fileURLToPath(import.meta.url);
+    const ok = plantedPort("P", 4113, { env: {}, here: planted }) === 4113 && plantedPort("P", 4113, { env, here: planted }) === 4999
+      && plantedPort("P", 4113, { env: { P: "not-a-port" }, here: planted }) === 4113 && plantedPort("P", 4113, { env, here: join(d, "gone.mjs") }) === 4113
+      && (realpathSync(mine).startsWith(realpathSync(tmpdir()) + sep) || plantedPort("P", 4113, { env, here: mine }) === 4113);
+    wipe(d);
+    assert("MLV3 REWORK (row 1053) — the port door is honoured ONLY for a tree under the OS temp dir; env unset, a bad value, or his own tree keep :4113", ok);
+  }
   const liveCfg = loadConfig();
   const cfg = { ...DEFAULT_CONFIG, tiers: { ...DEFAULT_CONFIG.tiers, tau1_base: 0.40, epsilon: 0.10 } };
   assert("SELFTEST HERMETIC: the checks' bar is pinned in this file, not read from the tunable config",
@@ -3190,7 +3217,7 @@ async function main() {
     try { const sp = await import("./spool.mjs"); return sp.pending().filter((r) => !nucleus.state.seenEvents.has(r.event_id)).length; }
     catch { return 0; }   // a spool that cannot open holds nothing this worker could lose (capture is POST-and-hope then)
   };
-  retirer = await retireWhenIdle({ name: "thalamus", entry: fileURLToPath(import.meta.url), log,
+  retirer = await retireWhenIdle({ name: "thalamus", entry: fileURLToPath(import.meta.url), log, judge: () => judgeHeld(JUDGE_AT),
     idle: async () => inflight === 0 && (await spoolUnseen()) === 0,
     retire: () => new Promise(() => {
       drainer.stop();

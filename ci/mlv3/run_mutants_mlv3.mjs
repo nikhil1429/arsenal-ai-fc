@@ -17,7 +17,8 @@ const MUTANTS = [
   { clause: "T1", file: "scripts/thalamus.mjs", from: "idle: async () => inflight === 0 && (await spoolUnseen()) === 0,", to: "idle: async () => false,", what: "the worker never reads itself idle (it never retires)" },
   { clause: "T2", file: "scripts/thalamus.mjs", from: "const drainer = createSpoolDrainer({ ingest: nucleus.ingest,", to: "const drainer = createSpoolDrainer({ ingest: async () => {},", what: "the drain marks spooled rows delivered without ingesting them (the loss path)" },
   { clause: "T3", file: "scripts/thalamus.mjs", from: "idle: async () => inflight === 0 && (await spoolUnseen()) === 0,", to: "idle: async () => (await spoolUnseen()) === 0,", what: "the idle predicate ignores a capture request in flight" },
-  { clause: "T4", file: "scripts/thalamus.mjs", from: "retirer = await retireWhenIdle({ name: \"thalamus\",", to: "retirer = await retireWhenIdle({ judge: async () => false, name: \"thalamus\",", what: "the thalamus retire stops reading the judge port" },
+  { clause: "T4", file: "scripts/thalamus.mjs", from: "judge: () => judgeHeld(JUDGE_AT),", to: "judge: async () => false,", what: "the thalamus retire stops reading the judge port" },
+  { clause: "LIVE-SAFE", file: "scripts/thalamus.mjs", from: "const PORT = plantedPort(\"ARSENAL_THALAMUS_PORT\", 4113);", to: "const PORT = 4113;", what: "the port door is ignored: a planted tree binds the live :4113" },
   { clause: "XML", file: "scripts/daemon_watchdog.mjs", from: 'args: ["scripts/thalamus.mjs"]', to: 'args: ["scripts/thalamus.mjs", "daemon-worker"]', what: "the service arguments change shape (a reinstall by his hand)" },
 ];
 const ROOT = mkdtempSync(join(tmpdir(), "mlv3-mutants-"));
