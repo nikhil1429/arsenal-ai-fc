@@ -32,7 +32,8 @@
 //   shares the console, so the same Ctrl+C reaches it; the keeper waits for its clean stop.
 //
 // MODES: selftest · help (an unknown mode REFUSES, exit 2). Module: keep(), KEEP_EXIT, portFree,
-//   JUDGE_PORT, holdJudgePort, judgeHeld (the judge round's port, unit mlv0).
+//   JUDGE_PORT, holdJudgePort, judgeHeld (the judge round's port, unit mlv0), retireWhenIdle,
+//   KEEP_POLL_MS (the deferred retire, units mlv1-mlv3).
 // WRITES: nothing. One worker at a time, one log line per decision.
 // ============================================================================
 
@@ -47,7 +48,7 @@ const BACKOFF_MS = [10000, 30000, 60000];   // services.mjs: <onfailure action="
 const RESET_MS = 3600000;                    // services.mjs: <resetfailure>1 hour</resetfailure>
 
 // decide: PURE. What the keeper does after a worker exits.
-function decide(code, signal, { stopping = false, crashes = 0, ranMs = 0, pollMs = 75000 } = {}) {
+function decide(code, signal, { stopping = false, crashes = 0, ranMs = 0, pollMs = KEEP_POLL_MS } = {}) {
   if (stopping) return { act: "stop", crashes, why: "a signal asked the keeper to stop" };
   if (code === KEEP_EXIT.CLEAN && !signal) return { act: "stop", crashes, why: "the worker stopped clean" };
   if (code === KEEP_EXIT.REFUSED) return { act: "stop", crashes, why: "REFUSED, ANTHROPIC_API_KEY is set: unset it and restart" };
@@ -87,12 +88,60 @@ export const holdJudgePort = (port = JUDGE_PORT) => new Promise((res) => {
 /** judgeHeld: true while a judge round holds its port. @param {number} [port] */
 export const judgeHeld = async (port = JUDGE_PORT) => !(await portFree(port));
 
+// RETIRE WHEN IDLE (units mlv1 / mlv2 / mlv3, forks row 1031 M0 A: THE KEEPER WITH A DEFERRED RETIRE). The brain's
+//   retire rule (sourceGraph / staleSources: the whole local import closure, strict ">" against this process's own boot
+//   instant, no tolerance) for a resident that holds LIVE WORK: it retires ONLY when its own `idle()` predicate says so
+//   AND no judge round holds JUDGE_PORT. Busy = the retire is DEFERRED (one log line per reason), never skipped: it is
+//   re-checked on every write in the closure's directories (fs.watch), on every `check()` the unit calls at the moment
+//   it becomes idle, and on the keeper's own poll as the floor. `retire(moved)` is the unit's own clean exit with
+//   KEEP_EXIT.RETIRED; its keeper respawns it on the new bytes at once.
+export const KEEP_POLL_MS = 75000;   // the keeper's own default poll (keep()'s pollMs below, brain_config's daemon.poll_ms default)
+/** @param {{ name: string, entry: string, idle: () => boolean | Promise<boolean>, retire: (moved: Array<{path: string, mtime_ms: number}>) => any,
+ *    log?: (line: string) => void, bootMs?: number, pollMs?: number, judge?: () => Promise<boolean>, watch?: Function | null }} o */
+export async function retireWhenIdle({ name, entry, idle, retire, log = console.log, bootMs = Date.now() - process.uptime() * 1000,
+  pollMs = KEEP_POLL_MS, judge = () => judgeHeld(), watch = null } = {}) {
+  const { sourceGraph, staleSources } = await import("./brain.mjs");
+  const { readFileSync, statSync, watch: fsWatch } = await import("node:fs");
+  const files = sourceGraph(entry, (p) => readFileSync(p, "utf8"));
+  let done = false, deferred = null, running = false, again = false;
+  const watchers = [];
+  const stop = () => { done = true; clearInterval(iv); for (const w of watchers) { try { w.close(); } catch { /* gone */ } } };
+  const check = async () => {
+    if (done) return false;
+    if (running) { again = true; return false; }   // a check asked for mid-check runs once more after it, never lost
+    running = true;
+    try {
+      const moved = staleSources(files, bootMs, (p) => statSync(p).mtimeMs);
+      if (!moved.length) return false;
+      const why = !(await idle()) ? "it is holding live work" : (await judge()) ? `a judge round holds :${JUDGE_PORT}` : null;
+      if (why) {
+        if (deferred !== why) log(`${name}: retire DEFERRED — ${moved.length} file(s) of its closure moved after boot (${moved.map((m) => m.path.split(/[\\/]/).pop()).join(", ")}), but ${why}; it retires the moment that ends.`);
+        deferred = why;
+        return false;
+      }
+      stop();
+      log(`${name}: RETIRING — booted ${new Date(bootMs).toISOString()}, and ${moved.length} file(s) of its closure moved after that: ${moved.map((m) => `${m.path.split(/[\\/]/).pop()} @ ${new Date(m.mtime_ms).toISOString()}`).join(" · ")}. Idle, no judge round: exiting ${KEEP_EXIT.RETIRED}, its keeper respawns it on the new bytes at once.`);
+      await retire(moved);
+      return true;
+    } finally { running = false; if (again && !done) { again = false; setImmediate(() => { check(); }); } }
+  };
+  const iv = setInterval(() => { check(); }, pollMs);
+  if (iv.unref) iv.unref();
+  const w = watch === null ? fsWatch : watch;
+  if (w) {
+    for (const dir of [...new Set(files.map((f) => f.replace(/[\\/][^\\/]+$/, "")))]) {
+      try { const h = w(dir, () => { check(); }); if (h && h.unref) h.unref(); watchers.push(h); } catch { /* the poll is the floor */ }
+    }
+  }
+  return { check, stop, files };
+}
+
 /** keep: run `worker` (an argv, [0] the executable) for ever under the contract above.
  *  Every effect is injected, so the selftest drives each branch with a FAKE spawn.
  *  @param {{ name: string, worker: string[], port?: number | null, pollMs?: number, log?: (line: string) => void,
  *    spawn?: (argv: string[]) => any, sleep?: (ms: number, cut: () => boolean) => Promise<void>,
  *    portIsFree?: (port: number) => Promise<boolean>, now?: () => number, platform?: string, signals?: any }} [opts] */
-export async function keep({ name, worker, port = null, pollMs = 75000, log = console.log,
+export async function keep({ name, worker, port = null, pollMs = KEEP_POLL_MS, log = console.log,
   spawn = (argv) => nodeSpawn(argv[0], argv.slice(1), { stdio: "inherit" }),
   sleep = nap, portIsFree = portFree, now = Date.now, platform = process.platform, signals = process } = {}) {
   let stopping = false, child = null, crashes = 0, spawns = 0, waiting = false;
@@ -189,6 +238,19 @@ async function selftest() {
   if (jh) await new Promise((r) => jh.close(r));
   const freed = jp ? !(await judgeHeld(jp)) : null;
   ok("THE JUDGE PORT: a held round reads held, and its close frees it (unit mlv0, row 1031 M4 A)", held === true && freed === true, `held ${held} · freed ${freed}`);
+  {
+    const { mkdtempSync, writeFileSync: wf, utimesSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const d = mkdtempSync(join(tmpdir(), "keeper-st-")), e = join(d, "u.mjs");
+    wf(e, 'import "./dep.mjs";\n'); wf(join(d, "dep.mjs"), "export {};\n");
+    const boot = Date.now() - 60000; utimesSync(e, new Date(boot - 1000), new Date(boot - 1000)); utimesSync(join(d, "dep.mjs"), new Date(boot + 1000), new Date(boot + 1000));
+    let busy = true, judging = false; const retired = [], logs = [];
+    const r = await retireWhenIdle({ name: "t", entry: e, bootMs: boot, idle: () => !busy, judge: async () => judging, retire: (m) => { retired.push(m.map((x) => x.path)); }, log: (l) => logs.push(l), watch: false, pollMs: 1 << 30 });
+    const a1 = await r.check(); busy = false; judging = true; const a2 = await r.check(); judging = false; const a3 = await r.check();
+    r.stop(); rmSync(d, { recursive: true, force: true });
+    ok("RETIRE WHEN IDLE: busy defers, a held judge port defers, idle + free retires ONCE naming the moved import (units mlv1-mlv3)",
+      a1 === false && a2 === false && a3 === true && retired.length === 1 && /dep\.mjs$/.test(retired[0][0]) && logs.filter((l) => /DEFERRED/.test(l)).length === 2, `${a1}/${a2}/${a3} · retired ${retired.length} · ${logs.length} log line(s)`);
+  }
   const svc = join(dirname(fileURLToPath(import.meta.url)), "services.mjs");
   const xml = existsSync(svc) ? readFileSync(svc, "utf8") : "";
   const delays = [...xml.matchAll(/<onfailure action="restart" delay="(\d+) sec"\/>/g)].map((m) => Number(m[1]) * 1000);

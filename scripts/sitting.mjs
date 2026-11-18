@@ -82,6 +82,7 @@ import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE inte
 import { isStale as forgeIsStale } from "./forge_session.mjs";   // W0-D — the route asks the pacer whether its session is stale; it used to re-derive it from started_at with a bare 18
 import { transcriptPathFor } from "./study_scope.mjs";   // G0 (23 Sep) — the leaf's one derivation of where a session's transcript lives
 import { JUDGE_BUDGET_MS, JUDGE_DISPATCH_MS } from "./gaffer_brain.mjs";   // unit mjud · msit — a judge verb is waited on for the judge's OWN budget plus its dispatch, read from its owner (ownerTimeoutMs)
+import { keep, KEEP_EXIT, retireWhenIdle } from "./keeper.mjs";   // unit mlv1 (forks row 1031 M0 A) — `daemon` is the KEEPER over `daemon-worker`, which retires on a source change ONLY when no sitting is open
 import { SESSION_CLOSE_MS } from "./claudegen.mjs";   // unit mtail F-C — the voice session's close grace (close() step 5), read from its owner so the CLI's close wait is derived (closeWaitMs)
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -1075,6 +1076,9 @@ export function createSitting(deps = {}) {
     //    the LLM row lands beside the base row and the drifts reach the contract through its owner
     try { reviewer(S.id); } catch (e) { log(`sitting: review launch failed: ${String(e && e.message || e).slice(0, 120)}`); }
     const out = { ok: true, id: S.id, review, intent_ok: ir.ok };
+    // unit mlv1 (row 1031 M0 A): the moment a sitting closes is the moment the worker becomes idle — a retire that was
+    // DEFERRED by this open sitting is re-checked now, after the file, the review launch and the intent line are done.
+    if (deps.onClosed) { try { deps.onClosed(S.id); } catch { /* the keeper's poll is the floor */ } }
     return out;
   }
   function plan() { return { ok: true, id: S ? S.id : null, map: S ? S.plan_map : null, source: S ? S.plan_source : null, cursor: S ? S.cursor : 0, units: S ? S.plan : [] }; }
@@ -1323,10 +1327,28 @@ async function main() {
   const opt = (k) => { const i = rest.indexOf(k); return i >= 0 ? rest[i + 1] : undefined; };
   switch ((mode || "").toLowerCase()) {
     case "daemon": {
-      const d = createSitting();
+      // THE KEEPER (unit mlv1, forks row 1031 M0 A; ci/mcr/MLIVE_SPEC.md §1 K1-K3). What the OS launches
+      // (`scripts/sitting.mjs daemon`, the service XML's arguments, unchanged in shape) is now keep() over
+      // `daemon-worker`: it never exits on its own, a RETIRE (75) respawns the worker at once on the new bytes, a
+      // second keeper idles while :PORT is held. The worker below is the daemon as it ran until today, plus the retire.
+      await keep({ name: "sitting", worker: [process.execPath, fileURLToPath(import.meta.url), "daemon-worker", ...process.argv.slice(3)], port: PORT });
+      return;
+    }
+    case "daemon-worker": {
+      // FROZEN (L9), verbatim the body of `daemon` until 18 Nov 2026: createSitting · serve(PORT) · stand down on a held
+      // port · SIGINT stops it. Added: a stand-down exits KEEP_EXIT.ALREADY_RESIDENT (69, the keeper waits), and the
+      // DEFERRED RETIRE — its idle predicate is "no open sitting" (an open sitting is live work: its child, its plan,
+      // his next line), and a judge round holding its port defers it too (keeper.mjs retireWhenIdle).
+      let retirer = null;
+      const d = createSitting({ onClosed: () => { if (retirer) retirer.check(); } });
       const r = await d.serve(PORT);
-      if (!r.ok) process.exit(0);
+      if (!r.ok) process.exit(KEEP_EXIT.ALREADY_RESIDENT);
       process.on("SIGINT", async () => { await d.stop(); process.exit(0); });
+      const open = () => !!(d.state && d.state.id && !d.state.closed_at);
+      retirer = await retireWhenIdle({ name: "sitting", entry: fileURLToPath(import.meta.url), idle: () => !open(),
+        retire: async () => { await d.stop(); process.exit(KEEP_EXIT.RETIRED); } });
+      log(`sitting: worker booted ${BOOTED_AT} · watching ${retirer.files.length} file(s) of its own closure; a change retires it only when no sitting is open and no judge round runs.`);
+      retirer.check();
       return;
     }
     case "status": {
