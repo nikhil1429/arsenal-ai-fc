@@ -107,12 +107,15 @@ const CLAUSES = {
     const L0 = num(n0, /laws \d+\/(\d+) both/), B0 = num(n0, /laws (\d+)\/\d+ both/), R0 = num(n0, /\((\d+)\/\d+ RED-planted\)/);
     put(t, "laws/plant-x.yml", "id: plant-x\nlanguage: JavaScript\nseverity: warning\nmessage: planted\nrule:\n  pattern: plantx()\n");
     const n1 = done(t, ["line", "--hermetic"]).out;
-    const lp = join(t, "scripts", "lawpack.mjs");
-    writeFileSync(lp, readFileSync(lp, "utf8") + `\nPLANTS["plant-x"] = "plantx();\\n";\nexport const CLEAN_PLANTS = { "plant-x": "export const ok = 1;\\n" };\n`);
+    const lp = join(t, "scripts", "lawpack.mjs"), lpSrc = readFileSync(lp, "utf8");
+    writeFileSync(lp, lpSrc + `\nPLANTS["plant-x"] = "plantx();\\n";\n`);                       // RED-planted only: NOT both ways
+    const nR = done(t, ["line", "--hermetic"]).out;
+    writeFileSync(lp, lpSrc + `\nPLANTS["plant-x"] = "plantx();\\n";\nexport const CLEAN_PLANTS = { "plant-x": "export const ok = 1;\\n" };\n`);
     const n2 = done(t, ["line", "--hermetic"]).out;
     const a = num(n1, /laws \d+\/(\d+) both/) === L0 + 1 && num(n1, /laws (\d+)\/\d+ both/) === B0 && num(n1, /\((\d+)\/\d+ RED-planted\)/) === R0;
+    const r = num(nR, /laws (\d+)\/\d+ both/) === B0 && num(nR, /\((\d+)\/\d+ RED-planted\)/) === R0 + 1;
     const b = num(n2, /laws (\d+)\/\d+ both/) === B0 + 1 && num(n2, /\((\d+)\/\d+ RED-planted\)/) === R0 + 1;
-    return { ok: Number.isFinite(L0) && a && b, why: `${(/laws [^|]+/.exec(n0) || ["?"])[0]}→ ${(/laws [^|]+/.exec(n1) || ["?"])[0]}→ ${(/laws [^|]+/.exec(n2) || ["?"])[0]}` };
+    return { ok: Number.isFinite(L0) && a && r && b, why: `${(/laws [^|]+/.exec(n0) || ["?"])[0]}→ ${(/laws [^|]+/.exec(n1) || ["?"])[0]}→ RED only ${(/laws [^|]+/.exec(nR) || ["?"])[0]}→ ${(/laws [^|]+/.exec(n2) || ["?"])[0]}` };
   },
   "D-REACH"(src) {
     const t = tree(src); const a = done(t, ["report"]);
