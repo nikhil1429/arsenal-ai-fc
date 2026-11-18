@@ -485,6 +485,13 @@ function validateRep(o, reg = EMPTY_REG, opts = {}) {
   if (o.confidence === null && o.confidence_source === UNGRADED_SOURCE) rep.confidence_source = UNGRADED_SOURCE;
   if (register) rep.register = register;
   if (judged) Object.assign(rep, judged);   // L2 — the judge's stamp, declared above (all or nothing)
+  // mjd4 — the judge's idempotency key rides ONLY the judge's own door, like its stamp
+  if (o.idem !== undefined && o.idem !== null) {
+    const door = /** @type {{door?: string}} */ (opts).door;
+    if (door === "paste" || door === "pull") return { ok: false, error: `an idempotency key (idem) rides ONLY the judge's own door (capture.mjs rep --idem …) — a rep arriving by ${door} may not carry one` };
+    if (typeof o.idem !== "string" || !o.idem.trim()) return { ok: false, error: `idem must be a non-empty string (${JSON.stringify(o.idem)})` };
+    rep.idem = o.idem.trim();
+  }
   // HIS REASON IS STORED WHOLE (his order, 30 Aug 2026: "store everything what i say").
   // This was .slice(0, 300) — a correction's WHY is the most valuable sentence in the row,
   // and it was the one being cut.
@@ -704,6 +711,7 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG, opts = {}) {
   // of a corrected original is a duplicate of a row that is still there, never a second copy.
   const existing = loadReps(path, reg, loadStats, { raw: true });
   const seen = new Set(existing.map(keyOf));
+  const idemSeen = new Set(existing.map((r) => r && r.idem).filter(Boolean));   // mjd4 — one rep per judge key, whatever its clock
   const toAppend = [];
   let rejected = 0, duplicates = 0;
   const errors = [];
@@ -717,8 +725,9 @@ function ingestUnlocked(path, candidates, reg = EMPTY_REG, opts = {}) {
     if (!v.ok) { rejected++; errors.push(v.error); continue; }
     const k = keyOf(v.rep);
     if (seen.has(k)) { duplicates++; continue; }
+    if (v.rep.idem && idemSeen.has(v.rep.idem)) { duplicates++; continue; }   // mjd4 — the same verdict, re-dispatched: already on disk
     if (v.rep.unregistered) unregistered.push(v.rep.concept);
-    seen.add(k); toAppend.push(v.rep);
+    seen.add(k); if (v.rep.idem) idemSeen.add(v.rep.idem); toAppend.push(v.rep);
   }
   // QUARANTINE BEFORE REWRITE (regression audit, 30 Jul 2026). writeAtomic rewrites the
   // file from `existing`, which holds ONLY the lines that validated — so every unreadable
@@ -2753,6 +2762,11 @@ function main() {
       // 551 (1)). Written only when supplied, never defaulted; validateRep holds it all or nothing.
       const stamp = stampFromFlags(flag("judged-by"), flag("judged-at"));
       if (stamp) Object.assign(one, stamp);
+      // --idem (unit mjd4, forks row 1030 (2)) — THE JUDGE'S IDEMPOTENCY KEY: the capture id the verdict settles. A second
+      // arrival with the same key is a DUPLICATE (ingest's own count), so a judge round that re-dispatches a capture left in
+      // doubt by a kill mid-settle lands its rep EXACTLY once. Written only when supplied; only this door carries it.
+      const idemFlag = flag("idem");
+      if (idemFlag !== undefined && String(idemFlag).trim()) one.idem = String(idemFlag).trim();
       if (!one.concept || !one.question || !one.confidence || one.correct === undefined) {
         console.error("rep: --concept, --q, --gut and --correct are all required.");
         console.error('  node scripts/capture.mjs rep --concept hallucinations --axis a --q "kya hai" --gut shaky --correct true');

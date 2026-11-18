@@ -268,6 +268,8 @@ export function buildRow(input = {}, deps = {}) {
   // holds for `gut`): a measurement nobody made is null, never a manufactured one.
   const shape = input.error_shape === undefined || input.error_shape === null ? null : String(input.error_shape).trim();
   if (shape) row.error_shape = shape;
+  // mjd4 — the judge's idempotency key (the capture id its verdict settles), stored only when supplied
+  if (input.idem !== undefined && input.idem !== null && String(input.idem).trim()) row.idem = String(input.idem).trim();
   return { ok: true, row, unregistered: !known.includes(concept) };
 }
 
@@ -1278,10 +1280,17 @@ function main() {
     // for weeks. This is the one sentence that makes a round teachable: the SHAPE of
     // the mistake, in the teacher's words, on the row. Optional and never invented —
     // absent means nobody wrote it down, which is a different fact from "no shape".
+    // mjd4 (forks row 1030 (2)) — `--idem <capture id>`: the judge re-dispatches a capture a kill left in doubt, and a round
+    // already on the log under that key is NOT appended again (exit 0, named), so the round lands EXACTLY once.
+    const idem = flag("idem") !== undefined && String(flag("idem")).trim() ? String(flag("idem")).trim() : null;
+    if (idem && readLog(LOG, { raw: true }).some((r) => r && r.idem === idem)) {
+      console.log(`rejirah: already graded under idem ${idem} — nothing appended (the judge's re-dispatch of a verdict already on the log)`);
+      return;
+    }
     const built = buildRow({
       concept: rest[0], axis: rest[1], result: rest[2],
       gut: flag("gut"), cold: flag("cold") === "false" ? false : true,
-      error_shape: flag("error-shape"),
+      error_shape: flag("error-shape"), idem,
     }, { capsuleIds: caps.map((c) => c.id) });
     if (!built.ok) { console.error(`rejirah: ${built.why}`); process.exit(1); }
     append(built.row);
