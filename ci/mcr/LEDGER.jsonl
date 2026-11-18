@@ -1,0 +1,5 @@
+{"ts":"2026-11-18T11:01:12.556Z","act":"branch","cmd":"git fetch origin main && git checkout -b claude/mcr-b3-spec origin/main","last_line":"base 074ead9"}
+{"ts":"2026-11-18T11:01:12.584Z","act":"push-other","cmd":"mcr2 land branch claude/mcr2-landing (row 1028 (2))","last_line":"e819c0d · diff --stat origin/main..HEAD: 3 files, 4 insertions(+), 4 deletions(-) · CI 134753581188 / 134753581538 in_progress at read"}
+{"ts":"2026-11-18T11:01:12.614Z","act":"ci-note","cmd":"check-runs d592de2 (B2 spec)","last_line":"134745404803 node 22 failure · 134745405247 node 24 failure — NEW RED: LOAD ZERO BLOCK 7 canon-count law hit by B2_SPEC.md heading '1.2 Organs'; fixed on that branch"}
+{"ts":"2026-11-18T11:01:12.643Z","act":"write","cmd":"ci/mcr/B3_SPEC.md","last_line":"B3 spec: done.mjs, checks as computations, reach reader, morning line, branch table D1-D6"}
+{"ts":"2026-11-18T11:01:12.705Z","act":"check","cmd":"canon-count law scan over ci/mcr/B3_SPEC.md (the LOAD ZERO BLOCK 7 regexes)","last_line":"0 hits"}
