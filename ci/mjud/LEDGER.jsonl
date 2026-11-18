@@ -23,3 +23,4 @@
 {"ts":"2026-11-18T08:41:15.167Z","act":"witness-head","cmd":"node ci/mjud/witness_mjud.mjs --org <tmp>/mjud-tree-head --base-org <tmp>/mjud-tree-base","last_line":"GREEN MJUD judge budget reaches every caller, the external check, the kill and the auth pattern · 11 clause(s)"}
 {"ts":"2026-11-18T08:41:15.192Z","act":"witness-base","cmd":"node ci/mjud/witness_mjud.mjs --org <tmp>/mjud-tree-base --base-org <tmp>/mjud-tree-base","last_line":"RED MJUD · M1 SITTING · M2 DUGOUT · M3 CENSUS · M4 F3-EAT · M5 F3-CLIP · M6 MJD2 · M8 MAUTH"}
 {"ts":"2026-11-18T08:41:15.212Z","act":"mutants","cmd":"node ci/mjud/run_mutants.mjs --org <tmp>/mjud-tree-head --base-org <tmp>/mjud-tree-base","last_line":"run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T08:43:11.837Z","act":"proof","cmd":"write ci/mjud/PROOF.md","last_line":"PROOF.md: P1 GREEN 11 / BASE RED 7 · P2 189/98/ALL/68 · P3 11 of 11 · P4 exit 0 · P5 no count rises"}
