@@ -42,6 +42,17 @@ const LIMIT_RE_LEGACY = /limit|rate.?limit|quota|overloaded|429/i;
 // real strings the CLI actually emits, and `429` as a bare number is GONE.
 const LIMIT_PHRASE_RE = /hit your (?:weekly|session|usage|5-hour|five-hour) limit|(?:usage|session|weekly|rate) limit reached|rate.?limit(?:ed|_error)?|too many requests|overloaded_error|\boverloaded\b|quota (?:exceeded|exhausted|reached)|resets \d/i;
 const API_STATUS_RE = /"api_error_status"\s*:\s*(\d{3})\b/;
+// ── THE ONE AUTH REFUSAL PATTERN (unit mtail, forks row 1017 (5) item 3) ────────
+// The claude CLI's own login refusals, as THIS file hands them back (claudeGen returns the CLI's `result`
+// text verbatim as `error`): "Not logged in · Please run /login", "Failed to authenticate", and the judge
+// lane's live "OAuth session expired and could not be refreshed" (row 963). It lived at gaffer_brain.mjs
+// JUDGE_AUTH_RE (unit mjud mauth), re-exported by brain.mjs as AUTH_FAIL_RE. It lives HERE now, at the
+// LEAF: this file imports no organ, so both owners import it without closing any cycle. Both old names
+// stay exported where they were, and each IS this RegExp object (never a restatement).
+const AUTH_REFUSAL_RE = /not logged in|please run \/login|invalid api key|authenticat|unauthorized|oauth session expired|could not be refreshed/i;
+// unit mtail F-C — the SESSION's close grace (session().close below: end stdin, then kill after this),
+// named so a caller that waits on a close (sitting.mjs closeWaitMs) derives it instead of typing it.
+const SESSION_CLOSE_MS = 3000;
 // 429 = the plan/rate wall · 529 = upstream overloaded. Both mean "back off";
 // neither is invented — both are codes the CLI stamps into the envelope itself.
 const LIMIT_STATUS = new Set([429, 529]);
@@ -554,7 +565,7 @@ function session(opts = {}) {
   const send = (text) => { const p = S.chain.then(() => sendOne(text)); S.chain = p.catch(() => { }); return p; };
   const close = () => new Promise((resolve) => {
     if (!S.alive) return resolve(S.exit_code);
-    const t = setTimeout(() => { try { child.kill(); } catch { } resolve(null); }, 3000);
+    const t = setTimeout(() => { try { child.kill(); } catch { } resolve(null); }, SESSION_CLOSE_MS);
     child.once("close", (code) => { clearTimeout(t); resolve(code); });
     try { child.stdin.end(); } catch { resolve(null); }
   });
@@ -950,6 +961,21 @@ async function selftest() {
       /brain_calls_lean:/.test(lcode) && /brain_calls_full_cli:/.test(lcode) && /arg_profile/.test(lcode));
   }
 
+  // unit mtail · THE ONE AUTH LITERAL lives here, at the leaf — and the two owners take it by import, restating none.
+  {
+    const src = (f) => { try { return readFileSync(join(HERE_DIR, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, ""); } catch { return ""; } };
+    const gb = src("gaffer_brain.mjs"), br = src("brain.mjs"), own = src("claudegen.mjs");
+    assert("mtail · AUTH_REFUSAL_RE matches every observed refusal (the CLI's login text, the watchdog's, the judge's OAuth text) and no limit wall",
+      ["Not logged in · Please run /login", "Failed to authenticate", "OAuth session expired and could not be refreshed"].every((t) => AUTH_REFUSAL_RE.test(t))
+      && !AUTH_REFUSAL_RE.test("You've hit your session limit · resets 8:30pm") && AUTH_REFUSAL_RE.flags === "i");
+    assert("mtail · ONE literal: this file holds it once; gaffer_brain.mjs and brain.mjs import it from here and hold no auth literal of their own",
+      (own.match(/oauth session expired\|could not be refreshed\/i;/g) || []).length === 1
+      && /import \{[^}]*\bAUTH_REFUSAL_RE\b[^}]*\} from "\.\/claudegen\.mjs";/.test(gb) && /import \{[^}]*\bAUTH_REFUSAL_RE\b[^}]*\} from "\.\/claudegen\.mjs";/.test(br)
+      && !/oauth session expired/i.test(gb.replace(/"[^"\n]*"/g, "")) && !/oauth session expired/i.test(br.replace(/"[^"\n]*"/g, "")));
+    assert("mtail F-C · the session's close grace is ONE named constant, used by close() and exported for the callers that wait on a close",
+      Number.isSafeInteger(SESSION_CLOSE_MS) && SESSION_CLOSE_MS > 0 && /resolve\(null\); \}, SESSION_CLOSE_MS\);/.test(own));
+  }
+
   // THE ENGINE MUST BE SPAWNABLE (E2E audit 25 Jul): the old BIN() pointed at a
   // shim that does not exist here, so every organ failed with EINVAL and nobody
   // noticed for days. This check fails loudly the moment the binary is unreachable.
@@ -979,4 +1005,4 @@ import { dirname } from "node:path";
 const HERE_DIR = dirname(fileURLToPath(import.meta.url));
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) selftest().then(ok => process.exit(ok ? 0 : 1));
 
-export { claudeGen, claudeGenAsync, classifyLimit, ledgerForensics, systemPromptRides, session, sessionArgs, LIMIT_PHRASE_RE, LIMIT_RE_LEGACY };
+export { claudeGen, claudeGenAsync, classifyLimit, ledgerForensics, systemPromptRides, session, sessionArgs, LIMIT_PHRASE_RE, LIMIT_RE_LEGACY, AUTH_REFUSAL_RE, SESSION_CLOSE_MS };

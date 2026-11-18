@@ -82,6 +82,7 @@ import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE inte
 import { isStale as forgeIsStale } from "./forge_session.mjs";   // W0-D — the route asks the pacer whether its session is stale; it used to re-derive it from started_at with a bare 18
 import { transcriptPathFor } from "./study_scope.mjs";   // G0 (23 Sep) — the leaf's one derivation of where a session's transcript lives
 import { JUDGE_BUDGET_MS, JUDGE_DISPATCH_MS } from "./gaffer_brain.mjs";   // unit mjud · msit — a judge verb is waited on for the judge's OWN budget plus its dispatch, read from its owner (ownerTimeoutMs)
+import { SESSION_CLOSE_MS } from "./claudegen.mjs";   // unit mtail F-C — the voice session's close grace (close() step 5), read from its owner so the CLI's close wait is derived (closeWaitMs)
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -214,6 +215,20 @@ const OWNER_TIMEOUT_MS = 20000;
 export function ownerTimeoutMs(file, args) {
   return file === "gaffer_brain.mjs" && Array.isArray(args) && JUDGE_VERBS.includes(args[0]) ? JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS : OWNER_TIMEOUT_MS;
 }
+// unit mtail F-C (forks row 1017 (5) item 2) — THE CLI WAITS THE LONGEST CLOSE THE DAEMON CAN TAKE. close() below runs its
+// steps in series: (1) the owner's `queue` read, (1b) the judge round through the code door, (2) the pacer's close, (4) the intent
+// close — each a spawnSync killed at ownerTimeoutMs — then (5) the voice session's close, killed after claudegen.mjs SESSION_CLOSE_MS;
+// (6) the review is spawned detached and never waited. CLOSE_OWNER_STEPS is that list AS WRITTEN (the selftest reads close()'s own
+// owner(...) calls against it), and closeWaitMs() is its sum: every term derived from an owner's export, none typed. The old typed
+// 240 s wait was below the judge's own JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS, so a close that was still inside its rules printed
+// "aborted" while the daemon finished it. A close that ends inside closeWaitMs() now prints its real result.
+export const CLOSE_OWNER_STEPS = Object.freeze([
+  Object.freeze(["gaffer_brain.mjs", Object.freeze(["queue"])]),
+  Object.freeze(["gaffer_brain.mjs", Object.freeze(["judge-due", "--trigger", "sitting.close"])]),
+  Object.freeze(["forge_session.mjs", Object.freeze(["close"])]),
+  Object.freeze(["intent.mjs", Object.freeze(["close"])]),
+]);
+export function closeWaitMs() { return CLOSE_OWNER_STEPS.reduce((a, [file, args]) => a + ownerTimeoutMs(file, args), 0) + SESSION_CLOSE_MS; }
 export function ownerCli(file, args, input) {
   if (DRY_OWNERS) { log(`sitting: DRY owner call → ${file} ${args.join(" ")}${input ? ` (stdin ${String(input).length} chars)` : ""}`); return { ok: true, status: 0, out: `DRY ${file} ${args[0]}`, err: "", dry: true }; }
   const r = spawnSync(process.execPath, [join(HERE, file), ...args], { input: input == null ? undefined : String(input), encoding: "utf8", windowsHide: true, timeout: ownerTimeoutMs(file, args), env: { ...process.env, ARSENAL_ORGAN: "1" } });
@@ -1365,7 +1380,7 @@ async function main() {
     case "turn": { const r = await post("/turn", { text: opt("--text") || rest.filter((a) => !a.startsWith("--")).join(" "), surface: opt("--surface") || "code" }); console.log(JSON.stringify(r)); return; }
     case "next": { console.log(JSON.stringify(await get("/next"))); return; }
     case "spoken": { console.log(JSON.stringify(await post("/spoken", { id: rest[0] }))); return; }
-    case "close": { const r = await post("/close", { reason: opt("--reason") || "his_word" }, 240000); console.log(r.ok ? `sitting: CLOSED ${r.id} — ${r.review.units_delivered}/${r.review.units_composed} units spoken · ${r.review.banked} banked · ${r.review.turns} turns${r.review.judge ? ` · judge ${r.review.judge.ok ? "ran" : "FAILED"}` : ""}` : `sitting: ${r.error}`); return; }
+    case "close": { const r = await post("/close", { reason: opt("--reason") || "his_word" }, closeWaitMs()); /* unit mtail F-C: the longest close, derived */ console.log(r.ok ? `sitting: CLOSED ${r.id} — ${r.review.units_delivered}/${r.review.units_composed} units spoken · ${r.review.banked} banked · ${r.review.turns} turns${r.review.judge ? ` · judge ${r.review.judge.ok ? "ran" : "FAILED"}` : ""}` : `sitting: ${r.error}`); return; }
     case "plan": { const r = (await daemonUp()) ? await get("/plan") : { units: (readJson(F.sitting()) || {}).plan || [], map: (readJson(F.sitting()) || {}).plan_map }; console.log(`map: ${r.map || "—"}`); (r.units || []).forEach((u) => console.log(`  ${String(u.i).padStart(2)} ${u.kind.padEnd(8)} s${u.step ?? "-"} ${u.axis || "-"} ${u.question ? "?" : " "} ${u.est_seconds}s · ${clip(u.text, 120)}`)); return; }
     case "stats": { console.log(stats({ days: Number(opt("--days") || 7) }).text); return; }
     case "agenda": {   // LAW A — his asks for the next sitting (acts.mjs verb agenda rides `add`)
@@ -1974,6 +1989,19 @@ async function selftest() {
       && /timeout: ownerTimeoutMs\(file, args\)/.test(src.slice(src.indexOf("export function ownerCli"), src.indexOf("export function ownerCli") + 700))
       && /owner\("gaffer_brain\.mjs", \["judge-due", "--trigger", "sitting\.close"\]\)/.test(src),
       `need ${need} · judge-due ${ownerTimeoutMs("gaffer_brain.mjs", ["judge-due"])} · queue ${ownerTimeoutMs("gaffer_brain.mjs", ["queue"])}`);
+  }
+  // ── unit mtail F-C — the CLI's close wait covers the longest close the daemon can take, derived from the close's own steps ──
+  {
+    const src = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n");
+    const c0 = src.indexOf("  async function close({ reason"), body = c0 < 0 ? "" : src.slice(c0, src.indexOf("\n  }\n", c0));
+    const called = [...body.matchAll(/owner\("([^"]+)", \["([^"]+)"/g)].map((m) => `${m[1]} ${m[2]}`);
+    const listed = CLOSE_OWNER_STEPS.map(([f, a]) => `${f} ${a[0]}`);
+    const sum = CLOSE_OWNER_STEPS.reduce((a, [f, args]) => a + ownerTimeoutMs(f, args), 0) + SESSION_CLOSE_MS;
+    assert("mtail F-C · closeWaitMs() is the sum of the close's own steps as written (every owner(...) call in close(), in order, each at ownerTimeoutMs) plus the session's close grace (claudegen.mjs SESSION_CLOSE_MS); it covers the judge's budget plus its dispatch; the CLI's close waits exactly it, no typed wait left",
+      called.length === CLOSE_OWNER_STEPS.length && called.join("|") === listed.join("|") && /await session\.close\(\)/.test(body)
+      && closeWaitMs() === sum && closeWaitMs() > JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS + 3 * OWNER_TIMEOUT_MS
+      && /post\("\/close", \{ reason: opt\("--reason"\) \|\| "his_word" \}, closeWaitMs\(\)\)/.test(src) && !/post\("\/close", [^\n]*\b\d{4,}\)/.test(src),
+      `called ${called.join(", ")} · listed ${listed.join(", ")} · closeWaitMs ${closeWaitMs()}`);
   }
   console.log(`\nsitting selftest: ${pass} passed, ${fail} failed`);
   return fail === 0;
