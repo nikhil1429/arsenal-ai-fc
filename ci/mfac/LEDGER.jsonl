@@ -3,3 +3,5 @@
 {"ts":"2026-11-18T18:41:07Z","act":"measure","cmd":"curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/branches/main","last_line":"\"protected\": false"}
 {"ts":"2026-11-18T18:41:07Z","act":"write","cmd":"Write ci/mfac/MFAC_SPEC.md","last_line":"N1-N6, forks F1-F10, named-not-guessed G1-G10"}
 {"ts":"2026-11-18T18:41:07Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs laws","last_line":"organism_test: 74 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 42 (hermetic: named, not run)"}
+{"ts":"2026-11-18T18:41:20Z","act":"push","cmd":"git push -u origin claude/mfac-spec","last_line":"* [new branch] claude/mfac-spec -> claude/mfac-spec @ b8694d7"}
+{"ts":"2026-11-18T18:41:20Z","act":"effort-receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs","last_line":"Error: Cannot find module '/home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs' (nothing written under campaign-2026-09/)"}
