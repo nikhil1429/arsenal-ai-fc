@@ -1,0 +1,4 @@
+{"ts":"2026-11-18T22:27:58.033Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mday2-build FETCH_HEAD","last_line":"base 3e3ce63"}
+{"ts":"2026-11-18T22:27:58.033Z","act":"selftest-before","cmd":"node scripts/learn_digest.mjs selftest","last_line":"learn_digest selftest 15/15 — all clauses hold"}
+{"ts":"2026-11-18T22:27:58.033Z","act":"edit","cmd":"scripts/learn_digest.mjs: day end line + boot line + selftest clause","last_line":"learn_digest selftest 16/16 — all clauses hold"}
+{"ts":"2026-11-18T22:27:58.033Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)"}
