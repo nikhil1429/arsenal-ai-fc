@@ -617,7 +617,7 @@ async function selftest() {
       const r3 = run(["migrate-roles", "--why", "again"]);
       assert("FUEL VERB run TWICE: the second run on its own output is refused (exit 2, `already migrated`, never a second rewrite) and the file stays byte-for-byte the first run's",
         r3.code === 2 && /already migrated \(role\/engine on T1, T2, T3, T4, T5, T6, T7, T8 · receipt _tank_models_retired_2026-11-13\)/.test(r3.last) && bytes() === once);
-      const src = readFileSync(fileURLToPath(import.meta.url), "utf8");
+      const src = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n");
       const mainSrc = src.slice(src.indexOf("\nasync function main() {"));   // the real definition (column 0), never this line's own literal
       const verbSrc = src.slice(src.indexOf("function migrateRolesEdit("), src.indexOf("// selftest\n"));
       const firstWrite = Math.min(...['mode === "selftest"', "recordUse(", "record429(", "withTankLock(", "saveBoard("].map((s) => mainSrc.indexOf(s)).filter((i) => i > 0));

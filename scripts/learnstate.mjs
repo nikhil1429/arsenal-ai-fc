@@ -2011,7 +2011,7 @@ function selftest() {
     assert("L3 · fate 07 — with no floor (the capsule re-locked), the sheet's own label still reaches the plan-of-record line — never silently stepped past",
       (() => { const n = nextup(d, NOW); return n.winner.name === "sprint" && /plan of record/.test(n.winner.line) && /seekhe hue NAHI/.test(n.winner.line); })());
     // THE WIRE — what this file imports from the ledger, and the UTC keys that are gone (comments stripped)
-    const srcL3 = readFileSync(fileURLToPath(import.meta.url), "utf8");
+    const srcL3 = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n");
     const code = srcL3.slice(0, srcL3.indexOf("function selftest()")).split("\n").map((l) => l.replace(/\/\/.*$/, "")).join("\n");
     const imp = (code.match(/import \{[^}]*\} from "\.\/resume_pointer\.mjs";/) || [""])[0];
     assert("L3 · WIRE — learnstate imports only the pointer ledger's READ verbs (`latest`, istDay — and since L6 `readRows`), never `consume`; no UTC day key (toISOString().slice(0, 10)) is left in its code",
