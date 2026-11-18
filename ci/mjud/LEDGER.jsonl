@@ -18,3 +18,5 @@
 {"ts":"2026-11-18T08:35:05.192Z","act":"measure-build","cmd":"node ci/mjud/sides.mjs build --worktree types","last_line":"exit 0"}
 {"ts":"2026-11-18T08:35:05.226Z","act":"measure-base","cmd":"node ci/mjud/sides.mjs base 5767e21 lint","last_line":"exit 0"}
 {"ts":"2026-11-18T08:35:05.251Z","act":"measure-build","cmd":"node ci/mjud/sides.mjs build --worktree lint","last_line":"exit 0"}
+{"ts":"2026-11-18T08:39:52.391Z","act":"witness-build","cmd":"node ci/mjud/witness_mjud.mjs --org <tmp>/mjud-tree-head --base-org <tmp>/mjud-tree-base","last_line":"GREEN MJUD judge budget reaches every caller, the external check, the kill and the auth pattern · 11 clause(s)"}
+{"ts":"2026-11-18T08:39:52.420Z","act":"witness-base","cmd":"node ci/mjud/witness_mjud.mjs --org <tmp>/mjud-tree-base --base-org <tmp>/mjud-tree-base","last_line":"RED MJUD · M1 SITTING · M2 DUGOUT · M3 CENSUS · M4 F3-EAT · M5 F3-CLIP · M6 MJD2 · M8 MAUTH"}
