@@ -1,0 +1,8 @@
+MUTANT I1 · a capture in doubt is never re-dispatched → RED MJD4 · I1 I5 · RED by its clause
+MUTANT I2 · the judge hands no idempotency key → RED MJD4 · I2 · RED by its clause
+MUTANT I3 · capture.mjs ignores the key on ingest → RED MJD4 · I2 I3 · RED by its clause
+MUTANT I4 · rejirah.mjs ignores the key → RED MJD4 · I4 · RED by its clause
+MUTANT I5 · an unresolved capture files no card → RED MJD4 · I5 · RED by its clause
+MUTANT BOUND · a caller moves too (scripts/sitting.mjs touched) → RED MJD4 · BOUND · RED by its clause
+CONTROL · GREEN MJD4 a capture in doubt lands exactly once, and until it does it is one card · 7 clause(s)
+run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN (LAST has no mutant: the witness's own cleanup)

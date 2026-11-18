@@ -1,0 +1,8 @@
+RED   I1 · round 1 exit 9 · round 2 resolved 0 · reps per capture [1,0,1] (each must be 1)
+GREEN I2 · round 1 exit 9 · reps per capture [1,1,1] (each must be 1)
+RED   I3 · the same verdict twice under one --idem → 2 rep(s) on reps_log (must be 1)
+RED   I4 · the same verdict twice under one --idem → 2 row(s) appended to rejirah_log (must be 1)
+RED   I5 · in-doubt card keys, round 2 [] · round 3 [] (one per capture in doubt, judge:in-doubt:w4u3epqg1 in both, never twice)
+GREEN BOUND · differs: nothing
+GREEN LAST · 0 node process(es) naming <tmp>/mjd4-XXXX
+RED MJD4 · I1 I3 I4 I5

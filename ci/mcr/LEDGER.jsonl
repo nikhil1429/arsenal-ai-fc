@@ -2,3 +2,7 @@
 {"ts":"2026-11-18T11:08:00.883Z","act":"ruling","cmd":"forks rows 1031 (mlive), 1032 (B3)","last_line":"queue: mjd4 · mgrd · mland · mlv0 · mlv1 · mlv2 · mlv3 · mdone · F2"}
 {"ts":"2026-11-18T11:08:00.912Z","act":"build","cmd":"--idem in capture rep / rejirah grade / doubtminer retire; judge re-dispatches in-doubt captures once; one card per unresolved capture","last_line":"5 files"}
 {"ts":"2026-11-18T11:08:00.941Z","act":"measure","cmd":"selftests build","last_line":"gaffer_brain 194/0 · rejirah 107/0 · doubtminer ALL CHECKS PASSED · capture SELFTEST FAILED (CONCURRENT READER x2, base to compare)"}
+{"ts":"2026-11-18T11:11:32.930Z","act":"witness","cmd":"witness_mjd4 build vs base","last_line":"GREEN MJD4 ... · 7 clause(s)"}
+{"ts":"2026-11-18T11:11:32.955Z","act":"witness","cmd":"witness_mjd4 base vs base","last_line":"RED MJD4 · I1 I3 I4 I5"}
+{"ts":"2026-11-18T11:11:32.992Z","act":"mutants","cmd":"run_mutants_mjd4","last_line":"run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T11:11:33.020Z","act":"measure","cmd":"selftests base->build","last_line":"gaffer_brain 194/0->194/0 · rejirah 107/0->107/0 · doubtminer pass both · capture same 2 reds both · models check exit 0"}

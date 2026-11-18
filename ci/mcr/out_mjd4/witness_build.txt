@@ -1,0 +1,8 @@
+GREEN I1 · round 1 exit 9 · round 2 resolved 1 · reps per capture [1,1,1] (each must be 1)
+GREEN I2 · round 1 exit 9 · reps per capture [1,1,1] (each must be 1)
+GREEN I3 · the same verdict twice under one --idem → 1 rep(s) on reps_log (must be 1)
+GREEN I4 · the same verdict twice under one --idem → 1 row(s) appended to rejirah_log (must be 1)
+GREEN I5 · in-doubt card keys, round 2 ["judge:in-doubt:w4ema2mw1"] · round 3 ["judge:in-doubt:w4ema2mw1","judge:in-doubt:w4ema2mw2"] (one per capture in doubt, judge:in-doubt:w4ema2mw1 in both, never twice)
+GREEN BOUND · differs: scripts/capture.mjs, scripts/doubtminer.mjs, scripts/gaffer_brain.mjs, scripts/rejirah.mjs
+GREEN LAST · 0 node process(es) naming <tmp>/mjd4-XXXX
+GREEN MJD4 a capture in doubt lands exactly once, and until it does it is one card · 7 clause(s)
