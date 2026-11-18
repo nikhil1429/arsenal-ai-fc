@@ -269,3 +269,11 @@ build** means the same plant with the tap in place.
 Read with curl, no token: `GET /repos/<owner>/<this repo>/commits/<sha>/check-runs`. The results are
 recorded in `ci/mpool/LEDGER.jsonl` (act `ci-read`) and in the seat's final message. A later push of this file
 names them here.
+
+**Push `2c33a1a` (18 Nov 2026), read with curl, no token:** workflow run `44372153926` (suite) · completed · **success**.
+Check runs: `135041554728` npm test · node 22 → success · `135041555200` npm test · node 24 → success.
+This push (the line above) is judged again; its run ids are in the seat's final message and the ledger.
+
+**Effort receipt.** `node campaign-2026-09/tools/effort_receipt.mjs` → `Error: Cannot find module
+'…/campaign-2026-09/tools/effort_receipt.mjs'` (this repository carries no `campaign-2026-09/`). Nothing was
+written under it.

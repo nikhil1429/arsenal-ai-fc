@@ -4,3 +4,6 @@
 {"ts":"2026-11-18T18:39:47.448Z","act":"measure-transcript","cmd":"key census of this seat's own transcript jsonl","last_line":"no rate-limit key on an ordinary turn"}
 {"ts":"2026-11-18T18:39:47.470Z","act":"measure-repo","cmd":"grep statusLine .claude/settings.json; grep token_vitals scripts/brain.mjs","last_line":"no statusLine in project settings; token_vitals = organism-ledger estimate"}
 {"ts":"2026-11-18T18:39:47.492Z","act":"canon-check","cmd":"BLOCK 7 LIVE/SUITE regex over ci/mpool/MPOOL_SPEC.md","last_line":"0 hits"}
+{"ts":"2026-11-18T18:44:38.976Z","act":"push","cmd":"git push -u origin claude/mpool-spec","last_line":"2c33a1a new branch"}
+{"ts":"2026-11-18T18:44:39.003Z","act":"ci-read","cmd":"curl check-runs 2c33a1a (no token)","last_line":"run 44372153926: 135041554728 node22 success · 135041555200 node24 success"}
+{"ts":"2026-11-18T18:44:39.025Z","act":"effort-receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs","last_line":"Error: Cannot find module campaign-2026-09/tools/effort_receipt.mjs; nothing written"}
