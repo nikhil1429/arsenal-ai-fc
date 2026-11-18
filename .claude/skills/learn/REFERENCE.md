@@ -498,9 +498,12 @@ code-confirmed, and it also means **do not run `examiner.mjs stage` for this clo
 `node scripts/examiner.mjs` is the read-only look, `stage` is a write. This beat has no organ; you
 run it in the turn and the reps land through §3.)*
 
-Then the day's ONE judge call — `node scripts/gaffer_brain.mjs judge-round` — on every banked study row (row 48 (3); since 6 Sep 2026 (row 68 (d)) the sitting organ fires this BY CODE at every sitting close when the grade queue holds unjudged rows — THIS line is the fallback for a day no sitting was open; a second call the same evening re-refuses the same rows for nothing).
-
-Finally: `node scripts/sitting.mjs close --reason fulltime` — the review row + session-intent line land through the owners.
+Then ONE command, when HE means the day is over (in any words): `node scripts/day.mjs end [--pointer "…"]` (unit mday).
+It runs, in order and through the owners: the pointer · the sitting's close (`--reason fulltime`; the close fires the
+day's ONE judge call BY CODE — row 68 (d) — so there is no hand-typed judge step here any more: since the /learn hook opens
+a sitting on every /learn day, "a day no sitting was open" no longer exists) · the machine half of the day
+(`postmatch.mjs autoclose --anchor close`) · ONE card · the ONE message of questions. It never waits on his answer; his
+answer, any time, is `node scripts/day.mjs answer --hit <X> …`. Calling it twice is safe.
 
 ## Laws (inviolable)
 - **Honest floor — never automated:** SOLVE · BOLO · REWRITE · the first-draft code · every Rosetta
