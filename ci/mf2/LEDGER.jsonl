@@ -3,3 +3,4 @@
 {"ts":"2026-11-18T14:34:36.385Z","act":"measure","cmd":"node scripts/organism_test.mjs all (base, full profile, archive tree, planted model stubs)","last_line":"exit 2 (76 s wall)"}
 {"ts":"2026-11-18T14:34:36.385Z","act":"build","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (build, repo checkout)","last_line":"organism_test: 139 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
 {"ts":"2026-11-18T14:34:36.385Z","act":"gate","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts":"2026-11-18T15:10:43.001Z","act":"ruling-read","cmd":"grep clone|git init|\"git\" in ci/mjd5/*.mjs and ci/mf2/*.mjs (architect CLASS: core.autocrlf at clone/init time)","last_line":"no git plant in either witness or mutant runner: every tree is a node cpSync copy of the --org/--base-org dir, no clone, no init, no git add — the class binds nothing here; nothing changed"}
