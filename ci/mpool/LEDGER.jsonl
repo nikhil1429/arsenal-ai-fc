@@ -1,0 +1,6 @@
+{"ts":"2026-11-18T18:39:47.374Z","act":"branch","cmd":"git fetch origin main; git checkout -b claude/mpool-spec FETCH_HEAD","last_line":"669200d (main tip at start)"}
+{"ts":"2026-11-18T18:39:47.404Z","act":"read-mday","cmd":"git show origin/claude/mday-spec:ci/mday/MDAY_SPEC.md","last_line":"mday-spec tip 9421614; mday-build tip ba842cf"}
+{"ts":"2026-11-18T18:39:47.426Z","act":"measure-cli","cmd":"claude --version; grep -aob rate_limits schema in /opt/claude-code/bin/claude","last_line":"2.1.327 (Claude Code); offset 319719798: five_hour/seven_day used_percentage + resets_at"}
+{"ts":"2026-11-18T18:39:47.448Z","act":"measure-transcript","cmd":"key census of this seat's own transcript jsonl","last_line":"no rate-limit key on an ordinary turn"}
+{"ts":"2026-11-18T18:39:47.470Z","act":"measure-repo","cmd":"grep statusLine .claude/settings.json; grep token_vitals scripts/brain.mjs","last_line":"no statusLine in project settings; token_vitals = organism-ledger estimate"}
+{"ts":"2026-11-18T18:39:47.492Z","act":"canon-check","cmd":"BLOCK 7 LIVE/SUITE regex over ci/mpool/MPOOL_SPEC.md","last_line":"0 hits"}
