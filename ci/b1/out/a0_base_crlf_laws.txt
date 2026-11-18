@@ -1,0 +1,25 @@
+=== ARSENAL AI FC — CROSS-ORGAN TEST SUITE ===
+
+── THE RULED KNOWN-RED LIST — the instrument, planted both ways ──────
+  ok   KNOWN-RED · every FAIL named by an entry (exact detail · detail pattern) is RULED, exit 1
+  ok   KNOWN-RED · the SAME assert with a DIFFERENT detail is UNRULED, exit 2 — a new death never hides under an old entry
+  ok   KNOWN-RED · an entry whose assert PASSED is STALE, exit 2 — the list shrinks in the fixing landing
+  ok   KNOWN-RED · an entry with no row is INVALID and rules nothing, exit 2 — the list grows only by a row
+
+── LAW CONSISTENCY — the same law, held the same way by every writer ─
+  ok   SNAPSHOT RIDES THE BUILD · every scheduled task a setup script registers is KNOWN to tasks_expected.json: in expected_enabled, expected_disabled or designed_absent (rows 816 (4) / 829 (4) / 865 / 874 (2))
+  ok   GUT-WORD LAW · capture.mjs REFUSES a rep with no gut-word (exit non-zero)
+  ok   GUT-WORD LAW · capture.mjs rejects a gut-word outside knew|shaky|guessed
+  ok   GUT-WORD LAW · rejirah.mjs holds the SAME law on a Re-Jirah round
+  ok   GUT-WORD LAW · rejirah.mjs rejects an out-of-vocabulary gut-word
+  ok   BLIND RAIL (row 814) · THE BLIND IS COUNTED — study_rail_replay --json over a planted dir (two rail hook rows, one REFUSED) reads totals.rails_blind 1 of totals.rails_calls 2
+file://<scratch>/crlf/scripts/organism_test.mjs:573
+
+TypeError: Cannot read properties of undefined (reading 'search')
+    at writersOf (file://<scratch>/crlf/scripts/organism_test.mjs:573:60)
+    at Object.laws (file://<scratch>/crlf/scripts/organism_test.mjs:670:23)
+    at async main (file://<scratch>/crlf/scripts/organism_test.mjs:2534:27)
+    at async file://<scratch>/crlf/scripts/organism_test.mjs:2554:81
+
+Node.js v22.23.5
+exit 1

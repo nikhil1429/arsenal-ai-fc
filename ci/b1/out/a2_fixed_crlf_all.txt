@@ -1,0 +1,316 @@
+── THE RULED KNOWN-RED LIST — the instrument, planted both ways ──────
+  ok   KNOWN-RED · every FAIL named by an entry (exact detail · detail pattern) is RULED, exit 1
+  ok   KNOWN-RED · the SAME assert with a DIFFERENT detail is UNRULED, exit 2 — a new death never hides under an old entry
+  ok   KNOWN-RED · an entry whose assert PASSED is STALE, exit 2 — the list shrinks in the fixing landing
+  ok   KNOWN-RED · an entry with no row is INVALID and rules nothing, exit 2 — the list grows only by a row
+── COVERAGE LAW — a selftest nobody runs is a hypothesis, not a net ──
+  ok   all 3 named suites still exist in package.json
+  FAIL EVERY organ with a selftest is wired into a suite (package.json:_selftest_coverage_law)
+  ok   …and appears in EXACTLY one suite (no double-billing)
+  ok   no suite names an organ that no longer exists on disk
+  ok   an authoritative runner exists that does NOT short-circuit (`npm test`)
+  ok   the runner covers every member of both suites (coverage cannot shrink on a red)
+── STATIC INTEGRITY — every organ parses, every state file parses ────
+  ok   all 129 organs parse under this Node (v22.23.5)
+  ok   every state .json parses (the bus is the contract between organs)
+  ok   every state .jsonl parses on every row (one bad row poisons a whole reader)
+  ok   every organ that LOADS reps from reps_log honours a correction (14 reader(s) found) — a superseded verdict must not keep deciding what he drills
+  ok   …and this check really found them — capture, nemesis, calibration, learning_state and fsrs are all in the set it walked
+  ok   a declared external producer is a REAL organ in this tree (1 declaration(s) checked) — the escape hatch cannot excuse a brain_out path nothing writes
+  ok   …and that organ really BUILDS that brain_out directory — a producer that names the wrong folder is the same lie one level down
+  ok   the MODES header of all 4 organs a doc points a session at names EVERY mode that organ dispatches (a documented discovery path may not lie)
+  ok   the trigger scanner SEES brain.mjs's own verb list (a `"trigger", "<verb>"` pair inside BRAIN_MODES) and classifies it as a verb, never as an arming
+  ok   all 3 brain triggers armed anywhere in the organism reach live work (a declared consumer, or the un-gated job that supersedes it)
+  ok   all 1 sole-producer command(s) are still both DISPATCHED by their organ and NAMED by the surface that calls them
+── LAW CONSISTENCY — the same law, held the same way by every writer ─
+  ok   SNAPSHOT RIDES THE BUILD · every scheduled task a setup script registers is KNOWN to tasks_expected.json: in expected_enabled, expected_disabled or designed_absent (rows 816 (4) / 829 (4) / 865 / 874 (2))
+  ok   GUT-WORD LAW · capture.mjs REFUSES a rep with no gut-word (exit non-zero)
+  ok   GUT-WORD LAW · capture.mjs rejects a gut-word outside knew|shaky|guessed
+  ok   GUT-WORD LAW · rejirah.mjs holds the SAME law on a Re-Jirah round
+  ok   GUT-WORD LAW · rejirah.mjs rejects an out-of-vocabulary gut-word
+  ok   BLIND RAIL (row 814) · THE BLIND IS COUNTED — study_rail_replay --json over a planted dir (two rail hook rows, one REFUSED) reads totals.rails_blind 1 of totals.rails_calls 2
+  ok   B1 (a) · CRLF-PROOF — writersOf over CRLF sources (a Windows checkout) names the same writers as over LF, and a function body left open at end of file is read, never thrown on
+  ok   BLIND RAIL (row 814) · ONE WRITER — across scripts/*.mjs only rails.mjs WRITES rails_blind.jsonl (read from the source, the instrument planted both ways), and its header names the file on its SOLE WRITER line
+  ok   A9 · both study skills were readable (a gate that cannot see its subject is not a gate)
+  FAIL A9 · every organ the two study skills name is on the registry's study_entry_points row — a skill cannot quietly grow a new door
+  ok   A9 · no study skill offers a DAEMON or a transport as a runnable command — waking one from here spends outside the gate and re-enables a lane he switched off
+  ok   A9 · PLANTED VIOLATION — an off-list organ and a deny-listed one are both caught (the gate is live, not vacuous)
+  ok   FOUR-MOMENTS LAW · forge_session refuses a question-moment outside the four
+  ok   LOAD ZERO BLOCK 1 · no organ spawns work for him OUTSIDE tasks.mjs (a bare call has no id, no key, and no memory that it already ran)
+  ok   LOAD ZERO BLOCK 1 · the act lane's `job` verb names tasks.mjs as its owner (the door he actually speaks through)
+  ok   LOAD ZERO BLOCK 1 · THE 18 AUG REPLAY: his one ask fired 3x from 3 processes makes ONE task — 1 run, 3 identical receipts
+  ok   LOAD ZERO BLOCK 1 · RUNTIME ASSERTION: an idempotency key may never be executed twice — the SECOND claim exits non-zero
+  ok   LOAD ZERO BLOCK 2 · NO NEW FACTS — every samjhao unit of all four topics asserts only what HIS OWN capsule holds (validators, not vibes)
+  ok   LOAD ZERO BLOCK 2 · all four topics are RUNNABLE and every one is a 9-axis revision of a LOCKED capsule
+  ok   LOAD ZERO BLOCK 2 · a concept with no locked capsule is REFUSED — samjhao is REVISION, never teaching from zero (that is FORGE)
+  ok   LOAD ZERO BLOCK 2 · a samjhao takes its id from the TASK layer, so it resumes on any surface (§4-E)
+  ok   LOAD ZERO BLOCK 2 · THE RATCHET: close is REFUSED while units/doubts are open, and it NAMES the count (a feeling becomes a number)
+  ok   LOAD ZERO BLOCK 2 · PREDICT-THEN-REVEAL is a gate: an answer before the guess is refused (what he retrieves sticks, what he reads does not)
+  ok   LOAD ZERO BLOCK 2 · the GUT-WORD LAW holds here too — samjhao refuses knew|shaky|guessed's absence exactly as capture.mjs does
+  ok   LOAD ZERO BLOCK 2 · before any samjhao, the cold round DOES serve the capsule's own strike (this is the baseline the guard must change)
+  FAIL LOAD ZERO BLOCK 2 · THE COLDNESS RATCHET: once samjhao OPENS an axis, the Re-Jirah may never serve that same strike again — it is named as burned and a FRESH question is demanded
+  ok   LOAD ZERO BLOCK 2 · ...and an axis he never reached is UNTOUCHED — only what was actually opened is burned
+  ok   LOAD ZERO BLOCK 3 · output produced with NO session open reaches the next surface he touches — and EXACTLY once (the second surface gets nothing)
+  ok   LOAD ZERO BLOCK 3 · a row that would ASK him for a decision is refused unless it says why code could not decide (BLOCK 6's gate, carried from day one)
+  ok   LOAD ZERO BLOCK 3 · the dead-man's switch exists and does NOT fire on a road he simply has not walked yet (BLOCK 9's false-positive ruling, applied here)
+  ok   LOAD ZERO BLOCK 4 · an ask created at the GAFFER door is open on the agenda
+  ok   LOAD ZERO BLOCK 4 · the relay's DELIVERED stamp CLOSES it — through the owner, from a door that is not the sitting
+  ok   LOAD ZERO BLOCK 4 · ...and a dugout REOPEN does not restart it — the row stays closed (this is the 19 Aug 00:00 loop, dead)
+  ok   LOAD ZERO BLOCK 4 · no ask may be created without a CLOSE PATH — an `ask` with no close_ref is refused at the door
+  ok   HIS ANSWERS ARE HIS · a FIXTURE may NEVER write a guess into his LIVE samjhao — refused, and the live ledger does not move a byte
+  ok   HIS ANSWERS ARE HIS · ...and the same call against a SANDBOX ledger is allowed — that is where a proof belongs
+  ok   LOAD ZERO BLOCK 5 · no organ tests a private word-list against HIS TEXT outside the resolver — every wording, every tone, one typed intent
+  ok   LOAD ZERO BLOCK 5 · ...and the DECLARED word-routing sites may only SHRINK (2 left: gaffer_state.isStandingLegacy · study_scope ACK_ONLY, row 641)
+  ok   LOAD ZERO BLOCK 5 · PLANTED — a command-line flag matcher (/^-(first|skip)$/) is NOT a word-routing site
+  ok   LOAD ZERO BLOCK 5 · PLANTED — CONTROL: the same words held against a whole utterance (/^(skip|haan)$/) ARE a site
+  ok   LOAD ZERO BLOCK 5 · PLANTED — a declaration by NAME covers only that matcher: a second one in study_scope.mjs is undeclared
+  ok   LOAD ZERO BLOCK 5 · the four sites §BLOCK 5 named are gone from the live path — sitting's two are FROZEN and unreferenced, talk and captains_call now ask the resolver
+  ok   LOAD ZERO BLOCK 5 · sitting.mjs asks the ONE resolver (acts.resolveIntent), rather than keeping its own vocabulary
+  ok   LOAD ZERO BLOCK 5 · talk.mjs asks the ONE resolver (acts.resolveIntent), rather than keeping its own vocabulary
+  ok   LOAD ZERO BLOCK 5 · captains_call.mjs asks the ONE resolver (acts.resolveIntent), rather than keeping its own vocabulary
+  ok   ONE SCHEDULE — all THREE derivations agree that a pre-epoch capsule is not due: the owner refuses it, deep calls it pre_cyborg, the map carries pre_cyborg with no next_due
+  ok   ONE SCHEDULE — and all three agree on the SAME open round and the SAME due date for a post-epoch capsule (a drifted derivation fails here, not in production)
+  ok   ONE SCHEDULE — the two collapsed twins are FROZEN, not deleted (L9), and referenced by nothing outside their own selftest
+  ok   NO SHIM CALLEE — the call list parses and every hook sequence was walked (an empty walk would make the next assert vacuously true)
+  ok   NO SHIM CALLEE — no turn_hook callee is SHIM-reached after something already imported it (the ES-module cache would make it a silent no-op that `ran` counts as a success)
+  ok   NO SHIM CALLEE — the three revived callees ride the CALL shape explicitly (outbox brief · captains_call deal · forge_session boot), so the cache can never swallow them again
+  ok   NO SHIM CALLEE — outbox.mjs actually EXPORTS hookMain (the call shape throws without it, and a throw here is one stderr line and a lost organ)
+  ok   NO SHIM CALLEE — captains_call.mjs actually EXPORTS hookMain (the call shape throws without it, and a throw here is one stderr line and a lost organ)
+  ok   NO SHIM CALLEE — forge_session.mjs actually EXPORTS hookMain (the call shape throws without it, and a throw here is one stderr line and a lost organ)
+  ok   NO SHIM CALLEE · PLANTED 1 — a callee reached only through a string-literal DYNAMIC import is in the closure: forge_session boot SHIM-run after learnstate_hook reads DEAD
+  ok   NO SHIM CALLEE · PLANTED 2 — CONTROL: the same sequence with forge_session on the CALL shape reads nothing dead
+  ok   NO SHIM CALLEE · PLANTED 3 — a COMPUTED specifier (import(p)) is NOT followed, the declared limit: nothing dead
+  ok   NO SHIM CALLEE · PLANTED 4 — a callee SHIM-run in an early-return branch and again after it is NOT dead (the two never share a process)
+  ok   NO SHIM CALLEE · PLANTED 5 — CONTROL: the same pair where the branch FALLS THROUGH reads DEAD (the exception is the return, nothing wider)
+  ok   NO SHIM CALLEE · PLANTED 6 — the early-return pair with CRLF line ends (his tree's turn_hook) is NOT dead: the walk reads shapes CR-agnostic
+  ok   R-04 — a WITNESSED delivery counts as consumption (nothing that worked before stops working)
+  ok   R-04 — an UNWITNESSED delivery is REFUSED: a stamp written by a headless child is not evidence that he saw anything
+  ok   R-04 — a legacy row with no witness field stays UNKNOWN and keeps its old meaning (L9: the gate got stricter only where it can prove the negative)
+  ok   R-04 — an ACK is his own hand and is never second-guessed, even on an unwitnessed row
+  ok   R-04 — and the writer really does emit the field the reader checks (the two halves are the same word, not two conventions)
+  ok   ONE STALENESS — all four live derivations agree a TWO-SITTING concept is still being paced (pacer speaking · deck silent · bus live · route says resume)
+  ok   ONE STALENESS — and all four agree an ABANDONED session is stale (a mirror patched into three of four fails HERE, not in front of him)
+  ok   ONE STALENESS — the frozen birth-anchored twin is the witness: it calls the same live session abandoned, which is what every mirror would still be doing
+  ok   ONE STALENESS — watchman.mjs IMPORTS the predicate from forge_session.mjs instead of re-deriving it
+  ok   ONE STALENESS — learnstate.mjs IMPORTS the predicate from forge_session.mjs instead of re-deriving it
+  ok   ONE STALENESS — sitting.mjs IMPORTS the predicate from forge_session.mjs instead of re-deriving it
+  ok   ONE STALENESS — learning_state.mjs IMPORTS the predicate from forge_session.mjs instead of re-deriving it
+  ok   ONE STALENESS — captains_call.mjs IMPORTS the predicate from forge_session.mjs instead of re-deriving it
+  ok   ONE STALENESS — no organ outside the owner still does forge-clock arithmetic by hand (the frozen copies are comments or *Legacy, never live paths)
+  ok   ONE STALENESS — the NUMBER is the owner's, everywhere: nobody re-declares 18
+  ok   LOAD ZERO BLOCK 6 · a DELIVERED outbox row is consumption — the join is produced_by 'brain:<job>', and `acked` outranks `delivered` on the same row
+  ok   LOAD ZERO BLOCK 6 · ...and the two kinds are declared in the ONE place the law is written (gate.mjs CONSUMPTION_KINDS), so consumptionOf will actually fold them
+  ok   LOAD ZERO BLOCK 6 · BOTH verdict paths read the road — the LANE path (nightshift/dmn/selfknowledge) is the weakest C in the organism and is where the batch cards come from
+  ok   LOAD ZERO BLOCK 6 · the road has a DRIVER — `relay` is reached from a real anchor, not only from this suite (it had never once been called in production: 22 posted, 6 delivered, all 6 by a hand-run proof)
+  ok   LOAD ZERO BLOCK 6 · every declared reason is a real sentence — a table of empty strings would be the gate with the teeth filed off
+  ok   LOAD ZERO BLOCK 6 · ...and the list of things the organism may ask him may only SHRINK (16 declared today)
+  ok   LOAD ZERO BLOCK 6 · a card with no declared reason is NOT his — it is retired at source and handed to the road; one WITH a reason survives untouched
+  ok   LOAD ZERO BLOCK 6 · the hand-filed door carries its OWN reason (--why-code-cannot-decide) and does not REFUSE — 20 filing sites across 9 organs only clip this command's stdout, so an exit 1 would make asks VANISH
+  ok   LOAD ZERO BLOCK 6 · a routed card reaches him THROUGH the outbox owner's own CLI — this organ names outbox.jsonl in no line of code
+  ok   LOAD ZERO BLOCK 6 · a gate card dies when brain's OWN journal says the lane is awake again; a still-asleep lane keeps its card; an ABSENT journal retires nothing
+  ok   LOAD ZERO BLOCK 6 · a daemon card dies only on a PROBE THAT CAME BACK UP after the card was filed — a dispatch is not an UP, and an UNKNOWN port retires nothing
+  ok   LOAD ZERO BLOCK 6 · a canon-drift card dies when the watchman's own latest sweep no longer carries that finding — the tree went clean and nobody had to remember
+  ok   S8 · THE NERVE WRITES AHEAD — hooks/afferent-post.mjs spools the event BEFORE it awaits the POST (this is Q-11's fix; without it a 250ms timeout or a bus that has not started yet DESTROYS his turn)
+  ok   S8 · ...and it marks its own row delivered on a 2xx, so a healthy bus never leaves work for a future drain
+  ok   S8 · ...and a spool that cannot open DEGRADES rather than throws — the nerve's first law is that it never bites the live editor
+  ok   S8 · THE CONSUMER IS IDEMPOTENT — thalamus.ingest() refuses an event_id it has already written, which is the half of at-least-once that keeps ONE turn of his from becoming two rows
+  ok   S8 · ...and the idempotence set is seeded from the WHOLE afferent file at boot, not the 500-row tail (the spool can hold a row for as many days as the daemon was down)
+  ok   S8 · THE THALAMUS DRAINS ON BOOT, AFTER listen() — the port must be open first, or a drain that takes seconds is a window in which a LIVE turn finds nothing listening
+  ok   S8 · NEW LANE ONLY — the spool names spool.db and NO existing state file (the rung's FORBIDDEN line, and L9: nothing is migrated to sqlite)
+  ok   S8 · node:sqlite IS AVAILABLE on this runtime, so the write-ahead is REAL and not silently degraded (if this ever goes red the nerve is back to POST-and-hope and `node scripts/spool.mjs status` says why)
+  ok   LAW T · the TIER 0 stack is DECLARED with a gate and a reason each (0/8 adopted) — a tool with no reason is a fashion, not a law
+  ok   LAW T · the UNADOPTED count may only SHRINK (8 left: tsc --checkJs, eslint no-empty, semgrep, knip, dependency-cruiser, c8, stryker, npm audit)
+  ok   LAW T · every adopted gate actually runs in the suite chain, so adoption cannot mean 'the package is installed and nobody calls it'
+  ok   LAW T · the organism's domain instruments are NOT replaced by the stack — xray/swallow/limits/treasury/pulse still exist and still run
+  ok   LOAD ZERO BLOCK 7 · no canon file states a live count a command can produce (89 files scanned, 1 declared)
+  ok   LOAD ZERO BLOCK 7 · ...and every canon-ok exemption carries a REAL reason, and the exemptions may only SHRINK (1 today)
+  ok   LOAD ZERO BLOCK 8 · a role with live candidates and NO leader is NAMED, never silent — and it says why code cannot pick for him
+  ok   LOAD ZERO BLOCK 8 · ...and it does NOT fire once he has named one, nor when there is genuinely nothing live to name (a quota-blocked role is not an unanswered question)
+  ok   LOAD ZERO BLOCK 8 · the skip that hid it is gone — `findings` no longer drops a role out of the loop unexamined
+  ok   LOAD ZERO BLOCK 9 · THE 19 AUG FALSE POSITIVES STAY SILENT — retired, never-a-stream and depends-on-him are NOT faults, however old they get
+  ok   LOAD ZERO BLOCK 9 · ...and a source DECLARED LIVE that goes past its cadence IS named, with its age and its cadence
+  ok   LOAD ZERO BLOCK 9 · a source posting to the bus and DECLARED NOWHERE is named — a new sense may not wire itself in silently, which is the one thing the registry cannot know about itself
+  ok   LOAD ZERO BLOCK 9 · every declared source carries a legal state and a REAL reason; every `live` one carries a cadence (a state with no reason is a shrug, and a live source with no cadence can never be late)
+  ok   LOAD ZERO BLOCK 9 · the watchman ASKS it, and reads the bus with an INLINE reader — this file has no readJsonl/readLines, and calling one it lacks is a ReferenceError the swallow eats (it has shipped green that way before, and the first cut of this wire did it again)
+  ok   LOAD ZERO BLOCK 9 · ABSENCE IS EXPLICIT — a payload judged on its OWN day says 'no reading' instead of handing a reader a fortnight-old night as last night's (readiness.json: mtime 18 Aug, day inside 2026-08-04)
+  ok   LOAD ZERO BLOCK 9 · freshness comes from the PAYLOAD's own stamp, never a file mtime — readiness.json has a fresh mtime and a 2026-08-04 day inside, and an old value standing in for a missing one is the bug
+  ok   LOAD ZERO BLOCK 6 · the LOAD NUMBER is code, printed on line 1, and it NAMES the part only he can drain (staged facts + overdue Re-Jirah are his by Law 4 — that is the floor, and hiding it would flatter the scoreboard)
+── HERMETICITY — a selftest must never touch dressing-room/state ─────
+  FAIL running all 122 selftests leaves live state untouched
+  ok   F-6 INSTRUMENT · a write inside a selftest's window is attributed to THAT selftest, and one in the gap is named an external writer racing the suite
+  ok   F-6 INSTRUMENT · MODIFIED with BYTE-IDENTICAL content is named an idempotent rewrite (not a leak), and a real content change is still a leak — the discriminator S10-R could not measure
+  ok   the one sanctioned selftest write lands in the organ's OWN log, never on the state bus
+  ok   …and that log is gitignored, so a test run can never reach the public remote
+── LEARNING PATH — the loop he actually uses, driven end to end ──────
+  ok   FORGE · a session opens
+  ok   FORGE · an open session BLOCKS a second start (the coverage report is the only record)
+  ok   FORGE · all 12 steps are recorded (0-11)
+  ok   FORGE · batch-marked axes are caught as UNGRADED, not counted as taught
+  ok   FORGE · a 0.2-minute 'session' is reported as NOT method_clean (theatre is named)
+  ok   A3 · every gate this lane had to override is COUNTED and carries its reason — a session cannot talk past the evidence without leaving a row
+  ok   FORGE · the undriven widget gate is named (built is not driven)
+  ok   A3 · ONE command banks an answer from a Code session — surface, probe and the measured latency all land on the row
+  ok   A3 · a `--surface code` bank with NO axis is refused AT THE BANK DOOR, not silently dropped hours later at judge-dispatch
+  ok   A3 · `axis a done` is REFUSED with no INTERVIEW-register line — Hinglish understanding and the cold English line are two skills, and only one was ever measured
+  ok   A3 · …and the axis refusal never asks for a jirah any more — the grilling moved to the STEP 9 round on his word, and a gate still demanding it here would re-install what he withdrew
+  ok   A3 · the axis closes on his Bolo row + the interview line, with NO jirah moment ever declared for it
+  ok   A3 · an axis with NO evidence exits 1 and hands over the exact bank command — never 'try harder'
+  ok   A3 · the bypass works, is recorded with HIS reason, and is counted — an escape hatch that left no trace would become the normal path
+  ok   A3 · STEP 10 is refused without a negative-space probe, and the refusal leaves the step exactly where it stood
+  ok   A3 · STEP 10 is STILL refused while the axes he closed were never GRILLED — the refusal names them by letter and hands over the exact bank command
+  ok   A3 · a jirah row nobody JUDGED is a question asked, not a grade — STEP 10 stays shut until the round's ONE judge call has settled them
+  ok   A3 · STEP 10 opens once every done axis carries a JUDGED jirah row, the negative-space probe is banked (the dossier's #1 senior signal) and one cross_axis row exists
+  ok   A3 · reps_log.jsonl is BYTE-IDENTICAL after every gate read — the gates count gaffer_brain's bank and capture.mjs stays reps_log's sole writer
+  ok   A3 · `close` refuses while banked answers carry no verdict — and it leaves the session OPEN, because a coverage report is a session's only durable trace
+  ok   A3 · once every banked answer has a verdict the close goes through, and the report NAMES the bypass out loud with his own reason
+  ok   A3 · a bypassed gate costs the session its method_clean — a session that talked past the evidence is not a clean one
+  ok   A3 · a session that banked NOTHING cannot close quietly — the refusal names what dies with the terminal
+  ok   A2 · `sitting.mjs open --no-spawn` on a box with no daemon exits 0, says so in one line, and spawns no child
+  ok   RE-JIRAH · a DEFERRED axis on an unlocked concept reaches the Re-Jirah queue (forge LAWS: 'deferred ≠ dropped')
+  ok   RE-JIRAH · the carry names it as UNLOCKED and invents no due-date for it (no lockedOn ⇒ no honest schedule)
+  ok   RE-JIRAH · a cold round grades and schedules the next due date
+  ok   RE-JIRAH · close prints the reJirahDone gist patch (HIS paste — nothing auto-saves)
+  ok   RE-JIRAH · close REPORTS the successive-relearning criterion without BLOCKING
+  ok   RE-JIRAH · the closed round reads PENDING until the gist paste lands (proof, not assumption)
+  ok   DEEP · the cold queue serves QUESTIONS ONLY (no answers leak into a cold round)
+  ok   CAPTURE · one valid rep lands with zero capture tax
+  ok   CAPTURE→GEMINI-QUALITY · the `rep` door WRITES the outcome ledger its two readers count (it never did until 10 Aug 2026)
+  ok   BRIEF · SessionStart still assembles and reports its byte manifest
+  ok   BRIEF · the assembled brief stays inside the declared ceiling (read off the footer — 5,300 since 18 Aug 2026)
+  ok   BRIEF · the WHOLE printed SessionStart brief is under 6,000 bytes (overhaul §7.4/§13 — the state line rides outside the manifest's ceiling)
+  ok   BRIEF · the manifest's accounting is reachable AS STRUCTURE — one JSON line, parts each carrying id + state + bytes
+  ok   BRIEF · the ceiling check reads the FIELD, not a sentence — total <= ceiling, both as numbers
+  ok   BRIEF · no context part reads DROPPED — a leg that was measured and then did not reach the session is a wire break, and nothing else catches it
+  ok   BRIEF · the ledger NEVER carries the assembled text — his memory, card and staged rulings stay out of every consumer's stdout
+── SUITES — every member run INDEPENDENTLY (one red never hides the rest) 
+  ok   validators
+  ok   deep
+  ok   mirror
+  ok   throwin
+  ok   heartbeat
+  ok   physio
+  ok   twin
+  ok   touchline
+  ok   setpiece
+  ok   scorer
+  ok   scout
+  ok   bootroom
+  ok   doubtminer
+  ok   postmatch
+  ok   viz
+  FAIL brain
+  ok   speak
+  ok   talk
+  ok   dugout
+  ok   shadow
+  ok   thalamus
+  ok   cortex
+  ok   hippocampus
+  ok   mcp-memory
+  FAIL context
+  ok   distiller
+  ok   selfknowledge
+  FAIL fuelboard
+  ok   examiner
+  ok   tone
+  ok   dmn
+  ok   presence
+  ok   council
+  ok   groundsman
+  ok   awayday
+  ok   nightshift
+  ok   turnstile
+  ok   conductor
+  ok   limits
+  ok   reconcile
+  ok   pulse
+  FAIL learnstate
+  ok   teaching_contract
+  ok   teaching_audit
+  ok   watchman
+  ok   outwork_audit
+  ok   harvest
+  ok   daemon_watchdog
+  ok   scoreboard
+  ok   nikhil_model
+  ok   archivist
+  ok   gate
+  ok   state
+  ok   swallow
+  ok   freeze
+  ok   models
+  ok   acts
+  ok   tasks
+  ok   outbox
+  ok   spool
+  ok   harness_text
+  ok   services
+  ok   claudegen
+  ok   turn_hook
+  ok   intent
+  ok   captain
+  ok   session_meter
+  ok   rails
+  ok   study_rail_replay
+  ok   claims
+  ok   teaching_gate
+  ok   gates
+  ok   lawpack
+  ok   registry
+  ok   learn_digest
+  ok   daily_green
+  ok   keeper
+  FAIL capture
+  ok   forge_session
+  ok   resume_pointer
+  ok   exchanges
+  ok   notes_corrections
+  ok   notes_compiler
+  ok   capsule_bridge
+  ok   shipped
+  ok   fsrs
+  ok   calibration
+  ok   nemesis
+  ok   learning_state
+  ok   manager
+  ok   test_coach_v2
+  ok   timeaudit
+  ok   sprintsync
+  ok   course
+  ok   oura_coach
+  ok   oura_auth
+  ok   samjhao
+  ok   rejirah
+  ok   python_state
+  ok   widget
+  ok   context_manifest
+  ok   captains_call
+  ok   benchmark
+  ok   gate_tune
+  ok   gaffer_state
+  ok   gaffer_brain
+  ok   register
+  ok   sitting
+  ok   tokenizer_play
+  FAIL sandbox
+  FAIL xray
+  ok   mutagen
+  ok   blackbox
+  ok   treasury
+  ok   unleash_verdict
+  FAIL herd
+  FAIL daykey
+  FAIL audit
+  ok   archive_audit
+  ok   flow_atlas
+  FAIL all 120 suite members pass (every one RUN, not chained)
+── GATES — tsc --checkJs + eslint + ajv schemas, frozen at their measured baselines, tightening only 
+  ok   GATES — undefined-symbol families 0 on both sides, every schema-d state file matches, and no frozen count rose (a gate may only get stricter)
+── LAW PACK — the organism's own laws as ast-grep rules, frozen and tightening only 
+  ok   LAW PACK — every rule file present, and no law's finding count rose (a gate may only get stricter)
+── ALIVE — ◇≤T: every lane produced its artifact inside its own deadline 
+  ok   ALIVE — bare checkout: pulse answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)
+── FLOW ATLAS — the witnessed flow graph must match the code it maps (stale-proof, S10) 
+  FAIL FLOW ATLAS — `check` re-derives the atlas from the live IR sha-identical (a code change that moves the graph demands `xray.mjs build` + `flow_atlas.mjs build` in the same commit)
+organism_test: 177 passed, 6 failed · ruled 0 · UNRULED 6
+exit 2

@@ -520,14 +520,17 @@ export function writersOf(fileName, sources) {
   const ARROW = /^\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/;
   const base = (spec) => String(spec).split(/[\\/]/).pop();
   const files = Object.entries(sources).map(([f, t]) => {
-    const flat = String(t).replace(/\/\*[\s\S]*?\*\//g, "");
+    // B1 (a): a Windows checkout is CRLF (core.autocrlf) — the body scan below ends a function at a line that IS "}",
+    // which "}\r" never is, so j ran to code.length and code[b] was undefined: a TypeError that killed `npm test`
+    // before its headline on every CI push from 6032898 on. The source is read as LF, whatever the checkout wrote.
+    const flat = String(t).replace(/\r\n?/g, "\n").replace(/\/\*[\s\S]*?\*\//g, "");
     const raw = flat.split("\n").map((l) => l.replace(/(^|[\s;,(){}[\]])\/\/.*$/, "$1"));
     const code = raw.map(codeOf);
     const exp = new Set(), doors = new Set(), bodies = [];
     code.forEach((l, i) => {
       const e = /^export\s+(?:async\s+)?(?:function\*?|const|let|var|class)\s+([A-Za-z_$][\w$]*)/.exec(l); if (e) exp.add(e[1]);
       const fn = /^(?:export\s+)?(?:async\s+)?function\*?\s+([A-Za-z_$][\w$]*)\s*\(/.exec(l);
-      if (fn) { let j = i + 1; while (j < code.length && code[j] !== "}") j++; bodies.push([fn[1], i, j]); if (code.slice(i, j + 1).some((b) => SINK.test(b))) doors.add(fn[1]); }
+      if (fn) { let j = i + 1; while (j < code.length && code[j] !== "}") j++; bodies.push([fn[1], i, Math.min(j, code.length - 1)]); if (code.slice(i, j + 1).some((b) => SINK.test(b))) doors.add(fn[1]); }
       const ar = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>(.*)$/.exec(l); if (ar && SINK.test(ar[2])) doors.add(ar[1]);
     });
     // what this file takes from which module: static `import { a, b as c } from "./m.mjs"` (local name → its export name),
@@ -667,6 +670,16 @@ async function laws() {
         "reader.mjs": `import { fileOf } from "./own.mjs";\nexport function read() {\n  return readFileSync(fileOf(), "utf8");\n}\nfunction selftest() {\n  writeFileSync(join(tmp, "x.jsonl"), "{}");   // appendFileSync(${LEDGER}) — prose\n}\n`,
         "namesake.mjs": `function record(x) {\n  writeFileSync(join(tmp, "log.txt"), x);\n}\nrecord("its own record, not the owner's");\n`,
       });
+      // B1 (a) · THE SAME INSTRUMENT ON A CRLF CHECKOUT — the planted sources with every LF turned CRLF (what a Windows
+      // checkout under core.autocrlf hands readOrgan) must name the SAME writers; the LF run above is the control.
+      const plantedCrlf = writersOf(LEDGER, Object.fromEntries(Object.entries({
+        "own.mjs": `export const F = join(R, "${LEDGER}");\nexport function fileOf() {\n  return F;\n}\nfunction door(p, t) {\n  appendFileSync(p, t);\n}\nexport function record(x) {\n  door(fileOf(), x);\n}\n`,
+        "caller.mjs": `import { record as rec } from "./own.mjs";\nrec({ why: "x" });\n`,
+        "namesake.mjs": `function record(x) {\n  writeFileSync(join(tmp, "log.txt"), x);\n}\nrecord("its own record, not the owner's");\n`,
+        "tail.mjs": `function open(p) {\n  appendFileSync(p, "${LEDGER}");`,
+      }).map(([f, t]) => [f, t.replace(/\n/g, "\r\n")])));
+      assert("B1 (a) · CRLF-PROOF — writersOf over CRLF sources (a Windows checkout) names the same writers as over LF, and a function body left open at end of file is read, never thrown on",
+        JSON.stringify(plantedCrlf) === JSON.stringify(["caller.mjs", "own.mjs", "tail.mjs"]), `crlf ${JSON.stringify(plantedCrlf)}`);
       const writers = writersOf(LEDGER, Object.fromEntries(scripts().map((f) => [f, readOrgan(f)])));
       const head = readOrgan("rails.mjs").split("\n");
       const header = head.slice(0, Math.max(0, head.findIndex((l) => /^import\s/.test(l))));
@@ -2531,7 +2544,12 @@ async function main() {
   console.log("=== ARSENAL AI FC — CROSS-ORGAN TEST SUITE ===");
   section("THE RULED KNOWN-RED LIST — the instrument, planted both ways");
   for (const [name, cond] of rulingSelfCheck()) assert(`KNOWN-RED · ${name}`, cond);
-  for (const c of chosen) await MODES[c]();   // LOAD ZERO BLOCK 6: laws() is async (it imports organs to drive their pure exports on fixtures)
+  // B1 (a): a mode that THROWS is a named red, never a dead runner — before this, one uncaught TypeError in laws() ended the
+  // process before the headline and every mode after it went unrun AND unreported (CI: "no headline line" on every push).
+  for (const c of chosen) {
+    try { await MODES[c](); }   // LOAD ZERO BLOCK 6: laws() is async (it imports organs to drive their pure exports on fixtures)
+    catch (e) { assert(`MODE ${c} · ran to its end (a throw is a red, never a dead runner)`, false, e instanceof Error ? String(e.stack || e.message).split("\n").slice(0, 3).join(" | ") : String(e)); }
+  }
   const v = rulingOf(fails, passed);
   // ONE machine line for the campaign's recorder (never a file: this suite writes nothing it does not own)
   console.log(`\nORGANISM_TEST_VERDICT ${JSON.stringify({ modes: chosen, pass, fail, exit: v.exit,
