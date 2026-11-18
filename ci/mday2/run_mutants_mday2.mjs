@@ -4,10 +4,10 @@
 // --only <that clause>, must read RED on the clause that names it. The control (the copy, unedited) runs the WHOLE witness
 // and must read GREEN. The edit site is matched in the file's OWN line ending (core.autocrlf) and must be unique, or the
 // mutant is NOT APPLIED and counts as surviving. A mutant marked `own` edits the witness copy and is judged by it.
-// Nothing under --org is written; .git, node_modules and the org's dressing-room/state are never copied (the witness plants
+// Nothing under --org is written; .git, node_modules, the org's dressing-room/state and its gitignored files are never copied (the witness plants
 // its own). No git repo is planted, no port bound, no model called; every child is spawnSync, bounded by its own exit.
 // LAST LINE: run_mutants: k of n mutant(s) RED by the clause that names them · control GREEN|RED
-import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { join, resolve, dirname, relative, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -27,7 +27,9 @@ const MUTANTS = [
 const SKIP = new Set([".git", "node_modules"]);
 const skipRel = (rel) => rel.split(sep).some((p) => SKIP.has(p)) || rel === join("dressing-room", "state") || rel.startsWith(join("dressing-room", "state") + sep);
 const TMP = mkdtempSync(join(tmpdir(), "mday2-mutants-"));
-const copy = (name) => { const d = join(TMP, name); cpSync(ORG, d, { recursive: true, filter: (src) => !skipRel(relative(ORG, src)) }); return d; };
+// the org's own gitignored files (a hook's machine-local log) are not copied: asked of git READ-ONLY, only on a work tree
+const IGNORED = new Set(existsSync(join(ORG, ".git")) ? String(spawnSync("git", ["-C", ORG, "ls-files", "--others", "--ignored", "--exclude-standard"], { encoding: "utf8", windowsHide: true }).stdout || "").split(/\r?\n/).filter(Boolean).map((p) => p.split("/").join(sep)) : []);
+const copy = (name) => { const d = join(TMP, name); cpSync(ORG, d, { recursive: true, filter: (src) => { const rel = relative(ORG, src); return !skipRel(rel) && !IGNORED.has(rel); } }); return d; };
 const lastLine = (s) => String(s || "").split(/\r?\n/).filter((l) => l.trim()).pop() || "";
 const witness = (wfile, org, only) => { const r = spawnSync(process.execPath, [wfile, "--org", org, "--base-org", BASE, ...(only ? ["--only", only] : [])], { encoding: "utf8", windowsHide: true }); return { status: r.status, out: String(r.stdout || "") }; };
 

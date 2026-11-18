@@ -53,6 +53,10 @@ Also changed in the same file: the header CONTRACT comment names the new clause;
 - build: `node ci/mday2/witness_mday2.mjs --org . --base-org <3e3ce63 tree>` → `GREEN MDAY2 the digest says the day is opened by code and ended by day.mjs end · 6 clause(s)` (exit 0)
 - base: `node ci/mday2/witness_mday2.mjs --org <3e3ce63 tree> --base-org <3e3ce63 tree>` → `RED MDAY2 · D1, D2, D3, D4, BOUND` (exit 1). LAST is a guard and reads GREEN on both; its RED side is the LAST mutant.
 
+## A defect the claims-gate re-run found (2026-11-18)
+
+Re-running the witness for the claims receipt read `RED MDAY2 · BOUND`: `scripts/tone.log`, a hook's machine-local log (`.gitignore:17` `*.log`), had appeared in the org after the first run, so BOUND's first GREEN depended on WHEN it ran. Fixed in the witness and the runner only: BOUND drops a path the org's own `.gitignore` ignores (`git check-ignore`, read-only, only on a work tree), and the mutant runner does not copy the org's gitignored files. Re-run after the fix (2026-11-18): build `GREEN MDAY2 … · 6 clause(s)`, base `RED MDAY2 · D1, D2, D3, D4, BOUND`, mutants `6 of 6 … · control GREEN`.
+
 ## The mutants (`ci/mday2/run_mutants_mday2.mjs`, 2026-11-18)
 
 `run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN` (exit 0) — D1 hand open put back · D2 judge-round typed · D3 the end line typed here not imported · D4 the selftest clause disarmed · BOUND a file beyond the named ones (scripts/day.mjs comment) · LAST (own) a node process naming the temp dir left alive. After the run: `ps` shows no process naming `mday2-`, and no `mday2-*` dir is left under the temp root.

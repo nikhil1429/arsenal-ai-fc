@@ -21,7 +21,8 @@
 //       `day.mjs status` as where the open day shows
 //   D4  learn_digest's selftest holds the D1-D3 law, planted both ways: on the clean copy its headline is all-hold (exit 0);
 //       on a copy whose render is planted with the old hand-typed open + judge-round line it reads RED (exit 1)
-//   BOUND  only scripts/learn_digest.mjs and ci/mday2/ differ between --org and --base-org (his state dir excluded, unread)
+//   BOUND  only scripts/learn_digest.mjs and ci/mday2/ differ between --org and --base-org (his state dir excluded, unread;
+//          a path the org's own .gitignore ignores — a hook's machine-local log — is not a build file)
 //   LAST   no node process naming this run's temp dir survives
 // LAST LINE: GREEN MDAY2 <what> · <n> clause(s) (exit 0) | RED MDAY2 · <clauses> (exit 1)
 // ============================================================================
@@ -104,7 +105,10 @@ if (want("D4")) {
     const a = walk(ORG), b = walk(BASE), diff = [];
     for (const k of new Set([...a.keys(), ...b.keys()])) if (a.get(k) !== b.get(k)) diff.push(k);
     const named = (k) => k === "scripts/learn_digest.mjs" || k.startsWith("ci/mday2/");
-    const stray = diff.filter((k) => !named(k));
+    // a path the ORG's own .gitignore ignores is machine-local (a hook's log), never a build file: asked of git READ-ONLY,
+    // only when --org is a work tree (no repo is planted; a tree without .git ignores nothing)
+    const ignored = new Set(existsSync(join(ORG, ".git")) ? lines(spawnSync("git", ["-C", ORG, "check-ignore", "--no-index", "--stdin"], { input: diff.join("\n"), encoding: "utf8", windowsHide: true }).stdout).map((l) => l.trim()) : []);
+    const stray = diff.filter((k) => !named(k) && !ignored.has(k));
     clause("BOUND", !stray.length && diff.includes("scripts/learn_digest.mjs"), `${diff.length} path(s) differ · outside the named files: ${stray.length ? stray.slice(0, 8).join(", ") : "none"}`);
   }
 }
