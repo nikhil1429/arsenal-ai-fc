@@ -31,9 +31,19 @@ description: The 30-second evening close — HIT/MISS, one signal, KAL-line, thr
    NOTE postmatch's own render prints only the **first five** pending
    (`grep -n "pendingBalls.slice" scripts/postmatch.mjs`) while the header carries
    the true total — if the header says more than five, read the two files yourself.
-3. Run, in order:
+3. **WHICH DAY HIS LINE CLOSES — read it before step 1's ask goes out (mpast, ruling A1):**
+   `node scripts/postmatch.mjs named` (READ-ONLY, writes nothing) prints the day his ONE line closes:
+   the NEWEST open day the day-close card names (`--date <day>`), the OLDER named days, and
+   `KAL asked` / `KAL not asked`. When it names a day other than today, step 1's ONE message asks
+   "Result for **<that day>**?" (the KAL only when it says `KAL asked` — only yesterday or today),
+   and SAYS, never asks, "<older days> close with no line of yours". Never one question per day,
+   never one result copied onto several days. When it names no day, the close is today, as before.
+   Then run, in order:
    `node scripts/gaffer_brain.mjs judge-round`  ← the day's ONE judge call on the banked study rows (5 Sep 2026, row 48 (3)). Since 6 Sep 2026 (row 68 (d)) the sitting organ fires it BY CODE at every sitting close when the grade queue holds unjudged rows — this line is the fallback for a day no sitting was open; a second call re-refuses the same rows for nothing →
-   `node scripts/postmatch.mjs --hit <X> --signal "<s>" --kal "<k>" [--diag start|block|sleep] [--route all]`
+   `node scripts/postmatch.mjs --hit <X> --signal "<s>" --kal "<k>" [--diag start|block|sleep] [--route all] [--date <the day named prints>]`
+   (`--date` is REFUSED by name, nothing written, for a malformed date, a future day, a day with no
+   machine record, or his own closed day; every older named day gets ONE line recording that no line
+   of his was given — read as closed, never re-asked.)
    → `node scripts/scorer.mjs` → `node scripts/setpiece.mjs` →
    `node scripts/viz.mjs`.
    All four scripts exist and all four run bare on their default mode — verified

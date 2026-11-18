@@ -32,7 +32,11 @@
 //   dressing-room/SEASON.md (the logbook — un-parked by his word 7 Aug 2026;
 //   Claude fills 100%, he writes ZERO)
 // MODES:  --hit HIT|MISS|PARTIAL|REST --signal "…" --kal "…" [--diag start|block|sleep]
-//         [--route all|none] [--dry] · route [all|<id>…] (route-only, no ledger)
+//         [--route all|none] [--date YYYY-MM-DD] [--dry] · route [all|<id>…] (route-only, no ledger)
+//           (mpast A1: --date closes the NEWEST open day the day-close card names — refused by name, nothing written,
+//           for a malformed date, a future day, a day with no machine record, his own closed day; every OLDER named
+//           day gets ONE appended line recording the ABSENCE of his word, read as closed, never re-asked)
+//         · named (READ-ONLY, for /full-time: the day his line closes, the older named days, whether the KAL is asked)
 //         · autoclose --date <YYYY-MM-DD|chain|chain-1> --anchor evening|morning [--dry]
 //           (THE DAY CLOSES ITSELF, mclose · rows 873 (2) / 877 / 883 / 891 — the MACHINE half of his
 //           full time, fired by the conductor's dayclose steps; see autoclose() below)
@@ -142,14 +146,18 @@ function updateSeason(season, hit, dateStr, extras = {}) {
   // MISS days included (a row is data, not a verdict). Uncapped: this IS the
   // season's memory; SEASON.md renders the tail, season.json holds it all.
   const rows = Array.isArray(s.rows) ? s.rows.slice() : [];
-  rows.push({ date: dateStr, matchday: won ? matches_played : null, result: hit,
-    kal: extras.kal || null, signal: extras.signal || null });
+  // mpast (ruled): the row is INSERTED BY DATE — after every row of its day or older — so the streak (seasonStreak reads the
+  // tail) reads DAYS, never close order: his full time for a past day the card named lands among its days, not at the end.
+  const row = { date: dateStr, matchday: won ? matches_played : null, result: hit, kal: extras.kal || null, signal: extras.signal || null };
+  const at = rows.findIndex((r) => r && String(r.date) > dateStr);
+  if (at < 0) rows.push(row); else rows.splice(at, 0, row);
+  const newest = rows[rows.length - 1];
   return {
     ...s,
     season_day: (s.season_day || 0) + 1,
     matches_played,
-    last_result: hit,
-    last_played: dateStr,
+    last_result: newest.result,
+    last_played: newest.date,
     rows,
   };
 }
@@ -465,10 +473,22 @@ function quietVerdict({ anchor, lastTs, at }) {
 /** hisResultOf — HIS result on a post_match file (the first legal RESULT line, daily_green's own reading), or null. */
 const hisResultOf = (text) => (String(text == null ? "" : text).match(HIS_RESULT_RE) || [])[1] || null;
 
-/** parseMachineRecord — the state of a MACHINE record, or null when the text is not one (or already carries HIS result). */
+// mpast A1 — THE ABSENCE OF HIS WORD, RECORDED. A day his one full-time line did not close (an OLDER day the day-close card
+//   named), or every day a card he answered `na` named, gets ONE line appended to its machine record. It reads as ABSENCE,
+//   never as a word of his: no legal RESULT (daily_green rung 8 stays RED on it by its own code), no KAL-LINE (KAL_RE never
+//   matches it), no season row (matches_played does not move). parseMachineRecord then reads the day as CLOSED — a recorded
+//   decision, never re-asked — and the close's idempotence never touches it again.
+const ABSENCE_RE = /^NO LINE OF HIS for this day — closed by /m;
+/** absenceLine — the ONE appended line: `by` is "his full time on <D>" or "his na on the day-close card <id>"; `at` the instant. */
+const absenceLine = (by, at) => `NO LINE OF HIS for this day — closed by ${by} at ${at}, a recorded decision (never re-asked; no RESULT, no matchday)`;
+const isAbsenceClosed = (text) => ABSENCE_RE.test(String(text == null ? "" : text));
+
+/** parseMachineRecord — the state of a MACHINE record, or null when the text is not one (or already carries HIS result, or
+ *  the recorded absence of it — mpast A1). */
 function parseMachineRecord(text) {
   const t = String(text == null ? "" : text);
   if (hisResultOf(t)) return null;
+  if (isAbsenceClosed(t)) return null;
   const cb = CLOSED_BY_RE.exec(t);
   if (!cb) return null;
   const ev = /^EVIDENCE: (\d+) captured study turn\(s\) · turns_until (\S+)/m.exec(t);
@@ -493,6 +513,7 @@ function autocloseDecision(prior, lastTs) {
   if (prior == null) return { act: "write", prev: null };
   const his = hisResultOf(prior);
   if (his) return { act: "his", result: his };
+  if (isAbsenceClosed(prior)) return { act: "decided" };   // mpast A1: closed by a recorded decision — never touched again
   const prev = parseMachineRecord(prior);
   if (!prev) return { act: "foreign" };
   const current = !!prev.turns_until && Date.parse(prev.turns_until) >= Date.parse(String(lastTs));
@@ -602,27 +623,100 @@ function openDaysOf(from, to, { dir = PM_DIR } = {}) {
   return out;
 }
 
-/** dayCloseCard — step (viii) after an EVENING close: through the deck's door when a card of the family is kept, `file` as
- *  before when none is (or when the door refuses). Returns the card's piece of the summary line; never throws. */
-async function dayCloseCard({ day, run, dir = PM_DIR }) {
-  let kept = null, bound = null, note = "";
+// ---------------------------------------------------------------------------
+// mpast · HIS FULL-TIME LINE FOR A PAST DAY THE DAY-CLOSE CARD NAMES (ruling A1 + B1, forks rows 956 (3) / 1015 (2)-(4))
+// ---------------------------------------------------------------------------
+// THE NAMED DAYS of a day-close card are the days its line names: the dates it spells (oldest first, dayCloseLine above) and,
+//   when it says `+k more`, the k oldest open days after the last one it spells, up to `upto`. Only days STILL OPEN count.
+// THE CARD whose named days his full time reads: the KEPT card (live, his word not on it); else the newest card of the family
+//   he answered `haan` (his haan is "I will close it"). A `na` card's days are closed by the evening step instead (MP7).
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const isRealDay = (d) => DAY_RE.test(String(d)) && Number.isFinite(Date.parse(`${d}T00:00:00.000Z`)) && new Date(Date.parse(`${d}T00:00:00.000Z`)).toISOString().slice(0, 10) === d;
+const keyDayOf = (card) => String((card && card.key) || "").slice(DAYCLOSE_FAMILY.length + 1);
+/** namedDaysOf — READ-ONLY. The OPEN days a day-close card names (see above), oldest first. */
+function namedDaysOf(card, { upto, dir = PM_DIR } = {}) {
+  const m = /^((?:\d{4}-\d{2}-\d{2})(?:, \d{4}-\d{2}-\d{2})*)(?: \+(\d+) more)?: /.exec(String((card && card.line) || ""));
+  if (!m) return [];
+  const spelled = m[1].split(", ").filter(isRealDay).sort();
+  const more = Number(m[2] || 0), last = spelled[spelled.length - 1];
+  const counted = more > 0 && last && isRealDay(upto) && upto > last ? openDaysOf(addDays(last, 1), upto, { dir }).days.slice(0, more) : [];
+  const open = new Set(openDaysOf(spelled[0], spelled[spelled.length - 1], { dir }).days);
+  return [...new Set([...spelled.filter((d) => open.has(d)), ...counted])].sort();
+}
+/** readDayCloseDeck — READ-ONLY, through the deck's own exports: its bound, the KEPT card, and the newest ANSWERED card of the
+ *  family (newest by its key's day). Never throws: an unreadable deck returns `error`. */
+async function readDayCloseDeck() {
   try {
-    const CC = await import("./captains_call.mjs");   // READ-ONLY: the deck's line bound and its door's own target rule
-    bound = CC.CARD_LINE_BOUND;
-    const t = CC.relineTarget(CC.loadState().cards, { family: DAYCLOSE_FAMILY });
-    if (t.card) kept = t.card;
-  } catch (e) { note = ` (the deck could not be read: ${oneLine((e && e.message) || e, 80)})`; }
+    const CC = await import("./captains_call.mjs");
+    const cards = CC.loadState().cards;
+    const t = CC.relineTarget(cards, { family: DAYCLOSE_FAMILY });
+    const answered = (Array.isArray(cards) ? cards : []).filter((c) => c && c.source === "hand-filed" && c.answer
+      && String(c.key || "").startsWith(`${DAYCLOSE_FAMILY}:`) && isRealDay(keyDayOf(c)))
+      .sort((a, b) => (keyDayOf(a) < keyDayOf(b) ? -1 : keyDayOf(a) > keyDayOf(b) ? 1 : String(a.answered_at || "") < String(b.answered_at || "") ? -1 : 1)).at(-1) || null;
+    return { bound: CC.CARD_LINE_BOUND, kept: t.card || null, answered };
+  } catch (e) { return { error: oneLine((e && e.message) || e, 80), bound: null, kept: null, answered: null }; }
+}
+/** cardNamedOpen — the card his full time reads and its named OPEN days (oldest first); the newest is the day his line closes. */
+async function cardNamedOpen({ today, dir = PM_DIR } = {}) {
+  const deck = await readDayCloseDeck();
+  const card = deck.kept || (deck.answered && deck.answered.answer === "haan" ? deck.answered : null);
+  if (!card) return { card: null, how: null, days: [], error: deck.error || null };
+  const upto = deck.kept ? today : (istDayOf(new Date(Date.parse(card.answered_at) || Date.now())) < today ? istDayOf(new Date(Date.parse(card.answered_at))) : today);
+  return { card, how: deck.kept ? "kept" : "answered haan", days: namedDaysOf(card, { upto, dir }), error: null };
+}
+/** kalAsked — PURE. The KAL-line is asked only when the day his line closes is yesterday or today (manager reads yesterday's). */
+const kalAsked = (closed, today) => closed === today || closed === addDays(today, -1);
+/** appendAbsence — ONE line appended to an OPEN machine record (the bytes above it kept, L9). Returns a summary word. */
+function appendAbsence(day, line, { dir = PM_DIR } = {}) {
+  const f = join(dir, `${day}.md`);
+  let text;
+  try { text = readFileSync(f, "utf8"); } catch (e) { return `${day} unreadable (${(e && e.code) || "?"})`; }
+  if (!parseMachineRecord(text)) return `${day} not open — untouched`;
+  writeAtomic(f, `${text}${text.endsWith("\n") ? "" : "\n"}${line}\n`);
+  return null;
+}
+/** settleNaCard — MP7: the newest ANSWERED card of the family, when its word is `na`, closes every day it named by the recorded
+ *  absence (baad is not an answer — it sleeps the card and closes nothing). Idempotent: a closed day is not open. */
+function settleNaCard(card, { dir = PM_DIR } = {}) {
+  if (!card || card.answer !== "na") return { closed: [], misses: [] };
+  const at = String(card.answered_at || card.retired_at || "");
+  const upto = Number.isFinite(Date.parse(at)) ? istDayOf(new Date(Date.parse(at))) : keyDayOf(card);
+  const days = namedDaysOf(card, { upto, dir }), closed = [], misses = [];
+  for (const d of days) { const miss = appendAbsence(d, absenceLine(`his na on the day-close card ${card.id}`, at), { dir }); if (miss) misses.push(miss); else closed.push(d); }
+  return { closed, misses };
+}
+
+/** dayCloseCard — step (viii) after an EVENING close: through the deck's door when a card of the family is kept, `file` as
+ *  before when none is (or when the door refuses). Returns the card's piece of the summary line; never throws.
+ *  mpast B1: with NO kept card, the filed card names every open day since the day AFTER the newest ANSWERED card's day — the
+ *  door rewrites the line `file` just filed (the card is born once, by `file`, as before) — and a `na` on that answered card
+ *  first closes every day it named (settleNaCard). The morning still files none and rewrites none (row 877). */
+async function dayCloseCard({ day, run, dir = PM_DIR }) {
+  let kept = null, bound = null, note = "", answered = null;
+  const deck = await readDayCloseDeck();   // READ-ONLY: the deck's line bound, its door's own target rule, its newest answered card
+  if (deck.error) note = ` (the deck could not be read: ${deck.error})`;
+  else { bound = deck.bound; kept = deck.kept; answered = deck.answered; }
+  const na = settleNaCard(answered, { dir });
+  const naNote = na.closed.length || na.misses.length ? ` · na on ${answered.id} closed ${na.closed.length} named day(s) with no line of his${na.misses.length ? ` (${oneLine(na.misses.join(", "), 60)})` : ""}` : "";
   if (kept) {
     const open = openDaysOf(kept.key.slice(DAYCLOSE_FAMILY.length + 1), day, { dir });
     const line = dayCloseLine(open.days, bound);
     const unread = open.unreadable.length ? ` · ${open.unreadable.length} record(s) unreadable: ${oneLine(open.unreadable.join(", "), 60)}` : "";
     if (!line) return `CARD LINE NOT REWRITTEN (${kept.id} kept · ${open.days.length} open day(s) · no line fits the deck's bound ${bound}${unread})`;
     const r = run("captains_call.mjs", ["reline", "--family", DAYCLOSE_FAMILY, "--key", kept.key, "--line", line], { timeout: 30000 });
-    if (r.status === 0) return `card ${kept.id} kept · its line names ${open.days.length} open day(s), ${open.days[0]} to ${open.days[open.days.length - 1]}${unread}`;
+    if (r.status === 0) return `card ${kept.id} kept · its line names ${open.days.length} open day(s), ${open.days[0]} to ${open.days[open.days.length - 1]}${unread}${naNote}`;
     note = ` (the door refused first: captains_call ${exitOf(r)}: ${oneLine(lastLineOf(r), 90)})`;
   }
   const c = run("captains_call.mjs", ["file", "--line", dayClosedLine(day), "--key", `${DAYCLOSE_FAMILY}:${day}`, "--why-code-cannot-decide", DAYCLOSE_WHY], { timeout: 30000 });
-  return (c.status === 0 ? oneLine(lastLineOf(c).replace(/^captains_call:\s*/, "card "), 120) : `CARD NOT FILED (captains_call ${exitOf(c)}: ${oneLine(lastLineOf(c), 100)})`) + note;
+  if (c.status !== 0) return `CARD NOT FILED (captains_call ${exitOf(c)}: ${oneLine(lastLineOf(c), 100)})${note}${naNote}`;
+  const filed = oneLine(lastLineOf(c).replace(/^captains_call:\s*/, "card "), 120);
+  // mpast B1: the window opens the day AFTER the newest answered card's day (with none answered, D alone — the BASE line)
+  const from = answered && !kept && addDays(keyDayOf(answered), 1) < day ? addDays(keyDayOf(answered), 1) : day;
+  const open = from < day ? openDaysOf(from, day, { dir }) : { days: [day], unreadable: [] };
+  const line = open.days.length > 1 ? dayCloseLine(open.days, bound) : null;
+  if (!line) return `${filed}${note}${naNote}`;
+  const r = run("captains_call.mjs", ["reline", "--family", DAYCLOSE_FAMILY, "--key", `${DAYCLOSE_FAMILY}:${day}`, "--line", line], { timeout: 30000 });
+  return `${filed} · ${r.status === 0 ? `its line names ${open.days.length} open day(s), ${open.days[0]} to ${open.days[open.days.length - 1]}` : `its line NOT REWRITTEN to name ${open.days.length} open day(s) (captains_call ${exitOf(r)}: ${oneLine(lastLineOf(r), 80)})`}${note}${naNote}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -720,6 +814,7 @@ async function autoclose(argv) {
   catch (e) { console.error(`postmatch: autoclose — ${pmFile} exists and cannot be read (${oneLine((e && e.code) || (e && e.message) || e, 60)}) — nothing written`); return 1; }
   const dec = autocloseDecision(prior, tt.last_ts);
   if (dec.act === "his") { console.log(`autoclose · ${day} · closed by his word (RESULT ${dec.result}) · never touched`); return 0; }
+  if (dec.act === "decided") { console.log(`autoclose · ${day} · closed by a recorded decision (no line of his) · never touched`); return 0; }
   if (dec.act === "foreign") { console.error(`autoclose · ${day} · post_match/${day}.md is neither his close nor a machine record — never touched (a hand's file is not code's to overwrite)`); return 0; }
   if (dec.act === "nothing-new") { console.log(`autoclose · ${day} · nothing new (turns_until ${dec.prev.turns_until} ≥ the last study turn ${tt.last_ts}; the compile done, the judge settled) · nothing written`); return 0; }
 
@@ -1181,6 +1276,52 @@ async function selftest() {
         compileLine: queueCompileLine(D, q), judgeLine: "JUDGE: SETTLED · x", queueLine: queueEvidenceLine(D, q) })).compile_done === true);
   }
 
+  // ── mpast (A1 + B1, forks rows 956 (3) / 1015 (2)-(4)) — his full-time line for a past day the card names ──
+  {
+    const mrec = (d) => renderMachineRecord({ day: d, anchor: "morning", at: `${d}T02:00:00.000Z`, ev: { sessions: [], misses: [], read: {} },
+      tt: { turns: 1, last_ts: `${d}T10:00:00.000Z`, outside: 0, per_session: {} }, archiveLine: "caught up", compileLine: "COMPILE: DONE · x", judgeLine: "JUDGE: SETTLED · x" });
+    const abs = absenceLine("his full time on 2026-11-14", "2026-11-15T12:00:00.000Z");
+    const closedRec = `${mrec("2026-11-13")}${abs}\n`;
+    assert("mpast — THE ABSENCE LINE reads as absence, never as his word: no legal RESULT (daily_green's reading), no KAL_RE match, and the record it closes is no longer open, never re-closed by code",
+      abs.startsWith("NO LINE OF HIS for this day — closed by his full time on 2026-11-14 at ") && hisResultOf(closedRec) === null && !KAL_RE.test(closedRec)
+      && !/^RESULT:\s*(HIT|MISS|PARTIAL|LOAD-MANAGED)/m.test(closedRec) && parseMachineRecord(mrec("2026-11-13")) !== null && parseMachineRecord(closedRec) === null
+      && autocloseDecision(closedRec, "2026-11-13T10:00:00.000Z").act === "decided" && machineBlockOf(closedRec) === null);
+    const s0 = { season_day: 2, matches_played: 1, rows: [{ date: "2026-11-10", result: "HIT" }, { date: "2026-11-14", result: "MISS" }] };
+    const s1 = updateSeason(s0, "HIT", "2026-11-12", {}), s2 = updateSeason(s0, "HIT", "2026-11-15", {});
+    assert("mpast — season.json's row is INSERTED BY DATE (the streak reads days, never close order); a newest day still appends, and last_played is the newest day",
+      s1.rows.map((r) => r.date).join() === "2026-11-10,2026-11-12,2026-11-14" && seasonStreak(s1.rows) === 0 && s1.last_played === "2026-11-14" && s1.matches_played === 2
+      && s2.rows.map((r) => r.date).join() === "2026-11-10,2026-11-14,2026-11-15" && seasonStreak(s2.rows) === 1 && s2.last_played === "2026-11-15");
+    assert("mpast — the KAL-line is asked only when the closed day is yesterday or today",
+      kalAsked("2026-11-15", "2026-11-15") && kalAsked("2026-11-14", "2026-11-15") && !kalAsked("2026-11-13", "2026-11-15"));
+    assert("mpast — a real day only: malformed or impossible dates are not days",
+      isRealDay("2026-11-15") && !isRealDay("2026-11-31") && !isRealDay("2026-1-5") && !isRealDay("") && !isRealDay("2026-11-15x"));
+    const tmp = mkdtempSync(join(tmpdir(), "mpast-pm-"));
+    try {
+      for (const d of ["2026-11-12", "2026-11-13", "2026-11-14", "2026-11-16", "2026-11-17"]) writeFileSync(join(tmp, `${d}.md`), mrec(d));
+      writeFileSync(join(tmp, "2026-11-15.md"), closedRec.replace(/2026-11-13/g, "2026-11-15"));
+      const card = (line, extra = {}) => ({ id: "c9", key: "dayclose:2026-11-12", source: "hand-filed", line, ...extra });
+      const nd1 = namedDaysOf(card("2026-11-12, 2026-11-13: the days closed themselves — x"), { upto: "2026-11-17", dir: tmp });
+      const nd2 = namedDaysOf(card("2026-11-12, 2026-11-13 +2 more: the days closed themselves — x"), { upto: "2026-11-17", dir: tmp });
+      assert("mpast — a card's NAMED days are the days its line spells plus its `+k more` counted open days after them, only those still open",
+        nd1.join() === "2026-11-12,2026-11-13" && nd2.join() === "2026-11-12,2026-11-13,2026-11-14,2026-11-16"
+        && namedDaysOf(card("2026-11-15: the day closed itself — x"), { upto: "2026-11-17", dir: tmp }).length === 0 && namedDaysOf(card("no dates"), { upto: "2026-11-17", dir: tmp }).length === 0);
+      const before = readFileSync(join(tmp, "2026-11-12.md"), "utf8");
+      const miss = appendAbsence("2026-11-12", abs, { dir: tmp }), after = readFileSync(join(tmp, "2026-11-12.md"), "utf8");
+      assert("mpast — appendAbsence adds exactly ONE line below the machine record's bytes (L9), and a closed day is never written twice",
+        miss === null && after === `${before}${abs}\n` && appendAbsence("2026-11-12", abs, { dir: tmp }) === "2026-11-12 not open — untouched" && readFileSync(join(tmp, "2026-11-12.md"), "utf8") === after);
+      const na = settleNaCard(card("2026-11-13, 2026-11-14: the days closed themselves — x", { answer: "na", answered_at: "2026-11-17T03:00:00.000Z" }), { dir: tmp });
+      const baad = settleNaCard(card("2026-11-16: the day closed itself — x", { answer: null, sleep_until: "2026-11-18" }), { dir: tmp });
+      assert("mpast — na closes every day the card named by the recorded absence (its own wording); baad closes nothing",
+        na.closed.join() === "2026-11-13,2026-11-14" && /^NO LINE OF HIS for this day — closed by his na on the day-close card c9 at 2026-11-17T03:00:00\.000Z/m.test(readFileSync(join(tmp, "2026-11-14.md"), "utf8"))
+        && baad.closed.length === 0 && parseMachineRecord(readFileSync(join(tmp, "2026-11-16.md"), "utf8")) !== null);
+    } finally { rmSync(tmp, { recursive: true, force: true }); }
+    const own = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n");
+    const m0 = own.lastIndexOf("async function main("), mn = m0 < 0 ? "" : own.slice(m0, own.indexOf("\n}\n", m0));
+    assert("mpast — main's --date refusals come BEFORE any write, each by name, and the double-click guard reads the day closed (dateStr), never the clock's today",
+      /if \(!isRealDay\(dateStr\)\) refuse\(/.test(mn) && /if \(dateStr > today\) refuse\(/.test(mn) && /if \(t == null\) refuse\(/.test(mn) && /if \(hisResultOf\(t\)\) refuse\(/.test(mn)
+      && mn.indexOf("refuse(") > 0 && mn.indexOf("refuse(") < mn.indexOf('writeAtomic(join(PM_DIR, dateStr + ".md"), md)') && /existsSync\(join\(PM_DIR, dateStr \+ "\.md"\)\) && !parseMachineRecord\(priorPm\)/.test(mn));
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -1256,8 +1397,41 @@ async function main() {
     return;
   }
   const dry = process.argv.includes("--dry");
-  const now = new Date();
-  const dateStr = localDate(now);
+  // mpast: the close's clock is the step's clock door (autocloseClock: the real clock on his tree, always; an instant only for a
+  // COPY under os.tmpdir(), the witness's) — so "today", "a future day" and "yesterday" are read off ONE clock
+  const clock = autocloseClock();
+  if (clock.door) console.error(`postmatch: clock door ${clock.door}`);
+  const now = clock.at;
+  const today = localDate(now);
+  if (mode === "named") {
+    // mpast A1 — READ-ONLY, for the full-time skill: the day his ONE line closes (the NEWEST open day the day-close card names),
+    // the OLDER named days that close with no line of his, and whether the KAL-line is asked. Writes nothing.
+    const n = await cardNamedOpen({ today });
+    if (n.error) console.log(`postmatch named · the deck could not be read (${n.error}) · his full time closes today ${today} · KAL asked`);
+    else if (!n.days.length) console.log(`postmatch named · no open day named by a day-close card${n.card ? ` (${n.card.id} ${n.how} names none still open)` : ""} · his full time closes today ${today} · KAL asked`);
+    else {
+      const newest = n.days[n.days.length - 1], older = n.days.slice(0, -1);
+      console.log(`postmatch named · card ${n.card.id} (${n.how}) · his line closes ${newest} (--date ${newest}) · ${older.length ? `older, closed with no line of his: ${older.join(", ")}` : "no older named day"} · ${kalAsked(newest, today) ? "KAL asked" : `KAL not asked (${newest} is older than yesterday; an older day's KAL is read by nobody)`}`);
+    }
+    return;
+  }
+  // mpast A1 — `--date D`: his line closes D, the newest open day the card names. REFUSED by name, nothing written: a malformed
+  // date, a future day, a day with no machine record, his own closed day (even with --force — the double-click guard is keyed
+  // on the day closed, never on today), a day already closed by a recorded decision.
+  const dateGiven = process.argv.includes("--date");
+  const dateStr = dateGiven ? String(argOf("--date") || "") : today;
+  if (dateGiven) {
+    const refuse = (why) => { console.error(`postmatch: --date ${oneLine(dateStr, 20) || "(none)"} REFUSED — ${why} · nothing written`); process.exit(1); };
+    if (!isRealDay(dateStr)) refuse("not a real YYYY-MM-DD day");
+    if (dateStr > today) refuse(`a future day (today is ${today})`);
+    const f = join(PM_DIR, dateStr + ".md");
+    let t = null;
+    try { t = existsSync(f) ? readFileSync(f, "utf8") : null; } catch (e) { refuse(`post_match/${dateStr}.md cannot be read (${(e && e.code) || "?"})`); }
+    if (t == null) refuse(`no machine record for ${dateStr} (no post_match/${dateStr}.md) — only a day the code closed is his to close by date`);
+    if (hisResultOf(t)) refuse(`${dateStr} is already closed by his own word (RESULT ${hisResultOf(t)})`);
+    if (isAbsenceClosed(t)) refuse(`${dateStr} was closed by a recorded decision (no line of his) — never re-asked`);
+    if (!parseMachineRecord(t)) refuse(`post_match/${dateStr}.md is not a machine record`);
+  }
 
   // THE --hit UPGRADE (mclose · row 873 (3)): a day the MACHINE closed (autoclose) was never closed by HIM. His full time goes
   // through, writes his RESULT + KAL on top, and keeps the machine record byte-for-byte below MACHINE CLOSE (kept, L9); a
@@ -1289,7 +1463,8 @@ async function main() {
   // audit #82: NO fabricated fallback here. If he declines, `kal` stays null and
   // renderPostMatch writes an honest "declined" marker instead of putting a canned
   // motivational sentence into the one slot that is supposed to be his own voice.
-  if (!kal) kal = (await promptIfTTY("KAL-LINE — tomorrow's pre-decided first move → ")) || null;
+  // mpast: asked only when the closed day is yesterday or today (manager reads yesterday's file; an older day's KAL nobody reads)
+  if (!kal && kalAsked(dateStr, today)) kal = (await promptIfTTY("KAL-LINE — tomorrow's pre-decided first move → ")) || null;
 
   const pulse = readJson(join(STATE_DIR, "pulse.json"));
   const drills = readJson(join(STATE_DIR, "drills.json"));
@@ -1321,6 +1496,16 @@ async function main() {
   const newSeason = updateSeason(season, hit, dateStr, { kal, signal });
   writeAtomic(SEASON, newSeason);
   writeAtomic(NOTEBOOK, updateNotebook(readJson(NOTEBOOK), signal, hit, dateStr));
+  // mpast A1 — every OLDER day the card named closes with ONE appended line recording the ABSENCE of his word (never a word of
+  // his: no RESULT, no KAL, no season row). Only on a --date close: his line went to the newest named day.
+  let olderNote = "";
+  if (dateGiven) {
+    const n = await cardNamedOpen({ today });
+    const older = n.days.filter((d) => d < dateStr), closed = [], misses = [];
+    for (const d of older) { const miss = appendAbsence(d, absenceLine(`his full time on ${dateStr}`, now.toISOString())); if (miss) misses.push(miss); else closed.push(d); }
+    if (closed.length || misses.length) olderNote = ` · ${closed.length} older named day(s) closed with no line of his${closed.length ? `: ${closed.join(", ")}` : ""}${misses.length ? ` (${oneLine(misses.join(", "), 60)})` : ""}`;
+    if (n.error) olderNote = ` · the deck could not be read (${n.error}) — no older day closed`;
+  }
   // THE LOGBOOK (8 Aug 2026): SEASON.md rides every full-time — Claude fills
   // 100%, he writes ZERO. Best-effort: a logbook render must never block the ritual.
   try { writeAtomic(SEASON_MD, renderSeasonMd({ ...gatherSeasonExtras(now), season: newSeason })); } catch { }
@@ -1394,7 +1579,7 @@ async function main() {
   const routeNote = route !== "all" ? ""
     : ledger.readable ? ` · ${pendingBalls.length} throw-in(s) routed`
     : " · throw-ins NOT routed (routing ledger unreadable — see above)";
-  console.log(`postmatch: ${hit} · Matchday ${matchday} · ${kal ? "KAL-line locked" : "no KAL-line (declined)"}${routeNote}${machineKept ? " · the machine close kept below (L9)" : ""}${notesLine} → ${join(PM_DIR, dateStr + ".md")}`);
+  console.log(`postmatch: ${hit} · Matchday ${matchday} · ${kal ? "KAL-line locked" : "no KAL-line (declined)"}${routeNote}${machineKept ? " · the machine close kept below (L9)" : ""}${olderNote}${notesLine} → ${join(PM_DIR, dateStr + ".md")}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
