@@ -110,6 +110,7 @@ import os from "node:os";
 // because that organ is the sole writer of rejirah_log.jsonl and derives nextDue,
 // fluency and the calibration gap from the row it writes itself.
 import { execFileSync } from "node:child_process";
+import { AUTH_REFUSAL_RE } from "./claudegen.mjs";   // unit mtail (row 1017 (5) item 3) — the ONE auth refusal pattern lives at its LEAF; JUDGE_AUTH_RE below IS it
 // The legacy engine, imported rather than re-implemented: when the Watcher is
 // unavailable this organ returns the SAME verdict the surface had yesterday, so a
 // dry key pool is a degradation and never a regression. gaffer_state.mjs imports
@@ -1899,8 +1900,9 @@ export function captureVerdict(stdout) {
 // know its day claims none, and daily_green's reader falls back to the row's `ts` by its own rule (row 883 (1)). Never a typed date.
 // A round over captures of two days (a study across midnight IST) gives each settled row its own capture's day. The judge's clock
 // stays on the row in its own field, `ts` (and `judged_by_code_at` for a code round).
-/** captureDay — PURE: { day, at } of the capture a settled row settles: its IST day, and its instant (`at` null when it has none). */
-function captureDay(it) {
+/** captureDay — PURE: { day, at } of the capture a settled row settles: its IST day, and its instant (`at` null when it has none).
+ *  unit mtail (mpm F1): EXPORTED — the mjday rule's ONE definition; postmatch.mjs imports it instead of carrying a pinned copy. */
+export function captureDay(it) {
   const ms = Date.parse(String((it && it.ts) || ""));
   if (Number.isFinite(ms)) return { day: istDay(new Date(ms)), at: new Date(ms).toISOString() };
   const carried = it && typeof it.day === "string" ? it.day : "";
@@ -1942,7 +1944,9 @@ function captureDay(it) {
 //   · unit mjud · mauth (row 1008 (2) F1): THIS IS NOW THE ONE HOME of the pattern. brain.mjs's AUTH_FAIL_RE is this RegExp,
 //     imported, no longer a restatement (the direction of the import is named in ci/mjud/PROOF.md: the other way closes cycles).
 const JUDGE_KILL_RE = /KILLED \((?:SIG[A-Z]+|no-signal)\) after \d+ms|ETIMEDOUT|turn timed out after \d+ ms/;
-export const JUDGE_AUTH_RE = /not logged in|please run \/login|invalid api key|authenticat|unauthorized|oauth session expired|could not be refreshed/i;
+//   · unit mtail (row 1017 (5) item 3): THE LITERAL WENT TO THE LEAF — claudegen.mjs AUTH_REFUSAL_RE, a file that imports no
+//     organ, so this file and brain.mjs both import it with no cycle. JUDGE_AUTH_RE stays exported here and IS that RegExp.
+export const JUDGE_AUTH_RE = AUTH_REFUSAL_RE;
 /** judgeRates — PURE: the per-capture ms of every judge ledger row that returned ok (job JUDGE_JOB, ok true, duration and items measured). */
 export function judgeRates(ledgerRows) {
   return (ledgerRows || []).filter((r) => r && r.job === JUDGE_JOB && r.ok === true
@@ -2912,11 +2916,10 @@ function selftest2(stub, S) {
           // LAW M live proof, 18 Aug 2026 — the `--rewind[=N]` CLI flag on `judge`. An argv
           // switch the OPERATOR types, parsed by the machine; never his words.
           "^--rewind(=\\d+)?$",
-          // mjdg (rows 963 / 999) — the judge LANE's own failure texts, by file:line at JUDGE_KILL_RE / JUDGE_AUTH_RE: the
-          // kill marks claudegen.mjs stamps (KILLED…, ETIMEDOUT, turn timed out) and the claude CLI's login refusals. A
-          // machine's error string, never his words.
+          // mjdg (rows 963 / 999) — the judge LANE's own failure text, by file:line at JUDGE_KILL_RE: the kill marks claudegen.mjs
+          // stamps (KILLED…, ETIMEDOUT, turn timed out). A machine's error string, never his words. (unit mtail: the login
+          // refusals' literal left this file for claudegen.mjs AUTH_REFUSAL_RE, so its allowance left this list — stricter.)
           "KILLED \\((?:SIG[A-Z]+|no-signal)\\) after \\d+ms|ETIMEDOUT|turn timed out after \\d+ ms",
-          "not logged in|please run \\/login|invalid api key|authenticat|unauthorized|oauth session expired|could not be refreshed",
           // mjdg — captains_call.mjs `file`'s own printed verdict ("captains_call: filed c<N>"), read to tell a minted card
           // from an idempotent no-op. An organ's line, never his.
           "filed c\\d+",
@@ -3416,9 +3419,13 @@ function selftest2(stub, S) {
 
           // ── unit mjud · mauth — ONE home for the auth refusal pattern (row 1008 (2) F1) ──
           const brainSrc = (() => { try { return readFileSync(join(HERE, "brain.mjs"), "utf8"); } catch { return ""; } })();
-          assert("mauth · the ONE pattern matches every observed refusal (the CLI's login text, the watchdog's, the judge's OAuth text) and brain.mjs takes it by import, restating none",
+          // unit mtail — the pattern's ONE home moved to the leaf (claudegen.mjs AUTH_REFUSAL_RE): this name IS it, and brain.mjs takes
+          // the same object from the same leaf (no longer through this file, so brain.mjs → gaffer_brain.mjs is no edge at all).
+          assert("mauth · the ONE pattern matches every observed refusal (the CLI's login text, the watchdog's, the judge's OAuth text); JUDGE_AUTH_RE IS claudegen.mjs AUTH_REFUSAL_RE and brain.mjs takes that same object from claudegen.mjs, restating none",
             ["Not logged in · Please run /login", "Failed to authenticate", "OAuth session expired and could not be refreshed"].every((t) => JUDGE_AUTH_RE.test(t))
-            && /import \{ JUDGE_AUTH_RE \} from "\.\/gaffer_brain\.mjs";/.test(brainSrc) && /const AUTH_FAIL_RE = JUDGE_AUTH_RE;/.test(brainSrc) && !/AUTH_FAIL_RE = \//.test(brainSrc));
+            && JUDGE_AUTH_RE === AUTH_REFUSAL_RE
+            && /import \{[^}]*\bAUTH_REFUSAL_RE\b[^}]*\} from "\.\/claudegen\.mjs";/.test(brainSrc) && /const AUTH_FAIL_RE = AUTH_REFUSAL_RE;/.test(brainSrc)
+            && !/AUTH_FAIL_RE = \//.test(brainSrc) && !/from "\.\/gaffer_brain\.mjs"/.test(brainSrc));
         }
 
         // ── L2 · THE BANK LANDS GRADED (6 Oct 2026 · forks rows 549-552 · fates 14 + 53) ──────────
@@ -3561,6 +3568,11 @@ function selftest2(stub, S) {
               assert("mjday · captureDay · the capture's instant beats a disagreeing day field; no instant → the day it carries; neither, or a day that is not a calendar day → null (a row claims no day it cannot know)",
                 captureDay({ ts: c1.ts, day: "2026-01-01" }).day === D && captureDay({ ts: c1.ts }).at === c1.ts && captureDay({ ts: "not an instant", day: D1 }).day === D1
                 && captureDay({ day: D }).at === null && captureDay({}).day === null && captureDay(null).day === null && captureDay({ day: "13 Nov 2026" }).day === null && captureDay({ day: "2026-02-30" }).day === null);
+              // unit mtail (mpm F1) — the rule is EXPORTED from here, and postmatch.mjs takes it by import: one definition in scripts/
+              const pmSrc = (() => { try { return readFileSync(join(HERE, "postmatch.mjs"), "utf8").replace(/\r\n/g, "\n"); } catch { return ""; } })();
+              assert("mtail F1 · captureDay is EXPORTED from this file (its ONE definition) and postmatch.mjs imports it, defining none of its own",
+                /^export function captureDay\(it\) \{/m.test(readFileSync(join(HERE, "gaffer_brain.mjs"), "utf8"))
+                && /import \{[^}]*\bcaptureDay\b[^}]*\} from "\.\/gaffer_brain\.mjs";/.test(pmSrc) && !/^\s*(?:export\s+)?function\s+captureDay\s*\(/m.test(pmSrc));
             }
           } finally { try { rmSync(tmpL2, { recursive: true, force: true }); } catch { /* the OS reaps its own temp dir */ } }
         }

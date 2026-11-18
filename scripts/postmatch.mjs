@@ -74,7 +74,7 @@ const BADGE = "⚪🔴";
 
 const localDate = (now) => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 import { READER_BUDGET_MS } from "./notes_compiler.mjs";   // mclose row 914 G — the cold reader's ONE budget, read from its owner
-import { JUDGE_BUDGET_MS, outstandingBank } from "./gaffer_brain.mjs";       // mclose row 914 G — the judge call's ONE budget, read from its owner · mpm F5 — the grade queue's outstanding captures, read by its owner's own reader
+import { JUDGE_BUDGET_MS, JUDGE_DISPATCH_MS, outstandingBank, captureDay } from "./gaffer_brain.mjs";       // mclose row 914 G — the judge call's ONE budget, read from its owner · mpm F5 — the grade queue's outstanding captures, read by its owner's own reader · unit mtail F-B — the judge's dispatch margin, from the same owner · mpm F1 — the mjday rule, imported from its ONE home
 import { recentRows, launchContext, addDays } from "./daykey.mjs";   // S11 — the recency gate (the form strip is a window of NOW, not the last 7 rows) · mclose — the chain's day-key (autoclose --date chain|chain-1)
 
 function writeAtomic(path, obj) {
@@ -396,6 +396,12 @@ const ANCHORS = Object.freeze(["evening", "morning"]);
 export const CHILD_TIMEOUT_MS = 300000;
 export const AUTOCLOSE_CHILDREN = Object.freeze(["archive", "compile", "card"]);
 export function autocloseBudget() { return READER_BUDGET_MS + JUDGE_BUDGET_MS + AUTOCLOSE_CHILDREN.length * CHILD_TIMEOUT_MS; }
+// unit mtail F-B (forks row 1017 (5) item 1) — THE JUDGE CHILD WAITS ITS ROUND'S BUDGET PLUS ITS DISPATCH MARGIN. A judge round
+// spends up to JUDGE_BUDGET_MS on its batches and then settles and dispatches (gaffer_brain.mjs settleBatch, each owner spawn at
+// JUDGE_DISPATCH_MS), so a child killed at JUDGE_BUDGET_MS alone could die mid-dispatch. Both read by import from the owner, never
+// typed; every reserve the close holds for the judge below is this value. The close's own budget (autocloseBudget) does NOT move:
+// the margin is taken from the time the earlier children leave, so the compile starts only when it still fits (row 914 G5).
+export const JUDGE_CHILD_MS = JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS;
 const AUTOCLOSE_DEADLINE_ENV = "ARSENAL_AUTOCLOSE_DEADLINE";   // the close's deadline — honoured ONLY for a copy under os.tmpdir()
 const MACHINE_KEPT = "MACHINE CLOSE (kept, L9)";
 // HIS RESULT: the four legal results, as daily_green.mjs:250 reads them (REST renders as LOAD-MANAGED, renderPostMatch above)
@@ -728,18 +734,12 @@ async function dayCloseCard({ day, run, dir = PM_DIR }) {
 //   its instant through the IST helper; with no instant, the day it carries; with neither, no day). Outstanding = no settled
 //   row after it (the owner's own outstandingBank). A queue-only day closes with its judge step and NO compile (no study
 //   session names a note to compile); a day with neither stays exactly as today.
-// THE RULE'S ONE HOME is gaffer_brain.mjs, which does not export it (READ-ONLY to this file): the copy below is pinned to it
-//   byte for byte by the selftest, so the two can never drift in silence (FORK: export captureDay from its owner).
-const istDayOf = (d) => new Date(d.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);
-/** captureDay — PURE, the mjday rule as gaffer_brain.mjs writes it (pinned byte for byte by the selftest, its helper named istDayOf here). */
-function captureDay(it) {
-  const ms = Date.parse(String((it && it.ts) || ""));
-  if (Number.isFinite(ms)) return { day: istDayOf(new Date(ms)), at: new Date(ms).toISOString() };
-  const carried = it && typeof it.day === "string" ? it.day : "";
-  const isDay = carried.length === 10 && Number.isFinite(Date.parse(`${carried}T00:00:00.000Z`))
-    && new Date(Date.parse(`${carried}T00:00:00.000Z`)).toISOString().slice(0, 10) === carried;
-  return { day: isDay ? carried : null, at: null };
-}
+// THE RULE'S ONE HOME is gaffer_brain.mjs: unit mtail (mpm F1) — it exports captureDay and this file IMPORTS it (top of file);
+//   the pinned copy and its own copy of the IST helper are gone. The import adds no edge (this file already imported
+//   gaffer_brain.mjs), so it closes no cycle.
+/** istDayOf — the IST day of an instant, read THROUGH the owner's mjday rule (captureDay of that instant), never a second copy
+ *  of the IST helper: the mpast card days (dayCloseCard's `upto`) and the capture days agree by construction. */
+const istDayOf = (d) => captureDay({ ts: d.toISOString() }).day;
 /** queueEvidenceOf — PURE. The outstanding captures OF `day` (each by its own IST day): their count, their ids in queue order,
  *  and the newest instant among them (a capture with only a day stands at that IST day's start, judgeOrder's own placing). */
 function queueEvidenceOf(day, outstanding) {
@@ -823,9 +823,9 @@ async function autoclose(argv) {
   const compileRun = () => {
     if (queueOnly) return queueCompileLine(day, queue);   // mpm F5: no study session names a note — nothing is spawned
     // row 914 G5: the compile starts only when the time left covers its seed, one reader budget, the judge and the card after it
-    const f0 = fits(CHILD_TIMEOUT_MS + READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS);
+    const f0 = fits(CHILD_TIMEOUT_MS + READER_BUDGET_MS + JUDGE_CHILD_MS + CHILD_TIMEOUT_MS);
     if (!f0.ok) return `COMPILE: UNSETTLED · ${f0.line} (the compile's seed, one reader budget, the judge and the card)`;
-    const s0 = spawnMs(f0, READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS);
+    const s0 = spawnMs(f0, READER_BUDGET_MS + JUDGE_CHILD_MS + CHILD_TIMEOUT_MS);
     if (!s0.ok) return `COMPILE: UNSETTLED · ${s0.line} (the compile's seed)`;
     const seed = run("notes_compiler.mjs", ["compile", "--date", noteDay, ...ids.flatMap((s) => ["--session", s])], { timeout: s0.ms });
     voice(seed);
@@ -833,9 +833,9 @@ async function autoclose(argv) {
     if (seed.status === 0) {
       // row 914 G6: fulltime carries the GATE's deadline — the close's, minus the judge's budget and the card's — so the notes never
       // eat the judge's slot; handed as a real-clock instant (the time left, translated), so a child on the real clock agrees
-      const f1 = fits(READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS);
+      const f1 = fits(READER_BUDGET_MS + JUDGE_CHILD_MS + CHILD_TIMEOUT_MS);
       if (!f1.ok) return `COMPILE: UNSETTLED · fulltime ${f1.line} (one reader budget, the judge and the card)`;
-      const s1 = spawnMs(f1, JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS);
+      const s1 = spawnMs(f1, JUDGE_CHILD_MS + CHILD_TIMEOUT_MS);
       if (!s1.ok) return `COMPILE: UNSETTLED · fulltime ${s1.line}`;
       const gateLeft = s1.ms;
       full = run("notes_compiler.mjs", ["fulltime", "--date", noteDay, "--no-archive-run", "--deadline", new Date(Date.now() + gateLeft).toISOString()], { timeout: gateLeft });
@@ -845,7 +845,7 @@ async function autoclose(argv) {
   };
   // the judge round through its own CODE door — judgeDue's rule (the PACER's idle rule) decides; nothing banked = not due
   const judgeRun = () => {
-    const f = fits(JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS);   // row 914 G5: the judge's own budget plus the card's after it
+    const f = fits(JUDGE_CHILD_MS + CHILD_TIMEOUT_MS);   // row 914 G5: the judge's own budget plus the card's after it · mtail F-B: the judge's = its budget + its dispatch margin
     if (!f.ok) return `JUDGE: UNSETTLED · ${f.line} (the judge and the card)`;
     const s = spawnMs(f, CHILD_TIMEOUT_MS);
     if (!s.ok) return `JUDGE: UNSETTLED · ${s.line} (the judge)`;
@@ -1154,13 +1154,25 @@ async function selftest() {
     {
       const dlF = autocloseDeadline({ at: atD, env: {}, uptimeS: 0.0829779 });
       const tm = closeTimer({ at: atD, dlMs: dlF.ms, realNow: () => 0 });
-      const vals = [[CHILD_TIMEOUT_MS + READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS, READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS],
-        [READER_BUDGET_MS + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS, JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS], [JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS, CHILD_TIMEOUT_MS]]
+      const vals = [[CHILD_TIMEOUT_MS + READER_BUDGET_MS + JUDGE_CHILD_MS + CHILD_TIMEOUT_MS, READER_BUDGET_MS + JUDGE_CHILD_MS + CHILD_TIMEOUT_MS],
+        [READER_BUDGET_MS + JUDGE_CHILD_MS + CHILD_TIMEOUT_MS, JUDGE_CHILD_MS + CHILD_TIMEOUT_MS], [JUDGE_CHILD_MS + CHILD_TIMEOUT_MS, CHILD_TIMEOUT_MS]]
         .map(([need, reserve]) => { const f = tm.fits(need); return f.ok ? tm.spawnMs(f, reserve) : { ok: false, ms: null }; });
       assert("AUTOCLOSE (row 932) — THE SPAWN VALUE: under a fractional uptime the compile's seed, fulltime and the judge each get a safe positive whole number of ms; a fraction, zero or a negative starts nothing and says so; the one clock reads the step's instant",
         vals.every((v) => v.ok && Number.isSafeInteger(v.ms) && v.ms > 0)
         && tm.spawnMs({ left: 1000.5 }, 0).ok === false && tm.spawnMs({ left: 0 }, 0).ok === false && tm.spawnMs({ left: 5 }, 10).ok === false
         && /^not started · /.test(tm.spawnMs({ left: 1000.5 }, 0).line) && tm.stepNow() === atD.getTime());
+    }
+    // unit mtail F-B — the judge child's wait is its budget PLUS its dispatch margin (both imported), the close's budget unmoved
+    {
+      const ownB = readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\r\n/g, "\n"), a0 = ownB.indexOf("const judgeRun = () => {"), jr = a0 < 0 ? "" : ownB.slice(a0, ownB.indexOf("\n  };\n", a0));
+      const tmJ = closeTimer({ at: atD, dlMs: atD.getTime() + JUDGE_CHILD_MS + CHILD_TIMEOUT_MS, realNow: () => 0 });
+      const fJ = tmJ.fits(JUDGE_CHILD_MS + CHILD_TIMEOUT_MS), sJ = fJ.ok ? tmJ.spawnMs(fJ, CHILD_TIMEOUT_MS) : { ok: false, ms: 0 };
+      const short = closeTimer({ at: atD, dlMs: atD.getTime() + JUDGE_BUDGET_MS + CHILD_TIMEOUT_MS, realNow: () => 0 }).fits(JUDGE_CHILD_MS + CHILD_TIMEOUT_MS);
+      assert("mtail F-B — the judge-due child waits AT LEAST JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS (both from gaffer_brain.mjs, none typed); a close with only the old budget left does not start it (UNSETTLED, retried); every judge reserve of the close is that value; the close's own budget does not move",
+        JUDGE_CHILD_MS === JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS && JUDGE_DISPATCH_MS > 0 && sJ.ok && sJ.ms >= JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS
+        && short.ok === false && /fits\(JUDGE_CHILD_MS \+ CHILD_TIMEOUT_MS\)/.test(jr) && /run\("gaffer_brain\.mjs", \["judge-due"[^\n]*timeout: s\.ms/.test(jr)
+        && !/JUDGE_BUDGET_MS/.test(ownB.slice(ownB.indexOf("const compileRun = () => {"), ownB.indexOf("const shortJudge = ")))
+        && autocloseBudget() === READER_BUDGET_MS + JUDGE_BUDGET_MS + AUTOCLOSE_CHILDREN.length * CHILD_TIMEOUT_MS);
     }
     assert("AUTOCLOSE (row 914 G6) — notes the deadline did not reach make the compile line UNSETTLED by count, never DONE",
       /^COMPILE: UNSETTLED · 1 note\(s\) not reached by the deadline/.test(compileLineOf({ status: 0, stdout: "notes_compiler: x\n", sessions: 1 }, { status: 1, stdout: "notes_compiler: 2026-11-13 IST · compiled 0 (0 superseding) · unchanged 2 · refused 0 · gate 1 pass / 0 fail / 0 absent (named) / 0 not run (reader stub) · names guard OFF · 1 note(s) not reached by the deadline\n" })));
@@ -1249,11 +1261,15 @@ async function selftest() {
     const fnOf = (text, head) => { const t = String(text).replace(/\r\n/g, "\n"), i = t.indexOf(head); return i < 0 ? "" : t.slice(i, t.indexOf("\n}\n", i) + 2); };
     const own = readFileSync(fileURLToPath(import.meta.url), "utf8");
     const gb = readFileSync(join(__dirname, "gaffer_brain.mjs"), "utf8");
-    const mine = fnOf(own, "function captureDay(it) {"), theirs = fnOf(gb, "function captureDay(it) {");
-    assert("mpm F5 — THE mjday RULE HAS ONE HOME: this copy of captureDay is gaffer_brain.mjs's byte for byte (its IST helper named istDayOf here, defined the same)",
-      mine.length > 0 && theirs.length > 0 && mine.replace(/istDayOf\(/g, "istDay(") === theirs
-      && gb.replace(/\r\n/g, "\n").includes("const istDay = (d = new Date()) => new Date(d.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);")
-      && own.replace(/\r\n/g, "\n").includes("const istDayOf = (d) => new Date(d.getTime() + 5.5 * 3600000).toISOString().slice(0, 10);"));
+    const gbMod = await import("./gaffer_brain.mjs");
+    const codeOf = (t) => String(t).replace(/\r\n/g, "\n").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    // unit mtail (mpm F1) — the pin is replaced: the function this file uses IS the owner's (one object), it has no definition
+    // here, and no copy of the IST helper is left in this file's code.
+    assert("mpm F5 · mtail F1 — THE mjday RULE HAS ONE HOME: the captureDay this file uses IS gaffer_brain.mjs's exported one (imported, the same function); this file defines none and carries no copy of the IST helper",
+      typeof gbMod.captureDay === "function" && captureDay === gbMod.captureDay && fnOf(gb, "export function captureDay(it) {").length > 0
+      && !/^\s*(?:export\s+)?(?:async\s+)?function\s+captureDay\s*\(/m.test(codeOf(own)) && !/5\.5 \* 3600000\)\.toISOString\(\)\.slice\(0, 10\)/.test(codeOf(own))
+      && /import \{[^}]*\bcaptureDay\b[^}]*\} from "\.\/gaffer_brain\.mjs";/.test(own)
+      && istDayOf(new Date("2026-11-14T20:00:00.000Z")) === "2026-11-15" && istDayOf(new Date("2026-11-14T18:00:00.000Z")) === "2026-11-14");
     const D = "2026-11-14";
     const rows = [
       { kind: "capture", id: "g-a", ts: "2026-11-13T20:00:00.000Z" },   // 01:30 IST on D — D's, though its UTC date is D-1

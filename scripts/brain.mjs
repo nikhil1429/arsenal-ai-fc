@@ -77,7 +77,7 @@ import { allowedNumbers as allowedNumbersShared, noNewNumbers as noNewNumbersSha
 // rule was already fitted to this very ledger's evidence in claudegen.mjs — one
 // definition, imported. claudegen pulls in nothing but node builtins, so this
 // adds no cycle and no side effect at load.
-import { classifyLimit } from "./claudegen.mjs";
+import { classifyLimit, AUTH_REFUSAL_RE } from "./claudegen.mjs";   // unit mtail — AUTH_REFUSAL_RE: the ONE auth refusal pattern, at its leaf (AUTH_FAIL_RE below)
 // THE GATE (ORGANISM_OVERHAUL 18 Aug 2026 §5, LAW L5). One pure verdict function,
 // shared with nightshift.mjs and dmn.mjs, so "asleep" means one thing everywhere.
 // gate.mjs writes nothing; the journal, the consumption lane and the card are OURS.
@@ -88,7 +88,6 @@ import { digestInput as intentDigestInput, validateDigest as intentValidateDiges
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 import { keep, KEEP_EXIT } from "./keeper.mjs";   // 15 Oct 2026 (forks rows 746 (2) / 753 (2)): `daemon` is the KEEPER over `daemon-worker`; a resident never exits on its own
 import { jobInputClass, inputCadenceDefaultH } from "./registry.mjs";   // rung S13 (29 Aug 2026): THE INPUT GUARD reads its declarations from the registry — the six code-computed lanes’ input classes and the DECLARED cadence seed. registry.mjs imports nothing of ours, so there is no cycle (gate.mjs already reads it the same way).
-import { JUDGE_AUTH_RE } from "./gaffer_brain.mjs";   // unit mjud · mauth — the ONE auth refusal pattern (AUTH_FAIL_RE below). gaffer_brain.mjs imports nothing that reaches this file, so there is no cycle (depcruise 7 → 7, measured).
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -966,7 +965,10 @@ function liveSignal(now, dir = STATE_DIR) {
 // WHY THE IMPORT POINTS THIS WAY (a FORK, ci/mjud/PROOF.md): gaffer_brain.mjs importing brain.mjs — static or dynamic —
 // closes three new import cycles through forge_session/sitting (depcruise no-circular 7 → 10, lawpack's ratchet RED);
 // this direction closes none (7 → 7). The widening is the old words plus the observed OAuth text, nothing guessed.
-const AUTH_FAIL_RE = JUDGE_AUTH_RE;
+// unit mtail (forks row 1017 (5) item 3) — THE LITERAL WENT TO THE LEAF: it lives at claudegen.mjs AUTH_REFUSAL_RE (a file that
+// imports no organ, and that this file already imported statically), so this file no longer imports gaffer_brain.mjs at all.
+// AUTH_FAIL_RE stays exported here, and gaffer_brain.mjs JUDGE_AUTH_RE stays exported there: both ARE that one RegExp object.
+const AUTH_FAIL_RE = AUTH_REFUSAL_RE;
 export { AUTH_FAIL_RE };
 // claudegen's ledger projection writes error_envelope ONLY when it says more
 // than `error` does (a null means "the envelope IS the error field"), so every
@@ -5563,6 +5565,11 @@ async function selftest() {
       failureStreak(deadRows.concat([{ engine: "claude", ok: true, ts: now(22, 5).toISOString() }])).dead === false);
     assert("DEAD BRAIN — the fuel gauge carries the ok-rate, so the doctor can see a dead brain",
       tokenVitals(cfg, deadRows, qEmpty, now(23, 0)).health.dead === true);
+    // unit mtail — the auth scan reads the ONE pattern at its leaf (claudegen.mjs), the same RegExp object, and the judge
+    // lane's OAuth refusal names the login too (row 963): a tail of those is a dead brain that says "login", not "mystery".
+    assert("mtail · AUTH_FAIL_RE IS claudegen.mjs AUTH_REFUSAL_RE (one object, no restatement) and an OAuth-expired tail reads as not logged in",
+      AUTH_FAIL_RE === AUTH_REFUSAL_RE
+      && failureStreak(deadRows.map((r) => ({ ...r, error: "OAuth session expired and could not be refreshed" }))).not_logged_in === true);
     // ── THE CAUSE IS READ, NOT ASKED FOR (wiring audit, 10 Aug 2026) ─────────
     // claudegen produced error_envelope on every failure from 4 Aug and 0 of the
     // organism's 4,558 ledger rows ever carried it, because no caller wrote it
