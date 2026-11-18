@@ -32,6 +32,9 @@ description: The session-agnostic front door to the day's learning — reads the
 1. `node scripts/learn_digest.mjs` — the screen. Read it whole; it is ≤ 16 KB by contract (selftest).
 2. `node scripts/sitting.mjs open --surface code --no-spawn --task "<what the digest says>"` — the day's
    container. Without it nothing lands at full-time (his 7 Aug captain's-call law).
+2b. **Open his newest deck in the Browser pane, UNASKED** (his word, 15 Nov: "merko thodi yaad rahega har bari kab kya
+   bolna hain"): `preview_start { name: "revision-decks" }`, then navigate to the URL on the digest's
+   "▶ OPEN AT BOOT, UNASKED" line. His annotation tools live there. He never asks for it; you never ask him to.
 3. If the digest shows an OPEN forge session, the open CONSUMES the pointer first: a STALE session → `node scripts/forge_session.mjs resume` (its first line is the consumed question); a LIVE one →
    `node scripts/resume_pointer.mjs consume --concept <concept> --by learn`. Your first message to him is THAT consumed question, word for word — no recap, no summary of yesterday, no "you already know this" (HOW_HE_LEARNS #10). Then teach.
    If nothing is consumed (the line says why), open with ONE fresh micro-question where he stopped.
@@ -71,6 +74,29 @@ description: The session-agnostic front door to the day's learning — reads the
   (5) Each idea's beats: dukaan → asli naam → ⭐ technical line → khud karo, where khud karo is a TYPED number box
   with instant ✅ / ❌ (a reveal button for concept answers); never tap-to-answer tiles.
   (6) Lexend, max-width 34em, no tables, no autoplay, theme tokens for light + dark.
+  (7) THE PICTURE ALWAYS SHOWS THE NUMBERS THE CURRENT TEXT USES (15 Nov, his catch: "why is sale 0 x 1.5?? when
+  10 units were sold"). A khud-karo beat loads the question's own inputs into the picture and hides the answer
+  ("?"); it never leaves an earlier beat's numbers on screen.
+  (8) SAVE IT WHERE HIS SCREEN IS SAFE (15 Nov, his word, registry ruling `rul-mwh04mxn0a`: "i am on video calls
+  mostly when studying so i do not want my repo name to be seen"). Write every deck to
+  `C:\Users\nikhi\Downloads\AI\<topic subfolder>\` (existing: Tokenization · Embedding · Inference · Neural Net;
+  create the subfolder if the topic has none) and send the file FROM there. Never send a file from the repo path.
+  (9) ENHANCE, NEVER REGRESS (15 Nov, his word: "i really want every session to follow the same or enhance it if
+  possible for my adhd and autistic brain"). Every deck starts from the template; any improvement a session makes
+  to the engine goes back into the template the same day, so the next axis and the next topic inherit it. The
+  learn digest prints this law at every boot (selftest clause), so /learn and /forge sessions both see it.
+  (10) OPEN IT IN THE BROWSER PANE, WITH HIS ANNOTATION TOOLS (15 Nov, his word: "make sure we get these annotation
+  tools in every revision files from now onwards for every topic and any session ... these tools are not coming in
+  the artifact"). The pen / box / text / pointer tools exist only in the Claude desktop Browser pane, not in the
+  Artifact viewer, and a file:// path outside the project opens there as a dead snapshot (no scripts). So every deck
+  is opened for him with `preview_start { name: "revision-decks" }` (`.claude/deck_server.mjs`, read-only, 127.0.0.1,
+  serves `C:\Users\nikhi\Downloads\AI`) and then navigated to `http://localhost:4791/<topic subfolder>/<file>.html`.
+  The address bar then shows no repo name. Never open a deck from the repo path. The Artifact link stays as the backup.
+  UNASKED, ALWAYS: at every boot (step 2b, the digest names the newest deck) and the same turn any deck is published.
+  Never tell him to say "deck kholo": anything he has to remember to say is a design failure (his law).
+  ANY OTHER DECK, BY NAME: when he names one in plain words ("embeddings axis c ka deck"), open it the same way, in
+  the Browser pane at its `http://localhost:4791/<topic>/<file>` URL. The decks home `http://localhost:4791/` lists
+  every topic folder, so he can also click through them himself inside the pane, tools included.
   Template: `learning-layer/AXIS_RECAP_DECK_TEMPLATE.html` (neuralnet axis a, 14 Nov). Copy its ENGINE, replace its
   `I` array of ideas. A long scroll page with pictures far from their text is the failure this line exists to stop.
 - **COVERAGE SWEEP BEFORE ANY RECAP (14 Nov 2026, his three catches on neuralnet axis a in one day).** Before
@@ -78,6 +104,34 @@ description: The session-agnostic front door to the day's learning — reads the
   input numbers ARE (in the LLM case too), every "do chhoti cheezein baad mein" that was deferred, and the industry
   name of every everyday word used (galti → error / loss, kitna ghumana → learning rate, shuru ka andaaza →
   initialization). He must never be the one who finds the gap (SAMJHAO_MERGED §3 C1).
+- **FIRST USE, NOT JUST SOMEWHERE (15 Nov 2026, his 12 annotations on the neuralnet axis a deck; acts `amwi45hl1i3`
+  · `amwi45ibx9f` · `amwi45izhcq`).** The coverage sweep above was obeyed and still failed him: learning rate,
+  activation and ReLU WERE opened in the deck, but on later cards than their first use. Verbatim: "teaching me new
+  words here without opening them or telling me where when i will learn it, my AuDHD brain got confused." So, in chat
+  AND in every deck, every topic, every axis:
+  (a) a term, acronym or pet phrase is opened in one line AT ITS FIRST USE, or that line says exactly where and when
+  it opens (another card by name, or an axis by letter AND name). Pet phrases count: "sabse chhoti machine" needed
+  "one input, one weight, one output" the moment it appeared.
+  (b) an acronym gets its full form and what each word means (ReLU = Rectified Linear Unit: rectified · linear · unit).
+  (c) every number says who sets it: learned in training (a parameter), chosen by a human before training (a
+  hyperparameter: learning rate 0.001, layer count, neuron count), or read from the data. His "who sets these
+  numbers?" and "how is 0.001 coming?" were both this one gap.
+  (d) every answer repeats its question: he never has to remember it ("i have forgotten the question now").
+  (e) a doubt he raises whose answer lives in a later axis gets the answer's SHAPE now plus "axis x (name) mein".
+  (f) a cross-topic link he asks for is said at BOTH ends. Open now: when inference & sampling is re-taught, it
+  opens by joining neuralnet's last layer → scores → probabilities → sampling, in one picture.
+  The template engine carries two beat fields for this: `ahead` (the 📍 line on the first-use beat) and `recall`
+  (the "Sawaal tha:" box on every answer beat). The learn digest prints this law at every boot (selftest clause).
+  CODE PATH: `node scripts/deck_lint.mjs <deck.html>` checks (a) leakage of a term onto an earlier card, (b) acronym
+  full forms and (d) recall on answer beats; RED = fix before he sees the deck. (c) who-sets-each-number and (f)
+  both ends of a link are judgement, not yet code: escalated to the architect 15 Nov for a better design.
+- **BIG PICTURE FIRST (16 Nov 2026, his word at neuralnet axis b).** Verbatim: "before we go ahead i want to know why
+  are we studying neural net and what is the importance of it in my role and will studying this entire topic right now
+  will help me in further topics as well? ... my AuDHD brain needs to know and see the entire picture first before we
+  start studying, ideally this should have been told/taught by the previous session without my saying." So every topic
+  opens UNASKED, before axis a, with one picture + text: why the topic exists · its weight in his role (AI Product
+  Engineer, any domain) and in interviews · which later topics it feeds, by name · the nine axes by name, each with what
+  it will answer for THIS topic. Every axis open gets the one-line version. He must never be the one who asks for the map.
 - **NAME EVERY AXIS, EVERY TIME (9 Oct 2026, his word: "i do not remember the axis names").** Never a bare
   letter: always the letter AND its name, in chat, pointers, file names and pages — "axis c (mechanism)".
   The nine, from `dressing-room/state/concepts.json` `.axes`: a kya + analogy · b kyun / first principles ·

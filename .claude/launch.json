@@ -12,6 +12,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["scripts/dugout.mjs", "--lan"],
       "port": 4114
+    },
+    {
+      "name": "revision-decks",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/deck_server.mjs"],
+      "port": 4791
     }
   ]
 }

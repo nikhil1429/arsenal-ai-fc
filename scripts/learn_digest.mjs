@@ -41,6 +41,29 @@ const ist = (iso) => { const d = new Date(iso); if (isNaN(d)) return "?"; return
 const hoursSince = (iso) => { const t = Date.parse(iso); return isNaN(t) ? null : (Date.now() - t) / 3600000; };
 const one = (s, n) => String(s ?? "").replace(/\s+/g, " ").trim().slice(0, n);
 
+// his revision decks (his word, 15 Nov 2026): saved under Downloads\AI\<topic>, served read-only by
+// .claude/deck_server.mjs on 127.0.0.1:4791 so the Browser pane opens them live, with his annotation tools.
+// "merko thodi yaad rahega har bari kab kya bolna hain" — so the boot finds the newest deck itself and says open it.
+const DECK_ROOT = "C:/Users/nikhi/Downloads/AI";
+const DECK_PORT = 4791;
+function newestDeck(concept) {
+  try {
+    const hits = [];
+    for (const d of fs.readdirSync(DECK_ROOT, { withFileTypes: true })) {
+      if (!d.isDirectory()) continue;
+      for (const f of fs.readdirSync(path.join(DECK_ROOT, d.name))) {
+        if (!/\.html?$/i.test(f)) continue;
+        if (concept && !f.toLowerCase().startsWith(concept.toLowerCase() + "__")) continue;
+        hits.push({ dir: d.name, file: f, mtime: fs.statSync(path.join(DECK_ROOT, d.name, f)).mtimeMs });
+      }
+    }
+    if (!hits.length) return null;
+    hits.sort((a, b) => b.mtime - a.mtime);
+    const h = hits[0];
+    return { dir: h.dir, file: h.file, url: `http://localhost:${DECK_PORT}/${encodeURIComponent(h.dir)}/${encodeURIComponent(h.file)}` };
+  } catch { return null; }   // no Downloads\AI on this machine is a state, not an error
+}
+
 // ---- gather ---------------------------------------------------------------------------------------------------
 export function gather() {
   const fsx = readJson(path.join(STATE, "forge_session.json"));
@@ -79,7 +102,7 @@ export function gather() {
     capsule: capsule ? { id: capsule.id, status: capsule.status, doubts: doubtsAll.length, traps: (capsule.traps || []).length,
       line: line ? { title: line.title, strike: line.strike } : null, traps_list: capsule.traps || [],
       calibration: capsule.calibration || "", doubtsHere, doubtMapFound: !!doubtMap } : null,
-    watch };
+    watch, deck: newestDeck(concept) };
 }
 
 // ---- render ---------------------------------------------------------------------------------------------------
@@ -146,6 +169,14 @@ export function render(g) {
   // forks row 276 (1)(b), his words #22 / #23 (24 Sep 2026)
   push("  PICTURE FIRST (his word, 24 Sep: \"pictures first then text, combine them both\"): the Board at this open · at EVERY new idea ONE picture first (mcp__visualize__show_widget, then `moment widget_gate`), then its text, both in the same message · the step-4 concept widget after axis g stays.");
   push("  REAL TERMS (his word, 24 Sep): the AI industry's real name every time, a Hinglish gloss beside it, never a pet word in its place.");
+  // his word, 16 Nov 2026 (neuralnet axis b): "my AuDHD brain needs to know and see the entire picture first before we start studying"
+  push("  BIG PICTURE FIRST (his word, 16 Nov: \"ideally this should have been told/taught by the previous session without my saying\"): every topic opens, UNASKED, before axis a, with ONE picture + text: why this topic exists · its weight in his role (AI Product Engineer, any domain) and in interviews · which later topics it feeds, by name · the nine axes by name with what each will answer for THIS topic. Every axis open gets the one-line version: what this axis answers and how it serves the topic.");
+  // his 12 annotations on the neuralnet axis a deck, 15 Nov 2026 (acts amwi45hl1i3 · amwi45ibx9f · amwi45izhcq)
+  push("  FIRST USE (his word, 15 Nov: \"teaching me new words here without opening them or telling me where when i will learn it, my AuDHD brain got confused\"): in chat AND in every deck, every term, acronym and pet phrase is opened in one line AT ITS FIRST USE, or that same line says exactly where and when it opens (axis by name) · an acronym gets its full form and what each word means (ReLU = Rectified Linear Unit) · every number says who sets it: learned in training, chosen by a human (hyperparameter), or from the data · every answer repeats its question, he never has to remember it · a cross-topic link he asks for is said at BOTH ends (open links he ordered: inference & sampling opens by joining neuralnet's last layer → probabilities → sampling, weights ≠ scores · hallucinations opens by joining neuralnet axis b doubt 1: an unseen question still runs the same fixed weights and still gets scores, no built-in \"I don't know\"). In decks: the template's `ahead` field (📍 line) on the first-use beat, `recall` (\"Sawaal tha:\") on every answer beat. DECK LINT before opening or sending any deck: node scripts/deck_lint.mjs <file> — RED = fix first, never show him a red deck.");
+  push("  AXIS CLOSE RECAP (his word, 14-15 Nov): a DECK, never a scroll page. One idea per screen; the picture stays fixed and lights the exact part each text step names; the picture always shows the numbers the current text uses (khud-karo loads the question's inputs, answer hidden); typed khud-karo boxes. Coverage sweep FIRST (every term the axis used gets opened). Build from learning-layer/AXIS_RECAP_DECK_TEMPLATE.html: copy the engine, replace the ideas, ENHANCE NEVER REGRESS (an improvement goes back into the template). Save to C:\\Users\\nikhi\\Downloads\\AI\\<topic subfolder>\\ and send from there, never from the repo path (his video calls). OPEN it for him in the Browser pane (his annotation tools live only there): preview_start name revision-decks, then http://localhost:4791/<topic subfolder>/<file>.html; the Artifact link is only the backup. Full law: .claude/skills/learn/SKILL.md 'THE RECAP IS A DECK'.");
+  push("  ▶ OPEN AT BOOT, UNASKED (his word, 15 Nov: \"merko thodi yaad rahega har bari kab kya bolna hain\"): preview_start name revision-decks, then navigate to "
+    + (g.deck ? g.deck.url + " (newest" + (g.concept ? " " + g.concept : "") + " deck)" : `http://localhost:${DECK_PORT}/ (the decks home; no deck for this concept yet)`)
+    + ". Do it before the first teaching message, and again the same turn any deck is published. He never has to ask for it.");
   if (g.watch && g.watch.length) push("  WATCH-LIST (his repeat hangovers): " + g.watch.map((w) => one(typeof w === "string" ? w : (w.concept || w.name || JSON.stringify(w)), 40)).join(" · "));
   push("");
   push("WHERE THE FULL WORDING LIVES (open ONLY the section a step needs — never the whole file):");
@@ -167,6 +198,11 @@ function selftest() {
     ["the first message is ruled to be the pointer question, no recap", !g.open || /WORD FOR WORD — no recap/.test(out), ""],
     ["the render names where the full wording lives, never the whole file", /never the whole file/.test(out), ""],
     ["his 24 Sep words ride the render: the Board at open, a picture FIRST at every new idea, the real industry term (forks row 276)", /PICTURE FIRST/.test(out) && /Board at this open/.test(out) && /EVERY new idea ONE picture first/.test(out) && /REAL TERMS/.test(out), ""],
+    ["his 14-15 Nov recap law rides the render: the deck, its template, the Downloads\\AI home", /AXIS CLOSE RECAP/.test(out) && /AXIS_RECAP_DECK_TEMPLATE/.test(out) && /ENHANCE NEVER REGRESS/.test(out) && /Downloads\\AI/.test(out) && /revision-decks/.test(out) && /localhost:4791/.test(out), ""],
+    ["his 15 Nov first-use law rides the render: term opened at first use or where+when, acronym full form, who sets each number, question on every answer, both ends of a cross-topic link", /FIRST USE/.test(out) && /AT ITS FIRST USE/.test(out) && /full form/.test(out) && /who sets it/.test(out) && /`recall`/.test(out) && /`ahead`/.test(out) && /BOTH ends/.test(out), ""],
+    ["his 16 Nov big-picture law rides the render: topic open unasked with why, role weight, the topics it feeds and the nine axes", /BIG PICTURE FIRST/.test(out) && /UNASKED, before axis a/.test(out) && /which later topics it feeds/.test(out) && /nine axes by name/.test(out), ""],
+    ["the deck lint rides the render and exists on disk (his 15 Nov law as a code path)", /DECK LINT before opening/.test(out) && /deck_lint\.mjs <file>/.test(out) && fs.existsSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "deck_lint.mjs")), ""],
+    ["the boot opens his newest deck in the Browser pane, unasked (his word, 15 Nov)", /OPEN AT BOOT, UNASKED/.test(out) && /navigate to http:\/\/localhost:4791\//.test(out), ""],
     ["the digest writes nothing (no write call in its own source)", !/\b(writeFileSync|appendFileSync|writeFile)\s*\(/.test(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/\/\/.*$/gm, "").replace(/"the digest writes nothing[^"]*"/, "")), ""],
     ["--json round-trips the gathered facts", (() => { try { return JSON.parse(JSON.stringify(g)).open === g.open; } catch { return false; } })(), ""],
   ];

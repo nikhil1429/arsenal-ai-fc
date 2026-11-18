@@ -79,3 +79,14 @@ The per-axis loop (A10, nine steps every axis) → `REFERENCE.md` "THE PER-AXIS 
   `teaching_contract.mjs`. Never hand-edit a state file. Capsules are IMMUTABLE (`mirror.mjs` sole writer).
 - **Desktop trap (22 Sep):** text above a tool call is replaced on his screen — tools first, the message last.
 - **His rulings → receipts in the same turn** (`acts.mjs do rule`); **your drift → self-reported** (`teaching_contract.mjs flag`).
+- **Axis recap = THE DECK (his word, 14-15 Nov 2026):** every revision page in every topic follows `.claude/skills/learn/SKILL.md`
+  "THE RECAP IS A DECK" (items 1-9): coverage sweep first · one idea per screen, picture fixed and lit in sync · built
+  from `learning-layer/AXIS_RECAP_DECK_TEMPLATE.html`, enhance never regress · saved to `C:\Users\nikhi\Downloads\AI\<topic>\`
+  and sent from there · OPENED for him in the Browser pane via `preview_start { name: "revision-decks" }` →
+  `http://localhost:4791/<topic>/<file>.html`, where his annotation tools live (item 10). UNASKED: at boot, right
+  after the digest, open the URL on its "▶ OPEN AT BOOT, UNASKED" line; and the same turn any deck is published.
+- **First use, in chat and in decks (his word, 15 Nov 2026):** a term, acronym or pet phrase is opened AT ITS FIRST
+  USE or the same line says where and when it opens · acronyms with full form · every number says who sets it
+  (training / a human / the data) · every answer repeats its question · a cross-topic link he asks for is said at
+  both ends. Full law: `.claude/skills/learn/SKILL.md` "FIRST USE, NOT JUST SOMEWHERE".
+  A forge-only session follows it exactly as a /learn session does.

@@ -117,12 +117,25 @@ svg.d .hlg rect{stroke:var(--ui);stroke-width:3}
 .blank{display:inline-block;min-width:4.2em;border-bottom:1.5px solid var(--muted)}
 .bar{height:10px;border-radius:5px;background:var(--card);border:1px solid var(--line);overflow:hidden;width:100%}
 .bar>div{height:100%;background:var(--er)}
-@media (prefers-reduced-motion:reduce){.c,.opt,svg.d .g{transition:none}}
+.qhide [data-ans]>span{display:none}
+.qhide [data-ans]::after{content:"? (tum nikaalo)"}
+.nbox{border:2px dashed var(--ui);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .25s}
+.nbox-l{font-size:12.5px;color:var(--ui);font-weight:500;text-align:center}
+/* recall = the question repeated on every answer card (his word, 15 Nov: "i have forgotten the question now").
+   ahead = where a term opens, on the beat where it is first used (his word, 15 Nov: never a new word without
+   opening it or saying where and when it opens). Both are beat fields read by the engine. */
+.recall{background:var(--soft);border-left:3px solid var(--ui);border-radius:8px;padding:8px 12px;font-size:14px}
+.recall b{font-weight:500;color:var(--ui)}
+.ahead{font-size:13.5px;color:var(--ui);background:var(--ui-bg);border-radius:8px;padding:7px 11px}
+.dq{font-size:12px;padding:4px 9px}
+svg.d .cv{stroke:var(--ou);stroke-width:2.4;fill:none}
+svg.d .ln{stroke:var(--kn);stroke-width:2;stroke-dasharray:6 4;fill:none}
+@media (prefers-reduced-motion:reduce){.c,.opt,svg.d .g,.nbox{transition:none}}
 </style>
 
 <div class="app">
   <div class="top">
-    <p class="title">neuralnet · axis a (kya + analogy) · revision deck</p>
+    <p class="title">neuralnet · axis a (kya + analogy) · revision deck · tumhare 12 doubts ke saath</p>
     <div class="mini" aria-label="Nau axes">
       <span class="ax on">a · kya + analogy</span><span class="ax">b · kyun</span><span class="ax">c · mechanism</span><span class="ax">d · math + range</span><span class="ax">e · limits</span><span class="ax">f · tradeoffs</span><span class="ax">g · FinOps</span><span class="ax">h · scale / cost</span><span class="ax">i · 3 ways</span>
     </div>
@@ -159,6 +172,7 @@ var LINES=[
  "A neuron takes several inputs, multiplies each by its own weight, and adds the results into a weighted sum.",
  "A bias is a learned number added to the weighted sum, so a neuron can output something sensible even when all its inputs are zero.",
  "An activation function is a simple non-linear rule applied to a neuron's weighted sum plus bias; ReLU outputs zero for negatives and passes positives through.",
+ "Without a non-linear activation, any stack of layers collapses into a single linear function, so the network could only draw straight lines; activations let it bend to fit real patterns.",
  "Neurons are arranged in layers; each layer takes the previous layer's outputs as its inputs. \"Deep\" learning just means many hidden layers.",
  "Training means the network predicts, measures how wrong it was with a loss function, and nudges every weight and bias to reduce the loss; this is gradient descent.",
  "The learning rate sets how big each update is; too small and training crawls, too large and the weights overshoot or diverge.",
@@ -168,7 +182,7 @@ var LINES=[
 
 var I=[
 /* ---------- NAKSHA ---------- */
-{id:'naksha',name:'Naksha',title:'Poora axis ek picture mein',
+{id:'naksha',name:'Naksha',overview:true,title:'Poora axis ek picture mein',
  pic:'<div class="row"><span class="c cin" data-k="in">input</span><span class="op">×</span><span class="c ckn" data-k="w">weight</span><span class="op">→ jodo →</span><span class="c cbi" data-k="b">+ bias</span><span class="op">→</span><span class="c cbx" data-k="a">activation</span><span class="op">→</span><span class="c cou" data-k="o">output</span></div>'+
      '<div class="row"><span class="c cer" data-k="t">galti (loss) dekh ke weight aur bias ghumao, baar baar = training</span></div>',
  beats:[
@@ -211,12 +225,13 @@ var I=[
      '<div class="row"><span class="op">→</span><span class="c cou" data-k="l1">pehli layer ke inputs</span></div>'+
      '<div data-k="prof" class="small" style="display:flex;flex-direction:column;gap:3px;align-items:center"><span class="dim">samajhne wala profile card (kharab hona · breakfast · mehenga):</span><span class="mono">doodh 0.9 · 0.95 · 0.3 &nbsp; dahi 0.85 · 0.7 · 0.3 &nbsp; cement 0 · 0 · 0.6</span></div>',
  beats:[
-  {tag:'Text se token',hl:['t','tok'],html:'<p class="bt">LLM ko pehle text milta hai, jaise "doodh". Woh tokens mein tootta hai. Yahi tumhara tokenization wala topic hai.</p>'},
+  {tag:'Text se token',hl:['t','tok'],html:'<p class="bt">LLM ko pehle text milta hai, jaise "doodh". Woh tokens mein tootta hai. Yahi tumhara tokenization wala topic hai.</p>',ahead:'Picture mein "pehli layer" likha hai: layer = model ke andar ek ke baad ek aane wale hisse; poora Layers card pe khulta hai. Token ID aur embedding matrix isi card ke Asli naam step pe khulte hain.'},
   {tag:'Token ID = sirf address',hl:['id'],html:'<p class="bt">Har token ka ek number hota hai, jaise 18342. Yeh Blinkit ke SKU code jaisa hai: sirf ek address. Is number se doodh ka matlab pata nahi chalta. (18342 bas ek misaal hai; asli ID har model ki vocabulary pe depend karti hai.)</p>'},
-  {tag:'Dukaan · profile card',hl:['row','prof'],html:'<p class="bt">Warehouse ke paas har product ka ek "profile card" bhi hota hai, jisme numbers likhe hote hain: kitni jaldi kharab hota hai, breakfast mein kitna aata hai, kitna mehenga hai. Model bhi apni embedding matrix mein us token ID wali row uthata hai. Woh row hi token ka profile card hai.</p>'},
-  {tag:'Yahi inputs hain',hl:['vec','l1'],html:'<p class="bt">Woh row numbers ki ek line hai, jaise 4096 numbers. Har number ek input hai, aur har input ka apna weight hota hai. Yahi line LLM ki pehli layer mein jaati hai.</p>'},
+  {tag:'Dukaan · profile card',hl:['row','prof'],html:'<p class="bt">Warehouse ke paas har product ka ek "profile card" bhi hota hai, jisme numbers likhe hote hain: kitni jaldi kharab hota hai, breakfast mein kitna aata hai, kitna mehenga hai. Model bhi apni embedding matrix mein us token ID wali row uthata hai. Woh row hi token ka profile card hai, aur uska asli naam hai <b>embedding vector</b>.</p>',ahead:'"vector" = numbers ki ek fixed-length line, bas. Isi card ke "Asli naam" step pe teeno naam ek saath khulte hain.'},
+  {tag:'Yahi inputs hain',hl:['vec','l1'],html:'<p class="bt">Woh row numbers ki ek line hai, jaise 4096 numbers. Har number ek input hai, aur har input ka apna weight hota hai. Yahi line LLM ki pehli layer mein jaati hai.</p>',ahead:'Weight agla hi card hai: har input ko guna karne wala seekha hua number.'},
   {tag:'⚠ Trap, tumhare embeddings notes se',cls:'trap',hl:['prof'],html:'<p class="bt">Asli numbers pe "kharab hona" ya "breakfast" jaise label nahi hote. Kaunsi position kya pakdegi, yeh machine training mein khud tay karti hai, aur woh insaan ke padhne layak nahi hota. Yeh key-value nahi hai, bas plain numbers ki ek fixed-length line hai.</p>'},
-  {tag:'Asli naam',hl:['id','row','vec'],html:'<p class="bt"><span class="term">token ID</span>: vocabulary mein token ka number, sirf address.<br><span class="term">embedding matrix</span>: numbers ki badi grid jisme har token ki ek row hoti hai. Yeh training mein seekhi jaati hai.<br><span class="term">embedding vector</span>: ek token ki row, yaani uske meaning ke numbers.</p>'},
+  {tag:'Yeh numbers set kaun karta hai?',hl:['row','vec'],recall:'"who sets these numbers?"',html:'<p class="bt">Koi insaan nahi. Training se pehle har row mein random numbers bhare jaate hain. Phir wahi training loop chalta hai jo aage "Training" card pe khulega: model agla token predict karta hai, galti napi jaati hai, aur jo rows us galti mein shaamil thi unke numbers thode ghumaye jaate hain, bilkul weights ki tarah. Laakhon baar ke baad milte-julte meaning wale tokens (doodh, dahi) ki rows apne aap paas aa jaati hain.</p>',ahead:'Weights agle card pe khulte hain. Embeddings topic restart ke baad dobara poora padhenge; wahan "rows apne aap paas kaise aati hain" gehrai se khulega.'},
+  {tag:'Asli naam',hl:['id','row','vec'],html:'<p class="bt"><span class="term">token ID</span>: vocabulary mein token ka number, sirf address.<br><span class="term">embedding matrix</span>: numbers ki badi grid jisme har token ki ek row hoti hai. Yeh training mein seekhi jaati hai.<br><span class="term">embedding vector</span>: ek token ki row, yaani uske meaning ke numbers.<br><span class="term">vector</span>: numbers ki ek fixed-length line. Isse zyada kuch nahi.</p>'},
   {tag:'⭐ Technical line',cls:'tech',hl:['id','row','vec','l1'],html:'<p class="tline">'+LINES[2]+'</p>'},
   {tag:'Khud karo',cls:'khud',hl:['prof'],type:'reveal',
    html:'<p class="bt">Profile card dekho: doodh, dahi aur cement mein se kaunse do ke numbers sabse kareeb hain, aur iska matlab kya hai? Pehle khud socho.</p>',
@@ -224,7 +239,7 @@ var I=[
  ]},
 /* ---------- WEIGHT ---------- */
 {id:'weight',name:'Weight',title:'Weight: ek knob jo input ko guna karta hai',
- pic:'<div class="row"><span class="c cin" data-k="s">aaj bika <b id="ws_v">20</b></span><span class="op">×</span><span class="c ckn" data-k="w">weight <b id="ww_v">1.5</b></span><span class="op">=</span><span class="c cou" data-k="o">kal ka order <b id="wo_v">30</b></span></div>'+
+ pic:'<div class="row"><span class="c cin" data-k="s">aaj bika <b id="ws_v">20</b></span><span class="op">×</span><span class="c ckn" data-k="w">weight <b id="ww_v">1.5</b></span><span class="op">=</span><span class="c cou" data-k="o" data-ans><span>kal ka order <b id="wo_v">30</b></span></span></div>'+
      '<label class="lab" for="ws">Aaj ki sale (input)</label><input type="range" id="ws" min="0" max="50" step="1" value="20">'+
      '<label class="lab" for="ww">Weight (knob)</label><input type="range" id="ww" min="-1" max="2" step="0.1" value="1.5">'+
      '<p class="small dim" id="wn" style="text-align:center"></p>',
@@ -232,61 +247,91 @@ var I=[
    $('wn').textContent=w<0?'Weight minus: yeh input order ko ghata raha hai':(w===0?'Weight 0: yeh input matter hi nahi karta':(w<1?'Weight 1 se kam: order sale se chhota':(w===1?'Weight 1.0: order bilkul sale jitna':'Weight 1 se zyada: order sale se bada')));}
    $('ws').addEventListener('input',u);$('ww').addEventListener('input',u);u();},
  beats:[
-  {tag:'Dukaan',hl:['w'],set:{ws:20,ww:1.5},html:'<p class="bt">Sabse chhoti machine ka rule itna hi hai: aaj ki sale × ek number = kal ka order. Woh number ek knob hai. Slider se knob ghumao aur dekho order kaise badalta hai.</p>'},
+  {tag:'Dukaan',hl:['w'],set:{ws:20,ww:1.5},html:'<p class="bt">Sabse simple neural network socho jo ban sakta hai: sirf EK input (aaj ki sale), EK knob, aur EK output (kal ka order). Na bias, na activation, na doosra neuron. Iska rule itna hi hai: aaj ki sale × ek number = kal ka order. Woh number ek knob hai. Slider se knob ghumao aur dekho order kaise badalta hai.</p>',ahead:'Neuron, bias aur activation agle teen cards pe khulte hain (Neuron, Bias, Activation).'},
   {tag:'Knob ke positions',hl:['w','o'],set:{ww:1.2},html:'<p class="bt">1.0 pe order bilkul utna hi hota hai jitna bika. 1.2 pe thoda extra, aur 0.8 pe kam. Dukaan wahi, sale wahi, sirf knob ghumaya aur order badal gaya.</p>'},
   {tag:'0 aur minus',hl:['w'],set:{ww:0},html:'<p class="bt">Knob 0 pe ho, toh woh input matter hi nahi karta. Knob minus mein bhi ja sakta hai, aur tab woh input order ko ghatata hai. Slider ko −0.5 tak le jaake dekho.</p>'},
   {tag:'Asli naam',hl:['w'],set:{ww:1.5},html:'<p class="bt"><span class="term">weight</span>: machine ke andar ka ek seekha hua number, jisse ek input ko guna kiya jaata hai. Yahi knob hai. Bada weight matlab woh input zyada matter karta hai.</p>'},
   {tag:'⭐ Technical line',cls:'tech',hl:['s','w','o'],html:'<p class="tline">'+LINES[3]+'</p>'},
-  {tag:'Khud karo',cls:'khud',hl:['s','w','o'],type:'num',ans:30,html:'<p class="bt">Aaj 20 packet bika aur weight 1.5 hai. Kal ka order kitna hoga? (Tumne yeh kar liya tha, ek baar phir haath se karo.)</p>',why:'20 × 1.5 = 30 packet.'}
+  {tag:'Khud karo',cls:'khud',hl:['s','w','o'],type:'num',ans:30,set:{ws:20,ww:1.5},hideAns:true,html:'<p class="bt">Picture mein aaj 20 packet bika aur weight 1.5 hai; jawab chhupa diya hai. Kal ka order kitna hoga? (Tumne yeh kar liya tha, ek baar phir haath se karo.)</p>',why:'20 × 1.5 = 30 packet.'}
  ]},
 /* ---------- NEURON ---------- */
-{id:'neuron',name:'Neuron',title:'Neuron: har input × apna weight, phir sab jodo',
- pic:'<div class="row" data-k="l1"><span class="c cin">sale 10</span><span class="op">×</span><span class="c ckn">1.5</span><span class="op">=</span><span class="c cbx mono">15</span></div>'+
+{id:'neuron',name:'Neuron',title:'Neuron: ek dabba jo saare inputs leke ek number deta hai',
+ pic:'<div class="nbox" data-k="box"><p class="nbox-l">yeh poora dabba = EK neuron</p>'+
+     '<div class="row" data-k="l1"><span class="c cin">sale <b id="nsl">10</b></span><span class="op">×</span><span class="c ckn">1.5</span><span class="op">=</span><span class="c cbx mono" id="nr1">15</span></div>'+
      '<div class="row" data-k="l2"><span class="c cin">Sunday <b id="nsv">1</b></span><span class="op">×</span><span class="c ckn">6</span><span class="op">=</span><span class="c cbx mono" id="nsr">6</span></div>'+
-     '<div class="row" data-k="sum"><span class="op">sab jodo →</span><span class="c cou">weighted sum <b id="nso">21</b></span><button id="nst">Sunday on / off</button></div>',
- init:function(){var s=1;function d(){$('nsv').textContent=s;$('nsr').textContent=s*6;$('nso').textContent=15+s*6;}$('nst').onclick=function(){s=1-s;d();};d();},
+     '<div class="row" data-k="sum"><span class="op">sab jodo →</span><span class="c cou" data-ans><span>weighted sum <b id="nso">21</b></span></span></div></div>'+
+     '<div class="row"><button id="nst">Sunday on / off</button></div>',
+ st:{sale:10,s:1},
+ init:function(){var self=this;function d(){var S=self.st;$('nsl').textContent=S.sale;$('nr1').textContent=num(S.sale*1.5);$('nsv').textContent=S.s;$('nsr').textContent=S.s*6;$('nso').textContent=num(S.sale*1.5+S.s*6);}
+   self.draw=d;$('nst').onclick=function(){self.st.s=1-self.st.s;d();};d();},
+ onBeat:function(b){var last=(b===this.beats.length-1);this.st={sale:last?8:10,s:last?1:(this.st?this.st.s:1)};if(this.draw)this.draw();},
  beats:[
   {tag:'Dukaan · pehla input',hl:['l1'],html:'<p class="bt">Asli manager sirf sale nahi dekhta, aur bhi cheezein dekhta hai. Pehla input hai sale, aur uska knob 1.5 hai: 10 × 1.5 = 15.</p>'},
   {tag:'Doosra input, apna knob',hl:['l2'],html:'<p class="bt">Doosra input hai "kal Sunday hai?". Sunday ko doodh zyada bikta hai, isliye iska apna alag knob hai, 6. Matlab "Sunday ho toh 6 packet extra": 1 × 6 = 6.</p>'},
   {tag:'Sab jodo',hl:['sum'],html:'<p class="bt">Machine har input ko uske apne knob se guna karti hai, phir sabko jod deti hai: 15 + 6 = 21. Button dabake dekho, Sunday off karne pe kya hota hai.</p>'},
+  {tag:'⚠ Neuron kaunsa hissa hai?',cls:'trap',hl:['box'],html:'<p class="bt">Har guna (input × weight) alag neuron nahi hai. Woh EK neuron ke andar ke steps hain. Neela dashed dabba dekho: jo saare inputs leta hai, har ek ko uske weight se guna karta hai, sab jodta hai aur ek number bahar deta hai, woh poora dabba ek neuron hai. Weighted sum usi ek neuron ke andar ka total hai.</p><div class="diff"><div class="m">- har input × weight = ek neuron; neurons ka sum = weighted sum</div><div class="p">+ poora dabba = ek neuron; guna uske andar ke steps; weighted sum = usi neuron ka andar ka total</div></div>'},
+  {tag:'Kai neurons kab hote hain?',hl:['box'],html:'<p class="bt">Kai neurons tab hote hain jab aise kai dabbe hon. Layers wale card mein Manager A ek dabba hai, Manager B doosra, aur head manager teesra: matlab 3 neurons. Aur aage ke cards ka bias aur activation bhi isi ek dabbe ke andar judte hain.</p>',ahead:'Bias agla card hai, activation us ke baad, aur layer ka poora matlab Layers card pe.'},
+  {tag:'Ek line ka naam',hl:['l1','l2','sum'],recall:'"what do we call one horizontal line of weights and input data??"',html:'<p class="bt">Inputs ko ek line mein likho: [10, 1]. Yeh <span class="term">input vector</span> hai. Is neuron ke weights ko bhi ek line mein likho: [1.5, 6]. Yeh <span class="term">weight vector</span> hai. Dono lines ko jodi-jodi guna karke jodna (10×1.5 + 1×6 = 21) ka math naam <span class="term">dot product</span> hai. Toh weighted sum = input vector aur weight vector ka dot product.</p>',ahead:'Ek layer ke saare neurons ki weight lines ek ke neeche ek rakho toh grid banti hai: weight matrix. Woh axis c (mechanism) mein khulegi.'},
   {tag:'Asli naam',hl:['l1','l2','sum'],html:'<p class="bt"><span class="term">neuron</span>: ek chhoti unit jo har input ko uske apne weight se guna karti hai aur sabko jodti hai.<br><span class="term">weighted sum</span>: "har input × uska weight" ka total.</p>'},
   {tag:'⭐ Technical line',cls:'tech',hl:['l1','l2','sum'],html:'<p class="tline">'+LINES[4]+'</p>'},
   {tag:'⚠ Yahan atke the',cls:'trap',hl:['l2'],html:'<p class="bt">Pehla jawab 15 aaya tha, kyunki Sunday wala input chhoot gaya. Tumne khud kaha tha: "ideally you should have taught me what is an input in neuron right?? it\'s a mistake on your end."</p><div class="diff"><div class="m">- sirf sale × uska weight</div><div class="p">+ har input × uska apna weight, phir sabko jodo</div></div>'},
-  {tag:'Khud karo',cls:'khud',hl:['l1','l2','sum'],type:'num',ans:18,html:'<p class="bt">Aaj 8 packet bika aur kal Sunday hai. Sale ka weight 1.5 hai aur Sunday ka 6. Weighted sum kitna hoga?</p>',why:'8 × 1.5 + 1 × 6 = 12 + 6 = 18.'}
+  {tag:'Khud karo',cls:'khud',hl:['l1','l2','sum'],type:'num',ans:18,hideAns:true,html:'<p class="bt">Picture mein ab aaj 8 packet bika aur kal Sunday hai; total chhupa diya hai. Sale ka weight 1.5, Sunday ka 6. Weighted sum kitna hoga?</p>',why:'8 × 1.5 + 1 × 6 = 12 + 6 = 18.'}
  ]},
 /* ---------- BIAS ---------- */
 {id:'bias',name:'Bias',title:'Bias: base stock, jo hamesha judta hai',
  pic:'<div class="row" data-k="l1"><span class="c cin">sale <b id="bsv">0</b></span><span class="op">×</span><span class="c ckn">1.5</span><span class="op">=</span><span class="c cbx mono" id="b1">0</span></div>'+
      '<div class="row" data-k="l2"><span class="c cin">Sunday <b id="buv">0</b></span><span class="op">×</span><span class="c ckn">6</span><span class="op">=</span><span class="c cbx mono" id="b2">0</span></div>'+
      '<div class="row" data-k="b"><span class="c cbi" id="bbc">bias +5</span><span class="small dim">kisi input se guna nahi hota</span></div>'+
-     '<div class="row" data-k="o"><span class="op">sab jodo →</span><span class="c cou" id="bo">5</span></div>'+
+     '<div class="row" data-k="o"><span class="op">sab jodo →</span><span class="c cou" data-ans><span id="bo">5</span></span></div>'+
      '<div class="row"><button id="bsb">Sale 0 / 20</button><button id="bub">Sunday on / off</button><button id="bbb">Bias on / off</button></div>',
  st:{s:0,u:0,on:1},
  init:function(){var self=this;function d(){var S=self.st,a=S.s*1.5,c=S.u*6,bb=S.on?5:0;$('bsv').textContent=S.s;$('buv').textContent=S.u;$('b1').textContent=a;$('b2').textContent=c;$('bbc').textContent=S.on?'bias +5':'bias off';$('bo').textContent='kal ka order: '+(a+c+bb);}
    self.draw=d;$('bsb').onclick=function(){self.st.s=self.st.s?0:20;d();};$('bub').onclick=function(){self.st.u=1-self.st.u;d();};$('bbb').onclick=function(){self.st.on=1-self.st.on;d();};d();},
- onBeat:function(b){if(b===0){this.st={s:0,u:0,on:0};}if(b===1){this.st={s:0,u:0,on:1};}if(this.draw)this.draw();},
+ onBeat:function(b){if(b===0){this.st={s:0,u:0,on:0};}if(b===1||b===4){this.st={s:0,u:0,on:1};}if(b===this.beats.length-1){this.st={s:10,u:0,on:1};}if(this.draw)this.draw();},
  beats:[
   {tag:'Dikkat',hl:['l1','l2','o'],html:'<p class="bt">Socho aaj ek bhi packet nahi bika aur kal Sunday bhi nahi. Bina bias ke neuron bolega 0 × 1.5 + 0 × 6 = 0. Matlab kal shelf bilkul khaali. Koi manager aisa nahi karta.</p>'},
   {tag:'Dukaan · base stock',hl:['b','o'],html:'<p class="bt">Manager hamesha kuch base stock rakhta hai: "chahe kuch bhi ho, 5 packet toh rahenge". Yeh 5 kisi input se guna nahi hota. Sab inputs × weights jodne ke baad yeh seedha upar se judta hai.</p>'},
   {tag:'Yeh bhi seekha jaata hai',hl:['b'],html:'<p class="bt">Yeh 5 bhi kisi insaan ne nahi likha. Training mein bias bhi weight ki tarah ghum ghum ke set hota hai. Teeno buttons daba ke khelo.</p>'},
+  {tag:'Bias nikalta kaise hai? Har baar judta hai?',hl:['b','o'],html:'<p class="bt">Bias koi haath se calculate nahi karta. Training shuru mein woh ek random andaaza hota hai, aur har galti ke baad thoda ghumta hai, bilkul weight ki tarah. Har baar kitna ghumega, yeh ek chhota number decide karta hai jiska naam <b>learning rate</b> hai (abhi bas itna: "har baar kitna ghumana"). Fark itna hai ki bias ke saath koi input guna nahi hota: badlaav = learning rate × galti. Aur har neuron ka apna ek bias hota hai, jo har baar neuron chalne pe ek baar judta hai: weighted sum ke baad, aur <b>activation</b> (total pe lagne wala aakhri chhota rule) se pehle.</p>',ahead:'Learning rate "Training" aur "Learning rate" wale cards pe poora khulta hai. Activation agla hi card hai.'},
+  {tag:'Sum 0 ho tab bhi judta hai?',hl:['l1','l2','b','o'],recall:'"so bias is added in every case, when the sum is zero or not?"',html:'<p class="bt">Haan, hamesha. Picture dekho: sale 0, Sunday 0, toh weighted sum 0 hai. Phir bhi bias 5 judta hai aur output 5 aata hai. Bias ka kaam hi yahi hai ki saare inputs 0 hon tab bhi neuron ka ek base number ho. Bias kabhi skip nahi hota. Bas agar data ko base stock ki zaroorat hi nahi, toh training uski value ko 0 ke paas le aati hai.</p>'},
   {tag:'Asli naam',hl:['b'],html:'<p class="bt"><span class="term">bias</span>: neuron ka ek extra seekha hua number, jo weighted sum mein seedha joda jaata hai, kisi input se guna kiye bina.</p>'},
   {tag:'⭐ Technical line',cls:'tech',hl:['l1','l2','b','o'],html:'<p class="tline">'+LINES[5]+'</p>'},
-  {tag:'Khud karo',cls:'khud',hl:['l1','l2','b','o'],type:'num',ans:20,html:'<p class="bt">Aaj 10 bika aur kal Sunday nahi hai. Sale ka weight 1.5 hai, Sunday ka 6, aur bias 5. Kal ka order kitna hoga? (Yeh sawaal pichhli baar khula reh gaya tha.)</p>',why:'10 × 1.5 + 0 × 6 + 5 = 15 + 0 + 5 = 20 packet.'}
+  {tag:'Khud karo',cls:'khud',hl:['l1','l2','b','o'],type:'num',ans:20,hideAns:true,html:'<p class="bt">Picture mein ab aaj 10 bika aur kal Sunday nahi hai; order chhupa diya hai. Sale ka weight 1.5, Sunday ka 6, aur bias 5. Kal ka order kitna hoga?</p>',why:'10 × 1.5 + 0 × 6 + 5 = 15 + 0 + 5 = 20 packet.'}
  ]},
 /* ---------- ACTIVATION ---------- */
 {id:'activation',name:'Activation',title:'Activation function: total pe aakhri chhota rule',
- pic:'<div class="row"><span class="c cbx" data-k="tot">weighted sum + bias = <b id="atv">12</b></span><span class="op">→</span><span class="c ckn" data-k="gate">ReLU</span><span class="op">→</span><span class="c cou" data-k="out">output <b id="ato">12</b></span></div>'+
+ pic:'<div class="row"><span class="c cbx" data-k="tot">weighted sum + bias = <b id="atv">12</b></span><span class="op">→</span><span class="c ckn" data-k="gate">ReLU</span><span class="op">→</span><span class="c cou" data-k="out" data-ans><span>output <b id="ato">12</b></span></span></div>'+
      '<input type="range" id="at" min="-20" max="30" step="1" value="12" aria-label="Total">'+
      '<svg class="d" viewBox="0 0 340 130" data-k="graph" role="img" aria-label="ReLU graph"><line class="grid" x1="10" y1="105" x2="330" y2="105"/><line class="grid" x1="138" y1="8" x2="138" y2="118"/><polyline class="pl" points="10,105 138,105 330,15"/><circle class="pt" id="apt" r="6" cx="214" cy="69"/><text class="sm" x="12" y="124">minus total → 0</text><text class="sm" x="230" y="124">plus total → wahi</text></svg>',
  init:function(){function d(){var v=+$('at').value,o=Math.max(0,v);$('atv').textContent=v;$('ato').textContent=o;$('apt').setAttribute('cx',(10+(v+20)/50*320).toFixed(1));$('apt').setAttribute('cy',(105-o/30*90).toFixed(1));}
    $('at').addEventListener('input',d);d();},
  beats:[
-  {tag:'Plus total',hl:['tot','gate','out'],set:{at:12},html:'<p class="bt">Neuron ka total (weighted sum + bias) 12 aaya. Ek aakhri chhota rule lagta hai: plus ho toh wahi number aage bhej do. Toh output = 12.</p>'},
+  {tag:'Plus total',hl:['tot','gate','out'],set:{at:12},html:'<p class="bt">Neuron ka total (weighted sum + bias) 12 aaya. Ek aakhri chhota rule lagta hai: plus ho toh wahi number aage bhej do. Toh output = 12. Picture mein is rule ka naam ReLU likha hai.</p>',ahead:'ReLU ka poora naam aur matlab isi card ke "Asli naam" step pe khulta hai.'},
   {tag:'Dukaan · Holi wala din',hl:['tot','gate','out'],set:{at:-4},html:'<p class="bt">Kal Holi hai, aadhe log shehar se bahar hain, aur formula bolta hai "−4 packet". Par manager minus 4 packet order nahi kar sakta. Woh seedha 0 order karta hai. Slider ko minus mein le jaake dekho.</p>'},
-  {tag:'Asli naam',hl:['gate','graph'],html:'<p class="bt"><span class="term">activation function</span>: neuron ke total pe lagne wala chhota rule, jo final output decide karta hai.<br><span class="term">ReLU</span>: sabse common activation function. Minus ho toh 0, plus ho toh wahi number. LLMs mein iske smooth cousins chalte hain, jaise GELU aur SwiGLU, par idea yahi hai.</p>'},
-  {tag:'Yeh hai kyun (poora axis b mein)',hl:['graph'],html:'<p class="bt">Iske bina kitni bhi layers laga do, poora network ek seedha guna-jod ban jaata hai, aur mode-wale patterns nahi seekh paata. Jaise thodi baarish mein order badhta hai, par bahut tez baarish mein delivery band hoti hai aur order girta hai. Activation hi aisa mod bana paata hai.</p>'},
-  {tag:'⭐ Technical line',cls:'tech',hl:['tot','gate','out'],html:'<p class="tline">'+LINES[6]+'</p>'},
-  {tag:'Khud karo',cls:'khud',hl:['gate'],type:'num',ans:0,html:'<p class="bt">Ek neuron ka total −7 aaya. ReLU ke baad output kya hoga?</p>',why:'0. Minus ho toh ReLU 0 deta hai.'}
+  {tag:'Asli naam',hl:['gate','graph'],html:'<p class="bt"><span class="term">activation function</span>: neuron ke total pe lagne wala chhota rule, jo final output decide karta hai.<br><span class="term">ReLU</span> = <b>Rectified Linear Unit</b>. <i>Rectified</i> = minus ko seedha karke 0 bana dena. <i>Linear</i> = plus side pe seedhi line, number jaisa ka taisa. <i>Unit</i> = ek chhota hissa ya function. Matlab: minus ho toh 0, plus ho toh wahi number. Yeh sabse common activation function hai.</p>',ahead:'LLMs mein iske thode smooth roop chalte hain (naam: GELU, SwiGLU). Idea wahi hai; inke poore naam aur farak axis f (tradeoffs) mein.'},
+  {tag:'Yeh kyun zaroori hai?',hl:['graph'],html:'<p class="bt">Iska jawab agle card "Activation kyun" mein step by step, apni picture ke saath hai. Abhi bas itna yaad rakho: ReLU ka kaam hai "minus ho toh 0".</p>'},
+  {tag:'⭐ Technical line',cls:'tech',hl:['tot','gate','out'],html:'<p class="tline">'+LINES[6]+'</p>',ahead:'"non-linear" = jo mod le sake; iska poora matlab agle card "Activation kyun" pe khulta hai.'},
+  {tag:'Khud karo',cls:'khud',hl:['gate'],type:'num',ans:0,set:{at:-7},hideAns:true,html:'<p class="bt">Picture mein ab neuron ka total −7 hai; output chhupa diya hai. ReLU ke baad output kya hoga?</p>',why:'0. Minus ho toh ReLU 0 deta hai.'}
+ ]},
+/* ---------- ACTIVATION KYUN ---------- */
+{id:'actwhy',name:'Activation kyun',title:'Activation kyun chahiye: seedhi line mod nahi le sakti',
+ pic:'<div class="row" data-k="chain"><span class="c cin">sale 10</span><span class="op">→</span><span class="c ckn">Manager 1: ×2</span><span class="op">→</span><span class="c cbx mono">20</span><span class="op">→</span><span class="c ckn">Manager 2: ×1.5</span><span class="op">→</span><span class="c cou">30</span></div>'+
+     '<div class="row" data-k="one"><span class="c cin">sale 10</span><span class="op">→</span><span class="c ckn">ek hi manager: ×3</span><span class="op">→</span><span class="c cou">30</span></div>'+
+     '<svg class="d" viewBox="0 0 340 160" data-k="graph" role="img" aria-label="Baarish vs orders: asli mod aur seedhi line">'+
+     '<line class="grid" x1="40" y1="130" x2="325" y2="130"/><line class="grid" x1="40" y1="15" x2="40" y2="130"/>'+
+     '<polyline class="cv" points="40,73 96,59 152,47 180,44 208,51 264,80 320,109"/><line class="ln" x1="40" y1="56" x2="320" y2="84"/>'+
+     '<text class="sm" x="44" y="148">baarish: kam</text><text class="sm" x="244" y="148">bahut tez</text><text class="sm" x="46" y="26">orders</text>'+
+     '<text class="sm" x="150" y="34" style="fill:var(--ou)">asli duniya: mod</text><text class="sm" x="200" y="100" style="fill:var(--kn)">seedhi line</text></svg>',
+ beats:[
+  {tag:'Do managers, bina activation',hl:['chain'],html:'<p class="bt">Socho do managers ek ke baad ek baithe hain, aur dono sirf guna karte hain. Pehla ×2 karta hai, doosra ×1.5. Sale 10 hai, toh pehle 20 banta hai, phir 30.</p>'},
+  {tag:'Ek manager kaafi tha',hl:['chain','one'],html:'<p class="bt">Par ×2 karke phir ×1.5 karna, seedha ×3 karne ke barabar hai. Matlab do managers ki jagah ek hi manager se kaam chal jaata. Doosra manager kuch naya nahi laaya.</p>'},
+  {tag:'Kitne bhi lagao, wahi baat',hl:['one'],html:'<p class="bt">Sirf guna-jod karne wale kitne bhi managers ek ke baad ek laga do, poora chain phir bhi ek hi guna-jod ban jaata hai. Aur aise kisi bhi guna-jod ka graph hamesha ek seedhi line hota hai.</p>'},
+  {tag:'Asli duniya mein mod hai',hl:['graph'],html:'<p class="bt">Teal line dekho. Thodi baarish ho toh log ghar se nahi nikalte, toh Blinkit pe order badhte hain. Par bahut tez baarish mein delivery band ho jaati hai, aur order girne lagte hain. Line pehle upar jaati hai, phir neeche. Isi ko mod kehte hain.</p>'},
+  {tag:'Seedhi line haar jaati hai',hl:['graph'],html:'<p class="bt">Amber dashed line seedhi hai. Woh ya toh hamesha upar jaayegi, ya hamesha neeche; "pehle upar, phir neeche" woh kabhi nahi bana sakti. Isliye bina activation wala network yeh pattern seekh hi nahi sakta, chahe usme kitni bhi layers hon.</p>'},
+  {tag:'ReLU mod daalta hai',hl:['graph'],html:'<p class="bt">ReLU har neuron pe ek chhota mod daalta hai: "minus ho toh 0, warna wahi". Yeh seedhi line ko ek jagah se tod ke mod deta hai. Kai neurons ke aise chhote chhote mod milkar teal jaisa curve bana dete hain. Isiliye har neuron mein activation hota hai.</p>'},
+  {tag:'Asli naam',hl:['one','graph'],html:'<p class="bt"><span class="term">linear</span>: sirf guna-jod; graph seedhi line.<br><span class="term">non-linear</span>: jisme mod aa sake. Activation function network ko non-linear banata hai. Iski poori gehrai axis b (kyun / first principles) mein hai.</p>'},
+  {tag:'⭐ Technical line',cls:'tech',hl:['chain','one','graph'],html:'<p class="tline">'+LINES[7]+'</p>'},
+  {tag:'Khud karo',cls:'khud',hl:['chain','one'],type:'num',ans:6,html:'<p class="bt">Do managers bina activation: pehla ×3 karta hai, doosra ×2. Inki jagah ek hi manager rakhna ho, toh woh kitne se guna karega?</p>',why:'3 × 2 = 6. Bina activation do layers ek hi layer ke barabar hain: ×6.'}
  ]},
 /* ---------- POORA NEURON ---------- */
 {id:'fullneuron',name:'Poora neuron',title:'Poora neuron, ek saath: guna → jodo → bias → activation',
@@ -294,7 +339,9 @@ var I=[
      '<div class="row"><span class="c ckn mono" data-k="g" id="fg">10×1.5 = 15 · 1×6 = 6</span></div>'+
      '<div class="row"><span class="op">→</span><span class="c cbx mono" data-k="j" id="fj">jodo: 21</span><span class="op">→</span><span class="c cbi mono" data-k="b" id="fb">+5 = 26</span><span class="op">→</span><span class="c cou mono" data-k="a" id="fa">ReLU → 26</span></div>'+
      '<p class="mono small" style="text-align:center" data-k="f">output = activation( input1×weight1 + input2×weight2 + … + bias )</p>',
- onBeat:function(b){var holi=(b===4);$('fex').textContent=holi?'Example: aaj 2 bika, kal Holi (input 1, weight −12), bias 5':'Example: aaj 10 bika, kal Sunday, bias 5';
+ onBeat:function(b){if(b===this.beats.length-1){$('fex').textContent='Khud karo: aaj 4 bika, kal Holi (input 1, weight −12), bias 5';
+     $('fg').textContent='4×1.5 = ? · 1×(−12) = ?';$('fj').textContent='jodo: ?';$('fb').textContent='+5 = ?';$('fa').textContent='ReLU → ?';return;}
+   var holi=(b===4);$('fex').textContent=holi?'Example: aaj 2 bika, kal Holi (input 1, weight −12), bias 5':'Example: aaj 10 bika, kal Sunday, bias 5';
    $('fg').textContent=holi?'2×1.5 = 3 · 1×(−12) = −12':'10×1.5 = 15 · 1×6 = 6';$('fj').textContent=holi?'jodo: −9':'jodo: 21';$('fb').textContent=holi?'+5 = −4':'+5 = 26';$('fa').textContent=holi?'ReLU → 0':'ReLU → 26';},
  beats:[
   {tag:'Guna',hl:['g'],html:'<p class="bt">Pehla kadam: har input ko uske weight se guna karo. 10 × 1.5 = 15, aur 1 × 6 = 6.</p>'},
@@ -309,19 +356,20 @@ var I=[
 {id:'layers',name:'Layers',title:'Layer: neurons ki line, jiska output agli line ka input',
  pic:'<svg class="d" viewBox="0 0 680 300" role="img" aria-label="Do layer ka network">'+
      '<line class="e" x1="170" y1="80" x2="290" y2="80"/><line class="e" x1="170" y1="80" x2="290" y2="220"/><line class="e" x1="170" y1="220" x2="290" y2="80"/><line class="e" x1="170" y1="220" x2="290" y2="220"/><line class="e" x1="430" y1="80" x2="510" y2="150"/><line class="e" x1="430" y1="220" x2="510" y2="150"/>'+
-     '<g class="g" data-k="in"><rect class="bx" x="30" y="56" width="140" height="48" rx="8"/><text x="100" y="85" text-anchor="middle">Sale: 10</text><rect class="bx" x="30" y="196" width="140" height="48" rx="8"/><text x="100" y="225" text-anchor="middle">Sunday: 1</text></g>'+
-     '<g class="g" data-k="A"><rect class="mg" x="290" y="48" width="140" height="64" rx="8"/><text x="360" y="74" text-anchor="middle">Manager A = 14</text><text class="sm" x="360" y="96" text-anchor="middle">sale×1 + Sun×4</text></g>'+
-     '<g class="g" data-k="B"><rect class="mg" x="290" y="188" width="140" height="64" rx="8"/><text x="360" y="214" text-anchor="middle">Manager B = 5</text><text class="sm" x="360" y="236" text-anchor="middle">sale×0.5 + Sun×0</text></g>'+
-     '<g class="g" data-k="H"><rect class="hd" x="510" y="118" width="150" height="64" rx="8"/><text x="585" y="144" text-anchor="middle">Head = 24</text><text class="sm" x="585" y="166" text-anchor="middle">A×1 + B×2</text></g>'+
+     '<g class="g" data-k="in"><rect class="bx" x="30" y="56" width="140" height="48" rx="8"/><text x="100" y="85" text-anchor="middle">Sale: 10</text><rect class="bx" x="30" y="196" width="140" height="48" rx="8"/><text id="lys" x="100" y="225" text-anchor="middle">Sunday: 1</text></g>'+
+     '<g class="g" data-k="A"><rect class="mg" x="290" y="48" width="140" height="64" rx="8"/><text id="lya" x="360" y="74" text-anchor="middle">Manager A = 14</text><text class="sm" x="360" y="96" text-anchor="middle">sale×1 + Sun×4</text></g>'+
+     '<g class="g" data-k="B"><rect class="mg" x="290" y="188" width="140" height="64" rx="8"/><text id="lyb" x="360" y="214" text-anchor="middle">Manager B = 5</text><text class="sm" x="360" y="236" text-anchor="middle">sale×0.5 + Sun×0</text></g>'+
+     '<g class="g" data-k="H"><rect class="hd" x="510" y="118" width="150" height="64" rx="8"/><text id="lyh" x="585" y="144" text-anchor="middle">Head = 24</text><text class="sm" x="585" y="166" text-anchor="middle">A×1 + B×2</text></g>'+
      '<text class="sm" x="100" y="288" text-anchor="middle">input layer</text><text class="sm" x="360" y="288" text-anchor="middle">hidden layer</text><text class="sm" x="585" y="288" text-anchor="middle">output layer</text></svg>',
+ onBeat:function(b){var k=(b===this.beats.length-1);$('lys').textContent=k?'Sunday: 0':'Sunday: 1';$('lya').textContent=k?'Manager A = ?':'Manager A = 14';$('lyb').textContent=k?'Manager B = ?':'Manager B = 5';$('lyh').textContent=k?'Head = ?':'Head = 24';},
  beats:[
   {tag:'Dukaan · inputs',hl:['in'],html:'<p class="bt">Bada dark store ek manager se nahi chalta. Shuru mein do inputs hain: sale 10, aur kal Sunday = 1.</p>'},
   {tag:'Manager A',hl:['in','A'],html:'<p class="bt">Pehli line mein Manager A apne knobs se dekhta hai: 10 × 1 + 1 × 4 = 14. Woh shayad "Sunday ka expert" ban gaya hai.</p>'},
   {tag:'Manager B',hl:['in','B'],html:'<p class="bt">Usi line mein Manager B, same inputs, par alag knobs: 10 × 0.5 + 1 × 0 = 5. Woh "roz ki sale" pe dhyaan deta hai.</p>'},
   {tag:'Head manager',hl:['A','B','H'],html:'<p class="bt">Head manager khud sale nahi dekhta. Woh sirf A aur B ke numbers sunta hai: 14 × 1 + 5 × 2 = 24. A aur B ka output, head ka input ban gaya.</p>'},
   {tag:'Asli naam',hl:['in','A','B','H'],html:'<p class="bt"><span class="term">layer</span>: neurons ki ek line. <span class="term">input layer</span> = shuru ke inputs, <span class="term">hidden layer</span> = beech wali (A aur B), jinka output bahar dikhta nahi, aur <span class="term">output layer</span> = aakhri, jo final prediction deti hai.<br><span class="term">deep learning</span>: jab hidden layers bahut saari hon.</p>'},
-  {tag:'⭐ Technical line',cls:'tech',hl:['in','A','B','H'],html:'<p class="tline">'+LINES[7]+'</p>'},
-  {tag:'Khud karo',cls:'khud',hl:['A','B','H'],type:'num',ans:20,html:'<p class="bt">Aaj bhi 10 bika, par kal Sunday NAHI hai (0). Knobs wahi hain. Head manager ka final number kya hoga?</p>',why:'A = 10×1 + 0×4 = 10 · B = 10×0.5 + 0 = 5 · Head = 10×1 + 5×2 = 20.'}
+  {tag:'⭐ Technical line',cls:'tech',hl:['in','A','B','H'],html:'<p class="tline">'+LINES[8]+'</p>'},
+  {tag:'Khud karo',cls:'khud',hl:['in','A','B','H'],type:'num',ans:20,html:'<p class="bt">Picture mein ab aaj 10 bika aur kal Sunday NAHI hai (0); numbers chhupa diye hain. Knobs wahi hain. Head manager ka final number kya hoga?</p>',why:'A = 10×1 + 0×4 = 10 · B = 10×0.5 + 0 = 5 · Head = 10×1 + 5×2 = 20.'}
  ]},
 /* ---------- TRAINING ---------- */
 {id:'training',name:'Training',title:'Training: predict karo, galti napo, knob ghumao, dobara',
@@ -329,10 +377,12 @@ var I=[
      '<div class="stats"><div class="st" data-k="day"><div class="k">Din</div><div class="v" id="td">Shuru</div></div><div class="st" data-k="w"><div class="k">Weight (knob)</div><div class="v" id="tw" style="color:var(--kn)">1.0</div></div>'+
      '<div class="st" data-k="p"><div class="k">Prediction → asli</div><div class="v" id="tp">— → 30</div></div><div class="st" data-k="e"><div class="k">Galti · loss</div><div class="v" id="te" style="color:var(--er)">—</div></div></div>'+
      '<div data-k="e2"><div class="bar"><div id="tbar" style="width:0%"></div></div><p class="small dim" id="tu" style="text-align:center;margin-top:4px"></p></div>',
- onBeat:function(b){var D=[['Shuru','1.0','— → 30','—',0,'Initialization: weight ek random andaaze pe.'],['Din 1','1.0 → 1.2','20 → 30','+10 · 100',100,'badlaav = 0.001 × 10 × 20 = 0.2'],['Din 2','1.2 → 1.32','24 → 30','+6 · 36',60,'badlaav = 0.001 × 6 × 20 = 0.12'],['Din 3','1.32 → 1.39','26.4 → 30','+3.6 · 13',36,'badlaav = 0.001 × 3.6 × 20 = 0.072'],['Din 4','1.39 → 1.44','27.8 → 30','+2.2 · 4.7',22,'har din galti pichhle din ki lagbhag 60%'],['Bahut din baad','≈ 1.5','30 → 30','≈ 0 · ≈ 0',1,'knob 1.5 pe ruk gaya']];
-   var r=D[Math.min(b,5)];$('td').textContent=r[0];$('tw').textContent=r[1];$('tp').textContent=r[2];$('te').textContent=r[3];$('tbar').style.width=r[4]+'%';$('tu').textContent=r[5];},
+ onBeat:function(b){var D=[['Shuru','1.0','— → 30','—',0,'Initialization: weight ek random andaaze pe.'],['Shuru','1.0','— → 30','—',0,'learning rate 0.001: insaan ne training se pehle chuna'],['Din 1','1.0 → 1.2','20 → 30','+10 · 100',100,'badlaav = 0.001 × 10 × 20 = 0.2'],['Din 2','1.2 → 1.32','24 → 30','+6 · 36',60,'badlaav = 0.001 × 6 × 20 = 0.12'],['Din 3','1.32 → 1.39','26.4 → 30','+3.6 · 13',36,'badlaav = 0.001 × 3.6 × 20 = 0.072'],['Din 4','1.39 → 1.44','27.8 → 30','+2.2 · 4.7',22,'har din galti pichhle din ki lagbhag 60%'],['Bahut din baad','≈ 1.5','30 → 30','≈ 0 · ≈ 0',1,'knob 1.5 pe ruk gaya']];
+   if(b===this.beats.length-1){D.push(['Khud karo','1.4 → ?','? → 30','?',0,'sale 20 · learning rate 0.001']);b=D.length-1;}
+   var r=D[Math.min(b,D.length-1)];if(b>6&&b<D.length-1)r=D[6];$('td').textContent=r[0];$('tw').textContent=r[1];$('tp').textContent=r[2];$('te').textContent=r[3];$('tbar').style.width=r[4]+'%';$('tu').textContent=r[5];},
  beats:[
   {tag:'Initialization',hl:['day','w'],html:'<p class="bt">Pehle din machine ko kuch nahi pata, isliye knob ek random andaaze pe hota hai: 1.0. Yeh kisi data se nahi aaya.</p>'},
+  {tag:'Upar likha "learning rate 0.001"',hl:['day','w'],recall:'"how is 0.001 coming? do we start from this learning rate?"',html:'<p class="bt"><b>Learning rate</b> = har galti ke baad knob kitna ghumana hai. 0.001 kisi data se nahi aaya: training shuru karne se pehle insaan isko chunta hai, aur haan, training isi value se shuru hoti hai. Agle steps mein dekhoge ki yeh har ghumane ko chhota rakhta hai.</p>',ahead:'Insaan 0.001 jaisa number kaise chunta hai, aur galat chuna toh kya hota hai: agla card "Learning rate".'},
   {tag:'Din 1',hl:['p','e','e2','w'],html:'<p class="bt">Machine predict karti hai: 20 × 1.0 = 20. Asal mein 30 laga. Galti = asli − prediction = +10, yaani kam bola. Isliye knob upar ghumega: badlaav = learning rate × galti × input = 0.001 × 10 × 20 = 0.2. Naya weight 1.2.</p>'},
   {tag:'Din 2',hl:['p','e','e2','w'],html:'<p class="bt">20 × 1.2 = 24. Galti +6, toh ghumana bhi chhota hai: 0.12. Weight 1.32. Galti ghat rahi hai.</p>'},
   {tag:'Din 3',hl:['p','e','e2','w'],html:'<p class="bt">20 × 1.32 = 26.4. Galti +3.6. Chhoti galti, chhota ghumana. Weight 1.39.</p>'},
@@ -340,8 +390,9 @@ var I=[
   {tag:'Bahut din baad',hl:['w','e'],html:'<p class="bt">Knob 1.5 pe ruk jaata hai, jahan galti lagbhag zero hai. Kisi insaan ne 1.5 nahi likha; galtiyon ne knob ko wahan dhakela. Bias bhi isi tarah ghumta hai.</p>'},
   {tag:'Asli naam · galti aur loss',hl:['e','e2'],html:'<p class="bt"><span class="term">error</span>: galti = asli jawab − prediction. Plus matlab kam bola, minus matlab zyada bola.<br><span class="term">loss</span>: galti kitni badi thi, ek positive number mein. Yahan galti × galti (squared error). Training ka poora goal hai loss ko chhota karna.</p>'},
   {tag:'Loss square kyun',hl:['e'],html:'<p class="bt">Galti +10 ho ya −10, dono utni hi buri hain, aur square dono ko 100 bana deta hai. Saath mein badi galti ko zyada saza milti hai: galti 2 ka loss 4, par galti 10 ka loss 100.</p>'},
+  {tag:'Asli AI mein iska matlab',hl:['e'],recall:'"badi galti ko zyada saza: what does it mean in real AI world? will we learn it ahead?"',html:'<p class="bt">Training loss chhota karne ki koshish karti hai, aur badi galti ka loss bahut bada hota hai. Isliye model pehle badi galtiyan theek karta hai. Fayda: bade blunders jaldi kam ho jaate hain. Nuksaan: ek ajeeb data point, jaise traffic jam wali 200 minute ki ek Zomato delivery, itna bada loss deta hai ki woh akela knobs ko apni taraf kheench leta hai. Aise ajeeb data point ko <span class="term">outlier</span> kehte hain. LLMs mein loss ka formula alag hota hai (naam: <span class="term">cross-entropy</span>), par idea milta-julta hai: galat token ko bahut confidence se bola toh bahut badi saza.</p>',ahead:'Loss ke formulas axis d (math + range) mein, aur outlier ka nuksaan axis e (limits / failure modes) mein.'},
   {tag:'Asli naam · baaki',hl:['day','w','p','e'],html:'<p class="bt"><span class="term">training</span>: examples pe baar baar predict, loss napo, weights aur biases ghumao.<br><span class="term">initialization</span>: shuru ka random andaaza.<br><span class="term">training data</span>: jin examples pe seekhte hain.<br><span class="term">gradient descent</span>: "loss kam karne ki direction mein thoda thoda ghumao" wala tareeka. Andar ka hisaab axis c mein.</p>'},
-  {tag:'⭐ Technical line',cls:'tech',hl:['day','w','p','e'],html:'<p class="tline">'+LINES[8]+'</p>'},
+  {tag:'⭐ Technical line',cls:'tech',hl:['day','w','p','e'],html:'<p class="tline">'+LINES[9]+'</p>'},
   {tag:'Khud karo',cls:'khud',hl:['w','p','e'],type:'num',ans:1.44,html:'<p class="bt">Weight 1.4 hai, sale 20, asli 30, learning rate 0.001. Prediction nikaalo, galti nikaalo, phir naya weight likho.</p>',why:'Prediction 20 × 1.4 = 28 · galti 30 − 28 = 2 · loss 4 · badlaav 0.001 × 2 × 20 = 0.04 · naya weight 1.44.'}
  ]},
 /* ---------- LEARNING RATE ---------- */
@@ -364,7 +415,8 @@ var I=[
   {tag:'Bada',hl:['chart'],html:'<p class="bt">Manager zor se ghumata hai, toh knob sahi jagah ke aar-paar jhoolta rehta hai, aur dheere dheere set hota hai.</p>'},
   {tag:'Bahut bada',hl:['chart'],html:'<p class="bt">Itna zor ki knob har baar pehle se zyada door chala jaata hai. Yeh kabhi set nahi hoga. Isko diverge karna kehte hain.</p>'},
   {tag:'Asli naam',hl:['chart'],html:'<p class="bt"><span class="term">learning rate</span>: chhota number jo decide karta hai ki har galti ke baad weights kitna ghumenge. Yeh khud seekha nahi jaata; training se pehle insaan set karta hai. Aise insaan-set numbers ko <span class="term">hyperparameter</span> kehte hain.<br>Is chhoti machine ka rule: badlaav = learning rate × galti × input.</p>'},
-  {tag:'⭐ Technical line',cls:'tech',hl:['chart'],html:'<p class="tline">'+LINES[9]+'</p>'}
+  {tag:'0.001 kahan se aaya?',hl:['chart'],recall:'"how is 0.001 coming? do we start from this learning rate?"',html:'<p class="bt">Insaan chunta hai. Woh chhoti trial trainings mein kuch values try karta hai (jaise 0.01, 0.001, 0.0001) aur dekhta hai kis pe loss sabse achha girta hai. 0.001 ek bahut common shuruaati value hai. Haan, training isi se shuru hoti hai. Badi trainings mein isko training ke dauraan dheere dheere ghataya bhi jaata hai, taaki end mein knob araam se set ho.</p>',ahead:'Training ke dauraan learning rate badalne ka plan (naam: learning rate schedule) axis f (tradeoffs) mein.'},
+  {tag:'⭐ Technical line',cls:'tech',hl:['chart'],html:'<p class="tline">'+LINES[10]+'</p>'}
  ]},
 /* ---------- TRAINING VS INFERENCE ---------- */
 {id:'inference',name:'Training vs inference',title:'Training mein knobs ghumte hain, inference mein freeze',
@@ -375,7 +427,7 @@ var I=[
   {tag:'Inference',hl:['inf'],html:'<p class="bt">Ab har subah woh bas aaj ki sale aur kal ka din daalta hai aur order nikaal leta hai. Knobs ko chhedta nahi. Yeh inference hai.</p>'},
   {tag:'Claude ke saath',hl:['inf'],html:'<p class="bt">Jab tum API pe Claude ko call karte ho (1-05 API Fundamentals), uske knobs nahi badalte. Tumhari chat se Claude kuch seekhta nahi; woh sirf apne fixed knobs se jawab nikaalta hai.</p>'},
   {tag:'Asli naam',hl:['tr','inf'],html:'<p class="bt"><span class="term">inference</span>: trained model ko fixed knobs ke saath naye input pe chalana. Inference & sampling topic mein jo padha tha, ki model probabilities deta hai, woh isi ka output hai.<br><span class="term">forward pass</span>: input se output tak, layers ke through, ek baar ka poora hisaab.</p>'},
-  {tag:'⭐ Technical line',cls:'tech',hl:['tr','inf'],html:'<p class="tline">'+LINES[10]+'</p>'},
+  {tag:'⭐ Technical line',cls:'tech',hl:['tr','inf'],html:'<p class="tline">'+LINES[11]+'</p>'},
   {tag:'Example',hl:['ex'],html:'<p class="bt">Blinkit ka model raat bhar purane data pe training karta hai. Subah 6 baje har dark store ka order nikaalna inference hai.</p>'}
  ]},
 /* ---------- PARAMETERS ---------- */
@@ -388,7 +440,8 @@ var I=[
   {tag:'Asli LLM',hl:['bigl','big'],html:'<p class="bt">Ek asli LLM mein kaam bilkul yahi hai, bas ginti bahut badi hai. Model ke naam ka "8B" ya "70B" yahi ginti hai. 1 billion = 100 crore, toh 8B matlab 800 crore.</p>'},
   {tag:'Claude',hl:['big'],html:'<p class="bt">Claude ki ginti Anthropic ne public nahi ki hai. Par woh isi family ka bada model hai, wahi jo tumne API Fundamentals mein call kiya tha.</p>'},
   {tag:'Asli naam',hl:['ours','big'],html:'<p class="bt"><span class="term">parameters</span>: model ke andar ke saare seekhe hue numbers, yaani saare weights + saare biases. Embedding matrix bhi isi mein aati hai.</p><div class="diff"><div class="m">- parameters = sirf weights (pehle yahi bola gaya tha)</div><div class="p">+ parameters = weights + biases</div></div>'},
-  {tag:'⭐ Technical line',cls:'tech',hl:['ours','big'],html:'<p class="tline">'+LINES[11]+'</p>'},
+  {tag:'Embedding matrix ismein kaise?',hl:['big'],recall:'"Embedding matrix bhi isi mein aati hai: what does it mean, i mean how?"',html:'<p class="bt">Parameters = model ke saare SEEKHE hue numbers. Embedding matrix ke numbers bhi random se shuru hote hain aur training mein galti dekh ke ghumte hain ("LLM ke input numbers" card ka "set kaun karta hai" step). Seekhe hue hain, isliye ginti mein aate hain. Ginti: Llama 3 8B ki vocabulary mein 1,28,256 tokens hain aur har row mein 4096 numbers. 1,28,256 × 4096 ≈ 52.5 crore numbers, sirf embedding matrix mein. Yaani 800 crore ka lagbhag 6.5%.</p>'},
+  {tag:'⭐ Technical line',cls:'tech',hl:['ours','big'],html:'<p class="tline">'+LINES[12]+'</p>'},
   {tag:'Khud karo',cls:'khud',hl:['bigl'],type:'num',ans:7000,html:'<p class="bt">Llama 3 70B mein kitne crore parameters hain?</p>',why:'70 billion × 100 = 7000 crore.'}
  ]},
 /* ---------- LLM SE JOD ---------- */
@@ -399,7 +452,8 @@ var I=[
  beats:[
   {tag:'Inputs',hl:['e'],html:'<p class="bt">Har token ka embedding vector pehli layer ke inputs banta hai. (Yeh "LLM ke input numbers" wali screen pe khula tha.)</p>'},
   {tag:'Beech mein',hl:['L'],html:'<p class="bt">Phir layer pe layer wahi chaar kadam chalte hain: guna, jodo, bias, activation. Bas neurons aur layers bahut zyada hote hain.</p>'},
-  {tag:'Output',hl:['p'],html:'<p class="bt">Aakhri layer har possible agle token ke liye ek number deti hai, jo probability banta hai. Inference & sampling topic mein jo probabilities padhi thi, woh yahin se aati hain.</p>'},
+  {tag:'Kitni layers, kitne neurons?',hl:['L'],recall:'"how do we decide how many layers and how many neurons will be there?? will we learn this ahead too?"',html:'<p class="bt">Pehle ek chhota sudhaar: layer ke andar neurons hote hain, neuron ke andar layers nahi. Kitni layers hongi aur har layer mein kitne neurons, yeh insaan training se pehle decide karta hai; machine isko nahi seekhti. Yeh bhi learning rate jaisa ek hyperparameter hai. Insaan dekhta hai kitna compute aur paisa hai, pehle ke models ke experiments kya bolte hain, aur chhote models pe try karta hai. Misaal: Llama 3 8B mein 32 layers hain, aur har layer 4096 numbers chaudi hai.</p><div class="diff"><div class="m">- neuron ke andar kitni layers</div><div class="p">+ har layer ke andar kitne neurons, aur kitni layers</div></div>',ahead:'Bada vs chhota network: axis f (tradeoffs). Layers badhane ka kharcha: axis h (scale / cost).'},
+  {tag:'Output',hl:['p'],html:'<p class="bt">Aakhri layer har possible agle token ke liye ek number deti hai, jo probability banta hai. Inference & sampling topic mein jo probabilities padhi thi, woh yahin se aati hain.</p>',ahead:'Tumhara order (15 Nov): jab inference & sampling dobara padhenge, pehla kaam yahi dot jodna hoga: aakhri layer ke scores → probabilities → sampling.'},
   {tag:'⭐ Technical line',cls:'tech',hl:['e','L','p'],html:'<p class="tline">In an LLM, each token\'s embedding vector is the input to the first layer, and the final layer outputs a score for every possible next token, which becomes a probability.</p>'}
  ]},
 /* ---------- SHARP CHECK ---------- */
@@ -419,23 +473,41 @@ var I=[
   {tag:'Pehle',hl:['s'],html:'<p class="bt">Training se pehle saare knobs random andaaze pe hote hain (initialization), isliye predictions bekaar aate hain. "1 order" do-teen baar dabao aur galti dekho.</p>'},
   {tag:'Har order ka chakkar',hl:['s','btn'],html:'<p class="bt">Har order pe teen kaam hote hain: predict karna, asli time se galti napna, aur har knob ko us direction mein thoda ghumana jisse loss chhota ho. Yahi gradient descent hai.</p>'},
   {tag:'1 lakh ke baad',hl:['s','btn'],html:'<p class="bt">Ab "1 lakh orders" dabao. Distance knob lagbhag 3 min per km pe, baarish knob lagbhag +8 min pe, aur bias lagbhag 10 min pe ruk jaata hai, kyunki wahan galti sabse kam hai.</p>'},
-  {tag:'Jawab',hl:['s'],html:'<p class="bt">Tumne sahi pakda tha ki do inputs hain toh do knobs hain. Baaki jawab yeh hai: pehle sab random tha, har order pe loss dekh ke knobs ghume, aur end mein woh loss sabse kam wali jagah pe ruk gaye.</p><div class="diff"><div class="m">- do inputs hain, distance aur baarish (sahi, par yahin ruk gaya)</div><div class="p">+ pehle random; har order pe loss dekh ke ghume; end mein loss sabse kam wali jagah ruke</div></div>'},
+  {tag:'Jawab',hl:['s'],recall:'Zomato ka network delivery ke minute predict karta hai. Inputs: distance aur baarish, saath mein ek bias (pickup ka base time). Training se pehle aur 1 lakh orders ke baad knobs mein kya farak hoga?',html:'<p class="bt">Tumne sahi pakda tha ki do inputs hain toh do knobs hain. Baaki jawab yeh hai: pehle sab random tha, har order pe loss dekh ke knobs ghume, aur end mein woh loss sabse kam wali jagah pe ruk gaye.</p><div class="diff"><div class="m">- do inputs hain, distance aur baarish (sahi, par yahin ruk gaya)</div><div class="p">+ pehle random; har order pe loss dekh ke ghume; end mein loss sabse kam wali jagah ruke</div></div>'},
   {tag:'Tumhare words',cls:'trap',hl:[],html:'<p class="bt">"I have understood what are you trying to teach me, but I am not able to create the answer somehow." Samajhna aur jawab khud banana do alag skills hain. Doosri wali Bolo se banti hai.</p>'}
+ ]},
+/* ---------- TUMHARE DOUBTS (15 Nov, his 12 annotations on the first deck) ---------- */
+{id:'doubts',name:'Tumhare 12 doubts',title:'Tumhare 12 doubts, ek ek karke, jawab ke saath',
+ pic:'<div class="row">'+['embedding row ka naam','numbers kaun set karta','sabse chhoti machine','naye shabd bina khole','bias hamesha? line ka naam','ReLU ka poora naam','0.001 kahan se','badi galti, badi saza','embedding = parameters?','kitni layers, neurons','inference se dot jodo','jawab pe sawaal'].map(function(t,i){return '<span class="c cbx dq" data-k="d'+(i+1)+'">'+(i+1)+' · '+t+'</span>';}).join('')+'</div>',
+ beats:[
+  {tag:'Doubt 1 · row ka naam',hl:['d1'],recall:'"what do we call it?? i think vector row, something named as vector right?"',html:'<p class="bt">Haan, sahi pakda. Embedding matrix ki ek row ko <span class="term">embedding vector</span> kehte hain. <span class="term">vector</span> = numbers ki ek fixed-length line. Toh "token ID 18342 wali row" aur "doodh ka embedding vector" ek hi cheez hai.</p>'},
+  {tag:'Doubt 2 · numbers kaun set karta hai',hl:['d2'],recall:'"did we learn this thing in the embedding topic? where are these embedded vector row numbers coming from?? who sets these numbers?"',html:'<p class="bt">Koi insaan nahi. Shuru mein har row mein random numbers hote hain. Training mein model agla token predict karta hai, galti napi jaati hai, aur rows ke numbers thode ghumte hain, bilkul weights ki tarah. Embeddings ke purane notes mein yeh baat thi (deck ka trap wahin se aaya), par woh topic restart ke baad dobara padhenge, isliye abhi confusion hona normal hai.</p>'},
+  {tag:'Doubt 3 · sabse chhoti machine',hl:['d3'],recall:'"Sabse chhoti machine: what do you mean by this??"',html:'<p class="bt">Matlab sabse simple neural network jo ban sakta hai: EK input (aaj ki sale), EK weight (knob), EK output (kal ka order). Na bias, na activation, na doosra neuron. Rule: output = input × weight. Deck ke baaki cards isi machine mein ek ek cheez jodte hain: pehle doosra input, phir bias, phir activation, phir aur neurons.</p>'},
+  {tag:'Doubt 4 · naye shabd bina khole',hl:['d4'],recall:'"teaching me new words here without opening them or telling me where when i will learn it"',html:'<p class="bt">Galti meri thi, tumhari nahi. <b>Learning rate</b> = har galti ke baad knob kitna ghumana hai. <b>Activation</b> = neuron ke total pe lagne wala aakhri chhota rule (ReLU: minus ho toh 0). Dono ab Bias card pe wahin khulte hain, aur poore deck mein har naye shabd ke neeche 📍 line hai ki woh kab aur kahan poora khulega.</p>'},
+  {tag:'Doubt 5 · bias hamesha? line ka naam?',hl:['d5'],recall:'"so bias is added in every case (what do we call one horizontal line of weights and input data??) when the sum is zero or not?"',html:'<p class="bt">Haan, har case mein, sum 0 ho tab bhi: 0 × 1.5 + 0 × 6 + 5 = 5. Line ka naam: inputs ki line = <span class="term">input vector</span>, ek neuron ke weights ki line = <span class="term">weight vector</span>, aur dono ko jodi-jodi guna karke jodna = <span class="term">dot product</span>. Toh weighted sum = dot product.</p>'},
+  {tag:'Doubt 6 · ReLU ka poora naam',hl:['d6'],recall:'"ReLU mentioned without opening its full form"',html:'<p class="bt">ReLU = <b>Rectified Linear Unit</b>. <i>Rectified</i> = minus ko seedha karke 0 bana dena. <i>Linear</i> = plus side pe seedhi line, number jaisa ka taisa. <i>Unit</i> = ek chhota function. Ek line mein: minus ho toh 0, plus ho toh wahi.</p>'},
+  {tag:'Doubt 7 · 0.001 kahan se',hl:['d7'],recall:'"how is 0.001 coming? no idea about that too. do we start from this learning rate?"',html:'<p class="bt">0.001 kisi data se nahi aata. Training se pehle insaan chunta hai, chhoti trial trainings mein 0.01, 0.001, 0.0001 jaisi values try karke. Isliye ise <span class="term">hyperparameter</span> kehte hain: insaan ka set kiya number, machine ka seekha hua nahi. Haan, training isi se shuru hoti hai; badi trainings mein ise beech mein dheere dheere ghataya bhi jaata hai.</p>',ahead:'Learning rate badalne ka plan (learning rate schedule): axis f (tradeoffs).'},
+  {tag:'Doubt 8 · badi galti, badi saza',hl:['d8'],recall:'"what does it mean in real AI world? will we learn it ahead?"',html:'<p class="bt">Model pehle badi galtiyan theek karta hai, kyunki unka loss sabse bada hai. Nuksaan: ek ajeeb data point (<span class="term">outlier</span>), jaise traffic jam wali 200 minute ki ek delivery, akela knobs ko apni taraf kheench leta hai. LLMs mein loss ka formula alag hai (<span class="term">cross-entropy</span>), par idea milta-julta: galat token ko bahut confidence se bola toh bahut badi saza.</p>',ahead:'Formulas axis d (math + range) mein, outlier ka nuksaan axis e (limits / failure modes) mein.'},
+  {tag:'Doubt 9 · embedding = parameters?',hl:['d9'],recall:'"Embedding matrix bhi isi mein aati hai: what does it mean, i mean how?"',html:'<p class="bt">Parameters = model ke saare SEEKHE hue numbers. Embedding matrix ke numbers training mein seekhe jaate hain (doubt 2), isliye woh bhi gine jaate hain. Llama 3 8B: 1,28,256 tokens × 4096 numbers ≈ 52.5 crore, sirf embedding matrix mein, yaani 800 crore ka lagbhag 6.5%.</p>'},
+  {tag:'Doubt 10 · kitni layers, kitne neurons',hl:['d10'],recall:'"how do we decide how many layers in a neuron will be and how many neurons will be there?? will we learn this ahead too?"',html:'<p class="bt">Chhota sudhaar: layer ke andar neurons hote hain, neuron ke andar layers nahi. Dono ginti insaan training se pehle chunta hai (hyperparameter), compute, paise aur experiments dekh ke. Llama 3 8B: 32 layers, har layer 4096 numbers chaudi.</p>',ahead:'Bada vs chhota: axis f (tradeoffs). Kharcha: axis h (scale / cost).'},
+  {tag:'Doubt 11 · inference se dot jodo',hl:['d11'],recall:'"make sure when we study inference and sampling then at that time we connect these points/dots"',html:'<p class="bt">Darj ho gaya, receipt ke saath. Jab inference & sampling dobara padhenge, pehla kaam yahi hoga: neural net ki aakhri layer ke scores → probabilities → sampling, ek hi picture mein.</p>'},
+  {tag:'Doubt 12 · jawab pe sawaal',hl:['d12'],recall:'"question should be mentioned here as well, i have forgotten the question now"',html:'<p class="bt">Ab har jawab wale step pe upar "Sawaal tha:" box aata hai, jaise yeh wala. Yeh deck ke template mein bhi gaya hai, toh aage ke har axis aur har topic ke deck mein aayega.</p>'}
  ]},
 /* ---------- JAHAN ATKE ---------- */
 {id:'atke',name:'Jahan atke',title:'Is axis ki daraarein, tumhare words mein',
- pic:'<div class="two"><div class="opt" data-k="k1"><b>Sunday wala input</b>15 bola, sahi 21</div><div class="opt" data-k="k2"><b>Sharp check</b>samajh aaya, jawab nahi bana</div><div class="opt" data-k="k3"><b>Bias, activation</b>teacher ne taal diye the</div><div class="opt" data-k="k4"><b>LLM ke input numbers</b>khole hi nahi gaye the</div></div>',
+ pic:'<div class="two"><div class="opt" data-k="k1"><b>Sunday wala input</b>15 bola, sahi 21</div><div class="opt" data-k="k2"><b>Sharp check</b>samajh aaya, jawab nahi bana</div><div class="opt" data-k="k3"><b>Bias, activation</b>teacher ne taal diye the</div><div class="opt" data-k="k4"><b>LLM ke input numbers</b>khole hi nahi gaye the</div><div class="opt" data-k="k5"><b>Naye shabd</b>bina khole aa gaye the</div></div>',
  beats:[
   {tag:'Sunday wala input',cls:'trap',hl:['k1'],html:'<p class="bt">Wajah tumne khud pakdi thi: "ideally you should have taught me what is an input in neuron right?? it\'s a mistake on your end." Input ka matlab pehle khola hi nahi gaya tha.</p>'},
   {tag:'Sharp check',cls:'trap',hl:['k2'],html:'<p class="bt">"I have understood what are you trying to teach me, but I am not able to create the answer somehow." Iska ilaaj Bolo hai, jahan jawab khud banana practise hota hai.</p>'},
   {tag:'Bias aur activation',cls:'trap',hl:['k3'],html:'<p class="bt">Teacher ne inhe "axis c mein" bol ke taal diya tha, aur gap tumne pakda: "you forgot to teach me one thing right, why is it not mentioned in the file?"</p>'},
-  {tag:'LLM ke input numbers',cls:'trap',hl:['k4'],html:'<p class="bt">"you have not explained what are those numbers which are used as inputs??" Ab yeh apni alag screen pe khula hai.</p>'}
+  {tag:'LLM ke input numbers',cls:'trap',hl:['k4'],html:'<p class="bt">"you have not explained what are those numbers which are used as inputs??" Ab yeh apni alag screen pe khula hai.</p>'},
+  {tag:'Naye shabd bina khole',cls:'trap',hl:['k5'],html:'<p class="bt">Pichhle deck mein learning rate, activation aur ReLU pehli baar bina khole aa gaye the. Galti meri thi. Tumhare words: "teaching me new words here without opening them or telling me where when i will learn it, my AuDHD brain got confused." Ab har naya shabd ya toh wahin khulta hai, ya uske neeche 📍 line batati hai ki kab aur kahan khulega.</p>'}
  ]},
 /* ---------- INTERVIEW LINES ---------- */
 {id:'lines',name:'Interview lines',title:'Interview lines, ek ek karke',
  pic:'<p class="big mono" id="lb"></p>',
  onBeat:function(b){$('lb').textContent=LINES[b];},
- beats:LINES.map(function(_,i){var T=['Neural network','Input aur output','LLM ke input numbers','Weight','Neuron','Bias','Activation','Layers','Training','Learning rate','Training vs inference','Parameters'];
+ beats:LINES.map(function(_,i){var T=['Neural network','Input aur output','LLM ke input numbers','Weight','Neuron','Bias','Activation','Activation kyun','Layers','Training','Learning rate','Training vs inference','Parameters'];
    return {tag:'⭐ '+T[i],cls:'tech',hl:[],html:'<p class="bt dim">Is line ko apni awaaz mein ek baar bolo. Ratta nahi: mechanism sahi ho toh words koi bhi chalenge.</p>'};})},
 /* ---------- BOLO ---------- */
 {id:'bolo',name:'Bolo',title:'Tumhara Bolo: blanks tum bharo',
@@ -456,10 +528,10 @@ function setInputs(map){if(!map)return;Object.keys(map).forEach(function(id){var
 function nextName(){var x=I[cur];if(beat<x.beats.length-1)return x.name+' › '+x.beats[beat+1].tag;if(cur<I.length-1)return I[cur+1].name;return 'axis b (kyun / first principles)';}
 function render(){var x=I[cur],b=x.beats[beat];
   if(rendered!==cur){$('pz').innerHTML=x.pic;$('ttl').textContent=x.title;if(x.init)x.init();rendered=cur;}
-  if(x.onBeat)x.onBeat(beat);setInputs(b.set);
+  if(x.onBeat)x.onBeat(beat);setInputs(b.set);$('pz').classList.toggle('qhide',!!b.hideAns);
   var keys=b.hl||[];Array.prototype.forEach.call($('pz').querySelectorAll('[data-k]'),function(el){var k=el.getAttribute('data-k');var on=keys.indexOf(k)>=0;
     el.classList.toggle('hl',on&&el.tagName!=='g');el.classList.toggle('dimmed',keys.length>0&&!on);if(el.tagName==='g'){el.classList.toggle('hlg',on);}});
-  var h='<span class="tag'+(b.cls?' '+b.cls:'')+'">'+b.tag+'</span>'+b.html;
+  var h='<span class="tag'+(b.cls?' '+b.cls:'')+'">'+b.tag+'</span>'+(b.recall?'<div class="recall"><b>Sawaal tha:</b> '+b.recall+'</div>':'')+b.html+(b.ahead?'<p class="ahead">📍 '+b.ahead+'</p>':'');
   if(b.type==='num'){h+='<div class="khud"><input id="ka" type="text" inputmode="decimal" aria-label="Tumhara jawab" placeholder="jawab"><button id="kc">Check</button></div><p class="fb" id="kf"></p><div class="why" id="kw" hidden>'+b.why+'</div>';}
   if(b.type==='reveal'){h+='<div class="khud"><button id="kr">Socha? Jawab dikhao</button></div><div class="why" id="kw" hidden>'+b.why+'</div>';}
   $('bz').innerHTML=h;
