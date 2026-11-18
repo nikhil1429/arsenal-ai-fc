@@ -205,6 +205,28 @@ if he says it) · export the landed seats through the names gate · release ever
 the resume order into CURRENT.md's first line · then **zero turns** until his word after the reset.
 The session stays OPEN and silent; the study surface is his — no card, no line, no panel ask.
 
+## THE NIGHT — armed by his day end, closed by his learn start (unit mfac · row 1069)
+The night is armed by HIS day end, never by you: `day.mjs end` writes the armed row through `node scripts/night.mjs arm`.
+1. **Hold.** While you have nothing in hand, hold on `node scripts/night.mjs wait --since <iso of your last begin>` in a
+   Monitor (or an until-loop on `wait --once`). It is a shell process the harness watches: zero tokens while it waits. It
+   exits 0 the moment a night is armed and not yet begun.
+2. **Begin.** `node scripts/night.mjs begin --runner runner`. Then your FIRST ACT checks that apply to a live session.
+3. **Before every launch** ask both halves, and launch only on two GOs: `node scripts/night.mjs may --act launch` (the
+   organism's half: armed, begun, not stopped, no red, no sitting open, free memory at or above the F4 line) AND the
+   campaign's own gate (pool reading inside the launch rule's age line, the pool table, `his_words.mjs tail`).
+4. **Mark every act:** `night.mjs mark --kind launch|return|land-ready|fork|red --unit <id>`. The furthest a night goes is
+   `land-ready` (a DRY pass of the landing verb). **Never land at night** — `may --act land` answers NO until a row grants
+   unattended landing.
+5. **Stops** (one row each, `night.mjs stop --reason <r>`): `pool` when the pool reading ages past the launch rule's own
+   line (F3 A; B waits for unit mpool) · `memory` (`may` writes it itself) · `red` (`mark --kind red` stops the night,
+   F5 A) · `context` when your own context reaches its rotation line · `his-word` on any word of his · `done` when the
+   queue is empty. A fork outside your class is `mark --kind fork`: that thread waits for the architect, the night goes
+   on (F6 A). After any stop, run THE PAUSE's soft half and hold silent.
+6. **The morning is not yours.** His `/learn` closes the night (`day.mjs start` → `night.mjs close`) and prints ONE line;
+   at most ONE card (`night:<D>`) waits for him when a land-ready unit or a fork does. Never print the night to him
+   yourself.
+7. **If you were not alive at the day end** nothing spawns you (F2 A): the morning line says `never begun`.
+
 ## CLOSE / ROTATION CHECKLIST (from CURRENT.md's own ROTATION CHECKLIST)
 
 **WHEN (his standing order 8 Sep 2026, forks ruling rows 147 / 166 — the /clear moment is TOLD, never guessed):** every message to the architect ends with the runner's context estimate from its own hook line ("context ~N% est") as one number. At **≥ 70 % and hosting nothing and nothing mid-build**, the runner ROTATES by this checklist and messages the architect "rotated · N %"; the architect then tells him in plain words: *"runner session mein /clear karo, phir 'runner' type karo"*. NEVER /clear while hosting a run (background runs die with the session) or mid-build; if the meter passes 70 % while hosting, finish the return leg first, then rotate.

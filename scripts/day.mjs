@@ -34,6 +34,8 @@
 //      with reason fulltime — its close fires the judge by code (sitting.mjs close, `judge-due --trigger sitting.close`)
 //   3. postmatch.mjs autoclose --date <D> --anchor close   the MACHINE half of the day, no quiet-rule defer (ruling F3 A)
 //   4. the evening organs measured idempotent by day (EVENING_ORGANS below — ruling F4; none is, today)
+//   5a. night.mjs arm --day <D> --by day.end   the night factory is armed through its owner's CLI (unit mfac, ruling F1 A: only
+//      this real close arms it — never the already or REFUSED path); the next `start` closes it and prints its ONE line
 //   5. captains_call.mjs deal   ONE card (its own order decides which)
 //   6. ONE line, then the ONE message of questions for him — answered or not, the day is already closed (R3)
 // SAFE TWICE: a sitting closed today with reason fulltime IS the owner's "already" stamp — the second call writes nothing.
@@ -89,6 +91,13 @@ function payloadOf() {
   try { const p = JSON.parse(raw); return p && typeof p === "object" ? p : {}; } catch { return {}; }
 }
 
+// unit mfac — THE NIGHT, through its owner's CLI (night.mjs is sole writer of night_log.jsonl): `end` arms it (step 5a), `start`
+// closes it and hands back its ONE line (null when no night was armed — silent).
+async function closeNight() {
+  const n = await ownerRun("night.mjs", ["close", "--by", "learn-start"]);
+  return n.stdout.split(/\r?\n/).find((l) => l.startsWith("NIGHT ")) || null;
+}
+
 // ── START ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export async function start({ session = null, transcript = null, by = "hand", now = new Date() } = {}) {
   if (process.env.ARSENAL_ORGAN === "1") return { ok: true, silent: true };   // a headless organ is never his study day
@@ -107,9 +116,10 @@ export async function start({ session = null, transcript = null, by = "hand", no
   // per start. Its own door decides (it files ONE keyed card only on a WAIT for want of a source); this file writes nothing.
   const pool = await ownerRun("usage_tap.mjs", ["need"]);
   const poolNote = ` · pool: ${lastLine(pool).replace(/^usage tap · need: /, "").slice(0, 120) || `usage_tap exit ${pool.status}`}`;
-  if (!r.ok) return { ok: false, r, line: `day: start ${D} — the sitting did not open: ${r.error}${r.resume ? ` → ${r.resume}` : ""}${rolled}${poolNote}` };
+  const night = await closeNight();   // unit mfac (F9 A): the learn start closes the night and never waits — its ONE line rides this start
+  if (!r.ok) return { ok: false, r, night, line: `day: start ${D} — the sitting did not open: ${r.error}${r.resume ? ` → ${r.resume}` : ""}${rolled}${poolNote}` };
   const hostNote = r.joined ? (prevHost && prevHost !== session ? ` · host moved ${short(prevHost)} → ${short(r.host_session_id)} (this /learn session is the study session now)` : ` · host ${short(r.host_session_id)} (same session — JOINED, nothing new)`) : ` · host ${short(r.host_session_id)}`;
-  return { ok: true, r, line: `day: START ${D} · sitting ${r.id} ${r.joined ? "JOINED" : "OPEN"} (door ${r.door}, ${by})${hostNote}${rolled}${poolNote} · the day ends when HE means it: node scripts/day.mjs end` };
+  return { ok: true, r, night, line: `day: START ${D} · sitting ${r.id} ${r.joined ? "JOINED" : "OPEN"} (door ${r.door}, ${by})${hostNote}${rolled}${poolNote} · the day ends when HE means it: node scripts/day.mjs end` };
 }
 
 // ── END ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -147,6 +157,9 @@ export async function end({ pointer = null, now = new Date(), envSession = proce
   await machineHalf();
   // 4. the evening organs measured idempotent by day (F4)
   for (const o of EVENING_ORGANS.filter((x) => x.on.includes("end"))) { const r = await ownerRun(o.file, []); steps.push(`${o.file} exit ${r.status}`); }
+  // 5a. the night (unit mfac, ruling F1 A: only this real close arms it — the already and REFUSED paths returned above)
+  const night = await ownerRun("night.mjs", ["arm", "--day", D, "--by", "day.end"]);
+  steps.push(night.status === 0 ? lastLine(night).replace(/^night: /, "night ") : `night NOT armed (${lastLine(night).slice(0, 80)})`);
   // 5. ONE card
   const deal = await ownerRun("captains_call.mjs", ["deal"]);
   const card = deal.stdout.split(/\r?\n/).filter((l) => l.trim());
@@ -206,6 +219,7 @@ async function main() {
       const p = payloadOf();
       const r = await start({ session: opt("--session") || (typeof p.session_id === "string" ? p.session_id : null), transcript: opt("--transcript") || (typeof p.transcript_path === "string" ? p.transcript_path : null), by: opt("--by") || "hand" });
       if (r.line) console.log(r.line);
+      if (r.night) console.log(r.night);   // unit mfac: the ONE night line, only when a night was armed
       return;   // HOOK PATH: never process.exit
     }
     case "end": { const r = await end({ pointer: opt("--pointer") }); for (const l of r.lines) console.log(l); process.exitCode = r.code; return; }
