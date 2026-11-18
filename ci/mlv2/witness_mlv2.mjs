@@ -18,7 +18,7 @@
 //                above is GREEN and those listeners received ZERO connections.
 //   XML · BOUND · LAST  as in every unit of this queue.
 // Bounds are MEASURED in this run: SLACK = one node start; IMPORT = one fresh process importing the copy's entry (the
-// one measurement step); the first boot is bounded by two IMPORTs and one SLACK (the keeper, then its worker); BOOT = the measured first
+// one measurement step); the first boot is bounded by two IMPORTs and three SLACKs (the keeper, then its worker); BOOT = the measured first
 // boot, and every later wait is bounded by BOOT + SLACK, plus cortex's own declared dispatch poll where a lane is
 // awaited (read from its source).
 // LAST LINE: GREEN MLV2 <what> · <n> clause(s) (exit 0) or RED MLV2 · <clauses> (exit 1)
@@ -73,7 +73,10 @@ rmSync(join(SDIR, "wake.json"), { force: true });
 const ti = Date.now();
 spawnSync(process.execPath, ["--input-type=module", "-e", `await import(${JSON.stringify(pathToFileURL(ENTRY).href)}).catch(() => {}); process.exit(0);`], { cwd: COPY, env: { ...ENV, ARSENAL_CORTEX_PORT: "", ARSENAL_THALAMUS_PORT: "", ARSENAL_JUDGE_PORT: "" }, stdio: "ignore" });
 const IMPORT = Date.now() - ti;
-const BOOT0 = IMPORT + IMPORT + SLACK;
+// the first boot, step by step, each a MEASURED quantity: the keeper's start (one IMPORT) · the worker's start (one
+// IMPORT) · the keeper's port probe and the worker's listen (one SLACK) · this witness's poll step (one SLACK) · the
+// /status round trip (one SLACK)
+const BOOT0 = IMPORT + IMPORT + SLACK + SLACK + SLACK;
 
 // THE PLANTED THALAMUS on a free port: records every /deep-answer, writes the resolution row the real owner would, and
 // holds its answer while `hold` is set (that keeps a lane IN FLIGHT)
@@ -126,7 +129,7 @@ let keeper = startKeeper();
   const s0 = Date.now();
   const up = await waitFor(portUp, BOOT0);
   BOUND = up ? Date.now() - s0 + SLACK : BOOT0;
-  console.log(up ? `  first keeper up in ${Date.now() - s0} ms · every later wait bounded by ${BOUND} ms` : `  first keeper NOT up within ${BOOT0} ms (two cold imports + one node start, measured) · ${out.slice(-2).join(" | ")}`);
+  console.log(up ? `  first keeper up in ${Date.now() - s0} ms · every later wait bounded by ${BOUND} ms` : `  first keeper NOT up within ${BOOT0} ms (two cold imports + three node starts, measured) · ${out.slice(-2).join(" | ")}`);
 }
 const POLL = Number((/setInterval\(\(\) => \{ retireIfArmed\(\); fire\(\); \}, (\d+)\)/.exec(readFileSync(ENTRY, "utf8")) || [])[1]);
 
