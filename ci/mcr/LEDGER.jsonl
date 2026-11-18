@@ -1,0 +1,5 @@
+{"ts":"2026-11-18T10:40:50.886Z","act":"branch","cmd":"git fetch origin main && git checkout -b claude/mcr-b2-spec FETCH_HEAD","last_line":"base 76b0626 (origin/main, carries scripts/ci_verdict.mjs)"}
+{"ts":"2026-11-18T10:40:50.909Z","act":"measure","cmd":"curl check-runs 76b0626 (anonymous)","last_line":"134737191337 npm test · node 22 success; 134737190476 npm test · node 24 success; 134741841410 public-safe-chores failure; 2 legs in_progress"}
+{"ts":"2026-11-18T10:40:50.938Z","act":"measure","cmd":"node scripts/ci_verdict.mjs 76b0626","last_line":"ci_verdict 76b0626 UNREADABLE — GET ... answered 403 (node fetch in this container; curl same URL answered 200)"}
+{"ts":"2026-11-18T10:42:36.108Z","act":"write","cmd":"ci/mcr/B2_SPEC.md","last_line":"B2 spec written: verb land.mjs, carry predicate, HERMETIC/LIVE split, groundsman rebase, branch table L1-L4 C1-C3 S1 G1-G2"}
+{"ts":"2026-11-18T10:42:36.143Z","act":"ruling","cmd":"message forks row 1025 (4)","last_line":"new FIRST item mjd3 BUILD received mid-B2; B2 pushed complete, mjd3 next, then B3"}
