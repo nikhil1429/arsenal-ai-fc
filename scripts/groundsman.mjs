@@ -28,7 +28,7 @@
 //        node scripts/groundsman.mjs status · selftest
 // ============================================================================
 
-import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync } from "node:fs";
+import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -181,9 +181,85 @@ function laneEnv(deps = {}) {
   if (!_laneEnv) _laneEnv = { ...process.env, [ENV_TOKEN]: issueDayKeyToken(laneDay(deps).day) };
   return _laneEnv;
 }
-function sh(cmd, args, deps = {}) {
-  const exec = deps.exec || ((c, a) => execFileSync(c, a, { encoding: "utf8", windowsHide: true, timeout: 120000, cwd: join(__dirname, ".."), env: laneEnv(deps) }));
-  try { return { ok: true, out: exec(cmd, args) }; } catch (e) { return { ok: false, out: String(e.message).slice(0, 200) }; }
+function sh(cmd, args, deps = {}, extraEnv = null) {   // extraEnv (row 1029 (3)): the rebuild's private GIT_INDEX_FILE, never his index
+  const exec = deps.exec || ((c, a, x) => execFileSync(c, a, { encoding: "utf8", windowsHide: true, timeout: 120000, cwd: join(__dirname, ".."), env: x ? { ...laneEnv(deps), ...x } : laneEnv(deps) }));
+  try { return { ok: true, out: exec(cmd, args, extraEnv) }; } catch (e) { return { ok: false, out: String(e.message).slice(0, 200) }; }
+}
+
+// ---------------------------------------------------------------------------
+// ROW 1029 (3) (unit mgrd, spec ci/mcr/B2_SPEC.md §4, G1 A + G2 A) — THE STATE PUSH MEETS ORIGIN FIRST. Until this unit
+// the lane never fetched: a moved origin (a landing pushed by a runner) left the night's commit made locally, the push
+// rejected, and every later night added one more own commit to a DIVERGED main. Now, every night, before staging:
+//   · fetch origin main — a refusal idles (NO-FETCH), nothing staged;
+//   · origin is an ancestor of HEAD → as before;
+//   · no own unpushed commit → a fast-forward-only merge to origin (git refuses only for a dirty path origin moved:
+//     idle DIRTY-PATH, ONE card by the owner CLI, nothing moved);
+//   · own unpushed STATE commits (heldCommits has already proven each is this lane's own, state paths only) and origin
+//     moved by commits that touch NO state path → each own commit is REBUILT by plumbing on origin's head: a private
+//     index (GIT_INDEX_FILE) holds origin's tree with that commit's dressing-room/state/ subtree laid over it,
+//     commit-tree with its own author and message, then `read-tree -m -u` (two-way, refuses a dirty path) + a CAS
+//     `update-ref` move main. Never a stash, never a force, never a rebase of a commit that is not its own;
+//   · origin moved a STATE path → idle STATE-CONFLICT, ONE card, nothing rewritten (his word decides).
+// ---------------------------------------------------------------------------
+const STATE_PREFIX = "dressing-room/state/";
+const linesOf = (s) => String(s || "").split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+function cardOnce(run, line, key) { run("node", [join(__dirname, "captains_call.mjs"), "file", "--line", line, "--key", key]); return key; }
+function dirtyOverlap(run, from, to) {
+  const moved = new Set(linesOf(run("git", ["diff", "--name-only", "--no-renames", from, to]).out));
+  const dirty = [...linesOf(run("git", ["diff", "--name-only", "HEAD"]).out), ...linesOf(run("git", ["ls-files", "--others", "--exclude-standard"]).out)];
+  return dirty.find((p) => moved.has(p)) || null;
+}
+function meetOrigin(run) {
+  const anc = run("git", ["merge-base", "--is-ancestor", "@{u}", "HEAD"]);
+  if (anc.ok) return { ok: true, how: "even" };
+  const O = run("git", ["rev-parse", "@{u}"]), H = run("git", ["rev-parse", "HEAD"]), B = run("git", ["merge-base", "HEAD", "@{u}"]);
+  const own = run("git", ["rev-list", "--reverse", "@{u}..HEAD"]);
+  if (!O.ok || !H.ok || !B.ok || !own.ok) return { ok: false, idle: "NO-BASE", why: "idle NO-BASE — origin's head, HEAD or their meeting point could not be read; fail closed, nothing staged, nothing moved" };
+  const o = O.out.trim(), hd = H.out.trim(), base = B.out.trim(), mine = linesOf(own.out), o12 = o.slice(0, 12);
+  if (!mine.length) {                                                       // behind only: fast-forward to origin
+    const ff = run("git", ["merge", "--ff-only", o]);
+    if (!ff.ok) {
+      const p = dirtyOverlap(run, hd, o) || String(ff.out).split(/\r?\n/).slice(1).join(" ").trim().slice(0, 100);
+      const key = cardOnce(run, `Raat ka state push ruka: origin aage gaya aur ${p} par aapka kaam chal raha hai. Aap merge karein; tab tak push band.`, `groundsman:dirty:${o12}`);
+      return { ok: false, idle: "DIRTY-PATH", card: key, why: `idle DIRTY-PATH ${p} — origin ${o.slice(0, 7)} moved a path that is dirty here; no stash, no force, nothing moved` };
+    }
+    return { ok: true, how: "ff", to: o };
+  }
+  const movedPaths = linesOf(run("git", ["log", "--no-renames", "--format=", "--name-only", `${base}..${o}`]).out);
+  const statePath = movedPaths.find((p) => p.startsWith(STATE_PREFIX));
+  if (statePath) {
+    const key = cardOnce(run, `Raat ka state push ruka: origin ne bhi state badli (${statePath}) aur yahan ${mine.length} state commit unpushed hain. Aapka faisla; kuch rewrite nahi hua.`, `groundsman:conflict:${o12}`);
+    return { ok: false, idle: "STATE-CONFLICT", card: key, why: `idle STATE-CONFLICT ${statePath} — origin ${o.slice(0, 7)} moved a state path and ${mine.length} own state commit(s) are unpushed; nothing rewritten` };
+  }
+  const idx = join(os.tmpdir(), `groundsman-index-${process.pid}-${o12}`);
+  const env = { GIT_INDEX_FILE: idx };
+  let parent = o;
+  try {
+    for (const c of mine) {
+      const meta = run("git", ["show", "-s", "--format=%an%x00%ae%x00%aI%x00%B", c]);
+      const steps = [
+        run("git", ["read-tree", o], env),
+        run("git", ["rm", "--cached", "-r", "-q", "--ignore-unmatch", "--", STATE_PREFIX.slice(0, -1)], env),
+      ];
+      if (run("git", ["rev-parse", "--verify", "-q", `${c}:${STATE_PREFIX.slice(0, -1)}`]).ok)
+        steps.push(run("git", ["read-tree", `--prefix=${STATE_PREFIX}`, `${c}:${STATE_PREFIX.slice(0, -1)}`], env));
+      const tree = run("git", ["write-tree"], env);
+      if (!meta.ok || steps.some((s) => !s.ok) || !tree.ok) return { ok: false, idle: "REBUILD-FAILED", why: `idle REBUILD-FAILED at ${c.slice(0, 7)} — the private index could not be built; nothing moved` };
+      const [an, ae, ad, ...msg] = String(meta.out).split("\0");
+      const made = run("git", ["commit-tree", tree.out.trim(), "-p", parent, "-m", msg.join("\0").replace(/\s+$/, "")], { GIT_AUTHOR_NAME: an, GIT_AUTHOR_EMAIL: ae, GIT_AUTHOR_DATE: ad });
+      if (!made.ok) return { ok: false, idle: "REBUILD-FAILED", why: `idle REBUILD-FAILED at ${c.slice(0, 7)} — commit-tree refused; nothing moved` };
+      parent = made.out.trim();
+    }
+  } finally { try { rmSync(idx, { force: true }); } catch {} }
+  const move = run("git", ["read-tree", "-m", "-u", hd, parent]);           // two-way: his dirty paths stay, an overlap refuses
+  if (!move.ok) {
+    const p = dirtyOverlap(run, hd, parent) || String(move.out).split(/\r?\n/).slice(1).join(" ").trim().slice(0, 100);
+    const key = cardOnce(run, `Raat ka state push ruka: origin aage gaya aur ${p} par aapka kaam chal raha hai. Aap merge karein; tab tak push band.`, `groundsman:dirty:${o12}`);
+    return { ok: false, idle: "DIRTY-PATH", card: key, why: `idle DIRTY-PATH ${p} — the rebuilt head moves a path that is dirty here; nothing moved` };
+  }
+  const ref = run("git", ["update-ref", "-m", `groundsman: own state commits rebuilt on origin ${o.slice(0, 7)}`, "HEAD", parent, hd]);
+  if (!ref.ok) return { ok: false, idle: "REBUILD-FAILED", why: "idle REBUILD-FAILED — HEAD moved under the rebuild (compare-and-swap refused)" };
+  return { ok: true, how: "rebuilt", n: mine.length, to: parent };
 }
 async function nightPass(hostId, deps = {}) {
   const run = (c, a) => (deps.sh || sh)(c, a, deps);
@@ -236,7 +312,7 @@ async function nightPass(hostId, deps = {}) {
 // honestly and retried by the next night's task — never forced.
 // ---------------------------------------------------------------------------
 async function pushOnlyPass(hostId, deps = {}) {
-  const run = (c, a) => (deps.sh || sh)(c, a, deps);
+  const run = (c, a, x) => (deps.sh || sh)(c, a, deps, x);
   // ── THE LANE READ-BACK (10 Aug 2026, wire-audit) ──────────────────────────
   // WHY IT LIVES HERE: this lane's push is what FIRES the away-day CI workflow
   // (.github/workflows/awayday.yml — push to main + a 03:00 IST cron), and until
@@ -277,21 +353,32 @@ async function pushOnlyPass(hostId, deps = {}) {
   // orphan again the first night the staging gate refuses — and a refusing night
   // is precisely a night somebody is reading this log.
   const withVerdict = (o) => ({ ...o, readback });
+  const fetched = run("git", ["fetch", "origin", "main"]);   // ROW 1029 (3): every night, before the range and the staging
+  if (!fetched.ok) return withVerdict({ ok: true, pushed: false, idle: "NO-FETCH", why: `idle NO-FETCH — origin could not be read (${String(fetched.out).split(/\r?\n/)[0].slice(0, 100)}); nothing staged, tomorrow retries` });
   const h = heldCommits(run);                       // ROW 808 (2): the RANGE first — after the read-back, before staging
   if (!h.ok) return withVerdict({ ok: true, pushed: false, refused: true, why: h.why });
   if (h.held.length) return withVerdict(refuseHeld(run, h));
+  const met = meetOrigin(run);                      // ROW 1029 (3): a moved origin is met (ff, or rebuilt by plumbing) or idles with ONE card
+  if (!met.ok) return withVerdict({ ok: true, pushed: false, idle: met.idle, card: met.card || null, why: met.why });
   const add = run("git", ["add", "-u", "--", ...PUBLISH_ALLOWLIST]);
   if (!add.ok) return withVerdict({ ok: true, pushed: false, why: `staging refused: ${add.out}` });
   const diff = run("git", ["diff", "--cached", "--quiet"]);
-  if (diff.ok) return withVerdict({ ok: true, pushed: false, why: "nothing public to push" });
+  if (diff.ok) {
+    // ROW 1029 (3): nothing new to stage, but own commits still unpushed (rebuilt tonight, or a past night's refused push) → push them
+    const ahead = linesOf(run("git", ["rev-list", "@{u}..HEAD"]).out);
+    if (!ahead.length) return withVerdict({ ok: true, pushed: false, met: met.how, why: "nothing public to push" });
+    const pushOwn = run("git", ["push"]);
+    if (!pushOwn.ok) return withVerdict({ ok: true, pushed: false, idle: "PUSH-RACE", met: met.how, why: `idle PUSH-RACE — push refused (${pushOwn.out.slice(0, 120)}) — tomorrow's pass retries; nothing forced` });
+    return withVerdict({ ok: true, pushed: true, met: met.how });
+  }
   const staged = run("git", ["diff", "--cached", "--name-only"]);
   if (!staged.ok) return withVerdict({ ok: true, pushed: false, refused: true, why: "refused: could not read the staged set back to verify it" });
   const offending = String(staged.out || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).filter(p => !isPublishablePath(p));
   if (offending.length) return withVerdict({ ok: true, pushed: false, refused: true, why: `refused: ${offending.length} staged path(s) off the publish allowlist (${offending.slice(0, 3).join(", ")}) — a human publishes those, never this lane` });
   run("git", ["commit", "-m", `groundsman: unattended state push (${hostId}) — his 9 Aug 2026 ruling, receipt in pushOnlyPass`]);
   const push = run("git", ["push"]);
-  if (!push.ok) return withVerdict({ ok: true, pushed: false, why: `push refused (${push.out.slice(0, 120)}) — tomorrow's pass retries; nothing forced` });
-  return withVerdict({ ok: true, pushed: true });
+  if (!push.ok) return withVerdict({ ok: true, pushed: false, idle: "PUSH-RACE", met: met.how, why: `idle PUSH-RACE — push refused (${push.out.slice(0, 120)}) — tomorrow's pass retries; nothing forced` });
+  return withVerdict({ ok: true, pushed: true, met: met.how });
 }
 
 async function selftest() {
@@ -409,6 +496,14 @@ async function selftest() {
     });
     assert("D3: a rejected push is reported honestly and NEVER forced (tomorrow retries)",
       r9.pushed === false && /retries/.test(r9.why) && /nothing forced/.test(r9.why));
+    // ROW 1029 (3) — the fetch comes first, every night; a fetch that fails stages nothing (the real-git plants: ci/mgrd/)
+    assert("ROW 1029 (3) · the push pass FETCHES origin main before the range read and before staging",
+      c6.some(x => x === "git fetch origin main") && c6.findIndex(x => x === "git fetch origin main") < c6.findIndex(x => x.startsWith("git add -u --"))
+      && c6.findIndex(x => x === "git fetch origin main") < c6.findIndex(x => x.startsWith("git log")));
+    const c10 = [];
+    const r10 = await pushOnlyPass("laptop", { sh: (c, a) => { c10.push(c + " " + a.join(" ")); if (c === "git" && a[0] === "fetch") return { ok: false, out: "fatal: unable to access" }; return { ok: true, out: "" }; } });
+    assert("ROW 1029 (3) · a fetch that fails idles NO-FETCH: nothing staged, nothing committed, nothing pushed",
+      r10.pushed === false && r10.idle === "NO-FETCH" && !c10.some(x => x.startsWith("git add")) && !c10.some(x => x.startsWith("git commit")) && !c10.some(x => x.startsWith("git push")));
 
     // THE LANE READ-BACK (10 Aug 2026, wire-audit) — see the header inside
     // pushOnlyPass. awayday.mjs was a producer with no consumer for six weeks:
