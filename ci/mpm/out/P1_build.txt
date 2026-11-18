@@ -1,0 +1,6 @@
+  ok   Q2 · neither day: exit 0 · autoclose · 2099-03-05 · no evidence · nothing run (0 study session(s) · file none · stdout = BASE's
+  ok   Q1 · queue-only day: exit 0 · record written · COMPILE: DONE · nothing to compile — no study session on 209 · JUDGE: NOT DUE · gaffer_brain: not due (day.close) — the newest unjudged capture is -38019
+  ok   Q3 · the record's queue line: · grade queue: 1 outstanding capture(s) of 2099-03-02 (each capture's own IST day) · wq-a
+  ok   BOUND · differs in 1 file(s): scripts/postmatch.mjs
+  ok   LAST · process list read · 0 node process(es) naming the temp root · fake claude logged no spawn
+GREEN MPM queue evidence closes its day · 5 clause(s)

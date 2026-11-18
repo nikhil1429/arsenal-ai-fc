@@ -1,0 +1,7 @@
+  RED by name Q1 · the queue never opens a day (BASE's gate) · witness exit 1 · RED MPM · Q1 Q3
+  RED by name Q2 · the no-evidence gate removed: a day with neither runs on · witness exit 1 · RED MPM · Q2
+  RED by name Q3 · the capture's UTC date instead of its IST day · witness exit 1 · RED MPM · Q3
+  RED by name BOUND · a second file touched · witness exit 1 · RED MPM · BOUND
+  RED by name LAST · the close spawns claude · witness exit 1 · RED MPM · LAST
+  control · the build tree unmutated · witness exit 0 · GREEN MPM queue evidence closes its day · 5 clause(s)
+run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN

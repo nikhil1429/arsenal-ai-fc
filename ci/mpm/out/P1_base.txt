@@ -1,0 +1,6 @@
+  ok   Q2 · neither day: exit 0 · autoclose · 2099-03-05 · no evidence · nothing run (0 study session(s) · file none · stdout = BASE's
+  RED  Q1 · queue-only day: exit 0 · record NONE · no compile line · no judge line
+  RED  Q3 · the record's queue line: absent
+  RED  BOUND · differs in 0 file(s): none
+  ok   LAST · process list read · 0 node process(es) naming the temp root · fake claude logged no spawn
+RED MPM · Q1 Q3 BOUND
