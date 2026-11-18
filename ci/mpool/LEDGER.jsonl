@@ -5,3 +5,5 @@
 {"ts":"2026-11-18T21:44:21.937Z","act":"suite-build","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (build 0e13338, after npm ci)","last_line":"organism_test: 140 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
 {"ts":"2026-11-18T21:44:21.937Z","act":"witness-green","cmd":"node ci/mpool/witness_mpool.mjs --org . --base-org <scratch clone of b1fc984>","last_line":"GREEN MPOOL the usage tap · 31 clause(s)"}
 {"ts":"2026-11-18T21:44:21.937Z","act":"witness-red","cmd":"node ci/mpool/witness_mpool.mjs --org <base> --base-org <base>","last_line":"RED MPOOL · W1.1, W1.2, W1.3, W1.4, W1.5, WA.i, WA.ii, W2.1, W2.2, W2.3, W2.4, W2.5, W2.6, W2.7, W2.8, W3.1, W3.2, W3.4, W4.1, W4.2, W4.3, W4.4, W4.5, W4.6, F2, F5, F9, C, J, S"}
+{"ts":"2026-11-18T21:48:56.316Z","act":"mutants","cmd":"node ci/mpool/run_mutants_mpool.mjs --org . --base-org <scratch clone of b1fc984>","last_line":"run_mutants: 31 of 31 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T21:48:56.316Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0 · literal model names outside models.mjs: 0"}

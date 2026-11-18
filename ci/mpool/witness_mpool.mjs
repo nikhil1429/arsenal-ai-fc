@@ -207,7 +207,7 @@ try {
   if (existsSync("/proc")) {
     for (const p of readdirSync("/proc")) {
       if (!/^\d+$/.test(p) || Number(p) === process.pid) continue;
-      try { const cl = readFileSync(join("/proc", p, "cmdline"), "utf8"); if (cl.includes(TMP) && /node/.test(cl)) survivors.push(Number(p)); } catch { /* raced */ }
+      try { const cl = readFileSync(join("/proc", p, "cmdline"), "utf8"); if (cl.includes(TMP) && /node/.test(cl)) { survivors.push(Number(p)); try { process.kill(Number(p)); } catch { /* gone */ } } } catch { /* raced */ }
     }
   }
   rmSync(TMP, { recursive: true, force: true });
