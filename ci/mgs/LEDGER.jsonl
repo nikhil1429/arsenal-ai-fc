@@ -2,3 +2,9 @@
 {"ts":"2026-11-18T22:25:55.970Z","act":"selftest-base","cmd":"node scripts/groundsman.mjs selftest (at base 7c3c279)","last_line":"ALL CHECKS PASSED"}
 {"ts":"2026-11-18T22:25:55.970Z","act":"build","cmd":"edit scripts/groundsman.mjs: landHold + LAND_HOLD_MAX_H wired into pushOnlyPass and nightPass before staging","last_line":""}
 {"ts":"2026-11-18T22:25:55.970Z","act":"selftest-build","cmd":"node scripts/groundsman.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T22:30:17.189Z","act":"push","cmd":"git push -u origin claude/mgs-build","last_line":"5967817c82809e346ea69bd63dd8025dae461303"}
+{"ts":"2026-11-18T22:30:17.190Z","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (base clone 7c3c279, after npm ci)","last_line":"organism_test: 140 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-18T22:30:17.190Z","act":"suite-build","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (build 5967817)","last_line":"organism_test: 142 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-18T22:30:17.190Z","act":"witness","cmd":"node ci/mgs/witness_mgs.mjs --org . --base-org <scratch>/base","last_line":"GREEN MGS land wait · 7 clause(s)"}
+{"ts":"2026-11-18T22:30:17.190Z","act":"mutants","cmd":"node ci/mgs/run_mutants_mgs.mjs --org . --base-org <scratch>/base","last_line":"run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T22:30:17.190Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0 · models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)"}
