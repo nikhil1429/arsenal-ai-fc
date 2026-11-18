@@ -6,15 +6,18 @@ pace (the runner never sits idle). Row 1055 (b) fixes B1 to B6. This file builds
 `file:line` at `4d166d3` or a measurement made on 18 Nov 2026 with the command named. What the cloud could not reach is
 under **NAMED, NOT GUESSED**.
 
-**Headline (measured 18 Nov 2026).** The witnesses exist and they still discriminate, but **not one of them is GREEN
-at main's head as written**. Every landed witness run with `--org` = an LF tree of `4d166d3` and `--base-org` = an LF
-tree of its own BASE passes every behavioural clause and goes RED on exactly one clause, `BOUND` ("only the named
-files differ"). BOUND is a *seat-time* clause: it proves the build touched only its named files, and every later
-landing makes it false. So B1 as ruled, run literally, lands a member that is RED on its first push. The spec's
-central fork is **F1: what the member does with BOUND**. Three more measured facts change the build: the suite's
-red-matching folds digit runs, so `mlv0`/`mlv1`, `mjd3`/`mjd4`/`mjd5` and `mf2`/`mf4` would be ONE member each (F4);
-two landed witnesses hold the judge's fixed port, `keeper.mjs:79` `JUDGE_PORT = 4118`, so B4 refuses them (F5);
-and three BASE shas are not on main and live only on build branches (F6).
+**Headline (measured 18 Nov 2026).** The fifteen landed witnesses still discriminate: each is RED on its own
+BASE, as its PROOF says. But **not one of them is GREEN at main's head as written**. Each was run with `--org` = an LF
+tree of `4d166d3` and `--base-org` = an LF tree of its own BASE. Twelve went RED on their `BOUND` clause only. BOUND
+says "only the named files differ"; it is a *seat-time* clause, and every later landing makes it false. The other three
+went RED on a behavioural clause too, where a later unit changed what the earlier witness pinned (mjd3, mtail, mjud).
+mf4's red is its own BOUND clause, printed as `W6 BOUND`. So B1 as ruled, run literally, lands a member that is RED on its first push. The central
+forks are **F1** (what the member does with BOUND) and **F11** (the overtaken witnesses).
+
+Three more measured facts change the build:
+- The verdict matches reds by name with digit runs folded, so `mlv0`/`mlv1`, `mjd3`/`mjd4`/`mjd5` and `mf2`/`mf4` would each collapse into ONE member (F4).
+- Two landed witnesses hold the judge's fixed port, `keeper.mjs:79` `JUDGE_PORT = 4118`, so B4 refuses them (F5).
+- Three BASE shas are on no main commit. They live only on build branches (F6).
 
 ---
 
@@ -77,7 +80,35 @@ run from a copy of its own ci dir. Linux container, node v22, 18 Nov 2026. Leg *
 leg *base* = `--org <BASE> --base-org <BASE>` (its RED, re-taken). Command: `scratchpad measure.sh` (its body is in
 `ci/ms1/LEDGER.jsonl`, act `measure`).
 
-MEASURE_TABLE_PENDING
+| Unit | head leg: exit · seconds · LAST line | base leg: exit · seconds · LAST line | Behavioural red at head (beyond BOUND) |
+|---|---|---|---|
+| mdone | 1 · 71.5 · `RED MDONE · BOUND` | 1 · 8.9 · `RED MDONE · D-ORPH, D-UNREAD, D-METER, D-RULE, D-REACH, D-NOCONS, D-LINE, D-WRITE, D-MORNI…` | none |
+| mlv1 | 1 · 1.6 · `RED MLV1 · BOUND` | 1 · 1.1 · `RED MLV1 · I1 IDLE, I2 MID, I3 JUDGE` | none |
+| mlv0 | 1 · 0.3 · `RED MLV0 · BOUND` | 1 · 0.3 · `RED MLV0 · S1 CLOSURE, S2 K6, S3 UNVERIFIED, M2 BOOT, M4 JUDGE` | none |
+| mland | 1 · 22.6 · `RED MLAND · BOUND` | 1 · 16.6 · `RED MLAND · V1, V2, V3, V4, V5, V6, V7, V8, CR1, CR2, CR3, CR4, L2, L3, L4, Q4, S8, BOUND` | none |
+| mgrd | 1 · 5.2 · `RED MGRD · BOUND` | 1 · 4.9 · `RED MGRD · G1, G2, G3, BOUND` | none |
+| mf2 | 1 · 229.3 · `RED MF2 · BOUND` | 1 · 233.0 · `RED MF2 · F1` | none |
+| mjd5 | 1 · 1.7 · `RED MJD5 · BOUND` | 1 · 1.5 · `RED MJD5 · R1 R3 R2` | none |
+| mjd3 | 1 · 11.9 · `RED MJD3 · J4 BOUND` | 1 · 37.8 · `RED MJD3 · J1 J2 J3 J4` | **J4** |
+| mjd4 | 1 · 1.8 · `RED MJD4 · BOUND` | 1 · 1.7 · `RED MJD4 · I1 I3 I4 I5` | none |
+| mcr2 | 1 · 2.5 · `RED MCR2 · BOUND` | 1 · 2.7 · `RED MCR2 · C-context C-fuelboard C-learnstate BOUND` | none |
+| mtail | 1 · 20.5 · `RED MTAIL · T3 AUTH · BOUND` | 1 · 23.0 · `RED MTAIL · T1 F-B · T2 F-C · T3 AUTH · T4 F1 · BOUND` | **T3 AUTH** |
+| mpast | 1 · 9.5 · `RED MPAST · BOUND` | 1 · 9.9 · `RED MPAST · MP1 MP4 MP6 MP3 MP2 MP5 MP7 MB2 MB4 BOUND` | none |
+| mjud | 1 · 1.1 · `RED MJUD · M3 CENSUS · M5 F3-CLIP · M6 MJD2 · BOUND` | 1 · 1.1 · `RED MJUD · M1 SITTING · M2 DUGOUT · M3 CENSUS · M4 F3-EAT · M5 F3-CLIP · M6 MJD2 · M8 MAUT…` | **M3 CENSUS M5 F3-CLIP M6 MJD2** |
+| mf4 | 1 · 2.4 · `RED MF4 · W6 BOUND` | 1 · 2.1 · `RED MF4 · W1 CANARY · W5 STREAK · W4 SELFTEST` | none |
+| mpm | 1 · 0.9 · `RED MPM · BOUND` | 1 · 0.9 · `RED MPM · Q1 Q3 BOUND` | none |
+| **sum** | 382.8 s | 345.5 s | |
+
+**What the table says (18 Nov 2026):**
+- **Every witness still discriminates.** On the base leg every one is RED, on the clauses its PROOF names, so the BASE shas of §0.2 are the right ones (F6 aside).
+- **Twelve units are RED at head on their BOUND clause only:** mdone, mlv1, mlv0, mland, mgrd, mf2, mjd5, mjd4, mcr2, mpast, mf4, mpm. The id is not uniform: mf4 prints `W6 BOUND`, the rest print `BOUND`. BOUND fails because the BASE..main diff holds files beyond the unit's named set, other units' `ci/` dirs included (mdone's line names `ci/mgrd/…` and `ci/mland/…`).
+- **Three units are RED at head on a behavioural clause as well.** In each case a LATER landing changed what the earlier witness pinned:
+  - **mjd3 J4** (round 1 exits 9 after 2 reps). The judge round's batch logic was re-cut after mjd3 by mjd4, mjd5 and mlv0 (`git log origin/main -- scripts/gaffer_brain.mjs`).
+  - **mtail T3 AUTH.** Its OAuth-pattern probes hold. The red part is `depcruise no-circular 13 vs BASE 7`: a ratchet the witness compares against its own BASE, so any cycle added since, by any unit, reds it.
+  - **mjud M3 CENSUS.** The census finds three judge-verb spawn sites and calls `scripts/postmatch.mjs:852` NOT covered. mtail (`074ead9`) rewrote that spawn into the `fits()` / `spawnMs()` budget form (`postmatch.mjs:848-852`), which the census pattern does not recognise. Whether that is an overtaken pattern or a real hole is a ruling (F11). **mjud M5 F3-CLIP and M6 MJD2:** the batch-budget behaviour mjud pinned was re-ruled by mjd3, mjd4 and mjd5.
+  - Whether each of these is a regression or a superseded ruling is not a seat's call. F11 carries it.
+- **Seconds** (Linux, one process each, run one after another): the last row has both sums. mf2 is most of it, because it runs a suite mode inside its plant. B5's per-leg figure is the head-leg sum. It is paid twice per CI leg (head tree + merge-base tree, `suite.yml:113`, `:133`), and F12-B would add the base leg on top.
+
 
 ---
 
@@ -229,7 +260,7 @@ and no BASE exist yet).
   (`sitting.mjs:108`) beside the spawn, and any plant that touches the judge (R2 step 2 fires `judge-due` through
   `sitting.mjs close`) must not hold `JUDGE_PORT` unless F5-B lands first. Named here so the mday build seat reads it
   before writing its witness.
-- **The day end opens the landing window.** `land.mjs` step 7 refuses while a sitting is open (`land.mjs:200-202`).
+- **The day end opens the landing window.** `land.mjs` step 7 refuses while a sitting is open (`land.mjs:202-205`).
   `day.mjs end` closes the sitting (MDAY_SPEC R2 step 2), so after his "chalo, aaj bas" in any words, the runner's next
   `land.mjs` passes step 7 with nothing for him to remember. The member itself never reads the live sitting
   (`dressing-room/state` is never read; B2 keeps it off his laptop), so a day in progress never colours a verdict.
@@ -248,7 +279,7 @@ and no BASE exist yet).
 
 | Fork | Question | Options | Recommend | The measurement that decides |
 |---|---|---|---|---|
-| **F1** | Every landed witness is RED at head on `BOUND` only (§0.3). What does the member judge? | (A) the LAST line's red list minus the ids `BOUND` and `LAST`-free seat clauses: GREEN iff every other clause is green (needs M10's last-line grammar, which all fifteen share) · (B) `--base-org` stays the BASE tree, and BOUND is fed a *bound tree*: HEAD with the unit's named files at their BASE bytes (deterministic, but no longer "builds that sha") · (C) re-cut every witness so BOUND reads `--org` vs the unit's own land commit (a new `ci/<unit>/LANDED` sha) · (D) land it RED and let the base-red rule carry it (every later push then shows fifteen permanent warnings) | **A**, with C as the long road | §0.3: BOUND is the only red on the head leg for every unit. If any unit shows a behavioural red at head, A is not enough for that unit and its row goes to F11 |
+| **F1** | Every landed witness is RED at head on its `BOUND` clause, and for twelve it is the only red (§0.3). What does the member judge? | (A) read the LAST line's red list (M10's grammar, shared by all fifteen) and judge GREEN iff every red id is a BOUND id (an id whose words include `BOUND`; mf4 prints `W6 BOUND`) · (B) `--base-org` stays the BASE tree, and BOUND is fed a *bound tree*: HEAD with the unit's named files at their BASE bytes (deterministic, but no longer "builds that sha") · (C) re-cut every witness so BOUND reads `--org` vs the unit's own land commit (a new `ci/<unit>/LANDED` sha) · (D) land it RED and let the base-red rule carry it (every later push then shows fifteen permanent warnings) | **A**, with C as the long road | §0.3: for twelve units BOUND is the only head-leg red, so A makes those twelve GREEN with no witness byte changed. The other three go to F11 |
 | **F2** | Which tree is `--org`? | (A) an LF tree of HEAD built the same way as the BASE · (B) the runner's own CRLF checkout | **A** | Every BASE tree is LF (B1); a witness that compares bytes (BOUND, mlv1's XML) across an LF base and a CRLF head reports every file. N3 measures it on the runner |
 | **F3** | How the member knows it is on the neutral machine (B2) | (A) `GITHUB_ACTIONS === "true"` (set by the runner itself, never by the workflow file) · (B) a new variable set in `suite.yml` · (C) `CI` | **A** | A needs no workflow edit; B touches `.github/workflows/suite.yml` (a file beyond) |
 | **F4** | `keyOf` folds digits (M5): `mlv0`/`mlv1`, `mjd3`/`mjd4`/`mjd5`, `mf2`/`mf4` collapse into one member each | (A) `ci_verdict.mjs` `keyOf` keeps the text inside `‹ ›` unfolded, with its selftest planted both ways · (B) the member spells unit digits as letters in the assert name · (C) one assert for all units together | **A** | W-V.1. B works with no change to `ci_verdict.mjs` but makes names he cannot read; C hides which unit went red |
@@ -258,7 +289,7 @@ and no BASE exist yet).
 | **F8** | What of a ci dir rides ms1's landing | (A) the witness, its imported siblings and `BASE` only · (B) the whole dir (`PROOF.md`, `LEDGER.jsonl`, `out/`, `run_mutants*`) | **A** | `out/` files are captured outputs; the names gate (Q4, `land.mjs:134`) must pass over every new file. A carries the fewest bytes past it |
 | **F9** | `ci/mcr/` holds two units (mjd3, mjd4) | (A) `ci/mcr/BASE.<unit>` per witness · (B) split into `ci/mjd3/` and `ci/mjd4/` on ms1's landing (the witness files' bytes unchanged, their home moved) · (C) one BASE per dir and one of the two goes to F7 | **B** | B keeps "one dir, one unit, one BASE" true for every later unit |
 | **F10** | Where hermetic witnesses live: `ci/witness/<unit>` (`land.mjs:15`, `:39`) or `ci/<unit>/` (every one written) | (A) `ci/<unit>/`, and `WITNESS_DIR` becomes `ci/` · (B) move every witness to `ci/witness/<unit>/` on ms1's landing | **A** | M8: zero files exist at `ci/witness/` on any branch (18 Nov 2026 survey) |
-| **F11** | A witness RED at head on a behavioural clause after F1 | (A) RED member, a real regression · (B) the unit's witness is re-judged by a seat and its BASE rewritten | **A** | §0.3 per unit |
+| **F11** | Three witnesses are RED at head on a behavioural clause (§0.3: mjd3 J4 · mtail T3 · mjud M3 M5 M6) | (A) each is a RED member, and ms1 cannot land GREEN until each is resolved · (B) **ms1 lands first with the units that are GREEN under F1-A** (and F5); each of the three gets its own re-judge seat in parallel (a regression is fixed; a superseded ruling gets its witness re-cut and its BASE re-taken) and rides its own land branch under B3 (ii) · (C) a KNOWN_RED entry per clause (`organism_test.mjs:2738` `rulingOf`). C rules the suite's exit, but the neutral verdict still counts the clause as a new red, so C does not land ms1 | **B** | §0.3, per unit. B keeps the runner moving (his word 243): ms1 does not wait on three judgements |
 | **F12** | Does the member also re-take each witness's RED at BASE (`--org BASE`) on every run, to prove the witness still discriminates? | (A) no; once, at the seat, recorded in PROOF · (B) yes, every run (doubles the seconds) | **A** | §0.3's base-leg column against B5's budget, his call |
 
 ---
@@ -291,4 +322,10 @@ and no BASE exist yet).
 
 ## 6. CI — the neutral machine's verdict on this branch
 
-CI_PENDING
+Read through the public API with curl, no token: `GET /repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`.
+
+**Push `28ae3b9` (18 Nov 2026), read with curl, no token:** workflow run `44373592870` (suite) · completed · **success**.
+Check runs: `135046667808` npm test · node 22 → success · `135046668307` npm test · node 24 → success.
+
+The push carrying this line is judged again; its run ids and verdict are in `ci/ms1/LEDGER.jsonl` (act `ci-read`) and
+in the seat's final message.
