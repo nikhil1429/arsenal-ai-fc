@@ -1,0 +1,7 @@
+control · exit 0 · GREEN MJD6 a failed retire never leaves a settled card live — the owner's sync sweeps it, once · 5 clause(s)
+mutant S1 · RED by its clause · reds S1 S3 S2 · RED MJD6 · S1 S3 S2
+mutant S2 · RED by its clause · reds S2 · RED MJD6 · S2
+mutant S3 · RED by its clause · reds S3 · RED MJD6 · S3
+mutant BOUND · RED by its clause · reds BOUND · RED MJD6 · BOUND
+mutant LAST · RED by its clause · reds LAST · RED MJD6 · LAST
+run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN
