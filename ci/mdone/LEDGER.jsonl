@@ -11,3 +11,4 @@
 {"ts":"2026-11-18T14:53:38.669Z","act":"push","cmd":"git push -u origin claude/mdone-build","last_line":"47054b6 then 07991de"}
 {"ts":"2026-11-18T14:53:38.669Z","act":"ci-prior","cmd":"node scripts/ci_verdict.mjs 4f86d59 (curl door)","last_line":"ci_verdict 4f86d59 GREEN — node 22 run 134878858223 · node 24 run 134878857484 · 0 new red"}
 {"ts":"2026-11-18T14:53:38.669Z","act":"ci","cmd":"node scripts/ci_verdict.mjs 07991de (curl door)","last_line":"PENDING at read; 47054b6 runs cancelled (superseded)"}
+{"ts":"2026-11-18T15:16:09.179Z","act":"autocrlf class (architect CLASS) — no git plant here","cmd":"merge claude/mland-build d76f9bd; GIT_CONFIG_GLOBAL=<core.autocrlf=true> node ci/mdone/witness_mdone.mjs --org <archive> --base-org <archive mland d76f9bd>","last_line":"GREEN MDONE what is left · 13 clause(s) — the witness copies trees (cpSync), plants no git init/clone, so nothing to change"}
