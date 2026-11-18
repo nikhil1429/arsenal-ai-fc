@@ -88,6 +88,7 @@ import { digestInput as intentDigestInput, validateDigest as intentValidateDiges
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 import { keep, KEEP_EXIT } from "./keeper.mjs";   // 15 Oct 2026 (forks rows 746 (2) / 753 (2)): `daemon` is the KEEPER over `daemon-worker`; a resident never exits on its own
 import { jobInputClass, inputCadenceDefaultH } from "./registry.mjs";   // rung S13 (29 Aug 2026): THE INPUT GUARD reads its declarations from the registry — the six code-computed lanes’ input classes and the DECLARED cadence seed. registry.mjs imports nothing of ours, so there is no cycle (gate.mjs already reads it the same way).
+import { JUDGE_AUTH_RE } from "./gaffer_brain.mjs";   // unit mjud · mauth — the ONE auth refusal pattern (AUTH_FAIL_RE below). gaffer_brain.mjs imports nothing that reaches this file, so there is no cycle (depcruise 7 → 7, measured).
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
@@ -958,7 +959,15 @@ function liveSignal(now, dir = STATE_DIR) {
 // meanings (the auth scan only widened its haystack to include the envelope), so
 // nothing is being replaced — token_vitals.json.health, the doctor, watchman and
 // captains_call's B3 card read the same fields they always did.
-const AUTH_FAIL_RE = /not logged in|please run \/login|invalid api key|authenticat|unauthorized/i;
+// unit mjud · mauth (row 1008 (2) F1) — THE AUTH REFUSAL PATTERN HAS ONE HOME. This line held its own restated
+// pattern, which did NOT match the judge lane's observed refusal "OAuth session expired and could not be refreshed"
+// (row 963: two live judge rows refused in 3-6 s); gaffer_brain.mjs restated it again, widened. Now there is ONE literal,
+// gaffer_brain.mjs JUDGE_AUTH_RE, and this name is that very RegExp, imported (exported again under this name).
+// WHY THE IMPORT POINTS THIS WAY (a FORK, ci/mjud/PROOF.md): gaffer_brain.mjs importing brain.mjs — static or dynamic —
+// closes three new import cycles through forge_session/sitting (depcruise no-circular 7 → 10, lawpack's ratchet RED);
+// this direction closes none (7 → 7). The widening is the old words plus the observed OAuth text, nothing guessed.
+const AUTH_FAIL_RE = JUDGE_AUTH_RE;
+export { AUTH_FAIL_RE };
 // claudegen's ledger projection writes error_envelope ONLY when it says more
 // than `error` does (a null means "the envelope IS the error field"), so every
 // reader ORs the two — never the envelope alone.
