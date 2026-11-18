@@ -76,7 +76,10 @@ const nap = (ms, cut) => new Promise((res) => {
 //   and `services.mjs status` read it: held = a round is running = no retire.
 //   Port registry: 4111 turnstile · 4112 cortex · 4113 thalamus · 4114 dugout · 4115 brain
 //   tick-lock · 4116 brain daemon-singleton · 4117 sitting · 4118 the judge round.
-export const JUDGE_PORT = 4118;
+//   ARSENAL_JUDGE_PORT is its env door (unit mlj, the ARSENAL_SITTING_PORT precedent at sitting.mjs:108): a witness plants
+//   an OS-picked port there, so no plant ever binds the live one. Anything that is not a port 1-65535 reads 4118, and every
+//   reader (the round's hold, services status, each retire, land.mjs) reads the SAME constant.
+export const JUDGE_PORT = ((p) => (Number.isInteger(p) && p > 0 && p < 65536 ? p : 4118))(Number(process.env.ARSENAL_JUDGE_PORT));
 /** holdJudgePort: bind JUDGE_PORT for this process's life. Resolves the server (close() it
  *  when the round ends) or null when another round already holds it (never a refusal here).
  *  @param {number} [port] */

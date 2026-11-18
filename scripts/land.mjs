@@ -15,6 +15,9 @@
 //   carrying witness (it declares no list) · S1 hermetic witnesses live at ci/witness/<unit> · step 8 never uses
 //   `git worktree add` (a shared clone) · step 11 PRINTS the stale units and restarts nothing · Q4 a NEW file under
 //   ci/witness/ lands only with the campaign names-gate result as an input (--names-gate); absent = REFUSED.
+//   THE JUDGE-HELD REFUSAL (unit mlj, rows 1040 (2) F1 / 1043 (2) F1; spec ci/mlv0/PROOF.md FORK 1): while a judge round
+//   holds keeper's JUDGE_PORT the verb (and its --dry) REFUSES JUDGE-HELD — read through keeper.mjs judgeHeld, the one
+//   predicate every retire reads, as the LAST gate before the move. A wait, not a stop of his: the count is not reset.
 // MODES:
 //   node scripts/land.mjs <unit> [--dry] [--live <witness>]… [--names-gate <file>]   the verb (twelve steps)
 //   node scripts/land.mjs push <unit>                    L4: retry the push of a landing main already holds
@@ -153,7 +156,7 @@ function namesGate(file, t, added, touched) {
 
 // ── THE VERB ─────────────────────────────────────────────────────────────────────────────────────────────────────
 /** @param {string} unit @param {{ dry: boolean, live: string[], namesGate: string|null }} opt */
-function land(unit, opt) {
+async function land(unit, opt) {
   /** @param {number} code @param {string} outcome @param {string} name @param {string} why @param {string|null} t */
   const stop = (code, outcome, name, why, t = null) => {
     if (!opt.dry) record({ unit, sha: t, outcome, name, human: HUMAN_STOPS.has(name) });
@@ -216,6 +219,15 @@ function land(unit, opt) {
       }
     } finally { rmSync(tmp, { recursive: true, force: true }); }
   }
+  // 8½ · NO JUDGE ROUND RUNNING (unit mlj · rows 1040 (2) F1 / 1043 (2) F1): the move rewrites bytes a running round reads,
+  //   so it waits. Read LAST, after every other gate and right before the move (a round that opened while the checks above
+  //   ran is still caught), and for --dry too. Not in HUMAN_STOPS (row 1043 (2) F4): the round's close clears it.
+  //   keeper is imported HERE, not at load, so count / carry / push never depend on it; a keeper that cannot answer is
+  //   a refusal (fail closed), never a landing.
+  let jh;
+  try { const k = await import("./keeper.mjs"); jh = { held: await k.judgeHeld(), port: k.JUDGE_PORT }; }
+  catch (e) { return stop(1, "REFUSED", "JUDGE-UNREADABLE", `keeper.mjs judgeHeld could not be read (${String((e && e.message) || e).split(/\r?\n/)[0]}) — fail closed`, T); }
+  if (jh.held) return stop(1, "REFUSED", "JUDGE-HELD", `a judge round holds :${jh.port} — land when it closes`, T);
   // 11 (read before the move, printed after) — acts + stale units; nothing is restarted, nothing is installed
   const acts = touched.includes("package-lock.json") ? ["npm ci"] : [];
   const su = staleUnits(T, touched);
@@ -328,4 +340,4 @@ function main() {
   const live = []; argv.forEach((a, i) => { if (a === "--live" && argv[i + 1]) live.push(argv[i + 1]); });
   return land(mode, { dry: argv.includes("--dry"), live, namesGate: flag("--names-gate") });
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) process.exitCode = main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) Promise.resolve(main()).then((c) => { process.exitCode = c; });

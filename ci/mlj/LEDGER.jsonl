@@ -1,0 +1,8 @@
+{"ts": "2026-11-18T18:49:51Z", "act": "cut claude/mlj-build from origin/main", "cmd": "git fetch origin main && git checkout -b claude/mlj-build FETCH_HEAD", "last_line": "4d166d3"}
+{"ts": "2026-11-18T18:49:51Z", "act": "base selftest keeper", "cmd": "node scripts/keeper.mjs selftest", "last_line": "keeper selftest: 17 passed, 0 failed"}
+{"ts": "2026-11-18T18:49:51Z", "act": "base models check", "cmd": "node scripts/models.mjs check", "last_line": "exit 0"}
+{"ts": "2026-11-18T18:49:51Z", "act": "base hermetic suite", "cmd": "ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all", "last_line": "organism_test: 136 passed, 4 failed · ruled 0 · UNRULED 4 · LIVE 126 (hermetic: named, not run) · exit 2"}
+{"ts": "2026-11-18T18:49:51Z", "act": "witness build", "cmd": "node ci/mlj/witness_mlj.mjs --org . --base-org <git archive 4d166d3 scripts setup package.json>", "last_line": "GREEN MLJ the judge-held refusal · 8 clause(s)"}
+{"ts": "2026-11-18T18:49:51Z", "act": "witness base", "cmd": "node ci/mlj/witness_mlj.mjs --org <base> --base-org <base>", "last_line": "RED MLJ · J1, J2, J3, J4, J5, K1, BOUND"}
+{"ts": "2026-11-18T18:49:51Z", "act": "mland witness at this build (fork measurement)", "cmd": "node <mland-build ci/mland/witness_mland.mjs> --org . --base-org <base>", "last_line": "RED MLAND · V1…S8, BOUND (build side: landing clauses RED, JUDGE-UNREADABLE from its planted keeper stub)"}
+{"ts": "2026-11-18T18:49:51Z", "act": "mland witness, stub + judgeHeld (fork measurement, scratch copy)", "cmd": "node <scratch copy, stub keeper + JUDGE_PORT + judgeHeld> --org . --base-org <base>", "last_line": "every clause build GREEN (base GREEN: mland is in main)"}
