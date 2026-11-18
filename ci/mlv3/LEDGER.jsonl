@@ -1,0 +1,10 @@
+{"ts":"2026-11-18T14:45:21.998Z","act":"measure","cmd":"git checkout -b claude/mlv3-build claude/mlv2-build","last_line":"78dc084"}
+{"ts":"2026-11-18T14:45:21.998Z","act":"selftest-base","cmd":"node scripts/thalamus.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T14:45:21.998Z","act":"witness-build-first","cmd":"node ci/mlv3/witness_mlv3.mjs --org . --base-org <copy of 78dc084>","last_line":"RED MLV3 · T2 ONCE, T3 INFLIGHT (the first idle predicate never read idle under a stream: corrected in thalamus.mjs)"}
+{"ts":"2026-11-18T14:45:21.998Z","act":"witness-build","cmd":"node ci/mlv3/witness_mlv3.mjs --org . --base-org <copy of 78dc084>","last_line":"GREEN MLV3 the capture nerve retires only when its spool is drained, and every event lands exactly once across a retire · 7 clause(s)"}
+{"ts":"2026-11-18T14:45:21.998Z","act":"witness-base","cmd":"node ci/mlv3/witness_mlv3.mjs --org <copy of 78dc084> --base-org <same>","last_line":"RED MLV3 · T1 IDLE, T2 ONCE, T3 INFLIGHT, T4 JUDGE"}
+{"ts":"2026-11-18T14:45:21.998Z","act":"mutants-first","cmd":"node ci/mlv3/run_mutants_mlv3.mjs --org . --base-org <copy of 78dc084>","last_line":"run_mutants: 3 of 5 mutant(s) RED by the clause that names them · control RED (T2 and T3 mutants survived; control T4 flake)"}
+{"ts":"2026-11-18T14:45:21.998Z","act":"mutants","cmd":"node ci/mlv3/run_mutants_mlv3.mjs --org . --base-org <copy of 78dc084>","last_line":"run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T14:45:21.998Z","act":"selftest-after","cmd":"node scripts/thalamus.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T14:45:21.998Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts":"2026-11-18T14:45:21.998Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"exit 2 · 1 UNRULED: orphaned home_pin, probe, study_scope (the same red as the base)"}

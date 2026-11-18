@@ -119,6 +119,7 @@ import { loadRegistry, canonicalize } from "./capture.mjs";
 // adjudicateLive, exactly as before — only the row SHAPE moves up here.
 import { ledgerForensics } from "./claudegen.mjs";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
+import { keep, KEEP_EXIT, retireWhenIdle } from "./keeper.mjs";   // unit mlv3 (forks row 1031 M0 A) — the keeper over `daemon-worker`, retiring only when its spool is drained
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 // UNIT 818 (13 Nov 2026) — LAW M: the adjudicator names a ROLE and the one resolver answers it. models.mjs
 // imports node builtins only and its module body has no side effects (its main guard is
@@ -3072,6 +3073,14 @@ async function main() {
   // UNIT 818 · THE OWNER SETTER is dispatched HERE — BEFORE the daemon's imports (brain.mjs just below, the
   // spool at listen): a config write never boots, imports or touches the nucleus.
   if (mode === "config") { process.exit(configMain(process.argv.slice(3))); }
+  // THE KEEPER (unit mlv3, forks row 1031 M0 A; ci/mcr/MLIVE_SPEC.md §1 K1-K4). What the OS launches is
+  // `scripts/thalamus.mjs` with no mode (the service XML's arguments, unchanged in shape): that is now keep() over
+  // `daemon-worker`, the nucleus below. A RETIRE (75) respawns it at once on the new bytes; while it is down the nerve
+  // writes ahead to the spool (S8) and the new worker drains it at boot, so a retire is latency, never a lost turn.
+  if (mode !== "daemon-worker") {
+    await keep({ name: "thalamus", worker: [process.execPath, fileURLToPath(import.meta.url), "daemon-worker", ...process.argv.slice(3)], port: PORT });
+    return;
+  }
   brainMod = await import("./brain.mjs");
   const cfg = loadConfig();
   // #10 — console.log alone went to a closed handle under hidden_run.vbs. Both,
@@ -3118,8 +3127,13 @@ async function main() {
   // S8 · THE DRAIN WHILE ALIVE (unit mcap, row 852 (1)): one drainer for this daemon's life — started in the listen
   // callback below (drainSpool), poked by every POST /afferent, ticking every SPOOL_DRAIN_EVERY_MS on an unref'd timer.
   const drainer = createSpoolDrainer({ ingest: nucleus.ingest, spool: () => import("./spool.mjs"), log });
+  // unit mlv3: a request IN FLIGHT is live capture (an /afferent body half-read is one of his turns) — counted, and its
+  // end re-checks a deferred retire (retirer, below).
+  let inflight = 0, retirer = null;
   const server = createServer(async (req, res) => {
     const send = (code, body) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(body)); };
+    inflight++;
+    res.once("close", () => { inflight--; if (retirer) retirer.check(); });
     try {
       if (req.method === "GET" && req.url === "/status") {
         // THE BUILD STAMP (audit #108, 6 Aug 2026). Node caches a module at load, so a
@@ -3146,7 +3160,7 @@ async function main() {
     } catch (e) { send(500, { error: String(e.message).slice(0, 200) }); }
   });
   server.on("error", (e) => {
-    if (e && e.code === "EADDRINUSE") { console.log(`thalamus: nucleus already live on :${PORT} — standing down.`); process.exit(0); }
+    if (e && e.code === "EADDRINUSE") { console.log(`thalamus: nucleus already live on :${PORT} — standing down.`); process.exit(KEEP_EXIT.ALREADY_RESIDENT); }   // unit mlv3: 69, a keeper waits
     throw e;
   });
   // ── S8 · THE DRAIN ON BOOT (28 Aug 2026) ──────────────────────────────────────────────
@@ -3164,6 +3178,30 @@ async function main() {
   // its one call in the listen callback (organism_test.mjs's S8 law pins both): it is now the drainer's start().
   const drainSpool = async () => drainer.start();
   server.listen(PORT, "127.0.0.1", () => { drainSpool(); return log(`thalamus: relay nucleus LIVE on http://127.0.0.1:${PORT} — τ0=${cfg.tiers.tau0} τ1=${cfg.tiers.tau1_base}+${cfg.tiers.budget_k}·(1−headroom) ε=${cfg.tiers.epsilon} · B=${cfg.binding_ms}ms · wake cap ${cfg.wake_cap_per_day}/day · SELF on provenance [${(cfg.self_sources || []).join(", ")}], never [${(cfg.self_deny_sources || []).join(", ")}]`); });
+  // THE DEFERRED RETIRE (unit mlv3, row 1031 M0 A): its idle predicate is "its spool drained", read PRECISELY: no
+  // capture request in flight, and no row pending in the spool that this nucleus has not already ingested (a row the
+  // nerve has not yet marked, whose event_id IS in seenEvents, is captured — the next drain only marks it). Busy DEFERS
+  // (keeper.mjs retireWhenIdle); a judge round holding its port defers it too. The retire stops LISTENING first
+  // (server.close lets an in-flight request finish), then FLUSHES the binding buffer through the nucleus's own chain
+  // (nucleus.flush() waits for a flush already running), then exits 75. An event that arrives while it is down finds
+  // nothing listening, stays pending in the nerve's spool, and the new worker drains it at boot through the same
+  // idempotent ingest() (S8) — exactly once.
+  const spoolUnseen = async () => {
+    try { const sp = await import("./spool.mjs"); return sp.pending().filter((r) => !nucleus.state.seenEvents.has(r.event_id)).length; }
+    catch { return 0; }   // a spool that cannot open holds nothing this worker could lose (capture is POST-and-hope then)
+  };
+  retirer = await retireWhenIdle({ name: "thalamus", entry: fileURLToPath(import.meta.url), log,
+    idle: async () => inflight === 0 && (await spoolUnseen()) === 0,
+    retire: () => new Promise(() => {
+      drainer.stop();
+      server.close(async () => {
+        try { await nucleus.flush(); } catch (e) { log(`thalamus: the retire's last flush failed — ${(e && e.message) || e}`); }
+        process.exit(KEEP_EXIT.RETIRED);
+      });
+      if (server.closeIdleConnections) server.closeIdleConnections();
+    }) });
+  log(`thalamus: worker watching ${retirer.files.length} file(s) of its own closure; a change retires it only when its spool is drained and no judge round runs.`);
+  retirer.check();
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
