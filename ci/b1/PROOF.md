@@ -35,7 +35,7 @@ the headline. CI dies after about 87 s, after `coverage` and `integrity` and par
 | base, CRLF clone | `git -c core.autocrlf=true clone …; node scripts/organism_test.mjs laws` | `exit 1` (stack: `organism_test.mjs:573 TypeError`) — `out/a0_base_crlf_laws.txt` |
 | fixed, same clone, 18 Nov 2026 | `node scripts/organism_test.mjs laws` | `organism_test: 114 passed, 2 failed · ruled 0 · UNRULED 2` — `out/a1_fixed_crlf_laws.txt` |
 | fixed, whole suite, 18 Nov 2026 | `npm test` (CRLF clone) | `organism_test: 177 passed, 6 failed · ruled 0 · UNRULED 6` — `out/a2_fixed_crlf_all.txt` |
-| Windows CI | suite.yml on this branch | see THE CI RUNS READ |
+| Windows CI, 18 Nov 2026 | suite.yml on 1b2c565 | both legs reach their headline and verdict: `GREEN (base 5767e21 · 0 new red · 1 base red · 126 live)` |
 
 ## (b) the hermetic profile
 
@@ -132,7 +132,7 @@ The plant branch `claude/b1-neutral-verdict-plant` is this branch plus ONE asser
    branch's red was a GENUINE new red: `LOAD ZERO BLOCK 7 · no canon file states a live count…`. This PROOF.md, a
    tracked `.md`, stated undated counts. The verdict caught it, and the lines were dated, which is the law's own
    "records" exemption. The gate is unchanged.
-3. **Final witness:** see the reads below.
+3. **Final witness, 1b2c565 / 522b328:** the branch reads GREEN on both legs, and the plant reads RED on both legs, naming ONLY the planted member.
 
 ## THE CI RUNS READ (check-run ids; every read by `node scripts/ci_verdict.mjs <sha>`, ≤3 calls each)
 
@@ -143,7 +143,12 @@ The plant branch `claude/b1-neutral-verdict-plant` is this branch plus ONE asser
 | 517e14b (plant v1) | `GREEN — … 0 new red · 2 base red … [runs 134688495108 / 134688494740]` ← THE HOLE |
 | f89ed50 (branch v2) | `RED — 1 new red: LOAD ZERO BLOCK 7 · no canon file states a live count … [runs 134695317349 / 134695316983]` ← a real red, this file's |
 | 49d12f0 (plant v2) | `RED — 2 new red: B1 PLANTED RED · a member red on the plant branch only ; LOAD ZERO BLOCK 7 … [runs 134695334936 / 134695335289]` |
-FINAL_READS_HERE
+| **1b2c565 (branch, FINAL)** | `ci_verdict 1b2c565 GREEN — npm test · node 22: GREEN (base 5767e21 · 0 new red · 1 base red · 126 live) [run 134707074623] \| npm test · node 24: GREEN (base 5767e21 · 0 new red · 1 base red · 126 live) [run 134707075668] (3 calls)` |
+| **522b328 (plant, FINAL)** | `ci_verdict 522b328 RED — npm test · node 22: RED (base 5767e21 · 1 new red: B1 PLANTED RED · a member red on the plant branch only · 1 base red · 126 live) [run 134707088841] \| npm test · node 24: RED (… same …) [run 134707089372] (3 calls)` |
+
+**The Windows BASE RED** (both legs, 18 Nov 2026) is `EVERY organ with a selftest is wired into a suite
+(package.json:_selftest_coverage_law)`: the orphans are home_pin, probe and study_scope, red at 5767e21 too. The Linux
+`sandbox` red does not reproduce on Windows.
 
 ## FORKS (each needs a file this unit may not edit, or a ruling)
 

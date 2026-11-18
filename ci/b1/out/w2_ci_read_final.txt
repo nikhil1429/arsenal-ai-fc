@@ -1,0 +1,2 @@
+ci_verdict 1b2c565 GREEN — npm test · node 22: GREEN (base 5767e21 · 0 new red · 1 base red · 126 live) [run 134707074623] | npm test · node 24: GREEN (base 5767e21 · 0 new red · 1 base red · 126 live) [run 134707075668] (3 calls)
+ci_verdict 522b328 RED — npm test · node 22: RED (base 5767e21 · 1 new red: B1 PLANTED RED · a member red on the plant branch only · 1 base red · 126 live) [run 134707088841] | npm test · node 24: RED (base 5767e21 · 1 new red: B1 PLANTED RED · a member red on the plant branch only · 1 base red · 126 live) [run 134707089372] (3 calls)
