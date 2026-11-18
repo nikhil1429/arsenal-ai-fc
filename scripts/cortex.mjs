@@ -73,6 +73,7 @@ import { currentWindow, AMBIENT } from "./distiller.mjs";
 import { presenceTailReport as jsonlTailReport } from "./presence.mjs";
 import { captain, captainTag } from "./captain.mjs";   // Block 2 §7.3
 import { dayKey } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: ConceptGraph 03:00 keys its SLOT's day in a catch-up burst
+import { keep, KEEP_EXIT, retireWhenIdle, judgeHeld } from "./keeper.mjs";   // unit mlv2 (forks row 1031 M0 A) — the keeper over `daemon-worker`, the deferred retire, the judge port
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -2117,7 +2118,7 @@ function lockRoute(method, url) {
   }
   if (String(method || "").toUpperCase() === "POST" && String(url || "") === "/restart") {
     return { arm: true, status: 200, body: { ok: true, armed: true,
-      note: "cortex retires when no deep lane is in flight; daemon_watchdog's next pass launches the fresh build" } };
+      note: "cortex retires (exit 75) when no deep lane is in flight; its keeper respawns the fresh build at once" } };
   }
   return { arm: false, status: 404, body: { ok: false,
     error: "cortex holds :4112 as a singleton lock — the only door is POST /restart (GET /status reads its boot instant)" } };
@@ -2185,7 +2186,7 @@ async function main() {
       return;
     }
     console.log(said && said.armed
-      ? "cortex: RESTART ARMED — the daemon retires as soon as no deep lane is in flight, then daemon_watchdog's next pass (its own 10-minute cadence) launches the build that HAS the repairs. Manual verb if you will not wait: wscript setup\\START_DAEMONS.vbs"
+      ? "cortex: RESTART ARMED — the daemon retires (exit 75) as soon as no deep lane is in flight, and its keeper (scripts/keeper.mjs) respawns the build that HAS the repairs at once."
       : `cortex: :4112 answered but did NOT arm — ${JSON.stringify(said).slice(0, 160)}`);
     return;
   }
@@ -2207,6 +2208,14 @@ async function main() {
     process.exitCode = f.fresh ? 0 : 1;
     return;
   }
+  // THE KEEPER (unit mlv2, forks row 1031 M0 A; ci/mcr/MLIVE_SPEC.md §1 K1-K5). What the OS launches is
+  // `scripts/cortex.mjs` with no mode (the service XML's arguments, unchanged in shape): that is now keep() over
+  // `daemon-worker`, the loop below. A RETIRE (75) respawns the worker at once on the new bytes; a held :4112 makes
+  // the keeper wait, never pile up. Every mode above returned already, so only the daemon path reaches here.
+  if (mode !== "daemon-worker") {
+    await keep({ name: "cortex", worker: [process.execPath, fileURLToPath(import.meta.url), "daemon-worker", ...process.argv.slice(3)], port: 4112 });
+    return;
+  }
   // SINGLETON LOCK — two cortexes racing one wake = double Opus spend. The
   // lock is a localhost port (4112, one below the thalamus), same pattern as
   // every daemon in the club: second instance stands down silently.
@@ -2215,7 +2224,7 @@ async function main() {
   // 2026: the restart door answers requests the instant the port binds, and it
   // reads this set to decide whether a paid lane is in flight.
   const inflight = new Set();
-  let restartArmed = false;
+  let restartArmed = false, retirer = null, exiting = false, judgeSaid = false;   // unit mlv2: the deferred retire (below) and the door's one exit
   // THE RESTART DOOR (see its header above) — the lock is no longer a black hole.
   const lock = createServer((req, res) => {
     const r = lockRoute(req.method, req.url);
@@ -2228,22 +2237,31 @@ async function main() {
     }
   });
   await new Promise((resolve) => {
-    lock.on("error", (e) => { if (e.code === "EADDRINUSE") { console.log("cortex: another cortex holds the lock (:4112) — standing down."); process.exit(0); } throw e; });
+    lock.on("error", (e) => { if (e.code === "EADDRINUSE") { console.log("cortex: another cortex holds the lock (:4112) — standing down."); process.exit(KEEP_EXIT.ALREADY_RESIDENT); } throw e; });   // unit mlv2: 69, so a keeper waits instead of stopping
     lock.listen(4112, "127.0.0.1", resolve);
   });
   // Consulted at EVERY point the lane count can change — on arm, when a lane
   // closes, and on the existing 5s poll — so an armed restart can never sit
   // waiting on an event that already happened. Hoisted (function declaration) so
   // the lock's handler above can call it.
+  // K5 (unit mlv2, row 1031; MLIVE_SPEC §1 K5): this exit WAS 0 — a CLEAN stop — and under WinSW (restarts only on
+  // failure) that left the service STOPPED, and under keep() a 0 stops the keeper too. It is a RETIRE now: exit 75,
+  // and the keeper respawns the fresh build at once. A judge round holding its port defers it (row 1031 M4 A), and the
+  // lane count is re-read after that async read, so a lane opened meanwhile is never cut.
   function retireIfArmed() {
     if (!restartReady({ armed: restartArmed, inflight: inflight.size })) return;
-    console.log("cortex: every lane idle — releasing :4112 and exiting. daemon_watchdog's next pass launches the fresh build (manual verb: wscript setup\\START_DAEMONS.vbs).");
-    // The OS frees the port on exit regardless; these two are tidiness, and
-    // closeAllConnections is what stops a keep-alive socket from holding close()
-    // open. No wait, no timeout — an exit that needs a deadline is a hang.
-    try { lock.closeAllConnections && lock.closeAllConnections(); } catch { }
-    try { lock.close(); } catch { }
-    process.exit(0);
+    judgeHeld().then((held) => {
+      if (exiting || !restartReady({ armed: restartArmed, inflight: inflight.size })) return;
+      if (held) { if (!judgeSaid) console.log("cortex: restart armed and every lane idle, but a judge round holds its port — retiring the moment it closes."); judgeSaid = true; return; }
+      exiting = true;
+      console.log(`cortex: every lane idle — releasing :4112 and exiting ${KEEP_EXIT.RETIRED} (RETIRED): its keeper (scripts/keeper.mjs) respawns the fresh build at once.`);
+      // The OS frees the port on exit regardless; these two are tidiness, and
+      // closeAllConnections is what stops a keep-alive socket from holding close()
+      // open. No wait, no timeout — an exit that needs a deadline is a hang.
+      try { lock.closeAllConnections && lock.closeAllConnections(); } catch { }
+      try { lock.close(); } catch { }
+      process.exit(KEEP_EXIT.RETIRED);
+    });
   }
   console.log("cortex: deep-brain daemon — watching wake_queue.jsonl (fs.watch + 5s poll, up to 2 concurrent lanes)");
   // M14 — PER-LANE dispatch: a wake arriving while another is being served
@@ -2270,7 +2288,7 @@ async function main() {
         inflight.add(w.moment_id);
         if (w.ts && now - new Date(w.ts) > ttlMs) {
           defaultPost("/deep-answer", { moment_id: w.moment_id, declined: true, reason: "expired-in-queue", provenance: "cortex" })
-            .catch(() => {}).finally(() => { inflight.delete(w.moment_id); retireIfArmed(); });
+            .catch(() => {}).finally(() => { inflight.delete(w.moment_id); retireIfArmed(); if (retirer) retirer.check(); });
           continue;
         }
         console.log(`cortex: lane open for ${w.moment_id} (${inflight.size}/${K})`);
@@ -2286,7 +2304,7 @@ async function main() {
           .catch(e => console.log("cortex: " + String(e.message).slice(0, 120)))
           // retireIfArmed BEFORE the re-entry: an armed restart that waited for
           // this lane must not be overtaken by the next dispatch (11 Aug 2026).
-          .finally(() => { inflight.delete(w.moment_id); retireIfArmed(); if (resolved) fire(); });
+          .finally(() => { inflight.delete(w.moment_id); retireIfArmed(); if (retirer) retirer.check(); if (resolved) fire(); });
       }
     } catch (e) { console.log("cortex: " + String(e.message).slice(0, 120)); }
   };
@@ -2296,6 +2314,13 @@ async function main() {
   // the queue was empty has no lane close to ride, so the poll is its floor.
   setInterval(() => { retireIfArmed(); fire(); }, 5000);
   fire();
+  // THE DEFERRED RETIRE (unit mlv2, row 1031 M0 A): its idle predicate is "no lane in flight" — a lane in flight is a
+  // paid Opus read or its POST home, never cut. A source change while a lane runs DEFERS; the lane's close re-checks it
+  // (the two .finally sites above); a judge round holding its port defers it too (keeper.mjs retireWhenIdle).
+  retirer = await retireWhenIdle({ name: "cortex", entry: fileURLToPath(import.meta.url), idle: () => inflight.size === 0 && !exiting,
+    retire: () => { exiting = true; try { lock.closeAllConnections && lock.closeAllConnections(); } catch { } try { lock.close(); } catch { } process.exit(KEEP_EXIT.RETIRED); } });
+  console.log(`cortex: worker watching ${retirer.files.length} file(s) of its own closure; a change retires it only when no lane is in flight and no judge round runs.`);
+  retirer.check();
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
