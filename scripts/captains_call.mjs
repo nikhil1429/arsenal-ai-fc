@@ -57,7 +57,8 @@
 // READS (RO): teaching_contract.json · forge_session.json · brain_out/market/ ·
 //   missions.json · benchmark.json · tape_room.json.
 // MODES: sync · deal · answer <id> <haan|na|baad> · file --line "…" · status ·
-//        list · selftest
+//        list · reline (--family <f> | --key <k>) --line "…" · selftest
+//        (reline = THE CARD-LINE DOOR, 15 Nov 2026: a kept rolling card's words, never its identity)
 // ============================================================================
 
 import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync, mkdirSync } from "node:fs";
@@ -1513,6 +1514,71 @@ export function fileDispatch(argv) {
   return { kind: "open", path: String(path) };
 }
 
+// ---------------------------------------------------------------------------
+// THE CARD-LINE DOOR (15 Nov 2026 · rows 913 (2) / 915 (3) / 938 (2) A3 — pure so
+// the selftest can hold it). fileGuard keeps ONE live ask per rolling family, which
+// is right for the ASK and wrong for its WORDS when the fact behind it grows while
+// it waits: the day close (postmatch.mjs autoclose) closes one more day each evening
+// he has not answered, its `file` mints nothing while the family is live, and the
+// kept card went on naming only its first day. Row 914 (3) measured it (no door
+// replaced a kept card's line); row 915 (3) ruled this door: ONE verb that rewrites
+// the line of a KEPT card of a rolling family, and nothing else.
+//   · it NEVER mints — no card, no write; `file` stays the deck's only birth — and it
+//     never touches an id, a key, a deal stamp, an expiry, a sleep or an answer: the
+//     card is the same ask, in the words of tonight's fact;
+//   · KEPT is fileGuard's own reading (live = no `answer`, no `retired_at`; a
+//     sleeping card counts — "baad" is not an answer), on a HAND-FILED card, the
+//     only kind whose words a filing organ gave it; a derived card's words are its
+//     source's (and its event-day key never rolls, ROLLING_KEY's header);
+//   · REFUSED, changing nothing: no live card of the family · his word is on the
+//     card (answered, retired, or a haan recorded at source in acted[]) · the
+//     addressed card is of another family · two live cards in one family (say which,
+//     by --key) · the line empty or over the deck's own bound. `file` CLIPS at that
+//     bound; a door that rewrites REFUSES instead — a line cut short names fewer days
+//     than it says;
+//   · the CLI writes through this file's own writeAtomic(CALL) — the single-writer
+//     law holds.
+// CARD_LINE_BOUND is `file`'s own clip, named once; the selftest pins it to the
+// `file` mode's source so the two can never drift apart.
+// ---------------------------------------------------------------------------
+export const CARD_LINE_BOUND = 140;
+const familyOf = (key) => { const m = ROLLING_KEY.exec(String(key || "")); return m ? m[1] : null; };
+const wordIsOn = (c) => !!(c.answer || c.retired_at || (Array.isArray(c.acted) && c.acted.length));
+const wordOf = (c) => c.answer || (c.retired_at ? "retired" : `haan recorded at source ×${c.acted.length}`);
+export function relineTarget(cards, { family = null, key = null } = {}) {
+  const deck = (Array.isArray(cards) ? cards : []).filter((c) => c && typeof c === "object");
+  const fam = family ? String(family) : null;
+  if (key) {
+    const kf = familyOf(key);
+    if (!kf) return { refuse: `${key} is not a rolling key (<family>:YYYY-MM-DD) — the door rewrites only a card of a rolling family` };
+    if (fam && kf !== fam) return { refuse: `${key} is of family ${kf}, not ${fam} — the door never crosses a family` };
+    const c = deck.find((x) => x.key === key);
+    if (!c) return { refuse: `no card keyed ${key}` };
+    if (c.source !== "hand-filed") return { refuse: `${c.id} (${key}) is a derived card (${c.source}) — its words are its source's, never a door's` };
+    if (wordIsOn(c)) return { refuse: `${c.id} (${key}) carries his word (${wordOf(c)}) — an answered card is history` };
+    return { card: c };
+  }
+  if (!fam) return { refuse: "no address — name the card's family (--family) or its key (--key)" };
+  const ofFam = deck.filter((x) => x.source === "hand-filed" && familyOf(x.key) === fam);
+  const live = ofFam.filter((x) => !wordIsOn(x));
+  if (live.length > 1) return { refuse: `${live.length} live cards of family ${fam} (${live.map((x) => x.id).join(", ")}) — address one by --key` };
+  if (live.length === 1) return { card: live[0] };
+  if (ofFam.length) return { refuse: `every card of family ${fam} carries his word (${ofFam.map((x) => `${x.id}: ${wordOf(x)}`).join(", ")}) — an answered card is history` };
+  return { refuse: `no live card of family ${fam}` };
+}
+/** relineCard — PURE: {state, card, changed} with ONLY the target's `line` replaced, or {refuse}. */
+export function relineCard(state, { family = null, key = null, line = "" } = {}) {
+  const text = String(line == null ? "" : line).replace(/\s+/g, " ").trim();   // `clip`'s own normalising, never its cut
+  if (!text) return { refuse: "the line is empty — a card that says nothing asks nothing" };
+  if (text.length > CARD_LINE_BOUND) return { refuse: `the line is ${text.length} characters, over the deck's bound of ${CARD_LINE_BOUND} — the door refuses, it never cuts` };
+  const s = { ...state, cards: ((state && state.cards) || []).map((c) => (c && typeof c === "object" ? { ...c } : c)) };
+  const t = relineTarget(s.cards, { family, key });
+  if (t.refuse) return { refuse: t.refuse };
+  const changed = t.card.line !== text;
+  t.card.line = text;
+  return { state: s, card: t.card, changed };
+}
+
 function runStagedDispatch(action) {
   // `at` is the stable identity — indexes renumber on every settle and id can repeat.
   const contract = readJson(CONTRACT);
@@ -1724,7 +1790,19 @@ async function main() {
     return;
   }
 
-  console.log("captains_call: sync | deal | answer <id> <haan|na|baad> | file --line \"…\" | status | list | selftest");
+  if (mode === "reline") {
+    // THE CARD-LINE DOOR (15 Nov 2026) — see relineCard's header. Refused = exit 1 and NOTHING written;
+    // a flag with no value (or whose value is the next flag) is an absent value, as fileDispatch reads them.
+    const val = (flag) => { const i = process.argv.indexOf(flag); const v = i >= 0 ? process.argv[i + 1] : undefined; return v === undefined || String(v).startsWith("--") ? null : String(v); };
+    const r = relineCard(loadState(), { family: val("--family"), key: val("--key"), line: val("--line") || "" });
+    if (r.refuse) { console.error(`captains_call: reline REFUSED — ${r.refuse} · nothing changed`); process.exitCode = 1; return; }
+    if (!r.changed) { console.log(`captains_call: ${r.card.id} (${r.card.key}) already says this — nothing written`); return; }
+    writeAtomic(CALL, r.state);
+    console.log(`captains_call: relined ${r.card.id} (${r.card.key}) — the same card, key and history; the new line deals at his next anchor`);
+    return;
+  }
+
+  console.log("captains_call: sync | deal | answer <id> <haan|na|baad> | file --line \"…\" | reline (--family <f> | --key <k>) --line \"…\" | status | list | selftest");
 }
 
 // ── SELFTEST — hermetic, fixture-driven, every check can fail ────────────────
@@ -2402,6 +2480,71 @@ function selftest() {
     assert("S11 · EXPIRED — a card never dealt, and a card dealt only TODAY, have both lost nothing (a fresh ask is not a failure)",
       expiredUnanswered({ id: "x", dealt: [] }, "2026-08-29").count === 0
       && expiredUnanswered({ id: "y", dealt: [d("2026-08-29")] }, "2026-08-29").count === 0);
+  }
+
+  // ── THE CARD-LINE DOOR (15 Nov 2026 · rows 913 (2) / 915 (3)) — bitten on fixtures, never his deck ──
+  {
+    const kept = (over = {}) => ({ id: "c7", key: "dayclose:2026-11-13", source: "hand-filed",
+      line: "2026-11-13: the day closed itself — your HIT/MISS and tomorrow's line, if you want (/full-time)",
+      dispatch: { kind: "none" }, why_code_cannot_decide: "his HIT/MISS and his KAL-line are his own words",
+      filed_at: "2026-11-13T17:27:05.000Z", dealt: ["2026-11-14T03:00:00.000Z", "2026-11-14T15:00:00.000Z"], answer: null, answered_at: null,
+      sleep_until: "2026-11-15", retired_at: null, resolution: null, expired_unanswered: 1, expired_last: "2026-11-14", expired_first: "2026-11-14", ...over });
+    const other = { id: "c3", key: "canon:OPS_STATE.md:2026-11-12", source: "hand-filed", line: "Canon OPS_STATE.md mein UNCOMMITTED badlav hai (M) — aapke word se tha?",
+      dispatch: { kind: "none" }, filed_at: "2026-11-12T13:31:04.054Z", dealt: [], answer: null, answered_at: null, sleep_until: null, retired_at: null, resolution: null };
+    const settled = { ...kept(), id: "c2", key: "dayclose:2026-11-10", answer: "haan", answered_at: "2026-11-11T03:00:00.000Z",
+      retired_at: "2026-11-11T03:00:00.000Z", resolution: "haan — done on his word (no exec by design, v1)" };
+    const deck = () => ({ version: 1, next_id: 8, cards: [settled, other, kept()].map((c) => ({ ...c })) });
+    const NEW = "2026-11-13, 2026-11-14: the days closed themselves — your HIT/MISS and tomorrow's line, if you want (/full-time)";
+    const J = (x) => JSON.stringify(x);
+    const sameBut = (a, b, field) => J(Object.keys(a)) === J(Object.keys(b)) && Object.keys(a).every((k) => k === field || J(a[k]) === J(b[k]));
+    const d0 = deck();
+    const r1 = relineCard(d0, { family: "dayclose", line: NEW });
+    const after = r1.state ? r1.state.cards.find((c) => c.id === "c7") : null;
+    assert("CARD-LINE DOOR — a KEPT card of a rolling family gets the new line and NOTHING else: id, key, deal stamps, expiry, sleep, reason, answer all byte-equal",
+      !r1.refuse && r1.changed === true && !!after && after.line === NEW && sameBut(after, kept(), "line"));
+    assert("CARD-LINE DOOR — PURE and never a mint: the input deck is untouched, the card count and next_id stay, every other card is byte-equal",
+      !!r1.state && J(d0) === J(deck()) && r1.state.cards.length === 3 && r1.state.next_id === 8 && r1.state.version === 1
+      && J(r1.state.cards[0]) === J(settled) && J(r1.state.cards[1]) === J(other));
+    assert("CARD-LINE DOOR — addressed by its key, or by its family and key, it rewrites the same card to the same deck",
+      (() => { const a = relineCard(deck(), { key: "dayclose:2026-11-13", line: NEW }), b = relineCard(deck(), { family: "dayclose", key: "dayclose:2026-11-13", line: NEW });
+        return !a.refuse && !b.refuse && a.card.id === "c7" && b.card.id === "c7" && J(a.state) === J(r1.state) && J(b.state) === J(r1.state); })());
+    assert("CARD-LINE DOOR — 'baad' is not an answer: a SLEEPING kept card is rewritten and still sleeps to the same day",
+      !!after && after.sleep_until === "2026-11-15");
+    assert("CARD-LINE DOOR — the same line again is no change (changed false: the CLI writes nothing)",
+      !!r1.state && relineCard(r1.state, { family: "dayclose", line: NEW }).changed === false);
+    assert("CARD-LINE DOOR — the line is normalised as `file` normalises it (whitespace runs are one space), never cut",
+      relineCard(deck(), { family: "dayclose", line: `  ${NEW.replace(/ /g, "  ")}\n` }).card.line === NEW);
+    const refused = (st, a) => { const before = J(st); const r = relineCard(st, a); return !!r.refuse && !r.state && J(st) === before; };
+    assert("CARD-LINE DOOR — REFUSED for an answered card, by its family (every card of it carries his word) and by its key",
+      refused({ version: 1, next_id: 3, cards: [settled] }, { family: "dayclose", line: NEW }) && refused(deck(), { key: "dayclose:2026-11-10", line: NEW }));
+    assert("CARD-LINE DOOR — REFUSED for a card his na retired, a retired card, and a haan recorded at source (acted[]): his word, in any form, ends the door",
+      refused({ version: 1, next_id: 9, cards: [kept({ answer: "na", answered_at: "2026-11-14T03:00:00.000Z", retired_at: "2026-11-14T03:00:00.000Z" })] }, { family: "dayclose", line: NEW })
+      && refused({ version: 1, next_id: 9, cards: [kept({ retired_at: "2026-11-14T00:00:00.000Z" })] }, { family: "dayclose", line: NEW })
+      && refused({ version: 1, next_id: 9, cards: [kept({ acted: ["2026-11-14T03:00:00.000Z"] })] }, { family: "dayclose", line: NEW }));
+    assert("CARD-LINE DOOR — REFUSED across a family: a key of another family under --family, and a family whose only live card is another family's",
+      refused(deck(), { family: "dayclose", key: "canon:OPS_STATE.md:2026-11-12", line: NEW }) && refused({ version: 1, next_id: 4, cards: [other] }, { family: "dayclose", line: NEW }));
+    assert("CARD-LINE DOOR — REFUSED with no live card (an empty deck, a family never filed, a key never filed): the door never mints",
+      refused(blank(), { family: "dayclose", line: NEW }) && refused(deck(), { family: "gate:dmn", line: NEW }) && refused(deck(), { key: "dayclose:2026-11-14", line: NEW }));
+    assert("CARD-LINE DOOR — REFUSED for an empty line, a blank line and a line over the deck's own bound (refused, never clipped); the bound itself passes",
+      refused(deck(), { family: "dayclose", line: "" }) && refused(deck(), { family: "dayclose", line: " \n\t " })
+      && refused(deck(), { family: "dayclose", line: "x".repeat(CARD_LINE_BOUND + 1) }) && !relineCard(deck(), { family: "dayclose", line: "x".repeat(CARD_LINE_BOUND) }).refuse);
+    assert("CARD-LINE DOOR — REFUSED for a non-rolling key, a derived card, an unaddressed call and two live cards in one family (say which, by --key)",
+      refused({ version: 1, next_id: 9, cards: [{ ...other, id: "c27", key: "awayday:red:31359935125" }] }, { key: "awayday:red:31359935125", line: NEW })
+      && refused({ version: 1, next_id: 9, cards: [kept({ source: "forge.stale_open" })] }, { family: "dayclose", line: NEW })
+      && refused(deck(), { line: NEW })
+      && refused({ version: 1, next_id: 9, cards: [kept(), kept({ id: "c8", key: "dayclose:2026-11-14" })] }, { family: "dayclose", line: NEW }));
+    assert("CARD-LINE DOOR — KEPT is fileGuard's own reading (one live card a family, no haan at source): fileGuard refuses tomorrow's mint for a live card exactly where the door finds that card",
+      [deck(), { cards: [settled] }, { cards: [other] }, blank(), { cards: [kept({ sleep_until: null })] }, { cards: [kept({ answer: "na", retired_at: "2026-11-14T03:00:00.000Z" })] }]
+        .every((st) => { const g = fileGuard(st.cards, "dayclose:2026-11-16", true); const t = relineTarget(st.cards, { family: "dayclose" });
+          return (!g.mint && /already live as/.test(g.why || "")) === !!t.card && (!t.card || String(g.why).includes(`${t.card.id} (${t.card.key})`)); }));
+    const own = readFileSync(join(__dirname, "captains_call.mjs"), "utf8");
+    const fileSlice = own.slice(own.indexOf('if (mode === "file")'), own.indexOf('if (mode === "status")'));
+    const doorSlice = own.slice(own.indexOf('if (mode === "reline")'), own.indexOf('console.log("captains_call: sync | deal'));
+    assert("CARD-LINE DOOR — CARD_LINE_BOUND IS `file`'s own clip, read off the `file` mode's source: one bound for both doors",
+      new RegExp(`line: clip\\(line, ${CARD_LINE_BOUND}\\)`).test(fileSlice));
+    assert("CARD-LINE DOOR — the `reline` verb routes through relineCard, writes ONLY through writeAtomic(CALL, …), never mints, refuses with exit 1, and sits outside the `file` mode",
+      doorSlice.length > 0 && /relineCard\(loadState\(\)/.test(doorSlice) && /writeAtomic\(CALL, r\.state\)/.test(doorSlice) && (doorSlice.match(/writeAtomic\(/g) || []).length === 1
+      && !/\.cards\.push|next_id\+\+/.test(doorSlice) && /process\.exitCode = 1/.test(doorSlice) && !/relineCard|reline/.test(fileSlice));
   }
 
   console.log(`\ncaptains_call selftest: ${pass} passed, ${fail} failed`);
