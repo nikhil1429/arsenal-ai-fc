@@ -16,6 +16,7 @@ ruling wins, and each difference is named in §2.
 
 **F8: built C alone.** `scripts/day.mjs` does not exist on `origin/main` at the cut (`ls scripts/day.mjs` → No such
 file). **A is OWED**: `day.mjs start` runs `usage_tap.mjs need` as one more owner call, once mday lands.
+**A was BUILT on 19 Nov 2026 by forks row 1091 (2)** after main carried `scripts/day.mjs`: see §8.
 
 ## 2. Where the ruling moved the spec (THE RULING WINS)
 
@@ -132,7 +133,7 @@ it cannot sit in a tracked file of a public repo (FORK F-c).
 
 ## FORKS (files beyond the named ones — written here, never edited)
 
-- **F-a** `package.json`: `usage_tap.mjs selftest` joins a suite string (`organism:selftest`) so the coverage law stops
+- **F-a** (DONE 19 Nov 2026, §8) `package.json`: `usage_tap.mjs selftest` joins a suite string (`organism:selftest`) so the coverage law stops
   naming it orphaned. Until then the hermetic chain judges it through the organism_test assert above.
 - **F-b** the campaign law home `<root>/tools/model_law.mjs` gains ONE line,
   `export const POOL_READING_MAX_AGE_MIN = 300;` (row 1062 F4, "five hours until a row moves it"), under that file's own
@@ -140,7 +141,69 @@ it cannot sit in a tracked file of a public repo (FORK F-c).
 - **F-c** `ARSENAL_CAMPAIGN_ROOT` set in his laptop's user environment (not in any tracked file).
 - **F-d** the SETTINGS LINE into the project `.claude/settings.json` (F3 B), by hand under a later row.
 - **F-e** the campaign launch gate reads `usage_tap.mjs verdict` by exit code (F6 B), campaign-side.
-- **F-f** F8 A: `scripts/day.mjs start` runs `usage_tap.mjs need` once mday lands.
+- **F-f** (DONE 19 Nov 2026, §8) F8 A: `scripts/day.mjs start` runs `usage_tap.mjs need` once mday lands.
 - **F-g** the hang caps (the witness's sync-child cap and the mutant runner's cap) are multiples of times measured in
   the run. They cap a hung child, they never judge a clause; the one clock-bound judgement (WA.i) uses the ruled second
   plus a measured node start, with no ratio.
+
+## 8. FOLLOW-UP — forks row 1091 (2), 19 Nov 2026 (tip a66575c ADOPTED; three more acts, new commits, never forced)
+
+1. **Main brought in.** `git fetch origin main`, then `git merge origin/main` (`3e3ce63`) into this branch → merge commit
+   `7f4711f`, no conflict. The one organism_test assert now sits on mdn2's bytes (`scripts/organism_test.mjs:2228-2236`),
+   and main carries `scripts/day.mjs` (unit mday). The new merge base is `3e3ce63`. The merge was made in a scratch clone,
+   because the live checkout holds a hook-written state file that a merge would overwrite; the session may not touch it.
+2. **F-f (F8 A) built.** Measured at `3e3ce63`: `start()` is `scripts/day.mjs:91-108`; its owner calls go through
+   `ownerRun()` (`:77-81`, each killed at the sitting owner's own bound, `sitting.mjs:219` `ownerTimeoutMs`). After the
+   sitting's own door (`S.openDoor`, `:103`), `start` now runs `ownerRun("usage_tap.mjs", ["need"])` ONCE and adds the tap's
+   one line to the start line as `pool: …`, on the opened path and on the not-opened path alike. day.mjs still writes
+   nothing; the card is filed by the tap's door through captains_call.mjs. Header line added (`:19-20`).
+3. **F-a built.** `package.json` `organism:selftest` now ends `… && node scripts/usage_tap.mjs selftest`.
+
+New witness clauses, each planted both ways:
+- **D**: `day.mjs start --session <id>` with the sitting daemon DOWN (a free port the OS hands out, nothing listening;
+  sitting state, HOME and archive under the temp dir). No reading gives exactly ONE `usage:panel:<IST day>` card and one
+  `pool:` note. A second start the same day is a JOIN and still gives ONE card. A fresh statusline reading gives `pool: GO`
+  and no card. Base `3e3ce63`: day.mjs runs no `need`, so no card: RED.
+- **P**: the usage_tap selftest sits in exactly ONE suite string of package.json.
+
+```
+node ci/mpool/witness_mpool.mjs --org . --base-org <scratch clone of 3e3ce63>
+GREEN MPOOL the usage tap · 33 clause(s)                                              (exit 0)
+
+node ci/mpool/witness_mpool.mjs --org <scratch clone of 3e3ce63> --base-org <the same>
+RED MPOOL · W1.1, W1.2, W1.3, W1.4, W1.5, WA.i, WA.ii, W2.1, W2.2, W2.3, W2.4, W2.5, W2.6, W2.7, W2.8, W3.1, W3.2, W3.4, W4.1, W4.2, W4.3, W4.4, W4.5, W4.6, F2, F5, F9, C, J, D, P, S   (exit 1)
+
+node ci/mpool/run_mutants_mpool.mjs --org . --base-org <scratch clone of 3e3ce63>
+run_mutants: 33 of 33 mutant(s) RED by the clause that names them · control GREEN    (exit 0)
+```
+
+Touched selftests, before (`3e3ce63`) and after (`b93f8e7`), headline lines. Both runs are scratch clones of the same
+lock (`package-lock.json` identical to b1fc984), with node_modules linked:
+
+```
+usage_tap selftest — before: the file does not exist at 3e3ce63
+usage_tap selftest — after:  usage_tap selftest 31/31 — all clauses hold
+day.mjs — no selftest of its own (it is witnessed by ci/mday); held here by clause D
+
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all
+  before (3e3ce63):  organism_test: 140 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)
+  after  (b93f8e7):  organism_test: 142 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)
+```
+
+- The coverage red is a base red. At both the base and the build it names `deck_lint, home_pin, probe, study_scope`; F-a
+  took `usage_tap` OFF the orphan list.
+- `sandbox selftest exits 0`, and the members line it rolls into, are red in BOTH scratch clones, for the same reason as
+  §5 (the clone's location). The selftest passes on the neutral machine (below).
+- `node scripts/models.mjs check` → exit 0 (literal model names outside models.mjs: 0).
+
+The neutral machine, read with curl and no token:
+
+| push | run | node 22 | node 24 |
+|---|---|---|---|
+| `7f4711f` (the merge) | 44412824939 | 135185210845 cancelled (superseded by the next push) | 135185211460 cancelled |
+| `b93f8e7` (F-f, F-a, D, P) | 44412829582 | 135185233163 success | 135185235569 success |
+
+The push carrying this section is read the same way; its ids are in the seat's final message.
+
+Still never touched: `.claude/settings.json`. The SETTINGS LINE stays in this proof.
+
