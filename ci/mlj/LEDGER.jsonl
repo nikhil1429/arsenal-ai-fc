@@ -13,3 +13,4 @@
 {"ts": "2026-11-18T18:52:57Z", "act": "CRLF witness both ways + mutants", "cmd": "witness / run_mutants over CRLF copies", "last_line": "GREEN MLJ the judge-held refusal · 8 clause(s) · RED MLJ · J1, J2, J3, J4, J5, K1, BOUND · run_mutants: 6 of 6 … control GREEN"}
 {"ts": "2026-11-18T18:52:57Z", "act": "build models check", "cmd": "node scripts/models.mjs check", "last_line": "exit 0"}
 {"ts": "2026-11-18T18:52:57Z", "act": "effort receipt", "cmd": "node campaign-2026-09/tools/effort_receipt.mjs", "last_line": "Error: Cannot find module '…/campaign-2026-09/tools/effort_receipt.mjs' (MODULE_NOT_FOUND); nothing written"}
+{"ts": "2026-11-18T18:59:01Z", "act": "push 2 (mutants + proof) — neutral verdict read", "cmd": "curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/2ea37d4/check-runs", "last_line": "run 44374506948 · npm test · node 22 success (check 135050043322) · npm test · node 24 success (check 135050043687)"}
