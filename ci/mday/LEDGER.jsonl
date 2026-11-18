@@ -1,0 +1,8 @@
+{"ts":"2026-11-18T16:55:12.834Z","act":"fetch-base","cmd":"git fetch origin main && git checkout -b claude/mday-spec FETCH_HEAD","last_line":"Switched to a new branch claude/mday-spec (base 33d1432)"}
+{"ts":"2026-11-18T16:55:12.834Z","act":"measure-hooks","cmd":"grep -n hook events .claude/settings.json","last_line":"UserPromptSubmit:4 Stop:18 SessionStart:40 PreCompact:50 SessionEnd:60 PreToolUse:70"}
+{"ts":"2026-11-18T16:55:12.834Z","act":"measure-learn","cmd":"grep -n day end .claude/skills/learn/SKILL.md","last_line":"41: Day end: judge-round -> sitting close --reason fulltime -> /full-time"}
+{"ts":"2026-11-18T16:55:12.834Z","act":"measure-fulltime","cmd":"sed -n 3p .claude/skills/full-time/SKILL.md","last_line":"description lists full time / post match / done for today / closing"}
+{"ts":"2026-11-18T16:55:12.834Z","act":"measure-sitting","cmd":"grep -n case open/close scripts/sitting.mjs","last_line":"1339 open (--no-spawn no-op when daemon down 1330) · 1383 close via daemon POST"}
+{"ts":"2026-11-18T16:55:12.834Z","act":"measure-postmatch","cmd":"grep -n --hit scripts/postmatch.mjs","last_line":"1476: no result given -> exit 1, nothing recorded"}
+{"ts":"2026-11-18T16:55:12.834Z","act":"measure-autoclose","cmd":"grep -n dayclose scripts/conductor.mjs","last_line":"158 dayclose evening · 106 dayclose-prev morning"}
+{"ts":"2026-11-18T16:55:12.834Z","act":"measure-scope","cmd":"sed -n 71,89p scripts/study_scope.mjs","last_line":"study iff payload session === open sitting host"}
