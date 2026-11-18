@@ -3,3 +3,6 @@
 {"ts":"2026-11-18T10:40:50.938Z","act":"measure","cmd":"node scripts/ci_verdict.mjs 76b0626","last_line":"ci_verdict 76b0626 UNREADABLE — GET ... answered 403 (node fetch in this container; curl same URL answered 200)"}
 {"ts":"2026-11-18T10:42:36.108Z","act":"write","cmd":"ci/mcr/B2_SPEC.md","last_line":"B2 spec written: verb land.mjs, carry predicate, HERMETIC/LIVE split, groundsman rebase, branch table L1-L4 C1-C3 S1 G1-G2"}
 {"ts":"2026-11-18T10:42:36.143Z","act":"ruling","cmd":"message forks row 1025 (4)","last_line":"new FIRST item mjd3 BUILD received mid-B2; B2 pushed complete, mjd3 next, then B3"}
+{"ts":"2026-11-18T11:01:36.490Z","act":"ci-note","cmd":"check-runs d592de2","last_line":"134745404803 node 22 failure · 134745405247 node 24 failure — NEW RED LOAD ZERO BLOCK 7 (a canon .md states a live count): the heading '1.2 Organs' read as a count"}
+{"ts":"2026-11-18T11:01:36.515Z","act":"fix","cmd":"heading of §1.2 reworded","last_line":"canon-count scan 0 hits"}
+{"ts":"2026-11-18T11:01:36.538Z","act":"ruling","cmd":"forks row 1029 (on this spec)","last_line":"L1 A · L2 A · L3 A · L4 A · C1 A (row 1023 stands) · C2 A · C3 A · S1 A · G1 A · G2 A; step 8 no git worktree; step 11 prints stale units only"}

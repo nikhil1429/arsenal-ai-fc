@@ -32,7 +32,7 @@
 | Consequence (derived from the two rows above, not yet observed in a log this seat can read): the next night `@{u}..HEAD` holds only its own commit(s) → passes `heldCommits` → commits again → push rejected again. Local `main` stays DIVERGED from `origin/main` until a human pulls; every night adds one more own commit. **UNREAD:** `scripts/groundsman.log` (laptop) — whether this has happened | derived |
 | The Kennel's `nightPass` DOES `git pull --ff-only` first and idles on refusal | `scripts/groundsman.mjs:190-191` |
 
-### 1.2 Organs that hold old bytes after a pull (the post-pull act each needs)
+### 1.2 What holds old bytes after a pull, and the post-pull act each needs
 
 | Organ | How it runs | Holds old bytes? | Post-pull act today | Where |
 |---|---|---|---|---|
