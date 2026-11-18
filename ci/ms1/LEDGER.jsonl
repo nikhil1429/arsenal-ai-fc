@@ -1,0 +1,2 @@
+{"ts":"2026-11-18T22:29:00.796Z","act":"branch","cmd":"git fetch origin main; git checkout -b claude/ms1-build FETCH_HEAD (in a fresh clone: the session tree holds a hook-written state file, never touched)","last_line":"3e3ce63bb53fcc93e37f2dea09250d216a1a5873"}
+{"ts":"2026-11-18T22:29:00.833Z","act":"carry","cmd":"git show origin/claude/<build>:ci/<dir>/<witness + imported siblings> > ci/<unit>/ (F8 A, F9 B: ci/mcr split into ci/mjd3 + ci/mjd4)","last_line":"21 units carried, bytes unchanged · mday already on main"}
