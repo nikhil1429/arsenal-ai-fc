@@ -1,0 +1,8 @@
+{"ts":"2026-11-18T14:35:30.501Z","act":"measure","cmd":"git checkout -b claude/mlv1-build claude/mlv0-build","last_line":"1631e22"}
+{"ts":"2026-11-18T14:35:30.501Z","act":"selftest-base","cmd":"node scripts/{sitting,keeper}.mjs selftest","last_line":"sitting 99/0 · keeper 16/0"}
+{"ts":"2026-11-18T14:35:30.501Z","act":"witness-build","cmd":"node ci/mlv1/witness_mlv1.mjs --org . --base-org <copy of 1631e22>","last_line":"GREEN MLV1 sitting retires on a source change only when no sitting is open and no judge round runs · 6 clause(s)"}
+{"ts":"2026-11-18T14:35:30.501Z","act":"witness-base","cmd":"node ci/mlv1/witness_mlv1.mjs --org <copy of 1631e22> --base-org <same>","last_line":"RED MLV1 · I1 IDLE, I2 MID, I3 JUDGE"}
+{"ts":"2026-11-18T14:35:30.501Z","act":"mutants","cmd":"node ci/mlv1/run_mutants_mlv1.mjs --org . --base-org <copy of 1631e22>","last_line":"run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T14:35:30.501Z","act":"selftest-after","cmd":"node scripts/{sitting,keeper}.mjs selftest","last_line":"sitting 99/0 · keeper 17/0"}
+{"ts":"2026-11-18T14:35:30.501Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts":"2026-11-18T14:35:30.501Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"exit 2 · 1 UNRULED: orphaned home_pin, probe, study_scope (the same red as the base)"}
