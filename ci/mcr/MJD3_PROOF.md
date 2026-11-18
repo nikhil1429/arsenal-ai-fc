@@ -46,7 +46,7 @@ run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN
 ```
 
 ## Gates
-- `node scripts/gaffer_brain.mjs selftest`: base **190 passed, 0 failed** → build **194 passed, 0 failed** (4 new mjd3 asserts).
+- measured 18 Nov 2026, `node scripts/gaffer_brain.mjs selftest`: base **190 passed, 0 failed** → build **194 passed, 0 failed** (4 new mjd3 asserts).
 - `node scripts/models.mjs check`: exit 0.
 - The neutral machine: the suite workflow's run on each push of this branch (ids in `ci/mcr/LEDGER.jsonl`).
 
