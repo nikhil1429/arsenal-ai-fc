@@ -104,3 +104,45 @@ witness --org <CRLF build> --base-org <CRLF base>    GREEN MLV3 the capture nerv
 run_mutants --org <CRLF build> --base-org <CRLF base> run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN
 witness --org <CRLF base>  --base-org <CRLF base>    RED MLV3 · T1 IDLE, T2 ONCE, T3 INFLIGHT, T4 JUDGE
 ```
+
+## REWORK · forks row 1053 (18 Nov 2026): RETURNED RED BY NAME — the fixed service ports
+
+**Why it was returned:** the witness bound thalamus's own fixed port :4113 — on his laptop the one organ left on holds
+it. The ruling's five requirements, answered:
+
+1. **Planted ports, honoured only under the OS temp dir.** `scripts/thalamus.mjs` gains `plantedPort(name, fixed)`
+   (cortex's door, the same shape): `ARSENAL_THALAMUS_PORT` (its listen and its keeper) and `ARSENAL_JUDGE_PORT`
+   (its retire's judge read) are honoured ONLY when thalamus.mjs itself (realpath) sits under `os.tmpdir()`. Unset,
+   bad, or anywhere else: the fixed :4113, byte for byte (`const PORT` keeps its name, so the S8 listen pin holds).
+   Its unreal-path catch is declared through `swallow()`. One thalamus selftest clause plants both ways.
+2. **Every wait is bounded.** First boot: two boot REHEARSALS (a fresh node that imports the entry and brain.mjs,
+   opens the spool and reads the whole afferent record — a worker's boot short of listening) plus three node starts
+   (the port probe and listen, this witness's poll step, the /status round trip); every later wait the measured first
+   boot plus one node start; a drain the drainer's own declared tick plus that; the in-flight request carries the same
+   bound. A clause that cannot run says `cannot run: <why>`; the witness exits 1. The one unbounded step is the
+   rehearsal MEASUREMENT itself (it binds no port and runs none of the unit). Named on the way: the first cut measured
+   a bare import, which missed the worker's real boot work and read RED on four of six runs; the second cut's rehearsal
+   died at parse (a newline literal inside its template) and measured nothing. Both fixed, both named.
+3. **LIVE-SAFE (new clause, with its mutant).** The real :4112 and :4113 are held by planted counting listeners for
+   the whole run; GREEN only when both were planted, every behavioural clause is GREEN and zero connections reached
+   them. Mutant: the port door ignored (a planted tree binds the live :4113) → RED by LIVE-SAFE.
+4. **Base and stack.** `claude/mlv2-build` (790e58c, itself cut on main 669200d) is MERGED into this branch (no rebase,
+   no force push); against it only `scripts/thalamus.mjs` differs. The base reads RED with no hang: its thalamus tries
+   the fixed :4113, finds the planted listener, and stands down.
+5. Measured 18 Nov 2026:
+
+```
+node ci/mlv3/witness_mlv3.mjs --org . --base-org <copy of mlv2 790e58c>
+GREEN MLV3 the capture nerve retires only when its spool is drained, every event lands exactly once across a retire, and no live port is touched · 8 clause(s)   (exit 0)
+node ci/mlv3/witness_mlv3.mjs --org <copy of mlv2> --base-org <same>
+RED MLV3 · T1 IDLE, T2 ONCE, T3 INFLIGHT, T4 JUDGE, LIVE-SAFE   (exit 1)
+node ci/mlv3/run_mutants_mlv3.mjs --org . --base-org <copy of mlv2>
+run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN
+CRLF copies (build and base): GREEN MLV3 … · 8 clause(s)
+thalamus selftest: ALL CHECKS PASSED · mutagen selftest: 24 passed, 0 failed · models check exit 0
+hermetic suite: the one red of main (orphaned: home_pin, probe, study_scope); none other
+```
+
+**FORK (named):** on his laptop the live thalamus holds :4113, so the counting listener cannot be planted there and
+LIVE-SAFE reads RED by name ("cannot plant … held by another process"); the plants never address :4113 (planted port,
+the witness's request door refuses a live port). The architect rules whether LIVE-SAFE is a CI/container clause only.
