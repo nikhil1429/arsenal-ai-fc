@@ -1,0 +1,11 @@
+{"ts":"2026-11-18T14:29:28.308Z","act":"measure","cmd":"git show origin/main:scripts/groundsman.mjs (15edfec)","last_line":"pushOnlyPass :238-295 · no fetch :234-237 · schedule setup/INSTALL_CYBORG_TASKS.ps1:165 DAILY 03:45"}
+{"ts":"2026-11-18T14:29:28.308Z","act":"selftest-before","cmd":"node scripts/groundsman.mjs selftest (15edfec)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T14:29:28.308Z","act":"build","cmd":"edit scripts/groundsman.mjs (fetch · meetOrigin · rebuild by plumbing · cards by captains_call.mjs)","last_line":"commit 5fe154b"}
+{"ts":"2026-11-18T14:29:28.308Z","act":"selftest-after","cmd":"node scripts/groundsman.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T14:29:28.308Z","act":"witness","cmd":"node ci/mgrd/witness_mgrd.mjs --org <archive 5fe154b> --base-org <archive 15edfec>","last_line":"GREEN MGRD state push meets origin · 5 clause(s)"}
+{"ts":"2026-11-18T14:29:28.308Z","act":"mutants","cmd":"node ci/mgrd/run_mutants_mgrd.mjs --org <archive 5fe154b> --base-org <archive 15edfec>","last_line":"run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T14:29:28.308Z","act":"models","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts":"2026-11-18T14:29:28.308Z","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (15edfec, shared clone)","last_line":"organism_test: 137 passed, 3 failed · ruled 0 · UNRULED 3"}
+{"ts":"2026-11-18T14:29:28.308Z","act":"suite-build","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (5fe154b, shared clone)","last_line":"organism_test: 137 passed, 3 failed · ruled 0 · UNRULED 3 (same three names)"}
+{"ts":"2026-11-18T14:29:28.308Z","act":"push","cmd":"git push -u origin claude/mgrd-build","last_line":"5fe154b"}
+{"ts":"2026-11-18T14:29:28.308Z","act":"ci","cmd":"node scripts/ci_verdict.mjs 5fe154b","last_line":"ci_verdict 5fe154b UNREADABLE — 403 (container node fetch); curl: runs 134870907034 (node 22) · 134870907422 (node 24) in_progress at read"}
