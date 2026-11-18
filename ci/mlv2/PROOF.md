@@ -101,8 +101,10 @@ at whatever answers :4112 — his live cortex. Both are the witness's defects; t
    (realpath) sits under `os.tmpdir()` (realpath; case-folded on win32). Anywhere else, or with the env unset or bad,
    the fixed port stands: service behaviour is byte for byte what it was. Its unreal-path catch is declared through
    `swallow()` (BLOCK 7). One cortex selftest clause plants both ways.
-2. **Every wait is bounded.** First boot: two cold imports of the copy's entry plus one node start (measured in the
-   run); every later wait: the measured first boot plus one node start; a lane: cortex's own declared poll plus that.
+2. **Every wait is bounded.** First boot: two cold imports of the copy's entry (the keeper's start, the worker's)
+   plus three node starts (the port probe and listen, this witness's poll step, the /status round trip), each measured
+   in the run — the first cut counted one node start and sat at the real boot (named: a bound that passes by its last
+   check is not a bound); every later wait: the measured first boot plus one node start; a lane: cortex's own declared poll plus that.
    Every fetch carries that bound; every child kill is bounded, then forced. A clause that cannot run says
    `cannot run: <why>`, and the witness exits 1. The one unbounded step is the cold-import MEASUREMENT itself (a fresh
    node that imports the entry and exits; it binds no port and runs none of the unit) — named here, not hidden.
