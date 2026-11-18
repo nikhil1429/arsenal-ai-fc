@@ -13,7 +13,9 @@
 //     dressing-room/state is read or written; no file of a credential is copied (only *.mjs, the skill, the settings).
 //   · the SETTINGS LINE is read from ci/mpool/PROOF.md beside this file and planted into each copy's
 //     .claude/settings.json ONLY (row 1062 F3 B: the real project settings are landed apart, by hand, under a later row).
-//   · THE PORT CLASS (row 1053): no port is bound, no live service is named, nothing is POSTed, nothing restarted.
+//   · THE PORT CLASS (row 1053): no fixed port is bound, no live service is named, nothing is POSTed, nothing restarted.
+//     Clause D runs day.mjs start (unit mday) with the sitting daemon DOWN: ARSENAL_SITTING_PORT is a free port the OS hands
+//     out (listen on 0, then closed — nothing listens on it), its state dir, HOME and archive all under the temp dir.
 //   · CRLF-proof and Windows-proof: every text is split on \r?\n, every child is process.execPath with argv (no shell),
 //     every git repo it would plant would be made with core.autocrlf=false — it plants none.
 //   · THE CLOCK-BOUND CLAUSE (WA.i, row 1062 ADDED (i)) judges against the RULED one second plus a slack MEASURED in this
@@ -28,6 +30,7 @@ import { mkdtempSync, mkdirSync, readdirSync, readFileSync, writeFileSync, copyF
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createServer } from "node:net";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const argOf = (n) => { const i = process.argv.indexOf(n); return i >= 0 ? process.argv[i + 1] : undefined; };
@@ -40,6 +43,7 @@ const RULED_F4_BOUND_MIN = 5 * 60;        // row 1062 F4: "bound five hours unti
 const TMP = mkdtempSync(join(tmpdir(), "mpool-witness-"));
 const children = new Set();
 const MIN = 60 * 1000;
+const FREE_PORT = await new Promise((res) => { const s = createServer(); s.listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => res(p)); }); });
 
 // ── the measured clock ──────────────────────────────────────────────────────────────────────────────────────────────
 const nodeStart = Math.max(...[0, 1, 2].map(() => { const t = Date.now(); spawnSync(process.execPath, ["-e", ""]); return Date.now() - t; }));
@@ -71,9 +75,11 @@ function plant(src, label) {
   writeFileSync(join(org, ".claude", "settings.json"), JSON.stringify(settings, null, 2));
   const ctx = { label, org, tap: join(org, "scripts", "usage_tap.mjs"), root: join(at, "root"), call: join(at, "call"), law: join(at, "root", "tools", "model_law.mjs") };
   ctx.reading = join(ctx.root, "usage_reading.json");
+  ctx.state = join(org, "dressing-room", "state"); ctx.home = join(at, "home");
   ctx.fresh = (law = true) => {
     rmSync(ctx.root, { recursive: true, force: true }); rmSync(ctx.call, { recursive: true, force: true });
     mkdirSync(join(ctx.root, "tools"), { recursive: true }); mkdirSync(ctx.call, { recursive: true });
+    rmSync(ctx.state, { recursive: true, force: true }); mkdirSync(ctx.state, { recursive: true }); mkdirSync(ctx.home, { recursive: true });
     if (law) writeFileSync(ctx.law, `// the campaign's law home (planted)\r\nexport const POOL_READING_MAX_AGE_MIN = ${RULED_F4_BOUND_MIN};\r\n`);
   };
   ctx.env = (withRoot = true) => { const e = { ...process.env, ARSENAL_CALL_STATE_DIR: ctx.call, ARSENAL_CAMPAIGN_ROOT: ctx.root }; if (!withRoot) delete e.ARSENAL_CAMPAIGN_ROOT; return e; };
@@ -180,6 +186,21 @@ const CLAUSES = [
     let t; try { t = readFileSync(join(c.org, "scripts", "organism_test.mjs"), "utf8"); } catch { return false; }
     if (!/hermeticRuns\.get\(runKey\(\[join\(ROOT, "scripts", "usage_tap\.mjs"\), "selftest"\]\)\)/.test(t) || !/MPOOL · usage_tap selftest/.test(t)) return false;
     return c.run(["selftest"], { env: { ...process.env } }).code === 0;
+  }],
+  ["D", "day.mjs start (unit mday, F8 A) runs usage_tap.mjs need ONCE per start: no reading → ONE keyed card; a second start the same day → still ONE; a fresh reading → none", (c) => {
+    const day = join(c.org, "scripts", "day.mjs"); if (!existsSync(day)) return false;
+    const e = { ...c.env(), HOME: c.home, USERPROFILE: c.home, ARSENAL_ARCHIVE: join(c.home, "archive"), ARSENAL_SITTING_PORT: String(FREE_PORT), ARSENAL_SITTING_STATE_DIR: c.state };
+    delete e.ARSENAL_ORGAN; delete e.CLAUDE_CODE_SESSION_ID;
+    const go = (sid) => { const r = spawnSync(process.execPath, [day, "start", "--session", sid], { cwd: c.org, env: e, encoding: "utf8", timeout: HANG_CAP_MS * 8 }); if (r.pid) children.add(r.pid); return r; };
+    c.fresh(); const a = go("11111111-2222-3333-4444-555555555555"); const one = c.cards().length; const b = go("11111111-2222-3333-4444-555555555555");
+    const firstOk = a.status === 0 && (String(a.stdout).match(/ · pool: /g) || []).length === 1 && one === 1 && c.cards().length === 1 && (String(b.stdout).match(/ · pool: /g) || []).length === 1;
+    c.fresh(); c.run(["statusline"], { input: both() }); const f = go("66666666-7777-8888-9999-000000000000");
+    return firstOk && f.status === 0 && / · pool: GO/.test(f.stdout) && c.cards().length === 0;
+  }],
+  ["P", "package.json: the usage_tap selftest is in exactly ONE suite string (row 1091 (2), F-a)", (c) => {
+    const pkg = readJ(join(c.org, "package.json")); if (!pkg) return false;
+    const n = ["organism:selftest", "squad:selftest", "audit:selftest"].filter((k) => /(^|&& )node scripts\/usage_tap\.mjs selftest( &&|$)/.test(String(pkg.scripts?.[k] || ""))).length;
+    return n === 1;
   }],
   ["S", "the SETTINGS LINE (ci/mpool/PROOF.md) is one statusLine command object running the tap's statusline verb in the planted copy", (c) => {
     const s = SETTINGS?.statusLine; const argv = settingsArgv(c);

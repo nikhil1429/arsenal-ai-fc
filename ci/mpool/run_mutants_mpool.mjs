@@ -56,6 +56,8 @@ const MUTANTS = [
   ["F9", "a panel reading with no reset is treated as rolled", [[TAP, "if (w.resets_at == null) continue;", "if (w.resets_at == null) return W(\"no reset time\", { age_min });"]]],
   ["C", "the runner twin's fallback-card line drops the need verb", [[SKILL, "run `node scripts/usage_tap.mjs need`", "run the usage tap"]]],
   ["J", "the hermetic chain stops judging the tap's selftest", [[OT, "const tap = hermeticRuns.get(runKey([join(ROOT, \"scripts\", \"usage_tap.mjs\"), \"selftest\"]));", "const tap = { code: 0, out: \"\" };"]]],
+  ["D", "day.mjs start drops the usage_tap need call", [["scripts/day.mjs", "const pool = await ownerRun(\"usage_tap.mjs\", [\"need\"]);", "const pool = { status: 0, stdout: \"\", stderr: \"\" };"]]],
+  ["P", "package.json drops the usage_tap selftest from its suite", [["package.json", " && node scripts/usage_tap.mjs selftest", ""]]],
   ["S", "the SETTINGS LINE runs a verb that is not the statusline", [[PROOF, "/scripts/usage_tap.mjs\\\" statusline\"", "/scripts/usage_tap.mjs\\\" status\""]]],
   ["LAST", "the statusline leaves a detached node process naming the campaign root", [[TAP, "import { spawnSync } from \"node:child_process\";", "import { spawnSync, spawn } from \"node:child_process\";"], [TAP, "function statusline() {\n", "function statusline() {\n  spawn(process.execPath, [\"-e\", \"setTimeout(() => {}, 60000)\", String(campaignRoot())], { detached: true, stdio: \"ignore\" }).unref();\n"]], "proc"],
 ];

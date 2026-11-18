@@ -17,6 +17,8 @@
 //     harness dispatches — measured on his laptop: a typed /learn arrives inline, with no Skill call) → `start` here, CALL shape.
 //   · PreToolUse(Skill) → rails.mjs pretooluse: a Skill call naming learn (the MODEL's invoke) → `start --by hook:skill`.
 //   Both bind the host from the HOOK PAYLOAD (G0's law: the model never types an id). A second start is a JOIN, never a fork.
+//   `start` also runs usage_tap.mjs need ONCE (unit mpool, rows 1062 F8 A / 1091 (2)): the pool's ONE keyed card is filed at the
+//   learn start, by the tap's own door, only on a WAIT for want of a source. Its one line rides the start line as `pool: …`.
 // THE END is the session model's to call when it reads HIS MEANING that the study day is over — in any words. NO phrase list,
 //   no regex of his words and no model call lives here (L6); the instruction rides CLAUDE.md and the SessionStart brief (F9).
 // MODES:
@@ -101,9 +103,13 @@ export async function start({ session = null, transcript = null, by = "hand", no
   }
   const prevHost = isOpen(readSitting()) ? readSitting().host_session_id || null : null;
   const r = await S.openDoor({ surface: "code", session, transcript, by: `day start · ${by}` });
-  if (!r.ok) return { ok: false, r, line: `day: start ${D} — the sitting did not open: ${r.error}${r.resume ? ` → ${r.resume}` : ""}${rolled}` };
+  // unit mpool (forks rows 1062 F8 A / 1091 (2)) — THE POOL AT THE LEARN START: ONE more owner call, usage_tap.mjs need, ONCE
+  // per start. Its own door decides (it files ONE keyed card only on a WAIT for want of a source); this file writes nothing.
+  const pool = await ownerRun("usage_tap.mjs", ["need"]);
+  const poolNote = ` · pool: ${lastLine(pool).replace(/^usage tap · need: /, "").slice(0, 120) || `usage_tap exit ${pool.status}`}`;
+  if (!r.ok) return { ok: false, r, line: `day: start ${D} — the sitting did not open: ${r.error}${r.resume ? ` → ${r.resume}` : ""}${rolled}${poolNote}` };
   const hostNote = r.joined ? (prevHost && prevHost !== session ? ` · host moved ${short(prevHost)} → ${short(r.host_session_id)} (this /learn session is the study session now)` : ` · host ${short(r.host_session_id)} (same session — JOINED, nothing new)`) : ` · host ${short(r.host_session_id)}`;
-  return { ok: true, r, line: `day: START ${D} · sitting ${r.id} ${r.joined ? "JOINED" : "OPEN"} (door ${r.door}, ${by})${hostNote}${rolled} · the day ends when HE means it: node scripts/day.mjs end` };
+  return { ok: true, r, line: `day: START ${D} · sitting ${r.id} ${r.joined ? "JOINED" : "OPEN"} (door ${r.door}, ${by})${hostNote}${rolled}${poolNote} · the day ends when HE means it: node scripts/day.mjs end` };
 }
 
 // ── END ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
