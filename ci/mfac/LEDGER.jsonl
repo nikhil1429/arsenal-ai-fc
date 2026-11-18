@@ -1,0 +1,4 @@
+{"ts":"2026-11-18T22:24:22.820Z","act":"cut","cmd":"git clone (core.autocrlf=false) + git checkout -b claude/mfac-build origin/main","last_line":"7c3c279 groundsman: unattended state push (laptop)"}
+{"ts":"2026-11-18T22:24:22.820Z","act":"base-suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (base 7c3c279)","last_line":"organism_test: 142 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-18T22:24:22.820Z","act":"selftest","cmd":"node scripts/night.mjs selftest","last_line":"night selftest: 22 passed, 0 failed"}
+{"ts":"2026-11-18T22:24:22.820Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0 · literal model names outside models.mjs: 0"}
