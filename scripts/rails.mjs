@@ -95,7 +95,7 @@
 // CLI: node scripts/rails.mjs pretooluse | born | orders [--quiet] | decide <json> | selftest
 // ============================================================================
 import { readFileSync, existsSync, readdirSync, openSync, writeSync, closeSync, constants as FS } from "node:fs";   // row 814: the write half serves rails_blind.jsonl alone
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync, spawn } from "node:child_process";
 import { join, dirname, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { freemem, tmpdir } from "node:os";
@@ -285,6 +285,25 @@ export function hostHandoff(payload = {}) {
 const SITTING_CLI = join(HERE, "sitting.mjs");
 const spawnHandoff = (args) => spawnSync(process.execPath, [SITTING_CLI, ...args], { cwd: ROOT, timeout: 5000, stdio: ["ignore", "ignore", "ignore"], windowsHide: true });
 
+// ── unit mday (forks rows 1044 / 1050 F2 C + F7 A) · THE SKILL DOOR ────────────────────────────────────────────────────
+// settings.json's PreToolUse matcher carries `Skill` from this unit. A Skill call naming the learn skill (the MODEL's invoke —
+// a typed /learn arrives inline, measured on his laptop, and is the UserPromptSubmit door's) starts the day with the PAYLOAD's
+// own ids: `day.mjs start --session <id> [--transcript <p>] --by hook:skill`. Two added clauses, by ruling F7:
+//   · a Skill payload that is NOT learn passes UNTOUCHED — no decide(), no line, no hand-off, the normal permission flow;
+//   · the Skill branch FAILS OPEN on its own error — a throw anywhere in it is swallowed and the call proceeds.
+export function dayHandoff(payload = {}) {
+  if (String(payload.tool_name || "") !== "Skill") return null;
+  const ti = payload.tool_input || {};
+  if (String(ti.skill || "") !== "learn") return null;
+  const sid = typeof payload.session_id === "string" ? payload.session_id : "";
+  if (!/^[0-9a-f-]{36}$/i.test(sid)) return null;
+  const tp = typeof payload.transcript_path === "string" ? payload.transcript_path : "";
+  return ["start", "--session", sid, ...(tp ? ["--transcript", tp] : []), "--by", "hook:skill"];
+}
+// DETACHED, never waited: a sitting's open gathers its context (sitting.mjs gatherPlanContext), which no hook bound should cut in
+// half, and the Skill call must not wait on it. The child holds the owner lock for its own write; a second door JOINs.
+const spawnDayHandoff = (args) => { const c = spawn(process.execPath, [join(HERE, "day.mjs"), ...args], { cwd: ROOT, detached: true, stdio: "ignore", windowsHide: true }); c.unref(); };
+
 // ── ROW 814 · THE BLIND LEDGER — rails' one file (forks rows 814 (1), 822 (2), 827 (1)) ──────────────
 // One row per BLIND call (a call the rail read no payload for): { ts, why, read_ms, rail_ms, free_mb } — the refusal's own why,
 // how long the read waited, how long this process had lived (the rail's own duration, boot included: row 822 (2)), and the
@@ -353,7 +372,7 @@ function blindCall(why, readMs) {
 //   bytes on as `raw` — or the refusal as `refused` (its why names the silence bound) with `readMs`, which this function counts
 //   as a BLIND call (blindCall: the same line, ONE ledger row, the same fail-open allow). It stays SYNCHRONOUS. The deadline
 //   read below is kept for a direct caller that hands nothing (L9), and a refusal there is counted the same way.
-export function pretooluse({ raw = null, refused = null, readMs = null, handoff = spawnHandoff, ctx = undefined } = {}) {
+export function pretooluse({ raw = null, refused = null, readMs = null, handoff = spawnHandoff, ctx = undefined, dayHand = spawnDayHandoff } = {}) {
   let payload = {};
   try {
     const handed = globalThis.__ARSENAL_HOOK_STDIN__;
@@ -370,6 +389,12 @@ export function pretooluse({ raw = null, refused = null, readMs = null, handoff 
     }
     payload = text && text.trim() ? JSON.parse(text) : {};
   } catch { payload = {}; }
+  // unit mday (F7 A): the Skill branch, BEFORE decide() — every Skill call returns here, allowed and silent
+  if (payload && payload.tool_name === "Skill") {
+    const out = { decision: "allow", rail: null, why: "Skill — passes untouched" };
+    try { const h = dayHandoff(payload); if (h) { dayHand(h); out.handoff = h; out.why = "Skill(learn) — the day's start handed to day.mjs"; } } catch (e) { out.why = `Skill branch failed open: ${String((e && e.message) || e).slice(0, 80)}`; }
+    return out;
+  }
   const d = decide(payload, ctx);
   if (d.decision === "deny") {
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: d.reason } }) + "\n");

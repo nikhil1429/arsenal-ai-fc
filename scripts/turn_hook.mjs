@@ -186,8 +186,19 @@ function countSpawns() {
 // line, deliberately: xray's verb graph reads `runOrgan("<file>", "<verb>")` as an
 // organ→verb edge (LAYER B'), so `contract` / `print` / `hook` / `recall-hint` /
 // `reset-turns` / `brief` / `boot` / `deal` remain "invoked", not orphan verbs.
+// ── unit mday (forks rows 1044 / 1050 F2 C) · THE LEARN DOOR ─────────────────────────────────────────────────────────
+// A prompt whose LEADING token is the slash command /learn (typed: measured on his laptop, it reaches the hook inline with no
+// Skill call; the harness may also hand it as its <command-name> tag) starts the day through day.mjs `start`, CALL shape, BEFORE
+// the scope is read — so this very prompt is already his study session. A COMMAND TOKEN the harness dispatches, never a phrase
+// of his: a prompt that only MENTIONS learn opens nothing. PURE, exported for the witness.
+export function learnCommandOf(stdin) {
+  let p = ""; try { const o = JSON.parse(String(stdin || "") || "{}"); p = o && typeof o.prompt === "string" ? o.prompt : ""; } catch { return false; }
+  const t = p.trimStart();
+  return /^\/learn(?![\w-])/.test(t) || /^<command-name>\/learn<\/command-name>/.test(t);
+}
 export async function prompt(opts = {}) {
   const r = { ran: 0, failed: [] };
+  if (learnCommandOf(typeof opts.stdin === "string" ? opts.stdin : "")) await runOrgan("day.mjs", "start", { ...opts, call: "hookMain", extraArgs: ["--by", "hook:prompt"] }, r);
   const scope = scopeOf(opts);
   if (!scope.study) {
     // G0 — outside the study session: no pacer, no contract, no bar, no audit, no turn clock. ONE
@@ -300,6 +311,9 @@ export async function start(opts = {}) {
     if (n) console.log(`ORGANISM: ${n} more notice(s) parked (watchman · outbox) — /organism-doctor when the session closes.`);
   }
   await runOrgan("captains_call.mjs", "deal", { ...opts, call: "hookMain" }, r);
+  // unit mday (ruling F9 A + the brief): the day's END line reaches a session that starts while today's sitting is open
+  // (CLAUDE.md carries it for every session). day.mjs loads its owners only inside its verbs, so `brief` costs a file read.
+  await runOrgan("day.mjs", "brief", { ...opts, call: "hookMain" }, r);
   return r;
 }
 // Stop (Block 2, §7.2 · 18 Aug 2026): teaching_audit's Stop audit + the session-intent

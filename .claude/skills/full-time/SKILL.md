@@ -5,6 +5,14 @@ description: The 30-second evening close — HIT/MISS, one signal, KAL-line, thr
 
 # /full-time — close the day, weld tomorrow
 
+> **unit mday (forks rows 1044 / 1050) — THE CLOSE IS `node scripts/day.mjs end`, AND THIS SKILL IS HIS ANSWER.** When he
+> means the day is over, in any words, the session runs `day.mjs end` once: it closes the sitting (the judge fires by code),
+> writes the machine half of the day (`postmatch.mjs autoclose --anchor close`) and deals ONE card — it never waits on him.
+> This skill is the ANSWER path: his result line, whenever it comes, rides `node scripts/day.mjs answer --hit <X> …`, which
+> forwards to postmatch (the UPGRADE door on a machine-closed day) and then runs scorer → setpiece → viz → the card (each
+> measured NOT idempotent by day, so they ride his answer only — ruling F4). The four trigger phrases in the description
+> stay as DISCOVERY text for this skill, never as a matcher.
+
 1. Ask, in ONE compact message: Result (HIT/MISS/PARTIAL/REST)? · one signal
    worth naming? · KAL-line (tomorrow's pre-decided first move)?
    (checked 10 Aug 2026 — those four result words are exactly the set the code
@@ -38,14 +46,15 @@ description: The 30-second evening close — HIT/MISS, one signal, KAL-line, thr
    "Result for **<that day>**?" (the KAL only when it says `KAL asked` — only yesterday or today),
    and SAYS, never asks, "<older days> close with no line of yours". Never one question per day,
    never one result copied onto several days. When it names no day, the close is today, as before.
-   Then run, in order:
-   `node scripts/gaffer_brain.mjs judge-round`  ← the day's ONE judge call on the banked study rows (5 Sep 2026, row 48 (3)). Since 6 Sep 2026 (row 68 (d)) the sitting organ fires it BY CODE at every sitting close when the grade queue holds unjudged rows — this line is the fallback for a day no sitting was open; a second call re-refuses the same rows for nothing →
-   `node scripts/postmatch.mjs --hit <X> --signal "<s>" --kal "<k>" [--diag start|block|sleep] [--route all] [--date <the day named prints>]`
+   Then run ONE command — `day.mjs answer` forwards these flags to postmatch and runs the chain below after it
+   (unit mday; the day's ONE judge call already fired BY CODE at the sitting's close, row 68 (d), so no judge step is typed here):
+   `node scripts/day.mjs answer --hit <X> --signal "<s>" --kal "<k>" [--diag start|block|sleep] [--route all] [--date <the day named prints>]`
+   which runs `node scripts/postmatch.mjs` with exactly those flags
    (`--date` is REFUSED by name, nothing written, for a malformed date, a future day, a day with no
    machine record, or his own closed day; every older named day gets ONE line recording that no line
    of his was given — read as closed, never re-asked.)
    → `node scripts/scorer.mjs` → `node scripts/setpiece.mjs` →
-   `node scripts/viz.mjs`.
+   `node scripts/viz.mjs` → `node scripts/captains_call.mjs deal` (day.mjs answer runs these four itself).
    All four scripts exist and all four run bare on their default mode — verified
    10 Aug 2026 by reading each file's own MODES header, not by trusting this line
    (`grep -n "^// MODES" scripts/postmatch.mjs scripts/scorer.mjs scripts/setpiece.mjs scripts/viz.mjs`).
@@ -105,7 +114,8 @@ description: The 30-second evening close — HIT/MISS, one signal, KAL-line, thr
    what is true is that **no OTHER organ writes there**, and that the local tree
    is a re-fetched MIRROR of the gist. So after his paste the doubt comes back on
    the next mirror run; before it, the local copy legitimately does not have it.)
-5. Run `node scripts/captains_call.mjs deal` (THE CAPTAIN'S CALL, 7 Aug 2026).
+5. (unit mday: `day.mjs answer` and `day.mjs end` already DEALT — do not deal again; use the card line their output printed. The text below is the deal's own law, kept.)
+   Run `node scripts/captains_call.mjs deal` (THE CAPTAIN'S CALL, 7 Aug 2026).
    If a card prints, add its ONE line to the reply and take his one-word answer
    (haan/na/baad → `answer <id> <word>`). One card max — the queue never shows.
    (checked 10 Aug 2026 against `scripts/captains_call.mjs` — the date, `deal`,
