@@ -354,16 +354,18 @@ try {
   // ── W8 — the two code counts (F8 A) ───────────────────────────────────────────────────────────────────────────────
   if (want("W8")) {
     await fresh();
-    const H = randomUUID(), d1 = "2099-01-01", d2 = "2099-01-02", d3 = "2099-01-03";
+    const H = randomUUID(), d1 = "2099-01-01", d2 = "2099-01-02", d3 = "2099-01-03", d4 = "2099-01-04";
     const rev = (id, day, hh, reason, closeHh) => ({ kind: "sitting_review", sitting_id: id, opened_at: `${day}T${hh}:00:00.000+05:30`, closed_at: `${day}T${closeHh}:00:00.000+05:30`, reason, host_session_id: H });
-    // d1: closed by end (fulltime), then ANOTHER sitting of the same host the same day (a false close) · d2: idle-closed, night-closed (a missed close) · d3: end, nothing after
-    writeFileSync(join(STATE, "sitting_reviews.jsonl"), [rev("s1", d1, "10", "fulltime", "12"), rev("s2", d1, "13", "idle", "14"), rev("s3", d2, "10", "idle", "11"), rev("s4", d3, "10", "fulltime", "11")].map((r) => JSON.stringify(r)).join("\n") + "\n");
+    // d1: closed by end (fulltime), then ANOTHER sitting of the same host the same day (a false close) · d2: idle-closed, closed by the
+    // evening anchor (a missed close) · d3: end, the close anchor, nothing after · d4: idle-closed, closed by the morning anchor (missed)
+    writeFileSync(join(STATE, "sitting_reviews.jsonl"), [rev("s1", d1, "10", "fulltime", "12"), rev("s2", d1, "13", "idle", "14"), rev("s3", d2, "10", "idle", "11"), rev("s4", d3, "10", "fulltime", "11"), rev("s5", d4, "10", "idle", "11")].map((r) => JSON.stringify(r)).join("\n") + "\n");
     mkdirSync(join(STATE, "post_match"), { recursive: true });
     writeFileSync(join(STATE, "post_match", `${d2}.md`), `planted\nCLOSED-BY: code · evening anchor · ${d2}T17:00:00.000Z\n`);
     writeFileSync(join(STATE, "post_match", `${d3}.md`), `planted\nCLOSED-BY: code · close anchor · ${d3}T06:00:00.000Z\n`);
+    writeFileSync(join(STATE, "post_match", `${d4}.md`), `planted\nCLOSED-BY: code · morning anchor · ${d4}T02:00:00.000Z\n`);
     const r = HAS_DAY() ? node(["scripts/day.mjs", "status"]) : { status: 1, stdout: "" };
     const l = lines(r.stdout).find((x) => /missed-close/.test(x)) || "";
-    clause("W8", /missed-close 1\/3 learn day/.test(l) && /false-close 1\/2 end/.test(l), `day.mjs status → ${l.slice(0, 170) || "NO counts line"}`);
+    clause("W8", /missed-close 2\/4 learn day/.test(l) && /false-close 1\/2 end/.test(l), `day.mjs status → ${l.slice(0, 170) || "NO counts line"}`);
   }
 
   // ── W10 — daemon up: the POST door only (F10) ─────────────────────────────────────────────────────────────────────
