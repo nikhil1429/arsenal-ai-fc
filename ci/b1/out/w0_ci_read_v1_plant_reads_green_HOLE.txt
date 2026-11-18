@@ -1,0 +1,3 @@
+ci_verdict cc1b869 GREEN — npm test · node 22: GREEN (base 5767e21 · 0 new red · 1 base red · 126 live) [run 134688375121] | npm test · node 24: GREEN (base 5767e21 · 0 new red · 1 base red · 126 live) [run 134688375773] (3 calls)
+ci_verdict 517e14b GREEN — npm test · node 22: GREEN (base 5767e21 · 0 new red · 2 base red · 126 live) [run 134688495108] | npm test · node 24: GREEN (base 5767e21 · 0 new red · 2 base red · 126 live) [run 134688494740] (3 calls)
+ci_verdict 517e14b GREEN — THE HOLE: the planted red rode the head's instrument onto the base

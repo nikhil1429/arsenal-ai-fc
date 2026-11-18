@@ -2,6 +2,7 @@
   ✓ keyOf folds digit runs: a tree that gains a file keeps an old red old
   ✓ judge: every head red red at the base too is GREEN, and a base red now passing is counted, never hidden
   ✓ judge: a red absent at the base is RED BY NAME
+  ✓ judge: under the HEAD's instrument, an assert the base's own instrument never had is NEW even when red on both sides; an old assert and a per-member line stay old
   ✓ judge: no head headline is RED; no base headline is RED (no silent pass on a dead base)
   ✓ annotate: 14 reds ride 10 annotations, the tenth carrying the last five — every red emitted
   ✓ annotate escapes the workflow-command specials (a name never breaks its own line)
@@ -12,5 +13,5 @@
   ✓ reader: no leg is NONE after ONE call
   ✓ reader: a leg with no verdict annotation is RED, never GREEN by absence
 
-ci_verdict selftest: 13 passed, 0 failed
+ci_verdict selftest: 14 passed, 0 failed
 ALL CHECKS PASSED

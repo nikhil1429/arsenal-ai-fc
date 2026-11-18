@@ -31,8 +31,9 @@
 # EVERY push says nothing about the push, so the verdict is now NEUTRAL and it is the job's exit:
 #   · both trees run the HERMETIC profile (ORGANISM_TEST_PROFILE=hermetic): every member that reads live state is NAMED
 #     LIVE in organism_test.mjs's table, printed with its reason, and not run here — never deleted;
-#   · the HEAD tree and its MERGE BASE (the merge base with origin/main; HEAD^1 when HEAD is on main) are both measured
-#     by the HEAD's instrument (its organism_test.mjs is laid over a local clone of the base, never committed there);
+#   · the HEAD tree and its MERGE BASE (the merge base with origin/main; HEAD^1 when HEAD is on main) are both measured;
+#     the base by ITS OWN organism_test.mjs, or — only when that dies before its machine line — by the head's, laid over
+#     a local clone of the base, with the base's own source handed to the verdict so the head's NEW asserts stay new;
 #   · GREEN iff no member is red at HEAD that is not red at the base. Every red is an annotation — a NEW red an error,
 #     a BASE red a warning — and the verdict is ONE more, which `node scripts/ci_verdict.mjs <sha>` reads signed-out.
 # The log carries NAMES only (assert and member lines, the headline): a detail line can quote a state file, and the
@@ -114,19 +115,32 @@ jobs:
           grep -E "^  (ok  |FAIL|LIVE) |^organism_test:|^── " "$RUNNER_TEMP/b1_head.txt" || echo "(no headline line — the runner did not reach its own summary)"
           exit 0
 
-      # THE MERGE BASE, measured by the HEAD's instrument: a local clone checked out at the base (the runner's own
-      # core.autocrlf applies, so it is CRLF exactly as the head is), with the head's organism_test.mjs laid over it.
+      # THE MERGE BASE, measured by ITS OWN instrument first: a local clone checked out at the base (the runner's own
+      # core.autocrlf applies, so it is CRLF exactly as the head is). Only when the base's own organism_test.mjs dies
+      # before its machine line (as 5767e21's does on CRLF) is the HEAD's laid over it — and then the verdict is handed
+      # the base's own source, so an assert the head's instrument ADDED is a new member, never an "old" red.
       - name: npm test · hermetic · merge base
+        id: basetest
         shell: bash
         run: |
           set +e
           git clone -q --no-checkout . "$RUNNER_TEMP/b1_base"
           git -C "$RUNNER_TEMP/b1_base" checkout -q --detach "${{ steps.base.outputs.base }}"
-          cp scripts/organism_test.mjs "$RUNNER_TEMP/b1_base/scripts/organism_test.mjs"
+          cp "$RUNNER_TEMP/b1_base/scripts/organism_test.mjs" "$RUNNER_TEMP/b1_base_instrument.mjs"
+          head_instrument="$PWD/scripts/organism_test.mjs"
           cd "$RUNNER_TEMP/b1_base" && npm ci --no-audit --no-fund > "$RUNNER_TEMP/b1_base_npm.txt" 2>&1
           echo "npm ci exit $? (base)"
           node scripts/organism_test.mjs all > "$RUNNER_TEMP/b1_base.txt" 2>&1
-          echo "organism_test exit $? (base)"
+          echo "organism_test exit $? (base, its own instrument)"
+          if grep -qE '^ORGANISM_TEST_VERDICT .*"reds":' "$RUNNER_TEMP/b1_base.txt"; then
+            echo "instrument=base" >> "$GITHUB_OUTPUT"
+          else
+            echo "the base's own instrument reached no machine line — measuring the base with the head's"
+            cp "$head_instrument" scripts/organism_test.mjs
+            node scripts/organism_test.mjs all > "$RUNNER_TEMP/b1_base.txt" 2>&1
+            echo "organism_test exit $? (base, the head's instrument)"
+            echo "instrument=head" >> "$GITHUB_OUTPUT"
+          fi
           grep -E "^organism_test:" "$RUNNER_TEMP/b1_base.txt" || echo "(no headline line on the base)"
           exit 0
 
@@ -136,6 +150,7 @@ jobs:
         run: |
           node scripts/ci_verdict.mjs compare --head "$RUNNER_TEMP/b1_head.txt" --base "$RUNNER_TEMP/b1_base.txt" \
             --label "node ${{ matrix.node }}" --head-sha "${{ steps.base.outputs.head }}" --base-sha "${{ steps.base.outputs.base }}" \
+            ${{ steps.basetest.outputs.instrument == 'head' && '--base-instrument "$RUNNER_TEMP/b1_base_instrument.mjs"' || '' }} \
             | tee "$RUNNER_TEMP/b1_verdict.txt"
           code=${PIPESTATUS[0]}
           { echo "## npm test · node ${{ matrix.node }}"; echo ""; grep -E "^B1_VERDICT " "$RUNNER_TEMP/b1_verdict.txt"; } >> "$GITHUB_STEP_SUMMARY"

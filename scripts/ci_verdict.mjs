@@ -22,7 +22,7 @@
 // Annotations carry NAMES only — never a detail line, which can quote a state file.
 // MODES: compare · selftest · <sha>
 // CLI: node scripts/ci_verdict.mjs <sha> [--repo owner/name]
-//      node scripts/ci_verdict.mjs compare --head <file> --base <file> --label <l> [--head-sha s] [--base-sha s]
+//      node scripts/ci_verdict.mjs compare --head <file> --base <file> --label <l> [--head-sha s] [--base-sha s] [--base-instrument f]
 // ============================================================================
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
@@ -47,12 +47,25 @@ export const keyOf = (n) => String(n).replace(/\d+/g, "#").replace(/\s+/g, " ").
 
 /** the neutral verdict: GREEN iff every head red is red at the base too
  *  @param {ReturnType<typeof parseSuite>} head @param {ReturnType<typeof parseSuite>} base */
-export function judge(head, base) {
+/** THE INSTRUMENT'S OWN NEW MEMBERS (B1 witness, 18 Nov 2026). When the base is measured by the HEAD's organism_test.mjs
+ *  (its own died before its machine line), an assert the head's instrument ADDED would be red on both sides and pass as
+ *  "old" — the plant branch proved it: a planted red read GREEN. So, in that case, an assert whose literal opening is
+ *  absent from the BASE's own organism_test.mjs source is a member the base never had, and its red is NEW. Per-member
+ *  lines (`SUITE MEMBER · <organ> …`) judge the base tree's organs, not the instrument, and stay comparable.
+ *  @param {string} name @param {string} baseSrc */
+export function newInInstrument(name, baseSrc) {
+  if (!baseSrc || /^SUITE MEMBER · /.test(name)) return false;
+  const open = String(name).split(/(?<=[\s(])\d|[`'"$\\]/)[0];   // up to a standalone number (an interpolated count) or a quote
+  if (open.length < 12) return false;   // too short to be a fingerprint: never call it new on a guess
+  return !String(baseSrc).replace(/\r\n/g, "\n").includes(open);
+}
+
+export function judge(head, base, baseSrc = "") {
   if (!head) return { v: "RED", why: "the head run produced no headline line", fresh: [], old: [], fixed: [] };
   if (!base) return { v: "RED", why: "the merge-base run produced no headline line (no base to compare against)", fresh: [...head.reds], old: [], fixed: [] };
   const baseKeys = new Set(base.reds.map(keyOf)), headKeys = new Set(head.reds.map(keyOf));
-  const fresh = head.reds.filter((n) => !baseKeys.has(keyOf(n)));
-  const old = head.reds.filter((n) => baseKeys.has(keyOf(n)));
+  const fresh = head.reds.filter((n) => !baseKeys.has(keyOf(n)) || newInInstrument(n, baseSrc));
+  const old = head.reds.filter((n) => !fresh.includes(n));
   const fixed = base.reds.filter((n) => !headKeys.has(keyOf(n)));
   return { v: fresh.length ? "RED" : "GREEN", why: fresh.length ? `${fresh.length} member(s) red that are not red at the merge base` : "no member red that is not red at the merge base", fresh, old, fixed };
 }
@@ -75,13 +88,14 @@ export function annotate(level, title, names, cap = 10) {
 }
 
 /** every line `compare` prints, in order: the reds, then the ONE verdict annotation, then the plain verdict line */
-export function compareLines(head, base, label, headSha = "", baseSha = "") {
-  const j = judge(head, base);
+export function compareLines(head, base, label, headSha = "", baseSha = "", baseSrc = "") {
+  const j = judge(head, base, baseSrc);
   const lines = [];
   lines.push(...annotate("error", `NEW RED · ${label}`, j.fresh, j.v === "RED" ? 9 : 10));
   lines.push(...annotate("warning", `BASE RED · ${label}`, j.old));
   const payload = { v: j.v, label, head: headSha, base: baseSha, why: j.why, new: j.fresh, base_red: j.old.length, fixed: j.fixed.length,
-    pass: head ? head.pass : null, fail: head ? head.fail : null, live: head ? head.live.length : null, profile: head ? head.profile : null };
+    pass: head ? head.pass : null, fail: head ? head.fail : null, live: head ? head.live.length : null, profile: head ? head.profile : null,
+    instrument: baseSrc ? "head (the base's own died before its machine line)" : "base" };
   lines.push(`::${j.v === "GREEN" ? "notice" : "error"} title=${escProp(`${VERDICT_TITLE} · ${label}`)}::${esc(`B1_VERDICT ${JSON.stringify(payload)}`)}`);
   lines.push(`B1_VERDICT ${label} ${j.v} — ${j.why} · head ${headSha.slice(0, 7) || "?"} · base ${baseSha.slice(0, 7) || "?"} · ${j.fresh.length} new red · ${j.old.length} base red · ${j.fixed.length} base red now passing`);
   return { lines, verdict: j.v };
@@ -128,6 +142,9 @@ function selftest() {
   ok("judge: every head red red at the base too is GREEN, and a base red now passing is counted, never hidden", g.v === "GREEN" && g.old.length === 2 && g.fixed.length === 1 && g.fresh.length === 0);
   const r = judge(parseSuite(suite(["B", "PLANTED"])), parseSuite(suite(["B"])));
   ok("judge: a red absent at the base is RED BY NAME", r.v === "RED" && r.fresh.length === 1 && r.fresh[0] === "PLANTED");
+  const src = 'assert("an old assert of the base · 1", x);';
+  const h = judge(parseSuite(suite(["B1 PLANTED RED · new", "an old assert of the base · 2", "SUITE MEMBER · fsrs selftest exits 0"])), parseSuite(suite(["B1 PLANTED RED · new", "an old assert of the base · 2", "SUITE MEMBER · fsrs selftest exits 0"])), src);
+  ok("judge: under the HEAD's instrument, an assert the base's own instrument never had is NEW even when red on both sides; an old assert and a per-member line stay old", h.v === "RED" && h.fresh.length === 1 && h.fresh[0] === "B1 PLANTED RED · new" && h.old.length === 2);
   ok("judge: no head headline is RED; no base headline is RED (no silent pass on a dead base)", judge(null, parseSuite(suite([]))).v === "RED" && judge(parseSuite(suite([])), null).v === "RED");
   const many = Array.from({ length: 14 }, (_, i) => `red-${i}`);
   const a = annotate("warning", "BASE RED", many);
@@ -162,7 +179,8 @@ async function main() {
   if (mode === "selftest") { process.exitCode = await selftest(); return; }
   if (mode === "compare") {
     const read = (p) => { try { return p ? readFileSync(p, "utf8") : ""; } catch { return ""; } };   // an unreadable run is a run with no headline
-    const { lines, verdict } = compareLines(parseSuite(read(flag("head"))), parseSuite(read(flag("base"))), flag("label") || "suite", flag("head-sha") || "", flag("base-sha") || "");
+    // --base-instrument: the base's OWN organism_test.mjs, passed only when the base was measured by the head's instead
+    const { lines, verdict } = compareLines(parseSuite(read(flag("head"))), parseSuite(read(flag("base"))), flag("label") || "suite", flag("head-sha") || "", flag("base-sha") || "", read(flag("base-instrument")));
     for (const l of lines) console.log(l);
     process.exitCode = verdict === "GREEN" ? 0 : 1;
     return;
