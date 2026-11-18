@@ -1,0 +1,74 @@
+  ✓ emit on window CHANGE → modality 'context', app+title carried
+  ✓ emit routes to the thalamus door + records the new state
+  ✓ no emit when the window is unchanged (delta-only, never a firehose)
+  ✓ first-ever window (no prior state) → emits
+  ✓ AW down / no window → no emit, no crash
+  ✓ title-only change still emits (the title carries the concept)
+  ✓ thalamus down → NOT emitted + state NOT advanced (retries next poll, no afferent dropped)
+  ✓ #22 a canon concept in the title reaches the SCORER — it is in the hab key and in concept_tokens
+  ✓ #22 two concepts in ONE app are now two habituation keys — hours of one concept no longer read like tab-churn
+  ✓ #22 TRAP AVOIDED — raw window words never enter the key or the vocabulary: `system32`/`cmd` canonicalize to NOTHING
+  ✓ #22 the quiet case is byte-identical to the pre-fix behaviour (no habituation churn introduced)
+  ✓ #22 NO registry on disk → app-only key and no tokens (a missing canon is never a licence to ship titles)
+  ✓ #22 the canon filter itself: a registered alias resolves, chrome does not
+  ✓ #22/#106 status reports have/need counters, not a status word
+  ✓ D8 an over-length title ships its cut NAMED — title_truncated + the raw length it was cut from
+  ✓ D8 a string landing EXACTLY on the cap is NOT a cut — nothing lost, so the flag says false
+  ✓ D8 one char past the cap IS a cut, and the text side names it too
+  ✓ D8 the flag cannot LIE — the shipped string is exactly min(raw length, cap) in both fields
+  ✓ D8 a short title emits a MEASURED false, never an absent field (absent = the pre-D8 UNKNOWN, a different fact)
+  ✓ D8 the cut never touches the concept wire — conceptOfTitle still reads the RAW title, before the clip
+  ✓ D8 status COUNTS the cut and keeps pre-flag rows as a separate UNKNOWN, never folded into clean
+  ✓ D8 the health surface SAYS it — the cut reaches the printed lines, with the cap and the raw length
+  ✓ D7 the lane is DERIVED — its own stamp (row 897; the process table until then) + restart verb + tasks_expected, never prose
+  ✓ D7 a dark bridge is NAMED, not silent (a stale stamp · unwired restart verb · unrecorded retirement)
+  ✓ PROBE HONESTY — a stamp that cannot be read is UNKNOWN with its reason, never `false`, and never invents a boot stamp (row 897: the stamp, not the process probe)
+  ✓ PROBE HONESTY — the surface says the stamp could not be read, and NEVER says the bridge is dark off a reading it could not take
+  ✓ PROBE HONESTY — the D9 build word degrades HONESTLY on an unreadable stamp: UNVERIFIED naming the stamp, never 'nothing is running'
+  ✓ PROBE HONESTY — UNKNOWN and DOWN stay different facts: a STALE stamp is still a DARK bridge, a missing stamp is UNKNOWN (never false), on every platform (row 897: no Windows-only reading is left)
+  ✓ D7 status hands him NO command and names NO dead task — the anchor law
+  ✓ D7 status states the LIVE lane: the resident daemon, with its start stamp and last emit
+  ✓ #wire fate() reads the ledger's modalities LIST and separates crossed from reflex
+  ✓ #wire it reports the ceiling REACHED against the bar FACED — counters, never a verdict word
+  ✓ #wire the printed surface names the downstream count, so a dead wire can never show a green light again
+  ✓ #wire the surface names its CONSUMER — the cortex's ambient line — and says crossing tau1 is not the point
+  ✓ #wire an EMPTY ledger reports zero honestly, never null-crashes the surface
+  ✓ D7 the dark case speaks in full — bridge down, restart verb unwired, no emit stamp
+  ✓ D9 a graph file written AFTER the boot is STALE; written before is current — conductor's own `>`, no tolerance invented
+  ✓ D9 UNKNOWN is its own answer — an unreadable graph or an unfindable process is UNVERIFIED, never a fabricated all-clear
+  ✓ D9 graphNow() takes the injected graph verbatim, and the LIVE walk answers with a real file + stamp (conductor's newestGraphMtime, not a bare mtime of this file)
+  ✓ D9 the health surface SAYS it — a running-but-stale bridge is named with BOTH stamps and the file that moved
+  ✓ D9 a current build and an unreadable one print DIFFERENTLY, and neither borrows the other's word
+  ✓ D9 the daemon loop REALLY runs the check — buildVerdict(BOOT_MS, graphNow()) sits in the arm, ahead of sense(), and breaks the loop with a RETIRING line
+  ✓ D9 the instrument stays BORROWED — the graph walker is imported from conductor.mjs, so this file never grows a second stale-build engine
+  ✓ #wire the health surface HAS A CALLER — /organism-doctor runs `node scripts/context.mjs status`
+  ✓ #wire the doctor is sent at the READ-ONLY verb — the bullet names `status`, never the bare command that emits
+  ✓ #wire the doctor's named first-reading really EXISTS on the surface — `running build:` is printed and the bullet points at it
+  ✓ #wire a fat-fingered verb can never turn that read into a WRITE — main() screens argv against the allowlist first
+  ✓ D10 the first fault is counted, stamped and QUOTED — a throw is never nothing again
+  ✓ D10 faults ACCUMULATE off the block on disk and keep the FIRST stamp — a wedge is a streak, not an incident
+  ✓ D10 the fault rides the bridge's OWN file and never moves the delta fields — the retry law is untouched by the code reporting the failure
+  ✓ D10 a clean poll CLEARS the block, delta fields still verbatim
+  ✓ D10 the health surface SAYS it — the count, the first stamp, the last error, and that an UP probe proves nothing here
+  ✓ D10 no-fault and no-state print DIFFERENTLY, and neither is reported as health
+  ✓ D10 no threshold and no verdict is invented — the block is five counters/stamps and nothing in it decides 'wedged'
+  ✓ D10 the daemon arm's catch BINDS the error, counts it, records it in its own file and prints it — never `catch { /* never taxes */ }` again
+  ✓ D10 the doctor is pointed at the new line, and the surface really prints that label — a two-ended wire, both ends here
+  ✓ S880B THE KEEPER — `daemon` runs keep() from scripts/keeper.mjs over `daemon-worker` (the brain shape: port null, pollMs = the bridge's own CONTEXT_POLL_MS) and holds no loop of its own; `daemon-worker` is an allowed mode
+  ✓ S880B A RETIRE EXITS 75 — the worker exits KEEP_EXIT.RETIRED after a retire, ALREADY_RESIDENT (69) when it yields, CLEAN (0) on a signal; the RETIRING line names the keeper, and no printed line promises the watchdog relaunch
+  ✓ S880B THE STAMP MOVES ON A POLL WITH NO WINDOW CHANGE — poll_ts moves, emit_ts/app/title do not, pid + boot_ts ride along; and the worker stamps on EVERY poll (after the poll's catch, never only on an emit)
+  ✓ S880B ONE FRESHNESS RULE — stampLiveness: fresh → true (UP), stale → false (DOWN), missing / unparseable / no poll_ts / beyond-the-bound future → null (UNKNOWN); the bound is STAMP_FRESH_MS = 3 × CONTEXT_POLL_MS, written as that expression
+  ✓ S880B THE PORTLESS SINGLETON — a FRESH stamp of a foreign LIVE pid → that pid (the worker exits 69); a fresh stamp of a DEAD pid → runs; its OWN pid → runs; a STALE or absent stamp → runs; alive = kill(pid, 0) succeeds or EPERM, ESRCH = dead
+  ✓ S880B THE SINGLETON IS WIRED — the worker asks otherResident(readStamp()) at BOOT (exit KEEP_EXIT.ALREADY_RESIDENT before the loop) and before EVERY poll's sense(), and a yielder breaks out before it posts or stamps
+  ✓ S880B THE STAMP RIDES BESIDE THE DELTA — withStamp never moves app/title/emit_ts/daemon_fault; stampOf/readStamp hand a liveness reader the stamp ONLY (never his window); an emit's default save carries the stamp through
+  ✓ S880B STATUS KEEPS ITS MEANING — under the keeper two processes carry `context.mjs daemon`; the lane reads the WORKER's own stamp (row 897: never the process table), whose boot_ts is the worker's BOOT_MS that D9 compares, and the restart verb is still read off the .vbs's `daemon` line
+  ✓ S880B THE TEST DOOR — ARSENAL_CONTEXT_STATE_DIR opens only for an existing dir UNDER the temp root (else ignored), the poll door only with it (floored at the 500 ms wait step), and no env leaves his live dir and the 60 s floor
+  ✓ S893 F1 A FRESH STAMP WITH NO PROCESS-TABLE LINE READS RUNNING — resident_running true, UP since the stamp's boot_ts, and the D9 build line compares THAT boot (current before it, STALE after it)
+  ✓ S893 F1 A STALE STAMP READS DOWN, even with a process-table line — resident_running false, no boot borrowed, the build UNVERIFIED (nothing running)
+  ✓ S893 F1 A MISSING OR UNREADABLE STAMP READS UNKNOWN (never green, never down), with its reason, even with a process-table line
+  ✓ S893 F1 NEVER THE PROCESS TABLE — across these readings the process probe was called 0 times; lane()'s code reads readStamp() and judges by stampLiveness(); none of its code names a process probe, and context.mjs imports none
+  ✓ S893 F1 THE SURFACE SAYS IT — UP names the fresh stamp and its boot; DOWN names the STALE stamp past its bound; UNKNOWN names its reason and never says the bridge is dark; the STALE build word carries the stamp's boot
+  ✓ S893 F1 status() WIRES IT — with no lane injected, status() hands lane() its own deps, so the stamp it is given (else readStamp() off disk) decides resident_running
+
+ALL CHECKS PASSED
+exit 0

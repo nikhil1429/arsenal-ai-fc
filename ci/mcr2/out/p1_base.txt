@@ -2,5 +2,5 @@
   ✗ C-fuelboard — org LF exit 0 (37 checks, ALL CHECKS PASSED) · org CRLF exit 1 (37 checks, SELFTEST FAILED) · base CRLF exit 1 (37 checks) red by [FUEL VERB is dispatched FIRST: `config` leaves m]
   ✗ C-learnstate — org LF exit 0 (149 checks, ALL CHECKS PASSED) · org CRLF exit 1 (149 checks, SELFTEST FAILED) · base CRLF exit 1 (149 checks) red by [L3 · WIRE — learnstate imports only the pointer ]
   ✗ BOUND — scripts/context.mjs does not differ (the build never fed it); scripts/fuelboard.mjs does not differ (the build never fed it); scripts/learnstate.mjs does not differ (the build never fed it)
-  ✓ LAST — 92 processes listed, 0 node naming the temp root · fake claude spawns 0
+  ✓ LAST — 109 processes listed, 0 node naming the temp root · fake claude spawns 0
 RED MCR2 · C-context C-fuelboard C-learnstate BOUND

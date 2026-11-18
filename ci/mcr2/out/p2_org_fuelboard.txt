@@ -1,0 +1,40 @@
+  ✓ local-midnight reset: usage + faults + 429 clear, day rolls
+  ✓ the LEARNED ceiling survives the day-reset (property of the account)
+  ✓ eight tanks, eight regions, each a different job
+  ✓ STARVATION GUARD: a 429 at LOW usage floors the ceiling at the estimate
+  ✓ a 429 at HIGH usage records the true observed ceiling
+  ✓ faulted tank reads COLD (till midnight)
+  ✓ pinned tank first: vision → T2
+  ✓ pinned cold → T7 absorbs the region (the shock absorber)
+  ✓ T7 also cold → borrows an idle tank, NEVER T1 mid-conversation
+  ✓ ALL tanks cold → null (degrade; hard stop before the Opus window)
+  ✓ DMN headroom = ceiling·(1−reserve) − used (use-it-or-lose-it only)
+  ✓ Cochlea ships DISABLED (a preview surface behind a pref) → DEAD
+  ✓ the Bridge tank is budgeted by the brain ledger, not this board
+  ✓ naive_shadow accumulates what all-Opus would have cost
+  ✓ the gauge draws 8 bars with states
+  ✓ the page summary carries id/state/pct for the fuel line
+  ✓ tank lock: the first writer takes the board
+  ✓ tank lock: a SECOND process cannot enter the read-modify-write
+  ✓ tank lock: released → the next spend walks straight in
+  ✓ tank lock: a STALE holder is broken — a dead organ never wedges the board
+  ✓ EVERY ledger spend runs inside the tank lock, and releases it
+  ✓ a REJECTED spend still releases the lock (no wedged fuelboard)
+  ✓ record429 HAS a live producer: the Dugout's /tank-fault door shells `fuelboard.mjs fault`
+  ✓ …and the voice page still knocks on it when a key really runs dry
+  ✓ FUEL READ RULE: a ROLE row resolves through models.mjs at READ time (an env set after import moves it) and a `model` beside the role is IGNORED; a July row (a model, no role) still shows its literal — the verb, not the reader, changes the board; T3 keeps the live role's second seed (its pick since LAW M)
+  ✓ FUEL READ RULE: an `engine` row (T4) is a LABEL — no model is resolved and the line shows the engine; DEFAULT_TANKS' T4 is `engine: opus-via-cortex` with no model and no role; the July T4 (`model: opus-via-cortex`) still shows its literal
+  ✓ FUEL READ RULE: a row naming NEITHER role, engine nor model takes its DEFAULT_TANKS twin by id — the twin's role resolves (or its engine labels), and the FILE's own fields win (enabled false stays false: the reader never turns a tank on); an id with no twin names no model
+  ✓ FUEL STATUS LINE: every tank line names what the read rule resolved — `role <r> → <model>` for the seven, `engine opus-via-cortex` for T4 (the defaults name no literal, so no line shows one)
+  ✓ FUEL VERB PASS (temp copy): exit 0 · every key kept in place and `_doc` byte-for-byte (its line too) · the seven get their DEFAULT_TANKS role in the seat `model` held · T4 `engine: opus-via-cortex`, no model, no role · ONE receipt directly after `tanks` holding all eight old values + the why · the last line names it
+  ✓ FUEL VERB never writes the six fields: id · name · region · key_index · quota_est · enabled stand as the FILE has them, even where they differ from DEFAULT_TANKS (T5 off stays off, T3 off stays off, T2 key 9, T6 quota 7, T8 renamed) — it names, it never turns a tank on or off
+  ✓ FUEL VERB FORMAT (row 841 (1)): the hand-aligned file round-trips under no JSON.stringify form; the written file round-trips under the verb's own form, JSON.stringify(o, null, 2) + "\n" — the form writeAtomic writes — and the receipt NAMES the change
+  ✓ FUEL VERB REFUSES with exit 2 and a NAMED line, the copy byte-for-byte as it was — by id: an unknown tank (T9 for T8) · by id: a tank missing (seven) · by id: a tank twice · already migrated: a role present · already migrated: a receipt present · a missing --why · an empty --why · an unparsable file · an unknown flag
+  ✓ FUEL VERB is NARROW: a --config not named fuelboard_config.json is refused (exit 2, that file untouched), and any verb but migrate-roles is refused (exit 2, the copy untouched)
+  ✓ FUEL VERB run TWICE: the second run on its own output is refused (exit 2, `already migrated`, never a second rewrite) and the file stays byte-for-byte the first run's
+  ✓ FUEL VERB is dispatched FIRST: `config` leaves main() above every mode that writes (selftest, use, fault, status's saveBoard), and the verb's own code never touches tanks.json, the board or the tank lock
+  ✓ FUEL × LAW M: the July file's eight `model` values are eight findings of the config scan; the migrated file has NONE — 0 hits, 0 declared (the old values sit in a `_` receipt, which the scan reads as history)
+  ✓ FUEL: the selftest left the live fuelboard_config.json byte-for-byte as it found it (every verb run above was on a temp copy)
+
+ALL CHECKS PASSED
+exit 0

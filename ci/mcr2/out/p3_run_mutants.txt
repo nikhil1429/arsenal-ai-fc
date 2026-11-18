@@ -1,0 +1,7 @@
+  ✓ M1 context.mjs:1192 read un-normalised — want RED by C-context · got exit 1: RED MCR2 · C-context
+  ✓ M2 fuelboard.mjs:620 read un-normalised — want RED by C-fuelboard · got exit 1: RED MCR2 · C-fuelboard BOUND
+  ✓ M3 learnstate.mjs:2014 read un-normalised — want RED by C-learnstate · got exit 1: RED MCR2 · C-learnstate BOUND
+  ✓ M4 a file outside the named set differs (README.md gains a line) — want RED by BOUND · got exit 1: RED MCR2 · BOUND
+  ✓ M5 a child leaves a node naming the temp root and spawns claude (NODE_OPTIONS preload) — want RED by LAST · got exit 1: RED MCR2 · LAST
+  ✓ control (the build, unmutated) — want GREEN · got exit 0: GREEN MCR2 own-source selftest reads are line-end-proof (3 files) · 5 clause(s)
+run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN

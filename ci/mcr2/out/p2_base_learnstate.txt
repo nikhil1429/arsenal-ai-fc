@@ -1,0 +1,152 @@
+  ✓ brief names the CURRENT concept from sprint.json
+  ✓ concept task routes to FORGE mode
+  ✓ brief carries where-left-off from the working_set
+  ✓ brief carries the open loop
+  ✓ brief carries the JS-hangover watch-list
+  ✓ watch-list prints the TOPIC (axis only as suffix), not a bare axis letter
+  ✓ watch-list never renders a raw object
+  ✓ legacy `patterns` never short-circuits nemesis's real `weaknesses` list
+  ✓ an 11-day-old working_set is flagged STALE with its age
+  ✓ a same-day working_set carries NO age tag (healthy case stays quiet)
+  ✓ the brief now READS have_need — the his-words ratio rides under the slots it explains
+  ✓ …and it names the CAUSE, so a self-capture leak is legible (#108's disease, not a caption's)
+  ✓ …and slot_sources rides too: the reader sees which slot came from the LLM vs the floor
+  ✓ a pre-#106 working_set (no counters at all) stays completely quiet — no invented numbers
+  ✓ a BROKEN pool no longer reads as a healthy quiet morning — the brief names why the floor is standing
+  ✓ …and a card the pool actually answered stays quiet: no llm_status, nothing appended (silent when healthy)
+  ✓ #WIRE fixture is honest — the slot really is longer than this brief's 180 clip and arrives marked
+  ✓ #WIRE the brief's own clip never hands him a silent mid-word cut — the marker survives the second door
+  ✓ #WIRE …and the clip still respects its cap exactly (marker spent from inside, no budget moved)
+  ✓ double-digit sprint id '10-01' labels S10, not S1
+  ✓ brief surfaces the daily Examiner reminder
+  ✓ brief tells the session NOT to re-ask where he is
+  ✓ skill task (Python) routes to the JS->Python CLOSE-PACKET loop
+  ✓ course task routes to COURSE (Colab) — NOT mislabeled FORGE
+  ✓ a 21-day-old chapter position is flagged PARKED with its age (current_at finally has a reader)
+  ✓ a chapter he opened today carries NO age tag (the healthy case stays quiet)
+  ✓ a position with NO stamp is called out, never assumed fresh (same law as wsTag/spTag)
+  ✓ an ingested course with NO position asks for the stamp (the arm that used to print nothing)
+  ✓ chapters closed but no position → the "not started" contradiction is named, not left to be spotted
+  ✓ an UNREADABLE course is NOT nagged for a stamp — one fault, one instruction
+  ✓ DAY ONE — a not-started course still NAMES the chapter to open (the `next` field finally has a reader)
+  ✓ mid-course — his own chapter carries the resume second, and the NEXT one is named
+  ✓ a chapter with NO timestamp shows no stamp at all — never a fabricated 00:00:00
+  ✓ the course line carries the course's ADDRESS, whole and unclipped (source_url finally has a reader)
+  ✓ no URL in his paste ⇒ no address on the line, and no dangling ' · ' either
+  ✓ build task routes to BUILD — never a stray FORGE label
+  ✓ empty state -> a valid brief, never a crash
+  ✓ P2 a TODAY night-coach file yields one line, NO age tag (healthy case stays quiet)
+  ✓ P2 a YESTERDAY file is tagged with its age, never served as fresh
+  ✓ P2 no night file ⇒ zero new lines (a new organ's silence is not a finding)
+  ✓ P2 a shapeless file (no misconceptions[]) stays silent, never crashes the brief
+  ✓ H6 a TODAY diary sibling yields the WILL CHANGE line, deterministic path
+  ✓ H6 no sibling ⇒ the md's first non-heading line (degraded path still speaks)
+  ✓ H6 no diary at all ⇒ zero new lines (absence is silence, never a nag)
+  ✓ #WIRE — no diary page + a RECORDED budget starvation ⇒ the kickoff says WHY, with the brain's own measured numbers, and refuses the slept-through story
+  ✓ #WIRE — an OLD night's starvation is not an excuse for this morning (and neither is another job's) — silence returns
+  ✓ ARBITER — with only a sprint, the sprint wins (plan of record)
+  ✓ ARBITER — an OPEN fresh forge session beats the sprint, and says RESUME
+  ✓ ARBITER row 69 (3) — the PEHLA KAAM line carries the pointer's exact question when one is on disk, and invents none when there is none
+  ✓ ARBITER — a STALE-open session wins, and the action is RESUME-first (close is still offered, for a concept he is actually done with)
+  ✓ ARBITER W0-D — a TWO-SITTING concept (born 3 days ago, touched 2h ago) reads as LIVE here, so his kickoff stops ordering a close on work in progress
+  ✓ ARBITER — session closed + an overdue Re-Jirah round → Re-Jirah wins (proof decays first)
+  ✓ ARBITER · W0-B — and a PRE-restart capsule never reaches that slot at all: same fixture, lock moved back before GAME ON
+  ✓ ARBITER — a round SAT-but-unpasted beats a merely-due round (five organs read it as never-served)
+  ✓ EXAMINER GATE — a 7-month-stale drill NEVER wins PEHLA KAAM (owner's loadFreshDrill, not a raw read)
+  ✓ EXAMINER GATE — the rejected drill stays VISIBLE as a contender, tagged STALE and dated
+  ✓ EXAMINER GATE — yesterday's 21:55 staging still wins, and the card now carries its DATE
+  ✓ EXAMINER RECEIPT — an unserved drill's card says nothing extra (silence is the honest default)
+  ✓ EXAMINER RECEIPT — a SERVED drill says so on the card, names the surface, and still ranks identically
+  ✓ ARBITER — the watchman NEVER appears, winner or loser
+  ✓ ARBITER — brief() carries exactly one PEHLA KAAM line
+  ✓ MEMORY — a supplied cartridge is spliced into the brief verbatim
+  ✓ MEMORY — the block is labelled BACKGROUND CONTEXT, not instructions
+  ✓ MEMORY — the block carries the true-when-written caveat + the deeper-recall pointer
+  ✓ MEMORY — memory sits ABOVE the LAWS line (orientation before rules)
+  ✓ BACKWARD-COMPATIBLE — no memory arg reproduces the old brief byte-for-byte
+  ✓ REPAIR TOWARD SILENCE — a non-string/empty cartridge is dropped, never rendered
+  ✓ MEMORY — the loader exists and is async (hook path may never block on a throw)
+  ✓ CARD — a supplied card is spliced verbatim
+  ✓ CARD — the block names the evidence file and says these are OBSERVED, not stated preferences
+  ✓ CARD — it sits above the LAWS line
+  ✓ BACKWARD-COMPATIBLE — no card arg reproduces the old brief byte-for-byte
+  ✓ REPAIR TOWARD SILENCE — an empty/non-string card is dropped, never rendered
+  ✓ CARD PARSER — reads only between the markers, strips bold, drops the surrounding prose
+  ✓ CARD PARSER — no markers -> null (never guesses at the boundaries)
+  ✓ CARD PARSER — a begin with no end -> null
+  ✓ CARD PARSER — an empty block -> null
+  ✓ CARD PARSER — a missing file -> null, never a throw
+  ✓ CARD PARSER — a runaway card is capped and says so (the brief stays orientation)
+  ✓ CARD PARSER — a caller's cap is honoured, and the WHOLE card is reachable with a cap no card can exceed
+  ✓ THE REAL DOC PARSES — the shipped HOW_HE_LEARNS.md yields all seventeen rules
+  ✓ RE-JIRAH OVERDUE still prints its counts unchanged in every age branch
+  ✓ a same-day capsule_map carries NO age tag (the healthy case stays quiet)
+  ✓ a 3-day-old capsule_map says so — the day-counts are that day's, not today's
+  ✓ a capsule_map with NO generated_at is CALLED OUT, never assumed fresh
+  ✓ the RE-JIRAH OVERDUE slot is still ONE line (the kickoff is not a wall)
+  ✓ SWEEP capsule_bridge's own headline reaches the kickoff VERBATIM — strike count and all
+  ✓ SWEEP it rides the SAME RE-JIRAH line, never re-composed into a second one
+  ✓ SWEEP a map with NO `line` renders exactly as before (absence stays absence, nothing invented)
+  ✓ OUTWARD — audit status + next fire ride the kickoff brief
+  ✓ OUTWARD — a staged topic mission surfaces with the EMPHASIS-only reminder
+  ✓ OUTWARD — the unmet floor surfaces as have/need (his ruled 2, never shame)
+  ✓ OUTWARD — a GATED benchmark never promises a benchmark run can touch the floor; it names the one door that is open
+  ✓ OUTWARD — floor met (2 benchmark runs this week) ⇒ the floor line goes SILENT
+  ✓ OUTWARD — a benchmark regression reaches the kickoff brief (Ruling 5 edge)
+  ✓ OUTWARD — the benchmark's NEED NAMES reach the kickoff, first + count (never the whole list — ANCHOR LAW)
+  ✓ OUTWARD — zero needs ⇒ the need line goes SILENT (absence, never an empty debt)
+  ✓ SEASON — the streak line rides the brief once a season exists
+  ✓ BACKWARD-COMPATIBLE — a world with no missions/benchmark/season shows ZERO outward noise
+  ✓ A4 · MID-CONCEPT, the headline is the OPEN SESSION's concept — the floor is the NEXT thing, never a second answer to 'where am I' on the same screen
+  ✓ A4 · HIS SHEET IS NOT DELETED — the line says where its own current went, and names the one command that overrides the floor
+  ✓ A5 · the STUDY BLOCK comes BEFORE the sheet's own lines — step, axis, what is left, FSRS, and the micro-question instruction
+  ✓ A5 · DEFERRED axes are offered before untouched ones — an axis he chose to put off is work already decided
+  ✓ A5 · the FSRS count comes from the scheduler's OWN file, and a count written for another day is labelled rather than believed
+  ✓ A5 + A6 · with a session live the machine's own lines are PARKED behind one counted line — nothing deleted, and the OUTWARD/T-mission line rides the same collapse
+  ✓ A4 · the DAILY EXAMINER follows the topic he actually studied, not the sheet's
+  ✓ A5 · a STALE-but-OPEN session STILL renders the study block. Staleness silences the PACER, never the MEMORY — his program is one topic per day, so on the morning of day 2 the session is ~20 h old, and the first draft made the whole block vanish exactly then
+  ✓ A5 · with NO In-Progress row on the sheet, an open session STILL produces the headline and the study block — the trigger is forge_session.json, never the sheet
+  ✓ A4 · with NOTHING open the FLOOR takes the headline, derived from the capsules the epoch disqualified — not the sheet's In-Progress row
+  ✓ A5 · with nothing open there is no study block and no ORGANISM line — the machine's lines print in place, exactly as they did before this rung
+  ✓ A4 · HIS OVERRIDE outranks the derivation (sprintsync floor writes it; this file only reads it)
+  ✓ A4 · once every capsule is re-locked the floor disappears by itself and the sheet's own current takes back over — no code change
+  ✓ L3 · THE ARBITER IS NO LONGER ONLY INSIDE if (cur) — with NO sheet row and an open session, brief() prints exactly ONE PEHLA KAAM line (learning-loop.txt:47)
+  ✓ L3 · THE FIRST ACT IS THE POINTER — the ledger's OPEN question (never the session file's copy) and its id, then 'you are here … this much is left' from code: STEP n/11 and its name, the axis, axes done k/9 and left
+  ✓ L3 · THE KICKOFF NEVER CONSUMES — brief() and nextup() leave the ledger byte-identical, no consumed row (SessionStart also opens engineering sessions)
+  ✓ L3 · NOTHING REPEATED — once the ledger's newest pointer is consumed, the first act re-serves neither it nor the session file's copy, and says to open with a fresh micro-question
+  ✓ L3 · A SESSION OLDER THAN THE LEDGER — with no ledger row for the concept, the session file's own pointer still answers (row 69 (3) unchanged)
+  ✓ L3 · EVERY DAY KEY IS IST — briefedOn keys 18:40Z (00:10 IST) to 6 Oct and 18:20Z (23:50 IST) to 5 Oct; the old UTC slice called both 5 Oct
+  ✓ L3 · EVERY DAY KEY IS IST — at 00:10 IST the FSRS count written for that IST day reads as TODAY's, not stale (the UTC key called it yesterday's)
+  ✓ L3 · fate 07 — the sheet's OWN done_pre_restart is READ: gather() serves learned = done minus the label, his `done` untouched beside it
+  ✓ L3 · fate 07 — A PRE-RESTART TOPIC IS NEVER SERVED AS LEARNED: the first act is the FLOOR (A4's law), not the sheet's next topic, and it names the label's topics as NOT learned
+  ✓ L3 · fate 07 — with no floor (the capsule re-locked), the sheet's own label still reaches the plan-of-record line — never silently stepped past
+  ✓ L3 · WIRE — learnstate imports only the pointer ledger's READ verbs (`latest`, istDay — and since L6 `readRows`), never `consume`; no UTC day key (toISOString().slice(0, 10)) is left in its code
+  ✓ L6 · the header says it in the organism's own words: SOLE WRITER of dressing-room/state/brief_log.jsonl, APPEND-ONLY, one row per brief HIS session printed
+  ✓ L6 · THE DAY BEFORE IS KEYED IN IST, NEVER UTC — 19:00Z on 5 Oct is 00:30 IST TODAY, so the carried day is 4 Oct (the UTC slice would carry 5 Oct, a day he never studied)
+  ✓ L6 · CLASS D, the witness's own reading — forge_sessions, the grade queue, the pointer ledger (written AND consumed) and the OPEN session (updated_at + resumes[].at, not once it carries ended_at) each key a study day; brief_log never does
+  ✓ L6 · brief() WRITES NOTHING — the suite calls it on fixture dirs, so the row is never written from here (no brief_log.jsonl after it)
+  ✓ L6 · the brief PRINTS the carried day in its FIRST lines — the IST day and what it left open, the pointer named by id and place; a consumed pointer's question is never re-served (L3)
+  ✓ L6 · fate 18 — the overdue line names ONLY epoch-passed concepts: a capsule locked before GAME ON, and a name with no capsule, are never named due; a post-epoch lock and a re-lock after GAME ON pass
+  ✓ L6 · fate 18 — the owner's sentence names the map's worst concept, so it rides only when THAT concept passed; the withheld names are SAID once, never silently dropped
+  ✓ L6 · fate 18 — what the brief SERVED is {concept, anchored_at, epoch_ok}: every entry epoch_ok, anchored at or after the registry's GAME ON (a re-lock anchors on the re-lock)
+  ✓ L6 · fate 18 — the ungated reader is kept FROZEN beside it (L9), referenced by no caller; on the same map it would have served the withdrawn capsule first
+  ✓ L6 · C22 — no compiled note at all: ONE named absence, printed once
+  ✓ L6 · C22 — NEVER A STRIKE FROM A FAILED NOTE: a note whose latest cold gate FAILED serves nothing, and the brief names the absence once
+  ✓ L6 · C22 — ASKED FIRST: a note whose latest cold gate PASSED with its traps named, at or before the brief, serves ONE cold strike built from a named trap, the note shut
+  ✓ L6 · C22 — a gate written AFTER the brief does not count: the gates are read as they stood at the brief's ts
+  ✓ L6 · C22 — the LATEST gate decides: a note that passed and then FAILED its next cold gate serves nothing
+  ✓ L6 · C22 — a SUPERSEDED note leaves the set (a recompile appended its successor), and the ungated successor never serves
+  ✓ L6 · fate 18 — THE RECORDED BRIEF IS APPEND-ONLY (the witness's CLASS A): the ledger before is a byte-prefix of the ledger after; two briefs, two rows, two ids; the first row byte-identical; no ts earlier than the row above
+  ✓ L6 · fate 18 — the row is {v:1, id, ts, day, pehla_kaam, carries_from, carry, rejirah[], asked_first}: the ONE first act VERBATIM off the printed text, the carried IST day and what it left open, every Re-Jirah it served (epoch-gated), the asked-first strike
+  ✓ L6 · fate 18 — NEVER A BACK-FILL: a brief dated before the last recorded row is refused (ok:false, with its why) and the ledger stays byte-identical
+  ✓ L6 · fate 18 — A FAILED APPEND IS ok:false with its why — never a bare catch that reports ok (the brief has already printed; main says it on stderr)
+  ✓ L6 · fate 18 — recordBriefed's guard holds: an organ session (ARSENAL_ORGAN=1) records nothing
+  ✓ L6 · fate 18 — OFF THE FINAL TEXT: a line that never reached the printed brief is never recorded as carried or served (the carried day, the Re-Jirah names, the strike) — and a concept id that is also a plain word ('fresh' in the first act's 'fresh micro-question') is never mistaken for a served name
+  ✓ L6 · fate 18 — a Re-Jirah the FIRST ACT serves is recorded too, epoch-gated: the arbiter's rejirah-due winner names its concept and the row carries it; no earlier study day ⇒ carries_from null
+  ✓ L6 · fate 18 — the writer is called from main() ONLY, after the print, off the printed text — never from brief() (which the suite calls on fixture dirs)
+  ✓ BORN — an absent brief_log.jsonl is born EMPTY (0 bytes) by its sole writer, and says so
+  ✓ BORN — a brief_log.jsonl that exists (even empty) is REFUSED, never written again
+  ✓ BORN NEVER TRUNCATES — a brief_log.jsonl holding a row is refused and stays byte-identical
+
+ALL CHECKS PASSED
+exit 0

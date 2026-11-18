@@ -4,3 +4,26 @@
 {"ts":"2026-11-18T10:34:32.861Z","act":"P1","cmd":"node ci/mcr2/witness_mcr2.mjs --org <build archive> --base-org <d0c8c96 archive>","last_line":"GREEN MCR2 own-source selftest reads are line-end-proof (3 files) · 5 clause(s)"}
 {"ts":"2026-11-18T10:34:32.890Z","act":"P1","cmd":"node ci/mcr2/witness_mcr2.mjs --org <d0c8c96 archive> --base-org <d0c8c96 archive>","last_line":"RED MCR2 · C-context C-fuelboard C-learnstate BOUND"}
 {"ts":"2026-11-18T10:34:32.919Z","act":"P1","cmd":"node ci/mcr2/witness_mcr2.mjs --org <build archive> --base-org <core.autocrlf=true clone of d0c8c96>","last_line":"GREEN MCR2 own-source selftest reads are line-end-proof (3 files) · 5 clause(s)"}
+{"ts":"2026-11-18T10:39:59.545Z","act":"P1","cmd":"node ci/mcr2/witness_mcr2.mjs --org <fresh build archive> --base-org <fresh d0c8c96 archive> (re-run on clean trees)","last_line":"GREEN MCR2 own-source selftest reads are line-end-proof (3 files) · 5 clause(s)"}
+{"ts":"2026-11-18T10:39:59.577Z","act":"P1","cmd":"node ci/mcr2/witness_mcr2.mjs --org <fresh d0c8c96 archive> --base-org <same>","last_line":"RED MCR2 · C-context C-fuelboard C-learnstate BOUND"}
+{"ts":"2026-11-18T10:39:59.612Z","act":"P2","cmd":"base: node scripts/context.mjs selftest (exit 0)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T10:39:59.644Z","act":"P2","cmd":"base: node scripts/fuelboard.mjs selftest (exit 0)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T10:39:59.680Z","act":"P2","cmd":"base: node scripts/learnstate.mjs selftest (exit 0)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T10:39:59.714Z","act":"P2","cmd":"base: node scripts/daily_green.mjs selftest (exit 0)","last_line":"daily_green selftest: 75 passed, 0 failed"}
+{"ts":"2026-11-18T10:39:59.752Z","act":"P2","cmd":"base: node scripts/organism_test.mjs laws (exit 2)","last_line":"organism_test: 113 passed, 2 failed · ruled 0 · UNRULED 2"}
+{"ts":"2026-11-18T10:39:59.797Z","act":"P2","cmd":"org: node scripts/context.mjs selftest (exit 0)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T10:39:59.832Z","act":"P2","cmd":"org: node scripts/fuelboard.mjs selftest (exit 0)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T10:39:59.868Z","act":"P2","cmd":"org: node scripts/learnstate.mjs selftest (exit 0)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-18T10:39:59.909Z","act":"P2","cmd":"org: node scripts/daily_green.mjs selftest (exit 0)","last_line":"daily_green selftest: 75 passed, 0 failed"}
+{"ts":"2026-11-18T10:39:59.952Z","act":"P2","cmd":"org: node scripts/organism_test.mjs laws (exit 2)","last_line":"organism_test: 113 passed, 2 failed · ruled 0 · UNRULED 2"}
+{"ts":"2026-11-18T10:39:59.991Z","act":"P3","cmd":"node ci/mcr2/run_mutants.mjs --org <fresh build archive> --base-org <fresh d0c8c96 archive>","last_line":"run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-18T10:40:00.035Z","act":"P4","cmd":"base: node scripts/models.mjs check (exit 0)","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)"}
+{"ts":"2026-11-18T10:40:00.070Z","act":"P5","cmd":"base: node scripts/lawpack.mjs (exit 0)","last_line":"lawpack: GREEN — no law's finding count rose, and every rule is on disk"}
+{"ts":"2026-11-18T10:40:00.114Z","act":"P5","cmd":"base: node scripts/gates.mjs types (exit 0)","last_line":"gates types  · 14 organ(s) @ts-check'd (baseline 14, may only grow) · undefined-symbol family 0 (must be 0) · other checkJs diagnostics 296 (baseline 296, may only fall)"}
+{"ts":"2026-11-18T10:40:00.150Z","act":"P5","cmd":"base: node scripts/gates.mjs lint (exit 0)","last_line":"gates lint   · 344 error(s) · 2 warning(s) · no-empty 262 · no-unused-vars 82 · (directive) 2 (frozen: no-empty 262 · no-unused-vars 82 · warnings 2)"}
+{"ts":"2026-11-18T10:40:00.186Z","act":"P4","cmd":"org: node scripts/models.mjs check (exit 0)","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)"}
+{"ts":"2026-11-18T10:40:00.236Z","act":"P5","cmd":"org: node scripts/lawpack.mjs (exit 0)","last_line":"lawpack: GREEN — no law's finding count rose, and every rule is on disk"}
+{"ts":"2026-11-18T10:40:00.279Z","act":"P5","cmd":"org: node scripts/gates.mjs types (exit 0)","last_line":"gates types  · 14 organ(s) @ts-check'd (baseline 14, may only grow) · undefined-symbol family 0 (must be 0) · other checkJs diagnostics 296 (baseline 296, may only fall)"}
+{"ts":"2026-11-18T10:40:00.314Z","act":"P5","cmd":"org: node scripts/gates.mjs lint (exit 0)","last_line":"gates lint   · 344 error(s) · 2 warning(s) · no-empty 262 · no-unused-vars 82 · (directive) 2 (frozen: no-empty 262 · no-unused-vars 82 · warnings 2)"}
+{"ts":"2026-11-18T10:40:00.351Z","act":"note","cmd":"CI suite.yml on 2ef8d06","last_line":"run 44286766934 failure (both legs, windows-latest); seat commit 2c7a714 run 44285820013 failure; BASE d0c8c96 run 44279219321 failure"}
+{"ts":"2026-11-18T10:41:08.935Z","act":"proof","cmd":"write ci/mcr2/PROOF.md, ci/mcr2/run_mutants.mjs","last_line":"PROOF.md P1-P5 written; BLOCK 7 scan of PROOF.md: 0 undeclared"}
