@@ -36,6 +36,15 @@
 //     sitting organ's close rows in sitting_reviews.jsonl). The streak counts STUDY days,
 //     not calendar days: a non-study day is skipped, a RED study day breaks it, and a day
 //     with no row at all breaks it too (an unwitnessed day is not evidence of anything).
+//   · THE LEARN CANARY (unit mf4, F4 — forks rows 960 (3) / 1009 (2)). A day with NO sitting
+//     registered but a LEARN SESSION on disk is a study day whose container was never opened:
+//     clauses 1-5 read RED "NO SITTING: learn session <id8>", never N-A, and the day breaks the
+//     streak. The learn session is the owners' own evidence, never re-derived here: the sessions
+//     the archive names that IST day (exchanges.mjs sessionsNamedOn), each read off its OWN
+//     transcript by study_scope.mjs studySessionsOfDay source (c) — Desktop + a learn opener.
+//     It is read ONLY on a day the sitting files call non-study, so a day with a sitting reads
+//     exactly as before, and a day with neither reads exactly as before. An archive day file
+//     that exists but cannot be read fails clauses 1-5 closed (RED "unreadable: learn evidence").
 //   · ONE ROW PER DATE, IDEMPOTENT. Re-running the same date appends nothing when the row
 //     is identical; when the facts changed, a new row is appended and the LATEST row for a
 //     date is the one that counts (append-only, never rewritten — L9).
@@ -74,6 +83,8 @@ import { readingFor } from "./oura_coach.mjs";
 import { KAL_RE } from "./postmatch.mjs";
 import { emitRows, REGISTRY_PATH } from "./registry.mjs";
 import { DAEMONS } from "./daemon_watchdog.mjs";
+import { sessionsNamedOn } from "./exchanges.mjs";                  // the archive's own reader: who it names on a day
+import { studySessionsOfDay } from "./study_scope.mjs";            // the transcript's own reader: is that session a learn session
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -137,6 +148,24 @@ function studyDay(st, day, now) {
     if (r && r.kind === "sitting_review" && istDay(r.closed_at) === day && !hits.some((h) => h.endsWith(` ${r.sitting_id}`))) hits.push(`closed sitting ${r.sitting_id}`);
   }
   return { known: true, study: hits.length > 0, why: hits.length ? hits.join(", ") : "no sitting open or closed on this day" };
+}
+
+// ── THE LEARN CANARY (mf4 · F4) — a learn session on a day with no sitting registered ──
+// Read only when studyDay() said "no sitting". Two owners, read in their order: the archive names
+// the day's sessions (exchanges.mjs sessionsNamedOn), and each is judged off its OWN transcript
+// (study_scope.mjs studySessionsOfDay, source "transcript": entrypoint claude-desktop AND a learn
+// opener as its first human prompt). An absent archive day is "no evidence", exactly as before; an
+// archive day that exists but cannot be read is UNKNOWN. `fixture.learn` = { archive, home } is the
+// selftest's in-process re-point, the same ONE root override; production passes nothing.
+function learnDay(day, { st, root, now, fixture }) {
+  // a fixture NEVER reads the live archive or his home: no `learn` given = an empty archive + home inside the fixture root
+  const lf = fixture ? (fixture.learn || { archive: join(root, "no-archive"), home: join(root, "no-home") }) : null;
+  const named = sessionsNamedOn(day, lf ? { root: lf.archive } : undefined);
+  if (named.unreadable && named.unreadable.length) return { known: false, why: `archive day ${named.unreadable.map((u) => `${u.day} ${u.why}`).join(", ")}` };
+  if (!named.sessions.length) return { known: true, sessions: [], why: "no session named by the archive" };
+  const ev = studySessionsOfDay(day, { dir: st, archiveSessions: named.sessions, root, now, ...(lf ? { home: lf.home } : {}) });
+  const sessions = ev.sessions.filter((s) => s.sources.includes("transcript")).map((s) => s.id);
+  return { known: true, sessions, why: sessions.length ? `learn session(s) ${sessions.map((id) => id.slice(0, 8)).join(",")}` : "no learn session among the archive-named" };
 }
 
 // ── THE ELEVEN CLAUSES. Each: (ctx) → { status, why }. ctx = { st, root, day, now, today, study, fixture } ─
@@ -355,11 +384,24 @@ async function witness({ date = null, now = new Date(), write = true } = {}, fix
   const ledger = fixture ? join(st, "daily_green.jsonl") : LEDGER;
   const today = todayIst(now);
   const day = date || today;
-  const sd = studyDay(st, day, now);
+  let sd = studyDay(st, day, now);
   const ctx = { st, root, day, now, today, fixture };
+  // THE LEARN CANARY (mf4 · F4): only a day the sitting files call non-study is asked; a learn session there is a
+  // study day with no sitting registered — RED by its own reason, never N-A. Unknown learn evidence fails closed.
+  let canary = null;
+  if (sd.known && !sd.study) {
+    let ld;
+    try { ld = learnDay(day, ctx); } catch (e) { ld = { known: false, why: clip(e && e.message, 40) }; }
+    if (!ld.known) { canary = UNREADABLE(`learn evidence (${clip(ld.why, 60)})`); sd = { known: false, why: `learn evidence unknown · ${ld.why} (${sd.why})` }; }
+    else if (ld.sessions.length) {
+      canary = R(`NO SITTING: learn session ${ld.sessions.map((id) => id.slice(0, 8)).join(",")}`);
+      sd = { known: true, study: true, why: `NO SITTING REGISTERED · ${ld.why} (${sd.why})` };
+    }
+  }
   const clauses = CLAUSES.map((c) => {
     let v;
-    if (c.study && !sd.known) v = UNREADABLE(`sitting organ (${sd.why})`);
+    if (c.study && canary) v = canary;
+    else if (c.study && !sd.known) v = UNREADABLE(`sitting organ (${sd.why})`);
     else if (c.study && !sd.study) v = NA("not a study day");
     else {
       try { v = c.fn(ctx); } catch (e) { v = UNREADABLE(`${c.key} (${clip(e && e.message, 40)})`); }
@@ -610,6 +652,85 @@ async function selftest() {
       JSON.stringify({ unknownSitting: c9.unknownSitting && c9.unknownSitting.by.daemons, downSitting: c9.downSitting && c9.downSitting.by.daemons }));
   }
   // ── /S880B ──
+
+  // ── MF4 SELFTESTS (unit mf4, F4 — forks rows 960 (3) / 1009 (2)): THE LEARN CANARY ──
+  // The archive is written by archivist's OWN writer into a temp bag (exchanges.mjs selftest's shape); each
+  // transcript is planted where study_scope.mjs transcriptPathFor reads it, under a temp home. Three sessions are
+  // named on DAY: a Desktop session whose first prompt is a learn opener (the learn session), the same opener on
+  // the CLI, and a Desktop session that opens as the architect — only the first is a learn session. Every
+  // predicate runs inside held() so a throw reads ✗.
+  {
+    const held = (f) => { try { return !!f(); } catch { return false; } };
+    const m = {};
+    try {
+      const { runArchive, initArchive } = await import("./archivist.mjs");
+      const { projectSlug, learnTriggers } = await import("./study_scope.mjs");
+      const opener = learnTriggers()[0];
+      const LS = "1a4f0e00-0000-4000-8000-0000000000aa", CS = "2c4f0e00-0000-4000-8000-0000000000bb", DS = "3d4f0e00-0000-4000-8000-0000000000cc";
+      const SENTINEL = "mf4-sentinel-transcript-text";
+      const bag = (ids) => {
+        const lb = join(base, `mf4-bag-${++seq}`), arc = join(lb, "archive"), repo = join(lb, "repo");
+        mkdirSync(join(repo, "dressing-room", "state"), { recursive: true });
+        initArchive({ root: arc, repo, quiet: true, warn: () => {} });
+        const rows = ids.map((id, i) => ({ event_id: `mf4e${i}`, modality: "code", source: "claude-code", surface: "claude-code", session_id: id, text: "haan", tier: "private", moment: {}, v: 3, ts: at(DAY, `10:0${i}`) }));
+        writeFileSync(join(repo, "dressing-room", "state", "afferent.jsonl"), rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
+        runArchive({ root: arc, repo, quiet: true, warn: () => {} });
+        return { archive: arc, home: join(lb, "home") };
+      };
+      const transcripts = (learn, root) => {
+        const dir = join(learn.home, ".claude", "projects", projectSlug(root));
+        mkdirSync(dir, { recursive: true });
+        const tx = (id, entrypoint, first) => writeFileSync(join(dir, `${id}.jsonl`), [
+          { type: "system", subtype: "init", entrypoint, session_id: id },
+          { type: "user", entrypoint, session_id: id, message: { role: "user", content: first } },
+          { type: "user", entrypoint, session_id: id, message: { role: "user", content: SENTINEL } },
+        ].map((r) => JSON.stringify(r)).join("\n") + "\n");
+        tx(LS, "claude-desktop", opener); tx(CS, "cli", opener); tx(DS, "claude-desktop", "architect");
+        return learn;
+      };
+      const withLearn = async (over, learnOf) => { const f = mk(over); return run(null, { extra: { learn: transcripts(learnOf, f.root) } }, f); };
+      const noSitting = { "sitting.json": JSON.stringify({ id: "s0", opened_at: at("2026-09-20"), closed_at: at("2026-09-20", "11:00") }) };
+      const all3 = bag([LS, CS, DS]);
+      const notLearn = bag([CS, DS]);
+      m.opener = opener;
+      m.canary = await withLearn(noSitting, all3);
+      m.sitWith = await withLearn({}, all3);
+      m.sitWithout = await run({});
+      m.neitherNamed = await withLearn(noSitting, notLearn);
+      m.neitherBare = await run(noSitting);
+      const broken = bag([LS]);
+      const [yy, mm, dd] = DAY.split("-");
+      const dayFile = join(broken.archive, "data", "afferent", yy, mm, `${dd}.jsonl`);
+      rmSync(dayFile, { force: true }); mkdirSync(dayFile, { recursive: true });   // the day file exists and cannot be read
+      m.unreadable = await withLearn(noSitting, broken);
+      m.SENTINEL = SENTINEL; m.LS = LS; m.CS = CS; m.DS = DS;
+    } catch (e) { m.err = String(e && e.stack || e).slice(0, 300); }
+    const same = (a, b) => JSON.stringify({ s: a.row.study, w: a.row.study_why, g: a.row.green, c: a.row.clauses }) === JSON.stringify({ s: b.row.study, w: b.row.study_why, g: b.row.green, c: b.row.clauses });
+    const first5 = (r) => r.row.clauses.slice(0, 5);
+    assert("MF4 CANARY — a day with a LEARN SESSION on disk (archive-named, Desktop, learn opener) and NO sitting registered is a study day whose clauses 1-5 are RED `NO SITTING: learn session <id8>`, never N-A; the row is not green",
+      held(() => m.canary.row.study === true && m.canary.row.green === false && /^NO SITTING REGISTERED · learn session\(s\) 1a4f0e00 \(/.test(m.canary.row.study_why)
+        && first5(m.canary).every((c) => c.status === "RED" && c.why === `NO SITTING: learn session ${m.LS.slice(0, 8)}`)),
+      m.err || JSON.stringify(m.canary && { why: m.canary.row.study_why, c: first5(m.canary) }));
+    assert("MF4 CANARY — ONLY the learn session is named: the CLI session with the same opener and the Desktop architect session are not learn sessions",
+      held(() => !(m.canary.line + JSON.stringify(m.canary.row)).includes(m.CS.slice(0, 8)) && !(m.canary.line + JSON.stringify(m.canary.row)).includes(m.DS.slice(0, 8)) && first5(m.neitherNamed).every((c) => c.status === "N-A")),
+      m.err || JSON.stringify(m.neitherNamed && first5(m.neitherNamed)));
+    assert("MF4 SITTING DAY READS AS TODAY — the same learn session on a day WITH a sitting changes nothing: the row equals the same day's row with no archive at all (11/11 green)",
+      held(() => same(m.sitWith, m.sitWithout) && m.sitWith.row.greens === 11 && m.sitWith.row.green === true), m.err || (m.sitWith && m.sitWith.line));
+    assert("MF4 NEITHER READS AS TODAY — no sitting and no learn session (the archive names only non-learn sessions, or no archive at all): clauses 1-5 N-A `not a study day`, study:false, the two rows equal",
+      held(() => same(m.neitherNamed, m.neitherBare) && m.neitherBare.row.study === false && first5(m.neitherBare).every((c) => c.status === "N-A" && c.why === "not a study day")),
+      m.err || JSON.stringify(m.neitherNamed && m.neitherNamed.row.study_why));
+    assert("MF4 STREAK — the canary day BREAKS the streak (a red study day), where the same day read as non-study would have been skipped",
+      held(() => streakFrom([{ date: "2026-09-23", study: true, green: true }, { ...m.canary.row, date: DAY }], DAY) === 0
+        && streakFrom([{ date: "2026-09-23", study: true, green: true }, { ...m.neitherBare.row, date: DAY }], DAY) === 1),
+      m.err || "");
+    assert("MF4 FAIL CLOSED — an archive day file that exists but cannot be read is UNKNOWN: clauses 1-5 RED `unreadable: learn evidence`, study:null, not green, never N-A",
+      held(() => m.unreadable.ok && m.unreadable.row.study === null && m.unreadable.row.green === false && first5(m.unreadable).every((c) => c.status === "RED" && /^unreadable: learn evidence \(archive day 2026-09-24 /.test(c.why))),
+      m.err || JSON.stringify(m.unreadable && first5(m.unreadable)));
+    assert("MF4 PRIVACY — the canary carries an 8-character session prefix only: no transcript text, no opener, no full session id reaches the line or the row",
+      held(() => { const t = m.canary.line + JSON.stringify(m.canary.row); return !t.includes(m.SENTINEL) && !t.includes(m.LS) && !t.includes(`"${m.opener}"`) && t.includes(m.LS.slice(0, 8)); }),
+      m.err || "");
+  }
+  // ── /MF4 ──
 
   // ── HERMETIC + ONE WRITE ──
   const liveLedgerAfter = readFile(LEDGER);
