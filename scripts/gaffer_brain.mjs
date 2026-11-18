@@ -186,7 +186,7 @@ const watcherModel = () => modelsResolve(WATCHER_ROLE, { env: WATCHER_ENV }).mod
 // older than 60s (dugout.mjs's own recall-lane freshness) and the spawn + node
 // boot already spends ~1s of that. A Flash call that has not answered in 20s has
 // lost the turn it was about.
-const WATCHER_DEADLINE_MS = Number(process.env.GAFFER_WATCHER_MS) || 20000;
+export const WATCHER_DEADLINE_MS = Number(process.env.GAFFER_WATCHER_MS) || 20000;   // mjd3: exported, the second opinion's reserve reads it
 // 60s, inherited verbatim from the /deep hint contract (dugout.mjs: "a correction
 // that arrives two minutes after the turn it is about would land on a different
 // conversation and read as a non-sequitur"). Not a new number.

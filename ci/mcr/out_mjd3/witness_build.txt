@@ -1,0 +1,8 @@
+mjd3 witness · node start S 26.4 ms (slowest of 3) · scale R 56.72 · bound 330000 clock ms = 5818 real ms · real slack 529 ms = 20.0 node starts · child cap 12165 real ms
+GREEN J1 · returned at 240503 of 330000 clock ms · settled 2 of 6 · outstanding 4 · coerced 0 · batches [{"size":3,"budget_ms":99976.00877377082,"tail_ms":200000}]
+GREEN J2 · overshot call · returned at 280703 of 330000 clock ms · settled 2 · outstanding 4 · deferred 1
+GREEN J3 · second opinion(s) handed deadline(s) [20000] at clock [60380] · returned at 140467 of 330000
+GREEN J4 · round 1 exit 9 after 2 rep(s) · round 2 reps {"c:0":1,"c:1":1,"c:2":1,"c:3":1} · twice none · in doubt [{"of":"m1","ref":"hidden_test:c:1"}]
+GREEN BOUND · differs: scripts/gaffer_brain.mjs
+GREEN LAST · 0 node process(es) naming <tmp>/mjd3-XXXX
+GREEN MJD3 the settle tail is bounded inside the round's budget and a kill mid-settle never dispatches twice · 6 clause(s)

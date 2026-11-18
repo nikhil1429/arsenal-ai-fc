@@ -1,0 +1,7 @@
+MUTANT J1 · the tail reserve is zero (the call is killed at all that remains) → RED MJD3 · J1 J2 · RED by its clause
+MUTANT J2 · the settle never re-reads what remains → RED MJD3 · J2 · RED by its clause
+MUTANT J3 · the second opinion is handed no deadline → RED MJD3 · J1 J3 · RED by its clause
+MUTANT J4 · a write-ahead row does not take a capture out of the queue → RED MJD3 · J4 · RED by its clause
+MUTANT BOUND · a caller moves too (scripts/sitting.mjs touched) → RED MJD3 · BOUND · RED by its clause
+CONTROL · GREEN MJD3 the settle tail is bounded inside the round's budget and a kill mid-settle never dispatches twice · 6 clause(s)
+run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN (LAST has no mutant: the witness's own cleanup)

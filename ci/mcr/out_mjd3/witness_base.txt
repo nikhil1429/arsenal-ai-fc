@@ -1,0 +1,8 @@
+mjd3 witness · node start S 32.7 ms (slowest of 3) · scale R 45.83 · bound 330000 clock ms = 7200 real ms · real slack 655 ms = 20.0 node starts · child cap 15055 real ms
+RED   J1 · no return within the child cap (killed at the cap)
+RED   J2 · no return within the child cap (killed at the cap)
+RED   J3 · a second opinion that never answers held the round past the child cap (killed at the cap)
+RED   J4 · round 1 exit 9 after 2 rep(s) · round 2 reps {"c:0":1,"c:1":2,"c:2":1,"c:3":1} · twice c:1 · in doubt null
+GREEN BOUND · differs: nothing
+GREEN LAST · 0 node process(es) naming <tmp>/mjd3-XXXX
+RED MJD3 · J1 J2 J3 J4
