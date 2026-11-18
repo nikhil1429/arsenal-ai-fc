@@ -1,0 +1,4 @@
+{"ts":"2026-11-18T11:08:00.858Z","act":"branch","cmd":"git checkout -b claude/mcr-mjd4-build origin/claude/mjd3-landing","last_line":"base 3a73782"}
+{"ts":"2026-11-18T11:08:00.883Z","act":"ruling","cmd":"forks rows 1031 (mlive), 1032 (B3)","last_line":"queue: mjd4 · mgrd · mland · mlv0 · mlv1 · mlv2 · mlv3 · mdone · F2"}
+{"ts":"2026-11-18T11:08:00.912Z","act":"build","cmd":"--idem in capture rep / rejirah grade / doubtminer retire; judge re-dispatches in-doubt captures once; one card per unresolved capture","last_line":"5 files"}
+{"ts":"2026-11-18T11:08:00.941Z","act":"measure","cmd":"selftests build","last_line":"gaffer_brain 194/0 · rejirah 107/0 · doubtminer ALL CHECKS PASSED · capture SELFTEST FAILED (CONCURRENT READER x2, base to compare)"}

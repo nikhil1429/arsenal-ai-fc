@@ -1427,6 +1427,13 @@ export function outstandingGrades(rows) {
 // time. At most once, and NAMED on every round's receipt (`in_doubt`), never silently re-graded.
 const DISPATCHING_KIND = "dispatching";
 /** inDoubtGrades — PURE: the captures whose dispatch began (a `dispatching` row) and never settled (no `settled` row). */
+/** inDoubtDispatches — PURE (mjd4): the NEWEST write-ahead row of every capture in doubt — what its re-dispatch is built from. */
+export function inDoubtDispatches(rows) {
+  const doubt = new Set(inDoubtGrades(rows).map((r) => r.id));
+  const last = new Map();
+  for (const r of rows || []) if (r && r.kind === DISPATCHING_KIND && doubt.has(r.of)) last.set(r.of, r);
+  return [...last.values()];
+}
 export function inDoubtGrades(rows) {
   const settled = new Set((rows || []).filter((r) => r && r.kind === "settled").map((r) => r.of));
   const begun = new Set((rows || []).filter((r) => r && r.kind === DISPATCHING_KIND && !settled.has(r.of)).map((r) => r.of));
@@ -1783,12 +1790,16 @@ export function keyDoubtCard(item, doubt) {
 // DISPATCHED through the owner's own CLI, because those organs derive real state
 // from the row they write (rejirah derives nextDue, fluency and the calibration gap;
 // doubtminer guards against phantom retires; capture holds the rep contract).
+// mjd4 (forks row 1030 (2)) — THE IDEMPOTENCY KEY THE THREE OWNERS READ: the capture id (`of`) the verdict settles, handed as
+// `--idem` to capture.mjs rep, rejirah.mjs grade and doubtminer.mjs retire. Each owner writes NOTHING for a key already on its
+// own log, so a capture a kill left in doubt is re-dispatched and lands EXACTLY once (inDoubtDispatches below).
+const idemArgv = (s) => (s && s.of ? ["--idem", String(s.of)] : []);
 export function ownerCommand(s) {
   const t = VERDICT_TYPES[s.type];
   if (!t) return null;
   if (t.owner === "rejirah") {
     const [concept, axis] = String(s.ref).split(":");
-    return { organ: "rejirah.mjs", argv: ["grade", concept, axis, s.verdict, "--gut", s.gut] };
+    return { organ: "rejirah.mjs", argv: ["grade", concept, axis, s.verdict, "--gut", s.gut, ...idemArgv(s)] };
   }
   if (t.owner === "doubtminer") {
     // ONLY a clean break retires the doubt. "standing" means it survived, and
@@ -1796,7 +1807,7 @@ export function ownerCommand(s) {
     // still holds it — the one thing the tape room exists to remember.
     if (s.verdict !== "broken") return { organ: null, note: "the doubt still stands — nothing is retired, which is the record staying true" };
     const [capsule, idx] = String(s.ref).split(":");
-    return { organ: "doubtminer.mjs", argv: ["retire", capsule, String(idx)] };
+    return { organ: "doubtminer.mjs", argv: ["retire", capsule, String(idx), ...idemArgv(s)] };
   }
   if (t.owner === "capture") {
     // A rep is the organism's unit of studied work, and capture.mjs is its only
@@ -1840,6 +1851,7 @@ export function ownerCommand(s) {
     // flag; capture.mjs is in no lend, so its one line (`ts: flag("ts") || new Date().toISOString()`) is a FORK of unit mjday.
     // Until it lands this flag rides unread and the rep keeps the dispatch clock — RED by name on the landing row, never hidden.
     if (s.captured_at) argv.push("--ts", String(s.captured_at));
+    argv.push(...idemArgv(s));
     return { organ: "capture.mjs", argv };
   }
   // doubt_quality has no owner organ today — the verdict lives in this organ's own
@@ -2051,8 +2063,9 @@ export async function gradeJudge(deps = {}) {
   const rows = deps.rows !== undefined ? deps.rows : readJournal(GRADE_QUEUE, 800);
   const queued = judgeOrder(outstandingGrades(rows));   // mjdg — OLDEST DAY FIRST (judgeOrder above)
   // mjd3 — a capture whose dispatch began and never settled (a kill mid-settle) is NAMED on every receipt and never re-dispatched
-  const inDoubt = inDoubtGrades(rows).map((r) => ({ of: r.id, ref: `${r.type}:${r.ref}` }));
-  if (!queued.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0, in_doubt: inDoubt };
+  let inDoubt = inDoubtGrades(rows).map((r) => ({ of: r.id, ref: `${r.type}:${r.ref}` }));
+  const pend = inDoubtDispatches(rows);   // mjd4 — re-dispatched once below, after the owner doors are built
+  if (!queued.length && !pend.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0, in_doubt: inDoubt };
 
   // §9.1 — THE EXTERNAL CHECK runs FIRST, so its result is ground the judge reads,
   // never a second opinion it hears afterwards. One search call per round at most;
@@ -2169,6 +2182,38 @@ export async function gradeJudge(deps = {}) {
     }
     return { ok: false, error: `no such owner organ: ${cmd.organ}` };
   });
+
+  // ── mjd4 (forks row 1030 (2)) · A CAPTURE IN DOUBT IS RE-DISPATCHED EXACTLY ONCE ──────────────────────────────────────────
+  // Every capture a kill left with a write-ahead row and no settled row is handed to its owner AGAIN, under the same `--idem`
+  // key: an owner that already wrote it writes nothing (and says so), one that never got it writes it now — once either way.
+  // Then its settled row is appended. Inside the round's ONE budget (a dispatch starts only when JUDGE_DISPATCH_MS remains).
+  // A capture that cannot be resolved this round (no budget, an owner refusal, an old write-ahead row with no verdict, the
+  // settled write failing) stays in doubt and is ONE card at his anchor, one key per capture — never silent.
+  const resolved = [];
+  for (const d of pend) {
+    const ref = `${d.type}:${d.ref}`;
+    let why = null;
+    if (deps.dry) why = "DRY RUN — the owner was not called";
+    else if (!d.verdict) why = "its write-ahead row carries no verdict (written before mjd4)";
+    else if (JUDGE_BUDGET_MS - Math.max(clock() - t0, extMs) < JUDGE_DISPATCH_MS) why = "the round's budget has no room for its dispatch";
+    else {
+      const dd = dispatch(ownerCommand(d));
+      if (!dd.ok) why = `its owner refused (${clip(dd.error, 120)})`;
+      else {
+        const row = { ...d, kind: "settled", ts: now.toISOString(), owner_noop: !!dd.noop, owner_note: dd.note || null, resolved_from: "in-doubt" };
+        const w = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, row);
+        if (!w || !w.ok) why = `its settled row did not land (${(w && w.error) || "the writer gave no answer"})`;
+        else resolved.push({ of: d.of, ref, owner_note: dd.note || null });
+      }
+    }
+    if (why && !deps.dry) {
+      const line = `Ek judged answer (${ref}) ka record adhoora reh gaya — round beech mein ruka tha. Agla judge round use ek hi baar uske owner tak bhejega; ${why}.`;
+      cardFile(line, `judge:in-doubt:${d.of}`, "a capture in doubt is resolved by the next round; until then it is named at his anchor (row 1030 (2))");
+    }
+  }
+  const settledNow = new Set(resolved.map((x) => x.of));
+  inDoubt = inDoubt.filter((x) => !settledNow.has(x.of));
+  if (!queued.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0, resolved_in_doubt: resolved, in_doubt: inDoubt };
 
   // ── ONE BATCH, SETTLED AS IT RETURNS — the pre-mjdg round body, run per batch (`items` = this batch's captures) ──
   const settleBatch = async (items, prompt, r) => {
@@ -2299,7 +2344,9 @@ export async function gradeJudge(deps = {}) {
       if (left() < JUDGE_DISPATCH_MS) { deferred.push({ ref: `${s.type}:${s.ref}`, of: s.of, step: "dispatch", left_ms: Math.round(left()) }); continue; }
       // mjd3 — THE WRITE-AHEAD ROW (see DISPATCHING_KIND): on disk BEFORE the owner is called, or the owner is not called
       if (!deps.dry) {
-        const w0 = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, { v: 2, kind: DISPATCHING_KIND, of: s.of, ts: now.toISOString(), type: s.type, ref: s.ref, ...stamp });
+        // mjd4 — the write-ahead row carries the WHOLE verdict (the settled row's fields), so a capture it leaves in doubt can be
+        // re-dispatched from it alone
+        const w0 = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, { ...s, kind: DISPATCHING_KIND, ts: now.toISOString() });
         if (!w0 || !w0.ok) { refused.push({ ref: `${s.type}:${s.ref}`, error: `the write-ahead row is not on disk (${(w0 && w0.error) || "the writer gave no answer"}) — the owner was NOT called` }); continue; }
       }
       const d = (deps.dry && !deps.dispatch)
@@ -2372,7 +2419,7 @@ export async function gradeJudge(deps = {}) {
   const calls = batches.length + ((ext && ext.calls) || 0);
   const outstanding = items.length - all.dispatched.length;
   const carried = { graded: all.dispatched.length, dispatched: all.dispatched, refused: all.refused, missed: all.missed, diamonds: all.diamonds, key_doubts: all.keyDoubts,
-    ...stamp, batches, sizing: sizing0, outstanding, calls, deferred: all.deferred, in_doubt: inDoubt };
+    ...stamp, batches, sizing: sizing0, outstanding, calls, deferred: all.deferred, in_doubt: inDoubt, resolved_in_doubt: resolved };
   const earlier = all.dispatched.length ? ` (${all.dispatched.length} item(s) of earlier batch(es) are settled and stay settled)` : "";
 
   if (stop && stop.kind === "auth") {
@@ -2436,7 +2483,7 @@ export async function gradeJudge(deps = {}) {
     register_line: registerLine(all.dispatched.map((s) => s.register).filter(Boolean)),
     outstanding, calls,
     // mjd3 — the items the round's clock could not fit (outstanding, never coerced) and the captures in doubt from a kill mid-settle
-    deferred: all.deferred, in_doubt: inDoubt,
+    deferred: all.deferred, in_doubt: inDoubt, resolved_in_doubt: resolved,
     // mjdg — the batches as they ran, the opening size's derivation, and why the round ended before the queue did (null = it did not)
     batches, sizing: sizing0, stopped: stop ? stop.kind : null, stopped_why: stop && stop.sizing ? stop.sizing.why : null, red: null };
 }
@@ -3433,8 +3480,8 @@ function selftest2(stub, S) {
         assert("PASS 1 · each verdict is dispatched through its OWN owner's CLI — rejirah for an axis, doubtminer for a broken doubt, capture for a rep",
           cmds.find((c) => c.organ === "rejirah.mjs") && cmds.find((c) => c.organ === "doubtminer.mjs") && cmds.find((c) => c.organ === "capture.mjs"));
         assert("PASS 1 · …and every dispatched argv is the owner's REAL contract, not an invented one",
-          JSON.stringify(cmds.find((c) => c.organ === "rejirah.mjs").argv) === JSON.stringify(["grade", "context", "a", "held", "--gut", "shaky"])
-          && JSON.stringify(cmds.find((c) => c.organ === "doubtminer.mjs").argv) === JSON.stringify(["retire", "tokenization", "0"])
+          JSON.stringify(cmds.find((c) => c.organ === "rejirah.mjs").argv) === JSON.stringify(["grade", "context", "a", "held", "--gut", "shaky", "--idem", items[0].id])   // mjd4: + the idempotency key
+          && JSON.stringify(cmds.find((c) => c.organ === "doubtminer.mjs").argv) === JSON.stringify(["retire", "tokenization", "0", "--idem", items[2].id])
           && cmds.find((c) => c.organ === "capture.mjs").argv.join(" ").includes("--correct true"));
         assert("PASS 1 · a doubt that STILL STANDS is never retired — deleting it would erase the evidence he still holds it, which is the one thing the tape room is for",
           ownerCommand({ type: "tape_doubt", ref: "tokenization:0", verdict: "standing", gut: "knew" }).organ === null);

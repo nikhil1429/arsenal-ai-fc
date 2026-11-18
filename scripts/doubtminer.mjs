@@ -1386,8 +1386,14 @@ async function main() {
     // retiring again must be legal and must append a NEW row rather than be
     // swallowed as a duplicate — otherwise a corrected verdict could never be
     // re-applied and the un-retire would be a one-way door of its own.
-    if (!activeRetiredKeys(retired).has(`${capsule}#${idx}`)) {
-      retired = retired.concat([{ capsule, doubt_index: idx, retired_on: dayKey(now) }]);   // Block 6 — day-key
+    // mjd4 (forks row 1030 (2)) — `--idem <capture id>`: a retire already recorded under the judge's key is never applied a
+    // second time (an un-retire HE made since stays his), so a re-dispatched verdict lands EXACTLY once.
+    const ii = process.argv.indexOf("--idem");
+    const idem = ii > 0 && process.argv[ii + 1] && String(process.argv[ii + 1]).trim() ? String(process.argv[ii + 1]).trim() : null;
+    if (idem && retired.some((r) => r && r.idem === idem)) {
+      console.log(`doubtminer: already retired under idem ${idem} — nothing new (the judge's re-dispatch of a verdict already applied)`);
+    } else if (!activeRetiredKeys(retired).has(`${capsule}#${idx}`)) {
+      retired = retired.concat([{ capsule, doubt_index: idx, retired_on: dayKey(now), ...(idem ? { idem } : {}) }]);   // Block 6 — day-key
     }
   }
 
