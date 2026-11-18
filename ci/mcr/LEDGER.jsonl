@@ -1,0 +1,4 @@
+{"ts":"2026-11-18T11:04:34.118Z","act":"branch","cmd":"git checkout -b claude/mcr-mlive-spec origin/main","last_line":"base 074ead9"}
+{"ts":"2026-11-18T11:04:34.144Z","act":"push-other","cmd":"claude/mjd3-landing (row 1030 (1))","last_line":"3a73782 · diff --stat e819c0d..HEAD: scripts/gaffer_brain.mjs 136 insertions(+), 24 deletions(-)"}
+{"ts":"2026-11-18T11:04:34.168Z","act":"write","cmd":"ci/mcr/MLIVE_SPEC.md","last_line":"why no keeper K1-K7; status line; restart verb + refusals; branch table M0-M5"}
+{"ts":"2026-11-18T11:04:34.194Z","act":"check","cmd":"canon-count scan ci/mcr/MLIVE_SPEC.md","last_line":"0 hits"}
