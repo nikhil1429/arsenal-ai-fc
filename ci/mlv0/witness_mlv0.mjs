@@ -137,7 +137,7 @@ const walk = (root, dir, out = new Map()) => {
   for (const e of ents) {
     const rel = `${dir}/${e.name}`;
     if (e.isDirectory()) walk(root, rel, out);
-    else if (/\.(mjs|js|json|ps1|xml|vbs|cmd|md)$/.test(e.name) && !/\.log$/.test(e.name)) out.set(rel, createHash("sha256").update(readFileSync(join(root, rel))).digest("hex"));
+    else if (/\.(mjs|js|json|ps1|xml|vbs|cmd|md)$/.test(e.name) && !/\.log$/.test(e.name)) out.set(rel, createHash("sha256").update(readFileSync(join(root, rel), "utf8").replace(/\r\n/g, "\n")).digest("hex")   /* CRLF-proof: a line ending is not a change */);
   }
   return out;
 };

@@ -78,3 +78,19 @@ The hermetic suite line is in `LEDGER.jsonl` (act `suite`).
    formula); its `/status` `booted_at` stays the module-load instant (unchanged). The two differ by the import time;
    the retire side is the stricter (earlier) one.
 3. The invariant clauses BOUND and LAST carry no mutant of their own.
+
+## The architect's class note: core.autocrlf (18 Nov 2026)
+
+Measured on this unit's files: **no witness here plants git** (no clone, no init; every plant is an fs copy), and every
+line it reads from a process or a log is split on `\r?\n`. Two CRLF hazards were found and closed:
+- the mutant runner matched a multi-line edit site in LF only; it now matches in the file's OWN line ending;
+- BOUND hashed raw bytes, so a CRLF checkout against an LF base read every file as changed; it now hashes text with
+  CRLF folded to LF (a line ending is not a change).
+
+Proven on copies converted to CRLF (scripts/ and setup/, the laptop's checkout shape), 18 Nov 2026:
+
+```
+witness --org <CRLF build> --base-org <CRLF base>    GREEN MLV1 sitting retires on a source change only when no sitting is open and no judge round runs · 6 clause(s)
+run_mutants --org <CRLF build> --base-org <CRLF base> run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN
+witness --org <CRLF base>  --base-org <CRLF base>    RED MLV1 · I1 IDLE, I2 MID, I3 JUDGE
+```
