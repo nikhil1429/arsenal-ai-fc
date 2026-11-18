@@ -31,12 +31,12 @@ gets a side effect evaluated with the call — one marker file per site into a t
 - Build vs base (`ci/mf2/out/witness_build.txt`): F1 · F2 · F3 · F4 · BOUND · LAST GREEN —
   `GREEN MF2 a LIVE assert is never executed in the hermetic profile, and the full profile runs every one as before · 6 clause(s)`
   (F1: 49 sites planted; hermetic markers build 0, base 49; full markers 49 on both.)
-- Base vs base (`ci/mf2/out/witness_base.txt`): see that file's last line; F1 is the clause RED on the base (the base
+- Base vs base (`ci/mf2/out/witness_base.txt`): `RED MF2 · F1` — 49 hermetic markers on the base (the base
   computes every LIVE assert under hermetic). **F2, F3, F4 are preservation clauses** (the build must equal the base), so
   base-vs-base reads them GREEN by construction; each is shown to bite by its own mutant below.
 
 ## Mutants — `node ci/mf2/run_mutants_mf2.mjs --org <build> --base-org <base>` (`ci/mf2/out/run_mutants.txt`)
-MUTANTS_LINE
+`run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN`
 
 F1 (skipLive never skips), F2 (FOUR-MOMENTS judged inverted), F3 (a hermetic member joins `LIVE_ASSERTS` with no row — the
 count rises), F4 (skipLive skips under the full profile), BOUND (a second file touched), LAST (the suite leaves a process

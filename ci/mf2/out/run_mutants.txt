@@ -1,0 +1,8 @@
+control · exit 0 · GREEN MF2 a LIVE assert is never executed in the hermetic profile, and the full profile runs every one as before · 6 clause(s)
+mutant F1 · RED by its clause · reds F1 · RED MF2 · F1
+mutant F2 · RED by its clause · reds F2 F4 · RED MF2 · F2 F4
+mutant F3 · RED by its clause · reds F1 F2 F3 · RED MF2 · F1 F2 F3
+mutant F4 · RED by its clause · reds F1 F4 · RED MF2 · F1 F4
+mutant BOUND · RED by its clause · reds BOUND · RED MF2 · BOUND
+mutant LAST · RED by its clause · reds LAST · RED MF2 · LAST
+run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN
