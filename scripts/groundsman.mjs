@@ -271,6 +271,50 @@ function meetOrigin(run, landed = []) {
   if (!ref.ok) return { ok: false, idle: "REBUILD-FAILED", why: "idle REBUILD-FAILED — HEAD moved under the rebuild (compare-and-swap refused)" };
   return { ok: true, how: "rebuilt", n: mine.length, to: parent };
 }
+// ---------------------------------------------------------------------------
+// ROW 1087 (3) (unit mgs) — THE LAND WAIT. scripts/land.mjs moves main only by a fast-forward to the exact sha the
+// neutral machine judged (its parent must BE origin main, else MAIN-MOVED), so a state push between the cut of a
+// refs/heads/land/<unit> branch on origin and its landing makes the judged sha unlandable and costs a full re-cut and
+// re-judge (19 Nov 2026, 03:45 IST). So, every pass, before staging: origin's land refs are read AT THIS PASS
+// (ls-remote: the remote's truth, not a tracking ref some earlier fetch left), and a land ref HOLDS the push while
+//   · its tip is not an ancestor of origin main (fetched this pass) — a landed or abandoned-and-merged ref never holds;
+//   · its tip is not carried by this very push (an ancestor of HEAD: the L4 landing land.mjs left on main is what the
+//     push LANDS, never what it spoils — a landed sha passes exactly as before this unit);
+//   · its age is within LAND_HOLD_MAX_H. AGE = now − the tip commit's COMMITTER time: the one clock plain git hands
+//     over the wire (ls-remote carries no time, a remote's reflog is not readable) and a cut is a fresh commit, so it
+//     stamps the cut. Past it the ref no longer holds and is named STALE, so an abandoned branch cannot silence the
+//     state push for ever.
+// A holding pass stages nothing, commits nothing, pushes nothing and returns ONE line naming every holding ref (and
+// every stale one); the next pass reads again. A remote that cannot be read idles NO-LAND-READ, named — never a push.
+// ---------------------------------------------------------------------------
+const LAND_HOLD_MAX_H = 24;   // ROW 1087 (3): the declared age. The push task is DAILY (setup/INSTALL_CYBORG_TASKS.ps1, ArsenalFC-Groundsman-Push), so an abandoned land ref costs at most one night's push.
+const LAND_PREFIX = "refs/heads/land/";
+function landHold(run, now = new Date()) {
+  const ls = run("git", ["ls-remote", "--heads", "origin"]);
+  const fail = (what, r) => ({ ok: false, idle: "NO-LAND-READ", why: `idle NO-LAND-READ — ${what} (${String(r.out || "").split(/\r?\n/)[0].slice(0, 100)}); nothing staged, nothing pushed, the next pass retries` });
+  if (!ls.ok) return fail("origin's land refs could not be read", ls);
+  const refs = linesOf(ls.out).map((l) => l.split(/\s+/)).filter(([s, r]) => /^[0-9a-f]{40}$/.test(s || "") && String(r || "").startsWith(LAND_PREFIX))
+    .map(([sha, r]) => ({ ref: r.slice("refs/heads/".length), sha }));
+  if (!refs.length) return { ok: true, holding: [], stale: [], line: "" };
+  const missing = [...new Set(refs.map((x) => x.sha))].filter((s) => !run("git", ["cat-file", "-e", `${s}^{commit}`]).ok);
+  if (missing.length) { const f = run("git", ["fetch", "-q", "--no-tags", "origin", ...missing]); if (!f.ok) return fail("a land tip could not be fetched", f); }
+  const holding = [], stale = [];
+  for (const x of refs) {
+    if (run("git", ["merge-base", "--is-ancestor", x.sha, "@{u}"]).ok) continue;   // landed: main already holds it
+    if (run("git", ["merge-base", "--is-ancestor", x.sha, "HEAD"]).ok) continue;   // carried by this push (the L4 landing)
+    const ct = run("git", ["show", "-s", "--format=%ct", x.sha]);
+    const secs = Number(String(ct.out || "").trim());
+    if (!ct.ok || !Number.isFinite(secs) || secs <= 0) return fail(`the cut time of ${x.ref} could not be read`, ct);
+    const ageH = (now.getTime() / 1000 - secs) / 3600;
+    (ageH > LAND_HOLD_MAX_H ? stale : holding).push({ ...x, ageH });
+  }
+  const name = (a) => a.map((x) => `${x.ref} ${x.sha.slice(0, 7)} (${x.ageH.toFixed(1)}h)`).join(", ");
+  const st = stale.length ? `STALE past ${LAND_HOLD_MAX_H}h, no longer holds: ${name(stale)}` : "";
+  const line = holding.length
+    ? `idle LAND-WAIT — held by ${name(holding)} (not yet an ancestor of origin main)${st ? " · " + st : ""} — nothing staged, nothing pushed; the next pass retries`
+    : st;
+  return { ok: true, holding: holding.map((x) => x.ref), stale: stale.map((x) => x.ref), line };
+}
 async function nightPass(hostId, deps = {}) {
   const run = (c, a) => (deps.sh || sh)(c, a, deps);
   const pull = run("git", ["pull", "--ff-only"]);
@@ -287,22 +331,26 @@ async function nightPass(hostId, deps = {}) {
   const h = heldCommits(run);                       // ROW 808 (2): the RANGE first — a held landing refuses before anything stages
   if (!h.ok) return { ok: true, ticked: true, pushed: false, refused: true, why: h.why };
   if (h.held.length) return refuseHeld(run, h, { ticked: true });
+  const lw = landHold(run, deps.now || new Date());   // ROW 1087 (3): a land ref being judged holds the push, before staging
+  if (!lw.ok) return { ok: true, ticked: true, pushed: false, idle: lw.idle, why: lw.why };
+  if (lw.holding.length) return { ok: true, ticked: true, pushed: false, idle: "LAND-WAIT", land: lw.holding, stale: lw.stale, why: lw.line };
+  const tag = (o) => (lw.line ? { ...o, stale: lw.stale, land_line: lw.line } : o);   // a STALE-only pass pushes and still names the stale refs
   const add = run("git", ["add", "-u", "--", ...PUBLISH_ALLOWLIST]);
-  if (!add.ok) return { ok: true, ticked: true, pushed: false, why: `staging refused: ${add.out}` };
+  if (!add.ok) return tag({ ok: true, ticked: true, pushed: false, why: `staging refused: ${add.out}` });
   const diff = run("git", ["diff", "--cached", "--quiet"]);
   if (!diff.ok) {                                    // exit 1 = staged changes exist
     // Lock 2: read the index back and refuse on ANY path off the allowlist —
     // the index can carry paths staged by something other than this pass.
     const staged = run("git", ["diff", "--cached", "--name-only"]);
-    if (!staged.ok) return { ok: true, ticked: true, pushed: false, refused: true, why: "refused: could not read the staged set back to verify it" };
+    if (!staged.ok) return tag({ ok: true, ticked: true, pushed: false, refused: true, why: "refused: could not read the staged set back to verify it" });
     const offending = String(staged.out || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).filter(p => !isPublishablePath(p));
-    if (offending.length) return { ok: true, ticked: true, pushed: false, refused: true, why: `refused: ${offending.length} staged path(s) off the publish allowlist (${offending.slice(0, 3).join(", ")}) — a human publishes those, never the night-shift` };
+    if (offending.length) return tag({ ok: true, ticked: true, pushed: false, refused: true, why: `refused: ${offending.length} staged path(s) off the publish allowlist (${offending.slice(0, 3).join(", ")}) — a human publishes those, never the night-shift` });
     run("git", ["commit", "-m", `kennel: night-shift outputs (${hostId})`]);
     const push = run("git", ["push"]);
-    if (!push.ok) return { ok: true, ticked: true, pushed: false, why: push.out };
-    return { ok: true, ticked: true, pushed: true };
+    if (!push.ok) return tag({ ok: true, ticked: true, pushed: false, why: push.out });
+    return tag({ ok: true, ticked: true, pushed: true });
   }
-  return { ok: true, ticked: true, pushed: false, why: "nothing public to push" };
+  return tag({ ok: true, ticked: true, pushed: false, why: "nothing public to push" });
 }
 
 // ---------------------------------------------------------------------------
@@ -370,25 +418,29 @@ async function pushOnlyPass(hostId, deps = {}) {
   if (h.held.length) return withVerdict(refuseHeld(run, h));
   const met = meetOrigin(run, h.landed);                      // ROW 1029 (3): a moved origin is met (ff, or rebuilt by plumbing) or idles with ONE card
   if (!met.ok) return withVerdict({ ok: true, pushed: false, idle: met.idle, card: met.card || null, why: met.why });
+  const lw = landHold(run, deps.now || new Date());          // ROW 1087 (3): after origin is met (HEAD = what the push carries), before staging
+  if (!lw.ok) return withVerdict({ ok: true, pushed: false, idle: lw.idle, why: lw.why });
+  if (lw.holding.length) return withVerdict({ ok: true, pushed: false, idle: "LAND-WAIT", met: met.how, land: lw.holding, stale: lw.stale, why: lw.line });
+  const pass = (o) => withVerdict(lw.line ? { ...o, stale: lw.stale, land_line: lw.line } : o);   // a STALE-only pass pushes and still names the stale refs
   const add = run("git", ["add", "-u", "--", ...PUBLISH_ALLOWLIST]);
-  if (!add.ok) return withVerdict({ ok: true, pushed: false, why: `staging refused: ${add.out}` });
+  if (!add.ok) return pass({ ok: true, pushed: false, why: `staging refused: ${add.out}` });
   const diff = run("git", ["diff", "--cached", "--quiet"]);
   if (diff.ok) {
     // ROW 1029 (3): nothing new to stage, but own commits still unpushed (rebuilt tonight, or a past night's refused push) → push them
     const ahead = linesOf(run("git", ["rev-list", "@{u}..HEAD"]).out);
-    if (!ahead.length) return withVerdict({ ok: true, pushed: false, met: met.how, why: "nothing public to push" });
+    if (!ahead.length) return pass({ ok: true, pushed: false, met: met.how, why: "nothing public to push" });
     const pushOwn = run("git", ["push"]);
-    if (!pushOwn.ok) return withVerdict({ ok: true, pushed: false, idle: "PUSH-RACE", met: met.how, why: `idle PUSH-RACE — push refused (${pushOwn.out.slice(0, 120)}) — tomorrow's pass retries; nothing forced` });
-    return withVerdict({ ok: true, pushed: true, met: met.how });
+    if (!pushOwn.ok) return pass({ ok: true, pushed: false, idle: "PUSH-RACE", met: met.how, why: `idle PUSH-RACE — push refused (${pushOwn.out.slice(0, 120)}) — tomorrow's pass retries; nothing forced` });
+    return pass({ ok: true, pushed: true, met: met.how });
   }
   const staged = run("git", ["diff", "--cached", "--name-only"]);
-  if (!staged.ok) return withVerdict({ ok: true, pushed: false, refused: true, why: "refused: could not read the staged set back to verify it" });
+  if (!staged.ok) return pass({ ok: true, pushed: false, refused: true, why: "refused: could not read the staged set back to verify it" });
   const offending = String(staged.out || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).filter(p => !isPublishablePath(p));
-  if (offending.length) return withVerdict({ ok: true, pushed: false, refused: true, why: `refused: ${offending.length} staged path(s) off the publish allowlist (${offending.slice(0, 3).join(", ")}) — a human publishes those, never this lane` });
+  if (offending.length) return pass({ ok: true, pushed: false, refused: true, why: `refused: ${offending.length} staged path(s) off the publish allowlist (${offending.slice(0, 3).join(", ")}) — a human publishes those, never this lane` });
   run("git", ["commit", "-m", `groundsman: unattended state push (${hostId}) — his 9 Aug 2026 ruling, receipt in pushOnlyPass`]);
   const push = run("git", ["push"]);
-  if (!push.ok) return withVerdict({ ok: true, pushed: false, idle: "PUSH-RACE", met: met.how, why: `idle PUSH-RACE — push refused (${push.out.slice(0, 120)}) — tomorrow's pass retries; nothing forced` });
-  return withVerdict({ ok: true, pushed: true, met: met.how });
+  if (!push.ok) return pass({ ok: true, pushed: false, idle: "PUSH-RACE", met: met.how, why: `idle PUSH-RACE — push refused (${push.out.slice(0, 120)}) — tomorrow's pass retries; nothing forced` });
+  return pass({ ok: true, pushed: true, met: met.how });
 }
 
 async function selftest() {
@@ -630,7 +682,7 @@ async function main() {
   }
   if (mode === "night") {
     console.log(`groundsman: night loop on ${hostId} — 30min cadence. SMOKE-TEST claude -p under tmux 48h before trusting this with the window (§9).`);
-    const pass = async () => { const r = await nightPass(hostId); console.log(`groundsman: ${r.ok ? `ticked${r.pushed ? " + pushed" : ""}` : `idle (${r.step}: ${r.why})`}`); };
+    const pass = async () => { const r = await nightPass(hostId); console.log(`groundsman: ${r.ok ? `ticked${r.pushed ? " + pushed" : r.idle ? ` · ${r.why}` : ""}${r.land_line ? ` · ${r.land_line}` : ""}` : `idle (${r.step}: ${r.why})`}`); };   // row 1087 (3): an idle pass names why
     await pass();
     setInterval(pass, 30 * 60000);
     return;
@@ -643,7 +695,7 @@ async function main() {
     // is the only place the away-day verdict becomes readable on the house side at
     // 03:45 — without it the read below is a call whose answer nobody hears.
     if (r.readback) console.log(`groundsman: away-day read-back — ${r.readback.line}`);
-    console.log(`groundsman: push-only — ${r.pushed ? "PUSHED (the sentinel's mini-brief reads tonight's truth)" : r.why}`);
+    console.log(`groundsman: push-only — ${r.pushed ? "PUSHED (the sentinel's mini-brief reads tonight's truth)" : r.why}${r.land_line ? ` · ${r.land_line}` : ""}`);
     const d = laneDay(); console.log(`groundsman: day-key ${d.day} (${d.source})`);
     return;
   }
@@ -652,4 +704,4 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { leaseState, heartbeat, tryTakeLease, mayTick, nightPass, pushOnlyPass, TTL_MIN, isPublishablePath, PUBLISH_ALLOWLIST };
+export { leaseState, heartbeat, tryTakeLease, mayTick, nightPass, pushOnlyPass, TTL_MIN, isPublishablePath, PUBLISH_ALLOWLIST, landHold, LAND_HOLD_MAX_H };
