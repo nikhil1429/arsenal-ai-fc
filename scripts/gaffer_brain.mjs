@@ -1895,6 +1895,72 @@ function captureDay(it) {
   return { day: isDay ? carried : null, at: null };
 }
 
+// ── mjdg · THE ROUND IN BOUNDED, SELF-SIZED BATCHES + THE AUTH CANARY (rows 963 (1)/(3) · 999 (1)/(2) · LENT to lane M, row 938 (3)) ──
+// MEASURED (row 963, row 999): since 5 Sep the judge wrote 5 brain-ledger rows, 0 ok — three KILLED at this budget
+// (spawnSync claude ETIMEDOUT) and two refused in 3-6 s ("OAuth session expired and could not be refreshed"); ONE round put
+// ALL 59 outstanding captures in ONE call (76,375 prompt bytes). A round that only ever dies whole settles nothing, ever.
+// THE SHAPE, as row 999 rules it:
+//   · BOUNDED BATCHES — the round is cut into batches, OLDEST DAY FIRST (the capture's own instant, captureDay below: mjday's
+//     rule, unchanged). Each batch is ONE judge call with its own ledger row, and SETTLES AS IT RETURNS (second judge, cards,
+//     owner, settled row) before the next batch starts, so a killed batch loses only itself; what is not reached stays in the
+//     queue for the next round (outstandingGrades reads the absence of a settled row) — the backlog drains over closes.
+//   · ONE BUDGET IN TOTAL — the round's judge calls share JUDGE_BUDGET_MS; the remaining budget is re-read before every batch,
+//     a batch that cannot fit is never started, and each call is killed at what remains, never at a fresh 300 s. The day
+//     close's sum (postmatch.mjs autocloseBudget) still counts ONE JUDGE_BUDGET_MS and never moves.
+//   · THE SIZE IS SELF-MEASURED, NEVER TYPED — judgeBatchSize: from the per-capture time (duration_ms / items) of the judge
+//     rows that returned ok on the brain ledger (job JUDGE_JOB, ok true), plus every batch of THIS round that returned ok.
+//     The estimate is the SLOWEST rate seen, the margin is the spread the rows themselves show (slowest − fastest), so a
+//     history that disagrees with itself reserves more. With NO ok row the batch is ONE capture — which is also row 963 (1)'s
+//     stop test: ONE capture that dies at its budget stops the round RED with its trace, to the architect, never a retry.
+//   · THE AUTH CANARY (row 963 (3)) — a batch the lane refuses for its login stops the round at once (no further batch is
+//     spent), RED with its own reason, and deals ONE card through the captain's-call door's CLI (`file --line --key`): the
+//     key is the rolling `judge:auth:<IST day>`, so a second refusal the same day mints nothing (captains_call.mjs fileGuard,
+//     exact key). Never a silent ok:false. The login itself is his hand.
+// NO RETRY ANYWHERE: a failed batch ends the round; the next round is the next door (judge-due / judge-round), never a loop.
+// The lane's OWN failure texts, by file:line (never a guessed string):
+//   · KILL — claudegen.mjs:263 parseErr prefixes `KILLED (<signal>) after <n>ms`; claudegen.mjs:691 (its own fixture) and
+//     row 963's three live rows carry `spawnSync claude ETIMEDOUT` with NO kill field (killed:false); claudegen.mjs:547 the
+//     session lane says `turn timed out after <n> ms`. claudegen.mjs:277 stamps `killed` when it knows.
+//   · AUTH — claudegen.mjs:235 hands back the CLI's own `result` text verbatim as `error`, so the words are the CLI's: brain.mjs:961
+//     AUTH_FAIL_RE (not exported) holds the observed "Not logged in · Please run /login" (brain.mjs:937, 732 live rows) and
+//     "Failed to authenticate" (daemon_watchdog.mjs:786), restated here word for word; plus row 963's live judge refusal
+//     "OAuth session expired and could not be refreshed", which brain.mjs:961 does NOT match (a FORK on brain.mjs, PROOF.md).
+const JUDGE_KILL_RE = /KILLED \((?:SIG[A-Z]+|no-signal)\) after \d+ms|ETIMEDOUT|turn timed out after \d+ ms/;
+export const JUDGE_AUTH_RE = /not logged in|please run \/login|invalid api key|authenticat|unauthorized|oauth session expired|could not be refreshed/i;
+/** judgeRates — PURE: the per-capture ms of every judge ledger row that returned ok (job JUDGE_JOB, ok true, duration and items measured). */
+export function judgeRates(ledgerRows) {
+  return (ledgerRows || []).filter((r) => r && r.job === JUDGE_JOB && r.ok === true
+    && Number.isFinite(r.duration_ms) && r.duration_ms > 0 && Number.isInteger(r.items) && r.items > 0)
+    .map((r) => r.duration_ms / r.items);
+}
+/** judgeBatchSize — PURE: how many captures the next batch may hold inside `remainingMs`, derived from `rates` (judgeRates). */
+export function judgeBatchSize({ rates = [], remainingMs, left }) {
+  if (!(left > 0)) return { size: 0, from_rows: rates.length, rate_ms: null, margin_ms: null, per_capture_ms: null, remaining_ms: remainingMs, why: "the queue is empty" };
+  if (!rates.length) {
+    const size = remainingMs > 0 ? 1 : 0;
+    return { size, from_rows: 0, rate_ms: null, margin_ms: null, per_capture_ms: null, remaining_ms: remainingMs,
+      why: size ? "no judge row has returned ok — the batch is ONE capture (row 999 (2))" : "no budget remains" };
+  }
+  const slow = Math.max(...rates), fast = Math.min(...rates);
+  const margin = slow - fast;
+  const per = slow + margin;
+  const size = Math.max(0, Math.min(left, Math.floor(remainingMs / per)));
+  return { size, from_rows: rates.length, rate_ms: Math.round(slow), margin_ms: Math.round(margin), per_capture_ms: Math.round(per), remaining_ms: remainingMs,
+    why: `${rates.length} ok judge row(s): slowest ${Math.round(slow)} ms/capture + margin ${Math.round(margin)} ms (the rows' own spread) against ${Math.round(remainingMs)} ms left` };
+}
+/** judgeOrder — PURE: the round's captures OLDEST DAY FIRST, by the capture's own instant (captureDay); a capture with only a day
+ *  sorts at that IST day's start, one with neither sorts last; ties keep the queue's own order. */
+export function judgeOrder(queued) {
+  const at = (it) => {
+    const c = captureDay(it);
+    if (c.at) return Date.parse(c.at);
+    if (c.day) return Date.parse(`${c.day}T00:00:00.000Z`) - 5.5 * 3600000;
+    return Infinity;
+  };
+  return (queued || []).map((it, i) => ({ it, i, k: at(it) }))
+    .sort((a, b) => (a.k === b.k ? a.i - b.i : a.k < b.k ? -1 : 1)).map((x) => x.it);
+}
+
 export async function gradeJudge(deps = {}) {
   const now = deps.now || new Date();
   // WHO FIRED IT (see JUDGE_CODE_TRIGGERS): a declared trigger is CODE, none is a TYPED round
@@ -1904,7 +1970,7 @@ export async function gradeJudge(deps = {}) {
     ? { judged_by: "code", judged_by_code_at: now.toISOString(), fired_by: String(deps.firedBy) }
     : { judged_by: "hand", judged_by_code_at: null, fired_by: "cli" };
   const rows = deps.rows !== undefined ? deps.rows : readJournal(GRADE_QUEUE, 800);
-  const queued = outstandingGrades(rows);
+  const queued = judgeOrder(outstandingGrades(rows));   // mjdg — OLDEST DAY FIRST (judgeOrder above)
   if (!queued.length) return { ok: true, skipped: "nothing captured since the last judge — the round is already settled", graded: 0 };
 
   // §9.1 — THE EXTERNAL CHECK runs FIRST, so its result is ground the judge reads,
@@ -1924,7 +1990,6 @@ export async function gradeJudge(deps = {}) {
   const head = deps.cartridge !== undefined ? deps.cartridge : judgeCartridge(deps);
   const rides = deps.headRides !== undefined ? deps.headRides
     : await (async () => { try { const { systemPromptRides } = await import("./claudegen.mjs"); return systemPromptRides(head); } catch { return false; } })();
-  const prompt = buildJudgePrompt(items, { ...deps, inlineHead: !rides });
   // claudeGen is the house door: it REFUSES when ANTHROPIC_API_KEY is set (his
   // standing law), and it is the same lane every other Opus job rides. effort max is
   // his 14 Aug ruling, and unlike the Watcher's per-turn path nothing is waiting on
@@ -1936,9 +2001,12 @@ export async function gradeJudge(deps = {}) {
   // `brain spend`. The row shape is nightshift's nsLedgerRow, field for field, with
   // ledgerForensics spread the same way, because brain_ledger.jsonl is a DOCUMENTED
   // shared append lane whose SCHEMA belongs to brain.mjs and to no appender.
-  const gen = deps.generate || (async (p) => {
+  // mjdg — ONE ROW PER BATCH (its own `items`, the batch's), and the call is killed at what remains of the round's ONE
+  // budget (`call.budget_ms`, never above JUDGE_BUDGET_MS). No field is added to the row: brain.mjs owns its schema.
+  const gen = deps.generate || (async (p, call = {}) => {
     const { claudeGen, ledgerForensics } = await import("./claudegen.mjs");
-    const r = await claudeGen(p, "opus", JUDGE_BUDGET_MS, ["--effort", "max"], rides ? head : null);
+    const budgetMs = Math.max(1, Math.min(JUDGE_BUDGET_MS, Number.isFinite(call.budget_ms) ? Math.floor(call.budget_ms) : JUDGE_BUDGET_MS));
+    const r = await claudeGen(p, "opus", budgetMs, ["--effort", "max"], rides ? head : null);
     try {
       appendFileSync(BRAIN_LEDGER, JSON.stringify({
         ts: new Date().toISOString(), job: JUDGE_JOB, engine: "claude", model: "opus",
@@ -1951,118 +2019,20 @@ export async function gradeJudge(deps = {}) {
         // WHETHER THE HEAD ACTUALLY RODE IS PART OF THE RECORD. Without it, a row
         // with no cache_read is unreadable after the fact: it could be a cold first
         // call, or it could be a box where the split silently never applied.
-        head_cached: !!rides, head_chars: head.length, items: items.length,
+        head_cached: !!rides, head_chars: head.length, items: Number.isInteger(call.items) ? call.items : items.length,
         ...ledgerForensics(r),
       }) + "\n");
     } catch { /* an unmetered call is still a made call — never fail the round on the meter */ }
     return r;
   });
-  const r = await gen(prompt);
-  if (!r || !r.ok) return { ok: false, reason: "lane-down", say: `gaffer_brain: the judge lane did not answer (${(r && r.error) || "no reply"}) — the round STAYS in the queue and nothing was invented. Run judge-round again.`, outstanding: items.length };
 
-  let parsed = null;
-  try { const t = String(r.text); const a = t.indexOf("{"), b = t.lastIndexOf("}"); parsed = JSON.parse(a >= 0 ? t.slice(a, b + 1) : t); } catch { }
-  const grades = (parsed && Array.isArray(parsed.grades)) ? parsed.grades : null;
-  if (!grades) return { ok: false, reason: "unparseable", say: "gaffer_brain: the judge answered in a shape this organ will not act on — the round STAYS in the queue.", outstanding: items.length };
-
-  // MATCHED BY ID, NEVER BY POSITION. A model returning eight grades for nine items
-  // would otherwise shift every verdict by one and mark the wrong things — plausible,
-  // silent, and completely wrong. An item with no grade, or with a verdict outside
-  // its type's legal set, stays OUTSTANDING and is judged again; it is never coerced.
-  const settled = [], missed = [];
-  // §9.4 — THE CORPUS the judge was given is the only legal source of "expected":
-  // head + body (the head rides again inside the body when inlined; a substring
-  // test does not mind the repeat).
-  const corpus = head + "\n" + prompt;
-  for (const it of items) {
-    const g = grades.find((x) => x && String(x.id) === it.id);
-    const verdict = g && isVerdict(it.type, g.verdict) ? String(g.verdict).trim().toLowerCase() : null;
-    if (!verdict) { missed.push(`${it.type}:${it.ref}`); continue; }
-    const cap = captureDay(it);   // mjday — the day of ITS capture, never the judge's clock (see captureDay above)
-    settled.push({
-      v: 2, kind: "settled", of: it.id, ts: now.toISOString(), day: cap.day,
-      // mjday (row 938 (2)) — the capture's instant rides the row ONLY when its day is not the judge's clock day (a round banked the
-      // next morning, or one that crossed midnight), so ownerCommand can hand it to the rep. A same-day row is byte for byte what it
-      // always was: the evening path never moves.
-      ...(cap.at && cap.day !== istDay(now) ? { captured_at: cap.at } : {}),
-      type: it.type, ref: it.ref, concept: it.concept, label: it.label, gut: it.gut, verdict,
-      // carried from the CAPTURE row, unchanged, so the owner receives everything the
-      // old direct-to-capture door used to hand it (see the note on gradeCapture's row)
-      axis: it.axis || null, latency_ms: Number.isInteger(it.latency_ms) ? it.latency_ms : null, note: it.note || null,
-      // ⚠ A3 FIX (4 Sep 2026, found by the rung's own verifier). `surface` was stamped on the
-      // CAPTURE row and ownerCommand pushed `--surface` — but ownerCommand is only ever
-      // called with a SETTLED row, and this constructor rebuilds from a FIXED FIELD LIST, so
-      // an undeclared field is silently dropped. The push was dead code: every study rep
-      // dispatched to capture.mjs would have carried capture's own default ("gem"), his
-      // stated verification (`tail -3 reps_log.jsonl` shows surface "code") would have shown
-      // nothing, CODE_STRICT would have been unreachable in production, and every Code rep
-      // would have entered the GEM-ONLY quality ledger as if it came from a Gem sitting.
-      // Same class as `corrects` in capture.mjs's own validator, one organ over.
-      surface: it.surface || null, probe: it.probe || null, register_of: it.register || null,
-      asked: it.asked ? clip(it.asked, 300) : null,
-      standard: it.standard || (VERDICT_TYPES[it.type] || {}).standard || null,
-      missing: Array.isArray(g.missing) ? g.missing.slice(0, 8) : [],
-      why: clip(g.why, 300), engine: "opus", pass: 1,
-      // L2 — WHO FIRED THE ROUND, on the row that records the verdict (see JUDGE_CODE_TRIGGERS)
-      ...stamp,
-      // §9.1 — WHAT GROUND THE VERDICT STOOD ON is part of the record: the checked
-      // claims with their verdicts and sources, or null with the reason (not run,
-      // lane down, nothing cited). Six months from now this is how a reader tells
-      // "the judge knew" from "the judge searched".
-      external_check: it.external_check || null,
-      external_check_note: it.external_check ? null
-        : !VERIFY_TYPES.includes(it.type) ? "not a checked type"
-          : (ext && ext.why) ? ext.why
-            : (ext && ext.droppedById && ext.droppedById[it.id]) ? `${ext.droppedById[it.id]} sourceless verdict(s) dropped by the validator — neither confirmed nor refuted`
-              : (ext && ext.ran ? "nothing checkable cited" : "not run"),
-      // §9.4 — THE REGISTER, on the interview-facing types only. The judge proposes
-      // used/expected; register.mjs holds them against his transcript and the corpus
-      // (invented terms dropped and NAMED in `dropped`), recomputes `missing`, and the
-      // hedge count is the capture row's own (code, at bank time) — never the model's.
-      register: REGISTER_TYPES.includes(it.type)
-        ? { ...validateRegister(g.register, { spoken: it.spoken, corpus }), hedges: Number.isInteger(it.hedges) ? it.hedges : countHedges(it.spoken) }
-        : null,
-    });
-  }
-
-  // ── BLOCK 5 · THE SECOND JUDGE, AND THE 💎 ──────────────────────────────
-  // Runs BEFORE dispatch, because a disagreement must never reach an owner. A
-  // verdict two families disagree about is not a fact about him; it is the single
-  // highest-value signal the design names, and it is HIS to resolve.
-  // FAIL-OPEN ON THE LANE, NEVER ON THE VERDICT: if the free pool is dry the first
-  // judgement stands, recorded honestly as one judge. A dead second reader must not
-  // silently discard a real verdict — that would be the truth layer eating truth.
   const second = deps.secondOpinion || ((it) => secondOpinion(it, deps));
-  const cardFile = deps.fileCard || ((line, key) => {
-    try { execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), "file", "--line", line, "--key", key], { encoding: "utf8", timeout: 30000, windowsHide: true }); return { ok: true }; }
-    catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
+  const cardFile = deps.fileCard || ((line, key, why = null) => {
+    try {
+      const out = execFileSync(process.execPath, [join(HERE, "captains_call.mjs"), "file", "--line", line, "--key", key, ...(why ? ["--why-code-cannot-decide", why] : [])], { encoding: "utf8", timeout: 30000, windowsHide: true });
+      return { ok: true, out: String(out || "") };
+    } catch (e) { return { ok: false, error: String((e && e.message) || e).slice(0, 200) }; }
   });
-  const diamonds = [], keyDoubts = [];
-  const confirmed = [];
-  for (const s of settled) {
-    // key_doubt rides ANY type and never changes the verdict — see keyDoubtCard.
-    const kd = (grades.find((x) => x && String(x.id) === s.of) || {}).key_doubt;
-    if (kd && String(kd).trim() && !deps.dry) {
-      const c = cardFile(keyDoubtCard(s, String(kd).trim()), `key_doubt:${s.type}:${s.ref}`);
-      keyDoubts.push({ ref: `${s.type}:${s.ref}`, filed: !!c.ok });
-    } else if (kd && String(kd).trim()) keyDoubts.push({ ref: `${s.type}:${s.ref}`, filed: false, dry: true });
-
-    if (!SECOND_JUDGE_TYPES.includes(s.type)) { confirmed.push(s); continue; }
-    const item = items.find((i) => i.id === s.of) || s;
-    const two = await second(item);
-    if (!two || !two.ok || !two.verdict) {
-      // named on the row, never hidden: "one judge" is a fact about this verdict
-      confirmed.push({ ...s, judges: 1, agreed: null, judge2: null, judge2_note: (two && two.reason) || "no second reading" });
-      continue;
-    }
-    if (two.verdict === s.verdict) { confirmed.push({ ...s, judges: 2, agreed: true, judge2: two.engine, judge2_why: two.why }); continue; }
-    // 💎 — NOT recorded as fact. It becomes his card.
-    const line = disagreementCard(item, { verdict: s.verdict, why: s.why }, { verdict: two.verdict, why: two.why });
-    const c = deps.dry ? { ok: true, dry: true } : cardFile(line, `diamond:${s.type}:${s.ref}`);
-    diamonds.push({ ref: `${s.type}:${s.ref}`, first: s.verdict, second: two.verdict, filed: !!c.ok, dry: !!deps.dry, line });
-  }
-  settled.length = 0; settled.push(...confirmed);
-
   // THREE NAMED SPAWNS, NOT ONE DYNAMIC ONE. `execFileSync(…, [join(HERE, cmd.organ)])`
   // is one line and it is an Unknown to the static analyser — the organ→organ edge
   // simply vanishes from the graph, and the per-organ sink ratchet charges for it.
@@ -2087,57 +2057,238 @@ export async function gradeJudge(deps = {}) {
     }
     return { ok: false, error: `no such owner organ: ${cmd.organ}` };
   });
-  // ⚠ --dry MEANS TOUCH NOTHING, AND IT DID NOT. Until this line `dry` only skipped
-  // the settlement append while STILL dispatching every verdict to rejirah,
-  // doubtminer and capture — so a rehearsal wrote into his real study record. Found
-  // the way these things always are: the acceptance run for this very build put three
-  // fabricated rows into his own rejirah_log, reps_log and tape_room. A flag whose
-  // name promises safety and delivers half of it is worse than no flag at all.
-  // An INJECTED dispatch still runs under dry — that is the selftest's own stub, and
-  // it is the thing being tested.
-  const dispatched = [], refused = [];
-  let settleFailed = null;
-  for (const s of settled) {
-    const d = (deps.dry && !deps.dispatch)
-      ? { ok: true, noop: true, note: "DRY RUN — the owner was NOT called and nothing was recorded" }
-      : dispatch(ownerCommand(s));
-    if (!d.ok) { refused.push({ ref: `${s.type}:${s.ref}`, error: d.error }); continue; }
-    const row = { ...s, owner_noop: !!d.noop, owner_note: d.note || null };
-    // ONLY WHAT THE OWNER ACCEPTED IS MARKED SETTLED. A verdict an owner refused is not
-    // a graded item, and writing a settlement row for it would lose his spoken answer.
-    // L2 (fate 14) — AND THE SETTLED ROW IS WRITTEN PER ITEM, CHECKED, THE MOMENT ITS OWNER ACCEPTED.
-    // The batch append after this loop sat in a bare catch: one swallowed failure left every
-    // just-graded capture looking ungraded (outstandingGrades reads the ABSENCE of a settled row),
-    // so the next round re-graded the same answers, spent a second Opus call and dispatched the
-    // same reps again (gaffer-dugout-sitting.txt:5, "A LOST SETTLEMENT ROW SILENTLY DOUBLE-COUNTS
-    // HIM"). Now a lost settled row STOPS the round at that item and says so: at most ONE verdict
-    // can sit on its owner's side without its settled row, and it is named, never hidden.
-    if (!deps.dry) {
-      const w = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, row);
-      if (!w || !w.ok) { settleFailed = { ref: `${s.type}:${s.ref}`, of: s.of, error: (w && w.error) || "the writer gave no answer" }; break; }
+
+  // ── ONE BATCH, SETTLED AS IT RETURNS — the pre-mjdg round body, run per batch (`items` = this batch's captures) ──
+  const settleBatch = async (items, prompt, r) => {
+    let parsed = null;
+    try { const t = String(r.text); const a = t.indexOf("{"), b = t.lastIndexOf("}"); parsed = JSON.parse(a >= 0 ? t.slice(a, b + 1) : t); } catch { }
+    const grades = (parsed && Array.isArray(parsed.grades)) ? parsed.grades : null;
+    if (!grades) return { unparseable: true };
+
+    // MATCHED BY ID, NEVER BY POSITION. A model returning eight grades for nine items
+    // would otherwise shift every verdict by one and mark the wrong things — plausible,
+    // silent, and completely wrong. An item with no grade, or with a verdict outside
+    // its type's legal set, stays OUTSTANDING and is judged again; it is never coerced.
+    const settled = [], missed = [];
+    // §9.4 — THE CORPUS the judge was given is the only legal source of "expected":
+    // head + body (the head rides again inside the body when inlined; a substring
+    // test does not mind the repeat).
+    const corpus = head + "\n" + prompt;
+    for (const it of items) {
+      const g = grades.find((x) => x && String(x.id) === it.id);
+      const verdict = g && isVerdict(it.type, g.verdict) ? String(g.verdict).trim().toLowerCase() : null;
+      if (!verdict) { missed.push(`${it.type}:${it.ref}`); continue; }
+      const cap = captureDay(it);   // mjday — the day of ITS capture, never the judge's clock (see captureDay above)
+      settled.push({
+        v: 2, kind: "settled", of: it.id, ts: now.toISOString(), day: cap.day,
+        // mjday (row 938 (2)) — the capture's instant rides the row ONLY when its day is not the judge's clock day (a round banked the
+        // next morning, or one that crossed midnight), so ownerCommand can hand it to the rep. A same-day row is byte for byte what it
+        // always was: the evening path never moves.
+        ...(cap.at && cap.day !== istDay(now) ? { captured_at: cap.at } : {}),
+        type: it.type, ref: it.ref, concept: it.concept, label: it.label, gut: it.gut, verdict,
+        // carried from the CAPTURE row, unchanged, so the owner receives everything the
+        // old direct-to-capture door used to hand it (see the note on gradeCapture's row)
+        axis: it.axis || null, latency_ms: Number.isInteger(it.latency_ms) ? it.latency_ms : null, note: it.note || null,
+        // ⚠ A3 FIX (4 Sep 2026, found by the rung's own verifier). `surface` was stamped on the
+        // CAPTURE row and ownerCommand pushed `--surface` — but ownerCommand is only ever
+        // called with a SETTLED row, and this constructor rebuilds from a FIXED FIELD LIST, so
+        // an undeclared field is silently dropped. The push was dead code: every study rep
+        // dispatched to capture.mjs would have carried capture's own default ("gem"), his
+        // stated verification (`tail -3 reps_log.jsonl` shows surface "code") would have shown
+        // nothing, CODE_STRICT would have been unreachable in production, and every Code rep
+        // would have entered the GEM-ONLY quality ledger as if it came from a Gem sitting.
+        // Same class as `corrects` in capture.mjs's own validator, one organ over.
+        surface: it.surface || null, probe: it.probe || null, register_of: it.register || null,
+        asked: it.asked ? clip(it.asked, 300) : null,
+        standard: it.standard || (VERDICT_TYPES[it.type] || {}).standard || null,
+        missing: Array.isArray(g.missing) ? g.missing.slice(0, 8) : [],
+        why: clip(g.why, 300), engine: "opus", pass: 1,
+        // L2 — WHO FIRED THE ROUND, on the row that records the verdict (see JUDGE_CODE_TRIGGERS)
+        ...stamp,
+        // §9.1 — WHAT GROUND THE VERDICT STOOD ON is part of the record: the checked
+        // claims with their verdicts and sources, or null with the reason (not run,
+        // lane down, nothing cited). Six months from now this is how a reader tells
+        // "the judge knew" from "the judge searched".
+        external_check: it.external_check || null,
+        external_check_note: it.external_check ? null
+          : !VERIFY_TYPES.includes(it.type) ? "not a checked type"
+            : (ext && ext.why) ? ext.why
+              : (ext && ext.droppedById && ext.droppedById[it.id]) ? `${ext.droppedById[it.id]} sourceless verdict(s) dropped by the validator — neither confirmed nor refuted`
+                : (ext && ext.ran ? "nothing checkable cited" : "not run"),
+        // §9.4 — THE REGISTER, on the interview-facing types only. The judge proposes
+        // used/expected; register.mjs holds them against his transcript and the corpus
+        // (invented terms dropped and NAMED in `dropped`), recomputes `missing`, and the
+        // hedge count is the capture row's own (code, at bank time) — never the model's.
+        register: REGISTER_TYPES.includes(it.type)
+          ? { ...validateRegister(g.register, { spoken: it.spoken, corpus }), hedges: Number.isInteger(it.hedges) ? it.hedges : countHedges(it.spoken) }
+          : null,
+      });
     }
-    dispatched.push(row);
+
+    // ── BLOCK 5 · THE SECOND JUDGE, AND THE 💎 ──────────────────────────────
+    // Runs BEFORE dispatch, because a disagreement must never reach an owner. A
+    // verdict two families disagree about is not a fact about him; it is the single
+    // highest-value signal the design names, and it is HIS to resolve.
+    // FAIL-OPEN ON THE LANE, NEVER ON THE VERDICT: if the free pool is dry the first
+    // judgement stands, recorded honestly as one judge. A dead second reader must not
+    // silently discard a real verdict — that would be the truth layer eating truth.
+    const diamonds = [], keyDoubts = [];
+    const confirmed = [];
+    for (const s of settled) {
+      // key_doubt rides ANY type and never changes the verdict — see keyDoubtCard.
+      const kd = (grades.find((x) => x && String(x.id) === s.of) || {}).key_doubt;
+      if (kd && String(kd).trim() && !deps.dry) {
+        const c = cardFile(keyDoubtCard(s, String(kd).trim()), `key_doubt:${s.type}:${s.ref}`);
+        keyDoubts.push({ ref: `${s.type}:${s.ref}`, filed: !!c.ok });
+      } else if (kd && String(kd).trim()) keyDoubts.push({ ref: `${s.type}:${s.ref}`, filed: false, dry: true });
+
+      if (!SECOND_JUDGE_TYPES.includes(s.type)) { confirmed.push(s); continue; }
+      const item = items.find((i) => i.id === s.of) || s;
+      const two = await second(item);
+      if (!two || !two.ok || !two.verdict) {
+        // named on the row, never hidden: "one judge" is a fact about this verdict
+        confirmed.push({ ...s, judges: 1, agreed: null, judge2: null, judge2_note: (two && two.reason) || "no second reading" });
+        continue;
+      }
+      if (two.verdict === s.verdict) { confirmed.push({ ...s, judges: 2, agreed: true, judge2: two.engine, judge2_why: two.why }); continue; }
+      // 💎 — NOT recorded as fact. It becomes his card.
+      const line = disagreementCard(item, { verdict: s.verdict, why: s.why }, { verdict: two.verdict, why: two.why });
+      const c = deps.dry ? { ok: true, dry: true } : cardFile(line, `diamond:${s.type}:${s.ref}`);
+      diamonds.push({ ref: `${s.type}:${s.ref}`, first: s.verdict, second: two.verdict, filed: !!c.ok, dry: !!deps.dry, line });
+    }
+
+    // ⚠ --dry MEANS TOUCH NOTHING, AND IT DID NOT. Until this line `dry` only skipped
+    // the settlement append while STILL dispatching every verdict to rejirah,
+    // doubtminer and capture — so a rehearsal wrote into his real study record. Found
+    // the way these things always are: the acceptance run for this very build put three
+    // fabricated rows into his own rejirah_log, reps_log and tape_room. A flag whose
+    // name promises safety and delivers half of it is worse than no flag at all.
+    // An INJECTED dispatch still runs under dry — that is the selftest's own stub, and
+    // it is the thing being tested.
+    const dispatched = [], refused = [];
+    let settleFailed = null;
+    for (const s of confirmed) {
+      const d = (deps.dry && !deps.dispatch)
+        ? { ok: true, noop: true, note: "DRY RUN — the owner was NOT called and nothing was recorded" }
+        : dispatch(ownerCommand(s));
+      if (!d.ok) { refused.push({ ref: `${s.type}:${s.ref}`, error: d.error }); continue; }
+      const row = { ...s, owner_noop: !!d.noop, owner_note: d.note || null };
+      // ONLY WHAT THE OWNER ACCEPTED IS MARKED SETTLED. A verdict an owner refused is not
+      // a graded item, and writing a settlement row for it would lose his spoken answer.
+      // L2 (fate 14) — AND THE SETTLED ROW IS WRITTEN PER ITEM, CHECKED, THE MOMENT ITS OWNER ACCEPTED.
+      // The batch append after this loop sat in a bare catch: one swallowed failure left every
+      // just-graded capture looking ungraded (outstandingGrades reads the ABSENCE of a settled row),
+      // so the next round re-graded the same answers, spent a second Opus call and dispatched the
+      // same reps again (gaffer-dugout-sitting.txt:5, "A LOST SETTLEMENT ROW SILENTLY DOUBLE-COUNTS
+      // HIM"). Now a lost settled row STOPS the round at that item and says so: at most ONE verdict
+      // can sit on its owner's side without its settled row, and it is named, never hidden.
+      if (!deps.dry) {
+        const w = (deps.appendRow || appendRowChecked)(GRADE_QUEUE, row);
+        if (!w || !w.ok) { settleFailed = { ref: `${s.type}:${s.ref}`, of: s.of, error: (w && w.error) || "the writer gave no answer" }; break; }
+      }
+      dispatched.push(row);
+    }
+    return { settled: confirmed, dispatched, refused, missed, diamonds, keyDoubts, settleFailed };
+  };
+
+  // ── THE ROUND: batch after batch, oldest day first, inside ONE budget, no retry ──
+  const ledger = deps.judgeHistory !== undefined ? deps.judgeHistory : readJournal(BRAIN_LEDGER, Infinity);
+  const rates = judgeRates(ledger);
+  const clock = deps.clock || (() => Date.now());
+  const t0 = clock();
+  let spent = 0, at = 0, stop = null;
+  const batches = [];
+  const all = { settled: [], dispatched: [], refused: [], missed: [], diamonds: [], keyDoubts: [] };
+  const sizing0 = judgeBatchSize({ rates, remainingMs: JUDGE_BUDGET_MS, left: items.length });
+  while (at < items.length) {
+    const remaining = JUDGE_BUDGET_MS - Math.max(clock() - t0, spent);
+    const sz = judgeBatchSize({ rates, remainingMs: remaining, left: items.length - at });
+    if (sz.size < 1) { stop = { kind: batches.length ? "budget" : "cannot-fit", sizing: sz }; break; }
+    const batch = items.slice(at, at + sz.size);
+    const prompt = buildJudgePrompt(batch, { ...deps, inlineHead: !rides });
+    const r = await gen(prompt, { items: batch.length, budget_ms: remaining, batch: batches.length + 1 });
+    const dur = r && Number.isFinite(r.duration_ms) && r.duration_ms > 0 ? r.duration_ms : 0;
+    spent += dur;
+    const rec = { n: batches.length + 1, size: batch.length, ids: batch.map((it) => it.id), budget_ms: remaining, duration_ms: dur, ok: !!(r && r.ok), sizing: sz };
+    batches.push(rec);
+    if (!r || !r.ok) {
+      const errText = String((r && (r.error_envelope || r.error)) || "no reply");
+      const killed = !!(r && (r.killed === true || r.timed_out === true)) || JUDGE_KILL_RE.test(errText);
+      const auth = JUDGE_AUTH_RE.test(errText);
+      rec.error = clip(errText, 300); rec.killed = killed; rec.auth = auth;
+      stop = { raw: (r && r.error) || "no reply", kind: auth ? "auth" : killed && batch.length === 1 ? "one-capture-dead" : killed ? "killed" : "lane-down", batch: rec, error: errText, item: batch[0] };
+      break;
+    }
+    if (dur) rates.push(dur / batch.length);   // this round's own ok batch is measured history for its next batch
+    const s = await settleBatch(batch, prompt, r);
+    if (s.unparseable) { rec.unparseable = true; stop = { kind: "unparseable", batch: rec }; break; }
+    for (const k of Object.keys(all)) all[k].push(...s[k]);
+    rec.graded = s.dispatched.length;
+    if (s.settleFailed) { stop = { kind: "settle-write-failed", settleFailed: s.settleFailed, batch: rec }; break; }
+    at += batch.length;
   }
-  if (settleFailed) {
-    return { ok: false, reason: "settle-write-failed", settle_failed: settleFailed,
-      say: `gaffer_brain: the verdict for ${settleFailed.ref} reached its owner but its SETTLED row is NOT on disk (${settleFailed.error}) — the round stopped there, and that one item reads as unjudged until the write works (${dispatched.length} earlier item(s) are settled). Fix the write, then run the round again.`,
-      graded: dispatched.length, dispatched, refused, missed, ...stamp, outstanding: items.length - dispatched.length };
+  const calls = batches.length + ((ext && ext.calls) || 0);
+  const outstanding = items.length - all.dispatched.length;
+  const carried = { graded: all.dispatched.length, dispatched: all.dispatched, refused: all.refused, missed: all.missed, diamonds: all.diamonds, key_doubts: all.keyDoubts,
+    ...stamp, batches, sizing: sizing0, outstanding, calls };
+  const earlier = all.dispatched.length ? ` (${all.dispatched.length} item(s) of earlier batch(es) are settled and stay settled)` : "";
+
+  if (stop && stop.kind === "auth") {
+    // THE AUTH CANARY (row 963 (3)) — RED at his anchor the same day, ONE card, never a silent ok:false.
+    const day = istDay(now);
+    const key = `judge:auth:${day}`;
+    const line = "RED · judge ka claude login refuse hua — terminal mein `claude` chalao, phir /login. Tab tak koi study rep settle nahi hoga.";
+    const card = deps.dry && !deps.fileCard ? { filed: false, dry: true, key }
+      : (() => { const c = cardFile(line, key, "the login is his hand (row 963 (3)): code cannot log in for him"); return { filed: !!c.ok, minted: !!(c.ok && /filed c\d+/.test(String(c.out || ""))), key, out: c.ok ? clip(String(c.out || "").trim(), 200) : null, error: c.ok ? null : c.error }; })();
+    return { ok: false, reason: "judge-auth-refused", red: "RED · JUDGE AUTH", card,
+      trace: { batch: stop.batch.n, size: stop.batch.size, duration_ms: stop.batch.duration_ms, error: clip(stop.error, 300) },
+      say: `gaffer_brain: RED · JUDGE AUTH — the judge lane refused its login on batch ${stop.batch.n} (${clip(stop.error, 160)}). The round stopped at once: no further batch was spent and nothing was invented${earlier}. ${card.dry ? "DRY RUN — no card filed" : card.filed ? `ONE card at his anchor (${key})` : `⚠ the card could NOT be filed (${card.error})`}; the login is his hand.`,
+      ...carried };
   }
-  return { ok: true, graded: dispatched.length, types: [...new Set(dispatched.map((s) => s.type))], settled, dispatched, refused, missed,
+  if (stop && stop.kind === "one-capture-dead") {
+    const it = stop.item, cap = captureDay(it);
+    const trace = { batch: stop.batch.n, size: 1, capture: { id: it.id, type: it.type, ref: it.ref, day: cap.day }, budget_ms: stop.batch.budget_ms, duration_ms: stop.batch.duration_ms, killed: true, error: clip(stop.error, 300) };
+    return { ok: false, reason: "judge-one-capture-past-budget", red: "RED · ONE CAPTURE PAST THE BUDGET", trace,
+      say: `gaffer_brain: RED · ONE CAPTURE PAST THE BUDGET — batch ${trace.batch} held ONE capture (${it.type}:${it.ref}, day ${cap.day || "unknown"}) and the lane died at its ${Math.round(trace.budget_ms)} ms budget (${clip(stop.error, 160)}). The round stopped: no further call was made, nothing was invented${earlier}. This is a budget or effort question for the architect (row 963 (1)), never a retry.`,
+      ...carried };
+  }
+  if (stop && stop.kind === "cannot-fit") {
+    return { ok: false, reason: "judge-batch-cannot-fit", red: "RED · NO BATCH FITS THE BUDGET", trace: { sizing: stop.sizing },
+      say: `gaffer_brain: RED · NO BATCH FITS THE BUDGET — ${stop.sizing.why}: not even ONE capture fits, so no batch was started and nothing was spent or invented. A budget or effort question for the architect (row 963 (1)).`,
+      ...carried };
+  }
+  if (stop && (stop.kind === "killed" || stop.kind === "lane-down")) {
+    return { ok: false, reason: stop.kind === "killed" ? "batch-killed" : "lane-down", red: null,
+      trace: { batch: stop.batch.n, size: stop.batch.size, budget_ms: stop.batch.budget_ms, duration_ms: stop.batch.duration_ms, killed: stop.kind === "killed", error: clip(stop.error, 300) },
+      say: `gaffer_brain: the judge lane did not answer (${stop.raw}) — the round STAYS in the queue and nothing was invented${stop.batch.n > 1 ? `: batch ${stop.batch.n} of ${stop.batch.size} capture(s) is lost to this round only${earlier}` : ""}. Run judge-round again.`,
+      ...carried };
+  }
+  if (stop && stop.kind === "unparseable") {
+    return { ok: false, reason: "unparseable", red: null, say: `gaffer_brain: the judge answered in a shape this organ will not act on — the round STAYS in the queue${earlier}.`, ...carried };
+  }
+  if (stop && stop.kind === "settle-write-failed") {
+    const settleFailed = stop.settleFailed;
+    return { ok: false, reason: "settle-write-failed", red: null, settle_failed: settleFailed,
+      say: `gaffer_brain: the verdict for ${settleFailed.ref} reached its owner but its SETTLED row is NOT on disk (${settleFailed.error}) — the round stopped there, and that one item reads as unjudged until the write works (${all.dispatched.length} earlier item(s) are settled). Fix the write, then run the round again.`,
+      ...carried };
+  }
+  return { ok: true, graded: all.dispatched.length, types: [...new Set(all.dispatched.map((s) => s.type))], settled: all.settled, dispatched: all.dispatched, refused: all.refused, missed: all.missed,
     // L2 — who fired this round, on the receipt as on every row (see JUDGE_CODE_TRIGGERS)
     ...stamp,
     // A DISAGREEMENT IS OUTSTANDING, NOT GRADED. It stays in the queue, so if he
     // resolves it the round can be judged again — and until then nothing about it
     // has entered his record.
-    diamonds, key_doubts: keyDoubts,
+    diamonds: all.diamonds, key_doubts: all.keyDoubts,
     // §9.1 — the external check's own receipt: whether it ran, how many claims it
     // returned, how many it refuted, how many the validator dropped as sourceless.
     external: { ran: !!(ext && ext.ran), ok: ext ? ext.ok !== false : false, why: (ext && ext.why) || null, claims: (ext && ext.claims) || 0, refuted: (ext && ext.refuted) || 0, dropped: (ext && ext.dropped) || 0, calls: (ext && ext.calls) || 0 },
     // §9.4 — THE ONE SPOKEN LINE for the round (null when nothing was missing): the
     // two terms the room most wanted and did not hear, and the hedge count. Read back
     // by whichever mouth closed the round; never a card, never a second line.
-    register_line: registerLine(dispatched.map((s) => s.register).filter(Boolean)),
-    outstanding: items.length - dispatched.length, calls: 1 + ((ext && ext.calls) || 0) };
+    register_line: registerLine(all.dispatched.map((s) => s.register).filter(Boolean)),
+    outstanding, calls,
+    // mjdg — the batches as they ran, the opening size's derivation, and why the round ended before the queue did (null = it did not)
+    batches, sizing: sizing0, stopped: stop ? stop.kind : null, stopped_why: stop && stop.sizing ? stop.sizing.why : null, red: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -2369,7 +2520,10 @@ async function main() {
     const r = await gradeJudge({ dry: process.argv.includes("--dry"), ...(firedBy ? { firedBy } : {}) });
     if (r.skipped) { console.log("gaffer_brain: " + r.skipped); return; }
     if (!r.ok) { console.log(r.say); process.exit(1); }
-    console.log(`gaffer_brain: ${r.graded} item(s) graded in ONE Opus call · types: ${r.types.join(", ") || "—"}${r.outstanding ? ` · ${r.outstanding} still outstanding` : ""}`);
+    // mjdg — ONE batch prints the pre-mjdg line byte for byte; several say so after it (postmatch.mjs judgeLineOf reads the head)
+    const nb = (r.batches || []).length;
+    console.log(`gaffer_brain: ${r.graded} item(s) graded in ONE Opus call${nb > 1 ? ` per batch · ${nb} batches, oldest day first` : ""} · types: ${r.types.join(", ") || "—"}${r.outstanding ? ` · ${r.outstanding} still outstanding` : ""}`);
+    if (r.stopped === "budget") console.log(`  the round's ONE budget ran out (${r.stopped_why}) — the rest waits in the queue for the next round, oldest day first`);
     console.log(`  stamped judged_by ${r.judged_by} · fired_by ${r.fired_by}${r.judged_by_code_at ? ` · judged_by_code_at ${r.judged_by_code_at}` : " · no code instant (a typed round)"}`);
     // §9.1 — the external check's receipt is said out loud with the round: ran or
     // not, and why; what it refuted is printed under the item it belongs to.
@@ -2420,6 +2574,12 @@ async function main() {
   console.error("usage: gaffer_brain.mjs [judge [--dry]|note|blocks [--raw]|status|probe|capture <type> <ref> --gut <word> [--json]|judge-round|judge-due --trigger <code trigger>|judge-night|queue|selftest]");
   process.exit(1);
 }
+
+// mjdg — THE SELFTEST'S ROUNDS ARE HERMETIC ON THE LEDGER TOO. Every pre-mjdg round below is one call by design, so it rides a
+// planted FAST history (one ok judge row, 1 ms for one capture): the round fits ONE batch, and no selftest reads the brain
+// ledger on disk. The batch shape itself is held by its own block (search "mjdg ·").
+const MJDG_FAST_HISTORY = [{ job: JUDGE_JOB, ok: true, duration_ms: 1, items: 1 }];
+const gradeJudgeST = (d) => gradeJudge({ judgeHistory: MJDG_FAST_HISTORY, ...d });
 
 // ===========================================================================
 // SELFTEST — in the same commit as the organ. ZERO live calls: the Watcher is
@@ -2700,6 +2860,14 @@ function selftest2(stub, S) {
           // LAW M live proof, 18 Aug 2026 — the `--rewind[=N]` CLI flag on `judge`. An argv
           // switch the OPERATOR types, parsed by the machine; never his words.
           "^--rewind(=\\d+)?$",
+          // mjdg (rows 963 / 999) — the judge LANE's own failure texts, by file:line at JUDGE_KILL_RE / JUDGE_AUTH_RE: the
+          // kill marks claudegen.mjs stamps (KILLED…, ETIMEDOUT, turn timed out) and the claude CLI's login refusals. A
+          // machine's error string, never his words.
+          "KILLED \\((?:SIG[A-Z]+|no-signal)\\) after \\d+ms|ETIMEDOUT|turn timed out after \\d+ ms",
+          "not logged in|please run \\/login|invalid api key|authenticat|unauthorized|oauth session expired|could not be refreshed",
+          // mjdg — captains_call.mjs `file`'s own printed verdict ("captains_call: filed c<N>"), read to tell a minted card
+          // from an idempotent no-op. An organ's line, never his.
+          "filed c\\d+",
         ]);
         const suspect = rx.filter((p) => !MACHINE_ONLY.has(p));
         assert(`HIS RULING · VOCAB-AGNOSTIC, held by source: all ${rx.length} regex literals in the production half parse the MACHINE's own markers — not one tests HIS words`,
@@ -2943,7 +3111,7 @@ function selftest2(stub, S) {
           const judgeFx = async (p) => { judgePrompt = p; return { ok: true, text: JSON.stringify({ grades: [
             { id: "ext:1", verdict: "failed", missing: ["the real window size, and that lost-in-the-middle is about POSITION not size"], why: "the number you leaned on is refuted by the check — see the source" },
             { id: "ext:2", verdict: "landed", missing: [], why: "theek" }] }) }; };
-          const pl = await gradeJudge({ dry: true, rows: [PLANT, OTHER], verifyGenerate: verifyFx, generate: judgeFx, dispatch: () => ({ ok: true }), now: T0, fieldProbes: FP, readJson: () => null });
+          const pl = await gradeJudgeST({ dry: true, rows: [PLANT, OTHER], verifyGenerate: verifyFx, generate: judgeFx, dispatch: () => ({ ok: true }), now: T0, fieldProbes: FP, readJson: () => null });
           assert("§9.1 · THE PLANTED FALSE FACT — the search lane is asked ONLY about the checked types (the voice_rep is not in the verify prompt), and told to return nothing rather than guess",
             !!verifyPrompt && /ext:1/.test(verifyPrompt) && !/ext:2/.test(verifyPrompt) && /never guess from memory/.test(verifyPrompt) && /SEARCH THE WEB/.test(verifyPrompt));
           assert("§9.1 · …the refutation reaches the JUDGE as ground UNDER THAT ITEM, verdict and source quoted, before it grades",
@@ -2960,25 +3128,25 @@ function selftest2(stub, S) {
             !("not-in-round" in (parseVerify(JSON.stringify({ items: [{ id: "not-in-round", claims: [{ claim: "x", verdict: "true", sources: ["https://a.b"] }] }] }), [PLANT]).checks)));
           // THE VALIDATOR IS THE PRODUCT: a true/false with no http source is the model's
           // prior wearing the word "checked" — dropped, counted, and named on the row.
-          const sourceless = await gradeJudge({ dry: true, rows: [PLANT], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
+          const sourceless = await gradeJudgeST({ dry: true, rows: [PLANT], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
             verifyGenerate: async () => ({ ok: true, text: JSON.stringify({ items: [{ id: "ext:1", claims: [{ claim: "2M window", verdict: "false", evidence: "trust me", sources: [] }, { claim: "some paper", verdict: "maybe", sources: ["https://x.y"] }, { claim: "unknown thing", verdict: "unverifiable", evidence: "no page found", sources: [] }] }] }) }),
             generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: "ext:1", verdict: "failed", missing: [], why: "x" }] }) }) });
           assert("§9.1 · a SOURCELESS true/false and an illegal verdict are DROPPED and counted; 'unverifiable' needs no source and is kept as exactly that",
             sourceless.external.dropped === 2 && sourceless.settled[0].external_check.length === 1 && sourceless.settled[0].external_check[0].verdict === "unverifiable"
             && /no source — neither confirmed nor refuted/.test(renderExternalCheck(sourceless.settled[0].external_check)));
-          const allDropped = await gradeJudge({ dry: true, rows: [PLANT], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
+          const allDropped = await gradeJudgeST({ dry: true, rows: [PLANT], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
             verifyGenerate: async () => ({ ok: true, text: JSON.stringify({ items: [{ id: "ext:1", claims: [{ claim: "2M window", verdict: "false", sources: [] }] }] }) }),
             generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: "ext:1", verdict: "failed", missing: [], why: "x" }] }) }) });
           assert("§9.1 · …and when the validator ate every claim the row says THAT, not 'nothing cited'",
             allDropped.settled[0].external_check === null && /sourceless verdict\(s\) dropped/.test(allDropped.settled[0].external_check_note));
           // FAIL-OPEN ON THE LANE, NEVER ON THE VERDICT.
-          const down = await gradeJudge({ dry: true, rows: [PLANT], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
+          const down = await gradeJudgeST({ dry: true, rows: [PLANT], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
             verifyGenerate: async () => ({ ok: false, error: "plan wall" }),
             generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: "ext:1", verdict: "failed", missing: [], why: "x" }] }) }) });
           assert("§9.1 · a DEAD search lane never blocks the round — it is judged without external ground and every row SAYS so",
             down.ok && down.graded === 1 && down.external.ran && down.external.ok === false && /did not answer/.test(down.settled[0].external_check_note));
           let verifyCalls = 0;
-          const noneEligible = await gradeJudge({ dry: true, rows: [OTHER], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
+          const noneEligible = await gradeJudgeST({ dry: true, rows: [OTHER], now: T0, fieldProbes: FP, readJson: () => null, dispatch: () => ({ ok: true }),
             verifyGenerate: async () => { verifyCalls++; return { ok: true, text: "{}" }; },
             generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: "ext:2", verdict: "landed", missing: [], why: "x" }] }) }) });
           assert("§9.1 · a round with no hidden_test/adversarial item makes NO search call at all — no spend, and the receipt says why",
@@ -3014,7 +3182,7 @@ function selftest2(stub, S) {
             { id: capR.row.id, verdict: "landed", missing: [], why: "theek", register: { used: ["hallucination rate", "held-out set", "chain-of-thought"], expected: ["hallucination rate", "held-out set", "grounding", "constitutional ai"] } },
             { id: capW.row.id, verdict: "held", missing: [], why: "aa gaya", register: { used: ["x"], expected: ["y"] } }] }) }; };
           const regCmds = [];
-          const rj = await gradeJudge({ dry: true, rows: [capR.row, capW.row], generate: regGen, dispatch: (c) => { regCmds.push(c); return { ok: true }; }, now: T0, readJson: (f) => (String(f).includes("hallucinations") ? CAPS : null), fieldProbes: null });
+          const rj = await gradeJudgeST({ dry: true, rows: [capR.row, capW.row], generate: regGen, dispatch: (c) => { regCmds.push(c); return { ok: true }; }, now: T0, readJson: (f) => (String(f).includes("hallucinations") ? CAPS : null), fieldProbes: null });
           const reg = rj.settled.find((s) => s.of === capR.row.id).register;
           assert("§9.4 · THE DoD FIXTURE, end to end — three hedges + one missing term yields EXACTLY {hedges:3, missing:['grounding']}: the invented 'constitutional ai' was dropped (not in the ground), the unsaid 'chain-of-thought' was dropped (never said), and missing was recomputed from his transcript",
             !!reg && reg.hedges === 3 && JSON.stringify(reg.missing) === JSON.stringify(["grounding"])
@@ -3030,7 +3198,7 @@ function selftest2(stub, S) {
           assert("§9.4 · THE ONE SPOKEN LINE closes the round — the term the room wanted and did not hear, and the hedge count",
             rj.register_line === `interviewer yeh shabd sunna chahega: "grounding" — aur 3 hedges (shayad/maybe/i think) kaate ja sakte hain`, rj.register_line);
           assert("§9.4 · …and a round where nothing was missing speaks NO line (silence over a fabricated ask)",
-            (await gradeJudge({ dry: true, rows: [capR.row], generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: capR.row.id, verdict: "landed", missing: [], why: "x", register: { used: ["hallucination rate"], expected: ["hallucination rate"] } }] }) }), dispatch: () => ({ ok: true }), now: T0, readJson: () => CAPS, fieldProbes: null })).register_line === null);
+            (await gradeJudgeST({ dry: true, rows: [capR.row], generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: capR.row.id, verdict: "landed", missing: [], why: "x", register: { used: ["hallucination rate"], expected: ["hallucination rate"] } }] }) }), dispatch: () => ({ ok: true }), now: T0, readJson: () => CAPS, fieldProbes: null })).register_line === null);
           assert("§9.4 · a judge that returns NO register block still yields a register on the row — hedges are code's and always present, the lists empty",
             (() => { const r = validateRegister(undefined, { spoken: SP, corpus: "" }); return r.hedges === 3 && r.expected.length === 0 && r.missing.length === 0; })());
         }
@@ -3105,7 +3273,7 @@ function selftest2(stub, S) {
           { id: items[1].id, verdict: "passed", missing: ["the failure case"], why: "separation dikhayi" },
           { id: items[0].id, verdict: "held", missing: [], why: "mechanism aa gaya" }] }) });
         const cmds = [];
-        const jr = await gradeJudge({ dry: true, rows: items, generate: genOK, dispatch: (c) => { cmds.push(c); return { ok: true }; }, now: T0 });
+        const jr = await gradeJudgeST({ dry: true, rows: items, generate: genOK, dispatch: (c) => { cmds.push(c); return { ok: true }; }, now: T0 });
         assert("PASS 1 · THREE DIFFERENT VERDICT TYPES graded in ONE Opus call — not three calls (this is the acceptance his spec asks for)",
           jr.ok && jr.graded === 3 && jr.calls === 1 && jr.types.length === 3);
         assert("PASS 1 · the keyless hidden_test really is GRADED — the old lane could not judge it at all, so this is the path that had to work",
@@ -3122,21 +3290,48 @@ function selftest2(stub, S) {
         assert("PASS 1 · a doubt that STILL STANDS is never retired — deleting it would erase the evidence he still holds it, which is the one thing the tape room is for",
           ownerCommand({ type: "tape_doubt", ref: "tokenization:0", verdict: "standing", gut: "knew" }).organ === null);
         {
-          const bad = await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: items[0].id, verdict: "passed", why: "x" }] }) }), dispatch: () => ({ ok: true }), now: T0 });
+          const bad = await gradeJudgeST({ dry: true, rows: items, generate: async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: items[0].id, verdict: "passed", why: "x" }] }) }), dispatch: () => ({ ok: true }), now: T0 });
           assert("PASS 1 · a verdict ILLEGAL for its type is refused and the item stays outstanding — 'passed' is not a legal answer for an axis weld",
             bad.graded === 0 && bad.missed.some((m) => m.startsWith("axis_weld")));
         }
         {
-          const ref2 = await gradeJudge({ dry: true, rows: items, generate: genOK, dispatch: () => ({ ok: false, error: "capture: --gut required" }), now: T0 });
+          const ref2 = await gradeJudgeST({ dry: true, rows: items, generate: genOK, dispatch: () => ({ ok: false, error: "capture: --gut required" }), now: T0 });
           assert("PASS 1 · a verdict the OWNER refuses is NOT marked settled and says why — his spoken answer is the one thing here that cannot be reproduced",
             ref2.graded === 0 && ref2.refused.length === 3 && ref2.outstanding === 3);
         }
         assert("PASS 1 · a dead lane keeps the whole round in the queue and invents nothing",
-          (await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: false, error: "plan wall" }) })).reason === "lane-down");
+          (await gradeJudgeST({ dry: true, rows: items, generate: async () => ({ ok: false, error: "plan wall" }) })).reason === "lane-down");
         assert("PASS 1 · an unparseable answer keeps the round too — junk never becomes a verdict",
-          (await gradeJudge({ dry: true, rows: items, generate: async () => ({ ok: true, text: "sure!" }) })).reason === "unparseable");
+          (await gradeJudgeST({ dry: true, rows: items, generate: async () => ({ ok: true, text: "sure!" }) })).reason === "unparseable");
         assert("PASS 1 · with nothing captured it does nothing at all — no call, no spend",
-          (await gradeJudge({ dry: true, rows: [], generate: async () => { throw new Error("must not be called"); } })).skipped !== undefined);
+          (await gradeJudgeST({ dry: true, rows: [], generate: async () => { throw new Error("must not be called"); } })).skipped !== undefined);
+
+        // ── mjdg · THE ROUND IN BOUNDED, SELF-SIZED BATCHES + THE AUTH CANARY (rows 963 / 999) ── hermetic: history, judge,
+        // owners and the card door are all planted; dry:true writes nothing.
+        {
+          const grade3 = (calls) => async (p) => { calls.push(p); return { ok: true, duration_ms: 1000, text: JSON.stringify({ grades: items.filter((it) => p.includes(`id ${it.id}`)).map((it) => ({ id: it.id, verdict: VERDICT_TYPES[it.type].verdicts[0], missing: [], why: "x" })) }) }; };
+          const c0 = [];
+          const none = await gradeJudge({ dry: true, rows: items, judgeHistory: [], generate: grade3(c0), dispatch: () => ({ ok: true }), now: T0, clock: () => 0 });
+          assert("mjdg · NO ok judge row on the ledger ⇒ the first batch holds exactly ONE capture (row 999 (2)), and the round still drains by the measured time",
+            none.ok && none.batches[0].size === 1 && none.sizing.size === 1 && none.sizing.from_rows === 0 && none.graded === 3);
+          assert("mjdg · the size is DERIVED, never typed: slowest rate + the rows' own spread against what is left",
+            judgeBatchSize({ rates: [10000, 20000], remainingMs: 300000, left: 59 }).size === 10
+            && judgeBatchSize({ rates: [400000], remainingMs: 300000, left: 59 }).size === 0
+            && judgeRates([{ job: JUDGE_JOB, ok: true, duration_ms: 60000, items: 3 }, { job: JUDGE_JOB, ok: false, duration_ms: 300000, items: 59 }, { job: "x", ok: true, duration_ms: 5, items: 1 }]).join() === "20000");
+          const slow = await gradeJudge({ dry: true, rows: items, judgeHistory: [{ job: JUDGE_JOB, ok: true, duration_ms: 400000, items: 1 }], generate: async () => { throw new Error("must not be called"); }, now: T0, clock: () => 0 });
+          assert("mjdg · a size that cannot fit ONE capture starts NO batch and says so, RED — no call, nothing spent",
+            slow.ok === false && slow.reason === "judge-batch-cannot-fit" && /RED/.test(slow.say) && slow.batches.length === 0 && slow.calls === 0);
+          const c1 = [];
+          const dead = await gradeJudge({ dry: true, rows: items, judgeHistory: [], generate: async (p) => { c1.push(p); return { ok: false, duration_ms: 300000, error: "spawnSync claude ETIMEDOUT" }; }, now: T0, clock: () => 0 });
+          assert("mjdg · ONE capture that dies at the budget stops the round RED with its trace — no further call, never a retry (row 963 (1))",
+            dead.ok === false && dead.reason === "judge-one-capture-past-budget" && c1.length === 1 && dead.trace.size === 1 && dead.trace.capture.id === items[0].id && /ETIMEDOUT/.test(dead.trace.error));
+          const cards = [];
+          const auth = await gradeJudge({ dry: true, rows: items, judgeHistory: [], generate: async () => ({ ok: false, duration_ms: 3000, error: "OAuth session expired and could not be refreshed" }), fileCard: (line, key) => { cards.push(key); return { ok: true, out: "captains_call: filed c1" }; }, now: T0, clock: () => 0 });
+          assert("mjdg · THE AUTH CANARY: a login refusal is RED with its own reason and ONE card keyed by the day — never a silent ok:false (row 963 (3))",
+            auth.ok === false && auth.reason === "judge-auth-refused" && /RED/.test(auth.say) && cards.length === 1 && cards[0] === `judge:auth:${istDay(T0)}` && auth.batches.length === 1);
+          assert("mjdg · OLDEST DAY FIRST: the queue is ordered by the capture's own instant, never by where it sits in the file",
+            judgeOrder([{ id: "b", ts: "2026-08-15T10:00:00.000Z" }, { id: "a", ts: "2026-08-14T10:00:00.000Z" }, { id: "c" }]).map((x) => x.id).join() === "a,b,c");
+        }
 
         // ── L2 · THE BANK LANDS GRADED (6 Oct 2026 · forks rows 549-552 · fates 14 + 53) ──────────
         // The rung's own clauses, each planted both ways. Hermetic: the writer, the judge and the
@@ -3174,7 +3369,7 @@ function selftest2(stub, S) {
             const capBefore = JSON.stringify(capA);
             const genA = async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: capA.id, verdict: "landed", missing: [], why: "matlab embedding mein, ID sirf pata hai" }] }) });
             const codeRows = [], codeCmds = [];
-            const byCode = await gradeJudge({ rows: [capA], generate: genA, firedBy: "sitting.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
+            const byCode = await gradeJudgeST({ rows: [capA], generate: genA, firedBy: "sitting.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
               dispatch: (c) => { codeCmds.push(c); return { ok: true }; }, appendRow: (p, row) => { codeRows.push({ p, row }); return { ok: true }; } });
             const sr = (codeRows[0] || {}).row || {};
             assert("L2 · JUDGE BY CODE · a round fired by a DECLARED trigger stamps its settled row judged_by \"code\" + judged_by_code_at (the round's ISO instant) + fired_by — APPENDED to the grade queue with `of` = the capture's id",
@@ -3186,13 +3381,13 @@ function selftest2(stub, S) {
             assert("L2 · APPEND-ONLY · the capture row is NEVER rewritten — the stamp rides the NEW settled row, and the capture the round read is byte-for-byte what it was",
               JSON.stringify(capA) === capBefore && !("judged_by" in capA) && !("judged_by_code_at" in capA));
             const handRows = [], handCmds = [];
-            const byHand = await gradeJudge({ rows: [capA], generate: genA, now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
+            const byHand = await gradeJudgeST({ rows: [capA], generate: genA, now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
               dispatch: (c) => { handCmds.push(c); return { ok: true }; }, appendRow: (p, row) => { handRows.push(row); return { ok: true }; } });
             const handCap = handCmds.find((c) => c.organ === "capture.mjs");
             assert("L2 · JUDGE BY HAND · a TYPED round grades him the same and is recorded as what it was — judged_by \"hand\", judged_by_code_at null, fired_by \"cli\" — and its rep carries --judged-by hand with no code instant",
               byHand.ok === true && handRows.length === 1 && handRows[0].judged_by === "hand" && handRows[0].judged_by_code_at === null && handRows[0].fired_by === "cli"
               && !!handCap && handCap.argv.join(" ").includes("--judged-by hand") && !handCap.argv.includes("--judged-at"));
-            const odd = await gradeJudge({ rows: [capA], firedBy: "a-typo", now: T0, dry: true, generate: async () => { throw new Error("must not be called"); } });
+            const odd = await gradeJudgeST({ rows: [capA], firedBy: "a-typo", now: T0, dry: true, generate: async () => { throw new Error("must not be called"); } });
             assert("L2 · JUDGE BY CODE · an UNDECLARED trigger is refused before anything is read or spent — a stamp a typo could mint would be testimony",
               odd.ok === false && odd.reason === "unknown-trigger");
 
@@ -3200,7 +3395,7 @@ function selftest2(stub, S) {
             const capB = { ...capA, id: `${capA.id}:b` };
             const genAB = async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: capA.id, verdict: "landed", missing: [], why: "x" }, { id: capB.id, verdict: "missed", missing: [], why: "y" }] }) });
             const sentAB = [];
-            const lost = await gradeJudge({ rows: [capA, capB], generate: genAB, firedBy: "sitting.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
+            const lost = await gradeJudgeST({ rows: [capA, capB], generate: genAB, firedBy: "sitting.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
               dispatch: (c) => { sentAB.push(c); return { ok: true }; }, appendRow: () => ({ ok: false, error: "EROFS: read-only file system" }) });
             assert("L2 · SETTLEMENT WRITE · a settled row that does not land is ok:false (settle-write-failed), NAMES the item, and the round STOPS there — the next verdict never reaches its owner, so nothing is double-counted",
               lost.ok === false && lost.reason === "settle-write-failed" && !!lost.settle_failed && lost.settle_failed.of === capA.id && sentAB.length === 1 && /NOT on disk/.test(String(lost.say)), JSON.stringify({ ok: lost.ok, reason: lost.reason, sent: sentAB.length }));
@@ -3239,7 +3434,7 @@ function selftest2(stub, S) {
               judgeDue(q0, { trigger: "day.close", now: mins(10 * 60) }).due === true
               && judgeDue([capA, { kind: "settled", of: capA.id }], { trigger: "day.close", now: mins(10 * 60) }).due === false);
             const dcRows = [];
-            const byDay = await gradeJudge({ rows: [capA], generate: genA, firedBy: "day.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
+            const byDay = await gradeJudgeST({ rows: [capA], generate: genA, firedBy: "day.close", now: T0, verify: noVerify, headRides: false, cartridge: "HEAD",
               dispatch: () => ({ ok: true }), appendRow: (p, row) => { dcRows.push(row); return { ok: true }; } });
             assert("mclose · DAY.CLOSE · a round it fires is stamped judged_by code · fired_by day.close on its settled row (the door names itself)",
               byDay.ok === true && dcRows.length === 1 && dcRows[0].judged_by === "code" && dcRows[0].fired_by === "day.close", JSON.stringify(dcRows[0] || {}).slice(0, 200));
@@ -3253,7 +3448,7 @@ function selftest2(stub, S) {
               const roundOf = async (caps, now) => {
                 const rows = [], cmds = [];
                 const gen = async () => ({ ok: true, text: JSON.stringify({ grades: caps.map((c) => ({ id: c.id, verdict: "landed", missing: [], why: "x" })) }) });
-                const r = await gradeJudge({ rows: caps, generate: gen, firedBy: "day.close", now, verify: noVerify, headRides: false, cartridge: "HEAD",
+                const r = await gradeJudgeST({ rows: caps, generate: gen, firedBy: "day.close", now, verify: noVerify, headRides: false, cartridge: "HEAD",
                   dispatch: (c) => { cmds.push(c); return { ok: true }; }, appendRow: (p, row) => { rows.push(row); return { ok: true }; } });
                 // one capture.mjs dispatch per settled row, in the round's own order (no second judge rides a voice_rep)
                 return { r, rows, rowOf: (c) => rows.find((x) => x.of === c.id) || {}, repOf: (c) => ((cmds[rows.findIndex((x) => x.of === c.id)] || {}).argv || []) };
@@ -3295,14 +3490,14 @@ function selftest2(stub, S) {
           const grade = (v, extra = {}) => async () => ({ ok: true, text: JSON.stringify({ grades: [{ id: "b5:1", verdict: v, missing: [], why: "held on the mechanism", ...extra }] }) });
 
           // AGREE → the verdict stands, and it SAYS both families read it.
-          const agree = await gradeJudge({ dry: true, rows: [cap()], generate: grade("defended"),
+          const agree = await gradeJudgeST({ dry: true, rows: [cap()], generate: grade("defended"),
             secondOpinion: async () => ({ ok: true, verdict: "defended", why: "same read", engine: "gemini-flash" }) });
           assert("BLOCK 5 · AGREE — one verdict, recorded, carrying BOTH judges' names (a claim about him that two model families reached separately)",
             agree.graded === 1 && agree.settled[0].judges === 2 && agree.settled[0].agreed === true
             && agree.settled[0].engine === "opus" && agree.settled[0].judge2 === "gemini-flash" && agree.diamonds.length === 0);
 
           // DISAGREE → 💎. NOT a fact about him. A card, and nothing settled.
-          const dis = await gradeJudge({ dry: true, rows: [cap()], generate: grade("defended"),
+          const dis = await gradeJudgeST({ dry: true, rows: [cap()], generate: grade("defended"),
             secondOpinion: async () => ({ ok: true, verdict: "collapsed", why: "he never named where it breaks", engine: "gemini-flash" }) });
           assert("BLOCK 5 · DISAGREE — the 💎: NOTHING is recorded, nothing reaches an owner, and the item stays outstanding to be judged again",
             dis.graded === 0 && dis.settled.length === 0 && dis.dispatched.length === 0 && dis.outstanding === 1);
@@ -3326,19 +3521,19 @@ function selftest2(stub, S) {
           // A KEYED verdict is never double-judged: his own answer is on disk, a
           // second opinion buys nothing there and doubles the cost.
           let asked2 = 0;
-          const keyed = await gradeJudge({ dry: true, rows: [cap({ type: "axis_weld", ref: "tokenization:a", key: "his weld", standard: "capsule" })],
+          const keyed = await gradeJudgeST({ dry: true, rows: [cap({ type: "axis_weld", ref: "tokenization:a", key: "his weld", standard: "capsule" })],
             generate: grade("held"), secondOpinion: async () => { asked2++; return { ok: true, verdict: "cracked" }; } });
           assert("BLOCK 5 · a KEYED verdict is NOT second-judged — his own answer is on disk, so a second opinion buys nothing and doubles the cost",
             asked2 === 0 && keyed.graded === 1 && keyed.settled[0].judges === undefined);
 
           // FAIL-OPEN ON THE LANE. A dry free pool must not silently eat a verdict.
-          const dry = await gradeJudge({ dry: true, rows: [cap()], generate: grade("defended"),
+          const dry = await gradeJudgeST({ dry: true, rows: [cap()], generate: grade("defended"),
             secondOpinion: async () => ({ ok: false, reason: "lane-down" }) });
           assert("BLOCK 5 · a DEAD second reader leaves the first verdict standing, recorded honestly as ONE judge — a broken second opinion must never discard a real one",
             dry.graded === 1 && dry.settled[0].judges === 1 && dry.settled[0].agreed === null && /lane-down/.test(dry.settled[0].judge2_note));
 
           // key_doubt — a card about the PAGE, never a change to the verdict.
-          const kd = await gradeJudge({ dry: true, rows: [cap({ type: "axis_weld", ref: "tokenization:a", key: "his weld", standard: "capsule" })],
+          const kd = await gradeJudgeST({ dry: true, rows: [cap({ type: "axis_weld", ref: "tokenization:a", key: "his weld", standard: "capsule" })],
             generate: grade("held", { key_doubt: "the weld says BPE merges letters one at a time; it merges the most frequent PAIR" }),
             secondOpinion: async () => ({ ok: false }) });
           assert("BLOCK 5 · key_doubt — his recall verdict STILL STANDS and is recorded; the doubt about his own page becomes a card, because only he edits a capsule",
@@ -3411,11 +3606,13 @@ function selftest2(stub, S) {
         {
           const src2 = readFileSync(new URL(import.meta.url), "utf8");
           assert("BOTH PASSES ride claudeGen, which REFUSES outright when ANTHROPIC_API_KEY is set — Max subscription, never an API key, and no new vendor anywhere",
-            (src2.match(/claudeGen\(p, "opus", JUDGE_BUDGET_MS, \["--effort", "max"\](?:, [^)]*)?\)/g) || []).length === 2
+            (src2.match(/claudeGen\(p, "opus", (?:JUDGE_BUDGET_MS|budgetMs), \["--effort", "max"\](?:, [^)]*)?\)/g) || []).length === 2
             && /if \(process\.env\.ANTHROPIC_API_KEY\) return refuse\(\);/.test(readFileSync(join(HERE, "claudegen.mjs"), "utf8")));
           // …and PASS 1 is the one that hands over a head, which is the whole of BLOCK 1.
           assert("PASS 1 rides the SPLIT — the head is handed to claudeGen's fifth parameter, and only when this box can actually carry it",
-            /claudeGen\(p, "opus", JUDGE_BUDGET_MS, \["--effort", "max"\], rides \? head : null\)/.test(src2));
+            /claudeGen\(p, "opus", budgetMs, \["--effort", "max"\], rides \? head : null\)/.test(src2)
+            // mjdg — the batch's kill is what remains of the ONE budget, never above it
+            && /const budgetMs = Math\.max\(1, Math\.min\(JUDGE_BUDGET_MS, /.test(src2));
           // §9.1 (18 Aug 2026) — the two source-level halves of the external check, held
           // on the SAME read of this file (see the note in the §9.1 block above).
           assert("§9.1 · the search lane is claudeGen with the TOOL GRANT (the 11 Aug proof) — same door, same API-key refusal, never a new vendor",
