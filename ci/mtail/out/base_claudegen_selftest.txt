@@ -1,0 +1,64 @@
+  ✓ API-KEY LAW — sync refuses with the key set
+  ✓ API-KEY LAW — async refuses with the key set
+  ✓ API-KEY LAW — session() refuses with the key set (never spawns)
+  ✓ SESSION: two turns on ONE child, answers in order (t1 then t2), session_id captured from init
+  ✓ SESSION: per-turn usage is THAT turn's (head written on t1, READ on t2 — the transport law's whole point)
+  ✓ SESSION: concurrent sends are SERIALISED (one conversation, one order)
+  ✓ SESSION: the plan wall is CLASSIFIED (api_error_status 429 → limit_hit, status 429) and the usage still rides
+  ✓ SESSION: a child that dies mid-turn answers with an ERROR row (exited:true), never a hang
+  ✓ SESSION: a send after death answers immediately (session is not alive)
+  ✓ SESSION: close() ends stdin and the child exits 0
+  ✓ SESSION: a turn the child never answers TIMES OUT into an error row (timed_out:true), never a hang
+  ✓ SESSION argv: stream-json in+out · --verbose · --model · --effort per spawn · --system-prompt-file · --resume · tools OFF (the driver writes, the child composes)
+  ✓ SESSION argv: a caller that names tools gets --allowedTools and NOT the `--tools ""` disarm (the 11 Aug lesson holds here too)
+  ✓ json result parsed, tokens counted
+  ✓ token SPLIT rides the result (#7 — the ledger cannot bill a lump sum)
+  ✓ no usage block → estimated total, NULL components (never a fake zero)
+  ✓ limit event detected honestly
+  ✓ raw non-json passes through
+  ✓ REAL plan limit (api_error_status 429) is still caught, and says WHY
+  ✓ a stop_sequence error is NOT a rate limit (the misfire that killed 5 tanks)
+  ✓ …and the LEGACY regex, frozen beside it, still proves the old behaviour
+  ✓ a bare 429 inside an unrelated number never reads as a limit
+  ✓ PROSE FALLBACK: an envelope with no status still catches the real message
+  ✓ an upstream 529 (overloaded) also backs off
+  ✓ a 500 is a failure but NOT a limit (never a quota death for a server bug)
+  ✓ FORENSICS: the failing envelope is preserved, not truncated one field short
+  ✓ LEDGER PROJECTION: the discriminator rides the row (a plan wall stays nameable after the fact)
+  ✓ LEDGER PROJECTION: no envelope copy when it says nothing `error` doesn't (the reader ORs them)
+  ✓ WIRE: nightshift.mjs (genLedgered) still spreads ledgerForensics onto its brain_ledger row
+  ✓ WIRE: dmn.mjs (ledgerRow) still spreads ledgerForensics onto its brain_ledger row
+  ✓ WIRE: council.mjs (convene (the cross-family chair)) still spreads ledgerForensics onto its brain_ledger row
+  ✓ WIRE: thalamus.mjs (meterAdjudication (the ε-band adjudicator)) still spreads ledgerForensics onto its brain_ledger row
+  ✓ SILENT KILL: a SIGTERM'd child that flushed a PARTIAL envelope is a FAILURE, never an answer
+  ✓ SILENT KILL: the kill is NAMED in the error text (the field brain/watchman/doctor already read) and the fragment survives
+  ✓ SILENT KILL: a cut-off call is never mistaken for a plan wall (no status, no phrase — just dead)
+  ✓ SILENT KILL: a CLEAN raw-text call still passes through untouched (no err ⇒ the old lane, byte for byte)
+  ✓ SILENT KILL: a non-zero exit beside a COMPLETE envelope keeps its status AND its usage (parseErr would bin both)
+  ✓ LEDGER PROJECTION: the kill rides the brain_ledger row, and a finished call adds nothing
+  ✓ WIRE: brain.mjs still READS the kill (killed field + the KILLED text prefix) and still has a `timeout` cause
+  ✓ …and the FROZEN legacy branch still reproduces the defect verbatim (ok:true, error:null, a fragment as the answer)
+  ✓ WIRE: claudeGenAsync's callback still routes through resolveChild (the async engine is the only one that can be killed mid-flush)
+  ✓ SYNC DOOR: a non-zero exit beside a COMPLETE envelope keeps the HONEST 4-field meter (nightshift's whole spend rode this)
+  ✓ SYNC DOOR: …and the classifier it never lost still names the wall
+  ✓ …and the FROZEN legacy catch still reproduces the defect verbatim (length guess, four NULL components)
+  ✓ SYNC DOOR: a killed sync child with a PARTIAL envelope is still a failure, and its stderr is not dropped by the re-route
+  ✓ WIRE: BOTH of claudeGen's exits route through resolveChild (re-inline parseErr and this goes red in the same second)
+  ✓ WIRE: claudeGen FORWARDS a caller's stable head into ARGS — an accepted parameter that never reaches argv is the door being open on paper only
+  ✓ WIRE: …and the head REPLACES the lane's default system block rather than riding beside it (lean lane only; the full lanes ignore it by design)
+  ✓ ARG-SET: the profile NAMES the argv it chose (lean ⇔ LEAN_ARGS present), on whatever lane this box is on
+  ✓ ARG-SET: the invocation did NOT change — the frozen legacy chooser returns the identical argv
+  ✓ TOOL GRANT: `--tools ""` is dropped when a caller names tools (a grant overridden downstream is worse than a refused one)
+  ✓ TOOL GRANT: the caller's grant actually survives into argv
+  ✓ TOOL GRANT: a caller that names no tools gets EXACTLY the old argv (the tool-less organ lane is untouched)
+  ✓ TOOL GRANT: a non-tool extra arg is appended WITHOUT disarming anything
+  ✓ ARG-SET: ARSENAL_CLAUDEGEN_FULL=1 reverts to the full CLI and SAYS `full-env` (the revert is legible, not just effective)
+  – shim-lane probe SKIPPED (BIN()'s %APPDATA% shim probe is win32-only — no lane to walk on linux)
+  ✓ ARG-SET: it rides EVERY result — the answer, the failure, and the kill — while an UNMADE call carries null, never a fake lane
+  ✓ LEDGER PROJECTION: the arg-set rides the row ALWAYS (a lean row that says nothing is indistinguishable from history)
+  ✓ WIRE: limits.mjs still COUNTS the arg-set off the bus (drop the reader and this producer is a black box again)
+  ✓ claude binary is resolvable (claude)
+
+ALL CHECKS PASSED
+
+[gates.mjs] exit 0

@@ -1,0 +1,11 @@
+base · postmatch_selftest · exit 0 · ALL CHECKS PASSED
+base · sitting_selftest · exit 0 · sitting selftest: 98 passed, 0 failed
+base · gaffer_brain_selftest · exit 0 · gaffer_brain selftest: 189 passed, 0 failed
+base · brain_selftest · exit 1 · SELFTEST FAILED
+base · claudegen_selftest · exit 0 · ALL CHECKS PASSED
+base · daily_green_selftest · exit 0 · daily_green selftest: 75 passed, 0 failed
+base · organism_test_laws · exit 2 · organism_test: 113 passed, 2 failed · ruled 0 · UNRULED 2
+base · models_check · exit 0 · models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)
+base · lawpack · exit 0 · lawpack: GREEN — no law's finding count rose, and every rule is on disk
+base · gates_types · exit 0 · gates types  · 14 organ(s) @ts-check'd (baseline 14, may only grow) · undefined-symbol family 0 (must be 0) · other checkJs diagnostics 296 (baseline 296, may only fall)
+base · gates_lint · exit 0 · gates lint   · 344 error(s) · 2 warning(s) · no-empty 262 · no-unused-vars 82 · (directive) 2 (frozen: no-empty 262 · no-unused-vars 82 · warnings 2)
