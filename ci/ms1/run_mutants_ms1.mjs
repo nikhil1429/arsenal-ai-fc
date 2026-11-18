@@ -40,7 +40,7 @@ const MUTANTS = [
   ["B4.3 ADMIT", OT, "const n = /\\blisten\\(\\s*([1-9]\\d{0,4})\\b/.exec(l);\n      if (n) { const o", "const n = /\\blisten\\(\\s*(\\d{1,5})\\b/.exec(l);\n      if (n) { const o"],
   ["B4.4 NOSPAWN", OT, 'assert(name("binds no fixed service port (B4)"), false, hits.join(" · ")); continue; }', 'assert(name("binds no fixed service port (B4)"), false, hits.join(" · ")); }'],
   ["B4.5 DOOR", OT, "for (const p of ports.named) if (p.door) env[p.door] = String(await freePort());", ""],
-  ["B5.1 SECONDS", OT, "console.log(`  witness ‹${unit}› ${((Date.now() - u0) / 1000).toFixed(1)} s · ${j.last}`);", ""],
+  ["B5.1 SECONDS", OT, "console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);", ""],
   ["B5.2 NOFETCH", OT, "const inClone = spawnSync(", 'spawnSync("git", ["-C", ROOT, "fetch", "-q", "origin", base], { windowsHide: true });\n    const inClone = spawnSync('],
   ["B6.1 NOBASE", OT, "if (baseText === null || !/^[0-9a-f]{40}\\r?\\n?$/.test(baseText))", "if (baseText === null) continue;\n    if (!/^[0-9a-f]{40}\\r?\\n?$/.test(baseText))"],
   ["B6.2 SHORT", OT, "!/^[0-9a-f]{40}\\r?\\n?$/.test(baseText)", "!/^[0-9a-f]{7,40}\\r?\\n?$/.test(baseText)"],

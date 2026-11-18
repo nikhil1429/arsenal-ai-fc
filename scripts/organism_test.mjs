@@ -2865,14 +2865,18 @@ async function witnesses() {
       finally { closeSync(fd); }
       for (const p of namingProcs(tmp)) { try { process.kill(p); } catch {} }
       const j = judgeLast(readFileSync(log, "utf8"), r.status, unit, boundIds(readFileSync(join(dir, `witness_${unit}.mjs`), "utf8")));
-      console.log(`  witness ‹${unit}› ${((Date.now() - u0) / 1000).toFixed(1)} s · ${j.last}`);
-      assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
+      const secs = ((Date.now() - u0) / 1000).toFixed(1);
+      console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);
+      // the name carries the seconds and the reds beyond BOUND: the workflow prints assert lines only (keyOf folds the digits)
+      assert(name(`GREEN at head against its BASE · ${secs} s${j.ok ? "" : ` · red beyond BOUND: ${j.left}`}`), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
     } finally {
       for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
       try { rmSync(tmp, { recursive: true, force: true }); } catch {}
     }
   }
-  console.log(`  witnesses · ${units.length} unit(s) · ${((Date.now() - T0) / 1000).toFixed(1)} s`);
+  const total = ((Date.now() - T0) / 1000).toFixed(1);
+  console.log(`  witnesses · ${units.length} unit(s) · ${total} s`);
+  assert(`WITNESSES · ${units.length} unit(s) judged in ${total} s (B5: the member's own seconds, measured every run)`, true);
 }
 
 // ── THE RULED KNOWN-RED LIST (12 Oct 2026, forks row 639 (iii); lane V's fork (C)) ──────

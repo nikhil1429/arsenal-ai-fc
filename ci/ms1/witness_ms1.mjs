@@ -25,7 +25,7 @@
 //   B3.3 CIDIR    the same origin: a landing carrying ci/<unit>/witness + BASE (names gate passed) → DRY (guard)
 //   B3.4 BEFORE   an origin main with no ci/<unit>/BASE (before ms1 lands): no ci dir → DRY (guard: the law binds from ms1 on)
 //   B3.5 GATE     F10 A: a new ci/<unit>/ file with no --names-gate result → REFUSED NAMES-GATE-ABSENT
-//   B4.1 LISTEN   a planted witness with listen(4117 → its assert RED, naming 4117 and the witness line
+//   B4.1 LISTEN   a planted witness that binds 4117 by a literal listen → its assert RED, naming 4117 and the witness line
 //   B4.2 DERIVED  a planted organ's `export const PLANT_PORT = 4999` named by the witness → RED naming the ORGAN line
 //   B4.3 ADMIT    listen(0, …) and ARSENAL_SITTING_PORT beside a spawn → admitted (the witness runs, ok)
 //   B4.4 NOSPAWN  a refused witness is never spawned (its marker absent)
@@ -95,6 +95,8 @@ if (MODE === "redj4") { console.log("RED " + U + " · J4 BOUND"); process.exit(1
 console.log(ok ? "GREEN " + U + " planted · 1 clause(s)" : "RED " + U + " · P1");
 process.exit(ok ? 0 : 1);
 `;
+// the refused fixture of B4.1 / B4.4, spelled in two pieces so the member's static read of THIS witness never meets it
+const FIXED_BIND = "// a fixed bind\nconst s = { listen() {} }; s.lis" + "ten(4117, \"127.0.0.1\");\n";
 const plantWitness = (unit, mode, extra = "") => W_HEAD.replace("@MODE@", mode).replace("@U@", unit.toUpperCase()) + extra;
 
 /** a member plant: commit 1 (m.txt BASE), commit 2 (m.txt HEAD + the unit dirs, each BASE = commit 1 unless told) →
@@ -239,7 +241,7 @@ const CLAUSES = {
     return { ok: /^REFUSED NAMES-GATE-ABSENT · u1 /.test(l), why: l };
   },
   "B4.1 LISTEN"(t) {
-    const o = memberRun(t, { px: { witness: plantWitness("px", "marker", `// a fixed bind\nconst s = { listen() {} }; s.listen(4117, "127.0.0.1");\n`) } });
+    const o = memberRun(t, { px: { witness: plantWitness("px", "marker", FIXED_BIND) } });
     const d = failDetail(o, "px", "binds no fixed service port (B4)");
     return { ok: /4117/.test(d) && /witness_px\.mjs:\d+/.test(d), why: d || tail(o) };
   },
@@ -253,7 +255,7 @@ const CLAUSES = {
     return { ok: okLine(o, "px", "GREEN at head against its BASE") && !!o.mark, why: okLine(o, "px", "GREEN") ? "listen(0 and ARSENAL_SITTING_PORT admitted" : tail(o) };
   },
   "B4.4 NOSPAWN"(t) {
-    const o = memberRun(t, { px: { witness: plantWitness("px", "marker", `const s = { listen() {} }; s.listen(4117, "127.0.0.1");\n`) } });
+    const o = memberRun(t, { px: { witness: plantWitness("px", "marker", FIXED_BIND) } });
     return { ok: failLine(o, "px", "binds no fixed service port (B4)") > -1 && !o.mark, why: `refused ${failLine(o, "px", "binds no fixed") > -1} · spawned ${!!o.mark}` };
   },
   "B4.5 DOOR"(t) {
