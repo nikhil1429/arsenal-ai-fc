@@ -24,7 +24,10 @@
 //   O2  conductor.mjs states no S12 claim and no switched-off claim on any line — each hit named file:line
 //   K1  services.mjs differs ∧ its CODE SKELETON (comments dropped, string/template text blanked, ${…} kept) equals the
 //       base's — the diff is comments or strings only
-//   K2  conductor.mjs, the same
+//   K2  ~~conductor.mjs, the same~~
+//       RE-CUT by unit ms1 (forks row 1144 (2), an ADDED edit): conductor.mjs differs (this unit changed it). Its did-not-touch
+//       conjunct — the CODE SKELETON equals the base's — moved into BOUND: unit mcon (main fb42118, row 1150's stack)
+//       changed conductor.mjs's code after this seat's base, which is a bound, not a behaviour of mtxt3
 //   A1  every services.mjs selftest assert's CHECK (the source after its label up to the next assert, comment lines
 //       dropped) is byte-identical to the base's, the assert COUNT is equal, and only labels moved (≥ 1 label differs)
 //   M1  THE MEMBER KEY: the renamed labels never reach a verdict key — (a) the org's scripts/organism_test.mjs judges a
@@ -212,8 +215,10 @@ try {
 
   if (want("O1")) { const h = have ? selftestClaims(oS) : ["unreadable"]; clause("O1", have && !h.length, h.length ? `${h.length} claim(s): ${h.slice(0, 8).join(", ")}` : `the ${SVC} selftest names no switch-off but the cited words`); }
   if (want("O2")) { const h = have ? fileClaims(COND, oC) : ["unreadable"]; clause("O2", have && !h.length, h.length ? `${h.length} claim(s): ${h.join(", ")}` : `no S12 / switched-off claim in ${COND}`); }
+  var K2_SAME;
   if (want("K1")) { const same = have && skeleton(oS) === skeleton(bS); clause("K1", sMoved && same, !sMoved ? absent(SVC) : same ? `${SVC}: code skeleton equals the base's — comments/strings only` : `${SVC}: a CODE token differs from the base`); }
-  if (want("K2")) { const same = have && skeleton(oC) === skeleton(bC); clause("K2", cMoved && same, !cMoved ? absent(COND) : same ? `${COND}: code skeleton equals the base's — comments/strings only` : `${COND}: a CODE token differs from the base`); }
+  K2_SAME = have && skeleton(oC) === skeleton(bC);   // ms1 (row 1144 (2)): judged in BOUND
+  if (want("K2")) clause("K2", cMoved, !cMoved ? absent(COND) : `${COND} differs from the base (its code-skeleton equality is BOUND's)`);
   if (want("A1")) {
     const n = oA.length === bA.length && oA.length > 0;
     const moved = n ? oA.map((a, k) => (a.check === bA[k].check ? null : k)).filter((x) => x != null) : [];
@@ -262,7 +267,7 @@ try {
       for (const p of a.keys()) if (!b.has(p)) diff.push(p);
       const extra = diff.filter((p) => !(p === SVC || p === COND || p.startsWith("ci/mtxt3/")));
       const both = diff.includes(SVC) && diff.includes(COND);
-      clause("BOUND", !extra.length && both, extra.length ? `a file beyond the named ones differs: ${extra.slice(0, 5).join(", ")}${extra.length > 5 ? ` (+${extra.length - 5})` : ""}` : both ? `only the named files differ (${diff.length} path(s))` : "the two named files do not both differ (the unit is absent)");
+      clause("BOUND", !extra.length && both && K2_SAME === true, K2_SAME !== true ? `${COND}: a CODE token differs from the base (K2's moved conjunct)` : extra.length ? `a file beyond the named ones differs: ${extra.slice(0, 5).join(", ")}${extra.length > 5 ? ` (+${extra.length - 5})` : ""}` : both ? `only the named files differ (${diff.length} path(s))` : "the two named files do not both differ (the unit is absent)");
     }
   }
 } catch (e) { console.log(`  witness threw: ${e && e.message}`); results.push({ id: "THREW", ok: false }); }
