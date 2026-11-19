@@ -1,0 +1,9 @@
+{"ts":"2026-11-19T12:26:55Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mq2-spec FETCH_HEAD","last_line":"fb42118"}
+{"ts":"2026-11-19T12:28:00Z","act":"read-input","cmd":"git show 4d329ff:ci/mxb/MXB_SPEC.md","last_line":"F-Q2 · the base Q2 row. thalamus_config.json has two writers on main"}
+{"ts":"2026-11-19T12:30:00Z","act":"deps","cmd":"npm ci --ignore-scripts","last_line":"npm notice"}
+{"ts":"2026-11-19T12:32:00Z","act":"grep-writers","cmd":"grep -rn \"\\\"thalamus_config.json\\\"\" scripts/*.mjs","last_line":"scripts/watchman.mjs:1918:    const p = join(STATE_DIR, \"thalamus_config.json\");"}
+{"ts":"2026-11-19T12:35:00Z","act":"ir-row","cmd":"node <scratch>/m.mjs <repo>","last_line":"declared [] · Q2 dressing-room/state/thalamus_config.json W=gate_tune.mjs,thalamus.mjs · Q5 []"}
+{"ts":"2026-11-19T12:40:00Z","act":"ir-watchman","cmd":"node <scratch>/w.mjs <repo>","last_line":"reads dressing-room/state/brain_ledger.jsonl 1905 (no thalamus_config edge)"}
+{"ts":"2026-11-19T12:45:00Z","act":"live-format","cmd":"node -e <round-trip booleans on the live file, no content printed>","last_line":"rt1 true rt2 false"}
+{"ts":"2026-11-19T12:50:00Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-19T13:00:00Z","act":"probe","cmd":"node ci/mq2/witness/probe_base.mjs --repo .","last_line":"mq2 probe: 3 RED of 3"}
