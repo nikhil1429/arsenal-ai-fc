@@ -68,6 +68,15 @@ const SELF = "organism_test.mjs";
 // full sandbox and run for minutes, so `npm test` keeps them behind their own
 // name while the coverage law still holds them to the same standard as the rest.
 const SUITE_NAMES = ["organism:selftest", "squad:selftest", "audit:selftest"];
+// unit mcov (forks row 1137 (5)) — THE SUITE'S OWN ROSTER: organs whose selftest the RUNNER spawns and judges as a suite
+// member although no package.json suite string names them yet. They are members in every sense the coverage law reads:
+// coverage() counts each one as one suite (so a roster organ ALSO named in package.json reds as double-billed, and a roster
+// name with no file on disk reds as a ghost), suiteMembers() appends them, suites() spawns each and asserts its exit, and
+// the hermetic profile names a LIVE one (LIVE_SELFTESTS) instead of running it. Measured at a583afb, 19 Nov 2026: the four
+// were the coverage law's orphans; deck_lint, probe, study_scope read no live state and reach no socket (ci/mcov/tools/
+// readprobe.mjs), home_pin reads state/captain.json through archivist.mjs's import. Moving them into a package.json suite
+// string (the one-place record) is a FORK in ci/mcov/PROOF.md; until it lands, this roster is where they are wired.
+const SUITE_ROSTER = Object.freeze(["deck_lint", "home_pin", "probe", "study_scope"]);
 // ── B1 (b) · THE HERMETIC PROFILE (18 Nov 2026) ──────────────────────────────────────────────────────────────────────
 // `ORGANISM_TEST_PROFILE=hermetic` (or `--hermetic`) is what CI runs. A member that reads LIVE state — a file of
 // dressing-room/state (a sandbox COPY of one included: its bytes are still his), a daemon's port, the process table, the
@@ -302,6 +311,7 @@ function coverage() {
       inSuite.set(m[1], (inSuite.get(m[1]) || 0) + 1);
     }
   });
+  for (const f of SUITE_ROSTER) inSuite.set(f, (inSuite.get(f) || 0) + 1);   // unit mcov: the runner's roster is one suite
 
   const withTest = scripts().filter(hasSelftest).map((f) => f.replace(/\.mjs$/, ""));
   const orphans = withTest.filter((f) => !inSuite.has(f));
@@ -339,6 +349,7 @@ function suiteMembers(pkg) {
       if (!out.includes(m[1])) out.push(m[1]);
     }
   }
+  for (const f of SUITE_ROSTER) if (!out.includes(f)) out.push(f);   // unit mcov: the runner's roster, after the strings
   return out;
 }
 

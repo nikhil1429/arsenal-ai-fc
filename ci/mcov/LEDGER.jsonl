@@ -1,0 +1,10 @@
+{"ts":"2026-11-19T02:50:53.077Z","act":"measure the coverage red at base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage","last_line":"organism_test: 9 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 0 (hermetic: named, not run)"}
+{"ts":"2026-11-19T02:50:53.077Z","act":"run deck_lint selftest","cmd":"node scripts/deck_lint.mjs selftest","last_line":"deck_lint selftest 13/13 — all clauses hold"}
+{"ts":"2026-11-19T02:50:53.077Z","act":"run home_pin selftest","cmd":"node scripts/home_pin.mjs selftest","last_line":"home_pin selftest: 16 passed, 0 failed"}
+{"ts":"2026-11-19T02:50:53.077Z","act":"run probe selftest without node_modules","cmd":"node scripts/probe.mjs selftest","last_line":"probe selftest: 175/176 ok · RED"}
+{"ts":"2026-11-19T02:50:53.077Z","act":"npm ci (as CI does)","cmd":"npm ci --ignore-scripts","last_line":"ok"}
+{"ts":"2026-11-19T02:50:53.077Z","act":"run probe selftest after npm ci","cmd":"node scripts/probe.mjs selftest","last_line":"probe selftest: 176/176 ok · GREEN"}
+{"ts":"2026-11-19T02:50:53.077Z","act":"measure live reads of the four selftests","cmd":"MCOV_PROBE_LOG=… NODE_OPTIONS=--import=ci/mcov/tools/readprobe.mjs node scripts/<organ>.mjs selftest","last_line":"home_pin: 2x fs state/captain.json, listen 0, 5x connect 127.0.0.1:<ephemeral> from the fixture hook; deck_lint/probe/study_scope: none"}
+{"ts":"2026-11-19T02:50:53.077Z","act":"build: study_scope selftest verb + SUITE_ROSTER in organism_test","cmd":"node scripts/study_scope.mjs selftest","last_line":"study_scope selftest: 61 passed, 0 failed"}
+{"ts":"2026-11-19T02:50:53.077Z","act":"coverage at head","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage","last_line":"organism_test: 10 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)"}
+{"ts":"2026-11-19T02:50:53.077Z","act":"suites at head","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs suites","last_line":"organism_test: 60 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 72 (hermetic: named, not run)"}
