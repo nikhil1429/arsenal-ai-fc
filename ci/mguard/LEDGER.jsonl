@@ -3,3 +3,7 @@
 {"ts":"2026-11-19T12:30Z","act":"measure","cmd":"node scripts/usage_tap.mjs verdict","last_line":"WAIT · no campaign root (ARSENAL_CAMPAIGN_ROOT unset) · five-hour ?% · weekly ?% · age ? min · source none (exit 3)"}
 {"ts":"2026-11-19T12:36Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"exit 2 (ERR_MODULE_NOT_FOUND: fsrs, mutagen)"}
 {"ts":"2026-11-19T12:38Z","act":"checkpoint","cmd":"STOP message (his word #269)","last_line":"CHECKPOINT · STOPPED at 2026-11-19T12:38Z · resume from §3 code path, §4 witness, §5 mutants, FORKS, NAMED NOT GUESSED, file list"}
+{"ts":"2026-11-19T18:15Z","act":"resume","cmd":"git fetch origin claude/mguard-spec (his word #270)","last_line":"4ab7872 is the tip; resume from §3"}
+{"ts":"2026-11-19T18:16Z","act":"measure","cmd":"node scripts/ci_verdict.mjs 4ab78728a4bd66d235eacb173cd0e59be9b53e82","last_line":"ci_verdict 4ab7872 UNREADABLE — GET .../check-runs?per_page=100 answered 403 (exit 2)"}
+{"ts":"2026-11-19T18:17Z","act":"measure","cmd":"curl check-runs of 4ab78728a4bd66d235eacb173cd0e59be9b53e82","last_line":"135566072467 npm test · node 24 success · 135566072176 npm test · node 22 success"}
+{"ts":"2026-11-19T18:30Z","act":"spec","cmd":"write ci/mguard/MGUARD_SPEC.md §0-§5, FORKS G1-G8, NAMED N-G1..N-G6, files","last_line":"spec whole"}
