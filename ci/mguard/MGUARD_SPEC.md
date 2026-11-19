@@ -213,4 +213,9 @@ bracketed by statusLine renders, and the return render's `shown` row — via `ru
 - `node scripts/ci_verdict.mjs 4ab78728a4bd66d235eacb173cd0e59be9b53e82` → `UNREADABLE — GET …/check-runs?per_page=100
   answered 403` (exit 2) from this container, while the same GET by curl answered 200: the reader's request is refused by
   this cloud's proxy path, not by GitHub's verdict. Named for the runner; not fixed here.
-- This push's tip: named in the LEDGER's last row and in the final message (a file cannot carry its own sha).
+- `68724a662237bcc806ee9c438e9aa5e29962a4f7` (the whole spec — its content tip): check runs `135777229196` npm test · node 24
+  and `135777228886` npm test · node 22, both QUEUED when read once (19 Nov 2026, never polled); `ci_verdict.mjs` on it →
+  the same 403 UNREADABLE. The commit after it adds only this paragraph and one LEDGER row.
+- EFFORT RECEIPT: `node campaign-2026-09/tools/effort_receipt.mjs --fleet mguard --seat 00 --model claude-opus-5-5` → exit 1,
+  `Error: Cannot find module '…/campaign-2026-09/tools/effort_receipt.mjs'` (MODULE_NOT_FOUND). Nothing written under
+  `campaign-2026-09/`.
