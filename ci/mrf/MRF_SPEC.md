@@ -226,8 +226,10 @@ run time from `.github/workflows/suite.yml`, never typed.
 - (C) Monotone against `15edfec`: no base member vanishes or goes ok → FAIL. Additions and FAIL → ok are named, never
   red. Measured over the range: red exactly at `9f6f9ab` (A2) and nowhere else, apart from the §6 flake.
 - **Recommendation: (C)**, with the A2 repair landing beside it. Of the three, only (C) would have flagged the one real
-  regression in the range and nothing deliberate. Deciding measurement: run each form over the 19 dumps (`analyze.mjs`
-  with the form's rule), which this seat already holds; count the commits each would have flagged.
+  regression in the range and nothing deliberate. Deciding measurement, already run by this seat (ledger act `form-c`, 19 Nov 2026): (C)'s rule over the 19 dumps
+  flags `9f6f9ab` … `a18c167` (A2 each time), plus `5e43987` (the §6 flake), and nothing else. The hermetic profile moves
+  0 at every commit; additions are 3, then 5, then 6, never red. Under (A), the same dumps would have needed 3 re-base
+  units (mdn2, mpool, mfac). Under (B), 0 flags by construction (measured at head only).
 
 **F-2 · which side repairs A2.**
 - (a) The suite's matcher (`organism_test.mjs:2453`), as §5.
@@ -284,4 +286,5 @@ Read with `curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commit
 | Push | Run | Check runs | Verdict |
 |---|---|---|---|
 | `c38cbf0` (checkpoint) | `44427357827` | `135235536370` node 22 · `135235536788` node 24 | success · success |
-| `bf0f06a` (ledger) | `44428227669` | `135238533297` node 22 · `135238533779` node 24 | (read at the next push) |
+| `bf0f06a` (ledger) | `44428227669` | `135238533297` node 22 · `135238533779` node 24 | success · success |
+| `e179de6` (the spec) | `44430497729` | `135246339086` node 22 · `135246339383` node 24 | (in progress at the next push; read in the final message) |

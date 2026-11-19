@@ -18,3 +18,4 @@
 {"ts":"2026-11-19T00:37:27.836Z","act":"selfrel","cmd":"node selfrel.mjs a18c167 self (F-1 (B): skipLive neutralised)","last_line":"plant found · hermetic 146=146 equal · full 310=310 first diff none · headlines equal"}
 {"ts":"2026-11-19T00:37:27.836Z","act":"lockfile","cmd":"git diff --stat 15edfec a18c167 -- package-lock.json","last_line":"(empty)"}
 {"ts":"2026-11-19T00:37:27.836Z","act":"spec","cmd":"write ci/mrf/MRF_SPEC.md; BLOCK 7 regex scan of it","last_line":"0 undeclared"}
+{"ts":"2026-11-19T00:37:49Z","act":"form-c","cmd":"node -e <rule C over dump/*.json: a base member vanishes or goes ok→FAIL, per profile>","last_line":"flags 9f6f9ab..a18c167 (A2) + 5e43987 (acts flake); hermetic moved 0 everywhere; added 3/5/6 never red"}
