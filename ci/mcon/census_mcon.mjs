@@ -3,8 +3,9 @@
 // ci/mcon/census_mcon.mjs — UNIT mcon · forks row 1132 (3): the spec question, answered by census —
 //   "how many selftest asserts in the repo are satisfied by their own literal".
 // ----------------------------------------------------------------------------
-// USAGE: node ci/mcon/census_mcon.mjs --org <dir> [--json]
-//   --org   the tree to census (read-only). acorn is loaded from <org>/node_modules (npm ci); absent ⇒ NOT MEASURABLE, exit 2.
+// USAGE: node ci/mcon/census_mcon.mjs --org <dir> [--modules <dir>] [--json]
+//   --org      the tree to census (read-only). acorn is loaded from <org>/node_modules (npm ci), else from <modules>/node_modules;
+//              neither ⇒ NOT MEASURABLE, exit 2.
 //   --json  print every hit as one JSON row instead of the text list
 // CONTRACT — READ-ONLY. It reads only *.mjs / *.js source files (never dressing-room/, never .git / node_modules),
 //   writes nothing, starts no process, binds no port, calls no model. Text is read with \r\n folded to \n.
@@ -35,8 +36,9 @@ const opt = (k) => { const i = argv.indexOf(k); return i >= 0 && argv[i + 1] ? a
 const ORG = opt("--org") ? resolve(opt("--org")) : null;
 const JSON_OUT = argv.includes("--json");
 if (!ORG) { console.error("usage: node ci/mcon/census_mcon.mjs --org <dir> [--json]"); process.exit(1); }
-if (!existsSync(join(ORG, "node_modules", "acorn", "package.json"))) { console.log("CENSUS MCON · NOT MEASURABLE — no acorn under <org>/node_modules (run npm ci)"); process.exit(2); }
-const req = createRequire(join(ORG, "package.json"));
+const MODS = [ORG, opt("--modules") ? resolve(opt("--modules")) : null].filter(Boolean).find((d) => existsSync(join(d, "node_modules", "acorn", "package.json")) && existsSync(join(d, "node_modules", "acorn-walk", "package.json")));
+if (!MODS) { console.log("CENSUS MCON · NOT MEASURABLE — no acorn under <org>/node_modules or <modules>/node_modules (run npm ci)"); process.exit(2); }
+const req = createRequire(join(MODS, "package.json"));
 const acorn = req("acorn");
 const walk = req("acorn-walk");
 
