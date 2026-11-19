@@ -7,7 +7,7 @@ with its ledger, `plant_mid.mjs` and `two_proc_mid.mjs`. Every act has its row i
 Every measurement below was taken on 19 Nov 2026 in LF trees (`git archive <sha>`, `git -c core.autocrlf=false init`,
 `npm ci --ignore-scripts`, ANTHROPIC_API_KEY and GITHUB_ACTIONS unset), never in a tree holding his state.
 
-No CHECKPOINT open.
+CHECKPOINT · STOPPED at 2026-11-19T12:41Z · resume from: read the check runs of this tip (curl, no token) into THE NEUTRAL MACHINE table, then the effort receipt step (`node campaign-2026-09/tools/effort_receipt.mjs --fleet midb --seat 00 --model claude-opus-5-5`), then the FINAL MESSAGE. The build, witness, mutants and proof are done and pushed.
 
 ## What was built (row 1159 (1)-(3) only)
 
@@ -193,4 +193,5 @@ Read with `curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commit
 |---|---|---|
 | `7885631` | run `44524298793` | cancelled (a newer push superseded it) |
 | `07f3e1b` | run `44524824295` | cancelled (a newer push superseded it) |
-| `d1b5be1` | run `44525090694` · `135563418930` (node 22) · `135563418710` (node 24) | read at the next push |
+| `d1b5be1` | run `44525090694` · `135563418930` (node 22) · `135563418710` (node 24) | **success · success** |
+| this checkpoint push | proof + ledger only; read it at its sha with the curl above | |
