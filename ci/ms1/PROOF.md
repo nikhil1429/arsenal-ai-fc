@@ -503,3 +503,35 @@ run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GRE
   `organism_test: 77 passed, 2 failed · ruled 0 · UNRULED 2`. The two are **‹mdn2› N-SUITE** and **‹mdone› D-UNREAD
   D-METER** (F-g, F-h: mrung's, behavioural). **mr3, mf2, mjd3, mjud and mtail all read GREEN.** KNOWN_RED is empty.
 - The assembled tip is named once mrv is merged (row 1144).
+- **main `fb42118`** (units mact, mcon and mxh: `scripts/acts.mjs`, `claims.mjs`, `conductor.mjs`, `xray.mjs`) → merge `4065c5b`,
+  clean. Witness after: every clause GREEN except BOUND (mrt's files). Member after: the same two reds (F-g, F-h).
+- **mrv `e0b8053`** (row 1153 (1)) → merge `79981c6`, clean. It brings `ci/mrv/` (witness, `plant_mrv.mjs`, BASE) and re-cuts the
+  mlv1, mlv2 and mlv3 witnesses (each prints a `PORT_HELD` machine line).
+- **row 1153 (2) F-7 A · `0b3f8a8`, ADDED edits in ms1's own files:** the member echoes every `PORT_HELD …` line a witness
+  prints as the named measurement assert `WITNESS ‹unit› · measured · PORT_HELD …`. Clause **B5.4 PORTHELD** + mutant.
+- **row 1153 (3) F-9 · `0b3f8a8`:** a witness that never ends is killed at the member's own bound and reads the NAMED red
+  `killed at the member's bound (<n> min, suite.yml timeout-minutes): the witness never finished`, never a hang. Clause
+  **B5.3 HANG** plants a witness whose first boot never arrives, under the plant's own workflow copy at timeout-minutes
+  1. Measured 19 Nov 2026: the red arrives after 60.2 s.
+- **row 1153 (5), noted:** on his laptop LIVE-SAFE reads red whenever his services are up; that line alone is never a
+  regression (the member never runs there, B2).
+- **row 1144 (2), the list of conjuncts, completed:**
+
+  | Witness · clause | Kind | Overtaking unit (adopting row) | Fate |
+  |---|---|---|---|
+  | mfac · W3.2 (land.mjs byte-identical) | nothing-else-changed | ms1 (row 1066) | moved into BOUND (row 1119 (3)(b)) |
+  | mr3 · K3 (other entries kept) | nothing-else-changed | mrj, mrt, mrf (rows 1129, 1131, 1127) | moved into BOUND (row 1144 (1)) |
+  | **mtxt3 · K2** (conductor.mjs code skeleton equals the base's) | nothing-else-changed | **mcon** (main `fb42118`, row 1150's stack) | **moved into BOUND (row 1144 (2)), commit after `0b3f8a8`** |
+  | mdn2 · N-SUITE | behaviour | mrung (row 1136) | not moved: fork F-g |
+  | mdone · D-UNREAD, D-METER | behaviour | mrung (row 1136) | not moved: fork F-h |
+  | **mtxt3 · N1** (the new lines state no live count) | **content of new lines** (mcon's new lines carry digits) | **mcon** | **not moved: fork F-i** |
+
+  mtxt3 re-judged: head `RED MTXT3 · N1, BOUND` · base `a583afb` `RED MTXT3 · O1, O2, K1, K2, A1, M1, T1, T2, G1, N1,
+  BOUND` · at its own land commit `3f84c80`, `RED MTXT3 · BOUND`.
+- **Witness and mutants at the assembled tree** (19 Nov 2026, against `fb42118`): every clause GREEN except BOUND
+  (`scripts/brain.mjs`, `scripts/keeper.mjs`, mrt's); base RED on every clause except the two guards ·
+  `run_mutants: 33 of 33 mutant(s) RED by the clause that names them · control GREEN`.
+- **Member at the assembled tree** (Linux, before the mtxt3 move): `WITNESSES · 38 unit(s) judged in 841.3 s` ·
+  `organism_test: 80 passed, 3 failed · ruled 0 · UNRULED 3` (‹mdn2› N-SUITE, ‹mdone› D-UNREAD D-METER, ‹mtxt3› K2 N1).
+  mrv, mlv1, mlv2, mlv3, mr3, mf2, mjd3, mjud and mtail all read GREEN. `measured · PORT_HELD mlv1 · linux · node v22.23.5
+  · held 2 ms after the kill · 1 probe(s) · bound 246 ms`. KNOWN_RED is empty.
