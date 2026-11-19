@@ -206,4 +206,10 @@ they are drift (prose contradicting `:2190-2228`), not behaviour; no clause read
 ## 9. The neutral machine on this spec's pushes
 
 <!-- the check runs of each push are read with curl, no token: GET /repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs -->
-(filled after the push)
+| Push | Run | node 22 | node 24 |
+|---|---|---|---|
+| `78b7da0` (spec + ledger) | `44428359827` | `135238994162` success | `135238994551` success |
+
+Main head `a18c167` for comparison: run `44423800868`, both legs success. This push carries only `ci/mr3/`, so the
+neutral machine judges the spec .md (LOAD ZERO BLOCK 7 among the laws) and nothing else moved. The push carrying this
+table is read the same way and named in the seat FINAL MESSAGE.
