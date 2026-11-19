@@ -144,3 +144,42 @@ new member. So the site repair (§2.3) must land BEFORE or WITH the LIVE exit, n
 No state file is written by any edit. `scripts/gates.mjs` is NOT touched: `LINT_BASELINE` stays 262 (`gates.mjs:92`),
 and no new verb is needed. Not a single number is typed by the build: the existing `{ timeout: 600000 }` at `:2670` is
 kept as it is.
+
+## 4. WITNESS CLAUSES (each plant RED on base `a583afb`, GREEN on the build) — `ci/mgat/tools/witness.mjs`
+
+Plants (built by the witness script under `os.tmpdir()`, never by a shell write): Z = state folder absent · E = present,
+empty · T = the commit's tracked state · X = T with `registry.json` overwritten by a value no schema object accepts.
+No port is bound. No live service is named or POSTed at, nothing restarts, and every child is a `spawnSync` that returns.
+
+| Clause | What it asserts | base `a583afb` (19 Nov 2026) | build (19 Nov 2026) |
+|---|---|---|---|
+| W1 | `gates.mjs report` on E exits 0 and its no-empty equals the tree's own frozen `LINT_BASELINE` | RED `gates report exit 1 · no-empty 268 · frozen 262` | GREEN `exit 0 · no-empty 262 · frozen 262` |
+| W2 | per touched file, no more no-empty sites than at the parent of the rise that added them | RED `groundsman.mjs 2 (≤ 1 at 15edfec) · cortex.mjs 10 (≤ 8 at 4d166d3) · captains_call.mjs 5 (≤ 2 at 8c729c8)` | GREEN `1 · 8 · 2` |
+| W3 | hermetic `organism_test.mjs gates` ENTERS the mode: an `ok GATES —` assert, no `LIVE MODE gates` | RED `LIVE MODE gates — not run in the hermetic profile` | GREEN `LIVE gates schema half … \| ok GATES —` |
+| W4 | the hermetic verdict is entered AND identical on Z and on X (state cannot move it) | RED `live ["MODE gates"]` (never entered) | GREEN `Z {"pass":5,"fail":0,"reds":[],"live":["gates schema half"]} · X the same` |
+| W5 | the ajv half still guards: the FULL profile on X fails, and hermetic NAMES `gates schema half` LIVE | RED `full on X: fail 1 · hermetic LIVE ["MODE gates"]` | GREEN `full on X: fail 1 · hermetic LIVE ["gates schema half"]` |
+| W6 | cortex: one `releaseLock()`, called twice; the retire line holds no bare catch | RED `releaseLock() calls 0 · retire line bare catches 2` | GREEN `calls 2 · bare catches 0` |
+| W7 | ONE planted new empty catch turns the HERMETIC `gates` mode RED (the next rise has a neutral reader) | RED `LIVE MODE gates — not run` | GREEN `FAIL GATES —` |
+
+Last lines: `mgat witness a583afb base: W1 RED · W2 RED · W3 RED · W4 RED · W5 RED · W6 RED · W7 RED` and `mgat witness
+a583afb build: W1 GREEN · W2 GREEN · W3 GREEN · W4 GREEN · W5 GREEN · W6 GREEN · W7 GREEN` (ledger rows `witness
+a583afb base` / `witness a583afb build`).
+
+### 4.2 The behaviour guard (not a clause: GREEN on base by construction) — `node ci/mgat/tools/guard.mjs a583afb`
+Each touched organ's own selftest on the T plant, base vs build, hermetic env. 19 Nov 2026: `groundsman … ALL CHECKS
+PASSED · SAME`, `cortex … ALL CHECKS PASSED · SAME`, `captains_call … captains_call selftest: 156 passed, 0 failed ·
+SAME`. Last line: `mgat guard a583afb: 3 of 3 organ selftests unchanged by the build`. (On the E plant cortex's
+selftest dies on both trees alike, `gate: the registry lanes table is EMPTY/unreachable`. It reads `registry.json`,
+`organism_test.mjs:98`. So the guard uses T.)
+
+## 5. MUTANTS (one per clause; each turns its clause RED on the build) — `ci/mgat/tools/build.mjs` `MUTANTS`
+
+| Mutant | What it undoes | Its clause on the mutant (19 Nov 2026, last line of `witness.mjs a583afb <M> <W>`) |
+|---|---|---|
+| M1 | S1 left undeclared | `mgat witness a583afb M1 (S1 left undeclared): W1 RED` |
+| M2 | S5's declaring comment stripped back to `catch { }` | `… M2 (…): W2 RED` |
+| M3 | `gates` put back in `LIVE_MODES` | `… M3 (…): W3 RED` |
+| M4 | the hermetic half runs `report` (the ajv half reads state) instead of `lint` | `… M4 (…): W4 RED` |
+| M5 | the schema half is no longer named LIVE | `… M5 (…): W5 RED` |
+| M6 | the retire callback re-types the release inline | `… M6 (…): W6 RED` |
+| M7 | the hermetic `gates` mode returns before it runs the gate | `… M7 (…): W7 RED` |
