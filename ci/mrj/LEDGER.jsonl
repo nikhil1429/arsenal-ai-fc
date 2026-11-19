@@ -6,3 +6,5 @@
 {"ts":"2026-11-19T01:48:42.321Z","act":"rebase","cmd":"git apply ci/mrj/REBASE.diff (from 73823e6) + header re-cut (old text struck) + KNOWN_RED mjud entry removed","last_line":"4 files: ci/mjud/witness_mjud.mjs ci/mjud/w_drive.mjs scripts/organism_test.mjs ci/mrj/BASE"}
 {"ts":"2026-11-19T01:48:42.321Z","act":"after-head","cmd":"node ci/mjud/witness_mjud.mjs --org T(52b51c1 + build) --base-org T(5767e21)","last_line":"RED MJUD · BOUND"}
 {"ts":"2026-11-19T01:48:42.321Z","act":"after-base","cmd":"node ci/mjud/witness_mjud.mjs --org T(5767e21) --base-org T(5767e21)","last_line":"RED MJUD · M1 SITTING · M2 DUGOUT · M3 CENSUS · M4 F3-EAT · M5 F3-CLIP · M6 MJD2 · M8 MAUTH"}
+{"ts":"2026-11-19T01:50:45.893Z","act":"witness-build","cmd":"node ci/mrj/witness_mrj.mjs --org T(eeba921) --base-org T(52b51c1)","last_line":"GREEN MRJ mjud M3, M5, M6 re-based on mtail and mjd3, the member green and its ruled entry gone · 8 clause(s)"}
+{"ts":"2026-11-19T01:50:45.893Z","act":"witness-base","cmd":"node ci/mrj/witness_mrj.mjs --org T(52b51c1) --base-org T(52b51c1)","last_line":"RED MRJ · R1 M3 · R2 M5 · R3 M6 · R4 MEMBER · R5 KNOWN · R6 HEADER"}
