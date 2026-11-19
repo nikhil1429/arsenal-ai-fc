@@ -20,7 +20,9 @@
 //   node ci/witness/mleft/witness_left.mjs reach   --campaign <dir>   C:capability-c29 — row 1163 (5): REACHED MEANS THE WINDOW
 //        REACH, NEVER THE STATIC REACH ALONE. Every lane with a consumer (not NO CONSUMER, not RETIRED — retirement read from
 //        gate.mjs LANE_CONSUMERS, the registry's own derived view) reads window true AND reached true; the consumption ledger
-//        (dressing-room/state/consumption.jsonl, sole writer brain.mjs) must exist, else the window is unknowable here → 2.
+//        (dressing-room/state/consumption.jsonl, sole writer brain.mjs) must exist, else the window is unknowable here → 2; and
+//        the campaign's plan v3 list must be there (a cloud session's hook keeps its OWN consumption ledger — measured
+//        19 Nov 2026 — which is not his window) → 2.
 //   node ci/witness/mleft/witness_left.mjs finish  --campaign <dir>   C:finish-zero — orphans lanes 0 and verbs 0; rungs g = n
 //        with u = r = x = 0, no hand row, the receipt chain holding, loops lg = ln; laws both = n; ten laws verify = n; the
 //        register site = n; the teaching rules read (a count, at the laptop).
@@ -156,6 +158,9 @@ async function clauseMode(mode) {
     let plan = null; try { plan = (await import(pathToFileURL(join(ROOT, "scripts", "rung_receipt.mjs")).href)).readPlan(campaign); } catch { plan = null; }
     v = judgeCensus(d.j, plan, readJ(join(campaign, "rungs", "plan_v3.json")), readJ(join(campaign, "census.json")));
   } else {
+    // the window is HIS: a machine without the campaign's plan v3 list is not his laptop, and its own consumption ledger (a
+    // cloud session's hook writes one) says nothing about his reach — UNREAD, never RED, never green (row 1162 (5))
+    if (!existsSync(join(campaign, "rungs", "plan_v3.json"))) return out(2, "UNREAD", "no plan v3 list in --campaign — the window reach is read only beside his campaign tree");
     let retired = null;
     try { const g = await import(pathToFileURL(join(ROOT, "scripts", "gate.mjs")).href); retired = new Set(Object.entries(g.LANE_CONSUMERS).filter(([, l]) => l && l.right_consumer && l.right_consumer.retired).map(([s]) => s)); } catch { retired = null; }
     v = judgeReach(d.j, retired, existsSync(join(ROOT, "dressing-room", "state", "consumption.jsonl")));
@@ -219,6 +224,7 @@ const PLANTS = [
   { id: "c29.green", clause: CLAUSE.reach, mode: "reach", want: 0, why: "the one consumed lane reached in the window; the retired lane not counted" },
   { id: "c29.static-only", clause: CLAUSE.reach, mode: "reach", want: 1, state: { lanes: [LANE_REACH, LANE_RETIRED, LANE_STATIC] }, why: "a lane static yes, window NO" },
   { id: "c29.no-consumption", clause: CLAUSE.reach, mode: "reach", want: 2, state: { consumption: false }, why: "the consumption ledger absent (the cloud)" },
+  { id: "c29.no-plan", clause: CLAUSE.reach, mode: "reach", want: 2, camp: { plan: false }, why: "a consumption ledger but no plan v3 list (a cloud session's own ledger)" },
   { id: "c29.hermetic", clause: CLAUSE.reach, mode: "reach", want: 2, hermetic: true, why: "the hermetic profile prints reach LIVE" },
   { id: "finish.real-tree", clause: CLAUSE.finish, mode: "finish", want: 1, why: "the REAL done.mjs over this tree: orphans are not zero" },
   { id: "finish.zero", clause: CLAUSE.finish, mode: "finish", want: 0, stub: ZERO, why: "stub: zero everywhere" },
