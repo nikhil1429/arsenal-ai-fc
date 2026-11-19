@@ -196,6 +196,14 @@ drop in the organism's quality or intensity**. The shape holds only through thes
   after; PASS (re-run equal, burn lower) = a pool line plus an adoption row; a quality fail = tighten the
   pack contract and run one more unit; a cost fail = a fork to the architect.
 
+## THE LAND BRANCH — what it carries (unit ms2 · forks row 1121 F9 (a))
+`land/<unit>` is ONE commit on the main tip it is cut on (P). Its subject opens `unit <unit> (`; a landing that carries
+several units opens `unit <a> + <b> (` and every unit it names shares it (F6 (b)). Every unit it names carries
+`ci/<named>/LANDED_ON`: one line, P's full sha (`git rev-parse origin/main` at the cut), written in that same commit.
+The verb reads both (`scripts/land.mjs` step 5 refuses SUBJECT and LANDED-ON once main carries a LANDED_ON), and the
+suite's landed-commit leg READS P from that file — it never computes it. A unit that overtakes another unit's clause
+writes that unit's `ci/<u>/REBASE` line (`RECUT` or `DROP <ID> · <its unit> · row <n> · <why>`) in its own landing.
+
 ## THE PAUSE — a code path, not a ritual (row 136 (1))
 
 On his word "pause" in **any** session, relayed or typed: launch nothing more · `TaskStop` every run
