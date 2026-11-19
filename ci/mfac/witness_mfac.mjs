@@ -23,7 +23,10 @@
 //   W1.3  `night.mjs wait` on no armed night → still waiting at the bound; after the day end arms → exits 0 naming D
 //   W1.4  F1 A: the evening autoclose of a never-ended day arms nothing, and `arm --by evening` REFUSES (only the day end arms)
 //   W1.5  static (L6): night.mjs exists and spawns no claude, imports no model resolver, creates no scheduled task
-//   F4    the SHIPPED night.mjs carries NIGHT_CONFIG.memory_floor_mb = FLOOR_UNSET and `may --act launch` answers NO floor-unset
+//   F4    ~~the SHIPPED night.mjs carries NIGHT_CONFIG.memory_floor_mb = FLOOR_UNSET and `may --act launch` answers NO floor-unset~~
+//         RE-CUT by unit ms1 (forks row 1125 (2), the fourth ADDED edit) to the form forks row 1103 (2) ruled and unit mfac-floor
+//         shipped: the SHIPPED night.mjs carries the ruled floor `memory_floor_mb: 1536`, and on an armed, begun night a free-memory
+//         plant one MB under that floor makes `may --act launch` answer NO memory (the placeholder form is refused)
 //   W2.1  armed ∧ begun ∧ no sitting ∧ memory at the line → `may --act launch` GO, exit 0
 //   W2.2  the same with a sitting OPEN → NO sitting-open, exit 1
 //   W2.3  `may` before any arm → NO not-armed
@@ -148,12 +151,15 @@ let exitCode = 1;
 try {
   const D = istDay();
 
-  // ── F4 — the shipped placeholder refuses (before the floor is planted) ──────────────────────────────────────────────
+  // ── F4 — the shipped floor is the RULED number, and a night under it says NO memory (ms1 re-cut, rows 1125 (2) / 1103 (2)) ─
   if (want("F4")) {
-    await fresh();
+    const RULED_MB = 1536;   // forks row 1103 (2): the ruled floor unit mfac-floor shipped (the 1.5 GB line of row 477 (5))
+    const shipped = new RegExp(`memory_floor_mb: ${RULED_MB}\\b`).test(SHIPPED);
+    await armedNight();
+    MEM = String(RULED_MB - 1);
     const m = night("may", "--act", "launch");
-    clause("F4", HAS_NIGHT && /memory_floor_mb: FLOOR_UNSET/.test(SHIPPED) && m.status === 1 && /^NO floor-unset/.test(lines(m.stdout)[0] || ""),
-      `shipped key ${/memory_floor_mb: FLOOR_UNSET/.test(SHIPPED) ? "FLOOR_UNSET" : "absent/typed"} · may → ${(lines(m.stdout)[0] || lines(m.stderr).at(-1) || "").slice(0, 60)} (exit ${m.status})`);
+    clause("F4", HAS_NIGHT && shipped && m.status === 1 && /^NO memory/.test(lines(m.stdout)[0] || ""),
+      `shipped floor ${shipped ? `the ruled ${RULED_MB}` : "NOT the ruled number"} · may at ${RULED_MB - 1} MB free → ${(lines(m.stdout)[0] || lines(m.stderr).at(-1) || "").slice(0, 60)} (exit ${m.status})`);
   }
   plantFloor();   // the runner's act before the land branch, in the copy only
 
