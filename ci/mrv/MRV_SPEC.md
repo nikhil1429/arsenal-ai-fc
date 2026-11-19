@@ -136,8 +136,33 @@ The two mutant-i2 rows are the proof that the repaired I3 no longer inherits I2'
 
 ### 1.6 The repair under the same CPU contention as §1.3
 
-<!-- RESULT-1.6 -->
-(pending in this push; the next push carries its last lines)
+```
+8× burners + node ci/mrv/measure_mlv1.mjs --root . --head 52b51c1 --n 20 --witness <scratch>/var/repaired/witness_mlv1.mjs
+MRV MEASURE · node v22.23.5 · 20 run(s) · I1 0/20 · I2 0/20 · I3 0/20 · XML 0/20 · BOUND 20/20 · LAST 0/20 red
+8× burners + <node v24.22.2> ci/mrv/measure_mlv1.mjs … --witness <scratch>/var/repaired/witness_mlv1.mjs
+MRV MEASURE · node v24.22.2 · 20 run(s) · I1 0/20 · I2 0/20 · I3 0/20 · XML 0/20 · BOUND 20/20 · LAST 0/20 red
+```
+
+Read honestly: the base's natural rate under this load was 1 in 20, so 0 in 20 for the repair does not decide by
+itself. The plants in §1.5 are the decisive evidence: each cause is made certain and then removed.
+
+### 1.7 The suite on this branch (the seat's own measurement, dated 19 Nov 2026)
+
+```
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all      (exit 2)
+organism_test: 140 passed, 4 failed · ruled 0 · UNRULED 4 · LIVE 126 (hermetic: named, not run)
+  FAIL EVERY organ with a selftest is wired into a suite (package.json:_selftest_coverage_law) · orphaned: deck_lint, home_pin, probe, study_scope
+  FAIL SUITE MEMBER · fsrs selftest exits 0        (ERR_MODULE_NOT_FOUND: this cloud seat has no node_modules; no npm ci run)
+  FAIL SUITE MEMBER · mutagen selftest exits 0     (the same)
+  FAIL all 52 hermetic suite members pass (every one RUN, not chained)   (the two above)
+  ok   LOAD ZERO BLOCK 7 · no canon file states a live count a command can produce (93 files scanned, 1 declared)
+git diff --name-only 52b51c1..HEAD   →   ci/mrv/ only (LEDGER.jsonl, MRV_SPEC.md, measure_mlv1.mjs, probe_arm.mjs, variants_mlv1.mjs)
+```
+
+None of the four names a file of this branch. The diff is `ci/mrv/` only, so each is a red of the base tree in this
+container. A base-tree run was refused by the repo's worktree rail, whose tool lives on his laptop. The neutral machine
+(§8) judges head against its merge base, and that is the authority. The witness member itself does not run here
+(`GITHUB_ACTIONS` unset, `scripts/organism_test.mjs:2835`).
 
 ## 2. THE CAUSES, by file:line at `52b51c1`
 
