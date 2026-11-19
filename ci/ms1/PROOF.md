@@ -566,7 +566,29 @@ the ledger and the seat's final message (writing them here would be a new push w
   - node 24 `135539401494`: `WITNESSES · 38 unit(s) judged in 2027.3 s`; all 38 ok; the same headline.
   - Both legs: `B1_VERDICT … RED — 1 member(s) red that are not red at the merge base`. The new red is `LOAD ZERO BLOCK
     7` on `ci/mrv/PROOF.md:105` (a count line the mrv merge brought, undated); the base red is main's coverage law.
-    The merge-base tree printed the C5 skip (`149 passed, 1 failed`).
+    The merge-base tree printed the C5 skip (19 Nov 2026: `149 passed, 1 failed`).
   - Fixed in the commit carrying this line, a doc-only edit: that line is dated `(19 Nov 2026)`. No witness or organ byte
     moves. Measured: zero undeclared lines over every tracked `.md` (the BLOCK 7 scan, 19 Nov 2026). **The assembled tip is
     now this commit**; its legs are in the ledger and the final message.
+
+CHECKPOINT · STOPPED at 2026-11-19T12:41Z · resume from: read both neutral legs of the assembled tip 1582be0 (run in progress at the stop) through the public API with curl, write every member line and the run ids into §13.1, then go idle for the architect re-run.
+
+### 13.2 RESUME · his word #270 (19 Nov 2026, 23:38 IST)
+
+- **`c35f7dd`, run `44526188862`** (the checkpoint; it cancelled `1582be0`'s run). Both legs RED.
+  - node 22 `135567431023`: one new red, `LOAD ZERO BLOCK 7`.
+  - node 24 `135567431782`: two new reds, `LOAD ZERO BLOCK 7` and `WITNESS ‹mlv3› · GREEN at head against its BASE`.
+- **BLOCK 7:** `ci/ms1/PROOF.md:569`, this seat's own §13.1 text, had its date more than two lines above it. It is now
+  dated in place.
+- **‹mlv3› on node 24 is a flake, not a regression** (measured 19 Nov 2026):
+  - the same bytes read `ok` on node 22 of the same run, and on both legs of `db3e01d`;
+  - `db3e01d..c35f7dd` changes only `ci/mrv/PROOF.md`, `ci/ms1/PROOF.md` and `ci/ms1/LEDGER.jsonl`, no code;
+  - its measured line `WITNESS ‹mlv3› · measured · PORT_HELD mlv3 · win32 · node v24.22.3 · held 1 ms after the kill ·
+    1 probe(s) · bound 301 ms` shows the port freed within its bound, so it is **not port-held**. It is the clock-bound
+    class of F-d (unit mrv's).
+  - Which clause it redded is not printed: the workflow prints assert lines only, and the detail line is not one of
+    them. NAMED, not guessed.
+- **The BLOCK 7 scan, replayed over the COMMIT's blobs** (`git show <sha>:<path>` for every tracked `.md` outside
+  `docs/archive/`, never the working tree; the suite's own LIVE / SUITE rules and exemptions), 19 Nov 2026, last line:
+  `BLOCK7 over b25088a's blobs: 97 files scanned, 1 declared, 0 undeclared`. The commit carrying this line is
+  scanned the same way before its push, and its line is in `LEDGER.jsonl` (act `block7-blobs`).
