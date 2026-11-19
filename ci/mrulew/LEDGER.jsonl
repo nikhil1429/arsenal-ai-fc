@@ -9,3 +9,4 @@
 {"ts":"2026-11-19T18:40:00Z","act":"witness","cmd":"node ci/witness/mrulew/witness_rules.mjs","last_line":"RULE-WITNESSES UNREAD · the live teaching rules file is absent here (his laptop holds it; never the seed) · exit 2"}
 {"ts":"2026-11-19T18:45:00Z","act":"witness","cmd":"node ci/witness/mrulew/witness_rules.mjs plants (first form)","last_line":"RED MRULEW · PLANTS P-ALL (coverage: coreAxes threw in the planted tree — the tracked registry was not re-planted)"}
 {"ts":"2026-11-19T18:50:00Z","act":"witness","cmd":"node ci/witness/mrulew/witness_rules.mjs judge","last_line":"GREEN MRULEW rule witnesses (16 seed rule(s): base 1 → head 0) · plants both ways · 4 clause(s) (exit 0)"}
+{"ts":"2026-11-19T18:58:00Z","act":"mutants","cmd":"node ci/mrulew/run_mutants_mrulew.mjs","last_line":"run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN"}
