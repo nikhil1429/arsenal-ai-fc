@@ -1,4 +1,8 @@
-# MGAT BUILD — PROOF (unit mgat, forks row 1145)
+# MGAT BUILD — PROOF (unit mgat, forks row 1145 · FK1 ruled B by forks row 1156)
+
+> **READ §8 FIRST.** §1-§7 are the build as it stood at `920d9b5` (base `4b00cf5`, four files). FK1 was ruled B by forks row 1156,
+> and §8 is what this branch is NOW: main `fb42118` merged in, `scripts/rung_receipt.mjs` the fifth file, and nine witness clauses.
+> §8's numbers supersede §2-§4 and §7 wherever they differ.
 
 Written 19 Nov 2026 by the cloud build seat. Branch `claude/mgat-build`. Nothing on main moved. No PR, no merge, no live
 model call, no state file read into or written by this branch. Every number below was measured 19 Nov 2026 (linux,
@@ -119,3 +123,65 @@ because a file cannot carry its own sha's verdict.
 ## 7. FILES ON THIS BRANCH vs `4b00cf5`
 `scripts/groundsman.mjs`, `scripts/cortex.mjs`, `scripts/captains_call.mjs`, `scripts/organism_test.mjs`, and `ci/mgat/**`.
 Nothing else (`git diff --stat 4b00cf5 HEAD`; witness BOUND). `.claude/settings.json` is not carried.
+
+## 8. FORKS ROW 1156 (FK1 ruled B), 19 Nov 2026 — what the branch is now
+
+### 8.1 The ruling, by clause
+- **(4) main merged first:** `git merge --no-edit fb42118` gave `b5ea3fe` (a plain merge, no conflict; main a4338f0, 980e953, fb42118 touch
+  `scripts/acts.mjs`, `claims.mjs`, `conductor.mjs`, `xray.mjs`, none of them this unit's). **Further rises at that head:**
+  `node ci/mgat/tools/drift.mjs 4b00cf5 fb42118` → `mgat drift 4b00cf5 -> fb42118: no-unused-vars 85 -> 85 · tsc 297 -> 297`. On the
+  merged head, no-empty reads 262 (`measure.mjs b5ea3fe gates`). **None:** main fb42118 brought no new rise of any of the three counts.
+  `ci/mgat/BASE` now names `fb42118`, the merge base the neutral verdict judges against. The cut was `4b00cf5` (§1).
+- **(1) the fifth file, each site's fate by measurement** (`scripts/rung_receipt.mjs`, file:line at `fb42118`; its header names
+  it the SOLE WRITER of its own receipts file, and no edit touches a write):
+
+| Site | What reads it (grep) | Fate |
+|---|---|---|
+| `:37` `sep` in the `node:path` import | nothing: `grep -n "\bsep\b"` hits only the import | **removed** (a name nothing reads) |
+| `:101` `row_sha256` in `rowSha`'s `const { row_sha256, ...rest } = row` | nothing: the binding exists only to keep the key out of `rest` | **removed**: `const rest = { ...row }; delete rest.row_sha256;`. The same object reaches `canon` (keys sorted), so every chain hash is unchanged. The selftest's chain asserts still pass (below) |
+| `:307` `const row = append(…red…)` | nothing: the red line prints the witness's exit, out sha and head, never the row. The green verb finds its red by key (`:313`), never by this binding | **removed** (`append(…)` kept: the write is the act) |
+| `:275` TS2339 `Property 'why' does not exist` | the cause, measured on a planted file under the repo's own tsconfig: `strict` is off, so `!sd.ok` does not narrow the declared `{ok:true,…}\|{ok:false,why}` union (it stays an error). `sd.ok === false` does narrow (no error) | **repaired at its cause**: `if (sd.ok === false)`, with a two-line comment naming why. No cast, no ignore comment, and the JSDoc `@returns` (`:84`) is unchanged |
+
+  Both frozen baselines are untouched: `git diff fb42118 HEAD -- scripts/gates.mjs` is empty. The bytes are `build.mjs` EDITS `RR-sep`,
+  `RR-rowsha`, `RR-red` and `RR-ts`. All thirteen EDITS matched exactly once at `fb42118`.
+- **(2) the witness gains the two counts:** W8 is no-unused-vars at or under `LINT_BASELINE["no-unused-vars"]`. W9 is "other checkJs
+  diagnostics" at or under `TYPE_BASELINE.soft_errors`. Both are read from the tree's own `scripts/gates.mjs`, never typed. Each has a mutant: M8
+  leaves `sep` in, M9 leaves the negation in. W3 is back to the spec's `ok GATES —`, because the gate is now green.
+- **(3)** The LIVE exit and every fate ride this one branch. **(5)** FK2 is unit mlaw's, and it is not touched here.
+
+### 8.2 The witness both ways (base worktree at `fb42118`, build `07d74db`), 19 Nov 2026
+- Build: W1 `exit 0 · no-empty 262 · frozen 262` · W2 `1 · 8 · 2` · W3 `ok GATES —` · W4 `Z {"pass":5,"fail":0,"live":["gates schema half"]} · gate reds 1 · X the same`
+  · W5 `full on X: fail 1 · SCHEMA red on the planted registry.json yes · hermetic LIVE ["gates schema half"]` · W6 `calls 2 · bare catches 0`
+  · W7 `FAIL GATES — … LINT ROSE — no-empty 263, baseline 262` · W8 `no-unused-vars 82 · frozen 82` · W9 `other checkJs diagnostics 296 · frozen soft_errors 296`
+  · BOUND `differing tracked files 26 · outside the named files 0` · LAST `0`. Base: every clause RED (W8 `85 · frozen 82`, W9 `297 · frozen 296`).
+- **LAST LINE (build): `GREEN MGAT gates hermetic half + six site fates + four rung_receipt fates · 9 clause(s) · RED on base, GREEN on org · BOUND · LAST` (exit 0).**
+- **LAST LINE (base as org): `RED MGAT · W1 (RED on org) · W2 (RED on org) · W3 (RED on org) · W4 (RED on org) · W5 (RED on org) · W6 (RED on org) · W7 (RED on org) · W8 (RED on org) · W9 (RED on org)` (exit 1).**
+
+### 8.3 Mutants (`run_mutants_mgat.mjs --org . --base-org <fb42118>`), 19 Nov 2026
+`CONTROL · named files equal to --org 5 of 5 · witness org side 9 of 9 GREEN`. M1-M7 are RED by W1-W7 as in §3. M8 → `W8 org RED … no-unused-vars 83 · frozen 82`.
+M9 → `W9 org RED … other checkJs diagnostics 297 · frozen soft_errors 296`. LAST `0`.
+**LAST LINE: `run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN` (exit 0).**
+
+### 8.4 Measurements, BASE `fb42118` vs BUILD `07d74db` (`measure.mjs`), 19 Nov 2026
+
+| What | BASE `fb42118` | BUILD `07d74db` |
+|---|---|---|
+| `gates.mjs report` (E) | exit 1 · 3 RED: TYPE 297/296 · no-empty 268/262 · no-unused-vars 85/82 | **exit 0 · `gates: GREEN — nothing rose`** · no-empty 262 · no-unused-vars 82 · types 296 |
+| lint line | `353 error(s) · 2 warning(s) · no-empty 268 · no-unused-vars 85` | `344 error(s) · 2 warning(s) · no-empty 262 · no-unused-vars 82` |
+| law pack findings | jugad 93 · bare-catch 37 · receipt-testimony-read 5 · the rest 0 · raw 1933 | **identical findings** · raw 1927. The two reds (jugad 93/90, depcruise 13/7) are the same on both sides. That is FK2, unit mlaw's |
+| groundsman / cortex selftest | exit 0 `ALL CHECKS PASSED` / exit 0 `ALL CHECKS PASSED` | the same |
+| captains_call selftest | exit 0 `captains_call selftest: 156 passed, 0 failed` (19 Nov 2026) | the same (19 Nov 2026) |
+| **rung_receipt selftest** | exit 0 `rung_receipt selftest: all 13 pass` | exit 0 `rung_receipt selftest: all 13 pass` |
+| member `gates` (hermetic) | `LIVE MODE gates — not run` | `LIVE gates schema half` + **`ok GATES —`** |
+| `models.mjs check` | exit 0 | **exit 0** |
+| hermetic suite (`suite.mjs <sha> base`, T plant), 19 Nov 2026 | `organism_test: 147 passed, 3 failed` | `organism_test: 148 passed, 3 failed` (19 Nov 2026): the same three linux reds (N6), and the one new pass is `GATES —` |
+
+Still OWED TO THE ARCHITECT, never guessed: `gates.mjs report` on his live state on this branch, the laptop lint count, and the
+groundsman, cortex and rung_receipt selftests on Windows, one at a time.
+
+### 8.5 Files on this branch vs main `fb42118`
+`scripts/groundsman.mjs`, `scripts/cortex.mjs`, `scripts/captains_call.mjs`, `scripts/organism_test.mjs`, `scripts/rung_receipt.mjs`,
+and `ci/mgat/**`. Nothing else (`git diff --stat fb42118 HEAD`; witness BOUND). `.claude/settings.json` is not carried.
+
+### 8.6 The neutral machine at the final tip
+See §8.7: it is written after the final push's two legs are read.
