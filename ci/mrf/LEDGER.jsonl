@@ -9,3 +9,5 @@
 {"ts":"2026-11-19T01:55:42.485Z","act":"hermetic-both","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (LF trees of 52b51c1 and 0399b73, GITHUB_ACTIONS unset)","last_line":"organism_test: 141 passed, 5 failed · ruled 0 · UNRULED 5 · LIVE 126 (both; member lines identical, folded)"}
 {"ts":"2026-11-19T01:55:42.513Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
 {"ts":"2026-11-19T01:55:42.555Z","act":"ci-read","cmd":"curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs","last_line":"af85cb8 run 44439321751 cancelled/cancelled · f1b44b8 run 44439769397 cancelled/cancelled · 0399b73 run 44439996605 in_progress"}
+{"ts":"2026-11-19T02:06:09.916Z","act":"member-all","cmd":"GITHUB_ACTIONS=true ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses (repo at 5378193)","last_line":"organism_test: 57 passed, 4 failed · ruled 3 · UNRULED 1 (‹mfac›, same at 52b51c1) · ok WITNESS ‹mf2› · ok WITNESS ‹mrf›"}
+{"ts":"2026-11-19T02:06:09.947Z","act":"member-mfac","cmd":"node member.mjs <repo> 52b51c1|5378193 mfac","last_line":"RED MFAC · F4 W3.2 BOUND (both)"}

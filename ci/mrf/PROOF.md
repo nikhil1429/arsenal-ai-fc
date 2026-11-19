@@ -94,6 +94,21 @@ build reads as it did at `15edfec` (ok).
 **`WITNESS ‹mrf› · GREEN at head against its BASE`** is a NEW member: `ci/mrf/BASE` makes the ms1 member judge it. At
 this branch's tip against `52b51c1`, only the named files differ, so BOUND itself is GREEN.
 
+**The member over the whole branch, by the suite itself** (`GITHUB_ACTIONS=true ORGANISM_TEST_PROFILE=hermetic node
+scripts/organism_test.mjs witnesses`, in the repo at `5378193`, Linux, 19 Nov 2026):
+
+```
+witness ‹mf2› 224.1 s · RED MF2 · BOUND                                                   ok   WITNESS ‹mf2› · GREEN at head against its BASE
+witness ‹mrf› 15.3 s · GREEN MRF mf2 re-judged monotone and A2 following mday's line · 9 clause(s)   ok   WITNESS ‹mrf› · GREEN at head against its BASE
+organism_test: 57 passed, 4 failed · ruled 3 · UNRULED 1 · LIVE 0 (hermetic: named, not run)
+  · [UNRULED] WITNESS ‹mfac› · GREEN at head against its BASE
+```
+
+The three ruled reds are mjd3 J4, mtail T3 AUTH and mjud M3 M5 M6, row 1107's other three entries, all untouched. **The
+mf2 entry is not STALE, because it is gone.** No other member turned red. The one UNRULED member, ‹mfac›, reads the same
+at the base: the member's recipe gives `RED MFAC · F4 W3.2 BOUND` at `52b51c1` (13.8 s) and at `5378193` (13.6 s),
+19 Nov 2026. That is ms1's own fork F-a (`ci/ms1/PROOF.md` §9), not this unit's.
+
 **Touched selftests.** No organ's selftest is touched. The suite itself, hermetic, in LF trees with `GITHUB_ACTIONS`
 unset, 19 Nov 2026:
 
