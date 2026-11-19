@@ -379,3 +379,5 @@ pack red appears.
   same law. Its check was run by the rule's own regex before each push.
 - FK9 and FK10 are closed by the assembled tip's re-statements: mf2, mjd3, mdone and mdn2 are GREEN on the neutral
   machine.
+
+CHECKPOINT · STOPPED at 2026-11-19T12:37:54Z · resume from: merged 1582be0 at c9f713b, MERGED.json re-derived at fb8cbda (witness GREEN MLAW · 10 clause(s), lawpack GREEN 90, mdone/mdn2 BOUND only); next: re-run run_mutants_mlaw.mjs on fb8cbda (interrupted by the stop), read both neutral legs of fb8cbda, write PROOF §12 (one new BLOCK 7 hit on this tree: ci/ms1/PROOF.md:569, byte-equal to 1582be0 — the ms1 seat's)
