@@ -2,3 +2,6 @@
 {"ts":"2026-11-19T12:22:00Z","act":"gap1 cwd diff","cmd":"build() from two cwds, cwddiff","last_line":"cwd-dependent edges: A-only 13 · B-only 13"}
 {"ts":"2026-11-19T12:35:00Z","act":"all rules on mxb stack","cmd":"MXC_RULES=cwd,ctx,nest measure.mjs --tree <mxb+mxc tree>","last_line":"unresolved 1996 · files 432 · Q1 10 · Q2 1 · Q3 6 · Q4 0 · Q5 0 · Q6 1"}
 {"ts":"2026-11-19T12:38:21Z","act":"CHECKPOINT","cmd":"STOP received (his word #269)","last_line":"CHECKPOINT · STOPPED at 2026-11-19T12:38:21Z · resume from writing witness_mxc.mjs W1-W7 + mutants M1-M7"}
+{"ts":"2026-11-19T18:13:09Z","act":"RESUME","cmd":"his word #270 via runner message","last_line":"resumed from CHECKPOINT 2026-11-19T12:38:21Z at c9b1dcc"}
+{"ts":"2026-11-19T18:13:09Z","act":"witness on base","cmd":"node ci/mxc/witness/witness_mxc.mjs --org <base> --base-org <base> --mini <mini base>","last_line":"witness_mxc: 3 GREEN, 4 RED"}
+{"ts":"2026-11-19T18:13:09Z","act":"witness on build","cmd":"node ci/mxc/witness/witness_mxc.mjs --org <build blob 36f8757> --base-org <base> --mini <mini build>","last_line":"witness_mxc: 7 GREEN, 0 RED"}
