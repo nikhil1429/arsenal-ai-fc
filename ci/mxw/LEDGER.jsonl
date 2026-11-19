@@ -12,3 +12,4 @@
 {"ts":"2026-11-19T00:55:00Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (copies with .git, base and build)","last_line":"base 143 passed 3 failed · build 143 passed 3 failed · same UNRULED set"}
 {"ts":"2026-11-19T00:58:00Z","act":"mutants","cmd":"witness.mjs on xray.m2 / xray.m3","last_line":"M2 W4 false · M3 W1 false W2 false"}
 {"ts":"2026-11-19T01:05:00Z","act":"spec","cmd":"write ci/mxw/MXW_SPEC.md","last_line":"verdict (a) xray blind for both rows"}
+{"ts":"2026-11-19T00:30:00Z","act":"ci-read","cmd":"curl check-runs e3e39aa","last_line":"run 44428770869: node 22 success · node 24 success"}

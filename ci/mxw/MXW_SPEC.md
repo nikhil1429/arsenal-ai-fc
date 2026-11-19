@@ -203,6 +203,13 @@ witness that is GREEN on base cannot prove the fix, so W1, W2 and W5 carry the p
 
 ## 10 · The neutral machine on this branch
 
-Filled in from the public check-runs API after each push (see §11).
+This branch is main plus `ci/mxw/` only, so its verdict is the BASE verdict the build will be compared against.
 
-## 11 · Check runs
+## 11 · Check runs (public API, `GET /repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`, no token)
+
+| sha | workflow run | job id | name | conclusion | completed |
+|---|---|---|---|---|---|
+| e3e39aa | 44428770869 | 135240408092 | npm test · node 22 | success | 2026-11-19T00:28:31Z |
+| e3e39aa | 44428770869 | 135240408287 | npm test · node 24 | success | 2026-11-19T00:29:40Z |
+
+The check runs for this push (the one that adds this table) are named in the seat's FINAL MESSAGE.
