@@ -2920,7 +2920,6 @@ const KNOWN_RED = [
   // unit ms1 (forks row 1107 (1)(c), row 1066 F11 A stands): the four landed witnesses a LATER landing overtook are RED members,
   // ruled here one each, owner = the re-judge unit row 1107 (2) names. The detail is exact: a NEW clause red beside the ruled
   // one is UNRULED (a new death never hides under an old entry), and the member turning green makes its entry STALE (refused).
-  { assert: "WITNESS ‹mjd3› · GREEN at head against its BASE", detail: "red beyond BOUND: J4", row: 1107, owner: "unit mr3", until: "mr3 re-judges mjd3 J4 (fix, or witness re-cut + BASE re-taken) and lands it" },
   // RETIRED by unit mrt (forks row 1120 (1) / (4)): the mtail entry (row 1107, detail "red beyond BOUND: T3 AUTH") — T3 repaired on main
   // (keeper.mjs a leaf again, depcruise no-circular 7), T2 re-based naming mday; ci/mtail's clauses re-cut in the same diff.
   { assert: "WITNESS ‹mf2› · GREEN at head against its BASE", detail: "red beyond BOUND: F2 F4", row: 1107, owner: "unit mrf", until: "mrf re-judges mf2 F2, F4 and lands it" },
@@ -2935,6 +2934,9 @@ const KNOWN_RED = [
 //     loaded, over-count never under-count. Retired when ea8d015 (rows 639 (A) + 641 (D)) put both on the CALL shape.
 //   · LOAD ZERO BLOCK 5, both lines (row 639, lane S): study_scope's ACK_ONLY declared by row 641 (B), the Select-Object
 //     flag matcher no longer read as speech (C).
+//   · WITNESS ‹mjd3› · GREEN at head against its BASE (row 1107, owner unit mr3), detail "red beyond BOUND: J4". Retired by
+//     unit mr3 (row 1112 (1), fate (a)): unit mjd4 (15edfec, row 1030 (2)) re-dispatches a capture in doubt exactly once on
+//     purpose, so mjd3's J4 was re-based in ci/mjd3/witness_mjd3.mjs (old text struck in its header; BASE 074ead9 kept, F1 A).
 function rulingOf(fails, passed, list = KNOWN_RED) {
   const ok = (e) => Number.isInteger(e.row) && e.row > 0 && typeof e.owner === "string" && e.owner.trim() && typeof e.assert === "string" && e.assert;
   const invalid = list.filter((e) => !ok(e)).map((e) => e.assert || "(no assert name)");
