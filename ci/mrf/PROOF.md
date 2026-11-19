@@ -137,9 +137,16 @@ and `ci/mrf/*`. `.claude/settings.json` is not touched (it is not on this branch
 |---|---|---|---|
 | `af85cb8` | `44439321751` | `135275928383` cancelled (superseded) | `135275928156` cancelled |
 | `f1b44b8` | `44439769397` | `135277486788` cancelled (superseded) | `135277486480` cancelled |
-| `0399b73` | `44439996605` | `135278240336` (in progress at the next push) | `135278240672` |
+| `0399b73` | `44439996605` | `135278240336` (superseded by the next push) | `135278240672` |
+| **`b1c7c97`** | **`44441828879`** | **`135284344803` failure** | **`135284344535` failure** |
+| `52b51c1` (the BASE, ms1's tip, for comparison) | `44429565409` | `135243231510` failure | `135243231639` failure |
 
-The last push's verdict is in the ledger's last `ci-read` row and in the final message.
+**Read by the check runs' annotations (19 Nov 2026).** Both legs at `b1c7c97` give `B1_VERDICT RED · 4 member(s) red that
+are not red at the merge base` (`95b07a6`), and the four are **‹mtail› ‹mjud› ‹mjd3› ‹mfac›**. At the BASE `52b51c1`, the
+same machine red **‹mtail› ‹mjud› ‹mjd3› ‹mfac› ‹mf2›**, and ‹mlv1› also on node 24 (ms1's fork F-d). So **‹mf2› left the
+red list and ‹mrf› did not join it.** The remaining three ruled reds are row 1107's other entries. ‹mfac› is ms1's
+fork F-a, red at the BASE, and not this unit's. No other member turned red. The verdict stays RED because of members this
+unit does not own.
 
 ## 6. FORKS and open questions (for the architect)
 
