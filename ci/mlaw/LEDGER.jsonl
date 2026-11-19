@@ -1,0 +1,8 @@
+{"ts":"2026-11-19T01:30:00Z","act":"branch","cmd":"git fetch origin main && git checkout -b claude/mlaw-spec FETCH_HEAD","last_line":"224f9b9 unit mtxt (forks row 1114 / newest adoption; ...)"}
+{"ts":"2026-11-19T01:31:00Z","act":"read","cmd":"git show 2c66b26:ci/mrt/MRT_SPEC.md ; git show 13d2728:ci/mrf/MRF_SPEC.md","last_line":"read, not re-measured"}
+{"ts":"2026-11-19T01:35:00Z","act":"install","cmd":"npm ci","last_line":"node_modules/.bin carries ast-grep sg depcruise knip"}
+{"ts":"2026-11-19T01:40:00Z","act":"tree-recipe","cmd":"node ci/mlaw/tools/lawgate.mjs 224f9b9   # before git init in tree.mjs","last_line":"fatal: not a git repository (or any of the parent directories): .git"}
+{"ts":"2026-11-19T01:45:00Z","act":"q1-census","cmd":"node ci/mlaw/tools/lawgate.mjs $(git rev-list --first-parent --reverse origin/main)","last_line":"{\"sha\":\"224f9b9\",\"jugad\":93,\"depcruise\":13,\"exit\":1,\"last\":\"lawpack: 2 RED — a gate may only get stricter (§10-D rule 6)\"}"}
+{"ts":"2026-11-19T01:48:00Z","act":"q1-sites","cmd":"node ci/mlaw/tools/jugadset.mjs d0c8c96 76b0626 009f52e 4d166d3 3824171 902b6cc 224f9b9","last_line":"3824171 -> 902b6cc 92 -> 93 ADDED [scripts/usage_tap.mjs:51 LAW_HOME[2]] GONE []"}
+{"ts":"2026-11-19T01:50:00Z","act":"q1-state-dependence","cmd":"node ci/mlaw/tools/lawstate.mjs 224f9b9","last_line":"{\"sha\":\"224f9b9\",\"state_entries\":57,\"exit\":1,\"out_sha256\":\"145ddf2bda9ff572\"} == state_entries 0"}
+{"ts":"2026-11-19T01:55:00Z","act":"hermetic-run","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 145 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
