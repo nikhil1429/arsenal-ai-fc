@@ -6,7 +6,7 @@ flake the mrf spec met under load (`git show 13d2728:ci/mrf/MRF_SPEC.md`, §6 an
 This seat builds nothing. Every number below is a measurement this seat made on 19 Nov 2026, with the command named;
 each has its row in `ci/mact/LEDGER.jsonl`. The measurement scripts live in the seat's scratchpad; their bodies are in §9.
 
-CHECKPOINT · load ×6 still running at the push · next: fill §2 LOAD placeholders, the hermetic run, CI rows
+Load ×6 complete (19 Nov 2026). No CHECKPOINT open.
 
 ## 0. HEADLINE
 
@@ -20,7 +20,7 @@ mrf run and this seat's load probe met inside the suite.
 
 - **Rate, predicted by a forced-pair sweep:** 23 of the 496 collision pairs red the selftest ⇒ **23/1296 ≈ 1.8 % per run**.
 - **Rate, measured alone:** **5 red of 300** (serial). **Under load** (three full-profile suites at once, each on its
-  own LF tree): **base 28 red of 1228 · candidate 0 red of 1220** (§2, 3 of 6 rounds; the full count is §2's table).
+  own LF tree): **base 41 red of 2239 (1.83 %) · candidate 0 red of 2220**; the suite member itself read FAIL in 1 of 21 full-profile copies (the probe), ok in the 18 of the six rounds.
   Load only adds draws; the rate per run is the same, inside the binomial spread.
 - **It reaches the live ledger too:** with the live clock and no `deps.now`, six acts refused at validation in one turn
   (no owner spawn, so no ms passes) mint **two equal ids in 224 of 20000 turns** on base (theory 15/1296 ≈ 1.16 %),
@@ -52,23 +52,24 @@ Why the suite on the neutral machine never saw it: `acts` is a LIVE selftest (`s
 | alone | `node alone.mjs <base tree> 300` | `300 runs, red 5 ms min/med/max 46 223 286` |
 | alone reds | the 5 rows of `alone300.jsonl` | `undo(hold)` ×3 · `undo(card)` ×1 · `undo(agenda)` + crash (`Node.js v22.23.5`, 13 ok) ×1 |
 | plant, base | `node --import pin_random.mjs scripts/acts.mjs selftest` ×3 (`Math.random = () => 0.5`) | exit 1 ×3, 6 FAIL each |
-| plant, candidate | the same in the candidate tree ×3 | `acts selftest: 56 passed, 0 failed` ×3 |
-| pair sweep | `node pairs.mjs <base tree>` | `calls 32 · control acts selftest: 56 passed, 0 failed · pairs 496 · red 23 · crash 1` |
+| plant, candidate | the same in the candidate tree ×3 | `acts selftest: 56 passed, 0 failed` ×3 (19 Nov 2026) |
+| pair sweep | `node pairs.mjs <base tree>` | `calls 32 · control acts selftest: 56 passed, 0 failed · pairs 496 · red 23 · crash 1` (19 Nov 2026) |
 | live clock, base | `node livems.mjs <base tree> 20000` | `turns 20000 · a turn with two mints in one ms 20000 · a turn with two EQUAL ids 224` |
 | live clock, candidate | `node livems.mjs <candidate tree> 20000` | `… a turn with two EQUAL ids 0` |
-| load probe | `node load.mjs 1 3 <base> <candidate>` | suite copies: acts member ok · (unread, matcher bug fixed after) · **FAIL** (the crash form; headline `293 passed, 17 failed` vs `294 passed, 16 failed`) · base loop 16 red of 368 · candidate 0 of 367 |
-| load ×6 | `node load.mjs 6 3 <base> <candidate>` then `node analyze.mjs load6x3.jsonl` | LOAD6_LINE |
+| load probe | `node load.mjs 1 3 <base> <candidate>` | suite copies: acts member ok · (unread, matcher bug fixed after) · **FAIL** (the crash form; headline `293 passed, 17 failed` vs `294 passed, 16 failed`) · base loop 16 red of 368 · candidate 0 of 367 (19 Nov 2026) |
+| load ×6 | `node load.mjs 6 3 <base> <candidate>` then `node analyze.mjs load6x3.jsonl` | `acts-under-load-base: red 41 of 2239 · ms min/med/max 69/338/1036` · `acts-under-load-build: red 0 of 2220 · ms min/med/max 159/342/860` · `suite-full: 18 runs · acts member FAIL 0 · ok 18` · every headline `294 passed, 16 failed` (19 Nov 2026) |
+| hermetic (the brief’s measurement) | `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` in a fresh base tree | `organism_test: 143 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` and `LIVE selftest acts — not run in the hermetic profile` (19 Nov 2026) |
 
 **Red of total, per assert, by command** (the pair sweep is exact: one forced pair per run; alone and load are draws):
 
-| Assert (`acts.mjs` line) | pair sweep: red pairs of 496 | alone: red of 300 | under load, base: red of LOADN | under load, candidate |
+| Assert (`acts.mjs` line) | pair sweep: red pairs of 496 | alone: red of 300 | under load, base: red of 2239 | under load, candidate |
 |---|---|---|---|---|
-| `undo(card)` `:493` | 7 | 1 | LOAD_CARD | 0 |
-| `undo(agenda)` `:497` | 6 (1 a crash) | 1 (a crash) | LOAD_AGENDA | 0 |
-| `undo(pref)` `:499` | 5 | 0 | LOAD_PREF | 0 |
-| `stats` `:502` | 4 | 0 | LOAD_STATS | 0 |
-| `boardLine` `:506` | 4 | 0 | LOAD_BOARD | 0 |
-| `undo(hold)` `:544` | 13 | 3 | LOAD_HOLD | 0 |
+| `undo(card)` `:493` | 7 | 1 | 13 | 0 |
+| `undo(agenda)` `:497` | 6 (1 a crash) | 1 (a crash) | 14 | 0 |
+| `undo(pref)` `:499` | 5 | 0 | 13 | 0 |
+| `stats` `:502` | 4 | 0 | 11 | 0 |
+| `boardLine` `:506` | 4 | 0 | 11 | 0 |
+| `undo(hold)` `:544` | 13 | 3 | 21 | 0 |
 | the other 50 asserts | 0 | 0 | 0 | 0 |
 
 The red pairs (Math.random call index, j–k): `0-1 0-2 1-2 0-7 … 6-7` (7) and `0-13 … 12-13` (13): the note / pref /
@@ -154,7 +155,7 @@ Last line: `GREEN MACT · W1 W2 W3 W4` or `RED MACT · <clauses>`.
 - (a) Leave it; the witness carries the proof. (b) A later unit makes the selftest hermetic (its `registry.json` / `captain.json` reads planted) so CI runs it.
 - **Recommendation: (b)** as its own row, not inside mact. Deciding measurement: `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` printing `LIVE selftest acts` before, an `ok SUITE MEMBER · acts` after.
 
-**F-5 · the mrf §6 note "6 of 6".** At `224f9b9` the selftest reads `56 passed` (`alone.mjs`, 300 of 300 runs that finished print 56 asserts). The mrf figure is a miscount or another invocation.
+**F-5 · the mrf §6 note "6 of 6".** At `224f9b9` (19 Nov 2026) the selftest reads `56 passed` (`alone.mjs`, 300 of 300 runs that finished print 56 asserts). The mrf figure is a miscount or another invocation.
 - (a) Leave mrf's text (a record). (b) Correct it in mrf's PROOF when mrf builds.
 - **Recommendation: (b).** Deciding measurement: `node scripts/acts.mjs selftest | tail -1` at `b1fc984`.
 
@@ -165,6 +166,7 @@ Last line: `GREEN MACT · W1 W2 W3 W4` or `RED MACT · <clauses>`.
   — the count only, never a row. Any non-zero decides F-2 (c).
 - **The rate on Windows / node 24:** the model predicts the same 23/1296; measure with `alone.mjs <tree> 300` there.
 - **Whether a live turn ever carried two acts minted in one ms:** needs his ledger's `ts` values (same command, counting equal `ts` among adjacent rows).
+- **The 3 hermetic reds in this seat’s tree** (the coverage law and `sandbox` `ERR_FS_EISDIR`, 19 Nov 2026) are not acts; the neutral machine read `109a5d0` green, so they are this seat’s tree recipe (the `node_modules` symlink or the `git init` inside the tree), named, not chased. Measure: the same command in a real clone on his laptop.
 - **The full-suite count of this seat's 18 copies** was measured on Linux only; mrf's 2 of 38 was the same machine class.
 
 ## 8. The files a build would touch
@@ -189,4 +191,5 @@ Read with `curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commit
 |---|---|---|---|
 | `815ba77` (skeleton) | `44440129054` | node 22 `135278602224` · node 24 `135278601848` | cancelled · cancelled (superseded by the next push) |
 | `109a5d0` (ledger) | `44440449965` | node 22 `135279758446` · node 24 `135279758152` | success · success |
-| `0c30cbb` (ledger) | `44441614371` | node 22 `135283563877` · node 24 `135283564134` | (queued at this push; read in the final message) |
+| `0c30cbb` (ledger) | `44441614371` | node 22 `135283563877` · node 24 `135283564134` | cancelled · cancelled (superseded) |
+| `a15c1a9` (spec draft) | `44441932617` | node 22 `135284653815` · node 24 `135284654501` | (in progress at the next push; read in the final message) |
