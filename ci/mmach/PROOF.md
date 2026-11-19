@@ -1,0 +1,5 @@
+# mmach · PROOF (in progress)
+
+CHECKPOINT · STOPPED at 2026-11-19T12:38:15Z · resume from: read CI of the siblings (broken 2995f43, clean 399b719) and of the build tip; build LF trees of BASE fb42118 and the build tip under os.tmpdir() by a node script; run the witness both ways (`--org <tip> --base-org <BASE>`), `ci/mmach/run_mutants_mmach.mjs` (written, NOT yet run), the hermetic suite, `node scripts/models.mjs check`, the law pack counts BASE vs build; then the proof body, the effort receipt, the FINAL MESSAGE.
+
+Done before the stop (19 Nov 2026 UTC): base cut `fb4211870093e6b8657655eb02ebcfc425f1eab1` (ci/mmach/BASE); siblings `claude/mmach-broken` 2995f43 (one byte, scripts/tokenizer_play.mjs:208) and `claude/mmach-clean` 399b719 (tree equals the base) pushed, never landed; witness `ci/witness/mmach/witness_machine.mjs` committed at 5d5ebc7 with no record, each clause read exit 2; red-before of all three recorded through `rung_receipt.mjs red` under an os.tmpdir() state door (3 rows, chain holds); record `ci/witness/mmach/machine.json` and `ci/mmach/run_mutants_mmach.mjs` written in this checkpoint commit, unrun.
