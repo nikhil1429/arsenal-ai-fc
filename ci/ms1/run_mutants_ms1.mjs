@@ -48,6 +48,9 @@ const MUTANTS = [
   ["F1 BOUND", OT, "for (const id of bids) rest =", "for (const id of []) rest ="],
   ["F1W BOUNDID", OT, '...[...src.matchAll(/["\'`]((?:[A-Z][A-Z0-9-]*\\s+)?BOUND)["\'`]/g)].map((m) => m[1])', ""],
   ["F11 BEHAVE", OT, 'const left = rest.replace(/[\\s,·]+/g, " ").trim();', 'const left = "";'],
+  ["R1 RULED", OT, '{ assert: "WITNESS ‹mjd3› · GREEN at head against its BASE", detail: "red beyond BOUND: J4", row: 1107,', '{ assert: "WITNESS ‹mjd3› · GREEN at head against its BASE", detail: "red beyond BOUND: J4", row: 1106,'],
+  ["R2 STALE", OT, "const stale = list.filter((e) => ok(e) && passed.includes(e.assert)).map((e) => e.assert);", "const stale = [];"],
+  ["R3 NEWDEATH", OT, '(e.detailRe ? new RegExp(e.detailRe).test(f.detail || "") : (e.detail ?? "") === (f.detail ?? ""))', "(true)"],
   ["V1 KEYOF", CV, '.map((p, i) => (i % 2 ? p : p.replace(/\\d+/g, "#")))', '.map((p) => p.replace(/\\d+/g, "#"))'],
 ];
 

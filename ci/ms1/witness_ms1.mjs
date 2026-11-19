@@ -39,6 +39,9 @@
 //   F1   BOUND    a witness whose LAST line is `RED PX · BOUND` (exit 1) → ok (F1 A: BOUND dropped)
 //   F1W  BOUNDID  a witness whose BOUND id is `W6 BOUND` (its own literal) → ok
 //   F11  BEHAVE   `RED PX · J4 BOUND` → FAIL naming J4 (F11 A: a behavioural red at head is a RED member)
+//   R1   RULED    row 1107 (1)(c): a planted ‹mjd3› red exactly `J4` → RULED (row 1107, owner unit mr3), UNRULED 0
+//   R2   STALE    the same member GREEN → its entry is STALE, exit 2 (a ruled entry whose member turns green is refused)
+//   R3   NEWDEATH ‹mjd3› red `J1 J4` → UNRULED, exit 2 (a new clause red never hides under the ruled one)
 //   V1   KEYOF    ci_verdict compare: head red WITNESS ‹mlv1› vs base red WITNESS ‹mlv0› → RED (F4 A)
 // Each clause runs on --base-org (must be RED) and on --org (must be GREEN); a GUARD (B3.3, B3.4) must be GREEN on both.
 // BOUND: only scripts/organism_test.mjs, scripts/land.mjs, scripts/ci_verdict.mjs and files under ci/ differ (text, CRLF
@@ -92,6 +95,7 @@ if (MODE === "lf") ok = ok && cr(base) === 0 && cr(org) === 0;
 if (MODE === "redbound") { console.log("  ✗ BOUND · off-bound: a later landing"); console.log("RED " + U + " · BOUND"); process.exit(1); }
 if (MODE === "redw6") { const id = "W6 BOUND"; console.log("RED " + U + " · " + id); process.exit(1); }
 if (MODE === "redj4") { console.log("RED " + U + " · J4 BOUND"); process.exit(1); }
+if (MODE === "redj4j1") { console.log("RED " + U + " · J1 J4 BOUND"); process.exit(1); }
 console.log(ok ? "GREEN " + U + " planted · 1 clause(s)" : "RED " + U + " · P1");
 process.exit(ok ? 0 : 1);
 `;
@@ -131,6 +135,7 @@ function memberRun(tree, units, { env = {}, crlf = false, organs = {} } = {}) {
 const okLine = (o, u, what) => o.lines.some((l) => l.startsWith(`  ok   WITNESS ‹${u}› · ${what}`));
 const failLine = (o, u, what) => o.lines.findIndex((l) => l.startsWith(`  FAIL WITNESS ‹${u}› · ${what}`));
 const failDetail = (o, u, what) => { const i = failLine(o, u, what); return i > -1 ? `${o.lines[i]} ${o.lines[i + 1] || ""}` : ""; };
+const verdictOf = (o) => { const l = o.lines.find((x) => x.startsWith("ORGANISM_TEST_VERDICT ")); try { return l ? JSON.parse(l.slice("ORGANISM_TEST_VERDICT ".length)) : null; } catch { return null; } };
 const tail = (o) => o.lines.filter(Boolean).slice(-2).join(" | ");
 
 // ── the land plant (ci/mlj's sandbox shape, every call --dry) ─────────────────────────────────────────────────
@@ -300,6 +305,21 @@ const CLAUSES = {
     const o = memberRun(t, { px: { witness: plantWitness("px", "redj4") } });
     const d = failDetail(o, "px", "GREEN at head against its BASE");
     return { ok: /red beyond BOUND: J4\b/.test(d), why: d || tail(o) };
+  },
+  "R1 RULED"(t) {
+    const o = memberRun(t, { mjd3: { witness: plantWitness("mjd3", "redj4") } });
+    const v = verdictOf(o), r = v && v.ruled.find((x) => x.assert === "WITNESS ‹mjd3› · GREEN at head against its BASE");
+    return { ok: !!r && r.row === 1107 && r.owner === "unit mr3" && v.unruled.length === 0, why: v ? `ruled ${JSON.stringify(v.ruled)} · unruled ${v.unruled.length}` : tail(o) };
+  },
+  "R2 STALE"(t) {
+    const o = memberRun(t, { mjd3: { witness: plantWitness("mjd3", "marker") } });
+    const v = verdictOf(o);
+    return { ok: !!v && v.stale.includes("WITNESS ‹mjd3› · GREEN at head against its BASE") && v.exit === 2, why: v ? `stale ${JSON.stringify(v.stale)} · exit ${v.exit}` : tail(o) };
+  },
+  "R3 NEWDEATH"(t) {
+    const o = memberRun(t, { mjd3: { witness: plantWitness("mjd3", "redj4j1") } });
+    const v = verdictOf(o), u = v && v.unruled.find((x) => x.assert === "WITNESS ‹mjd3› · GREEN at head against its BASE");
+    return { ok: !!u && v.ruled.length === 0 && v.exit === 2, why: v ? `unruled ${JSON.stringify(v.unruled)} · exit ${v.exit}` : tail(o) };
   },
   "V1 KEYOF"(t) {
     const cv = join(t, "scripts", "ci_verdict.mjs");

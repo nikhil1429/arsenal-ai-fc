@@ -2875,8 +2875,10 @@ async function witnesses() {
       const j = judgeLast(readFileSync(log, "utf8"), r.status, unit, boundIds(readFileSync(join(dir, `witness_${unit}.mjs`), "utf8")));
       const secs = ((Date.now() - u0) / 1000).toFixed(1);
       console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);
-      // the name carries the seconds and the reds beyond BOUND: the workflow prints assert lines only (keyOf folds the digits)
-      assert(name(`GREEN at head against its BASE · ${secs} s${j.ok ? "" : ` · red beyond BOUND: ${j.left}`}`), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
+      // the judged name is STABLE, so a KNOWN_RED entry can rule it (row 1107 (1)(c)); its reds ride the detail. The seconds ride
+      // their own measurement line: the workflow prints assert lines only (keyOf folds the digits)
+      assert(name(`ran in ${secs} s (B5)`), true);
+      assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
     } finally {
       for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
       try { rmSync(tmp, { recursive: true, force: true }); } catch {}
@@ -2901,7 +2903,14 @@ async function witnesses() {
 // Every FAIL still exits non-zero, ruled or not (exit 1 when all are ruled) — CI and the watchman's
 // nightly sweep see exactly the red they saw before; the list only says which reds are news.
 const KNOWN_RED = [
-  // EMPTY since 13 Oct 2026 (row 642): every entry of row 639 left the list in the landing that fixed it — NO SHIM
+  // unit ms1 (forks row 1107 (1)(c), row 1066 F11 A stands): the four landed witnesses a LATER landing overtook are RED members,
+  // ruled here one each, owner = the re-judge unit row 1107 (2) names. The detail is exact: a NEW clause red beside the ruled
+  // one is UNRULED (a new death never hides under an old entry), and the member turning green makes its entry STALE (refused).
+  { assert: "WITNESS ‹mjd3› · GREEN at head against its BASE", detail: "red beyond BOUND: J4", row: 1107, owner: "unit mr3", until: "mr3 re-judges mjd3 J4 (fix, or witness re-cut + BASE re-taken) and lands it" },
+  { assert: "WITNESS ‹mtail› · GREEN at head against its BASE", detail: "red beyond BOUND: T3 AUTH", row: 1107, owner: "unit mrt", until: "mrt re-judges mtail T3 AUTH and lands it" },
+  { assert: "WITNESS ‹mjud› · GREEN at head against its BASE", detail: "red beyond BOUND: M3 CENSUS M5 F3-CLIP M6 MJD2", row: 1107, owner: "unit mrj", until: "mrj re-judges mjud M3, M5, M6 and lands it" },
+  { assert: "WITNESS ‹mf2› · GREEN at head against its BASE", detail: "red beyond BOUND: F2 F4", row: 1107, owner: "unit mrf", until: "mrf re-judges mf2 F2, F4 and lands it" },
+  // (EMPTY from 13 Oct 2026 to unit ms1's row 1107 entries above) Row 642: every entry of row 639 left the list in the landing that fixed it — NO SHIM
   // CALLEE when lane V's ea8d015 put forge_session contract and hippocampus recall-hint on the CALL shape (the entry
   // read STALE on his tree), the two LOAD ZERO BLOCK 5 lines on row 641 (B) + (C). The next entry joins only by a row.
 ];
