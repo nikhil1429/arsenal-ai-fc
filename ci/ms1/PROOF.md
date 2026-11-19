@@ -414,3 +414,29 @@ RED MS1 · B1.1 BASE, B1.2 LF, B1.3 NOCALC, B2.1 FULL, B2.2 LAPTOP, B2.3 NEUTRAL
 node ci/ms1/run_mutants_ms1.mjs --org . --base-org <224f9b9>
 run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GREEN                     (exit 0)
 ```
+
+## 12. FOURTH FOLLOW-UP · forks row 1125, 19 Nov 2026 (new commits, never force)
+
+- **(2) `20de517` · F-e fate (a), the fourth ADDED edit:** mfac F4 is re-cut to the form row 1103 (2) ruled and unit
+  mfac-floor shipped. The shipped `night.mjs` carries `memory_floor_mb: 1536`, and on an armed, begun night a
+  free-memory plant one MB under it makes `may --act launch` answer `NO memory`. The old text is struck in its header.
+  Re-judged: head `RED MFAC · BOUND`; base `7c3c279` `RED MFAC · F4 W1.1 … W9` (26 ids); `a18c167` (the
+  placeholder form) `RED MFAC · F4`.
+- **(3) `7fea11d` · the gate fails closed:** hermetic + `GITHUB_ACTIONS=true` with no `GITHUB_WORKSPACE` is the RED assert
+  `WITNESSES · the neutral machine names its workspace (GITHUB_WORKSPACE): the gate fails closed`, never a skip. Clause
+  **T4 NOWORKSPACE** + its mutant.
+- **Measured on the cancelled `c637496` run (node 22 log):** B4 refused **mland, mlj, mlv0, mlv1, mport and ms1**. Unit mport
+  had moved keeper's export to `JUDGE_PORT = plantedPort("ARSENAL_JUDGE_PORT", 4118)` (`scripts/keeper.mjs:100`), and
+  the member read only a `process.env.X` door. It now also reads a door handed as a quoted `ARSENAL_…PORT` literal on
+  the export's line. Clause **B4.6 DOORLIT** + its mutant. After it, no B4 refusal (the member line below).
+- Witness and mutants against `224f9b9`, 19 Nov 2026: `GREEN MS1 every landed witness rides the suite · 33 clause(s)` ·
+  base `RED MS1 · B1.1 BASE, …` · `run_mutants: 31 of 31 mutant(s) RED by the clause that names them · control GREEN`.
+
+## 13. THE ASSEMBLED BRANCH · repair tips merged one at a time (row 1119 (2); merge commits, never a rebase)
+
+- **mrj `0fff2e2`** (row 1129) → merge `ff9f6af`, clean. It brings `ci/mrj/` (witness, BASE `52b51c1`), re-cuts
+  `ci/mjud/witness_mjud.mjs` + `w_drive.mjs`, and removes the mjud KNOWN_RED entry. Witness after: `GREEN MS1 · 33
+  clause(s)`, base RED. Member after (Linux, `GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo>`, 19 Nov 2026):
+  `WITNESS ‹mjud› · GREEN at head against its BASE` ok · `‹mrj›` ok · `organism_test: 64 passed, 3 failed · ruled 2 ·
+  UNRULED 1`. The reds are ‹mf2› and ‹mjd3› (ruled) and ‹mtail› (`red beyond BOUND: T2 F-C T3 AUTH`, unruled: T2 is
+  mrt's, F-c). Nothing is red that was not red at `c637496`.
