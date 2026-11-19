@@ -1665,9 +1665,12 @@ export function stepLine(s) {
 //             (it never got that far — the chain died upstream of it).
 // An OPEN step is one the fold no longer covers, so its own lane is owed a run.
 //
-// ⛔ IT REPORTS. IT RUNS NOTHING. S9 installs ownership; S12 turns things on, his
-// word per stage. `fallback` prints the owed commands; arming it to fire them is
-// S12's, and the FORBIDDEN line on this rung is explicit about waking lanes.
+// ⛔ IT REPORTS. IT RUNS NOTHING. S9 installs ownership; turning a lane on is HIS
+// word, never this file's (his 20 Aug 2026 switch-off, lifted by his 30 Aug 2026 word:
+// grep -n "nothing burns tokens\|ORGANISM IS BACK ON" docs/archive/ORGANISM_AUDIT__2026-08-19.md).
+// `fallback` prints the owed commands; arming it to fire them is his word too, and
+// the FORBIDDEN line on this rung is explicit about waking lanes. What runs now:
+// `node scripts/services.mjs status` · `node scripts/state.mjs`.
 export function foldVerdicts(chain, report, { day = null } = {}) {
   const askedFor = day || (report && report.day_key) || null;
   // A report for ANOTHER day cannot cover today — this is the recency compare the
@@ -1726,7 +1729,7 @@ async function main() {
     const v = foldVerdicts(chain, report, { day: chainDay(which).day });
     console.log(foldLine(v));
     for (const row of v.filter((x) => x.state === "OPEN")) console.log(`  OPEN  ${row.id.padEnd(14)} ${row.why}\n        ↳ ${row.cmd}`);
-    console.log("conductor: NOTHING WAS RUN — this reports what the fold no longer covers. S12 arms the firing, on his word.");
+    console.log("conductor: NOTHING WAS RUN — this reports what the fold no longer covers. Arming the firing is his word.");
     return;
   }
   // `--dry` USED TO LIE: it suppressed only the report while every organ ran for real
