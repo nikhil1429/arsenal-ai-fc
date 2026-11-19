@@ -8,3 +8,4 @@
 {"ts":"2026-11-19T18:12:30Z","act":"resume","cmd":"architect message RESUME (his word 270); git fetch origin claude/mleft-build","last_line":"304d67c · CHECKPOINT · resume from the base-org RED run + BOUND"}
 {"ts":"2026-11-19T18:12:30Z","act":"witness-base","cmd":"node ci/witness/mleft/witness_left.mjs --org <worktree fb42118> --base-org <worktree fb42118>","last_line":"RED MLEFT · B-left:one-command, C:census-510, C:capability-c29, C:finish-zero (exit 1)"}
 {"ts":"2026-11-19T18:12:30Z","act":"witness-build","cmd":"node ci/witness/mleft/witness_left.mjs --org <worktree 304d67c> --base-org <worktree fb42118>","last_line":"GREEN MLEFT what is left, read by one command — 18 plant(s) both ways · 4 clause(s) + BOUND + LAST (exit 0)"}
+{"ts":"2026-11-19T18:14:04Z","act":"mutants","cmd":"node ci/mleft/run_mutants_mleft.mjs","last_line":"run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN (exit 0)"}
