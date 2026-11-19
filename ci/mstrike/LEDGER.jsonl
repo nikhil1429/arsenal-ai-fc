@@ -4,3 +4,4 @@
 {"ts":"2026-11-19T18:13Z","act":"resume","cmd":"RESUME message (his word 270); git fetch origin claude/mstrike-build","last_line":"2bd3d18 · resume from step 2"}
 {"ts":"2026-11-19T18:13Z","act":"witness build","cmd":"node ci/witness/mstrike/witness_strike.mjs --org <archive HEAD+witness> --base-org <archive fb42118>","last_line":"GREEN MSTRIKE the asked-first strike is read, and read first · 1 clause(s) (6 plant(s), BOUND, LAST)"}
 {"ts":"2026-11-19T18:13Z","act":"witness base","cmd":"node ci/witness/mstrike/witness_strike.mjs --org <archive fb42118> --base-org <archive fb42118>","last_line":"RED MSTRIKE · C22 (C22.1, C22.2, C22.3, C22.4, C22.5, C22.6)"}
+{"ts":"2026-11-19T18:13Z","act":"mutants","cmd":"node ci/mstrike/run_mutants_mstrike.mjs --org <build> --base-org <base>","last_line":"run_mutants: 2 of 2 mutant(s) RED by the clause that names them · control GREEN"}
