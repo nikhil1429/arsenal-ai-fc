@@ -4,3 +4,4 @@
 {"ts":"2026-11-19T18:12:04Z","act":"resume","cmd":"git fetch origin claude/mfactory-build (his word 270)","last_line":"e0f84d4 CHECKPOINT"}
 {"ts":"2026-11-19T18:12:04Z","act":"witness-build","cmd":"node ci/witness/mfactory/witness_factory.mjs plants --base-org <LF tree fb42118>","last_line":"GREEN MFACTORY the factory window's four numbers are read, each from its owner, and an unread window is never green · 6 clause(s)"}
 {"ts":"2026-11-19T18:12:04Z","act":"witness-base","cmd":"node ci/witness/mfactory/witness_factory.mjs plants --org <LF tree fb42118> --base-org <LF tree fb42118>","last_line":"RED MFACTORY · P1, P2, P3, P4"}
+{"ts":"2026-11-19T18:13:29Z","act":"mutants","cmd":"node ci/mfactory/run_mutants_mfactory.mjs","last_line":"run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN"}
