@@ -9,8 +9,9 @@
 //   --base-org  the BASE tree (origin/main at the cut, named in ci/mtxt/PROOF.md); absent ⇒ every clause RED
 //   --only      run only these clause ids (the mutant runner's door); LAST always runs
 // CONTRACT — READ-ONLY on --org and --base-org. The one process it starts (services.mjs selftest) runs on a COPY of each
-//   tree's scripts/ + package.json under os.tmpdir(), with an EMPTY dressing-room/state and its own HOME / USERPROFILE under
-//   the same temp root: nothing of his is copied, nothing of any state file is read or printed. No git repo is planted
+//   whole tree but .git / node_modules under os.tmpdir() (its selftest reads the registry off the bus, so the tree's
+//   TRACKED state rides the copy, by node), with its own HOME / USERPROFILE / ARSENAL_ARCHIVE under the same temp root;
+//   nothing of any state file is read or printed by the witness, and the copy is removed before LAST. No git repo is planted
 //   (nothing is cloned or init'd here; the runner that clones does so with core.autocrlf=false). Every text read folds
 //   \r\n to \n, so a Windows checkout reads the same. No port is bound, no service is named live, nothing is POSTed, nothing
 //   restarted, no model is called. No timeout, budget or size is typed: the size gate is the BASE file's own byte count
@@ -108,11 +109,12 @@ const newBlock = (base, org) => { const d = lineDiff(base, org); return d.sameCo
 const runningLine = (src) => (src || "").split("\n").find((l) => l.includes("RUNNING as an OS unit")) || "";
 const runningTail = (l) => { const k = l.indexOf("}"); return k >= 0 ? l.slice(k + 1) : l; };
 
-// ---- the selftest headline, on a temp COPY (scripts/ + package.json; an empty state dir; HOME under the temp root) ----
+// ---- the selftest headline, on a temp COPY of the whole tree but .git / node_modules (the selftest reads the registry
+//   off the bus, so the tree's tracked state rides the copy — copied by node, under os.tmpdir(), never read or printed
+//   here); HOME / USERPROFILE / ARSENAL_ARCHIVE under the temp root ----
 function selftestHeadline(tree, tag) {
-  const dst = join(ROOT, `st-${tag}`); mkdirSync(join(dst, "dressing-room", "state"), { recursive: true });
-  cpSync(join(tree, "scripts"), join(dst, "scripts"), { recursive: true });
-  if (existsSync(join(tree, "package.json"))) cpSync(join(tree, "package.json"), join(dst, "package.json"));
+  const dst = join(ROOT, `st-${tag}`);
+  cpSync(tree, dst, { recursive: true, filter: (p) => { const r = relative(tree, p).split(sep); return r[0] !== ".git" && !r.includes("node_modules"); } });
   const home = join(ROOT, `home-${tag}`); mkdirSync(home, { recursive: true });
   const env = { ...process.env, HOME: home, USERPROFILE: home, ARSENAL_ARCHIVE: join(home, "archive") };
   delete env.ANTHROPIC_API_KEY;
