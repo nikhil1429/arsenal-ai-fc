@@ -5,3 +5,4 @@
 {"ts":"2026-11-19T18:13:09Z","act":"RESUME","cmd":"his word #270 via runner message","last_line":"resumed from CHECKPOINT 2026-11-19T12:38:21Z at c9b1dcc"}
 {"ts":"2026-11-19T18:13:09Z","act":"witness on base","cmd":"node ci/mxc/witness/witness_mxc.mjs --org <base> --base-org <base> --mini <mini base>","last_line":"witness_mxc: 3 GREEN, 4 RED"}
 {"ts":"2026-11-19T18:13:09Z","act":"witness on build","cmd":"node ci/mxc/witness/witness_mxc.mjs --org <build blob 36f8757> --base-org <base> --mini <mini build>","last_line":"witness_mxc: 7 GREEN, 0 RED"}
+{"ts":"2026-11-19T18:14:53Z","act":"mutants","cmd":"node ci/mxc/witness/run_mutants_mxc.mjs --repo . --xray <candidate 36f8757> --base-org <base>","last_line":"run_mutants_mxc: 7 of 7 mutant(s) RED by the clause that names them · control GREEN"}
