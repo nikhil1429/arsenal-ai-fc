@@ -2226,6 +2226,14 @@ function hermetic() {
   // ONE RUN PER SELFTEST (row 880 (1)): the result run() returns is KEPT for suites() under its identical-command key,
   // after the window's end is stamped — the same spawns, the same order, the same window; the trip metric is untouched.
   for (const f of targets) { if (liveSelftest(f.replace(/\.mjs$/, ""))) continue; const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args), r); }
+  // unit mpool (forks rows 1062 / 1066) — THE USAGE TAP's selftest rides THIS loop (it has a selftest, so it is a target)
+  // and is JUDGED here, from the loop's own kept result (a read of the map, never a second spawn; suites() still takes it
+  // if a suite ever names it). Its package.json suite membership is a FORK the unit names in ci/mpool/PROOF.md.
+  {
+    const tap = hermeticRuns.get(runKey([join(ROOT, "scripts", "usage_tap.mjs"), "selftest"]));
+    assert("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", !!tap && tap.code === 0,
+      tap ? String(tap.out).trim().split("\n").filter((l) => /FAIL|selftest/.test(l)).slice(-4).join(" | ") : "usage_tap.mjs selftest never ran");
+  }
   if (!tripLive) {
   const after = snap(), afterH = hashes();
 

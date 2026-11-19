@@ -530,3 +530,7 @@ gitleaks_*.json
 gitleaks-report*.json
 GITLEAKS_HISTORY__*.md
 dressing-room/state/*.lock
+
+# unit mfac (row 1069, ADDED (i), his pick: "Sirf laptop pe"): the night factory's append log — night.mjs is its sole
+# writer. It stays on the laptop. The BIOMETRIC ruling lines above (readiness.json / intake_log.json) are untouched.
+dressing-room/state/night_log.jsonl

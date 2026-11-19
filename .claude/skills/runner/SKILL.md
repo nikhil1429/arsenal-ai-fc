@@ -103,12 +103,14 @@ scope sentence cut from row 437.
   the runner — THE LABOUR LANE below. Judgement never leaves the Opus runner.
 - **THE WINDOWS ARE NOT MEASURED** (row 131), verbatim: *"the gate's five-hour and weekly arithmetic
   are NOTES; every launch at the 3,000,000 cap; fleets fly together — FLEET.lock is a LIST."*
+  **THE POOL IS NOW READ, NOT RECALLED** (unit mpool, row 1062 F8 C): `node scripts/usage_tap.mjs verdict` in the organism repo, with `ARSENAL_CAMPAIGN_ROOT` set to the campaign root, reads the statusLine reading — exit 0 GO, exit 3 WAIT, by exit code (F6 B); it REPORTS, the gate decides (F5 B), and a stale, half or rolled reading is WAIT.
 - **THE HOST RULE** (row 130 (2)(a), NARROWED by his word, row 248): while a fleet flies the host
   builds anything EXCEPT the return path — campaign.mjs, the return watcher, the export, any
   `witness_*return*`, the belt, verifiers and the freeze set. The in-code counter still reads the host's
   own output, so keep the build well under the fleet's cap.
 - **THE PAUSE** (row 136 (1)) — a code path, below.
 - **THE POOL IS HIS PANEL** — recorded whenever he posts one, never asked inside a window.
+  **HIS PANEL IS THE FALLBACK CARD** (row 1062 F7 B / F8 C / F10 A): when the gate reads WAIT for want of a source, run `node scripts/usage_tap.mjs need` — ONE keyed card at his learn start; his SPOKEN two numbers become a reading only by the session running `usage_tap.mjs panel`. He types nothing.
 - **THE HEARTBEAT** (rows 628 (3) / 684 (4) / 693) — `node tools/roles.mjs heartbeat runner --me "<name>"` (lanes V and M add `--lane V` / `--lane M`) at every ledger row this session writes and every 20 min in a hold, so a STALE line means absent, not busy; the 20-min loop is a background shell that Claude Code can reap on low memory, and then a heartbeat by hand with each row is the ruled fallback.
 - **HIS WORD OUTRANKS EVERYTHING HERE**; a fork OUTSIDE the runner's class (below) is the architect's.
 
@@ -202,6 +204,28 @@ if he says it) · export the landed seats through the names gate · release ever
 (`launch_close_fleet.mjs release --run <wf>`) · write ONE PAUSED row on the ledger · write PAUSED with
 the resume order into CURRENT.md's first line · then **zero turns** until his word after the reset.
 The session stays OPEN and silent; the study surface is his — no card, no line, no panel ask.
+
+## THE NIGHT — armed by his day end, closed by his learn start (unit mfac · row 1069)
+The night is armed by HIS day end, never by you: `day.mjs end` writes the armed row through `node scripts/night.mjs arm`.
+1. **Hold.** While you have nothing in hand, hold on `node scripts/night.mjs wait --since <iso of your last begin>` in a
+   Monitor (or an until-loop on `wait --once`). It is a shell process the harness watches: zero tokens while it waits. It
+   exits 0 the moment a night is armed and not yet begun.
+2. **Begin.** `node scripts/night.mjs begin --runner runner`. Then your FIRST ACT checks that apply to a live session.
+3. **Before every launch** ask both halves, and launch only on two GOs: `node scripts/night.mjs may --act launch` (the
+   organism's half: armed, begun, not stopped, no red, no sitting open, free memory at or above the F4 line) AND the
+   campaign's own gate (pool reading inside the launch rule's age line, the pool table, `his_words.mjs tail`).
+4. **Mark every act:** `night.mjs mark --kind launch|return|land-ready|fork|red --unit <id>`. The furthest a night goes is
+   `land-ready` (a DRY pass of the landing verb). **Never land at night** — `may --act land` answers NO until a row grants
+   unattended landing.
+5. **Stops** (one row each, `night.mjs stop --reason <r>`): `pool` when the pool reading ages past the launch rule's own
+   line (F3 A; B waits for unit mpool) · `memory` (`may` writes it itself) · `red` (`mark --kind red` stops the night,
+   F5 A) · `context` when your own context reaches its rotation line · `his-word` on any word of his · `done` when the
+   queue is empty. A fork outside your class is `mark --kind fork`: that thread waits for the architect, the night goes
+   on (F6 A). After any stop, run THE PAUSE's soft half and hold silent.
+6. **The morning is not yours.** His `/learn` closes the night (`day.mjs start` → `night.mjs close`) and prints ONE line;
+   at most ONE card (`night:<D>`) waits for him when a land-ready unit or a fork does. Never print the night to him
+   yourself.
+7. **If you were not alive at the day end** nothing spawns you (F2 A): the morning line says `never begun`.
 
 ## CLOSE / ROTATION CHECKLIST (from CURRENT.md's own ROTATION CHECKLIST)
 
