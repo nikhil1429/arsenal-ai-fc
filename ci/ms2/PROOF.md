@@ -215,5 +215,31 @@ red at head …`, `ok WITNESS ‹mfac› · GREEN at its LANDED sha against its 
 
 ### 10.2 The neutral machine on this tip
 
-See §10.3 (written when both legs are done; read once with `node scripts/ci_verdict.mjs <full sha>`, or the check-runs
-and annotations by curl when that answers 403, as it did for 42188fc).
+### 10.3 The neutral legs of `6f42b9db1b2607f82fdd5788f1d0137c48409c03` (run 44592550788, read once, 19 Nov 2026)
+
+`node scripts/ci_verdict.mjs 6f42b9db1b2607f82fdd5788f1d0137c48409c03` → `ci_verdict 6f42b9d UNREADABLE — … answered 403`
+(as for 42188fc), so the legs were read with curl (check-runs and their annotations, no token):
+
+| leg | job | started → completed | conclusion | annotation |
+|---|---|---|---|---|
+| node 22 | `135802231416` | 18:53:41Z → 19:53:53Z | **cancelled** | `The job has exceeded the maximum execution time of 1h0m0s` |
+| node 24 | `135802230787` | 18:53:41Z → 19:53:52Z | **cancelled** | `The job has exceeded the maximum execution time of 1h0m0s` |
+
+**No verdict: both legs ran into the job's own bound (`timeout-minutes: 60`, `suite.yml:62`).** This is N1/N2 measured,
+and it settles F5 against the projection of the spec's §5. On a SEAT branch every `ci/<u>/` differs from main (main
+carries one ci dir), so C4 runs every landed unit's L-leg on every push. Here that was 32 L-legs on git sides, beside 39
+head legs, with the assembled tip's slower witnesses. On Linux the same member took `1154.0 s` (§10.1). On
+`windows-latest` it does not fit inside the job, after npm ci twice and the suite's other modes.
+The earlier push `42188fc` (29 landed units, before the merge) finished in 57 / 54 min (§7, run 44446257679).
+
+**FK8 · the fit (for the architect; nothing here widens a bound, the workflow is untouched):** (a) C4 also compares
+`ci/<u>/` with the **merge-base's** tree (or with the seat's own BASE), not only main's, so a seat push runs only the
+L-legs of the dirs the seat itself changed; (b) F5 (d): the L-leg gets its own job with its own bound; (c) the head
+leg runs only for changed dirs too; (d) once the assembled landing and ms2 land, main carries every ci dir and an
+ordinary push runs ~0 L-legs (C4 as built): only seat pushes pay. Measured fact for the ruling: the cost is paid by
+**seat** pushes, not by landings.
+
+### 10.4 Where this seat stops
+
+Tip pushed; no later assembled tip has been named to this seat (the runner said one may follow). On such a message:
+merge it, re-run the witness and the mutants, read both legs, add §10.5.
