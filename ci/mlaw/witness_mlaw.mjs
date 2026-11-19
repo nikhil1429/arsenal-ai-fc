@@ -31,6 +31,8 @@
 //             no literal): on a copy with an EMPTY state dir `done.mjs report` prints the named red "reach RED — no live
 //             mechanisms row "his_surfaces""; with that row planted through the copy's own `registry.mjs set` (ARSENAL_REGISTRY
 //             under the temp root) the reach line is no such red; `done.mjs selftest` on the copy exits 0.
+//   COVERAGE  FK5 B (row 1152 (2)) · done.mjs has a selftest mode, a package.json suite string runs `node scripts/done.mjs
+//             selftest`, and `organism_test.mjs coverage` on a copy names NO orphan called done.
 //   HERMETIC  P2 · lawpack is in neither LIVE_MODES nor LIVE_SELFTESTS of --org's organism_test.mjs, and every key of the three
 //             LIVE tables at --org is a key at --base-org (they only shrink); on an EMPTY-state copy the hermetic
 //             `organism_test.mjs lawpack` prints no `LIVE MODE lawpack`, JUDGES the LAW PACK assert, and prints an
@@ -44,8 +46,10 @@
 //             journals listen() and connect(), exits 0 with its portOpen assert passing, and connects to NO port that the same
 //             process did not first get from a listen(0) (a fixed closed port would be a live service on his laptop).
 //   BOUND     --org differs from --base-org ONLY in the named files (scripts/organism_test.mjs, scripts/ci_verdict.mjs,
-//             scripts/conductor.mjs, scripts/done.mjs, scripts/usage_tap.mjs); ci/mlaw/** is this unit's own output and
-//             .claude/settings.json the seat's effort key, both left out by name. Tracked files when the side is a git tree.
+//             scripts/conductor.mjs, scripts/done.mjs, scripts/usage_tap.mjs, package.json, ci/mdone/witness_mdone.mjs,
+//             ci/mdn2/witness_mdn2.mjs), or in a file main brought in at the row 1152 (3) merge whose bytes are EXACTLY main's
+//             (ci/mlaw/MERGED.json: main's LF sha256 of every file main changed since the merge base); ci/mlaw/** is this unit's
+//             own output and .claude/settings.json the seat's effort key, both left out by name. Tracked files when a git tree.
 //   LAST      no node process naming the temp root survives, and the fake claude / gemini logged no spawn.
 // LAST LINE: GREEN MLAW the law pack judged hermetic, its rise a new red · <n> clause(s)  (exit 0)  ·  RED MLAW · <clauses>  (exit 1)
 // ============================================================================
@@ -62,7 +66,9 @@ if (!ORG || !existsSync(join(ORG, "scripts", "lawpack.mjs")) || !BASE_ORG || !ex
   console.log("RED MLAW · USAGE (--org <dir> --base-org <dir>, each with scripts/lawpack.mjs)"); process.exit(1);
 }
 
-const NAMED = ["scripts/organism_test.mjs", "scripts/ci_verdict.mjs", "scripts/conductor.mjs", "scripts/done.mjs", "scripts/usage_tap.mjs"];
+const NAMED = ["scripts/organism_test.mjs", "scripts/ci_verdict.mjs", "scripts/conductor.mjs", "scripts/done.mjs", "scripts/usage_tap.mjs",
+  "package.json", "ci/mdone/witness_mdone.mjs", "ci/mdn2/witness_mdn2.mjs"];
+const MERGED = (() => { try { return JSON.parse(readFileSync(new URL("./MERGED.json", import.meta.url), "utf8")); } catch { return null; } })();
 const JUGAD = "jugad-literal-subject-list";
 const LP_LINE = "ORGANISM_TEST_LAWPACK";
 const SKIP_TOP = new Set([".git", "node_modules"]);
@@ -215,6 +221,20 @@ try {
       `literal SURFACES list ${literal ? "PRESENT" : "absent"} · lazySubjects(his_surfaces) ${lazy ? "yes" : "NO"} · empty registry: ${clip(reachLine(r0.all) || r0.all.trim().split("\n").at(-1), 90)} · row planted (seed exit ${seed.status}): ${clip(reachLine(r1.all) || r1.all.trim().split("\n").at(-1), 70)} · done selftest exit ${st.status}`);
   }
 
+  // ── COVERAGE ── (FK5 B: the done selftest rides a suite string; the coverage law names no orphan called done)
+  {
+    const pkg = (() => { try { return JSON.parse(read(join(ORG, "package.json")) || "{}"); } catch { return {}; } })();
+    const wired = Object.values(pkg.scripts || {}).some((s) => /(^|&&\s*)node scripts\/done\.mjs selftest(\s*&&|\s*$)/.test(String(s)));
+    const hasMode = /if \(mode === "selftest"\) return selftest\(\);/.test(read(join(ORG, "scripts", "done.mjs")) || "");
+    const c = copyOf(ORG, "cov");
+    const r = node(c, [join(c, "scripts", "organism_test.mjs"), "coverage"]);
+    const orphanLine = lines(r.all).find((l) => /^\s*orphaned: /.test(l)) || "";
+    const orphans = orphanLine ? orphanLine.trim().slice("orphaned: ".length).split(",").map((s) => s.trim()) : [];
+    const judged = lines(r.all).some((l) => /^\s*(ok|FAIL)\s+EVERY organ with a selftest is wired into a suite/.test(l));
+    clause("COVERAGE", hasMode && wired && judged && !orphans.includes("done"),
+      `done.mjs selftest mode ${hasMode ? "present" : "ABSENT"} · a package.json suite string runs it: ${wired ? "yes" : "NO"} · the coverage law ${judged ? "judged" : "NOT judged"} · orphans: ${orphans.join(", ") || "none"}`);
+  }
+
   // ── HERMETIC ──
   {
     const so = read(join(ORG, "scripts", "organism_test.mjs")), sb = read(join(BASE_ORG, "scripts", "organism_test.mjs"));
@@ -312,8 +332,9 @@ try {
     };
     const a = files(ORG), bb = files(BASE_ORG);
     const diff = [...new Set([...a.keys(), ...bb.keys()])].filter((k) => a.get(k) !== bb.get(k)).filter((k) => !k.startsWith("ci/mlaw/") && k !== ".claude/settings.json").sort();
-    const outside = diff.filter((k) => !NAMED.includes(k));
-    clause("BOUND", outside.length === 0, `differs from BASE in ${diff.length} file(s): ${diff.join(", ") || "none"}${outside.length ? ` · OUTSIDE THE NAMED: ${outside.slice(0, 12).join(", ")}${outside.length > 12 ? ` … (+${outside.length - 12})` : ""}` : ""}`);
+    const mainBytes = diff.filter((k) => !NAMED.includes(k) && MERGED && MERGED.files && MERGED.files[k] && MERGED.files[k] === (a.get(k) || "(deleted)"));
+    const outside = diff.filter((k) => !NAMED.includes(k) && !mainBytes.includes(k));
+    clause("BOUND", outside.length === 0, `differs from BASE in ${diff.length} file(s): named ${diff.filter((k) => NAMED.includes(k)).join(", ") || "none"} · main's own bytes (MERGED.json ${MERGED ? String(MERGED.main).slice(0, 7) : "ABSENT"}) ${mainBytes.length}${outside.length ? ` · OUTSIDE THE NAMED: ${outside.slice(0, 12).join(", ")}${outside.length > 12 ? ` … (+${outside.length - 12})` : ""}` : ""}`);
   }
 } catch (e) {
   clause("WITNESS", false, `threw: ${String((e && e.stack) || e).split("\n").slice(0, 3).join(" | ")}`);

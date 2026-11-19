@@ -1,0 +1,23 @@
+{
+ "why": "unit mlaw row 1152 (3): main merged into the build; BOUND accepts a non-named file only when its bytes are main's",
+ "main": "fb4211870093e6b8657655eb02ebcfc425f1eab1",
+ "merge_base": "224f9b90758d13edb42550f002d6c845cc7bb2a8",
+ "files": {
+  "package.json": "0e44227864532e999baea6df369145360a266ace8dd60f3e9e593c1107c12549",
+  "scripts/acts.mjs": "8eacefb8a7638af2e2a4b5b8633ef9d07b3d0411725cfaf8ef080bc8ee986740",
+  "scripts/claims.mjs": "6832a13ef56974e7b31db354761b0d0c4c3336dc940b89871fb690b13ce053d5",
+  "scripts/conductor.mjs": "0567730ab3007ad97ce53417bcfd877ec72a0f42e29d3eff6189a78594072fa4",
+  "scripts/day.mjs": "00a38e1593ad4dfd90a855a3e17ca671259d61914ea7aec138da121bbae5660e",
+  "scripts/done.mjs": "ac3fade4d827c6ed7ee999f3396b41bc97ae41d79ffa603b67338982c572003c",
+  "scripts/organism_test.mjs": "a735c4aa93feb6e5a40d98e959ac2788b59d3e091e1e23f2d25ea8174ba7d9d4",
+  "scripts/rails.mjs": "c8456bf9e6f55eda70fc4dd8f13836fb7d1cdd59104643f533799ba9df9a30d2",
+  "scripts/rung_receipt.mjs": "c9960b61a7166fa7524463c08479b8cb67125f13ae6cfac3a40a846f2a4acbe6",
+  "scripts/services.mjs": "1afa20cdae3ca977a5867622666806d66dcfe3cbdbf2d65859672796ee092a40",
+  "scripts/xray.mjs": "bfecabc3b09ffeb65ed86dc86dc9bd7855e7ab86b22e8506c488726c2397c59c",
+  "setup/services/ArsenalFC-Dugout.logon.ps1": "fbd2870b72d47de91cbef7266adf51fea57c03863fdc89ea1565547e021bb3de",
+  "setup/services/ArsenalFC-Turnstile.logon.ps1": "e7d05cdd6ec98559232af56d4a241b850ea55940eb0bb97a46f42f3ad03abfda",
+  "setup/services/README.md": "b9b5d7ccb6388a434c1b1a4fceef435796ce3b12a58e524f82b7f8cf0a39f3e5",
+  "setup/services/grant-logon-right.ps1": "318b68c82908da3d98735253294ae1db90681cfcec14a3f9051dd560241a29ec",
+  "setup/services/install.ps1": "61619f622d00f98a35aacc9fab4ad1ca4ad63da7b083e4a2a9d15cbd1f2d1a16"
+ }
+}
