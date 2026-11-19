@@ -68,7 +68,7 @@ const ORG = arg("--org"), BASE = arg("--base-org");
 if (!ORG || !BASE) { console.log("RED MS1 · usage: --org <dir> --base-org <dir>"); process.exit(1); }
 const NAMED = ["scripts/organism_test.mjs", "scripts/land.mjs", "scripts/ci_verdict.mjs"], NAMED_DIRS = ["ci/"];
 // the landed units of ci/ms1/PROOF.md §0.2 (measured at 3e3ce63, 18 Nov 2026; at a18c167 + 95b07a6 + 224f9b9, 19 Nov 2026: rows 1107 / 1112 / 1119), each carried by ms1's landing
-const CARRIED = ["mcr2", "mday", "mday2", "mdn2", "mdone", "mf2", "mf4", "mfac", "mfac-floor", "mgrd", "mgs", "mjd3", "mjd4", "mjd5", "mjd6", "mjud", "mland", "mlj", "mlv0", "mlv1", "mlv2", "mlv3", "mpast", "mjd7", "mpm", "mpool", "mport", "mtail", "mtxt"];
+const CARRIED = ["mcr2", "mday", "mday2", "mdn2", "mdone", "mf2", "mf4", "mfac", "mfac-floor", "mgrd", "mgs", "mjd3", "mjd4", "mjd5", "mjd6", "mjud", "mland", "mlj", "mlv0", "mlv1", "mlv2", "mlv3", "mpast", "mjd7", "mpm", "mpool", "mport", "mrung", "mtail", "mtxt", "mtxt3", "mxw"];
 const ROOT = mkdtempSync(join(os.tmpdir(), "witness-ms1-"));
 let seq = 0;
 
