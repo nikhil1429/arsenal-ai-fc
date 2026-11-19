@@ -22,3 +22,9 @@
 {"ts":"2026-11-19T02:06:47Z","act":"ir-facts","cmd":"node ci/mxh/witness/unres.mjs <tree>/scripts/xray.mjs","last_line":"base = base+mxh unresolved 2065 xray.mjs 8 · mxw = mxw+mxh 2015 xray.mjs 8"}
 {"ts":"2026-11-19T02:06:47Z","act":"atlas","cmd":"node ci/mxh/witness/atlas.mjs <tree>","last_line":"check exit 0 on all four trees; atlas sha differs base vs base (time-dependent)"}
 {"ts":"2026-11-19T02:06:47Z","act":"spec","cmd":"write ci/mxh/MXH_SPEC.md; BLOCK 7 scan of the file (organism_test.mjs:1898 regexes)","last_line":"scan done, 0 undeclared"}
+{"ts":"2026-11-19T02:11:56Z","act":"ruling-1128-3","cmd":"message: N1 as a third question; git rev-parse <ref>:scripts/xray.mjs for land/mxw 12f1eca, db9da19, ab98546, main 224f9b9, a583afb","last_line":"mxw refs all f62d504 · main 224f9b9 = a583afb = f6d2d59 (measured before AND after: the mxw tree is the landing xray)"}
+{"ts":"2026-11-19T02:11:56Z","act":"n1-witness","cmd":"witness_mxh.mjs (W7) on base, mxw, base+n1, mxw+n1","last_line":"base/mxw RED W7 (2 invented: w7_shadow.jsonl, w7b_plain.jsonl) · +mask GREEN W7"}
+{"ts":"2026-11-19T02:11:56Z","act":"n1-census","cmd":"node ci/mxh/witness/n1_census.mjs <copy>","last_line":"exposed 3 in 2 files, all plain (organism_test.mjs:2769 x2, treasury.mjs:54)"}
+{"ts":"2026-11-19T02:11:56Z","act":"n1-bites","cmd":"node ci/mxh/witness/factdiff.mjs <unmasked> <masked> (base, mxw, mxh-all both)","last_line":"lost 0 gained 0 · unresolved 2065→2065 / 2015→2015 · organs worse 0"}
+{"ts":"2026-11-19T02:11:56Z","act":"mutants-n1","cmd":"run_mutants_mxh.mjs --xray <mxh+n1 build> (base and mxw)","last_line":"GREEN MXH MUTANTS · 11 of 11 killed by their clause, control GREEN (both)"}
+{"ts":"2026-11-19T02:11:56Z","act":"main-moved","cmd":"git fetch origin main; git diff 224f9b9 origin/main --stat","last_line":"a583afb: services.mjs, rails.mjs only; B5 rails.mjs:324-325 → :326-327"}

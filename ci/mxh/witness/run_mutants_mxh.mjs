@@ -28,6 +28,13 @@ const MUTANTS = [
     from: "if (lastStop(line.slice(0, fm.index)) >= 0 || ", to: "if (" },
   { id: "M8", kills: "W6", why: "the whole clause rule dropped (the F2 boundary fix ALONE)",
     from: "        if (lastStop(line.slice(0, fm.index)) >= 0 || foreignNamed(f, clauseBefore(head, m.index + fm.index))) continue;\n", to: "" },
+  // N1 (forks row 1128 (3)) — these run only on a build carrying xray_n1_mask.patch (else UNAPPLIED = RED)
+  { id: "M9", kills: "W7", why: "the mask only in the fixpoint (pass 1 still leaks)",
+    from: "        if (inner !== scope) {\n", to: "        if (false) {\n" },
+  { id: "M10", kills: "W7", why: "the mask only in pass 1 (the fixpoint re-analysis still leaks)",
+    from: "      let combos = [maskParams(new Map(env), fn.params)];", to: "      let combos = [new Map(env)];" },
+  { id: "M11", kills: "W7", why: "patternNames skips ObjectPattern (the destructured slot of mxw PROOF N1 leaks)",
+    from: "    else if (p.type === \"ObjectPattern\") p.properties.forEach((q) => go(q.type === \"RestElement\" ? q.argument : q.value)); };", to: "    };" },
 ];
 const T = mkdtempSync(join(tmpdir(), "mxh-mutants-"));
 const src = readFileSync(XRAY, "utf8");

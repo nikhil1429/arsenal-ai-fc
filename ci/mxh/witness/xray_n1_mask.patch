@@ -1,0 +1,40 @@
+--- a/scripts/xray.mjs	2026-11-19 01:57:57.607138332 +0000
++++ b/scripts/xray.mjs	2026-11-19 02:09:28.051179374 +0000
+@@ -440,9 +440,28 @@
+   const paramEnv = new Map();   // fnName -> Map(param -> Set<string>)
+   const callArgs = [];          // deferred: [fnName, [AbsVal]]
+ 
++  // unit mxh N1: every name a parameter list binds — plain, defaulted, destructured (any depth), rest.
++  const patternNames = (ps) => { const out = []; const go = (p) => { if (!p) return;
++    if (p.type === "Identifier") out.push(p.name);
++    else if (p.type === "AssignmentPattern") go(p.left);
++    else if (p.type === "RestElement") go(p.argument);
++    else if (p.type === "ArrayPattern") p.elements.forEach(go);
++    else if (p.type === "ObjectPattern") p.properties.forEach((q) => go(q.type === "RestElement" ? q.argument : q.value)); };
++    ps.forEach(go); return out; };
++  const maskParams = (scope, ps) => { const sh = patternNames(ps).filter((nm) => scope.has(nm)); if (!sh.length) return scope; const m = new Map(scope); for (const nm of sh) m.delete(nm); return m; };
+   const walkBody = (node, scope, ctx) => {
+     const visit = (n) => {
+       if (!n || typeof n.type !== "string") return;
++      // N1: a function's parameters SHADOW the enclosing binding of the same name (pass 1 descends here)
++      if ((n.type === "FunctionDeclaration" || n.type === "FunctionExpression" || n.type === "ArrowFunctionExpression") && n.params.length) {
++        const inner = maskParams(scope, n.params);
++        if (inner !== scope) {
++          n.params.forEach(visit);                              // defaults evaluate in the OUTER scope
++          const prevCtx = CTX; if (n.id) CTX = n.id.name;
++          walkBody(n.body, inner, ctx);
++          CTX = prevCtx; return;
++        }
++      }
+       switch (n.type) {
+         case "TryStatement": {
+           const c = n.handler;
+@@ -666,7 +685,7 @@
+     // re-analyse every function whose parameter set is known, once per known value
+     for (const [fname, fn] of localFns) {
+       const pe = paramEnv.get(fname);
+-      let combos = [new Map(env)];
++      let combos = [maskParams(new Map(env), fn.params)];
+       if (pe) {
+         for (const [pname, vals] of pe) {
+           const next = [];

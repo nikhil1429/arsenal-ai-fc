@@ -1,4 +1,19 @@
-# MXH SPEC — the sole-writer header parser (F2) and Q6 SILENT (F5)
+# MXH SPEC — the sole-writer header parser (F2), Q6 SILENT (F5) and the parameter-shadow gap (N1)
+
+> **FOLLOW-UP · forks row 1128 (3), received after the first spec push (aa12457).** mxw's finding N1 becomes
+> this spec's THIRD question. It is answered in **§N1** below, with its own witness clause **W7**, mutants
+> **M9-M11** and fork **F12**.
+>
+> **Before or after mxw's adopted fix? AFTER, and BEFORE too.** These blobs were compared with
+> `git rev-parse <ref>:scripts/xray.mjs`:
+> - `land/mxw` 12f1eca, `claude/mxw-build` db9da19 and ab98546 all carry xray blob **f62d504**.
+> - main 224f9b9 and main a583afb both carry **f6d2d59**.
+>
+> So every "mxw tree" figure in this file IS the landing mxw xray, and every "base" figure is main's.
+>
+> Main moved during this seat, 224f9b9 → a583afb (unit mtxt2: `scripts/services.mjs` and `scripts/rails.mjs`
+> only). The only cited line it moves is B5 in §3: `rails.mjs:324-325` at 224f9b9 is **`:326-327` at a583afb**.
+> The header `:5` is unchanged, and so is every xray line.
 
 Unit mxh · forks rows 1122 (1) (F2 A as unit mxh, F5 A handed to mxh) and 1123 (1) · spec seat, cloud,
 written 2026-11-19 (UTC). Base: `origin/main` **224f9b9** (2026-11-19). This file builds nothing. Every number
@@ -157,6 +172,53 @@ really writes the file, at the line named.
 
 Each B row is a separate IR transfer-function gap. Each has its own idiom, and none is in this unit (fork F8).
 
+## §N1 · the parameter-shadow gap (mxw PROOF N1, forks row 1128 (3))
+
+**The defect, by file:line at 224f9b9 (the xray lines are the same at a583afb and in land/mxw f62d504, outside
+`seedDefaults`):**
+- `scripts/xray.mjs:235-238`: `evalNode` resolves an `Identifier` by `scope.get(name)` and nothing else.
+- `:609` is pass 1, `walkBody(Program, env, "module")`. The module walk descends into **every function body**
+  with the module `env` (`:563-578`), so a parameter is resolved against the module bindings.
+- `:666` is the fixpoint re-analysis, `let combos = [new Map(env)]`. A parameter is overwritten only when it
+  has a known value (from a caller `:654-660`, or a default from `seedDefaults` `:621`). A parameter with no
+  known value keeps the module binding of the same name.
+
+**It is wider than N1.** N1 names the destructured no-default slot. The plant shows that a **plain parameter
+with no constant caller** leaks the same way: `const file = …; function f(file) { appendFileSync(file) }` reads
+as a writer of the module's file. Both shapes invent a writer fact.
+
+**The proposed code path** (`ci/mxh/witness/xray_n1_mask.patch` on top of `xray_mxh_full.patch`; the combined
+patch is `xray_mxh_full_n1.patch`, `git apply --check` clean on 224f9b9):
+- `patternNames(params)` collects every name a parameter list binds: plain, defaulted, destructured at any
+  depth, and rest.
+- `maskParams(scope, params)` deletes those names from a copy of the scope, only when one of them is bound.
+- In `visit`, a function node with a shadowing parameter visits its params in the OUTER scope (so defaults
+  still resolve), then walks its body in the masked scope.
+- The fixpoint seeds `combos` from `maskParams(new Map(env), fn.params)`.
+
+It adds no fs call and no transfer function. A parameter is Unknown until a caller or a default says
+otherwise.
+
+**Census, measured 2026-11-19:**
+```
+exposure  (node ci/mxh/witness/n1_census.mjs <copy>): 3 parameters in 2 files bind a module-level name
+          organism_test.mjs:2769 fails (plain) · organism_test.mjs:2769 passed (plain) · treasury.mjs:54 n (plain)
+          destructured: 0 · defaulted: 0 · rest: 0
+bites     (node ci/mxh/witness/factdiff.mjs <unmasked>/scripts/xray.mjs <masked>/scripts/xray.mjs)
+          main 224f9b9:      edges lost 0 · gained 0 · unresolved 2065→2065 · organs worse 0 · Q1-Q5 unchanged
+          land/mxw f62d504:  edges lost 0 · gained 0 · unresolved 2015→2015 · organs worse 0 · Q1-Q5 unchanged
+          with all of mxh:   the same zero diff against mxh without the mask (Q5 0 · Q6 12 main / 7 mxw)
+```
+**Fate: LATENT — not a breach, and no invented fact today.** None of the 3 exposed names reaches a path
+sink. They are a counter and a number, so no IR edge changes when the mask is applied. The gap is real and
+mechanical: the planted fixture gets 2 invented writer facts on main and on land/mxw. Nothing in the repo
+triggers it yet, so the first organ that names a parameter after one of its own path constants will get a
+writer fact it does not have. That is what W7 guards.
+
+*Not reached by this census:* shadowing of a **function-local** const by an inner function's parameter, and
+whether xray's `env` holds imported bindings. n1_census reads module-level declarations only. *Laptop:* none
+needed. The same factdiff on any tree measures the bites, whatever the binding's origin.
+
 ## 4 · Witness — each plant RED on base, GREEN on the build
 
 `node ci/mxh/witness/witness_mxh.mjs --xray <xray.mjs to judge> --tree <copy with node_modules/acorn> --live`.
@@ -173,6 +235,15 @@ calls no model. Every wait is bounded by the child's own exit, and no timeout is
 | **W4** nothing lost | a true claim after a `;` clause naming another organ (fuelboard.mjs:24-26), and after a full stop on the line above (forge_session.mjs:102) | RED | GREEN | **GREEN** |
 | **W5** Q6 | `k5` declared + never written → reported; `m5`'s lane beside a same-basename fixture path → NOT reported | RED | RED | **GREEN** |
 | **W6** live | on the real `scripts/`: .jsonl declarations exist, and every Q5 row's declarer writes that file | RED (0 jsonl; widgets row) | RED (4 rows) | **GREEN** |
+| **W7** N1 | `p7.mjs`: a module `const path`/`const file`, then `noDefault(t, { path } = {})` and `plainShadow(file)`, each appending → p7 writes NOTHING | RED (2 invented) | RED | **GREEN** with the N1 mask (RED with mxh alone: F12) |
+
+```
+measured 2026-11-19, W7 (witness_mxh.mjs):
+base 224f9b9 / land-mxw f62d504          RED   W7 — p7 invented writer facts: w7_shadow.jsonl, w7b_plain.jsonl
+either + N1 mask                         GREEN W7 — none
+base + mxh + N1 (xray_mxh_full_n1)       GREEN MXH · 7 clause(s)
+mxw  + mxh + N1                          GREEN MXH · 7 clause(s)
+```
 
 ```
 measured 2026-11-19 (witness_mxh.mjs, last line):
@@ -198,9 +269,15 @@ replacement on a temp copy. An anchor that is not found exactly once is RED (UNA
 | M6 | Q6 reads only the last path of a basename | W5 |
 | M7 | a stop between the marker and the token no longer ends the claim | W3 |
 | M8 | the whole clause rule dropped (the F2 fix alone) | W6 |
+| M9 | the N1 mask only in the fixpoint (pass 1 still leaks) | W7 |
+| M10 | the N1 mask only in pass 1 (the fixpoint still leaks) | W7 |
+| M11 | `patternNames` skips ObjectPattern (N1's exact destructured slot leaks) | W7 |
 ```
-measured 2026-11-19: GREEN MXH MUTANTS · 8 of 8 killed by their clause, control GREEN   (base tree AND mxw tree)
+measured 2026-11-19: GREEN MXH MUTANTS · 8 of 8 killed by their clause, control GREEN   (mxh build, base AND mxw tree)
+measured 2026-11-19: GREEN MXH MUTANTS · 11 of 11 killed by their clause, control GREEN (mxh+N1 build, base AND mxw tree)
 ```
+(On the mxh build without the N1 mask, M9-M11 read UNAPPLIED and the control is RED on W7. That is by
+design: the runner is judged on the build the architect picks under F12.)
 M7 was first aimed at W6 and **lived**. In the live copy, the distiller row's file is shadowed by an absolute
 fixture path the IR resolved from the cwd (a last-wins collision), so Q5 never saw the row. It is named in §8,
 re-aimed at W3, and M8 now carries W6.
@@ -274,6 +351,16 @@ re-aimed at W3, and M8 now carries W6.
 - (B) Q6 skips headers that say their file lives outside the repo. That is a prose rule, the very thing F6
   removes.
 
+**F12 · N1, the parameter-shadow gap** (forks row 1128 (3), mxw PROOF X2 "whose unit")
+- (A) named only. It is latent (0 bites, measured), so it waits for its own unit.
+- (B) mask it in this landing (`xray_mxh_full_n1.patch`), with W7 and M9-M11. **Recommended.** Measured:
+  0 edges change, 0 unresolved change and 0 organs get worse on both trees, so it moves no verdict today. The
+  gate gets strictly stricter: W7 is RED today, and any future organ that names a parameter after its own
+  path constant would gain an invented writer fact.
+- (C) its own unit, cut after mxw lands.
+- *What decides it:* `factdiff.mjs` on the land tree. If it is still 0 lost / 0 gained, (B) costs nothing.
+  If a fact moves, every moved edge must be triaged first, and (C) becomes the right call.
+
 ## 8 · NAMED, NOT GUESSED
 
 - **The committed `xray_graph.json` is stale against main's code.** The `xray q`/report path on the clone
@@ -302,7 +389,8 @@ re-aimed at W3, and M8 now carries W6.
 
 1. `scripts/xray.mjs` — the `:949-959` declared loop (boundary + clause rule), plus `queries()`
    `:1040-1078` (Q6) and `report()` (`:1205`, one `show`). Owner: xray.mjs. The patch is
-   `ci/mxh/witness/xray_mxh_full.patch`.
+   `ci/mxh/witness/xray_mxh_full.patch`. If F12 (B), it is `xray_mxh_full_n1.patch`, which also changes
+   `walkBody` `:443-446` (the mask) and the fixpoint `:666`.
 2. `scripts/organism_test.mjs` — the hermetic clause, if F9 (B)/(C). Owner: organism_test.mjs.
 3. `dressing-room/state/xray_graph.json` — regenerated ONLY by `node scripts/xray.mjs build` (owner `xray.mjs:4`).
 4. `dressing-room/state/flow_atlas.json` (and what `flow_atlas.mjs build` emits) — ONLY by that verb, if the

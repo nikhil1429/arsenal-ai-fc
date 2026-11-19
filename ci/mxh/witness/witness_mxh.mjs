@@ -16,6 +16,8 @@
 //   W5 Q6 SILENT  a declared file with no writer is reported; a selftest fixture path of the same basename neither
 //                 hides nor fakes the state lane (every path with the basename is read)
 //   W6 live  on the real scripts/: declarations of .jsonl exist, and every Q5 row's declarer is itself a writer
+//   W7 N1 (forks row 1128 (3))  a parameter SHADOWS a same-name module const: a destructured no-default slot
+//        (mxw PROOF N1's plant) and a plain parameter with no caller each stay Unknown — no invented writer fact
 // LAST LINE: GREEN MXH · <n> clause(s) (exit 0) or RED MXH · <ids> (exit 1)
 // ============================================================================
 import { mkdtempSync, mkdirSync, copyFileSync, cpSync, writeFileSync, existsSync, symlinkSync, rmSync, readdirSync } from "node:fs";
@@ -49,7 +51,8 @@ console.log(JSON.stringify({
   declared: ir.declared_sole_writers.map((d) => d.organ + ">" + d.file),
   writers: Object.fromEntries(ir.files.map((f) => [f.path, f.writers])),
   Q5: q.Q5.map((r) => ({ path: r.path, by: r.declared_by, und: r.undeclared })),
-  Q6: q.Q6 ? q.Q6.map((r) => r.declared_by + ">" + r.file) : null }));`);
+  Q6: q.Q6 ? q.Q6.map((r) => r.declared_by + ">" + r.file) : null,
+  p7: ir.files.filter((f) => f.writers.includes("p7.mjs")).map((f) => f.path.split("/").pop()) }));`);
   const r = spawnSync(process.execPath, [f], { cwd: P, encoding: "utf8", windowsHide: true, env: { ...process.env, ANTHROPIC_API_KEY: "" } });
   const last = String(r.stdout || "").split(/\r?\n/).filter((s) => s.trim()).pop() || "";
   try { return JSON.parse(last); } catch { return { error: `exit ${r.status}: ${String(r.stderr || "").split(/\r?\n/).filter(Boolean).slice(-1)[0] || "no JSON"}` }; }
@@ -74,10 +77,11 @@ const P = tree("plant", {
   "h4.mjs": `// h4 — fixture\n${H}`,
   "k5.mjs": `// k5 — fixture\n//   SOLE WRITER of dressing-room/state/w5_silent.jsonl (declared, never written)\n${H}`,
   "m5.mjs": `// m5 — fixture\n//   SOLE WRITER of dressing-room/state/w5_held.jsonl\n${H}${W("w5_held.jsonl")}`,
+  "p7.mjs": `// p7 — fixture\n${H}const path = join(STATE, "w7_shadow.jsonl");\nconst file = join(STATE, "w7b_plain.jsonl");\nexport function noDefault(t, { path } = {}) { appendFileSync(path, t); }\nexport function plainShadow(file) { appendFileSync(file, "x"); }\n`,
   "n5.mjs": `// n5 — fixture: a selftest path of the SAME basename, read, never written\n${H}export function fx() { return readFileSync(join(HERE, "w5_held.jsonl"), "utf8"); }\n`,
 });
 const F = facts(P);
-if (F.error) for (const id of ["W1", "W2", "W3", "W4", "W5"]) clause(id, false, F.error);
+if (F.error) for (const id of ["W1", "W2", "W3", "W4", "W5", "W7"]) clause(id, false, F.error);
 else {
   const has = (s) => F.declared.includes(s);
   const q5 = (p) => F.Q5.filter((r) => r.path.endsWith("/" + p));
@@ -92,6 +96,7 @@ else {
   const q6 = F.Q6 || [];
   clause("W5", F.Q6 !== null && q6.includes("k5.mjs>w5_silent.jsonl") && !q6.includes("m5.mjs>w5_held.jsonl"),
     F.Q6 === null ? "no Q6 in queries()" : `k5 ${q6.includes("k5.mjs>w5_silent.jsonl")} · m5 ${q6.includes("m5.mjs>w5_held.jsonl")}`);
+  clause("W7", !F.p7.includes("w7_shadow.jsonl") && !F.p7.includes("w7b_plain.jsonl"), `p7 invented writer facts: ${F.p7.join(", ") || "none"}`);
 }
 
 // ── LIVE W6 ──────────────────────────────────────────────────────────────────
