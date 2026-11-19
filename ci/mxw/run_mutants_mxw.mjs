@@ -5,9 +5,10 @@
 // names it. The control (the copy, unedited) runs the WHOLE witness and must read GREEN. The edit site is matched in the
 // file's OWN line ending (CRLF-proof) and must be unique, or the mutant is NOT APPLIED and counts as surviving. A mutant
 // marked `own` edits the witness and is judged by the edited copy. No git is planted; no port, service or model is touched.
-// Nothing under --org is written; node_modules rides as a link; the state dir is not copied (the witness plants its own).
+// Nothing under --org is written; node_modules rides as a link; the copy is whole (BOUND compares it byte for byte with
+// --base-org) and is never printed — the witness's LIVE plant empties its own state dir.
 // LAST LINE: run_mutants: k of n mutant(s) RED by the clause that names them · control GREEN|RED
-import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync, symlinkSync, existsSync, mkdirSync } from "node:fs";
+import { mkdtempSync, cpSync, readFileSync, writeFileSync, rmSync, symlinkSync, existsSync } from "node:fs";
 import { join, resolve, dirname, relative, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
@@ -41,9 +42,7 @@ const T = mkdtempSync(join(tmpdir(), "mxw-mutants-"));
 const nm = [join(ORG, "node_modules"), join(HERE, "..", "..", "node_modules")].find((p) => existsSync(join(p, "acorn")));
 function copyOrg(name) {
   const to = join(T, name);
-  const SD = "dressing-room/state";
-  cpSync(ORG, to, { recursive: true, filter: (s) => { const r = relative(ORG, s).split(sep).join("/"); return !(r === ".git" || r.startsWith(".git/") || r === "node_modules" || r.startsWith("node_modules/") || r.startsWith(SD + "/")); } });
-  mkdirSync(join(to, ...SD.split("/")), { recursive: true });
+  cpSync(ORG, to, { recursive: true, filter: (s) => { const r = relative(ORG, s).split(sep).join("/"); return !(r === ".git" || r.startsWith(".git/") || r === "node_modules" || r.startsWith("node_modules/")); } });
   if (nm) symlinkSync(nm, join(to, "node_modules"), process.platform === "win32" ? "junction" : "dir");
   return to;
 }

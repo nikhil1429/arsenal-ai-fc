@@ -4,3 +4,5 @@
 {"ts":"2026-11-19T01:47:28.428Z","act":"witness build","cmd":"node ci/mxw/witness_mxw.mjs --org <LF export of HEAD> --base-org <LF export of 224f9b9>","last_line":"GREEN MXW xray reads an options-bag default path · 8 clause(s)"}
 {"ts":"2026-11-19T01:47:28.428Z","act":"witness base","cmd":"node ci/mxw/witness_mxw.mjs --org <LF export of 224f9b9> --base-org <LF export of 224f9b9>","last_line":"RED MXW · W1 W2 W5"}
 {"ts":"2026-11-19T01:47:28.428Z","act":"finding","cmd":"W3 with a same-name module const planted, both trees","last_line":"RED W3 on base AND build: a no-default destructured slot resolves to a same-name module const (pre-existing, named, out of F1 A)"}
+{"ts":"2026-11-19T01:50:03.110Z","act":"mutants","cmd":"node ci/mxw/run_mutants_mxw.mjs --org <LF export of HEAD> --base-org <LF export of 224f9b9>","last_line":"run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-19T01:50:03.110Z","act":"last sweep","cmd":"ps -eo pid,args | grep -E mxw-(witness|mutants)- | grep -v grep | wc -l","last_line":"0"}
