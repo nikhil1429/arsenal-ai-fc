@@ -12,8 +12,9 @@
 //     ({ broken: { branch, sha, base, planted_assert }, clean: { branch, sha, base } }, written once by the unit) and runs
 //     --org's own scripts/ci_verdict.mjs <sha> as a CHILD (the one reader; no second reader is built here).
 //     EXIT (spec §0): 0 the clause HOLDS · 1 RED, read and it does not hold · 2 UNREAD (a fact absent or unreadable).
-//   broken   0 iff the child exits 1, its line reads RED, and EVERY required leg reads RED whose NEW reds are exactly
-//            [planted_assert] (by name: the annotation carries the member name); a RED naming another, or GREEN → 1;
+//   broken   0 iff the child exits 1, its line reads RED, and EVERY required leg reads RED naming planted_assert AMONG
+//            its NEW reds (spec §B-machine:broken-red, by name: the annotation carries the member name); a RED that
+//            does not name it, or GREEN → 1;
 //            PENDING / NONE / UNREADABLE, or no record → 2.
 //   clean    0 iff the child exits 0, its line reads GREEN and every leg reads GREEN with 0 new red, AND the record's clean
 //            sibling shares the broken branch's base (same base, the break reverted); a RED leg or a sibling on another
@@ -43,7 +44,7 @@
 //   Windows, /proc elsewhere. No model is called and none is named.
 // CLAUSES:
 //   B-machine:broken-red    BASE: no record → not 0. BUILD (planted API): both legs RED naming planted_assert → 0 · RED naming
-//                           another → 1 · RED naming it plus another → 1 · one leg RED, one GREEN → 1 · GREEN → 1 ·
+//                           another → 1 · RED naming it plus its aggregate → 0 · one leg RED, one GREEN → 1 · GREEN → 1 ·
 //                           in_progress → 2 · API 403 → 2 · no record → 2
 //   B-machine:clean-green   BASE: no record → not 0. BUILD: both legs GREEN → 0 · one leg RED → 1 · API 403 (UNREADABLE,
 //                           exit 2) → 2 · in_progress → 2 · no record → 2 · a sibling on another base → 1
@@ -212,8 +213,8 @@ export function readClause(mode, org, root, o = {}) {
   if (mode === "nologin") return (r.status === 0 || r.status === 1) ? say(0, `read signed-out (${p.v})`) : say(2, "an exit outside 0/1");
   if (mode === "broken") {
     if (r.status !== 1 || p.v !== "RED") return say(1, `the broken branch reads ${p.v}, not RED`);
-    const named = p.legs.length > 0 && p.legs.every((l) => l.v === "RED" && l.fresh.length === 1 && l.fresh[0] === broken.planted_assert);
-    return named ? say(0, `RED by name on every leg: ${broken.planted_assert}`) : say(1, `RED, but not every leg names exactly the planted assert (${broken.planted_assert}) as its one new red`);
+    const named = p.legs.length > 0 && p.legs.every((l) => l.v === "RED" && l.fresh.includes(broken.planted_assert));
+    return named ? say(0, `RED by name on every leg: ${broken.planted_assert}`) : say(1, `RED, but not every leg names the planted assert (${broken.planted_assert}) among its new reds`);
   }
   if (r.status !== 0 || p.v !== "GREEN") return say(1, `the clean sibling reads ${p.v}, not GREEN`);
   return p.legs.length > 0 && p.legs.every((l) => l.v === "GREEN" && l.fresh.length === 0) ? say(0, "GREEN on every leg") : say(1, "a leg is not GREEN with 0 new red");
@@ -300,7 +301,7 @@ async function plants(ORG, BASE, only) {
       if (mode === "broken") {
         check("both legs RED naming the planted assert", readClause(mode, build, T, { plan: PLAN(bs, ["RED", [A]], ["RED", [A]]) }), 0);
         check("RED naming another assert", readClause(mode, build, T, { plan: PLAN(bs, ["RED", ["another assert · x"]], ["RED", ["another assert · x"]]) }), 1);
-        check("RED naming it plus another", readClause(mode, build, T, { plan: PLAN(bs, ["RED", [A, "another assert · x"]], ["RED", [A, "another assert · x"]]) }), 1);
+        check("RED naming it plus its aggregate (the shape the neutral machine printed on the broken branch)", readClause(mode, build, T, { plan: PLAN(bs, ["RED", [A, "all 53 hermetic suite members pass (every one RUN, not chained)"]], ["RED", [A, "all 53 hermetic suite members pass (every one RUN, not chained)"]]) }), 0);
         check("one leg RED by name, one GREEN", readClause(mode, build, T, { plan: PLAN(bs, ["RED", [A]], ["GREEN", []]) }), 1);
         check("GREEN", readClause(mode, build, T, { plan: PLAN(bs, ["GREEN", []], ["GREEN", []]) }), 1);
         check("a leg in_progress (PENDING)", readClause(mode, build, T, { plan: PLAN(bs, ["RED", [A]], ["RED", [A]], "in_progress") }), 2);

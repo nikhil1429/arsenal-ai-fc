@@ -28,7 +28,7 @@ const VREL = ["scripts", "ci_verdict.mjs"];
 /** @type {{ id: string, clause: string, kind: "witness"|"org", file?: string[], from?: string, to?: string, add?: [string[], string] }[]} */
 const MUTANTS = [
   { id: "M1", clause: "B-machine:broken-red", kind: "witness",
-    from: `p.legs.every((l) => l.v === "RED" && l.fresh.length === 1 && l.fresh[0] === broken.planted_assert)`,
+    from: `p.legs.every((l) => l.v === "RED" && l.fresh.includes(broken.planted_assert))`,
     to: `p.legs.every((l) => l.v === "RED")` },
   { id: "M2", clause: "B-machine:clean-green", kind: "witness",
     from: `if (p.v === "UNREADABLE" || r.status === 2) return say(2, "UNREAD — the API was not read");`,
