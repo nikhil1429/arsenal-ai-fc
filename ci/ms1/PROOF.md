@@ -532,6 +532,6 @@ run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GRE
   (`scripts/brain.mjs`, `scripts/keeper.mjs`, mrt's); base RED on every clause except the two guards ·
   `run_mutants: 33 of 33 mutant(s) RED by the clause that names them · control GREEN`.
 - **Member at the assembled tree** (Linux, before the mtxt3 move): `WITNESSES · 38 unit(s) judged in 841.3 s` ·
-  `organism_test: 80 passed, 3 failed · ruled 0 · UNRULED 3` (‹mdn2› N-SUITE, ‹mdone› D-UNREAD D-METER, ‹mtxt3› K2 N1).
+  (19 Nov 2026) `organism_test: 80 passed, 3 failed · ruled 0 · UNRULED 3` (‹mdn2› N-SUITE, ‹mdone› D-UNREAD D-METER, ‹mtxt3› K2 N1).
   mrv, mlv1, mlv2, mlv3, mr3, mf2, mjd3, mjud and mtail all read GREEN. `measured · PORT_HELD mlv1 · linux · node v22.23.5
   · held 2 ms after the kill · 1 probe(s) · bound 246 ms`. KNOWN_RED is empty.
