@@ -1,3 +1,8 @@
 {"ts":"2026-11-19T01:44:35.172Z","act":"branch","cmd":"git fetch origin main && git checkout -b claude/mrung-build origin/main","last_line":"224f9b90758d13edb42550f002d6c845cc7bb2a8"}
 {"ts":"2026-11-19T01:44:35.172Z","act":"spec","cmd":"git show 0e0f001:ci/mrung/MRUNG_SPEC.md > ci/mrung/MRUNG_SPEC.md","last_line":"the ruled spec, carried whole (its own ledger stays at 0e0f001:ci/mrung/LEDGER.jsonl)"}
 {"ts":"2026-11-19T01:44:35.172Z","act":"measure","cmd":"git diff --stat a18c167 224f9b9 -- scripts/done.mjs scripts/day.mjs scripts/sitting.mjs scripts/daily_green.mjs package.json .gitignore","last_line":"(empty) — every spec file:line still holds at this base"}
+{"ts":"2026-11-19T01:51:55.701Z","act":"deps","cmd":"npm ci --ignore-scripts","last_line":"node_modules (gitignored) — acorn for xray; a first base run without it measured done() as NOT MEASURABLE, discarded"}
+{"ts":"2026-11-19T01:51:55.701Z","act":"measure-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (clone of 224f9b9 under os.tmpdir())","last_line":"organism_test: 153 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run) — exit 2"}
+{"ts":"2026-11-19T01:51:55.701Z","act":"build","cmd":"node scripts/rung_receipt.mjs selftest","last_line":"rung_receipt selftest: all 13 pass"}
+{"ts":"2026-11-19T01:51:55.701Z","act":"build","cmd":"node <scratchpad>/xq.mjs <repo> (xray build: the receipt file in the graph)","last_line":"{w:[rung_receipt.mjs], r:[done.mjs, rung_receipt.mjs]} · Q2 1 Q5 1 (base: Q2 1 Q5 1)"}
+{"ts":"2026-11-19T01:51:55.701Z","act":"build","cmd":"node scripts/done.mjs line --hermetic","last_line":"DONE · … · rungs UNREAD · … (one line, exit 0)"}
