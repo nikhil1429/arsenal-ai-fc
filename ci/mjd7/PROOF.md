@@ -69,6 +69,6 @@ base: `whole 1`.
    gaffer_brain's order of acts; not built — the architect's call.
 3. The cost on his real queue stays the runner's to measure and write in its landing row (row 1063 (4)).
 4. The seat environment carried no `node_modules`; `npm ci --ignore-scripts` (gitignored) was run so xray, fsrs and
-   mutagen could load. Without it the hermetic run printed `140 passed, 4 failed` on base and build alike.
+   mutagen could load. Without it, 19 Nov 2026, `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` printed `140 passed, 4 failed` on base and build alike.
 5. The session's harness named branch `claude/mjd7-queue-setup-plql7a` (carrying the settings commit 9bfc50a); this
    build is on `claude/mjd7-build` from main, per the brief, and carries no `.claude/settings.json` change.
