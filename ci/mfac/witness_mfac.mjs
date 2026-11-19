@@ -29,7 +29,8 @@
 //   W2.3  `may` before any arm → NO not-armed
 //   W2.4  ADDED (ii): `may --act land` → NO land-attended even when launch is GO
 //   W3.1  ADDED (ii): `mark --kind landed` REFUSED, no landed row; a land-ready night closes with its count and its card
-//   W3.2  static: night.mjs moves no ref (no push / force / merge verb), never names the landing verb; land.mjs byte-identical to base
+//   W3.2  static: night.mjs moves no ref (no push / force / merge verb), never names the landing verb (its land.mjs
+//         did-not-touch conjunct lives in BOUND: unit ms1, forks row 1119 (3)(b), the third ADDED edit)
 //   W4.1  `stop --reason pool` (F3 A, the runner's gate) → NO stopped:pool
 //   W4.2  the free-memory plant under the line → NO memory, and a stopped row with reason memory
 //   W4.3  F5 A: `mark --kind red` → the next may says NO
@@ -236,9 +237,8 @@ try {
   }
   if (want("W3.2")) {
     const body = HAS_NIGHT ? SHIPPED.slice(0, SHIPPED.indexOf("async function selftest(")) : "";
-    const landSame = BASE_ORG && existsSync(join(BASE_ORG, "scripts", "land.mjs")) && lf(readFileSync(join(ORG, "scripts", "land.mjs"))) === lf(readFileSync(join(BASE_ORG, "scripts", "land.mjs")));
-    clause("W3.2", HAS_NIGHT && body.length > 0 && !/["'`](push|merge|--force|update-ref|reset)["'`]|git push|land\.mjs/.test(body) && landSame,
-      `${HAS_NIGHT ? "night.mjs moves no ref, names no landing verb" : "night.mjs absent"} · land.mjs ${landSame ? "byte-identical to base" : "DIFFERS or unreadable"}`);
+    clause("W3.2", HAS_NIGHT && body.length > 0 && !/["'`](push|merge|--force|update-ref|reset)["'`]|git push|land\.mjs/.test(body),
+      `${HAS_NIGHT ? "night.mjs moves no ref, names no landing verb" : "night.mjs absent"}`);
   }
 
   if (want("W4.1")) {
@@ -337,7 +337,9 @@ try {
       const a = walk(ORG), b = walk(BASE_ORG);
       const diff = [...new Set([...a.keys(), ...b.keys()])].filter((k) => a.get(k) !== b.get(k));
       const beyond = diff.filter((k) => !NAMED.includes(k));
-      ok = beyond.length === 0; why = `differs: ${diff.join(", ") || "nothing"}${beyond.length ? ` · BEYOND THE NAMED: ${beyond.slice(0, 8).join(", ")}` : ""}`;
+      // ms1 (row 1119 (3)(b)): W3.2's did-not-touch conjunct is a bound, so it is judged here — land.mjs byte-identical to base
+      const landSame = existsSync(join(BASE_ORG, "scripts", "land.mjs")) && lf(readFileSync(join(ORG, "scripts", "land.mjs"))) === lf(readFileSync(join(BASE_ORG, "scripts", "land.mjs")));
+      ok = beyond.length === 0 && landSame; why = `differs: ${diff.join(", ") || "nothing"}${beyond.length ? ` · BEYOND THE NAMED: ${beyond.slice(0, 8).join(", ")}` : ""} · land.mjs ${landSame ? "byte-identical to base" : "DIFFERS or unreadable"}`;
     }
     clause("BOUND", ok, why);
   }
