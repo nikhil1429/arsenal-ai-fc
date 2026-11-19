@@ -9,6 +9,8 @@
 //   M-JUGAD    one literal subject list appended to scripts/usage_tap.mjs (a named file: BOUND stays GREEN)   → JUGAD
 //   M-SURFACES done.mjs's SURFACES typed back as a literal pair (the row unread)                              → SURFACES
 //   M-LAWHOME  usage_tap.mjs's LAW_HOME typed back as two path segments                                      → JUGAD
+//   M-COVERAGE the done selftest taken back out of package.json's suite string                              → COVERAGE
+//   M-MAINBYTE a file main brought in (scripts/rung_receipt.mjs) no longer carries main's bytes                → BOUND
 //   M-HERMETIC lawpack put back into organism_test.mjs's LIVE_MODES                                           → HERMETIC
 //   M-RISE     ci_verdict.mjs judge() no longer reads the law pack line (names only, as at BASE)             → RISE
 //   M-FALL     lawpackRises reds on head !== base (a FALL turns red)                                         → RISE
@@ -87,6 +89,8 @@ const MUTANTS = [
   { id: "M-JUGAD", clause: "JUGAD", apply: (t) => append(t, "scripts/usage_tap.mjs", `\nconst MLAW_MUTANT_LIST = ["alpha", "beta"];\nexport { MLAW_MUTANT_LIST };\n`) },
   { id: "M-SURFACES", clause: "SURFACES", apply: (t) => edit(t, "scripts/done.mjs", `const SURFACES = lazySubjects(SURFACES_ROW);`, `const SURFACES = ["manager.mjs", "captains_call.mjs"];`) },
   { id: "M-LAWHOME", clause: "JUGAD", apply: (t) => { edit(t, "scripts/usage_tap.mjs", `const LAW_HOME = "tools/model_law.mjs";`, `const LAW_HOME = ["tools", "model_law.mjs"];`); edit(t, "scripts/usage_tap.mjs", "join(root, LAW_HOME)", "join(root, ...LAW_HOME)"); } },
+  { id: "M-COVERAGE", clause: "COVERAGE", apply: (t) => edit(t, "package.json", " && node scripts/done.mjs selftest", "") },
+  { id: "M-MAINBYTE", clause: "BOUND", apply: (t) => append(t, "scripts/rung_receipt.mjs", "\n// unit mlaw mutant M-MAINBYTE: not main's bytes\n") },
   { id: "M-HERMETIC", clause: "HERMETIC", apply: (t) => edit(t, OT, `  // lawpack LEFT this table at unit mlaw (forks row 1137 (2) F2 A) — see LIVE_SELFTESTS: the mode rides the hermetic profile.\n`,
     `  lawpack: "walks the whole tree, dressing-room/state included",\n`) },
   { id: "M-RISE", clause: "RISE", apply: (t) => edit(t, CIV, `  fresh.push(...lawpackRises(head.lawpack, base.lawpack, baseline));\n`, "") },
