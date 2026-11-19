@@ -2923,12 +2923,18 @@ async function witnesses() {
       try { r = spawnSync(NODE, [join("ci", unit, /** @type {string} */ (witnessFile(dir, unit))), "--org", orgT, "--base-org", baseT], { cwd: wd, env, stdio: ["ignore", fd, fd], timeout: left, windowsHide: true }); }
       finally { closeSync(fd); }
       for (const p of namingProcs(tmp)) { try { process.kill(p); } catch {} }
-      const j = judgeLast(readFileSync(log, "utf8"), r.status, unit, boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")));
+      const out = readFileSync(log, "utf8");
+      // row 1153 (3) F-9: a witness that never ends (a first boot that never arrives) is killed at the member's own bound
+      // and is a NAMED red, never a hang
+      const killed = !!(r.error && /ETIMEDOUT/.test(String(r.error.code || r.error.message))) || (r.status === null && !!r.signal);
+      const j = killed ? { ok: false, last: "(killed at the bound)", left: `killed at the member's bound (${jobMin} min, suite.yml timeout-minutes): the witness never finished` } : judgeLast(out, r.status, unit, boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")));
       const secs = ((Date.now() - u0) / 1000).toFixed(1);
       console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);
       // the judged name is STABLE, so a KNOWN_RED entry can rule it (row 1107 (1)(c)); its reds ride the detail. The seconds ride
       // their own measurement line: the workflow prints assert lines only (keyOf folds the digits)
       assert(name(`ran in ${secs} s (B5)`), true);
+      // row 1153 (2) F-7 A: every PORT_HELD machine line the witness prints rides as a named measurement line
+      for (const l of out.split(/\r?\n/).map((x) => x.trim()).filter((x) => /^PORT_HELD /.test(x))) assert(name(`measured · ${l}`), true);
       assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
     } finally {
       for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
