@@ -2910,7 +2910,8 @@ const KNOWN_RED = [
   // ruled here one each, owner = the re-judge unit row 1107 (2) names. The detail is exact: a NEW clause red beside the ruled
   // one is UNRULED (a new death never hides under an old entry), and the member turning green makes its entry STALE (refused).
   { assert: "WITNESS ‹mjd3› · GREEN at head against its BASE", detail: "red beyond BOUND: J4", row: 1107, owner: "unit mr3", until: "mr3 re-judges mjd3 J4 (fix, or witness re-cut + BASE re-taken) and lands it" },
-  { assert: "WITNESS ‹mtail› · GREEN at head against its BASE", detail: "red beyond BOUND: T3 AUTH", row: 1107, owner: "unit mrt", until: "mrt re-judges mtail T3 AUTH and lands it" },
+  // RETIRED by unit mrt (forks row 1120 (1) / (4)): the mtail entry (row 1107, detail "red beyond BOUND: T3 AUTH") — T3 repaired on main
+  // (keeper.mjs a leaf again, depcruise no-circular 7), T2 re-based naming mday; ci/mtail's clauses re-cut in the same diff.
   { assert: "WITNESS ‹mjud› · GREEN at head against its BASE", detail: "red beyond BOUND: M3 CENSUS M5 F3-CLIP M6 MJD2", row: 1107, owner: "unit mrj", until: "mrj re-judges mjud M3, M5, M6 and lands it" },
   { assert: "WITNESS ‹mf2› · GREEN at head against its BASE", detail: "red beyond BOUND: F2 F4", row: 1107, owner: "unit mrf", until: "mrf re-judges mf2 F2, F4 and lands it" },
   // (EMPTY from 13 Oct 2026 to unit ms1's row 1107 entries above) Row 642: every entry of row 639 left the list in the landing that fixed it — NO SHIM
