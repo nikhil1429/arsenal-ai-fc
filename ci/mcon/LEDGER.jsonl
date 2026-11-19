@@ -1,3 +1,5 @@
 {"ts":"2026-11-19T03:03:34.119Z","act":"cut","cmd":"git fetch origin main ; git checkout -b claude/mcon-build FETCH_HEAD","last_line":"base 3f84c80bdf37432587bb11d4faf82d5eed7d5f5d"}
 {"ts":"2026-11-19T03:03:34.119Z","act":"selftest-base","cmd":"node scripts/conductor.mjs selftest (base 3f84c80)","last_line":"ALL CHECKS PASSED (111 passed, 0 failed)"}
 {"ts":"2026-11-19T03:04:58.258Z","act":"selftest-build","cmd":"node scripts/conductor.mjs selftest (build: the S9 (6) assert reads a child run of fallback on a temp copy)","last_line":"ALL CHECKS PASSED (111 passed, 0 failed)"}
+{"ts":"2026-11-19T03:08:20.845Z","act":"census-base","cmd":"node ci/mcon/census_mcon.mjs --org <LF clone of 3f84c80, npm ci>","last_line":"CENSUS MCON · 39 own-literal pin(s) in 28 assert(s) · 1 own-assert · 78 unresolved · 144 file(s) walked"}
+{"ts":"2026-11-19T03:08:20.845Z","act":"census-build","cmd":"node ci/mcon/census_mcon.mjs --org <LF clone of 432738f, npm ci>","last_line":"CENSUS MCON · 38 own-literal pin(s) in 27 assert(s) · 1 own-assert · 78 unresolved · 144 file(s) walked"}
