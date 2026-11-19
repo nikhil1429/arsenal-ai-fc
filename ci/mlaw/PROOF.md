@@ -420,3 +420,13 @@ network, not the reader. The legs above were read through the same API the reade
   (`node scripts/organism_test.mjs laws`, 19 Nov 2026). That line came in with `1582be0`'s own PROOF addition, and the
   file is byte-equal to `1582be0`'s (`git diff --quiet 1582be0 HEAD -- ci/mlaw/../ms1/PROOF.md`). It is the ms1 seat's to
   date; this seat does not edit it. This PROOF passes the law by the rule's own regex.
+
+## 13. FORKS ROW 1168 — THE ADOPTED ms1 ASSEMBLED TIP 179a0ee MERGED (19 Nov 2026)
+
+`git merge --no-edit 179a0ee3525aca1ab018bce11fd940346a040463` gave merge commit `d2b53f1`: doc-only (`ci/ms1/PROOF.md`,
+`ci/ms1/LEDGER.jsonl`), with no conflict, no rebase and no force. `ci/mlaw/MERGED.json` was re-derived from
+`179a0ee`'s own LF bytes (51 files changed since `cf1ca54`). From `e9fd6ba` this commit changes only the merge,
+`ci/mlaw/MERGED.json`, this PROOF and `ci/mlaw/LEDGER.jsonl`: no organ byte and no witness byte. On this tree (19 Nov
+2026): `node ci/mlaw/witness_mlaw.mjs` reads `GREEN MLAW the law pack judged hermetic, its rise a new red · 10 clause(s)`,
+and `node scripts/organism_test.mjs laws` reads `ok LOAD ZERO BLOCK 7` (FK12 is closed by `179a0ee`). The neutral legs of
+this tip are read once each, after this single push, and are reported in the final message only (row 1168 (4)).
