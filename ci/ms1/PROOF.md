@@ -452,3 +452,21 @@ run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GRE
     `‹mrt›` ok · `organism_test: 67 passed, 2 failed · ruled 2 · UNRULED 0`. The two are ‹mf2› and ‹mjd3›, both ruled.
     Nothing is red that was not red at `c637496`.
   - Each neutral leg's mtail line at this tip: §13.1 below.
+- **mr3 `08b4772`** (row 1134) → merge `e54e3b6`. **One conflict, resolved by measurement**: KNOWN_RED. mr3 retires the
+  mjd3 entry, and this branch had already retired mjud (mrj) and mtail (mrt). All three go, and mrt's comment and mr3's
+  retirement note stay. The list now holds ‹mf2› alone. It brings `ci/mr3/` (BASE `52b51c1`) and the re-cut
+  `ci/mjd3/witness_mjd3.mjs` (J4 naming unit mjd4).
+  - Witness after: every clause GREEN except BOUND (`scripts/brain.mjs`, `scripts/keeper.mjs`: mrt's files, §13 above).
+    Base `224f9b9`: RED.
+  - Member after (Linux, 19 Nov 2026): `WITNESS ‹mjd3› · GREEN at head against its BASE` ok (`RED MJD3 · BOUND`) ·
+    `organism_test: 69 passed, 2 failed · ruled 1 · UNRULED 1`. ‹mf2› is ruled (mrf to come).
+  - **NEW, fork F-f (for the architect): `WITNESS ‹mr3›` is RED: `RED MR3 · K3 BOUND`.** mr3's K3 claims "the tree's
+    KNOWN_RED = the base's list minus exactly ‹mjd3›". On the assembled branch, mrj and mrt have also retired their
+    entries, so the list differs from mr3's base by more than ‹mjd3›. Like BOUND and like F-a's did-not-touch
+    conjunct, it is a seat-time claim that the next merge overtakes. It is not a regression of mjd3, and it is not one
+    of my ADDED edits. Fate options, the architect's call:
+    - (a) K3's "nothing else changed" half moves into mr3's own BOUND, keeping "‹mjd3› absent, nothing joined" — the
+      F-a shape (a fifth ADDED edit, or mr3's seat).
+    - (b) mr3's BASE is re-taken at the assembled tree.
+  - The `cf1ca54` neutral run (`44444943278`) was cancelled by this push, so the per-leg mtail line comes from the next
+    tip's run.
