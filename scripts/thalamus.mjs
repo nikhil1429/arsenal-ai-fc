@@ -119,7 +119,7 @@ import { loadRegistry, canonicalize } from "./capture.mjs";
 // adjudicateLive, exactly as before — only the row SHAPE moves up here.
 import { ledgerForensics } from "./claudegen.mjs";
 import { supersedeReps } from "./capture.mjs";   // BLOCK 4 — a corrected verdict must stop counting HERE too; the sole writer of reps_log owns what supersession means
-import { keep, KEEP_EXIT, retireWhenIdle, judgeHeld, JUDGE_PORT } from "./keeper.mjs";   // unit mlv3 (forks row 1031 M0 A) — the keeper over `daemon-worker`, retiring only when its spool is drained
+import { keep, KEEP_EXIT, retireWhenIdle, judgeHeld, JUDGE_PORT, plantedPort } from "./keeper.mjs";   // unit mlv3 (forks row 1031 M0 A) — the keeper over `daemon-worker`, retiring only when its spool is drained
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
 // UNIT 818 (13 Nov 2026) — LAW M: the adjudicator names a ROLE and the one resolver answers it. models.mjs
 // imports node builtins only and its module body has no side effects (its main guard is
@@ -152,19 +152,10 @@ const LOGFILE   = join(__dirname, "thalamus.log");         // #10 — the diagno
 // THE PLANTED-TREE PORT DOOR (unit mlv3 rework, forks row 1053) — the same door cortex.mjs carries: a witness runs a
 // REAL thalamus on a COPY under the OS temp dir and must never touch the live :4113 (his laptop runs it, the one organ
 // left on). The env name is honoured ONLY when this very file (realpath) sits under os.tmpdir(); anywhere else, or with
-// the env unset or bad, the fixed port stands, byte for byte what it was.
-export function plantedPort(name, fixed, { here = fileURLToPath(import.meta.url), env = process.env, tmp = tmpdir(), platform = process.platform } = {}) {
-  const v = env[name];
-  if (v == null || v === "") return fixed;
-  let h, t;
-  try { h = realpathSync(here); t = realpathSync(tmp); } catch (e) { swallow("plantedPort: an unreal path is never a planted tree → the fixed port", e); return fixed; }
-  const fold = (x) => (platform === "win32" ? x.toLowerCase() : x);
-  const under = fold(h).startsWith(fold(t.endsWith(sep) ? t : t + sep));
-  const n = Number(v);
-  return under && Number.isInteger(n) && n > 0 && n < 65536 ? n : fixed;
-}
+// the env unset or bad, the fixed port stands, byte for byte what it was. UNIT mport (row 1064 (6)): the door is keeper.mjs's
+// plantedPort, imported — one guard, one home (the guard reads keeper.mjs's own place); this file keeps no copy of it.
 const PORT = plantedPort("ARSENAL_THALAMUS_PORT", 4113);   // one below the Dugout's 4114
-const JUDGE_AT = plantedPort("ARSENAL_JUDGE_PORT", JUDGE_PORT);   // the judge round's port (keeper.mjs), read by the retire
+const JUDGE_AT = JUDGE_PORT;   // the judge round's port: keeper.mjs already read it through the same plantedPort door, read by the retire
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e);} return null; };
 // `raw` returns the LINE TEXT instead of the parsed row, and it exists because a rewriter
