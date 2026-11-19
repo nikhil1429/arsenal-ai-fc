@@ -209,7 +209,6 @@ const LIVE_ASSERTS = Object.freeze({
 const LIVE_MODES = Object.freeze({
   path: "drives forge/rejirah/samjhao/capture end to end over a sandbox COPY of dressing-room/state (registry, concepts, forge_profile, missions …) and mirror.mjs reaches the network",
   alive: "pulse.mjs probes the process table (Get-ScheduledTask) and reads the lanes' live artifacts",
-  gates: "validates every schema-d file of dressing-room/state (ajv) and reads state/laws_register.json",
   lawpack: "walks the whole tree, dressing-room/state included (437,917 state reads measured in one run)",
   atlas: "re-derives the atlas from state/xray_graph.json, the live IR",
 });
@@ -2667,7 +2666,11 @@ function alive() {
 // families stay 0, frozen counts may only fall, the checked list may only grow.
 function gates() {
   section("GATES — tsc --checkJs + eslint + ajv schemas, frozen at their measured baselines, tightening only");
-  const r = run([join(ROOT, "scripts", "gates.mjs"), "report"], { timeout: 600000 });
+  // unit mgat: the hermetic profile runs the STATE-FREE half — `gates.mjs lint` (tsc + eslint), whose output was byte-identical
+  // with the state folder absent, empty and tracked-present (ci/mgat/MGAT_SPEC.md §3). The ajv half validates his state files: LIVE, named.
+  const half = PROFILE === "hermetic";
+  if (half) liveNamed("gates schema half", "validates every schema-d file of dressing-room/state (ajv); the tsc + eslint half runs");
+  const r = run([join(ROOT, "scripts", "gates.mjs"), half ? "lint" : "report"], { timeout: 600000 });
   if (/NOT MEASURABLE HERE/.test(r.out)) {
     assert("GATES — bare checkout: the gate answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));
     return;
