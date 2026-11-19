@@ -224,6 +224,11 @@ Decides it: the re-based witness's base leg at the candidate (RED on M5 at `e819
 
 Read with curl, no token: `GET https://api.github.com/repos/<owner>/arsenal-ai-fc/commits/<sha>/check-runs` (the owner is this repository's own). See §11.
 
-## 11. CI of this branch
+## 11. CI of this branch (read 19 Nov 2026 with curl, no token)
 
-(filled after the push)
+| Push | Run | node 22 | node 24 |
+|---|---|---|---|
+| `8c0d026` (the spec) | `44427789999` | job `135237016673` **success** | job `135237016908` **success** |
+
+For comparison, main head `a18c167`: run `44423800868`, both legs success. This branch adds only `ci/mrj/` files, so the
+suite verdict is main's. The verdict of this push (the §11 fill) is named in the seat's final message.
