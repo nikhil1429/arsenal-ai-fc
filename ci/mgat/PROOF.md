@@ -183,5 +183,12 @@ groundsman, cortex and rung_receipt selftests on Windows, one at a time.
 `scripts/groundsman.mjs`, `scripts/cortex.mjs`, `scripts/captains_call.mjs`, `scripts/organism_test.mjs`, `scripts/rung_receipt.mjs`,
 and `ci/mgat/**`. Nothing else (`git diff --stat fb42118 HEAD`; witness BOUND). `.claude/settings.json` is not carried.
 
-### 8.6 The neutral machine at the final tip
-See §8.7: it is written after the final push's two legs are read.
+### 8.6 The neutral machine
+- `920d9b5` → merge `b5ea3fe`, `2a0d56a` (the fifth file), `07d74db` (the witness): each superseded by the next push before it finished.
+- **`46103cac4203f721991cf3ed30c2bb897534921e`** (PROOF §8; the last tip carrying code or witness bytes), run `44519772101`, 19 Nov 2026:
+  node 22 job `135545121457` **success** · node 24 job `135545121089` **success**. B1 verdict on both legs: `GREEN · no member red that is not red at the merge base`.
+  Base `fb42118`, `new: []`, `base_red 1` (the coverage law, as at the base), pass/fail 150/1 (19 Nov 2026).
+
+### 8.7 THE TIP
+The tip judged by the neutral machine is **`46103cac4203f721991cf3ed30c2bb897534921e`**. The commit after it adds only this §8.6/§8.7 text and
+ledger rows (`ci/mgat/PROOF.md`, `ci/mgat/LEDGER.jsonl`), because a file cannot carry its own sha's verdict. Its two legs are read after the push.
