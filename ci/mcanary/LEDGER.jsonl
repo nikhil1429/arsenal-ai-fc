@@ -1,0 +1,8 @@
+{"ts":"2026-11-19T12:34:00Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mcanary-build origin/main","last_line":"fb42118 unit mxh (forks row 1150 / adoption at ac14bad): land branch stacked on land/mcon 980e953 …"}
+{"ts":"2026-11-19T12:35:00Z","act":"read-spec","cmd":"git show 88bf69d:ci/mwit/MWIT_SPEC.md (with LEDGER.jsonl, plant_day.mjs)","last_line":"B-canary:launch-no-laptop · opus-vs-fable · design-fleet — unit mcanary, one reader: the canary file"}
+{"ts":"2026-11-19T12:38:00Z","act":"measure","cmd":"get_session (this session, read-only; shape only, nothing recorded)","last_line":"keys: id · created_at · environment_kind anthropic_cloud · configured_model · external_metadata.last_served_model · session_context.outcomes[].git_repository.git_info.branches · status_bucket"}
+{"ts":"2026-11-19T12:39:00Z","act":"measure","cmd":"git log origin/main --format=%B -200 | grep -c 'Claude-Session: https://claude.ai/code/session_'","last_line":"46"}
+{"ts":"2026-11-19T12:40:00Z","act":"setup","cmd":"npm ci --no-audit --no-fund","last_line":"done 0"}
+{"ts":"2026-11-19T12:41:00Z","act":"measure","cmd":"node scripts/lawpack.mjs gate (BASE fb42118)","last_line":"lawpack: 2 RED — a gate may only get stricter (§10-D rule 6) · exit 1"}
+{"ts":"2026-11-19T12:41:30Z","act":"measure","cmd":"node scripts/models.mjs check (BASE fb42118)","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0) · exit 0"}
+{"ts":"2026-11-19T12:47:00Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (BASE fb42118)","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run) · EXIT 2"}
