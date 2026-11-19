@@ -25,15 +25,25 @@
 //       name) or started with a timeout ≥ budget + margin and finishes; never killed. P2 (the contrast): the deadline leaves
 //       JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS + CHILD_TIMEOUT_MS + 1/4 JUDGE_DISPATCH_MS — it IS started, timeout ≥ budget + margin,
 //       finishes, and the record's JUDGE line is the child's own. autocloseBudget() equals BASE's (the close budget does not move).
-//   T2  F-C · a FAKE sitting daemon on its own port answers /close after D = the midpoint of the OLD wait (BASE's typed /close
+//   ~~T2  F-C · a FAKE sitting daemon on its own port answers /close after D = the midpoint of the OLD wait (BASE's typed /close
 //       wait, read from its source) and the LONGEST close (the sum of ownerTimeoutMs over the owner(...) steps close() writes,
 //       plus the session's close grace read from claudegen.mjs). `sitting.mjs close` must print its real result
 //       ("sitting: CLOSED <id> …"), exit 0, its /close wait ≥ LONGEST. Contrast: the same CLI against a daemon that answers at
-//       once prints the same result (the wait is not a delay).
+//       once prints the same result (the wait is not a delay).~~  (struck by unit mrt, forks row 1120 (1) / row 1112 (1))
+//   T2  F-C (RE-CUT by unit mrt, forks row 1120 (1): T2 fate (a) RE-BASE, F2 A, naming unit mday rows 1075 / 1078 F10 A — the
+//       CLI asks GET /status before it POSTs /close, and the old seam scaled that probe too, so a cold first fetch tripped it) ·
+//       a FAKE sitting daemon on its own port answers /close after D = the midpoint of the OLD wait (BASE's typed /close wait,
+//       read from its source) and the LONGEST close (the sum of ownerTimeoutMs over the owner(...) steps close() writes, plus
+//       the session's close grace read from claudegen.mjs). `sitting.mjs close` must print its real result
+//       ("sitting: CLOSED <id> …"), exit 0, its POST /close wait ≥ LONGEST, and its FIRST request is GET /status on its own
+//       UNSCALED wait (mday's probe, asserted). Contrast: the same CLI against a daemon that answers at once prints the same
+//       result (the wait is not a delay), probe first too. Only the POST /close wait runs on the scaled clock (w_preload.mjs).
 //   T3  ONE auth literal · claudegen.mjs exports AUTH_REFUSAL_RE; gaffer_brain.mjs JUDGE_AUTH_RE and brain.mjs AUTH_FAIL_RE are
 //       that SAME object; it matches the three observed refusals and no limit wall; no other file in scripts/ carries the OAuth
-//       words as a PATTERN (an alternation, a regex literal or its string); the depcruise no-circular count read on both trees
-//       does not rise.
+//       words as a PATTERN (an alternation, a regex literal or its string); ~~the depcruise no-circular count read on both trees
+//       does not rise.~~  (struck by unit mrt, forks row 1120 (1) F5 B / row 1112 (1)) RE-CUT by unit mrt, forks row 1120 (1)
+//       (T3 fate (b) REPAIR on main, F5 B the edge-set form): the depcruise no-circular count read on both trees does not rise
+//       AND every no-circular from→to row of --org is a row of --base-org (a cycle swapped for another does not pass).
 //   T4  mpm F1 · captureDay has ONE definition in scripts/ — gaffer_brain.mjs, exported; postmatch.mjs imports it and defines
 //       none; the close evidence of mpm reads as before: the same queue-only close (captures either side of an IST midnight)
 //       writes a post_match record byte-equal to BASE's, naming exactly the captures of that IST day.
@@ -187,9 +197,12 @@ try {
     let slow = null, fast = null;
     if (DUR !== null && DUR > OLD && DUR < LONGEST) { slow = await runCli(DUR); fast = await runCli(0); }
     const printed = (r) => !!r && r.code === 0 && /^sitting: CLOSED sit_20990410_0000_wit0 — 2\/3 units spoken · 1 banked · 4 turns · judge ran$/m.test(r.out);
-    const waitOf = (r) => (r && r.aborts.length ? r.aborts.at(-1).ms : null);
-    clause("T2 F-C", printed(slow) && waitOf(slow) >= LONGEST && printed(fast),
-      `old wait ${OLD ?? "(no --base-org)"} ms · longest close ${LONGEST ?? "?"} ms (${steps.map(([f, v]) => `${f} ${v}`).join(" + ")} + session grace ${grace ?? "?"}) · a close of ${DUR ?? "?"} ms: ${slow ? (printed(slow) ? "printed its result" : `NOT printed (exit ${slow.code}: ${(slow.out + slow.err).trim().split(/\r?\n/).at(-1)?.slice(0, 90)})`) : "not run"} · CLI wait ${waitOf(slow) ?? "?"} ms · contrast (an instant close): ${fast ? (printed(fast) ? "printed" : "NOT printed") : "not run"}`);
+    // ~~const waitOf = (r) => (r && r.aborts.length ? r.aborts.at(-1).ms : null);~~ (struck by unit mrt, forks row 1120 (1) / row 1112 (1))
+    const waitOf = (r) => { const c = r ? r.aborts.filter((a) => a.method === "POST" && a.path === "/close") : []; return c.length ? c.at(-1).ms : null; };
+    // unit mrt re-base (forks row 1120 (1), F2 A; mday rows 1075 / 1078, F10 A): the CLI asks GET /status FIRST (the daemon-up probe), then POSTs /close
+    const probed = (r) => !!r && r.aborts.length >= 2 && r.aborts[0].method === "GET" && r.aborts[0].path === "/status" && r.aborts[0].scaled === false;
+    clause("T2 F-C", printed(slow) && waitOf(slow) >= LONGEST && printed(fast) && probed(slow) && probed(fast),
+      `old wait ${OLD ?? "(no --base-org)"} ms · longest close ${LONGEST ?? "?"} ms (${steps.map(([f, v]) => `${f} ${v}`).join(" + ")} + session grace ${grace ?? "?"}) · a close of ${DUR ?? "?"} ms: ${slow ? (printed(slow) ? "printed its result" : `NOT printed (exit ${slow.code}: ${(slow.out + slow.err).trim().split(/\r?\n/).at(-1)?.slice(0, 90)})`) : "not run"} · CLI wait ${waitOf(slow) ?? "?"} ms · probe ${slow && slow.aborts[0] ? `${slow.aborts[0].method} ${slow.aborts[0].path} ${slow.aborts[0].ms} ms` : "none"} · contrast (an instant close): ${fast ? (printed(fast) ? "printed" : "NOT printed") : "not run"}${fast && !probed(fast) ? " (no probe first)" : ""}`);
   }
 
   // ── T3 · ONE auth literal ──
@@ -210,12 +223,15 @@ try {
       if (!tree) return null;
       const bin = join(tree, "node_modules", "dependency-cruiser", "bin", "dependency-cruise.mjs");
       const r = spawnSync(process.execPath, [bin, "--config", ".dependency-cruiser.cjs", "--output-type", "json", "scripts", "hooks"], { cwd: tree, encoding: "utf8", windowsHide: true, maxBuffer: 1 << 28 });
-      try { const o = String(r.stdout); return ((JSON.parse(o.slice(o.indexOf("{"), o.lastIndexOf("}") + 1)).summary || {}).violations || []).filter((v) => v.rule && v.rule.name === "no-circular").length; } catch { return null; }
+      // unit mrt (forks row 1120 (1) F5 B): the from→to ROWS, not only their count
+      try { const o = String(r.stdout); return ((JSON.parse(o.slice(o.indexOf("{"), o.lastIndexOf("}") + 1)).summary || {}).violations || []).filter((v) => v.rule && v.rule.name === "no-circular").map((v) => `${v.from}→${v.to}`); } catch { return null; }
     };
-    const cOrg = cyc(ORG), cBase = cyc(BASE_ORG);
+    const eOrg = cyc(ORG), eBase = cyc(BASE_ORG);
+    const cOrg = eOrg ? eOrg.length : null, cBase = eBase ? eBase.length : null;
+    const newRows = eOrg && eBase ? eOrg.filter((e) => !eBase.includes(e)) : null;
     clause("T3 AUTH", !!cg && same.re && same.g && same.b && same.hits && same.hits.every(Boolean) && same.wall === false
-      && carriers.length === 1 && carriers[0] === "claudegen.mjs" && cOrg !== null && cBase !== null && cOrg <= cBase,
-      `claudegen AUTH_REFUSAL_RE ${cg ? "exported" : "ABSENT"} · gaffer_brain JUDGE_AUTH_RE ${same.g ? "IS it" : "is NOT it"} · brain AUTH_FAIL_RE ${same.b ? "IS it" : "is NOT it"}${same.error ? ` (${String(same.error).slice(0, 80)})` : ""} · matches ${(same.hits || []).filter(Boolean).length}/3, limit wall ${same.wall ? "MATCHED" : "not matched"} · files carrying the OAuth words as a pattern: ${carriers.join(", ") || "none"} · depcruise no-circular ${cOrg ?? "?"} vs BASE ${cBase ?? "(no --base-org)"}`);
+      && carriers.length === 1 && carriers[0] === "claudegen.mjs" && cOrg !== null && cBase !== null && cOrg <= cBase && newRows !== null && newRows.length === 0,
+      `claudegen AUTH_REFUSAL_RE ${cg ? "exported" : "ABSENT"} · gaffer_brain JUDGE_AUTH_RE ${same.g ? "IS it" : "is NOT it"} · brain AUTH_FAIL_RE ${same.b ? "IS it" : "is NOT it"}${same.error ? ` (${String(same.error).slice(0, 80)})` : ""} · matches ${(same.hits || []).filter(Boolean).length}/3, limit wall ${same.wall ? "MATCHED" : "not matched"} · files carrying the OAuth words as a pattern: ${carriers.join(", ") || "none"} · depcruise no-circular ${cOrg ?? "?"} vs BASE ${cBase ?? "(no --base-org)"} · rows not in BASE's: ${newRows ? (newRows.length ? newRows.join(", ") : "none") : "?"}`);
   }
 
   // ── T4 · mpm F1 ──
