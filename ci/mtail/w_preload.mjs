@@ -7,8 +7,13 @@
 //         spawnSync's own; it prints a judge "not due" line when it finishes. The timeout the organ handed is logged UNSCALED.
 //       · any other organ script (archivist, captains_call, notes_compiler, …) → not run: a logged exit-0 stub.
 //     Nothing else is touched (git, a shell tool: the real spawnSync).
-//   MTAIL_ABORT_LOG set — AbortSignal.timeout(ms) is logged UNSCALED and armed at ms / MTAIL_SCALE real ms (the CLI's own wait,
-//     on the scaled clock the fake daemon also runs on).
+//   ~~MTAIL_ABORT_LOG set — AbortSignal.timeout(ms) is logged UNSCALED and armed at ms / MTAIL_SCALE real ms (the CLI's own wait,
+//     on the scaled clock the fake daemon also runs on).~~  (struck by unit mrt, forks row 1120 (1) T2 fate (a) / row 1112 (1))
+//   MTAIL_ABORT_LOG set (RE-CUT by unit mrt, forks row 1120 (1): T2 fate (a) RE-BASE naming unit mday, rows 1075 / 1078 F10 A) —
+//     AbortSignal.timeout(ms) arms the organ's REAL wait and remembers ms; a fetch wrapper re-arms ONLY the POST /close wait at
+//     ms / MTAIL_SCALE real ms (the CLI's own close wait, on the scaled clock the fake daemon also runs on). Every other wait —
+//     mday's GET /status probe (daemonUp) in front of the close — keeps its own real wait. Every wait is logged UNSCALED with
+//     { ms, method, path, scaled }.
 import cp from "node:child_process";
 import { syncBuiltinESMExports } from "node:module";
 import { appendFileSync } from "node:fs";
@@ -45,5 +50,17 @@ if (process.env.MTAIL_SPAWN_LOG && SCALE > 0) {
 if (process.env.MTAIL_ABORT_LOG && SCALE > 0) {
   const LOG = process.env.MTAIL_ABORT_LOG;
   const orig = AbortSignal.timeout.bind(AbortSignal);
-  AbortSignal.timeout = (ms) => { log(LOG, { kind: "abort", ms }); return orig(scaled(ms)); };
+  // unit mrt (T2 re-base, mday rows 1075 / 1078 F10 A): ONLY the /close POST's wait runs on the scaled clock — the CLI's
+  // /status probe (daemonUp, added by mday) keeps its own real wait; every wait is logged UNSCALED with its path and method.
+  const ms0 = new WeakMap();
+  AbortSignal.timeout = (ms) => { const s = orig(ms); ms0.set(s, ms); return s; };
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (url, o = {}) => {
+    const ms = o && o.signal ? ms0.get(o.signal) : undefined, method = String((o && o.method) || "GET").toUpperCase();
+    const path = (() => { try { return new URL(String(url)).pathname; } catch { return null; } })();
+    if (ms === undefined) return realFetch(url, o);
+    const close = method === "POST" && path === "/close";
+    log(LOG, { kind: "abort", ms, method, path, scaled: close });
+    return realFetch(url, close ? { ...o, signal: orig(scaled(ms)) } : o);
+  };
 }
