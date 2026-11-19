@@ -26,3 +26,5 @@
 {"ts":"2026-11-19T12:29:03.673Z","act":"build-two-proc","cmd":"node ci/mid/two_proc_mid.mjs --org <LF dfbc989> (spec 8b2c556)","last_line":"TWO_PROC · acts differ · claims differ · proposed differ"}
 {"ts":"2026-11-19T12:29:03.695Z","act":"build-lawpack","cmd":"node scripts/lawpack.mjs gate (LF tree dfbc989)","last_line":"lawpack: 2 RED — jugad-literal-subject-list 93 · depcruise_errors 13 · bare-catch 37 · receipt-testimony-read 5 · import-time-registry-read 2 · others 0 — every count EQUAL to BASE"}
 {"ts":"2026-11-19T12:29:03.721Z","act":"build-models","cmd":"node scripts/models.mjs check (LF tree dfbc989)","last_line":"exit 0"}
+{"ts":"2026-11-19T12:32:22.237Z","act":"witness-build","cmd":"node ci/mid/witness_mid.mjs --org <LF dfbc989> --base-org <LF fb42118>","last_line":"GREEN MID one shared mint + two-row refusals · 9 clause(s) (exit 0)"}
+{"ts":"2026-11-19T12:32:22.262Z","act":"witness-base","cmd":"node ci/mid/witness_mid.mjs --org <LF fb42118> --base-org <LF fb42118>","last_line":"RED MID · W1, W2, W3, W4, W5, W6, W7, W8 (exit 1)"}
