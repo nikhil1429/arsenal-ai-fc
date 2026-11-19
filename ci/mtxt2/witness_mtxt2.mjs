@@ -30,14 +30,14 @@
 //   T1  services.mjs differs ∧ its own `selftest` headline equals the base's and reads "0 failed" (exit 0)
 //   T2  rails.mjs, the same
 //   D1  rails.mjs differs ∧ the claude-p rail is unchanged: decide() on a `claude -p` Bash call (no study context) reads
-//       deny · rail claude-p on both trees with the SAME fix; the org reason keeps (L6), (L5) and "ledger" and carries no
+//       deny · rail claude-p on both trees with the SAME fix; the org deny's why keeps (L6), (L5) and "ledger" and carries no
 //       S12 / switched-off clause; and the `pretooluse` hook, fed the same call on stdin, prints the same
 //       permissionDecision (deny) with the same exit code on both trees
 //   G1  in each file every cited `grep -n "a\|b" docs/archive/<file>.md` RESOLVES (every alternative hits a line of the
 //       cited file in --org), and each file carries one whose hits include a line with 20 Aug 2026 AND a line with
 //       30 Aug 2026 — both of his words, cited
-//   N1  the new lines (in --org, absent from the base) state no live count or state: no digit once dates, the cited file
-//       name, rung ids (S<n>) and law ids (L<n>) are removed, and none of Disabled / killed / Running / Ready / EXPECTED
+//   N1  the new lines (in --org, absent from the base) state no live count or state: no digit once dates, file names
+//       (<path>.md / .mjs / .ps1), rung ids (S<n>) and law ids (L<n>) are removed, and none of Disabled / killed / Running / Ready / EXPECTED
 //   BOUND  only scripts/services.mjs, scripts/rails.mjs and ci/mtxt2/** differ from --base-org (both named files DO
 //          differ); .git and node_modules are not walked; text is hashed with CRLF folded to LF
 //   LAST   no node process naming this run's temp root survives (ps; PowerShell on Windows)
@@ -139,7 +139,7 @@ function selftestHeadline(tree, tag, script, word) {
 const CP_CALL = { tool_name: "Bash", tool_input: { command: "claude -p 'mtxt2 probe — a string, never run'" } };
 function railProbe(tree, tag) {
   const dst = copyOf(tree, tag), url = pathToFileURL(join(dst, RAILS)).href, env = envFor(tag);
-  const code = `import(process.env.__R).then((m) => { const d = m.decide(JSON.parse(process.env.__P), null); process.stdout.write(JSON.stringify({ decision: d.decision, rail: d.rail, fix: d.fix, reason: d.reason }) + "\\n"); })`;
+  const code = `import(process.env.__R).then((m) => { const d = m.decide(JSON.parse(process.env.__P), null); process.stdout.write(JSON.stringify({ decision: d.decision, rail: d.rail, fix: d.fix, why: d.why, reason: d.reason }) + "\\n"); })`;
   const a = spawnSync(process.execPath, ["--input-type=module", "-e", code], { cwd: dst, env: { ...env, __R: url, __P: JSON.stringify(CP_CALL) }, encoding: "utf8" });
   let dec = null; try { dec = JSON.parse((a.stdout || "").trim().split(/\r?\n/).pop()); } catch { dec = null; }
   const h = spawnSync(process.execPath, [join(dst, RAILS), "pretooluse"], { cwd: dst, env, input: JSON.stringify(CP_CALL), encoding: "utf8" });
@@ -200,7 +200,7 @@ try {
     else {
       const a = railProbe(BASE, "base"), b = railProbe(ORG, "org");
       const same = !!(a.dec && b.dec) && a.dec.decision === "deny" && b.dec.decision === "deny" && a.dec.rail === "claude-p" && b.dec.rail === "claude-p" && a.dec.fix === b.dec.fix;
-      const r = (b.dec && b.dec.reason) || "";
+      const r = (b.dec && b.dec.why) || "";
       const keeps = r.includes("(L6)") && r.includes("(L5)") && /ledger/.test(r) && !/\bS12\b/.test(r) && !SWITCHED.test(r);
       const hook = a.hook === "deny" && b.hook === "deny" && a.hookCode === b.hookCode;
       clause("D1", same && keeps && hook, `decide: ${same ? "deny · claude-p · same fix on both" : `MOVED (base ${a.dec && a.dec.decision}/${a.dec && a.dec.rail} · org ${b.dec && b.dec.decision}/${b.dec && b.dec.rail})`} · reason ${keeps ? "keeps L6, L5, the ledger; no switch-off clause" : "LOST a true reason or KEPT the switch-off clause"} · hook ${hook ? `deny on both, exit ${b.hookCode}` : `base ${a.hook}/${a.hookCode} · org ${b.hook}/${b.hookCode}`}`);
@@ -213,7 +213,7 @@ try {
   }
   if (want("N1")) {
     const fresh = have ? [...newLines(bS, oS).map(([n, l]) => [`${SVC}:${n}`, l]), ...newLines(bR, oR).map(([n, l]) => [`${RAILS}:${n}`, l])] : [];
-    const strip = (t) => t.replace(/ORGANISM_AUDIT__\d{4}-\d{2}-\d{2}/g, "").replace(/\b\d{1,2} [A-Z][a-z]{2} \d{4}\b/g, "").replace(/\b[SL]\d+\b/g, "");
+    const strip = (t) => t.replace(/[\w./-]+\.(?:md|mjs|ps1)\b/g, "").replace(/\b\d{1,2} [A-Z][a-z]{2} \d{4}\b/g, "").replace(/\b[SL]\d+\b/g, "");
     const bad = fresh.map(([w, l]) => { const s = strip(l); return /\d/.test(s) ? `${w} a digit` : /Disabled|killed|Running|Ready|EXPECTED/.test(s) ? `${w} a state word` : null; }).filter(Boolean);
     clause("N1", fresh.length > 0 && !bad.length, !fresh.length ? "no new lines (the unit is absent)" : bad.length ? bad.join(", ") : `${fresh.length} new line(s) state no live count or state`);
   }
