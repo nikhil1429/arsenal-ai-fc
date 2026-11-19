@@ -151,7 +151,15 @@ node scripts/models.mjs check   → exit 0 (literal model names outside models.m
 | `06db9f8` | `44439372749` | `135276191246` node 22 · `135276191776` node 24 | cancelled (superseded) |
 | `b4c9d19` | `44439863633` | `135277799076` node 22 · `135277799449` node 24 | cancelled (superseded) |
 | `044ebf8` | `44440113630` | `135278640263` node 22 · `135278640519` node 24 | cancelled (superseded) |
-| `d45adaa` | `44440962977` | `135281475863` node 24 · `135281476115` node 22 | superseded by the next push |
+| `d45adaa` | `44440962977` | `135281475863` node 24 · `135281476115` node 22 | cancelled (superseded) |
+| `e2de691` | `44441831152` | `135284364443` node 22 · `135284364743` node 24 | **failure** on both legs — read below |
+
+`e2de691`, measured 19 Nov 2026 from the check runs' annotations (public API): both legs print `B1_VERDICT RED` against the
+merge base `224f9b9` (main, which carries no member at all). The NEW REDs are the same nine on both legs: `WITNESS ‹mf2›`,
+`‹mjd3›`, `‹mjud›` (each RULED row 1107, owners mrf / mr3 / mrj), `WITNESS ‹mfac›`, and B4 for `‹mland›`, `‹mlj›`, `‹mlv0›`,
+`‹mlv1›`, `‹ms1›` (FK1). BASE RED is the selftest-coverage law. **`WITNESS ‹mtail›` and `WITNESS ‹mrt›` are in neither list:
+GREEN at head on windows-latest, node 22 and node 24.** That answers spec N1 (T2 on Windows with the re-based seam) once, on
+the neutral machine.
 
 The last push's runs are named in the seat's final message (this file cannot carry its own sha).
 
