@@ -354,7 +354,7 @@ re-aimed at W3, and M8 now carries W6.
 **F12 · N1, the parameter-shadow gap** (forks row 1128 (3), mxw PROOF X2 "whose unit")
 - (A) named only. It is latent (0 bites, measured), so it waits for its own unit.
 - (B) mask it in this landing (`xray_mxh_full_n1.patch`), with W7 and M9-M11. **Recommended.** Measured:
-  0 edges change, 0 unresolved change and 0 organs get worse on both trees, so it moves no verdict today. The
+  (2026-11-19) 0 edges change, 0 unresolved change and no organ gets worse on both trees, so it moves no verdict today. The
   gate gets strictly stricter: W7 is RED today, and any future organ that names a parameter after its own
   path constant would gain an invented writer fact.
 - (C) its own unit, cut after mxw lands.
@@ -395,7 +395,7 @@ re-aimed at W3, and M8 now carries W6.
 3. `dressing-room/state/xray_graph.json` — regenerated ONLY by `node scripts/xray.mjs build` (owner `xray.mjs:4`).
 4. `dressing-room/state/flow_atlas.json` (and what `flow_atlas.mjs build` emits) — ONLY by that verb, if the
    land tree's `flow_atlas check` goes STALE after step 3.
-5. Each one a fork, beyond these: the §2 organs' prose (F6 C), any IR transfer function (F8), and Q5's own
+5. Each one a fork, beyond these: the prose of the organs named in §2 (F6 C), any IR transfer function (F8), and Q5's own
    Map (F7 B). No registry act: no row is touched.
 
 ## 10 · The neutral machine on this branch
