@@ -117,8 +117,24 @@ selftest drives through the re-export pass on both sides.
 runs only under that env), 19 Nov 2026:
 
 ```
-(see §8.1, filled from the clean base run)
+BASE 51055bb : organism_test: 193 passed, 13 failed · ruled 4 · UNRULED 9 · LIVE 126 (hermetic: named, not run)   exit 2
+build b4c9d19: organism_test: 186 passed, 12 failed · ruled 3 · UNRULED 9 · LIVE 126 (hermetic: named, not run)   exit 2
+
+member lines this unit touches:
+  WITNESS ‹mtail› · GREEN at head against its BASE   before: FAIL (RULED row 1107 · unit mrt) — witness ‹mtail› RED MTAIL · T3 AUTH · BOUND
+                                                     after : ok — witness ‹mtail› RED MTAIL · BOUND (BOUND dropped)
+  WITNESS ‹mrt› · GREEN at head against its BASE     before: (absent)
+                                                     after : ok — witness ‹mrt› GREEN MRT the T3 repair · 6 clause(s)
+  KNOWN_RED                                          before: ruled 4 · after: ruled 3, STALE 0, INVALID 0
 ```
+
+The sorted assert-line diff, base vs build, has exactly these differences, plus one environmental difference. The FAIL `WITNESS
+‹mtail›` leaves, the ok `WITNESS ‹mtail›` arrives, and the two `WITNESS ‹mrt›` oks arrive. **No other member turns red: the same
+UNRULED set on both sides** (FK1 names them). The environmental difference: ten asserts (two LOAD ZERO lane, six RUNG A, two S7
+RATCHET) run only `if (cfg && ledgerLanes)` (organism_test.mjs:1611), that is, only when the gitignored `brain_ledger.jsonl`
+exists in the clone. The base clone had one from §7's brain selftest run before its suite. The build clone created its own only
+during its run. That accounts for the drop in passed with fewer asserts run and none failing. The neutral machine runs both on a
+fresh checkout.
 
 ## 9. models check
 
@@ -133,8 +149,9 @@ node scripts/models.mjs check   → exit 0 (literal model names outside models.m
 | `2a0e37c` | `44438967888` | `135274781369` node 22 · `135274781900` node 24 | cancelled (superseded) |
 | `08629d1` | `44439264907` | `135275831299` node 22 · `135275831674` node 24 | cancelled (superseded) |
 | `06db9f8` | `44439372749` | `135276191246` node 22 · `135276191776` node 24 | cancelled (superseded) |
-| `b4c9d19` | `44439863633` | `135277799076` node 22 · `135277799449` node 24 | see the final message |
-| `044ebf8` | `44440113630` | `135278640263` node 22 · `135278640519` node 24 | see the final message |
+| `b4c9d19` | `44439863633` | `135277799076` node 22 · `135277799449` node 24 | cancelled (superseded) |
+| `044ebf8` | `44440113630` | `135278640263` node 22 · `135278640519` node 24 | cancelled (superseded) |
+| `d45adaa` | `44440962977` | `135281475863` node 24 · `135281476115` node 22 | superseded by the next push |
 
 The last push's runs are named in the seat's final message (this file cannot carry its own sha).
 
