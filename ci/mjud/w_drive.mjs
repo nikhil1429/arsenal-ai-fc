@@ -60,7 +60,10 @@ async function gaffer() {
   { judgeCalls.length = 0; const handed = [];
     const r = await G.gradeJudge({ ...base, rows: plantRows(3), judgeHistory: [{ job: G.JUDGE_JOB, ok: true, duration_ms: 1000, items: 1 }], generate: grade(),
       verifyGenerate: async (p, call) => { handed.push(call && call.budget_ms); return { ok: true, text: '{"items":[]}', duration_ms: B / 3 }; } });
-    facts.third = { ok: r.ok, first_budget: judgeCalls[0] ? judgeCalls[0].budget_ms : null, handed, graded: r.graded }; }
+    const b0 = (r.batches || [])[0];
+    facts.third = { ok: r.ok, first_budget: judgeCalls[0] ? judgeCalls[0].budget_ms : null, handed, graded: r.graded,
+      tail: b0 && Number.isFinite(b0.tail_ms) ? b0.tail_ms : null,
+      reserve: b0 && typeof G.settleReserveMs === "function" ? G.settleReserveMs(plantRows(3).filter((it) => b0.ids.includes(it.id))) : null }; }
   // mjd2 — a killed batch of 10 on the ledger beside a fast ok row; then the size that died next
   const fast = { job: G.JUDGE_JOB, ok: true, duration_ms: 10000, items: 1 };
   const kill = (n) => ({ job: G.JUDGE_JOB, ok: false, duration_ms: B, items: n, error: "spawnSync claude ETIMEDOUT" });
@@ -69,7 +72,10 @@ async function gaffer() {
   { judgeCalls.length = 0; const r1 = await G.gradeJudge({ ...base, rows: plantRows(12), judgeHistory: [fast, kill(10)], verify: async () => ({ ran: false, why: "planted", checks: {}, calls: 0 }), generate: grade(10) });
     const s1 = (r1.batches || [])[0] ? r1.batches[0].size : null;
     const r2 = await G.gradeJudge({ ...base, rows: plantRows(12), judgeHistory: [fast, kill(10), kill(s1 || 1)], verify: async () => ({ ran: false, why: "planted", checks: {}, calls: 0 }), generate: grade(10) });
-    facts.kill2 = { s1, s2: (r2.batches || [])[0] ? r2.batches[0].size : null }; }
+    // mrj (re-base of M6 on mjd3, row 1025 (4)): a round that starts NO batch because not one capture fits is size 0 — the mjd2
+    // rule's own terminal ("down to the RED of not even ONE capture fits"), read from the round's own reason and sizing
+    const s2 = (r2.batches || [])[0] ? r2.batches[0].size : (r2.reason === "judge-batch-cannot-fit" && r2.sizing && r2.sizing.size === 0 ? 0 : null);
+    facts.kill2 = { s1, s2, reason2: r2.reason || null }; }
   // mjd2, the other way — a refusal and an un-killed failure are no floor: the size is the ok-only size
   { const refused = { job: G.JUDGE_JOB, ok: false, duration_ms: 3000, items: 1, error: "OAuth session expired and could not be refreshed" };
     const lost = { job: G.JUDGE_JOB, ok: false, duration_ms: B, items: 59 };
