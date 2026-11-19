@@ -440,3 +440,15 @@ run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GRE
   `WITNESS ‹mjud› · GREEN at head against its BASE` ok · `‹mrj›` ok · `organism_test: 64 passed, 3 failed · ruled 2 ·
   UNRULED 1`. The reds are ‹mf2› and ‹mjd3› (ruled) and ‹mtail› (`red beyond BOUND: T2 F-C T3 AUTH`, unruled: T2 is
   mrt's, F-c). Nothing is red that was not red at `c637496`.
+- **mrt `e2de691`** (row 1131) → merge `b88d7f0`. **One conflict, resolved by measurement**: KNOWN_RED, where mrj
+  (`ff9f6af`) retired the mjud entry and mrt retires the mtail entry. Both go, and mrt's retirement comment stays (the
+  list now holds ‹mjd3› and ‹mf2›). mrt's own main merge `51055bb` brings `224f9b9`, which ms1 already held: nothing
+  new. It brings `ci/mrt/` (BASE `51055bb`), sourceGraph / staleSources moved from `scripts/brain.mjs` into
+  `scripts/keeper.mjs`, and the re-cut `ci/mtail/witness_mtail.mjs` + `w_preload.mjs`.
+  - Witness after: every clause GREEN except **BOUND · off-bound: scripts/brain.mjs, scripts/keeper.mjs**. Those are mrt's
+    adopted files, beyond ms1's named set. BOUND is seat-time and the assembled branch is no longer ms1 alone; the
+    member drops it (F1 A). Base `224f9b9`: RED.
+  - Member after (Linux, 19 Nov 2026): `WITNESS ‹mtail› · GREEN at head against its BASE` ok (`RED MTAIL · BOUND`) ·
+    `‹mrt›` ok · `organism_test: 67 passed, 2 failed · ruled 2 · UNRULED 0`. The two are ‹mf2› and ‹mjd3›, both ruled.
+    Nothing is red that was not red at `c637496`.
+  - Each neutral leg's mtail line at this tip: §13.1 below.
