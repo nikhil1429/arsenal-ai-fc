@@ -1,0 +1,2 @@
+{"ts":"2026-11-19T12:37:50Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mcap-build origin/main","last_line":"fb42118"}
+{"ts":"2026-11-19T12:37:50Z","act":"checkpoint","cmd":"architect message STOP (his word #269)","last_line":"CHECKPOINT · STOPPED at 2026-11-19T12:37:50Z · resume from step 1: measure the organs, then write the map and the witness"}
