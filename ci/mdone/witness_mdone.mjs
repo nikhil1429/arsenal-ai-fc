@@ -55,7 +55,7 @@ function tree(src) {
   const reg = { version: 1, updated_at: null, tables: { lanes: [
     { subject: "plantlane", schema_owner: "plant_writer.mjs", consumers: [{ kind: "organ", name: "plant_reader.mjs" }], consumer_kind: "organ", witness: "ci/mdone planted lane", why: `planted by the witness ${MARK}` },
     { subject: "nocons", schema_owner: "plant_writer.mjs", consumers: [], consumer_kind: "organ", witness: "ci/mdone planted lane", why: "a lane that names nobody" },
-  ] } };
+  ], mechanisms: [{ subject: "his_surfaces", schema_owner: "done.mjs", witness: "ci/mlaw/witness_mlaw.mjs SURFACES", subjects: ["manager.mjs", "captains_call.mjs"], why: "unit mlaw row 1152 (1): done.mjs reads his surfaces from this row" }] } };   // unit mlaw (row 1152 (1)): the his_surfaces row beside the lanes
   put(dir, "dressing-room/state/registry.json", JSON.stringify(reg));
   put(dir, "dressing-room/state/consumption.jsonl", JSON.stringify({ ts: new Date().toISOString(), lane: "plantlane", kind: "opened", by: `plant_reader.mjs` , note: MARK }) + "\n");
   put(dir, "scripts/plant_writer.mjs", WRITER("plantlane.json"));

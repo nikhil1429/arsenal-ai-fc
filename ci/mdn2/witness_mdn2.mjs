@@ -68,7 +68,7 @@ function tree(src, lanes = []) {
   const dir = join(ROOT, `t${++seq}`);
   cpSync(src, dir, { recursive: true, filter: (s) => { const r = relative(src, s).split(sep).join("/"); return !(r === "node_modules" || r.startsWith("node_modules/") || r === ".git" || r === "dressing-room/state" || r.startsWith("dressing-room/state/")); } });
   if (existsSync(NM)) symlinkSync(NM, join(dir, "node_modules"), "junction");
-  put(dir, "dressing-room/state/registry.json", JSON.stringify({ version: 1, updated_at: null, tables: { lanes } }));
+  put(dir, "dressing-room/state/registry.json", JSON.stringify({ version: 1, updated_at: null, tables: { lanes, mechanisms: [{ subject: "his_surfaces", schema_owner: "done.mjs", witness: "ci/mlaw/witness_mlaw.mjs SURFACES", subjects: ["manager.mjs", "captains_call.mjs"], why: "unit mlaw row 1152 (1): done.mjs reads his surfaces from this row" }] } }));   // unit mlaw (row 1152 (1)): the his_surfaces row beside the lanes
   return dir;
 }
 // every env door under the temp dir or blanked to the tree copy's own default
