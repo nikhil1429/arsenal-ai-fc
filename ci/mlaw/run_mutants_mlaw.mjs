@@ -87,7 +87,7 @@ const MUTANTS = [
     `  lawpack: "walks the whole tree, dressing-room/state included",\n`) },
   { id: "M-RISE", clause: "RISE", apply: (t) => edit(t, CIV, `  fresh.push(...lawpackRises(head.lawpack, base.lawpack, baseline));\n`, "") },
   { id: "M-FALL", clause: "RISE", apply: (t) => edit(t, CIV, `    if (h > b) out.push(`, `    if (h !== b) out.push(`) },
-  { id: "M-NOLINE", clause: "NOLINE", apply: (t) => edit(t, CIV, `  if (!baseLp && !baseline) return [`, `  if (!baseLp) return []; if (!baseline) return [`) },
+  { id: "M-NOLINE", clause: "NOLINE", apply: (t) => edit(t, CIV, `  if (!baseLp && !baseline) return [`, `  if (!baseLp) return [];\n  if (!baseLp && !baseline) return [`) },
   { id: "M-PORT", clause: "PORT", apply: (t) => edit(t, COND, `Number(closedPort) > 0 && (await portOpen(Number(closedPort), 200)) === false`, `(await portOpen(59999, 200)) === false`) },
   { id: "M-BOUND", clause: "BOUND", apply: (t) => append(t, "scripts/state.mjs", "\n// unit mlaw mutant M-BOUND: a line outside the named files\n") },
   { id: "M-LAST", clause: "LAST", apply: (t) => edit(t, COND, `      const closedPort = await new Promise(`,
