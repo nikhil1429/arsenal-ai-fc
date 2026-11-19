@@ -341,9 +341,9 @@ build was measured in place and reverted.
 
 ```
 GET https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs
-CHECK_RUNS
+5b7cf3b  run 44511562686  jobs 135516829744 (npm test · node 22) / 135516829267 (npm test · node 24)  completed / SUCCESS   (the first spec push, 2026-11-19)
 ```
 
 ## 10 · Peer/architect messages received
 
-None received in this session up to the last push (2026-11-19).
+None received in this session up to the last push (2026-11-19). This §9 update rides the next push; its run is the next row of `ci/mxb/LEDGER.jsonl`.
