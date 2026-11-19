@@ -1,0 +1,5 @@
+{"ts":"2026-11-19T12:20Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mguard-spec origin/main","last_line":"fb4211870093e6b8657655eb02ebcfc425f1eab1"}
+{"ts":"2026-11-19T12:30Z","act":"measure","cmd":"node scripts/usage_tap.mjs selftest | tail -1","last_line":"usage_tap selftest 31/31 — all clauses hold"}
+{"ts":"2026-11-19T12:30Z","act":"measure","cmd":"node scripts/usage_tap.mjs verdict","last_line":"WAIT · no campaign root (ARSENAL_CAMPAIGN_ROOT unset) · five-hour ?% · weekly ?% · age ? min · source none (exit 3)"}
+{"ts":"2026-11-19T12:36Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"exit 2 (ERR_MODULE_NOT_FOUND: fsrs, mutagen)"}
+{"ts":"2026-11-19T12:38Z","act":"checkpoint","cmd":"STOP message (his word #269)","last_line":"CHECKPOINT · STOPPED at 2026-11-19T12:38Z · resume from §3 code path, §4 witness, §5 mutants, FORKS, NAMED NOT GUESSED, file list"}
