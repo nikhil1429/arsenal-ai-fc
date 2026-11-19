@@ -12,7 +12,7 @@ node scripts/services.mjs emit
 The watchdog used to be the only thing that restarted a dead daemon, and it was
 `LogonType=Interactive` — so **no logged-in session meant no supervisor at all**.
 It also relaunched purely off "port closed", which on 28 Aug 2026 meant an
-orientation `--help` woke four daemons inside a switched-off organism.
+orientation `--help` woke four daemons inside an organism his 20 Aug 2026 order then held off.
 
 Ownership now belongs to the OS. The watchdog reports; it does not launch.
 
@@ -30,4 +30,6 @@ It asks for your Windows password once, for the services. **It goes to Windows, 
 to a file** — no credential is ever written here, and no session sees it.
 
 **Nothing starts.** Services install `start=demand`, tasks register disabled.
-S12 turns the organism back on, stage by stage, on your word.
+Starting a unit is your word, never this installer's: your 20 Aug 2026 switch-off was lifted
+by your 30 Aug 2026 word (`grep -n "nothing burns tokens\|ORGANISM IS BACK ON" docs/archive/ORGANISM_AUDIT__2026-08-19.md`).
+What runs now: `node scripts/services.mjs status`.
