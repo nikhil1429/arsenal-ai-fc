@@ -470,3 +470,12 @@ run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GRE
     - (b) mr3's BASE is re-taken at the assembled tree.
   - The `cf1ca54` neutral run (`44444943278`) was cancelled by this push, so the per-leg mtail line comes from the next
     tip's run.
+- **mrf `542dec7`** (= `5378193` + `ci/mrf/PROOF.md` and `LEDGER.jsonl` only; rows 1127 (1)-(2)) → merge `5368b82`.
+  **One conflict, resolved by measurement**: KNOWN_RED. mrf retires the mf2 entry, and the other three retirements
+  stay. **The list is EMPTY** (row 1119 (2)); its retirement notes stay as comments. It brings `ci/mrf/` (BASE `52b51c1`)
+  and the re-cut `ci/mf2/witness_mf2.mjs`.
+  - Witness after: every clause GREEN except BOUND (mrt's files). R1 to R3 plant their own entry, so the empty list
+    leaves them GREEN (row 1112). Base `224f9b9`: RED.
+  - Member after (Linux, 19 Nov 2026): `witness ‹mf2› 241.3 s · RED MF2 · BOUND` → ok · `‹mrf›` ok ·
+    `organism_test: 72 passed, 1 failed · ruled 0 · UNRULED 1`. The one is **‹mr3› K3 (fork F-f)**.
+  - The `38ae428` neutral run (`44447441495`) was cancelled by this push.
