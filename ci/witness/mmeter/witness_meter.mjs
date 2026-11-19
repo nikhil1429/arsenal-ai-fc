@@ -124,6 +124,7 @@ async function plantsFor(org) {
     await d("a 6/11 latest row", 1, meter([{ ...R, date: "2026-11-01" }, { ...six, date: R.date }]));
     await d("the LAST row of the latest date wins (11/11 then 6/11 on one date)", 1, meter([R, { ...six, date: R.date }]));
     await d("a non-study (N-A) latest row", 1, meter([naRow]));
+    await d("a row that disagrees with itself (its count reads 10, its clauses all GREEN)", 1, meter([{ ...R, greens: 10 }]));
     await d("an 11-green row whose day is not a study day", 1, meter([{ ...R, study: false }]));
     await d("no meter ledger", 2, join(T, "absent.jsonl"));
     await d("an unparseable ledger line", 2, meter(null, `${JSON.stringify(R)}\n{not json\n`));
