@@ -1,0 +1,8 @@
+{"ts":"2026-11-19T01:48:42.321Z","act":"fetch","cmd":"git fetch origin claude/ms1-build claude/mrj-spec main","last_line":"ms1-build 52b51c1 · mrj-spec 73823e6 · main 224f9b9"}
+{"ts":"2026-11-19T01:48:42.321Z","act":"branch","cmd":"git checkout -b claude/mrj-build 52b51c1","last_line":"Switched to a new branch claude/mrj-build"}
+{"ts":"2026-11-19T01:48:42.321Z","act":"merge-check","cmd":"git diff --stat 95b07a6 origin/main -- ci/mjud scripts/organism_test.mjs ci/mrj  (95b07a6 = merge-base 52b51c1 origin/main)","last_line":"(empty) — main changed none of the named files since the merge base; no merge made (FORK M0)"}
+{"ts":"2026-11-19T01:48:42.321Z","act":"before-head","cmd":"node ci/mjud/witness_mjud.mjs --org T(52b51c1) --base-org T(5767e21)","last_line":"RED MJUD · M3 CENSUS · M5 F3-CLIP · M6 MJD2 · BOUND"}
+{"ts":"2026-11-19T01:48:42.321Z","act":"before-base","cmd":"node ci/mjud/witness_mjud.mjs --org T(5767e21) --base-org T(5767e21)","last_line":"RED MJUD · M1 SITTING · M2 DUGOUT · M3 CENSUS · M4 F3-EAT · M5 F3-CLIP · M6 MJD2 · M8 MAUTH"}
+{"ts":"2026-11-19T01:48:42.321Z","act":"rebase","cmd":"git apply ci/mrj/REBASE.diff (from 73823e6) + header re-cut (old text struck) + KNOWN_RED mjud entry removed","last_line":"4 files: ci/mjud/witness_mjud.mjs ci/mjud/w_drive.mjs scripts/organism_test.mjs ci/mrj/BASE"}
+{"ts":"2026-11-19T01:48:42.321Z","act":"after-head","cmd":"node ci/mjud/witness_mjud.mjs --org T(52b51c1 + build) --base-org T(5767e21)","last_line":"RED MJUD · BOUND"}
+{"ts":"2026-11-19T01:48:42.321Z","act":"after-base","cmd":"node ci/mjud/witness_mjud.mjs --org T(5767e21) --base-org T(5767e21)","last_line":"RED MJUD · M1 SITTING · M2 DUGOUT · M3 CENSUS · M4 F3-EAT · M5 F3-CLIP · M6 MJD2 · M8 MAUTH"}

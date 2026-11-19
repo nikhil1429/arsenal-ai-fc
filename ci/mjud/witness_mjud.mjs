@@ -22,13 +22,25 @@
 //                dispatch; a non-judge tool spawn keeps 60 s.                                               [feeds: msit]
 //   M3 CENSUS    every judge-verb spawn site in scripts/ + hooks/ (the call shapes `"gaffer_brain.mjs", ["judge-…"` and
 //                `join(…, "gaffer_brain.mjs"), "judge-…"`) is one of: sitting.mjs through ownerTimeoutMs, dugout.mjs
-//                through shTimeoutMs, postmatch.mjs through its JUDGE_BUDGET_MS reserve — and nothing else.  [feeds: msit]
+//                through shTimeoutMs, ~~postmatch.mjs through its JUDGE_BUDGET_MS reserve~~ — and nothing else.  [feeds: msit]
+//                RE-BASED by unit mrj (forks row 1112 (1), fate (a); F2 A the new form only) on unit mtail, rows 1017 (2)-(5)
+//                / 1019 (1), first-parent main 074ead9: postmatch.mjs through its JUDGE_CHILD_MS reserve, where the file
+//                holds `export const JUDGE_CHILD_MS = JUDGE_BUDGET_MS + JUDGE_DISPATCH_MS;` and the judge run reads
+//                `fits(JUDGE_CHILD_MS + CHILD_TIMEOUT_MS)` (the pre-mtail `fits(JUDGE_BUDGET_MS + …)` form reads RED).
 //   M4 F3-EAT    a planted external check that takes the whole budget: NO judge call is made, no batch starts, and
 //                the reason names the check (judge-budget-spent-by-external-check); the check was handed ≤ budget. [F3]
 //   M5 F3-CLIP   a check that takes a third: the check is handed the budget, the first batch is killed at what the
-//                check left (budget − a third), never at a fresh budget.                                       [F3]
+//                check left ~~(budget − a third)~~, never at a fresh budget.                                   [F3]
+//                RE-BASED by unit mrj (forks row 1112 (1), fate (a)) on unit mjd3, rows 1025 (4) / 1030, first-parent main
+//                3a73782 (the settle tail reserved inside the budget): killed at budget − a third − the first batch's own
+//                tail_ms, where that tail is finite, > 0, and equals the copy's settleReserveMs(<that batch's rows>).
 //   M6 MJD2      a batch of 10 KILLED at the budget beside a fast ok row: the next first batch is < 10; and planted
 //                again with that size killed too, the size shrinks again (s2 < s1).                          [mjd2]
+//                ~~s2 is the second round's first batch size~~ — RE-BASED by unit mrj (forks row 1112 (1), fate (a); F4 A)
+//                on unit mjd3, rows 1025 (4) / 1030, first-parent main 3a73782: a second round that starts NO batch with
+//                reason judge-batch-cannot-fit and sizing.size 0 reads s2 = 0 (mjd2's own terminal, "not even ONE
+//                capture fits"); s1 must be a positive integer, so 0 < 0 can never pass.
+//   (BASE is kept at 5767e21 by row 1112 F3 A: every re-based clause is RED there.)
 //   M7 NOFLOOR   the other way (guard): an auth refusal and an un-killed failure teach the size nothing — the size
 //                equals the ok-only size.                                                                     [guard]
 //   M8 MAUTH     brain.mjs exports AUTH_FAIL_RE, it matches the three observed refusals (OAuth included), it IS the
@@ -124,7 +136,7 @@ const need = (f) => f.budget + (Number.isFinite(f.dispatch) ? f.dispatch : 0);
   const covered = (s) => {
     if (s.f === "scripts/sitting.mjs") return /owner\("gaffer_brain\.mjs"/.test(s.src) && /export function ownerCli[\s\S]{0,700}timeout: ownerTimeoutMs\(file, args\)/.test(srcOf(s.f)) && /function ownerTimeoutMs[\s\S]{0,300}JUDGE_BUDGET_MS \+ JUDGE_DISPATCH_MS/.test(srcOf(s.f));
     if (s.f === "scripts/dugout.mjs") return /sh\("gaffer_brain\.mjs"/.test(s.src) && /function execTool\(name, args, deps = \{\}\) \{\n\s*const sh = deps\.sh \|\| [^\n]*timeout: shTimeoutMs\(script, argv\)/.test(srcOf(s.f)) && /function shTimeoutMs[\s\S]{0,300}JUDGE_BUDGET_MS \+ JUDGE_DISPATCH_MS/.test(srcOf(s.f));
-    if (s.f === "scripts/postmatch.mjs") return /const f = fits\(JUDGE_BUDGET_MS \+ CHILD_TIMEOUT_MS\);[\s\S]{0,300}const s = spawnMs\(f, CHILD_TIMEOUT_MS\);[\s\S]{0,300}"judge-due", "--trigger", "day\.close"\][^\n]*timeout: s\.ms/.test(srcOf(s.f));
+    if (s.f === "scripts/postmatch.mjs") return /export const JUDGE_CHILD_MS = JUDGE_BUDGET_MS \+ JUDGE_DISPATCH_MS;/.test(srcOf(s.f)) && /const f = fits\(JUDGE_CHILD_MS \+ CHILD_TIMEOUT_MS\);[\s\S]{0,300}const s = spawnMs\(f, CHILD_TIMEOUT_MS\);[\s\S]{0,300}"judge-due", "--trigger", "day\.close"\][^\n]*timeout: s\.ms/.test(srcOf(s.f));
     return false;
   };
   const bad = sites.filter((s) => !covered(s));
@@ -140,12 +152,12 @@ const g = drive("gaffer");
 }
 {
   const t = g.third || {};
-  const ok = !g.threw && t.ok && t.handed && t.handed[0] === g.budget && t.first_budget === g.budget - g.budget / 3;
-  clause("M5 F3-CLIP", ok, `a check taking ${g.budget / 3} ms: handed ${JSON.stringify(t.handed)} · the first batch killed at ${t.first_budget} ms (owed ${g.budget - g.budget / 3})`);
+  const ok = !g.threw && t.ok && t.handed && t.handed[0] === g.budget && Number.isFinite(t.tail) && t.tail > 0 && t.tail === t.reserve && t.first_budget === g.budget - g.budget / 3 - t.tail;
+  clause("M5 F3-CLIP", ok, `a check taking ${g.budget / 3} ms: handed ${JSON.stringify(t.handed)} · the first batch killed at ${t.first_budget} ms (owed ${g.budget - g.budget / 3} − its settle tail ${t.tail}, settleReserveMs ${t.reserve})`);
 }
 {
   const k = g.kill1 || {}, k2 = g.kill2 || {};
-  const ok = !g.threw && Number.isInteger(k.first_size) && k.first_size < k.killed_size && Number.isInteger(k2.s2) && k2.s2 < k2.s1;
+  const ok = !g.threw && Number.isInteger(k.first_size) && k.first_size < k.killed_size && Number.isInteger(k2.s1) && k2.s1 > 0 && Number.isInteger(k2.s2) && k2.s2 < k2.s1;
   clause("M6 MJD2", ok, `10 captures killed at the budget beside a fast ok row ⇒ next size ${k.first_size}; that size killed too ⇒ ${k2.s2} (was ${k2.s1})`);
 }
 {
