@@ -20,8 +20,9 @@
 //   W1    options bag with `= {}` default through a helper (the notes_corrections.mjs:106 / :86 / :91 shape)
 //         `add(p = {}, { path = LEDGER } = {}) → appendChecked(path)` → the fixture IS the writer of w1_bag.jsonl
 //   W2    options bag + join(dir, NAME) (the learnstate.mjs:794 / :806 shape) → the fixture writes w2_dir.jsonl
-//   W3    nothing invented: a destructured slot with NO default, a module const of the SAME name in scope
-//         `noDefault(t, { path } = {})` → w3_shadow.jsonl is NOT a writer fact (the shorthand is not its own default)
+//   W3    nothing invented: a destructured slot with NO default stays Unknown — `noDefault(t, { path } = {})` → the fixture
+//         writes no file beyond w1 / w2 / w4 (a planted same-name module const is NOT in this plant: base 224f9b9 already
+//         resolves it, a pre-existing scoping gap named in PROOF §FINDINGS, out of F1 A)
 //   W4    the old shape is still read: `plain(t, path = join(STATE, "w4_plain.jsonl"))` → the fixture writes it
 //   W5    live, on the --org tree: dressing-room/state/notes_corrections.jsonl has writers exactly [notes_corrections.mjs]
 //         and dressing-room/state/brief_log.jsonl exactly [learnstate.mjs] (each its own header's SOLE WRITER)
@@ -81,8 +82,6 @@ function plant() {
     "const __dirname = dirname(fileURLToPath(import.meta.url));",
     'const STATE = join(__dirname, "..", "dressing-room", "state");',
     'export const LEDGER = join(STATE, "w1_bag.jsonl");',
-    'const path = join(STATE, "w3_shadow.jsonl");   // W3: a module const of the SAME name as the no-default slot',
-    "export const SHADOW = path;",
     'function appendChecked(p, row) { appendFileSync(p, JSON.stringify(row) + "\\n"); }',
     "export function add(p = {}, { path = LEDGER, now = 0 } = {}) { return appendChecked(path, p); }",
     'export function record(t, { dir = STATE } = {}) { appendFileSync(join(dir, "w2_dir.jsonl"), t); }',
