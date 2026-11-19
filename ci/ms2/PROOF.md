@@ -67,8 +67,8 @@ Mutants (`node ci/ms2/run_mutants_ms2.mjs --org <build> --base-org <c637496>`):
 
 | | headline line | witnesses line |
 |---|---|---|
-| before `c637496` | `organism_test: 48 passed, 11 failed · ruled 4 · UNRULED 7 · LIVE 0 (hermetic: named, not run)` | `witnesses · 30 unit(s) · 350.2 s` |
-| after `385899e` | `organism_test: 73 passed, 16 failed · ruled 4 · UNRULED 12 · LIVE 0 (hermetic: named, not run)` | `witnesses · 31 unit(s) · 735.9 s` |
+| before `c637496` (19 Nov 2026) | `organism_test: 48 passed, 11 failed · ruled 4 · UNRULED 7 · LIVE 0 (hermetic: named, not run)` | `witnesses · 30 unit(s) · 350.2 s` |
+| after `385899e` (19 Nov 2026) | `organism_test: 73 passed, 16 failed · ruled 4 · UNRULED 12 · LIVE 0 (hermetic: named, not run)` | `witnesses · 31 unit(s) · 735.9 s` |
 
 **The L-leg at every landed unit (after):** 26 of the 29 landed units `ok   WITNESS ‹u› · GREEN at its LANDED sha against its
 landing's parent`, BOUND judged in full, git sides. mtail's T3 AUTH, mjd3's J4, mjud's M3/M5/M6 and mf2's F2/F4 are all
@@ -101,7 +101,17 @@ GREEN at their landing, which is the spec's §3 measured again by the member its
 `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` (no GITHUB_ACTIONS: the witnesses member prints its
 one skip line):
 
-@SUITE@
+| 19 Nov 2026 | headline line | exit · wall |
+|---|---|---|
+| before `c637496` (19 Nov 2026) | `organism_test: 143 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` | 2 · 25.5 s |
+| after `345fde9` (19 Nov 2026) | `organism_test: 145 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)` | 2 · 30.2 s |
+
+The one red after is red before too: `EVERY organ with a selftest is wired into a suite (package.json:_selftest_coverage_law)`
+(`orphaned: deck_lint, home_pin, probe, study_scope`), no file of ms2's. The two reds only before (`SUITE MEMBER · sandbox
+selftest exits 0` and `all … hermetic suite members pass`, the sandbox tripwire recording two of four canary attempts)
+were measured in a shared clone under the OS temp dir, not in this checkout; they are named, not attributed (N4).
+No selftest of an organ is touched by ms2: `land.mjs` has no selftest mode (its witness is `ci/mland/`, judged by the
+member, §4: `GREEN MLAND landing verb · 19 clause(s)` at L).
 
 ## 6. MODELS
 
@@ -140,5 +150,6 @@ at L) (row 1120 (1)), mrf → `ci/mf2/REBASE` F2, F4 (row 1120), mrv → its cla
 
 - **N1** the L-leg's seconds and the job's wall time on `windows-latest`: read from this branch's first un-cancelled run (§7).
 - **N2** the Windows cost of git sides (`git init` + `git add -A` + commit, twice per L-leg): the same run.
+- **N4** the sandbox selftest's two reds in the `c637496` clone (§5): a clone-path effect or a real red at that tip is not measured here.
 - **N3** mlv2 LIVE-SAFE, red once in the full Linux sequence, green alone twice: whether a sequence effect (a port a
   previous witness left) or a flake is not measured.
