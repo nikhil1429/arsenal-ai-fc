@@ -163,3 +163,5 @@ results of that clone are NOT readings of the repairs (their organ changes are a
 - **N4** the sandbox selftest's two reds in the `c637496` clone (§5): a clone-path effect or a real red at that tip is not measured here.
 - **N3** mlv2 LIVE-SAFE, red once in the full Linux sequence, green alone twice: whether a sequence effect (a port a
   previous witness left) or a flake is not measured.
+
+CHECKPOINT · STOPPED at 2026-11-19T12:38:15Z · resume from: re-run the member (GITHUB_ACTIONS=true GITHUB_WORKSPACE=$PWD ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses) on the tree merged with 1582be0 (merges f69de73 + 0f182b1 are on this branch; witness GREEN 30 clauses vs 1582be0, mutants 28 of 28, ledger), write the measured RECUT lines (PROOF §9) into ci/<u>/REBASE, re-run witness + member, add the new PROOF section with the tip sha and both neutral legs (node scripts/ci_verdict.mjs <full sha>)
