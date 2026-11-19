@@ -188,3 +188,43 @@ pushed sha are rows of `ci/mcov/LEDGER.jsonl` (act `ci`).
 - **F7 · the branch.** The harness opened this session on `claude/mcov-effort-receipt-76c5ko` (carrying the settings key
   commit `f9fd723`), not `claude/mcov-queue`; the build branch was cut from `origin/main` as the brief says, and carries no
   settings change.
+
+
+## 12. RE-CUT ON land/mgat 1b8c379 (Runner M, rows 1158 (1) / 1166 (2) / 1168 (2), 19 Nov 2026)
+
+Main moved to `5759cce`; `land/mgat` `1b8c379e6551b34124ed6070aac2ed9208c8076c` is mgat on it. The three-way merge of this
+branch onto it was not clean, so the seat merged it (merge commit `d74f9d4`, parents `2684b64` and `1b8c379`; no rebase,
+no force) and `ci/mcov/BASE` is now `1b8c379`. The diff from the new base is exactly the named files (`git diff --name-only
+1b8c379 HEAD`): `ci/mcov/*`, `package.json`, `scripts/organism_test.mjs`, `scripts/study_scope.mjs`.
+
+THE RESOLUTION HUNKS, both sides' intent kept:
+- `package.json` `organism:selftest`: main appended `rung_receipt` and mcov appended its four at the same tail. Measured, the
+  two lines were the same string with those tails removed. Resolved as main's line plus mcov's four after it:
+  `… && node scripts/night.mjs selftest && node scripts/rung_receipt.mjs selftest && node scripts/deck_lint.mjs selftest &&
+  node scripts/home_pin.mjs selftest && node scripts/probe.mjs selftest && node scripts/study_scope.mjs selftest`.
+- `scripts/organism_test.mjs` `gates()`: mgat made the hermetic profile run `gates.mjs lint` (the ajv half named LIVE) with a
+  typed `{ timeout: 600000 }`; mcov had named that value once as `HEAVY_BOUND_MS`. Resolved as mgat's hunk with
+  `{ timeout: HEAVY_BOUND_MS }`, so the file still types the value once (`grep -n 600000` finds only line 57).
+
+```
+$ node ci/mcov/witness_mcov.mjs --org . --base-org <clone of 1b8c379>      # on the merged tree, 19 Nov 2026
+BOUND · 9 path(s) differ between the orgs: ci/mcov/BASE, ci/mcov/LEDGER.jsonl, ci/mcov/PROOF.md, ci/mcov/run_mutants_mcov.mjs, ci/mcov/tools/readprobe.mjs, ci/mcov/witness_mcov.mjs, package.json, scripts/organism_test.mjs, scripts/study_scope.mjs
+HOLDS C1 COVERAGE · base RED (orphaned: deck_lint, home_pin, probe, study_scope) · build GREEN (wired, no orphan)
+HOLDS C2 HERMETIC · base RED (not judged green: deck_lint, probe, study_scope) · build GREEN (deck_lint, probe, study_scope judged ok)
+HOLDS C3 LIVE-NAMED · base RED (home_pin neither named nor run) · build GREEN (home_pin named LIVE)
+HOLDS C4 VERB · base RED (exit 0 · last line: study_scope: scope --session <id> | unbound --session <id> [--transcript p] [--prompt "…"] [--entrypoint e]   (read-only; the hook path is t) · build GREEN (exit 0 · last line: study_scope selftest: 61 passed, 0 failed)
+HOLDS C5 ONE RECORD · base RED (deck_lint in 0 suite string(s) · home_pin in 0 suite string(s) · probe in 0 suite string(s) · study_scope in 0 suite string(s)) · build GREEN (one record: package.json only, no member list in the suite file)
+HOLDS C6 SLOW-GREEN · base RED (judged red: FAIL SUITE MEMBER · mcov_slow selftest exits 0 FAIL SUITE MEMBER · mcov_hang selftest exits 0) · build GREEN (slept 120000 ms (the helper default) and was judged ok)
+HOLDS C7 HANG-NAMED · base RED (not named: detail "LIVE selftest capture — not run in the hermetic profile: reads state/heartbeat_config.json" · roll-up does not name a kill) · build GREEN (named: killed by the suite bound (600000 ms) — not an exit code · roll-up names it)
+LAST · no process names the temp dir
+GREEN MCOV the four coverage orphans wired in package.json, each in its profile, a member's kill named · 7 clause(s)
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage    # merged tree
+organism_test: 10 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)
+```
+
+Not re-run on the merged tree (named, not claimed): the mutants (last read at `12e7e09`: 7 of 7 RED, control GREEN), the law
+pack, the whole hermetic run, and the neutral legs of the new tip; the architect re-runs once.
+
+CHECKPOINT · STOPPED at 22:30 UTC 19 Nov 2026 · tip = the commit that carries this line (its parent `45f852b`, merge
+`d74f9d4`) · resolution hunks: package.json organism:selftest tail, organism_test.mjs gates() run bound · resume from: the
+architect's re-run
