@@ -20,9 +20,10 @@
 //   W1    options bag with `= {}` default through a helper (the notes_corrections.mjs:106 / :86 / :91 shape)
 //         `add(p = {}, { path = LEDGER } = {}) → appendChecked(path)` → the fixture IS the writer of w1_bag.jsonl
 //   W2    options bag + join(dir, NAME) (the learnstate.mjs:794 / :806 shape) → the fixture writes w2_dir.jsonl
-//   W3    nothing invented: a destructured slot with NO default stays Unknown — `noDefault(t, { path } = {})` → the fixture
-//         writes no file beyond w1 / w2 / w4 (a planted same-name module const is NOT in this plant: base 224f9b9 already
-//         resolves it, a pre-existing scoping gap named in PROOF §FINDINGS, out of F1 A)
+//   W3    nothing invented: a destructured slot with NO default stays Unknown, a defaulted sibling beside it —
+//         `noDefault(t, { path, alt = join(STATE, "w3_alt.jsonl") } = {}) → appendFileSync(path)` → the fixture writes no
+//         file beyond w1 / w2 / w4 (w3_alt.jsonl is the sibling's default, never the slot's). A planted same-name module
+//         const is NOT in this plant: base 224f9b9 already resolves it (a pre-existing scoping gap, PROOF §FINDINGS, out of F1 A)
 //   W4    the old shape is still read: `plain(t, path = join(STATE, "w4_plain.jsonl"))` → the fixture writes it
 //   W5    live, on the --org tree: dressing-room/state/notes_corrections.jsonl has writers exactly [notes_corrections.mjs]
 //         and dressing-room/state/brief_log.jsonl exactly [learnstate.mjs] (each its own header's SOLE WRITER)
@@ -85,7 +86,7 @@ function plant() {
     'function appendChecked(p, row) { appendFileSync(p, JSON.stringify(row) + "\\n"); }',
     "export function add(p = {}, { path = LEDGER, now = 0 } = {}) { return appendChecked(path, p); }",
     'export function record(t, { dir = STATE } = {}) { appendFileSync(join(dir, "w2_dir.jsonl"), t); }',
-    "export function noDefault(t, { path } = {}) { appendFileSync(path, t); }",
+    'export function noDefault(t, { path, alt = join(STATE, "w3_alt.jsonl") } = {}) { appendFileSync(path, t); }',
     'export function plain(t, path = join(STATE, "w4_plain.jsonl")) { appendFileSync(path, t); }',
     "",
   ].join("\n"));
