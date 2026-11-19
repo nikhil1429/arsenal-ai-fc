@@ -1,0 +1,25 @@
+--- a/scripts/xray.mjs
++++ b/scripts/xray.mjs
+@@ -620,14 +620,17 @@
+   // harvest_log.jsonl and every `= STATE_DIR)` reader in the repo.
+   const seedDefaults = () => {
+     for (const [fname, fn] of localFns) {
+-      for (const p of fn.params) {
+-        if (p.type !== "AssignmentPattern" || p.left.type !== "Identifier") continue;
+-        const v = evalNode(p.right, env);
++      // unit mxw: an options-bag default, `f(x, { path = LEDGER } = {})`, seeds its named slot exactly as `f(path = LEDGER)` does.
++      const slots = (p) => p.type === "AssignmentPattern" && p.left.type === "Identifier" ? [[p.left.name, p.right]]
++        : p.type === "AssignmentPattern" && p.left.type === "ObjectPattern" ? slots(p.left)
++        : p.type === "ObjectPattern" ? p.properties.filter((q) => q.type === "Property" && q.value.type === "AssignmentPattern" && q.value.left.type === "Identifier").map((q) => [q.value.left.name, q.value.right]) : [];
++      for (const p of fn.params) for (const [name, right] of slots(p)) {
++        const v = evalNode(right, env);
+         if (!isC(v)) continue;
+         if (!paramEnv.has(fname)) paramEnv.set(fname, new Map());
+         const pe = paramEnv.get(fname);
+-        if (!pe.has(p.left.name)) pe.set(p.left.name, new Set());
+-        pe.get(p.left.name).add(v.v);
++        if (!pe.has(name)) pe.set(name, new Set());
++        pe.get(name).add(v.v);
+       }
+     }
+   };
