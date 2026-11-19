@@ -1,0 +1,66 @@
+// unit mgat · THE PROPOSED CODE PATH as exact edits (each `from` must match ONCE in the base file, or the build refuses).
+// A spec seat builds nothing on a branch: these edits are applied only to a temp tree under os.tmpdir() by witness.mjs.
+// MUTANTS: each undoes ONE clause's reason, so its clause must turn RED on the build.
+import { readFileSync, writeFileSync } from "node:fs"; import { join } from "node:path";
+
+const C = "  try { lock.closeAllConnections && lock.closeAllConnections(); } catch { }\n      try { lock.close(); } catch { }\n";
+export const EDITS = [
+  { id: "S1", file: "scripts/groundsman.mjs",
+    from: "} finally { try { rmSync(idx, { force: true }); } catch {} }",
+    to: "} finally { try { rmSync(idx, { force: true }); } catch { /* the private index under os.tmpdir(): force covers ENOENT, and any other failure leaves one temp file — the push result above is already decided */ } }" },
+  { id: "S2S3-fn", file: "scripts/cortex.mjs",
+    from: "  function retireIfArmed() {\n",
+    to: "  // unit mgat: the ONE lock release, called by both retire paths (the copy in the keeper's retire callback was\n  // re-typed without this reason beside it). The OS frees the port on exit regardless; these two are tidiness, and\n  // closeAllConnections is what stops a keep-alive socket from holding close() open.\n  function releaseLock() {\n    try { lock.closeAllConnections && lock.closeAllConnections(); } catch { }\n    try { lock.close(); } catch { }\n  }\n  function retireIfArmed() {\n" },
+  { id: "S2S3-a", file: "scripts/cortex.mjs",
+    from: "      // The OS frees the port on exit regardless; these two are tidiness, and\n      // closeAllConnections is what stops a keep-alive socket from holding close()\n      // open. No wait, no timeout — an exit that needs a deadline is a hang.\n    " + C,
+    to: "      // No wait, no timeout — an exit that needs a deadline is a hang (releaseLock's header says why the release is tidiness).\n      releaseLock();\n" },
+  { id: "S2S3-b", file: "scripts/cortex.mjs",
+    from: "retire: () => { exiting = true; try { lock.closeAllConnections && lock.closeAllConnections(); } catch { } try { lock.close(); } catch { } process.exit(KEEP_EXIT.RETIRED); } });",
+    to: "retire: () => { exiting = true; releaseLock(); process.exit(KEEP_EXIT.RETIRED); } });" },
+  { id: "S4", file: "scripts/captains_call.mjs",
+    from: "try { o.push(JSON.parse(l)); } catch { } } return o; };\n// The ONE disk door",
+    to: "try { o.push(JSON.parse(l)); } catch { /* a torn tail never parses and the cursor stays before it (seatGradeCursor); a merged line drops a settled row, so its card stays LIVE — the safe side */ } } return o; };\n// The ONE disk door" },
+  { id: "S5", file: "scripts/captains_call.mjs",
+    from: "if (!n) break; got += n; } } catch { } finally {",
+    to: "if (!n) break; got += n; } } catch { /* a short read: readGradeQueueSince's anchor-length check falls back to ONE whole read */ } finally {" },
+  { id: "S6", file: "scripts/captains_call.mjs",
+    from: "if (fd !== null) { try { closeSync(fd); } catch { } } }",
+    to: "if (fd !== null) { try { closeSync(fd); } catch { /* opened above, closed only here: EBADF is the one way in, and a finally has nothing to hand back */ } } }" },
+  { id: "LIVE", file: "scripts/organism_test.mjs",
+    from: "  gates: \"validates every schema-d file of dressing-room/state (ajv) and reads state/laws_register.json\",\n",
+    to: "" },
+  { id: "HALF", file: "scripts/organism_test.mjs",
+    from: "  const r = run([join(ROOT, \"scripts\", \"gates.mjs\"), \"report\"], { timeout: 600000 });\n",
+    to: "  // unit mgat: the hermetic profile runs the STATE-FREE half — `gates.mjs lint` (tsc + eslint), whose output was byte-identical\n  // with the state folder absent, empty and tracked-present (ci/mgat/MGAT_SPEC.md §3). The ajv half validates his state files: LIVE, named.\n  const half = PROFILE === \"hermetic\";\n  if (half) liveNamed(\"gates schema half\", \"validates every schema-d file of dressing-room/state (ajv); the tsc + eslint half runs\");\n  const r = run([join(ROOT, \"scripts\", \"gates.mjs\"), half ? \"lint\" : \"report\"], { timeout: 600000 });\n" },
+];
+
+// one mutant per witness clause (see MGAT_SPEC.md §5)
+export const MUTANTS = {
+  M1: { why: "S1 left undeclared", drop: ["S1"] },
+  M2: { why: "S5's declaring comment stripped back to catch { }", drop: ["S5"] },
+  M3: { why: "gates put back in LIVE_MODES", drop: ["LIVE"] },
+  M4: { why: "the hermetic half runs report (the ajv half reads state) instead of lint", patch: [["half ? \"lint\" : \"report\"", "half ? \"report\" : \"report\""]] },
+  M5: { why: "the schema half is no longer named LIVE", patch: [["  if (half) liveNamed(\"gates schema half\"", "  if (false) liveNamed(\"gates schema half\""]] },
+  M6: { why: "the retire callback re-types the release inline", drop: ["S2S3-b"] },
+  M7: { why: "the hermetic gates mode returns before it runs the gate", patch: [["  const half = PROFILE === \"hermetic\";\n", "  const half = PROFILE === \"hermetic\";\n  if (half) return;\n"]] },
+};
+
+/** apply EDITS (minus a mutant's drops, plus its patches) inside tree d */
+export function applyBuild(d, mutant = null) {
+  const m = mutant ? MUTANTS[mutant] : {};
+  const byFile = {};
+  for (const e of EDITS) {
+    if ((m.drop || []).includes(e.id)) continue;
+    const p = join(d, e.file); const src = byFile[e.file] ?? readFileSync(p, "utf8");
+    const n = src.split(e.from).length - 1;
+    if (n !== 1) throw new Error(`build: edit ${e.id} matched ${n} times in ${e.file} (must be exactly 1)`);
+    byFile[e.file] = src.replace(e.from, () => e.to);
+  }
+  for (const [from, to] of m.patch || []) {
+    const f = Object.keys(byFile).find((k) => byFile[k].includes(from));
+    if (!f) throw new Error(`build: mutant ${mutant} patch did not match`);
+    byFile[f] = byFile[f].replace(from, () => to);
+  }
+  for (const [f, s] of Object.entries(byFile)) writeFileSync(join(d, f), s);
+  return Object.keys(byFile);
+}

@@ -85,3 +85,62 @@ and §2.2 shows a stricter path exists for every one of the six:
 
 Net, if all of this is built: no-empty 268 → 262 (−1 S1, −2 S2/S3, −3 S4-S6), equal to the frozen baseline. The gate
 turns GREEN with its baseline unmoved. Measured on a built tree in §3.3, not typed.
+
+## 3. QUESTION 3 — can the `gates` mode leave `LIVE_MODES` and ride the hermetic profile?
+
+### 3.1 Where it sits today (at `a583afb`)
+- `scripts/organism_test.mjs:212` — `gates` in `LIVE_MODES` ("validates every schema-d file of dressing-room/state (ajv)
+  and reads state/laws_register.json"). `:2809` — in the hermetic profile a LIVE mode is named and never entered.
+- `.github/workflows/suite.yml:68` (`ORGANISM_TEST_PROFILE: hermetic`) is the neutral machine. Its head and base steps
+  (`:111`, `:125`) run `organism_test.mjs all`, so `gates()` (`organism_test.mjs:2668-2677`) has never run there.
+- `gates()` spawns `gates.mjs report` (`:2670`). `report` runs THREE halves: tsc, eslint (`gates.mjs:313-333`
+  `measure`) and the ajv half (`validateState`, `gates.mjs:240`, which reads the state folder at `:72`). The verb
+  `lint` (`gates.mjs:500-503`) runs `measure()` and `judge(m)` (BOTH the type and the lint ratchet) and exits BEFORE
+  `validateState` is called (`:506`). So `gates.mjs lint` is the state-free half of the same gate, already in the file.
+- The ajv half's subjects (`schemas/*.schema.json`, four): `laws_register.json` and `registry.json` are TRACKED;
+  `captains_call.json` and `models.json` are not (`git ls-files --error-unmatch`, 19 Nov 2026). The hermetic law's own
+  definition (`organism_test.mjs:72-73`) names "a file of dressing-room/state … its bytes are still his" as LIVE. So
+  the ajv half is LIVE by that definition, even on a CI checkout.
+
+### 3.2 The verdict with the state folder absent and present (`node ci/mgat/tools/stateverdict.mjs a583afb [verb]`)
+Plants: Z = folder absent · E = folder present, empty · T = the commit's tracked state present. 19 Nov 2026:
+
+| Verb | Z | E | T |
+|---|---|---|---|
+| `report` | exit 1 · stdout sha256 `e98db026f6ba` · schema `0/0 … 4 NOT MEASURED` | exit 1 · `e98db026f6ba` | exit 1 · `478294663f78` · schema `2/2 … 2 NOT MEASURED` |
+| `lint` | exit 1 · `30e59a39627e` | exit 1 · `30e59a39627e` | exit 1 · `30e59a39627e` |
+| `organism_test.mjs gates` (full) | `4 passed, 1 failed` | same | same |
+
+Each plant carries the one RED `LINT ROSE — no-empty 268, baseline 262` (last line of each run `mgat stateverdict
+a583afb: done`, ledger rows `stateverdict a583afb` and `stateverdict a583afb lint`). The `report` VERDICT does not move
+with state, but its OUTPUT does: the schema line. Read on a planted bad state file (§4 W4/W5, plant X), the ajv half
+DOES move the verdict. That is what it is for, and why it stays LIVE. The `lint` output is byte-identical on all
+three plants.
+
+### 3.3 Answer
+**Yes. The gate's tsc + eslint half can ride the hermetic profile, and its ajv half stays LIVE, named.** This is the
+SPLIT that mlaw's census table names for this member (`git show da6d5e8:ci/mlaw/MLAW_SPEC.md`, the census row `gates
+| 212 | SPLIT`), now with the split's door measured: the verb `lint` already exists. The proposed path (§3.4) makes the
+NEXT no-empty rise RED on the neutral machine (W7). Today that rise is read only by the watchman's nightly full run on
+his laptop, as mlaw §0.2 measured for the law pack.
+
+**ORDER MATTERS — measured from the verdict step, not guessed:** `ci_verdict.mjs compare` judges the head against the
+merge base, and an assert the head ADDS is a new member, never an "old red" (`suite.yml:117-120`, the step's own
+comment). If `gates` leaves `LIVE_MODES` while no-empty still reads 268, the landing that does it goes RED on its own
+new member. So the site repair (§2.3) must land BEFORE or WITH the LIVE exit, never after (fork F1).
+
+### 3.4 The code path proposed (every edit exact, in `ci/mgat/tools/build.mjs` `EDITS`; applied only to temp trees)
+
+| Edit | File:line at `a583afb` | Owner (header) | Change |
+|---|---|---|---|
+| S1 | `scripts/groundsman.mjs:263` | groundsman.mjs (its own code; it writes no other organ's file here) | declare the block: a comment naming why |
+| S2S3-fn | `scripts/cortex.mjs:2274` (before `retireIfArmed`) | cortex.mjs | hoist `function releaseLock()` with the two original lines and their reason (`:2281-2285`) |
+| S2S3-a | `scripts/cortex.mjs:2281-2285` | cortex.mjs | the original release becomes `releaseLock();` |
+| S2S3-b | `scripts/cortex.mjs:2344` | cortex.mjs | the copy becomes `releaseLock();` |
+| S4 / S5 / S6 | `scripts/captains_call.mjs:1691`, `:1699` (×2) | captains_call.mjs (sole writer of `captains_call.json`, `:21`; the grade queue is READ ONLY here, `:1633`) | declare each block |
+| LIVE | `scripts/organism_test.mjs:212` | organism_test.mjs (writes nothing it does not own, `:2814`) | `gates` leaves `LIVE_MODES` |
+| HALF | `scripts/organism_test.mjs:2670` | organism_test.mjs | hermetic: `liveNamed("gates schema half", …)` and spawn `gates.mjs lint`; full: `report` exactly as today |
+
+No state file is written by any edit. `scripts/gates.mjs` is NOT touched: `LINT_BASELINE` stays 262 (`gates.mjs:92`),
+and no new verb is needed. Not a single number is typed by the build: the existing `{ timeout: 600000 }` at `:2670` is
+kept as it is.
