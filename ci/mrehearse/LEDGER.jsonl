@@ -12,3 +12,4 @@
 {"ts":"2026-11-19T18:13:51.480Z","act":"witness-build","cmd":"node ci/witness/mrehearse/witness_rehearse.mjs plants --org . --base-org <git archive fb42118>","last_line":"GREEN MREHEARSE night-replay · 8 clause(s) [exit 0]"}
 {"ts":"2026-11-19T18:13:51.480Z","act":"witness-base","cmd":"node ci/witness/mrehearse/witness_rehearse.mjs plants --org <base> --base-org <base>","last_line":"RED MREHEARSE · W1,W2,W3,W4,W5,W6 [exit 1]"}
 {"ts":"2026-11-19T18:13:51.480Z","act":"witness-clause-cloud","cmd":"node ci/witness/mrehearse/witness_rehearse.mjs --night 2026-11-19","last_line":"UNREAD B-rehearsal:night-replay · night log unreadable or absent [exit 2 — the night log lives on his laptop only]"}
+{"ts":"2026-11-19T18:14:54.709Z","act":"mutants","cmd":"node ci/mrehearse/run_mutants_mrehearse.mjs --org . --base-org <git archive fb42118>","last_line":"run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN"}
