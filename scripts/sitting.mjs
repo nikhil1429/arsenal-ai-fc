@@ -200,7 +200,7 @@ export function agendaMark(kind, ids, extra = {}, now = new Date()) {
   const closes = kind === "done" || kind === "drop", rows = closes ? agendaRows() : [];
   let n = 0;
   for (const id of ids) {
-    if (closes && agendaAmbiguous(id, rows)) { log(`sitting: ${agendaAmbiguous(id, rows)} (${kind} refused)`); continue; }   // F-3 A: never close a pair
+    if (closes && agendaAmbiguous(id, rows)) { console.error(`sitting: ${agendaAmbiguous(id, rows)} (${kind} refused)`); continue; }   // F-3 A: never close a pair (named on stderr; the agenda is this function's only file)
     appendRow(F.agenda(), { kind, of: id, ts: now.toISOString(), ...extra }); n++;
   }
   return n;
