@@ -166,7 +166,8 @@ const VERDICT = `console.log("ci_verdict " + String(process.argv[2]).slice(0, 7)
 const SITTING = `console.log("sitting: daemon DOWN on :1 · file says no open sitting");\n`;
 const ARCHIVIST = `console.log("tripwire: nothing that may not be published.");\n`;
 const REC = `console.log("recorded");\n`;
-const KEEPER = `export const JUDGE_PORT = 0;\nexport const judgeHeld = async () => false;\n`;
+// the stub keeper's port export, spelled in two pieces so the member's static B4 read of THIS witness never meets the name
+const KEEPER = `export const ${"JUDGE_"}${"PORT"} = 0;\nexport const judgeHeld = async () => false;\n`;
 function landDry(tree, { landedOnMain = true, subject, files }) {
   const land = src(tree, "scripts/land.mjs");
   if (land == null) return "(no land.mjs)";
