@@ -79,16 +79,16 @@ function closeAt(lines, i) {
 /** Every column-0 `function selftest…(` block as [start, end] line indexes. @param {string[]} lines @returns {[number, number][]} */
 function selftestBlocks(lines) {
   const open = new RegExp("^(export\\s+)?(async\\s+)?function\\*?\\s+" + "selftest" + "\\w*\\s*\\(");
-  /** @type {[number, number][]} */
-  const out = [];
-  lines.forEach((l, i) => { if (open.test(l)) { const e = closeAt(lines, i); out.push([i, e === -1 ? lines.length - 1 : e]); } });
-  return out;
+  return lines.flatMap((l, i) => {
+    if (!open.test(l)) return [];
+    const e = closeAt(lines, i);
+    return [/** @type {[number, number]} */ ([i, e === -1 ? lines.length - 1 : e])];
+  });
 }
 
 /** The single line index matching re, or a throw naming why. @param {string[]} lines @param {RegExp} re @param {string} what @param {string} file */
 function onlyLine(lines, re, what, file) {
-  const hits = [];
-  lines.forEach((l, i) => { if (re.test(l)) hits.push(i); });
+  const hits = lines.flatMap((l, i) => (re.test(l) ? [i] : []));
   if (hits.length === 0) throw new Error(`own_source: anchor not found — ${what} in ${file}`);
   if (hits.length > 1) throw new Error(`own_source: anchor is ambiguous — ${what} at ${hits.length} lines of ${file} (${hits.map((h) => h + 1).join(", ")})`);
   return hits[0];
@@ -236,7 +236,7 @@ export function doorGuard(box) {
  */
 export function childRun(script, args = [], { cwd, env = process.env, preload, input, boundDir, spawn = spawnSync } = {}) {
   const bound = childBoundMs(boundDir);
-  const argv = [...(preload ? ["--import", preload] : []), script, ...args];
+  const argv = preload ? ["--import", preload, script, ...args] : [script, ...args];
   const r = spawn(process.execPath, argv, { cwd, env, input, encoding: "utf8", timeout: bound, windowsHide: true });
   const err = /** @type {NodeJS.ErrnoException | undefined} */ (r.error);
   const killed = (err && err.code === "ETIMEDOUT") || (r.status === null && r.signal != null);
@@ -324,8 +324,8 @@ function selftest() {
     ok("BOUND · the real owner reads a positive integer", Number.isSafeInteger(real) && real > 0, String(real));
 
     // childRun through a RECORDED door: the bound is what the child gets.
-    /** @type {any[]} */
-    const rec = [];
+    /** @type {any[][]} */
+    const rec = Array.of();
     /** @type {any} */
     const door = (/** @type {any[]} */ ...a) => { rec.push(a); return { status: 0, signal: null, stdout: "x\r\ny", stderr: "" }; };
     const r0 = childRun("organ.mjs", ["mode"], { preload: "file:///guard.mjs", spawn: door });
