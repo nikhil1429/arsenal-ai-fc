@@ -1067,7 +1067,7 @@ export function statusLine(rows) {
   return `services: ${rows.length - miss.length}/${rows.length} owned by the OS`
     + (miss.length ? ` · NOT INSTALLED: ${miss.join(", ")} (run setup/services/install.ps1 — his hands, one visit)` : "")
     + (run.length
-      ? ` · ⚠ RUNNING as an OS unit: ${run.join(", ")} — the organism is supposed to be OFF until S12`
+      ? ` · ⚠ RUNNING as an OS unit: ${run.join(", ")} — his 20 Aug 2026 switch-off was lifted by his 30 Aug 2026 word (grep -n "ORGANISM IS BACK ON" docs/archive/ORGANISM_AUDIT__2026-08-19.md); whether each SHOULD run: \`node scripts/state.mjs\``
       : " · no OS unit running (this says NOTHING about bare node processes — `node scripts/daemon_watchdog.mjs status` reads those)");
 }
 

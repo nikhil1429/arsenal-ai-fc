@@ -53,16 +53,19 @@
 //      counted evidence went DOWN since the last run (Ruling 5 max-flow edge:
 //      "captains_call card on bucket regression").
 //
-// WRITES: dressing-room/state/captains_call.json (sole).
+// WRITES: dressing-room/state/captains_call.json (sole) — its `grade_cursor` field (unit mjd7) is this file's
+//   own too: the sweep's place in the judge's grade queue, written only by sync, in the deck's one write.
 // READS (RO): teaching_contract.json · forge_session.json · brain_out/market/ ·
-//   missions.json · benchmark.json · tape_room.json.
+//   missions.json · benchmark.json · tape_room.json · gaffer_grade_queue.jsonl (gaffer_brain.mjs owns it;
+//   read FROM grade_cursor on, never written here).
 // MODES: sync · deal · answer <id> <haan|na|baad> · file --line "…" · status ·
 //        list · reline (--family <f> | --key <k>) --line "…" · selftest
 //        · retire --key <k> --why "…" (THE AT-SOURCE RETIRE DOOR, unit mjd5: a declared key class only)
 //        (reline = THE CARD-LINE DOOR, 15 Nov 2026: a kept rolling card's words, never its identity)
 // ============================================================================
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync, mkdirSync, statSync, openSync, readSync, closeSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -1422,7 +1425,12 @@ export function stampExpiries(state, today) {
 function sync(now = new Date()) {
   // mjd6 — THE SETTLED-FROM-DOUBT SWEEP runs right after derive and BEFORE the decision gate and the write: a card whose
   // capture already settled never reaches his anchor, and its retire lands in this pass's one write (sweepSettledFromDoubt).
-  const next = sweepSettledFromDoubt(deriveCards(loadState(), gatherSources(), now), readLinesJson(GRADE_QUEUE), now).state;
+  // mjd7 — THE CURSOR: the sweep reads only what arrived in the grade queue since the last sync (readGradeQueueSince); a
+  // missing, ahead or rewritten cursor falls back to ONE whole read. The re-seated cursor rides this pass's one write.
+  const base = loadState();
+  const q = readGradeQueueSince(GRADE_QUEUE, base[GRADE_CURSOR_FIELD]);
+  const next = sweepSettledFromDoubt(deriveCards(base, gatherSources(), now), q.rows, now).state;
+  next[GRADE_CURSOR_FIELD] = q.cursor;
   // THE DECISION GATE runs AFTER derive, so it sees this sync's fresh mints too: a card minted and
   // gated in the same pass never reaches his lane at all. It runs BEFORE the write, so the retire
   // and the road row land together or not at all.
@@ -1640,6 +1648,70 @@ export function sweepSettledFromDoubt(state, rows, now = new Date()) {
     retired.push({ id: r.card.id, key: r.card.key });
   }
   return { state: s, retired };
+}
+
+// ---------------------------------------------------------------------------
+// THE GRADE-QUEUE CURSOR (unit mjd7, forks row 1063 (4)). The sweep above used to read the judge's WHOLE grade queue on
+// every sync. The queue is append-only (gaffer_brain.mjs header, its sole writer), so a sync needs only the rows that
+// arrived since the last one. The cursor is a field of this organ's own deck (captains_call.json `grade_cursor`):
+//   offset      the byte just past the last COMPLETE line the last sync read (a half-written tail row is read again)
+//   anchor_len  the byte length of that last line, \n included;  anchor  its sha256
+// A sync reads the anchor line back first and then only [offset, size). It falls back to ONE whole read, and re-seats the
+// cursor from it, never skipping a row, when the cursor is MISSING (absent or malformed), AHEAD (offset past the queue's
+// size: a truncated queue, or a cursor that never belonged to this queue), or REWRITTEN (the bytes before the offset are
+// not the anchor line any more: a queue rewritten or truncated and grown again). Re-reading a row is harmless: the
+// sweep retires each card exactly once (retireCard's guards).
+// ---------------------------------------------------------------------------
+export const GRADE_CURSOR_FIELD = "grade_cursor";
+const sha256 = (buf) => createHash("sha256").update(buf).digest("hex");
+/** validGradeCursor — PURE: is this a cursor the sweep can trust the shape of? */
+export function validGradeCursor(c) {
+  return !!c && typeof c === "object" && Number.isSafeInteger(c.offset) && c.offset >= 0 && Number.isSafeInteger(c.anchor_len)
+    && c.anchor_len >= 0 && c.anchor_len <= c.offset && typeof c.anchor === "string" && /^[0-9a-f]{64}$/.test(c.anchor);
+}
+/** planGradeRead — PURE: {mode:"whole", why} | {mode:"tail", from}; `size` is the queue's byte size now. */
+export function planGradeRead(cursor, size) {
+  if (!validGradeCursor(cursor)) return { mode: "whole", why: "missing" };
+  if (cursor.offset > size) return { mode: "whole", why: "ahead" };
+  return { mode: "tail", from: cursor.offset - cursor.anchor_len };
+}
+/** seatGradeCursor — PURE: `buf` holds the queue's bytes from `start`; `floor` is the buf index new rows begin at. The
+ *  cursor is seated just past the last complete line at or after `floor`; with none there, `prev` is kept. */
+export function seatGradeCursor(buf, start, floor, prev, why) {
+  const nl = buf.lastIndexOf(0x0a);
+  if (nl < 0 || nl < floor) {
+    if (validGradeCursor(prev) && floor > 0) return { ...prev, last_read: why };
+    const empty = Buffer.alloc(0);
+    return { offset: start, anchor_len: 0, anchor: sha256(empty), last_read: why };
+  }
+  const lineStart = nl > 0 ? buf.lastIndexOf(0x0a, nl - 1) + 1 : 0;
+  const line = buf.subarray(lineStart, nl + 1);
+  return { offset: start + nl + 1, anchor_len: line.length, anchor: sha256(line), last_read: why };
+}
+const parseRows = (buf) => { const o = []; for (const l of buf.toString("utf8").split(/\r?\n/)) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch { } } return o; };
+// The ONE disk door the cursor reads through — READ ONLY (no write, no open for write), injectable so the selftest needs no file.
+export const GRADE_QUEUE_IO = {
+  size(p) { try { return statSync(p).size; } catch { return 0; } },
+  readAll(p) { try { return readFileSync(p); } catch { return Buffer.alloc(0); } },
+  readRange(p, from, len) {
+    const buf = Buffer.alloc(Math.max(0, len));
+    let fd = null, got = 0;
+    try { fd = openSync(p, "r"); while (got < len) { const n = readSync(fd, buf, got, len - got, from + got); if (!n) break; got += n; } } catch { } finally { if (fd !== null) { try { closeSync(fd); } catch { } } }
+    return buf.subarray(0, got);
+  },
+};
+/** readGradeQueueSince — {rows, cursor, mode, why}: the rows since `cursor`, and the cursor re-seated. */
+export function readGradeQueueSince(path, cursor, io = GRADE_QUEUE_IO) {
+  const size = io.size(path);
+  const plan = planGradeRead(cursor, size);
+  const whole = (why) => { const buf = io.readAll(path); return { rows: parseRows(buf), cursor: seatGradeCursor(buf, 0, 0, null, `whole:${why}`), mode: "whole", why }; };
+  if (plan.mode === "whole") return whole(plan.why);
+  const anchorBuf = io.readRange(path, plan.from, cursor.anchor_len);
+  if (anchorBuf.length !== cursor.anchor_len || sha256(anchorBuf) !== cursor.anchor) return whole("rewritten");
+  const tail = io.readRange(path, cursor.offset, size - cursor.offset);
+  // seat against anchor+tail so a new anchor line is whole even when it is the only new row
+  const both = Buffer.concat([anchorBuf, tail]);
+  return { rows: parseRows(tail), cursor: seatGradeCursor(both, plan.from, anchorBuf.length, cursor, "tail"), mode: "tail", why: "since" };
 }
 
 function runStagedDispatch(action) {
@@ -2662,7 +2734,36 @@ function selftest() {
           && c.retired.length === 0 && c.state.cards.length === 0 && c.state.next_id === 1; })());
     const syncSrc = own.slice(own.indexOf("function sync("), own.indexOf("decisionGate(next"));
     assert("SWEEP — sync runs it after derive and before the decision gate, on the judge's grade queue read-only, and its result is the state the one write carries",
-      /sweepSettledFromDoubt\(deriveCards\(/.test(syncSrc) && /readLinesJson\(GRADE_QUEUE\)/.test(syncSrc) && !/(writeAtomic|writeFileSync|appendFileSync|renameSync)\(\s*GRADE_QUEUE/.test(own));
+      /sweepSettledFromDoubt\(deriveCards\(/.test(syncSrc) && /readGradeQueueSince\(GRADE_QUEUE, base\[GRADE_CURSOR_FIELD\]\)/.test(syncSrc) && !/(writeAtomic|writeFileSync|appendFileSync|renameSync)\(\s*GRADE_QUEUE/.test(own));
+
+    // THE GRADE-QUEUE CURSOR (unit mjd7, forks row 1063 (4)) — readGradeQueueSince on an in-memory queue with a counted read.
+    const memIo = (bytes) => { const io = { buf: Buffer.from(bytes, "utf8"), whole: 0, ranged: 0,
+      size: () => io.buf.length, readAll: () => { io.whole++; return io.buf; }, readRange: (p, f, n) => { const b = io.buf.subarray(f, f + n); io.ranged += b.length; return b; } }; return io; };
+    const L = (o) => JSON.stringify(o) + "\n";
+    const gq0 = L({ kind: "capture", id: "cap1" }) + L(sd("cap0")) + L({ kind: "capture", id: "cap2" });
+    const gio0 = memIo(gq0), g0 = readGradeQueueSince("q", undefined, gio0);
+    assert("CURSOR — a missing cursor reads the whole queue ONCE and seats the cursor at its end",
+      g0.mode === "whole" && g0.why === "missing" && gio0.whole === 1 && gio0.ranged === 0 && g0.rows.length === 3 && g0.cursor.offset === Buffer.byteLength(gq0) && validGradeCursor(g0.cursor));
+    const gadd = L(sd("cap1")), gio1 = memIo(gq0 + gadd), g1 = readGradeQueueSince("q", g0.cursor, gio1);
+    assert("CURSOR — a seated cursor reads ONLY the anchor line and what arrived since (no whole read), and the sweep sees the new row",
+      g1.mode === "tail" && gio1.whole === 0 && gio1.ranged === Buffer.byteLength(gadd) + g0.cursor.anchor_len && g1.rows.length === 1 && g1.rows[0].of === "cap1"
+      && g1.cursor.offset === Buffer.byteLength(gq0 + gadd) && sweepSettledFromDoubt(three, g1.rows, T).retired.length === 1);
+    const gio2 = memIo(gq0 + gadd), g2 = readGradeQueueSince("q", g1.cursor, gio2);
+    assert("CURSOR — nothing new: no rows, the cursor stays where it was",
+      g2.mode === "tail" && g2.rows.length === 0 && gio2.whole === 0 && g2.cursor.offset === g1.cursor.offset && g2.cursor.anchor === g1.cursor.anchor);
+    const ghalf = '{"kind":"settled","of":"cap', gio3 = memIo(gq0 + ghalf), g3 = readGradeQueueSince("q", g0.cursor, gio3);
+    assert("CURSOR — a half-written tail row is never passed: the cursor stays before it, so the next sync reads it whole",
+      g3.cursor.offset === Buffer.byteLength(gq0) && g3.rows.length === 0);
+    const gahead = readGradeQueueSince("q", { ...g1.cursor }, memIo(gq0));
+    const grew = memIo(L(sd("cap2")) + "x".repeat(g1.cursor.offset) + "\n"), gr = readGradeQueueSince("q", g1.cursor, grew);
+    const gbad = [null, {}, { offset: -1, anchor_len: 0, anchor: g0.cursor.anchor }, { offset: 1, anchor_len: 2, anchor: g0.cursor.anchor }, { ...g0.cursor, anchor: "nope" }]
+      .map((c) => { const io = memIo(gq0); const r = readGradeQueueSince("q", c, io); return r.mode === "whole" && r.why === "missing" && io.whole === 1 && r.rows.length === 3; });
+    assert("CURSOR — every fallback is ONE whole read that re-seats: ahead of the queue, a rewritten queue, a missing or malformed cursor",
+      gahead.mode === "whole" && gahead.why === "ahead" && gahead.cursor.offset === Buffer.byteLength(gq0) && gahead.rows.length === 3
+      && gr.mode === "whole" && gr.why === "rewritten" && grew.whole === 1 && gr.rows.some((x) => x.of === "cap2") && gr.cursor.offset === grew.buf.length && gbad.every(Boolean));
+    assert("CURSOR — the cursor is a field of this deck only: sync seats it in the one write, and its disk door opens the queue read-only",
+      /next\[GRADE_CURSOR_FIELD\] = q\.cursor;/.test(own.slice(own.indexOf("function sync("), own.indexOf("writeAtomic(CALL, next)")))
+      && !/openSync\([^)]*,\s*"[wa+]/.test(own) && /openSync\(p, "r"\)/.test(own));
   }
 
   console.log(`\ncaptains_call selftest: ${pass} passed, ${fail} failed`);
