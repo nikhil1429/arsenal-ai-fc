@@ -18,9 +18,14 @@
 //   K2    STRUCK    the tree's mjd3 header keeps the OLD J4 text struck (~~…~~, the words "hands no rep to its owner a
 //                   second time" and "names the capture in doubt" inside the strike) and names unit mjd4, 15edfec,
 //                   row 1030 (2) and row 1112 (1); ci/mjd3/BASE is one 40-hex line equal between the two trees (F1 A).
-//   K3    OTHERS    every other KNOWN_RED entry of --base-org is in the tree, byte-equal as an object, and nothing joined:
-//                   the tree's list = the base's list minus exactly the ‹mjd3› entry.
-//   BOUND (guard)   only ci/mjd3/witness_mjd3.mjs, scripts/organism_test.mjs and files under ci/mr3/ differ between the
+//   K3    OTHERS    ~~every other KNOWN_RED entry of --base-org is in the tree, byte-equal as an object, and nothing joined:
+//                   the tree's list = the base's list minus exactly the ‹mjd3› entry.~~
+//                   RE-CUT by unit ms1 (forks row 1144 (1), an ADDED edit): the ‹mjd3› entry is gone and nothing joined
+//                   (every tree entry is a base entry, byte-equal as an object). Its nothing-else-changed half — every
+//                   other base entry still present — moved into BOUND: another adopted unit retiring its own entry
+//                   (mrj, mrt, mrf on the assembled branch) is a bound, not a behaviour of mjd3.
+//   BOUND (guard)   (+ K3's moved half: every other KNOWN_RED entry of --base-org is still in the tree)
+//                   only ci/mjd3/witness_mjd3.mjs, scripts/organism_test.mjs and files under ci/mr3/ differ between the
 //                   two trees (text, CRLF folded to LF); ci/mjd3/BASE is not among them.
 //   LAST  (guard)   no process naming this run's temp dir (the mjd3 witness runs with it as its cwd) survives.
 //   On --org = --base-org = the BASE tree, J4 K1 K2 K3 are RED and the guards GREEN; on the build, all GREEN.
@@ -119,14 +124,18 @@ async function main() {
   clause("K2", oldIn && names.length === 0 && baseKept,
     `old J4 text struck ${oldIn} · names missing ${names.length ? names.join(", ") : "none"} · ci/mjd3/BASE kept ${baseKept}${bo ? ` (${bo.trim().slice(0, 7)})` : ""}`);
 
-  // K3 — every other entry stays, byte-equal as an object; nothing joins
+  var k3Gone;   // set by K3, read by BOUND
+  // K3 — the ‹mjd3› entry is gone and nothing joins (its nothing-else-changed half is judged in BOUND, row 1144 (1))
   const kb = knownRedOf(text(join(BASE, "scripts", "organism_test.mjs")));
   let ok3 = false, why3 = kb.list ? (kr.list ? "" : `--org: ${kr.why}`) : `--base-org: ${kb.why}`;
+  k3Gone = null;
   if (kb.list && kr.list) {
     const want = kb.list.filter((e) => e.assert !== MJD3).map((e) => JSON.stringify(e));
     const have = kr.list.map((e) => JSON.stringify(e));
     const gone = want.filter((x) => !have.includes(x)), joined = have.filter((x) => !want.includes(x));
-    ok3 = gone.length === 0 && joined.length === 0 && have.length === want.length;
+    // ms1 (row 1144 (1)): K3 judges mjd3's own entry gone and nothing joined; `gone` (other entries retired) is BOUND's
+    ok3 = !kr.list.some((e) => e.assert === MJD3) && joined.length === 0;
+    k3Gone = gone;
     why3 = `base ${kb.list.length} entr(ies) · tree ${kr.list.length} · expected ${want.length} (the base minus ‹mjd3›) · missing ${gone.length} · joined ${joined.length}`;
   }
   clause("K3", ok3, why3);
@@ -145,7 +154,8 @@ async function main() {
   const differ = [...new Set([...a.keys(), ...b.keys()])].filter((k) => a.get(k) !== b.get(k)).sort();
   const named = (k) => k === "ci/mjd3/witness_mjd3.mjs" || k === "scripts/organism_test.mjs" || k.startsWith("ci/mr3/");
   const beyond = differ.filter((k) => !named(k));
-  clause("BOUND", beyond.length === 0, `differs: ${differ.join(", ") || "nothing"}${beyond.length ? ` · BEYOND the named files: ${beyond.join(", ")}` : ""}`);
+  const k3Kept = Array.isArray(k3Gone) && k3Gone.length === 0;   // ms1 (row 1144 (1)): K3's nothing-else-changed half
+  clause("BOUND", beyond.length === 0 && k3Kept, `differs: ${differ.join(", ") || "nothing"}${beyond.length ? ` · BEYOND the named files: ${beyond.join(", ")}` : ""} · other KNOWN_RED entries kept ${k3Kept ? "all" : `NO (${Array.isArray(k3Gone) ? k3Gone.length : "unreadable"} gone)`}`);
 
   // LAST (guard) — no node process naming the temp dir or either tree survives
   const listing = process.platform === "win32"
