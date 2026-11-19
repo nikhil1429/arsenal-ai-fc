@@ -741,18 +741,18 @@ async function selftest() {
     const turn = dispatchAll(Array.from({ length: 6 }, (_, i) => ({ verb: `refused_${i}`, args: { text: "x" } })), "code", { append: () => true });
     assert("ONE ID · 32 acts on ONE planted clock mint 32 distinct ids, and a turn's six refused acts (no ms between them) six — the sequence, never the random bucket, makes them unique",
       new Set(sameMs).size === 32 && new Set(turn.map((r) => r.id)).size === 6 && sameMs.every((x) => /^a[0-9a-z]+$/.test(x)), JSON.stringify({ distinct: new Set(sameMs).size, turn: turn.map((r) => r.id) }));
-    const dc = [], da = [];
-    const dd = { now: new Date("2026-10-21T12:00:00Z"), exec: (o) => { dc.push(o); return { ok: true, out: "ok" }; }, append: (r) => { da.push(r); return true; } };
+    const sink = { calls: 0, rows: 0 };
+    const dd = { now: new Date("2026-10-21T12:00:00Z"), exec: () => { sink.calls++; return { ok: true, out: "ok" }; }, append: () => { sink.rows++; return true; } };
     const RF = "teaching_contract: REFUSED. Route it through acts verb `design` → the registry rulings lane.";
     const nA = { id: "aTWO", ts: "2026-10-19T12:00:00Z", door: "cli", verb: "note", args: { text: "x", kind: "thread" }, owner: "hippocampus.mjs", ok: true, receipt: '{"ok":true,"id":"m1"}' };
     const nB = { ...nA, verb: "pref", args: { text: "y", axis: "how_to_speak" }, owner: "gaffer_state.mjs", receipt: "ok" };
     const fF = { id: "aFL", ts: "2026-10-19T12:00:00Z", door: "cli", verb: "rule", args: { text: "r" }, ok: false, error: RF };
     const fK = { id: "aOK", ts: "2026-10-19T12:00:07Z", door: "cli", verb: "rule", args: { text: "r" }, ok: true, receipt: "added" };
     const fD = { id: "aDZ", ts: "2026-10-19T12:00:08Z", door: "cli", verb: "design", args: { text: "r" }, ok: true, receipt: "{}" };
-    const got = [undo("aTWO", { ...dd, rows: [nA, nB] }), resolveFailed("aFL", "aOK", { ...dd, rows: [fF, fF, fK] }), resolveFailed("aFL", "aOK", { ...dd, rows: [fF, fK, fK] }),
-      rerouteFailed("aFL", null, { ...dd, rows: [fF, fF] }), rerouteFailed("aFL", "aDZ", { ...dd, rows: [fF, fD, fD] })];
+    const got = { undo: undo("aTWO", { ...dd, rows: [nA, nB] }), resolve_id: resolveFailed("aFL", "aOK", { ...dd, rows: [fF, fF, fK] }), resolve_by: resolveFailed("aFL", "aOK", { ...dd, rows: [fF, fK, fK] }),
+      reroute_id: rerouteFailed("aFL", null, { ...dd, rows: [fF, fF] }), reroute_by: rerouteFailed("aFL", "aDZ", { ...dd, rows: [fF, fD, fD] }) };
     assert("ONE ROW · undo, resolve and reroute REFUSE an id held by two rows (the act's id and the --by id): ambiguous, no owner called, no row appended",
-      got.every((g) => !g.ok && /ambiguous/.test(g.why || "")) && dc.length === 0 && da.length === 0, JSON.stringify(got.map((g) => g.why)));
+      Object.values(got).every((g) => !g.ok && /ambiguous/.test(g.why || "")) && sink.calls === 0 && sink.rows === 0, JSON.stringify(Object.values(got).map((g) => g.why)));
   }
   assert("OWNERS: every verb names an EXISTING organ file and declares a reverse", VERBS.every((v) => OWNERS[v] && existsSync(join(__dirname, OWNERS[v].organ)) && typeof OWNERS[v].reverse === "function"), VERBS.filter((v) => !existsSync(join(__dirname, OWNERS[v].organ))).join(","));
   // forks row 616 (12 Oct 2026): intentKey's separator was a RAW NUL byte in this source; it is now the
