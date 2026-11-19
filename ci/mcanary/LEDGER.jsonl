@@ -12,3 +12,7 @@
 {"ts":"2026-11-19T18:13:00Z","act":"witness","cmd":"node ci/witness/mcanary/witness_canary.mjs plants --org . --base-org <scratch>/base (git archive fb42118)","last_line":"GREEN MCANARY plants both ways, BOUND held · 3 clause(s)"}
 {"ts":"2026-11-19T18:13:30Z","act":"witness","cmd":"node ci/witness/mcanary/witness_canary.mjs launch-no-laptop","last_line":"CANARY launch-no-laptop UNREAD · no pass row for it · exit 2"}
 {"ts":"2026-11-19T18:18:00Z","act":"mutants","cmd":"node ci/mcanary/run_mutants_mcanary.mjs --org .","last_line":"run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-19T18:24:00Z","act":"measure","cmd":"node scripts/lawpack.mjs gate (BUILD)","last_line":"lawpack: 2 RED — a gate may only get stricter (§10-D rule 6) · exit 1 · counts byte-identical to BASE"}
+{"ts":"2026-11-19T18:24:30Z","act":"measure","cmd":"node scripts/models.mjs check (BUILD)","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0) · exit 0"}
+{"ts":"2026-11-19T18:30:00Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (BUILD)","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run) · EXIT 2"}
+{"ts":"2026-11-19T18:33:00Z","act":"witness","cmd":"node ci/witness/mcanary/witness_canary.mjs plants --org . --base-org <scratch>/base","last_line":"GREEN MCANARY plants both ways, BOUND held · 3 clause(s)"}
