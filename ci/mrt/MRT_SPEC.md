@@ -179,7 +179,30 @@ node 22 and node 24 legs differ (PROOF §7 item 8) and why the walk shows T2 RED
 
 ### 4.2 Measured by repetition (10 witness runs per tree)
 
-T2REP_PLACEHOLDER
+Ten runs of the landed witness per tree, each against LF BASE d0c8c96, measured 19 Nov 2026 (`t2rep`: for each tree,
+ten times `node ci/mtail/witness_mtail.mjs --org <tree> --base-org <BASE>`, the T2 line kept):
+
+```
+b1fc984 T2 RED 0/10
+9f6f9ab run5 a close of 316500 ms: NOT printed (exit 0: sitting: the sitting daemon answers on :<port> — its POST door is the only door while it ru) · CLI wait 1200 ms · contrast (an instant close): printed
+9f6f9ab run6 a close of 316500 ms: NOT printed (exit 0: sitting: the sitting daemon answers on :<port> — its POST door is the only door while it ru) · CLI wait 1200 ms · contrast (an instant close): printed
+9f6f9ab run10 a close of 316500 ms: printed its result · CLI wait 393000 ms · contrast (an instant close): NOT printed
+9f6f9ab T2 RED 3/10
+a18c167 run2 a close of 316500 ms: NOT printed (exit 0: sitting: the sitting daemon answers on :<port> — its POST door is the only door while it ru) · CLI wait 1200 ms · contrast (an instant close): printed
+a18c167 run4 a close of 316500 ms: NOT printed (exit 0: sitting: the sitting daemon answers on :<port> — its POST door is the only door while it ru) · CLI wait 1200 ms · contrast (an instant close): printed
+a18c167 run5 a close of 316500 ms: NOT printed (exit 0: sitting: the sitting daemon answers on :<port> — its POST door is the only door while it ru) · CLI wait 1200 ms · contrast (an instant close): printed
+a18c167 run7 a close of 316500 ms: NOT printed (exit 0: sitting: the sitting daemon answers on :<port> — its POST door is the only door while it ru) · CLI wait 1200 ms · contrast (an instant close): printed
+a18c167 run8 a close of 316500 ms: printed its result · CLI wait 393000 ms · contrast (an instant close): NOT printed
+a18c167 run9 a close of 316500 ms: NOT printed (exit 0: sitting: the sitting daemon answers on :<port> — its POST door is the only door while it ru) · CLI wait 1200 ms · contrast (an instant close): printed
+a18c167 run10 a close of 316500 ms: NOT printed (exit 0: sitting: the sitting daemon answers on :<port> — its POST door is the only door while it ru) · CLI wait 1200 ms · contrast (an instant close): printed
+a18c167 T2 RED 7/10
+```
+
+Before mday (`b1fc984`) T2 never reads RED; from mday (`9f6f9ab`) on, it reads RED in a share of the runs, every RED
+with the same signature: `CLI wait 1200 ms` (the probe was the process's last wait; no /close was posted) and the local
+door's 409 line. (In the run where the slow close printed and the instant contrast did not, the contrast tripped on the
+same probe.) The share rose at head — more modules loaded before the first fetch is a plausible cause, not measured (N3).
+Main's close itself is not regressed: whenever the probe answers in time, the CLI waits `closeWaitMs()` and prints.
 
 ### 4.3 The re-based clause (exact new expectation)
 
@@ -194,7 +217,46 @@ The behaviour mday ruled stays and is now ASSERTED, and the scaled clock is conf
 
 The patch (prototype, measured; it lives in the spec only):
 
-T2PATCH_PLACEHOLDER
+```diff
+--- w/ci/mtail/w_preload.mjs	2026-11-19 00:04:52.000000000 +0000
++++ w2/ci/mtail/w_preload.mjs	2026-11-19 00:27:41.695852132 +0000
+@@ -45,5 +45,17 @@
+ if (process.env.MTAIL_ABORT_LOG && SCALE > 0) {
+   const LOG = process.env.MTAIL_ABORT_LOG;
+   const orig = AbortSignal.timeout.bind(AbortSignal);
+-  AbortSignal.timeout = (ms) => { log(LOG, { kind: "abort", ms }); return orig(scaled(ms)); };
++  // unit mrt (T2 re-base, mday rows 1075 / 1078 F10 A): ONLY the /close POST's wait runs on the scaled clock — the CLI's
++  // /status probe (daemonUp, added by mday) keeps its own real wait; every wait is logged UNSCALED with its path and method.
++  const ms0 = new WeakMap();
++  AbortSignal.timeout = (ms) => { const s = orig(ms); ms0.set(s, ms); return s; };
++  const realFetch = globalThis.fetch;
++  globalThis.fetch = (url, o = {}) => {
++    const ms = o && o.signal ? ms0.get(o.signal) : undefined, method = String((o && o.method) || "GET").toUpperCase();
++    const path = (() => { try { return new URL(String(url)).pathname; } catch { return null; } })();
++    if (ms === undefined) return realFetch(url, o);
++    const close = method === "POST" && path === "/close";
++    log(LOG, { kind: "abort", ms, method, path, scaled: close });
++    return realFetch(url, close ? { ...o, signal: orig(scaled(ms)) } : o);
++  };
+ }
+--- w/ci/mtail/witness_mtail.mjs	2026-11-19 00:04:52.000000000 +0000
++++ w2/ci/mtail/witness_mtail.mjs	2026-11-19 00:27:41.695852132 +0000
+@@ -187,9 +187,11 @@
+     let slow = null, fast = null;
+     if (DUR !== null && DUR > OLD && DUR < LONGEST) { slow = await runCli(DUR); fast = await runCli(0); }
+     const printed = (r) => !!r && r.code === 0 && /^sitting: CLOSED sit_20990410_0000_wit0 — 2\/3 units spoken · 1 banked · 4 turns · judge ran$/m.test(r.out);
+-    const waitOf = (r) => (r && r.aborts.length ? r.aborts.at(-1).ms : null);
+-    clause("T2 F-C", printed(slow) && waitOf(slow) >= LONGEST && printed(fast),
+-      `old wait ${OLD ?? "(no --base-org)"} ms · longest close ${LONGEST ?? "?"} ms (${steps.map(([f, v]) => `${f} ${v}`).join(" + ")} + session grace ${grace ?? "?"}) · a close of ${DUR ?? "?"} ms: ${slow ? (printed(slow) ? "printed its result" : `NOT printed (exit ${slow.code}: ${(slow.out + slow.err).trim().split(/\r?\n/).at(-1)?.slice(0, 90)})`) : "not run"} · CLI wait ${waitOf(slow) ?? "?"} ms · contrast (an instant close): ${fast ? (printed(fast) ? "printed" : "NOT printed") : "not run"}`);
++    const waitOf = (r) => { const c = r ? r.aborts.filter((a) => a.method === "POST" && a.path === "/close") : []; return c.length ? c.at(-1).ms : null; };
++    // unit mrt re-base (mday rows 1075 / 1078, F10 A): the CLI asks GET /status FIRST (the daemon-up probe), then POSTs /close
++    const probed = (r) => !!r && r.aborts.length >= 2 && r.aborts[0].method === "GET" && r.aborts[0].path === "/status" && r.aborts[0].scaled === false;
++    clause("T2 F-C", printed(slow) && waitOf(slow) >= LONGEST && printed(fast) && probed(slow) && probed(fast),
++      `old wait ${OLD ?? "(no --base-org)"} ms · longest close ${LONGEST ?? "?"} ms (${steps.map(([f, v]) => `${f} ${v}`).join(" + ")} + session grace ${grace ?? "?"}) · a close of ${DUR ?? "?"} ms: ${slow ? (printed(slow) ? "printed its result" : `NOT printed (exit ${slow.code}: ${(slow.out + slow.err).trim().split(/\r?\n/).at(-1)?.slice(0, 90)})`) : "not run"} · CLI wait ${waitOf(slow) ?? "?"} ms · probe ${slow && slow.aborts[0] ? `${slow.aborts[0].method} ${slow.aborts[0].path} ${slow.aborts[0].ms} ms` : "none"} · contrast (an instant close): ${fast ? (printed(fast) ? "printed" : "NOT printed") : "not run"}`);
+   }
+ 
+   // ── T3 · ONE auth literal ──
+```
 
 Measured with the prototype:
 
@@ -218,7 +280,29 @@ copy with its own empty `dressing-room/state` under `os.tmpdir()` (the witness's
 
 ## 5. WITNESS CLAUSES AND MUTANTS (the build's proof)
 
-MUTANTS_PLACEHOLDER
+### 5.1 Witness clauses (proposed for the build, `ci/mrt/witness_mrt.mjs`; the landed mtail witness carries T3 unchanged and T2 re-based)
+
+| Clause | Plant | BASE of the build (head a18c167) | The build (repaired) |
+|---|---|---|---|
+| **R1 CYCLES** (= mtail T3's count conjunct) | dependency-cruiser no-circular on `--org` vs `--base-org` d0c8c96: the count does not rise AND the from→to edge set is a subset of BASE's | RED (13 vs 7; seven new edges) | GREEN (7, equal set) |
+| **R2 LEAF** | `keeper.mjs` carries no local import, static or dynamic (`from "./…"` / `import("./…")` in its code); `brain.mjs` exports `sourceGraph` / `staleSources` and they ARE keeper's objects (`===`, imported in a child on a temp copy) | RED (keeper.mjs:116 imports ./brain.mjs; brain's are its own) | GREEN |
+| **R3 MLV1 KEPT** (the contrast — the repair must not undo mlv1) | `node scripts/keeper.mjs selftest` on a temp copy, judge port planted through `ARSENAL_JUDGE_PORT` from a listen(0) port: exit 0 and its RETIRE WHEN IDLE assert present and ok | GREEN | GREEN |
+| **R4 LAWPACK** | `node scripts/lawpack.mjs gate` on the tree prints no `depcruise_errors ROSE` line (the jugad line is not this clause — F4) | RED | GREEN |
+| **T2 F-C (re-based)** | §4.3, in the mtail witness | GREEN at head (0 RED in 10 runs, measured 19 Nov 2026), RED at d0c8c96 | GREEN |
+
+### 5.2 Mutants — one per clause, each a copy of the repaired tree with ONE edit, the re-based witness on each (measured 19 Nov 2026)
+
+```
+repaired build                                   → RED MTAIL · BOUND          (BOUND only: dropped by the ms1 member)
+M-T3  keeper.mjs re-gains await import("./brain.mjs") → RED MTAIL · T3 AUTH · BOUND
+M-T2a sitting.mjs close posts /close with BASE's typed old wait instead of closeWaitMs() → RED MTAIL · T2 F-C · BOUND
+M-T2b sitting.mjs close skips the daemonUp() probe (mday F10 A undone)                  → RED MTAIL · T2 F-C · BOUND
+```
+
+For the build's own clauses: M-R1 = M-T3 (RED on R1 and R4 by the same edge); M-R2 = brain.mjs keeps its own copy of the
+two functions beside the re-export removed (R2 RED by identity, R1 GREEN — proves R2 is not R1 restated); M-R3 = keeper.mjs
+`retireWhenIdle` loses its `idle()` check (keeper's own RETIRE WHEN IDLE assert RED). M-R2 and M-R3 are specified, not
+yet run (the build runs them; `run_mutants_mrt.mjs` with a GREEN control).
 
 ## 6. THE PORT CLASS (row 1053)
 
@@ -229,11 +313,42 @@ the organ's own (scaled for the one /close wait) or the witness's existing bound
 
 ## 7. FORKS (the architect's to rule)
 
-FORKS_PLACEHOLDER
+- **F1 · where the two functions go.** (A) into `keeper.mjs`, brain re-exports — two files, no new module. (B) a new
+  leaf `scripts/source_closure.mjs` imported by keeper and brain (and later conductor / services directly) — cleaner owner
+  name, one new file. (C) keeper takes the walk as an injected dependency from each caller (`retireWhenIdle({ graph,
+  stale })`, sitting passes brain's) — no move, but sitting.mjs must import brain.mjs, which it already does (cycle unchanged
+  by that). **Recommend A** — measured: 7 cycles, BASE's edge set, keeper / brain selftests unchanged. Decides between A and
+  B: whether the architect wants keeper.mjs to own a non-keeper helper; no measurement separates them (both read 7).
+- **F2 · T2's fate.** (A) re-base the witness seam (§4.3) naming mday rows 1075 / 1078 — recommended; measured 0 RED in 10
+  at head with the probe asserted. (B) repair main: make `daemonUp()`'s probe wait derived and longer — NOT recommended:
+  main's behaviour is right on an unscaled clock (no RED appears without the witness's scaling; N1 is the laptop proof).
+  (C) keep the seam and warm the CLI's first fetch in the preload — hides the probe rather than asserting it.
+  Decides: N1 (the probe on his laptop's real clock answers a live-shaped fake daemon every time).
+- **F3 · where the T2 re-base lands.** (A) the mrt build edits `ci/mtail/w_preload.mjs` + `witness_mtail.mjs` on its own
+  branch and ms1 carries those bytes into `ci/mtail` (KNOWN_RED row 1107 owner mrt clears). (B) ms1's seat edits them. (C)
+  the clause moves to `ci/mrt` and mtail's T2 is retired by name (a re-base, not a drop — row 1107 forbids dropping).
+  **Recommend A.** Decides: whether ms1's KNOWN_RED reads the mtail witness by its path on the build branch.
+- **F4 · the second lawpack red at head, `jugad-literal-subject-list` 93 vs 90.** Not in this unit's clause; found by the
+  same command. (A) a new repair unit, its first red commit bisected the same way. (B) fold into mrt. (C) assign to the
+  unit whose commit raised it once bisected. **Recommend A.** Decides: the bisect (`lawpack.mjs gate` per first-parent
+  step), not run here — outside the brief.
+- **F5 · the landed mtail T3 conjunct.** (A) keep `cOrg <= cBase` (a count) — it already turns GREEN with the repair. (B)
+  tighten it to the edge-set subset (R1), so a cycle swapped for another does not pass. **Recommend B**, a gate may only get
+  stricter. Decides: nothing further to measure; it is a strictness choice.
 
 ## 8. NAMED NOT GUESSED (what the cloud could not reach)
 
-NNG_PLACEHOLDER
+- **N1** — T2 on Windows (his laptop, windows-latest) with the re-based witness, both node 22 and 24: the neutral
+  machine's two legs measure it once the re-based files are on a pushed branch (`suite.yml`); his laptop: ten runs of
+  `node ci/mtail/witness_mtail.mjs --org <LF head> --base-org <LF d0c8c96>` (sides.mjs), T2 line kept.
+- **N2** — brain selftest's GEMINI SHIM assert (a spaced %APPDATA% path quoted before cmd.exe) fails on linux on BOTH
+  sides; on win32 it should pass both sides: `node scripts/brain.mjs selftest` on LF head and the repaired tree.
+- **N3** — why the probe's cold first fetch is slower at head than at 9f6f9ab (more imports at load is a guess): a timing
+  of `sitting.mjs close`'s first fetch on both trees on his laptop.
+- **N4** — mlv1's ruling row ("architect adoption message, row to follow"): the forks register on his laptop names it.
+- **N5** — whether a resident brain / sitting daemon on his laptop, booted before a landing of this repair, retires on
+  the moved bytes: keeper's own retire rule sees keeper.mjs and brain.mjs change, so it should; `node scripts/services.mjs
+  status` after the landing (his laptop only; no daemon is touched from here, and the organism is switched off by his order).
 
 ## 9. FILES A BUILD WOULD TOUCH
 
@@ -246,4 +361,11 @@ Anything beyond these is a fork (F1 B names the one candidate: a new leaf module
 
 ## 10. NEUTRAL MACHINE (suite workflow, check runs of this branch's pushes)
 
-CI_PLACEHOLDER
+Read through the public API, no token (`curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`):
+
+| Push (sha) | Run | Check run | Conclusion |
+|---|---|---|---|
+| `c0faeb7` (draft) | `44429641549` | `135243395854` npm test · node 22 | success |
+| `c0faeb7` (draft) | `44429641549` | `135243395504` npm test · node 24 | success |
+
+The last push's runs are named in the seat's final message (this file cannot carry its own sha).
