@@ -81,11 +81,11 @@ agenda mints (calls 0–2) collide with each other, the card mint (call 7) with 
 | Class | Verdict | Evidence |
 |---|---|---|
 | **a clock** | **THE CAUSE, with the random space** | `:71` mints from `now` + 1296 buckets; `:453` plants one `now` for every dispatch; `:182` mints before validation, so a refused act (`:183`) spends no time. The pair plant reds base deterministically. |
-| a fixed wait | none | `grep -n "setTimeout\|sleep" scripts/acts.mjs` at the selftest: none; no assert reads elapsed time (`ms` is only `typeof … === "number"`, `:49` of the selftest body). |
-| a shared path or lock | none for the red | the selftest's only live read is the `acts.jsonl` stat at the start and end (`HERMETIC`, `:593`); it never red in 2600+ runs. Each copy had its own tree. |
+| a fixed wait | none | `grep -n "setTimeout\|sleep" scripts/acts.mjs` at the selftest: none; no assert reads elapsed time (`ms` is only `typeof … === "number"`, `:488`). |
+| a shared path or lock | none for the red | the selftest's only live read is the `acts.jsonl` stat at the start and end (`HERMETIC`, `:586`); it never red in 2600+ runs. Each copy had its own tree. |
 | a port | none | `acts.mjs` binds and dials none (`grep -n "listen\|createServer\|fetch(" scripts/acts.mjs`: none in the selftest path). |
-| a process start | none | the selftest spawns no organ (`exec` injected, `:452`); the pin fixture uses `mkdtempSync(tmpdir())` (`:636`). |
-| a real race in `acts.mjs` | **yes, the same hole** | live `dispatchAll` (`:206`) of a turn's acts mints in one ms; two equal ids in 1.1 % of six-refused-act turns; `undo :226`, `resolve :250/:253`, `reroute :279/:289` all take the FIRST row with the id. |
+| a process start | none | the selftest spawns no organ (`exec` injected, `:452`); the pin fixture uses `mkdtempSync(tmpdir())` (`:631`). |
+| a real race in `acts.mjs` | **yes, the same hole** | live `dispatchAll` (`:200`) of a turn's acts mints in one ms; two equal ids in 1.1 % of six-refused-act turns; `undo :226`, `resolve :250/:253`, `reroute :279/:289` all take the FIRST row with the id. |
 
 Files and owners: `scripts/acts.mjs` is **SOLE WRITER** of `dressing-room/state/acts.jsonl` and `intent_cache.json`
 (header `:5-6`). The repair touches only that file; it writes no other organ's state and changes no row's fields.
@@ -107,8 +107,8 @@ Why the code and not the selftest: planting `deps.now` is the organ's own door f
 mints in one ms as well (§2, live clock). A selftest that only staggered its clock would hide a hole the ledger has.
 
 **(a) the selftest, `acts.mjs:491/:497/:499`:** `calls[8].argv` / `calls[9].argv` / `calls[10].argv` become
-`calls[8]?.argv?.…` (optional chaining, the same expression otherwise), so a wrong-row undo is a named FAIL and the 50
-asserts after it still run. No assert changes its condition; none is removed.
+`calls[8]?.argv?.…` (optional chaining, the same expression otherwise), so a wrong-row undo is a named FAIL and every assert
+after it still runs. No assert changes its condition; none is removed.
 
 ## 5. The witness (`ci/mact/witness_mact.mjs`, a build seat writes it; this seat writes no code)
 
