@@ -17,3 +17,7 @@
 {"ts": "2026-11-19T18:38:00Z", "act": "mutants", "cmd": "node ci/mmeter/run_mutants_mmeter.mjs", "last_line": "run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts": "2026-11-19T18:38:30Z", "act": "build", "cmd": "node ci/witness/mmeter/witness_meter.mjs plants", "last_line": "PLANTS mmeter · 18 of 18 plant(s) as expected"}
 {"ts": "2026-11-19T18:39:00Z", "act": "build", "cmd": "node ci/witness/mmeter/witness_meter.mjs --org . --base-org <base worktree fb42118>", "last_line": "GREEN MMETER strict meter exit + meter witness (day11 · oldday), RED on base and GREEN on build · 2 clause(s)"}
+{"ts": "2026-11-19T18:50:00Z", "act": "measure-build", "cmd": "node scripts/lawpack.mjs gate (build, LF)", "last_line": "lawpack: 2 RED — the same two base reds; every count equal to base"}
+{"ts": "2026-11-19T18:51:00Z", "act": "fix-cause", "cmd": "node scripts/done.mjs line --hermetic (build, first) → orphan verbs 121; selftest args[0] === \"rev-parse\" → args.includes(\"rev-parse\")", "last_line": "DONE · orphans lanes 5 · orphan verbs 120 · …"}
+{"ts": "2026-11-19T18:52:00Z", "act": "measure-build", "cmd": "ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all", "last_line": "organism_test: 151 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts": "2026-11-19T18:52:30Z", "act": "measure-build", "cmd": "node scripts/models.mjs check", "last_line": "models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)"}

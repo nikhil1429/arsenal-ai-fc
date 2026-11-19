@@ -765,10 +765,10 @@ async function selftest() {
     assert("STRICT EXIT — a non-study day is never 0 (N-A is not GREEN, F12 A), nor is an 11-green row that is not a study day, nor a row missing a clause",
       exitOf(nonStudy.row) === 3 && exitOf({ ...g.row, study: false }) === 3 && exitOf({ ...g.row, clauses: g.row.clauses.slice(0, 10) }) === 3 && exitOf(null) === 3, nonStudy.line);
     const SHA = "c".repeat(40);
-    const shaExec = (ahead) => (cmd, args) => (args[0] === "rev-parse" ? `${SHA}\n` : gitOk(ahead)(cmd, args));
+    const shaExec = (ahead) => (cmd, args) => (args.includes("rev-parse") ? `${SHA}\n` : gitOk(ahead)(cmd, args));
     const f = mk({});
     const s1 = await run({}, { extra: { gitExec: shaExec(0) } }, f);
-    const s2 = await run({}, { extra: { gitExec: (cmd, args) => (args[0] === "rev-parse" ? `${"d".repeat(40)}\n` : gitOk(0)(cmd, args)) } }, f);
+    const s2 = await run({}, { extra: { gitExec: (cmd, args) => (args.includes("rev-parse") ? `${"d".repeat(40)}\n` : gitOk(0)(cmd, args)) } }, f);
     const rowsOf = (p) => readFileSync(p, "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l));
     const led = rowsOf(join(f.st, "daily_green.jsonl"));
     assert("CODE SHA — the appended row carries code_sha, the HEAD commit git names at the meter's root",
