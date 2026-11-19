@@ -276,6 +276,17 @@ const settled = (cap, verdict, o = {}) => ({ v: 2, kind: "settled", of: cap.id, 
 const note = (items, o = {}) => ({ v: 1, kind: "compiled", id: `n-${Math.random().toString(36).slice(2, 10)}`, ts: CLOSE, day: PD, concept: "tokenization", axis: "a", compiler: "plant", sources: ["rid-1"], note: { items }, content_sha: "x", ...o });
 const crackItem = (words, o = {}) => ({ mark: "T", kind: "crack", at: at(30), rid: "rid-1", moment: "jirah", words, galat: ["ek word = ek token"], sahi: ["token + ization"], ...o });
 const WORDS = "pakka - har word ek token hota hai";
+// THE RULED IDS — the per-id plants are pinned to the RULING, never to the map they judge (a plant derived from the map
+// could not catch a map that narrowed): the spec's proposed maps (ci/mwit/MWIT_SPEC.md @ 88bf69d, sections c07 c10 c12 c32)
+// as built by row 1163 (7), and c28's "the proposed map" of row 1163 (4). The map may name MORE ids (a gate only gets
+// stricter); a map that drops a ruled id turns its plant RED until the ruling moves too.
+const RULED = Object.freeze({
+  c07: { checks: ["A.one-question", "A.new-terms", "A.position"], audit: ["one-idea", "act-mt2kgn09"] },
+  c10: { checks: ["A.count-form", "A.position"], audit: ["terminology"] },
+  c12: { checks: ["A.gut-trio", "A.gut-by-moment", "B.bank"], audit: [] },
+  c28: { checks: ["A.buying"], audit: ["no-system-mid-concept"] },
+  c32: { checks: ["B.bank", "B.judge-once"], audit: [] },
+});
 
 function plantCase(R, mapObj, st) {
   const S = join(R, "dressing-room", "state");
@@ -307,7 +318,7 @@ export function plantsFor(org) {
     let base = null; try { base = JSON.parse(readFileSync(mapPath(org), "utf8").replace(/^﻿/, "")); } catch { base = null; }
     const clone = () => (base ? JSON.parse(JSON.stringify(base)) : null);
     const o = (c, name, want, st, mapObj = clone()) => { plantCase(R, mapObj, st); const r = runChild(R, c, st.day); out[c].push({ name, want, got: `exit ${r.code} · ${r.last}`, ok: r.code === want }); };
-    const idsOf = (c) => (base && base[c] ? base[c] : { checks: [], audit: [] });
+    const idsOf = (c) => RULED[c];
 
     // the TURNS clauses (c07 c10 c12) and the turns half of c28 / c32
     for (const c of ["c07", "c10", "c12", "c28", "c32"]) {
