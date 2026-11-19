@@ -259,3 +259,67 @@ it.
 
 `node campaign-2026-09/tools/effort_receipt.mjs --fleet ms1b --seat 00 --model claude-opus-5-5`. Its error is in the
 final message. Nothing is written under `campaign-2026-09/`.
+
+## 9. FOLLOW-UP · forks row 1107 (1), relayed 19 Nov 2026 (new commits, never force)
+
+**(a) main brought in.** `git merge origin/main` at **`a18c167`** (merge `77c5a55`) was clean: no conflict in
+`scripts/organism_test.mjs`, `scripts/land.mjs` or `package.json`. Main's mpool lines in `organism_test.mjs` and its
+`package.json` are kept as main has them. `ci/ms1/BASE` is now `a18c167`, the tree the witness is re-judged RED against.
+
+**(b) ci dirs carried** (the witness + BASE, plus mpool's one sibling, all bytes unchanged). mfac-floor is not on main
+(`land/mfac-floor` only), so it is not carried.
+
+| Unit | carried from | BASE (from its PROOF) | on main | head leg (`--org 501c5ed`) | base leg |
+|---|---|---|---|---|---|
+| mday2 | `claude/mday2-build` `9dba1c8` | `3e3ce63` | yes | `RED MDAY2 · BOUND` | `RED MDAY2 · D1, D2, D3, D4, BOUND` |
+| mgs | `claude/mgs-build` `ebfbb1e` | `7c3c279` | yes | `GREEN MGS land wait · 7 clause(s)` (it has no BOUND) | `RED MGS · C1, C2, C3, C4, C6, C7` |
+| mpool | `claude/mpool-build` `b6cb4a9` (+ `PROOF.md`) | `b1fc984` | yes | `GREEN MPOOL the usage tap · 33 clause(s)` | `RED MPOOL · W1.1 … S` (32 ids) |
+| mfac | `claude/mfac-build` `922db41` | `7c3c279` | yes | **`RED MFAC · W3.2 BOUND`** | `RED MFAC · F4 W1.1 … W9` (26 ids) |
+
+`ci/mpool/PROOF.md` rides as a sibling because the witness READS it at run time (`ci/mpool/witness_mpool.mjs:56`: the
+settings line it plants). Without it the head leg read `RED MPOOL · WA.i, S`; with it, GREEN. No other carried witness
+reads a file beside itself (`grep -n 'readFileSync(join(HERE' ci/*/witness_*.mjs`).
+
+**(c) the ruled-red door.** `KNOWN_RED` in `scripts/organism_test.mjs` holds four entries, one per member. Each has
+`row: 1107`, its owner unit and an `until`. The judged assert name is now **stable** (`WITNESS ‹unit› · GREEN at head
+against its BASE`), its reds ride the detail (`red beyond BOUND: <ids>`) and the entry matches the detail EXACTLY. The
+seconds moved to their own measurement assert `WITNESS ‹unit› · ran in <s> s (B5)`, the line the workflow prints.
+
+| Member | detail ruled | owner |
+|---|---|---|
+| `WITNESS ‹mjd3› · GREEN at head against its BASE` | `red beyond BOUND: J4` | unit mr3 |
+| `WITNESS ‹mtail› · GREEN at head against its BASE` | `red beyond BOUND: T3 AUTH` | unit mrt |
+| `WITNESS ‹mjud› · GREEN at head against its BASE` | `red beyond BOUND: M3 CENSUS M5 F3-CLIP M6 MJD2` | unit mrj |
+| `WITNESS ‹mf2› · GREEN at head against its BASE` | `red beyond BOUND: F2 F4` | unit mrf |
+
+The list only shrinks: a member that turns green makes its entry STALE (exit 2, `rulingOf`). A new clause red beside the
+ruled one is UNRULED. Three new witness clauses plant both on the suite's own door: **R1 RULED**, **R2 STALE**,
+**R3 NEWDEATH**. On the laptop the member skips (B2), so no entry ever reads STALE there
+(`ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`: the only red is main's coverage base red, no STALE).
+
+**(d) witness and mutants, both ways, against an LF `git archive` of `a18c167`:**
+
+```
+node ci/ms1/witness_ms1.mjs --org . --base-org <a18c167>       GREEN MS1 every landed witness rides the suite · 30 clause(s)   (exit 0)
+node ci/ms1/witness_ms1.mjs --org <a18c167> --base-org <same>   RED MS1 · B1.1 BASE, … R1 RULED, R2 STALE, R3 NEWDEATH, V1 KEYOF, BOUND (exit 1)
+node ci/ms1/run_mutants_ms1.mjs --org . --base-org <a18c167>    run_mutants: 28 of 28 mutant(s) RED by the clause that names them · control GREEN
+node scripts/ci_verdict.mjs selftest                            ci_verdict selftest: 21 passed, 0 failed   (19 Nov 2026)
+node scripts/models.mjs check                                   exit 0
+```
+
+The member over the whole repo, Linux, `GITHUB_ACTIONS=true` (before the mpool sibling, 19 Nov 2026): 26 units in
+465.4 s · `ruled 4 · UNRULED 2` (mfac, mpool). With the sibling, mpool is GREEN, so the expectation is **ruled 4 ·
+UNRULED 1 (mfac) + main's coverage base red**.
+
+**FORKS of the follow-up (for the architect):**
+- **F-a · mfac W3.2 is overtaken by ms1 itself.** The clause demands `scripts/land.mjs` byte-identical to mfac's BASE,
+  and ms1 edits land.mjs (NO-CI-DIR, F10 A). It is a RED member that row 1107 does not rule, and this seat may not edit
+  the mfac witness (two ADDED edits only). Options: a row ruling it into KNOWN_RED; a third ADDED edit (mfac's W3.2
+  reads land.mjs against main's land at its land commit); or mfac's BASE re-taken once ms1 has landed.
+- **F-b · "zero UNRULED" cannot read zero** while main's own coverage red (`EVERY organ with a selftest is wired into a
+  suite`, orphaned deck_lint, home_pin, probe, study_scope) is red. It is UNRULED in the suite's headline, red at
+  `a18c167` and not ms1's. The neutral verdict counts it as a base red.
+- **F-c · mtail's detail is exact**: when node 22 also reds `T2 F-C` (seen once, push `f98e914`), that leg reads mtail
+  UNRULED. That is the door working (a new clause red is news), but a flake can trip it.
+- **F-d · mlv1 I2 MID, I3 JUDGE** red once on node 24 (push `3966f61`), GREEN on every other Windows leg: a
+  clock-bound landed witness, unruled, outside ms1's edits.
