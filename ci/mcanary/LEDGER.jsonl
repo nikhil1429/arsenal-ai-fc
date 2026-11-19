@@ -7,3 +7,7 @@
 {"ts":"2026-11-19T12:41:30Z","act":"measure","cmd":"node scripts/models.mjs check (BASE fb42118)","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0) · exit 0"}
 {"ts":"2026-11-19T12:47:00Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (BASE fb42118)","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run) · EXIT 2"}
 {"ts":"2026-11-19T12:38:01Z","act":"checkpoint","cmd":"STOP message (his pause, word 269)","last_line":"CHECKPOINT · STOPPED at 2026-11-19T12:38:01Z · resume from: write ci/witness/mcanary/witness_canary.mjs"}
+{"ts":"2026-11-19T18:10:00Z","act":"resume","cmd":"RESUME message (his word 270); git fetch origin claude/mcanary-build","last_line":"0c62d5b · CHECKPOINT · resume from: write ci/witness/mcanary/witness_canary.mjs"}
+{"ts":"2026-11-19T18:12:00Z","act":"refused","cmd":"git worktree add --detach <scratch>/base fb42118","last_line":"RAIL worktree — a bare git worktree add on the organism repo … (base made by git archive fb42118 | tar -x instead)"}
+{"ts":"2026-11-19T18:13:00Z","act":"witness","cmd":"node ci/witness/mcanary/witness_canary.mjs plants --org . --base-org <scratch>/base (git archive fb42118)","last_line":"GREEN MCANARY plants both ways, BOUND held · 3 clause(s)"}
+{"ts":"2026-11-19T18:13:30Z","act":"witness","cmd":"node ci/witness/mcanary/witness_canary.mjs launch-no-laptop","last_line":"CANARY launch-no-laptop UNREAD · no pass row for it · exit 2"}
