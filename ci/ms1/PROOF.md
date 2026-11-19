@@ -592,3 +592,33 @@ CHECKPOINT · STOPPED at 2026-11-19T12:41Z · resume from: read both neutral leg
   `docs/archive/`, never the working tree; the suite's own LIVE / SUITE rules and exemptions), 19 Nov 2026, last line:
   `BLOCK7 over b25088a's blobs: 97 files scanned, 1 declared, 0 undeclared`. The commit carrying this line is
   scanned the same way before its push, and its line is in `LEDGER.jsonl` (act `block7-blobs`).
+
+### 13.3 THE ASSEMBLED TIP, NAMED (row 1119 (2), row 1154 (6); resume of his word #270)
+
+**THE ASSEMBLED TIP IS `179a0ee3525aca1ab018bce11fd940346a040463`.** It is ms1 + mrj `0fff2e2` + mrt `e2de691` + mr3
+`08b4772` + mrf `542dec7` + mrv `e0b8053`, with main `fb42118` brought in and KNOWN_RED empty. The land subject names
+every unit joined by plus: **ms1 + mrj + mrt + mr3 + mrf + mrv**. Run `44585179366`, read through the public API with
+curl, no token, 19 Nov 2026:
+
+| Leg | Check run | Verdict | Witness members | Member seconds | Suite headline |
+|---|---|---|---|---|---|
+| node 22 | `135776070753` | `B1_VERDICT node 22 GREEN — no member red that is not red at the merge base · 0 new red · 1 base red` | 38 of 38 `WITNESS ‹unit› · GREEN at head against its BASE` ok | `WITNESSES · 38 unit(s) judged in 2080.9 s` | `organism_test: 228 passed, 1 failed · ruled 0 · UNRULED 1` |
+| node 24 | `135776071204` | `B1_VERDICT node 24 GREEN — no member red that is not red at the merge base · 0 new red · 1 base red` | 38 of 38 ok | `WITNESSES · 38 unit(s) judged in 1939.3 s` | `organism_test: 228 passed, 1 failed · ruled 0 · UNRULED 1` |
+
+- The one red on both legs is main's own coverage law (`EVERY organ with a selftest is wired into a suite`), a base
+  red, red at `fb42118` too (F-b, an old red). The merge-base tree printed the C5 skip on both legs (19 Nov 2026,
+  headline `149 passed, 1 failed`).
+- `node scripts/ci_verdict.mjs 179a0ee3525aca1ab018bce11fd940346a040463` answered `UNREADABLE — … answered 403` twice
+  (the anonymous API refused this container). The verdict above is each leg's own `B1_VERDICT` line from its job log,
+  read with curl.
+- The commit carrying this section changes only `ci/ms1/PROOF.md` and `ci/ms1/LEDGER.jsonl` over `179a0ee`. The judged
+  tip is `179a0ee`. Its BLOCK 7 scan over its own blobs is in `LEDGER.jsonl`.
+- The measured `PORT_HELD` lines (row 1153 (2) F-7 A), node 22 then node 24, each well inside its bound:
+  - `WITNESS ‹mlv1› · measured · PORT_HELD mlv1 · win32 · node v22.23.4 · held 2 ms after the kill · 1 probe(s) · bound 356 ms
+`
+  - `WITNESS ‹mrv› · measured · PORT_HELD mlv1 · win32 · node v22.23.4 · held 3 ms after the kill · 1 probe(s) · bound 382 ms
+`
+  - `WITNESS ‹mlv1› · measured · PORT_HELD mlv1 · win32 · node v24.22.2 · held 2 ms after the kill · 1 probe(s) · bound 279 ms
+`
+  - `WITNESS ‹mrv› · measured · PORT_HELD mlv1 · win32 · node v24.22.2 · held 2 ms after the kill · 1 probe(s) · bound 282 ms
+`
