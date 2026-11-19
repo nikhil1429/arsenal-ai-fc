@@ -1,0 +1,5 @@
+{"ts":"2026-11-19T12:40:00Z","act":"cut","cmd":"git fetch origin main claude/mwit-spec && git checkout -b claude/mleft-build origin/main","last_line":"fb42118 unit mxh (forks row 1150 / adoption at ac14bad): land branch stacked on land/mcon 980e953 …"}
+{"ts":"2026-11-19T12:42:00Z","act":"read-spec","cmd":"git show 88bf69d:ci/mwit/MWIT_SPEC.md","last_line":"627 lines; units row 3 mleft: B-left:one-command, C:census-510, C:capability-c29, C:finish-zero"}
+{"ts":"2026-11-19T12:50:00Z","act":"setup","cmd":"npm ci --no-audit --no-fund","last_line":"npm notice"}
+{"ts":"2026-11-19T12:51:00Z","act":"measure","cmd":"node scripts/done.mjs json --hermetic","last_line":"{\"hermetic\":true,\"orphans\":{\"lanes\":5,\"verbs\":120},\"rungs\":{\"read\":false,…},…,\"reach\":{\"live\":true}} · exit 0"}
+{"ts":"2026-11-19T12:52:00Z","act":"measure","cmd":"node scripts/done.mjs json (cloud, not hermetic)","last_line":"rules ten 9/10 verify · register 14/14 site · teaching unread · reach 24 rows, every window false (consumption.jsonl untracked, absent here) · exit 0"}
