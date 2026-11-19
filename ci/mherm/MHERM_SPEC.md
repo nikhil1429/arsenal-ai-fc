@@ -187,4 +187,10 @@ Beyond them, as forks: `scripts/audit_preload.mjs` (F1 B/C) · a new witness org
 
 ## CHECK RUNS OF THIS BRANCH
 
-(filled after the push; see below)
+Read through the public API, no token (`curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`):
+- `00cfd98` (the spec's first push) · workflow run `44509195493` (`suite`, push) ·
+  check run `135508666412` `npm test · node 22` → **completed success** (10:54:07Z) ·
+  check run `135508666069` `npm test · node 24` → **completed success** (10:55:49Z), 19 Nov 2026.
+  Their output titles and summaries are empty through the API; the job logs need a token and were not read.
+  The neutral verdict judges head against merge base, so a red common to both (the coverage-law red of Q1) does not
+  redden it — this branch adds only `ci/mherm/`.
