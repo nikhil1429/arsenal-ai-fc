@@ -5,3 +5,6 @@
 {"ts":"2026-11-19T12:35:21.266Z","act":"measure","cmd":"node scripts/models.mjs check","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0) [exit 0]"}
 {"ts":"2026-11-19T12:35:21.266Z","act":"measure","cmd":"npm ci --ignore-scripts && node scripts/lawpack.mjs gate","last_line":"lawpack: 2 RED — a gate may only get stricter (§10-D rule 6) [jugad-literal-subject-list 93 vs 90 · depcruise_errors 13 vs 7, both on the base]"}
 {"ts":"2026-11-19T12:35:21.266Z","act":"measure","cmd":"git check-ignore -v <state>/rehearsal_log.jsonl","last_line":"(no output) — not ignored; .gitignore is not a named file: FORK"}
+{"ts":"2026-11-19T12:38:01.581Z","act":"build","cmd":"node scripts/night.mjs selftest","last_line":"night selftest: 23 passed, 0 failed"}
+{"ts":"2026-11-19T12:38:01.581Z","act":"build","cmd":"node --check scripts/rehearse.mjs","last_line":"syntax-ok (never run yet)"}
+{"ts":"2026-11-19T12:38:01.581Z","act":"checkpoint","cmd":"peer STOP message (his word 269)","last_line":"CHECKPOINT · STOPPED at 2026-11-19T12:38Z · resume from: write ci/witness/mrehearse/witness_rehearse.mjs"}
