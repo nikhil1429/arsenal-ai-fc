@@ -19,6 +19,16 @@
 //                   file (scripts/organism_test.mjs) lists no member names: no array literal in it (parsed with acorn)
 //                   holds two or more string elements that are, exactly, names of package.json suite members. A spawn
 //                   argv naming one organ is not a list; a second list of member names beside the one record is.
+//   C6 SLOW-GREEN · (forks row 1151 (1) (b)) a planted suite member whose selftest sleeps the run helper's DEFAULT bound
+//                   (read from the planted tree's own `opts.timeout || <n>`, never typed here) and then exits 0 is judged
+//                   `ok   SUITE MEMBER · mcov_slow selftest exits 0` by the hermetic `suites` mode: a member's wait is a
+//                   hang guard, not a race.
+//   C7 HANG-NAMED · (row 1151 (1) (a)) a planted suite member that never exits is red, and its red is NAMED: the member's
+//                   FAIL detail and the roll-up both say `killed by the suite bound (<bound> ms)` with a bound above the
+//                   helper's default — never a bare non-zero exit.
+//   C6 and C7 ride ONE extra clone per tree (two plant files under scripts/ and two members appended to the
+//   organism:selftest string of that clone only), so C1–C5 judge the unplanted tree. The two trees' planted runs go
+//   concurrently; the hang plant is killed by the suite runner's own bound, so the witness's whole wait is that bound.
 // BOUND (not a both-ways clause): every path whose index blob differs between the two orgs is a named file —
 //   package.json, scripts/organism_test.mjs, the four organs' files, or a path under ci/mcov/.
 // LAST: no process whose command line names the witness's temp root survives (read from /proc on Linux, from
@@ -27,10 +37,10 @@
 //   selftests it runs plant their own ephemeral ports (listen 0) under their own temp dirs. It sets no wait of its own:
 //   every child it spawns is the suite runner, whose own run() bounds each member it spawns.
 // EXIT / LAST LINE: `GREEN MCOV <what> · <n> clause(s)` (exit 0) or `RED MCOV · <clauses>` (exit 1).
-// EXPORTS (for ci/mcov/run_mutants_mcov.mjs): plantClone(org, into) · judge(dir) · CLAUSES · survivors(root).
+// EXPORTS (for ci/mcov/run_mutants_mcov.mjs): plantClone(org, into) · judge(dir) · judgeBounds(dir) · CLAUSES · BOUND_CLAUSES · survivors(root).
 // ----------------------------------------------------------------------------------------------------------------------
-import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, realpathSync } from "node:fs";
+import { execFileSync, spawnSync, spawn } from "node:child_process";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, realpathSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
@@ -38,6 +48,7 @@ import { parse } from "acorn";
 import { simple } from "acorn-walk";
 
 export const CLAUSES = ["C1 COVERAGE", "C2 HERMETIC", "C3 LIVE-NAMED", "C4 VERB", "C5 ONE RECORD"];
+export const BOUND_CLAUSES = ["C6 SLOW-GREEN", "C7 HANG-NAMED"];
 const SUITE_NAMES = ["organism:selftest", "squad:selftest", "audit:selftest"];
 const FOUR = ["deck_lint", "home_pin", "probe", "study_scope"];
 const HERMETIC_FOUR = ["deck_lint", "probe", "study_scope"];
@@ -75,6 +86,38 @@ export function judge(dir) {
   v["C5 ONE RECORD"] = oneRecord(dir);
   v["C4 VERB"] = { green: ss.code === 0 && !!m && Number(m[1]) > 0, why: `exit ${ss.code} · last line: ${last.slice(0, 140)}` };
   return v;
+}
+
+/** C6 + C7 — plant a slow and a hanging member into one planted tree, run the hermetic `suites` once
+ *  @param {string} dir a planted clone (it is changed: two plant files, two members) @returns {Promise<Record<string, {green: boolean, why: string}>>} */
+export function judgeBounds(dir) {
+  const src = readFileSync(join(dir, "scripts", "organism_test.mjs"), "utf8");
+  const dm = /opts\.timeout \|\| (\d+)/.exec(src);
+  const def = dm ? Number(dm[1]) : NaN;
+  if (!Number.isFinite(def)) return Promise.resolve(Object.fromEntries(BOUND_CLAUSES.map((c) => [c, { green: false, why: "the run helper's default bound is not readable in this tree" }])));
+  writeFileSync(join(dir, "scripts", "mcov_slow.mjs"), `// planted by ci/mcov/witness_mcov.mjs: sleeps the run helper's default bound, then exits 0\nif (process.argv[2] === "selftest") setTimeout(() => { console.log("mcov_slow selftest: slept the helper default, exit 0"); }, ${def});\n`);
+  writeFileSync(join(dir, "scripts", "mcov_hang.mjs"), "// planted by ci/mcov/witness_mcov.mjs: never exits; only the suite runner's bound ends it\nif (process.argv[2] === \"selftest\") setInterval(() => {}, 1 << 30);\n");
+  const pj = join(dir, "package.json"), pkg = readFileSync(pj, "utf8");
+  const anchor = /("organism:selftest": "[^"]*)"/;
+  writeFileSync(pj, pkg.replace(anchor, (_, s) => `${s} && node scripts/mcov_slow.mjs selftest && node scripts/mcov_hang.mjs selftest"`));
+  return new Promise((done) => {
+    const c = spawn(process.execPath, [join("scripts", "organism_test.mjs"), "suites"], { cwd: dir, env: childEnv(), windowsHide: true });
+    let out = "";
+    c.stdout.on("data", (d) => { out += d; }); c.stderr.on("data", (d) => { out += d; });
+    c.on("close", () => {
+      const v = {};
+      const slowOk = /^ {2}ok {3}SUITE MEMBER · mcov_slow selftest exits 0$/m.test(out);
+      const slowFail = out.split(NL).find((l) => /FAIL SUITE MEMBER · mcov_slow /.test(l));
+      v["C6 SLOW-GREEN"] = { green: slowOk, why: slowOk ? `slept ${def} ms (the helper default) and was judged ok` : slowFail ? `judged red: ${slowFail.trim()} ${(out.split(NL)[out.split(NL).indexOf(slowFail) + 1] || "").trim()}`.slice(0, 200) : "mcov_slow never judged" };
+      const L = out.split(NL), i = L.findIndex((l) => /^ {2}FAIL SUITE MEMBER · mcov_hang selftest exits 0/.test(l));
+      const detail = i >= 0 ? (L[i + 1] || "").trim() : "";
+      const km = /killed by the suite bound \((\d+) ms\)/.exec(detail);
+      const rollup = /mcov_hang: killed by the suite bound \(\d+ ms\)/.test(out);
+      const named = i >= 0 && !!km && Number(km[1]) > def && rollup;
+      v["C7 HANG-NAMED"] = { green: named, why: i < 0 ? "mcov_hang never judged red" : named ? `named: ${detail.slice(0, 120)} · roll-up names it` : `not named: detail "${detail.slice(0, 100)}" · roll-up ${rollup ? "names it" : "does not name a kill"}` };
+      done(v);
+    });
+  });
 }
 
 /** C5 — the four in exactly one package.json suite string, and no member list in the suite file */
@@ -125,7 +168,7 @@ function differing(a, b) {
   return [...new Set([...A.keys(), ...B.keys()])].filter((p) => A.get(p) !== B.get(p)).sort();
 }
 
-function main() {
+async function main() {
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };
   const org = opt("--org"), base = opt("--base-org");
@@ -138,9 +181,13 @@ function main() {
     console.log(`BOUND · ${diff.length} path(s) differ between the orgs: ${diff.join(", ") || "(none)"}`);
     if (outside.length) { console.log(`BOUND · RED — outside the named files: ${outside.join(", ")}`); reds.push("BOUND"); }
     const buildMods = existsSync(join(resolve(org), "node_modules")) ? join(resolve(org), "node_modules") : null;
+    const pb = judgeBounds(plantClone(base, mkdtempSync(join(root, "base-bounds-")), buildMods));
+    const ph = judgeBounds(plantClone(org, mkdtempSync(join(root, "build-bounds-"))));
     const vb = judge(plantClone(base, mkdtempSync(join(root, "base-")), buildMods));
     const vh = judge(plantClone(org, mkdtempSync(join(root, "build-"))));
-    for (const c of CLAUSES) {
+    const [bb, bh] = await Promise.all([pb, ph]);
+    Object.assign(vb, bb); Object.assign(vh, bh);
+    for (const c of [...CLAUSES, ...BOUND_CLAUSES]) {
       const ok = !vb[c].green && vh[c].green;
       console.log(`${ok ? "HOLDS" : "BROKEN"} ${c} · base ${vb[c].green ? "GREEN" : "RED"} (${vb[c].why}) · build ${vh[c].green ? "GREEN" : "RED"} (${vh[c].why})`);
       if (!ok) reds.push(c);
@@ -152,7 +199,7 @@ function main() {
     try { rmSync(root, { recursive: true, force: true }); } catch { /* a locked temp file on Windows is litter, not a verdict */ }
   }
   if (reds.length) { console.log(`RED MCOV · ${reds.join(", ")}`); process.exit(1); }
-  console.log(`GREEN MCOV the four coverage orphans wired in package.json, each in its profile · ${CLAUSES.length} clause(s)`);
+  console.log(`GREEN MCOV the four coverage orphans wired in package.json, each in its profile, a member's kill named · ${CLAUSES.length + BOUND_CLAUSES.length} clause(s)`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main();

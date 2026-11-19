@@ -49,11 +49,22 @@ const assert = (name, cond, detail) => {
 };
 const section = (t) => console.log(`\n── ${t} ${"─".repeat(Math.max(0, 66 - t.length))}`);
 
+// THE LONG BOUND, in ONE place (unit mcov · forks row 1151 (1) (b), 19 Nov 2026). The heavy modes (gates, lawpack,
+// flow_atlas) each typed this same value; it is named here, unchanged, and a SUITE MEMBER's run takes it too: a member's
+// wait is a HANG GUARD, not a race (his laptop measured probe's selftest past the helper's default on 19 Nov 2026, and
+// the default killed it and read the kill as a red exit). No new number: the value is the one the heavy modes had.
+const HEAVY_BOUND_MS = 600000;
 // run an organ as a child; never import (a top-level side effect must not leak in)
+// unit mcov (row 1151 (1) (a)): a child this helper KILLS by its bound returns `killed: <the bound in ms>` beside its
+// code, so a reader can say "killed by the suite bound" and never mistake the kill for a non-zero exit.
 const run = (args, opts = {}) => {
-  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: opts.timeout || 120000, ...(opts.env ? { env: opts.env } : {}) });
-  return { code: r.status, out: (r.stdout || "") + (r.stderr || "") };
+  const bound = opts.timeout || 120000;
+  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: bound, ...(opts.env ? { env: opts.env } : {}) });
+  const killed = !!(r.error && /** @type {NodeJS.ErrnoException} */ (r.error).code === "ETIMEDOUT");
+  return { code: r.status, out: (r.stdout || "") + (r.stderr || ""), ...(killed ? { killed: bound } : {}) };
 };
+/** why a member run is red, in words: a kill by the bound is NAMED with the bound, never a bare exit @param {{code: number|null, killed?: number}} r */
+const redWhy = (r) => r.killed ? `killed by the suite bound (${r.killed} ms) — not an exit code` : `exit ${r.code}`;
 
 // This file is excluded from its own coverage check: it IS the suite, so it has no
 // `selftest` mode to wire anywhere. Named here rather than filtered silently.
@@ -375,12 +386,14 @@ function suites() {
     // test_coach_v2 is itself a harness and is invoked bare (package.json documents this)
     const args = m === "test_coach_v2" ? [file] : [file, "selftest"];
     // ONE RUN PER SELFTEST (row 880 (1)): hermetic()'s result when this is its IDENTICAL command, else a spawn
-    const key = runKey(args), kept = hermeticRuns.get(key);
+    // unit mcov (row 1151 (1) (b)): the member run takes the LONG BOUND, a hang guard — the identical-command key carries it
+    const key = runKey(args, { timeout: HEAVY_BOUND_MS }), kept = hermeticRuns.get(key);
     if (kept) { hermeticRuns.delete(key); reused++; }
-    const r = kept || run(args);
-    if (r.code !== 0) red.push({ m, tail: r.out.split(/\r?\n/).filter(Boolean).slice(-3).join(" | ") });
+    const r = kept || run(args, { timeout: HEAVY_BOUND_MS });
+    // (a): a kill by the bound is NAMED, in the member's red and in the roll-up — never a bare non-zero exit
+    if (r.code !== 0) red.push({ m, tail: [redWhy(r), ...r.out.split(/\r?\n/).filter(Boolean).slice(-3)].join(" | ") });
     // B1 (c): every member is its OWN assert, so a red member is a NAME the neutral verdict can compare across trees
-    assert(`SUITE MEMBER · ${m} selftest exits 0`, r.code === 0);
+    assert(`SUITE MEMBER · ${m} selftest exits 0`, r.code === 0, r.code === 0 ? "" : redWhy(r));
   }
   console.log(`  suites: reused ${reused} of ${members.length} member result(s) from hermetic (identical command), ran ${members.length - reused}`);
   assert(`all ${PROFILE === "hermetic" ? `${ran} hermetic` : members.length} suite members pass (every one RUN, not chained)`, red.length === 0,
@@ -2224,12 +2237,12 @@ function hermetic() {
   const timeline = [];                       // F-6's attribution side, free: the spawn loop already runs
   // ONE RUN PER SELFTEST (row 880 (1)): the result run() returns is KEPT for suites() under its identical-command key,
   // after the window's end is stamped — the same spawns, the same order, the same window; the trip metric is untouched.
-  for (const f of targets) { if (liveSelftest(f.replace(/\.mjs$/, ""))) continue; const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args), r); }
+  for (const f of targets) { if (liveSelftest(f.replace(/\.mjs$/, ""))) continue; const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args, { timeout: HEAVY_BOUND_MS }); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args, { timeout: HEAVY_BOUND_MS }), r); }
   // unit mpool (forks rows 1062 / 1066) — THE USAGE TAP's selftest rides THIS loop (it has a selftest, so it is a target)
   // and is JUDGED here, from the loop's own kept result (a read of the map, never a second spawn; suites() still takes it
   // if a suite ever names it). Its package.json suite membership is a FORK the unit names in ci/mpool/PROOF.md.
   {
-    const tap = hermeticRuns.get(runKey([join(ROOT, "scripts", "usage_tap.mjs"), "selftest"]));
+    const tap = hermeticRuns.get(runKey([join(ROOT, "scripts", "usage_tap.mjs"), "selftest"], { timeout: HEAVY_BOUND_MS }));
     assert("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", !!tap && tap.code === 0,
       tap ? String(tap.out).trim().split("\n").filter((l) => /FAIL|selftest/.test(l)).slice(-4).join(" | ") : "usage_tap.mjs selftest never ran");
   }
@@ -2667,7 +2680,7 @@ function alive() {
 // families stay 0, frozen counts may only fall, the checked list may only grow.
 function gates() {
   section("GATES — tsc --checkJs + eslint + ajv schemas, frozen at their measured baselines, tightening only");
-  const r = run([join(ROOT, "scripts", "gates.mjs"), "report"], { timeout: 600000 });
+  const r = run([join(ROOT, "scripts", "gates.mjs"), "report"], { timeout: HEAVY_BOUND_MS });
   if (/NOT MEASURABLE HERE/.test(r.out)) {
     assert("GATES — bare checkout: the gate answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));
     return;
@@ -2689,7 +2702,7 @@ function gates() {
 // five to bite. A rule that stops biting fails the suite.
 function lawpack() {
   section("LAW PACK — the organism's own laws as ast-grep rules, frozen and tightening only");
-  const r = run([join(ROOT, "scripts", "lawpack.mjs"), "gate"], { timeout: 600000 });
+  const r = run([join(ROOT, "scripts", "lawpack.mjs"), "gate"], { timeout: HEAVY_BOUND_MS });
   if (/NOT MEASURABLE HERE/.test(r.out)) {
     assert("LAW PACK — bare checkout: the pack answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));
     return;
@@ -2736,7 +2749,7 @@ function atlas() {
     assert("FLOW ATLAS — bare checkout: no IR/atlas built here; NOT MEASURABLE is the honest answer", true);
     return;
   }
-  const r = run([join(ROOT, "scripts", "flow_atlas.mjs"), "check"], { timeout: 600000 });
+  const r = run([join(ROOT, "scripts", "flow_atlas.mjs"), "check"], { timeout: HEAVY_BOUND_MS });
   assert("FLOW ATLAS — `check` re-derives the atlas from the live IR sha-identical (a code change that moves the graph demands `xray.mjs build` + `flow_atlas.mjs build` in the same commit)",
     r.code === 0, r.out.split(/\r?\n/).slice(-3).join(" | "));
 }
