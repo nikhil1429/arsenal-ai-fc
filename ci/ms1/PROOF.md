@@ -363,3 +363,54 @@ run_mutants: 28 of 28 mutant(s) RED by the clause that names them · control GRE
 
 Everything in §9 (row 1107 (1)) still stands, its forks F-a to F-d included. F-a: mfac W3.2 still pins land.mjs to
 mfac's base bytes.
+
+## 11. THIRD FOLLOW-UP · forks row 1119, 19 Nov 2026 (new commits, never force; each step pushed when done)
+
+Main `224f9b9` is merged in (merge `2911fc8`, clean). `ci/ms1/BASE` is `224f9b9`. No repair branch is merged (row 1119
+(2)): mr3, mrj, mrt, mrf and mrv come one tip at a time, each named by a later message. The KNOWN_RED list of row 1107
+(1)(c) stays on this branch as scaffolding, and the land branch carries it EMPTY.
+
+**(3)(a) · `cfc172b` · the merge-base tree runs no witness** (C5 first half, `ci/ms2/MS2_SPEC.md` on `claude/ms2-spec`
+`929e7e6`). After the B2 gate, `witnesses()` runs only when `realpath(ROOT)` is `realpath(GITHUB_WORKSPACE)`
+(case-folded on win32). Elsewhere it prints `  SKIP WITNESSES · the merge-base tree — witnesses are judged at head (C5)`
+and makes no assert. The merge-base step's clone under `$RUNNER_TEMP/b1_base` is never the workspace, so a leg pays the
+member once, and a witness red at head is never "old". Clause **T3 BASETREE** plants `GITHUB_WORKSPACE` naming another
+dir: one C5 line, nothing spawned, no assert. Every member plant now sets `GITHUB_WORKSPACE` to its own repo. Its
+mutant removes the gate.
+
+**(3)(b) · `0191132` · fork F-a, the third ADDED edit** (`ci/mfac/witness_mfac.mjs`): W3.2's did-not-touch conjunct
+(land.mjs byte-identical to base) moves into that witness's own BOUND clause. W3.2 keeps its static night.mjs reads.
+Re-judged:
+- head (`cfc172b` tree, BASE `7c3c279`): `RED MFAC · F4 BOUND` (W3.2 green)
+- base (`7c3c279`, both ways): `RED MFAC · F4 W1.1 … W3.1 W3.2 W4.1 … W9` (26 ids)
+
+**NEW, fork F-e (for the architect): mfac F4 is overtaken by mfac-floor.** F4 pins "the SHIPPED night.mjs carries
+`memory_floor_mb: FLOOR_UNSET`". mfac-floor (`95b07a6`, row 1103 (2)) replaced that placeholder with the ruled 1536 MB.
+The head leg reds `F4: shipped key absent/typed`. It is a behavioural red (F11 A), not mine to edit (three ADDED edits
+only). A fourth ADDED edit, an owner, or mfac-floor's witness taking F4's place: the architect's call.
+
+**(3)(c) · `cba2757` · ci dirs carried**, witness bytes unchanged:
+
+| Unit | from | BASE | head leg | base leg |
+|---|---|---|---|---|
+| mport | `claude/mport-build` `878dd07` | `95b07a6` | `RED MPORT · BOUND` | `RED MPORT · P1, P2, P3` |
+| mjd7 | `claude/mjd7-build` `b0c06f3` (its own `BASE` as shipped) | `95b07a6` | `RED MJD7 · BOUND` | `RED MJD7 · C1 F1 F2 F3` |
+| mtxt | `claude/mtxt-build` `471b7fe` | `95b07a6` | `RED MTXT · BOUND` | `RED MTXT · S1, S2, S3, S4, C1, C2, C3, C4, N1, BOUND` |
+
+B3.1 now names 29 carried units (`B3.1 CARRIED · 29 units carried, every BASE a main commit`, 19 Nov 2026).
+
+**(4) and (5), as ruled:** F-b the coverage red is an old red (main's own, named). F-c mtail T2 belongs to unit mrt. F-d
+unit mrv carries mlv1 I2, I3 (node 24). Forks 1, 4, 5, 6, 8 and 9 stand as built.
+
+**The two last lines, both ways, against an LF `git archive` of `224f9b9` (19 Nov 2026):**
+
+```
+node ci/ms1/witness_ms1.mjs --org . --base-org <224f9b9>
+GREEN MS1 every landed witness rides the suite · 31 clause(s)                                         (exit 0)
+node ci/ms1/witness_ms1.mjs --org <224f9b9> --base-org <224f9b9>
+RED MS1 · B1.1 BASE, B1.2 LF, B1.3 NOCALC, B2.1 FULL, B2.2 LAPTOP, B2.3 NEUTRAL, T3 BASETREE, B3.1 CARRIED, B3.2 NOCI,
+  B3.5 GATE, B4.1 LISTEN, B4.2 DERIVED, B4.3 ADMIT, B4.4 NOSPAWN, B4.5 DOOR, B5.1 SECONDS, B5.2 NOFETCH, B6.1 NOBASE,
+  B6.2 SHORT, B6.3 SKIPWINS, F1 BOUND, F1W BOUNDID, F11 BEHAVE, R1 RULED, R2 STALE, R3 NEWDEATH, V1 KEYOF, BOUND (exit 1)
+node ci/ms1/run_mutants_ms1.mjs --org . --base-org <224f9b9>
+run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GREEN                     (exit 0)
+```
