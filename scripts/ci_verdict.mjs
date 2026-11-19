@@ -42,7 +42,7 @@ export async function frozenBaseline(href = new URL("./lawpack.mjs", import.meta
 }
 
 /** the machine line organism_test.mjs prints, parsed; null when the run never reached it (no headline)
- *  @param {string} text @returns {{ pass: number, fail: number, reds: string[], live: string[], profile: string } | null} */
+ *  @param {string} text @returns {{ pass: number, fail: number, reds: string[], live: string[], profile: string, lawpack: Record<string, number> | null } | null} */
 export function parseSuite(text) {
   const line = String(text).split(/\r?\n/).find((l) => l.startsWith("ORGANISM_TEST_VERDICT "));
   if (!line) return null;
