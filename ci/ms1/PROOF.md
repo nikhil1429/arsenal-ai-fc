@@ -535,3 +535,28 @@ run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GRE
   (19 Nov 2026) `organism_test: 80 passed, 3 failed · ruled 0 · UNRULED 3` (‹mdn2› N-SUITE, ‹mdone› D-UNREAD D-METER, ‹mtxt3› K2 N1).
   mrv, mlv1, mlv2, mlv3, mr3, mf2, mjd3, mjud and mtail all read GREEN. `measured · PORT_HELD mlv1 · linux · node v22.23.5
   · held 2 ms after the kill · 1 probe(s) · bound 246 ms`. KNOWN_RED is empty.
+- **row 1154 · the snapshot class re-stated as properties** (19 Nov 2026). One ADDED edit each, the old text struck in
+  its header. Each carries its two proofs: red at the witness's own base, and a property-breaking mutant red at head.
+
+  | Witness · clause | Property re-stated | Overtaking unit (row) | at its BASE | mutant at head |
+  |---|---|---|---|---|
+  | mdn2 · N-SUITE (`ff7f607`, row 1154 (2)) | this unit's own three named WHAT IS LEFT asserts present and ok, and no WHAT IS LEFT line red (never a count of all) | mrung (1136) | `4d166d3`: RED | one of its asserts renamed → RED (own 2/3) |
+  | mdone · D-UNREAD (`dfbc99d`, row 1154 (3)) | no campaign, and a zero-clause plan v3 list, read `rungs UNREAD`, never a zero count; units still `1 open` | mrung (1136) | `669200d`: RED | done.mjs without its zero-clause guard → `rungs 0/0 GREEN` → RED |
+  | mdone · D-METER (`dfbc99d`, row 1154 (3)) | a receipt triple (rows built by the tree's own rung_receipt.mjs exports) with the meter byte-unchanged and the old recorded day RED → `rungs 1/1 GREEN`; old day rewritten GREEN, or the meter moved → RED | mrung (1136) | `669200d`: RED | rung_receipt.mjs without its "old day reads GREEN" refusal → RED |
+  | mtxt3 · N1 (`a8859b5`, row 1154 (4) under row 1144 (2)) | only the lines this unit added at its own land commit (`ci/mtxt3/OWN_LINES.json`, measured with git, `3f84c80` vs `12f1eca`, fingerprints with digits removed and whitespace collapsed) state no live count; later units' lines are the bound's | mcon (main `fb42118`) | `a583afb`: RED | a digit planted into one of its own conductor.mjs lines → RED |
+
+  Row 1154 (5): unit mlaw re-cuts the same two witness plants (mdn2, mdone) on this assembled tip.
+- **Member over the assembled tree** (Linux, `GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo>`, 19 Nov 2026):
+  `WITNESSES · 38 unit(s) judged in 842.2 s` · `organism_test: 83 passed, 0 failed · ruled 0 · UNRULED 0`. KNOWN_RED is
+  EMPTY.
+- **ms1's witness and mutants at the assembled tree** (19 Nov 2026, against `fb42118`; ms1's own files are unchanged since):
+  every clause GREEN except BOUND (`scripts/brain.mjs`, `scripts/keeper.mjs`: mrt's adopted files, beyond ms1's named
+  set) · base RED on every clause except the two guards · `run_mutants: 33 of 33 mutant(s) RED by the clause that names
+  them · control GREEN`.
+
+### 13.1 THE ASSEMBLED TIP (row 1119 (2), row 1154 (6))
+
+The assembled tip is **the commit that carries this section**: ms1 + mrj `0fff2e2` + mrt `e2de691` + mr3 `08b4772` + mrf
+`542dec7` + mrv `e0b8053`, with main `fb42118` brought in and KNOWN_RED empty. The land subject names every unit joined by
+plus: **ms1 + mrj + mrt + mr3 + mrf + mrv**. Both neutral legs of this tip are read through the public API; they are in
+the ledger and the seat's final message (writing them here would be a new push with a new verdict).
