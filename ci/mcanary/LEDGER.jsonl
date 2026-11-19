@@ -11,3 +11,4 @@
 {"ts":"2026-11-19T18:12:00Z","act":"refused","cmd":"git worktree add --detach <scratch>/base fb42118","last_line":"RAIL worktree — a bare git worktree add on the organism repo … (base made by git archive fb42118 | tar -x instead)"}
 {"ts":"2026-11-19T18:13:00Z","act":"witness","cmd":"node ci/witness/mcanary/witness_canary.mjs plants --org . --base-org <scratch>/base (git archive fb42118)","last_line":"GREEN MCANARY plants both ways, BOUND held · 3 clause(s)"}
 {"ts":"2026-11-19T18:13:30Z","act":"witness","cmd":"node ci/witness/mcanary/witness_canary.mjs launch-no-laptop","last_line":"CANARY launch-no-laptop UNREAD · no pass row for it · exit 2"}
+{"ts":"2026-11-19T18:18:00Z","act":"mutants","cmd":"node ci/mcanary/run_mutants_mcanary.mjs --org .","last_line":"run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN"}
