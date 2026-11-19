@@ -8,3 +8,6 @@
 {"ts":"2026-11-19T00:36:30Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0 (literal model names outside models.mjs: 0)"}
 {"ts":"2026-11-19T00:50:00Z","act":"witness-build","cmd":"node ci/mport/witness_mport.mjs --org . --base-org <base 95b07a6 materialised under the scratch temp dir>","last_line":"GREEN MPORT cortex and thalamus read every planted port through keeper's one guard; his machine reads the fixed ports · 3 clause(s)"}
 {"ts":"2026-11-19T00:51:00Z","act":"witness-base","cmd":"node ci/mport/witness_mport.mjs --org <base> --base-org <base>","last_line":"RED MPORT · P1, P2, P3"}
+{"ts":"2026-11-19T00:55:00Z","act":"push","cmd":"git push -u origin claude/mport-build","last_line":"dfda6516e6e8a57cd537fad77c6c14462e30aaa9 · check runs 135236840275 (npm test · node 22) + 135236839901 (npm test · node 24) in_progress"}
+{"ts":"2026-11-19T01:00:00Z","act":"mutants","cmd":"node ci/mport/run_mutants_mport.mjs --org . --base-org <base>","last_line":"run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-19T01:10:00Z","act":"suite-hermetic","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"exit 2 · 4 UNRULED, all environmental (ERR_MODULE_NOT_FOUND fsrs/mutagen, no node_modules; coverage orphans deck_lint/home_pin/probe/study_scope)"}
