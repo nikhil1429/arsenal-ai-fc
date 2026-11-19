@@ -1,0 +1,55 @@
+diff -u a/ci/mjud/w_drive.mjs b/ci/mjud/w_drive.mjs
+--- a/ci/mjud/w_drive.mjs	2026-11-19 00:04:52.000000000 +0000
++++ b/ci/mjud/w_drive.mjs	2026-11-19 00:13:38.555929073 +0000
+@@ -60,7 +60,10 @@
+   { judgeCalls.length = 0; const handed = [];
+     const r = await G.gradeJudge({ ...base, rows: plantRows(3), judgeHistory: [{ job: G.JUDGE_JOB, ok: true, duration_ms: 1000, items: 1 }], generate: grade(),
+       verifyGenerate: async (p, call) => { handed.push(call && call.budget_ms); return { ok: true, text: '{"items":[]}', duration_ms: B / 3 }; } });
+-    facts.third = { ok: r.ok, first_budget: judgeCalls[0] ? judgeCalls[0].budget_ms : null, handed, graded: r.graded }; }
++    const b0 = (r.batches || [])[0];
++    facts.third = { ok: r.ok, first_budget: judgeCalls[0] ? judgeCalls[0].budget_ms : null, handed, graded: r.graded,
++      tail: b0 && Number.isFinite(b0.tail_ms) ? b0.tail_ms : null,
++      reserve: b0 && typeof G.settleReserveMs === "function" ? G.settleReserveMs(plantRows(3).filter((it) => b0.ids.includes(it.id))) : null }; }
+   // mjd2 — a killed batch of 10 on the ledger beside a fast ok row; then the size that died next
+   const fast = { job: G.JUDGE_JOB, ok: true, duration_ms: 10000, items: 1 };
+   const kill = (n) => ({ job: G.JUDGE_JOB, ok: false, duration_ms: B, items: n, error: "spawnSync claude ETIMEDOUT" });
+@@ -69,7 +72,10 @@
+   { judgeCalls.length = 0; const r1 = await G.gradeJudge({ ...base, rows: plantRows(12), judgeHistory: [fast, kill(10)], verify: async () => ({ ran: false, why: "planted", checks: {}, calls: 0 }), generate: grade(10) });
+     const s1 = (r1.batches || [])[0] ? r1.batches[0].size : null;
+     const r2 = await G.gradeJudge({ ...base, rows: plantRows(12), judgeHistory: [fast, kill(10), kill(s1 || 1)], verify: async () => ({ ran: false, why: "planted", checks: {}, calls: 0 }), generate: grade(10) });
+-    facts.kill2 = { s1, s2: (r2.batches || [])[0] ? r2.batches[0].size : null }; }
++    // mrj (re-base of M6 on mjd3, row 1025 (4)): a round that starts NO batch because not one capture fits is size 0 — the mjd2
++    // rule's own terminal ("down to the RED of not even ONE capture fits"), read from the round's own reason and sizing
++    const s2 = (r2.batches || [])[0] ? r2.batches[0].size : (r2.reason === "judge-batch-cannot-fit" && r2.sizing && r2.sizing.size === 0 ? 0 : null);
++    facts.kill2 = { s1, s2, reason2: r2.reason || null }; }
+   // mjd2, the other way — a refusal and an un-killed failure are no floor: the size is the ok-only size
+   { const refused = { job: G.JUDGE_JOB, ok: false, duration_ms: 3000, items: 1, error: "OAuth session expired and could not be refreshed" };
+     const lost = { job: G.JUDGE_JOB, ok: false, duration_ms: B, items: 59 };
+diff -u a/ci/mjud/witness_mjud.mjs b/ci/mjud/witness_mjud.mjs
+--- a/ci/mjud/witness_mjud.mjs	2026-11-19 00:04:52.000000000 +0000
++++ b/ci/mjud/witness_mjud.mjs	2026-11-19 00:13:38.556112537 +0000
+@@ -124,7 +124,7 @@
+   const covered = (s) => {
+     if (s.f === "scripts/sitting.mjs") return /owner\("gaffer_brain\.mjs"/.test(s.src) && /export function ownerCli[\s\S]{0,700}timeout: ownerTimeoutMs\(file, args\)/.test(srcOf(s.f)) && /function ownerTimeoutMs[\s\S]{0,300}JUDGE_BUDGET_MS \+ JUDGE_DISPATCH_MS/.test(srcOf(s.f));
+     if (s.f === "scripts/dugout.mjs") return /sh\("gaffer_brain\.mjs"/.test(s.src) && /function execTool\(name, args, deps = \{\}\) \{\n\s*const sh = deps\.sh \|\| [^\n]*timeout: shTimeoutMs\(script, argv\)/.test(srcOf(s.f)) && /function shTimeoutMs[\s\S]{0,300}JUDGE_BUDGET_MS \+ JUDGE_DISPATCH_MS/.test(srcOf(s.f));
+-    if (s.f === "scripts/postmatch.mjs") return /const f = fits\(JUDGE_BUDGET_MS \+ CHILD_TIMEOUT_MS\);[\s\S]{0,300}const s = spawnMs\(f, CHILD_TIMEOUT_MS\);[\s\S]{0,300}"judge-due", "--trigger", "day\.close"\][^\n]*timeout: s\.ms/.test(srcOf(s.f));
++    if (s.f === "scripts/postmatch.mjs") return /export const JUDGE_CHILD_MS = JUDGE_BUDGET_MS \+ JUDGE_DISPATCH_MS;/.test(srcOf(s.f)) && /const f = fits\(JUDGE_CHILD_MS \+ CHILD_TIMEOUT_MS\);[\s\S]{0,300}const s = spawnMs\(f, CHILD_TIMEOUT_MS\);[\s\S]{0,300}"judge-due", "--trigger", "day\.close"\][^\n]*timeout: s\.ms/.test(srcOf(s.f));
+     return false;
+   };
+   const bad = sites.filter((s) => !covered(s));
+@@ -140,12 +140,12 @@
+ }
+ {
+   const t = g.third || {};
+-  const ok = !g.threw && t.ok && t.handed && t.handed[0] === g.budget && t.first_budget === g.budget - g.budget / 3;
+-  clause("M5 F3-CLIP", ok, `a check taking ${g.budget / 3} ms: handed ${JSON.stringify(t.handed)} · the first batch killed at ${t.first_budget} ms (owed ${g.budget - g.budget / 3})`);
++  const ok = !g.threw && t.ok && t.handed && t.handed[0] === g.budget && Number.isFinite(t.tail) && t.tail > 0 && t.tail === t.reserve && t.first_budget === g.budget - g.budget / 3 - t.tail;
++  clause("M5 F3-CLIP", ok, `a check taking ${g.budget / 3} ms: handed ${JSON.stringify(t.handed)} · the first batch killed at ${t.first_budget} ms (owed ${g.budget - g.budget / 3} − its settle tail ${t.tail}, settleReserveMs ${t.reserve})`);
+ }
+ {
+   const k = g.kill1 || {}, k2 = g.kill2 || {};
+-  const ok = !g.threw && Number.isInteger(k.first_size) && k.first_size < k.killed_size && Number.isInteger(k2.s2) && k2.s2 < k2.s1;
++  const ok = !g.threw && Number.isInteger(k.first_size) && k.first_size < k.killed_size && Number.isInteger(k2.s1) && k2.s1 > 0 && Number.isInteger(k2.s2) && k2.s2 < k2.s1;
+   clause("M6 MJD2", ok, `10 captures killed at the budget beside a fast ok row ⇒ next size ${k.first_size}; that size killed too ⇒ ${k2.s2} (was ${k2.s1})`);
+ }
+ {
