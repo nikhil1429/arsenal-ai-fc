@@ -19,6 +19,8 @@
 //   B2.1 FULL     full profile → exactly ONE `  SKIP WITNESSES — ` line, no witness spawned, no assert
 //   B2.2 LAPTOP   hermetic profile without GITHUB_ACTIONS → the same one line, nothing spawned
 //   B2.3 NEUTRAL  hermetic + GITHUB_ACTIONS=true (F3 A) → the planted witness runs
+//   T3   BASETREE C5 first half (row 1119 (3)(a)): GITHUB_WORKSPACE names another dir (the merge-base clone) → exactly one
+//                 `  SKIP WITNESSES · the merge-base tree — witnesses are judged at head (C5)` line, nothing spawned, no assert
 //   B3.1 CARRIED  static on the tree: every landed unit's ci/<unit>/witness_<unit>.mjs with a 40-hex BASE, every BASE a
 //                 commit of main's history, ci/mcr/ split (F9 B)
 //   B3.2 NOCI     land.mjs, origin main carrying a ci/<unit>/BASE: a landing with no ci dir → REFUSED NO-CI-DIR
@@ -133,7 +135,7 @@ function memberRun(tree, units, { env = {}, crlf = false, organs = {}, knownRed 
   }
   commit(d, "head");
   const mark = join(d, "..", `${relative(ROOT, d)}.mark`), trace = join(d, "..", `${relative(ROOT, d)}.trace`);
-  const e = { ...process.env, ORGANISM_TEST_PROFILE: "hermetic", GITHUB_ACTIONS: "true", MS1_MARK: mark, GIT_TRACE: trace, ...env };
+  const e = { ...process.env, ORGANISM_TEST_PROFILE: "hermetic", GITHUB_ACTIONS: "true", GITHUB_WORKSPACE: d, MS1_MARK: mark, GIT_TRACE: trace, ...env };
   for (const [k, v] of Object.entries(e)) if (v === undefined) delete e[k];
   const r = sp(process.execPath, [join(d, "scripts", "organism_test.mjs"), "witnesses"], { cwd: d, env: e });
   let m = null; try { m = JSON.parse(readFileSync(mark, "utf8")); } catch {}
@@ -218,6 +220,12 @@ const CLAUSES = {
   "B2.3 NEUTRAL"(t) {
     const o = memberRun(t, { px: { witness: plantWitness("px", "marker") } });
     return { ok: !!o.mark && !o.lines.some((l) => /SKIP WITNESSES/.test(l)), why: `hermetic + GITHUB_ACTIONS: spawned ${!!o.mark}` };
+  },
+  "T3 BASETREE"(t) {
+    const o = memberRun(t, { px: { witness: plantWitness("px", "marker") } }, { env: { GITHUB_WORKSPACE: join(ROOT, "elsewhere") } });
+    const skips = o.lines.filter((l) => l === "  SKIP WITNESSES · the merge-base tree — witnesses are judged at head (C5)").length;
+    const asserts = o.lines.filter((l) => /^ {2}(ok {3}|FAIL )WITNESS/.test(l)).length;
+    return { ok: skips === 1 && !o.mark && asserts === 0, why: `GITHUB_WORKSPACE names another dir: C5 skip lines ${skips} · spawned ${!!o.mark} · witness asserts ${asserts}` };
   },
   "B3.1 CARRIED"(t) {
     const miss = [];

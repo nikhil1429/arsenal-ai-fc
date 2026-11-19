@@ -28,7 +28,7 @@
 //   the law it is holding · a RED here is a real defect, not a flaky net.
 // CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack|done|witnesses]
 // ============================================================================
-import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync, appendFileSync, symlinkSync, unlinkSync, openSync, closeSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync, appendFileSync, symlinkSync, unlinkSync, openSync, closeSync, realpathSync } from "node:fs";
 import { createHash } from "node:crypto";   // S11 · F-6: the content discriminator (an idempotent rewrite is not a leak)
 import { join, dirname, delimiter } from "node:path";
 import { createServer } from "node:net";   // unit ms1: an OS-picked free port for every port door (never a fixed one)
@@ -2756,6 +2756,7 @@ function atlas() {
 // The BASE must already be a commit in this clone: the member never reaches the network. It writes nothing outside
 // the OS temp dir, reads dressing-room/state never, and every wait is bounded by the job's own declared
 // timeout-minutes, read from .github/workflows/suite.yml (never typed here). Sole writer of nothing.
+const WITNESS_BASETREE = "  SKIP WITNESSES · the merge-base tree — witnesses are judged at head (C5)";
 const WITNESS_SKIP = "  SKIP WITNESSES — the witnesses member runs on the neutral machine only (B2): a witness may bind ports";
 /** a unit's witness file: witness_<unit>.mjs, or with every - of the dir name written _ (ci/mfac-floor/witness_mfac_floor.mjs)
  *  @param {string} dir @param {string} unit @returns {string|null} */
@@ -2833,6 +2834,11 @@ const freePort = () => new Promise((res, rej) => { const s = createServer(); s.o
 async function witnesses() {
   section("WITNESSES — every landed unit's witness, at HEAD against its own BASE (unit ms1)");
   if (!(PROFILE === "hermetic" && process.env.GITHUB_ACTIONS === "true")) { console.log(WITNESS_SKIP); return; }
+  // C5, first half (forks row 1119 (3)(a); ci/ms2/MS2_SPEC.md on claude/ms2-spec 929e7e6): only the tree the runner checked out
+  // (GITHUB_WORKSPACE) runs the witnesses. The verdict's other tree is a clone under the runner's temp dir, so there the member
+  // prints one line and makes no assert: it is paid once per leg, and a member red at head is always new.
+  const real = (p) => { try { const r = realpathSync(p); return process.platform === "win32" ? r.toLowerCase() : r; } catch { return null; } };
+  if (!process.env.GITHUB_WORKSPACE || real(ROOT) !== real(process.env.GITHUB_WORKSPACE)) { console.log(WITNESS_BASETREE); return; }
   const units = witnessUnits(ROOT);
   const T0 = Date.now();
   const wf = (() => { try { return readFileSync(join(ROOT, ".github", "workflows", "suite.yml"), "utf8"); } catch { return ""; } })();

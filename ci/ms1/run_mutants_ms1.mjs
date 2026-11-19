@@ -30,6 +30,7 @@ const MUTANTS = [
   ["B2.1 FULL", OT, "{ console.log(WITNESS_SKIP); return; }", "{ return; }"],
   ["B2.2 LAPTOP", OT, 'PROFILE === "hermetic" && process.env.GITHUB_ACTIONS === "true"', 'PROFILE === "hermetic"'],
   ["B2.3 NEUTRAL", OT, 'if (!(PROFILE === "hermetic" && process.env.GITHUB_ACTIONS === "true"))', 'if ((PROFILE === "hermetic" && process.env.GITHUB_ACTIONS === "true"))'],
+  ["T3 BASETREE", OT, "if (!process.env.GITHUB_WORKSPACE || real(ROOT) !== real(process.env.GITHUB_WORKSPACE)) { console.log(WITNESS_BASETREE); return; }", ""],
   ["B3.1 CARRIED", null, "ci/mf2/BASE"],
   ["B3.2 NOCI", LAND, ".some((p) => /^ci\\/[a-z0-9-]+\\/BASE$/.test(p))) {", ".some(() => false)) {"],
   ["B3.3 CIDIR", LAND, "|| !touched.some((p) => p.startsWith(`ci/${unit}/`)))", "|| true)"],
