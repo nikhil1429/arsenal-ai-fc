@@ -10,3 +10,6 @@
 {"ts":"2026-11-19T10:37:42.489Z","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (LF clone 4b00cf5, npm ci)","last_line":"organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)"}
 {"ts":"2026-11-19T10:37:42.516Z","act":"block7-selfcheck","cmd":"node -e <LOAD ZERO BLOCK 7 regexes over ci/mpin/MPIN_SPEC.md>","last_line":"BLOCK 7: 0 undeclared"}
 {"ts":"2026-11-19T10:37:42.542Z","act":"ci-read","cmd":"curl …/commits/5b7eec1/check-runs","last_line":"run 44506050078 · node 22 135497855852 success · node 24 135497854818 in_progress"}
+{"ts":"2026-11-19T10:44:58.075Z","act":"ci-read","cmd":"curl …/commits/0fb9785/check-runs","last_line":"run 44507434724 · node 22 135502591763 success · node 24 135502589549 success"}
+{"ts":"2026-11-19T10:44:58.104Z","act":"ci-read","cmd":"curl …/commits/5b7eec1/check-runs","last_line":"run 44506050078 · node 22 135497855852 success · node 24 135497854818 success"}
+{"ts":"2026-11-19T10:44:58.130Z","act":"effort-receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs --fleet mpin --seat 00 --model claude-opus-5-5","last_line":"Error: Cannot find module '/home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs' (MODULE_NOT_FOUND, exit 1) — nothing written under campaign-2026-09/"}
