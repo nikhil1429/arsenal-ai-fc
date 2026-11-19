@@ -1,2 +1,6 @@
 {"ts":"2026-11-19T01:52:16.722Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mact-spec origin/main (FETCH_HEAD was overwritten by a second fetch; reset --hard origin/main)","last_line":"HEAD is now at 224f9b9"}
 {"ts":"2026-11-19T01:52:16.722Z","act":"probe-alone","cmd":"node alone.mjs <LF tree 224f9b9> 3","last_line":"acts selftest: 56 passed, 0 failed (3 of 3, 150-201 ms)"}
+{"ts":"2026-11-19T01:54:56.076Z","act":"alone-300","cmd":"node alone.mjs <LF tree 224f9b9> 300 (acts selftest alone, serial, refusing claude/gemini shim first on PATH)","last_line":"300 runs, red 5 ms min/med/max 46 223 286 (undo(hold) x3, undo(card) x1, undo(agenda)+crash x1)"}
+{"ts":"2026-11-19T01:54:56.076Z","act":"plant-base","cmd":"node --import pin_random.mjs scripts/acts.mjs selftest (Math.random=()=>0.5) in LF tree 224f9b9, x3","last_line":"exit 1 x3 · 6 FAIL each · undo(card) undo(agenda) undo(pref) stats boardLine undo(hold)"}
+{"ts":"2026-11-19T01:54:56.076Z","act":"plant-build","cmd":"same plant, LF tree 224f9b9 + acts.mjs:71 idSeq patch (temp tree only), x3","last_line":"acts selftest: 56 passed, 0 failed (3 of 3)"}
+{"ts":"2026-11-19T01:54:56.076Z","act":"id-consumers","cmd":"grep -rnE newId|^a[0-9a-z] scripts hooks","last_line":"no parser of the act id shape; sibling pattern scripts/claims.mjs:82"}
