@@ -1,4 +1,0 @@
-# THE RE-BASE DOOR (unit ms2, forks row 1121 (3)): one line per overtaken clause — RECUT <ID> · <overtaking unit> · row <n> · <why>.
-# Written by ms2 for the units of the assembled landing (ms1 + mr3 + mrj + mrt + mrf + mrv), measured at L on the tree merged with 1582be0.
-RECUT M3 CENSUS · mrj · row 1112 · re-based on mtail 074ead9; the new form is red at mjud's own landing
-RECUT M5 F3-CLIP · mrj · row 1112 · re-based on mjd3 3a73782; the new form is red at mjud's own landing
