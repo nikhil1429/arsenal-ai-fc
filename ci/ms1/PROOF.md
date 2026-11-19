@@ -588,3 +588,7 @@ CHECKPOINT · STOPPED at 2026-11-19T12:41Z · resume from: read both neutral leg
     class of F-d (unit mrv's).
   - Which clause it redded is not printed: the workflow prints assert lines only, and the detail line is not one of
     them. NAMED, not guessed.
+- **The BLOCK 7 scan, replayed over the COMMIT's blobs** (`git show <sha>:<path>` for every tracked `.md` outside
+  `docs/archive/`, never the working tree; the suite's own LIVE / SUITE rules and exemptions), 19 Nov 2026, last line:
+  `BLOCK7 over b25088a's blobs: 97 files scanned, 1 declared, 0 undeclared`. The commit carrying this line is
+  scanned the same way before its push, and its line is in `LEDGER.jsonl` (act `block7-blobs`).
