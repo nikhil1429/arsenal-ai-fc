@@ -38,8 +38,19 @@ FOLLOW-UP (forks row 1143 (1), 19 Nov 2026, F1 ruled B): the first build wired t
 - `package.json` — the four are appended to the `organism:selftest` string (`deck_lint`, `home_pin`, `probe`, `study_scope`,
   each `node scripts/<organ>.mjs selftest`). The `suites()` runner spawns and asserts each as a member, and the hermetic
   profile names `home_pin` LIVE from its existing `LIVE_SELFTESTS` entry.
-- `scripts/organism_test.mjs` — the roster is REMOVED in the same commit; the file is byte-equal to the base again (the BOUND
-  line no longer lists it). No exemption line; the coverage law, its detector and its floor are unchanged.
+- `scripts/organism_test.mjs` — the roster is REMOVED in the same commit (at `1a4a275` the file was byte-equal to the base).
+  No exemption line; the coverage law, its detector and its floor are unchanged.
+
+FOLLOW-UP (forks row 1151 (1), 19 Nov 2026): on his laptop the probe selftest alone takes longer than the run helper's
+default bound, and the member run killed it and read the kill as a plain non-zero exit. In `scripts/organism_test.mjs`:
+
+- (b) `HEAVY_BOUND_MS` names, once, the long bound the heavy modes (gates, lawpack, flow_atlas) each typed; those three
+  sites now read it, so no new number is typed. A suite member's run takes it in `suites()`, and so does `hermetic()`'s
+  selftest loop, so the identical-command key that hands a hermetic result to `suites()` still matches (ONE RUN PER
+  SELFTEST, row 880 (1)). The run helper's own default is unchanged.
+- (a) the run helper returns `killed: <bound>` when its bound kills the child; `redWhy()` turns that into
+  `killed by the suite bound (<bound> ms) — not an exit code`, which is the member assert's FAIL detail and the roll-up's
+  tail. The assert NAME is unchanged, so the neutral verdict compares the same names across trees.
 - `scripts/study_scope.mjs` — a `selftest` verb (prints each case, a headline, exit 1 on any fail) and its header comment
   corrected.
 - `ci/mcov/` — `BASE`, `LEDGER.jsonl`, `PROOF.md`, `witness_mcov.mjs`, `run_mutants_mcov.mjs`, `tools/readprobe.mjs`.
@@ -67,7 +78,7 @@ suites (hermetic)          base: (no SUITE MEMBER line for any of the four)
                                  ok   SUITE MEMBER · probe selftest exits 0
                                  ok   SUITE MEMBER · study_scope selftest exits 0
 suites line (head)         organism_test: 60 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 72 (hermetic: named, not run)
-all (hermetic), in this checkout at head (re-measured after the follow-up, the same line):
+all (hermetic), in this checkout at head (re-measured at `1a4a275` and at `12e7e09`, the same line; at `12e7e09` `suites: reused 55 of 127 member result(s) from hermetic (identical command), ran 72`, so the long-bound key still matches):
                            organism_test: 149 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 126 (hermetic: named, not run)
 all (hermetic), fresh scratch clones, FIRST run of each:
                            base:  organism_test: 143 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)
@@ -75,40 +86,51 @@ all (hermetic), fresh scratch clones, FIRST run of each:
                            (the shared red on both is `SUITE MEMBER · sandbox selftest exits 0` and its roll-up — FORK F5)
 ```
 
-## 6. The witness, both ways (after the follow-up, 19 Nov 2026)
+## 6. The witness, both ways (after the row 1151 follow-up, 19 Nov 2026, tip `12e7e09`; wall time 12 min, the hang plant's bound)
 
 ```
 $ node ci/mcov/witness_mcov.mjs --org . --base-org <clone of a583afb>
-BOUND · 8 path(s) differ between the orgs: ci/mcov/BASE, ci/mcov/LEDGER.jsonl, ci/mcov/PROOF.md, ci/mcov/run_mutants_mcov.mjs, ci/mcov/tools/readprobe.mjs, ci/mcov/witness_mcov.mjs, package.json, scripts/study_scope.mjs
+BOUND · 9 path(s) differ between the orgs: ci/mcov/BASE, ci/mcov/LEDGER.jsonl, ci/mcov/PROOF.md, ci/mcov/run_mutants_mcov.mjs, ci/mcov/tools/readprobe.mjs, ci/mcov/witness_mcov.mjs, package.json, scripts/organism_test.mjs, scripts/study_scope.mjs
 HOLDS C1 COVERAGE · base RED (orphaned: deck_lint, home_pin, probe, study_scope) · build GREEN (wired, no orphan)
 HOLDS C2 HERMETIC · base RED (not judged green: deck_lint, probe, study_scope) · build GREEN (deck_lint, probe, study_scope judged ok)
 HOLDS C3 LIVE-NAMED · base RED (home_pin neither named nor run) · build GREEN (home_pin named LIVE)
-HOLDS C4 VERB · base RED (exit 0 · last line: study_scope: scope --session <id> | unbound …) · build GREEN (exit 0 · last line: study_scope selftest: 61 passed, 0 failed)
+HOLDS C4 VERB · base RED (exit 0 · last line: study_scope: scope --session <id> | unbound --session <id> [--transcript p] [--prompt "…"] [--entrypoint e]   (read-only; the hook path is t) · build GREEN (exit 0 · last line: study_scope selftest: 61 passed, 0 failed)
 HOLDS C5 ONE RECORD · base RED (deck_lint in 0 suite string(s) · home_pin in 0 suite string(s) · probe in 0 suite string(s) · study_scope in 0 suite string(s)) · build GREEN (one record: package.json only, no member list in the suite file)
+HOLDS C6 SLOW-GREEN · base RED (judged red: FAIL SUITE MEMBER · mcov_slow selftest exits 0 FAIL SUITE MEMBER · mcov_hang selftest exits 0) · build GREEN (slept 120000 ms (the helper default) and was judged ok)
+HOLDS C7 HANG-NAMED · base RED (not named: detail "LIVE selftest capture — not run in the hermetic profile: reads state/heartbeat_config.json" · roll-up does not name a kill) · build GREEN (named: killed by the suite bound (600000 ms) — not an exit code · roll-up names it)
 LAST · no process names the temp dir
-GREEN MCOV the four coverage orphans wired in package.json, each in its profile · 5 clause(s)
+GREEN MCOV the four coverage orphans wired in package.json, each in its profile, a member's kill named · 7 clause(s)
 ```
 
 C5 (forks row 1143 (1)) reads a "member list" as an array literal in `scripts/organism_test.mjs` (parsed with acorn) holding two
 or more string elements that are exactly names of package.json suite members. Measured at head: zero such arrays; the
 removed roster was one (the C5 mutant re-adds it and C5 names it at its line). Single-organ spawn argv (for example a
-`"--q", "probe"` argument) is not a list. Before the follow-up the witness ran with four clauses and read
-`GREEN MCOV the four coverage orphans wired, each in its profile · 4 clause(s)` (19 Nov 2026, tip `0bc4617`).
+`"--q", "probe"` argument) is not a list.
 
-## 7. The mutants (after the follow-up, 19 Nov 2026)
+C6 / C7 (forks row 1151 (1)) ride one extra clone per tree: two plant files (`scripts/mcov_slow.mjs` sleeps the run helper's
+default bound, read from that tree's own source; `scripts/mcov_hang.mjs` never exits) appended to that clone's
+`organism:selftest` string only. On the base the slow member is killed at the helper's default and the hang's red reads
+as a bare exit (its FAIL line carries no detail, and the roll-up names no kill); on the build the slow member is judged ok
+and the hang is named `killed by the suite bound (600000 ms) — not an exit code` in its FAIL detail and in the roll-up.
+
+Earlier tips, for the record (19 Nov 2026): `0bc4617` read `GREEN MCOV … · 4 clause(s)`; `1a4a275` read `GREEN MCOV … · 5 clause(s)`.
+
+## 7. The mutants (after the row 1151 follow-up, 19 Nov 2026, tip `12e7e09`)
 
 ```
 $ node ci/mcov/run_mutants_mcov.mjs --org .
-control · C1 COVERAGE GREEN · C2 HERMETIC GREEN · C3 LIVE-NAMED GREEN · C4 VERB GREEN · C5 ONE RECORD GREEN
 mutant C1 COVERAGE · RED by its clause (orphaned: deck_lint) — deck_lint dropped from its package.json suite string
 mutant C2 HERMETIC · RED by its clause (not judged green: deck_lint, probe, study_scope) — suites() skips the three hermetic members
 mutant C3 LIVE-NAMED · RED by its clause (home_pin judged as a hermetic member) — home_pin's LIVE entry deleted (it would run hermetic)
-mutant C4 VERB · RED by its clause (exit 0 · last line: study_scope: scope … | selftest …) — the selftest verb no longer answers
-mutant C5 ONE RECORD · RED by its clause (member list organism_test.mjs:71 [deck_lint, home_pin, probe, study_scope]) — a second member list beside package.json (the removed roster, re-added)
-run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN
+mutant C4 VERB · RED by its clause (exit 0 · last line: study_scope: scope --session <id> | unbound --session <id> [--transcript p] [--prompt "…"] [--entrypoint e] | selftest   (read-only; the hoo) — the selftest verb no longer answers
+mutant C5 ONE RECORD · RED by its clause (member list organism_test.mjs:82 [deck_lint, home_pin, probe, study_scope]) — a second member list beside package.json (the removed roster, re-added)
+mutant C6 SLOW-GREEN · RED by its clause (judged red: FAIL SUITE MEMBER · mcov_slow selftest exits 0 killed by the suite bound (120000 ms) — not an exit code) — the suites member run back on the helper's default bound (a race, not a hang guard)
+mutant C7 HANG-NAMED · RED by its clause (not named: detail "exit null" · roll-up does not name a kill) — a kill by the bound read as a bare exit again
+control · C1 COVERAGE GREEN · C2 HERMETIC GREEN · C3 LIVE-NAMED GREEN · C4 VERB GREEN · C5 ONE RECORD GREEN · C6 SLOW-GREEN GREEN · C7 HANG-NAMED GREEN
+run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
 ```
 
-## 8. Law pack counts, BASE and build (`node scripts/lawpack.mjs gate`, LF trees, 19 Nov 2026; build re-measured after the follow-up, same line)
+## 8. Law pack counts, BASE and build (`node scripts/lawpack.mjs gate`, LF trees, 19 Nov 2026; build re-measured at `1a4a275` and at `12e7e09`, the same line)
 
 ```
 BASE  lawpack · 1928 raw match(es) over 8/8 rules · findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 93 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 13
@@ -131,6 +153,13 @@ exit 0
 
 ## 10. The neutral machine
 
+```
+12e7e09  135503765187 npm test · node 22 success · 135503765871 npm test · node 24 success
+1a4a275  135454191058 npm test · node 22 success · 135454190348 npm test · node 24 success
+fed58b2  135306767180 npm test · node 22 success · 135306766855 npm test · node 24 success
+```
+
+
 Read with `curl https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs` (no token). The runs of each
 pushed sha are rows of `ci/mcov/LEDGER.jsonl` (act `ci`).
 
@@ -152,6 +181,10 @@ pushed sha are rows of `ci/mcov/LEDGER.jsonl` (act `ci`).
   asserts (the `LOAD ZERO` / `RUNG A` ledger block) because run 1 left gitignored files in that clone's state dir. Named, not
   chased: neither is this unit's, and the CI runner judges a fresh tree once.
 - **F6 · the two law pack REDs** (jugad 93/90, depcruise 13/7) are on BASE as on the build: mlaw's, not this unit's.
+- **F8 · the witness waits the real long bound.** C7's hang plant is ended only by the suite runner's own bound, so one
+  witness run takes that long (12 min, 19 Nov 2026), and so does the mutant runner (its planted runs go concurrently). No
+  door shortens it: a door that lowers the member bound for a test is a second number. (A) it stays · (B) a lower-only
+  env door for the member bound, planted by the witness. **Recommend A**.
 - **F7 · the branch.** The harness opened this session on `claude/mcov-effort-receipt-76c5ko` (carrying the settings key
   commit `f9fd723`), not `claude/mcov-queue`; the build branch was cut from `origin/main` as the brief says, and carries no
   settings change.
