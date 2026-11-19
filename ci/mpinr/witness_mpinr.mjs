@@ -125,7 +125,7 @@ if (clause === "GUARD") {
   const kid = join(box, "spawner.mjs");
   writeFileSync(kid, 'import { execFileSync, spawnSync } from "node:child_process";\nlet n = 0;\nfor (const f of [() => execFileSync("git", ["--version"]), () => spawnSync("node", ["-v"])]) { try { f(); } catch { n++; } }\nconsole.log("refused " + n);\n');
   const r = M.childRun(kid, [], { preload: g.preload, env: { ...process.env, ...g.env } });
-  const outside = throwsWith(() => M.doorGuard(dirname(tmpdir())), /REFUSED/);
+  const outside = throwsWith(() => M.doorGuard(join(dirname(tmpdir()), "mpinr-never-" + process.pid)), /REFUSED/);
   const rec = g.spawned();
   rmSync(box, { recursive: true, force: true });
   say(r.why === null && r.stdout.trim() === "refused 2" && rec.length === 2 && outside, "child says " + JSON.stringify(r.stdout.trim()) + " · recorded [" + rec.join(" | ") + "] · outside tmpdir refused " + outside + (r.why ? " · " + r.why : ""));
@@ -141,7 +141,7 @@ if (clause === "COPY") {
   c.cleanup();
   const gone = !existsSync(c.box);
   rmSync(box, { recursive: true, force: true });
-  say(shape && gone, "state seeded [" + c.seeded + "] · scripts copied " + existsSync(join(src, "scripts", "a.mjs")) + " · under tmpdir " + under(c.box) + " · cleanup removed " + gone);
+  say(shape && gone, "state seeded [" + c.seeded + "] · scripts copied " + shape + " · under tmpdir " + under(c.box) + " · cleanup removed " + gone);
 }
 say(false, "unknown clause " + clause);
 `);

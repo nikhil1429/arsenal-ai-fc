@@ -360,7 +360,7 @@ function selftest() {
     ok("GUARD · every child_process door inside the child is RECORDED and REFUSED", gr.pass((c) => c.stdout.trim() === "refused 2") && g.spawned().join("|") === "execFileSync git|spawnSync node", `${gr.why || gr.stdout.trim()} · [${g.spawned().join("|")}]`);
     const quiet = childRun(kid, ["calm"], { preload: g.preload, env: { ...process.env, ...g.env } });
     ok("GUARD · a child that opens no door leaves the record as it was", quiet.pass((c) => c.status === 0) && g.spawned().length === 2);
-    ok("GUARD · REFUSED outside os.tmpdir()", throwsWith(() => doorGuard(dirname(tmpdir())), /REFUSED — the guard is planted under os.tmpdir\(\) only/));
+    ok("GUARD · REFUSED outside os.tmpdir()", throwsWith(() => doorGuard(join(dirname(tmpdir()), "own-source-never-" + process.pid)), /REFUSED — the guard is planted under os.tmpdir\(\) only/));
 
     // THE COPY: scripts/ whole, the state dir EMPTY but for the named files.
     const root = join(box, "root");
