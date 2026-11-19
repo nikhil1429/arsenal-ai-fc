@@ -54,6 +54,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { lazySubjects } from "./registry.mjs";   // S10 row 14 — the doors are rows
+import { mintId } from "./mint.mjs";   // unit mid (forks row 1159 (1)) — the ONE shared mint, process identity beside the sequence
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -68,12 +69,10 @@ const isFixture = () => (process.argv[2] || "") === "selftest" || !!process.env.
 
 const clip = (s, n = 200) => String(s == null ? "" : s).replace(/\s+/g, " ").trim().slice(0, n);
 const readRows = (p = ACTS_LEDGER) => { try { if (!existsSync(p)) return []; return readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } };
-// unit mact (forks row 1138 (2), F-2 (a)): a PROCESS-LOCAL SEQUENCE between the ms and the random bucket — one process never
-// mints the same id twice, whatever clock it is handed. Before it, two acts in one ms (a planted deps.now, or a turn's refused
-// acts, which spend no time) shared an id 1 time in 1296 per pair, and undo/resolve/reroute acted on the FIRST row with it.
-// The ms part has a fixed length for this era and the bucket a fixed 2, so the sequence between them reads back whole.
-let idSeq = 0;
-const newId = (now) => `a${now.getTime().toString(36)}${(idSeq++).toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, "0")}`;
+// unit mact (forks row 1138 (2), F-2 (a)) put a PROCESS-LOCAL SEQUENCE here: one process never minted the same id twice, but two
+// processes on one clock still did (each starts at 0 — ci/mid/MID_SPEC.md Q3, measured). Unit mid (forks row 1159 (1), F-1 A /
+// F-2 A) replaces it with the ONE shared mint: the process id, fixed width, beside the sequence (scripts/mint.mjs).
+const newId = (now) => mintId("a", now);
 // unit mact (F-2 (c)): an id held by TWO rows is AMBIGUOUS — undo, resolve and reroute refuse it, always (a row minted before the
 // sequence may share its id with another; which one he meant cannot be read off the ledger, so no verb guesses).
 const idHeldByTwo = (rows, id) => rows.filter((r) => r && r.id === id).length > 1;

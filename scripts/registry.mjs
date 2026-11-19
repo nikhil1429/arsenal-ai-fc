@@ -51,6 +51,7 @@ import { join, dirname, isAbsolute } from "node:path";
 import { tmpdir, homedir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { mintId } from "./mint.mjs";   // unit mid (forks row 1159 (1)) — the ONE shared mint (pure: imports no organ)
 
 const SELF = fileURLToPath(import.meta.url);
 const __dirname = dirname(SELF);
@@ -476,6 +477,9 @@ export function upsertRow(table, row, { path = REGISTRY_PATH, at = nowISO(), que
   reg.tables[table] = reg.tables[table] || [];
   const key = row.subject || row.id;
   const i = reg.tables[table].findIndex((r) => r && (r.subject || r.id) === key);
+  // unit mid (forks row 1159 (2), F-3 A): a ruling row is HIS WORDS, append-only — it is never upserted over (measured: a second
+  // ruling with an equal id merged over the first and his first words were gone from the table).
+  if (table === "rulings" && i >= 0) return { ok: false, why: `ruling ${key} is already in the rulings table — a ruling row is never upserted over (append-only, his words)` };
   const stamped = { ...row, updated_at: at, ...(i < 0 ? { added_at: at } : { added_at: reg.tables[table][i].added_at || at }) };
   if (i < 0) reg.tables[table].push(stamped); else reg.tables[table][i] = { ...reg.tables[table][i], ...stamped };
   saveRegistry(reg, path);
@@ -743,10 +747,15 @@ function resolveOpenOrder() {
 }
 
 // ── rulings lane (spec §3, C2): his word → a dated row (+ ONE card) ──────────
-export function addRuling({ text, scope, by = "captain", at = nowISO(), source = "acts.design", card = true, path = REGISTRY_PATH, exec = null } = {}) {
+export function addRuling({ text, scope, by = "captain", at = nowISO(), source = "acts.design", card = true, path = REGISTRY_PATH, exec = null, mint = mintId } = {}) {
   if (!clip(text)) return { ok: false, why: "a ruling is his words — empty text is refused" };
   if (!["architecture", "learning-method"].includes(scope)) return { ok: false, why: 'scope is a FIELD: "architecture" | "learning-method" (C2 — never a second lane)' };
-  const id = `rul-${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, "0")}`;
+  // unit mid (forks row 1159 (1), F-5 A): the mint takes the clock of `at` (plantable), and (row 1159 (2)) an id already held by a
+  // rulings row is re-minted ONCE, else the ruling is refused by name — never upserted over his earlier words.
+  const held = new Set(((loadRegistry(path).tables || {}).rulings || []).map((x) => x && x.id).filter(Boolean));
+  let id = mint("rul-", new Date(at));
+  if (held.has(id)) id = mint("rul-", new Date(at));
+  if (held.has(id)) return { ok: false, why: `ruling id ${id} is already held by a rulings row, twice minted — refused, nothing written (his earlier ruling stays as it was)` };
   const r = upsertRow("rulings", { id, at, scope, by, source, text: clip(text, 2000) }, { path });
   if (!r.ok) return r;
   let cardResult = null;

@@ -81,6 +81,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 import { tmpdir, homedir } from "node:os";
 import { randomBytes } from "node:crypto";
+import { mintId } from "./mint.mjs";   // unit mid (forks row 1159 (1)) — the ONE shared mint (the agenda id had NO random part)
 import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE intent door — no organ keeps its own word list
 import { isStale as forgeIsStale } from "./forge_session.mjs";   // W0-D — the route asks the pacer whether its session is stale; it used to re-derive it from started_at with a bare 18
 import { transcriptPathFor } from "./study_scope.mjs";   // G0 (23 Sep) — the leaf's one derivation of where a session's transcript lives
@@ -177,20 +178,33 @@ function appendRow(p, row) { mkdirSync(dirname(p), { recursive: true }); appendF
 // {kind:"drop", of, ts}. acts.mjs verb `agenda` rides `agenda add`; `open` serves every open row
 // into the head (his asks FIRST) and marks them served; `close` marks the served rows done.
 export function agendaRows() { return readRows(F.agenda()); }
+// unit mid (forks row 1159 (2), F-3 A): an id held by TWO agenda rows is AMBIGUOUS — an ask minted before the shared mint shared its
+// id with any other ask in the same ms (measured: dropping ONE closed BOTH, his second ask vanished unserved). The open list NAMES
+// the pair (`ambiguous: n`); done and drop REFUSE it by name — no row appended, both asks stay open.
+const agendaHeldBy = (rows, id) => rows.filter((r) => r && r.kind === "agenda" && r.id === id).length;
+export const agendaAmbiguous = (id, rows = agendaRows()) => { const n = agendaHeldBy(rows, id); return n > 1 ? `agenda ${id} is held by ${n} agenda rows — ambiguous: two rows hold one id, nothing closed` : null; };
 export function openAgenda(rows = agendaRows()) {
   const closed = new Set(rows.filter((r) => r.kind === "done" || r.kind === "drop").map((r) => r.of));
-  return rows.filter((r) => r.kind === "agenda" && r.id && !closed.has(r.id)).map((r) => ({ id: r.id, ts: r.ts, text: r.text, by: r.by || "captain", served: rows.some((x) => x.kind === "served" && x.of === r.id) }));
+  return rows.filter((r) => r.kind === "agenda" && r.id && !closed.has(r.id)).map((r) => { const n = agendaHeldBy(rows, r.id); return { id: r.id, ts: r.ts, text: r.text, by: r.by || "captain", served: rows.some((x) => x.kind === "served" && x.of === r.id), ...(n > 1 ? { ambiguous: n } : {}) }; });
 }
 export function agendaAdd(text, { by = "captain", now = new Date() } = {}) {
   const t = String(text || "").trim().slice(0, 500);
   if (!t) return { ok: false, why: "agenda needs his words" };
   const dup = openAgenda().find((r) => r.text === t);
   if (dup) return { ok: true, id: dup.id, dup: true };
-  const id = `ag${now.getTime().toString(36)}`;
+  const id = mintId("ag", now);
   appendRow(F.agenda(), { kind: "agenda", id, ts: now.toISOString(), text: t, by });
   return { ok: true, id };
 }
-export function agendaMark(kind, ids, extra = {}, now = new Date()) { for (const id of ids) appendRow(F.agenda(), { kind, of: id, ts: now.toISOString(), ...extra }); return ids.length; }
+export function agendaMark(kind, ids, extra = {}, now = new Date()) {
+  const closes = kind === "done" || kind === "drop", rows = closes ? agendaRows() : [];
+  let n = 0;
+  for (const id of ids) {
+    if (closes && agendaAmbiguous(id, rows)) { log(`sitting: ${agendaAmbiguous(id, rows)} (${kind} refused)`); continue; }   // F-3 A: never close a pair
+    appendRow(F.agenda(), { kind, of: id, ts: now.toISOString(), ...extra }); n++;
+  }
+  return n;
+}
 const nowISO = () => new Date().toISOString();
 const istDay = (d = new Date()) => new Date(d.getTime() + 330 * 60000).toISOString().slice(0, 10);   // his day is IST (captain profile tz)
 const clip = (s, n) => { s = String(s ?? ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
@@ -1484,7 +1498,7 @@ async function main() {
         mkdirSync(dirname(F.agenda()), { recursive: true }); writeFileSync(F.agenda(), ""); console.log(`sitting: agenda lane created (empty) — ${F.agenda()}`); return;
       }
       if (sub === "add") { const r = agendaAdd(opt("--text") || rest.slice(1).filter((a) => !a.startsWith("--")).join(" ")); console.log(r.ok ? `sitting: agenda added ${r.id}${r.dup ? " (already open — same words)" : ""}` : `sitting: agenda NOT added — ${r.why}`); process.exit(r.ok ? 0 : 1); }
-      if (sub === "drop") { const id = rest[1]; if (!id || !openAgenda().some((r) => r.id === id)) { console.log(`sitting: no open agenda ${id || "(id?)"}`); process.exit(1); } agendaMark("drop", [id]); console.log(`sitting: agenda dropped ${id}`); return; }
+      if (sub === "drop") { const id = rest[1]; if (!id || !openAgenda().some((r) => r.id === id)) { console.log(`sitting: no open agenda ${id || "(id?)"}`); process.exit(1); } if (agendaAmbiguous(id)) { console.log(`sitting: agenda NOT dropped — ${agendaAmbiguous(id)}`); process.exit(1); } agendaMark("drop", [id]); console.log(`sitting: agenda dropped ${id}`); return; }
       // LOAD ZERO BLOCK 4 — CLOSE (19 Aug 2026). `done` existed as a ROW KIND and as a writer
       // (agendaMark) since LAW A, but it had no DOOR: the only caller was closeSitting() below,
       // and only for rows THAT sitting had served. So an ask born at the Gaffer could never be
@@ -1496,6 +1510,7 @@ async function main() {
         const id = rest[1];
         if (!id) { console.log("sitting: agenda done <id> — kaunsi row?"); process.exit(1); }
         if (!openAgenda().some((r) => r.id === id)) { console.log(`sitting: agenda ${id} is not open (already done/dropped, or never existed) — nothing to close`); process.exit(1); }
+        if (agendaAmbiguous(id)) { console.log(`sitting: agenda NOT closed — ${agendaAmbiguous(id)}`); process.exit(1); }
         agendaMark("done", [id], { by: opt("--by") || "cli" });
         console.log(`sitting: agenda done ${id}`);
         return;

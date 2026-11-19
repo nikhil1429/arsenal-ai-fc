@@ -66,6 +66,7 @@ import { join, dirname } from "node:path";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { mintId } from "./mint.mjs";   // unit mid (forks row 1159 (1)) — the ONE shared mint
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -79,8 +80,9 @@ export const CLAIM_RE = /\b(verified|confirmed|checked|sab green|poora padh|done
 export const DEFAULT_MINUTES = 30;
 
 const sha16 = (s) => createHash("sha256").update(String(s == null ? "" : s), "utf8").digest("hex").slice(0, 16);
-let claimSeq = 0;   // unit mact (forks row 1138 (2), F-3 (b)): the act mint's one-line repair — a process-local sequence, one process never mints the same id twice
-const newId = (now) => `k${now.getTime().toString(36)}${(claimSeq++).toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, "0")}`;
+// unit mact's process-local claimSeq (forks row 1138 (2)) is replaced by the ONE shared mint (unit mid, forks row 1159 (1)):
+// the process id beside the sequence, so two processes on one clock never share a claim id either.
+const newId = (now) => mintId("k", now);
 const argOf = (flag, argv = process.argv) => { const i = argv.indexOf(flag); return i > 0 && argv[i + 1] != null ? String(argv[i + 1]) : null; };
 export const sessionOfEnv = (env = process.env) => String(env.CLAUDE_CODE_SESSION_ID || "").trim() || null;
 

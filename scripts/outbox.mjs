@@ -58,6 +58,7 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { mintId } from "./mint.mjs";   // unit mid (forks row 1159 (1)) — the ONE shared mint, process identity beside the sequence
 import { LANE_CONSUMERS } from "./gate.mjs";   // S7: the off-road CONSUMER MAP lives in the gate now (§1) — this file re-exports the view it always published
 
 const SELF = fileURLToPath(import.meta.url);
@@ -116,7 +117,11 @@ const DEFAULT_MAX_PER_SWEEP = 3;                                 // L7: he is ne
 const BACKLOG_LOUD = 20;
 
 const clip = (s, n = 300) => String(s == null ? "" : s).replace(/\s+/g, " ").trim().slice(0, n);
-const newId = (now) => `o${now.getTime().toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, "0")}`;
+const newId = (now) => mintId("o", now);
+// unit mid (forks row 1159 (2), F-3 A): an id held by TWO post rows is AMBIGUOUS — a row minted before the shared mint may share its
+// id with another (1 in 1296 per pair per ms, measured: the fold kept the first and the ack/deliver of the second landed on it).
+// The fold NAMES the pair (`ambiguous: n`); ack, undeliver and the relay's deliver REFUSE it by name: no row appended.
+const ambiguousWhy = (id, n) => `outbox ${id} is held by ${n} post rows — ambiguous: two rows hold one id, nothing acted on`;
 export const readRows = (p = OUTBOX_LEDGER) => { try { if (!existsSync(p)) return []; return readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } };
 export const keyOf = (producedBy, kind, subject) => createHash("sha1").update(`${producedBy} ${kind} ${clip(subject, 300).toLowerCase()}`).digest("hex").slice(0, 12);
 
@@ -158,6 +163,7 @@ export function fold(rows) {
   const by = new Map();
   for (const r of rows || []) {
     if (!r || !r.ev) continue;
+    if (r.ev === "post" && by.has(r.id)) { const o0 = by.get(r.id); o0.ambiguous = (o0.ambiguous || 1) + 1; continue; }
     if (r.ev === "post") { if (!by.has(r.id)) by.set(r.id, { id: r.id, produced_by: r.produced_by, kind: r.kind, subject: r.subject, body_ref: r.body_ref || null, idempotency_key: r.idempotency_key, priority: r.priority ?? 50, requires_decision: !!r.requires_decision, why_code_cannot_decide: r.why_code_cannot_decide || null, close_ref: r.close_ref || null, created_at: r.ts, delivered_at: null, delivered_via: null, delivered_witnessed: null, delivered_by: null, acked_at: null }); continue; }
     if (r.ev === "sweep") continue;
     const o = by.get(r.of); if (!o) continue;
@@ -250,7 +256,8 @@ export function relay(surface, deps = {}, max = DEFAULT_MAX_PER_SWEEP) {
   if (!SURFACES.includes(s)) return { ok: false, why: `unknown surface "${surface}" (${SURFACES.join("|")})` };
   return withLock(() => {
     const queue = pending(rowsOf(deps));
-    const take = queue.slice(0, Math.max(0, Number(max) || DEFAULT_MAX_PER_SWEEP));
+    const refused = queue.filter((o) => o.ambiguous > 1).map((o) => ambiguousWhy(o.id, o.ambiguous));   // F-3 A: never stamp a pair
+    const take = queue.filter((o) => !(o.ambiguous > 1)).slice(0, Math.max(0, Number(max) || DEFAULT_MAX_PER_SWEEP));
     // R-04 (W0-C, 2 Sep 2026) — A `delivered` STAMP MUST NAME ITS WITNESS.
     // gate.mjs reads `delivered` as "he was shown it", and the only thing that made that
     // legitimate was the note at the call site: the call that DELIVERS is the call that
@@ -270,7 +277,7 @@ export function relay(surface, deps = {}, max = DEFAULT_MAX_PER_SWEEP) {
       o.close_note = c.ok ? (c.closed === false ? c.why : null) : c.why;
     }
     appendRow({ ev: "sweep", ts: now.toISOString(), surface: s, n: take.length }, deps);
-    return { ok: true, surface: s, delivered: take, held_back: Math.max(0, queue.length - take.length) };
+    return { ok: true, surface: s, delivered: take, held_back: Math.max(0, queue.length - take.length), ...(refused.length ? { refused_ambiguous: refused } : {}) };
   }, deps);
 }
 
@@ -291,6 +298,7 @@ export function undeliver(id, why, deps = {}) {
   return withLock(() => {
     const o = fold(rowsOf(deps)).get(id);
     if (!o) return { ok: false, why: `no outbox row ${id}` };
+    if (o.ambiguous > 1) return { ok: false, why: ambiguousWhy(id, o.ambiguous) };
     if (!o.delivered_at) return { ok: false, why: `row ${id} is already pending — nothing to put back` };
     if (o.acked_at) return { ok: false, why: `row ${id} was ACKED by him — his own hand closes a row, and this door does not reopen that` };
     appendRow({ ev: "undeliver", of: id, ts: now.toISOString(), why: String(why) }, deps);
@@ -303,6 +311,7 @@ export function ack(id, deps = {}) {
   return withLock(() => {
     const o = fold(rowsOf(deps)).get(id);
     if (!o) return { ok: false, why: `no outbox row ${id}` };
+    if (o.ambiguous > 1) return { ok: false, why: ambiguousWhy(id, o.ambiguous) };
     if (o.acked_at) return { ok: false, why: `row ${id} already acked at ${o.acked_at}` };
     appendRow({ ev: "ack", of: id, ts: now.toISOString() }, deps);
     return { ok: true, row: fold(rowsOf(deps)).get(id) };

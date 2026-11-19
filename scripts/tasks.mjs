@@ -53,6 +53,7 @@ import { spawnSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { lazySubjects } from "./registry.mjs";   // S10 — task kinds are ROWS now, never literals
+import { mintId } from "./mint.mjs";   // unit mid (forks row 1159 (1)) — the ONE shared mint, process identity beside the sequence
 
 const SELF = fileURLToPath(import.meta.url);
 const __dirname = dirname(SELF);
@@ -89,7 +90,11 @@ export const RUNNERS = {
 };
 
 const clip = (s, n = 300) => String(s == null ? "" : s).replace(/\s+/g, " ").trim().slice(0, n);
-const newId = (now) => `t${now.getTime().toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, "0")}`;
+const newId = (now) => mintId("t", now);
+// unit mid (forks row 1159 (2), F-3 A): an id held by TWO create rows is AMBIGUOUS — a task minted before the shared mint may share its
+// id with another (measured: the fold kept the second and every verb on the id landed on it). The fold NAMES the pair
+// (`ambiguous: n`); claim, progress, finish and fail REFUSE it by name: no row appended, nothing run.
+const ambiguousWhy = (id, n) => `task ${id} is held by ${n} create rows — ambiguous: two rows hold one id, nothing acted on`;
 const stableJson = (o) => { if (o == null || typeof o !== "object") return JSON.stringify(o ?? null); if (Array.isArray(o)) return `[${o.map(stableJson).join(",")}]`; return `{${Object.keys(o).sort().map((k) => `${JSON.stringify(k)}:${stableJson(o[k])}`).join(",")}}`; };
 
 export function readRows(p = TASKS_LEDGER) {
@@ -128,7 +133,8 @@ export function foldTasks(rows) {
   for (const r of rows || []) {
     if (!r || !r.ev) continue;
     if (r.ev === "create") {
-      byId.set(r.id, { id: r.id, key: r.key, kind: r.kind, subject: r.subject, args: r.args || {}, door: r.door || null, by: r.by || null, ttl_h: r.ttl_h ?? DEFAULT_TTL_H, created_at: r.ts, state: "queued", claimed_at: null, runner: null, pid: null, progress: [], replays: 0, finished_at: null, receipt: null, error: null, ms: null });
+      const n = byId.has(r.id) ? (byId.get(r.id).ambiguous || 1) + 1 : 0;
+      byId.set(r.id, { ...(n ? { ambiguous: n } : {}), id: r.id, key: r.key, kind: r.kind, subject: r.subject, args: r.args || {}, door: r.door || null, by: r.by || null, ttl_h: r.ttl_h ?? DEFAULT_TTL_H, created_at: r.ts, state: "queued", claimed_at: null, runner: null, pid: null, progress: [], replays: 0, finished_at: null, receipt: null, error: null, ms: null });
       continue;
     }
     const t = byId.get(r.of);
@@ -210,6 +216,7 @@ function transition(ev, id, extra, deps = {}) {
   return withLedgerLock(() => {
     const t = foldTasks(rowsOf(deps)).get(id);
     if (!t) return { ok: false, why: `no task ${id}` };
+    if (t.ambiguous > 1) return { ok: false, why: ambiguousWhy(id, t.ambiguous), task: t };
     if (!LEGAL[ev].includes(t.state)) return { ok: false, why: `task ${id} is ${t.state} — ${ev} is legal only from ${LEGAL[ev].join("|")}${ev === "claim" ? " (an idempotency key may never be executed twice)" : ""}`, task: t };
     const row = { ev, of: id, ts: now.toISOString(), ...extra };
     appendRow(row, deps);
