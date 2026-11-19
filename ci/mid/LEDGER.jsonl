@@ -9,3 +9,20 @@
 {"ts":"2026-11-19T12:26:47.997Z","act":"base-plant","cmd":"node ci/mid/plant_mid.mjs --org <LF fb42118> (spec 8b2c556)","last_line":"PLANT_MID · 9 readers · 0 error(s) · acts.undo=IDS-DIFFER · claims.mint=IDS-DIFFER · outbox.fold=DROP-SECOND · tasks.fold=OVERWRITE-FIRST · registry.addRuling=MERGE-SECOND-OVER-FIRST · sitting.agenda=DROP-ONE-CLOSES-BOTH · resume_pointer.state=DROP-NEW (read as consumed) · notes_compiler.noteState=SUPERSEDE-ONE-RETIRES-BOTH · notes_corrections.active=SUPERSEDE-ONE-RETIRES-BOTH"}
 {"ts":"2026-11-19T12:26:48.015Z","act":"base-two-proc","cmd":"node ci/mid/two_proc_mid.mjs --org <LF fb42118> (spec 8b2c556)","last_line":"TWO_PROC · acts SAME · claims SAME · proposed differ"}
 {"ts":"2026-11-19T12:26:48.035Z","act":"mint","cmd":"node scripts/mint.mjs selftest","last_line":"✓ mint.mjs selftest — 8 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.319Z","act":"selftest-base","cmd":"node scripts/acts.mjs selftest (LF tree fb42118)","last_line":"acts selftest: 58 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.341Z","act":"selftest-build","cmd":"node scripts/acts.mjs selftest (LF tree dfbc989)","last_line":"acts selftest: 58 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.372Z","act":"selftest-base","cmd":"node scripts/claims.mjs selftest (LF tree fb42118)","last_line":"✓ claims.mjs selftest — 24 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.396Z","act":"selftest-build","cmd":"node scripts/claims.mjs selftest (LF tree dfbc989)","last_line":"✓ claims.mjs selftest — 24 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.419Z","act":"selftest-base","cmd":"node scripts/outbox.mjs selftest (LF tree fb42118)","last_line":"outbox: 46 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.445Z","act":"selftest-build","cmd":"node scripts/outbox.mjs selftest (LF tree dfbc989)","last_line":"outbox: 46 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.470Z","act":"selftest-base","cmd":"node scripts/tasks.mjs selftest (LF tree fb42118)","last_line":"tasks: 38 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.496Z","act":"selftest-build","cmd":"node scripts/tasks.mjs selftest (LF tree dfbc989)","last_line":"tasks: 38 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.521Z","act":"selftest-base","cmd":"node scripts/registry.mjs selftest (LF tree fb42118)","last_line":"registry selftest: 61 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.546Z","act":"selftest-build","cmd":"node scripts/registry.mjs selftest (LF tree dfbc989)","last_line":"registry selftest: 61 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.575Z","act":"selftest-base","cmd":"node scripts/sitting.mjs selftest (LF tree fb42118)","last_line":"sitting selftest: 99 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.603Z","act":"selftest-build","cmd":"node scripts/sitting.mjs selftest (LF tree dfbc989)","last_line":"sitting selftest: 99 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.631Z","act":"selftest-build","cmd":"node scripts/mint.mjs selftest (LF tree dfbc989)","last_line":"✓ mint.mjs selftest — 8 passed, 0 failed"}
+{"ts":"2026-11-19T12:29:03.651Z","act":"build-plant","cmd":"node ci/mid/plant_mid.mjs --org <LF dfbc989> (spec 8b2c556)","last_line":"PLANT_MID · 9 readers · 0 error(s) · acts.undo=IDS-DIFFER · claims.mint=IDS-DIFFER · outbox.fold=IDS-DIFFER · tasks.fold=IDS-DIFFER · registry.addRuling=IDS-DIFFER · sitting.agenda=IDS-DIFFER · resume_pointer.state=DROP-NEW (read as consumed) · notes_compiler.noteState=SUPERSEDE-ONE-RETIRES-BOTH · notes_corrections.active=SUPERSEDE-ONE-RETIRES-BOTH"}
+{"ts":"2026-11-19T12:29:03.673Z","act":"build-two-proc","cmd":"node ci/mid/two_proc_mid.mjs --org <LF dfbc989> (spec 8b2c556)","last_line":"TWO_PROC · acts differ · claims differ · proposed differ"}
+{"ts":"2026-11-19T12:29:03.695Z","act":"build-lawpack","cmd":"node scripts/lawpack.mjs gate (LF tree dfbc989)","last_line":"lawpack: 2 RED — jugad-literal-subject-list 93 · depcruise_errors 13 · bare-catch 37 · receipt-testimony-read 5 · import-time-registry-read 2 · others 0 — every count EQUAL to BASE"}
+{"ts":"2026-11-19T12:29:03.721Z","act":"build-models","cmd":"node scripts/models.mjs check (LF tree dfbc989)","last_line":"exit 0"}
