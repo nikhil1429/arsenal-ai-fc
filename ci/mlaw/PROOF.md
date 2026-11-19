@@ -212,3 +212,98 @@ the same clauses and are not this unit's (FK9).
   to rule. The neutral machine names them NEW only because its merge base is main.
 - **FK8 · the effort receipt.** `campaign-2026-09/tools/effort_receipt.mjs` is not in this repository
   (`Error: Cannot find module …`, exit 1, ledger row). Nothing was written under `campaign-2026-09/`.
+
+## 10. ROW 1152 — THE LAST FOLLOW-UP (19 Nov 2026), and row 1154 (5)
+
+**(3) main merged.** `git fetch origin main && git merge --no-edit fb42118`, a merge commit `d1668bb`, no rebase and no
+force. The one conflict was `scripts/done.mjs`. I resolved it by keeping both sides: main's mrung rung-receipt reader
+(`OLD_RECORDED_DAY` exported, `--receipts`) and mlaw's `his_surfaces` row read plus its selftest. `scripts/conductor.mjs`
+and `scripts/organism_test.mjs` merged on their own. After the merge (19 Nov 2026), `node scripts/conductor.mjs selftest`
+read `ALL CHECKS PASSED (111 passed, 0 failed)`. ⚠ The merge commit's message says "127 passed". That number is my
+error; 111 is the measurement (ledger row "correction"). `ci/mlaw/MERGED.json` records main's LF sha256 of each of the 16
+files main changed since the merge base `224f9b9`. BOUND accepts a non-named file only when its bytes are exactly main's
+(mutant M-MAINBYTE).
+
+**(1) FK6 B.** `ci/mdone/witness_mdone.mjs` and `ci/mdn2/witness_mdn2.mjs`: each plant carries the `his_surfaces` row
+beside its lanes, one line each. Both witnesses at the build against each one's own BASE, and at main `fb42118` (19 Nov
+2026):
+
+```
+mdone @build (cb2c57b) vs its BASE: RED MDONE · D-UNREAD, D-METER, BOUND     @main fb42118: RED MDONE · D-UNREAD, D-METER, BOUND
+mdn2  @build (cb2c57b) vs its BASE: RED MDN2 · N-SUITE, BOUND                @main fb42118: RED MDN2 · N-SUITE, BOUND
+```
+
+The `his_surfaces` reds (D-NOCONS, D-REACH, N-REACH) are gone. What is left is the same at main itself, so it came in with
+the merge and is not this unit's: D-UNREAD / D-METER (`rungs UNREAD · hand 1 REFUSED`: mrung's receipt reader refuses
+mdone's old hand plant) and N-SUITE (`mode done GREEN hermetic, never LIVE false (6 ok)`: main's done mode now holds six
+asserts where the witness counts three). **FK10** names them. ⚠ **Row 1154 (5) arrived after these two edits were pushed.**
+From that moment nothing more goes to these two witnesses. The 1152 follow-up is re-cut on the ms1 ASSEMBLED tip once a
+message names it.
+
+**(2) FK5 B.** `package.json` `organism:selftest` gains `&& node scripts/done.mjs selftest`. The hermetic run (19 Nov 2026):
+
+```
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all
+  ok   SUITE MEMBER · done selftest exits 0
+  orphaned: deck_lint, home_pin, probe, study_scope          (no orphan called done)
+organism_test: 152 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 124 (hermetic: named, not run)
+```
+
+Unit mcov edits the same string, so whichever of the two lands second re-cuts on the first (row 1152 (2)).
+
+**The witness, both ways, on `e667302` (19 Nov 2026):**
+
+```
+node ci/mlaw/witness_mlaw.mjs --org <LF tree of the build> --base-org <LF tree of cf1ca54>
+  ok   LEGS · ok JUGAD (90 at --org, frozen 90; gate exit 0, GREEN) · ok SURFACES · ok COVERAGE (orphans: deck_lint, home_pin, probe, study_scope)
+  ok   HERMETIC · ok RISE (91 → 92 a NEW red; a fall and an equal GREEN) · ok NOLINE (90 → 92 against BASELINE) · ok PORT
+  ok   BOUND · differs from BASE in 20 file(s): named ci/mdn2/witness_mdn2.mjs, ci/mdone/witness_mdone.mjs, package.json, scripts/ci_verdict.mjs, scripts/conductor.mjs, scripts/done.mjs, scripts/organism_test.mjs, scripts/usage_tap.mjs · main's own bytes (MERGED.json fb42118) 12
+  ok   LAST
+GREEN MLAW the law pack judged hermetic, its rise a new red · 10 clause(s)          (exit 0)
+node ci/mlaw/witness_mlaw.mjs --org <LF tree of cf1ca54> --base-org <LF tree of cf1ca54>
+RED MLAW · LEGS · JUGAD · SURFACES · COVERAGE · HERMETIC · RISE · NOLINE · PORT          (exit 1)
+```
+
+**The mutants, on `cb2c57b` (19 Nov 2026):**
+
+```
+  control · GREEN MLAW the law pack judged hermetic, its rise a new red · 10 clause(s) (exit 0)
+  M-LEGS RED by LEGS · M-JUGAD RED by JUGAD · M-SURFACES RED by SURFACES · M-LAWHOME RED by JUGAD · M-COVERAGE RED by COVERAGE
+  M-MAINBYTE RED by BOUND · M-HERMETIC RED by HERMETIC · M-RISE RED by RISE · M-FALL RED by RISE · M-NOLINE RED by NOLINE
+  M-PORT RED by PORT · M-BOUND RED by BOUND · M-LAST RED by LAST
+run_mutants: 13 of 13 mutant(s) RED by the clause that names them · control GREEN
+```
+
+**The law pack count line (`node scripts/lawpack.mjs gate`, 19 Nov 2026):**
+
+```
+BASE  cf1ca54  … jugad-literal-subject-list 93 … depcruise_errors 7     lawpack: 1 RED — a gate may only get stricter (§10-D rule 6)
+build cb2c57b  findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 90 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 7
+               lawpack: GREEN — no law's finding count rose, and every rule is on disk
+```
+
+`node scripts/gates.mjs report` (19 Nov 2026), checkJs / no-empty / no-unused-vars: `224f9b9` 296 / 268 / 82 · `cf1ca54`
+300 / 272 / 82 · pre-merge build `d7d80fb` 300 / 272 / 82 · main `fb42118` 297 / 268 / 85 · the build 301 / 272 / 85. mlaw
+adds 0 to each; the rest is the ms1 base (+4 / +4) plus main (+1 / +3). `node scripts/models.mjs check`: exit 0. The
+touched selftests at the build (19 Nov 2026): ci_verdict 29 passed, 0 failed · conductor 111 passed, 0 failed · done
+5 passed, 0 failed · usage_tap 31/31.
+
+**The neutral runs of `cb2c57b` (read with curl, no token, 19 Nov 2026), merge base main `fb42118`:**
+
+```
+npm test · node 22  run 135509495593  completed/failure · B1_VERDICT RED · pass 215 · fail 5 · live 124 · 1 base red
+   new: WITNESS ‹mdn2› · WITNESS ‹mdone› · WITNESS ‹mf2› · WITNESS ‹mjd3›
+npm test · node 24  run 135509495217  completed/failure · B1_VERDICT RED · pass 214 · fail 6 · live 124 · 1 base red
+   new: WITNESS ‹mdn2› · WITNESS ‹mdone› · WITNESS ‹mf2› · WITNESS ‹mjd3› · WITNESS ‹mlv1›
+```
+
+No law pack red appears on either Windows leg. The new reds are all witnesses, and each is carried: mdone / mdn2 by
+FK10 (the same at main), mf2 / mjd3 by FK9 (the same at `cf1ca54`). **mlv1 is red on node 24 only. NAMED, NOT GUESSED:**
+locally its witness reads `RED MLV1 · BOUND` (BOUND alone, which the member drops) both at the build and at `cf1ca54`, and
+the node 22 leg reads it green. The annotations carry names only, so what node 24 on Windows read is not reachable
+here.
+
+- **FK10 · reds main brought in, carried, not touched:** mdone D-UNREAD / D-METER and mdn2 N-SUITE (above), the same at
+  `fb42118`. They belong to unit mrung's landing or to those witnesses' owners.
+- **FK11 · after row 1154 (5)** the two witness plants wait for the ms1 assembled tip. The re-cut is the next act, and it
+  waits for the message that names that tip.
