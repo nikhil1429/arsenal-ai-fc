@@ -87,5 +87,10 @@
     "type": "command",
     "command": "node \"$CLAUDE_PROJECT_DIR/scripts/usage_tap.mjs\" statusline",
     "padding": 0
+  },
+  "modelSettings": {
+    "claude-opus-5-5": {
+      "effortLevel": "medium"
+    }
   }
 }
