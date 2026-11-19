@@ -7,7 +7,7 @@ with its ledger, `plant_mid.mjs` and `two_proc_mid.mjs`. Every act has its row i
 Every measurement below was taken on 19 Nov 2026 in LF trees (`git archive <sha>`, `git -c core.autocrlf=false init`,
 `npm ci --ignore-scripts`, ANTHROPIC_API_KEY and GITHUB_ACTIONS unset), never in a tree holding his state.
 
-CHECKPOINT · STOPPED at 2026-11-19T12:41Z · resume from: read the check runs of this tip (curl, no token) into THE NEUTRAL MACHINE table, then the effort receipt step (`node campaign-2026-09/tools/effort_receipt.mjs --fleet midb --seat 00 --model claude-opus-5-5`), then the FINAL MESSAGE. The build, witness, mutants and proof are done and pushed.
+~~CHECKPOINT · STOPPED at 2026-11-19T12:41Z~~ — RESUMED on his word #270 (relayed by the runner); the steps it named are done below. No CHECKPOINT open.
 
 ## What was built (row 1159 (1)-(3) only)
 
@@ -176,8 +176,9 @@ unit's, not touched here).
   spec's NAMED command.
 - **FORK-3 · the base law pack is RED on main `fb42118`** (jugad 93/90, depcruise 13/7) — measured, unchanged by this build; whose unit
   lowers it is not this seat's.
-- **FORK-4 · the effort receipt** — `campaign-2026-09/tools/effort_receipt.mjs` is not in this repository; its error is named in the final
-  message and nothing is written under `campaign-2026-09/`.
+- **FORK-4 · the effort receipt** — `node campaign-2026-09/tools/effort_receipt.mjs --fleet midb --seat 00 --model claude-opus-5-5` →
+  `Error: Cannot find module '/home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs'` (`MODULE_NOT_FOUND`, exit 1, 19 Nov 2026):
+  the repository carries no `campaign-2026-09/`. Nothing was written under it.
 
 ## NAMED, NOT GUESSED
 
@@ -194,4 +195,5 @@ Read with `curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commit
 | `7885631` | run `44524298793` | cancelled (a newer push superseded it) |
 | `07f3e1b` | run `44524824295` | cancelled (a newer push superseded it) |
 | `d1b5be1` | run `44525090694` · `135563418930` (node 22) · `135563418710` (node 24) | **success · success** |
-| this checkpoint push | proof + ledger only; read it at its sha with the curl above | |
+| `201bf9c` the checkpoint (full `201bf9c89e73e0e13a3832715bf295105803250a`) | run `44526165559` · `135567188303` (node 22) · `135567188705` (node 24) | **success · success** (curl, no token). `node scripts/ci_verdict.mjs 201bf9c89e73e0e13a3832715bf295105803250a` → `UNREADABLE — … check-runs?per_page=100 answered 403` in this container; the same URL by curl answered 200 |
+| this push (the final tip; its sha is the branch head, named in the FINAL MESSAGE — a file cannot carry its own commit's sha) | proof + ledger only | read by the runner |
