@@ -1,0 +1,14 @@
+{"ts":"2026-11-19T00:05:00Z","act":"branch","cmd":"git fetch origin main && git checkout -b claude/mxw-spec FETCH_HEAD","last_line":"95b07a6 unit mfac-floor (forks row 1106 (1) / newest adoption): land branch"}
+{"ts":"2026-11-19T00:07:00Z","act":"registry-owner","cmd":"grep -n \"SOLE WRITER\" scripts/registry.mjs","last_line":"4://   SOLE WRITER of dressing-room/state/registry.json"}
+{"ts":"2026-11-19T00:09:00Z","act":"hermetic-copy","cmd":"node <scratch>/copy.mjs $PWD && npm ci --ignore-scripts (in the copy)","last_line":"/tmp/mxw-hermetic-QIjvH0"}
+{"ts":"2026-11-19T00:10:00Z","act":"registry-read","cmd":"node scripts/registry.mjs get --table lanes --subject notes_corrections|brief_log --json (keys+paths only printed)","last_line":"brief_log schema_owner learnstate.mjs writes_to brief_log.jsonl files absent"}
+{"ts":"2026-11-19T00:12:00Z","act":"xray-base","cmd":"build() in hermetic copy","last_line":"notes_corrections.jsonl writers [] · brief_log.jsonl writers [] · Q2 1 · Q5 1 · unresolved 2063"}
+{"ts":"2026-11-19T00:14:00Z","act":"writers-grep","cmd":"grep -n appendFileSync|recordBrief|add( scripts/notes_corrections.mjs scripts/learnstate.mjs","last_line":"notes_corrections.mjs:91 · learnstate.mjs:806 · learnstate.mjs:823"}
+{"ts":"2026-11-19T00:17:00Z","act":"xray-build","cmd":"seedDefaults options-bag patch in copy; snap base vs build","last_line":"Q2 1→1 · Q5 1→1 · unresolved 2063→2013 · worse none · both files gain their declared owner"}
+{"ts":"2026-11-19T00:22:00Z","act":"witness","cmd":"node ci/mxw/witness/witness.mjs <xray> <node_modules>","last_line":"base W1 false W2 false W3 true W4 true · build all true"}
+{"ts":"2026-11-19T00:26:00Z","act":"header-regex","cmd":"node ci/mxw/witness/silent.mjs over base/build/regexonly/full","last_line":"regex reads x.jsonl as x.json; full fix Q5 1→6 (probe noise subtracted)"}
+{"ts":"2026-11-19T00:32:00Z","act":"atlas","cmd":"node scripts/flow_atlas.mjs check across base/build rebuild states (copy)","last_line":"build IR+atlas rebuilt exit 0; build IR only exit 2 STALE"}
+{"ts":"2026-11-19T00:36:00Z","act":"xray-selftest","cmd":"node scripts/xray.mjs selftest (copy, base and build)","last_line":"xray: 20 passed, 3 failed (NUL trap) on both"}
+{"ts":"2026-11-19T00:55:00Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (copies with .git, base and build)","last_line":"base 143 passed 3 failed · build 143 passed 3 failed · same UNRULED set"}
+{"ts":"2026-11-19T00:58:00Z","act":"mutants","cmd":"witness.mjs on xray.m2 / xray.m3","last_line":"M2 W4 false · M3 W1 false W2 false"}
+{"ts":"2026-11-19T01:05:00Z","act":"spec","cmd":"write ci/mxw/MXW_SPEC.md","last_line":"verdict (a) xray blind for both rows"}
