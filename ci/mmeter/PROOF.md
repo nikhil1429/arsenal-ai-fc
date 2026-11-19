@@ -104,3 +104,14 @@ ignore: the build reads `orphan verbs 120`, `orphans lanes 5`, as the base.
 ## CI
 
 Read through the public API with curl and `NODE_USE_ENV_PROXY=1 node scripts/ci_verdict.mjs <full sha>`, no token; rows `ci` in the ledger.
+
+Tip `659cb71da732eaf7d5d3ac4ddea3d203de294aa6` (19 Nov 2026), read once:
+```
+135778636966 npm test · node 22 completed success
+135778636657 npm test · node 24 completed success
+ci_verdict 659cb71 GREEN — npm test · node 22: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135778636966] | npm test · node 24: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135778636657] (3 calls)
+```
+The commit carrying this section adds only these lines (proof + ledger); its own runs are judged by its push.
+
+Effort receipt (the brief's last step): `node campaign-2026-09/tools/effort_receipt.mjs --fleet mmeter --seat 00 --model claude-opus-5-5`
+→ `Error: Cannot find module '…/campaign-2026-09/tools/effort_receipt.mjs'` (exit 1); nothing written under campaign-2026-09/.
