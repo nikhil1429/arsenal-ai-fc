@@ -152,7 +152,33 @@ checkJs diagnostics 300 · no-empty 272. The gates mode is LIVE and is red at BA
 
 ## 8. THE NEUTRAL MACHINE (the suite workflow, read through the public API with curl, no token)
 
-CI_PENDING
+Read 19 Nov 2026 with `curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs` and
+`…/check-runs/<id>/annotations`, no token. The runs on `c289ba2`, `b082a95`, `8e4a61f`, `44abb22` and `d7d80fb` were
+cancelled, because a newer push replaced each one. The runs on `b43b7af` (the code of this build; only this proof and the
+ledger change after it):
+
+```
+npm test · node 22  run 135474248776  completed/failure · B1_VERDICT RED · merge base 224f9b9 (main) · pass 210 · fail 5 · live 124 · 1 base red · 4 new red
+npm test · node 24  run 135474249150  completed/failure · B1_VERDICT RED · merge base 224f9b9 (main) · pass 210 · fail 5 · live 124 · 1 base red · 4 new red
+  new red (both legs): WITNESS ‹mdn2› · WITNESS ‹mdone› · WITNESS ‹mf2› · WITNESS ‹mjd3›  (each "… · GREEN at head against its BASE")
+  base red (both legs): EVERY organ with a selftest is wired into a suite (package.json:_selftest_coverage_law)
+```
+
+What the neutral machine shows beside it: no law pack red. Both legs ran the law pack in the hermetic profile for the
+first time, and it is not among the five fails, so it was judged green at 90 on Windows too, because `live` fell to 124.
+No `LAW PACK ROSE` new red appeared either. The CI merge base is main `224f9b9`, not this seat's base, so a red the ms1 base
+already carries reads NEW here. I measured each of the four witnesses locally against its own BASE (19 Nov 2026):
+
+```
+mdone  @b43b7af: RED MDONE · D-REACH, D-NOCONS, BOUND    @cf1ca54: RED MDONE · BOUND        ← this build (FK6)
+mdn2   @b43b7af: RED MDN2 · N-REACH, BOUND               @cf1ca54: RED MDN2 · BOUND         ← this build (FK6)
+mf2    @b43b7af: RED MF2 · F2 F4 BOUND                   @cf1ca54: RED MF2 · F2 F4 BOUND    ← inherited from the ms1 base (FK9)
+mjd3   @b43b7af: RED MJD3 · J4 BOUND                     @cf1ca54: RED MJD3 · J4 BOUND      ← inherited from the ms1 base (FK9)
+```
+
+The witnesses member drops BOUND. So two of the four new reds are this build's, both from the ruled "absent row is a
+named red" meeting two witnesses whose plants hold no such row (FK6). The other two are already red at `cf1ca54` with
+the same clauses and are not this unit's (FK9).
 
 ## 9. FORKS
 
@@ -178,5 +204,10 @@ CI_PENDING
   named files gain those two witnesses. A fallback in done.mjs is not an option: the ruling forbids one.
 - **FK7 · carried, not touched** (row 1146 (4)): the spec's F7 (hermetic coverage red) and F8 (`gates` no-empty red, mode
   LIVE) belong to mlaw2 / mcov / mgat. The conductor selftest stays LIVE in hermetic (a PLANT member).
+- **FK9 · two witnesses already red in the ms1 base, carried, not touched.** `ci/mf2/witness_mf2.mjs` reads `RED MF2 · F2 F4`
+  (F2 "base hermetic judged 140, build 148 … judged only by the build: MPOOL · usage_tap selftest runs in the hermetic …"; F4
+  "full profile: base 304 member(s), build 310", 19 Nov 2026). `ci/mjd3/witness_mjd3.mjs` reads `RED MJD3 · J4` ("round 1
+  exit 9 after 2 rep(s)"). Both read the same at `cf1ca54` and at this build. They are the ms1 seat's or their own units'
+  to rule. The neutral machine names them NEW only because its merge base is main.
 - **FK8 · the effort receipt.** `campaign-2026-09/tools/effort_receipt.mjs` is not in this repository
   (`Error: Cannot find module …`, exit 1, ledger row). Nothing was written under `campaign-2026-09/`.

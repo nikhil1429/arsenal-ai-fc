@@ -27,3 +27,5 @@
 {"ts":"2026-11-19T09:44:29.848Z","act":"mutants","cmd":"node ci/mlaw/run_mutants_mlaw.mjs (on d7d80fb)","last_line":"run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-19T09:44:29.873Z","act":"hermetic","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (build)","last_line":"organism_test: 147 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 124 (hermetic: named, not run)"}
 {"ts":"2026-11-19T09:44:29.902Z","act":"fork-FK6","cmd":"witness_mdone / witness_mdn2 at d7d80fb vs their BASE","last_line":"RED MDONE · D-REACH, D-NOCONS, BOUND · RED MDN2 · N-REACH, BOUND (their plants hold no his_surfaces row)"}
+{"ts":"2026-11-19T10:31:04.504Z","act":"ci-read","cmd":"curl …/commits/b43b7af/check-runs + annotations (no token)","last_line":"node 22 run 135474248776 · node 24 run 135474249150: B1_VERDICT RED · 4 new red WITNESS ‹mdn2› ‹mdone› ‹mf2› ‹mjd3› · base red coverage law · no law pack red"}
+{"ts":"2026-11-19T10:31:04.544Z","act":"measure","cmd":"witness_mf2 / witness_mjd3 at b43b7af and at cf1ca54","last_line":"identical both: RED MF2 · F2 F4 BOUND · RED MJD3 · J4 BOUND (inherited)"}
