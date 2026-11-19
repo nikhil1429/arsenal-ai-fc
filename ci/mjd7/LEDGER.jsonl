@@ -1,0 +1,12 @@
+{"ts":"2026-11-19T00:24:38.205Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mjd7-build FETCH_HEAD","last_line":"95b07a604ef22f2a215bfc56e4ff45990177a437"}
+{"ts":"2026-11-19T00:24:38.205Z","act":"measure-base","cmd":"node scripts/captains_call.mjs selftest","last_line":"captains_call selftest: 150 passed, 0 failed"}
+{"ts":"2026-11-19T00:24:38.205Z","act":"measure-base","cmd":"node scripts/models.mjs check","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)"}
+{"ts":"2026-11-19T00:24:38.205Z","act":"build","cmd":"git commit scripts/captains_call.mjs","last_line":"05963c8"}
+{"ts":"2026-11-19T00:24:38.205Z","act":"measure-build","cmd":"node scripts/captains_call.mjs selftest","last_line":"captains_call selftest: 156 passed, 0 failed"}
+{"ts":"2026-11-19T00:24:38.205Z","act":"witness-build","cmd":"node ci/mjd7/witness_mjd7.mjs --org <build export> --base-org <base export>","last_line":"GREEN MJD7 the sweep reads the grade queue from its cursor — one whole read only when the cursor is missing, ahead or rewritten · 6 clause(s)"}
+{"ts":"2026-11-19T00:24:38.205Z","act":"witness-base","cmd":"node ci/mjd7/witness_mjd7.mjs --org <base export> --base-org <base export>","last_line":"RED MJD7 · C1 F1 F2 F3"}
+{"ts":"2026-11-19T00:24:38.205Z","act":"witness-mjd6","cmd":"node witness_mjd6.mjs (3966f61) --org <build export> --base-org <base export>","last_line":"GREEN MJD6 a failed retire never leaves a settled card live — the owner's sync sweeps it, once · 5 clause(s)"}
+{"ts":"2026-11-19T00:24:38.205Z","act":"mutants","cmd":"node ci/mjd7/run_mutants_mjd7.mjs --org <build export> --base-org <base export>","last_line":"run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-19T00:24:38.205Z","act":"suite-build","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 145 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-19T00:24:38.205Z","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (base captains_call.mjs)","last_line":"organism_test: 145 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-19T00:24:38.205Z","act":"xray","cmd":"node scripts/xray.mjs report","last_line":"Q2 (0) · Q5 (0)"}
