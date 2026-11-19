@@ -25,8 +25,10 @@
 //       20000 turns, append injected → 0 turns holding two equal ids (the probe also prints how many turns minted in one ms)
 //   W3  the acts selftest under EVERY forced pair (pair_random.mjs over all j<k of the Math.random calls a control run counts)
 //       → the control GREEN and 0 red pairs
-//   W4  a red is NAMED, never a throw: the org's acts.mjs with its mint line replaced by the BASE's (the collision put back)
-//       + pair 0-2 → the last line `acts selftest: N passed, M failed` with M ≥ 1, and no stack (`Node.js v`, `TypeError`)
+//   W4  a red is NAMED, never a throw: the org's acts.mjs with the BASE's behaviour put back — its mint line replaced by the
+//       base's (the collision) and the two-row refusal, where the tree has one, switched off (so undo acts on the wrong row as
+//       the base does; with the refusal on, `uN.ok && …` short-circuits and the guard is never reached — measured 19 Nov 2026,
+//       mutant M4 at :497 SURVIVED) + pair 0-2 → the last line `acts selftest: N passed, M failed` with M ≥ 1, and no stack
 //   W5  F-2 (c): undo, resolve and reroute REFUSE an id held by two rows — the id itself and the `--by` id — and on a refusal
 //       no owner is called and no row is appended
 //   W6  F-3 (b): the claims mint, the same plant as W1 (pinned random, one fixed now, 32 fileClaim with an injected runner and
@@ -197,11 +199,12 @@ try {
       const baseLine = (MINT.exec(readFileSync(join(BASE_ORG, "scripts", "acts.mjs"), "utf8").replace(/\r\n/g, "\n")) || [])[0];
       const W4 = join(ROOT, "org-w4"); copyOrg(ORG, W4);
       const f = join(W4, "scripts", "acts.mjs"), src = readFileSync(f, "utf8").replace(/\r\n/g, "\n");
+      const TWO = /^const idHeldByTwo = .*$/m;   // the build's two-row refusal (F-2 (c)); the base has none
       const hit = baseLine && MINT.test(src);
-      if (hit) writeFileSync(f, src.replace(MINT, () => baseLine));
+      if (hit) writeFileSync(f, src.replace(MINT, () => baseLine).replace(TWO, () => "const idHeldByTwo = () => false;"));
       const r = node(W4, [...preload("pair_random.mjs"), ...SELF], { MACT_PAIR: "0,2" });
       const h = headline(r.stdout), m = h ? Number(/, (\d+) failed/.exec(h)[1]) : 0, st = stacked(r.stdout + r.stderr);
-      clause("W4", hit && h && m >= 1 && !st, hit ? `the base mint put back + pair 0-2 · exit ${r.status} · ${h || "NO HEADLINE"} · stack ${st ? "YES" : "none"}` : "the mint line is not found in one of the trees");
+      clause("W4", hit && h && m >= 1 && !st, hit ? `the base mint + no two-row refusal put back + pair 0-2 · exit ${r.status} · ${h || "NO HEADLINE"} · stack ${st ? "YES" : "none"}` : "the mint line is not found in one of the trees");
     }
   }
   if (want("W5")) {

@@ -36,7 +36,7 @@ const MUTANTS = [
   { id: "M1", clause: "W1", file: "scripts/acts.mjs", why: "the act sequence never advances", from: "${(idSeq++).toString(36)}", to: "${(idSeq).toString(36)}" },
   { id: "M2", clause: "W2", file: "scripts/acts.mjs", why: "a validation-refused act mints without the sequence (the base shape)", from: "  const id = newId(now);\n", to: `  const id = v.ok ? newId(now) : ${BASE_MINT};\n` },
   { id: "M3", clause: "W3", file: "scripts/acts.mjs", why: "the sequence is a local of the mint (resets every call)", from: "${(idSeq++).toString(36)}", to: "${(() => { let s = 0; return s++; })().toString(36)}" },
-  { id: "M4", clause: "W4", file: "scripts/acts.mjs", why: "the undo(agenda) assert's guard removed (calls[9].argv on undefined throws)", from: 'calls[9]?.argv?.join(" ") === "agenda drop ag1"', to: 'calls[9].argv.join(" ") === "agenda drop ag1"' },
+  { id: "M4", clause: "W4", file: "scripts/acts.mjs", why: "the undo(pref) assert's guard removed (calls[10].argv on undefined throws, the base's crash line)", from: 'calls[10]?.argv?.join(" ") === "forget how_to_speak"', to: 'calls[10].argv.join(" ") === "forget how_to_speak"' },
   { id: "M5", clause: "W5", file: "scripts/acts.mjs", why: "the two-row test counts three (an id held by two rows passes)", from: "rows.filter((r) => r && r.id === id).length > 1;", to: "rows.filter((r) => r && r.id === id).length > 2;" },
   { id: "M6", clause: "W6", file: "scripts/claims.mjs", why: "the claims sequence never advances", from: "${(claimSeq++).toString(36)}", to: "${(claimSeq).toString(36)}" },
 ];
