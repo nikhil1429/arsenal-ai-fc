@@ -254,3 +254,5 @@ Read with `curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commit
 
 | Push | Check runs | Verdict |
 |---|---|---|
+| `2b321a6` the spec | run `44506813623` · `135500460318` (node 22) · `135500459799` (node 24) | **success · success** |
+| this row's own push | spec-only edit; read it at its sha with the curl above | |
