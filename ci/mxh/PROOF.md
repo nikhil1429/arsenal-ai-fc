@@ -184,9 +184,12 @@ prints `static NO (its declared consumer reads none of its files)` (`done.mjs:19
 ```
 GET /repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs
 0a806df  run 44449464936  jobs 135309655574 (node 24) / 135309655110 (node 22)  completed / cancelled (superseded)
-fc2892e  run 44449696556  jobs 135310410201 (node 24) / 135310409759 (node 22)  in_progress when read
+fc2892e  run 44449696556  jobs 135310410201 (node 24) / 135310409759 (node 22)  completed / cancelled (superseded)
+74afba9  run 44449913349  jobs 135311126307 (node 22) / 135311125995 (node 24)  completed / SUCCESS
+861cb64  run 44492550507  jobs 135451665391 (node 22) / 135451665781 (node 24)  completed / SUCCESS   (the last build push)
 ```
-The runs of the last push are named in the seat's FINAL MESSAGE and in the ledger.
+This file was first pushed in **6b8af93** (after 74afba9). The push that carries this §10 update is read through the
+same API, and its run is the next row of `ci/mxh/LEDGER.jsonl`.
 
 ## 11 · FORKS (each one line)
 
