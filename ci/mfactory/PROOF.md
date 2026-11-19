@@ -95,3 +95,11 @@ See the last ledger row: `node campaign-2026-09/tools/effort_receipt.mjs …` �
 
 The neutral legs of each push are read through the public API (curl, no token) and named in `LEDGER.jsonl`; the final
 tip's legs are named in the session's final message.
+
+### CI of the work tip (19 Nov 2026)
+
+```
+NODE_USE_ENV_PROXY=1 node scripts/ci_verdict.mjs 3ce7e2c85c627e8e1cf530ac14d8bb8bad8b2dac
+ci_verdict 3ce7e2c GREEN — npm test · node 22: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135778546010] | npm test · node 24: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135778545339] (3 calls)
+```
+The commit that carries this section changes only this file and the ledger; its own legs are named in the seat's final message.
