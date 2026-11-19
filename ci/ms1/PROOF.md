@@ -570,3 +570,5 @@ the ledger and the seat's final message (writing them here would be a new push w
   - Fixed in the commit carrying this line, a doc-only edit: that line is dated `(19 Nov 2026)`. No witness or organ byte
     moves. Measured: zero undeclared lines over every tracked `.md` (the BLOCK 7 scan, 19 Nov 2026). **The assembled tip is
     now this commit**; its legs are in the ledger and the final message.
+
+CHECKPOINT · STOPPED at 2026-11-19T12:41Z · resume from: read both neutral legs of the assembled tip 1582be0 (run in progress at the stop) through the public API with curl, write every member line and the run ids into §13.1, then go idle for the architect re-run.
