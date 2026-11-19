@@ -348,7 +348,7 @@ function selftest() {
     t("a row with a wrong prev_sha256 breaks the chain from that row on", broke.brokenAt === 3 && clauseVerdict("S1:c1", cmd, broke).why === "chain");
     t("a typed verdict flag is refused before anything runs", !parseArgs(["green", "--rung", "S1", "--clause", "c1", "--day", "2026-11-20", "--verdict", "GREEN"]).ok);
     t("an unknown verb is refused", !parseArgs(["green-now"]).ok);
-    t("ARSENAL_RUNG_STATE_DIR outside os.tmpdir() is refused", !stateDir({ [STATE_ENV]: ROOT }).ok && stateDir({ [STATE_ENV]: dir }).ok);
+    t("ARSENAL_RUNG_STATE_DIR outside os.tmpdir() is refused", !stateDir({ [STATE_ENV]: join(dirname(real(tmpdir())), `not-tmp-${process.pid}`) }).ok && stateDir({ [STATE_ENV]: dir }).ok);
     t("the witness bound is read from an owner, a positive integer", Number.isInteger(WITNESS_TIMEOUT_MS) && WITNESS_TIMEOUT_MS > 0);
     t("the plan reader refuses an absent plan and a plan without source_sha256", !readPlan(dir).ok);
   } finally { rmSync(dir, { recursive: true, force: true }); }
