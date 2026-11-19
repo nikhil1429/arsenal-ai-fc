@@ -5,7 +5,8 @@ merge, no live model call, no connector, nothing deleted. Every measurement belo
 on LF trees. Its command is beside it, and its row is in `ci/mlaw/LEDGER.jsonl`.
 
 Row 1146 (the architect, 19 Nov 2026) ruled on my first proof's FK1–FK3: (1) FK1 A, (2) FK2 as one path, (3) the pass
-line stays 90, reached by cause, (4) FK4 stands, FK5/FK6 belong to other units. This proof is the build after that ruling.
+line stays 90, reached by cause, (4) FK4 stands, FK5/FK6 belong to other units. §2–§9 are the build after that ruling. Row 1152, the last follow-up, is §10, which supersedes
+the witness, mutants and neutral-run lines of §3, §4 and §8.
 
 ## 1. BASE
 
@@ -187,11 +188,11 @@ the same clauses and are not this unit's (FK9).
   `law-waiver:jugad` marker is on any line. (ii) The spec's W1 mutant has nothing to delete: it is LEGS / JUGAD / SURFACES
   here. (iii) W4 (a fall is not red) is folded into RISE (mutant M-FALL). (iv) W5 / W6 / W7 test P4 (the planted tree),
   which row 1137 (3) does not give this unit. The LIVE tables' "only shrink" check rides HERMETIC.
-- **FK5 · `done.mjs` now has a selftest, and no package.json suite string names it.** The coverage law's orphan list
+- **FK5 · RULED B (row 1152 (2)) and BUILT, see §10.** Was: `done.mjs` now has a selftest, and no package.json suite string names it.** The coverage law's orphan list
   gains `done` (the same assert name, red at BASE too). `package.json` is not one of my named files. (A) the seat that
   wires the four orphans (unit mcov, row 1143) adds `node scripts/done.mjs selftest` to a suite string · (B) mlaw's named
   files gain `package.json`.
-- **FK6 · TWO EARLIER WITNESSES PLANT A REGISTRY WITH NO `his_surfaces` ROW, so the ruled named red now shows in them.**
+- **FK6 · RULED B (row 1152 (1)) and BUILT, see §10.** Was: TWO EARLIER WITNESSES PLANT A REGISTRY WITH NO `his_surfaces` ROW, so the ruled named red now shows in them.**
   Measured at `d7d80fb` against each unit's own BASE (19 Nov 2026): `ci/mdone/witness_mdone.mjs` reads `RED MDONE ·
   D-REACH, D-NOCONS, BOUND`. D-NOCONS's line is `reach RED — no live mechanisms row "his_surfaces" …`, and D-REACH reads
   reach REACHED false. At BASE `cf1ca54` it read `RED MDONE · BOUND`. `ci/mdn2/witness_mdn2.mjs` reads `RED MDN2 ·
