@@ -13,9 +13,9 @@ Windows Task Scheduler + `ntfy.sh`. **FREEZE: deferred by his word 18 Aug 2026 u
 guard is built and dormant** (`node scripts/freeze.mjs status`; it arms the day `FREEZE.md` returns to the root —
 record: `docs/archive/FREEZE__deferred-2026-08-18.md`). **LAW M (18 Aug 2026): no organ names a model — a ROLE; `scripts/models.mjs`
 resolves the live Gemini model + key and says why (`node scripts/models.mjs status` · `check` = 0 literals outside it).
-**⛔ 20 Aug 2026 — THE ORGANISM IS SWITCHED OFF by his order** (all ArsenalFC tasks Disabled, daemons killed;
-ONE exception: thalamus, capture-only, zero tokens). RED state lines are EXPECTED and deliberate; **re-enable
-NOTHING** — the reboot is rung S12 of the open work order's §10 ladder, on HIS word only, stage by stage.
+**Switched OFF by his 20 Aug 2026 order, back ON by his 30 Aug 2026 haan** — both words, cited:
+`grep -n "nothing burns tokens\|ORGANISM IS BACK ON" docs/archive/ORGANISM_AUDIT__2026-08-19.md`. What runs NOW
+is never written here: `node scripts/services.mjs status` · `node scripts/state.mjs` (his machine, not a cloud).
 
 ## The ten laws (each is a code path — verify, never recall)
 | # | Law | Verify |
