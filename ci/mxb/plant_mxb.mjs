@@ -26,7 +26,7 @@ import { pathToFileURL } from "node:url";
 export const slash = (p) => p.split(sep).join("/");
 export const SKIP_TOP = new Set([".git", "node_modules", "ci"]);
 export const isState = (rel) => rel === "dressing-room/state" || rel.startsWith("dressing-room/state/");
-export const nodeModulesOf = (...dirs) => dirs.filter(Boolean).map((d) => join(d, "node_modules")).find((d) => existsSync(join(d, "acorn")));
+export const nodeModulesOf = (...dirs) => dirs.filter(Boolean).map((d) => resolve(d, "node_modules")).find((d) => existsSync(join(d, "acorn")));
 
 export function plant(src, dst, { eol = "lf", nm } = {}) {
   mkdirSync(dst, { recursive: true });
