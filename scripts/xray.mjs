@@ -441,13 +441,14 @@ function analyzeFile(absPath, src) {
   const callArgs = [];          // deferred: [fnName, [AbsVal]]
 
   // unit mxh N1: every name a parameter list binds — plain, defaulted, destructured (any depth), rest.
-  const patternNames = (ps) => { const out = []; const go = (p) => { if (!p) return;
-    if (p.type === "Identifier") out.push(p.name);
-    else if (p.type === "AssignmentPattern") go(p.left);
-    else if (p.type === "RestElement") go(p.argument);
-    else if (p.type === "ArrayPattern") p.elements.forEach(go);
-    else if (p.type === "ObjectPattern") p.properties.forEach((q) => go(q.type === "RestElement" ? q.argument : q.value)); };
-    ps.forEach(go); return out; };
+  const bound = (p) => !p ? []
+    : p.type === "Identifier" ? [p.name]
+    : p.type === "AssignmentPattern" ? bound(p.left)
+    : p.type === "RestElement" ? bound(p.argument)
+    : p.type === "ArrayPattern" ? p.elements.flatMap(bound)
+    : p.type === "ObjectPattern" ? p.properties.flatMap((q) => bound(q.type === "RestElement" ? q.argument : q.value))
+    : [];
+  const patternNames = (ps) => ps.flatMap(bound);
   const maskParams = (scope, ps) => { const sh = patternNames(ps).filter((nm) => scope.has(nm)); if (!sh.length) return scope; const m = new Map(scope); for (const nm of sh) m.delete(nm); return m; };
   const walkBody = (node, scope, ctx) => {
     const visit = (n) => {

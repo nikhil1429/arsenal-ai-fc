@@ -40,7 +40,7 @@ const MUTANTS = [
   { id: "M9", kills: "W7", why: "the N1 mask only in the fixpoint (pass 1 still leaks)", ...XR("        if (inner !== scope) {\n", "        if (false) {\n") },
   { id: "M10", kills: "W7", why: "the N1 mask only in pass 1 (the fixpoint re-analysis still leaks)", ...XR("      let combos = [maskParams(new Map(env), fn.params)];", "      let combos = [new Map(env)];") },
   { id: "M11", kills: "W7", why: "patternNames skips ObjectPattern (the destructured slot of mxw PROOF N1 leaks)",
-    ...XR("    else if (p.type === \"ObjectPattern\") p.properties.forEach((q) => go(q.type === \"RestElement\" ? q.argument : q.value)); };", "    };") },
+    ...XR("    : p.type === \"ObjectPattern\" ? p.properties.flatMap((q) => bound(q.type === \"RestElement\" ? q.argument : q.value))\n", "") },
   { id: "M12", kills: "BOUND", why: "a file beyond the named one changes (scripts/rails.mjs gains a trailing comment line)", file: "scripts/rails.mjs", append: "\n// mxh mutant M12\n" },
   { id: "M13", kills: "LAST", why: "the judged xray leaves a detached node child naming the temp root alive",
     ...XR("export function queries(ir) {", "{ const { spawn } = await import(\"node:child_process\"); spawn(process.execPath, [\"-e\", \"setInterval(() => {})\", (await import(\"node:url\")).fileURLToPath(import.meta.url)], { detached: true, stdio: \"ignore\", windowsHide: true }).unref(); }\nexport function queries(ir) {") },
