@@ -452,3 +452,111 @@ run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GRE
     `‹mrt›` ok · `organism_test: 67 passed, 2 failed · ruled 2 · UNRULED 0`. The two are ‹mf2› and ‹mjd3›, both ruled.
     Nothing is red that was not red at `c637496`.
   - Each neutral leg's mtail line at this tip: §13.1 below.
+- **mr3 `08b4772`** (row 1134) → merge `e54e3b6`. **One conflict, resolved by measurement**: KNOWN_RED. mr3 retires the
+  mjd3 entry, and this branch had already retired mjud (mrj) and mtail (mrt). All three go, and mrt's comment and mr3's
+  retirement note stay. The list now holds ‹mf2› alone. It brings `ci/mr3/` (BASE `52b51c1`) and the re-cut
+  `ci/mjd3/witness_mjd3.mjs` (J4 naming unit mjd4).
+  - Witness after: every clause GREEN except BOUND (`scripts/brain.mjs`, `scripts/keeper.mjs`: mrt's files, §13 above).
+    Base `224f9b9`: RED.
+  - Member after (Linux, 19 Nov 2026): `WITNESS ‹mjd3› · GREEN at head against its BASE` ok (`RED MJD3 · BOUND`) ·
+    `organism_test: 69 passed, 2 failed · ruled 1 · UNRULED 1`. ‹mf2› is ruled (mrf to come).
+  - **NEW, fork F-f (for the architect): `WITNESS ‹mr3›` is RED: `RED MR3 · K3 BOUND`.** mr3's K3 claims "the tree's
+    KNOWN_RED = the base's list minus exactly ‹mjd3›". On the assembled branch, mrj and mrt have also retired their
+    entries, so the list differs from mr3's base by more than ‹mjd3›. Like BOUND and like F-a's did-not-touch
+    conjunct, it is a seat-time claim that the next merge overtakes. It is not a regression of mjd3, and it is not one
+    of my ADDED edits. Fate options, the architect's call:
+    - (a) K3's "nothing else changed" half moves into mr3's own BOUND, keeping "‹mjd3› absent, nothing joined" — the
+      F-a shape (a fifth ADDED edit, or mr3's seat).
+    - (b) mr3's BASE is re-taken at the assembled tree.
+  - The `cf1ca54` neutral run (`44444943278`) was cancelled by this push, so the per-leg mtail line comes from the next
+    tip's run.
+- **mrf `542dec7`** (= `5378193` + `ci/mrf/PROOF.md` and `LEDGER.jsonl` only; rows 1127 (1)-(2)) → merge `5368b82`.
+  **One conflict, resolved by measurement**: KNOWN_RED. mrf retires the mf2 entry, and the other three retirements
+  stay. **The list is EMPTY** (row 1119 (2)); its retirement notes stay as comments. It brings `ci/mrf/` (BASE `52b51c1`)
+  and the re-cut `ci/mf2/witness_mf2.mjs`.
+  - Witness after: every clause GREEN except BOUND (mrt's files). R1 to R3 plant their own entry, so the empty list
+    leaves them GREEN (row 1112). Base `224f9b9`: RED.
+  - Member after (Linux, 19 Nov 2026): `witness ‹mf2› 241.3 s · RED MF2 · BOUND` → ok · `‹mrf›` ok ·
+    `organism_test: 72 passed, 1 failed · ruled 0 · UNRULED 1`. The one is **‹mr3› K3 (fork F-f)**.
+  - The `38ae428` neutral run (`44447441495`) was cancelled by this push.
+- **main `4b00cf5`** (row 1136 (2): units mtxt2, mtxt2-emit, mxw, mtxt3 and mrung) → merge, clean (organism_test.mjs and
+  package.json included). **Carried**, witness bytes unchanged + BASE as shipped: **mxw** (`claude/mxw-build` `ce9eeb4`,
+  BASE `224f9b9`; its `witness/` subdir is not read by `witness_mxw.mjs`, so it does not ride, F8 A), **mtxt3**
+  (`bb3567a`, BASE `a583afb`), **mrung** (`d76f697`, BASE `224f9b9`) → commit `26f79bb`. Head legs: `RED MXW · BOUND`,
+  `RED MTXT3 · BOUND`, `RED MRUNG · BOUND`. Base legs: `RED MXW · W1 W2 W5`, `RED MTXT3 · O1 … N1, BOUND`,
+  `RED MRUNG · W1 … W13`.
+- **row 1144 (1) · `0a566a0` · fork F-f, an ADDED edit to `ci/mr3/witness_mr3.mjs`:** K3 keeps its behaviour (the ‹mjd3›
+  entry gone, nothing joined). Its nothing-else-changed half (every other base KNOWN_RED entry kept) moves into mr3's
+  own BOUND; the old text is struck in its header. Re-judged: head `RED MR3 · BOUND`; base `52b51c1` `RED MR3 · J4 K1
+  K2 K3`.
+- **row 1144 (2), the list of conjuncts:**
+
+  | Witness · clause | Kind | Overtaking unit (adopting row) | Fate |
+  |---|---|---|---|
+  | mfac · W3.2 (land.mjs byte-identical) | nothing-else-changed | ms1 (row 1066) | moved into BOUND (row 1119 (3)(b)) |
+  | mr3 · K3 (other entries kept) | nothing-else-changed | mrj, mrt, mrf (rows 1129, 1131, 1127) | moved into BOUND (row 1144 (1)) |
+  | **mdn2 · N-SUITE** (the `done` mode prints exactly 3 ok lines; 6 now) | **behaviour** (a count of the mode's asserts) | **mrung** (row 1136) | **NOT moved: fork F-g** |
+  | **mdone · D-UNREAD, D-METER** (`done.mjs line --campaign …` reads `rungs UNREAD · hand 1 REFUSED`) | **behaviour** (done.mjs's campaign read) | **mrung** (row 1136) | **NOT moved: fork F-h** |
+
+- Witness after (19 Nov 2026, against `4b00cf5`): every clause GREEN except BOUND (`scripts/brain.mjs`,
+  `scripts/keeper.mjs`, mrt's); base RED. Member after (Linux): `WITNESSES · 37 unit(s) judged in 673.7 s` ·
+  `organism_test: 77 passed, 2 failed · ruled 0 · UNRULED 2`. The two are **‹mdn2› N-SUITE** and **‹mdone› D-UNREAD
+  D-METER** (F-g, F-h: mrung's, behavioural). **mr3, mf2, mjd3, mjud and mtail all read GREEN.** KNOWN_RED is empty.
+- The assembled tip is named once mrv is merged (row 1144).
+- **main `fb42118`** (units mact, mcon and mxh: `scripts/acts.mjs`, `claims.mjs`, `conductor.mjs`, `xray.mjs`) → merge `4065c5b`,
+  clean. Witness after: every clause GREEN except BOUND (mrt's files). Member after: the same two reds (F-g, F-h).
+- **mrv `e0b8053`** (row 1153 (1)) → merge `79981c6`, clean. It brings `ci/mrv/` (witness, `plant_mrv.mjs`, BASE) and re-cuts the
+  mlv1, mlv2 and mlv3 witnesses (each prints a `PORT_HELD` machine line).
+- **row 1153 (2) F-7 A · `0b3f8a8`, ADDED edits in ms1's own files:** the member echoes every `PORT_HELD …` line a witness
+  prints as the named measurement assert `WITNESS ‹unit› · measured · PORT_HELD …`. Clause **B5.4 PORTHELD** + mutant.
+- **row 1153 (3) F-9 · `0b3f8a8`:** a witness that never ends is killed at the member's own bound and reads the NAMED red
+  `killed at the member's bound (<n> min, suite.yml timeout-minutes): the witness never finished`, never a hang. Clause
+  **B5.3 HANG** plants a witness whose first boot never arrives, under the plant's own workflow copy at timeout-minutes
+  1. Measured 19 Nov 2026: the red arrives after 60.2 s.
+- **row 1153 (5), noted:** on his laptop LIVE-SAFE reads red whenever his services are up; that line alone is never a
+  regression (the member never runs there, B2).
+- **row 1144 (2), the list of conjuncts, completed:**
+
+  | Witness · clause | Kind | Overtaking unit (adopting row) | Fate |
+  |---|---|---|---|
+  | mfac · W3.2 (land.mjs byte-identical) | nothing-else-changed | ms1 (row 1066) | moved into BOUND (row 1119 (3)(b)) |
+  | mr3 · K3 (other entries kept) | nothing-else-changed | mrj, mrt, mrf (rows 1129, 1131, 1127) | moved into BOUND (row 1144 (1)) |
+  | **mtxt3 · K2** (conductor.mjs code skeleton equals the base's) | nothing-else-changed | **mcon** (main `fb42118`, row 1150's stack) | **moved into BOUND (row 1144 (2)), commit after `0b3f8a8`** |
+  | mdn2 · N-SUITE | behaviour | mrung (row 1136) | not moved: fork F-g |
+  | mdone · D-UNREAD, D-METER | behaviour | mrung (row 1136) | not moved: fork F-h |
+  | **mtxt3 · N1** (the new lines state no live count) | **content of new lines** (mcon's new lines carry digits) | **mcon** | **not moved: fork F-i** |
+
+  mtxt3 re-judged: head `RED MTXT3 · N1, BOUND` · base `a583afb` `RED MTXT3 · O1, O2, K1, K2, A1, M1, T1, T2, G1, N1,
+  BOUND` · at its own land commit `3f84c80`, `RED MTXT3 · BOUND`.
+- **Witness and mutants at the assembled tree** (19 Nov 2026, against `fb42118`): every clause GREEN except BOUND
+  (`scripts/brain.mjs`, `scripts/keeper.mjs`, mrt's); base RED on every clause except the two guards ·
+  `run_mutants: 33 of 33 mutant(s) RED by the clause that names them · control GREEN`.
+- **Member at the assembled tree** (Linux, before the mtxt3 move): `WITNESSES · 38 unit(s) judged in 841.3 s` ·
+  (19 Nov 2026) `organism_test: 80 passed, 3 failed · ruled 0 · UNRULED 3` (‹mdn2› N-SUITE, ‹mdone› D-UNREAD D-METER, ‹mtxt3› K2 N1).
+  mrv, mlv1, mlv2, mlv3, mr3, mf2, mjd3, mjud and mtail all read GREEN. `measured · PORT_HELD mlv1 · linux · node v22.23.5
+  · held 2 ms after the kill · 1 probe(s) · bound 246 ms`. KNOWN_RED is empty.
+- **row 1154 · the snapshot class re-stated as properties** (19 Nov 2026). One ADDED edit each, the old text struck in
+  its header. Each carries its two proofs: red at the witness's own base, and a property-breaking mutant red at head.
+
+  | Witness · clause | Property re-stated | Overtaking unit (row) | at its BASE | mutant at head |
+  |---|---|---|---|---|
+  | mdn2 · N-SUITE (`ff7f607`, row 1154 (2)) | this unit's own three named WHAT IS LEFT asserts present and ok, and no WHAT IS LEFT line red (never a count of all) | mrung (1136) | `4d166d3`: RED | one of its asserts renamed → RED (own 2/3) |
+  | mdone · D-UNREAD (`dfbc99d`, row 1154 (3)) | no campaign, and a zero-clause plan v3 list, read `rungs UNREAD`, never a zero count; units still `1 open` | mrung (1136) | `669200d`: RED | done.mjs without its zero-clause guard → `rungs 0/0 GREEN` → RED |
+  | mdone · D-METER (`dfbc99d`, row 1154 (3)) | a receipt triple (rows built by the tree's own rung_receipt.mjs exports) with the meter byte-unchanged and the old recorded day RED → `rungs 1/1 GREEN`; old day rewritten GREEN, or the meter moved → RED | mrung (1136) | `669200d`: RED | rung_receipt.mjs without its "old day reads GREEN" refusal → RED |
+  | mtxt3 · N1 (`a8859b5`, row 1154 (4) under row 1144 (2)) | only the lines this unit added at its own land commit (`ci/mtxt3/OWN_LINES.json`, measured with git, `3f84c80` vs `12f1eca`, fingerprints with digits removed and whitespace collapsed) state no live count; later units' lines are the bound's | mcon (main `fb42118`) | `a583afb`: RED | a digit planted into one of its own conductor.mjs lines → RED |
+
+  Row 1154 (5): unit mlaw re-cuts the same two witness plants (mdn2, mdone) on this assembled tip.
+- **Member over the assembled tree** (Linux, `GITHUB_ACTIONS=true GITHUB_WORKSPACE=<repo>`, 19 Nov 2026):
+  `WITNESSES · 38 unit(s) judged in 842.2 s` · `organism_test: 83 passed, 0 failed · ruled 0 · UNRULED 0`. KNOWN_RED is
+  EMPTY.
+- **ms1's witness and mutants at the assembled tree** (19 Nov 2026, against `fb42118`; ms1's own files are unchanged since):
+  every clause GREEN except BOUND (`scripts/brain.mjs`, `scripts/keeper.mjs`: mrt's adopted files, beyond ms1's named
+  set) · base RED on every clause except the two guards · `run_mutants: 33 of 33 mutant(s) RED by the clause that names
+  them · control GREEN`.
+
+### 13.1 THE ASSEMBLED TIP (row 1119 (2), row 1154 (6))
+
+The assembled tip is **the commit that carries this section**: ms1 + mrj `0fff2e2` + mrt `e2de691` + mr3 `08b4772` + mrf
+`542dec7` + mrv `e0b8053`, with main `fb42118` brought in and KNOWN_RED empty. The land subject names every unit joined by
+plus: **ms1 + mrj + mrt + mr3 + mrf + mrv**. Both neutral legs of this tip are read through the public API; they are in
+the ledger and the seat's final message (writing them here would be a new push with a new verdict).

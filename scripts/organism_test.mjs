@@ -2449,10 +2449,16 @@ function path() {
       // live sitting.json. Exactly the class the suite's own "selftests leave live state
       // untouched" check exists for, arriving through a brand-new door. An ephemeral port
       // with nothing listening on it is the condition this assertion actually names.
+      // unit mrf (forks row 1120 (2) F-3 (b)): the typed port leaves — the port is OS-picked (bound to 0 by a child, read,
+      // released), so nothing listens on it by construction, never by a number nobody chose. The child rides run()'s own bound.
+      const a2Port = run(["-e", "const s=require('node:net').createServer();s.listen(0,'127.0.0.1',()=>{process.stdout.write(String(s.address().port));s.close();});"]).out.trim();
       const ns = run([S("sitting.mjs"), "open", "--surface", "code", "--no-spawn"],
-        { cwd: sb, env: { ...process.env, ARSENAL_SITTING_PORT: "45177", ARSENAL_SITTING_STATE_DIR: join(sb, "dressing-room", "state") } });
+        { cwd: sb, env: { ...process.env, ARSENAL_SITTING_PORT: a2Port, ARSENAL_SITTING_STATE_DIR: join(sb, "dressing-room", "state") } });
+      // unit mrf (forks row 1120 (2) F-2 (a)): the matcher FOLLOWS mday's line. mday (rows 1075 / 1078, F10 A) replaced the
+      // old `… no sitting registered (--no-spawn) …` line with openLocal + openLine (sitting.mjs), so `/no-spawn/` read every
+      // run FAIL from 9f6f9ab on. The claim is unchanged: exit 0, ONE open line through the LOCAL door, no daemon started.
       assert("A2 · `sitting.mjs open --no-spawn` on a box with no daemon exits 0, says so in one line, and spawns no child",
-        ns.code === 0 && /no-spawn/.test(ns.out) && !/could not start the daemon/.test(ns.out), ns.out.slice(0, 250));
+        /^\d+$/.test(a2Port) && ns.code === 0 && /^sitting: (?:OPEN|JOINED) \S+ .* · door local$/m.test(ns.out) && !/could not start the daemon/.test(ns.out), ns.out.slice(0, 250));
       // leave the lane's own fixture behind for the checks below
       WR(SESSION, CLOSED);
     }
@@ -2935,12 +2941,18 @@ async function witnesses() {
       try { r = spawnSync(NODE, [join("ci", unit, /** @type {string} */ (witnessFile(dir, unit))), "--org", orgT, "--base-org", baseT], { cwd: wd, env, stdio: ["ignore", fd, fd], timeout: left, windowsHide: true }); }
       finally { closeSync(fd); }
       for (const p of namingProcs(tmp)) { try { process.kill(p); } catch {} }
-      const j = judgeLast(readFileSync(log, "utf8"), r.status, unit, boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")));
+      const out = readFileSync(log, "utf8");
+      // row 1153 (3) F-9: a witness that never ends (a first boot that never arrives) is killed at the member's own bound
+      // and is a NAMED red, never a hang
+      const killed = !!(r.error && /ETIMEDOUT/.test(String(r.error.code || r.error.message))) || (r.status === null && !!r.signal);
+      const j = killed ? { ok: false, last: "(killed at the bound)", left: `killed at the member's bound (${jobMin} min, suite.yml timeout-minutes): the witness never finished` } : judgeLast(out, r.status, unit, boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")));
       const secs = ((Date.now() - u0) / 1000).toFixed(1);
       console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);
       // the judged name is STABLE, so a KNOWN_RED entry can rule it (row 1107 (1)(c)); its reds ride the detail. The seconds ride
       // their own measurement line: the workflow prints assert lines only (keyOf folds the digits)
       assert(name(`ran in ${secs} s (B5)`), true);
+      // row 1153 (2) F-7 A: every PORT_HELD machine line the witness prints rides as a named measurement line
+      for (const l of out.split(/\r?\n/).map((x) => x.trim()).filter((x) => /^PORT_HELD /.test(x))) assert(name(`measured · ${l}`), true);
       assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
     } finally {
       for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
@@ -2969,21 +2981,26 @@ const KNOWN_RED = [
   // unit ms1 (forks row 1107 (1)(c), row 1066 F11 A stands): the four landed witnesses a LATER landing overtook are RED members,
   // ruled here one each, owner = the re-judge unit row 1107 (2) names. The detail is exact: a NEW clause red beside the ruled
   // one is UNRULED (a new death never hides under an old entry), and the member turning green makes its entry STALE (refused).
-  { assert: "WITNESS ‹mjd3› · GREEN at head against its BASE", detail: "red beyond BOUND: J4", row: 1107, owner: "unit mr3", until: "mr3 re-judges mjd3 J4 (fix, or witness re-cut + BASE re-taken) and lands it" },
   // RETIRED by unit mrt (forks row 1120 (1) / (4)): the mtail entry (row 1107, detail "red beyond BOUND: T3 AUTH") — T3 repaired on main
   // (keeper.mjs a leaf again, depcruise no-circular 7), T2 re-based naming mday; ci/mtail's clauses re-cut in the same diff.
-  { assert: "WITNESS ‹mf2› · GREEN at head against its BASE", detail: "red beyond BOUND: F2 F4", row: 1107, owner: "unit mrf", until: "mrf re-judges mf2 F2, F4 and lands it" },
   // (EMPTY from 13 Oct 2026 to unit ms1's row 1107 entries above) Row 642: every entry of row 639 left the list in the landing that fixed it — NO SHIM
   // CALLEE when lane V's ea8d015 put forge_session contract and hippocampus recall-hint on the CALL shape (the entry
   // read STALE on his tree), the two LOAD ZERO BLOCK 5 lines on row 641 (B) + (C). The next entry joins only by a row.
 ];
-// RETIRED ENTRIES (L9: the record stays, the rule goes) — read them whole in 287df98's KNOWN_RED:
+// RETIRED ENTRIES (L9: the record stays, the rule goes):
+//   · WITNESS ‹mf2› · GREEN at head against its BASE, detail "red beyond BOUND: F2 F4" (row 1107, owner unit mrf). Retired
+//     by unit mrf (forks row 1120 (2) / (4)): mf2's F2 and F4 re-cut MONOTONE (F-1 C, ci/mf2/monotone.mjs) and A2's matcher
+//     following mday's line (F-2 (a)), in the same diff.
+// — and read these whole in 287df98's KNOWN_RED:
 //   · NO SHIM CALLEE (row 639, lane V), detail "prompt: forge_session.mjs contract · prompt: hippocampus.mjs recall-hint
 //     (already loaded — SHIM is a no-op)". The hippocampus death was read through sitting.mjs's `await import("./acts.mjs")`
 //     (its DRIVER loop) and acts' static import of hippocampus: the walk counts every string-literal dynamic import as
 //     loaded, over-count never under-count. Retired when ea8d015 (rows 639 (A) + 641 (D)) put both on the CALL shape.
 //   · LOAD ZERO BLOCK 5, both lines (row 639, lane S): study_scope's ACK_ONLY declared by row 641 (B), the Select-Object
 //     flag matcher no longer read as speech (C).
+//   · WITNESS ‹mjd3› · GREEN at head against its BASE (row 1107, owner unit mr3), detail "red beyond BOUND: J4". Retired by
+//     unit mr3 (row 1112 (1), fate (a)): unit mjd4 (15edfec, row 1030 (2)) re-dispatches a capture in doubt exactly once on
+//     purpose, so mjd3's J4 was re-based in ci/mjd3/witness_mjd3.mjs (old text struck in its header; BASE 074ead9 kept, F1 A).
 function rulingOf(fails, passed, list = KNOWN_RED) {
   const ok = (e) => Number.isInteger(e.row) && e.row > 0 && typeof e.owner === "string" && e.owner.trim() && typeof e.assert === "string" && e.assert;
   const invalid = list.filter((e) => !ok(e)).map((e) => e.assert || "(no assert name)");

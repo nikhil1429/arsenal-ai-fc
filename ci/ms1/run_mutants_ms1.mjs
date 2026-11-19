@@ -45,6 +45,8 @@ const MUTANTS = [
   ["B4.6 DOORLIT", OT, "|[\"'](ARSENAL_[A-Z0-9_]*PORT)[\"']/.exec(m[2]);", "/.exec(m[2]);"],
   ["B5.1 SECONDS", OT, "console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);", ""],
   ["B5.2 NOFETCH", OT, "const inClone = spawnSync(", 'spawnSync("git", ["-C", ROOT, "fetch", "-q", "origin", base], { windowsHide: true });\n    const inClone = spawnSync('],
+  ["B5.3 HANG", OT, "const killed = !!(r.error", "const killed = false; const killedUnread = !!(r.error"],
+  ["B5.4 PORTHELD", OT, "for (const l of out.split(/\\r?\\n/).map((x) => x.trim()).filter((x) => /^PORT_HELD /.test(x))) assert(name(`measured · ${l}`), true);", ""],
   ["B6.1 NOBASE", OT, "if (baseText === null || !/^[0-9a-f]{40}\\r?\\n?$/.test(baseText))", "if (baseText === null) continue;\n    if (!/^[0-9a-f]{40}\\r?\\n?$/.test(baseText))"],
   ["B6.2 SHORT", OT, "!/^[0-9a-f]{40}\\r?\\n?$/.test(baseText)", "!/^[0-9a-f]{7,40}\\r?\\n?$/.test(baseText)"],
   ["B6.3 SKIPWINS", OT, '{ console.log(WITNESS_SKIP); return; }', "{ console.log(WITNESS_SKIP); }"],

@@ -25,7 +25,10 @@
 //            tree's own ast-grep over the tree's own laws/ in a throwaway project, NO rule bites any clean plant, while
 //            in a second throwaway project every RED plant still bites (the instrument is alive) · done.mjs --hermetic
 //            then reads `laws n/n both ways (n/n RED-planted)`.
-//   N-SUITE  organism_test.mjs carries a `done` mode, a member of `all` (listed by its usage line), run under the
+//   N-SUITE  ~~(the mode prints exactly 3 ok lines)~~ RE-CUT by unit ms1 (forks row 1154 (2), an ADDED edit; overtaking unit
+//            mrung, row 1136, which lawfully added its RUNGS asserts to the same mode): THIS unit's own three named asserts
+//            are present and ok and no `WHAT IS LEFT` line is red — never a count of all.
+//            organism_test.mjs carries a `done` mode, a member of `all` (listed by its usage line), run under the
 //            HERMETIC profile and never named LIVE: GREEN on the tree · RED (exit non-zero, the assert named) when the
 //            planted done.mjs prints a second line · RED when one CLEAN_PLANTS entry is planted away.
 // Each clause runs on --base-org (must be RED) and on --org (must be GREEN).
@@ -151,8 +154,11 @@ console.log(JSON.stringify({ sg: !!lp.sgBin(), ids, ruleIds: lp.RULE_IDS, clean:
     const g = suite(t);
     const usage = node(t, [join(t, "scripts", "organism_test.mjs"), "no-such-mode"]);
     const listed = /\|\s*done\s*\|/.test(usage.out) || /\bdone\s*\|\s*all\b/.test(usage.out);
-    const okLines = g.lines.filter((l) => /^\s*ok\s+WHAT IS LEFT · /.test(l)).length;
-    const green = g.code === 0 && okLines === 3 && /LIVE 0 \(hermetic/.test(g.out) && !/^\s*LIVE /m.test(g.out);
+    // ms1 (row 1154 (2)): this unit's OWN named asserts are present and ok, and no WHAT IS LEFT line is red — never a count of all
+    const OWN = ["WHAT IS LEFT · done.mjs --hermetic exits 0 and prints exactly ONE", "WHAT IS LEFT · the hermetic form reads no live state", "WHAT IS LEFT · every laws/*.yml rule is planted BOTH ways"];
+    const okLines = OWN.filter((n) => g.lines.some((l) => l.replace(/^\s*ok\s+/, "").startsWith(n) && /^\s*ok\s+/.test(l))).length;
+    const anyRed = g.lines.some((l) => /^\s*FAIL\s+WHAT IS LEFT/.test(l));
+    const green = g.code === 0 && okLines === OWN.length && !anyRed && /LIVE 0 \(hermetic/.test(g.out) && !/^\s*LIVE /m.test(g.out);
     const t2 = tree(src); const dp = join(t2, "scripts", "done.mjs");
     writeFileSync(dp, readFileSync(dp, "utf8") + `\nconsole.log("a second line, planted");\n`);
     const r2 = suite(t2), twoLines = r2.code !== 0 && /FAIL\s+WHAT IS LEFT · done\.mjs --hermetic exits 0 and prints exactly ONE/.test(r2.out);
@@ -162,7 +168,7 @@ console.log(JSON.stringify({ sg: !!lp.sgBin(), ids, ruleIds: lp.RULE_IDS, clean:
     if (cut !== lsrc) writeFileSync(lp, cut);
     const r3 = suite(t3), oneAway = cut !== lsrc && r3.code !== 0 && /FAIL\s+WHAT IS LEFT · every laws\/\*\.yml rule is planted BOTH ways/.test(r3.out);
     return { ok: green && listed && twoLines && oneAway,
-      why: `mode done GREEN hermetic, never LIVE ${green} (${okLines} ok) · in \`all\` ${listed} · a second line RED ${twoLines} · a clean plant away RED ${oneAway}` };
+      why: `mode done GREEN hermetic, never LIVE ${green} (own ${okLines}/3 ok, a WHAT IS LEFT red ${anyRed}) · in \`all\` ${listed} · a second line RED ${twoLines} · a clean plant away RED ${oneAway}` };
   },
 };
 

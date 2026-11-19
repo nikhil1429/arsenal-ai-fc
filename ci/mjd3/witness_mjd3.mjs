@@ -16,8 +16,17 @@
 //       remains, so the round still returns within the bound and every unsettled item is outstanding.
 //   J3  SECOND DEADLINE · (the judge call answers at once) a second opinion that never answers is handed a deadline ≤ WATCHER_DEADLINE_MS and ≤ what
 //       the round has left, and the round goes on at that deadline (the first judgement stands as one judge).
-//   J4  KILL MID-SETTLE · a process killed after an owner wrote a rep and before its settled row: the next round, in a
-//       fresh process over the same queue, hands no rep to its owner a second time, and names the capture in doubt.
+//   J4  KILL MID-SETTLE — RE-BASED (fate (a), forks row 1112 (1); unit mr3): unit mjd4 (15edfec, ruling row 1030 (2), landed
+//       under rows 1030 (3) / 1033) changed this ON PURPOSE — a capture a kill left in doubt is re-dispatched EXACTLY ONCE under
+//       its idempotency key, and each owner writes nothing for a key already on its own log. The old text, STRUCK (L9):
+//       ~~a process killed after an owner wrote a rep and before its settled row: the next round, in a fresh process over the~~
+//       ~~same queue, hands no rep to its owner a second time, and names the capture in doubt.~~
+//       NOW: a process killed after an owner wrote a rep and before its settled row: the next round, in a fresh process over
+//       the same queue, re-dispatches the capture in doubt exactly once, under the same --idem key as its first hand-off; an
+//       owner that honours the key (writes nothing for a key already on its own log — the plant mirrors that owners' law)
+//       ends with every capture on its log exactly once; every hand-off carries --idem = its capture id; no capture other
+//       than the doubted one is handed twice; the receipt names the doubted capture in resolved_in_doubt (exactly one, of =
+//       it) and in_doubt is empty; the queue carries its settled row with resolved_from "in-doubt".
 //   BOUND only scripts/gaffer_brain.mjs differs between --base-org and --org (callers and the close budget do not move).
 //   LAST  no node process naming this run's temp dir survives.
 // LAST LINE: GREEN MJD3 <what> · <n> clause(s)  (exit 0)  |  RED MJD3 · <clauses>  (exit 1)
@@ -71,10 +80,16 @@ const deps = {
   dispatch: (cmd) => {
     if (!fast) busy(JD);
     const q = cmd && cmd.argv ? cmd.argv[cmd.argv.indexOf("--q") + 1] : null;
-    appendFileSync(rf, JSON.stringify({ q }) + "\n");
+    // the owners' idem law (mjd4, row 1030 (2)): every hand-off is logged; the OWNER log takes a key only once
+    const ix = cmd && cmd.argv ? cmd.argv.indexOf("--idem") : -1, idem = ix >= 0 ? cmd.argv[ix + 1] : null;
+    const ol = rf + ".owner";
+    const have = existsSync(ol) ? readFileSync(ol, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
+    const dup = !!idem && have.some((x) => x.idem === idem);
+    appendFileSync(rf, JSON.stringify({ q, idem }) + "\n");
+    if (!dup) appendFileSync(ol, JSON.stringify({ q, idem }) + "\n");
     dispatches++;
     if (scenario === "kill" && dispatches === 2) process.exit(9);   // the kill: the owner wrote, the settled row did not
-    return { ok: true };
+    return dup ? { ok: true, noop: true, note: "already on its log under " + idem } : { ok: true };
   },
   appendRow: (p, row) => { appendFileSync(qf, JSON.stringify(row) + "\n"); return { ok: true }; },
   keys: ["k0", "k1"],
@@ -86,7 +101,7 @@ if (fast) { deps.fileCard = () => ({ ok: true, out: "" }); deps.secondOpinion = 
 const res = await gb.gradeJudge(deps);
 const elapsed = clock();
 writeFileSync(out, JSON.stringify({ elapsed, B, JD, W: Number(process.env.GAFFER_WATCHER_MS) || null, seen,
-  res: { ok: res.ok, reason: res.reason || null, graded: res.graded, outstanding: res.outstanding, deferred: res.deferred || null, in_doubt: res.in_doubt || null,
+  res: { ok: res.ok, reason: res.reason || null, graded: res.graded, outstanding: res.outstanding, deferred: res.deferred || null, in_doubt: res.in_doubt || null, resolved_in_doubt: res.resolved_in_doubt || null,
     batches: (res.batches || []).map((b) => ({ size: b.size, budget_ms: b.budget_ms, tail_ms: b.tail_ms })) } }));
 process.exit(0);
 `);
@@ -115,7 +130,8 @@ function runIn(org, scenario, R, capMs, f) {
       const o = existsSync(f.out) ? JSON.parse(readFileSync(f.out, "utf8")) : null;
       const q = readFileSync(f.qf, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
       const reps = readFileSync(f.rf, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
-      res({ ...f, code, capped, err: err.split("\n").filter(Boolean).slice(-2).join(" | "), o, q, reps });
+      const owner = existsSync(f.rf + ".owner") ? readFileSync(f.rf + ".owner", "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
+      res({ ...f, owner, code, capped, err: err.split("\n").filter(Boolean).slice(-2).join(" | "), o, q, reps });
     });
   });
 }
@@ -162,11 +178,19 @@ async function main() {
 
   const k1 = await runChild(ORG, "kill", 1, cap, items(4));
   const k2 = await runIn(ORG, "round2", 1, cap, k1);
-  const counts = {}; for (const x of k2.reps) counts[x.q] = (counts[x.q] || 0) + 1;
-  const twice = Object.entries(counts).filter(([, n]) => n > 1).map(([q]) => q);
-  const named = k2.o && Array.isArray(k2.o.res.in_doubt) && k2.o.res.in_doubt.length === 1;
-  clause("J4", k1.code === 9 && k2.o && twice.length === 0 && named,
-    `round 1 exit ${k1.code} after ${k1.reps.length} rep(s) · round 2 reps ${JSON.stringify(counts)} · twice ${twice.length ? twice.join(",") : "none"} · in doubt ${k2.o ? JSON.stringify(k2.o.res.in_doubt) : "no receipt"}`);
+  // J4 re-based (row 1112 (1)): round 2 re-uses round 1's files, so k2.reps (every hand-off) and k2.owner (the owner's log) hold BOTH rounds
+  const doubted = (k1.q.find((x) => x.kind === "dispatching" && !k1.q.some((y) => y.kind === "settled" && y.of === x.of)) || {}).of || null;
+  const keyOf = (q) => "m" + String(q).split(":")[1];
+  const handed = {}; for (const x of k2.reps) handed[x.q] = (handed[x.q] || 0) + 1;
+  const ownerN = {}; for (const x of k2.owner) ownerN[x.q] = (ownerN[x.q] || 0) + 1;
+  const keyed = k2.reps.length > 0 && k2.reps.every((x) => x.idem && x.idem === keyOf(x.q));
+  const onceEach = Array.from({ length: 4 }, (_, i) => ownerN["c:" + i] === 1).every(Boolean);
+  const reOnce = !!doubted && Object.entries(handed).every(([q, n]) => n === (keyOf(q) === doubted ? 2 : 1)) && Object.keys(handed).some((q) => keyOf(q) === doubted);
+  const rid = k2.o ? k2.o.res.resolved_in_doubt : null, idl = k2.o ? k2.o.res.in_doubt : null;
+  const named = Array.isArray(rid) && rid.length === 1 && rid[0].of === doubted && Array.isArray(idl) && idl.length === 0;
+  const settledRow = k2.q.some((x) => x.kind === "settled" && x.of === doubted && x.resolved_from === "in-doubt");
+  clause("J4", k1.code === 9 && !!k2.o && keyed && onceEach && reOnce && named && settledRow,
+    `round 1 exit ${k1.code} after ${k1.reps.length} hand-off(s) · doubted ${doubted} · handed ${JSON.stringify(handed)} · on the owner's log ${JSON.stringify(ownerN)} · every hand-off keyed ${keyed} · resolved ${JSON.stringify(rid && rid.map((x) => x.of))} · in doubt ${JSON.stringify(idl && idl.map((x) => x.of || x))} · settled from in-doubt ${settledRow}`);
 
   // BOUND — every file of the two trees (no .git, no node_modules), by content
   const walk = (root, d = root, acc = new Map()) => {
@@ -192,7 +216,7 @@ async function main() {
 
   const n = greens.length + reds.length;
   if (reds.length) { console.log(`RED MJD3 · ${reds.join(" ")}`); process.exit(1); }
-  console.log(`GREEN MJD3 the settle tail is bounded inside the round's budget and a kill mid-settle never dispatches twice · ${n} clause(s)`);
+  console.log(`GREEN MJD3 the settle tail is bounded inside the round's budget and a kill mid-settle lands each rep on its owner's log exactly once (J4 re-based on mjd4, row 1112 (1)) · ${n} clause(s)`);
   process.exit(0);
 }
 main().catch((e) => { console.log(`RED MJD3 · WITNESS-THREW ${String(e && e.message || e).slice(0, 160)}`); process.exit(1); });
