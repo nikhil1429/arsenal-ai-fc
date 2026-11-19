@@ -440,9 +440,29 @@ function analyzeFile(absPath, src) {
   const paramEnv = new Map();   // fnName -> Map(param -> Set<string>)
   const callArgs = [];          // deferred: [fnName, [AbsVal]]
 
+  // unit mxh N1: every name a parameter list binds — plain, defaulted, destructured (any depth), rest.
+  const bound = (p) => !p ? []
+    : p.type === "Identifier" ? [p.name]
+    : p.type === "AssignmentPattern" ? bound(p.left)
+    : p.type === "RestElement" ? bound(p.argument)
+    : p.type === "ArrayPattern" ? p.elements.flatMap(bound)
+    : p.type === "ObjectPattern" ? p.properties.flatMap((q) => bound(q.type === "RestElement" ? q.argument : q.value))
+    : [];
+  const patternNames = (ps) => ps.flatMap(bound);
+  const maskParams = (scope, ps) => { const sh = patternNames(ps).filter((nm) => scope.has(nm)); if (!sh.length) return scope; const m = new Map(scope); for (const nm of sh) m.delete(nm); return m; };
   const walkBody = (node, scope, ctx) => {
     const visit = (n) => {
       if (!n || typeof n.type !== "string") return;
+      // N1: a function's parameters SHADOW the enclosing binding of the same name (pass 1 descends here)
+      if ((n.type === "FunctionDeclaration" || n.type === "FunctionExpression" || n.type === "ArrowFunctionExpression") && n.params.length) {
+        const inner = maskParams(scope, n.params);
+        if (inner !== scope) {
+          n.params.forEach(visit);                              // defaults evaluate in the OUTER scope
+          const prevCtx = CTX; if (n.id) CTX = n.id.name;
+          walkBody(n.body, inner, ctx);
+          CTX = prevCtx; return;
+        }
+      }
       switch (n.type) {
         case "TryStatement": {
           const c = n.handler;
@@ -620,14 +640,17 @@ function analyzeFile(absPath, src) {
   // harvest_log.jsonl and every `= STATE_DIR)` reader in the repo.
   const seedDefaults = () => {
     for (const [fname, fn] of localFns) {
-      for (const p of fn.params) {
-        if (p.type !== "AssignmentPattern" || p.left.type !== "Identifier") continue;
-        const v = evalNode(p.right, env);
+      // unit mxw: an options-bag default, `f(x, { path = LEDGER } = {})`, seeds its named slot exactly as `f(path = LEDGER)` does.
+      const slots = (p) => p.type === "AssignmentPattern" && p.left.type === "Identifier" ? [[p.left.name, p.right]]
+        : p.type === "AssignmentPattern" && p.left.type === "ObjectPattern" ? slots(p.left)
+        : p.type === "ObjectPattern" ? p.properties.filter((q) => q.type === "Property" && q.value.type === "AssignmentPattern" && q.value.left.type === "Identifier").map((q) => [q.value.left.name, q.value.right]) : [];
+      for (const p of fn.params) for (const [name, right] of slots(p)) {
+        const v = evalNode(right, env);
         if (!isC(v)) continue;
         if (!paramEnv.has(fname)) paramEnv.set(fname, new Map());
         const pe = paramEnv.get(fname);
-        if (!pe.has(p.left.name)) pe.set(p.left.name, new Set());
-        pe.get(p.left.name).add(v.v);
+        if (!pe.has(name)) pe.set(name, new Set());
+        pe.get(name).add(v.v);
       }
     }
   };
@@ -666,7 +689,7 @@ function analyzeFile(absPath, src) {
     // re-analyse every function whose parameter set is known, once per known value
     for (const [fname, fn] of localFns) {
       const pe = paramEnv.get(fname);
-      let combos = [new Map(env)];
+      let combos = [maskParams(new Map(env), fn.params)];
       if (pe) {
         for (const [pname, vals] of pe) {
           const next = [];
@@ -947,13 +970,37 @@ export function build() {
   walkInto(ROOT, repoFiles, repoDirs);
 
   // ── declared SOLE WRITER headers (doc↔code drift, Q5) ─────────────────────
+  // unit mxh (F2): the token ends at a boundary — `x.jsonl` was read as `x.json` (json|jsonl, no
+  // boundary), so no .jsonl lane was ever declared. THE CLAUSE RULE: a token is the organ's OWN
+  // declaration only when it sits in the marker's own clause (no `. ` or `;` between them) and that
+  // clause names no OTHER organ's `.mjs` — "night.mjs is sole writer of night_log.jsonl" in day.mjs
+  // is prose about night.mjs, not day.mjs's claim. Measured in unit mxh's spec (ci/mxh/MXH_SPEC.md §2, its seat branch).
   const declared = [];
+  const STOP = /\.(?=\s|$)|;/g;
+  const lastStop = (t) => { let k = -1; for (const s of t.matchAll(STOP)) k = s.index + 1; return k; };
+  const foreignNamed = (organ, t) => [...t.matchAll(/([A-Za-z0-9_\-]+)\.mjs/g)].some((o) => o[1] + ".mjs" !== organ);
+  // back to the clause start, over wrapped // lines. No line cap is typed: `start` falls strictly on every
+  // step, so the walk ends at the head's first line, a code line, an empty // line or a stop.
+  const clauseBefore = (head, at) => {
+    let start = head.lastIndexOf("\n", at - 1) + 1, txt = head.slice(start, at);
+    for (;;) {
+      const cut = lastStop(txt);
+      if (cut >= 0) return txt.slice(cut);
+      if (start === 0) return txt;
+      const ps = head.lastIndexOf("\n", start - 2) + 1, prev = head.slice(ps, start - 1);
+      if (!/^\s*\/\//.test(prev) || /^\s*\/\/\s*$/.test(prev)) return txt;
+      txt = prev + "\n" + txt; start = ps;
+    }
+  };
   for (const f of files) {
     const src = readFileSync(join(scriptDir, f), "utf8");
     const head = src.slice(0, 12000);
     for (const m of head.matchAll(/(?:SOLE WRITER|sole writer|Single writer|single writer|SINGLE WRITER)[^\n]{0,160}/g)) {
       const line = m[0];
-      for (const fm of line.matchAll(/([A-Za-z0-9_\-.]+\.(?:json|jsonl))/g)) declared.push({ organ: f, file: fm[1] });
+      for (const fm of line.matchAll(/([A-Za-z0-9_\-.]+\.jsonl?)(?![A-Za-z0-9_])/g)) {
+        if (lastStop(line.slice(0, fm.index)) >= 0 || foreignNamed(f, clauseBefore(head, m.index + fm.index))) continue;
+        declared.push({ organ: f, file: fm[1] });
+      }
       if (/capsules\//.test(line)) declared.push({ organ: f, file: "capsules/" });
     }
   }
@@ -1038,7 +1085,7 @@ const NOISE_RE = /^dressing-room\/state\/(demo_sandbox|brain_out|archive|capsule
 const DATED_RE = /\d{4}-\d{2}(-\d{2})?/;
 
 export function queries(ir) {
-  const out = { Q1: [], Q2: [], Q3: [], Q4: [], Q5: [] };
+  const out = { Q1: [], Q2: [], Q3: [], Q4: [], Q5: [], Q6: [] };
   for (const f of ir.files) {
     if (!STATE_RE.test(f.path)) continue;
     if (f.is_dir || NOISE_RE.test(f.path) || DATED_RE.test(f.path)) continue;
@@ -1073,6 +1120,21 @@ export function queries(ir) {
     if (!f) continue;
     const others = f.writers.filter((w) => w !== d.organ);
     if (others.length) out.Q5.push({ path: f.path, declared_by: d.organ, actual_writers: f.writers, undeclared: others });
+  }
+  // Q6 SILENT (unit mxh, F5 · REPORT-ONLY: no gate, no audit finding reads it) — a header declares
+  // SOLE WRITER of X and NO path named X in the IR has any writer. Every path with that basename is
+  // read, not the last one a Map kept: a selftest fixture `scripts/x.jsonl` must not hide (or fake)
+  // the state lane `dressing-room/state/x.jsonl`. A declaration the IR holds no file for at all is
+  // reported with in_ir:false — the IR's own blindness, named, never guessed.
+  const byBase = new Map();
+  for (const f of ir.files) { if (f.is_dir) continue; const b = basename(f.path); if (!byBase.has(b)) byBase.set(b, []); byBase.get(b).push(f); }
+  const seenQ6 = new Set();
+  for (const d of ir.declared_sole_writers) {
+    if (d.file.endsWith("/") || seenQ6.has(d.organ + "\0" + d.file)) continue;
+    const named = byBase.get(d.file) || [];
+    if (named.some((f) => f.writers.length)) continue;
+    seenQ6.add(d.organ + "\0" + d.file);
+    out.Q6.push({ file: d.file, declared_by: d.organ, in_ir: named.length > 0, paths: named.map((f) => f.path) });
   }
   return out;
 }
@@ -1203,6 +1265,7 @@ function report() {
   show("Q3 ORPHAN LANE — written, never read", q.Q3, (f) => `${f.path}  ← ${f.writers.join(", ")}`);
   show("Q4 GHOST STATE — on disk, no live code touches it", q.Q4, (f) => `${f.path}`);
   show("Q5 UNDECLARED WRITER — header says sole writer, IR disagrees", q.Q5, (r) => `${r.path}  declared=${r.declared_by} undeclared=${r.undeclared.join(", ")}`);
+  show("Q6 SILENT (report-only) — header says sole writer, the IR sees NO writer", q.Q6, (r) => `${r.file}  declared=${r.declared_by}${r.in_ir ? "" : "  (no IR file)"}`);
   show("BROKEN EDGE — a caller invokes a verb the callee does not have", v.brokenEdges, (r) => `${r.caller} → ${r.callee} ${r.verb}  (${r.why})`);
   show("DANGLING LANE — writers reachable, readers not (the '27 dealt / 0 answerable' shape)", v.dangling, (r) => `${r.path}  W=${r.writers.join(",")}  R=${r.readers.join(",")}`);
   show("ORPHAN VERB — built, and nothing anywhere can call it", v.orphanVerbs, (r) => `${r.organ} ${r.verb}`);

@@ -27,7 +27,9 @@
 # not a courtesy.
 #
 # ⛔ NOTHING IS STARTED. Every service is installed with start=demand and every
-# task is registered disabled. S12 turns things on, stage by stage, on his word.
+# task is registered disabled. Starting a unit is his word, never this script's (his
+# 20 Aug 2026 switch-off, lifted by his 30 Aug 2026 word: grep -n "nothing burns tokens\|ORGANISM IS BACK ON"
+# docs/archive/ORGANISM_AUDIT__2026-08-19.md). What runs now: node scripts/services.mjs status.
 # ============================================================================
 $ErrorActionPreference = "Stop"
 $repo = "C:\Users\nikhi\GitHub\arsenal-ai-fc"
@@ -107,7 +109,7 @@ function Test-SameAccount([string]$a, [string]$b) {
 # <allowservicelogonright> only applies when WinSW sets the account, which it does not
 # here (the credential goes through sc.exe so it never touches a file). Without the
 # right, every service installs cleanly and then fails to START - and it would surface
-# at S12 as a confusing "logon failure", far from its cause. Granted here, where the
+# at the first start as a confusing "logon failure", far from its cause. Granted here, where the
 # script is already elevated, and REPORTED either way.
 function Grant-ServiceLogonRight([string]$account) {
   try {
@@ -159,13 +161,13 @@ if (-not $svc) {
   # <password> element, and a password persisted in a repo file is the one thing
   # this generator refuses to do.
   sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
-  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  sc.exe config $id start= demand | Out-Null   # auto is his word, never this script's
   $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
   if (Test-SameAccount $acct $cred.UserName) {
     Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
   } else {
     Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
-    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start"
     $failed += "$id (account)"
   }
 }
@@ -189,13 +191,13 @@ if (-not $svc) {
   # <password> element, and a password persisted in a repo file is the one thing
   # this generator refuses to do.
   sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
-  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  sc.exe config $id start= demand | Out-Null   # auto is his word, never this script's
   $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
   if (Test-SameAccount $acct $cred.UserName) {
     Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
   } else {
     Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
-    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start"
     $failed += "$id (account)"
   }
 }
@@ -219,13 +221,13 @@ if (-not $svc) {
   # <password> element, and a password persisted in a repo file is the one thing
   # this generator refuses to do.
   sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
-  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  sc.exe config $id start= demand | Out-Null   # auto is his word, never this script's
   $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
   if (Test-SameAccount $acct $cred.UserName) {
     Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
   } else {
     Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
-    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start"
     $failed += "$id (account)"
   }
 }
@@ -249,13 +251,13 @@ if (-not $svc) {
   # <password> element, and a password persisted in a repo file is the one thing
   # this generator refuses to do.
   sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
-  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  sc.exe config $id start= demand | Out-Null   # auto is his word, never this script's
   $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
   if (Test-SameAccount $acct $cred.UserName) {
     Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
   } else {
     Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
-    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start"
     $failed += "$id (account)"
   }
 }
@@ -279,13 +281,13 @@ if (-not $svc) {
   # <password> element, and a password persisted in a repo file is the one thing
   # this generator refuses to do.
   sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
-  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  sc.exe config $id start= demand | Out-Null   # auto is his word, never this script's
   $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
   if (Test-SameAccount $acct $cred.UserName) {
     Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
   } else {
     Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
-    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start"
     $failed += "$id (account)"
   }
 }
@@ -304,4 +306,4 @@ if ($failed.Count -gt 0) {
   exit 1
 }
 Write-Host "  DONE - and NOTHING IS RUNNING. Verify:  node scripts/services.mjs status"
-Write-Host "  S12 is what turns the organism back on, stage by stage, on your word."
+Write-Host "  This script starts nothing: starting a unit is your word (your 20 Aug 2026 switch-off was lifted by your 30 Aug 2026 word)."

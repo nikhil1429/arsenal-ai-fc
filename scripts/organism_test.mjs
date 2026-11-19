@@ -2739,6 +2739,37 @@ function done() {
   const m = /laws (\d+)\/(\d+) both ways \((\d+)\/(\d+) RED-planted\)/.exec(lines[0] || "");
   assert("WHAT IS LEFT · every laws/*.yml rule is planted BOTH ways (a RED and a CLEAN plant in lawpack.mjs)",
     !!m && Number(m[2]) > 0 && m[1] === m[2] && m[3] === m[2], m ? m[0] : (lines[0] || "").slice(0, 300));
+  // unit mrung (forks row 1130 (3), fork 9): THE HERMETIC RECEIPT READ, held by the neutral machine. A plan v3 list of one clause
+  // and a receipt triple built with rung_receipt.mjs's OWN row math (a child, never an import) are planted under os.tmpdir();
+  // done.mjs --hermetic reads the planted receipt GREEN through --receipts, reads the same clause UNREAD without it (the
+  // state file never opened), and reads a plan of zero clauses UNREAD — never the guessed 0/0 row 1058 forbids.
+  const T = mkdtempSync(join(tmpdir(), "organism-mrung-"));
+  try {
+    const plant = [
+      "const [root, dir] = process.argv.slice(1);",
+      "const { pathToFileURL } = await import('node:url'); const { join } = await import('node:path'); const fs = await import('node:fs');",
+      "const R = await import(pathToFileURL(join(root, 'scripts', 'rung_receipt.mjs')).href);",
+      "const W = 'node ci/x.mjs'; let prev = R.ZERO; const rows = [];",
+      "const add = (b) => { const r = { v: 1, ...b, key: 'S1:c1', rung: 'S1', clause: 'c1', at: '2026-11-20T15:00:00.000Z', by: R.BY, prev_sha256: prev }; r.row_sha256 = R.rowSha(r); prev = r.row_sha256; rows.push(r); return r; };",
+      "const red = add({ kind: 'red', cmd: W, cmd_sha256: R.sha256(W), head_sha: 'a'.repeat(40), exit: 1, out_sha256: R.sha256('o') });",
+      "const g = add({ kind: 'green', cmd: W, cmd_sha256: R.sha256(W), head_sha: 'b'.repeat(40), red_head_sha: 'a'.repeat(40), red_sha: red.row_sha256, ancestor: 0, exit: 0, out_sha256: R.sha256('p'), day: '2026-11-20', day_proof: { source: 'sitting_reviews.jsonl', sitting_id: 's1', closed_at: '2026-11-20T15:00:00.000Z', reason: 'fulltime' } });",
+      "add({ kind: 'meter', meter: R.METER_FILE, before_sha256: R.sha256('m'), after_sha256: R.sha256('m'), equal: true, old_day: '2026-11-13', old_day_green: false, green_sha: g.row_sha256 });",
+      "fs.writeFileSync(join(dir, 'receipts.jsonl'), rows.map((r) => JSON.stringify(r)).join('\\n') + '\\n');",
+      "for (const [c, rungs] of [['c1', [{ rung: 'S1', clauses: [{ id: 'c1', witness: W }] }]], ['c0', []]]) { fs.mkdirSync(join(dir, c, 'rungs'), { recursive: true }); fs.writeFileSync(join(dir, c, 'rungs', R.PLAN_FILE), JSON.stringify({ plan: 'v3', source: 'plan_v3.md', source_sha256: R.sha256('plan'), rungs, loops: [] })); }",
+    ].join("\n");
+    const p = run(["--input-type=module", "-e", plant, ROOT, T]);
+    const env = { env: { ...process.env, ORGANISM_TEST_PROFILE: "hermetic" } };
+    const a = run([join(ROOT, "scripts", "done.mjs"), "report", "--hermetic", "--campaign", join(T, "c1"), "--receipts", join(T, "receipts.jsonl")], env);
+    const b = run([join(ROOT, "scripts", "done.mjs"), "report", "--hermetic", "--campaign", join(T, "c1")], env);
+    const c = run([join(ROOT, "scripts", "done.mjs"), "report", "--hermetic", "--campaign", join(T, "c0")], env);
+    const rl = (r) => (r.out.split(/\r?\n/).find((l) => l.startsWith("DONE rungs")) || "").slice(0, 200);
+    assert("WHAT IS LEFT · RUNGS (unit mrung) — a planted receipt read through --receipts counts its plan clause GREEN",
+      p.code === 0 && a.code === 0 && /DONE rungs\s+1\/1 GREEN · 0 UNREAD/.test(a.out), p.code !== 0 ? p.out.slice(0, 300) : rl(a));
+    assert("WHAT IS LEFT · RUNGS — hermetic without --receipts reads NO receipt: the same clause is UNREAD, never counted",
+      b.code === 0 && /DONE rungs\s+0\/1 GREEN · 1 UNREAD/.test(b.out), rl(b));
+    assert("WHAT IS LEFT · RUNGS — a plan v3 list of zero clauses is UNREAD, never the guessed 0/0 (row 1058)",
+      c.code === 0 && /DONE rungs\s+UNREAD \(the plan v3 list holds no clause\)/.test(c.out) && !/0\/0/.test(c.out), rl(c));
+  } finally { rmSync(T, { recursive: true, force: true }); }
 }
 
 // ── THE FLOW ATLAS (AUDIT §10-C rung S10 · acceptance (d)) ───────────────────
