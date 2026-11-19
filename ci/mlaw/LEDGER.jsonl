@@ -19,3 +19,11 @@
 {"ts":"2026-11-19T09:00:26.878Z","act":"mutants","cmd":"node ci/mlaw/run_mutants_mlaw.mjs --org <build LF tree> --base-org <cf1ca54 LF tree> (on b2854c6)","last_line":"run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-19T09:00:26.906Z","act":"ci-read","cmd":"curl api.github.com …/commits/<sha>/check-runs (no token)","last_line":"c289ba2, b082a95, 8e4a61f: both legs cancelled (superseded by the next push)"}
 {"ts":"2026-11-19T09:00:26.932Z","act":"effort-receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs --fleet mlawb --seat 00 --model claude-opus-5-5","last_line":"Error: Cannot find module '…/campaign-2026-09/tools/effort_receipt.mjs' (exit 1) — nothing written under campaign-2026-09/"}
+{"ts":"2026-11-19T09:44:29.698Z","act":"FK1-FK2","cmd":"node scripts/lawpack.mjs gate (build)","last_line":"lawpack: GREEN — no law's finding count rose · jugad-literal-subject-list 90"}
+{"ts":"2026-11-19T09:44:29.736Z","act":"FK1","cmd":"node scripts/done.mjs selftest","last_line":"done selftest: 5 passed, 0 failed"}
+{"ts":"2026-11-19T09:44:29.761Z","act":"FK2","cmd":"node scripts/usage_tap.mjs selftest","last_line":"usage_tap selftest 31/31 — all clauses hold"}
+{"ts":"2026-11-19T09:44:29.793Z","act":"witness-build","cmd":"node ci/mlaw/witness_mlaw.mjs --org <build d7d80fb> --base-org <cf1ca54>","last_line":"GREEN MLAW the law pack judged hermetic, its rise a new red · 9 clause(s)"}
+{"ts":"2026-11-19T09:44:29.821Z","act":"witness-base","cmd":"node ci/mlaw/witness_mlaw.mjs --org <cf1ca54> --base-org <cf1ca54>","last_line":"RED MLAW · LEGS · JUGAD · SURFACES · HERMETIC · RISE · NOLINE · PORT"}
+{"ts":"2026-11-19T09:44:29.848Z","act":"mutants","cmd":"node ci/mlaw/run_mutants_mlaw.mjs (on d7d80fb)","last_line":"run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-19T09:44:29.873Z","act":"hermetic","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (build)","last_line":"organism_test: 147 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 124 (hermetic: named, not run)"}
+{"ts":"2026-11-19T09:44:29.902Z","act":"fork-FK6","cmd":"witness_mdone / witness_mdn2 at d7d80fb vs their BASE","last_line":"RED MDONE · D-REACH, D-NOCONS, BOUND · RED MDN2 · N-REACH, BOUND (their plants hold no his_surfaces row)"}
