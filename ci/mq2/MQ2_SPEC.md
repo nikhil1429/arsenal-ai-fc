@@ -251,3 +251,10 @@ The CI check runs for this branch's tip are read with
 `curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs` (no token). They are recorded
 in the FINAL MESSAGE and in `ci/mq2/LEDGER.jsonl`. The suite workflow (`.github/workflows/suite.yml:43-45`, push on
 `**`) is the one that runs on a non-main branch.
+
+**Check runs of `d11aa70` (the spec's first push), read 2026-11-19 by the curl above:** workflow run 44525377613 —
+job 135564419787 `npm test · node 22` **success** · job 135564420245 `npm test · node 24` **success**.
+
+**The effort receipt (2026-11-19):** `node campaign-2026-09/tools/effort_receipt.mjs --fleet mq2 --seat 00 --model
+claude-opus-5-5` → `Error: Cannot find module '/home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs'`
+(exit 1). This repository does not carry `campaign-2026-09/`, so nothing was written under it.

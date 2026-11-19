@@ -7,3 +7,6 @@
 {"ts":"2026-11-19T12:45:00Z","act":"live-format","cmd":"node -e <round-trip booleans on the live file, no content printed>","last_line":"rt1 true rt2 false"}
 {"ts":"2026-11-19T12:50:00Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
 {"ts":"2026-11-19T13:00:00Z","act":"probe","cmd":"node ci/mq2/witness/probe_base.mjs --repo .","last_line":"mq2 probe: 3 RED of 3"}
+{"ts":"2026-11-19T13:20:00Z","act":"push","cmd":"git push -u origin claude/mq2-spec","last_line":"branch claude/mq2-spec set up to track origin/claude/mq2-spec. (d11aa70)"}
+{"ts":"2026-11-19T13:35:00Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/d11aa707db4d82535e9502b8bdf41beb8119a5e0/check-runs","last_line":"135564419787 npm test · node 22 success · 135564420245 npm test · node 24 success (run 44525377613)"}
+{"ts":"2026-11-19T13:36:00Z","act":"effort-receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs --fleet mq2 --seat 00 --model claude-opus-5-5","last_line":"Error: Cannot find module /home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs (exit 1)"}
