@@ -116,7 +116,9 @@ baseline 90` and `depcruise_errors ROSE — 13, baseline 7`): they are main's at
 | `8653fd6` code + mutants | `44447854002` | `135304340193` · `135304339694` | cancelled · cancelled (superseded) |
 | `154fa03` code tip | `44448190208` | `135305453072` · `135305453408` | **success · success** |
 | `8864da4` W4 replant | `44449439817` | `135309489003` · `135309488697` | **success · success** |
-| later pushes | named in the final message | | |
+| `c25268f` ledger | `44492434928` | `135451187007` · `135451187551` | cancelled · cancelled (superseded) |
+| `35b1ab8` full proof | `44492827835` | `135452602197` · `135452601561` | **success · success** |
+| this row's own push | ledger-only edit; read it at its sha with the curl above | | |
 
 ## 8. The F-3 census — every id minted in that shape, and who looks it up by id (grep at the build tip)
 
