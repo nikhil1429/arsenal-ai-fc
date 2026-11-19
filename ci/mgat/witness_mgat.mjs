@@ -18,7 +18,7 @@
 //       read with `git show` from --base-org's object store; an unreachable object is NAMED and the clause is RED).
 //   W3  hermetic `organism_test.mjs gates` ENTERS the mode (a GATES assert, no `LIVE MODE gates`) and its reds name no
 //       no-empty rise.
-//   W4  the hermetic verdict is entered AND identical on Z and on X (state cannot move it).
+//   W4  the hermetic verdict is entered AND identical on Z and on X, the gate's own RED lines included (state cannot move it).
 //   W5  the ajv half still guards: the FULL profile on X fails BY a SCHEMA red on the planted registry.json, and hermetic
 //       NAMES `gates schema half` LIVE.
 //   W6  cortex: one `function releaseLock()`, called twice; the retire callback line holds no bare catch.
@@ -91,9 +91,11 @@ const CL = {
   W3: (src) => once(src, "E", (d) => { const r = node(d, ["scripts/organism_test.mjs", "gates"], "hermetic"); const a = asserts(r.out); const blk = gatesBlock(r.out);
     const entered = a.some((l) => /^(ok|FAIL) +GATES —/.test(l)) && !a.some((l) => /^LIVE MODE gates/.test(l)); const neRose = /no-empty/.test(blk.split(/\r?\n/).filter((l) => /RED|ROSE/.test(l)).join(" "));
     return { ok: entered && !neRose, line: `hermetic gates: ${a.filter((l) => /GATES|gates/.test(l)).map((l) => l.slice(0, 90)).join(" | ")}${neRose ? " · a no-empty rise is red" : ""}` }; }),
-  W4: (src) => { const z = once(src, "Z", (d) => verdictOf(node(d, ["scripts/organism_test.mjs", "gates"], "hermetic").out)); const x = once(src, "X", (d) => verdictOf(node(d, ["scripts/organism_test.mjs", "gates"], "hermetic").out));
+  W4: (src) => { // the verdict AND the gate's own RED lines: at a cut where the gate is already red, a bare verdict is equal on any red
+    const seen = (k) => once(src, k, (d) => { const o = node(d, ["scripts/organism_test.mjs", "gates"], "hermetic").out; const v = verdictOf(o); return v && { ...v, gateReds: [...o.matchAll(/\bRED\s+([A-Z][^\r\n]*)/g)].map((m) => m[1].trim()) }; });
+    const z = seen("Z"), x = seen("X");
     const entered = !!z && !z.live.includes("MODE gates");
-    return { ok: entered && JSON.stringify(z) === JSON.stringify(x), line: `hermetic verdict Z ${JSON.stringify(z && { pass: z.pass, fail: z.fail, live: z.live })} · X ${JSON.stringify(z) === JSON.stringify(x) ? "the same" : JSON.stringify(x && { pass: x.pass, fail: x.fail, live: x.live })}` }; },
+    return { ok: entered && JSON.stringify(z) === JSON.stringify(x), line: `hermetic verdict Z ${JSON.stringify(z && { pass: z.pass, fail: z.fail, live: z.live })} · gate reds ${z && z.gateReds.length} · X ${JSON.stringify(z) === JSON.stringify(x) ? "the same" : JSON.stringify(x && { pass: x.pass, fail: x.fail, live: x.live, gateReds: x.gateReds.length })}` }; },
   W5: (src) => { const fo = once(src, "X", (d) => node(d, ["scripts/organism_test.mjs", "gates"]).out); const f = verdictOf(fo); const h = once(src, "E", (d) => verdictOf(node(d, ["scripts/organism_test.mjs", "gates"], "hermetic").out));
     // the planted red must be the AJV half's own (a SCHEMA red naming the planted registry.json), not any other count that is red
     const schemaRed = !!f && f.reds.some((x) => /GATES/.test(x)) && /SCHEMA — registry\.json does NOT match/.test(fo);
