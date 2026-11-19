@@ -1,0 +1,10 @@
+{"ts":"2026-11-19T00:20:00Z","act":"base","cmd":"git fetch origin main && git checkout -b claude/mport-build FETCH_HEAD","last_line":"95b07a604ef22f2a215bfc56e4ff45990177a437"}
+{"ts":"2026-11-19T00:22:00Z","act":"selftest-before","cmd":"node scripts/keeper.mjs selftest","last_line":"keeper selftest: 17 passed, 0 failed"}
+{"ts":"2026-11-19T00:22:30Z","act":"selftest-before","cmd":"node scripts/cortex.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-19T00:23:00Z","act":"selftest-before","cmd":"node scripts/thalamus.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-19T00:35:00Z","act":"selftest-after","cmd":"node scripts/keeper.mjs selftest","last_line":"keeper selftest: 17 passed, 0 failed"}
+{"ts":"2026-11-19T00:35:30Z","act":"selftest-after","cmd":"node scripts/cortex.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-19T00:36:00Z","act":"selftest-after","cmd":"node scripts/thalamus.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-19T00:36:30Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0 (literal model names outside models.mjs: 0)"}
+{"ts":"2026-11-19T00:50:00Z","act":"witness-build","cmd":"node ci/mport/witness_mport.mjs --org . --base-org <base 95b07a6 materialised under the scratch temp dir>","last_line":"GREEN MPORT cortex and thalamus read every planted port through keeper's one guard; his machine reads the fixed ports · 3 clause(s)"}
+{"ts":"2026-11-19T00:51:00Z","act":"witness-base","cmd":"node ci/mport/witness_mport.mjs --org <base> --base-org <base>","last_line":"RED MPORT · P1, P2, P3"}
