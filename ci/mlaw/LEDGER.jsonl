@@ -38,3 +38,10 @@
 {"ts":"2026-11-19T11:02:48.644Z","act":"gates","cmd":"node scripts/gates.mjs report at 224f9b9 / cf1ca54 / d7d80fb / fb42118 / build","last_line":"checkJs 296/300/300/297/301 · no-empty 268/272/272/268/272 · no-unused-vars 82/82/82/85/85 — mlaw adds 0"}
 {"ts":"2026-11-19T11:26:46.724Z","act":"ci-read","cmd":"curl …/commits/cb2c57b/check-runs + annotations (no token)","last_line":"node 22 run 135509495593 RED (new: mdn2 mdone mf2 mjd3) · node 24 run 135509495217 RED (+ mlv1) · base fb42118 · no law pack red"}
 {"ts":"2026-11-19T11:26:46.756Z","act":"measure","cmd":"witness_mlv1 at cb2c57b and cf1ca54 vs its BASE","last_line":"RED MLV1 · BOUND both (node 24 leg only red on the neutral machine — named, not guessed)"}
+{"ts":"2026-11-19T12:32:25.570Z","act":"merge","cmd":"git merge --no-edit db3e01d (row 1154 (5))","last_line":"1504969, no conflict"}
+{"ts":"2026-11-19T12:32:25.602Z","act":"witnesses","cmd":"witness_mdone / witness_mdn2 at fdd0fd6 vs their BASE","last_line":"RED MDONE · BOUND · RED MDN2 · BOUND (BOUND dropped by the member)"}
+{"ts":"2026-11-19T12:32:25.633Z","act":"witness-build","cmd":"node ci/mlaw/witness_mlaw.mjs --org <fdd0fd6> --base-org <cf1ca54>","last_line":"GREEN MLAW the law pack judged hermetic, its rise a new red · 10 clause(s)"}
+{"ts":"2026-11-19T12:32:25.668Z","act":"witness-base","cmd":"node ci/mlaw/witness_mlaw.mjs --org <cf1ca54> --base-org <cf1ca54>","last_line":"RED MLAW · LEGS · JUGAD · SURFACES · COVERAGE · HERMETIC · RISE · NOLINE · PORT"}
+{"ts":"2026-11-19T12:32:25.703Z","act":"mutants","cmd":"node ci/mlaw/run_mutants_mlaw.mjs (on fdd0fd6)","last_line":"run_mutants: 13 of 13 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-19T12:32:25.737Z","act":"lawpack","cmd":"node scripts/lawpack.mjs gate (fdd0fd6)","last_line":"lawpack: GREEN · jugad-literal-subject-list 90"}
+{"ts":"2026-11-19T12:32:25.774Z","act":"ci-read","cmd":"curl …/commits/fdd0fd6/check-runs + annotations","last_line":"node 22 run 135541015426 · node 24 run 135541015067: RED, the one new red LOAD ZERO BLOCK 7 (ci/mrv/PROOF.md:105, inherited from db3e01d)"}

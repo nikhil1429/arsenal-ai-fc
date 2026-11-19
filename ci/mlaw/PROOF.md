@@ -307,3 +307,75 @@ here.
   `fb42118`. They belong to unit mrung's landing or to those witnesses' owners.
 - **FK11 · after row 1154 (5)** the two witness plants wait for the ms1 assembled tip. The re-cut is the next act, and it
   waits for the message that names that tip.
+
+## 11. ROW 1154 (5) — THE RE-CUT ON THE ms1 ASSEMBLED TIP (19 Nov 2026). Final code tip `fdd0fd6`
+
+**The merge.** `git fetch origin claude/ms1-build && git merge --no-edit db3e01d` produced merge commit `1504969`. There
+was no rebase, no force push and no conflict. `db3e01d` is ms1 + mrj + mrt + mr3 + mrf + mrv with main `fb42118` merged
+in (its PROOF §13.1). The row 1152 (1)-(3) edits carried through the merge intact: each re-stated plant
+(`ci/mdone/witness_mdone.mjs`, `ci/mdn2/witness_mdn2.mjs`) still holds its one `his_surfaces` line beside its lanes, and
+`package.json` still runs `node scripts/done.mjs selftest`. `ci/mlaw/MERGED.json` was re-derived from `db3e01d`'s own LF
+bytes (51 files changed since `cf1ca54`), so BOUND accepts a non-named file only when it carries the assembled tip's
+bytes (`fdd0fd6`).
+
+**Both re-stated witnesses at the build, each against its own BASE** (19 Nov 2026):
+
+```
+node ci/mdone/witness_mdone.mjs --org <LF tree of fdd0fd6> --base-org <LF tree of ci/mdone/BASE>   →  RED MDONE · BOUND
+node ci/mdn2/witness_mdn2.mjs   --org <LF tree of fdd0fd6> --base-org <LF tree of ci/mdn2/BASE>    →  RED MDN2 · BOUND
+```
+
+BOUND alone is left, and the witnesses member drops it, so both are GREEN on the neutral machine (below). FK10 is
+closed by the re-statements.
+
+**The witness, both ways** (on `fdd0fd6`, 19 Nov 2026):
+
+```
+node ci/mlaw/witness_mlaw.mjs --org <LF tree of fdd0fd6> --base-org <LF tree of cf1ca54>
+  ok LEGS · ok JUGAD (90 at --org, frozen 90, gate exit 0, GREEN) · ok SURFACES · ok COVERAGE · ok HERMETIC · ok RISE (91 → 92 NEW) · ok NOLINE (90 → 92) · ok PORT
+  ok   BOUND · differs from BASE in 53 file(s): named ci/mdn2/witness_mdn2.mjs, ci/mdone/witness_mdone.mjs, package.json, scripts/ci_verdict.mjs, scripts/conductor.mjs, scripts/done.mjs, scripts/organism_test.mjs, scripts/usage_tap.mjs · the merged-in bytes …
+  ok   LAST
+GREEN MLAW the law pack judged hermetic, its rise a new red · 10 clause(s)          (exit 0)
+node ci/mlaw/witness_mlaw.mjs --org <LF tree of cf1ca54> --base-org <LF tree of cf1ca54>
+RED MLAW · LEGS · JUGAD · SURFACES · COVERAGE · HERMETIC · RISE · NOLINE · PORT          (exit 1)
+```
+
+**The mutants** (on `fdd0fd6`, 19 Nov 2026):
+
+```
+  control · GREEN MLAW the law pack judged hermetic, its rise a new red · 10 clause(s) (exit 0)
+  M-LEGS · M-JUGAD · M-SURFACES · M-LAWHOME · M-COVERAGE · M-MAINBYTE · M-HERMETIC · M-RISE · M-FALL · M-NOLINE · M-PORT · M-BOUND · M-LAST — each RED by the clause that names it
+run_mutants: 13 of 13 mutant(s) RED by the clause that names them · control GREEN
+```
+
+**The law pack count line** (`node scripts/lawpack.mjs gate`, 19 Nov 2026):
+
+```
+BASE  cf1ca54  … jugad-literal-subject-list 93 … depcruise_errors 7       lawpack: 1 RED — a gate may only get stricter (§10-D rule 6)
+build fdd0fd6  findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 90 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 7
+               lawpack: GREEN — no law's finding count rose, and every rule is on disk
+```
+
+The touched selftests at `fdd0fd6` (19 Nov 2026): ci_verdict 29 passed, 0 failed · conductor 111 passed, 0 failed · done
+5 passed, 0 failed · usage_tap 31/31. `node scripts/models.mjs check`: exit 0. Hermetic suite: `organism_test: 151
+passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124` (19 Nov 2026). The two reds are the coverage law (orphans
+`deck_lint, home_pin, probe, study_scope`, no `done`) and LOAD ZERO BLOCK 7 (FK12).
+
+**The neutral runs of `fdd0fd6`** (read with curl, no token, 19 Nov 2026; merge base main `fb42118`):
+
+```
+npm test · node 22  run 135541015426  completed/failure · B1_VERDICT RED · pass 232 · fail 2 · live 124 · 1 base red
+   new: LOAD ZERO BLOCK 7 · no canon file states a live count a command can produce (98 files scanned, 1 declared)
+npm test · node 24  run 135541015067  completed/failure · B1_VERDICT RED · pass 232 · fail 2 · live 124 · 1 base red
+   new: LOAD ZERO BLOCK 7 · no canon file states a live count a command can produce (98 files scanned, 1 declared)
+```
+
+Every witness reads GREEN on both Windows legs now, including mdone, mdn2, mf2, mjd3, mlv1 and mlaw itself. No law
+pack red appears.
+
+- **FK12 · the one new red, inherited from the assembled tip:** LOAD ZERO BLOCK 7 trips on `ci/mrv/PROOF.md:105` (a
+  suite headline undated within two lines). That file is byte-equal to `db3e01d`'s (`git diff --quiet db3e01d HEAD --
+  ci/mrv/PROOF.md`). It is unit mrv's or the ms1 seat's to date, and this seat did not edit it. This PROOF passes the
+  same law. Its check was run by the rule's own regex before each push.
+- FK9 and FK10 are closed by the assembled tip's re-statements: mf2, mjd3, mdone and mdn2 are GREEN on the neutral
+  machine.
