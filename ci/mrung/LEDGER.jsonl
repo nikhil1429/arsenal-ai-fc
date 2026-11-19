@@ -1,0 +1,3 @@
+{"ts":"2026-11-19T01:44:35.172Z","act":"branch","cmd":"git fetch origin main && git checkout -b claude/mrung-build origin/main","last_line":"224f9b90758d13edb42550f002d6c845cc7bb2a8"}
+{"ts":"2026-11-19T01:44:35.172Z","act":"spec","cmd":"git show 0e0f001:ci/mrung/MRUNG_SPEC.md > ci/mrung/MRUNG_SPEC.md","last_line":"the ruled spec, carried whole (its own ledger stays at 0e0f001:ci/mrung/LEDGER.jsonl)"}
+{"ts":"2026-11-19T01:44:35.172Z","act":"measure","cmd":"git diff --stat a18c167 224f9b9 -- scripts/done.mjs scripts/day.mjs scripts/sitting.mjs scripts/daily_green.mjs package.json .gitignore","last_line":"(empty) — every spec file:line still holds at this base"}
