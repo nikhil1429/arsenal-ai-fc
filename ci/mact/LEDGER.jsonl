@@ -1,1 +1,6 @@
 {"ts":"2026-11-19T02:45:21Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mact-build FETCH_HEAD","last_line":"a583afba1427e6bca42167c55cba14a7b221b0c0"}
+{"ts":"2026-11-19T02:52:06.176Z","act":"lftree-base","cmd":"node ci/mact/lftree.mjs a583afb <tmp>/base","last_line":"lftree a583afb → <tmp>/base · 426 file(s)"}
+{"ts":"2026-11-19T02:52:06.176Z","act":"selftest-base","cmd":"node scripts/acts.mjs selftest (base LF tree, ARSENAL_ACTS_LEDGER under tmp) x3","last_line":"acts selftest: 56 passed, 0 failed"}
+{"ts":"2026-11-19T02:52:06.176Z","act":"selftest-base-claims","cmd":"node scripts/claims.mjs selftest (base LF tree, ARSENAL_CLAIMS_LEDGER under tmp)","last_line":"✓ claims.mjs selftest — 24 passed, 0 failed"}
+{"ts":"2026-11-19T02:52:06.176Z","act":"pair-preload-fix","cmd":"node ci/mact/witness_mact.mjs --only W3 on base, first preload (unforced draws real random) vs the exact preload (call i → bucket i)","last_line":"first: red 33 · crash 2 (natural collisions on unforced draws; pair 1,5 red once, green once serially) · exact: red 23 · crash 1, twice"}
+{"ts":"2026-11-19T02:52:06.176Z","act":"witness-base","cmd":"node ci/mact/witness_mact.mjs --org <tmp>/base --base-org <tmp>/base","last_line":"RED MACT · W1, W2, W3, W4, W5, W6"}
