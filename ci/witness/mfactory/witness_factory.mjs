@@ -225,7 +225,15 @@ function plants() {
         }
         return acc;
       };
-      const a = walk(ORG), b = walk(BASE_ORG);
+      // a file the tree's own git IGNORES (a selftest's .log, his gitignored tokens) is no part of a commit: dropped, asked of
+      // that tree's git (a tree that is no git work tree ignores nothing)
+      const unignored = (dir, m) => {
+        const r = spawnSync("git", ["-C", dir, "check-ignore", "--no-index", "--stdin"], { input: [...m.keys()].join("\n"), encoding: "utf8", windowsHide: true });
+        if (r.status !== 0 && r.status !== 1) return m;
+        for (const p of lines(r.stdout)) m.delete(slash(p));
+        return m;
+      };
+      const a = unignored(ORG, walk(ORG)), b = unignored(BASE_ORG, walk(BASE_ORG));
       const diff = [...new Set([...a.keys(), ...b.keys()])].filter((x) => a.get(x) !== b.get(x)).sort();
       const extra = diff.filter((f) => !NAMED(f));
       clause("BOUND", extra.length === 0, `${diff.length} file(s) differ from --base-org${extra.length ? ` · BEYOND THE NAMED: ${extra.slice(0, 6).join(", ")}` : ", all named"}`);
