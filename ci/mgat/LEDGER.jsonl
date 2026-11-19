@@ -9,3 +9,8 @@
 {"ts":"2026-11-19T02:49:46.162Z","act":"sites 5e43987","cmd":"node ci/mgat/tools/sites.mjs 5e43987","exit":0,"last_line":"mgat sites 4d166d3 -> 5e43987: no-empty 263 -> 265 · new 2 · gone 0"}
 {"ts":"2026-11-19T02:50:05.318Z","act":"sites 1fcaec9","cmd":"node ci/mgat/tools/sites.mjs 1fcaec9","exit":0,"last_line":"mgat sites 8c729c8 -> 1fcaec9: no-empty 265 -> 268 · new 3 · gone 0"}
 {"ts":"2026-11-19T02:50:44.510Z","act":"sites a583afb --all","cmd":"node ci/mgat/tools/sites.mjs a583afb --all","exit":0,"last_line":"mgat sites a583afb: no-empty 268"}
+{"ts":"2026-11-19T02:52:15.884Z","act":"lawsite head","cmd":"node ci/mgat/tools/lawsite.mjs","exit":0,"last_line":"mgat lawsite: 0 of 6 new no-empty sites fall under the law pack's bare-catch half (lane ∧ fs I/O)"}
+{"ts":"2026-11-19T02:52:59.885Z","act":"fate probes head","cmd":"node ci/mgat/tools/fate.mjs","exit":0,"last_line":"mgat fate: probes done"}
+{"ts":"2026-11-19T02:53:26.263Z","act":"fate probes head (S5 dir fixed)","cmd":"node ci/mgat/tools/fate.mjs","exit":0,"last_line":"mgat fate: probes done"}
+{"ts":"2026-11-19T02:56:05.847Z","act":"stateverdict a583afb","cmd":"node ci/mgat/tools/stateverdict.mjs a583afb","exit":0,"last_line":"mgat stateverdict a583afb: done"}
+{"ts":"2026-11-19T02:57:58.613Z","act":"stateverdict a583afb lint","cmd":"node ci/mgat/tools/stateverdict.mjs a583afb lint","exit":0,"last_line":"mgat stateverdict a583afb: done"}
