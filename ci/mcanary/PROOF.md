@@ -135,5 +135,18 @@ named, not this unit's.
 
 ## CI
 
-Read by `NODE_USE_ENV_PROXY=1 node scripts/ci_verdict.mjs <full sha>` and the public API with curl, no token; the tip and its
-two legs are named in the section appended after the final push.
+Read by the public API with curl, no token, and `NODE_USE_ENV_PROXY=1 node scripts/ci_verdict.mjs <full sha>` (19 Nov 2026):
+
+```
+19005bae135f0ebeaede8b0b9ec28f1caa994bc5  (the proof's own commit)
+135779275053 npm test · node 22 completed success
+135779273055 npm test · node 24 completed success
+ci_verdict 19005ba GREEN — npm test · node 22: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135779275053] | npm test · node 24: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135779273055] (3 calls)   exit 0
+```
+
+The tip that carries this section changes only this file and the ledger; its two legs are read the same way and named in the
+seat's final message.
+
+Effort receipt (the brief's last step): `node campaign-2026-09/tools/effort_receipt.mjs --fleet mcanary --seat 00 --model …`
+→ `Error: Cannot find module '/home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs'`, exit 1 — the tool is not
+in this repository; nothing was written under `campaign-2026-09/`.
