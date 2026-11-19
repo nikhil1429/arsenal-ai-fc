@@ -3,3 +3,5 @@
 {"ts":"2026-11-19T12:50:00Z","act":"setup","cmd":"npm ci --no-audit --no-fund","last_line":"npm notice"}
 {"ts":"2026-11-19T12:51:00Z","act":"measure","cmd":"node scripts/done.mjs json --hermetic","last_line":"{\"hermetic\":true,\"orphans\":{\"lanes\":5,\"verbs\":120},\"rungs\":{\"read\":false,…},…,\"reach\":{\"live\":true}} · exit 0"}
 {"ts":"2026-11-19T12:52:00Z","act":"measure","cmd":"node scripts/done.mjs json (cloud, not hermetic)","last_line":"rules ten 9/10 verify · register 14/14 site · teaching unread · reach 24 rows, every window false (consumption.jsonl untracked, absent here) · exit 0"}
+{"ts":"2026-11-19T12:38Z","act":"witness","cmd":"node ci/witness/mleft/witness_left.mjs","last_line":"GREEN MLEFT what is left, read by one command — 18 plant(s) both ways · 4 clause(s) + LAST (exit 0)"}
+{"ts":"2026-11-19T12:38Z","act":"checkpoint","cmd":"architect message: STOP (his word 269)","last_line":"CHECKPOINT · STOPPED at 2026-11-19T12:38Z · resume from the base-org RED run + BOUND, then ci/mleft/run_mutants_mleft.mjs"}
