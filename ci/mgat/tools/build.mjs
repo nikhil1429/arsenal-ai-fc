@@ -32,6 +32,20 @@ export const EDITS = [
   { id: "HALF", file: "scripts/organism_test.mjs",
     from: "  const r = run([join(ROOT, \"scripts\", \"gates.mjs\"), \"report\"], { timeout: 600000 });\n",
     to: "  // unit mgat: the hermetic profile runs the STATE-FREE half — `gates.mjs lint` (tsc + eslint), whose output was byte-identical\n  // with the state folder absent, empty and tracked-present (ci/mgat/MGAT_SPEC.md §3). The ajv half validates his state files: LIVE, named.\n  const half = PROFILE === \"hermetic\";\n  if (half) liveNamed(\"gates schema half\", \"validates every schema-d file of dressing-room/state (ajv); the tsc + eslint half runs\");\n  const r = run([join(ROOT, \"scripts\", \"gates.mjs\"), half ? \"lint\" : \"report\"], { timeout: 600000 });\n" },
+  // forks row 1156 (1) FK1 B — scripts/rung_receipt.mjs, the unit's fifth file: the two other counts of the same gate, risen by
+  // the same cause (a landing that did not read the gate). Each site's fate by measurement (PROOF.md §8).
+  { id: "RR-sep", file: "scripts/rung_receipt.mjs",
+    from: "import { join, dirname, resolve, relative, isAbsolute, basename, sep } from \"node:path\";",
+    to: "import { join, dirname, resolve, relative, isAbsolute, basename } from \"node:path\";" },
+  { id: "RR-rowsha", file: "scripts/rung_receipt.mjs",
+    from: "export function rowSha(row) { const { row_sha256, ...rest } = row; return sha256(String(row.prev_sha256) + canon(rest)); }",
+    to: "export function rowSha(row) { const rest = { ...row }; delete rest.row_sha256; return sha256(String(row.prev_sha256) + canon(rest)); }" },
+  { id: "RR-red", file: "scripts/rung_receipt.mjs",
+    from: "    const row = append(path, rr, { kind: \"red\", key,",
+    to: "    append(path, rr, { kind: \"red\", key," },
+  { id: "RR-ts", file: "scripts/rung_receipt.mjs",
+    from: "  if (!sd.ok) return { code: 1, lines: [`rung_receipt: REFUSED · ${sd.why}`] };\n",
+    to: "  // `=== false`, not `!sd.ok`: tsconfig.json keeps strict off, and without strictNullChecks a negation does not narrow a\n  // true/false discriminant, so `sd.why` read as absent (TS2339). The equality narrows; the behaviour is the same.\n  if (sd.ok === false) return { code: 1, lines: [`rung_receipt: REFUSED · ${sd.why}`] };\n" },
 ];
 
 // one mutant per witness clause (see MGAT_SPEC.md §5)
@@ -43,6 +57,8 @@ export const MUTANTS = {
   M5: { why: "the schema half is no longer named LIVE", patch: [["  if (half) liveNamed(\"gates schema half\"", "  if (false) liveNamed(\"gates schema half\""]] },
   M6: { why: "the retire callback re-types the release inline", drop: ["S2S3-b"] },
   M7: { why: "the hermetic gates mode returns before it runs the gate", patch: [["  const half = PROFILE === \"hermetic\";\n", "  const half = PROFILE === \"hermetic\";\n  if (half) return;\n"]] },
+  M8: { why: "rung_receipt's unused sep import left in (no-unused-vars rises by one)", drop: ["RR-sep"] },
+  M9: { why: "rung_receipt's negation left in (the TS2339 diagnostic returns)", drop: ["RR-ts"] },
 };
 
 /** apply EDITS (minus a mutant's drops, plus its patches) inside tree d */
