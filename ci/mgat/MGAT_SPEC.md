@@ -10,6 +10,25 @@ command is beside it and its row is in `ci/mgat/LEDGER.jsonl`. Read first, not r
 This seat's scratch tools are `ci/mgat/tools/*.mjs` (they build no organ and write only under `os.tmpdir()` and
 `ci/mgat/LEDGER.jsonl`).
 
+
+## 0. HEADLINE
+
+1. **The three rises are confirmed by command at each commit and its parent, and they agree with mlaw §2.6 to the
+   unit:** `0b209b2` mgrd 262 → 263 (S1, `groundsman.mjs:263`) · `5e43987` mlv2 263 → 265 (S2/S3, `cortex.mjs:2344`) ·
+   `1fcaec9` mjd7 265 → 268 (S4-S6, `captains_call.mjs:1691`, `:1699` ×2). Each is a COPY of a shape already in its
+   own file (§1.3). Head `a583afb` still reads 268.
+2. **No site needs a re-base.** Measured (§2): none is bound by swallow.mjs's lane law (0 of 6 under lawpack's own
+   judge). Five are designed swallows and are DECLARED at the site with their reason. The two cortex ones are
+   REPAIRED by folding the copy into one `releaseLock()`. 268 → 262 = the frozen baseline. `LINT_BASELINE` is not
+   touched, so the gate gets no looser.
+3. **`gates` can leave `LIVE_MODES`.** Its tsc + eslint half (`gates.mjs lint`, already in the file) printed
+   byte-identical output with the state folder absent, empty and tracked (§3.2). The ajv half reads his state and stays
+   LIVE, named `gates schema half`. On a temp-tree build, all seven witness clauses read RED on base and GREEN on the
+   build, and each of seven mutants turns its own clause RED (§4, §5). W7: a planted new empty catch is now RED on the
+   hermetic profile.
+4. **Order matters:** the LIVE exit must land WITH or AFTER the site fates, never before. Otherwise its own new member
+   is red (§3.3, F1).
+
 ## 1. QUESTION 1 — each rise, by command at the commit and its parent, and every new site by file:line
 
 ### 1.1 Recipe
@@ -109,7 +128,7 @@ Plants: Z = folder absent · E = folder present, empty · T = the commit's track
 |---|---|---|---|
 | `report` | exit 1 · stdout sha256 `e98db026f6ba` · schema `0/0 … 4 NOT MEASURED` | exit 1 · `e98db026f6ba` | exit 1 · `478294663f78` · schema `2/2 … 2 NOT MEASURED` |
 | `lint` | exit 1 · `30e59a39627e` | exit 1 · `30e59a39627e` | exit 1 · `30e59a39627e` |
-| `organism_test.mjs gates` (full) | `4 passed, 1 failed` | same | same |
+| `organism_test.mjs gates` (full), 19 Nov 2026 | `4 passed, 1 failed` | same | same |
 
 Each plant carries the one RED `LINT ROSE — no-empty 268, baseline 262` (last line of each run `mgat stateverdict
 a583afb: done`, ledger rows `stateverdict a583afb` and `stateverdict a583afb lint`). The `report` VERDICT does not move
@@ -183,3 +202,102 @@ selftest dies on both trees alike, `gate: the registry lanes table is EMPTY/unre
 | M5 | the schema half is no longer named LIVE | `… M5 (…): W5 RED` |
 | M6 | the retire callback re-types the release inline | `… M6 (…): W6 RED` |
 | M7 | the hermetic `gates` mode returns before it runs the gate | `… M7 (…): W7 RED` |
+
+### 5.2 The seat's suite measurement — `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` (`node ci/mgat/tools/suite.mjs a583afb base|build`, T plant, linux, 19 Nov 2026)
+- base: `mgat suite a583afb base: exit 2 · organism_test: 143 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)`
+- build: `mgat suite a583afb build: exit 2 · organism_test: 144 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)`
+- The three reds are the SAME on both: the `_selftest_coverage_law` assert, `SUITE MEMBER · sandbox selftest exits 0`, and
+  the roll-up of the suite members. None of them touches a file of this build. They are reds on this linux temp tree, and
+  the neutral machine (windows) read `5de84f7` GREEN (§8), so they are not named here as anything but this seat's
+  environment (N6). LIVE names differ by exactly one: base only `MODE gates`, build only `gates schema half`. The one new
+  pass is the `GATES —` assert.
+
+## 6. FORKS (each the architect's to rule)
+
+- **F1 · the order of the two halves.** (A) ONE build carries the site fates AND the LIVE exit, so the landing's head
+  reads `ok GATES` and the base reads `LIVE MODE gates`, and nothing new is red · (B) two builds: the sites first, then
+  the LIVE exit · (C) the LIVE exit first. **Recommend A.** C is ruled out by measurement: a head that ADDS the
+  `GATES` member while no-empty reads 268 goes RED on a new member (§3.3; base witness W1 RED + W3 RED). B costs one
+  more neutral verdict and buys nothing W1-W7 do not already show together. What decides it: the neutral verdict on
+  an A build (one run of `suite.yml`).
+- **F2 · how a designed empty block is told apart.** (A) a comment inside the block naming why (four sites, the
+  idiom `captains_call.mjs` already uses ten times; the count falls, `LINT_BASELINE` is untouched) · (B) re-base:
+  raise `LINT_BASELINE["no-empty"]` by the designed sites (loosens the gate; the brief allows it only when it is
+  measured as designed) · (C) give every site a binding and a `swallow()` call (swallow.mjs's law binds none of the six,
+  §2.1; it adds a ledger row per process for a failure no reader acts on). **Recommend A.** It is the only option where
+  the gate stays at least as strict. What decides it: W1 + W2 on the build (GREEN, §4) and the mutant M2 (§5). They
+  show a stripped comment is caught.
+- **F3 · S4's merged-line drop.** (A) declare only (the cost is on the safe side: a card stays live) · (B) also COUNT
+  the dropped lines: `parseRows` returns them, and `readGradeQueueSince` carries `dropped` beside `why`, with no state
+  shape change (the cursor field is the same). **Recommend A now, B as its own unit** if a measurement on his laptop
+  ever shows a dropped line (§7 N3). What decides it: `node scripts/captains_call.mjs` grade-queue lines that do not
+  parse, counted on his real queue.
+- **F4 · S2/S3 by fold, or declared in place.** (A) fold the copy into one `releaseLock()` (W6) · (B) declare the
+  copy with the original's comment. **Recommend A.** It removes the copy that made the rise, and the guard shows
+  cortex's own selftest unchanged (§4.2). What decides it: the cortex selftest on the build on his laptop (N2).
+- **F5 · the pre-existing copies' originals** (`groundsman.mjs:44`, `captains_call.mjs:103` ×2, `cortex.mjs:2284-2285`
+  under A of F4, and the other 258): inside the frozen 262 they are not this unit's. (A) leave them · (B) a later unit
+  declares them and RATCHETS the baseline down. **Recommend A here.** Each one removed later is a fall the gate already
+  prints (`LINT FELL … tighten`).
+- **F6 · the `gates` SELFTEST** is a separate LIVE member (`organism_test.mjs:116`, `LIVE_SELFTESTS`). (A) out of this
+  unit · (B) census it here. **Recommend A.** mlaw's census (`ci/mlaw/tools/summarize.mjs`) already holds the selftest
+  class. Not re-measured.
+- **F7 · LIVE_MODES is edited by two units.** mlaw proposes `lawpack` leave the same object (`organism_test.mjs:213`).
+  (A) whichever lands second re-cuts on the first (disjoint lines, `:212` vs `:213`) · (B) one build for both.
+  **Recommend A.** The edits touch adjacent lines, not the same line. What decides it: `git merge-tree` of the two build
+  branches.
+
+## 7. NAMED NOT GUESSED (a cloud seat cannot reach these; what measures each on his laptop)
+
+- **N1 · Windows wall time of the hermetic `gates` mode** on the CI runner (tsc + eslint over every organ). The
+  workflow's ceiling is `suite.yml:60`. The mode's own spawn already carries its existing ceiling (`organism_test.mjs:2670`).
+  Measured by: the build's first neutral run. Its step time is in the run's log.
+- **N2 · the six fates on Windows:** EPERM/EBUSY for S1 (an antivirus lock on a temp file), and the cortex retire
+  on a live keeper. Measured on his laptop by: `node scripts/groundsman.mjs selftest` and `node scripts/cortex.mjs
+  selftest` on the build branch, and `node scripts/keeper.mjs` status after one armed retire. That last one is a live
+  daemon, so it is never done from a witness.
+- **N3 · whether his real grade queue has ever had a line that does not parse** (F3). Measured on his laptop by a read
+  of the queue through captains_call's exported `readGradeQueueSince` with the dropped-line count of F3 B. A cloud seat
+  must not read his state.
+- **N4 · CRLF trees.** Every count here is on an LF tree. eslint's `no-empty` is line-ending-blind by rule, and mlaw
+  §2.6 measured the same 262 frozen value on LF. The neutral machine is CRLF (`suite.yml`, windows-latest). Measured
+  by: the build's neutral run (W1's count is printed in its `GATES` assert only on red).
+- **N5 · the full profile on his live state** (the ajv half now reads `captains_call.json` and `models.json`, which no
+  checkout carries). Measured on his laptop by: `node scripts/gates.mjs report` on the build branch.
+- **N6 · the three linux-only reds of §5.2** (coverage law, sandbox selftest, the roll-up). They are the same on base and
+  build, and the neutral machine read `5de84f7` GREEN. Why they are red on a linux temp tree was not chased (not this
+  unit). Measured by: the same `suite.mjs` run on windows, or the neutral run's head output.
+
+## 8. THE NEUTRAL MACHINE ON THIS BRANCH
+Check runs of this branch's pushes, read through the public API without a token
+(`curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`), 19 Nov 2026:
+
+| Push | node 22 | node 24 |
+|---|---|---|
+| `5de84f7` (step 1) | `135302564171` completed success | `135302564459` completed success |
+| `236d72f` (step 2) | `135305179549` cancelled (superseded by the next push) | `135305179168` cancelled |
+| `787d6b2` (step 3) | `135307261882` cancelled (superseded) | `135307261544` cancelled |
+| `9d1cbe8` (witness) | `135308651018` completed **failure** | `135308651239` completed **failure** |
+
+`9d1cbe8`'s RED is this spec's own: the B1 verdict annotation names ONE new red, `LOAD ZERO BLOCK 7 · no canon file
+states a live count a command can produce` (base red 1, the coverage law, not new). Its cause was the §3.2 table row
+holding a suite count with no date within two lines (`node ci/mgat/tools/canon.mjs ci/mgat/MGAT_SPEC.md`, the
+scan's regexes copied from `organism_test.mjs:1898-1915`, read `1 undated live-count line(s)` at line 112). Dated in the
+next push. The same tool then read `0 undated live-count line(s)`. The final push's runs are named in the seat's FINAL
+message, because a file cannot carry its own sha's verdict.
+
+The branch adds only `ci/mgat/**` (no organ, no state), so the head and the merge base run the same organs. A GREEN
+here says this branch made nothing red. It cannot say anything about the build, which is on no branch (the witness
+runs it on temp trees only).
+
+## 9. FILES A BUILD WOULD TOUCH (and nothing else)
+
+1. `scripts/groundsman.mjs` — S1 (`:263`).
+2. `scripts/cortex.mjs` — S2/S3 fold (`:2274`, `:2281-2285`, `:2344`).
+3. `scripts/captains_call.mjs` — S4/S5/S6 (`:1691`, `:1699`).
+4. `scripts/organism_test.mjs` — LIVE (`:212`) and HALF (`:2670`).
+
+NOT touched, by design: `scripts/gates.mjs` (no baseline moves, no new verb), `eslint.config.mjs`, any state file,
+`.github/workflows/suite.yml`. Any file beyond these four is a fork for the architect, not this build's. The exact
+bytes are `ci/mgat/tools/build.mjs` `EDITS`. A build seat applies them with each `from` matched exactly once, or the
+build refuses.
