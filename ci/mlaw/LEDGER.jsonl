@@ -14,3 +14,5 @@
 {"ts":"2026-11-19T02:55:59.007Z","act":"P2-P3","cmd":"node scripts/ci_verdict.mjs compare --head <hermetic lawpack run> --base <same, law pack line removed>","last_line":"B1_VERDICT t RED — new: LAW PACK ROSE · jugad-literal-subject-list 90 → 92 (against lawpack.mjs BASELINE)"}
 {"ts":"2026-11-19T02:57:49.231Z","act":"F6","cmd":"node scripts/conductor.mjs selftest","last_line":"ALL CHECKS PASSED (111 passed, 0 failed)"}
 {"ts":"2026-11-19T02:57:49.261Z","act":"F6","cmd":"node scripts/gates.mjs report (build)","last_line":"checkJs diagnostics 300 · no-empty 272 — equal to BASE (a parseSuite JSDoc that had raised checkJs to 306 fixed first)"}
+{"ts":"2026-11-19T03:03:05.417Z","act":"witness-build","cmd":"node ci/mlaw/witness_mlaw.mjs --org <LF tree of the build> --base-org <LF tree of cf1ca54>","last_line":"GREEN MLAW the law pack judged hermetic, its rise a new red · 8 clause(s)"}
+{"ts":"2026-11-19T03:03:05.448Z","act":"witness-base","cmd":"node ci/mlaw/witness_mlaw.mjs --org <LF tree of cf1ca54> --base-org <LF tree of cf1ca54>","last_line":"RED MLAW · LEGS · JUGAD · HERMETIC · RISE · NOLINE · PORT"}

@@ -211,7 +211,8 @@ try {
       const c = copyOf(ORG, tag, { git: true });
       writeFileSync(join(c, "scripts", "zz_mlaw_plant.mjs"), PLANT(n));
       recommit(c);
-      return { c, out: node(c, [join(c, "scripts", "organism_test.mjs"), "lawpack"]).all };
+      // the plant's own count, off the gate's findings line (so a tree whose suite prints no law pack line still names it)
+      return { c, out: node(c, [join(c, "scripts", "organism_test.mjs"), "lawpack"]).all, gate: counts(node(c, [join(c, "scripts", "lawpack.mjs"), "gate"]).all) };
     };
     const A = plantRun(1, "riseA"), B = plantRun(2, "riseB");
     const io = join(ROOT, "io"); mkdirSync(io, { recursive: true });
@@ -225,13 +226,14 @@ try {
       return { code: r.status, p };
     };
     const ca = (lpLine(A.out) ? JSON.parse(lpLine(A.out).slice(LP_LINE.length + 1)) : null), cb = (lpLine(B.out) ? JSON.parse(lpLine(B.out).slice(LP_LINE.length + 1)) : null);
-    const na = ca ? ca[JUGAD] : counts(A.out)?.[JUGAD], nb = cb ? cb[JUGAD] : counts(B.out)?.[JUGAD];
+    const na = A.gate ? A.gate[JUGAD] : null, nb = B.gate ? B.gate[JUGAD] : null;
     const up = compare(pb, pa), down = compare(pa, pb), eq = compare(pa, pa);
     const want = `LAW PACK ROSE · ${JUGAD} ${na} → ${nb}`;
     const upOk = up.code === 1 && !!up.p && up.p.v === "RED" && (up.p.new || []).includes(want);
     const calm = (x) => x.code === 0 && !!x.p && x.p.v === "GREEN" && !(x.p.new || []).some((n) => /^LAW PACK ROSE/.test(n));
-    clause("RISE", Number.isSafeInteger(na) && nb === na + 1 && upOk && calm(down) && calm(eq),
-      `planted ${JUGAD} ${na ?? "?"} (A) → ${nb ?? "?"} (B) · head B over base A: ${up.p ? `${up.p.v}, new [${(up.p.new || []).map((n) => clip(n, 70)).join(" ; ")}]` : "no verdict"} (exit ${up.code}) · A over B (a fall): ${down.p ? down.p.v : "?"} · A over A: ${eq.p ? eq.p.v : "?"}`);
+    const lineOk = !!ca && !!cb && ca[JUGAD] === na && cb[JUGAD] === nb;
+    clause("RISE", Number.isSafeInteger(na) && nb === na + 1 && lineOk && upOk && calm(down) && calm(eq),
+      `planted ${JUGAD} ${na ?? "?"} (A) → ${nb ?? "?"} (B) by the gate · the suite's law pack line ${lineOk ? "carries both" : ca && cb ? "DIFFERS from the gate" : "ABSENT"} · head B over base A: ${up.p ? `${up.p.v}, new [${(up.p.new || []).map((n) => clip(n, 70)).join(" ; ")}]` : "no verdict"} (exit ${up.code}) · A over B (a fall): ${down.p ? down.p.v : "?"} · A over A: ${eq.p ? eq.p.v : "?"}`);
     // NOLINE — the base printed no law pack line: the tree's own lawpack.mjs BASELINE is the base
     const frozen = evalIn(A.c, `const m = await import(${href(A.c, "scripts/lawpack.mjs")}); console.log(JSON.stringify(m.BASELINE));`);
     const atBase = frozen && !frozen.error ? lines(B.out).map((l) => (l.startsWith(`${LP_LINE} `) ? `${LP_LINE} ${JSON.stringify(frozen)}` : l)).join("\n") : "";
