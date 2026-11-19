@@ -20,7 +20,7 @@ const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : nu
 const ORG = opt("--org") && resolve(opt("--org")); const BASE = opt("--base-org") && resolve(opt("--base-org"));
 if (!ORG || !BASE) { console.log("usage: node ci/mgat/run_mutants_mgat.mjs --org <dir> --base-org <dir>"); process.exit(1); }
 const RUN = mkdtempSync(join(tmpdir(), "mgat-mut-"));
-const CLAUSE = { M1: "W1", M2: "W2", M3: "W3", M4: "W4", M5: "W5", M6: "W6", M7: "W7" };
+const CLAUSE = { M1: "W1", M2: "W2", M3: "W3", M4: "W4", M5: "W5", M6: "W6", M7: "W7", M8: "W8", M9: "W9" };
 const nm = [join(ORG, "node_modules"), join(BASE, "node_modules")].find((p) => existsSync(p));
 function tree(m) {
   const d = join(RUN, m || "control");

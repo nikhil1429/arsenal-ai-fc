@@ -16,13 +16,15 @@
 //       scripts/gates.mjs, never typed (ruling: "no-empty must read at or under its frozen baseline").
 //   W2  per touched file, no more no-empty sites than at the PARENT of the rise that added them (the parents' bytes are
 //       read with `git show` from --base-org's object store; an unreachable object is NAMED and the clause is RED).
-//   W3  hermetic `organism_test.mjs gates` ENTERS the mode (a GATES assert, no `LIVE MODE gates`) and its reds name no
-//       no-empty rise.
+//   W3  hermetic `organism_test.mjs gates` ENTERS the mode and reads `ok GATES —` (no `LIVE MODE gates`): the spec's clause,
+//       restored once the fifth file (forks row 1156) took the two other counts back to their baselines.
 //   W4  the hermetic verdict is entered AND identical on Z and on X, the gate's own RED lines included (state cannot move it).
 //   W5  the ajv half still guards: the FULL profile on X fails BY a SCHEMA red on the planted registry.json, and hermetic
 //       NAMES `gates schema half` LIVE.
 //   W6  cortex: one `function releaseLock()`, called twice; the retire callback line holds no bare catch.
 //   W7  ONE planted new empty catch turns the HERMETIC `gates` mode RED, by a no-empty rise (the next rise has a reader).
+//   W8  `gates.mjs report` on E: no-unused-vars AT OR UNDER the tree's own frozen LINT_BASELINE["no-unused-vars"] (row 1156 (2)).
+//   W9  `gates.mjs report` on E: "other checkJs diagnostics" AT OR UNDER the tree's own frozen TYPE_BASELINE.soft_errors (row 1156 (2)).
 //   BOUND  only the named files differ between --org and --base-org (tracked files, line endings normalised).
 //   LAST   no node process naming this run's temp dir survives.
 // THE PORT CLASS (row 1053): no port is bound, no live service is named or POSTed at, nothing is restarted; every
@@ -39,9 +41,9 @@ const argv = process.argv.slice(2);
 const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : null; };
 const ORG = opt("--org") && resolve(opt("--org")); const BASE = opt("--base-org") && resolve(opt("--base-org"));
 if (!ORG || !BASE) { console.log("usage: node ci/mgat/witness_mgat.mjs --org <dir> --base-org <dir> [--only W1,...]"); console.log("RED MGAT · usage"); process.exit(1); }
-const ALL = ["W1", "W2", "W3", "W4", "W5", "W6", "W7"];
+const ALL = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9"];
 const WANT = opt("--only") ? opt("--only").split(",") : ALL; const ORG_ONLY = argv.includes("--org-only");
-const NAMED = ["scripts/groundsman.mjs", "scripts/cortex.mjs", "scripts/captains_call.mjs", "scripts/organism_test.mjs"];
+const NAMED = ["scripts/groundsman.mjs", "scripts/cortex.mjs", "scripts/captains_call.mjs", "scripts/organism_test.mjs", "scripts/rung_receipt.mjs"];   // the fifth by forks row 1156 (1)
 const NAMED_DIR = "ci/mgat/";
 const SD = "dressing-room/state";
 // the rise parents (MGAT_SPEC.md §1.2, measured there by sites.mjs): the commit BEFORE each file's new no-empty sites
@@ -89,8 +91,14 @@ const CL = {
     const ok = Object.keys(RISE_PARENT).every((f) => parentCount[f] !== null && now[f] <= parentCount[f]);
     return { ok, line: Object.keys(RISE_PARENT).map((f) => `${f.split("/")[1]} ${now[f]} (≤ ${parentCount[f] === null ? `UNREACHABLE ${RISE_PARENT[f]}` : parentCount[f]} at ${RISE_PARENT[f]})`).join(" · ") }; },
   W3: (src) => once(src, "E", (d) => { const r = node(d, ["scripts/organism_test.mjs", "gates"], "hermetic"); const a = asserts(r.out); const blk = gatesBlock(r.out);
-    const entered = a.some((l) => /^(ok|FAIL) +GATES —/.test(l)) && !a.some((l) => /^LIVE MODE gates/.test(l)); const neRose = /no-empty/.test(blk.split(/\r?\n/).filter((l) => /RED|ROSE/.test(l)).join(" "));
+    const entered = a.some((l) => /^ok +GATES —/.test(l)) && !a.some((l) => /^LIVE MODE gates/.test(l)); const neRose = /no-empty/.test(blk.split(/\r?\n/).filter((l) => /RED|ROSE/.test(l)).join(" "));
     return { ok: entered && !neRose, line: `hermetic gates: ${a.filter((l) => /GATES|gates/.test(l)).map((l) => l.slice(0, 90)).join(" | ")}${neRose ? " · a no-empty rise is red" : ""}` }; }),
+  W8: (src) => once(src, "E", (d) => { const r = node(d, ["scripts/gates.mjs", "report"]); const n = (r.out.match(/no-unused-vars (\d+)/) || [])[1];
+    const fz = (readFileSync(join(d, "scripts", "gates.mjs"), "utf8").match(/"no-unused-vars": (\d+)/) || [])[1];
+    return { ok: n !== undefined && fz !== undefined && Number(n) <= Number(fz), line: `gates report · no-unused-vars ${n} · frozen ${fz} (read from scripts/gates.mjs)` }; }),
+  W9: (src) => once(src, "E", (d) => { const r = node(d, ["scripts/gates.mjs", "report"]); const n = (r.out.match(/other checkJs diagnostics (\d+)/) || [])[1];
+    const fz = (readFileSync(join(d, "scripts", "gates.mjs"), "utf8").match(/soft_errors: (\d+)/) || [])[1];
+    return { ok: n !== undefined && fz !== undefined && Number(n) <= Number(fz), line: `gates report · other checkJs diagnostics ${n} · frozen soft_errors ${fz} (read from scripts/gates.mjs)` }; }),
   W4: (src) => { // the verdict AND the gate's own RED lines: at a cut where the gate is already red, a bare verdict is equal on any red
     const seen = (k) => once(src, k, (d) => { const o = node(d, ["scripts/organism_test.mjs", "gates"], "hermetic").out; const v = verdictOf(o); return v && { ...v, gateReds: [...o.matchAll(/\bRED\s+([A-Z][^\r\n]*)/g)].map((m) => m[1].trim()) }; });
     const z = seen("Z"), x = seen("X");
@@ -138,4 +146,4 @@ const L = last(); console.log(`LAST ${L.ok ? "GREEN" : "RED  "} ${L.line}`);
 const bad = WANT.filter((w) => !res[w].ok).map((w) => `${w}${res[w].org ? " (GREEN on base)" : " (RED on org)"}`);
 if (!B.ok) bad.push("BOUND"); if (!L.ok) bad.push("LAST");
 if (bad.length) { console.log(`RED MGAT · ${bad.join(" · ")}`); process.exitCode = 1; }
-else { console.log(`GREEN MGAT gates hermetic half + six site fates · ${WANT.length} clause(s) · RED on base, GREEN on org · BOUND · LAST`); process.exitCode = 0; }
+else { console.log(`GREEN MGAT gates hermetic half + six site fates + four rung_receipt fates · ${WANT.length} clause(s) · RED on base, GREEN on org · BOUND · LAST`); process.exitCode = 0; }

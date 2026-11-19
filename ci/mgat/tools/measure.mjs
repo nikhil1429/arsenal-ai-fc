@@ -29,7 +29,7 @@ if (only.includes("gates")) once("E", (d) => { const r = node(d, ["scripts/gates
 if (only.includes("lawpack")) once("E", (d) => { const r = node(d, ["scripts/lawpack.mjs", "gate"]);
   for (const l of r.out.split("\n").filter((l) => /\d/.test(l) && /count|frozen|baseline|ROSE|FELL|rule|law|=|→|->/i.test(l)).slice(0, 40)) console.log("  " + l.trim().slice(0, 220));
   console.log(`MEASURE lawpack ${tag}: lawpack.mjs gate (E) exit ${r.code} · ${(r.out.trim().split("\n").pop() || "").trim().slice(0, 220)}`); });
-if (only.includes("selftests")) for (const o of ["groundsman", "cortex", "captains_call"]) once("T", (d) => { const r = node(d, [`scripts/${o}.mjs`, "selftest"], "hermetic");
+if (only.includes("selftests")) for (const o of ["groundsman", "cortex", "captains_call", "rung_receipt"]) once("T", (d) => { const r = node(d, [`scripts/${o}.mjs`, "selftest"], "hermetic");
   const head = (r.out.trim().split("\n").filter((l) => /selftest|passed|failed|ALL CHECKS|FAIL/i.test(l)).pop() || "").trim().slice(0, 180);
   console.log(`MEASURE selftest ${o} ${tag}: exit ${r.code} · ${head}`); });
 if (only.includes("member")) once("E", (d) => { const r = node(d, ["scripts/organism_test.mjs", "gates"], "hermetic");
