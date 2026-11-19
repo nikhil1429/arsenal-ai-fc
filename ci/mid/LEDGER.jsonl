@@ -28,3 +28,7 @@
 {"ts":"2026-11-19T12:29:03.721Z","act":"build-models","cmd":"node scripts/models.mjs check (LF tree dfbc989)","last_line":"exit 0"}
 {"ts":"2026-11-19T12:32:22.237Z","act":"witness-build","cmd":"node ci/mid/witness_mid.mjs --org <LF dfbc989> --base-org <LF fb42118>","last_line":"GREEN MID one shared mint + two-row refusals · 9 clause(s) (exit 0)"}
 {"ts":"2026-11-19T12:32:22.262Z","act":"witness-base","cmd":"node ci/mid/witness_mid.mjs --org <LF fb42118> --base-org <LF fb42118>","last_line":"RED MID · W1, W2, W3, W4, W5, W6, W7, W8 (exit 1)"}
+{"ts":"2026-11-19T12:34:05.627Z","act":"witness-build","cmd":"node ci/mid/witness_mid.mjs --org <LF fbb22b0> --base-org <LF fb42118>","last_line":"GREEN MID one shared mint + two-row refusals · 9 clause(s) (exit 0)"}
+{"ts":"2026-11-19T12:34:05.653Z","act":"witness-base","cmd":"node ci/mid/witness_mid.mjs --org <LF fb42118> --base-org <LF fb42118>","last_line":"RED MID · W1, W2, W3, W4, W5, W6, W7, W8 (exit 1)"}
+{"ts":"2026-11-19T12:34:05.680Z","act":"mutants","cmd":"node ci/mid/run_mutants_mid.mjs --org <LF fbb22b0> --base-org <LF fb42118>","last_line":"run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-19T12:34:05.705Z","act":"fix","cmd":"first mutant run: control RED MID · W8 (outside: scripts/sitting.log) — agendaMark's refusal wrote the organ's text log under the tree; now stderr only","last_line":"fixed in fbb22b0; git status --short --ignored of the build tree after the witness: empty"}
