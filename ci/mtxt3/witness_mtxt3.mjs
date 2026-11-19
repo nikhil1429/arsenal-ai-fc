@@ -38,7 +38,10 @@
 //   T2  conductor.mjs differs ∧ its own `selftest` headline equals the base's and reads "0 failed" (exit 0)
 //   G1  in the NEW lines of each file a cited `grep -n "a\|b" docs/archive/<file>.md` RESOLVES (every alternative hits a
 //       line of the cited file in --org) and its hits include a line with 20 Aug 2026 AND a line with 30 Aug 2026
-//   N1  the new lines (in --org, absent from the base) state no live count or state: no digit once dates, file names
+//   N1  ~~the new lines (in --org, absent from the base) state no live count or state~~ RE-CUT by unit ms1 (forks row 1154 (4),
+//       an ADDED edit): the lines THIS UNIT added at its own land commit (ci/mtxt3/OWN_LINES.json: 3f84c80 against 12f1eca,
+//       each line fingerprinted with every digit removed and whitespace collapsed) and new in --org state no live count or state; lines of later
+//       units (mcon, main fb42118) are the bound's. The rule, as before: no digit once dates, file names
 //       (<path>.md / .mjs / .ps1), rung ids (S<n>) and law ids (L<n>) are removed, and none of Disabled / killed / Ready / EXPECTED
 //   BOUND  only scripts/services.mjs, scripts/conductor.mjs and ci/mtxt3/** differ from --base-org (both named files DO
 //          differ); .git and node_modules are not walked; text is hashed with CRLF folded to LF
@@ -254,10 +257,15 @@ try {
     clause("G1", have && per.every((v) => v.ok), have ? per.map((v) => `${v.f}: ${v.why}`).join(" · ") : "unreadable");
   }
   if (want("N1")) {
-    const nl = have ? [...newLines(bS, oS).map(([n, l]) => [`${SVC}:${n}`, l]), ...newLines(bC, oC).map(([n, l]) => [`${COND}:${n}`, l])] : [];
+    // ms1 (row 1154 (4)): only the unit's OWN land-commit lines are judged (fingerprints with every digit removed, so a digit planted into
+    // one of its own lines is still its line and still reds); a later unit's new line is the bound's
+    let own = null; try { own = JSON.parse(readFileSync(new URL("./OWN_LINES.json", import.meta.url), "utf8")).files; } catch { own = null; }
+    const fp = (l) => createHash("sha256").update(l.replace(/\d/g, "").replace(/\s+/g, " ")).digest("hex");
+    const mine = (f) => ([, l]) => !!own && Array.isArray(own[f]) && own[f].includes(fp(l));
+    const nl = have && own ? [...newLines(bS, oS).filter(mine(SVC)).map(([n, l]) => [`${SVC}:${n}`, l]), ...newLines(bC, oC).filter(mine(COND)).map(([n, l]) => [`${COND}:${n}`, l])] : [];
     const strip = (t) => t.replace(/[\w./-]+\.(?:md|mjs|ps1)\b/g, "").replace(/\b\d{1,2} [A-Z][a-z]{2} \d{4}\b/g, "").replace(/\b[SL]\d+\b/g, "");
     const bad = nl.map(([w, l]) => { const s = strip(l); return /\d/.test(s) ? `${w} a digit` : /Disabled|killed|Ready|EXPECTED/.test(s) ? `${w} a state word` : null; }).filter(Boolean);
-    clause("N1", nl.length > 0 && !bad.length, !nl.length ? "no new lines (the unit is absent)" : bad.length ? bad.join(", ") : `${nl.length} new line(s) state no live count or state`);
+    clause("N1", nl.length > 0 && !bad.length, !own ? "ci/mtxt3/OWN_LINES.json unreadable" : !nl.length ? "no new lines of this unit (the unit is absent)" : bad.length ? bad.join(", ") : `${nl.length} new line(s) state no live count or state`);
   }
   if (want("BOUND")) {
     if (!ok) clause("BOUND", false, "no --org / --base-org");
