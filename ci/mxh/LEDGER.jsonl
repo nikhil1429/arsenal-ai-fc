@@ -1,1 +1,7 @@
 {"ts":"2026-11-19T01:51:05Z","act":"branch","cmd":"git fetch origin main && git checkout -b claude/mxh-spec origin/main","last_line":"224f9b9 unit mtxt (forks row 1114 / newest adoption ...): land branch stacked on land/mjd7 1fcaec9"}
+{"ts":"2026-11-19T01:52:30Z","act":"hermetic-copy","cmd":"node ci/mxh/witness/copy.mjs $PWD HEAD (git archive 224f9b9 + npm ci --ignore-scripts under os.tmpdir())","last_line":"/tmp/mxh-hermetic-sVhuXN"}
+{"ts":"2026-11-19T01:52:30Z","act":"mxw-landed?","cmd":"sed -n 621,633p scripts/xray.mjs ; git merge-base origin/main origin/claude/mxw-build","last_line":"seedDefaults identifier-only on main (mxw NOT landed); mxw-build ab98546 cut from 224f9b9"}
+{"ts":"2026-11-19T01:52:30Z","act":"measure-base","cmd":"node ci/mxh/witness/q5.mjs <base>/scripts/xray.mjs","last_line":"declared 66 · declared_jsonl 0 · Q5_n 1 · F5_n 5 · not_in_ir_n 33"}
+{"ts":"2026-11-19T01:52:30Z","act":"measure-fix","cmd":"apply_f2.mjs fix; q5.mjs","last_line":"declared 66 · declared_jsonl 32 · Q5_n 5 · F5_n 14 · not_in_ir_n 7"}
+{"ts":"2026-11-19T01:52:30Z","act":"measure-mxw","cmd":"xray.mjs from origin/claude/mxw-build ab98546; q5.mjs","last_line":"declared_jsonl 0 · Q5_n 1 · F5_n 4 · not_in_ir_n 33"}
+{"ts":"2026-11-19T01:52:30Z","act":"measure-mxwfix","cmd":"mxw xray + apply_f2.mjs fix; q5.mjs","last_line":"declared_jsonl 32 · Q5_n 7 · F5_n 9 · not_in_ir_n 5"}
