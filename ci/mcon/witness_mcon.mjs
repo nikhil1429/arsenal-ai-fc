@@ -5,9 +5,10 @@
 //   to slice its own source from its own string literal, so its /NOTHING WAS RUN/ pin satisfied itself); and the spec
 //   question, answered by census: how many selftest asserts in the repo are satisfied by their own literal.
 // ----------------------------------------------------------------------------
-// USAGE: node ci/mcon/witness_mcon.mjs --org <dir> --base-org <dir> [--only <clause>[,<clause>…]]
+// USAGE: node ci/mcon/witness_mcon.mjs --org <dir> --base-org <dir> [--modules <dir>] [--only <clause>[,<clause>…]]
 //   --org       the tree to witness (the build reads GREEN; the base, given as --org too, reads RED)
 //   --base-org  the BASE tree (the sha in ci/mcon/BASE); absent ⇒ every clause RED
+//   --modules   a tree whose node_modules carries acorn for the census (default: the first of --org / --base-org that has it)
 //   --only      run only these clause ids (the mutant runner's door); LAST always runs
 // CONTRACT — READ-ONLY on --org and --base-org. Every process it starts runs on a COPY of a tree (all but .git and
 //   node_modules) under ONE os.tmpdir() root made here, by node — never a shell copy — with TMPDIR / TEMP / TMP / HOME /
@@ -46,6 +47,7 @@ const ORG = opt("--org") ? resolve(opt("--org")) : null;
 const BASE = opt("--base-org") ? resolve(opt("--base-org")) : null;
 const ONLY = opt("--only") ? new Set(opt("--only").split(",")) : null;
 const want = (id) => !ONLY || ONLY.has(id);
+const MODULES = opt("--modules") ? resolve(opt("--modules")) : [ORG, BASE].find((d) => d && existsSync(join(d, "node_modules", "acorn", "package.json"))) || ORG;
 
 const COND = "scripts/conductor.mjs";
 const fold = (s) => s.replace(/\r\n/g, "\n");
@@ -121,7 +123,7 @@ try {
       if (!existsSync(census)) clause("C1", false, "the org carries no ci/mcon/census_mcon.mjs — the census is absent");
       else {
         const run = (tree) => {
-          const r = spawnSync(process.execPath, [census, "--org", tree, "--modules", existsSync(join(ORG, "node_modules")) ? ORG : BASE, "--json"], { encoding: "utf8", env: childEnv(), windowsHide: true });
+          const r = spawnSync(process.execPath, [census, "--org", tree, "--modules", MODULES, "--json"], { encoding: "utf8", env: childEnv(), windowsHide: true });
           const lines = fold(String(r.stdout || "")).split("\n").filter(Boolean);
           const rows = lines.filter((l) => l.startsWith("{")).map((l) => JSON.parse(l)).filter((h) => h.kind === "own-literal");
           return { code: r.status, last: lines[lines.length - 1] || "(no output)", rows };
