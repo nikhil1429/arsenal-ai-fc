@@ -8,3 +8,5 @@
 {"ts":"2026-11-19T12:34:51.712Z","act":"report-build","cmd":"node scripts/lawpack.mjs report (same tree)","last_line":"own-literal census · walk scripts+hooks · 140 file(s) · own-literal 39 · unresolved 77 · own-assert 1 (listed) · waived 0 · parse errors 0"}
 {"ts":"2026-11-19T12:34:51.712Z","act":"gates-both","cmd":"node scripts/gates.mjs (base tree and build tree)","last_line":"gates: 3 RED — a gate may only get stricter (§10-D rule 6) — identical lines on both trees"}
 {"ts":"2026-11-19T12:34:51.712Z","act":"models-check-build","cmd":"node scripts/models.mjs check (build tree)","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0) · exit 0"}
+{"ts":"2026-11-19T12:38:31.663Z","act":"witness-base","cmd":"node ci/mpinl/witness_mpinl.mjs --org <LF clone fb42118> --base-org <same>","last_line":"RED MPINL · W1, W1u, W2, W2u, W3, W4, W5, W6, F7"}
+{"ts":"2026-11-19T12:38:31.663Z","act":"checkpoint","cmd":"STOP message (his pause #269)","last_line":"CHECKPOINT · STOPPED at 2026-11-19T12:38Z · resume from: the witness on the build, then the mutants"}
