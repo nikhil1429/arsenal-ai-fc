@@ -1,5 +1,3 @@
-CHECKPOINT · STOPPED at 2026-11-19T12:38Z · resume from re-run node ci/mxb/run_mutants_mxb.mjs --org . --base-org <node ci/mxb/plant_mxb.mjs base --repo . --sha fb42118> whole (M1-M15), then ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all on the build, then fill PROOF §5 §7 §8, then the effort receipt
-
 # MXB PROOF — the six Q6 blindnesses (B1-B6), one IR family in `scripts/xray.mjs` (BUILD seat)
 
 Unit mxb · forks row 1161 (1)-(5) · **build seat, cloud, written 2026-11-19 (UTC)** · branch `claude/mxb-build`.
@@ -80,14 +78,29 @@ build`), re-frozen by the runner at the landing through the owner (row 1161 (4))
 
 ## 5 · The mutants (`ci/mxb/run_mutants_mxb.mjs --org . --base-org <base plant>`)
 
-PARTIAL, interrupted by the STOP (2026-11-19). The run had judged the control and M1-M3 when it was halted; M4-M15 are not yet run.
+The whole run (2026-11-19, after the resume; the partial run before the STOP is in the ledger). One mutant per clause, plus
+three tree mutants for W11 (a raw NUL byte back in each file) and one for BOUND. An anchor not found is UNAPPLIED (none).
 
 ```
-# 2026-11-19 — partial, the runner's lines before the stop
+# 2026-11-19 — node ci/mxb/run_mutants_mxb.mjs --org . --base-org <base plant>  (8m05s wall)
 control: GREEN MXB the six Q6 blindnesses resolved by the five rules + the guard, no writer invented, the NUL asserts state main, LF and CRLF · 13 clause(s) (exit 0)
 M1 RED by W1 · red=[W1,W7] · an object value no longer binds an ObjectPattern parameter (finishProbe's `{ path }`)
 M2 RED by W2 · red=[W2,W7] · an object literal's arrow property is no longer a function value (`F.sitting`)
 M3 RED by W3 · red=[W3,W7] · an object value no longer flattens into a plain parameter (`deps.outPath`)
+M4 RED by W4 · red=[W3,W4,W7] · a closure returned by a call is not kept in scope (`const P = mkP(dir)`)
+M5 RED by W5 · red=[W5,W7] · writeSync on an openSync descriptor is not a write (the sink class without the fd rule)
+M6 RED by W6 · red=[W2,W4,W6,W7] · an expression-bodied function's return value is not evaluated (`GATE_LOG(dir)`)
+M7 RED by W7 · red=[W1,W7] · `probe` is a test word again (finishProbe's write is a fixture, B1 stays in Q6) — F-CTX0 reversed
+M8 RED by W8 · red=[W8] · openSync is a WRITE whatever its flag (the naive sink-class fix for B5: a read-open becomes a writer)
+M9 RED by W9 · red=[W9] · a writeSync on a descriptor the IR cannot follow is counted as an unresolved site
+M10 RED by W10 · red=[W10] · an object value built at a TEST call site binds a production parameter (G-FIX off)
+M11 RED by W11 · red=[W11] · the NUL asserts state the dead trap again (`raw.includes(0)`, red on main since forks row 616)
+M12 RED by W11 · red=[W11,BOUND] · a raw NUL byte comes back into calibration.mjs (the grep trap re-opened)
+M13 RED by W11 · red=[W11,BOUND] · a raw NUL byte comes back into dmn.mjs (the grep trap re-opened)
+M14 RED by W11 · red=[W11,BOUND] · a raw NUL byte comes back into rejirah.mjs (the grep trap re-opened)
+M15 RED by BOUND · red=[BOUND] · a file beyond the named one differs from the base (one comment line in state.mjs)
+LAST: 0 node process(es) naming the temp root survive · the temp root removed
+run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN
 ```
 
 ## 6 · F-CONSUMERS B — the done verdict, before and after, in this seat's trees (2026-11-19)
@@ -109,14 +122,14 @@ on-disk Q1/Q4 rows (`node scripts/xray.mjs q`) before and after — this clone's
 ```
 # 2026-11-19 — base (repo at fb42118): ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all
 organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)
-# build: NOT YET RUN (stopped before it began)
+# 2026-11-19 — build (this branch): the same command
+organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)
 # 2026-11-19 — node scripts/lawpack.mjs report, base and build: every count identical
 lawpack · 1933 raw match(es) over 8/8 rules · jugad-literal-subject-list 93 (frozen 90) · bare-catch 37 · receipt-testimony-read 5 · import-time-registry-read 2 · raw-nul-in-source 0 · depcruise_errors 13 (frozen 7)
 lawpack: 2 RED — a gate may only get stricter (§10-D rule 6)
-# 2026-11-19 — node scripts/models.mjs check (base): exit 0
+# 2026-11-19 — node scripts/models.mjs check, base and build: exit 0 both
 models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)
 ```
-The build's `models.mjs check` is owed at resume (xray.mjs names no model).
 
 ## 8 · The neutral machine (public API, no token)
 
@@ -124,9 +137,14 @@ The build's `models.mjs check` is owed at resume (xray.mjs names no model).
 # 2026-11-19 — GET https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs
 aa2b565  run 44524409775  completed / cancelled (superseded by the next push)
 b2a17f7  run 44524616430  completed / cancelled (superseded by the next push)
-054e73e  run 44525043077  queued at the read
+054e73e  run 44525043077  completed / cancelled (superseded)
+fe8ec51  run 44525466563  completed / cancelled (superseded)
+8bbfcad  run 44525766483  npm test · node 22 SUCCESS · npm test · node 24 SUCCESS   (the checkpoint tip)
+ca078c9  run 44585341542  in progress at the read
 ```
-The runs of the later pushes are read at resume.
+`node scripts/ci_verdict.mjs <full sha>` answered `UNREADABLE — … check-runs … answered 403` from this container (node's
+fetch through the cloud proxy), while `curl` on the same URL answered 200 — so the legs are read with curl, no token.
+The final tip's legs: §11.
 
 ## 9 · FORKS (each one line; nothing beyond the named files was edited)
 
@@ -141,4 +159,10 @@ The runs of the later pushes are read at resume.
 
 ## 10 · Peer/architect messages received
 
-None received in this session up to the last push (2026-11-19).
+- STOP (his word #269, 2026-11-19 18:06 IST, via the usage-limits session): checkpoint pushed at 8bbfcad (CHECKPOINT · STOPPED at 2026-11-19T12:38Z).
+- RESUME (his word #270, 2026-11-19 23:38 IST): resumed from 8bbfcad's CHECKPOINT line; the line is retired here, kept in the ledger.
+
+## 11 · The final tip
+
+The commit that carries this section is the proof tip; its sha and both neutral legs (`npm test · node 22`,
+`npm test · node 24`) are the last row of `ci/mxb/LEDGER.jsonl`, written by the one commit after it (ledger only).
