@@ -123,15 +123,24 @@ export function parseReceipts(text) {
 const lastSha = (rr) => { const ok = rr.rows.filter((x) => x.chain); return ok.length ? ok[ok.length - 1].row.row_sha256 : ZERO; };
 
 // ── THE ROW SHAPE (R2) — a row is the organ's measurement or it is TYPED ──────────────────────────────────────────────
-const COMMON = ["v", "kind", "key", "rung", "clause", "at", "by", "prev_sha256", "row_sha256"];
-const FIELDS = {
+// ONE owner structure (forks row 1130 (1)): the common fields and each kind's own fields are keys of ROW_SHAPE; every list the
+// organ uses (COMMON, FIELDS, ROW_FIELDS) is DERIVED from it — none is listed a second time.
+const ROW_SHAPE = Object.freeze({
+  common: Object.freeze({ v: 1, kind: 1, key: 1, rung: 1, clause: 1, at: 1, by: 1, prev_sha256: 1, row_sha256: 1 }),
+  kinds: Object.freeze({
   red: ["cmd", "cmd_sha256", "head_sha", "exit", "out_sha256"],
   green: ["cmd", "cmd_sha256", "head_sha", "red_head_sha", "red_sha", "ancestor", "exit", "out_sha256", "day", "day_proof"],
   meter: ["meter", "before_sha256", "after_sha256", "equal", "old_day", "old_day_green", "green_sha"],
   loop: ["files"],
-};
+  }),
+});
+const COMMON = Object.keys(ROW_SHAPE.common);
+const FIELDS = ROW_SHAPE.kinds;
 export const ROW_FIELDS = Object.freeze(Object.fromEntries(Object.entries(FIELDS).map(([k, v]) => [k, Object.freeze([...COMMON, ...v])])));
-const LOOP_ROLES = ["sheet", "page", "acts", "ladder"];
+// the loop's four artefacts: role → the CLI flag that names it — the ONE structure the roles, the loop verb's flags and its
+// required set are all derived from (forks row 1130 (1))
+const LOOP_FLAGS = Object.freeze({ sheet: "--sheet", page: "--page", acts: "--acts", ladder: "--ladder" });
+const LOOP_ROLES = Object.keys(LOOP_FLAGS);
 /** rowProblem — null for a well-formed measurement, else the word why it is TYPED */
 export function rowProblem(r) {
   if (!r || typeof r !== "object") return "typed: not a row";
@@ -238,8 +247,8 @@ function append(path, rr, body) {
   rr.rows.push({ row, i: rr.rows.length, chain: true });
   return row;
 }
-const VERBS = { red: ["--rung", "--clause", "--cmd"], green: ["--rung", "--clause", "--day"], loop: ["--loop", "--sheet", "--page", "--acts", "--ladder"], show: ["--rung"], verify: [], selftest: [] };
-const REQUIRED = { red: ["--rung", "--clause", "--cmd"], green: ["--rung", "--clause", "--day"], loop: ["--loop", "--sheet", "--page", "--acts", "--ladder"] };
+const VERBS = { red: ["--rung", "--clause", "--cmd"], green: ["--rung", "--clause", "--day"], loop: ["--loop", ...Object.values(LOOP_FLAGS)], show: ["--rung"], verify: [], selftest: [] };
+const REQUIRED = { red: ["--rung", "--clause", "--cmd"], green: ["--rung", "--clause", "--day"], loop: ["--loop", ...Object.values(LOOP_FLAGS)] };
 /** parseArgs — every flag must be the verb's own, each with a value; anything else refuses BEFORE anything runs */
 export function parseArgs(argv) {
   const [verb, ...rest] = argv;
@@ -278,7 +287,7 @@ export async function cli(argv, env = process.env) {
   if (rr.brokenAt >= 0) return { code: 1, lines: [`rung_receipt: REFUSED · the chain is broken at row ${rr.brokenAt + 1} — nothing is appended onto a file verify rejects`] };
   if (a.verb === "loop") {
     const files = LOOP_ROLES.map((role) => {
-      const p = resolve(o[role === "acts" ? "--acts" : `--${role}`]);
+      const p = resolve(o[LOOP_FLAGS[role]]);
       return existsSync(p) ? { role, name: basename(p), sha256: sha256(readFileSync(p)) } : { role, missing: true };
     });
     const gone = files.filter((f) => f.missing).map((f) => f.role);
