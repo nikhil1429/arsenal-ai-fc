@@ -301,6 +301,16 @@ through the ms1 mutant runner shape (`ci/ms1/run_mutants_ms1.mjs`).
 
   Recommendation: **A**. Decided by: whether any later unit re-measures a flaky member. If one does, B.
 
+- **F-6 · mlv3, red on node 24 at 9644818 (§8).** It is the same keeper family (units mlv1 to mlv3 share
+  `retireWhenIdle` and `keep()`), and this seat did not measure it. Options:
+  - **A.** Extend unit mrv to mlv2 and mlv3: the same instruments, since `measure_mlv1.mjs --witness` takes any copy.
+    The same repetition and plants.
+  - **B.** A new unit for mlv3 alone.
+  - **C.** Wait until it is red at two tips (row 1119's own bar).
+
+  Recommendation: **A**. Decided by: whether `ci/mlv3/` restarts or kills a keeper the way mlv1 does (C1 / C2). That is
+  answered by a read of its kill and start sites, then the same plant matrix.
+
 ## 6. NAMED FILES A BUILD WOULD TOUCH
 
 - `ci/mlv1/witness_mlv1.mjs` (the repair, §3). Under F-1 C, also `ci/mlv1/witness_mlv1Legacy.mjs` (the frozen bytes).
@@ -331,9 +341,29 @@ through the ms1 mutant runner shape (`ci/ms1/run_mutants_ms1.mjs`).
 
 ## 8. THE NEUTRAL MACHINE ON THIS BRANCH
 
-<!-- RESULT-CI -->
-(read after the last push; the next push carries it)
+Read through the public API, no token, dated 19 Nov 2026. The pushes b0bcbcd, 9d0fee4, 3ba3021 and 88f6d78 were each
+CANCELLED by the next push (`suite.yml` concurrency, cancel-in-progress). 9644818 is the first push judged whole:
+
+```
+run 44442757201 · head 9644818 · merge base 95b07a6
+job 135287486817  npm test · node 22  failure
+   ok   WITNESS ‹mlv1› · ran in 3.3 s (B5)
+   ok   WITNESS ‹mlv1› · GREEN at head against its BASE
+   B1_VERDICT node 22 RED — 5 member(s) red that are not red at the merge base · head 9644818 · base 95b07a6 · 5 new red · 1 base red · 0 base red now passing
+   new: WITNESS ‹mf2› · ‹mfac› · ‹mjd3› · ‹mjud› · ‹mtail›   (each "· GREEN at head against its BASE")
+job 135287487081  npm test · node 24  failure
+   ok   WITNESS ‹mlv1› · ran in 2.8 s (B5)
+   ok   WITNESS ‹mlv1› · GREEN at head against its BASE
+   B1_VERDICT node 24 RED — 6 member(s) red that are not red at the merge base · head 9644818 · base 95b07a6 · 6 new red · 1 base red · 0 base red now passing
+   new: WITNESS ‹mf2› · ‹mfac› · ‹mjd3› · ‹mjud› · ‹mlv3› · ‹mtail›
+```
+
+The neutral machine's mlv1 tally with this run added (dated 19 Nov 2026): **node 22: 0 of 5 red · node 24: 2 of 5
+red.** This branch changes `ci/mrv/` only. The other reds are therefore those of its base tip 52b51c1, whose node 24 leg
+carried the same five plus mlv1 (§1.1). They belong to their own units (the row 1107 KNOWN_RED owners, and mfac), and
+none of them is mrv's. **mlv3 is new red on node 24 here**: a sibling keeper witness, which is fork F-6.
 
 ## 9. STATUS
 
-All the measured steps are on the branch (§1.1 to §1.5). §1.6 and §8 are filled by the next push.
+COMPLETE at the push that carries this line: every step of the brief is measured and on the branch. The verdict of this
+final push is named in the seat's final message, because a push cannot carry its own run.
