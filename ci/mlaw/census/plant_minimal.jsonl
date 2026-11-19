@@ -1,0 +1,2 @@
+{"organ":"dugout","line":107,"named":["registry.json","captain.json","readiness.json"],"extra":["reps_log.jsonl"],"minimal":["captain.json","readiness.json","registry.json","reps_log.jsonl"]}
+{"organ":"limits","line":123,"named":["reps_log.jsonl","physio_config.json","nemesis_config.json"],"extra":["doubtminer_config.json"],"minimal":["doubtminer_config.json","nemesis_config.json","physio_config.json","reps_log.jsonl"]}
