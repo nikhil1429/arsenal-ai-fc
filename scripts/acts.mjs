@@ -68,7 +68,16 @@ const isFixture = () => (process.argv[2] || "") === "selftest" || !!process.env.
 
 const clip = (s, n = 200) => String(s == null ? "" : s).replace(/\s+/g, " ").trim().slice(0, n);
 const readRows = (p = ACTS_LEDGER) => { try { if (!existsSync(p)) return []; return readFileSync(p, "utf8").split("\n").filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } };
-const newId = (now) => `a${now.getTime().toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, "0")}`;
+// unit mact (forks row 1138 (2), F-2 (a)): a PROCESS-LOCAL SEQUENCE between the ms and the random bucket — one process never
+// mints the same id twice, whatever clock it is handed. Before it, two acts in one ms (a planted deps.now, or a turn's refused
+// acts, which spend no time) shared an id 1 time in 1296 per pair, and undo/resolve/reroute acted on the FIRST row with it.
+// The ms part has a fixed length for this era and the bucket a fixed 2, so the sequence between them reads back whole.
+let idSeq = 0;
+const newId = (now) => `a${now.getTime().toString(36)}${(idSeq++).toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, "0")}`;
+// unit mact (F-2 (c)): an id held by TWO rows is AMBIGUOUS — undo, resolve and reroute refuse it, always (a row minted before the
+// sequence may share its id with another; which one he meant cannot be read off the ledger, so no verb guesses).
+const idHeldByTwo = (rows, id) => rows.filter((r) => r && r.id === id).length > 1;
+const ambiguous = (id, rows) => `act ${id} is held by ${rows.filter((r) => r && r.id === id).length} rows — ambiguous: two rows hold one id, nothing acted on`;
 
 // ── THE OWNER TABLE — every verb is an owner's CLI + its declared reverse ──
 // `argv(args, id)` builds the child argv (after `node scripts/<organ>.mjs`); `stdin` hands his
@@ -226,6 +235,7 @@ export function undo(id, deps = {}) {
   const row = rows.find((r) => r.id === id && r.verb);
   const now = deps.now || new Date();
   if (!row) return { ok: false, why: `no act ${id}` };
+  if (idHeldByTwo(rows, id)) return { ok: false, why: ambiguous(id, rows) };
   const prior = rows.find((r) => r.verb === "undo" && r.of === id && r.ok);   // append-only ledger: the undo is its own row
   if (prior) return { ok: false, why: `act ${id} already undone at ${prior.undone_at}` };
   if (!row.ok) return { ok: false, why: `act ${id} never succeeded (${row.error}) — nothing to undo` };
@@ -249,9 +259,11 @@ export function resolveFailed(id, by, deps = {}) {
   const isAct = (r) => r.verb && r.verb !== "undo" && r.verb !== "resolve" && r.verb !== "reroute";
   const failed = rows.find((r) => r.id === id && isAct(r));
   if (!failed) return { ok: false, why: `no act ${id}` };
+  if (idHeldByTwo(rows, id)) return { ok: false, why: ambiguous(id, rows) };
   if (failed.ok) return { ok: false, why: `act ${id} succeeded — nothing to resolve` };
   const fix = rows.find((r) => r.id === by && isAct(r));
   if (!fix) return { ok: false, why: `no act ${by}` };
+  if (idHeldByTwo(rows, by)) return { ok: false, why: ambiguous(by, rows) };
   if (!fix.ok) return { ok: false, why: `act ${by} did not succeed — it cannot supersede ${id}` };
   if (fix.verb !== failed.verb) return { ok: false, why: `act ${by} is a ${fix.verb}, ${id} a ${failed.verb} — a supersession keeps the verb` };
   if (!(Date.parse(fix.ts) > Date.parse(failed.ts))) return { ok: false, why: `act ${by} is not later than ${id}` };
@@ -278,6 +290,7 @@ export function rerouteFailed(id, by = null, deps = {}) {
   const now = deps.now || new Date();
   const failed = rows.find((r) => r.id === id && VERBS.includes(r.verb));
   if (!failed) return { ok: false, why: `no act ${id}` };
+  if (idHeldByTwo(rows, id)) return { ok: false, why: ambiguous(id, rows) };
   if (failed.ok) return { ok: false, why: `act ${id} succeeded — nothing to re-route` };
   if (failed.args && failed.args.rerouted_from) return { ok: false, why: `act ${id} is itself a re-route of ${failed.args.rerouted_from} — one hop, never a chain` };
   if (rows.some((r) => r.verb === "reroute" && r.of === id && r.ok)) return { ok: false, why: `act ${id} already re-routed` };
@@ -288,6 +301,7 @@ export function rerouteFailed(id, by = null, deps = {}) {
   if (by) {
     const fix = rows.find((r) => r.id === by && VERBS.includes(r.verb));
     if (!fix) return { ok: false, why: `no act ${by}` };
+    if (idHeldByTwo(rows, by)) return { ok: false, why: ambiguous(by, rows) };
     if (!fix.ok || fix.verb !== named) return { ok: false, why: `act ${by} is ${fix.ok ? `a ${fix.verb}` : "a failure"}; only an ok ${named} act (the consumer ${o.organ} named) can be the one ${id} reached` };
     if (!(Date.parse(fix.ts) > Date.parse(failed.ts))) return { ok: false, why: `act ${by} is not later than ${id}` };
     const link = { id: `${id}-reroute`, ts: now.toISOString(), door: "cli", verb: "reroute", of: id, by, owner: "acts.mjs", ok: true,
@@ -488,15 +502,15 @@ async function selftest() {
   assert("every row landed in the ledger with door · verb · owner · argv · receipt|error · ms (11 dispatched, 2 refused at validation)", rows.length === 11 && rows.every((r) => r.id && r.ts && r.door && "ok" in r) && rows[0].argv[0] === "mark" && typeof rows[0].ms === "number");
   // undo
   const u1 = undo(n1.id, { ...deps, rows });
-  assert("undo(note) → hippocampus forget <id from the receipt>; the undo row carries undone_at and `of`", u1.ok && calls[8].argv[0] === "forget" && calls[8].argv[1] === "m1" && u1.row.of === n1.id && u1.row.undone_at, JSON.stringify(u1));
+  assert("undo(note) → hippocampus forget <id from the receipt>; the undo row carries undone_at and `of`", u1.ok && calls[8]?.argv?.[0] === "forget" && calls[8]?.argv?.[1] === "m1" && u1.row.of === n1.id && u1.row.undone_at, JSON.stringify(u1));
   const u2 = undo(c1.id, { ...deps, rows });
   assert("undo(card) → declared NOT reversible, says why (answered at an anchor, never unfiled); no owner call", !u2.ok && /never unfiled/.test(u2.why) && calls.length === 9);
   const u3 = undo(n1.id, { ...deps, rows });
   assert("undo twice → refused (already undone)", !u3.ok && /already undone/.test(u3.why));
   const u4 = undo(a1.id, { ...deps, rows });
-  assert("undo(agenda) → sitting agenda drop <id from the receipt>", u4.ok && calls[9].argv.join(" ") === "agenda drop ag1");
+  assert("undo(agenda) → sitting agenda drop <id from the receipt>", u4.ok && calls[9]?.argv?.join(" ") === "agenda drop ag1");
   const u5 = undo(p1.id, { ...deps, rows });
-  assert("undo(pref) → gaffer_state forget <axis>", u5.ok && calls[10].argv.join(" ") === "forget how_to_speak");
+  assert("undo(pref) → gaffer_state forget <axis>", u5.ok && calls[10]?.argv?.join(" ") === "forget how_to_speak");
   // stats + findings
   const s = stats(7, rows, Date.parse("2026-08-18T21:00:00Z"));
   assert("stats: n (acts incl. the refused, never the undo rows) · ok · failed · undone · by door/verb", s.n === 11 && s.ok === 7 && s.failed === 4 && s.undone === 3 && s.by_door.gaffer === 7 && s.by_verb.job === 2, JSON.stringify(s));
@@ -719,6 +733,26 @@ async function selftest() {
     const refusals = ["aEARLY", "aBAD", "aRULE", "aNONE"].map((b2) => rerouteFailed("aPAST", b2, { ...R.deps, rows: [past, early, bad, other] }));
     assert("REROUTE · a link is refused with NO row when its --by is earlier than the refusal, a failure, a verb other than the one the owner named, or absent",
       refusals.every((x) => !x.ok && x.why) && R.rows.length === 0 && R.calls.length === 0, refusals.map((x) => x.why).join(" | "));
+  }
+  // ── ONE ID, ONE ROW (unit mact, forks row 1138 (2)) — the mint never repeats in a process; a verb never guesses between two rows ──
+  {
+    const fixed = new Date("2026-08-18T20:30:00Z"), sameMs = [];
+    for (let i = 0; i < 32; i++) sameMs.push(dispatch({ door: "cli", verb: "note", args: { text: `one ms ${i}`, kind: "thread" } }, { exec: () => ({ ok: true, out: '{"ok":true,"id":"m1"}' }), append: () => true, now: fixed }).id);
+    const turn = dispatchAll(Array.from({ length: 6 }, (_, i) => ({ verb: `refused_${i}`, args: { text: "x" } })), "code", { append: () => true });
+    assert("ONE ID · 32 acts on ONE planted clock mint 32 distinct ids, and a turn's six refused acts (no ms between them) six — the sequence, never the random bucket, makes them unique",
+      new Set(sameMs).size === 32 && new Set(turn.map((r) => r.id)).size === 6 && sameMs.every((x) => /^a[0-9a-z]+$/.test(x)), JSON.stringify({ distinct: new Set(sameMs).size, turn: turn.map((r) => r.id) }));
+    const dc = [], da = [];
+    const dd = { now: new Date("2026-10-21T12:00:00Z"), exec: (o) => { dc.push(o); return { ok: true, out: "ok" }; }, append: (r) => { da.push(r); return true; } };
+    const RF = "teaching_contract: REFUSED. Route it through acts verb `design` → the registry rulings lane.";
+    const nA = { id: "aTWO", ts: "2026-10-19T12:00:00Z", door: "cli", verb: "note", args: { text: "x", kind: "thread" }, owner: "hippocampus.mjs", ok: true, receipt: '{"ok":true,"id":"m1"}' };
+    const nB = { ...nA, verb: "pref", args: { text: "y", axis: "how_to_speak" }, owner: "gaffer_state.mjs", receipt: "ok" };
+    const fF = { id: "aFL", ts: "2026-10-19T12:00:00Z", door: "cli", verb: "rule", args: { text: "r" }, ok: false, error: RF };
+    const fK = { id: "aOK", ts: "2026-10-19T12:00:07Z", door: "cli", verb: "rule", args: { text: "r" }, ok: true, receipt: "added" };
+    const fD = { id: "aDZ", ts: "2026-10-19T12:00:08Z", door: "cli", verb: "design", args: { text: "r" }, ok: true, receipt: "{}" };
+    const got = [undo("aTWO", { ...dd, rows: [nA, nB] }), resolveFailed("aFL", "aOK", { ...dd, rows: [fF, fF, fK] }), resolveFailed("aFL", "aOK", { ...dd, rows: [fF, fK, fK] }),
+      rerouteFailed("aFL", null, { ...dd, rows: [fF, fF] }), rerouteFailed("aFL", "aDZ", { ...dd, rows: [fF, fD, fD] })];
+    assert("ONE ROW · undo, resolve and reroute REFUSE an id held by two rows (the act's id and the --by id): ambiguous, no owner called, no row appended",
+      got.every((g) => !g.ok && /ambiguous/.test(g.why || "")) && dc.length === 0 && da.length === 0, JSON.stringify(got.map((g) => g.why)));
   }
   assert("OWNERS: every verb names an EXISTING organ file and declares a reverse", VERBS.every((v) => OWNERS[v] && existsSync(join(__dirname, OWNERS[v].organ)) && typeof OWNERS[v].reverse === "function"), VERBS.filter((v) => !existsSync(join(__dirname, OWNERS[v].organ))).join(","));
   // forks row 616 (12 Oct 2026): intentKey's separator was a RAW NUL byte in this source; it is now the

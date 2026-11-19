@@ -79,7 +79,8 @@ export const CLAIM_RE = /\b(verified|confirmed|checked|sab green|poora padh|done
 export const DEFAULT_MINUTES = 30;
 
 const sha16 = (s) => createHash("sha256").update(String(s == null ? "" : s), "utf8").digest("hex").slice(0, 16);
-const newId = (now) => `k${now.getTime().toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, "0")}`;
+let claimSeq = 0;   // unit mact (forks row 1138 (2), F-3 (b)): the act mint's one-line repair — a process-local sequence, one process never mints the same id twice
+const newId = (now) => `k${now.getTime().toString(36)}${(claimSeq++).toString(36)}${Math.floor(Math.random() * 1296).toString(36).padStart(2, "0")}`;
 const argOf = (flag, argv = process.argv) => { const i = argv.indexOf(flag); return i > 0 && argv[i + 1] != null ? String(argv[i + 1]) : null; };
 export const sessionOfEnv = (env = process.env) => String(env.CLAUDE_CODE_SESSION_ID || "").trim() || null;
 
