@@ -65,4 +65,60 @@ run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN
 
 M-J4 is the spec's registered mutant (F4 A: one per clause; the spare M-J4b is not registered).
 
-<!-- §6 onward filled after the member and suite runs -->
+## 6. The member, before and after (the member's own recipe, ci/ms1/PROOF.md §5.1)
+
+Linux, this container, 19 Nov 2026, `GITHUB_ACTIONS=true ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses`,
+base in a scratch clone at `52b51c1`, build at `4b044b9` (the witness + KNOWN_RED commit):
+
+| Member (19 Nov 2026) | base `52b51c1` | build |
+|---|---|---|
+| ‹mjd3› last line | `RED MJD3 · J4 BOUND` → **RULED** row 1107 · unit mr3 | `RED MJD3 · BOUND` → **ok** (BOUND dropped); no entry, so no STALE |
+| every other member | the build's line, word for word (the reds of this container: ‹mdn2› `SETUP`, ‹mdone› `SETUP`, ‹mfac› `F4 W3.2`, ‹mtail› `T2 F-C · T3 AUTH`, ‹mf2›, ‹mjud›) | same; none turned red |
+
+The ‹mr3› member itself rides from `3fcad4e` on (its witness is on the tree); on the neutral machine it is not among the reds (§7).
+
+## 7. The neutral machine (suite workflow, `windows-latest`, node 22 and 24; check runs read with curl, no token)
+
+| sha (19 Nov 2026) | check runs | verdict | the red members it names (B1_VERDICT `new`) |
+|---|---|---|---|
+| `52b51c1` (base) | node 22 `135243231510` · node 24 `135243231639` | failure | ‹mf2› ‹mfac› **‹mjd3›** ‹mjud› ‹mtail› (+ ‹mlv1› on node 24 only) |
+| `4b044b9`, `8532785` | cancelled by the next push | — | — |
+| `08b4772` (build) | node 22 `135278560649` · node 24 `135278560020` | failure | ‹mf2› ‹mfac› ‹mjud› ‹mtail› — **‹mjd3› gone, ‹mr3› not red, nothing new** |
+
+The four left are other units' (rows 1107 (2): mrf, mrj, mrt; ‹mfac› is red at the base too). Main never carries this branch
+alone: row 1119 (2), ms1's seat assembles the land branch.
+
+## 8. Selftests touched, before and after (the hermetic suite is the measurement)
+
+`ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`, scratch clones, 19 Nov 2026 (no GITHUB_ACTIONS, so the
+witnesses member prints its skip line):
+
+```
+base  52b51c1: organism_test: 139 passed, 5 failed · ruled 0 · UNRULED 5 · LIVE 126 (hermetic: named, not run)   exit 2
+build 08b4772: organism_test: 139 passed, 5 failed · ruled 0 · UNRULED 5 · LIVE 126 (hermetic: named, not run)   exit 2
+```
+
+The same five on both (this container has no `node_modules`: fsrs, sandbox, mutagen selftests, the coverage law, the
+all-members line). The sorted assert sets differ in ONE line: LOAD ZERO BLOCK 7 scans one more canon file (this PROOF) and
+passes. `node scripts/models.mjs check` → exit 0, `literal model names outside models.mjs: 0`.
+
+## 9. Where the build differs from the spec (THE RULING WINS)
+
+- Spec F2 offered A/B/C; ruled **C**: ms1 re-cut its own R1/R2 plants on `52b51c1` — nothing of ci/ms1 touched here.
+- Spec F5 (land on ms1-build or main); ruled by row 1119: build on its own branch from `52b51c1`, ms1 assembles the landing.
+- Spec F6; ruled **C**: the two stale comments in `scripts/gaffer_brain.mjs` (`:1426-1428`, `:2066` on main) are NOT edited.
+- Spec §5's clauses were J4 + K1; the build adds **K2 STRUCK** (row 1112 (1)'s "old text stays in the header, struck") and
+  **K3 OTHERS** (no other ruled entry moved), with BOUND and LAST as guards; one mutant per clause (F4 A).
+- The mjd3 witness's GREEN last line changed its words ("never dispatches twice" no longer true by mjd4's design); the
+  member judges only its `GREEN MJD3 ` prefix.
+
+## 10. FORKS (for the architect)
+
+- **F-M · the merge of main.** The brief's merge rule triggers on the letter (the files differ), not on the substance (main
+  moved none of them since `95b07a6`, §1). Built WITHOUT the merge. (A) stands as built; (B) merge main in a follow-up, which
+  turns the mr3 BOUND guard red on six files beyond the named ones. *Recommend A.*
+- **F-C · a stale count in ms1's comment.** `scripts/organism_test.mjs` above KNOWN_RED says "the four landed witnesses …
+  are RED members"; three are left. Not mine (brief: my entry only). (A) leave it to the ms1 seat at assembly; (B) mr3
+  follow-up edits that one comment. *Recommend A.*
+- **F-L · the effort receipt.** `campaign-2026-09/tools/effort_receipt.mjs` is not in this repository; its error is named in
+  the FINAL MESSAGE; nothing written under `campaign-2026-09/`.
