@@ -1,0 +1,3 @@
+{"ts":"2026-11-19T01:43:19.131Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mxw-build FETCH_HEAD","last_line":"base 224f9b90758d13edb42550f002d6c845cc7bb2a8"}
+{"ts":"2026-11-19T01:43:19.131Z","act":"measure","cmd":"git diff --stat 95b07a6 224f9b9 -- scripts/xray.mjs scripts/notes_corrections.mjs scripts/learnstate.mjs","last_line":"(empty) — the spec lines hold at this base: xray.mjs:621-633 seedDefaults, notes_corrections.mjs:106, learnstate.mjs:794/817"}
+{"ts":"2026-11-19T01:43:19.131Z","act":"build F1 A","cmd":"git apply ci/mxw spec patch e4013cb:ci/mxw/witness/xray_seed_defaults.patch","last_line":"scripts/xray.mjs | 13 ++++++++----- ; node --check ok"}
