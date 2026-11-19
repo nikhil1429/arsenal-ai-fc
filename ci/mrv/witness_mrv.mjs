@@ -17,6 +17,8 @@
 //                SLACKs, read from its first line): C1 and LAST GREEN.
 //   M2 ALONE     mlv2 under p3 — the keeper exits at C1's retire: C2, C3, K5 and LAST GREEN (C1 red by the plant).
 //   M3 BOOT      mlv3 under p1 — as M2 BOOT: T1 and LAST GREEN.
+//   M3 RESPAWN   mlv3 under p1w — the worker respawned by T2's retire (its third worker) boots slower by mlv3's own BOOT0:
+//                T2 and LAST GREEN (row 1139 (1), the ruling on 03ec8d7).
 //   M3 ALONE     mlv3 under p3 — the keeper exits at T2's retire: T3, T4 and LAST GREEN (T2 red by the plant).
 //   BOUND        only the named files differ between --base-org and --org (ci/mlv1/ · ci/mlv2/ · ci/mlv3/ · ci/mrv/ ·
 //                scripts/organism_test.mjs), by text, CRLF folded.
@@ -72,7 +74,7 @@ process.stdin.on("end", () => process.exit(0));`;
 
 let runNo = 0;
 /** run --org's ci/<unit> witness over COPY under one plant; resolves at the child's EXIT
- *  @param {string} unit @param {"none"|"p1"|"p2"|"p3"} plant @param {{ at?: number }} [o] */
+ *  @param {string} unit @param {"none"|"p1"|"p1w"|"p2"|"p3"} plant @param {{ at?: number }} [o] */
 async function runUnder(unit, plant, { at = 0 } = {}) {
   const dir = join(TMP, `plant-${++runNo}-${unit}-${plant}`); mkdirSync(dir);
   const env = { ...process.env, ARSENAL_JUDGE_PORT: String(await freePort()), MRV_PLANT: plant, MRV_DIR: dir, MRV_P1_AT: String(at), MRV_P3_AT: String(at),
@@ -97,7 +99,7 @@ async function runUnder(unit, plant, { at = 0 } = {}) {
     if (ws && wslack === null) wslack = Number(ws[1]);
     const sl = /· slack (\d+) ms · import (\d+) ms/.exec(l);
     // p1's size: mlv1's measured first BOOT (it slows the SECOND keeper); mlv2/mlv3's own BOOT0 (it slows the FIRST)
-    if (plant === "p1" && !existsSync(join(dir, "p1_ms"))) {
+    if ((plant === "p1" || plant === "p1w") && !existsSync(join(dir, "p1_ms"))) {
       if (unit === "mlv1" && fb) writeFileSync(join(dir, "p1_ms"), fb[1]);
       if (unit !== "mlv1" && sl) writeFileSync(join(dir, "p1_ms"), String(Number(sl[2]) + Number(sl[2]) + Number(sl[1]) + Number(sl[1]) + Number(sl[1])));
     }
@@ -139,6 +141,7 @@ await clause("M1 ALONE · mlv1's I3 stands on its own keeper when I2 left none",
 await clause("M2 BOOT · mlv2's first keeper is waited as a BOOT", async () => verdict(await runUnder("mlv2", "p1", { at: 1 }), ["C1 IDLE", "LAST"], "p1"));
 await clause("M2 ALONE · mlv2's later clauses stand on their own keeper", async () => verdict(await runUnder("mlv2", "p3", { at: 1 }), ["C2 LANE", "C3 JUDGE", "K5 DOOR", "LAST"], "p3"));
 await clause("M3 BOOT · mlv3's first keeper is waited as a BOOT", async () => verdict(await runUnder("mlv3", "p1", { at: 1 }), ["T1 IDLE", "LAST"], "p1"));
+await clause("M3 RESPAWN · mlv3's T2 waits its respawned worker as a BOOT", async () => verdict(await runUnder("mlv3", "p1w", { at: 3 }), ["T2 ONCE", "LAST"], "p1w"));
 await clause("M3 ALONE · mlv3's later clauses stand on their own keeper", async () => verdict(await runUnder("mlv3", "p3", { at: 2 }), ["T3 INFLIGHT", "T4 JUDGE", "LAST"], "p3"));
 
 const walk = (root, dir = "", o = new Map()) => {

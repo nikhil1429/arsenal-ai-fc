@@ -33,6 +33,7 @@ const MUTANTS = [
   ["M2 BOOT", W2, ...BOOT_REVERT],
   ["M2 ALONE", W2, ...READY_REMOVED],
   ["M3 BOOT", W3, ...BOOT_REVERT],
+  ["M3 RESPAWN", W3, "    const retiring = linesSince(n0, /RETIRING/);", "    if (Date.now() > end) { why2 = \"mutant: one first-boot sample\"; break; } const retiring = linesSince(n0, /RETIRING/);"],
   ["M3 ALONE", W3, ...READY_REMOVED],
 ];
 const copyOf = (into) => {

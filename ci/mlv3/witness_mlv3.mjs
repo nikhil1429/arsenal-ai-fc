@@ -31,6 +31,10 @@
 //   (I3)  ~~each clause after the first reads the keeper an earlier clause left (`portUp()`, "cannot run: no daemon up")~~ →
 //         ready(): a clause with no keeper answering kills what is left, waits for its planted port to bind (a-2, bounded
 //         by BOOT + SLACK, one `PORT_HELD` machine line), starts its OWN keeper and waits for it as a BOOT (a-1).
+//   (T2)  row 1139 (1), the ruling on 03ec8d7 (mlv3 red on node 24 on the neutral machine): T2's wait for the RESPAWNED
+//         worker ~~`while (!s2 && Date.now() < end)`, one first-boot sample + SLACK~~ → the retire DECISION keeps BOOT + SLACK
+//         (its RETIRING line), and the respawn is a BOOT that ends on an event. T2 claims ONCE (none lost, none twice, 0
+//         pending), not promptness; T1 still claims the prompt retire and its wait is unchanged.
 //   KEPT, none loosened (row 1135 (2)): every DEFERRED wait, every retire wait, the lane and drain waits, their bounds.
 // LAST LINE: GREEN MLV3 <what> · <n> clause(s) (exit 0) or RED MLV3 · <clauses> (exit 1)
 // ============================================================================
@@ -205,17 +209,30 @@ await behaviour("T2 ONCE · events streamed through a retire land exactly once, 
   const sent = [], fates = { delivered: 0, pending: 0, unspooled: 0 };
   const send = async (tag) => { const e = evtOf(tag); sent.push(e.event_id); fates[await nerve(e)]++; };
   for (let i = 0; i < 3; i++) await send("before");
+  const n0 = out.length;
   touchClosure();
   // keep the nerve firing, one event per measured node start, until a NEW worker has answered, then three more
-  let s2 = null; const end = Date.now() + BOUND;
-  while (!s2 && Date.now() < end) { await send("during"); s2 = await newBoot(s1)(); if (!s2) await sleep(SLACK); }
+  // UNIT mrv (row 1139 (1), the ruling on 03ec8d7): ~~let s2 = null; const end = Date.now() + BOUND;~~
+  // ~~while (!s2 && Date.now() < end) { await send("during"); s2 = await newBoot(s1)(); if (!s2) await sleep(SLACK); }~~
+  // The RETIRE decision keeps its bound: a RETIRING line within BOOT + SLACK of the write. The RESPAWNED worker is a BOOT,
+  // and an event ends it: it answers · a worker exit that is not a clean retire, or a second one · "keeper waiting" · the
+  // keeper's exit.
+  let s2 = null, why2 = ""; const end = Date.now() + BOUND;
+  for (;;) {
+    await send("during"); s2 = await newBoot(s1)(); if (s2) break;
+    const retiring = linesSince(n0, /RETIRING/);
+    if (!retiring && Date.now() > end) { why2 = `no RETIRING line within ${BOUND} ms of the write`; break; }
+    const ex = out.slice(n0).filter((l) => /worker exit/.test(l));
+    if (ex.length > 1 || ex.some((l) => !/respawn now$/.test(l)) || linesSince(n0, /keeper waiting/) || exited(keeper)) { why2 = `the respawn did not come up (${(ex.pop() || "keeper waiting or exited").slice(0, 120)})`; break; }
+    await sleep(SLACK);
+  }
   for (let i = 0; i < 3; i++) await send("after");
   // the new worker drains at boot and then every drainer tick: wait for 0 pending, bounded by that tick + BOUND
   if (!Number.isFinite(DRAIN_MS)) return { ok: false, why: "cannot run: the drainer's tick is not readable from its source" };
   const drained = await waitFor(async () => sp.stats().pending === 0, DRAIN_MS + BOUND);
   const counts = sent.map(landed), lost = counts.filter((n) => n === 0).length, twice = counts.filter((n) => n > 1).length;
   const ok = !!s2 && !!drained && lost === 0 && twice === 0 && fates.pending > 0;
-  return { ok, why: `${sent.length} event(s) · ${fates.delivered} delivered live, ${fates.pending} arrived while nothing listened · retire ${s2 ? "yes" : "NO"} · spool ${drained ? "drained" : `${sp.stats().pending} still pending`} · lost ${lost} · twice ${twice}` };
+  return { ok, why: `${sent.length} event(s) · ${fates.delivered} delivered live, ${fates.pending} arrived while nothing listened · retire ${s2 ? "yes" : `NO${why2 ? ` (${why2})` : ""}`} · spool ${drained ? "drained" : `${sp.stats().pending} still pending`} · lost ${lost} · twice ${twice}` };
 });
 
 await behaviour("T3 INFLIGHT · a capture request in flight defers the retire; it lands once, then it retires", async () => {

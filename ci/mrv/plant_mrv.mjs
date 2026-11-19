@@ -9,6 +9,9 @@
 //       measured ms the witness_mrv wrote to MRV_DIR/p1_ms (read from the judged witness's OWN first lines). It waits
 //       for that file (bounded: the file appears, or this process's parent is gone), then sleeps (Atomics.wait, no
 //       busy loop), writing MRV_DIR/p1_engaged as it begins.
+//   p1w the WORKER start number MRV_P1_AT (counted across this run's workers in MRV_DIR/workers) boots slower by
+//       MRV_DIR/p1_ms, the same size and the same wait as p1 (row 1139 (1), the ruling on 03ec8d7: a respawn is a boot too);
+//       MRV_DIR/p1_engaged.
 //   p3  at the worker exit number MRV_P3_AT that is a RETIRE (KEEP_EXIT.RETIRED, read from the tree's own keeper.mjs),
 //       the keeper exits instead of respawning (the state a red earlier clause leaves: no keeper up); MRV_DIR/p3_engaged.
 //   p2  in the JUDGED WITNESS's own process (argv[1] a ci/mlv<n>/witness_mlv<n>.mjs under os.tmpdir()): the FIRST keeper it
@@ -28,6 +31,18 @@ const under = (p) => { try { const f = (s) => (process.platform === "win32" ? s.
 const PLANT = process.env.MRV_PLANT, DIR = process.env.MRV_DIR, SCRIPT = process.argv[1] || "";
 const KEEPER = /[\\/]scripts[\\/](sitting|cortex|thalamus)\.mjs$/.test(SCRIPT) && !process.argv.includes("daemon-worker")
   && (!/sitting\.mjs$/.test(SCRIPT) || process.argv[2] === "daemon");
+const WORKER = /[\\/]scripts[\\/](sitting|cortex|thalamus)\.mjs$/.test(SCRIPT) && process.argv.includes("daemon-worker");
+if (PLANT === "p1w" && DIR && WORKER && under(DIR) && under(SCRIPT)) {
+  appendFileSync(join(DIR, "workers"), `${process.pid}\n`);
+  const nth = readFileSync(join(DIR, "workers"), "utf8").split(/\r?\n/).filter(Boolean).length;
+  if (nth === Number(process.env.MRV_P1_AT)) {
+    const f = join(DIR, "p1_ms"), nap = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, Math.max(0, ms));
+    const parentUp = () => { try { process.kill(process.ppid, 0); return true; } catch { return false; } };
+    while (!existsSync(f) && parentUp()) nap(1);
+    const ms = existsSync(f) ? Number(readFileSync(f, "utf8")) : 0;
+    if (ms > 0) { writeFileSync(join(DIR, "p1_engaged"), `worker ${nth} pid ${process.pid} slowed ${ms} ms\n`); nap(ms); }
+  }
+}
 const WITNESS = /[\\/]ci[\\/]mlv\d[\\/]witness_mlv\d\.mjs$/.test(SCRIPT);
 if (PLANT === "p2" && DIR && WITNESS && under(DIR) && under(SCRIPT)) {
   const cp = createRequire(import.meta.url)("node:child_process");
