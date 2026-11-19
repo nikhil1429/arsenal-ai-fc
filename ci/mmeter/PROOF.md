@@ -55,14 +55,14 @@ added — a row that disagrees with itself (count 10, clauses all GREEN) reads 1
 
 ## Selftests and members touched (headline, before → after)
 
-- `node scripts/daily_green.mjs selftest` → `daily_green selftest: 75 passed, 0 failed` → `daily_green selftest: 81 passed, 0 failed`
+- `node scripts/daily_green.mjs selftest` → `daily_green selftest: 75 passed, 0 failed` → `daily_green selftest: 81 passed, 0 failed` (measured 19 Nov 2026)
   (it is LIVE-named in the hermetic profile, so the suite does not run it; measured by hand both ways).
 - `done.mjs` has no selftest; its suite member `WHAT IS LEFT` reads the same six `ok` lines before and after.
 - the new member: `ok   CLAUSE WITNESS · ci/witness/mmeter/witness_meter.mjs plants — exit 0, every plant as expected (n > 0)`
   (no line before). Planted red: a throwaway `ci/witness/zzprobe/witness_probe.mjs` printing `0 of 0` → `FAIL` (removed).
 - `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` →
-  base `organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` (exit 2) ·
-  build `organism_test: 151 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)` (exit 2).
+  base `organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` (exit 2) · (measured 19 Nov 2026)
+  build `organism_test: 151 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)` (exit 2). (measured 19 Nov 2026)
   The build's one red is the base's own `EVERY organ with a selftest is wired into a suite` (orphaned: deck_lint, home_pin,
   probe, study_scope — none of them touched here); the base's other two (`sandbox selftest`, `all 53 hermetic suite
   members`) were green in the build run — a flake of this container, named, not claimed as a fix.
