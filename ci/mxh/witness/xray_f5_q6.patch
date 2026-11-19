@@ -1,0 +1,41 @@
+--- a/scripts/xray.mjs	2026-11-19 01:55:19.819128952 +0000
++++ b/scripts/xray.mjs	2026-11-19 01:57:57.607138332 +0000
+@@ -1061,7 +1061,7 @@
+ const DATED_RE = /\d{4}-\d{2}(-\d{2})?/;
+ 
+ export function queries(ir) {
+-  const out = { Q1: [], Q2: [], Q3: [], Q4: [], Q5: [] };
++  const out = { Q1: [], Q2: [], Q3: [], Q4: [], Q5: [], Q6: [] };
+   for (const f of ir.files) {
+     if (!STATE_RE.test(f.path)) continue;
+     if (f.is_dir || NOISE_RE.test(f.path) || DATED_RE.test(f.path)) continue;
+@@ -1097,6 +1097,21 @@
+     const others = f.writers.filter((w) => w !== d.organ);
+     if (others.length) out.Q5.push({ path: f.path, declared_by: d.organ, actual_writers: f.writers, undeclared: others });
+   }
++  // Q6 SILENT (unit mxh, F5 · REPORT-ONLY: no gate, no audit finding reads it) — a header declares
++  // SOLE WRITER of X and NO path named X in the IR has any writer. Every path with that basename is
++  // read, not the last one a Map kept: a selftest fixture `scripts/x.jsonl` must not hide (or fake)
++  // the state lane `dressing-room/state/x.jsonl`. A declaration the IR holds no file for at all is
++  // reported with in_ir:false — the IR's own blindness, named, never guessed.
++  const byBase = new Map();
++  for (const f of ir.files) { if (f.is_dir) continue; const b = basename(f.path); if (!byBase.has(b)) byBase.set(b, []); byBase.get(b).push(f); }
++  const seenQ6 = new Set();
++  for (const d of ir.declared_sole_writers) {
++    if (d.file.endsWith("/") || seenQ6.has(d.organ + "\0" + d.file)) continue;
++    const named = byBase.get(d.file) || [];
++    if (named.some((f) => f.writers.length)) continue;
++    seenQ6.add(d.organ + "\0" + d.file);
++    out.Q6.push({ file: d.file, declared_by: d.organ, in_ir: named.length > 0, paths: named.map((f) => f.path) });
++  }
+   return out;
+ }
+ 
+@@ -1226,6 +1241,7 @@
+   show("Q3 ORPHAN LANE — written, never read", q.Q3, (f) => `${f.path}  ← ${f.writers.join(", ")}`);
+   show("Q4 GHOST STATE — on disk, no live code touches it", q.Q4, (f) => `${f.path}`);
+   show("Q5 UNDECLARED WRITER — header says sole writer, IR disagrees", q.Q5, (r) => `${r.path}  declared=${r.declared_by} undeclared=${r.undeclared.join(", ")}`);
++  show("Q6 SILENT (report-only) — header says sole writer, the IR sees NO writer", q.Q6, (r) => `${r.file}  declared=${r.declared_by}${r.in_ir ? "" : "  (no IR file)"}`);
+   show("BROKEN EDGE — a caller invokes a verb the callee does not have", v.brokenEdges, (r) => `${r.caller} → ${r.callee} ${r.verb}  (${r.why})`);
+   show("DANGLING LANE — writers reachable, readers not (the '27 dealt / 0 answerable' shape)", v.dangling, (r) => `${r.path}  W=${r.writers.join(",")}  R=${r.readers.join(",")}`);
+   show("ORPHAN VERB — built, and nothing anywhere can call it", v.orphanVerbs, (r) => `${r.organ} ${r.verb}`);
