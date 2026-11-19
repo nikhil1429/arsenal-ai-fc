@@ -17,6 +17,8 @@
 //   ci/ lands only with the campaign names-gate result as an input (--names-gate); absent = REFUSED.
 //   NO-CI-DIR (unit ms1 · row 1066 F7 A): once main carries a ci/<unit>/BASE (ms1's landing on), a landing whose tree lacks
 //   ci/<unit>/witness_<unit>.mjs with a 40-hex ci/<unit>/BASE, or that touches nothing under ci/<unit>/, is REFUSED.
+//   SUBJECT / LANDED-ON (unit ms2 · row 1121 C6, F6 b): once main carries a ci/<unit>/LANDED_ON, T's subject names the unit
+//   (`unit <unit> (` or `unit <a> + <unit> (`) and every named unit's ci/<named>/LANDED_ON at T equals T's parent; else REFUSED.
 //   THE JUDGE-HELD REFUSAL (unit mlj, rows 1040 (2) F1 / 1043 (2) F1; spec ci/mlv0/PROOF.md FORK 1): while a judge round
 //   holds keeper's JUDGE_PORT the verb (and its --dry) REFUSES JUDGE-HELD — read through keeper.mjs judgeHeld, the one
 //   predicate every retire reads, as the LAST gate before the move. A wait, not a stop of his: the count is not reset.
@@ -202,6 +204,22 @@ async function land(unit, opt) {
     const baseOk = has(b) && /^[0-9a-f]{40}$/.test(git(["cat-file", "blob", `${T}:${b}`]).out);
     if (!has(w) || !baseOk || !touched.some((p) => p.startsWith(`ci/${unit}/`)))
       return stop(1, "REFUSED", "NO-CI-DIR", `a landing carries ${w} and a 40-hex ${b}, and touches ci/${unit}/`, T);
+  }
+  // 5 · THE LANDING CONTRACT (unit ms2 · forks row 1121, C6; F6 b): the law binds from the landing that put the first
+  //   ci/<unit>/LANDED_ON on main. From then on T's subject names its unit (`unit <unit> (`, or the plus form
+  //   `unit <a> + <unit> (` — every unit it names shares this landing), and every unit it names carries ci/<named>/LANDED_ON
+  //   at T equal to P, the main tip the landing is cut on: the base the suite's landed-commit leg READS (never computes).
+  //   Both are refusals of the branch, read before the verdict; neither is a stop of his.
+  if (lines(git(["ls-tree", "-r", "--name-only", P, "--", "ci"]).out).some((p) => /^ci\/[a-z0-9-]+\/LANDED_ON$/.test(p))) {
+    const subj = git(["log", "-1", "--format=%s", T]).out;
+    const m = /^unit ([A-Za-z0-9-]+(?:\s*\+\s*[A-Za-z0-9-]+)*) \(/.exec(subj);
+    const named = m ? m[1].split("+").map((x) => x.trim()) : [];
+    if (!named.includes(unit)) return stop(1, "REFUSED", "SUBJECT", `T's subject opens \`unit ${unit} (\` or \`unit <a> + ${unit} (\` — it reads "${subj.slice(0, 48)}"`, T);
+    for (const n of named) {
+      const f = `ci/${n}/LANDED_ON`;
+      const r = git(["cat-file", "blob", `${T}:${f}`]);
+      if (!r.ok || !/^[0-9a-f]{40}$/.test(r.out) || r.out !== P) return stop(1, "REFUSED", "LANDED-ON", `${f} at T is one 40-hex line equal to T's parent ${P.slice(0, 7)}${r.ok ? ` — it reads ${r.out.slice(0, 12)}` : " — it is absent"}`, T);
+    }
   }
   const idx = join(mkdtempSync(join(os.tmpdir(), "land-index-")), "index");
   try {

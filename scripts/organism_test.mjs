@@ -2831,8 +2831,192 @@ function namingProcs(dir) {
 /** an OS-picked free port (bound to 0, read, released) — never a fixed one */
 const freePort = () => new Promise((res, rej) => { const s = createServer(); s.once("error", rej); s.listen(0, "127.0.0.1", () => { const a = s.address(); s.close(() => res(typeof a === "object" && a ? a.port : 0)); }); });
 
+// ── unit ms2 · THE LANDED-COMMIT LEG, THE RE-BASE DOOR, THE TRIGGER (forks rows 1121 / 1123 (2); spec ci/ms2/MS2_SPEC.md
+// on claude/ms2-spec 929e7e6, the ruling winning where they differ). Every helper sits OUTSIDE witnesses(), whose body
+// still names no merge-base and no parent arithmetic (ms1 B1.3: the base is READ, never computed):
+//   C1 the L-leg (F1 c, F2 a, F4 a) — a unit's ci/<u>/LANDED_ON holds P, the main tip its landing was cut on (one 40-hex
+//      line, READ). L is DERIVED: on the first-parent line of refs/remotes/origin/main, the newest commit of the unbroken
+//      run right after P whose subjects name <u> (`unit <u> (`, or the plus form `unit <a> + <u> (`, F6 b: every named
+//      unit shares the landing). A landing in flight (HEAD's first parent is P and HEAD's subject names <u>) is L = HEAD.
+//      The witness runs at --org L, --base-org P, both GIT trees (an LF tree, then git init + ONE commit inside it, the
+//      ci/mtail/sides.mjs shape), and its LAST line is judged IN FULL: BOUND included, only a valid RECUT id dropped.
+//   C3 the re-base door (F3, row 1121 (3)) — ci/<u>/REBASE, one line per clause, two kinds, each naming the overtaking
+//      unit and its row:  RECUT <ID> · <unit v> · row <n> · <why>  (the witness carries a NEW expectation: the head leg
+//      judges the new form, the L-leg does not judge that id) ·  DROP <ID> · <unit v> · row <n> · <why>  (no meaning at
+//      head: the head leg drops the id, the L-leg binds it; green at head makes the line STALE, a red). A line is VALID
+//      iff its ID is a quoted literal of the witness's own source, v is a unit of this tree other than u, u has landed,
+//      v did not land before or with u (v landed after u, or v lands later: its line rides v's own landing, F3 b), and its
+//      row is an integer > 0. An unknown id, a wrong order or a bad line is INVALID, a red, and drops nothing.
+//   C4 the trigger (F5, row 1121 (2)) — a landed unit's L-leg runs iff ci/<u>/ differs from refs/remotes/origin/main's
+//      (or the ref is absent); otherwise ONE carried line and nothing is spawned.
+const LANDING_SUBJECT = /^unit ([A-Za-z0-9-]+(?:\s*\+\s*[A-Za-z0-9-]+)*) \(/;
+/** the units a landing subject names (F6 b: `unit a + b (` names both) @param {string} s @returns {string[]} */
+const landingUnits = (s) => { const m = LANDING_SUBJECT.exec(String(s)); return m ? m[1].split("+").map((x) => x.trim()) : []; };
+const MAIN_REF = "refs/remotes/origin/main";
+/** main's first-parent line, newest first; null when the ref is absent @param {string} root @returns {{h: string, s: string}[]|null} */
+function mainLine(root) {
+  const r = spawnSync("git", ["-C", root, "log", "--first-parent", "--format=%H%x09%s", MAIN_REF, "--"], { encoding: "utf8", windowsHide: true, maxBuffer: 1 << 28 });
+  if (r.status !== 0) return null;
+  return String(r.stdout || "").split(/\r?\n/).filter(Boolean).map((l) => { const t = l.indexOf("\t"); return { h: l.slice(0, t), s: l.slice(t + 1) }; });
+}
+/** HEAD's sha, first parent and subject (the in-flight rule) @param {string} root */
+function headFacts(root) {
+  const p = String(spawnSync("git", ["-C", root, "rev-list", "--parents", "-n", "1", "HEAD"], { encoding: "utf8", windowsHide: true }).stdout || "").trim().split(/\s+/);
+  const s = String(spawnSync("git", ["-C", root, "log", "-1", "--format=%s", "HEAD"], { encoding: "utf8", windowsHide: true }).stdout || "").trim();
+  return { h: p[0] || "", p1: p[1] || "", s };
+}
+/** C1: where a unit stands, from its ci/<u>/LANDED_ON @param {string} root @param {string} unit @param {ReturnType<typeof mainLine>} line @param {ReturnType<typeof headFacts>} head
+ *  @returns {{ state: "none"|"bad"|"offmain"|"nolanding"|"notlanded"|"landed"|"inflight", P?: string, L?: string, at?: number, why?: string }} */
+function landedOf(root, unit, line, head) {
+  const f = join(root, "ci", unit, "LANDED_ON");
+  if (!existsSync(f)) return { state: "none" };
+  const t = readFileSync(f, "utf8");
+  if (!/^[0-9a-f]{40}\r?\n?$/.test(t)) return { state: "bad", why: "ci/<unit>/LANDED_ON is not one 40-hex line" };
+  const P = t.trim();
+  const named = (s) => landingUnits(s).includes(unit);
+  if (!line) return head.p1 === P && named(head.s) ? { state: "inflight", P, L: head.h, at: -1 } : { state: "offmain", P, why: `${MAIN_REF} is absent: L cannot be derived` };
+  const i = line.findIndex((c) => c.h === P);
+  if (i < 0) return head.p1 === P && named(head.s) && !line.length ? { state: "inflight", P, L: head.h, at: -1 } : { state: "offmain", P, why: `${P.slice(0, 7)} is not on ${MAIN_REF}'s first-parent line` };
+  let j = i;
+  while (j - 1 >= 0 && named(line[j - 1].s)) j--;
+  if (j < i) return { state: "landed", P, L: line[j].h, at: j };
+  if (head.p1 === P && named(head.s)) return { state: "inflight", P, L: head.h, at: -1 };
+  if (i === 0) return { state: "notlanded", P };
+  return { state: "nolanding", P, why: `the commit after ${P.slice(0, 7)} on ${MAIN_REF}'s first-parent line (${line[i - 1].h.slice(0, 7)}) is not a \`unit ${unit} (\` landing` };
+}
+/** is <id> one of the ids of a LAST line (the token rule judgeLast drops by) @param {string} last @param {string} id */
+const idIn = (last, id) => new RegExp(`(?<=^|[\\s,·])${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")}(?=$|[\\s,·])`).test(` ${last} `);
+/** C3: the door's lines, each judged VALID or INVALID (with why) @param {string} root @param {string} unit @param {string} src the witness's own source
+ *  @param {ReturnType<typeof landedOf>} self @param {(v: string) => ReturnType<typeof landedOf>} other */
+function rebaseOf(root, unit, src, self, other) {
+  const f = join(root, "ci", unit, "REBASE");
+  if (!existsSync(f)) return null;
+  const out = [];
+  readFileSync(f, "utf8").split(/\r?\n/).forEach((raw, k) => {
+    const l = raw.trim();
+    if (!l || l.startsWith("#")) return;
+    const m = /^(RECUT|DROP) (.+?) · ([a-z0-9-]+) · row (\d+) · (.+)$/.exec(l);
+    if (!m) { out.push({ n: k + 1, kind: "", id: l, v: "", row: 0, bad: "not `RECUT|DROP <ID> · <unit> · row <n> · <why>`" }); return; }
+    const [, kind, id, v, row] = m;
+    const q = (c) => src.includes(`${c}${id}${c}`);
+    let bad = "";
+    if (!(q('"') || q("'") || q("`"))) bad = `${id} is no quoted literal of the witness's source (an unknown id)`;
+    else if (!(Number(row) > 0)) bad = "its row is not an integer > 0";
+    else if (v === unit) bad = "a unit never overtakes itself";
+    else if (!existsSync(join(root, "ci", v))) bad = `${v} is no unit of this tree (no ci/${v}/)`;
+    else if (!(self.state === "landed" || self.state === "inflight")) bad = `${unit} has not landed: nothing to re-base`;
+    else {
+      const o = other(v);
+      if (o.state === "landed" || o.state === "inflight") {
+        // v lands after u: its L stands strictly newer on main's first-parent line (in flight = newer than every main commit)
+        const after = o.L !== self.L && (o.state === "inflight" ? self.state === "landed" : self.state === "landed" && /** @type {number} */ (o.at) < /** @type {number} */ (self.at));
+        if (!after) bad = `the order is wrong: ${v} landed before or with ${unit}`;
+      } else if (o.state !== "none" && o.state !== "notlanded") bad = `${v}'s LANDED_ON is unreadable (${o.state})`;
+    }
+    out.push({ n: k + 1, kind, id, v, row: Number(row), bad });
+  });
+  return out;
+}
+/** spawn one witness from a COPY of its dir under <tmp> against two trees, bounded by <left> ms; the member's own sweep after
+ *  @param {{ dir: string, unit: string, orgT: string, baseT: string, tmp: string, left: number, ports: ReturnType<typeof organPorts>, tag: string }} o */
+async function spawnWitness(o) {
+  const shim = join(o.tmp, `shim${o.tag}`), wd = join(o.tmp, `w${o.tag}`);
+  mkdirSync(shim);
+  for (const tool of ["claude", "gemini"]) {
+    writeFileSync(join(shim, tool), `#!/bin/sh\necho "REFUSED — no live model call in a witness (unit ms1)" >&2\nexit 1\n`, { mode: 0o755 });
+    writeFileSync(join(shim, `${tool}.cmd`), `@echo REFUSED — no live model call in a witness (unit ms1) 1>&2\r\n@exit /b 1\r\n`);
+  }
+  const env = { ...process.env };
+  const pk = Object.keys(env).find((k) => k.toUpperCase() === "PATH") || "PATH";
+  env[pk] = `${shim}${delimiter}${env[pk] || ""}`;
+  for (const p of o.ports.named) if (p.door) env[p.door] = String(await freePort());
+  cpSync(o.dir, join(wd, "ci", o.unit), { recursive: true });
+  const log = join(o.tmp, `out${o.tag}.txt`), fd = openSync(log, "w");
+  let r;
+  try { r = spawnSync(NODE, [join("ci", o.unit, /** @type {string} */ (witnessFile(o.dir, o.unit))), "--org", o.orgT, "--base-org", o.baseT], { cwd: wd, env, stdio: ["ignore", fd, fd], timeout: o.left, windowsHide: true }); }
+  finally { closeSync(fd); }
+  for (const p of namingProcs(o.tmp)) { try { process.kill(p); } catch {} }
+  return { out: readFileSync(log, "utf8"), code: r.status };
+}
+/** F4 a: a GIT side — an LF tree, then git init + ONE commit inside it (the ci/mtail/sides.mjs shape) @param {string} root @param {string} sha @param {string} into */
+function gitSide(root, sha, into) {
+  const e = lfTree(root, sha, into);
+  if (e) return e;
+  try { rmSync(`${into}.index`, { force: true }); } catch {}
+  for (const a of [["init", "-q"], ["add", "-A"], ["-c", "user.name=witness-side", "-c", "user.email=side@example.invalid", "-c", "commit.gpgsign=false", "commit", "-q", "--no-verify", "--allow-empty", "-m", `side ${sha}`]]) {
+    const r = spawnSync("git", ["-c", "core.autocrlf=false", "-c", "core.eol=lf", "-C", into, ...a], { encoding: "utf8", windowsHide: true, maxBuffer: 1 << 26 });
+    if (r.status !== 0) return `git ${a[a.length - 1]} in the side: ${String(r.stderr || "").trim().split(/\r?\n/)[0]}`;
+  }
+  return null;
+}
+/** C4: does ci/<u>/ differ from main's (or is the ref absent)? @param {string} root @param {string} unit */
+const ciChanged = (root, unit) => spawnSync("git", ["-C", root, "diff", "--quiet", MAIN_REF, "HEAD", "--", `ci/${unit}/`], { windowsHide: true }).status !== 0;
+
+/** the head leg of one unit (ms1's, unchanged but for C3's DROP ids) @returns {Promise<{ last: string, code: number|null }|null>} */
+async function headLeg(ctx, unit, dropIds) {
+  const u0 = Date.now();
+  const name = (what) => `WITNESS ‹${unit}› · ${what}`;
+  const dir = join(ROOT, "ci", unit);
+  const baseText = existsSync(join(dir, "BASE")) ? readFileSync(join(dir, "BASE"), "utf8") : null;
+  if (baseText === null || !/^[0-9a-f]{40}\r?\n?$/.test(baseText)) { assert(name("carries a BASE file (B6)"), false, baseText === null ? "ci/<unit>/BASE is absent" : "ci/<unit>/BASE is not one 40-hex line"); return null; }
+  const base = baseText.trim();
+  const inClone = spawnSync("git", ["-C", ROOT, "cat-file", "-e", `${base}^{commit}`], { windowsHide: true }).status === 0;
+  if (!inClone) { assert(name("its BASE is in the clone"), false, `${base.slice(0, 7)} is not a commit here (the member never fetches)`); return null; }
+  const tmp = mkdtempSync(join(tmpdir(), `ms1-${unit}-`));
+  try {
+    const orgT = join(tmp, "org"), baseT = join(tmp, "base");
+    const e1 = ctx.head ? lfTree(ROOT, ctx.head, orgT) : "HEAD is not a commit", e2 = lfTree(ROOT, base, baseT);
+    if (e1 || e2) { assert(name("its trees are built (LF, under the temp dir)"), false, String(e1 || e2)); return null; }
+    const ports = organPorts(orgT);
+    const hits = fixedPortHits(dir, ports);
+    if (hits.length) { assert(name("binds no fixed service port (B4)"), false, hits.join(" · ")); return null; }
+    if (existsSync(ctx.nm)) for (const t of [orgT, baseT]) symlinkSync(ctx.nm, join(t, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+    const r = await spawnWitness({ dir, unit, orgT, baseT, tmp, left: Math.max(1, ctx.T0 + ctx.jobMin * 60000 - Date.now()), ports, tag: "" });
+    const j = judgeLast(r.out, r.code, unit, [...boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")), ...dropIds]);
+    const secs = ((Date.now() - u0) / 1000).toFixed(1);
+    console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);
+    // the judged name is STABLE, so a KNOWN_RED entry can rule it (row 1107 (1)(c)); its reds ride the detail. The seconds ride
+    // their own measurement line: the workflow prints assert lines only (keyOf folds the digits)
+    assert(name(`ran in ${secs} s (B5)`), true);
+    assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
+    return { last: j.last, code: r.code };
+  } finally {
+    for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
+    try { rmSync(tmp, { recursive: true, force: true }); } catch {}
+  }
+}
+/** C1 + C4: the landed-commit leg of one unit @param {ReturnType<typeof landedOf>} at @param {string[]} recutIds */
+async function landedLeg(ctx, unit, at, recutIds) {
+  const name = (what) => `WITNESS ‹${unit}› · ${what}`;
+  if (at.state === "none" || at.state === "notlanded") { console.log(`  witness ‹${unit}› L · not landed — its L-leg runs at its landing`); return; }
+  if (at.state === "bad") { assert(name("its LANDED_ON is one 40-hex line (C1)"), false, String(at.why)); return; }
+  if (at.state === "offmain") { assert(name("its LANDED_ON is on main's first-parent line (C1)"), false, String(at.why)); return; }
+  if (at.state === "nolanding") { assert(name("its LANDED_ON is followed by its landing on main's first-parent line (C1)"), false, String(at.why)); return; }
+  if (!ciChanged(ROOT, unit)) { console.log(`  witness ‹${unit}› L · carried — ci/${unit}/ equals main's; judged at its landing`); return; }
+  const u0 = Date.now();
+  const dir = join(ROOT, "ci", unit);
+  const tmp = mkdtempSync(join(tmpdir(), `ms2-${unit}-`));
+  try {
+    const orgT = join(tmp, "L"), baseT = join(tmp, "P");
+    const e = gitSide(ROOT, /** @type {string} */ (at.L), orgT) || gitSide(ROOT, /** @type {string} */ (at.P), baseT);
+    if (e) { assert(name("its landed sides are built (git trees under the temp dir, F4 a)"), false, e); return; }
+    const ports = organPorts(orgT);
+    const hits = fixedPortHits(dir, ports);
+    if (hits.length) { assert(name("binds no fixed service port (B4)"), false, hits.join(" · ")); return; }
+    if (existsSync(ctx.nm)) for (const t of [orgT, baseT]) symlinkSync(ctx.nm, join(t, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+    const r = await spawnWitness({ dir, unit, orgT, baseT, tmp, left: Math.max(1, ctx.T0 + ctx.jobMin * 60000 - Date.now()), ports, tag: "L" });
+    const j = judgeLast(r.out, r.code, unit, recutIds);
+    const secs = ((Date.now() - u0) / 1000).toFixed(1);
+    console.log(`  witness ‹${unit}› L ${secs} s · ${j.last}`);
+    assert(name("GREEN at its LANDED sha against its landing's parent"), j.ok, j.ok ? "" : `red at L: ${j.left}`);
+  } finally {
+    for (const t of ["L", "P"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
+    try { rmSync(tmp, { recursive: true, force: true }); } catch {}
+  }
+}
+
 async function witnesses() {
-  section("WITNESSES — every landed unit's witness, at HEAD against its own BASE (unit ms1)");
+  section("WITNESSES — every landed unit's witness, at HEAD against its own BASE (unit ms1), and at its LANDED sha against its landing's parent (unit ms2)");
   if (!(PROFILE === "hermetic" && process.env.GITHUB_ACTIONS === "true")) { console.log(WITNESS_SKIP); return; }
   // C5, first half (forks row 1119 (3)(a); ci/ms2/MS2_SPEC.md on claude/ms2-spec 929e7e6): only the tree the runner checked out
   // (GITHUB_WORKSPACE) runs the witnesses. The verdict's other tree is a clone under the runner's temp dir, so there the member
@@ -2845,53 +3029,22 @@ async function witnesses() {
   const jobMin = Number((/timeout-minutes:\s*(\d+)/.exec(wf) || [])[1]);
   if (!(jobMin > 0)) { assert("WITNESSES · the member reads its bound, the job's own timeout-minutes in .github/workflows/suite.yml", false, "no timeout-minutes line"); return; }
   const headSha = spawnSync("git", ["-C", ROOT, "rev-parse", "--verify", "-q", "HEAD"], { encoding: "utf8", windowsHide: true });
-  const head = String(headSha.stdout || "").trim();
-  const nm = join(ROOT, "node_modules");
+  const ctx = { head: String(headSha.stdout || "").trim(), nm: join(ROOT, "node_modules"), T0, jobMin };
+  const line = mainLine(ROOT), hf = headFacts(ROOT);
+  const where = (u) => landedOf(ROOT, u, line, hf);
   for (const unit of units) {
-    const u0 = Date.now();
-    const name = (what) => `WITNESS ‹${unit}› · ${what}`;
-    const dir = join(ROOT, "ci", unit);
-    const baseText = existsSync(join(dir, "BASE")) ? readFileSync(join(dir, "BASE"), "utf8") : null;
-    if (baseText === null || !/^[0-9a-f]{40}\r?\n?$/.test(baseText)) { assert(name("carries a BASE file (B6)"), false, baseText === null ? "ci/<unit>/BASE is absent" : "ci/<unit>/BASE is not one 40-hex line"); continue; }
-    const base = baseText.trim();
-    const inClone = spawnSync("git", ["-C", ROOT, "cat-file", "-e", `${base}^{commit}`], { windowsHide: true }).status === 0;
-    if (!inClone) { assert(name("its BASE is in the clone"), false, `${base.slice(0, 7)} is not a commit here (the member never fetches)`); continue; }
-    const tmp = mkdtempSync(join(tmpdir(), `ms1-${unit}-`));
-    try {
-      const orgT = join(tmp, "org"), baseT = join(tmp, "base"), shim = join(tmp, "shim"), wd = join(tmp, "w");
-      const e1 = head ? lfTree(ROOT, head, orgT) : "HEAD is not a commit", e2 = lfTree(ROOT, base, baseT);
-      if (e1 || e2) { assert(name("its trees are built (LF, under the temp dir)"), false, String(e1 || e2)); continue; }
-      const ports = organPorts(orgT);
-      const hits = fixedPortHits(dir, ports);
-      if (hits.length) { assert(name("binds no fixed service port (B4)"), false, hits.join(" · ")); continue; }
-      if (existsSync(nm)) for (const t of [orgT, baseT]) symlinkSync(nm, join(t, "node_modules"), process.platform === "win32" ? "junction" : "dir");
-      mkdirSync(shim);
-      for (const tool of ["claude", "gemini"]) {
-        writeFileSync(join(shim, tool), `#!/bin/sh\necho "REFUSED — no live model call in a witness (unit ms1)" >&2\nexit 1\n`, { mode: 0o755 });
-        writeFileSync(join(shim, `${tool}.cmd`), `@echo REFUSED — no live model call in a witness (unit ms1) 1>&2\r\n@exit /b 1\r\n`);
-      }
-      const env = { ...process.env };
-      const pk = Object.keys(env).find((k) => k.toUpperCase() === "PATH") || "PATH";
-      env[pk] = `${shim}${delimiter}${env[pk] || ""}`;
-      for (const p of ports.named) if (p.door) env[p.door] = String(await freePort());
-      cpSync(dir, join(wd, "ci", unit), { recursive: true });
-      const log = join(tmp, "out.txt"), fd = openSync(log, "w");
-      const left = Math.max(1, T0 + jobMin * 60000 - Date.now());
-      let r;
-      try { r = spawnSync(NODE, [join("ci", unit, /** @type {string} */ (witnessFile(dir, unit))), "--org", orgT, "--base-org", baseT], { cwd: wd, env, stdio: ["ignore", fd, fd], timeout: left, windowsHide: true }); }
-      finally { closeSync(fd); }
-      for (const p of namingProcs(tmp)) { try { process.kill(p); } catch {} }
-      const j = judgeLast(readFileSync(log, "utf8"), r.status, unit, boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")));
-      const secs = ((Date.now() - u0) / 1000).toFixed(1);
-      console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);
-      // the judged name is STABLE, so a KNOWN_RED entry can rule it (row 1107 (1)(c)); its reds ride the detail. The seconds ride
-      // their own measurement line: the workflow prints assert lines only (keyOf folds the digits)
-      assert(name(`ran in ${secs} s (B5)`), true);
-      assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
-    } finally {
-      for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
-      try { rmSync(tmp, { recursive: true, force: true }); } catch {}
+    const at = where(unit);
+    const wsrc = readFileSync(join(ROOT, "ci", unit, /** @type {string} */ (witnessFile(join(ROOT, "ci", unit), unit))), "utf8");
+    const door = rebaseOf(ROOT, unit, wsrc, at, where);
+    const valid = (door || []).filter((d) => !d.bad);
+    const h = await headLeg(ctx, unit, valid.filter((d) => d.kind === "DROP").map((d) => d.id));
+    if (door) {
+      const bad = door.filter((d) => d.bad);
+      assert(`REBASE ‹${unit}› · every line is valid (a quoted id of the witness, an overtaking unit that lands after, a row)`, !bad.length, bad.map((d) => `INVALID line ${d.n}: ${d.bad}`).join(" · "));
+      const stale = h ? valid.filter((d) => d.kind === "DROP" && !(h.code === 1 && idIn(h.last.replace(/^RED \S+ · /, ""), d.id))).map((d) => d.id) : [];
+      assert(`REBASE ‹${unit}› · every DROP id is still red at head (a green one is STALE: remove its line in this landing)`, !stale.length, stale.map((id) => `${id} · STALE — it is green at head`).join(" · "));
     }
+    await landedLeg(ctx, unit, at, valid.filter((d) => d.kind === "RECUT").map((d) => d.id));
   }
   const total = ((Date.now() - T0) / 1000).toFixed(1);
   console.log(`  witnesses · ${units.length} unit(s) · ${total} s`);
