@@ -102,7 +102,7 @@ Each mutant reverts one repair:
 - **Members touched:** WITNESS ‹mlv1›, ‹mlv2› and ‹mlv3› are re-cut, and ‹mrv› is new. The neutral machine judges them
   (§7). This container cannot run the witness member (`GITHUB_ACTIONS` unset, `scripts/organism_test.mjs` WITNESS_SKIP).
 - **The hermetic suite** (`ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`, exit 2 on both). Base
-  and build print the same headline: `organism_test: 143 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126`. The three
+  and build print the same headline (19 Nov 2026): `organism_test: 143 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126`. The three
   fails are identical and are the cf1ca54 tree's own in this container: the selftest-coverage law, `sandbox selftest`,
   and the all-members roll-up.
 - **`node scripts/lawpack.mjs gate`** (exit 1 on both). The count line is byte-identical base vs build:

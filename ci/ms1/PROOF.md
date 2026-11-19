@@ -560,3 +560,13 @@ The assembled tip is **the commit that carries this section**: ms1 + mrj `0fff2e
 `542dec7` + mrv `e0b8053`, with main `fb42118` brought in and KNOWN_RED empty. The land subject names every unit joined by
 plus: **ms1 + mrj + mrt + mr3 + mrf + mrv**. Both neutral legs of this tip are read through the public API; they are in
 the ledger and the seat's final message (writing them here would be a new push with a new verdict).
+- **`db3e01d`, run `44518101124`** (19 Nov 2026), read with curl, no token:
+  - node 22 `135539401941`: `WITNESSES · 38 unit(s) judged in 2112.6 s`; all 38 `WITNESS ‹unit› · GREEN at head against its
+    BASE` ok; `organism_test: 227 passed, 2 failed · ruled 0 · UNRULED 2`.
+  - node 24 `135539401494`: `WITNESSES · 38 unit(s) judged in 2027.3 s`; all 38 ok; the same headline.
+  - Both legs: `B1_VERDICT … RED — 1 member(s) red that are not red at the merge base`. The new red is `LOAD ZERO BLOCK
+    7` on `ci/mrv/PROOF.md:105` (a count line the mrv merge brought, undated); the base red is main's coverage law.
+    The merge-base tree printed the C5 skip (`149 passed, 1 failed`).
+  - Fixed in the commit carrying this line, a doc-only edit: that line is dated `(19 Nov 2026)`. No witness or organ byte
+    moves. Measured: zero undeclared lines over every tracked `.md` (the BLOCK 7 scan, 19 Nov 2026). **The assembled tip is
+    now this commit**; its legs are in the ledger and the final message.
