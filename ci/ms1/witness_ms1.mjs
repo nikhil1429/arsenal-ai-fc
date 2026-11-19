@@ -39,9 +39,11 @@
 //   F1   BOUND    a witness whose LAST line is `RED PX · BOUND` (exit 1) → ok (F1 A: BOUND dropped)
 //   F1W  BOUNDID  a witness whose BOUND id is `W6 BOUND` (its own literal) → ok
 //   F11  BEHAVE   `RED PX · J4 BOUND` → FAIL naming J4 (F11 A: a behavioural red at head is a RED member)
-//   R1   RULED    row 1107 (1)(c): a planted ‹mjd3› red exactly `J4` → RULED (row 1107, owner unit mr3), UNRULED 0
-//   R2   STALE    the same member GREEN → its entry is STALE, exit 2 (a ruled entry whose member turns green is refused)
-//   R3   NEWDEATH ‹mjd3› red `J1 J4` → UNRULED, exit 2 (a new clause red never hides under the ruled one)
+//   R1   RULED    row 1107 (1)(c) / row 1112: the plant writes its OWN entry into its copy's KNOWN_RED (‹pr›, detail
+//                 `red beyond BOUND: J4`, row 9999, owner unit plant) — never the live list — and its ‹pr› reds exactly `J4`
+//                 → RULED with that row and owner, UNRULED 0
+//   R2   STALE    the same planted entry, ‹pr› GREEN → STALE, exit 2 (a ruled entry whose member turns green is refused)
+//   R3   NEWDEATH the same planted entry, ‹pr› red `J1 J4` → UNRULED, exit 2 (a new clause red never hides under it)
 //   V1   KEYOF    ci_verdict compare: head red WITNESS ‹mlv1› vs base red WITNESS ‹mlv0› → RED (F4 A)
 // Each clause runs on --base-org (must be RED) and on --org (must be GREEN); a GUARD (B3.3, B3.4) must be GREEN on both.
 // BOUND: only scripts/organism_test.mjs, scripts/land.mjs, scripts/ci_verdict.mjs and files under ci/ differ (text, CRLF
@@ -60,7 +62,7 @@ const ORG = arg("--org"), BASE = arg("--base-org");
 if (!ORG || !BASE) { console.log("RED MS1 · usage: --org <dir> --base-org <dir>"); process.exit(1); }
 const NAMED = ["scripts/organism_test.mjs", "scripts/land.mjs", "scripts/ci_verdict.mjs"], NAMED_DIRS = ["ci/"];
 // the landed units of ci/ms1/PROOF.md §0.2 (measured at 3e3ce63, 18 Nov 2026, and at a18c167, 19 Nov 2026: row 1107 (1)(b)), each carried by ms1's landing
-const CARRIED = ["mcr2", "mday", "mday2", "mdn2", "mdone", "mf2", "mf4", "mfac", "mgrd", "mgs", "mjd3", "mjd4", "mjd5", "mjd6", "mjud", "mland", "mlj", "mlv0", "mlv1", "mlv2", "mlv3", "mpast", "mpm", "mpool", "mtail"];
+const CARRIED = ["mcr2", "mday", "mday2", "mdn2", "mdone", "mf2", "mf4", "mfac", "mfac-floor", "mgrd", "mgs", "mjd3", "mjd4", "mjd5", "mjd6", "mjud", "mland", "mlj", "mlv0", "mlv1", "mlv2", "mlv3", "mpast", "mpm", "mpool", "mtail"];
 const ROOT = mkdtempSync(join(os.tmpdir(), "witness-ms1-"));
 let seq = 0;
 
@@ -105,8 +107,14 @@ const plantWitness = (unit, mode, extra = "") => W_HEAD.replace("@MODE@", mode).
 
 /** a member plant: commit 1 (m.txt BASE), commit 2 (m.txt HEAD + the unit dirs, each BASE = commit 1 unless told) →
  *  run the tree's organism_test.mjs witnesses there. @returns {{ out: string, lines: string[], mark: any, trace: string }} */
-function memberRun(tree, units, { env = {}, crlf = false, organs = {} } = {}) {
-  const ot = src(tree, "scripts/organism_test.mjs"), wf = src(tree, ".github/workflows/suite.yml");
+function memberRun(tree, units, { env = {}, crlf = false, organs = {}, knownRed = null } = {}) {
+  let ot = src(tree, "scripts/organism_test.mjs");
+  const wf = src(tree, ".github/workflows/suite.yml");
+  // row 1112: a plant that judges the ruled-red door carries its OWN entry, written into the copy's KNOWN_RED — never the live list
+  if (ot != null && knownRed) {
+    if (!/^const KNOWN_RED = \[\n/m.test(ot)) return { out: "(the tree's organism_test.mjs has no `const KNOWN_RED = [` line to plant into)", lines: [], mark: null, trace: "" };
+    ot = ot.replace(/^const KNOWN_RED = \[\n/m, () => `const KNOWN_RED = [\n${knownRed.map((e) => `  ${JSON.stringify(e)},\n`).join("")}`);
+  }
   if (ot == null || wf == null) return { out: "(the tree has no organism_test.mjs / suite.yml)", lines: [], mark: null, trace: "" };
   const d = newDir("m");
   init(d);
@@ -135,6 +143,8 @@ function memberRun(tree, units, { env = {}, crlf = false, organs = {} } = {}) {
 const okLine = (o, u, what) => o.lines.some((l) => l.startsWith(`  ok   WITNESS ‹${u}› · ${what}`));
 const failLine = (o, u, what) => o.lines.findIndex((l) => l.startsWith(`  FAIL WITNESS ‹${u}› · ${what}`));
 const failDetail = (o, u, what) => { const i = failLine(o, u, what); return i > -1 ? `${o.lines[i]} ${o.lines[i + 1] || ""}` : ""; };
+// the planted ruled entry (row 1112): its own unit, row and owner, so no live entry can make or break R1-R3
+const PLANT_RULED = { assert: "WITNESS ‹pr› · GREEN at head against its BASE", detail: "red beyond BOUND: J4", row: 9999, owner: "unit plant", until: "the plant is torn down" };
 const verdictOf = (o) => { const l = o.lines.find((x) => x.startsWith("ORGANISM_TEST_VERDICT ")); try { return l ? JSON.parse(l.slice("ORGANISM_TEST_VERDICT ".length)) : null; } catch { return null; } };
 const tail = (o) => o.lines.filter(Boolean).slice(-2).join(" | ");
 
@@ -213,7 +223,7 @@ const CLAUSES = {
     const miss = [];
     for (const u of CARRIED) {
       const b = src(t, `ci/${u}/BASE`);
-      if (src(t, `ci/${u}/witness_${u}.mjs`) == null) miss.push(`${u}: no witness`);
+      if (src(t, `ci/${u}/witness_${u}.mjs`) == null && src(t, `ci/${u}/witness_${u.replace(/-/g, "_")}.mjs`) == null) miss.push(`${u}: no witness`);
       else if (b == null || !/^[0-9a-f]{40}\n$/.test(b)) miss.push(`${u}: no 40-hex BASE`);
       else if (isMainCommit(b.trim()) === false) miss.push(`${u}: BASE on no main commit (F6 B)`);
     }
@@ -307,18 +317,18 @@ const CLAUSES = {
     return { ok: /red beyond BOUND: J4\b/.test(d), why: d || tail(o) };
   },
   "R1 RULED"(t) {
-    const o = memberRun(t, { mjd3: { witness: plantWitness("mjd3", "redj4") } });
-    const v = verdictOf(o), r = v && v.ruled.find((x) => x.assert === "WITNESS ‹mjd3› · GREEN at head against its BASE");
-    return { ok: !!r && r.row === 1107 && r.owner === "unit mr3" && v.unruled.length === 0, why: v ? `ruled ${JSON.stringify(v.ruled)} · unruled ${v.unruled.length}` : tail(o) };
+    const o = memberRun(t, { pr: { witness: plantWitness("pr", "redj4") } }, { knownRed: [PLANT_RULED] });
+    const v = verdictOf(o), r = v && v.ruled.find((x) => x.assert === PLANT_RULED.assert);
+    return { ok: !!r && r.row === PLANT_RULED.row && r.owner === PLANT_RULED.owner && v.unruled.length === 0, why: v ? `ruled ${JSON.stringify(v.ruled)} · unruled ${v.unruled.length}` : tail(o) };
   },
   "R2 STALE"(t) {
-    const o = memberRun(t, { mjd3: { witness: plantWitness("mjd3", "marker") } });
+    const o = memberRun(t, { pr: { witness: plantWitness("pr", "marker") } }, { knownRed: [PLANT_RULED] });
     const v = verdictOf(o);
-    return { ok: !!v && v.stale.includes("WITNESS ‹mjd3› · GREEN at head against its BASE") && v.exit === 2, why: v ? `stale ${JSON.stringify(v.stale)} · exit ${v.exit}` : tail(o) };
+    return { ok: !!v && v.stale.includes(PLANT_RULED.assert) && v.exit === 2, why: v ? `stale ${JSON.stringify(v.stale)} · exit ${v.exit}` : tail(o) };
   },
   "R3 NEWDEATH"(t) {
-    const o = memberRun(t, { mjd3: { witness: plantWitness("mjd3", "redj4j1") } });
-    const v = verdictOf(o), u = v && v.unruled.find((x) => x.assert === "WITNESS ‹mjd3› · GREEN at head against its BASE");
+    const o = memberRun(t, { pr: { witness: plantWitness("pr", "redj4j1") } }, { knownRed: [PLANT_RULED] });
+    const v = verdictOf(o), u = v && v.unruled.find((x) => x.assert === PLANT_RULED.assert);
     return { ok: !!u && v.ruled.length === 0 && v.exit === 2, why: v ? `unruled ${JSON.stringify(v.unruled)} · exit ${v.exit}` : tail(o) };
   },
   "V1 KEYOF"(t) {

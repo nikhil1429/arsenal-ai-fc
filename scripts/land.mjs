@@ -196,8 +196,9 @@ async function land(unit, opt) {
   // 5 · NO-CI-DIR (unit ms1 · row 1066 F7 A): the law binds from the landing that put the first ci/<unit>/BASE on main —
   //   from then every landing carries its unit's witness and BASE, so its proof rides the suite as a standing gate
   if (lines(git(["ls-tree", "-r", "--name-only", P, "--", "ci"]).out).some((p) => /^ci\/[a-z0-9-]+\/BASE$/.test(p))) {
-    const w = `ci/${unit}/witness_${unit}.mjs`, b = `ci/${unit}/BASE`;
+    const b = `ci/${unit}/BASE`;
     const has = (p) => git(["cat-file", "-e", `${T}:${p}`]).ok;
+    const w = [`ci/${unit}/witness_${unit}.mjs`, `ci/${unit}/witness_${unit.replace(/-/g, "_")}.mjs`].find(has) || `ci/${unit}/witness_${unit}.mjs`;
     const baseOk = has(b) && /^[0-9a-f]{40}$/.test(git(["cat-file", "blob", `${T}:${b}`]).out);
     if (!has(w) || !baseOk || !touched.some((p) => p.startsWith(`ci/${unit}/`)))
       return stop(1, "REFUSED", "NO-CI-DIR", `a landing carries ${w} and a 40-hex ${b}, and touches ci/${unit}/`, T);

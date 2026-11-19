@@ -2757,11 +2757,14 @@ function atlas() {
 // the OS temp dir, reads dressing-room/state never, and every wait is bounded by the job's own declared
 // timeout-minutes, read from .github/workflows/suite.yml (never typed here). Sole writer of nothing.
 const WITNESS_SKIP = "  SKIP WITNESSES — the witnesses member runs on the neutral machine only (B2): a witness may bind ports";
-/** the dirs ci/<unit>/ that hold witness_<unit>.mjs @param {string} root */
+/** a unit's witness file: witness_<unit>.mjs, or with every - of the dir name written _ (ci/mfac-floor/witness_mfac_floor.mjs)
+ *  @param {string} dir @param {string} unit @returns {string|null} */
+const witnessFile = (dir, unit) => [`witness_${unit}.mjs`, `witness_${unit.replace(/-/g, "_")}.mjs`].find((f) => existsSync(join(dir, f))) || null;
+/** the dirs ci/<unit>/ that hold a witness (witnessFile) @param {string} root */
 function witnessUnits(root) {
   const ci = join(root, "ci");
   if (!existsSync(ci)) return [];
-  return readdirSync(ci).filter((d) => /^[a-z0-9-]+$/.test(d) && existsSync(join(ci, d, `witness_${d}.mjs`))).sort();
+  return readdirSync(ci).filter((d) => /^[a-z0-9-]+$/.test(d) && !!witnessFile(join(ci, d), d)).sort();
 }
 /** the ports the organs export (derived, never typed): `export const <NAME>PORT = …<literal>…`, and its env door if the
  *  same line reads one; and every `listen(<literal>)` an organ binds @param {string} tree */
@@ -2869,10 +2872,10 @@ async function witnesses() {
       const log = join(tmp, "out.txt"), fd = openSync(log, "w");
       const left = Math.max(1, T0 + jobMin * 60000 - Date.now());
       let r;
-      try { r = spawnSync(NODE, [join("ci", unit, `witness_${unit}.mjs`), "--org", orgT, "--base-org", baseT], { cwd: wd, env, stdio: ["ignore", fd, fd], timeout: left, windowsHide: true }); }
+      try { r = spawnSync(NODE, [join("ci", unit, /** @type {string} */ (witnessFile(dir, unit))), "--org", orgT, "--base-org", baseT], { cwd: wd, env, stdio: ["ignore", fd, fd], timeout: left, windowsHide: true }); }
       finally { closeSync(fd); }
       for (const p of namingProcs(tmp)) { try { process.kill(p); } catch {} }
-      const j = judgeLast(readFileSync(log, "utf8"), r.status, unit, boundIds(readFileSync(join(dir, `witness_${unit}.mjs`), "utf8")));
+      const j = judgeLast(readFileSync(log, "utf8"), r.status, unit, boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")));
       const secs = ((Date.now() - u0) / 1000).toFixed(1);
       console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);
       // the judged name is STABLE, so a KNOWN_RED entry can rule it (row 1107 (1)(c)); its reds ride the detail. The seconds ride
