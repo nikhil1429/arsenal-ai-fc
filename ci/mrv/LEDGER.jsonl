@@ -1,0 +1,4 @@
+{"ts":"2026-11-19T01:52:32.924Z","act":"cut","cmd":"git fetch origin claude/ms1-build && git checkout -b claude/mrv-spec 52b51c1","last":"Switched to a new branch 'claude/mrv-spec'"}
+{"ts":"2026-11-19T01:52:32.953Z","act":"read-ci","cmd":"node fetchlogs.mjs 2026-11-17T00:00:00Z (public API: runs → jobs → job logs, mlv1 lines kept)","last":"legs 554 · with mlv1 lines 380 · 8 legs ran WITNESS ‹mlv1› (all claude/ms1-build)"}
+{"ts":"2026-11-19T01:52:32.976Z","act":"tally-ci","cmd":"legs.json: WITNESS ‹mlv1› · GREEN at head against its BASE per node","last":"node 22: 0/4 red · node 24: 2/4 red (3966f61 detail I2 MID I3 JUDGE; 52b51c1 detail not printed, names only)"}
+{"ts":"2026-11-19T01:52:33.004Z","act":"measure-smoke","cmd":"node ci/mrv/measure_mlv1.mjs --root . --head 52b51c1 --n 2 --out <scratch>/m22.jsonl","last":"MRV MEASURE · node v22.23.5 · 2 run(s) · I1 0/2 · I2 0/2 · I3 0/2 · XML 0/2 · BOUND 2/2 · LAST 0/2 red"}
