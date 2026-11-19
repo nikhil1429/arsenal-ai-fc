@@ -141,6 +141,57 @@ NEW red — the selftest assumed the repo sits outside `os.tmpdir()`, false in a
 10. **The effort receipt** (`campaign-2026-09/tools/effort_receipt.mjs`) is not in this repository; its error is named
     in the seat's final message and nothing is written under `campaign-2026-09/`.
 
+## 8 · FOLLOW-UP — forks row 1130 (the architect's ruling on ed29f4d)
+
+**What the ruling measured, re-measured here** (`node scripts/lawpack.mjs report`, 19 Nov 2026): at `ed29f4d` the law pack's
+`jugad-literal-subject-list` read 95 on the build against 93 on the base (frozen baseline 90); `depcruise_errors` 13 on
+both. The two new findings were both in `scripts/rung_receipt.mjs`: `COMMON` (the row's common fields) and `LOOP_ROLES`.
+
+**(1) Fixed at the site, by derivation, never by an ignore line.** The common fields and each kind's own fields are now keys
+of ONE owner structure, `ROW_SHAPE`; `COMMON`, `FIELDS` and `ROW_FIELDS` are derived from it. The loop's four roles are
+the keys of `LOOP_FLAGS` (role → its CLI flag); `LOOP_ROLES`, the loop verb's flags and its required set are derived from
+it. No `law-waiver` line was added.
+
+THE LAW PACK GATE'S COUNT LINE (`node scripts/lawpack.mjs report`, 19 Nov 2026):
+
+| Tree | Line |
+|---|---|
+| BASE `224f9b9` | `lawpack · 1928 raw match(es) over 8/8 rules · findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 93 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 13` |
+| BUILD `09be994` | `lawpack · 1933 raw match(es) over 8/8 rules · findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 93 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 13` |
+
+Every FINDING count is equal. The RAW match count (the ast-grep hits before the law pack's judgement) rises by 5 with the
+new code; it is not a gated count (the `frozen:` line names none), and is named here rather than left for a reader to find.
+
+**The new witness clause G3** (LAWPACK): every count on the findings line of the `--org` copy is no higher than on
+`--base-org`. On the build: `GREEN G3 · 11 count(s) · higher than BASE: none · jugad 93 vs 93 · depcruise 13 vs 13`. It
+is GREEN on the base too (a tree is never higher than itself): a guard, like G1 and G2. **Its mutant M14** re-lists
+`LOOP_ROLES` as a literal array: `M14 G3 · KILLED · RED MRUNG · G3`.
+
+**(3) Fork 9, as ruled:** the hermetic receipt read joins the suite's `done()` section (`scripts/organism_test.mjs`, now a
+named file of this unit). Three asserts, a planted plan and receipt under `os.tmpdir()` built by a child with
+`rung_receipt.mjs`'s own row math: GREEN through `--receipts`, UNREAD without it, a zero-clause plan UNREAD never 0/0.
+`ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs done` (19 Nov 2026): `organism_test: 10 passed, 0 failed ·
+ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)`.
+
+**Fork 2, as ruled:** the registry row is the runner's one command at the landing (§6 fork 2 holds the command).
+**Forks 1, 3, 4, 5, 6, 7, 8:** ruled as built.
+
+**Every measurement, re-taken at `09be994`** (19 Nov 2026):
+
+| Measurement | Last line |
+|---|---|
+| witness, BUILD | `GREEN MRUNG the rung receipt measures red before, a real day's green and the meter, and done.mjs reads it UNREAD before it guesses · 18 clause(s)` (exit 0) |
+| witness, BASE | `RED MRUNG · W1, W2, W3, W4, W5, W6, W7, W8, W9, W10, W11, W12, W13` (exit 1) |
+| mutants | `run_mutants: 14 of 14 mutant(s) RED by the clause that names them · control GREEN` |
+| BOUND | `5 file(s) differ from --base-org (package.json, scripts/day.mjs, scripts/done.mjs, scripts/organism_test.mjs, scripts/rung_receipt.mjs)` |
+| suite, BUILD (fresh clone) | `organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` (19 Nov 2026) — the same three reds as the base, +3 RUNGS asserts |
+| suite, BASE (fresh clone) | `organism_test: 143 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` (19 Nov 2026) |
+| `node scripts/rung_receipt.mjs selftest` | `rung_receipt selftest: all 13 pass` |
+| `node scripts/models.mjs check` | exit 0 |
+
+The member lines touched by the follow-up: `SUITE MEMBER · rung_receipt selftest exits 0` `ok` before and after; the
+`WHAT IS LEFT` section, three `ok` lines before, six after (the three above added).
+
 ## 7 · THE NEUTRAL MACHINE
 
 Read signed-out through the public API (`curl https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`), 19 Nov 2026.
@@ -150,7 +201,9 @@ Each push cancels the run of the push before it (the workflow's concurrency), so
 |---|---|---|---|
 | `ef242af` | `44440084971` | `135278456934` node 24 · `135278457217` node 22 | node 24 success · node 22 cancelled (superseded) |
 | `e022fc1` | `44440688509` | `135280561691` node 24 · `135280562112` node 22 | both cancelled (superseded) |
-| `1e396e4` | `44441080560` | `135281881714` node 24 · `135281881368` node 22 | in progress when this file was written |
+| `1e396e4` | `44441080560` | `135281881714` node 24 · `135281881368` node 22 | cancelled (superseded) |
+| `ed29f4d` | `44441322699` | `135282672906` node 22 · `135282672477` node 24 | both success · B1 annotation `GREEN` vs base 224f9b9 ("no member red that is not red at the merge base") |
+| `58913b9` · `f266835` · `09be994` | the follow-up pushes (row 1130) | — | named in the seat's final message |
 
 The push that carries this file is judged by the same workflow; its run and verdict are named in the seat's final
 message, not here (a file cannot carry the verdict of the commit that writes it).
