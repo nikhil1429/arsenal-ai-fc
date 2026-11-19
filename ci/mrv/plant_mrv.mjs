@@ -8,11 +8,14 @@
 //   p1  the keeper start number MRV_P1_AT (counted across this run's keepers in MRV_DIR/keepers) boots slower by the
 //       measured ms the witness_mrv wrote to MRV_DIR/p1_ms (read from the judged witness's OWN first lines). It waits
 //       for that file (bounded: the file appears, or this process's parent is gone), then sleeps (Atomics.wait, no
-//       busy loop), and writes MRV_DIR/p1_engaged.
+//       busy loop), writing MRV_DIR/p1_engaged as it begins.
 //   p3  at the worker exit number MRV_P3_AT that is a RETIRE (KEEP_EXIT.RETIRED, read from the tree's own keeper.mjs),
 //       the keeper exits instead of respawning (the state a red earlier clause leaves: no keeper up); MRV_DIR/p3_engaged.
-//   p2 is not here: it holds a port OUTSIDE the keeper's process tree (a kill on win32 takes the whole tree), so
-//       witness_mrv's own holder child plants it.
+//   p2  in the JUDGED WITNESS's own process (argv[1] a ci/mlv<n>/witness_mlv<n>.mjs under os.tmpdir()): the FIRST keeper it
+//       spawns reports its exit to the witness only once MRV_DIR/p2_held exists (or MRV_DIR/p2_gone) — that is, only once
+//       witness_mrv's holder child, OUTSIDE the keeper's tree, has bound the freed port. The kill then returns while the
+//       port is still held: C2 of ci/mrv/MRV_SPEC.md (win32's taskkill teardown lag), made certain on any OS. The holder
+//       frees the port after the judged witness's own measured BOOT.
 // Every keeper also writes its planted service port (the env door it was handed) to MRV_DIR/port: p2's holder reads it.
 // ============================================================================
 import { appendFileSync, existsSync, readFileSync, writeFileSync, realpathSync } from "node:fs";
@@ -25,6 +28,27 @@ const under = (p) => { try { const f = (s) => (process.platform === "win32" ? s.
 const PLANT = process.env.MRV_PLANT, DIR = process.env.MRV_DIR, SCRIPT = process.argv[1] || "";
 const KEEPER = /[\\/]scripts[\\/](sitting|cortex|thalamus)\.mjs$/.test(SCRIPT) && !process.argv.includes("daemon-worker")
   && (!/sitting\.mjs$/.test(SCRIPT) || process.argv[2] === "daemon");
+const WITNESS = /[\\/]ci[\\/]mlv\d[\\/]witness_mlv\d\.mjs$/.test(SCRIPT);
+if (PLANT === "p2" && DIR && WITNESS && under(DIR) && under(SCRIPT)) {
+  const cp = createRequire(import.meta.url)("node:child_process");
+  const orig = cp.spawn;
+  let first = true;
+  cp.spawn = function (...a) {
+    const c = orig.apply(this, a);
+    if (first && Array.isArray(a[1]) && a[1].some((x) => /[\\/]scripts[\\/](sitting|cortex|thalamus)\.mjs$/.test(String(x)))) {
+      first = false;
+      const emit = c.emit;
+      c.emit = function (ev, ...rest) {
+        if (ev !== "exit") return emit.call(this, ev, ...rest);
+        const go = () => (existsSync(join(DIR, "p2_held")) || existsSync(join(DIR, "p2_gone")) ? emit.call(this, ev, ...rest) : setTimeout(go, 1));
+        go();
+        return true;
+      };
+    }
+    return c;
+  };
+  syncBuiltinESMExports();
+}
 if (PLANT && DIR && KEEPER && under(DIR) && under(SCRIPT)) {
   const port = process.env.ARSENAL_SITTING_PORT && /sitting\.mjs$/.test(SCRIPT) ? process.env.ARSENAL_SITTING_PORT
     : /cortex\.mjs$/.test(SCRIPT) ? process.env.ARSENAL_CORTEX_PORT : process.env.ARSENAL_THALAMUS_PORT;
@@ -36,7 +60,7 @@ if (PLANT && DIR && KEEPER && under(DIR) && under(SCRIPT)) {
     const f = join(DIR, "p1_ms"), parentUp = () => { try { process.kill(process.ppid, 0); return true; } catch { return false; } };
     while (!existsSync(f) && parentUp()) nap(1);
     const ms = existsSync(f) ? Number(readFileSync(f, "utf8")) : 0;
-    if (ms > 0) { nap(ms); writeFileSync(join(DIR, "p1_engaged"), `keeper ${nth} pid ${process.pid} slowed ${ms} ms\n`); }
+    if (ms > 0) { writeFileSync(join(DIR, "p1_engaged"), `keeper ${nth} pid ${process.pid} slowed ${ms} ms\n`); nap(ms); }
   }
   if (PLANT === "p3") {
     const k = await import(pathToFileURL(join(dirname(SCRIPT), "keeper.mjs")).href);
