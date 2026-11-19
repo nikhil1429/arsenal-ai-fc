@@ -479,3 +479,27 @@ run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GRE
   - Member after (Linux, 19 Nov 2026): `witness ‹mf2› 241.3 s · RED MF2 · BOUND` → ok · `‹mrf›` ok ·
     `organism_test: 72 passed, 1 failed · ruled 0 · UNRULED 1`. The one is **‹mr3› K3 (fork F-f)**.
   - The `38ae428` neutral run (`44447441495`) was cancelled by this push.
+- **main `4b00cf5`** (row 1136 (2): units mtxt2, mtxt2-emit, mxw, mtxt3 and mrung) → merge, clean (organism_test.mjs and
+  package.json included). **Carried**, witness bytes unchanged + BASE as shipped: **mxw** (`claude/mxw-build` `ce9eeb4`,
+  BASE `224f9b9`; its `witness/` subdir is not read by `witness_mxw.mjs`, so it does not ride, F8 A), **mtxt3**
+  (`bb3567a`, BASE `a583afb`), **mrung** (`d76f697`, BASE `224f9b9`) → commit `26f79bb`. Head legs: `RED MXW · BOUND`,
+  `RED MTXT3 · BOUND`, `RED MRUNG · BOUND`. Base legs: `RED MXW · W1 W2 W5`, `RED MTXT3 · O1 … N1, BOUND`,
+  `RED MRUNG · W1 … W13`.
+- **row 1144 (1) · `0a566a0` · fork F-f, an ADDED edit to `ci/mr3/witness_mr3.mjs`:** K3 keeps its behaviour (the ‹mjd3›
+  entry gone, nothing joined). Its nothing-else-changed half (every other base KNOWN_RED entry kept) moves into mr3's
+  own BOUND; the old text is struck in its header. Re-judged: head `RED MR3 · BOUND`; base `52b51c1` `RED MR3 · J4 K1
+  K2 K3`.
+- **row 1144 (2), the list of conjuncts:**
+
+  | Witness · clause | Kind | Overtaking unit (adopting row) | Fate |
+  |---|---|---|---|
+  | mfac · W3.2 (land.mjs byte-identical) | nothing-else-changed | ms1 (row 1066) | moved into BOUND (row 1119 (3)(b)) |
+  | mr3 · K3 (other entries kept) | nothing-else-changed | mrj, mrt, mrf (rows 1129, 1131, 1127) | moved into BOUND (row 1144 (1)) |
+  | **mdn2 · N-SUITE** (the `done` mode prints exactly 3 ok lines; 6 now) | **behaviour** (a count of the mode's asserts) | **mrung** (row 1136) | **NOT moved: fork F-g** |
+  | **mdone · D-UNREAD, D-METER** (`done.mjs line --campaign …` reads `rungs UNREAD · hand 1 REFUSED`) | **behaviour** (done.mjs's campaign read) | **mrung** (row 1136) | **NOT moved: fork F-h** |
+
+- Witness after (19 Nov 2026, against `4b00cf5`): every clause GREEN except BOUND (`scripts/brain.mjs`,
+  `scripts/keeper.mjs`, mrt's); base RED. Member after (Linux): `WITNESSES · 37 unit(s) judged in 673.7 s` ·
+  `organism_test: 77 passed, 2 failed · ruled 0 · UNRULED 2`. The two are **‹mdn2› N-SUITE** and **‹mdone› D-UNREAD
+  D-METER** (F-g, F-h: mrung's, behavioural). **mr3, mf2, mjd3, mjud and mtail all read GREEN.** KNOWN_RED is empty.
+- The assembled tip is named once mrv is merged (row 1144).
