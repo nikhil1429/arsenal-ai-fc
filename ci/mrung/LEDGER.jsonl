@@ -1,0 +1,6 @@
+{"ts":"2026-11-19T00:05:00Z","act":"branch","cmd":"git fetch origin main && git checkout -b claude/mrung-spec FETCH_HEAD","last_line":"a18c167f0ecda8f688cc8edb161439f7e9bdab3a"}
+{"ts":"2026-11-19T00:06:00Z","act":"read","cmd":"Read scripts/done.mjs scripts/day.mjs","last_line":"done.mjs 207 lines · day.mjs 235 lines at a18c167"}
+{"ts":"2026-11-19T00:08:00Z","act":"deps","cmd":"npm ci --ignore-scripts","last_line":"node_modules (gitignored) — acorn for xray"}
+{"ts":"2026-11-19T00:10:00Z","act":"probe","cmd":"node <scratchpad>/probe_done.mjs <repo> (hermetic copy under os.tmpdir)","last_line":"typed_strings_count_green: DONE rungs 1/1 clauses GREEN · 0/0 loops · old day: 2026-11-13 still RED"}
+{"ts":"2026-11-19T00:12:00Z","act":"probe","cmd":"node -e <empty rungs dir + clauses []> on the hermetic copy","last_line":"camp-e3 DONE rungs 0/0 clauses GREEN · 0/0 loops · old day: the meter is unreadable"}
+{"ts":"2026-11-19T00:20:00Z","act":"canon-check","cmd":"node -e <LOAD ZERO BLOCK 7 regex from scripts/organism_test.mjs:1890-1916> ci/mrung/MRUNG_SPEC.md","last_line":"undeclared []"}
