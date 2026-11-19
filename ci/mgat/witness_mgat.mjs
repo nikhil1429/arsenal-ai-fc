@@ -19,7 +19,8 @@
 //   W3  hermetic `organism_test.mjs gates` ENTERS the mode (a GATES assert, no `LIVE MODE gates`) and its reds name no
 //       no-empty rise.
 //   W4  the hermetic verdict is entered AND identical on Z and on X (state cannot move it).
-//   W5  the ajv half still guards: the FULL profile on X fails, and hermetic NAMES `gates schema half` LIVE.
+//   W5  the ajv half still guards: the FULL profile on X fails BY a SCHEMA red on the planted registry.json, and hermetic
+//       NAMES `gates schema half` LIVE.
 //   W6  cortex: one `function releaseLock()`, called twice; the retire callback line holds no bare catch.
 //   W7  ONE planted new empty catch turns the HERMETIC `gates` mode RED, by a no-empty rise (the next rise has a reader).
 //   BOUND  only the named files differ between --org and --base-org (tracked files, line endings normalised).
@@ -93,9 +94,10 @@ const CL = {
   W4: (src) => { const z = once(src, "Z", (d) => verdictOf(node(d, ["scripts/organism_test.mjs", "gates"], "hermetic").out)); const x = once(src, "X", (d) => verdictOf(node(d, ["scripts/organism_test.mjs", "gates"], "hermetic").out));
     const entered = !!z && !z.live.includes("MODE gates");
     return { ok: entered && JSON.stringify(z) === JSON.stringify(x), line: `hermetic verdict Z ${JSON.stringify(z && { pass: z.pass, fail: z.fail, live: z.live })} · X ${JSON.stringify(z) === JSON.stringify(x) ? "the same" : JSON.stringify(x && { pass: x.pass, fail: x.fail, live: x.live })}` }; },
-  W5: (src) => { const f = once(src, "X", (d) => verdictOf(node(d, ["scripts/organism_test.mjs", "gates"]).out)); const h = once(src, "E", (d) => verdictOf(node(d, ["scripts/organism_test.mjs", "gates"], "hermetic").out));
-    const schemaRed = !!f && f.reds.some((x) => /GATES/.test(x));
-    return { ok: !!f && f.fail > 0 && schemaRed && !!h && h.live.includes("gates schema half"), line: `full on X: fail ${f && f.fail} · hermetic LIVE ${JSON.stringify(h && h.live)}` }; },
+  W5: (src) => { const fo = once(src, "X", (d) => node(d, ["scripts/organism_test.mjs", "gates"]).out); const f = verdictOf(fo); const h = once(src, "E", (d) => verdictOf(node(d, ["scripts/organism_test.mjs", "gates"], "hermetic").out));
+    // the planted red must be the AJV half's own (a SCHEMA red naming the planted registry.json), not any other count that is red
+    const schemaRed = !!f && f.reds.some((x) => /GATES/.test(x)) && /SCHEMA — registry\.json does NOT match/.test(fo);
+    return { ok: !!f && f.fail > 0 && schemaRed && !!h && h.live.includes("gates schema half"), line: `full on X: fail ${f && f.fail} · SCHEMA red on the planted registry.json ${schemaRed ? "yes" : "no"} · hermetic LIVE ${JSON.stringify(h && h.live)}` }; },
   W6: (src) => { const s = readFileSync(join(src, "scripts", "cortex.mjs"), "utf8"); const calls = (s.match(/releaseLock\(\);/g) || []).length;
     const retire = lines(s).find((l) => /retire: \(\) => \{ exiting = true;/.test(l)) || "";
     return { ok: calls === 2 && /function releaseLock\(\)/.test(s) && !/catch \{ \}/.test(retire), line: `releaseLock() calls ${calls} · retire line bare catches ${(retire.match(/catch \{ \}/g) || []).length}` }; },
