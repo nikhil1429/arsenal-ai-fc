@@ -32,10 +32,14 @@ as the suite workflow does, it is GREEN. Its hermetic fate stands on the CI inst
 
 ## 3. The build (named files only)
 
-- `scripts/organism_test.mjs` — `SUITE_ROSTER` (the four), counted as ONE suite by `coverage()` (so a roster organ also in a
-  package.json string reds as double-billed, and a roster name with no file reds as a ghost), appended by `suiteMembers()`, so
-  `suites()` spawns and asserts each, and the hermetic profile names `home_pin` LIVE from its existing table entry. No
-  exemption line; the coverage law, its detector and its floor are unchanged.
+FOLLOW-UP (forks row 1143 (1), 19 Nov 2026, F1 ruled B): the first build wired the four through a `SUITE_ROSTER` list in
+`scripts/organism_test.mjs` (commits `01727fd`..`fed58b2`). The ruling moved them, by a seat follow-up, into the ONE record:
+
+- `package.json` — the four are appended to the `organism:selftest` string (`deck_lint`, `home_pin`, `probe`, `study_scope`,
+  each `node scripts/<organ>.mjs selftest`). The `suites()` runner spawns and asserts each as a member, and the hermetic
+  profile names `home_pin` LIVE from its existing `LIVE_SELFTESTS` entry.
+- `scripts/organism_test.mjs` — the roster is REMOVED in the same commit; the file is byte-equal to the base again (the BOUND
+  line no longer lists it). No exemption line; the coverage law, its detector and its floor are unchanged.
 - `scripts/study_scope.mjs` — a `selftest` verb (prints each case, a headline, exit 1 on any fail) and its header comment
   corrected.
 - `ci/mcov/` — `BASE`, `LEDGER.jsonl`, `PROOF.md`, `witness_mcov.mjs`, `run_mutants_mcov.mjs`, `tools/readprobe.mjs`.
@@ -63,7 +67,7 @@ suites (hermetic)          base: (no SUITE MEMBER line for any of the four)
                                  ok   SUITE MEMBER · probe selftest exits 0
                                  ok   SUITE MEMBER · study_scope selftest exits 0
 suites line (head)         organism_test: 60 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 72 (hermetic: named, not run)
-all (hermetic), in this checkout at head:
+all (hermetic), in this checkout at head (re-measured after the follow-up, the same line):
                            organism_test: 149 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 126 (hermetic: named, not run)
 all (hermetic), fresh scratch clones, FIRST run of each:
                            base:  organism_test: 143 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)
@@ -71,35 +75,40 @@ all (hermetic), fresh scratch clones, FIRST run of each:
                            (the shared red on both is `SUITE MEMBER · sandbox selftest exits 0` and its roll-up — FORK F5)
 ```
 
-## 6. The witness, both ways
+## 6. The witness, both ways (after the follow-up, 19 Nov 2026)
 
 ```
 $ node ci/mcov/witness_mcov.mjs --org . --base-org <clone of a583afb>
-BOUND · 6 path(s) differ between the orgs: ci/mcov/BASE, ci/mcov/LEDGER.jsonl, ci/mcov/tools/readprobe.mjs, ci/mcov/witness_mcov.mjs, scripts/organism_test.mjs, scripts/study_scope.mjs
+BOUND · 8 path(s) differ between the orgs: ci/mcov/BASE, ci/mcov/LEDGER.jsonl, ci/mcov/PROOF.md, ci/mcov/run_mutants_mcov.mjs, ci/mcov/tools/readprobe.mjs, ci/mcov/witness_mcov.mjs, package.json, scripts/study_scope.mjs
 HOLDS C1 COVERAGE · base RED (orphaned: deck_lint, home_pin, probe, study_scope) · build GREEN (wired, no orphan)
 HOLDS C2 HERMETIC · base RED (not judged green: deck_lint, probe, study_scope) · build GREEN (deck_lint, probe, study_scope judged ok)
 HOLDS C3 LIVE-NAMED · base RED (home_pin neither named nor run) · build GREEN (home_pin named LIVE)
 HOLDS C4 VERB · base RED (exit 0 · last line: study_scope: scope --session <id> | unbound …) · build GREEN (exit 0 · last line: study_scope selftest: 61 passed, 0 failed)
+HOLDS C5 ONE RECORD · base RED (deck_lint in 0 suite string(s) · home_pin in 0 suite string(s) · probe in 0 suite string(s) · study_scope in 0 suite string(s)) · build GREEN (one record: package.json only, no member list in the suite file)
 LAST · no process names the temp dir
-GREEN MCOV the four coverage orphans wired, each in its profile · 4 clause(s)
+GREEN MCOV the four coverage orphans wired in package.json, each in its profile · 5 clause(s)
 ```
 
-Each clause reads RED on the base clone and GREEN on the build clone in that one run (both ways). Run with the base as
-`--org` and itself as `--base-org`, every clause reads BROKEN and the last line is `RED MCOV · C1 COVERAGE, C2 HERMETIC, C3 LIVE-NAMED, C4 VERB` (exit 1).
+C5 (forks row 1143 (1)) reads a "member list" as an array literal in `scripts/organism_test.mjs` (parsed with acorn) holding two
+or more string elements that are exactly names of package.json suite members. Measured at head: zero such arrays; the
+removed roster was one (the C5 mutant re-adds it and C5 names it at its line). Single-organ spawn argv (for example a
+`"--q", "probe"` argument) is not a list. Before the follow-up the witness ran with four clauses and read
+`GREEN MCOV the four coverage orphans wired, each in its profile · 4 clause(s)` (19 Nov 2026, tip `0bc4617`).
 
-## 7. The mutants
+## 7. The mutants (after the follow-up, 19 Nov 2026)
 
 ```
 $ node ci/mcov/run_mutants_mcov.mjs --org .
-control · C1 COVERAGE GREEN · C2 HERMETIC GREEN · C3 LIVE-NAMED GREEN · C4 VERB GREEN
-mutant C1 COVERAGE · RED by its clause (orphaned: deck_lint) — deck_lint dropped from the roster
-mutant C2 HERMETIC · RED by its clause (not judged green: deck_lint, probe, study_scope) — suites() skips the roster's hermetic members
+control · C1 COVERAGE GREEN · C2 HERMETIC GREEN · C3 LIVE-NAMED GREEN · C4 VERB GREEN · C5 ONE RECORD GREEN
+mutant C1 COVERAGE · RED by its clause (orphaned: deck_lint) — deck_lint dropped from its package.json suite string
+mutant C2 HERMETIC · RED by its clause (not judged green: deck_lint, probe, study_scope) — suites() skips the three hermetic members
 mutant C3 LIVE-NAMED · RED by its clause (home_pin judged as a hermetic member) — home_pin's LIVE entry deleted (it would run hermetic)
 mutant C4 VERB · RED by its clause (exit 0 · last line: study_scope: scope … | selftest …) — the selftest verb no longer answers
-run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN
+mutant C5 ONE RECORD · RED by its clause (member list organism_test.mjs:71 [deck_lint, home_pin, probe, study_scope]) — a second member list beside package.json (the removed roster, re-added)
+run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN
 ```
 
-## 8. Law pack counts, BASE and build (`node scripts/lawpack.mjs gate`, LF trees, 19 Nov 2026)
+## 8. Law pack counts, BASE and build (`node scripts/lawpack.mjs gate`, LF trees, 19 Nov 2026; build re-measured after the follow-up, same line)
 
 ```
 BASE  lawpack · 1928 raw match(es) over 8/8 rules · findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 93 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 13
@@ -127,14 +136,12 @@ pushed sha are rows of `ci/mcov/LEDGER.jsonl` (act `ci`).
 
 ## 11. FORKS (each the architect's to rule)
 
-- **F1 · where the four are wired.** `package.json` is beyond the named files, so the roster lives in `organism_test.mjs`
-  (`SUITE_ROSTER`). (A) it stays · (B) at landing the four join a package.json suite string and the roster is emptied in the
-  SAME commit (the double-billing assert reds a half-move). **Recommend B**: `organism_test.mjs:61-69` makes the suite strings
-  the one membership record.
+- **F1 · where the four are wired — RULED B (forks row 1143 (1), 19 Nov 2026), BUILT** by the seat follow-up: the four are in
+  the `organism:selftest` string and the roster is removed from the suite file; C5 holds it.
 - **F2 · home_pin could be hermetic.** Its only live read is `state/captain.json` through `archivist.mjs`'s import-time
   `captain()` calls; nothing in its verdict reads it. (A) it stays LIVE · (B) a unit makes that read lazy in `archivist.mjs`
   and takes home_pin off `LIVE_SELFTESTS`. Its table reason also says it "reaches a localhost port it does not listen on":
-  measured, the only connects are its fixture hook reaching the selftest's own `listen(0)` stub. **Recommend B**, its own unit.
+  measured, the only connects are its fixture hook reaching the selftest's own `listen(0)` stub. **Recommend B**, its own unit. RULED (forks row 1143 (2)): it goes to unit mlaw2.
 - **F3 · the coverage detector reads comments.** `hasSelftest` (`organism_test.mjs:289` base) matched study_scope's header
   comment, so a file with no verb counted as having a selftest, and `selftest` on it printed usage and exited 0 (a member that
   could never go red). (A) leave · (B) a unit requires a dispatch on the word, with a census of what moves. **Recommend B.**
