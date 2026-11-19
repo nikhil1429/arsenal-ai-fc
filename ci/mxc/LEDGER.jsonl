@@ -1,0 +1,4 @@
+{"ts":"2026-11-19T12:20:00Z","act":"base measure","cmd":"node ci/mxc/witness/measure.mjs --tree <base tree>","last_line":"unresolved 2040 · files 419 · Q1 14 · Q2 1 · Q3 5 · Q4 3 · Q5 0 · Q6 7"}
+{"ts":"2026-11-19T12:22:00Z","act":"gap1 cwd diff","cmd":"build() from two cwds, cwddiff","last_line":"cwd-dependent edges: A-only 13 · B-only 13"}
+{"ts":"2026-11-19T12:35:00Z","act":"all rules on mxb stack","cmd":"MXC_RULES=cwd,ctx,nest measure.mjs --tree <mxb+mxc tree>","last_line":"unresolved 1996 · files 432 · Q1 10 · Q2 1 · Q3 6 · Q4 0 · Q5 0 · Q6 1"}
+{"ts":"2026-11-19T12:38:21Z","act":"CHECKPOINT","cmd":"STOP received (his word #269)","last_line":"CHECKPOINT · STOPPED at 2026-11-19T12:38:21Z · resume from writing witness_mxc.mjs W1-W7 + mutants M1-M7"}
