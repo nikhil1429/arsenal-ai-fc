@@ -2887,8 +2887,10 @@ const freePort = () => new Promise((res, rej) => { const s = createServer(); s.o
 //      iff its ID is a quoted literal of the witness's own source, v is a unit of this tree other than u, u has landed,
 //      v did not land before or with u (v landed after u, or v lands later: its line rides v's own landing, F3 b), and its
 //      row is an integer > 0. An unknown id, a wrong order or a bad line is INVALID, a red, and drops nothing.
-//   C4 the trigger (F5, row 1121 (2)) — a landed unit's L-leg runs iff ci/<u>/ differs from refs/remotes/origin/main's
-//      (or the ref is absent); otherwise ONE carried line and nothing is spawned.
+//   C4 the trigger (F5, row 1121 (2); FK8 A, row 1171) — a landed unit's L-leg runs iff ci/<u>/ differs from its tree at
+//      the MERGE BASE of the push (HEAD with refs/remotes/origin/main; the ref absent or no merge base = it runs), so a
+//      seat pays only for the ci dirs it changed itself; otherwise ONE carried line and nothing is spawned. The head leg
+//      always runs every unit. The job's bound is not raised.
 const LANDING_SUBJECT = /^unit ([A-Za-z0-9-]+(?:\s*\+\s*[A-Za-z0-9-]+)*) \(/;
 /** the units a landing subject names (F6 b: `unit a + b (` names both) @param {string} s @returns {string[]} */
 const landingUnits = (s) => { const m = LANDING_SUBJECT.exec(String(s)); return m ? m[1].split("+").map((x) => x.trim()) : []; };
@@ -2991,8 +2993,11 @@ function gitSide(root, sha, into) {
   }
   return null;
 }
-/** C4: does ci/<u>/ differ from main's (or is the ref absent)? @param {string} root @param {string} unit */
-const ciChanged = (root, unit) => spawnSync("git", ["-C", root, "diff", "--quiet", MAIN_REF, "HEAD", "--", `ci/${unit}/`], { windowsHide: true }).status !== 0;
+/** C4 (FK8 A): does ci/<u>/ differ from its tree at the push's merge base with main (or is there none)? @param {string} root @param {string} unit */
+const ciChanged = (root, unit) => {
+  const mb = String(spawnSync("git", ["-C", root, "merge-base", "HEAD", MAIN_REF], { encoding: "utf8", windowsHide: true }).stdout || "").trim();
+  return !/^[0-9a-f]{40}$/.test(mb) || spawnSync("git", ["-C", root, "diff", "--quiet", mb, "HEAD", "--", `ci/${unit}/`], { windowsHide: true }).status !== 0;
+};
 
 /** the head leg of one unit (ms1's, unchanged but for C3's DROP ids) @returns {Promise<{ last: string, code: number|null }|null>} */
 async function headLeg(ctx, unit, dropIds) {
@@ -3037,7 +3042,7 @@ async function landedLeg(ctx, unit, at, recutIds) {
   if (at.state === "bad") { assert(name("its LANDED_ON is one 40-hex line (C1)"), false, String(at.why)); return; }
   if (at.state === "offmain") { assert(name("its LANDED_ON is on main's first-parent line (C1)"), false, String(at.why)); return; }
   if (at.state === "nolanding") { assert(name("its LANDED_ON is followed by its landing on main's first-parent line (C1)"), false, String(at.why)); return; }
-  if (!ciChanged(ROOT, unit)) { console.log(`  witness ‹${unit}› L · carried — ci/${unit}/ equals main's; judged at its landing`); return; }
+  if (!ciChanged(ROOT, unit)) { console.log(`  witness ‹${unit}› L · carried — ci/${unit}/ equals the merge base's; judged at its landing`); return; }
   const u0 = Date.now();
   const dir = join(ROOT, "ci", unit);
   const tmp = mkdtempSync(join(tmpdir(), `ms2-${unit}-`));
@@ -3047,7 +3052,7 @@ async function landedLeg(ctx, unit, at, recutIds) {
     if (e) { assert(name("its landed sides are built (git trees under the temp dir, F4 a)"), false, e); return; }
     const ports = organPorts(orgT);
     const hits = fixedPortHits(dir, ports);
-    if (hits.length) { assert(name("binds no fixed service port (B4)"), false, hits.join(" · ")); return; }
+    if (hits.length) { assert(name("binds no fixed service port at its LANDED sha (B4)"), false, hits.join(" · ")); return; }
     if (existsSync(ctx.nm)) for (const t of [orgT, baseT]) symlinkSync(ctx.nm, join(t, "node_modules"), process.platform === "win32" ? "junction" : "dir");
     const r = await spawnWitness({ dir, unit, orgT, baseT, tmp, left: Math.max(1, ctx.T0 + ctx.jobMin * 60000 - Date.now()), ports, tag: "L" });
     const j = r.killed ? { ok: false, last: "(killed at the bound)", left: `killed at the member's bound (${ctx.jobMin} min, suite.yml timeout-minutes): the witness never finished` }
@@ -3118,6 +3123,12 @@ const KNOWN_RED = [
   // one is UNRULED (a new death never hides under an old entry), and the member turning green makes its entry STALE (refused).
   // RETIRED by unit mrt (forks row 1120 (1) / (4)): the mtail entry (row 1107, detail "red beyond BOUND: T3 AUTH") — T3 repaired on main
   // (keeper.mjs a leaf again, depcruise no-circular 7), T2 re-based naming mday; ci/mtail's clauses re-cut in the same diff.
+  // unit ms2 (forks row 1171, FK2 A): three LANDED-COMMIT-leg asserts are ruled, the port class (row 1053). At their L the
+  // keeper's judge port had no env door, so the leg refuses to spawn a witness that would bind it (mlv0, mlv1), or the
+  // witness's own port clause reads red there (mport). The head leg still binds all three: only these L names are ruled.
+  { assert: "WITNESS ‹mlv0› · binds no fixed service port at its LANDED sha (B4)", detailRe: "^JUDGE_PORT at witness_mlv0\\.mjs:\\d+ \\(the organ's scripts/keeper\\.mjs:\\d+, no env door\\)( · JUDGE_PORT at witness_mlv0\\.mjs:\\d+ \\(the organ's scripts/keeper\\.mjs:\\d+, no env door\\))*$", row: 1171, owner: "unit ms2", until: "mlv0's witness names the judge port through a door its landed tree honours, or the leg plants one (a ruling)" },
+  { assert: "WITNESS ‹mlv1› · binds no fixed service port at its LANDED sha (B4)", detailRe: "^JUDGE_PORT at witness_mlv1\\.mjs:\\d+ \\(the organ's scripts/keeper\\.mjs:\\d+, no env door\\)( · JUDGE_PORT at witness_mlv1\\.mjs:\\d+ \\(the organ's scripts/keeper\\.mjs:\\d+, no env door\\))*$", row: 1171, owner: "unit ms2", until: "mlv1's witness names the judge port through a door its landed tree honours, or the leg plants one (a ruling)" },
+  { assert: "WITNESS ‹mport› · GREEN at its LANDED sha against its landing's parent", detail: "red at L: WITNESS", row: 1171, owner: "unit ms2", until: "mport's WITNESS clause is read on the neutral Windows leg (FK7) and re-judged" },
   // (EMPTY from 13 Oct 2026 to unit ms1's row 1107 entries above) Row 642: every entry of row 639 left the list in the landing that fixed it — NO SHIM
   // CALLEE when lane V's ea8d015 put forge_session contract and hippocampus recall-hint on the CALL shape (the entry
   // read STALE on his tree), the two LOAD ZERO BLOCK 5 lines on row 641 (B) + (C). The next entry joins only by a row.

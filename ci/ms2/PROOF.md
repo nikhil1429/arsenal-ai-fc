@@ -256,3 +256,73 @@ merge it, re-run the witness and the mutants, read both legs, add §10.5.
   `ci/ms2/PROOF.md` and `ci/ms2/LEDGER.jsonl`. Nothing else.
 - This tip is pushed ONCE. Its two neutral legs are read once each, with `node scripts/ci_verdict.mjs <full sha>`, and
   written in the seat's final message only, so the verdict stays on this tip.
+
+## 12. MAIN 5759cce MERGED, ROW 1171 APPLIED (rows 1170 (3) / 1171, 19 Nov 2026)
+
+Row 1168 is withdrawn for ms2 (the architect names it his miss), so `e17c00d` restores the five door lines (it reverts
+`fc8890b`; the files are byte-identical to `2e4ec3b`).
+- **(b) the merge.** `f2ab18e` merges main **5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90** (the assembled landing, subject
+  `unit ms1 + mrj + mrt + mr3 + mrf + mrv (`, the plus form F6 (b) reads). Its `scripts/organism_test.mjs` and
+  `scripts/land.mjs` are byte-identical to 179a0ee's (`git diff --quiet 179a0ee 5759cce -- <file>`). So the two
+  history-only conflicts resolve to this branch's version, and `scripts/`, `ci/` and `.claude/` are unchanged against
+  `e17c00d` by the merge. `ci/ms2/BASE` = 5759cce.
+- **(c) the landed-commit file** of the six units just landed: `ci/{ms1,mr3,mrj,mrt,mrf,mrv}/LANDED_ON` = `fb42118…`,
+  5759cce's parent, so L = 5759cce for all six (the plus form shares the landing). 38 LANDED_ON in all. W-C1 names the six.
+  The door lines are now valid by ORDER, not by PENDING (FK4): each overtaking unit's L (5759cce) is newer than its
+  overtaken unit's.
+- **(d) row 1171.**
+  - **FK2 A.** The L-leg's port refusal has its own name: `WITNESS ‹u› · binds no fixed service port at its LANDED sha
+    (B4)`. The head leg's `binds no fixed service port (B4)` binds as before. Three entries join KNOWN_RED (row 1171,
+    owner unit ms2, the port class): mlv0 and mlv1 by that L name, with a detail pattern that admits JUDGE_PORT hits
+    only (a new fixed bind beside them is UNRULED), and mport's `GREEN at its LANDED sha against its landing's parent`
+    with detail `red at L: WITNESS`.
+  - **FK8 A.** `ciChanged` compares `ci/<u>/` with its tree at the MERGE BASE of the push (`git merge-base HEAD
+    refs/remotes/origin/main`; none = it runs). A helper outside `witnesses()`, so ms1's B1.3 NOCALC holds. The head
+    leg runs every unit; `.github/workflows/suite.yml` is untouched and the bound is not raised. New clause **W-T3
+    MERGEBASE**: main changes `ci/pu/` after the seat's cut and the seat's `ci/pu/` equals the merge base → one carried
+    line, one spawn. Its mutant compares with main's tip instead.
+  - **FK7.** No completed Windows leg reads mport's L-leg yet. 42188fc's legs predate the B4 door fix and refused mport
+    before it spawned, and 6f42b9d / 7be797e died at the bound. It is read from this tip's legs when one completes:
+    the seat's final message, not a push.
+  - **FK4 / FK5 stand.**
+  - **mf2** (N5: `F4` red once in the full Linux member sequence, GREEN alone on 2e4ec3b and on 1582be0) is recorded as a
+    **second no-cause red beside mlv3's**, evidence for unit mdtl. mlv2's LIVE-SAFE (N3) has the same shape.
+- **The witness both ways (19 Nov 2026)**, LF trees of this tree and of 5759cce:
+  `--org build --base-org 5759cce` → `GREEN MS2 every landed unit judged at its LANDED sha, at head only what still binds · 31 clause(s)` (exit 0) ·
+  `--org 5759cce --base-org 5759cce` → `RED MS2 · W-L1 READ, W-L2 RUN, W-L3 SPOOF, W-L4 INFLIGHT, W-L6 FULL, W-L7 GITSIDE, W-L8 OFFMAIN, W-L9 SECONDS, W-L10 PLUS, W-R1 DROP, W-R2 KEEPATL, W-R3 STALE, W-R4 ORDER, W-R5 UNKNOWN, W-R6 NEWDEATH, W-R7 RECUT, W-R9 PENDING, W-T1 TRIGGER, W-T2 CHANGED, W-T3 MERGEBASE, W-G1 SUBJECT, W-G2 LANDEDON, W-G4 PLUS, W-C1 CARRY, BOUND` (exit 1).
+  Mutants: `run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GREEN`.
+
+### 12.1 The step timings of the legs that died at the bound (curl `actions/runs/<id>/jobs`, read 19 Nov 2026)
+
+| run · tip | leg | npm ci | `npm test · hermetic · head` | merge base | verdict step |
+|---|---|---|---|---|---|
+| 44446257679 · 42188fc | node 22 | 24 s | 3281 s (success) | 116 s | failure (RED) |
+| 44446257679 · 42188fc | node 24 | 20 s | 3082 s (success) | 118 s | failure (RED) |
+| 44592550788 · 6f42b9d | node 22 | 59 s | **3527 s, cancelled** | skipped | skipped |
+| 44592550788 · 6f42b9d | node 24 | 66 s | **3524 s, cancelled** | skipped | skipped |
+| 44604478134 · 7be797e | node 22 | 48 s | **3531 s, cancelled** | skipped | skipped |
+| 44604478134 · 7be797e | node 24 | 59 s | **3531 s, cancelled** | skipped | skipped |
+
+The head step alone (the suite with the witnesses member, head leg + L-legs) fills the hour. On THIS tip FK8 A cannot
+spare an L-leg: its own LANDED_ON files and door lines change every `ci/<u>/` against the 5759cce merge base, so ms2's
+own push pays the full sweep, about the same as 6f42b9d. After ms2 lands, a seat pays only for the dirs it changes.
+
+### 12.2 The member on this tree (Linux, 19 Nov 2026, before `ci/mr3/REBASE`)
+
+`GITHUB_ACTIONS=true GITHUB_WORKSPACE=$PWD ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses` →
+(19 Nov 2026) `organism_test: 123 passed, 10 failed · ruled 3 · UNRULED 7 · LIVE 0 (hermetic: named, not run)` · `witnesses · 39 unit(s) · 1371.9 s`.
+29 L-legs `ok`; 10 `ok   REBASE` lines (the five door files valid by order, none STALE); the three row 1171 entries
+read `[RULED row 1171 · unit ms2 …]`. The seven UNRULED, each named:
+- **mr3 at head `K3`.** Overtaken by ms2 itself: K3 holds "the ‹mjd3› entry is gone and NOTHING JOINS KNOWN_RED", and row
+  1171's FK2 A entries join it. ms2 writes the door line in its own landing: `ci/mr3/REBASE` =
+  `DROP K3 · ms2 · row 1171 · …`. Measured after it (`<scratchpad>/only2.sh <tip> mr3 "mjd3 ms2"`): `ok WITNESS ‹mr3› ·
+  GREEN at head` · `ok REBASE ‹mr3› · every line is valid` · `ok … every DROP id is still red at head`.
+- **The six units of the shared landing at L = 5759cce vs P = fb42118: `red at L: BOUND`** (ms1, mrj, mrt, mrf, mrv) and
+  **`K2 BOUND`** (mr3). **FK9, new.** A plus-form landing (F6 (b)) carries the UNION of its units' files, and each
+  witness's BOUND names only its own, so at the shared L every BOUND is red. mr3's K2 also reads `ci/mjd3/BASE` on
+  `--base-org`, and P (main before the assembled landing) carries no ci dir. These are reds of how the landing was
+  made, not overtakes, so no door line fits them; this seat writes none. Options: (a) the L-leg of a plus-form landing
+  judges BOUND as ms1's head leg does (drop BOUND ids); (b) rule the six L asserts; (c) each unit's BOUND names its
+  co-landed units' files.
+
+CHECKPOINT · STOPPED at the push of this commit (its parent and the merge are named in §12; the tip is this commit, read with `git rev-parse origin/claude/ms2-build`) · resume from: read both neutral legs of the tip once each (`node scripts/ci_verdict.mjs <full sha>`, curl when it answers 403), FK7 (mport's L-leg on the Windows leg) and the step timings if a leg dies at the bound — in the final message only; then the architect's ruling on FK9.

@@ -1,0 +1,3 @@
+# THE RE-BASE DOOR (unit ms2, forks row 1121 (3)): one line per overtaken clause.
+# K3 ("the mjd3 entry is gone and nothing joins" KNOWN_RED) has no meaning at head once row 1171's FK2 A entries join the list (ms2's landing).
+DROP K3 · ms2 · row 1171 · ms2's landing adds three ruled entries to KNOWN_RED (FK2 A); the L-leg still binds K3 at mr3's own landing

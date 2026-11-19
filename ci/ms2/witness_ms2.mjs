@@ -39,6 +39,8 @@
 //   C4 · THE TRIGGER (row 1121 (2))
 //   W-T1 TRIGGER   ci/pu/ equal to origin/main's → ONE `  witness ‹pu› L · carried` line, the witness spawned once (head)
 //   W-T2 CHANGED   ci/pu/ differs from origin/main's → the L assert present
+//   W-T3 MERGEBASE FK8 A (row 1171): main moved on and changed ci/pu/ after the seat was cut; the seat's ci/pu/ equals the
+//                  push's MERGE BASE → ONE carried line, the witness spawned once (a seat pays only for the dirs it changed)
 //   C6 · THE LAND VERB WRITES THE CONTRACT (land.mjs step 5; origin main carries a ci/old/LANDED_ON unless said)
 //   W-G1 SUBJECT   T's subject `wip` → REFUSED SUBJECT
 //   W-G2 LANDEDON  ci/u1/LANDED_ON ≠ T's parent → REFUSED LANDED-ON
@@ -69,7 +71,7 @@ if (!ORG || !BASE) { console.log("RED MS2 · usage: --org <dir> --base-org <dir>
 const NAMED = ["scripts/organism_test.mjs", "scripts/land.mjs", ".claude/skills/runner/SKILL.md"];
 const NAMED_CI = (p) => p.startsWith("ci/ms2/") || /^ci\/[a-z0-9-]+\/(LANDED_ON|REBASE)$/.test(p);
 // the carried units that have landed on main (ms1's CARRIED list at c637496, ci/ms1/witness_ms1.mjs), each with a LANDED_ON (C7)
-const CARRIED = ["mcr2", "mday", "mday2", "mdn2", "mdone", "mf2", "mf4", "mfac", "mfac-floor", "mgrd", "mgs", "mjd3", "mjd4", "mjd5", "mjd6", "mjd7", "mjud", "mland", "mlj", "mlv0", "mlv1", "mlv2", "mlv3", "mpast", "mpm", "mpool", "mport", "mrung", "mtail", "mtxt", "mtxt3", "mxw"];
+const CARRIED = ["mcr2", "mday", "mday2", "mdn2", "mdone", "mf2", "mf4", "mfac", "mfac-floor", "mgrd", "mgs", "mjd3", "mjd4", "mjd5", "mjd6", "mjd7", "mjud", "mland", "mlj", "mlv0", "mlv1", "mlv2", "mlv3", "mpast", "mpm", "mpool", "mport", "mr3", "mrf", "mrj", "mrt", "mrung", "mrv", "ms1", "mtail", "mtxt", "mtxt3", "mxw"];
 const ROOT = mkdtempSync(join(os.tmpdir(), "witness-ms2-"));
 let seq = 0;
 
@@ -299,12 +301,18 @@ const CLAUSES = {
   },
   "W-T1 TRIGGER"(t) {
     const o = memberRun(t, [{ tag: "P" }, { tag: "L", subject: "unit pu (plant)", files: unitFiles("pu") }, { tag: "X" }, { tag: "HEAD", subject: "seat", files: { "notes/y.txt": "y\n" } }], { mainAt: "X" });
-    const c = o.lines.filter((l) => l === "  witness ‹pu› L · carried — ci/pu/ equals main's; judged at its landing").length;
+    const c = o.lines.filter((l) => /^ {2}witness ‹pu› L · carried — /.test(l)).length;
     return { ok: c === 1 && Lmark(o, "pu").length === 1 && !has(o, LA("pu")), why: `carried lines ${c} · spawns ${Lmark(o, "pu").length} · L assert ${has(o, LA("pu"))}` };
   },
   "W-T2 CHANGED"(t) {
     const o = memberRun(t, [{ tag: "P" }, { tag: "L", subject: "unit pu (plant)", files: unitFiles("pu") }, { tag: "X" }, { tag: "HEAD", subject: "seat", files: { "ci/pu/NOTE": "a changed ci dir\n" } }], { mainAt: "X" });
     return { ok: okLine(o, LA("pu")) && Lmark(o, "pu").length === 2, why: `L assert ${has(o, LA("pu"))} · spawns ${Lmark(o, "pu").length}` };
+  },
+  "W-T3 MERGEBASE"(t) {
+    const o = memberRun(t, [{ tag: "P" }, { tag: "L", subject: "unit pu (plant)", files: unitFiles("pu") }, { tag: "M", subject: "main moves", files: { "ci/pu/NOTE": "main changed ci/pu after the seat's cut\n" } },
+      { tag: "HEAD", from: "L", branch: "seat", subject: "seat", files: { "notes/y.txt": "y\n" } }], { mainAt: "M" });
+    const c = o.lines.filter((l) => /^ {2}witness ‹pu› L · carried — /.test(l)).length;
+    return { ok: c === 1 && Lmark(o, "pu").length === 1 && !has(o, LA("pu")), why: `carried lines ${c} · spawns ${Lmark(o, "pu").length} · L assert ${has(o, LA("pu"))}` };
   },
   "W-G1 SUBJECT"(t) { const l = landDry(t, { subject: "wip", files: U1() }); return { ok: /^REFUSED SUBJECT · u1 /.test(l), why: l }; },
   "W-G2 LANDEDON"(t) { const l = landDry(t, { subject: "unit u1 (plant)", files: U1(`${"c".repeat(40)}\n`) }); return { ok: /^REFUSED LANDED-ON · u1 /.test(l), why: l }; },
