@@ -68,7 +68,24 @@ construction, as in mrt's witness. Each of them is made RED by its own mutant (�
 
 ## 4. THE MUTANTS (`ci/mlaw/run_mutants_mlaw.mjs`)
 
-MUTANTS_PENDING
+`node ci/mlaw/run_mutants_mlaw.mjs --org <LF tree of the build> --base-org <LF tree of cf1ca54>` (19 Nov 2026, on `b2854c6`):
+
+```
+control · GREEN MLAW the law pack judged hermetic, its rise a new red · 8 clause(s) (exit 0)
+  M-LEGS · RED by LEGS · RED MLAW · LEGS · JUGAD (exit 1)
+  M-JUGAD · RED by JUGAD · RED MLAW · JUGAD (exit 1)
+  M-HERMETIC · RED by HERMETIC · RED MLAW · HERMETIC (exit 1)
+  M-RISE · RED by RISE · RED MLAW · RISE · NOLINE (exit 1)
+  M-FALL · RED by RISE · RED MLAW · RISE (exit 1)
+  M-NOLINE · RED by NOLINE · RED MLAW · NOLINE (exit 1)
+  M-PORT · RED by PORT · RED MLAW · PORT (exit 1)
+  M-BOUND · RED by BOUND · RED MLAW · BOUND (exit 1)
+  M-LAST · RED by LAST · RED MLAW · LAST (exit 1)
+run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN
+exit 0
+```
+
+There is one mutant per clause, and RISE has two (the rise unseen, and a fall made red). Each mutant is RED by the clause that names it, and the control is GREEN. A first run on `44205b3` also read 9 of 9. In that run M-NOLINE also turned RISE red, because the mutant was wider than its clause. It was narrowed in `b2854c6`, so that it now breaks only the no-line base, and the run above is the re-run. After each run, `ps` showed no process naming the M-LAST marker (19 Nov 2026).
 
 ## 5. EACH TOUCHED SELFTEST, BEFORE AND AFTER (headline line, 19 Nov 2026)
 
