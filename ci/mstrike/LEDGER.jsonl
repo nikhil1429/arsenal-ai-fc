@@ -5,3 +5,7 @@
 {"ts":"2026-11-19T18:13Z","act":"witness build","cmd":"node ci/witness/mstrike/witness_strike.mjs --org <archive HEAD+witness> --base-org <archive fb42118>","last_line":"GREEN MSTRIKE the asked-first strike is read, and read first · 1 clause(s) (6 plant(s), BOUND, LAST)"}
 {"ts":"2026-11-19T18:13Z","act":"witness base","cmd":"node ci/witness/mstrike/witness_strike.mjs --org <archive fb42118> --base-org <archive fb42118>","last_line":"RED MSTRIKE · C22 (C22.1, C22.2, C22.3, C22.4, C22.5, C22.6)"}
 {"ts":"2026-11-19T18:13Z","act":"mutants","cmd":"node ci/mstrike/run_mutants_mstrike.mjs --org <build> --base-org <base>","last_line":"run_mutants: 2 of 2 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-19T18:17Z","act":"lawpack","cmd":"node scripts/lawpack.mjs gate (LF clones base fb42118, build b4e613b)","last_line":"lawpack: 2 RED — equal counts on both trees"}
+{"ts":"2026-11-19T18:17Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (base, build)","last_line":"organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run) on both"}
+{"ts":"2026-11-19T18:17Z","act":"red-before","cmd":"ARSENAL_RUNG_STATE_DIR=<mktemp> node scripts/rung_receipt.mjs red --rung C --clause capability-c22 --cmd \"node ci/witness/mstrike/witness_strike.mjs --day 2026-11-19\"","last_line":"rung_receipt: red C:capability-c22 · exit 2 · out b7c0c8be2d19 · head b4e613b462a9"}
+{"ts":"2026-11-19T18:17Z","act":"models","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
