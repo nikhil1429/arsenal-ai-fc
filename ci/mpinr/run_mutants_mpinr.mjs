@@ -8,7 +8,10 @@
 // run). The witness then judges the clone; the mutant is caught only when the witness exits 1 AND its RED list names the
 // mutant's own clause. The control is the same clone unmutated: it must read GREEN.
 // THE PORT CLASS (row 1053): no port, no service, no POST, no restart; every child wait is bounded by the base owner's
-// STEP_TIMEOUT_MS read here (scripts/conductor.mjs), the bound the witness itself uses.
+// STEP_TIMEOUT_MS read here (scripts/conductor.mjs), the bound the witness itself uses. The witness runs at most one bounded
+// child per clause plus its detector's wait, so ITS wait here is that bound times (clauses + 1) — derived from MUTANTS (one
+// per clause), never typed: a witness given only one bound is killed before it can print the RED it owes (first run,
+// 19 Nov 2026: the KILLED mutant read "witness exit null").
 // LAST LINE: run_mutants: <k> of <n> mutant(s) RED by the clause that names them · control GREEN|RED   (exit 0 iff k = n and GREEN)
 // ============================================================================
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync } from "node:fs";
@@ -51,7 +54,7 @@ const cloneOf = (name) => {
   return d;
 };
 const judge = (d) => {
-  const r = spawnSync(process.execPath, [WITNESS, "--org", d, "--base-org", BASE_ORG], { encoding: "utf8", timeout: BOUND, windowsHide: true });
+  const r = spawnSync(process.execPath, [WITNESS, "--org", d, "--base-org", BASE_ORG], { encoding: "utf8", timeout: BOUND * (MUTANTS.length + 1), windowsHide: true });
   const last = (fold(r.stdout || "").trim().split("\n").pop() || "").trim();
   return { status: r.status, last, timedOut: !!(r.error && r.error.code === "ETIMEDOUT") };
 };
