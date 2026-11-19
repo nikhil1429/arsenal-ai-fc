@@ -5,3 +5,6 @@
 {"ts":"2026-11-19T01:52:30Z","act":"measure-fix","cmd":"apply_f2.mjs fix; q5.mjs","last_line":"declared 66 · declared_jsonl 32 · Q5_n 5 · F5_n 14 · not_in_ir_n 7"}
 {"ts":"2026-11-19T01:52:30Z","act":"measure-mxw","cmd":"xray.mjs from origin/claude/mxw-build ab98546; q5.mjs","last_line":"declared_jsonl 0 · Q5_n 1 · F5_n 4 · not_in_ir_n 33"}
 {"ts":"2026-11-19T01:52:30Z","act":"measure-mxwfix","cmd":"mxw xray + apply_f2.mjs fix; q5.mjs","last_line":"declared_jsonl 32 · Q5_n 7 · F5_n 9 · not_in_ir_n 5"}
+{"ts":"2026-11-19T01:55:02Z","act":"triage-decls","cmd":"node ci/mxh/witness/decls.mjs <mxwfix>/scripts/xray.mjs","last_line":"65 token rows; every Q5 row's declaring organ is NOT an IR writer and the undeclared writer is the file's own header owner"}
+{"ts":"2026-11-19T01:55:02Z","act":"fp-rules-fix","cmd":"node ci/mxh/witness/fp_rules.mjs <fix>/scripts/xray.mjs","last_line":"R4 kept_true 46 dropped_false 5 kept_false [] dropped_true []"}
+{"ts":"2026-11-19T01:55:02Z","act":"fp-rules-mxwfix","cmd":"node ci/mxh/witness/fp_rules.mjs <mxwfix>/scripts/xray.mjs","last_line":"R4 kept_true 51 dropped_false 7 kept_false [] dropped_true []"}
