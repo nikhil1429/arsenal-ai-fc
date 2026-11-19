@@ -128,4 +128,17 @@ No count rose (raw matches 1933 → 1934; raw is not a finding).
 
 ## CI of the tip
 
-Recorded in the section below by the commit after this one's push (the tip names itself only after it is pushed).
+The work tip **`55d6d3d40a5166a2df347ce087d2cd6e3c2a7119`** (every file of the unit; the commit after it adds only this
+section and its ledger row), read 19 Nov 2026 with the FULL sha:
+
+```
+NODE_USE_ENV_PROXY=1 node scripts/ci_verdict.mjs 55d6d3d40a5166a2df347ce087d2cd6e3c2a7119
+ci_verdict 55d6d3d GREEN — npm test · node 22: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135779763483] | npm test · node 24: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135779763750] (3 calls)
+```
+
+The earlier push `7e14549` reads RED (cancelled, both legs, runs 135778299752 / 135778300587): its runs were cancelled by
+the next push, never reached a verdict — not a red of the code.
+
+Effort receipt: `node campaign-2026-09/tools/effort_receipt.mjs --fleet mrehearse --seat 00 --model claude-opus-5-5` →
+`Error: Cannot find module '…/campaign-2026-09/tools/effort_receipt.mjs'` (exit 1; this repository carries no
+`campaign-2026-09/`); nothing written under it.
