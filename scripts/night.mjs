@@ -18,8 +18,8 @@
 //   F2 A  no spawn: a dead runner = never begun     → the line says "never begun" when no begun row exists
 //   F3 A  launches stop when the pool reading ages  → the runner's gate says so: `stop --reason pool` (the pool lives in the
 //         campaign; this organ names no campaign path, F7 A)
-//   F4 A  the memory line is a config key here      → NIGHT_CONFIG.memory_floor_mb, shipped as FLOOR_UNSET: `may` answers
-//         NO "floor unset" until the runner writes the value (from the blind-rail free-memory rows) before the land branch
+//   F4 A  the memory line is a config key here      → NIGHT_CONFIG.memory_floor_mb, RULED 1536 (row 1103); a non-number: `may` answers
+//         NO "floor unset" (the 1.5 GB line of row 477 (5) replaced the blind-rail source, which is empty on his laptop)
 //   F5 A  one red stops the night                   → mark --kind red appends a stopped row; every later may says NO
 //   F6 A  a fork outside class stops that thread    → mark --kind fork stops nothing; it waits for the architect on the card
 //   F7 A  the campaign calls this by CLI            → no campaign path, no campaign file read
@@ -49,11 +49,11 @@ const STATE_DIR = SEAM || join(ROOT, "dressing-room", "state");
 const SITTING_DIR = process.env.ARSENAL_SITTING_STATE_DIR || STATE_DIR;   // the sitting owner's own dir rule (read only)
 export const LOG_NAME = "night_log.jsonl";
 
-// ── F4 A — THE MEMORY LINE. The runner writes the value (a number of MB, taken from the blind-rail free-memory rows on his
-// laptop) BEFORE the land branch is cut. Until then this placeholder REFUSES: `may` answers NO "floor unset". No session
-// types the number; a number here that no row measured is a defect.
+// ── F4 A — THE MEMORY LINE, RULED 1536 MB by forks row 1103 (2): the standing 1.5 GB line of row 477 (5) — under it nothing
+// parallel starts on his laptop. It replaces the blind-rail source the F4 A text named, which is EMPTY on his laptop (row 1103).
+// A floor that is not a positive number still REFUSES: `may` answers NO "floor unset" (FLOOR_UNSET stays the named non-value).
 export const FLOOR_UNSET = "FLOOR_UNSET";
-export const NIGHT_CONFIG = Object.freeze({ memory_floor_mb: FLOOR_UNSET });
+export const NIGHT_CONFIG = Object.freeze({ memory_floor_mb: 1536 });   // forks row 1103 · the 1.5 GB line of row 477 (5)
 
 export const KINDS = Object.freeze(["launch", "return", "land-ready", "fork", "red"]);
 export const REASONS = Object.freeze(["pool", "memory", "red", "fork", "context", "his-word", "learn-start", "done"]);
@@ -143,7 +143,7 @@ export function organ({ dir = STATE_DIR, sittingDir = SITTING_DIR, now = () => n
   function may({ act }) {
     if (!ACTS.includes(act)) return { code: 1, out: `NO usage · --act ${ACTS.join("|")}` };
     if (act === "land") return { code: 1, out: "NO land-attended · no landing at night: land-ready is the ceiling until a row grants unattended landing (ruling ADDED (ii))" };
-    if (typeof floor !== "number" || !Number.isFinite(floor) || floor <= 0) return { code: 1, out: "NO floor-unset · NIGHT_CONFIG.memory_floor_mb is the placeholder: the runner writes it from the blind-rail free-memory rows before the land branch (ruling F4 A)" };
+    if (typeof floor !== "number" || !Number.isFinite(floor) || floor <= 0) return { code: 1, out: "NO floor-unset · NIGHT_CONFIG.memory_floor_mb is not a positive number of MB (ruled 1536 by forks row 1103, the 1.5 GB line of row 477 (5))" };
     const n = live();
     if (!n) return { code: 1, out: "NO not-armed · no night is armed (only the day end arms one)" };
     if (n.stopped) return { code: 1, out: `NO stopped:${n.stopped.reason}` };
@@ -200,7 +200,9 @@ async function selftest() {
     let mem = 0;
     const mk = (extra = {}) => organ({ dir: join(tmp, "st"), sittingDir: sdir, floor: F, freeMb: () => mem, fileCard: (c) => { if (!cards.some((x) => x.key === c.key)) cards.push(c); return true; }, ...extra });
     const o = mk();
-    ok("the shipped floor is the placeholder and REFUSES (F4 A)", NIGHT_CONFIG.memory_floor_mb === FLOOR_UNSET && /^NO floor-unset/.test(organ({ dir: join(tmp, "x"), sittingDir: sdir }).may({ act: "launch" }).out));
+    const floorNo = (f) => /^NO floor-unset/.test(organ({ dir: join(tmp, "x"), sittingDir: sdir, floor: f }).may({ act: "launch" }).out);
+    ok("a non-number floor refuses (F4 A, row 1103) — FLOOR_UNSET and a string give NO floor-unset; a numeric floor passes that check",
+      floorNo(FLOOR_UNSET) && floorNo("1536") && !floorNo(NIGHT_CONFIG.memory_floor_mb) && typeof NIGHT_CONFIG.memory_floor_mb === "number");
     ok("arm refuses any hand but the day end (F1 A)", o.arm({ day: "2026-11-18", by: "evening" }).code === 1 && !o.waiting());
     ok("may before any arm → NO not-armed", /^NO not-armed/.test(o.may({ act: "launch" }).out));
     ok("arm → one armed row; a second arm writes nothing", o.arm({ day: "2026-11-18", by: "day.end" }).code === 0 && /already/.test(o.arm({ day: "2026-11-18", by: "day.end" }).out) && readRows(o.LOG).filter((r) => r.kind === "armed").length === 1);
