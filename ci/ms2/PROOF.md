@@ -165,3 +165,55 @@ results of that clone are NOT readings of the repairs (their organ changes are a
   previous witness left) or a flake is not measured.
 
 CHECKPOINT · STOPPED at 2026-11-19T12:38:15Z · resume from: re-run the member (GITHUB_ACTIONS=true GITHUB_WORKSPACE=$PWD ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses) on the tree merged with 1582be0 (merges f69de73 + 0f182b1 are on this branch; witness GREEN 30 clauses vs 1582be0, mutants 28 of 28, ledger), write the measured RECUT lines (PROOF §9) into ci/<u>/REBASE, re-run witness + member, add the new PROOF section with the tip sha and both neutral legs (node scripts/ci_verdict.mjs <full sha>)
+RESUMED (his word #270, relayed by the runner, 19 Nov 2026) from the CHECKPOINT line above.
+
+## 10. THE ASSEMBLED TIP MERGED (architect orders after row 1158, 19 Nov 2026)
+
+- **Merges** (merge commits, never a rebase, never a force push): `f69de73` merges **db3e01d** (the assembled tip:
+  ms1 + mrj + mrt + mr3 + mrf + mrv, main fb42118 merged); `0f182b1` merges **1582be0** on top (db3e01d + the dated
+  count line at `ci/mrv/PROOF.md:105`). The one conflict (`scripts/organism_test.mjs`, the per-unit loop of
+  `witnesses()`) keeps ms2's head leg / door / L-leg shape and carries ms1's two head-leg additions into it: the
+  killed-at-the-bound named red (row 1153 (3) F-9, now in BOTH legs) and the PORT_HELD measurement lines (row 1153 (2)).
+  1582be0's `organPorts` reads `plantedPort("ARSENAL_JUDGE_PORT", …)` as a door: **FK1 is answered upstream**.
+- `ci/ms2/BASE` = `1582be0…` (the tree ms2 builds on). LANDED_ON added for the three units 1582be0 carries from main
+  (mrung `3f84c80`, mtxt3 `12f1eca`, mxw `0f39835`): 32 in all; W-C1 CARRY names them.
+- **The witness both ways (19 Nov 2026)**, LF trees of the merged work tree and of 1582be0:
+  `--org merged --base-org 1582be0` → `GREEN MS2 every landed unit judged at its LANDED sha, at head only what still binds · 30 clause(s)` (exit 0) ·
+  `--org 1582be0 --base-org 1582be0` → `RED MS2 · W-L1 READ, W-L2 RUN, W-L3 SPOOF, W-L4 INFLIGHT, W-L6 FULL, W-L7 GITSIDE, W-L8 OFFMAIN, W-L9 SECONDS, W-L10 PLUS, W-R1 DROP, W-R2 KEEPATL, W-R3 STALE, W-R4 ORDER, W-R5 UNKNOWN, W-R6 NEWDEATH, W-R7 RECUT, W-R9 PENDING, W-T1 TRIGGER, W-T2 CHANGED, W-G1 SUBJECT, W-G2 LANDEDON, W-G4 PLUS, W-C1 CARRY, BOUND` (exit 1).
+- **Mutants**: `run_mutants: 28 of 28 mutant(s) RED by the clause that names them · control GREEN`.
+
+### 10.1 The member on the merged tree, and the door lines it measured
+
+`GITHUB_ACTIONS=true GITHUB_WORKSPACE=$PWD ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses` at
+`a1bd8a2` (19 Nov 2026, Linux, no door lines yet): `organism_test: 108 passed, 9 failed · ruled 0 · UNRULED 9 · LIVE 0` ·
+`witnesses · 39 unit(s) · 1154.0 s`. The L-leg is GREEN for 24 landed units; ms1, mr3, mrj, mrt, mrf, mrv and ms2 print
+`not landed`. The L reds, each traced to the commit that re-cut the witness, became the door lines (`2e4ec3b`):
+
+| `ci/<u>/REBASE` | red at L (a1bd8a2) | the re-cut, by `git log c637496..1582be0 -- ci/<u>/` |
+|---|---|---|
+| mjd3 | `J4` | `RECUT J4 · mr3 · row 1112` (c76c378) |
+| mjud | `M3 CENSUS M5 F3-CLIP` | `RECUT M3 CENSUS` / `RECUT M5 F3-CLIP · mrj · row 1112` (eeba921) |
+| mtail | `T2 F-C` | `RECUT T2 F-C · mrt · row 1120` (08629d1) |
+| mdone | `D-UNREAD D-METER` | `RECUT D-UNREAD` / `RECUT D-METER · ms1 · row 1154` (dfbc99d, ms1's own landing) |
+| mfac | `F4` | `RECUT F4 · ms1 · row 1125` (20de517, ms1's own landing) — this also answers FK3 |
+
+ms1 is the landing unit of the assembled landing, so its two re-cuts are written beside the five units' (the ruling's
+"the overtaking unit writes the line in its own landing"). Every id is a quoted literal of its witness (checked by
+`grep` for `"<ID>"`). mf2 needs no line: its re-cut is GREEN at L (6 clauses). **Measured after the lines** (each unit
+with its overtaking unit's dir kept, `<scratchpad>/only2.sh 2e4ec3b <u> <v>`): mjd3, mjud, mtail, mdone, mfac each print
+their L red and NO FAIL; mfac's lines in full: `ok REBASE ‹mfac› · every line is valid …`, `ok … every DROP id is still
+red at head …`, `ok WITNESS ‹mfac› · GREEN at its LANDED sha against its landing's parent`. Every line is PENDING-valid
+(§1 call 1, FK4) until the assembled landing lands, after which each is valid by order.
+
+**Reds left after the door (a1bd8a2's member run, the door lines aside):**
+- `WITNESS ‹mlv0›` / `‹mlv1› · binds no fixed service port (B4)` at L (`scripts/keeper.mjs:78` / `:79` at their L, no
+  door then): FK2 stands. mrv re-cut mlv1 (a84558f) and still names JUDGE_PORT, so its L-leg cannot spawn.
+- `WITNESS ‹mport› · GREEN at its LANDED sha` `red at L: WITNESS` (`RED MPORT · WITNESS` at L `8c729c8` vs P `95b07a6`;
+  mport's witness is unchanged since c637496): **FK7**, new: mport's own clause `WITNESS` is red at its own landing.
+- `WITNESS ‹mf2› · GREEN at head` `F4`, once, in the full sequence. **Not reproduced**: mf2 alone on `2e4ec3b` → head
+  `ok`, L `GREEN MF2 … · 6 clause(s)` `ok`; on 1582be0 alone → head `ok` (N5, the same shape as N3).
+
+### 10.2 The neutral machine on this tip
+
+See §10.3 (written when both legs are done; read once with `node scripts/ci_verdict.mjs <full sha>`, or the check-runs
+and annotations by curl when that answers 403, as it did for 42188fc).
