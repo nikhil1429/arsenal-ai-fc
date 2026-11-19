@@ -24,7 +24,13 @@
 //             never typed), and on the unplanted copy it equals one leg per matrix node; and the tree's own law pack scan
 //             (judgeJugad(scan().matches)) sites NO jugad finding in scripts/ci_verdict.mjs.
 //   JUGAD     P1 · `lawpack.mjs gate` on a copy of --org and of --base-org: no count on --org's findings line is higher than
-//             --base-org's, jugad-literal-subject-list is LOWER, and lawpack.mjs's BASELINE is byte-equal on both sides.
+//             --base-org's, jugad-literal-subject-list is LOWER and AT OR BELOW its frozen BASELINE (the pass line, row 1146 (3)),
+//             the gate exits 0, the tree's own scan sites NO jugad finding in ci_verdict.mjs, done.mjs or usage_tap.mjs, and
+//             lawpack.mjs's BASELINE is byte-equal on both sides.
+//   SURFACES  FK1 A (row 1146 (1)) · done.mjs reads his surfaces from the registry mechanisms row his_surfaces (lazySubjects,
+//             no literal): on a copy with an EMPTY state dir `done.mjs report` prints the named red "reach RED — no live
+//             mechanisms row "his_surfaces""; with that row planted through the copy's own `registry.mjs set` (ARSENAL_REGISTRY
+//             under the temp root) the reach line is no such red; `done.mjs selftest` on the copy exits 0.
 //   HERMETIC  P2 · lawpack is in neither LIVE_MODES nor LIVE_SELFTESTS of --org's organism_test.mjs, and every key of the three
 //             LIVE tables at --org is a key at --base-org (they only shrink); on an EMPTY-state copy the hermetic
 //             `organism_test.mjs lawpack` prints no `LIVE MODE lawpack`, JUDGES the LAW PACK assert, and prints an
@@ -146,6 +152,7 @@ function tableKeys(src, name) {
   const body = s.slice(i, s.indexOf("\n});", i));
   return lines(body).slice(1).map((l) => /^\s*(?:"((?:[^"\\]|\\.)*)"|([A-Za-z_$][\w$-]*))\s*:/.exec(l)).filter(Boolean).map((m) => (m[1] !== undefined ? m[1] : m[2]));
 }
+const SITES = ["scripts/ci_verdict.mjs", "scripts/done.mjs", "scripts/usage_tap.mjs"];
 const PLANT = (n) => Array.from({ length: n }, (_, i) => `const MLAW_PLANT_${i} = ["alpha${i}", "beta${i}"];\nexport { MLAW_PLANT_${i} };\n`).join("");
 
 let exitCode = 1;
@@ -181,8 +188,31 @@ try {
     const bo = baselineOf(ORG), bb = baselineOf(BASE_ORG);
     const rose = o.n && b.n ? Object.keys(o.n).filter((k) => o.n[k] > (b.n[k] ?? 0)) : null;
     const fell = o.n && b.n ? o.n[JUGAD] < b.n[JUGAD] : false;
-    clause("JUGAD", !!o.n && !!b.n && rose.length === 0 && fell && !!bo && bo === bb,
-      `${JUGAD} ${o.n ? o.n[JUGAD] : "?"} at --org, ${b.n ? b.n[JUGAD] : "?"} at --base-org · count(s) higher at --org: ${rose ? (rose.join(", ") || "none") : "? (no findings line)"} · lawpack.mjs BASELINE ${bo && bo === bb ? "byte-equal" : "DIFFERS or unreadable"} · ${clip(lines(o.r.all).filter((l) => /^lawpack: /.test(l.trim())).at(-1), 70)}`);
+    const frozenJ = evalIn(o.c, `const m = await import(${href(o.c, "scripts/lawpack.mjs")}); console.log(JSON.stringify(m.BASELINE[${JSON.stringify(JUGAD)}]));`);
+    const atLine = o.n && Number.isSafeInteger(frozenJ) && o.n[JUGAD] <= frozenJ;
+    const sites = evalIn(o.c, `const lp = await import(${href(o.c, "scripts/lawpack.mjs")}); const S = ${JSON.stringify(SITES)}; console.log(JSON.stringify(lp.judgeJugad(lp.scan().matches).findings.filter((f) => S.some((s) => String(f.file).replace(/\\\\/g, "/").endsWith(s))).map((f) => f.file + ":" + f.line)));`);
+    clause("JUGAD", !!o.n && !!b.n && rose.length === 0 && fell && atLine && o.r.status === 0 && Array.isArray(sites) && sites.length === 0 && !!bo && bo === bb,
+      `${JUGAD} ${o.n ? o.n[JUGAD] : "?"} at --org (frozen ${Number.isSafeInteger(frozenJ) ? frozenJ : "?"}), ${b.n ? b.n[JUGAD] : "?"} at --base-org · count(s) higher at --org: ${rose ? (rose.join(", ") || "none") : "? (no findings line)"} · jugad sites in the three: ${Array.isArray(sites) ? (sites.join(", ") || "none") : clip(sites.error)} · lawpack.mjs BASELINE ${bo && bo === bb ? "byte-equal" : "DIFFERS or unreadable"} · gate exit ${o.r.status}: ${clip(lines(o.r.all).filter((l) => /^lawpack: /.test(l.trim())).at(-1), 70)}`);
+  }
+
+  // ── SURFACES ──
+  {
+    const src = read(join(ORG, "scripts", "done.mjs")) || "";
+    const literal = /const\s+SURFACES\s*=\s*\[/.test(src);
+    const lazy = /const\s+SURFACES\s*=\s*lazySubjects\(\s*SURFACES_ROW\s*\)/.test(src) && /SURFACES_ROW\s*=\s*"his_surfaces"/.test(src);
+    const reachLine = (out) => lines(out).find((l) => /^DONE reach /.test(l)) || "";
+    const c0 = copyOf(ORG, "surf0");
+    const r0 = node(c0, [join(c0, "scripts", "done.mjs"), "report"]);
+    const red0 = /RED — no live mechanisms row "his_surfaces"/.test(reachLine(r0.all));
+    const c1 = copyOf(ORG, "surf1");
+    const regP = join(c1, ...STATE.split("/"), "registry.json");
+    const seed = node(c1, [join(c1, "scripts", "registry.mjs"), "set", "--table", "mechanisms", "--json",
+      JSON.stringify({ subject: "his_surfaces", schema_owner: "done.mjs", witness: "ci/mlaw/witness_mlaw.mjs SURFACES", subjects: ["manager.mjs", "captains_call.mjs"], why: "mlaw witness plant" })], { ARSENAL_REGISTRY: regP });
+    const r1 = node(c1, [join(c1, "scripts", "done.mjs"), "report"], { ARSENAL_REGISTRY: regP });
+    const red1 = /no live mechanisms row "his_surfaces"/.test(r1.all);
+    const st = node(c1, [join(c1, "scripts", "done.mjs"), "selftest"]);
+    clause("SURFACES", !literal && lazy && red0 && seed.status === 0 && r1.status === 0 && !red1 && !!reachLine(r1.all) && st.status === 0,
+      `literal SURFACES list ${literal ? "PRESENT" : "absent"} · lazySubjects(his_surfaces) ${lazy ? "yes" : "NO"} · empty registry: ${clip(reachLine(r0.all) || r0.all.trim().split("\n").at(-1), 90)} · row planted (seed exit ${seed.status}): ${clip(reachLine(r1.all) || r1.all.trim().split("\n").at(-1), 70)} · done selftest exit ${st.status}`);
   }
 
   // ── HERMETIC ──
