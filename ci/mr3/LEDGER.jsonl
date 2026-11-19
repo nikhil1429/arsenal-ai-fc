@@ -8,3 +8,4 @@
 {"ts":"2026-11-19T01:44:33.061Z","act":"KNOWN_RED: the mjd3 entry leaves, one RETIRED line (L9)","cmd":"node <scratch>/edit_ot.mjs; git diff scripts/organism_test.mjs","last_line":"-1 entry (WITNESS ‹mjd3›, row 1107, owner unit mr3) · +3 comment lines under RETIRED ENTRIES"}
 {"ts":"2026-11-19T01:47:17.765Z","act":"witness_mr3 on the build","cmd":"node ci/mr3/witness_mr3.mjs --org <52b51c1 + build files> --base-org <52b51c1>","last_line":"GREEN MR3 mjd3 J4 re-based on mjd4 (row 1112 (1)) and its ruled-red entry gone · 6 clause(s)"}
 {"ts":"2026-11-19T01:47:17.798Z","act":"witness_mr3 on the base","cmd":"node ci/mr3/witness_mr3.mjs --org <52b51c1> --base-org <52b51c1>","last_line":"RED MR3 · J4 K1 K2 K3"}
+{"ts":"2026-11-19T01:50:03.729Z","act":"mutants","cmd":"node ci/mr3/run_mutants_mr3.mjs --org <build> --base-org <52b51c1>","last_line":"run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN"}
