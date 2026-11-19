@@ -36,7 +36,6 @@ import { join, dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 import { build, queries, verbGraph } from "./xray.mjs";
-import { readPlan, parseReceipts, clauseVerdict, loopVerdict, PLAN_FILE } from "./rung_receipt.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -103,7 +102,9 @@ function rungsLegacy(campaign, meterPath) {
 void rungsLegacy;
 // unit mrung — THE RECEIPT READER. The plan v3 list (campaign-side, F3 a) says WHICH clauses exist; the receipts (one organ's
 // measurements, hash-chained) say what was measured. n is the plan's clause count; a plan of zero clauses is UNREAD, never 0/0.
-function rungs(campaign, receiptsText) {
+// The reader's doors are rung_receipt.mjs's own exports, loaded by dynamic import in measure() — never a static import:
+// rung_receipt.mjs green imports OLD_RECORDED_DAY from here, and a static cycle under top-level await never settles.
+function rungs(campaign, receiptsText, { readPlan, parseReceipts, clauseVerdict, loopVerdict, PLAN_FILE }) {
   if (!campaign) return { read: false, why: "UNREAD (no --campaign)" };
   const rd = join(campaign, "rungs");
   // F2 (a): every hand rung file (anything in rungs/ but the plan) is REFUSED, clause by clause, and counted in nothing
@@ -202,7 +203,8 @@ async function measure() {
   // the receipts: --receipts (a planted file) wins; the hermetic form without it reads NOTHING (undefined); else the tracked file
   const receiptsText = flag("--receipts") ? text(resolve(flag("--receipts"))) : HERMETIC ? undefined : (() => { try { return readFileSync(RECEIPTS, "utf8"); } catch { return null; } })();
   const ir = build();
-  return { o: orphans(ir), r: rungs(campaign, receiptsText), u: units(campaign), c: census(campaign), ru: await rules(), re: await reach(ir) };
+  const RR = await import(pathToFileURL(join(ROOT, "scripts", "rung_receipt.mjs")).href);
+  return { o: orphans(ir), r: rungs(campaign, receiptsText, RR), u: units(campaign), c: census(campaign), ru: await rules(), re: await reach(ir) };
 }
 function lineOf(m) {
   const hd = m.r.hand ? ` · hand ${m.r.hand} REFUSED` : "";
