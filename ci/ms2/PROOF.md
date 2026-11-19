@@ -243,3 +243,16 @@ ordinary push runs ~0 L-legs (C4 as built): only seat pushes pay. Measured fact 
 
 Tip pushed; no later assembled tip has been named to this seat (the runner said one may follow). On such a message:
 merge it, re-run the witness and the mutants, read both legs, add §10.5.
+
+## 11. THE ADOPTED ASSEMBLED TIP MERGED (forks rows 1167 / 1168, 19 Nov 2026)
+
+- `fc8890b` reverts `2e4ec3b` (the five `ci/<u>/REBASE` files of §10.1). The architect's order binds the diff from `a1bd8a2`
+  to proof, ledger, BASE and the merge only. The lines and their measurement stay recorded in §10.1 and at `2e4ec3b`,
+  for the ruling. Without them the L-leg reds of §10.1 (mjd3 J4, mjud M3/M5, mtail T2 F-C, mdone D-UNREAD/D-METER,
+  mfac F4) stand unruled on this tip.
+- `d2830b2` merges **179a0ee3525aca1ab018bce11fd940346a040463** (claude/ms1-build: 1582be0 + doc-only commits, adopted, GREEN
+  on both neutral legs) with a merge commit, no conflict. `ci/ms2/BASE` = that sha.
+- `git diff --name-only a1bd8a2 <this tip>`: the merge's paths (ci/ms1/, ci/mrv/ docs) plus `ci/ms2/BASE`,
+  `ci/ms2/PROOF.md` and `ci/ms2/LEDGER.jsonl`. Nothing else.
+- This tip is pushed ONCE. Its two neutral legs are read once each, with `node scripts/ci_verdict.mjs <full sha>`, and
+  written in the seat's final message only, so the verdict stays on this tip.
