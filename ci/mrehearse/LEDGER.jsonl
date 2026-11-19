@@ -1,0 +1,7 @@
+{"ts":"2026-11-19T12:35:21.266Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mrehearse-build FETCH_HEAD","last_line":"main fb4211870093e6b8657655eb02ebcfc425f1eab1 (fb42118)"}
+{"ts":"2026-11-19T12:35:21.266Z","act":"spec","cmd":"git show 88bf69d:ci/mwit/MWIT_SPEC.md (whole) + ci/mwit/plant_day.mjs + ci/mwit/LEDGER.jsonl","last_line":"B-rehearsal:night-replay · unit 5 mrehearse · F3 A · F4 A"}
+{"ts":"2026-11-19T12:35:21.266Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run) [exit 2]"}
+{"ts":"2026-11-19T12:35:21.266Z","act":"measure","cmd":"node scripts/night.mjs selftest","last_line":"night selftest: 22 passed, 0 failed"}
+{"ts":"2026-11-19T12:35:21.266Z","act":"measure","cmd":"node scripts/models.mjs check","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0) [exit 0]"}
+{"ts":"2026-11-19T12:35:21.266Z","act":"measure","cmd":"npm ci --ignore-scripts && node scripts/lawpack.mjs gate","last_line":"lawpack: 2 RED — a gate may only get stricter (§10-D rule 6) [jugad-literal-subject-list 93 vs 90 · depcruise_errors 13 vs 7, both on the base]"}
+{"ts":"2026-11-19T12:35:21.266Z","act":"measure","cmd":"git check-ignore -v <state>/rehearsal_log.jsonl","last_line":"(no output) — not ignored; .gitignore is not a named file: FORK"}
