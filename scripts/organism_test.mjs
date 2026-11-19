@@ -2775,7 +2775,10 @@ function organPorts(tree) {
   for (const f of existsSync(dir) ? readdirSync(dir).filter((x) => x.endsWith(".mjs")) : []) {
     readFileSync(join(dir, f), "utf8").split(/\r?\n/).forEach((l, i) => {
       const m = /^export const ([A-Z_]*PORT) = (.*)$/.exec(l);
-      if (m && /\b\d{2,5}\b/.test(m[2])) named.push({ name: m[1], door: (/process\.env\.([A-Z0-9_]+)/.exec(m[2]) || [])[1] || null, at: `scripts/${f}:${i + 1}` });
+      // the door: `process.env.<NAME>` on the line, or the env name handed as a quoted ARSENAL_…PORT literal
+      // (keeper.mjs `plantedPort("ARSENAL_JUDGE_PORT", 4118)`, unit mport)
+      const dm = m && /process\.env\.([A-Z0-9_]+)|["'](ARSENAL_[A-Z0-9_]*PORT)["']/.exec(m[2]);
+      if (m && /\b\d{2,5}\b/.test(m[2])) named.push({ name: m[1], door: dm ? dm[1] || dm[2] : null, at: `scripts/${f}:${i + 1}` });
       const n = /\blisten\(\s*([1-9]\d{1,4})\b/.exec(l);
       if (n) literal.push({ port: n[1], at: `scripts/${f}:${i + 1}` });
     });
@@ -2838,7 +2841,9 @@ async function witnesses() {
   // (GITHUB_WORKSPACE) runs the witnesses. The verdict's other tree is a clone under the runner's temp dir, so there the member
   // prints one line and makes no assert: it is paid once per leg, and a member red at head is always new.
   const real = (p) => { try { const r = realpathSync(p); return process.platform === "win32" ? r.toLowerCase() : r; } catch { return null; } };
-  if (!process.env.GITHUB_WORKSPACE || real(ROOT) !== real(process.env.GITHUB_WORKSPACE)) { console.log(WITNESS_BASETREE); return; }
+  // row 1125 (3): the neutral flag set with NO workspace named is a RED, never a skip — a gate fails closed
+  if (!process.env.GITHUB_WORKSPACE) { assert("WITNESSES · the neutral machine names its workspace (GITHUB_WORKSPACE): the gate fails closed", false, "GITHUB_ACTIONS is set and GITHUB_WORKSPACE is not"); return; }
+  if (real(ROOT) !== real(process.env.GITHUB_WORKSPACE)) { console.log(WITNESS_BASETREE); return; }
   const units = witnessUnits(ROOT);
   const T0 = Date.now();
   const wf = (() => { try { return readFileSync(join(ROOT, ".github", "workflows", "suite.yml"), "utf8"); } catch { return ""; } })();

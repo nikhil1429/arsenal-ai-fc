@@ -21,6 +21,8 @@
 //   B2.3 NEUTRAL  hermetic + GITHUB_ACTIONS=true (F3 A) → the planted witness runs
 //   T3   BASETREE C5 first half (row 1119 (3)(a)): GITHUB_WORKSPACE names another dir (the merge-base clone) → exactly one
 //                 `  SKIP WITNESSES · the merge-base tree — witnesses are judged at head (C5)` line, nothing spawned, no assert
+//   T4   NOWORKSPACE row 1125 (3): hermetic + GITHUB_ACTIONS with NO GITHUB_WORKSPACE → a RED assert (the gate fails closed),
+//                 no skip line, nothing spawned
 //   B3.1 CARRIED  static on the tree: every landed unit's ci/<unit>/witness_<unit>.mjs with a 40-hex BASE, every BASE a
 //                 commit of main's history, ci/mcr/ split (F9 B)
 //   B3.2 NOCI     land.mjs, origin main carrying a ci/<unit>/BASE: a landing with no ci dir → REFUSED NO-CI-DIR
@@ -33,6 +35,8 @@
 //   B4.4 NOSPAWN  a refused witness is never spawned (its marker absent)
 //   B4.5 DOOR     F5 B: a planted organ JUDGE_PORT with env door ARSENAL_JUDGE_PORT → admitted, and the witness's env
 //                 carries a free port in that door (not the organ's literal)
+//   B4.6 DOORLIT  a planted organ `export const PLANT_PORT = door("ARSENAL_PLANT_PORT", 4999)` (the door handed as a quoted env
+//                 name, keeper's plantedPort form since unit mport) → admitted, and the witness's env carries a free port in it
 //   B5.1 SECONDS  one `  witness ‹unit› <s> s · <LAST line>` per unit and one `  witnesses · <n> unit(s) · <s> s`
 //   B5.2 NOFETCH  a BASE absent from the clone → RED `its BASE is in the clone`, and git never fetches (GIT_TRACE)
 //   B6.1 NOBASE   a unit with a witness and no BASE → RED `carries a BASE file (B6)`
@@ -90,7 +94,7 @@ import { join } from "node:path";
 const a = (k) => process.argv[process.argv.indexOf(k) + 1];
 const org = a("--org"), base = a("--base-org");
 const MODE = "@MODE@", U = "@U@";
-if (process.env.MS1_MARK) writeFileSync(process.env.MS1_MARK, JSON.stringify({ org, base, door: process.env.ARSENAL_JUDGE_PORT || null }));
+if (process.env.MS1_MARK) writeFileSync(process.env.MS1_MARK, JSON.stringify({ org, base, door: process.env.ARSENAL_JUDGE_PORT || null, doors: Object.fromEntries(Object.entries(process.env).filter(([k]) => /^ARSENAL_[A-Z0-9_]*PORT$/.test(k))) }));
 const m = (d) => { try { return readFileSync(join(d, "m.txt"), "latin1").split(/\\r?\\n/)[0]; } catch { return null; } };
 const cr = (d) => { let n = 0; const w = (x) => { for (const f of readdirSync(x)) { const p = join(x, f); if (statSync(p).isDirectory()) w(p); else if (readFileSync(p, "latin1").includes("\\r")) n++; } }; w(d); return n; };
 let ok = true;
@@ -140,7 +144,7 @@ function memberRun(tree, units, { env = {}, crlf = false, organs = {}, knownRed 
   const r = sp(process.execPath, [join(d, "scripts", "organism_test.mjs"), "witnesses"], { cwd: d, env: e });
   let m = null; try { m = JSON.parse(readFileSync(mark, "utf8")); } catch {}
   let t = ""; try { t = readFileSync(trace, "utf8"); } catch {}
-  return { out: r.out, lines: r.out.split("\n"), mark: m, trace: t, c1 };
+  return { out: r.out, lines: r.out.split("\n"), mark: m, markPath: mark, trace: t, c1 };
 }
 const okLine = (o, u, what) => o.lines.some((l) => l.startsWith(`  ok   WITNESS ‹${u}› · ${what}`));
 const failLine = (o, u, what) => o.lines.findIndex((l) => l.startsWith(`  FAIL WITNESS ‹${u}› · ${what}`));
@@ -227,6 +231,12 @@ const CLAUSES = {
     const asserts = o.lines.filter((l) => /^ {2}(ok {3}|FAIL )WITNESS/.test(l)).length;
     return { ok: skips === 1 && !o.mark && asserts === 0, why: `GITHUB_WORKSPACE names another dir: C5 skip lines ${skips} · spawned ${!!o.mark} · witness asserts ${asserts}` };
   },
+  "T4 NOWORKSPACE"(t) {
+    const o = memberRun(t, { px: { witness: plantWitness("px", "marker") } }, { env: { GITHUB_WORKSPACE: undefined } });
+    const red = o.lines.some((l) => l.startsWith("  FAIL WITNESSES · the neutral machine names its workspace (GITHUB_WORKSPACE)"));
+    const skips = o.lines.filter((l) => /SKIP WITNESSES/.test(l)).length;
+    return { ok: red && skips === 0 && !o.mark, why: `GITHUB_ACTIONS set, no GITHUB_WORKSPACE: RED ${red} · skip lines ${skips} · spawned ${!!o.mark}` };
+  },
   "B3.1 CARRIED"(t) {
     const miss = [];
     for (const u of CARRIED) {
@@ -286,6 +296,12 @@ const CLAUSES = {
     const o = memberRun(t, { px: { witness: plantWitness("px", "marker", `// reads the door's port through its export name: JUDGE_PORT\n`) } }, { organs: { "scripts/plant_keeper.mjs": organ }, env: { ARSENAL_JUDGE_PORT: undefined } });
     const door = o.mark && o.mark.door;
     return { ok: okLine(o, "px", "GREEN at head against its BASE") && /^\d+$/.test(String(door)) && door !== "4118", why: `admitted ${okLine(o, "px", "GREEN")} · the witness's ARSENAL_JUDGE_PORT ${door}` };
+  },
+  "B4.6 DOORLIT"(t) {
+    const organ = 'const door = (name, fixed) => Number(process["env"][name]) || fixed;\nexport const PLANT_PORT = door("ARSENAL_PLANT_PORT", 4999);\n';
+    const o = memberRun(t, { px: { witness: plantWitness("px", "marker", "// names an organ's port whose door is a quoted env name: PLANT_PORT\n") } }, { organs: { "scripts/plant_door.mjs": organ }, env: { ARSENAL_PLANT_PORT: undefined } });
+    const door = o.mark && o.mark.doors ? o.mark.doors.ARSENAL_PLANT_PORT ?? null : null;
+    return { ok: okLine(o, "px", "GREEN at head against its BASE") && /^\d+$/.test(String(door)) && door !== "4999", why: `admitted ${okLine(o, "px", "GREEN")} · ARSENAL_PLANT_PORT in the witness's env ${door}` };
   },
   "B5.1 SECONDS"(t) {
     const o = memberRun(t, { pa: { witness: plantWitness("pa", "marker") }, pb: { witness: plantWitness("pb", "marker") } });
