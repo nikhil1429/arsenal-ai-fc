@@ -468,4 +468,13 @@ hermetic table (the suite runs the plants) — `scripts/organism_test.mjs` is th
 
 ## CI of this push
 
-Filled in after the push (below this line, by the next commit).
+Push of `57613d1` (19 Nov 2026), read by the public API with curl, no token:
+
+```
+135476577676 npm test · node 22 completed success
+135476578501 npm test · node 24 completed success
+NODE_USE_ENV_PROXY=1 node scripts/ci_verdict.mjs 57613d1722534db2f394bb88b449f3bcb6f889a0
+ci_verdict 57613d1 GREEN — npm test · node 22: GREEN (base 4b00cf5 · 0 new red · 1 base red · 126 live) [run 135476577676] | npm test · node 24: GREEN (base 4b00cf5 · 0 new red · 1 base red · 126 live) [run 135476578501] (3 calls)
+```
+
+The commit that carries this section is judged by its own push; its runs are named in the seat's final message.
