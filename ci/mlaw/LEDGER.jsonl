@@ -16,3 +16,4 @@
 {"ts":"2026-11-19T02:17:09Z","act":"q2-gates-empty-plant","cmd":"node ci/mlaw/tools/gatesz.mjs 224f9b9","last_line":"gates: 1 RED — a gate may only get stricter (§10-D rule 6) · LINT ROSE — no-empty 268, baseline 262"}
 {"ts":"2026-11-19T02:17:09Z","act":"q2-summarize","cmd":"node ci/mlaw/tools/summarize.mjs","last_line":"mlaw census: 126 full-only members · CAN ride hermetic on a plant 111 · CANNOT (or not shown) 15"}
 {"ts":"2026-11-19T02:17:09Z","act":"q2-state-hash-after","cmd":"node -e sha256 over the state dir (read only)","last_line":"0f9246b8c3d94be7 (equal)"}
+{"ts":"2026-11-19T02:18:07Z","act":"ci-read","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/check-runs/135281614215/annotations (and 135281614691)","last_line":"NEW RED · node 22 1/1 | LOAD ZERO BLOCK 7 · no canon file states a live count a command can produce (91 files scanned, 1 declared) — spec line 25, dated in the next commit"}

@@ -22,7 +22,7 @@ The scratch scripts are committed as `ci/mlaw/tools/*.mjs` (they build no organ 
    it) and never spawns `lawpack.mjs selftest` (`:120`). The landing verb reads that machine's verdict and nothing
    else (`land.mjs:127-135` → `ci_verdict.mjs`). The pre-commit hook runs no gate of it (`hooks/pre-commit:27,35`). The
    only reader left is the watchman's nightly FULL run on his laptop (`watchman.mjs:813`). It reads the exit code
-   only (`:818`), and that exit was already non-zero from other reds (mrf §2: 21 failed in the full profile at
+   only (`:818`), and that exit was already non-zero from other reds (mrf §2, measured 19 Nov 2026: 21 failed in the full profile at
    `a18c167`), so a law pack red adds nothing it can see.
 3. **The LIVE reason is not true for the gate's verdict.** `lawpack.mjs gate` printed byte-identical output on a tree
    with the state directory ABSENT and on the same tree with its tracked state present (§1.4). The only state bytes it
