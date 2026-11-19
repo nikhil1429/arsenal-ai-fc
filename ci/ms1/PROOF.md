@@ -323,3 +323,43 @@ UNRULED 1 (mfac) + main's coverage base red**.
   UNRULED. That is the door working (a new clause red is news), but a flake can trip it.
 - **F-d · mlv1 I2 MID, I3 JUDGE** red once on node 24 (push `3966f61`), GREEN on every other Windows leg: a
   clock-bound landed witness, unruled, outside ms1's edits.
+
+## 10. SECOND FOLLOW-UP · forks row 1112 (mr3 fork F2 C), 19 Nov 2026 (new commits, never force)
+
+**R1 RULED, R2 STALE and R3 NEWDEATH now plant their OWN known-red entry.** `memberRun(…, { knownRed })` writes the
+entry into the KNOWN_RED of the organism_test.mjs COPY it plants:
+`{ assert: "WITNESS ‹pr› · GREEN at head against its BASE", detail: "red beyond BOUND: J4", row: 9999, owner: "unit plant" }`.
+The planted unit is `‹pr›`, so no live entry (row 1107's four) can make or break these clauses. When an owner unit
+(mr3 …) retires its entry, R1 to R3 still stand. Measured: the same three clauses over a copy whose live list holds none
+of the four row-1107 entries:
+
+```
+node ci/ms1/witness_ms1.mjs --org <build, the four live entries removed> --base-org <95b07a6> --only "R1 RULED,R2 STALE,R3 NEWDEATH"
+GREEN MS1 every landed witness rides the suite · 4 clause(s)
+```
+
+The R1 mutant no longer edits the live list: it breaks the ruled match in `rulingOf`
+(`e.assert === f.name` → `` e.assert === `${f.name} ` ``). R2's (`stale = []`) and R3's (the detail check → `true`)
+already targeted the mechanism.
+
+**Main `95b07a6` merged in** (clean; mfac-floor's `scripts/night.mjs`). **`ci/mfac-floor/` carried**: its witness
+`witness_mfac_floor.mjs` (from `claude/mfac-floor` `fc1ed3b`, bytes unchanged) and its BASE `a18c167`. That witness
+writes the dir's `-` as `_` in its file name, so the member (`witnessFile`), land.mjs's NO-CI-DIR and B3.1 accept
+`witness_<unit>.mjs` or `witness_<unit with - as _>.mjs`. Head leg `RED MFAC-FLOOR · BOUND` · base leg
+`RED MFAC-FLOOR · F4.1 F4.2 F4.3`. `ci/ms1/BASE` is now `95b07a6`.
+
+**The two last lines, both ways, against an LF `git archive` of `95b07a6` (19 Nov 2026):**
+
+```
+node ci/ms1/witness_ms1.mjs --org . --base-org <95b07a6>
+GREEN MS1 every landed witness rides the suite · 30 clause(s)                                         (exit 0)
+node ci/ms1/witness_ms1.mjs --org <95b07a6> --base-org <95b07a6>
+RED MS1 · B1.1 BASE, B1.2 LF, B1.3 NOCALC, B2.1 FULL, B2.2 LAPTOP, B2.3 NEUTRAL, B3.1 CARRIED, B3.2 NOCI, B3.5 GATE,
+  B4.1 LISTEN, B4.2 DERIVED, B4.3 ADMIT, B4.4 NOSPAWN, B4.5 DOOR, B5.1 SECONDS, B5.2 NOFETCH, B6.1 NOBASE, B6.2 SHORT,
+  B6.3 SKIPWINS, F1 BOUND, F1W BOUNDID, F11 BEHAVE, R1 RULED, R2 STALE, R3 NEWDEATH, V1 KEYOF, BOUND          (exit 1)
+node ci/ms1/run_mutants_ms1.mjs --org . --base-org <95b07a6>
+run_mutants: 28 of 28 mutant(s) RED by the clause that names them · control GREEN                     (exit 0)
+```
+
+Everything in §9 (row 1107 (1)) still stands, its forks F-a to F-d included. F-a: mfac W3.2 still pins land.mjs to
+mfac's base bytes.
