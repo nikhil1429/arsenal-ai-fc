@@ -82,14 +82,22 @@ const nap = (ms, cut) => new Promise((res) => {
 //   THIS file sits under the OS temp dir (both paths through realpath, case-insensitive on win32) — a planted tree; his
 //   tree reads 4118 whatever its env says. Anything that is not a port 1-65535 reads 4118 too, and every reader (the
 //   round's hold, services status, each retire, land.mjs) reads the SAME constant.
-const UNDER_TMP = (() => {
-  try {
-    const f = (s) => (process.platform === "win32" ? s.toLowerCase() : s);
-    const rel = relative(f(realpathSync(tmpdir())), f(realpathSync(fileURLToPath(import.meta.url))));
-    return !!rel && !rel.startsWith("..") && !isAbsolute(rel);
-  } catch { return false; }
-})();
-export const JUDGE_PORT = ((p) => (Number.isInteger(p) && p > 0 && p < 65536 ? p : 4118))(UNDER_TMP ? Number(process.env.ARSENAL_JUDGE_PORT) : NaN);
+//   UNIT mport (row 1064 (6) / (1)): that guard is now EXPORTED as plantedPort(name, fixed) — the ONE door every planted port
+//   in cortex.mjs and thalamus.mjs reads through: the env name is read only when THIS file (keeper.mjs) sits under the OS temp
+//   dir, else the fixed port. One guard, one home; `here` / `env` / `tmp` / `platform` are a selftest's planted inputs only.
+/** @param {string} name @param {number} fixed @param {{ here?: string, env?: Record<string, string | undefined>, tmp?: string, platform?: string }} [o] */
+export function plantedPort(name, fixed, { here = fileURLToPath(import.meta.url), env = process.env, tmp = tmpdir(), platform = process.platform } = {}) {
+  const under = (() => {
+    try {
+      const f = (s) => (platform === "win32" ? s.toLowerCase() : s);
+      const rel = relative(f(realpathSync(tmp)), f(realpathSync(here)));
+      return !!rel && !rel.startsWith("..") && !isAbsolute(rel);
+    } catch { return false; }
+  })();
+  const p = under ? Number(env[name]) : NaN;
+  return Number.isInteger(p) && p > 0 && p < 65536 ? p : fixed;
+}
+export const JUDGE_PORT = plantedPort("ARSENAL_JUDGE_PORT", 4118);
 /** holdJudgePort: bind JUDGE_PORT for this process's life. Resolves the server (close() it
  *  when the round ends) or null when another round already holds it (never a refusal here).
  *  @param {number} [port] */
