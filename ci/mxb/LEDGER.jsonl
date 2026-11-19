@@ -16,3 +16,4 @@
 {"ts":"2026-11-19T11:00:26.518Z","act":"worktree-refused","cmd":"git worktree add --detach <tmp> HEAD","last_line":"PreToolUse RAIL worktree refused (not overridden); measured in place and reverted instead"}
 {"ts":"2026-11-19T11:00:26.518Z","act":"xray-selftest","cmd":"node scripts/xray.mjs selftest (repo base; build tree)","last_line":"xray: 19 passed, 4 failed (both; LIVE in the hermetic profile)"}
 {"ts":"2026-11-19T11:11:51.513Z","act":"ci-read","cmd":"curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/5b7cf3b/check-runs (no token)","last_line":"run 44511562686 · npm test · node 22 completed success · npm test · node 24 completed success"}
+{"ts":"2026-11-19T11:17:51.862Z","act":"ci-read","cmd":"curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/105bbb3/check-runs (no token)","last_line":"run 44512625156 · npm test · node 24 completed success · npm test · node 22 completed success"}
