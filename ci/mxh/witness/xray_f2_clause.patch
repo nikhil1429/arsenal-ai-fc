@@ -1,0 +1,40 @@
+--- a/scripts/xray.mjs	2026-11-19 01:55:19.777385975 +0000
++++ c/scripts/xray.mjs	2026-11-19 01:55:19.819128952 +0000
+@@ -947,13 +947,36 @@
+   walkInto(ROOT, repoFiles, repoDirs);
+ 
+   // ── declared SOLE WRITER headers (doc↔code drift, Q5) ─────────────────────
++  // unit mxh (F2): the token ends at a boundary — `x.jsonl` was read as `x.json` (json|jsonl, no
++  // boundary), so no .jsonl lane was ever declared. THE CLAUSE RULE: a token is the organ's OWN
++  // declaration only when it sits in the marker's own clause (no `. ` or `;` between them) and that
++  // clause names no OTHER organ's `.mjs` — "night.mjs is sole writer of night_log.jsonl" in day.mjs
++  // is prose about night.mjs, not day.mjs's claim. Measured in ci/mxh/MXH_SPEC.md §2.
+   const declared = [];
++  const STOP = /\.(?=\s|$)|;/g;
++  const lastStop = (t) => { let k = -1; for (const s of t.matchAll(STOP)) k = s.index + 1; return k; };
++  const foreignNamed = (organ, t) => [...t.matchAll(/([A-Za-z0-9_\-]+)\.mjs/g)].some((o) => o[1] + ".mjs" !== organ);
++  const clauseBefore = (head, at) => {           // back to the clause start, over wrapped // lines
++    let start = head.lastIndexOf("\n", at - 1) + 1, txt = head.slice(start, at);
++    for (let i = 0; i < 6; i++) {
++      const cut = lastStop(txt);
++      if (cut >= 0) return txt.slice(cut);
++      if (start === 0) return txt;
++      const ps = head.lastIndexOf("\n", start - 2) + 1, prev = head.slice(ps, start - 1);
++      if (!/^\s*\/\//.test(prev) || /^\s*\/\/\s*$/.test(prev)) return txt;
++      txt = prev + "\n" + txt; start = ps;
++    }
++    return txt;
++  };
+   for (const f of files) {
+     const src = readFileSync(join(scriptDir, f), "utf8");
+     const head = src.slice(0, 12000);
+     for (const m of head.matchAll(/(?:SOLE WRITER|sole writer|Single writer|single writer|SINGLE WRITER)[^\n]{0,160}/g)) {
+       const line = m[0];
+-      for (const fm of line.matchAll(/([A-Za-z0-9_\-.]+\.(?:json|jsonl))/g)) declared.push({ organ: f, file: fm[1] });
++      for (const fm of line.matchAll(/([A-Za-z0-9_\-.]+\.jsonl?)(?![A-Za-z0-9_])/g)) {
++        if (lastStop(line.slice(0, fm.index)) >= 0 || foreignNamed(f, clauseBefore(head, m.index + fm.index))) continue;
++        declared.push({ organ: f, file: fm[1] });
++      }
+       if (/capsules\//.test(line)) declared.push({ organ: f, file: "capsules/" });
+     }
+   }

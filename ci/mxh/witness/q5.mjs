@@ -12,7 +12,10 @@ for (const d of ir.declared_sole_writers) {
   if (f.is_dir) continue;
   if (f.writers.length === 0) silent.add(`${d.organ}→${f.path}${f.fixture_writers?.length ? " (fixture-only)" : ""}`);
 }
+// guarded: a declaration Q5 really checks — some IR path with that basename has the declarer as a writer
+const guarded = new Set(ir.declared_sole_writers.filter((d) => ir.files.some((f) => f.path.split("/").pop() === d.file && f.writers.includes(d.organ))).map((d) => d.organ + "→" + d.file));
 const out = {
+  guarded_n: guarded.size,
   declared: ir.declared_sole_writers.length,
   declared_jsonl: ir.declared_sole_writers.filter((d) => d.file.endsWith(".jsonl")).length,
   Q2: q.Q2.map((f) => f.path),

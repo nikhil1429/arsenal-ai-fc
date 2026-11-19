@@ -1,0 +1,11 @@
+--- a/scripts/xray.mjs	2026-11-19 01:55:19.777385975 +0000
++++ b/scripts/xray.mjs	2026-11-19 01:55:19.795128951 +0000
+@@ -953,7 +953,7 @@
+     const head = src.slice(0, 12000);
+     for (const m of head.matchAll(/(?:SOLE WRITER|sole writer|Single writer|single writer|SINGLE WRITER)[^\n]{0,160}/g)) {
+       const line = m[0];
+-      for (const fm of line.matchAll(/([A-Za-z0-9_\-.]+\.(?:json|jsonl))/g)) declared.push({ organ: f, file: fm[1] });
++      for (const fm of line.matchAll(/([A-Za-z0-9_\-.]+\.jsonl?)(?![A-Za-z0-9_])/g)) declared.push({ organ: f, file: fm[1] });
+       if (/capsules\//.test(line)) declared.push({ organ: f, file: "capsules/" });
+     }
+   }
