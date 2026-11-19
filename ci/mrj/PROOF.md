@@ -95,13 +95,33 @@ sandbox canary, the coverage-law orphans, and their roll-up. The witnesses membe
 
 ## 7. The member — before and after
 
-MEMBER_PLACEHOLDER
+`GITHUB_ACTIONS=true ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses`, in the two clones (19 Nov 2026,
+this container, the two sides run side by side):
+
+| Member line | before `52b51c1` | after `fd22645` |
+|---|---|---|
+| `WITNESS ‹mjud› · GREEN at head against its BASE` | `RED MJUD · M3 CENSUS · M5 F3-CLIP · M6 MJD2 · BOUND` → FAIL, **ruled** (the mrj entry) | `RED MJUD · BOUND` → **ok** (BOUND dropped, F1 A) |
+| `WITNESS ‹mrj› · GREEN at head against its BASE` | (no ci/mrj on that side) | `GREEN MRJ … · 8 clause(s)` → **ok** |
+| ruled / STALE | ruled 4 (mjd3, mtail, mjud, mf2) · STALE none | ruled 3 (mjd3, mtail, mf2) · **STALE none** |
+
+Every other member reads the same last line on both sides, except ‹mlv2› and ‹mlv3›, RED `LIVE-SAFE` on the BASE side only. That is
+the side-by-side run (the two clones on one machine at once), not this build: on the build side, which carries the change, they
+read `RED · BOUND` (GREEN). The UNRULED reds on both sides (‹mdn2› and ‹mdone› `SETUP`, ‹mfac› `F4 W3.2`) are this container's
+(no `node_modules`; ms1's neutral-machine runs do not show them), and they are the same on both sides. **No member turns red on
+the build.** The neutral machine is the judge (§9).
 
 ## 8. `node scripts/models.mjs check` — exit 0 (19 Nov 2026, on the build).
 
 ## 9. The neutral machine (curl, no token: `GET /repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`)
 
-CI_PLACEHOLDER
+| Push | Run | node 22 | node 24 |
+|---|---|---|---|
+| `eeba921` | `44439699547` | `135277172195` cancelled (superseded) | `135277172390` cancelled |
+| `540c258` | `44439946203` | `135278092615` cancelled (superseded) | `135278092950` cancelled |
+| `fd22645` | `44440072357` | `135278501806` cancelled (superseded) | `135278502243` cancelled |
+| `4f1dfdc` | `44440316635` | `135279316985` superseded by the next push | `135279317546` |
+
+The verdict of the last push (this §9 fill) is named in the seat's final message.
 
 ## 10. FORKS
 
