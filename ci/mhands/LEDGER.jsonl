@@ -6,3 +6,4 @@
 {"ts":"2026-11-19T13:20:00Z","act":"witness","cmd":"node ci/witness/mhands/witness_hands.mjs --org . --base-org <clone fb42118>","last_line":"GREEN MHANDS his hands off the runner: … · 4 clause(s) (exit 0)"}
 {"ts":"2026-11-19T13:25:00Z","act":"witness-base","cmd":"node ci/witness/mhands/witness_hands.mjs --org <clone fb42118> --base-org <clone fb42118>","last_line":"RED MHANDS · B-hands:clicks-off, B-hands:fresh-runner (exit 1)"}
 {"ts":"2026-11-19T12:38Z","act":"checkpoint","cmd":"STOP message (his pause, word 269)","last_line":"CHECKPOINT · STOPPED at 2026-11-19T12:38Z · resume from step 4: run_mutants_mhands.mjs"}
+{"ts":"2026-11-19T18:11:51Z","act":"mutants","cmd":"node ci/mhands/run_mutants_mhands.mjs","last_line":"run_mutants: 2 of 2 mutant(s) RED by the clause that names them · control GREEN"}
