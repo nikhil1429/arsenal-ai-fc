@@ -1,3 +1,6 @@
 {"ts":"2026-11-19T01:43:19.131Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mxw-build FETCH_HEAD","last_line":"base 224f9b90758d13edb42550f002d6c845cc7bb2a8"}
 {"ts":"2026-11-19T01:43:19.131Z","act":"measure","cmd":"git diff --stat 95b07a6 224f9b9 -- scripts/xray.mjs scripts/notes_corrections.mjs scripts/learnstate.mjs","last_line":"(empty) — the spec lines hold at this base: xray.mjs:621-633 seedDefaults, notes_corrections.mjs:106, learnstate.mjs:794/817"}
 {"ts":"2026-11-19T01:43:19.131Z","act":"build F1 A","cmd":"git apply ci/mxw spec patch e4013cb:ci/mxw/witness/xray_seed_defaults.patch","last_line":"scripts/xray.mjs | 13 ++++++++----- ; node --check ok"}
+{"ts":"2026-11-19T01:47:28.428Z","act":"witness build","cmd":"node ci/mxw/witness_mxw.mjs --org <LF export of HEAD> --base-org <LF export of 224f9b9>","last_line":"GREEN MXW xray reads an options-bag default path · 8 clause(s)"}
+{"ts":"2026-11-19T01:47:28.428Z","act":"witness base","cmd":"node ci/mxw/witness_mxw.mjs --org <LF export of 224f9b9> --base-org <LF export of 224f9b9>","last_line":"RED MXW · W1 W2 W5"}
+{"ts":"2026-11-19T01:47:28.428Z","act":"finding","cmd":"W3 with a same-name module const planted, both trees","last_line":"RED W3 on base AND build: a no-default destructured slot resolves to a same-name module const (pre-existing, named, out of F1 A)"}
