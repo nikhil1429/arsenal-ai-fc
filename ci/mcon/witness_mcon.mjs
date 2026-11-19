@@ -19,7 +19,8 @@
 //   restarted, no model is called. No timeout, budget or size is typed: every child is awaited by spawnSync, which returns
 //   when it exits (the selftest's own child is bounded by the file's own STEP_TIMEOUT_MS).
 // CLAUSES (each RED on the base, GREEN on the build):
-//   F1  SPAWN — a copy of --org whose `fallback` branch is mutated to RUN something (one spawnSync before its last line):
+//   F1  SPAWN — a copy of --org whose `fallback` branch is mutated to RUN something (one spawnSync before its last line,
+//       its error swallowed, so the exit code alone cannot see it):
 //       the org's conductor selftest prints ✗ on the S9 RUNS NOTHING assert and exits non-zero
 //   F2  SILENT — a copy whose fallback console line no longer says NOTHING WAS RUN (the mtxt3 T2 mutant): ✗ and non-zero
 //   F3  STATE — a copy whose fallback writes one file into its state dir: ✗ and non-zero
@@ -75,7 +76,8 @@ function copyOf(tree, tag) {
 // ---- the three fallback mutants, planted into a copy (an anchor that is missing is a refusal, never a silent pass) ----
 const LAST_FB_LINE = '    console.log("conductor: NOTHING WAS RUN — this reports what the fold no longer covers.';
 export const FALLBACK_MUTANTS = {
-  F1: (s) => s.replace(LAST_FB_LINE, '    spawnSync(process.execPath, ["-e", "0"]);\n' + LAST_FB_LINE),
+  // a fallback that runs a child and SWALLOWS whatever happens — the exit code alone cannot see it; the guard's record can
+  F1: (s) => s.replace(LAST_FB_LINE, '    try { spawnSync(process.execPath, ["-e", "0"]); } catch {}\n' + LAST_FB_LINE),
   F2: (s) => s.replace(LAST_FB_LINE, '    console.log("conductor: this reports what the fold no longer covers.'),
   F3: (s) => s.replace(LAST_FB_LINE, '    writeFileSync(join(STATE_DIR, "mcon_fallback_mutant.json"), "{}");\n' + LAST_FB_LINE),
 };
