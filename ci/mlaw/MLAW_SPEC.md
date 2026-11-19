@@ -312,7 +312,19 @@ is measured by `node ci/mlaw/tools/gatesbis.mjs` (every first-parent commit). Se
 
 ### 2.6 The `gates` no-empty census
 
-GATES_BISECT_PENDING
+`node ci/mlaw/tools/gatesbis.mjs` runs `gates.mjs report` on the empty plant at every first-parent commit (49, 19 Nov
+2026; the rows are in `ci/mlaw/census/gates_no_empty.jsonl`). The lint count does not depend on state: eslint reads
+the scripts. The frozen value printed beside it is 262 at every commit.
+
+| Step | First commit · unit · row (its message) |
+|---|---|
+| 262 → 263 | `0b209b2` · **mgrd** · forks row 1029 (3) ("plus scripts/groundsman.mjs") |
+| 263 → 265 | `5e43987` · **mlv2** · forks rows 1060 / 1061 ("plus scripts/cortex.mjs") |
+| 265 → 268 | `1fcaec9` · **mjd7** · forks row 1114 ("plus scripts/captains_call.mjs") |
+
+Last row at head `224f9b9`: `gates lint · … no-empty 268 · … (frozen: no-empty 262 …)`. The sites are not named here,
+because that is F8's unit. Like the law pack, `gates` is one fixed-name assert in a LIVE mode
+(`organism_test.mjs:2670`). P3's numeric line would serve it the same way.
 
 ## 3. THE CODE PATH (proposed; built by nobody here)
 
@@ -441,7 +453,17 @@ first on PATH, no daemon reached, nothing restarted, and every wait being the tr
 
 ## 8. THE NEUTRAL MACHINE ON THIS BRANCH
 
-CI_RUNS_PENDING
+Read through the public API with no token (`curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`,
+and `/check-runs/<id>/annotations`):
+
+| Push | Run | Legs | Verdict |
+|---|---|---|---|
+| `1383e2b` (step 1) | jobs 135281614215 / 135281614691 | node 22 · node 24 | **failure**. NEW RED on both legs: `LOAD ZERO BLOCK 7 · no canon file states a live count a command can produce`. One undated number beside "failed" sat in this spec (§0 item 2). BASE RED (a warning): the coverage law, F7 |
+| `d9d8bf3` (step 2) | run 44443184655 | both | **cancelled** (the next push superseded it: `concurrency: cancel-in-progress`, `suite.yml`) |
+| `1779254` (the canon line dated) | run 44443303992 (jobs 135289322973 / 135289323261) | node 22 · node 24 | **success** on both |
+
+The last push's own run is in the FINAL MESSAGE of this seat, because a spec cannot name the run of the commit that
+carries it.
 
 ## 9. FILES A BUILD WOULD TOUCH
 
@@ -450,4 +472,5 @@ CI_RUNS_PENDING
 · `scripts/gates.mjs` / its baseline (F8, a unit of its own). Not touched: `scripts/lawpack.mjs` (`BASELINE` stays 90),
 `.github/workflows/suite.yml`, any state file.
 
-CHECKPOINT · step 2 (Q2 census) pushed 2026-11-19 UTC · resume from §2.6 gates census and §8 CI runs
+
+DONE · both questions answered, 19 Nov 2026 UTC · nothing built, nothing landed
