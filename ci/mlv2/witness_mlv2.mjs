@@ -18,9 +18,18 @@
 //                above is GREEN and those listeners received ZERO connections.
 //   XML · BOUND · LAST  as in every unit of this queue.
 // Bounds are MEASURED in this run: SLACK = one node start; IMPORT = one fresh process importing the copy's entry (the
-// one measurement step); the first boot is bounded by two IMPORTs and three SLACKs (the keeper, then its worker); BOOT = the measured first
+// one measurement step); ~~the first boot is bounded by two IMPORTs and three SLACKs (the keeper, then its worker)~~ (struck by unit mrv, below); BOOT = the measured first
 // boot, and every later wait is bounded by BOOT + SLACK, plus cortex's own declared dispatch poll where a lane is
 // awaited (read from its source).
+// UNIT mrv (forks rows 1135 (1)-(3) / 1139 (1), F-1 A: re-cut in place, BASE kept). The changed waits, by name:
+//   (a-1) the first boot ~~`waitFor(portUp, BOOT0)`~~ → bootUp(): a keeper START ends on an EVENT, re-read at SLACK steps:
+//         /status answers · the keeper's own "keeper waiting" line · a worker exit line before it answered · the keeper's
+//         exit. Its outer bound is the member's derived `left`. BOOT0 stays the bound of each request made before BOOT is
+//         measured, and of the kill race; BOUND = the measured BOOT + SLACK, as before.
+//   (I3)  ~~each clause after the first reads the keeper an earlier clause left (`portUp()`, "cannot run: no daemon up")~~ →
+//         ready(): a clause with no keeper answering kills what is left, waits for its planted port to bind (a-2, bounded
+//         by BOOT + SLACK, one `PORT_HELD` machine line), starts its OWN keeper and waits for it as a BOOT (a-1).
+//   KEPT, none loosened (row 1135 (2)): every DEFERRED wait, every retire wait, the lane and drain waits, their bounds.
 // LAST LINE: GREEN MLV2 <what> · <n> clause(s) (exit 0) or RED MLV2 · <clauses> (exit 1)
 // ============================================================================
 import { mkdtempSync, writeFileSync, readFileSync, appendFileSync, rmSync, readdirSync, cpSync, existsSync, statSync, symlinkSync } from "node:fs";
@@ -121,15 +130,45 @@ const waitFor = async (pred, bound) => { const end = Date.now() + bound; for (;;
 const portUp = async () => { const s = await status(); return s && s.ok ? s : null; };
 const touchClosure = () => appendFileSync(ENTRY, `\n// witness mlv2 write ${Date.now()}\n`);
 const linesSince = (n, re) => out.slice(n).find((l) => re.test(l));
+// UNIT mrv (row 1135 (1) / row 1139 (1)) (a-1): a keeper START is a BOOT — it ends on an event, never on one sample's clock
+const bootUp = async (pred) => {
+  const s0 = Date.now();
+  for (;;) {
+    const s = await portUp();
+    if (s && pred(s)) return { s, why: `up in ${Date.now() - s0} ms` };
+    const w = out.find((l) => /keeper waiting/.test(l)), x = out.find((l) => /worker exit/.test(l));
+    if (w || x || exited(keeper)) return { s: null, why: w ? `the keeper is WAITING: :${CPORT} is held (${w.slice(0, 120)})` : x ? `its worker exited before it answered (${x.slice(0, 120)})` : `the keeper exited (${keeper.exitCode ?? keeper.signalCode})` };
+    await sleep(SLACK);
+  }
+};
+// (a-2): after a kill, the planted port binds before the next keeper starts
+const freeHere = () => new Promise((res) => { const s = createServer(); s.once("error", () => res(false)); s.listen(CPORT, "127.0.0.1", () => s.close(() => res(true))); });
+const portFreed = async () => {
+  const k0 = Date.now(); let probes = 0;
+  const ok = await waitFor(async () => { probes++; return freeHere(); }, BOUND);
+  console.log(`PORT_HELD mlv2 · ${process.platform} · node ${process.version} · held ${Date.now() - k0} ms after the kill · ${probes} probe(s) · bound ${BOUND} ms`);
+  return ok ? { ok: true } : { ok: false, why: `:${CPORT} still held ${BOUND} ms after the kill` };
+};
+// (I3): a clause stands on its OWN keeper, never on the one an earlier clause left
+let READY_WHY = "";
+const ready = async () => {
+  const s = await portUp(); if (s) { READY_WHY = "inherited a keeper"; return s; }
+  await killTree(keeper);
+  const f = await portFreed(); if (!f.ok) { READY_WHY = f.why; return null; }
+  keeper = startKeeper();
+  const b = await bootUp(() => true); READY_WHY = `started its own keeper (${b.why})`;
+  return b.s;
+};
 
 console.log(`witness mlv2 · org ${ORG} · slack ${SLACK} ms · import ${IMPORT} ms · planted ports cortex :${CPORT} thalamus :${TPORT} judge :${JPORT} · live ports ${LIVE_PORTS.map((p) => `:${p} ${live[p].planted ? "held by a counting listener" : "HELD BY ANOTHER PROCESS"}`).join(", ")}`);
 
 let keeper = startKeeper();
 {
   const s0 = Date.now();
-  const up = await waitFor(portUp, BOOT0);
+  // UNIT mrv (a-1): ~~const up = await waitFor(portUp, BOOT0);~~
+  const b = await bootUp(() => true), up = b.s;
   BOUND = up ? Date.now() - s0 + SLACK : BOOT0;
-  console.log(up ? `  first keeper up in ${Date.now() - s0} ms · every later wait bounded by ${BOUND} ms` : `  first keeper NOT up within ${BOOT0} ms (two cold imports + three node starts, measured) · ${out.slice(-2).join(" | ")}`);
+  console.log(up ? `  first keeper up in ${Date.now() - s0} ms · every later wait bounded by ${BOUND} ms` : `  first keeper NOT up · ${b.why} · ${out.slice(-2).join(" | ")}`);
 }
 const POLL = Number((/setInterval\(\(\) => \{ retireIfArmed\(\); fire\(\); \}, (\d+)\)/.exec(readFileSync(ENTRY, "utf8")) || [])[1]);
 
@@ -147,7 +186,7 @@ await behaviour("C1 IDLE · no lane in flight: a closure write retires the worke
 await behaviour("C2 LANE · a lane in flight defers the retire; its close lets it retire; the moment reached home exactly once", async () => {
   if (!thalUp) return { ok: false, why: `cannot run: the planted thalamus could not bind :${TPORT}` };
   if (!Number.isFinite(POLL)) return { ok: false, why: "cannot run: cortex's dispatch poll is not readable from its source" };
-  const s1 = await portUp(); if (!s1) return { ok: false, why: "cannot run: no daemon up" };
+  const s1 = await ready(); /* UNIT mrv (I3): ~~const s1 = await portUp(); if (!s1)~~ */ if (!s1) return { ok: false, why: `cannot run: no daemon up · ${READY_WHY}` };
   const mid = "m-mlv2-planted";
   hold = true;
   appendFileSync(join(SDIR, "wake_queue.jsonl"), JSON.stringify({ moment_id: mid, status: "pending", ts: new Date(0).toISOString() }) + "\n");
@@ -169,7 +208,7 @@ await behaviour("C3 JUDGE · a held judge port defers the retire; freed, the nex
   const judge = createServer();
   const held = await new Promise((r) => { judge.once("error", () => r(false)); judge.listen(JPORT, "127.0.0.1", () => r(true)); });
   if (!held) return { ok: false, why: `cannot run: the planted judge port :${JPORT} could not be held` };
-  const s1 = await portUp(); if (!s1) { judge.close(); return { ok: false, why: "cannot run: no daemon up" }; }
+  const s1 = await ready(); /* UNIT mrv (I3): ~~const s1 = await portUp(); if (!s1)~~ */ if (!s1) { judge.close(); return { ok: false, why: `cannot run: no daemon up · ${READY_WHY}` }; }
   const n = out.length;
   touchClosure();
   const deferred = await waitFor(async () => linesSince(n, /retire DEFERRED.*judge/), BOUND);
@@ -181,7 +220,7 @@ await behaviour("C3 JUDGE · a held judge port defers the retire; freed, the nex
 });
 
 await behaviour("K5 DOOR · his restart door exits as a retire and the keeper brings the fresh build up", async () => {
-  const s1 = await portUp(); if (!s1) return { ok: false, why: "cannot run: no daemon up" };
+  const s1 = await ready(); /* UNIT mrv (I3): ~~const s1 = await portUp(); if (!s1)~~ */ if (!s1) return { ok: false, why: `cannot run: no daemon up · ${READY_WHY}` };
   let r = {};
   try { r = await (await call(CPORT, "/restart", { method: "POST" })).json(); } catch (e) { r = { error: String(e.message || e) }; }
   const s2 = await waitFor(async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }, BOUND);

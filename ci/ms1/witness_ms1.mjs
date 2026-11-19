@@ -21,6 +21,8 @@
 //   B2.3 NEUTRAL  hermetic + GITHUB_ACTIONS=true (F3 A) → the planted witness runs
 //   T3   BASETREE C5 first half (row 1119 (3)(a)): GITHUB_WORKSPACE names another dir (the merge-base clone) → exactly one
 //                 `  SKIP WITNESSES · the merge-base tree — witnesses are judged at head (C5)` line, nothing spawned, no assert
+//   T4   NOWORKSPACE row 1125 (3): hermetic + GITHUB_ACTIONS with NO GITHUB_WORKSPACE → a RED assert (the gate fails closed),
+//                 no skip line, nothing spawned
 //   B3.1 CARRIED  static on the tree: every landed unit's ci/<unit>/witness_<unit>.mjs with a 40-hex BASE, every BASE a
 //                 commit of main's history, ci/mcr/ split (F9 B)
 //   B3.2 NOCI     land.mjs, origin main carrying a ci/<unit>/BASE: a landing with no ci dir → REFUSED NO-CI-DIR
@@ -33,8 +35,14 @@
 //   B4.4 NOSPAWN  a refused witness is never spawned (its marker absent)
 //   B4.5 DOOR     F5 B: a planted organ JUDGE_PORT with env door ARSENAL_JUDGE_PORT → admitted, and the witness's env
 //                 carries a free port in that door (not the organ's literal)
+//   B4.6 DOORLIT  a planted organ `export const PLANT_PORT = door("ARSENAL_PLANT_PORT", 4999)` (the door handed as a quoted env
+//                 name, keeper's plantedPort form since unit mport) → admitted, and the witness's env carries a free port in it
 //   B5.1 SECONDS  one `  witness ‹unit› <s> s · <LAST line>` per unit and one `  witnesses · <n> unit(s) · <s> s`
 //   B5.2 NOFETCH  a BASE absent from the clone → RED `its BASE is in the clone`, and git never fetches (GIT_TRACE)
+//   B5.3 HANG     row 1153 (3) F-9: a planted witness whose first boot never arrives, under the plant's own bound (its
+//                 workflow copy at timeout-minutes 1) → the member kills it and its assert is RED with the named detail
+//                 `killed at the member's bound (1 min, suite.yml timeout-minutes): the witness never finished`, never a hang
+//   B5.4 PORTHELD row 1153 (2) F-7 A: a witness's `PORT_HELD …` machine line → echoed as `WITNESS ‹unit› · measured · PORT_HELD …`
 //   B6.1 NOBASE   a unit with a witness and no BASE → RED `carries a BASE file (B6)`
 //   B6.2 SHORT    a 7-char BASE → RED
 //   B6.3 SKIPWINS the missing-BASE plant on the laptop (no GITHUB_ACTIONS) → the skip line, no red
@@ -64,7 +72,7 @@ const ORG = arg("--org"), BASE = arg("--base-org");
 if (!ORG || !BASE) { console.log("RED MS1 · usage: --org <dir> --base-org <dir>"); process.exit(1); }
 const NAMED = ["scripts/organism_test.mjs", "scripts/land.mjs", "scripts/ci_verdict.mjs"], NAMED_DIRS = ["ci/"];
 // the landed units of ci/ms1/PROOF.md §0.2 (measured at 3e3ce63, 18 Nov 2026; at a18c167 + 95b07a6 + 224f9b9, 19 Nov 2026: rows 1107 / 1112 / 1119), each carried by ms1's landing
-const CARRIED = ["mcr2", "mday", "mday2", "mdn2", "mdone", "mf2", "mf4", "mfac", "mfac-floor", "mgrd", "mgs", "mjd3", "mjd4", "mjd5", "mjd6", "mjud", "mland", "mlj", "mlv0", "mlv1", "mlv2", "mlv3", "mpast", "mjd7", "mpm", "mpool", "mport", "mtail", "mtxt"];
+const CARRIED = ["mcr2", "mday", "mday2", "mdn2", "mdone", "mf2", "mf4", "mfac", "mfac-floor", "mgrd", "mgs", "mjd3", "mjd4", "mjd5", "mjd6", "mjud", "mland", "mlj", "mlv0", "mlv1", "mlv2", "mlv3", "mpast", "mjd7", "mpm", "mpool", "mport", "mrung", "mtail", "mtxt", "mtxt3", "mxw"];
 const ROOT = mkdtempSync(join(os.tmpdir(), "witness-ms1-"));
 let seq = 0;
 
@@ -90,12 +98,14 @@ import { join } from "node:path";
 const a = (k) => process.argv[process.argv.indexOf(k) + 1];
 const org = a("--org"), base = a("--base-org");
 const MODE = "@MODE@", U = "@U@";
-if (process.env.MS1_MARK) writeFileSync(process.env.MS1_MARK, JSON.stringify({ org, base, door: process.env.ARSENAL_JUDGE_PORT || null }));
+if (process.env.MS1_MARK) writeFileSync(process.env.MS1_MARK, JSON.stringify({ org, base, door: process.env.ARSENAL_JUDGE_PORT || null, doors: Object.fromEntries(Object.entries(process.env).filter(([k]) => /^ARSENAL_[A-Z0-9_]*PORT$/.test(k))) }));
 const m = (d) => { try { return readFileSync(join(d, "m.txt"), "latin1").split(/\\r?\\n/)[0]; } catch { return null; } };
 const cr = (d) => { let n = 0; const w = (x) => { for (const f of readdirSync(x)) { const p = join(x, f); if (statSync(p).isDirectory()) w(p); else if (readFileSync(p, "latin1").includes("\\r")) n++; } }; w(d); return n; };
 let ok = true;
-if (MODE === "marker" || MODE === "lf") ok = m(base) === "BASE" && m(org) === "HEAD";
+if (MODE === "marker" || MODE === "lf" || MODE === "portheld") ok = m(base) === "BASE" && m(org) === "HEAD";
 if (MODE === "lf") ok = ok && cr(base) === 0 && cr(org) === 0;
+if (MODE === "hang") { console.log("  first boot pending"); setInterval(() => {}, 1 << 30); await new Promise(() => {}); }
+if (MODE === "portheld") console.log("PORT_HELD " + U.toLowerCase() + " · planted · held 7 ms after the kill · 1 probe(s) · bound 9 ms");
 if (MODE === "redbound") { console.log("  ✗ BOUND · off-bound: a later landing"); console.log("RED " + U + " · BOUND"); process.exit(1); }
 if (MODE === "redw6") { const id = "W6 BOUND"; console.log("RED " + U + " · " + id); process.exit(1); }
 if (MODE === "redj4") { console.log("RED " + U + " · J4 BOUND"); process.exit(1); }
@@ -109,9 +119,11 @@ const plantWitness = (unit, mode, extra = "") => W_HEAD.replace("@MODE@", mode).
 
 /** a member plant: commit 1 (m.txt BASE), commit 2 (m.txt HEAD + the unit dirs, each BASE = commit 1 unless told) →
  *  run the tree's organism_test.mjs witnesses there. @returns {{ out: string, lines: string[], mark: any, trace: string }} */
-function memberRun(tree, units, { env = {}, crlf = false, organs = {}, knownRed = null } = {}) {
+function memberRun(tree, units, { env = {}, crlf = false, organs = {}, knownRed = null, jobMinutes = null } = {}) {
   let ot = src(tree, "scripts/organism_test.mjs");
-  const wf = src(tree, ".github/workflows/suite.yml");
+  let wf = src(tree, ".github/workflows/suite.yml");
+  // B5.3: the plant's OWN workflow copy may carry a shorter timeout-minutes, so a never-ending witness meets the bound in this run
+  if (wf != null && jobMinutes) wf = wf.replace(/timeout-minutes:\s*\d+/, `timeout-minutes: ${jobMinutes}`);
   // row 1112: a plant that judges the ruled-red door carries its OWN entry, written into the copy's KNOWN_RED — never the live list
   if (ot != null && knownRed) {
     if (!/^const KNOWN_RED = \[\n/m.test(ot)) return { out: "(the tree's organism_test.mjs has no `const KNOWN_RED = [` line to plant into)", lines: [], mark: null, trace: "" };
@@ -140,7 +152,7 @@ function memberRun(tree, units, { env = {}, crlf = false, organs = {}, knownRed 
   const r = sp(process.execPath, [join(d, "scripts", "organism_test.mjs"), "witnesses"], { cwd: d, env: e });
   let m = null; try { m = JSON.parse(readFileSync(mark, "utf8")); } catch {}
   let t = ""; try { t = readFileSync(trace, "utf8"); } catch {}
-  return { out: r.out, lines: r.out.split("\n"), mark: m, trace: t, c1 };
+  return { out: r.out, lines: r.out.split("\n"), mark: m, markPath: mark, trace: t, c1 };
 }
 const okLine = (o, u, what) => o.lines.some((l) => l.startsWith(`  ok   WITNESS ‹${u}› · ${what}`));
 const failLine = (o, u, what) => o.lines.findIndex((l) => l.startsWith(`  FAIL WITNESS ‹${u}› · ${what}`));
@@ -227,6 +239,12 @@ const CLAUSES = {
     const asserts = o.lines.filter((l) => /^ {2}(ok {3}|FAIL )WITNESS/.test(l)).length;
     return { ok: skips === 1 && !o.mark && asserts === 0, why: `GITHUB_WORKSPACE names another dir: C5 skip lines ${skips} · spawned ${!!o.mark} · witness asserts ${asserts}` };
   },
+  "T4 NOWORKSPACE"(t) {
+    const o = memberRun(t, { px: { witness: plantWitness("px", "marker") } }, { env: { GITHUB_WORKSPACE: undefined } });
+    const red = o.lines.some((l) => l.startsWith("  FAIL WITNESSES · the neutral machine names its workspace (GITHUB_WORKSPACE)"));
+    const skips = o.lines.filter((l) => /SKIP WITNESSES/.test(l)).length;
+    return { ok: red && skips === 0 && !o.mark, why: `GITHUB_ACTIONS set, no GITHUB_WORKSPACE: RED ${red} · skip lines ${skips} · spawned ${!!o.mark}` };
+  },
   "B3.1 CARRIED"(t) {
     const miss = [];
     for (const u of CARRIED) {
@@ -287,6 +305,12 @@ const CLAUSES = {
     const door = o.mark && o.mark.door;
     return { ok: okLine(o, "px", "GREEN at head against its BASE") && /^\d+$/.test(String(door)) && door !== "4118", why: `admitted ${okLine(o, "px", "GREEN")} · the witness's ARSENAL_JUDGE_PORT ${door}` };
   },
+  "B4.6 DOORLIT"(t) {
+    const organ = 'const door = (name, fixed) => Number(process["env"][name]) || fixed;\nexport const PLANT_PORT = door("ARSENAL_PLANT_PORT", 4999);\n';
+    const o = memberRun(t, { px: { witness: plantWitness("px", "marker", "// names an organ's port whose door is a quoted env name: PLANT_PORT\n") } }, { organs: { "scripts/plant_door.mjs": organ }, env: { ARSENAL_PLANT_PORT: undefined } });
+    const door = o.mark && o.mark.doors ? o.mark.doors.ARSENAL_PLANT_PORT ?? null : null;
+    return { ok: okLine(o, "px", "GREEN at head against its BASE") && /^\d+$/.test(String(door)) && door !== "4999", why: `admitted ${okLine(o, "px", "GREEN")} · ARSENAL_PLANT_PORT in the witness's env ${door}` };
+  },
   "B5.1 SECONDS"(t) {
     const o = memberRun(t, { pa: { witness: plantWitness("pa", "marker") }, pb: { witness: plantWitness("pb", "marker") } });
     const per = ["pa", "pb"].every((u) => o.lines.some((l) => new RegExp(`^ {2}witness ‹${u}› \\d+(\\.\\d+)? s · GREEN ${u.toUpperCase()} `).test(l)));
@@ -297,6 +321,17 @@ const CLAUSES = {
     const o = memberRun(t, { px: { witness: plantWitness("px", "marker"), base: `${"c".repeat(40)}\n` } });
     const red = failLine(o, "px", "its BASE is in the clone") > -1, fetched = /\bfetch\b/.test(o.trace);
     return { ok: red && !fetched && !o.mark, why: `RED its BASE is in the clone ${red} · git fetch in GIT_TRACE ${fetched} · spawned ${!!o.mark}` };
+  },
+  "B5.3 HANG"(t) {
+    const t0 = Date.now();
+    const o = memberRun(t, { px: { witness: plantWitness("px", "hang") } }, { jobMinutes: 1 });
+    const d = failDetail(o, "px", "GREEN at head against its BASE");
+    return { ok: /killed at the member's bound \(1 min, suite\.yml timeout-minutes\): the witness never finished/.test(d), why: `${d || tail(o)} · ended in ${((Date.now() - t0) / 1000).toFixed(1)} s` };
+  },
+  "B5.4 PORTHELD"(t) {
+    const o = memberRun(t, { px: { witness: plantWitness("px", "portheld") } });
+    const l = o.lines.find((x) => x.startsWith("  ok   WITNESS ‹px› · measured · PORT_HELD px · planted · held 7 ms after the kill"));
+    return { ok: !!l && okLine(o, "px", "GREEN at head against its BASE"), why: l ? l.trim() : tail(o) };
   },
   "B6.1 NOBASE"(t) {
     const o = memberRun(t, { px: { witness: plantWitness("px", "marker"), base: null } });

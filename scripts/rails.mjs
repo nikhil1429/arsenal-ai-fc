@@ -27,7 +27,9 @@
 //                     to the selftests and to the owner's own validation.
 //   3. `claude-p`   — `claude -p` fired from a session shell. That is the organism's
 //                     OWN transport (L6), it bypasses the gate (L5) and its spend lands
-//                     in nobody's ledger. The organism is also SWITCHED OFF until S12.
+//                     in nobody's ledger. (His 20 Aug 2026 switch-off was lifted by his
+//                     30 Aug 2026 word — both cited: `grep -n "nothing burns tokens\|ORGANISM IS BACK ON"
+//                     docs/archive/ORGANISM_AUDIT__2026-08-19.md`; the rail stands on the three above.)
 //
 // THE OVERRIDE, AND WHY IT IS IN THE COMMAND AND NOT IN THE ENVIRONMENT (§10-C):
 //   "Rails carry a per-rung OVERRIDE, declared in that rung's micro-order — S12's canary
@@ -196,7 +198,7 @@ export function factoryDecide(payload = {}) {
   if (tool === "Bash" || tool === "PowerShell") {
     const cmd = String(input.command || "");
     if (CLAUDE_P_RE.test(cmd)) {
-      return deny("claude-p", "`claude -p` from a session shell — that is the organism's OWN transport (L6), it runs outside the gate (L5), its spend lands in no ledger, and the organism is SWITCHED OFF until S12",
+      return deny("claude-p", "`claude -p` from a session shell — that is the organism's OWN transport (L6), it runs outside the gate (L5), and its spend lands in no ledger",
         "if a lane must run, run it through its organ's CLI so the gate and the ledger see it; if this is a rung's canary, declare the override");
     }
     // a shell write into state is the same breach as an editor write, one layer down

@@ -2448,10 +2448,16 @@ function path() {
       // live sitting.json. Exactly the class the suite's own "selftests leave live state
       // untouched" check exists for, arriving through a brand-new door. An ephemeral port
       // with nothing listening on it is the condition this assertion actually names.
+      // unit mrf (forks row 1120 (2) F-3 (b)): the typed port leaves — the port is OS-picked (bound to 0 by a child, read,
+      // released), so nothing listens on it by construction, never by a number nobody chose. The child rides run()'s own bound.
+      const a2Port = run(["-e", "const s=require('node:net').createServer();s.listen(0,'127.0.0.1',()=>{process.stdout.write(String(s.address().port));s.close();});"]).out.trim();
       const ns = run([S("sitting.mjs"), "open", "--surface", "code", "--no-spawn"],
-        { cwd: sb, env: { ...process.env, ARSENAL_SITTING_PORT: "45177", ARSENAL_SITTING_STATE_DIR: join(sb, "dressing-room", "state") } });
+        { cwd: sb, env: { ...process.env, ARSENAL_SITTING_PORT: a2Port, ARSENAL_SITTING_STATE_DIR: join(sb, "dressing-room", "state") } });
+      // unit mrf (forks row 1120 (2) F-2 (a)): the matcher FOLLOWS mday's line. mday (rows 1075 / 1078, F10 A) replaced the
+      // old `… no sitting registered (--no-spawn) …` line with openLocal + openLine (sitting.mjs), so `/no-spawn/` read every
+      // run FAIL from 9f6f9ab on. The claim is unchanged: exit 0, ONE open line through the LOCAL door, no daemon started.
       assert("A2 · `sitting.mjs open --no-spawn` on a box with no daemon exits 0, says so in one line, and spawns no child",
-        ns.code === 0 && /no-spawn/.test(ns.out) && !/could not start the daemon/.test(ns.out), ns.out.slice(0, 250));
+        /^\d+$/.test(a2Port) && ns.code === 0 && /^sitting: (?:OPEN|JOINED) \S+ .* · door local$/m.test(ns.out) && !/could not start the daemon/.test(ns.out), ns.out.slice(0, 250));
       // leave the lane's own fixture behind for the checks below
       WR(SESSION, CLOSED);
     }
@@ -2721,6 +2727,37 @@ function done() {
   const m = /laws (\d+)\/(\d+) both ways \((\d+)\/(\d+) RED-planted\)/.exec(lines[0] || "");
   assert("WHAT IS LEFT · every laws/*.yml rule is planted BOTH ways (a RED and a CLEAN plant in lawpack.mjs)",
     !!m && Number(m[2]) > 0 && m[1] === m[2] && m[3] === m[2], m ? m[0] : (lines[0] || "").slice(0, 300));
+  // unit mrung (forks row 1130 (3), fork 9): THE HERMETIC RECEIPT READ, held by the neutral machine. A plan v3 list of one clause
+  // and a receipt triple built with rung_receipt.mjs's OWN row math (a child, never an import) are planted under os.tmpdir();
+  // done.mjs --hermetic reads the planted receipt GREEN through --receipts, reads the same clause UNREAD without it (the
+  // state file never opened), and reads a plan of zero clauses UNREAD — never the guessed 0/0 row 1058 forbids.
+  const T = mkdtempSync(join(tmpdir(), "organism-mrung-"));
+  try {
+    const plant = [
+      "const [root, dir] = process.argv.slice(1);",
+      "const { pathToFileURL } = await import('node:url'); const { join } = await import('node:path'); const fs = await import('node:fs');",
+      "const R = await import(pathToFileURL(join(root, 'scripts', 'rung_receipt.mjs')).href);",
+      "const W = 'node ci/x.mjs'; let prev = R.ZERO; const rows = [];",
+      "const add = (b) => { const r = { v: 1, ...b, key: 'S1:c1', rung: 'S1', clause: 'c1', at: '2026-11-20T15:00:00.000Z', by: R.BY, prev_sha256: prev }; r.row_sha256 = R.rowSha(r); prev = r.row_sha256; rows.push(r); return r; };",
+      "const red = add({ kind: 'red', cmd: W, cmd_sha256: R.sha256(W), head_sha: 'a'.repeat(40), exit: 1, out_sha256: R.sha256('o') });",
+      "const g = add({ kind: 'green', cmd: W, cmd_sha256: R.sha256(W), head_sha: 'b'.repeat(40), red_head_sha: 'a'.repeat(40), red_sha: red.row_sha256, ancestor: 0, exit: 0, out_sha256: R.sha256('p'), day: '2026-11-20', day_proof: { source: 'sitting_reviews.jsonl', sitting_id: 's1', closed_at: '2026-11-20T15:00:00.000Z', reason: 'fulltime' } });",
+      "add({ kind: 'meter', meter: R.METER_FILE, before_sha256: R.sha256('m'), after_sha256: R.sha256('m'), equal: true, old_day: '2026-11-13', old_day_green: false, green_sha: g.row_sha256 });",
+      "fs.writeFileSync(join(dir, 'receipts.jsonl'), rows.map((r) => JSON.stringify(r)).join('\\n') + '\\n');",
+      "for (const [c, rungs] of [['c1', [{ rung: 'S1', clauses: [{ id: 'c1', witness: W }] }]], ['c0', []]]) { fs.mkdirSync(join(dir, c, 'rungs'), { recursive: true }); fs.writeFileSync(join(dir, c, 'rungs', R.PLAN_FILE), JSON.stringify({ plan: 'v3', source: 'plan_v3.md', source_sha256: R.sha256('plan'), rungs, loops: [] })); }",
+    ].join("\n");
+    const p = run(["--input-type=module", "-e", plant, ROOT, T]);
+    const env = { env: { ...process.env, ORGANISM_TEST_PROFILE: "hermetic" } };
+    const a = run([join(ROOT, "scripts", "done.mjs"), "report", "--hermetic", "--campaign", join(T, "c1"), "--receipts", join(T, "receipts.jsonl")], env);
+    const b = run([join(ROOT, "scripts", "done.mjs"), "report", "--hermetic", "--campaign", join(T, "c1")], env);
+    const c = run([join(ROOT, "scripts", "done.mjs"), "report", "--hermetic", "--campaign", join(T, "c0")], env);
+    const rl = (r) => (r.out.split(/\r?\n/).find((l) => l.startsWith("DONE rungs")) || "").slice(0, 200);
+    assert("WHAT IS LEFT · RUNGS (unit mrung) — a planted receipt read through --receipts counts its plan clause GREEN",
+      p.code === 0 && a.code === 0 && /DONE rungs\s+1\/1 GREEN · 0 UNREAD/.test(a.out), p.code !== 0 ? p.out.slice(0, 300) : rl(a));
+    assert("WHAT IS LEFT · RUNGS — hermetic without --receipts reads NO receipt: the same clause is UNREAD, never counted",
+      b.code === 0 && /DONE rungs\s+0\/1 GREEN · 1 UNREAD/.test(b.out), rl(b));
+    assert("WHAT IS LEFT · RUNGS — a plan v3 list of zero clauses is UNREAD, never the guessed 0/0 (row 1058)",
+      c.code === 0 && /DONE rungs\s+UNREAD \(the plan v3 list holds no clause\)/.test(c.out) && !/0\/0/.test(c.out), rl(c));
+  } finally { rmSync(T, { recursive: true, force: true }); }
 }
 
 // ── THE FLOW ATLAS (AUDIT §10-C rung S10 · acceptance (d)) ───────────────────
@@ -2775,7 +2812,10 @@ function organPorts(tree) {
   for (const f of existsSync(dir) ? readdirSync(dir).filter((x) => x.endsWith(".mjs")) : []) {
     readFileSync(join(dir, f), "utf8").split(/\r?\n/).forEach((l, i) => {
       const m = /^export const ([A-Z_]*PORT) = (.*)$/.exec(l);
-      if (m && /\b\d{2,5}\b/.test(m[2])) named.push({ name: m[1], door: (/process\.env\.([A-Z0-9_]+)/.exec(m[2]) || [])[1] || null, at: `scripts/${f}:${i + 1}` });
+      // the door: `process.env.<NAME>` on the line, or the env name handed as a quoted ARSENAL_…PORT literal
+      // (keeper.mjs `plantedPort("ARSENAL_JUDGE_PORT", 4118)`, unit mport)
+      const dm = m && /process\.env\.([A-Z0-9_]+)|["'](ARSENAL_[A-Z0-9_]*PORT)["']/.exec(m[2]);
+      if (m && /\b\d{2,5}\b/.test(m[2])) named.push({ name: m[1], door: dm ? dm[1] || dm[2] : null, at: `scripts/${f}:${i + 1}` });
       const n = /\blisten\(\s*([1-9]\d{1,4})\b/.exec(l);
       if (n) literal.push({ port: n[1], at: `scripts/${f}:${i + 1}` });
     });
@@ -2936,7 +2976,9 @@ async function spawnWitness(o) {
   try { r = spawnSync(NODE, [join("ci", o.unit, /** @type {string} */ (witnessFile(o.dir, o.unit))), "--org", o.orgT, "--base-org", o.baseT], { cwd: wd, env, stdio: ["ignore", fd, fd], timeout: o.left, windowsHide: true }); }
   finally { closeSync(fd); }
   for (const p of namingProcs(o.tmp)) { try { process.kill(p); } catch {} }
-  return { out: readFileSync(log, "utf8"), code: r.status };
+  // row 1153 (3) F-9: a witness that never ends is killed at the member's own bound and is a NAMED red, never a hang
+  const killed = !!(r.error && /ETIMEDOUT/.test(String(r.error.code || r.error.message))) || (r.status === null && !!r.signal);
+  return { out: readFileSync(log, "utf8"), code: r.status, killed };
 }
 /** F4 a: a GIT side — an LF tree, then git init + ONE commit inside it (the ci/mtail/sides.mjs shape) @param {string} root @param {string} sha @param {string} into */
 function gitSide(root, sha, into) {
@@ -2972,12 +3014,15 @@ async function headLeg(ctx, unit, dropIds) {
     if (hits.length) { assert(name("binds no fixed service port (B4)"), false, hits.join(" · ")); return null; }
     if (existsSync(ctx.nm)) for (const t of [orgT, baseT]) symlinkSync(ctx.nm, join(t, "node_modules"), process.platform === "win32" ? "junction" : "dir");
     const r = await spawnWitness({ dir, unit, orgT, baseT, tmp, left: Math.max(1, ctx.T0 + ctx.jobMin * 60000 - Date.now()), ports, tag: "" });
-    const j = judgeLast(r.out, r.code, unit, [...boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")), ...dropIds]);
+    const j = r.killed ? { ok: false, last: "(killed at the bound)", left: `killed at the member's bound (${ctx.jobMin} min, suite.yml timeout-minutes): the witness never finished` }
+      : judgeLast(r.out, r.code, unit, [...boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")), ...dropIds]);
     const secs = ((Date.now() - u0) / 1000).toFixed(1);
     console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);
     // the judged name is STABLE, so a KNOWN_RED entry can rule it (row 1107 (1)(c)); its reds ride the detail. The seconds ride
     // their own measurement line: the workflow prints assert lines only (keyOf folds the digits)
     assert(name(`ran in ${secs} s (B5)`), true);
+    // row 1153 (2) F-7 A: every PORT_HELD machine line the witness prints rides as a named measurement line
+    for (const l of r.out.split(/\r?\n/).map((x) => x.trim()).filter((x) => /^PORT_HELD /.test(x))) assert(name(`measured · ${l}`), true);
     assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
     return { last: j.last, code: r.code };
   } finally {
@@ -3005,7 +3050,8 @@ async function landedLeg(ctx, unit, at, recutIds) {
     if (hits.length) { assert(name("binds no fixed service port (B4)"), false, hits.join(" · ")); return; }
     if (existsSync(ctx.nm)) for (const t of [orgT, baseT]) symlinkSync(ctx.nm, join(t, "node_modules"), process.platform === "win32" ? "junction" : "dir");
     const r = await spawnWitness({ dir, unit, orgT, baseT, tmp, left: Math.max(1, ctx.T0 + ctx.jobMin * 60000 - Date.now()), ports, tag: "L" });
-    const j = judgeLast(r.out, r.code, unit, recutIds);
+    const j = r.killed ? { ok: false, last: "(killed at the bound)", left: `killed at the member's bound (${ctx.jobMin} min, suite.yml timeout-minutes): the witness never finished` }
+      : judgeLast(r.out, r.code, unit, recutIds);
     const secs = ((Date.now() - u0) / 1000).toFixed(1);
     console.log(`  witness ‹${unit}› L ${secs} s · ${j.last}`);
     assert(name("GREEN at its LANDED sha against its landing's parent"), j.ok, j.ok ? "" : `red at L: ${j.left}`);
@@ -3022,7 +3068,9 @@ async function witnesses() {
   // (GITHUB_WORKSPACE) runs the witnesses. The verdict's other tree is a clone under the runner's temp dir, so there the member
   // prints one line and makes no assert: it is paid once per leg, and a member red at head is always new.
   const real = (p) => { try { const r = realpathSync(p); return process.platform === "win32" ? r.toLowerCase() : r; } catch { return null; } };
-  if (!process.env.GITHUB_WORKSPACE || real(ROOT) !== real(process.env.GITHUB_WORKSPACE)) { console.log(WITNESS_BASETREE); return; }
+  // row 1125 (3): the neutral flag set with NO workspace named is a RED, never a skip — a gate fails closed
+  if (!process.env.GITHUB_WORKSPACE) { assert("WITNESSES · the neutral machine names its workspace (GITHUB_WORKSPACE): the gate fails closed", false, "GITHUB_ACTIONS is set and GITHUB_WORKSPACE is not"); return; }
+  if (real(ROOT) !== real(process.env.GITHUB_WORKSPACE)) { console.log(WITNESS_BASETREE); return; }
   const units = witnessUnits(ROOT);
   const T0 = Date.now();
   const wf = (() => { try { return readFileSync(join(ROOT, ".github", "workflows", "suite.yml"), "utf8"); } catch { return ""; } })();
@@ -3068,21 +3116,26 @@ const KNOWN_RED = [
   // unit ms1 (forks row 1107 (1)(c), row 1066 F11 A stands): the four landed witnesses a LATER landing overtook are RED members,
   // ruled here one each, owner = the re-judge unit row 1107 (2) names. The detail is exact: a NEW clause red beside the ruled
   // one is UNRULED (a new death never hides under an old entry), and the member turning green makes its entry STALE (refused).
-  { assert: "WITNESS ‹mjd3› · GREEN at head against its BASE", detail: "red beyond BOUND: J4", row: 1107, owner: "unit mr3", until: "mr3 re-judges mjd3 J4 (fix, or witness re-cut + BASE re-taken) and lands it" },
-  { assert: "WITNESS ‹mtail› · GREEN at head against its BASE", detail: "red beyond BOUND: T3 AUTH", row: 1107, owner: "unit mrt", until: "mrt re-judges mtail T3 AUTH and lands it" },
-  { assert: "WITNESS ‹mjud› · GREEN at head against its BASE", detail: "red beyond BOUND: M3 CENSUS M5 F3-CLIP M6 MJD2", row: 1107, owner: "unit mrj", until: "mrj re-judges mjud M3, M5, M6 and lands it" },
-  { assert: "WITNESS ‹mf2› · GREEN at head against its BASE", detail: "red beyond BOUND: F2 F4", row: 1107, owner: "unit mrf", until: "mrf re-judges mf2 F2, F4 and lands it" },
+  // RETIRED by unit mrt (forks row 1120 (1) / (4)): the mtail entry (row 1107, detail "red beyond BOUND: T3 AUTH") — T3 repaired on main
+  // (keeper.mjs a leaf again, depcruise no-circular 7), T2 re-based naming mday; ci/mtail's clauses re-cut in the same diff.
   // (EMPTY from 13 Oct 2026 to unit ms1's row 1107 entries above) Row 642: every entry of row 639 left the list in the landing that fixed it — NO SHIM
   // CALLEE when lane V's ea8d015 put forge_session contract and hippocampus recall-hint on the CALL shape (the entry
   // read STALE on his tree), the two LOAD ZERO BLOCK 5 lines on row 641 (B) + (C). The next entry joins only by a row.
 ];
-// RETIRED ENTRIES (L9: the record stays, the rule goes) — read them whole in 287df98's KNOWN_RED:
+// RETIRED ENTRIES (L9: the record stays, the rule goes):
+//   · WITNESS ‹mf2› · GREEN at head against its BASE, detail "red beyond BOUND: F2 F4" (row 1107, owner unit mrf). Retired
+//     by unit mrf (forks row 1120 (2) / (4)): mf2's F2 and F4 re-cut MONOTONE (F-1 C, ci/mf2/monotone.mjs) and A2's matcher
+//     following mday's line (F-2 (a)), in the same diff.
+// — and read these whole in 287df98's KNOWN_RED:
 //   · NO SHIM CALLEE (row 639, lane V), detail "prompt: forge_session.mjs contract · prompt: hippocampus.mjs recall-hint
 //     (already loaded — SHIM is a no-op)". The hippocampus death was read through sitting.mjs's `await import("./acts.mjs")`
 //     (its DRIVER loop) and acts' static import of hippocampus: the walk counts every string-literal dynamic import as
 //     loaded, over-count never under-count. Retired when ea8d015 (rows 639 (A) + 641 (D)) put both on the CALL shape.
 //   · LOAD ZERO BLOCK 5, both lines (row 639, lane S): study_scope's ACK_ONLY declared by row 641 (B), the Select-Object
 //     flag matcher no longer read as speech (C).
+//   · WITNESS ‹mjd3› · GREEN at head against its BASE (row 1107, owner unit mr3), detail "red beyond BOUND: J4". Retired by
+//     unit mr3 (row 1112 (1), fate (a)): unit mjd4 (15edfec, row 1030 (2)) re-dispatches a capture in doubt exactly once on
+//     purpose, so mjd3's J4 was re-based in ci/mjd3/witness_mjd3.mjs (old text struck in its header; BASE 074ead9 kept, F1 A).
 function rulingOf(fails, passed, list = KNOWN_RED) {
   const ok = (e) => Number.isInteger(e.row) && e.row > 0 && typeof e.owner === "string" && e.owner.trim() && typeof e.assert === "string" && e.assert;
   const invalid = list.filter((e) => !ok(e)).map((e) => e.assert || "(no assert name)");

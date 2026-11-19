@@ -8,12 +8,18 @@
 //   effect evaluated with the call itself — it writes one marker file per call site into a temp dir — so a LIVE assert whose
 //   block is entered leaves a trace, and one never executed leaves none.
 //   F1 · hermetic: the build leaves NO marker; full: the build leaves a marker at every site the base full run marks (and some).
-//   F2 · every member the BASE hermetic run judged (ok / FAIL, LIVE excluded) is judged by the build with the same verdict,
-//        and the build judges nothing the base did not (digit runs folded, as LIVE_ASSERTS keys are).
+//   F2 · RE-CUT by unit mrf (forks row 1120 (2) F-1 C · row 1120 (4)) — MONOTONE over the hermetic members (ok / FAIL, LIVE
+//        excluded, digit runs folded): no base member vanishes or goes ok → FAIL; members ADDED by a later unit and FAIL → ok
+//        are NAMED in the clause line, never red (ci/mf2/monotone.mjs). STRUCK, the text it replaces:
+//        ~~every member the BASE hermetic run judged (ok / FAIL, LIVE excluded) is judged by the build with the same verdict,
+//        and the build judges nothing the base did not (digit runs folded, as LIVE_ASSERTS keys are).~~
 //   F3 · the LIVE count on the build's hermetic headline is equal to or lower than the base's, and the build names LIVE no
 //        member the base did not (digit runs folded).
-//   F4 · the build's FULL profile output equals the base's member for member: the same (verdict, name) sequence (digit runs
-//        folded), the same pass/fail headline.
+//   F4 · RE-CUT by unit mrf (forks row 1120 (2) F-1 C · row 1120 (4)) — MONOTONE over the FULL profile's members, the same
+//        rule as F2 (ci/mf2/monotone.mjs); both headlines and exits are named in the line, not compared. STRUCK, the text
+//        it replaces:
+//        ~~the build's FULL profile output equals the base's member for member: the same (verdict, name) sequence (digit runs
+//        folded), the same pass/fail headline.~~
 //   BOUND outside ci/, only scripts/organism_test.mjs differs between the trees.
 //   LAST  no node process naming this run's temp dir survives.
 // LAST LINE: GREEN MF2 <what> · <n> clause(s) (exit 0) | RED MF2 · <clauses> (exit 1)
@@ -24,6 +30,7 @@ import { join, relative, resolve, delimiter } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { monotone, monoLine } from "./monotone.mjs";   // unit mrf (row 1120 (2) F-1 C): the rule F2 and F4 read
 
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
 const ORG = arg("--org") && resolve(arg("--org")), BASE = arg("--base-org") && resolve(arg("--base-org"));
@@ -83,12 +90,10 @@ const bf = suite(b, "full"), of = suite(o, "full");
 clause("F1", po.sites > 0 && oh.marks.length === 0 && of.marks.length > 0 && bf.marks.every((m) => of.marks.includes(m)),
   `planted ${po.sites} LIVE call site(s) (base ${pb.sites}) · hermetic markers: build ${oh.marks.length} (must be 0), base ${bh.marks.length} · full markers: build ${of.marks.length}, base ${bf.marks.length} (every base one must be in the build's)`);
 {
-  const key = ([v, n]) => `${v}\u0000${n}`;
-  const bset = new Map(bh.members.map((m) => [m[1], m[0]])), oset = new Map(oh.members.map((m) => [m[1], m[0]]));
-  const lost = [...bset].filter(([n, v]) => oset.get(n) !== v).map(([n, v]) => `${v}→${oset.get(n) || "absent"} ${n.slice(0, 70)}`);
-  const added = [...oset.keys()].filter((n) => !bset.has(n)).map((n) => n.slice(0, 70));
-  clause("F2", bh.members.length > 0 && lost.length === 0 && added.length === 0 && bh.members.length === oh.members.length && bh.members.map(key).sort().join() === oh.members.map(key).sort().join(),
-    `base hermetic judged ${bh.members.length}, build ${oh.members.length} · verdict moved or absent: ${lost.length ? lost.join(" · ") : "none"} · judged only by the build: ${added.length ? added.join(" · ") : "none"}`);
+  // unit mrf (row 1120 (2) F-1 C): MONOTONE. Struck form, kept for the record: base and build judged the same multiset of
+  // (verdict, name), nothing judged only by the build — which turned red on EVERY later unit that added a member (mdn2 first).
+  const r = monotone(bh.members, oh.members);
+  clause("F2", r.ok, `base hermetic judged ${bh.members.length}, build ${oh.members.length} · ${monoLine(r)}`);
 }
 const liveOf = (h) => { const m = /LIVE (\d+)/.exec(h); return m ? Number(m[1]) : null; };
 {
@@ -97,13 +102,10 @@ const liveOf = (h) => { const m = /LIVE (\d+)/.exec(h); return m ? Number(m[1]) 
     `hermetic headline LIVE: build ${liveOf(oh.head)} · base ${liveOf(bh.head)} (build ≤ base) · LIVE names printed: build ${oh.live.length}, base ${bh.live.length} · named LIVE only by the build: ${extra.length ? extra.map((n) => n.slice(0, 60)).join(" · ") : "none"}`);
 }
 {
-  const seq = (r) => r.members.map(([v, n]) => `${v} ${n}`);
-  const A = seq(bf), B = seq(of);
-  let first = -1;
-  for (let i = 0; i < Math.max(A.length, B.length); i++) if (A[i] !== B[i]) { first = i; break; }
-  const hd = (h) => h.replace(/\d+(?:\.\d+)?\s*(?:ms|s)\b/g, "#");
-  clause("F4", A.length > 0 && first === -1 && hd(bf.head) === hd(of.head) && bf.code === of.code,
-    `full profile: base ${A.length} member(s), build ${B.length} · first difference ${first === -1 ? "none" : `at ${first}: base "${String(A[first]).slice(0, 80)}" / build "${String(B[first]).slice(0, 80)}"`} · headline base "${bf.head}" · build "${of.head}" · exit ${bf.code}/${of.code}`);
+  // unit mrf (row 1120 (2) F-1 C): MONOTONE, the F2 rule over the full profile. Struck form, kept for the record: the same
+  // (verdict, name) SEQUENCE and the same headline and exit — red on any added member and on any headline count it moved.
+  const r = monotone(bf.members, of.members);
+  clause("F4", r.ok, `full profile: base ${bf.members.length} member(s), build ${of.members.length} · ${monoLine(r)} · headline base "${bf.head}" · build "${of.head}" · exit ${bf.code}/${of.code}`);
 }
 
 const walk = (root, d = root, acc = new Map()) => {

@@ -10,15 +10,18 @@
 //       session ⇒ no watchdog ⇒ no restarts. THE SUPERVISOR HAD THE SAME
 //       MORTALITY AS THE SUPERVISED.
 //     · on 28 Aug 2026 an orientation `--help` fell through to its default pass
-//       and relaunched four daemons into an organism his standing order says is
-//       SWITCHED OFF (queue/2026-08-28_s9-accidental-daemon-wake.md).
+//       and relaunched four daemons into an organism his standing order then held
+//       OFF (his 20 Aug 2026 word, lifted by his 30 Aug 2026 word — the grep below)
+//       (queue/2026-08-28_s9-accidental-daemon-wake.md).
 //   So ownership moves to the OS, which is the only thing that outlives a logon
 //   session, and the watchdog becomes a reporter (see its header).
 //
 // WHAT THIS FILE IS: a GENERATOR and a READER. It writes service/task definitions
 //   to disk and it reports what is installed. IT INSTALLS NOTHING AND IT STARTS
-//   NOTHING — S9 installs ownership, S12 turns things on, HIS word per stage. A
-//   rung that leaves something running has broken the switch-off.
+//   NOTHING — S9 installs ownership; starting a unit is HIS word, never this file's.
+//   Off by his 20 Aug 2026 order, back on by his 30 Aug 2026 haan — both words, cited:
+//   `grep -n "nothing burns tokens\|ORGANISM IS BACK ON" docs/archive/ORGANISM_AUDIT__2026-08-19.md`.
+//   What runs NOW is never written here: `node scripts/services.mjs status` · `node scripts/state.mjs`.
 //
 // THE JUGAD RULE (S3), APPLIED: the order says "the headless five" and "the
 //   desktop two". Those are QUANTIFIERS, and this file never types them as a
@@ -210,8 +213,8 @@ export function logonTaskPs1(row) {
 # Installing it as a service would SUCCEED and then do nothing, which is worse than
 # failing — session-0 isolation is silent.
 #
-# This registers the task. It does NOT start it: S9 installs ownership, S12 turns
-# things on, HIS word per stage.
+# This registers the task. It does NOT start it: S9 installs ownership; starting
+# it is HIS word, never this file's.
 
 $ErrorActionPreference = "Stop"
 $repo = "${REPO}"
@@ -239,11 +242,11 @@ Register-ScheduledTask -TaskName $id -Action $action -Trigger $trigger \`
   -Principal $principal -Settings $settings -Force | Out-Null
 
 # ⛔ REGISTERED ${row.logon_start === false ? "AND IMMEDIATELY DISABLED" : "DISABLED"} — this is not a mistake.
-# The organism is SWITCHED OFF by his order of 20 Aug 2026. S9 installs ownership;
-# S12 enables, stage by stage, on his word. Enabling here would break the switch-off.
+# An installer enables nothing: enabling is HIS word (his 20 Aug 2026 switch-off, lifted by
+# his 30 Aug 2026 word: grep -n "nothing burns tokens\\|ORGANISM IS BACK ON" docs/archive/ORGANISM_AUDIT__2026-08-19.md).
 Disable-ScheduledTask -TaskName $id | Out-Null
 
-Write-Host "  ~ $id registered as a LOGON TASK (disabled — S12 enables it on his word)"
+Write-Host "  ~ $id registered as a LOGON TASK (disabled — enabling it is his word; what runs: node scripts/services.mjs status)"
 `;
 }
 
@@ -654,7 +657,7 @@ export function emit({ write = true } = {}) {
 // terminates the enclosing PowerShell string early. Measured, not theorised: both
 // generated logon tasks failed to parse with
 //   line 41 col 88: Unexpected token ')' … The string is missing the terminator: "
-// on a `Write-Host "… (disabled — S12 enables it …)"` line. He was one command away
+// on a `Write-Host "… (disabled — …)"` line. He was one command away
 // from running these elevated, and they would have died at PARSE time.
 // The repo already knew this — setup/INSTALL_TASKS.ps1 carries a BOM. Matching it.
 const BOM = "﻿";
@@ -691,7 +694,9 @@ function installerPs1() {
 # not a courtesy.
 #
 # ⛔ NOTHING IS STARTED. Every service is installed with start=demand and every
-# task is registered disabled. S12 turns things on, stage by stage, on his word.
+# task is registered disabled. Starting a unit is his word, never this script's (his
+# 20 Aug 2026 switch-off, lifted by his 30 Aug 2026 word: grep -n "nothing burns tokens\\|ORGANISM IS BACK ON"
+# docs/archive/ORGANISM_AUDIT__2026-08-19.md). What runs now: node scripts/services.mjs status.
 # ============================================================================
 $ErrorActionPreference = "Stop"
 $repo = "${REPO}"
@@ -771,7 +776,7 @@ function Test-SameAccount([string]$a, [string]$b) {
 # <allowservicelogonright> only applies when WinSW sets the account, which it does not
 # here (the credential goes through sc.exe so it never touches a file). Without the
 # right, every service installs cleanly and then fails to START - and it would surface
-# at S12 as a confusing "logon failure", far from its cause. Granted here, where the
+# at the first start as a confusing "logon failure", far from its cause. Granted here, where the
 # script is already elevated, and REPORTED either way.
 function Grant-ServiceLogonRight([string]$account) {
   try {
@@ -823,13 +828,13 @@ if (-not $svc) {
   # <password> element, and a password persisted in a repo file is the one thing
   # this generator refuses to do.
   sc.exe config $id obj= $cred.UserName password= $plainPw | Out-Null
-  sc.exe config $id start= demand | Out-Null   # S12 flips these to auto, on his word
+  sc.exe config $id start= demand | Out-Null   # auto is his word, never this script's
   $acct = (Get-CimInstance Win32_Service -Filter "Name='$id'").StartName
   if (Test-SameAccount $acct $cred.UserName) {
     Write-Host "  ~ $id installed, runs as $acct, start=demand, NOT running"
   } else {
     Write-Host "  ! $id installed but its logon account reads '$acct', not '$($cred.UserName)'"
-    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start at S12"
+    Write-Host "      fix once in services.msc -> $id -> Log On tab, or it will fail to start"
     $failed += "$id (account)"
   }
 }`).join("\n\n")}
@@ -847,7 +852,7 @@ if ($failed.Count -gt 0) {
   exit 1
 }
 Write-Host "  DONE - and NOTHING IS RUNNING. Verify:  node scripts/services.mjs status"
-Write-Host "  S12 is what turns the organism back on, stage by stage, on your word."
+Write-Host "  This script starts nothing: starting a unit is your word (your 20 Aug 2026 switch-off was lifted by your 30 Aug 2026 word)."
 `;
 }
 
@@ -858,7 +863,7 @@ Write-Host "  S12 is what turns the organism back on, stage by stage, on your wo
 // password again and re-installing five services that are already correct — friction
 // for a thing that needs neither a credential nor a service. This asks for NOTHING,
 // changes exactly one setting, and is safe to run repeatedly.
-// It is also what S12's pre-flight should call before it turns anything on.
+// It is also what a pre-flight should call before any unit is started.
 function grantRightPs1() {
   return `# ============================================================================
 # grant-logon-right.ps1 — GENERATED by scripts/services.mjs (S9 · OWNERSHIP)
@@ -987,7 +992,7 @@ if ($after -contains "SeServiceLogonRight") {
 }
 Write-Host "  RESULT  : FAILED — the grant returned $rc and the right is still absent."
 Write-Host "            (secpol.msc does NOT exist on Windows Home, so that is not the fallback.)"
-Write-Host "            Report the whole block above; S12 must not turn anything on until this reads GRANTED."
+Write-Host "            Report the whole block above; no service should be started until this reads GRANTED."
 exit 1
 `;
 }
@@ -1007,7 +1012,7 @@ node scripts/services.mjs emit
 The watchdog used to be the only thing that restarted a dead daemon, and it was
 \`LogonType=Interactive\` — so **no logged-in session meant no supervisor at all**.
 It also relaunched purely off "port closed", which on 28 Aug 2026 meant an
-orientation \`--help\` woke four daemons inside a switched-off organism.
+orientation \`--help\` woke four daemons inside an organism his 20 Aug 2026 order then held off.
 
 Ownership now belongs to the OS. The watchdog reports; it does not launch.
 
@@ -1025,7 +1030,9 @@ It asks for your Windows password once, for the services. **It goes to Windows, 
 to a file** — no credential is ever written here, and no session sees it.
 
 **Nothing starts.** Services install \`start=demand\`, tasks register disabled.
-S12 turns the organism back on, stage by stage, on your word.
+Starting a unit is your word, never this installer's: your 20 Aug 2026 switch-off was lifted
+by your 30 Aug 2026 word (\`grep -n "nothing burns tokens\\|ORGANISM IS BACK ON" docs/archive/ORGANISM_AUDIT__2026-08-19.md\`).
+What runs now: \`node scripts/services.mjs status\`.
 `;
 }
 
@@ -1228,9 +1235,10 @@ async function selftest() {
     && /^\$plainPw = \$cred\.GetNetworkCredential\(\)\.Password$/m.test(instCode)
     && !/(--password|password=) \$cred\.GetNetworkCredential/.test(instCode));
 
-  // ⛔ THE SWITCH-OFF. A rung that leaves something running has broken it, and the
-  // generated files are where that would happen silently.
-  assert("THE SWITCH-OFF HOLDS — every service installs start=demand, every logon task registers DISABLED, and the installer starts nothing",
+  // ⛔ THE INSTALLER STARTS NOTHING. Starting a unit is HIS word, never a generated file's
+  // (his 20 Aug 2026 switch-off, lifted by his 30 Aug 2026 word: grep -n "nothing burns tokens\|ORGANISM IS BACK ON"
+  // docs/archive/ORGANISM_AUDIT__2026-08-19.md), and the generated files are where a start would happen silently.
+  assert("THE INSTALLER STARTS NOTHING — every service installs start=demand, every logon task registers DISABLED, and no start verb is emitted",
     !!inst && /start= demand/.test(inst.body) && !/sc\.exe start/i.test(inst.body) && !/Start-ScheduledTask/.test(inst.body)
     && emitted.filter((f) => f.path.endsWith(".logon.ps1")).every((f) => /Disable-ScheduledTask/.test(f.body)));
 
@@ -1305,8 +1313,8 @@ async function selftest() {
     calls.length === surfaces().length
     && calls.every((c) => /^sc\.exe query |^schtasks \/Query /.test(c)));
 
-  // The line has to be loud about the one thing that would mean the switch-off broke.
-  assert("THE LINE SHOUTS IF ANYTHING IS RUNNING — a running row is flagged against the switch-off, not reported as health",
+  // The line has to be loud about a running unit: whether it SHOULD run is his word, read by `node scripts/state.mjs`.
+  assert("THE LINE SHOUTS IF ANYTHING IS RUNNING — a running row is flagged ⚠ RUNNING, not reported as health",
     /⚠ RUNNING as an OS unit: brain/.test(statusLine([{ name: "brain", kind: "service", installed: true, running: true }])));
 
   // SHAPE 7 — the quiet line must not overclaim. It measured OS units; a bare node

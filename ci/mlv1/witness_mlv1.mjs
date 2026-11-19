@@ -18,7 +18,22 @@
 //   BOUND        only the named files differ (scripts/ + setup/, by bytes).
 //   LAST         no node process naming this run's temp dir survives.
 // Bounds are MEASURED in this run: SLACK = one node start; BOOT = the first keeper's spawn → its /status answering.
-// Every wait is bounded by BOOT + SLACK (a worker respawn is one node start and an import, inside a keeper start).
+// ~~Every wait is bounded by BOOT + SLACK (a worker respawn is one node start and an import, inside a keeper start).~~
+//   struck by UNIT mrv (forks rows 1135 (1)-(3) / 1139 (1), F-1 A: re-cut in place, BASE kept). Every wait for a WORKER
+//   (a retire, a deferral, a respawn) is bounded by BOOT + SLACK, as before. A keeper START is not a worker and is no longer
+//   waited on one sample: each one is a BOOT, waited as the first is. The changed waits, by name:
+//   (a-1) I2's re-started keeper ~~`waitFor(open, BOUND)`~~ → bootUp(): ends on an EVENT, re-read at SLACK steps: /status
+//         answers (open) · the keeper's own "keeper waiting" line (a named red: the port outlived the kill) · a worker exit
+//         line before it answered · the keeper's exit. Its outer bound is the member's derived `left`.
+//   (a-2) after I2's kill, NEW: portFreed() — the next keeper starts only when a test bind of PORT succeeds, bounded by
+//         BOOT + SLACK; red `:<port> still held …`. It prints ONE machine line (row 1135 (5)):
+//         `PORT_HELD mlv1 · <platform> · node <v> · held <ms> ms after the kill · <k> probe(s) · bound <ms>`.
+//   (I3)  ~~I3 reads the keeper and the sitting I2 left (`portUp()`, "no daemon up")~~ → I3 stands on its own precondition:
+//         no keeper answering → kill, portFreed(), its own keeper, bootUp(); an OPEN sitting answering → POST /close through
+//         the planted keeper's own door (F-3 B: the owner writes its own file), the close bounded by BOOT + SLACK and the
+//         idle answer after it bounded by BOOT + SLACK.
+//   KEPT, neither loosened (row 1135 (2)): I2's DEFERRED wait and its after-close retire wait, BOOT + SLACK each; I1; I3's
+//   DEFERRED and freed waits. The keeper's one-poll sleep on a held port is its designed contract and is NOT changed (F-2 A).
 // LAST LINE: GREEN MLV1 <what> · <n> clause(s) (exit 0) or RED MLV1 · <clauses> (exit 1)
 // ============================================================================
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, appendFileSync, rmSync, readdirSync, cpSync, existsSync, statSync, symlinkSync } from "node:fs";
@@ -75,6 +90,25 @@ const waitFor = async (pred, bound) => { const end = Date.now() + bound; for (;;
 const portUp = async () => { const s = await status(); return s && s.ok ? s : null; };
 const touchClosure = () => appendFileSync(ENTRY, `\n// witness mlv1 write ${Date.now()}\n`);
 const linesSince = (n, re) => out.slice(n).find((l) => re.test(l));
+// UNIT mrv (row 1135) (a-1): a keeper START is a BOOT — it ends on an event, never on one sample's clock
+const bootUp = async (pred) => {
+  const s0 = Date.now();
+  for (;;) {
+    const s = await portUp();
+    if (s && pred(s)) return { s, why: `up in ${Date.now() - s0} ms` };
+    const w = out.find((l) => /keeper waiting/.test(l)), x = out.find((l) => /worker exit/.test(l));
+    if (w || x || keeper.exitCode != null || keeper.signalCode != null) return { s: null, why: w ? `the keeper is WAITING: :${PORT} outlived the kill (${w.slice(0, 120)})` : x ? `its worker exited before it answered (${x.slice(0, 120)})` : `the keeper exited (${keeper.exitCode ?? keeper.signalCode})` };
+    await sleep(SLACK);
+  }
+};
+// UNIT mrv (row 1135) (a-2): after a kill, the port binds before the next keeper starts; the held time is printed (row 1135 (5))
+const freeHere = () => new Promise((res) => { const s = createServer(); s.once("error", () => res(false)); s.listen(PORT, "127.0.0.1", () => s.close(() => res(true))); });
+const portFreed = async () => {
+  const k0 = Date.now(); let probes = 0;
+  const ok = await waitFor(async () => { probes++; return freeHere(); }, BOUND);
+  console.log(`PORT_HELD mlv1 · ${process.platform} · node ${process.version} · held ${Date.now() - k0} ms after the kill · ${probes} probe(s) · bound ${BOUND} ms`);
+  return ok ? { ok: true } : { ok: false, why: `:${PORT} still held ${BOUND} ms after the kill` };
+};
 
 console.log(`witness mlv1 · org ${ORG} · slack ${SLACK} ms (one node start, measured)`);
 
@@ -100,14 +134,16 @@ await clause("I1 IDLE · no sitting open: a closure write retires the worker and
 
 await clause("I2 MID · an open sitting defers the retire, loses 0 items, and the close lets it retire", async () => {
   await killTree(keeper);
+  { const f = await portFreed(); if (!f.ok) return f; }   // UNIT mrv (a-2)
   const id = "s-mlv1-planted";
   writeFileSync(join(SDIR, "sitting.json"), JSON.stringify({ id, captain: "planted", surfaces: ["code"], task: "planted", route: "FORGE", transport: "code", opened_at: new Date().toISOString(), last_turn_at: new Date().toISOString(), closed_at: null, close_reason: null,
     plan: [{ i: 0, kind: "say", text: "u0", est_seconds: 1 }, { i: 1, kind: "say", text: "u1", est_seconds: 1 }, { i: 2, kind: "say", text: "u2", est_seconds: 1 }], plan_source: "planted", plan_map: null, cursor: 2, unit_seq: 2, pending_question: null,
     stats: { turns: 0, by_class: { deliver: 0, respond: 0, compose: 0, judge: 0 }, tokens: { input: 0, output: 0, cache_creation: 0, cache_read: 0 }, latency_ms: { deliver: [], respond: [], compose: [], judge: [] }, units_composed: 2, units_delivered: 0, banked: 0, owner_calls: 0, head_tokens: null } }));
   writeFileSync(join(SDIR, "sitting_out.jsonl"), [0, 1].map((i) => JSON.stringify({ kind: "unit", id: `${id}-u${i}`, sitting_id: id, text: `u${i}`, est_seconds: 1, question: false, class: "deliver" })).join("\n") + "\n");
   keeper = startKeeper();
-  const s1 = await waitFor(async () => { const s = await portUp(); return s && s.open ? s : null; }, BOUND);
-  if (!s1) return { ok: false, why: "the planted open sitting did not resume" };
+  // UNIT mrv (a-1): ~~const s1 = await waitFor(async () => { const s = await portUp(); return s && s.open ? s : null; }, BOUND);~~
+  const b = await bootUp((s) => s.open), s1 = b.s;
+  if (!s1) return { ok: false, why: `the planted open sitting did not resume · ${b.why}` };
   const n = out.length;
   touchClosure();
   const deferred = await waitFor(async () => linesSince(n, /retire DEFERRED/), BOUND);
@@ -131,7 +167,24 @@ await clause("I3 JUDGE · a held judge port defers the retire; freed, the next w
   kids.push(judge);
   const held = await new Promise((res) => { judge.stdout.on("data", (d) => /HELD/.test(String(d)) && res(true)); judge.once("exit", () => res(false)); });
   if (!held) return { ok: false, why: `the judge port :${jport} could not be held` };
-  const s1 = await portUp(); if (!s1) { await killTree(judge); return { ok: false, why: "no daemon up" }; }
+  // UNIT mrv (I3 stands alone): ~~const s1 = await portUp(); if (!s1) { await killTree(judge); return { ok: false, why: "no daemon up" }; }~~
+  let s1 = await portUp(), pre = "inherited an idle keeper";
+  if (!s1) {
+    await killTree(keeper);
+    const f = await portFreed(); if (!f.ok) { await killTree(judge); return f; }
+    keeper = startKeeper();
+    const b = await bootUp(() => true); s1 = b.s; pre = `started its own keeper (${b.why})`;
+    if (!s1) { await killTree(judge); return { ok: false, why: `no daemon up · ${b.why}` }; }
+  }
+  if (s1.open) {
+    const c0 = Date.now();
+    let closed = null;
+    try { closed = await (await fetch(`http://127.0.0.1:${PORT}/close`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ reason: "planted-by-I3" }), signal: AbortSignal.timeout(BOUND) })).json(); } catch (e) { closed = { ok: false, error: String((e && e.name) || e) }; }
+    const idle = closed && closed.ok ? await waitFor(async () => { const s = await portUp(); return s && !s.open ? s : null; }, BOUND) : null;
+    pre += ` · closed the open sitting it found through the door in ${Date.now() - c0} ms (bound ${BOUND} ms each)`;
+    if (!idle) { await killTree(judge); return { ok: false, why: `${pre} · close ${closed && closed.ok} ${closed && closed.error ? closed.error : ""} · no idle keeper after it` }; }
+    s1 = idle;
+  }
   const n = out.length;
   touchClosure();
   const deferred = await waitFor(async () => linesSince(n, /retire DEFERRED.*judge/), BOUND);
@@ -140,7 +193,7 @@ await clause("I3 JUDGE · a held judge port defers the retire; freed, the next w
   touchClosure();
   const s2 = await waitFor(async () => { const s = await portUp(); return s && s.pid !== s1.pid ? s : null; }, BOUND);
   const ok = !!deferred && mid && mid.pid === s1.pid && !!s2;
-  return { ok, why: `${deferred ? "DEFERRED naming the judge" : "no DEFERRED line"} · held pid ${s1.pid} → ${mid && mid.pid} · freed → ${s2 ? s2.pid : "no retire"}` };
+  return { ok, why: `${pre} · ${deferred ? "DEFERRED naming the judge" : "no DEFERRED line"} · held pid ${s1.pid} → ${mid && mid.pid} · freed → ${s2 ? s2.pid : "no retire"}` };
 });
 
 await killTree(keeper);
