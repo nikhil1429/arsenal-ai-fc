@@ -26,13 +26,13 @@
 // The hermetic form (--hermetic or ORGANISM_TEST_PROFILE=hermetic) reads no state file: reach and the three live rule
 // sets print LIVE. The witness of this organ is ci/mdone/witness_mdone.mjs.
 // ============================================================================
-import { readFileSync, readdirSync, existsSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 import { build, queries, verbGraph } from "./xray.mjs";
-import { lazySubjects } from "./registry.mjs";   // unit mlaw (forks row 1146 (1) FK1 A): his reading surfaces are a ROW, never a literal
+import { lazySubjects, upsertRow, retireRow } from "./registry.mjs";   // unit mlaw (forks row 1146 (1) FK1 A): his reading surfaces are a ROW, never a literal
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -211,26 +211,29 @@ function reportOf(m) {
   return out;
 }
 
-/** the selftest (unit mlaw, forks row 1146 (1) FK1 A): the his_surfaces row PLANTED both ways, on registry files under
- *  os.tmpdir() only — never the live registry, never a state file */
+/** the selftest (unit mlaw, forks row 1146 (1) FK1 A): the his_surfaces row PLANTED both ways, in registry files under
+ *  os.tmpdir() written by registry.mjs's OWN exported writers (upsertRow / retireRow) — this organ still writes nothing, never
+ *  the live registry, never a state file. The temp dir is left to the OS (removing it would be a write of this organ's own). */
 function selftest() {
   let pass = 0, fail = 0;
   const ok = (name, cond) => { if (cond) pass++; else fail++; console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
   const dir = mkdtempSync(join(tmpdir(), "done-selftest-"));
-  try {
-    const plant = (name, rows) => { const p = join(dir, name); writeFileSync(p, JSON.stringify({ version: 1, tables: { mechanisms: rows } })); return p; };
-    const planted = { subject: SURFACES_ROW, subjects: ["sheet_owner.mjs", "card_owner.mjs"] };
-    const a = surfacesOrRed(lazySubjects(SURFACES_ROW, plant("with.json", [planted])));
-    ok("PLANTED · the his_surfaces row is read through lazySubjects: its subjects ARE the surfaces (a row edit, never a code edit)",
-      "list" in a && JSON.stringify(a.list) === JSON.stringify(planted.subjects));
-    const b = surfacesOrRed(lazySubjects(SURFACES_ROW, plant("without.json", [{ subject: "some_other_row", subjects: ["x.mjs"] }])));
-    ok("PLANTED · a registry with NO his_surfaces row is a NAMED RED (no fallback literal, never an empty list)",
-      "red" in b && b.red.includes(`"${SURFACES_ROW}"`));
-    const c = surfacesOrRed(lazySubjects(SURFACES_ROW, plant("retired.json", [{ ...planted, retired: true }])));
-    ok("PLANTED · a RETIRED his_surfaces row is the same named red", "red" in c && c.red.includes(`"${SURFACES_ROW}"`));
-    const d = surfacesOrRed(lazySubjects(SURFACES_ROW, join(dir, "absent.json")));
-    ok("PLANTED · an absent registry file is the same named red", "red" in d);
-  } finally { try { rmSync(dir, { recursive: true, force: true }); } catch (e) { void e; } }
+  const row = (subject, subjects) => ({ subject, schema_owner: "done.mjs", witness: "node scripts/done.mjs selftest", subjects, why: "done.mjs selftest plant" });
+  const planted = row(SURFACES_ROW, ["sheet_owner.mjs", "card_owner.mjs"]);
+  const withP = join(dir, "with.json"), withoutP = join(dir, "without.json"), retiredP = join(dir, "retired.json");
+  const seeded = [upsertRow("mechanisms", planted, { path: withP }), upsertRow("mechanisms", row("some_other_row", ["x.mjs"]), { path: withoutP }),
+    upsertRow("mechanisms", planted, { path: retiredP })];
+  const retired = retireRow("mechanisms", SURFACES_ROW, "done.mjs selftest: a retired row is no row", { path: retiredP });
+  ok("the plants are written by registry.mjs's own writers, under os.tmpdir()", seeded.every((r) => r && r.ok) && !!retired && !!retired.ok);
+  const a = surfacesOrRed(lazySubjects(SURFACES_ROW, withP));
+  ok("PLANTED · the his_surfaces row is read through lazySubjects: its subjects ARE the surfaces (a row edit, never a code edit)",
+    "list" in a && JSON.stringify(a.list) === JSON.stringify(planted.subjects));
+  const b = surfacesOrRed(lazySubjects(SURFACES_ROW, withoutP));
+  ok("PLANTED · a registry with NO his_surfaces row is a NAMED RED (no fallback literal, never an empty list)", "red" in b && b.red.includes(`"${SURFACES_ROW}"`));
+  const c = surfacesOrRed(lazySubjects(SURFACES_ROW, retiredP));
+  ok("PLANTED · a RETIRED his_surfaces row is the same named red", "red" in c && c.red.includes(`"${SURFACES_ROW}"`));
+  const d = surfacesOrRed(lazySubjects(SURFACES_ROW, join(dir, "absent.json")));
+  ok("PLANTED · an absent registry file is the same named red", "red" in d);
   console.log(`\ndone selftest: ${pass} passed, ${fail} failed`);
   console.log(fail ? "SELFTEST FAILED" : "ALL CHECKS PASSED");
   return fail ? 1 : 0;
