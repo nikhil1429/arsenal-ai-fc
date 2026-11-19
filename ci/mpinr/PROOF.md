@@ -65,8 +65,7 @@ run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN
   derived from its MUTANTS list. The witness is unchanged.
 
 ## EACH TOUCHED SELFTEST, BEFORE AND AFTER (its headline line)
-- own_source: before, absent at fb42118 (no `scripts/own_source.mjs`). After: `own_source selftest: 30 passed, 0 failed`
-  (19 Nov 2026).
+- own_source (19 Nov 2026): before, absent at fb42118 (no `scripts/own_source.mjs`). After: `own_source selftest: 30 passed, 0 failed`.
 - No other organ's selftest is touched.
 
 ## THE MEMBER LINE OF EVERY MEMBER TOUCHED, BEFORE AND AFTER
@@ -74,8 +73,8 @@ Command: `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`.
 
 | Run | Headline (19 Nov 2026) | Member line |
 |---|---|---|
-| base | `organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` | none |
-| build | `organism_test: 158 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` | `ok   SUITE MEMBER · own_source selftest exits 0` |
+| base (19 Nov 2026) | `organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` | none |
+| build (19 Nov 2026) | `organism_test: 158 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)` | `ok   SUITE MEMBER · own_source selftest exits 0` |
 
 - **The three reds are the same on both runs:** the selftest-coverage law (orphaned deck_lint, home_pin, probe, study_scope), the
   sandbox member, and the hermetic roll-up (it names sandbox only).
