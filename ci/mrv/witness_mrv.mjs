@@ -44,7 +44,8 @@ const NAMED = (f) => /^ci\/(mlv1|mlv2|mlv3|mrv)\//.test(f) || f === "scripts/org
 const TMP = mkdtempSync(join(tmpdir(), "mrv-witness-"));
 const results = [];
 const clause = async (id, fn) => {
-  if (ONLY && id !== ONLY && id !== "LAST") return;
+  const short = id.split(" · ")[0];
+  if (ONLY && short !== ONLY && short !== "LAST") return;
   let ok = false, why = "";
   try { const r = await fn(); ok = r === true || (r && r.ok === true); why = (r && r.why) || ""; } catch (e) { why = `threw: ${String((e && e.message) || e).split(/\r?\n/)[0].slice(0, 200)}`; }
   results.push({ id, ok });
