@@ -119,9 +119,17 @@ the build.** The neutral machine is the judge (§9).
 | `eeba921` | `44439699547` | `135277172195` cancelled (superseded) | `135277172390` cancelled |
 | `540c258` | `44439946203` | `135278092615` cancelled (superseded) | `135278092950` cancelled |
 | `fd22645` | `44440072357` | `135278501806` cancelled (superseded) | `135278502243` cancelled |
-| `4f1dfdc` | `44440316635` | `135279316985` superseded by the next push | `135279317546` |
+| `4f1dfdc` | `44440316635` | `135279316985` cancelled (superseded) | `135279317546` cancelled |
+| `0fff2e2` | `44440928472` | `135281362544` **failure** | `135281362856` **failure** |
+| BASE `52b51c1` (for comparison) | `44429565409` | `135243231510` failure | `135243231639` failure |
 
-The verdict of the last push (this §9 fill) is named in the seat's final message.
+Read 19 Nov 2026 from the job logs and the check run's annotations. Each leg of `0fff2e2` reports `B1_VERDICT … RED — 4 member(s) red that
+are not red at the merge base · base 95b07a6`. The four are ‹mf2› ‹mfac› ‹mjd3› ‹mtail›, none of them this unit's. **‹mjud› ok and ‹mrj›
+ok**, on both legs. On BASE `52b51c1` the same verdict named 6 new red: ‹mf2› ‹mfac› ‹mjd3› **‹mjud›** ‹mlv1› ‹mtail›. The build
+removes ‹mjud› from the red set and adds no member. ‹mlv1› passing on the build run is not this unit's (it changes no mlv1 file).
+The headline went from `ruled 4 · UNRULED 3` on BASE to `ruled 2 · UNRULED 3` on the build: mjud's ruled entry left, and one of
+‹mf2›/‹mjd3›/‹mtail› read a detail its entry does not name (the ms1 proof §5.3 already names mtail's node-22 `T2 F-C` flicker). The
+workflow prints no detail, so which one it was is **NAMED, not reached** (Q3).
 
 ## 10. FORKS
 
