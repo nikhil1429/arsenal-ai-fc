@@ -205,7 +205,7 @@ function selftest() {
   const ids = idsOf(T, t2.rules);
   assert("ids — register order is base-by-first-appearance then merges; the same token is the same number everywhere", ids.register.join("|") === ["E", "c", "o", SPACE, "Ec", "Eco"].join("|") && ids.ids.join(",") === "5,3,5,3,5");
   const dl = dial(T, [0, 2]);
-  assert("dial — 0 merges = 11 tokens (3+4+4), 2 merges = 5 tokens; chars-per-token RISES with the dial", dl[0].tokens === 12 && dl[1].tokens === 5 && dl[1].chars_per_token > dl[0].chars_per_token);
+  assert("dial — 0 merges = 11 tokens (3+4+4), 2 merges = 5 tokens; chars-per-token RISES with the dial", dl[0].tokens === 11 && dl[1].tokens === 5 && dl[1].chars_per_token > dl[0].chars_per_token);
   assert("determinism — the same text trains to the same rulebook twice (frozen rulebook law)", JSON.stringify(train(T, 3).rules) === JSON.stringify(train(T, 3).rules));
   assert("order matters — Ec+o BEFORE E+c never fires (Ec does not exist yet), so the tokens stay unmerged", flat(applyRules(toBase(T), [["Ec", "o"], ["E", "c"]])).length === 8);
   assert("parseRules — 'E+c,Ec+o' and a boundary rule parse; a rule without + is refused", JSON.stringify(parseRules("E+c, Ec+o")) === JSON.stringify([["E", "c"], ["Ec", "o"]]) && parseRules(`${SPACE}+E`)[0][0] === SPACE && (() => { try { parseRules("Eco"); return false; } catch { return true; } })());
