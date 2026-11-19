@@ -21,25 +21,34 @@ node 22, LF trees under `os.tmpdir()`, state PLANTED by node scripts). Its comma
   `captains_call.json`, and the grade queue is READ ONLY there (`:1633`, gaffer_brain.mjs its sole writer). No edit writes a state file.
 
 ## 2. THE WITNESS, BOTH WAYS — `node ci/mgat/witness_mgat.mjs --org <build> --base-org <base worktree at 4b00cf5>`
-On build tip `1458be5` (19 Nov 2026), each clause ran RED on the base copy and GREEN on the build copy:
+On build tip `1458be5`, and re-run on `a431182` after W4 was sharpened (19 Nov 2026), each clause ran RED on the base copy and GREEN on the build copy:
 - W1 base `gates report exit 1 · no-empty 268 · frozen 262` → org `exit 1 · no-empty 262 · frozen 262`. The frozen value is read from `scripts/gates.mjs`.
 - W2 base `groundsman.mjs 2 (≤ 1) · cortex.mjs 10 (≤ 8) · captains_call.mjs 5 (≤ 2)` → org `1 · 8 · 2`.
 - W3 base `LIVE MODE gates — not run` → org `LIVE gates schema half … | FAIL GATES —`. The mode is entered, and no no-empty red is in it (§5 FK1).
-- W4 base `Z {"pass":4,"fail":0,"live":["MODE gates"]}` → org `Z {"pass":4,"fail":1,"live":["gates schema half"]} · X the same`.
+- W4 base `Z {"pass":4,"fail":0,"live":["MODE gates"]} · gate reds 1` → org `Z {"pass":4,"fail":1,"live":["gates schema half"]} · gate reds 6 · X the same` (the gate's own RED lines are compared too, §5.1).
 - W5 base `hermetic LIVE ["MODE gates"]` → org `full on X: fail 1 · SCHEMA red on the planted registry.json yes · hermetic LIVE ["gates schema half"]`.
 - W6 base `releaseLock() calls 0 · retire line bare catches 2` → org `calls 2 · bare catches 0`.
 - W7 base `LIVE MODE gates — not run` → org `FAIL GATES — … · LINT ROSE — no-empty 263, baseline 262`.
-- BOUND `differing tracked files 24 · outside the named files 0` · LAST `node processes naming <run dir>: 0`.
+- BOUND `differing tracked files 25 · outside the named files 0` (on `a431182`) · LAST `node processes naming <run dir>: 0`.
 - **LAST LINE (build): `GREEN MGAT gates hermetic half + six site fates · 7 clause(s) · RED on base, GREEN on org · BOUND · LAST` (exit 0).**
-- **LAST LINE (base as org), 19 Nov 2026:** see §2.1.
 
 ### 2.1 Base judged as org (the other way)
-MUTANTS_AND_BASE_PLACEHOLDER
+`node ci/mgat/witness_mgat.mjs --org <base> --base-org <base>`, 19 Nov 2026: every clause RED on org (W1 `no-empty 268 ·
+frozen 262` … W7 `LIVE MODE gates — not run`), BOUND `differing tracked files 0`, LAST `0`.
+**LAST LINE: `RED MGAT · W1 (RED on org) · W2 (RED on org) · W3 (RED on org) · W4 (RED on org) · W5 (RED on org) · W6 (RED on org) · W7 (RED on org)` (exit 1).**
 
 ## 3. MUTANTS — `node ci/mgat/run_mutants_mgat.mjs --org <build> --base-org <base>`
 Each mutant tree is a `git clone -c core.autocrlf=false` of the base with `applyBuild(tree, Mk)`. CONTROL is `applyBuild(tree)`:
 its four files must equal the branch's bytes, and every clause must read GREEN on it.
-MUTANTS_PLACEHOLDER
+On `a431182`, 19 Nov 2026:
+- `CONTROL · named files equal to --org 4 of 4 · witness org side 7 of 7 GREEN`
+- M1 → `W1 org RED … no-empty 263 · frozen 262` · M2 → `W2 org RED … captains_call.mjs 3 (≤ 2 at 8c729c8)` · M3 → `W3 org RED … LIVE MODE gates`
+  · M4 → `W4 org RED … Z gate reds 6 · X gateReds 8` · M5 → `W5 org RED … hermetic LIVE []` · M6 → `W6 org RED releaseLock() calls 1 · retire line bare catches 2`
+  · M7 → `W7 org RED`. LAST `node processes naming <run dir>: 0`.
+- **LAST LINE: `run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN` (exit 0).**
+- History, named: the first run (on `1458be5`) read `run_mutants: 6 of 7 … · control GREEN`. M4 survived because, at this cut, main drift
+  (FK1) already makes the hermetic gate red on Z and X alike, so the bare verdicts compared equal. W4 now compares the gate's own RED
+  lines as well, and M4 reads RED.
 
 ## 4. MEASUREMENTS, BASE vs BUILD — `node ci/mgat/tools/measure.mjs <sha>` (E plant for gates/lawpack/member, T plant for selftests, 19 Nov 2026)
 
@@ -94,7 +103,18 @@ MUTANTS_PLACEHOLDER
   (state folder empty) or real drift. Measured by: `node scripts/lawpack.mjs gate` on his laptop.
 
 ## 6. THE NEUTRAL MACHINE (check runs through the public API, no token)
-NEUTRAL_PLACEHOLDER
+`curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs` (and `/check-runs/<id>/annotations`), 19 Nov 2026:
+
+| Push | node 22 | node 24 |
+|---|---|---|
+| `b6595d1` (step 2), `c17ad3f`, `1458be5`, `6205245`, `9ecfbd6` (`12a2aad` and `f749e2f`: not read) | cancelled (each superseded by the next push) | cancelled |
+| `a431182` (W4) | `135479646260` completed **failure** (run `44500742874`) | `135479645998` completed **failure** (run `44500742874`) |
+
+`a431182`'s B1 verdict on both nodes is `RED · 1 member(s) red that are not red at the merge base`. Its `new` field names exactly ONE red:
+`GATES — undefined-symbol families 0 on both sides, every schema-d state file matches, and no frozen count rose`. Its base red is
+the one coverage law (`_selftest_coverage_law`), and pass/fail are 149/2 (19 Nov 2026). **This is FK1, read by the neutral machine (windows, CRLF):** the new member is
+entered and red for the rung_receipt.mjs counts. No other member changed. The runs of the final push are named in the FINAL message,
+because a file cannot carry its own sha's verdict.
 
 ## 7. FILES ON THIS BRANCH vs `4b00cf5`
 `scripts/groundsman.mjs`, `scripts/cortex.mjs`, `scripts/captains_call.mjs`, `scripts/organism_test.mjs`, and `ci/mgat/**`.
