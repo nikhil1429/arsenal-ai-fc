@@ -318,11 +318,13 @@ function survivors(rootMark) {
 async function whole() {
   const ORG = opt("--org") ? resolve(opt("--org")) : null, BASE_ORG = opt("--base-org") ? resolve(opt("--base-org")) : null;
   const ONLY = opt("--only") ? opt("--only").split(",") : null;
-  if (!ORG || !existsSync(join(ORG, ...SELF_REL.split("/")))) { console.log(`RED ${UNIT} · USAGE (--org <dir> carrying ${SELF_REL})`); return 1; }
+  if (!ORG || !existsSync(ORG)) { console.log(`RED ${UNIT} · USAGE (--org <dir>)`); return 1; }
+  const orgHas = existsSync(join(ORG, ...SELF_REL.split("/")));
   const results = [];
   const clause = (id, ok, why) => { results.push({ id, ok: !!ok }); console.log(`  ${ok ? "GREEN" : "RED  "} ${id} · ${why}`); };
   const mark = `mhands-plant-`;
   for (const c of CLAUSES.filter((c) => !ONLY || ONLY.includes(c))) {
+    if (!orgHas) { clause(c, false, `the --org tree carries no ${SELF_REL}: the clause command cannot run`); continue; }
     const [b] = plantsOf(ORG, [c]);
     let baseWhy, baseRed;
     if (!BASE_ORG) { baseRed = false; baseWhy = "no --base-org given"; }
