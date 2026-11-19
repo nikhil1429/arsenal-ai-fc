@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ============================================================================
-// ci/mrung/run_mutants_mrung.mjs — UNIT mrung · one mutant per witness clause (spec ci/mrung/MRUNG_SPEC.md §7, + M13 for W13)
+// ci/mrung/run_mutants_mrung.mjs — UNIT mrung · one mutant per witness clause (spec ci/mrung/MRUNG_SPEC.md §7, + M13 for W13, + M14 for G3 — ruling forks row 1130 (1))
 // ----------------------------------------------------------------------------
 // USAGE: node ci/mrung/run_mutants_mrung.mjs --org <build dir> --base-org <base dir>
 // CONTRACT — each mutant is a COPY of --org under os.tmpdir() (its tracked and untracked-not-ignored files; never .git, never
@@ -36,6 +36,7 @@ const MUTANTS = [
   { id: "M10", clause: "W10", file: "scripts/rung_receipt.mjs", from: "if (head === red.head_sha) return", to: "if (false) return" },
   { id: "M11", clause: "W11", file: "scripts/done.mjs", from: "const read = receiptsText !== undefined;", to: "const read = receiptsText !== undefined && !HERMETIC;" },
   { id: "M12", clause: "W12", file: "scripts/done.mjs", from: "import { readFileSync, readdirSync, existsSync } from \"node:fs\";", to: "import { readFileSync, readdirSync, existsSync, appendFileSync } from \"node:fs\";\nexport const touchReceipts = () => appendFileSync(RECEIPTS, \"\");" },
+  { id: "M14", clause: "G3", file: "scripts/rung_receipt.mjs", from: "const LOOP_ROLES = Object.keys(LOOP_FLAGS);", to: "const LOOP_ROLES = [\"sheet\", \"page\", \"acts\", \"ladder\"];" },
   { id: "M13", clause: "W13", file: "scripts/rung_receipt.mjs", from: "head_sha: head, exit: r.exit, out_sha256: r.out_sha256 });", to: "head_sha: head, exit: r.exit, out_sha256: r.out_sha256, last_line: r.last });" },
 ];
 
