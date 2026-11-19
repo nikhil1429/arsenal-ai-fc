@@ -1,2 +1,3 @@
 {"ts":"2026-11-19T13:05:00Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mfactory-build FETCH_HEAD","last_line":"fb42118 unit mxh (forks row 1150 / adoption at ac14bad): land branch stacked on land/mcon 980e953 … Not a landing."}
 {"ts":"2026-11-19T13:06:00Z","act":"read-spec","cmd":"git fetch origin claude/mwit-spec && git show 88bf69d:ci/mwit/MWIT_SPEC.md","last_line":"## CI of this push … The commit that carries this section is judged by its own push"}
+{"ts":"2026-11-19T12:37Z","act":"checkpoint","cmd":"STOP message (his word 269)","last_line":"CHECKPOINT · STOPPED at 2026-11-19T12:37Z · resume from BOUND fix, then mutants"}
