@@ -334,7 +334,7 @@ try {
     const diff = [...new Set([...a.keys(), ...bb.keys()])].filter((k) => a.get(k) !== bb.get(k)).filter((k) => !k.startsWith("ci/mlaw/") && k !== ".claude/settings.json").sort();
     const mainBytes = diff.filter((k) => !NAMED.includes(k) && MERGED && MERGED.files && MERGED.files[k] && MERGED.files[k] === (a.get(k) || "(deleted)"));
     const outside = diff.filter((k) => !NAMED.includes(k) && !mainBytes.includes(k));
-    clause("BOUND", outside.length === 0, `differs from BASE in ${diff.length} file(s): named ${diff.filter((k) => NAMED.includes(k)).join(", ") || "none"} · main's own bytes (MERGED.json ${MERGED ? String(MERGED.main).slice(0, 7) : "ABSENT"}) ${mainBytes.length}${outside.length ? ` · OUTSIDE THE NAMED: ${outside.slice(0, 12).join(", ")}${outside.length > 12 ? ` … (+${outside.length - 12})` : ""}` : ""}`);
+    clause("BOUND", outside.length === 0, `differs from BASE in ${diff.length} file(s): named ${diff.filter((k) => NAMED.includes(k)).join(", ") || "none"} · the merged-in bytes (MERGED.json ${MERGED ? String(MERGED.assembled || MERGED.main).slice(0, 7) : "ABSENT"}) ${mainBytes.length}${outside.length ? ` · OUTSIDE THE NAMED: ${outside.slice(0, 12).join(", ")}${outside.length > 12 ? ` … (+${outside.length - 12})` : ""}` : ""}`);
   }
 } catch (e) {
   clause("WITNESS", false, `threw: ${String((e && e.stack) || e).split("\n").slice(0, 3).join(" | ")}`);
