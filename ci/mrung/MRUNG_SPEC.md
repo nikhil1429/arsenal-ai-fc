@@ -280,4 +280,12 @@ CARRIED GUARDS, which must read GREEN on both (a regression net, named as such, 
 
 ## 11 · CHECK RUNS (the neutral machine)
 
-Filled after the push — see §11 rows appended below by the next commit.
+Read signed-out through the public API (`curl https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`), 19 Nov 2026:
+
+| sha | workflow run | check run | conclusion | B1 verdict (annotation) |
+|---|---|---|---|---|
+| `fa71a3fd233595223d9f3eefe4d704e390797698` (this spec's first push) | `44427768810` suite | `135236943802` npm test · node 22 | success | `GREEN` — head fa71a3f vs base a18c167, "no member red that is not red at the merge base" |
+| same | same | `135236944439` npm test · node 24 | success | — |
+
+The push that carries this table is judged by the same workflow; its run is named in the seat's final message, not here
+(a file cannot carry the verdict of the commit that writes it).

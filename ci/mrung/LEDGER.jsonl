@@ -4,3 +4,5 @@
 {"ts":"2026-11-19T00:10:00Z","act":"probe","cmd":"node <scratchpad>/probe_done.mjs <repo> (hermetic copy under os.tmpdir)","last_line":"typed_strings_count_green: DONE rungs 1/1 clauses GREEN · 0/0 loops · old day: 2026-11-13 still RED"}
 {"ts":"2026-11-19T00:12:00Z","act":"probe","cmd":"node -e <empty rungs dir + clauses []> on the hermetic copy","last_line":"camp-e3 DONE rungs 0/0 clauses GREEN · 0/0 loops · old day: the meter is unreadable"}
 {"ts":"2026-11-19T00:20:00Z","act":"canon-check","cmd":"node -e <LOAD ZERO BLOCK 7 regex from scripts/organism_test.mjs:1890-1916> ci/mrung/MRUNG_SPEC.md","last_line":"undeclared []"}
+{"ts":"2026-11-19T00:21:00Z","act":"push","cmd":"git push -u origin claude/mrung-spec","last_line":"fa71a3fd233595223d9f3eefe4d704e390797698"}
+{"ts":"2026-11-19T00:23:00Z","act":"ci-read","cmd":"curl api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/fa71a3f/check-runs","last_line":"135236943802 node 22 success · 135236944439 node 24 success · run 44427768810 · B1_VERDICT GREEN"}
