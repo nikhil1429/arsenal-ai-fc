@@ -15,8 +15,12 @@
 //                   and never judges it as a hermetic member.
 //   C4 VERB       · `node scripts/study_scope.mjs selftest` exits 0 and its last line is
 //                   `study_scope selftest: <n> passed, 0 failed` with n > 0 (its own cases, not the usage line).
+//   C5 ONE RECORD · (forks row 1143 (1)) each of the four is named by EXACTLY ONE package.json suite string, and the suite
+//                   file (scripts/organism_test.mjs) lists no member names: no array literal in it (parsed with acorn)
+//                   holds two or more string elements that are, exactly, names of package.json suite members. A spawn
+//                   argv naming one organ is not a list; a second list of member names beside the one record is.
 // BOUND (not a both-ways clause): every path whose index blob differs between the two orgs is a named file —
-//   scripts/organism_test.mjs, scripts/study_scope.mjs, the four organs' files, or a path under ci/mcov/.
+//   package.json, scripts/organism_test.mjs, the four organs' files, or a path under ci/mcov/.
 // LAST: no process whose command line names the witness's temp root survives (read from /proc on Linux, from
 //   Get-CimInstance on Windows, from ps elsewhere — never through a shell); the temp root is then removed.
 // PORT CLASS (row 1053): the witness binds no port, names no live service, POSTs nothing and restarts nothing; the
@@ -30,10 +34,14 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
+import { parse } from "acorn";
+import { simple } from "acorn-walk";
 
-export const CLAUSES = ["C1 COVERAGE", "C2 HERMETIC", "C3 LIVE-NAMED", "C4 VERB"];
+export const CLAUSES = ["C1 COVERAGE", "C2 HERMETIC", "C3 LIVE-NAMED", "C4 VERB", "C5 ONE RECORD"];
+const SUITE_NAMES = ["organism:selftest", "squad:selftest", "audit:selftest"];
+const FOUR = ["deck_lint", "home_pin", "probe", "study_scope"];
 const HERMETIC_FOUR = ["deck_lint", "probe", "study_scope"];
-const NAMED = [/^scripts\/organism_test\.mjs$/, /^scripts\/(deck_lint|home_pin|probe|study_scope)\.mjs$/, /^ci\/mcov\//];
+const NAMED = [/^package\.json$/, /^scripts\/organism_test\.mjs$/, /^scripts\/(deck_lint|home_pin|probe|study_scope)\.mjs$/, /^ci\/mcov\//];
 const NL = /\r?\n/;
 const git = (cwd, args) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 const childEnv = () => { const e = { ...process.env, ORGANISM_TEST_PROFILE: "hermetic" }; delete e.NODE_OPTIONS; return e; };
@@ -64,8 +72,28 @@ export function judge(dir) {
   const ss = node(dir, [join("scripts", "study_scope.mjs"), "selftest"]);
   const last = ss.out.split(NL).filter(Boolean).pop() || "";
   const m = /^study_scope selftest: (\d+) passed, 0 failed$/.exec(last);
+  v["C5 ONE RECORD"] = oneRecord(dir);
   v["C4 VERB"] = { green: ss.code === 0 && !!m && Number(m[1]) > 0, why: `exit ${ss.code} · last line: ${last.slice(0, 140)}` };
   return v;
+}
+
+/** C5 — the four in exactly one package.json suite string, and no member list in the suite file */
+function oneRecord(dir) {
+  const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+  const members = new Set(), times = new Map(FOUR.map((f) => [f, 0]));
+  for (const n of SUITE_NAMES) {
+    const named = new Set([...String(pkg.scripts?.[n] || "").matchAll(/scripts\/([A-Za-z0-9_\-]+)\.mjs/g)].map((m) => m[1]));
+    for (const m of named) { members.add(m); if (times.has(m)) times.set(m, times.get(m) + 1); }
+  }
+  const notOnce = FOUR.filter((f) => times.get(f) !== 1).map((f) => `${f} in ${times.get(f)} suite string(s)`);
+  const lists = [];
+  const ast = parse(readFileSync(join(dir, "scripts", "organism_test.mjs"), "utf8"), { ecmaVersion: "latest", sourceType: "module", locations: true });
+  simple(ast, { ArrayExpression(n) {
+    const names = n.elements.filter((e) => e && e.type === "Literal" && typeof e.value === "string" && members.has(e.value)).map((e) => e.value);
+    if (names.length >= 2) lists.push(`organism_test.mjs:${n.loc.start.line} [${names.join(", ")}]`);
+  } });
+  const why = [...notOnce, ...lists.map((l) => `member list ${l}`)];
+  return { green: why.length === 0, why: why.length ? why.join(" · ") : "one record: package.json only, no member list in the suite file" };
 }
 
 /** every live process whose command line names `root` (never through a shell) @returns {string[]} */
@@ -124,7 +152,7 @@ function main() {
     try { rmSync(root, { recursive: true, force: true }); } catch { /* a locked temp file on Windows is litter, not a verdict */ }
   }
   if (reds.length) { console.log(`RED MCOV · ${reds.join(", ")}`); process.exit(1); }
-  console.log(`GREEN MCOV the four coverage orphans wired, each in its profile · ${CLAUSES.length} clause(s)`);
+  console.log(`GREEN MCOV the four coverage orphans wired in package.json, each in its profile · ${CLAUSES.length} clause(s)`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main();

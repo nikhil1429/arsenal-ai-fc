@@ -13,15 +13,18 @@ import { tmpdir } from "node:os";
 import { plantClone, judge, CLAUSES, survivors } from "./witness_mcov.mjs";
 
 const MUTANTS = [
-  { clause: "C1 COVERAGE", file: "scripts/organism_test.mjs", why: "deck_lint dropped from the roster",
-    from: 'SUITE_ROSTER = Object.freeze(["deck_lint", "home_pin"', to: 'SUITE_ROSTER = Object.freeze(["home_pin"' },
-  { clause: "C2 HERMETIC", file: "scripts/organism_test.mjs", why: "suites() skips the roster's hermetic members",
+  { clause: "C1 COVERAGE", file: "package.json", why: "deck_lint dropped from its package.json suite string",
+    from: " && node scripts/deck_lint.mjs selftest", to: "" },
+  { clause: "C2 HERMETIC", file: "scripts/organism_test.mjs", why: "suites() skips the three hermetic members",
     from: "  for (const m of members) {\n    if (liveSelftest(m)) continue;   // B1 (b)",
-    to: "  for (const m of members) {\n    if (SUITE_ROSTER.includes(m) && m !== \"home_pin\") continue;\n    if (liveSelftest(m)) continue;   // B1 (b)" },
+    to: "  for (const m of members) {\n    if (/^(deck_lint|probe|study_scope)$/.test(m)) continue;\n    if (liveSelftest(m)) continue;   // B1 (b)" },
   { clause: "C3 LIVE-NAMED", file: "scripts/organism_test.mjs", why: "home_pin's LIVE entry deleted (it would run hermetic)",
     from: '  "home_pin": "reads state/captain.json · reaches a localhost port it does not listen on",\n', to: "" },
   { clause: "C4 VERB", file: "scripts/study_scope.mjs", why: "the selftest verb no longer answers",
     from: 'if (mode === "selftest") {', to: 'if (mode === "selftest-gone") {' },
+  { clause: "C5 ONE RECORD", file: "scripts/organism_test.mjs", why: "a second member list beside package.json (the removed roster, re-added)",
+    from: 'const SUITE_NAMES = ["organism:selftest", "squad:selftest", "audit:selftest"];\n',
+    to: 'const SUITE_NAMES = ["organism:selftest", "squad:selftest", "audit:selftest"];\nexport const SUITE_ROSTER = Object.freeze(["deck_lint", "home_pin", "probe", "study_scope"]);\n' },
 ];
 
 const argv = process.argv.slice(2);
