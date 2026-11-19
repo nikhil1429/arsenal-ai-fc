@@ -1,0 +1,5 @@
+{"ts":"2026-11-19T00:13:18.693Z","act":"branch","cmd":"git fetch origin main && git checkout -b claude/mrf-spec FETCH_HEAD","last_line":"a18c167 (origin/main at start)"}
+{"ts":"2026-11-19T00:13:18.695Z","act":"fetch-witness","cmd":"git fetch origin claude/ms1-build && git log -1 origin/claude/ms1-build","last_line":"3981f36 (newer than the brief named 3966f61; git diff 3966f61 3981f36 -- ci/mf2 = empty)"}
+{"ts":"2026-11-19T00:13:18.695Z","act":"deps","cmd":"npm ci --no-audit --no-fund (repo node_modules, gitignored; symlinked into each tree as the ms1 member does)","last_line":"exit 0"}
+{"ts":"2026-11-19T00:13:18.695Z","act":"first-parent","cmd":"git log --first-parent --oneline 15edfec..origin/main | wc -l","last_line":"21"}
+{"ts":"2026-11-19T00:13:18.695Z","act":"suite-touch","cmd":"git log --first-parent --format=%h 7fde711..origin/main -- scripts/organism_test.mjs","last_line":"902b6cc d0c8f06"}
