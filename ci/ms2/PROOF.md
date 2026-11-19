@@ -140,11 +140,21 @@ member, §4: `GREEN MLAND landing verb · 19 clause(s)` at L).
 
 ## 9. THE ASSEMBLED TIP (open)
 
-When a message names the assembled `claude/ms1-build` tip: `git merge` it (never rebase, never force), then (1) write
-`ci/<u>/REBASE` RECUT lines for the clauses the five units re-cut, as measured: mr3 → `ci/mjd3/REBASE` J4 (row 1112 (1)),
-mrj → `ci/mjud/REBASE` M3 CENSUS, M5 F3-CLIP, M6 MJD2 (row 1112 (1)), mrt → `ci/mtail/REBASE` T3 AUTH (+ T2 if it is red
-at L) (row 1120 (1)), mrf → `ci/mf2/REBASE` F2, F4 (row 1120), mrv → its clause; (2) re-run the witness and the member;
-(3) name both here.
+When a message names the assembled `claude/ms1-build` tip: `git merge` it (never rebase, never force), re-run the
+witness and the member, and name both here. **The door lines, measured now (19 Nov 2026, Linux)** by the ms2 member over a
+shared clone of this branch whose `ci/` holds only the four re-cut dirs, each taken from its repair branch's tip
+(mr3 `08b4772`, mrj `0fff2e2`, mrt `d45adaa`, mrf `5378193`), LANDED_ON as §2 (`<scratchpad>/recut_measure.sh`):
+
+| re-cut witness | its L-leg (L vs P, BOUND judged) | the line its overtaking unit's landing needs |
+|---|---|---|
+| mjd3 (mr3) | `RED MJD3 · J4` | `ci/mjd3/REBASE`: `RECUT J4 · mr3 · row 1112 · …` |
+| mjud (mrj) | `RED MJUD · M3 CENSUS · M5 F3-CLIP` (M6 GREEN at L) | `ci/mjud/REBASE`: `RECUT M3 CENSUS · mrj · row 1112 · …`, `RECUT M5 F3-CLIP · mrj · row 1112 · …` |
+| mtail (mrt) | `RED MTAIL · T2 F-C` (T3 AUTH GREEN at L) | `ci/mtail/REBASE`: `RECUT T2 F-C · mrt · row 1120 · …` |
+| mf2 (mrf) | `GREEN MF2 … · 6 clause(s)` (the monotone re-cut holds at L) | none |
+| mlv1? (mrv) | no build branch reachable (`claude/mrv-spec` only) | measured when the assembled tip arrives |
+
+Each id is a quoted literal of its re-cut witness only if the re-cut keeps it so; (a) is judged at the merge. The head
+results of that clone are NOT readings of the repairs (their organ changes are absent from it) and are not cited.
 
 ## NAMED, NOT GUESSED
 
