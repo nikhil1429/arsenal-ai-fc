@@ -13,13 +13,15 @@
 // THE METHOD (content, where mcon's census is position): for one pin `/re/.test(S)` / `S.includes(lit)` / `S.match(re)`,
 //   1. the pin's subject expression S and every const it reads (latest binding before the pin, as the census does) are
 //      re-emitted as a tiny program and EVALUATED on the real source text;
-//   2. own   = S contains the pin's own literal SOURCE TEXT, and the pin's matcher matches inside that text
+//   2. own   = S covers the pin's own literal — by POSITION when S is a verbatim slice of the file (the census's definition),
+//              by CONTENT (S contains the literal's source text) only when S is transformed — and the matcher matches inside it
 //              ⇒ the pin reads true whatever the code under test says: SAME SHAPE (own-literal);
 //      R     = the pin run on S; Rlit = the pin run on S with every copy of its own literal text cut out;
 //      Rass  = the pin run on S with the enclosing assert call's whole text cut out;
 //      Rcode = the pin run on S with the whole TOP-LEVEL statement holding the pin (its selftest block) cut out — true ⇒ the
 //              pinned text lives in code outside the test block (codeLine names the first such line): a narrowed subject
 //              keeps an honest reading; false ⇒ only test text satisfies it;
+//      codeFn  = the top-level declaration holding codeLineNC (a narrowing's anchor);
 //      RcodeNC = Rcode with every COMMENT blanked too (codeLineNC): false while Rcode is true ⇒ only PROSE outside the test
 //              block satisfies it, and a narrowing would trade a self-satisfied pin for a prose-satisfied one;
 //   3. CLASS  same-shape     own (the census's shape, measured by content)
@@ -87,13 +89,18 @@ function load(rel) {
 
 const GLOBALS = new Set(["JSON", "Math", "String", "Number", "Array", "Object", "RegExp", "Date", "Boolean", "undefined", "Infinity", "NaN", "Set", "Map", "parseInt", "parseFloat", "Error", "encodeURIComponent", "decodeURIComponent"]);
 function freeIds(node) {
-  const out = new Set();
+  const out = new Set(), local = new Set();
+  // names bound INSIDE the expression (arrow / function params, inner consts) are not free
+  walk.full(node, (x) => {
+    if (/Function/.test(x.type)) for (const p of x.params || []) walk.full(p, (q) => { if (q.type === "Identifier") local.add(q.name); });
+    if (x.type === "VariableDeclarator" && x.id.type === "Identifier") local.add(x.id.name);
+  });
   walk.fullAncestor(node, (x, _s, anc) => {
     if (x.type !== "Identifier") return;
     const p = anc[anc.length - 2];
     if (p && p.type === "MemberExpression" && p.property === x && !p.computed) return;
     if (p && p.type === "Property" && p.key === x && !p.computed && !p.shorthand) return;
-    out.add(x.name);
+    if (!local.has(x.name)) out.add(x.name);
   });
   return out;
 }
@@ -165,11 +172,18 @@ for (const r of rows) {
   const test = matcherOf(pin.lit);
   const Sstr = Array.isArray(S) ? S.join("\n") : String(S);
   const cut = (s, piece) => (piece ? s.split(piece).join("") : s);
-  const own = Sstr.includes(pin.text) && test(pin.text);
+  // POSITION first (the census's own definition): when the subject is a verbatim slice of the file, own ⇔ its range covers
+  // the pin's literal. Only a TRANSFORMED subject (filter / join / replace) falls back to CONTENT (it contains the literal's text).
+  const at0 = Array.isArray(S) ? -1 : f.src.indexOf(Sstr);
+  const method = at0 >= 0 && f.src.indexOf(Sstr, at0 + 1) < 0 ? "position" : "content";
+  const own = (method === "position" ? at0 <= pin.lit.start && pin.lit.end <= at0 + Sstr.length : Sstr.includes(pin.text)) && test(pin.text);
   const R = Array.isArray(S) ? test(S) : test(Sstr);
-  const Rlit = test(cut(Sstr, pin.text));
+  // the cuts are POSITIONAL when the subject is a verbatim slice (only THIS copy of the literal / THIS assert call is removed),
+  // and by content otherwise
+  const blank = (s0, e0) => { const x = Math.max(at0, s0), y = Math.min(at0 + Sstr.length, e0); return y > x ? Sstr.slice(0, x - at0) + Sstr.slice(y - at0) : Sstr; };
   const assertText = pin.assertCall ? f.src.slice(pin.assertCall.start, pin.assertCall.end) : null;
-  const Rass = assertText ? test(cut(Sstr, assertText)) : Rlit;
+  const Rlit = method === "position" ? test(blank(pin.lit.start, pin.lit.end)) : test(cut(Sstr, pin.text));
+  const Rass = !pin.assertCall ? Rlit : method === "position" ? test(blank(pin.assertCall.start, pin.assertCall.end)) : test(cut(Sstr, assertText));
   // Rcode — the pin on its subject with the WHOLE top-level statement that holds the pin cut out (the selftest block):
   // true ⇒ the pinned text lives in code outside the test block, so a NARROWED subject keeps an honest reading; codeLine names it.
   const stmt = f.ast.body.find((b) => b.start <= pin.n.start && pin.n.end <= b.end);
@@ -200,11 +214,21 @@ for (const r of rows) {
     } else Rcode = test(cut(Sstr, f.src.slice(stmt.start, stmt.end)));
   }
   const block = stmt ? `${lineOf(f.src, stmt.start)}-${lineOf(f.src, stmt.end)}` : null;
+  // codeFn — the top-level declaration that holds codeLineNC (what a narrowed subject would be anchored on)
+  let codeFn = null;
+  if (codeLineNC) {
+    const off = f.src.split("\n").slice(0, codeLineNC - 1).join("\n").length + 1;
+    const d = f.ast.body.find((b) => b.start <= off && off < b.end);
+    const decl = d && (d.type === "ExportNamedDeclaration" || d.type === "ExportDefaultDeclaration") && d.declaration ? d.declaration : d;
+    codeFn = !decl ? null : decl.id && decl.id.name ? `${decl.type === "FunctionDeclaration" ? "function " : ""}${decl.id.name}`
+      : decl.type === "VariableDeclaration" ? `const ${decl.declarations.map((x) => x.id && x.id.name).join(",")}`
+      : `${decl.type} @${lineOf(f.src, decl.start)}-${lineOf(f.src, decl.end)}`;
+  }
   const cls = own ? "same-shape" : !R ? "reads-false" : !Rass ? "own-assert" : "honest";
-  out.push({ ...row, cls, subject_chars: Sstr.length, subject_kind: Array.isArray(S) ? "array" : typeof S, own, R, Rlit, Rass, Rcode, codeLine, RcodeNC, codeLineNC, block });
+  out.push({ ...row, cls, method, subject_chars: Sstr.length, subject_kind: Array.isArray(S) ? "array" : typeof S, own, R, Rlit, Rass, Rcode, codeLine, RcodeNC, codeLineNC, codeFn, block });
 }
 
 if (JSON_OUT) for (const o of out) console.log(JSON.stringify(o));
-else for (const o of out) console.log(`  ${o.at}  [census ${o.census}] → ${o.cls}${o.why ? `  (${o.why})` : `  subject ${o.subject_kind} ${o.subject_chars} chars · own ${o.own} · R ${o.R} · Rlit ${o.Rlit} · Rass ${o.Rass} · Rcode ${o.Rcode}${o.codeLine ? ` @${o.codeLine}` : ""} · RcodeNC ${o.RcodeNC}${o.codeLineNC ? ` @${o.codeLineNC}` : ""} · block ${o.block}`}  ${o.pin.slice(0, 70)}`);
+else for (const o of out) console.log(`  ${o.at}  [census ${o.census}] → ${o.cls}${o.why ? `  (${o.why})` : `  subject ${o.subject_kind} ${o.subject_chars} chars by ${o.method} · own ${o.own} · R ${o.R} · Rlit ${o.Rlit} · Rass ${o.Rass} · Rcode ${o.Rcode}${o.codeLine ? ` @${o.codeLine}` : ""} · RcodeNC ${o.RcodeNC}${o.codeLineNC ? ` @${o.codeLineNC} in ${o.codeFn}` : ""} · block ${o.block}`}  ${o.pin.slice(0, 70)}`);
 const c = (k) => out.filter((o) => o.cls === k).length;
 console.log(`CLASSIFY MPIN · ${out.length} site(s) · same-shape ${c("same-shape")} · own-assert ${c("own-assert")} · honest ${c("honest")} · reads-false ${c("reads-false")} · not-evaluable ${c("not-evaluable")}`);
