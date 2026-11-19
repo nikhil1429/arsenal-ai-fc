@@ -103,9 +103,20 @@ export function compareLines(head, base, label, headSha = "", baseSha = "", base
   return { lines, verdict: j.v };
 }
 
-/** THE LEGS THE VERDICT NEEDS (unit mrdr, forks row 1022 (1)): suite.yml's matrix `node: [22, 24]`, one leg per node. The
- *  selftest reads suite.yml's own matrix line and REDS if this list and that line ever disagree, so it is checked, never trusted. */
-export const REQUIRED_LEGS = ["npm test · node 22", "npm test · node 24"];
+/** THE LEGS THE VERDICT NEEDS (unit mrdr, forks row 1022 (1)), DERIVED from their one owner (unit mlaw, forks row 1137 (1) F1 B):
+ *  suite.yml's own job name line (`name: <prefix>${{ matrix.node }}`) and its matrix line (`node: [ … ]`), one leg per node. The
+ *  typed copy this replaces was the law pack's jugad-literal-subject-list finding 91 (ci/mlaw/MLAW_SPEC.md §1.3 on claude/mlaw-spec).
+ *  A suite.yml with no such lines derives NO leg, and the reader then answers NONE — never GREEN by an empty list.
+ *  @param {string} yml @returns {string[]} */
+export function legsOf(yml) {
+  const t = String(yml).replace(/\r\n/g, "\n");
+  const name = /^\s*name:\s*(.*?)\$\{\{\s*matrix\.node\s*\}\}\s*$/m.exec(t);
+  const matrix = /^\s*node:\s*\[([^\]]*)\]/m.exec(t);
+  if (!name || !matrix) return [];
+  return matrix[1].split(",").map((s) => s.trim()).filter(Boolean).map((n) => `${name[1]}${n}`);
+}
+const SUITE_YML = new URL("../.github/workflows/suite.yml", import.meta.url);
+export const REQUIRED_LEGS = Object.freeze(legsOf((() => { try { return readFileSync(SUITE_YML, "utf8"); } catch { return ""; } })()));
 
 /** ONE run per leg NAME, the NEWEST (the highest id: a re-run or a second check suite on the same sha — a sha pushed to
  *  two branches — mints a later run), in REQUIRED_LEGS order; every required leg with no run is named in `missing`.
@@ -210,6 +221,13 @@ function selftest() {
     try { matrix = (readFileSync(new URL("../.github/workflows/suite.yml", import.meta.url), "utf8").match(/^\s*node:\s*\[([^\]]*)\]/m) || ["", ""])[1]; } catch { matrix = ""; }
     const nodes = matrix.split(",").map((s) => s.trim()).filter(Boolean);
     ok("mrdr · REQUIRED_LEGS equals suite.yml's own matrix line, one leg per node (checked, never trusted)", nodes.length > 0 && JSON.stringify(nodes.map((n) => `npm test · node ${n}`)) === JSON.stringify(REQUIRED_LEGS));
+    // unit mlaw (forks row 1137 (1) F1 B): the legs are DERIVED, so the derivation is planted both ways
+    const yml = (m, nm = "    name: npm test · node ${{ matrix.node }}") => `jobs:\n  t:\n${nm}\n    strategy:\n      matrix:\n${m}\n`;
+    const three = legsOf(yml("        node: [22, 24, 26]")), crlf = legsOf(yml("        node: [22, 24]").replace(/\n/g, "\r\n"));
+    ok("PLANTED mlaw · a matrix that gains a node gains a leg (derived from suite.yml, never typed), CRLF-proof",
+      JSON.stringify(three) === JSON.stringify(["npm test · node 22", "npm test · node 24", "npm test · node 26"]) && JSON.stringify(crlf) === JSON.stringify(["npm test · node 22", "npm test · node 24"]));
+    ok("PLANTED mlaw · a suite.yml with no matrix line or no job name line derives NO leg (the reader then says NONE, never GREEN)",
+      legsOf(yml("")).length === 0 && legsOf(yml("        node: [22]", "    name: npm test")).length === 0 && legsOf("").length === 0);
     console.log(`\nci_verdict selftest: ${pass} passed, ${fail} failed`);
     console.log(fail ? "SELFTEST FAILED" : "ALL CHECKS PASSED");
     return fail ? 1 : 0;
