@@ -336,7 +336,8 @@ Read with `curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commit
 |---|---|---|
 | ms1 `f98e914` (for §5) | node 22 `135202961143` failure 1713 s · node 24 `135202961645` failure 1618 s | RED (ms1's four, ms1 PROOF §5.3) |
 | ms1 `3981f36` (for N5) | node 22 `135231308170` cancelled · node 24 `135231308681` cancelled | none |
-| ms2 spec pushes | see the ledger acts `ci-read` (filled after each push) | — |
+| ms2 spec `352e5f2` | run `44429320779`: node 22 `135242307473` success 286 s · node 24 `135242307602` success 302 s | GREEN (both legs) |
+| ms2 spec, this push (ledger + §9 only) | the ledger act `ci-read` of the final message | — |
 
 ## 10. OPEN QUESTIONS FOR THE ARCHITECT
 
