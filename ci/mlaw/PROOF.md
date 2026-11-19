@@ -381,3 +381,42 @@ pack red appears.
   machine.
 
 CHECKPOINT · STOPPED at 2026-11-19T12:37:54Z · resume from: merged 1582be0 at c9f713b, MERGED.json re-derived at fb8cbda (witness GREEN MLAW · 10 clause(s), lawpack GREEN 90, mdone/mdn2 BOUND only); next: re-run run_mutants_mlaw.mjs on fb8cbda (interrupted by the stop), read both neutral legs of fb8cbda, write PROOF §12 (one new BLOCK 7 hit on this tree: ci/ms1/PROOF.md:569, byte-equal to 1582be0 — the ms1 seat's)
+
+## 12. RESUMED (his word #270) — THE ms1 ASSEMBLED TIP 1582be0 MERGED; final measurements (19 Nov 2026)
+
+The CHECKPOINT above is resumed. `git merge --no-edit 1582be0` gave `c9f713b`: a doc-only merge (the dated
+`ci/mrv/PROOF.md` line, ms1's PROOF and ledger), with no conflict, no rebase and no force. `ci/mlaw/MERGED.json` was
+re-derived from `1582be0`'s own LF bytes at `fb8cbda`. `claude/ms1-build` has moved only by its own CHECKPOINT commit
+`c35f7dd` since then, and no message names a new assembled tip, so nothing more was merged. The code is the same at `fb8cbda`
+and `c23b28f`. The tip this section is pushed on is a proof-only commit after `c23b28f`.
+
+Measured on `c23b28f` (19 Nov 2026):
+
+```
+node ci/mlaw/witness_mlaw.mjs --org <LF tree of c23b28f> --base-org <LF tree of cf1ca54>   →  GREEN MLAW the law pack judged hermetic, its rise a new red · 10 clause(s)
+node ci/mlaw/run_mutants_mlaw.mjs --org <same> --base-org <same>                            →  run_mutants: 13 of 13 mutant(s) RED by the clause that names them · control GREEN
+node scripts/lawpack.mjs gate                                                               →  … jugad-literal-subject-list 90 … depcruise_errors 7 · lawpack: GREEN
+node ci/mdone/witness_mdone.mjs (vs its BASE)  →  RED MDONE · BOUND        node ci/mdn2/witness_mdn2.mjs (vs its BASE)  →  RED MDN2 · BOUND
+```
+
+After the mutant run, no process named the M-LAST marker. The BASE-way witness line is §11's (`RED MLAW · LEGS · JUGAD ·
+SURFACES · COVERAGE · HERMETIC · RISE · NOLINE · PORT`), because the BASE tree did not change.
+
+**The neutral runs of `c23b28f`** (full sha `c23b28f4aac3c9028d28f92302bcdb987daa4861`; the runs on `fb8cbda` were cancelled
+by the checkpoint push). Read with curl, no token, 19 Nov 2026:
+
+```
+npm test · node 22  run 135565591720  completed/failure · B1_VERDICT RED · base fb42118 · pass 232 · fail 2 · live 124 · 1 base red
+   new: LOAD ZERO BLOCK 7 · no canon file states a live count a command can produce (98 files scanned, 1 declared)
+npm test · node 24  run 135565592266  completed/failure · B1_VERDICT RED · base fb42118 · pass 232 · fail 2 · live 124 · 1 base red
+   new: LOAD ZERO BLOCK 7 · no canon file states a live count a command can produce (98 files scanned, 1 declared)
+```
+
+`node scripts/ci_verdict.mjs c23b28f4aac3c9028d28f92302bcdb987daa4861` answered `UNREADABLE — … answered 403` from this
+container: its anonymous `fetch` is refused here, while curl through the same proxy is served. That is this container's
+network, not the reader. The legs above were read through the same API the reader calls.
+
+- **FK12, moved:** `1582be0` dated the `ci/mrv/PROOF.md` line, and BLOCK 7 now trips on `ci/ms1/PROOF.md:569`
+  (`node scripts/organism_test.mjs laws`, 19 Nov 2026). That line came in with `1582be0`'s own PROOF addition, and the
+  file is byte-equal to `1582be0`'s (`git diff --quiet 1582be0 HEAD -- ci/mlaw/../ms1/PROOF.md`). It is the ms1 seat's to
+  date; this seat does not edit it. This PROOF passes the law by the rule's own regex.
