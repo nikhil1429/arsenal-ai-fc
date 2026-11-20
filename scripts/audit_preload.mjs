@@ -53,7 +53,6 @@ const require_ = createRequire(import.meta.url);
 const fs = require_("fs");
 const cp = require_("child_process");
 const path = require_("path");
-const os = require_("os");
 
 // ── Original handles, captured BEFORE any patching. Everything this file does
 //    internally goes through these, so the collar can never deny itself.
