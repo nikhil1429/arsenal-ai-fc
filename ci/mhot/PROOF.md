@@ -398,3 +398,60 @@ as §11 records it.
 
 **STOPPED here** per row 1203: the build does not return for the re-run of row 1187 until MHOT-M3 is ruled. Nothing in
 code changed for this message.
+
+## 14 · FORKS ROW 1204 — MHOT-M3 ruled option A: the mlaw witness re-cut in place (runner M, 2026-11-20)
+
+`ci/mlaw/witness_mlaw.mjs` joins this unit's named files by row 1204, and the witness's BOUND set names it. Each re-cut is
+an ADDED edit with its struck text kept, and none is a bare OR. One helper, `rollOf(tree)`, decides the shape:
+- it returns `undefined` when the tree has no `suite/members` (the old shape: the strings and tables are the record);
+- it returns `null` when the tree has one but its own `organism_test.mjs roll --json` cannot be read (a red, never a pass);
+- otherwise it returns the roll.
+
+**COVERAGE** (the clause row 1204 names). ~~a package.json suite string runs `node scripts/done.mjs selftest`~~ → a suite
+runs it. Where the tree holds `suite/members`, the tree's own roll must name `done` with argv `["selftest"]`. Where it does
+not, the old string test runs unchanged. Its detail line names which record it read.
+
+**The other clauses that read a table literal the fold moved, checked for a vacuous pass:**
+- **HERMETIC** — re-cut. It read `LIVE_SELFTESTS`'s keys through `tableKeys`. After the fold that table holds no member line,
+  so two of its checks would have passed on nothing: "lawpack is not in LIVE_SELFTESTS" (empty table) and "the LIVE tables
+  only shrink" (a member made LIVE in its file would be unseen). Re-cut: where a tree holds `suite/members`, its LIVE
+  selftests are the residual table's keys plus every roll member whose `live` is a reason. Both checks now read the real
+  set (71 on the merged tree: base's 72 minus lawpack, with home_pin counted from its member file).
+- **LIVE_MODES and LIVE_ASSERTS inside HERMETIC** — not moved by the fold (F3 A, F4 A), so they are read as before.
+- **JUGAD, RISE, NOLINE** run the law pack and the suite's `lawpack` mode; **LEGS** reads `ci_verdict.mjs`; **SURFACES**
+  reads `done.mjs`; **PORT** reads `conductor.mjs`. None reads a record the fold moved, so none is re-cut.
+
+**The mutants**, in `ci/mhot/run_mutants_mhot.mjs`, run over git-initialised copies (the law pack lists files with git).
+mlaw's witness has no `--only`, so each mutant is judged by its red set: the mutant's set must be the control's set plus
+exactly its own clause.
+- **M-MLAW-COVERAGE:** `suite/members/done.json` removed. This is the one row 1204 asks for.
+- **M-MLAW-HERMETIC:** `suite/members/lawpack.json` given a LIVE reason again.
+
+**The runs** on git clones (`--org` = this commit, `--base-org` = `5759cce`, both units' BASE; the parent = `6a6bdff`):
+
+```
+$ node ci/mhot/witness_mhot.mjs --org <clone 800f57d> --base-org <clone 5759cce> --bound-base <clone 6a6bdff>
+GREEN MHOT the member roll · 12 clause(s)                                    (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone 5759cce> --base-org <clone 5759cce>
+RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9                                (exit 1)
+$ node ci/mlaw/witness_mlaw.mjs --org <clone 800f57d> --base-org <clone 5759cce>
+  ok   COVERAGE · done.mjs selftest mode present · the tree's member roll (suite/members) runs it: yes · the coverage law judged · orphans: none
+  ok   HERMETIC · LIVE selftests read from the table + the member roll (71) · lawpack in LIVE table(s): none · keys at --org not at --base-org: none · …
+RED MLAW · BOUND                                                             (exit 1)
+$ node <this commit's ci/mlaw/witness_mlaw.mjs> --org <clone 6a6bdff, no suite/> --base-org <clone 5759cce>
+  ok   COVERAGE · done.mjs selftest mode present · a package.json suite string runs it: yes · …
+RED MLAW · BOUND                                    (the old-shape branch holds on a tree without suite/members)
+$ node ci/mhot/run_mutants_mhot.mjs --org <clone 800f57d> --base-org <clone 5759cce> --bound-base <clone 6a6bdff>
+  ok   MLAW CONTROL · the unmutated copy → RED MLAW · BOUND
+  ok   M-MLAW-COVERAGE · the done member file removed → RED MLAW · COVERAGE · BOUND
+  ok   M-MLAW-HERMETIC · lawpack's member file given a LIVE reason again → RED MLAW · HERMETIC · BOUND
+run_mutants: 14 of 14 mutant(s) RED by the clause that names them · control GREEN
+```
+
+**mlaw's BOUND** reads `--base-org` (`5759cce`), because the witness has no bound-base door. The paths mlaw, mcov and
+mmeter landed read foreign there: that is row 1200 (2)'s class, which the neutral member drops. It is the same line main
+`6a6bdff` itself prints (§13's control). Beyond BOUND, both witnesses are green on the merged tree, and the build returns
+for the architect's re-run of row 1187.
+
+**Still standing:** the mcov half of MHOT-M2 (§11: `ci/mcov/witness_mcov.mjs` C1, C6, C7 read or plant through the chain
+string). Row 1204 rules only the mlaw half.
