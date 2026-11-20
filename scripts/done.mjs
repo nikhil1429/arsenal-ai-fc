@@ -26,16 +26,18 @@
 //             of rung_receipts.jsonl) keyed by the campaign's plan v3 list (<campaign>/rungs/plan_v3.json, rung_receipt.mjs
 //             PLAN_CONTRACT); a plan clause with no complete receipt is UNREAD, a typed row REFUSED, an empty plan UNREAD —
 //             never 0/0. The old hand contract (rungsLegacy, frozen) is REFUSED and counted in nothing (F2 a).
-// MODES: line (default) · report · json        FLAGS: --campaign <dir> · --meter <file> · --receipts <file> · --hermetic
+// MODES: line (default) · report · json · selftest (plants registry files under os.tmpdir() only)        FLAGS: --campaign <dir> · --meter <file> · --receipts <file> · --hermetic
 // The hermetic form (--hermetic or ORGANISM_TEST_PROFILE=hermetic) reads no state file: reach and the three live rule
 // sets print LIVE; its rungs read ONLY --receipts (a planted file) — without it every plan clause is UNREAD and the state
 // file is never opened. The witness of this organ is ci/mdone/witness_mdone.mjs (rungs: ci/mrung/witness_mrung.mjs).
 // ============================================================================
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 import { build, queries, verbGraph } from "./xray.mjs";
+import { lazySubjects, upsertRow, retireRow } from "./registry.mjs";   // unit mlaw (forks row 1146 (1) FK1 A): his reading surfaces are a ROW, never a literal
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -44,7 +46,17 @@ const METER = join(STATE, "daily_green.jsonl");            // Q3 — the day met
 const RECEIPTS = join(STATE, "rung_receipts.jsonl");       // unit mrung — rung_receipt.mjs is its sole writer; read here, never written
 const CONSUMPTION = join(STATE, "consumption.jsonl");      // brain.mjs:132 is its sole writer; read here, never written
 export const OLD_RECORDED_DAY = "2026-11-13";                     // row 1032 Q3 — the old recorded day that must still read RED
-const SURFACES = ["manager.mjs", "captains_call.mjs"];     // the sheet's and the card's owners (manager.mjs:21, captains_call.mjs:1731)
+// THE SURFACES HE READS (the sheet's and the card's owners) are the registry mechanisms row `his_surfaces`, read at FIRST USE
+// (lazySubjects, the shape registry.mjs owns). No fallback literal: an absent row is a NAMED RED on the reach line (unit mlaw,
+// forks row 1146 (1) FK1 A; the typed pair this replaced was the law pack's jugad finding 92, ci/mlaw/MLAW_SPEC.md §1.3).
+export const SURFACES_ROW = "his_surfaces";
+const SURFACES = lazySubjects(SURFACES_ROW);
+/** the row's subjects, or the named red when the registry holds no live row @param {readonly string[]} view
+ *  @returns {{ list: string[] } | { red: string }} */
+export function surfacesOrRed(view) {
+  try { return { list: [...view] }; }
+  catch { return { red: `no live mechanisms row "${SURFACES_ROW}" in the registry — the surfaces he reads are a ROW (seed it through registry.mjs set --table mechanisms)` }; }
+}
 
 const argv = process.argv.slice(2);
 const flag = (k) => { const i = argv.indexOf(k); return i > -1 ? argv[i + 1] : null; };
@@ -66,7 +78,9 @@ function orphans(ir) {
 // ladder_sha256 } · <campaign>/units.json [{ unit, fate, landed, clause }] · <campaign>/census.json [{ piece, fate, rung,
 // serves_no_step }]. A path in a loop file resolves against the campaign dir, or against the repo when it starts
 // dressing-room/.
-function oldDayRed(meterPath) {
+/** The old recorded day's verdict on the meter — exported for the clause witness ci/witness/mmeter/witness_meter.mjs
+ *  (unit mmeter, A:old-day-red): one read path, never a copy. Its last row for OLD_RECORDED_DAY is the one that counts. */
+export function oldDayRed(meterPath) {
   const rows = readL(meterPath);
   if (!rows) return { ok: false, why: "the meter is unreadable" };
   const last = rows.filter((r) => r && r.date === OLD_RECORDED_DAY).pop();
@@ -171,6 +185,9 @@ async function rules() {
 // ── THE REACH READER ────────────────────────────────────────────────────────────────────────────────────────────
 async function reach(ir) {
   if (HERMETIC) return { live: true };
+  const sv = surfacesOrRed(SURFACES);   // FK1 A: an absent row is a named red, before any other read
+  if ("red" in sv) return { red: sv.red };
+  const surfaces = sv.list;
   let gate;
   try { gate = await import(pathToFileURL(join(ROOT, "scripts", "gate.mjs")).href); } catch (e) { return { unread: `the consumer map could not be read (${String(e && e.message).slice(0, 80)})` }; }
   // unit mdn2 (forks row 1051 (4)): a lane's files are what its registry row DECLARES (`files`, registry.mjs laneFiles);
@@ -187,7 +204,7 @@ async function reach(ir) {
     const files = ir.files.filter((f) => { const p = f.path; if (decl) return decl.includes(p); const b = `dressing-room/state/brain_out/${subject}`; return p === b || p.startsWith(b + "/") || p === `dressing-room/state/${subject}.json` || p === `dressing-room/state/${subject}.jsonl`; });
     const readers = new Set(files.flatMap((f) => f.readers));
     const noCons = !rc.retired && rc.kind !== "him" && !(rc.names || []).length;
-    const stat = noCons || rc.retired ? false : rc.kind === "him" ? [...readers].some((r) => skills.has(r) || SURFACES.includes(r)) : (rc.names || []).some((n) => readers.has(n));
+    const stat = noCons || rc.retired ? false : rc.kind === "him" ? [...readers].some((r) => skills.has(r) || surfaces.includes(r)) : (rc.names || []).some((n) => readers.has(n));
     const c = gate.consumptionOf(cons, [subject]);
     const age = c.last_at ? (now - Date.parse(c.last_at)) / 864e5 : null;
     const win = noCons ? false : gate.consumerSatisfied(rc, c, { ageDays: age }).ok;
@@ -219,6 +236,7 @@ function lineOf(m) {
   let re;
   if (m.re.live) re = "reach LIVE (the consumer map is the live registry)";
   else if (m.re.unread) re = "reach UNREAD";
+  else if (m.re.red) re = `reach RED — ${m.re.red}`;
   else { const R = m.re.rows, ok = R.filter((x) => !x.noCons && !x.retired); re = `reach ${R.filter((x) => x.reached).length}/${ok.length} (static ${R.filter((x) => x.stat).length}/${ok.length} · window ${R.filter((x) => x.win).length}/${ok.length} · files declared ${ok.filter((x) => x.decl).length}/${ok.length}) · NO CONSUMER ${R.filter((x) => x.noCons).length}`; }
   return `DONE · orphans lanes ${m.o.lanes.length} · orphan verbs ${m.o.verbs.length} · ${rg} · rules ${ru} · ${un} · ${ce} · ${re}`;
 }
@@ -232,14 +250,43 @@ function reportOf(m) {
   out.push(m.c.read ? `DONE census   PENDING ${m.c.pending} · neither a fate+rung nor serves-no-step ${m.c.unfated}` : `DONE census   ${m.c.why}`);
   if (m.re.rows) {
     for (const x of m.re.rows) out.push(`DONE reach    ${x.subject}: ${x.noCons ? "NO CONSUMER" : x.retired ? "RETIRED" : x.reached ? "REACHED" : `static ${x.stat ? "yes" : x.files ? "NO (its declared consumer reads none of its files)" : x.decl ? "NO (none of its declared files is in the xray graph)" : "NO (no file of it in the xray graph)"} · window ${x.win ? "yes" : "NO"}`}`);
-  } else out.push(`DONE reach    ${m.re.live ? "LIVE (hermetic form: the consumer map is the live registry, D2 A)" : m.re.unread}`);
+  } else out.push(`DONE reach    ${m.re.live ? "LIVE (hermetic form: the consumer map is the live registry, D2 A)" : m.re.red ? `RED — ${m.re.red}` : m.re.unread}`);
   // the ONE card a day per check, and only for what only his word can fix: a census PENDING is a fate nobody ruled
   if (m.c.read && m.c.pending > 0) out.push(`CARD done:census:${today()} → node scripts/captains_call.mjs file --line "Census: ${m.c.pending} piece PENDING — fate aapka faisla." --key done:census:${today()}`);
   return out;
 }
 
+/** the selftest (unit mlaw, forks row 1146 (1) FK1 A): the his_surfaces row PLANTED both ways, in registry files under
+ *  os.tmpdir() written by registry.mjs's OWN exported writers (upsertRow / retireRow) — this organ still writes nothing, never
+ *  the live registry, never a state file. The temp dir is left to the OS (removing it would be a write of this organ's own). */
+function selftest() {
+  let pass = 0, fail = 0;
+  const ok = (name, cond) => { if (cond) pass++; else fail++; console.log(`  ${cond ? "✓" : "✗"} ${name}`); };
+  const dir = mkdtempSync(join(tmpdir(), "done-selftest-"));
+  const row = (subject, subjects) => ({ subject, schema_owner: "done.mjs", witness: "node scripts/done.mjs selftest", subjects, why: "done.mjs selftest plant" });
+  const planted = row(SURFACES_ROW, ["sheet_owner.mjs", "card_owner.mjs"]);
+  const withP = join(dir, "with.json"), withoutP = join(dir, "without.json"), retiredP = join(dir, "retired.json");
+  const seeded = [upsertRow("mechanisms", planted, { path: withP }), upsertRow("mechanisms", row("some_other_row", ["x.mjs"]), { path: withoutP }),
+    upsertRow("mechanisms", planted, { path: retiredP })];
+  const retired = retireRow("mechanisms", SURFACES_ROW, "done.mjs selftest: a retired row is no row", { path: retiredP });
+  ok("the plants are written by registry.mjs's own writers, under os.tmpdir()", seeded.every((r) => r && r.ok) && !!retired && !!retired.ok);
+  const a = surfacesOrRed(lazySubjects(SURFACES_ROW, withP));
+  ok("PLANTED · the his_surfaces row is read through lazySubjects: its subjects ARE the surfaces (a row edit, never a code edit)",
+    "list" in a && JSON.stringify(a.list) === JSON.stringify(planted.subjects));
+  const b = surfacesOrRed(lazySubjects(SURFACES_ROW, withoutP));
+  ok("PLANTED · a registry with NO his_surfaces row is a NAMED RED (no fallback literal, never an empty list)", "red" in b && b.red.includes(`"${SURFACES_ROW}"`));
+  const c = surfacesOrRed(lazySubjects(SURFACES_ROW, retiredP));
+  ok("PLANTED · a RETIRED his_surfaces row is the same named red", "red" in c && c.red.includes(`"${SURFACES_ROW}"`));
+  const d = surfacesOrRed(lazySubjects(SURFACES_ROW, join(dir, "absent.json")));
+  ok("PLANTED · an absent registry file is the same named red", "red" in d);
+  console.log(`\ndone selftest: ${pass} passed, ${fail} failed`);
+  console.log(fail ? "SELFTEST FAILED" : "ALL CHECKS PASSED");
+  return fail ? 1 : 0;
+}
+
 async function main() {
   const mode = argv[0] && !argv[0].startsWith("--") ? argv[0] : "line";
+  if (mode === "selftest") return selftest();
   if (!["line", "report", "json"].includes(mode)) { console.log("done.mjs [line|report|json] [--campaign <dir>] [--meter <file>] [--receipts <file>] [--hermetic]"); return 2; }
   const m = await measure();
   if (mode === "json") console.log(JSON.stringify({ hermetic: HERMETIC, orphans: { lanes: m.o.lanes.length, verbs: m.o.verbs.length }, rungs: m.r, units: m.u, census: m.c, rules: m.ru, reach: m.re.rows ? m.re.rows.map((x) => ({ subject: x.subject, reached: x.reached, static: x.stat, window: x.win, no_consumer: x.noCons })) : m.re }));
