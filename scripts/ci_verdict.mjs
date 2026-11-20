@@ -233,8 +233,8 @@ function selftest() {
     ok("reader: two GREEN legs read GREEN in exactly 3 calls", G.v === "GREEN" && G.calls === 3 && G.line.startsWith("ci_verdict ddddddd GREEN"));
     const R = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", runs()], ["/check-runs/1/", ann("GREEN", [])], ["/check-runs/2/", ann("RED", ["PLANTED"])]]));
     ok("reader: one RED leg reads RED and NAMES the new red", R.v === "RED" && R.line.includes("PLANTED") && R.calls === 3);
-    const annC = [{ title: `${VERDICT_TITLE} · node 24`, message: `B1_VERDICT ${JSON.stringify({ v: "RED", base: "c".repeat(40), new: [W, "PLANTED"], cause: { [W]: ["P1 · the planted clause claims one thing"] }, base_red: 0, live: 3 })}` }];
-    const RC = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", runs()], ["/check-runs/1/", ann("GREEN", [])], ["/check-runs/2/", annC]]));
+    const RC = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", runs()], ["/check-runs/1/", ann("GREEN", [])],
+      ["/check-runs/2/", [{ title: `${VERDICT_TITLE} · node 24`, message: `B1_VERDICT ${JSON.stringify({ v: "RED", base: "c".repeat(40), new: [W, "PLANTED"], cause: { [W]: ["P1 · the planted clause claims one thing"] }, base_red: 0, live: 3 })}` }]]]));
     ok("mdtl · reader: a new red with a cause reads `— cause: <ID> · <text>`, a red with none reads its name alone", RC.v === "RED" && RC.line.includes(`${W} — cause: P1 · the planted clause claims one thing ; PLANTED ·`));
     const P = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", runs("in_progress")]]));
     ok("reader: a leg still running is PENDING after ONE call (it never polls)", P.v === "PENDING" && P.calls === 1);

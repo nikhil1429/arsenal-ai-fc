@@ -42,9 +42,8 @@ const STATE = join(ROOT, "dressing-room", "state");
 const NODE = process.execPath;
 
 let pass = 0, fail = 0;
-const fails = [], passed = [];
-/** unit mdtl: one entry per failing witness clause, `<red name> · <ID> · <text>` (witness_cause.mjs causeText) @type {string[]} */
-const causes = [];
+// unit mdtl: `causes` holds one entry per failing witness clause, `<red name> · <ID> · <text>` (witness_cause.mjs causeText)
+const fails = [], passed = [], causes = [];
 const assert = (name, cond, detail) => {
   if (liveAssert(name)) return;   // B1 (b): a LIVE member under the hermetic profile is named, never judged
   if (cond) { pass++; passed.push(name); console.log(`  ok   ${name}`); }
