@@ -13,8 +13,12 @@
 //        are NAMED in the clause line, never red (ci/mf2/monotone.mjs). STRUCK, the text it replaces:
 //        ~~every member the BASE hermetic run judged (ok / FAIL, LIVE excluded) is judged by the build with the same verdict,
 //        and the build judges nothing the base did not (digit runs folded, as LIVE_ASSERTS keys are).~~
-//   F3 · the LIVE count on the build's hermetic headline is equal to or lower than the base's, and the build names LIVE no
-//        member the base did not (digit runs folded).
+//   F3 · the LIVE count on the build's hermetic headline is equal to or lower than the base's PLUS the admitted names, and the
+//        build names LIVE no member the base did not, except one ADMITTED by ci/mf2/LIVE_ADMITTED.json (forks row 1204): an
+//        entry with its ruling row whose listed asserts the base hermetic run judged NONE of (measured here, on the copies),
+//        each listed name an assert of the build's source; an entry the build no longer prints LIVE is RED. STRUCK, the text
+//        it replaces: ~~the LIVE count on the build's hermetic headline is equal to or lower than the base's, and the build
+//        names LIVE no member the base did not (digit runs folded).~~
 //   F4 · RE-CUT by unit mrf (forks row 1120 (2) F-1 C · row 1120 (4)) — MONOTONE over the FULL profile's members, the same
 //        rule as F2 (ci/mf2/monotone.mjs); both headlines and exits are named in the line, not compared. STRUCK, the text
 //        it replaces:
@@ -26,7 +30,8 @@
 // Portable: no POSIX-only shell (the planted model stubs are written per platform); every read is split on /\r?\n/.
 // ============================================================================
 import { mkdtempSync, writeFileSync, readFileSync, readdirSync, statSync, lstatSync, rmSync, cpSync, mkdirSync, chmodSync } from "node:fs";
-import { join, relative, resolve, delimiter } from "node:path";
+import { join, relative, resolve, delimiter, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -97,9 +102,35 @@ clause("F1", po.sites > 0 && oh.marks.length === 0 && of.marks.length > 0 && bf.
 }
 const liveOf = (h) => { const m = /LIVE (\d+)/.exec(h); return m ? Number(m[1]) : null; };
 {
-  const extra = oh.live.filter((n) => !bh.live.includes(n));
-  clause("F3", liveOf(oh.head) !== null && liveOf(bh.head) !== null && liveOf(oh.head) <= liveOf(bh.head) && extra.length === 0,
-    `hermetic headline LIVE: build ${liveOf(oh.head)} · base ${liveOf(bh.head)} (build ≤ base) · LIVE names printed: build ${oh.live.length}, base ${bh.live.length} · named LIVE only by the build: ${extra.length ? extra.map((n) => n.slice(0, 60)).join(" · ") : "none"}`);
+  // forks row 1204 (option (a), NARROWED to a listed admission): a LIVE name the base did not print is admitted only when
+  // (i) it stands in ci/mf2/LIVE_ADMITTED.json (beside this witness) with its ruling row, and (ii) THIS run measured, on its own
+  // base copy, that the base hermetic run judged NONE of the asserts listed under it (each listed prefix must also be an assert
+  // name in the build's own organism_test.mjs, so an entry cannot stand for nothing). The count may rise by exactly the
+  // admitted names the build prints. An entry the build no longer prints as LIVE is RED: its retiring unit deletes it.
+  let adm = [], admErr = "";
+  try {
+    const j = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "LIVE_ADMITTED.json"), "utf8"));
+    adm = Array.isArray(j.admitted) ? j.admitted : [];
+  } catch (e) { admErr = `LIVE_ADMITTED.json unreadable (${e instanceof Error ? e.message : String(e)})`; }
+  const osrc = readFileSync(join(o, "scripts", "organism_test.mjs"), "utf8");
+  const judged = (pre) => bh.members.filter(([, n]) => n.startsWith(fold(pre))).map(([, n]) => n);
+  const why = [];
+  const admitted = [];
+  for (const e of adm) {
+    const name = fold(e && e.live), asserts = Array.isArray(e && e.asserts) ? e.asserts : [];
+    if (!e || !e.live || !/^\d+/.test(String(e.row || ""))) { why.push(`entry ${JSON.stringify(String(e && e.live).slice(0, 50))} carries no ruling row`); continue; }
+    if (!asserts.length) { why.push(`entry "${name.slice(0, 50)}" lists no assert under it`); continue; }
+    const absent = asserts.filter((a) => !osrc.includes(a));
+    if (absent.length) { why.push(`entry "${name.slice(0, 50)}" lists ${absent.length} name(s) that are no assert of the build: ${absent.map((a) => a.slice(0, 40)).join(" · ")}`); continue; }
+    const hit = asserts.flatMap(judged);
+    if (hit.length) { why.push(`entry "${name.slice(0, 50)}" (row ${e.row}): the BASE judged ${hit.length} of its asserts — a LIVE name may not hide judged asserts: ${hit.slice(0, 3).map((n) => n.slice(0, 50)).join(" · ")}`); continue; }
+    if (!oh.live.includes(name)) { why.push(`entry "${name.slice(0, 50)}" (row ${e.row}) is no longer printed LIVE by the build — delete it in the landing that retired it`); continue; }
+    admitted.push(name);
+  }
+  const extra = oh.live.filter((n) => !bh.live.includes(n) && !admitted.includes(n));
+  const room = admitted.filter((n) => !bh.live.includes(n)).length;
+  clause("F3", !admErr && why.length === 0 && liveOf(oh.head) !== null && liveOf(bh.head) !== null && liveOf(oh.head) <= liveOf(bh.head) + room && extra.length === 0,
+    `hermetic headline LIVE: build ${liveOf(oh.head)} · base ${liveOf(bh.head)} + ${room} admitted (build ≤ base + admitted) · LIVE names printed: build ${oh.live.length}, base ${bh.live.length} · admitted (row-listed, none of their asserts judged by the base): ${admitted.length ? admitted.map((n) => n.slice(0, 60)).join(" · ") : "none"} · named LIVE only by the build, unadmitted: ${extra.length ? extra.map((n) => n.slice(0, 60)).join(" · ") : "none"}${admErr ? ` · ${admErr}` : ""}${why.length ? ` · REFUSED: ${why.join(" | ")}` : ""}`);
 }
 {
   // unit mrf (row 1120 (2) F-1 C): MONOTONE, the F2 rule over the full profile. Struck form, kept for the record: the same
