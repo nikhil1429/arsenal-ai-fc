@@ -1,0 +1,9 @@
+{"ts":"2026-11-20T01:30:00Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mdtl-spec FETCH_HEAD","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T01:35:00Z","act":"measure","cmd":"curl -s $API/commits/1b8c379e65/check-runs","last_line":"135921298241 npm test · node 24 completed failure"}
+{"ts":"2026-11-20T01:36:00Z","act":"measure","cmd":"curl -s $API/check-runs/135921298755/annotations","last_line":"failure | NEW RED · node 22 1/2 | GATES — undefined-symbol families 0 on both sides (name only, no cause)"}
+{"ts":"2026-11-20T01:37:00Z","act":"measure","cmd":"node scripts/ci_verdict.mjs 1b8c379e65","last_line":"ci_verdict 1b8c379 UNREADABLE — GET .../check-runs?per_page=100 answered 403"}
+{"ts":"2026-11-20T01:38:00Z","act":"measure","cmd":"curl -s https://api.github.com/rate_limit","last_line":"core limit 15000 (the proxy authenticates; not anonymous)"}
+{"ts":"2026-11-20T01:52:00Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 141 passed, 4 failed · ruled 0 · UNRULED 4 · LIVE 126 (hermetic: named, not run) [2026-11-20, no npm ci]"}
+{"ts":"2026-11-20T01:55:00Z","act":"measure","cmd":"node scratchpad/tools/measure_base.mjs . 5759cce","last_line":"detail red beyond BOUND: P1 P2 Q<CANARY> (runner-side); leaving lines naming the canary 0 · naming clause P1 0 · payload has cause false"}
+{"ts":"2026-11-20T01:57:00Z","act":"blocked","cmd":"date -u ...; grep -n ... (one Bash call)","last_line":"approval request unanswered when the worker restarted; the call did not run. Re-run as separate commands, no refusal."}
+{"ts":"2026-11-20T04:05:00Z","act":"write","cmd":"Write ci/mdtl/MDTL_SPEC.md","last_line":"spec written; checkpoint for push"}
