@@ -1,0 +1,7 @@
+{"organ":"captain","file":"captain.json","others":[],"keys":12,"all_real_green":true,"real_keys":["number"]}
+{"organ":"scout","file":"dossier_weights.json","others":[],"keys":11,"all_real_green":true,"real_keys":["bucket_round_map"]}
+{"organ":"timeaudit","file":"buckets.json","others":[],"keys":8,"all_real_green":true,"real_keys":["targets","browsers","default","rules","claudeDesktop"]}
+{"organ":"thalamus","file":"thalamus_config.json","others":[],"keys":29,"all_real_green":true,"real_keys":["pe"]}
+{"organ":"conductor","file":"tasks_expected.json","others":["registry.json"],"keys":9,"all_real_green":true,"real_keys":["expected_disabled","slots"]}
+{"organ":"dmn","file":"brain_config.json","others":["registry.json"],"keys":19,"all_real_green":true,"real_keys":["budget"]}
+{"organ":"heartbeat","file":"heartbeat_config.json","others":[],"keys":3,"all_real_green":true,"real_keys":["order"]}

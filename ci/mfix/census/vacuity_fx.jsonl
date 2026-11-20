@@ -1,0 +1,6 @@
+{"organ":"learn_digest","side":"Z","files":[],"exit":0,"swallowed_empty_lanes":2,"not_measured":0}
+{"organ":"learn_digest","side":"S","files":["registry.json","heartbeat_config.json"],"exit":0,"swallowed_empty_lanes":0,"not_measured":0}
+{"organ":"reconcile","side":"Z","files":[],"exit":0,"swallowed_empty_lanes":26,"not_measured":0}
+{"organ":"reconcile","side":"S","files":["registry.json","heartbeat_config.json"],"exit":0,"swallowed_empty_lanes":0,"not_measured":0}
+{"organ":"heartbeat","side":"Z","files":[],"exit":0,"swallowed_empty_lanes":0,"not_measured":2}
+{"organ":"heartbeat","side":"S","files":["registry.json","heartbeat_config.json"],"exit":1,"swallowed_empty_lanes":0,"not_measured":0}

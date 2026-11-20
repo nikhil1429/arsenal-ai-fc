@@ -1,0 +1,6 @@
+{"mode":"integrity","variant":"Z","exit":2,"verdicts":{"219":"ok","221":"ok","222":"ok","225":"ok"}}
+{"mode":"integrity","variant":"R","exit":0,"verdicts":{"219":"ok","220":"ok","221":"ok","222":"ok","225":"ok"}}
+{"mode":"integrity","variant":"R-brain_config.json","exit":2,"verdicts":{"219":"ok","221":"ok","222":"ok","225":"ok"}}
+{"mode":"integrity","variant":"R-registry.json","exit":0,"verdicts":{"219":"ok","220":"ok","221":"ok","222":"ok","225":"ok"}}
+{"mode":"integrity","variant":"R-tasks_expected.json","exit":0,"verdicts":{"219":"ok","220":"ok","221":"ok","222":"ok","225":"ok"}}
+{"mode":"integrity","variant":"S","exit":2,"verdicts":{"219":"FAIL","220":"FAIL","221":"ok","222":"ok","225":"ok"}}

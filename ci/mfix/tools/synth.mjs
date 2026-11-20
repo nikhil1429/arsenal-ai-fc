@@ -4,6 +4,7 @@
 //             else 1), every boolean is kept; rows of `rulings` (his words) are dropped to zero.
 //   SYNTH_REAL_ROWS=a,b — rows whose `subject` is named stay VERBATIM: the code-coupled enumerations, measured as the
 //             smallest set the member needs real (the rest stays synthetic).
+//   SYNTH_PRE="argv;argv" — owner CLIs run in the tree AFTER the transform, BEFORE the member (owner-derived files).
 //   tokens  — the same, with `subject`/`id` replaced too (the control: does the member need the code's own ids?).
 // Then the member runs on the transformed plant (exits only). The transform is applied by this node script inside
 // the temp tree; the output is names + exits, never a value.
@@ -27,8 +28,9 @@ const rows = await pool(organs, 4, async (o) => {
   const d = mk(sha, { keep: files });
   for (const f of files) { const p = join(d, SD, f), t = readFileSync(p, "utf8");
     writeFileSync(p, f.endsWith(".jsonl") ? t.split(/\r?\n/).filter((l) => l.trim()).map((l) => JSON.stringify(tx(JSON.parse(l), null))).join("\n") + "\n" : JSON.stringify(tx(JSON.parse(t), null), null, 1)); }
+  const pre = []; for (const c of (process.env.SYNTH_PRE || "").split(";").filter(Boolean)) pre.push((await runIn(d, c.trim().split(/\s+/), wait)).code);
   const r = await runIn(d, cmd(o), wait); rm(d);
-  const row = { organ: o, how, files, real: [...REAL], exit: r.code, pass: r.pass, fail: r.fail, failed: r.asserts.filter((a) => a.v === "FAIL").length };
+  const row = { organ: o, how, files, real: [...REAL], ...(pre.length ? { pre: process.env.SYNTH_PRE, pre_exits: pre } : {}), exit: r.code, pass: r.pass, fail: r.fail, failed: r.asserts.filter((a) => a.v === "FAIL").length };
   console.log(JSON.stringify(row)); return row;
 });
 console.error(`synth ${how} ${files.join("+")}: ${rows.length} members · green ${rows.filter((r) => r.exit === 0).length}`);

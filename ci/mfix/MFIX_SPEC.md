@@ -14,17 +14,20 @@ and mcov `cebe3eb` are on it). Every count below is printed by a command in `ci/
    census's 126 at `224f9b9`, and only by the lawpack mode and selftest.
 2. **The split with mlaw2, by class (row 1205 (2): on an overlap mlaw2 wins).** `node ci/mfix/tools/census.mjs 6a6bdff`
    re-ran the mlaw census at this base: the same three classes, member for member. mlaw2 claims ZERO (green on an EMPTY
-   plant, no fixture). **mfix takes PLANT** (red on the empty plant, green on the tracked state) plus the two vacuous
-   ZERO asserts (F5 A: "vacuous ones excluded" from mlaw2) and the modes whose only honest plant is a fixture or an
-   owner-derived file. The census line is in §1.
+   plant, no fixture). **mfix takes PLANT** (red on the empty plant, green on the tracked state) plus what mlaw2
+   EXCLUDED AS VACUOUS and a fixture can give a subject (`learn_digest`, `reconcile`, `heartbeat`, asserts `:219`
+   `:225`, mode `atlas`: §2.2). mlaw2's own census (`cf1785c`) claims 18 ZERO selftests and 5 asserts; **no member is
+   named by both units** (§12).
 3. **The plants are much smaller than the LIVE reasons say.** `ci/mfix/tools/plantcheck.mjs` (one-at-a-time removal over
    the files each member really reads, measured by a read-set probe) shows **`registry.json` alone is the minimal plant
    of almost every PLANT selftest**, and inside it only `tables.mechanisms` and/or `tables.lanes`. `captain.json`,
    named in many LIVE reasons, is load-bearing for `captain` alone. The full line is in §1.
 4. **Most of it can be synthetic, and the rest is code, not his data.** A transform that keeps only the row ids the code
    asks for by name (`subject`, `id`), turns every other string into a token and DROPS `tables.rulings` (his words) keeps
-   a share of the members green (`synth.mjs`). For the rest, `coupled.mjs` finds the few rows whose REAL values the
-   member needs — and those rows are the organism's own enumerations, moved out of code into the registry by design
+   18 of the 42 PLANT selftests green by itself (20 Nov 2026, `synth.mjs`). Every one of the other 24 is green once a
+   CLOSED list stays verbatim — one registry row for most of them (`game_on_epoch`, the GAME-ON stamp, is the commonest),
+   or one or a few keys of one config file — and everything else stays synthetic (`coupled.mjs`, `coupled_keys.mjs`;
+   each greedy run ends on a measured green). Those rows are the organism's own enumerations, moved out of code by design
    (`scripts/registry.mjs:8-13`: "TABLES OF ROWS that until this rung lived as literals inside twelve mechanisms").
    Whether a fixture may carry them verbatim is **FORK F1**, the one ruling this unit turns on.
 5. **The fixture can be written by its OWNER inside the plant.** `registry.mjs set --table mechanisms --json …` in an
@@ -38,7 +41,21 @@ and mcov `cebe3eb` are on it). Every count below is printed by a command in `ci/
 
 ## 1. THE CENSUS AT THE BASE (`node ci/mfix/tools/summarize.mjs`, 20 Nov 2026, the lines it prints)
 
-SUMMARY-BLOCK
+```
+selftests 71: ZERO 22 (mlaw2) · PLANT 42 (mfix) · RED-BOTH 7
+plantcheck: 42/42 measured · minimal plant green 42 · with a load-bearing key 41 · presence-only (no bearing key) models
+minimal-plant files: registry.json 35 · dossier_weights.json 3 · doubtminer_config.json 2 · captain.json 1 · tasks_expected.json 1 · brain_config.json 1 · xray_graph.json 1 · twin_config.json 1 · reps_log.jsonl 1 · ladder_config.json 1 · buckets.json 1 · thalamus_config.json 1
+synthetic (ids transform of the minimal plant): 42 measured · green 18 · red acts,bootroom,capsule_bridge,captain,conductor,cortex,deep,distiller,dmn,daily_green,forge_session,gate,gate_tune,learnstate,nightshift,samjhao,rejirah,scout,shadow,sprintsync,tasks,throwin,timeaudit,thalamus
+code-coupled rows: 18 members measured · green with all rows verbatim 18 · rows kept verbatim: capsule_bridge game_on_epoch · bootroom mutation:forge_profile.json · acts act_doors · cortex modalities_ambient · distiller modalities_interactive+modalities_ambient · deep game_on_epoch · daily_green game_on_epoch · forge_session core_axes_default · learnstate game_on_epoch · gate dmn_rollout+dmn_counter+ns_probe_bank+ns_distractors+ns_pre_answers+ns_grade_probes+cortex_wake+cortex_consolidate+thalamus_adjudicator+council_chair+gaffer_judge+gaffer_verify+mission_m03+haiku_pulse+selfknowledge+dmn_bg_drain+ns_field_probes+compiled_notes+notes_corrections+capsule_backups+brief_log+rejirah_log · samjhao game_on_epoch · gate_tune mutation:thalamus_config.tiers · nightshift game_on_epoch · rejirah game_on_epoch · throwin modalities_interactive · shadow interruption_types · sprintsync game_on_epoch · tasks task_kinds+dmn_counter
+code-coupled keys (config files): captain captain.json number of 12 · scout dossier_weights.json bucket_round_map of 11 · timeaudit buckets.json targets+browsers+default+rules+claudeDesktop of 8 · thalamus thalamus_config.json pe of 29 · conductor tasks_expected.json expected_disabled+slots of 9 · dmn brain_config.json budget of 19 · heartbeat heartbeat_config.json order of 3
+verbatim registry rows, by members needing each: game_on_epoch 8 · modalities_ambient 2 · modalities_interactive 2 · dmn_counter 2 · mutation:forge_profile.json 1 · act_doors 1 · core_axes_default 1 · dmn_rollout 1 · ns_probe_bank 1 · ns_distractors 1 · ns_pre_answers 1 · ns_grade_probes 1 · cortex_wake 1 · cortex_consolidate 1 · thalamus_adjudicator 1 · council_chair 1 · gaffer_judge 1 · gaffer_verify 1 · mission_m03 1 · haiku_pulse 1 · selfknowledge 1 · dmn_bg_drain 1 · ns_field_probes 1 · compiled_notes 1 · notes_corrections 1 · capsule_backups 1 · brief_log 1 · rejirah_log 1 · mutation:thalamus_config.tiers 1 · interruption_types 1 · task_kinds 1 · distinct 31
+```
+
+Read: every PLANT selftest has a minimal plant that keeps it green; all but one have a load-bearing key; the synthetic
+transform alone keeps the members named GREEN in §2 green; every other one is green once the rows or keys of its
+`verbatim rows` cell stay real and everything else stays synthetic (each greedy run ends on a measured green). The
+verbatim set is CLOSED and small: the `distinct` count above is every registry row any member needs, and the most
+needed is `game_on_epoch`, the GAME-ON stamp (CLAUDE.md, 30 Aug 2026), a constant, not his data.
 
 ### 1.1 Recipe
 
@@ -67,6 +84,21 @@ SUMMARY-BLOCK
   a member red on the transform, start with every `mechanisms` / `lanes` row verbatim and drop rows one at a time while
   green; the rows left are the ones whose real values its asserts need.
 
+### 1.2 The plant files: what each is, and who may write it (headers at `6a6bdff`)
+
+Only the files that appear in some member's MINIMAL plant are listed: the rest of the read set is inert (F4).
+
+| File | What it is | Writer (file:line) | Seeded by (FX2) |
+|---|---|---|---|
+| `registry.json` | the organism's enumerations as rows (`mechanisms`, `lanes`, …) plus `rulings` (his words, never seeded) | `scripts/registry.mjs:4` SOLE WRITER | `registry.mjs set --table … --json …` (measured: exit 0 on an empty tree) |
+| `tasks_expected.json` | the scheduled-task snapshot | `scripts/watchman.mjs:83` SOLE WRITER, "by `expect` only" | `watchman.mjs expect` (its inputs are F2's question: on linux there is no schtasks to read) |
+| `xray_graph.json` | the code's read/write graph, DERIVED from `scripts/` | `scripts/xray.mjs:4` SOLE WRITER | `xray.mjs build` — no authored byte (measured: exit 0 on an empty tree) |
+| `laws_register.json` | the standing-laws register, DERIVED | `scripts/registry.mjs:5` SOLE WRITER | `registry.mjs laws collect` — no authored byte (measured: exit 0) |
+| `reps_log.jsonl` | his reps (HIS DATA) | `scripts/capture.mjs:6` single writer | `capture.mjs rep …` with synthetic concept/axis/gut-word |
+| `thalamus_config.json` | thalamus tuning | `scripts/gate_tune.mjs:18` declared owner | the owner's verb, or F2 A |
+| `captain.json` | his identity profile | none: `scripts/captain.mjs:11` "owns no state file (captain.json is hand-edited" | F2 (synthetic identity, never his name) |
+| `brain_config.json` · `dossier_weights.json` · `doubtminer_config.json` · `ladder_config.json` · `buckets.json` · `twin_config.json` | hand-edited organ config | none declared in a header (`grep -n "SOLE WRITER" scripts/*.mjs` names none of them) | F2 |
+
 ## 2. WHAT MFIX TAKES, PER MEMBER (generated: `node ci/mfix/tools/summarize.mjs --table`)
 
 The read site is the first non-comment line naming the file in the member's own script, else in a module it imports
@@ -74,7 +106,50 @@ The read site is the first non-comment line naming the file in the member's own 
 `subjectsOf`: `scripts/registry.mjs:121-135`, path `REGISTRY_PATH` at `:59`). The non-vacuity plant is one load-bearing
 key, deleted. "verbatim rows" is F1's subject.
 
-MEMBER-TABLE
+| organ | LIVE line | minimal plant | read site (file:line) | load-bearing keys | non-vacuity plant (delete → red) | synthetic | verbatim rows |
+|---|---|---|---|---|---|---|---|
+| acts | 102 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | act_doors |
+| bootroom | 106 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | mutation:forge_profile.json |
+| calibration | 108 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | GREEN | none |
+| capsule_bridge | 109 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | game_on_epoch |
+| captain | 110 | captain.json | scripts/captain.mjs:29 | 11 | captain.json:voice | red | keys: number |
+| context | 113 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.lanes | GREEN | none |
+| conductor | 112 | registry.json + tasks_expected.json | scripts/registry.mjs:59 · scripts/conductor.mjs:1485 | 4 | tasks_expected.json:slots | red | keys: expected_disabled + slots |
+| context_manifest | 114 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.lanes | GREEN | none |
+| council | 116 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.lanes | GREEN | none |
+| cortex | 115 | registry.json | scripts/registry.mjs:59 | 3 | registry.json:tables.mechanisms | red | modalities_ambient |
+| daemon_watchdog | 117 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.lanes | GREEN | none |
+| deep | 120 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | game_on_epoch |
+| distiller | 121 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | modalities_interactive + modalities_ambient |
+| doubtminer | 123 | doubtminer_config.json | scripts/doubtminer.mjs:49 | 2 | doubtminer_config.json:lexicon.max_anchors | GREEN | none |
+| dmn | 122 | brain_config.json + registry.json | scripts/thalamus.mjs:2144 · scripts/registry.mjs:59 | 4 | registry.json:tables.lanes | red | keys: budget |
+| daily_green | 118 | registry.json | scripts/registry.mjs:59 | 3 | registry.json:tables.mechanisms | red | game_on_epoch |
+| forge_session | 128 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | core_axes_default |
+| flow_atlas | 127 | registry.json + xray_graph.json | scripts/registry.mjs:59 · scripts/flow_atlas.mjs:45 | 4 | xray_graph.json:roots | GREEN | none |
+| gate | 131 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.lanes | red | dmn_rollout + dmn_counter + ns_probe_bank + ns_distractors + ns_pre_answers + ns_grade_probes + cortex_wake + cortex_consolidate + thalamus_adjudicator + council_chair + gaffer_judge + gaffer_verify + mission_m03 + haiku_pulse + selfknowledge + dmn_bg_drain + ns_field_probes + compiled_notes + notes_corrections + capsule_backups + brief_log + rejirah_log |
+| gate_tune | 132 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | mutation:thalamus_config.tiers |
+| gaffer_brain | 130 | dossier_weights.json + registry.json | scripts/gaffer_brain.mjs:153 · scripts/registry.mjs:59 | 3 | registry.json:tables.mechanisms | GREEN | none |
+| learnstate | 140 | registry.json | scripts/registry.mjs:59 | 3 | registry.json:tables.mechanisms | red | game_on_epoch |
+| limits | 141 | doubtminer_config.json | scripts/limits.mjs:232 | 2 | doubtminer_config.json:lexicon.max_anchors | GREEN | none |
+| manager | 142 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | GREEN | none |
+| mcp-memory | 143 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.lanes | GREEN | none |
+| models | 144 | twin_config.json | (indirect: a helper beyond two import hops) | 0 | — (presence only) | GREEN | none |
+| outbox | 148 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.lanes | GREEN | none |
+| nightshift | 145 | registry.json | scripts/registry.mjs:59 | 3 | registry.json:tables.mechanisms | red | game_on_epoch |
+| dugout | 124 | registry.json + reps_log.jsonl | scripts/registry.mjs:59 · scripts/dugout.mjs:1420 | 3 | reps_log.jsonl:(no rows) | GREEN | none |
+| samjhao | 155 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | game_on_epoch |
+| rejirah | 154 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | game_on_epoch |
+| scout | 156 | dossier_weights.json | scripts/scout.mjs:713 | 1 | dossier_weights.json:bucket_round_map | red | keys: bucket_round_map |
+| services | 158 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.lanes | GREEN | none |
+| shadow | 160 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | interruption_types |
+| setpiece | 159 | dossier_weights.json + ladder_config.json + registry.json | scripts/setpiece.mjs:1013 · scripts/setpiece.mjs:1012 · scripts/registry.mjs:59 | 16 | registry.json:tables.mechanisms | GREEN | none |
+| sprintsync | 162 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | game_on_epoch |
+| talk | 163 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.lanes | GREEN | none |
+| tasks | 164 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | task_kinds + dmn_counter |
+| throwin | 168 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.mechanisms | red | modalities_interactive |
+| timeaudit | 169 | buckets.json | scripts/timeaudit.mjs:27 | 4 | buckets.json:rules.Meta | red | keys: targets + browsers + default + rules + claudeDesktop |
+| thalamus | 167 | thalamus_config.json | scripts/thalamus.mjs:136 | 2 | thalamus_config.json:pe.base_rates | red | keys: pe |
+| watchman | 172 | registry.json | scripts/registry.mjs:59 | 2 | registry.json:tables.lanes | GREEN | none |
 
 ### 2.1 The PLANT asserts (the `laws` and `integrity` modes; generated: `modeplant.mjs`, `coupled.mjs mode:laws`)
 
@@ -82,27 +157,59 @@ The asserts ride their mode's spawn, so their plant is measured at the mode's gr
 `laws` reads four state files (`registry.json`, `captain.json`, `tasks_expected.json`, `brain_config.json`); mode
 `integrity` reads every state file, because two of its asserts' SUBJECT is "every state file parses".
 
-LAWS-BLOCK
+```
+atlas (W6 plant): seeded exit 0 · ok · edited-after-build exit 2 · FAIL
+integrity mode: Z 219:ok,221:ok,222:ok,225:ok · R 219:ok,220:ok,221:ok,222:ok,225:ok · R-brain_config.json 219:ok,221:ok,222:ok,225:ok · R-registry.json 219:ok,220:ok,221:ok,222:ok,225:ok · R-tasks_expected.json 219:ok,220:ok,221:ok,222:ok,225:ok · S 219:FAIL,220:FAIL,221:ok,222:ok,225:ok
+laws mode: Z ok 4/5 · R ok 40/42 · R-registry.json ok 4/5 · R-captain.json ok 40/42 · R-tasks_expected.json ok 39/42 · R-brain_config.json ok 40/42 · S ok 21/32
+laws mode code-coupled rows: task_kinds+game_on_epoch+study_skills (live ok 40)
+```
 
 - **Per assert line** (`organism_test.mjs` LIVE_ASSERTS at `:176-226`): the A9 block (`:177`, `:180`), LOAD ZERO BLOCK
   1 / 2 / 4, S8 and the plain `reads state/registry.json` rows ride `laws` and need `registry.json` +
   `tasks_expected.json` (`captain.json` and `brain_config.json` measured inert there: the `R-<file>` variants).
-  Lines `:215` and `:220` ride `integrity` and need `brain_config.json`; line `:218` needs `registry.json` +
-  `tasks_expected.json` (its reason also names `captain.json`, measured inert).
+  Line `:215` (S8 · the nerve writes ahead, reason `brain_config.json`) rides `laws` and is green there with
+  `brain_config.json` absent (variant `R-brain_config.json`). Line `:218` (SNAPSHOT RIDES THE BUILD) needs
+  `registry.json` + `tasks_expected.json` (its reason also names `captain.json`, measured inert), and it is the one
+  `laws` assert a SYNTHETIC `tasks_expected.json` turns red: its subject is that file's task list (variant
+  `S+task_kinds,game_on_epoch,study_skills`, `census/modeplant_laws_real.jsonl`). Line `:220` (all brain triggers reach
+  live work) rides `integrity` and needs `brain_config.json`; it is red on the synthetic one (variant `S`).
+- **So the `laws` asserts need, measured:** a synthetic registry with THREE rows verbatim (`task_kinds`,
+  `game_on_epoch`, `study_skills`: `coupled.mjs … mode:laws`, `census/coupled_laws.jsonl`) and a synthetic
+  `tasks_expected.json`, for every PLANT assert of the mode but `:218`; `:218` needs `tasks_expected.json`'s
+  `expected_disabled` + `slots` verbatim (`coupled_keys.mjs`, measured on conductor's selftest, the same reader).
 - **The two vacuous ZERO asserts** (`:219` "a declared external producer is a REAL organ in this tree (# declaration(s)
   checked)" and `:225` "…and that organ really BUILDS that brain_out directory"): ok on the empty plant over ZERO
   declarations. They are mfix's by row 1137 (4) ("vacuous ones excluded" from mlaw2). Their fixture is a
-  `brain_config.json` with at least one external-producer declaration naming a real organ of the tree; the plant that
-  proves them non-vacuous names an organ that does not exist (W4).
+  `brain_config.json` with at least one external-producer declaration naming a real organ of the tree. Measured: on
+  the synthetic transform, whose declaration names the token organ `fx`, `:219` reads **FAIL** (variant `S`), so the
+  assert is not vacuous once a declaration exists, and an absent organ is W4's red plant. `:225` stayed ok on `S`; its
+  non-vacuity is the build's W4 measurement (N6).
+
+### 2.2 What mlaw2 EXCLUDED AS VACUOUS, and is mfix's to give a subject (`vacuity_fx.mjs`, `coupled_keys.mjs`)
+
+mlaw2's census (`claude/mlaw2-census` `cf1785c`, `ci/mlaw2/census/SUMMARY.txt`) names, as VACUOUS and excluded: selftests
+`gates` `heartbeat` `learn_digest` `reconcile` · asserts `:219` `:221` `:222` `:224` `:225` · modes `alive` `atlas`. Its
+vacuity probe reads them green on the empty plant over a swallowed throw or a NOT-MEASURED line
+(`ci/mlaw2/census/vacuity.jsonl`). Row 1205 (2): unclaimed by mlaw2, so they are this unit's to fixture, or to name.
+
+| Member | Its empty-plant vacuity (mlaw2) | On the mfix plant, measured (20 Nov 2026) | Fate here |
+|---|---|---|---|
+| `learn_digest` · `reconcile` | gate.mjs's throw "the registry lanes table is EMPTY/unreachable" swallowed | on the SYNTHETIC registry: zero swallowed throws, still exit 0 (`census/vacuity_fx.jsonl`) | mfix, plant = the synthetic registry (no verbatim row) |
+| `heartbeat` | "DEFAULTS.order vs canon parity — NOT MEASURED (heartbeat_config.json unreadable)" | on a synthetic `heartbeat_config.json`: zero NOT MEASURED, and RED; green with key `order` verbatim (`census/coupled_keys.jsonl`) | mfix, F1 prices the one key |
+| `gates` selftest · gates mode ajv half · asserts `:221` `:222` | the schema'd files are absent | SUBJECT: a fixture would make them measure the fixture | named in §3, never moved; they are FX5's validator |
+| asserts `:219` `:225` | zero declarations | §2.1 | mfix (W4) |
+| assert `:224` (the one sanctioned selftest write lands in the organ's OWN log) | its subject is a snapshot of the whole state dir around a thalamus selftest | not measured here: its subject is the state dir's bytes, so it is SUBJECT-shaped | named, N8 |
+| mode `atlas` | `organism_test.mjs:2838-2839` asserts `true` | W6's plant: real `check`, green, and red on a code edit (`census/atlas_real.jsonl`) | mfix (F5) |
+| mode `alive` | pulse NOT-MEASURABLE on linux | — | N4 |
 
 ## 3. WHAT CANNOT GET A SYNTHETIC FIXTURE, AND WHY
 
 | Member | Class | Why no fixture can serve it |
 |---|---|---|
 | assert `:221` "every state .json parses" · `:222` "every state .jsonl parses on every row" | SUBJECT | its subject IS his bytes; on a fixture it measures the fixture. It is the fixture VALIDATOR in the build (W5), never a moved member |
-| gates mode, ajv half | SUBJECT | validates the schema'd state files (`schemas/*.schema.json`, `gates.mjs:220-246`); on a fixture it says the fixture is valid. Same use as above. Its lint half is unit mgat's (F8) |
+| gates mode, ajv half | SUBJECT | validates the schema'd state files (`schemas/*.schema.json`, `gates.mjs:220-246`); on a fixture it says the fixture is valid. Same use as above. Its lint half is unit mgat's (mlaw spec F8, row 1137 (5)) |
 | asserts `:179` (A9 · every organ the two study skills name is on the registry's study entry points) · `:194` (THE COLDNESS RATCHET) | RED-ON-PLANT | red on the tracked state of a fresh clone (`modeplant.mjs` variant `R`). A fixture that turned them green would be authored to agree with code that the tracked state disagrees with: N2 |
-| selftests blackbox · brain · capture · audit · daykey · herd · xray | RED-BOTH | red even on the tracked state on linux. Measured for xray (20 Nov 2026, `derive.mjs`): on an EMPTY plant plus the owner-derived graph (`xray.mjs build`) it is 20 passed / 3 failed, BETTER than on the tracked state; the 3 left are "<organ>.mjs really does contain NUL bytes (the trap is still live)" for calibration / dmn / rejirah, and `git show 6a6bdff:scripts/<organ>.mjs` holds zero NUL bytes, so the red is code, not state. herd's 2 reds are DAY-KEY asserts, red on both. The rest: N1 |
+| selftests blackbox · brain · capture · audit · daykey · herd · xray | RED-BOTH | red even on the tracked state on linux. Measured for xray (20 Nov 2026, `derive.mjs`): on an EMPTY plant plus the owner-derived graph (`xray.mjs build`) it is 20 passed / 3 failed, BETTER than on the tracked state; the 3 left are "<organ>.mjs really does contain NUL bytes (the trap is still live)" for calibration / dmn / rejirah, and `git show 6a6bdff:scripts/<organ>.mjs` holds zero NUL bytes, so the red is code, not state. herd's 2 reds are DAY-KEY asserts, red on both. **blackbox**: mlaw2 (`cf1785c`, its spec §0 item 5 (c)) found it red on both only because a LINKED node_modules breaks its sandbox copy; measured here with node_modules COPIED and untracked, on an EMPTY plant plus the owner-derived graph it is still red on three tracer asserts ("the tracer sees a read", "…records a SWALLOWED ENOENT", "…and the process still exited 0"; `census/derived.jsonl`), so its plant is more than the graph (N9). The rest: N1 |
 | mode `path` | NETWORK | `mirror.mjs` fetches his gist; the port class forbids it |
 | mode `alive` | PLANT-UNRUN | pulse answers NOT-MEASURABLE on linux first (`organism_test.mjs` `alive()`); its doors exist (mlaw §2.4), the plant is N4 |
 
@@ -216,6 +323,17 @@ default. The one fixed port in the class (`conductor.mjs:990` → 59999) is unit
 - **F6 · the RED-BOTH seven.** (A) they stay LIVE until his laptop's N1 run names which are state and which are platform
   · (B) xray moves on the owner-derived graph now, its NUL-trap asserts named as a code red for their own unit.
   **Recommend A**: a member that is red on a fresh clone cannot leave the LIVE table green.
+- **F7 · `models`, presence-only.** Red on the empty plant, green on a minimal plant of `twin_config.json` alone, and NO
+  read key of depth ≤ 2 is load-bearing (`plantcheck.jsonl`: `bearing` empty); its synthetic transform is green. It needs
+  the file to EXIST and judges nothing in it, so W2 refuses it. (A) it moves with an empty-object `twin_config.json`
+  seeded, named presence-only in its witness row, W2 waived for it by its row · (B) it stays LIVE until its owner names
+  what it should judge in the file · (C) it is handed to mlaw2 as a no-fixture member with a presence plant.
+  **Recommend B**: a member that cannot fail on its fixture is the vacuous class row 1137 (4) excludes. Decides: one
+  deeper probe (depth > 2, or the file's mere existence: `plantcheck.mjs` with the file emptied to `{}`).
+- **F8 · `gate` needs many verbatim rows.** `coupled.mjs` keeps a large set of `lanes` / `mechanisms` rows verbatim for
+  `gate` (the L5 gate walks every lane), against one row for most members (§1). (A) it moves under F1 A with its rows
+  listed · (B) it moves last, after its owner derives the lane list it walks from one row. **Recommend A** if F1 is A;
+  the size is the cost F1 already prices.
 
 ## 9. NAMED NOT GUESSED (what a cloud seat cannot reach; what measures each on his laptop)
 
@@ -226,6 +344,16 @@ default. The one fixed port in the class (`conductor.mjs:990` → 59999) is unit
   Windows minimal plant is larger names a platform-only read.
 - **N4 · `alive` on a planted task list** (mlaw N4, unchanged).
 - **N5 · the neutral machine on this branch (Windows legs)**: §11.
+- **N6 · whether assert `:225` judges a seeded producer.** It stayed ok on the synthetic `brain_config.json` (§2.1).
+  Measured by the build's W4 run, on linux or his laptop alike; the cloud seat has not built the seed.
+- **N9 · blackbox's tracer plant.** Its three tracer asserts need a state read the tracer can see; the read-set probe
+  cannot see a child that sets its own `NODE_OPTIONS`. Measured by `node ci/mfix/tools/plantcheck.mjs <sha> blackbox`
+  with node_modules copied (as `blackbox_derived.mjs` does), on linux or his laptop.
+- **N8 · assert `:224` on a plant.** Its subject is the whole state dir around a thalamus selftest; whether a plant of
+  `thalamus_config.json` alone gives it a real subject is the build's measurement (`modeplant.mjs <sha> hermetic
+  thalamus_config.json`).
+- **N7 · whether the synthetic transform holds on Windows.** `node ci/mfix/tools/synth.mjs <sha> ids registry.json
+  <organ…>` on his laptop: a member green here and red there names a platform read.
 
 ## 10. FILES A BUILD WOULD TOUCH
 
@@ -239,6 +367,20 @@ RUNS-BLOCK
 
 ## 12. THE OVERLAP WITH MLAW2 (read twice: at the start and before the last push)
 
-OVERLAP-BLOCK
+Read at the start (20 Nov 2026: `git fetch origin claude/mlaw2-census` → no such ref) and again before the last push
+(`origin/claude/mlaw2-census` at `6018a70`, census step 2 `cf1785c`, `ci/mlaw2/census/SUMMARY.txt`).
 
-CHECKPOINT · 20 Nov 2026 · spec drafted, census running (plantcheck / coupled) · resume from: fill SUMMARY / MEMBER / LAWS / RUNS / OVERLAP blocks from `node ci/mfix/tools/summarize.mjs --table`
+- **mlaw2 CLAIMS** (no fixture): selftests `archivist examiner exchanges fuelboard home_pin notes_compiler oura_coach
+  outwork_audit postmatch python_state rails selfknowledge sitting test_coach_v2 teaching_audit turn_hook viz widget`
+  · asserts `:181 :182 :183 :184 :223` · modes none.
+- **mfix TAKES** (a fixture): the PLANT selftests of §2, `learn_digest` `reconcile` `heartbeat` (§2.2), the PLANT
+  asserts of §2.1, asserts `:219` `:225`, mode `atlas`.
+- **Members both of us name as our own: NONE.** Every mlaw2 claim is a ZERO member here (green on the empty plant,
+  `census/selftests.jsonl` Z column; asserts `:181-184` and `:223` ok on Z, `census/modes.jsonl`); no mfix member is in
+  its claim list. Row 1205 (2)'s tie-break (mlaw2 wins) has nothing to decide.
+- **Where the two censuses CLASS a member differently** (not an overlap of claims, named so neither is lost):
+  `blackbox` (mlaw2: needs a fixture; here: red on the derived plant, N9) · the RED-BOTH count (mlaw2 counts one fewer,
+  that same member) · mlaw2's NEEDS-FIXTURE set is one larger than this unit's PLANT set by exactly `blackbox`.
+- **The planter.** mlaw2's `ci/mlaw2/plant.mjs` refuses any fixture today (`plant_inputs.json` `"fixtures": []`, and
+  `plant()` throws on one). That is F3: this unit's seed would fill it.
+

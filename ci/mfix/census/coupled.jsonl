@@ -1,1 +1,6 @@
 {"organ":"capsule_bridge","file":"registry.json","tables":["mechanisms","lanes"],"all_real_green":true,"real_rows":["game_on_epoch"]}
+{"organ":"bootroom","file":"registry.json","tables":["mechanisms","lanes"],"all_real_green":true,"real_rows":["mutation:forge_profile.json"]}
+{"organ":"acts","file":"registry.json","tables":["mechanisms","lanes"],"all_real_green":true,"real_rows":["act_doors"]}
+{"organ":"cortex","file":"registry.json","tables":["mechanisms","lanes"],"all_real_green":true,"real_rows":["modalities_ambient"]}
+{"organ":"distiller","file":"registry.json","tables":["mechanisms","lanes"],"all_real_green":true,"real_rows":["modalities_interactive","modalities_ambient"]}
+{"organ":"deep","file":"registry.json","tables":["mechanisms","lanes"],"all_real_green":true,"real_rows":["game_on_epoch"]}

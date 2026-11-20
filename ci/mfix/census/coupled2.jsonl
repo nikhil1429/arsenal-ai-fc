@@ -1,0 +1,12 @@
+{"organ":"daily_green","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["game_on_epoch"]}
+{"organ":"forge_session","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["core_axes_default"]}
+{"organ":"learnstate","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["game_on_epoch"]}
+{"organ":"gate","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["dmn_rollout","dmn_counter","ns_probe_bank","ns_distractors","ns_pre_answers","ns_grade_probes","cortex_wake","cortex_consolidate","thalamus_adjudicator","council_chair","gaffer_judge","gaffer_verify","mission_m03","haiku_pulse","selfknowledge","dmn_bg_drain","ns_field_probes","compiled_notes","notes_corrections","capsule_backups","brief_log","rejirah_log"]}
+{"organ":"samjhao","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["game_on_epoch"]}
+{"organ":"gate_tune","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["mutation:thalamus_config.tiers"]}
+{"organ":"nightshift","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["game_on_epoch"]}
+{"organ":"rejirah","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["game_on_epoch"]}
+{"organ":"throwin","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["modalities_interactive"]}
+{"organ":"shadow","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["interruption_types"]}
+{"organ":"sprintsync","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["game_on_epoch"]}
+{"organ":"tasks","file":"registry.json","tables":["mechanisms","lanes"],"also":[],"all_real_green":true,"real_rows":["task_kinds","dmn_counter"]}

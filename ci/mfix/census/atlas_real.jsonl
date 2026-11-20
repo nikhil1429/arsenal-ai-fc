@@ -1,0 +1,2 @@
+{"variant":"seeded","owner_exits":[0,0],"exit":0,"atlas_assert":"ok FLOW ATLAS — `check` re-derives the atlas from the live IR s"}
+{"variant":"edited-after-build","owner_exits":[0,0],"exit":2,"atlas_assert":"FAIL FLOW ATLAS — `check` re-derives the atlas from the live IR s"}
