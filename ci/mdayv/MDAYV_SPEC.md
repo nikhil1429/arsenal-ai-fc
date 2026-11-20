@@ -290,3 +290,44 @@ Re-read against `cebe3ebe4024c2144b934b3032b3fb837285d926` (`git fetch origin ma
 - **`scripts/organism_test.mjs`:** a member bound `MEMBER_BOUND_MS` (:62, env may only LOWER it) and kills named in a member
   red. The `clauses` member that would walk `ci/witness/mdayv/` is mmeter's, not yet on main; F8 stands — the build cuts from
   the main that carries mmeter. Any witness this unit proposes runs inside that bound and types none of its own (§4).
+
+## 11 · NEW MAIN 6a6bdff (unit mmeter landed; runner M's message, 20 Nov 2026) — F8's gate is open
+
+Re-read against `6a6bdfff4349b849398b69d0748b27d37c874b85` (`git fetch origin main` → `git rev-parse FETCH_HEAD`), 20 Nov 2026.
+`git diff --stat cebe3eb 6a6bdff` → `10 files changed, 791 insertions(+), 7 deletions(-)`; outside `ci/` it names only
+`scripts/daily_green.mjs`, `scripts/done.mjs`, `scripts/organism_test.mjs`.
+
+- **F8's gate:** `git diff --quiet e83537b 6a6bdff -- scripts/daily_green.mjs` exits 0 — the landed meter is the adopted
+  mmeter tree byte for byte, so §3's overlap table holds as written. mmeter is on main; a build may cut from 6a6bdff (or a later main).
+- **Unchanged for this unit:** `git diff --quiet cebe3eb 6a6bdff -- scripts/day.mjs scripts/night.mjs scripts/rung_receipt.mjs
+  scripts/conductor.mjs scripts/usage_tap.mjs scripts/study_scope.mjs package.json` exits 0 (both carriers, the receipt, the seams).
+- **THE REBASED PLAN (§3's anchors re-measured at 6a6bdff by `grep -n` on `git show 6a6bdff:scripts/daily_green.mjs`):**
+
+  | mdayv edit | anchor string | line @6a6bdff (was @5759cce) |
+  |---|---|---|
+  | header: THE FINAL READ paragraph | after THE CODE SHA paragraph, before `// MODES:` | :79 (:71) |
+  | the CLI line gains `final [--through YYYY-MM-DD]` | `// CLI:   node scripts/daily_green.mjs` | :80 (:72) |
+  | the row gains `read` (+ `final_at`) | `const row = { date: day` … `code_sha: codeSha(` | :436-437 (:413) |
+  | the write predicate (a final appends past identity; nothing after a final) | `if (write && (!last \|\| identity(last) !== identity(row)))` | :444 (:421) |
+  | the ONE write, reused | `appendFileSync(ledger,` | :446 (:422) |
+  | `identity` — UNCHANGED | `const identity = (row)` | :363 (:355) |
+  | `latestByDate` — UNCHANGED, now exported by mmeter | `export function latestByDate` | :366 (:356) |
+  | `exitOf` — UNCHANGED, mmeter's | `export function exitOf` | :390 (new) |
+  | `main()`: the `final` mode and its exit (F7 A) before mmeter's strict exit | `const out = await witness({ date })` · `process.exit(exitOf(out.row))` | :806 · :810 (:757 · none) |
+  | the mdayv selftest block | `// ── HERMETIC + ONE WRITE ──` | :784 (:741) |
+
+- **What mmeter's landing changes in the design:**
+  1. A plain or `--date` meter run now exits 3 on any day below 11 of 11 (`:810`). So both carriers MUST call the `final`
+     mode, whose exit is F7's (0 when every asked day has a final row), never the plain mode: a red DAY would otherwise fail
+     the conductor's `meter-final` step and print as a failed owner call in `day.mjs start`. F7 A is now load-bearing, not taste.
+  2. Every row now carries `code_sha` (`:437`), outside `identity`. A final row carries it too (the stamp of the code that
+     took the final read). mmeter's A:old-day-red (`ci/witness/mmeter/witness_meter.mjs`) reads `oldDayRed` (now exported,
+     `done.mjs:83`) and the LATEST row's `code_sha`; F2's FLOOR keeps `final` from ever writing a `2026-11-13` row, so that
+     clause cannot move. A final read of yesterday makes yesterday the meter's LATEST date until today's first provisional
+     row: mmeter's A:day-11 then reads the final row (F5 A needs no edit).
+  3. `organism_test.mjs` now carries the `clauses` member (`clauseWitnesses` :2809, mode `clauses` :3078) that walks
+     `ci/witness/<unit>/witness_*.mjs plants`. §4's `ci/witness/mdayv/witness_dayv.mjs` rides it with no edit to the suite,
+     and must print mmeter's contract (`CLAUSE <id> GREEN|RED · k/n plant(s)` · `PLANTS mdayv · k of n plant(s) as expected`).
+  4. The line is unchanged byte for byte by mmeter, so F10 A's trailing mark still leaves its plant regex
+     (`^DAILY GREEN \d{4}-\d{2}-\d{2} IST · 5\/11 · `) matching.
+- **`ci/mdayv/BASE` for the build:** the main it cuts from, a 40-hex sha that carries `e83537b`'s meter (6a6bdff or later).
