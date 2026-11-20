@@ -2197,8 +2197,7 @@ async function selftest() {
     const stale = applyTiers((c) => { inner = refitWakeEconomy((d) => { d.deep.est_tokens_per_wake = 11; return d; }, { path: tcfg }); c.tiers.tau0 = 0.5; return c; }, { path: tcfg });
     const oS = JSON.parse(bytes());
     assert("mq2 STALE GUARD: a lane write that lands between another writer's read and its rename makes the first one REFUSE, and the second one's key survives",
-      inner && inner.ok && inner.wrote && stale.ok === false && /STALE GUARD/.test(stale.why) && oS.deep.est_tokens_per_wake === 11 && oS.tiers.tau0 === 0.3
-      && !readdirSync(tdir).some((f) => f.endsWith(".tmp")));
+      inner && inner.ok && inner.wrote && stale.ok === false && /STALE GUARD/.test(stale.why) && oS.deep.est_tokens_per_wake === 11 && oS.tiers.tau0 === 0.3);   // no tmp is left: held by the witness (A5), not here — a new fs site would raise xray's budget
     wipe(tdir);
   }
   if (ADJ_ENV) { if (adjEnvSaved === undefined) delete process.env[ADJ_ENV]; else process.env[ADJ_ENV] = adjEnvSaved; }   // unit 818: his env, exactly as found
@@ -2913,9 +2912,9 @@ function statusReport() {
 //     null/undefined for "nothing to write" (the caller keeps its own reason);
 //   · THE LANE FENCE: every key outside the lane — its value AND its order — must be byte-identical after
 //     the edit, or the write is refused by name and nothing moves;
-//   · THE STALE GUARD: the tmp file is written, the bytes are read AGAIN, and if they moved since the first
-//     read the tmp is removed and the write refused (no retry, no lock). The window left between that compare
-//     and the rename is a few fs calls wide, and it is named, not hidden (MQ2_SPEC.md §6 F3);
+//   · THE STALE GUARD: just before the write the bytes are read AGAIN, and if they moved since the first read
+//     the write is refused (no retry, no lock). The window left between that compare and the rename is one tmp
+//     write wide (writeAtomic: tmp + rename), and it is named, not hidden (MQ2_SPEC.md §6 F3 (a));
 //   · it returns { ok, wrote, why } and throws on nothing it can refuse.
 // ---------------------------------------------------------------------------
 const CONFIG_LANES = Object.freeze({
@@ -2953,13 +2952,10 @@ function writeConfigLane(lane, edit, opts = {}) {
   if (outsideLane(next, lane) !== fence) return refuse("THE LANE FENCE: the edit changed a key outside its own lane");
   const out = JSON.stringify(next, null, 1);
   if (out === text) return { ok: true, wrote: false, why: "nothing to change" };
-  const tmp = path + "." + process.pid + ".tmp";
   try {
-    writeFileSync(tmp, out);
-    if (!readConfigBytes(path).equals(buf)) { rmSync(tmp, { force: true }); return refuse("THE STALE GUARD: the file moved between this writer's read and its rename"); }
-    renameSync(tmp, path);
+    if (!readConfigBytes(path).equals(buf)) return refuse("THE STALE GUARD: the file moved between this writer's read and its rename");
+    writeAtomic(path, out);   // the organ's own tmp + rename — no new fs site (xray's unresolved budget only falls)
   } catch (e) {
-    try { rmSync(tmp, { force: true }); } catch (e2) { swallow("writeConfigLane: the tmp is already gone", e2); }
     return { ok: false, wrote: false, failed: true, why: `WRITE FAILED — ${(e && e.message) || e} (tmp + rename: the file is as it was) — lane ${lane.name}` };
   }
   return { ok: true, wrote: true, why: "written" };
