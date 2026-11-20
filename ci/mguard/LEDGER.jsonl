@@ -14,3 +14,4 @@
 {"ts":"2026-11-20T03:47Z","act":"witness","cmd":"node ci/mguard/witness_mguard.mjs --org . --base-org <LF tree 5759cce>","last_line":"GREEN MGUARD the spend guard · 7 clause(s) (exit 0)"}
 {"ts":"2026-11-20T03:48Z","act":"witness","cmd":"node ci/mguard/witness_mguard.mjs --org <LF tree 5759cce> --base-org <LF tree 5759cce>","last_line":"RED MGUARD · JUDGE (exit 1)"}
 {"ts":"2026-11-20T04:00Z","act":"mutants","cmd":"node ci/mguard/run_mutants_mguard.mjs --org . --base-org <LF tree 5759cce>","last_line":"run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-20T04:10Z","act":"build-G8","cmd":".claude/skills/runner/SKILL.md: one line after the fallback-card line (the away report, read and show only, its judge)","last_line":"canon replay HEAD · 97 md blob(s) · undeclared 0 · declared 1"}
