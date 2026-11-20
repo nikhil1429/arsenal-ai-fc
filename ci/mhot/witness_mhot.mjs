@@ -1,7 +1,13 @@
 #!/usr/bin/env node
 // ci/mhot/witness_mhot.mjs — THE UNIT WITNESS of unit mhot (forks rows 1172 (3) / 1187). HEADER = CONTRACT.
 //
-//   node ci/mhot/witness_mhot.mjs --org <build tree> --base-org <base tree> [--only <id>[,<id>…]]
+//   node ci/mhot/witness_mhot.mjs --org <build tree> --base-org <base tree> [--bound-base <tree>] [--only <id>[,<id>…]]
+//
+// THE SPLIT (forks row 1200 (2)-(3), a standing class): the clauses H1-H9 are judged against --base-org, the commit
+// ci/mhot/BASE names (red there, green on the build), and BOUND against --bound-base, the PARENT of the land commit — after a
+// main-moved rebuild that parent carries paths other units landed. Absent, the bound base is --base-org. BOUND finds the
+// unit's two in-file edits by ANCHOR in the bound base (package.json's six keys _selftest_coverage_law … _runner_law;
+// audit.mjs's "suite members" block), never by line number, because main moving shifts them. No BASE file is rewritten.
 //
 // WHAT IT PROVES. A suite member is ONE FILE (suite/members/<organ>.json), so two units that each add or move a member
 // never edit one line together; the coverage law, the independent runner and the fast-fail chain all read those files;
@@ -43,7 +49,10 @@
 //                       `chain organism:selftest` both red NAMING "no member directory"; no "suite members pass" ok line
 //   H9  LANDED READERS  the tree's own ci/mfac W7 (`--only W7`) and ci/mpool P read the BUILD tree GREEN (re-cut, F6 A);
 //                       LIVE_ASSERTS / LIVE_MODES / KNOWN_RED literals each still present once (mf2, mr3, mrf, mrj, ms1 read them)
-//   BOUND  only the named files differ from --base-org, package.json only at lines 17-22, audit.mjs only at 582-587
+//   HB     THE SPLIT, planted: this witness as a child over a planted land commit whose parent carries two foreign landed
+//          paths reads BOUND green against --bound-base <parent>, RED naming them against the BASE-as-bound, and RED naming
+//          exactly the one unit path planted outside the named files
+//   BOUND  only the named files differ from --bound-base, package.json only in its six keys, audit.mjs only in its block
 //   LAST   no node process naming the temp root survives
 //
 // LAST LINE   GREEN MHOT the member roll · <n> clause(s)   (exit 0)   or   RED MHOT · <clauses>   (exit 1)
@@ -51,12 +60,18 @@
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readdirSync, readFileSync, writeFileSync, copyFileSync, existsSync, rmSync, statSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve, relative, sep } from "node:path";
+import { join, resolve, relative, sep, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 
+const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 && process.argv[i + 1] && !process.argv[i + 1].startsWith("--") ? process.argv[i + 1] : null; };
 const ORG = arg("--org") ? resolve(arg("--org")) : null, BASE = arg("--base-org") ? resolve(arg("--base-org")) : null;
 const ONLY = arg("--only") ? arg("--only").split(",") : null;
+// forks row 1200 (2)-(3), THE STANDING SPLIT: the CLAUSES are judged against --base-org (the ci/mhot/BASE commit: red there,
+// green on the build); BOUND is judged against --bound-base, the PARENT of the land commit (after a main-moved rebuild the
+// parent carries paths other units landed, which are not this unit's). Absent, the bound base is --base-org (the cut).
+const BOUND_BASE = arg("--bound-base") ? resolve(arg("--bound-base")) : BASE;
 if (!ORG || !BASE || !existsSync(join(ORG, "package.json")) || !existsSync(join(BASE, "package.json"))) { console.log("RED MHOT · USAGE (--org <dir> --base-org <dir>, each with package.json)"); process.exit(1); }
 const T0 = Date.now();
 const wf = (() => { try { return readFileSync(join(ORG, ".github", "workflows", "suite.yml"), "utf8"); } catch { return ""; } })();
@@ -253,23 +268,53 @@ function hashes(tree) {
     const st = statSync(p); if (st.isDirectory()) walk(p); else m.set(rel, createHash("sha256").update(readFileSync(p).toString("latin1").replace(/\r\n/g, "\n")).digest("hex")); } };
   walk(tree); return m;
 }
-function bound() {
-  const a = hashes(BASE), b = hashes(ORG);
+/** the changed region of b against a, as [first, endA) in a's lines (common prefix / suffix), or null when equal */
+const region = (a, b) => { let p = 0; while (p < a.length && p < b.length && a[p] === b[p]) p++; if (p === a.length && p === b.length) return null;
+  let q = 0; while (q < a.length - p && q < b.length - p && a[a.length - 1 - q] === b[b.length - 1 - q]) q++; return [p, a.length - q]; };
+// the unit's two in-file regions, found by ANCHOR in the bound base (its line numbers move once main moves): package.json's
+// six keys _selftest_coverage_law … _runner_law (lines 17-22 at 5759cce) and audit.mjs's "suite members" derive (582-587)
+const pkgSpan = (a) => { const i = a.findIndex((l) => /^\s*"_selftest_coverage_law":/.test(l)), j = a.findIndex((l) => /^\s*"_runner_law":/.test(l)); return i >= 0 && j >= i ? [i, j + 1] : null; };
+const audSpan = (a) => { const i = a.findIndex((l) => /^\s*"suite members": \(\) => \{/.test(l)); if (i < 0) return null; const j = a.findIndex((l, k) => k > i && /^ {4}\},\s*$/.test(l)); return j > i ? [i, j + 1] : null; };
+const inside = (r, span) => r === null || (!!span && r[0] >= span[0] && r[1] <= span[1]);
+/** @param {string} from the bound base (the land commit's parent) @param {string} to the build */
+function bound(from = BOUND_BASE, to = ORG) {
+  const a = hashes(from), b = hashes(to);
   const differ = [...new Set([...a.keys(), ...b.keys()])].filter((k) => a.get(k) !== b.get(k)).sort();
   const beyond = differ.filter((k) => !NAMED(k));
   const L = (t, rel) => lines(rd(join(t, rel)) || "");
-  const pa = L(BASE, "package.json"), pb = L(ORG, "package.json");
-  const pkgOk = pa.length === pb.length && pa.every((l, i) => l === pb[i] || (i >= 16 && i <= 21));
-  const aa = L(BASE, "scripts/audit.mjs"), ab = L(ORG, "scripts/audit.mjs");
-  const tail = aa.length - 587;
-  const audOk = aa.slice(0, 581).join("\n") === ab.slice(0, 581).join("\n") && aa.slice(587).join("\n") === ab.slice(ab.length - tail).join("\n");
-  return { ok: !beyond.length && pkgOk && audOk, why: `${differ.length} file(s) differ · beyond the named: ${beyond.length ? beyond.slice(0, 8).join(", ") : "none"} · package.json only lines 17-22: ${pkgOk ? "yes" : "NO"} · audit.mjs only lines 582-587: ${audOk ? "yes" : "NO"}` };
+  const pa = L(from, "package.json"), pkgOk = inside(region(pa, L(to, "package.json")), pkgSpan(pa));
+  const aa = L(from, "scripts/audit.mjs"), audOk = inside(region(aa, L(to, "scripts/audit.mjs")), audSpan(aa));
+  return { ok: !beyond.length && pkgOk && audOk, beyond, why: `against ${from === BASE ? "the BASE tree" : "the bound base (the land commit's parent)"} · ${differ.length} file(s) differ · beyond the named: ${beyond.length ? beyond.slice(0, 8).join(", ") : "none"} · package.json only its six law/suite keys: ${pkgOk ? "yes" : "NO"} · audit.mjs only its suite-members block: ${audOk ? "yes" : "NO"}` };
+}
+// ── HB · THE SPLIT, PLANTED (row 1200 (2)-(3)) — this witness run as a child over three planted trees ────────────────
+// P (a land commit's parent) = the BASE's package.json, audit.mjs and suite.yml PLUS two paths another unit landed; L (the
+// rebuilt land commit) = P plus this unit's own edits (the build's package.json and audit.mjs, one member file); L2 = L plus
+// one unit path outside the named files. GREEN iff: L against --bound-base P reads BOUND green; L against BASE-as-bound
+// (no --bound-base: P without the foreign paths) reads them as foreign, RED; L2 against P reads RED naming only that path.
+function hb() {
+  const mk = (name) => { const d = join(TMP, `hb-${name}`); mkdirSync(join(d, "scripts"), { recursive: true }); mkdirSync(join(d, ".github", "workflows"), { recursive: true }); return d; };
+  const put = (d, rel, txt) => { mkdirSync(join(d, ...rel.split("/").slice(0, -1)), { recursive: true }); writeFileSync(join(d, ...rel.split("/")), txt); };
+  const seed = (d) => { copyFileSync(join(BASE, "package.json"), join(d, "package.json")); copyFileSync(join(BASE, "scripts", "audit.mjs"), join(d, "scripts", "audit.mjs")); put(d, ".github/workflows/suite.yml", wf); };
+  const Bp = mk("base"), P = mk("parent"), Lt = mk("land"), L2 = mk("land2");
+  seed(Bp);
+  for (const d of [P, Lt, L2]) { seed(d); put(d, "scripts/zz_landed_elsewhere.mjs", "// another unit's landed organ (planted)\n"); put(d, "ci/zz_other/witness_zz_other.mjs", "// another unit's landed witness (planted)\n"); }
+  for (const d of [Lt, L2]) { copyFileSync(join(ORG, "package.json"), join(d, "package.json")); copyFileSync(join(ORG, "scripts", "audit.mjs"), join(d, "scripts", "audit.mjs")); put(d, "suite/members/zz_mhot_a.json", JSON.stringify({ suite: "organism:selftest", argv: ["selftest"], live: null }) + "\n"); }
+  put(L2, "scripts/zz_outside_named.mjs", "// a unit path outside its named files (planted)\n");
+  const me = join(HERE, "witness_mhot.mjs");
+  const last = (r) => lines(r.out).map((x) => x.trim()).filter(Boolean).pop() || "";
+  const bline = (r) => (lines(r.out).find((l) => /^\s*(ok|FAIL)\s+BOUND ·/.test(l)) || "").trim();
+  const go = (org, extra) => sh(process.execPath, [me, "--org", org, "--base-org", Bp, ...extra, "--only", "HB-NONE"], { cwd: TMP });
+  const a = go(Lt, ["--bound-base", P]), b = go(Lt, []), c = go(L2, ["--bound-base", P]);
+  const ok = a.code === 0 && /^GREEN MHOT /.test(last(a))
+    && b.code === 1 && last(b) === "RED MHOT · BOUND" && /zz_landed_elsewhere\.mjs/.test(bline(b)) && /witness_zz_other\.mjs/.test(bline(b))
+    && c.code === 1 && last(c) === "RED MHOT · BOUND" && /beyond the named: scripts\/zz_outside_named\.mjs ·/.test(bline(c));
+  return { ok, why: `land vs parent: ${last(a)} · land vs BASE: ${last(b)} (${/zz_landed_elsewhere/.test(bline(b)) ? "the foreign paths named" : "foreign paths NOT named"}) · land+outside vs parent: ${last(c)}${/zz_outside_named/.test(bline(c)) ? " (names the outside path)" : ""}` };
 }
 
 // ── run ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const bad = [];
 let survivors = [];
-console.log(`witness mhot · org ${ORG} · base ${BASE} · bound ${jobMin} min (suite.yml timeout-minutes) · tmp ${TMP}`);
+console.log(`witness mhot · org ${ORG} · base ${BASE} (clauses) · bound base ${BOUND_BASE === BASE ? "= base" : BOUND_BASE} (BOUND) · bound ${jobMin} min (suite.yml timeout-minutes) · tmp ${TMP}`);
 try {
   for (const [id, name, fn] of CLAUSES) {
     if (!want(id)) continue;
@@ -279,6 +324,11 @@ try {
     const ok = gr.ok && !br.ok;
     if (!ok) bad.push(id);
     console.log(`  ${ok ? "ok  " : "FAIL"} ${id} · build ${gr.ok ? "GREEN" : "RED"} · base ${br.ok ? "GREEN (vacuous)" : "RED"} · ${name}\n         build: ${gr.why}\n         base:  ${br.why}`);
+  }
+  if (want("HB")) {
+    let h; try { h = hb(); } catch (e) { h = { ok: false, why: `threw: ${String(e instanceof Error ? e.message : e)}` }; }
+    if (!h.ok) bad.push("HB");
+    console.log(`  ${h.ok ? "ok  " : "FAIL"} HB · THE BOUND SPLIT (row 1200 (2)-(3)), planted · ${h.why}`);
   }
   const b = bound();
   if (!b.ok) bad.push("BOUND");
@@ -304,5 +354,5 @@ try {
 console.log(`  ${survivors.length ? "FAIL" : "ok  "} LAST · no node process naming the temp root survives${survivors.length ? ` (${survivors.join(", ")})` : ""}`);
 if (survivors.length) bad.push("LAST");
 if (bad.length) { console.log(`RED MHOT · ${bad.join(", ")}`); process.exit(1); }
-console.log(`GREEN MHOT the member roll · ${CLAUSES.filter(([id]) => want(id)).length + 2} clause(s)`);
+console.log(`GREEN MHOT the member roll · ${CLAUSES.filter(([id]) => want(id)).length + (want("HB") ? 1 : 0) + 2} clause(s)`);
 process.exit(0);

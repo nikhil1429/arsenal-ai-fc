@@ -50,6 +50,7 @@ const MUTANTS = [
   { clause: "H7", what: "the member file of test_coach_v2 is dropped", m: (t) => { const p = join(t, "suite", "members", "test_coach_v2.json"); if (!existsSync(p)) return "test_coach_v2.json absent"; unlinkSync(p); return null; } },
   { clause: "H8", what: "suiteRoll returns an empty roll with NO defect when the directory is absent", m: (t) => edit(t, OT, "export function suiteRoll", "    defects.push({ file: MEMBERS_REL, why: `no member directory", "    if (Date.now() > 0) return { members, defects };\n    defects.push({ file: MEMBERS_REL, why: `no member directory") },
   { clause: "H9", what: "mpool P left un-re-cut (the strings only)", m: (t) => edit(t, "ci/mpool/witness_mpool.mjs", null, "    return n + rolled === 1;", "    return n === 1;") },
+  { clause: "HB", what: "BOUND judged against BASE again (the bound base ignored: row 1200 (2)-(3)'s split undone)", m: (t) => edit(t, W, null, "function bound(from = BOUND_BASE, to = ORG) {", "function bound(from = BASE, to = ORG) {") },
   { clause: "BOUND", what: "scripts/sitting.mjs touched (one organ byte beyond the named)", m: (t) => { const p = join(t, "scripts", "sitting.mjs"); if (!existsSync(p)) return "sitting.mjs absent"; writeFileSync(p, readFileSync(p, "utf8") + "\n// planted by run_mutants_mhot (BOUND)\n"); return null; } },
   { clause: "LAST", what: "the witness leaves a node process naming its temp dir", m: (t) => {
     const e = edit(t, W, null, 'import { spawnSync } from "node:child_process";', 'import { spawnSync, spawn as __mut } from "node:child_process";');
