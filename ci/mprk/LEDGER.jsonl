@@ -1,0 +1,10 @@
+{"ts":"2026-11-20T01:36:38.273Z","act":"fetch-base","cmd":"git fetch origin main && git rev-parse FETCH_HEAD","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T01:36:38.273Z","act":"branch","cmd":"git checkout -b claude/mprk-spec 5759cce","last_line":"Switched to a new branch claude/mprk-spec"}
+{"ts":"2026-11-20T01:36:38.273Z","act":"read-residual","cmd":"git show b37ebfc:ci/mcap/PROOF.md (section 7)","last_line":"Residual mcap-2 · no organ holds parked items"}
+{"ts":"2026-11-20T01:36:38.273Z","act":"measure-parks","cmd":"grep -n park over scripts, skills, learning-layer, SAMJHAO_MERGED","last_line":"13 order/shape sites P1-P13 + 4 out-of-scope senses (see spec §1)"}
+{"ts":"2026-11-20T01:36:38.273Z","act":"measure-readers","cmd":"grep -n note|thread|open_threads|card over mcp-memory, acts, hippocampus, captains_call","last_line":"no lane returns a park at an anchor unasked; none closes one"}
+{"ts":"2026-11-20T01:36:38.273Z","act":"red-on-base","cmd":"node -e import(acts.mjs) dispatch park with stub append/exec","last_line":"dispatch park -> false unknown verb \"park\""}
+{"ts":"2026-11-20T01:36:38.273Z","act":"suite-1","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"exit 2 · fsrs + mutagen ERR_MODULE_NOT_FOUND (no node_modules) + coverage law"}
+{"ts":"2026-11-20T01:36:38.273Z","act":"npm-ci","cmd":"npm ci --ignore-scripts","last_line":"exit 0"}
+{"ts":"2026-11-20T01:36:38.273Z","act":"suite-2","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"exit 2 · orphaned: deck_lint, home_pin, probe, study_scope"}
+{"ts":"2026-11-20T01:36:38.274Z","act":"write-spec","cmd":"write ci/mprk/MPRK_SPEC.md","last_line":"spec written"}
