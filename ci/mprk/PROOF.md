@@ -165,3 +165,14 @@ The check runs of each pushed tip are read through the public API with curl and 
 (`GET /repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`) and recorded in `ci/mprk/LEDGER.jsonl`. Each push
 cancels the previous tip's runs (the workflow's concurrency); the last tip's ids and verdict are in the seat's final
 message.
+
+## 8. Merges of new mains (20 Nov 2026; `ci/mprk/BASE` kept at 5759cce, forks row 1200 (2))
+
+| new main | merge commit | conflicts | how both intents hold |
+|---|---|---|---|
+| 3f22388 (mlaw) | 4b334be | `package.json` suite lines only | union: `organism:selftest` gains main's `done.mjs` member; `squad:selftest` keeps mprk's `parked.mjs` member; each side had changed only its own line |
+| cebe3eb (mcov) | 5291eee | `package.json` suite lines only | union: `organism:selftest` gains main's `deck_lint`, `home_pin`, `probe`, `study_scope` members; `squad:selftest` keeps `parked.mjs` |
+| 6a6bdff (mmeter) | e6bcb5b | none (git merged clean; main touched no named file of this unit) | nothing to resolve |
+
+After each merge the witness ran on the merged LF tree with the bound judged against the parent (`GREEN MPRK … · 15 clause(s)`),
+the parent main alone read RED on the 14 clauses, and the mutants read `15 of 15 … · control GREEN` (ledger rows).
