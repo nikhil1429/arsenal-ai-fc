@@ -142,3 +142,12 @@ the next push, never reached a verdict — not a red of the code.
 Effort receipt: `node campaign-2026-09/tools/effort_receipt.mjs --fleet mrehearse --seat 00 --model claude-opus-5-5` →
 `Error: Cannot find module '…/campaign-2026-09/tools/effort_receipt.mjs'` (exit 1; this repository carries no
 `campaign-2026-09/`); nothing written under it.
+
+## Merge of main 5759cce (row 1172, 20 Nov 2026)
+
+CHECKPOINT · MERGED at 2026-11-20T01:28Z · merged tip = merge commit `96ac1f5` (main `5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90` into work tip `d6fadad`) plus the one commit that writes this section and `BASE` · BASE = `5759cce` (`ci/mrehearse/BASE`) · resolution hunks: NONE (clean merge; `scripts/organism_test.mjs` and `package.json` came from main unchanged, this unit adds no member to either) · witness build: `GREEN MREHEARSE night-replay · 8 clause(s)` (exit 0) · witness base 5759cce: `RED MREHEARSE · W1,W2,W3,W4,W5,W6` (exit 1) · mutants: `run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN` · night selftest after the merge: see the fenced line below · STOPPED (no new step).
+
+```
+node scripts/night.mjs selftest      (merged tree, 20 Nov 2026)
+night selftest: 23 passed, 0 failed
+```
