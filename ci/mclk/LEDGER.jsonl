@@ -1,0 +1,5 @@
+{"ts":"2026-11-20T22:20:19.173Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mclk-build FETCH_HEAD","last_line":"FETCH_HEAD 56ed4ffaa304a4b303245cbedab4db025e02a3f0"}
+{"ts":"2026-11-20T22:20:19.173Z","act":"measure cause on base, clock door all children at 2026-11-21 00:02 IST","cmd":"NODE_OPTIONS=--import=<clock preload> node ci/witness/mmeter/witness_meter.mjs plants","last_line":"PLANTS mmeter · 15 of 18 plant(s) as expected"}
+{"ts":"2026-11-20T22:20:19.173Z","act":"measure cause on base at 2026-11-20 23:58 IST","cmd":"same, 23:58 IST","last_line":"PLANTS mmeter · 18 of 18 plant(s) as expected"}
+{"ts":"2026-11-20T22:20:19.173Z","act":"measure cause on base at 2026-11-21 00:07 IST","cmd":"same, 00:07 IST","last_line":"PLANTS mmeter · 18 of 18 plant(s) as expected"}
+{"ts":"2026-11-20T22:20:19.173Z","act":"fix plant_day: one planted instant, stamps inside the day, instant handed to the meter child","cmd":"NODE_OPTIONS=--import=<clock preload> node ci/witness/mmeter/witness_meter.mjs plants (00:02, 23:58, 00:00 IST)","last_line":"PLANTS mmeter · 18 of 18 plant(s) as expected"}
