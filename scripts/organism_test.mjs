@@ -377,7 +377,7 @@ function suites() {
     assert(`SUITE MEMBER · ${m} selftest exits 0`, r.code === 0);
   }
   console.log(`  suites: reused ${reused} of ${members.length} member result(s) from hermetic (identical command), ran ${members.length - reused}`);
-  assert(`all ${PROFILE === "hermetic" ? `${ran} hermetic` : members.length} suite members pass (every one RUN, not chained)`, red.length === 0,
+  assert(`all ${PROFILE === "hermetic" ? `${ran} hermetic` : members.length} suite members pass (every one RUN, not chained)`, red.length === 0 && members.length > 0,
     red.map((r) => `${r.m}: ${r.tail}`).join("\n         "));
 }
 
