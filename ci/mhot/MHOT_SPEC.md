@@ -431,3 +431,17 @@ than organism_test.mjs and audit.mjs, and no file under `dressing-room/`.**
 ## 10 · THIS BRANCH'S CHECK RUNS
 
 Recorded in the ledger (`ci/mhot/LEDGER.jsonl`) after each push. The FINAL MESSAGE names the last push's runs and verdict.
+
+- Push `54f0b09` (the spec): workflow run 44654515709, check runs 136017335766 (`npm test · node 22`) and 136017335506
+  (`npm test · node 24`). Read through the public API with no token, about 45 minutes after the push (2026-11-20): **both
+  still `queued`**, so no verdict yet. The spec touches no organ, so the only law it can move is LOAD ZERO BLOCK 7, which
+  was replayed over the commit's blobs before the push:
+
+```
+$ node <scratchpad>/canon.mjs $(git rev-parse HEAD)      # the BLOCK 7 regexes, over git show <sha>:<path> of every tracked .md
+CANON_SCAN 54f0b09 files 98 declared 1 undeclared 0
+```
+
+- The effort receipt (`node campaign-2026-09/tools/effort_receipt.mjs --fleet mhot --seat 00 --model claude-opus-5-5`)
+  failed with `Error: Cannot find module '/home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs'`. This
+  repository carries no `campaign-2026-09/`, and nothing was written there.

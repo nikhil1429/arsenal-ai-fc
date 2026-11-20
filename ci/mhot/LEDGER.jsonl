@@ -12,3 +12,7 @@
 {"ts":"2026-11-20T01:33:26.322Z","act":"conflict today","cmd":"node ci/mhot/measure_mhot.mjs conflict <mlaw-build> <mcov-build>","last_line":"clean false · package.json organism:selftest"}
 {"ts":"2026-11-20T01:33:26.322Z","act":"conflict ms1 assembly","cmd":"node ci/mhot/measure_mhot.mjs conflict cf1ca54 08b4772 | 82f6e1e e2de691 | 38ae428 542dec7","last_line":"clean false x3 · KNOWN_RED"}
 {"ts":"2026-11-20T01:33:26.322Z","act":"write spec","cmd":"ci/mhot/MHOT_SPEC.md","last_line":"written"}
+{"ts":"2026-11-20T02:20:33.970Z","act":"canon scan over commit blobs","cmd":"node canon.mjs 54f0b09","last_line":"CANON_SCAN 54f0b09 files 98 declared 1 undeclared 0"}
+{"ts":"2026-11-20T02:20:33.972Z","act":"push","cmd":"git push -u origin claude/mhot-spec","last_line":"* [new branch] claude/mhot-spec -> claude/mhot-spec"}
+{"ts":"2026-11-20T02:20:33.972Z","act":"check runs 54f0b09","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/54f0b09d4662a62057bffc0e4c456554b27a86dc/check-runs","last_line":"136017335766 npm test · node 22 queued null · 136017335506 npm test · node 24 queued null"}
+{"ts":"2026-11-20T02:20:33.972Z","act":"effort receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs --fleet mhot --seat 00 --model claude-opus-5-5","last_line":"Error: Cannot find module campaign-2026-09/tools/effort_receipt.mjs"}
