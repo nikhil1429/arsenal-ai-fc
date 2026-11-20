@@ -3,7 +3,7 @@
 // ci/mshard/witness_mshard.mjs — WITNESS of unit mshard (the witnesses member split across jobs, and the fold)
 // ----------------------------------------------------------------------------
 // CONTRACT (forks rows 1171 (3) / 1188; spec ci/mshard/MSHARD_SPEC.md on claude/mshard-spec c82a0e6, the ruling wins):
-//   node ci/mshard/witness_mshard.mjs --org <build tree> --base-org <base tree> [--only <clause,…>]
+//   node ci/mshard/witness_mshard.mjs --org <build tree> --base-org <base tree> [--parent-org <parent tree>] [--only <clause,…>]
 // Every plant is a COPY under os.tmpdir(): a member plant is a throwaway git repo (core.autocrlf=false at init) holding the
 // tree's scripts/organism_test.mjs and .github/workflows/suite.yml (and, when a clause says so, a planted ci/mshard/TIMES)
 // beside planted ci/<unit>/ dirs whose witnesses are a few lines of node; a fold plant is a copy of the tree's
@@ -59,6 +59,9 @@ import os from "node:os";
 
 const arg = (k) => { const i = process.argv.indexOf(k); return i > -1 ? process.argv[i + 1] : null; };
 const ORG = arg("--org"), BASE = arg("--base-org");
+// THE BOUND CLASS (forks row 1200 (2)): after a merge of a new main the clauses stay judged against BASE and the bound is judged
+// against the PARENT — the new main merged in, given as --parent-org; with no --parent-org the bound is judged against BASE
+const PARENT = arg("--parent-org") || BASE;
 if (!ORG || !BASE) { console.log("RED MSHARD · usage: --org <dir> --base-org <dir>"); process.exit(1); }
 const ONLY = arg("--only") ? String(arg("--only")).split(",").map((s) => s.trim()).filter(Boolean) : null;
 const NAMED = [".github/workflows/suite.yml", "scripts/organism_test.mjs", "scripts/ci_verdict.mjs"], NAMED_DIRS = ["ci/mshard/"];
@@ -355,10 +358,10 @@ function files(dir) {
   return out;
 }
 function boundClause() {
-  const a = new Set(files(ORG)), b = new Set(files(BASE));
-  const diff = [...new Set([...a, ...b])].filter((f) => { const x = a.has(f) ? lf(readFileSync(join(ORG, f), "latin1")) : null, y = b.has(f) ? lf(readFileSync(join(BASE, f), "latin1")) : null; return x !== y; }).sort();
+  const a = new Set(files(ORG)), b = new Set(files(PARENT));
+  const diff = [...new Set([...a, ...b])].filter((f) => { const x = a.has(f) ? lf(readFileSync(join(ORG, f), "latin1")) : null, y = b.has(f) ? lf(readFileSync(join(PARENT, f), "latin1")) : null; return x !== y; }).sort();
   const beyond = diff.filter((f) => !NAMED.includes(f) && !NAMED_DIRS.some((p) => f.startsWith(p)));
-  return { ok: beyond.length === 0, why: beyond.length ? `beyond the named files: ${beyond.slice(0, 8).join(", ")}${beyond.length > 8 ? ` (+${beyond.length - 8})` : ""}` : `${diff.length} file(s) differ, every one named` };
+  return { ok: beyond.length === 0, why: beyond.length ? `beyond the named files: ${beyond.slice(0, 8).join(", ")}${beyond.length > 8 ? ` (+${beyond.length - 8})` : ""}` : `${diff.length} file(s) differ from the ${PARENT === BASE ? "base" : "parent"}, every one named` };
 }
 /** node processes whose command line names the temp dir */
 function survivors() {

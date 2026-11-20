@@ -251,14 +251,17 @@ export function compareLines(head, base, label, headSha = "", baseSha = "", base
  *  @param {string} yml @returns {string[]} */
 export function legsOf(yml) {
   const t = String(yml).replace(/\r\n/g, "\n");
-  // unit mshard: suite.yml carries several matrix jobs (suite, witnesses, the fold), so the leg is read job by job — the job
-  // whose own name and own node list derive names of the leg's form (LEG); a file with no jobs block is read as one job
+  // unit mshard: suite.yml carries several matrix jobs (suite, witnesses, the fold), so the leg's NAME is read from the job whose
+  // own name derives names of the leg's form (LEG); its NODES stay unit mlaw's read, the file's first node list — the
+  // ci_verdict selftest holds every node list equal to REQUIRED_LEGS, so the lists cannot part while the suite is green
   const jobs = /^jobs:\s*$/m.test(t) ? t.slice(t.search(/^jobs:\s*$/m)).split(/\n(?=  [\w-]+:\s*$)/m).slice(1) : [t];
+  const matrix = /^\s*node:\s*\[([^\]]*)\]/m.exec(t);
+  if (!matrix) return [];
+  const nodes = matrix[1].split(",").map((x) => x.trim()).filter(Boolean);
   for (const b of jobs) {
     const name = /^\s*name:\s*(.*?)\$\{\{\s*matrix\.node\s*\}\}\s*$/m.exec(b);
-    const matrix = /^\s*node:\s*\[([^\]]*)\]/m.exec(b);
-    if (!name || !matrix) continue;
-    const legs = matrix[1].split(",").map((x) => x.trim()).filter(Boolean).map((n) => `${name[1]}${n}`);
+    if (!name) continue;
+    const legs = nodes.map((n) => `${name[1]}${n}`);
     if (legs.length && legs.every((l) => LEG.test(l))) return legs;
   }
   return [];

@@ -194,3 +194,49 @@ by W-S13 PRIVACY instead.
   the shards and never drops a unit, because coverage is judged from `witnessUnits`.
 - **Q4** · F-CARRY's signed-out content read: this container cannot reach the artifact blob host (proxy 403), so the
   download-and-`namesAndNumbers` half of the measurement needs a seat that can. Which seat, before landing?
+
+## 8 · THE MERGE OF NEW MAIN cebe3eb (units mlaw + mcov), forks rows 1201 · 1187 (2) · 1181 (2) · 1200 (2)
+
+Merge commit c68c56f (parents 7e4b95c · cebe3ebe4024c2144b934b3032b3fb837285d926), with a merge commit and no rebase. The two earlier
+STOP lines in the LEDGER (3f22388, cebe3eb) were made under the runner's order that row 1201 withdrew. Git conflicted on ONE file,
+`scripts/ci_verdict.mjs`, in five hunks. `scripts/organism_test.mjs` and `package.json` auto-merged; the organism:selftest line
+took main's members unchanged, because mshard adds none. `ci/mshard/BASE` stays 5759cce (row 1200 (2)). Lines are those of the
+resolved file.
+
+| # | lines now | main meant (mlaw) | mshard meant | the result keeps both by |
+|---|---|---|---|---|
+| H1 | 56 | parseSuite's type gains `lawpack` | parseSuite's type gains `causes` (mdtl's channel) | the type names both fields |
+| H2 | 57–179 | parseSuite returns `lawpack: parseLawpack(text)`; new `parseLawpack`, `lawpackRises` (a rise over the base is a NEW red by number) | parseSuite returns `causes`; new `machineLine`, `digest`, `namesAndNumbers`, `mergeParts` (the fold) | parseSuite returns both. mlaw's two functions are kept verbatim (70, 90), then mshard's block (100–179) |
+| H3 | 233 | `compareLines(…, baseSrc, baseline)` passes the frozen baseline to `judge` | `compareLines(…, baseSrc, shards)` carries the fold's shard list into the payload | baseline stays the 7th positional argument (main's API as landed) and shards rides 8th; `judge(head, base, baseSrc, baseline)` |
+| H4 | 472–483 | selftest: REQUIRED_LEGS equals the FIRST matrix line; frozenBaseline readable; legs derived both ways (planted) | selftest: REQUIRED_LEGS equals EVERY node list; workflowLaws; foldLaws | mshard's every-list check (it covers the first-list one) plus all of mlaw's plants, then mshard's laws |
+| H5 | 500–503 | CLI compare: frozen baseline read only when the base has no law pack line | CLI compare: `--head-part` digests folded into ONE suite before the judge | the fold runs first, and mlaw's baseline rule then reads the FOLDED head; both go to compareLines |
+
+**Beyond the markers.** Two textually clean pieces would have broken one intent each, so I kept both:
+
+- **C1 · the digest drops the law pack (F-CARRY a × mlaw F3 A).** mshard's whitelist carried only the verdict, plan and shard
+  lines. In CI, head.txt and base.txt are digests, so `ORGANISM_TEST_LAWPACK` would never have reached `judge`, and a rise would
+  have passed unseen. Now `TAGS.lawpack` exists (101) and `digest` carries the line through mlaw's own `parseLawpack`
+  filter, which gives `{law: n}`, names and numbers only (125). The sharded fold keeps `lawpack: head.lawpack` (179). A new fold
+  law proves it (396): `fold × mlaw: … a rise is still a NEW red after the fold`.
+- **C2 · legsOf reads the wrong job (mlaw F1 B × mshard F-JOB J2).** Main's `legsOf` took the FIRST `name: … ${{ matrix.node }}`
+  line. Under mshard that line is `suite · node N`, which would derive REQUIRED_LEGS = `suite · node 22/24`, and the reader would
+  then wait for legs that are not the fold. Now `legsOf` (252) takes the NAME from the job whose name derives the leg's form
+  (`LEG`, already in the file, so nothing new is typed). The NODES stay mlaw's own read, the file's first node list, so mlaw's
+  LEGS plant (on the first list) still gains a leg. The selftest holds every node list equal to REQUIRED_LEGS, so the two cannot
+  part while the suite is green. Derived: `[ 'npm test · node 22', 'npm test · node 24' ]`.
+
+**The bound against the parent (row 1200 (2)).** `witness_mshard.mjs` gains `--parent-org <tree>`. BOUND diffs against it,
+while every clause still runs on `--base-org` (BASE). Without the flag, BOUND is judged against BASE, as before.
+
+**Measured on the merged tree** (LF exports under os.tmpdir(): merged c68c56f + the resolution commit, base 5759cce, parent cebe3eb):
+- witness `--org merged --base-org base --parent-org parent`: `GREEN MSHARD the witnesses member split across jobs, folded by name · 23 clause(s)`
+  (BOUND · 9 file(s) differ from the parent, every one named · LAST · 0 survive)
+- witness on base: `RED MSHARD · W-S1 PLAN, … W-S21 KREAD` (every clause but the guard). Without `--parent-org`, merged: `RED MSHARD · BOUND`
+- mutants: `run_mutants: 21 of 21 mutant(s) RED by the clause that names them · control GREEN`
+- `node scripts/ci_verdict.mjs selftest`: `ci_verdict selftest: 42 passed, 0 failed` (41 before C1's law; build before the merge: 33)
+- mlaw's own witness (`ci/mlaw/witness_mlaw.mjs --base-org 5759cce`): merged `RED MLAW · BOUND` = parent cebe3eb `RED MLAW · BOUND`,
+  with LEGS ok (planted +26 → 3 legs) and JUGAD ok (90 = frozen 90). Its BOUND is mlaw's own file set against ITS BASE, so it is red
+  on any later tree. Before C2, merged read `RED MLAW · LEGS · JUGAD · BOUND`.
+- hermetic suite: merged `153 passed, 3 failed` = parent `153 passed, 3 failed`, with the same three reds by name (export-tree
+  artifacts: no history, sandbox); the `ORGANISM_TEST_LAWPACK` line is byte-equal (md5 4a295a6b…). No count rose.
+- `node scripts/models.mjs check`: exit 0.
