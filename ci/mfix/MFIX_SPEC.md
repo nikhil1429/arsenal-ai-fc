@@ -363,12 +363,28 @@ default. The one fixed port in the class (`conductor.mjs:990` → 59999) is unit
 
 ## 11. THE NEUTRAL MACHINE ON THIS BRANCH
 
-RUNS-BLOCK
+Read through the public API with no token (`curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`,
+and `/check-runs/<id>/annotations`), 20 Nov 2026 UTC:
+
+| Push | Jobs | Legs | Verdict |
+|---|---|---|---|
+| `49c11eb` (open + canon replay) | 136363275324 / 136363274831 | node 22 · node 24 | **cancelled** (superseded: `concurrency: cancel-in-progress`) |
+| `b48853f` (census at the base) | 136367558492 / 136367558964 | both | **cancelled** (superseded) |
+| `f03f502` (spec draft checkpoint) | 136372743634 / 136372744859 | both | **cancelled** (superseded) |
+| `6fa6ef5` (spec complete) | 136385898092 / 136385893678 | node 22 · node 24 | **success** on both |
+
+The base's own push run, for contrast: main `6a6bdff` job 136341665594 (node 22) is **failure**, its annotation
+`B1_VERDICT … RED … 2 member(s) red that are not red at the merge base` naming `SUITE MEMBER · probe selftest exits 0`;
+its node 24 leg (136341665059) and the earlier pair (136292643782 / 136292644270) are success. Not this unit's; named so
+it is not lost (the same member read red in this seat's first hermetic run, before `npm ci`, and green after it).
+
+The last push's own run is in the seat's FINAL MESSAGE, because a spec cannot name the run of the commit that carries it.
 
 ## 12. THE OVERLAP WITH MLAW2 (read twice: at the start and before the last push)
 
 Read at the start (20 Nov 2026: `git fetch origin claude/mlaw2-census` → no such ref) and again before the last push
-(`origin/claude/mlaw2-census` at `6018a70`, census step 2 `cf1785c`, `ci/mlaw2/census/SUMMARY.txt`).
+(`origin/claude/mlaw2-census` at `6018a70`, census step 2 `cf1785c`, `ci/mlaw2/census/SUMMARY.txt`), and a third time
+at the last push (`90b6ba7`): its CLAIM lines are unchanged.
 
 - **mlaw2 CLAIMS** (no fixture): selftests `archivist examiner exchanges fuelboard home_pin notes_compiler oura_coach
   outwork_audit postmatch python_state rails selfknowledge sitting test_coach_v2 teaching_audit turn_hook viz widget`
@@ -384,3 +400,6 @@ Read at the start (20 Nov 2026: `git fetch origin claude/mlaw2-census` → no su
 - **The planter.** mlaw2's `ci/mlaw2/plant.mjs` refuses any fixture today (`plant_inputs.json` `"fixtures": []`, and
   `plant()` throws on one). That is F3: this unit's seed would fill it.
 
+
+
+DONE · the spec answers row 1205 (2), 20 Nov 2026 UTC · nothing built, nothing landed
