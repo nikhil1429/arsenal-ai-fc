@@ -1,3 +1,5 @@
+CHECKPOINT · MERGED at 2026-11-20T01:36Z (row 1172) · merged tip 54095396ce874e295254ac524d0ecc6ee44cd65e (merge of 129917e + main 5759cce) · BASE 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 · resolution hunks: NONE (a clean merge; scripts/organism_test.mjs and package.json are main's whole, this unit touches neither; scripts/xray.mjs main blob 47b9de0 = fb42118's, ours 157a8f0) · witness base: RED MXB · W1 W2 W3 W4 W5 W6 W7 W11 · witness build: GREEN MXB … LF and CRLF · 13 clause(s) · mutants: run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN · STOPPED here (row 1172 (5))
+
 # MXB PROOF — the six Q6 blindnesses (B1-B6), one IR family in `scripts/xray.mjs` (BUILD seat)
 
 Unit mxb · forks row 1161 (1)-(5) · **build seat, cloud, written 2026-11-19 (UTC)** · branch `claude/mxb-build`.
@@ -166,3 +168,16 @@ The final tip's legs: §11.
 
 The commit that carries this section is the proof tip; its sha and both neutral legs (`npm test · node 22`,
 `npm test · node 24`) are the last row of `ci/mxb/LEDGER.jsonl`, written by the one commit after it (ledger only).
+
+## 12 · The merge of main 5759cce (row 1172, 2026-11-20)
+
+```
+# 2026-11-20 — git merge --no-ff 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90  ->  54095396ce874e295254ac524d0ecc6ee44cd65e
+Automatic merge went well (112 paths from main; no conflict, so no resolution hunk)
+node ci/mxb/plant_mxb.mjs base --repo . --sha 5759cce   ->  1 path re-written (scripts/xray.mjs, blob 47b9de0)
+witness on BASE : RED MXB · W1 W2 W3 W4 W5 W6 W7 W11  (exit 1)
+witness on BUILD: GREEN MXB the six Q6 blindnesses resolved by the five rules + the guard, no writer invented, the NUL asserts state main, LF and CRLF · 13 clause(s)  (exit 0)
+run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN  (exit 0)
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (merged tree):
+organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)   (the same selftest-coverage row as before the merge)
+```
