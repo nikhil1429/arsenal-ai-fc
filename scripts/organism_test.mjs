@@ -2331,6 +2331,54 @@ function hermetic() {
   }
   assert("…and that log is gitignored, so a test run can never reach the public remote",
     run(["-e", `process.exit(require('child_process').execSync('git check-ignore -q scripts/thalamus.log && echo y || echo n',{cwd:${JSON.stringify(ROOT)}}).toString().trim()==='y'?0:1)`]).code === 0);
+  mhermClauses();
+}
+
+// ── unit mherm · W1 + W3 RIDE THE SUITE (forks row 1157 (3), F2 C, 20 Nov 2026) ─────────────────────────────────────────
+// The hermetic run must be a function of the tree alone. Two of its five clauses are cheap enough to run on every push, so
+// they live here; W2 · W4 · W5 (a fresh clone under the temp dir, the whole run twice) are the workflow's own step, because a
+// whole-suite double run cannot live inside the suite it measures. Both run on a COPY of the tracked tree (`git ls-files`,
+// never a tree copy: his gitignored state never leaves ROOT) placed under this run's own temp dir, so the copy sits UNDER the
+// temp dir exactly as a fresh clone in %TEMP% or /tmp does — the position that reddened the sandbox before unit mherm.
+//   W3 · `laws` (hermetic) on the copy, without and then with a one-row brain_ledger.jsonl planted in the COPY's state dir
+//        (by node, never a shell): the verdict lines must be byte-equal (T3 names the ledger block LIVE).
+//   W1 · the copy's `sandbox.mjs selftest`, its child's temp dir = this run's (an ANCESTOR of the copy): exit 0, and the
+//        canary's live-state targets in the copy never created (T1: the sandbox's own .tmp; F1 B: no temp allowance).
+function mhermClauses() {
+  const VL = /^ {2}(ok {2}|FAIL|LIVE) |^organism_test:/;
+  /** @param {string} out */
+  const vlines = (out) => String(out).split(/\r?\n/).filter((l) => VL.test(l)).join("\n");
+  const T = mkdtempSync(join(RUN_TMP, "mherm-"));
+  const tree = join(T, "tree");
+  try {
+    const ls = spawnSync("git", ["ls-files", "-z"], { cwd: ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+    const files = ls.status === 0 ? String(ls.stdout).split("\0").filter(Boolean) : [];
+    if (files.length) { for (const rel of files) if (existsSync(join(ROOT, rel))) cpSync(join(ROOT, rel), join(tree, rel)); }
+    // a plain tree (no .git: a witness hands one) holds no gitignored state of his, so a copy of it is the tree itself
+    else cpSync(ROOT, tree, { recursive: true, filter: (src) => !/[\\/](node_modules|\.git)([\\/]|$)/.test(src.slice(ROOT.length)) });
+    // the copy's sandbox builds from ITS `git ls-files`, so the copy is a git repo: init-and-add, no commit (as sandbox.mjs does)
+    for (const g of [["init", "-q"], ["add", "-A"]]) spawnSync("git", ["-c", "core.autocrlf=false", ...g], { cwd: tree, stdio: "ignore", windowsHide: true });
+    if (existsSync(join(ROOT, "node_modules"))) symlinkSync(join(ROOT, "node_modules"), join(tree, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+    const env = { ...process.env, ORGANISM_TEST_PROFILE: "hermetic" };
+    const ledger = join(tree, "dressing-room", "state", "brain_ledger.jsonl");
+    const w3a = run([join(tree, "scripts", "organism_test.mjs"), "laws"], { cwd: tree, env });
+    mkdirSync(dirname(ledger), { recursive: true });
+    writeFileSync(ledger, "{}\n");
+    const w3b = run([join(tree, "scripts", "organism_test.mjs"), "laws"], { cwd: tree, env });
+    rmSync(ledger, { force: true });
+    const a = vlines(w3a.out), b = vlines(w3b.out);
+    assert("MHERM W3 · a planted gitignored brain_ledger.jsonl changes no hermetic verdict line of `laws` (a tracked copy, run without and with the plant)",
+      a.length > 0 && a === b, `without the plant: ${a.split("\n").pop() || "(no headline)"} · with it: ${b.split("\n").pop() || "(no headline)"}`);
+    const w1 = run([join(tree, "scripts", "sandbox.mjs"), "selftest"], { cwd: tree });
+    const canary = join(tree, "dressing-room", "state", "CANARY_MUST_NEVER_EXIST.json");
+    const head = w1.out.trim().split(/\r?\n/).filter((l) => /^sandbox: /.test(l)).pop() || "(no sandbox headline)";
+    assert("MHERM W1 · the sandbox collar denies the canary for a tree that sits UNDER the temp dir (a tracked copy under this run's own temp)",
+      w1.code === 0 && !existsSync(canary) && !existsSync(ledger),
+      `${redWhy(w1)} · ${head}${existsSync(canary) ? " · the canary's live-state file was CREATED in the copy" : ""}${existsSync(ledger) ? " · the canary appended the copy's brain_ledger" : ""}`);
+  } finally {
+    try { unlinkSync(join(tree, "node_modules")); } catch { /* no link */ }
+    rmSync(T, { recursive: true, force: true });
+  }
 }
 
 // ── 5. THE LEARNING PATH, END TO END ─────────────────────────────────────────
