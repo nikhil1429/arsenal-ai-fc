@@ -207,3 +207,19 @@ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (merged, this 
   ok   all 59 hermetic suite members pass (every one RUN, not chained)
   organism_test: 157 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 124 (hermetic: named, not run)   (exit 0; the coverage-law base red is gone with mcov)
 ```
+
+## 12 · NEW MAIN 6a6bdff MERGED (unit mmeter; forks rows 1187 (2) / 1181 (2) / 1201), 2026-11-20
+
+Main `6a6bdfff4349b849398b69d0748b27d37c874b85` is merged as merge commit 5465136. **No conflicted hunk**: git merged
+`scripts/organism_test.mjs` (mmeter's `clauses` mode, which walks `ci/witness/`) beside mdtl's `causes`, and mmeter changes
+nothing else this unit touches. This unit has no `ci/witness/mdtl/`, so the new mode judges no clause of mdtl.
+`ci/mdtl/BASE` stays 5759cce (row 1200 (2)).
+
+```
+witness --org <merged> --base-org <5759cce, BASE>     RED MDTL · BOUND   (D1-D5, SETUP, LAST GREEN; BOUND names main's files, dropped by the member)
+witness --org <merged> --base-org <6a6bdff, parent>   GREEN MDTL a red witness leaves its failing clause readable, from public bytes only · 8 clause(s)
+run_mutants --org <merged> --base-org <6a6bdff>       run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all   organism_test: 159 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 124 (hermetic: named, not run)
+node scripts/lawpack.mjs gate             lawpack: GREEN — no law's finding count rose (1939 raw · jugad 90 · bare-catch 37 · depcruise 7)
+node scripts/models.mjs check             exit 0
+```

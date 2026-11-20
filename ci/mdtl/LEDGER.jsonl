@@ -21,3 +21,9 @@
 {"ts":"2026-11-20T13:40:52.483Z","act":"suite-merged","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 157 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 124 (hermetic: named, not run)"}
 {"ts":"2026-11-20T13:40:52.483Z","act":"lawpack-merged","cmd":"node scripts/lawpack.mjs gate","last_line":"lawpack: GREEN — no law finding count rose (1939 raw, jugad 90, bare-catch 37, depcruise 7; equal to cebe3eb)"}
 {"ts":"2026-11-20T13:40:52.483Z","act":"models","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts":"2026-11-20T14:20:53.666Z","act":"merge-main","cmd":"git fetch origin main; git merge --no-edit 6a6bdfff4349b849398b69d0748b27d37c874b85","last_line":"merge commit 5465136, no conflict; BASE kept 5759cce"}
+{"ts":"2026-11-20T14:20:53.666Z","act":"witness-merged-vs-parent","cmd":"node ci/mdtl/witness_mdtl.mjs --org <LF merged> --base-org <LF 6a6bdff>","last_line":"GREEN MDTL a red witness leaves its failing clause readable, from public bytes only · 8 clause(s)"}
+{"ts":"2026-11-20T14:20:53.666Z","act":"witness-merged-vs-BASE","cmd":"node ci/mdtl/witness_mdtl.mjs --org <LF merged> --base-org <LF 5759cce>","last_line":"RED MDTL · BOUND (main files; dropped by the member)"}
+{"ts":"2026-11-20T14:20:53.666Z","act":"mutants-merged","cmd":"node ci/mdtl/run_mutants_mdtl.mjs --org <LF merged> --base-org <LF 6a6bdff>","last_line":"run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-20T14:20:53.666Z","act":"suite-merged","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 159 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 124 (hermetic: named, not run)"}
+{"ts":"2026-11-20T14:20:53.666Z","act":"lawpack-merged","cmd":"node scripts/lawpack.mjs gate","last_line":"lawpack: GREEN — no law finding count rose"}
