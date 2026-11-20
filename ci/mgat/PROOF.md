@@ -237,4 +237,57 @@ is **empty**: outside `ci/` the merged tip is byte-identical to land/mgat `1b8c3
 - (b) mf2 F3 against the HALF name. Either the ajv half is named LIVE under a name the base already prints, or mf2's F3 is re-cut to compare
   the LIVE names that LEFT against the ones that ARRIVED (owner unit mrf, like F2/F4).
 
-CHECKPOINT · STOPPED after the 5759cce re-cut · tip: the commit that carries this line, its parent the merge `08b7e15`; its sha is in the runner's read of claude/mgat-build · resume from the architect's ruling on §9.4
+~~CHECKPOINT · STOPPED after the 5759cce re-cut · tip: the commit that carries this line, its parent the merge `08b7e15`; its sha is in the runner's read of claude/mgat-build · resume from the architect's ruling on §9.4~~ (superseded: ruled by forks row 1174, §10)
+
+## 10. FORKS ROW 1174 (runner M, 20 Nov 2026) — the five ms1 sites fated, mf2 F3 re-stated
+
+### 10.1 (1) The five sites in `scripts/organism_test.mjs` (main `5759cce`, unit ms1 `f052188` / `0b3f8a8`), each fated. No ignore comment, and `scripts/gates.mjs` is untouched
+
+| Site (at `5759cce`) | Fate (`build.mjs` EDIT) | What the handling does |
+|---|---|---|
+| `:2870` `/proc/<pid>/cmdline` read, `catch {}` | `MS-proc` | `catch { continue; }`: a process that exited between `readdir` and the read names nothing, so it is skipped. The match moved out of the try |
+| `:2928` `process.kill(p)`, `catch {}` | `MS-kill` | ESRCH (it already exited) is the designed case. Any other code prints `witness ‹unit› · survivor <pid> not killed (<code>)` |
+| `:2932:68` TS2339 `r.error.code` | `MS-code` | repaired at its cause: `"code" in r.error ? r.error.code : ""`. An `in` narrowing types `code` on Node's error (measured on a planted file under this repo's `strict: false` tsconfig). No cast, no ignore comment, the same behaviour |
+| `:2943` `unlinkSync(<tree>/node_modules)`, `catch {}` | `MS-unlink` | ENOENT (a tree that failed before its link was made) is the designed case. Any other code prints the link that was not removed |
+| `:2944` `rmSync(tmp)`, `catch {}` | `MS-rm` | prints `witness ‹unit› · temp dir <path> left behind (<code>)` (force already covers ENOENT; what is left is a Windows lock) |
+
+`gates.mjs report` on the E plant at `c8125dd` (`measure.mjs HEAD gates,member`, 20 Nov 2026): **exit 0 · `gates: GREEN — nothing rose`** · no-empty 262
+(frozen 262) · no-unused-vars 82 (frozen 82) · checkJs at or under 296 (no TYPE red). The hermetic member reads `ok GATES —`.
+
+### 10.2 (2) mf2 F3 RE-STATED as its property — the live set never withholds more
+- **The rule** is `ci/mf2/livenarrow.mjs` (new; pure, the same shape as mrf's `monotone.mjs`). A name LIVE at head but not at the base is
+  ADMITTED only when the head tree declares the base LIVE name it narrows, that partner WAS live at the base and is GONE at head, and no
+  partner is claimed twice. The LIVE count may not rise. `node ci/mf2/livenarrow.mjs selftest` → `livenarrow selftest: 9 of 9`. Every rule
+  is planted both ways: no partner RED, declared and gone GREEN, partner still live RED, partner never live RED, claimed twice RED, count
+  rose RED, no headline RED, nothing new GREEN, and the table reader.
+- **The declaration lives in the tree:** `scripts/organism_test.mjs` `LIVE_NARROWS = { "gates schema half": "MODE gates" }` (EDIT `NARROWS`).
+  The HALF line reads it, so the table is a live binding and no-unused-vars does not move.
+- **`ci/mf2/witness_mf2.mjs`**: the F3 header is re-stated, with the struck text kept for the record. F3 calls `liveNarrow` over the ORG tree's own
+  `LIVE_NARROWS`.
+- **Measured** (`node ci/mgat/tools/mf2run.mjs mf2 <org> <base>`, the member's recipe, 20 Nov 2026):
+
+| Run | F3 line | last line |
+|---|---|---|
+| build `3e14b7c` → `15edfec` (the member's run) | **GREEN** · `named LIVE only by the build: gates schema half · admitted (narrows a base name now gone): gates schema half ← MODE gates · refused: none` | `RED MF2 · BOUND`: only BOUND, which the member forgives, so **the member reads GREEN** |
+| **RED at the base of mf2:** org `15edfec` → base `3e14b7c` | **RED** · `named LIVE only by the build: MODE gates · refused: MODE gates (no narrowed partner declared)` | `RED MF2 · F1 F2 F3 F4 BOUND` |
+| **the one mutant M12** (`e29c094`, the build with the `LIVE_NARROWS` entry emptied: a new live name with no narrowed partner) → `15edfec` | **RED** · `refused: gates schema half (no narrowed partner declared)` | `RED MF2 · F3 BOUND` |
+
+  NAMED, my reading of "red at the base of mf2": the witness is run with mf2's BASE tree `15edfec` as org against the build. That tree prints
+  `MODE gates` LIVE, which the build no longer prints, and it declares no narrowing, so F3 is RED there. The architect re-runs it as named.
+- **(4)** The row 1171 (5) "no-cause" red of mf2 is this clause: §9.3's F3 red, now GREEN at the build.
+
+### 10.3 The mgat witness and mutants at this tip (base worktree `5759cce`, 20 Nov 2026)
+- **`GREEN MGAT gates hermetic half + six site fates + four rung_receipt fates · 9 clause(s) · RED on base, GREEN on org · BOUND · LAST`** (exit 0;
+  build `3e14b7c`). BOUND `differing tracked files 29 · outside the named files 0`, where `ci/mf2/` is admitted by row 1174 (2).
+- Base as org: **`RED MGAT · W1 (RED on org) · W2 (RED on org) · W3 (RED on org) · W4 (RED on org) · W5 (RED on org) · W6 (RED on org) · W7 (RED on org) · W8 (RED on org) · W9 (RED on org)`** (exit 1).
+- **`run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN`** (exit 0; `ed4d2fe`). M10 (the `/proc` catch left empty) is RED by
+  W1 `no-empty 263 · frozen 262`, and M11 (`r.error.code` unnarrowed) is RED by W9 `297 · frozen 296`. Named: the first run read `· control RED` with its
+  own control line at `5 of 5 · 9 of 9 GREEN`. The runner compared against the mutant count, not the distinct clause count, and is fixed in `ed4d2fe`. M12 is mf2's (§10.2).
+- Selftests on `5759cce` and on `ed4d2fe` are the same: groundsman `ALL CHECKS PASSED` · cortex `ALL CHECKS PASSED` · captains_call `156 passed, 0 failed`
+  (20 Nov 2026) · rung_receipt `all 13 pass`. `models.mjs check` exits 0 on both.
+
+### 10.4 Files vs main `5759cce`
+`scripts/groundsman.mjs`, `scripts/cortex.mjs`, `scripts/captains_call.mjs`, `scripts/organism_test.mjs`, `scripts/rung_receipt.mjs`, `ci/mgat/**`,
+and `ci/mf2/witness_mf2.mjs` + `ci/mf2/livenarrow.mjs` (row 1174 (2)). `scripts/gates.mjs` is byte-identical to main.
+
+CHECKPOINT · STOPPED after forks row 1174 · tip: the commit that carries this line (one push), its parent `ed4d2fe` · its two neutral legs are read after the push and named in the seat's final message (a file cannot carry its own sha's verdict) · resume from the architect's re-run of the mgat witness and the mf2 witness on that tip
