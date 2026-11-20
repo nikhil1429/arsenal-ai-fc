@@ -1,0 +1,1 @@
+mlaw2 assert census 6a6bdff: modes integrity,laws,hermetic,alive,gates,atlas · 49 LIVE asserts · bound read off organism_test.mjs

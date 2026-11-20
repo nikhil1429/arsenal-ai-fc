@@ -11,7 +11,7 @@
 // scripts read handed a port the OS picked (listen 0, read, close). No port, wait, size or model id is typed here.
 // It writes ONLY under os.tmpdir(). It never reads, prints or copies a file of the checkout's state dir.
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync, readFileSync, readdirSync, chmodSync, existsSync } from "node:fs";
+import { cpSync, mkdtempSync, mkdirSync, symlinkSync, writeFileSync, readFileSync, readdirSync, chmodSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path"; import { tmpdir } from "node:os"; import { fileURLToPath } from "node:url";
 import net from "node:net";
 
@@ -20,14 +20,17 @@ export const REPO = join(HERE, "..", "..");
 export const INPUTS = JSON.parse(readFileSync(join(HERE, "plant_inputs.json"), "utf8"));
 const SD = INPUTS.state_dir;
 
-/** @param {string} sha @param {{ trackedState?: boolean, tag?: string }} [o] @returns {string} the tree's path */
+/** @param {string} sha @param {{ trackedState?: boolean, tag?: string, copyModules?: boolean }} [o] @returns {string} the tree's path */
 export function plant(sha, o = {}) {
   const d = mkdtempSync(join(tmpdir(), `mlaw2-${o.tag || (o.trackedState ? "T" : "Z")}-`));
   const tar = execFileSync("git", ["-C", REPO, "-c", "core.autocrlf=false", "archive", "--format=tar", sha], { maxBuffer: 1 << 30 });
   execFileSync("tar", ["-x", "-C", d, ...(o.trackedState ? [] : [`--exclude=${SD}`])], { input: tar, maxBuffer: 1 << 30 });
   mkdirSync(join(d, SD), { recursive: true });
   for (const f of INPUTS.fixtures) throw new Error(`plant_inputs.json names a fixture (${f}): the mlaw2 census plants none`);
-  if (!existsSync(join(d, "node_modules"))) symlinkSync(join(REPO, "node_modules"), join(d, "node_modules"));
+  // node_modules is LINKED (a junction on Windows) by default; copyModules makes it a real copy, for a member that itself
+  // copies the tree with cpSync (sandbox, blackbox): cpSync refuses a linked directory ("Recursive option not enabled").
+  if (o.copyModules) cpSync(join(REPO, "node_modules"), join(d, "node_modules"), { recursive: true, dereference: true });
+  else if (!existsSync(join(d, "node_modules"))) symlinkSync(join(REPO, "node_modules"), join(d, "node_modules"), process.platform === "win32" ? "junction" : "dir");
   const g = (...a) => execFileSync("git", ["-C", d, "-c", "core.autocrlf=false", "-c", "user.email=seat@local", "-c", "user.name=seat", ...a], { stdio: "pipe" });
   g("init", "-q"); g("add", "-A"); g("commit", "-qm", `planted ${sha}`, "--no-verify");
   return d;
@@ -66,6 +69,18 @@ export async function plantEnv(d, extra = {}) {
   const ports = {};
   for (const k of portDoors(d)) { env[k] = String(await freePort()); ports[k] = "os-picked"; }
   return { env: { ...env, ...extra }, home, ports };
+}
+
+/** THE SCRUB — the one line a census keeps of a PLANT run's output: a stack's error line rather than the runtime banner, the
+ *  plant's temp path masked, and any line that is a JSON value WITHHELD (an organ can print a record its code carries, and a
+ *  record can carry a person's name: never into a census file). @param {string} out @param {string} d */
+export function lastLine(out, d) {
+  const L = out.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  let last = L.pop() || "";
+  if (/^Node\.js v\d/.test(last)) last = L.find((l) => /^[A-Za-z]*Error\b|^Error:/.test(l)) || last;
+  last = last.split(d).join("<plant>").replace(/\/tmp\/[\w.-]+/g, "<tmp>");
+  if (/^[{[]/.test(last)) last = "<a JSON line, withheld by the scrub>";
+  return last.slice(0, 200);
 }
 
 /** the organism_test.mjs source lines of a tree @param {string} d */

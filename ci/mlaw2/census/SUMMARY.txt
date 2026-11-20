@@ -1,0 +1,8 @@
+selftests 71: RIDES 18 · VACUOUS 4 · NEEDS-FIXTURE 43 · RED-BOTH 6
+asserts 49: RIDES 5 · VACUOUS 5 · NEEDS-FIXTURE 5 · BLOCKED 32 · RED-BOTH 2
+modes 4: path NETWORK · alive VACUOUS · gates RED-BOTH · atlas VACUOUS
+mlaw2 census: 124 full-only members · RIDE the hermetic profile on the planted tree with NO fixture 23 · VACUOUS (named, excluded) 11 · need a fixture 80 · not decidable here 10
+CLAIM selftests archivist examiner exchanges fuelboard home_pin notes_compiler oura_coach outwork_audit postmatch python_state rails selfknowledge sitting test_coach_v2 teaching_audit turn_hook viz widget
+CLAIM asserts 181 182 183 184 223
+CLAIM modes none
+EXCLUDED-VACUOUS selftests gates heartbeat learn_digest reconcile · asserts 219 221 222 224 225 · modes alive atlas

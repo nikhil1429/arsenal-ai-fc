@@ -7,7 +7,7 @@
 // only. Each mode spawn waits the suite's member bound, read off organism_test.mjs.
 //   node ci/mlaw2/tools/census_asserts.mjs <sha> [mode …]
 import { spawn } from "node:child_process"; import { join } from "node:path";
-import { plant, plantEnv, memberBound, liveTables } from "../plant.mjs";
+import { plant, plantEnv, lastLine, memberBound, liveTables } from "../plant.mjs";
 const pos = process.argv.slice(2), sha = pos[0] || "HEAD";
 const Z0 = plant(sha, { tag: "Z0" }); const BOUND = memberBound(Z0); const tables = liveTables(Z0);
 const ASSERT_MODES = ["integrity", "laws", "hermetic"];
@@ -22,7 +22,7 @@ const runMode = (d, mode) => new Promise(async (res) => {
   let killed = false; const kill = setTimeout(() => { killed = true; c.kill("SIGKILL"); }, BOUND);
   c.on("close", (code) => { clearTimeout(kill);
     const asserts = out.split(/\r?\n/).map((l) => /^  (ok  |FAIL) (.*)$/.exec(l)).filter(Boolean).map((m) => ({ v: m[1].trim(), name: m[2] }));
-    const last = out.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).pop() || "";
+    const last = lastLine(out, d);
     res({ code, killed, s: Math.round((Date.now() - t0) / 100) / 10, asserts, last }); });
 });
 const res = { Z: {}, T: {} };

@@ -1,0 +1,4 @@
+{"line":181,"exit":1,"names_gut_law":true,"crash":false,"last":"GUT-WORD LAW: --gut is what he committed BEFORE answering. No gut-word, no rep. Never re-graded after."}
+{"line":182,"exit":0,"names_gut_law":false,"crash":false,"last":"rejected reasons: confidence not knew|shaky|guessed (maybe) — null is lawful ONLY with confidence_source \"unrecorded-samjhao-era\" (the S10 back-fill ruling; nothing else may be ungraded)"}
+{"line":183,"exit":1,"names_gut_law":true,"crash":false,"last":"node scripts/rejirah.mjs grade embeddings a held --gut shaky"}
+{"line":184,"exit":1,"names_gut_law":true,"crash":false,"last":"rejirah: gut must be knew|shaky|guessed (got \"maybe\")"}

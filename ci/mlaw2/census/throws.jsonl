@@ -1,0 +1,2 @@
+{"mode":"laws","exit":2,"throw_line":924,"error":"Error: registry: no live mechanisms row \"study_deny_list\" in <plant>/dressing-room/state/registry.json — seed it via `node scripts/registry.mjs set --table mechanisms --json ...` |     at subjectsOf ("}
+{"mode":"integrity","exit":2,"throw_line":578,"error":"Error: ENOENT: no such file or directory, open '<plant>/dressing-room/state/brain_config.json' |     at readFileSync (node:fs:440:20) |     at Object.integrity (file://<plant>/scripts/organism_test.mj"}
