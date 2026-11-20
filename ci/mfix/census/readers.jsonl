@@ -1,0 +1,71 @@
+{"organ":"blackbox","sites":{"xray_graph.json":"scripts/blackbox.mjs:49"}}
+{"organ":"audit","sites":{"registry.json":"scripts/registry.mjs:59","xray_graph.json":"scripts/audit.mjs:73","audit_ledger.jsonl":"scripts/audit.mjs:71","brain_config.json":"(indirect: a helper beyond two import hops)","concepts.json":"scripts/registry.mjs:181","thalamus_config.json":"(indirect: a helper beyond two import hops)","mirror_config.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"acts","sites":{"registry.json":"scripts/registry.mjs:59","captain.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"brain","sites":{"registry.json":"scripts/registry.mjs:59","brain_config.json":"scripts/brain.mjs:94","learning_state.json":"scripts/brain.mjs:2932","concepts.json":"scripts/brain.mjs:693","captain.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"bootroom","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"archivist","sites":{"captain.json":"scripts/archivist.mjs:2389","archive_audit.jsonl":"(indirect: a helper beyond two import hops)","audit_ledger.jsonl":"(indirect: a helper beyond two import hops)","bootroom_log.jsonl":"(indirect: a helper beyond two import hops)","brief_log.jsonl":"(indirect: a helper beyond two import hops)","compiled_notes.jsonl":"(indirect: a helper beyond two import hops)","daily_green.jsonl":"(indirect: a helper beyond two import hops)","gate_tune_ledger.jsonl":"(indirect: a helper beyond two import hops)","notes_corrections.jsonl":"(indirect: a helper beyond two import hops)","rails_blind.jsonl":"(indirect: a helper beyond two import hops)","recital_audit.jsonl":"(indirect: a helper beyond two import hops)","rejirah_log.jsonl":"(indirect: a helper beyond two import hops)","reps_log.jsonl":"scripts/archivist.mjs:2563","resume_pointer.jsonl":"(indirect: a helper beyond two import hops)","teaching_gate.jsonl":"(indirect: a helper beyond two import hops)"}}
+{"organ":"captain","sites":{"captain.json":"scripts/captain.mjs:29"}}
+{"organ":"capsule_bridge","sites":{"registry.json":"scripts/registry.mjs:59","forge_profile.json":"scripts/capsule_bridge.mjs:73"}}
+{"organ":"calibration","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"context","sites":{"registry.json":"scripts/conductor.mjs:1614","captain.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"conductor","sites":{"registry.json":"scripts/conductor.mjs:1614","captain.json":"(indirect: a helper beyond two import hops)","tasks_expected.json":"scripts/conductor.mjs:1485"}}
+{"organ":"capture","sites":{"heartbeat_config.json":"scripts/capture.mjs:1633"}}
+{"organ":"council","sites":{"registry.json":"scripts/registry.mjs:59","council_config.json":"scripts/council.mjs:56","brain_config.json":"scripts/brain.mjs:94"}}
+{"organ":"cortex","sites":{"registry.json":"scripts/registry.mjs:59","captain.json":"scripts/captain.mjs:29"}}
+{"organ":"context_manifest","sites":{"registry.json":"(indirect: a helper beyond two import hops)","resume_pointer.jsonl":"(indirect: a helper beyond two import hops)","compiled_notes.jsonl":"(indirect: a helper beyond two import hops)","rejirah_log.jsonl":"(indirect: a helper beyond two import hops)","forge_profile.json":"(indirect: a helper beyond two import hops)","examiner_drill.json":"(indirect: a helper beyond two import hops)","missions.json":"(indirect: a helper beyond two import hops)","benchmark.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"daykey","sites":{"tasks_expected.json":"scripts/daykey.mjs:63"}}
+{"organ":"daily_green","sites":{"captain.json":"scripts/captain.mjs:29","registry.json":"scripts/daily_green.mjs:216","daily_green.jsonl":"scripts/daily_green.mjs:99"}}
+{"organ":"daemon_watchdog","sites":{"registry.json":"scripts/conductor.mjs:1614","captain.json":"(indirect: a helper beyond two import hops)","conductor.json":"scripts/daemon_watchdog.mjs:70"}}
+{"organ":"dmn","sites":{"registry.json":"(indirect: a helper beyond two import hops)","brain_config.json":"scripts/thalamus.mjs:2144","concepts.json":"scripts/hippocampus.mjs:554"}}
+{"organ":"distiller","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"deep","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"examiner","sites":{"examiner_drill.json":"scripts/examiner.mjs:45","concepts.json":"scripts/examiner.mjs:248"}}
+{"organ":"doubtminer","sites":{"doubtminer_config.json":"scripts/doubtminer.mjs:49"}}
+{"organ":"flow_atlas","sites":{"registry.json":"(indirect: a helper beyond two import hops)","xray_graph.json":"scripts/flow_atlas.mjs:45","awayday.json":"(indirect: a helper beyond two import hops)","benchmark.json":"(indirect: a helper beyond two import hops)","conductor.json":"(indirect: a helper beyond two import hops)","course.json":"(indirect: a helper beyond two import hops)","examiner_drill.json":"(indirect: a helper beyond two import hops)","learning_state.json":"(indirect: a helper beyond two import hops)","missions.json":"(indirect: a helper beyond two import hops)","python_state.json":"(indirect: a helper beyond two import hops)","readiness.json":"scripts/thalamus.mjs:1442","thalamus_config.json":"scripts/thalamus.mjs:136","widgets.json":"(indirect: a helper beyond two import hops)","reps_log.jsonl":"scripts/flow_atlas.mjs:147"}}
+{"organ":"exchanges","sites":{"captain.json":"scripts/archivist.mjs:2389"}}
+{"organ":"dugout","sites":{"registry.json":"scripts/registry.mjs:59","captain.json":"scripts/captain.mjs:29","readiness.json":"scripts/dugout.mjs:237","reps_log.jsonl":"scripts/dugout.mjs:1420","dossier_weights.json":"scripts/dugout.mjs:722","learning_state.json":"scripts/dugout.mjs:729","examiner_drill.json":"scripts/gaffer_brain.mjs:951","fuelboard_config.json":"scripts/fuelboard.mjs:45","recital_audit.jsonl":"scripts/dugout.mjs:174","thalamus_config.json":"scripts/dugout.mjs:2650","missions.json":"scripts/dugout.mjs:1627","twin_config.json":"scripts/dugout.mjs:2565","calibration_config.json":"scripts/dugout.mjs:2578"}}
+{"organ":"fuelboard","sites":{"fuelboard_config.json":"scripts/fuelboard.mjs:45"}}
+{"organ":"forge_session","sites":{"concepts.json":"scripts/forge_session.mjs:3014","registry.json":"scripts/registry.mjs:59"}}
+{"organ":"gate_tune","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"gate","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"gaffer_brain","sites":{"dossier_weights.json":"scripts/gaffer_brain.mjs:153","registry.json":"scripts/registry.mjs:59"}}
+{"organ":"herd","sites":{"xray_graph.json":"scripts/herd.mjs:54"}}
+{"organ":"heartbeat","sites":{"heartbeat_config.json":"scripts/heartbeat.mjs:39"}}
+{"organ":"gates","sites":{"laws_register.json":"(indirect: a helper beyond two import hops)","registry.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"learnstate","sites":{"registry.json":"scripts/registry.mjs:59","forge_profile.json":"scripts/rejirah.mjs:78","python_state.json":"scripts/python_state.mjs:87"}}
+{"organ":"learn_digest","sites":{"registry.json":"scripts/registry.mjs:59","rejirah_log.jsonl":"scripts/forge_session.mjs:2713","forge_profile.json":"(indirect: a helper beyond two import hops)","examiner_drill.json":"(indirect: a helper beyond two import hops)","learning_state.json":"scripts/learn_digest.mjs:97"}}
+{"organ":"home_pin","sites":{"captain.json":"scripts/archivist.mjs:2389"}}
+{"organ":"mcp-memory","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"manager","sites":{"registry.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"limits","sites":{"reps_log.jsonl":"scripts/limits.mjs:44","physio_config.json":"scripts/limits.mjs:225","nemesis_config.json":"scripts/limits.mjs:230","learning_state_config.json":"scripts/limits.mjs:231","doubtminer_config.json":"scripts/limits.mjs:232","twin_config.json":"scripts/limits.mjs:233","brain_config.json":"(indirect: a helper beyond two import hops)","calibration_config.json":"scripts/limits.mjs:1001","council_config.json":"(indirect: a helper beyond two import hops)","forge_profile.json":"(indirect: a helper beyond two import hops)","fuelboard_config.json":"(indirect: a helper beyond two import hops)","heartbeat_config.json":"(indirect: a helper beyond two import hops)","ladder_config.json":"(indirect: a helper beyond two import hops)","mirror_config.json":"(indirect: a helper beyond two import hops)","scorer_config.json":"(indirect: a helper beyond two import hops)","scout_config.json":"(indirect: a helper beyond two import hops)","setpiece_config.json":"(indirect: a helper beyond two import hops)","sitting_config.json":"(indirect: a helper beyond two import hops)","thalamus_config.json":"(indirect: a helper beyond two import hops)","throwin_config.json":"(indirect: a helper beyond two import hops)","touchline_config.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"notes_compiler","sites":{"captain.json":"scripts/archivist.mjs:2389"}}
+{"organ":"nightshift","sites":{"registry.json":"scripts/registry.mjs:59","gate_tune_ledger.jsonl":"scripts/captains_call.mjs:1308","captain.json":"scripts/captain.mjs:29"}}
+{"organ":"models","sites":{"brain_config.json":"scripts/models.mjs:591","calibration_config.json":"(indirect: a helper beyond two import hops)","council_config.json":"(indirect: a helper beyond two import hops)","doubtminer_config.json":"(indirect: a helper beyond two import hops)","fuelboard_config.json":"scripts/models.mjs:623","heartbeat_config.json":"(indirect: a helper beyond two import hops)","ladder_config.json":"(indirect: a helper beyond two import hops)","learning_state_config.json":"(indirect: a helper beyond two import hops)","mirror_config.json":"(indirect: a helper beyond two import hops)","nemesis_config.json":"(indirect: a helper beyond two import hops)","physio_config.json":"(indirect: a helper beyond two import hops)","scorer_config.json":"(indirect: a helper beyond two import hops)","scout_config.json":"(indirect: a helper beyond two import hops)","setpiece_config.json":"(indirect: a helper beyond two import hops)","sitting_config.json":"(indirect: a helper beyond two import hops)","thalamus_config.json":"scripts/models.mjs:919","throwin_config.json":"(indirect: a helper beyond two import hops)","touchline_config.json":"(indirect: a helper beyond two import hops)","twin_config.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"outwork_audit","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"outbox","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"oura_coach","sites":{"captain.json":"scripts/captain.mjs:29"}}
+{"organ":"python_state","sites":{"python_state.json":"scripts/python_state.mjs:87"}}
+{"organ":"postmatch","sites":{"captain.json":"scripts/archivist.mjs:2389"}}
+{"organ":"rejirah","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"rails","sites":{"sitting.json":"scripts/rails.mjs:550"}}
+{"organ":"scout","sites":{"dossier_weights.json":"scripts/scout.mjs:713"}}
+{"organ":"samjhao","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"reconcile","sites":{"registry.json":"(indirect: a helper beyond two import hops)","brain_config.json":"scripts/reconcile.mjs:278","flow_atlas.json":"(indirect: a helper beyond two import hops)","dossier_weights.json":"(indirect: a helper beyond two import hops)","readiness.json":"(indirect: a helper beyond two import hops)","learning_state.json":"(indirect: a helper beyond two import hops)","missions.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"setpiece","sites":{"registry.json":"(indirect: a helper beyond two import hops)","ladder_config.json":"scripts/setpiece.mjs:1012","dossier_weights.json":"scripts/setpiece.mjs:1013","captain.json":"scripts/captain.mjs:29"}}
+{"organ":"services","sites":{"registry.json":"scripts/conductor.mjs:1614","captain.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"selfknowledge","sites":{"captain.json":"scripts/captain.mjs:29"}}
+{"organ":"sprintsync","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"sitting","sites":{"captain.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"shadow","sites":{"reps_log.jsonl":"scripts/shadow.mjs:42","registry.json":"scripts/registry.mjs:59"}}
+{"organ":"tasks","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"talk","sites":{"registry.json":"scripts/registry.mjs:59"}}
+{"organ":"thalamus","sites":{"thalamus_config.json":"scripts/thalamus.mjs:136","registry.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"test_coach_v2","sites":{"captain.json":"scripts/captain.mjs:29"}}
+{"organ":"teaching_audit","sites":{"concepts.json":"scripts/registry.mjs:181","reps_log.jsonl":"scripts/teaching_audit.mjs:1619"}}
+{"organ":"turn_hook","sites":{"sitting.json":"scripts/study_scope.mjs:62","registry.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"timeaudit","sites":{"buckets.json":"scripts/timeaudit.mjs:27"}}
+{"organ":"throwin","sites":{"registry.json":"(indirect: a helper beyond two import hops)"}}
+{"organ":"widget","sites":{"widgets.json":"scripts/widget.mjs:51"}}
+{"organ":"watchman","sites":{"registry.json":"scripts/conductor.mjs:1614","captain.json":"(indirect: a helper beyond two import hops)","unleash_baseline.json":"scripts/watchman.mjs:1336"}}
+{"organ":"viz","sites":{"captain.json":"scripts/captain.mjs:29"}}
+{"organ":"xray","sites":{"xray_graph.json":"scripts/xray.mjs:92"}}
