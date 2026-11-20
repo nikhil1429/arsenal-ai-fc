@@ -203,9 +203,9 @@ C4 the census drops its last row · C5 a bare self-run no longer read.
 - **The coverage law, its suites and its floor:** unchanged in code; `hermetic()`'s targets are the same set (the census has-column
   equals the legacy has-column on every script). The law is STRICTER in kind: a comment or a string can no longer satisfy it,
   and a comment or a string can no longer make an innocent script an orphan.
-- `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage`, build: `organism_test: 10 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)`
-- `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`, build (the seat checkout): `organism_test: 156 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 124 (hermetic: named, not run)` (exit 0)
-- the same, base (a fresh clone of cebe3eb): `organism_test: 154 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)` (exit 2) — both reds are `sandbox selftest` (its tripwire recorded 2 of 4
+- (20 Nov 2026) `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage`, build: `organism_test: 10 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)`
+- (20 Nov 2026) `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`, build (the seat checkout): `organism_test: 156 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 124 (hermetic: named, not run)` (exit 0)
+- (20 Nov 2026) the same, base (a fresh clone of cebe3eb): `organism_test: 154 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)` (exit 2) — both reds are `sandbox selftest` (its tripwire recorded 2 of 4
   attempts), the fresh-clone red unit mcov named as its F5 and the architect routed to unit mherm. Not this unit's: the sandbox
   organ is untouched and its run is the same spawn on both trees.
 - `node scripts/models.mjs check`: exit 0.
