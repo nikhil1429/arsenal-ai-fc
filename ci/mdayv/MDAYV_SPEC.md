@@ -251,3 +251,24 @@ The commit carrying this section adds only these lines and a ledger row; its own
 Effort receipt (the brief's last step), 20 Nov 2026: `node campaign-2026-09/tools/effort_receipt.mjs --fleet mdayv --seat 00
 --model claude-opus-5-5` → `Error: Cannot find module '…/campaign-2026-09/tools/effort_receipt.mjs'` (exit 1); this
 repository carries no `campaign-2026-09/`, so nothing was written under it.
+
+## 9 · NEW MAIN 3f22388 (unit mlaw landed; runner M's message, 20 Nov 2026)
+
+Re-read against `3f2238887947e5827d2ce8f07a480e9dea3f527c` (`git fetch origin main` → `git rev-parse FETCH_HEAD`), 20 Nov 2026.
+`git diff --stat 5759cce 3f22388` → `14 files changed, 1261 insertions(+), 26 deletions(-)`. What it changes for this spec:
+
+- **Unchanged for this unit:** `git diff --quiet 5759cce 3f22388 -- scripts/daily_green.mjs scripts/day.mjs scripts/night.mjs
+  scripts/rung_receipt.mjs` exits 0. Every `@5759cce` line cited in §1-§4 for those four files holds at 3f22388.
+- **`scripts/done.mjs` (a meter READER, M10):** mlaw adds a `his_surfaces` registry read and a `selftest` (now in the
+  `organism:selftest` line of `package.json`). The meter reading is untouched in substance, only shifted: `METER` :43 → :45,
+  `OLD_RECORDED_DAY = "2026-11-13"` :46 → :48, `function oldDayRed` :69 → :81 (`git show 3f22388:scripts/done.mjs | grep -n …`).
+  §2.3's row and V6's "done.mjs oldDayRed answer byte-equal" are unaffected. Note for the mmeter landing, not this unit: mmeter's
+  `export function oldDayRed` edit now applies at :81, not :69.
+- **`scripts/conductor.mjs` (carrier C-morning):** mlaw changes only the DAEMON selftest's probe port (OS-picked, row 1137 (3)).
+  `MORNING` :83 and `dayclose-prev` :106 hold; the DAYCLOSE MORNING pin §4 extends moved `conductor.mjs:1440` → `:1442`.
+  `meter-final` would still sit between :106 and `physio` :107.
+- **`scripts/usage_tap.mjs` (N5):** `LAW_HOME` becomes one path string; `campaignRoot` :63 → :65, the selftest's
+  `ARSENAL_CALL_STATE_DIR` plant :270 → :272. N5's two seams stand.
+- **`package.json`:** one member added to `organism:selftest` (`node scripts/done.mjs selftest`); this unit adds no member (§7).
+- **`scripts/organism_test.mjs` / `scripts/ci_verdict.mjs` / `ci/mdn2` / `ci/mdone` / `ci/mlaw`:** none is in §7's file list;
+  nothing here moves. F8 stands: the build cuts from the main that carries mmeter (now expected over 3f22388).
