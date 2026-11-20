@@ -103,3 +103,5 @@ NODE_USE_ENV_PROXY=1 node scripts/ci_verdict.mjs 3ce7e2c85c627e8e1cf530ac14d8bb8
 ci_verdict 3ce7e2c GREEN — npm test · node 22: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135778546010] | npm test · node 24: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135778545339] (3 calls)
 ```
 The commit that carries this section changes only this file and the ledger; its own legs are named in the seat's final message.
+
+CHECKPOINT · MERGED main 5759cce (row 1172) at 2026-11-20T01:28:23Z · base now 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 (ci/mfactory/BASE) · merged tip = the commit that carries this line (named in the ledger row and the runner reads the branch) · resolution hunks: NONE (the merge was clean; scripts/organism_test.mjs and package.json untouched by this unit) · witness: GREEN MFACTORY the factory window's four numbers are read, each from its owner, and an unread window is never green · 6 clause(s) (build) / RED MFACTORY · P1, P2, P3, P4 (base 5759cce) · mutants: run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN · STOPPED.
