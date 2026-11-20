@@ -55,7 +55,7 @@ try {
   const f3 = (r) => (r.out.split(/\r?\n/).find((l) => /^(GREEN|RED {2}) F3 · /.test(l)) || "(no F3 line)");
   const names = (r, id) => r.code === 1 && /^RED MF2 · /.test(r.last) && r.last.slice("RED MF2 · ".length).split(/\s+/).includes(id);
   for (const [id, r, why] of [["M-D1-NOPARTNER", d1, "no narrowed partner declared"], ["M-D2-UNLISTED", u, "door 2 admitted (row-listed, none of their asserts judged by the base): none"], ["M-D2-JUDGED", j, "the BASE judged"]]) {
-    const hit = names(r, "F3") && /^RED {2}F3 · /.test(f3(r)) && f3(r).includes(why);
+    const hit = names(r, "F3") && /^RED +F3 · /.test(f3(r)) && f3(r).includes(why);
     if (hit) k++;
     console.log(`  ${hit ? "RED " : "MISS"} ${id} → ${r.last}\n         ${f3(r).slice(0, 600)}`);
   }
