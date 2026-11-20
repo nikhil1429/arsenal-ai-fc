@@ -170,3 +170,5 @@ and the line says `no repair door`. Until the senses row is seeded, the line say
 ## 8 · Check runs
 
 Read through the public API with no token after each push. The rows are in `ci/mpres/LEDGER.jsonl` (`act: "check runs"`).
+
+CHECKPOINT · merged origin/main 3f22388 (mlaw) at 2026-11-20T11:45:56Z as 6639f69, package.json union only, witness and mutants re-run GREEN on the merged tree · resume from: the next new-main line (mmeter, mcov)
