@@ -23,6 +23,7 @@
 //   BOUND outside ci/, only scripts/witness_cause.mjs (new, present in --org), scripts/organism_test.mjs,
 //         scripts/ci_verdict.mjs and package.json differ (by text, CRLF folded) — package.json by row 1186 F6 A.
 //   LAST  no node process naming this run's temp dir survives.
+//   SETUP the --org tree's suite.yml names its timeout-minutes and its head grep, and both copies are planted (else RED).
 // THE PORT CLASS (row 1053): nothing here binds a port, names a live service or POSTs; the member's own port doors are
 // OS-picked. Every wait is bounded by the --org tree's own suite.yml timeout-minutes (read, never typed).
 // LAST LINE: GREEN MDTL <what> · <n> clause(s) (exit 0) | RED MDTL · <clauses> (exit 1)
