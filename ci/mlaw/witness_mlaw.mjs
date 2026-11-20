@@ -31,10 +31,15 @@
 //             no literal): on a copy with an EMPTY state dir `done.mjs report` prints the named red "reach RED — no live
 //             mechanisms row "his_surfaces""; with that row planted through the copy's own `registry.mjs set` (ARSENAL_REGISTRY
 //             under the temp root) the reach line is no such red; `done.mjs selftest` on the copy exits 0.
-//   COVERAGE  FK5 B (row 1152 (2)) · done.mjs has a selftest mode, a package.json suite string runs `node scripts/done.mjs
-//             selftest`, and `organism_test.mjs coverage` on a copy names NO orphan called done.
+//   COVERAGE  FK5 B (row 1152 (2)) · done.mjs has a selftest mode, ~~a package.json suite string runs `node scripts/done.mjs
+//             selftest`~~ a suite runs `done.mjs selftest` — RE-CUT by unit mhot (forks row 1204, the class of row 1187 (1) F6 A), an
+//             ADDED edit: where the tree holds suite/members, the tree's OWN roll (`organism_test.mjs roll --json`) names done with
+//             argv ["selftest"]; where it does not, the package.json string as before (never a bare OR of the two) — and
+//             `organism_test.mjs coverage` on a copy names NO orphan called done.
 //   HERMETIC  P2 · lawpack is in neither LIVE_MODES nor LIVE_SELFTESTS of --org's organism_test.mjs, and every key of the three
-//             LIVE tables at --org is a key at --base-org (they only shrink); on an EMPTY-state copy the hermetic
+//             LIVE tables at --org is a key at --base-org (they only shrink) — RE-CUT by unit mhot (row 1204), an ADDED edit: where a
+//             tree holds suite/members, its LIVE selftests are the residual table's keys PLUS every roll member whose `live` is a
+//             reason (the fold moved them there; reading the table alone would pass on nothing); on an EMPTY-state copy the hermetic
 //             `organism_test.mjs lawpack` prints no `LIVE MODE lawpack`, JUDGES the LAW PACK assert, and prints an
 //             ORGANISM_TEST_LAWPACK line equal to the full profile's on the same copy; `lawpack.mjs selftest` there exits 0.
 //   RISE      P3 · two copies, A = the tree + one planted literal subject list, B = the tree + two: the tree's own organism_test
@@ -150,6 +155,14 @@ function counts(out) {
   return Object.keys(c).length ? c : null;
 }
 const lpLine = (out) => lines(out).find((l) => l.startsWith(`${LP_LINE} `)) || null;
+/** unit mhot (row 1204): a tree's member roll — undefined when the tree has no suite/members (the old shape: its strings and
+ *  tables are the record), null when it has one but its own `organism_test.mjs roll --json` cannot be read (a red, never a
+ *  vacuous pass), else { members: [{ organ, suite, argv, live }] } */
+function rollOf(tree) {
+  if (!existsSync(join(tree, "suite", "members"))) return undefined;
+  const r = node(tree, [join(tree, "scripts", "organism_test.mjs"), "roll", "--json"]);
+  try { const j = JSON.parse(r.out); return j && Array.isArray(j.members) && r.status === 0 ? j : null; } catch { return null; }
+}
 /** the keys of one `const <NAME> = Object.freeze({ … });` table in organism_test.mjs's source */
 function tableKeys(src, name) {
   const s = String(src || "");
@@ -224,7 +237,12 @@ try {
   // ── COVERAGE ── (FK5 B: the done selftest rides a suite string; the coverage law names no orphan called done)
   {
     const pkg = (() => { try { return JSON.parse(read(join(ORG, "package.json")) || "{}"); } catch { return {}; } })();
-    const wired = Object.values(pkg.scripts || {}).some((s) => /(^|&&\s*)node scripts\/done\.mjs selftest(\s*&&|\s*$)/.test(String(s)));
+    // ~~const wired = (a package.json suite string runs it)~~ → RE-CUT (row 1204): the tree's own record, whichever shape it has
+    const roll = rollOf(ORG);
+    const wired = roll === undefined
+      ? Object.values(pkg.scripts || {}).some((s) => /(^|&&\s*)node scripts\/done\.mjs selftest(\s*&&|\s*$)/.test(String(s)))
+      : !!roll && roll.members.some((m) => m && m.organ === "done" && JSON.stringify(m.argv) === '["selftest"]');
+    const wiredBy = roll === undefined ? "a package.json suite string" : roll === null ? "the member roll (UNREADABLE)" : "the tree's member roll (suite/members)";
     const hasMode = /if \(mode === "selftest"\) return selftest\(\);/.test(read(join(ORG, "scripts", "done.mjs")) || "");
     const c = copyOf(ORG, "cov");
     const r = node(c, [join(c, "scripts", "organism_test.mjs"), "coverage"]);
@@ -232,7 +250,7 @@ try {
     const orphans = orphanLine ? orphanLine.trim().slice("orphaned: ".length).split(",").map((s) => s.trim()) : [];
     const judged = lines(r.all).some((l) => /^\s*(ok|FAIL)\s+EVERY organ with a selftest is wired into a suite/.test(l));
     clause("COVERAGE", hasMode && wired && judged && !orphans.includes("done"),
-      `done.mjs selftest mode ${hasMode ? "present" : "ABSENT"} · a package.json suite string runs it: ${wired ? "yes" : "NO"} · the coverage law ${judged ? "judged" : "NOT judged"} · orphans: ${orphans.join(", ") || "none"}`);
+      `done.mjs selftest mode ${hasMode ? "present" : "ABSENT"} · ${wiredBy} runs it: ${wired ? "yes" : "NO"} · the coverage law ${judged ? "judged" : "NOT judged"} · orphans: ${orphans.join(", ") || "none"}`);
   }
 
   // ── HERMETIC ──
@@ -240,6 +258,10 @@ try {
     const so = read(join(ORG, "scripts", "organism_test.mjs")), sb = read(join(BASE_ORG, "scripts", "organism_test.mjs"));
     const T = ["LIVE_SELFTESTS", "LIVE_ASSERTS", "LIVE_MODES"];
     const ko = Object.fromEntries(T.map((t) => [t, tableKeys(so, t)])), kb = Object.fromEntries(T.map((t) => [t, tableKeys(sb, t)]));
+    // RE-CUT (row 1204): a folded tree's LIVE selftests = the residual table's keys + every roll member with a LIVE reason
+    const ro = rollOf(ORG), rb = rollOf(BASE_ORG);
+    const liveOf = (keys, r) => (r === undefined ? keys : r === null || !Array.isArray(keys) ? null : [...keys, ...r.members.filter((m) => m && m.live !== null).map((m) => m.organ)]);
+    ko.LIVE_SELFTESTS = liveOf(ko.LIVE_SELFTESTS, ro); kb.LIVE_SELFTESTS = liveOf(kb.LIVE_SELFTESTS, rb);
     const tablesRead = T.every((t) => Array.isArray(ko[t]) && Array.isArray(kb[t]) && kb[t].length > 0);
     const grown = tablesRead ? T.flatMap((t) => ko[t].filter((k) => !kb[t].includes(k)).map((k) => `${t}.${k}`)) : null;
     const inLive = tablesRead ? ["LIVE_SELFTESTS", "LIVE_MODES"].filter((t) => ko[t].includes("lawpack")) : null;
@@ -252,7 +274,7 @@ try {
     const lh = lpLine(h.all), lf = lpLine(f.all);
     const stHead = lines(st.all).filter((l) => /^lawpack selftest: /.test(l.trim())).at(-1) || "no headline";
     clause("HERMETIC", tablesRead && grown.length === 0 && inLive.length === 0 && !liveLine && judged && !!lh && lh === lf && st.status === 0,
-      `lawpack in LIVE table(s): ${inLive ? (inLive.join(", ") || "none") : "? (tables unread)"} · keys at --org not at --base-org: ${grown ? (grown.join(", ") || "none") : "?"} · hermetic run on an EMPTY state dir: ${liveLine ? "LIVE MODE lawpack (not judged)" : judged ? "the LAW PACK assert judged" : "no LAW PACK assert line"} · machine line ${lh ? (lh === lf ? "equal to the full profile's" : "DIFFERS from the full profile's") : "ABSENT"} · ${clip(stHead, 50)} (exit ${st.status})`);
+      `${ro === undefined ? "" : `LIVE selftests read from the table + the member roll (${ro ? ko.LIVE_SELFTESTS.length : "?"}) · `}lawpack in LIVE table(s): ${inLive ? (inLive.join(", ") || "none") : "? (tables unread)"} · keys at --org not at --base-org: ${grown ? (grown.join(", ") || "none") : "?"} · hermetic run on an EMPTY state dir: ${liveLine ? "LIVE MODE lawpack (not judged)" : judged ? "the LAW PACK assert judged" : "no LAW PACK assert line"} · machine line ${lh ? (lh === lf ? "equal to the full profile's" : "DIFFERS from the full profile's") : "ABSENT"} · ${clip(stHead, 50)} (exit ${st.status})`);
   }
 
   // ── RISE + NOLINE ── (the tree's own instruments, on two planted copies)
