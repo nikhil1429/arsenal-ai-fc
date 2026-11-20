@@ -1,0 +1,9 @@
+{"ts":"2026-11-20T06:40:56.878Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mkp24-spec FETCH_HEAD","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T06:40:56.878Z","act":"read-mdtl","cmd":"git show 9d5c9b8:ci/mdtl/MDTL_SPEC.md","last_line":"229 lines read whole"}
+{"ts":"2026-11-20T06:40:56.878Z","act":"runs","cmd":"curl -s $API/actions/runs?created>=2026-11-19T21:00:00Z (pages 1-3)","last_line":"total_count 75"}
+{"ts":"2026-11-20T06:40:56.878Z","act":"annotations","cmd":"curl -s $API/check-runs/<job>/annotations for each completed non-cancelled suite leg","last_line":"node 22 legs 43 mlv3 1 mrv 1 · node 24 legs 43 mlv3 2"}
+{"ts":"2026-11-20T06:40:56.878Z","act":"compare","cmd":"curl -s $API/compare/5759cce...<sha> for 0a73a81 e10d4eb 1302da5 5444815","last_line":"1302da5 ahead 1 behind 0 base 5759cce files .claude/settings.json"}
+{"ts":"2026-11-20T06:40:56.878Z","act":"family","cmd":"grep -ln keeper.mjs ci/*/witness_*.mjs","last_line":"mlv0 mlv1 mland mlj mport mrt ms1"}
+{"ts":"2026-11-20T06:40:56.878Z","act":"hermetic","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 141 passed, 4 failed · ruled 0 · UNRULED 4 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-20T06:40:56.878Z","act":"rate","cmd":"curl -s https://api.github.com/rate_limit","last_line":"core limit 15000"}
+{"ts":"2026-11-20T06:40:56.878Z","act":"mlaw-run","cmd":"curl -s $API/actions/runs/44686340528","last_line":"44686340528 87d72d3 in_progress null"}
