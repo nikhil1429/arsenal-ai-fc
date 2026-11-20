@@ -2817,7 +2817,8 @@ function witnessUnits(root) {
 // A malformed door is ONE named red and no spawn, never "run all", never "run none". The doors never reach a spawned witness's
 // env, so a witness that runs this member inside its own plant meets the unsharded member. The machine lines carry names,
 // shas and seconds only. Sole writer of nothing.
-const SHARD_DOORS = ["ORGANISM_WITNESS_SHARD", "ORGANISM_WITNESS_SHARDS"];
+/** a shard door, by its name (a predicate, never a list): ORGANISM_WITNESS_SHARD and ORGANISM_WITNESS_SHARDS @param {string} k */
+const isShardDoor = (k) => /^ORGANISM_WITNESS_SHARDS?$/.test(k);
 const MSHARD_TIMES = "ci/mshard/TIMES";
 /** a tracked file of the tree, or "" @param {string} root @param {string} rel */
 const treeText = (root, rel) => { try { return readFileSync(join(root, ...rel.split("/")), "utf8"); } catch { return ""; } };
@@ -2983,7 +2984,7 @@ async function witnesses() {
         writeFileSync(join(shim, `${tool}.cmd`), `@echo REFUSED — no live model call in a witness (unit ms1) 1>&2\r\n@exit /b 1\r\n`);
       }
       const env = { ...process.env };
-      for (const d of SHARD_DOORS) delete env[d];   // unit mshard: a witness's own plant meets the unsharded member
+      for (const d of Object.keys(env).filter(isShardDoor)) delete env[d];   // unit mshard: a witness's own plant meets the unsharded member
       const pk =Object.keys(env).find((k) => k.toUpperCase() === "PATH") || "PATH";
       env[pk] = `${shim}${delimiter}${env[pk] || ""}`;
       for (const p of ports.named) if (p.door) env[p.door] = String(await freePort());

@@ -41,7 +41,7 @@ const MUTANTS = [
   ["W-S13 PRIVACY", [[CV, "out.push(`${TAGS.verdict}${JSON.stringify(d)}`);", "out.push(`${TAGS.verdict}${JSON.stringify(v)}`);"]]],
   ["W-S14 UNSHARDED", [[OT, "  /** @type {Record<string, number>} */\n  const secsOf = {};", "  console.log(\"WITNESS_PLAN {}\");\n  /** @type {Record<string, number>} */\n  const secsOf = {};"]]],
   ["W-S15 LPT", [[OT, "w(b) - w(a) ||", "w(a) - w(b) ||"]]],
-  ["W-S16 DOORLESS", [[OT, "      for (const d of SHARD_DOORS) delete env[d];   // unit mshard: a witness's own plant meets the unsharded member\n", ""]]],
+  ["W-S16 DOORLESS", [[OT, "      for (const d of Object.keys(env).filter(isShardDoor)) delete env[d];   // unit mshard: a witness's own plant meets the unsharded member\n", ""]]],
   ["W-S17 PLANRUN", [[OT, "if (doorN !== undefined) { console.log(`WITNESS_PLAN ${", "if (doorN !== undefined) { console.log(`WITNESS_PLAN_ ${"]]],
   ["W-S18 CAUSE", [[CV, "live.push(...v.live); causes.push(...v.causes);", "live.push(...v.live);"]]],
   ["W-S19 TIMES", [[CV, "max[u] = Math.max(max[u] ?? 0, v);", "max[u] = Math.min(max[u] ?? v, v);"]]],

@@ -43,7 +43,7 @@ const VERDICT_TITLE = "B1 VERDICT";
 const LEG = /^npm test · node (\d+)$/;
 
 /** the machine line organism_test.mjs prints, parsed; null when the run never reached it (no headline)
- *  @param {string} text @returns {{ pass: number, fail: number, reds: string[], live: string[], profile: string } | null} */
+ *  @param {string} text @returns {{ pass: number, fail: number, reds: string[], live: string[], profile: string, causes: string[] } | null} */
 export function parseSuite(text) {
   const line = String(text).split(/\r?\n/).find((l) => l.startsWith("ORGANISM_TEST_VERDICT "));
   if (!line) return null;
