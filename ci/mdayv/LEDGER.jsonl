@@ -6,3 +6,5 @@
 {"ts":"2026-11-20T07:29:00Z","act":"suite-bare","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 141 passed, 4 failed · ruled 0 · UNRULED 4 · LIVE 126 (hermetic: named, not run)"}
 {"ts":"2026-11-20T07:33:00Z","act":"suite","cmd":"npm ci --ignore-scripts && ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
 {"ts":"2026-11-20T07:40:00Z","act":"write-spec","cmd":"ci/mdayv/MDAYV_SPEC.md","last_line":"written"}
+{"ts":"2026-11-20T08:30:00Z","act":"ci","cmd":"NODE_USE_ENV_PROXY=1 node scripts/ci_verdict.mjs 93aa206fd2f2d52fc3fbf98bc66b3fe90a048441","last_line":"ci_verdict 93aa206 GREEN — node 22 run 136153574158 · node 24 run 136153573782 (base 5759cce · 0 new red · 1 base red)"}
+{"ts":"2026-11-20T08:30:00Z","act":"effort-receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs --fleet mdayv --seat 00 --model claude-opus-5-5","last_line":"Error: Cannot find module '/home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs' (exit 1)"}

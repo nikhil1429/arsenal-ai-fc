@@ -239,4 +239,15 @@ matches neither `NIGHT ` nor `pool:`, so mfac stays untouched · (b) edit mfac's
 
 ## 8 · CI (the neutral machine)
 
-Filled after the push of this file, read through the public API with curl, no token.
+Read through the public API with curl (`/commits/<sha>/check-runs`, no token) and `NODE_USE_ENV_PROXY=1 node
+scripts/ci_verdict.mjs <full sha>`, 20 Nov 2026. Tip `93aa206fd2f2d52fc3fbf98bc66b3fe90a048441`:
+```
+136153574158 npm test · node 22 completed success
+136153573782 npm test · node 24 completed success
+ci_verdict 93aa206 GREEN — npm test · node 22: GREEN (base 5759cce · 0 new red · 1 base red · 126 live) [run 136153574158] | npm test · node 24: GREEN (base 5759cce · 0 new red · 1 base red · 126 live) [run 136153573782] (3 calls)
+```
+The commit carrying this section adds only these lines and a ledger row; its own runs are judged by its push.
+
+Effort receipt (the brief's last step), 20 Nov 2026: `node campaign-2026-09/tools/effort_receipt.mjs --fleet mdayv --seat 00
+--model claude-opus-5-5` → `Error: Cannot find module '…/campaign-2026-09/tools/effort_receipt.mjs'` (exit 1); this
+repository carries no `campaign-2026-09/`, so nothing was written under it.
