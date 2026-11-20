@@ -303,3 +303,26 @@ The options:
 - (c) The three read UNREAD until (a) lands.
 
 This seat does not decide it.
+
+## 11 · The merges of main 3f22388, cebe3eb and 6a6bdff (20 Nov 2026)
+
+Each new main was merged with a merge commit, never a rebase and never a force push: `e5b446f` (3f22388, unit mlaw), `7e79746`
+(cebe3eb, unit mcov) and `e69a654` (6a6bdff, unit mmeter). **No conflict hunk in any of the three.** This unit touches neither
+`package.json` nor `scripts/organism_test.mjs`, so main's side of each stands whole. There was no intent to reconcile.
+`ci/mcap/BASE` is kept at `5759cce` (forks row 1200 (2): the clauses are judged against BASE, the bound against the parent).
+
+```
+git diff --name-only 6a6bdfff4349b849398b69d0748b27d37c874b85 HEAD        (the bound, against the parent)
+ci/mcap/BASE · ci/mcap/LEDGER.jsonl · ci/mcap/PROOF.md · ci/mcap/run_mutants_mcap.mjs · ci/witness/mcap/capability_map.json · ci/witness/mcap/witness_capability.mjs
+node ci/witness/mcap/witness_capability.mjs plants
+PLANTS mcap · 86 of 86 plant(s) as expected                                (exit 0)
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs clauses     (mmeter's member, now on main)
+  ok   CLAUSE WITNESS · ci/witness/mcap/witness_capability.mjs plants — exit 0, every plant as expected (n > 0)
+node ci/mcap/run_mutants_mcap.mjs
+run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN   (exit 0)
+```
+
+**FORK mcap-6 is answered by (c):** mmeter's member walks `ci/witness/` and judges this witness on main. The witness's own
+unit-mode BOUND still compares the org with `ci/mcap/BASE`. So, once main has moved, it lists the landed units' files.
+Row 1200 (2) puts the bound against the parent instead. Making the witness's BOUND read the parent is a witness edit that no
+message has asked for yet, and it is named here.
