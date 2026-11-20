@@ -150,3 +150,7 @@ seat's final message.
 Effort receipt (the brief's last step): `node campaign-2026-09/tools/effort_receipt.mjs --fleet mcanary --seat 00 --model …`
 → `Error: Cannot find module '/home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs'`, exit 1 — the tool is not
 in this repository; nothing was written under `campaign-2026-09/`.
+
+## Merge of main (row 1172, 20 Nov 2026)
+
+CHECKPOINT · STOPPED at 2026-11-20T01:28:40Z · merged tip `531c9a2f1a264f0851988e03782313f0b5d6fa6b` (merge of main into `c7b8fa2`) · BASE now `5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90` (`ci/mcanary/BASE`) · resolution hunks: NONE — the merge was clean; of the two contested files only `scripts/organism_test.mjs` moved, on main's side alone (this unit adds no member, row 1162 (2)), and `package.json` did not move · witness `node ci/witness/mcanary/witness_canary.mjs plants --org . --base-org <git archive 5759cce>` → `GREEN MCANARY plants both ways, BOUND held · 3 clause(s)` (BOUND: 7 file(s) differ, all named) · mutants `node ci/mcanary/run_mutants_mcanary.mjs --org .` → `run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN` · resume from: the architect's next message.
