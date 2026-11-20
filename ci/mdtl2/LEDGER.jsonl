@@ -1,0 +1,15 @@
+{"ts":"2026-11-20T15:42:26.742Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mdtl2-spec origin/main","last_line":"6a6bdfff4349b849398b69d0748b27d37c874b85"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"read-mdtl","cmd":"git show 9d5c9b8:ci/mdtl/MDTL_SPEC.md; git show a3c544b:ci/mdtl/PROOF.md; git diff origin/main a3c544b -- scripts/ci_verdict.mjs scripts/organism_test.mjs; git show a3c544b:scripts/witness_cause.mjs","last_line":"read whole"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M2","cmd":"curl -s $API/commits/d2d9383416860ab1173e1f095a07a81bf0051914/check-runs","last_line":"136344033976 npm test · node 24 failure"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M3","cmd":"curl -s $API/check-runs/136344033976/annotations","last_line":"failure | NEW RED · node 24 1/2 | SUITE MEMBER · probe selftest exits 0"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M4","cmd":"curl -s $API/check-runs/136341665594/annotations","last_line":"NEW RED · node 22 1/2 | SUITE MEMBER · probe selftest exits 0"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M5","cmd":"curl -s $API/actions/jobs/136344033976","last_line":"9 the neutral verdict | failure"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M6","cmd":"node tools/census.mjs scripts/organism_test.mjs --tmpl","last_line":"census · 209 assert call site(s) · 33 with an interpolated or computed name · 14 enclosing function(s)"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M7","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (LF clone of 6a6bdff under os.tmpdir)","last_line":"organism_test: 156 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M8","cmd":"node tools/printers.mjs <clone>","last_line":"printers · 129 member(s) · 7 red here · 128 print marked check lines · 8166 check line(s): whole-literal 7707 · literal-head 216 · no literal 243 · fail-marked 19"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M9","cmd":"node tools/skeleton.mjs <clone> probe turn_hook lawpack teaching_gate harness_text dugout xray limits brain","last_line":"skeleton · 9 organ(s) · 1540 check line(s): whole literal 1261 · template skeleton 117 · neither 162"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M10","cmd":"node tools/measure_base.mjs <repo> <node_modules>","last_line":"payload has cause false · compare exit 1"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M11","cmd":"node tools/measure_throw.mjs <plant>","last_line":"detail names a canary prefix 10 of 17 chars · detail names the canary false · detail error class SyntaxError · detail names a scripts/ frame true · leaving lines naming the canary 0 of 8"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M12","cmd":"node scripts/ci_verdict.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"M13","cmd":"curl -s https://api.github.com/rate_limit","last_line":"core limit 15000"}
+{"ts":"2026-11-20T15:42:26.742Z","act":"write","cmd":"ci/mdtl2/MDTL2_SPEC.md","last_line":"written"}
