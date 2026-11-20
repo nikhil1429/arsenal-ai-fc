@@ -56,14 +56,14 @@ self-run call `:1006`) — held by the self-run form. The witness plants each cl
 | council.mjs | has | 484 | has | dispatch | 484 | — |
 | course.mjs | has | 904 | has | dispatch | 904 | — |
 | daemon_watchdog.mjs | has | 1060 | has | dispatch | 1060 | — |
-| daily_green.mjs | has | 753 | has | dispatch | 753 | — |
+| daily_green.mjs | has | 802 | has | dispatch | 802 | — |
 | day.mjs | none | — | none | — | — | — |
 | daykey.mjs | has | 353 | has | dispatch | 353 | — |
 | deck_lint.mjs | has | 153 | has | dispatch | 153 | — |
 | deep.mjs | has | 796 | has | dispatch | 796 | — |
 | distiller.mjs | has | 1183 | has | dispatch | 1183 | — |
 | dmn.mjs | has | 1019 | has | dispatch | 1570 | — |
-| done.mjs | has | 287 | has | dispatch | 287 | — |
+| done.mjs | has | 289 | has | dispatch | 289 | — |
 | doubtminer.mjs | has | 917 | has | dispatch | 1346 | — |
 | dugout.mjs | has | 6496 | has | dispatch | 6496 | — |
 | examiner.mjs | has | 508 | has | dispatch | 785 | — |

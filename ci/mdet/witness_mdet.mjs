@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // ci/mdet/witness_mdet.mjs — unit mdet (forks row 1151 (3) F3 B) · THE WITNESS. Its header is its contract.
 // ----------------------------------------------------------------------------------------------------------------------
-// USAGE: node ci/mdet/witness_mdet.mjs --org <build checkout> --base-org <base checkout>
+// USAGE: node ci/mdet/witness_mdet.mjs --org <build checkout> --base-org <base checkout> [--bound-org <parent checkout>]
+//   --bound-org (forks row 1200 (2), THE BOUND CLASS): after a main-moved merge the CLAUSES are judged against --base-org
+//   (the tree of ci/mdet/BASE) and the BOUND against the parent named here; absent, the bound reads --base-org.
 //   An org is a git checkout (the witness CLONES its HEAD with core.autocrlf=false, so a Windows checkout plants LF bytes
 //   exactly as committed) or a plain tree (the suite's WITNESSES member hands LF work trees with no .git: the witness COPIES
 //   it, node_modules and .git left out). It never runs in, writes to or reads the state of either org: BOUND reads
@@ -202,14 +204,14 @@ function differing(a, b) {
 function main() {
   const argv = process.argv.slice(2);
   const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : undefined; };
-  const org = opt("--org"), base = opt("--base-org");
+  const org = opt("--org"), base = opt("--base-org"), boundOrg = opt("--bound-org") || base;
   if (!org || !base) { console.log("usage: node ci/mdet/witness_mdet.mjs --org <build checkout> --base-org <base checkout>"); process.exit(2); }
   const root = mkdtempSync(join(tmpdir(), "mdet-witness-"));
   const reds = [];
   try {
-    const diff = differing(org, base);
+    const diff = differing(org, boundOrg);
     const outside = diff.filter((p) => !NAMED.some((r) => r.test(p)));
-    console.log(`BOUND · ${diff.length} path(s) differ between the orgs: ${diff.join(", ") || "(none)"}`);
+    console.log(`BOUND · against ${boundOrg === base ? "the base org" : "the bound org"} · ${diff.length} path(s) differ: ${diff.join(", ") || "(none)"}`);
     if (outside.length) { console.log(`BOUND · RED — outside the named files: ${outside.join(", ")}`); reds.push("BOUND"); }
     const mods = [org, base].map((d) => join(resolve(d), "node_modules")).find((p) => existsSync(p)) || null;
     const vb = judgeAll(plantTree(base, mkdtempSync(join(root, "base-")), mods));
