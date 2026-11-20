@@ -985,9 +985,11 @@ async function selftest() {
       ok("DAEMON — a launch that throws is reported as a FAILURE, with its reason",
         repErr.steps[0].ok === false && /wscript missing/.test(repErr.steps[0].error));
 
-      // the probe itself must answer honestly on a port nobody is serving
-      ok("DAEMON — portOpen says false for a port nobody is listening on",
-        (await portOpen(59999, 200)) === false);
+      // the probe itself must answer honestly on a port nobody is serving. unit mlaw (forks row 1137 (3) F6 B): the port is
+      // OS-PICKED — listen on 0, read it, close, then connect — never a fixed number a live service on his laptop could hold
+      const closedPort = await new Promise((res, rej) => { const s = net.createServer(); s.once("error", rej); s.listen(0, "127.0.0.1", () => { const a = s.address(); s.close(() => res(typeof a === "object" && a ? a.port : 0)); }); });
+      ok("DAEMON — portOpen says false for a port nobody is listening on (an OS-picked port, closed before the probe)",
+        Number(closedPort) > 0 && (await portOpen(Number(closedPort), 200)) === false);
 
       // THE SELFTEST MUST NEVER START A REAL DAEMON. A dry run with no injected
       // launcher short-circuits before probe AND before launch — otherwise this very
