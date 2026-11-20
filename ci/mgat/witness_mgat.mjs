@@ -44,7 +44,7 @@ if (!ORG || !BASE) { console.log("usage: node ci/mgat/witness_mgat.mjs --org <di
 const ALL = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9"];
 const WANT = opt("--only") ? opt("--only").split(",") : ALL; const ORG_ONLY = argv.includes("--org-only");
 const NAMED = ["scripts/groundsman.mjs", "scripts/cortex.mjs", "scripts/captains_call.mjs", "scripts/organism_test.mjs", "scripts/rung_receipt.mjs"];   // the fifth by forks row 1156 (1)
-const NAMED_DIR = "ci/mgat/";
+const NAMED_DIR = "ci/mgat/"; const RULED_DIRS = ["ci/mf2/"];   // ci/mf2: its F3 re-stated by this seat (forks row 1174 (2))
 const SD = "dressing-room/state";
 // the rise parents (MGAT_SPEC.md §1.2, measured there by sites.mjs): the commit BEFORE each file's new no-empty sites
 const RISE_PARENT = { "scripts/groundsman.mjs": "15edfec", "scripts/cortex.mjs": "4d166d3", "scripts/captains_call.mjs": "8c729c8" };
@@ -122,7 +122,7 @@ function bound() {
   const diff = [];
   for (const f of new Set([...a, ...b])) { const pa = join(ORG, f), pb = join(BASE, f);
     const ea = a.has(f) && existsSync(pa), eb = b.has(f) && existsSync(pb); if (ea !== eb || (ea && norm(pa) !== norm(pb))) diff.push(f); }
-  const out = diff.filter((f) => !NAMED.includes(f) && !f.startsWith(NAMED_DIR));
+  const out = diff.filter((f) => !NAMED.includes(f) && !f.startsWith(NAMED_DIR) && !RULED_DIRS.some((r) => f.startsWith(r)));
   return { ok: out.length === 0, line: `differing tracked files ${diff.length} · outside the named files ${out.length}${out.length ? ": " + out.slice(0, 8).join(" ") : ""}` };
 }
 function last() {

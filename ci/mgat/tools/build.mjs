@@ -31,7 +31,7 @@ export const EDITS = [
     to: "" },
   { id: "HALF", file: "scripts/organism_test.mjs",
     from: "  const r = run([join(ROOT, \"scripts\", \"gates.mjs\"), \"report\"], { timeout: 600000 });\n",
-    to: "  // unit mgat: the hermetic profile runs the STATE-FREE half — `gates.mjs lint` (tsc + eslint), whose output was byte-identical\n  // with the state folder absent, empty and tracked-present (ci/mgat/MGAT_SPEC.md §3). The ajv half validates his state files: LIVE, named.\n  const half = PROFILE === \"hermetic\";\n  if (half) liveNamed(\"gates schema half\", \"validates every schema-d file of dressing-room/state (ajv); the tsc + eslint half runs\");\n  const r = run([join(ROOT, \"scripts\", \"gates.mjs\"), half ? \"lint\" : \"report\"], { timeout: 600000 });\n" },
+    to: "  // unit mgat: the hermetic profile runs the STATE-FREE half — `gates.mjs lint` (tsc + eslint), whose output was byte-identical\n  // with the state folder absent, empty and tracked-present (ci/mgat/MGAT_SPEC.md §3). The ajv half validates his state files: LIVE, named.\n  const half = PROFILE === \"hermetic\";\n  if (half) liveNamed(\"gates schema half\", `validates every schema-d file of dressing-room/state (ajv); the tsc + eslint half runs (narrows ${LIVE_NARROWS[\"gates schema half\"]})`);\n  const r = run([join(ROOT, \"scripts\", \"gates.mjs\"), half ? \"lint\" : \"report\"], { timeout: 600000 });\n" },
   // forks row 1156 (1) FK1 B — scripts/rung_receipt.mjs, the unit's fifth file: the two other counts of the same gate, risen by
   // the same cause (a landing that did not read the gate). Each site's fate by measurement (PROOF.md §8).
   { id: "RR-sep", file: "scripts/rung_receipt.mjs",
@@ -63,6 +63,10 @@ export const EDITS = [
   { id: "MS-rm", file: "scripts/organism_test.mjs",
     from: "      try { rmSync(tmp, { recursive: true, force: true }); } catch {}\n",
     to: "      try { rmSync(tmp, { recursive: true, force: true }); } catch (e) { console.log(`  witness ‹${unit}› · temp dir ${tmp} left behind (${e.code || e.message})`); }\n" },
+  // forks row 1174 (2): the tree DECLARES which base LIVE name a new one narrows (mf2's F3, re-stated, admits it only so)
+  { id: "NARROWS", file: "scripts/organism_test.mjs",
+    from: "  atlas: \"re-derives the atlas from state/xray_graph.json, the live IR\",\n});\n",
+    to: "  atlas: \"re-derives the atlas from state/xray_graph.json, the live IR\",\n});\n// unit mgat (forks row 1174 (2)): a LIVE name that NARROWS a base one declares it here — new LIVE name → the base LIVE name it\n// replaces, which must be gone. ci/mf2's F3 (ci/mf2/livenarrow.mjs) admits a name the base never printed only through this table.\nconst LIVE_NARROWS = Object.freeze({\n  \"gates schema half\": \"MODE gates\",\n});\n" },
 ];
 
 // one mutant per witness clause (see MGAT_SPEC.md §5)
@@ -78,6 +82,7 @@ export const MUTANTS = {
   M9: { why: "rung_receipt's negation left in (the TS2339 diagnostic returns)", drop: ["RR-ts"] },
   M10: { why: "ms1's /proc read catch left empty (no-empty rises by one)", drop: ["MS-proc"] },
   M11: { why: "ms1's r.error.code left unnarrowed (the TS2339 diagnostic returns)", drop: ["MS-code"] },
+  M12: { why: "a new LIVE name with no narrowed partner (the LIVE_NARROWS entry emptied)", patch: [["  \"gates schema half\": \"MODE gates\",\n", ""]] },
 };
 
 /** apply EDITS (minus a mutant's drops, plus its patches) inside tree d */

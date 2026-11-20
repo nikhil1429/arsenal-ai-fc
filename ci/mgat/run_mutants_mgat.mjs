@@ -20,7 +20,7 @@ const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : nu
 const ORG = opt("--org") && resolve(opt("--org")); const BASE = opt("--base-org") && resolve(opt("--base-org"));
 if (!ORG || !BASE) { console.log("usage: node ci/mgat/run_mutants_mgat.mjs --org <dir> --base-org <dir>"); process.exit(1); }
 const RUN = mkdtempSync(join(tmpdir(), "mgat-mut-"));
-const CLAUSE = { M1: "W1", M2: "W2", M3: "W3", M4: "W4", M5: "W5", M6: "W6", M7: "W7", M8: "W8", M9: "W9" };
+const CLAUSE = { M1: "W1", M2: "W2", M3: "W3", M4: "W4", M5: "W5", M6: "W6", M7: "W7", M8: "W8", M9: "W9", M10: "W1", M11: "W9" };   // M12 is mf2 F3's mutant: judged by ci/mf2, PROOF §10
 const nm = [join(ORG, "node_modules"), join(BASE, "node_modules")].find((p) => existsSync(p));
 function tree(m) {
   const d = join(RUN, m || "control");
@@ -37,7 +37,7 @@ const cw = witness(c, ["--org-only"]); const cOrg = cw.out.split(/\r?\n/).filter
 const cGreen = same.length === files.length && cOrg.length === Object.keys(CLAUSE).length && cOrg.every((l) => / org  GREEN /.test(l));
 console.log(`CONTROL · named files equal to --org ${same.length} of ${files.length} · witness org side ${cOrg.filter((l) => /GREEN/.test(l)).length} of ${cOrg.length} GREEN`);
 rmSync(c, { recursive: true, force: true });
-let k = 0; const ids = Object.keys(MUTANTS);
+let k = 0; const ids = Object.keys(MUTANTS).filter((m) => CLAUSE[m]);
 for (const m of ids) {
   const w = CLAUSE[m]; const d = tree(m); const r = witness(d, ["--org-only", "--only", w]); rmSync(d, { recursive: true, force: true });
   const line = r.out.split(/\r?\n/).find((l) => l.startsWith(`${w} org `)) || "(no clause line)"; const red = / org  RED /.test(line); if (red) k++;

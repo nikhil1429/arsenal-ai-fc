@@ -213,6 +213,11 @@ const LIVE_MODES = Object.freeze({
   lawpack: "walks the whole tree, dressing-room/state included (437,917 state reads measured in one run)",
   atlas: "re-derives the atlas from state/xray_graph.json, the live IR",
 });
+// unit mgat (forks row 1174 (2)): a LIVE name that NARROWS a base one declares it here — new LIVE name → the base LIVE name it
+// replaces, which must be gone. ci/mf2's F3 (ci/mf2/livenarrow.mjs) admits a name the base never printed only through this table.
+const LIVE_NARROWS = Object.freeze({
+  "gates schema half": "MODE gates",
+});
 /** @type {string[]} */ const lived = [];
 const foldName = (n) => String(n).replace(/\d+/g, "#");
 const liveNamed = (name, why) => { if (!lived.includes(name)) lived.push(name); console.log(`  LIVE ${name} — not run in the hermetic profile: ${why}`); return true; };
@@ -2676,7 +2681,7 @@ function gates() {
   // unit mgat: the hermetic profile runs the STATE-FREE half — `gates.mjs lint` (tsc + eslint), whose output was byte-identical
   // with the state folder absent, empty and tracked-present (ci/mgat/MGAT_SPEC.md §3). The ajv half validates his state files: LIVE, named.
   const half = PROFILE === "hermetic";
-  if (half) liveNamed("gates schema half", "validates every schema-d file of dressing-room/state (ajv); the tsc + eslint half runs");
+  if (half) liveNamed("gates schema half", `validates every schema-d file of dressing-room/state (ajv); the tsc + eslint half runs (narrows ${LIVE_NARROWS["gates schema half"]})`);
   const r = run([join(ROOT, "scripts", "gates.mjs"), half ? "lint" : "report"], { timeout: 600000 });
   if (/NOT MEASURABLE HERE/.test(r.out)) {
     assert("GATES — bare checkout: the gate answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));

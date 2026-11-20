@@ -13,8 +13,12 @@
 //        are NAMED in the clause line, never red (ci/mf2/monotone.mjs). STRUCK, the text it replaces:
 //        ~~every member the BASE hermetic run judged (ok / FAIL, LIVE excluded) is judged by the build with the same verdict,
 //        and the build judges nothing the base did not (digit runs folded, as LIVE_ASSERTS keys are).~~
-//   F3 · the LIVE count on the build's hermetic headline is equal to or lower than the base's, and the build names LIVE no
-//        member the base did not (digit runs folded).
+//   F3 · RE-STATED by unit mgat (forks row 1174 (2), the snapshot class of row 1154) AS ITS PROPERTY — THE LIVE SET NEVER
+//        WITHHOLDS MORE: the build's hermetic LIVE count is equal to or lower than the base's, and a name LIVE at the build but
+//        not at the base is admitted only where the build tree declares (scripts/organism_test.mjs LIVE_NARROWS) which base LIVE
+//        name it narrows and that name is gone at the build (ci/mf2/livenarrow.mjs). STRUCK, the text it replaces:
+//        ~~the LIVE count on the build's hermetic headline is equal to or lower than the base's, and the build names LIVE no
+//        member the base did not (digit runs folded).~~
 //   F4 · RE-CUT by unit mrf (forks row 1120 (2) F-1 C · row 1120 (4)) — MONOTONE over the FULL profile's members, the same
 //        rule as F2 (ci/mf2/monotone.mjs); both headlines and exits are named in the line, not compared. STRUCK, the text
 //        it replaces:
@@ -30,7 +34,8 @@ import { join, relative, resolve, delimiter } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { monotone, monoLine } from "./monotone.mjs";   // unit mrf (row 1120 (2) F-1 C): the rule F2 and F4 read
+import { monotone, monoLine } from "./monotone.mjs";
+import { liveNarrow, narrowsOf, narrowLine } from "./livenarrow.mjs";   // unit mgat (row 1174 (2)): the rule F3 reads   // unit mrf (row 1120 (2) F-1 C): the rule F2 and F4 read
 
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
 const ORG = arg("--org") && resolve(arg("--org")), BASE = arg("--base-org") && resolve(arg("--base-org"));
@@ -97,9 +102,10 @@ clause("F1", po.sites > 0 && oh.marks.length === 0 && of.marks.length > 0 && bf.
 }
 const liveOf = (h) => { const m = /LIVE (\d+)/.exec(h); return m ? Number(m[1]) : null; };
 {
-  const extra = oh.live.filter((n) => !bh.live.includes(n));
-  clause("F3", liveOf(oh.head) !== null && liveOf(bh.head) !== null && liveOf(oh.head) <= liveOf(bh.head) && extra.length === 0,
-    `hermetic headline LIVE: build ${liveOf(oh.head)} · base ${liveOf(bh.head)} (build ≤ base) · LIVE names printed: build ${oh.live.length}, base ${bh.live.length} · named LIVE only by the build: ${extra.length ? extra.map((n) => n.slice(0, 60)).join(" · ") : "none"}`);
+  // unit mgat (row 1174 (2)): THE LIVE SET NEVER WITHHOLDS MORE. Struck form, kept for the record: count ≤ and `extra.length === 0`
+  // (no name LIVE only at the build) — which turned red on a unit that NARROWED a live member (mgat: MODE gates → gates schema half).
+  const r = liveNarrow({ baseLive: bh.live, headLive: oh.live, baseCount: liveOf(bh.head), headCount: liveOf(oh.head), narrows: narrowsOf(readFileSync(join(ORG, "scripts", "organism_test.mjs"), "utf8")) });
+  clause("F3", r.ok, `hermetic headline LIVE: build ${liveOf(oh.head)} · base ${liveOf(bh.head)} (build ≤ base) · LIVE names printed: build ${oh.live.length}, base ${bh.live.length} · named LIVE only by the build: ${r.extra.length ? r.extra.map((n) => n.slice(0, 60)).join(" · ") : "none"} · ${narrowLine(r)}`);
 }
 {
   // unit mrf (row 1120 (2) F-1 C): MONOTONE, the F2 rule over the full profile. Struck form, kept for the record: the same
