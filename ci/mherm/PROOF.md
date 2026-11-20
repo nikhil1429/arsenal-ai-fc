@@ -179,6 +179,47 @@ The check runs of every push, read through the public API with no token
 (`curl -sS https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`), are rows of the ledger. A push
 cancels the run of the push before it (the workflow's concurrency group), so only the last push of a burst completes.
 
+**`327892e`** (the last push before main moved), workflow `suite`, read 20 Nov 2026:
+
+| check run | job | conclusion | wall |
+|---|---|---|---|
+| 136311865420 | hermetic twice · node 22 | **success** | 13:32:40Z → 13:38:18Z |
+| 136311872510 | hermetic twice · node 24 | **success** | 13:36:45Z → 13:42:21Z |
+| 136311868101 | npm test · node 22 | failure | 13:34:37Z → 14:21:49Z |
+| 136311867731 | npm test · node 24 | failure | 13:30:30Z → 14:23:01Z |
+
+W2 · W4 · W5 hold on Windows, both nodes: the whole hermetic `all` twice in a fresh clone under `os.tmpdir()` fits in
+about six minutes a job (so each Windows run is well under three; the per-run line is in the job log, which needs a token).
+The npm-test verdict annotation, both legs: `1 member(s) red that are not red at the merge base` —
+`NEW RED · WITNESS ‹mf2› · GREEN at head against its BASE`. Reproduced here (the member's shape: LF trees of HEAD and
+of `ci/mf2/BASE`): `RED MF2 · F3 BOUND`, and F3 reads
+`hermetic headline LIVE: build 125 · base 126 (build ≤ base) · … named LIVE only by the build: LOAD ZERO · the brain-ledger lane block …`.
+The count holds; the red is the ONE new LIVE name T3 adds, which row 1157 (1) and (4) rule (F3 A, `liveNamed` one line).
+mf2's F3 ratchet ("the build names LIVE no member the base did not") and F3 A cannot both hold: every T3 shape short of
+F3 C (unit mherm2's fixture) names a LIVE line. Not worked around (no KNOWN_RED entry without a row): **FORK F-8**.
+mf2's BOUND red is the bound class (its BASE is behind main), which the member drops.
+
+## 10-M. Main moved — 6a6bdff merged (unit mmeter)
+
+Runner M's message, 20 Nov 2026: main is `6a6bdfff4349b849398b69d0748b27d37c874b85` (unit mmeter). `git fetch origin main`,
+`git merge --no-edit FETCH_HEAD` → merge commit `e1c1c07`. **No conflict**: `scripts/organism_test.mjs` auto-merged (main
+added the `clauses` mode that walks `ci/witness/`, my unit edits `run()`, the ledger block and `hermetic()`; no hunk
+touches the other's lines); `package.json` is not touched by this unit, so its `organism:selftest` line is main's. Both
+intents hold: main's `clauses` mode is a member of `MODES`, and every child it spawns inherits the run's own temp (T2).
+`ci/mherm/BASE` is unchanged (cebe3eb): the clauses are judged against it, the bound against the parent (row 1200 (2)) —
+the witness and the mutant runner take `--bound-org <dir>` for that, the base org when it is absent.
+
+Re-measured on the merged tree (20 Nov 2026):
+
+```
+witness --org <merge> --base-org <cebe3eb> --bound-org <6a6bdff>   → GREEN MHERM … · 5 clause(s)   (BOUND: 10 named paths)
+witness --org <merge> --base-org <6a6bdff>                         → GREEN MHERM … · 5 clause(s)   (every clause RED at the parent too)
+witness --org <merge> --base-org <cebe3eb>  (no --bound-org)       → RED MHERM · BOUND   (the mmeter files: the bound class)
+run_mutants --org <merge> --base-org <cebe3eb> --bound-org <6a6bdff> → run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN
+working tree, hermetic all                                         → organism_test: 160 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125
+lawpack gate, 6a6bdff and the merge (LF clones)                    → the same count line as §9, both GREEN
+```
+
 ## 11. What the two named next units need from this build
 
 - **mherm2** (a planted ledger fixture so the ten asserts run on every push · F5 B):
@@ -222,4 +263,8 @@ cancels the run of the push before it (the workflow's concurrency group), so onl
 - **F-6 · Windows, named not guessed:** whether `os.tmpdir()` (an 8.3 short name on the runner) and the clone path compare
   equal inside the collar; whether a junction `node_modules` reads the same in `git status` before and after; the job's wall
   time per run. All three are printed by the `hermetic-twice` job's first run.
+- **F-8 · mf2's LIVE ratchet against T3 (F3 A).** `ci/mf2/witness_mf2.mjs` F3 reds on the one LIVE name T3 adds (§10), so
+  the neutral npm-test verdict of this branch is RED on that one member. Rule one: (a) mf2's F3 admits a LIVE name that
+  replaces a block the base skipped SILENTLY (strictly more visible: before T3 the block's existence depended on a gitignored
+  file), (b) a KNOWN_RED entry by a row, until mherm2's fixture retires the name, or (c) bring F3 C (mherm2) into this unit.
 - **F-7 · the effort receipt.** `campaign-2026-09/tools/effort_receipt.mjs` is not in this repository (see the final message).
