@@ -173,8 +173,8 @@ for (const [k, tree] of [["org", ORG], ["base", BASE]]) {
 }
 const O = side.org, B = side.base;
 const bad = O.err || B.err;
-if (bad) clause("SETUP", false, `a copy could not be planted: ${bad}`);
-else {
+clause("SETUP", !bad, bad ? `a copy could not be planted: ${bad}` : `both copies planted · the bound (${jobMin} min) and the head grep read from the --org suite.yml`);
+if (!bad) {
   // D1
   const ann = newRedOf(O.cmp, "toy");
   const inAnn = ann.includes(esc(`cause · P1 · ${CLAIM}`)), inRead = O.rd.includes(`P1 · ${CLAIM}`);
