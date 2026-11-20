@@ -1,5 +1,7 @@
 # unit mstrike · C:capability-c22 · PROOF
 
+CHECKPOINT · STOPPED at 2026-11-20T01:28Z · row 1172 merge: main 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 merged into this branch (merge commit 3410fb84e96e51f11942a45243c03838040c2f9f; the pushed tip is the commit above it that carries this line) · BASE = 5759cce · resolution hunks: none (no conflict; this branch touches only ci/witness/mstrike/ and ci/mstrike/, neither of which main touches; scripts/organism_test.mjs and package.json untouched here) · witness build: GREEN MSTRIKE the asked-first strike is read, and read first · 1 clause(s) (6 plant(s), BOUND, LAST) (exit 0) · witness base 5759cce: RED MSTRIKE · C22 (C22.1, C22.2, C22.3, C22.4, C22.5, C22.6) (exit 1) · mutants: run_mutants: 2 of 2 mutant(s) RED by the clause that names them · control GREEN · resume from: nothing owed; await the architect
+
 ~~CHECKPOINT · STOPPED at 2026-11-19T12:38Z · resume from step 2~~ — RESUMED 19 Nov 2026 on the runner's message (his word 270); steps 2-5 done below.
 
 **Base:** origin/main `fb4211870093e6b8657655eb02ebcfc425f1eab1` (fb42118; `ci/mstrike/BASE`). **Spec:** `ci/mwit/MWIT_SPEC.md` @ 88bf69d §C:capability-c22, read whole with its ledger and `ci/mwit/plant_day.mjs`. **Work tip judged here:** `b4e613b462a9b609957e570d31950b691148dc90` (witness + mutants); this proof's own commit is judged by its own push (named in the seat's final message).

@@ -9,3 +9,4 @@
 {"ts":"2026-11-19T18:17Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (base, build)","last_line":"organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run) on both"}
 {"ts":"2026-11-19T18:17Z","act":"red-before","cmd":"ARSENAL_RUNG_STATE_DIR=<mktemp> node scripts/rung_receipt.mjs red --rung C --clause capability-c22 --cmd \"node ci/witness/mstrike/witness_strike.mjs --day 2026-11-19\"","last_line":"rung_receipt: red C:capability-c22 · exit 2 · out b7c0c8be2d19 · head b4e613b462a9"}
 {"ts":"2026-11-19T18:17Z","act":"models","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts":"2026-11-20T01:28Z","act":"merge main (row 1172)","cmd":"git merge 5759cce; witness both ways; run_mutants (LF clones of 3410fb8 and 5759cce)","last_line":"GREEN MSTRIKE … (exit 0) · RED MSTRIKE · C22 (exit 1) on base · run_mutants: 2 of 2 … control GREEN"}
