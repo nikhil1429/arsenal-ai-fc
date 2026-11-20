@@ -64,11 +64,11 @@ const isPark = (r) => !!r && r.ev === "park" && typeof r.id === "string" && r.id
 const isClose = (r) => !!r && r.ev === "close" && typeof r.id === "string" && r.id !== "" && CLOSE_BY.includes(r.by);
 
 /** readRows(dir) → every parseable row, in order; an absent ledger is [] (no parks), never an error. */
-export function readRows(dir = null) {
-  const p = ledgerOf(dir);
-  if (!existsSync(p)) return [];
+export function readRows(dir = null) { return readLedger(ledgerOf(dir)); }
+function readLedger(path = LEDGER) {
+  if (!existsSync(path)) return [];
   const out = [];
-  for (const l of readFileSync(p, "utf8").split(/\r?\n/)) {
+  for (const l of readFileSync(path, "utf8").split(/\r?\n/)) {
     if (!l.trim()) continue;
     try { out.push(JSON.parse(l)); } catch { /* a torn line is skipped, never fatal: the next append still lands */ }
   }
@@ -102,15 +102,14 @@ export function stampOf(forge, now = new Date()) {
   if (!forge || typeof forge !== "object" || !forge.concept || forge.closed_at || forgeIsStale(forge, now)) return { concept: null, axis: null, step: null };
   return { concept: String(forge.concept), axis: forge.current_axis ?? null, step: Number.isInteger(forge.step) ? forge.step : null };
 }
-const readForge = (dir) => { try { return JSON.parse(readFileSync(forgeOf(dir), "utf8")); } catch { return null; } };
+function readForgeAt(path = FORGE) { try { return JSON.parse(readFileSync(path, "utf8")); } catch { return null; } }
+const readForge = (dir) => readForgeAt(forgeOf(dir));
 
-function append(dir, row) {
-  const p = ledgerOf(dir);
-  mkdirSync(dirname(p), { recursive: true });
-  appendFileSync(p, JSON.stringify(row) + "\n");
+function append(row, path = LEDGER) {
+  mkdirSync(dirname(path), { recursive: true });
+  appendFileSync(path, JSON.stringify(row) + "\n");
   // read back before ok is said (the resume_pointer rule): an append nobody can read is not a park
-  const back = readRows(dir).some((r) => r && r.ev === row.ev && r.id === row.id && r.ts === row.ts);
-  return back;
+  return readLedger(path).some((r) => r && r.ev === row.ev && r.id === row.id && r.ts === row.ts);
 }
 
 /** addPark(dir, {text, door, act, why}, now) → {ok, id?, why?} */
@@ -119,7 +118,7 @@ export function addPark(dir, { text = "", door = "cli", act = null, why = null }
   if (!t.trim()) return { ok: false, why: "no words — a park carries his words verbatim (stdin)" };
   const st = stampOf(readForge(dir), now);
   const row = { v: 1, ev: "park", id: newId(now), ts: now.toISOString(), text: t, ...st, door: one(door) || "cli", act: act ? one(act) : null, why: why ? one(why) : null };
-  try { if (!append(dir, row)) return { ok: false, why: "the park row did not read back off the ledger" }; }
+  try { if (!append(row, ledgerOf(dir))) return { ok: false, why: "the park row did not read back off the ledger" }; }
   catch (e) { return { ok: false, why: `append failed: ${one(e && e.message)}` }; }
   return { ok: true, id: row.id, row };
 }
@@ -130,7 +129,7 @@ export function closePark(dir, id, { by = "", why = null } = {}, now = new Date(
   if (!hit) return { ok: false, changed: false, why: `no park ${id}` };
   if (hit.close) return { ok: true, changed: false, why: `park ${id} already closed (${hit.close.by} at ${hit.close.ts}) — nothing written`, park: hit.park };
   const row = { v: 1, ev: "close", id: hit.park.id, ts: now.toISOString(), by, why: why ? one(why) : null };
-  try { if (!append(dir, row)) return { ok: false, changed: false, why: "the close row did not read back off the ledger" }; }
+  try { if (!append(row, ledgerOf(dir))) return { ok: false, changed: false, why: "the close row did not read back off the ledger" }; }
   catch (e) { return { ok: false, changed: false, why: `append failed: ${one(e && e.message)}` }; }
   return { ok: true, changed: true, park: hit.park, row };
 }

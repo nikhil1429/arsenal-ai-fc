@@ -352,9 +352,10 @@ export const WHY_CODE_CANNOT_DECIDE = Object.freeze({
   // the very thing it exists to protect. Measured: c56 (his own 18 Aug Instagram reading task) is
   // the live case, and it is the one card in the deck whose key is `manual:<iso>`.
   "manual:":          "he filed this himself with no key — it is his own note, and only he can say it is done or move the day",
-  // unit mprk (row 1190): a parked item is HIS words, set aside mid-concept — taking it up now or dropping it is his call alone
-  "park:":            "these are his own parked words, and only he can say whether to take them up now or drop them",
 });
+// unit mprk (row 1190): the park card's reason rides ON THE CARD (`why_code_cannot_decide`, the field whyForCard reads first —
+// the hand-filed door's shape), never as a 17th row above: the suite's LOAD ZERO BLOCK 6 law holds this table to SHRINK-ONLY.
+export const PARK_WHY = "these are his own parked words, and only he can say whether to take them up now or drop them";
 // The `file --line` door carries its own reason per call (--why-code-cannot-decide), because a
 // hand-filed ask has no fixed source to key on. `manual:` keys with no stated reason are gated
 // exactly like everything else.
@@ -958,6 +959,8 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
   for (const p of (parks && Array.isArray(parks.open) ? parks.open : [])) {
     if (!p || !p.id) continue;
     mint(`park:${p.id}`, "parked", `Parked (${p.concept || "bina concept"}) — ab uthayein? "${String(p.text || "")}"`, { kind: "park", id: p.id });
+    const pc = byKey.get(`park:${p.id}`);
+    if (pc && !pc.why_code_cannot_decide) pc.why_code_cannot_decide = PARK_WHY;   // the decision gate keeps it: his own words
   }
 
   return s;
@@ -2809,6 +2812,33 @@ function selftest() {
     assert("CURSOR — the cursor is a field of this deck only: sync seats it in the one write, and its disk door opens the queue read-only",
       /next\[GRADE_CURSOR_FIELD\] = q\.cursor;/.test(own.slice(own.indexOf("function sync("), own.indexOf("writeAtomic(CALL, next)")))
       && !/openSync\([^)]*,\s*"[wa+]/.test(own) && /openSync\(p, "r"\)/.test(own));
+  }
+
+  // ── SOURCE 6 · PARKED ITEMS (unit mprk, row 1190) — pure, on fixtures ──
+  {
+    const TP = new Date("2026-11-20T10:00:00Z");
+    const P = (id, o = {}) => ({ v: 1, ev: "park", id, ts: "2026-11-20T09:00:00.000Z", text: `words ${id}`, concept: null, axis: null, step: null, door: "act", act: null, why: null, ...o });
+    const d1 = deriveCards(blank(), { parks: { open: [P("pkA", { concept: "embeddings" }), P("pkB")], closed: new Set() } }, TP);
+    const cA = d1.cards.find((c) => c.key === "park:pkA"), cB = d1.cards.find((c) => c.key === "park:pkB");
+    assert("PARK — ONE card per open park, keyed park:<id>, source parked, dispatch {kind:park,id}, the line carrying his words and the concept",
+      d1.cards.length === 2 && !!cA && !!cB && cA.source === "parked" && cA.dispatch.kind === "park" && cA.dispatch.id === "pkA" && cA.line.includes("words pkA") && cA.line.includes("embeddings") && cB.line.includes("bina concept"));
+    assert("PARK — the reason rides on the card (whyForCard), so the decision gate keeps it and the table does not grow",
+      whyForCard(cA) === PARK_WHY && decisionGate(JSON.parse(JSON.stringify(d1)), TP, null).routed.length === 0 && !Object.keys(WHY_CODE_CANNOT_DECIDE).some((k) => k.startsWith("park")));
+    const d2 = deriveCards(d1, { parks: { open: [P("pkA"), P("pkB")], closed: new Set() } }, TP);
+    assert("PARK — a re-derive mints nothing twice", d2.cards.length === 2);
+    const withOut = { ...blank(), cards: [{ id: "c7", key: "market:2026-11-01.md", source: "brain_out/market", line: "x", dispatch: { kind: "none" }, filed_at: "2026-11-01T00:00:00Z", dealt: [], answer: null, answered_at: null, sleep_until: null, retired_at: null, resolution: null }] };
+    const d3 = deriveCards(withOut, { parks: { open: [P("pkC")], closed: new Set() } }, TP);
+    assert("PARK — F1 a: a park card ranks beside hand-filed (0), ahead of the outward tier", pickCard(d3, { today: "2026-11-20" }).key === "park:pkC");
+    const h = applyAnswer(d1, cA.id, "haan", TP), n = applyAnswer(d1, cB.id, "na", TP), b = applyAnswer(d1, cA.id, "baad", TP);
+    assert("PARK — haan and na hand the owner its close (by his word); baad only sleeps the card to the next day",
+      h.action.kind === "park-dispatch" && h.action.id === "pkA" && h.action.by === "haan" && n.action.kind === "park-dispatch" && n.action.by === "na"
+      && b.action.kind === "sleep" && b.action.until === "2026-11-21");
+    const sw = sweepClosedParks(d1, new Set(["pkB"]), TP);
+    assert("PARK — F3 a: a park closed at its owner retires its card at source through the declared key class; an open one is untouched",
+      sw.retired.length === 1 && sw.retired[0].key === "park:pkB" && !sw.state.cards.find((c) => c.key === "park:pkA").retired_at
+      && RETIRE_AT_SOURCE_KEYS.some((re) => re.test("park:pkB")) && sweepClosedParks(d1, new Set(), TP).retired.length === 0);
+    const settled = { ...d1, cards: d1.cards.map((c) => (c.key === "park:pkB" ? { ...c, answer: "na", retired_at: TP.toISOString() } : c)) };
+    assert("PARK — his word on a card is history: the sweep never rewrites an answered card", sweepClosedParks(settled, new Set(["pkB"]), TP).retired.length === 0);
   }
 
   console.log(`\ncaptains_call selftest: ${pass} passed, ${fail} failed`);
