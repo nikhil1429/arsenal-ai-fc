@@ -140,3 +140,12 @@ BUILD lawpack · 1933 raw match(es) over 8/8 rules · findings: owners-only-stat
   PowerShell's `Get-CimInstance` on win32. Every run here was Linux; the architect's laptop re-run is the Windows measurement.
 - **N2 · the LIVE selftests.** No LIVE member is touched. own_source's member is hermetic and RUNS in the hermetic profile (the
   member line above).
+
+## THE MERGE OF MAIN 5759cce (row 1172, 20 Nov 2026)
+- Merged tip `bf561374bd63bdf650877ed62e7ac8306adaf2f3` = main `5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90` (ms1 + mrj + mrt + mr3 + mrf + mrv) merged into `f970325`; `ci/mpinr/BASE` = 5759cce. No land/* branch merged.
+- Resolution hunks: none — git merged without a conflict; `scripts/organism_test.mjs` is main's bytes, and `package.json` differs from main by the one line only (`git diff --numstat 5759cce` → `1 1 package.json`, 20 Nov 2026).
+- Witness on the merged tree (20 Nov 2026): base 5759cce `RED MPINR · SELFTEST · SUITE · NARROW · KILLED · GUARD · COPY · LEAF · ONLY-NAMED` (exit 1) · build `GREEN MPINR own_source module · 9 clause(s)` (exit 0).
+- Mutants on the merged tree (20 Nov 2026): `run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN`.
+- Law pack on LF trees (20 Nov 2026): 5759cce and the merged build both read `lawpack · 1940 raw match(es)`, every finding count equal, `depcruise_errors 7`.
+
+CHECKPOINT · STOPPED at 2026-11-20T01:32:16Z · merged tip bf561374bd63bdf650877ed62e7ac8306adaf2f3 on base 5759cce · no resolution hunk · witness GREEN MPINR own_source module · 9 clause(s) · run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN · resume from: the neutral machine's verdict of this push
