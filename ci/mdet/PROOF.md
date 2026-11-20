@@ -169,3 +169,68 @@ self-run call `:1006`) — held by the self-run form. The witness plants each cl
 | widget.mjs | has | 277 | has | dispatch | 277 | — |
 | xray.mjs | has | 213 | has | dispatch | 1407 | — |
 <!-- census:end -->
+
+## 3 · The witness, both ways (20 Nov 2026)
+
+`ci/mdet/witness_mdet.mjs --org <dir> --base-org <dir>` plants six scripts into a clone (or a copy of a plain tree) of each org
+under os.tmpdir(): mdet_comment (the word only in comments), mdet_string (only in string literals), mdet_dispatch (`=== "selftest"`),
+mdet_case (`case "selftest":`), mdet_selfrun (its own `selftest()` called), mdet_decl (a declaration nobody calls, and
+`other.selftest()`). None is in a suite, so the coverage law must call exactly the has-plants orphans. Clauses C1 COMMENT,
+C2 STRING, C3 DISPATCH, C4 CENSUS (the census minus the plants equals the table above), C5 SELF-RUN — header = contract.
+
+| run | command | last line |
+|---|---|---|
+| build vs base | `node ci/mdet/witness_mdet.mjs --org . --base-org <clone of cebe3eb>` | `GREEN MDET the coverage detector reads a dispatch or a self-run, never a comment or a string · 5 clause(s)` (exit 0) |
+| base as org | `node ci/mdet/witness_mdet.mjs --org <clone of cebe3eb> --base-org <clone of cebe3eb>` | `RED MDET · C1 COMMENT, C2 STRING, C3 DISPATCH, C4 CENSUS, C5 SELF-RUN` (exit 1) |
+| plain LF trees | the same, `--org` / `--base-org` = `git archive` of HEAD / cebe3eb (the WITNESSES member's shape) | GREEN MDET, BOUND = the ci/mdet files and scripts/organism_test.mjs |
+
+Every clause reads RED on base for two reasons: the legacy detector calls mdet_comment and mdet_string orphans, and base has no
+census mode (it prints its mode list and exits 1) and no ci/mdet/PROOF.md. A witness run takes seconds: it runs only the
+`coverage` and `census` modes, which read files and spawn nothing; each is bounded by the planted file's HEAVY_BOUND_MS, read.
+
+## 4 · Mutants (20 Nov 2026)
+
+`node ci/mdet/run_mutants_mdet.mjs --org .` — one exact edit of scripts/organism_test.mjs per clause, each in a fresh plant:
+C1 line comments no longer blanked · C2 any whole literal counts (the legacy reading) · C3 a dispatch no longer accepted ·
+C4 the census drops its last row · C5 a bare self-run no longer read.
+
+`run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN`
+
+## 5 · Measurements (20 Nov 2026)
+
+- **Touched selftests:** none. scripts/organism_test.mjs is the suite runner, not a member; its `selftest` verb is unchanged.
+- **Touched members:** none. package.json is untouched: the census moves no script, so no member line moves (row 1187 (2) not exercised).
+- **The coverage law, its suites and its floor:** unchanged in code; `hermetic()`'s targets are the same set (the census has-column
+  equals the legacy has-column on every script). The law is STRICTER in kind: a comment or a string can no longer satisfy it,
+  and a comment or a string can no longer make an innocent script an orphan.
+- `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage`, build: `organism_test: 10 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)`
+- `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`, build (the seat checkout): `organism_test: 156 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 124 (hermetic: named, not run)` (exit 0)
+- the same, base (a fresh clone of cebe3eb): `organism_test: 154 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)` (exit 2) — both reds are `sandbox selftest` (its tripwire recorded 2 of 4
+  attempts), the fresh-clone red unit mcov named as its F5 and the architect routed to unit mherm. Not this unit's: the sandbox
+  organ is untouched and its run is the same spawn on both trees.
+- `node scripts/models.mjs check`: exit 0.
+- **The law pack gate's count line** (`ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs lawpack`, LF trees, after `npm ci`):
+  - base: `ORGANISM_TEST_LAWPACK {"owners-only-state-write":0,"law-m-literal-model":0,"jugad-literal-subject-list":90,"trailing-n-slice":0,"bare-catch":37,"receipt-testimony-read":5,"tum-not-tu-prose":0,"import-time-registry-read":2,"unguarded-dispatch":0,"raw-nul-in-source":0,"depcruise_errors":7}`
+  - build: `ORGANISM_TEST_LAWPACK {"owners-only-state-write":0,"law-m-literal-model":0,"jugad-literal-subject-list":90,"trailing-n-slice":0,"bare-catch":37,"receipt-testimony-read":5,"tum-not-tu-prose":0,"import-time-registry-read":2,"unguarded-dispatch":0,"raw-nul-in-source":0,"depcruise_errors":7}`
+  - identical: no count rose; the gate's own assert is ok on both.
+- **Canon-count replay** (LOAD ZERO BLOCK 7) over the COMMIT blobs of every tracked .md, before every push that touched one:
+  undeclared 0.
+
+## 6 · FORKS
+
+- **F1 · the self-run form is a second accepted form beside the dispatch.** The brief says "requires a DISPATCH on the word". Read
+  literally, claudegen (`scripts/claudegen.mjs:1006`, run bare, no word to dispatch on) MOVES has → none and leaves the coverage law:
+  the gate loosens. (A) dispatch only, and claudegen's membership stays by package.json alone, unenforced · (B) dispatch OR a call of
+  the script's own `selftest()` in code (built). **Built B**: it keeps every current has, and witness C5 plants it both ways.
+- **F2 · an uncalled `function selftest(` now reads none.** The legacy reading counted the declaration. No script at this cut is in
+  that shape (the census moves nothing); C5's mdet_decl plants it. (A) keep (built) · (B) count a declaration too. Recommend A: a
+  declaration nobody calls cannot run.
+- **F3 · test_coach_v2 is a suite member the detector cannot see.** It is invoked bare and carries no `selftest` word or function
+  (census: none on both readings), so the coverage law does not require it. Named, not chased: no change of reading moves it; a unit
+  could ask every bare-invoked member to answer the word.
+- **F4 · the base `all` red** is mcov F5 / unit mherm (above), measured here only because the base was a fresh clone.
+- **F5 · the census table is a snapshot of this cut.** Witness C4 compares it row for row, so any later edit of a scripts/*.mjs that
+  moves a dispatch line reds C4 on a re-run of this witness against a newer tree. When main moves, the table is regenerated by
+  `node scripts/organism_test.mjs census` in the merge step (the brief's main-moves rule), never hand-edited.
+- **F6 · the effort receipt tool** (campaign-2026-09/tools/effort_receipt.mjs) is not in this repository: its error is named in the
+  final message; nothing is written under campaign-2026-09/.
