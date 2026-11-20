@@ -1,6 +1,6 @@
 // unit mgat · runs ONE other unit's witness exactly as the suite's WITNESSES member does (scripts/organism_test.mjs:2855 lfTree,
 // :2895-2935): LF trees of <org-sha> and <base-sha> under os.tmpdir() (git --work-tree checkout, core.autocrlf=false, core.eol=lf),
-// node_modules linked, a refusing claude/gemini first on PATH, ci/<unit> copied into a scratch cwd. Writes nothing outside os.tmpdir().
+// node_modules linked, a refusing claude/gemini first on PATH, ci/<unit> copied from THIS checkout (the member's ROOT) into a scratch cwd. Writes nothing outside os.tmpdir().
 // usage: node ci/mgat/tools/mf2run.mjs <unit> <org-sha> <base-sha>
 import { spawnSync } from "node:child_process"; import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, cpSync, rmSync, existsSync } from "node:fs";
 import { join, delimiter } from "node:path"; import { tmpdir } from "node:os"; import { REPO } from "./tree.mjs";
@@ -13,7 +13,8 @@ try {
   for (const t of [orgT, baseT]) symlinkSync(join(REPO, "node_modules"), join(t, "node_modules"), process.platform === "win32" ? "junction" : "dir");
   mkdirSync(shim); for (const tool of ["claude", "gemini"]) writeFileSync(join(shim, tool), "#!/bin/sh\necho REFUSED >&2\nexit 1\n", { mode: 0o755 });
   const env = { ...process.env, PATH: `${shim}${delimiter}${process.env.PATH || ""}` }; delete env.ORGANISM_TEST_PROFILE;
-  const witnessDir = join(orgT, "ci", unit); if (!existsSync(witnessDir)) throw new Error(`no ci/${unit} at ${orgSha}`);
+  // the witness bytes come from THIS checkout, as the member copies them from ROOT (organism_test.mjs: dir = join(ROOT, "ci", unit))
+  const witnessDir = join(REPO, "ci", unit); if (!existsSync(witnessDir)) throw new Error(`no ci/${unit} in this checkout`);
   cpSync(witnessDir, join(wd, "ci", unit), { recursive: true });
   const r = spawnSync(process.execPath, [join("ci", unit, `witness_${unit}.mjs`), "--org", orgT, "--base-org", baseT], { cwd: wd, env, encoding: "utf8", maxBuffer: 1 << 30 });
   process.stdout.write((r.stdout || "") + (r.stderr || ""));

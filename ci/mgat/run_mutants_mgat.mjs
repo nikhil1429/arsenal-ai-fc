@@ -34,7 +34,7 @@ const norm = (p) => readFileSync(p).toString("latin1").split("\r\n").join("\n");
 const c = tree(null); const files = [...new Set(EDITS.map((e) => e.file))];
 const same = files.filter((f) => norm(join(c, f)) === norm(join(ORG, f)));
 const cw = witness(c, ["--org-only"]); const cOrg = cw.out.split(/\r?\n/).filter((l) => /^W\d org /.test(l));
-const cGreen = same.length === files.length && cOrg.length === Object.keys(CLAUSE).length && cOrg.every((l) => / org  GREEN /.test(l));
+const cGreen = same.length === files.length && cOrg.length === new Set(Object.values(CLAUSE)).size && cOrg.every((l) => / org  GREEN /.test(l));
 console.log(`CONTROL · named files equal to --org ${same.length} of ${files.length} · witness org side ${cOrg.filter((l) => /GREEN/.test(l)).length} of ${cOrg.length} GREEN`);
 rmSync(c, { recursive: true, force: true });
 let k = 0; const ids = Object.keys(MUTANTS).filter((m) => CLAUSE[m]);
