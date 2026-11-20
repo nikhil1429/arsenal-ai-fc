@@ -118,7 +118,8 @@ const LIVE_SELFTESTS = Object.freeze({
   "heartbeat": "reads state/heartbeat_config.json",
   "herd": "reads state/xray_graph.json · probes the process table",
   "home_pin": "reads state/captain.json · reaches a localhost port it does not listen on",
-  "lawpack": "reads state/archive_audit.jsonl, state/audit_ledger.jsonl, state/awayday.json …",
+  // "lawpack" LEFT this table at unit mlaw (forks row 1137 (2) F2 A): its verdict reads no state byte but the whole-tree NUL
+  // scan's (byte-identical with the state dir absent, ci/mlaw/MLAW_SPEC.md §1.4), so it rides the hermetic profile; the scan stays whole.
   "learn_digest": "reads state/learning_state.json, state/registry.json, state/forge_profile.json …",
   "learnstate": "reads state/registry.json, state/forge_profile.json, state/python_state.json …",
   "limits": "reads state/reps_log.jsonl, state/physio_config.json, state/nemesis_config.json …",
@@ -211,7 +212,7 @@ const LIVE_MODES = Object.freeze({
   path: "drives forge/rejirah/samjhao/capture end to end over a sandbox COPY of dressing-room/state (registry, concepts, forge_profile, missions …) and mirror.mjs reaches the network",
   alive: "pulse.mjs probes the process table (Get-ScheduledTask) and reads the lanes' live artifacts",
   gates: "validates every schema-d file of dressing-room/state (ajv) and reads state/laws_register.json",
-  lawpack: "walks the whole tree, dressing-room/state included (437,917 state reads measured in one run)",
+  // lawpack LEFT this table at unit mlaw (forks row 1137 (2) F2 A) — see LIVE_SELFTESTS: the mode rides the hermetic profile.
   atlas: "re-derives the atlas from state/xray_graph.json, the live IR",
 });
 /** @type {string[]} */ const lived = [];
@@ -2694,6 +2695,18 @@ function gates() {
 // PROVEN ON EVERY RUN, not once on the day it landed: lawpack's selftest builds a throwaway
 // project carrying the REAL laws/ rules, plants one violation per rule, and requires all
 // five to bite. A rule that stops biting fails the suite.
+const LAWPACK_LINE = "ORGANISM_TEST_LAWPACK";
+/** the law pack gate's `findings: <law> <n> · …` line as { law: n }, or null when the gate printed none @param {string} out */
+function lawpackCounts(out) {
+  const l = String(out).split(/\r?\n/).find((x) => /^lawpack · .* · findings: /.test(x));
+  if (!l) return null;
+  /** @type {Record<string, number>} */ const c = {};
+  for (const part of l.slice(l.indexOf("findings: ") + "findings: ".length).split(" · ")) {
+    const m = /^(\S+) (\d+)$/.exec(part.trim());
+    if (m) c[m[1]] = Number(m[2]);
+  }
+  return Object.keys(c).length ? c : null;
+}
 function lawpack() {
   section("LAW PACK — the organism's own laws as ast-grep rules, frozen and tightening only");
   const r = run([join(ROOT, "scripts", "lawpack.mjs"), "gate"], { timeout: 600000 });
@@ -2701,6 +2714,11 @@ function lawpack() {
     assert("LAW PACK — bare checkout: the pack answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));
     return;
   }
+  // unit mlaw (forks row 1137 (2) F3 A): the pack's counts ride ONE machine line, so the neutral verdict can see a law that is
+  // already over its baseline RISE again (by number — a rise has no name of its own). Read off the gate's own `findings:` line
+  // (measure().counts, printed by lawpack.mjs), never re-measured and never typed; a gate that printed no such line prints none.
+  const counts = lawpackCounts(r.out);
+  if (counts) console.log(`${LAWPACK_LINE} ${JSON.stringify(counts)}`);
   const reds = r.out.split(/\r?\n/).filter((l) => /^\s*RED\s/.test(l));
   assert("LAW PACK — every rule file present, and no law's finding count rose (a gate may only get stricter)",
     r.code === 0, reds.join("\n         ") || r.out.split(/\r?\n/).slice(-3).join(" | "));
