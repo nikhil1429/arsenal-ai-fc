@@ -302,3 +302,32 @@ so the member does not run it; a red on this branch is evidence of the §1 kind.
 
 Before each push, the LOAD ZERO BLOCK 7 scan (`scripts/organism_test.mjs:1874-1923`) is replayed over `git show <sha>:<path>`
 for every tracked `.md` of the commit (scratchpad `canon_scan.mjs`). Any undeclared line means no push.
+
+## 14 · NEW MAIN 3f22388 (unit mlaw landed; the runner's new-main line, read 2026-11-20)
+
+The base section is read against `3f2238887947e5827d2ce8f07a480e9dea3f527c`. Measured by
+`git diff --name-only 5759cce 3f22388` (its stat reads `14 files changed, 1261 insertions(+), 26 deletions(-)`).
+
+- **The keeper family is untouched.** No file of `ci/mlv1`, `ci/mlv2`, `ci/mlv3` or `ci/mrv` changed. Neither did
+  `scripts/keeper.mjs`, `scripts/thalamus.mjs`, `scripts/cortex.mjs`, `scripts/sitting.mjs` or `.github/workflows/suite.yml`
+  (the grep for them prints nothing). §2, §3 and §5 stand as written.
+- **`scripts/organism_test.mjs` shifted; none of its witness-member logic changed.** The diff adds nothing that names
+  witness, KNOWN_RED, judgeLast or PORT_HELD. The hunks are at `:121`, `:214`, `:2696` (+12) and `:2703` (+5). So every
+  anchor this spec gives:
+  - **at `:2795` or later moves by +18** (`:2795`→`:2813`, `:2805`→`:2823`, `:2826`→`:2844`, `:2858-2870`→`:2876-2888`,
+    `:2907`→`:2925`, `:2911-2914`→`:2929-2932`, `:2921`→`:2939`, `:2932`→`:2950`, `:2933`→`:2951`, `:2937-2938`→`:2955-2956`);
+  - **in `:1874-1923` moves by +1** (`:1875-1924`);
+  - **at `:46-50` is unchanged.**
+
+  Each was re-found by its text in `git show 3f22388:scripts/organism_test.mjs`.
+- **`scripts/ci_verdict.mjs` changed** (mlaw's law-pack lane). Its header `:5` (`SOLE WRITER of`) and `:22` are unchanged,
+  so §7's owner line stands. Two things move for this unit:
+  1. `compareLines` now also emits NEW REDs named by law and numbers (`lawpackRises`). These share the cap of nine NEW RED
+     annotations that mdtl's cause channel rides. A head with more new reds than the cap would lose the later ones' causes.
+     That is mdtl's question; it is named here as **N7**. *Measure it:* mdtl's build, at its own base.
+  2. mdtl's spec anchors in `ci_verdict.mjs` (`parseSuite`, `compareLines`, `annotate`) moved. §5 step 3 and §7 name mdtl's
+     functions, not their lines, so nothing here is re-cut.
+- **`package.json`** gained `node scripts/done.mjs selftest` on the `organism:selftest` line. It touches no file of §12.
+- **mlaw's other witnesses** (`ci/mdn2`, `ci/mdone`, `ci/mlaw`) are not of the keeper family (K-F1).
+- **K-F7 is answered by the landing itself.** mlaw landed after 87d72d3 read GREEN on both legs (run 44686340528, §10).
+- **The §1 record is unchanged.** It counts reds since 5759cce. The measurement in §6 still waits for mdtl on main.
