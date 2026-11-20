@@ -1,0 +1,4 @@
+{"ts":"2026-11-20T06:50:00Z","act":"cut build branch from origin/main","cmd":"git fetch origin main && git checkout -b claude/mpres-build origin/main","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T06:52:00Z","act":"read the ruled spec","cmd":"git show e2e18d2:ci/mpres/MPRES_SPEC.md","last_line":"- `3691654` (the spec commit), workflow run 44657224399 ... both legs success"}
+{"ts":"2026-11-20T07:10:00Z","act":"install deps (gitignored node_modules) for the law pack","cmd":"npm ci --no-audit --no-fund","last_line":"EXIT 0"}
+{"ts":"2026-11-20T07:30:00Z","act":"presence selftest after step 1","cmd":"node scripts/presence.mjs selftest","last_line":"ALL CHECKS PASSED"}
