@@ -1,6 +1,6 @@
 # mleft · PROOF (unit mleft, forks rows 1162 / 1163; spec ci/mwit/MWIT_SPEC.md @ 88bf69d, UNITS row 3)
 
-**Base:** main `fb4211870093e6b8657655eb02ebcfc425f1eab1` (fb42118, measured at the cut 19 Nov 2026: `git rev-parse origin/main`),
+**Base:** main `5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90` since the row 1172 merge (20 Nov 2026; section at the end). Cut from main `fb4211870093e6b8657655eb02ebcfc425f1eab1` (fb42118, measured at the cut 19 Nov 2026: `git rev-parse origin/main`),
 written to `ci/mleft/BASE`. **Branch:** `claude/mleft-build`. **Tip:** named in the last section (the commit carrying this file
 is judged by its own push; its sha is the branch tip the final message names).
 
@@ -149,3 +149,27 @@ This repository carries no `campaign-2026-09/`; nothing was written under it.
   (the plan v3 keys and the receipt file are his).
 - **Spec vs ruling differences named:** F13 (c) held c29 (row 1162 (3)); row 1163 (5) returns it to this unit — built. The spec's
   "every unit edits organism_test.mjs" is overruled by row 1162 (2) — not edited.
+- **FK9 · ms1's member does not see this witness (found 20 Nov 2026 after the merge).** Main's WITNESSES member
+  (`scripts/organism_test.mjs:2783-2800`, unit ms1) judges only a dir `ci/<unit>/` holding `witness_<unit>.mjs`; this unit's
+  witness sits at `ci/witness/mleft/witness_left.mjs` (UNITS row 3, F10 a), so `ci/mleft/BASE` alone puts nothing in that
+  member. (a) a two-line shim `ci/mleft/witness_mleft.mjs` that runs the real witness with the same `--org` / `--base-org` — a
+  file beyond the named ones, so NOT added here; (b) unit mmeter's `ci/witness` walk (row 1162 (2)) is the member that runs it.
+  Architect's word.
+
+## Row 1172 · the merge of main 5759cce (20 Nov 2026)
+
+`git merge --no-ff 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90` into `68bbfc8` → merge commit `d980977`, **no conflict**: of the
+files main changed since fb42118, only `scripts/organism_test.mjs` is a suite file, this branch never touched it, and no
+`ci/witness/mleft/` or `ci/mleft/` path is on main. Resolution hunks: **none**. `ci/mleft/BASE` → `5759cce` (commit `8bd691b`).
+No land/* branch merged. Re-run on LF worktrees (`core.autocrlf=false`) of 5759cce and of `8bd691b`:
+
+```
+node ci/witness/mleft/witness_left.mjs --org <worktree 5759cce> --base-org <worktree 5759cce>
+RED MLEFT · B-left:one-command, C:census-510, C:capability-c29, C:finish-zero                         (exit 1)
+node ci/witness/mleft/witness_left.mjs --org <worktree 8bd691b> --base-org <worktree 5759cce>
+GREEN MLEFT what is left, read by one command — 19 plant(s) both ways · 4 clause(s) + BOUND + LAST    (exit 0)
+node ci/mleft/run_mutants_mleft.mjs --org <worktree 8bd691b>
+run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN                       (exit 0)
+```
+
+CHECKPOINT · STOPPED at 2026-11-20 (row 1172 step 5) · merged tip = the commit carrying this line, child of 8bd691b (merge d980977 of main 5759cce) · base 5759cce · resolution hunks none · witness GREEN MLEFT … 19 plant(s) both ways · 4 clause(s) + BOUND + LAST / base RED MLEFT · B-left:one-command, C:census-510, C:capability-c29, C:finish-zero · mutants run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN · resume from the architect's word on FK9
