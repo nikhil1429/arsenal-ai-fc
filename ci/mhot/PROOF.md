@@ -315,3 +315,39 @@ organism_test: 158 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermeti
    the same two reds by name (the clone's sandbox canary: SUITE MEMBER sandbox and the all-members assert), the same LIVE
    list; the four added lines are this unit's four new ok asserts; every other ok/FAIL line identical
 ```
+
+## 12 · THE MERGE OF MAIN 6a6bdff (unit mmeter) — forks rows 1201 / 1187 (2) / 1181 (2) / 1200 (2), 2026-11-20
+
+Merge commit `638c520` (parents `9848bce`, this branch, and `6a6bdff`, main), a merge commit, never a rebase.
+`ci/mhot/BASE` is unchanged (`5759cce`): the clauses are judged against it, and BOUND against the parent `6a6bdff`.
+mmeter added no suite member (`package.json` is untouched by it), and nothing it landed reads the chain strings, the LIVE
+table or `suiteMembers` (`git grep` over `ci/mmeter`, `ci/witness`, `daily_green.mjs`, `done.mjs` and its
+`organism_test.mjs` diff).
+
+**Hunk 1 (the only one) · `scripts/organism_test.mjs`, the header's `// CLI:` comment, the conflicted file's lines 29-34.**
+- *Main meant:* unit mmeter added the `clauses` mode, the walk of `ci/witness/`, to the mode list.
+- *This unit meant:* a second line naming the two roll verbs, `chain <suite>` and `roll [--json]`.
+- *The result keeps both:* main's mode list with `clauses`, then this unit's verbs line. Both dispatches stand in code:
+  `clauses: clauseWitnesses` in `MODES`, and `chain` / `roll` beside `selftest`, outside `MODES`.
+
+```
+$ node ci/mhot/witness_mhot.mjs --org <LF 638c520> --base-org <LF 5759cce> --bound-base <LF 6a6bdff>
+  ok   H7 · … build: 124 base member(s) · lost 0 · changed 0 · un-LIVEd since (stricter) 1 (lawpack) · non-member LIVE reasons lost 0
+  ok   BOUND · against the bound base (the land commit's parent) · 139 file(s) differ · beyond the named: none · package.json only its six law/suite keys: yes · audit.mjs only its suite-members block: yes
+GREEN MHOT the member roll · 12 clause(s)                                    (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <LF 5759cce> --base-org <LF 5759cce>
+RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9                                (exit 1)
+$ node ci/mhot/run_mutants_mhot.mjs --org <LF 638c520> --base-org <LF 5759cce> --bound-base <LF 6a6bdff>
+run_mutants: 12 of 12 mutant(s) RED by the clause that names them · control GREEN
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all      # clone at 6a6bdff (main, the parent)
+organism_test: 156 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all      # clone at 638c520 (the merge)
+organism_test: 160 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)
+   the same two reds (the clone's sandbox canary), the same LIVE list; the four added lines are this unit's four ok asserts
+$ node ci/mmeter/witness_mmeter.mjs --org <tree> --base-org <LF of ci/mmeter/BASE>     # at 638c520 and at 6a6bdff
+RED MMETER · A:old-day-red, BOUND                    (identical on both: the merge moves nothing for mmeter's witness)
+$ node scripts/lawpack.mjs gate | head -1            # clone at 638c520, and the same at 6a6bdff: equal on every count
+findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 90 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 7
+```
+
+Fork MHOT-M2 (§11: mcov and mlaw's landed witnesses that read the chain strings) stands unchanged by this merge.
