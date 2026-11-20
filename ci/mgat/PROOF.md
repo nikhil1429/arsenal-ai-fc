@@ -313,4 +313,57 @@ breach of "once" is named here for the architect.
 The legs of `e10d4eb` (run `44657947058`), read 20 Nov 2026: node 24 job `136028733378` **failure** (the three above) · node 22 job `136028733565` **failure**,
 `2 member(s) red`: LOAD ZERO BLOCK 7 and `WITNESS ‹mgat›` only. `WITNESS ‹mlv3›` is GREEN on node 22, so its red is node-24-only (item 3).
 
-CHECKPOINT · STOPPED after forks row 1174 + the named second push · tip: the commit that carries this line · its legs are read after the push and named in the seat's final message · resume from the architect's re-run of the mgat and mf2 witnesses on that tip
+~~CHECKPOINT · STOPPED after forks row 1174 + the named second push · tip: the commit that carries this line · its legs are read after the push and named in the seat's final message · resume from the architect's re-run of the mgat and mf2 witnesses on that tip~~ (superseded by §12)
+
+## 12. MAIN `6a6bdff` MERGED (runner M; forks rows 1187 (2) / 1181 (2) / 1200 (2) / 1201 / 1205 (3)), 20 Nov 2026
+
+### 12.1 The merge
+`git merge --no-edit origin/main` (main `6a6bdff`: mlaw `3f22388`, mcov `cebe3eb`, mmeter `6a6bdff`) gave merge commit `ebd7fec`. That is a merge, never a rebase, and
+nothing was force-pushed. `ci/mgat/BASE` is kept at `5759cce` (row 1200 (2)). **Two conflict hunks, both in `scripts/organism_test.mjs`. Both intents hold in each:**
+
+| Hunk | main meant | mgat meant | resolution (both hold) |
+|---|---|---|---|
+| `LIVE_MODES` (merged line ~230) | `lawpack` LEAVES the table (mlaw, row 1137 (2) F2 A), with a comment naming where it went | `gates` LEAVES the table (row 1145 (1)) | neither row stays: the table holds `path`, `alive`, `atlas` and main's lawpack comment |
+| `gates()` (merged line ~2711) | the spawn's bound reads `HEAVY_BOUND_MS` (a named constant, `:57`, no typed timeout) | the hermetic profile runs `gates.mjs lint` with the ajv half named LIVE (the HALF) | mgat's HALF lines, with main's `{ timeout: HEAVY_BOUND_MS }` on the spawn |
+
+`package.json` merged with NO conflict: mgat never edited it, so its `organism:selftest` line is main's line, which is the union. Every other file
+main changed merged clean. No hunk was left whose intents cannot both hold: **no fork**.
+
+### 12.2 The frozen counts did not move (row 1174 (1))
+- `gates.mjs report` on the merged tree (`measure.mjs HEAD gates,member`, E plant): **exit 0 · `gates: GREEN — nothing rose`** · no-empty 262 · no-unused-vars 82 ·
+  the hermetic member `ok GATES —`. Main `6a6bdff` alone reads exit 1, at 272 / 85 / 298, the same as `5759cce`.
+- `MGAT_RULE=no-empty,no-unused-vars node ci/mgat/tools/drift.mjs 9897cb4 ebd7fec` → `344 -> 344 · tsc 296 -> 296`. **Main's three landings brought no
+  new empty catch and no new type diagnostic**, so there was nothing new to fate. `scripts/gates.mjs` is byte-identical to main.
+
+### 12.3 What the merge changed in this unit's own ci/ (row 1200 (2): the clauses against BASE, the bound against the parent)
+- **`ci/mgat/MERGED.json`** (new): main's LF sha256 for each of the 29 files main changed since BASE. BOUND accepts a file outside the named set only
+  when its bytes equal main's there (mlaw's MERGED.json pattern).
+- **Mutants are now the merged build minus one fate** (`build.mjs` `MERGE_MAP` / `mutantOnBuild`). Each fate's bytes are read through the merge (main's
+  `HEAVY_BOUND_MS` in HALF; the LIVE row is put back before mlaw's comment) and put back to the BASE bytes it replaced. Each pair matched exactly once,
+  or the runner refuses. The CONTROL is that every one of the 19 EDITS is present in `--org`.
+
+### 12.4 The re-run on the merged tree `d789966` (base worktree `5759cce`; `GITHUB_WORKSPACE` set as CI sets it), 20 Nov 2026
+- mgat witness: **`GREEN MGAT gates hermetic half + six site fates + four rung_receipt fates · 9 clause(s) · RED on base, GREEN on org · BOUND · LAST`** (exit 0).
+  BOUND reads `differing tracked files 59 · main's bytes at the merge (MERGED.json 6a6bdff) 28 · outside the named files 0`.
+- The same through the member's own recipe (`mf2run.mjs mgat d789966 5759cce`, non-repo LF trees): **GREEN MGAT … (exit 0)**.
+- Base as org: **`RED MGAT · W1 (RED on org) · W2 (RED on org) · W3 (RED on org) · W4 (RED on org) · W5 (RED on org) · W6 (RED on org) · W7 (RED on org) · W8 (RED on org) · W9 (RED on org)`** (exit 1).
+- **`run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN`** (exit 0; `CONTROL · fates present in --org 19 of 19 · witness org side 9 of 9 GREEN`).
+- mf2 witness (`mf2run.mjs mf2 d789966 15edfec`, the member's run): F3 **GREEN** · `hermetic headline LIVE: build 124 · base 126 · named LIVE only by the
+  build: gates schema half · admitted (narrows a base name now gone): gates schema half ← MODE gates`. Last line **`RED MF2 · BOUND`**: BOUND only, which the
+  member forgives, so the member reads GREEN. M12 (`d22d2c4`, the `LIVE_NARROWS` entry emptied) → F3 **RED** `refused: gates schema half (no narrowed partner declared)`, `RED MF2 · F3 BOUND`.
+
+### 12.5 F3, ONE clause, TWO doors (row 1205 (3)): mgat is FIRST
+`git fetch origin claude/mherm-build` → `cf167b1` (2026-11-20 14:38 UTC), read just before this push. It carries **no change under `ci/mf2/`**
+(`git diff --stat origin/main FETCH_HEAD -- ci/mf2` is empty). So **mgat returns first** and builds door 1 only, as ruled. HOW THE SECOND COMPOSES, so it
+merges clean:
+- Door 1 lives in `ci/mf2/livenarrow.mjs` (`liveNarrow({ baseLive, headLive, baseCount, headCount, narrows })`) and in ONE call site of `witness_mf2.mjs`'s F3.
+  The count rule there is already "the count allows only the admitted names": `headCount ≤ baseCount` with every extra name admitted.
+- Door 2 (mherm, row 1204 (2)) joins as a SECOND admitter of the same `extra` list. Its list file sits beside the witness, and each row names a LIVE name and the
+  ruling row that admits it, admitted only when the base judged none of its asserts. The clean composition: give `liveNarrow` one more input,
+  `listed: { name, row, baseJudged }[]`, and in its loop admit `n` when door 1 holds OR the listed row holds (a name admitted by neither is refused, and
+  the reason names both doors). F3's call site then passes `listed` read from the list file. That touches the one loop and the one call; door 1's lines are unchanged,
+  so a merge of mherm onto this branch (or this onto mherm) conflicts at most on that call line, and both intents hold there.
+- The second seat's mutants: door 1's (M12 here: a new LIVE name with no narrowed partner) and door 2's (an unlisted name; a listed name whose asserts the base judged).
+  All of them must read RED, with `node ci/mf2/livenarrow.mjs selftest` gaining door 2's plants.
+
+CHECKPOINT · STOPPED after the merge of main 6a6bdff (one push) · tip: the commit that carries this line · its two neutral legs are read after the push and named in the seat's final message · resume from the architect's re-run of the mgat and mf2 witnesses on that tip
