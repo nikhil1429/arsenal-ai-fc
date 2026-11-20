@@ -1,0 +1,14 @@
+{"ts":"2026-11-20T01:36:23.516Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mcrk-spec FETCH_HEAD","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T01:36:23.517Z","act":"measure","cmd":"git fetch origin claude/mcap-build; git show b37ebfc:ci/mcap/PROOF.md (lines 157-163)","last_line":"FORK mcap-1 · c18 has no crack-row owner"}
+{"ts":"2026-11-20T01:36:23.518Z","act":"measure","cmd":"grep -n \"ALLOWED_CMD = \" scripts/study_scope.mjs","last_line":"285: ... forge_session\\.mjs[\"']?\\s+(pointer|moment|crack|axis|...)"}
+{"ts":"2026-11-20T01:36:23.519Z","act":"measure","cmd":"grep -n case scripts/forge_session.mjs (switch (mode) at 2770)","last_line":"start 2771 · step 2842 · axis 2904 · moment 2943 · pointer 2944 · lockchain 2966 · resume 2974 · status 2996 · contract 2997 · boot 3036 · close 3048 · selftest 3169 — no crack"}
+{"ts":"2026-11-20T01:36:23.520Z","act":"measure","cmd":"node scripts/forge_session.mjs crack (scripts copy under the scratchpad, base 5759cce)","last_line":"usage line, exit 0, nothing written"}
+{"ts":"2026-11-20T01:36:23.521Z","act":"measure","cmd":"node -e count crack items in dressing-room/state/compiled_notes.jsonl (counts only)","last_line":"rows 15 · compiled 8 · crack items 22 · with moment 0 · with words 0"}
+{"ts":"2026-11-20T01:36:23.522Z","act":"measure","cmd":"git check-ignore -v dressing-room/state/cracks.jsonl","last_line":"(not ignored — a new file there is TRACKED by default)"}
+{"ts":"2026-11-20T01:36:23.523Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (before npm ci)","last_line":"EXIT 2 · fsrs, mutagen ERR_MODULE_NOT_FOUND (no node_modules)"}
+{"ts":"2026-11-20T01:36:23.524Z","act":"install","cmd":"npm ci --ignore-scripts","last_line":"node_modules installed (gitignored)"}
+{"ts":"2026-11-20T01:36:23.525Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run) · EXIT 2 (orphaned: deck_lint, home_pin, probe, study_scope)"}
+{"ts":"2026-11-20T01:36:23.526Z","act":"measure","cmd":"node scripts/forge_session.mjs selftest","last_line":"forge_session selftest: 237 passed, 0 failed"}
+{"ts":"2026-11-20T01:36:23.527Z","act":"measure","cmd":"node scripts/notes_compiler.mjs selftest","last_line":"notes_compiler selftest: 45 passed, 0 failed"}
+{"ts":"2026-11-20T01:36:23.528Z","act":"measure","cmd":"git archive b37ebfc | tar -x (scratchpad); node ci/witness/mcap/witness_capability.mjs plants","last_line":"PLANTS mcap · 80 of 80 plant(s) as expected (CLAUSE C:capability-c18 GREEN · 10/10 plant(s))"}
+{"ts":"2026-11-20T01:36:23.529Z","act":"measure","cmd":"git diff --quiet 5759cce b37ebfc -- forge_session notes_compiler study_scope teaching_gate gaffer_brain","last_line":"organs equal at main and b37ebfc"}
