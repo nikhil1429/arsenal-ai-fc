@@ -1,0 +1,13 @@
+{"ts":"2026-11-20T15:48:28.738Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mprb-spec FETCH_HEAD","last_line":"main 6a6bdff at 2026-11-20T15:48:22Z"}
+{"ts":"2026-11-20T15:58:14.750Z","act":"measure","cmd":"grep -n SEG_TIMEOUT_MS scripts/probe.mjs","last_line":"205:const SEG_TIMEOUT_MS = 30000, OUTPUT_CAP = 1 << 20, HEAD_BYTES = 2048;"}
+{"ts":"2026-11-20T15:58:14.770Z","act":"measure","cmd":"curl -s $API/check-runs/136341665594/annotations","last_line":"failure | NEW RED · node 22 1/2 | SUITE MEMBER · probe selftest exits 0"}
+{"ts":"2026-11-20T15:58:14.791Z","act":"measure","cmd":"curl -s $API/check-runs/136344033976/annotations","last_line":"failure | NEW RED · node 24 1/2 | SUITE MEMBER · probe selftest exits 0"}
+{"ts":"2026-11-20T15:58:14.813Z","act":"measure","cmd":"curl -s $API/actions/jobs/<id> (four legs, step 7 seconds)","last_line":"6a6bdff n22 RED 2262 · n24 GREEN 2758 · d2d9383 n24 RED 1999 · n22 GREEN 2720"}
+{"ts":"2026-11-20T15:58:14.836Z","act":"measure","cmd":"curl -s -o /dev/null -w %{http_code} $API/actions/jobs/136341665594/logs ; curl -s $API/rate_limit","last_line":"200 through the agent proxy · rate limit 15000 (authenticated proxy: not a signed-out read; body not read)"}
+{"ts":"2026-11-20T15:58:14.855Z","act":"measure","cmd":"node scratchpad/survey.mjs (last 60 suite runs, public API)","last_line":"legs with a verdict: 52 probe NEW-RED: 2"}
+{"ts":"2026-11-20T15:58:14.879Z","act":"measure","cmd":"node scratchpad/stamp.mjs (probe selftest, no npm ci)","last_line":"probe selftest: 175/176 ok · RED (V32-26 ERR_MODULE_NOT_FOUND acorn: no node_modules)"}
+{"ts":"2026-11-20T15:58:14.902Z","act":"measure","cmd":"npm ci; node scratchpad/stamp.mjs x3","last_line":"176/176 ok · GREEN x3 · total_ms 10823 / 10540 / 11922"}
+{"ts":"2026-11-20T15:58:14.921Z","act":"measure","cmd":"16 busy node loops on 4 cores; node scratchpad/stamp.mjs x2","last_line":"176/176 GREEN x2 · total_ms 33349 / 32671"}
+{"ts":"2026-11-20T15:58:14.949Z","act":"measure","cmd":"node --import scratchpad/tablebound.mjs scripts/probe.mjs selftest","last_line":"probe selftest: 170/176 ok · RED (L7f-A4 P1 B1 A1 A2 A3)"}
+{"ts":"2026-11-20T15:58:14.970Z","act":"measure","cmd":"node --import scratchpad/tablecount.mjs scripts/probe.mjs selftest","last_line":"TABLE-READ count 13 · probe selftest: 174/176 ok · RED (B1 A1: ps branch has no session)"}
+{"ts":"2026-11-20T15:58:14.995Z","act":"read","cmd":"git show ccce4d5:ci/mdtl2/MDTL2_SPEC.md","last_line":"K1 suite member selftest exit · probe the live example · N1 the failing check named not guessed"}
