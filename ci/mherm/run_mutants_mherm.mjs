@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // ci/mherm/run_mutants_mherm.mjs — unit mherm · ONE MUTANT PER CLAUSE, each RED by the clause that names it, and a control.
 // ----------------------------------------------------------------------------------------------------------------------
-// USAGE: node ci/mherm/run_mutants_mherm.mjs --org <build checkout> --base-org <base checkout>
+// USAGE: node ci/mherm/run_mutants_mherm.mjs --org <build checkout> --base-org <base checkout> [--bound-org <merge parent>]
+//   (--bound-org is handed to the witness: after main moved, the bound is judged against the parent, forks row 1200 (2))
 //   Each mutant is a plain copy of the build org (node_modules and .git left out) under one temp root, with ONE piece of the
 //   build taken back to the base, then judged by ci/mherm/witness_mherm.mjs --org <mutant> --base-org <base>. A mutant counts
 //   only when the witness exits 1 and its LAST line `RED MHERM · …` names the mutant's clause. The control is the unmutated
@@ -28,7 +29,7 @@ import { survivors, isRepo } from "./witness_mherm.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
-const org = arg("--org"), base = arg("--base-org");
+const org = arg("--org"), base = arg("--base-org"), bound = arg("--bound-org");
 if (!org || !base || !existsSync(org) || !existsSync(base)) { console.log("run_mutants: USAGE --org <build> --base-org <base>"); process.exit(1); }
 const ORG = resolve(org), BASE = resolve(base);
 // a checkout's file is read from its HEAD (never its working dir, which may hold edits or gitignored files); a plain tree's as is
@@ -74,7 +75,7 @@ try {
     return d;
   };
   const judge = (tree) => {
-    const r = spawnSync(process.execPath, [join(HERE, "witness_mherm.mjs"), "--org", tree, "--base-org", BASE], { encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
+    const r = spawnSync(process.execPath, [join(HERE, "witness_mherm.mjs"), "--org", tree, "--base-org", BASE, ...(bound ? ["--bound-org", resolve(bound)] : [])], { encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 });
     const last = String(r.stdout || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean).pop() || "(no last line)";
     return { code: r.status, last, out: String(r.stdout || "") };
   };

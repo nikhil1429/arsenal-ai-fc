@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ci/mherm/witness_mherm.mjs — unit mherm (forks rows 1151 (3) / 1157) · THE WITNESS. Its header is its contract.
 // ----------------------------------------------------------------------------------------------------------------------
-// USAGE: node ci/mherm/witness_mherm.mjs --org <build checkout> --base-org <base checkout>
+// USAGE: node ci/mherm/witness_mherm.mjs --org <build checkout> --base-org <base checkout> [--bound-org <merge parent>]
 //   An org is a git checkout (its HEAD is CLONED with core.autocrlf=false, so a Windows checkout plants LF bytes exactly as
 //   committed) or a plain tree (the suite's WITNESSES member hands LF work trees with no .git: it is COPIED, node_modules
 //   and .git left out, then `git init` + `git add -A` with core.autocrlf=false, no commit — the trees' own sandbox builds
@@ -26,7 +26,9 @@
 //                 `all`. The whole `all`, twice, is the workflow job `hermetic-twice` (suite.yml, F2 C).
 //   W2 W4 W5 ride one plant and its two runs; W1 W3 ride a second plant (so the first plant's runs cannot feed them).
 //   The two orgs' plants run concurrently, each child writing to a file (no pipe to fill).
-// BOUND (not a both-ways clause): every path whose index blob differs between the two orgs' plants is a named file —
+// BOUND (not a both-ways clause): every path whose index blob differs between the build's plant and the BOUND org's is a
+//   named file. The bound org is `--bound-org <dir>` when given (the build's merge parent after main moved: forks row
+//   1200 (2), the clauses against ci/mherm/BASE, the bound against the parent), else the base org —
 //   scripts/sandbox.mjs, scripts/organism_test.mjs, scripts/tone.mjs, scripts/audit_preload.mjs,
 //   .github/workflows/suite.yml, or a path under ci/mherm/.
 // LAST: no process whose command line names R survives (read from /proc on Linux, from Get-CimInstance on Windows, from ps
@@ -162,7 +164,8 @@ export function survivors(dir) {
 
 async function main() {
   const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
-  const org = arg("--org"), base = arg("--base-org");
+  const org = arg("--org"), base = arg("--base-org"), boundOrg = arg("--bound-org");
+  if (boundOrg && !existsSync(boundOrg)) { console.log("RED MHERM · USAGE (--bound-org names no dir)"); process.exit(1); }
   if (!org || !base || !existsSync(org) || !existsSync(base)) { console.log("RED MHERM · USAGE (--org <build> --base-org <base>, both existing dirs)"); process.exit(1); }
   const R = mkdtempSync(join(tmpdir(), "mherm-w-"));
   let reds = [], what = "";
@@ -179,10 +182,10 @@ async function main() {
       if (!ok) reds.push(c);
     }
     // BOUND — every path that differs between the two orgs is a named file (read from the W1/W3 plants' indexes)
-    const bb = blobs(join(R, "base-b", "tree")), bh = blobs(join(R, "build-b", "tree"));
+    const bb = blobs(boundOrg ? plantTree(boundOrg, join(R, "bound")) : join(R, "base-b", "tree")), bh = blobs(join(R, "build-b", "tree"));
     const differ = [...new Set([...bb.keys(), ...bh.keys()])].filter((k) => bb.get(k) !== bh.get(k)).sort();
     const stray = differ.filter((p) => !NAMED.some((re) => re.test(p)));
-    console.log(`  ${stray.length ? "FAIL" : "ok  "} BOUND · ${differ.length} path(s) differ, each a named file${stray.length ? ` — NOT named: ${stray.join(", ")}` : `: ${differ.join(", ")}`}`);
+    console.log(`  ${stray.length ? "FAIL" : "ok  "} BOUND · against ${boundOrg ? "the bound org (--bound-org)" : "the base org"} · ${differ.length} path(s) differ, each a named file${stray.length ? ` — NOT named: ${stray.join(", ")}` : `: ${differ.join(", ")}`}`);
     if (stray.length) reds.push("BOUND");
     what = `the hermetic run is a function of the tree (sandbox's own temp · the run's own temp · the ledger block LIVE · tone logs in its box · no collar temp allowance)`;
   } catch (e) {
