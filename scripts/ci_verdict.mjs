@@ -43,7 +43,9 @@ export function parseSuite(text) {
 }
 
 /** a member's identity across two trees: its name with every digit run folded @param {string} n */
-export const keyOf = (n) => String(n).replace(/\d+/g, "#").replace(/\s+/g, " ").trim();
+// F4 A (unit ms1, forks row 1066): the text inside ‹ › is a UNIT NAME and keeps its digits — mlv0 and mlv1, mjd3/mjd4/mjd5,
+// mf2 and mf4 are distinct members; every digit run outside ‹ › still folds.
+export const keyOf = (n) => String(n).split(/(‹[^›]*›)/).map((p, i) => (i % 2 ? p : p.replace(/\d+/g, "#"))).join("").replace(/\s+/g, " ").trim();
 
 /** the neutral verdict: GREEN iff every head red is red at the base too
  *  @param {ReturnType<typeof parseSuite>} head @param {ReturnType<typeof parseSuite>} base */
@@ -161,6 +163,11 @@ function selftest() {
   const suite = (reds, extra = {}) => `noise\nORGANISM_TEST_VERDICT ${JSON.stringify({ pass: 10, fail: reds.length, reds, live: ["L1"], profile: "hermetic", ...extra })}\n\norganism_test: 10 passed`;
   ok("parseSuite reads the machine line; a run with no machine line is null (no headline)", !!parseSuite(suite(["a"])) && parseSuite("organism_test: died") === null && parseSuite(suite(["a"]).replace(/\n/g, "\r\n")).reds[0] === "a");
   ok("keyOf folds digit runs: a tree that gains a file keeps an old red old", keyOf("all 122 organs parse") === keyOf("all 123 organs parse") && keyOf("A9 · x") !== keyOf("A8 · y"));
+  ok("keyOf keeps a unit's digits inside ‹ › (F4 A): WITNESS ‹mlv0› and WITNESS ‹mlv1› are two members, a digit run outside ‹ › still folds",
+    keyOf("WITNESS ‹mlv0› · GREEN at head against its BASE") !== keyOf("WITNESS ‹mlv1› · GREEN at head against its BASE")
+    && keyOf("WITNESS ‹mf2› · 12 s") === keyOf("WITNESS ‹mf2› · 13 s") && keyOf("WITNESS ‹mjd3› · x") !== keyOf("WITNESS ‹mjd4› · x"));
+  const wv = judge(parseSuite(suite(["WITNESS ‹mlv1› · GREEN at head against its BASE"])), parseSuite(suite(["WITNESS ‹mlv0› · GREEN at head against its BASE"])));
+  ok("judge: a unit red at the head and ANOTHER unit red at the base is RED (one unit never hides behind its sibling)", wv.v === "RED" && wv.fresh.length === 1);
   const g = judge(parseSuite(suite(["all 121 x", "B"])), parseSuite(suite(["all 120 x", "B", "C"])));
   ok("judge: every head red red at the base too is GREEN, and a base red now passing is counted, never hidden", g.v === "GREEN" && g.old.length === 2 && g.fixed.length === 1 && g.fresh.length === 0);
   const r = judge(parseSuite(suite(["B", "PLANTED"])), parseSuite(suite(["B"])));
