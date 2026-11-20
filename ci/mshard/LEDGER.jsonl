@@ -1,0 +1,11 @@
+{"ts":"2026-11-20T01:32:20.620Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mshard-spec FETCH_HEAD","last_line":"base 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T01:32:20.620Z","act":"bound","cmd":"grep -n timeout-minutes .github/workflows/suite.yml","last_line":"62: timeout-minutes: 60"}
+{"ts":"2026-11-20T01:32:20.620Z","act":"step-timings","cmd":"curl actions/jobs/{135919452425,135919452846,135776070753,135776071204,135938095709,135938095372}","last_line":"head step 2105/2157 (5759cce) · 2230/2072 (179a0ee) · 3491 then base cancelled / 3524 cancelled (e789487)"}
+{"ts":"2026-11-20T01:32:20.620Z","act":"member-seconds","cmd":"curl actions/jobs/<id>/logs | grep WITNESSES","last_line":"5759cce 1971.9/2015.2/2074.5/1762.8 · 179a0ee 2080.9/1939.3 · 4dd0e51 2125.6/2226.2 · e789487 n22 3383.8 (39 units)"}
+{"ts":"2026-11-20T01:32:20.620Z","act":"per-unit","cmd":"node units.mjs <six green logs>; node part.mjs tab.tsv","last_line":"units 38 · head-leg sum of per-unit max 2130.5 s · largest mf2 703.5 s · LPT K=3 max 712"}
+{"ts":"2026-11-20T01:32:20.620Z","act":"landed-leg","cmd":"B5 sum vs member total on 135938095709","last_line":"1598.3 head-leg vs 3383.8 member: L-legs 1785.5 s by difference"}
+{"ts":"2026-11-20T01:32:20.620Z","act":"fk8-scope","cmd":"git diff --name-only 5759cce origin/claude/ms2-build | ci dirs","last_line":"39 ci dirs differ (LANDED_ON in each): FK8 A spares no L-leg on ms2 own push"}
+{"ts":"2026-11-20T01:32:20.620Z","act":"hermetic-base-nomodules","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 141 passed, 4 failed · UNRULED 4 (ERR_MODULE_NOT_FOUND before npm ci)"}
+{"ts":"2026-11-20T01:32:20.620Z","act":"hermetic-base","cmd":"npm ci; ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126"}
+{"ts":"2026-11-20T01:32:20.620Z","act":"fk7-side-reading","cmd":"grep mport log_135938095709","last_line":"ok WITNESS ‹mport› · GREEN at its LANDED sha (Windows node 22, e789487) · headline STALE 1"}
+{"ts":"2026-11-20T01:32:20.620Z","act":"spec","cmd":"write ci/mshard/MSHARD_SPEC.md","last_line":"shapes A-E, 14 clauses, 7 forks, 7 named-not-guessed"}
