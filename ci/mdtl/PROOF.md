@@ -223,3 +223,25 @@ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all   organism_tes
 node scripts/lawpack.mjs gate             lawpack: GREEN — no law's finding count rose (1939 raw · jugad 90 · bare-catch 37 · depcruise 7)
 node scripts/models.mjs check             exit 0
 ```
+
+## 13 · NEW MAIN b3a61c6 MERGED (unit mpres), 2026-11-20
+
+Main `b3a61c6fa0a248554ad447ece8c02f9f0a1d1660` is merged as merge commit 411a494 (no rebase, no force push). `ci/mdtl/BASE`
+stays 5759cce (row 1200 (2)).
+
+**The one conflicted hunk, H6 · `package.json:18` (`organism:selftest`).** mpres added `node scripts/senses.mjs selftest`
+after the `state.mjs` member; mdtl added `node scripts/witness_cause.mjs selftest` after `ci_verdict.mjs`. The result is
+the UNION: main's line plus mdtl's one member in its place, nothing else changed. A set diff confirms it: mdtl's only extra
+member is that one, and main's only extra member is `senses.mjs`. No other file conflicted.
+
+```
+node scripts/senses.mjs selftest                       senses selftest: 18 passed, 0 failed   (exit 0)
+node scripts/ci_verdict.mjs selftest                   ALL CHECKS PASSED
+node scripts/witness_cause.mjs selftest                ALL CHECKS PASSED
+witness --org <merged> --base-org <b3a61c6, parent>    GREEN MDTL a red witness leaves its failing clause readable, from public bytes only · 8 clause(s)
+witness --org <merged> --base-org <5759cce, BASE>      RED MDTL · BOUND   (main's files; dropped by the member)
+run_mutants --org <merged> --base-org <b3a61c6>        run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
+node scripts/models.mjs check                          exit 0
+```
+
+CHECKPOINT · merged b3a61c6 at 2026-11-20T16:22Z · resume from: read the check runs of this push, then wait for the next ruling
