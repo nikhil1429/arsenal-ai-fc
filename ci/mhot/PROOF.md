@@ -351,3 +351,50 @@ findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-su
 ```
 
 Fork MHOT-M2 (§11: mcov and mlaw's landed witnesses that read the chain strings) stands unchanged by this merge.
+
+## 13 · FORKS ROW 1203 — the MHOT-M1 carry's two conditions (runner M, 2026-11-20) · STOPPED on (b)
+
+**(a) lawpack left BOTH tables at unit mlaw (row 1137 (2) F2 A), and both removals are carried after the fold:**
+- *The selftest, from `LIVE_SELFTESTS`:* lands in `suite/members/lawpack.json` = `{"suite":"organism:selftest","argv":["selftest"],"live":null}`.
+  mlaw's two-line comment stays verbatim in the residual `LIVE_SELFTESTS` table (`scripts/organism_test.mjs:111-112`),
+  with one line naming the member file (`:113-114`).
+- *The mode, from `LIVE_MODES`:* this unit never folded `LIVE_MODES` (F4 A: it stays), so mlaw's removal and its comment
+  merged clean. In the merged tree the table is byte-identical to main `6a6bdff`'s, `lawpack` absent, and the comment is at
+  `scripts/organism_test.mjs:171`. Its "see LIVE_SELFTESTS" still points at the kept comment.
+- *Measured:* in the hermetic run of the merged clone (`638c520`, §12), `SUITE MEMBER · lawpack selftest exits 0` and
+  `LAW PACK — every rule file present, …` are both judged `ok`, and no `LIVE … lawpack` line is printed. That is exactly what
+  main `6a6bdff`'s clone prints. Both ride the hermetic profile after the fold.
+
+**(b) The mlaw witness beside this unit's witness, on the merged tree.** All three trees are git clones made with
+`core.autocrlf=false`, because the law pack needs git and LF trees without `.git` read its counts as `?`. The trees are
+`--org` = clone of `34c921b` (the merge `638c520` plus this unit's records), `--base-org` = clone of `5759cce` (both units'
+BASE), and the parent = clone of `6a6bdff`. `ci/mlaw/witness_mlaw.mjs` has no `--bound-base` door, so its BOUND reads its BASE.
+Under row 1200 (2) that is the class the neutral member drops.
+
+```
+$ node ci/mhot/witness_mhot.mjs --org <clone 34c921b> --base-org <clone 5759cce> --bound-base <clone 6a6bdff>
+GREEN MHOT the member roll · 12 clause(s)                                    (exit 0)
+$ node ci/mlaw/witness_mlaw.mjs --org <clone 34c921b> --base-org <clone 5759cce>
+  RED  COVERAGE · done.mjs selftest mode present · a package.json suite string runs it: NO · the coverage law judged · orphans: none
+  RED  BOUND · differs from BASE in 160 file(s): …
+RED MLAW · COVERAGE · BOUND                                                  (exit 1)
+$ node ci/mlaw/witness_mlaw.mjs --org <clone 6a6bdff> --base-org <clone 5759cce>      # the control: main itself
+RED MLAW · BOUND                                                             (exit 1)
+```
+
+Every other mlaw clause (LEGS, JUGAD, SURFACES, HERMETIC, RISE, NOLINE, PORT, LAST) reads `ok` on both trees.
+
+**FORK MHOT-M3 · clause `COVERAGE` of `ci/mlaw/witness_mlaw.mjs` reads RED on the merged tree** (row 1203: "if either reads
+red, stop and name it as a fork with the clause name"). It is the mlaw half of MHOT-M2 (§11). The clause asks whether "a
+`package.json` suite string runs" `done.mjs selftest`. After the fold, `done` is a member by its file
+(`suite/members/done.json`), and the strings name no organ. The property the clause holds ("done's selftest is in a suite,
+and the coverage law judged it with no orphan") is true on the merged tree: its own detail reads "the coverage law judged
+· orphans: none". Only its reader is the old one. `ci/mlaw/witness_mlaw.mjs` is outside this unit's named files, so it is
+not edited.
+*Options:* A re-cut COVERAGE in place as an ADDED edit, F6 A's shape: the strings OR the tree's `roll --json` names
+`done` with argv `["selftest"]`, by this seat under a row that names the file · B a KNOWN_RED entry until mlaw's seat
+re-judges · C mlaw's seat re-cuts it. The mcov half of MHOT-M2 (C1, C6, C7) is not re-measured by this message and stands
+as §11 records it.
+
+**STOPPED here** per row 1203: the build does not return for the re-run of row 1187 until MHOT-M3 is ruled. Nothing in
+code changed for this message.
