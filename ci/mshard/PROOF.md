@@ -233,10 +233,10 @@ while every clause still runs on `--base-org` (BASE). Without the flag, BOUND is
   (BOUND · 9 file(s) differ from the parent, every one named · LAST · 0 survive)
 - witness on base: `RED MSHARD · W-S1 PLAN, … W-S21 KREAD` (every clause but the guard). Without `--parent-org`, merged: `RED MSHARD · BOUND`
 - mutants: `run_mutants: 21 of 21 mutant(s) RED by the clause that names them · control GREEN`
-- `node scripts/ci_verdict.mjs selftest`: `ci_verdict selftest: 42 passed, 0 failed` (41 before C1's law; build before the merge: 33)
+- 20 Nov 2026 · `node scripts/ci_verdict.mjs selftest`: `ci_verdict selftest: 42 passed, 0 failed` (41 before C1's law; build before the merge: 33)
 - mlaw's own witness (`ci/mlaw/witness_mlaw.mjs --base-org 5759cce`): merged `RED MLAW · BOUND` = parent cebe3eb `RED MLAW · BOUND`,
   with LEGS ok (planted +26 → 3 legs) and JUGAD ok (90 = frozen 90). Its BOUND is mlaw's own file set against ITS BASE, so it is red
   on any later tree. Before C2, merged read `RED MLAW · LEGS · JUGAD · BOUND`.
-- hermetic suite: merged `153 passed, 3 failed` = parent `153 passed, 3 failed`, with the same three reds by name (export-tree
+- 20 Nov 2026 · hermetic suite: merged `153 passed, 3 failed` = parent `153 passed, 3 failed`, with the same three reds by name (export-tree
   artifacts: no history, sandbox); the `ORGANISM_TEST_LAWPACK` line is byte-equal (md5 4a295a6b…). No count rose.
 - `node scripts/models.mjs check`: exit 0.
