@@ -34,7 +34,7 @@
 // The witness of this organ is ci/mrung/witness_mrung.mjs.
 // ============================================================================
 import { readFileSync, appendFileSync, existsSync, mkdirSync, realpathSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { join, dirname, resolve, relative, isAbsolute, basename } from "node:path";
+import { join, dirname, resolve, relative, isAbsolute, basename, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
@@ -98,7 +98,7 @@ export function canon(v) {
   if (v && typeof v === "object") return `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canon(v[k])}`).join(",")}}`;
   return JSON.stringify(v);
 }
-export function rowSha(row) { const rest = { ...row }; delete rest.row_sha256; return sha256(String(row.prev_sha256) + canon(rest)); }
+export function rowSha(row) { const { row_sha256, ...rest } = row; return sha256(String(row.prev_sha256) + canon(rest)); }
 
 /** readReceipts — every line, the chain walked; rows from the first break on carry chain:false. A missing file is rows [] .
  *  @returns {{ present: boolean, rows: any[], brokenAt: number }} brokenAt = -1 when the chain holds */
@@ -272,9 +272,7 @@ export async function cli(argv, env = process.env) {
   if (!a.ok) return { code: 1, lines: [`rung_receipt: REFUSED · ${a.why} · nothing ran, nothing written`] };
   if (a.verb === "selftest") return selftest();
   const sd = stateDir(env);
-  // `=== false`, not `!sd.ok`: tsconfig.json keeps strict off, and without strictNullChecks a negation does not narrow a
-  // true/false discriminant, so `sd.why` read as absent (TS2339). The equality narrows; the behaviour is the same.
-  if (sd.ok === false) return { code: 1, lines: [`rung_receipt: REFUSED · ${sd.why}`] };
+  if (!sd.ok) return { code: 1, lines: [`rung_receipt: REFUSED · ${sd.why}`] };
   const path = env[STATE_ENV] ? join(sd.dir, RECEIPTS_FILE) : RECEIPTS_DEFAULT;
   const meterPath = join(sd.dir, METER_FILE);
   const rr = readReceipts(path);
@@ -306,7 +304,7 @@ export async function cli(argv, env = process.env) {
     const r = runWitness(w.argv);
     if (r.exit === null) return { code: 1, lines: [`rung_receipt: REFUSED · ${key}: the witness did not finish inside WITNESS_TIMEOUT_MS · nothing written`] };
     if (r.exit === 0) return { code: 1, lines: [`rung_receipt: REFUSED · ${key}: the witness exited 0 — a red-before that is not red is not a red-before · nothing written`] };
-    append(path, rr, { kind: "red", key, rung: o["--rung"], clause: o["--clause"], cmd: o["--cmd"], cmd_sha256: sha256(o["--cmd"]), head_sha: head, exit: r.exit, out_sha256: r.out_sha256 });
+    const row = append(path, rr, { kind: "red", key, rung: o["--rung"], clause: o["--clause"], cmd: o["--cmd"], cmd_sha256: sha256(o["--cmd"]), head_sha: head, exit: r.exit, out_sha256: r.out_sha256 });
     return { code: 0, lines: [`rung_receipt: red ${key} · exit ${r.exit} · out ${r.out_sha256.slice(0, 12)} · head ${head.slice(0, 12)} · last: ${r.last.slice(0, 160)}`] };
   }
   // green

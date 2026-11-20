@@ -1688,7 +1688,7 @@ export function seatGradeCursor(buf, start, floor, prev, why) {
   const line = buf.subarray(lineStart, nl + 1);
   return { offset: start + nl + 1, anchor_len: line.length, anchor: sha256(line), last_read: why };
 }
-const parseRows = (buf) => { const o = []; for (const l of buf.toString("utf8").split(/\r?\n/)) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch { /* a torn tail never parses and the cursor stays before it (seatGradeCursor); a merged line drops a settled row, so its card stays LIVE — the safe side */ } } return o; };
+const parseRows = (buf) => { const o = []; for (const l of buf.toString("utf8").split(/\r?\n/)) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch { } } return o; };
 // The ONE disk door the cursor reads through — READ ONLY (no write, no open for write), injectable so the selftest needs no file.
 export const GRADE_QUEUE_IO = {
   size(p) { try { return statSync(p).size; } catch { return 0; } },
@@ -1696,7 +1696,7 @@ export const GRADE_QUEUE_IO = {
   readRange(p, from, len) {
     const buf = Buffer.alloc(Math.max(0, len));
     let fd = null, got = 0;
-    try { fd = openSync(p, "r"); while (got < len) { const n = readSync(fd, buf, got, len - got, from + got); if (!n) break; got += n; } } catch { /* a short read: readGradeQueueSince's anchor-length check falls back to ONE whole read */ } finally { if (fd !== null) { try { closeSync(fd); } catch { /* opened above, closed only here: EBADF is the one way in, and a finally has nothing to hand back */ } } }
+    try { fd = openSync(p, "r"); while (got < len) { const n = readSync(fd, buf, got, len - got, from + got); if (!n) break; got += n; } } catch { } finally { if (fd !== null) { try { closeSync(fd); } catch { } } }
     return buf.subarray(0, got);
   },
 };

@@ -2271,13 +2271,6 @@ async function main() {
   // failure) that left the service STOPPED, and under keep() a 0 stops the keeper too. It is a RETIRE now: exit 75,
   // and the keeper respawns the fresh build at once. A judge round holding its port defers it (row 1031 M4 A), and the
   // lane count is re-read after that async read, so a lane opened meanwhile is never cut.
-  // unit mgat: the ONE lock release, called by both retire paths (the copy in the keeper's retire callback was
-  // re-typed without this reason beside it). The OS frees the port on exit regardless; these two are tidiness, and
-  // closeAllConnections is what stops a keep-alive socket from holding close() open.
-  function releaseLock() {
-    try { lock.closeAllConnections && lock.closeAllConnections(); } catch { }
-    try { lock.close(); } catch { }
-  }
   function retireIfArmed() {
     if (!restartReady({ armed: restartArmed, inflight: inflight.size })) return;
     judgeHeld(JUDGE_AT).then((held) => {
@@ -2285,8 +2278,11 @@ async function main() {
       if (held) { if (!judgeSaid) console.log("cortex: restart armed and every lane idle, but a judge round holds its port — retiring the moment it closes."); judgeSaid = true; return; }
       exiting = true;
       console.log(`cortex: every lane idle — releasing :4112 and exiting ${KEEP_EXIT.RETIRED} (RETIRED): its keeper (scripts/keeper.mjs) respawns the fresh build at once.`);
-      // No wait, no timeout — an exit that needs a deadline is a hang (releaseLock's header says why the release is tidiness).
-      releaseLock();
+      // The OS frees the port on exit regardless; these two are tidiness, and
+      // closeAllConnections is what stops a keep-alive socket from holding close()
+      // open. No wait, no timeout — an exit that needs a deadline is a hang.
+      try { lock.closeAllConnections && lock.closeAllConnections(); } catch { }
+      try { lock.close(); } catch { }
       process.exit(KEEP_EXIT.RETIRED);
     });
   }
@@ -2345,7 +2341,7 @@ async function main() {
   // paid Opus read or its POST home, never cut. A source change while a lane runs DEFERS; the lane's close re-checks it
   // (the two .finally sites above); a judge round holding its port defers it too (keeper.mjs retireWhenIdle).
   retirer = await retireWhenIdle({ name: "cortex", entry: fileURLToPath(import.meta.url), judge: () => judgeHeld(JUDGE_AT), idle: () => inflight.size === 0 && !exiting,
-    retire: () => { exiting = true; releaseLock(); process.exit(KEEP_EXIT.RETIRED); } });
+    retire: () => { exiting = true; try { lock.closeAllConnections && lock.closeAllConnections(); } catch { } try { lock.close(); } catch { } process.exit(KEEP_EXIT.RETIRED); } });
   console.log(`cortex: worker watching ${retirer.files.length} file(s) of its own closure; a change retires it only when no lane is in flight and no judge round runs.`);
   retirer.check();
 }
