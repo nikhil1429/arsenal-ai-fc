@@ -7,3 +7,6 @@
 {"ts":"2026-11-20T06:40:56.878Z","act":"hermetic","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 141 passed, 4 failed · ruled 0 · UNRULED 4 · LIVE 126 (hermetic: named, not run)"}
 {"ts":"2026-11-20T06:40:56.878Z","act":"rate","cmd":"curl -s https://api.github.com/rate_limit","last_line":"core limit 15000"}
 {"ts":"2026-11-20T06:40:56.878Z","act":"mlaw-run","cmd":"curl -s $API/actions/runs/44686340528","last_line":"44686340528 87d72d3 in_progress null"}
+{"ts":"2026-11-20T07:42:52.054Z","act":"ci-990ad40","cmd":"curl -s $API/check-runs/136131748993/annotations · 136131749293/annotations (run 44689529813)","last_line":"node 24 GREEN · node 22 GREEN · BASE RED 1 (selftest-coverage law) each"}
+{"ts":"2026-11-20T07:42:52.054Z","act":"ci-87d72d3","cmd":"curl -s $API/check-runs/136121457642/annotations · 136121457871/annotations (run 44686340528)","last_line":"node 24 GREEN · node 22 GREEN · BASE RED 1 each"}
+{"ts":"2026-11-20T07:42:52.054Z","act":"effort-receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs --fleet mkp24 --seat 00 --model claude-opus-5-5","last_line":"Error: Cannot find module campaign-2026-09/tools/effort_receipt.mjs (exit 1); nothing written"}
