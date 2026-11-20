@@ -30,6 +30,8 @@ const MUTANTS = [
     from: `: CTX === "module" && n.type === "VariableDeclarator"`, to: `: n.type === "VariableDeclarator"` },
   { id: "M7", kills: "W7", why: "a nested body is walked with ctx \"module\" (loses its probe/test ctx; watchman's thalamus_config write goes live)",
     from: `const prevCtx = CTX; if (n.id) CTX = n.id.name;\n          walkBody(n.body, inner, ctx);`, to: `const prevCtx = CTX; CTX = locals ? "module" : (n.id ? n.id.name : CTX);\n          walkBody(n.body, inner, ctx);` },
+  { id: "M8", kills: "W8", why: "nested locals are collected only for a FunctionDeclaration (an arrow behind `||` stays unfolded)",
+    from: `const locals = n.body.type === "BlockStatement"`, to: `const locals = n.type === "FunctionDeclaration" && n.body.type === "BlockStatement"` },
 ];
 const runWitness = (text) => {
   const f = join(mkdtempSync(join(tmpdir(), "mxc-mut-")), "xray.mjs");

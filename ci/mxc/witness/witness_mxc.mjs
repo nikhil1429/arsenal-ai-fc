@@ -67,6 +67,14 @@ const judge = (id, what, ok, why) => { clauses.push({ id, ok }); console.log(`${
   const ok = q2(qO, irO) === q2(qB, irB) && qO.Q5.length === 0;
   judge("W7", "GUARD · Q2 rows+writers build = base, Q5 0", ok, `Q2 base ${q2(qB, irB)} build ${q2(qO, irO)} · Q5 ${qO.Q5.length}`);
 }
+// W8 row 1175 (5) — a DEFAULT writer behind a logical-or (`const write = deps.writeCfg || ((f) => { const p = … })`):
+// plant P6 both names, and watchman.mjs probeWakeEconomy's write of thalamus_config.json at :1925 (any class)
+{
+  const pp = edge(irM, "p6.mjs", "W", "dressing-room/state/p6_probe_cfg.json"), pt = edge(irM, "p6.mjs", "W", "dressing-room/state/p6_tune_cfg.json");
+  const w = edge(irO, "watchman.mjs", "W", "dressing-room/state/thalamus_config.json");
+  judge("W8", "P6 `||`-arrow default writers seen (neutral name LIVE); watchman.mjs:1925 writes thalamus_config.json", !!pp && !!pt && pt.fixture === false && !!w && w.lines.includes(1925),
+    `P6 probe ${JSON.stringify(pp)} · tune ${JSON.stringify(pt)} · watchman ${JSON.stringify(w)}`);
+}
 const g = clauses.filter((c) => c.ok).length, r = clauses.length - g;
 console.log(`witness_mxc: ${g} GREEN, ${r} RED`);
 process.exit(r ? 1 : 0);

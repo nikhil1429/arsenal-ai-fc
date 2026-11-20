@@ -1,5 +1,7 @@
 # MXC SPEC — three evaluator gaps of `scripts/xray.mjs`, and a fate for `manager_notes.json`
 
+CHECKPOINT · STOPPED at 2026-11-20T01:47:23Z · row 1175 (5) done (§3b, W8, M8) · resume from: read the neutral verdict of this tip (both legs) and wait for a ruling
+
 Unit mxc · forks row 1161 (6) · cloud spec seat, written 2026-11-19 (UTC). Branch `claude/mxc-spec`. Resumed
 2026-11-19 on his word #270 from `CHECKPOINT · STOPPED at 2026-11-19T12:38:21Z` (tip c9b1dcc); that line is superseded here.
 Nothing is built. The candidate xray.mjs is GENERATED from the base by `ci/mxc/witness/make_candidate.mjs` (8 exact-once
@@ -13,8 +15,8 @@ Every count below was measured on 2026-11-19 by the command named beside it or i
 **R-ACTX** (gap 2): a module-scope `const` arrow names its body's ctx. **R-NEST + R-MASK** (gap 3): a nested function's
 locals are folded over the scope it closes over, and a local masks the outer name. On the repo the IR becomes the same
 from any cwd (13 edges moved at base, 0 on the build). The mxb spec's E1 Q1 row closes once stacked on mxb. No verb set
-moves, Q5 stays 0, and Q2 is unchanged on base. The witness has 7 clauses: 4 RED on base, all 7 GREEN on the build.
-There are 7 mutants, each RED by its own clause.
+moves, Q5 stays 0, and Q2 is unchanged on base. The witness has 8 clauses: 5 RED on base, all 8 GREEN on the build (2026-11-20).
+There are 8 mutants, each RED by its own clause.
 ⚠ **Measured on the way, for unit mq2:** `watchman.mjs` `probeWakeEconomy` writes `thalamus_config.json` in production.
 Stacked on mxb (which drops `probe` from the fixture words), Q2's row gains a THIRD writer: gate_tune, thalamus, watchman.
 
@@ -130,6 +132,52 @@ is a false edge (plant P5, read on 3 visits at base).
 
   So the "two writers on main" is three by the code. Named here; not ruled (F-Q2).
 
+### 3b · Row 1175 (5): the DEFAULT writer behind a logical-or (watchman `probeWakeEconomy`) — added 2026-11-20
+
+**The shape at my cut.** `watchman.mjs` blob ee43176 is the same at fb42118 and at the mq2 spec's base
+(`git rev-parse 7460be5:scripts/watchman.mjs`), so mq2's line numbers stand here.
+- `export function probeWakeEconomy(deps = {})` is at `:1902`. At `:1917`:
+  `const write = deps.writeCfg || ((f) => { const p = join(STATE_DIR, "thalamus_config.json"); … })`. It reads
+  `readJson(p)` at `:1919`, which reaches the sink inside `readJson` at `:191`. It writes
+  `writeFileSync(p + ".tmp" + pid)` and then `renameSync(…, p)` at `:1925`.
+- The production call is `:2137`, `findings.push(...probeWakeEconomy())`. The selftest injects `writeCfg` at `:2638` and `:2642`.
+
+**Why base is blind (2026-11-20).** The arrow is not a `const` arrow. The declarator's init is a `LogicalExpression`, so
+`collectDecls` (`xray.mjs:364`) neither registers it in `localFns` nor names it. `evalNode`'s `||` returns the right
+arm (`xray.mjs:259-263`), which is an arrow, so the value is Unknown. The arrow is walked only INLINE, inside
+`probeWakeEconomy`'s own walk, and there its local `p` is never collected. This is exactly gap 3, a nested closure's
+local, not gap 2.
+
+**Which rule resolves it, each alone.** The flagged prototype, a mini tree with plant P6, `MXC_RULES=<rule>`, 2026-11-20:
+
+```
+none: (no p6 edge)    cwd: (no p6 edge)    ctx: (no p6 edge)    mask: (no p6 edge)
+nest: p6.mjs W dressing-room/state/p6_probe_cfg.json fx | p6.mjs W dressing-room/state/p6_tune_cfg.json live
+```
+
+**R-NEST alone resolves it**, and no new rule is needed. R-ACTX need not name a LogicalExpression init: the write keeps
+its ENCLOSING ctx (`probeWakeEconomy`). That is the right ctx, because the arrow is that function's own default lane. Its CLASS
+is then the fixture words' verdict, not mxc's:
+- base vocabulary: `probe` matches, so the write is classed a fixture;
+- mxb's R-CTX drops `probe`, so the write is LIVE.
+
+The real site, by `build()` in each tree (2026-11-20):
+
+```
+base fb42118        watchman.mjs: no thalamus_config.json edge · writers gate_tune.mjs+thalamus.mjs
+base + mxc 36f8757  watchman.mjs reads :191 (live) · writes :1925 (fixture) · writers gate_tune.mjs+thalamus.mjs · fixture_writers watchman.mjs
+mxb + mxc 862c087   watchman.mjs reads :191 (live) · writes :1925 (LIVE)    · writers gate_tune.mjs+thalamus.mjs+watchman.mjs
+plant P6 on mxb+mxc: p6_probe_cfg.json W live · p6_tune_cfg.json W live
+```
+
+**Planted both ways.** `ci/mxc/witness/plants/p6.mjs` holds the shape twice: `probeRefit` (a probe name) and
+`refitTune` (a neutral name, live under any vocabulary). The new clause **W8** judges that both P6 writers are seen,
+that the neutral one is LIVE, and that the repo tree has watchman.mjs writing `thalamus_config.json` with line 1925.
+It is RED on base and GREEN on the build. **M8** collects nested locals only for a FunctionDeclaration, so an arrow
+behind `||` stays unfolded; it is RED by W8 (and by W3 and W5).
+For mq2's F5: mq2's option (a), removing the inline writer, makes the shape moot for that file. Either way, mxc's
+R-NEST is the rule that sees it, and on the mxb stack it makes W7 flag the writer as a true third writer.
+
 ## 4 · `manager_notes.json` — the run log with no consumer
 
 - **Writer:** `manager.mjs:1007`, `writeAtomic(dir, P("manager_notes.json"), …)`. The record is built at `:1006`
@@ -173,13 +221,14 @@ a stub package.json and a node_modules link, and it is judged from a cwd that is
 | W5 | gap 3 (shadow): P5's nested `const OUTER` reads no `p5_outer.json` | RED (false read) | GREEN |
 | W6 | GUARD · cortex.mjs `gateStat` (nested in selftest) read stays a fixture, base and build | GREEN by design | GREEN |
 | W7 | GUARD · Q2 rows AND writer sets build = base, Q5 = 0 | GREEN by design | GREEN |
+| W8 | row 1175 (5): P6's `||`-arrow default writers seen (neutral name LIVE); watchman.mjs writes thalamus_config.json at :1925 | RED (none seen) | GREEN |
 
 A guard cannot be RED on base, because base IS the reference. Each guard's RED is shown by its mutant (§6).
 
 ```
 # 2026-11-19 · base tree, mini base tree / candidate 36f8757 trees — last lines
-node ci/mxc/witness/witness_mxc.mjs --org $B --base-org $B --mini $PB   ->  witness_mxc: 3 GREEN, 4 RED   (W1 W2 W3 W5 RED)
-node ci/mxc/witness/witness_mxc.mjs --org $O --base-org $B --mini $PO   ->  witness_mxc: 7 GREEN, 0 RED
+node ci/mxc/witness/witness_mxc.mjs --org $B --base-org $B --mini $PB   ->  witness_mxc: 3 GREEN, 5 RED   (W1 W2 W3 W5 W8 RED; 2026-11-20)
+node ci/mxc/witness/witness_mxc.mjs --org $O --base-org $B --mini $PO   ->  witness_mxc: 8 GREEN, 0 RED
 ```
 
 **On the mxb stack, named:** W7 is RED there by design. The third writer (§3) is a TRUE finding, not an invented one;
@@ -202,14 +251,15 @@ Control: the unmutated candidate must be all GREEN.
 | M5 | W5 | a nested local no longer masks the outer binding |
 | M6 | W6 | a const arrow names the ctx from ANY ctx |
 | M7 | W7 | a nested body is walked with ctx `"module"` (watchman's probe write goes live: a third Q2 writer) |
+| M8 | W8 | nested locals are collected only for a FunctionDeclaration (an arrow behind `||` stays unfolded) |
 
 ```
-# 2026-11-19, candidate 36f8757 — the runner's last lines
-control: witness_mxc: 7 GREEN, 0 RED (exit 0)
+# 2026-11-20, candidate 36f8757 — the runner's last lines
+control: witness_mxc: 8 GREEN, 0 RED (exit 0)
 M1 RED by W1 · red=[W1]          M2 RED by W2 · red=[W2]          M3 RED by W3 · red=[W3,W5]
 M4 RED by W4 · red=[W4,W5]       M5 RED by W5 · red=[W5]          M6 RED by W6 · red=[W6]
-M7 RED by W7 · red=[W6,W7]
-run_mutants_mxc: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
+M7 RED by W7 · red=[W6,W7]       M8 RED by W8 · red=[W3,W5,W8]
+run_mutants_mxc: 8 of 8 mutant(s) RED by the clause that names them · control GREEN
 ```
 
 ## 7 · The suite, the xray selftest, the ratchet (base vs build)
@@ -306,7 +356,7 @@ mxb seat found the repo's worktree rail refuses it.
 | file | what |
 |---|---|
 | `scripts/xray.mjs` | the 8 edits of `ci/mxc/witness/make_candidate.mjs` (owner of `xray_graph.json`, `xray.mjs:4`; no state file is written by the rules) |
-| `ci/mxc/witness/witness_mxc.mjs` · `run_mutants_mxc.mjs` · `plant_tree.mjs` · `plants/p1,p2,p3,p5.mjs` | the witness, the mutants, the planter, the plants |
+| `ci/mxc/witness/witness_mxc.mjs` · `run_mutants_mxc.mjs` · `plant_tree.mjs` · `plants/p1,p2,p3,p5,p6.mjs` | the witness, the mutants, the planter, the plants |
 
 **Beyond them, each a fork:**
 - `dressing-room/state/xray_graph.json`: re-emit at the landing (F-RATCHET).
@@ -345,3 +395,5 @@ line 76 (an undated organ count). The job log needs a token, so this is named, n
 - 2026-11-19 ~12:38Z: STOP from the runner session (his word #269). Answered by the checkpoint c9b1dcc.
 - 2026-11-19: a second CHECKPOINT order (his word #269). Already satisfied at c9b1dcc.
 - 2026-11-19: RESUME (his word #270). This file is the resumed work.
+- 2026-11-20: CONDITIONAL LINE (row 1175 (5), the runner): the `||`-arrow default writer. Answered in §3b, with W8 and M8. Pushed once, then CHECKPOINT.
+- Final tip of 2026-11-19, b9b0459: no check run had appeared when it was read once (never polled).
