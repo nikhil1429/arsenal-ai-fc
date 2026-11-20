@@ -1,9 +1,10 @@
 # mhands · HIS HANDS OFF THE RUNNER — PROOF (forks rows 1162 / 1163, 19 Nov 2026 UTC)
 
+CHECKPOINT · MERGED main 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 into claude/mhands-build (row 1172, 20 Nov 2026) · BASE = 5759cce · merge commit f050b72, its tip the commit that carries this line · resolution hunks: NONE (no conflict; the only paths this branch differs from 5759cce in are ci/witness/mhands/** and ci/mhands/**) · witness on the merged tree: GREEN MHANDS his hands off the runner: … · 4 clause(s) (exit 0); --org <clone 5759cce>: RED MHANDS · B-hands:clicks-off, B-hands:fresh-runner (exit 1) · mutants: run_mutants: 2 of 2 mutant(s) RED by the clause that names them · control GREEN · STOPPED here by the order.
 CHECKPOINT · STOPPED at 2026-11-19T12:38Z · resume from step 4: write ci/mhands/run_mutants_mhands.mjs (kept as the record of the pause, his word 269)
 RESUMED 2026-11-19 (his word 270) from that line; every step after it is below.
 
-Branch `claude/mhands-build`, cut from `origin/main` at **`fb42118`** (`fb4211870093e6b8657655eb02ebcfc425f1eab1`, fetched
+Branch `claude/mhands-build`, cut from `origin/main` at **`fb42118`** (re-based by merge on **`5759cce`**, 20 Nov 2026, line above; the measurements below were taken at fb42118) (`fb4211870093e6b8657655eb02ebcfc425f1eab1`, fetched
 19 Nov 2026; `ci/mhands/BASE`). The spec is `ci/mwit/MWIT_SPEC.md` at **`88bf69d`** (branch `claude/mwit-spec`), read whole with its
 ledger and its one sibling `ci/mwit/plant_day.mjs`; the clause designs read whole: B-hands:clicks-off (spec `:201-217`), B-hands:fresh-runner
 (`:219-231`), UNITS row 7 (`:527`). The tip this proof describes is named in the ledger's last `ci` row and in the final message.
