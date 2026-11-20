@@ -23,3 +23,4 @@
 {"ts":"2026-11-20T06:55:15.607Z","act":"models-check","cmd":"node scripts/models.mjs check (both clones)","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (exit 0 both)"}
 {"ts":"2026-11-20T06:55:15.607Z","act":"ci-9d4309b","cmd":"curl GET /repos/nikhil1429/arsenal-ai-fc/commits/9d4309b…/check-runs","last_line":"npm test · node 22 136136026598 queued | node 24 136136026371 queued"}
 {"ts":"2026-11-20T06:55:15.607Z","act":"write-proof","cmd":"write ci/mprk/PROOF.md","last_line":"proof written"}
+{"ts":"2026-11-20T07:46:11.185Z","act":"ci-3e850f6","cmd":"curl GET /repos/nikhil1429/arsenal-ai-fc/commits/3e850f6…/check-runs","last_line":"npm test · node 24 136137164010 success | npm test · node 22 136137163810 success"}
