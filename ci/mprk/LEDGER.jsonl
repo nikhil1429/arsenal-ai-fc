@@ -1,0 +1,18 @@
+{"ts":"2026-11-20T06:52:14.681Z","act":"fetch-base","cmd":"git fetch origin main && git rev-parse FETCH_HEAD","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"branch","cmd":"git checkout -b claude/mprk-build FETCH_HEAD","last_line":"Switched to a new branch claude/mprk-build"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"read-spec","cmd":"git show 5e604bc:ci/mprk/MPRK_SPEC.md (+ ci/mprk/LEDGER.jsonl)","last_line":"spec read whole: K1-K9, F1-F7, N1-N5"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"npm-ci","cmd":"npm ci --ignore-scripts","last_line":"npm ci exit 0"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"selftest-parked","cmd":"node scripts/parked.mjs selftest","last_line":"parked selftest: 20 passed, 0 failed"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"selftest-acts","cmd":"node scripts/acts.mjs selftest","last_line":"acts selftest: 58 passed, 0 failed"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"selftest-turn_hook","cmd":"node scripts/turn_hook.mjs selftest (teaching_bar cases)","last_line":"turn_hook: 168 passed, 0 failed · widest skeleton 2809 B, budget 2814 B"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"commit-push-1","cmd":"git commit && git push -u origin claude/mprk-build","last_line":"b36247c pushed"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"ci-b36247c","cmd":"curl GET /repos/nikhil1429/arsenal-ai-fc/commits/b36247c…/check-runs","last_line":"npm test · node 22 136132747494 cancelled | node 24 136132747301 cancelled (superseded by the next push)"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (LF clone at 5759cce)","last_line":"organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (exit 2)"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"suite-build-1","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (LF clone at b36247c)","last_line":"organism_test: 147 passed, 4 failed · UNRULED 4 (new: LOAD ZERO BLOCK 6 WHY_CODE_CANNOT_DECIDE 17 > 16)"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"fix-block6","cmd":"the park reason rides on the card (why_code_cannot_decide), the table stays 16","last_line":"captains_call selftest: 163 passed, 0 failed"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"fix-k2","cmd":"parked.mjs ledger path through a default param (xray resolves the sink)","last_line":"xray IR: dressing-room/state/parked.jsonl W=parked.mjs R=parked.mjs"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"commit-push-2","cmd":"git commit && git push origin claude/mprk-build","last_line":"958f995 pushed"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"witness-head","cmd":"node ci/mprk/witness_mprk.mjs --org <LF tree 958f995> --base-org <LF tree 5759cce>","last_line":"GREEN MPRK one owner for parked items, one card where each returns · 15 clause(s)"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"witness-base","cmd":"node ci/mprk/witness_mprk.mjs --org <LF tree 5759cce> --base-org <LF tree 5759cce>","last_line":"RED MPRK · K1, K3K4, K5, K6, K7, K8, F3, F4, K9, K2, F5, SKILL, COVER, BOUND"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"mutants","cmd":"node ci/mprk/run_mutants_mprk.mjs --org <LF tree 958f995> --base-org <LF tree 5759cce>","last_line":"run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-20T06:52:14.681Z","act":"ci-958f995","cmd":"curl GET /repos/nikhil1429/arsenal-ai-fc/commits/958f995…/check-runs","last_line":"npm test · node 22 136135212422 queued | node 24 136135212029 queued"}
