@@ -1,0 +1,14 @@
+{"ts":"2026-11-20T01:33:26.322Z","act":"fetch main","cmd":"git fetch origin main && git rev-parse FETCH_HEAD","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"cut branch","cmd":"git checkout -b claude/mhot-spec FETCH_HEAD","last_line":"Switched to a new branch 'claude/mhot-spec'"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"suite at base (no node_modules)","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 141 passed, 4 failed · ruled 0 · UNRULED 4 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"npm ci","cmd":"npm ci --no-audit --no-fund","last_line":"npm ci exit 0"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"suite at base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"base check runs","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90/check-runs","last_line":"135886176499 npm test · node 22 completed success"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"landings 20","cmd":"node ci/mhot/measure_mhot.mjs landings origin/main 20","last_line":"MHOT_LANDINGS touched_any 5 · shared_lines_touched_by_two_or_more 2 (organism:selftest 3 landings, MODES 2)"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"landings all","cmd":"node ci/mhot/measure_mhot.mjs landings origin/main 60","last_line":"MHOT_LANDINGS landings 46 · organism:selftest 5 landings"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"queue","cmd":"node ci/mhot/measure_mhot.mjs queue origin/main <mcov-build> <mlaw-build> <land/mgat> <mgat-build>","last_line":"MHOT_QUEUE refs 4 · touching 4"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"conflict mcov re-cut","cmd":"node ci/mhot/measure_mhot.mjs conflict 2684b64 1b8c379","last_line":"clean false · package.json organism:selftest + function gates()"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"conflict mlaw re-cut","cmd":"node ci/mhot/measure_mhot.mjs conflict 7119175 1b8c379","last_line":"clean false · LIVE_MODES (:214) + two ci witness add/add"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"conflict today","cmd":"node ci/mhot/measure_mhot.mjs conflict <mlaw-build> <mcov-build>","last_line":"clean false · package.json organism:selftest"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"conflict ms1 assembly","cmd":"node ci/mhot/measure_mhot.mjs conflict cf1ca54 08b4772 | 82f6e1e e2de691 | 38ae428 542dec7","last_line":"clean false x3 · KNOWN_RED"}
+{"ts":"2026-11-20T01:33:26.322Z","act":"write spec","cmd":"ci/mhot/MHOT_SPEC.md","last_line":"written"}
