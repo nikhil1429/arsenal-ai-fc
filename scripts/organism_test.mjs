@@ -40,6 +40,14 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
 const STATE = join(ROOT, "dressing-room", "state");
 const NODE = process.execPath;
+// unit mherm T2 (forks row 1157 (1), 20 Nov 2026): THE RUN'S TEMP DIR IS ITS OWN. One dir per process, made here, handed to
+// this process and to every child as TMPDIR/TEMP/TMP (os.tmpdir() reads them: TMPDIR on POSIX, TEMP then TMP on Windows),
+// and removed when the process exits. Before this, the selftests of five organs left a file or a dir in the shared temp dir on every run
+// (hippocampus, harvest, mirror, pulse, done; ci/mherm/PROOF.md W4) — never read again, but a run that leaves anything
+// behind is not a function of its tree alone. A spawn handed its own env gets the same three keys in run() below.
+const RUN_TMP = mkdtempSync(join(tmpdir(), "organism-run-"));
+for (const k of ["TMPDIR", "TEMP", "TMP"]) process.env[k] = RUN_TMP;
+process.on("exit", () => { try { rmSync(RUN_TMP, { recursive: true, force: true }); } catch { /* the OS's problem after this */ } });
 
 let pass = 0, fail = 0;
 const fails = [], passed = [];
@@ -65,7 +73,7 @@ const MEMBER_BOUND_MS = (() => { const v = Number(process.env.ORGANISM_TEST_MEMB
 // code, so a reader can say "killed by the suite bound" and never mistake the kill for a non-zero exit.
 const run = (args, opts = {}) => {
   const bound = opts.timeout || 120000;
-  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: bound, ...(opts.env ? { env: opts.env } : {}) });
+  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: bound, ...(opts.env ? { env: { ...opts.env, TMPDIR: RUN_TMP, TEMP: RUN_TMP, TMP: RUN_TMP } } : {}) });
   const killed = !!(r.error && /** @type {NodeJS.ErrnoException} */ (r.error).code === "ETIMEDOUT");
   return { code: r.status, out: (r.stdout || "") + (r.stderr || ""), ...(killed ? { killed: bound } : {}) };
 };
@@ -1620,7 +1628,12 @@ async function laws() {
       const G = await import(pathToFileURL(join(ROOT, "scripts", "gate.mjs")).href);      // S7 — the declared-consumers table and its resolver
       const B = await import(pathToFileURL(join(ROOT, "scripts", "brain.mjs")).href);     // S7 — jobConsumers: who a job_input lane's downstream jobs actually are
       const cfg = (() => { try { return JSON.parse(readFileSync(join(ROOT, "dressing-room", "state", "brain_config.json"), "utf8")); } catch { return null; } })();
-      const ledgerLanes = (() => {
+      // unit mherm T3 (forks row 1157 (1), F3 A): brain_ledger.jsonl is GITIGNORED — absent in a fresh tree, born by a run —
+      // so under the hermetic profile this block was entered only when an EARLIER run had left the file: ten asserts that
+      // existed on a second run and not on the first. It is NAMED LIVE here, one line, never silently skipped; the full
+      // profile reads the ledger exactly as before. (unit mherm2 plants a ledger fixture so the ten run on every push.)
+      const ledgerLanes = PROFILE === "hermetic" && liveNamed("LOAD ZERO · the brain-ledger lane block (every ledger lane declared · S7 RATCHET · RUNG A ledger-side)",
+        "reads state/brain_ledger.jsonl — gitignored: absent in a fresh tree, born by a run") ? null : (() => {
         try {
           const seen = new Set();
           for (const l of readFileSync(join(ROOT, "dressing-room", "state", "brain_ledger.jsonl"), "utf8").split(/\r?\n/)) {
