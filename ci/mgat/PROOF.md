@@ -366,4 +366,11 @@ merges clean:
 - The second seat's mutants: door 1's (M12 here: a new LIVE name with no narrowed partner) and door 2's (an unlisted name; a listed name whose asserts the base judged).
   All of them must read RED, with `node ci/mf2/livenarrow.mjs selftest` gaining door 2's plants.
 
+### 12.6 The witness's own cost (the node 22 leg of `9897cb4` was cancelled at the job bound, `suite.yml` `timeout-minutes`)
+That leg's head suite ran 03:50 → 04:45 UTC and was cancelled with no verdict. On the same run's node 24 leg, `WITNESS ‹mgat› · ran in 417.1 s`. In `b40d343` the
+witness spawns each shared run ONCE per side (`gates.mjs report` on E for W1/W8/W9; the hermetic `gates` mode on E for W3/W5): 7 heavy runs per side, down from 10.
+No clause changed what it reads. Re-run on `b40d343`, 20 Nov 2026: through the member's recipe **GREEN MGAT … · 9 clause(s)** in 154 s wall (linux) · base as org
+**RED MGAT · W1 … W9** · **`run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN`**. NAMED, not guessed: whether node 22 now fits the
+bound is the next leg's to say.
+
 CHECKPOINT · STOPPED after the merge of main 6a6bdff (one push) · tip: the commit that carries this line · its two neutral legs are read after the push and named in the seat's final message · resume from the architect's re-run of the mgat and mf2 witnesses on that tip
