@@ -149,7 +149,9 @@ description: The session-agnostic front door to the day's learning — reads the
   Drift is self-reported in the same turn: `node scripts/teaching_contract.mjs flag <rule-id> --why "…"`.
 - **His rulings become receipts in the same turn:** `node scripts/acts.mjs do rule --door claude-code --text "…"`.
 - **No system / notes / tool work mid-concept** (HOW_HE_LEARNS #12) — name it, park it in one line, hand the
-  micro-question back. An architect question goes to the architect terminal, not into his lesson.
+  micro-question back, and end that reply with the park tail `<<ACT {"acts":[{"verb":"park","args":{"text":"<his words>"}}]}>>`
+  (its owner `parked.mjs` keeps his words; each returns as ONE Captain's Call card at his next anchor — row 1190; the
+  crash-belt line stays beside it). An architect question goes to the architect terminal, not into his lesson.
 - **Desktop trap (22 Sep):** text written ABOVE a tool call is replaced on his screen — every tool first, the
   whole teaching message LAST, self-contained.
 - **Owners only.** You never hand-edit a state file; every write above goes through the organ that owns it.

@@ -52,6 +52,10 @@
 //   5. benchmark regression — benchmark.json (benchmark.mjs owns): a bucket's
 //      counted evidence went DOWN since the last run (Ruling 5 max-flow edge:
 //      "captains_call card on bucket regression").
+//   6. PARKED ITEMS (unit mprk, forks rows 1173 (3) / 1190) — parked.jsonl (parked.mjs owns it; this only
+//      reads openParks / closedIds): ONE card per open park, key `park:<id>`, rank 0 beside hand-filed (F1 a —
+//      they are his own words). haan / na close the park through its owner; baad sleeps the card a day; a park
+//      closed by another door (an act undo) retires its card at source in the sync (F3 a, RETIRE_AT_SOURCE_KEYS).
 //
 // WRITES: dressing-room/state/captains_call.json (sole) — its `grade_cursor` field (unit mjd7) is this file's
 //   own too: the sweep's place in the judge's grade queue, written only by sync, in the deck's one write.
@@ -70,6 +74,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { execFileSync } from "node:child_process";
 import { resolveIntent } from "./acts.mjs";   // LOAD ZERO BLOCK 5: the ONE intent door
+import { openParks, closedIds } from "./parked.mjs";   // unit mprk · source 6 — READ-ONLY; parked.mjs is the SOLE WRITER of parked.jsonl
 // W0-D (2 Sep 2026): the forge staleness predicate now comes from its OWNER instead of
 // being re-derived here. See the frozen mirror below for what this replaces and why.
 import { isStale as forgeIsStale, staleHours as forgeStaleHours, STALE_HOURS as FORGE_STALE_HOURS } from "./forge_session.mjs";
@@ -347,6 +352,8 @@ export const WHY_CODE_CANNOT_DECIDE = Object.freeze({
   // the very thing it exists to protect. Measured: c56 (his own 18 Aug Instagram reading task) is
   // the live case, and it is the one card in the deck whose key is `manual:<iso>`.
   "manual:":          "he filed this himself with no key — it is his own note, and only he can say it is done or move the day",
+  // unit mprk (row 1190): a parked item is HIS words, set aside mid-concept — taking it up now or dropping it is his call alone
+  "park:":            "these are his own parked words, and only he can say whether to take them up now or drop them",
 });
 // The `file --line` door carries its own reason per call (--why-code-cannot-decide), because a
 // hand-filed ask has no fixed source to key on. `manual:` keys with no stated reason are gated
@@ -384,7 +391,7 @@ export function decisionGate(state, now = new Date(), post = null) {
 export function deriveCards(state, { staged = [], marketFile = null, marketHonest = "", marketNoopFiles = [], gate2 = null, missions = null, bench = null, tiers = null,
   rejirah = null, gem = null, claudeOut = null, oura = null, geminiLogin = null, geminiLane = { live: true }, gatetune = null, gatetuneSource = null, pendingFacts = [], m2 = null, canonPatches = [], staleFacts = [], model = null, awayday = null,
   gateStates = null, daemonPorts = null, watchmanLast = null,
-  forge = null } = {}, now = new Date()) {   // W0-D · SD-05: the stale open loop, read from the pacer's own file
+  forge = null, parks = null } = {}, now = new Date()) {   // W0-D · SD-05: the stale open loop, read from the pacer's own file
   const s = { ...state, cards: state.cards.map((c) => ({ ...c })) };
   const byKey = new Map(s.cards.map((c) => [c.key, c]));
   const ts = now.toISOString();
@@ -946,7 +953,34 @@ export function deriveCards(state, { staged = [], marketFile = null, marketHones
       "superseded by this week's audit card");
   }
 
+  // SOURCE 6 (unit mprk, row 1190) — ONE card per OPEN park, never serialized into a list: the ladder (pickCard) already
+  // deals one card per anchor and rests a card dealt today. A park's card is minted once (byKey); its close is the owner's.
+  for (const p of (parks && Array.isArray(parks.open) ? parks.open : [])) {
+    if (!p || !p.id) continue;
+    mint(`park:${p.id}`, "parked", `Parked (${p.concept || "bina concept"}) — ab uthayein? "${String(p.text || "")}"`, { kind: "park", id: p.id });
+  }
+
   return s;
+}
+
+// THE CLOSED-PARK SWEEP (unit mprk, F3 a) — PURE. A park closed by ANOTHER door (the act's undo, at-source) retires its
+// card in the owner's own sync pass, through retireCard (only the declared key class, only a live card, never twice).
+// Positive reading only: a park this deck holds a card for is retired only when its id is NAMED by a close row.
+export const PARK_SWEEP_WHY = "the park was closed at its owner (parked.mjs) — nothing left to ask (row 1190 F3 a)";
+export function sweepClosedParks(state, closed, now = new Date()) {
+  let s = state;
+  const retired = [];
+  if (!closed || !closed.size) return { state: s, retired };
+  for (const c of ((state && state.cards) || [])) {
+    if (!c || c.answer || c.retired_at) continue;
+    const m = /^park:(.+)$/.exec(String(c.key || ""));
+    if (!m || !closed.has(m[1])) continue;
+    const r = retireCard(s, { key: c.key, why: PARK_SWEEP_WHY, now });
+    if (r.refuse || !r.changed) continue;
+    s = r.state;
+    retired.push({ id: r.card.id, key: r.card.key });
+  }
+  return { state: s, retired };
 }
 
 // WIRING REPAIR (10 Aug 2026) — THE FIRE-NUDGE READS THE FIRE STAMP.
@@ -995,7 +1029,7 @@ export function pickCard(state, { today }) {
   // LADDER B (9 Aug 2026): teaching/identity integrity (gate2 · rejirah · his
   // facts) shares the tier under the drifts; everything operational rides the
   // outward tier. Still an ORDER, never a number.
-  const rank = (c) => (c.source === "hand-filed" ? 0
+  const rank = (c) => (c.source === "hand-filed" || c.source === "parked" ? 0   // F1 a (row 1190): a park is his own words
     : c.source === "teaching_contract.staged" ? 1
     : ["tape_room.gate2", "rejirah.pending", "hippocampus.pending_fact", "hippocampus.stale_fact"].includes(c.source) ? 2 : 3);
   // LADDER A1 (9 Aug 2026): the c9 monopoly. A serialized card nobody answered used
@@ -1092,6 +1126,11 @@ export function applyAnswer(state, id, word, now = new Date()) {
   // hippocampus.mjs's own doors, dispatched by the CLI layer.
   if (c.dispatch.kind === "pending-fact") {
     return { state: s, action: { kind: "pending-fact-dispatch", verb: word === "haan" ? "promote" : "drop-pending", at: c.dispatch.at, cardId: c.id } };
+  }
+  // unit mprk (row 1190) — a parked item: haan (take it up now) and na (dropped by his word) both CLOSE the park
+  // through its owner; baad never reaches here (it sleeps the card above, and the park stays open).
+  if (c.dispatch.kind === "park") {
+    return { state: s, action: { kind: "park-dispatch", id: c.dispatch.id, by: word, cardId: c.id } };
   }
   // LADDER B11 — haan forgets via the owner's own CLI; na falls through (fact stays).
   if (c.dispatch.kind === "forget-fact" && word === "haan") {
@@ -1365,7 +1404,9 @@ function gatherSources() {
     gateStates: liveGateStates(), daemonPorts: readJson(join(STATE_DIR, "daemon_watchdog.json")), watchmanLast: readJson(join(STATE_DIR, "watchman_last.json")),
     // W0-D · SD-05 — the pacer's live file, read-only (forge_session.mjs is its sole
     // writer). Same read dealGuard already does one function down; one source, two uses.
-    forge: readJson(FORGE) };
+    forge: readJson(FORGE),
+    // unit mprk · source 6 — the park owner's own readers over THIS deck's state dir; unreadable = null (no opinion)
+    parks: (() => { try { return { open: openParks(STATE_DIR), closed: closedIds(STATE_DIR) }; } catch { return null; } })() };
 }
 
 // LOAD ZERO BLOCK 6 (19 Aug 2026) — THE ROAD, as this organ reaches it. Owners-only: this file
@@ -1429,7 +1470,8 @@ function sync(now = new Date()) {
   // missing, ahead or rewritten cursor falls back to ONE whole read. The re-seated cursor rides this pass's one write.
   const base = loadState();
   const q = readGradeQueueSince(GRADE_QUEUE, base[GRADE_CURSOR_FIELD]);
-  const next = sweepSettledFromDoubt(deriveCards(base, gatherSources(), now), q.rows, now).state;
+  const src = gatherSources();
+  const next = sweepClosedParks(sweepSettledFromDoubt(deriveCards(base, src, now), q.rows, now).state, src.parks && src.parks.closed, now).state;   // unit mprk F3 a
   next[GRADE_CURSOR_FIELD] = q.cursor;
   // THE DECISION GATE runs AFTER derive, so it sees this sync's fresh mints too: a card minted and
   // gated in the same pass never reaches his lane at all. It runs BEFORE the write, so the retire
@@ -1602,7 +1644,8 @@ export function relineCard(state, { family = null, key = null, line = "" } = {})
 //     no-op, and a second retire of the same key retires nothing twice (already settled → no-op);
 //   · the epitaph is the filing organ's own reason, as every other retire-at-source writes it.
 // ---------------------------------------------------------------------------
-export const RETIRE_AT_SOURCE_KEYS = [/^judge:in-doubt:[^\s:]+$/];
+// unit mprk: `park:<id>` joins by forks row 1190 (1) F3 a — an undone park must not still ask him.
+export const RETIRE_AT_SOURCE_KEYS = [/^judge:in-doubt:[^\s:]+$/, /^park:[^\s:]+$/];
 /** retireCard — PURE: {state, card, changed} with ONLY the target's retired_at + resolution set, or {refuse}. */
 export function retireCard(state, { key = null, why = "", now = new Date() } = {}) {
   const k = key == null ? "" : String(key);
@@ -1814,7 +1857,7 @@ async function main() {
     // LADDER B — the three owner-CLI dispatches, all on the ratify pattern:
     // success retires the card with the owner's own words; failure keeps the
     // card LIVE (his word must never be consumed by a dispatch that died).
-    if (["pending-fact-dispatch", "forget-dispatch", "gatetune-dispatch", "gate-wake-dispatch", "restart-dispatch"].includes(action.kind)) {
+    if (["park-dispatch", "pending-fact-dispatch", "forget-dispatch", "gatetune-dispatch", "gate-wake-dispatch", "restart-dispatch"].includes(action.kind)) {
       // 11 Aug 2026: restart-dispatch joins the same pattern. The argv comes from
       // the RESTART_DOOR TABLE keyed by the daemon's name — never from the card —
       // so a hand-edited state file can name a daemon but never a command. An
@@ -1824,7 +1867,9 @@ async function main() {
         console.error(`captains_call: ${id} ${word} NOT recorded — no restart door for daemon "${action.name}" (card stays live)`);
         process.exit(1);
       }
-      const argvFor = action.kind === "pending-fact-dispatch"
+      const argvFor = action.kind === "park-dispatch"
+        ? [join(__dirname, "parked.mjs"), "close", action.id, "--by", action.by]   // unit mprk: the park's OWNER closes it
+        : action.kind === "pending-fact-dispatch"
         ? [join(__dirname, "hippocampus.mjs"), action.verb, "--at", action.at]
         : action.kind === "forget-dispatch"
           ? [join(__dirname, "hippocampus.mjs"), "forget", action.id]

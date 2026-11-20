@@ -467,6 +467,7 @@ docs/derived/
 dressing-room/state/models.json
 # LAW A (MODELS + ACTS Block 2, 18 Aug 2026): the acts ledger — acts.mjs sole writer; his words verbatim.
 dressing-room/state/acts.jsonl
+dressing-room/state/parked.jsonl
 # LAW A (18 Aug 2026): his agenda for the next sitting — sitting.mjs sole writer; his words verbatim.
 dressing-room/state/sitting_agenda.jsonl
 # LOAD ZERO BLOCK 1 (19 Aug 2026): the task ledger — tasks.mjs sole writer; append-only events,
