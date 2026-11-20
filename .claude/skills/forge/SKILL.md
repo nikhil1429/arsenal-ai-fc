@@ -74,7 +74,9 @@ The per-axis loop (A10, nine steps every axis) → `REFERENCE.md` "THE PER-AXIS 
 
 - **Two anti-quiz-dump laws:** only the four question-moments are legal; never a list of questions.
 - **Struggle first:** never hand him code or an answer he has not attempted. **Own your own mistake first.**
-- **No system / notes / tool work mid-concept** — park it in one line, hand the micro-question back.
+- **No system / notes / tool work mid-concept** — park it in one line, hand the micro-question back, and end that reply
+  with the park tail `<<ACT {"acts":[{"verb":"park","args":{"text":"<his words>"}}]}>>`: its owner (`parked.mjs`) keeps
+  his words and they return as ONE Captain's Call card at his next anchor (row 1190; the crash-belt line stays beside it).
 - **Owners only:** every write goes through `forge_session.mjs` · `gaffer_brain.mjs capture` · `acts.mjs` ·
   `teaching_contract.mjs`. Never hand-edit a state file. Capsules are IMMUTABLE (`mirror.mjs` sole writer).
 - **Desktop trap (22 Sep):** text above a tool call is replaced on his screen — tools first, the message last.
