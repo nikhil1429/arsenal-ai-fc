@@ -1,0 +1,6 @@
+{"ts":"2026-11-20T02:05Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mguard-build 5759cce","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T02:06Z","act":"read-spec","cmd":"git show 4eb934d:ci/mguard/MGUARD_SPEC.md (and its LEDGER.jsonl)","last_line":"spec whole; usage_tap.mjs, presence.mjs, runner SKILL.md unchanged fb42118..5759cce, so its file:line holds"}
+{"ts":"2026-11-20T02:10Z","act":"measure","cmd":"node scripts/usage_tap.mjs selftest | tail -1","last_line":"usage_tap selftest 31/31 — all clauses hold"}
+{"ts":"2026-11-20T02:10Z","act":"measure","cmd":"node scripts/presence.mjs selftest | tail -1","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-20T02:10Z","act":"measure","cmd":"echo <block> | node scripts/usage_tap.mjs statusline (root unset)","last_line":"five-hour 1% · weekly 2% · no campaign root (ARSENAL_CAMPAIGN_ROOT unset) — nothing written"}
+{"ts":"2026-11-20T02:10Z","act":"measure","cmd":"node scripts/models.mjs check ; echo exit $?","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0) · exit 0"}
