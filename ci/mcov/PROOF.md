@@ -269,4 +269,85 @@ organism_test: 10 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: 
 Not re-run on this tree (named, not claimed): the mutants (last read at `12e7e09`: 7 of 7 RED, control GREEN), the law pack,
 the whole hermetic run and the neutral legs of the new tip; the architect re-runs once.
 
-CHECKPOINT · STOPPED at 01:40 UTC 20 Nov 2026 · tip = the commit that carries this line (parent `cbf7a05`; re-merge `5bb30d0`; revert `b03ad49`) · base 5759cce · resolution hunk: package.json organism:selftest tail (main's rung_receipt, then mcov's four) · resume from: the architect's re-run
+SUPERSEDED by section 14 (row 1182 (2)) · was: CHECKPOINT · STOPPED at 01:40 UTC 20 Nov 2026 · tip = the commit that carries this line (parent `cbf7a05`; re-merge `5bb30d0`; revert `b03ad49`) · base 5759cce · resolution hunk: package.json organism:selftest tail (main's rung_receipt, then mcov's four) · resume from: the architect's re-run
+
+
+## 14. THE NEUTRAL RED ON 093a94a, ITS CAUSE AND ITS FIX (Runner M, forks row 1182 (2), 20 Nov 2026)
+
+Run 44654615747, both legs RED: `3 member(s) red that are not red at the merge base` — `WITNESS ‹mcov›`, `WITNESS ‹mpool›`,
+`WITNESS ‹mtxt3›` (`GREEN at head against its BASE`), pass 231, fail 3, base red 0. The workflow prints assert lines only, so
+the FAIL details are not in the leg logs; each cause below is from a reproduction of the member's own setup
+(`scripts/organism_test.mjs` `witnesses()`: `--org` and `--base-org` are LF work trees checked out through a private index,
+NOT git repositories, `node_modules` linked into each, and the witness run from a COPY of its `ci/<unit>/` dir), run for each
+unit at `093a94a` and, for mpool and mtxt3, at main `5759cce`.
+
+THE CAUSES, all three made by this unit (none by mpool or mtxt3):
+1. **mcov** — `ERR_MODULE_NOT_FOUND: Cannot find package 'acorn' imported from …/w/ci/mcov/witness_mcov.mjs`. The witness
+   imported acorn at the top (C5, row 1143), and its copied dir sits beside no `node_modules`. Behind it, the next two
+   would have failed too: the witness `git clone`d each org and read `git ls-files -s` for BOUND, and the member's orgs
+   are not repositories.
+2. **mpool clause J** — reproduced `FAIL J · build RED · the tap's selftest is judged in the hermetic chain
+   (organism_test.mjs)`, `RED MPOOL · J`; at main it reads `GREEN`. J pins the TEXT
+   `hermeticRuns.get(runKey([join(ROOT, "scripts", "usage_tap.mjs"), "selftest"]))` (`ci/mpool/witness_mpool.mjs:187`), and
+   this unit's row 1151 edit had added `, { timeout: HEAVY_BOUND_MS }` to that call.
+3. **mtxt3 clause M1** — reproduced `RED MTXT3 · M1, BOUND`; at main it reads `RED MTXT3 · BOUND` and the member drops BOUND,
+   so it judges green there. M1 pins the substring `` assert(`SUITE MEMBER · ${m} selftest exits 0`, r.code === 0) ``
+   (`ci/mtxt3/witness_mtxt3.mjs:233`), and the row 1151 edit had added a third, detail argument to that assert.
+
+A fourth hazard, measured from the job's own steps: the head step took 38 min with mcov dying at once, and the job's
+`timeout-minutes` is 60 (`.github/workflows/suite.yml:62`). The mcov witness then waited out the whole long member bound on
+its hang plant (12 min on Linux), which on the Windows legs would have put the job against its own limit.
+
+THE FIX, in this unit's own paths only (no witness of another unit edited; no frozen count moved):
+- `scripts/organism_test.mjs` — both pinned shapes are restored with the row 1151 behaviour kept. `runKey` keys a MEMBER
+  run, so its default bound is the member bound and every key call is `runKey(args)`; the usage_tap read is the exact
+  pinned text again. The member assert is the two-argument form again, and a red member's `redWhy` (the kill named with its
+  bound) is printed on the line under its FAIL; the roll-up still names it. NEW: `MEMBER_BOUND_MS`, the long bound, which
+  `ORGANISM_TEST_MEMBER_BOUND_MS` may only LOWER (a positive integer below `HEAVY_BOUND_MS`; anything else is ignored). Unset
+  — his laptop, the watchman, CI — a member run takes `HEAVY_BOUND_MS` exactly as at `093a94a`.
+- `ci/mcov/witness_mcov.mjs` — acorn is loaded from the planted tree's `node_modules` (`createRequire`); a plain-tree org
+  is COPIED (node_modules and .git left out) and a checkout is still cloned with core.autocrlf=false; BOUND compares
+  bytes of two plain trees, index blobs of two checkouts; every clause judges ONE planted tree per org, whose `suites` run
+  is handed the door at twice the helper default, so the hang is killed there and not at the long bound.
+- `ci/mcov/run_mutants_mcov.mjs` — the same API; the C6 mutant re-anchored on the member-bound line.
+
+```
+$ <the member's setup, reproduced> ci/mcov/witness_mcov.mjs --org <LF tree of ea38294> --base-org <LF tree of 5759cce>   # 20 Nov 2026, 6.4 min
+BOUND · 9 path(s) differ between the orgs: ci/mcov/BASE, ci/mcov/LEDGER.jsonl, ci/mcov/PROOF.md, ci/mcov/run_mutants_mcov.mjs, ci/mcov/tools/readprobe.mjs, ci/mcov/witness_mcov.mjs, package.json, scripts/organism_test.mjs, scripts/study_scope.mjs
+HOLDS C1 COVERAGE · base RED (orphaned: deck_lint, home_pin, probe, study_scope) · build GREEN (wired, no orphan)
+HOLDS C2 HERMETIC · base RED (not judged green: deck_lint, probe, study_scope) · build GREEN (deck_lint, probe, study_scope judged ok)
+HOLDS C3 LIVE-NAMED · base RED (home_pin neither named nor run) · build GREEN (home_pin named LIVE)
+HOLDS C4 VERB · base RED (exit 0 · last line: study_scope: scope --session <id> | unbound --session <id> [--transcript p] [--prompt "…"] [--entrypoint e]   (read-only; the hook path is t) · build GREEN (exit 0 · last line: study_scope selftest: 61 passed, 0 failed)
+HOLDS C5 ONE RECORD · base RED (deck_lint in 0 suite string(s) · home_pin in 0 suite string(s) · probe in 0 suite string(s) · study_scope in 0 suite string(s)) · build GREEN (one record: package.json only, no member list in the suite file)
+HOLDS C6 SLOW-GREEN · base RED (judged red: FAIL SUITE MEMBER · mcov_slow selftest exits 0 FAIL SUITE MEMBER · mcov_hang selftest exits 0) · build GREEN (slept 120000 ms (the helper default) and was judged ok)
+HOLDS C7 HANG-NAMED · base RED (not named: detail "LIVE selftest capture — not run in the hermetic profile: reads state/heartbeat_config.json" · roll-up does not name a kill) · build GREEN (named: killed by the suite bound (240000 ms) — not an exit code · roll-up names it)
+LAST · no process names the temp dir
+GREEN MCOV the four coverage orphans wired in package.json, each in its profile, a member's kill named · 7 clause(s)
+$ <the same> ci/mpool/witness_mpool.mjs     →  GREEN MPOOL the usage tap · 33 clause(s)  (exit 0)
+$ <the same> ci/mtxt3/witness_mtxt3.mjs     →  RED MTXT3 · BOUND  (exit 1; BOUND only, as at main — the member drops BOUND)
+$ node ci/mcov/run_mutants_mcov.mjs --org .
+control · C1 COVERAGE GREEN · C2 HERMETIC GREEN · C3 LIVE-NAMED GREEN · C4 VERB GREEN · C5 ONE RECORD GREEN · C6 SLOW-GREEN GREEN · C7 HANG-NAMED GREEN
+mutant C1 COVERAGE · RED by its clause (orphaned: deck_lint) — deck_lint dropped from its package.json suite string
+mutant C2 HERMETIC · RED by its clause (not judged green: deck_lint, probe, study_scope) — suites() skips the three hermetic members
+mutant C3 LIVE-NAMED · RED by its clause (home_pin judged as a hermetic member) — home_pin's LIVE entry deleted (it would run hermetic)
+mutant C4 VERB · RED by its clause (exit 0 · last line: study_scope: scope --session <id> | unbound --session <id> [--transcript p] [--prompt "…"] [--entrypoint e] | selftest   (read-only; the hoo) — the selftest verb no longer answers
+mutant C5 ONE RECORD · RED by its clause (member list organism_test.mjs:88 [deck_lint, home_pin, probe, study_scope]) — a second member list beside package.json (the removed roster, re-added)
+mutant C6 SLOW-GREEN · RED by its clause (judged red: FAIL SUITE MEMBER · mcov_slow selftest exits 0 killed by the suite bound (120000 ms) — not an exit code) — the suites member run back on the helper's default bound (a race, not a hang guard)
+mutant C7 HANG-NAMED · RED by its clause (not named: detail "exit null" · roll-up does not name a kill) — a kill by the bound read as a bare exit again
+run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all      # head
+  ok   MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)
+  suites: reused 56 of 128 member result(s) from hermetic (identical command), ran 72
+organism_test: 153 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 126 (hermetic: named, not run)
+$ node scripts/lawpack.mjs gate      # BASE 5759cce, then build — the same line
+BASE  lawpack · 1940 raw match(es) over 8/8 rules · findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 93 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 7
+build lawpack · 1940 raw match(es) over 8/8 rules · findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 93 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 7
+both  lawpack: 1 RED — a gate may only get stricter (§10-D rule 6)   (jugad 93 vs baseline 90, on BASE as on the build)
+```
+
+FORK F8 is answered by measurement here, not by ruling: option B (the lower-only door) is built because the neutral job's
+time, not taste, required it. The architect may still rule it back to A; then the witness waits the long bound again.
+ESLint over `ci/mcov/` is clean; over `scripts/organism_test.mjs` it prints the same 4 `no-empty` errors main's own file prints
+(the WITNESSES member's empty catches), so none is new.
+
+CHECKPOINT · STOPPED at 06:40 UTC 20 Nov 2026 · tip = the commit that carries this line (parent `ea38294`) · base 5759cce · the fix: organism_test.mjs runKey default + member assert form + MEMBER_BOUND_MS door; witness_mcov.mjs acorn from the planted tree, plain-tree copy, one planted tree per org · resume from: the neutral legs of this tip
