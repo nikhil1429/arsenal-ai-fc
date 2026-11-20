@@ -7,3 +7,4 @@ L.forEach((l, i) => { if (/^\s*```/.test(l)) { fence = !fence; return; } if (fen
   if (/<!--\s*canon-ok:/.test(l)) return; if (/\b20\d\d\b/.test(L.slice(Math.max(0, i - 2), i + 1).join(" "))) return; bad.push(`${f}:${i + 1}`); });
 for (const b of bad) console.log("UNDATED " + b);
 console.log(`mgat canon ${f}: ${bad.length} undated live-count line(s)`);
+process.exitCode = bad.length ? 1 : 0;   // a finding is a non-zero exit, so a pre-push `&&` chain stops on it (PROOF §11 (1))

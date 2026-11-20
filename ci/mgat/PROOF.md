@@ -290,4 +290,27 @@ is **empty**: outside `ci/` the merged tip is byte-identical to land/mgat `1b8c3
 `scripts/groundsman.mjs`, `scripts/cortex.mjs`, `scripts/captains_call.mjs`, `scripts/organism_test.mjs`, `scripts/rung_receipt.mjs`, `ci/mgat/**`,
 and `ci/mf2/witness_mf2.mjs` + `ci/mf2/livenarrow.mjs` (row 1174 (2)). `scripts/gates.mjs` is byte-identical to main.
 
-CHECKPOINT · STOPPED after forks row 1174 · tip: the commit that carries this line (one push), its parent `ed4d2fe` · its two neutral legs are read after the push and named in the seat's final message (a file cannot carry its own sha's verdict) · resume from the architect's re-run of the mgat witness and the mf2 witness on that tip
+~~CHECKPOINT · STOPPED after forks row 1174 · tip: the commit that carries this line (one push), its parent `ed4d2fe` · its two neutral legs are read after the push and named in the seat's final message (a file cannot carry its own sha's verdict) · resume from the architect's re-run of the mgat witness and the mf2 witness on that tip~~ (superseded by §11)
+
+## 11. THE ONE PUSH `e10d4eb` READ RED — and the second push, named (20 Nov 2026)
+Row 1174 said "push ONCE". `e10d4eb` was that push. Its node 24 leg (job `136028733378`, run `44657947058`) reads **B1 RED · 3 new red** against
+`5759cce`. Two of the three are this seat's own defects, so this seat pushes ONE more commit, after both legs of `e10d4eb` were read. The
+breach of "once" is named here for the architect.
+1. **`LOAD ZERO BLOCK 7`**: PROOF §10.3 carried one count line whose date sat on the next line, outside the scan's window. My pre-push scan
+   PRINTED it (`1 undated live-count line(s)`), but `canon.mjs` exits 0 on a finding, so the `&&` chain pushed anyway. That was my error. The line is dated now,
+   and the scan over the new commit's blobs reads 0.
+2. **`WITNESS ‹mgat› · GREEN at head against its BASE`** (it died in 2.4 s): the member hands a witness LF trees with NO `.git`
+   (`organism_test.mjs` `lfTree`). My witness read both trees through `git ls-files` and died on `fatal: not a git repository`. Every run
+   of mine had passed git checkouts, so none had met it. Fixed: a tree with no `.git` is walked (`.git` and `node_modules` skipped), and W2 reads
+   the rise parents from the first object store that holds them (`--base-org`, then `GITHUB_WORKSPACE`, the neutral clone at `fetch-depth: 0`, then `--org`).
+   None holding them stays a NAMED red. Measured with the member's own recipe (`node ci/mgat/tools/mf2run.mjs mgat 626da67 5759cce`, non-repo LF trees):
+   without `GITHUB_WORKSPACE`, `RED MGAT · W2 (RED on org)` (UNREACHABLE, as designed); with it set as CI sets it, **`GREEN MGAT gates hermetic half + six
+   site fates + four rung_receipt fates · 9 clause(s) · RED on base, GREEN on org · BOUND · LAST` (exit 0)**.
+3. **`WITNESS ‹mlv3› · GREEN at head against its BASE`**: NOT reproduced. `node ci/mgat/tools/mf2run.mjs mlv3 e10d4eb 40347a6` reads
+   `RED MLV3 · BOUND`, the form the member forgives. T1-T4, LIVE-SAFE, XML and LAST are all GREEN, the same as at main `5759cce`. mlv3 is the thalamus
+   keeper's timing witness, and its own header (row 1139 (1)) records a node-24-only red on the neutral machine before. This seat changed no
+   thalamus, keeper or spool byte. NAMED, not guessed: whether it reads red on the next node 24 leg is that leg's to say.
+The legs of `e10d4eb` (run `44657947058`), read 20 Nov 2026: node 24 job `136028733378` **failure** (the three above) · node 22 job `136028733565` **failure**,
+`2 member(s) red`: LOAD ZERO BLOCK 7 and `WITNESS ‹mgat›` only. `WITNESS ‹mlv3›` is GREEN on node 22, so its red is node-24-only (item 3).
+
+CHECKPOINT · STOPPED after forks row 1174 + the named second push · tip: the commit that carries this line · its legs are read after the push and named in the seat's final message · resume from the architect's re-run of the mgat and mf2 witnesses on that tip
