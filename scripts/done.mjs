@@ -22,9 +22,14 @@
 // THE MORNING LINE (D4 A): `line` is printed by the /matchday anchor right after the state line — read, never answered.
 // It is a card only when a check is RED on a thing only his word can fix; this organ never files it — `report` prints
 // the ONE card command (key done:<check>:<day>) for the anchor to run through captains_call.mjs, the card's owner.
-// MODES: line (default) · report · json        FLAGS: --campaign <dir> · --meter <file> · --hermetic
+//   unit mrung (row 1058 (5), rulings forks row 1122 (2)): rungs are read from THE RUNG RECEIPT (rung_receipt.mjs, sole writer
+//             of rung_receipts.jsonl) keyed by the campaign's plan v3 list (<campaign>/rungs/plan_v3.json, rung_receipt.mjs
+//             PLAN_CONTRACT); a plan clause with no complete receipt is UNREAD, a typed row REFUSED, an empty plan UNREAD —
+//             never 0/0. The old hand contract (rungsLegacy, frozen) is REFUSED and counted in nothing (F2 a).
+// MODES: line (default) · report · json        FLAGS: --campaign <dir> · --meter <file> · --receipts <file> · --hermetic
 // The hermetic form (--hermetic or ORGANISM_TEST_PROFILE=hermetic) reads no state file: reach and the three live rule
-// sets print LIVE. The witness of this organ is ci/mdone/witness_mdone.mjs.
+// sets print LIVE; its rungs read ONLY --receipts (a planted file) — without it every plan clause is UNREAD and the state
+// file is never opened. The witness of this organ is ci/mdone/witness_mdone.mjs (rungs: ci/mrung/witness_mrung.mjs).
 // ============================================================================
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
@@ -35,9 +40,10 @@ import { build, queries, verbGraph } from "./xray.mjs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const STATE = join(ROOT, "dressing-room", "state");
-const METER = join(STATE, "daily_green.jsonl");            // Q3 — the day meter; daily_green.mjs:91 is its sole writer
+const METER = join(STATE, "daily_green.jsonl");            // Q3 — the day meter; daily_green.mjs is its sole writer (header :4, append :422)
+const RECEIPTS = join(STATE, "rung_receipts.jsonl");       // unit mrung — rung_receipt.mjs is its sole writer; read here, never written
 const CONSUMPTION = join(STATE, "consumption.jsonl");      // brain.mjs:132 is its sole writer; read here, never written
-const OLD_RECORDED_DAY = "2026-11-13";                     // row 1032 Q3 — the old recorded day that must still read RED
+export const OLD_RECORDED_DAY = "2026-11-13";                     // row 1032 Q3 — the old recorded day that must still read RED
 const SURFACES = ["manager.mjs", "captains_call.mjs"];     // the sheet's and the card's owners (manager.mjs:21, captains_call.mjs:1731)
 
 const argv = process.argv.slice(2);
@@ -67,7 +73,8 @@ function oldDayRed(meterPath) {
   if (!last) return { ok: false, why: `the meter holds no ${OLD_RECORDED_DAY} row` };
   return last.green === false ? { ok: true, why: `${OLD_RECORDED_DAY} still RED` } : { ok: false, why: `${OLD_RECORDED_DAY} reads GREEN now (the old day was rewritten)` };
 }
-function rungs(campaign, meterPath) {
+// FROZEN (L9) — the hand contract above, kept as written; rungs() below no longer calls it (F2 a: a typed row counts in nothing).
+function rungsLegacy(campaign, meterPath) {
   if (!campaign) return { read: false, why: "UNREAD (no --campaign)" };
   const rd = join(campaign, "rungs"), ld = join(campaign, "loops");
   if (!existsSync(rd)) return { read: false, why: `UNREAD (${rd} absent)` };
@@ -91,6 +98,37 @@ function rungs(campaign, meterPath) {
     if (ok) lg++; else lred.push(l.loop || f);
   }
   return { read: true, g, n, lg, ln, red, lred, old: old.why };
+}
+void rungsLegacy;
+// unit mrung — THE RECEIPT READER. The plan v3 list (campaign-side, F3 a) says WHICH clauses exist; the receipts (one organ's
+// measurements, hash-chained) say what was measured. n is the plan's clause count; a plan of zero clauses is UNREAD, never 0/0.
+// The reader's doors are rung_receipt.mjs's own exports, loaded by dynamic import in measure() — never a static import:
+// rung_receipt.mjs green imports OLD_RECORDED_DAY from here, and a static cycle under top-level await never settles.
+function rungs(campaign, receiptsText, { readPlan, parseReceipts, clauseVerdict, loopVerdict, PLAN_FILE }) {
+  if (!campaign) return { read: false, why: "UNREAD (no --campaign)" };
+  const rd = join(campaign, "rungs");
+  // F2 (a): every hand rung file (anything in rungs/ but the plan) is REFUSED, clause by clause, and counted in nothing
+  let hand = 0;
+  for (const f of existsSync(rd) ? readdirSync(rd).filter((x) => x.endsWith(".json") && x !== PLAN_FILE).sort() : []) {
+    const r = readJ(join(rd, f)); hand += r && Array.isArray(r.clauses) && r.clauses.length ? r.clauses.length : 1;
+  }
+  const plan = readPlan(campaign);
+  if (!plan.ok) return { read: false, hand, why: `UNREAD (${plan.why})` };
+  if (!plan.clauses.length) return { read: false, hand, why: "UNREAD (the plan v3 list holds no clause)" };
+  const read = receiptsText !== undefined;   // undefined = not read at all (hermetic without --receipts); null = read, absent
+  const rr = parseReceipts(read ? receiptsText : null);
+  const by = { GREEN: 0, UNREAD: 0, RED: 0, REFUSED: 0 }; const not = [];
+  for (const c of plan.clauses) {
+    const v = read ? clauseVerdict(c.key, c.witness, rr) : { word: "UNREAD", why: "no receipts read (hermetic without --receipts)" };
+    by[v.word]++; if (v.word !== "GREEN") not.push(`${c.key} ${v.word} (${v.why})`);
+  }
+  let lg = 0; const lnot = [];
+  for (const id of plan.loops) {
+    const v = read ? loopVerdict(id, rr) : { word: "UNREAD", why: "no receipts read" };
+    if (v.word === "GREEN") lg++; else lnot.push(`loop:${id} ${v.word} (${v.why})`);
+  }
+  return { read: true, n: plan.clauses.length, g: by.GREEN, u: by.UNREAD, r: by.RED, x: by.REFUSED, hand, lg, ln: plan.loops.length, not, lnot,
+    chain: rr.brokenAt < 0 ? "holds" : `BROKEN at row ${rr.brokenAt + 1}` };
 }
 function units(campaign) {
   if (!campaign) return { read: false, why: "UNREAD (no --campaign)" };
@@ -160,12 +198,17 @@ async function reach(ir) {
 
 async function measure() {
   const campaign = flag("--campaign") ? resolve(flag("--campaign")) : null;
-  const meterPath = flag("--meter") ? resolve(flag("--meter")) : METER;
+  void METER;   // the meter is read by the receipt's writer around the green run (rung_receipt.mjs green), never here now
+  const text = (p) => { try { return readFileSync(p, "utf8"); } catch { return null; } };
+  // the receipts: --receipts (a planted file) wins; the hermetic form without it reads NOTHING (undefined); else the tracked file
+  const receiptsText = flag("--receipts") ? text(resolve(flag("--receipts"))) : HERMETIC ? undefined : (() => { try { return readFileSync(RECEIPTS, "utf8"); } catch { return null; } })();
   const ir = build();
-  return { o: orphans(ir), r: rungs(campaign, HERMETIC && !flag("--meter") ? "" : meterPath), u: units(campaign), c: census(campaign), ru: await rules(), re: await reach(ir) };
+  const RR = await import(pathToFileURL(join(ROOT, "scripts", "rung_receipt.mjs")).href);
+  return { o: orphans(ir), r: rungs(campaign, receiptsText, RR), u: units(campaign), c: census(campaign), ru: await rules(), re: await reach(ir) };
 }
 function lineOf(m) {
-  const rg = m.r.read ? `rungs ${m.r.g}/${m.r.n} clauses · ${m.r.lg}/${m.r.ln} loops` : "rungs UNREAD";
+  const hd = m.r.hand ? ` · hand ${m.r.hand} REFUSED` : "";
+  const rg = m.r.read ? `rungs ${m.r.g}/${m.r.n} GREEN · ${m.r.u} UNREAD · ${m.r.r} RED · ${m.r.x} REFUSED${hd} · ${m.r.lg}/${m.r.ln} loops` : `rungs UNREAD${hd}`;
   const L = m.ru.laws;
   const ru = [`laws ${L.both}/${L.n} both ways (${L.red}/${L.n} RED-planted)`,
     m.ru.ten ? `ten laws ${m.ru.ten.verify}/${m.ru.ten.n} with a verify command` : "ten laws LIVE",
@@ -183,7 +226,7 @@ function reportOf(m) {
   const out = [lineOf(m)];
   out.push(`DONE orphans  lanes ${m.o.lanes.length} (Q3)${m.o.lanes.length ? ": " + m.o.lanes.join(", ") : ""}`);
   out.push(`DONE orphans  verbs ${m.o.verbs.length} (orphan verbs)`);
-  out.push(m.r.read ? `DONE rungs    ${m.r.g}/${m.r.n} clauses GREEN · ${m.r.lg}/${m.r.ln} loops · old day: ${m.r.old}${m.r.red.length ? " · not green: " + m.r.red.join(", ") : ""}${m.r.lred.length ? " · loops not green: " + m.r.lred.join(", ") : ""}` : `DONE rungs    ${m.r.why}`);
+  out.push(m.r.read ? `DONE rungs    ${m.r.g}/${m.r.n} GREEN · ${m.r.u} UNREAD · ${m.r.r} RED · ${m.r.x} REFUSED · ${m.r.lg}/${m.r.ln} loops · receipt chain ${m.r.chain}${m.r.hand ? ` · hand ${m.r.hand} REFUSED (typed: hand contract)` : ""}${m.r.not.length ? " · not green: " + m.r.not.join(", ") : ""}${m.r.lnot.length ? " · loops not green: " + m.r.lnot.join(", ") : ""}` : `DONE rungs    ${m.r.why}${m.r.hand ? ` · hand ${m.r.hand} REFUSED (typed: hand contract)` : ""}`);
   out.push(`DONE rules    laws/*.yml ${m.ru.laws.both}/${m.ru.laws.n} planted both ways · ${m.ru.laws.red}/${m.ru.laws.n} RED-planted${m.ru.laws.missing.length ? " · no clean plant: " + m.ru.laws.missing.join(", ") : ""} (the sets are never summed)`);
   out.push(m.u.read ? `DONE units    ${m.u.open} open by clause ${JSON.stringify(m.u.by)}` : `DONE units    ${m.u.why}`);
   out.push(m.c.read ? `DONE census   PENDING ${m.c.pending} · neither a fate+rung nor serves-no-step ${m.c.unfated}` : `DONE census   ${m.c.why}`);
@@ -197,7 +240,7 @@ function reportOf(m) {
 
 async function main() {
   const mode = argv[0] && !argv[0].startsWith("--") ? argv[0] : "line";
-  if (!["line", "report", "json"].includes(mode)) { console.log("done.mjs [line|report|json] [--campaign <dir>] [--meter <file>] [--hermetic]"); return 2; }
+  if (!["line", "report", "json"].includes(mode)) { console.log("done.mjs [line|report|json] [--campaign <dir>] [--meter <file>] [--receipts <file>] [--hermetic]"); return 2; }
   const m = await measure();
   if (mode === "json") console.log(JSON.stringify({ hermetic: HERMETIC, orphans: { lanes: m.o.lanes.length, verbs: m.o.verbs.length }, rungs: m.r, units: m.u, census: m.c, rules: m.ru, reach: m.re.rows ? m.re.rows.map((x) => ({ subject: x.subject, reached: x.reached, static: x.stat, window: x.win, no_consumer: x.noCons })) : m.re }));
   else if (mode === "report") for (const l of reportOf(m)) console.log(l);

@@ -125,5 +125,5 @@ if ($after -contains "SeServiceLogonRight") {
 }
 Write-Host "  RESULT  : FAILED — the grant returned $rc and the right is still absent."
 Write-Host "            (secpol.msc does NOT exist on Windows Home, so that is not the fallback.)"
-Write-Host "            Report the whole block above; S12 must not turn anything on until this reads GRANTED."
+Write-Host "            Report the whole block above; no service should be started until this reads GRANTED."
 exit 1
