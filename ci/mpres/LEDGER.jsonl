@@ -1,0 +1,7 @@
+{"ts":"2026-11-20T01:40:00Z","act":"cut branch from origin/main","cmd":"git fetch origin main && git checkout -b claude/mpres-spec FETCH_HEAD","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T01:44:00Z","act":"list installer-registered tasks","cmd":"node <scratch>/regs.mjs (watchman installerRegistrations(setupScripts()))","last_line":"holes: []"}
+{"ts":"2026-11-20T01:46:00Z","act":"presence selftest at base","cmd":"node scripts/presence.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-20T01:46:00Z","act":"state selftest at base","cmd":"node scripts/state.mjs selftest","last_line":"state selftest: 24 passed, 0 failed (20 Nov 2026)"}
+{"ts":"2026-11-20T01:46:00Z","act":"touchline selftest at base","cmd":"node scripts/touchline.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-20T01:52:00Z","act":"hermetic suite at base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 141 passed, 4 failed · ruled 0 · UNRULED 4 · LIVE 126 (hermetic: named, not run) (20 Nov 2026, exit 2)"}
+{"ts":"2026-11-20T01:53:00Z","act":"tracked-ness of the sensor output files","cmd":"git check-ignore -q dressing-room/state/<f>","last_line":"registry.json tracked; presence_log/timeaudit/pitch_read/mirror_manifest/throwin_state/daemon_watchdog ignored"}
