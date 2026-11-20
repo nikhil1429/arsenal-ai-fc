@@ -211,3 +211,22 @@ For example: teaching_audit's promptHook stamps a `turn_id` into `prompt`, the b
 (`teaching_audit.mjs` and `gaffer_brain.mjs`), so the build stays as it was. `words` is still `prompt.text` byte for
 byte. The crack row already carries `prompt_session_id` and `prompt_at`. No join clause was added, so as not to invent
 one. CHECKPOINT · STOPPED at 2026-11-20T07:10Z on row 1194 (1) · resume from the architect's ruling on FORK mcrk-4c.
+
+## 11 · THE MERGES OF NEW MAIN (forks rows 1187 (2) / 1181 (2) / 1200 (2) / 1201), 20 Nov 2026
+
+| Main | Merge commit | Conflicting hunks |
+|---|---|---|
+| 3f22388 (unit mlaw) | 78db147 | none |
+| cebe3eb (unit mcov) | e4d9f41 | none |
+| 6a6bdff (unit mmeter) | e8aa2d9 | none |
+
+None of the three mains touches a file this unit touches, and this unit never edits `package.json` or
+`scripts/organism_test.mjs`. So every merge was clean, there was no hunk to reconcile, and there is no fork.
+`ci/mcrk/BASE` stays 5759cce (row 1200 (2)). The clauses are judged against it, and BOUND against the merge's parent.
+
+**What the mmeter main changed for this unit:** its new member `clauses` walks `ci/witness/<unit>/witness_*.mjs` in
+`plants` mode with no base tree. That run exposed a defect in this unit's own K2c. With no `--base-tree`, the session
+file's writer is the tree's own code, so its contract carries the crack line as well. K2c stripped the carrier on one
+side only, so the run read `10 of 11`. K2c now strips it on both sides. With a base tree the comparison is unchanged,
+and mutant M4 still bites on the carrier count. The member then read
+`organism_test: 7 passed, 0 failed · ruled 0 · UNRULED 0` (`ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs clauses`, 20 Nov 2026).
