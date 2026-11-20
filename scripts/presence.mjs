@@ -16,6 +16,14 @@
 //        conserve mute at the mouth. On a conserve day it senses but stays
 //        OFF the wire (rest is the agenda). AW unreachable → silent no-op.
 //        Sole writer of presence_log.jsonl (gitignored). Zero LLM.
+// AWAY SPANS (unit mguard, forks row 1176 G2 A): every focus row also RECORDS the
+//        known-away spans it already computed — `away: [[startIso, endIso], …]`
+//        (awayIntervals over the AFK events of the same pass, nothing new fetched;
+//        null when there is no AFK truth) and `back_at` (the start of the first
+//        not-afk event after the last span, never before its end; null while he
+//        is still away). A span is CLOSED iff back_at is set and is not before its
+//        end. `awaySpans()` is the read-only reader other organs use (the usage
+//        tap's statusLine, read and show only — row 1176 G5 A / G7 A).
 // MODES: node scripts/presence.mjs sense [--demo] · calibrate · status · roll · selftest
 // ============================================================================
 
@@ -307,6 +315,9 @@ function archiveSiblings(file) {
 // `complete` is the honesty flag (#4): false means history ran out before n rows
 // were found — a short answer, never a measured zero. Callers that only want rows
 // use presenceTail(n, { file }).
+// #51: every sense pass appends exactly TWO rows (the thrash row and the kind:"focus" row), so two full passes is
+// strictly more than the one-of-each a "previous row" lookup needs (hoisted from sense() so awaySpans() shares it).
+const ROWS_PER_PASS = 2, PREV_TAIL_ROWS = ROWS_PER_PASS * 2;
 function presenceTailReport(n, deps = {}) {
   const file = deps.file || PLOG;
   const readT = deps.tailText || tailText;
@@ -500,6 +511,44 @@ function presentSec(startMs, endMs, away) {
   return Math.max(0, ms) / 1000;
 }
 
+// unit mguard (row 1176 G2 A): when he came BACK — the start of the first not-afk event after the last away span's
+// start, never before that span's end (AW stamps the not-afk event where the afk one ends); null while he is still
+// away or when there is no AFK truth. PURE.
+function backAt(afkEvents, away) {
+  if (!Array.isArray(afkEvents) || !away || !away.length) return null;
+  const last = away[away.length - 1];
+  const starts = afkEvents.filter(e => e && e.timestamp && String((e.data || {}).status || "").toLowerCase() === "not-afk")
+    .map(e => new Date(e.timestamp).getTime()).filter(t => Number.isFinite(t) && t > last[0]).sort((a, b) => a - b);
+  return starts.length ? new Date(Math.max(starts[0], last[1])).toISOString() : null;
+}
+// the two fields a focus row records (row 1176 G2 A) — PURE over the pass's own AFK events
+function awayFields(afkEvents) {
+  const away = awayIntervals(afkEvents);
+  return { away: away ? away.map(([s, e]) => [new Date(s).toISOString(), new Date(e).toISOString()]) : null, back_at: backAt(afkEvents, away) };
+}
+// THE READER (row 1176 G7 A): the CLOSED away spans the latest focus row records, read from the ledger's TAIL through
+// presenceTailReport (bounded; it widens only while the history has more). Read-only, never throws.
+//   → { at, back_at, spans: [{ start, end }] } or null (no focus row, or one that records no away field)
+function awaySpans(deps = {}) {
+  try {
+    const readTail = deps.readTail || ((n) => presenceTailReport(n, { file: deps.file || PLOG }));
+    let n = PREV_TAIL_ROWS;
+    for (;;) {
+      const rep = readTail(n);
+      const hit = rep.rows.filter(r => r && r.kind === "focus").slice(-1)[0] || null;
+      if (hit || !rep.complete) return hit ? closedOf(hit) : null;
+      n = rep.need * 2;
+    }
+  } catch { return null; }
+}
+// the CLOSED spans one focus row records: back_at set and not before the span's end. PURE.
+function closedOf(row) {
+  if (!row || !Array.isArray(row.away)) return null;
+  const back = row.back_at ? Date.parse(row.back_at) : NaN;
+  const spans = Number.isFinite(back) ? row.away.filter(a => Array.isArray(a) && Date.parse(a[1]) <= back).map(([start, end]) => ({ start, end })) : [];
+  return { at: row.ts || null, back_at: row.back_at || null, spans };
+}
+
 // focusReadLegacy — the pre-audit engine, FROZEN VERBATIM (layering, never
 // replace). Kept as the record of what the sentinel used to see: whole-event
 // durations, start-timestamp windowing, no AFK truth.
@@ -691,7 +740,6 @@ async function sense(deps = {}) {
   // the one-of-each these lookups need. It is NOT a cap: findPrev widens the window
   // and walks into the archives until the row is found or history genuinely runs out.
   // "I did not look far enough" must never be rendered as "there is no previous row".
-  const ROWS_PER_PASS = 2, PREV_TAIL_ROWS = ROWS_PER_PASS * 2;
   const readTail = deps.readTail || ((n) => presenceTailReport(n, { file: deps.plog || PLOG }));
   let _rep = null;
   const findPrev = (pred) => {
@@ -733,7 +781,7 @@ async function sense(deps = {}) {
   const afk = deps.afk !== undefined ? deps.afk : (deps.events !== undefined ? null : await fetchAfkEvents(deps));
   const f = focusRead(events, now, deps.matcher || null, FOCUS, afk);
   const prevFocus = deps.prevFocus !== undefined ? deps.prevFocus : findPrev(r => r && r.kind === "focus");
-  const frow = { ts: now.toISOString(), day: dayKey(now), kind: "focus", ...f, tone: tone.arousal, posted: false };
+  const frow = { ts: now.toISOString(), day: dayKey(now), kind: "focus", ...f, ...awayFields(afk), tone: tone.arousal, posted: false };
   if (f.break_live && !(prevFocus && prevFocus.break_live) && tone.arousal !== "conserve") {
     // #6, same law on this lane — but NO sprint fallback here. The pull words name
     // what dragged him AWAY ("youtube", "cricket"); calling today's study ground the
@@ -883,6 +931,30 @@ async function selftest() {
     assert("SENTINEL: not-afk spans subtract nothing — at the machine, the break is still a break", focusRead(evts, now, matcher, FOCUS, afkHere).break_live === true);
     assert("SENTINEL: no AFK bucket → the old un-clipped read, never invented absence", focusRead(evts, now, matcher, FOCUS, null).break_live === true);
     assert("SENTINEL: the pre-audit engine stays frozen beside it (layering, never replace)", focusReadLegacy(evts, now, matcher).break_live === true);
+
+    // unit mguard (row 1176 G2 A / G7 A): the focus row RECORDS the away spans and when he came back
+    {
+      const T = (m) => new Date(now.getTime() + m * 60000).toISOString();
+      const afkBack = [{ timestamp: T(-50), duration: 20 * 60, data: { status: "afk" } }, { timestamp: T(-30), duration: 30 * 60, data: { status: "not-afk" } }];
+      let row = null;
+      await sense({ ...fbase, afk: afkBack, post: async () => false, append: (r) => { if (r.kind === "focus") row = r; } });
+      assert("MGUARD G2: a focus row records away [[startIso,endIso]] and back_at = the not-afk start after the span", !!row && JSON.stringify(row.away) === JSON.stringify([[T(-50), T(-30)]]) && row.back_at === T(-30));
+      const still = awayFields([{ timestamp: T(-10), duration: 10 * 60, data: { status: "afk" } }]);
+      assert("MGUARD G2: still away (no not-afk after the span) → back_at null, the span is NOT closed", still.back_at === null && closedOf({ kind: "focus", away: still.away, back_at: null }).spans.length === 0);
+      assert("MGUARD G2: no AFK truth → away null, never an invented span", awayFields(null).away === null && awayFields(null).back_at === null);
+      let rowN = null;
+      await sense({ ...fbase, afk: null, post: async () => false, append: (r) => { if (r.kind === "focus") rowN = r; } });
+      assert("MGUARD G2: an offline pass (afk null) still records the fields, as null", !!rowN && rowN.away === null && rowN.back_at === null);
+      const tmpd = mkdtempSync(join(tmpdir(), "presence-away-"));
+      try {
+        const file = join(tmpd, "presence_log.jsonl");
+        writeFileSync(file, [{ ts: T(-1), kind: undefined, edge: false }, { ts: T(-1), kind: "focus", away: [[T(-50), T(-30)]], back_at: T(-30) }, { ts: T(0), edge: false }].map(r => JSON.stringify(r)).join("\n") + "\n");
+        const a = awaySpans({ file });
+        assert("MGUARD G7: awaySpans reads the latest focus row's CLOSED spans from the tail, read-only", !!a && a.spans.length === 1 && a.spans[0].start === T(-50) && a.back_at === T(-30));
+        writeFileSync(file, JSON.stringify({ ts: T(0), kind: "focus", focus_min: 1 }) + "\n");
+        assert("MGUARD G7: a focus row with no away field (a pre-mguard row) → null, never 'no spans'", awaySpans({ file }) === null && awaySpans({ file: join(tmpd, "absent.jsonl") }) === null);
+      } finally { rmSync(tmpd, { recursive: true, force: true }); }
+    }
 
     // E2E audit 25 Jul 2026 regression (cc7f9b1f): AW heartbeat-merges an
     // unbroken stretch into ONE event stamped at its START, so the old
@@ -1078,6 +1150,9 @@ async function main() {
     const w = calmWindow(recentPass);
     console.log(`  calibration readiness: ${new Set(recentPass.map(r => r.day).filter(Boolean)).size}/${CALIBRATE.min_days} day(s) · ${w.calm.length}/${CALIBRATE.min_calm_samples} calm sample(s) in the last ${recent.rows.length} ledger row(s)` +
       (w.enough ? ` — the Sunday fit will run on the last ${w.window.length} day(s)` : " — the Sunday fit will SKIP and the factory signature holds"));
+    const aw = rows.filter(r => r && r.kind === "focus" && Array.isArray(r.away)).map(closedOf).filter(Boolean);
+    const closedToday = new Set(aw.flatMap(c => c.spans.map(sp => sp.start))).size;
+    console.log(`  away (unit mguard): ${aw.length} focus row(s) record away spans today · ${closedToday} distinct closed span(s) · last back_at ${aw.length ? aw[aw.length - 1].back_at || "none (still away)" : "none"}`);
     console.log(`  ledger: read ${d.scanned_rows} row(s) from ${d.files} file(s) (${d.archives} archive(s))` +
       (d.covers_boundary ? " — the window reached past midnight, today's count is complete" : " — WINDOW DID NOT REACH MIDNIGHT: today's count is a floor, not a total"));
     const g = archiveIgnoreGap();
@@ -1117,6 +1192,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 export { thrashTelemetry, isLeadingEdge, sense, calibrate, calibrateLegacy, calmWindow, factoryEdge, CALIBRATE,
          loadSignature, SIGNATURE, focusRead, focusReadLegacy, awayIntervals, bucketsMatcher, sensePassRows,
          fetchAwEvents, fetchWindowEvents, fetchAfkEvents, FOCUS,
+         // unit mguard (row 1176 G2 A / G7 A) — the recorded away spans and their read-only reader
+         backAt, awayFields, awaySpans, closedOf,
          // #51 — the shared, archive-tolerant readers the other four call sites can import
          presenceTail, presenceTailReport, presenceDayReport, rollPresenceLog, rollDue, maybeRoll, archiveSiblings, archivePath,
          // #6 — the producer-side concept canon
