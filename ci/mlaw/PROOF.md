@@ -434,3 +434,50 @@ this tip are read once each, after this single push, and are reported in the fin
 CHECKPOINT · STOPPED at 2026-11-19T22:18:22Z · merged land/mgat 1b8c379 at 140be7f (BASE = 1b8c379); resolution hunks: scripts/organism_test.mjs LIVE_MODES — both removals kept (mgat's gates line + mlaw's lawpack line; tables = 1b8c379's minus lawpack only) · ci/mdone/witness_mdone.mjs + ci/mdn2/witness_mdn2.mjs — mlaw's his_surfaces plant line kept (the merged done.mjs reads that row); package.json merged clean (rung_receipt + done both on the tail). On this tree, 19 Nov 2026: witness vs 1b8c379 GREEN MLAW · 10 clause(s), BASE-way RED MLAW · LEGS · JUGAD · SURFACES · COVERAGE · HERMETIC · RISE · NOLINE · PORT; lawpack GREEN at jugad 90 (1b8c379: 93, 2 RED); mdone / mdn2 vs their BASE: BOUND only. The tip is the commit carrying this line; the architect re-runs.
 
 CHECKPOINT · STOPPED at 2026-11-20T01:25:37Z · row 1172: the land/mgat merge 140be7f REVERTED by a8743fc (git revert -m 1, no force, no rewrite); main re-merged at 1a71145 (parents a8743fc + 5759cce), BASE = 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90. Tree outside ci/ = git merge-tree --write-tree 7119175 5759cce (fa51222) exactly (git diff fa51222 HEAD -- . ':(exclude)ci' empty, 20 Nov 2026). Resolution hunk: the one conflict pair was ci/mdone/witness_mdone.mjs + ci/mdn2/witness_mdn2.mjs (add/add): each keeps mlaw's his_surfaces plant line (main's bytes plus that line; the build's done.mjs reads the row). scripts/organism_test.mjs merged clean (main carries no mgat gates change); package.json clean (main's rung_receipt + mlaw's done on the tail). Measured 20 Nov 2026: witness vs 5759cce GREEN MLAW · 10 clause(s), BASE-way RED MLAW · LEGS · JUGAD · SURFACES · COVERAGE · HERMETIC · RISE · NOLINE · PORT; lawpack GREEN at jugad 90 (5759cce: 93); mdone / mdn2 vs their BASE: BOUND only. The tip is the commit carrying this line; the architect re-runs.
+
+## 14. FORKS ROW 1182 (3) — mlv3 RED ON NODE 24 ONLY, at 0a73a81: MEASURED, NOT REPRODUCED (20 Nov 2026)
+
+**The neutral read of `0a73a814b8eb49a917f32598c719ec78be91dc95`** (curl, no token): node 22 run 136014324830 success · node 24
+run 136014324380 failure, `B1_VERDICT RED`, base `5759cce`, one new red `WITNESS ‹mlv3› · GREEN at head against its BASE`,
+pass 233 · fail 2 · live 124. The annotations carry names only. The witness's own lines sit in the job log, which needs a
+token, so what node 24 on Windows read is not reachable from here.
+
+**Measured on node 24 here** (node v24.22.3, the official linux-x64 tarball under os.tmpdir(); the repo's node is 22). LF
+trees of `0a73a81` and of `ci/mlv3/BASE` `40347a6`, built as `organism_test.mjs lfTree` builds them; three runs in a row:
+
+```
+run 1 (node 24, exit 1): RED MLV3 · BOUND   — GREEN T1 IDLE · T2 ONCE · T3 INFLIGHT · T4 JUDGE · LIVE-SAFE · XML · LAST
+run 2 (node 24, exit 1): RED MLV3 · BOUND   — the same seven GREEN
+run 3 (node 24, exit 1): RED MLV3 · BOUND   — the same seven GREEN
+```
+
+The witnesses member drops BOUND (`boundIds`), so all three runs are GREEN in the member's judgement. **NOT REPRODUCED in
+three runs.**
+
+**This build does not reach mlv3's subject.** `scripts/thalamus.mjs` (mlv3's one named file), `scripts/spool.mjs`,
+`hooks/` and `setup/` are byte-equal to main `5759cce` (`git diff --quiet 5759cce HEAD -- …`, 20 Nov 2026). The static
+import closure of thalamus.mjs, spool.mjs and hooks/afferent-post.mjs (51 files) holds none of this build's changed files
+(organism_test, ci_verdict, conductor, done, usage_tap).
+
+**What mlv3 depends on, read off its own header** (`ci/mlv3/witness_mlv3.mjs:4-35`):
+- **CLOCK:** every bound is MEASURED in the run. SLACK = one node start, IMPORT = one fresh process, BOOT = the measured
+  first keeper boot, and the later waits are BOOT + SLACK (here 20 ms / 91 ms / 185 ms → 205 ms). On a loaded runner, one
+  slow sample against a fast one is a red that has nothing to do with the code. The unit's own history names this class
+  on node 24: row 1139 (1), "mlv3 red on node 24 on the neutral machine", at `03ec8d7`.
+- **PORT:** the keeper runs on planted ports through thalamus's env doors (ARSENAL_THALAMUS_PORT · ARSENAL_JUDGE_PORT). The
+  LIVE-SAFE clause binds counting listeners on the fixed :4112 and :4113 for the whole run, and T4 holds the planted
+  judge port. A port still held from an earlier member on the same runner makes `PORT_HELD`.
+- **PROCESS TABLE / ORDER:** a real keeper and its worker are spawned, retired and respawned (T1–T4 run in order, each
+  clause starting its own keeper when none answers, I3). LAST reads the process table for survivors of the temp dir.
+- **NETWORK:** none (localhost only; ANTHROPIC_API_KEY planted to a non-key).
+
+This seat's own neutral history shows the same shape, one witness red on node 24 alone, on other members too: `WITNESS
+‹mlv1›` on `cb2c57b` (run 135509495217, node 22 green), and none on `7119175` (both legs GREEN, runs 135844988565 /
+135844989051).
+
+- **FK13 · mlv3 on node 24 at `0a73a81`: not reproduced (3 of 3 GREEN on node 24 here, linux), and not reachable by this
+  build's bytes.** It is the timing / port / process class named above. (A) unit mlv3 or mrv measures it on a Windows
+  node 24 runner, where the job log names its red clause and its measured SLACK / BOOT · (B) the runner reads the job
+  log of run 136014324380 (it needs a token) and names the clause.
+
+CHECKPOINT · STOPPED at 2026-11-20T06:13:48Z · tip = the commit carrying this line (on 0a73a81; base 5759cce; no organ byte changed); mlv3 on node 24 measured here 3 of 3 GREEN (BOUND only), not reproduced; fork FK13 names its clock / port / process dependence; resume from the architect's ruling on FK13.
