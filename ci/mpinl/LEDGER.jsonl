@@ -18,3 +18,9 @@
 {"ts":"2026-11-19T18:17:40.780Z","act":"models-check","cmd":"node scripts/models.mjs check (build 579b0ef)","last_line":"exit 0"}
 {"ts":"2026-11-19T18:17:40.780Z","act":"ci-read","cmd":"curl anonymous check-runs","last_line":"1106834 run 44524179344 success/success · 0291f61 run 44525206584 cancelled/cancelled (superseded) · e96a143 run 44525775058 success/success · 579b0ef run 44585680575 in_progress/queued"}
 {"ts":"2026-11-19T18:17:40.780Z","act":"proof","cmd":"write ci/mpinl/PROOF.md (BLOCK 7 canon-count scan over it: undeclared [])","last_line":"PROOF written"}
+{"ts":"2026-11-20T01:31:05.981Z","act":"merge-main","cmd":"git merge --no-ff 5759cce (row 1172)","last_line":"074817d · no conflicts; lawpack.mjs and package.json untouched by main"}
+{"ts":"2026-11-20T01:31:05.981Z","act":"F7-census-ci-5759cce","cmd":"node ci/mpinl/instruments/census_mcon.mjs --org <5759cce clone>/ci --modules <clone>","last_line":"CENSUS MCON · 0 own-literal pin(s) in 0 assert(s) · 0 own-assert · 0 unresolved · 57 file(s) walked"}
+{"ts":"2026-11-20T01:31:05.981Z","act":"witness-base-5759cce","cmd":"node ci/mpinl/witness_mpinl.mjs --org <5759cce> --base-org <5759cce>","last_line":"RED MPINL · W1, W1u, W2, W2u, W3, W4, W5, W6, F7"}
+{"ts":"2026-11-20T01:31:05.981Z","act":"witness-merged","cmd":"node ci/mpinl/witness_mpinl.mjs --org <merged> --base-org <5759cce>","last_line":"GREEN MPINL the own-literal pin class held by a count, its baseline the tree's own read · 11 clause(s)"}
+{"ts":"2026-11-20T01:31:05.981Z","act":"mutants-merged","cmd":"node ci/mpinl/run_mutants_mpinl.mjs --org <merged> --base-org <5759cce>","last_line":"run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-20T01:31:05.981Z","act":"checkpoint","cmd":"row 1172 step 5","last_line":"CHECKPOINT · merged on BASE 5759cce · stopped"}

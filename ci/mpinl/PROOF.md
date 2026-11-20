@@ -1,5 +1,17 @@
 # UNIT mpin-law (mpinl) · PROOF
 
+CHECKPOINT · STOPPED at 2026-11-20 (row 1172, the runner's conditional line) · merged tip = the commit carrying this line, merge
+074817d on the branch · BASE = main 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 (`ci/mpinl/BASE`) · resolution hunks: NONE
+(`git merge --no-ff 5759cce` merged with no conflict; main did not touch `scripts/lawpack.mjs` or `package.json`, so
+`scripts/organism_test.mjs` arrived as main's) · on LF clones of the merged tree and of 5759cce, 20 Nov 2026:
+- law read `own-literal census · walk scripts+hooks · 140 file(s) · own-literal 39 · unresolved 77` — the frozen 39 / 77 hold
+- F7 census over main 5759cce's `ci/` → `CENSUS MCON · 0 own-literal pin(s) in 0 assert(s) · 0 own-assert · 0 unresolved · 57 file(s) walked`, so the walk stays scripts+hooks
+- witness BASE 5759cce: `RED MPINL · W1, W1u, W2, W2u, W3, W4, W5, W6, F7` · witness MERGED: `GREEN MPINL the own-literal pin class held by a count, its baseline the tree's own read · 11 clause(s)`
+- mutants: `run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN`
+- lawpack gate on both trees: `lawpack: 1 RED` (jugad 93 vs 90, main's; depcruise now 7 = baseline). Every count other than the two new keys is equal. Raw matches are 1940 on both.
+
+The sections below are the record of the first build on fb42118 (19 Nov 2026).
+
 Seat 2 of 3 under forks row 1160 (2). It builds the law that holds the own-literal pin class by a count, in `scripts/lawpack.mjs`.
 Branch `claude/mpinl-build`. The work tip is **579b0ef9c4052bd54be32f3038fb3a1b39a558b0**; the commit after it carries only this
 proof and the ledger. Every number below is a command's printed line, dated 19 Nov 2026, or sits in a fence.
