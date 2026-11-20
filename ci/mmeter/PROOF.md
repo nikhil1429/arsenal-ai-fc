@@ -1,12 +1,28 @@
 # unit mmeter · PROOF (forks rows 1162 / 1163; spec `ci/mwit/MWIT_SPEC.md` @ 88bf69d, clauses A:day-11 + A:old-day-red)
 
-CHECKPOINT · MERGED (forks row 1172) at 2026-11-20 · merged tip 18a9c26 (main 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 into 8e648f5) · BASE now 5759cce (`ci/mmeter/BASE`) · resolution hunks: scripts/organism_test.mjs auto-merged clean but held TWO top-level `function witnesses` (SyntaxError at load) — ms1's member keeps `witnesses`; this unit's member renamed `clauseWitnesses`, mode `clauses`, both in MODES and the CLI line; no member of either side removed · witness on the merged tree: `GREEN MMETER strict meter exit + meter witness (day11 · oldday), RED on base and GREEN on build · 2 clause(s)`, base-as-org `RED MMETER · A:day-11, A:old-day-red` · mutants `run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN` · STOPPED: resume only on the runner's word.
+CHECKPOINT · UNIT WITNESS (forks row 1184 option A) at 2026-11-20 · the witness commit 78e4be2 (the proof/ledger/mutant commit rides on it; its sha is the branch tip the runner reads) · BASE 5759cce (`ci/mmeter/BASE`, unchanged) · new file `ci/mmeter/witness_mmeter.mjs`, the UNIT witness against BASE, run from a dir holding only `ci/mmeter/` over two LF trees (the ms1 member's shape): head vs base → `GREEN MMETER strict meter exit + old-day red, RED at base and GREEN at head · 2 clause(s)` (exit 0) · base vs base → `RED MMETER · A:day-11, A:old-day-red` (exit 1) · mutants `run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN` · STOPPED: resume only on the runner's word.
+Earlier: CHECKPOINT · MERGED (forks row 1172) at 2026-11-20 · merged tip 18a9c26 (main 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 into 8e648f5) · BASE now 5759cce (`ci/mmeter/BASE`) · resolution hunks: scripts/organism_test.mjs auto-merged clean but held TWO top-level `function witnesses` (SyntaxError at load) — ms1's member keeps `witnesses`; this unit's member renamed `clauseWitnesses`, mode `clauses`, both in MODES and the CLI line; no member of either side removed · witness on the merged tree: `GREEN MMETER strict meter exit + meter witness (day11 · oldday), RED on base and GREEN on build · 2 clause(s)`, base-as-org `RED MMETER · A:day-11, A:old-day-red` · mutants `run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN` · STOPPED: resume only on the runner's word.
 Merged-tree measurements (20 Nov 2026): law pack findings line identical base 5759cce vs build (both `lawpack: 1 RED`, the base's jugad-literal-subject-list 93 / baseline 90) · `done.mjs line --hermetic` orphan verbs 120 / lanes 5 on both · hermetic suite base `organism_test: 157 passed, 3 failed` vs build `organism_test: 151 passed, 1 failed` (measured 20 Nov 2026) — the build's one red is the base's coverage-orphans red; the base run's ten extra passes (LOAD ZERO ledger lanes, S7 RATCHET, RUNG A) read a gitignored brain_ledger.jsonl its own run leaked into the base worktree beside its sandbox canary (the base's sandbox red); this checkout holds no such file, so that block reads nothing in either tree's clean form — named, not claimed.
 Earlier: CHECKPOINT · STOPPED at 2026-11-19T12:38Z · resume from the suite member — RESUMED 2026-11-19 on his word 270; every step after it is below.
 
 **Base:** main `fb4211870093e6b8657655eb02ebcfc425f1eab1` (`ci/mmeter/BASE`), fetched 19 Nov 2026. Branch `claude/mmeter-build`.
 Every number below is a command's last line, measured 19 Nov 2026 on LF trees in the cloud (the base in a `git worktree` of
 `fb42118`, the build in this checkout); `ci/mmeter/LEDGER.jsonl` holds one row per act.
+
+## The unit witness against BASE (forks row 1184 A)
+
+`node ci/mmeter/witness_mmeter.mjs --org <head tree> --base-org <base tree>` — both arguments required (none → RED). It runs
+the HEAD's clause code `<org>/ci/witness/mmeter/witness_meter.mjs plants --org <tree>` once per tree, so every plant runs that
+TREE's own scripts; a clause holds iff RED on base AND GREEN on head. BOUND walks both trees (no .git needed), CRLF folded.
+Measured 20 Nov 2026, LF trees of the commit and of 5759cce built like the member's `lfTree`, from a dir holding only `ci/mmeter/`:
+```
+  A:day-11 · base RED (7 plant(s) fail, first: the meter CLI on a planted 5/11 study day exits 3 …) · head GREEN → HOLDS
+  A:old-day-red · base RED (2 plant(s) fail, first: the old day red, the latest row stamped by the org's own meter → 0) · head GREEN → HOLDS
+  BOUND · GREEN · LAST · GREEN
+GREEN MMETER strict meter exit + old-day red, RED at base and GREEN at head · 2 clause(s)        (exit 0)
+--org <base tree> --base-org <base tree>  →  RED MMETER · A:day-11, A:old-day-red                (exit 1: no clause code in the base)
+```
+`ci/witness/mmeter/` is unchanged (the clause witnesses by plants are a different kind).
 
 ## Files (BOUND: only these differ from the base)
 
@@ -17,6 +33,7 @@ Every number below is a command's last line, measured 19 Nov 2026 on LF trees in
 | `scripts/organism_test.mjs` | EDIT ONCE (row 1162 (2)) · the member `witnesses`: walks `ci/witness/<unit>/witness_*.mjs`, runs each `plants`; a witness with no plants reads red |
 | `ci/witness/mmeter/witness_meter.mjs` | the clause witness (`day11` · `oldday`), its `plants`, and the unit mode (`--org --base-org`) |
 | `ci/witness/mmeter/plant_day.mjs` | from `ci/mwit/plant_day.mjs`, extended to plant 11/11 (git init + bare origin, core.autocrlf=false) |
+| `ci/mmeter/witness_mmeter.mjs` | the UNIT witness against BASE (forks row 1184 A) — the landing law's `ci/<unit>/witness_<unit>.mjs` |
 | `ci/mmeter/{BASE,LEDGER.jsonl,PROOF.md,run_mutants_mmeter.mjs}` | this proof's own |
 
 ## The witness, both ways (last line)
@@ -51,6 +68,11 @@ node ci/mmeter/run_mutants_mmeter.mjs
   M2 RED  by A:day-11 · the witness's `greens === 11` → `greens >= 5`
   M3 RED  by A:old-day-red · the old-day verdict `green === true` → `green !== false` (the null row must stay 2)
 run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN
+```
+After forks row 1184 A (20 Nov 2026), M4 joins — it mutates the UNIT witness:
+```
+  M4 RED  by A:day-11 (true: RED MMETER · A:day-11, A:old-day-red · mutant: GREEN MMETER …) · the UNIT witness ignores the base (a pass-through): the head read as its own base must stay RED
+run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN
 ```
 M2 first lived (2 of 3): the every-GREEN check already reds every honest row below 11, so `greens` was masked. A plant was
 added — a row that disagrees with itself (count 10, clauses all GREEN) reads 1 — and M2 now dies by it.
