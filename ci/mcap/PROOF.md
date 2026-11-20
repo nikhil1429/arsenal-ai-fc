@@ -230,3 +230,76 @@ run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
 CHECKPOINT · STOPPED at 2026-11-20 (UTC, after this push) · merged tip = this commit's parent chain on `claude/mcap-build`
 (merge `b53eb4c`, BASE commit, this proof commit) · base 5759cce · resolution hunks: none (no conflict) · witness `GREEN MCAP … · 7 clause(s)` /
 base `RED MCAP · … BOUND` · mutants `run_mutants: 7 of 7 … · control GREEN` · resume from: the architect's next ruling (FORK mcap-6; c18 re-sourced once mcrk lands).
+
+## 10 · Row 1194: c18 re-shaped (fork mcrk-4 ruled "neither a nor b"), 20 Nov 2026
+
+**The ruling.** c18 stops comparing texts. The old predicate was `fold(words) === fold(capture.spoken)`. On his laptop,
+the runner measured that it held for only part of the capture rows, because his words live twice: once in the prompt record
+and once in the teacher's bank copy. **The new shape:** c18 joins the crack row to its capture by the TURN IDENTITY both
+records carry, never by time and never by text (row 1194 (1), (4)). It requires a legal moment, non-empty words, and words
+that came from the prompt record. Rows dated before 30 Aug 2026 are pre-cyborg and enter no count (row 1194 (3)).
+
+**The field names, coordinated with the mcrk build** (`claude/mcrk-build` `977823a`, not on main):
+- The crack row (`cracks.jsonl`, sole writer `forge_session.mjs` once mcrk lands, `crackRow`) carries `bank_of`, the `id` of
+  the capture row of that turn. The judge's settled row names the same capture by `of`. So the join reads: settled.`of` =
+  capture.`id` = crack.`bank_of`. That is identity on both sides, with no time and no text.
+- `words_src: "teaching_audit_last.prompt"` is the prompt record (the UserPromptSubmit write). `moment` is checked against
+  teaching_gate `MOMENT_KINDS`.
+- The diff is the compiled crack item whose `crack_id` names the crack row (mcrk's notes_compiler stamps `crack_id`). That
+  is also an identity join. The "one diff" requirement of row 1163 (3) stands.
+- The map carries `join: {crack_field: "bank_of", capture_field: "id"}`, `words_src` and `cyborg_from: "2026-08-30"`. A map
+  that lacks any of these reads UNREAD.
+- The witness reads crack rows through the owner's `readCracks` when the tree exports it (the mcrk tree). On main, which
+  has no reader, it reads the file the owner declares, read-only.
+
+**The dependency (named).** Until mcrk lands, main has no `cracks.jsonl` writer. So c18 is a TRUE red on any real day with a
+broken answer ("no crack row carries its turn identity"). This is unchanged from row 1173.
+- `bank_of` is chosen by the crack verb at write time, as the axis's first bank row after his prompt (mcrk `crackRow`). That
+  pick is the organ's, not this witness's: the witness never joins by time.
+- If mcrk renames `bank_of` or `words_src`, this map moves with it. A map change is a witness change, so a fresh red is owed.
+
+Plants for c18, both ways (20 Nov 2026), all as expected:
+- **0:** the crack row is joined by turn identity, with a legal moment, words from the prompt record, and its diff.
+- **0:** his words differ from the bank's copy and the identity matches. No text is compared.
+- **1:** no crack row.
+- **1:** no turn identity on the crack row.
+- **1:** the identity names another capture, while the words equal his (a text join would pass this one).
+- **1:** empty words.
+- **1:** words not from the prompt record.
+- **1:** an illegal moment.
+- **1:** another axis.
+- **1:** no compiled item names the crack row.
+- **2:** no broken answer.
+- **2:** the capture is absent.
+- **2:** a pre-cyborg day.
+- **2:** a map without a broken verdict for a type, or without a join, or no map at all.
+
+```
+node ci/witness/mcap/witness_capability.mjs plants
+CLAUSE C:capability-c18 GREEN · 16/16 plant(s)
+PLANTS mcap · 86 of 86 plant(s) as expected                    (exit 0)
+node ci/witness/mcap/witness_capability.mjs plants --org <clone of claude/mcrk-build 977823a + this map>
+PLANTS mcap · 86 of 86 plant(s) as expected                    (exit 0; crack rows read through mcrk's readCracks)
+node ci/witness/mcap/witness_capability.mjs --org . --base-org <clone of 5759cce>
+GREEN MCAP capability map + witness (c07 c10 c12 c13 c18 c28 c32), RED on base and GREEN on build · 7 clause(s)   (exit 0)
+node ci/witness/mcap/witness_capability.mjs --org <clone of 5759cce> --base-org <clone of 5759cce>
+RED MCAP · C:capability-c07, C:capability-c10, C:capability-c12, C:capability-c13, C:capability-c18, C:capability-c28, C:capability-c32, BOUND   (exit 1)
+node ci/mcap/run_mutants_mcap.mjs
+  RED  C:capability-c18 · the text comparison is restored in place of the turn-identity join (row 1194 (1) refuses it) · clause RED
+run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN   (exit 0)
+```
+
+**FORK mcap-7 · row 1194 (4) "no witness may use a time join" reaches three more clauses.** This build moved only c18, as
+ordered. Three other readers still join by time, because the records they read carry no shared turn identity on main:
+- **c13** keeps the capture rows inside the sitting's `[opened_at, closed_at]`. Capture rows carry no sitting id.
+- **c28** pairs a park turn's gate row with the audit row of the same Stop by session and the neighbouring gate rows' `ts`.
+  The gate row carries no turn id, and the audit row carries none either.
+- **c32** reads "banked after the last banked moment, before the close" by `ts`.
+
+The options:
+- (a) The owners stamp one turn id on every gate, audit and capture row of a turn. That is an organ build, so it belongs
+  to another unit, and these three clauses then join by it.
+- (b) Rule these three as windows, not joins. They filter by an interval and pair no two records by an instant.
+- (c) The three read UNREAD until (a) lands.
+
+This seat does not decide it.

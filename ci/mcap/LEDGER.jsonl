@@ -20,3 +20,9 @@
 {"ts":"2026-11-20T01:31:06Z","act":"unit","cmd":"node ci/witness/mcap/witness_capability.mjs --org . --base-org <clone 5759cce>","last_line":"GREEN MCAP capability map + witness (c07 c10 c12 c13 c18 c28 c32), RED on base and GREEN on build · 7 clause(s)"}
 {"ts":"2026-11-20T01:31:06Z","act":"mutants","cmd":"node ci/mcap/run_mutants_mcap.mjs","last_line":"run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-20T01:31:06Z","act":"checkpoint","cmd":"row 1172 / 1173","last_line":"CHECKPOINT · merged on 5759cce · c18 true red until mcrk · FORK mcap-6"}
+{"ts":"2026-11-20T07:16:10Z","act":"c18-reshape","cmd":"forks row 1194 (1): c18 joins crack.bank_of = capture.id (turn identity), words_src = teaching_audit_last.prompt, legal moment, non-empty words; pre-cyborg rows excluded (row 1194 (3))","last_line":"CLAUSE C:capability-c18 GREEN · 16/16 plant(s)"}
+{"ts":"2026-11-20T07:16:10Z","act":"plants","cmd":"node ci/witness/mcap/witness_capability.mjs plants","last_line":"PLANTS mcap · 86 of 86 plant(s) as expected"}
+{"ts":"2026-11-20T07:16:10Z","act":"plants-mcrk-tree","cmd":"node ci/witness/mcap/witness_capability.mjs plants --org <clone claude/mcrk-build 977823a>","last_line":"PLANTS mcap · 86 of 86 plant(s) as expected"}
+{"ts":"2026-11-20T07:16:10Z","act":"unit","cmd":"node ci/witness/mcap/witness_capability.mjs --org . --base-org <clone 5759cce>","last_line":"GREEN MCAP capability map + witness (c07 c10 c12 c13 c18 c28 c32), RED on base and GREEN on build · 7 clause(s)"}
+{"ts":"2026-11-20T07:16:10Z","act":"mutants","cmd":"node ci/mcap/run_mutants_mcap.mjs","last_line":"run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-20T07:16:10Z","act":"fork","cmd":"row 1194 (4)","last_line":"FORK mcap-7: c13 window, c28 audit pairing and c32 close half still read by ts (no shared turn id on main)"}
