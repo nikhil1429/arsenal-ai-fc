@@ -225,6 +225,48 @@ organism_test: 10 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: 
 Not re-run on the merged tree (named, not claimed): the mutants (last read at `12e7e09`: 7 of 7 RED, control GREEN), the law
 pack, the whole hermetic run, and the neutral legs of the new tip; the architect re-runs once.
 
-CHECKPOINT · STOPPED at 22:30 UTC 19 Nov 2026 · tip = the commit that carries this line (its parent `45f852b`, merge
+SUPERSEDED by section 13 (row 1172) · was: CHECKPOINT · STOPPED at 22:30 UTC 19 Nov 2026 · tip = the commit that carries this line (its parent `45f852b`, merge
 `d74f9d4`) · resolution hunks: package.json organism:selftest tail, organism_test.mjs gates() run bound · resume from: the
 architect's re-run
+
+
+## 13. RE-MERGE OF MAIN 5759cce (row 1172, 20 Nov 2026) — section 12's land/mgat merge reverted
+
+`land/mgat` `1b8c379` read RED on both neutral legs and will not land now, so this branch carried mgat's bytes. Done, in
+order (new commits only; no force push, no history rewrite):
+
+1. `git revert -m 1 d74f9d4` → `b03ad49`. After it, the tree outside `ci/mcov/` equals the pre-merge tip `2684b64`.
+2. Main `5759cce` is an ANCESTOR of `1b8c379`, so after the revert a plain `git merge 5759cce` is a no-op (git counts it as
+   already merged) and would leave main's changes reverted. So the real merge of `2684b64` with `5759cce` was made on a
+   scratch branch (merge `6046fdf`, deleted after), and recorded on this branch as the merge commit `5bb30d0` whose parents
+   are `b03ad49` and `5759cce`, whose tree is `6046fdf`'s outside `ci/mcov/` and this branch's `ci/mcov/`. Checked:
+   `git diff 6046fdf HEAD -- . ':!ci'` is empty, so outside `ci/` the tree equals the pre-merge tip merged with main.
+3. `ci/mcov/BASE` = `5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90` (`cbf7a05`). `git diff --name-only 5759cce HEAD` lists exactly
+   the named files: `ci/mcov/*`, `package.json`, `scripts/organism_test.mjs`, `scripts/study_scope.mjs`.
+
+THE RESOLUTION HUNK (the one conflict with main): `package.json` `organism:selftest`. Main appended `rung_receipt` and mcov its
+four at the same tail. Measured: the two lines were the same string with those tails removed. Resolved as main's line,
+then mcov's four: `… && node scripts/night.mjs selftest && node scripts/rung_receipt.mjs selftest && node scripts/deck_lint.mjs
+selftest && node scripts/home_pin.mjs selftest && node scripts/probe.mjs selftest && node scripts/study_scope.mjs selftest`.
+`scripts/organism_test.mjs` merged with main cleanly (its conflict in section 12 was with mgat's `gates()` hunk, now gone).
+
+```
+$ node ci/mcov/witness_mcov.mjs --org . --base-org <clone of 5759cce>      # re-merged tree, 20 Nov 2026
+BOUND · 9 path(s) differ between the orgs: ci/mcov/BASE, ci/mcov/LEDGER.jsonl, ci/mcov/PROOF.md, ci/mcov/run_mutants_mcov.mjs, ci/mcov/tools/readprobe.mjs, ci/mcov/witness_mcov.mjs, package.json, scripts/organism_test.mjs, scripts/study_scope.mjs
+HOLDS C1 COVERAGE · base RED (orphaned: deck_lint, home_pin, probe, study_scope) · build GREEN (wired, no orphan)
+HOLDS C2 HERMETIC · base RED (not judged green: deck_lint, probe, study_scope) · build GREEN (deck_lint, probe, study_scope judged ok)
+HOLDS C3 LIVE-NAMED · base RED (home_pin neither named nor run) · build GREEN (home_pin named LIVE)
+HOLDS C4 VERB · base RED (exit 0 · last line: study_scope: scope --session <id> | unbound --session <id> [--transcript p] [--prompt "…"] [--entrypoint e]   (read-only; the hook path is t) · build GREEN (exit 0 · last line: study_scope selftest: 61 passed, 0 failed)
+HOLDS C5 ONE RECORD · base RED (deck_lint in 0 suite string(s) · home_pin in 0 suite string(s) · probe in 0 suite string(s) · study_scope in 0 suite string(s)) · build GREEN (one record: package.json only, no member list in the suite file)
+HOLDS C6 SLOW-GREEN · base RED (judged red: FAIL SUITE MEMBER · mcov_slow selftest exits 0 FAIL SUITE MEMBER · mcov_hang selftest exits 0) · build GREEN (slept 120000 ms (the helper default) and was judged ok)
+HOLDS C7 HANG-NAMED · base RED (not named: detail "LIVE selftest capture — not run in the hermetic profile: reads state/heartbeat_config.json" · roll-up does not name a kill) · build GREEN (named: killed by the suite bound (600000 ms) — not an exit code · roll-up names it)
+LAST · no process names the temp dir
+GREEN MCOV the four coverage orphans wired in package.json, each in its profile, a member's kill named · 7 clause(s)
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage    # re-merged tree
+organism_test: 10 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)
+```
+
+Not re-run on this tree (named, not claimed): the mutants (last read at `12e7e09`: 7 of 7 RED, control GREEN), the law pack,
+the whole hermetic run and the neutral legs of the new tip; the architect re-runs once.
+
+CHECKPOINT · STOPPED at 01:40 UTC 20 Nov 2026 · tip = the commit that carries this line (parent `cbf7a05`; re-merge `5bb30d0`; revert `b03ad49`) · base 5759cce · resolution hunk: package.json organism:selftest tail (main's rung_receipt, then mcov's four) · resume from: the architect's re-run
