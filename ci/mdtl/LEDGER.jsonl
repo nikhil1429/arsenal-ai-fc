@@ -7,3 +7,6 @@
 {"ts":"2026-11-20T01:55:00Z","act":"measure","cmd":"node scratchpad/tools/measure_base.mjs . 5759cce","last_line":"detail red beyond BOUND: P1 P2 Q<CANARY> (runner-side); leaving lines naming the canary 0 · naming clause P1 0 · payload has cause false"}
 {"ts":"2026-11-20T01:57:00Z","act":"blocked","cmd":"date -u ...; grep -n ... (one Bash call)","last_line":"approval request unanswered when the worker restarted; the call did not run. Re-run as separate commands, no refusal."}
 {"ts":"2026-11-20T04:05:00Z","act":"write","cmd":"Write ci/mdtl/MDTL_SPEC.md","last_line":"spec written; checkpoint for push"}
+{"ts":"2026-11-20T04:10:00Z","act":"push","cmd":"git push -u origin claude/mdtl-spec","last_line":"* [new branch] claude/mdtl-spec -> claude/mdtl-spec (0891d11)"}
+{"ts":"2026-11-20T04:11:00Z","act":"receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs --fleet mdtl --seat 00 --model claude-opus-5-5","last_line":"Error: Cannot find module '.../campaign-2026-09/tools/effort_receipt.mjs' code MODULE_NOT_FOUND; nothing written"}
+{"ts":"2026-11-20T05:40:00Z","act":"measure","cmd":"curl -s $API/check-runs/136073669243|136073669449/annotations","last_line":"0891d11 node 22 GREEN · node 24 RED, NEW RED WITNESS ‹mpool› · GREEN at head against its BASE (no cause readable)"}

@@ -213,6 +213,16 @@ machine" is measured as the union of three channels:
 Pushed 2026-11-20. The check runs of this tip are read through the public API with curl after the push and recorded in
 `ci/mdtl/LEDGER.jsonl`. A file cannot carry its own verdict (row 1167 (3)).
 
+The record of the previous tip, 0891d11 (2026-11-20, read by curl):
+- node 22, check run 136073669243: **GREEN**. Its only red is the one BASE RED, the selftest-coverage law.
+- node 24, check run 136073669449: **RED**. The one NEW RED is `WITNESS ‹mpool› · GREEN at head against its BASE`, a name
+  with no cause readable.
+
+0891d11 adds only `ci/mdtl/MDTL_SPEC.md` and `ci/mdtl/LEDGER.jsonl`, and `ci/mdtl` holds no witness, so the member never runs
+it. **This is a third no-cause witness red, beside mlv3 and mf2: one leg out of two, at a diff that touches no code.** It goes
+to the architect as evidence for this unit and as an mpool flake or regression to rule. Its clause cannot be named from the
+run, which is exactly what this unit fixes (N6 applies to it too).
+
 ## 9 · THE CANON-COUNT REPLAY (row 1169)
 
 Before each push, the LOAD ZERO BLOCK 7 scan (`organism_test.mjs:1898-1917`) is replayed over `git show <sha>:<path>` for every
