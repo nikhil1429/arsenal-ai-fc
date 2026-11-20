@@ -2867,7 +2867,9 @@ function namingProcs(dir) {
   const out = [];
   for (const p of existsSync("/proc") ? readdirSync("/proc") : []) {
     if (!/^\d+$/.test(p) || Number(p) === process.pid) continue;
-    try { if (readFileSync(`/proc/${p}/cmdline`, "utf8").replace(/\0/g, " ").includes(dir)) out.push(Number(p)); } catch {}
+    let cmd;
+    try { cmd = readFileSync(`/proc/${p}/cmdline`, "utf8"); } catch { continue; }   // that process exited between readdir and the read: it names nothing
+    if (cmd.replace(/\0/g, " ").includes(dir)) out.push(Number(p));
   }
   return out;
 }
@@ -2925,11 +2927,11 @@ async function witnesses() {
       let r;
       try { r = spawnSync(NODE, [join("ci", unit, /** @type {string} */ (witnessFile(dir, unit))), "--org", orgT, "--base-org", baseT], { cwd: wd, env, stdio: ["ignore", fd, fd], timeout: left, windowsHide: true }); }
       finally { closeSync(fd); }
-      for (const p of namingProcs(tmp)) { try { process.kill(p); } catch {} }
+      for (const p of namingProcs(tmp)) { try { process.kill(p); } catch (e) { if (e && e.code !== "ESRCH") console.log(`  witness ‹${unit}› · survivor ${p} not killed (${e.code || e.message})`); } }
       const out = readFileSync(log, "utf8");
       // row 1153 (3) F-9: a witness that never ends (a first boot that never arrives) is killed at the member's own bound
       // and is a NAMED red, never a hang
-      const killed = !!(r.error && /ETIMEDOUT/.test(String(r.error.code || r.error.message))) || (r.status === null && !!r.signal);
+      const killed = !!(r.error && /ETIMEDOUT/.test(String(("code" in r.error ? r.error.code : "") || r.error.message))) || (r.status === null && !!r.signal);
       const j = killed ? { ok: false, last: "(killed at the bound)", left: `killed at the member's bound (${jobMin} min, suite.yml timeout-minutes): the witness never finished` } : judgeLast(out, r.status, unit, boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")));
       const secs = ((Date.now() - u0) / 1000).toFixed(1);
       console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);
@@ -2940,8 +2942,8 @@ async function witnesses() {
       for (const l of out.split(/\r?\n/).map((x) => x.trim()).filter((x) => /^PORT_HELD /.test(x))) assert(name(`measured · ${l}`), true);
       assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
     } finally {
-      for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
-      try { rmSync(tmp, { recursive: true, force: true }); } catch {}
+      for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch (e) { if (e && e.code !== "ENOENT") console.log(`  witness ‹${unit}› · the node_modules link in ${t} was not removed (${e.code || e.message})`); } }
+      try { rmSync(tmp, { recursive: true, force: true }); } catch (e) { console.log(`  witness ‹${unit}› · temp dir ${tmp} left behind (${e.code || e.message})`); }
     }
   }
   const total = ((Date.now() - T0) / 1000).toFixed(1);

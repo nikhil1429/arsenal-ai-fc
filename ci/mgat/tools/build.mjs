@@ -46,6 +46,23 @@ export const EDITS = [
   { id: "RR-ts", file: "scripts/rung_receipt.mjs",
     from: "  if (!sd.ok) return { code: 1, lines: [`rung_receipt: REFUSED · ${sd.why}`] };\n",
     to: "  // `=== false`, not `!sd.ok`: tsconfig.json keeps strict off, and without strictNullChecks a negation does not narrow a\n  // true/false discriminant, so `sd.why` read as absent (TS2339). The equality narrows; the behaviour is the same.\n  if (sd.ok === false) return { code: 1, lines: [`rung_receipt: REFUSED · ${sd.why}`] };\n" },
+  // forks row 1174 (1) — unit ms1's five rises in scripts/organism_test.mjs (f052188, 0b3f8a8), the gate read hermetically for the first
+  // time by this unit's LIVE exit. Each empty catch gets its HANDLING (no ignore comment); the type diagnostic is repaired at its cause.
+  { id: "MS-proc", file: "scripts/organism_test.mjs",
+    from: "    try { if (readFileSync(`/proc/${p}/cmdline`, \"utf8\").replace(/\\0/g, \" \").includes(dir)) out.push(Number(p)); } catch {}\n",
+    to: "    let cmd;\n    try { cmd = readFileSync(`/proc/${p}/cmdline`, \"utf8\"); } catch { continue; }   // that process exited between readdir and the read: it names nothing\n    if (cmd.replace(/\\0/g, \" \").includes(dir)) out.push(Number(p));\n" },
+  { id: "MS-kill", file: "scripts/organism_test.mjs",
+    from: "      for (const p of namingProcs(tmp)) { try { process.kill(p); } catch {} }\n",
+    to: "      for (const p of namingProcs(tmp)) { try { process.kill(p); } catch (e) { if (e && e.code !== \"ESRCH\") console.log(`  witness ‹${unit}› · survivor ${p} not killed (${e.code || e.message})`); } }\n" },
+  { id: "MS-code", file: "scripts/organism_test.mjs",
+    from: "const killed = !!(r.error && /ETIMEDOUT/.test(String(r.error.code || r.error.message)))",
+    to: "const killed = !!(r.error && /ETIMEDOUT/.test(String((\"code\" in r.error ? r.error.code : \"\") || r.error.message)))" },
+  { id: "MS-unlink", file: "scripts/organism_test.mjs",
+    from: "      for (const t of [\"org\", \"base\"]) { try { unlinkSync(join(tmp, t, \"node_modules\")); } catch {} }\n",
+    to: "      for (const t of [\"org\", \"base\"]) { try { unlinkSync(join(tmp, t, \"node_modules\")); } catch (e) { if (e && e.code !== \"ENOENT\") console.log(`  witness ‹${unit}› · the node_modules link in ${t} was not removed (${e.code || e.message})`); } }\n" },
+  { id: "MS-rm", file: "scripts/organism_test.mjs",
+    from: "      try { rmSync(tmp, { recursive: true, force: true }); } catch {}\n",
+    to: "      try { rmSync(tmp, { recursive: true, force: true }); } catch (e) { console.log(`  witness ‹${unit}› · temp dir ${tmp} left behind (${e.code || e.message})`); }\n" },
 ];
 
 // one mutant per witness clause (see MGAT_SPEC.md §5)
@@ -59,6 +76,8 @@ export const MUTANTS = {
   M7: { why: "the hermetic gates mode returns before it runs the gate", patch: [["  const half = PROFILE === \"hermetic\";\n", "  const half = PROFILE === \"hermetic\";\n  if (half) return;\n"]] },
   M8: { why: "rung_receipt's unused sep import left in (no-unused-vars rises by one)", drop: ["RR-sep"] },
   M9: { why: "rung_receipt's negation left in (the TS2339 diagnostic returns)", drop: ["RR-ts"] },
+  M10: { why: "ms1's /proc read catch left empty (no-empty rises by one)", drop: ["MS-proc"] },
+  M11: { why: "ms1's r.error.code left unnarrowed (the TS2339 diagnostic returns)", drop: ["MS-code"] },
 };
 
 /** apply EDITS (minus a mutant's drops, plus its patches) inside tree d */
