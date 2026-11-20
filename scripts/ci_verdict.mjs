@@ -30,16 +30,60 @@ import { pathToFileURL } from "node:url";
 const DEFAULT_REPO = "nikhil1429/arsenal-ai-fc";
 const VERDICT_TITLE = "B1 VERDICT";
 const LEG = /^npm test · node (\d+)$/;
+const LAWPACK_LINE = "ORGANISM_TEST_LAWPACK";   // organism_test.mjs's law pack machine line (unit mlaw, forks row 1137 (2) F3 A)
+
+/** lawpack.mjs's frozen BASELINE, read from that file (its own export), or null when it cannot be read
+ *  @returns {Promise<Record<string, number> | null>} */
+export async function frozenBaseline(href = new URL("./lawpack.mjs", import.meta.url).href) {
+  try {
+    const b = (await import(href)).BASELINE;
+    return b && typeof b === "object" && Object.values(b).every((v) => Number.isSafeInteger(v)) ? { ...b } : null;
+  } catch { return null; }
+}
 
 /** the machine line organism_test.mjs prints, parsed; null when the run never reached it (no headline)
- *  @param {string} text @returns {{ pass: number, fail: number, reds: string[], live: string[], profile: string } | null} */
+ *  @param {string} text @returns {{ pass: number, fail: number, reds: string[], live: string[], profile: string, lawpack: Record<string, number> | null } | null} */
 export function parseSuite(text) {
   const line = String(text).split(/\r?\n/).find((l) => l.startsWith("ORGANISM_TEST_VERDICT "));
   if (!line) return null;
   let j = null;
   try { j = JSON.parse(line.slice("ORGANISM_TEST_VERDICT ".length)); } catch { return null; }
   if (!j || !Array.isArray(j.reds)) return null;
-  return { pass: Number(j.pass) || 0, fail: Number(j.fail) || 0, reds: j.reds.map(String), live: Array.isArray(j.live) ? j.live.map(String) : [], profile: String(j.profile || "full") };
+  return { pass: Number(j.pass) || 0, fail: Number(j.fail) || 0, reds: j.reds.map(String), live: Array.isArray(j.live) ? j.live.map(String) : [], profile: String(j.profile || "full"), lawpack: parseLawpack(text) };
+}
+
+/** THE LAW PACK'S COUNTS (unit mlaw, forks row 1137 (2) F3 A): organism_test.mjs's `ORGANISM_TEST_LAWPACK {"<law>":<n>,…}` line,
+ *  or null when the run printed none (a base older than mlaw, or a run that never reached the law pack's gate)
+ *  @param {string} text @returns {Record<string, number> | null} */
+export function parseLawpack(text) {
+  const line = String(text).split(/\r?\n/).find((l) => l.startsWith(`${LAWPACK_LINE} `));
+  if (!line) return null;
+  let j = null;
+  try { j = JSON.parse(line.slice(LAWPACK_LINE.length + 1)); } catch { return null; }
+  if (!j || typeof j !== "object" || Array.isArray(j)) return null;
+  /** @type {Record<string, number>} */ const c = {};
+  for (const [k, v] of Object.entries(j)) if (Number.isSafeInteger(v) && v >= 0) c[k] = v;
+  return c;
+}
+
+/** A RISE IS A NEW RED, BY NUMBER (unit mlaw, forks row 1137 (2) F3 A). A law already over its baseline that rises again carries
+ *  the SAME folded assert name on both sides, so by name it is "a base red" forever (ci/mlaw/MLAW_SPEC.md §1.5). Here every law
+ *  whose count is higher at the head than at the merge base is a NEW red named by law and numbers. The base's count is its own
+ *  machine line; a base with NO such line is compared against `baseline` — lawpack.mjs's frozen BASELINE, read from that file by
+ *  the caller, never typed. A law the base does not count compares against the baseline's, else 0 (nothing is grandfathered).
+ *  Stricter only: an equal or a lower count adds nothing. No head line ⇒ nothing to judge; a base with no line and no readable
+ *  baseline is itself a NEW red (never GREEN by absence).
+ *  @param {Record<string, number> | null | undefined} headLp @param {Record<string, number> | null | undefined} baseLp
+ *  @param {Record<string, number> | null} [baseline] @returns {string[]} */
+export function lawpackRises(headLp, baseLp, baseline = null) {
+  if (!headLp) return [];
+  if (!baseLp && !baseline) return [`LAW PACK BASELINE UNREADABLE · the base printed no ${LAWPACK_LINE} line and scripts/lawpack.mjs's BASELINE could not be read`];
+  const out = [];
+  for (const [law, h] of Object.entries(headLp)) {
+    const b = baseLp && law in baseLp ? baseLp[law] : baseline && Number.isSafeInteger(baseline[law]) ? baseline[law] : 0;
+    if (h > b) out.push(`LAW PACK ROSE · ${law} ${b} → ${h}${baseLp ? "" : " (the base printed no law pack line: against lawpack.mjs BASELINE)"}`);
+  }
+  return out;
 }
 
 /** a member's identity across two trees: its name with every digit run folded @param {string} n */
@@ -62,11 +106,14 @@ export function newInInstrument(name, baseSrc) {
   return !String(baseSrc).replace(/\r\n/g, "\n").includes(open);
 }
 
-export function judge(head, base, baseSrc = "") {
+/** @param {ReturnType<typeof parseSuite>} head @param {ReturnType<typeof parseSuite>} base @param {string} [baseSrc]
+ *  @param {Record<string, number> | null} [baseline] lawpack.mjs's frozen BASELINE, for a base with no law pack line */
+export function judge(head, base, baseSrc = "", baseline = null) {
   if (!head) return { v: "RED", why: "the head run produced no headline line", fresh: [], old: [], fixed: [] };
   if (!base) return { v: "RED", why: "the merge-base run produced no headline line (no base to compare against)", fresh: [...head.reds], old: [], fixed: [] };
   const baseKeys = new Set(base.reds.map(keyOf)), headKeys = new Set(head.reds.map(keyOf));
   const fresh = head.reds.filter((n) => !baseKeys.has(keyOf(n)) || newInInstrument(n, baseSrc));
+  fresh.push(...lawpackRises(head.lawpack, base.lawpack, baseline));
   const old = head.reds.filter((n) => !fresh.includes(n));
   const fixed = base.reds.filter((n) => !headKeys.has(keyOf(n)));
   return { v: fresh.length ? "RED" : "GREEN", why: fresh.length ? `${fresh.length} member(s) red that are not red at the merge base` : "no member red that is not red at the merge base", fresh, old, fixed };
@@ -90,8 +137,8 @@ export function annotate(level, title, names, cap = 10) {
 }
 
 /** every line `compare` prints, in order: the reds, then the ONE verdict annotation, then the plain verdict line */
-export function compareLines(head, base, label, headSha = "", baseSha = "", baseSrc = "") {
-  const j = judge(head, base, baseSrc);
+export function compareLines(head, base, label, headSha = "", baseSha = "", baseSrc = "", baseline = null) {
+  const j = judge(head, base, baseSrc, baseline);
   const lines = [];
   lines.push(...annotate("error", `NEW RED · ${label}`, j.fresh, j.v === "RED" ? 9 : 10));
   lines.push(...annotate("warning", `BASE RED · ${label}`, j.old));
@@ -103,9 +150,20 @@ export function compareLines(head, base, label, headSha = "", baseSha = "", base
   return { lines, verdict: j.v };
 }
 
-/** THE LEGS THE VERDICT NEEDS (unit mrdr, forks row 1022 (1)): suite.yml's matrix `node: [22, 24]`, one leg per node. The
- *  selftest reads suite.yml's own matrix line and REDS if this list and that line ever disagree, so it is checked, never trusted. */
-export const REQUIRED_LEGS = ["npm test · node 22", "npm test · node 24"];
+/** THE LEGS THE VERDICT NEEDS (unit mrdr, forks row 1022 (1)), DERIVED from their one owner (unit mlaw, forks row 1137 (1) F1 B):
+ *  suite.yml's own job name line (`name: <prefix>${{ matrix.node }}`) and its matrix line (`node: [ … ]`), one leg per node. The
+ *  typed copy this replaces was the law pack's jugad-literal-subject-list finding 91 (ci/mlaw/MLAW_SPEC.md §1.3 on claude/mlaw-spec).
+ *  A suite.yml with no such lines derives NO leg, and the reader then answers NONE — never GREEN by an empty list.
+ *  @param {string} yml @returns {string[]} */
+export function legsOf(yml) {
+  const t = String(yml).replace(/\r\n/g, "\n");
+  const name = /^\s*name:\s*(.*?)\$\{\{\s*matrix\.node\s*\}\}\s*$/m.exec(t);
+  const matrix = /^\s*node:\s*\[([^\]]*)\]/m.exec(t);
+  if (!name || !matrix) return [];
+  return matrix[1].split(",").map((s) => s.trim()).filter(Boolean).map((n) => `${name[1]}${n}`);
+}
+const SUITE_YML = new URL("../.github/workflows/suite.yml", import.meta.url);
+export const REQUIRED_LEGS = Object.freeze(legsOf((() => { try { return readFileSync(SUITE_YML, "utf8"); } catch { return ""; } })()));
 
 /** ONE run per leg NAME, the NEWEST (the highest id: a re-run or a second check suite on the same sha — a sha pushed to
  *  two branches — mints a later run), in REQUIRED_LEGS order; every required leg with no run is named in `missing`.
@@ -176,6 +234,23 @@ function selftest() {
   const h = judge(parseSuite(suite(["B1 PLANTED RED · new", "an old assert of the base · 2", "SUITE MEMBER · fsrs selftest exits 0"])), parseSuite(suite(["B1 PLANTED RED · new", "an old assert of the base · 2", "SUITE MEMBER · fsrs selftest exits 0"])), src);
   ok("judge: under the HEAD's instrument, an assert the base's own instrument never had is NEW even when red on both sides; an old assert and a per-member line stay old", h.v === "RED" && h.fresh.length === 1 && h.fresh[0] === "B1 PLANTED RED · new" && h.old.length === 2);
   ok("judge: no head headline is RED; no base headline is RED (no silent pass on a dead base)", judge(null, parseSuite(suite([]))).v === "RED" && judge(parseSuite(suite([])), null).v === "RED");
+  // unit mlaw (forks row 1137 (2) F3 A): a law pack RISE is a new red BY NUMBER, planted both ways
+  const LP = "LAW PACK — every rule file present, and no law's finding count rose (a gate may only get stricter)";
+  const lp = (reds, counts) => `${suite(reds)}\n${counts ? `${LAWPACK_LINE} ${JSON.stringify(counts)}\n` : ""}`;
+  ok("parseLawpack reads the law pack machine line (CRLF too); a run with none is null",
+    JSON.stringify(parseLawpack(lp([], { a: 3 }))) === '{"a":3}' && JSON.stringify(parseLawpack(lp([], { a: 3 }).replace(/\n/g, "\r\n"))) === '{"a":3}' && parseLawpack(suite([])) === null && parseSuite(lp([], { a: 3 })).lawpack.a === 3);
+  const rise = judge(parseSuite(lp([LP], { jugad: 92, dc: 7 })), parseSuite(lp([LP], { jugad: 91, dc: 7 })));
+  ok("PLANTED mlaw · the law pack red on BOTH sides (one folded name) and a law RISES 91 → 92: RED, the rise a NEW red named by law and numbers",
+    rise.v === "RED" && rise.fresh.length === 1 && rise.fresh[0] === "LAW PACK ROSE · jugad 91 → 92" && rise.old.length === 1);
+  const fall = judge(parseSuite(lp([LP], { jugad: 91, dc: 7 })), parseSuite(lp([LP], { jugad: 92, dc: 7 })));
+  const same = judge(parseSuite(lp([LP], { jugad: 92 })), parseSuite(lp([LP], { jugad: 92 })));
+  ok("PLANTED mlaw · a FALL or an equal count adds no red (stricter only): GREEN, the law pack red still a base red", fall.v === "GREEN" && same.v === "GREEN" && fall.old.length === 1);
+  const noBase = (b) => judge(parseSuite(lp([], { jugad: 91 })), parseSuite(lp([], null)), "", b);
+  ok("PLANTED mlaw · a base with NO law pack line is compared against lawpack.mjs's BASELINE: above it RED, at it GREEN, no baseline readable RED",
+    noBase({ jugad: 90 }).v === "RED" && /^LAW PACK ROSE · jugad 90 → 91 /.test(noBase({ jugad: 90 }).fresh[0] || "") && noBase({ jugad: 91 }).v === "GREEN"
+    && noBase(null).v === "RED" && /^LAW PACK BASELINE UNREADABLE/.test(noBase(null).fresh[0] || ""));
+  ok("PLANTED mlaw · a law the base does not count is judged against the baseline, else 0 (nothing grandfathered); no head line judges nothing",
+    lawpackRises({ fresh: 1 }, { jugad: 90 }).length === 1 && lawpackRises({ fresh: 0 }, { jugad: 90 }).length === 0 && lawpackRises(null, null).length === 0);
   const many = Array.from({ length: 14 }, (_, i) => `red-${i}`);
   const a = annotate("warning", "BASE RED", many);
   ok("annotate: 14 reds ride 10 annotations, the tenth carrying the last five — every red emitted", a.length === 10 && many.every((n) => a.some((l) => l.includes(n))) && a[9].includes("red-13"));
@@ -210,6 +285,16 @@ function selftest() {
     try { matrix = (readFileSync(new URL("../.github/workflows/suite.yml", import.meta.url), "utf8").match(/^\s*node:\s*\[([^\]]*)\]/m) || ["", ""])[1]; } catch { matrix = ""; }
     const nodes = matrix.split(",").map((s) => s.trim()).filter(Boolean);
     ok("mrdr · REQUIRED_LEGS equals suite.yml's own matrix line, one leg per node (checked, never trusted)", nodes.length > 0 && JSON.stringify(nodes.map((n) => `npm test · node ${n}`)) === JSON.stringify(REQUIRED_LEGS));
+    const FB = await frozenBaseline();
+    ok("mlaw · lawpack.mjs's frozen BASELINE is readable from this file (the base-with-no-line comparison has its numbers)",
+      !!FB && Number.isSafeInteger(FB["jugad-literal-subject-list"]) && (await frozenBaseline("file:///nonexistent/lawpack.mjs")) === null);
+    // unit mlaw (forks row 1137 (1) F1 B): the legs are DERIVED, so the derivation is planted both ways
+    const yml = (m, nm = "    name: npm test · node ${{ matrix.node }}") => `jobs:\n  t:\n${nm}\n    strategy:\n      matrix:\n${m}\n`;
+    const three = legsOf(yml("        node: [22, 24, 26]")), crlf = legsOf(yml("        node: [22, 24]").replace(/\n/g, "\r\n"));
+    ok("PLANTED mlaw · a matrix that gains a node gains a leg (derived from suite.yml, never typed), CRLF-proof",
+      JSON.stringify(three) === JSON.stringify(["npm test · node 22", "npm test · node 24", "npm test · node 26"]) && JSON.stringify(crlf) === JSON.stringify(["npm test · node 22", "npm test · node 24"]));
+    ok("PLANTED mlaw · a suite.yml with no matrix line or no job name line derives NO leg (the reader then says NONE, never GREEN)",
+      legsOf(yml("")).length === 0 && legsOf(yml("        node: [22]", "    name: npm test")).length === 0 && legsOf("").length === 0);
     console.log(`\nci_verdict selftest: ${pass} passed, ${fail} failed`);
     console.log(fail ? "SELFTEST FAILED" : "ALL CHECKS PASSED");
     return fail ? 1 : 0;
@@ -224,7 +309,10 @@ async function main() {
   if (mode === "compare") {
     const read = (p) => { try { return p ? readFileSync(p, "utf8") : ""; } catch { return ""; } };   // an unreadable run is a run with no headline
     // --base-instrument: the base's OWN organism_test.mjs, passed only when the base was measured by the head's instead
-    const { lines, verdict } = compareLines(parseSuite(read(flag("head"))), parseSuite(read(flag("base"))), flag("label") || "suite", flag("head-sha") || "", flag("base-sha") || "", read(flag("base-instrument")));
+    const head = parseSuite(read(flag("head"))), base = parseSuite(read(flag("base")));
+    // unit mlaw (F3 A): only a base with no law pack line needs the frozen baseline, read from lawpack.mjs itself (never typed here)
+    const baseline = head && head.lawpack && base && !base.lawpack ? await frozenBaseline() : null;
+    const { lines, verdict } = compareLines(head, base, flag("label") || "suite", flag("head-sha") || "", flag("base-sha") || "", read(flag("base-instrument")), baseline);
     for (const l of lines) console.log(l);
     process.exitCode = verdict === "GREEN" ? 0 : 1;
     return;
