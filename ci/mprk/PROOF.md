@@ -176,3 +176,33 @@ message.
 
 After each merge the witness ran on the merged LF tree with the bound judged against the parent (`GREEN MPRK … · 15 clause(s)`),
 the parent main alone read RED on the 14 clauses, and the mutants read `15 of 15 … · control GREEN` (ledger rows).
+
+## 9. The probe red on d2d9383's node 24 leg — (b), not this unit's bytes (measured 20 Nov 2026)
+
+The neutral machine at d2d9383 (base 6a6bdff): node 24 job 136344033976 read `FAIL SUITE MEMBER · probe selftest exits 0`
+and its roll-up; node 22 job 136344034295 read the same member `ok`. Both runners are Windows Server 2025. The member
+prints no detail line in the job log.
+
+- **The same red on main's own tip.** 6a6bdff's node 22 job 136341665594 reads `FAIL SUITE MEMBER · probe selftest exits 0`
+  and `B1_VERDICT node 22 RED`, with no mprk byte in that tree. Its node 24 job 136341665059 reads the member `ok`. The
+  member flips leg by leg on a tree that does not change, so the red follows the runner, not a diff.
+- **Our earlier tips:** c00dd6c read it `ok` on both legs (jobs 136292881859, 136292881395), and so did main 6a6bdff's
+  first pair (136292644270, 136292643782).
+- **What probe reads.** Its selftest plants its own fixture repos under the temp dir (`w(path.join(REPO, ".gitignore"), …)`
+  at `scripts/probe.mjs:1374`, `:1701`, `:1964`, `:2162`). It reads no skill file, no `package.json` and no `.gitignore` of
+  the tree under test, and none of this unit's paths. It spawns real git, grep, sed and wc segments under a per-segment
+  timeout (`SEG_TIMEOUT_MS`, `:205`), so it is clock-bound on a slow runner.
+- **This container, the merged tree and main, node 22.23.5 and node 24.22.3 (CI's node 24 version), three runs each:**
+
+```
+t_m (d2d9383 tree)  node 22  run1/2/3  exit 0 · probe selftest: 176/176 ok · GREEN
+t_main (6a6bdff)    node 22  run1/2/3  exit 0 · probe selftest: 176/176 ok · GREEN
+t_m (d2d9383 tree)  node 24  run1/2/3  exit 0 · 176 PASS · 0 FAIL
+t_main (6a6bdff)    node 24  run1/2/3  exit 0 · 176 PASS · 0 FAIL
+ORGANISM_TEST_PROFILE=hermetic node24 scripts/organism_test.mjs suites (LF clone of d2d9383):
+  ok   SUITE MEMBER · probe selftest exits 0
+  organism_test: 62 passed, 2 failed · UNRULED 2   (the two are this container's base reds: sandbox selftest and its roll-up)
+```
+
+Verdict: **(b)**. The red is probe's own clock on the Windows runner, with the same red on main 6a6bdff's own run. Nothing
+here was changed and `scripts/probe.mjs` is untouched. The runner carries it to the architect.
