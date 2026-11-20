@@ -43,6 +43,8 @@ const NODE = process.execPath;
 
 let pass = 0, fail = 0;
 const fails = [], passed = [];
+/** unit mdtl: one entry per failing witness clause, `<red name> · <ID> · <text>` (witness_cause.mjs causeText) @type {string[]} */
+const causes = [];
 const assert = (name, cond, detail) => {
   if (liveAssert(name)) return;   // B1 (b): a LIVE member under the hermetic profile is named, never judged
   if (cond) { pass++; passed.push(name); console.log(`  ok   ${name}`); }
@@ -2889,6 +2891,7 @@ async function witnesses() {
   const headSha = spawnSync("git", ["-C", ROOT, "rev-parse", "--verify", "-q", "HEAD"], { encoding: "utf8", windowsHide: true });
   const head = String(headSha.stdout || "").trim();
   const nm = join(ROOT, "node_modules");
+  const wc = existsSync(join(HERE, "witness_cause.mjs")) ? await import("./witness_cause.mjs") : null;
   for (const unit of units) {
     const u0 = Date.now();
     const name = (what) => `WITNESS ‹${unit}› · ${what}`;
@@ -2936,6 +2939,15 @@ async function witnesses() {
       // row 1153 (2) F-7 A: every PORT_HELD machine line the witness prints rides as a named measurement line
       for (const l of out.split(/\r?\n/).map((x) => x.trim()).filter((x) => /^PORT_HELD /.test(x))) assert(name(`measured · ${l}`), true);
       assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
+      // unit mdtl (forks row 1186 F1 A · F2 R2): the red's CAUSE, built by witness_cause.mjs from public bytes only (a clause id
+      // that is a literal of the witness's own tracked source, its header claim line, the member's literals); it rides the
+      // machine line alone, so the judged name and detail above stay byte-identical (every KNOWN_RED entry keeps its match).
+      // The import is guarded by the module's presence: a base tree measured by this instrument has no witness_cause.mjs.
+      if (!j.ok && wc) {
+        const wsrc = readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8");
+        const kind = killed ? "killed" : j.left.startsWith(wc.MEMBER.GRAMMAR) ? "grammar" : "clauses";
+        for (const c of wc.causesOf({ left: j.left, src: wsrc, kind, code: r.status })) causes.push(wc.causeText(name("GREEN at head against its BASE"), c));
+      }
     } finally {
       for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
       try { rmSync(tmp, { recursive: true, force: true }); } catch {}
@@ -3032,7 +3044,7 @@ async function main() {
   console.log(`\nORGANISM_TEST_VERDICT ${JSON.stringify({ modes: chosen, pass, fail, exit: v.exit,
     ruled: v.ruled.map((f) => ({ assert: f.name, row: f.entry.row, owner: f.entry.owner })),
     unruled: v.unruled.map((f) => ({ assert: f.name, detail: f.detail || null })), stale: v.stale, invalid: v.invalid,
-    profile: PROFILE, reds: fails.map((f) => f.name), live: lived })}`);
+    profile: PROFILE, reds: fails.map((f) => f.name), live: lived, ...(causes.length ? { causes } : {}) })}`);
   console.log(`\n${"=".repeat(70)}\norganism_test: ${pass} passed, ${fail} failed · ruled ${v.ruled.length} · UNRULED ${v.unruled.length}`
     + (v.stale.length ? ` · STALE ${v.stale.length}` : "") + (v.invalid.length ? ` · INVALID ${v.invalid.length}` : "")
     + (PROFILE === "hermetic" ? ` · LIVE ${lived.length} (hermetic: named, not run)` : ""));
