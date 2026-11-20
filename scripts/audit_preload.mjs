@@ -88,7 +88,6 @@ if (!COLLAR && !TRACE) {
   };
 
   const SANDBOX = COLLAR ? norm(COLLAR) : "";
-  const TMP = norm(os.tmpdir());
   // Where the audit's own bookkeeping lives; always writable, never traced as a
   // finding — otherwise the tracer would trip its own collar on its first line.
   const SELF_FILES = [TRACE, TRIPWIRE, HEARTBEAT].filter(Boolean).map(norm);
@@ -125,10 +124,13 @@ if (!COLLAR && !TRACE) {
     if (!COLLAR) return true;
     if (isSelf(p)) return true;
     if (under(p, SANDBOX)) return true;
-    // os.tmpdir() is permitted because several organs legitimately mkdtemp there
-    // (claudegen builds a fake %APPDATA% to walk the npm-shim lane). A temp write
-    // cannot reach live state or the network, so it is recorded, never denied.
-    if (under(p, TMP)) return true;
+    // unit mherm F1 B (forks row 1157 (2), 20 Nov 2026) — THE TEMP ALLOWANCE IS DROPPED, a stricter gate. It read
+    // `if (under(p, TMP)) return true` with TMP = os.tmpdir(): several organs legitimately mkdtemp (claudegen builds a fake
+    // %APPDATA% to walk the npm-shim lane). But the parent's temp dir can hold the REAL tree (a fresh clone in %TEMP% or
+    // /tmp), and then the canary's live writes were allowed. sandbox.mjs now hands every child the sandbox's own .tmp as
+    // TMPDIR/TEMP/TMP, so an organ's mkdtemp lands under SANDBOX; and a traced sandbox run measured ZERO writes outside the
+    // sandbox with the allowance still in place (ci/mherm/PROOF.md, F1 B). So a temp write outside the sandbox is now an
+    // escape like any other: denied and tripped (the `TMP = os.tmpdir()` const it read is gone with it).
     return false;
   };
 
