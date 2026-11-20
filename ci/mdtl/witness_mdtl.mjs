@@ -181,8 +181,9 @@ else {
   // D2
   const L2 = leaving(O.out, O.cmp, O.rd);
   const hits = L2.filter((l) => l.includes(HEX)).length;
+  const onRunner = lines(O.out).filter((l) => l.includes(HEX)).length;   // the plant is real: the canary DID reach the runner
   const wB = newRedOf(O.cmp, "toyb").includes(esc("cause · WITHHELD · ")) && O.rd.includes("WITNESS ‹toyb› · GREEN at head against its BASE — cause: WITHHELD · ");
-  clause("D2", hits === 0 && wB, `${L2.length} leaving line(s) · ${hits} naming the canary · toy B's WITHHELD cause readable ${wB}`);
+  clause("D2", onRunner > 0 && hits === 0 && wB, `${onRunner} runner line(s) carry the canary · ${L2.length} leaving line(s) · ${hits} naming it · toy B's WITHHELD cause readable ${wB}`);
   // D3
   const jo = judged(O.out), jb = judged(B.out);
   const any = JSON.parse(jo).got.length > 0;
