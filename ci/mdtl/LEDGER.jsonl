@@ -1,0 +1,13 @@
+{"ts":"2026-11-20","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mdtl-build FETCH_HEAD; git rev-parse HEAD","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20","act":"spec","cmd":"git show 9d5c9b8:ci/mdtl/MDTL_SPEC.md","last_line":"read whole (ledger + named siblings); shape A + R2 per row 1186"}
+{"ts":"2026-11-20","act":"selftest","cmd":"node scripts/witness_cause.mjs selftest","last_line":"ALL CHECKS PASSED (11 passed, 0 failed)"}
+{"ts":"2026-11-20","act":"selftest","cmd":"node scripts/ci_verdict.mjs selftest","last_line":"ALL CHECKS PASSED (26 passed, 0 failed; base 21)"}
+{"ts":"2026-11-20","act":"witness-build","cmd":"node ci/mdtl/witness_mdtl.mjs --org <LF build> --base-org <LF 5759cce>","last_line":"GREEN MDTL a red witness leaves its failing clause readable, from public bytes only · 8 clause(s)"}
+{"ts":"2026-11-20","act":"witness-base","cmd":"node ci/mdtl/witness_mdtl.mjs --org <LF 5759cce> --base-org <LF 5759cce>","last_line":"RED MDTL · D1 D2 D5 BOUND"}
+{"ts":"2026-11-20","act":"mutants","cmd":"node ci/mdtl/run_mutants_mdtl.mjs","last_line":"run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-20","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (5759cce worktree)","last_line":"organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-20","act":"suite-build","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 150 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-20","act":"lawpack","cmd":"node scripts/lawpack.mjs gate (base and build)","last_line":"lawpack · 1940 raw match(es) · findings identical both sides (jugad 93 vs frozen 90 RED on both)"}
+{"ts":"2026-11-20","act":"models","cmd":"node scripts/models.mjs check","last_line":"exit 0 · literal model names outside models.mjs: 0"}
+{"ts":"2026-11-20","act":"ci-read","cmd":"curl -s $API/commits/ce580e2/check-runs","last_line":"136131659640 npm test · node 22 completed cancelled · 136131659306 npm test · node 24 queued"}
+{"ts":"2026-11-20","act":"ci-read","cmd":"curl -s $API/commits/b644691/check-runs","last_line":"136132702741 npm test · node 22 queued · 136132702424 npm test · node 24 queued"}
