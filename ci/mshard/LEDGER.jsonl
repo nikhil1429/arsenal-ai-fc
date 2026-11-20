@@ -1,0 +1,2 @@
+{"ts":"2026-11-20T06:38:42.308Z","act":"cut","cmd":"git fetch origin main; git checkout -b claude/mshard-build 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 (FETCH_HEAD)","last_line":"base 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T06:38:42.308Z","act":"spec-read","cmd":"git show c82a0e6:ci/mshard/MSHARD_SPEC.md; git show c82a0e6:ci/mshard/LEDGER.jsonl; git show 9d5c9b8:ci/mdtl/MDTL_SPEC.md","last_line":"spec 14 clauses, 7 forks; mdtl cause channel = causes[] on ORGANISM_TEST_VERDICT"}
