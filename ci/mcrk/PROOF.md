@@ -190,3 +190,24 @@ the door.
   state read the lander makes.
 - FORK mcrk-b4 · the names guard is not run on the gitignored crack row (§6). If his words should be guarded before they
   are even written privately, the guard must reach the pacer without growing its hook closure (a new owner-side export).
+
+## 10 · ROW 1194 (1) — c18 BY TURN IDENTITY: STOPPED, A FORK (20 Nov 2026)
+
+The ruling: join the crack row to its capture by the turn identity both records carry, never by time or text. It also
+says: if no shared turn identity exists today, stop and name the fork. **None exists.** By command, at this tip:
+
+- **The prompt record** (`scripts/teaching_audit.mjs:1635-1653`, promptHook) writes `prompt: {text, step, moments,
+  moments_by_kind, reps, session_id, at}`. `session_id` is the hook's Claude Code session, which spans every turn of a
+  sitting, so it is not a turn. `at` is a clock.
+- **The bank capture** (`scripts/gaffer_brain.mjs:1360-1398`) writes `{v, kind:"capture", id, ts, day, type, ref,
+  concept, label, gut, asked, standard, key, extra, axis, latency_ms, note, surface, probe, register, spoken, hedges}`.
+  It carries no session id, no turn id and no prompt stamp, and its `id` is `type:ref:<capture ISO>`, a clock.
+  `grep -n "session_id\|prompt_at\|turn_id\|uuid" scripts/gaffer_brain.mjs` finds no such field on the row.
+- They share only concept, axis and clocks. Row 1194 (4) forbids the clocks, and concept/axis is not one turn.
+
+**FORK mcrk-4c · a turn identity has no carrier.** Some owner must mint a per-turn id and both records must carry it.
+For example: teaching_audit's promptHook stamps a `turn_id` into `prompt`, the bank line passes it to
+`gaffer_brain.mjs capture`, and the crack row copies it from `prompt`. Two of those three are outside this seat's paths
+(`teaching_audit.mjs` and `gaffer_brain.mjs`), so the build stays as it was. `words` is still `prompt.text` byte for
+byte. The crack row already carries `prompt_session_id` and `prompt_at`. No join clause was added, so as not to invent
+one. CHECKPOINT · STOPPED at 2026-11-20T07:10Z on row 1194 (1) · resume from the architect's ruling on FORK mcrk-4c.
