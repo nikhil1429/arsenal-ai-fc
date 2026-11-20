@@ -40,7 +40,7 @@
 //                words and crack_id, and galat/sahi deep-equal the base build's for the same ex
 //   K6 NODIFF    a row whose turn holds no ```diff, plus a later diff with no row: an item with galat [] and sahi [] and the
 //                named gap; the row-less diff item carries no moment
-//   K7 C18       `crack` on a real plant, then compileDay over a planted archive root: the mcap c18 predicate
+//   K7 C18       axis b (pehle_guess), then axis c (check_q); `crack` on that plant, then compileDay over a planted archive root: the mcap c18 predicate
 //                (b37ebfc:ci/witness/mcap/witness_capability.mjs:205-225, replicated — ci/witness/mcap/ is not touched)
 //                finds a live note of the day with a crack item: legal moment, fold(words) === fold(his reply), one diff
 //   K8 CARRIERS  `contract` on an open session names `forge_session.mjs crack`; forge/SKILL.md, learn/SKILL.md and
@@ -214,7 +214,9 @@ await clause("K4", () => {
 });
 
 const T0 = Date.now() - 3600000, iso = (m) => new Date(T0 + m * 60000).toISOString();
-const EXK = [{ role: "teacher", at: iso(1), rid: "r-k1", text: "Ek word kitne tokens banata hai?" }, { role: "him", at: iso(2), rid: "r-k2", text: SAID },
+// the archive's copy of his reply differs from the prompt record by whitespace (as a harness copy can): the row's words,
+// not the archive's, are what the crack item must carry
+const EXK = [{ role: "teacher", at: iso(1), rid: "r-k1", text: "Ek word kitne tokens banata hai?" }, { role: "him", at: iso(2), rid: "r-k2", text: fold(SAID) },
   { role: "teacher", at: iso(3), rid: "r-k3", text: "```diff\n- ek word = ek token\n+ ek word = ek ya zyada tokens (subwords)\n```\nKahan atke the?" }];
 const ROW = { v: 1, kind: "crack", id: "ck-witness-0001", at: iso(2.5), concept: "tokenization", axis: "c", moment: "check_q", moment_at: iso(1.5), words: SAID, prompt_at: iso(2) };
 
@@ -241,7 +243,10 @@ await clause("K6", async () => {
 });
 
 await clause("K7", async () => {
-  const p = plant(TREE, "k7"); const o = open(p); if (!o.ok) return o;
+  const p = plant(TREE, "k7");
+  for (const st of [["start", "tokenization"], ["step", "3"], ["axis", "b", "now"], ["moment", "pehle_guess"], ["axis", "c", "now"], ["moment", "check_q"]]) {
+    const x = p.run(...st); if (x.code !== 0) return { ok: false, why: `${st.join(" ")} → exit ${x.code}` };
+  }
   const s = p.json("forge_session.json");
   // the clocks of the turn, in order: the teacher's question (at its declared moment) · his reply · `crack` · the ```diff turn
   const q = new Date(Date.parse((s.moments_log || []).at(-1).at)), prm = new Date(Math.max(Date.now(), q.getTime() + 1));
