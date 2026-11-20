@@ -9,3 +9,4 @@
 {"ts":"2026-11-20T07:43:11.906Z","act":"selftest","cmd":"node scripts/learnstate.mjs selftest","last_line":"ALL CHECKS PASSED"}
 {"ts":"2026-11-20T07:43:11.906Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
 {"ts":"2026-11-20T08:28:31.915Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/4b0524c/check-runs","last_line":"136156177393 npm test · node 22 success · 136156177042 npm test · node 24 success"}
+{"ts":"2026-11-20T11:46:05.044Z","act":"new-main","cmd":"git fetch origin main && git rev-parse FETCH_HEAD ; git diff --quiet 5759cce 3f22388 -- <the spec organs> && echo \"spec organs equal\"","last_line":"3f2238887947e5827d2ce8f07a480e9dea3f527c · spec organs equal · §10 written (spec seat: no merge)"}

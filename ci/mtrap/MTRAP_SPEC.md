@@ -406,3 +406,33 @@ Read through the public API with no token:
 `curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`. The ids and the verdict are in the
 seat's FINAL MESSAGE and in the ledger row `ci`. This spec changes no code, so the run judges its markdown against the
 suite's canon laws.
+
+## 10 · NEW MAIN 3f22388 (unit mlaw landed) — read against this spec's base
+
+Runner M's new-main line, 20 Nov 2026: main moved from 5759cce to **3f2238887947e5827d2ce8f07a480e9dea3f527c**
+(`git fetch origin main && git rev-parse FETCH_HEAD`). This is a spec seat, so nothing is merged. The base section was
+re-read against the new main:
+
+```
+$ git diff --quiet 5759cce 3f22388 -- scripts/notes_compiler.mjs scripts/forge_session.mjs scripts/learnstate.mjs \
+    scripts/postmatch.mjs scripts/models.mjs scripts/state.mjs scripts/daily_green.mjs scripts/teaching_bar.mjs \
+    scripts/study_scope.mjs .dependency-cruiser.cjs .claude/settings.json && echo "spec organs equal"
+spec organs equal
+
+$ git show 3f22388:scripts/done.mjs | grep -n "compiled_notes\|cold_gate\|notes_compiler" ; echo "exit $?"
+exit 1
+
+$ git ls-remote origin claude/mcrk-build claude/mcap-build claude/mcrk-spec
+937710b… mcrk-build · f8a7e15… mcap-build · 02c6f57… mcrk-spec        # the read tips are unchanged
+```
+
+What the new main changes for this unit:
+- **No file:line of §2–§6 moves.** Every organ this spec cites is byte-equal at 3f22388.
+- **`scripts/done.mjs` still reads no note verdict**, so the §3.3 row stands. The suite now runs its selftest
+  (`package.json` organism:selftest gained `node scripts/done.mjs selftest`).
+- **The law pack now rides the hermetic profile** (`organism_test.mjs`, unit mlaw, forks row 1137 (2) F2 A). It prints
+  ONE machine line, `ORGANISM_TEST_LAWPACK {…counts}`, which the neutral verdict reads (F3 A). The mtrap BUILD's hermetic
+  run therefore judges its law-pack counts against the base. The new pacer→compiler dynamic import (§3.4) and the
+  learnstate→compiler edge (§6) must add no law-pack finding. That is a build measurement, named here.
+- **Cutting the build:** the mtrap build cuts from the newest main at its start (3f22388 or later), and `ci/mtrap/BASE`
+  names that sha. The landing order of §5 (mcrk, then mtrap) stands.
