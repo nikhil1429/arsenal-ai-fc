@@ -283,7 +283,7 @@ is **empty**: outside `ci/` the merged tip is byte-identical to land/mgat `1b8c3
 - **`run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN`** (exit 0; `ed4d2fe`). M10 (the `/proc` catch left empty) is RED by
   W1 `no-empty 263 · frozen 262`, and M11 (`r.error.code` unnarrowed) is RED by W9 `297 · frozen 296`. Named: the first run read `· control RED` with its
   own control line at `5 of 5 · 9 of 9 GREEN`. The runner compared against the mutant count, not the distinct clause count, and is fixed in `ed4d2fe`. M12 is mf2's (§10.2).
-- Selftests on `5759cce` and on `ed4d2fe` are the same: groundsman `ALL CHECKS PASSED` · cortex `ALL CHECKS PASSED` · captains_call `156 passed, 0 failed`
+- Selftests on `5759cce` and on `ed4d2fe` (20 Nov 2026) are the same: groundsman `ALL CHECKS PASSED` · cortex `ALL CHECKS PASSED` · captains_call `156 passed, 0 failed`
   (20 Nov 2026) · rung_receipt `all 13 pass`. `models.mjs check` exits 0 on both.
 
 ### 10.4 Files vs main `5759cce`

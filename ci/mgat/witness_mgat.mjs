@@ -15,7 +15,7 @@
 //   W1  `gates.mjs report` on E: no-empty AT OR UNDER the tree's own frozen LINT_BASELINE["no-empty"], read from its
 //       scripts/gates.mjs, never typed (ruling: "no-empty must read at or under its frozen baseline").
 //   W2  per touched file, no more no-empty sites than at the PARENT of the rise that added them (the parents' bytes are
-//       read with `git show` from --base-org's object store; an unreachable object is NAMED and the clause is RED).
+//       read with `git show` from the first store holding them: --base-org, GITHUB_WORKSPACE, --org; none is NAMED, RED).
 //   W3  hermetic `organism_test.mjs gates` ENTERS the mode and reads `ok GATES —` (no `LIVE MODE gates`): the spec's clause,
 //       restored once the fifth file (forks row 1156) took the two other counts back to their baselines.
 //   W4  the hermetic verdict is entered AND identical on Z and on X, the gate's own RED lines included (state cannot move it).
@@ -51,7 +51,15 @@ const RISE_PARENT = { "scripts/groundsman.mjs": "15edfec", "scripts/cortex.mjs":
 const RUN = mkdtempSync(join(tmpdir(), "mgat-wit-"));
 
 const git = (dir, ...a) => execFileSync("git", ["-C", dir, "-c", "core.autocrlf=false", ...a], { encoding: "utf8", maxBuffer: 1 << 28, stdio: ["ignore", "pipe", "pipe"] });
-const tracked = (dir) => git(dir, "ls-files", "-z").split("\0").filter(Boolean);
+// the suite's WITNESSES member hands this witness LF trees that are NOT git repositories (organism_test.mjs lfTree): a tree
+// with no .git is walked (.git and node_modules skipped), a checkout is read through `git ls-files` (its tracked files only)
+const isRepo = (dir) => spawnSync("git", ["-C", dir, "rev-parse", "--show-toplevel"], { encoding: "utf8" }).status === 0 && existsSync(join(dir, ".git"));
+const walkTree = (root, d = root, acc = []) => { for (const e of readdirSync(d, { withFileTypes: true })) { if (e.name === ".git" || e.name === "node_modules") continue;
+  const p = join(d, e.name); if (e.isSymbolicLink()) continue; if (e.isDirectory()) walkTree(root, p, acc); else acc.push(p.slice(root.length + 1).split("\\").join("/")); } return acc; };
+const tracked = (dir) => (isRepo(dir) ? git(dir, "ls-files", "-z").split("\0").filter(Boolean) : walkTree(dir));
+// W2 reads the rise parents' bytes from the first object store that holds them: --base-org, the neutral machine's clone
+// (GITHUB_WORKSPACE), --org. None holding one is NAMED (UNREACHABLE) and the clause is RED
+const storeOf = (sha) => [BASE, process.env.GITHUB_WORKSPACE, ORG].filter(Boolean).find((c) => spawnSync("git", ["-C", c, "cat-file", "-e", `${sha}^{commit}`]).status === 0);
 const modulesOf = (dir) => [join(dir, "node_modules"), join(ORG, "node_modules"), join(BASE, "node_modules")].find((p) => existsSync(p));
 let seq = 0;
 /** a plant: the tracked files of `src` (working-tree bytes), dressing-room/state never copied, then the state kind planted */
@@ -85,7 +93,8 @@ const CL = {
     return { ok: ne !== undefined && fz !== undefined && Number(ne) <= Number(fz), line: `gates report exit ${r.code} · no-empty ${ne} · frozen ${fz} (read from scripts/gates.mjs)` }; }),
   W2: (src) => {
     if (!parentCount) { parentCount = {}; once(BASE, "E", (d) => { for (const [f, p] of Object.entries(RISE_PARENT)) {
-      let bytes = null; try { bytes = execFileSync("git", ["-C", BASE, "show", `${p}:${f}`], { maxBuffer: 1 << 28, stdio: ["ignore", "pipe", "pipe"] }); } catch { parentCount[f] = null; continue; } /* the object is not in --base-org's store: named below */
+      const st = storeOf(p); let bytes = null; try { bytes = st && execFileSync("git", ["-C", st, "show", `${p}:${f}`], { maxBuffer: 1 << 28, stdio: ["ignore", "pipe", "pipe"] }); } catch { bytes = null; } /* named below */
+      if (!bytes) { parentCount[f] = null; continue; }
       writeFileSync(join(d, f), bytes); parentCount[f] = eslintCounts(d, [f])[f]; } }); }
     const now = once(src, "E", (d) => eslintCounts(d, Object.keys(RISE_PARENT)));
     const ok = Object.keys(RISE_PARENT).every((f) => parentCount[f] !== null && now[f] <= parentCount[f]);
