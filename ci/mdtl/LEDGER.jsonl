@@ -11,3 +11,4 @@
 {"ts":"2026-11-20","act":"models","cmd":"node scripts/models.mjs check","last_line":"exit 0 · literal model names outside models.mjs: 0"}
 {"ts":"2026-11-20","act":"ci-read","cmd":"curl -s $API/commits/ce580e2/check-runs","last_line":"136131659640 npm test · node 22 completed cancelled · 136131659306 npm test · node 24 queued"}
 {"ts":"2026-11-20","act":"ci-read","cmd":"curl -s $API/commits/b644691/check-runs","last_line":"136132702741 npm test · node 22 queued · 136132702424 npm test · node 24 queued"}
+{"ts":"2026-11-20T07:40Z","act":"ci-read","cmd":"curl -s $API/commits/91a8947/check-runs + /check-runs/<id>/annotations","last_line":"136133678809 npm test · node 22 completed success · B1 VERDICT GREEN (0 new red · 1 base red: the selftest-coverage law) | 136133679150 npm test · node 24 completed success · B1 VERDICT GREEN (0 new red · 1 base red)"}
