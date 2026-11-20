@@ -55,6 +55,11 @@ const section = (t) => console.log(`\n── ${t} ${"─".repeat(Math.max(0, 66 
 // wait is a HANG GUARD, not a race (his laptop measured probe's selftest past the helper's default on 19 Nov 2026, and
 // the default killed it and read the kill as a red exit). No new number: the value is the one the heavy modes had.
 const HEAVY_BOUND_MS = 600000;
+// THE MEMBER BOUND (row 1182 (2)): a member run takes HEAVY_BOUND_MS. ORGANISM_TEST_MEMBER_BOUND_MS may only LOWER it (a
+// positive integer below the long bound; anything else is ignored), so a witness can plant a hanging member and see it named
+// killed without spending the whole long bound of the neutral job's time. Unset — his laptop, the watchman, CI — it is the
+// long bound. A door that can only tighten is a guard, never a budget.
+const MEMBER_BOUND_MS = (() => { const v = Number(process.env.ORGANISM_TEST_MEMBER_BOUND_MS); return Number.isInteger(v) && v > 0 && v < HEAVY_BOUND_MS ? v : HEAVY_BOUND_MS; })();
 // run an organ as a child; never import (a top-level side effect must not leak in)
 // unit mcov (row 1151 (1) (a)): a child this helper KILLS by its bound returns `killed: <the bound in ms>` beside its
 // code, so a reader can say "killed by the suite bound" and never mistake the kill for a non-zero exit.
@@ -365,10 +370,12 @@ function suiteMembers(pkg) {
 // `selftest` in hermetic), a member hermetic never ran, and every member of `suites` run alone,
 // because the store lives in this process only. A kept failure is the very { code, out } a fresh
 // spawn returns, so it reds exactly as that spawn would, with its tail.
-/** runKey — the identical-command key of one run() call. PURE: exported so a fixture can bite it.
+/** runKey — the identical-command key of one MEMBER run (row 880 (1)). PURE: exported so a fixture can bite it. Its default
+ *  bound is the member bound (row 1151 (1) (b)), because every call that keys a run — hermetic()'s loop, suites() and the
+ *  usage_tap read — keys a member run, and every member run takes MEMBER_BOUND_MS.
  *  @param {string[]} args @param {{ cwd?: string, timeout?: number, env?: object }} [opts] @returns {string} */
 export function runKey(args, opts = {}) {
-  return JSON.stringify([args, opts.cwd || ROOT, opts.timeout || 120000, opts.env || null]);
+  return JSON.stringify([args, opts.cwd || ROOT, opts.timeout || MEMBER_BOUND_MS, opts.env || null]);
 }
 const hermeticRuns = new Map();   // runKey → { code, out } as run() returned it · set by hermetic()'s loop, taken once by suites()
 
@@ -388,13 +395,14 @@ function suites() {
     const args = m === "test_coach_v2" ? [file] : [file, "selftest"];
     // ONE RUN PER SELFTEST (row 880 (1)): hermetic()'s result when this is its IDENTICAL command, else a spawn
     // unit mcov (row 1151 (1) (b)): the member run takes the LONG BOUND, a hang guard — the identical-command key carries it
-    const key = runKey(args, { timeout: HEAVY_BOUND_MS }), kept = hermeticRuns.get(key);
+    const key = runKey(args), kept = hermeticRuns.get(key);
     if (kept) { hermeticRuns.delete(key); reused++; }
-    const r = kept || run(args, { timeout: HEAVY_BOUND_MS });
+    const r = kept || run(args, { timeout: MEMBER_BOUND_MS });
     // (a): a kill by the bound is NAMED, in the member's red and in the roll-up — never a bare non-zero exit
     if (r.code !== 0) red.push({ m, tail: [redWhy(r), ...r.out.split(/\r?\n/).filter(Boolean).slice(-3)].join(" | ") });
     // B1 (c): every member is its OWN assert, so a red member is a NAME the neutral verdict can compare across trees
-    assert(`SUITE MEMBER · ${m} selftest exits 0`, r.code === 0, r.code === 0 ? "" : redWhy(r));
+    assert(`SUITE MEMBER · ${m} selftest exits 0`, r.code === 0);
+    if (r.code !== 0) console.log(`         ${redWhy(r)}`);   // (a): the member's red names the kill, on the line under its FAIL
   }
   console.log(`  suites: reused ${reused} of ${members.length} member result(s) from hermetic (identical command), ran ${members.length - reused}`);
   assert(`all ${PROFILE === "hermetic" ? `${ran} hermetic` : members.length} suite members pass (every one RUN, not chained)`, red.length === 0,
@@ -2238,12 +2246,12 @@ function hermetic() {
   const timeline = [];                       // F-6's attribution side, free: the spawn loop already runs
   // ONE RUN PER SELFTEST (row 880 (1)): the result run() returns is KEPT for suites() under its identical-command key,
   // after the window's end is stamped — the same spawns, the same order, the same window; the trip metric is untouched.
-  for (const f of targets) { if (liveSelftest(f.replace(/\.mjs$/, ""))) continue; const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args, { timeout: HEAVY_BOUND_MS }); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args, { timeout: HEAVY_BOUND_MS }), r); }
+  for (const f of targets) { if (liveSelftest(f.replace(/\.mjs$/, ""))) continue; const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args, { timeout: MEMBER_BOUND_MS }); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args), r); }
   // unit mpool (forks rows 1062 / 1066) — THE USAGE TAP's selftest rides THIS loop (it has a selftest, so it is a target)
   // and is JUDGED here, from the loop's own kept result (a read of the map, never a second spawn; suites() still takes it
   // if a suite ever names it). Its package.json suite membership is a FORK the unit names in ci/mpool/PROOF.md.
   {
-    const tap = hermeticRuns.get(runKey([join(ROOT, "scripts", "usage_tap.mjs"), "selftest"], { timeout: HEAVY_BOUND_MS }));
+    const tap = hermeticRuns.get(runKey([join(ROOT, "scripts", "usage_tap.mjs"), "selftest"]));
     assert("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", !!tap && tap.code === 0,
       tap ? String(tap.out).trim().split("\n").filter((l) => /FAIL|selftest/.test(l)).slice(-4).join(" | ") : "usage_tap.mjs selftest never ran");
   }
