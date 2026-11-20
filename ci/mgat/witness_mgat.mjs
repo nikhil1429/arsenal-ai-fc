@@ -25,7 +25,8 @@
 //   W7  ONE planted new empty catch turns the HERMETIC `gates` mode RED, by a no-empty rise (the next rise has a reader).
 //   W8  `gates.mjs report` on E: no-unused-vars AT OR UNDER the tree's own frozen LINT_BASELINE["no-unused-vars"] (row 1156 (2)).
 //   W9  `gates.mjs report` on E: "other checkJs diagnostics" AT OR UNDER the tree's own frozen TYPE_BASELINE.soft_errors (row 1156 (2)).
-//   BOUND  only the named files differ between --org and --base-org (tracked files, line endings normalised).
+//   BOUND  only the named files differ between --org and --base-org (tracked files, line endings normalised), plus a file whose
+//          LF bytes are main's at the merge (ci/mgat/MERGED.json, row 1200 (2): the bound against the parent).
 //   LAST   no node process naming this run's temp dir survives.
 // THE PORT CLASS (row 1053): no port is bound, no live service is named or POSTed at, nothing is restarted; every
 //   child is spawnSync (it returns when the child exits) and no fixed budget is typed. No model is called.
@@ -35,7 +36,8 @@
 // ============================================================================
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, symlinkSync, rmSync, writeFileSync, appendFileSync, readFileSync, existsSync, readdirSync } from "node:fs";
-import { join, resolve, dirname } from "node:path"; import { tmpdir } from "node:os";
+import { join, resolve, dirname } from "node:path"; import { tmpdir } from "node:os"; import { createHash } from "node:crypto";
+const MERGED = (() => { try { return JSON.parse(readFileSync(new URL("./MERGED.json", import.meta.url), "utf8")); } catch { return null; } })();   // row 1200 (2)
 
 const argv = process.argv.slice(2);
 const opt = (k) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] : null; };
@@ -131,8 +133,13 @@ function bound() {
   const diff = [];
   for (const f of new Set([...a, ...b])) { const pa = join(ORG, f), pb = join(BASE, f);
     const ea = a.has(f) && existsSync(pa), eb = b.has(f) && existsSync(pb); if (ea !== eb || (ea && norm(pa) !== norm(pb))) diff.push(f); }
-  const out = diff.filter((f) => !NAMED.includes(f) && !f.startsWith(NAMED_DIR) && !RULED_DIRS.some((r) => f.startsWith(r)));
-  return { ok: out.length === 0, line: `differing tracked files ${diff.length} · outside the named files ${out.length}${out.length ? ": " + out.slice(0, 8).join(" ") : ""}` };
+  // row 1200 (2): the clauses are judged against BASE, the BOUND against the merge parent. A file outside the named set passes only
+  // when its LF bytes are main's at the merge (ci/mgat/MERGED.json, written from `git show <main>:<file>`; "(deleted)" for a deletion)
+  const sha = (p) => createHash("sha256").update(Buffer.from(norm(p), "latin1")).digest("hex");
+  const mainBytes = (f) => !!(MERGED && MERGED.files && MERGED.files[f] && MERGED.files[f] === (existsSync(join(ORG, f)) && a.has(f) ? sha(join(ORG, f)) : "(deleted)"));
+  const rest = diff.filter((f) => !NAMED.includes(f) && !f.startsWith(NAMED_DIR) && !RULED_DIRS.some((r) => f.startsWith(r)));
+  const out = rest.filter((f) => !mainBytes(f));
+  return { ok: out.length === 0, line: `differing tracked files ${diff.length} · main's bytes at the merge (MERGED.json ${MERGED ? MERGED.main.slice(0, 7) : "absent"}) ${rest.length - out.length} · outside the named files ${out.length}${out.length ? ": " + out.slice(0, 8).join(" ") : ""}` };
 }
 function last() {
   let cmds = [];

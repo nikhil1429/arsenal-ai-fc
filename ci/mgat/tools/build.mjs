@@ -69,6 +69,21 @@ export const EDITS = [
     to: "  atlas: \"re-derives the atlas from state/xray_graph.json, the live IR\",\n});\n// unit mgat (forks row 1174 (2)): a LIVE name that NARROWS a base one declares it here — new LIVE name → the base LIVE name it\n// replaces, which must be gone. ci/mf2's F3 (ci/mf2/livenarrow.mjs) admits a name the base never printed only through this table.\nconst LIVE_NARROWS = Object.freeze({\n  \"gates schema half\": \"MODE gates\",\n});\n" },
 ];
 
+// row 1200 (2) · THE MERGE MAP: main 6a6bdff merged into the build (PROOF §12). The EDITS stay the exact bytes against BASE
+// 5759cce; on the MERGED tree two of them read through main's own change: the HALF line carries main's HEAVY_BOUND_MS, and the
+// LIVE removal sits where mlaw left its comment. run_mutants_mgat.mjs builds each mutant as the merged build minus one fate.
+export const MERGE_MAP = [["{ timeout: 600000 }", "{ timeout: HEAVY_BOUND_MS }"]];
+export const mm = (t) => MERGE_MAP.reduce((x, [a, b]) => x.split(a).join(b), t);
+export const ON_MERGED = { LIVE: { at: "  // lawpack LEFT this table at unit mlaw" } };   // a removed line is put back BEFORE this anchor
+/** the patch pairs that turn the MERGED build into mutant m (each `from` must match once in the tree) */
+export function mutantOnBuild(m) {
+  const M = MUTANTS[m]; const pairs = [];
+  for (const id of M.drop || []) { const e = EDITS.find((x) => x.id === id);
+    if (e.to === "") { const a = ON_MERGED[id].at; pairs.push([a, mm(e.from) + a]); } else pairs.push([mm(e.to), mm(e.from)]); }
+  for (const [f, t] of M.patch || []) pairs.push([mm(f), mm(t)]);
+  return pairs;
+}
+
 // one mutant per witness clause (see MGAT_SPEC.md §5)
 export const MUTANTS = {
   M1: { why: "S1 left undeclared", drop: ["S1"] },
