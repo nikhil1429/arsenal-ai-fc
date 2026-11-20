@@ -24,7 +24,7 @@ const mk = (withState) => {
 const src = readFileSync(join(REPO, "scripts", "organism_test.mjs"), "utf8").split("\n");
 const block = (name) => { const a = src.findIndex((l) => l.startsWith(`const ${name} = Object.freeze({`)); const b = src.findIndex((l, i) => i > a && l.startsWith("});"));
   return src.slice(a + 1, b).map((l, i) => ({ line: a + 2 + i, key: (l.match(/^\s+"([^"]+)":/) || l.match(/^\s+([\w-]+):/) || [])[1], why: (l.match(/:\s*"(.*)",\s*$/) || [])[1] })).filter((x) => x.key); };
-const WAIT = Number((src.join("\n").match(/timeout: opts\.timeout \|\| (\d+)/) || [])[1]);
+const WAIT = Number((src.join("\n").match(/const bound = opts\.timeout \|\| (\d+)/) || [])[1]);
 const pkg = JSON.parse(readFileSync(join(REPO, "package.json"), "utf8"));
 const SUITES = JSON.parse((src.join("\n").match(/const SUITE_NAMES = (\[[^\]]+\])/) || [])[1]);
 const segs = SUITES.map((n) => pkg.scripts[n] || "").flatMap((v) => String(v).split("&&").map((s) => s.trim())).filter((s) => s.startsWith("node scripts/"));
