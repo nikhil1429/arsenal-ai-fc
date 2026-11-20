@@ -4,3 +4,5 @@
 {"ts":"2026-11-20T02:10Z","act":"measure","cmd":"node scripts/presence.mjs selftest | tail -1","last_line":"ALL CHECKS PASSED"}
 {"ts":"2026-11-20T02:10Z","act":"measure","cmd":"echo <block> | node scripts/usage_tap.mjs statusline (root unset)","last_line":"five-hour 1% · weekly 2% · no campaign root (ARSENAL_CAMPAIGN_ROOT unset) — nothing written"}
 {"ts":"2026-11-20T02:10Z","act":"measure","cmd":"node scripts/models.mjs check ; echo exit $?","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0) · exit 0"}
+{"ts":"2026-11-20T02:25Z","act":"build-clause","cmd":"row 1176 (3) in scripts/usage_tap.mjs: no root ⇒ RED by the door's name, the reading named DROPPED (statusline stdout+stderr, status, verdict, need)","last_line":"usage_tap selftest 33/33 — all clauses hold"}
+{"ts":"2026-11-20T02:27Z","act":"measure","cmd":"node ci/mpool/witness_mpool.mjs --org . --base-org <LF tree b1fc984>","last_line":"GREEN MPOOL the usage tap · 33 clause(s)"}

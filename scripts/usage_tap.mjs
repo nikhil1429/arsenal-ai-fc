@@ -11,6 +11,10 @@
 //     this public repository: code public, data private. The write is atomic (tmp + rename) and the tmp sits beside it.
 //   · ENV DOOR `ARSENAL_CAMPAIGN_ROOT` — the one way the tap finds the campaign root. DEFAULT ABSENT. Absent (or not a
 //     directory) ⇒ every verb writes NOTHING and says so in its one line (row 1062 ADDED (ii)).
+//   · NO SILENT DROP (row 1176 (3)): with no root, a status-line reading is never dropped into nothing — the statusline
+//     line (and a stderr line) reads RED by the door's name and says the reading was DROPPED; `status`, `verdict` and
+//     `need` read RED by the same name. Fail open keeps its meaning (exit 0, one line, inside the bound); what it never
+//     does is fail open into a line that looks like a reading. A write that throws reads RED the same way.
 //   · THE AGE BOUND is NEVER typed here (row 1062 F4 A). Its law home is the campaign's `tools/model_law.mjs` under the
 //     root, read as TEXT for ONE contract line `POOL_READING_MAX_AGE_MIN` (= or :) <whole minutes>; never imported,
 //     never executed. No such line ⇒ every verdict is WAIT · rule unreadable (never a default number).
@@ -147,9 +151,12 @@ export function verdict(reading, now, rule) {
   return { ...base, go: true, age_min, why: "fresh and whole" };
 }
 
-const line = (v) => `${v.go ? "GO" : "WAIT"} · ${v.why} · five-hour ${v.five ?? "?"}% · weekly ${v.week ?? "?"}% · age ${v.age_min ?? "?"} min · source ${v.source ?? "none"}`;
+const line = (v) => `${v.go ? "GO" : v.red ? "RED" : "WAIT"} · ${v.why} · five-hour ${v.five ?? "?"}% · weekly ${v.week ?? "?"}% · age ${v.age_min ?? "?"} min · source ${v.source ?? "none"}`;
 const istDay = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 export const CARD_LINE = "Pool ka panel: five-hour aur weekly kitna percent dikh raha hai? Bas do number bol do.";
+/** row 1176 (3): the no-root line names the door and the reading it drops — RED, never a reading-shaped line @param {string} shown */
+const noRootRed = (shown) => `RED · usage tap · no campaign root (${ROOT_DOOR} unset) — this reading (${shown}) is DROPPED, nothing written`;
+const NO_ROOT_WHY = `no campaign root (${ROOT_DOOR} unset) — every status-line reading is DROPPED until the door is set`;
 const CARD_WHY = "his plan's usage meter is on his screen only, and no statusLine reading reached the campaign root inside the age bound";
 
 // ── verbs ───────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -170,12 +177,13 @@ function statusline() {
       if (!reading) { process.stderr.write(`usage tap: ${why} — nothing written\n`); return finish(`usage tap · ${why} — nothing written`); }
       const shown = `five-hour ${reading.five ? Math.round(reading.five.pct) + "%" : "?"} · weekly ${reading.week ? Math.round(reading.week.pct) + "%" : "?"}`;
       const root = campaignRoot();
-      if (!root) return finish(`${shown} · no campaign root (${ROOT_DOOR} unset) — nothing written`);
+      if (!root) { process.stderr.write(`usage tap: ${noRootRed(shown)}\n`); return finish(noRootRed(shown)); }
       writeReading(root, reading);
       finish(`${shown} · read now`);
     } catch (e) {
-      process.stderr.write(`usage tap: ${String(e && e.message || e).split("\n")[0]}\n`);
-      finish("usage tap · failed open — nothing written");
+      const why = String(e && e.message || e).split("\n")[0];
+      process.stderr.write(`usage tap: ${why}\n`);
+      finish(`RED · usage tap · the write failed (${why}) — this reading is DROPPED, failed open`);
     }
   });
   process.stdin.resume();
@@ -197,13 +205,13 @@ function panel() {
 
 function judge() {
   const root = campaignRoot();
-  if (!root) return { root, v: { go: false, no_source: false, why: `no campaign root (${ROOT_DOOR} unset)`, age_min: null, five: null, week: null, source: null } };
+  if (!root) return { root, v: { go: false, red: true, no_source: false, why: NO_ROOT_WHY, age_min: null, five: null, week: null, source: null } };
   return { root, v: verdict(readReading(readingPath(root)), new Date(), readRule(root)) };
 }
 
 function need() {
   const { root, v } = judge();
-  if (!root) { console.log(`usage tap · need: ${v.why} — nothing filed`); return; }
+  if (!root) { console.log(`usage tap · need: RED · ${v.why} — nothing filed`); return; }
   if (v.go || !v.no_source) { console.log(`usage tap · need: ${v.go ? "GO" : `WAIT for a reason his panel cannot change (${v.why})`} — nothing filed`); return; }
   const r = spawnSync(process.execPath, [CALL, "file", "--line", CARD_LINE, "--key", `usage:panel:${istDay(new Date())}`, "--why-code-cannot-decide", CARD_WHY], { encoding: "utf8", env: process.env });
   console.log(`usage tap · need: WAIT · ${v.why} → ${String(r.stdout || r.stderr || "").trim().split("\n")[0] || `captains_call exit ${r.status}`}`);
@@ -280,6 +288,9 @@ async function selftest() {
     const noRoot = { ...env }; delete noRoot.ARSENAL_CAMPAIGN_ROOT;
     const nr = cli(["statusline"], block({ five_hour: { used_percentage: 1 }, seven_day: { used_percentage: 2 } }), noRoot);
     t("ADDED (ii) root absent → nothing written, and it says so, exit 0", nr.status === 0 && /no campaign root/.test(nr.stdout));
+    t("R1176.3 root absent → the statusline line reads RED by the door's name and says the reading is DROPPED (stdout and stderr)", /^RED · .*ARSENAL_CAMPAIGN_ROOT unset.*DROPPED/.test(nr.stdout) && /five-hour 1%/.test(nr.stdout) && /ARSENAL_CAMPAIGN_ROOT unset.*DROPPED/.test(nr.stderr));
+    const nst = cli(["status"], undefined, noRoot), nvd = cli(["verdict"], undefined, noRoot), nnd = cli(["need"], undefined, noRoot);
+    t("R1176.3 root absent → status, verdict and need read RED by the door's name; verdict still refuses by exit (3)", nst.stdout.split(/\r?\n/).filter(Boolean).every((l) => /^RED · .*ARSENAL_CAMPAIGN_ROOT unset/.test(l)) && /^RED · .*ARSENAL_CAMPAIGN_ROOT unset/.test(nvd.stdout) && nvd.status === 3 && /RED · .*ARSENAL_CAMPAIGN_ROOT unset/.test(nnd.stdout));
     t("W4.3 a fresh statusline reading → need files nothing", /nothing filed/.test(cli(["need"]).stdout) && !existsSync(join(tmp, "call", "captains_call.json")));
     rmSync(readingPath(root));
     const n1 = cli(["need"]), n2 = cli(["need"]);
@@ -303,7 +314,7 @@ if (isMain) {
   else if (mode === "status") {
     const { root, v } = judge();
     const r = root ? readReading(readingPath(root)) : null;
-    console.log(r ? `usage tap · reading ${r.source} at ${r.read_at}` : `usage tap · no reading${root ? "" : ` (${ROOT_DOOR} unset)`}`);
+    console.log(r ? `usage tap · reading ${r.source} at ${r.read_at}` : root ? "usage tap · no reading" : `RED · usage tap · no reading — ${NO_ROOT_WHY}`);
     console.log(line(v));
   }
   else if (mode === "selftest") selftest();
