@@ -377,3 +377,28 @@ What the new main changes for this unit:
 - **study_scope now has a selftest in the suite.** If a build adds `answerOf` to `study_scope.mjs`, its selftest case lands in
   that member, which now runs in the suite, so the gate gets stricter and no looser.
 - **package.json:** this spec still proposes no change to it. A build that does touch it takes the union of both member sets (forks row 1187 (2)).
+
+## 11 · NEW MAIN 6a6bdff (unit mmeter landed, runner M's new-main line, 20 Nov 2026)
+
+Read against `6a6bdfff4349b849398b69d0748b27d37c874b85`. **No cited organ moved:**
+```
+$ git diff --quiet cebe3eb 6a6bdff -- scripts/{gaffer_brain,teaching_audit,forge_session,study_scope,register,teaching_gate,teaching_bar,learn_digest,sitting,dugout,notes_compiler,rails,intent,claims}.mjs .claude/skills .gitignore package.json && echo "cited files equal"
+cited files equal
+```
+The anchors of §1-§7, as corrected for study_scope.mjs in §10, stand at 6a6bdff. What the new main changes for this unit:
+- **The suite now runs every clause witness** (`organism_test.mjs` mode `clauses`, function clauseWitnesses). It walks
+  `ci/witness/<unit>/witness_*.mjs`, runs each one with the single argument `plants` on the HEAD tree, and is GREEN only on exit 0
+  with a last line matching `PLANTS <unit> · k of n plant(s) as expected` with n > 0 and k = n. So the proposed
+  `ci/witness/mbank/witness_bank.mjs` (§4) joins the suite the day it lands, with no edit to organism_test.mjs. That binds its
+  shape:
+  - its closing line is exactly `PLANTS mbank · k of n plant(s) as expected` (§4 already names `PLANTS mbank · N of N`, and
+    this is the exact wording);
+  - `plants` with no `--tree` judges the tree it sits in. Each clause B1-B12 is planted both ways there (the refused record
+    reads refused, the good record reads banked), so k = n on the build. The base-RED leg of §4's table lives only in
+    `--tree <base>` and in the unit witness `ci/mbank/witness_mbank.mjs`. It never runs in the suite member;
+  - B7 and B12 plant the crack verb. On a tree without the mcrk build, those plants are absent and the witness must FAIL,
+    never skip, so FORK mbank-0 (a) (build after mcrk lands) is now also a suite condition;
+  - the member reads a checkout without node_modules as NOT MEASURABLE, so the witness may import organs that need the
+    pinned parser.
+- **`scripts/daily_green.mjs` now exits 3 on a day below 11 of 11, and `scripts/done.mjs` changed.** This spec neither cites
+  nor touches either file. They are named here only because a build's PROOF will read the day meter on its own run.

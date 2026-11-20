@@ -14,3 +14,5 @@
 {"ts":"2026-11-20T11:45Z","act":"new-main-read","cmd":"git diff --quiet 5759cce 3f22388 -- <every cited organ> .claude/skills .gitignore && echo \"cited files equal\"","last_line":"cited files equal"}
 {"ts":"2026-11-20T11:45Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/7f4ca59/check-runs","last_line":"136146569916 npm test · node 24 completed success | 136146569582 npm test · node 22 completed success"}
 {"ts":"2026-11-20T12:38Z","act":"new-main-read","cmd":"git diff -U0 3f22388 cebe3eb -- scripts/study_scope.mjs | grep \"^@@\"","last_line":"@@ -745 +746,10 @@ function cli() {"}
+{"ts":"2026-11-20T14:20Z","act":"new-main-read","cmd":"git diff --quiet cebe3eb 6a6bdff -- <every cited organ> .claude/skills .gitignore package.json && echo \"cited files equal\"","last_line":"cited files equal"}
+{"ts":"2026-11-20T14:20Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/2eeca3d/check-runs","last_line":"136292328073 npm test · node 22 completed success | 136292327642 npm test · node 24 completed success"}
