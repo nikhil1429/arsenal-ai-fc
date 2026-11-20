@@ -94,6 +94,12 @@ const REPS_LOG  = join(STATE_DIR, "reps_log.jsonl");
 // 30-45d of real data (his standing rule). capture.mjs is its single writer.
 const GEMINI_QUALITY = join(STATE_DIR, "gemini_quality.jsonl");
 const CONFIG_PATH   = join(STATE_DIR, "capture_config.json");   // machine-local (gitignored)
+// unit mpres (forks rows 1177 (2) / 1191, F8 A): THE PULL'S INPUT SNAPSHOT — one object, overwritten by
+// every `pull`: {at, input:"drive-inbox", configured, alive, dead_since, last_live_at}. A CONFIGURED inbox
+// whose folder is missing (the drive app stopped, the mount gone) is a DEAD input and reads red by name on
+// the one state line (senses.mjs); an unconfigured one is dormant and never red. The inbox PATH is never
+// written here (it can carry a person's folder names). capture.mjs is its sole writer.
+const PULL_SNAPSHOT = join(STATE_DIR, "capture_pull.json");
 const CONCEPTS_PATH = join(STATE_DIR, "concepts.json");         // canon (committed)
 
 // Colab→Drive inbox (Option B). Resolved from CONFIG, never a hardcoded user path:
@@ -1028,11 +1034,33 @@ function parseBlob(text) {
 //     dead". Borrowed, not chosen.
 //   · counts, filenames and reasons in the line are MEASURED. Nothing rounded.
 // The card is a PROPOSAL: it asks, it never re-ingests anything on his behalf.
+/** unit mpres — pure: the pull's input snapshot. dead_since carries across dead pulls, resets on a live one.
+ * @param {any} prior @param {{configured:boolean, alive:boolean|null, now?:Date}} o */
+export function pullSnapshot(prior, { configured, alive, now = new Date() }) {
+  const at = now.toISOString(), p = prior && typeof prior === "object" ? prior : null;
+  if (!configured) return { at, input: "drive-inbox", configured: false, alive: null, dead_since: null, last_live_at: (p && p.last_live_at) || null };
+  if (alive) return { at, input: "drive-inbox", configured: true, alive: true, dead_since: null, last_live_at: at };
+  return { at, input: "drive-inbox", configured: true, alive: false, dead_since: p && p.configured === true && p.alive === false && p.dead_since ? p.dead_since : at, last_live_at: (p && p.last_live_at) || null };
+}
+/** @param {any} snap */
+function writePullSnapshot(snap, path = PULL_SNAPSHOT) {
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+    const tmp = `${path}.tmp${process.pid}`;
+    writeFileSync(tmp, JSON.stringify(snap, null, 1));
+    renameSync(tmp, path);
+    return true;
+  } catch { return false; }
+}
+const readPullSnapshot = (path = PULL_SNAPSHOT) => { try { return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : null; } catch { return null; } };
+
 // pull: ingest new *.jsonl from the Drive inbox → move processed files to /done.
 // deps.fileCard is the selftest's seam (awayday.mjs:409 pattern) — production passes nothing.
 function pullFromInbox(inboxPath, repsPath, reg = EMPTY_REG, deps = {}) {
   if (!existsSync(inboxPath)) {
-    return { pulled: 0, files: 0, wired: false, rejections: [], carded: false, card_error: null, note: `inbox not found (${inboxPath}) — Google Drive for Desktop not wired yet; nothing pulled` };
+    // unit mpres F8 A: this function is only reached with a CONFIGURED inbox (main returns first when none is),
+    // so a missing folder here is a DEAD input — distinct from the unset `false`, never the same word.
+    return { pulled: 0, files: 0, wired: "configured-missing", rejections: [], carded: false, card_error: null, note: `inbox configured but not found (${inboxPath}) — the drive mount is down; nothing pulled` };
   }
   const files = readdirSync(inboxPath).filter((f) => f.toLowerCase().endsWith(".jsonl"));
   const doneDir = join(inboxPath, "done");
@@ -1945,7 +1973,17 @@ function selftest() {
   const p3 = join(dir, "reps_empty.jsonl"); if (existsSync(p3)) rmSync(p3);
   ingest(p3, [], reg);
   assert("empty-ingest: no file fabricated", !existsSync(p3));
-  assert("pull dormant: missing inbox → 0 pulled, wired=false", pullFromInbox(join(dir, "no_such_inbox"), p, reg).wired === false);
+  // unit mpres F8 A: pullFromInbox is only reached with a CONFIGURED inbox, so a missing folder is a dead
+  // input with its own word — never the unset `false` (that word belongs to main's not-configured branch).
+  assert("mpres W11 — a configured, missing inbox → 0 pulled, wired=\"configured-missing\" (never the unset false)", (() => { const r = pullFromInbox(join(dir, "no_such_inbox"), p, reg); return r.wired === "configured-missing" && r.pulled === 0; })());
+  {
+    const t1 = new Date("2026-11-17T05:00:00Z"), t2 = new Date("2026-11-17T06:00:00Z"), t3 = new Date("2026-11-17T07:00:00Z");
+    const d1 = pullSnapshot(null, { configured: true, alive: false, now: t1 }), d2 = pullSnapshot(d1, { configured: true, alive: false, now: t2 });
+    const l3 = pullSnapshot(d2, { configured: true, alive: true, now: t3 }), u = pullSnapshot(l3, { configured: false, alive: null, now: t3 });
+    assert("mpres — the pull snapshot carries dead_since across dead pulls, resets live, and reads an unconfigured inbox as dormant (never dead)",
+      d2.alive === false && d2.dead_since === t1.toISOString() && l3.alive === true && l3.dead_since === null && u.configured === false && u.alive === null);
+    assert("mpres — the pull snapshot never records the inbox PATH", !JSON.stringify([d1, d2, l3, u]).includes("no_such_inbox"));
+  }
 
   // --- E2E audit (25 Jul 2026) regressions ---------------------------------
   // ts gate: unparseable timestamps used to be APPENDED here and then silently
@@ -2863,12 +2901,18 @@ function main() {
   if (mode === "pull") {
     const inbox = resolveInbox();
     if (!inbox) {
+      writePullSnapshot(pullSnapshot(readPullSnapshot(), { configured: false, alive: null }));   // unit mpres: dormant, said so, never red
       console.log("pull: inbox not configured — set env ARSENAL_REPS_INBOX or capture_config.json {inbox:...}; nothing pulled.");
       process.exit(0);
     }
     const r = pullFromInbox(inbox, REPS_LOG, reg);
-    console.log(`pull: ${r.note}` + (r.wired ? ` (rejected ${r.rejected || 0}, duplicates ${r.duplicates || 0})` : ""));
-    if (!r.wired) console.log(`  to enable: create ${inbox} (or fix ARSENAL_REPS_INBOX / capture_config.json), then enable task ArsenalFC-CapturePull.`);
+    const inboxDead = r.wired === "configured-missing";
+    const snap = pullSnapshot(readPullSnapshot(), { configured: true, alive: !inboxDead });
+    writePullSnapshot(snap);
+    console.log(`pull: ${r.note}` + (r.wired === true ? ` (rejected ${r.rejected || 0}, duplicates ${r.duplicates || 0})` : ""));
+    if (r.wired !== true) console.log(`  to enable: create ${inbox} (or fix ARSENAL_REPS_INBOX / capture_config.json), then enable task ArsenalFC-CapturePull.`);
+    // unit mpres F2 B + F8 A: a configured inbox that is gone is a dead input — never exit 0 with a zero
+    if (inboxDead) { console.log(`pull: input DEAD since ${snap.dead_since} (configured inbox missing) → ${PULL_SNAPSHOT}`); process.exit(1); }
     // THE REGISTRY GATE's anchor on the unattended lane — the whole reason it is a card
     // and not a console line. This runs 14×/day into a stdout nobody reads. (10 Aug 2026)
     noticeRegistry("pull", reg);

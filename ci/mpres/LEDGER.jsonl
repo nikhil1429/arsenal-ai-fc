@@ -4,3 +4,5 @@
 {"ts":"2026-11-20T07:30:00Z","act":"presence selftest after step 1","cmd":"node scripts/presence.mjs selftest","last_line":"ALL CHECKS PASSED"}
 {"ts":"2026-11-20T07:40:00Z","act":"touchline selftest after step 2","cmd":"node scripts/touchline.mjs selftest","last_line":"ALL CHECKS PASSED"}
 {"ts":"2026-11-20T07:55:00Z","act":"dmn selftest after step 3","cmd":"node scripts/dmn.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-20T08:05:00Z","act":"capture selftest at base (this box runs as root)","cmd":"node scripts/capture.mjs selftest (base worktree 5759cce)","last_line":"SELFTEST FAILED (2 reds: CONCURRENT READER x2, the held-handle plant cannot hold against root)"}
+{"ts":"2026-11-20T08:06:00Z","act":"capture selftest after step 4","cmd":"node scripts/capture.mjs selftest","last_line":"SELFTEST FAILED (the SAME 2 CONCURRENT READER reds as base; the 3 new mpres checks green)"}
