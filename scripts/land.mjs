@@ -12,9 +12,11 @@
 //   (once, when origin still sits at the parent) and `push <unit>` retries later; groundsman knows the commit as lawful ·
 //   C1 (row 1023) THE SHA JUDGED IS THE SHA LANDED: the CI verdict is read at T and T itself is what main becomes; no
 //   verdict ever carries · C2 a witness declares what it reads in `// READS:` header lines · C3 the suite is not a
-//   carrying witness (it declares no list) · S1 hermetic witnesses live at ci/witness/<unit> · step 8 never uses
+//   carrying witness (it declares no list) · S1 hermetic witnesses live at ci/<unit>/ (F10 A, row 1066) · step 8 never uses
 //   `git worktree add` (a shared clone) · step 11 PRINTS the stale units and restarts nothing · Q4 a NEW file under
-//   ci/witness/ lands only with the campaign names-gate result as an input (--names-gate); absent = REFUSED.
+//   ci/ lands only with the campaign names-gate result as an input (--names-gate); absent = REFUSED.
+//   NO-CI-DIR (unit ms1 · row 1066 F7 A): once main carries a ci/<unit>/BASE (ms1's landing on), a landing whose tree lacks
+//   ci/<unit>/witness_<unit>.mjs with a 40-hex ci/<unit>/BASE, or that touches nothing under ci/<unit>/, is REFUSED.
 //   THE JUDGE-HELD REFUSAL (unit mlj, rows 1040 (2) F1 / 1043 (2) F1; spec ci/mlv0/PROOF.md FORK 1): while a judge round
 //   holds keeper's JUDGE_PORT the verb (and its --dry) REFUSES JUDGE-HELD — read through keeper.mjs judgeHeld, the one
 //   predicate every retire reads, as the LAST gate before the move. A wait, not a stop of his: the count is not reset.
@@ -39,7 +41,7 @@ const ROOT = join(__dirname, "..");
 const UNATTENDED_AFTER = 10;                     // row 1029 L2 — the architect's N, ruled, not chosen here
 const STATE_PREFIX = "dressing-room/state/";
 const SETTINGS_PATH = ".claude/settings.json";
-const WITNESS_DIR = "ci/witness/";
+const WITNESS_DIR = "ci/";   // F10 A (unit ms1, forks row 1066): every hermetic witness lives at ci/<unit>/
 // the stops a HUMAN has to resolve (L2 counts landings since the last one); a wait (pending verdict, open sitting,
 // main moved by a state push) is not a stop of his — it clears by itself or by the runner's next act
 const HUMAN_STOPS = new Set(["DIRTY-PATH", "PUSH-REJECTED", "NOT-FF", "LOCAL-DIVERGED", "LIVE-RED", "TRIPWIRE"]);
@@ -137,8 +139,8 @@ function verdictAt(t) {
 /** @param {string|null} file @param {string} t @param {string[]} added @param {string[]} touched */
 function namesGate(file, t, added, touched) {
   const fresh = added.filter((p) => p.startsWith(WITNESS_DIR));
-  if (!fresh.length) return { ok: true, why: "no new ci/witness file" };
-  if (!file) return { ok: false, why: `${fresh.length} new ci/witness file(s) and no --names-gate result (fail closed)` };
+  if (!fresh.length) return { ok: true, why: "no new ci/ file" };
+  if (!file) return { ok: false, why: `${fresh.length} new ci/ file(s) and no --names-gate result (fail closed)` };
   let g = null;
   try { g = JSON.parse(readFileSync(file, "utf8")); } catch { return { ok: false, why: "the names-gate result is unreadable" }; }
   if (!g || g.sha !== t) return { ok: false, why: "the names-gate result names another sha" };
@@ -151,7 +153,7 @@ function namesGate(file, t, added, touched) {
     const b = spawnSync("git", ["cat-file", "blob", `${t}:${p}`], { cwd: ROOT, windowsHide: true, maxBuffer: 1 << 26 });
     if (b.status === 0 && createHash("sha256").update(b.stdout).digest("hex") === g.list_sha256) return { ok: false, list: true, why: `${p} IS the names list` };
   }
-  return { ok: true, why: `${fresh.length} new ci/witness file(s) passed the names gate` };
+  return { ok: true, why: `${fresh.length} new ci/ file(s) passed the names gate` };
 }
 
 // ── THE VERB ─────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -191,6 +193,16 @@ async function land(unit, opt) {
   const st = touched.find((p) => p.startsWith(STATE_PREFIX));
   if (st) return stop(1, "REFUSED", "STATE-PATH", `${st} — state reaches origin by the groundsman only`, T);
   if (touched.includes(SETTINGS_PATH)) return stop(1, "REFUSED", "SETTINGS-PATH", `${SETTINGS_PATH} never lands`, T);
+  // 5 · NO-CI-DIR (unit ms1 · row 1066 F7 A): the law binds from the landing that put the first ci/<unit>/BASE on main —
+  //   from then every landing carries its unit's witness and BASE, so its proof rides the suite as a standing gate
+  if (lines(git(["ls-tree", "-r", "--name-only", P, "--", "ci"]).out).some((p) => /^ci\/[a-z0-9-]+\/BASE$/.test(p))) {
+    const b = `ci/${unit}/BASE`;
+    const has = (p) => git(["cat-file", "-e", `${T}:${p}`]).ok;
+    const w = [`ci/${unit}/witness_${unit}.mjs`, `ci/${unit}/witness_${unit.replace(/-/g, "_")}.mjs`].find(has) || `ci/${unit}/witness_${unit}.mjs`;
+    const baseOk = has(b) && /^[0-9a-f]{40}$/.test(git(["cat-file", "blob", `${T}:${b}`]).out);
+    if (!has(w) || !baseOk || !touched.some((p) => p.startsWith(`ci/${unit}/`)))
+      return stop(1, "REFUSED", "NO-CI-DIR", `a landing carries ${w} and a 40-hex ${b}, and touches ci/${unit}/`, T);
+  }
   const idx = join(mkdtempSync(join(os.tmpdir(), "land-index-")), "index");
   try {
     const rt = git(["read-tree", T], { env: { GIT_INDEX_FILE: idx } });
