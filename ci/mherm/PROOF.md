@@ -220,6 +220,46 @@ working tree, hermetic all                                         → organism_
 lawpack gate, 6a6bdff and the merge (LF clones)                    → the same count line as §9, both GREEN
 ```
 
+## 10-F. FORK F-8 ruled — mf2's F3, one clause with two doors (forks rows 1204 and 1205 (3))
+
+Row 1204 ruled F-8 as option (a), narrowed to a listed admission ((b) and (c) refused; row 1157 (4) stands). Row 1205 (3)
+then ruled F3 as ONE clause with TWO doors and gave both doors to the second of the mgat and mherm build seats to return.
+**This seat is SECOND**: `claude/mgat-build` was read at `9897cb4` before this push (20 Nov 2026), and it already carries
+door 1 (`ci/mf2/livenarrow.mjs`, its F3 re-statement). Its branch is not merged: `livenarrow.mjs` is brought by content
+(`git show 9897cb4:ci/mf2/livenarrow.mjs`, byte-equal), and F3 here holds both doors in the one clause.
+
+- **door 1** (unit mgat, row 1174 (2)): the build tree declares in `LIVE_NARROWS` the base LIVE name its new name narrows,
+  that partner was LIVE at the base and is gone at the build (`liveNarrow`, unchanged; `node ci/mf2/livenarrow.mjs selftest`
+  → `livenarrow selftest: 9 of 9`).
+- **door 2** (this seat, row 1204 (2)): the name stands in `ci/mf2/LIVE_ADMITTED.json` with its ruling row; every assert listed
+  under it is an assert name of the build's own source; the witness measured on its own base copy that the base hermetic run
+  judged NONE of them; an entry the build no longer prints LIVE reads RED (unit mherm2 deletes it when its fixture lands).
+- **the count**: the build's LIVE may exceed the base's by exactly the names door 2 admits; door 2's names leave the set and
+  the count before door 1's rule judges what is left. ONE entry today: T3's name, row 1204, its ten asserts listed.
+
+Measured on the merged tree (LF trees of HEAD and of `ci/mf2/BASE` 15edfec, the member's shape; 20 Nov 2026):
+
+```
+mf2 witness            → RED MF2 · BOUND        (F1 F2 F3 F4 LAST GREEN; BOUND is the bound class: mf2's BASE is behind main)
+  GREEN F3 · hermetic headline LIVE: build 125 · base 126 + 1 admitted by door 2 (build ≤ base + door 2) · … · door 1 admitted (narrows a base name now gone): none · refused: none · door 2 admitted (row-listed, none of their asserts judged by the base): LOAD ZERO · the brain-ledger lane block …
+node ci/mf2/run_mutants_mf2.mjs
+  RED  M-D1-NOPARTNER → RED MF2 · F3 BOUND     (door 1: the list emptied, no LIVE_NARROWS partner — "no narrowed partner declared")
+  RED  M-D2-UNLISTED → RED MF2 · F3 BOUND      (door 2: the entry renamed, the build's new name unlisted)
+  RED  M-D2-JUDGED → RED MF2 · F2 F3 F4 BOUND  (door 2: a ledger planted in the base copy, so the base judged the ten — "the BASE judged 10")
+  control → RED MF2 · BOUND  (its F3 GREEN)
+run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN
+mherm witness --org <merge> --base-org <cebe3eb> --bound-org <6a6bdff>
+  ok   BOUND · against the bound org (--bound-org) · 14 path(s) differ, each a named file (the four ci/mf2 files added to its list by rows 1204 / 1205 (3))
+GREEN MHERM the hermetic run is a function of the tree (…) · 5 clause(s)
+node ci/mherm/run_mutants_mherm.mjs (same orgs)
+run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN
+```
+
+The ms1 member judges the mf2 witness by its last line with BOUND dropped (the bound class, row 1200 (2)), so this tree's
+`RED MF2 · BOUND` reads GREEN there; the npm-test leg that was red on `327892e` for this one member is the architect's re-run.
+Files this added beyond the brief's list, each ruled to this seat by those rows: `ci/mf2/witness_mf2.mjs` (F3),
+`ci/mf2/LIVE_ADMITTED.json`, `ci/mf2/run_mutants_mf2.mjs`, `ci/mf2/livenarrow.mjs` (mgat's, by content).
+
 ## 11. What the two named next units need from this build
 
 - **mherm2** (a planted ledger fixture so the ten asserts run on every push · F5 B):
@@ -263,7 +303,7 @@ lawpack gate, 6a6bdff and the merge (LF clones)                    → the same 
 - **F-6 · Windows, named not guessed:** whether `os.tmpdir()` (an 8.3 short name on the runner) and the clone path compare
   equal inside the collar; whether a junction `node_modules` reads the same in `git status` before and after; the job's wall
   time per run. All three are printed by the `hermetic-twice` job's first run.
-- **F-8 · mf2's LIVE ratchet against T3 (F3 A).** `ci/mf2/witness_mf2.mjs` F3 reds on the one LIVE name T3 adds (§10), so
+- **F-8 · RULED (rows 1204, 1205 (3); §10-F).** ~~mf2's LIVE ratchet against T3 (F3 A).~~ `ci/mf2/witness_mf2.mjs` F3 reds on the one LIVE name T3 adds (§10), so
   the neutral npm-test verdict of this branch is RED on that one member. Rule one: (a) mf2's F3 admits a LIVE name that
   replaces a block the base skipped SILENTLY (strictly more visible: before T3 the block's existence depended on a gitignored
   file), (b) a KNOWN_RED entry by a row, until mherm2's fixture retires the name, or (c) bring F3 C (mherm2) into this unit.
