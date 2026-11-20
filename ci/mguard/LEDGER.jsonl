@@ -19,3 +19,4 @@
 {"ts":"2026-11-20T04:41Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (build)","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
 {"ts":"2026-11-20T04:41Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (LF tree 5759cce)","last_line":"organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)"}
 {"ts":"2026-11-20T04:42Z","act":"ci","cmd":"curl check-runs of 13f6889","last_line":"136026941301 node 22 queued · 136026940969 node 24 queued"}
+{"act":"ci-read","sha":"1fe86f6","runs":[136027924936,136027925181],"verdict":"failure","new_red":["WITNESS ‹mpool› · GREEN at head against its BASE"],"why":"F1 (mpool W3.1 two writes vs G4 A three)","base_runs":[135919452425,135919452846],"base_verdict":"success"}

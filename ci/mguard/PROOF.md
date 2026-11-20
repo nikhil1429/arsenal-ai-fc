@@ -99,7 +99,19 @@ The suite's LOAD ZERO BLOCK 7 law, replayed with `git show <sha>:<path>` over ev
 
 ## The neutral machine (public API, curl, no token)
 
-CI_PLACEHOLDER
+Check runs read at `api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs` and `…/check-runs/<id>/annotations`:
+
+- `fa7c18f`: 136024667228 / 136024666833 · cancelled (superseded by the next push)
+- `37d6a32`: 136026011388 / 136026010983 · cancelled
+- `13f6889`: 136026941301 (node 22) / 136026940969 (node 24) · superseded
+- **`1fe86f6`: 136027924936 (node 22) · failure · 136027925181 (node 24) · failure.** Both legs carry the same B1_VERDICT:
+  `RED · "1 member(s) red that are not red at the merge base" · new: ["WITNESS ‹mpool› · GREEN at head against its BASE"]
+  · base_red 1 · fixed 0 · pass 229 · fail 2 · live 126 · profile hermetic`. The ONE new red is F1 below, and it is the
+  red this proof predicted. The `WITNESS ‹mguard›` member is not in the new-red list. BASE `5759cce` reads success on both legs
+  (135919452425 / 135919452846).
+
+**The verdict of the last push is RED, by F1 alone.** The fix is in `ci/mpool/witness_mpool.mjs`, a file this build may
+not touch. It goes to the architect.
 
 ## FORKS
 
