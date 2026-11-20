@@ -174,3 +174,5 @@ Read through the public API with no token after each push. The rows are in `ci/m
 CHECKPOINT · merged origin/main 3f22388 (mlaw) at 2026-11-20T11:45:56Z as 6639f69, package.json union only, witness and mutants re-run GREEN on the merged tree · resume from: the next new-main line (mmeter, mcov)
 
 CHECKPOINT · merged origin/main cebe3eb (mcov) at 2026-11-20T12:38:34Z as d84cc42, package.json union only, BASE kept (forks row 1200 (2)), witness and mutants re-run GREEN on the merged tree · resume from: the next new-main line (mmeter)
+
+CHECKPOINT · merged origin/main 6a6bdff (mmeter) at 2026-11-20T14:20:00Z as 08a37b7 with no conflicting hunk (so no hunk to name), BASE kept (forks row 1200 (2)), witness and mutants re-run GREEN on the merged tree · resume from: the next message
