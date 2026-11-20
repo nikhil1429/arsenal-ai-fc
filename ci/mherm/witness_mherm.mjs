@@ -30,7 +30,8 @@
 //   named file. The bound org is `--bound-org <dir>` when given (the build's merge parent after main moved: forks row
 //   1200 (2), the clauses against ci/mherm/BASE, the bound against the parent), else the base org —
 //   scripts/sandbox.mjs, scripts/organism_test.mjs, scripts/tone.mjs, scripts/audit_preload.mjs,
-//   .github/workflows/suite.yml, or a path under ci/mherm/.
+//   .github/workflows/suite.yml, a path under ci/mherm/, or (forks rows 1204 / 1205 (3)) ci/mf2/witness_mf2.mjs,
+//   ci/mf2/run_mutants_mf2.mjs, ci/mf2/livenarrow.mjs, ci/mf2/LIVE_ADMITTED.json.
 // LAST: no process whose command line names R survives (read from /proc on Linux, from Get-CimInstance on Windows, from ps
 //   elsewhere — never through a shell); R is then removed.
 // PORT CLASS (row 1053): the witness binds no port, names no live service, POSTs nothing and restarts nothing; the
@@ -47,7 +48,9 @@ import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 
 export const CLAUSES = ["W1 COLLAR", "W2 TREE", "W3 LEDGER", "W4 TEMP", "W5 TWICE"];
-const NAMED = [/^scripts\/(sandbox|organism_test|tone|audit_preload)\.mjs$/, /^\.github\/workflows\/suite\.yml$/, /^ci\/mherm\//];
+// ci/mf2/: the mf2 witness's F3 doors, its list file and mutants — ruled to this seat by forks rows 1204 and 1205 (3)
+const NAMED = [/^scripts\/(sandbox|organism_test|tone|audit_preload)\.mjs$/, /^\.github\/workflows\/suite\.yml$/, /^ci\/mherm\//,
+  /^ci\/mf2\/(witness_mf2|run_mutants_mf2|livenarrow)\.mjs$/, /^ci\/mf2\/LIVE_ADMITTED\.json$/];
 const VL = /^ {2}(ok {2}|FAIL|LIVE) |^organism_test:/;
 const NL = /\r?\n/;
 const vlines = (out) => String(out).split(NL).filter((l) => VL.test(l)).join("\n");
