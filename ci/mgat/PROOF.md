@@ -192,3 +192,49 @@ and `ci/mgat/**`. Nothing else (`git diff --stat fb42118 HEAD`; witness BOUND). 
 ### 8.7 THE TIP
 The tip judged by the neutral machine is **`46103cac4203f721991cf3ed30c2bb897534921e`**. The commit after it adds only this §8.6/§8.7 text and
 ledger rows (`ci/mgat/PROOF.md`, `ci/mgat/LEDGER.jsonl`), because a file cannot carry its own sha's verdict. Its two legs are read after the push.
+
+## 9. THE RE-CUT ON MAIN `5759cce` (runner M, 20 Nov 2026) — the two new reds of land/mgat `1b8c379`, named. No organ byte changed
+
+### 9.1 The merge
+`git merge --no-edit 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90` → `08b7e15` (no conflict). `git diff --stat origin/land/mgat HEAD -- . ':!ci'`
+is **empty**: outside `ci/` the merged tip is byte-identical to land/mgat `1b8c379`. `ci/mgat/BASE` now names `5759cce`.
+
+### 9.2 (a) the GATES red — which frozen count rose (`node ci/mgat/tools/measure.mjs <sha> gates`, E plant, 20 Nov 2026)
+
+| Rule | frozen (`scripts/gates.mjs`, untouched) | main `5759cce` | merged tip `08b7e15` | the sites that add it at the tip (`MGAT_RULE=no-empty,no-unused-vars node ci/mgat/tools/drift.mjs a5f8693 08b7e15`) |
+|---|---|---|---|---|
+| no-empty | 262 | 272 | **266** | `scripts/organism_test.mjs:2870` `namingProcs` `/proc` read `catch {}` · `:2928` `process.kill(p)` `catch {}` · `:2943` `unlinkSync(… node_modules)` `catch {}` · `:2944` `rmSync(tmp …)` `catch {}` |
+| checkJs diagnostics | 296 | 298 | **297** | `scripts/organism_test.mjs:2932:68` TS2339 `Property 'code' does not exist on type 'Error'` (`r.error.code`, the F-9 bound kill) |
+| no-unused-vars | 82 | 85 | 82 | none (this unit's rung_receipt fates hold it at the frozen value) |
+
+- `gates.mjs report` exits 1 on BOTH (main `5759cce`: 3 RED · the merged tip: 2 RED, `LINT ROSE — no-empty 266` and `TYPE COUNT ROSE — 297`).
+- **Whose bytes:** every one of the five sites is in main's own `scripts/organism_test.mjs` (`git blame` → `5759cce`). Its assembled tree carries unit
+  ms1's commits: `git log -S` on `claude/ms1-build` `179a0ee` gives `f052188` (unit ms1, the witnesses member) for all four no-empty sites, and
+  `0b3f8a8` (unit ms1, forks row 1153 (3) F-9) for the TS2339. Not one is in a line this unit wrote.
+- **Why it is NEW at land/mgat and not on main:** on main the `gates` mode is in `LIVE_MODES`, so the hermetic profile never runs the gate.
+  This unit's LIVE exit (row 1145 (1)) makes the neutral machine read the gate. So the first landing that carries it reads main's own five
+  rises as a new member red. That is the same class FK1 named (forks row 1156 (1)), from a later landing.
+
+### 9.3 (b) WITNESS ‹mf2› · GREEN at head against its BASE — its red clause and cause (`node ci/mgat/tools/mf2run.mjs`, the member's own recipe: LF trees, refusing model stubs, 20 Nov 2026)
+
+| org → base | last line | the clause lines that are red |
+|---|---|---|
+| `08b7e15` → `15edfec` (mf2's own BASE, as the member runs it) | `RED MF2 · F3 BOUND` | F3 `named LIVE only by the build: gates schema half` · BOUND |
+| `08b7e15` → `5759cce` (as asked) | `RED MF2 · F3 BOUND` | F3 `… named LIVE only by the build: gates schema half` · BOUND `differs: scripts/captains_call.mjs, scripts/cortex.mjs, scripts/groundsman.mjs, scripts/organism_test.mjs, scripts/rung_receipt.mjs` |
+| `5759cce` → `15edfec` (control: main) | `RED MF2 · BOUND` | BOUND only |
+
+- The member forgives BOUND (`judgeLast`, `scripts/organism_test.mjs:2843-2852`, the bid ids), so main reads GREEN. At the tip it reads
+  **red beyond BOUND: F3**.
+- **The red clause is F3** (`ci/mf2/witness_mf2.mjs:16`, `:101`): "the build names LIVE no member the base did not". The LIVE count is equal (126 build, 126 base).
+  The new NAME is `gates schema half`, which this unit's HALF edit prints through `liveNamed` (`scripts/organism_test.mjs`, the `gates()` function)
+  in place of `MODE gates`. F1, F2 and F4 are GREEN on both runs. F2 names the GATES member as "added (named, never red)".
+- **The cause** is this unit's own design: the spec's §3.4 HALF names the ajv half LIVE under a new name. mf2's F3 counts any new LIVE name as
+  red, even when one leaves the table as the other arrives.
+
+### 9.4 What the architect rules (named, nothing done)
+- (a) The five ms1 sites: fates by measurement, as the mgat six and the rung_receipt four. Either `scripts/organism_test.mjs`'s ms1 lines join
+  this unit (it already owns that file) or unit ms1 takes them, and mgat re-cuts.
+- (b) mf2 F3 against the HALF name. Either the ajv half is named LIVE under a name the base already prints, or mf2's F3 is re-cut to compare
+  the LIVE names that LEFT against the ones that ARRIVED (owner unit mrf, like F2/F4).
+
+CHECKPOINT · STOPPED after the 5759cce re-cut · tip: the commit that carries this line, its parent the merge `08b7e15`; its sha is in the runner's read of claude/mgat-build · resume from the architect's ruling on §9.4
