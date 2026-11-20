@@ -422,3 +422,11 @@ any change: `package.json`, `.github/workflows/suite.yml`, any state file, any o
 
 Read with no token: `R=$(git remote get-url origin | sed -E 's#.*github.com[:/]##; s#\.git$##'); curl -s https://api.github.com/repos/$R/commits/<sha>/check-runs` (the slug is derived, not typed).
 
+| Push | Run | Legs | Verdict |
+|---|---|---|---|
+| `6322110` (step 1, tools only) | not read (superseded within minutes by the next push) | — | — |
+| `6018a70` (the census and this spec) | run 44760950619 · jobs 136373118010 / 136373118479 | node 22 · node 24 (`windows-latest`) | **success** on both. Annotation, each leg, 20 Nov 2026: `B1_VERDICT {"v":"GREEN", … "base":"6a6bdff…", "why":"no member red that is not red at the merge base","new":[],"base_red":0 …}` |
+
+The run of the push that carries this table is named in the seat's FINAL MESSAGE (a spec cannot name the run of its own commit).
+
+DONE · the census and the planted tree, 20 Nov 2026 UTC · nothing built, nothing landed · the BUILD half is cut from main after unit mhot lands (row 1205 (1))
