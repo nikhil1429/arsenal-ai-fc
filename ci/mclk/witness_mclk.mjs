@@ -146,7 +146,8 @@ function survivors() {
 //   suite member runs it (scripts/organism_test.mjs witnesses()): fresh LF trees of the commit (--org) and of its
 //   ci/<u>/BASE (--base-org) under the temp dir, node_modules linked, a claude and a gemini that refuse first on PATH, every
 //   exported organ port door set to an OS-picked free port, the witness run from a copy of its dir, every BOUND id dropped
-//   from its RED last line, each wait bounded by .github/workflows/suite.yml timeout-minutes (read, never typed).
+//   from its RED last line. Each run is bounded by .github/workflows/suite.yml timeout-minutes (read, never typed) shared
+//   evenly over the runs still to go; a run killed there reads "(killed at the bound)", a named outcome.
 //   A SITE is a run RED at AFTER or BEFORE; it is a CLOCK SITE iff the REAL control reads GREEN.
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DERIVE = /new Date\(\s*\)|new Date\(\s*(Date\.now|now\b|boot\b)|GIT_(COMMITTER|AUTHOR)_DATE|epoch\(\s*(now\b|Date\.now)/;
@@ -225,7 +226,10 @@ async function census(a) {
     const runs = [];
     let k = 0;
     const T0 = Date.now();
-    const left = () => Math.max(1, T0 + jobMin * 60000 - Date.now());
+    // each run's bound: the job's timeout-minutes (suite.yml, read) shared evenly over the runs still to go — a run that never
+    // ends is killed there and is a NAMED outcome ("killed at the bound"), never a census that hangs
+    let todo = plants.length * clocks.length + units.filter((u) => derive[`ci/${u}/${unitFile(join(scan, "ci", u), u)}`]).length * clocks.length;
+    const left = () => Math.max(1, Math.floor((T0 + jobMin * 60000 - Date.now()) / Math.max(1, todo--)));
     for (const f of plants) for (const [ck, env0] of clocks) {
       const t = join(W, `p${++k}`);
       const e2 = treeOf(sha, t);
@@ -237,6 +241,7 @@ async function census(a) {
         const L = lines(r.stdout);
         const last = L.filter((l) => /^PLANTS \S+ · \d+ of \d+ plant\(s\) as expected$/.test(l)).pop() || L.pop() || "";
         const m = /· (\d+) of (\d+) plant/.exec(last);
+        if (r.error && /ETIMEDOUT/.test(String(r.error.code || r.error.message))) L.push("(killed at the bound)");
         res = { ok: r.status === 0 && !!m && Number(m[2]) > 0 && m[1] === m[2], last: last || `(no line, exit ${r.status}${r.signal ? ` ${r.signal}` : ""})`, red: L.filter((l) => /^\s+FAIL /.test(l)).slice(0, 2).map((l) => l.trim()) };
       }
       unlinkNm(t); rmSync(t, { recursive: true, force: true });
