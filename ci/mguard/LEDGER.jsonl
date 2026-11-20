@@ -15,3 +15,7 @@
 {"ts":"2026-11-20T03:48Z","act":"witness","cmd":"node ci/mguard/witness_mguard.mjs --org <LF tree 5759cce> --base-org <LF tree 5759cce>","last_line":"RED MGUARD · JUDGE (exit 1)"}
 {"ts":"2026-11-20T04:00Z","act":"mutants","cmd":"node ci/mguard/run_mutants_mguard.mjs --org . --base-org <LF tree 5759cce>","last_line":"run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-20T04:10Z","act":"build-G8","cmd":".claude/skills/runner/SKILL.md: one line after the fallback-card line (the away report, read and show only, its judge)","last_line":"canon replay HEAD · 97 md blob(s) · undeclared 0 · declared 1"}
+{"ts":"2026-11-20T04:40Z","act":"measure","cmd":"node scripts/lawpack.mjs gate (LF trees BASE 5759cce and the build)","last_line":"every judged count equal; both: lawpack: 1 RED (jugad-literal-subject-list 93, baseline 90 — on BASE as cut)"}
+{"ts":"2026-11-20T04:41Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (build)","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-20T04:41Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (LF tree 5759cce)","last_line":"organism_test: 147 passed, 3 failed · ruled 0 · UNRULED 3 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-20T04:42Z","act":"ci","cmd":"curl check-runs of 13f6889","last_line":"136026941301 node 22 queued · 136026940969 node 24 queued"}
