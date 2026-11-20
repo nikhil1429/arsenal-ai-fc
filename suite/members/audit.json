@@ -1,0 +1,1 @@
+{"suite":"audit:selftest","argv":["selftest"],"live":"reads state/registry.json, state/xray_graph.json, state/audit_ledger.jsonl …"}

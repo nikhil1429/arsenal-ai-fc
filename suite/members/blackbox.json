@@ -1,0 +1,1 @@
+{"suite":"audit:selftest","argv":["selftest"],"live":"reads state/xray_graph.json · times the wall clock: red under instrumentation load alone"}

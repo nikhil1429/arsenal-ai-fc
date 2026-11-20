@@ -27,6 +27,7 @@
 //   imports them, so a top-level side effect cannot leak in) · every assertion NAMES
 //   the law it is holding · a RED here is a real defect, not a flaky net.
 // CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack|done|witnesses]
+//      node scripts/organism_test.mjs chain <suite> · roll [--json]   (unit mhot: the member roll, suite/members/*.json)
 // ============================================================================
 import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync, appendFileSync, symlinkSync, unlinkSync, openSync, closeSync, realpathSync } from "node:fs";
 import { createHash } from "node:crypto";   // S11 · F-6: the content discriminator (an idempotent rewrite is not a leak)
@@ -82,79 +83,14 @@ const SUITE_NAMES = ["organism:selftest", "squad:selftest", "audit:selftest"];
 // members whose verdict moves with the date; a member red under the probe's load alone times the wall clock. Keys of
 // LIVE_ASSERTS are assert names with digit runs folded to `#`, cut at 90 characters, matched as a prefix.
 const PROFILE = process.env.ORGANISM_TEST_PROFILE === "hermetic" || process.argv.includes("--hermetic") ? "hermetic" : "full";
+// ~~THE LIVE SELFTEST TABLE held one line per organ here~~ — FOLDED by unit mhot (forks row 1187, F1 B · L9: moved, never
+// deleted). A MEMBER's hermetic-LIVE reason now sits in its own member file, suite/members/<organ>.json `live`, byte-equal to
+// the line it held here at 5759cce (`node scripts/organism_test.mjs roll` prints every one). What stays below is ONLY the
+// reason of an organ that has a selftest and NO member file (hermetic()'s loop spawns every organ with a selftest, member or
+// not): a unit that gives such an organ its member file moves the reason into that file and deletes its line here in the same
+// commit — coverage() reds a reason held in both places.
 const LIVE_SELFTESTS = Object.freeze({
-  "acts": "reads state/registry.json, state/captain.json",
-  "archivist": "reads state/captain.json, state/archive_audit.jsonl, state/audit_ledger.jsonl … · reaches a localhost port it does not listen on",
-  "audit": "reads state/registry.json, state/xray_graph.json, state/audit_ledger.jsonl …",
-  "blackbox": "reads state/xray_graph.json · times the wall clock: red under instrumentation load alone",
-  "bootroom": "reads state/registry.json",
-  "brain": "reads state/registry.json, state/brain_config.json, state/learning_state.json …",
-  "calibration": "reads state/registry.json",
-  "capsule_bridge": "reads state/registry.json, state/forge_profile.json …",
-  "captain": "reads state/captain.json",
-  "capture": "reads state/heartbeat_config.json",
-  "conductor": "reads state/registry.json, state/captain.json, state/tasks_expected.json …",
-  "context": "reads state/registry.json, state/captain.json",
-  "context_manifest": "reads state/registry.json, state/resume_pointer.jsonl, state/compiled_notes.jsonl …",
-  "cortex": "reads state/registry.json, state/captain.json",
-  "council": "reads state/registry.json, state/council_config.json, state/brain_config.json",
-  "daemon_watchdog": "reads state/registry.json, state/captain.json, state/conductor.json …",
-  "daily_green": "reads state/captain.json, state/registry.json, state/daily_green.jsonl …",
-  "daykey": "reads state/tasks_expected.json",
-  "deep": "reads state/registry.json …",
-  "distiller": "reads state/registry.json",
-  "dmn": "reads state/registry.json, state/brain_config.json, state/concepts.json …",
-  "doubtminer": "reads state/doubtminer_config.json",
-  "dugout": "reads state/registry.json, state/captain.json, state/readiness.json … · its verdict moves with the wall clock (red under a +90-day shift, green at the true date)",
-  "examiner": "reads state/concepts.json, state/examiner_drill.json …",
-  "exchanges": "reads state/captain.json",
-  "flow_atlas": "reads state/registry.json, state/xray_graph.json, state/archive_audit.jsonl …",
-  "forge_session": "reads state/concepts.json, state/registry.json …",
-  "fuelboard": "reads state/fuelboard_config.json …",
-  "gaffer_brain": "reads state/dossier_weights.json, state/registry.json …",
-  "gate": "reads state/registry.json …",
-  "gate_tune": "reads state/registry.json",
-  "gates": "reads state/laws_register.json, state/registry.json …",
-  "heartbeat": "reads state/heartbeat_config.json",
-  "herd": "reads state/xray_graph.json · probes the process table",
   "home_pin": "reads state/captain.json · reaches a localhost port it does not listen on",
-  "lawpack": "reads state/archive_audit.jsonl, state/audit_ledger.jsonl, state/awayday.json …",
-  "learn_digest": "reads state/learning_state.json, state/registry.json, state/forge_profile.json …",
-  "learnstate": "reads state/registry.json, state/forge_profile.json, state/python_state.json …",
-  "limits": "reads state/reps_log.jsonl, state/physio_config.json, state/nemesis_config.json …",
-  "manager": "reads state/registry.json …",
-  "mcp-memory": "reads state/registry.json",
-  "models": "reads state/brain_config.json, state/calibration_config.json, state/council_config.json …",
-  "nightshift": "reads state/registry.json, state/captain.json, state/gate_tune_ledger.jsonl …",
-  "notes_compiler": "reads state/captain.json",
-  "oura_coach": "reads state/captain.json",
-  "outbox": "reads state/registry.json",
-  "outwork_audit": "reads state/registry.json",
-  "postmatch": "reads state/captain.json",
-  "python_state": "reads state/python_state.json",
-  "rails": "reads state/sitting.json …",
-  "reconcile": "reads state/registry.json, state/brain_config.json, state/flow_atlas.json …",
-  "rejirah": "reads state/registry.json …",
-  "samjhao": "reads state/registry.json …",
-  "scout": "reads state/dossier_weights.json",
-  "selfknowledge": "reads state/captain.json",
-  "services": "reads state/registry.json, state/captain.json",
-  "setpiece": "reads state/registry.json, state/ladder_config.json, state/dossier_weights.json …",
-  "shadow": "reads state/reps_log.jsonl, state/registry.json",
-  "sitting": "reads state/captain.json",
-  "sprintsync": "reads state/registry.json …",
-  "talk": "reads state/registry.json",
-  "tasks": "reads state/registry.json …",
-  "teaching_audit": "reads state/concepts.json, state/reps_log.jsonl …",
-  "test_coach_v2": "reads state/captain.json",
-  "thalamus": "reads state/thalamus_config.json, state/registry.json …",
-  "throwin": "reads state/registry.json",
-  "timeaudit": "reads state/buckets.json",
-  "turn_hook": "reads state/sitting.json, state/registry.json … · times the wall clock: red under instrumentation load alone",
-  "viz": "reads state/captain.json",
-  "watchman": "reads state/registry.json, state/captain.json, state/unleash_baseline.json … · its verdict moves with the wall clock (red under a +90-day shift, green at the true date)",
-  "widget": "reads state/widgets.json",
-  "xray": "reads state/xray_graph.json",
 });
 const LIVE_ASSERTS = Object.freeze({
   "A# · PLANTED VIOLATION — an off-list organ and a deny-listed one are both caught (the gate": "in the A9 block, whose sandbox run reads state copies",
@@ -238,8 +174,59 @@ function skipLive(...names) {
   for (const n of names) liveNamed(n, LIVE_ASSERTS[/** @type {string} */ (keyOf(n))]);
   return true;
 }
+// ── THE MEMBER ROLL (unit mhot · forks row 1187: F1 B, F2 A, F8 A) ──────────────────────────────────────────────────────
+// WHY. The three suites used to be ONE JSON line each in package.json (an `&&` chain naming every organ), and every unit
+// that added a member appended to the same line — so any two such units conflicted, always (ci/mhot/MHOT_SPEC.md §2-§3,
+// measured on claude/mhot-spec 099123f). Now a member is ONE FILE, suite/members/<organ>.json = { suite, argv, live }:
+// adding a member creates a file nobody else edits, and "exactly one suite" is structural (a file names one suite).
+// suiteRoll is the ONE reader: coverage(), suites(), the hermetic LIVE lookup and the `chain` / `roll` verbs all read
+// through it, and scripts/audit.mjs spawns `roll --json` rather than keeping its own copy (this suite spawns organs and
+// never imports them; audit spawning the suite keeps that direction). A file that does not parse, names no known suite,
+// holds a non-array argv or a blank reason is a NAMED DEFECT, never dropped — and a tree with no member directory is a
+// defect too, so this instrument laid over an old tree (suite.yml's base-leg fallback) reds by name, never passes on 0.
+const MEMBERS_REL = "suite/members";
+/** @typedef {{ organ: string, suite: string, argv: string[], live: string|null, file: string }} Member */
+/** suiteRoll — PURE over the tree it is handed: reads <root>/suite/members/*.json, writes nothing. Sorted by file name.
+ *  @param {string} [root] @returns {{ members: Member[], defects: { file: string, why: string }[] }} */
+export function suiteRoll(root = ROOT) {
+  /** @type {Member[]} */ const members = [];
+  /** @type {{ file: string, why: string }[]} */ const defects = [];
+  /** @type {string[]} */ let names;
+  try { names = readdirSync(join(root, ...MEMBERS_REL.split("/"))); }
+  catch (e) {
+    defects.push({ file: MEMBERS_REL, why: `no member directory (${(e && /** @type {any} */ (e).code) || "unreadable"}): this instrument reads its suites from ${MEMBERS_REL}/*.json and fails closed without it` });
+    return { members, defects };
+  }
+  for (const f of names.sort()) {
+    const file = `${MEMBERS_REL}/${f}`;
+    const bad = (why) => defects.push({ file, why });
+    if (!f.endsWith(".json")) { bad("not a .json member file"); continue; }
+    const organ = f.slice(0, -".json".length);
+    if (!/^[A-Za-z0-9_\-]+$/.test(organ)) { bad("the file name is not an organ name"); continue; }
+    /** @type {any} */ let j;
+    try { j = JSON.parse(readFileSync(join(root, ...MEMBERS_REL.split("/"), f), "utf8")); }
+    catch (e) { bad(`does not parse: ${String(e instanceof Error ? e.message : e).split(/\r?\n/)[0]}`); continue; }
+    if (!j || typeof j !== "object" || Array.isArray(j)) { bad("is not one JSON object"); continue; }
+    const keys = Object.keys(j).sort().join(",");
+    if (keys !== "argv,live,suite") { bad(`holds keys {${keys}}: a member file holds exactly suite, argv and live`); continue; }
+    if (!SUITE_NAMES.includes(j.suite)) { bad(`names suite ${JSON.stringify(j.suite)}: not one of ${SUITE_NAMES.join(" | ")}`); continue; }
+    if (!Array.isArray(j.argv) || !j.argv.every((x) => typeof x === "string")) { bad("argv is not an array of strings"); continue; }
+    if (!(j.live === null || (typeof j.live === "string" && j.live.trim() !== ""))) { bad("live is neither null nor a reason"); continue; }
+    members.push({ organ, suite: j.suite, argv: j.argv, live: j.live, file });
+  }
+  return { members, defects };
+}
+/** the ONE command a suite's npm script holds (written once by unit mhot, never edited by a unit again) @param {string} suite */
+const chainCommand = (suite) => `node scripts/organism_test.mjs chain ${suite}`;
+/** @type {ReturnType<typeof suiteRoll> | null} */ let rolled = null;
+const roll = () => rolled || (rolled = suiteRoll(ROOT));
 /** a LIVE selftest under the hermetic profile is printed and never spawned @param {string} organ (no extension) */
-const liveSelftest = (organ) => PROFILE === "hermetic" && Object.prototype.hasOwnProperty.call(LIVE_SELFTESTS, organ) && liveNamed(`selftest ${organ}`, LIVE_SELFTESTS[organ]);
+const liveSelftest = (organ) => {
+  if (PROFILE !== "hermetic") return false;
+  const m = roll().members.find((x) => x.organ === organ);
+  const why = m ? m.live : Object.prototype.hasOwnProperty.call(LIVE_SELFTESTS, organ) ? LIVE_SELFTESTS[organ] : null;
+  return !!why && liveNamed(`selftest ${organ}`, why);
+};
 const scripts = () => readdirSync(join(ROOT, "scripts")).filter((f) => f.endsWith(".mjs") && f !== SELF);
 // 9 Aug 2026 (launch F1): also match a bare `function selftest(` — claudegen defines
 // one and runs it as its whole CLI, and the quoted-string-only regex was blind to it.
@@ -296,52 +283,55 @@ function coverage() {
   const suites = SUITE_NAMES.map((n) => pkg.scripts[n] || "");
   assert(`all ${SUITE_NAMES.length} named suites still exist in package.json`, suites.every(Boolean),
     SUITE_NAMES.filter((n) => !pkg.scripts[n]).join(", "));
+  // unit mhot (row 1187 F8 A): each suite's npm script is the chain verb of its OWN name, written once. A member named in
+  // a string again would be a second membership record, and the shared line every unit edits would be back.
+  const offChain = SUITE_NAMES.filter((n) => pkg.scripts[n] !== chainCommand(n));
+  assert("every suite's npm script is the chain verb of its own name: a member is a file under suite/members, never a word in a string (unit mhot)",
+    offChain.length === 0, offChain.map((n) => `${n}: ${String(pkg.scripts[n] || "(absent)").slice(0, 120)}`).join(" · "));
 
-  const inSuite = new Map();   // file -> how many suites name it
-  suites.forEach((s) => {
-    for (const m of s.matchAll(/scripts\/([A-Za-z0-9_\-]+)\.mjs/g)) {
-      inSuite.set(m[1], (inSuite.get(m[1]) || 0) + 1);
-    }
-  });
+  const R = roll();
+  assert(`the member roll reads clean: every ${MEMBERS_REL} file parses and names one suite, an argv and a reason or null (a defect is named, never dropped)`,
+    R.defects.length === 0, R.defects.map((d) => `${d.file}: ${d.why}`).join(" · "));
+  const inSuite = new Map();   // organ -> how many member files name it (a case-folded name counts as the same organ: Windows)
+  for (const m of R.members) inSuite.set(m.organ, (inSuite.get(m.organ) || 0) + 1);
 
   const withTest = scripts().filter(hasSelftest).map((f) => f.replace(/\.mjs$/, ""));
   const orphans = withTest.filter((f) => !inSuite.has(f));
   assert("EVERY organ with a selftest is wired into a suite (package.json:_selftest_coverage_law)",
     orphans.length === 0, orphans.length ? `orphaned: ${orphans.join(", ")}` : "");
 
-  const dupes = [...inSuite].filter(([, n]) => n > 1).map(([f]) => f);
+  const folded = new Map();
+  for (const m of R.members) folded.set(m.organ.toLowerCase(), [...(folded.get(m.organ.toLowerCase()) || []), m.organ]);
+  const dupes = [...folded.values()].filter((v) => v.length > 1).map((v) => v.join("/"));
   assert("…and appears in EXACTLY one suite (no double-billing)", dupes.length === 0,
-    dupes.length ? `in both suites: ${dupes.join(", ")}` : "");
+    dupes.length ? `in two member files: ${dupes.join(", ")}` : "");
 
   const ghosts = [...inSuite.keys()].filter((f) => !existsSync(join(ROOT, "scripts", f + ".mjs")));
   assert("no suite names an organ that no longer exists on disk", ghosts.length === 0,
     ghosts.length ? `ghosts: ${ghosts.join(", ")}` : "");
 
-  // CHAIN SHAPE (defect class 2). The && chains are KEPT — they are the membership
-  // record and a useful fast-fail — but they must not be the authority, because a red
-  // at position 16 of 43 left 27 organs unrun AND unreported. The fix is that an
-  // authoritative runner exists which runs every member independently.
+  // ONE PLACE FOR A LIVE REASON (unit mhot): a member's reason is its file's `live`; the residual table holds only organs
+  // with no member file, so a reason held in both places is a red (the move half-made).
+  const twice = Object.keys(LIVE_SELFTESTS).filter((k) => inSuite.has(k));
+  assert("a hermetic-LIVE reason lives in ONE place: no LIVE_SELFTESTS key also has a member file (move it into the file)",
+    twice.length === 0, twice.length ? `in both: ${twice.join(", ")}` : "");
+
+  // CHAIN SHAPE (defect class 2). The fast-fail chains are KEPT — `npm run <suite>` runs `chain <suite>`, which stops at
+  // the first red — but they must not be the authority, because a red at position 16 of 43 left 27 organs unrun AND
+  // unreported. The fix is that an authoritative runner exists which runs every member independently.
   assert("an authoritative runner exists that does NOT short-circuit (`npm test`)",
     /organism_test\.mjs/.test(pkg.scripts.test || ""),
     "package.json has no `test` script pointing at the independent runner");
-  const members = suiteMembers(pkg);
+  const members = R.members;
   // floor ratcheted 58 → 59 on 8 Aug 2026: benchmark.mjs (the outward loop) joined squad:selftest.
   // floor ratcheted 59 → 69 on 9 Aug 2026: harvest.mjs (P7, the Gemini harvest lane) joined
   // organism:selftest at a live count of 69 — the floor rides the real count, not the last edit.
   assert("the runner covers every member of both suites (coverage cannot shrink on a red)",
-    members.length >= 69, `only ${members.length} members parsed out of the two suites`);
+    members.length >= 69, `only ${members.length} members read from ${MEMBERS_REL}`);
 }
 
-// the suite strings stay the single membership record; the runner parses them
-function suiteMembers(pkg) {
-  const out = [];
-  for (const n of SUITE_NAMES) {
-    for (const m of (pkg.scripts[n] || "").matchAll(/scripts\/([A-Za-z0-9_\-]+)\.mjs/g)) {
-      if (!out.includes(m[1])) out.push(m[1]);
-    }
-  }
-  return out;
-}
+// ~~the suite strings stay the single membership record; the runner parses them~~ (suiteMembers, retired by unit mhot:
+// the member files are the record now, and suiteRoll above is their one reader)
 
 // ── ONE RUN PER SELFTEST (forks row 880 (1), branch A · 14 Nov 2026) ─────────
 // hermetic() spawns every organ that has a selftest inside its forensics window, and suites()
@@ -364,17 +354,20 @@ const hermeticRuns = new Map();   // runKey → { code, out } as run() returned 
 // ── 1b. THE RUNNER — every member, independently, all results reported ───────
 function suites() {
   section("SUITES — every member run INDEPENDENTLY (one red never hides the rest)");
-  const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
-  const members = suiteMembers(pkg);
+  const R = roll();
+  const members = R.members;
+  // unit mhot: zero members, or a defect in the walk, is a red by name — never a vacuous "all 0 pass"
+  assert(`SUITES · the member roll names its members (${MEMBERS_REL}): an empty or defective roll is a red, never a pass`,
+    members.length > 0 && R.defects.length === 0, R.defects.map((d) => `${d.file}: ${d.why}`).join(" · ") || `${members.length} member(s)`);
   const red = [];
   let reused = 0;
   let ran = 0;
-  for (const m of members) {
+  for (const mem of members) {
+    const m = mem.organ;
     if (liveSelftest(m)) continue;   // B1 (b)
     ran++;
-    const file = join(ROOT, "scripts", m + ".mjs");
-    // test_coach_v2 is itself a harness and is invoked bare (package.json documents this)
-    const args = m === "test_coach_v2" ? [file] : [file, "selftest"];
+    // the member's own argv (test_coach_v2 is itself a harness and its file says `[]`: invoked bare)
+    const args = [join(ROOT, "scripts", m + ".mjs"), ...mem.argv];
     // ONE RUN PER SELFTEST (row 880 (1)): hermetic()'s result when this is its IDENTICAL command, else a spawn
     const key = runKey(args), kept = hermeticRuns.get(key);
     if (kept) { hermeticRuns.delete(key); reused++; }
@@ -3009,11 +3002,46 @@ function rulingSelfCheck() {
   ];
 }
 
+// ── THE TWO ROLL VERBS (unit mhot · row 1187 F8 A) ───────────────────────────────────────────────────────────────────
+// `chain <suite>` is what `npm run <suite>` runs (package.json, written once): that suite's members in walk order, each a child
+// with inherited stdio, STOPPING at the first red with its exit code — the fast-fail shape the away-day lane (ci_manifest.json)
+// and a human's pre-commit glance rely on. It runs every member whatever the profile, exactly as the && string did. `roll`
+// prints the roll (`--json`: one object { members, defects }, which scripts/audit.mjs reads). Both fail closed on a defect.
+/** @param {string|undefined} suite @returns {number} the exit code */
+function chain(suite) {
+  if (!suite || !SUITE_NAMES.includes(suite)) { console.log(`organism_test chain: name one suite — ${SUITE_NAMES.join(" | ")}`); return 1; }
+  const R = suiteRoll(ROOT);
+  for (const d of R.defects) console.log(`chain ${suite}: DEFECT ${d.file} — ${d.why}`);
+  if (R.defects.length) return 1;
+  const ms = R.members.filter((m) => m.suite === suite);
+  if (!ms.length) { console.log(`chain ${suite}: no member file names this suite — a chain of nothing is a red, never a pass`); return 1; }
+  for (const m of ms) {
+    const r = spawnSync(NODE, [join(ROOT, "scripts", `${m.organ}.mjs`), ...m.argv], { cwd: ROOT, stdio: "inherit", windowsHide: true });
+    if (r.status !== 0) { console.log(`chain ${suite}: STOPPED at ${m.organ} (exit ${r.status ?? r.signal}) — fast-fail; \`npm test\` runs every member`); return r.status || 1; }
+  }
+  console.log(`chain ${suite}: ${ms.length} member(s) green`);
+  return 0;
+}
+/** @param {boolean} json @returns {number} the exit code */
+function rollVerb(json) {
+  const R = suiteRoll(ROOT);
+  if (json) console.log(JSON.stringify(R));
+  else {
+    for (const m of R.members) console.log(`ROLL ${m.suite} ${m.organ} argv ${JSON.stringify(m.argv)}${m.live ? ` LIVE ${m.live}` : ""}`);
+    for (const d of R.defects) console.log(`DEFECT ${d.file} — ${d.why}`);
+    console.log(`roll: ${R.members.length} member(s) · ${R.defects.length} defect(s) · ${MEMBERS_REL}`);
+  }
+  return R.defects.length ? 1 : 0;
+}
+
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive, atlas, done, witnesses };
 async function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }
+  // unit mhot (row 1187 F8 A): two VERBS beside `selftest`, outside MODES — so `all` never runs them
+  if (mode === "chain") process.exit(chain(process.argv[3]));
+  if (mode === "roll") process.exit(rollVerb(process.argv.includes("--json")));
   const chosen = mode === "all" ? Object.keys(MODES) : [mode];
   if (chosen.some((c) => !MODES[c])) { console.log(`organism_test: ${Object.keys(MODES).join(" | ")} | all`); process.exit(1); }
   console.log("=== ARSENAL AI FC — CROSS-ORGAN TEST SUITE ===");

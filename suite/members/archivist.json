@@ -1,0 +1,1 @@
+{"suite":"organism:selftest","argv":["selftest"],"live":"reads state/captain.json, state/archive_audit.jsonl, state/audit_ledger.jsonl … · reaches a localhost port it does not listen on"}

@@ -1,0 +1,1 @@
+{"suite":"squad:selftest","argv":["selftest"],"live":"reads state/heartbeat_config.json"}

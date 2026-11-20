@@ -200,7 +200,16 @@ const CLAUSES = [
   ["P", "package.json: the usage_tap selftest is in exactly ONE suite string (row 1091 (2), F-a)", (c) => {
     const pkg = readJ(join(c.org, "package.json")); if (!pkg) return false;
     const n = ["organism:selftest", "squad:selftest", "audit:selftest"].filter((k) => /(^|&& )node scripts\/usage_tap\.mjs selftest( &&|$)/.test(String(pkg.scripts?.[k] || ""))).length;
-    return n === 1;
+    // RE-CUT by unit mhot (forks row 1187 F6 A), an ADDED edit holding the SAME property: ~~in exactly ONE suite string~~ →
+    // in exactly one suite across the tree's membership records — the strings (a tree before mhot) PLUS the member roll that
+    // tree's OWN organism_test.mjs prints (`roll --json` over suite/members/*.json of the tree handed in, read in place, never
+    // written; a tree with no roll verb counts none). One member file is one suite by construction.
+    const src = c.label === "org" ? ORG : BASE;
+    const rr = spawnSync(process.execPath, [join(src, "scripts", "organism_test.mjs"), "roll", "--json"], { cwd: src, encoding: "utf8", windowsHide: true, timeout: HANG_CAP_MS * 8 });
+    if (rr.pid) children.add(rr.pid);
+    const rj = (() => { try { return JSON.parse(String(rr.stdout || "")); } catch { return null; } })();
+    const rolled = (rj && Array.isArray(rj.members) ? rj.members : []).filter((m) => m && m.organ === "usage_tap" && JSON.stringify(m.argv) === '["selftest"]').length;
+    return n + rolled === 1;
   }],
   ["S", "the SETTINGS LINE (ci/mpool/PROOF.md) is one statusLine command object running the tap's statusline verb in the planted copy", (c) => {
     const s = SETTINGS?.statusLine; const argv = settingsArgv(c);
