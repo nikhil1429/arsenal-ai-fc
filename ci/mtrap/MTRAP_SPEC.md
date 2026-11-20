@@ -436,3 +436,43 @@ What the new main changes for this unit:
   learnstate→compiler edge (§6) must add no law-pack finding. That is a build measurement, named here.
 - **Cutting the build:** the mtrap build cuts from the newest main at its start (3f22388 or later), and `ci/mtrap/BASE`
   names that sha. The landing order of §5 (mcrk, then mtrap) stands.
+
+## 11 · NEW MAIN cebe3eb (unit mcov landed) — read against this spec's base
+
+Runner M's new-main line, 20 Nov 2026: main moved from 3f22388 to **cebe3ebe4024c2144b934b3032b3fb837285d926**. This is
+a spec seat, so nothing is merged. The base section was re-read against the new main:
+
+```
+$ git diff --quiet 3f22388 cebe3eb -- scripts/notes_compiler.mjs scripts/forge_session.mjs scripts/learnstate.mjs \
+    scripts/postmatch.mjs scripts/models.mjs scripts/state.mjs scripts/done.mjs scripts/daily_green.mjs \
+    scripts/teaching_bar.mjs .dependency-cruiser.cjs .claude/settings.json && echo "spec organs equal"
+spec organs equal
+
+$ git show cebe3eb:scripts/study_scope.mjs | grep -n "ALLOWED_CMD = \|notes_compiler.mjs dayBounds" | cut -c1-40
+286:export const ALLOWED_CMD = /(learn_dig
+682:  const d0 = Date.parse(`${day}T00:00:0
+
+$ git rev-parse origin/claude/mcrk-build origin/claude/mcap-build
+622727bd331303b5a157a2a5f565638734483721
+53537b638160827ebff42da2d7890c1853c2d88f
+
+$ git diff --quiet 937710b origin/claude/mcrk-build -- scripts/notes_compiler.mjs scripts/forge_session.mjs && echo "mcrk organ hunks equal"
+mcrk organ hunks equal
+```
+
+What the new main changes for this unit:
+- **No organ line of §2–§6 moves.** `study_scope.mjs` gained a selftest verb, so its lines shift by one: ALLOWED_CMD is now
+  `:286` (was `:285`) and the IST day-bounds comment is `:682` (was `:681`). This spec only names study_scope as
+  untouched, so no proposal changes.
+- **The base suite's one pre-existing red is gone at this main.** The orphan-selftest member (deck_lint, home_pin, probe,
+  study_scope; §1) now has all four wired through `package.json` organism:selftest. The mtrap build's hermetic run
+  therefore starts from a base with no known red. A red on the build is the build's.
+- **THE MEMBER BOUND** (`organism_test.mjs:58-62`, row 1182 (2)): every member run now has a named bound, and a member red
+  names its kills. The notes_compiler, forge_session and learnstate selftest cases this build adds (§6) ride their
+  members' bound. The build measures that each member still finishes under the bound on the neutral machine. The bound is
+  not typed here.
+- **The sibling tips moved by merges only.** mcrk-build is now `622727b`: it merged main 3f22388, and its notes_compiler and
+  forge_session hunks are byte-equal to the `937710b` read in §5. mcap-build is now `53537b6`: it merged main 3f22388 and
+  left BASE at 5759cce. §5's line map and landing order stand.
+- **BASE for the mtrap build** (the bound class, row 1200 (2)): the build cuts from the newest main at its start, writes
+  that sha into `ci/mtrap/BASE` once, and never rewrites it after a later merge.
