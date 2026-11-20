@@ -26,7 +26,7 @@
 // LAWS: READ-ONLY on dressing-room/state · spawns organs as CHILD PROCESSES (never
 //   imports them, so a top-level side effect cannot leak in) · every assertion NAMES
 //   the law it is holding · a RED here is a real defect, not a flaky net.
-// CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack|done|witnesses]
+// CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack|done|witnesses|clauses]
 //      node scripts/organism_test.mjs chain <suite> · roll [--json]   (unit mhot: the member roll, suite/members/*.json)
 // ============================================================================
 import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync, appendFileSync, symlinkSync, unlinkSync, openSync, closeSync, realpathSync } from "node:fs";
@@ -2796,6 +2796,32 @@ function done() {
   } finally { rmSync(T, { recursive: true, force: true }); }
 }
 
+// ── THE CLAUSE WITNESSES (unit mmeter · forks row 1162 (2), F11) ──────────────────────────────────────────────────────
+// ONE member, edited ONCE: it walks ci/witness/<unit>/ and runs every witness_*.mjs in its `plants` mode, which plants each
+// clause both ways on copies under os.tmpdir() and ends `PLANTS <unit> · k of n plant(s) as expected`. A witness is GREEN
+// iff it exits 0 AND prints that line with n > 0 and k === n — a witness with no plants (no line, or n = 0) reads RED. Later
+// units add their witness file and no edit here. A checkout with no node_modules (npm ci never ran) is NOT MEASURABLE,
+// named, like the law pack and done.mjs (a witness may import an organ that needs its pinned parser). Its mode is `clauses`:
+// unit ms1's member `witnesses` (ci/<unit>/witness_<unit>.mjs against its BASE, on the neutral machine) is a different member.
+function clauseWitnesses() {
+  section("CLAUSE WITNESSES — every ci/witness/<unit>/witness_*.mjs, its plants both ways");
+  const dir = join(ROOT, "ci", "witness");
+  if (!existsSync(join(ROOT, "node_modules"))) {
+    assert("CLAUSE WITNESSES — bare checkout: no node_modules, so the witnesses are NOT MEASURABLE here (measurability is an answer, silence is not)", true);
+    return;
+  }
+  const files = existsSync(dir) ? readdirSync(dir).filter((u) => statSync(join(dir, u)).isDirectory()).sort()
+    .flatMap((u) => readdirSync(join(dir, u)).filter((f) => /^witness_.*\.mjs$/.test(f)).sort().map((f) => `ci/witness/${u}/${f}`)) : [];
+  assert("CLAUSE WITNESSES — ci/witness holds at least one witness (the walk found something to judge)", files.length > 0, dir);
+  for (const f of files) {
+    const r = run([join(ROOT, f), "plants"]);
+    const last = (r.out.split(/\r?\n/).filter((l) => /^PLANTS \S+ · \d+ of \d+ plant\(s\) as expected$/.test(l)).pop()) || "";
+    const m = /· (\d+) of (\d+) plant/.exec(last);
+    assert(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, r.code === 0 && !!m && Number(m[2]) > 0 && m[1] === m[2],
+      last || `exit ${r.code} · no PLANTS line (a witness with no plants reads red) · ${r.out.split(/\r?\n/).filter((l) => /FAIL|RED/.test(l)).slice(0, 2).join(" | ").slice(0, 240)}`);
+  }
+}
+
 // ── THE FLOW ATLAS (AUDIT §10-C rung S10 · acceptance (d)) ───────────────────
 // "flow_atlas check joins npm test — the atlas goes stale-proof the day the
 // registry exists." check re-derives the atlas from the live IR and compares
@@ -3078,7 +3104,7 @@ function rollVerb(json) {
 }
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
-const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive, atlas, done, witnesses };
+const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive, atlas, done, witnesses, clauses: clauseWitnesses };
 async function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }
