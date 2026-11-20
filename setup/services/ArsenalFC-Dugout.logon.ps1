@@ -5,8 +5,8 @@
 # Installing it as a service would SUCCEED and then do nothing, which is worse than
 # failing — session-0 isolation is silent.
 #
-# This registers the task. It does NOT start it: S9 installs ownership; starting
-# it is HIS word, never this file's.
+# This registers the task. It does NOT start it: S9 installs ownership, S12 turns
+# things on, HIS word per stage.
 
 $ErrorActionPreference = "Stop"
 $repo = "C:\Users\nikhi\GitHub\arsenal-ai-fc"
@@ -34,8 +34,8 @@ Register-ScheduledTask -TaskName $id -Action $action -Trigger $trigger `
   -Principal $principal -Settings $settings -Force | Out-Null
 
 # ⛔ REGISTERED AND IMMEDIATELY DISABLED — this is not a mistake.
-# An installer enables nothing: enabling is HIS word (his 20 Aug 2026 switch-off, lifted by
-# his 30 Aug 2026 word: grep -n "nothing burns tokens\|ORGANISM IS BACK ON" docs/archive/ORGANISM_AUDIT__2026-08-19.md).
+# The organism is SWITCHED OFF by his order of 20 Aug 2026. S9 installs ownership;
+# S12 enables, stage by stage, on his word. Enabling here would break the switch-off.
 Disable-ScheduledTask -TaskName $id | Out-Null
 
-Write-Host "  ~ $id registered as a LOGON TASK (disabled — enabling it is his word; what runs: node scripts/services.mjs status)"
+Write-Host "  ~ $id registered as a LOGON TASK (disabled — S12 enables it on his word)"

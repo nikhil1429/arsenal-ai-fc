@@ -197,20 +197,6 @@ export function closeCounts({ reviews = readRows(join(STATE_DIR, "sitting_review
   return { learn_days: learnDays.length, missed: nightClosed.length, ends: ends.length, false_closes: falseCloses.length,
     line: `counts (F8, from the owners' records): missed-close ${nightClosed.length}/${learnDays.length} learn day(s) closed by the night instead of by end or his line · false-close ${falseCloses.length}/${ends.length} end(s) followed the same day by another sitting of the same host` };
 }
-/** dayProof — PURE over the sitting owner's close rows (unit mrung, ruling forks row 1122 (2) F1 b): IST day D is a REAL DAY iff
- *  a sitting_review row closed it with reason "fulltime" (the close only `end` makes, on his meaning — word 240) AND that sitting
- *  was bound to a host session. A day-rollover or night close, or a sitting with no host, is not a real day. The latest such row
- *  answers. Still SOLE WRITER OF NOTHING: rung_receipt.mjs reads this; the row's own writer is sitting.mjs. */
-export function dayProof(D, { reviews = readRows(join(STATE_DIR, "sitting_reviews.jsonl")) } = {}) {
-  const rows = reviews.filter((r) => r && r.kind === "sitting_review" && dayOf(r.closed_at) === D);
-  if (!rows.length) return { real: false, why: `no sitting closed on ${D}` };
-  const full = rows.filter((r) => r.reason === "fulltime");
-  if (!full.length) return { real: false, why: `the sitting(s) of ${D} closed by ${[...new Set(rows.map((r) => r.reason || "?"))].join("/")}, never by a fulltime end` };
-  const bound = full.filter((r) => typeof r.host_session_id === "string" && r.host_session_id);
-  if (!bound.length) return { real: false, why: `the fulltime close of ${D} has no bound host` };
-  const r = bound[bound.length - 1];
-  return { real: true, sitting_id: String(r.sitting_id), closed_at: String(r.closed_at), reason: "fulltime" };
-}
 export function status({ now = new Date() } = {}) {
   const D = istDay(now), s = readSitting();
   const sit = !s || !s.id ? "no sitting on file" : isOpen(s) ? `sitting ${s.id} OPEN since ${s.opened_at} · host ${s.host_session_id ? short(s.host_session_id) : "NOT BOUND"}` : `sitting ${s.id} closed ${s.closed_at} (${s.close_reason || "?"})`;

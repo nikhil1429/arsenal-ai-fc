@@ -32,7 +32,7 @@
 //   shares the console, so the same Ctrl+C reaches it; the keeper waits for its clean stop.
 //
 // MODES: selftest · help (an unknown mode REFUSES, exit 2). Module: keep(), KEEP_EXIT, portFree,
-//   JUDGE_PORT, holdJudgePort, judgeHeld (the judge round's port, unit mlv0), retireWhenIdle, sourceGraph, staleSources (the retire rule, unit mrt),
+//   JUDGE_PORT, holdJudgePort, judgeHeld (the judge round's port, unit mlv0), retireWhenIdle,
 //   KEEP_POLL_MS (the deferred retire, units mlv1-mlv3).
 // WRITES: nothing. One worker at a time, one log line per decision.
 // ============================================================================
@@ -109,48 +109,6 @@ export const holdJudgePort = (port = JUDGE_PORT) => new Promise((res) => {
 /** judgeHeld: true while a judge round holds its port. @param {number} [port] */
 export const judgeHeld = async (port = JUDGE_PORT) => !(await portFree(port));
 
-// THE RETIRE RULE'S TWO PURE FUNCTIONS (moved here VERBATIM from brain.mjs by unit mrt, forks row 1120 (1): T3 fate (b) REPAIR, F1 A).
-//   keeper.mjs is a LEAF (node builtins only); brain.mjs re-exports both, so every importer reads these same objects. The why of
-//   the rule (a resident retires when its own import closure moves after boot, strict ">", no grace) is brain.mjs's STALE-CODE
-//   RETIREMENT block, which stays beside brain's own retire path.
-export function sourceGraph(entry, readSrc) {
-  // keyed on separator-normalised paths: join() returns native separators, so a
-  // caller handing in "C:/…/brain.mjs" and manager.mjs's own "./brain.mjs" would
-  // otherwise be watched TWICE and named twice in the retirement line (seen live,
-  // 10 Aug). Separators only — case-folding would be a guess about the platform.
-  const seen = new Map();
-  const key = (p) => String(p).replace(/[\\/]+/g, "/");
-  const queue = [entry];
-  while (queue.length) {
-    const p = queue.shift();
-    if (seen.has(key(p))) continue;
-    let src;
-    // A module we cannot READ is not watched AT ALL: never treated as changed
-    // (a transient read error must not retire the pacer) and never added to the
-    // list. That second half matters — the regex below cannot tell an import
-    // statement from a specifier sitting inside a STRING LITERAL, and this very
-    // file's selftest fixtures contain both. Requiring the file to open is what
-    // keeps "./late.mjs" out of the live watch list (measured: it was in it).
-    try { src = readSrc(p); } catch { continue; }
-    seen.set(key(p), p);
-    // static `from "./x.mjs"` and dynamic `import("./x.mjs")`, both local only:
-    // node: builtins and bare specifiers are not ours to watch. Built fresh each
-    // call so no lastIndex can leak between walks.
-    for (const m of String(src).matchAll(/(?:from|import)\s*\(?\s*["'](\.\/[^"'\n]+\.mjs)["']/g)) queue.push(join(dirname(p), m[1]));
-  }
-  return [...seen.values()];
-}
-export function staleSources(paths, bootMs, mtimeOf) {
-  const out = [];
-  for (const p of paths) {
-    let mt = null;
-    // a file that vanished is not evidence of a NEWER one — same fail-quiet rule
-    try { mt = mtimeOf(p); } catch { continue; }
-    if (typeof mt === "number" && mt > bootMs) out.push({ path: p, mtime_ms: mt });
-  }
-  return out;
-}
-
 // RETIRE WHEN IDLE (units mlv1 / mlv2 / mlv3, forks row 1031 M0 A: THE KEEPER WITH A DEFERRED RETIRE). The brain's
 //   retire rule (sourceGraph / staleSources: the whole local import closure, strict ">" against this process's own boot
 //   instant, no tolerance) for a resident that holds LIVE WORK: it retires ONLY when its own `idle()` predicate says so
@@ -163,6 +121,7 @@ export const KEEP_POLL_MS = 75000;   // the keeper's own default poll (keep()'s 
  *    log?: (line: string) => void, bootMs?: number, pollMs?: number, judge?: () => Promise<boolean>, watch?: Function | null }} o */
 export async function retireWhenIdle({ name, entry, idle, retire, log = console.log, bootMs = Date.now() - process.uptime() * 1000,
   pollMs = KEEP_POLL_MS, judge = () => judgeHeld(), watch = null } = {}) {
+  const { sourceGraph, staleSources } = await import("./brain.mjs");
   const { readFileSync, statSync, watch: fsWatch } = await import("node:fs");
   const files = sourceGraph(entry, (p) => readFileSync(p, "utf8"));
   let done = false, deferred = null, running = false, again = false;

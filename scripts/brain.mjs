@@ -86,7 +86,7 @@ import { readRows as outboxRows, fold as outboxFold } from "./outbox.mjs";   // 
 import { dayKey, addDays } from "./daykey.mjs";   // Block 6 — THE DAY-KEY LAW: a chain child (the morning sheet tick) keys the CHAIN's day; overnight jobs keep their wall-clock shift (shiftDay/serveDate untouched)
 import { digestInput as intentDigestInput, validateDigest as intentValidateDigest } from "./intent.mjs";   // Block 2 §7.2 (18 Aug 2026): the intent_digest job's food + its validator — brain never writes the intent lane
 import { swallow } from "./swallow.mjs";   // Block 7 — SWALLOW + PANIC (§14.2): every fs-guarding silent catch is declared
-import { keep, KEEP_EXIT, judgeHeld, sourceGraph, staleSources } from "./keeper.mjs";   // 15 Oct 2026 (forks rows 746 (2) / 753 (2)): `daemon` is the KEEPER over `daemon-worker`; a resident never exits on its own
+import { keep, KEEP_EXIT, judgeHeld } from "./keeper.mjs";   // 15 Oct 2026 (forks rows 746 (2) / 753 (2)): `daemon` is the KEEPER over `daemon-worker`; a resident never exits on its own
 import { jobInputClass, inputCadenceDefaultH } from "./registry.mjs";   // rung S13 (29 Aug 2026): THE INPUT GUARD reads its declarations from the registry — the six code-computed lanes’ input classes and the DECLARED cadence seed. registry.mjs imports nothing of ours, so there is no cycle (gate.mjs already reads it the same way).
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -7067,10 +7067,43 @@ async function withTickLock(fn, deps = {}) {
 // The graph is walked, not hardcoded: brain.mjs imports nikhil_model, scoreboard,
 // manager, captains_call and validators today, and a repair landing in any of
 // them is just as frozen in a running resident as one landing here.
-// unit mrt (forks row 1120 (1), T3 fate (b), F1 A): sourceGraph / staleSources now LIVE in scripts/keeper.mjs, a leaf — keeper's
-// retireWhenIdle (unit mlv1) used to reach them by `await import("./brain.mjs")`, the one edge that closed six new import cycles
-// (depcruise no-circular 13 vs lawpack's frozen 7). Re-exported here so every importer (conductor, services, cortex) reads the same objects.
-export { sourceGraph, staleSources } from "./keeper.mjs";
+export function sourceGraph(entry, readSrc) {
+  // keyed on separator-normalised paths: join() returns native separators, so a
+  // caller handing in "C:/…/brain.mjs" and manager.mjs's own "./brain.mjs" would
+  // otherwise be watched TWICE and named twice in the retirement line (seen live,
+  // 10 Aug). Separators only — case-folding would be a guess about the platform.
+  const seen = new Map();
+  const key = (p) => String(p).replace(/[\\/]+/g, "/");
+  const queue = [entry];
+  while (queue.length) {
+    const p = queue.shift();
+    if (seen.has(key(p))) continue;
+    let src;
+    // A module we cannot READ is not watched AT ALL: never treated as changed
+    // (a transient read error must not retire the pacer) and never added to the
+    // list. That second half matters — the regex below cannot tell an import
+    // statement from a specifier sitting inside a STRING LITERAL, and this very
+    // file's selftest fixtures contain both. Requiring the file to open is what
+    // keeps "./late.mjs" out of the live watch list (measured: it was in it).
+    try { src = readSrc(p); } catch { continue; }
+    seen.set(key(p), p);
+    // static `from "./x.mjs"` and dynamic `import("./x.mjs")`, both local only:
+    // node: builtins and bare specifiers are not ours to watch. Built fresh each
+    // call so no lastIndex can leak between walks.
+    for (const m of String(src).matchAll(/(?:from|import)\s*\(?\s*["'](\.\/[^"'\n]+\.mjs)["']/g)) queue.push(join(dirname(p), m[1]));
+  }
+  return [...seen.values()];
+}
+export function staleSources(paths, bootMs, mtimeOf) {
+  const out = [];
+  for (const p of paths) {
+    let mt = null;
+    // a file that vanished is not evidence of a NEWER one — same fail-quiet rule
+    try { mt = mtimeOf(p); } catch { continue; }
+    if (typeof mt === "number" && mt > bootMs) out.push({ path: p, mtime_ms: mt });
+  }
+  return out;
+}
 
 // DRY MEANS DRY (E2E audit 25 Jul 2026). --dry only ever suppressed WRITES: the
 // executor still fired REAL `claude -p` calls, and because the ledger append is a

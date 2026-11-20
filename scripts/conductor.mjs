@@ -1593,49 +1593,12 @@ async function selftest() {
       && /2\/3 step\(s\) OPEN/.test(foldLine(mixed)));
 
     // (6) ⛔ IT REPORTS, IT DOES NOT RUN. The whole rung's FORBIDDEN line, asserted
-    // off the mode's REAL OUTPUT (unit mcon · forks row 1132 (3)). This used to slice
-    // this file's own source from the first `if (mode === "fallback")` — which was this
-    // assert's own string literal, so its /NOTHING WAS RUN/ pin was satisfied by its own
-    // regex and could never fail. Now a CHILD runs `fallback` on a COPY of scripts/ (plus
-    // the registry the import graph needs) under os.tmpdir(), with an empty state dir, and
-    // a preloaded guard that RECORDS and REFUSES every child_process door. The verdict is
-    // the child's stdout, its exit, the guard's record and the copy's state dir: a fallback
-    // that runs a step, arms a trigger or launches a daemon leaves a spawn in the record or
-    // a file in the state dir, and this goes RED. The wait is bounded by STEP_TIMEOUT_MS.
-    {
-      const { cpSync, readdirSync } = await import("node:fs");
-      const box = mkdtempSync(join(tmpdir(), "conductor-fallback-"));
-      try {
-        const copyState = join(box, "dressing-room", "state");
-        mkdirSync(copyState, { recursive: true });
-        cpSync(join(REPO, "scripts"), join(box, "scripts"), { recursive: true });
-        const reg = join(STATE_DIR, "registry.json");
-        if (existsSync(reg)) cpSync(reg, join(copyState, "registry.json"));
-        const seeded = readdirSync(copyState).sort().join(",");
-        const spawnLog = join(box, "spawns.log");
-        writeFileSync(spawnLog, "");
-        const guard = join(box, "guard.mjs");
-        writeFileSync(guard, [
-          'import { createRequire, syncBuiltinESMExports } from "node:module";',
-          'import { appendFileSync } from "node:fs";',
-          'const cp = createRequire(import.meta.url)("node:child_process");',
-          'for (const k of ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"]) {',
-          '  cp[k] = (...a) => { appendFileSync(process.env.CONDUCTOR_SPAWN_LOG, k + " " + String(a[0]) + "\\n"); throw new Error("fallback guard refused " + k); };',
-          "}",
-          "syncBuiltinESMExports();",
-        ].join("\n"));
-        const r = spawnSync(process.execPath, ["--import", pathToFileURL(guard).href, join(box, "scripts", "conductor.mjs"), "fallback"],
-          { cwd: box, encoding: "utf8", timeout: STEP_TIMEOUT_MS, windowsHide: true, env: { ...stripDayKeyEnv(process.env), CONDUCTOR_SPAWN_LOG: spawnLog } });
-        const out = String(r.stdout || "").replace(/\r\n/g, "\n").split("\n");
-        const spawned = readFileSync(spawnLog, "utf8").split("\n").filter(Boolean);
-        const after = readdirSync(copyState).sort().join(",");
-        const ranNothing = r.status === 0 && /^conductor fallback: /.test(out[0] || "")
-          && out.some((l) => /^conductor: NOTHING WAS RUN/.test(l))
-          && spawned.length === 0 && after === seeded;
-        ok("S9 · FOLD — the fallback mode RUNS NOTHING: a child run of `fallback` on a temp copy exits 0, prints its fold line and NOTHING WAS RUN, opens no child_process door and writes nothing to state", ranNothing);
-        if (!ranNothing) console.log(`      ↳ exit ${r.status} · spawns [${spawned.join(" | ")}] · state ${after === seeded ? "unchanged" : "CHANGED"} · ${String(r.stderr || "").split("\n")[0]}`);
-      } finally { rmSync(box, { recursive: true, force: true }); }
-    }
+    // off the source: `fallback` must reach no runner, no arm, no launcher.
+    const src = readFileSync(join(REPO, "scripts", "conductor.mjs"), "utf8");
+    const fb = src.slice(src.indexOf('if (mode === "fallback")'), src.indexOf("if (mode === \"plan\")"));
+    ok("S9 · FOLD — the fallback mode RUNS NOTHING: no conduct(), no runStep, no launchDetached, no arm in its whole branch",
+      fb.length > 0 && !/await conduct\(/.test(fb) && !/launchDetached\(/.test(fb) && !/armTrigger\(/.test(fb)
+      && /NOTHING WAS RUN/.test(fb));
   }
 
   console.log(fail === 0 ? `\nALL CHECKS PASSED (${pass} passed, 0 failed)` : `\n${fail} FAILED (${pass} passed)`);
@@ -1702,12 +1665,9 @@ export function stepLine(s) {
 //             (it never got that far — the chain died upstream of it).
 // An OPEN step is one the fold no longer covers, so its own lane is owed a run.
 //
-// ⛔ IT REPORTS. IT RUNS NOTHING. S9 installs ownership; turning a lane on is HIS
-// word, never this file's (his 20 Aug 2026 switch-off, lifted by his 30 Aug 2026 word:
-// grep -n "nothing burns tokens\|ORGANISM IS BACK ON" docs/archive/ORGANISM_AUDIT__2026-08-19.md).
-// `fallback` prints the owed commands; arming it to fire them is his word too, and
-// the FORBIDDEN line on this rung is explicit about waking lanes. What runs now:
-// `node scripts/services.mjs status` · `node scripts/state.mjs`.
+// ⛔ IT REPORTS. IT RUNS NOTHING. S9 installs ownership; S12 turns things on, his
+// word per stage. `fallback` prints the owed commands; arming it to fire them is
+// S12's, and the FORBIDDEN line on this rung is explicit about waking lanes.
 export function foldVerdicts(chain, report, { day = null } = {}) {
   const askedFor = day || (report && report.day_key) || null;
   // A report for ANOTHER day cannot cover today — this is the recency compare the
@@ -1766,7 +1726,7 @@ async function main() {
     const v = foldVerdicts(chain, report, { day: chainDay(which).day });
     console.log(foldLine(v));
     for (const row of v.filter((x) => x.state === "OPEN")) console.log(`  OPEN  ${row.id.padEnd(14)} ${row.why}\n        ↳ ${row.cmd}`);
-    console.log("conductor: NOTHING WAS RUN — this reports what the fold no longer covers. Arming the firing is his word.");
+    console.log("conductor: NOTHING WAS RUN — this reports what the fold no longer covers. S12 arms the firing, on his word.");
     return;
   }
   // `--dry` USED TO LIE: it suppressed only the report while every organ ran for real

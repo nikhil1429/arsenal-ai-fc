@@ -1235,10 +1235,9 @@ async function selftest() {
     && /^\$plainPw = \$cred\.GetNetworkCredential\(\)\.Password$/m.test(instCode)
     && !/(--password|password=) \$cred\.GetNetworkCredential/.test(instCode));
 
-  // ⛔ THE INSTALLER STARTS NOTHING. Starting a unit is HIS word, never a generated file's
-  // (his 20 Aug 2026 switch-off, lifted by his 30 Aug 2026 word: grep -n "nothing burns tokens\|ORGANISM IS BACK ON"
-  // docs/archive/ORGANISM_AUDIT__2026-08-19.md), and the generated files are where a start would happen silently.
-  assert("THE INSTALLER STARTS NOTHING — every service installs start=demand, every logon task registers DISABLED, and no start verb is emitted",
+  // ⛔ THE SWITCH-OFF. A rung that leaves something running has broken it, and the
+  // generated files are where that would happen silently.
+  assert("THE SWITCH-OFF HOLDS — every service installs start=demand, every logon task registers DISABLED, and the installer starts nothing",
     !!inst && /start= demand/.test(inst.body) && !/sc\.exe start/i.test(inst.body) && !/Start-ScheduledTask/.test(inst.body)
     && emitted.filter((f) => f.path.endsWith(".logon.ps1")).every((f) => /Disable-ScheduledTask/.test(f.body)));
 
@@ -1313,8 +1312,8 @@ async function selftest() {
     calls.length === surfaces().length
     && calls.every((c) => /^sc\.exe query |^schtasks \/Query /.test(c)));
 
-  // The line has to be loud about a running unit: whether it SHOULD run is his word, read by `node scripts/state.mjs`.
-  assert("THE LINE SHOUTS IF ANYTHING IS RUNNING — a running row is flagged ⚠ RUNNING, not reported as health",
+  // The line has to be loud about the one thing that would mean the switch-off broke.
+  assert("THE LINE SHOUTS IF ANYTHING IS RUNNING — a running row is flagged against the switch-off, not reported as health",
     /⚠ RUNNING as an OS unit: brain/.test(statusLine([{ name: "brain", kind: "service", installed: true, running: true }])));
 
   // SHAPE 7 — the quiet line must not overclaim. It measured OS units; a bare node
