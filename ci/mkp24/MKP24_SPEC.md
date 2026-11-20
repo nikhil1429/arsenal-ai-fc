@@ -393,3 +393,106 @@ The base section is read against `6a6bdfff4349b849398b69d0748b27d37c874b85`. Mea
 - **`scripts/daily_green.mjs` and `scripts/done.mjs`** touch no file of §12. mmeter's `ci/mmeter` and `ci/witness/mmeter` are
   not of the keeper family (K-F1).
 - **The §1 record is unchanged.** The measurement in §6 still waits for mdtl on main.
+
+## 17 · THE FIRST READABLE RED (forks row 1213 (3); read 2026-11-20; branch merged with main 56ed4ff)
+
+**Where.** land/mdtl `90c7aa564bcae0e01f0b0d887ab2b0289d7da66a` on main b3a61c6. Its workflow run is 44775110899.
+- node 22 is GREEN (check run 136422712625).
+- node 24 is RED (check run 136422712503), with ONE new red, `WITNESS ‹mlv3› · GREEN at head against its BASE`. The verdict
+  reads `"base_red":0,"pass":252,"fail":1`.
+
+`git diff --name-only b3a61c6 90c7aa5` names no thalamus, keeper, spool, `ci/mlv*` or `ci/mrv` path. It holds only mcap,
+mdtl, `package.json`, `scripts/ci_verdict.mjs`, `scripts/organism_test.mjs` and `scripts/witness_cause.mjs`.
+
+**The cause lines, read by curl, no token** (`curl -s $API/check-runs/136422712503/annotations`). The NEW RED's message
+ends with three lines:
+
+```
+cause · T1 · IDLE      spool drained, nothing in flight: a closure write RETIRES the worker (a new boot) after that write.
+cause · LIVE-SAFE · the real :4112 and :4113 are held by planted counting listeners for the whole run; every clause
+cause · WITHHELD · a clause id that is not a literal of the witness's own source was withheld
+```
+
+### 17.1 · Why a clause id was withheld: it is the second word of `T1 IDLE`, and no state byte is involved
+
+- **The emitted ids.** mlv3 names its reds by `r.id.split(" · ")[0]` (`ci/mlv3/witness_mlv3.mjs:318`). So a T1 plus
+  LIVE-SAFE red prints the LAST line `RED MLV3 · T1 IDLE, LIVE-SAFE`.
+- **The fold.** The member's `judgeLast` folds commas and dots to spaces. That gives
+  `left = "T1 IDLE LIVE-SAFE"`.
+- **The split.** mdtl's `causesOf` (`scripts/witness_cause.mjs:78-89`, identical at claude/mdtl-build c766e5d and at 90c7aa5)
+  splits `left` on whitespace (`:83`), giving three tokens: `T1`, `IDLE` and `LIVE-SAFE`.
+  - `claimLines` (`:46-62`) reads the header line `//   T1 IDLE      spool drained…` as id `T1`, with claim
+    `IDLE      spool…`. That is why the annotation reads `T1 · IDLE      …`.
+  - `idsInSource` (`:68-72`) adds a quoted literal only where the id OPENS the string: `"T1 IDLE · …"` yields `T1` and never
+    `IDLE`.
+  - So **`IDLE` alone is not a literal, and it becomes the one WITHHELD entry.**
+- **Measured.** Scratchpad `split.mjs` imports 90c7aa5's own `witness_cause.mjs` and replays the fold on `T1 IDLE, LIVE-SAFE`.
+  Its last three lines are the three annotation lines above:
+  `cause · T1 · IDLE      spool drained, nothing in flight: a closure write RETIRES th` ·
+  `cause · LIVE-SAFE · …` · `cause · WITHHELD · …`.
+
+**What it means for the mdtl channel.** The WITHHELD here is a false alarm: no token was dynamic and no canary rode it. Worse,
+the same fold **names the wrong clause** for the rest of this family. Every core witness and mrv use two-word ids, so
+`claimLines` keys them by their first word, and the first claim line wins:
+- mlv1 has the claim ids `I1 I2 I3 XML BOUND LAST DEFERRED`;
+- mlv2 has `C1 C2 C3 K5 LIVE-SAFE XML`;
+- mrv has `M1 M2 M3 BOUND LAST`.
+
+Replayed with scratchpad `split2.mjs` on 90c7aa5's module:
+- a mrv red at `M1 PORTHELD` reads `M1 · RESTART   mlv1 under p1 — …` plus WITHHELD: **the claim of M1 RESTART, a different
+  clause**;
+- a mrv red at `M3 RESPAWN` reads `M3 · BOOT …`, also wrong;
+- mlv1 `I3 JUDGE` reads correctly (`I3 · JUDGE …`), but carries a false WITHHELD.
+
+**This is a defect of mdtl's id grammar, not of the keeper family.** It goes to the architect as FORK K-F10.
+
+### 17.2 · The fate of each cause line (from public bytes)
+
+| cause | what the public bytes prove | the class |
+|---|---|---|
+| `T1 · IDLE` | T1 was red. T1 is the only behaviour clause that does **not** stand on `ready()`. Its wait is unchanged since mrv (header `:33-36`: "T1 still claims the prompt retire and its wait is unchanged"). Inside ONE bound (`BOUND` = the first boot + one SLACK, `:188`) it waits for a whole chain: the `fs.watch` event or the poll floor of `KEEP_POLL_MS` (`scripts/keeper.mjs:161`, `:190-196`), then the idle and judge checks, then the RETIRING exit, the keeper's respawn, and a second full worker boot answering `/status` (`:197-205`) | **the runner's clock, by the bound's structure** (A, the recommendation) — one bound covering one boot, while the chain needs a boot plus the event latency. *Not proven:* public bytes cannot say whether the RETIRING line came late (filesystem events) or the respawn did (process). C0's T1 codes split exactly these (§5) |
+| `LIVE-SAFE` | its ok needs `allGreen` over the behaviour clauses (`ci/mlv3/witness_mlv3.mjs:281-282` at c766e5d). A red T1 alone makes LIVE-SAFE red. No other LIVE-SAFE branch (`notPlanted`, `hits`, `calls.fixed`) is needed to explain it | **a cascade of T1**, not a port fault (A). A held `:4112`/`:4113` cannot be excluded from the cause line alone; under C0 it reads `LIVE-PORT-HELD` |
+| `WITHHELD` | §17.1: the token is `IDLE`, the second word of `T1 IDLE` | **not a clause and not a fault of the runner.** It is a parse artifact of mdtl's channel (K-F10) |
+
+What the cause lines rule out:
+- **T2, T3 and T4 were GREEN.** No `T2`, `T3` or `T4` cause appears, and each would be a source literal.
+- **So were XML and LAST.** LAST green means no survivor, so the process table was clean at the end.
+- **The organ retired correctly under load three times in the same run.** T2, T3 and T4 each need a retire (T2 through a
+  stream, T3 after a deferral, T4 after a freed judge).
+
+So a **real fault** of thalamus' retire is the weaker reading. The same tree is GREEN on node 22 (136422712625), and the
+diff carries no organ path. That is not a proof: B below names what would decide it.
+
+**FORK K-F11 · T1's fate.**
+- (A) the runner's clock: T1's single bound is structurally tighter than the chain it waits on;
+- (B) a real fault: thalamus' idle retire, its first one after boot, is sometimes not taken.
+
+**Rec A, on the evidence of the table.** *Decides it:* C0's T1 codes on the next T1 red. `RETIRE-LATE` (no RETIRING line by
+the bound) points at the filesystem event or the poll. `RESPAWN-LATE` (RETIRING seen, no new boot by the bound) points at
+the process. A RETIRING line that never comes at all, on a leg where T2-T4 retired, would be B. **No re-run until green is
+proposed** (row 1213 (3)). The re-run of the same tree that row 1213 (1) ordered is c44bea9 (check runs 136463314908 and
+136463314660), in progress when this was written. It is recorded in the ledger when read, as evidence and not as a cure.
+
+### 17.3 · New forks
+
+- **K-F10 · mdtl's id grammar for multi-word clause ids.**
+  - (A) `idsInSource` and `claimLines` learn the multi-word id. That is a quoted literal `"<ID>( <ID>)* · "` and a header
+    line whose id runs up to its column gap. `causesOf` then matches the `left` tokens **greedily, longest known id first**.
+    The judged name and detail stay byte-identical (`judgeLast` untouched), so KNOWN_RED keeps its match.
+  - (B) the member stops folding the witness's `, ` separator, and the ids arrive whole.
+  - (C) leave the grammar as it is; the keeper witnesses are re-cut to one-word ids.
+
+  **Rec A.** It is one module (`scripts/witness_cause.mjs`), the module of the mdtl build (or mdtl2, K-F3), and it edits
+  no landed witness (row 1186 F3 A). C changes judged names that KNOWN_RED and the ledgers carry. *Decides it:* A's test
+  replays this exact red: `left "T1 IDLE LIVE-SAFE"` must give `T1 IDLE · spool drained…` and `LIVE-SAFE · …` with no
+  WITHHELD, and `M1 PORTHELD` must give M1 PORTHELD's own claim.
+- **K-F11 · T1's fate**: §17.2.
+- **K-F2 is answered for T1 by this red.** R2 named the clause (T1) but not which link of its chain failed. **C0 stands as
+  the recommendation**, and T1's codes are its first job: `NOT-UP`, `RETIRE-LATE`, `RESPAWN-LATE` and `BOOT-BEFORE-WRITE`,
+  each read from T1's own branches, plus one read of `linesSince(n, /RETIRING/)`. No wait is changed.
+
+### 17.4 · The merge
+
+`git merge --no-edit origin/main` (main `56ed4ffaa304a4b303245cbedab4db025e02a3f0`) gave merge commit 7bc4e3c, with no
+conflict. This branch adds only `ci/mkp24/`. **mdtl is not on main 56ed4ff** (land/mdtl c44bea9 is its land branch), so
+§6's neutral measurement on main still waits for it. This red is read from the land branch, as row 1213 (3) sends it.
