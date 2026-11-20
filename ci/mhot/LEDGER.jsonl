@@ -71,3 +71,12 @@
 {"ts":"2026-11-20T14:59:24.676Z","act":"witness","cmd":"node <re-cut ci/mlaw/witness_mlaw.mjs> --org <clone 6a6bdff> --base-org <clone 5759cce>","last_line":"RED MLAW · BOUND (old-shape branch: COVERAGE ok via the string)"}
 {"ts":"2026-11-20T14:59:24.676Z","act":"mutants","cmd":"node ci/mhot/run_mutants_mhot.mjs --org <clone 800f57d> --base-org <clone 5759cce> --bound-base <clone 6a6bdff>","last_line":"run_mutants: 14 of 14 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-20T14:59:24.676Z","act":"return","cmd":"(none)","last_line":"both witnesses green beyond BOUND on the merged tree; the build returns for the architect re-run of row 1187; MHOT-M2 mcov half stands"}
+{"ts":"2026-11-20T16:27:20.499Z","act":"new-main","cmd":"git fetch origin main && git rev-parse origin/main","last_line":"b3a61c6fa0a248554ad447ece8c02f9f0a1d1660 (runner M: unit mpres landed)"}
+{"ts":"2026-11-20T16:27:20.499Z","act":"merge","cmd":"git merge --no-edit origin/main (b3a61c6 into a84f25f)","last_line":"c9ecd40 · parents a84f25f b3a61c6 · one hunk: package.json organism:selftest (six keys) → union: suite/members/senses.json new, chain lines kept (PROOF §15)"}
+{"ts":"2026-11-20T16:27:20.499Z","act":"coverage","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage","last_line":"organism_test: 13 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)"}
+{"ts":"2026-11-20T16:27:20.499Z","act":"selftest","cmd":"node scripts/senses.mjs selftest","last_line":"senses selftest: 18 passed, 0 failed (exit 0)"}
+{"ts":"2026-11-20T16:27:20.499Z","act":"witness","cmd":"node ci/mhot/witness_mhot.mjs --org <clone c9ecd40> --base-org <clone 5759cce> --bound-base <clone b3a61c6>","last_line":"GREEN MHOT the member roll · 12 clause(s)"}
+{"ts":"2026-11-20T16:27:20.499Z","act":"witness","cmd":"node ci/mhot/witness_mhot.mjs --org <clone 5759cce> --base-org <clone 5759cce>","last_line":"RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9"}
+{"ts":"2026-11-20T16:27:20.499Z","act":"mutants","cmd":"node ci/mhot/run_mutants_mhot.mjs --org <clone c9ecd40> --base-org <clone 5759cce> --bound-base <clone b3a61c6>","last_line":"run_mutants: 14 of 14 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-20T16:27:20.499Z","act":"control","cmd":"node ci/mpres/witness_mpres.mjs at c9ecd40 and at b3a61c6","last_line":"RED MPRES · BOUND (identical both)"}
+{"ts":"2026-11-20T16:27:20.499Z","act":"CHECKPOINT","cmd":"(PROOF §15)","last_line":"MERGED b3a61c6 · resume from: the architect re-run of row 1187"}

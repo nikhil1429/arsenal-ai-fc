@@ -455,3 +455,39 @@ for the architect's re-run of row 1187.
 
 **Still standing:** the mcov half of MHOT-M2 (§11: `ci/mcov/witness_mcov.mjs` C1, C6, C7 read or plant through the chain
 string). Row 1204 rules only the mlaw half.
+
+## 15 · THE MERGE OF MAIN b3a61c6 (unit mpres) — forks rows 1187 (2) / 1201 / 1200 (2), 2026-11-20
+
+Merge commit `c9ecd40` (parents `a84f25f`, this branch, and `b3a61c6`, main), a merge commit, never a rebase.
+`ci/mhot/BASE` is unchanged (`5759cce`): the clauses are judged against it, and BOUND against the parent `b3a61c6`.
+
+**The one conflicted hunk · `package.json`, the six keys `_selftest_coverage_law` … `_runner_law` (lines 17-22 of each side).**
+- *Main meant:* unit mpres added the member `node scripts/senses.mjs selftest` to the `organism:selftest` string, after
+  `state.mjs`. It changed nothing else on those six keys: measured, the only difference between `6a6bdff` and `b3a61c6` in
+  `package.json` scripts is that one added member.
+- *This unit meant:* the three suite scripts are `node scripts/organism_test.mjs chain <suite>`, written once.
+- *The result is the union of both member sets:* this unit's six lines stand, and mpres's member is its file,
+  `suite/members/senses.json` = `{"suite":"organism:selftest","argv":["selftest"],"live":null}`. mpres added no LIVE
+  reason (its diff does not touch `scripts/organism_test.mjs`). Nothing else changed. No other file conflicted.
+  `ci/mpres/witness_mpres.mjs` reads no chain string.
+
+```
+$ node scripts/organism_test.mjs roll | tail -1
+roll: 130 member(s) · 0 defect(s) · suite/members
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage
+organism_test: 13 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)
+$ node scripts/senses.mjs selftest
+senses selftest: 18 passed, 0 failed                                         (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone c9ecd40> --base-org <clone 5759cce> --bound-base <clone b3a61c6>
+  ok   BOUND · against the bound base (the land commit's parent) · 141 file(s) differ · beyond the named: none · …
+GREEN MHOT the member roll · 12 clause(s)                                    (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone 5759cce> --base-org <clone 5759cce>
+RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9                                (exit 1)
+$ node ci/mhot/run_mutants_mhot.mjs --org <clone c9ecd40> --base-org <clone 5759cce> --bound-base <clone b3a61c6>
+  ok   MLAW CONTROL · the unmutated copy → RED MLAW · BOUND
+run_mutants: 14 of 14 mutant(s) RED by the clause that names them · control GREEN
+$ node ci/mpres/witness_mpres.mjs --org <tree> --base-org <clone of ci/mpres/BASE>      # at c9ecd40 and at b3a61c6
+RED MPRES · BOUND                    (identical on both: the merge moves nothing for mpres's witness; BOUND = row 1200 class)
+```
+
+CHECKPOINT · MERGED b3a61c6 at 16:27 UTC 2026-11-20 · tip = the commit that carries this line · resume from: the architect's re-run of row 1187 (the mcov half of MHOT-M2 still stands, §11)
