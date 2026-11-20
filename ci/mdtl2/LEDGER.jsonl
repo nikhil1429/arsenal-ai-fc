@@ -13,3 +13,7 @@
 {"ts":"2026-11-20T15:42:26.742Z","act":"M12","cmd":"node scripts/ci_verdict.mjs selftest","last_line":"ALL CHECKS PASSED"}
 {"ts":"2026-11-20T15:42:26.742Z","act":"M13","cmd":"curl -s https://api.github.com/rate_limit","last_line":"core limit 15000"}
 {"ts":"2026-11-20T15:42:26.742Z","act":"write","cmd":"ci/mdtl2/MDTL2_SPEC.md","last_line":"written"}
+{"ts":"2026-11-20T16:41:34.636Z","act":"push","cmd":"git push -u origin claude/mdtl2-spec","last_line":"ccce4d5e2d5ed54e8f2ae2683522a620290e027a"}
+{"ts":"2026-11-20T16:41:34.636Z","act":"checks-ccce4d5","cmd":"curl -s $API/commits/ccce4d5e2d5ed54e8f2ae2683522a620290e027a/check-runs","last_line":"136390593728 npm test · node 22 success ; 136390594039 npm test · node 24 success"}
+{"ts":"2026-11-20T16:41:34.636Z","act":"verdict-ccce4d5","cmd":"curl -s $API/check-runs/<id>/annotations (both legs)","last_line":"B1 VERDICT node 22 GREEN · node 24 GREEN · 0 new red · 0 base red · fail 0 · base 6a6bdff"}
+{"ts":"2026-11-20T16:41:34.636Z","act":"N6","cmd":"the same two legs","last_line":"sandbox selftest not red on either neutral leg (fail 0): the M7 sandbox red is container-bound"}
