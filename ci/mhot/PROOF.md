@@ -226,3 +226,92 @@ run_mutants: 12 of 12 mutant(s) RED by the clause that names them · control GRE
 
 HB is a guard like BOUND and LAST: it is judged on the build only. It tests the witness's own split, which exists in no
 base tree.
+
+## 11 · THE MERGE OF MAIN cebe3eb (units mlaw + mcov) — forks rows 1201 / 1187 (2) / 1181 (2) / 1200 (2), 2026-11-20
+
+Merge commit `aae4d51` (parents `e0630cd`, this branch, and `cebe3eb`, main), a merge commit, never a rebase.
+`ci/mhot/BASE` is unchanged (`5759cce`): the clauses are judged against it, and BOUND against the parent `cebe3eb`. The
+earlier stop (fork MHOT-M1, LEDGER) was withdrawn by runner M under row 1201. Every conflicted hunk was resolved by keeping
+both intents, and none had two intents that could not both hold.
+
+**Hunk 1 · `package.json`, the conflicted file's lines 17-31 (the six keys at lines 17-22 of each side).**
+- *Main meant:* unit mlaw appended `node scripts/done.mjs selftest`, and unit mcov appended `deck_lint`, `home_pin`, `probe`
+  and `study_scope`, to the `organism:selftest` string. Main left the three law prose keys unchanged.
+- *This unit meant:* the three suite scripts are `node scripts/organism_test.mjs chain <suite>`, written once, and the
+  prose names the member files (F7 A, F8 A).
+- *The result keeps both:* this unit's six lines stand, and the union of both member sets is taken in the member-file
+  shape: five new files, `suite/members/{done,deck_lint,home_pin,probe,study_scope}.json`, each `organism:selftest` with argv
+  `["selftest"]`, exactly the command main's string held. The union is checked by `organism_test.mjs coverage` on the merged
+  tree, where every organ with a selftest is wired and none is double-billed.
+
+**Hunk 2 · `scripts/organism_test.mjs`, the `LIVE_SELFTESTS` table, the conflicted file's lines 110-150.**
+- *Main meant:* unit mlaw deleted the `lawpack` line (row 1137 (2) F2 A: its verdict reads no state byte, so it rides the
+  hermetic profile) and left a two-line comment in its place.
+- *This unit meant:* the table is folded into the member files (F1 B), and only a non-member's reason may stay in it.
+- *The result keeps both:* the folded table stands; mlaw's comment is kept in it, verbatim, with one line saying where the
+  removal now lives: `suite/members/lawpack.json` carries `live: null`, so lawpack runs in the hermetic profile exactly as
+  mlaw intended. mcov made `home_pin` a member, so its reason moved byte-equal from the residual table into
+  `suite/members/home_pin.json`, and the table holds no line (fork F10 is closed by mcov's landing; coverage's
+  "one place" assert holds).
+
+**Merged clean, kept as is:** mcov's `MEMBER_BOUND_MS` and its named kill (`redWhy`) inside this unit's roll-walking
+`suites()`; the identical-command key now carries the member bound (`runKey`), which hermetic()'s loop and suites() share.
+
+**This unit's own witness, re-cut on the merged tree (named files only):**
+- H7, an ADDED edit holding the same property: ~~every LIVE reason byte-equal~~ → nothing HIDDEN and nothing LOST. A
+  member's reason is base's byte-equal or `null`: a later unit that made a member run in the hermetic profile made the net
+  stricter (mlaw's lawpack). A reason that changed text, or a member that became LIVE, is still red. A non-member base
+  reason is found in the table or byte-equal in the member file a later unit gave it (home_pin). This settles F11 without a
+  later re-cut, and it holds in the neutral member, which hands no parent tree.
+- `run_mutants_mhot.mjs` hands `--bound-base` through to every witness run. M-HB (the split undone) reads `RED MHOT · HB,
+  BOUND` when a real parent carrying foreign landed paths is handed in, because the one fault is seen by the plant and by
+  the live bound. The runner accepts that pair for M-HB only, and only when `--bound-base` is given.
+
+```
+$ node ci/mhot/witness_mhot.mjs --org <LF 9fd9cff> --base-org <LF 5759cce> --bound-base <LF cebe3eb>
+  ok   H7 · build GREEN · base RED · …  build: 124 base member(s) · lost 0 · changed 0 · un-LIVEd since (stricter) 1 (lawpack) · non-member LIVE reasons lost 0
+  ok   BOUND · against the bound base (the land commit's parent) · 139 file(s) differ · beyond the named: none · package.json only its six law/suite keys: yes · audit.mjs only its suite-members block: yes
+GREEN MHOT the member roll · 12 clause(s)                                    (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <LF 5759cce> --base-org <LF 5759cce>
+RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9                                (exit 1)
+$ node ci/mhot/witness_mhot.mjs --org <LF 9fd9cff> --base-org <LF 5759cce>          # the neutral member's view: no parent
+RED MHOT · BOUND                     (the paths mlaw and mcov landed read foreign against BASE; the member drops BOUND, F1 A)
+$ node ci/mhot/run_mutants_mhot.mjs --org <LF 9fd9cff> --base-org <LF 5759cce> --bound-base <LF cebe3eb>
+run_mutants: 12 of 12 mutant(s) RED by the clause that names them · control GREEN
+$ node scripts/lawpack.mjs gate | head -1          # clone at 9fd9cff, and the same at cebe3eb: equal on every count
+findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 90 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 7
+$ node scripts/models.mjs check ; echo $?          # clone at 9fd9cff
+models check · config scan: 19 file(s) · hits 0 · declared 0 (fuelboard_config.json 0 of baseline 0)
+0
+```
+
+**FORK MHOT-M2 · two newly landed witnesses read the chain strings** (files beyond this unit's named set, so measured and
+not edited). Each was run on the merged tree and, as the control, on main `cebe3eb` itself, both against its own BASE, in
+this container:
+
+```
+ci/mcov/witness_mcov.mjs   at cebe3eb: RED MCOV · BOUND, C2 HERMETIC, C5 ONE RECORD
+                           at 9fd9cff: C1 COVERAGE, C6 SLOW-GREEN, C7 HANG-NAMED also red — its plants add mcov_slow / mcov_hang
+                           by appending to the organism:selftest string (witness_mcov.mjs:92), which the build no longer reads
+ci/mlaw/witness_mlaw.mjs   at cebe3eb: RED MLAW · JUGAD · SURFACES · HERMETIC · RISE · NOLINE · BOUND
+                           at 9fd9cff: COVERAGE also red — "a package.json suite string runs it: NO" (done is a member file now)
+```
+
+The reds shared by both columns are this container (no git in the planted trees, `acorn` not loadable from a planted
+tree) and the BOUND class, not the merge. The four new reds are the F6 class exactly: a landed witness that reads the
+strings. In the neutral `witnesses` member, the head runs each against its BASE, so ‹mcov› and ‹mlaw› will red there on
+this branch until they are re-cut. *Options:* A re-cut both in place as ADDED edits, F6 A's shape (mcov: plant by the
+tree's door, the member file when `suite/members` exists, and count the roll in C1; mlaw: count `roll --json` beside the
+strings in COVERAGE), by this seat under a row that names the two files · B a KNOWN_RED entry each, until their units
+re-judge · C their own seats re-cut (row 1187 (3)'s rule, read as covering landed units too).
+
+**The suite, like for like** (clones made with `core.autocrlf=false`, `node_modules` linked, 2026-11-20):
+
+```
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all      # clone at cebe3eb (main, the parent)
+organism_test: 154 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all      # clone at 9fd9cff (the merge + the H7 re-cut)
+organism_test: 158 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)
+   the same two reds by name (the clone's sandbox canary: SUITE MEMBER sandbox and the all-members assert), the same LIVE
+   list; the four added lines are this unit's four new ok asserts; every other ok/FAIL line identical
+```
