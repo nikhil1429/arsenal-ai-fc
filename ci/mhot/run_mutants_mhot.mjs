@@ -89,6 +89,26 @@ const runWitness = (tree, only) => {
   return { code: r.status, last: out.split(/\r?\n/).map((s) => s.trim()).filter(Boolean).pop() || "" };
 };
 
+// ── THE MLAW RE-CUT'S MUTANTS (forks row 1204) ─────────────────────────────────────────────────────────────────────
+// ci/mlaw/witness_mlaw.mjs COVERAGE and HERMETIC were re-cut by this unit to read the member roll. Each mutant breaks ONE
+// member file in a copy of <org>; the copy is made a git repo (core.autocrlf=false) because the law pack lists files with
+// git. mlaw's witness has no --only and no bound-base door, so it is judged by its RED SET: the mutant's set must be the
+// control's set plus exactly its own clause, and the control (the unmutated copy) must hold neither clause.
+const MLAW_MUTANTS = [
+  { clause: "COVERAGE", what: "the done member file removed", m: (t) => { const p = join(t, "suite", "members", "done.json"); if (!existsSync(p)) return "done.json absent"; unlinkSync(p); return null; } },
+  { clause: "HERMETIC", what: "lawpack's member file given a LIVE reason again", m: (t) => edit(t, "suite/members/lawpack.json", null, '"live":null', '"live":"planted LIVE (run_mutants_mhot)"') },
+];
+const gitify = (t) => { const g = (...a) => spawnSync("git", ["-c", "core.autocrlf=false", "-c", "user.name=mhot-mutants", "-c", "user.email=mutants@invalid", "-c", "commit.gpgsign=false", ...a], { cwd: t, encoding: "utf8", windowsHide: true, timeout: left() });
+  g("init", "-q"); g("config", "core.autocrlf", "false"); writeFileSync(join(t, ".git", "info", "exclude"), "node_modules\n"); g("add", "-A"); return g("commit", "-q", "--no-verify", "-m", "mutant copy").status === 0 ? null : "git commit failed"; };
+const mlawReds = (t) => {
+  const r = spawnSync(process.execPath, [join(t, "ci", "mlaw", "witness_mlaw.mjs"), "--org", t, "--base-org", BASE], { encoding: "utf8", windowsHide: true, timeout: left(), env: childEnv(), cwd: TMP, maxBuffer: 1 << 28 });
+  const last = (String(r.stdout || "") + String(r.stderr || "")).split(/\r?\n/).map((x) => x.trim()).filter(Boolean).pop() || "";
+  const m = /^RED MLAW · (.*)$/.exec(last);
+  return { last, set: m ? m[1].split(" · ").map((x) => x.trim()).sort() : /^GREEN MLAW /.test(last) ? [] : null };
+};
+let km = 0, mlawControl = false;
+const hasMlaw = existsSync(join(ORG, "ci", "mlaw", "witness_mlaw.mjs"));
+
 let k = 0;
 try {
   for (const mu of MUTANTS) {
@@ -104,6 +124,26 @@ try {
     try { unlinkSync(join(t, "node_modules")); } catch { /* not linked */ }
     rmSync(t, { recursive: true, force: true });
   }
+  if (hasMlaw) {
+    const ct = join(TMP, "mlaw-control"); copy(ct);
+    const ce = gitify(ct), ctl = ce ? { last: ce, set: null } : mlawReds(ct);
+    mlawControl = !!ctl.set && MLAW_MUTANTS.every((mu) => !ctl.set.includes(mu.clause));
+    console.log(`  ${mlawControl ? "ok  " : "FAIL"} MLAW CONTROL · the unmutated copy → ${ctl.last}`);
+    try { unlinkSync(join(ct, "node_modules")); } catch { /* not linked */ }
+    rmSync(ct, { recursive: true, force: true });
+    for (const mu of MLAW_MUTANTS) {
+      const t = join(TMP, `mlaw-${mu.clause.toLowerCase()}`); copy(t);
+      const why = mu.m(t) || gitify(t);
+      const r = why ? { last: why, set: null } : mlawReds(t);
+      for (const p of namingProcs(TMP)) { try { process.kill(p); } catch { /* gone */ } }
+      const want = ctl.set ? [...ctl.set, mu.clause].sort() : null;
+      const ok = mlawControl && !!r.set && JSON.stringify(r.set) === JSON.stringify(want);
+      if (ok) km++;
+      console.log(`  ${ok ? "ok  " : "FAIL"} M-MLAW-${mu.clause} · ${mu.what} → ${r.last}`);
+      try { unlinkSync(join(t, "node_modules")); } catch { /* not linked */ }
+      rmSync(t, { recursive: true, force: true });
+    }
+  }
   const c = runWitness(ORG, null);
   var control = c.code === 0 && /^GREEN MHOT /.test(c.last);
   console.log(`  ${control ? "ok  " : "FAIL"} CONTROL · the unmutated witness over --org → exit ${c.code} · ${c.last}`);
@@ -111,5 +151,6 @@ try {
   for (const p of namingProcs(TMP)) { try { process.kill(p); } catch { /* gone */ } }
   rmSync(TMP, { recursive: true, force: true });
 }
-console.log(`run_mutants: ${k} of ${MUTANTS.length} mutant(s) RED by the clause that names them · control ${control ? "GREEN" : "RED"}`);
-process.exit(k === MUTANTS.length && control ? 0 : 1);
+const n = MUTANTS.length + (hasMlaw ? MLAW_MUTANTS.length : 0), kk = k + km, ctlOk = control && (!hasMlaw || mlawControl);
+console.log(`run_mutants: ${kk} of ${n} mutant(s) RED by the clause that names them · control ${ctlOk ? "GREEN" : "RED"}`);
+process.exit(kk === n && ctlOk ? 0 : 1);
