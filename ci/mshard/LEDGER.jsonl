@@ -9,3 +9,7 @@
 {"ts":"2026-11-20T01:32:20.620Z","act":"hermetic-base","cmd":"npm ci; ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126"}
 {"ts":"2026-11-20T01:32:20.620Z","act":"fk7-side-reading","cmd":"grep mport log_135938095709","last_line":"ok WITNESS ‹mport› · GREEN at its LANDED sha (Windows node 22, e789487) · headline STALE 1"}
 {"ts":"2026-11-20T01:32:20.620Z","act":"spec","cmd":"write ci/mshard/MSHARD_SPEC.md","last_line":"shapes A-E, 14 clauses, 7 forks, 7 named-not-guessed"}
+{"ts":"2026-11-20T01:35:34.240Z","act":"canon-scan","cmd":"node canonscan.mjs 8d77024 (git show <sha>:<path>, every tracked .md)","last_line":"canon scan 8d77024 · 98 files · undeclared 0 · declared 1"}
+{"ts":"2026-11-20T01:35:34.240Z","act":"hermetic-branch","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (at 8d77024)","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126"}
+{"ts":"2026-11-20T01:35:34.240Z","act":"ci-legs","cmd":"curl commits/8d77024/check-runs","last_line":"run 44654459793 · node 22 136017158332 queued · node 24 136017157867 queued (01:35:08Z)"}
+{"ts":"2026-11-20T01:35:34.240Z","act":"ci-verdict","cmd":"node scripts/ci_verdict.mjs 8d77024","last_line":"UNREADABLE — check-runs answered 403 (node fetch from this container); curl used"}

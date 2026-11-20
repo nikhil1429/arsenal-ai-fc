@@ -302,8 +302,12 @@ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all
 ```
 That one red is the base's, on this Linux container. Both Windows legs of 5759cce are GREEN (M2), so it is not news to
 the neutral verdict. The same command at this branch's commit is the ledger row `hermetic-branch`.
-Neutral legs of this branch's tip: read once per leg with curl (no token), named in the ledger row `ci-legs` and in
-the seat's final message. A spec push that adds only `ci/mshard/` changes no witness. `ci/mshard/` holds no
+Neutral legs of this branch's first push, 8d77024, read with curl (no token) at 2026-11-20T01:35:08Z: run 44654459793,
+`npm test · node 22` 136017158332 **queued** · `npm test · node 24` 136017157867 **queued**. No verdict yet. This push
+supersedes that run (`cancel-in-progress`, suite.yml:53), so the verdict of record is this tip's, read once per leg with
+`node scripts/ci_verdict.mjs <full sha>` (curl when it answers 403, as it did from this container). The hermetic suite at
+8d77024's tree, Linux, 20 Nov 2026: `organism_test: 149 passed, 1 failed · UNRULED 1`, the base's one red and nothing
+else. The canon-count replay (LOAD ZERO BLOCK 7) over 8d77024's commit blobs: 0 undeclared lines. A spec push that adds only `ci/mshard/` changes no witness. `ci/mshard/` holds no
 `witness_mshard.mjs` yet, so `witnessUnits` does not list it and the member's unit count is unchanged.
 
 ---
