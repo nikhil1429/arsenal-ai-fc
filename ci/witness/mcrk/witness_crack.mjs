@@ -74,7 +74,7 @@ for (const tool of ["claude", "gemini"]) {
 }
 const ENV = (() => { const e = { ...process.env }; const pk = Object.keys(e).find((k) => k.toUpperCase() === "PATH") || "PATH"; e[pk] = `${SHIM}${delimiter}${e[pk] || ""}`; return e; })();
 const NM = [TREE, join(HERE, "..", "..", "..")].map((t) => join(t, "node_modules")).find((p) => existsSync(p)) || null;
-const text = (p) => { try { return readFileSync(p, "utf8").replace(/^﻿/, ""); } catch { return null; } };
+const text = (p) => { try { return readFileSync(p, "utf8").replace(/^\uFEFF/, ""); } catch { return null; } };
 const sha = (p) => (existsSync(p) ? createHash("sha256").update(readFileSync(p)).digest("hex") : "absent");
 const lines = (s) => String(s || "").split(/\r?\n/);
 const fold = (s) => String(s || "").replace(/\s+/g, " ").trim();

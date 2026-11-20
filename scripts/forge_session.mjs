@@ -682,12 +682,10 @@ export function readCracks(path = CRACKS) {
   if (!existsSync(path)) return { rows: [], absent: true, torn: 0 };
   let text;
   try { text = readFileSync(path, "utf8"); } catch (e) { return { rows: null, torn: 0, error: String((e && e.code) || (e && e.message) || e).slice(0, 120) }; }
-  const rows = []; let torn = 0;
-  for (const l of text.replace(/^﻿/, "").split(/\r?\n/)) {
-    if (!l.trim()) continue;
-    try { const o = JSON.parse(l); if (o && typeof o === "object" && !Array.isArray(o) && o.kind === "crack") rows.push(o); else torn++; } catch { torn++; }
-  }
-  return { rows, torn };
+  const parsed = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((l) => l.trim())
+    .map((l) => { try { return JSON.parse(l); } catch { return null; } });   // a torn line reads as null and is counted, never thrown
+  const rows = parsed.filter((o) => o && typeof o === "object" && !Array.isArray(o) && o.kind === "crack");
+  return { rows, torn: parsed.length - rows.length };
 }
 /** sameCrack — the row already written for THIS answer (one forge session, one prompt): the idempotence key. */
 export const sameCrack = (rows, row) => (rows || []).find((r) => r && r.session_started_at === row.session_started_at && r.prompt_at === row.prompt_at) || null;

@@ -808,8 +808,9 @@ async function selftest() {
       afterCheck.items.filter((i) => i.mark === "N").map((i) => i.kind).join() === "answer,cracked,stuck", afterCheck.items.filter((i) => i.mark === "N").map((i) => i.kind).join());
     // unit mcrk (forks rows 1173 (1) / 1189) — THE CRACK ROW stamps its turn's crack item; the teacher's diff is kept exactly
     {
-      const exK = [{ role: "teacher", at: at(1), rid: "k1", text: "Ek word kitne tokens?" }, { role: "him", at: at(2), rid: "k2", text: "shaky — ek word ek token" },
-        { role: "teacher", at: at(3), rid: "k3", text: "```diff\n- ek word = ek token\n+ ek word = ek ya zyada tokens\n```\nKahan atke?" }];
+      // frozen: one fixture feeds four builds, so no build may mutate the turns another one reads
+      const exK = Object.freeze([{ role: "teacher", at: at(1), rid: "k1", text: "Ek word kitne tokens?" }, { role: "him", at: at(2), rid: "k2", text: "shaky — ek word ek token" },
+        { role: "teacher", at: at(3), rid: "k3", text: "```diff\n- ek word = ek token\n+ ek word = ek ya zyada tokens\n```\nKahan atke?" }]);
       const row = { v: 1, kind: "crack", id: "ck-selftest-0001", at: at(2.5), concept: "x", axis: "a", moment: "check_q", words: "shaky — ek word ek token", prompt_at: at(2) };
       const plain = buildNote({ concept: "x", axis: "a", ex: exK }), stamped = buildNote({ concept: "x", axis: "a", ex: exK, cracks: [row] });
       const pc = plain.items.find((i) => i.kind === "crack"), sc = stamped.items.find((i) => i.kind === "crack");
