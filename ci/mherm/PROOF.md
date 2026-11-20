@@ -224,7 +224,8 @@ lawpack gate, 6a6bdff and the merge (LF clones)                    → the same 
 
 Row 1204 ruled F-8 as option (a), narrowed to a listed admission ((b) and (c) refused; row 1157 (4) stands). Row 1205 (3)
 then ruled F3 as ONE clause with TWO doors and gave both doors to the second of the mgat and mherm build seats to return.
-**This seat is SECOND**: `claude/mgat-build` was read at `9897cb4` before this push (20 Nov 2026), and it already carries
+**This seat is SECOND**: `claude/mgat-build` was read at `9897cb4` and again at `8c00ae2` right before this push (20 Nov
+2026; at `68462db` mgat names itself FIRST of mgat/mherm; its `ci/mf2` files are byte-unchanged between the two), and it carries
 door 1 (`ci/mf2/livenarrow.mjs`, its F3 re-statement). Its branch is not merged: `livenarrow.mjs` is brought by content
 (`git show 9897cb4:ci/mf2/livenarrow.mjs`, byte-equal), and F3 here holds both doors in the one clause.
 
