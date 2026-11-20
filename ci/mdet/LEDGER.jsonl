@@ -1,2 +1,3 @@
 {"ts":"2026-11-20T12:40:21.249Z","act":"cut the build branch from main","cmd":"git fetch origin main && git checkout -b claude/mdet-build FETCH_HEAD","last_line":"main cebe3ebe4024c2144b934b3032b3fb837285d926"}
 {"ts":"2026-11-20T12:40:21.291Z","act":"the census of the coverage detector, every scripts/*.mjs","cmd":"node scripts/organism_test.mjs census","last_line":"137 rows · 0 move"}
+{"ts":"2026-11-20T12:40:51.413Z","act":"the detector: dispatch or self-run, comments and strings blanked","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage","last_line":"organism_test: 10 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)"}
