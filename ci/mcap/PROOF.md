@@ -326,3 +326,30 @@ run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
 unit-mode BOUND still compares the org with `ci/mcap/BASE`. So, once main has moved, it lists the landed units' files.
 Row 1200 (2) puts the bound against the parent instead. Making the witness's BOUND read the parent is a witness edit that no
 message has asked for yet, and it is named here.
+
+## 12 · `ci/mcap/witness_mcap.mjs`, the unit witness against BASE (forks row 1184 option A), 20 Nov 2026
+
+The landing verb's NO-CI-DIR law (`scripts/land.mjs` §5) wants `ci/mcap/witness_mcap.mjs` beside a 40-hex `ci/mcap/BASE`.
+This build adds that one file, in the mmeter shape (`ci/mmeter/witness_mmeter.mjs` on main 6a6bdff), and edits no other file
+beyond this proof and the ledger.
+- **The clause code is the head's own.** The witness runs `<org>/ci/witness/mcap/witness_capability.mjs plants --org <tree>`
+  once per tree. A clause holds iff it reads RED on the base tree and GREEN on the head tree.
+- **BOUND walks the two trees.** It needs no git: the member hands it LF trees with no `.git`.
+- **`--parent-org`** is optional (row 1200 (2): the clauses against BASE, the bound against the parent). Without it, the
+  bound is read against the base. At a head past later landings it then names those landings' files, and the member's
+  `judgeLast` drops `BOUND` from a RED line (`scripts/organism_test.mjs:2903-2905`).
+
+Run on LF trees made by `git archive` (no `.git`, node_modules linked), as the member makes them:
+
+```
+node ci/mcap/witness_mcap.mjs --org <head 2026-11-20> --base-org <BASE 5759cce> --parent-org <main 6a6bdff>      (build)
+  BOUND (against the parent) · GREEN · 7 file(s) differ, every one named
+GREEN MCAP capability map + witness (c07 c10 c12 c13 c18 c28 c32), RED at base and GREEN at head · 7 clause(s)   (exit 0)
+
+node ci/mcap/witness_mcap.mjs --org <head> --base-org <BASE 5759cce>          (build, the member's call: no parent)
+RED MCAP · BOUND                                                                                                (exit 1; the member drops BOUND)
+
+node ci/mcap/witness_mcap.mjs --org <BASE 5759cce> --base-org <BASE 5759cce>  (the BASE tree)
+  UNREAD · the head tree carries no ci/witness/mcap/witness_capability.mjs (the clause code)
+RED MCAP · C:capability-c07, C:capability-c10, C:capability-c12, C:capability-c13, C:capability-c18, C:capability-c28, C:capability-c32   (exit 1)
+```
