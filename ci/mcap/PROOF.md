@@ -184,3 +184,49 @@ this unit's; named, not fixed (no organ file is this unit's).
 ```
 
 The final tip's two legs are named in the ledger and the final message.
+
+Read at 2026-11-19T18:38Z, once: `ci_verdict b37ebfc GREEN — npm test · node 22: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135786526980] | npm test · node 24: GREEN (base fb42118 · 0 new red · 1 base red · 126 live) [run 135786526210]`.
+
+## 9 · Row 1173 and the merge of main 5759cce (row 1172), 20 Nov 2026
+
+**Row 1173 rules FORK mcap-1 as (b):** unit mcrk builds the pacer's crack verb as the SOLE WRITER of the crack row (his words
+verbatim, concept, axis, moment, written at the moment the answer breaks), and the notes compiler reads that row. Option (a)
+is refused. **c18 is not weakened, skipped or re-labelled.** Until mcrk lands, c18 reads a TRUE red on any real day with a
+broken answer. The reason: no organ on main writes a crack row carrying `moment` and `words` (his words). The only crack
+items on main are notes_compiler's `[T]` diff items (`galat`/`sahi`, no moment, no words, `scripts/notes_compiler.mjs:311,322`),
+so the witness's crack-row predicate (a legal moment · his words equal to the capture's `spoken` · one diff) finds none, and
+the broken answer is red. That red is the capability's real state today, not a defect of the witness. When mcrk lands, the
+witness's SOURCE moves to mcrk's row (a witness change, so a fresh red before is owed). **Residual mcap-2** (are parked
+items ever shown again) goes to unit **mprk**.
+
+**The merge.** `git merge --no-edit origin/main` at main `5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90` (ms1 + mrj + mrt + mr3 +
+mrf + mrv landed), merge commit `b53eb4c`. No land/* branch was merged. **No conflict hunks:** `scripts/organism_test.mjs` and
+`package.json` are untouched by this unit, so main's side stands whole and nothing of either side was removed. `ci/mcap/BASE`
+now reads `5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90` (commit after the merge).
+
+**FORK mcap-6 · ms1's member does not find this witness.** main's WITNESSES member (`scripts/organism_test.mjs:2800-2806`,
+`witnessFile`) judges only `ci/<unit>/witness_<unit>.mjs`, with its cwd a copy of `ci/<unit>/` (`:2919-2924`). This unit's
+witness sits at `ci/witness/mcap/witness_capability.mjs` (the UNITS row, F10 A, and the brief). So on CI the member does not
+see it: it is not red, and not judged. mmeter's member (it walks `ci/witness/`, `claude/mmeter-build` `4d75624`) is not on
+main. (a) a thin `ci/mcap/witness_mcap.mjs` that hands its args to the ci/witness witness — a file beyond this unit's named
+ones, so not added; (b) ms1's `witnessFile` also looks in `ci/witness/<unit>/` (an edit of the suite file, which is mmeter's
+by row 1162 (2)); (c) mmeter's member landing covers it.
+
+Measured on the merged tree, by command (20 Nov 2026):
+
+```
+node ci/witness/mcap/witness_capability.mjs plants
+PLANTS mcap · 80 of 80 plant(s) as expected                     (exit 0)
+node ci/witness/mcap/witness_capability.mjs --org . --base-org <clone of 5759cce>
+  BOUND · GREEN · 6 file(s), every one named
+  LAST · GREEN · no process names the temp prefix
+GREEN MCAP capability map + witness (c07 c10 c12 c13 c18 c28 c32), RED on base and GREEN on build · 7 clause(s)   (exit 0)
+node ci/witness/mcap/witness_capability.mjs --org <clone of 5759cce> --base-org <clone of 5759cce>
+RED MCAP · C:capability-c07, C:capability-c10, C:capability-c12, C:capability-c13, C:capability-c18, C:capability-c28, C:capability-c32, BOUND   (exit 1)
+node ci/mcap/run_mutants_mcap.mjs
+run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN   (exit 0)
+```
+
+CHECKPOINT · STOPPED at 2026-11-20 (UTC, after this push) · merged tip = this commit's parent chain on `claude/mcap-build`
+(merge `b53eb4c`, BASE commit, this proof commit) · base 5759cce · resolution hunks: none (no conflict) · witness `GREEN MCAP … · 7 clause(s)` /
+base `RED MCAP · … BOUND` · mutants `run_mutants: 7 of 7 … · control GREEN` · resume from: the architect's next ruling (FORK mcap-6; c18 re-sourced once mcrk lands).
