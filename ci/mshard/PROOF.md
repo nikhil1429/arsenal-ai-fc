@@ -240,3 +240,22 @@ while every clause still runs on `--base-org` (BASE). Without the flag, BOUND is
 - 20 Nov 2026 · hermetic suite: merged `153 passed, 3 failed` = parent `153 passed, 3 failed`, with the same three reds by name (export-tree
   artifacts: no history, sandbox); the `ORGANISM_TEST_LAWPACK` line is byte-equal (md5 4a295a6b…). No count rose.
 - `node scripts/models.mjs check`: exit 0.
+
+## 9 · THE MERGE OF NEW MAIN 6a6bdff (unit mmeter), forks rows 1187 (2) · 1181 (2) · 1201 · 1200 (2)
+
+Merge commit d43cff7 (parents 1a54f72 · 6a6bdfff4349b849398b69d0748b27d37c874b85), made as a merge commit with no rebase. **No
+hunk conflicted**, so there is no hunk to name. `scripts/organism_test.mjs` merged automatically. main's new `clauses` mode
+(`clauseWitnesses`, which walks `ci/witness/<unit>/`) is a member of the suite job's `all` and is separate from the `witnesses`
+member that mshard shards. `ci/witness/` holds no `witness_witness.mjs`, so it is not a unit of the plan. `ci/mmeter` is a new
+unit of the plan. `ci/mshard/BASE` stays 5759cce (row 1200 (2)).
+
+Measured on 20 Nov 2026 on LF exports under os.tmpdir() (merged d43cff7, base 5759cce, parent 6a6bdff):
+- witness `--org merged --base-org base --parent-org parent`: `GREEN MSHARD the witnesses member split across jobs, folded by name · 23 clause(s)`
+  (BOUND · 9 file(s) differ from the parent, every one named)
+- witness on base: `RED MSHARD · W-S1 PLAN, … W-S21 KREAD` (every clause but the guard)
+- mutants: `run_mutants: 21 of 21 mutant(s) RED by the clause that names them · control GREEN`
+- 20 Nov 2026 · `ci_verdict selftest: 42 passed, 0 failed` · `models.mjs check` exit 0
+- 20 Nov 2026 · hermetic suite: merged `155 passed, 3 failed` = parent `155 passed, 3 failed`, the same three reds by name, and the
+  law pack line is byte-equal. No count rose.
+- the plan: three shards of 9 / 16 / 17 units. `unknown` = mcov, mlaw, mmeter, mshard (no TIMES row yet, so each is weighed at
+  the mean, never dropped). Q3 asks who refreshes TIMES after landing.
