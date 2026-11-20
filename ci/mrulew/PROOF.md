@@ -102,3 +102,13 @@ run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN
 
 ~~CHECKPOINT · STOPPED at 2026-11-19T12:37:57Z · resume from: write rule_witness.json and witness_rules.mjs …~~ — resumed on
 his word 270 (19 Nov 2026); every step after it is above.
+
+## 8 · Merge of main 5759cce (row 1172, 20 Nov 2026)
+
+- `git merge --no-ff 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90` into the tip `b703c70` with no conflict (this branch edits neither
+  `scripts/organism_test.mjs` nor `package.json`). Resolution hunks: none. `ci/mrulew/BASE` now reads `5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90`.
+- Witness on the merged tree: `GREEN MRULEW rule witnesses (16 seed rule(s): base 1 → head 0) · plants both ways · 4 clause(s) (exit 0)`;
+  the cloud read is still `RULE-WITNESSES UNREAD …` (exit 2).
+- Mutants on the merged tree: `run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN`.
+
+CHECKPOINT · STOPPED at 2026-11-20T01:29:11Z · merged tip = the commit carrying this line (its parents b703c70 and 5759cce) · base 5759cce · resolution hunks none · witness GREEN MRULEW (exit 0) · mutants 4 of 4 · control GREEN · resume from: nothing owed, awaiting the architect
