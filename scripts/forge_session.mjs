@@ -26,7 +26,7 @@
 //     mirror.mjs is their sole writer), so the fact lives beside them and rejirah.mjs's
 //     loadCapsules layers it in memory for every reader of a capsule.
 //   · SOLE WRITER of dressing-room/state/cracks.jsonl (unit mcrk, forks rows 1173 (1) / 1189) — THE CRACK ROW, append-only:
-//     `crack` writes ONE row at the moment his answer breaks — his words verbatim (teaching_audit_last.json's
+//     `crack` writes ONE row at the moment his answer breaks — the text he typed, verbatim (teaching_audit_last.json's
 //     prompt, read-only; refused when absent, never a teacher copy), the concept, the axis and the moment from this
 //     organ's own session. It NEVER calls save(): forge_session.json is not written by it. The file is ignored by git
 //     (row 1189 (2), the private default of his 14 Aug ruling); notes_compiler.mjs reads it through readCracks().

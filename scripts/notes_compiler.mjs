@@ -62,8 +62,8 @@
 //   ITEMS   — his pehle-guess with its gut-word (the first gut-bearing answer) · each crack: the teacher's ```diff
 //             block (- galat / + sahi, the crack marker, NOTES_DESIGN P4) with the answer that cracked and the
 //             [unit mcrk: the crack ROW of that turn — cracks.jsonl, read through forge_session.mjs readCracks — stamps
-//             its moment, his words verbatim and its id on the turn's crack item; the teacher's diff is kept exactly; a
-//             row whose turn has no diff is an item with an EMPTY diff and a named gap, never a diff built from his words]
+//             its moment, the text he typed (verbatim) and its id on the turn's crack item; the teacher's diff is kept exactly; a
+//             row whose turn has no diff is an item with an EMPTY diff and a named gap, never a diff built from what he typed]
 //             stuck-story after it · his hand-trace (an answer carrying two or more numbers he typed) · his Bolo
 //             (the answer after the teacher asks for it) · the teacher's [T] layers by the skeleton markers
 //             ([DUKAAN] [ASLI NAAM] [TECHNICAL LINE], teaching_bar.mjs:339-342) · each check (the LAST question
