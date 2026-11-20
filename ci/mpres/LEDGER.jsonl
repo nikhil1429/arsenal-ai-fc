@@ -3,3 +3,4 @@
 {"ts":"2026-11-20T07:10:00Z","act":"install deps (gitignored node_modules) for the law pack","cmd":"npm ci --no-audit --no-fund","last_line":"EXIT 0"}
 {"ts":"2026-11-20T07:30:00Z","act":"presence selftest after step 1","cmd":"node scripts/presence.mjs selftest","last_line":"ALL CHECKS PASSED"}
 {"ts":"2026-11-20T07:40:00Z","act":"touchline selftest after step 2","cmd":"node scripts/touchline.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-20T07:55:00Z","act":"dmn selftest after step 3","cmd":"node scripts/dmn.mjs selftest","last_line":"ALL CHECKS PASSED"}

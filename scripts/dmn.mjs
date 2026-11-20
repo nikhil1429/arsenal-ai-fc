@@ -30,7 +30,10 @@
 //        MUTED — a depleted captain rests), and the lanes have measured
 //        headroom (use-it-or-lose-it quota; blast radius $0). Rollouts are
 //        hard-capped. Sole writer of dmn_precache.json (gitignored — it names
-//        his weaknesses).
+//        his weaknesses) and of dmn_input.json (unit mpres, forks rows 1177 (2) /
+//        1191: the away gate's own input — ActivityWatch's AFK bucket — recorded
+//        each gate-checked pass {at,input,alive,dead_since,last_live_at,why}, so a
+//        dead AW no longer reads as "he was here"; such a pass exits NON-ZERO, F2 B).
 // MODES: node scripts/dmn.mjs            → gate-checked dream pass
 //        node scripts/dmn.mjs --force    → skip the away-check (real-run/test)
 //        node scripts/dmn.mjs status · drain (fold the background queue, by hand) · selftest
@@ -131,7 +134,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const PRECACHE  = join(STATE_DIR, "dmn_precache.json");
 const BLEDGER   = join(STATE_DIR, "brain_ledger.jsonl");   // #7 — the shared window ledger (append-only; brain.mjs owns the schema)
-const AW = "http://localhost:5600";
+// F7 A (unit mpres): ONE env door, AW_API_BASE, with ARSENAL_AW read as an alias (this was hardcoded)
+const AW = process.env.AW_API_BASE || process.env.ARSENAL_AW || "http://localhost:5600";
+// unit mpres: the gate's input snapshot. NOT stamped into dmn_precache.json, on purpose: setpiece.mjs
+// reads a same-day precache as a dream (:497, :813), so a stub precache would read as an empty dream.
+const DINPUT    = join(STATE_DIR, "dmn_input.json");
 
 const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8")); } catch (e) { swallow("readJson: readFileSync(p) unreadable → null", e);} return null; };
 const readLines = (p) => { const o = []; try { if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l.trim()) continue; try { o.push(JSON.parse(l)); } catch {} } } catch (e) { swallow("readLines: readFileSync(p) unreadable → o", e);} return o; };
@@ -424,11 +431,16 @@ async function isAway(deps = {}) {
     const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 4000);
     const r = await fetchFn(`${AW}/api/0/buckets`, { signal: ctrl.signal });
     clearTimeout(t);
-    if (!r.ok) return { away: false, why: "ActivityWatch unreachable — assume present" };
+    if (!r.ok) return { away: false, why: "ActivityWatch unreachable — assume present", input_dead: true };
     const buckets = await r.json();
     const afk = Object.keys(buckets).find(b => b.startsWith("aw-watcher-afk"));
-    if (!afk) return { away: false, why: "no AFK bucket — assume present" };
-    const ev = await (await fetchFn(`${AW}/api/0/buckets/${encodeURIComponent(afk)}/events?limit=1`)).json();
+    if (!afk) return { away: false, why: "no AFK bucket — assume present", input_dead: true };
+    // unit mpres: the follow-up read carries its OWN abort (presence's scar a7262423, same shape): a half-alive
+    // AW that takes the socket and never answers must not hang the hourly pass on undici's header timeout.
+    const c2 = new AbortController(); const t2 = setTimeout(() => c2.abort(), 4000);
+    let ev;
+    try { ev = await (await fetchFn(`${AW}/api/0/buckets/${encodeURIComponent(afk)}/events?limit=1`, { signal: c2.signal })).json(); }
+    finally { clearTimeout(t2); }
     const last = ev && ev[0];
     if (!last) return { away: false, why: "no AFK events" };
     // E2E audit 25 Jul 2026: the freshness test was `now - event.timestamp < 6h`,
@@ -443,7 +455,13 @@ async function isAway(deps = {}) {
     const endMs = new Date(last.timestamp).getTime() + (Number(last.duration) || 0) * 1000;
     const away = !!(last.data && last.data.status === "afk") && (Date.now() - endMs) < AFK_STALE_MS;
     return { away, why: away ? "AFK per ActivityWatch" : "present per ActivityWatch" };
-  } catch { return { away: false, why: "AFK check failed — assume present (never dream over his shoulder)" }; }
+  } catch { return { away: false, why: "AFK check failed — assume present (never dream over his shoulder)", input_dead: true }; }
+}
+// unit mpres — pure: dead_since carries across dead passes, resets on a live one.
+export function dmnInputSnapshot(prior, a, now = new Date()) {
+  const at = now.toISOString(), p = prior && typeof prior === "object" ? prior : null;
+  if (!a.input_dead) return { at, input: "activitywatch", alive: true, dead_since: null, last_live_at: at, why: a.why };
+  return { at, input: "activitywatch", alive: false, dead_since: p && p.alive === false && p.dead_since ? p.dead_since : at, last_live_at: (p && p.last_live_at) || null, why: a.why };
 }
 
 // M16 — THE TANK-BORROW GATE: when the captain is away there is no live
@@ -508,7 +526,12 @@ async function dream(deps = {}) {
   if (!tone.effects.dmn_allowed) return { ok: false, skipped: "tone is conserve — a depleted captain rests; no dreaming" };
   if (!deps.force) {
     const a = deps.awayCheck ? await deps.awayCheck() : await isAway(deps);
-    if (!a.away) return { ok: false, skipped: `not away (${a.why}) — the Rest Room only fires when he's gone` };
+    // unit mpres: the gate's input is recorded every gate-checked pass, through the same seam law as the
+    // precache write: a caller that redirected `write`, or injected the away check (then nothing was read
+    // live, so there is no live input to record), writes no live state unless it names `writeInput`.
+    const writeInput = deps.writeInput || (deps.write || deps.awayCheck ? null : (o) => writeAtomic(DINPUT, o));
+    if (writeInput) writeInput(dmnInputSnapshot(deps.readInput ? deps.readInput() : readJson(DINPUT), a, now));
+    if (!a.away) return { ok: false, skipped: `not away (${a.why}) — the Rest Room only fires when he's gone`, input_dead: !!a.input_dead };
   }
   // ---- C3.8 · THE FOURTH GATE: THE WINDOW (12 Aug 2026) ----------------------
   // "EVERY DOOR OBEYS THE GOVERNOR." This organ did not, and it is the largest
@@ -1082,6 +1105,24 @@ async function selftest() {
     assert("AFK CLOCK: a stale AFK event is NOT away (never dream over his shoulder)", (await isAway({ fetchFn: mkFetch(stale) })).away === false);
     const atDesk = { timestamp: hoursAgo(0.01), duration: 30, data: { status: "not-afk" } };
     assert("AFK CLOCK: not-afk is present", (await isAway({ fetchFn: mkFetch(atDesk) })).away === false);
+    // unit mpres (forks rows 1177 (2) / 1191) — a dead AW is NAMED dead, never just "assume present"
+    const deadFetch = async () => { throw Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }); };
+    const deadA = await isAway({ fetchFn: deadFetch });
+    assert("mpres W10 — AW unreachable ⇒ input_dead (still not away: never dream over his shoulder)", deadA.away === false && deadA.input_dead === true);
+    assert("mpres W10 — a live AFK read is NOT input_dead", !(await isAway({ fetchFn: mkFetch(atDesk) })).input_dead);
+    let sig = null;
+    await isAway({ fetchFn: async (url, o) => { if (String(url).includes("/events")) sig = o && o.signal; return String(url).includes("/events") ? { ok: true, json: async () => [atDesk] } : { ok: true, json: async () => ({ "aw-watcher-afk_desktop": {} }) }; } });
+    assert("mpres — the follow-up events read carries its OWN abort signal (presence's scar a7262423)", !!sig && typeof sig.aborted === "boolean");
+    const stamps = [];
+    const t1 = new Date("2026-11-17T05:00:00Z"), t2 = new Date("2026-11-17T06:00:00Z");
+    let prior = null;
+    const writeInput = (o) => { stamps.push(o); prior = o; };
+    const r1 = await dream({ force: false, now: t1, tone: { effects: { dmn_allowed: true } }, fetchFn: deadFetch, writeInput, readInput: () => prior });
+    await dream({ force: false, now: t2, tone: { effects: { dmn_allowed: true } }, fetchFn: deadFetch, writeInput, readInput: () => prior });
+    assert("mpres W10 — the gate STAMPS its dead input (dmn_input.json): alive:false, dead_since = the first dead pass, and the pass says input_dead",
+      r1.input_dead === true && stamps.length === 2 && stamps[1].alive === false && stamps[1].dead_since === t1.toISOString() && /unreachable|failed/.test(stamps[1].why));
+    const live = dmnInputSnapshot(stamps[1], { away: false, why: "present per ActivityWatch" }, new Date("2026-11-17T07:00:00Z"));
+    assert("mpres — a live gate read resets dead_since and stamps last_live_at", live.alive === true && live.dead_since === null && live.last_live_at === live.at);
   }
 
   // ---- C3.8 · THE FOURTH GATE — THE WINDOW (12 Aug 2026) ---------------------
@@ -1628,6 +1669,7 @@ async function main() {
   console.log(r.ok
     ? `dmn: dreamed — ${r.entries} stall signature(s) from ${r.rollouts}/${r.planned_rollouts} planned rollouts across ${(r.lanes || []).join("+")} (${r.verified} verified; INERT ammunition for M7)${r.engine_down ? ` · PARTIAL: the ${r.engine_down} engine refused mid-pass — ${String(r.engine_error).slice(0, 140)}` : ""}`
     : `dmn: no dream — ${r.skipped}`);
+  if (r.input_dead) { console.log(`dmn: input DEAD — ActivityWatch's AFK read failed → ${DINPUT}`); process.exitCode = 1; }   // unit mpres F2 B
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
