@@ -167,7 +167,8 @@ await clause("K2c", () => {
   const bl = lines(cB.out).filter(Boolean), tl = lines(cT.out).filter(Boolean);
   const carried = tl.filter((l) => CARRIER.test(l)).length;
   const sameStatus = sB.out === sT.out && sT.code === 0 && sT.out.length > 0;
-  const sameRest = tl.length === bl.length && tl.every((l, i) => l.replace(CARRIER, "") === bl[i]);
+  // the carrier is stripped on BOTH sides: with no --base-tree the writer is --tree's own code and carries it too
+  const sameRest = tl.length === bl.length && tl.every((l, i) => l.replace(CARRIER, "") === bl[i].replace(CARRIER, ""));
   return { ok: sameStatus && sameRest && carried === 1, why: `status ${sameStatus ? "identical" : "DIFFERS"} · contract ${tl.length} line(s) vs base ${bl.length} · ${sameRest ? "base lines kept" : "a base line CHANGED"} · crack carrier on ${carried} line(s)` };
 });
 
