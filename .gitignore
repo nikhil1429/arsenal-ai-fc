@@ -258,6 +258,11 @@ dressing-room/state/presence_log.jsonl
 # (presence_log.2026-07.jsonl) did not match the anchored rule above. It carries the
 # same activity telemetry as the live file, and this repo is PUBLIC. Cover the roll:
 dressing-room/state/presence_log.*.jsonl
+# unit mpres (forks rows 1177 (2) / 1191) — each sensor's own dead-input snapshot (presence.mjs ·
+# dmn.mjs · capture.mjs, each its sole writer). They carry his activity timing, and this repo is PUBLIC.
+dressing-room/state/presence_input.json
+dressing-room/state/dmn_input.json
+dressing-room/state/capture_pull.json
 # the produce-and-consume reconciliation (4 Aug 2026) — derived output, regenerated
 # on every run; it names every artifact and its readers.
 dressing-room/state/reconcile.json
