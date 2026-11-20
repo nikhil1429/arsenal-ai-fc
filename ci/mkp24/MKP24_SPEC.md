@@ -357,3 +357,39 @@ The base section is read against `cebe3ebe4024c2144b934b3032b3fb837285d926`. Mea
   hanging member.
 - **`package.json` and `scripts/study_scope.mjs`** touch no file of §12. mcov's `ci/mcov` is not of the keeper family (K-F1).
 - **The §1 record is unchanged.** The measurement in §6 still waits for mdtl on main.
+
+## 16 · NEW MAIN 6a6bdff (unit mmeter landed; the runner's new-main line, read 2026-11-20)
+
+The base section is read against `6a6bdfff4349b849398b69d0748b27d37c874b85`. Measured by
+`git diff --name-only cebe3eb 6a6bdff` (its stat reads `10 files changed, 791 insertions(+), 7 deletions(-)`).
+
+- **The keeper family is untouched again.** None of these changed: `ci/mlv1`, `ci/mlv2`, `ci/mlv3`, `ci/mrv`, the keeper,
+  thalamus, cortex and sitting organs, `scripts/ci_verdict.mjs` and `.github/workflows/suite.yml` (the grep for them prints
+  nothing). §2, §3 and §5 stand.
+- **`scripts/organism_test.mjs` shifted again.** The hunks are at `:29` (the CLI comment), `:2801` (+26: the new
+  `clauseWitnesses`) and `:3052` (the MODES line).
+  - The canon block stays at `:1896-1945`.
+  - Every member anchor of §15 moves by a further +26: the member's header at `:2860`; `witnessUnits`' sort at `:2870`;
+    `left` at `:2986`; the judged assert at `:3003`; `MODES` at `:3078`.
+
+  Each was re-found by its text in `git show 6a6bdff:scripts/organism_test.mjs`.
+- **A second witness channel exists now: the `clauses` member** (`clauseWitnesses`). It walks `ci/witness/<unit>/witness_*.mjs`
+  and runs each in its `plants` mode through `run()`. `all` runs every mode (`:3082`), so it runs on every leg. It reds unless
+  the LAST `PLANTS <unit> · k of n plant(s) as expected` line has n > 0 and k = n. It reads NOT MEASURABLE (an ok) on a
+  checkout with no `node_modules`, as in this container.
+  - It does not pick up `ci/witness` as a unit of the ms1 `witnesses` member: `witnessFile` (`:2865`) asks for
+    `witness_witness.mjs`, which does not exist. The keeper witnesses stay where they are and the two members stay apart.
+  - Its `run()` call passes **no** timeout, so a clause witness runs under `run()`'s default bound, not under
+    `MEMBER_BOUND_MS` (§15). A keeper-spawning plant witness filed there would be judged by that default.
+- **A new fork for the build, K-F9 · where mkp24's own witness lives.**
+  - (A) `ci/mkp24/witness_mkp24.mjs` under the ms1 `witnesses` member, as §8 wrote it. It runs on the neutral machine only,
+    against `ci/mkp24/BASE`.
+  - (B) `ci/witness/mkp24/witness_mkp24.mjs` in the `clauses` member's `plants` grammar. It would also run off the neutral
+    machine, wherever `node_modules` exists.
+
+  **Rec A.** Its plants spawn real keepers and bind OS-picked ports, which is the B2 reason the ms1 member runs only on the
+  neutral machine. B would also judge keeper boots under `run()`'s default bound. *Decides it:* the architect's rule for which
+  member a port-binding witness belongs to.
+- **`scripts/daily_green.mjs` and `scripts/done.mjs`** touch no file of §12. mmeter's `ci/mmeter` and `ci/witness/mmeter` are
+  not of the keeper family (K-F1).
+- **The §1 record is unchanged.** The measurement in §6 still waits for mdtl on main.
