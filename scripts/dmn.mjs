@@ -1110,7 +1110,7 @@ async function selftest() {
     const deadA = await isAway({ fetchFn: deadFetch });
     assert("mpres W10 — AW unreachable ⇒ input_dead (still not away: never dream over his shoulder)", deadA.away === false && deadA.input_dead === true);
     assert("mpres W10 — a live AFK read is NOT input_dead", !(await isAway({ fetchFn: mkFetch(atDesk) })).input_dead);
-    let sig = null;
+    /** @type {any} */ let sig = null;
     await isAway({ fetchFn: async (url, o) => { if (String(url).includes("/events")) sig = o && o.signal; return String(url).includes("/events") ? { ok: true, json: async () => [atDesk] } : { ok: true, json: async () => ({ "aw-watcher-afk_desktop": {} }) }; } });
     assert("mpres — the follow-up events read carries its OWN abort signal (presence's scar a7262423)", !!sig && typeof sig.aborted === "boolean");
     const stamps = [];

@@ -725,7 +725,7 @@ async function spawnOnce(cmd, args = []) {
     try { c = spawn(cmd, args, { detached: true, stdio: "ignore", windowsHide: true }); }
     catch (e) { res({ ok: false, why: (e && e.code) || "spawn threw" }); return; }
     c.once("error", (e) => res({ ok: false, why: (e && e.code) || "spawn error" }));
-    c.once("spawn", () => { try { c.unref(); } catch {} res({ ok: true, why: "the launcher started" }); });
+    c.once("spawn", () => { try { c.unref(); } catch { /* the child already gone: nothing to detach */ } res({ ok: true, why: "the launcher started" }); });
   });
 }
 async function recordDeadInput(deps, now, file) {
@@ -1180,7 +1180,7 @@ async function selftest() {
       assert("mpres F9 — a self_repair row without reversible:true is NOT eligible (registry spec §13)", notEligible.launcher === null);
       const r0 = await sense({ now: at(33), events: null, tone, append: () => { throw new Error("no log without telemetry"); } });
       assert("mpres — an injected-events caller with no file named stays OFF the filesystem", r0.dead === true && !r0.input);
-    } finally { try { rmSync(dir, { recursive: true, force: true }); } catch {} }
+    } finally { try { rmSync(dir, { recursive: true, force: true }); } catch { /* a temp dir the OS reaps */ } }
   }
 
   const passed = checks.every(c => c[1]);

@@ -219,7 +219,7 @@ function selftest() {
       SEED_ROW.subjects.every((s) => typeof DEAD[s] === "function") && Object.keys(DEAD).every((s) => SEED_ROW.subjects.includes(s)));
     assert("READ-ONLY — this organ has no write into the state dir, no network, no spawn (its only writes are this selftest's temp plants)",
       !/fetch\(|spawn|execFile|appendFileSync|renameSync/.test(readFileSync(fileURLToPath(import.meta.url), "utf8").replace(/^\s*\/\/.*$/gm, "").replace(/assert\("READ-ONLY[^\n]*\n[^\n]*/m, "")));
-  } finally { try { rmSync(root, { recursive: true, force: true }); } catch {} }
+  } finally { try { rmSync(root, { recursive: true, force: true }); } catch { /* a temp dir the OS reaps */ } }
   console.log(`\nsenses selftest: ${pass} passed, ${fail} failed`);
   return fail === 0;
 }
