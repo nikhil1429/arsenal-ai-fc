@@ -5,3 +5,7 @@
 {"ts":"2026-11-20T01:46:00Z","act":"touchline selftest at base","cmd":"node scripts/touchline.mjs selftest","last_line":"ALL CHECKS PASSED"}
 {"ts":"2026-11-20T01:52:00Z","act":"hermetic suite at base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 141 passed, 4 failed · ruled 0 · UNRULED 4 · LIVE 126 (hermetic: named, not run) (20 Nov 2026, exit 2)"}
 {"ts":"2026-11-20T01:53:00Z","act":"tracked-ness of the sensor output files","cmd":"git check-ignore -q dressing-room/state/<f>","last_line":"registry.json tracked; presence_log/timeaudit/pitch_read/mirror_manifest/throwin_state/daemon_watchdog ignored"}
+{"ts":"2026-11-20T02:05:00Z","act":"canon-count replay over commit blobs","cmd":"node <scratch>/canon.mjs 36916540","last_line":"canon replay @3691654: 98 md blobs · undeclared 0 · declared 1"}
+{"ts":"2026-11-20T02:06:00Z","act":"push","cmd":"git push -u origin claude/mpres-spec","last_line":"* [new branch] claude/mpres-spec -> claude/mpres-spec"}
+{"ts":"2026-11-20T02:08:00Z","act":"effort receipt","cmd":"node campaign-2026-09/tools/effort_receipt.mjs --fleet mpres --seat 00 --model <configured>","last_line":"Error: Cannot find module campaign-2026-09/tools/effort_receipt.mjs (nothing written)"}
+{"ts":"2026-11-20T03:08:00Z","act":"check runs","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/36916540…/check-runs","last_line":"run 44657224399: 136026312710 node 22 success · 136026313056 node 24 success"}

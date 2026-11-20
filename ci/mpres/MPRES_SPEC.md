@@ -226,3 +226,8 @@ The neutral machine's verdict is read through the public API with no token after
 recorded in the ledger and in this section:
 
 - see `ci/mpres/LEDGER.jsonl`, the rows `act: "check runs"`.
+- `3691654` (the spec commit), workflow run 44657224399, read 20 Nov 2026 with no token:
+  check run 136026312710 `npm test · node 22` **success** (completed 2026-11-20T02:52:41Z) ·
+  check run 136026313056 `npm test · node 24` **success** (completed 2026-11-20T03:07:18Z).
+  The neutral machine judges the base-plus-spec tree GREEN on both legs. This commit only records the
+  verdict, so its own runs are named in the ledger.
