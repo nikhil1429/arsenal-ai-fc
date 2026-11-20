@@ -354,3 +354,26 @@ Every `file:line` of §1-§7 therefore stands at 3f22388. What the new main does
   organism_test.mjs touches no BLOCK 7 line).
 - **A build that touches package.json** (this spec proposes none) resolves the organism:selftest line as the union of both member
   sets (forks row 1187 (2)).
+
+## 10 · NEW MAIN cebe3eb (unit mcov landed, runner M's new-main line, 20 Nov 2026)
+
+Read against `cebe3ebe4024c2144b934b3032b3fb837285d926`. One cited organ moved; the rest did not:
+```
+$ git diff --quiet 3f22388 cebe3eb -- scripts/{gaffer_brain,teaching_audit,forge_session,register,teaching_gate,teaching_bar,learn_digest,sitting,dugout,notes_compiler,rails,intent,claims}.mjs .claude/skills .gitignore && echo "other cited files equal"
+other cited files equal
+
+$ git diff -U0 3f22388 cebe3eb -- scripts/study_scope.mjs | grep "^@@"
+@@ -745 +746,10 @@ function cli() {
+```
+What the new main changes for this unit:
+- **`scripts/study_scope.mjs` line numbers shift.** One line is added near the top (`:41-44`), and a selftest verb is added in `cli()`.
+  At cebe3eb the anchors this spec cites read: GUT_LEAD `:216` (was `:215`), classifyPrompt `:232` (was `:231`), and the planted
+  rails shapes `:898-902` (were `:888-892`). The code those lines name is unchanged; §2.6, §3.3 and §3.5 mean these lines.
+  `answerOf` (§3.3, §5) is still proposed beside GUT_LEAD.
+- **The pre-existing suite red of §1 is cured on the new main.** The organism:selftest line now carries the four orphans
+  (deck_lint, home_pin, probe, study_scope). At cebe3eb the one pre-existing red of §1 is expected to be gone, but it was not re-run
+  here. The build seat measures the hermetic run on its own base, and the bound (`MEMBER_BOUND_MS`, `scripts/organism_test.mjs`)
+  is judged against the parent, never by a rewritten BASE (forks row 1200 (2)).
+- **study_scope now has a selftest in the suite.** If a build adds `answerOf` to `study_scope.mjs`, its selftest case lands in
+  that member, which now runs in the suite, so the gate gets stricter and no looser.
+- **package.json:** this spec still proposes no change to it. A build that does touch it takes the union of both member sets (forks row 1187 (2)).
