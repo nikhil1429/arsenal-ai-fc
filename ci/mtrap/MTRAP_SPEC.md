@@ -476,3 +476,38 @@ What the new main changes for this unit:
   left BASE at 5759cce. §5's line map and landing order stand.
 - **BASE for the mtrap build** (the bound class, row 1200 (2)): the build cuts from the newest main at its start, writes
   that sha into `ci/mtrap/BASE` once, and never rewrites it after a later merge.
+
+## 12 · NEW MAIN 6a6bdff (unit mmeter landed) — read against this spec's base
+
+Runner M's new-main line, 20 Nov 2026: main moved from cebe3eb to **6a6bdfff4349b849398b69d0748b27d37c874b85**. This is
+a spec seat, so nothing is merged. The base section was re-read against the new main:
+
+```
+$ git diff --quiet cebe3eb 6a6bdff -- scripts/notes_compiler.mjs scripts/forge_session.mjs scripts/learnstate.mjs \
+    scripts/postmatch.mjs scripts/models.mjs scripts/state.mjs scripts/teaching_bar.mjs scripts/study_scope.mjs \
+    .dependency-cruiser.cjs .claude/settings.json package.json && echo "spec organs equal"
+spec organs equal
+
+$ git show 6a6bdff:scripts/done.mjs | grep -n "compiled_notes\|cold_gate\|notes_compiler\|gateDay\|traps" ; \
+  git show 6a6bdff:scripts/daily_green.mjs | grep -n "compiled_notes\|cold_gate\|notes_compiler\|gateDay\|traps"
+(no line from either)
+
+$ git show 6a6bdff:scripts/organism_test.mjs | grep -n "^function clauseWitnesses"
+2809:function clauseWitnesses() {
+```
+
+What the new main changes for this unit:
+- **No cited organ line moves.** The two organs mmeter changed (`done.mjs`, `daily_green.mjs`) still read no note
+  verdict, so their rows in §3.3 stand. The day meter's new exit 3 on a short day does not read the compiled notes.
+- **The clause witness now has a suite member** (`organism_test.mjs:2802-2826`, mode `clauses`, row 1162 (2) F11). It
+  walks `ci/witness/<unit>/` and runs every `witness_*.mjs` in its `plants` mode on the tree under test. It reads GREEN
+  iff the witness exits 0 AND its last such line is `PLANTS <unit> · k of n plant(s) as expected`, with n > 0 and k = n.
+  So §4's `ci/witness/mtrap/witness_traps.mjs` is bound to two things:
+  - its bare `plants` mode judges only the HEAD tree it sits in, and every plant as expected ends with
+    `PLANTS mtrap · n of n plant(s) as expected`;
+  - its RED-at-base leg runs only under `--tree <base archive>` (the unit witness `ci/mtrap/witness_mtrap.mjs` drives it),
+    so the suite member never reads the base leg as a failure.
+  The member is NOT MEASURABLE on a checkout with no node_modules. The build runs it after `npm ci --ignore-scripts`.
+- **The sibling builds:** mmeter's own `ci/witness/mmeter/` sits beside where mtrap's would go, and the two touch disjoint
+  paths. §5's landing order (mcrk, then mtrap) stands.
+- **BASE for the mtrap build** is unchanged in kind (row 1200 (2)): written once from the main the build cuts from.
