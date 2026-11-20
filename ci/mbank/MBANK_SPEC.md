@@ -337,3 +337,20 @@ Read through the public API with no token:
 `curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`. The ids and verdict of the last
 push are in the ledger row `ci` and in the seat's FINAL MESSAGE. This spec changes no code; the run judges the markdown
 against the suite's canon laws.
+
+## 9 · NEW MAIN 3f22388 (unit mlaw landed, runner M's new-main line, 20 Nov 2026)
+
+Read against `3f2238887947e5827d2ce8f07a480e9dea3f527c`. **Nothing this spec cites moved:**
+```
+$ git diff --quiet 5759cce 3f22388 -- scripts/{gaffer_brain,teaching_audit,forge_session,study_scope,register,teaching_gate,teaching_bar,learn_digest,sitting,dugout,notes_compiler,rails,intent,claims}.mjs .claude/skills .gitignore && echo "cited files equal"
+cited files equal
+```
+Every `file:line` of §1-§7 therefore stands at 3f22388. What the new main does change for this unit:
+- **The build's base.** `ci/mbank/BASE` names the main the build is cut from, which is now 3f22388 or later (and, under
+  FORK mbank-0 (a), the main that carries the landed mcrk build).
+- **The suite line of §1 was measured at 5759cce, not re-run at 3f22388.** The new main edits `scripts/organism_test.mjs` and
+  adds one member to `package.json`'s organism:selftest line (`node scripts/done.mjs selftest`), so the build seat re-measures the
+  hermetic run on its own base. The LOAD ZERO BLOCK 7 canon law this spec is scanned against is unchanged (the diff of
+  organism_test.mjs touches no BLOCK 7 line).
+- **A build that touches package.json** (this spec proposes none) resolves the organism:selftest line as the union of both member
+  sets (forks row 1187 (2)).
