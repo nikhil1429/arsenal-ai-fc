@@ -331,3 +331,29 @@ The base section is read against `3f2238887947e5827d2ce8f07a480e9dea3f527c`. Mea
 - **mlaw's other witnesses** (`ci/mdn2`, `ci/mdone`, `ci/mlaw`) are not of the keeper family (K-F1).
 - **K-F7 is answered by the landing itself.** mlaw landed after 87d72d3 read GREEN on both legs (run 44686340528, §10).
 - **The §1 record is unchanged.** It counts reds since 5759cce. The measurement in §6 still waits for mdtl on main.
+
+## 15 · NEW MAIN cebe3eb (unit mcov landed; the runner's new-main line, read 2026-11-20)
+
+The base section is read against `cebe3ebe4024c2144b934b3032b3fb837285d926`. Measured by
+`git diff --name-only 3f22388 cebe3eb` (its stat reads `9 files changed, 786 insertions(+), 16 deletions(-)`).
+
+- **The keeper family is untouched again.** None of these changed: `ci/mlv1`, `ci/mlv2`, `ci/mlv3`, `ci/mrv`, the keeper,
+  thalamus, cortex and sitting organs, `scripts/ci_verdict.mjs` and `.github/workflows/suite.yml` (the grep for them prints
+  nothing). §2, §3, §5 and §14's compare note stand.
+- **`scripts/organism_test.mjs` shifted again.** Every anchor of §14 from `:1875` onward moves by a further +21: the canon block
+  sits at `:1896-1945`; the member's header (`Sole writer of nothing`) at `:2834`; `witnessUnits`' sort at `:2844`;
+  `fixedPortHits` at `:2865`; `namingProcs` at `:2898`; the B4 check at `:2946`; the refusing shims at `:2951`; `left` at
+  `:2960`; the sweep at `:2964`; the witness's runner line at `:2971`; PORT_HELD at `:2976`; the judged assert at `:2977`.
+  `assert` at `:46-50` is unchanged (the first hunk is at `:52`). Each was re-found by its text in
+  `git show cebe3eb:scripts/organism_test.mjs`.
+- **The new member bound does not bind the keeper witnesses.** `MEMBER_BOUND_MS` (and `HEAVY_BOUND_MS`, the value the heavy
+  modes already had) bounds the member runs made through `run()`. `witnesses` is a MODE run in-process
+  (`const MODES = { …, witnesses }`, `:3052`), and its children are spawned with their own `left`, derived from `suite.yml`'s
+  timeout-minutes (`:2960`, unchanged). So §3's order row and §8's bound line stand.
+- **The "killed by the suite bound" wording** (`redWhy`) names a killed member run in the hermetic roll-up. The witness member's
+  own killed literal (`killed at the member's bound …`) is unchanged, so mdtl's `KILLED` member literal, which §5 step 3 leans
+  on, keeps its match.
+- **`ORGANISM_TEST_MEMBER_BOUND_MS`** is a lower-only door. mkp24's witness plants nothing through it: no clause of §8 needs a
+  hanging member.
+- **`package.json` and `scripts/study_scope.mjs`** touch no file of §12. mcov's `ci/mcov` is not of the keeper family (K-F1).
+- **The §1 record is unchanged.** The measurement in §6 still waits for mdtl on main.
