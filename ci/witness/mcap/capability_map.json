@@ -50,6 +50,16 @@
   "c18": {
     "reader": "crack",
     "meaning": "row 1163 (3): every answer of the day judged broken has a crack row stamped concept, axis and moment holding his words and one diff; a broken answer without one is red; a day with no broken answer is unread",
+    "amended": "forks row 1194 (1) (fork mcrk-4: neither a nor b): no text comparison, no time join; the crack row is joined to its capture by the turn identity both records carry; a legal moment, non-empty words, words from the prompt record; rows before cyborg_from enter no count (row 1194 (3))",
+    "join": {
+      "crack_field": "bank_of",
+      "capture_field": "id",
+      "_source": "claude/mcrk-build forge_session.mjs crackRow: bank_of = the capture row id of the axis after his prompt; the settled row names the same capture by `of`"
+    },
+    "words_src": "teaching_audit_last.prompt",
+    "_words_src_source": "claude/mcrk-build forge_session.mjs crackRow words_src (the UserPromptSubmit record)",
+    "cyborg_from": "2026-08-30",
+    "_cyborg_source": "row 1194 (3); CLAUDE.md GAME ON 30 Aug 2026",
     "broken": {
       "axis_weld": [
         "cracked"

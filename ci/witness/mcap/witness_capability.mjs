@@ -28,11 +28,14 @@
 //           mapped non-answer kind (question · confusion · system — the classifier's question and complaint readings);
 //           2 if the day held no such reply at all (no gate row of the sitting classified one, no capture holds one);
 //           0 when such replies came and none was banked as an answer.
-//   crack   (c18, row 1163 (3)) every settled verdict of day D whose verdict the map calls broken must have a crack row:
-//           a live compiled note of D (compiled_notes.jsonl, sole writer notes_compiler.mjs) for the same concept and axis
-//           holding an item kind "crack" stamped with a legal `moment` (teaching_gate MOMENT_KINDS), his words (`words`,
-//           equal to the capture's `spoken` after whitespace folding) and one diff (galat and sahi both non-empty).
-//           1 on a broken answer without one; 2 if the day had no broken answer, or a broken answer's capture is absent.
+//   crack   (c18, rows 1163 (3) / 1194 (1)) every settled verdict of day D whose verdict the map calls broken must have a
+//           crack row, joined by TURN IDENTITY only (never by time, never by text — row 1194 (1)/(4)): the settled row's
+//           `of` is its capture's `id`; the crack row (cracks.jsonl, sole writer forge_session.mjs once unit mcrk lands —
+//           read through its readCracks when exported) carries that id in the map's join field (`bank_of`). The crack row must
+//           be of the same concept and axis, carry a legal `moment` (teaching_gate MOMENT_KINDS), non-empty `words`, and
+//           `words_src` equal to the map's prompt-record source; its diff is the live compiled crack item whose `crack_id`
+//           names it (galat and sahi both non-empty). Rows dated before the map's cyborg_from enter no count (row 1194 (3)).
+//           1 on a broken answer without one; 2 if the day had no (post-cyborg) broken answer, or its capture is absent.
 //   park    (c28, row 1163 (4)) the turns reader over the map, plus every PARK turn of the sitting (a gate row whose `cls`
 //           is a mapped park kind — his system talk) must end on the micro-question handed back in the same turn: the
 //           audit row of the same Stop (same session, between the neighbouring gate rows) measures questions ≥ 1. 1 on a
@@ -138,6 +141,10 @@ async function loadMap(org, c, O) {
     const unplaced = Object.keys(VT).filter((t) => !(t in broken) && !not.includes(t));
     if (unplaced.length) return { code: 2, why: `UNREAD · the map places no broken verdict for type(s) ${unplaced.join(", ")}` };
     if (typeof O.N.noteState !== "function" || typeof O.N.readRows !== "function") return { code: 2, why: "UNREAD · notes_compiler.mjs exports no noteState/readRows" };
+    const j = e.join || {};
+    if (typeof j.crack_field !== "string" || !j.crack_field || typeof j.capture_field !== "string" || !j.capture_field) return { code: 2, why: `UNREAD · ${c}'s map names no turn-identity join (join.crack_field / join.capture_field)` };
+    if (typeof e.words_src !== "string" || !e.words_src) return { code: 2, why: `UNREAD · ${c}'s map names no prompt-record source (words_src)` };
+    if (!DAY_RE.test(String(e.cyborg_from || ""))) return { code: 2, why: `UNREAD · ${c}'s map names no pre-cyborg cut (cyborg_from)` };
     if (!Array.isArray(O.G.MOMENT_KINDS)) return { code: 2, why: "UNREAD · teaching_gate.mjs exports no MOMENT_KINDS" };
   }
   return { ok: true, e: { ...e, checks, audit } };
@@ -202,26 +209,49 @@ function nonanswerVerdict(org, sit, e, O) {
   if (!seen) return { code: 2, why: `UNREAD · sitting ${sit.id} held no reply the classifier reads as ${e.nonanswer_kinds.join("/")}` };
   return { code: 0, why: `${seen} non-answer repl(ies) in sitting ${sit.id}, none banked as an answer (${caps.length} rep row(s) read)` };
 }
+// c18 (forks row 1194 (1), fork mcrk-4 ruled "neither a nor b"): NO TEXT COMPARISON and NO TIME JOIN. The broken answer's
+// settled row names its capture by id (`of`); the crack row names the same capture by its TURN IDENTITY (the field the map's
+// `join.crack_field` names — `bank_of`, written by the mcrk crack verb, claude/mcrk-build forge_session.mjs crackRow); the
+// teacher's diff is the compiled crack item whose `crack_id` names that crack row. Rows dated before the map's
+// `cyborg_from` are pre-cyborg and enter no count (row 1194 (3)).
+function cracksOf(org, O) {
+  const p = join(stateOf(org), "cracks.jsonl");
+  if (typeof O.F.readCracks === "function") {   // the owner's reader, once the mcrk build is on the tree
+    const r = O.F.readCracks(p);
+    return r && Array.isArray(r.rows) ? { ok: true, rows: r.rows, via: "readCracks" } : { code: 2, why: `UNREAD · cracks.jsonl unreadable (${(r && r.error) || "no rows"})` };
+  }
+  const f = readJsonl(p);   // no owner reader on this tree (mcrk not landed): the file the owner declares, read only
+  if (f.error) return { code: 2, why: `UNREAD · cracks.jsonl unreadable (${f.error})` };
+  return { ok: true, rows: (f.rows || []).filter((r) => r && r.kind === "crack"), via: f.absent ? "absent" : "file" };
+}
 function crackVerdict(org, sit, e, O) {
   const q = queueOf(org); if (!q.ok) return q;
   const nl = readJsonl(O.N.LEDGER || join(stateOf(org), "compiled_notes.jsonl"));
   if (!nl.rows) return { code: 2, why: `UNREAD · compiled_notes.jsonl ${nl.absent ? "absent" : `unreadable (${nl.error})`}` };
-  const broken = q.rows.filter((r) => r && r.kind === "settled" && r.day === sit.D && Array.isArray(e.broken[r.type]) && e.broken[r.type].includes(r.verdict));
-  if (!broken.length) return { code: 2, why: `UNREAD · no answer of ${sit.D} was judged broken` };
+  const ck = cracksOf(org, O); if (!ck.ok) return ck;
+  const cyborg = (d) => DAY_RE.test(String(d || "")) && String(d) >= e.cyborg_from;
+  const broken = q.rows.filter((r) => r && r.kind === "settled" && r.day === sit.D && cyborg(r.day) && Array.isArray(e.broken[r.type]) && e.broken[r.type].includes(r.verdict));
+  if (!broken.length) return { code: 2, why: `UNREAD · no answer of ${sit.D} was judged broken${cyborg(sit.D) ? "" : ` (${sit.D} is pre-cyborg: before ${e.cyborg_from}, row 1194 (3))`}` };
   const caps = new Map(q.rows.filter((r) => r && r.kind === "capture").map((r) => [r.id, r]));
-  const live = O.N.noteState(nl.rows).live.filter((r) => O.N.noteDay(r) === sit.D);
+  const rows = ck.rows.filter((r) => r && r.kind === "crack" && cyborg(r.day));
+  const items = O.N.noteState(nl.rows).live.flatMap((n) => (Array.isArray(n.note && n.note.items) ? n.note.items : [])).filter((it) => it && it.kind === "crack");
   const axisOf = (r) => r.axis || (String(r.ref || "").includes(":") ? String(r.ref).split(":").pop() : null);
   const missing = [];
   for (const b of broken) {
     const cap = caps.get(b.of);
-    if (!cap || typeof cap.spoken !== "string") return { code: 2, why: `UNREAD · the capture of broken answer ${b.type}:${b.ref} is absent (his words cannot be read)` };
-    const ok = live.some((n) => n.concept === b.concept && n.axis === axisOf(b) && Array.isArray(n.note && n.note.items) && n.note.items.some((it) => it && it.kind === "crack"
-      && O.G.MOMENT_KINDS.includes(it.moment) && typeof it.words === "string" && fold(it.words) === fold(cap.spoken)
-      && Array.isArray(it.galat) && it.galat.length > 0 && Array.isArray(it.sahi) && it.sahi.length > 0));
-    if (!ok) missing.push(`${b.type}:${b.ref}`);
+    if (!cap) return { code: 2, why: `UNREAD · the capture of broken answer ${b.type}:${b.ref} is absent (its turn identity cannot be read)` };
+    const crack = rows.find((r) => r && r[e.join.crack_field] === cap[e.join.capture_field]);
+    const why = !crack ? "no crack row carries its turn identity"
+      : crack.concept !== b.concept || crack.axis !== axisOf(b) ? "the crack row is of another concept or axis"
+      : !O.G.MOMENT_KINDS.includes(crack.moment) ? "the crack row carries no legal moment"
+      : typeof crack.words !== "string" || !crack.words.trim() ? "the crack row's words are empty"
+      : crack.words_src !== e.words_src ? `the crack row's words are not from the prompt record (${crack.words_src || "no source"})`
+      : !items.some((it) => it.crack_id === crack.id && Array.isArray(it.galat) && it.galat.length > 0 && Array.isArray(it.sahi) && it.sahi.length > 0) ? "no compiled crack item with its diff names the crack row"
+      : null;
+    if (why) missing.push(`${b.type}:${b.ref} (${why})`);
   }
-  if (missing.length) return { code: 1, why: `RED · ${missing.length} of ${broken.length} broken answer(s) without a crack row (concept · axis · moment · his words · one diff): ${missing.join(", ")}` };
-  return { code: 0, why: `${broken.length} broken answer(s) of ${sit.D}, each with its crack row` };
+  if (missing.length) return { code: 1, why: `RED · ${missing.length} of ${broken.length} broken answer(s) without their crack row: ${missing.join("; ")}` };
+  return { code: 0, why: `${broken.length} broken answer(s) of ${sit.D}, each joined to its crack row by turn identity (crack rows via ${ck.via})` };
 }
 function parkVerdict(org, sit, e, O) {
   const t = turnsVerdict(org, sit, e, O); if (t.code === 2) return t;
@@ -257,7 +287,8 @@ export async function clause(c, { org = REPO, day = null } = {}) {
   if (!CLAUSES.includes(c)) return { code: 2, why: `UNREAD · ${c} is not one of ${CLAUSES.join(" ")}` };
   if (!DAY_RE.test(String(day || ""))) return { code: 2, why: "UNREAD · --day <YYYY-MM-DD> is required" };
   const O = { G: await organ(org, "teaching_gate.mjs"), A: await organ(org, "teaching_audit.mjs"), S: await organ(org, "study_scope.mjs"),
-    D: await organ(org, "day.mjs"), B: await organ(org, "gaffer_brain.mjs"), N: await organ(org, "notes_compiler.mjs") };
+    D: await organ(org, "day.mjs"), B: await organ(org, "gaffer_brain.mjs"), N: await organ(org, "notes_compiler.mjs"),
+    F: await organ(org, "forge_session.mjs") };
   if (typeof O.S.classifyPrompt !== "function") return { code: 2, why: `UNREAD · study_scope.mjs exports no classifyPrompt${O.S.__err ? ` (${O.S.__err})` : ""}` };
   const m = await loadMap(org, c, O); if (!m.ok) return m;
   const sit = sittingOf(org, day, O); if (!sit.ok) return sit;
@@ -276,6 +307,9 @@ const settled = (cap, verdict, o = {}) => ({ v: 2, kind: "settled", of: cap.id, 
 const note = (items, o = {}) => ({ v: 1, kind: "compiled", id: `n-${Math.random().toString(36).slice(2, 10)}`, ts: CLOSE, day: PD, concept: "tokenization", axis: "a", compiler: "plant", sources: ["rid-1"], note: { items }, content_sha: "x", ...o });
 const crackItem = (words, o = {}) => ({ mark: "T", kind: "crack", at: at(30), rid: "rid-1", moment: "jirah", words, galat: ["ek word = ek token"], sahi: ["token + ization"], ...o });
 const WORDS = "pakka - har word ek token hota hai";
+// the mcrk crack row (claude/mcrk-build forge_session.mjs crackRow): bank_of = the capture row id, words from the prompt record
+const crackRow = (cap, o = {}) => ({ v: 1, kind: "crack", id: `ck-plant-${cap.ts.slice(11, 16).replace(":", "")}`, at: at(26), day: cap.day, concept: cap.concept, axis: cap.axis, moment: "jirah", moment_at: at(20),
+  words: cap.spoken, words_src: "teaching_audit_last.prompt", prompt_at: at(24), prompt_session_id: HOST, bank_of: cap.id, ...o });
 // THE RULED IDS — the per-id plants are pinned to the RULING, never to the map they judge (a plant derived from the map
 // could not catch a map that narrowed): the spec's proposed maps (ci/mwit/MWIT_SPEC.md @ 88bf69d, sections c07 c10 c12 c32)
 // as built by row 1163 (7), and c28's "the proposed map" of row 1163 (4). The map may name MORE ids (a gate only gets
@@ -297,6 +331,7 @@ function plantCase(R, mapObj, st) {
   put("teaching_audit.jsonl", st.audit);
   put("gaffer_grade_queue.jsonl", st.queue);
   put("compiled_notes.jsonl", st.notes);
+  put("cracks.jsonl", st.cracks);
   const mp = mapPath(R);
   rmSync(mp, { force: true });
   if (mapObj) { mkdirSync(dirname(mp), { recursive: true }); writeFileSync(mp, JSON.stringify(mapObj, null, 2) + "\n"); }
@@ -363,20 +398,32 @@ export function plantsFor(org) {
       o(c, "a kind the classifier does not return → 2", 2, { gate: g, queue: [] }, bad);
       o(c, "no capability map → 2", 2, { gate: g, queue: [] }, null);
     }
-    // c18 — row 1163 (3)
+    // c18 — rows 1163 (3) / 1194 (1): the join is the TURN IDENTITY (crack.bank_of = capture.id), never time, never text
     {
-      const c = "c18", cap = capture(25, WORDS), broke = settled(cap, "missed");
-      o(c, "a broken answer with its crack row → 0", 0, { queue: [cap, broke], notes: [note([crackItem(WORDS)])] });
-      o(c, "a broken answer without a crack row → 1", 1, { queue: [cap, broke], notes: [note([])] });
-      o(c, "the crack row carries no moment → 1", 1, { queue: [cap, broke], notes: [note([crackItem(WORDS, { moment: undefined })])] });
-      o(c, "the crack row holds words that are not his → 1", 1, { queue: [cap, broke], notes: [note([crackItem("teacher ne kaha ek word ek token")])] });
-      o(c, "the crack row carries no diff (sahi empty) → 1", 1, { queue: [cap, broke], notes: [note([crackItem(WORDS, { sahi: [] })])] });
-      o(c, "the crack row is of another axis → 1", 1, { queue: [cap, broke], notes: [note([crackItem(WORDS)], { axis: "b" })] });
-      o(c, "no answer of the day judged broken → 2", 2, { queue: [cap, settled(cap, "landed")], notes: [note([])] });
-      o(c, "the broken answer's capture is absent → 2", 2, { queue: [broke], notes: [note([crackItem(WORDS)])] });
+      const c = "c18", cap = capture(25, WORDS), broke = settled(cap, "missed"), ck = crackRow(cap);
+      const good = { queue: [cap, broke], cracks: [ck], notes: [note([crackItem(WORDS, { crack_id: ck.id })])] };
+      o(c, "a broken answer, its crack row joined by turn identity, a legal moment, words from the prompt record, its diff → 0", 0, good);
+      o(c, "a broken answer with no crack row at all → 1", 1, { ...good, cracks: [] });
+      o(c, "the crack row carries NO turn identity → 1", 1, { ...good, cracks: [crackRow(cap, { bank_of: null })] });
+      o(c, "the crack row's turn identity names ANOTHER capture (its words equal his: a text join would pass) → 1", 1, { ...good, cracks: [crackRow(cap, { bank_of: "voice_rep:tokenization:a:another-turn" })] });
+      o(c, "the crack row's words are empty → 1", 1, { ...good, cracks: [crackRow(cap, { words: "  " })] });
+      o(c, "the crack row's words are not from the prompt record (the teacher's copy) → 1", 1, { ...good, cracks: [crackRow(cap, { words_src: "teacher" })] });
+      o(c, "the crack row carries no legal moment → 1", 1, { ...good, cracks: [crackRow(cap, { moment: "quiz" })] });
+      o(c, "the crack row is of another axis → 1", 1, { ...good, cracks: [crackRow(cap, { axis: "b" })] });
+      o(c, "no compiled crack item with a diff names the crack row → 1", 1, { ...good, notes: [note([crackItem(WORDS)])] });
+      o(c, "his words differ from the bank's copy, the identity matches → 0 (no text comparison)", 0, { ...good, cracks: [crackRow(cap, { words: "shaky — ek word ek token, shayad" })] });
+      o(c, "no answer of the day judged broken → 2", 2, { ...good, queue: [cap, settled(cap, "landed")] });
+      o(c, "the broken answer's capture is absent → 2", 2, { ...good, queue: [broke] });
+      {
+        const PRE = "2026-08-20", pc = capture(25, WORDS, { day: PRE }), pb = settled(pc, "missed", { day: PRE });
+        o(c, "a pre-cyborg day (before 30 Aug 2026): its broken answer enters no count → 2", 2, { day: PRE,
+          reviews: [review({ opened_at: `${PRE}T08:00:00.000Z`, closed_at: `${PRE}T12:00:00.000Z` })], queue: [pc, pb], cracks: [], notes: [] });
+      }
       const bad = clone(); if (bad && bad[c] && bad[c].broken) delete bad[c].broken.voice_rep;
-      o(c, "the map places no broken verdict for a type → 2", 2, { queue: [cap, broke], notes: [note([crackItem(WORDS)])] }, bad);
-      o(c, "no capability map → 2", 2, { queue: [cap, broke], notes: [note([crackItem(WORDS)])] }, null);
+      o(c, "the map places no broken verdict for a type → 2", 2, good, bad);
+      const noJoin = clone(); if (noJoin && noJoin[c]) delete noJoin[c].join;
+      o(c, "the map names no turn-identity join → 2", 2, good, noJoin);
+      o(c, "no capability map → 2", 2, good, null);
     }
   } catch (e) {
     for (const c of CLAUSES) out[c].push({ name: "the plants ran to their end", want: 0, got: String((e && e.message) || e).slice(0, 160), ok: false });

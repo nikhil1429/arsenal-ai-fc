@@ -25,7 +25,7 @@ const MUTANTS = [
   { clause: "c10", what: "the map keeps A.position only (A.count-form dropped)", ...mapEdit((m) => { m.c10.checks = ["A.position"]; }) },
   { clause: "c12", what: "the map drops B.bank", ...mapEdit((m) => { m.c12.checks = m.c12.checks.filter((x) => x !== "B.bank"); }) },
   { clause: "c13", what: "a question is read as an answer (question dropped from the non-answer kinds)", ...mapEdit((m) => { m.c13.nonanswer_kinds = m.c13.nonanswer_kinds.filter((x) => x !== "question"); }) },
-  { clause: "c18", what: "the crack row's words are not compared with his", ...textEdit('typeof it.words === "string" && fold(it.words) === fold(cap.spoken)', "true") },
+  { clause: "c18", what: "the text comparison is restored in place of the turn-identity join (row 1194 (1) refuses it)", ...textEdit("rows.find((r) => r && r[e.join.crack_field] === cap[e.join.capture_field])", "rows.find((r) => r && fold(r.words) === fold(cap.spoken))") },
   { clause: "c28", what: "the map drops the audit id no-system-mid-concept", ...mapEdit((m) => { m.c28.audit = []; }) },
   { clause: "c32", what: "the close half is dropped (an open moment at close is never red)", ...textEdit("if (!answered) return { code: 1,", "if (false) return { code: 1,") },
 ];
