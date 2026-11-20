@@ -66,7 +66,9 @@ function orphans(ir) {
 // ladder_sha256 } · <campaign>/units.json [{ unit, fate, landed, clause }] · <campaign>/census.json [{ piece, fate, rung,
 // serves_no_step }]. A path in a loop file resolves against the campaign dir, or against the repo when it starts
 // dressing-room/.
-function oldDayRed(meterPath) {
+/** The old recorded day's verdict on the meter — exported for the clause witness ci/witness/mmeter/witness_meter.mjs
+ *  (unit mmeter, A:old-day-red): one read path, never a copy. Its last row for OLD_RECORDED_DAY is the one that counts. */
+export function oldDayRed(meterPath) {
   const rows = readL(meterPath);
   if (!rows) return { ok: false, why: "the meter is unreadable" };
   const last = rows.filter((r) => r && r.date === OLD_RECORDED_DAY).pop();
