@@ -151,6 +151,17 @@ is recorded in the ledger row `ci-verdict` of the next push and in the seat's fi
 read of the digests is measured on that same run: `GET /actions/runs/<id>/artifacts` anonymously, then the archive of
 one digest, checked with `namesAndNumbers`.
 
+**MEASURED on 015d785 (run 44692270968, curl, no token, 20 Nov 2026 08:16Z).** `ci_verdict.mjs 015d785` answers
+`UNREADABLE … answered 403` from this container, so the check runs were read through curl: all ten are completed/success.
+They are `npm test · node 22` 136160474956 and `npm test · node 24` 136160474961 (the fold legs, J2 names),
+`suite · node 22` 136140640240 and `suite · node 24` 136140639906, and `witnesses · node {22,24} · shard {1,2,3}`
+136140640055 / 136140640294 / 136140640256 / 136140640146 / 136140640008 / 136140640211. F-CARRY, signed out:
+`GET /actions/runs/44692270968/artifacts` lists 8 artifacts by name and size. The two suite digests are 8048 B each and the
+six shard digests 392–503 B (`b1-node{22,24}-suite`, `b1-node{22,24}-shard{1,2,3}`). The archive download redirects to
+`productionresultssa19.blob.core.windows.net`, which this container's egress proxy refuses (403), so **the content
+check with `namesAndNumbers` on a downloaded digest is NOT measured here**. It stays open (§7). The whitelist is proved
+by W-S13 PRIVACY instead.
+
 ## 6 · FORKS (measured and named, not edited)
 
 - **(i) the flow atlas** (spec §9 (i)). Measured in LF exports under the temp dir (`node scripts/xray.mjs build && node
@@ -181,3 +192,5 @@ one digest, checked with `namesAndNumbers`.
 - **Q2** · Artifact retention for the digests: the repository default, or a ruled shorter one?
 - **Q3** · `times <sha>` after landing: which seat refreshes `ci/mshard/TIMES`, and when? A stale table only unbalances
   the shards and never drops a unit, because coverage is judged from `witnessUnits`.
+- **Q4** · F-CARRY's signed-out content read: this container cannot reach the artifact blob host (proxy 403), so the
+  download-and-`namesAndNumbers` half of the measurement needs a seat that can. Which seat, before landing?
