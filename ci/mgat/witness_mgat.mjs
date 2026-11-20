@@ -89,10 +89,17 @@ const eslintCounts = (d, files) => { const r = spawnSync(process.execPath, [join
 const gatesBlock = (out) => { const L = lines(out); const i = L.findIndex((l) => /^  (ok  |FAIL) GATES —/.test(l)); return i < 0 ? "" : L.slice(i, i + 8).join("\n"); };
 
 let parentCount = null;
+// ONE run per (tree, plant, command): W1, W8 and W9 read the same `gates.mjs report` on E, and W3 and W5 the same hermetic `gates`
+// mode on E. Each is spawned once per side and read by every clause that needs it (the member's job bound is the whole suite: the
+// node 22 leg of 9897cb4 was cancelled at it, PROOF §12.6). The plant is still per run, and its bytes are those of `src`.
+const memo = new Map();
+const cached = (key, fn) => { if (!memo.has(key)) memo.set(key, fn()); return memo.get(key); };
+const reportE = (src) => cached(`report|${src}`, () => once(src, "E", (d) => ({ ...node(d, ["scripts/gates.mjs", "report"]), gatesSrc: readFileSync(join(d, "scripts", "gates.mjs"), "utf8") })));
+const hermE = (src) => cached(`herm|${src}`, () => once(src, "E", (d) => node(d, ["scripts/organism_test.mjs", "gates"], "hermetic")));
 const CL = {
-  W1: (src) => once(src, "E", (d) => { const r = node(d, ["scripts/gates.mjs", "report"]); const ne = (r.out.match(/no-empty (\d+)/) || [])[1];
-    const fz = (readFileSync(join(d, "scripts", "gates.mjs"), "utf8").match(/"no-empty": (\d+)/) || [])[1];
-    return { ok: ne !== undefined && fz !== undefined && Number(ne) <= Number(fz), line: `gates report exit ${r.code} · no-empty ${ne} · frozen ${fz} (read from scripts/gates.mjs)` }; }),
+  W1: (src) => { const r = reportE(src); const ne = (r.out.match(/no-empty (\d+)/) || [])[1];
+    const fz = (r.gatesSrc.match(/"no-empty": (\d+)/) || [])[1];
+    return { ok: ne !== undefined && fz !== undefined && Number(ne) <= Number(fz), line: `gates report exit ${r.code} · no-empty ${ne} · frozen ${fz} (read from scripts/gates.mjs)` }; },
   W2: (src) => {
     if (!parentCount) { parentCount = {}; once(BASE, "E", (d) => { for (const [f, p] of Object.entries(RISE_PARENT)) {
       const st = storeOf(p); let bytes = null; try { bytes = st && execFileSync("git", ["-C", st, "show", `${p}:${f}`], { maxBuffer: 1 << 28, stdio: ["ignore", "pipe", "pipe"] }); } catch { bytes = null; } /* named below */
@@ -101,21 +108,21 @@ const CL = {
     const now = once(src, "E", (d) => eslintCounts(d, Object.keys(RISE_PARENT)));
     const ok = Object.keys(RISE_PARENT).every((f) => parentCount[f] !== null && now[f] <= parentCount[f]);
     return { ok, line: Object.keys(RISE_PARENT).map((f) => `${f.split("/")[1]} ${now[f]} (≤ ${parentCount[f] === null ? `UNREACHABLE ${RISE_PARENT[f]}` : parentCount[f]} at ${RISE_PARENT[f]})`).join(" · ") }; },
-  W3: (src) => once(src, "E", (d) => { const r = node(d, ["scripts/organism_test.mjs", "gates"], "hermetic"); const a = asserts(r.out); const blk = gatesBlock(r.out);
+  W3: (src) => { const r = hermE(src); const a = asserts(r.out); const blk = gatesBlock(r.out);
     const entered = a.some((l) => /^ok +GATES —/.test(l)) && !a.some((l) => /^LIVE MODE gates/.test(l)); const neRose = /no-empty/.test(blk.split(/\r?\n/).filter((l) => /RED|ROSE/.test(l)).join(" "));
-    return { ok: entered && !neRose, line: `hermetic gates: ${a.filter((l) => /GATES|gates/.test(l)).map((l) => l.slice(0, 90)).join(" | ")}${neRose ? " · a no-empty rise is red" : ""}` }; }),
-  W8: (src) => once(src, "E", (d) => { const r = node(d, ["scripts/gates.mjs", "report"]); const n = (r.out.match(/no-unused-vars (\d+)/) || [])[1];
-    const fz = (readFileSync(join(d, "scripts", "gates.mjs"), "utf8").match(/"no-unused-vars": (\d+)/) || [])[1];
-    return { ok: n !== undefined && fz !== undefined && Number(n) <= Number(fz), line: `gates report · no-unused-vars ${n} · frozen ${fz} (read from scripts/gates.mjs)` }; }),
-  W9: (src) => once(src, "E", (d) => { const r = node(d, ["scripts/gates.mjs", "report"]); const n = (r.out.match(/other checkJs diagnostics (\d+)/) || [])[1];
-    const fz = (readFileSync(join(d, "scripts", "gates.mjs"), "utf8").match(/soft_errors: (\d+)/) || [])[1];
-    return { ok: n !== undefined && fz !== undefined && Number(n) <= Number(fz), line: `gates report · other checkJs diagnostics ${n} · frozen soft_errors ${fz} (read from scripts/gates.mjs)` }; }),
+    return { ok: entered && !neRose, line: `hermetic gates: ${a.filter((l) => /GATES|gates/.test(l)).map((l) => l.slice(0, 90)).join(" | ")}${neRose ? " · a no-empty rise is red" : ""}` }; },
+  W8: (src) => { const r = reportE(src); const n = (r.out.match(/no-unused-vars (\d+)/) || [])[1];
+    const fz = (r.gatesSrc.match(/"no-unused-vars": (\d+)/) || [])[1];
+    return { ok: n !== undefined && fz !== undefined && Number(n) <= Number(fz), line: `gates report · no-unused-vars ${n} · frozen ${fz} (read from scripts/gates.mjs)` }; },
+  W9: (src) => { const r = reportE(src); const n = (r.out.match(/other checkJs diagnostics (\d+)/) || [])[1];
+    const fz = (r.gatesSrc.match(/soft_errors: (\d+)/) || [])[1];
+    return { ok: n !== undefined && fz !== undefined && Number(n) <= Number(fz), line: `gates report · other checkJs diagnostics ${n} · frozen soft_errors ${fz} (read from scripts/gates.mjs)` }; },
   W4: (src) => { // the verdict AND the gate's own RED lines: at a cut where the gate is already red, a bare verdict is equal on any red
     const seen = (k) => once(src, k, (d) => { const o = node(d, ["scripts/organism_test.mjs", "gates"], "hermetic").out; const v = verdictOf(o); return v && { ...v, gateReds: [...o.matchAll(/\bRED\s+([A-Z][^\r\n]*)/g)].map((m) => m[1].trim()) }; });
     const z = seen("Z"), x = seen("X");
     const entered = !!z && !z.live.includes("MODE gates");
     return { ok: entered && JSON.stringify(z) === JSON.stringify(x), line: `hermetic verdict Z ${JSON.stringify(z && { pass: z.pass, fail: z.fail, live: z.live })} · gate reds ${z && z.gateReds.length} · X ${JSON.stringify(z) === JSON.stringify(x) ? "the same" : JSON.stringify(x && { pass: x.pass, fail: x.fail, live: x.live, gateReds: x.gateReds.length })}` }; },
-  W5: (src) => { const fo = once(src, "X", (d) => node(d, ["scripts/organism_test.mjs", "gates"]).out); const f = verdictOf(fo); const h = once(src, "E", (d) => verdictOf(node(d, ["scripts/organism_test.mjs", "gates"], "hermetic").out));
+  W5: (src) => { const fo = once(src, "X", (d) => node(d, ["scripts/organism_test.mjs", "gates"]).out); const f = verdictOf(fo); const h = verdictOf(hermE(src).out);
     // the planted red must be the AJV half's own (a SCHEMA red naming the planted registry.json), not any other count that is red
     const schemaRed = !!f && f.reds.some((x) => /GATES/.test(x)) && /SCHEMA — registry\.json does NOT match/.test(fo);
     return { ok: !!f && f.fail > 0 && schemaRed && !!h && h.live.includes("gates schema half"), line: `full on X: fail ${f && f.fail} · SCHEMA red on the planted registry.json ${schemaRed ? "yes" : "no"} · hermetic LIVE ${JSON.stringify(h && h.live)}` }; },
