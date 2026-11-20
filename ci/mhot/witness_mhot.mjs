@@ -43,8 +43,8 @@
 //   H6  ONE READER      no organ under scripts/ or hooks/ but organism_test.mjs names a suite-name literal or the member
 //                       regex in code, and scripts/audit.mjs reads `roll --json`
 //   H7  NOTHING LOST    the tree's `roll --json` holds every member of --base-org's three strings in its suite with its argv
-//                       (as base's runner ran it) and its LIVE reason byte-equal; a base LIVE reason with no member is still
-//                       in the tree's LIVE_SELFTESTS table, byte-equal
+//                       (as base's runner ran it) and its LIVE reason byte-equal OR null (un-LIVEd = stricter, never hidden);
+//                       a base LIVE reason with no member is in the tree's table, or in the member file a later unit gave it
 //   H8  FAILS CLOSED    the tree's instrument over a plant of --base-org's package.json and NO suite/: `suites` and
 //                       `chain organism:selftest` both red NAMING "no member directory"; no "suite members pass" ok line
 //   H9  LANDED READERS  the tree's own ci/mfac W7 (`--only W7`) and ci/mpool P read the BUILD tree GREEN (re-cut, F6 A);
@@ -215,18 +215,26 @@ const CLAUSES = [
     let roll = null; try { roll = JSON.parse(r.stdout); } catch { roll = null; }
     if (r.code !== 0 || !roll || !Array.isArray(roll.members)) return { ok: false, why: `roll --json exit ${r.code} · ${roll ? "no members" : "no JSON"}` };
     const by = new Map(roll.members.map((m) => [m.organ, m]));
-    const lost = [], moved = [];
+    // RE-CUT at the merge of main cebe3eb (forks rows 1201 / 1200 (2)), an ADDED edit holding the same property: ~~every LIVE
+    // reason byte-equal~~ → nothing HIDDEN and nothing LOST: a member's reason is base's byte-equal, OR null — a later unit that
+    // made a member run in the hermetic profile (mlaw's lawpack) made the net stricter, never looser. A reason that changed text,
+    // or a member that became LIVE, is still a red. A base reason with no member (home_pin) is found byte-equal in the table OR
+    // in the member file a later unit gave it (mcov), or is null there (stricter).
+    const lost = [], moved = [], unlived = [];
     const seen = new Set();
     for (const s of suitesOf) for (const m of String(bp.scripts[s]).matchAll(/scripts\/([A-Za-z0-9_\-]+)\.mjs/g)) {
       const o = m[1]; seen.add(o); const x = by.get(o);
       if (!x) { lost.push(o); continue; }
       const argv = bare.has(o) ? [] : ["selftest"];
-      if (x.suite !== s || JSON.stringify(x.argv) !== JSON.stringify(argv) || x.live !== (Object.prototype.hasOwnProperty.call(live, o) ? live[o] : null)) moved.push(o);
+      const want = Object.prototype.hasOwnProperty.call(live, o) ? live[o] : null;
+      if (x.suite !== s || JSON.stringify(x.argv) !== JSON.stringify(argv) || (x.live !== want && x.live !== null)) moved.push(o);
+      else if (x.live !== want) unlived.push(o);
     }
     const to = readFileSync(join(T, "scripts", "organism_test.mjs"), "utf8");
     const tt = to.slice(to.indexOf("const LIVE_SELFTESTS = Object.freeze({"), to.indexOf("});", to.indexOf("const LIVE_SELFTESTS = Object.freeze({")));
-    const strayLost = Object.keys(live).filter((k) => !seen.has(k) && !tt.includes(`  ${JSON.stringify(k)}: ${JSON.stringify(live[k])},`));
-    return { ok: seen.size > 0 && !lost.length && !moved.length && !strayLost.length, why: `${seen.size} base member(s) · lost ${lost.length}${lost.length ? ` (${lost.slice(0, 5).join(", ")})` : ""} · changed ${moved.length}${moved.length ? ` (${moved.slice(0, 5).join(", ")})` : ""} · non-member LIVE reasons lost ${strayLost.length}` };
+    const strayLost = Object.keys(live).filter((k) => !seen.has(k) && !tt.includes(`  ${JSON.stringify(k)}: ${JSON.stringify(live[k])},`)
+      && !(by.has(k) && (by.get(k).live === live[k] || by.get(k).live === null)));
+    return { ok: seen.size > 0 && !lost.length && !moved.length && !strayLost.length, why: `${seen.size} base member(s) · lost ${lost.length}${lost.length ? ` (${lost.slice(0, 5).join(", ")})` : ""} · changed ${moved.length}${moved.length ? ` (${moved.slice(0, 5).join(", ")})` : ""} · un-LIVEd since (stricter) ${unlived.length}${unlived.length ? ` (${unlived.join(", ")})` : ""} · non-member LIVE reasons lost ${strayLost.length}` };
   }],
   ["H8", "FAILS CLOSED ON AN OLD TREE — the tree's instrument over base's package.json and no suite/ reds by name", (T) => {
     const d = plant(T, "h8", { pkgFrom: BASE, members: false });

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // ============================================================================
 // run_mutants_mhot.mjs — unit MHOT: ONE mutant per clause of ci/mhot/witness_mhot.mjs, each must turn RED the clause that names it.
-// CONTRACT:  node ci/mhot/run_mutants_mhot.mjs --org <build tree> --base-org <tree>
+// CONTRACT:  node ci/mhot/run_mutants_mhot.mjs --org <build tree> --base-org <tree> [--bound-base <the land commit's parent>]
+//   (forks row 1200 (2)-(3): --bound-base is handed through to every witness run, so the bound reads the parent and the
+//   clauses read BASE; absent, the witness's own default holds.)
 //   Each mutant copies <org> under os.tmpdir() (node_modules rides as a link, never copied), breaks ONE thing in the copy (a
 //   tree file, or the copy's own witness source), and runs the copy's witness `--only <its clause>` over the copy: it must exit
 //   1 with the last line `RED MHOT · <its clause>` (BOUND and LAST always run, so they must stay green under every other
@@ -19,6 +21,7 @@ import { spawnSync } from "node:child_process";
 
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
 const ORG = arg("--org") && resolve(arg("--org")), BASE = arg("--base-org") && resolve(arg("--base-org"));
+const BB = arg("--bound-base") ? ["--bound-base", resolve(arg("--bound-base"))] : [];
 if (!ORG || !BASE) { console.log("run_mutants: USAGE (--org <dir> --base-org <dir>)"); process.exit(1); }
 const T0 = Date.now();
 const jobMin = Number((/timeout-minutes:\s*(\d+)/.exec((() => { try { return readFileSync(join(ORG, ".github", "workflows", "suite.yml"), "utf8"); } catch { return ""; } })()) || [])[1]);
@@ -50,7 +53,10 @@ const MUTANTS = [
   { clause: "H7", what: "the member file of test_coach_v2 is dropped", m: (t) => { const p = join(t, "suite", "members", "test_coach_v2.json"); if (!existsSync(p)) return "test_coach_v2.json absent"; unlinkSync(p); return null; } },
   { clause: "H8", what: "suiteRoll returns an empty roll with NO defect when the directory is absent", m: (t) => edit(t, OT, "export function suiteRoll", "    defects.push({ file: MEMBERS_REL, why: `no member directory", "    if (Date.now() > 0) return { members, defects };\n    defects.push({ file: MEMBERS_REL, why: `no member directory") },
   { clause: "H9", what: "mpool P left un-re-cut (the strings only)", m: (t) => edit(t, "ci/mpool/witness_mpool.mjs", null, "    return n + rolled === 1;", "    return n === 1;") },
-  { clause: "HB", what: "BOUND judged against BASE again (the bound base ignored: row 1200 (2)-(3)'s split undone)", m: (t) => edit(t, W, null, "function bound(from = BOUND_BASE, to = ORG) {", "function bound(from = BASE, to = ORG) {") },
+  { clause: "HB", what: "BOUND judged against BASE again (the bound base ignored: row 1200 (2)-(3)'s split undone)", m: (t) => edit(t, W, null, "function bound(from = BOUND_BASE, to = ORG) {", "function bound(from = BASE, to = ORG) {"),
+    // the ONE fault reads in two clauses when a real parent carrying foreign landed paths is handed in: the plant (HB) and the
+    // live bound itself. Accepted only then, and named in ci/mhot/PROOF.md §11.
+    also: BB.length ? "HB, BOUND" : null },
   { clause: "BOUND", what: "scripts/sitting.mjs touched (one organ byte beyond the named)", m: (t) => { const p = join(t, "scripts", "sitting.mjs"); if (!existsSync(p)) return "sitting.mjs absent"; writeFileSync(p, readFileSync(p, "utf8") + "\n// planted by run_mutants_mhot (BOUND)\n"); return null; } },
   { clause: "LAST", what: "the witness leaves a node process naming its temp dir", m: (t) => {
     const e = edit(t, W, null, 'import { spawnSync } from "node:child_process";', 'import { spawnSync, spawn as __mut } from "node:child_process";');
@@ -78,7 +84,7 @@ function copy(into) {
 }
 const childEnv = () => { const e = { ...process.env, TMPDIR: CT, TMP: CT, TEMP: CT }; for (const k of Object.keys(e)) if (/^ARSENAL_|^CLAUDE_CODE_/.test(k) || k === "ANTHROPIC_API_KEY") delete e[k]; return e; };
 const runWitness = (tree, only) => {
-  const r = spawnSync(process.execPath, [join(tree, W), "--org", tree, "--base-org", BASE, ...(only ? ["--only", only] : [])], { encoding: "utf8", windowsHide: true, timeout: left(), env: childEnv(), cwd: TMP, maxBuffer: 1 << 26 });
+  const r = spawnSync(process.execPath, [join(tree, W), "--org", tree, "--base-org", BASE, ...BB, ...(only ? ["--only", only] : [])], { encoding: "utf8", windowsHide: true, timeout: left(), env: childEnv(), cwd: TMP, maxBuffer: 1 << 26 });
   const out = String(r.stdout || "") + String(r.stderr || "");
   return { code: r.status, last: out.split(/\r?\n/).map((s) => s.trim()).filter(Boolean).pop() || "" };
 };
@@ -92,7 +98,7 @@ try {
     if (why) { console.log(`  FAIL M-${mu.clause} · the mutant did not apply: ${why}`); rmSync(t, { recursive: true, force: true }); continue; }
     const r = runWitness(t, mu.clause);
     for (const p of namingProcs(TMP)) { try { process.kill(p); } catch { /* gone */ } }
-    const ok = r.code === 1 && r.last === `RED MHOT · ${mu.clause}`;
+    const ok = r.code === 1 && (r.last === `RED MHOT · ${mu.clause}` || (!!mu.also && r.last === `RED MHOT · ${mu.also}`));
     if (ok) k++;
     console.log(`  ${ok ? "ok  " : "FAIL"} M-${mu.clause} · ${mu.what} → exit ${r.code} · ${r.last}`);
     try { unlinkSync(join(t, "node_modules")); } catch { /* not linked */ }
