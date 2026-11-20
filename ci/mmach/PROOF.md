@@ -2,8 +2,10 @@
 
 Unit **mmach** of the mwit spec (`ci/mwit/MWIT_SPEC.md` on `claude/mwit-spec` @ `88bf69d`, §B-machine), rulings forks rows
 1162 / 1163. Branch `claude/mmach-build`, cut from `origin/main` at **`fb4211870093e6b8657655eb02ebcfc425f1eab1`**
-(`ci/mmach/BASE`, fetched 19 Nov 2026). Ledger: `ci/mmach/LEDGER.jsonl`. Every run below is dated 19 Nov 2026 (UTC) and
+(fetched 19 Nov 2026); main `5759cce` merged in on 20 Nov 2026, so `ci/mmach/BASE` is now `5759cce`. The siblings' own base stays `fb42118` (the record). Ledger: `ci/mmach/LEDGER.jsonl`. Every run below is dated 19 Nov 2026 (UTC) and
 named by its command.
+
+CHECKPOINT · STOPPED at 2026-11-20T01:28:27Z (row 1172, 20 Nov 2026) · main 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 merged into this branch (merge commit = the parent of the commit carrying this line) · BASE = 5759cce · resolution hunks: NONE (the merge was clean; scripts/organism_test.mjs and package.json untouched by this unit) · witness --org <merged> --base-org <5759cce>: GREEN MMACH the machine reads the broken branch RED by name, its clean sibling GREEN, both with no login (planted both ways) · 5 clause(s) (exit 0); --org <5759cce>: RED MMACH · B-machine:broken-red, B-machine:clean-green, B-machine:read-no-login (exit 1); the same on CRLF copies · run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN · resume from: the runner's next order.
 
 CHECKPOINT · STOPPED at 2026-11-19T12:38:15Z · resume from the witness both ways (kept as history: RESUMED on the
 architect's message, his word 270, and carried through below).

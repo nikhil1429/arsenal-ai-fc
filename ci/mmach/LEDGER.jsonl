@@ -14,3 +14,6 @@
 {"ts":"2026-11-19T18:22:00Z","act":"measure","cmd":"node scripts/models.mjs check","last_line":"models check · config scan: 19 file(s) · hits 0 · declared 0 · exit 0"}
 {"ts":"2026-11-19T18:30:00Z","act":"measure","cmd":"node scripts/lawpack.mjs gate (LF trees, BASE fb42118 and build 8904e05)","last_line":"identical counts both: jugad-literal-subject-list 93 · bare-catch 37 · receipt-testimony-read 5 · import-time-registry-read 2 · depcruise_errors 13 · rest 0 (both exit 1, the reds already on main)"}
 {"ts":"2026-11-19T18:40:00Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (build)","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 · exit 2 (the base red)"}
+{"ts":"2026-11-20T01:28:27Z","act":"merge","cmd":"git fetch origin main && git merge --no-edit origin/main (5759cce)","last_line":"clean merge, no conflict · BASE = 5759cce"}
+{"ts":"2026-11-20T01:28:27Z","act":"witness","cmd":"witness --org <merged> --base-org <5759cce> (LF and CRLF) · run_mutants","last_line":"GREEN MMACH … · 5 clause(s) (exit 0) · RED on base (exit 1) · run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-20T01:28:27Z","act":"checkpoint","cmd":"row 1172: push once and stop","last_line":"CHECKPOINT · STOPPED at 2026-11-20T01:28:27Z · merged on 5759cce"}
