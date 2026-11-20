@@ -173,6 +173,7 @@ message.
 | 3f22388 (mlaw) | 4b334be | `package.json` suite lines only | union: `organism:selftest` gains main's `done.mjs` member; `squad:selftest` keeps mprk's `parked.mjs` member; each side had changed only its own line |
 | cebe3eb (mcov) | 5291eee | `package.json` suite lines only | union: `organism:selftest` gains main's `deck_lint`, `home_pin`, `probe`, `study_scope` members; `squad:selftest` keeps `parked.mjs` |
 | 6a6bdff (mmeter) | e6bcb5b | none (git merged clean; main touched no named file of this unit) | nothing to resolve |
+| b3a61c6 (mpres) | 7676005 | `package.json` `organism:selftest` line (hunk: the two adjacent suite lines) | union: `organism:selftest` gains mpres's `node scripts/senses.mjs selftest` after the `state.mjs` member; `squad:selftest` keeps `parked.mjs`; nothing else. `.gitignore` merged clean (mpres's hunk near line 258, this unit's line near 470) |
 
 After each merge the witness ran on the merged LF tree with the bound judged against the parent (`GREEN MPRK … · 15 clause(s)`),
 the parent main alone read RED on the 14 clauses, and the mutants read `15 of 15 … · control GREEN` (ledger rows).
@@ -206,3 +207,15 @@ ORGANISM_TEST_PROFILE=hermetic node24 scripts/organism_test.mjs suites (LF clone
 
 Verdict: **(b)**. The red is probe's own clock on the Windows runner, with the same red on main 6a6bdff's own run. Nothing
 here was changed and `scripts/probe.mjs` is untouched. The runner carries it to the architect.
+
+At 7676005 (main b3a61c6 merged), the last lines on the merged LF tree, 20 Nov 2026:
+
+```
+witness  --base-org <b3a61c6, the parent>  GREEN MPRK one owner for parked items, one card where each returns · 15 clause(s)
+witness  --base-org <5759cce, BASE>         RED MPRK · BOUND            (the bound is judged against the parent, row 1200 (2))
+witness  --org <b3a61c6> alone              RED MPRK · K1, K3K4, K5, K6, K7, K8, F3, F4, K9, K2, F5, SKILL, COVER, BOUND
+mutants                                     run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN
+node scripts/senses.mjs selftest            senses selftest: 18 passed, 0 failed   (exit 0)
+```
+
+CHECKPOINT · main b3a61c6 merged at 7676005, pushed at 2026-11-20T16:22Z · resume from: the next new-main line or ruling (the build itself is complete)
