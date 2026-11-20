@@ -189,3 +189,40 @@ landing every seat in flight that adds a member re-cuts to a member file (row 11
 
 Recorded per push in `ci/mhot/LEDGER.jsonl` (read through the public API with no token). The FINAL MESSAGE names the last
 push's runs and verdict.
+
+## 10 · THE BOUND SPLIT (forks row 1200 (2)-(3), a standing class — runner M's message, 2026-11-20)
+
+**Where the design holds it.** The member files replace the strings, but the thing that judges a unit's landing is still
+its unit witness. In `ci/mhot/witness_mhot.mjs`:
+
+- the clauses H1-H9 take `--base-org`, the tree of the commit `ci/mhot/BASE` names (red there, green on the build);
+- BOUND takes `--bound-base`, the tree of the PARENT of the land commit, and falls back to `--base-org` only when it is
+  absent (`const BOUND_BASE`, `function bound(from = BOUND_BASE, to = ORG)`);
+- BOUND finds the unit's two in-file edits by ANCHOR in the bound base, not by line number: in `package.json`, the six keys
+  `_selftest_coverage_law` … `_runner_law` (lines 17-22 at `5759cce`); in `scripts/audit.mjs`, the `"suite members"` block
+  (lines 582-587 at `5759cce`). A main that moved shifts those lines, and the old numeric check would have read the shift
+  as foreign;
+- `ci/mhot/BASE` is never rewritten. The neutral suite member still passes only `--org` / `--base-org` and drops BOUND by
+  its F1 A rule; a hand run after a rebuild passes `--bound-base <LF tree of the land commit's parent>`.
+
+The member files themselves add no bound of their own: `suite/members/*.json` is one named pattern in the BOUND set, and the
+roll's reader (`suiteRoll`) is judged by the clauses against BASE, so the split carries through unchanged.
+
+**The plant, clause HB.** The witness runs itself as a child over three planted trees under its temp root. P stands for a
+land commit's parent: BASE's `package.json`, `audit.mjs` and `suite.yml`, plus two paths another unit landed. L is the
+rebuilt land commit: P plus this unit's own edits. L2 is L plus one unit path outside the named files.
+
+```
+$ node ci/mhot/witness_mhot.mjs --org <LF tree of this commit> --base-org <LF tree of 5759cce>
+  ok   HB · THE BOUND SPLIT (row 1200 (2)-(3)), planted · land vs parent: GREEN MHOT the member roll · 2 clause(s) · land vs BASE: RED MHOT · BOUND (the foreign paths named) · land+outside vs parent: RED MHOT · BOUND (names the outside path)
+  ok   BOUND · against the BASE tree · 134 file(s) differ · beyond the named: none · package.json only its six law/suite keys: yes · audit.mjs only its suite-members block: yes
+GREEN MHOT the member roll · 12 clause(s)                                    (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <LF tree of 5759cce> --base-org <LF tree of 5759cce>
+RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9                                (exit 1)
+$ node ci/mhot/run_mutants_mhot.mjs --org <LF tree of this commit> --base-org <LF tree of 5759cce>
+  ok   M-HB · BOUND judged against BASE again (the bound base ignored: row 1200 (2)-(3)'s split undone) → exit 1 · RED MHOT · HB
+run_mutants: 12 of 12 mutant(s) RED by the clause that names them · control GREEN
+```
+
+HB is a guard like BOUND and LAST: it is judged on the build only. It tests the witness's own split, which exists in no
+base tree.
