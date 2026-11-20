@@ -272,3 +272,21 @@ Re-read against `3f2238887947e5827d2ce8f07a480e9dea3f527c` (`git fetch origin ma
 - **`package.json`:** one member added to `organism:selftest` (`node scripts/done.mjs selftest`); this unit adds no member (§7).
 - **`scripts/organism_test.mjs` / `scripts/ci_verdict.mjs` / `ci/mdn2` / `ci/mdone` / `ci/mlaw`:** none is in §7's file list;
   nothing here moves. F8 stands: the build cuts from the main that carries mmeter (now expected over 3f22388).
+
+## 10 · NEW MAIN cebe3eb (unit mcov landed; runner M's message, 20 Nov 2026)
+
+Re-read against `cebe3ebe4024c2144b934b3032b3fb837285d926` (`git fetch origin main` → `git rev-parse FETCH_HEAD`), 20 Nov 2026.
+`git diff --stat 3f22388 cebe3eb` → `9 files changed, 786 insertions(+), 16 deletions(-)`; outside `ci/mcov/` it names only
+`package.json`, `scripts/organism_test.mjs`, `scripts/study_scope.mjs`. What it changes for this spec:
+
+- **Unchanged for this unit:** `git diff --quiet 3f22388 cebe3eb -- scripts/daily_green.mjs scripts/day.mjs scripts/night.mjs
+  scripts/rung_receipt.mjs scripts/conductor.mjs scripts/done.mjs scripts/usage_tap.mjs` exits 0: every line §1-§4 and §9 cite holds.
+- **`scripts/study_scope.mjs` (the meter imports `studySessionsOfDay` from it, `daily_green.mjs:87`):** mcov adds a `selftest`
+  verb; `git diff 3f22388 cebe3eb -- scripts/study_scope.mjs | grep -c studySessionsOfDay` → `0`, so the reader the learn
+  canary uses is untouched.
+- **`package.json`:** `organism:selftest` gains the `deck_lint`, `home_pin`, `probe`, `study_scope` selftests — the four
+  organs M24's one base red named orphaned (20 Nov 2026). At this main M24's pre-existing red is expected gone; not re-run here.
+  This unit still adds no member (§7).
+- **`scripts/organism_test.mjs`:** a member bound `MEMBER_BOUND_MS` (:62, env may only LOWER it) and kills named in a member
+  red. The `clauses` member that would walk `ci/witness/mdayv/` is mmeter's, not yet on main; F8 stands — the build cuts from
+  the main that carries mmeter. Any witness this unit proposes runs inside that bound and types none of its own (§4).
