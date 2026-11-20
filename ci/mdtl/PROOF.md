@@ -167,3 +167,43 @@ exit 0
 
 The check runs of each pushed tip are read by curl from the public API and recorded in `ci/mdtl/LEDGER.jsonl`. A file
 cannot carry its own verdict (row 1167 (3)).
+
+## 11 · NEW MAIN cebe3eb MERGED (forks rows 1187 (2) / 1181 (2) / 1201), 2026-11-20
+
+The runner's first two new-main lines (3f22388, then cebe3eb) said to STOP on a conflict beyond the package.json member
+line, and this seat stopped twice (ledger rows `merge-main-FORK`). Row 1201 withdrew that order. Main cebe3eb
+(`cebe3ebe4024c2144b934b3032b3fb837285d926`, units mlaw and mcov) is now merged as a merge commit: no rebase, no force push.
+`ci/mdtl/BASE` stays 5759cce (row 1200 (2)). `scripts/organism_test.mjs` merged with no conflict: mcov's MEMBER_BOUND_MS and
+kill naming sit beside mdtl's `causes`, and the cause block still follows the judged assert.
+
+**Every hunk resolved, each keeping both intents:**
+
+| # | File:line (merged) | Main meant (mlaw / mcov) | mdtl meant | The result |
+|---|---|---|---|---|
+| H1 | `package.json:18` (`organism:selftest`) | five members added: done, deck_lint, home_pin, probe, study_scope | `witness_cause.mjs selftest` added after `ci_verdict.mjs selftest` | the union: main's line, plus mdtl's one member in its place (checked by a set diff: mdtl's only extra member is that one) |
+| H2 | `scripts/ci_verdict.mjs:49` (parseSuite's JSDoc return type) | `lawpack: Record<string, number> \| null` | `causes: string[]` | both fields in the one type |
+| H3 | `scripts/ci_verdict.mjs:56-57` (parseSuite's return) and the mlaw functions after it | `lawpack: parseLawpack(text)`, plus `parseLawpack` and `lawpackRises` | `causes: …` | both fields in the return; main's two functions kept byte for byte |
+| H4 | `scripts/ci_verdict.mjs:160-169` (compareLines' head) | a 7th parameter `baseline = null`, passed to `judge` | mdtl's `causesFor`, `workspaceSrc`, and a `readSrc` parameter | both: `compareLines(head, base, label, headSha, baseSha, baseSrc, baseline = null, readSrc = () => "")`. Main's position for `baseline` is kept, so every main caller is unchanged. mdtl's `readSrc` moves to 8th, and mdtl's two selftest calls were shifted to pass `null` for `baseline` |
+| H5 | `scripts/ci_verdict.mjs:358-362` (main's `compare`) | head/base parsed once, the frozen baseline read only when the base has no law pack line, `baseline` passed | `workspaceSrc` passed as the source door | main's block, with `workspaceSrc` appended after `baseline` |
+
+No hunk had two intents that could not both hold.
+
+**On the merged tree (tip of the merge, by command, 2026-11-20):**
+
+```
+node scripts/ci_verdict.mjs selftest      ci_verdict selftest: 34 passed, 0 failed · ALL CHECKS PASSED
+node scripts/witness_cause.mjs selftest   ALL CHECKS PASSED
+witness --org <merged> --base-org <5759cce, BASE>      RED MDTL · BOUND
+  (D1-D5, SETUP and LAST GREEN; BOUND names main's own files, and the member drops BOUND by its boundIds, F1 A)
+witness --org <merged> --base-org <cebe3eb, parent>    GREEN MDTL a red witness leaves its failing clause readable, from public bytes only · 8 clause(s)
+witness --org <5759cce> --base-org <5759cce>           RED MDTL · D1 D2 D5 BOUND
+run_mutants --org <merged> --base-org <cebe3eb>        run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
+node scripts/lawpack.mjs gate (merged)    lawpack · 1939 raw match(es) over 8/8 rules · findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 90 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 7 · lawpack: GREEN
+node scripts/lawpack.mjs gate (cebe3eb)   the same count line, every count equal (its RED is the raw-NUL scan's git ls-files in a plain tree that is not a git checkout)
+node scripts/models.mjs check             exit 0 · literal model names outside models.mjs: 0
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (merged, this container)
+  ok   SUITE MEMBER · ci_verdict selftest exits 0
+  ok   SUITE MEMBER · witness_cause selftest exits 0
+  ok   all 59 hermetic suite members pass (every one RUN, not chained)
+  organism_test: 157 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 124 (hermetic: named, not run)   (exit 0; the coverage-law base red is gone with mcov)
+```
