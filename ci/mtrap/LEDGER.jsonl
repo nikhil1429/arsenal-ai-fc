@@ -1,0 +1,10 @@
+{"ts":"2026-11-20T07:43:11.906Z","act":"cut","cmd":"git fetch origin main && git rev-parse FETCH_HEAD","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T07:43:11.906Z","act":"read-mcrk-spec","cmd":"git show 02c6f57:ci/mcrk/MCRK_SPEC.md","last_line":"read whole (tip of claude/mcrk-spec 02c6f57)"}
+{"ts":"2026-11-20T07:43:11.906Z","act":"read-mcrk-build","cmd":"git diff -U0 origin/main origin/claude/mcrk-build -- scripts/notes_compiler.mjs scripts/forge_session.mjs","last_line":"937710b · notes_compiler imports readCracks from forge_session (:109)"}
+{"ts":"2026-11-20T07:43:11.906Z","act":"read-mcap","cmd":"git fetch origin claude/mcap-spec","last_line":"fatal: couldn't find remote ref claude/mcap-spec · mcap read as claude/mcap-build f8a7e15 PROOF.md + witness"}
+{"ts":"2026-11-20T07:43:11.906Z","act":"measure-traps","cmd":"grep -n \"traps.push|traps.forEach\" scripts/notes_compiler.mjs","last_line":"353:  traps.forEach((t, i) => { t.id = `T${i + 1}`; });"}
+{"ts":"2026-11-20T07:43:11.906Z","act":"measure-gates","cmd":"node -e <gate rows of tracked compiled_notes.jsonl: booleans and trap ids only>","last_line":"2026-11-18 axis c live true traps 5 from crack verdict fail · 7 gate rows in the cloud copy (7c3c279)"}
+{"ts":"2026-11-20T07:43:11.906Z","act":"measure-readers","cmd":"grep -n compiled_notes|cold_gate|notes_compiler scripts/state.mjs scripts/done.mjs scripts/daily_green.mjs","last_line":"exit 1"}
+{"ts":"2026-11-20T07:43:11.906Z","act":"selftest","cmd":"node scripts/notes_compiler.mjs selftest","last_line":"notes_compiler selftest: 45 passed, 0 failed"}
+{"ts":"2026-11-20T07:43:11.906Z","act":"selftest","cmd":"node scripts/learnstate.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-20T07:43:11.906Z","act":"suite","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
