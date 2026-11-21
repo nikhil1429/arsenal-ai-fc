@@ -1,0 +1,22 @@
+{"ts":"2026-11-21T14:08:59.115Z","act":"cut","cmd":"git checkout -b claude/mjset-build f635d68b1bce300b58aa031ed49278b8bbe3e5a8","last_line":"Switched to a new branch claude/mjset-build (origin/claude/mbank-build at f635d68, not moved)"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"spec","cmd":"git show 09d7f71:ci/mjset/MJSET_SPEC.md","last_line":"read whole: §0-§16 + §15.6; §15 not built (row 1260 (1)/(4))"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"selftest-cut","cmd":"node scripts/gaffer_brain.mjs selftest (f635d68 export)","last_line":"gaffer_brain selftest: 198 passed, 0 failed"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"selftest-cut","cmd":"node scripts/postmatch.mjs selftest (f635d68 export)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"mbank-witness-cut","cmd":"node ci/mbank/witness_mbank.mjs --org <f635d68> --base-org <5301f15>","last_line":"RED MBANK · BOUND"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"build","cmd":"git commit (scripts/gaffer_brain.mjs, scripts/postmatch.mjs, ci/mjset/BASE)","last_line":"2fe00fe"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"witness","cmd":"git commit (clause witness, unit witness, mutant runner)","last_line":"ff38780"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"clause-witness-tip","cmd":"node ci/witness/mjset/witness_mjset.mjs plants --tree <tip>","last_line":"plants: 12 clause(s) · 12 GREEN"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"clause-witness-base","cmd":"node ci/witness/mjset/witness_mjset.mjs plants --tree <f635d68>","last_line":"plants: 12 clause(s) · 0 GREEN"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"unit-witness-head","cmd":"node ci/mjset/witness_mjset.mjs --org <tip> --base-org <f635d68>","last_line":"GREEN MJSET … · 14 clause(s)"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"unit-witness-base","cmd":"node ci/mjset/witness_mjset.mjs --org <f635d68> --base-org <f635d68>","last_line":"RED MJSET · W1, W2, W3, W4, W5, W6, W7, W8, W9, W11, W12, W13"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"mutants","cmd":"node ci/mjset/run_mutants_mjset.mjs --org <tip> --base-org <f635d68>","last_line":"run_mutants: 13 of 13 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"selftest-tip","cmd":"node scripts/gaffer_brain.mjs selftest (tip export)","last_line":"gaffer_brain selftest: 205 passed, 0 failed"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"selftest-tip","cmd":"node scripts/postmatch.mjs selftest (tip export)","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"models-check","cmd":"node scripts/models.mjs check (tip export)","last_line":"exit 0"}
+{"ts":"2026-11-21T14:08:59.115Z","act":"mbank-witness-tip","cmd":"node ci/mbank/witness_mbank.mjs --org <tip> --base-org <5301f15>","last_line":"RED MBANK · BOUND"}
+{"ts":"2026-11-21T14:11:23.962Z","act":"suite-cut","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (clone at f635d68)","last_line":"organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T14:11:23.962Z","act":"suite-tip","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (clone at ff38780)","last_line":"organism_test: 167 passed, 1 failed (CLAUSE WITNESS mjset: no PLANTS line)"}
+{"ts":"2026-11-21T14:11:23.962Z","act":"fix","cmd":"git commit (the clause witness prints its PLANTS line)","last_line":"6b5c78b"}
+{"ts":"2026-11-21T14:11:23.962Z","act":"unit-witness-head","cmd":"node ci/mjset/witness_mjset.mjs --org <6b5c78b> --base-org <f635d68>","last_line":"GREEN MJSET … · 14 clause(s)"}
+{"ts":"2026-11-21T14:11:23.962Z","act":"mutants","cmd":"node ci/mjset/run_mutants_mjset.mjs --org <6b5c78b> --base-org <f635d68>","last_line":"run_mutants: 13 of 13 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T14:11:23.962Z","act":"suite-tip","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (clone at 6b5c78b)","last_line":"organism_test: 168 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
