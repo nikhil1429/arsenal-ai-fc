@@ -1395,6 +1395,17 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
   if (probeRaw && !PROBE_KINDS.includes(probeRaw.toLowerCase())) {
     return { ok: false, reason: "bad-probe", say: `gaffer_brain: --probe must be one of ${PROBE_KINDS.join("|")} (got "${clip(probeRaw, 40)}"). A probe kind nobody recognises would count as "some probe" at the LOCK gate and prove nothing.` };
   }
+  // unit mdayq (forks rows 1241 (1) / 1257 F3 B / F10 A): `--moment` names the moment a row answered — ONE legal value,
+  // `day_close`, and a word outside it is refused like a bad probe (absent → null, never guessed). A day-close answer is
+  // banked only through the code door WITH a session id (F10 A: no session id refuses — the per-session record is the
+  // one place his words of THIS session live; without the id the shared slot could hand over another session's text).
+  const momentRaw = String(deps.moment === undefined || deps.moment === null ? "" : deps.moment).trim().toLowerCase();
+  if (momentRaw && momentRaw !== "day_close") {
+    return { ok: false, reason: "bad-moment", say: `gaffer_brain: --moment must be day_close (got "${clip(momentRaw, 40)}") — the per-axis banked moments are identified as before; a moment word nobody reads proves nothing.` };
+  }
+  if (momentRaw === "day_close" && !(fromPrompt && deps.sessionChecked === true)) {
+    return { ok: false, reason: "no-session", say: "gaffer_brain: a `--moment day_close` answer is banked only through the code door with this session's id (CLAUDE_CODE_SESSION_ID) — without it his words could be another session's; nothing banked." };
+  }
   const regRaw = String(deps.register === undefined || deps.register === null ? "" : deps.register).trim();
   if (regRaw && !REGISTERS.includes(regRaw.toLowerCase())) {
     return { ok: false, reason: "bad-register", say: `gaffer_brain: --register must be ${REGISTERS.join("|")} (got "${clip(regRaw, 40)}"). The axis gate asks for the INTERVIEW line by name; an unrecognised word could never satisfy it and would never say why.` };
@@ -1432,6 +1443,7 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
     surface: deps.surface ? String(deps.surface).trim().toLowerCase() : null,
     probe: PROBE_KINDS.includes(String(deps.probe || "").trim().toLowerCase()) ? String(deps.probe).trim().toLowerCase() : null,
     register: REGISTERS.includes(String(deps.register || "").trim().toLowerCase()) ? String(deps.register).trim().toLowerCase() : null,
+    moment: momentRaw === "day_close" ? "day_close" : null,   // unit mdayq — the axis-done gate and the LOCK's negative-space count skip it (F3 B)
     spoken: clip(said, 4000),
     // §9.4 — HEDGES ARE COUNTED HERE, at the moment of capture, by code (register.mjs's
     // meter — the scrimmage's own). Every banked answer, every surface, no model. The
@@ -2756,7 +2768,7 @@ async function main() {
     }
     const r = gradeCapture({ type: process.argv[3], ref: process.argv[4], gut, spoken }, {
       asked: flag("asked"), axis: flag("axis"), note: flag("note"),
-      surface: flag("surface"), probe: flag("probe"), register: flag("register"),
+      surface: flag("surface"), probe: flag("probe"), register: flag("register"), moment: flag("moment"),
       latencyMs: lat !== undefined && Number.isFinite(Number(lat)) ? Math.trunc(Number(lat)) : undefined,
       src, prompt, sessionChecked, prior: codeDoor ? readJournal(GRADE_QUEUE, 4000) : undefined,
     });

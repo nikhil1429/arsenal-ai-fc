@@ -23,11 +23,19 @@
 //   no regex of his words and no model call lives here (L6); the instruction rides CLAUDE.md and the SessionStart brief (F9).
 // MODES:
 //   start  [--session <payload id>] [--transcript <p>] [--by hook:prompt|hook:skill]   (no --session: the hook payload's own)
-//   end    [--pointer "<the exact unanswered micro-question>"]                           (the session model calls this, once)
+//   end    [--pointer "<the exact unanswered micro-question>"] [--dayq left|lost]       (the session model calls this, once —
+//          twice on a day-close day: the first prints the ask and writes nothing, the second closes)
 //   answer --hit HIT|MISS|PARTIAL|REST [--signal s] [--kal k] [--diag d] [--date D] [--route r]   (only if he answers, any time)
 //   status (read-only: today's start/close state + the two code counts of ruling F8, one line each)
 //   brief  (SessionStart: ONE line, only while a sitting opened today is open; silent otherwise)
 // THE END, in this order (each through its owner; a step that cannot run says so and the next still runs):
+//   0. THE DAY-CLOSE PAIR (unit mdayq, forks rows 1241 (1) / 1257 F4 A) — read-only: forge_session.mjs dayCloseDue over the
+//      pacer's two files and the bank's rows (gaffer_brain bankRows). DUE (taught on D, no axis closed on D, fewer than two
+//      `moment day_close` rows banked on D) and no --dayq → prints the DAYQ block (the day's material by code, F1 A: the
+//      teacher composes both questions from it, one a turn, F8 A) and RETURNS, writing nothing, exit 0. --dayq left (he
+//      leaves before answering) or --dayq lost (the bank refused his answer, F10 A) → the close runs, its line says the
+//      day was taught and what was banked: no card is filed and nothing is red on him. A read that fails says so and the
+//      close runs as before (his day end is never blocked by this read).
 //   1. forge_session.mjs pointer "<--pointer>"   only when a forge concept is open and the pointer is given (L3: the words
 //      are the model's; the door is the pacer's)
 //   2. the sitting closes through its OWN door (sitting.mjs closeDoor: daemon up → POST only; down → the local door, F10)
@@ -124,7 +132,34 @@ export async function start({ session = null, transcript = null, by = "hand", no
 
 // ── END ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 const QUESTIONS = "ASK HIM, in ONE message, and never wait on it (the day is already closed): Result — HIT / MISS / PARTIAL / REST? · one signal worth naming? · KAL-line (tomorrow's first move)? · on a MISS only: start / block / sleep? — his answer, whenever it comes: node scripts/day.mjs answer --hit <X> --signal \"…\" --kal \"…\" [--diag …]";
-export async function end({ pointer = null, now = new Date(), envSession = process.env.CLAUDE_CODE_SESSION_ID || null } = {}) {
+// unit mdayq — step 0's read: the pacer's own pure skip over its own two files and the bank's rows, all read only
+async function dayCloseRead(D) {
+  try {
+    const f = await import(pathToFileURL(join(HERE, "forge_session.mjs")).href);
+    const g = await import(pathToFileURL(join(HERE, "gaffer_brain.mjs")).href);
+    const reg = readJson(join(STATE_DIR, "concepts.json"));
+    return f.dayCloseDue({ session: readJson(join(STATE_DIR, "forge_session.json")), history: readRows(join(STATE_DIR, "forge_sessions.jsonl")),
+      D, bank: g.bankRows({}), axisNames: reg && reg.axes && typeof reg.axes === "object" ? reg.axes : {} });
+  } catch (e) { return { due: false, failed: true, why: `the day-close read failed (${String((e && e.message) || e).split(/\r?\n/)[0].slice(0, 120)}) — the close runs as before` }; }
+}
+const PROBE_SAY = { recall: "recall — ONE idea taught today, in his words", negative_space: "what that same idea does NOT do" };
+function dayqAsk(D, q) {
+  const k = (q.asked || 0) + 1, ax = `${q.axis}${q.axis_name ? ` (${q.axis_name})` : ""}`;
+  const mom = Object.entries(q.material.moments || {}).map(([m, n]) => `${m} ${n}`).join(", ") || "none";
+  return [
+    `DAYQ · ask first · ${D} was taught and no axis closed · concept ${q.concept} · axis ${ax} · today's material: axes ${q.material.axes.join(", ")} · moments ${mom} · banked ${q.asked || 0} of 2 · nothing written`,
+    `DAYQ · Q${k} (${PROBE_SAY[q.next] || q.next}) — compose it from today's material and this conversation (a capsule may inform, never be the source) · ONE question this turn, the trio pakka / shayad / pata nahi its last line, after: node scripts/forge_session.mjs moment day_close`,
+    `DAYQ · his answer → node scripts/gaffer_brain.mjs capture voice_rep ${q.concept}:${q.axis} --axis ${q.axis} --surface code --moment day_close --probe ${q.next} --asked "<the question, verbatim>" [--latency_ms <n>]   (his words and his gut word come off his own prompt record)`,
+    `DAYQ · then run end again (same --pointer): node scripts/day.mjs end — it closes once two are banked · he leaves first: node scripts/day.mjs end --dayq left · the bank refused his answer: node scripts/day.mjs end --dayq lost   (the day closes as taught: no card, nothing red on him)`,
+  ];
+}
+const dayqStep = (q, dayq) => {
+  if (q.done) return `day-close: pair banked (${q.asked} row(s)) · the sitting close judges them`;
+  if (!q.due) return `day-close: not due (${q.why})`;
+  const banked = q.asked ? `${q.asked} of 2 banked` : "nothing banked";
+  return dayq === "left" ? `day-close: unanswered (he left) · day taught · ${banked}` : `day-close: answer not banked (the door refused it) · day taught · ${banked}`;
+};
+export async function end({ pointer = null, dayq = null, now = new Date(), envSession = process.env.CLAUDE_CODE_SESSION_ID || null } = {}) {
   const D = istDay(now), s = readSitting();
   if (isOpen(s) && s.host_session_id && s.host_session_id !== envSession) {
     return { ok: false, refused: true, code: 1, lines: [`day: REFUSED — the open sitting ${s.id} belongs to his study session ${short(s.host_session_id)}, not this one (${envSession ? short(envSession) : "no session id"}); nothing written. The night close (conductor dayclose) will still close ${D}.`] };
@@ -132,7 +167,10 @@ export async function end({ pointer = null, now = new Date(), envSession = proce
   if (!isOpen(s) && s && s.close_reason === "fulltime" && dayOf(s.closed_at) === D) {
     return { ok: true, already: true, code: 0, lines: [`day: already closed ${D} · sitting ${s.id} closed ${s.closed_at} (fulltime) · nothing changed`] };
   }
-  const lines = [], steps = [];
+  // 0. the day-close pair (unit mdayq, F4 A) — due and not --dayq left|lost: the ask, nothing written
+  const q = await dayCloseRead(D);
+  if (q.due && dayq !== "left" && dayq !== "lost") return { ok: true, ask: true, code: 0, lines: dayqAsk(D, q) };
+  const lines = [], steps = [dayqStep(q, dayq)];
   // 1. the pointer — only for an open concept, and only with the model's own words
   const forge = readJson(join(STATE_DIR, "forge_session.json"));
   if (pointer && forge && forge.concept && !forge.closed_at) {
@@ -236,12 +274,12 @@ async function main() {
       if (r.night) console.log(r.night);   // unit mfac: the ONE night line, only when a night was armed
       return;   // HOOK PATH: never process.exit
     }
-    case "end": { const r = await end({ pointer: opt("--pointer") }); for (const l of r.lines) console.log(l); process.exitCode = r.code; return; }
+    case "end": { const r = await end({ pointer: opt("--pointer"), dayq: opt("--dayq") }); for (const l of r.lines) console.log(l); process.exitCode = r.code; return; }
     case "answer": { const r = await answer(rest); for (const l of r.lines) console.log(l); process.exitCode = r.code; return; }
     case "status": { for (const l of status()) console.log(l); return; }
     case "brief": { for (const l of brief()) console.log(l); return; }
     default:
-      console.log("day: start [--session id] [--transcript p] [--by who] | end [--pointer \"…\"] | answer --hit X [--signal s] [--kal k] [--diag d] | status | brief");
+      console.log("day: start [--session id] [--transcript p] [--by who] | end [--pointer \"…\"] [--dayq left|lost] | answer --hit X [--signal s] [--kal k] [--diag d] | status | brief");
       process.exitCode = mode ? 2 : 0;
   }
 }

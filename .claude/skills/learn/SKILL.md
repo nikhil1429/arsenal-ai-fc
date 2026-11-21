@@ -43,7 +43,7 @@ description: The session-agnostic front door to the day's learning — reads the
 4. **Every stop** (axis end, mid-axis exit, his "bas", context near the line): `node scripts/forge_session.mjs
    pointer "<the exact unanswered micro-question + the gut-word ask + where in the axis>"` BEFORE anything else.
 5. Day end — when HE means the study day is over, in ANY words (no phrase list; read his meaning): run
-   `node scripts/day.mjs end [--pointer "<the exact unanswered micro-question>"]` ONCE. It closes the sitting (its close
+   `node scripts/day.mjs end [--pointer "<the exact unanswered micro-question>"]` ONCE. If it prints `DAYQ · ask first`, it wrote nothing: ask the two day-close questions it names ONE at a time, each after `moment day_close`, each with the trio, bank each answer with the line it prints (`--moment day_close`), then run `end` again; if he leaves before he answers, `end --dayq left` (the day closes as taught, nothing banked, no card). It closes the sitting (its close
    fires the judge by code), writes the machine half of the day, deals ONE card and prints the ONE message of questions —
    ask it, never wait on it. His answer, whenever it comes: `node scripts/day.mjs answer --hit <X> …`. A second `end` is
    safe (it says already closed). A day he never closes is closed by the night code. (Full text: `REFERENCE.md §4`.)
