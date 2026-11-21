@@ -40,14 +40,32 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
 const STATE = join(ROOT, "dressing-room", "state");
 const NODE = process.execPath;
+// unit mherm T2 (forks row 1157 (1), 20 Nov 2026): THE RUN'S TEMP DIR IS ITS OWN. One dir per process, made here, handed to
+// this process and to every child as TMPDIR/TEMP/TMP (os.tmpdir() reads them: TMPDIR on POSIX, TEMP then TMP on Windows),
+// and removed when the process exits. Before this, the selftests of five organs left a file or a dir in the shared temp dir on every run
+// (hippocampus, harvest, mirror, pulse, done; ci/mherm/PROOF.md W4) — never read again, but a run that leaves anything
+// behind is not a function of its tree alone. A spawn handed its own env gets the same three keys in run() below.
+const RUN_TMP = mkdtempSync(join(tmpdir(), "organism-run-"));
+for (const k of ["TMPDIR", "TEMP", "TMP"]) process.env[k] = RUN_TMP;
+process.on("exit", () => { try { rmSync(RUN_TMP, { recursive: true, force: true }); } catch { /* the OS's problem after this */ } });
 
 let pass = 0, fail = 0;
 // unit mdtl: `causes` holds one entry per failing witness clause, `<red name> · <ID> · <text>` (witness_cause.mjs causeText)
 const fails = [], passed = [], causes = [];
+// unit mdtl2 (forks row 1220): every OTHER red's cause, rebuilt from public bytes by red_cause.mjs. The import is guarded by the
+// module's presence (a base tree measured by this instrument has none). Its ONE generic hook below only pushes into `causes`:
+// every judged name and detail stays byte-identical, so every KNOWN_RED entry keeps its match.
+const rc = existsSync(join(HERE, "red_cause.mjs")) ? await import("./red_cause.mjs") : null;
+let trackedAtHead = null;
+const rcIO = { root: ROOT, read: (p) => { try { return readFileSync(join(ROOT, p), "utf8"); } catch (e) { void e; return ""; } },   // unreadable = WITHHELD
+  tracked: () => (trackedAtHead ??= new Set(String(spawnSync("git", ["-C", ROOT, "ls-files", "-z"], { encoding: "utf8", windowsHide: true }).stdout || "").split("\0").filter(Boolean))) };
 const assert = (name, cond, detail) => {
   if (liveAssert(name)) return;   // B1 (b): a LIVE member under the hermetic profile is named, never judged
   if (cond) { pass++; passed.push(name); console.log(`  ok   ${name}`); }
-  else { fail++; fails.push({ name, detail }); console.log(`  FAIL ${name}${detail ? `\n         ${detail}` : ""}`); }
+  else {
+    fail++; fails.push({ name, detail }); console.log(`  FAIL ${name}${detail ? `\n         ${detail}` : ""}`);
+    if (rc && detail) for (const c of rc.causesOfDetail(name, String(detail), rcIO)) causes.push(rc.causeLine(name, c));   // unit mdtl2: the one generic hook
+  }
 };
 const section = (t) => console.log(`\n── ${t} ${"─".repeat(Math.max(0, 66 - t.length))}`);
 
@@ -66,7 +84,7 @@ const MEMBER_BOUND_MS = (() => { const v = Number(process.env.ORGANISM_TEST_MEMB
 // code, so a reader can say "killed by the suite bound" and never mistake the kill for a non-zero exit.
 const run = (args, opts = {}) => {
   const bound = opts.timeout || 120000;
-  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: bound, ...(opts.env ? { env: opts.env } : {}) });
+  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: bound, ...(opts.env ? { env: { ...opts.env, TMPDIR: RUN_TMP, TEMP: RUN_TMP, TMP: RUN_TMP } } : {}) });
   const killed = !!(r.error && /** @type {NodeJS.ErrnoException} */ (r.error).code === "ETIMEDOUT");
   return { code: r.status, out: (r.stdout || "") + (r.stderr || ""), ...(killed ? { killed: bound } : {}) };
 };
@@ -304,7 +322,91 @@ function relockSandboxCapsule(root, id) {
     return true;
   } catch { return false; }
 }
-const hasSelftest = (f) => { const src = readOrgan(f); return /['"`]selftest['"`]/.test(src) || /function selftest\(/.test(src); };
+// unit mdet (forks row 1151 (3) F3 B) — THE COVERAGE DETECTOR READS CODE, NEVER A COMMENT OR A STRING. Until this unit a
+// script "had a selftest" when the quoted word appeared ANYWHERE in its bytes, so a backticked word in a header comment
+// counted a selftest that did not exist (study_scope, measured by unit mcov: ci/mcov/PROOF.md F3). The old reading is
+// FROZEN below as hasSelftestLegacy (L9: frozen, never deleted) so the census can print both columns. The new one lexes the
+// source (comments blanked, every string and template body blanked and kept as a literal) and accepts exactly two forms:
+//   dispatch · a whole literal `selftest` that is an operand of === / == / !== / != or a `case` label: the mode the script
+//              actually branches on;
+//   self-run · a CALL of its own selftest() in code (not its declaration, not a method of another object): a script run
+//              bare IS its selftest (claudegen, the class package.json:_selftest_coverage_law names), so the gate stays
+//              as strict as before for it (a gate only gets stricter).
+// Dependency-free on purpose: the coverage law must measure in a bare checkout with no node_modules.
+const hasSelftestLegacy = (f) => { const src = readOrgan(f); return /['"`]selftest['"`]/.test(src) || /function selftest\(/.test(src); };
+/** codeOf — comments blanked, string/template/regex bodies blanked (newlines kept, so offsets and lines hold). PURE.
+ *  @param {string} src @returns {{ code: string, lits: { v: string, s: number, e: number, whole: boolean }[] }} */
+function codeOf(src) {
+  const n = src.length, lits = [], tpl = [];   // tpl: brace depth of each open ${ … } inside a template
+  let out = "", i = 0, prev = "";
+  const blank = (c) => (c === "\n" ? "\n" : " ");
+  const regexMayStart = () => prev === "" || /[(,=:[!&|?{};+\-*%<>~^]$/.test(prev)
+    || /^(return|typeof|case|do|else|in|of|new|delete|void|throw|yield|await)$/.test(prev);
+  const templateBody = (s, opened) => {          // i sits just past a backtick or past the } closing a ${ … }
+    let v = "";
+    while (i < n) {
+      const c = src[i];
+      if (c === "\\") { v += src.slice(i, i + 2); out += blank(src[i]) + blank(src[i + 1] || ""); i += 2; continue; }
+      if (c === "`") { out += "`"; i++; lits.push({ v, s, e: i, whole: opened }); return; }
+      if (c === "$" && src[i + 1] === "{") { out += "${"; i += 2; lits.push({ v, s, e: i, whole: false }); tpl.push(0); return; }
+      v += c; out += blank(c); i++;
+    }
+  };
+  while (i < n) {
+    const c = src[i], d = src[i + 1];
+    if (c === "/" && d === "/") { while (i < n && src[i] !== "\n") { out += " "; i++; } continue; }
+    if (c === "/" && d === "*") { const end = src.indexOf("*/", i + 2), stop = end < 0 ? n : end + 2; for (; i < stop; i++) out += blank(src[i]); continue; }
+    if (c === "'" || c === '"') {
+      const s = i; let v = ""; out += c; i++;
+      while (i < n && src[i] !== c && src[i] !== "\n") { if (src[i] === "\\") { v += src.slice(i, i + 2); out += "  "; i += 2; continue; } v += src[i]; out += " "; i++; }
+      out += src[i] === c ? c : ""; if (src[i] === c) i++;
+      lits.push({ v, s, e: i, whole: true }); prev = "x"; continue;
+    }
+    if (c === "`") { const s = i; out += "`"; i++; templateBody(s, true); prev = "x"; continue; }
+    if (c === "}" && tpl.length && tpl[tpl.length - 1] === 0) { tpl.pop(); const s = i; out += "}"; i++; templateBody(s, false); prev = "x"; continue; }
+    if (tpl.length && c === "{") tpl[tpl.length - 1]++;
+    if (tpl.length && c === "}") tpl[tpl.length - 1]--;
+    if (c === "/" && regexMayStart()) {
+      let cls = false; out += "/"; i++;
+      while (i < n && src[i] !== "\n") { const t = src[i]; if (t === "\\") { out += "  "; i += 2; continue; } if (t === "[") cls = true; else if (t === "]") cls = false; else if (t === "/" && !cls) break; out += " "; i++; }
+      if (src[i] === "/") { out += "/"; i++; } prev = "x"; continue;
+    }
+    out += c; i++;
+    if (!/\s/.test(c)) prev = /[A-Za-z0-9_$]/.test(c) ? (/[A-Za-z0-9_$]$/.test(prev) ? prev : "") + c : c;
+  }
+  return { code: out, lits };
+}
+/** selftestForm — how a source answers the word, or null. PURE.
+ *  @param {string} src @returns {{ form: "dispatch"|"self-run", at: number } | null}  at = 1-based line */
+function selftestForm(src) {
+  const { code, lits } = codeOf(src);
+  const lineOf = (k) => src.slice(0, k).split("\n").length;
+  for (const l of lits) {
+    if (!l.whole || l.v !== "selftest") continue;
+    if (/(?:[!=]==?|\bcase)\s*$/.test(code.slice(Math.max(0, l.s - 16), l.s)) || /^\s*[!=]==?/.test(code.slice(l.e, l.e + 8))) return { form: "dispatch", at: lineOf(l.s) };
+  }
+  for (const m of code.matchAll(/(^|[^.\w$])selftest\s*\(/g)) {
+    const k = m.index + m[1].length;
+    if (/\bfunction\s*\*?\s*$/.test(code.slice(Math.max(0, k - 16), k))) continue;          // its declaration
+    let j = code.indexOf("(", k), depth = 0;
+    for (; j < code.length; j++) { if (code[j] === "(") depth++; else if (code[j] === ")" && --depth === 0) break; }
+    if (/^\s*\{/.test(code.slice(j + 1, j + 8))) continue;                                   // a method definition
+    return { form: "self-run", at: lineOf(k) };
+  }
+  return null;
+}
+const hasSelftest = (f) => selftestForm(readOrgan(f)) !== null;
+/** censusRows — every scripts/*.mjs (this file excepted, as scripts() does): the legacy reading, the new one, the form and
+ *  where it sits, and whether it MOVES. The table ci/mdet/PROOF.md carries is exactly these rows (unit mdet's witness C4). */
+function censusRows() {
+  return scripts().sort().map((f) => {
+    const src = readOrgan(f), old = hasSelftestLegacy(f), nf = selftestForm(src);
+    const om = /['"`]selftest['"`]/.exec(src) || /function selftest\(/.exec(src);
+    const oldAt = om ? `${src.slice(0, om.index).split("\n").length}` : "—";
+    const moves = old === !!nf ? "—" : (old ? "MOVES has → none" : "MOVES none → has");
+    return `| ${f} | ${old ? "has" : "none"} | ${oldAt} | ${nf ? "has" : "none"} | ${nf ? nf.form : "—"} | ${nf ? nf.at : "—"} | ${moves} |`;
+  });
+}
 
 // ── 1. COVERAGE LAW ──────────────────────────────────────────────────────────
 // The meta-test package.json's own prose asks for and never got.
@@ -405,6 +507,8 @@ function suites() {
     // B1 (c): every member is its OWN assert, so a red member is a NAME the neutral verdict can compare across trees
     assert(`SUITE MEMBER · ${m} selftest exits 0`, r.code === 0);
     if (r.code !== 0) console.log(`         ${redWhy(r)}`);   // (a): the member's red names the kill, on the line under its FAIL
+    // unit mdtl2 (K1 / K4): the exit SLOT, the FIRST failing check as a literal or skeleton of the member's own source, and a count
+    if (r.code !== 0 && rc) causes.push(rc.causeLine(`SUITE MEMBER · ${m} selftest exits 0`, rc.memberCause({ code: r.code, killed: r.killed, out: r.out, src: rcIO.read(`scripts/${m}.mjs`) })));
   }
   console.log(`  suites: reused ${reused} of ${members.length} member result(s) from hermetic (identical command), ran ${members.length - reused}`);
   assert(`all ${PROFILE === "hermetic" ? `${ran} hermetic` : members.length} suite members pass (every one RUN, not chained)`, red.length === 0,
@@ -1621,7 +1725,12 @@ async function laws() {
       const G = await import(pathToFileURL(join(ROOT, "scripts", "gate.mjs")).href);      // S7 — the declared-consumers table and its resolver
       const B = await import(pathToFileURL(join(ROOT, "scripts", "brain.mjs")).href);     // S7 — jobConsumers: who a job_input lane's downstream jobs actually are
       const cfg = (() => { try { return JSON.parse(readFileSync(join(ROOT, "dressing-room", "state", "brain_config.json"), "utf8")); } catch { return null; } })();
-      const ledgerLanes = (() => {
+      // unit mherm T3 (forks row 1157 (1), F3 A): brain_ledger.jsonl is GITIGNORED — absent in a fresh tree, born by a run —
+      // so under the hermetic profile this block was entered only when an EARLIER run had left the file: ten asserts that
+      // existed on a second run and not on the first. It is NAMED LIVE here, one line, never silently skipped; the full
+      // profile reads the ledger exactly as before. (unit mherm2 plants a ledger fixture so the ten run on every push.)
+      const ledgerLanes = PROFILE === "hermetic" && liveNamed("LOAD ZERO · the brain-ledger lane block (every ledger lane declared · S7 RATCHET · RUNG A ledger-side)",
+        "reads state/brain_ledger.jsonl — gitignored: absent in a fresh tree, born by a run") ? null : (() => {
         try {
           const seen = new Set();
           for (const l of readFileSync(join(ROOT, "dressing-room", "state", "brain_ledger.jsonl"), "utf8").split(/\r?\n/)) {
@@ -2256,6 +2365,8 @@ function hermetic() {
     const tap = hermeticRuns.get(runKey([join(ROOT, "scripts", "usage_tap.mjs"), "selftest"]));
     assert("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", !!tap && tap.code === 0,
       tap ? String(tap.out).trim().split("\n").filter((l) => /FAIL|selftest/.test(l)).slice(-4).join(" | ") : "usage_tap.mjs selftest never ran");
+    // unit mdtl2 (K3): the member's cause, from the loop's own kept result
+    if (tap && tap.code !== 0 && rc) causes.push(rc.causeLine("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", rc.memberCause({ ...tap, src: rcIO.read("scripts/usage_tap.mjs") })));
   }
   if (!tripLive) {
   const after = snap(), afterH = hashes();
@@ -2319,6 +2430,54 @@ function hermetic() {
   }
   assert("…and that log is gitignored, so a test run can never reach the public remote",
     run(["-e", `process.exit(require('child_process').execSync('git check-ignore -q scripts/thalamus.log && echo y || echo n',{cwd:${JSON.stringify(ROOT)}}).toString().trim()==='y'?0:1)`]).code === 0);
+  mhermClauses();
+}
+
+// ── unit mherm · W1 + W3 RIDE THE SUITE (forks row 1157 (3), F2 C, 20 Nov 2026) ─────────────────────────────────────────
+// The hermetic run must be a function of the tree alone. Two of its five clauses are cheap enough to run on every push, so
+// they live here; W2 · W4 · W5 (a fresh clone under the temp dir, the whole run twice) are the workflow's own step, because a
+// whole-suite double run cannot live inside the suite it measures. Both run on a COPY of the tracked tree (`git ls-files`,
+// never a tree copy: his gitignored state never leaves ROOT) placed under this run's own temp dir, so the copy sits UNDER the
+// temp dir exactly as a fresh clone in %TEMP% or /tmp does — the position that reddened the sandbox before unit mherm.
+//   W3 · `laws` (hermetic) on the copy, without and then with a one-row brain_ledger.jsonl planted in the COPY's state dir
+//        (by node, never a shell): the verdict lines must be byte-equal (T3 names the ledger block LIVE).
+//   W1 · the copy's `sandbox.mjs selftest`, its child's temp dir = this run's (an ANCESTOR of the copy): exit 0, and the
+//        canary's live-state targets in the copy never created (T1: the sandbox's own .tmp; F1 B: no temp allowance).
+function mhermClauses() {
+  const VL = /^ {2}(ok {2}|FAIL|LIVE) |^organism_test:/;
+  /** @param {string} out */
+  const vlines = (out) => String(out).split(/\r?\n/).filter((l) => VL.test(l)).join("\n");
+  const T = mkdtempSync(join(RUN_TMP, "mherm-"));
+  const tree = join(T, "tree");
+  try {
+    const ls = spawnSync("git", ["ls-files", "-z"], { cwd: ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+    const files = ls.status === 0 ? String(ls.stdout).split("\0").filter(Boolean) : [];
+    if (files.length) { for (const rel of files) if (existsSync(join(ROOT, rel))) cpSync(join(ROOT, rel), join(tree, rel)); }
+    // a plain tree (no .git: a witness hands one) holds no gitignored state of his, so a copy of it is the tree itself
+    else cpSync(ROOT, tree, { recursive: true, filter: (src) => !/[\\/](node_modules|\.git)([\\/]|$)/.test(src.slice(ROOT.length)) });
+    // the copy's sandbox builds from ITS `git ls-files`, so the copy is a git repo: init-and-add, no commit (as sandbox.mjs does)
+    for (const g of [["init", "-q"], ["add", "-A"]]) spawnSync("git", ["-c", "core.autocrlf=false", ...g], { cwd: tree, stdio: "ignore", windowsHide: true });
+    if (existsSync(join(ROOT, "node_modules"))) symlinkSync(join(ROOT, "node_modules"), join(tree, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+    const env = { ...process.env, ORGANISM_TEST_PROFILE: "hermetic" };
+    const ledger = join(tree, "dressing-room", "state", "brain_ledger.jsonl");
+    const w3a = run([join(tree, "scripts", "organism_test.mjs"), "laws"], { cwd: tree, env });
+    mkdirSync(dirname(ledger), { recursive: true });
+    writeFileSync(ledger, "{}\n");
+    const w3b = run([join(tree, "scripts", "organism_test.mjs"), "laws"], { cwd: tree, env });
+    rmSync(ledger, { force: true });
+    const a = vlines(w3a.out), b = vlines(w3b.out);
+    assert("MHERM W3 · a planted gitignored brain_ledger.jsonl changes no hermetic verdict line of `laws` (a tracked copy, run without and with the plant)",
+      a.length > 0 && a === b, `without the plant: ${a.split("\n").pop() || "(no headline)"} · with it: ${b.split("\n").pop() || "(no headline)"}`);
+    const w1 = run([join(tree, "scripts", "sandbox.mjs"), "selftest"], { cwd: tree });
+    const canary = join(tree, "dressing-room", "state", "CANARY_MUST_NEVER_EXIST.json");
+    const head = w1.out.trim().split(/\r?\n/).filter((l) => /^sandbox: /.test(l)).pop() || "(no sandbox headline)";
+    assert("MHERM W1 · the sandbox collar denies the canary for a tree that sits UNDER the temp dir (a tracked copy under this run's own temp)",
+      w1.code === 0 && !existsSync(canary) && !existsSync(ledger),
+      `${redWhy(w1)} · ${head}${existsSync(canary) ? " · the canary's live-state file was CREATED in the copy" : ""}${existsSync(ledger) ? " · the canary appended the copy's brain_ledger" : ""}`);
+  } finally {
+    try { unlinkSync(join(tree, "node_modules")); } catch { /* no link */ }
+    rmSync(T, { recursive: true, force: true });
+  }
 }
 
 // ── 5. THE LEARNING PATH, END TO END ─────────────────────────────────────────
@@ -2821,8 +2980,11 @@ function clauseWitnesses() {
     const r = run([join(ROOT, f), "plants"]);
     const last = (r.out.split(/\r?\n/).filter((l) => /^PLANTS \S+ · \d+ of \d+ plant\(s\) as expected$/.test(l)).pop()) || "";
     const m = /· (\d+) of (\d+) plant/.exec(last);
-    assert(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, r.code === 0 && !!m && Number(m[2]) > 0 && m[1] === m[2],
+    const green = r.code === 0 && !!m && Number(m[2]) > 0 && m[1] === m[2];
+    assert(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, green,
       last || `exit ${r.code} · no PLANTS line (a witness with no plants reads red) · ${r.out.split(/\r?\n/).filter((l) => /FAIL|RED/.test(l)).slice(0, 2).join(" | ").slice(0, 240)}`);
+    // unit mdtl2 (K11): each `CLAUSE <ID> RED · k/n plant(s)` line's id (a literal of the witness's own source) and its claim
+    if (!green && rc) for (const c of rc.clauseCause({ out: r.out, src: rcIO.read(f) })) causes.push(rc.causeLine(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, c));
   }
 }
 
@@ -3093,6 +3255,8 @@ const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpac
 async function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }
+  // unit mdet: the coverage detector's census, a READ (never a mode of `all`, so the suite's verdict is unmoved by it)
+  if (mode === "census") { console.log("| script | legacy | legacy at | detector | form | at | moves |\n|---|---|---|---|---|---|---|"); for (const r of censusRows()) console.log(r); process.exit(0); }
   const chosen = mode === "all" ? Object.keys(MODES) : [mode];
   if (chosen.some((c) => !MODES[c])) { console.log(`organism_test: ${Object.keys(MODES).join(" | ")} | all`); process.exit(1); }
   console.log("=== ARSENAL AI FC — CROSS-ORGAN TEST SUITE ===");
