@@ -1,5 +1,22 @@
 # UNIT mpin-law (mpinl) · PROOF
 
+CHECKPOINT · 21 Nov 2026 (rows 1233 (2) / 1236) · merge 38fa17b of main 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f (BASE = 7bf008b,
+because row 1172 keyed BASE to the main merged) · conflicted files: NONE (main did not touch `scripts/lawpack.mjs`; every landed line of
+`scripts/organism_test.mjs`, `package.json` and `ci/` is main's) · tip 2adef619ef58131987a1cc3dd4ef6bad16b8ef0c. On LF clones, 21 Nov 2026:
+- The first witness run on the merge read `RED MPINL · W1u, W4`. Main's landings brought new unresolved sites in `forge_session.mjs`.
+  One of them, `:2697`, was counted by the law but not by mcon's census: the F6 (a) filter branch had skipped the census's
+  depth budget (a cap of 8). Fix: the branch now spends depth + 3 (join, filter, split). Then the BASELINE unresolved key was re-read
+  from the tree, 77 → 79 (row 1160 (2)). The 5759cce tree still reads 39 / 77 with the fix.
+- `node scripts/lawpack.mjs gate` reads `lawpack: GREEN — no law's finding count rose, and every rule is on disk` on both 7bf008b
+  and the merged tree. `node scripts/lawpack.mjs selftest`: `89 passed, 0 failed`. The ci census reads 0 hits in 88 files, so the
+  walk stays scripts+hooks.
+- Witness BASE 7bf008b: `RED MPINL · W1, W1u, W2, W2u, W3, W4, W5, W6, F7` · witness MERGED: `GREEN MPINL the own-literal pin class
+  held by a count, its baseline the tree's own read · 11 clause(s)`.
+- Mutants: `run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN`.
+- Neutral legs of 2adef61, run 44881124017, read by anonymous curl 25 min after the push: `npm test · node 22` 136776416830,
+  `npm test · node 24` 136776416663, `hermetic twice · node 22` 136776416714, `hermetic twice · node 24` 136776416840. All four
+  were still `queued`, so no verdict was read yet. None is red; none is retried.
+
 CHECKPOINT · STOPPED at 2026-11-20 (row 1172, the runner's conditional line) · merged tip = the commit carrying this line, merge
 074817d on the branch · BASE = main 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 (`ci/mpinl/BASE`) · resolution hunks: NONE
 (`git merge --no-ff 5759cce` merged with no conflict; main did not touch `scripts/lawpack.mjs` or `package.json`, so
