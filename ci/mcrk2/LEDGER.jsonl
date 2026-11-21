@@ -1,0 +1,20 @@
+{"ts":"2026-11-21T07:48:32Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mcrk2-spec FETCH_HEAD","last_line":"7bf008b unit mclk ... land branch on land/mdtl2 4d582d5"}
+{"ts":"2026-11-21T07:52:00Z","act":"measure","cmd":"node scripts/forge_session.mjs selftest","last_line":"forge_session selftest: 243 passed, 0 failed"}
+{"ts":"2026-11-21T07:52:30Z","act":"measure","cmd":"node scripts/notes_compiler.mjs selftest","last_line":"notes_compiler selftest: 48 passed, 0 failed"}
+{"ts":"2026-11-21T07:54:00Z","act":"measure","cmd":"node ci/witness/mcrk/witness_crack.mjs plants --tree . --base-tree <archive 7bf008b>","last_line":"PLANTS mcrk · 12 of 12 plant(s) as expected"}
+{"ts":"2026-11-21T07:56:00Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (no node_modules)","last_line":"organism_test: 150 passed, 8 failed · ruled 0 · UNRULED 8 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T07:58:00Z","act":"install","cmd":"npm ci --no-audit --no-fund","last_line":"npm notice"}
+{"ts":"2026-11-21T08:05:00Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 166 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T08:20:00Z","act":"write","cmd":"ci/mcrk2/MCRK2_SPEC.md","last_line":"spec written; no existing file edited"}
+{"ts":"2026-11-21T08:02:51.618Z","act":"read","cmd":"git fetch origin claude/mbank-build && git show FETCH_HEAD:scripts/forge_session.mjs | grep -n hisPrompt","last_line":"cfdf866 · hisPrompt at :661, crackRow call at :683 passes {since} only"}
+{"ts":"2026-11-21T08:02:51.618Z","act":"write","cmd":"ci/mcrk2/MCRK2_SPEC.md §11 ROW 1246 + F2/§10 amended","last_line":"row 1246 answered in the spec"}
+{"ts":"2026-11-21T08:40:24.569Z","act":"read","cmd":"git fetch origin claude/mbank-build && git show FETCH_HEAD:ci/mbank/PROOF.md | grep -n B17","last_line":"210022f · B17 CRACK: on main 7bf008b the crack verb writes the parallel session text as his words"}
+{"ts":"2026-11-21T08:40:24.569Z","act":"ci-read","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/65e32dd/check-runs","last_line":"4 runs queued (136782258941, 136782259174, 136782259185, 136782259262); 9d7291d runs cancelled by the newer push"}
+{"ts":"2026-11-21T08:40:24.569Z","act":"write","cmd":"ci/mcrk2/MCRK2_SPEC.md §11.3 row 1250","last_line":"crack path reads through study_scope.mjs readHisPrompt, named"}
+{"ts":"2026-11-21T13:57:02.422Z","act":"cut","cmd":"git fetch origin claude/mbank-build && git checkout -b claude/mcrk2-build f635d68b1bce300b58aa031ed49278b8bbe3e5a8","last_line":"claude/mbank-build tip = f635d68 (not moved past it)"}
+{"ts":"2026-11-21T13:57:02.422Z","act":"install","cmd":"npm ci --no-audit --no-fund","last_line":"npm notice"}
+{"ts":"2026-11-21T13:57:02.422Z","act":"measure-cut","cmd":"node scripts/forge_session.mjs selftest","last_line":"forge_session selftest: 244 passed, 0 failed"}
+{"ts":"2026-11-21T13:57:02.422Z","act":"measure-cut","cmd":"node scripts/notes_compiler.mjs selftest","last_line":"notes_compiler selftest: 48 passed, 0 failed"}
+{"ts":"2026-11-21T13:57:02.422Z","act":"measure-cut","cmd":"node scripts/teaching_gate.mjs selftest","last_line":"teaching_gate selftest: 130 passed, 0 failed"}
+{"ts":"2026-11-21T13:57:02.422Z","act":"measure-cut","cmd":"node scripts/teaching_audit.mjs selftest","last_line":"ALL CHECKS PASSED (153 passed, 0 failed)"}
+{"ts":"2026-11-21T13:57:02.422Z","act":"measure-cut","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
