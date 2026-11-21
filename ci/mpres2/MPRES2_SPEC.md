@@ -343,3 +343,93 @@ service or binds a port. The default lister on the laptop is NAMED NOT GUESSED (
   during a dead span; the cost of one process listing — measure: time `Get-CimInstance Win32_Process -Filter "Name='aw-qt.exe'"` there.
 
 CHECKPOINT · STOPPED at 2026-11-21T09:50Z · resume from: the architect's rulings on F1–F10, then a build seat (spec complete; nothing built).
+
+## 12. TWO MORE FACTS (runner M, 21 Nov 2026 15:15 IST, forks row 1251) — the held door, and slow vs dead
+
+### 12.1 THE DOOR IS HELD — and the re-seed is a landing step
+
+Fact (his laptop): the `self_repair` row `activitywatch` was RETIRED by its owner CLI (`registry.mjs retire`, `scripts/registry.mjs:39`)
+at 15:13 IST. At 7bf008b a retired row reads as absent (`presence.mjs:713`: `!row || row.retired` ⇒ `no self_repair row activitywatch`),
+so every dead span now writes `none` and starts nothing — the 14-launcher flap is held, by the registry, not by code.
+
+**The trap the landing must avoid (read at the cut):** `upsertRow` MERGES into the existing row — `{ ...old, ...stamped }`
+(`scripts/registry.mjs:480`). A `set` whose JSON omits `retired` leaves the old `retired: true` in place, and the door stays shut while
+the lander believes it re-seeded. The re-seed JSON must carry `"retired": false` explicitly.
+
+**The landing steps, in order** (the lander on his laptop; no cloud seat writes the registry):
+1. Land the build that carries §11's no-relaunch check (and, per F7, §2's change). **Never re-seed before it lands**: with the row live
+   and no running-launcher check, the next flap relaunches again (the 21 Nov mechanism, §11.2).
+2. Re-seed through the owner CLI, the retired row's own fields plus the un-retire:
+   `node scripts/registry.mjs set --table self_repair --json '{"subject":"activitywatch", …the retired row's artifact, verified_by,
+   report_anchor, witness, launcher, launcher_args…, "reversible":true, "retired":false}'` — the field VALUES are the retired row's,
+   read on his laptop (`rowOf("self_repair","activitywatch")`), never typed by a seat (NAMED NOT GUESSED).
+3. Verify by one read: `node -e` over `rowOf("self_repair","activitywatch")` shows `retired:false`, `reversible:true`, a `launcher`; and
+   the next dead pass's `sense` line reads `beside-running` (a launcher is running) — not `asked`, not `none`.
+
+Under §2's change the retired stretch is exactly the `none` case: each dead pass re-reads the door, so the first pass after step 2 sees
+the row — and §11's check (step 1) is what keeps that pass from starting a second launcher. **This makes §11 a precondition of §2's
+re-seed**, which settles F7 in favour of (B) or (A-with-§11), never §2 alone. Witness clause **R5 RESEED**: plant a retired row
+(`retired:true`) then a `set`-shaped merge that omits `retired` ⇒ `launcherDoor` still `none`; with `retired:false` ⇒ the door names the
+launcher; with a running launcher planted ⇒ `beside-running`, 0 asks. Base: the first two legs GREEN (guard on the merge law), the third
+RED (no check). Mutant: the running-launcher check removed.
+
+### 12.2 THE OPEN CAUSE — how a sense pass tells a slow or busy server from a dead one, before it reads "dead"
+
+The architect's reading: the long spans (13:09·19, 13:29·19, 14:05·21, 14:28·35 passes) fell during heavy local witness re-runs on the
+laptop — a busy machine, not a dead server. At 7bf008b the pass cannot tell:
+
+| file:line | what the pass has, and throws away |
+|---|---|
+| `presence.mjs:595` | the buckets leg, bounded by the code's own abort (its 4 s constant; a seat types none) |
+| `presence.mjs:598` | a buckets map with no `aw-watcher-window` key ⇒ `null` — the server ANSWERED |
+| `presence.mjs:600` | the events leg, the same abort bound |
+| `presence.mjs:602` | `catch { return null; }` — an abort (the server accepted, answered too slowly), a refused connection (nothing bound the port), and a non-JSON body all become the same `null` |
+| `presence.mjs:755` | `events === null` ⇒ dead pass, span opened, door asked |
+
+**The proposal: read the evidence the fetch already has, and add the launcher read, before "dead".** No new probe and no new port read:
+the fetch's own failure IS the port read — a refused connection means no process bound the port; an abort after the bound means
+something holds the port and did not answer in time.
+
+| the fetch's outcome (kept, not collapsed) | launcher running (§11 seam) | the pass reads | span / door |
+|---|---|---|---|
+| events returned | — | **alive** | as today |
+| abort on either leg (port held, no answer within the code's bound) | yes | **busy** — a named state, not dead | opens no dead span, asks nothing; `busy_since` carried like `dead_since` |
+| abort | no | **dead** (`dead_reason: abort, no launcher`) | dead span; the door may ask once |
+| refused (nothing bound the port) | yes | **dead beside a running launcher** — §11's named red | no launch (`beside-running`) |
+| refused | no | **dead** (`dead_reason: refused`) | dead span; the door asks once |
+| answered, no window bucket | — | **watcher absent** — the server is up, its window watcher is not | its own red; never an `aw-qt` relaunch (the launcher is running by construction) |
+| answered, body not JSON | — | **dead** (`dead_reason: bad-json`) | dead span |
+
+What this changes in code (a build, not this seat): `fetchAwEvents` returns `{ events, reason }` (reason ∈ `abort` · `refused` ·
+`no-window-bucket` · `bad-json`, read from the error's `name` / `cause.code`); `sense` (`:755`) branches on the table; `inputSnapshot`
+gains a `busy` state that neither opens nor resets a dead span (fork F12); `senses.mjs:63-68` maps `busy` and `watcher absent` to their
+own evidence. The architect's slow-server reading then becomes MEASURABLE from the snapshot: a span is either `busy` passes or `dead`
+ones, by name.
+
+Witness clauses (seams only — `fetchFn` throws an `AbortError` / a `TypeError` with `cause.code: "ECONNREFUSED"` / returns a map with
+no window key / returns a non-JSON body; `launcherRunning` planted; no port bound, no server named, nothing listed):
+
+| id | plant | base | build | mutant |
+|---|---|---|---|---|
+| **S1 BUSY-NOT-DEAD** | abort ×N passes, launcher running | **RED** dead span, `asked` | GREEN `busy`, 0 asks, no `dead_since` | map abort to dead |
+| **S2 REFUSED-BESIDE** | refused, launcher running | **RED** `asked` | GREEN `beside-running`, 0 asks | drop the launcher read on the refused branch |
+| **S3 WATCHER-ABSENT** | buckets with no window key | **RED** dead, `asked` (an `aw-qt` relaunch for a watcher fault) | GREEN `watcher absent`, 0 asks | map no-window-bucket to dead |
+| **S4 BUSY-THEN-LIVE** | abort, abort, events | **RED** (a dead span opened and a launcher asked) | GREEN `busy_since` cleared, no dead span ever | carry `busy` into `dead_since` |
+| **S5 DEAD-STILL-DEAD** | refused ×2, no launcher | GREEN (guard) | GREEN dead, 1 ask | treat refused as busy |
+
+New forks:
+- **F11 · how `busy` reads on the state line.** (A) a named amber (`presence busy since …`) on the senses tail; (B) silent until it
+  becomes dead (F12). **Recommend A** — L10, verifiable in one line; a busy laptop during his witness runs is a fact he should see.
+- **F12 · does a long busy stretch ever become dead?** (A) never — busy is busy until it answers or refuses; (B) after a stretch the
+  architect rules. **Recommend A**: an abort means the port is held, and a relaunch beside it is exactly the 21 Nov harm; a number here
+  would be a typed budget. Decided by: the laptop count of how many abort-only spans ever ended in a refusal (below).
+- **F13 · the launcher read on every failed fetch.** It is a process listing (or a pid-file check, F10) per non-alive pass. (A) every
+  non-alive pass; (B) only on abort / refused. **Recommend B** (the table needs it nowhere else).
+
+NAMED NOT GUESSED (laptop only, measure nothing live from here): which of abort / refused / no-window-bucket the 14 spans were — not
+recoverable from `presence.log` at 7bf008b (the reason is thrown away at `:602`); after the build, the snapshot's `dead_reason` and
+`busy_since` answer it for the next span. Whether the heavy witness runs coincide with the long spans by timestamp — measure: the
+runner's witness-run start/end times against the four spans' pass rows. The retired row's field values for step 2 — measure:
+`rowOf("self_repair","activitywatch")` on his laptop.
+
+CHECKPOINT · STOPPED at 2026-11-21T10:05Z · resume from: the architect's rulings on F1–F13 (F7 now constrained by §12.1: §11 before any re-seed), then a build seat (spec complete; nothing built).
