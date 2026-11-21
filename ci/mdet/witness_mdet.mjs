@@ -4,7 +4,10 @@
 // USAGE: node ci/mdet/witness_mdet.mjs --org <build checkout> --base-org <base checkout> [--bound-org <parent checkout>]
 //   --bound-org (forks row 1200 (2), THE BOUND CLASS): after a main-moved merge the CLAUSES are judged against --base-org
 //   (the tree of ci/mdet/BASE) and the BOUND against the parent named here; absent, the bound reads --base-org.
-//   An org is a git checkout (the witness CLONES its HEAD with core.autocrlf=false, so a Windows checkout plants LF bytes
+//   An org is a git checkout (~~the witness CLONES its HEAD with core.autocrlf=false, so a Windows checkout plants LF bytes
+//   exactly as committed~~ — struck by forks row 1226 (2): false under the repo's `* text=auto`, where core.eol defaults to
+//   native and a Windows clone wrote CRLF, so C4 read judged 0 / moved 140; the witness CLONES its HEAD with
+//   core.autocrlf=false AND core.eol=lf, on the command and in the clone's config, so a Windows checkout plants LF bytes
 //   exactly as committed) or a plain tree (the suite's WITNESSES member hands LF work trees with no .git: the witness COPIES
 //   it, node_modules and .git left out). It never runs in, writes to or reads the state of either org: BOUND reads
 //   `git ls-files -s` of two checkouts, or the bytes of two plain trees. Every plant is written under os.tmpdir().
@@ -107,7 +110,9 @@ function isRepo(d) {
  *  node_modules (the org's, else <modules>) @returns {string} the planted dir */
 export function plantTree(org, into, modules = null) {
   const dir = join(into, "tree"), src = resolve(org);
-  if (isRepo(src)) execFileSync("git", ["-c", "core.autocrlf=false", "clone", "-q", "-c", "core.autocrlf=false", src, dir], { stdio: ["ignore", "pipe", "pipe"] });
+  // forks row 1226 (2): core.eol=lf beside core.autocrlf=false, on the command and in the clone's own config — under the repo's
+  // `* text=auto` a Windows clone with no eol setting writes CRLF (core.eol defaults to native), and every organ blob read moved
+  if (isRepo(src)) execFileSync("git", ["-c", "core.autocrlf=false", "-c", "core.eol=lf", "clone", "-q", "-c", "core.autocrlf=false", "-c", "core.eol=lf", src, dir], { stdio: ["ignore", "pipe", "pipe"] });
   else cpSync(src, dir, { recursive: true, filter: (s) => { const r = relative(src, s).split(sep)[0]; return r !== "node_modules" && r !== ".git"; } });
   const mods = [join(src, "node_modules"), modules].find((p) => p && existsSync(p));
   if (mods) symlinkSync(realpathSync(mods), join(dir, "node_modules"), process.platform === "win32" ? "junction" : "dir");
