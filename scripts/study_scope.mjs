@@ -214,6 +214,58 @@ export async function unboundMain() {
 // kind: answer › confusion › system › question › other (a system flag riding an answer or a confusion
 // does not make the message a park).
 const GUT_LEAD = /^\s*(?:gut[\s-]*word\s*(?:is|=|:|-|—)?\s*)?(pakka|pakaa|pkka|shayad|shaya|shyad|shayd|pata\s*nahi|pata\s*nhi|knew|shaky|guessed)\b\s*[—–\-:,.;!]/i;
+// unit mbank (forks row 1230, mbank-7 a) — his ANSWER, the GUT_LEAD prefix the classifier matched stripped off: the
+// gut-word is his calibration, not a hedge, so the bank's hedge meter counts over this (register.mjs is not touched).
+export const answerOf = (text) => { const s = String(text || ""); const m = GUT_LEAD.exec(s); return m ? s.slice(m[0].length) : s; };
+// ── THE ONE DOOR TO HIS WORDS (unit mbank, forks rows 1189 (1) / 1194 (2) / 1230 / 1250, mbank-1 d) ───────────────────
+// The prompt record teaching_audit.mjs writes at UserPromptSubmit (its single writer) is read HERE and nowhere new:
+// forge_session.mjs crackRow and gaffer_brain.mjs capture's code door both take his words through hisPrompt. PURE: the caller
+// reads the file (readHisPrompt is that one read). Every check beyond `absent` is opted into by the caller, so the crack
+// row keeps exactly the refusals it had (`since` only) and the bank adds its own (row 1230 mbank-6 a: no turn id = refused).
+//   since       an ISO floor: a prompt before it (or a floor that does not parse) is "before"
+//   sessionId   a Claude session id: a prompt written by another session is "other-session"
+//   fresh       true: a prompt its turn's Stop already consumed is "consumed" (it is not THIS turn's)
+//   needTurn    true: a prompt with no turn_id (written before this unit) is "no-turn-id"
+/** @returns {{ok:true,text:string,at:string,session_id:string|null,turn_id:string|null}|{ok:false,reason:string,why:string}} */
+export function hisPrompt(auditLast, { since = null, sessionId = null, fresh = false, needTurn = false } = {}) {
+  const p = auditLast && typeof auditLast === "object" ? auditLast.prompt : null;
+  const at = p && typeof p === "object" && typeof p.at === "string" ? Date.parse(p.at) : NaN;
+  if (!p || typeof p !== "object" || typeof p.text !== "string" || !p.text.trim() || !Number.isFinite(at))
+    return { ok: false, reason: "absent", why: "the UserPromptSubmit record is absent" };
+  if (since !== null) { const f = Date.parse(String(since)); if (!Number.isFinite(f) || at < f) return { ok: false, reason: "before", why: "the UserPromptSubmit record is from before this session" }; }
+  if (fresh && p.consumed_at) return { ok: false, reason: "consumed", why: "the prompt record was already consumed by its turn's Stop — it is not this turn's message" };
+  if (sessionId && p.session_id !== sessionId) return { ok: false, reason: "other-session", why: "the prompt record was written by another Claude session" };
+  const turn = typeof p.turn_id === "string" && p.turn_id ? p.turn_id : null;
+  if (needTurn && !turn) return { ok: false, reason: "no-turn-id", why: "the prompt record carries no turn_id (written before unit mbank) — ask again, one turn" };
+  return { ok: true, text: p.text, at: p.at, session_id: typeof p.session_id === "string" ? p.session_id : null, turn_id: turn };
+}
+export const AUDIT_LAST_PATH = join(STATE_DIR, "teaching_audit_last.json");   // READ-ONLY here; owned by teaching_audit.mjs
+const auditLastOf = (path = AUDIT_LAST_PATH) => { try { const j = JSON.parse(readFileSync(path, "utf8")); return j && typeof j === "object" && !Array.isArray(j) ? j : null; } catch { return null; } };
+/** ownRecordOf — THIS session's own prompt record (never a stub, never another session's), or null. */
+export function ownRecordOf(last, sessionId) {
+  const m = sessionId && last && last.prompts_by_session && typeof last.prompts_by_session === "object" ? last.prompts_by_session : null;
+  const e = m ? m[sessionId] : null;
+  return e && typeof e === "object" && !e.stub && typeof e.text === "string" ? e : null;
+}
+/** ownStopOf (row 1250, mbank-9) — THIS session's own last Stop: {at, kinds} from its consumed record or its stub, or the
+ *  previous Stop its open record carries forward; null when the session has no record. None of his words. */
+export function ownStopOf(last, sessionId) {
+  const m = sessionId && last && last.prompts_by_session && typeof last.prompts_by_session === "object" ? last.prompts_by_session : null;
+  const e = m ? m[sessionId] : null;
+  if (!e || typeof e !== "object") return null;
+  const at = e.stub || e.consumed_at ? (e.stop_at || e.consumed_at || null) : (e.prev_stop_at || null);
+  const kinds = e.stub || e.consumed_at ? e.stop_kinds : e.prev_stop_kinds;
+  return at ? { at, kinds: Array.isArray(kinds) ? kinds : null } : null;
+}
+/** readHisPrompt — the door's one file read (gaffer_brain imports it statically, never a second reader).
+ *  Unit mbank (row 1246): with a sessionId it reads THAT session's own record (`prompts_by_session[sessionId]`, written by
+ *  teaching_audit.mjs), never the shared `prompt` slot every session overwrites; without one it reads the shared slot and
+ *  the caller says so (`session_checked:false`). */
+export const readHisPrompt = (opts = {}, path = AUDIT_LAST_PATH) => {
+  const last = auditLastOf(path);
+  if (!opts.sessionId) return hisPrompt(last, opts);
+  return hisPrompt({ prompt: ownRecordOf(last, opts.sessionId) }, opts);
+};
 const GUT_INLINE = /\bgut[\s-]*word\s*(?:is|=|:|-|—)\s*(pakka|shayad|pata\s*nahi|knew|shaky|guessed)\b/i;
 // after a sentence break: 9e29b88c t3 "gut word was in enlgish right? knew - sequence length will be 3"
 const GUT_AFTER_BREAK = /(?:[?.!]\s+)(pakka|shayad|pata\s*nahi|knew|shaky|guessed)\s*[—–\-:]\s*\S/i;
