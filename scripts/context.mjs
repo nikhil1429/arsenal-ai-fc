@@ -117,7 +117,7 @@ const RESIDENT_MATCH = "context.mjs daemon";                        // the full 
 // ROW 897 (s893, 14 Nov 2026) — SUPERSEDED, kept as history: `const WORKER_MATCH = "context.mjs
 // daemon-worker"` is gone with the probe it fed. The lane now reads the stamp, and only the WORKER
 // writes the stamp (stampPoll in `daemon-worker`), so its pid and boot_ts are the worker's by birth.
-const AW = process.env.ARSENAL_AW || "http://localhost:5600";
+const AW = process.env.AW_API_BASE || process.env.ARSENAL_AW || "http://localhost:5600";   // unit mpres F7 A: ONE name, AW_API_BASE; ARSENAL_AW (this organ's old name) read as an alias
 const THALAMUS = process.env.ARSENAL_THALAMUS || "http://127.0.0.1:4113";
 const FLOOR_MS = 60000;                                             // resident poll cadence (~60s floor)
 // ROW 880 (2) F1 — the bridge's OWN cadence, exported, and ONE freshness rule derived from it. The
