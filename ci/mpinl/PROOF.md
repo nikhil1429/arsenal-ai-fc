@@ -8,7 +8,7 @@ because row 1172 keyed BASE to the main merged) · conflicted files: NONE (main 
   depth budget (a cap of 8). Fix: the branch now spends depth + 3 (join, filter, split). Then the BASELINE unresolved key was re-read
   from the tree, 77 → 79 (row 1160 (2)). The 5759cce tree still reads 39 / 77 with the fix.
 - `node scripts/lawpack.mjs gate` reads `lawpack: GREEN — no law's finding count rose, and every rule is on disk` on both 7bf008b
-  and the merged tree. `node scripts/lawpack.mjs selftest`: `89 passed, 0 failed`. The ci census reads 0 hits in 88 files, so the
+  and the merged tree. `node scripts/lawpack.mjs selftest` (21 Nov 2026): `89 passed, 0 failed`. The ci census reads 0 hits in 88 files, so the
   walk stays scripts+hooks.
 - Witness BASE 7bf008b: `RED MPINL · W1, W1u, W2, W2u, W3, W4, W5, W6, F7` · witness MERGED: `GREEN MPINL the own-literal pin class
   held by a count, its baseline the tree's own read · 11 clause(s)`.
