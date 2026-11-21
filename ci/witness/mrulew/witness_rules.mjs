@@ -242,6 +242,8 @@ async function main() {
   try {
     const p = await plants(ORG, root);
     for (const l of p.lines) console.log(l);
+    // unit mmeter's member (scripts/organism_test.mjs clauseWitnesses) reads this line: k of n plant cases as expected
+    console.log(`PLANTS mrulew · ${(p.n || 0) - ((p.bad || []).length)} of ${p.n || 0} plant(s) as expected`);
     if (!judge) {
       console.log(p.ok ? `GREEN MRULEW plants · ${p.n} case(s) both ways · ${p.seed} seed rule(s) witnessed (exit 0)` : `RED MRULEW · PLANTS ${(p.bad || []).join(" ") || "UNREAD"}`);
       process.exitCode = p.ok ? 0 : 1;

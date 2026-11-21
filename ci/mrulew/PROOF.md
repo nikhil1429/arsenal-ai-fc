@@ -112,3 +112,15 @@ his word 270 (19 Nov 2026); every step after it is above.
 - Mutants on the merged tree: `run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN`.
 
 CHECKPOINT · STOPPED at 2026-11-20T01:29:11Z · merged tip = the commit carrying this line (its parents b703c70 and 5759cce) · base 5759cce · resolution hunks none · witness GREEN MRULEW (exit 0) · mutants 4 of 4 · control GREEN · resume from: nothing owed, awaiting the architect
+
+## 9 · Merge of main 7bf008b (forks rows 1233 (2) / 1236, 21 Nov 2026)
+
+- `git merge --no-edit origin/main` (7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f) into `b92a03f` with no conflict; no conflicted file. `ci/mrulew/BASE`
+  moves to 7bf008b, as row 1172 keyed it to the main merged in (BOUND reads BASE..HEAD).
+- The landed suite member of unit mmeter (`scripts/organism_test.mjs` clauseWitnesses) runs every `ci/witness/<unit>/witness_*.mjs plants` and
+  requires a `PLANTS <unit> · k of n plant(s) as expected` line: the witness's plants mode now prints it (k, n counted from its own cases).
+  No suite edit by this unit. The witness derives no day from the clock, so mclk's planter instant does not reach it.
+- Witness: `GREEN MRULEW rule witnesses (16 seed rule(s): base 1 → head 0) · plants both ways · 4 clause(s) (exit 0)` · plants
+  `PLANTS mrulew · 7 of 7 plant(s) as expected` · mutants `run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN`.
+
+CHECKPOINT · STOPPED at 2026-11-21T07:35:06Z · merge of main 7bf008b = the parent of the commit carrying this line · base 7bf008b · conflicted files none · witness GREEN MRULEW (exit 0) · mutants 4 of 4 · control GREEN · neutral legs of this tip: read after the push and named in the final message (and the next push's proof)
