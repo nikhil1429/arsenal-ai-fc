@@ -28,3 +28,8 @@
 {"ts": "2026-11-20T02:17:00Z", "act": "witness-base", "cmd": "node ci/mq2/witness/witness_mq2.mjs --org <base tree> --base-org <base tree>", "last_line": "RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9"}
 {"ts": "2026-11-20T02:18:00Z", "act": "effort-receipt", "cmd": "node campaign-2026-09/tools/effort_receipt.mjs --fleet mq2b --seat 00 --model claude-opus-5-5", "last_line": "Error: Cannot find module /home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs (exit 1)"}
 {"ts":"2026-11-20T03:26:29Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/ae2b32d/check-runs","last_line":"run 44659072079 · 136032500823 npm test · node 22 success · 136032500577 npm test · node 24 success (92be65c run 44658184054 cancelled, superseded)"}
+{"ts": "2026-11-21T07:30:00Z", "act": "merge", "cmd": "git fetch origin main; git merge FETCH_HEAD", "last_line": "a0b39c6 (parents b6cf269 7bf008b) · no conflict"}
+{"ts": "2026-11-21T07:31:00Z", "act": "ci", "cmd": "curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/b6cf269/check-runs", "last_line": "run 44667737438 · node 22 success · node 24 success"}
+{"ts": "2026-11-21T07:50:00Z", "act": "witness-build", "cmd": "node ci/mq2/witness/witness_mq2.mjs --org . --base-org <7bf008b tree>", "last_line": "RED MQ2 · A9"}
+{"ts": "2026-11-21T07:51:00Z", "act": "witness-base", "cmd": "node ci/mq2/witness/witness_mq2.mjs --org <7bf008b tree> --base-org <7bf008b tree>", "last_line": "RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9"}
+{"ts": "2026-11-21T07:55:00Z", "act": "mutants", "cmd": "node ci/mq2/run_mutants_mq2.mjs --org . --base-org <7bf008b tree>", "last_line": "run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control RED (A9)"}

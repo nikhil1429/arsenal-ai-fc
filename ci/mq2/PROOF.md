@@ -225,3 +225,35 @@ final message.
 `Error: Cannot find module '/home/user/arsenal-ai-fc/campaign-2026-09/tools/effort_receipt.mjs'` (exit 1). This
 repository does not carry `campaign-2026-09/`, so nothing was written under it. It is run once more as the seat's
 last step, and its result is in the final message.
+
+## 10 · RESUME · the merge of main 7bf008b (forks rows 1233 (2) / 1236, 2026-11-21)
+
+- `git fetch origin main` → `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f`; `git merge FETCH_HEAD` → merge commit
+  **a0b39c6** (parents b6cf269 · 7bf008b). A merge, never a rebase, never a force push.
+- **Conflicted files: none.** Main's blobs for `scripts/thalamus.mjs`, `scripts/gate_tune.mjs` and
+  `scripts/watchman.mjs` did not move between 5759cce and 7bf008b, so git took this unit's bytes for those three and
+  main's bytes for everything else. That includes `scripts/organism_test.mjs`, `package.json` and every `ci/` path
+  main landed. `git diff 7bf008b a0b39c6 --stat` lists only the three named scripts and `ci/mq2/**`.
+- **`ci/mq2/BASE` is left at 5759cce, on purpose.** The brief keys BASE to "the sha you cut from", not to the main
+  merged in. The witness's base tree for this re-run is 7bf008b (`git archive 7bf008b`, state left out, a git tree
+  with core.autocrlf=false).
+- **The clock (mclk on main):** no witness clause derives a day boundary. A2 plants an apply on 1970-01-01, so its
+  window and age never cross a midnight, and its salience rows are judged only as `>= applied_on`. A midnight run
+  cannot flip it.
+- **On the merged tree**, 2026-11-21:
+
+```
+node ci/mq2/witness/witness_mq2.mjs --org . --base-org <7bf008b tree>
+A1-A7 base RED · build GREEN → held · A8 base vs build GREEN — law pack rose: none · unresolved sinks 2112 → 2108
+A9 build RED (free race tiers+wake: LOST wake · tiers+adjudicator: LOST tiers · wake+adjudicator: LOST wake · forced overlap: holder refused out loud)
+BOUND GREEN — 10 path(s) differ · beyond the named files: none · LAST GREEN — 10 child process(es) started, 0 alive
+RED MQ2 · A9
+node ci/mq2/witness/witness_mq2.mjs --org <7bf008b tree> --base-org <7bf008b tree>
+RED MQ2 · A1, A2, A3, A4, A5, A6, A7, A9
+node ci/mq2/run_mutants_mq2.mjs --org . --base-org <7bf008b tree>
+run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control RED (A9)
+```
+  The law pack on the merged tree: `jugad-literal-subject-list 90` (main's own RED at 5759cce is gone on 7bf008b),
+  every other count as §4, none raised. The one open RED is still A9, which is fork F9 (§6).
+
+CHECKPOINT · MERGED main 7bf008b at a0b39c6 · witness RED MQ2 · A9 (F9) · mutants 8 of 8, control RED (A9) · legs of a0b39c6: run 44879636984 (npm test node 22 + node 24, hermetic twice node 22 + node 24) queued at 2026-11-21 · resume from: read those legs, then await the F9 ruling
