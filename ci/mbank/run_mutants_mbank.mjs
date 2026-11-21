@@ -20,7 +20,7 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > -1 ? process.
 const ORG = arg("--org") && resolve(arg("--org")), BASE = arg("--base-org") && resolve(arg("--base-org"));
 if (!ORG || !BASE) { console.log("run_mutants: usage --org <dir> --base-org <dir>"); process.exit(1); }
 const WITNESS = join(dirname(fileURLToPath(import.meta.url)), "witness_mbank.mjs");
-const GB = "scripts/gaffer_brain.mjs", FS = "scripts/forge_session.mjs", SS = "scripts/study_scope.mjs", TB = "scripts/teaching_bar.mjs", NC = "scripts/notes_compiler.mjs", TA = "scripts/teaching_audit.mjs";
+const OT = "scripts/organism_test.mjs", GB = "scripts/gaffer_brain.mjs", FS = "scripts/forge_session.mjs", SS = "scripts/study_scope.mjs", TB = "scripts/teaching_bar.mjs", NC = "scripts/notes_compiler.mjs", TA = "scripts/teaching_audit.mjs";
 const ROOT = mkdtempSync(join(os.tmpdir(), "mutants-mbank-"));
 const DOOR = "  const spoken = said === undefined ? prompt.text : sliceOf(prompt.text, said);";
 const CODE = '    const codeDoor = said !== undefined || String(flag("surface") || "").trim().toLowerCase() === "code";';
@@ -36,6 +36,7 @@ const MUTANTS = [
   ["B8", "M8 route stdin through the door", GB, CODE, "    const codeDoor = true;"],
   ["B18", "M18 the clock reads the shared Stop again", FS, "  const own = sessionId ? ownStopOf(auditLast, sessionId) : null;", "  const own = null;"],
   ["B19", "M19 prevMomentKinds ignores his own Stop", TB, "  if (own && Array.isArray(own.kinds)) return own.kinds;", ""],
+  ["B20", "M20 the lane plants no prompt record", OT, "const bank = (...a) => { hisTurn(a); return", "const bank = (...a) => { return"],
   ["B9", "M9 a second reader of the record in gaffer_brain", GB, "export const spokenSrcOf =", 'export const secondReader = () => readFileSync(join(STATE_DIR, "teaching_audit_last.json"), "utf8");\nexport const spokenSrcOf ='],
   ["B10", "M10 drop the idempotence key", GB, "  if (fromPrompt && row.turn_id && Array.isArray(deps.prior)) {", "  if (false) {"],
   ["B11", "M11 rename spoken", GB, "    spoken: clip(said, 4000),", "    words_spoken: clip(said, 4000),"],
@@ -47,7 +48,7 @@ const MUTANTS = [
   ["B15", "M15 the door reads the shared slot again", SS, "  if (!opts.sessionId) return hisPrompt(last, opts);", "  return hisPrompt(last, opts);"],
 ];
 const copyOf = (into) => {
-  for (const p of ["scripts", "package.json", ".claude/skills"]) if (existsSync(join(ORG, p))) cpSync(join(ORG, p), join(into, p), { recursive: true });
+  for (const p of ["scripts", "package.json", ".claude/skills", "learning-layer"]) if (existsSync(join(ORG, p))) cpSync(join(ORG, p), join(into, p), { recursive: true });
   if (existsSync(join(ORG, "node_modules"))) symlinkSync(join(ORG, "node_modules"), join(into, "node_modules"), process.platform === "win32" ? "junction" : "dir");
 };
 const lastOf = (r) => String(r.stdout || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean).pop() || "";

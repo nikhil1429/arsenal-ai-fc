@@ -12,9 +12,17 @@
 // is read from this file's own repository when it is there (a seat run from a checkout), else from --org.
 //   B1 WORDS · B2 DRIFT · B3 ABSENT · B4 WHOLE · B5 GUT · B6 HEDGE · B7 TURN · B8 STDIN · B9 ONE DOOR · B10 ONCE ·
 //   B11 READERS · B12 MCRK · B13 STAMP · B14 MINT · B15 PARALLEL · B16 AUDIT · B17 CRACK · B18 CLOCK · B19 BANKLINE — the clause witness's own, one line each (its header names each plant)
+//   B20 LANE  (forks row 1265, mbank-10 a; a seat clause of THIS file, never of the clause witness, whose plants run in
+//             mf2's hermetic copies where a LIVE lane must not execute) on a COPY of each tree (scripts, learning-layer,
+//             package.json, its tracked dressing-room only, node_modules linked): `organism_test.mjs path` (the full profile,
+//             its own sandbox) reads `ok` on each of the NINE A3 asserts of the zero-tax lane, AND a typed `--said` with no
+//             prompt record is REFUSED at the code door on that same tree. RED on the old lane (6e5dca6: the nine FAIL), RED
+//             on a base whose door banks a typed copy; GREEN on the build. The lane's own mirror.mjs step reaches the network
+//             exactly as the suite's full profile does; this clause adds no port, no service, no POST
 //   BOUND     only the named files differ between --base-org and --org (scripts/forge_session.mjs · scripts/teaching_audit.mjs ·
 //             scripts/gaffer_brain.mjs · scripts/study_scope.mjs · scripts/teaching_bar.mjs · scripts/learn_digest.mjs ·
-//             scripts/teaching_gate.mjs · scripts/notes_compiler.mjs · scripts/intent.mjs · .claude/skills/forge/SKILL.md ·
+//             scripts/teaching_gate.mjs · scripts/notes_compiler.mjs · scripts/intent.mjs · scripts/organism_test.mjs (the A3
+//             block of the path lane only, row 1265) · .claude/skills/forge/SKILL.md ·
 //             .claude/skills/forge/REFERENCE.md · .claude/skills/learn/REFERENCE.md · ci/witness/mbank/ · ci/mbank/), by text,
 //             CRLF folded
 //   LAST      no node process naming this run's temp dir survives
@@ -24,7 +32,7 @@
 // planted here (a repo the caller plants for --org / --base-org is made with core.autocrlf=false).
 // LAST LINE: GREEN MBANK <what> · <n> clause(s) (exit 0) or RED MBANK · <clauses> (exit 1)
 // ============================================================================
-import { mkdtempSync, readFileSync, existsSync, rmSync, readdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, existsSync, rmSync, readdirSync, mkdirSync, cpSync, symlinkSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { spawnSync, execFileSync } from "node:child_process";
@@ -36,7 +44,7 @@ const ORG = resolve(arg("--org") || "."), BASE = arg("--base-org") ? resolve(arg
 const ONLY = arg("--only") ? arg("--only").split(",").map((s) => s.trim()).filter(Boolean) : null;
 const UNIT = "MBANK", HERE = dirname(fileURLToPath(import.meta.url));
 const NAMED = (f) => ["scripts/forge_session.mjs", "scripts/teaching_audit.mjs", "scripts/gaffer_brain.mjs", "scripts/study_scope.mjs",
-  "scripts/teaching_bar.mjs", "scripts/learn_digest.mjs", "scripts/teaching_gate.mjs", "scripts/notes_compiler.mjs", "scripts/intent.mjs",
+  "scripts/teaching_bar.mjs", "scripts/learn_digest.mjs", "scripts/teaching_gate.mjs", "scripts/notes_compiler.mjs", "scripts/intent.mjs", "scripts/organism_test.mjs",
   ".claude/skills/forge/SKILL.md", ".claude/skills/forge/REFERENCE.md", ".claude/skills/learn/REFERENCE.md"].includes(f) || /^ci\/(witness\/mbank|mbank)\//.test(f);
 const TMP = mkdtempSync(join(tmpdir(), "mbank-witness-"));
 const results = [];
@@ -63,6 +71,49 @@ else if (want.length) {
     if (!b) { record(id, false, `not reported on --base-org (${base.tail.slice(0, 120)})`); continue; }
     record(id, h.ok && !b.ok, `org ${h.ok ? "GREEN" : "RED"} · base ${b.ok ? "GREEN (a pass-through: the clause proves nothing)" : "RED"}${h.ok ? "" : ` · ${h.why.slice(0, 160)}`}`);
   }
+}
+
+// ── B20 LANE ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+const NINE = ["A3 · ONE command banks an answer from a Code session", "A3 · a `--surface code` bank with NO axis is refused AT THE BANK DOOR",
+  "A3 · the axis closes on his Bolo row + the interview line", "A3 · STEP 10 is STILL refused while the axes he closed were never GRILLED",
+  "A3 · a jirah row nobody JUDGED is a question asked, not a grade", "A3 · STEP 10 opens once every done axis carries a JUDGED jirah row",
+  "A3 · `close` refuses while banked answers carry no verdict", "A3 · once every banked answer has a verdict the close goes through",
+  "A3 · a bypassed gate costs the session its method_clean"];
+const laneEnv = () => { const e = { ...process.env }; for (const k of Object.keys(e)) if (/^ARSENAL_/i.test(k) || k === "CLAUDE_CODE_SESSION_ID" || k === "ORGANISM_TEST_PROFILE") delete e[k];
+  e.TMPDIR = e.TEMP = e.TMP = TMP; return e; };
+let laneSeq = 0;
+function laneCopy(tree) {
+  const d = join(TMP, `lane-${++laneSeq}`); mkdirSync(d, { recursive: true });
+  for (const p of ["scripts", "learning-layer", "package.json"]) if (existsSync(join(tree, p))) cpSync(join(tree, p), join(d, p), { recursive: true });
+  // his state is never copied: a git work tree gives only its TRACKED dressing-room files; an exported tree is tracked files only
+  if (existsSync(join(tree, ".git"))) {
+    const ls = spawnSync("git", ["-C", tree, "ls-files", "-z", "dressing-room"], { encoding: "utf8", windowsHide: true });
+    for (const f of String(ls.stdout || "").split("\0").filter(Boolean)) { mkdirSync(dirname(join(d, f)), { recursive: true }); cpSync(join(tree, f), join(d, f)); }
+  } else if (existsSync(join(tree, "dressing-room"))) cpSync(join(tree, "dressing-room"), join(d, "dressing-room"), { recursive: true });
+  const nm = [join(tree, "node_modules"), join(HERE, "..", "..", "node_modules")].find((x) => existsSync(x));
+  if (nm) symlinkSync(nm, join(d, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+  return d;
+}
+function lane(tree) {
+  const d = laneCopy(tree);
+  const r = spawnSync(process.execPath, [join(d, "scripts", "organism_test.mjs"), "path"], { cwd: d, env: laneEnv(), encoding: "utf8", windowsHide: true });
+  const L = String(r.stdout || "").split(/\r?\n/);
+  const nine = NINE.map((n) => ({ n, ok: L.some((l) => l.startsWith(`  ok   ${n}`)) }));
+  // the door on the same tree, typed copy, no record: refused, nothing banked
+  const st = join(d, "dressing-room", "state"); mkdirSync(st, { recursive: true });
+  for (const f of ["teaching_audit_last.json", "gaffer_grade_queue.jsonl"]) rmSync(join(st, f), { force: true });
+  const t = spawnSync(process.execPath, [join(d, "scripts", "gaffer_brain.mjs"), "capture", "voice_rep", "tokenization:a", "--axis", "a", "--gut", "knew",
+    "--asked", "Pehla merge kaunsa pair hota hai?", "--said", "a typed copy of his answer", "--surface", "code"], { cwd: d, env: laneEnv(), input: "", encoding: "utf8", windowsHide: true });
+  const closed = t.status === 1 && !existsSync(join(st, "gaffer_grade_queue.jsonl"));
+  return { nine, closed, head: L.filter((l) => l.startsWith("organism_test:")).pop() || `(no headline; exit ${r.status})` };
+}
+if (!ONLY || ONLY.includes("B20")) {
+  const h = lane(ORG), b = BASE ? lane(BASE) : null;
+  const hOk = h.nine.every((x) => x.ok) && h.closed, bOk = b ? b.nine.every((x) => x.ok) && b.closed : null;
+  const fails = h.nine.filter((x) => !x.ok).map((x) => x.n.slice(5, 45));
+  record("B20", hOk && (b ? !bOk : true), `org: nine ok ${h.nine.filter((x) => x.ok).length}/9 · typed copy refused ${h.closed} · ${h.head}`
+    + (b ? ` | base: nine ok ${b.nine.filter((x) => x.ok).length}/9 · typed copy refused ${b.closed}${bOk ? " (a pass-through)" : ""}` : " | base leg NOT RUN")
+    + (fails.length ? ` · org FAIL: ${fails.join(" / ")}` : ""));
 }
 
 const walk = (root, dir = "", o = new Map()) => {
