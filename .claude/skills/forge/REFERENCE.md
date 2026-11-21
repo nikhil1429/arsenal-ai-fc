@@ -81,7 +81,7 @@ if no drills, read `dressing-room/state/cards.json` for what's due).
 
 `scripts/forge_session.mjs` is the sole writer of `state/forge_session.json`, and a
 `UserPromptSubmit` hook re-injects the contract **every turn**. You MUST drive it:
-**`crack` (unit mcrk):** in the turn you write the ```diff for his broken answer, run `node scripts/forge_session.mjs crack` (no args) — it is the SOLE WRITER of `state/cracks.jsonl` (his words of that turn verbatim, read from the prompt record; refused when absent, never typed by you).
+**`crack` (unit mcrk):** in the turn you write the ```diff for his broken answer, run `node scripts/forge_session.mjs crack` (no args) — it is the SOLE WRITER of `state/cracks.jsonl` (his words of that turn verbatim, read from the prompt record; refused when absent, never typed by you). Declare the moment (and `axis <x> now`) BEFORE his answer: an undeclared moment, or no axis ON, still writes his words and reds on you, the teacher, by name (unit mcrk2, row 1258 F7 B).
 *(precision added 10 Aug 2026 — both halves re-verified true, and one thing was missing. It is
 sole writer of **two** files, not one: `forge_session.json` (live pacer state) AND
 `forge_sessions.jsonl` (the append-only history `close` writes) — its own header says so,

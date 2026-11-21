@@ -31,8 +31,10 @@
 //                member drops it like BOUND
 //   K2c BASEFILE a session file written by the BASE code (start · step 3 · axis c now · pointer) reads under --tree to
 //                the same `status` as under the base, and `contract` = the base's lines with the one crack carrier added
-//   K3 REFUSE    (a) no prompt record (b) his prompt before the session's only moment (c) no axis ON (d) a stale session
-//                (e) a closed session: each exits 1 with its own named line and no cracks.jsonl
+//   K3 REFUSE    (a) no prompt record (d) a stale session (e) a closed session: each exits 1 with its own named line and no
+//                cracks.jsonl. NARROWED IN PLACE by forks row 1243 (1) / row 1258 F6 A: legs (b) his prompt before the
+//                session's only moment and (c) no axis ON are INVERTED by ruling — they now WRITE his words with the gap
+//                named; their inverted assertions live in ci/witness/mcrk2/witness_crack_gap.mjs (G2 / G3), never skipped
 //   K3b ONCE     `crack` twice on one prompt: the second says `already written <id>`, exit 0, and the file holds 1 row
 //   K4 MOMENT    axis b with pehle_guess · check_q · check_q (refused) · jirah, then axis c with pehle_guess · check_q ·
 //                check_q (refused): the row's moment is check_q and moment_at is the LAST NON-refused entry on axis c
@@ -72,7 +74,10 @@ for (const tool of ["claude", "gemini"]) {
   writeFileSync(join(SHIM, tool), "#!/bin/sh\necho \"REFUSED — no live model call in a witness (unit mcrk)\" >&2\nexit 1\n", { mode: 0o755 });
   writeFileSync(join(SHIM, `${tool}.cmd`), "@echo REFUSED — no live model call in a witness (unit mcrk) 1>&2\r\n@exit /b 1\r\n");
 }
-const ENV = (() => { const e = { ...process.env }; const pk = Object.keys(e).find((k) => k.toUpperCase() === "PATH") || "PATH"; e[pk] = `${SHIM}${delimiter}${e[pk] || ""}`; return e; })();
+// unit mcrk2 (forks row 1258 F2 C; FORK mcrk2-F6w in ci/mcrk2/PROOF.md): the crack verb now reads his words through
+// readHisPrompt with the CALLING session's id, so the seat's own CLAUDE_CODE_SESSION_ID must never reach a plant whose prompt
+// record was written by "sess-witness" — the child has no session id, the shape of the neutral machine
+const ENV = (() => { const e = { ...process.env }; delete e.CLAUDE_CODE_SESSION_ID; const pk = Object.keys(e).find((k) => k.toUpperCase() === "PATH") || "PATH"; e[pk] = `${SHIM}${delimiter}${e[pk] || ""}`; return e; })();
 const NM = [TREE, join(HERE, "..", "..", "..")].map((t) => join(t, "node_modules")).find((p) => existsSync(p)) || null;
 const text = (p) => { try { return readFileSync(p, "utf8").replace(/^\uFEFF/, ""); } catch { return null; } };
 const sha = (p) => (existsSync(p) ? createHash("sha256").update(readFileSync(p)).digest("hex") : "absent");
@@ -173,15 +178,11 @@ await clause("K2c", () => {
 });
 
 await clause("K3", () => {
+  // forks row 1243 (1) / row 1258 F6 A: (b) and (c) are no longer refusals — their inverted legs are mcrk2's G2 / G3
   const cases = [];
   const expect = (name, p, re) => { const r = p.run("crack"); const ok = r.code === 1 && re.test(r.err) && !existsSync(p.at("cracks.jsonl")); cases.push(`${name} ${ok ? "refused" : `NOT REFUSED (exit ${r.code}${existsSync(p.at("cracks.jsonl")) ? ", a row written" : ""})`}`); return ok; };
   const a = plant(TREE, "k3a"); if (!open(a).ok) return { ok: false, why: "setup (a)" };
   const okA = expect("(a) no prompt record", a, /his words are not on disk/);
-  const b = plant(TREE, "k3b-early"); if (!open(b).ok) return { ok: false, why: "setup (b)" };
-  const sb = b.json("forge_session.json"); b.prompt(SAID, new Date(Date.parse(sb.started_at) + 1));
-  const okB = expect("(b) prompt before the moment", b, /no moment declared on axis c before his answer/);
-  const c = plant(TREE, "k3c"); const st = [["start", "tokenization"], ["step", "3"], ["moment", "check_q"]].every((s) => c.run(...s).code === 0); if (!st) return { ok: false, why: "setup (c)" };
-  c.prompt(); const okC = expect("(c) no axis ON", c, /no axis is ON/);
   const d = plant(TREE, "k3d"); if (!open(d).ok) return { ok: false, why: "setup (d)" };
   const sd = d.json("forge_session.json"), old = new Date(Date.now() - 3 * 86400000).toISOString();
   d.write("forge_session.json", { ...sd, started_at: old, updated_at: old }); d.prompt();
@@ -189,7 +190,7 @@ await clause("K3", () => {
   const e = plant(TREE, "k3e"); if (!open(e).ok) return { ok: false, why: "setup (e)" };
   e.write("forge_session.json", { ...e.json("forge_session.json"), closed_at: new Date().toISOString() }); e.prompt();
   const okE = expect("(e) closed session", e, /was closed/);
-  return { ok: okA && okB && okC && okD && okE, why: cases.join(" · ") };
+  return { ok: okA && okD && okE, why: `${cases.join(" · ")} · (b)/(c) narrowed out by row 1243 (their inverted legs: mcrk2 G2 / G3)` };
 });
 
 await clause("K3b", () => {
