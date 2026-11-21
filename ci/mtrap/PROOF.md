@@ -273,4 +273,22 @@ with five or more counted traps, each with a FAIL gate.
 - One reading is named for the architect, not changed: under b, the fail count grows with every recompile of the same
   axis. It counts gated notes, not axes. A per-axis count would be a new fork, not a fix.
 
-CHECKPOINT · the fourth fail named (neuralnet · axis c · 20 Nov, the laptop's live recompile; inferred, the cloud holds neither row) · no build line changes · STOPPED at 2026-11-21T08:41 UTC · resume from the next ruling
+
+## 13 · THE CHECKJS RED REPAIRED, MAIN b6c284d MERGED (forks row 1273 (2), 22 Nov 2026)
+
+- **The red.** `scripts/learnstate.mjs(2123,214) TS2554`: one C22 selftest assert passed a third argument. That file's
+  `assert` takes two (`learnstate.mjs:1342`), so the argument was never printed.
+- **The repair.** The dead argument is dropped, so the assert's meaning is byte-for-byte unchanged, and the frozen count is
+  untouched. checkJs diagnostics go from 297 to 296.
+- **Main.** a0645d2 is merged (`7b120cf`), then b6c284d (`5477df8`). Neither merge had a conflict.
+
+```
+gates.mjs report (LF archive of 5477df8)   other checkJs diagnostics 296 (baseline 296, may only fall)   [its 2 SCHEMA reds = gitignored state absent from any archive; main's own archive reads the same]
+gates.mjs report (checkout of 5477df8)     gates: GREEN — nothing rose, the undefined-symbol families are 0 on both sides, and every schema'd state file matches
+learnstate.mjs selftest                    ALL CHECKS PASSED
+witness  --org <5477df8> --base-org <b6c284d>   GREEN MTRAP … · 12 clause(s)    · main b6c284d itself: RED MTRAP · W1, W2, W3, W4, W5, W6, W7, W8, W9, SKILL
+mutants                                    run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN
+hermetic suite at 5477df8                  organism_test: 168 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)
+```
+
+CHECKPOINT · repair + merge pushed (5477df8, main b6c284d) · resume from the CI legs of this tip and the next ruling
