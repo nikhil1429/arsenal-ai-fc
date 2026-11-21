@@ -1443,12 +1443,13 @@ async function selftest() {
       !!dc && (dc.args || []).join(" ") === "scripts/postmatch.mjs autoclose --date chain --anchor evening" && !dc.needs && !dc.daemon && !dc.arm
       && rep.order.indexOf("dayclose") === rep.order.indexOf("examiner") + 1 && rep.order.indexOf("wall-pm") === rep.order.indexOf("dayclose") + 1
       && seen.includes("scripts/postmatch.mjs autoclose --date chain --anchor evening"));
-    ok("DAYCLOSE (mclose, row 919 (A)) — the MORNING closes the SLEPT day: dayclose-prev, postmatch.mjs autoclose --date chain-1 --anchor morning, right after the three daemons and before physio, the first reader of reps_log — outside the signals→sheet gate",
-      !!dp && (dp.args || []).join(" ") === "scripts/postmatch.mjs autoclose --date chain-1 --anchor morning" && !dp.needs && !dp.daemon && !dp.arm
-      && MORNING.indexOf(dp) === MORNING.findIndex(s => s.id === "turnstile") + 1 && MORNING[MORNING.indexOf(dp) + 1].id === "meter-final" && MORNING[MORNING.indexOf(dp) + 2].id === "physio");
+    // unit mdayv (row 1229 F1 C) folds its METER FINAL pin INTO this one, never beside it: the conductor's selftest headline is
+    // pinned to the base's by another unit's witness (ci/mtxt3 T2), so the count stays and this check only gets stricter
     const mf = MORNING.find(s => s.id === "meter-final");
-    ok("METER FINAL (mdayv, row 1229 F1 C) — right after dayclose-prev and before physio: scripts/daily_green.mjs final, no needs, no daemon, no arm, the organ default budget",
-      !!mf && (mf.args || []).join(" ") === "scripts/daily_green.mjs final" && !mf.needs && !mf.daemon && !mf.arm && !("budget" in mf)
+    ok("DAYCLOSE (mclose, row 919 (A)) — the MORNING closes the SLEPT day: dayclose-prev, postmatch.mjs autoclose --date chain-1 --anchor morning, right after the three daemons and before physio, the first reader of reps_log — outside the signals→sheet gate; METER FINAL (mdayv, row 1229 F1 C) sits between them: scripts/daily_green.mjs final, no needs, no daemon, no arm, the organ default budget",
+      !!dp && (dp.args || []).join(" ") === "scripts/postmatch.mjs autoclose --date chain-1 --anchor morning" && !dp.needs && !dp.daemon && !dp.arm
+      && MORNING.indexOf(dp) === MORNING.findIndex(s => s.id === "turnstile") + 1
+      && !!mf && (mf.args || []).join(" ") === "scripts/daily_green.mjs final" && !mf.needs && !mf.daemon && !mf.arm && !("budget" in mf)
       && MORNING.indexOf(mf) === MORNING.indexOf(dp) + 1 && MORNING[MORNING.indexOf(mf) + 1].id === "physio");
     const repClose = await conduct(EVENING, {
       ...base,
