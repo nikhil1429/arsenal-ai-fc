@@ -44,6 +44,10 @@
 //   rung_receipt.mjs WITNESS_TIMEOUT_MS (read from its owner, never typed); plants run concurrently up to
 //   os.availableParallelism() (measured, not typed). LAST: no node process whose command line names the temp root survives
 //   (PowerShell on Windows, ps elsewhere). Every line read from a process is split on \r?\n.
+// THE SUITE'S LINE (unit mmeter's member, scripts/organism_test.mjs clauseWitnesses): `PLANTS mleft · k of n plant(s) as
+//   expected` before the last line, and `CLAUSE <id> RED · k/n plant(s)` for a clause whose plants did not all hold.
+// No day is derived from the clock (unit mclk): the one clock read is the planted consumption row's ts, "now", so the
+//   window is fresh by construction; no plant sits at a midnight.
 // LAST LINE: GREEN MLEFT <what> · <n> clause(s) (exit 0) or RED MLEFT · <clauses> (exit 1).
 // ============================================================================
 import { cpSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, readdirSync, statSync, symlinkSync } from "node:fs";
@@ -92,8 +96,10 @@ function judgeAnswers(j) {
   const ru = j.rules || {};
   if (!(ru.laws && num(ru.laws.n) && num(ru.laws.both))) un.push("laws/*.yml"); else ok.push("laws");
   for (const k of ["ten", "register", "teaching"]) { if (!ru[k] || ru[k].unread) un.push(`${k} ${ru[k] ? "UNREAD" : "LIVE"}`); else ok.push(k); }
-  if (!Array.isArray(j.reach)) un.push(`reach ${j.reach && j.reach.live ? "LIVE" : "UNREAD"}`); else ok.push("reach");
-  return { un, red: [], ok };
+  const red = [];
+  if (j.reach && typeof j.reach.red === "string") red.push(`reach RED — ${j.reach.red}`);
+  else if (!Array.isArray(j.reach)) un.push(`reach ${j.reach && j.reach.live ? "LIVE" : "UNREAD"}`); else ok.push("reach");
+  return { un, red, ok };
 }
 function judgeCensus(j, plan, planRaw, rows) {
   const un = [], red = [];
@@ -112,10 +118,12 @@ function judgeCensus(j, plan, planRaw, rows) {
 }
 function judgeReach(j, retired, consumptionPresent) {
   const un = [], red = [];
-  if (!Array.isArray(j.reach)) un.push(`reach ${j.reach && j.reach.live ? "LIVE" : "UNREAD"}`);
+  const named = j.reach && typeof j.reach.red === "string";   // unit mlaw: done.mjs names a RED when the his_surfaces row is absent
+  if (!named && !Array.isArray(j.reach)) un.push(`reach ${j.reach && j.reach.live ? "LIVE" : "UNREAD"}`);
   if (!consumptionPresent) un.push("the consumption ledger (dressing-room/state/consumption.jsonl, brain.mjs) is absent — the window reach is unknowable here");
   if (!retired) un.push("the retirement map (gate.mjs LANE_CONSUMERS) is unreadable");
   if (un.length) return { un, red, ok: [] };
+  if (named) return { un, red: [`reach RED — ${j.reach.red}`], ok: [] };
   const lanes = j.reach.filter((x) => x && !x.no_consumer && !retired.has(x.subject));
   if (!lanes.length) return { un: ["no lane with a consumer — nothing to reach"], red, ok: [] };
   const not = lanes.filter((x) => !(x.reached === true && x.window === true));
@@ -189,9 +197,10 @@ const jsonl = (rows) => rows.map((r) => JSON.stringify(r)).join("\n") + "\n";
 const LANE_REACH = { subject: "zz_reach", schema_owner: "done.mjs", consumers: [{ name: "done.mjs" }], consumer_kind: "organ", files: ["dressing-room/state/consumption.jsonl"] };
 const LANE_RETIRED = { subject: "zz_retired", schema_owner: "done.mjs", consumers: [], consumer_retired: true };
 const LANE_STATIC = { subject: "zz_static", schema_owner: "done.mjs", consumers: [{ kind: "him" }], consumer_kind: "him", files: ["dressing-room/state/consumption.jsonl"] };
-function plantState(t, { lanes = [LANE_REACH, LANE_RETIRED], consumption = true } = {}) {
+const SURFACES_ROW = { subject: "his_surfaces", subjects: ["manager.mjs", "captains_call.mjs"] };   // planted: the row done.mjs reads (unit mlaw)
+function plantState(t, { lanes = [LANE_REACH, LANE_RETIRED], consumption = true, surfaces = true } = {}) {
   const s = STATE(t);
-  put(join(s, "registry.json"), { version: 1, tables: { lanes } });
+  put(join(s, "registry.json"), { version: 1, tables: { lanes, mechanisms: surfaces ? [SURFACES_ROW] : [] } });
   if (consumption) put(join(s, "consumption.jsonl"), jsonl([{ ts: new Date().toISOString(), lane: "zz_reach", kind: "opened", by: "done.mjs" }]));
   put(join(s, "laws_register.json"), { standing_laws: [{ id: "planted-law", check_site: "planted" }] });
   put(join(s, "teaching_contract.json"), { rules: [{ id: "planted-rule" }] });
@@ -225,6 +234,8 @@ const PLANTS = [
   { id: "c29.static-only", clause: CLAUSE.reach, mode: "reach", want: 1, state: { lanes: [LANE_REACH, LANE_RETIRED, LANE_STATIC] }, why: "a lane static yes, window NO" },
   { id: "c29.no-consumption", clause: CLAUSE.reach, mode: "reach", want: 2, state: { consumption: false }, why: "the consumption ledger absent (the cloud)" },
   { id: "c29.no-plan", clause: CLAUSE.reach, mode: "reach", want: 2, camp: { plan: false }, why: "a consumption ledger but no plan v3 list (a cloud session's own ledger)" },
+  { id: "c29.no-surfaces-row", clause: CLAUSE.reach, mode: "reach", want: 1, state: { surfaces: false }, why: "the registry holds no his_surfaces row — done.mjs names reach RED" },
+  { id: "one-command.no-surfaces-row", clause: CLAUSE.answers, mode: "answers", want: 1, state: { surfaces: false }, why: "done.mjs names reach RED (no his_surfaces row)" },
   { id: "c29.hermetic", clause: CLAUSE.reach, mode: "reach", want: 2, hermetic: true, why: "the hermetic profile prints reach LIVE" },
   { id: "finish.real-tree", clause: CLAUSE.finish, mode: "finish", want: 1, why: "the REAL done.mjs over this tree: orphans are not zero" },
   { id: "finish.zero", clause: CLAUSE.finish, mode: "finish", want: 0, stub: ZERO, why: "stub: zero everywhere" },
@@ -284,6 +295,7 @@ async function plantsMode() {
   const ids = Object.values(CLAUSE).filter((c) => !only || only.has(c));
   const plants = PLANTS.filter((p) => ids.includes(p.clause));
   const failed = new Set(), out = [];
+  let asExpected = 0; const per = new Map();   // clause -> [ok, n] — the PLANTS line unit mmeter's member reads
   const T = mkdtempSync(join(tmpdir(), "mleft-witness-"));
   try {
     if (!existsSync(join(org, SELF))) {
@@ -306,6 +318,8 @@ async function plantsMode() {
         });
         for (const { p, r } of res) {
           const ok = r.code === p.want;
+          if (ok) asExpected++;
+          const pc = per.get(p.clause) || [0, 0]; per.set(p.clause, [pc[0] + (ok ? 1 : 0), pc[1] + 1]);
           if (!ok) failed.add(p.clause);
           out.push(`PLANT ${p.id} ${p.clause} want ${p.want} got ${r.code} ${ok ? "ok" : "FAIL"} · ${p.why} · ${r.last.slice(0, 200)}`);
         }
@@ -323,6 +337,9 @@ async function plantsMode() {
     rmSync(T, { recursive: true, force: true });
   }
   for (const l of out) console.log(l);
+  for (const [c, [k, n]] of per) if (k !== n) console.log(`CLAUSE ${c} RED · ${k}/${n} plant(s)`);
+  // unit mmeter's member (scripts/organism_test.mjs clauseWitnesses): GREEN iff exit 0 AND this line with n > 0 and k = n
+  console.log(`PLANTS mleft · ${asExpected} of ${per.size ? [...per.values()].reduce((a, [, n]) => a + n, 0) : 0} plant(s) as expected`);
   if (failed.size) { console.log(`RED MLEFT · ${[...failed].join(", ")}`); return 1; }
   console.log(`GREEN MLEFT what is left, read by one command — ${plants.length} plant(s) both ways · ${ids.length} clause(s)${baseOrg ? " + BOUND" : ""} + LAST`);
   return 0;
