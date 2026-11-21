@@ -80,7 +80,10 @@
 // that can break his session is a worse defect than the drift it catches.
 //
 // WRITES: teaching_audit.jsonl + teaching_audit_last.json (this organ is their
-// single writer). It never touches the contract file itself
+// single writer). Unit mbank (forks row 1246): teaching_audit_last.json also carries
+// `prompts_by_session` — the prompt record kept PER Claude session (the shared `prompt`
+// slot is overwritten by every session's UserPromptSubmit), so the bank door reads its
+// OWN session's prompt; the `prompt` slot stays exactly as before for its readers. It never touches the contract file itself
 // (teaching_contract.json belongs to teaching_contract.mjs) — auto-counting
 // and the checked_at heartbeat both go through teaching_contract.mjs's own CLI
 // (`autohit` / `checked`), exactly as the owners-only law requires.
@@ -145,8 +148,9 @@ import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
+import { randomUUID } from "node:crypto";   // unit mbank (row 1230): the prompt record's turn id is minted HERE, by its single writer
 import { subjectsOf, coreAxes, REGISTRY_PATH } from "./registry.mjs";   // S10 #10 sources + #12 core axes — rows, never literals · row 583 (5): REGISTRY_PATH, for the selftest's proof that it reads its OWN registry
-import { SCOPE_GLOBAL, humanText, SLASH_NOISE, BANKED_MOMENTS } from "./study_scope.mjs";   // G0 (23 Sep 2026): the dispatcher's study-scope verdict, stamped on every row · L4 (6 Oct 2026): his last prompt bounds the turn (the reader the gate and the replay use) and the test moments are the landed test-moment case's own set
+import { SCOPE_GLOBAL, humanText, SLASH_NOISE, BANKED_MOMENTS, transcriptPathFor } from "./study_scope.mjs";   // G0 (23 Sep 2026): the dispatcher's study-scope verdict, stamped on every row · L4 (6 Oct 2026): his last prompt bounds the turn (the reader the gate and the replay use) and the test moments are the landed test-moment case's own set
 import { recordPicture, loadRegistry, pictureLines } from "./widget.mjs";   // L4 (fate 54): the registry's OWN writer — widget.mjs stays the sole writer of widgets.json (nobody's hook callee, so never a shim no-op)
 import { HARNESS_WRAPPERS, HARNESS_MARKERS } from "./harness_text.mjs";   // row 858 (1)-(2), LENT by lane V: HARNESS_PROMPT's names, one home
 
@@ -1632,12 +1636,39 @@ const momentsTotal = (session) => (session && session.question_moments && typeof
 const momentsByKind = (session) => (session && session.question_moments && typeof session.question_moments === "object"
   ? { ...session.question_moments } : null);
 
+// unit mbank (rows 1246 / 1250) — the per-session map. When a new prompt is recorded, an entry its own Stop already
+// consumed loses its TEXT and is kept as a STUB (mbank-9, row 1250): the instant of that Stop and that Stop's moment
+// kinds, none of his words. A stub is dropped only when its session's transcript is gone (no count, no age). The writing
+// session's own entry is replaced, carrying its previous Stop forward (prev_stop_at / prev_stop_kinds). The Stop stamps
+// consumed_at, stop_at and stop_kinds on its OWN session's entry only.
+const mapOf = (m) => (m && typeof m === "object" && !Array.isArray(m) ? m : {});
+const stubOf = (v) => ({ stub: true, session_id: v.session_id || null, stop_at: v.stop_at || v.consumed_at || null,
+  stop_kinds: Array.isArray(v.stop_kinds) ? v.stop_kinds : null, transcript_path: typeof v.transcript_path === "string" ? v.transcript_path : null });
+const transcriptAlive = (sid, v) => { try { return existsSync(v.transcript_path || transcriptPathFor(sid)); } catch { return false; } };
+const keptPrompts = (m) => Object.fromEntries(Object.entries(mapOf(m)).flatMap(([k, v]) => {
+  if (!v || typeof v !== "object") return [];
+  if (!v.stub && !v.consumed_at) return [[k, v]];
+  const st = v.stub ? v : stubOf(v);
+  return transcriptAlive(k, st) ? [[k, st]] : [];
+}));
+const consumeOwn = (m, sid, now, closeByKind) => {
+  const o = { ...mapOf(m) };
+  const e = sid ? o[sid] : null;
+  if (e && typeof e === "object" && !e.stub && !e.consumed_at) {
+    const open = e.moments_by_kind && typeof e.moments_by_kind === "object" ? e.moments_by_kind : {};
+    const close = closeByKind && typeof closeByKind === "object" ? closeByKind : {};
+    o[sid] = { ...e, consumed_at: now, stop_at: now, stop_kinds: Object.keys(close).filter((k) => (Number(close[k]) || 0) > (Number(open[k]) || 0)) };
+  }
+  return o;
+};
 function promptHook(hook) {
   const { session } = readForgeSession();
   const last = readLast() || {};
-  writeLastReal({
-    ...last,
-    prompt: {
+  const sidP = typeof hook.session_id === "string" ? hook.session_id : null;
+  const prevOwn = sidP ? mapOf(last.prompts_by_session)[sidP] : null;   // his previous turn, carried forward as a Stop only
+  const prevStop = prevOwn && typeof prevOwn === "object" && (prevOwn.stub || prevOwn.consumed_at)
+    ? { prev_stop_at: prevOwn.stop_at || prevOwn.consumed_at || null, prev_stop_kinds: Array.isArray(prevOwn.stop_kinds) ? prevOwn.stop_kinds : null } : {};
+  const rec = {
       text: String(hook.prompt || ""),
       step: session && Number.isFinite(Number(session.step)) ? Number(session.step) : null,
       // LR-04 — the OPENING end of this turn's window, captured for the same reason
@@ -1648,7 +1679,16 @@ function promptHook(hook) {
       reps: repsCount(),
       session_id: typeof hook.session_id === "string" ? hook.session_id : null,
       at: new Date().toISOString(),
-    },
+      // unit mbank (forks row 1230): ONE turn identity both records carry — the bank row and the crack row copy it off
+      // this prompt through forge_session.mjs hisPrompt (the one door); nothing joins his words by time or by text.
+      turn_id: randomUUID(),
+      transcript_path: typeof hook.transcript_path === "string" ? hook.transcript_path : null,
+      ...prevStop,
+  };
+  writeLastReal({
+    ...last,
+    prompt: rec,
+    prompts_by_session: { ...keptPrompts(last.prompts_by_session), ...(sidP ? { [sidP]: rec } : {}) },
     checked_rules: CHECKED_RULES,
   });
 }
@@ -1664,8 +1704,15 @@ export function stopHook(hook, io) {
   // Pair this Stop with ITS OWN prompt — same Claude Code session, not yet
   // consumed. A different session's prompt (parallel-session interleave) is
   // discarded, never silently reused; the row says which happened.
-  const p = last.prompt || null;
+  // unit mbank (forks rows 1246 / 1248): THIS session's own record first (prompts_by_session[sid]), so a parallel
+  // session's prompt in the shared slot can no longer cost his turn its audit; the shared slot is the fallback only for a
+  // session that has no own entry (a record written before this unit). The shared slot is still consumed exactly as before.
+  const shared = last.prompt || null;
+  const ownRec0 = sid ? mapOf(last.prompts_by_session)[sid] : null;
+  const ownRec = ownRec0 && typeof ownRec0 === "object" && !ownRec0.stub && typeof ownRec0.text === "string" ? ownRec0 : null;   // a stub holds no prompt
+  const p = ownRec || shared;
   const paired = !!(p && sid && p.session_id === sid && !p.consumed_at);
+  const sharedPaired = !!(shared && sid && shared.session_id === sid && !shared.consumed_at);
   const userText = paired ? String(p.text || "") : "";
   const userTextSource = paired ? "fresh" : (p ? "session-mismatch (parallel session's prompt discarded)" : "missing (no prompt recorded)");
   const prevStep = paired && Number.isFinite(p.step) ? p.step
@@ -1772,7 +1819,8 @@ export function stopHook(hook, io) {
   // audited/why on disk is what separates "correctly quiet" from "dead" — the
   // two states whose indistinguishability let the first death survive.
   io.writeLast({
-    prompt: p ? { ...p, consumed_at: paired ? now : (p.consumed_at || null) } : null,
+    prompt: shared ? { ...shared, consumed_at: sharedPaired ? now : (shared.consumed_at || null) } : null,
+    prompts_by_session: consumeOwn(last.prompts_by_session, sid, now, momentsByKind(session)),   // unit mbank (row 1246): this session's own turn ends
     stop: {
       at: now,
       session_id: sid,
@@ -1813,6 +1861,7 @@ export function stopHook(hook, io) {
   io.appendLog({
     ts: now,
     session_id: sid,
+    turn_id: paired && typeof p.turn_id === "string" ? p.turn_id : null,   // unit mbank: the paired prompt's turn, else null
     // A LEGACY verdict (an old-build sitting — study_scope's transition guard) is NOT a host match, so
     // its rows stay unstamped and R8 classifies them the P0 way, by surface.
     scope: scopeNow && scopeNow.study && !scopeNow.legacy ? "study" : null,
@@ -2517,6 +2566,14 @@ function selftest() {
       assert("END-TO-END — the prompt recorded at UserPromptSubmit is consumed by ITS OWN session's Stop with user_text_source 'fresh' (§5.3's wire, live)",
         p1.status === 0 && s2.status === 0 && rows2.length === 2 && rows2[1].user_text_source === "fresh"
         && lastJ2 && lastJ2.prompt && typeof lastJ2.prompt.consumed_at === "string");
+      assert("END-TO-END — unit mbank: the prompt record carries a minted turn_id (a UUID), the Stop keeps it on the consumed prompt, and the paired Stop row names the same turn",
+        !!(lastJ2 && lastJ2.prompt && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(String(lastJ2.prompt.turn_id || "")))
+        && rows2.length === 2 && rows2[1].turn_id === lastJ2.prompt.turn_id && rows2[0].turn_id === null);
+      assert("END-TO-END — unit mbank (row 1246): the prompt is also kept PER SESSION, and that session's own Stop consumes its own entry (same bytes, same turn)",
+        !!(lastJ2 && lastJ2.prompts_by_session && lastJ2.prompts_by_session["selftest-e2e"])
+        && lastJ2.prompts_by_session["selftest-e2e"].text === "yaar samajh nahi aa raha"
+        && lastJ2.prompts_by_session["selftest-e2e"].turn_id === lastJ2.prompt.turn_id
+        && typeof lastJ2.prompts_by_session["selftest-e2e"].consumed_at === "string");
     } finally {
       try { rmSync(tmp, { recursive: true, force: true }); } catch { /* a temp dir that outlives the test is litter, not a failure */ }
     }
