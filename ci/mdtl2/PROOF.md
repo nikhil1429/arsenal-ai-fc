@@ -38,7 +38,7 @@ Not edited: `scripts/witness_cause.mjs` (F1 A), `.github/workflows/suite.yml` (s
 `node ci/mdtl2/witness_mdtl2.mjs --org <tree> --base-org <tree of 25f13f2>`:
 
 ```
---org = the build (8d48e59)  →  GREEN MDTL2 every no-cause red that is not a witness red leaves its cause, from public bytes only · 15 clause(s)   (exit 0)
+--org = the build (975c0c0)  →  GREEN MDTL2 every no-cause red that is not a witness red leaves its cause, from public bytes only · 15 clause(s)   (exit 0)
 --org = the base (25f13f2)   →  RED MDTL2 · E1 E2 E3 E4 E5 E6 E7 E8 E9 BOUND   (exit 1)
 ```
 
@@ -62,12 +62,12 @@ E1-m … E12-m, BOUND-m, LAST-m, each RED by its own clause (the full table of t
 
 ```
 cut 25f13f2   organism_test: 160 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)
-tip acf442b   organism_test: 161 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)
+tip 975c0c0   organism_test: 161 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)
 both          FAIL SUITE MEMBER · sandbox selftest exits 0   +  its roll-up   (container-bound: spec N6, its neutral legs green)
 green at the cut and not green at the tip: 0   ·   the one new green: SUITE MEMBER · red_cause selftest exits #
 
 node scripts/ci_verdict.mjs selftest     cut: ci_verdict selftest: 34 passed, 0 failed   tip: ci_verdict selftest: 38 passed, 0 failed
-node scripts/red_cause.mjs selftest      cut: (absent)                                   tip: red_cause selftest: 22 passed, 0 failed
+node scripts/red_cause.mjs selftest      cut: (absent)                                   tip: red_cause selftest: 24 passed, 0 failed
 node scripts/witness_cause.mjs selftest  untouched, ok at both
 LAW PACK — every rule file present, and no law's finding count rose   ok at both
 node scripts/models.mjs check            exit 0 (literal model names outside models.mjs: 0)
@@ -82,11 +82,20 @@ keeps its match — the table holds none today, and its bytes did not move.
 and `all … hermetic suite members pass … · sandbox · exit 1`. The first failing check of the N6 sandbox red is its
 negative-control canary tripwire, read from public bytes only — consistent with the spec's "container-bound" answer.
 
-**THE PROBE (row 1220, unit mprb F1 C).** No leg of this branch has read the probe red yet (this container reads probe
-green). When a neutral leg of a tree carrying this unit reads `SUITE MEMBER · probe selftest exits 0` red, its NEW RED
-message and `ci_verdict <sha>` line carry `— cause: exit <n> · FAIL <the first failing check, a literal or skeleton of
-scripts/probe.mjs> · and <n> more`: that line is the evidence mprb waits for, and it is recorded in the ledger the moment
-a leg reads it. A retry until green is refused in advance.
+**THE NEUTRAL MACHINE'S FIRST READ (acf442b, 2026-11-21; check runs 136662682507 node 22 · 136662682054 node 24, both
+`failure`).** The channel read two reds out from public bytes on its first leg:
+- **its own bug.** `SUITE MEMBER · red_cause selftest exits 0 — cause: exit 1 · FAIL throwCause: ERR and the first frame
+  under the root as path:line; the message never leaves` (both legs). `throwCause` read a file URL with `fileURLToPath`,
+  which answers by the HOST's platform: the selftest's drive-less frame threw on Windows. Fixed in 975c0c0 (read by text,
+  a Windows frame planted in the selftest). The red was read, not guessed, and not retried.
+- **THE PROBE (row 1220, unit mprb F1 C), node 22 only:** `SUITE MEMBER · probe selftest exits 0 — cause: exit 1 · FAIL …/…`
+  and the roll-up `probe · exit 1`. This is **the first public read of a probe red**, and it is the evidence mprb waits for:
+  probe exited 1 with **exactly one** failing check line (no `and <n> more`), on node 22 and not on node 24 of the same sha.
+  Its spelling `…/…` is a path-join template of probe.mjs (`${d}/${e.name}`), which names nothing; 975c0c0 refuses a
+  skeleton with no word character in its static bytes and lets a longer literal opening win, so the next probe red reads
+  either a literal of probe.mjs or WITHHELD. Which check it is stays **NAMED NOT GUESSED** until that leg. Under the spec §4
+  table it is a K1 red with ONE failing check: not an import-level death (that fails every check). A retry until green is
+  refused in advance.
 
 ## 6 · DIFFERENCES FROM THE SPEC (the build, named)
 
@@ -116,12 +125,15 @@ a leg reads it. A retry until green is refused in advance.
   check: a builder-only skip is caught by `verify` (that is the design), so it would not bite E6.
 - **D10 · the guards.** E10, E11, E12 and LAST are GREEN at the base by the spec's own table; every other clause is RED at
   the base and GREEN at the build.
+- **D12 · skeleton strength (975c0c0, after the neutral read).** A skeleton must carry a word character in its static
+  bytes, and between a covering skeleton and a literal opening the spelling with more public bytes wins (a tie to the
+  skeleton). The spec ranked skeleton before prefix unconditionally; the probe red showed a `…/…` win.
 - **D11 · the witness links node_modules** into each copy (the pinned parser), and unlinks it before removal; SETUP is RED
   when none with acorn is found beside either tree.
 
 ## 7 · THE PARALLEL BUILD (mkp24)
 
-`claude/mkp24-build` read at the start (3898668) and before the last push (b5fc77b): its one organism_test.mjs hunk is
+`claude/mkp24-build` read at the start (3898668) and before the last push (b5fc77b, 2026-11-21): its one organism_test.mjs hunk is
 `@@ -3010,7 +3010,10 @@ async function witnesses()`. This build's four hunks sit at `@@ -44,10`, `@@ -405,6`,
 `@@ -2256,6`, `@@ -2821,8`: **no line overlaps**. `git merge-tree --write-tree HEAD origin/claude/mkp24-build` is clean
 (2026-11-21). Neither edit touches the other's `scripts/witness_cause.mjs` lines (this build does not edit it at all).
