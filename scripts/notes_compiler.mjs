@@ -351,7 +351,7 @@ export function buildNote({ concept, axis, ex = [], bank = [], capsule = null, c
   // diff is an item with an EMPTY diff and a named gap — the diff is never built from his words.
   for (const r of [...(cracks || [])].filter((c) => c && c.concept === concept && c.axis === axis && typeof c.at === "string")
     .sort((a, b) => a.at.localeCompare(b.at))) {
-    const stamp = { moment: r.moment, words: r.words, crack_id: r.id, words_at: r.prompt_at };
+    const stamp = { moment: r.moment, words: r.words, crack_id: r.id, turn_id: typeof r.turn_id === "string" ? r.turn_id : null, words_at: r.prompt_at };   // turn_id: unit mbank (row 1230 mbank-8 a)
     let at = -1;
     for (let i = 0; i < ex.length; i++) {
       if (ex[i].at < r.at) continue;

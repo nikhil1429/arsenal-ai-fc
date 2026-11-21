@@ -126,6 +126,7 @@ import { observe as observeLegacy, supervise as superviseLegacy, emptyState, isS
 // this file's own law (selftest: "not one regex here tests HIS words") stays whole.
 import { lazySubjects } from "./registry.mjs";   // A3 (4 Sep 2026) — the probe/register vocabularies are ROWS, never literals (his 11-Aug jugad law)
 import { countHedges, REGISTER_TYPES, validateRegister, registerLine } from "./register.mjs";
+import { classifyPrompt, answerOf } from "./study_scope.mjs";   // unit mbank (row 1230): his gut-word read off HIS message (mbank-5 b), and his answer with the gut-word lead stripped for the hedge meter (mbank-7 a) — study_scope is a leaf
 import { generate as modelsGenerate, loadKeys as modelsLoadKeys, resolveSync as modelsResolve } from "./models.mjs";   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — the Watcher names the ROLE `text`; the resolver picks the live model + key and says why (models.mjs imports no organ — the import graph stays tiny)
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -1319,6 +1320,43 @@ export function capsuleGround(concept, deps = {}) {
 }
 
 // ---------------------------------------------------------------------------
+// THE CODE DOOR'S WORDS (unit mbank, forks rows 1189 (1) / 1194 (2) / 1230) — HIS bytes, never a teacher copy
+// ---------------------------------------------------------------------------
+// On the code surface (a call carrying --said or --surface code) his words are the prompt record's text, taken through
+// the ONE door (forge_session.mjs hisPrompt, read by readHisPrompt). PURE: `prompt` is that door's ok:true result.
+//   mbank-4 b — no --said: the whole message. --said given: a SELECTOR only — it must sit inside his message with the
+//               whitespace folded, and the bytes kept are the matching slice OF HIS MESSAGE, never the argument.
+//   mbank-5 b — the gut-word is read off his message by study_scope's classifier; a --gut that disagrees, or a --gut on a
+//               message that carries none (row 270, an invented calibration), is REFUSED.
+//   mbank-2 a — nothing of the teacher's copy is stored.
+export const GUT_FLAG = Object.freeze({ pakka: "knew", shayad: "shaky", "pata nahi": "guessed", knew: "knew", shaky: "shaky", guessed: "guessed" });
+/** sliceOf — the bytes of `text` that `sel` names with whitespace folded on both sides, or null when it is not inside. */
+export function sliceOf(text, sel) {
+  const src = String(text || ""), want = String(sel || "").replace(/\s+/g, " ").trim();
+  if (!want) return null;
+  let folded = "", map = [];
+  for (let i = 0; i < src.length; i++) {
+    if (src[i].trim() === "") { if (folded && folded[folded.length - 1] !== " ") { folded += " "; map.push(i); } continue; }
+    folded += src[i]; map.push(i);
+  }
+  const at = folded.indexOf(want);
+  return at < 0 ? null : src.slice(map[at], map[at + want.length - 1] + 1);
+}
+/** codeDoorWords — {ok, spoken, gut} from his prompt record, or the refusal: never a byte from the teacher's argument. */
+export function codeDoorWords({ prompt, said, gut } = /** @type {any} */ ({})) {
+  if (!prompt || prompt.ok !== true || typeof prompt.text !== "string") return { ok: false, reason: "no-prompt", say: "gaffer_brain: his words are not on disk — the bank takes them from the prompt record, never from a typed copy; nothing banked" };
+  const spoken = said === undefined ? prompt.text : sliceOf(prompt.text, said);
+  if (spoken === null) return { ok: false, reason: "not-his-words", say: "gaffer_brain: --said is not inside his message — the bank keeps HIS bytes from the prompt record, and a copy that is not in it is refused before the write (drop --said to bank his whole message); nothing banked" };
+  const his = classifyPrompt(prompt.text).gut, hisFlag = his ? GUT_FLAG[his] || null : null;
+  const typed = gut === undefined || gut === null ? "" : String(gut).trim().toLowerCase();
+  if (typed && !hisFlag) return { ok: false, reason: "gut-invented", say: `gaffer_brain: --gut ${typed} but his message carries no gut-word — an invented calibration is refused (row 270); nothing banked` };
+  if (typed && typed !== hisFlag) return { ok: false, reason: "gut-not-his", say: `gaffer_brain: --gut ${typed} but he said "${his}" (= ${hisFlag}) — the gut-word is HIS, read off his message; nothing banked` };
+  return { ok: true, spoken, gut: hisFlag || undefined };
+}
+/** spokenSrcOf — the stdin doors keep their own words and say which door they are (mbank-3 a). */
+export const spokenSrcOf = (note) => { const n = String(note || ""); return n.startsWith("dugout-voice") || n.startsWith("scrimmage-voice") ? "voice" : n.startsWith("sitting ") ? "sitting" : "stdin"; };
+
+// ---------------------------------------------------------------------------
 // CAPTURE — the fast half. NO MODEL, NO NETWORK, NO SUBPROCESS.
 // ---------------------------------------------------------------------------
 // THE GUT-WORD LAW IS HELD AT THIS DOOR TOO. capture.mjs refuses a rep without one
@@ -1329,8 +1367,10 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
   if (!VERDICT_TYPES[type]) return { ok: false, reason: "unknown-type", say: `gaffer_brain: unknown verdict type "${type}". Legal: ${Object.keys(VERDICT_TYPES).join(", ")}.` };
   const word = String(gut || "").trim().toLowerCase();
   if (!["knew", "shaky", "guessed"].includes(word)) return { ok: false, reason: "no-gut", say: "gaffer_brain: --gut is required and must be knew|shaky|guessed, committed BEFORE the answer. GUT-WORD LAW: no gut-word, no rep." };
-  const said = String(spoken || "").trim();
-  if (said.length < 10) return { ok: false, reason: "empty", say: "gaffer_brain: nothing was said — an empty answer is not a failed one, and guessing which it was is exactly what this lane must never do." };
+  // unit mbank: the prompt door's bytes are kept as he typed them (no trim, no fold); every other door as before
+  const fromPrompt = deps.src === "prompt";
+  const said = fromPrompt ? String(spoken || "") : String(spoken || "").trim();
+  if (said.trim().length < 10) return { ok: false, reason: "empty", say: "gaffer_brain: nothing was said — an empty answer is not a failed one, and guessing which it was is exactly what this lane must never do." };
   const mat = deps.material !== undefined ? deps.material : gradeMaterial(type, ref, deps);
   if (!mat) return { ok: false, reason: "no-material", say: `gaffer_brain: nothing on disk for ${type} "${ref}" — grading needs HIS page, and inventing one is the single thing this lane must never do.` };
   // ── A3 · THE SAME LAW AT EVERY DOOR ──────────────────────────────────────────
@@ -1396,8 +1436,19 @@ export function gradeCapture({ type = "axis_weld", ref, spoken, gut }, deps = {}
     // §9.4 — HEDGES ARE COUNTED HERE, at the moment of capture, by code (register.mjs's
     // meter — the scrimmage's own). Every banked answer, every surface, no model. The
     // judge is later told this number exists and is not its to produce.
-    hedges: countHedges(said),
+    // unit mbank (mbank-7 a): over his ANSWER — a leading gut-word (`shayad -`) is his calibration, not a hedge.
+    hedges: countHedges(answerOf(said)),
+    // unit mbank: which door his words came through, and the turn they answer (joined by turn_id, never by time or text)
+    spoken_src: fromPrompt ? "prompt" : (deps.src === "voice" || deps.src === "sitting" ? deps.src : "stdin"),
+    turn_id: fromPrompt && deps.prompt && typeof deps.prompt.turn_id === "string" ? deps.prompt.turn_id : null,
+    prompt_at: fromPrompt && deps.prompt && typeof deps.prompt.at === "string" ? deps.prompt.at : null,
+    session_checked: fromPrompt ? deps.sessionChecked === true : null,
   };
+  // unit mbank — ONE ANSWER, ONE REP: a code-door capture of a turn + slice already banked writes nothing (a re-run)
+  if (fromPrompt && row.turn_id && Array.isArray(deps.prior)) {
+    const dup = deps.prior.find((r) => r && r.kind === "capture" && r.turn_id === row.turn_id && r.spoken === row.spoken);
+    if (dup) return { ok: true, already: true, row: dup, captured: dup.id, type: dup.type, has_key: !!dup.key };
+  }
   // ── THE BANK WRITE (L2 · fate 14, 6 Oct 2026) — A FAILED WRITE OF HIS ANSWER IS ok:false ──────
   // This line sat in a bare catch and returned ok:true whatever happened: the CLI printed
   // "captured", sitting.mjs bank() counted it and cleared pending_question so the question could
@@ -2290,7 +2341,7 @@ export async function gradeJudge(deps = {}) {
         // (invented terms dropped and NAMED in `dropped`), recomputes `missing`, and the
         // hedge count is the capture row's own (code, at bank time) — never the model's.
         register: REGISTER_TYPES.includes(it.type)
-          ? { ...validateRegister(g.register, { spoken: it.spoken, corpus }), hedges: Number.isInteger(it.hedges) ? it.hedges : countHedges(it.spoken) }
+          ? { ...validateRegister(g.register, { spoken: it.spoken, corpus }), hedges: Number.isInteger(it.hedges) ? it.hedges : countHedges(answerOf(it.spoken)) }
           : null,
       });
     }
@@ -2686,12 +2737,34 @@ async function main() {
     // it that way, and a flag ignored for its spelling is a measurement thrown away.
     const lat = flag("latency") !== undefined ? flag("latency") : flag("latency_ms");
     const said = flag("said");
-    const spoken = said !== undefined ? String(said) : readFileSync(0, "utf8");
-    const r = gradeCapture({ type: process.argv[3], ref: process.argv[4], gut: flag("gut"), spoken }, {
+    const asJson = process.argv.includes("--json");
+    const refuse = (o) => { console.log(asJson ? JSON.stringify({ ok: false, reason: o.reason, say: o.say }) : o.say); process.exit(1); };
+    // unit mbank (forks rows 1189 (1) / 1194 (2) / 1230) — THE CODE DOOR: a call carrying --said or --surface code banks
+    // HIS words from the prompt record through the one door, refused when absent, consumed, from another Claude session
+    // or written before the turn id existed (mbank-6 a). The stdin doors (voice, sitting) keep their own words (mbank-3 a).
+    const codeDoor = said !== undefined || String(flag("surface") || "").trim().toLowerCase() === "code";
+    let spoken, gut = flag("gut"), src, prompt = null, sessionChecked = null;
+    if (codeDoor) {
+      const sessionId = process.env.CLAUDE_CODE_SESSION_ID || null;
+      const { readHisPrompt } = await import("./forge_session.mjs");
+      prompt = readHisPrompt({ sessionId, fresh: true, needTurn: true });
+      if (!prompt.ok) refuse({ reason: `prompt-${prompt.reason}`, say: `gaffer_brain: his words are not on disk (${prompt.reason}: ${prompt.why}) — the bank takes them from the prompt record, never from a typed copy; nothing banked` });
+      const w = codeDoorWords({ prompt, said, gut });
+      if (!w.ok) refuse(w);
+      spoken = w.spoken; gut = w.gut; src = "prompt"; sessionChecked = !!sessionId;
+    } else {
+      spoken = readFileSync(0, "utf8"); src = spokenSrcOf(flag("note"));
+    }
+    const r = gradeCapture({ type: process.argv[3], ref: process.argv[4], gut, spoken }, {
       asked: flag("asked"), axis: flag("axis"), note: flag("note"),
       surface: flag("surface"), probe: flag("probe"), register: flag("register"),
       latencyMs: lat !== undefined && Number.isFinite(Number(lat)) ? Math.trunc(Number(lat)) : undefined,
+      src, prompt, sessionChecked, prior: codeDoor ? readJournal(GRADE_QUEUE, 4000) : undefined,
     });
+    if (r.ok && r.already) {
+      console.log(asJson ? JSON.stringify({ ok: true, already: true, captured: r.captured }) : `gaffer_brain: already banked ${r.captured} — this turn's answer is on the queue once; nothing written`);
+      return;
+    }
     // --json (L2 · fate 15) — THE VERDICT AS ONE MACHINE LINE. sitting.mjs bank() reads this line's
     // `ok` — the write's own answer — and never the exit status (gaffer-dugout-sitting.txt:8). The
     // exit code keeps its meaning for a human shell; a program reads the verdict.
@@ -3464,6 +3537,29 @@ function selftest2(stub, S) {
         assert("CAPTURE · an EMPTY answer is refused, never banked as a failure — 'he said nothing' and 'he said the wrong thing' are different facts",
           gradeCapture({ type: "axis_weld", ref: "context:a", gut: "guessed", spoken: "" }, { dry: true, material: { concept: "c" } }).reason === "empty");
         assert("CAPTURE · an unknown verdict type is refused at the door", gradeCapture({ type: "vibes", ref: "x", gut: "knew", spoken: SAID }, { dry: true }).reason === "unknown-type");
+        {
+          // unit mbank (row 1230) — THE CODE DOOR: his bytes from the prompt record, the gut-word his, the hedge meter over his answer
+          const PR = { ok: true, text: "shayad -  plant answer\n one two three", at: "2026-11-21T04:00:00.000Z", session_id: "s", turn_id: "t-1" };
+          const sel = codeDoorWords({ prompt: PR, said: "plant answer one two" }), whole = codeDoorWords({ prompt: PR });
+          assert("CODE DOOR (mbank-4 b · mbank-2 a) — no --said banks his whole message; --said selects, and the bytes kept are HIS slice (whitespace as he typed it), never the argument",
+            whole.ok && whole.spoken === PR.text && sel.ok && sel.spoken === "plant answer\n one two"
+            && codeDoorWords({ prompt: PR, said: "plant answer one 2" }).reason === "not-his-words" && codeDoorWords({ prompt: { ok: false } }).reason === "no-prompt");
+          assert("CODE DOOR (mbank-5 b) — the gut-word is read off his message; a --gut that disagrees, or one typed on a message with none, is refused",
+            whole.gut === "shaky" && codeDoorWords({ prompt: PR, gut: "shaky" }).ok && codeDoorWords({ prompt: PR, gut: "knew" }).reason === "gut-not-his"
+            && codeDoorWords({ prompt: { ...PR, text: "plant answer one two three" }, gut: "knew" }).reason === "gut-invented"
+            && codeDoorWords({ prompt: { ...PR, text: "plant answer one two three" } }).gut === undefined);
+          const mat = { concept: "c", label: "l" };
+          const cp = gradeCapture({ type: "voice_rep", ref: "c:a", gut: whole.gut, spoken: whole.spoken }, { dry: true, material: mat, src: "prompt", prompt: PR, sessionChecked: true, now: T0 });
+          assert("CODE DOOR ROW — spoken byte-equal to his message, spoken_src prompt, turn_id and prompt_at from the record, session_checked; the gut-word lead is not a hedge (mbank-7 a)",
+            cp.ok && cp.row.spoken === PR.text && cp.row.spoken_src === "prompt" && cp.row.turn_id === "t-1" && cp.row.prompt_at === PR.at
+            && cp.row.session_checked === true && cp.row.hedges === 0 && countHedges(PR.text) === 1);
+          const again = gradeCapture({ type: "voice_rep", ref: "c:a", gut: whole.gut, spoken: whole.spoken }, { dry: true, material: mat, src: "prompt", prompt: PR, prior: [cp.row], now: T0 });
+          const stdinRow = gradeCapture({ type: "voice_rep", ref: "c:a", gut: "knew", spoken: "  voice plant words here  " }, { dry: true, material: mat, src: spokenSrcOf("dugout-voice think:1ms"), now: T0 });
+          assert("CODE DOOR — the same turn + slice is `already banked` (one answer, one rep); the stdin doors keep their own words and name their door",
+            again.ok && again.already === true && again.captured === cp.row.id
+            && stdinRow.ok && stdinRow.row.spoken === "voice plant words here" && stdinRow.row.spoken_src === "voice" && stdinRow.row.turn_id === null
+            && spokenSrcOf("sitting x · y") === "sitting" && spokenSrcOf(null) === "stdin");
+        }
         {
           const t0 = process.hrtime.bigint();
           for (let i = 0; i < 200; i++) gradeCapture({ type: "axis_weld", ref: "context:a", gut: "knew", spoken: SAID }, { dry: true, material: { concept: "context", label: "a", key: K.weld } });
