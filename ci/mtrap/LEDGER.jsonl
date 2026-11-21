@@ -1,3 +1,6 @@
 {"ts":"2026-11-21T05:52:16.180Z","act":"cut","cmd":"git fetch origin main && git rev-parse origin/main ; git checkout -b claude/mtrap-build 5301f15","last_line":"5301f1582f7a1dbc9ec9605434c9db5d8bd19107 · origin/main has not moved past it"}
 {"ts":"2026-11-21T05:52:16.223Z","act":"spec","cmd":"git fetch origin claude/mtrap-spec && git rev-parse origin/claude/mtrap-spec","last_line":"ed6402d4c12aaa371ab2dd8e9575682daa505087 (the ruled tip)"}
 {"ts":"2026-11-21T05:52:16.252Z","act":"sibling","cmd":"git fetch origin claude/mbank-build","last_line":"fatal: couldn't find remote ref claude/mbank-build (not yet pushed at the cut)"}
+{"ts":"2026-11-21T05:54:05.414Z","act":"selftest-base","cmd":"node scripts/notes_compiler.mjs selftest (at 5301f15)","last_line":"notes_compiler selftest: 48 passed, 0 failed"}
+{"ts":"2026-11-21T05:54:05.443Z","act":"selftest-head","cmd":"node scripts/notes_compiler.mjs selftest","last_line":"notes_compiler selftest: 55 passed, 0 failed"}
+{"ts":"2026-11-21T05:54:05.469Z","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (at 5301f15)","last_line":"organism_test: 165 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
