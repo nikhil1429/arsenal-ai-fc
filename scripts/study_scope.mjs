@@ -214,6 +214,9 @@ export async function unboundMain() {
 // kind: answer › confusion › system › question › other (a system flag riding an answer or a confusion
 // does not make the message a park).
 const GUT_LEAD = /^\s*(?:gut[\s-]*word\s*(?:is|=|:|-|—)?\s*)?(pakka|pakaa|pkka|shayad|shaya|shyad|shayd|pata\s*nahi|pata\s*nhi|knew|shaky|guessed)\b\s*[—–\-:,.;!]/i;
+// unit mbank (forks row 1230, mbank-7 a) — his ANSWER, the GUT_LEAD prefix the classifier matched stripped off: the
+// gut-word is his calibration, not a hedge, so the bank's hedge meter counts over this (register.mjs is not touched).
+export const answerOf = (text) => { const s = String(text || ""); const m = GUT_LEAD.exec(s); return m ? s.slice(m[0].length) : s; };
 const GUT_INLINE = /\bgut[\s-]*word\s*(?:is|=|:|-|—)\s*(pakka|shayad|pata\s*nahi|knew|shaky|guessed)\b/i;
 // after a sentence break: 9e29b88c t3 "gut word was in enlgish right? knew - sequence length will be 3"
 const GUT_AFTER_BREAK = /(?:[?.!]\s+)(pakka|shayad|pata\s*nahi|knew|shaky|guessed)\s*[—–\-:]\s*\S/i;
