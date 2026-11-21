@@ -258,3 +258,35 @@ C4 the census drops its last row · C5 a bare self-run no longer read.
 - Law pack count line, merged tree and main 6a6bdff alike: `ORGANISM_TEST_LAWPACK {"owners-only-state-write":0,"law-m-literal-model":0,"jugad-literal-subject-list":90,"trailing-n-slice":0,"bare-catch":37,"receipt-testimony-read":5,"tum-not-tu-prose":0,"import-time-registry-read":2,"unguarded-dispatch":0,"raw-nul-in-source":0,"depcruise_errors":7}` — no count rose. `node scripts/models.mjs check`: exit 0.
 
 CHECKPOINT · merged main 6a6bdff at 14:21Z 20 Nov 2026 · witness and mutants GREEN on the merged tree · resume from: the neutral verdict of this push
+
+## 8 · FIX — forks row 1224 (architect, 21 Nov 2026): witness C4 re-cut
+
+**What reded.** land/mdet 72c9add (this branch's ee23f4a onto main e436c17) read `BROKEN C4 CENSUS`: C4 compared the frozen table
+row for row, line numbers and all, and units landed after the cut moved lines of captains_call, capture and ci_verdict. Every other
+clause, BOUND against the parent and LAST held.
+
+**The re-cut (row 1224 (2)), C4 only — no other clause touched:**
+1. The table (§2) carries each organ's blob in its last cell (`git hash-object scripts/<organ>`), re-keyed on the merge of main
+   e436c17. A row is JUDGED (the tree's census row must equal it, blob cell aside) only when the organ's bytes in the tree hash to
+   that blob. An organ whose blob moved, or that is gone, is NAMED and COUNTED, never judged. A census row absent from the table is
+   NAMED, never red. At least one row must be judged, and a row with no blob judges nothing (a red).
+2. THE PLANT: the same tree with one line added at the head of the first judged dispatch organ must read C4 GREEN with that organ
+   named moved. The line is then taken back out.
+3. THE MUTANT: a moved organ judged (the blob key ignored). It edits a COPY of the witness under the temp root; the unchanged
+   control stays. It reads red through the plant.
+4. Merge of current main: `git fetch origin main && git merge --no-edit origin/main` (origin/main = `e436c172f712e47aa47a40a8a4870581fec8a855`),
+   merge commit `aa989e1353f466de47711062627e8dc36d7f9936`, no conflict. ci/mdet/BASE is unchanged (cebe3eb); clauses are judged against it, BOUND against e436c17.
+
+**Re-run on the merged tree (21 Nov 2026):**
+- witness, bound against e436c17: `GREEN MDET the coverage detector reads a dispatch or a self-run, never a comment or a string · 5 clause(s)` (exit 0). C4 on the build: `judged 140 · moved 0 · absent 0 · head-line plant on acts.mjs: GREEN, named moved (judged 139 · moved 1 (acts.mjs) · absent 0)`
+- witness as the WITNESSES member calls it (no --bound-org): `RED MDET · BOUND` — the member drops BOUND (`judgeLast`).
+- base as org: `RED MDET · C1 COMMENT, C2 STRING, C3 DISPATCH, C4 CENSUS, C5 SELF-RUN` (exit 1).
+- mutants: `run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN`
+- (21 Nov 2026) `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage`: 10 passed, 0 failed. `node scripts/models.mjs check`: exit 0.
+- law pack count line, merged tree and main e436c17 alike: `ORGANISM_TEST_LAWPACK {"owners-only-state-write":0,"law-m-literal-model":0,"jugad-literal-subject-list":90,"trailing-n-slice":0,"bare-catch":37,"receipt-testimony-read":5,"tum-not-tu-prose":0,"import-time-registry-read":2,"unguarded-dispatch":0,"raw-nul-in-source":0,"depcruise_errors":7}` — no count rose.
+- census on the merged tree: nothing moves between the legacy and the new reading.
+
+Files touched by the fix: ci/mdet/witness_mdet.mjs, ci/mdet/run_mutants_mdet.mjs, ci/mdet/PROOF.md, ci/mdet/LEDGER.jsonl; the rest
+is what the merge brings.
+
+CHECKPOINT · row 1224 fix pushed at 02:42Z 21 Nov 2026 · resume from: the two neutral legs of this push, then the architect's one re-run
