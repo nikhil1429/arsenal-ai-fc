@@ -61,6 +61,9 @@
 //             of the concept/axis in the window, with their settled verdicts).
 //   ITEMS   — his pehle-guess with its gut-word (the first gut-bearing answer) · each crack: the teacher's ```diff
 //             block (- galat / + sahi, the crack marker, NOTES_DESIGN P4) with the answer that cracked and the
+//             [unit mcrk: the crack ROW of that turn — cracks.jsonl, read through forge_session.mjs readCracks — stamps
+//             its moment, the text he typed (verbatim) and its id on the turn's crack item; the teacher's diff is kept exactly; a
+//             row whose turn has no diff is an item with an EMPTY diff and a named gap, never a diff built from what he typed]
 //             stuck-story after it · his hand-trace (an answer carrying two or more numbers he typed) · his Bolo
 //             (the answer after the teacher asks for it) · the teacher's [T] layers by the skeleton markers
 //             ([DUKAAN] [ASLI NAAM] [TECHNICAL LINE], teaching_bar.mjs:339-342) · each check (the LAST question
@@ -103,6 +106,7 @@ import { archiveRoot, istDayKey } from "./archivist.mjs";
 import { readLaneDays, exchanges, istDaysBetween, WORD_LANE, BANK_LANE } from "./exchanges.mjs";
 import { readRows as readCorrectionRows, active as liveCorrections, matchesIn, LEDGER as CORRECTIONS } from "./notes_corrections.mjs";
 import { loadCapsules } from "./rejirah.mjs";   // the capsules' reader — read only, capsules are immutable
+import { readCracks } from "./forge_session.mjs";   // unit mcrk — the crack rows' reader; forge_session.mjs is cracks.jsonl's SOLE WRITER
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -312,14 +316,18 @@ const tItem = (x, kind, extra = {}) => ({ mark: "T", kind, at: x.at, rid: x.rid,
 
 /** buildNote — PURE. One axis note from its word stream, bank, capsule and the live corrections (read FIRST).
  *  @param {{concept:string, axis:string, ex:any[], bank:any[], capsule:any, corrections:any[], window:any}} p */
-export function buildNote({ concept, axis, ex = [], bank = [], capsule = null, corrections = [], window = null }) {
+export function buildNote({ concept, axis, ex = [], bank = [], capsule = null, corrections = [], window = null, cracks = [] }) {
   const items = [], traps = [], gaps = [];
+  const crackItemsOf = new Map();   // unit mcrk — ex index → that teacher record's crack items (diff order)
   let seenGut = false;
   for (let i = 0; i < ex.length; i++) {
     const x = ex[i], prev = ex[i - 1] || null, next = ex[i + 1] || null;
     if (x.role === "teacher") {
       for (const d of diffBlocks(x.text)) {
-        items.push(tItem(x, "crack", { galat: d.galat, sahi: d.sahi }));
+        const it = tItem(x, "crack", { galat: d.galat, sahi: d.sahi });
+        items.push(it);
+        if (!crackItemsOf.has(i)) crackItemsOf.set(i, []);
+        crackItemsOf.get(i).push(it);
         traps.push({ from: "crack", bait: d.galat.join(" / ") || "(no - line)", truth: d.sahi.join(" / ") || "(no + line)", rid: x.rid, at: x.at });
       }
       for (const l of layersOf(x.text)) items.push(tItem(x, l.kind, { text: l.text }));
@@ -336,6 +344,26 @@ export function buildNote({ concept, axis, ex = [], bank = [], capsule = null, c
     const kind = gut && !seenGut ? "pehle_guess" : crackedNext ? "cracked" : afterCrack ? "stuck" : askedBolo ? "bolo" : numbersIn(x.text) >= 2 ? "trace" : asked ? "answer" : null;
     if (gut) seenGut = true;
     if (kind) items.push(nItem(x, kind, { ...(gut ? { gut: gut.toLowerCase() } : {}), ...(kind === "pehle_guess" && crackedNext ? { cracked: true } : {}) }));
+  }
+  // THE CRACK ROWS (unit mcrk, row 1189 (3) mcrk-3 a) — each row of this concept/axis attaches to the FIRST teacher record
+  // at or after it that comes before his next record (the turn the teacher wrote the ```diff in): its first unstamped crack
+  // item gains the moment, his words and the row id; galat/sahi stay EXACTLY the teacher's diff. A row whose turn holds no
+  // diff is an item with an EMPTY diff and a named gap — the diff is never built from his words.
+  for (const r of [...(cracks || [])].filter((c) => c && c.concept === concept && c.axis === axis && typeof c.at === "string")
+    .sort((a, b) => a.at.localeCompare(b.at))) {
+    const stamp = { moment: r.moment, words: r.words, crack_id: r.id, words_at: r.prompt_at };
+    let at = -1;
+    for (let i = 0; i < ex.length; i++) {
+      if (ex[i].at < r.at) continue;
+      if (ex[i].role === "teacher") at = i;
+      break;
+    }
+    const free = at >= 0 ? (crackItemsOf.get(at) || []).find((it) => !it.crack_id) : null;
+    if (free) Object.assign(free, stamp);
+    else {
+      items.push({ mark: "T", kind: "crack", at: r.at, rid: null, galat: [], sahi: [], ...stamp });
+      gaps.push(`crack row ${r.id} has no \`\`\`diff in its turn — the teacher's diff is missing`);
+    }
   }
   // THE BANK — receipts in the timeline (a capture row and the verdict that settled it)
   const receipts = (bank || []).map((b) => ({ kind: "bank", at: b.at, rid: b.rid, type: b.type || null, gut: b.gut || null, asked: b.asked || null, said: b.said || null,
@@ -360,7 +388,7 @@ export function buildNote({ concept, axis, ex = [], bank = [], capsule = null, c
   const weld = fl && fl.weld ? flag({ text: fl.weld }, "text") : null;
   // GAPS — what the compile could not find, named (never filled in)
   if (!items.some((i) => i.kind === "pehle_guess")) gaps.push("no pehle-guess with a gut-word");
-  if (!items.some((i) => i.kind === "crack")) gaps.push("no crack (no ```diff block in the teacher's turns)");
+  if (!items.some((i) => i.kind === "crack" && (i.galat.length || i.sahi.length))) gaps.push("no crack (no ```diff block in the teacher's turns)");
   if (!items.some((i) => i.kind === "trace")) gaps.push("no hand-trace (no answer with numbers he typed)");
   if (!items.some((i) => i.kind === "bolo")) gaps.push("no Bolo");
   if (!items.some((i) => ["dukaan", "asli_naam", "technical_line"].includes(i.kind))) gaps.push("no [T] skeleton layer marked in the teacher's turns");
@@ -395,6 +423,8 @@ export function renderNote(note) {
     } else if (it.mark === "N") {
       L.push(`[N ${istStampOf(it.at) || "????-??-?? ??:??:?? IST"} · ${String(it.rid || "").slice(-8)}] ${LABEL[it.kind] || it.kind}${it.cracked ? " (it cracked)" : ""}${it.gut ? ` · gut ${it.gut}` : ""}: ${corrMark(it, note)}${one(it.text)}`);
     } else {
+      // unit mcrk (G-B): his words of a crack row ride their OWN [N] line, above the teacher's [T] diff line
+      if (it.kind === "crack" && typeof it.words === "string") L.push(`[N ${istStampOf(it.words_at) || "????-??-?? ??:??:?? IST"} · crack ${it.crack_id}] HIS WORDS (the answer that broke${it.moment ? `, at ${it.moment}` : ""}): ${one(it.words)}`);
       const body = it.kind === "crack" ? `galat: ${one(it.galat.join(" / ")) || "—"} | sahi: ${one(it.sahi.join(" / ")) || "—"}` : one(it.text);
       L.push(`[T ${istStampOf(it.at) || "?"} · ${String(it.rid || "").slice(-8)}] ${LABEL[it.kind] || it.kind}: ${corrMark(it, note)}${body}`);
     }
@@ -435,6 +465,10 @@ export function compileDay({ date = todayIst(), stateDir = STATE_DIR, path = nul
     groups.get(k).push(w);
   }
   const capsules = loadCapsules(capsulesDir || join(stateDir, "capsules"));
+  // unit mcrk — THE CRACK ROWS, read once through their owner's reader. Absent = no cracks (said on the result); an
+  // unreadable file is NAMED on the result and is never fatal: the teacher's diffs still compile, unstamped.
+  const ck = readCracks(join(stateDir, "cracks.jsonl"));
+  const cracksNote = ck.rows === null ? `cracks.jsonl unreadable (${ck.error}) — crack items compiled without their rows` : ck.absent ? "no cracks.jsonl (no crack row written)" : `${ck.rows.length} crack row(s) read`;
   const results = [];
   let ok = true, lastGuard = null;
   for (const [k, wins] of groups) {
@@ -457,7 +491,8 @@ export function compileDay({ date = todayIst(), stateDir = STATE_DIR, path = nul
       .map((r) => { const p = r.payload, s = settled.get(p.id); return { rid: r.rid, at: r.ts_utc || p.ts, type: p.type, gut: p.gut, asked: p.asked, said: p.spoken, latency_ms: p.latency_ms, probe: p.probe, register: p.register, verdict: s ? (s.verdict || s.pass || "settled") : null }; });
     const capsule = capsules.find((x) => String(x.id || "").toLowerCase() === c || String(x.title || "").toLowerCase() === c) || null;
     const window = { windows: wins.map((w) => ({ from: w.from, to: w.to, origin: w.origin, how: w.how })), sessions: scope, scope: scope.length ? "G0 host" : "concept stamp (no host bound — a weaker scope)", records: ex.length };
-    const note = buildNote({ concept: c, axis: a, ex, bank, capsule, corrections: liveCorrections(corrRows, { concept: c, axis: a }), window });
+    const cracks = (ck.rows || []).filter((r) => String(r.concept || "").toLowerCase() === c && String(r.axis || "").toLowerCase() === a && typeof r.at === "string" && inWin(r.at));
+    const note = buildNote({ concept: c, axis: a, ex, bank, capsule, corrections: liveCorrections(corrRows, { concept: c, axis: a }), window, cracks });
     const sources = [...new Set([...ex.map((x) => x.rid), ...bank.map((b) => b.rid)].filter((x) => typeof x === "string" && x))];
     if (!sources.length) { results.push({ concept: c, axis: a, op: "skipped", why: "no archive record id to cite — a note without sources is never written" }); continue; }
     const content_sha = sha256(JSON.stringify({ compiler: COMPILER, note, sources }));
@@ -470,7 +505,7 @@ export function compileDay({ date = todayIst(), stateDir = STATE_DIR, path = nul
     rows.push(row);
     results.push({ concept: c, axis: a, op: prev ? "recompiled" : "compiled", id: row.id, supersedes: prev ? prev.id : null, sources: sources.length, traps: note.traps.length, gaps: note.gaps.length });
   }
-  return { ok, date, results, guard: lastGuard };
+  return { ok, date, results, guard: lastGuard, cracks: cracksNote };
 }
 
 // ---------------------------------------------------------------------------
@@ -678,6 +713,7 @@ const summary = (date, c, g, stub) => {
   return `notes_compiler: ${date} IST · compiled ${n("compiled") + n("recompiled")} (${n("recompiled")} superseding) · unchanged ${n("unchanged")} · refused ${n("refused")}`
     + ` · gate ${gated.filter((r) => r.verdict === "pass").length} pass / ${gated.filter((r) => r.verdict === "fail").length} fail / ${(g.results || []).filter((r) => r.op === "absent").length} absent (named) / ${(g.results || []).filter((r) => r.op !== "gated" && r.op !== "absent" && r.op !== "unreached").length} not run (reader ${stub ? "stub" : `role:${READER_ROLE}`})`
     + ` · names guard ${c.guard ? (c.guard.ran ? "ran" : "OFF") : "not reached"}`
+    + (c.cracks ? ` · ${c.cracks}` : "")   // unit mcrk — the crack rows, said (absent and unreadable both named)
     + (unreached ? ` · ${unreached} note(s) not reached by the deadline` : "");
 };
 
@@ -770,6 +806,26 @@ async function selftest() {
       { role: "teacher", at: at(5), rid: "r5", text: "```diff\n- c\n+ d\n```\nKahan atke?" }, { role: "him", at: at(6), rid: "r6", text: "maine socha c, phir d" }] });
     assert("AFTER A CRACK — his reply is the stuck-story only when the crack turn asked for it; a crack turn ending on the canonical check (\"haan ya nahi\") got an ANSWER",
       afterCheck.items.filter((i) => i.mark === "N").map((i) => i.kind).join() === "answer,cracked,stuck", afterCheck.items.filter((i) => i.mark === "N").map((i) => i.kind).join());
+    // unit mcrk (forks rows 1173 (1) / 1189) — THE CRACK ROW stamps its turn's crack item; the teacher's diff is kept exactly
+    {
+      // frozen: one fixture feeds four builds, so no build may mutate the turns another one reads
+      const exK = Object.freeze([{ role: "teacher", at: at(1), rid: "k1", text: "Ek word kitne tokens?" }, { role: "him", at: at(2), rid: "k2", text: "shaky — ek word ek token" },
+        { role: "teacher", at: at(3), rid: "k3", text: "```diff\n- ek word = ek token\n+ ek word = ek ya zyada tokens\n```\nKahan atke?" }]);
+      const row = { v: 1, kind: "crack", id: "ck-selftest-0001", at: at(2.5), concept: "x", axis: "a", moment: "check_q", words: "shaky — ek word ek token", prompt_at: at(2) };
+      const plain = buildNote({ concept: "x", axis: "a", ex: exK }), stamped = buildNote({ concept: "x", axis: "a", ex: exK, cracks: [row] });
+      const pc = plain.items.find((i) => i.kind === "crack"), sc = stamped.items.find((i) => i.kind === "crack");
+      assert("CRACK ROW (unit mcrk) — the row stamps moment, his words and its id on its turn's crack item; galat/sahi stay the teacher's diff; his words ride their own [N] line",
+        !!sc && sc.moment === "check_q" && sc.words === row.words && sc.crack_id === row.id && sc.words_at === row.prompt_at
+        && JSON.stringify(sc.galat) === JSON.stringify(pc.galat) && JSON.stringify(sc.sahi) === JSON.stringify(pc.sahi) && !("moment" in pc) && !("words" in pc)
+        && renderNote(stamped).some((l) => l.startsWith("[N ") && l.includes(`crack ${row.id}`) && l.includes(row.words)) && !renderNote(plain).some((l) => l.includes("HIS WORDS")));
+      const noDiff = buildNote({ concept: "x", axis: "a", ex: [...exK.slice(0, 2), { role: "teacher", at: at(3), rid: "k3", text: "Kahan atke?" }], cracks: [row] });
+      const nd = noDiff.items.filter((i) => i.kind === "crack");
+      assert("CRACK ROW (unit mcrk) — a row whose turn holds no ```diff is an EMPTY-diff item and a named gap: the diff is never built from his words",
+        nd.length === 1 && nd[0].galat.length === 0 && nd[0].sahi.length === 0 && nd[0].crack_id === row.id && noDiff.gaps.some((g) => g.startsWith(`crack row ${row.id} has no`)));
+      assert("CRACK ROW (unit mcrk) — a row of another axis stamps nothing, and no row leaves the note byte-equal to the base build",
+        !buildNote({ concept: "x", axis: "a", ex: exK, cracks: [{ ...row, axis: "b" }] }).items.some((i) => "crack_id" in i)
+        && JSON.stringify(buildNote({ concept: "x", axis: "a", ex: exK, cracks: [] })) === JSON.stringify(plain));
+    }
     assert("EXTRACTION — the teacher's [T] layers by the skeleton markers (DUKAAN · ASLI NAAM · TECHNICAL LINE)",
       kinds("dukaan").length === 1 && kinds("asli_naam").length === 1 && kinds("technical_line").length === 2);
     assert("THE BANK — receipts: asked, what he said, gut, latency, and the settled verdict; the interview line is named",
