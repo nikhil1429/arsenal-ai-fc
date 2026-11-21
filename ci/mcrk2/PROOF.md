@@ -1,0 +1,186 @@
+# MCRK2 PROOF — the crack verb never loses his words; the miss falls on the teacher by name
+
+Unit mcrk2, build seat (unit mcrk2b, forks rows 1243 / 1246 / 1258 / 1269). Written by a cloud build seat on 21 Nov 2026.
+**Not a landing.** Nothing here moves main; nothing is merged into main; no PR is opened.
+
+## 1. The base — PROVISIONAL (row 1269 (1) and (2))
+
+- **Branch:** `claude/mcrk2-build`, cut from the mbank build tip with
+  `git fetch origin claude/mbank-build && git checkout -b claude/mcrk2-build f635d68b1bce300b58aa031ed49278b8bbe3e5a8`.
+- **`ci/mcrk2/BASE`** = `f635d68b1bce300b58aa031ed49278b8bbe3e5a8`. On 21 Nov 2026 `origin/claude/mbank-build` had **not** moved
+  past it (its tip read `f635d68`), so no newer sha is named.
+- mbank is adopted at that tip **only provisionally**, until its two legs read green. It is not on main. When a message
+  names a re-cut mbank tip, or a main that carries mbank, this seat merges it (a merge commit, never a rebase or a force
+  push), re-runs the unit witness at the merge and names the merge and its result here.
+- **The spec** is `ci/mcrk2/MCRK2_SPEC.md` at `9a6beb4` (claude/mcrk2-spec), carried here byte-equal and left as it is.
+  Its ledger rows are carried at the head of `ci/mcrk2/LEDGER.jsonl`.
+
+## 2. The ruling as built (row 1258, forks F1 to F9)
+
+| fork | ruled | built |
+|---|---|---|
+| F1 | A | `teaching_gate.mjs` reds **`C.crack-gap`** (mouth `count`) on that turn by name, and `teaching_audit.mjs` counts drift **`crack-gap`** in its own audit lane. No card is filed; no note is blocked |
+| F2 | C | the verb reads his words only through mbank's reader **`readHisPrompt({ since, sessionId: CLAUDE_CODE_SESSION_ID, fresh: true })`**; a consumed record and another session's record both refuse |
+| F3 | A | the gate knows the turn by `prompt_session_id === payload.session_id` plus a once-latch (`crack_gaps` on its own log row). No text join, no time join |
+| F4 | B, F4-m yes | `notes_compiler.mjs settleCrackAxis`: a containing window of its session, else exactly one axis declared in its turn; ambiguity refuses; a moment logged with no axis gives an axis-none crack its moment |
+| F5 | A | §7 below, once |
+| F6 | A | `ci/witness/mcrk/witness_crack.mjs` K3 narrowed in place, citing row 1243; the inverted legs live in mcrk2 G2 / G3; nothing skipped |
+| F7 | B | one sentence in `.claude/skills/forge/REFERENCE.md` (the `crack` paragraph) tells the teacher before the miss |
+| F8 | A | `moment: "undeclared"`, `axis: "none"`, never null; plus `gap` and `gap_owner: "teacher"` |
+| F9 | A | the gate red is study-scope only (out of scope the gate returns before it); outside scope the drift lane still counts it |
+
+## 3. The changed files (the bound)
+
+```
+scripts/forge_session.mjs          crackRow (branch 4 first; axis "none"; moment "undeclared"; gap + gap_owner), the crack case
+                                   (readHisPrompt with since, the calling session id, fresh), the verb print line (GAP), the
+                                   header law line, the selftest crack block (two legs inverted by ruling, new legs added)
+scripts/notes_compiler.mjs         pacerSessions, settleCrackAxis, compileDay (settle + unplaced named), buildNote (gap row is a
+                                   crack; GAPS line), render (moment undeclared / axis settled label), header, selftest
+scripts/teaching_gate.mjs          CHECKS C.crack-gap (count), RANK, decide() input `cracks`, stopHook read + log field
+                                   crack_gaps, selftest
+scripts/teaching_audit.mjs         crackGapDrift (pure) + its emitter before staging, CHECKED_RULES + RULE_NOTES + the oracle
+                                   mirror, SEED_GAP declares crack-gap, selftest
+.claude/skills/forge/REFERENCE.md  one sentence (F7 B)
+ci/witness/mcrk/witness_crack.mjs  K3 narrowed (F6 A); its ENV drops CLAUDE_CODE_SESSION_ID (FORK mcrk2-F6w)
+ci/witness/mcrk2/witness_crack_gap.mjs · ci/mcrk2/{BASE, witness_mcrk2.mjs, run_mutants_mcrk2.mjs, PROOF.md, LEDGER.jsonl,
+MCRK2_SPEC.md (carried byte-equal)}
+```
+
+Never edited: `scripts/registry.mjs`, `scripts/teaching_contract.mjs`, `package.json`, `scripts/study_scope.mjs` and every
+other mbank file, anything under `dressing-room/state`. The mbank reader is read through its export only.
+
+## 4. The witness, both ways (21 Nov 2026)
+
+The org and base trees are `git archive` copies under the seat's scratch dir (a working tree carries hook-written state files,
+which BOUND would name).
+
+```
+$ node ci/mcrk2/witness_mcrk2.mjs --org <archive HEAD> --base-org <archive f635d68>     # exit 0
+GREEN MCRK2 the crack verb writes his words with the moment named undeclared or the axis named none, refuses only when his words of this turn are not on disk (absent, stale, consumed, another session's), the gap reds on the teaching gate once and counts as drift, no card, no note blocked, the compiler settles its axis from the pacer ledger · 14 clause(s)
+
+$ node ci/mcrk2/witness_mcrk2.mjs --org <archive f635d68> --base-org <archive f635d68>  # exit 1
+RED MCRK2 · G2, G3, G3b, G4, G5, G6, G7, G8, G9, G10, G12, MCRK CARRY
+
+$ node ci/witness/mcrk2/witness_crack_gap.mjs plants                                    # the suite's clause-witness walk, exit 0
+PLANTS mcrk2 · 12 of 12 plant(s) as expected
+```
+
+Every clause of the clause witness is RED on the base for its own reason (G4 at base: (a)(b)(c) refused, **(d) consumed and
+(e) another session's slot WRITTEN**; MCRK CARRY at base: K3 not narrowed). BOUND and LAST are seat-time clauses.
+
+## 5. The mutants (21 Nov 2026)
+
+```
+$ node ci/mcrk2/run_mutants_mcrk2.mjs --org <archive HEAD> --base-org <archive f635d68>   # exit 0
+run_mutants: 21 of 21 mutant(s) RED by the clause that names them · control GREEN
+```
+
+M1 gap on every row · M2 the no-moment refusal back · M3 the no-axis refusal back · M3b the axis check ahead of the prompt
+check · M4d fresh dropped · M4e the calling session id dropped · M5 the crack case writes the session · M6a the gap red a
+patch · M6b the once-latch dropped · M6c another session's gap reds · M7a the emitter dropped · M7b crack-gap undeclared ·
+M7c the emitter files a card · M8 a gap group skipped · M8b GAPS silent · M9a an unsettled row placed by a guess · M9b
+settling dropped · M10 readCracks drops gap rows · M10b the verb line silent · M12e a direct record read in the crack case ·
+M-carry the seat's session id reaches the mcrk plants again. (M5 was first written as a bare `save(s)`, which rewrites the
+same bytes and proved nothing; it now touches `updated_at`, a real session write.)
+
+## 6. Every touched selftest and member, before (the cut f635d68) and after (this tip), by its headline line
+
+```
+                                             cut f635d68 (21 Nov 2026)                     tip (21 Nov 2026)
+node scripts/forge_session.mjs selftest      forge_session selftest: 244 passed, 0 failed  forge_session selftest: 245 passed, 0 failed
+node scripts/notes_compiler.mjs selftest     notes_compiler selftest: 48 passed, 0 failed  notes_compiler selftest: 51 passed, 0 failed
+node scripts/teaching_gate.mjs selftest      teaching_gate selftest: 130 passed, 0 failed  teaching_gate selftest: 132 passed, 0 failed
+node scripts/teaching_audit.mjs selftest     ALL CHECKS PASSED (153 passed, 0 failed)      ALL CHECKS PASSED (154 passed, 0 failed)
+ci/witness/mcrk/witness_crack.mjs plants     PLANTS mcrk · 11 of 11 plant(s) as expected   PLANTS mcrk · 11 of 11 plant(s) as expected
+ci/witness/mbank/witness_bank.mjs plants     (green at the cut: its member line ok)        PLANTS mbank · 19 of 19 plant(s) as expected
+ci/witness/mcap/witness_capability.mjs       (green at the cut: its member line ok)        PLANTS mcap · 86 of 86 plant(s) as expected
+ci/witness/mmeter/witness_meter.mjs          (green at the cut: its member line ok)        PLANTS mmeter · 18 of 18 plant(s) as expected
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all
+  cut  organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)
+  tip  organism_test: 168 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)
+  (the only member lines that moved: + CLAUSE WITNESS · ci/witness/mcrk2/witness_crack_gap.mjs plants — ok;
+   LOAD ZERO BLOCK 7 scans one more canon file — ok)
+node scripts/models.mjs check                exit 0 · literal model names outside models.mjs: 0
+```
+
+The mcrk witness reads 11 plants without `--base-tree` (CODEC BOUND is a base-vs-build clause, said on its own line).
+
+## 7. F5 A — the two lost cracks of 21 Nov, named once
+
+**Two crack answers of 21 Nov 2026, 11:32 IST, are LOST.** The verb refused both (the first: no axis ON; the second, seven
+seconds later: no moment declared on axis d), so no row was written, and the only door that holds his words, the prompt
+record, is overwritten at every later prompt. Both misses were the teacher's, not his. Row 1258 F5 A grants no recovery door,
+and none is built. The runner repeats the count at each day close until mcrk2 lands (row 1243 (5)).
+
+## 8. Where the build differs from the spec (the ruling and the brief win), each named
+
+1. **`words_src` stays `"teaching_audit_last.prompt"`** (spec §11.3 proposed `"study_scope.hisPrompt"`). mbank's clause B12,
+   a member at this tip, asserts the old value.
+2. **`crackRow` keeps its `auditLast` argument** and gains `prompt` (the door's result, what the verb passes) and `sessionId`;
+   the spec's signature took `prompt` only. mbank's B12 and the selftest call the pure function with a record object; the same
+   door (`hisPrompt` with since, sessionId, fresh) is applied inside.
+3. **The env-absent refusal (spec §11.2, clause G12c) is NOT built — FORK mcrk2-F12.** With no `CLAUDE_CODE_SESSION_ID` the
+   verb passes `sessionId: null`, and mbank's `readHisPrompt` then reads the shared slot with `since` and `fresh` and no session
+   check (mbank's own contract). Refusing there would turn the landed mcrk witness and every neutral-machine leg red (the
+   neutral machine has no session id). The ruling's F2 C names "the calling session id", and with none there is nothing to
+   compare. The architect may rule it stricter.
+4. **No seed row for `crack-gap` in `teaching_contract.mjs`** (never edited by this brief) — FORK mcrk2-F13. The id is
+   declared in `teaching_audit.mjs SEED_GAP`, the file's own declared-gap list, whose ratchet goes red the day the owner seeds
+   it. Until then `autohit crack-gap` exits 1 on his laptop and the drift is counted in the audit lane's own log row
+   (`teaching_audit.jsonl` drifts + staged). Spec G7's "the contract CLI lists crack-gap" leg is replaced by the SEED_GAP leg.
+5. **The pacer `status` suffix (spec §6, G10's status leg) is not built**: the brief names `forge_session.mjs` for crackRow
+   and the verb print line. G10 holds readCracks and the print line instead.
+6. **FORK mcrk2-F6w — one edit in `witness_crack.mjs` beyond K3.** Its `ENV` now deletes `CLAUDE_CODE_SESSION_ID`. Without it,
+   on any seat or on his laptop (where Claude Code sets the variable) K1, K2, K3b, K4 and K7 go RED: the verb, now reading
+   through the calling session's own record, rightly refuses a plant whose prompt record was written by `sess-witness`.
+   Measured here: with the seat's id the narrowed witness read 6 of 11; with the variable absent 11 of 11.
+7. **Spec G12 (interleave) at this base.** mbank already writes HIS words when his session has its own record; the defect
+   left at f635d68 is the fallback to another session's shared slot when his own record is absent. That is G4 (e) here, RED
+   at base. G12 holds the source check and the own-record leg.
+8. **The gate's turn join.** In scope with an unreadable transcript, `decide` returns before any check (as it always has),
+   so a gap row written on such a turn reds on the next readable Stop of that session, once (the latch). Named, not changed.
+9. **Settling (F4 B) — the turn's end** is his next archived record of the same session (`prompt_session_id`, else the
+   concept stamp) after `prompt_at`, read from the word lane for the days of the row; with none, `[prompt_at, row.at]`.
+10. **Other units' mutant anchors.** At this tip mbank's `run_mutants_mbank.mjs` M17 anchor (`auditLast: ownC ? …`) no longer
+    lands: that line is the one F2 C replaces by ruling (its behaviour is held by mcrk2 G4 (e) / G12, mutants M4e / M12e).
+    The B12 and B13 anchors and mcrk's K7 anchor were kept landing (byte-equal lines). mcrk's M5 and M8 anchors already did
+    not land at the base f635d68 (pre-existing, not this unit's).
+
+## 9. OWED to the runner (his laptop only; never guessed here)
+
+- Whether a sitting was bound to the 11:32 IST session (F9): `node scripts/sitting.mjs status`.
+- Whether Claude Desktop sets `CLAUDE_CODE_SESSION_ID` for a Bash child (spec §10, F2-b; it decides how often FORK mcrk2-F12
+  applies): `node -e "console.log(!!process.env.CLAUDE_CODE_SESSION_ID)"` in a Desktop study session (a boolean, never the value).
+- How often moments are logged with `axis: null` (F4-m reach): over `forge_sessions.jsonl`, `moments_log[].axis === null`.
+- That `node scripts/teaching_audit.mjs report` names `crack-gap` UNWIRED until the contract's owner seeds it (FORK mcrk2-F13).
+
+## 10. FORKS (one line each)
+
+- **mcrk2-F6w** — `witness_crack.mjs`'s ENV drops `CLAUDE_CODE_SESSION_ID` (beyond F6 A's K3): forced, or the landed member reds wherever the variable is set.
+- **mcrk2-F12** — no refusal when the calling session id is absent (spec §11.2's G12c not built): the shared slot with since + fresh, as mbank's reader does.
+- **mcrk2-F13** — `crack-gap` has no seed row in `teaching_contract.mjs` (not this unit's file); declared in SEED_GAP; owed to the contract's owner.
+- **mcrk2-F14** — mbank's mutant M17 anchor is replaced by ruling (F2 C); whoever re-cuts mbank or lands second re-anchors it (class of row 1253).
+
+## 6b. The neutral machine's `witnesses` member, emulated (21 Nov 2026)
+
+Run on a clean local clone at the cut and at the tip, with the member's own flags
+(`GITHUB_ACTIONS=true GITHUB_WORKSPACE=<clone> ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs witnesses`,
+no session id). This container's repository is a shallow clone, so the units whose BASE commit it lacks read
+"its BASE is in the clone" RED at the cut and at the tip alike; that is the container, not the tree. The diff of every
+member line, cut to tip:
+
+```
+>   ok   WITNESS ‹mcrk2› · GREEN at head against its BASE
+<   ok   WITNESSES · 51 unit(s) judged in 828.5 s (B5: the member's own seconds, measured every run)
+>   ok   WITNESSES · 52 unit(s) judged in 804.4 s (B5: the member's own seconds, measured every run)
+```
+
+Every other unit's line (mbank, mcap, mcrk, mclk, mdet, mdtl2 and the rest whose BASE is here) is byte-equal: GREEN at head
+against its BASE at both. The neutral machine's own check runs of the pushed tip are named in the ledger (act `ci-read`).
+
+## 11. CHECKPOINT
+
+CHECKPOINT · BUILT at 2026-11-21T14:50Z · witness GREEN both ways, 21 of 21 mutants RED, control GREEN · resume from: read the
+neutral machine's check runs of this tip; then any message (a re-cut mbank tip or a main carrying mbank → merge it, re-run the
+unit witness at the merge, name it here)
