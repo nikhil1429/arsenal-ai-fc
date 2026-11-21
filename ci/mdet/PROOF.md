@@ -290,3 +290,37 @@ Files touched by the fix: ci/mdet/witness_mdet.mjs, ci/mdet/run_mutants_mdet.mjs
 is what the merge brings.
 
 CHECKPOINT · row 1224 fix pushed at 02:42Z 21 Nov 2026 · resume from: the two neutral legs of this push, then the architect's one re-run
+
+## 9 · FIX — forks row 1226 (2) (architect, 21 Nov 2026): the plant clone takes eol=lf
+
+Branch `claude/mdet-eol`, cut from main `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f` (unit mdet landed at dfe26a1).
+
+**What reded (a false red, never a false green).** On a Windows git checkout the architect's run read C4 `judged 0 / moved 140`.
+`plantTree` cloned with `core.autocrlf=false` and no eol setting; the repo's `.gitattributes` says `* text=auto`, and with no
+`core.eol` git checks text out in the native ending, so the Windows clone wrote CRLF and every organ's blob hash moved.
+
+**The edit (ci/mdet/witness_mdet.mjs only):** `ci/mdet/witness_mdet.mjs:115` now clones with `-c core.autocrlf=false -c core.eol=lf`
+on the command AND in the clone's own config; the old header line is struck (`~~…~~`) with the new one beside it.
+
+**Proof (21 Nov 2026).** This seat is Linux, so Windows git's native ending is reproduced by a global git config holding
+`core.eol = crlf` (`GIT_CONFIG_GLOBAL=<that file>`), which is the same knob a Windows git defaults to:
+- the OLD witness, that config: `RED MDET · BOUND, C4 CENSUS` — C4 `judged 0 · moved 140 (acts.mjs, archive
+RED MDET · BOUND, C4 CENSUS…`: the architect's reading, reproduced.
+- the NEW witness, that config, bound against 7bf008b: `GREEN MDET the coverage detector reads a dispatch or a self-run, never a comment or a string · 5 clause(s)` (exit 0) — C4 `judged 136 · moved 4 (audit_preload.mjs, ci_verdict.mjs, sandbox.mjs, tone.mjs) · absent 1 (red_cause.mjs) · head-line plant on acts.mjs: GREEN, named moved (judged 135 · moved 5 (acts.mjs, audit_preload.mjs, ci_verdict.mjs, sandbox.mjs, tone.mjs) · absen`.
+  The moved and absent organs are the ones changed or added on main since the table was keyed at the e436c17 merge: named, never judged.
+- the NEW witness, no such config: GREEN MDET (5 clauses). Base as org: `RED MDET · C1 COMMENT, C2 STRING, C3 DISPATCH, C4 CENSUS, C5 SELF-RUN`.
+- mutants, CRLF-native config and without: `run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN`
+- the windows-latest neutral legs run this witness through the suite's WITNESSES member, which hands it plain LF trees (`lfTree`,
+  `core.eol=lf`), i.e. the copy path, not the clone path; their verdicts are §9's last line below.
+
+**Other units' witnesses (row 1226 (3)) — NAMED, never edited.** Every git clone or init under ci/ with no `core.eol`:
+- SAME CLASS (a clone of the organism checkout, which carries `* text=auto`, so CRLF on a Windows git): `ci/mcov/witness_mcov.mjs:75`
+  · `ci/mherm/witness_mherm.mjs:70` · `ci/mherm/run_mutants_mherm.mjs:73`.
+- NO EOL, NOT AFFECTED (the cloned seed carries no text attribute, so with core.autocrlf=false nothing is converted):
+  `ci/mgrd/witness_mgrd.mjs:53,54,61` · `ci/mland/witness_mland.mjs:73,74,84` · `ci/mlj/witness_mlj.mjs:100,101,109` ·
+  `ci/mgs/witness_mgs.mjs:67,70,76` · `ci/ms1/witness_ms1.mjs:92,176,185` (its `* text=auto` plant at :136 sits in a repo that is
+  committed, never cloned or checked out, and its CRLF variant sets core.eol=crlf on purpose).
+- INIT OVER COPIED BYTES (no checkout, so no eol conversion is applied to the working tree): `ci/mherm/witness_mherm.mjs:73` ·
+  `ci/mdtl/witness_mdtl.mjs:114` · `ci/mdtl2/witness_mdtl2.mjs:142` · `ci/mtail/sides.mjs:21` · `ci/mrung/witness_mrung.mjs:110` ·
+  `ci/mlaw/witness_mlaw.mjs:111` · `ci/mjud/sides.mjs:37` · `ci/witness/mmeter/plant_day.mjs:100,101`.
+  (`ci/mday/witness_mday.mjs:150` is `archivist.mjs init`, not a git init.)
