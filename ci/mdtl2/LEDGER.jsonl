@@ -2,3 +2,8 @@
 {"ts":"2026-11-21T00:22:14.544Z","act":"cut","cmd":"git checkout -b claude/mdtl2-build 25f13f2","last_line":"Switched to a new branch claude/mdtl2-build"}
 {"ts":"2026-11-21T00:22:14.544Z","act":"spec","cmd":"git show d39e060:ci/mdtl2/MDTL2_SPEC.md","last_line":"read whole (sections 0-10) with its ledger"}
 {"ts":"2026-11-21T00:22:14.544Z","act":"parallel","cmd":"git diff 25f13f2 origin/claude/mkp24-build -- scripts/organism_test.mjs | grep ^@@","last_line":"@@ -3010,7 +3010,10 @@ async function witnesses() (mkp24 tip 3898668)"}
+{"ts":"2026-11-21T00:34:08.215Z","act":"hermetic-cut","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (LF clone of 25f13f2 under os.tmpdir(), node_modules linked)","last_line":"organism_test: 160 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)"}
+{"ts":"2026-11-21T00:34:08.215Z","act":"hermetic-tip","cmd":"the same, LF clone of b54bcac","last_line":"organism_test: 161 passed, 2 failed · ruled 0 · UNRULED 2 · LIVE 124 (hermetic: named, not run)"}
+{"ts":"2026-11-21T00:34:08.215Z","act":"reds-both","cmd":"grep ^  FAIL (cut and tip)","last_line":"SUITE MEMBER · sandbox selftest exits 0 ; all <n> hermetic suite members pass (the container-bound sandbox red, spec N6) at both"}
+{"ts":"2026-11-21T00:34:08.215Z","act":"channel-live","cmd":"the tip machine line causes (container)","last_line":"SUITE MEMBER · sandbox selftest exits 0 · exit 1 · FAIL NEGATIVE CONTROL · writing LIVE dressing-room/state is DENIED · and 3 more"}
+{"ts":"2026-11-21T00:34:08.215Z","act":"selftests","cmd":"node scripts/red_cause.mjs selftest ; node scripts/ci_verdict.mjs selftest","last_line":"red_cause selftest: 22 passed, 0 failed ; ci_verdict selftest: 38 passed, 0 failed (34 at the cut)"}
