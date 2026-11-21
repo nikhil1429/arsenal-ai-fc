@@ -11,3 +11,7 @@
 {"ts":"2026-11-21T05:57:48.490Z","act":"selftests-head","cmd":"notes_compiler · forge_session · learnstate selftest","last_line":"55 passed, 0 failed · 243 passed, 0 failed · ALL CHECKS PASSED (149 → 152 checks)"}
 {"ts":"2026-11-21T06:02:41.707Z","act":"clause-witness-head","cmd":"node ci/witness/mtrap/witness_traps.mjs plants --base-tree <git archive 5301f15>","last_line":"PLANTS mtrap · 10 of 10 plant(s) as expected"}
 {"ts":"2026-11-21T06:02:41.729Z","act":"clause-witness-base","cmd":"node ci/witness/mtrap/witness_traps.mjs plants --tree <git archive 5301f15> --base-tree <same>","last_line":"PLANTS mtrap · 0 of 10 plant(s) as expected"}
+{"ts":"2026-11-21T06:04:03.795Z","act":"witness-head","cmd":"node ci/mtrap/witness_mtrap.mjs --org <git archive of the tip> --base-org <git archive 5301f15>","last_line":"GREEN MTRAP … · 12 clause(s)"}
+{"ts":"2026-11-21T06:04:03.820Z","act":"witness-base","cmd":"node ci/mtrap/witness_mtrap.mjs --org <git archive 5301f15> --base-org <same>","last_line":"RED MTRAP · W1, W2, W3, W4, W5, W6, W7, W8, W9, SKILL"}
+{"ts":"2026-11-21T06:04:03.845Z","act":"mutants","cmd":"node ci/mtrap/run_mutants_mtrap.mjs --org <tip archive> --base-org <5301f15 archive>","last_line":"run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T06:04:10.722Z","act":"models-check","cmd":"node scripts/models.mjs check","last_line":"exit 0 · literal model names outside models.mjs: 0"}
