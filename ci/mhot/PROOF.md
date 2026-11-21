@@ -565,3 +565,71 @@ re-judges. C mcov's seat re-cuts.
 carries their verdict when read). The previous tip `f9c7ed4` (run 44773570313): `npm test` node 22 and node 24 failure.
 
 CHECKPOINT · RESUMED at 06:12 UTC 2026-11-21 · merged 5301f15 at 1527a72 · legs of 1527a72: hermetic twice ×2 success, npm test ×2 in progress (run 44873083652) · resume from: the npm test verdict, then the ruling on MHOT-M2's mcov half (§16)
+
+## 17 · THE MERGE OF MAIN 7bf008b (units mdet, mdtl2, mclk) — forks rows 1226 / 1228, 2026-11-21
+
+Merge commit `1a502c7` (parents `d90e9d4`, this branch, and `7bf008b`, main), a merge commit, never a rebase.
+`ci/mhot/BASE` is unchanged (`5759cce`). Two conflicted files, both resolved keeping both intents:
+- **`package.json`, the six keys `_selftest_coverage_law` … `_runner_law`.** *Main meant:* one new member,
+  `node scripts/red_cause.mjs selftest` on `organism:selftest`, the only scripts difference `5301f15` → `7bf008b`,
+  measured. *This unit meant:* the chain commands. *The result is the union:* this unit's six lines, plus
+  `suite/members/red_cause.json` (organism:selftest, `["selftest"]`, `live: null`).
+- **`scripts/organism_test.mjs`, `main()`'s verb dispatch** (beside `if (mode === "selftest")`). *Main meant:* unit mdet's
+  `census` verb, a read never in `MODES`. *This unit meant:* the `chain` and `roll` verbs, also outside `MODES`.
+  *The result keeps both:* all three dispatches stand, mhot's first and mdet's after.
+- **Merged clean, kept:** mdet's coverage detector (`hasSelftest` → `selftestForm`, `hasSelftestLegacy` frozen), which
+  `coverage()`'s roll-orphan check now calls; mdtl2's and mclk's lines. mclk's clock door: no clause of
+  `ci/mhot/witness_mhot.mjs` derives a day from the clock, so none moves.
+
+```
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs coverage
+organism_test: 13 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 0 (hermetic: named, not run)
+$ node scripts/organism_test.mjs roll | tail -1
+roll: 133 member(s) · 0 defect(s) · suite/members
+$ node ci/mhot/witness_mhot.mjs --org <clone 1a502c7> --base-org <clone 5759cce> --bound-base <clone 7bf008b>
+  ok   BOUND · against the bound base (the land commit's parent) · 144 file(s) differ · beyond the named: none · …
+GREEN MHOT the member roll · 12 clause(s)                                    (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone 5759cce> --base-org <clone 5759cce>
+RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9                                (exit 1)
+$ node ci/mhot/run_mutants_mhot.mjs --org <clone 1a502c7> --base-org <clone 5759cce> --bound-base <clone 7bf008b>
+run_mutants: 14 of 14 mutant(s) RED by the clause that names them · control GREEN
+$ node ci/mlaw/witness_mlaw.mjs --org <clone 1a502c7> --base-org <clone 5759cce>
+RED MLAW · BOUND                                    (row 1200 class: mlaw's witness has no bound-base door)
+```
+
+**The neutral legs of `1a502c7`** (workflow run 44877720834, read through the public API with no token):
+`136766054402 hermetic twice · node 22 success` · `136766054349 hermetic twice · node 24 success` ·
+`136766054066 npm test · node 22 failure` · `136766054386 npm test · node 24 failure`. The two `npm test` verdict
+annotations (`B1_VERDICT`, head `1a502c7` over base `7bf008b`) name these as new member reds:
+`WITNESS ‹mcov›`, `WITNESS ‹mprk›` and `WITNESS ‹mdtl2›` on both legs, plus `WITNESS ‹mlv3›` on node 24 only.
+Earlier tips: `d90e9d4` (run 44874441824) and `1527a72` (run 44873083652): `hermetic twice` ×2 success, `npm test` ×2
+cancelled, each superseded by the next push.
+
+**Each witness red, measured here on git clones, at the merge and at main `7bf008b` (the control), against its own BASE:**
+
+```
+mcov   at 1a502c7: RED MCOV · BOUND, C1 COVERAGE, C5 ONE RECORD, C6 SLOW-GREEN, C7 HANG-NAMED      at 7bf008b: RED MCOV · BOUND
+mprk   at 1a502c7: RED MPRK · COVER, BOUND                                                       at 7bf008b: RED MPRK · BOUND
+mdtl2  at 1a502c7: RED MDTL2 · E1 E2 E3 E10 E11 BOUND                                            at 7bf008b: RED MDTL2 · BOUND
+mlv3   at 1a502c7: RED MLV3 · BOUND                                                              at 7bf008b: RED MLV3 · BOUND
+```
+
+- **mlv3** is identical on both trees here: its node 24 red on the neutral machine (T1 IDLE, LIVE-SAFE: a worker and its
+  held ports) is not from this unit's fold. Named, not chased; a re-run of the leg measures it.
+- **FORK MHOT-M2, widened to three landed witnesses** (the F6 class: a landed witness that reads or plants members through
+  the `&&` strings). None of their files is in this unit's named set: row 1204 named only mlaw's. Each is measured, not edited.
+  - `ci/mcov/witness_mcov.mjs` **C1, C5, C6, C7** (§16).
+  - `ci/mprk/witness_mprk.mjs` **COVER** (`:295-302`): counts `node scripts/parked.mjs selftest` across the suite strings,
+    "must be 1". On the build it reads 0, while `suite/members/parked.json` holds it. The re-cut shape: the tree's roll where
+    `suite/members` exists, else the strings.
+  - `ci/mdtl2/witness_mdtl2.mjs` **E1, E2, E3, E10, E11**, all through `plantRepo` (`:136-140`). It plants `toy_member`
+    by writing the `organism:selftest` string and copies no `suite/`, so on the build the planted tree has no member
+    directory and the toy member never runs. The re-cut shape: where the tree holds `suite/members`, plant one member file
+    per planted member (the chain strings as the build writes them); else the string.
+
+  *Options for all three, one ruling:* A this seat re-cuts each in place as ADDED edits, row 1204's shape, under a row that
+  names the three files, with one mutant each (the planted member file removed → that clause red) · B a KNOWN_RED entry
+  each until their seats re-judge · C their own seats re-cut. Until it is ruled, `npm test` on this branch reds on these
+  three by name, and on nothing this unit's own files cause.
+
+CHECKPOINT · MERGED 7bf008b at 1a502c7 · 07:57 UTC 2026-11-21 · legs of 1a502c7 (run 44877720834): hermetic twice node 22 success, node 24 success · npm test node 22 failure, node 24 failure (new reds: WITNESS ‹mcov› ‹mprk› ‹mdtl2›, ‹mlv3› node 24 only) · resume from: the ruling on MHOT-M2 (mcov, mprk, mdtl2)
