@@ -1,0 +1,8 @@
+{"ts":"2026-11-21T07:48:32Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mcrk2-spec FETCH_HEAD","last_line":"7bf008b unit mclk ... land branch on land/mdtl2 4d582d5"}
+{"ts":"2026-11-21T07:52:00Z","act":"measure","cmd":"node scripts/forge_session.mjs selftest","last_line":"forge_session selftest: 243 passed, 0 failed"}
+{"ts":"2026-11-21T07:52:30Z","act":"measure","cmd":"node scripts/notes_compiler.mjs selftest","last_line":"notes_compiler selftest: 48 passed, 0 failed"}
+{"ts":"2026-11-21T07:54:00Z","act":"measure","cmd":"node ci/witness/mcrk/witness_crack.mjs plants --tree . --base-tree <archive 7bf008b>","last_line":"PLANTS mcrk · 12 of 12 plant(s) as expected"}
+{"ts":"2026-11-21T07:56:00Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (no node_modules)","last_line":"organism_test: 150 passed, 8 failed · ruled 0 · UNRULED 8 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T07:58:00Z","act":"install","cmd":"npm ci --no-audit --no-fund","last_line":"npm notice"}
+{"ts":"2026-11-21T08:05:00Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 166 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T08:20:00Z","act":"write","cmd":"ci/mcrk2/MCRK2_SPEC.md","last_line":"spec written; no existing file edited"}
