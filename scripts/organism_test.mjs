@@ -26,7 +26,7 @@
 // LAWS: READ-ONLY on dressing-room/state · spawns organs as CHILD PROCESSES (never
 //   imports them, so a top-level side effect cannot leak in) · every assertion NAMES
 //   the law it is holding · a RED here is a real defect, not a flaky net.
-// CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack|done|witnesses]
+// CLI: node scripts/organism_test.mjs [all|coverage|integrity|laws|hermetic|path|gates|lawpack|done|witnesses|clauses]
 // ============================================================================
 import { readFileSync, readdirSync, statSync, existsSync, cpSync, rmSync, mkdtempSync, mkdirSync, writeFileSync, appendFileSync, symlinkSync, unlinkSync, openSync, closeSync, realpathSync } from "node:fs";
 import { createHash } from "node:crypto";   // S11 · F-6: the content discriminator (an idempotent rewrite is not a leak)
@@ -40,21 +40,56 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
 const STATE = join(ROOT, "dressing-room", "state");
 const NODE = process.execPath;
+// unit mherm T2 (forks row 1157 (1), 20 Nov 2026): THE RUN'S TEMP DIR IS ITS OWN. One dir per process, made here, handed to
+// this process and to every child as TMPDIR/TEMP/TMP (os.tmpdir() reads them: TMPDIR on POSIX, TEMP then TMP on Windows),
+// and removed when the process exits. Before this, the selftests of five organs left a file or a dir in the shared temp dir on every run
+// (hippocampus, harvest, mirror, pulse, done; ci/mherm/PROOF.md W4) — never read again, but a run that leaves anything
+// behind is not a function of its tree alone. A spawn handed its own env gets the same three keys in run() below.
+const RUN_TMP = mkdtempSync(join(tmpdir(), "organism-run-"));
+for (const k of ["TMPDIR", "TEMP", "TMP"]) process.env[k] = RUN_TMP;
+process.on("exit", () => { try { rmSync(RUN_TMP, { recursive: true, force: true }); } catch { /* the OS's problem after this */ } });
 
 let pass = 0, fail = 0;
-const fails = [], passed = [];
+// unit mdtl: `causes` holds one entry per failing witness clause, `<red name> · <ID> · <text>` (witness_cause.mjs causeText)
+const fails = [], passed = [], causes = [];
+// unit mdtl2 (forks row 1220): every OTHER red's cause, rebuilt from public bytes by red_cause.mjs. The import is guarded by the
+// module's presence (a base tree measured by this instrument has none). Its ONE generic hook below only pushes into `causes`:
+// every judged name and detail stays byte-identical, so every KNOWN_RED entry keeps its match.
+const rc = existsSync(join(HERE, "red_cause.mjs")) ? await import("./red_cause.mjs") : null;
+let trackedAtHead = null;
+const rcIO = { root: ROOT, read: (p) => { try { return readFileSync(join(ROOT, p), "utf8"); } catch (e) { void e; return ""; } },   // unreadable = WITHHELD
+  tracked: () => (trackedAtHead ??= new Set(String(spawnSync("git", ["-C", ROOT, "ls-files", "-z"], { encoding: "utf8", windowsHide: true }).stdout || "").split("\0").filter(Boolean))) };
 const assert = (name, cond, detail) => {
   if (liveAssert(name)) return;   // B1 (b): a LIVE member under the hermetic profile is named, never judged
   if (cond) { pass++; passed.push(name); console.log(`  ok   ${name}`); }
-  else { fail++; fails.push({ name, detail }); console.log(`  FAIL ${name}${detail ? `\n         ${detail}` : ""}`); }
+  else {
+    fail++; fails.push({ name, detail }); console.log(`  FAIL ${name}${detail ? `\n         ${detail}` : ""}`);
+    if (rc && detail) for (const c of rc.causesOfDetail(name, String(detail), rcIO)) causes.push(rc.causeLine(name, c));   // unit mdtl2: the one generic hook
+  }
 };
 const section = (t) => console.log(`\n── ${t} ${"─".repeat(Math.max(0, 66 - t.length))}`);
 
+// THE LONG BOUND, in ONE place (unit mcov · forks row 1151 (1) (b), 19 Nov 2026). The heavy modes (gates, lawpack,
+// flow_atlas) each typed this same value; it is named here, unchanged, and a SUITE MEMBER's run takes it too: a member's
+// wait is a HANG GUARD, not a race (his laptop measured probe's selftest past the helper's default on 19 Nov 2026, and
+// the default killed it and read the kill as a red exit). No new number: the value is the one the heavy modes had.
+const HEAVY_BOUND_MS = 600000;
+// THE MEMBER BOUND (row 1182 (2)): a member run takes HEAVY_BOUND_MS. ORGANISM_TEST_MEMBER_BOUND_MS may only LOWER it (a
+// positive integer below the long bound; anything else is ignored), so a witness can plant a hanging member and see it named
+// killed without spending the whole long bound of the neutral job's time. Unset — his laptop, the watchman, CI — it is the
+// long bound. A door that can only tighten is a guard, never a budget.
+const MEMBER_BOUND_MS = (() => { const v = Number(process.env.ORGANISM_TEST_MEMBER_BOUND_MS); return Number.isInteger(v) && v > 0 && v < HEAVY_BOUND_MS ? v : HEAVY_BOUND_MS; })();
 // run an organ as a child; never import (a top-level side effect must not leak in)
+// unit mcov (row 1151 (1) (a)): a child this helper KILLS by its bound returns `killed: <the bound in ms>` beside its
+// code, so a reader can say "killed by the suite bound" and never mistake the kill for a non-zero exit.
 const run = (args, opts = {}) => {
-  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: opts.timeout || 120000, ...(opts.env ? { env: opts.env } : {}) });
-  return { code: r.status, out: (r.stdout || "") + (r.stderr || "") };
+  const bound = opts.timeout || 120000;
+  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: bound, ...(opts.env ? { env: { ...opts.env, TMPDIR: RUN_TMP, TEMP: RUN_TMP, TMP: RUN_TMP } } : {}) });
+  const killed = !!(r.error && /** @type {NodeJS.ErrnoException} */ (r.error).code === "ETIMEDOUT");
+  return { code: r.status, out: (r.stdout || "") + (r.stderr || ""), ...(killed ? { killed: bound } : {}) };
 };
+/** why a member run is red, in words: a kill by the bound is NAMED with the bound, never a bare exit @param {{code: number|null, killed?: number}} r */
+const redWhy = (r) => r.killed ? `killed by the suite bound (${r.killed} ms) — not an exit code` : `exit ${r.code}`;
 
 // This file is excluded from its own coverage check: it IS the suite, so it has no
 // `selftest` mode to wire anywhere. Named here rather than filtered silently.
@@ -118,7 +153,8 @@ const LIVE_SELFTESTS = Object.freeze({
   "heartbeat": "reads state/heartbeat_config.json",
   "herd": "reads state/xray_graph.json · probes the process table",
   "home_pin": "reads state/captain.json · reaches a localhost port it does not listen on",
-  "lawpack": "reads state/archive_audit.jsonl, state/audit_ledger.jsonl, state/awayday.json …",
+  // "lawpack" LEFT this table at unit mlaw (forks row 1137 (2) F2 A): its verdict reads no state byte but the whole-tree NUL
+  // scan's (byte-identical with the state dir absent, ci/mlaw/MLAW_SPEC.md §1.4), so it rides the hermetic profile; the scan stays whole.
   "learn_digest": "reads state/learning_state.json, state/registry.json, state/forge_profile.json …",
   "learnstate": "reads state/registry.json, state/forge_profile.json, state/python_state.json …",
   "limits": "reads state/reps_log.jsonl, state/physio_config.json, state/nemesis_config.json …",
@@ -211,7 +247,7 @@ const LIVE_MODES = Object.freeze({
   path: "drives forge/rejirah/samjhao/capture end to end over a sandbox COPY of dressing-room/state (registry, concepts, forge_profile, missions …) and mirror.mjs reaches the network",
   alive: "pulse.mjs probes the process table (Get-ScheduledTask) and reads the lanes' live artifacts",
   gates: "validates every schema-d file of dressing-room/state (ajv) and reads state/laws_register.json",
-  lawpack: "walks the whole tree, dressing-room/state included (437,917 state reads measured in one run)",
+  // lawpack LEFT this table at unit mlaw (forks row 1137 (2) F2 A) — see LIVE_SELFTESTS: the mode rides the hermetic profile.
   atlas: "re-derives the atlas from state/xray_graph.json, the live IR",
 });
 /** @type {string[]} */ const lived = [];
@@ -286,7 +322,91 @@ function relockSandboxCapsule(root, id) {
     return true;
   } catch { return false; }
 }
-const hasSelftest = (f) => { const src = readOrgan(f); return /['"`]selftest['"`]/.test(src) || /function selftest\(/.test(src); };
+// unit mdet (forks row 1151 (3) F3 B) — THE COVERAGE DETECTOR READS CODE, NEVER A COMMENT OR A STRING. Until this unit a
+// script "had a selftest" when the quoted word appeared ANYWHERE in its bytes, so a backticked word in a header comment
+// counted a selftest that did not exist (study_scope, measured by unit mcov: ci/mcov/PROOF.md F3). The old reading is
+// FROZEN below as hasSelftestLegacy (L9: frozen, never deleted) so the census can print both columns. The new one lexes the
+// source (comments blanked, every string and template body blanked and kept as a literal) and accepts exactly two forms:
+//   dispatch · a whole literal `selftest` that is an operand of === / == / !== / != or a `case` label: the mode the script
+//              actually branches on;
+//   self-run · a CALL of its own selftest() in code (not its declaration, not a method of another object): a script run
+//              bare IS its selftest (claudegen, the class package.json:_selftest_coverage_law names), so the gate stays
+//              as strict as before for it (a gate only gets stricter).
+// Dependency-free on purpose: the coverage law must measure in a bare checkout with no node_modules.
+const hasSelftestLegacy = (f) => { const src = readOrgan(f); return /['"`]selftest['"`]/.test(src) || /function selftest\(/.test(src); };
+/** codeOf — comments blanked, string/template/regex bodies blanked (newlines kept, so offsets and lines hold). PURE.
+ *  @param {string} src @returns {{ code: string, lits: { v: string, s: number, e: number, whole: boolean }[] }} */
+function codeOf(src) {
+  const n = src.length, lits = [], tpl = [];   // tpl: brace depth of each open ${ … } inside a template
+  let out = "", i = 0, prev = "";
+  const blank = (c) => (c === "\n" ? "\n" : " ");
+  const regexMayStart = () => prev === "" || /[(,=:[!&|?{};+\-*%<>~^]$/.test(prev)
+    || /^(return|typeof|case|do|else|in|of|new|delete|void|throw|yield|await)$/.test(prev);
+  const templateBody = (s, opened) => {          // i sits just past a backtick or past the } closing a ${ … }
+    let v = "";
+    while (i < n) {
+      const c = src[i];
+      if (c === "\\") { v += src.slice(i, i + 2); out += blank(src[i]) + blank(src[i + 1] || ""); i += 2; continue; }
+      if (c === "`") { out += "`"; i++; lits.push({ v, s, e: i, whole: opened }); return; }
+      if (c === "$" && src[i + 1] === "{") { out += "${"; i += 2; lits.push({ v, s, e: i, whole: false }); tpl.push(0); return; }
+      v += c; out += blank(c); i++;
+    }
+  };
+  while (i < n) {
+    const c = src[i], d = src[i + 1];
+    if (c === "/" && d === "/") { while (i < n && src[i] !== "\n") { out += " "; i++; } continue; }
+    if (c === "/" && d === "*") { const end = src.indexOf("*/", i + 2), stop = end < 0 ? n : end + 2; for (; i < stop; i++) out += blank(src[i]); continue; }
+    if (c === "'" || c === '"') {
+      const s = i; let v = ""; out += c; i++;
+      while (i < n && src[i] !== c && src[i] !== "\n") { if (src[i] === "\\") { v += src.slice(i, i + 2); out += "  "; i += 2; continue; } v += src[i]; out += " "; i++; }
+      out += src[i] === c ? c : ""; if (src[i] === c) i++;
+      lits.push({ v, s, e: i, whole: true }); prev = "x"; continue;
+    }
+    if (c === "`") { const s = i; out += "`"; i++; templateBody(s, true); prev = "x"; continue; }
+    if (c === "}" && tpl.length && tpl[tpl.length - 1] === 0) { tpl.pop(); const s = i; out += "}"; i++; templateBody(s, false); prev = "x"; continue; }
+    if (tpl.length && c === "{") tpl[tpl.length - 1]++;
+    if (tpl.length && c === "}") tpl[tpl.length - 1]--;
+    if (c === "/" && regexMayStart()) {
+      let cls = false; out += "/"; i++;
+      while (i < n && src[i] !== "\n") { const t = src[i]; if (t === "\\") { out += "  "; i += 2; continue; } if (t === "[") cls = true; else if (t === "]") cls = false; else if (t === "/" && !cls) break; out += " "; i++; }
+      if (src[i] === "/") { out += "/"; i++; } prev = "x"; continue;
+    }
+    out += c; i++;
+    if (!/\s/.test(c)) prev = /[A-Za-z0-9_$]/.test(c) ? (/[A-Za-z0-9_$]$/.test(prev) ? prev : "") + c : c;
+  }
+  return { code: out, lits };
+}
+/** selftestForm — how a source answers the word, or null. PURE.
+ *  @param {string} src @returns {{ form: "dispatch"|"self-run", at: number } | null}  at = 1-based line */
+function selftestForm(src) {
+  const { code, lits } = codeOf(src);
+  const lineOf = (k) => src.slice(0, k).split("\n").length;
+  for (const l of lits) {
+    if (!l.whole || l.v !== "selftest") continue;
+    if (/(?:[!=]==?|\bcase)\s*$/.test(code.slice(Math.max(0, l.s - 16), l.s)) || /^\s*[!=]==?/.test(code.slice(l.e, l.e + 8))) return { form: "dispatch", at: lineOf(l.s) };
+  }
+  for (const m of code.matchAll(/(^|[^.\w$])selftest\s*\(/g)) {
+    const k = m.index + m[1].length;
+    if (/\bfunction\s*\*?\s*$/.test(code.slice(Math.max(0, k - 16), k))) continue;          // its declaration
+    let j = code.indexOf("(", k), depth = 0;
+    for (; j < code.length; j++) { if (code[j] === "(") depth++; else if (code[j] === ")" && --depth === 0) break; }
+    if (/^\s*\{/.test(code.slice(j + 1, j + 8))) continue;                                   // a method definition
+    return { form: "self-run", at: lineOf(k) };
+  }
+  return null;
+}
+const hasSelftest = (f) => selftestForm(readOrgan(f)) !== null;
+/** censusRows — every scripts/*.mjs (this file excepted, as scripts() does): the legacy reading, the new one, the form and
+ *  where it sits, and whether it MOVES. The table ci/mdet/PROOF.md carries is exactly these rows (unit mdet's witness C4). */
+function censusRows() {
+  return scripts().sort().map((f) => {
+    const src = readOrgan(f), old = hasSelftestLegacy(f), nf = selftestForm(src);
+    const om = /['"`]selftest['"`]/.exec(src) || /function selftest\(/.exec(src);
+    const oldAt = om ? `${src.slice(0, om.index).split("\n").length}` : "—";
+    const moves = old === !!nf ? "—" : (old ? "MOVES has → none" : "MOVES none → has");
+    return `| ${f} | ${old ? "has" : "none"} | ${oldAt} | ${nf ? "has" : "none"} | ${nf ? nf.form : "—"} | ${nf ? nf.at : "—"} | ${moves} |`;
+  });
+}
 
 // ── 1. COVERAGE LAW ──────────────────────────────────────────────────────────
 // The meta-test package.json's own prose asks for and never got.
@@ -354,10 +474,12 @@ function suiteMembers(pkg) {
 // `selftest` in hermetic), a member hermetic never ran, and every member of `suites` run alone,
 // because the store lives in this process only. A kept failure is the very { code, out } a fresh
 // spawn returns, so it reds exactly as that spawn would, with its tail.
-/** runKey — the identical-command key of one run() call. PURE: exported so a fixture can bite it.
+/** runKey — the identical-command key of one MEMBER run (row 880 (1)). PURE: exported so a fixture can bite it. Its default
+ *  bound is the member bound (row 1151 (1) (b)), because every call that keys a run — hermetic()'s loop, suites() and the
+ *  usage_tap read — keys a member run, and every member run takes MEMBER_BOUND_MS.
  *  @param {string[]} args @param {{ cwd?: string, timeout?: number, env?: object }} [opts] @returns {string} */
 export function runKey(args, opts = {}) {
-  return JSON.stringify([args, opts.cwd || ROOT, opts.timeout || 120000, opts.env || null]);
+  return JSON.stringify([args, opts.cwd || ROOT, opts.timeout || MEMBER_BOUND_MS, opts.env || null]);
 }
 const hermeticRuns = new Map();   // runKey → { code, out } as run() returned it · set by hermetic()'s loop, taken once by suites()
 
@@ -376,12 +498,17 @@ function suites() {
     // test_coach_v2 is itself a harness and is invoked bare (package.json documents this)
     const args = m === "test_coach_v2" ? [file] : [file, "selftest"];
     // ONE RUN PER SELFTEST (row 880 (1)): hermetic()'s result when this is its IDENTICAL command, else a spawn
+    // unit mcov (row 1151 (1) (b)): the member run takes the LONG BOUND, a hang guard — the identical-command key carries it
     const key = runKey(args), kept = hermeticRuns.get(key);
     if (kept) { hermeticRuns.delete(key); reused++; }
-    const r = kept || run(args);
-    if (r.code !== 0) red.push({ m, tail: r.out.split(/\r?\n/).filter(Boolean).slice(-3).join(" | ") });
+    const r = kept || run(args, { timeout: MEMBER_BOUND_MS });
+    // (a): a kill by the bound is NAMED, in the member's red and in the roll-up — never a bare non-zero exit
+    if (r.code !== 0) red.push({ m, tail: [redWhy(r), ...r.out.split(/\r?\n/).filter(Boolean).slice(-3)].join(" | ") });
     // B1 (c): every member is its OWN assert, so a red member is a NAME the neutral verdict can compare across trees
     assert(`SUITE MEMBER · ${m} selftest exits 0`, r.code === 0);
+    if (r.code !== 0) console.log(`         ${redWhy(r)}`);   // (a): the member's red names the kill, on the line under its FAIL
+    // unit mdtl2 (K1 / K4): the exit SLOT, the FIRST failing check as a literal or skeleton of the member's own source, and a count
+    if (r.code !== 0 && rc) causes.push(rc.causeLine(`SUITE MEMBER · ${m} selftest exits 0`, rc.memberCause({ code: r.code, killed: r.killed, out: r.out, src: rcIO.read(`scripts/${m}.mjs`) })));
   }
   console.log(`  suites: reused ${reused} of ${members.length} member result(s) from hermetic (identical command), ran ${members.length - reused}`);
   assert(`all ${PROFILE === "hermetic" ? `${ran} hermetic` : members.length} suite members pass (every one RUN, not chained)`, red.length === 0,
@@ -1598,7 +1725,12 @@ async function laws() {
       const G = await import(pathToFileURL(join(ROOT, "scripts", "gate.mjs")).href);      // S7 — the declared-consumers table and its resolver
       const B = await import(pathToFileURL(join(ROOT, "scripts", "brain.mjs")).href);     // S7 — jobConsumers: who a job_input lane's downstream jobs actually are
       const cfg = (() => { try { return JSON.parse(readFileSync(join(ROOT, "dressing-room", "state", "brain_config.json"), "utf8")); } catch { return null; } })();
-      const ledgerLanes = (() => {
+      // unit mherm T3 (forks row 1157 (1), F3 A): brain_ledger.jsonl is GITIGNORED — absent in a fresh tree, born by a run —
+      // so under the hermetic profile this block was entered only when an EARLIER run had left the file: ten asserts that
+      // existed on a second run and not on the first. It is NAMED LIVE here, one line, never silently skipped; the full
+      // profile reads the ledger exactly as before. (unit mherm2 plants a ledger fixture so the ten run on every push.)
+      const ledgerLanes = PROFILE === "hermetic" && liveNamed("LOAD ZERO · the brain-ledger lane block (every ledger lane declared · S7 RATCHET · RUNG A ledger-side)",
+        "reads state/brain_ledger.jsonl — gitignored: absent in a fresh tree, born by a run") ? null : (() => {
         try {
           const seen = new Set();
           for (const l of readFileSync(join(ROOT, "dressing-room", "state", "brain_ledger.jsonl"), "utf8").split(/\r?\n/)) {
@@ -2225,7 +2357,7 @@ function hermetic() {
   const timeline = [];                       // F-6's attribution side, free: the spawn loop already runs
   // ONE RUN PER SELFTEST (row 880 (1)): the result run() returns is KEPT for suites() under its identical-command key,
   // after the window's end is stamped — the same spawns, the same order, the same window; the trip metric is untouched.
-  for (const f of targets) { if (liveSelftest(f.replace(/\.mjs$/, ""))) continue; const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args), r); }
+  for (const f of targets) { if (liveSelftest(f.replace(/\.mjs$/, ""))) continue; const t0 = Date.now(); const args = [join(ROOT, "scripts", f), "selftest"]; const r = run(args, { timeout: MEMBER_BOUND_MS }); timeline.push({ organ: f, start: t0, end: Date.now() }); hermeticRuns.set(runKey(args), r); }
   // unit mpool (forks rows 1062 / 1066) — THE USAGE TAP's selftest rides THIS loop (it has a selftest, so it is a target)
   // and is JUDGED here, from the loop's own kept result (a read of the map, never a second spawn; suites() still takes it
   // if a suite ever names it). Its package.json suite membership is a FORK the unit names in ci/mpool/PROOF.md.
@@ -2233,6 +2365,8 @@ function hermetic() {
     const tap = hermeticRuns.get(runKey([join(ROOT, "scripts", "usage_tap.mjs"), "selftest"]));
     assert("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", !!tap && tap.code === 0,
       tap ? String(tap.out).trim().split("\n").filter((l) => /FAIL|selftest/.test(l)).slice(-4).join(" | ") : "usage_tap.mjs selftest never ran");
+    // unit mdtl2 (K3): the member's cause, from the loop's own kept result
+    if (tap && tap.code !== 0 && rc) causes.push(rc.causeLine("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", rc.memberCause({ ...tap, src: rcIO.read("scripts/usage_tap.mjs") })));
   }
   if (!tripLive) {
   const after = snap(), afterH = hashes();
@@ -2296,6 +2430,54 @@ function hermetic() {
   }
   assert("…and that log is gitignored, so a test run can never reach the public remote",
     run(["-e", `process.exit(require('child_process').execSync('git check-ignore -q scripts/thalamus.log && echo y || echo n',{cwd:${JSON.stringify(ROOT)}}).toString().trim()==='y'?0:1)`]).code === 0);
+  mhermClauses();
+}
+
+// ── unit mherm · W1 + W3 RIDE THE SUITE (forks row 1157 (3), F2 C, 20 Nov 2026) ─────────────────────────────────────────
+// The hermetic run must be a function of the tree alone. Two of its five clauses are cheap enough to run on every push, so
+// they live here; W2 · W4 · W5 (a fresh clone under the temp dir, the whole run twice) are the workflow's own step, because a
+// whole-suite double run cannot live inside the suite it measures. Both run on a COPY of the tracked tree (`git ls-files`,
+// never a tree copy: his gitignored state never leaves ROOT) placed under this run's own temp dir, so the copy sits UNDER the
+// temp dir exactly as a fresh clone in %TEMP% or /tmp does — the position that reddened the sandbox before unit mherm.
+//   W3 · `laws` (hermetic) on the copy, without and then with a one-row brain_ledger.jsonl planted in the COPY's state dir
+//        (by node, never a shell): the verdict lines must be byte-equal (T3 names the ledger block LIVE).
+//   W1 · the copy's `sandbox.mjs selftest`, its child's temp dir = this run's (an ANCESTOR of the copy): exit 0, and the
+//        canary's live-state targets in the copy never created (T1: the sandbox's own .tmp; F1 B: no temp allowance).
+function mhermClauses() {
+  const VL = /^ {2}(ok {2}|FAIL|LIVE) |^organism_test:/;
+  /** @param {string} out */
+  const vlines = (out) => String(out).split(/\r?\n/).filter((l) => VL.test(l)).join("\n");
+  const T = mkdtempSync(join(RUN_TMP, "mherm-"));
+  const tree = join(T, "tree");
+  try {
+    const ls = spawnSync("git", ["ls-files", "-z"], { cwd: ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+    const files = ls.status === 0 ? String(ls.stdout).split("\0").filter(Boolean) : [];
+    if (files.length) { for (const rel of files) if (existsSync(join(ROOT, rel))) cpSync(join(ROOT, rel), join(tree, rel)); }
+    // a plain tree (no .git: a witness hands one) holds no gitignored state of his, so a copy of it is the tree itself
+    else cpSync(ROOT, tree, { recursive: true, filter: (src) => !/[\\/](node_modules|\.git)([\\/]|$)/.test(src.slice(ROOT.length)) });
+    // the copy's sandbox builds from ITS `git ls-files`, so the copy is a git repo: init-and-add, no commit (as sandbox.mjs does)
+    for (const g of [["init", "-q"], ["add", "-A"]]) spawnSync("git", ["-c", "core.autocrlf=false", ...g], { cwd: tree, stdio: "ignore", windowsHide: true });
+    if (existsSync(join(ROOT, "node_modules"))) symlinkSync(join(ROOT, "node_modules"), join(tree, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+    const env = { ...process.env, ORGANISM_TEST_PROFILE: "hermetic" };
+    const ledger = join(tree, "dressing-room", "state", "brain_ledger.jsonl");
+    const w3a = run([join(tree, "scripts", "organism_test.mjs"), "laws"], { cwd: tree, env });
+    mkdirSync(dirname(ledger), { recursive: true });
+    writeFileSync(ledger, "{}\n");
+    const w3b = run([join(tree, "scripts", "organism_test.mjs"), "laws"], { cwd: tree, env });
+    rmSync(ledger, { force: true });
+    const a = vlines(w3a.out), b = vlines(w3b.out);
+    assert("MHERM W3 · a planted gitignored brain_ledger.jsonl changes no hermetic verdict line of `laws` (a tracked copy, run without and with the plant)",
+      a.length > 0 && a === b, `without the plant: ${a.split("\n").pop() || "(no headline)"} · with it: ${b.split("\n").pop() || "(no headline)"}`);
+    const w1 = run([join(tree, "scripts", "sandbox.mjs"), "selftest"], { cwd: tree });
+    const canary = join(tree, "dressing-room", "state", "CANARY_MUST_NEVER_EXIST.json");
+    const head = w1.out.trim().split(/\r?\n/).filter((l) => /^sandbox: /.test(l)).pop() || "(no sandbox headline)";
+    assert("MHERM W1 · the sandbox collar denies the canary for a tree that sits UNDER the temp dir (a tracked copy under this run's own temp)",
+      w1.code === 0 && !existsSync(canary) && !existsSync(ledger),
+      `${redWhy(w1)} · ${head}${existsSync(canary) ? " · the canary's live-state file was CREATED in the copy" : ""}${existsSync(ledger) ? " · the canary appended the copy's brain_ledger" : ""}`);
+  } finally {
+    try { unlinkSync(join(tree, "node_modules")); } catch { /* no link */ }
+    rmSync(T, { recursive: true, force: true });
+  }
 }
 
 // ── 5. THE LEARNING PATH, END TO END ─────────────────────────────────────────
@@ -2674,7 +2856,7 @@ function alive() {
 // families stay 0, frozen counts may only fall, the checked list may only grow.
 function gates() {
   section("GATES — tsc --checkJs + eslint + ajv schemas, frozen at their measured baselines, tightening only");
-  const r = run([join(ROOT, "scripts", "gates.mjs"), "report"], { timeout: 600000 });
+  const r = run([join(ROOT, "scripts", "gates.mjs"), "report"], { timeout: HEAVY_BOUND_MS });
   if (/NOT MEASURABLE HERE/.test(r.out)) {
     assert("GATES — bare checkout: the gate answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));
     return;
@@ -2694,13 +2876,30 @@ function gates() {
 // PROVEN ON EVERY RUN, not once on the day it landed: lawpack's selftest builds a throwaway
 // project carrying the REAL laws/ rules, plants one violation per rule, and requires all
 // five to bite. A rule that stops biting fails the suite.
+const LAWPACK_LINE = "ORGANISM_TEST_LAWPACK";
+/** the law pack gate's `findings: <law> <n> · …` line as { law: n }, or null when the gate printed none @param {string} out */
+function lawpackCounts(out) {
+  const l = String(out).split(/\r?\n/).find((x) => /^lawpack · .* · findings: /.test(x));
+  if (!l) return null;
+  /** @type {Record<string, number>} */ const c = {};
+  for (const part of l.slice(l.indexOf("findings: ") + "findings: ".length).split(" · ")) {
+    const m = /^(\S+) (\d+)$/.exec(part.trim());
+    if (m) c[m[1]] = Number(m[2]);
+  }
+  return Object.keys(c).length ? c : null;
+}
 function lawpack() {
   section("LAW PACK — the organism's own laws as ast-grep rules, frozen and tightening only");
-  const r = run([join(ROOT, "scripts", "lawpack.mjs"), "gate"], { timeout: 600000 });
+  const r = run([join(ROOT, "scripts", "lawpack.mjs"), "gate"], { timeout: HEAVY_BOUND_MS });
   if (/NOT MEASURABLE HERE/.test(r.out)) {
     assert("LAW PACK — bare checkout: the pack answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));
     return;
   }
+  // unit mlaw (forks row 1137 (2) F3 A): the pack's counts ride ONE machine line, so the neutral verdict can see a law that is
+  // already over its baseline RISE again (by number — a rise has no name of its own). Read off the gate's own `findings:` line
+  // (measure().counts, printed by lawpack.mjs), never re-measured and never typed; a gate that printed no such line prints none.
+  const counts = lawpackCounts(r.out);
+  if (counts) console.log(`${LAWPACK_LINE} ${JSON.stringify(counts)}`);
   const reds = r.out.split(/\r?\n/).filter((l) => /^\s*RED\s/.test(l));
   assert("LAW PACK — every rule file present, and no law's finding count rose (a gate may only get stricter)",
     r.code === 0, reds.join("\n         ") || r.out.split(/\r?\n/).slice(-3).join(" | "));
@@ -2760,6 +2959,35 @@ function done() {
   } finally { rmSync(T, { recursive: true, force: true }); }
 }
 
+// ── THE CLAUSE WITNESSES (unit mmeter · forks row 1162 (2), F11) ──────────────────────────────────────────────────────
+// ONE member, edited ONCE: it walks ci/witness/<unit>/ and runs every witness_*.mjs in its `plants` mode, which plants each
+// clause both ways on copies under os.tmpdir() and ends `PLANTS <unit> · k of n plant(s) as expected`. A witness is GREEN
+// iff it exits 0 AND prints that line with n > 0 and k === n — a witness with no plants (no line, or n = 0) reads RED. Later
+// units add their witness file and no edit here. A checkout with no node_modules (npm ci never ran) is NOT MEASURABLE,
+// named, like the law pack and done.mjs (a witness may import an organ that needs its pinned parser). Its mode is `clauses`:
+// unit ms1's member `witnesses` (ci/<unit>/witness_<unit>.mjs against its BASE, on the neutral machine) is a different member.
+function clauseWitnesses() {
+  section("CLAUSE WITNESSES — every ci/witness/<unit>/witness_*.mjs, its plants both ways");
+  const dir = join(ROOT, "ci", "witness");
+  if (!existsSync(join(ROOT, "node_modules"))) {
+    assert("CLAUSE WITNESSES — bare checkout: no node_modules, so the witnesses are NOT MEASURABLE here (measurability is an answer, silence is not)", true);
+    return;
+  }
+  const files = existsSync(dir) ? readdirSync(dir).filter((u) => statSync(join(dir, u)).isDirectory()).sort()
+    .flatMap((u) => readdirSync(join(dir, u)).filter((f) => /^witness_.*\.mjs$/.test(f)).sort().map((f) => `ci/witness/${u}/${f}`)) : [];
+  assert("CLAUSE WITNESSES — ci/witness holds at least one witness (the walk found something to judge)", files.length > 0, dir);
+  for (const f of files) {
+    const r = run([join(ROOT, f), "plants"]);
+    const last = (r.out.split(/\r?\n/).filter((l) => /^PLANTS \S+ · \d+ of \d+ plant\(s\) as expected$/.test(l)).pop()) || "";
+    const m = /· (\d+) of (\d+) plant/.exec(last);
+    const green = r.code === 0 && !!m && Number(m[2]) > 0 && m[1] === m[2];
+    assert(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, green,
+      last || `exit ${r.code} · no PLANTS line (a witness with no plants reads red) · ${r.out.split(/\r?\n/).filter((l) => /FAIL|RED/.test(l)).slice(0, 2).join(" | ").slice(0, 240)}`);
+    // unit mdtl2 (K11): each `CLAUSE <ID> RED · k/n plant(s)` line's id (a literal of the witness's own source) and its claim
+    if (!green && rc) for (const c of rc.clauseCause({ out: r.out, src: rcIO.read(f) })) causes.push(rc.causeLine(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, c));
+  }
+}
+
 // ── THE FLOW ATLAS (AUDIT §10-C rung S10 · acceptance (d)) ───────────────────
 // "flow_atlas check joins npm test — the atlas goes stale-proof the day the
 // registry exists." check re-derives the atlas from the live IR and compares
@@ -2774,7 +3002,7 @@ function atlas() {
     assert("FLOW ATLAS — bare checkout: no IR/atlas built here; NOT MEASURABLE is the honest answer", true);
     return;
   }
-  const r = run([join(ROOT, "scripts", "flow_atlas.mjs"), "check"], { timeout: 600000 });
+  const r = run([join(ROOT, "scripts", "flow_atlas.mjs"), "check"], { timeout: HEAVY_BOUND_MS });
   assert("FLOW ATLAS — `check` re-derives the atlas from the live IR sha-identical (a code change that moves the graph demands `xray.mjs build` + `flow_atlas.mjs build` in the same commit)",
     r.code === 0, r.out.split(/\r?\n/).slice(-3).join(" | "));
 }
@@ -3029,6 +3257,15 @@ async function headLeg(ctx, unit, dropIds) {
     // row 1153 (2) F-7 A: every PORT_HELD machine line the witness prints rides as a named measurement line
     for (const l of r.out.split(/\r?\n/).map((x) => x.trim()).filter((x) => /^PORT_HELD /.test(x))) assert(name(`measured · ${l}`), true);
     assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
+    // unit mdtl (forks row 1186 F1 A · F2 R2): the red's CAUSE, built by witness_cause.mjs from public bytes only (a clause id
+    // that is a literal of the witness's own tracked source, its header claim line, the member's literals); it rides the
+    // machine line alone, so the judged name and detail above stay byte-identical (every KNOWN_RED entry keeps its match).
+    // The import is guarded by the module's presence: a base tree measured by this instrument has no witness_cause.mjs.
+    if (!j.ok && ctx.wc) {
+      const wsrc = readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8");
+      const kind = r.killed ? "killed" : j.left.startsWith(ctx.wc.MEMBER.GRAMMAR) ? "grammar" : "clauses";
+      for (const c of ctx.wc.causesOf({ left: j.left, src: wsrc, kind, code: r.code })) causes.push(ctx.wc.causeText(name("GREEN at head against its BASE"), c));
+    }
     return { last: j.last, code: r.code };
   } finally {
     for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
@@ -3082,7 +3319,8 @@ async function witnesses() {
   const jobMin = Number((/timeout-minutes:\s*(\d+)/.exec(wf) || [])[1]);
   if (!(jobMin > 0)) { assert("WITNESSES · the member reads its bound, the job's own timeout-minutes in .github/workflows/suite.yml", false, "no timeout-minutes line"); return; }
   const headSha = spawnSync("git", ["-C", ROOT, "rev-parse", "--verify", "-q", "HEAD"], { encoding: "utf8", windowsHide: true });
-  const ctx = { head: String(headSha.stdout || "").trim(), nm: join(ROOT, "node_modules"), T0, jobMin };
+  const wc = existsSync(join(HERE, "witness_cause.mjs")) ? await import("./witness_cause.mjs") : null;   // unit mdtl (row 1186): the cause module, when present
+  const ctx = { head: String(headSha.stdout || "").trim(), nm: join(ROOT, "node_modules"), T0, jobMin, wc };
   const line = mainLine(ROOT), hf = headFacts(ROOT);
   const where = (u) => landedOf(ROOT, u, line, hf);
   for (const unit of units) {
@@ -3174,10 +3412,12 @@ function rulingSelfCheck() {
 }
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
-const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive, atlas, done, witnesses };
+const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpack, alive, atlas, done, witnesses, clauses: clauseWitnesses };
 async function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }
+  // unit mdet: the coverage detector's census, a READ (never a mode of `all`, so the suite's verdict is unmoved by it)
+  if (mode === "census") { console.log("| script | legacy | legacy at | detector | form | at | moves |\n|---|---|---|---|---|---|---|"); for (const r of censusRows()) console.log(r); process.exit(0); }
   const chosen = mode === "all" ? Object.keys(MODES) : [mode];
   if (chosen.some((c) => !MODES[c])) { console.log(`organism_test: ${Object.keys(MODES).join(" | ")} | all`); process.exit(1); }
   console.log("=== ARSENAL AI FC — CROSS-ORGAN TEST SUITE ===");
@@ -3196,7 +3436,7 @@ async function main() {
   console.log(`\nORGANISM_TEST_VERDICT ${JSON.stringify({ modes: chosen, pass, fail, exit: v.exit,
     ruled: v.ruled.map((f) => ({ assert: f.name, row: f.entry.row, owner: f.entry.owner })),
     unruled: v.unruled.map((f) => ({ assert: f.name, detail: f.detail || null })), stale: v.stale, invalid: v.invalid,
-    profile: PROFILE, reds: fails.map((f) => f.name), live: lived })}`);
+    profile: PROFILE, reds: fails.map((f) => f.name), live: lived, ...(causes.length ? { causes } : {}) })}`);
   console.log(`\n${"=".repeat(70)}\norganism_test: ${pass} passed, ${fail} failed · ruled ${v.ruled.length} · UNRULED ${v.unruled.length}`
     + (v.stale.length ? ` · STALE ${v.stale.length}` : "") + (v.invalid.length ? ` · INVALID ${v.invalid.length}` : "")
     + (PROFILE === "hermetic" ? ` · LIVE ${lived.length} (hermetic: named, not run)` : ""));

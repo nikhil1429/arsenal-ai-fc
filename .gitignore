@@ -114,6 +114,9 @@ dressing-room/state/reps_log.jsonl.quarantine.jsonl
 dressing-room/state/forge_session.json
 dressing-room/state/forge_session.json.tmp
 dressing-room/state/forge_sessions.jsonl
+# the crack rows (unit mcrk, row 1189 (2) mcrk-2 a) — his verbatim words at each broken answer; the compiled note (tracked,
+# names-guarded) stays the ONE public copy. The private default of his 14 Aug ruling; reopens only on his word.
+dressing-room/state/cracks.jsonl
 # teaching-contract runtime (his personal drift ledger + a turn counter that changes on
 # EVERY prompt — same class as forge_session.json. The rules are seeded by
 # scripts/teaching_contract.mjs, so a fresh clone rebuilds this file on first run.)
@@ -258,6 +261,11 @@ dressing-room/state/presence_log.jsonl
 # (presence_log.2026-07.jsonl) did not match the anchored rule above. It carries the
 # same activity telemetry as the live file, and this repo is PUBLIC. Cover the roll:
 dressing-room/state/presence_log.*.jsonl
+# unit mpres (forks rows 1177 (2) / 1191) — each sensor's own dead-input snapshot (presence.mjs ·
+# dmn.mjs · capture.mjs, each its sole writer). They carry his activity timing, and this repo is PUBLIC.
+dressing-room/state/presence_input.json
+dressing-room/state/dmn_input.json
+dressing-room/state/capture_pull.json
 # the produce-and-consume reconciliation (4 Aug 2026) — derived output, regenerated
 # on every run; it names every artifact and its readers.
 dressing-room/state/reconcile.json
@@ -467,6 +475,7 @@ docs/derived/
 dressing-room/state/models.json
 # LAW A (MODELS + ACTS Block 2, 18 Aug 2026): the acts ledger — acts.mjs sole writer; his words verbatim.
 dressing-room/state/acts.jsonl
+dressing-room/state/parked.jsonl
 # LAW A (18 Aug 2026): his agenda for the next sitting — sitting.mjs sole writer; his words verbatim.
 dressing-room/state/sitting_agenda.jsonl
 # LOAD ZERO BLOCK 1 (19 Aug 2026): the task ledger — tasks.mjs sole writer; append-only events,

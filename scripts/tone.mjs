@@ -40,7 +40,10 @@ const readJson = (p) => { try { if (existsSync(p)) return JSON.parse(readFileSyn
 // under contention in a sandbox. Now: per-process temp (two writers can't collide) and
 // a short backoff, because these locks clear in milliseconds. The final failure still
 // throws — a write that genuinely cannot land must not be swallowed.
-function writeAtomic(path, obj, attempts = 5) {
+// unit mherm T4 (forks row 1157 (1), 20 Nov 2026): `logDir` is where the failure line goes — beside this script on the
+// scheduled path (the default, unchanged), the selftest's OWN box when the selftest drives it, so a run writes no
+// scripts/tone.log into the tree and its assert reads the line THIS run wrote, never one an earlier run left there.
+function writeAtomic(path, obj, attempts = 5, logDir = __dirname) {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = `${path}.${process.pid}.tmp`;
   writeFileSync(tmp, JSON.stringify(obj, null, 2) + "\n");
@@ -55,7 +58,7 @@ function writeAtomic(path, obj, attempts = 5) {
         // redirect, so stderr goes nowhere and a genuine failure is invisible forever. Every
         // other organ here keeps a sibling .log; tone now does too. Best-effort, then rethrow.
         try {
-          appendFileSync(join(__dirname, "tone.log"),
+          appendFileSync(join(logDir, "tone.log"),
             `${new Date().toISOString()} writeAtomic FAILED after ${attempts} attempt(s) on ${path}: ${e?.code || ""} ${e?.message || String(e)}\n`, "utf8");
         } catch { /* a log that cannot be written must not become the failure */ }
         throw e;
@@ -173,14 +176,14 @@ async function selftest() {
   mkdirSync(dirTarget, { recursive: true });
   let threw = null;
   const t0 = Date.now();
-  try { writeAtomic(dirTarget, { x: 1 }); } catch (e) { threw = e; }
+  try { writeAtomic(dirTarget, { x: 1 }, undefined, box); } catch (e) { threw = e; }
   const elapsed = Date.now() - t0;
   assert("a doomed rename rethrows rather than being swallowed", !!threw);
   assert("it cleans its own temp on the failure path",
     readdirSync(box).filter(f => f.includes(".tmp")).length === 0);
   assert("the retry budget is bounded (no spin): under 2s", elapsed < 2000);
-  assert("the failure leaves a line in scripts/tone.log — 'nothing logged why' is closed",
-    existsSync(join(__dirname, "tone.log")) && /writeAtomic FAILED/.test(readFileSync(join(__dirname, "tone.log"), "utf8")));
+  assert("the failure leaves a line in its tone.log (beside the script when scheduled; the selftest's own box here) — 'nothing logged why' is closed",
+    existsSync(join(box, "tone.log")) && /writeAtomic FAILED/.test(readFileSync(join(box, "tone.log"), "utf8")));
   rmSync(box, { recursive: true, force: true });
 
   const passed = checks.every(c => c[1]);

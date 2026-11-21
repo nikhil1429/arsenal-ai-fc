@@ -29,6 +29,7 @@ description: Run a full FORGE study session INSIDE Claude Code with ZERO capture
 - **THE PACER** — `forge_session.mjs` paces THE METHOD; a skipped step is refused, not invisible. Verbs:
   `start <concept>` (refuses while a session is open) · `step <0-11>` · `axis <a-i> now|done|defer` ·
   `moment pehle_guess|widget_gate|check_q|jirah|sharp_check` (sharp_check = the axis-close sharp check, row 266) · `pointer "…"` · `contract` · `resume` · `close`.
+  `crack` (`node scripts/forge_session.mjs crack`, no args) — run it in the SAME turn you write the ```diff: it writes his words of that turn verbatim with the concept, axis and moment (unit mcrk).
   → `REFERENCE.md` "THE PACER".
 - **THE NOTES LAW** (22 Sep, row 240): notes are extracted from the archive by code at the week's end;
   your only live job is the four elicitations (gut-word · stuck-story at the crack with the one ```diff
@@ -74,7 +75,9 @@ The per-axis loop (A10, nine steps every axis) → `REFERENCE.md` "THE PER-AXIS 
 
 - **Two anti-quiz-dump laws:** only the four question-moments are legal; never a list of questions.
 - **Struggle first:** never hand him code or an answer he has not attempted. **Own your own mistake first.**
-- **No system / notes / tool work mid-concept** — park it in one line, hand the micro-question back.
+- **No system / notes / tool work mid-concept** — park it in one line, hand the micro-question back, and end that reply
+  with the park tail `<<ACT {"acts":[{"verb":"park","args":{"text":"<his words>"}}]}>>`: its owner (`parked.mjs`) keeps
+  his words and they return as ONE Captain's Call card at his next anchor (row 1190; the crash-belt line stays beside it).
 - **Owners only:** every write goes through `forge_session.mjs` · `gaffer_brain.mjs capture` · `acts.mjs` ·
   `teaching_contract.mjs`. Never hand-edit a state file. Capsules are IMMUTABLE (`mirror.mjs` sole writer).
 - **Desktop trap (22 Sep):** text above a tool call is replaced on his screen — tools first, the message last.
