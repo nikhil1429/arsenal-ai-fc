@@ -155,3 +155,81 @@ jobs:
           code=${PIPESTATUS[0]}
           { echo "## npm test · node ${{ matrix.node }}"; echo ""; grep -E "^B1_VERDICT " "$RUNNER_TEMP/b1_verdict.txt"; } >> "$GITHUB_STEP_SUMMARY"
           exit $code
+
+  # unit mherm · W2 · W4 · W5 (forks row 1157 (3), F2 C, 20 Nov 2026) — THE HERMETIC RUN IS A FUNCTION OF THE TREE ALONE.
+  # A fresh clone of HEAD under the temp dir (os.tmpdir(), where a scratch clone sits on his laptop), the hermetic `all`
+  # run twice with TMPDIR/TEMP/TMP = one fresh dir that holds the clone: W5 the two runs' verdict lines are byte-equal,
+  # W2 `git status --porcelain --ignored` is the same before and after, W4 the temp dir holds nothing but the clone after.
+  # The first run prints its Windows wall time. ITS OWN JOB, not a step of npm-test: that job measured 48 min of its
+  # timeout-minutes on main cebe3eb (check run 136266834894), and a whole-suite double run cannot live inside the suite it
+  # measures, nor inside the job that already carries it. Each run is bounded by npm-test's own timeout-minutes, read
+  # from this file. W1 and W3 ride the suite itself (organism_test.mjs, hermetic mode).
+  hermetic-twice:
+    name: hermetic twice · node ${{ matrix.node }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: a fresh clone under the temp dir, the hermetic run twice (W2 · W4 · W5)
+        shell: bash
+        run: |
+          cat > "$RUNNER_TEMP/mherm_step.mjs" <<'MHERM_EOF'
+          // unit mherm · W2 · W4 · W5 — a fresh clone under the temp dir, the hermetic `all` run twice (forks row 1157 (3), F2 C)
+          import { spawnSync } from "node:child_process";
+          import { mkdtempSync, readdirSync, readFileSync, symlinkSync, unlinkSync, rmSync, openSync, closeSync, existsSync } from "node:fs";
+          import { join } from "node:path";
+          import { tmpdir } from "node:os";
+          const WS = process.cwd();
+          // each run's bound is the npm-test job's own timeout-minutes (its one owner), never a number typed here
+          const min = Number((/timeout-minutes:\s*(\d+)/.exec(readFileSync(join(WS, ".github", "workflows", "suite.yml"), "utf8")) || [])[1]);
+          if (!(min > 0)) { console.log("RED MHERM-STEP · BOUND (no timeout-minutes in suite.yml)"); process.exit(1); }
+          const git = (args, cwd) => spawnSync("git", args, { cwd, encoding: "utf8", windowsHide: true });
+          const X = mkdtempSync(join(tmpdir(), "mherm-step-"));          // the run's temp dir: TMPDIR/TEMP/TMP of both runs
+          const LOGS = mkdtempSync(join(process.env.RUNNER_TEMP || tmpdir(), "mherm-logs-"));
+          const tree = join(X, "tree");
+          const head = git(["rev-parse", "HEAD"], WS).stdout.trim();
+          git(["-c", "core.autocrlf=false", "clone", "-q", "--no-local", "-c", "core.autocrlf=false", WS, tree], WS);
+          git(["checkout", "-q", "--detach", head], tree);
+          if (existsSync(join(WS, "node_modules"))) symlinkSync(join(WS, "node_modules"), join(tree, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+          const VL = /^ {2}(ok {2}|FAIL|LIVE) |^organism_test:/;
+          const lines = (s) => s.split(/\r?\n/).filter((l) => VL.test(l));
+          const status = () => git(["status", "--porcelain", "--ignored"], tree).stdout;
+          const st0 = status();
+          const env = { ...process.env, ORGANISM_TEST_PROFILE: "hermetic", TMPDIR: X, TEMP: X, TMP: X };
+          const runs = [];
+          for (const i of [1, 2]) {
+            const log = join(LOGS, `run${i}.txt`), fd = openSync(log, "w"), t0 = Date.now();
+            let r;
+            try { r = spawnSync(process.execPath, [join("scripts", "organism_test.mjs"), "all"], { cwd: tree, env, stdio: ["ignore", fd, fd], timeout: min * 60000, windowsHide: true }); }
+            finally { closeSync(fd); }
+            const out = readFileSync(log, "utf8"), vl = lines(out);
+            runs.push(vl);
+            console.log(`MHERM_STEP run ${i} · wall ${((Date.now() - t0) / 1000).toFixed(1)} s · ${process.platform} · node ${process.version} · exit ${r.status}${r.error ? ` (${r.error.code || r.error.message})` : ""} · ${vl.filter((l) => l.startsWith("organism_test:")).pop() || "(no headline)"}`);
+          }
+          const reds = [];
+          const say = (id, ok, what, why) => { console.log(`  ${ok ? "ok  " : "FAIL"} MHERM ${id} · ${what}${ok ? "" : `\n         ${why}`}`); if (!ok) reds.push(id); };
+          const [a, b] = runs, at = a.findIndex((l, k) => l !== b[k]);
+          say("W5", a.length > 0 && a.length === b.length && at < 0, "a fresh clone and its second run give byte-equal verdict lines",
+            `run 1 ${a.length} line(s), run 2 ${b.length}; first difference at line ${at < 0 ? Math.min(a.length, b.length) + 1 : at + 1}: ${JSON.stringify(String((at < 0 ? b[a.length] ?? a[b.length] : b[at]) ?? "").slice(0, 160))}`);
+          const st1 = status();
+          say("W2", st1 === st0, "the two runs leave the tree as they found it (git status --porcelain --ignored, before = after)",
+            `after: ${st1.split(/\r?\n/).filter((l) => l && !st0.split(/\r?\n/).includes(l)).join(" · ") || "(a line went missing)"}`);
+          const left = readdirSync(X).filter((n) => n !== "tree");
+          say("W4", left.length === 0, "nothing the runs write outlives them in their temp dir", `left: ${left.slice(0, 12).join(" · ")}${left.length > 12 ? ` (+${left.length - 12})` : ""}`);
+          try { unlinkSync(join(tree, "node_modules")); } catch { /* no link */ }
+          rmSync(X, { recursive: true, force: true });
+          console.log(reds.length ? `RED MHERM-STEP · ${reds.join(" ")}` : "GREEN MHERM-STEP W2 W4 W5 · 3 clause(s)");
+          process.exit(reds.length ? 1 : 0);
+          MHERM_EOF
+          node "$RUNNER_TEMP/mherm_step.mjs"
