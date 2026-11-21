@@ -154,3 +154,36 @@ in this repository; nothing was written under `campaign-2026-09/`.
 ## Merge of main (row 1172, 20 Nov 2026)
 
 CHECKPOINT · STOPPED at 2026-11-20T01:28:40Z · merged tip `531c9a2f1a264f0851988e03782313f0b5d6fa6b` (merge of main into `c7b8fa2`) · BASE now `5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90` (`ci/mcanary/BASE`) · resolution hunks: NONE — the merge was clean; of the two contested files only `scripts/organism_test.mjs` moved, on main's side alone (this unit adds no member, row 1162 (2)), and `package.json` did not move · witness `node ci/witness/mcanary/witness_canary.mjs plants --org . --base-org <git archive 5759cce>` → `GREEN MCANARY plants both ways, BOUND held · 3 clause(s)` (BOUND: 7 file(s) differ, all named) · mutants `node ci/mcanary/run_mutants_mcanary.mjs --org .` → `run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN` · resume from: the architect's next message.
+
+## Merge of main 7bf008b (forks rows 1233 (2) / 1236, 21 Nov 2026)
+
+- merge: `a4e48c2` (main `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f` into `475ffad`), a merge commit, no rebase, no force. Conflicted
+  files: NONE — the merge was clean; `scripts/organism_test.mjs`, `package.json` and `ci/` carry every landed line of main as-is.
+- BASE: `ci/mcanary/BASE` = `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f` — the brief keys BASE to the main this branch merges (row 1172).
+- one edit on top (`520231a`): main now carries unit mmeter's suite member, which reads a witness GREEN only on a
+  `PLANTS <unit> · k of n plant(s) as expected` line; the witness prints that line, and `CLAUSE <id> RED · k/n plant(s)` on a red
+  clause. No predicate, case or mutant edit site moved.
+- mclk: no witness of this unit derives a day from the clock (it compares recorded `created_at` / pass `at` instants only), so the
+  planter's one instant is not read here.
+- witness on the merged tree, `node ci/witness/mcanary/witness_canary.mjs plants --org . --base-org <git archive 7bf008b>` (21 Nov 2026)
+  → `PLANTS mcanary · 30 of 30 plant(s) as expected` · `GREEN MCANARY plants both ways, BOUND held · 3 clause(s)`.
+- mutants, `node ci/mcanary/run_mutants_mcanary.mjs --org .` → `run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN`.
+- suite, `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` on the merged tree → exit 0, no failed assertion; the
+  CLAUSE WITNESS member reads mcanary GREEN.
+- CI on `520231ae21b4f1337601c584371c3f4c98f6ace3`, read by the public API with curl, no token, and
+  `NODE_USE_ENV_PROXY=1 node scripts/ci_verdict.mjs <full sha>` (21 Nov 2026):
+
+```
+136775494247 npm test · node 24 completed success
+136775494256 npm test · node 22 completed cancelled
+ci_verdict 520231a RED — npm test · node 22: RED (cancelled; no verdict annotation — the run never reached its verdict · step npm test · hermetic · merge base · cancelled) [run 136775494256] | npm test · node 24: GREEN (base 7bf008b · 0 new red · 0 base red · 125 live) [run 136775494247]   exit 1
+```
+
+  THE RED, named: the node 22 leg never judged. Its annotation reads `The job has exceeded the maximum execution time of 1h0m0s`.
+  The step times, from the public jobs API: `npm test · hermetic · head` ran 08:09:45Z→09:07:56Z (≈58 min) and passed, which left
+  the `merge base` step under a minute before the runner's job limit cancelled it at 09:08:34Z, and the verdict step was skipped. On
+  node 24 the same head step ran ≈47 min and the merge-base step ≈3 min, then GREEN with 0 new red. So the cause is the job's
+  wall-clock limit on the node 22 runner, not an assertion; the job logs are not on the tokenless API, so which member spent the
+  minutes is NOT measured here. No retry was run (a retry until green is refused).
+
+CHECKPOINT · 2026-11-21 · merge sha `a4e48c2` (main `7bf008b` in, clean, no conflicted file) · BASE `7bf008b` · witness `GREEN MCANARY plants both ways, BOUND held · 3 clause(s)` · mutants `3 of 3 … · control GREEN` · legs on `520231a`: node 24 GREEN [136775494247] · node 22 RED — cancelled at the 1h job limit before its merge-base step [136775494256] · resume from: the architect's next message.
