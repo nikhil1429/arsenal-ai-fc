@@ -257,7 +257,10 @@ const CLAUSES = {
     const lists = [...wf.matchAll(/^\s*node:\s*\[([^\]]*)\]/gm)].map((m) => m[1].split(",").map((x) => x.trim()).filter(Boolean).map((n) => `npm test · node ${n}`));
     const legs = [...wf.matchAll(/^ {4}name:\s*(.+?)\s*$/gm)].map((m) => m[1]).filter((n) => /^npm test · node /.test(n));
     const evil = wf.replace(/^( {4}name:\s*)witnesses · node (\$\{\{ matrix\.node \}\}).*$/m, "$1npm test · node $2");
-    const refused = evil !== wf && !cv.workflowLaws(evil).every(([, c]) => c);
+    // the LEG-NAME law itself refuses it (read by its own text): since the merge of main 5301f15 the leg-scoped ONEBOUND law also
+    // reads such a plant as a leg with no needs, and a refusal by that law alone must not pass for this clause
+    const nameLaw = (w) => (cv.workflowLaws(w).find(([what]) => /named like a leg/.test(what)) || ["", false])[1];
+    const refused = evil !== wf && !nameLaw(evil) && nameLaw(wf);
     const ok = lists.length >= 3 && lists.every((l) => same(l, cv.REQUIRED_LEGS)) && legs.length === 1 && cv.workflowLaws(wf).every(([, c]) => c) && refused;
     return { ok, why: `node lists ${lists.length} · leg-named jobs ${legs.length} · a shard job named as a leg refused ${refused}` };
   },

@@ -35,7 +35,7 @@ const MUTANTS = [
   ["W-S7 FAILCLOSED", [[CV, "if (!plan && !partTexts.length) return { suite: head, shards: null };", "if (!partTexts.length) return { suite: head, shards: null };"]]],
   ["W-S8 SHARDRUN", [[OT, "    units = plan.shards[k - 1];\n", "    void plan.shards[k - 1];\n"]]],
   ["W-S9 BADDOOR", [[OT, "    if (!plan || !n || !good) {\n      assert(", "    if (!plan || !n || !good) { return;\n      assert("]]],
-  ["W-S10 ONEBOUND", [[CV, "bounds.every((b) => b === bounds[0])", "bounds.length > 0"]]],
+  ["W-S10 ONEBOUND", [[CV, "lj.every((j) => j.bounds.length === 1 && j.bounds[0] === first)", "lj.every((j) => j.bounds.length === 1)"]]],
   ["W-S11 LEGNAME", [[CV, "legLike.length === 1],", "legLike.length >= 1],"]]],
   ["W-S12 HEADALL", [[OT, "const order = [...units].sort(", 'const order = [...units].filter((u) => spawnSync("git", ["-C", ROOT, "diff", "--quiet", "HEAD~1", "HEAD", "--", "ci/" + u], { windowsHide: true }).status !== 0).sort(']]],
   ["W-S13 PRIVACY", [[CV, "out.push(`${TAGS.verdict}${JSON.stringify(d)}`);", "out.push(`${TAGS.verdict}${JSON.stringify(v)}`);"]]],
@@ -52,6 +52,14 @@ const MUTANTS = [
 function copyTree(dst) {
   for (const f of [OT, CV, WF]) { mkdirSync(dirname(join(dst, f)), { recursive: true }); cpSync(join(ORG, f), join(dst, f)); }
   if (existsSync(join(ORG, "ci", "mshard"))) cpSync(join(ORG, "ci", "mshard"), join(dst, "ci", "mshard"), { recursive: true });
+  // ci_verdict.mjs's relative imports (main's ./witness_cause.mjs, unit mdtl), derived from its source and followed; never typed
+  const todo = [readFileSync(join(ORG, CV), "utf8")], done = new Set();
+  while (todo.length) for (const m of String(todo.pop()).matchAll(/^import\s[^;]*?from\s+"\.\/([\w.-]+\.mjs)"/gm)) {
+    if (done.has(m[1]) || !existsSync(join(ORG, "scripts", m[1]))) continue;
+    done.add(m[1]);
+    cpSync(join(ORG, "scripts", m[1]), join(dst, "scripts", m[1]));
+    todo.push(readFileSync(join(ORG, "scripts", m[1]), "utf8"));
+  }
 }
 const witness = (tree, only) => {
   const r = spawnSync(process.execPath, [WITNESS, "--org", tree, "--base-org", BASE, "--only", only], { encoding: "utf8", windowsHide: true, timeout: JOB_MS, maxBuffer: 1 << 26 });
