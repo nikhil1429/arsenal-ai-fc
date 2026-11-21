@@ -10,8 +10,9 @@
 //   --only      only these clauses' plants (the mutant runner's door); BOUND, GIT STATUS and LAST always run
 //   --at        the planter's ONE read of the clock (default: now) — C2 runs it before and after 00:00 IST
 // CONTRACT
-//   · The clauses V1-V10 are ci/witness/mdayv/witness_dayv.mjs's (its header names each, planted both ways); this file runs
-//     its plantsFor() on the base and on the build with the SAME planted instant T, derived ONCE from the one read and the
+//   · The clauses V1-V10 are ci/witness/mdayv/witness_dayv.mjs's (its header names each, planted both ways), loaded from
+//     --org (the neutral member runs this file from a temp dir holding only ci/mdayv); this file runs its plantsFor() on the
+//     base and on the build with the SAME planted instant T, derived ONCE from the one read and the
 //     build's floor (C1: never a fresh new Date() per plant; T is handed to every child through the mclk door).
 //   · A clause is GREEN iff it reads RED on the base AND GREEN on the build.
 //   · BOUND: the files that differ between --org and --base-org (a content walk, CRLF folded to LF; .git, node_modules,
@@ -27,7 +28,6 @@ import { join, resolve, relative, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import { plantsFor, floorOf, plantedInstant, clauseOk, survivors, CLAUSE_IDS, TMP_PREFIX } from "../witness/mdayv/witness_dayv.mjs";
 
 const lines = (t) => String(t || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 const slash = (p) => p.split(sep).join("/");
@@ -73,6 +73,11 @@ async function main() {
   const only = opt("--only") ? opt("--only").split(",") : null;
   const read = opt("--at") ? Date.parse(opt("--at")) : Date.now();   // THE ONE READ of the clock (C1)
   if (!Number.isFinite(read)) { console.log("RED MDAYV · USAGE (--at needs an ISO instant)"); return 1; }
+  // the plants are the ORG's clause witness (one instrument for both trees): the neutral member runs this file from a temp dir
+  // that holds only ci/mdayv, so it is loaded from --org, never by a path relative to this file
+  const W = join(org, "ci", "witness", "mdayv", "witness_dayv.mjs");
+  if (!existsSync(W)) { console.log("RED MDAYV · USAGE (--org carries no ci/witness/mdayv/witness_dayv.mjs)"); return 1; }
+  const { plantsFor, floorOf, plantedInstant, clauseOk, survivors, CLAUSE_IDS, TMP_PREFIX } = await import(pathToFileURL(W).href);
   const floor = floorOf(org), T = plantedInstant(read, floor);
   const repo = isRepo(org), st0 = repo ? porcelain(org) : null;
   const ids = CLAUSE_IDS.filter((id) => !only || only.includes(id));
