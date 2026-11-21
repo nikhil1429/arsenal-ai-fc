@@ -246,9 +246,13 @@ const LIVE_ASSERTS = Object.freeze({
 const LIVE_MODES = Object.freeze({
   path: "drives forge/rejirah/samjhao/capture end to end over a sandbox COPY of dressing-room/state (registry, concepts, forge_profile, missions …) and mirror.mjs reaches the network",
   alive: "pulse.mjs probes the process table (Get-ScheduledTask) and reads the lanes' live artifacts",
-  gates: "validates every schema-d file of dressing-room/state (ajv) and reads state/laws_register.json",
   // lawpack LEFT this table at unit mlaw (forks row 1137 (2) F2 A) — see LIVE_SELFTESTS: the mode rides the hermetic profile.
   atlas: "re-derives the atlas from state/xray_graph.json, the live IR",
+});
+// unit mgat (forks row 1174 (2)): a LIVE name that NARROWS a base one declares it here — new LIVE name → the base LIVE name it
+// replaces, which must be gone. ci/mf2's F3 (ci/mf2/livenarrow.mjs) admits a name the base never printed only through this table.
+const LIVE_NARROWS = Object.freeze({
+  "gates schema half": "MODE gates",
 });
 /** @type {string[]} */ const lived = [];
 const foldName = (n) => String(n).replace(/\d+/g, "#");
@@ -2856,7 +2860,11 @@ function alive() {
 // families stay 0, frozen counts may only fall, the checked list may only grow.
 function gates() {
   section("GATES — tsc --checkJs + eslint + ajv schemas, frozen at their measured baselines, tightening only");
-  const r = run([join(ROOT, "scripts", "gates.mjs"), "report"], { timeout: HEAVY_BOUND_MS });
+  // unit mgat: the hermetic profile runs the STATE-FREE half — `gates.mjs lint` (tsc + eslint), whose output was byte-identical
+  // with the state folder absent, empty and tracked-present (ci/mgat/MGAT_SPEC.md §3). The ajv half validates his state files: LIVE, named.
+  const half = PROFILE === "hermetic";
+  if (half) liveNamed("gates schema half", `validates every schema-d file of dressing-room/state (ajv); the tsc + eslint half runs (narrows ${LIVE_NARROWS["gates schema half"]})`);
+  const r = run([join(ROOT, "scripts", "gates.mjs"), half ? "lint" : "report"], { timeout: HEAVY_BOUND_MS });
   if (/NOT MEASURABLE HERE/.test(r.out)) {
     assert("GATES — bare checkout: the gate answered NOT-MEASURABLE and exited 0 (measurability is an answer, silence is not)", r.code === 0, r.out.slice(0, 300));
     return;
@@ -3092,7 +3100,9 @@ function namingProcs(dir) {
   const out = [];
   for (const p of existsSync("/proc") ? readdirSync("/proc") : []) {
     if (!/^\d+$/.test(p) || Number(p) === process.pid) continue;
-    try { if (readFileSync(`/proc/${p}/cmdline`, "utf8").replace(/\0/g, " ").includes(dir)) out.push(Number(p)); } catch {}
+    let cmd;
+    try { cmd = readFileSync(`/proc/${p}/cmdline`, "utf8"); } catch { continue; }   // that process exited between readdir and the read: it names nothing
+    if (cmd.replace(/\0/g, " ").includes(dir)) out.push(Number(p));
   }
   return out;
 }
@@ -3151,11 +3161,11 @@ async function witnesses() {
       let r;
       try { r = spawnSync(NODE, [join("ci", unit, /** @type {string} */ (witnessFile(dir, unit))), "--org", orgT, "--base-org", baseT], { cwd: wd, env, stdio: ["ignore", fd, fd], timeout: left, windowsHide: true }); }
       finally { closeSync(fd); }
-      for (const p of namingProcs(tmp)) { try { process.kill(p); } catch {} }
+      for (const p of namingProcs(tmp)) { try { process.kill(p); } catch (e) { if (e && e.code !== "ESRCH") console.log(`  witness ‹${unit}› · survivor ${p} not killed (${e.code || e.message})`); } }
       const out = readFileSync(log, "utf8");
       // row 1153 (3) F-9: a witness that never ends (a first boot that never arrives) is killed at the member's own bound
       // and is a NAMED red, never a hang
-      const killed = !!(r.error && /ETIMEDOUT/.test(String(r.error.code || r.error.message))) || (r.status === null && !!r.signal);
+      const killed = !!(r.error && /ETIMEDOUT/.test(String(("code" in r.error ? r.error.code : "") || r.error.message))) || (r.status === null && !!r.signal);
       const j = killed ? { ok: false, last: "(killed at the bound)", left: `killed at the member's bound (${jobMin} min, suite.yml timeout-minutes): the witness never finished` } : judgeLast(out, r.status, unit, boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")));
       const secs = ((Date.now() - u0) / 1000).toFixed(1);
       console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);
@@ -3175,8 +3185,8 @@ async function witnesses() {
         for (const c of wc.causesOf({ left: j.left, src: wsrc, kind, code: r.status })) causes.push(wc.causeText(name("GREEN at head against its BASE"), c));
       }
     } finally {
-      for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
-      try { rmSync(tmp, { recursive: true, force: true }); } catch {}
+      for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch (e) { if (e && e.code !== "ENOENT") console.log(`  witness ‹${unit}› · the node_modules link in ${t} was not removed (${e.code || e.message})`); } }
+      try { rmSync(tmp, { recursive: true, force: true }); } catch (e) { console.log(`  witness ‹${unit}› · temp dir ${tmp} left behind (${e.code || e.message})`); }
     }
   }
   const total = ((Date.now() - T0) / 1000).toFixed(1);
