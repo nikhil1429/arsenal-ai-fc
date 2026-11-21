@@ -1,4 +1,4 @@
-// unit mbare · THE PLANTED TREE — COPIED from ci/mlaw2/plant.mjs at 90b6ba7 (claude/mlaw2-census; reuse by copy, the original never edited). Changes from the original: the temp prefix mbare-, REPO three levels up (tools/), the usage line. A census tool, not an organ.
+// unit mbare · THE PLANTED TREE — COPIED from ci/mlaw2/plant.mjs at 90b6ba7 (claude/mlaw2-census; reuse by copy, the original never edited). Changes from the original: the temp prefix mbare-, REPO three levels up (tools/), the usage line, the shim dir removed at exit. A census tool, not an organ.
 //   node ci/mbare/tools/plant.mjs <sha> [--with-tracked-state]      → prints the planted tree's path (one line)
 //   import { plant, plantEnv, memberCmd, memberBound, liveTables } from "./plant.mjs"
 // It builds ONE tree of <sha> under os.tmpdir(): an LF `git archive` (core.autocrlf=false), the state dir EXCLUDED and then
@@ -11,7 +11,7 @@
 // scripts read handed a port the OS picked (listen 0, read, close). No port, wait, size or model id is typed here.
 // It writes ONLY under os.tmpdir(). It never reads, prints or copies a file of the checkout's state dir.
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, mkdirSync, symlinkSync, writeFileSync, readFileSync, readdirSync, chmodSync, existsSync } from "node:fs";
+import { cpSync, mkdtempSync, mkdirSync, symlinkSync, writeFileSync, readFileSync, readdirSync, chmodSync, existsSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path"; import { tmpdir } from "node:os"; import { fileURLToPath } from "node:url";
 import net from "node:net";
 
@@ -41,6 +41,7 @@ export const plantIsEmpty = (d) => readdirSync(join(d, SD)).length === 0;
 
 const shimDir = (() => { let s = null; return () => {
   if (s) return s; s = mkdtempSync(join(tmpdir(), "mbare-shim-"));
+  const made = s; process.on("exit", () => { try { rmSync(made, { recursive: true, force: true }); } catch { /* the OS's after this */ } });   // (mbare: not in the mlaw2 original)
   for (const b of INPUTS.model_shims) {
     writeFileSync(join(s, b), "#!/bin/sh\necho 'REFUSED: no live model call (planted shim)' >&2\nexit 97\n"); chmodSync(join(s, b), 0o755);
     writeFileSync(join(s, `${b}.cmd`), "@echo REFUSED: no live model call (planted shim) 1>&2\r\n@exit /b 97\r\n");
