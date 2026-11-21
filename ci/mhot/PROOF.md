@@ -491,3 +491,77 @@ RED MPRES · BOUND                    (identical on both: the merge moves nothin
 ```
 
 CHECKPOINT · MERGED b3a61c6 at 16:27 UTC 2026-11-20 · tip = the commit that carries this line · resume from: the architect's re-run of row 1187 (the mcov half of MHOT-M2 still stands, §11)
+
+## 16 · RESUMED (forks row 1232 (2), 2026-11-21) — the merge of main 5301f15, the removed lines, the witnesses, the legs
+
+**1 · The merge.** Merge commit `1527a72` (parents `f9c7ed4`, this branch, and `5301f15`, main, after units mcap, mprk, mdtl,
+mcrk and mherm), a merge commit, never a rebase, pushed inside the order's window. `ci/mhot/BASE` is unchanged
+(`5759cce`). One conflicted hunk, `package.json`, the six keys `_selftest_coverage_law` … `_runner_law`:
+- *Main meant:* two new members, `node scripts/witness_cause.mjs selftest` on `organism:selftest` and
+  `node scripts/parked.mjs selftest` on `squad:selftest`. That is the only scripts difference `b3a61c6` → `5301f15`, measured.
+- *This unit meant:* the chain commands, written once.
+- *The result is the union:* this unit's six lines, plus `suite/members/witness_cause.json` (organism:selftest) and
+  `suite/members/parked.json` (squad:selftest), both argv `["selftest"]` and `live: null`. No LIVE key was added on main.
+- `scripts/organism_test.mjs` merged clean, so every landed line of every other unit stands as main has it.
+
+**2 · Row 1204 (1), MHOT-M3 = A** is on this branch since `29f5f49` (§14): mlaw's COVERAGE and HERMETIC re-cut in place,
+struck text kept, the roll where `suite/members` exists and the old string or table where it does not, with the mutant
+"done member file removed" (M-MLAW-COVERAGE) and M-MLAW-HERMETIC. Their runs on this merge are below.
+
+**3 · Row 1203 (2): every line a landed unit took out of a table is still out after the fold.** The list is derived, not
+typed. Every first-parent landing of main from `5759cce` to `5301f15` is compared with its first parent, over
+`LIVE_SELFTESTS`, `LIVE_ASSERTS`, `LIVE_MODES`, `KNOWN_RED` (its `assert:` names) and the member lists (the three
+strings plus `suite/members/*.json`). Each removed key is then read at main and at this tip. At the folded tip a LIVE
+selftest is the residual table's key OR a member file with a reason.
+
+```
+$ git log --first-parent --format=%h 5759cce..5301f15        # the landings scanned
+3f22388 mlaw · cebe3eb mcov · 6a6bdff mmeter · b3a61c6 mpres · 56ed4ff mcap · b6de26b mprk · 25f13f2 mdtl · e436c17 mcrk · 5301f15 mherm
+$ node <scratchpad>/removed.mjs 5759cce 5301f15 1527a72
+REMOVED mlaw 3f22388 LIVE_SELFTESTS "lawpack" · at main out · at tip out
+REMOVED mlaw 3f22388 LIVE_MODES "lawpack" · at main out · at tip out
+REMOVED_SCAN 5759cce..5301f15 landings 9 removed 2 still-out-at-main-and-tip 2 back 0
+```
+
+At the tip, `lawpack` is a member with `live: null` (`suite/members/lawpack.json`), and `LIVE_MODES` is byte-equal to main's.
+
+**4 · The witnesses on the merged tree** (git clones; `--base-org` = `5759cce`; the parent = `5301f15`):
+
+```
+$ node ci/mhot/witness_mhot.mjs --org <clone 1527a72> --base-org <clone 5759cce> --bound-base <clone 5301f15>
+  ok   BOUND · against the bound base (the land commit's parent) · 143 file(s) differ · beyond the named: none · …
+GREEN MHOT the member roll · 12 clause(s)                                    (exit 0)
+$ node ci/mhot/witness_mhot.mjs --org <clone 5759cce> --base-org <clone 5759cce>
+RED MHOT · H1, H2, H3, H4, H5, H6, H7, H8, H9                                (exit 1)
+$ node ci/mhot/run_mutants_mhot.mjs --org <clone 1527a72> --base-org <clone 5759cce> --bound-base <clone 5301f15>
+run_mutants: 14 of 14 mutant(s) RED by the clause that names them · control GREEN
+$ node ci/mlaw/witness_mlaw.mjs --org <clone 1527a72> --base-org <clone 5759cce>
+  ok   COVERAGE · done.mjs selftest mode present · the tree's member roll (suite/members) runs it: yes · …
+  ok   HERMETIC · LIVE selftests read from the table + the member roll (71) · lawpack in LIVE table(s): none · …
+RED MLAW · BOUND                                    (row 1200 class: mlaw's witness has no bound-base door)
+$ node ci/mcov/witness_mcov.mjs --org <clone 5301f15> --base-org <clone of ci/mcov/BASE>       # the control: main itself
+RED MCOV · BOUND
+$ node ci/mcov/witness_mcov.mjs --org <clone 1527a72> --base-org <clone of ci/mcov/BASE>
+RED MCOV · BOUND, C1 COVERAGE, C5 ONE RECORD, C6 SLOW-GREEN, C7 HANG-NAMED
+```
+
+**FORK MHOT-M2, the mcov half, now measured on git clones: this is what reds `WITNESS ‹mcov›` on the neutral legs.**
+Each of the four is the F6 class: `ci/mcov/witness_mcov.mjs` reads or plants members through the `&&` strings.
+- **C1 COVERAGE:** its plants add `mcov_slow` / `mcov_hang` by appending to the `organism:selftest` string
+  (`witness_mcov.mjs:92`); the build reads member files, so they are orphans.
+- **C5 ONE RECORD:** counts each organ "in exactly one suite string".
+- **C6 SLOW-GREEN** and **C7 HANG-NAMED:** judge the planted members, which never become members.
+
+No row has yet named `ci/mcov/witness_mcov.mjs` among this unit's files (row 1204 ruled the mlaw half only), so it is
+measured here, not edited.
+*Options:* A re-cut C1, C5, C6 and C7 in place as ADDED edits, row 1204's shape. Plant by the tree's door: a member file
+where `suite/members` exists, else the string. Count the tree's roll where it exists, else the strings. Mutants:
+`mcov_slow`'s planted member file removed → C6, and a second file for one organ → C5. B a KNOWN_RED entry until mcov's seat
+re-judges. C mcov's seat re-cuts.
+
+**5 · The neutral legs of `1527a72`** (workflow run 44873083652, read through the public API with no token):
+`136751728064 hermetic twice · node 22 success` · `136751727827 hermetic twice · node 24 success` ·
+`136751727977 npm test · node 22` and `136751727984 npm test · node 24` in progress at the time of writing (the ledger
+carries their verdict when read). The previous tip `f9c7ed4` (run 44773570313): `npm test` node 22 and node 24 failure.
+
+CHECKPOINT · RESUMED at 06:12 UTC 2026-11-21 · merged 5301f15 at 1527a72 · legs of 1527a72: hermetic twice ×2 success, npm test ×2 in progress (run 44873083652) · resume from: the npm test verdict, then the ruling on MHOT-M2's mcov half (§16)
