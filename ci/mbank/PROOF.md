@@ -154,3 +154,29 @@ CHECKPOINT · STOPPED at 2026-11-21T06:40Z · resume from: the architect's rulin
 `hisPrompt`/`readHisPrompt` into `scripts/study_scope.mjs` (forge_session re-exports, gaffer_brain imports statically),
 re-cut B9 to pin the door in study_scope, then re-run the witness both ways, the mutants and the hermetic profile, push once.
 On (A) kept: the LAW PACK red needs a ruling of its own.
+
+## 7 · NEW MAIN 7bf008b (mdet dfe26a1 · mdtl2 4d582d5 · mclk 7bf008b landed; the architect's order by the runner, forks rows 1226 / 1228, 21 Nov 2026)
+
+`git fetch origin main && git merge --no-edit FETCH_HEAD` made merge commit `6a1d800` (6a1d800484f422c5e82bbe03e6e207cbba5bb78d). It applied with **no
+conflicted file**. Main's change since 5301f15 touches `package.json` and `scripts/organism_test.mjs`, which this build never
+edits, and none of this build's named files. Every landed line of the other units stands as main wrote it. `ci/mbank/BASE`
+still names the cut (5301f15). Each run below is on 21 Nov 2026, with the base leg on a clone of main 7bf008b:
+```
+$ node ci/mbank/witness_mbank.mjs --org <merge clone> --base-org <main 7bf008b clone>
+GREEN MBANK … · 16 clause(s)
+$ node ci/mbank/witness_mbank.mjs --org <main 7bf008b clone> --base-org <main 7bf008b clone>
+RED MBANK · B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14
+$ node ci/witness/mbank/witness_bank.mjs plants --tree <merge clone>
+PLANTS mbank · 14 of 14 plant(s) as expected
+$ node ci/mbank/run_mutants_mbank.mjs --org <merge clone> --base-org <main 7bf008b clone>
+run_mutants: 14 of 14 mutant(s) RED by the clause that names them · control GREEN
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all
+main 7bf008b: organism_test: 165 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125 (hermetic: named, not run)
+merge:        organism_test: 166 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125 (hermetic: named, not run)
+```
+The merge's one red is still LAW PACK (FORK mbank-1, §4). Main's one red in that run was the mcap clause-witness member,
+whose last line read `PLANTS mcap · 86 of 86 plant(s) as expected`. It is GREEN in the merge run and on its own re-run.
+Both suites ran in parallel on one machine, so it is named as a load effect, not a verdict, and this build touches none of
+its files. The witness derives no day from the clock, so the mclk door does not bear on it.
+
+CHECKPOINT · merge 6a1d800 pushed · neutral legs: see the ledger row `ci` for this sha · resume from: the architect's ruling on FORK mbank-1 (§6)
