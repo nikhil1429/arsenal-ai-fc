@@ -2120,7 +2120,7 @@ function selftest() {
       WL("compiled_notes.jsonl", [...five, ...fails]);
       const a5 = /** @type {*} */ (askedFirst(d, NOW6)), o5 = brief(d, NOW6);
       assert("L6 · C22 · MTRAP — five 2-trap notes with kept FAIL rows (two of them superseded) serve nothing and are COUNTED not gateable 5, fail 0, beside their kept rows",
-        !a5.note_id && /pass 0 · fail 0 · not gateable 5 \(fewer than 3 traps, kept fail rows beside them\) · ungated 0/.test(a5.absent) && o5.split("\n").filter((l) => l.includes("not gateable 5")).length === 1, a5.absent);
+        !a5.note_id && /pass 0 · fail 0 · not gateable 5 \(fewer than 3 traps, kept fail rows beside them\) · ungated 0/.test(a5.absent) && o5.split("\n").filter((l) => l.includes("not gateable 5")).length === 1);
       const fat = [6, 7, 8].map((i) => ({ ...nFail, id: `n-fat-${i}`, ts: `2026-10-0${i - 3}T11:00:00.000Z`, concept: "embeddings", axis: "c", note: { traps: trapsOf(5) } }));
       WL("compiled_notes.jsonl", [...fat, ...fat.map((n, i) => ({ ...gFail, id: `g-fat-${i}`, of: n.id, ts: `2026-10-0${i + 3}T12:00:00.000Z` }))]);
       assert("L6 · C22 · MTRAP — TRUE fails stand: three five-trap notes with kept FAIL rows count fail 3, not gateable 0",
