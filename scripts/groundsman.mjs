@@ -260,7 +260,7 @@ function meetOrigin(run, landed = []) {
       if (!made.ok) return { ok: false, idle: "REBUILD-FAILED", why: `idle REBUILD-FAILED at ${c.slice(0, 7)} — commit-tree refused; nothing moved` };
       parent = made.out.trim();
     }
-  } finally { try { rmSync(idx, { force: true }); } catch {} }
+  } finally { try { rmSync(idx, { force: true }); } catch { /* the private index under os.tmpdir(): force covers ENOENT, and any other failure leaves one temp file — the push result above is already decided */ } }
   const move = run("git", ["read-tree", "-m", "-u", hd, parent]);           // two-way: his dirty paths stay, an overlap refuses
   if (!move.ok) {
     const p = dirtyOverlap(run, hd, parent) || String(move.out).split(/\r?\n/).slice(1).join(" ").trim().slice(0, 100);
