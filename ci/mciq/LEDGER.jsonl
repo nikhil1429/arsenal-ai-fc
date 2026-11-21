@@ -1,0 +1,7 @@
+{"ts":"2026-11-21T10:52:00Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mciq-build FETCH_HEAD","last_line":"main 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f"}
+{"ts":"2026-11-21T11:00:00Z","act":"edit+witness commit f901252","cmd":"node ci/mciq/witness_mciq.mjs --org <LF tree HEAD> --base-org <LF tree 7bf008b>","last_line":"GREEN MCIQ the push trigger runs main, land/**, claude/*-build, claude/*-spec and every other branch and draws no run for superseded/** or claude/*-queue, both legs and the other triggers kept · 8 clause(s)"}
+{"ts":"2026-11-21T11:00:00Z","act":"witness on base","cmd":"node ci/mciq/witness_mciq.mjs --org <LF tree 7bf008b> --base-org <LF tree 7bf008b>","last_line":"RED MCIQ · IGNORE"}
+{"ts":"2026-11-21T11:02:00Z","act":"mutants commit 6e61181","cmd":"node ci/mciq/run_mutants_mciq.mjs --org <LF tree HEAD> --base-org <LF tree 7bf008b>","last_line":"run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T11:04:00Z","act":"law pack, LF clones","cmd":"node scripts/lawpack.mjs gate (clone 7bf008b, clone 6e61181)","last_line":"lawpack: GREEN — no law's finding count rose, and every rule is on disk (both)"}
+{"ts":"2026-11-21T11:04:00Z","act":"ci_verdict selftest (reads suite.yml matrix)","cmd":"node scripts/ci_verdict.mjs selftest (LF tree 7bf008b, LF tree 6e61181)","last_line":"ALL CHECKS PASSED (both)"}
+{"ts":"2026-11-21T11:04:00Z","act":"LAW M","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
