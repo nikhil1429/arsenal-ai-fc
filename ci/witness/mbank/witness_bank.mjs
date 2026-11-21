@@ -47,6 +47,9 @@
 //   B16 AUDIT     (row 1248) a planted study day: an open forge session, then two of his turns, each with ANOTHER session's
 //                 UserPromptSubmit landing between his prompt and his Stop: the teaching audit's own Stop rows read
 //                 user_text_source "fresh" on both (session-mismatch ZERO), each naming HIS turn id
+//   B17 CRACK     (row 1248) an open session (axis a, a check_q); HIS prompt through the real hook, then ANOTHER session's
+//                 prompt: `forge_session.mjs crack` (CLAUDE_CODE_SESSION_ID = his) writes HIS words and HIS turn id, never the
+//                 other session's text
 //   B14 MINT      the REAL UserPromptSubmit hook (teaching_audit.mjs hook, his prompt on stdin, the plant's session id) mints
 //                 a UUID turn_id on the prompt record, and the code-door capture that follows carries that same id
 // OUTPUT: one `CLAUSE <id> GREEN|RED · <why>` line per clause, then `PLANTS mbank · k of n plant(s) as expected` (exit 0
@@ -290,6 +293,19 @@ await clause("B16", () => {
   const mism = rows.filter((r) => /session-mismatch/.test(String(r.user_text_source || ""))).length;
   return { ok: codes.every((c) => c === 0) && rows.length === 2 && mism === 0 && rows.every((r) => r.user_text_source === "fresh" && typeof r.turn_id === "string"),
     why: `hook exits ${codes.join(",")} · his Stop rows ${rows.length} · session-mismatch ${mism} · sources ${rows.map((r) => String(r.user_text_source).split(" ")[0]).join(",")}` };
+});
+
+await clause("B17", () => {
+  const p = plant("b17");
+  for (const s of [["start", "tokenization"], ["step", "3"], ["axis", "a", "now"], ["moment", "check_q"]]) { const r = p.node("forge_session.mjs", s); if (r.code !== 0) return { ok: false, why: `${s.join(" ")} → ${brief(r)}` }; }
+  const hook = (sid, prompt) => p.node("teaching_audit.mjs", ["hook"], { input: JSON.stringify({ hook_event_name: "UserPromptSubmit", session_id: sid, prompt }), sid });
+  const his = "shayad - his broken answer, the crack turn", other = "architect: read the row and rule the fork";
+  hook(SID, his);
+  let mine = null; try { mine = JSON.parse(text(p.at("teaching_audit_last.json"))).prompt.turn_id; } catch { mine = null; }
+  hook("sess-parallel-architect", other);
+  const k = p.node("forge_session.mjs", ["crack"]), ck = (p.cracks() || [])[0] || {};
+  return { ok: k.code === 0 && ck.words === his && !!mine && ck.turn_id === mine,
+    why: `crack ${brief(k)} · his words ${ck.words === his} · other session's text written ${ck.words === other} · his turn ${!!mine && ck.turn_id === mine}` };
 });
 
 if (OWN_TMP) { try { rmSync(TMP, { recursive: true, force: true }); } catch { /* the caller's LAST names a survivor */ } }

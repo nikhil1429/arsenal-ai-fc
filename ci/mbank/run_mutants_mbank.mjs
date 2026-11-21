@@ -41,6 +41,7 @@ const MUTANTS = [
   ["B13", "M13 no turn_id on the compiled crack item", NC, 'turn_id: typeof r.turn_id === "string" ? r.turn_id : null, words_at: r.prompt_at };', "turn_id: null, words_at: r.prompt_at };"],
   ["B14", "M14 the record's owner mints no turn_id", TA, "      turn_id: randomUUID(),\n", ""],
   ["B16", "M16 the Stop pairs with the shared slot again", TA, "  const p = ownRec || shared;", "  const p = shared;"],
+  ["B17", "M17 the crack verb reads the shared slot again", FS, "auditLast: ownC && typeof ownC === \"object\" ? { ...alC, prompt: ownC } : alC,", "auditLast: alC,"],
   ["B15", "M15 the door reads the shared slot again", FS, "  if (!opts.sessionId) return hisPrompt(last, opts);", "  return hisPrompt(last, opts);"],
 ];
 const copyOf = (into) => {

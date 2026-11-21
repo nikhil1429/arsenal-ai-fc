@@ -3330,7 +3330,12 @@ export async function hookMain() {
       // save()/apply() — the open session file is not written (spec §4); cracks.jsonl is written by appendCrack alone.
       const s = live(need(load()));
       const bank = await readBank(s.concept);
-      const r = crackRow({ session: s, auditLast: loadAuditLast(), bank: bank.rows, now: new Date() });
+      // unit mbank (row 1248): his words from THIS session's own prompt record when it has one (the shared slot is
+      // overwritten by any parallel session's prompt, whose text would otherwise be written here as his); else the shared
+      // slot, as before. crackRow's refusals are unchanged.
+      const alC = loadAuditLast(), sidC = process.env.CLAUDE_CODE_SESSION_ID || null;
+      const ownC = sidC && alC && alC.prompts_by_session && typeof alC.prompts_by_session === "object" ? alC.prompts_by_session[sidC] : null;
+      const r = crackRow({ session: s, auditLast: ownC && typeof ownC === "object" ? { ...alC, prompt: ownC } : alC, bank: bank.rows, now: new Date() });
       if (!r.ok) { console.error(`forge_session: crack REFUSED — ${r.why}`); process.exit(1); }
       const prior = readCracks();
       if (prior.rows === null) { console.error(`forge_session: crack REFUSED — cracks.jsonl exists and cannot be read (${prior.error}) — nothing written`); process.exit(1); }
