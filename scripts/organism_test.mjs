@@ -3040,6 +3040,54 @@ function witnessUnits(root) {
   if (!existsSync(ci)) return [];
   return readdirSync(ci).filter((d) => /^[a-z0-9-]+$/.test(d) && !!witnessFile(join(ci, d), d)).sort();
 }
+// ── unit mshard (forks rows 1171 (3) / 1188; spec ci/mshard/MSHARD_SPEC.md on claude/mshard-spec c82a0e6) ──────────────────
+// THE WITNESSES MEMBER SPLIT ACROSS JOBS. F-SHAPE B: LPT over the measured table ci/mshard/TIMES (unit → seconds, printed by a
+// seat with `node scripts/ci_verdict.mjs times`, F-TABLE a: the suite never reaches the network). K is the length of the
+// `shard: [1, …, n]` matrix list in .github/workflows/suite.yml, read and never typed here (F-K b). The plan is a function of
+// the head tree's witnessUnits, K and the table ONLY: it reads no diff and no merge base, so the head leg judges every unit on
+// every push (row 1171 (3)). Two doors, read only inside witnesses() and only after its C5 base-tree line:
+//   ORGANISM_WITNESS_SHARD=<k>[/<n>]  runs shard k of the plan and prints ONE `WITNESS_SHARD {…}` machine line;
+//   ORGANISM_WITNESS_SHARDS=plan|<n>  spawns nothing and prints ONE `WITNESS_PLAN {…}` line (the suite job's: coverage is the
+//                                     fold's to judge, ci_verdict.mjs compare --head-part);
+//   both unset                        today's member, byte for byte (F-UNSHARDED a).
+// A malformed door is ONE named red and no spawn, never "run all", never "run none". The doors never reach a spawned witness's
+// env, so a witness that runs this member inside its own plant meets the unsharded member. The machine lines carry names,
+// shas and seconds only. Sole writer of nothing.
+/** a shard door, by its name (a predicate, never a list): ORGANISM_WITNESS_SHARD and ORGANISM_WITNESS_SHARDS @param {string} k */
+const isShardDoor = (k) => /^ORGANISM_WITNESS_SHARDS?$/.test(k);
+const MSHARD_TIMES = "ci/mshard/TIMES";
+/** a tracked file of the tree, or "" @param {string} root @param {string} rel */
+const treeText = (root, rel) => { try { return readFileSync(join(root, ...rel.split("/")), "utf8"); } catch { return ""; } };
+/** K: suite.yml's `shard: [1, …, n]` matrix list; null when absent or not exactly 1..n @param {string} wf */
+function shardList(wf) {
+  const m = /^\s*shard:\s*\[([^\]]*)\]/m.exec(String(wf));
+  if (!m) return null;
+  const ks = m[1].split(",").map((s) => s.trim()).filter(Boolean);
+  return ks.length > 0 && ks.every((s, i) => s === String(i + 1)) ? ks.length : null;
+}
+/** the measured table: one `<unit> <seconds>` row each; every other line is its header @param {string} text */
+function readTimes(text) {
+  /** @type {Record<string, number>} */
+  const t = {};
+  for (const l of String(text || "").split(/\r?\n/)) { const m = /^([a-z0-9-]+)\s+(\d+(?:\.\d+)?)$/.exec(l.trim()); if (m) t[m[1]] = Number(m[2]); }
+  return t;
+}
+/** F-SHAPE B · LPT: the heaviest unit first, onto the lightest shard (a tie: the lower k). A unit absent from the table weighs
+ *  the table's mean over the tree's units (derived, never typed; equal weights when the table is empty) and lands like any other; a table row naming no unit of the
+ *  tree is named in `stale` and ignored. Coverage never rides the table: every unit of `units` is in exactly one shard.
+ *  @param {string[]} units @param {number} n @param {Record<string, number>} times */
+function witnessPlan(units, n, times = {}) {
+  const has = (u) => Object.prototype.hasOwnProperty.call(times, u);
+  const known = units.filter(has);
+  const mean = known.length ? known.reduce((a, u) => a + times[u], 0) / known.length : 1;   // an empty table: equal weights
+  const w = (u) => (has(u) ? times[u] : mean);
+  const order = [...units].sort((a, b) => w(b) - w(a) || (a < b ? -1 : a > b ? 1 : 0));
+  /** @type {string[][]} */
+  const shards = Array.from({ length: n }, () => []);
+  const load = Array(n).fill(0);
+  for (const u of order) { let k = 0; for (let i = 1; i < n; i++) if (load[i] < load[k]) k = i; shards[k].push(u); load[k] += w(u); }
+  return { n, shards: shards.map((s) => [...s].sort()), unknown: units.filter((u) => !has(u)), stale: Object.keys(times).filter((u) => !units.includes(u)).sort() };
+}
 /** the ports the organs export (derived, never typed): `export const <NAME>PORT = …<literal>…`, and its env door if the
  *  same line reads one; and every `listen(<literal>)` an organ binds @param {string} tree */
 function organPorts(tree) {
@@ -3119,13 +3167,36 @@ async function witnesses() {
   // row 1125 (3): the neutral flag set with NO workspace named is a RED, never a skip — a gate fails closed
   if (!process.env.GITHUB_WORKSPACE) { assert("WITNESSES · the neutral machine names its workspace (GITHUB_WORKSPACE): the gate fails closed", false, "GITHUB_ACTIONS is set and GITHUB_WORKSPACE is not"); return; }
   if (real(ROOT) !== real(process.env.GITHUB_WORKSPACE)) { console.log(WITNESS_BASETREE); return; }
-  const units = witnessUnits(ROOT);
+  let units = witnessUnits(ROOT);
   const T0 = Date.now();
   const wf = (() => { try { return readFileSync(join(ROOT, ".github", "workflows", "suite.yml"), "utf8"); } catch { return ""; } })();
   const jobMin = Number((/timeout-minutes:\s*(\d+)/.exec(wf) || [])[1]);
   if (!(jobMin > 0)) { assert("WITNESSES · the member reads its bound, the job's own timeout-minutes in .github/workflows/suite.yml", false, "no timeout-minutes line"); return; }
   const headSha = spawnSync("git", ["-C", ROOT, "rev-parse", "--verify", "-q", "HEAD"], { encoding: "utf8", windowsHide: true });
   const head = String(headSha.stdout || "").trim();
+  // unit mshard: the doors (read here, after C5: the base-tree clone never reads them)
+  const doorK = process.env.ORGANISM_WITNESS_SHARD, doorN = process.env.ORGANISM_WITNESS_SHARDS;
+  /** @type {{ k: number, n: number } | null} */
+  let sharded = null;
+  if (doorK !== undefined || doorN !== undefined) {
+    const n = shardList(wf);
+    const plan = n ? witnessPlan(units, n, readTimes(treeText(ROOT, MSHARD_TIMES))) : null;
+    const m = /^(\d+)(?:\/(\d+))?$/.exec(String(doorK ?? ""));
+    const k = m ? Number(m[1]) : 0;
+    const good = !!plan && !!n && (doorK !== undefined && doorN !== undefined ? false
+      : doorK !== undefined ? !!m && k >= 1 && k <= n && (m[2] === undefined || Number(m[2]) === n)
+      : doorN === "plan" || doorN === String(n));
+    if (!plan || !n || !good) {
+      assert("WITNESSES · the shard door names a shard of the plan (suite.yml shard: [1 … n], unit mshard)", false,
+        !n ? "suite.yml carries no shard: [1 … n] matrix list" : `ORGANISM_WITNESS_SHARD ${JSON.stringify(doorK ?? null)} · ORGANISM_WITNESS_SHARDS ${JSON.stringify(doorN ?? null)} · n ${n}`);
+      return;
+    }
+    if (doorN !== undefined) { console.log(`WITNESS_PLAN ${JSON.stringify({ n, head, units, shards: plan.shards, unknown: plan.unknown, stale: plan.stale })}`); return; }
+    units = plan.shards[k - 1];
+    sharded = { k, n };
+  }
+  /** @type {Record<string, number>} */
+  const secsOf = {};
   const nm = join(ROOT, "node_modules");
   const wc = existsSync(join(HERE, "witness_cause.mjs")) ? await import("./witness_cause.mjs") : null;
   for (const unit of units) {
@@ -3152,7 +3223,8 @@ async function witnesses() {
         writeFileSync(join(shim, `${tool}.cmd`), `@echo REFUSED — no live model call in a witness (unit ms1) 1>&2\r\n@exit /b 1\r\n`);
       }
       const env = { ...process.env };
-      const pk = Object.keys(env).find((k) => k.toUpperCase() === "PATH") || "PATH";
+      for (const d of Object.keys(env).filter(isShardDoor)) delete env[d];   // unit mshard: a witness's own plant meets the unsharded member
+      const pk =Object.keys(env).find((k) => k.toUpperCase() === "PATH") || "PATH";
       env[pk] = `${shim}${delimiter}${env[pk] || ""}`;
       for (const p of ports.named) if (p.door) env[p.door] = String(await freePort());
       cpSync(dir, join(wd, "ci", unit), { recursive: true });
@@ -3168,6 +3240,7 @@ async function witnesses() {
       const killed = !!(r.error && /ETIMEDOUT/.test(String(("code" in r.error ? r.error.code : "") || r.error.message))) || (r.status === null && !!r.signal);
       const j = killed ? { ok: false, last: "(killed at the bound)", left: `killed at the member's bound (${jobMin} min, suite.yml timeout-minutes): the witness never finished` } : judgeLast(out, r.status, unit, boundIds(readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8")));
       const secs = ((Date.now() - u0) / 1000).toFixed(1);
+      secsOf[unit] = Number(secs);
       console.log(`  witness ‹${unit}› ${secs} s · ${j.last}`);
       // the judged name is STABLE, so a KNOWN_RED entry can rule it (row 1107 (1)(c)); its reds ride the detail. The seconds ride
       // their own measurement line: the workflow prints assert lines only (keyOf folds the digits)
@@ -3192,6 +3265,13 @@ async function witnesses() {
   const total = ((Date.now() - T0) / 1000).toFixed(1);
   console.log(`  witnesses · ${units.length} unit(s) · ${total} s`);
   assert(`WITNESSES · ${units.length} unit(s) judged in ${total} s (B5: the member's own seconds, measured every run)`, true);
+  if (sharded) {
+    // judged = every unit that reached a judging assert (its BASE, clone, trees, port or GREEN-at-head line), never its seconds line
+    const judging = (n, u) => n.startsWith(`WITNESS ‹${u}› · `) && !/^WITNESS ‹[^›]*› · (ran in |measured · )/.test(n);
+    const names = [...passed, ...fails.map((f) => f.name)];
+    const judged = units.filter((u) => names.some((n) => judging(n, u)));
+    console.log(`WITNESS_SHARD ${JSON.stringify({ k: sharded.k, n: sharded.n, head, plan: units, judged, secs: secsOf })}`);
+  }
 }
 
 // ── THE RULED KNOWN-RED LIST (12 Oct 2026, forks row 639 (iii); lane V's fork (C)) ──────
@@ -3262,6 +3342,14 @@ const MODES = { coverage, integrity, laws, hermetic, path, suites, gates, lawpac
 async function main() {
   const mode = (process.argv[2] || "all").toLowerCase();
   if (mode === "selftest") { console.log("organism_test is itself the test suite — run `node scripts/organism_test.mjs all`"); process.exit(0); }
+  // unit mshard: the plan of THIS tree, printed (names only; no witness runs, no assert)
+  if (mode === "witness-plan") {
+    const n = shardList(treeText(ROOT, ".github/workflows/suite.yml"));
+    if (!n) { console.log("witness-plan: .github/workflows/suite.yml carries no shard: [1 … n] matrix list"); process.exit(1); }
+    const units = witnessUnits(ROOT), p = witnessPlan(units, n, readTimes(treeText(ROOT, MSHARD_TIMES)));
+    console.log(`WITNESS_PLAN ${JSON.stringify({ n, units, shards: p.shards, unknown: p.unknown, stale: p.stale })}`);
+    process.exit(0);
+  }
   // unit mdet: the coverage detector's census, a READ (never a mode of `all`, so the suite's verdict is unmoved by it)
   if (mode === "census") { console.log("| script | legacy | legacy at | detector | form | at | moves |\n|---|---|---|---|---|---|---|"); for (const r of censusRows()) console.log(r); process.exit(0); }
   const chosen = mode === "all" ? Object.keys(MODES) : [mode];
