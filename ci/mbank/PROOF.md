@@ -180,3 +180,33 @@ Both suites ran in parallel on one machine, so it is named as a load effect, not
 its files. The witness derives no day from the clock, so the mclk door does not bear on it.
 
 CHECKPOINT · merge 6a1d800 pushed · neutral legs: see the ledger row `ci` for this sha · resume from: the architect's ruling on FORK mbank-1 (§6)
+
+## 8 · THE ZERO-CAPTURES READ (forks row 1237 (1), 21 Nov 2026): EVERY LINE WHERE THIS UNIT ASSUMES A BANK CALL HAPPENS
+
+The runner's read on his laptop, counts only, is quoted and not re-derived. No study turn called the bank on 17-21 Nov
+2026, nothing was refused, and the newest capture is from 16 Nov. **This unit changes what a bank call STORES. It never
+makes one happen.** Each line below is at the branch tip (merge 5db4a07 and later) and is a place that does nothing unless
+a teacher's turn calls `gaffer_brain.mjs capture` on the code surface. No fix is designed here; the architect rules where
+the cause sits.
+
+| Where | What it assumes |
+|---|---|
+| `scripts/gaffer_brain.mjs:2745` (`const codeDoor = …`) and `:2750` (`readHisPrompt({ sessionId, fresh: true, needTurn: true })`) | the teacher's turn runs `capture … --said/--surface code`. The door, every refusal and the new row fields live only inside that call |
+| `scripts/gaffer_brain.mjs:1346` `codeDoorWords`, and the row fields in `gradeCapture` (`spoken_src`, `turn_id`, `prompt_at`, `session_checked`, the idempotence key) | the same call; they are pure and run only when it runs |
+| `scripts/teaching_audit.mjs:1654` (`turn_id: randomUUID()`) | it mints on EVERY UserPromptSubmit whether a bank follows or not. A turn id with no bank row is the zero-call state, and it is visible as such |
+| `scripts/forge_session.mjs:661` `hisPrompt`, crackRow `:700` `bank_of` | the crack row looks for a bank row of the axis after his prompt. With no bank call it writes `bank_of: null` and names it (that line is mcrk's, unchanged) |
+| `scripts/forge_session.mjs:820`, `:896` (the missing-bank lines) | a carrier. It tells the teacher the command at the axis close / LOCK gate, AFTER the turn that should have banked |
+| `scripts/learn_digest.mjs:160`, `.claude/skills/forge/SKILL.md:49`, `.claude/skills/forge/REFERENCE.md:141`, `.claude/skills/learn/REFERENCE.md:468` | carriers. Prose and printed lines that tell a teacher how to call the bank; they cannot cause the call |
+| `scripts/teaching_gate.mjs:141` (`B.bank` fix text), `:143` (`B.bank-verbatim` fix text) | fix texts only. `B.bank-verbatim` is evaluated only `if (reps.length)` (a bank ran this turn, `teaching_gate.mjs` near `:667`), so a turn with no bank call never reaches it. Whether `B.bank` fires on a missing bank is the gate's own rule, which this unit does not touch. The read says no gate red named a missing bank |
+| `ci/witness/mbank/witness_bank.mjs`, every clause B1-B14 (12 code-door capture calls planted) | each plant MAKES the bank call itself. The witness proves what a call stores and refuses; it cannot see whether a real teaching turn calls at all |
+
+**Not this unit's door:** the Dugout voice tool `bank_answer` (`scripts/dugout.mjs:1897`, prompt `:747`) is the stdin door,
+and it is unchanged here (mbank-3 a). The read counts `bank_answer` calls in the study-session transcripts. Those sessions
+bank through `gaffer_brain.mjs capture` on the code surface, not through Dugout. So a zero there and a zero on the code door
+are two different facts, and the architect may want the code-door count named separately.
+
+**CI of merge 5db4a07, read before this push (public API, no token):** 136766571358 `hermetic twice · node 22` completed
+success · 136766571254 `hermetic twice · node 24` completed success · 136766571130 `npm test · node 24` in_progress ·
+136766571421 `npm test · node 22` queued. This push may supersede those two npm legs.
+
+CHECKPOINT · §8 written at 2026-11-21 (UTC) · resume from: the architect's ruling on FORK mbank-1 (§6), and on where the zero-call cause sits
