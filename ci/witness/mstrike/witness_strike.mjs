@@ -15,7 +15,10 @@
 //            or the host transcript is absent/unreadable/holds no prompt. Never a green. On the cloud the transcript lives
 //            only on his laptop, so a real day reads UNREAD here (row 1162 (5)).
 //     It prints no state content: no strike text, no note id, no word of his — a verdict, the day and a reason shape only.
-//   node ci/witness/mstrike/witness_strike.mjs --org <build tree> --base-org <base tree> [--only c22]   THE PLANTS
+//   node ci/witness/mstrike/witness_strike.mjs plants [--org <dir>]   THE SUITE'S MODE (unit mmeter's one member, row 1162 (2)):
+//     the six C22 plants and LAST over --org (default: this tree), no BOUND (the member hands no base); one
+//     `CLAUSE C22 GREEN|RED · k/n plant(s)` line, then `PLANTS mstrike · k of n plant(s) as expected`; exit 0 iff k === n > 0
+//   node ci/witness/mstrike/witness_strike.mjs --org <build tree> --base-org <base tree> [--only c22]   THE PLANTS BOTH WAYS
 //     Every plant is ONE temp root under os.tmpdir(): a copy of --org's scripts/ and of --org's own reader
 //     (ci/witness/mstrike/witness_strike.mjs — absent on the base, so every plant there reads RED), a planted
 //     dressing-room/state (sitting_reviews.jsonl + brief_log.jsonl, nothing of his) and a planted HOME/USERPROFILE holding
@@ -136,7 +139,7 @@ function survivors(root) {
   if (r.status !== 0) return null;
   return String(r.stdout || "").split(/\r?\n/).filter((l) => /node/i.test(l) && l.includes(root) && !l.includes("ps -eo"));
 }
-async function plants(org, base, only) {
+async function plants(org, base, only, suite = false) {
   const res = [];
   const ok = (id, pass, detail) => { res.push({ id, pass, detail }); console.log(`  ${pass ? "ok  " : "RED "} ${id} · ${detail}`); };
   const m = /timeout-minutes:\s*(\d+)/.exec((() => { try { return readFileSync(join(org, ".github", "workflows", "suite.yml"), "utf8"); } catch { return ""; } })());
@@ -176,8 +179,9 @@ async function plants(org, base, only) {
         ok(p.id, r.status === p.want, `want exit ${p.want} · got ${r.status} · ${last.slice(0, 160)}`);
       }
     }
-    // BOUND
-    if (!base) ok("BOUND", false, "no --base-org");
+    // BOUND (not in the suite's plants mode: the member hands no base tree)
+    if (suite) { /* BOUND is judged by the both-ways mode */ }
+    else if (!base) ok("BOUND", false, "no --base-org");
     else {
       const A = walk(org), B = walk(base);
       const diff = [...new Set([...A.keys(), ...B.keys()])].filter((p) => A.get(p) !== B.get(p));
@@ -191,6 +195,11 @@ async function plants(org, base, only) {
   ok("LAST", Array.isArray(s) && s.length === 0, s === null ? "the process list is unreadable" : `${s.length} node process(es) name the temp root`);
   const red = res.filter((x) => !x.pass).map((x) => x.id);
   const n = res.filter((x) => /^C22\./.test(x.id)).length;
+  if (suite) {
+    const c = res.filter((x) => /^C22/.test(x.id)), k = c.filter((x) => x.pass).length, lastOk = !red.includes("LAST");
+    console.log(`CLAUSE C22 ${k === c.length && c.length > 0 ? "GREEN" : "RED"} · ${k}/${c.length} plant(s)`);
+    return { code: k === c.length && c.length > 0 && lastOk ? 0 : 1, line: `PLANTS mstrike · ${k} of ${c.length} plant(s) as expected` };
+  }
   return red.length
     ? { code: 1, line: `RED MSTRIKE · ${[...new Set(red.map((x) => (/^C22/.test(x) ? "C22" : x)))].join(", ")} (${red.join(", ")})` }
     : { code: 0, line: `GREEN MSTRIKE the asked-first strike is read, and read first · 1 clause(s) (${n} plant(s), BOUND, LAST)` };
@@ -199,9 +208,10 @@ async function plants(org, base, only) {
 async function main() {
   const D = flag("--day"), org = flag("--org"), base = flag("--base-org"), only = flag("--only");
   let r;
-  if (D) r = await reader(D, ROOT);
+  if (argv[0] === "plants") r = await plants(org || ROOT, null, null, true);
+  else if (D) r = await reader(D, ROOT);
   else if (org) r = await plants(org, base, only ? only.toLowerCase().split(",") : null);
-  else r = { code: 2, line: "UNREAD MSTRIKE · usage: --day <YYYY-MM-DD> | --org <dir> --base-org <dir> [--only c22]" };
+  else r = { code: 2, line: "UNREAD MSTRIKE · usage: --day <YYYY-MM-DD> | plants [--org <dir>] | --org <dir> --base-org <dir> [--only c22]" };
   console.log(r.line);
   process.exitCode = r.code;
 }
