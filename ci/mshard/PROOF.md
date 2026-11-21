@@ -388,3 +388,10 @@ passes `workspaceFile("scripts/organism_test.mjs")`. A run with a verdict line d
 - law pack gate, 21 Nov 2026, equal on both: `jugad-literal-subject-list 90 · bare-catch 37 · receipt-testimony-read 5 · import-time-registry-read 2 ·
   depcruise_errors 7`, every other law 0 (BASE 5759cce: jugad 93, §10). `node scripts/gates.mjs`, equal on both: TYPE COUNT 298 · no-empty 272 ·
   no-unused-vars 85. **No count rose.**
+
+**The legs of 9fb8d70 (merge a9e2f03 of main 7bf008b), read by curl through the public API, no token:**
+`npm test · node 22` run 136805133609 GREEN · `npm test · node 24` run 136805133577 GREEN (B1_VERDICT base 7bf008b · 0 new red ·
+base_red 0 · 285 pass · 0 fail · 3 shards each). Every other job of the push completed success (six witness shards, suite · node 22/24,
+hermetic twice · node 22/24).
+
+CHECKPOINT · 2026-11-21T11:27:36Z · merge a9e2f03 (main 7bf008b) · tip 9fb8d70 · legs node 22 136805133609 GREEN · node 24 136805133577 GREEN

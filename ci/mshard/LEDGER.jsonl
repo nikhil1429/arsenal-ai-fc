@@ -62,3 +62,4 @@
 {"ts":"2026-11-21T07:00:35.800Z","act":"hermetic","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (a9e2f03 · 7bf008b clones)","last_line":"organism_test: 166 passed, 0 failed (both; lawpack line byte-equal)"}
 {"ts":"2026-11-21T07:00:35.800Z","act":"lawpack-gates","cmd":"node scripts/lawpack.mjs gate; node scripts/gates.mjs (a9e2f03 · 7bf008b)","last_line":"equal on both; no count rose"}
 {"ts":"2026-11-21T07:00:35.800Z","act":"selftest-models","cmd":"node scripts/ci_verdict.mjs selftest; node scripts/models.mjs check (a9e2f03 · 7bf008b)","last_line":"53 · 38 passed, 0 failed · models exit 0"}
+{"ts":"2026-11-21T11:27:36.558Z","act":"legs-read","cmd":"curl GET /commits/9fb8d70/check-runs + /check-runs/<id>/annotations (no token)","last_line":"node 22 136805133609 GREEN · node 24 136805133577 GREEN · 0 new red"}
