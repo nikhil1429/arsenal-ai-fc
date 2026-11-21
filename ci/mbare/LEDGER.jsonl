@@ -25,3 +25,4 @@
 {"ts":"2026-11-21T06:56:35.677Z","act":"witness on the merge vs 7bf008b","cmd":"witness_mbare.mjs --org <4395471> --base-org <7bf008b>","last_line":"GREEN MBARE ... · 4 clause(s)"}
 {"ts":"2026-11-21T06:56:35.677Z","act":"mutants on the merge","cmd":"run_mutants_mbare.mjs --org <4395471> --base-org <7bf008b>","last_line":"run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-21T06:56:35.677Z","act":"law pack counts main vs merge","cmd":"node ci/mbare/tools/lawpack_counts.mjs 7bf008b HEAD","last_line":"equal on every count"}
+{"ts":"2026-11-21T08:18:00.607Z","act":"read neutral legs of 7825664","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/7825664436243bcd040fa1757f22ab6d01657d38/check-runs","last_line":"hermetic twice node 22 success · node 24 success · npm test node 22/24 cancelled (exceeded 1h0m0s)"}

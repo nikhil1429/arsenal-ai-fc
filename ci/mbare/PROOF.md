@@ -215,3 +215,16 @@ DONE · the guard, its witness and mutants, the re-census · 21 Nov 2026 UTC · 
 | `lawpack_counts.mjs 7bf008b HEAD` | equal: jugad-literal-subject-list 90 · bare-catch 37 · receipt-testimony-read 5 · import-time-registry-read 2 · depcruise_errors 7 · every other 0; gates 298 / no-empty 272 / no-unused-vars 85 on both |
 
 On the empty plant the merged laws mode prints 104 assert lines (98 at a3cadcf: main's three units added asserts), 5 guard reds, 6 BLOCKED.
+
+**The neutral legs of tip `7825664`** (run `44877900695`, read 21 Nov 2026 by `curl https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`, no token):
+`hermetic twice · node 22` success · `hermetic twice · node 24` success · `npm test · node 22` and `npm test · node 24` **cancelled**. The
+annotation reads "The job has exceeded the maximum execution time of 1h0m0s". On main `7bf008b` the same legs took 43 to 53 min. So this
+build's witness, which runs the FULL laws mode on several plants inside the suite's `witnesses` mode, pushes `npm test` past the job's
+bound. That is a fork (K8, below), not a timeout to raise: this seat types no budget.
+
+- **K8 · the witness is too heavy for the npm test leg.** Recommendation: the architect rules on one of two things. Either (a) the
+  witness plants fewer full-profile runs (for example it shares one T run between REACH and TRANSPARENT, and RETHROW runs only the A9
+  block), or (b) the suite's `witnesses` mode runs member witnesses in parallel. Not edited here: (b) is outside the named files, and (a)
+  is a redesign that needs a ruling on what the witness may drop.
+
+CHECKPOINT · merge 4395471 (tip 7825664) of main 7bf008b · legs (run 44877900695): hermetic twice node 22 success · node 24 success · npm test node 22 / node 24 cancelled at the 1h job bound (K8) · 21 Nov 2026
