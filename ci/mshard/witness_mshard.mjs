@@ -144,6 +144,15 @@ function cvCopy(tree) {
   if (s == null) return null;
   const d = newDir("v");
   put(d, "scripts/ci_verdict.mjs", s);
+  // its relative imports beside it, derived from the copied source itself (main's ci_verdict.mjs imports ./witness_cause.mjs,
+  // unit mdtl), followed transitively; never a typed list
+  const todo = [s], done = new Set();
+  while (todo.length) for (const m of String(todo.pop()).matchAll(/^import\s[^;]*?from\s+"\.\/([\w.-]+\.mjs)"/gm)) {
+    if (done.has(m[1])) continue;
+    done.add(m[1]);
+    const dep = src(tree, `scripts/${m[1]}`);
+    if (dep != null) { put(d, `scripts/${m[1]}`, dep); todo.push(dep); }
+  }
   const wf = src(tree, ".github/workflows/suite.yml");
   if (wf != null) put(d, ".github/workflows/suite.yml", wf);
   return join(d, "scripts", "ci_verdict.mjs");
