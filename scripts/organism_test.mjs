@@ -93,7 +93,8 @@ async function bareGuard(block, names, body) {
     const open = names.filter((x) => !judged.has(x));
     for (const n of open) console.log(`  BLOCKED ${n} — not judged: its input ${input} is absent from the state dir`);
     assert(`BLOCKED BY ITS INPUT · ${block} — the state input ${input} is absent, so the block is not judged (a blocked block is never a pass)`, false,
-      names.length ? `${open.length} of ${names.length} assert(s) of the block unreached` : "every assert of the block after the throw is unreached (a block with no LIVE names: its asserts are named at run, never listed)");
+      `${names.length ? `${open.length} of ${names.length} assert(s) of the block unreached` : "every assert of the block after the throw is unreached (a block with no LIVE names: its asserts are named at run, never listed)"}`
+      + ` · read at ${[...String(e instanceof Error ? e.stack : "").matchAll(/scripts[\\/]([\w-]+\.mjs):(\d+)/g)].map((m) => `${m[1]}:${m[2]}`).filter((x, i, a) => a.indexOf(x) === i).slice(0, 4).join(" ← ") || "(no stack frame)"}`);
   }
 }
 /** a LIVE block of laws(), guarded: skipped whole when LIVE (skipLive), else run under bareGuard @param {string} block @param {string[]} names @param {() => unknown} body */
