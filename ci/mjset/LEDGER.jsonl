@@ -11,3 +11,4 @@
 {"ts":"2026-11-21T09:00Z","act":"context-1239-1240","cmd":"grep -n cracks.jsonl scripts/gaffer_brain.mjs scripts/sitting.mjs scripts/postmatch.mjs","last_line":"(no match) — §14 M1-M5 named, no fix designed"}
 {"ts":"2026-11-21T08:10Z","act":"drain-row-1244","cmd":"node scratch/p4.mjs scripts/gaffer_brain.mjs (planted corrected estimator + guard, planted rates; days-to-empty arithmetic)","last_line":"rounds/day 8 x 1 capture, inflow 5/day: 19 days"}
 {"ts":"2026-11-21T08:30Z","act":"fold-N1-N6","cmd":"git log --format=%h %cI -1 e819c0d ; 3a73782 (shallow clone: 10e2f7f5/69575677/9ff901aa not present)","last_line":"3a73782 2026-11-18T11:02:14+00:00"}
+{"ts":"2026-11-21T08:50Z","act":"row-1245","cmd":"sed -n 499,508p scripts/postmatch.mjs (parseMachineRecord reads the first ^JUDGE: line)","last_line":"compile_line: compile, compile_done: /^COMPILE: DONE\\b/.test(compile), judge_line: judge, judge_settled: /^JUDGE: SETTLED\\b/.test(judge) };"}

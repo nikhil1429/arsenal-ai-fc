@@ -479,6 +479,51 @@ capture waits behind the backlog: oldest first (`judgeOrder`) puts today's answe
 change to any guard. D5 keeps today's answers from waiting behind the backlog. D2 is worth one measurement before anyone
 reads the rate as linear.
 
+## 16 · ROW 1245 (architect, by the runner, 21 Nov 2026): three clauses added to the mjset build, from N1
+
+**(1) THE JUDGE LINE IS KEPT PER CARRIER (law L9: layering, never replace).**
+- **At base:** a record holds ONE `JUDGE:` line. `parseMachineRecord` (`scripts/postmatch.mjs:499-508`) reads the first
+  match. The unsettled re-run replaces it in place (`:864-868`, `text.replace(dec.prev.judge_line, () => l)`), so the
+  evening try of 19 Nov was lost to the morning try of 20 Nov 09:15 IST (N1).
+- **The build:** each try writes its own line, naming its carrier (the anchor: evening / morning) and its instant (the
+  close's clock, `closeTimer`, `:464-475`). A later try appends a line and never replaces an earlier one. Only the decision
+  that reads "settled" changes: `judge_settled` and the redo of `:533` read the NEWEST try, and every earlier line stays
+  byte for byte. One shape that keeps today's readers working: the newest try stays the one `^JUDGE: ` line, and each
+  earlier try is kept under its own prefix (`JUDGE TRY · <anchor> · <ISO>: …`), which `^JUDGE: ` does not match. Whether
+  to use that shape or numbered lines is the build's choice, witnessed either way.
+- **Owner:** `scripts/postmatch.mjs`, the sole writer of `post_match/<day>.md`. It is the ONE file beyond §11 granted to
+  the mjset build by this row.
+- **Witness clause W11:** in a planted state dir under the temp dir (no live service, no port, every child planted), plant
+  an evening try (judge NOT BANKED, killed) and then a morning try (NOT BANKED, cannot fit) for the same day. Then read the
+  record. **Base RED:** one JUDGE line, the morning's. **Build GREEN:** both lines, each with its anchor and instant, the
+  evening's byte-identical to what it wrote, and the decision reads the morning's.
+- **Mutant M11:** the morning try replaces the evening line.
+
+**(2) THE SIX JOIN PATHS, each named on the receipt.**
+- **At base:** a round that ends ok having settled nothing exits 0 printing `0 item(s) graded` (`gaffer_brain.mjs:2739`).
+  The cause appears only in the per-item lines (missed / refused / 💎) or nowhere at all (deferred).
+- **The build:** every round that ends ok with `graded === 0` and a call made carries `settled_nothing: <reason>` on its
+  receipt, one of `missed` · `deferred` · `diamond` · `refused` · `dry`. The CLI's head line says it, so
+  `postmatch.mjs judgeLineOf` (`:574-582`) and the sitting record keep the reason.
+- **Witness clause W12:** the six planted paths of §3 (J1-J6) run on both trees.
+  - **Base RED** for J1 (`dry`), J3 (`missed`), J4 (`deferred`), J5 (`diamond`) and J6 (`refused`): ok:true, nothing settled,
+    no reason on the receipt.
+  - **J2 (unparseable) is already named at base** (`ok:false, reason "unparseable"`, `:2474-2475`, exit 1), so it is GREEN on
+    both trees and carried as a regression clause.
+  - **Build GREEN:** each of the five names its reason; J1 under F4 A makes no call at all and says DRY.
+- **Mutant M12:** drop the `settled_nothing` field.
+
+**(3) N6: nobody asks him about the login.** No card and no question about the login is added. The first judge round
+after the build lands reads it. A refusal is K3 (`:2438-2448`), the spec's ONE card, filed by code under
+`judge:auth:<IST day>`, and W5 already witnesses it.
+
+**(4) N2 is closed** by the runner's measurement: the 300 s kills were whole-queue batches (items 57-59) on older trees.
+§1.2's formula (300 − 60·n) holds for every kill since.
+
+**Files a build touches, updated (§11):** `scripts/gaffer_brain.mjs` · `scripts/postmatch.mjs` (row 1245 (1), this one
+file) · `ci/witness/mjset/witness_mjset.mjs` · `ci/mjset/run_mutants_mjset.mjs` · `ci/mjset/PROOF.md` / `BASE` /
+`LEDGER.jsonl`.
+
 ## 12 · THE NEUTRAL MACHINE
 
 The check runs of this branch's pushed sha, read through the public API with no token (`curl -s
