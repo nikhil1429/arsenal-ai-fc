@@ -1,3 +1,5 @@
+CHECKPOINT · MERGED at 2026-11-21T08:13Z (forks rows 1233 (2) / 1236) · merge sha b3f2cf7638d37a601545680ef0d32f0639eb3260 (e2cbcf0 + main 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f) · BASE 7bf008b · conflicted files: NONE · witness base: RED MXB · W1 W2 W3 W4 W5 W6 W7 W11 · witness build: GREEN MXB … LF and CRLF · 13 clause(s) · mutants: run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN · legs of b3f2cf7 (run 44880052649) at 2026-11-21T08:13Z: npm test · node 22 in_progress · npm test · node 24 queued · hermetic twice · node 22 queued · hermetic twice · node 24 queued — not yet judged, none red; no retry
+
 CHECKPOINT · MERGED at 2026-11-20T01:36Z (row 1172) · merged tip 54095396ce874e295254ac524d0ecc6ee44cd65e (merge of 129917e + main 5759cce) · BASE 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 · resolution hunks: NONE (a clean merge; scripts/organism_test.mjs and package.json are main's whole, this unit touches neither; scripts/xray.mjs main blob 47b9de0 = fb42118's, ours 157a8f0) · witness base: RED MXB · W1 W2 W3 W4 W5 W6 W7 W11 · witness build: GREEN MXB … LF and CRLF · 13 clause(s) · mutants: run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN · STOPPED here (row 1172 (5))
 
 # MXB PROOF — the six Q6 blindnesses (B1-B6), one IR family in `scripts/xray.mjs` (BUILD seat)
@@ -180,4 +182,24 @@ witness on BUILD: GREEN MXB the six Q6 blindnesses resolved by the five rules + 
 run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN  (exit 0)
 ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (merged tree):
 organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)   (the same selftest-coverage row as before the merge)
+```
+
+## 13 · The merge of main 7bf008b (forks rows 1233 (2) / 1236, 2026-11-21)
+
+- The earlier CHECKPOINT (row 1172, after 5759cce) and every later message were read; they still bind.
+- BASE is re-keyed to 7bf008b because row 1172 keyed BASE to the main this branch merges.
+- No conflicted file: main's 105 paths came in whole (scripts/organism_test.mjs, package.json and every ci/ dir are
+  main's bytes); main never touched scripts/xray.mjs (blob 47b9de0 at 7bf008b, as at fb42118) nor ci/mxb.
+- mclk: this witness derives no day from the clock (no Date in ci/mxb/*.mjs), so no midnight plant applies.
+
+```
+# 2026-11-21 — git merge --no-ff 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f  ->  b3f2cf7638d37a601545680ef0d32f0639eb3260
+Automatic merge went well (105 paths from main; no conflict)
+witness on BASE (plant of 7bf008b): RED MXB · W1 W2 W3 W4 W5 W6 W7 W11  (exit 1)
+witness on BUILD (merged tree)     : GREEN MXB the six Q6 blindnesses resolved by the five rules + the guard, no writer invented, the NUL asserts state main, LF and CRLF · 13 clause(s)  (exit 0)
+run_mutants: 15 of 15 mutant(s) RED by the clause that names them · control GREEN  (exit 0)
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (merged tree):
+organism_test: 166 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)
+# 2026-11-21 — curl GET /commits/b3f2cf7638d37a601545680ef0d32f0639eb3260/check-runs (no token), run 44880052649
+npm test · node 22 in_progress · npm test · node 24 queued · hermetic twice · node 22 queued · hermetic twice · node 24 queued
 ```
