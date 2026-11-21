@@ -389,4 +389,8 @@ the code door, choose (c). New witness clauses for a build:
 
 ## 12 · CI ON THIS PUSH
 
-Filled after the push from the public check-runs API (`curl https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`).
+Filled after the push from the public check-runs API (`curl https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`), no token.
+
+- `298c988` (ROW 1246 push): 136781982249 hermetic twice · node 24 success ; 136781982136 hermetic twice · node 22 success ; 136781982066 npm test · node 22 success ; 136781981943 npm test · node 24 success. Verdict: GREEN.
+- `0d632d1` (first spec push): 136780188823 · 136780188763 · 136780188681 · 136780188483, all completed/cancelled (superseded by the `298c988` push).
+- The commit that adds this section starts its own runs; their ids are read from the same API and named in the session's final message, not here.
