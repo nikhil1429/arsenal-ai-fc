@@ -99,6 +99,7 @@ import { execFileSync } from "node:child_process";   // LOCK-chain + topic-open 
 import { coreAxes } from "./registry.mjs";   // S10 #12 — per-concept core axes, ONE reader (twin literal died)
 import { write as writePointerRow, consume as consumePointerRow } from "./resume_pointer.mjs";   // L3 — the pointer ledger's SOLE WRITER; this organ only calls it
 
+import { hisPrompt, ownRecordOf, ownStopOf } from "./study_scope.mjs";   // unit mbank (row 1250): the one door and his own session's record
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const SESSION   = join(STATE_DIR, "forge_session.json");
@@ -623,8 +624,11 @@ export function dossierLines(concept, s, { dossier, registry } = {}) {
 // hook), else teaching_contract.json's `checked_at` (stamped by the same anchor). NEVER
 // invented: with no readable anchor the line SAYS the number could not be read and tells
 // the teacher to leave the flag off, which is a different fact from "he answered fast".
-export function stopToPromptMs(auditLast, teaching, now = new Date()) {
-  const iso = (auditLast && auditLast.stop && auditLast.stop.at) || (teaching && teaching.checked_at) || null;
+export function stopToPromptMs(auditLast, teaching, now = new Date(), sessionId = process.env.CLAUDE_CODE_SESSION_ID || null) {
+  // unit mbank (forks row 1250, mbank-9): HIS OWN session's last Stop (its record or its stub), never a parallel
+  // session's Stop in the shared slot; the shared slot only when his session has no record.
+  const own = sessionId ? ownStopOf(auditLast, sessionId) : null;
+  const iso = (own && own.at) || (auditLast && auditLast.stop && auditLast.stop.at) || (teaching && teaching.checked_at) || null;
   const t = Date.parse(String(iso || ""));
   if (!Number.isFinite(t)) return null;
   const ms = now.getTime() - t;
@@ -648,38 +652,9 @@ const istDayOf = (iso) => {
   return Number.isNaN(d.getTime()) ? null
     : new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 };
-// ── THE ONE DOOR TO HIS WORDS (unit mbank, forks rows 1189 (1) / 1194 (2) / 1230, mbank-1 a) ─────────────────────────
-// The prompt record teaching_audit.mjs writes at UserPromptSubmit (its single writer) is read HERE and nowhere new:
-// crackRow (below) and gaffer_brain.mjs capture's code door both take his words through hisPrompt. PURE: the caller
-// reads the file (readHisPrompt is that one read). Every check beyond `absent` is opted into by the caller, so the crack
-// row keeps exactly the refusals it had (`since` only) and the bank adds its own (row 1230 mbank-6 a: no turn id = refused).
-//   since       an ISO floor: a prompt before it (or a floor that does not parse) is "before"
-//   sessionId   a Claude session id: a prompt written by another session is "other-session"
-//   fresh       true: a prompt its turn's Stop already consumed is "consumed" (it is not THIS turn's)
-//   needTurn    true: a prompt with no turn_id (written before this unit) is "no-turn-id"
-/** @returns {{ok:true,text:string,at:string,session_id:string|null,turn_id:string|null}|{ok:false,reason:string,why:string}} */
-export function hisPrompt(auditLast, { since = null, sessionId = null, fresh = false, needTurn = false } = {}) {
-  const p = auditLast && typeof auditLast === "object" ? auditLast.prompt : null;
-  const at = p && typeof p === "object" && typeof p.at === "string" ? Date.parse(p.at) : NaN;
-  if (!p || typeof p !== "object" || typeof p.text !== "string" || !p.text.trim() || !Number.isFinite(at))
-    return { ok: false, reason: "absent", why: "the UserPromptSubmit record is absent" };
-  if (since !== null) { const f = Date.parse(String(since)); if (!Number.isFinite(f) || at < f) return { ok: false, reason: "before", why: "the UserPromptSubmit record is from before this session" }; }
-  if (fresh && p.consumed_at) return { ok: false, reason: "consumed", why: "the prompt record was already consumed by its turn's Stop — it is not this turn's message" };
-  if (sessionId && p.session_id !== sessionId) return { ok: false, reason: "other-session", why: "the prompt record was written by another Claude session" };
-  const turn = typeof p.turn_id === "string" && p.turn_id ? p.turn_id : null;
-  if (needTurn && !turn) return { ok: false, reason: "no-turn-id", why: "the prompt record carries no turn_id (written before unit mbank) — ask again, one turn" };
-  return { ok: true, text: p.text, at: p.at, session_id: typeof p.session_id === "string" ? p.session_id : null, turn_id: turn };
-}
-/** readHisPrompt — the door's one file read (gaffer_brain reaches it by a dynamic import, never a second reader).
- *  Unit mbank (row 1246): with a sessionId it reads THAT session's own record (`prompts_by_session[sessionId]`, written by
- *  teaching_audit.mjs), never the shared `prompt` slot every session overwrites; without one it reads the shared slot and
- *  the caller says so (`session_checked:false`). */
-export const readHisPrompt = (opts = {}) => {
-  const last = loadAuditLast();
-  if (!opts.sessionId) return hisPrompt(last, opts);
-  const m = last && last.prompts_by_session && typeof last.prompts_by_session === "object" ? last.prompts_by_session : null;
-  return hisPrompt({ prompt: m && m[opts.sessionId] && typeof m[opts.sessionId] === "object" ? m[opts.sessionId] : null }, opts);
-};
+// ── THE ONE DOOR TO HIS WORDS lives in study_scope.mjs (unit mbank, forks row 1250, mbank-1 d: the leaf every hook organ
+// already imports — no cycle, no SHIM closure grows); re-exported here so the pacer's callers keep their names.
+export { hisPrompt, readHisPrompt } from "./study_scope.mjs";
 /** crackRow — PURE. The row `crack` would append, or why it refuses.
  *  @param {{session:any, auditLast:any, bank?:any[]|null, now?:Date}} p @returns {{ok:true,row:any}|{ok:false,why:string}} */
 export function crackRow({ session, auditLast, bank = [], now = new Date() } = /** @type {any} */ ({})) {
@@ -3333,9 +3308,8 @@ export async function hookMain() {
       // unit mbank (row 1248): his words from THIS session's own prompt record when it has one (the shared slot is
       // overwritten by any parallel session's prompt, whose text would otherwise be written here as his); else the shared
       // slot, as before. crackRow's refusals are unchanged.
-      const alC = loadAuditLast(), sidC = process.env.CLAUDE_CODE_SESSION_ID || null;
-      const ownC = sidC && alC && alC.prompts_by_session && typeof alC.prompts_by_session === "object" ? alC.prompts_by_session[sidC] : null;
-      const r = crackRow({ session: s, auditLast: ownC && typeof ownC === "object" ? { ...alC, prompt: ownC } : alC, bank: bank.rows, now: new Date() });
+      const alC = loadAuditLast(), ownC = ownRecordOf(alC, process.env.CLAUDE_CODE_SESSION_ID || null);
+      const r = crackRow({ session: s, auditLast: ownC ? { ...alC, prompt: ownC } : alC, bank: bank.rows, now: new Date() });
       if (!r.ok) { console.error(`forge_session: crack REFUSED — ${r.why}`); process.exit(1); }
       const prior = readCracks();
       if (prior.rows === null) { console.error(`forge_session: crack REFUSED — cracks.jsonl exists and cannot be read (${prior.error}) — nothing written`); process.exit(1); }

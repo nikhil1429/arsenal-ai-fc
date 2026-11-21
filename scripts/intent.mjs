@@ -36,6 +36,7 @@ import { readFileSync, appendFileSync, existsSync, mkdtempSync, writeFileSync, r
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
+import { ownRecordOf } from "./study_scope.mjs";   // unit mbank (forks row 1250 (3)): his own session's prompt record
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -77,6 +78,10 @@ export function kindGuess(prompt = "", reply = "") {
 const TAIL_BYTES = 256 * 1024;
 export function promptFromAuditLast(sessionId, auditLastPath = AUDIT_LAST()) {
   const j = readJson(auditLastPath);
+  // unit mbank (forks row 1250 (3)): THIS session's own record first; the shared slot (another session may have written
+  // it) only when the session has none, and then only when its session matches, as before.
+  const own = ownRecordOf(j, sessionId);
+  if (own && own.text.trim()) return { text: own.text, at: own.at || null };
   const p = j && j.prompt;
   if (!p || typeof p.text !== "string" || !p.text.trim()) return null;
   if (sessionId && p.session_id && p.session_id !== sessionId) return null;   // another session's prompt — never reused

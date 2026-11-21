@@ -33,8 +33,9 @@
 //   B7  TURN      an open forge session (axis a, a check_q), then the prompt (turn T): the capture's turn_id and the
 //                 `forge_session.mjs crack` row's turn_id both equal T
 //   B8  STDIN     --note "dugout-voice think:1ms", stdin words, NO prompt record → banked with those words, spoken_src voice
-//   B9  ONE DOOR  forge_session.mjs exports hisPrompt + readHisPrompt; gaffer_brain.mjs reaches readHisPrompt and names
-//                 no prompt-record path; crackRow calls hisPrompt
+//   B9  ONE DOOR  (row 1250, mbank-1 d) study_scope.mjs DEFINES hisPrompt + readHisPrompt; forge_session.mjs re-exports
+//                 them from it; gaffer_brain.mjs imports readHisPrompt statically from study_scope.mjs, imports no
+//                 forge_session.mjs and names no prompt-record path; crackRow calls hisPrompt
 //   B10 ONCE      the B1 call twice → the second says `already banked <id>`, exit 0, one row
 //   B11 READERS   over the B1 row: buildJudgePrompt holds spoken byte-equal, validateRegister reads it, buildNote's bank
 //                 receipt carries it as `said` (a string) — and the row is a prompt-door row
@@ -50,6 +51,11 @@
 //   B17 CRACK     (row 1248) an open session (axis a, a check_q); HIS prompt through the real hook, then ANOTHER session's
 //                 prompt: `forge_session.mjs crack` (CLAUDE_CODE_SESSION_ID = his) writes HIS words and HIS turn id, never the
 //                 other session's text
+//   B18 CLOCK     (row 1250, mbank-9 a) his Stop (his transcript planted), then a PARALLEL session's prompt and Stop: his
+//                 consumed entry becomes a STUB holding no text, and stopToPromptMs for his session measures from HIS own
+//                 Stop, not the parallel Stop in the shared slot
+//   B19 BANKLINE  (row 1250, mbank-9 b) axis a ON, his prompt, `moment sharp_check`, his Stop, then a parallel prompt and
+//                 Stop: teaching_bar bankDue on his next answer still reads BANK-DUE (the [BANK] line is shown)
 //   B14 MINT      the REAL UserPromptSubmit hook (teaching_audit.mjs hook, his prompt on stdin, the plant's session id) mints
 //                 a UUID turn_id on the prompt record, and the code-door capture that follows carries that same id
 // OUTPUT: one `CLAUSE <id> GREEN|RED · <why>` line per clause, then `PLANTS mbank · k of n plant(s) as expected` (exit 0
@@ -206,12 +212,14 @@ await clause("B8", () => {
     why: `voice ${brief(r)} src ${row.spoken_src} · sitting exit ${rs.code} src ${srow.spoken_src}` };
 });
 await clause("B9", async () => {
-  const fs = text(join(TREE, "scripts", "forge_session.mjs")) || "", gb = text(join(TREE, "scripts", "gaffer_brain.mjs")) || "";
-  const m = await imp(plant("b9").dir, "forge_session.mjs");
+  const fs = text(join(TREE, "scripts", "forge_session.mjs")) || "", gb = text(join(TREE, "scripts", "gaffer_brain.mjs")) || "", ss = text(join(TREE, "scripts", "study_scope.mjs")) || "";
+  const dir = plant("b9").dir, m = await imp(dir, "forge_session.mjs"), sc = await imp(dir, "study_scope.mjs");
   const crackSrc = String(m.crackRow || "");
-  const ok = typeof m.hisPrompt === "function" && typeof m.readHisPrompt === "function" && /\breadHisPrompt\b/.test(gb)
-    && !/teaching_audit_last/.test(gb) && /hisPrompt\(/.test(crackSrc) && /export function hisPrompt\b/.test(fs);
-  return { ok, why: `hisPrompt ${typeof m.hisPrompt} · readHisPrompt ${typeof m.readHisPrompt} · gaffer_brain names the record path: ${/teaching_audit_last/.test(gb)} · crackRow through the door: ${/hisPrompt\(/.test(crackSrc)}` };
+  const home = /export function hisPrompt\b/.test(ss) && /export const readHisPrompt\b/.test(ss) && !/export function hisPrompt\b/.test(fs);
+  const reexp = /export \{[^}]*\bhisPrompt\b[^}]*\breadHisPrompt\b[^}]*\} from "\.\/study_scope\.mjs"/.test(fs) && m.hisPrompt === sc.hisPrompt && m.readHisPrompt === sc.readHisPrompt;
+  const gbStatic = /^import \{[^}]*\breadHisPrompt\b[^}]*\} from "\.\/study_scope\.mjs";/m.test(gb) && !/import\(\s*["']\.\/forge_session\.mjs["']\s*\)/.test(gb) && !/teaching_audit_last/.test(gb);
+  return { ok: home && reexp && gbStatic && /hisPrompt\(/.test(crackSrc),
+    why: `door home study_scope ${home} · forge_session re-exports the same functions ${reexp} · gaffer_brain static import, no record path ${gbStatic} · crackRow through the door ${/hisPrompt\(/.test(crackSrc)}` };
 });
 await clause("B10", () => {
   const p = plant("b10"); p.prompt(B1P);
@@ -306,6 +314,41 @@ await clause("B17", () => {
   const k = p.node("forge_session.mjs", ["crack"]), ck = (p.cracks() || [])[0] || {};
   return { ok: k.code === 0 && ck.words === his && !!mine && ck.turn_id === mine,
     why: `crack ${brief(k)} · his words ${ck.words === his} · other session's text written ${ck.words === other} · his turn ${!!mine && ck.turn_id === mine}` };
+});
+
+// his turn and a parallel session's turn, through the real hooks, with his transcript planted (a stub lives while it does)
+function interleave(p, { moment = null } = {}) {
+  const tx = join(p.dir, "his-transcript.jsonl"); writeFileSync(tx, "{}\n");
+  const ev = (o, sid, extra = {}) => p.node("teaching_audit.mjs", ["hook"], { input: JSON.stringify({ session_id: sid, ...o, ...extra }), sid });
+  const OTHER = "sess-parallel-runner", codes = [];
+  codes.push(ev({ hook_event_name: "UserPromptSubmit", prompt: "pakka - his answer before the parallel turn" }, SID, { transcript_path: tx }).code);
+  if (moment) codes.push(p.node("forge_session.mjs", ["moment", moment]).code);
+  codes.push(ev({ hook_event_name: "Stop", last_assistant_message: "Theek. Ab ek sharp sawaal — tumhare hisaab se kya hoga?" }, SID, { transcript_path: tx }).code);
+  codes.push(ev({ hook_event_name: "UserPromptSubmit", prompt: "runner: a parallel session's prompt" }, OTHER).code);
+  codes.push(ev({ hook_event_name: "Stop", last_assistant_message: "runner reply" }, OTHER).code);
+  let rec = null; try { rec = JSON.parse(text(p.at("teaching_audit_last.json"))); } catch { rec = null; }
+  return { codes, rec };
+}
+await clause("B18", async () => {
+  const p = plant("b18");
+  for (const s of [["start", "tokenization"], ["step", "3"]]) { const r = p.node("forge_session.mjs", s); if (r.code !== 0) return { ok: false, why: `${s.join(" ")} → ${brief(r)}` }; }
+  const { codes, rec } = interleave(p);
+  const mine = rec && rec.prompts_by_session ? rec.prompts_by_session[SID] : null, other = rec && rec.stop ? rec.stop.at : null;
+  const hisStop = mine ? mine.stop_at : null;
+  const fs = await imp(p.dir, "forge_session.mjs");
+  const now = new Date(Date.parse(other || "") + 5000);
+  const ms = fs.stopToPromptMs(rec, null, now, SID), want = Number.isFinite(Date.parse(hisStop || "")) ? now.getTime() - Date.parse(hisStop) : NaN;
+  const stub = !!(mine && mine.stub && !("text" in mine));
+  return { ok: codes.every((c) => c === 0) && stub && !!hisStop && hisStop !== other && ms === want,
+    why: `his entry a stub with no text ${stub} · his Stop ≠ the parallel Stop ${!!hisStop && hisStop !== other} · clock ${ms} ms, from his Stop ${want} ms` };
+});
+await clause("B19", async () => {
+  const p = plant("b19");
+  for (const s of [["start", "tokenization"], ["step", "3"], ["axis", "a", "now"]]) { const r = p.node("forge_session.mjs", s); if (r.code !== 0) return { ok: false, why: `${s.join(" ")} → ${brief(r)}` }; }
+  const { codes, rec } = interleave(p, { moment: "sharp_check" });
+  const tb = await imp(p.dir, "teaching_bar.mjs");
+  const due = tb.bankDue({ prompt: "pakka - his answer to the sharp check", sessionId: SID, auditLast: rec });
+  return { ok: codes.every((c) => c === 0) && !!due, why: `hook and pacer exits ${codes.join(",")} · bankDue ${JSON.stringify(due)} · shared slot's Stop is the parallel session's ${rec && rec.stop ? rec.stop.session_id !== SID : "?"}` };
 });
 
 if (OWN_TMP) { try { rmSync(TMP, { recursive: true, force: true }); } catch { /* the caller's LAST names a survivor */ } }

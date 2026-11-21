@@ -126,7 +126,7 @@ import { observe as observeLegacy, supervise as superviseLegacy, emptyState, isS
 // this file's own law (selftest: "not one regex here tests HIS words") stays whole.
 import { lazySubjects } from "./registry.mjs";   // A3 (4 Sep 2026) — the probe/register vocabularies are ROWS, never literals (his 11-Aug jugad law)
 import { countHedges, REGISTER_TYPES, validateRegister, registerLine } from "./register.mjs";
-import { classifyPrompt, answerOf } from "./study_scope.mjs";   // unit mbank (row 1230): his gut-word read off HIS message (mbank-5 b), and his answer with the gut-word lead stripped for the hedge meter (mbank-7 a) — study_scope is a leaf
+import { classifyPrompt, answerOf, readHisPrompt } from "./study_scope.mjs";   // unit mbank (row 1230): his gut-word read off HIS message (mbank-5 b), and his answer with the gut-word lead stripped for the hedge meter (mbank-7 a) — study_scope is a leaf
 import { generate as modelsGenerate, loadKeys as modelsLoadKeys, resolveSync as modelsResolve } from "./models.mjs";   // MODELS + ACTS Block 1 (18 Aug 2026): LAW M — the Watcher names the ROLE `text`; the resolver picks the live model + key and says why (models.mjs imports no organ — the import graph stays tiny)
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -1323,7 +1323,7 @@ export function capsuleGround(concept, deps = {}) {
 // THE CODE DOOR'S WORDS (unit mbank, forks rows 1189 (1) / 1194 (2) / 1230) — HIS bytes, never a teacher copy
 // ---------------------------------------------------------------------------
 // On the code surface (a call carrying --said or --surface code) his words are the prompt record's text, taken through
-// the ONE door (forge_session.mjs hisPrompt, read by readHisPrompt). PURE: `prompt` is that door's ok:true result.
+// the ONE door (study_scope.mjs hisPrompt, read by readHisPrompt). PURE: `prompt` is that door's ok:true result.
 //   mbank-4 b — no --said: the whole message. --said given: a SELECTOR only — it must sit inside his message with the
 //               whitespace folded, and the bytes kept are the matching slice OF HIS MESSAGE, never the argument.
 //   mbank-5 b — the gut-word is read off his message by study_scope's classifier; a --gut that disagrees, or a --gut on a
@@ -2746,7 +2746,6 @@ async function main() {
     let spoken, gut = flag("gut"), src, prompt = null, sessionChecked = null;
     if (codeDoor) {
       const sessionId = process.env.CLAUDE_CODE_SESSION_ID || null;
-      const { readHisPrompt } = await import("./forge_session.mjs");
       prompt = readHisPrompt({ sessionId, fresh: true, needTurn: true });
       if (!prompt.ok) refuse({ reason: `prompt-${prompt.reason}`, say: `gaffer_brain: his words are not on disk (${prompt.reason}: ${prompt.why}) — the bank takes them from the prompt record, never from a typed copy; nothing banked` });
       const w = codeDoorWords({ prompt, said, gut });

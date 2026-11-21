@@ -11,10 +11,10 @@
 // --base-org the base leg is not run and the line says so (the clause still has to be GREEN on --org). The clause witness
 // is read from this file's own repository when it is there (a seat run from a checkout), else from --org.
 //   B1 WORDS · B2 DRIFT · B3 ABSENT · B4 WHOLE · B5 GUT · B6 HEDGE · B7 TURN · B8 STDIN · B9 ONE DOOR · B10 ONCE ·
-//   B11 READERS · B12 MCRK · B13 STAMP · B14 MINT · B15 PARALLEL · B16 AUDIT · B17 CRACK — the clause witness's own, one line each (its header names each plant)
+//   B11 READERS · B12 MCRK · B13 STAMP · B14 MINT · B15 PARALLEL · B16 AUDIT · B17 CRACK · B18 CLOCK · B19 BANKLINE — the clause witness's own, one line each (its header names each plant)
 //   BOUND     only the named files differ between --base-org and --org (scripts/forge_session.mjs · scripts/teaching_audit.mjs ·
 //             scripts/gaffer_brain.mjs · scripts/study_scope.mjs · scripts/teaching_bar.mjs · scripts/learn_digest.mjs ·
-//             scripts/teaching_gate.mjs · scripts/notes_compiler.mjs · .claude/skills/forge/SKILL.md ·
+//             scripts/teaching_gate.mjs · scripts/notes_compiler.mjs · scripts/intent.mjs · .claude/skills/forge/SKILL.md ·
 //             .claude/skills/forge/REFERENCE.md · .claude/skills/learn/REFERENCE.md · ci/witness/mbank/ · ci/mbank/), by text,
 //             CRLF folded
 //   LAST      no node process naming this run's temp dir survives
@@ -36,7 +36,7 @@ const ORG = resolve(arg("--org") || "."), BASE = arg("--base-org") ? resolve(arg
 const ONLY = arg("--only") ? arg("--only").split(",").map((s) => s.trim()).filter(Boolean) : null;
 const UNIT = "MBANK", HERE = dirname(fileURLToPath(import.meta.url));
 const NAMED = (f) => ["scripts/forge_session.mjs", "scripts/teaching_audit.mjs", "scripts/gaffer_brain.mjs", "scripts/study_scope.mjs",
-  "scripts/teaching_bar.mjs", "scripts/learn_digest.mjs", "scripts/teaching_gate.mjs", "scripts/notes_compiler.mjs",
+  "scripts/teaching_bar.mjs", "scripts/learn_digest.mjs", "scripts/teaching_gate.mjs", "scripts/notes_compiler.mjs", "scripts/intent.mjs",
   ".claude/skills/forge/SKILL.md", ".claude/skills/forge/REFERENCE.md", ".claude/skills/learn/REFERENCE.md"].includes(f) || /^ci\/(witness\/mbank|mbank)\//.test(f);
 const TMP = mkdtempSync(join(tmpdir(), "mbank-witness-"));
 const results = [];
@@ -44,7 +44,7 @@ const record = (id, ok, why) => { if (ONLY && !ONLY.includes(id) && id !== "LAST
 
 const CW = [join(HERE, "..", "witness", "mbank", "witness_bank.mjs"), join(ORG, "ci", "witness", "mbank", "witness_bank.mjs")].find((p) => existsSync(p)) || null;
 console.log(`witness mbank · org ${ORG}${BASE ? ` · base ${BASE}` : ""} · clause witness ${CW || "ABSENT"}`);
-const IDS = ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15", "B16", "B17"];
+const IDS = ["B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8", "B9", "B10", "B11", "B12", "B13", "B14", "B15", "B16", "B17", "B18", "B19"];
 const want = IDS.filter((id) => !ONLY || ONLY.includes(id));
 const runOn = (tree) => {
   const r = spawnSync(process.execPath, [CW, "plants", "--tree", tree, "--tmp", TMP, ...(ONLY ? ["--only", want.join(",")] : [])], { cwd: TMP, encoding: "utf8", windowsHide: true });
