@@ -171,3 +171,27 @@ run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN
 node scripts/night.mjs selftest
 night selftest: 23 passed, 0 failed
 ```
+
+**A second break, same merge:** unit mmeter's suite member (now on main) runs every `ci/witness/<unit>/witness_*.mjs` as
+bare `plants`, with no `--org` or `--base-org`, and needs a `PLANTS <unit> · k of n plant(s) as expected` line. Mine printed
+no such line, and its BOUND was RED with no base, so this witness would have turned the suite red. Fixed in the witness: with no
+`--base-org`, BOUND reads its base from `ci/mrehearse/BASE` through git in `--org` (tracked diff since BASE plus untracked
+files; an unresolvable BASE stays RED, never green). Each clause now prints `CLAUSE <id> GREEN|RED · …`, then the PLANTS line,
+then the LAST LINE as before.
+
+```
+node ci/witness/mrehearse/witness_rehearse.mjs plants        (bare, as the suite member calls it; 21 Nov 2026)
+PLANTS mrehearse · 8 of 8 plant(s) as expected
+GREEN MREHEARSE night-replay · 8 clause(s)                     exit 0
+node ci/witness/mrehearse/witness_rehearse.mjs plants --org <base 7bf008b> --base-org <base 7bf008b>
+PLANTS mrehearse · 2 of 8 plant(s) as expected
+RED MREHEARSE · W1,W2,W3,W4,W5,W6                              exit 1
+node ci/mrehearse/run_mutants_mrehearse.mjs --org . --base-org <base 7bf008b>
+run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all      (merged tree)
+organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)   exit 0
+  ok   CLAUSE WITNESS · ci/witness/mrehearse/witness_rehearse.mjs plants — exit 0, every plant as expected (n > 0)
+node scripts/lawpack.mjs gate      build: lawpack: GREEN — no law's finding count rose, and every rule is on disk
+  findings, build and base 7bf008b alike: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 90 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 7
+  (the base archive's gate prints "1 RED" with every finding count equal: a git-archive tree, not a count that rose)
+```

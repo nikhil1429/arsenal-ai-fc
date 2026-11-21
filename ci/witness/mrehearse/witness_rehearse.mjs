@@ -13,7 +13,7 @@
 //       1  the row is outside the night, its code_sha is not the night's head, or would_be_11 disagrees with its clauses
 //       2  UNREAD: no night N, no rehearsal row for N, no rehearse mark / head, or would_be_11 not computed (null)
 //     Without --night it reads the latest armed night.
-//  2. THE PLANTS (both ways):  node ci/witness/mrehearse/witness_rehearse.mjs plants --org <dir> --base-org <dir> [--only W1,W3]
+//  2. THE PLANTS (both ways):  node ci/witness/mrehearse/witness_rehearse.mjs plants [--org <dir>] [--base-org <dir>] [--only W1,W3]
 //     Every plant is a temp tree under os.tmpdir(): <org>'s scripts/ + package.json in a FRESH git repo (core.autocrlf=false
 //     at init) with TWO commits — HEAD~ carries a daily_green.mjs that exits at once, HEAD the real one — and its OWN
 //     dressing-room/state planted by writeFileSync (nothing of his is copied, nothing printed). The night is armed and
@@ -31,12 +31,14 @@
 //                      scripts/*.mjs no other file names that log on a code line; its code calls no model, fetches nothing, moves no ref;
 //                      the row's keys are the named ones and every clause carries {n,status} only (no reason text)
 //     BOUND            tracked text outside dressing-room/state differs between --org and --base-org ONLY in the unit's
-//                      files (CRLF folded to LF; listed by git ls-files when the dir is a repo, else walked)
+//                      files (CRLF folded to LF; listed by git ls-files when the dir is a repo, else walked); with no
+//                      --base-org (the suite member's bare `plants`) the base is ci/mrehearse/BASE read through git in --org
 //     LAST             no node process naming this run's temp root survives; <org>'s own state dir is byte-identical
 // PORT CLASS (row 1053): no port is bound, no service named, nothing POSTed, nothing restarted; no model is called. Every
 //   child is a finite CLI (git, node) with no service to wait on — no wait on a service exists to bound, no timeout typed.
 // Windows: no POSIX-only shell; every line split on \r?\n; processes listed through PowerShell on Windows, `ps` elsewhere.
-// LAST LINE: GREEN MREHEARSE night-replay · <n> clause(s) (exit 0) · RED MREHEARSE · <clauses> (exit 1)
+// OUTPUT: one `CLAUSE <id> GREEN|RED · <why>` line per clause, then `PLANTS mrehearse · k of n plant(s) as expected` (the
+//   suite member's line, unit mmeter), then the LAST LINE: GREEN MREHEARSE night-replay · <n> clause(s) (exit 0) · RED MREHEARSE · <clauses> (exit 1)
 // ============================================================================
 import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync, cpSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, dirname, resolve, relative, sep } from "node:path";
@@ -221,8 +223,21 @@ function tracked(dir) {
   walk(dir); return out;
 }
 const hashText = (p) => { try { return createHash("sha256").update(readFileSync(p, "utf8").replace(/\r\n/g, "\n")).digest("hex"); } catch { return null; } };
+/** BOUND with no --base-org (the suite member's call, `plants` alone): the base is ci/mrehearse/BASE, read through git in
+ *  <org> — tracked changes since it plus untracked files. Unresolvable (no repo, no such commit) → RED, never green. */
+function boundByGit(org) {
+  let sha = ""; try { sha = readFileSync(join(org, "ci", "mrehearse", "BASE"), "utf8").trim(); } catch { /* absent: named below */ }
+  if (!SHA.test(sha)) return { ok: false, detail: "--base-org absent and ci/mrehearse/BASE carries no sha" };
+  const g = (args) => spawnSync("git", ["-C", org, ...args], { encoding: "utf8", windowsHide: true, maxBuffer: 1 << 26 });
+  const d = g(["diff", "--name-only", "-z", sha, "--", "."]), u = g(["ls-files", "--others", "--exclude-standard", "-z"]);
+  if (d.status !== 0 || u.status !== 0) return { ok: false, detail: `--base-org absent and BASE ${sha.slice(0, 7)} is not readable here` };
+  const differ = [...new Set([...d.stdout.split("\0"), ...u.stdout.split("\0")])].filter(Boolean).filter((f) => !f.startsWith("dressing-room/state/"));
+  const outside = differ.filter((f) => !UNIT_FILES.some((x) => (x.endsWith("/") ? f.startsWith(x) : f === x)));
+  return { ok: outside.length === 0, detail: `base ${sha.slice(0, 7)} (git) · ${differ.length} file(s) differ · outside the unit: ${outside.slice(0, 8).join(", ") || "none"}` };
+}
 function bound(org, base) {
-  if (!base || !existsSync(base)) return { ok: false, detail: "--base-org absent" };
+  if (!base) return boundByGit(org);
+  if (!existsSync(base)) return { ok: false, detail: "--base-org absent" };
   const keep = (f) => !f.startsWith("dressing-room/state/");
   const a = new Set(tracked(org).filter(keep)), b = new Set(tracked(base).filter(keep));
   const differ = [...new Set([...a, ...b])].filter((f) => !a.has(f) || !b.has(f) || hashText(join(org, f)) !== hashText(join(base, f)));
@@ -258,8 +273,9 @@ function plants({ org, base, only }) {
   const left = procsNaming(TMP);
   const after = stateHash(org);
   res.push({ id: "LAST", ok: left.length === 0 && before === after, detail: `${left.length} process(es) name the temp root · org state ${before === after ? "byte-identical" : "CHANGED"}` });
-  for (const r of res) console.log(`  ${r.ok ? "GREEN" : "RED  "} ${r.id} · ${r.detail}`);
+  for (const r of res) console.log(`CLAUSE ${r.id} ${r.ok ? "GREEN" : "RED"} · ${r.detail}`);
   const red = res.filter((r) => !r.ok).map((r) => r.id);
+  console.log(`PLANTS mrehearse · ${res.length - red.length} of ${res.length} plant(s) as expected`);   // the suite member's line (unit mmeter)
   console.log(red.length ? `RED MREHEARSE · ${red.join(",")}` : `GREEN MREHEARSE night-replay · ${res.length} clause(s)`);
   return red.length ? 1 : 0;
 }

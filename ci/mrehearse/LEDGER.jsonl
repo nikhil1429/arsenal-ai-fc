@@ -34,3 +34,7 @@
 {"ts":"2026-11-21T07:32:25.057Z","act":"witness-build","cmd":"witness plants --org . --base-org <base 7bf008b>","last_line":"GREEN MREHEARSE night-replay · 8 clause(s) [exit 0]"}
 {"ts":"2026-11-21T07:32:25.057Z","act":"witness-base","cmd":"witness plants --org <base 7bf008b> --base-org <base 7bf008b>","last_line":"RED MREHEARSE · W1,W2,W3,W4,W5,W6 [exit 1]"}
 {"ts":"2026-11-21T07:32:25.057Z","act":"mutants","cmd":"node ci/mrehearse/run_mutants_mrehearse.mjs --org . --base-org <base 7bf008b>","last_line":"run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T07:36:16.306Z","act":"fix","cmd":"witness: bare `plants` (unit mmeter's member) — BOUND from ci/mrehearse/BASE via git; CLAUSE lines + PLANTS line","last_line":"PLANTS mrehearse · 8 of 8 plant(s) as expected · GREEN MREHEARSE night-replay · 8 clause(s)"}
+{"ts":"2026-11-21T07:36:16.306Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (merged 7bf008b)","last_line":"organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 [exit 0]"}
+{"ts":"2026-11-21T07:36:16.306Z","act":"measure","cmd":"node scripts/lawpack.mjs gate","last_line":"lawpack: GREEN — no law's finding count rose, and every rule is on disk"}
+{"ts":"2026-11-21T07:36:16.306Z","act":"mutants","cmd":"node ci/mrehearse/run_mutants_mrehearse.mjs --org . --base-org <base 7bf008b>","last_line":"run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN"}
