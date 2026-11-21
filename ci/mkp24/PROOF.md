@@ -206,3 +206,49 @@ member never fetches, and `ci/mdet` is not on this branch.
 - The hermetic profile reads `organism_test: 149 passed, 6 failed · … LIVE 124`, with the same assert set as the cut (2026-11-21).
 - `node scripts/models.mjs check` exits 0.
 
+## 11 · THE MERGE WITH MAIN AND THE BASE (the architect, by the runner: forks rows 1216 K-F4 / 1232 (2) / 1233 (1), 21 Nov 2026)
+
+**The merge.**
+- `git fetch origin main` gave `git rev-parse FETCH_HEAD` = `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f`.
+- `git merge --no-edit FETCH_HEAD` made merge commit **1492987** (parents 11b2c10 and 7bf008b). It is a merge, not a rebase,
+  and nothing was force-pushed.
+- **No file conflicted.** Main moved `scripts/organism_test.mjs`, `package.json`, `scripts/ci_verdict.mjs` and
+  `.github/workflows/suite.yml`, and each merged automatically beside this unit's lines. Every landed line of mdtl, mcrk, mherm,
+  mdet, mdtl2 and mclk is kept as main has it.
+- `scripts/red_cause.mjs` and `scripts/ci_verdict.mjs` are byte-identical to main.
+
+**The BASE.** `ci/mkp24/BASE` = `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f` (commit 6b5c0ae). It is the main the branch now
+carries, and mdtl is on it (row 1216 K-F4). The interim base of section 1 is retired.
+
+**Re-run on the merged tree (2026-11-21).**
+- The witness against BASE = main:
+  - at the merged head it reads `GREEN MKP24 … · 10 clause(s)`, BOUND with 13 files differing and none beyond the named;
+  - at main itself it reads `RED MKP24 · K1 RETIRE-LATE, K2 NO-GAP, K3 PORT, K4 LOST, K5 UNPLANTED, K6 NO-LEAK, K7 REPLAY, K8 MRV, BOUND`.
+- `node ci/mkp24/run_mutants_mkp24.mjs` (the default trees, HEAD and ci/mkp24/BASE) exits 0 in 193 s:
+  `run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN`.
+- `witness_cause selftest: 17 passed, 0 failed` (2026-11-21), and `node scripts/models.mjs check` exits 0.
+- The hermetic profile at the merged tip reads `organism_test: 150 passed, 8 failed · … LIVE 125` (2026-11-21).
+  - The two fails beyond the cut's six are `SUITE MEMBER · ci_verdict selftest` and `SUITE MEMBER · red_cause selftest`
+    (mdtl2's).
+  - In this container they need the `acorn` parser of `node_modules`, and there is no `npm ci` here.
+  - Main 7bf008b's own tree fails them the same way here (measured 2026-11-21, on both trees): `ci_verdict selftest: 36 passed, 2 failed`
+    and (2026-11-21) `red_cause selftest: 14 passed, 10 failed`. So they are not of this merge.
+  - The neutral machine, which runs `npm ci`, reads them green (below).
+- mclk: no clause of this witness derives a day from the clock.
+
+**The two neutral legs of 6b5c0ae** (run 44877861591, read by curl of the public API, 2026-11-21):
+- **node 24, check run 136766445352: GREEN.**
+  `B1_VERDICT {"v":"GREEN", … "head":"6b5c0ae…","base":"7bf008b…", "new":[], "pass":271,"fail":0 …}`.
+  `WITNESS ‹mkp24› · GREEN at head against its BASE` (ran in 27.7 s).
+- **node 22, check run 136766445185: CANCELLED by the job's own 60-minute limit**, not by a red.
+  - The annotation reads `The job has exceeded the maximum execution time of 1h0m0s`.
+  - The head step `npm test · hermetic · head` ended **success** (06:58:07 → 07:53:47). In its log every keeper-family
+    witness is GREEN: `WITNESS ‹mkp24›` GREEN in 33.4 s, and mlv1, mlv2, mlv3 and mrv GREEN.
+  - The merge-base step was cut at the limit, so no verdict was written.
+  - For scale: main 7bf008b's own node 22 leg took 06:40:55 → 07:30:05 (136760736371), and its node 24 leg read failure
+    (136760736638).
+  - **This is FK5 (wall time) made real.** No re-run for green is made (row 1213 (3)). The architect decides whether the
+    cancelled leg is read as a red, as no verdict, or as a fresh neutral run.
+
+CHECKPOINT · RESUMED at 2026-11-21 · merge 1492987 (main 7bf008b) · BASE 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f · legs of 6b5c0ae: node 24 136766445352 GREEN, node 22 136766445185 CANCELLED at the 60-minute job limit after a GREEN head step · resume from: the architect's reading of the node 22 leg
+
