@@ -12,7 +12,7 @@ import { spawn } from "node:child_process"; import { mkdtempSync, readFileSync, 
 import { join, resolve } from "node:path"; import { tmpdir, cpus } from "node:os"; import { pathToFileURL, fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { plant, plantEnv, lastLine, memberCmd, memberBound, REPO, INPUTS } from "../plant.mjs";
-import { mask } from "./mask.mjs";
+import { mask, maskText } from "./mask.mjs";
 const args = process.argv.slice(2), pos = args.filter((a, i) => !a.startsWith("--") && !/^--(trees|pool)$/.test(args[i - 1] || ""));
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const sha = pos[0] || "HEAD", only = pos.slice(1);
@@ -38,7 +38,7 @@ const N = Number(opt("--pool", String(Math.max(1, Math.min(4, Math.floor(cpus().
 const jdir = mkdtempSync(join(tmpdir(), "mplant-j-"));
 const fold = (J, tag, f) => [...new Set(J.filter((x) => x.tag === tag && f(x)).map((x) => x.rel.replace(/\d+/g, "#")))].sort();
 const rows = await pool(organs, N, async (o) => {
-  const row = { organ: mask(o), cmd: memberCmd(o).map(mask).join(" ") };
+  const row = { organ: mask(o), cmd: maskText(memberCmd(o).join(" "), [o]) };
   for (const t of TREES) {
     const d = plant(sha, { trackedState: t === "T", copyModules: t !== "ZL", tag: t });
     const jp = t === "ZJ" ? join(jdir, `${o}.${t}.jsonl`) : null;
