@@ -10,3 +10,4 @@
 {"ts":"2026-11-21T07:50:00Z","act":"mpres mutants over B","cmd":"node ci/mpres/run_mutants_mpres.mjs --org <B> --base-org <base>","last_line":"run_mutants: 16 of 16 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-21T07:52:00Z","act":"mpres mutants over A","cmd":"node ci/mpres/run_mutants_mpres.mjs --org <A> --base-org <base>","last_line":"run_mutants: 15 of 16 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-21T08:50:00Z","act":"check runs a71c11c","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/a71c11c/check-runs","last_line":"run 44882030754: hermetic twice node 24 success; hermetic twice node 22, npm test node 22, npm test node 24 queued"}
+{"ts":"2026-11-21T09:42:35.286Z","act":"fold runner counts + architect clause (§11)","cmd":"sed -n 588,604p scripts/presence.mjs","last_line":"} catch { return null; }  // AW down → silent no-op (never guess)"}

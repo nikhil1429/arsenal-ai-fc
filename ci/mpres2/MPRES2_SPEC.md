@@ -267,3 +267,79 @@ Read with `curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits
 Three legs sat in the runner queue for an hour; this seat does not re-trigger CI (no empty commit, no dispatch). This commit is the
 next push: its own run is named in the seat's FINAL MESSAGE (the workflow's concurrency cancels the older run once a newer one exists
 on the branch, `.github/workflows/suite.yml:49`).
+
+## 11. THE SECOND CLASS, MEASURED ON HIS LAPTOP — a relaunch beside a running launcher (runner M, 21 Nov 2026 15:15 IST)
+
+**THE ARCHITECT'S CLAUSE (verbatim, binding on this spec):** *the repair door never starts a launcher while one launcher process of
+that sensor is already running; a sensor that reads dead beside a running launcher is a named red of its own, not a relaunch.*
+
+### 11.1 The runner's counts (his laptop, 21 Nov 2026; this seat's ground, not re-derived)
+
+- He saw 15 ActivityWatch tray icons. Measured: 15 `aw-qt` launchers started at 12:34:11 (the runner's own start, row 1177 (1)), then
+  12:36, 12:40, 12:44, 12:48, 12:54, 12:58, 13:09, 13:29, 13:49, 13:51, 13:56, 14:05, 14:28, 15:04 IST — each with its own watcher
+  pair. Only the 12:34 set's server held real memory; most later servers sat near 1 MB (could not bind the port). The runner stopped
+  the 14 later sets by pid at ~15:12 and kept the 12:34 set; one launcher remains.
+- `presence.log`, one sense pass a minute, 12:30–15:10 IST: short LIVE runs (1–4 passes) alternating with DEAD spans, every dead pass
+  reading `ActivityWatch unreachable — no telemetry, no guess` while the 12:34 launcher and its server were running. The 14 dead spans
+  after 12:34 (start · passes): 12:36·1, 12:40·3, 12:44·2, 12:48·2, 12:54·3, 12:58·9, 13:09·19, 13:29·19, 13:49·1, 13:51·4, 13:56·8,
+  14:05·21, 14:28·35, 15:04·6. Each span's FIRST pass wrote `asked (the launcher started)` and started one launcher — 14 spans, 14
+  launchers, launch minutes equal to the `aw-qt` start minutes one for one. The pass before each span read LIVE (`calm`).
+- Dead reason every time: the window-events fetch returned null, never a missing launcher.
+- Not measured: why the fetch reads unreachable beside a running server.
+
+### 11.2 The mechanism, by the code at 7bf008b
+
+| file:line | the step |
+|---|---|
+| `scripts/presence.mjs:698` | a LIVE pass returns `dead_since:null` and no `repair` — the span's record is dropped |
+| `scripts/presence.mjs:699` | the next dead pass opens a NEW span (`dead_since = at`) |
+| `scripts/presence.mjs:701` | the old record's `span` ≠ the new `dead_since`, so nothing is carried |
+| `scripts/presence.mjs:733-741` | no record ⇒ the door is asked ⇒ `spawnOnce` starts ANOTHER launcher; nothing asks whether one is already running |
+| `scripts/presence.mjs:591-603` `fetchAwEvents` | **every** failure collapses to `null`: the 4 s abort on either leg (`:595`, `:600`), a refused connection, a buckets map with no `aw-watcher-window` key (`:598`), a body that is not JSON — so "unreachable" cannot say WHICH, and the runner's open question is unmeasurable from the log by construction |
+
+So the bound "one ask per span" holds exactly as written and still multiplies launchers: a flapping input (LIVE 1–4 passes, DEAD again)
+is a new span every time. The mpres2 change in §2 does not cause this and does not fix it; it would make it no worse (it reopens only
+`none`, and every one of the 14 records was `asked`).
+
+### 11.3 What the build must add (the clause as a code path)
+
+1. **A running-launcher check before the ask** — in `recordDeadInput`, after `launcherDoor` names a launcher and BEFORE the `asking`
+   record at `:738`: ask a seam `deps.launcherRunning(door)` (default: one process listing). Running ⇒ write
+   `repair = { span, at, result: "beside-running", why: "<launcher leaf> running, input dead" }`, spawn nothing. That result is an ask
+   that did not run, but it IS a verdict on the span: it **closes** the span (no re-list every pass) — fork F8.
+2. **The named red** — `scripts/senses.mjs:67` maps `beside-running` to its own evidence (`dead beside a running launcher`), distinct
+   from `repair FAILED` and `no repair door`; the `sense` CLI line at `presence.mjs:1242` prints it as it prints every result already.
+3. **The fetch names its reason** — `fetchAwEvents` returns a reason with the null (`abort` · `refused` · `no-window-bucket` · `bad-json`)
+   and the dead snapshot carries it as `dead_reason`, so the next laptop read answers 11.1's open question from the log (fork F9).
+
+### 11.4 Witness clauses and mutants (added to §5's table)
+
+| id | plant | base 7bf008b | build | mutant |
+|---|---|---|---|---|
+| **R1 NO-RELAUNCH** | the 21 Nov flap on seams: dead, live, dead, live, dead (3 spans), `launcherRunning` → true from the first ask on | **RED** 3 asks (3 launchers) | GREEN 1 ask, later spans `beside-running` | drop the check: `deps.launcherRunning` call → `false` |
+| **R2 NAMED-RED** | R1's last snapshot through `senses.DEAD.presence` | **RED** evidence `launcher asked` | GREEN evidence `dead beside a running launcher` | map `beside-running` to `null` evidence |
+| **R3 NOT-RUNNING-ASKS** | dead, `launcherRunning` → false | GREEN (guard) | GREEN 1 ask, `asked`/`failed` | invert the check (`!running` → `running`) |
+| **R4 REASON-NAMED** | four planted fetchFns: abort, ECONNREFUSED, buckets with no window key, non-JSON body | **RED** no `dead_reason` | GREEN each `dead_reason` by name | collapse every reason to one string |
+
+Doors as §4: the process listing is a seam (`deps.launcherRunning`), planted true/false; no witness lists real processes, names a live
+service or binds a port. The default lister on the laptop is NAMED NOT GUESSED (below).
+
+### 11.5 Files, forks, and what only the laptop can measure
+
+- Files a build adds to §6: `scripts/presence.mjs` (`recordDeadInput`, `fetchAwEvents`, the default lister), `scripts/senses.mjs:67`
+  (one evidence mapping) — **a new file touched beyond §6, so fork F7**.
+- **F7 · scope.** (A) one build: mpres2 (§2) + the clause (§11); (B) two builds, the clause first (it is the live harm — 14 launchers in
+  2.5 h), mpres2 after. **Recommend B**: the relaunch is happening on his laptop now; the `none` case needs a row seeded mid-span.
+- **F8 · does `beside-running` close the span?** (A) yes — one listing per span, the red stands until a live pass; (B) no — re-list every
+  pass, and ask once if the launcher has died. **Recommend B** with the ask bound kept: a launcher that died mid-span is exactly what
+  the door exists for, and a listing is not a launch. Decided by: the cost of one listing on his laptop (`conductor.mjs:446` records
+  `Get-CimInstance Win32_Process` at seconds per call on this laptop).
+- **F9 · the reason field.** (A) in the snapshot only; (B) also in `presence.log`'s dead line. **Recommend A** (one writer, one file).
+- **F10 · how "running" is known.** (A) list processes by the launcher's leaf name; (B) a pid file written by `spawnOnce` on its
+  `spawn` event, checked alive; (C) both. **Recommend B** — it knows only what THIS door started, never a launcher the runner or he
+  started by hand, so (C) if the architect wants the 12:34 runner start counted too (it was not started by the door).
+- NAMED NOT GUESSED: why the fetch reads null beside a running 73 MB server (abort at 4 s vs refused vs a later launcher's server holding
+  the port vs no window bucket) — measure on his laptop: `curl -s -m 10 http://localhost:5600/api/0/buckets` timed, and the bucket keys,
+  during a dead span; the cost of one process listing — measure: time `Get-CimInstance Win32_Process -Filter "Name='aw-qt.exe'"` there.
+
+CHECKPOINT · STOPPED at 2026-11-21T09:50Z · resume from: the architect's rulings on F1–F10, then a build seat (spec complete; nothing built).
