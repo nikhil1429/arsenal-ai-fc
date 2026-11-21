@@ -271,4 +271,20 @@ record. Its check runs are named below.
 
 ## CHECK RUNS of the pushed tip
 
-(written on the push that follows the first one; see the last section)
+Read 21 Nov 2026 through the public API, no token:
+`curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`.
+
+| sha | run id | name | conclusion |
+|---|---|---|---|
+| `7d6148b` (the first spec push) | 136869420247 | npm test · node 22 | success |
+| `7d6148b` | 136869420411 | npm test · node 24 | success |
+| `7d6148b` | 136869420414 | hermetic twice · node 22 | success |
+| `7d6148b` | 136869420678 | hermetic twice · node 24 | success |
+| `f635d68` (the cut, for comparison) | 136855935644 / 136855935651 | hermetic twice · node 22 / 24 | success |
+| `f635d68` | 136855935336 / 136855935714 | npm test · node 22 / 24 | cancelled |
+
+The spec push is GREEN on all four legs of the neutral machine. The container's hermetic reds (§ MEASUREMENTS) do not
+reproduce there.
+
+STATUS · spec complete at 2026-11-21 (UTC) · nothing built · resume from: the architect's rulings on FORKS maud43-1..10,
+and the runner's laptop counts C1-C7
