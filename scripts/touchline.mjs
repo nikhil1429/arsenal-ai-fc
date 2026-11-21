@@ -27,6 +27,10 @@
 //         buckets.json (app classification) · reps_log.jsonl · cards.json ·
 //         own pitch_read_history.jsonl
 // OUTPUT: pitch_read.json + pitch_read_history.jsonl (sole writer of both)
+// DEAD INPUT (unit mpres, forks rows 1177 (2) / 1191): AW unreachable is `tunnel.state:"input_dead"`,
+//         never `no_data` (which keeps its meaning: AW up, no events), plus a top-level
+//         `input:{activitywatch,at,dead_since,last_live_at}` carried across runs; the run exits
+//         NON-ZERO (F2 B). The AW base is env AW_API_BASE with ARSENAL_AW read as an alias (F7 A).
 // MODES:  run (default) · selftest
 // ============================================================================
 
@@ -159,11 +163,13 @@ function classifyApp(app, title, buckets) {
 // ---------------------------------------------------------------------------
 // TUNNEL: present-but-circling after kickoff — many short window-hops, none in
 // the Learning bucket. Wall minutes accumulate across runs on the same date.
-function tunnelRead(windowEvents, buckets, cfg, now, prevSameDay) {
+function tunnelRead(windowEvents, buckets, cfg, now, prevSameDay, inputDead = null) {
   const kick = new Date(now); {
     const [h, m] = cfg.kickoff.split(":").map(Number);
     kick.setHours(h, m, 0, 0);
   }
+  // unit mpres: a DEAD input is said first and by name — it is not a quiet morning and not an empty pitch
+  if (inputDead) return { state: "input_dead", wall_minutes_today: prevSameDay ? prevSameDay.tunnel.wall_minutes_today : 0, evidence: `ActivityWatch unreachable (${inputDead})`, trend_only: true };
   if (now < kick) return { state: "pre_kickoff", wall_minutes_today: prevSameDay ? prevSameDay.tunnel.wall_minutes_today : 0, evidence: "before kickoff", trend_only: true };
   const cutoff = now.getTime() - cfg.tunnel.window_min * 60000;
   const recent = (windowEvents || []).filter(e => new Date(e.timestamp).getTime() >= cutoff);
@@ -359,6 +365,15 @@ function buildRead({ tunnel, struggle, tank, weak_foot, now }) {
   };
 }
 
+// unit mpres: the input record, carried across runs from the organ's own last read (any date — a dead
+// span may cross midnight). dead_since resets only on a live read.
+function inputRecord(alive, prevRead, now) {
+  const at = now.toISOString();
+  const p = prevRead && prevRead.input && typeof prevRead.input === "object" ? prevRead.input : null;
+  if (alive) return { activitywatch: true, at, dead_since: null, last_live_at: at };
+  return { activitywatch: false, at, dead_since: p && p.activitywatch === false && p.dead_since ? p.dead_since : at, last_live_at: (p && p.last_live_at) || null };
+}
+
 async function awFetch(base, path, timeout = 10000) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), timeout);
@@ -402,6 +417,13 @@ async function selftest() {
   assert("tunnel carries trend_only marker (weekly trend, never daily meter)", t1.trend_only === true);
   const t3 = tunnelRead([], buckets, cfg, new Date(2026, 6, 12, 8, 0, 0), null);
   assert("tunnel: before kickoff = pre_kickoff (no wall accrues)", t3.state === "pre_kickoff");
+  // unit mpres (forks rows 1177 (2) / 1191) — a dead input is NAMED, never a quiet no_data
+  const td = tunnelRead(null, buckets, cfg, now, { tunnel: { wall_minutes_today: 9 } }, "the buckets read failed");
+  assert("mpres W6 — AW unreachable ⇒ tunnel input_dead (never no_data), wall minutes carried", td.state === "input_dead" && td.wall_minutes_today === 9 && /unreachable/.test(td.evidence));
+  assert("mpres W6 — AW up with no events keeps no_data", tunnelRead([], buckets, cfg, now, null, null).state === "no_data");
+  const i1 = inputRecord(false, null, now), i2 = inputRecord(false, { input: i1 }, new Date(now.getTime() + 1800000)), i3 = inputRecord(true, { input: i2 }, new Date(now.getTime() + 3600000));
+  assert("mpres — dead_since carries across dead runs and resets on a live one",
+    i1.dead_since === now.toISOString() && i2.dead_since === now.toISOString() && i3.activitywatch === true && i3.dead_since === null && i3.last_live_at === i3.at);
 
   // STRUGGLE
   const rep = (correct, conf, lat, axis) => ({ correct, confidence: conf, latency_ms: lat, axis });
@@ -543,7 +565,7 @@ async function main() {
   const cfg = loadConfig();
   const now = new Date();
   const today = localDate(now);
-  const base = process.env[cfg.aw_base_env] || cfg.aw_default;
+  const base = process.env[cfg.aw_base_env] || process.env.ARSENAL_AW || cfg.aw_default;   // F7 A: the old name is an alias
   const buckets = readJson(join(STATE_DIR, "buckets.json"));
   const cards = readJson(join(STATE_DIR, "cards.json"));
   const reps = supersedeReps(readLines(join(STATE_DIR, "reps_log.jsonl")));
@@ -553,15 +575,16 @@ async function main() {
   const prev = prevSameDay && prevSameDay.date === today ? prevSameDay : null;
 
   // AW window events for today (graceful when AW is down)
-  let windowEvents = null;
+  let windowEvents = null, inputDead = null;
   const bucketMap = await awFetch(base, "/api/0/buckets/");
   if (bucketMap) {
     const winId = Object.keys(bucketMap).find(b => b.startsWith("aw-watcher-window"));
     if (winId) {
       const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
       windowEvents = await awFetch(base, `/api/0/buckets/${encodeURIComponent(winId)}/events?start=${dayStart.toISOString()}&end=${now.toISOString()}&limit=2000`);
-    }
-  }
+      if (windowEvents === null) inputDead = "the window events read failed";
+    } else inputDead = "no aw-watcher-window bucket";
+  } else inputDead = "the buckets read failed";
 
   const repsByDate = {};
   for (const r of reps) {
@@ -570,7 +593,7 @@ async function main() {
   }
 
   const read = buildRead({
-    tunnel: tunnelRead(windowEvents, buckets, cfg, now, prev),
+    tunnel: tunnelRead(windowEvents, buckets, cfg, now, prev, inputDead),
     struggle: struggleRead(repsToday, cfg),
     tank: tankRead(cards, cfg),
     weak_foot: weakFootRead(history, repsByDate, cfg, today),     // today is watched, not judged (E2E audit 25 Jul 2026)
@@ -581,6 +604,7 @@ async function main() {
   const scorerCfg = readJson(join(STATE_DIR, "scorer_config.json"));
   const sessionMin = scorerCfg && typeof scorerCfg.session_min_minutes === "number" ? scorerCfg.session_min_minutes : 45;
   read.first_focus_at = firstFocusRead(windowEvents, buckets, prev && prev.first_focus_at, sessionMin);
+  read.input = inputRecord(!inputDead, prevSameDay, now);   // unit mpres — prevSameDay is the last read of ANY date
   writeAtomic(OUT, read);
   // one daily summary line in history — still exactly one per date, but now
   // refreshed on every run instead of frozen at the 00:00 run (E2E audit 25 Jul
@@ -599,8 +623,10 @@ async function main() {
   // counter says how far off six he actually is, which is the thing he can act on.
   const struggleLine = read.struggle.gate && !read.struggle.gate.open ? read.struggle.gate.line : read.struggle.verdict;
   console.log(`touchline: tunnel=${read.tunnel.state} struggle=${struggleLine} bench=${read.tank.benched.length} weak-foot=${read.weak_foot.streaks.length} → ${OUT}`);
+  // unit mpres F2 B: a dead input never exits 0 with a zero
+  if (inputDead) { console.log(`touchline: input DEAD since ${read.input.dead_since} (${inputDead})`); process.exitCode = 1; }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
 
-export { tunnelRead, struggleRead, tankRead, weakFootRead, buildRead, classifyApp, loadConfig, loadConfigFromObject, repDayKey, mergeHistoryLine, struggleGate };
+export { inputRecord, tunnelRead, struggleRead, tankRead, weakFootRead, buildRead, classifyApp, loadConfig, loadConfigFromObject, repDayKey, mergeHistoryLine, struggleGate };

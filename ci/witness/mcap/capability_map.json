@@ -1,0 +1,118 @@
+{
+  "_what": "unit mcap · the capability map read by ci/witness/mcap/witness_capability.mjs. Every id is validated by the witness against its owner at run time: a check id must be a key of CHECKS (scripts/teaching_gate.mjs) and an audit id an entry of CHECKED_RULES (scripts/teaching_audit.mjs), each named inside that organ's own selftest; a verdict must be one of its type's verdicts in VERDICT_TYPES (scripts/gaffer_brain.mjs). An id that fails any of these makes the clause UNREAD (exit 2), never green.",
+  "_source": "spec ci/mwit/MWIT_SPEC.md @ 88bf69d (the proposed maps, clauses c07 c10 c12 c13 c18 c28 c32) and the rulings forks rows 1162 / 1163: row 1163 (7) builds all seven now; c13, c18 and c28 take the meanings of row 1163 (2)-(4). A map change is a witness change: scripts/rung_receipt.mjs refuses an old green (witness changed).",
+  "c07": {
+    "reader": "turns",
+    "meaning": "one idea per message: no surviving red of these checks or audit rules across the real day's sitting",
+    "checks": [
+      "A.one-question",
+      "A.new-terms",
+      "A.position"
+    ],
+    "audit": [
+      "one-idea",
+      "act-mt2kgn09"
+    ]
+  },
+  "c10": {
+    "reader": "turns",
+    "meaning": "real terms: position by NAME, never a count form; terminology held",
+    "checks": [
+      "A.count-form",
+      "A.position"
+    ],
+    "audit": [
+      "terminology"
+    ]
+  },
+  "c12": {
+    "reader": "turns",
+    "meaning": "gut-word: every gut-bearing moment carried the trio and every gut-word reply was banked",
+    "checks": [
+      "A.gut-trio",
+      "A.gut-by-moment",
+      "B.bank"
+    ],
+    "audit": []
+  },
+  "c13": {
+    "reader": "nonanswer",
+    "meaning": "row 1163 (2): on a real day no rep row of the sitting holds a reply the study classifier reads as a question or a complaint; one such row is red; a day with no such reply is unread",
+    "nonanswer_kinds": [
+      "question",
+      "confusion",
+      "system"
+    ],
+    "checks": [],
+    "audit": [],
+    "_spec_map_set_aside": "spec proposal {checks: A.confusion-literal, B.moment} is set aside: row 1163 (1)-(2) gives c13 its whole meaning (the rep-row reading); a turn check is not part of it"
+  },
+  "c18": {
+    "reader": "crack",
+    "meaning": "row 1163 (3): every answer of the day judged broken has a crack row stamped concept, axis and moment holding his words and one diff; a broken answer without one is red; a day with no broken answer is unread",
+    "amended": "forks row 1194 (1) (fork mcrk-4: neither a nor b): no text comparison, no time join; the crack row is joined to its capture by the turn identity both records carry; a legal moment, non-empty words, words from the prompt record; rows before cyborg_from enter no count (row 1194 (3))",
+    "join": {
+      "crack_field": "bank_of",
+      "capture_field": "id",
+      "_source": "claude/mcrk-build forge_session.mjs crackRow: bank_of = the capture row id of the axis after his prompt; the settled row names the same capture by `of`"
+    },
+    "words_src": "teaching_audit_last.prompt",
+    "_words_src_source": "claude/mcrk-build forge_session.mjs crackRow words_src (the UserPromptSubmit record)",
+    "cyborg_from": "2026-08-30",
+    "_cyborg_source": "row 1194 (3); CLAUDE.md GAME ON 30 Aug 2026",
+    "broken": {
+      "axis_weld": [
+        "cracked"
+      ],
+      "tape_doubt": [
+        "standing"
+      ],
+      "hidden_test": [
+        "failed"
+      ],
+      "adversarial": [
+        "collapsed"
+      ],
+      "scrimmage": [
+        "failed"
+      ],
+      "interview": [
+        "not_yet"
+      ],
+      "trap": [
+        "fell_in"
+      ],
+      "voice_rep": [
+        "missed"
+      ]
+    },
+    "not_an_answer": [
+      "doubt_quality"
+    ],
+    "checks": [],
+    "audit": [],
+    "_spec_map_set_aside": "spec proposal {checks: B.bank-verbatim, B.bank} is set aside: row 1163 (3) gives c18 its whole meaning (the crack-row reading)"
+  },
+  "c28": {
+    "reader": "park",
+    "meaning": "row 1163 (4): the proposed map, plus the park turn itself ends on the micro-question; the return is the question handed back in the same turn",
+    "park_cls": [
+      "system"
+    ],
+    "checks": [
+      "A.buying"
+    ],
+    "audit": [
+      "no-system-mid-concept"
+    ]
+  },
+  "c32": {
+    "reader": "close",
+    "meaning": "answer-before-leave: the bank duties hold, and the sitting's close left no banked moment open after the last banked answer",
+    "checks": [
+      "B.bank",
+      "B.judge-once"
+    ],
+    "audit": []
+  }
+}

@@ -13,8 +13,17 @@
 //        are NAMED in the clause line, never red (ci/mf2/monotone.mjs). STRUCK, the text it replaces:
 //        ~~every member the BASE hermetic run judged (ok / FAIL, LIVE excluded) is judged by the build with the same verdict,
 //        and the build judges nothing the base did not (digit runs folded, as LIVE_ASSERTS keys are).~~
-//   F3 · the LIVE count on the build's hermetic headline is equal to or lower than the base's, and the build names LIVE no
-//        member the base did not (digit runs folded).
+//   F3 · ONE CLAUSE, TWO DOORS (forks row 1205 (3)) — THE LIVE SET NEVER WITHHOLDS MORE THAN IT ADMITS. The build's hermetic
+//        LIVE count may rise above the base's by exactly the names door 2 admits, and a name LIVE at the build but not at the
+//        base is admitted only through a door:
+//          door 1 (unit mgat, row 1174 (2); ci/mf2/livenarrow.mjs) — the build tree declares (scripts/organism_test.mjs
+//                 LIVE_NARROWS) the base LIVE name it narrows, that name WAS live at the base and is GONE at the build;
+//          door 2 (unit mherm, row 1204 (2)) — it stands in ci/mf2/LIVE_ADMITTED.json (beside this witness) with its ruling
+//                 row, each assert listed under it is an assert of the build's source, and THIS run measured on its own base
+//                 copy that the base hermetic run judged NONE of them; an entry the build no longer prints LIVE is RED (the
+//                 unit that retires the name deletes the entry).
+//        STRUCK, the text it replaces: ~~the LIVE count on the build's hermetic headline is equal to or lower than the base's,
+//        and the build names LIVE no member the base did not (digit runs folded).~~
 //   F4 · RE-CUT by unit mrf (forks row 1120 (2) F-1 C · row 1120 (4)) — MONOTONE over the FULL profile's members, the same
 //        rule as F2 (ci/mf2/monotone.mjs); both headlines and exits are named in the line, not compared. STRUCK, the text
 //        it replaces:
@@ -26,11 +35,13 @@
 // Portable: no POSIX-only shell (the planted model stubs are written per platform); every read is split on /\r?\n/.
 // ============================================================================
 import { mkdtempSync, writeFileSync, readFileSync, readdirSync, statSync, lstatSync, rmSync, cpSync, mkdirSync, chmodSync } from "node:fs";
-import { join, relative, resolve, delimiter } from "node:path";
+import { join, relative, resolve, delimiter, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { monotone, monoLine } from "./monotone.mjs";   // unit mrf (row 1120 (2) F-1 C): the rule F2 and F4 read
+import { liveNarrow, narrowsOf, narrowLine } from "./livenarrow.mjs";   // unit mgat (row 1174 (2)): F3 door 1
 
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
 const ORG = arg("--org") && resolve(arg("--org")), BASE = arg("--base-org") && resolve(arg("--base-org"));
@@ -97,9 +108,38 @@ clause("F1", po.sites > 0 && oh.marks.length === 0 && of.marks.length > 0 && bf.
 }
 const liveOf = (h) => { const m = /LIVE (\d+)/.exec(h); return m ? Number(m[1]) : null; };
 {
-  const extra = oh.live.filter((n) => !bh.live.includes(n));
-  clause("F3", liveOf(oh.head) !== null && liveOf(bh.head) !== null && liveOf(oh.head) <= liveOf(bh.head) && extra.length === 0,
-    `hermetic headline LIVE: build ${liveOf(oh.head)} · base ${liveOf(bh.head)} (build ≤ base) · LIVE names printed: build ${oh.live.length}, base ${bh.live.length} · named LIVE only by the build: ${extra.length ? extra.map((n) => n.slice(0, 60)).join(" · ") : "none"}`);
+  // F3 door 2 — forks row 1204 (option (a), NARROWED to a listed admission): a LIVE name the base did not print is admitted when
+  // (i) it stands in ci/mf2/LIVE_ADMITTED.json (beside this witness) with its ruling row, and (ii) THIS run measured, on its own
+  // base copy, that the base hermetic run judged NONE of the asserts listed under it (each listed prefix must also be an assert
+  // name in the build's own organism_test.mjs, so an entry cannot stand for nothing). The count may rise by exactly the
+  // admitted names the build prints. An entry the build no longer prints as LIVE is RED: its retiring unit deletes it.
+  let adm = [], admErr = "";
+  try {
+    const j = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "LIVE_ADMITTED.json"), "utf8"));
+    adm = Array.isArray(j.admitted) ? j.admitted : [];
+  } catch (e) { admErr = `LIVE_ADMITTED.json unreadable (${e instanceof Error ? e.message : String(e)})`; }
+  const osrc = readFileSync(join(o, "scripts", "organism_test.mjs"), "utf8");
+  const judged = (pre) => bh.members.filter(([, n]) => n.startsWith(fold(pre))).map(([, n]) => n);
+  const why = [];
+  const admitted = [];
+  for (const e of adm) {
+    const name = fold(e && e.live), asserts = Array.isArray(e && e.asserts) ? e.asserts : [];
+    if (!e || !e.live || !/^\d+/.test(String(e.row || ""))) { why.push(`entry ${JSON.stringify(String(e && e.live).slice(0, 50))} carries no ruling row`); continue; }
+    if (!asserts.length) { why.push(`entry "${name.slice(0, 50)}" lists no assert under it`); continue; }
+    const absent = asserts.filter((a) => !osrc.includes(a));
+    if (absent.length) { why.push(`entry "${name.slice(0, 50)}" lists ${absent.length} name(s) that are no assert of the build: ${absent.map((a) => a.slice(0, 40)).join(" · ")}`); continue; }
+    const hit = asserts.flatMap(judged);
+    if (hit.length) { why.push(`entry "${name.slice(0, 50)}" (row ${e.row}): the BASE judged ${hit.length} of its asserts — a LIVE name may not hide judged asserts: ${hit.slice(0, 3).map((n) => n.slice(0, 50)).join(" · ")}`); continue; }
+    if (!oh.live.includes(name)) { why.push(`entry "${name.slice(0, 50)}" (row ${e.row}) is no longer printed LIVE by the build — delete it in the landing that retired it`); continue; }
+    admitted.push(name);
+  }
+  // door 2's admitted names leave the set (and the count) before door 1's rule judges what is left
+  const room = admitted.filter((n) => !bh.live.includes(n)).length;
+  const r = liveNarrow({ baseLive: bh.live, headLive: oh.live.filter((n) => bh.live.includes(n) || !admitted.includes(n)),
+    baseCount: liveOf(bh.head), headCount: liveOf(oh.head) === null ? null : liveOf(oh.head) - room,
+    narrows: narrowsOf(readFileSync(join(ORG, "scripts", "organism_test.mjs"), "utf8")) });
+  clause("F3", !admErr && why.length === 0 && r.ok,
+    `hermetic headline LIVE: build ${liveOf(oh.head)} · base ${liveOf(bh.head)} + ${room} admitted by door 2 (build ≤ base + door 2) · LIVE names printed: build ${oh.live.length}, base ${bh.live.length} · door 1 ${narrowLine(r)} · door 2 admitted (row-listed, none of their asserts judged by the base): ${admitted.length ? admitted.map((n) => n.slice(0, 60)).join(" · ") : "none"}${admErr ? ` · ${admErr}` : ""}${why.length ? ` · door 2 REFUSED: ${why.join(" | ")}` : ""}`);
 }
 {
   // unit mrf (row 1120 (2) F-1 C): MONOTONE, the F2 rule over the full profile. Struck form, kept for the record: the same
