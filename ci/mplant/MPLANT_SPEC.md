@@ -428,6 +428,9 @@ Read with no token: `R=$(git remote get-url origin | sed -E 's#.*github.com[:/]#
 
 | Push | Run | Legs | Verdict |
 |---|---|---|---|
-@@ROWS@@
+| `abb5c34` (step 1, tools) | run 44873282524 | node 22 · node 24 (`windows-latest`), npm test + hermetic twice | cancelled (superseded by the next push), 21 Nov 2026 |
+| `1e87e77` (step 2, doors) | run 44873587364 | the same four jobs | hermetic twice · node 24 **success**; the other three cancelled (superseded), 21 Nov 2026 |
+| `1683239` (step 3, the census and this spec) | run 44874577004 | the same four jobs | cancelled (superseded by `98b994c`), 21 Nov 2026 |
+| `98b994c` (line references) | cancelled by this table's own push | — | — |
 
 The run of the push that carries this table is named in the seat's FINAL MESSAGE (a spec cannot name the run of its own commit).
