@@ -7,3 +7,4 @@
 {"ts":"2026-11-21T07:45Z","act":"mbank-overlap","cmd":"git fetch origin claude/mbank-build && git diff -U0 7bf008b FETCH_HEAD -- scripts/gaffer_brain.mjs | grep '^@@'","last_line":"@@ -3466,0 +3540,23 @@ function selftest2(stub, S) {"}
 {"ts":"2026-11-21T08:05Z","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (bare cloud checkout, no npm ci)","last_line":"exit 2 (FAIL members: lawpack ci_verdict red_cause done probe fsrs mutagen; ERR_MODULE_NOT_FOUND on fsrs mutagen done)"}
 {"ts":"2026-11-21T08:20Z","act":"write-spec","cmd":"write ci/mjset/MJSET_SPEC.md","last_line":"File created"}
+{"ts":"2026-11-21T08:40Z","act":"ruling-1237-1","cmd":"grep -n bank_answer|outstandingBank|gradeCapture scripts/*.mjs → §13 B1-B10 (no fix designed)","last_line":"scripts/postmatch.mjs:800:  const queue = studySeen ? null : queueEvidenceOf(day, outstandingBank());"}

@@ -27,7 +27,9 @@
    The head is a **19 Aug capture: pre-cyborg**. Which path fired on 19 Nov is NAMED NOT GUESSED (§9).
 4. **THE 59: 2 PRE-CYBORG (19 Aug), 57 AFTER THE FLOOR** — 59 − 2 = 57, row 1235 (4)'s number. Fate proposed (§4): the 2 are
    set aside by a code row naming the floor (kept, never judged, never dropped); the 57 drain by the same path, oldest first.
-5. **UPSTREAM: zero captures 18-21 Nov is the bank line (unit mbank), not this unit.** Shared lines named in §6.
+5. **UPSTREAM: zero captures 18-21 Nov is the bank line (unit mbank), not this unit.** Shared lines named in §6. Ruled by
+   the architect (forks row 1237 (1), 21 Nov 2026): no study turn called the bank, so the capture is lost BEFORE it. Every
+   line where this unit assumes a bank call is in §13. No fix is designed for it.
 
 ## 1 · THE ROUND — why the judge child is killed, each failure class, its retry at the NEXT carrier
 
@@ -313,6 +315,32 @@ scratchpad and are restated in this spec's §2.2 / §3 outputs. A build carries 
   `ci/mjset/LEDGER.jsonl` (this branch's).
 - Beyond them, each a FORK: `scripts/registry.mjs` (none needed — `gameOnEpoch` is read, never edited); `scripts/sitting.mjs`
   / `scripts/postmatch.mjs` (none needed — their waits already cover the round).
+
+## 13 · WHERE THIS UNIT ASSUMES A BANK CALL HAPPENS (architect ruling, forks row 1237 (1), 21 Nov 2026)
+
+The ruling's ground (the runner's zero-captures read, his laptop, counts only; never re-derived here): over 17-21 Nov,
+no study turn called `bank_answer` and no call was refused, so **the capture is lost BEFORE the bank**. Where the cause sits
+(the teaching turn or the surface) is the architect's call. This unit designs NO fix for it. Below is every line at base
+7bf008b where mjset's path assumes a capture row reached the queue. Each is a plain dependency, none a repair:
+
+| # | file:line | what it assumes |
+|---|---|---|
+| B1 | `scripts/gaffer_brain.mjs:1327-1415` (gradeCapture, the append at `:1412`) | the ONLY door that writes a `capture` row; every capture this unit settles was banked through it |
+| B2 | `scripts/dugout.mjs:1897` (the `bank_answer` tool), handler `:2166` | the code-surface bank; zero calls ⇒ zero rows (row 1237 (1)) |
+| B3 | `scripts/sitting.mjs:599-600` (bank() → `gaffer_brain.mjs capture`) | the sitting's bank; `S.stats.banked` counts it |
+| B4 | `scripts/gaffer_brain.mjs:2689-2694` (main, `capture` verb) | the CLI door B2 and B3 reach (mbank edits these lines, §6) |
+| B5 | `scripts/gaffer_brain.mjs:1420-1423` outstandingGrades · `:1893-1903` judgeDue | "due" = outstanding capture rows exist; no row ⇒ "nothing outstanding", the round never starts |
+| B6 | `scripts/sitting.mjs:1036-1039` | the close fires the judge only when `banked > 0` or the queue has rows waiting |
+| B7 | `scripts/postmatch.mjs:800` (queueEvidenceOf(day, outstandingBank())) · `:852-857` judgeRun | the day close's judge step and its queue-only evidence read the bank's rows |
+| B8 | `scripts/gaffer_brain.mjs:918` outstandingBank · `scripts/forge_session.mjs:866`, `:2866` | the forge close's "judged" gate counts the same rows |
+| B9 | `scripts/gaffer_brain.mjs:2045` judgeOrder · `:1932` captureDay | the order and the filed day come from the capture row's own `ts` |
+| B10 | `scripts/daily_green.mjs:228-236` (rung 4) | "examiner GREEN" = a settled row on the day. With no capture it reads R ("did not run"), the same as a failed round |
+
+Consequence, named and not repaired: every clause of §7 (W1-W9) plants its captures directly as queue rows. The witness
+proves the settle path given a capture, and nothing about whether a capture is made. On the days of row 1237 (1), mjset's
+build changes nothing, because B5 finds no outstanding rows and no round is due. The 59 old captures are the only work the
+build would do until the bank question is ruled. B10 cannot tell "no capture" from "no settle", which is a fork for the
+architect (F9), not a fix: (A) leave it · (B) the rung names which of the two it is.
 
 ## 12 · THE NEUTRAL MACHINE
 
