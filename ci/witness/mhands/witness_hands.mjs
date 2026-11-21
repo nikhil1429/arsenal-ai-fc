@@ -6,7 +6,8 @@
 // USAGE (the clause commands — the receipt organ's form, `node <tracked path> [plain args]`, scripts/rung_receipt.mjs:224):
 //   node ci/witness/mhands/witness_hands.mjs clicks [--day <YYYY-MM-DD IST>] [--campaign <dir>]
 //   node ci/witness/mhands/witness_hands.mjs fresh  --campaign <dir> [--day <YYYY-MM-DD IST>]
-//   node ci/witness/mhands/witness_hands.mjs plants                 (the self-plants, both clauses; the suite member's door, row 1162 (2))
+//   node ci/witness/mhands/witness_hands.mjs plants                 (the self-plants, both clauses; the suite member's door, row 1162 (2):
+//     one `CLAUSE <id> GREEN|RED · k/n plant(s)` line per clause, last line `PLANTS mhands · k of n plant(s) as expected`)
 //   node ci/witness/mhands/witness_hands.mjs --org <dir> --base-org <dir> [--only <clause>[,<clause>…]]   (the unit's whole witness)
 // EXIT LAW (spec §0): 0 the clause HOLDS · 1 RED (read, and it does not hold) · 2 UNREAD (a fact it needs is absent/unreadable — never
 //   a green). Where one half reads RED and another reads UNREAD, the read RED wins (a read fact is reported, never hidden behind a miss).
@@ -362,11 +363,14 @@ if (isMain) {
   else if (verb === "fresh") { const r = fresh({ campaign: opt("--campaign"), day: opt("--day") }); console.log(r.line); code = r.code; }
   else if (verb === "plants") {
     const out = plantsOf(TREE);
-    for (const o of out) { for (const m of o.miss) console.log(`  miss · ${o.clause} · ${m.p.id}: want ${m.p.want} got ${m.got} · ${m.line.slice(0, 200)}`); console.log(`  ${o.ok ? "GREEN" : "RED  "} ${o.clause} · ${o.n - o.miss.length}/${o.n} plants at their exit`); }
-    const red = out.filter((o) => !o.ok).map((o) => o.clause);
-    const n = out.reduce((s, o) => s + o.n, 0);
-    console.log(red.length ? `RED ${UNIT} plants · ${red.join(", ")}` : `GREEN ${UNIT} plants · ${n} plant(s) both ways over ${out.length} clause(s)`);
-    code = red.length || n === 0 ? 1 : 0;
+    // the suite member's shape (scripts/organism_test.mjs clauseWitnesses, unit mmeter; the CLAUSE line read by unit mdtl2's witness_cause.mjs)
+    for (const o of out) {
+      for (const r of o.res) console.log(`  ${r.got === r.p.want ? "ok  " : "FAIL"} ${o.clause} · ${r.p.id}${r.got === r.p.want ? "" : `\n         want ${r.p.want} got ${r.got} · ${r.line.slice(0, 200)}`}`);
+      console.log(`CLAUSE ${o.clause} ${o.ok ? "GREEN" : "RED"} · ${o.n - o.miss.length}/${o.n} plant(s)`);
+    }
+    const n = out.reduce((s, o) => s + o.n, 0), k = out.reduce((s, o) => s + o.n - o.miss.length, 0);
+    console.log(`PLANTS mhands · ${k} of ${n} plant(s) as expected`);
+    code = k === n && n > 0 ? 0 : 1;
   }
   else if (verb === null && opt("--org")) code = await whole();
   else { console.log(`RED ${UNIT} · USAGE: clicks [--day D] [--campaign dir] | fresh --campaign dir [--day D] | plants | --org dir --base-org dir [--only c]`); code = 1; }

@@ -42,12 +42,12 @@ if (!FILES.every((f) => existsSync(join(ORG, ...f.split("/"))))) { console.log(`
 let k = 0;
 for (const m of MUTANTS) {
   const r = run(m);
-  const red = r.applied && r.lines.some((l) => new RegExp(`^\\s*RED\\s+${m.clause.replace(/[-:]/g, "\\$&")} `).test(l));
+  const red = r.applied && r.lines.some((l) => new RegExp(`^CLAUSE ${m.clause.replace(/[-:]/g, "\\$&")} RED `).test(l));
   if (red) k++;
   console.log(`  ${red ? "KILLED " : "SURVIVED"} ${m.clause} · ${m.what}${r.applied ? "" : " · NOT APPLIED"}`);
 }
 const c = run(null);
-const controlGreen = c.code === 0 && /^GREEN MHANDS plants/.test(c.lines.at(-1) || "");
+const controlGreen = c.code === 0 && /^PLANTS mhands · (\d+) of \1 plant\(s\) as expected$/.test(c.lines.at(-1) || "");
 console.log(`  control · ${c.lines.at(-1) || "(no output)"}`);
 console.log(`run_mutants: ${k} of ${MUTANTS.length} mutant(s) RED by the clause that names them · control ${controlGreen ? "GREEN" : "RED"}`);
 process.exit(k === MUTANTS.length && controlGreen ? 0 : 1);
