@@ -40,9 +40,19 @@
 # full outputs stay on the runner.
 name: suite
 
+# unit mciq · THE QUEUE BRAKE (forks row 1256 (2), 21 Nov 2026). MEASURED by the runner (two public API reads, 16:27 IST):
+# 23 runs queued and 9 in progress; four ready land tips sat 16th to 20th behind runs drawn by keep refs pushed as branches
+# under superseded/ and by the cloud seats' queue branches claude/<unit>-queue (one commit, a settings key, never a build).
+# So a push to those two namespaces draws NO run. Syntax: `branches` with NEGATED patterns (GitHub's documented filter for
+# push: patterns are read in order, the LAST one that matches a ref decides, a `!` one excludes; `branches` and
+# `branches-ignore` cannot both sit on one event, and keeping the match-all "**" first leaves every other ref exactly as it
+# was). It composes: the filter gates the push event alone, so pull_request and workflow_dispatch trigger as before, and an
+# excluded ref never starts a run, so it never enters the concurrency group below, which is unchanged. The gate is NOT
+# loosened: main, land/**, claude/*-build, claude/*-spec and every other branch still run both legs (node 22 and 24).
+# Witness: ci/mciq/witness_mciq.mjs proves it by name (`*` never crosses a `/`, so claude/*-queue is one segment).
 on:
   push:
-    branches: ["**"]
+    branches: ["**", "!superseded/**", "!claude/*-queue"]
   pull_request:
   workflow_dispatch: {}
 
