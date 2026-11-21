@@ -50,7 +50,7 @@ const MUTANTS = [
   { id: "E1-m", clause: "E1", why: "memberCause drops the failing-check entry", edits: [
     [RC, "  if (checks.length) {\n    const r = repOf(checks[0], alphabetOf(src));", "  if (checks.length && !checks.length) {\n    const r = repOf(checks[0], alphabetOf(src));"]] },
   { id: "E2-m", clause: "E2", why: "a skeleton keeps its fill bytes (F4 B undone): the salad leaves", edits: [
-    [RC, "  if (best !== null) return best;", "  if (best !== null) return t;"]] },
+    [RC, "  if (best !== null && (lp === null || n >= lp.length)) return best;", "  if (best !== null && (lp === null || n >= lp.length)) return t;"]] },
   { id: "E3-m", clause: "E3", why: "the roll-up cause copies the tail", edits: [
     [RC, "slotOf(m[2] === \"null\" ? null : Number(m[2]))}`);", "slotOf(m[2] === \"null\" ? null : Number(m[2]))} · ${l}`);"]] },
   { id: "E4-m", clause: "E4", why: "PATH drops the tracked check (any basename-shaped token is a path)", edits: [
