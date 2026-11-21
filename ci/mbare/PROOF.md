@@ -196,3 +196,22 @@ No count rose. The 3 gates REDs are state-independent and the same at base (mlaw
 | a495a4a (the witness) | 44875211526 | queued when this proof was written; its verdict and the run of this proof's own push are named in the FINAL MESSAGE |
 
 DONE · the guard, its witness and mutants, the re-census · 21 Nov 2026 UTC · nothing landed
+
+## 9. MAIN MOVED — THE MERGE (the architect's order by the runner, forks rows 1226 / 1228, 21 Nov 2026)
+
+- `git fetch origin main` → `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f` (mdet dfe26a1, mdtl2 4d582d5, mclk 7bf008b since 5301f15), then
+  `git merge --no-edit FETCH_HEAD` → merge commit **`439547173378a92e3b76472448ce74274c72eb80`**. A merge, no rebase, no force push.
+- **Conflicted files: none.** git auto-merged every path, `scripts/organism_test.mjs` included; every landed line of the three units is kept
+  (`git diff --name-only 7bf008b 4395471` lists only `scripts/organism_test.mjs` and `ci/mbare/**`, 21 Nov 2026).
+- `ci/mbare/BASE` stays `5301f15…` (the sha this unit was cut from). Against it the witness reads RED only on BOUND, which names the three
+  units' landed files (the one red the member tolerates when main moves on); against main `7bf008b` it reads GREEN.
+- The witness derives no day from the clock (no date, no midnight plant): mclk's door does not touch it.
+
+| run on the merged tree (21 Nov 2026) | last line |
+|---|---|
+| `witness_mbare.mjs --org <4395471> --base-org <5301f15>` | `RED MBARE · BOUND` (REACH, NEVER-A-PASS, TRANSPARENT, RETHROW GREEN; BOUND: 34 paths, the outside ones mclk/mdet/mdtl2's) |
+| `witness_mbare.mjs --org <4395471> --base-org <7bf008b>` | `GREEN MBARE the laws mode passes a bare state dir by naming each blocked input, and changes nothing where the inputs exist · 4 clause(s)` |
+| `run_mutants_mbare.mjs --org <4395471> --base-org <7bf008b>` | `run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN` |
+| `lawpack_counts.mjs 7bf008b HEAD` | equal: jugad-literal-subject-list 90 · bare-catch 37 · receipt-testimony-read 5 · import-time-registry-read 2 · depcruise_errors 7 · every other 0; gates 298 / no-empty 272 / no-unused-vars 85 on both |
+
+On the empty plant the merged laws mode prints 104 assert lines (98 at a3cadcf: main's three units added asserts), 5 guard reds, 6 BLOCKED.
