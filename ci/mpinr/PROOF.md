@@ -149,3 +149,26 @@ BUILD lawpack · 1933 raw match(es) over 8/8 rules · findings: owners-only-stat
 - Law pack on LF trees (20 Nov 2026): 5759cce and the merged build both read `lawpack · 1940 raw match(es)`, every finding count equal, `depcruise_errors 7`.
 
 CHECKPOINT · STOPPED at 2026-11-20T01:32:16Z · merged tip bf561374bd63bdf650877ed62e7ac8306adaf2f3 on base 5759cce · no resolution hunk · witness GREEN MPINR own_source module · 9 clause(s) · run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN · resume from: the neutral machine's verdict of this push
+
+## THE MERGE OF MAIN 7bf008b (forks rows 1233 (2) / 1236, 21 Nov 2026)
+- Merge commit `63fd0d9847e2c76cf436f6259f67907a84d2800f` = main `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f` merged into `1451c8d` (a merge, no rebase, no force). `ci/mpinr/BASE` = 7bf008b, as row 1172 keyed it to the main merged.
+- **One conflicted file, `package.json`.** Main had extended `organism:selftest` (deck_lint, home_pin, probe, study_scope). It was resolved as main's bytes whole, plus the one member `&& node scripts/own_source.mjs selftest` at the chain's end. `git diff --numstat 7bf008b` → `1 1 package.json` (21 Nov 2026). `scripts/organism_test.mjs` and every `ci/` file of the other units are main's bytes.
+- **The two neutral legs of 63fd0d9 (run 44880854795, read by curl, 21 Nov 2026):**
+  - `npm test · node 24` (136775598791) **failure**;
+  - `npm test · node 22` (136775599006) cancelled;
+  - `hermetic twice · node 22` (136775599091) success;
+  - `hermetic twice · node 24` (136775598976) success.
+- **THE RED, NAMED, AND ITS CAUSE.** B1_VERDICT RED, new red `WITNESS ‹mpinr› · GREEN at head against its BASE`, cause `ONLY-NAMED`.
+  - unit ms1's witness member (scripts/organism_test.mjs `witnesses()`, the `lfTree` helper) hands the witness two LF trees built by `git --work-tree=<dir> checkout`. They are NOT repositories, and ONLY-NAMED read them through `git diff`, so it could not read at all.
+  - My Linux runs gave it real clones, so the defect never showed there.
+  - **The fix** (`b83ce4e0b10d776cce18f06010b578e44159223b`) compares the two trees as directories (CRLF-folded, `.git` and `node_modules` skipped), with no git.
+  - **Re-run in the member's own shape** (bare LF work trees built with their own index files, 21 Nov 2026): base 7bf008b reads `RED MPINR · SELFTEST · SUITE · NARROW · KILLED · GUARD · COPY · LEAF · ONLY-NAMED` (exit 1); the build reads `GREEN MPINR own_source module · 9 clause(s)` (exit 0). Mutants: `run_mutants: 9 of 9 mutant(s) RED by the clause that names them · control GREEN`.
+  - **This is a fix at the cause, not a retry**, because the witness changed.
+- **The neutral legs of b83ce4e (run 44887864043, read by curl at 2026-11-21T11:15:53Z):**
+  - `npm test · node 24` (136797053692) **success**, the leg that was red;
+  - `hermetic twice · node 22` (136797053860) success;
+  - `npm test · node 22` (136797053825) in_progress at the read;
+  - `hermetic twice · node 24` (136797053885) in_progress at the read.
+- **A named slip, repaired.** One local `git --work-tree checkout` was run without its own GIT_INDEX_FILE and rewrote this clone's index (never the working tree, never a commit). `git reset -q` restored it before any commit; the status after showed only the witness edit.
+
+CHECKPOINT · 2026-11-21T11:15:53Z · merge sha 63fd0d9 (main 7bf008b) · fix b83ce4e · witness GREEN MPINR own_source module · 9 clause(s) · run_mutants: 9 of 9 · control GREEN · legs of b83ce4e: npm test node 24 success, hermetic node 22 success, npm test node 22 and hermetic node 24 in progress at the read · resume from: their verdict
