@@ -287,6 +287,7 @@ W8-W10 replay mday's own temp-org plant (`ci/mday/witness_mday.mjs`), whose F-cl
   by the law). **Recommend (a)**, (b) as its fallback.
 - **F8 · one question per turn.** (a) Q1, his answer, bank, then Q2 (the one-question-per-message law, HOW_HE_LEARNS #1) ·
   (b) both in one message. **Recommend (a)**; (b) is the quiz-dump shape the gate's R2 refuses.
+- **F10 · a day-close answer the door refuses (another session's prompt in the slot, or no session id).** Options and recommendation in ROW 1246: (a) refuse `no-session`, re-ask once, then `end --dayq lost` · (b) straight to `--dayq lost` · (c) wait for the per-session record. **Recommend (a).**
 - **F9 · the two crack refusals of 21 Nov (row 1241 (3)).** Named to the mcrk owner, not specced here: (i) "no axis is ON"
   (`forge_session.mjs:658`), (ii) "no moment declared on axis d before his answer" (`:667`). The runner counts, over the
   days since mcrk landed, how many refusals cost a captured crack; counts only, then ruled. mdayq does not touch `crackRow`.
@@ -332,6 +333,59 @@ git diff --stat 7bf008b origin/claude/mjset-spec | tail -1  → 2 files changed,
   moments an axis" line — accurate as written, since the day-close pair is per DAY; touch only if the architect wants the
   digest to print it) · `scripts/teaching_bar.mjs:301-306` (reads `bankDueAt`, no edit needed; named because its selftest
   `:624-635` will exercise the new kind).
+
+## ROW 1246 · EVERY PLACE THIS UNIT TAKES HIS WORDS, AND WHO ELSE CAN WRITE THE SLOT (architect, by the runner, 21 Nov 2026)
+
+The ground (runner, his laptop, counts only, never re-derived here): `scripts/teaching_audit.mjs` `promptHook` (`:1635`,
+the record `prompt: { text, …, session_id, at }` at `:1640-1650`) writes `teaching_audit_last.json` on EVERY
+UserPromptSubmit of every session in this repo. Its one guard is `ARSENAL_ORGAN=1` (`:1872`), so the runner and architect
+sessions write it too. The audit's own Stop rows for 17-21 Nov: 101 audited turns, 43 session-mismatch. mbank is being
+amended so that teaching_audit keeps the record PER SESSION and `hisPrompt` reads its own session's record.
+
+### Where mdayq takes his words (file:line at 7bf008b, plus the mbank lines it would ride)
+
+| # | words | read where | through hisPrompt with its own session id? |
+|---|---|---|---|
+| R1 | the day-close answers Q1 / Q2 (the bytes banked) | `gaffer_brain.mjs capture` code door: on `claude/mbank-build` `cfdf866` `scripts/gaffer_brain.mjs:2748-2752`: `sessionId = CLAUDE_CODE_SESSION_ID`, `readHisPrompt({ sessionId, fresh: true, needTurn: true })` (`scripts/forge_session.mjs:674` → `hisPrompt` `:661-672`, the session check `:668`), then `codeDoorWords` | **YES.** mdayq adds no reader. It only adds `--moment day_close` to the same call. At base `7bf008b` there is no door: `scripts/gaffer_brain.mjs:2688-2689` takes `--said` (the teacher's copy) or stdin. So mdayq must build on mbank (F5 (a)). |
+| R2 | his gut word on each day-close answer | `codeDoorWords` → `classifyPrompt(prompt.text)` over the SAME `prompt` object from R1 (mbank `gaffer_brain.mjs:1322-1358`) | **YES**, the same read. It is not a second one. |
+| R3 | whether his message is an answer (so the bank is due) | the gate and the skeleton classify the turn's prompts from the session's OWN transcript (`scripts/teaching_gate.mjs:337`, `prompts.push` per transcript line), then `bankDueAt` (`study_scope.mjs:267`) | Not through hisPrompt, and it needs no session id: the transcript is this session's own file. It never banks bytes, only says "due". |
+| R4 | the crack row | **mdayq does not touch it.** Base `scripts/forge_session.mjs:3292` → `crackRow` (`:652-677`) reads `auditLast.prompt` directly (`:659-662`). The only check is the `since` floor, with no session id. On mbank, `:683` reads `hisPrompt(auditLast, { since })`, still **without `sessionId`** | **NO, today and on mbank `cfdf866`.** The crack row would inherit the per-session record only if mbank's amendment makes `crack` pass `CLAUDE_CODE_SESSION_ID` the way the bank does at `:2748-2750`. This is named to the mbank / mcrk owners. It is not fixed here. |
+| R5 | `day.mjs end` step 0 and `dayCloseDue` | read the pacer's `forge_session.json` + `forge_sessions.jsonl` and the bank's rows (`bankRows`, `gaffer_brain.mjs:927`) | They read no words at all, only moments, marks and bank rows by day. |
+
+So mdayq reads his words in exactly one place, R1, through `hisPrompt` with its own session id. When mbank's per-session
+record lands, R1 inherits it with no mdayq change. R4 is the one reader with no session id, and it belongs to mcrk.
+
+### The case: his answer and another session's prompt in the same turn
+
+1. He types Q1's answer in his study session S. promptHook writes the slot: `{text: his answer, session_id: S}`.
+2. Before the model's bank line runs in S, a runner or architect prompt in session R overwrites the shared slot:
+   `{text: R's prompt, session_id: R}`. This is the 43-of-101 class.
+3. **The shared slot as it stands (mbank `cfdf866`):** `readHisPrompt({ sessionId: S })` returns `other-session` (`:668`).
+   The bank refuses (`gaffer_brain.mjs:2751`), and nothing is banked: no copy of his words, and no row in R's words.
+   Without a session id (`CLAUDE_CODE_SESSION_ID` unset) the check is skipped (`:668` needs `sessionId`), and R's words
+   would be banked as his. The row's `session_checked: false` would be the only trace (mbank `gaffer_brain.mjs:1445`).
+4. **The per-session record (the amendment):** S reads S's own record. R's prompt cannot reach it, so the case cannot
+   happen for R1.
+
+**What mdayq does then (fork F10):**
+- (a) **Recommended.** A `day_close` bank refuses without a session id. This is stricter only, mdayq-scoped: `--moment
+  day_close` with `sessionId` null is refused `no-session`. On an `other-session` refusal the teacher asks the SAME
+  question once more, as one turn with the trio. His re-typed answer then lands as a fresh record of S. If that is
+  refused again, the model runs `day.mjs end --dayq lost`. The close runs and the line says `day-close: answer not
+  banked (door refused: other-session) · day taught`. Nothing is banked, there is no card, and nothing is red on him.
+  `dayCloseDue` (§3) counts banked rows only, so a refused answer is never counted as asked-and-banked. Once the
+  per-session record lands, the re-ask path stays as dead weight but harmless, and the next build may strike it (L9).
+- (b) No re-ask: the first refusal goes straight to `--dayq lost`. He re-types nothing, but one parallel prompt costs
+  the answer.
+- (c) Wait for mbank's amendment before mdayq builds (F5 (a) already orders mbank first). Then (a)'s re-ask is never
+  written, and only the `no-session` refusal is kept.
+
+What decides it: the runner's 43 / 101 mismatch rate measured again AFTER the per-session record lands. If it reads 0 for
+the code door, choose (c). New witness clauses for a build:
+- **W13 PARALLEL PROMPT:** a planted slot whose `session_id` is not the bank's. Base (mbank tip): refused `other-session`.
+  Build: refused, no row, `end` prints `ask first` again. Mutant M13 drops the `sessionId` argument.
+- **W14 NO SESSION ID:** `--moment day_close` with `CLAUDE_CODE_SESSION_ID` unset. Base: banked, `session_checked`
+  false. Build: refused `no-session`. Mutant M14 lets the null id through.
 
 ## 12 · CI ON THIS PUSH
 

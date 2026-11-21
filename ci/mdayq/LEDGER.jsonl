@@ -8,3 +8,4 @@
 {"ts":"2026-11-21T07:53:58.310Z","act":"selftest-scope","cmd":"node scripts/study_scope.mjs selftest","last_line":"study_scope selftest: 61 passed, 0 failed"}
 {"ts":"2026-11-21T07:53:58.310Z","act":"selftest-gate","cmd":"node scripts/teaching_gate.mjs selftest","last_line":"teaching_gate selftest: 130 passed, 0 failed"}
 {"ts":"2026-11-21T07:53:58.310Z","act":"spec","cmd":"write ci/mdayq/MDAYQ_SPEC.md","last_line":"spec written; no existing file edited"}
+{"ts":"2026-11-21T08:01:48Z","act":"row-1246","cmd":"edit ci/mdayq/MDAYQ_SPEC.md: section ROW 1246 + fork F10","last_line":"R1 via hisPrompt with own session id (mbank gaffer_brain.mjs:2748-2750); R4 crack row reads without sessionId (mbank forge_session.mjs:683)"}
