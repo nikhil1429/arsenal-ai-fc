@@ -25,6 +25,11 @@
 //     SIDECAR, append-only. His default: a re-lock never edits a capsule (immutable,
 //     mirror.mjs is their sole writer), so the fact lives beside them and rejirah.mjs's
 //     loadCapsules layers it in memory for every reader of a capsule.
+//   · SOLE WRITER of dressing-room/state/cracks.jsonl (unit mcrk, forks rows 1173 (1) / 1189) — THE CRACK ROW, append-only:
+//     `crack` writes ONE row at the moment his answer breaks — the text he typed, verbatim (teaching_audit_last.json's
+//     prompt, read-only; refused when absent, never a teacher copy), the concept, the axis and the moment from this
+//     organ's own session. It NEVER calls save(): forge_session.json is not written by it. The file is ignored by git
+//     (row 1189 (2), the private default of his 14 Aug ruling); notes_compiler.mjs reads it through readCracks().
 //   · CALLS, NEVER WRITES, THE POINTER LEDGER (rung L3, 15 Oct 2026 · fate 19 KEEP, additive).
 //     resume_pointer.mjs is the SOLE WRITER of dressing-room/state/resume_pointer.jsonl. Its
 //     `write` is handed the session's own pointer at every STOP this organ has (`pointer "<q>"`,
@@ -73,7 +78,8 @@
 // read-only lock-chain preview was invisible to anyone who read this header or ran the
 // script bare. The two docs now fail the selftest the moment either drops a verb.
 // MODES: start <concept> [--force] · step <0-11> · axis <a-i> now|done|defer
-//        · moment <kind> · pointer ["<question>"] · lockchain · resume · status · contract · boot · close · selftest
+//        · moment <kind> · pointer ["<question>"] · crack · lockchain · resume · status · contract · boot · close · selftest
+//        (an UNKNOWN verb is REFUSED by name, exit 1 — row 1189 (8); the bare invocation prints the usage, exit 0)
 // A3 (4 Sep 2026): `step 10`, `axis <x> done` and `close` are EVIDENCE-GATED — each
 //        refuses unless the bank (gaffer_brain.mjs, read-only from here) holds the row
 //        it names, and each takes `--no-rep-why "<reason>"` as a recorded, counted
@@ -88,6 +94,7 @@ import { readFileSync, writeFileSync, existsSync, renameSync, mkdirSync, rmSync,
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";   // W0-D: pathToFileURL for the import guard at the dispatch
 import { tmpdir } from "node:os";
+import { randomBytes } from "node:crypto";   // unit mcrk — the crack row's id
 import { execFileSync } from "node:child_process";   // LOCK-chain + topic-open spawns (outward loop, 8 Aug 2026)
 import { coreAxes } from "./registry.mjs";   // S10 #12 — per-concept core axes, ONE reader (twin literal died)
 import { write as writePointerRow, consume as consumePointerRow } from "./resume_pointer.mjs";   // L3 — the pointer ledger's SOLE WRITER; this organ only calls it
@@ -104,6 +111,9 @@ const REPS      = join(STATE_DIR, "reps_log.jsonl");           // READ-ONLY here
 // mirror.mjs is their only writer), so the fact is recorded beside them and layered in
 // memory by rejirah.mjs's loadCapsules. Append-only, one row per proven re-lock.
 const RELOCKS   = join(STATE_DIR, "relocks.jsonl");
+// unit mcrk (forks rows 1173 (1) / 1189) — SOLE WRITER of dressing-room/state/cracks.jsonl, THE CRACK ROW. Append-only, one
+// row per broken answer, written by `crack` alone (never through save()); gitignored (row 1189 (2)).
+export const CRACKS = join(STATE_DIR, "cracks.jsonl");
 
 // THE METHOD — PER-CONCEPT PIPELINE, verbatim order (PROJECT_OS.md).
 export const STEPS = [   // exported for learn_digest.mjs (forks row 649 (0)): the step names have ONE home
@@ -622,6 +632,70 @@ export function stopToPromptMs(auditLast, teaching, now = new Date()) {
   // away — neither is a measurement of how fast he answered. Both read as unmeasured.
   return ms >= 0 && ms <= 30 * 60000 ? Math.round(ms) : null;
 }
+// ---------------------------------------------------------------------------
+// THE CRACK ROW (unit mcrk, forks rows 1173 (1) / 1189) — his words at the moment his answer breaks
+// ---------------------------------------------------------------------------
+// At base the call `forge_session.mjs crack` (admitted by study_scope.mjs ALLOWED_CMD) fell to the usage line and exited 0,
+// writing nothing — the crack row had no owner, so no compiled crack item carried a moment or his words. `crack` is that
+// owner. Row 1189 (1) mcrk-1 a: his words come from the prompt record teaching_audit.mjs writes at UserPromptSubmit
+// (teaching_audit_last.json → prompt.text, byte for byte), REFUSED when absent — never a teacher copy, no `--said`.
+// (7) mcrk-7 a: no legal moment declared on the axis before his answer → REFUSED, never `moment:null`.
+// Pure until the one append; the session file is never written (no save(), no apply()).
+// The per-turn carrier (row 1189 (5) mcrk-5 a — carriers only): it rides the EXISTING question-moments line.
+const CRACK_CONTRACT = " · crack → ```diff likho to usi turn mein: node scripts/forge_session.mjs crack (no args)";
+const istDayOf = (iso) => {
+  const d = new Date(String(iso || ""));
+  return Number.isNaN(d.getTime()) ? null
+    : new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+};
+/** crackRow — PURE. The row `crack` would append, or why it refuses.
+ *  @param {{session:any, auditLast:any, bank?:any[]|null, now?:Date}} p @returns {{ok:true,row:any}|{ok:false,why:string}} */
+export function crackRow({ session, auditLast, bank = [], now = new Date() } = /** @type {any} */ ({})) {
+  const s = session;
+  if (!s || !s.concept) return { ok: false, why: "no active session — run `start <concept>` first" };
+  if (s.closed_at) return { ok: false, why: `session '${s.concept}' was closed at ${s.closed_at} — start a new one` };
+  const axis = s.current_axis && AXES.includes(s.current_axis) ? s.current_axis : null;
+  if (!axis) return { ok: false, why: "no axis is ON — declare it with `axis <x> now` first" };
+  const p = auditLast && typeof auditLast === "object" ? auditLast.prompt : null;
+  const pAt = p && typeof p.at === "string" ? Date.parse(p.at) : NaN, sAt = Date.parse(String(s.started_at || ""));
+  if (!p || typeof p.text !== "string" || !p.text.trim() || !Number.isFinite(pAt) || !Number.isFinite(sAt) || pAt < sAt)
+    return { ok: false, why: "his words are not on disk (the UserPromptSubmit record is absent) — no crack row is written from memory" };
+  // the moment his answer answered: the LAST non-refused moment declared on this axis before his prompt
+  const log = (Array.isArray(s.moments_log) ? s.moments_log : [])
+    .filter((m) => m && m.axis === axis && !m.refused && MOMENTS.includes(m.kind) && Number.isFinite(Date.parse(m.at)) && Date.parse(m.at) < pAt);
+  const m = log.length ? log[log.length - 1] : null;
+  if (!m) return { ok: false, why: `no moment declared on axis ${axis} before his answer — the answer to an undeclared question is not a crack row` };
+  const at = now.toISOString();
+  const bankRow = Array.isArray(bank)
+    ? bank.filter((r) => r && String(r.axis || "").toLowerCase() === axis && Number.isFinite(Date.parse(r.ts || "")) && Date.parse(r.ts) >= pAt)
+      .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))[0] || null
+    : null;
+  return { ok: true, row: {
+    v: 1, kind: "crack", id: `ck-${now.getTime().toString(36)}-${randomBytes(2).toString("hex")}`, at, day: istDayOf(at),
+    concept: s.concept, axis, moment: m.kind, moment_at: m.at,
+    words: p.text, words_src: "teaching_audit_last.prompt", prompt_at: p.at, prompt_session_id: typeof p.session_id === "string" ? p.session_id : null,
+    step: s.step, session_started_at: s.started_at, bank_of: bankRow && typeof bankRow.id === "string" ? bankRow.id : null,
+  } };
+}
+/** readCracks — the crack rows, read only: {rows, absent?, torn, error?}; rows null when the file exists and cannot be read. */
+export function readCracks(path = CRACKS) {
+  if (!existsSync(path)) return { rows: [], absent: true, torn: 0 };
+  let text;
+  try { text = readFileSync(path, "utf8"); } catch (e) { return { rows: null, torn: 0, error: String((e && e.code) || (e && e.message) || e).slice(0, 120) }; }
+  const parsed = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((l) => l.trim())
+    .map((l) => { try { return JSON.parse(l); } catch { return null; } });   // a torn line reads as null and is counted, never thrown
+  const rows = parsed.filter((o) => o && typeof o === "object" && !Array.isArray(o) && o.kind === "crack");
+  return { rows, torn: parsed.length - rows.length };
+}
+/** sameCrack — the row already written for THIS answer (one forge session, one prompt): the idempotence key. */
+export const sameCrack = (rows, row) => (rows || []).find((r) => r && r.session_started_at === row.session_started_at && r.prompt_at === row.prompt_at) || null;
+/** appendCrack — the ONE write: append, then read the row back off the disk before ok:true. */
+export function appendCrack(row, path = CRACKS) {
+  try { mkdirSync(dirname(path), { recursive: true }); appendFileSync(path, JSON.stringify(row) + "\n"); }
+  catch (e) { return { ok: false, why: `append failed (${String((e && e.message) || e).slice(0, 120)}) — nothing written` }; }
+  const back = readCracks(path);
+  return back.rows && back.rows.some((r) => r.id === row.id) ? { ok: true, id: row.id } : { ok: false, why: "read-back: the row is not on the disk" };
+}
 function contractLines(s, now = new Date(), clock = undefined) {
   if (!s || !s.concept) return [];
   if (s.closed_at) return [];                                    // a closed session pacts nothing
@@ -653,7 +727,7 @@ function contractLines(s, now = new Date(), clock = undefined) {
   if (skipped.length) L.push(`  ⚠ SKIPPED so far: ${skipped.map((i) => `${i} ${STEPS[i]}`).join(" · ")} — say so out loud, or go back.`);
   L.push(`  axes:${s.current_axis && !s.axes_done.includes(s.current_axis) && !s.axes_deferred.includes(s.current_axis) ? ` ON ${s.current_axis} ·` : ""} done ${s.axes_done.join("") || "—"} · deferred ${s.axes_deferred.join("") || "—"} · left ${AXES.filter((a) => !s.axes_done.includes(a) && !s.axes_deferred.includes(a)).join("") || "—"}`
     + (ungraded.length ? ` · ungraded ${ungraded.join("")}` : ""));
-  L.push(`  question-moments used: ${MOMENTS.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these ${MOMENTS.length} are legal — no quiz-dump)`);
+  L.push(`  question-moments used: ${MOMENTS.map((m) => `${m} ${s.question_moments[m] || 0}`).join(" · ")} (only these ${MOMENTS.length} are legal — no quiz-dump)${CRACK_CONTRACT}`);
   // forks row 276 (1)(a): the per-axis count of step 3's per-idea pictures — said, never gated (the ORDER rides the
   // TURN SKELETON's line 0, the one home of the checkable rules)
   if (n === 3) L.push(`  pictures per axis (picture first at every new idea): ${Object.entries(s.pictures_by_axis || {}).map(([a, k]) => `${a} ${k}`).join(" · ") || "none yet"}`);
@@ -2587,6 +2661,46 @@ function selftest() {
       && srcL3.includes("SOLE WRITER of dressing-room/state/forge_session.json. Nothing else writes it."));
   }
 
+  // ── unit mcrk (forks rows 1173 (1) / 1189) · THE CRACK ROW ───────────────────
+  {
+    const T0 = new Date("2026-11-20T04:00:00.000Z"), iso = (m) => new Date(T0.getTime() + m * 60000).toISOString();
+    const sess = { ...blank("tokenization", T0), step: 3, current_axis: "c", started_at: iso(0), updated_at: iso(5),
+      moments_log: [{ kind: "pehle_guess", axis: "c", at: iso(1) }, { kind: "check_q", axis: "b", at: iso(2) }, { kind: "check_q", axis: "c", at: iso(3) },
+        { kind: "check_q", axis: "c", at: iso(3.5), refused: true }, { kind: "jirah", axis: "c", at: iso(6) }] };
+    const words = "shaky — ek word ek token hota hai\n  (dekho)";
+    const aud = { prompt: { text: words, at: iso(4), session_id: "sess-x" } };
+    const r = crackRow({ session: sess, auditLast: aud, bank: [{ id: "cap-early", axis: "c", ts: iso(3) }, { id: "cap-late", axis: "c", ts: iso(4.2) }, { id: "cap-b", axis: "b", ts: iso(4.1) }], now: new Date(iso(4.5)) });
+    assert("CRACK ROW — his words byte for byte from the prompt record; concept, axis, the LAST non-refused moment on the axis before his prompt; the bank row of the axis after it",
+      r.ok && r.row.words === words && r.row.words_src === "teaching_audit_last.prompt" && r.row.concept === "tokenization" && r.row.axis === "c"
+      && r.row.moment === "check_q" && r.row.moment_at === iso(3) && r.row.prompt_at === iso(4) && r.row.prompt_session_id === "sess-x" && r.row.step === 3
+      && r.row.session_started_at === iso(0) && r.row.bank_of === "cap-late" && r.row.day === "2026-11-20" && /^ck-[0-9a-z]+-[0-9a-f]{4}$/.test(r.row.id) && r.row.v === 1 && r.row.kind === "crack", JSON.stringify(r).slice(0, 300));
+    const why = (o) => (o.ok ? "" : o.why);
+    assert("CRACK ROW REFUSES — no prompt record · a prompt from before this session · no axis ON · no moment before his answer · a closed session (mcrk-1 a · mcrk-7 a)",
+      /his words are not on disk/.test(why(crackRow({ session: sess, auditLast: {}, now: T0 })))
+      && /his words are not on disk/.test(why(crackRow({ session: sess, auditLast: { prompt: { text: words, at: iso(-1) } }, now: T0 })))
+      && /his words are not on disk/.test(why(crackRow({ session: sess, auditLast: { prompt: { text: "", at: iso(4) } }, now: T0 })))
+      && /no axis is ON/.test(why(crackRow({ session: { ...sess, current_axis: null }, auditLast: aud, now: T0 })))
+      && /no moment declared on axis c before his answer/.test(why(crackRow({ session: sess, auditLast: { prompt: { text: words, at: iso(0.5) } }, now: T0 })))
+      && /was closed/.test(why(crackRow({ session: { ...sess, closed_at: iso(5) }, auditLast: aud, now: T0 })))
+      && crackRow({ session: sess, auditLast: aud, bank: null, now: T0 }).ok && crackRow({ session: sess, auditLast: aud, bank: null, now: T0 }).row.bank_of === null);
+    const cp = join(tmpdir(), `forge_cracks_selftest_${process.pid}.jsonl`);
+    rmSync(cp, { force: true });
+    const a1 = readCracks(cp), w1 = appendCrack(r.row, cp), back = readCracks(cp);
+    assert("CRACK ROW ON DISK — absent reads as no rows; the append reads its row back; the same answer is found again (one row per answer)",
+      a1.absent === true && a1.rows.length === 0 && w1.ok && back.rows.length === 1 && back.rows[0].words === words
+      && sameCrack(back.rows, crackRow({ session: sess, auditLast: aud, now: new Date(iso(9)) }).row)?.id === r.row.id
+      && sameCrack(back.rows, { session_started_at: iso(0), prompt_at: iso(7) }) === null);
+    rmSync(cp, { force: true });
+    const srcC = readFileSync(fileURLToPath(import.meta.url), "utf8"), dspC = srcC.slice(srcC.indexOf("switch (mode" + ") {"));
+    const aC = dspC.indexOf('    case "' + 'crack":'), blkC = aC < 0 ? "" : dspC.slice(aC, dspC.indexOf('\n    case "', aC + 8)).split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
+    assert("CRACK VERB NEVER WRITES THE SESSION — its case calls no save() and no apply(); appendCrack is its one write (spec §4)",
+      blkC.length > 0 && /appendCrack\(r\.row\)/.test(blkC) && !/\bsave\(/.test(blkC) && !/\bapply\(/.test(blkC));
+    assert("UNKNOWN VERB REFUSES BY NAME (row 1189 (8)) — the default branch names the verb and sets exit 1; the bare call keeps the usage",
+      /unknown verb "\$\{mode\}"/.test(dspC) && /process\.exitCode = 1/.test(dspC.slice(dspC.indexOf("    default:"))));
+    assert("THE CONTRACT CARRIES THE CRACK LINE (mcrk-5 a) — on the existing question-moments line",
+      contractLines({ ...sess, updated_at: new Date().toISOString(), started_at: new Date().toISOString() }).some((l) => l.includes("question-moments used:") && l.includes("node scripts/forge_session.mjs crack")));
+  }
+
   console.log(`\nforge_session selftest: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
@@ -3156,6 +3270,9 @@ export async function hookMain() {
       // night left anything behind at all. Unconditional, loudest at zero.
       const rl = repsBankedLine(reps);
       if (rl) R.push(`  ${rl}`);
+      // unit mcrk — the crack rows of THIS session, read only (cracks.jsonl's writer is `crack` above)
+      { const ck = readCracks(); R.push(ck.rows === null ? `  cracks: UNKNOWN — cracks.jsonl cannot be read (${ck.error})`
+        : `  cracks this session: ${ck.rows.filter((c) => c.session_started_at === s.started_at).length} (one row per broken answer, written by \`crack\` in the \`\`\`diff turn)`); }
       R.push("  → say all of this out loud to him, verbatim, before the delta.");
       R.push(recorded === false
         ? `forge_session: history append FAILED — the coverage above is the ONLY copy; save it (F5)`
@@ -3166,14 +3283,40 @@ export async function hookMain() {
       console.log(R.join("\n"));
       break;
     }
+    case "crack": {
+      // unit mcrk — THE CRACK ROW. The teacher runs it in the SAME turn it writes the ```diff (the turn whose prompt was his
+      // broken answer). No argument: his words are read from the prompt record, never typed by anyone. It NEVER calls
+      // save()/apply() — the open session file is not written (spec §4); cracks.jsonl is written by appendCrack alone.
+      const s = live(need(load()));
+      const bank = await readBank(s.concept);
+      const r = crackRow({ session: s, auditLast: loadAuditLast(), bank: bank.rows, now: new Date() });
+      if (!r.ok) { console.error(`forge_session: crack REFUSED — ${r.why}`); process.exit(1); }
+      const prior = readCracks();
+      if (prior.rows === null) { console.error(`forge_session: crack REFUSED — cracks.jsonl exists and cannot be read (${prior.error}) — nothing written`); process.exit(1); }
+      const dup = sameCrack(prior.rows, r.row);
+      if (dup) { console.log(`forge_session: crack already written ${dup.id} — nothing written (one row per answer)`); break; }
+      const w = appendCrack(r.row);
+      if (!w.ok) { console.error(`forge_session: crack REFUSED — ${w.why}`); process.exit(1); }
+      const row = r.row;
+      // his words are never echoed (data private): their length only
+      console.log(`forge_session: crack written ${row.id} · ${row.concept} axis ${row.axis} · moment ${row.moment} · his words ${row.words.length} char(s) verbatim from the prompt record`
+        + ` · bank_of ${row.bank_of || (bank.rows === null ? `null (the bank could not be read: ${bank.why})` : "null (no bank row of this axis since his answer)")}`);
+      break;
+    }
     case "selftest": selftest(); break;
     default:
+      // row 1189 (8): an UNKNOWN verb is REFUSED BY NAME, exit 1 — the silent exit 0 let a typo read as a success (the
+      // `crack` call fell here at base and wrote nothing). exitCode, not exit(): this body also runs inside a hook's CALL.
+      if (mode !== undefined) {
+        console.error(`forge_session: REFUSED — unknown verb "${mode}" (nothing written). The verbs:`);
+        process.exitCode = 1;
+      }
       // `lockchain` was missing here too until the 10 Aug DEAD_COMMAND repair — a verb
       // dispatched at the `case` below but named by neither doc is a command only its
       // author knows exists. Keep this line and the header MODES block in step with the
       // switch; the selftest reads all three out of this file's own source and fails if
       // they diverge (grep -n "DISPATCH DOC WIRE").
-      console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | pointer [\"<the exact unanswered micro-question>\"] (write at EVERY stop; bare = read back — row 68 (b)) | lockchain (read-only preview of the step-10 chain) | resume (wake a STALE session where it stands — nothing blanked) | status | contract | boot | close | selftest"
+      console.log("forge_session: start <concept> [--force] | step <0-11> | axis <a-i> now|done|defer (arg REQUIRED — bare form refuses) | moment <" + MOMENTS.join("|") + "> | pointer [\"<the exact unanswered micro-question>\"] (write at EVERY stop; bare = read back — row 68 (b)) | crack (no args: his words of this turn, verbatim, at the moment his answer breaks — the ```diff turn) | lockchain (read-only preview of the step-10 chain) | resume (wake a STALE session where it stands — nothing blanked) | status | contract | boot | close | selftest"
         + `\n  evidence gates (A3): \`step 10\` needs a judged \`--probe ${JIRAH_PROBE}\` row for EVERY done axis + a negative-space probe + one cross_axis row · \`axis <x> done\` needs his banked Bolo + an interview-register line (NO jirah — that moved to the STEP 9 round, his ruling 4 Sep 2026) · \`close\` needs every banked answer judged. Each takes ${GATE_BYPASS_FLAG} "<reason>" — recorded, counted, method_clean false.`);
   }
 }
