@@ -155,9 +155,11 @@ export const BASELINE = {
   // landing (`node scripts/lawpack.mjs report`, the own-literal census line), never typed from a spec. Read on main fb42118:
   // own-literal 39 = mcon's census 38 (its conductor repair landed) + scripts/mutagen.mjs:967, which F6 (a)'s whole-line-comment
   // filter resolves; unresolved 77 = mcon's 78 − that one. A unit landing after this law lowers its number as its last commit,
-  // read from its own land tree. May only FALL.
+  // read from its own land tree. May only FALL. RE-READ 21 Nov 2026 on main 7bf008b merged (rows 1233 (2) / 1236): landed
+  // units brought two new unresolved sites (forge_session.mjs's unknown-verb test, row 1189 (8)), so 77 → 79 is the tree's
+  // read, never this law's rise; own-literal still 39.
   "own-literal-pin": 39,
-  "own-source-pin-unresolved": 77,
+  "own-source-pin-unresolved": 79,
   depcruise_errors: 7,
 };
 
@@ -651,7 +653,9 @@ export function ownLiteralPinsOf(raw, rel, kit) {
         if (f && f.type === "CallExpression" && f.callee.type === "MemberExpression" && !f.callee.computed && f.callee.property.name === "filter") {
           const sp = f.callee.object;
           if (sp && sp.type === "CallExpression" && sp.callee.type === "MemberExpression" && !sp.callee.computed && sp.callee.property.name === "split" && newline(sp.arguments[0]) && sp.arguments.length === 1) {
-            const under = range(sp.callee.object, pos, depth + 1);
+            // depth + 3: the join, the filter and the split each spend one level of the census's own budget, exactly as its
+            // generic member-call walk would (the definition is mcon's; a deeper reach here would count sites it cuts off)
+            const under = range(sp.callee.object, pos, depth + 3);
             if (!under) return null;
             const drop = dropOf(f.arguments[0]);
             return under !== "unresolved" && !under.drop && drop && f.arguments.length === 1 ? { a: under.a, b: under.b, drop } : "unresolved";
