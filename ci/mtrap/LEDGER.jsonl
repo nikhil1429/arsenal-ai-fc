@@ -9,3 +9,5 @@
 {"ts":"2026-11-21T05:57:48.424Z","act":"depcruise-head","cmd":"npx depcruise scripts --config .dependency-cruiser.cjs","last_line":"x 7 dependency violations — the same 7 as base; learnstate → notes_compiler edge present, not circular"}
 {"ts":"2026-11-21T05:57:48.458Z","act":"xray","cmd":"node scripts/xray.mjs report | grep Q2/Q5 (cut and tip)","last_line":"Q2 (0) · Q5 (0) at both"}
 {"ts":"2026-11-21T05:57:48.490Z","act":"selftests-head","cmd":"notes_compiler · forge_session · learnstate selftest","last_line":"55 passed, 0 failed · 243 passed, 0 failed · ALL CHECKS PASSED (149 → 152 checks)"}
+{"ts":"2026-11-21T06:02:41.707Z","act":"clause-witness-head","cmd":"node ci/witness/mtrap/witness_traps.mjs plants --base-tree <git archive 5301f15>","last_line":"PLANTS mtrap · 10 of 10 plant(s) as expected"}
+{"ts":"2026-11-21T06:02:41.729Z","act":"clause-witness-base","cmd":"node ci/witness/mtrap/witness_traps.mjs plants --tree <git archive 5301f15> --base-tree <same>","last_line":"PLANTS mtrap · 0 of 10 plant(s) as expected"}
