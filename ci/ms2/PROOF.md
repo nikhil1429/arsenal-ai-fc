@@ -356,3 +356,11 @@ FK5 stand, mf2 is a second no-cause red beside mlv3), FK9 is open, and no retry 
 - **Its neutral legs:** read once each, after this push, through the public API (curl, no token). They are named in the
   CHECKPOINT line below (a push of its own, made only to name them) and in the final message. If a leg is red, its red and
   cause are named; there is no retry.
+
+**CHECKPOINT (21 Nov 2026, unit ms2, rows 1233 (2) / 1236)**: merge `42faaa39955c860d5483d80c47c76329534ea7e1` (main 7bf008b) ·
+tip `e8d4a196967f1dae676427d89d52bfaaedeb4a70` · run 44880028090. Each leg was read once by curl with no token, because `ci_verdict.mjs` answered 403.
+`npm test · node 22` (job 136773063657) was **cancelled** at the `timeout-minutes` bound. Its head step ran 3544 s, and the merge-base and verdict steps were skipped.
+`npm test · node 24` (job 136773063986) was **cancelled** at the same bound. Its head step ran 3531 s, with the same two steps skipped. Before the head step, setup took 63 s on node 22 and 75 s on node 24.
+The neutral side jobs `hermetic twice · node 22 / node 24` (jobs 136773064002 / 136773064012) are both **success**.
+The cause is FK8, unchanged. The head step alone fills the 60-minute bound on windows-latest. The FK8 A trigger cannot shrink it here, because this merge adds LANDED_ON to 12 ci dirs, so their L-legs run on top of the head leg.
+No red assert was read: the legs died at the bound, not on a clause. There is no retry. FK8 and FK7 (mport's L-leg on Windows, still unread) stay open for the architect.
