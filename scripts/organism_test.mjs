@@ -41,9 +41,18 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
 const STATE = join(ROOT, "dressing-room", "state");
 const NODE = process.execPath;
+// unit mherm T2 (forks row 1157 (1), 20 Nov 2026): THE RUN'S TEMP DIR IS ITS OWN. One dir per process, made here, handed to
+// this process and to every child as TMPDIR/TEMP/TMP (os.tmpdir() reads them: TMPDIR on POSIX, TEMP then TMP on Windows),
+// and removed when the process exits. Before this, the selftests of five organs left a file or a dir in the shared temp dir on every run
+// (hippocampus, harvest, mirror, pulse, done; ci/mherm/PROOF.md W4) — never read again, but a run that leaves anything
+// behind is not a function of its tree alone. A spawn handed its own env gets the same three keys in run() below.
+const RUN_TMP = mkdtempSync(join(tmpdir(), "organism-run-"));
+for (const k of ["TMPDIR", "TEMP", "TMP"]) process.env[k] = RUN_TMP;
+process.on("exit", () => { try { rmSync(RUN_TMP, { recursive: true, force: true }); } catch { /* the OS's problem after this */ } });
 
 let pass = 0, fail = 0;
-const fails = [], passed = [];
+// unit mdtl: `causes` holds one entry per failing witness clause, `<red name> · <ID> · <text>` (witness_cause.mjs causeText)
+const fails = [], passed = [], causes = [];
 const assert = (name, cond, detail) => {
   if (liveAssert(name)) return;   // B1 (b): a LIVE member under the hermetic profile is named, never judged
   if (cond) { pass++; passed.push(name); console.log(`  ok   ${name}`); }
@@ -66,7 +75,7 @@ const MEMBER_BOUND_MS = (() => { const v = Number(process.env.ORGANISM_TEST_MEMB
 // code, so a reader can say "killed by the suite bound" and never mistake the kill for a non-zero exit.
 const run = (args, opts = {}) => {
   const bound = opts.timeout || 120000;
-  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: bound, ...(opts.env ? { env: opts.env } : {}) });
+  const r = spawnSync(NODE, args, { cwd: opts.cwd || ROOT, encoding: "utf8", timeout: bound, ...(opts.env ? { env: { ...opts.env, TMPDIR: RUN_TMP, TEMP: RUN_TMP, TMP: RUN_TMP } } : {}) });
   const killed = !!(r.error && /** @type {NodeJS.ErrnoException} */ (r.error).code === "ETIMEDOUT");
   return { code: r.status, out: (r.stdout || "") + (r.stderr || ""), ...(killed ? { killed: bound } : {}) };
 };
@@ -1617,7 +1626,12 @@ async function laws() {
       const G = await import(pathToFileURL(join(ROOT, "scripts", "gate.mjs")).href);      // S7 — the declared-consumers table and its resolver
       const B = await import(pathToFileURL(join(ROOT, "scripts", "brain.mjs")).href);     // S7 — jobConsumers: who a job_input lane's downstream jobs actually are
       const cfg = (() => { try { return JSON.parse(readFileSync(join(ROOT, "dressing-room", "state", "brain_config.json"), "utf8")); } catch { return null; } })();
-      const ledgerLanes = (() => {
+      // unit mherm T3 (forks row 1157 (1), F3 A): brain_ledger.jsonl is GITIGNORED — absent in a fresh tree, born by a run —
+      // so under the hermetic profile this block was entered only when an EARLIER run had left the file: ten asserts that
+      // existed on a second run and not on the first. It is NAMED LIVE here, one line, never silently skipped; the full
+      // profile reads the ledger exactly as before. (unit mherm2 plants a ledger fixture so the ten run on every push.)
+      const ledgerLanes = PROFILE === "hermetic" && liveNamed("LOAD ZERO · the brain-ledger lane block (every ledger lane declared · S7 RATCHET · RUNG A ledger-side)",
+        "reads state/brain_ledger.jsonl — gitignored: absent in a fresh tree, born by a run") ? null : (() => {
         try {
           const seen = new Set();
           for (const l of readFileSync(join(ROOT, "dressing-room", "state", "brain_ledger.jsonl"), "utf8").split(/\r?\n/)) {
@@ -2315,6 +2329,54 @@ function hermetic() {
   }
   assert("…and that log is gitignored, so a test run can never reach the public remote",
     run(["-e", `process.exit(require('child_process').execSync('git check-ignore -q scripts/thalamus.log && echo y || echo n',{cwd:${JSON.stringify(ROOT)}}).toString().trim()==='y'?0:1)`]).code === 0);
+  mhermClauses();
+}
+
+// ── unit mherm · W1 + W3 RIDE THE SUITE (forks row 1157 (3), F2 C, 20 Nov 2026) ─────────────────────────────────────────
+// The hermetic run must be a function of the tree alone. Two of its five clauses are cheap enough to run on every push, so
+// they live here; W2 · W4 · W5 (a fresh clone under the temp dir, the whole run twice) are the workflow's own step, because a
+// whole-suite double run cannot live inside the suite it measures. Both run on a COPY of the tracked tree (`git ls-files`,
+// never a tree copy: his gitignored state never leaves ROOT) placed under this run's own temp dir, so the copy sits UNDER the
+// temp dir exactly as a fresh clone in %TEMP% or /tmp does — the position that reddened the sandbox before unit mherm.
+//   W3 · `laws` (hermetic) on the copy, without and then with a one-row brain_ledger.jsonl planted in the COPY's state dir
+//        (by node, never a shell): the verdict lines must be byte-equal (T3 names the ledger block LIVE).
+//   W1 · the copy's `sandbox.mjs selftest`, its child's temp dir = this run's (an ANCESTOR of the copy): exit 0, and the
+//        canary's live-state targets in the copy never created (T1: the sandbox's own .tmp; F1 B: no temp allowance).
+function mhermClauses() {
+  const VL = /^ {2}(ok {2}|FAIL|LIVE) |^organism_test:/;
+  /** @param {string} out */
+  const vlines = (out) => String(out).split(/\r?\n/).filter((l) => VL.test(l)).join("\n");
+  const T = mkdtempSync(join(RUN_TMP, "mherm-"));
+  const tree = join(T, "tree");
+  try {
+    const ls = spawnSync("git", ["ls-files", "-z"], { cwd: ROOT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, windowsHide: true });
+    const files = ls.status === 0 ? String(ls.stdout).split("\0").filter(Boolean) : [];
+    if (files.length) { for (const rel of files) if (existsSync(join(ROOT, rel))) cpSync(join(ROOT, rel), join(tree, rel)); }
+    // a plain tree (no .git: a witness hands one) holds no gitignored state of his, so a copy of it is the tree itself
+    else cpSync(ROOT, tree, { recursive: true, filter: (src) => !/[\\/](node_modules|\.git)([\\/]|$)/.test(src.slice(ROOT.length)) });
+    // the copy's sandbox builds from ITS `git ls-files`, so the copy is a git repo: init-and-add, no commit (as sandbox.mjs does)
+    for (const g of [["init", "-q"], ["add", "-A"]]) spawnSync("git", ["-c", "core.autocrlf=false", ...g], { cwd: tree, stdio: "ignore", windowsHide: true });
+    if (existsSync(join(ROOT, "node_modules"))) symlinkSync(join(ROOT, "node_modules"), join(tree, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+    const env = { ...process.env, ORGANISM_TEST_PROFILE: "hermetic" };
+    const ledger = join(tree, "dressing-room", "state", "brain_ledger.jsonl");
+    const w3a = run([join(tree, "scripts", "organism_test.mjs"), "laws"], { cwd: tree, env });
+    mkdirSync(dirname(ledger), { recursive: true });
+    writeFileSync(ledger, "{}\n");
+    const w3b = run([join(tree, "scripts", "organism_test.mjs"), "laws"], { cwd: tree, env });
+    rmSync(ledger, { force: true });
+    const a = vlines(w3a.out), b = vlines(w3b.out);
+    assert("MHERM W3 · a planted gitignored brain_ledger.jsonl changes no hermetic verdict line of `laws` (a tracked copy, run without and with the plant)",
+      a.length > 0 && a === b, `without the plant: ${a.split("\n").pop() || "(no headline)"} · with it: ${b.split("\n").pop() || "(no headline)"}`);
+    const w1 = run([join(tree, "scripts", "sandbox.mjs"), "selftest"], { cwd: tree });
+    const canary = join(tree, "dressing-room", "state", "CANARY_MUST_NEVER_EXIST.json");
+    const head = w1.out.trim().split(/\r?\n/).filter((l) => /^sandbox: /.test(l)).pop() || "(no sandbox headline)";
+    assert("MHERM W1 · the sandbox collar denies the canary for a tree that sits UNDER the temp dir (a tracked copy under this run's own temp)",
+      w1.code === 0 && !existsSync(canary) && !existsSync(ledger),
+      `${redWhy(w1)} · ${head}${existsSync(canary) ? " · the canary's live-state file was CREATED in the copy" : ""}${existsSync(ledger) ? " · the canary appended the copy's brain_ledger" : ""}`);
+  } finally {
+    try { unlinkSync(join(tree, "node_modules")); } catch { /* no link */ }
+    rmSync(T, { recursive: true, force: true });
+  }
 }
 
 // ── 5. THE LEARNING PATH, END TO END ─────────────────────────────────────────
@@ -2951,6 +3013,7 @@ async function witnesses() {
   const headSha = spawnSync("git", ["-C", ROOT, "rev-parse", "--verify", "-q", "HEAD"], { encoding: "utf8", windowsHide: true });
   const head = String(headSha.stdout || "").trim();
   const nm = join(ROOT, "node_modules");
+  const wc = existsSync(join(HERE, "witness_cause.mjs")) ? await import("./witness_cause.mjs") : null;
   for (const unit of units) {
     const u0 = Date.now();
     const name = (what) => `WITNESS ‹${unit}› · ${what}`;
@@ -2998,6 +3061,15 @@ async function witnesses() {
       // row 1153 (2) F-7 A: every PORT_HELD machine line the witness prints rides as a named measurement line
       for (const l of out.split(/\r?\n/).map((x) => x.trim()).filter((x) => /^PORT_HELD /.test(x))) assert(name(`measured · ${l}`), true);
       assert(name("GREEN at head against its BASE"), j.ok, j.ok ? "" : `red beyond BOUND: ${j.left}`);
+      // unit mdtl (forks row 1186 F1 A · F2 R2): the red's CAUSE, built by witness_cause.mjs from public bytes only (a clause id
+      // that is a literal of the witness's own tracked source, its header claim line, the member's literals); it rides the
+      // machine line alone, so the judged name and detail above stay byte-identical (every KNOWN_RED entry keeps its match).
+      // The import is guarded by the module's presence: a base tree measured by this instrument has no witness_cause.mjs.
+      if (!j.ok && wc) {
+        const wsrc = readFileSync(join(dir, /** @type {string} */ (witnessFile(dir, unit))), "utf8");
+        const kind = killed ? "killed" : j.left.startsWith(wc.MEMBER.GRAMMAR) ? "grammar" : "clauses";
+        for (const c of wc.causesOf({ left: j.left, src: wsrc, kind, code: r.status })) causes.push(wc.causeText(name("GREEN at head against its BASE"), c));
+      }
     } finally {
       for (const t of ["org", "base"]) { try { unlinkSync(join(tmp, t, "node_modules")); } catch {} }
       try { rmSync(tmp, { recursive: true, force: true }); } catch {}
@@ -3129,7 +3201,7 @@ async function main() {
   console.log(`\nORGANISM_TEST_VERDICT ${JSON.stringify({ modes: chosen, pass, fail, exit: v.exit,
     ruled: v.ruled.map((f) => ({ assert: f.name, row: f.entry.row, owner: f.entry.owner })),
     unruled: v.unruled.map((f) => ({ assert: f.name, detail: f.detail || null })), stale: v.stale, invalid: v.invalid,
-    profile: PROFILE, reds: fails.map((f) => f.name), live: lived })}`);
+    profile: PROFILE, reds: fails.map((f) => f.name), live: lived, ...(causes.length ? { causes } : {}) })}`);
   console.log(`\n${"=".repeat(70)}\norganism_test: ${pass} passed, ${fail} failed · ruled ${v.ruled.length} · UNRULED ${v.unruled.length}`
     + (v.stale.length ? ` · STALE ${v.stale.length}` : "") + (v.invalid.length ? ` · INVALID ${v.invalid.length}` : "")
     + (PROFILE === "hermetic" ? ` · LIVE ${lived.length} (hermetic: named, not run)` : ""));

@@ -19,13 +19,17 @@
 //   · selftest — every pure part on fixtures, and the reader on a planted fetch (no network).
 // A red is identified by its assert NAME with digit runs folded ("all 122 organs" and "all 123
 // organs" are one member): a tree that gains a file must not turn an old red into a new one.
-// Annotations carry NAMES only — never a detail line, which can quote a state file.
+// Annotations carry NAMES only — never a detail line, which can quote a state file. UNIT mdtl (forks row 1186 F1 A · F2 R2):
+// a NEW witness red also carries its CAUSE inside its own NEW RED message and the verdict payload (`cause`), and only a
+// cause that verifyCause (scripts/witness_cause.mjs) rebuilds byte for byte from the witness's own tracked source or a
+// member literal; anything else is WITHHELD. No annotation is added; a GREEN head's output is byte-identical to before.
 // MODES: compare · selftest · <sha>
 // CLI: node scripts/ci_verdict.mjs <sha> [--repo owner/name]
 //      node scripts/ci_verdict.mjs compare --head <file> --base <file> --label <l> [--head-sha s] [--base-sha s] [--base-instrument f]
 // ============================================================================
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { verifyCause, sourcePaths } from "./witness_cause.mjs";
 
 const DEFAULT_REPO = "nikhil1429/arsenal-ai-fc";
 const VERDICT_TITLE = "B1 VERDICT";
@@ -42,14 +46,15 @@ export async function frozenBaseline(href = new URL("./lawpack.mjs", import.meta
 }
 
 /** the machine line organism_test.mjs prints, parsed; null when the run never reached it (no headline)
- *  @param {string} text @returns {{ pass: number, fail: number, reds: string[], live: string[], profile: string, lawpack: Record<string, number> | null } | null} */
+ *  @param {string} text @returns {{ pass: number, fail: number, reds: string[], live: string[], profile: string, lawpack: Record<string, number> | null, causes: string[] } | null} */
 export function parseSuite(text) {
   const line = String(text).split(/\r?\n/).find((l) => l.startsWith("ORGANISM_TEST_VERDICT "));
   if (!line) return null;
   let j = null;
   try { j = JSON.parse(line.slice("ORGANISM_TEST_VERDICT ".length)); } catch { return null; }
   if (!j || !Array.isArray(j.reds)) return null;
-  return { pass: Number(j.pass) || 0, fail: Number(j.fail) || 0, reds: j.reds.map(String), live: Array.isArray(j.live) ? j.live.map(String) : [], profile: String(j.profile || "full"), lawpack: parseLawpack(text) };
+  return { pass: Number(j.pass) || 0, fail: Number(j.fail) || 0, reds: j.reds.map(String), live: Array.isArray(j.live) ? j.live.map(String) : [], profile: String(j.profile || "full"), lawpack: parseLawpack(text),
+    causes: Array.isArray(j.causes) ? j.causes.map(String) : [] };
 }
 
 /** THE LAW PACK'S COUNTS (unit mlaw, forks row 1137 (2) F3 A): organism_test.mjs's `ORGANISM_TEST_LAWPACK {"<law>":<n>,…}` line,
@@ -136,15 +141,40 @@ export function annotate(level, title, names, cap = 10) {
   return out;
 }
 
-/** every line `compare` prints, in order: the reds, then the ONE verdict annotation, then the plain verdict line */
-export function compareLines(head, base, label, headSha = "", baseSha = "", baseSrc = "", baseline = null) {
+/** unit mdtl: the verified causes of every NEW red that owns one, { "<red name>": ["<ID> · <text>", …] } (empty when none)
+ *  @param {string[]} fresh @param {string[]} causes @param {(unit: string) => string} readSrc */
+export function causesFor(fresh, causes, readSrc) {
+  /** @type {Record<string, string[]>} */
+  const out = {};
+  for (const l of causes) {
+    const v = verifyCause(l, fresh, readSrc);
+    if (v && !(out[v.member] || []).includes(v.cause)) (out[v.member] = out[v.member] || []).push(v.cause);
+  }
+  return out;
+}
+
+/** the witness source of <unit> in the tree this file sits in (the workspace on the neutral machine); "" when unreadable
+ *  @param {string} unit */
+export const workspaceSrc = (unit) => {
+  for (const p of sourcePaths(unit)) { try { return readFileSync(new URL(`../${p}`, import.meta.url), "utf8"); } catch { /* the other spelling, then "" (unreadable = WITHHELD) */ } }
+  return "";
+};
+
+/** every line `compare` prints, in order: the reds, then the ONE verdict annotation, then the plain verdict line.
+ *  readSrc is the witness-source door (default: none, so every witness cause is WITHHELD; main passes workspaceSrc)
+ *  @param {ReturnType<typeof parseSuite>} head @param {ReturnType<typeof parseSuite>} base @param {string} label
+ *  @param {string} [headSha] @param {string} [baseSha] @param {string} [baseSrc] @param {Record<string, number> | null} [baseline]
+ *  @param {(unit: string) => string} [readSrc] */
+export function compareLines(head, base, label, headSha = "", baseSha = "", baseSrc = "", baseline = null, readSrc = () => "") {
   const j = judge(head, base, baseSrc, baseline);
   const lines = [];
-  lines.push(...annotate("error", `NEW RED · ${label}`, j.fresh, j.v === "RED" ? 9 : 10));
+  const cause = causesFor(j.fresh, head ? head.causes : [], readSrc);
+  const shown = j.fresh.map((n) => (cause[n] ? [n, ...cause[n].map((c) => `cause · ${c}`)].join("\n") : n));
+  lines.push(...annotate("error", `NEW RED · ${label}`, shown, j.v === "RED" ? 9 : 10));
   lines.push(...annotate("warning", `BASE RED · ${label}`, j.old));
   const payload = { v: j.v, label, head: headSha, base: baseSha, why: j.why, new: j.fresh, base_red: j.old.length, fixed: j.fixed.length,
     pass: head ? head.pass : null, fail: head ? head.fail : null, live: head ? head.live.length : null, profile: head ? head.profile : null,
-    instrument: baseSrc ? "head (the base's own died before its machine line)" : "base" };
+    instrument: baseSrc ? "head (the base's own died before its machine line)" : "base", ...(Object.keys(cause).length ? { cause } : {}) };
   lines.push(`::${j.v === "GREEN" ? "notice" : "error"} title=${escProp(`${VERDICT_TITLE} · ${label}`)}::${esc(`B1_VERDICT ${JSON.stringify(payload)}`)}`);
   lines.push(`B1_VERDICT ${label} ${j.v} — ${j.why} · head ${headSha.slice(0, 7) || "?"} · base ${baseSha.slice(0, 7) || "?"} · ${j.fresh.length} new red · ${j.old.length} base red · ${j.fixed.length} base red now passing`);
   return { lines, verdict: j.v };
@@ -203,7 +233,8 @@ export async function readVerdict(sha, repo, get) {
     try { p = vAnn ? JSON.parse(String(vAnn.message).slice("B1_VERDICT ".length)) : null; } catch { p = null; }
     if (!p) { red = true; parts.push(`${leg.name}: RED (${leg.conclusion}; no verdict annotation — the run never reached its verdict) [run ${leg.id}]`); continue; }
     if (p.v !== "GREEN") red = true;
-    parts.push(`${leg.name}: ${p.v} (base ${String(p.base).slice(0, 7)} · ${p.new.length} new red${p.new.length ? `: ${p.new.join(" ; ")}` : ""} · ${p.base_red} base red · ${p.live} live) [run ${leg.id}]`);
+    const why = (n) => (p.cause && Array.isArray(p.cause[n]) && p.cause[n].length ? `${n} — cause: ${p.cause[n].join(" ; ")}` : n);   // unit mdtl
+    parts.push(`${leg.name}: ${p.v} (base ${String(p.base).slice(0, 7)} · ${p.new.length} new red${p.new.length ? `: ${p.new.map(why).join(" ; ")}` : ""} · ${p.base_red} base red · ${p.live} live) [run ${leg.id}]`);
   }
   return { line: `ci_verdict ${short} ${red ? "RED" : "GREEN"} — ${parts.join(" | ")} (${calls} calls)`, calls, v: red ? "RED" : "GREEN" };
 }
@@ -257,6 +288,19 @@ function selftest() {
   ok("annotate escapes the workflow-command specials (a name never breaks its own line)", annotate("error", "T: x", ["a%b\nc"])[0] === "::error title=T%3A x 1/1::a%25b%0Ac");
   const c = compareLines(parseSuite(suite(["B", "PLANTED"])), parseSuite(suite(["B"])), "node 22", "a".repeat(40), "b".repeat(40));
   ok("compare: RED prints the new red as an error, the base red as a warning, ONE verdict error, exit RED", c.verdict === "RED" && c.lines.filter((l) => l.startsWith("::error title=NEW RED")).length === 1 && c.lines.filter((l) => l.startsWith("::warning")).length === 1 && c.lines.filter((l) => l.includes(VERDICT_TITLE)).length === 1);
+  // unit mdtl (forks row 1186): the cause rides the NEW RED message and the payload, verified against the witness's own source
+  const W = "WITNESS ‹toy› · GREEN at head against its BASE";
+  const wsrc = (u) => (u === "toy" ? '// CONTRACT\n//   P1 · the planted clause claims one thing\n//   BOUND outside ci/\nimport x from "y";\nclause("P1", a, b);' : "");
+  const cz = compareLines(parseSuite(suite(["B", W], { causes: [`${W} · P1 · the planted clause claims one thing`, `${W} · P1 · FORGED-TEXT-IN-NO-SOURCE`] })), parseSuite(suite(["B"])), "node 22", "", "", "", null, wsrc);
+  const czNew = cz.lines.find((l) => l.startsWith("::error title=NEW RED")) || "";
+  const czPay = JSON.parse((/B1_VERDICT (\{.*\})$/.exec(cz.lines.find((l) => l.includes(VERDICT_TITLE)) || "") || ["", "{}"])[1].replace(/%0A/g, "\n").replace(/%25/g, "%"));
+  ok("mdtl · a NEW witness red carries its verified cause in its own NEW RED message and the payload; no annotation is added",
+    czNew.includes("%0Acause · P1 · the planted clause claims one thing") && JSON.stringify(czPay.cause) === JSON.stringify({ [W]: ["P1 · the planted clause claims one thing", "WITHHELD · a clause id that is not a literal of the witness's own source was withheld"] }) && cz.lines.length === c.lines.length);
+  ok("mdtl · a forged cause text never leaves: compare re-writes it to WITHHELD (the second check)", !cz.lines.some((l) => l.includes("FORGED-TEXT-IN-NO-SOURCE")));
+  const cd = compareLines(parseSuite(suite(["B", W], { causes: [`${W} · P1 · the planted clause claims one thing`] })), parseSuite(suite(["B"])), "node 22");
+  ok("mdtl · with no source door (the pure default) every witness cause is WITHHELD", cd.lines.some((l) => l.includes("%0Acause · WITHHELD · ")) && !cd.lines.some((l) => l.includes("claims one thing")));
+  const g0 = compareLines(parseSuite(suite(["B"])), parseSuite(suite(["B"])), "node 22", "a", "b"), g1 = compareLines(parseSuite(suite(["B"], { causes: [`${W} · P1 · x`] })), parseSuite(suite(["B"])), "node 22", "a", "b", "", null, wsrc);
+  ok("mdtl · a GREEN head's compare output is byte-identical with or without causes (no new red owns them)", JSON.stringify(g0.lines) === JSON.stringify(g1.lines));
   const runs = (st = "completed") => ({ check_runs: [{ id: 2, name: "npm test · node 24", status: st, conclusion: "success" }, { id: 1, name: "npm test · node 22", status: st, conclusion: "success" }, { id: 9, name: "public-safe-chores", status: "completed" }] });
   const ann = (v, nw) => [{ title: "BASE RED · node 22 1/1", message: "B" }, { title: `${VERDICT_TITLE} · node 22`, message: `B1_VERDICT ${JSON.stringify({ v, base: "c".repeat(40), new: nw, base_red: 1, live: 3 })}` }];
   const fake = (map) => async (p) => { for (const [k, v] of map) if (p.includes(k)) return v; throw new Error(`unplanted ${p}`); };
@@ -265,6 +309,9 @@ function selftest() {
     ok("reader: two GREEN legs read GREEN in exactly 3 calls", G.v === "GREEN" && G.calls === 3 && G.line.startsWith("ci_verdict ddddddd GREEN"));
     const R = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", runs()], ["/check-runs/1/", ann("GREEN", [])], ["/check-runs/2/", ann("RED", ["PLANTED"])]]));
     ok("reader: one RED leg reads RED and NAMES the new red", R.v === "RED" && R.line.includes("PLANTED") && R.calls === 3);
+    const RC = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", runs()], ["/check-runs/1/", ann("GREEN", [])],
+      ["/check-runs/2/", [{ title: `${VERDICT_TITLE} · node 24`, message: `B1_VERDICT ${JSON.stringify({ v: "RED", base: "c".repeat(40), new: [W, "PLANTED"], cause: { [W]: ["P1 · the planted clause claims one thing"] }, base_red: 0, live: 3 })}` }]]]));
+    ok("mdtl · reader: a new red with a cause reads `— cause: <ID> · <text>`, a red with none reads its name alone", RC.v === "RED" && RC.line.includes(`${W} — cause: P1 · the planted clause claims one thing ; PLANTED ·`));
     const P = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", runs("in_progress")]]));
     ok("reader: a leg still running is PENDING after ONE call (it never polls)", P.v === "PENDING" && P.calls === 1);
     const N = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", { check_runs: [] }]]));
@@ -312,7 +359,7 @@ async function main() {
     const head = parseSuite(read(flag("head"))), base = parseSuite(read(flag("base")));
     // unit mlaw (F3 A): only a base with no law pack line needs the frozen baseline, read from lawpack.mjs itself (never typed here)
     const baseline = head && head.lawpack && base && !base.lawpack ? await frozenBaseline() : null;
-    const { lines, verdict } = compareLines(head, base, flag("label") || "suite", flag("head-sha") || "", flag("base-sha") || "", read(flag("base-instrument")), baseline);
+    const { lines, verdict } = compareLines(head, base, flag("label") || "suite", flag("head-sha") || "", flag("base-sha") || "", read(flag("base-instrument")), baseline, workspaceSrc);
     for (const l of lines) console.log(l);
     process.exitCode = verdict === "GREEN" ? 0 : 1;
     return;
