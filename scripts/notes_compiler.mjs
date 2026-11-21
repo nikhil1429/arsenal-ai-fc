@@ -111,7 +111,7 @@ import { archiveRoot, istDayKey } from "./archivist.mjs";
 import { readLaneDays, exchanges, istDaysBetween, WORD_LANE, BANK_LANE } from "./exchanges.mjs";
 import { readRows as readCorrectionRows, active as liveCorrections, matchesIn, LEDGER as CORRECTIONS } from "./notes_corrections.mjs";
 import { loadCapsules } from "./rejirah.mjs";   // the capsules' reader — read only, capsules are immutable
-import { readCracks } from "./forge_session.mjs";   // unit mcrk — the crack rows' reader; forge_session.mjs is cracks.jsonl's SOLE WRITER
+import { readCracks, TRAP_BAR, COUNTED_FROM, NO_BAIT, gateableOf } from "./forge_session.mjs";   // unit mtrap — the bar's one home, re-exported below · unit mcrk — the crack rows' reader; forge_session.mjs is cracks.jsonl's SOLE WRITER
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -518,26 +518,10 @@ export function compileDay({ date = todayIst(), stateDir = STATE_DIR, path = nul
 // ---------------------------------------------------------------------------
 // THE COLD GATE
 // ---------------------------------------------------------------------------
-/** TRAP_BAR — the bar of three DISTINCT traps (row 1198 (1): it STAYS). ONE home: verdictOf, stubReader and gateableOf read it. */
-export const TRAP_BAR = 3;
-/** COUNTED_FROM — the trap sources that count toward the bar: THIS lesson's cracks and corrections (mtrap-3 b). */
-export const COUNTED_FROM = Object.freeze(["crack", "correction"]);
-/** NO_BAIT — buildNote's placeholder bait for a diff with no `-` line (its crack push); a missing bait is not a trap. */
-export const NO_BAIT = "(no - line)";
-const foldBait = (s) => String(s == null ? "" : s).normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
-/** gateableOf — PURE. {gateable, have, need, owed}. `have` = the note's distinct counted traps by folded bait: a capsule
- *  trap, an empty bait or the placeholder bait does not count, and two traps whose baits fold equal count once. It only
- *  COUNTS — nothing is added to `traps` (row 1198 (2): the compiler invents no trap and pads no count). */
-export function gateableOf(note) {
-  const seen = new Set();
-  for (const t of note && Array.isArray(note.traps) ? note.traps : []) {
-    if (!t || !COUNTED_FROM.includes(t.from)) continue;
-    const b = foldBait(t.bait);
-    if (b && b !== foldBait(NO_BAIT)) seen.add(b);
-  }
-  const have = seen.size;
-  return { gateable: have >= TRAP_BAR, have, need: TRAP_BAR, owed: Math.max(0, TRAP_BAR - have) };
-}
+// unit mtrap — TRAP_BAR / COUNTED_FROM / NO_BAIT / gateableOf: ONE home, forge_session.mjs (the pacer's contract reads the
+// predicate on every turn, and this file already imports the pacer — mcrk — so the pacer could not import it back without
+// a cycle: measured, a lazy import is still a dependency-cruiser edge). Re-exported here: every reader asks the compiler.
+export { TRAP_BAR, COUNTED_FROM, NO_BAIT, gateableOf };
 /** verdictOf — PURE. The reader's reply against the note: PASS iff answered from the note alone, three DISTINCT
  *  seductive wrong answers each already a trap of the note, and the note rebuilds. */
 export function verdictOf(note, reply) {
