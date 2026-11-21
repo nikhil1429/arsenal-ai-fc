@@ -232,7 +232,7 @@ export function clauseCause({ out = "", src = "" }) {
 export function sectionCause(text, src) {
   const last = String(text).split(/\r?\n/).filter((l) => l.startsWith("── ")).pop();
   if (last === undefined) return "no section reached";
-  const r = repOf(last.slice(3).replace(/\s*─+\s*$/, ""), alphabetOf(src));
+  const r = repOf(last.slice(3).replace(/[\s─]+$/, ""), alphabetOf(src));
   return r === null ? WITHHELD : `last section · ${r}`;
 }
 
@@ -373,8 +373,8 @@ function selftest() {
   ok("clauseCause: a literal id with its claim and its k/n SLOT; an id not in the source is ONE WITHHELD",
     JSON.stringify(clauseCause({ out: `CLAUSE P1 RED · 0/1 plant(s)\nCLAUSE Q${CAN} RED · 0/1 plant(s)\nCLAUSE P1 GREEN · 1/1 plant(s)`, src: files["ci/witness/toy/witness_toy.mjs"] })) === JSON.stringify(["P1 RED · 0/1 plant(s) · the planted clause claims one thing", WITHHELD]));
   const os = files["scripts/organism_test.mjs"];
-  ok("sectionCause (F7 A): the last section as LIT or SKEL; a forged title is WITHHELD; no section is said",
-    sectionCause("── SUITES — x ────\nnoise", os) === "last section · SUITES — x" && sectionCause("── GATES — LIVE ──", os) === "last section · … — LIVE" && sectionCause(`── SUITES — x ──\n── ${CAN} ──`, os) === WITHHELD && sectionCause("died", os) === "no section reached");
+  ok("sectionCause (F7 A): the last section as LIT or SKEL (a long title has no dashes, only its space); a forged title is WITHHELD; no section is said",
+    sectionCause("── SUITES — x ────\nnoise", os) === "last section · SUITES — x" && sectionCause("── SUITES — x \nnoise", os) === "last section · SUITES — x" && sectionCause("── GATES — LIVE ──", os) === "last section · … — LIVE" && sectionCause(`── SUITES — x ──\n── ${CAN} ──`, os) === WITHHELD && sectionCause("died", os) === "no section reached");
   const yml = "jobs:\n  t:\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm ci\n      - name: npm test · hermetic · head\n        run: |\n          x\n";
   ok("stepCause (F6 A): a step the workflow names, the runner's shapes for it, else (unnamed); an unknown conclusion is (unknown)",
     stepCause("npm test · hermetic · head", "failure", yml) === "step npm test · hermetic · head · failure" && stepCause("Run npm ci", "failure", yml) === "step Run npm ci · failure"
