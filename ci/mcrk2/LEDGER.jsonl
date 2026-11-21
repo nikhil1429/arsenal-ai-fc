@@ -8,3 +8,6 @@
 {"ts":"2026-11-21T08:20:00Z","act":"write","cmd":"ci/mcrk2/MCRK2_SPEC.md","last_line":"spec written; no existing file edited"}
 {"ts":"2026-11-21T08:02:51.618Z","act":"read","cmd":"git fetch origin claude/mbank-build && git show FETCH_HEAD:scripts/forge_session.mjs | grep -n hisPrompt","last_line":"cfdf866 · hisPrompt at :661, crackRow call at :683 passes {since} only"}
 {"ts":"2026-11-21T08:02:51.618Z","act":"write","cmd":"ci/mcrk2/MCRK2_SPEC.md §11 ROW 1246 + F2/§10 amended","last_line":"row 1246 answered in the spec"}
+{"ts":"2026-11-21T08:40:24.569Z","act":"read","cmd":"git fetch origin claude/mbank-build && git show FETCH_HEAD:ci/mbank/PROOF.md | grep -n B17","last_line":"210022f · B17 CRACK: on main 7bf008b the crack verb writes the parallel session text as his words"}
+{"ts":"2026-11-21T08:40:24.569Z","act":"ci-read","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/65e32dd/check-runs","last_line":"4 runs queued (136782258941, 136782259174, 136782259185, 136782259262); 9d7291d runs cancelled by the newer push"}
+{"ts":"2026-11-21T08:40:24.569Z","act":"write","cmd":"ci/mcrk2/MCRK2_SPEC.md §11.3 row 1250","last_line":"crack path reads through study_scope.mjs readHisPrompt, named"}

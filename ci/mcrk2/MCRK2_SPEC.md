@@ -478,3 +478,45 @@ per-session record itself (in `teaching_audit.mjs` and `readHisPrompt`) is mbank
 - **F11 · the interleave refusal: red or not.** (a) refused by name, with no red and no drift. It is an instrument loss,
   counted on teaching_audit's `session-mismatch` lane (rec, per row 1243 (1) "refused as today") · (b) also red a named
   `C.crack-lost` count on the gate. **Recommend (a)** until the per-session record lands, after which the case is gone.
+
+### 11.3 Row 1250 — the fact mbank measured, and the door this unit reads through (21 Nov 2026)
+
+**The fact (forks row 1250, the architect; measured by the mbank build, its `ci/mbank/PROOF.md` §10, clause B17, read on
+`origin/claude/mbank-build` @ 210022f).** On main today (7bf008b), the crack verb takes its words from the one shared
+last-prompt slot. When another Claude session in the same repo (the runner or the architect) prompts between his prompt and
+the crack call, **the crack verb writes THAT session's text as his words**. The mbank witness reads `CLAUSE B17 RED · … his
+words 41 char(s)` on main: those characters are the other session's prompt. This confirms, by a measurement, the base row of
+§11.2 (*"WRITTEN with words B"*), which I had derived from the code at `forge_session.mjs:659-662` + `:676`. It is a defect
+on main, not a hypothetical.
+
+**The fix is mbank's, not mcrk2's.** It is a per-session prompt record: `prompts_by_session[session_id]`, written by
+`teaching_audit.mjs` (still the sole writer) beside the shared slot. It is read through the one door, `hisPrompt` /
+`readHisPrompt`, which is **moving to `scripts/study_scope.mjs`** (row 1250). At 210022f the door still sits in
+`scripts/forge_session.mjs` (about `:651-681`). Its `readHisPrompt` reads `prompts_by_session[sessionId]` when it is given a
+`sessionId`, and the shared slot otherwise (about `:677-681`).
+
+**What this spec now names (amending §11.1 W1):** the crack path reads his words **only** through
+`readHisPrompt({ since: s.started_at, sessionId: CLAUDE_CODE_SESSION_ID, fresh: true })`, **imported from
+`scripts/study_scope.mjs`** once mbank lands it there. That means one read, the owner's per-session record, and no read of
+`teaching_audit_last.json` anywhere in the crack path. Concretely, the mcrk2 build makes three changes to the crack path:
+- `forge_session.mjs` case `crack` (base `:3292`): `crackRow` is handed the door's **result**, never `loadAuditLast()`.
+  Its signature becomes `crackRow({ session, prompt, bank, now })`, where `prompt` is the `hisPrompt` result, so that
+  `crackRow` stays PURE and the door stays the one reader.
+- `crackRow`: branch 4 is the door's refusal, mapped by `reason`. `absent` / `before` / `consumed` / `other-session` are each
+  refused by name (§2.1 step 3, §11.2). `words_src` becomes `"study_scope.hisPrompt"`, and `turn_id` is copied from the door
+  (mbank already copies it).
+- **No fallback to the shared slot from the crack path.** mbank's build lets the crack verb fall back to the shared slot when
+  its session has no own entry (PROOF §10: *"else the shared slot, as before"*). Under mcrk2 the verb always passes
+  `sessionId`, so a fallback read of a slot written by another session is still refused `other-session` by `hisPrompt`'s
+  own check. A session with no readable id is refused before the door (§11.2, the "env absent" row). His words are written
+  only from his own session's record.
+
+**Witness consequences (added to §7 and §11.2):** G12 INTERLEAVE is the same plant as mbank's B17, read from mcrk2's side.
+It is RED on main (written with the other session's text) and GREEN on the build (refused before the per-session record
+lands; written with HIS words after it). **G12e DOOR HOME** is a source check: the build's crack path imports `readHisPrompt`
+from `./study_scope.mjs` and contains no `teaching_audit_last` read. It is RED on base and GREEN on the build. Mutant
+**M12e** puts a direct `loadAuditLast()` back into the crack case, which reads RED.
+
+**Files:** the mcrk2 build touches `study_scope.mjs` **not at all**. The door's move is mbank's. mcrk2 only imports from
+it, which makes fork **F10 (a)** (mbank lands first) a dependency rather than a preference: until the door lives in
+`study_scope.mjs`, the mcrk2 build cannot import it from there.
