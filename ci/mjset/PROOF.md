@@ -127,6 +127,32 @@ mclk, mdet, mdtl2), so files beyond its named list differ; the same line at the 
   after landing (K3's card if it refuses); the first round's `settled_nothing` reason if it settles nothing; the count of
   `pre_cyborg` rows it writes (the spec's N4 / N5 read 2).
 
+## 8 · MERGE OF MAIN a0645d2 (runner M, forks rows 1272 (5) / 1273 (1), 22 Nov 2026)
+
+- `git fetch origin main` → `a0645d23bd33770da4a1bcc9d0d84d696a643d42` (mshard + mgat landed; mbank NOT on it:
+  `git merge-base --is-ancestor f635d68 a0645d2` → 1). Merged by a merge commit, `1d8af54` (no conflict); the branch stays stacked
+  on the provisional mbank f635d68 and `ci/mjset/BASE` still names it. The merge brings main's two units only.
+- The unit witness's base leg at the merge is the tree of f635d68 + a0645d2 WITHOUT mjset (`git merge-tree --write-tree f635d68
+  a0645d2`, a scratch commit never pushed) — the same provisional base with main's two units in it, so BOUND names only mjset's files:
+  - head, 22 Nov 2026: `node ci/mjset/witness_mjset.mjs --org <1d8af54> --base-org <f635d68+a0645d2>` → `GREEN MJSET … · 14 clause(s)` (BOUND: 8 file(s) differ, every one named)
+  - base, 22 Nov 2026: `--org <f635d68+a0645d2> --base-org <f635d68+a0645d2>` → `RED MJSET · W1, W2, W3, W4, W5, W6, W7, W8, W9, W11, W12, W13`
+  - mutants, 22 Nov 2026: `run_mutants: 13 of 13 mutant(s) RED by the clause that names them · control GREEN`
+  - members, 22 Nov 2026: `gaffer_brain selftest: 205 passed, 0 failed` · postmatch `ALL CHECKS PASSED` · `node scripts/models.mjs check` exit 0
+- **THE GATES (main's new law), `node scripts/gates.mjs report` at 1d8af54, 22 Nov 2026:** `other checkJs diagnostics 297 (baseline
+  296, may only fall)` · lint `no-empty 262 · no-unused-vars 82 · (directive) 2` = the frozen counts (none rose) · last line
+  `gates: 1 RED — a gate may only get stricter (§10-D rule 6)`.
+  - **The one diagnostic over the baseline is NOT mjset's bytes.** `tsc --noEmit` diffed against main a0645d2 (296): the one
+    added is `scripts/organism_test.mjs(2549,226): error TS2339: Property 'ARSENAL_ORGAN' does not exist on type '{ CLAUDE_CODE_SESSION_ID …'`,
+    and `git blame` puts that line on `9074365` — unit mbank's B20 lane (mbank-10 a), inside the provisional base.
+  - The same tree without any mjset commit (f635d68 + a0645d2) reads the same `other checkJs diagnostics 297`. mjset adds 0
+    checkJs diagnostics and 0 lint findings; `scripts/gaffer_brain.mjs` and `scripts/postmatch.mjs` carry no tsc diagnostic.
+  - Not repaired here: `scripts/organism_test.mjs` is an mbank file this seat may never edit, and a baseline is never raised.
+    **FORK mjset-gates** — the fix is mbank's own bytes (the planted env object at that line typed so a later `ARSENAL_ORGAN` key
+    is legal, e.g. built as a `Record<string,string>`), carried by an mbank re-cut; mjset merges it when a message names it.
+- Hermetic suite at 1d8af54, 22 Nov 2026 (a local clone): `organism_test: 168 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125`; the
+  one FAIL is the GATES member (`TYPE COUNT ROSE — 297 checkJs diagnostics, baseline 296`), the diagnostic named above; the
+  mjset clause witness member reads `ok`.
+
 ## CHECKPOINT
 
-CHECKPOINT · 2026-11-21 · done: F1 C · F2 B · F3 A · F4 A · F5 A · F6 A (on mbank f635d68) · row 1245 (1) (2) (3) · row 1260 (2) · witness both ways · 13 of 13 mutants · the hermetic suite green at cut and tip · resume from: a message naming a re-cut mbank tip or a main carrying mbank (merge it, re-run the unit witness and mutants, push), or the architect's ruling on FORKS mjset-cost / mjset-floor / mjset-rotate.
+CHECKPOINT · 2026-11-22 · main a0645d2 merged (1d8af54), witness + mutants green at the merge, the gates' one RED is mbank's line (FORK mjset-gates) · earlier, 2026-11-21 · done: F1 C · F2 B · F3 A · F4 A · F5 A · F6 A (on mbank f635d68) · row 1245 (1) (2) (3) · row 1260 (2) · witness both ways · 13 of 13 mutants · the hermetic suite green at cut and tip · resume from: a message naming a re-cut mbank tip or a main carrying mbank (merge it, re-run the unit witness and mutants, push), or the architect's ruling on FORKS mjset-cost / mjset-floor / mjset-rotate / mjset-gates.
