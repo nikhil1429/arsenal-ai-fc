@@ -12,3 +12,4 @@
 {"ts":"2026-11-21T08:10Z","act":"drain-row-1244","cmd":"node scratch/p4.mjs scripts/gaffer_brain.mjs (planted corrected estimator + guard, planted rates; days-to-empty arithmetic)","last_line":"rounds/day 8 x 1 capture, inflow 5/day: 19 days"}
 {"ts":"2026-11-21T08:30Z","act":"fold-N1-N6","cmd":"git log --format=%h %cI -1 e819c0d ; 3a73782 (shallow clone: 10e2f7f5/69575677/9ff901aa not present)","last_line":"3a73782 2026-11-18T11:02:14+00:00"}
 {"ts":"2026-11-21T08:50Z","act":"row-1245","cmd":"sed -n 499,508p scripts/postmatch.mjs (parseMachineRecord reads the first ^JUDGE: line)","last_line":"compile_line: compile, compile_done: /^COMPILE: DONE\\b/.test(compile), judge_line: judge, judge_settled: /^JUDGE: SETTLED\\b/.test(judge) };"}
+{"ts":"2026-11-21T10:10Z","act":"row-1254-3","cmd":"grep -n cost_usd scripts/claudegen.mjs","last_line":"scripts/claudegen.mjs:672 (fixture only — the envelope's cost field is dropped by parseResult)"}

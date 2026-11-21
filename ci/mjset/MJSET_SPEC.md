@@ -475,6 +475,69 @@ capture waits behind the backlog: oldest first (`judgeOrder`) puts today's answe
   expired). Today's login state is unread by the judge lane, because no row has been written since 19 Nov. The first
   round after the F1 C build is the next proof, and K3's card fires if it refuses.
 
+### 15.6 D6 · DRAIN ON THE CREDIT (a named option, forks row 1254 (3); a design on the page only, nothing built)
+
+**What it is:** the drain rounds, and ONLY those, bill a monthly API credit instead of his five-hour pool. Today no organ,
+seat or session uses that credit. It needs an API key, and his standing law makes every organ refuse when one is set
+(`scripts/claudegen.mjs:449`, `:459`, `:507`; `scripts/brain.mjs:4293`, `:7526`; CLAUDE.md "never an API key").
+**This option runs against that standing law.** It is on the page so the architect can set it beside D1-D5 with numbers,
+and only HIS word could open it. This seat asks him for no key and accepts none in any message.
+
+1. **WHAT IS MEASURED FIRST: the dollar cost of ONE judged capture at his ruled effort (Opus, effort max).**
+   - **The reading:** the CLI's own result envelope. The judge's call already uses the JSON output, which `parseResult`
+     reads (`scripts/claudegen.mjs:215-224`, `j.usage` → the four token fields). The envelope's own cost field is DROPPED
+     today: `grep -n "cost_usd" scripts/claudegen.mjs` finds it only inside a fixture string (`:672`).
+   - **The measurement:** carry that field, unchanged and as the CLI printed it, onto the judge's ledger row on the next
+     ordinary subscription round. Dollars per capture = the field divided by `items`, read off the row, never computed
+     from a typed price.
+   - **Before any credit round runs**, at least one ok row with the field must exist. Until then the option's cost reads
+     "unmeasured" (null, never 0).
+   - **Named, not guessed:** whether his CLI version prints the field. Measure it on his laptop with the newest
+     `gaffer_judge` row's raw envelope, or by one `claude -p --output-format json` reply he already makes.
+   - **The ground today:** the one ok row (19 Nov) carries 39410 tokens for one capture. That is tokens, not dollars, and
+     no price is typed here.
+2. **THE HARD STOP, by code, below the credit and never above it.**
+   - Before each drain round the door reads two things:
+     - **(a) The spend so far this month:** the sum of the cost field over this month's drain rows on the brain ledger.
+       They are a distinct `job` (a drain-only name, so the subscription rows never count), read by the ledger's own
+       reader.
+     - **(b) The credit:** HIS number, held in a registry row with its receipt, read through `registry.mjs` like
+       `gameOnEpoch` (`:226`), never typed.
+   - **The door REFUSES the round** when (a) + one round's worst case > (b). The worst case is the slowest measured
+     per-capture cost plus the rows' own spread (the same shape as the corrected estimator) × the guarded one capture.
+   - A row whose cost field is missing counts as the worst case, never 0.
+   - **The refusal** names the spend, the credit and the worst case, files no card, and leaves the drain to the
+     subscription carriers (D1).
+   - An unreadable credit row refuses (the stop fails closed).
+3. **WHERE A KEY WOULD LIVE.** Outside the repository work tree: a file under his user profile beside nothing tracked, or
+   the OS credential store. It is never in a tracked file, never in `dressing-room/state`, never in a message, never in a
+   log or ledger row, and never in the parent's `process.env`. A key in the parent's env would trip every refusal in item
+   5 for every organ, so it lives only in the ONE child's env (item 4). The privacy ruling's belts hold it: the archivist
+   `init` refusal of a work tree, the pre-commit tripwire, and `.gitignore`. A build would add the file's name to the
+   tripwire's list.
+4. **THE ONE READER.** One new leaf organ, `scripts/credit_door.mjs`. It imports no organ, so it can be read alone.
+   - It reads the key only when invoked as `judge-drain`.
+   - It hands the key ONLY to the one spawned CLI child's `env`, never to its own `process.env`.
+   - It never prints or returns the key.
+   - It writes the drain round's ledger row with the cost field.
+   - `gaffer_brain.mjs` would reach it through its existing `generate` seam (`:2108`), and only for a round fired by a
+     declared drain trigger (a new entry in `JUDGE_CODE_TRIGGERS`, `:1881`). Every other round stays on the subscription.
+5. **EVERY OTHER ORGAN STILL REFUSES.** The refusals named above stay byte for byte.
+   - **Clause W13:** plant a fake key file under the temp dir (a test string, never a key) and a planted `claude` that
+     reports only WHETHER a key reached its env. Then:
+     - (i) `credit_door.mjs judge-drain` reaches the planted CLI with the key present in the child's env and absent from
+       its own;
+     - (ii) a SECOND organ that tries the key path is refused (gaffer_brain's own non-drain round, and a plant importing
+       the reader), and claudegen's refusal still fires when a key is in any organ's `process.env`;
+     - (iii) a static check: only `credit_door.mjs` names the key path (`grep` over `scripts/*.mjs`).
+   - **Clause W14:** the hard stop is planted with a spend of (credit − worst case + 1) and refuses with no call; at
+     (credit − worst case − 1) it runs one guarded call.
+   - **Mutants:** M13 a second organ allowed to read the key (W13 RED) · M14 the stop compares (a) > (b) instead of
+     (a) + worst case > (b), i.e. it stops above the credit (W14 RED).
+
+Numbers it would sit beside: none until item 1 is measured. D1-D5 cost subscription time only; D6 costs dollars per
+capture × captures drained, at most the credit, stopped by code below it.
+
 **Recommendation (planted, the architect decides):** D1 and D5 together. D1 is the only option that raises outflow with no
 change to any guard. D5 keeps today's answers from waiting behind the backlog. D2 is worth one measurement before anyone
 reads the rate as linear.
@@ -529,3 +592,7 @@ file) · `ci/witness/mjset/witness_mjset.mjs` · `ci/mjset/run_mutants_mjset.mjs
 The check runs of this branch's pushed sha, read through the public API with no token (`curl -s
 https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs`), are recorded in `ci/mjset/LEDGER.jsonl`
 (act `ci`) after each push.
+
+## CHECKPOINT
+
+CHECKPOINT · 2026-11-21T10:10Z · done: §0-§16 + §15.6 (D6 DRAIN ON THE CREDIT, forks row 1254 (3)) on claude/mjset-spec · resume from: the architect's ruling on D1-D6 and F9; the BUILD of F1-F6 + row 1245 launches when unit mbank is on main (row 1244 F6 A), not from this seat.
