@@ -7,10 +7,12 @@
 // USAGE
 //   node ci/witness/mfactory/witness_factory.mjs --window <id> --campaign <dir> [--table <file>]
 //        THE CLAUSE. Reads the campaign's factory-window table and judges the row of window <id>.
-//   node ci/witness/mfactory/witness_factory.mjs plants [--org <dir>] [--base-org <dir>] [--only <clause>[,<clause>…]]
-//   node ci/witness/mfactory/witness_factory.mjs --org <dir> --base-org <dir> [--only …]      (the same plants mode)
-//        THE PLANTS. Every clause planted both ways: RED on --base-org, GREEN on --org. --org defaults to the tree this
-//        file sits in; --base-org defaults to an LF tree of the commit in ci/mfactory/BASE (private index, core.autocrlf
+//   node ci/witness/mfactory/witness_factory.mjs plants [--org <dir>] [--only …]
+//        PLANTS ONLY (unit mmeter's suite member): the plants on --org, one `CLAUSE <id> GREEN|RED · k/n plant(s)` line each,
+//        ending `PLANTS mfactory · k of n plant(s) as expected` (exit 0 iff k === n > 0 and LAST holds). No base, no BOUND.
+//   node ci/witness/mfactory/witness_factory.mjs --org <dir> --base-org <dir> [--only …]   (or `plants` with a --base-org)
+//        THE UNIT WITNESS. Every clause planted both ways: RED on --base-org, GREEN on --org. --org defaults to the tree this
+//        file sits in; with no --base-org (the bare --org form) it defaults to an LF tree of the commit in ci/mfactory/BASE (private index, core.autocrlf
 //        false, under os.tmpdir()); a base that cannot be built leaves BOUND RED. --only is the mutant runner's door;
 //        BOUND and LAST always run.
 // THE CLAUSE'S EXIT LAW (spec §0): 0 the row carries all four numbers · 1 RED, a number is missing / not finite / its
@@ -41,7 +43,7 @@
 //   no model. Every child is spawnSync, so every wait is bounded by the child's own exit; no timeout is typed.
 // PORTABLE: no POSIX-only shell; every line read is split on \r?\n; BOUND hashes text with CRLF folded to LF; the one git
 //   tree it builds is checked out with core.autocrlf=false, core.eol=lf (row 1036); no git repo is planted.
-// LAST LINE: GREEN MFACTORY <what> · <n> clause(s) (exit 0) or RED MFACTORY · <clauses> (exit 1)
+// LAST LINE (unit form): GREEN MFACTORY <what> · <n> clause(s) (exit 0) or RED MFACTORY · <clauses> (exit 1)
 // ============================================================================
 import { readFileSync, writeFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, readdirSync, statSync, cpSync } from "node:fs";
 import { join, resolve, relative, dirname, sep } from "node:path";
@@ -142,7 +144,12 @@ function plants() {
   const ORG = resolve(opt("--org") || TREE);
   let BASE_ORG = opt("--base-org") ? resolve(/** @type {string} */ (opt("--base-org"))) : null;
   let baseWhy = "";
-  if (!BASE_ORG) {
+  // PLANTS-ONLY (unit mmeter's suite member runs `plants` bare, row 1162 (2)): the plants on --org alone, no base, no BOUND;
+  // the last line is `PLANTS mfactory · k of n plant(s) as expected`. A --base-org (or the bare --org/--base-org form) is
+  // the UNIT witness: the plants both ways plus BOUND, ending GREEN|RED MFACTORY.
+  const unitMode = !!BASE_ORG || argv[0] !== "plants";
+  let planted = 0, asExpected = 0;
+  if (!BASE_ORG && unitMode) {
     let b = null;
     try { b = readFileSync(join(ORG, "ci", "mfactory", "BASE"), "utf8").trim(); } catch { /* absent */ }
     if (!b || !/^[0-9a-f]{40}$/.test(b)) baseWhy = "no --base-org and no ci/mfactory/BASE line";
@@ -205,15 +212,18 @@ function plants() {
       let baseRed = 0;
       for (const [what, edit, args, exp] of cases) {
         const b = runReader(plantTree(ORG, edit), args());
+        planted++; if (b.code === exp) asExpected++;
         if (b.code !== exp) miss.push(`${what}: want ${exp}, got ${b.code} (${b.last.slice(0, 120)})`);
         if (BASE_ORG) { const r = runReader(plantTree(BASE_ORG, edit), args()); if (r.code !== exp) baseRed++; }
       }
-      const baseOk = !BASE_ORG ? false : baseRed > 0;
+      const baseOk = !unitMode ? true : !BASE_ORG ? false : baseRed > 0;
+      console.log(`CLAUSE ${id} ${miss.length ? "RED" : "GREEN"} · ${cases.length - miss.length}/${cases.length} plant(s)`);
       clause(id, miss.length === 0 && baseOk,
-        `${cases.length - miss.length}/${cases.length} plant(s) as designed on --org · base ${BASE_ORG ? `${baseRed}/${cases.length} not as designed (RED on base)` : `UNREAD (${baseWhy || "no base"})`}${miss.length ? ` · ${miss.join(" · ")}` : ""}`);
+        `${cases.length - miss.length}/${cases.length} plant(s) as designed on --org · base ${!unitMode ? "not run (plants mode)" : BASE_ORG ? `${baseRed}/${cases.length} not as designed (RED on base)` : `UNREAD (${baseWhy || "no base"})`}${miss.length ? ` · ${miss.join(" · ")}` : ""}`);
     }
     // ── BOUND ──
-    if (!BASE_ORG) clause("BOUND", false, baseWhy || "no --base-org");
+    if (!unitMode) { /* plants mode: no BOUND */ }
+    else if (!BASE_ORG) clause("BOUND", false, baseWhy || "no --base-org");
     else {
       const walk = (dir, acc = new Map(), top = dir) => {
         for (const name of readdirSync(dir)) {
@@ -248,6 +258,11 @@ function plants() {
   rmSync(ROOT, { recursive: true, force: true });
   clause("LAST", left.length === 0, `${left.length} node process(es) naming the temp root survive`);
   const red = results.filter((r) => !r.ok).map((r) => r.id);
+  if (!unitMode) {
+    const ok = !red.length && !exitCode && planted > 0 && asExpected === planted;
+    console.log(`PLANTS mfactory · ${asExpected} of ${planted} plant(s) as expected`);
+    process.exit(ok ? 0 : 1);
+  }
   if (red.length || exitCode) { console.log(`RED ${UNIT} · ${red.join(", ") || "WITNESS"}`); process.exit(1); }
   console.log(`GREEN ${UNIT} the factory window's four numbers are read, each from its owner, and an unread window is never green · ${results.length} clause(s)`);
   process.exit(0);
