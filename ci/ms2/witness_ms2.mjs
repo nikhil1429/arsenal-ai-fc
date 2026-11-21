@@ -71,7 +71,7 @@ if (!ORG || !BASE) { console.log("RED MS2 · usage: --org <dir> --base-org <dir>
 const NAMED = ["scripts/organism_test.mjs", "scripts/land.mjs", ".claude/skills/runner/SKILL.md"];
 const NAMED_CI = (p) => p.startsWith("ci/ms2/") || /^ci\/[a-z0-9-]+\/(LANDED_ON|REBASE)$/.test(p);
 // the carried units that have landed on main (ms1's CARRIED list at c637496, ci/ms1/witness_ms1.mjs), each with a LANDED_ON (C7)
-const CARRIED = ["mcr2", "mday", "mday2", "mdn2", "mdone", "mf2", "mf4", "mfac", "mfac-floor", "mgrd", "mgs", "mjd3", "mjd4", "mjd5", "mjd6", "mjd7", "mjud", "mland", "mlj", "mlv0", "mlv1", "mlv2", "mlv3", "mpast", "mpm", "mpool", "mport", "mr3", "mrf", "mrj", "mrt", "mrung", "mrv", "ms1", "mtail", "mtxt", "mtxt3", "mxw"];
+const CARRIED = ["mcap", "mclk", "mcov", "mcr2", "mcrk", "mday", "mday2", "mdet", "mdn2", "mdone", "mdtl", "mdtl2", "mf2", "mf4", "mfac", "mfac-floor", "mgrd", "mgs", "mherm", "mjd3", "mjd4", "mjd5", "mjd6", "mjd7", "mjud", "mland", "mlaw", "mlj", "mlv0", "mlv1", "mlv2", "mlv3", "mmeter", "mpast", "mpm", "mpool", "mport", "mpres", "mprk", "mr3", "mrf", "mrj", "mrt", "mrung", "mrv", "ms1", "mtail", "mtxt", "mtxt3", "mxw"];
 const ROOT = mkdtempSync(join(os.tmpdir(), "witness-ms2-"));
 let seq = 0;
 

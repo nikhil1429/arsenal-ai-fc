@@ -326,3 +326,33 @@ read `[RULED row 1171 · unit ms2 …]`. The seven UNRULED, each named:
   co-landed units' files.
 
 CHECKPOINT · STOPPED at the push of this commit (its parent and the merge are named in §12; the tip is this commit, read with `git rev-parse origin/claude/ms2-build`) · resume from: read both neutral legs of the tip once each (`node scripts/ci_verdict.mjs <full sha>`, curl when it answers 403), FK7 (mport's L-leg on the Windows leg) and the step timings if a leg dies at the bound — in the final message only; then the architect's ruling on FK9.
+
+## 13. RESUMED: MAIN 7bf008b MERGED (forks rows 1233 (2) / 1236, 21 Nov 2026)
+
+Read before acting: §12's CHECKPOINT line and every message after it. They still bind: row 1171 (FK2 A, FK8 A, FK7 open, FK4 and
+FK5 stand, mf2 is a second no-cause red beside mlv3), FK9 is open, and no retry for green.
+- **The merge.** `42faaa39955c860d5483d80c47c76329534ea7e1` merges main **7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f** (`git fetch
+  origin main; git merge FETCH_HEAD`, a merge commit). **One conflicted file: `scripts/organism_test.mjs`**, the
+  per-unit loop of `witnesses()`. How it was resolved: ms2's shape is kept (headLeg / the door / landedLeg), and main's ONE new
+  line set in that loop (unit mdtl, row 1186 F1 A · F2 R2) is carried into `headLeg` with the same text and meaning:
+  - the guarded import of `witness_cause.mjs` (now `ctx.wc`);
+  - the CAUSE lines pushed to `causes` after a head red, from `r.code` / `r.killed`.
+  Every other landed line of main in that file, in `package.json` and in `ci/` merged without conflict and is kept as
+  landed. `package-lock.json` is unchanged from 5759cce to 7bf008b. The body of `witnesses()` still names no merge-base, no
+  `HEAD^` and no `^1` (ms1 B1.3).
+- **BASE.** `ci/ms2/BASE` = 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f. Rows 1170 (3) / 1171 keyed this seat's BASE to the main it
+  merges.
+- **C7 carried forward.** Twelve units landed on main since 5759cce and carried no LANDED_ON. Each now holds its P, derived as
+  in §2: mcap, mclk, mcov, mcrk, mdet, mdtl, mdtl2, mherm, mlaw, mmeter, mpres, mprk. That makes 50 in all, and every
+  existing LANDED_ON still equals its derivation. W-C1 names all 50.
+- **The witness both ways** (21 Nov 2026, LF trees of the merged work tree and of 7bf008b):
+  `--org merged --base-org 7bf008b` → `GREEN MS2 every landed unit judged at its LANDED sha, at head only what still binds · 31 clause(s)` (exit 0) ·
+  `--org 7bf008b --base-org 7bf008b` → `RED MS2 · W-L1 READ, W-L2 RUN, W-L3 SPOOF, W-L4 INFLIGHT, W-L6 FULL, W-L7 GITSIDE, W-L8 OFFMAIN, W-L9 SECONDS, W-L10 PLUS, W-R1 DROP, W-R2 KEEPATL, W-R3 STALE, W-R4 ORDER, W-R5 UNKNOWN, W-R6 NEWDEATH, W-R7 RECUT, W-R9 PENDING, W-T1 TRIGGER, W-T2 CHANGED, W-T3 MERGEBASE, W-G1 SUBJECT, W-G2 LANDEDON, W-G4 PLUS, W-C1 CARRY, BOUND` (exit 1).
+  Mutants: `run_mutants: 29 of 29 mutant(s) RED by the clause that names them · control GREEN`.
+- **The full hermetic suite** (21 Nov 2026, `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`):
+  `organism_test: 166 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)` (exit 0).
+- **The clock (mclk).** No clause of `ci/ms2/witness_ms2.mjs` derives a day from the clock. Its planted commit dates are
+  fixed epochs (`1700000000 + n`), so no midnight plant exists here.
+- **Its neutral legs:** read once each, after this push, through the public API (curl, no token). They are named in the
+  CHECKPOINT line below (a push of its own, made only to name them) and in the final message. If a leg is red, its red and
+  cause are named; there is no retry.
