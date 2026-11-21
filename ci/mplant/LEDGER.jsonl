@@ -20,3 +20,4 @@
 {"ts":"2026-11-21T06:11:10.376Z","act":"measure","cmd":"git ls-files | wc -l ; git ls-files <the state dir> | wc -l","last_line":"607 tracked · 57 under the state dir"}
 {"ts":"2026-11-21T06:11:10.398Z","act":"measure","cmd":"plant.mjs 5301f15, wall time","last_line":"plant ms 1281"}
 {"ts":"2026-11-21T06:12:57.900Z","act":"measure","cmd":"node ci/mplant/tools/vacuity.mjs 5301f15 <the 61, sets.mjs hermeticSpawned> (names masked by mask.mjs)","last_line":"61 rows · vacuous 0 · swallowed 0 · onlyZ>0 1 (awayday: its checkout-exposure REPORT line, awayday.mjs:104-108, not a clause) · sandbox Z 1 T 1 (the probe's plants use the LB door)"}
+{"ts":"2026-11-21T06:14:08.305Z","act":"canon","cmd":"node ci/mplant/tools/canon_scan.mjs 0e9513b (the COMMIT blobs; aacc025 was never pushed: 8 undeclared, dated and amended)","last_line":"canon scan 0e9513beb1905dc552dd092d948c1c6d7be8841b: 107 md blobs · undeclared 0 · declared 1"}
