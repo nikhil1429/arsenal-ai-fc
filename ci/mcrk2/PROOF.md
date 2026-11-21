@@ -161,6 +161,8 @@ and none is built. The runner repeats the count at each day close until mcrk2 la
 - **mcrk2-F12** — no refusal when the calling session id is absent (spec §11.2's G12c not built): the shared slot with since + fresh, as mbank's reader does.
 - **mcrk2-F13** — `crack-gap` has no seed row in `teaching_contract.mjs` (not this unit's file); declared in SEED_GAP; owed to the contract's owner.
 - **mcrk2-F14** — mbank's mutant M17 anchor is replaced by ruling (F2 C); whoever re-cuts mbank or lands second re-anchors it (class of row 1253).
+- **mcrk2-F15** — the gates' +1 checkJs diagnostic at this tip is mbank's `scripts/organism_test.mjs` LANE_ENV line (9074365), not an mcrk2 byte; for mbank's re-cut.
+- **mcrk2-F16** — `ci/mcrk2/MERGED.json`, a file beyond the brief's list, on the ruled class of row 1200 (2), so BOUND can judge a build with main merged in.
 
 ## 6b. The neutral machine's `witnesses` member, emulated (21 Nov 2026)
 
@@ -193,9 +195,42 @@ read success. It is the class row 1269 (3) names (an unsplit leg that meets the 
 on f635d68 itself both npm-test legs were cancelled at the bound (check runs 136855935336 node 22 and 136855935714 node 24,
 each 60 min; its hermetic legs 136855935644 / 136855935651 success). No retry was run (refused in advance).
 
+## 13. THE MERGE OF MAIN a0645d2 (runner M, forks rows 1272 (5) / 1273 (1), 22 Nov 2026 IST)
+
+- `git fetch origin main` (a0645d2: mshard + mgat landed), then a merge commit, no rebase, no force push. Still stacked on the
+  provisional mbank f635d68. **No conflict.** Main touched none of this unit's named files (`git diff 7bf008b a0645d2` over
+  them is empty); the only file both sides carry is `scripts/organism_test.mjs` (mbank's bytes + mshard's), merged by git.
+- **BOUND after the merge:** `ci/mcrk2/MERGED.json` (new, the class of row 1200 (2), `ci/mgat/MERGED.json`) lists every file
+  outside the named set with the LF sha256 of git's own three-way merge of BASE and main (`git merge-tree --write-tree
+  f635d68 a0645d2`), each checked equal to the tip's blob. BOUND accepts a file outside the named set only when listed with
+  those bytes; a stray byte reads `RED MCRK2 · BOUND` (checked). The clauses stay against BASE f635d68.
+
+```
+at the merge (22 Nov 2026)
+node ci/mcrk2/witness_mcrk2.mjs --org <archive tip> --base-org <archive f635d68>    GREEN MCRK2 … · 14 clause(s)   (BOUND · 51 file(s) differ · the merge's bytes (MERGED.json a0645d2) 37 · outside the named files 0)
+node ci/mcrk2/witness_mcrk2.mjs --org <archive f635d68> --base-org <same>          RED MCRK2 · G2, G3, G3b, G4, G5, G6, G7, G8, G9, G10, G12, MCRK CARRY
+node ci/mcrk2/run_mutants_mcrk2.mjs                                                 run_mutants: 21 of 21 mutant(s) RED by the clause that names them · control GREEN
+forge_session selftest: 245 passed, 0 failed · notes_compiler selftest: 51 passed, 0 failed · teaching_gate selftest: 132 passed, 0 failed
+teaching_audit: ALL CHECKS PASSED (154 passed, 0 failed) · witness_crack: PLANTS mcrk · 11 of 11 · models check exit 0
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all
+  organism_test: 168 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125 (hermetic: named, not run)   — the one red is GATES (below)
+node scripts/gates.mjs report   (tip)
+  gates types  · … · other checkJs diagnostics 297 (baseline 296, may only fall)
+  gates lint   · 344 error(s) · 2 warning(s) · no-empty 262 · no-unused-vars 82 · (directive) 2 (frozen: no-empty 262 · no-unused-vars 82 · warnings 2)
+  gates: 1 RED — a gate may only get stricter (§10-D rule 6)
+node scripts/gates.mjs report   (git's merge of BASE f635d68 and main a0645d2, WITHOUT any mcrk2 byte: tree 4e81424)
+  other checkJs diagnostics 297 · lint identical — the same RED
+```
+
+**The +1 checkJs diagnostic is not this unit's bytes — FORK mcrk2-F15.** tsc names it in `scripts/organism_test.mjs`
+(`Property 'ARSENAL_ORGAN' does not exist on type '{ CLAUDE_CODE_SESSION_ID … }'`, the `LANE_ENV` line), which `git blame`
+gives to mbank's commit 9074365 (forks row 1265, mbank-10 a), inside the provisional base. The file is not one of mcrk2's
+named files, so it is named and not edited; no baseline is raised and nothing is ignored. This unit's four organs add 0
+diagnostics (tsc main a0645d2 → tip differ by that one mbank line only) and no lint count rises.
+
 ## 11. CHECKPOINT
 
-CHECKPOINT · BUILT at 2026-11-21T14:50Z · witness GREEN both ways, 21 of 21 mutants RED, control GREEN · neutral machine read
-at 2026-11-21T16:18Z (§12) · resume from: any message (a re-cut mbank tip or a main carrying mbank → merge it with a merge
-commit, re-run the unit witness and mutants at the merge, name the merge and its result here; a ruling on FORKS mcrk2-F6w /
-F12 / F13 / F14)
+CHECKPOINT · MERGED main a0645d2 at 2026-11-21T19:30Z · witness GREEN at the merge, RED at base, 21 of 21 mutants RED,
+control GREEN · gates 1 RED, mbank's bytes (FORK mcrk2-F15) · resume from: read the neutral machine's split legs on this tip;
+then any message (a re-cut mbank tip or a new main → merge it, regenerate MERGED.json from git merge-tree, re-run the unit
+witness and mutants, name it here; a ruling on FORKS mcrk2-F6w / F12 / F13 / F14 / F15)
