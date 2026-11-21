@@ -138,6 +138,7 @@ node scripts/gaffer_brain.mjs capture voice_rep <concept>:<axis> --axis <a-i> --
 
 - `--said` is new and is why this is one command: no heredoc, no stdin, nothing to get wrong
   mid-lesson. (`<<< "…"` still works and is what the voice lane uses.)
+- **His words are taken from the prompt record, never from your copy** (unit mbank): the bank reads his message through the one door, keeps HIS bytes (`--said` only selects a slice, and a `--said` that is not inside his message is REFUSED), reads his gut-word off his message (a `--gut` that disagrees is REFUSED), and stamps the turn id. Omit `--said` and his whole message is banked.
 - `--latency_ms` is the **Stop→prompt clock** — how long he took to answer. `forge_session.mjs
   contract` prints it every turn. **If you cannot read it, LEAVE THE FLAG OFF.** A null latency
   is a measurement that was not made; an invented one corrupts the fluency ladder permanently.

@@ -1,0 +1,44 @@
+{"ts":"2026-11-20T07:05Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mbank-spec FETCH_HEAD","last_line":"Switched to a new branch 'claude/mbank-spec'"}
+{"ts":"2026-11-20T07:05Z","act":"measure-base","cmd":"git rev-parse FETCH_HEAD","last_line":"5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90"}
+{"ts":"2026-11-20T07:06Z","act":"read-mcrk-spec","cmd":"git show 02c6f57:ci/mcrk/MCRK_SPEC.md | wc -c","last_line":"26722"}
+{"ts":"2026-11-20T07:07Z","act":"read-mcrk-build","cmd":"git rev-parse origin/claude/mcrk-build","last_line":"937710bde43403e7f558bbb5b9a5f179df6dc50f"}
+{"ts":"2026-11-20T07:08Z","act":"measure-spoken-writer","cmd":"grep -n \"spoken: clip(said\" scripts/gaffer_brain.mjs","last_line":"1395:    spoken: clip(said, 4000),"}
+{"ts":"2026-11-20T07:08Z","act":"measure-said-flag","cmd":"grep -n 'const said = flag(\"said\")' scripts/gaffer_brain.mjs","last_line":"2688:    const said = flag(\"said\");"}
+{"ts":"2026-11-20T07:09Z","act":"measure-callers","cmd":"grep -rn \"gradeCapture(\" scripts/*.mjs | awk -F: '$2<3000' | wc -l","last_line":"2"}
+{"ts":"2026-11-20T07:09Z","act":"measure-turn-id","cmd":"grep -n \"turn_id\" scripts/teaching_audit.mjs ; echo \"exit $?\"","last_line":"exit 1"}
+{"ts":"2026-11-20T07:10Z","act":"measure-consumed","cmd":"grep -n \"consumed_at: paired\" scripts/teaching_audit.mjs","last_line":"1775:    prompt: p ? { ...p, consumed_at: paired ? now : (p.consumed_at || null) } : null,"}
+{"ts":"2026-11-20T07:11Z","act":"measure-hedge","cmd":"grep -n \"export const HEDGE_RE\" scripts/register.mjs","last_line":"42:export const HEDGE_RE = /\\b(shayad|matlab|i think|i guess|maybe|probably|sort of|kind of|hopefully|not sure|i feel like)\\b/gi;"}
+{"ts":"2026-11-20T07:12Z","act":"measure-env","cmd":"env | grep -c \"^CLAUDE_CODE_SESSION_ID=\"","last_line":"1"}
+{"ts":"2026-11-20T07:14Z","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 149 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 126 (hermetic: named, not run)"}
+{"ts":"2026-11-20T07:20Z","act":"write-spec","cmd":"wc -c ci/mbank/MBANK_SPEC.md","last_line":"(see commit)"}
+{"ts":"2026-11-20T11:45Z","act":"new-main-read","cmd":"git diff --quiet 5759cce 3f22388 -- <every cited organ> .claude/skills .gitignore && echo \"cited files equal\"","last_line":"cited files equal"}
+{"ts":"2026-11-20T11:45Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/7f4ca59/check-runs","last_line":"136146569916 npm test · node 24 completed success | 136146569582 npm test · node 22 completed success"}
+{"ts":"2026-11-20T12:38Z","act":"new-main-read","cmd":"git diff -U0 3f22388 cebe3eb -- scripts/study_scope.mjs | grep \"^@@\"","last_line":"@@ -745 +746,10 @@ function cli() {"}
+{"ts":"2026-11-20T14:20Z","act":"new-main-read","cmd":"git diff --quiet cebe3eb 6a6bdff -- <every cited organ> .claude/skills .gitignore package.json && echo \"cited files equal\"","last_line":"cited files equal"}
+{"ts":"2026-11-20T14:20Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/2eeca3d/check-runs","last_line":"136292328073 npm test · node 22 completed success | 136292327642 npm test · node 24 completed success"}
+{"ts":"2026-11-21T05:51Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mbank-build 5301f15","last_line":"origin/main = 5301f15 (not moved past it at the cut)"}
+{"ts":"2026-11-21T05:51Z","act":"read-spec","cmd":"git show 653151d:ci/mbank/MBANK_SPEC.md | wc -c","last_line":"35241"}
+{"ts":"2026-11-21T05:51Z","act":"measure-mtrap","cmd":"git fetch origin claude/mtrap-build","last_line":"fatal: couldn't find remote ref claude/mtrap-build"}
+{"ts":"2026-11-21T05:51Z","act":"selftest","cmd":"node scripts/teaching_audit.mjs selftest","last_line":"ALL CHECKS PASSED (152 passed, 0 failed)"}
+{"ts":"2026-11-21T05:51Z","act":"selftest","cmd":"node scripts/forge_session.mjs selftest","last_line":"forge_session selftest: 244 passed, 0 failed"}
+{"ts":"2026-11-21T06:07Z","act":"selftest","cmd":"node scripts/gaffer_brain.mjs selftest","last_line":"gaffer_brain selftest: 198 passed, 0 failed"}
+{"ts":"2026-11-21T06:07Z","act":"probe-mbank-1-A","cmd":"node scripts/lawpack.mjs report (gaffer_brain dynamic-imports forge_session)","last_line":"lawpack: 1 RED — a gate may only get stricter (§10-D rule 6)"}
+{"ts":"2026-11-21T06:07Z","act":"probe-mbank-1-B","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs laws (gaffer_brain imports teaching_audit)","last_line":"FAIL NO SHIM CALLEE — no turn_hook callee is SHIM-reached after something already imported it"}
+{"ts":"2026-11-21T06:07Z","act":"probe-mbank-1-d","cmd":"lawpack report · organism_test laws (door in study_scope, throwaway clone)","last_line":"lawpack: GREEN · organism_test: 74 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 43"}
+{"ts":"2026-11-21T06:07Z","act":"suite-cut","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (clone @ 5301f15)","last_line":"organism_test: 165 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T06:07Z","act":"suite-tip","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (clone @ 7347d55)","last_line":"organism_test: 165 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T06:07Z","act":"witness-head","cmd":"node ci/mbank/witness_mbank.mjs --org <tip clone> --base-org <cut clone>","last_line":"GREEN MBANK … · 16 clause(s)"}
+{"ts":"2026-11-21T06:07Z","act":"witness-base","cmd":"node ci/mbank/witness_mbank.mjs --org <cut clone> --base-org <cut clone>","last_line":"RED MBANK · B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14"}
+{"ts":"2026-11-21T06:07Z","act":"mutants","cmd":"node ci/mbank/run_mutants_mbank.mjs --org <tip clone> --base-org <cut clone>","last_line":"run_mutants: 14 of 14 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T06:07Z","act":"models-check","cmd":"node scripts/models.mjs check ; echo exit $?","last_line":"exit 0"}
+{"ts":"2026-11-21T06:07Z","act":"xray","cmd":"node scripts/xray.mjs report | grep Q2/Q5 (cut and tip)","last_line":"Q2 (0) · Q5 (0) at both"}
+{"ts":"2026-11-21T06:07Z","act":"mtrap-overlap","cmd":"git merge-tree --write-tree HEAD origin/claude/mtrap-build (a4191c9)","last_line":"exit 0 · no base line edited by both"}
+{"ts":"2026-11-21T06:07Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/9bedbb3/check-runs","last_line":"136753260896 npm test · node 24 cancelled | 136753260678 npm test · node 22 cancelled (superseded by the next push)"}
+{"ts":"2026-11-21T06:56Z","act":"merge-main","cmd":"git fetch origin main && git merge --no-edit FETCH_HEAD (7bf008b)","last_line":"merge 6a1d800484f422c5e82bbe03e6e207cbba5bb78d · no conflicted file"}
+{"ts":"2026-11-21T07:28Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/5db4a07/check-runs","last_line":"136766571358 hermetic twice · node 22 success | 136766571254 hermetic twice · node 24 success | 136766571130 npm test · node 24 in_progress | 136766571421 npm test · node 22 queued"}
+{"ts":"2026-11-21T08:46Z","act":"ruling-1250","cmd":"build mbank-1 d · mbank-9 stub · intent.mjs (commit 6c3a096)","last_line":"PLANTS mbank · 19 of 19 plant(s) as expected"}
+{"ts":"2026-11-21T08:46Z","act":"witness-head","cmd":"node ci/mbank/witness_mbank.mjs --org <tip> --base-org <main 7bf008b>","last_line":"GREEN MBANK … · 21 clause(s)"}
+{"ts":"2026-11-21T08:46Z","act":"witness-base","cmd":"node ci/mbank/witness_mbank.mjs --org <main 7bf008b> --base-org <main 7bf008b>","last_line":"RED MBANK · B1 … B19"}
+{"ts":"2026-11-21T08:46Z","act":"mutants","cmd":"node ci/mbank/run_mutants_mbank.mjs --org <tip> --base-org <main 7bf008b>","last_line":"run_mutants: 19 of 19 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T08:46Z","act":"suite-tip","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (clone @ 6c3a096)","last_line":"organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T08:46Z","act":"lawpack-tip","cmd":"node scripts/lawpack.mjs report","last_line":"lawpack: GREEN — no law's finding count rose, and every rule is on disk"}
