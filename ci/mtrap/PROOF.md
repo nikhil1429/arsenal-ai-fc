@@ -223,4 +223,54 @@ hermetic suite at f9c4002                       organism_test: 167 passed, 0 fai
 CI 5839264 (pre-merge tip)                      136754495430 hermetic twice · node 22 success · 136754495422 hermetic twice · node 24 success · npm test legs in progress at the read
 ```
 
-CHECKPOINT · merge f9c4002 (main 7bf008b) · tip da3e30f legs: hermetic node 22 success (136766437058) · hermetic node 24 success (136766436857) · npm test node 24 success (136766437017) · npm test node 22 cancelled (136766437110) · resume from the next ruling
+
+## 12 · THE FOURTH FAIL (forks row 1249, 21 Nov 2026) — the runner's laptop at 86355a7 reads C22 `pass 0 · fail 4 · not gateable 5 · ungated 0`
+
+**The runner's other laptop counts** (as handed, counts only):
+- The owed fragment printed 0 of 9 times, because axis e has no live note.
+- The contract costs about +86 ms at the median.
+- Glance 13–21 Nov shows one note on each of 15, 17 and 20 Nov, and no day with two.
+- The L1 witness pins no row-kind set, and both trees read the same.
+
+**What the cloud copy holds.** The tracked ledger's last commit is `7c3c279` (19 Nov). It is the same blob at 5301f15, 7bf008b
+and the tip. Read by `gateableOf` (concept, axis, day and counts only):
+
+```
+neuralnet · axis a · 13, 14 (superseded), 15 Nov (live) · 2 traps each · kept FAIL  → not gateable 3
+neuralnet · axis b · 16 (superseded), 17 Nov (live)     · 2 traps each · kept FAIL  → not gateable 2
+neuralnet · axis c · 17 Nov (superseded)                · 5 traps      · FAIL       → fail
+neuralnet · axis c · 18 Nov (live in the cloud copy)    · 5 traps      · FAIL       → fail
+```
+
+The cloud copy alone reads `fail 2`.
+
+**Which note is the fourth.** Two laptop axis-c notes are absent from the cloud copy. Both are **neuralnet · axis c** notes
+with five or more counted traps, each with a FAIL gate.
+- **One is the spec's "eighth gate"** (ed6402d §1/§8): the third axis-c note, unpushed at the spec's probe on 20 Nov.
+- **The other is the one the runner's glance places on 20 Nov.**
+  - On the laptop, axis a's live note is the 15 Nov one and axis b's is the 17 Nov one.
+  - The runner's glance shows no note on 18 Nov, so the 18 Nov axis-c note has been superseded there.
+  - The only later day with a note is 20 Nov. So the live **neuralnet · axis c · 20 Nov** note is a recompile, gated FAIL
+    at the 20 Nov day close.
+- **That 20 Nov note is the fourth fail.** If the eighth gate and the 20 Nov note were one note, the reading would be
+  fail 3. It reads fail 4, so they are two.
+- **This is inferred, not read.** The cloud holds neither row. The count-only command that settles it on the laptop:
+  `node --input-type=module -e "<per gated compiled row: day, concept, axis, counted traps, last verdict, live>"`, the same
+  one that printed the cloud table above.
+
+**Why my expectation said 3.**
+- I copied the spec's §8 expectation, "3 axis-c with 5". It counted the gates standing at the spec's probe on 20 Nov,
+  before the 20 Nov day close compiled and gated one more axis-c note.
+- I did not ask the laptop's ledger for its newest gate. Under mtrap-9 b (row 1230), C22 counts **every** compiled note
+  gated at or before now, superseded ones included. So each recompile and re-gate of the same axis adds one fail.
+- That is the ruled reading. The error was in my expectation's date, not in the count.
+
+**Does any line of the build change? No.**
+- `not gateable 5` matches.
+- The four fails are four distinct gated notes. Each has at least 3 distinct counted traps and a kept FAIL row, which is
+  exactly what mtrap-9 b counts.
+- The build wrote no row. The laptop's gate rows were written by main's own day close, which the build does not run.
+- One reading is named for the architect, not changed: under b, the fail count grows with every recompile of the same
+  axis. It counts gated notes, not axes. A per-axis count would be a new fork, not a fix.
+
+CHECKPOINT · the fourth fail named (neuralnet · axis c · 20 Nov, the laptop's live recompile; inferred, the cloud holds neither row) · no build line changes · STOPPED at 2026-11-21T08:41 UTC · resume from the next ruling
