@@ -179,8 +179,23 @@ member line, cut to tip:
 Every other unit's line (mbank, mcap, mcrk, mclk, mdet, mdtl2 and the rest whose BASE is here) is byte-equal: GREEN at head
 against its BASE at both. The neutral machine's own check runs of the pushed tip are named in the ledger (act `ci-read`).
 
+## 12. The neutral machine on the build tip 9384bee (read with curl, no token, 21 Nov 2026)
+
+```
+136880452049  hermetic twice · node 22   success    15:02:34Z → 15:12:08Z
+136880452270  hermetic twice · node 24   success    15:16:27Z → 15:26:05Z
+136880452939  npm test · node 24         success    15:19:08Z → 16:17:41Z  (head success · merge base success · the neutral verdict success)
+136880452293  npm test · node 22         cancelled  15:17:05Z → 16:17:17Z  (head success · merge base CANCELLED by the job's timeout-minutes · verdict skipped)
+```
+
+The node 22 cancel is the job's own bound (suite.yml `timeout-minutes`) reached in the merge-base run, after the head run
+read success. It is the class row 1269 (3) names (an unsplit leg that meets the bound) and it is **pre-existing at the base**:
+on f635d68 itself both npm-test legs were cancelled at the bound (check runs 136855935336 node 22 and 136855935714 node 24,
+each 60 min; its hermetic legs 136855935644 / 136855935651 success). No retry was run (refused in advance).
+
 ## 11. CHECKPOINT
 
-CHECKPOINT · BUILT at 2026-11-21T14:50Z · witness GREEN both ways, 21 of 21 mutants RED, control GREEN · resume from: read the
-neutral machine's check runs of this tip; then any message (a re-cut mbank tip or a main carrying mbank → merge it, re-run the
-unit witness at the merge, name it here)
+CHECKPOINT · BUILT at 2026-11-21T14:50Z · witness GREEN both ways, 21 of 21 mutants RED, control GREEN · neutral machine read
+at 2026-11-21T16:18Z (§12) · resume from: any message (a re-cut mbank tip or a main carrying mbank → merge it with a merge
+commit, re-run the unit witness and mutants at the merge, name the merge and its result here; a ruling on FORKS mcrk2-F6w /
+F12 / F13 / F14)
