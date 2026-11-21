@@ -253,4 +253,17 @@ Witness file: `ci/witness/mpres2/witness_mpres2.mjs` — the shape the suite mem
 
 ## 10. CHECK RUNS (the neutral machine, read with curl, no token)
 
-Filled after the push — see the commit that follows this one on the branch.
+Read with `curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/check-runs` (no token), 21 Nov 2026 08:50 UTC.
+
+**Spec sha `a71c11c2736546a2aceacdb09adedf1ac1f33c4d`** — workflow run `44882030754` (suite.yml, windows-latest):
+
+| job id | name | status at 08:50 UTC |
+|---|---|---|
+| 136779200049 | hermetic twice · node 24 | completed · **success** (07:57:46 UTC) |
+| 136779200190 | hermetic twice · node 22 | queued (since 07:49:43 UTC) |
+| 136779200137 | npm test · node 22 | queued (since 07:49:43 UTC) |
+| 136779200210 | npm test · node 24 | queued (since 07:49:43 UTC) |
+
+Three legs sat in the runner queue for an hour; this seat does not re-trigger CI (no empty commit, no dispatch). This commit is the
+next push: its own run is named in the seat's FINAL MESSAGE (the workflow's concurrency cancels the older run once a newer one exists
+on the branch, `.github/workflows/suite.yml:49`).
