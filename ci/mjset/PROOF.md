@@ -101,12 +101,12 @@ moved gaffer_brain.mjs by about 51 lines above the judge; no line the spec cites
 
 | member | cut | tip |
 |---|---|---|
-| `node scripts/gaffer_brain.mjs selftest` | `gaffer_brain selftest: 198 passed, 0 failed` | `gaffer_brain selftest: 205 passed, 0 failed` (7 mjset asserts added) |
+| `node scripts/gaffer_brain.mjs selftest` (21 Nov 2026) | `gaffer_brain selftest: 198 passed, 0 failed` | `gaffer_brain selftest: 205 passed, 0 failed` (7 mjset asserts added) |
 | `node scripts/postmatch.mjs selftest` | `ALL CHECKS PASSED` | `ALL CHECKS PASSED` (1 mjset assert added) |
 | `node scripts/models.mjs check` | exit 0 | exit 0 |
 | landed mbank witness `ci/mbank/witness_mbank.mjs --base-org <5301f15>` | `RED MBANK · BOUND` (B1-B20 + LAST GREEN) | `RED MBANK · BOUND` (B1-B20 + LAST GREEN) |
 | the mjset spec witness | none exists (the spec branch carries only the spec and its ledger) | — |
-| hermetic suite `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` (a local clone, core.autocrlf=false, node_modules from `npm ci`) | `organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)` | `organism_test: 168 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)` — the one more is the suite member CLAUSE WITNESS · ci/witness/mjset/witness_mjset.mjs |
+| hermetic suite, 21 Nov 2026, `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all` (a local clone, core.autocrlf=false, node_modules from `npm ci`) | `organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)` | `organism_test: 168 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)` — the one more is the suite member CLAUSE WITNESS · ci/witness/mjset/witness_mjset.mjs |
 
 The mbank witness's BOUND reads RED at the cut already: its base 5301f15 predates the main its tip f635d68 carries (units
 mclk, mdet, mdtl2), so files beyond its named list differ; the same line at the tip, every B clause GREEN at both.
