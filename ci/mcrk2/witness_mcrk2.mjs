@@ -15,7 +15,8 @@
 //   BOUND     only the named files differ between --base-org and --org (scripts/forge_session.mjs ·
 //             scripts/notes_compiler.mjs · scripts/teaching_gate.mjs · scripts/teaching_audit.mjs ·
 //             .claude/skills/forge/REFERENCE.md · ci/witness/mcrk/witness_crack.mjs · ci/witness/mcrk2/ · ci/mcrk2/), by text,
-//             CRLF folded
+//             CRLF folded; a file outside them is accepted ONLY when its LF bytes are git's own merge of BASE and a main
+//             merged into the build, listed in ci/mcrk2/MERGED.json (the class of row 1200 (2), ci/mgat/MERGED.json)
 //   LAST      no node process naming this run's temp dir survives
 // THE PORT CLASS (row 1053): no port is bound, no service is named, nothing is POSTed, nothing restarts, no model is
 // called (the clause witness puts a refusing `claude` / `gemini` shim first on its PATH). Every wait is a child's exit;
@@ -66,8 +67,10 @@ const walk = (root, dir = "", o = new Map()) => {
 };
 if (BASE && (!ONLY || ONLY.includes("BOUND"))) {
   const a = walk(BASE), b = walk(ORG);
-  const diff = [...new Set([...a.keys(), ...b.keys()])].filter((k) => a.get(k) !== b.get(k)).sort(), extra = diff.filter((f) => !NAMED(f));
-  record("BOUND", extra.length === 0, `${diff.length} file(s) differ${extra.length ? ` · BEYOND THE NAMED: ${extra.slice(0, 12).join(", ")}${extra.length > 12 ? ` (+${extra.length - 12})` : ""}` : ""}`);
+  const MERGED = (() => { try { return JSON.parse(readFileSync(join(HERE, "MERGED.json"), "utf8")); } catch { return null; } })();
+  const merged = (f) => !!(MERGED && MERGED.files && Object.prototype.hasOwnProperty.call(MERGED.files, f) && MERGED.files[f] === (b.has(f) ? b.get(f) : "(deleted)"));
+  const diff = [...new Set([...a.keys(), ...b.keys()])].filter((k) => a.get(k) !== b.get(k)).sort(), outside = diff.filter((f) => !NAMED(f)), extra = outside.filter((f) => !merged(f));
+  record("BOUND", extra.length === 0, `${diff.length} file(s) differ · the merge's bytes (MERGED.json ${MERGED ? String(MERGED.main).slice(0, 7) : "absent"}) ${outside.length - extra.length}${extra.length ? ` · BEYOND THE NAMED: ${extra.slice(0, 12).join(", ")}${extra.length > 12 ? ` (+${extra.length - 12})` : ""}` : " · outside the named files 0"}`);
 }
 try { rmSync(TMP, { recursive: true, force: true }); } catch { /* a survivor holds a file: LAST names it */ }
 {
