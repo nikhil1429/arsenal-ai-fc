@@ -43,3 +43,8 @@
 {"ts":"2026-11-21T08:46Z","act":"suite-tip","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (clone @ 6c3a096)","last_line":"organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
 {"ts":"2026-11-21T08:46Z","act":"lawpack-tip","cmd":"node scripts/lawpack.mjs report","last_line":"lawpack: GREEN — no law's finding count rose, and every rule is on disk"}
 {"ts":"2026-11-21T12:41Z","act":"mf2-diagnose","cmd":"node ci/mf2/witness_mf2.mjs --org <tip 6e5dca6> --base-org <main 7bf008b>","last_line":"RED MF2 · F4 BOUND"}
+{"ts":"2026-11-21T13:09Z","act":"mbank-10-a","cmd":"organism_test.mjs path lane: plant his record via teaching_audit hook (commit 9074365)","last_line":"organism_test: 44 passed, 0 failed · ruled 0 · UNRULED 0"}
+{"ts":"2026-11-21T13:09Z","act":"witness-head","cmd":"node ci/mbank/witness_mbank.mjs --org <tip> --base-org <main 7bf008b>","last_line":"GREEN MBANK … · 22 clause(s)"}
+{"ts":"2026-11-21T13:09Z","act":"witness-base","cmd":"node ci/mbank/witness_mbank.mjs --org <main> --base-org <main>","last_line":"RED MBANK · B1 … B20"}
+{"ts":"2026-11-21T13:09Z","act":"mutants","cmd":"node ci/mbank/run_mutants_mbank.mjs --org <tip> --base-org <main 7bf008b>","last_line":"run_mutants: 20 of 20 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T13:09Z","act":"mf2","cmd":"node ci/mf2/witness_mf2.mjs --org <tip> --base-org <main 7bf008b>","last_line":"RED MF2 · BOUND (F4 GREEN · ok→FAIL none)"}

@@ -429,3 +429,51 @@ not a repair, so it is not built.
 No file was edited for this section. ci/mf2 is untouched and no clause is loosened. The tip's code is still 6c3a096's.
 
 CHECKPOINT · RED mf2 F4 diagnosed at tip 6e5dca6 · members: the nine A3 asserts of the organism_test `path` lane (ok at 7bf008b, FAIL at the tip) · cause: the lane banks a typed `--said` with no prompt record, which this unit's door refuses by design · repair: FORK mbank-10 (needs scripts/organism_test.mjs), not built · last lines: `RED MF2 · F4 BOUND` (vs 7bf008b) · own witness and mutants unchanged since §11 (`GREEN MBANK … · 21 clause(s)`, `run_mutants: 19 of 19 …`) · NEXT: the architect's ruling on FORK mbank-10
+
+## 13 · FORK mbank-10 RULED A (forks row 1265, 21 Nov 2026): BUILT
+
+**The lines changed in `scripts/organism_test.mjs`** (granted for the A3 block of the `path` lane alone): one hunk,
+`@@ -2541 +2541,9 @@ function path()`, at `:2541-:2549` of the tip. It is the lane's own `bank` helper and nothing else in the
+file moves. Before each code-door bank (a call carrying `--said`) `hisTurn` runs the REAL owner hook,
+`teaching_audit.mjs hook`, with `{hook_event_name:"UserPromptSubmit", session_id:"sess-e2e-zero-tax-lane", prompt:"<--gut> -
+<--said>"}` on stdin. `LANE_ENV` sets `CLAUDE_CODE_SESSION_ID` to that id, points the owner's own env door
+`ARSENAL_AUDIT_STATE_DIR` at the sandbox's state (`SD`), sets `ARSENAL_AUDIT_NO_SPAWN=1` and drops `ARSENAL_ORGAN`. The bank
+runs in that same env. No assert is deleted, skipped or re-worded.
+
+**The witness gains B20 LANE**, a seat clause of `ci/mbank/witness_mbank.mjs` only. The clause witness's plants run in mf2's
+hermetic copies, where a LIVE lane must not execute. On a copy of each tree (scripts, learning-layer, package.json, its
+TRACKED dressing-room only), `organism_test.mjs path` must read `ok` on the nine A3 asserts AND a typed `--said` with no
+record must be refused on that tree. The unit bound gains `scripts/organism_test.mjs`. **Mutant M20** removes the planted
+record (`const bank = (...a) => { return …`).
+```
+$ node ci/mbank/witness_mbank.mjs --org <tip> --base-org <main 7bf008b> --only B20
+  GREEN B20 · org: nine ok 9/9 · typed copy refused true · organism_test: 44 passed, 0 failed · ruled 0 · UNRULED 0 | base: nine ok 9/9 · typed copy refused false
+$ node ci/mbank/witness_mbank.mjs --org <old lane 6e5dca6> --only B20
+  RED   B20 · org: nine ok 0/9 · typed copy refused true · organism_test: 35 passed, 9 failed · ruled 0 · UNRULED 9 | base leg NOT RUN
+```
+
+**The re-run, whole, on the repaired tree (9074365), base leg main 7bf008b, 21 Nov 2026:**
+```
+$ node ci/mbank/witness_mbank.mjs --org <tip> --base-org <main 7bf008b>
+GREEN MBANK … · 22 clause(s)                                   # B1-B20, BOUND, LAST
+$ node ci/mbank/witness_mbank.mjs --org <main 7bf008b> --base-org <main 7bf008b>
+RED MBANK · B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20
+$ node ci/mbank/run_mutants_mbank.mjs --org <tip> --base-org <main 7bf008b>
+run_mutants: 20 of 20 mutant(s) RED by the clause that names them · control GREEN
+  RED   mutant M20 the lane plants no prompt record → B20 (scripts/organism_test.mjs) · … · RED MBANK · B20 · … nine ok 0/9 …
+$ node ci/mf2/witness_mf2.mjs --org <tip> --base-org <main 7bf008b>
+GREEN F1 · planted 49 LIVE call site(s) (base 49) · hermetic markers: build 0 (must be 0), base 0 · full markers: build 49, base 49 …
+GREEN F2 · base hermetic judged 166, build 167 · vanished none · ok→FAIL none · added (named, never red) 1: ok CLAUSE WITNESS · ci/witness/mbank/witness_bank.mjs plants …
+GREEN F3 · hermetic headline LIVE: build 125 · base 125 + 0 admitted by door 2 …
+GREEN F4 · full profile: base 329 member(s), build 330 · vanished none · ok→FAIL none · … headline base "organism_test: 318 passed, 11 failed · ruled 0 · UNRULED 11" · build "organism_test: 319 passed, 11 failed · ruled 0 · UNRULED 11" · exit 2/2
+RED   BOUND · differs: <this unit's named files>
+GREEN LAST · 0 node process(es) naming /tmp/mf2-…
+RED MF2 · BOUND
+```
+**F4 shows no member going from ok to fail.** mf2's last line is `RED MF2 · BOUND`. BOUND is mf2's own seat-time unit bound
+("outside ci/, only scripts/organism_test.mjs differs between the trees"); this unit's named files differ by construction.
+The suite's witnesses member judges the last line with every BOUND id dropped (`scripts/organism_test.mjs:3025`, F1 A), so it
+judges no red there. The full profile's 11 failures are identical at base and build (F4 monotone); in this cloud they are
+the members that need his machine.
+
+CHECKPOINT · RED (mf2 F4, nine A3 asserts of the organism_test path lane: ok at 7bf008b, FAIL at 6e5dca6) REPAIRED by FORK mbank-10 A at 9074365 · the lane's bank helper plants his record through the real teaching_audit hook (organism_test.mjs:2541-2549) · last lines: `GREEN MBANK … · 22 clause(s)` · `RED MBANK · B1 … B20` (main) · `run_mutants: 20 of 20 mutant(s) RED by the clause that names them · control GREEN` · mf2 `GREEN F4 · … ok→FAIL none` (last line `RED MF2 · BOUND`, the seat-time bound the suite drops) · NEXT: the architect's re-run on this tip, with the mbank witness whole, and the two legs read on this BUILD tip before any land tip is cut
