@@ -61,25 +61,27 @@ const section = (t) => console.log(`\n── ${t} ${"─".repeat(Math.max(0, 66 
 // unit mbare (mlaw2 fork F7 B, forks row 1231) · THE BARE-STATE GUARD of the laws mode. On a bare state dir (a plant, a fresh
 // tree) a block of laws() whose state input is ABSENT used to throw, and the throw ended the mode: every block after it went
 // unreached (ci/mlaw2/MLAW2_SPEC.md §3 (d)). bareGuard runs ONE block; a throw whose cause is a state input that is ABSENT
-// from the state dir it was read from (an ENOENT under a dressing-room/state dir, or registry.mjs's missing-row throw naming
-// a registry.json that does not exist) makes the block print each of its not-yet-judged asserts as BLOCKED by that input,
+// (an ENOENT under a dressing-room/state dir, or a throw naming a state file — registry.mjs's missing-row throw, gate.mjs's
+// "seed registry.json" — that ROOT's state dir does not hold) makes the block print each of its not-yet-judged asserts as BLOCKED by that input,
 // by name, and file ONE red assert naming the input: a blocked block is NEVER a pass. The mode then goes on to the next
 // block. Any other throw, and any throw while the input exists, is re-thrown untouched: on a state dir that holds the input
 // the full profile reads exactly as before (ci/mbare/PROOF.md).
 /** @param {unknown} e @returns {string|null} the absent input, relative to its state dir, or null */
 function absentStateInput(e) {
   const err = /** @type {{ code?: string, path?: string, message?: string }} */ (e && typeof e === "object" ? e : {});
-  const row = /registry: no live mechanisms row "([^"]+)" in (.+?registry\.json)/.exec(String(err.message || e));
-  for (const p of [err.code === "ENOENT" ? err.path : undefined, row ? row[2] : undefined]) {
-    if (typeof p !== "string") continue;
-    const at = p.replace(/\\/g, "/").lastIndexOf("/dressing-room/state/");
-    if (at < 0 || existsSync(p)) continue;
-    const rel = p.replace(/\\/g, "/").slice(at + "/dressing-room/state/".length);
-    return row && p === row[2] ? `${rel} (its mechanisms row "${row[1]}")` : rel;
+  const msg = String(err.message || e);
+  const under = (/** @type {string} */ p) => { const n = p.replace(/\\/g, "/"), i = n.lastIndexOf("/dressing-room/state/"); return i < 0 ? null : n.slice(i + "/dressing-room/state/".length); };
+  // an ENOENT under a state dir: the throw itself proves the file absent (no second fs call on a computed path)
+  if (err.code === "ENOENT" && typeof err.path === "string" && under(err.path)) return under(err.path);
+  // a throw that NAMES its input (registry.mjs: 'no live mechanisms row "<m>" in <dir>/registry.json'; gate.mjs: "seed
+  // registry.json") counts only while that file is absent from ROOT's state dir — the dir an organ imported from ROOT reads.
+  // Read off ONE listing of that dir, so the guard aims no fs call at a path the error handed it.
+  const here = (() => { try { return new Set(readdirSync(STATE)); } catch { return new Set(); } })();
+  const row = /registry: no live mechanisms row "([^"]+)" in /.exec(msg);
+  for (const m of msg.matchAll(/\b([\w-]+\.jsonl?)\b/g)) {
+    if (here.has(m[1])) continue;
+    return row && m[1] === "registry.json" ? `registry.json (its mechanisms row "${row[1]}")` : `${m[1]} (named by the throw)`;
   }
-  // an organ imported from ROOT that throws with no path (gate.mjs: "seed registry.json") names its input by file name: it is
-  // ROOT's state dir that organ read, so the name counts only while that file is absent there
-  for (const m of String(err.message || e).matchAll(/\b([\w-]+\.jsonl?)\b/g)) if (!existsSync(join(STATE, m[1]))) return `${m[1]} (named by the throw)`;
   return null;
 }
 /** @param {string} block @param {string[]} names the block's asserts @param {() => unknown} body */
