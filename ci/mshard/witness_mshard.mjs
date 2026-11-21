@@ -24,7 +24,8 @@
 //   W-S8  SHARDRUN   member plant, ORGANISM_WITNESS_SHARD=2: exactly shard 2's witnesses spawn, and ONE WITNESS_SHARD line
 //                    names k 2, its plan and every unit judged
 //   W-S9  BADDOOR    doors 0 · n+1 · x · 2/(n+2) · both doors at once → ONE named red each, no witness spawned
-//   W-S10 ONEBOUND   every job of the tree's suite.yml carries one timeout-minutes, all equal and none above the base's;
+//   W-S10 ONEBOUND   every job of the LEG (the job named `npm test · node N` and every job its `needs:` names) carries one
+//                    timeout-minutes, all equal and none above the base's (a job outside the leg is not a part of the split);
 //                    the tree's workflowLaws refuses a planted workflow with one job's bound raised
 //   W-S11 LEGNAME    exactly one job name of suite.yml reads as a leg, every `node:` list equals REQUIRED_LEGS; the tree's
 //                    workflowLaws refuses a planted shard job named `npm test · node N`
@@ -226,14 +227,18 @@ const CLAUSES = {
   },
   async "W-S10 ONEBOUND"(t) {
     const wf = lf(src(t, ".github/workflows/suite.yml") || ""), bw = lf(src(BASE, ".github/workflows/suite.yml") || "");
-    const bounds = [...wf.matchAll(/^\s*timeout-minutes:\s*(\d+)\s*$/gm)].map((m) => Number(m[1]));
     const baseBound = Number((/timeout-minutes:\s*(\d+)/.exec(bw) || [])[1]);
-    const jobs = [...(wf.split(/^jobs:\s*$/m)[1] || "").matchAll(/^ {2}[a-z0-9_-]+:\s*$/gm)].length;
+    // the leg's jobs, read here on their own (never through the tree's legJobs): the job named like a leg, then its needs
+    const blocks = (wf.split(/^jobs:\s*$/m)[1] || "").split(/\n(?= {2}[a-z0-9_-]+:\s*$)/m).map((b) => ({ id: (/^ {2}([a-z0-9_-]+):\s*$/m.exec(b) || [])[1], b })).filter((x) => x.id);
+    const leg = blocks.find((x) => /^ {4}name:\s*npm test · node \$\{\{ matrix\.node \}\}\s*$/m.test(x.b));
+    const needs = leg ? ((/^ {4}needs:\s*\[([^\]]*)\]/m.exec(leg.b) || ["", ""])[1]).split(",").map((x) => x.trim()).filter(Boolean) : [];
+    const per = leg ? [leg.id, ...needs].map((id) => { const x = blocks.find((y) => y.id === id); return x ? [...x.b.matchAll(/^\s*timeout-minutes:\s*(\d+)\s*$/gm)].map((m) => Number(m[1])) : []; }) : [];
+    const jobs = per.length, bounds = per.flat();
     const cv = await imp(t);
     if (!cv || typeof cv.workflowLaws !== "function") return { ok: false, why: `the tree's ci_verdict.mjs exports no workflowLaws · bounds ${bounds.join(",")} over ${jobs} job(s)` };
     const lastRaised = (() => { const all = [...wf.matchAll(/^(\s*timeout-minutes:\s*)(\d+)\s*$/gm)]; const m = all[all.length - 1]; return m ? wf.slice(0, m.index) + `${m[1]}${Number(m[2]) + 1}` + wf.slice(/** @type {number} */ (m.index) + m[0].length) : wf; })();
     const own = cv.workflowLaws(wf).every(([, c]) => c), refused = !cv.workflowLaws(lastRaised).every(([, c]) => c);
-    const ok = bounds.length === jobs && jobs > 0 && bounds.every((b) => b === bounds[0] && b <= baseBound) && own && refused;
+    const ok = per.every((p) => p.length === 1) && jobs > 1 && bounds.every((b) => b === bounds[0] && b <= baseBound) && own && refused;
     return { ok, why: `bounds ${bounds.join(",")} over ${jobs} job(s), base ${baseBound} · the tree's laws hold ${own} · a raised last bound refused ${refused}` };
   },
   async "W-S11 LEGNAME"(t) {
