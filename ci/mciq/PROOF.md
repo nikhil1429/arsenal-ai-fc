@@ -28,14 +28,14 @@ below names the command that produces it.
 - `node scripts/ci_verdict.mjs selftest` (reads suite.yml's matrix line): LF tree 7bf008b `ALL CHECKS PASSED` · LF tree of the build `ALL CHECKS PASSED`.
 - The WITNESSES member (`scripts/organism_test.mjs`, unit ms1) gains unit mciq; off the neutral machine it is one named skip line.
 - unit mherm's witness names suite.yml in its BOUND (a seat-time clause the member drops): not re-run here.
-- SUITE_PLACEHOLDER
+- `ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`, LF clones, the two run concurrently, 21 Nov 2026: base 7bf008b `organism_test: 165 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125 (hermetic: named, not run)` (exit 2) · build 6e61181 `organism_test: 166 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)` (exit 0). The one base red is `CLAUSE WITNESS · ci/witness/mcap/witness_capability.mjs plants`, a file this unit does not touch, ok on the build in the same run: a flake of the base run (the two ran side by side), not a cause here — F5.
 
 ## LAW M and the law pack (row 1130 (2)) — `node scripts/lawpack.mjs gate`, LF clones (core.autocrlf=false), 21 Nov 2026
 BASE  (clone 7bf008b) `lawpack · 1953 raw match(es) over 8/8 rules · findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 90 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 7`
 build (clone 6e61181) `lawpack · 1953 raw match(es) over 8/8 rules · findings: owners-only-state-write 0 · law-m-literal-model 0 · jugad-literal-subject-list 90 · trailing-n-slice 0 · bare-catch 37 · receipt-testimony-read 5 · tum-not-tu-prose 0 · import-time-registry-read 2 · unguarded-dispatch 0 · raw-nul-in-source 0 · depcruise_errors 7`
 both  `lawpack: GREEN — no law's finding count rose, and every rule is on disk`. Every count equal: this build raises none.
 - `node scripts/models.mjs check`: exit 0 (21 Nov 2026).
-- Canon-count replay (LOAD ZERO BLOCK 7) over the COMMIT blobs before the push: CANON_PLACEHOLDER
+- Canon-count replay (LOAD ZERO BLOCK 7) over the COMMIT blobs before the push: the line is in ci/mciq/LEDGER.jsonl for each pushed sha (`node canon_replay.mjs <sha>`, the scan of organism_test.mjs LOAD ZERO BLOCK 7 over `git show <sha>:<path>`).
 
 ## CI (the neutral machine) — check runs read through the public API
 - See ci/mciq/LEDGER.jsonl for each push's run ids and verdicts.
@@ -45,3 +45,4 @@ both  `lawpack: GREEN — no law's finding count rose, and every rule is on disk
 - F2 · this branch's own pushes: `claude/mciq-build` is a build tip and still draws both legs (row 1256 (2)); only `claude/mciq-queue` stops drawing runs, and only once this lands.
 - F3 · a pull_request event is not filtered by this edit: a PR opened FROM a queue or superseded branch would still run (none is opened by any seat today). A · leave it · B · add the same negations under pull_request (`branches` there filters the BASE branch, not the head, so it cannot express this; it would need a job-level `if:` on github.head_ref).
 - F4 · row 1256 (3), named for him, not ruled: whether a build tip whose tree equals its land tip needs its own pair of legs; runs can be cancelled only by his hand in the GitHub page.
+- F5 · the base run's one red (mcap clause witness, `plants`) did not reproduce on the build in the same concurrent run; not re-measured alone here. A · the architect re-runs it alone · B · leave it to the neutral machine's base leg.
