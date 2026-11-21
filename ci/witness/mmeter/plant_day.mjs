@@ -18,7 +18,16 @@
 //     commit's sha is what the build stamps as the row's code_sha.
 //   · No port, no network, no model, no service; every child is spawnSync (it ends before this returns); the temp root is
 //     removed before return. CRLF-proof: every line read from a child or a file is split on \r?\n.
-// EXPORT: plantDay({ org, want }) → { want, n, exit, line, rows } (rows = the planted ledger's rows after the run).
+//   · ONE PLANTED INSTANT (unit mclk, forks row 1214 (3)): the clock is read ONCE (`now`, or the `now` a caller hands in).
+//     The planted day D is the IST date of that read; the planted instant T is that read, moved forward to D 00:06 IST when
+//     it falls earlier (so every row's stamp, T minus one to five minutes, lies INSIDE D whatever the clock reads — before
+//     row 1214 the rows were stamped from the raw read, and a read at 00:02 IST put them on D minus one). T is HANDED to the
+//     meter child, never re-read by it: THE DOOR is a one-line Date preload written into the temp root (`mclk_clock.mjs`,
+//     the instant a literal in it) and appended to the child's NODE_OPTIONS as `--import=<its file URL>` — the meter reads
+//     the clock only through `new Date()` / `Date.now()` (scripts/daily_green.mjs witness() and state.mjs's facts), so a
+//     Date preload in that one child is the narrowest door; no organ is edited and no env var is read by any organ.
+// EXPORT: plantDay({ org, want, now }) → { want, n, exit, line, rows, day, at } (rows = the planted ledger's rows after the
+//   run; day = D; at = T as ISO).
 // ============================================================================
 import { readFileSync, cpSync, mkdirSync, mkdtempSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
@@ -39,15 +48,29 @@ function git(cwd, args) {
 }
 
 /** Plant one day on a copy of <org> and run its real meter CLI. */
-export async function plantDay({ org = REPO, want = 5 } = {}) {
+/** THE PLANTED INSTANT (row 1214 (3)): the day of ONE read and an instant inside it late enough that T minus five
+ *  minutes is still that day. @param {Date} now @returns {{ day: string, T: number }} */
+export function plantedInstant(now = new Date()) {
+  const day = new Date(now.getTime() + 330 * 60000).toISOString().slice(0, 10);
+  const T = Math.max(now.getTime(), Date.parse(`${day}T00:06:00+05:30`));
+  return { day, T };
+}
+/** THE DOOR: a Date preload pinned at T, appended to the child's NODE_OPTIONS (the instant handed, never re-read). */
+function clockDoor(root, T) {
+  const f = join(root, "mclk_clock.mjs");
+  writeFileSync(f, `const R = globalThis.Date, T = ${T};\nfunction D(...a) { if (!new.target) return new R(T).toString(); return a.length ? new R(...a) : new R(T); }\n` +
+    `D.prototype = R.prototype; D.now = () => T; D.parse = R.parse; D.UTC = R.UTC;\nglobalThis.Date = D;\n`);
+  return `${process.env.NODE_OPTIONS ? `${process.env.NODE_OPTIONS} ` : ""}--import=${pathToFileURL(f).href}`;
+}
+
+export async function plantDay({ org = REPO, want = 5, now = new Date() } = {}) {
   const root = mkdtempSync(join(tmpdir(), TMP_PREFIX + "day-"));
   try {
     cpSync(join(org, "scripts"), join(root, "scripts"), { recursive: true });
     cpSync(join(org, "package.json"), join(root, "package.json"));
     const st = join(root, "dressing-room", "state");
-    const now = new Date();
-    const day = new Date(now.getTime() + 330 * 60000).toISOString().slice(0, 10);
-    const at = (m = 1) => new Date(now.getTime() - m * 60000).toISOString();
+    const { day, T } = plantedInstant(now);
+    const at = (m = 1) => new Date(T - m * 60000).toISOString();
     const reg = JSON.parse(readFileSync(join(org, "dressing-room", "state", "registry.json"), "utf8"));
     (reg.tables.emit_contract = reg.tables.emit_contract || []).push({ subject: "note_blocks", writes_to: "note_blocks.jsonl" });
     const files = {
@@ -83,12 +106,12 @@ export async function plantDay({ org = REPO, want = 5 } = {}) {
       git(root, ["push", "-q", "-u", "origin", "HEAD:refs/heads/planted"]);
       git(root, ["branch", "-q", "--set-upstream-to=origin/planted"]);
     }
-    const r = spawnSync(process.execPath, [join(root, "scripts", "daily_green.mjs")], { cwd: root, encoding: "utf8", windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1" } });
+    const r = spawnSync(process.execPath, [join(root, "scripts", "daily_green.mjs")], { cwd: root, encoding: "utf8", windowsHide: true, env: { ...process.env, ARSENAL_ORGAN: "1", NODE_OPTIONS: clockDoor(root, T) } });
     const last = lines(r.stdout).pop() || lines(r.stderr).pop() || "";
     const n = (/· (\d+)\/11 ·/.exec(last) || [])[1];
     const lp = join(st, "daily_green.jsonl");
     const rows = existsSync(lp) ? lines(readFileSync(lp, "utf8")).map((l) => { try { return JSON.parse(l); } catch { return null; } }) : [];
-    return { want: Number(want), n: n === undefined ? null : Number(n), exit: r.status, line: last, rows };
+    return { want: Number(want), n: n === undefined ? null : Number(n), exit: r.status, line: last, rows, day, at: new Date(T).toISOString() };
   } finally { rmSync(root, { recursive: true, force: true }); }
 }
 
