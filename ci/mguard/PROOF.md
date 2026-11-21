@@ -113,6 +113,60 @@ Check runs read at `api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/<sha>/
 **The verdict of the last push is RED, by F1 alone.** The fix is in `ci/mpool/witness_mpool.mjs`, a file this build may
 not touch. It goes to the architect.
 
+## RESUME · merge of main 7bf008b (21 Nov 2026, forks rows 1233 (2) / 1236)
+
+The order was `git fetch origin main` (FETCH_HEAD `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f`), then `git merge --no-edit FETCH_HEAD`
+into `claude/mguard-build`. That made merge commit **`1917b8d8653a7ac640253d32fca51e09943d5f49`**: no rebase, no force.
+Every landed line of the other units is kept. `scripts/organism_test.mjs`, `package.json` and `ci/` merged clean, and git
+named exactly two conflicts:
+
+- `scripts/presence.mjs`, header: unit mpres's new LAWS lines are kept verbatim ("NEVER silent", presence_input.json,
+  "Sole writer of presence_log.jsonl + presence_input.json"). Mguard's AWAY SPANS note follows them. Mguard's copy of the
+  old two lines it replaced is dropped.
+  Exports: both units' lines are kept (`inputSnapshot, launcherDoor, PINPUT` and `backAt, awayFields, awaySpans, closedOf`).
+- `scripts/usage_tap.mjs`: unit mlaw's one-path `LAW_HOME = "tools/model_law.mjs"` (and its comment) is kept, plus mguard's
+  `HISTORY_NAME`. Mguard's segment-pair `LAW_HOME` is dropped. Every use of it is a `join(root, LAW_HOME)`, which takes
+  either shape.
+
+Read on the merged tree:
+- `usage_tap selftest 45/45 — all clauses hold`
+- presence `ALL CHECKS PASSED`
+- `node scripts/models.mjs check` exit 0
+
+**BASE is left at `5759cce`.** The brief keys BASE to the main the build was CUT from ("main measured at 5759cce"), not to
+a main merged in later. The landed units that merged main after their cut (mpres, mlaw, mcap) kept their cut sha the same
+way. The tree at the newer main is also read below, so both bases are on record.
+
+The witness, by last line, on LF trees:
+
+```
+--org <merge 1917b8d>  --base-org <LF 5759cce>   GREEN MGUARD the spend guard · 7 clause(s)   (exit 0)
+--org <LF 5759cce>     --base-org <LF 5759cce>   RED MGUARD · JUDGE                            (exit 1)
+--org <LF 7bf008b>     --base-org <LF 5759cce>   RED MGUARD · JUDGE                            (exit 1)   main as it stands now
+run_mutants (--org <merge> --base-org <LF 5759cce>): run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN
+```
+
+**mclk:** the witness takes no day from a second clock read. The day it hands the judge is `p.day`, the IST day of the
+presence row its own planted pass wrote. Every history row is stamped off the same pass instants, so a plant near IST
+midnight judges the day its rows were written on.
+
+The law pack on LF trees:
+- main `7bf008b`: `jugad-literal-subject-list 90 · bare-catch 37 · receipt-testimony-read 5 · import-time-registry-read 2
+  · depcruise_errors 7`, the rest 0. `lawpack: GREEN`.
+- the merge: the same counts. `lawpack: GREEN`.
+
+No count rises, and F8's 93 → 90 was cleared on main by unit mlaw.
+
+The mpool witness on the merged tree (`--base-org <LF b1fc984>`) still reads `RED MPOOL · W3.1`: F1, unchanged. Main
+`7bf008b` reads `GREEN MPOOL the usage tap · 33 clause(s)`.
+
+The neutral legs on `1917b8d`, read by curl at push time, are all queued: 136775817334 (npm test · node 22), 136775817524
+(npm test · node 24), 136775817554 (hermetic twice · node 22) and 136775817582 (hermetic twice · node 24). The verdict follows in
+the next commit, as read, with no retry.
+
+CHECKPOINT · 21 Nov 2026 · merge `1917b8d` (main 7bf008b merged in) · witness GREEN at build and RED at base · mutants 7 of 7 · legs
+136775817334 / 136775817524 / 136775817554 / 136775817582 queued
+
 ## FORKS
 
 - **F1 · the mpool witness's W3.1 against G4 A.** `ci/mpool/witness_mpool.mjs:157-160` (a landed unit's witness, judged
