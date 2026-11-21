@@ -6,3 +6,5 @@
 {"ts":"2026-11-21T07:58:00Z","act":"install","cmd":"npm ci --no-audit --no-fund","last_line":"npm notice"}
 {"ts":"2026-11-21T08:05:00Z","act":"measure","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 166 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
 {"ts":"2026-11-21T08:20:00Z","act":"write","cmd":"ci/mcrk2/MCRK2_SPEC.md","last_line":"spec written; no existing file edited"}
+{"ts":"2026-11-21T08:02:51.618Z","act":"read","cmd":"git fetch origin claude/mbank-build && git show FETCH_HEAD:scripts/forge_session.mjs | grep -n hisPrompt","last_line":"cfdf866 · hisPrompt at :661, crackRow call at :683 passes {since} only"}
+{"ts":"2026-11-21T08:02:51.618Z","act":"write","cmd":"ci/mcrk2/MCRK2_SPEC.md §11 ROW 1246 + F2/§10 amended","last_line":"row 1246 answered in the spec"}

@@ -323,12 +323,13 @@ Each clause: what is planted · RED on base 7bf008b · GREEN on the build · its
   see it) · (c) teaching_audit drift only (no G2 red). **Recommend (a):** row 1243 (2) says both "reds on the teaching
   gate" and "counts as drift", and at the base those are two owners. *Measured by:* G6 + G7.
 - **F2 · "from another session" in branch 4.** Today's verb does not check it (§1 F-b). (a) refuse when `prompt.consumed_at`
-  is set, i.e. an earlier turn's words · (b) refuse when `prompt.session_id` ≠ the session that is calling, which needs an
-  identity the verb can read; the open sitting's `host_session_id` is the only one on disk · (c) both · (d) as today, no
-  new check. **Recommend (a)** now. It is local, it needs no identity, and a gate only gets stricter. (b) needs F2-b's
-  measurement first. *Measured by:* on his laptop, how often `consumed_at` is set when a crack would be run: the
-  `teaching_audit.jsonl` `user_text_source` mix of study turns. Plus whether Claude Code hands a Bash child its session id
-  (named in §10).
+  is set, i.e. an earlier turn's words · (b) refuse when `prompt.session_id` ≠ the calling session's id ·
+  (c) both · (d) as today, no new check. **Amended by row 1246 (§11): recommend (c), through mbank's `hisPrompt` with
+  `{ since, sessionId, fresh: true }`.** The calling session's id is readable: `CLAUDE_CODE_SESSION_ID`, read at the base
+  by `scripts/claims.mjs:85` (`sessionOfEnv`). `claims.mjs:50-55` records that it was measured equal to the Stop payload's
+  `session_id` on his machine, and `day.mjs:127` uses it too. *Measured by:* on his laptop, how often `consumed_at` is set
+  when a crack would be run, from the `teaching_audit.jsonl` `user_text_source` mix of study turns. Row 1246's
+  laptop count, 17-21 Nov 2026: 43 of 101 audited turns were session-mismatch.
 - **F3 · the gate's turn identity.** (a) `prompt_session_id === payload.session_id` plus a once-latch in the gate's own
   log · (b) parse the crack call's tool_result line in the turn's transcript (`parseTranscript` at `:327` reads tool_use
   today, and tool_result reading would be new) · (c) a time join on `row.at` within the turn. **Recommend (a):** it uses no
@@ -381,8 +382,11 @@ moves.
   missing): `grep` that day's rows by ts, fields only.
 - **How often is `consumed_at` set mid-turn?** (F2) Count `user_text_source` over study-scope rows of `teaching_audit.jsonl`
   since 13 Nov.
-- **Does a Bash child of Claude Code see its session id?** (F2-b) In a study session, run `node -e "console.log(Object.keys(process.env).filter(k=>/SESSION/i.test(k)).join(' '))"`.
-  It prints names only, never values.
+- **Does a Bash child of Claude Code see its session id?** (F2-b) This is answered at the base: `scripts/claims.mjs:50-55`
+  records `CLAUDE_CODE_SESSION_ID` as measured equal to the Stop payload's `session_id` on his machine. What stays
+  unmeasured from the cloud is whether **Claude Desktop** sets it for a Bash child the way the CLI does. Row 1246's
+  absent-env case refuses until this is known. To measure it, run in a Desktop study session
+  `node -e "console.log(!!process.env.CLAUDE_CODE_SESSION_ID)"`, which prints a boolean and never the value.
 - **How often are moments declared with no axis?** (F4) Over `forge_sessions.jsonl`, count `moments_log` entries with
   `axis === null`.
 - **The live seed of teaching_contract.json** carries no `crack-gap` today. It is gitignored, so only the build's `load()`
@@ -392,3 +396,85 @@ moves.
   no refusal ledger.
 - **Whether `npm ci` is part of the neutral machine's hermetic run:** yes, per `suite.yml` (the `npm ci` step before the
   hermetic run). This container needed it too (§0).
+
+---
+
+## 11. ROW 1246 — his words through ONE door, per session (the architect's question, 21 Nov 2026)
+
+**The question, as ruled:** row 1246 asks me to name, by file:line at my cut, every place this unit takes his words, and to
+say that it reads them only through `hisPrompt` with its own session id, so that it inherits the per-session record when
+mbank lands. It also asks me to name the case where his answer and another session's prompt fall in the same turn, and
+what this unit does then.
+
+**Ground (row 1246's laptop counts, 17-21 Nov 2026, not re-derived):** `promptHook` at `scripts/teaching_audit.mjs:1635-1656`
+writes the one shared slot `teaching_audit_last.json` `prompt` on **every** UserPromptSubmit of every session. Its only
+guard is `ARSENAL_ORGAN=1` at `:1872`, so runner and architect sessions write it too. Of 101 audited turns, 43 were
+session-mismatch.
+
+**The door (mbank, read on `origin/claude/mbank-build` @ cfdf866, not on main):** `hisPrompt(auditLast, {since, sessionId,
+fresh, needTurn})` and `readHisPrompt` are in that branch's `scripts/forge_session.mjs`, at about `:651-674`. Its crack call
+at about `:683` passes **`{ since }` only**. That means mbank's crackRow, as built, keeps today's blindness to another
+session's prompt. `gaffer_brain.mjs` at about `:2748-2750` passes `{ sessionId: CLAUDE_CODE_SESSION_ID, fresh, needTurn }`.
+
+### 11.1 Every place this unit takes his words (at 7bf008b), and the door each uses after mcrk2
+
+| # | where (7bf008b) | what it takes | today | after mcrk2 |
+|---|---|---|---|---|
+| W1 | `forge_session.mjs:3292` → `loadAuditLast()` (`:1351-1357`, path `:107`) → `crackRow` `:659-662` | his prompt text, at, session_id | a raw read of `auditLast.prompt`; checks absent/empty/before only | **only** `readHisPrompt({ since: s.started_at, sessionId: CLAUDE_CODE_SESSION_ID, fresh: true })`, the mbank door, **with its own session id**. No other read of `teaching_audit_last.json` is added. `crackRow` takes the door's result (`p.text`, `p.at`, `p.session_id`, `p.turn_id`) and never `auditLast.prompt` |
+| W2 | `forge_session.mjs:676` | `words: p.text` into the crack row | from the raw read | from the door's `ok:true` result, byte for byte. `words_src` becomes `"hisPrompt"` (proposed) |
+| W3 | `notes_compiler.mjs:354` | `r.words` copied onto the note's crack item | from the crack row | unchanged. It is a copy of W2's row and **no new read of the prompt record** |
+| W4 | `notes_compiler.mjs:480-485` (`readLaneDays(WORD_LANE …)` + `exchanges(… sessions: scope)`) | his archived turns for the note | the archive word lane, scoped by `studyScope` (`:273-282`) | unchanged. It does **not** touch the prompt record, so it neither uses nor needs `hisPrompt`. This is the compiler's source for every non-crack item |
+| W5 (proposed reader) | `teaching_audit.mjs` `stopHook`, G7 emitter, beside `:1668` | none of his words: it joins a crack row to **its own paired prompt** by `prompt_at` (by `turn_id` once mbank lands) | — | the owner's own pairing (`paired`: same session id, not consumed). It reads no text into the drift evidence |
+| W6 (proposed reader) | `teaching_gate.mjs` `stopHook` (`:785`) | none of his words: crack rows by `prompt_session_id` and id | — | — |
+
+**Day-close answers:** this unit reads **none**. Row 1243 (5) is the runner's day-close count line to the architect, and
+it is not a read of his words. No mcrk2 code runs at `day.mjs end` (`:127`). The only day-scoped reader is the compiler
+(W3, W4), and neither of those reads the prompt record.
+
+So, at the build, **W1 is the one place mcrk2 takes his words from the prompt record**, and it goes only through
+`hisPrompt` with its own session id. When mbank's owner keeps the record per session, `readHisPrompt` is the one function
+that changes its read. W1 inherits the change with no mcrk2 edit, and W2 and W3 inherit it through the row.
+
+**Order of landing:** if mbank lands first, the mcrk2 build makes its crackRow edit on top of mbank's door call (about `:683`
+there): it adds `sessionId` and `fresh` to that call and moves the call ahead of the axis check (§2.1 step 3). If mcrk2
+lands first, it carries the same call to a local `hisPrompt`, and that is a fork for the architect (**F10**). I recommend
+**mbank first**, so there is never a second door.
+
+### 11.2 The interleave: his answer and another session's prompt in the same turn
+
+The case, in order. In the study session S1, his answer arrives, and UserPromptSubmit(S1) writes the slot `{session_id: S1,
+text: A, at: t1}`. Before the teacher's `crack` tool call runs, still mid-turn, a parallel session S2 (the runner, the
+architect, any session in this repo) submits a prompt. UserPromptSubmit(S2) **overwrites** the slot with `{S2, B, t2 > t1}`.
+Then `crack` runs inside S1.
+
+| tree | what the verb does |
+|---|---|
+| **base 7bf008b** | `pAt = t2 ≥ started_at`, so the row is **WRITTEN with words B**: another session's text, possibly an engineering prompt, filed in his crack file as his words, with `prompt_session_id: S2`. This is a wrong-words row and a data-privacy hazard. Nothing refuses it |
+| **mbank as built** (`{since}` only) | the same: **WRITTEN with B** |
+| **mcrk2, before the per-session record** | `hisPrompt(… sessionId: S1)` → `other-session` → **REFUSED** with exit 1 and nothing written. This is branch 4: there are no words of his on disk for this session. **His answer A is lost to this door**, and the refusal says so by name: *"crack REFUSED — his words of this turn are not on disk: the prompt record was overwritten by another Claude session (<S2 8-char prefix>) — no crack row is written from another session's text"*. It is **not** a teacher gap, so it gets no red and no drift. The teacher did nothing wrong, and the instrument lost it. Teaching_audit's own Stop row for S1 already records `session-mismatch` (`teaching_audit.mjs:1668-1670`), so the loss is countable on the owner's lane |
+| **mcrk2 after mbank's per-session record lands** | `readHisPrompt` reads **S1's own** record. A survives S2's prompt, and the crack is **WRITTEN with A**, with the branch and the gap set as usual. The interleave case disappears |
+| **env absent** (`CLAUDE_CODE_SESSION_ID` unset in the Bash child) | `hisPrompt` skips its session check when `sessionId` is null. mcrk2 does **not** pass null. It refuses first: *"crack REFUSED — this session's id is not readable (CLAUDE_CODE_SESSION_ID) — his words cannot be told from another session's"*. This is stricter, and a gate only gets stricter. Whether Desktop sets the variable is named in §10 |
+
+A second case sits beside it: his own two messages before `crack` runs, both in S1. The record holds his **latest** prompt,
+which is fresh and from the same session. That is the right answer to crack, and it is written as usual.
+
+**Witness clauses and mutants added by row 1246** (in `ci/witness/mcrk2/witness_crack_gap.mjs`, port class as in §7):
+
+| id | plant → assertion | base | build | mutant |
+|---|---|---|---|---|
+| **G12 INTERLEAVE** | open session; slot written `{S1, A, t1}` then `{S2, B, t2}`; `crack` with child env `CLAUDE_CODE_SESSION_ID=S1` → exit 1 naming the other session, **no `cracks.jsonl`**, and no file holds B | **RED** (written with B) | GREEN | M12: drop `sessionId` from the door call → RED |
+| **G12b OWN SESSION** | no interleave: the slot holds only `{S1, A}`, child env `CLAUDE_CODE_SESSION_ID=S1` → written, words byte-equal to A, `prompt_session_id: S1` | GREEN (guard) | GREEN | M12b: compare against `sitting.host_session_id` instead of the env → RED when the two differ |
+| **G12c NO ENV** | `CLAUDE_CODE_SESSION_ID` deleted from the child env → exit 1 "this session's id is not readable", no file | **RED** (written) | GREEN | M12c: pass `sessionId: null` through → RED |
+| **G12d ONE DOOR** | source check on the build's `forge_session.mjs`: `crackRow` reads the prompt only via `hisPrompt`; the crack case reads no `.prompt` field itself; one `loadAuditLast()` feeds the crack path | **RED** (no door) | GREEN | M12d: a direct `auditLast.prompt.text` read in crackRow → RED |
+
+A further note on files: the mcrk2 build touches **no mbank file beyond `forge_session.mjs`'s crackRow call** (W1). The
+per-session record itself (in `teaching_audit.mjs` and `readHisPrompt`) is mbank's amendment, and it is not done here.
+
+- **F10 · landing order versus the door.** (a) mbank lands first and mcrk2 builds on its `hisPrompt` · (b) mcrk2 lands
+  first with a local copy of the door, and mbank folds it · (c) one land branch carries both, mbank then mcrk2.
+  **Recommend (a)**, or (c) if the runner wants one neutral verdict. (b) makes a second door, which row 1246 forbids in
+  spirit. *Measured by:* `git merge-tree` of the two build tips over main, checking that crackRow is the only overlapping
+  hunk.
+- **F11 · the interleave refusal: red or not.** (a) refused by name, with no red and no drift. It is an instrument loss,
+  counted on teaching_audit's `session-mismatch` lane (rec, per row 1243 (1) "refused as today") · (b) also red a named
+  `C.crack-lost` count on the gate. **Recommend (a)** until the per-session record lands, after which the case is gone.
