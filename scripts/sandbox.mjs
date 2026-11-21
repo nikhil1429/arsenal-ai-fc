@@ -91,6 +91,12 @@ export function buildSandbox(opts = {}) {
   mkdirSync(join(root, ".appdata", "npm"), { recursive: true });
   mkdirSync(join(root, ".npm-cache"), { recursive: true });
   mkdirSync(join(root, ".localappdata"), { recursive: true });
+  // unit mherm T1 (forks row 1157 (1), 20 Nov 2026): the sandbox's OWN temp dir. Before this the children inherited the
+  // parent's TMPDIR/TEMP/TMP, so the collar's temp allowance (audit_preload.mjs, `TMP = os.tmpdir()`) was the PARENT's temp
+  // dir — and a tree that sits under it (a fresh clone in %TEMP% or /tmp) lay inside that allowance: the canary's two
+  // "live" writes landed in the real tree instead of being denied (ci/mherm/PROOF.md, W1). Now a child's os.tmpdir() is
+  // this dir, inside the sandbox, so no position of the real tree can fall under a child's temp allowance.
+  mkdirSync(join(root, ".tmp"), { recursive: true });
   writeFileSync(join(root, ".npmrc"), "audit=false\nfund=false\nupdate-notifier=false\n");
 
   const tripwire = join(audit, "tripwire.jsonl");
@@ -129,6 +135,9 @@ export function buildSandbox(opts = {}) {
     npm_config_fund: "false",
     npm_config_audit: "false",
     LOCALAPPDATA: join(root, ".localappdata"),
+    TMPDIR: join(root, ".tmp"),                   // unit mherm T1: POSIX os.tmpdir()
+    TEMP: join(root, ".tmp"),                     // unit mherm T1: Windows os.tmpdir() reads TEMP, then TMP
+    TMP: join(root, ".tmp"),
     ANTHROPIC_API_KEY: "sk-ant-SANDBOX-JUNK-refuse-me",
     ARSENAL_AUDIT_COLLAR: root,
     ARSENAL_AUDIT_TRIPWIRE: tripwire,
