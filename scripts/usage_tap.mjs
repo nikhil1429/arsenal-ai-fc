@@ -69,7 +69,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DOOR = "ARSENAL_CAMPAIGN_ROOT";
 const READING_NAME = "usage_reading.json";
 const HISTORY_NAME = "usage_readings.jsonl";
-const LAW_HOME = ["tools", "model_law.mjs"];
+// the law home is ONE path under the campaign root door (one path = one subject; unit mlaw, forks row 1146 (2) FK2 — the
+// segment pair it replaces was the law pack's jugad finding 93, ci/mlaw/MLAW_SPEC.md §1.3)
+const LAW_HOME = "tools/model_law.mjs";
 const LAW_LINE = /^\s*(?:export\s+const\s+)?POOL_READING_MAX_AGE_MIN\s*[:=]\s*(\d+)\s*[;,]?\s*(?:\/\/.*)?$/m;
 const CALL = join(__dirname, "captains_call.mjs");
 // THE RULED BOUND (row 1062 ADDED (i), his architect's words: "returns inside one second"). A ruling's value, not ours.
@@ -99,7 +101,7 @@ export function readReading(path) {
 /** the age bound from its law home, as TEXT; null when unreadable @param {string|null} root */
 export function readRule(root) {
   if (!root) return null;
-  let t; try { t = readFileSync(join(root, ...LAW_HOME), "utf8"); } catch { return null; }
+  let t; try { t = readFileSync(join(root, LAW_HOME), "utf8"); } catch { return null; }
   const m = LAW_LINE.exec(t);
   const n = m ? Number(m[1]) : NaN;
   return Number.isInteger(n) && n > 0 ? { maxAgeMin: n } : null;
@@ -369,8 +371,8 @@ async function selftest() {
     t("F9 A a panel reading with no resets → judged by age alone", verdict({ ...good, source: "his-panel", five: { pct: 1, resets_at: null }, week: { pct: 1, resets_at: null } }, at(200), rule).go === true);
     t("P4 no-source marks: no reading and stale are no_source; rolled is not", verdict(null, now, rule).no_source && verdict(good, at(400), rule).no_source && !verdict(good, at(121), rule).no_source);
     // the law home, read as TEXT
-    mkdirSync(join(tmp, "root", "tools"), { recursive: true });
-    const lawP = join(tmp, "root", "tools", "model_law.mjs");
+    const lawP = join(tmp, "root", LAW_HOME);
+    mkdirSync(dirname(lawP), { recursive: true });
     writeFileSync(lawP, "// law\nexport const POOL_READING_MAX_AGE_MIN = 300; // row 1062 F4\n");
     t("F4 A the bound is read from its law home", readRule(join(tmp, "root"))?.maxAgeMin === 300);
     writeFileSync(lawP, "// no bound here\n");

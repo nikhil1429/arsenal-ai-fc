@@ -68,13 +68,21 @@
 //     never green and never gated, and its why names it apart: `down: <names>` · `unknown: <names>`.
 //   · clauses 9-11 read the machine NOW; on a past --date they say so.
 // WHO ELSE COULD ACT ON THIS OUTPUT? state.mjs (a future field) · /full-time · the runner.
+// THE STRICT EXIT (unit mmeter, forks rows 1162 (1) F1 A / F12 A, 19 Nov 2026). line and --json modes exit 0 ONLY when the
+//   day's row reads 11 of 11 GREEN on a study day (exitOf below); 3 when it reads below (any RED, any N-A, or not a study
+//   day); 1 as before when the ledger is unreadable or --date is malformed. The printed line is unchanged byte for byte,
+//   and the run still appends exactly as before — the exit is for the anchor that runs the meter, never a receipt's witness
+//   (the clause's read-only witness is ci/witness/mmeter/witness_meter.mjs).
+// THE CODE SHA (unit mmeter, F2 A / F5): every row this organ appends carries `code_sha`, the HEAD commit of the tree the
+//   meter ran in (git rev-parse HEAD at its root; null when git cannot say). It is a stamp, not a fact of the day: it is
+//   kept OUT of the row's identity, so re-running the same facts on newer code appends nothing (ONE ROW PER DATE holds).
 // MODES: line (default) | --json | --date YYYY-MM-DD | selftest
-// CLI:   node scripts/daily_green.mjs [--json] [--date YYYY-MM-DD] | selftest
+// CLI:   node scripts/daily_green.mjs [--json] [--date YYYY-MM-DD] | selftest      exit 0 = 11/11 study day · 3 below · 1 unreadable
 // ============================================================================
 import { readFileSync, appendFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
-import { spawnSync } from "node:child_process";
+import { spawnSync, execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { gitFacts, daemonFacts, suiteFacts, sittingFacts } from "./state.mjs";
 import { supersedeReps } from "./capture.mjs";                     // reps_log's owner defines what a correction means
@@ -353,7 +361,9 @@ const CLAUSES = Object.freeze([
 
 // ── THE LEDGER (this organ's ONE file) ───────────────────────────────────────
 const identity = (row) => JSON.stringify({ date: row.date, study: row.study, clauses: row.clauses });
-function latestByDate(rows) {
+/** The latest row per date (append order: the last row for a date wins). Exported for the clause witness
+ *  ci/witness/mmeter/witness_meter.mjs (unit mmeter): one read path, never a copy. */
+export function latestByDate(rows) {
   const m = new Map();
   for (const r of rows) if (r && /^\d{4}-\d{2}-\d{2}$/.test(String(r.date))) m.set(r.date, r);   // append order: the last row for a date wins
   return m;
@@ -374,6 +384,19 @@ export function streakFrom(rows, day) {
     k++;
   }
   return k;
+}
+
+/** THE STRICT EXIT (F1 A · F12 A): 0 only for a row that reads 11 of 11 GREEN on a study day; 3 for every other row. */
+export function exitOf(row) {
+  return row && row.study === true && row.greens === 11 && Array.isArray(row.clauses) && row.clauses.length === 11
+    && row.clauses.every((c) => c && c.status === "GREEN") ? 0 : 3;
+}
+/** THE CODE SHA — the HEAD commit of the tree the meter runs in, or null when git cannot say (never a guess). */
+function codeSha(root, exec) {
+  try {
+    const s = String(exec("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8", windowsHide: true, stdio: ["ignore", "pipe", "ignore"] }) || "").trim();
+    return /^[0-9a-f]{40}$/.test(s) ? s : null;
+  } catch { return null; }
 }
 
 /** THE WITNESS. `fixture` is the ONE root override, passed in-process by selftest() only:
@@ -410,7 +433,8 @@ async function witness({ date = null, now = new Date(), write = true } = {}, fix
   });
   const reds = clauses.filter((c) => c.status === "RED").length;
   const greens = clauses.filter((c) => c.status === "GREEN").length;
-  const row = { date: day, study: sd.known ? sd.study : null, study_why: sd.why, green: reds === 0 && sd.known === true, greens, reds, clauses };
+  const row = { date: day, study: sd.known ? sd.study : null, study_why: sd.why, green: reds === 0 && sd.known === true, greens, reds, clauses,
+    code_sha: codeSha(root, fixture && fixture.gitExec ? fixture.gitExec : execFileSync) };
 
   const prior = readJsonl(ledger);
   if (prior.born && prior.error) return { ok: false, why: `unreadable: daily_green.jsonl (${prior.error})`, row };
@@ -732,6 +756,31 @@ async function selftest() {
   }
   // ── /MF4 ──
 
+  // ── THE STRICT EXIT + THE CODE SHA (unit mmeter, forks row 1162 (1) F1 A / F12 A / F2 A) ──
+  {
+    const five = await run({ "rejirah_log.jsonl": null, "readiness.json": null, [`post_match/${DAY}.md`]: null, "daemon_watchdog.json": null, "watchman_last.json": null }, { extra: { gitExec: gitNoUpstream } });
+    const nonStudy = await run({ "sitting.json": JSON.stringify({ id: "s0", opened_at: at("2026-09-20"), closed_at: at("2026-09-20", "11:00") }) });
+    assert("STRICT EXIT — a 5/11 study day exits nonzero (3); the same law reads the full 11/11 study day 0",
+      five.row.greens === 5 && five.row.study === true && exitOf(five.row) === 3 && g.row.greens === 11 && exitOf(g.row) === 0, `${five.line} → ${exitOf(five.row)}`);
+    assert("STRICT EXIT — a non-study day is never 0 (N-A is not GREEN, F12 A), nor is an 11-green row that is not a study day, nor a row missing a clause",
+      exitOf(nonStudy.row) === 3 && exitOf({ ...g.row, study: false }) === 3 && exitOf({ ...g.row, clauses: g.row.clauses.slice(0, 10) }) === 3 && exitOf(null) === 3, nonStudy.line);
+    const SHA = "c".repeat(40);
+    const shaExec = (ahead) => (cmd, args) => (args.includes("rev-parse") ? `${SHA}\n` : gitOk(ahead)(cmd, args));
+    const f = mk({});
+    const s1 = await run({}, { extra: { gitExec: shaExec(0) } }, f);
+    const s2 = await run({}, { extra: { gitExec: (cmd, args) => (args.includes("rev-parse") ? `${"d".repeat(40)}\n` : gitOk(0)(cmd, args)) } }, f);
+    const rowsOf = (p) => readFileSync(p, "utf8").split(/\r?\n/).filter(Boolean).map((l) => JSON.parse(l));
+    const led = rowsOf(join(f.st, "daily_green.jsonl"));
+    assert("CODE SHA — the appended row carries code_sha, the HEAD commit git names at the meter's root",
+      s1.row.code_sha === SHA && led.length === 1 && led[0].code_sha === SHA, JSON.stringify(led.map((r) => r.code_sha)));
+    assert("CODE SHA — it is a stamp, not a fact: the same facts on newer code append NOTHING (ONE ROW PER DATE holds)",
+      s2.appended === false && rowsOf(join(f.st, "daily_green.jsonl")).length === 1, JSON.stringify({ appended: s2.appended }));
+    assert("CODE SHA — git that cannot say gives null, never a guess",
+      g.row.code_sha === null && five.row.code_sha === null, JSON.stringify([g.row.code_sha, five.row.code_sha]));
+    assert("latestByDate — the LAST row for a date wins, a dateless row is skipped",
+      latestByDate([{ date: DAY, greens: 6 }, { date: "x" }, { date: DAY, greens: 11 }]).get(DAY).greens === 11 && latestByDate([{ date: "x" }]).size === 0);
+  }
+
   // ── HERMETIC + ONE WRITE ──
   const liveLedgerAfter = readFile(LEDGER);
   assert("HERMETIC — the live ledger is byte-identical after the whole selftest", JSON.stringify(liveLedgerBefore) === JSON.stringify(liveLedgerAfter));
@@ -758,5 +807,6 @@ async function main() {
   if (!out.ok) { console.log(`DAILY GREEN · ${out.why}`); process.exit(1); }
   if (args.includes("--json")) console.log(JSON.stringify({ line: out.line, streak: out.streak, appended: out.appended, ...out.row }, null, 2));
   else console.log(out.line);
+  process.exit(exitOf(out.row));   // THE STRICT EXIT (F1 A): 0 only at 11/11 on a study day, 3 below
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

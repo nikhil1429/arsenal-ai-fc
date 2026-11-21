@@ -14,8 +14,14 @@
 // LAWS:  sensing ≠ speaking: this organ NEVER voices anything — the whisper
 //        still passes the earned-voice gate (shadow ratification) + the RED/
 //        conserve mute at the mouth. On a conserve day it senses but stays
-//        OFF the wire (rest is the agenda). AW unreachable → silent no-op.
-//        Sole writer of presence_log.jsonl (gitignored). Zero LLM.
+//        OFF the wire (rest is the agenda). AW unreachable → no ledger row and
+//        no guess, but NEVER silent (unit mpres, forks rows 1177 (2) / 1191): the
+//        dead input is recorded in presence_input.json (F1 A, a snapshot each
+//        pass), the pass exits NON-ZERO (F2 B), and ONCE per dead span it asks
+//        the service's own launcher, recording the ask and its result (F9 B,
+//        bounded: never a loop, never a second launcher). senses.mjs reads the
+//        snapshot onto the one state line.
+//        Sole writer of presence_log.jsonl + presence_input.json (both gitignored). Zero LLM.
 // AWAY SPANS (unit mguard, forks row 1176 G2 A): every focus row also RECORDS the
 //        known-away spans it already computed — `away: [[startIso, endIso], …]`
 //        (awayIntervals over the AFK events of the same pass, nothing new fetched;
@@ -45,7 +51,14 @@ const STATE_DIR = join(__dirname, "..", "dressing-room", "state");
 const PLOG      = join(STATE_DIR, "presence_log.jsonl");
 const CONCEPTS  = join(STATE_DIR, "concepts.json");
 const SPRINT    = join(STATE_DIR, "sprint.json");
-const AW = "http://localhost:5600";
+// F7 A (unit mpres): ONE env door for ActivityWatch, AW_API_BASE (touchline's and timeaudit's), with
+// context's old name ARSENAL_AW read as an alias. Before it this organ HARDCODED the URL, so a moved AW
+// went blind silently (setup/SURFACES.md says so) and no witness could plant a dead input from outside.
+const AW = process.env.AW_API_BASE || process.env.ARSENAL_AW || "http://localhost:5600";
+// unit mpres: THE DEAD-INPUT SNAPSHOT (F1 A) — one object, overwritten every live-fetched pass:
+// {at, input, alive, dead_since, last_live_at, repair?}. `dead_since` carries forward across dead passes
+// and resets only on a live one, so the line can say since WHEN. This organ is its sole writer.
+const PINPUT    = join(STATE_DIR, "presence_input.json");
 const THALAMUS = "http://127.0.0.1:4113";
 
 // the stall signature (leading edge, conservative — a false whisper costs trust).
@@ -713,11 +726,88 @@ function stallConcepts(titleWords, deps = {}) {
 // ---------------------------------------------------------------------------
 // THE SENSE PASS — telemetry → (maybe) one afferent · always the log
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// unit mpres — THE DEAD INPUT, NAMED (forks rows 1177 (2) / 1191)
+// ---------------------------------------------------------------------------
+// The class: a sensor whose input is dead must read red by name on the one state line, never exit 0
+// with a zero. This pass used to RETURN before any write when AW was down, so a dead day looked exactly
+// like a laptop asleep. Now the pass records its own input in its own file (owners-only law).
+const readSnap = (p) => { try { return p && existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null; } catch { return null; } };
+function writeSnap(p, obj) {
+  mkdirSync(dirname(p), { recursive: true });
+  const tmp = `${p}.tmp${process.pid}`;
+  writeFileSync(tmp, JSON.stringify(obj, null, 1));
+  renameSync(tmp, p);
+}
+/** inputSnapshot(prior, {alive, now}) — pure. dead_since carries forward over dead passes; a live pass
+ *  resets it and stamps last_live_at. A repair record rides only inside the dead span it was made in. */
+function inputSnapshot(prior, { alive, now, input = "activitywatch" }) {
+  const at = now.toISOString();
+  const p = prior && typeof prior === "object" ? prior : null;
+  if (alive) return { at, input, alive: true, dead_since: null, last_live_at: at };
+  const dead_since = p && p.alive === false && p.dead_since ? p.dead_since : at;
+  const out = { at, input, alive: false, dead_since, last_live_at: (p && p.last_live_at) || null };
+  if (p && p.alive === false && p.repair && p.repair.span === dead_since) out.repair = p.repair;
+  return out;
+}
+// F9 B, BOUNDED. The service's OWN launcher, and only one: the env door ARSENAL_AW_LAUNCHER (a plant
+// door — a witness points it under its temp dir) or else the registry's self_repair row `activitywatch`
+// (seeded by the lander, never by a cloud seat), which must DECLARE reversible:true and a report anchor
+// (registry.mjs spec §13: a row without them is not auto-repair-eligible). No row ⇒ no ask, said so.
+async function launcherDoor(deps = {}) {
+  const env = deps.env || process.env;
+  if (env.ARSENAL_AW_LAUNCHER) return { launcher: env.ARSENAL_AW_LAUNCHER, args: [], source: "env ARSENAL_AW_LAUNCHER" };
+  try {
+    const row = deps.repairRow !== undefined ? deps.repairRow : (await import("./registry.mjs")).rowOf("self_repair", "activitywatch");
+    if (!row || row.retired) return { launcher: null, why: "no self_repair row activitywatch" };
+    if (row.reversible !== true || !row.report_anchor) return { launcher: null, why: "self_repair row activitywatch not eligible (reversible + report_anchor)" };
+    if (typeof row.launcher !== "string" || !row.launcher.trim()) return { launcher: null, why: "self_repair row activitywatch names no launcher" };
+    return { launcher: row.launcher, args: Array.isArray(row.launcher_args) ? row.launcher_args.map(String) : [], source: "registry self_repair/activitywatch" };
+  } catch (e) { return { launcher: null, why: `registry unreadable (${String((e && e.message) || e).slice(0, 60)})` }; }
+}
+// one detached start, awaited only until the OS says it started or refused ('spawn' | 'error' — one of the
+// two always fires, so the wait is bounded by the OS itself). The path never rides the record: only the code.
+async function spawnOnce(cmd, args = []) {
+  const { spawn } = await import("node:child_process");
+  return await new Promise((res) => {
+    let c;
+    try { c = spawn(cmd, args, { detached: true, stdio: "ignore", windowsHide: true }); }
+    catch (e) { res({ ok: false, why: (e && e.code) || "spawn threw" }); return; }
+    c.once("error", (e) => res({ ok: false, why: (e && e.code) || "spawn error" }));
+    c.once("spawn", () => { try { c.unref(); } catch { /* the child already gone: nothing to detach */ } res({ ok: true, why: "the launcher started" }); });
+  });
+}
+async function recordDeadInput(deps, now, file) {
+  const snap = inputSnapshot(readSnap(file), { alive: false, now });
+  if (!snap.repair) {
+    const door = await launcherDoor(deps);
+    if (!door.launcher) snap.repair = { span: snap.dead_since, at: now.toISOString(), result: "none", why: door.why };
+    else {
+      // the bound is WRITTEN before the ask, so a pass that dies mid-launch can never ask twice in one span
+      snap.repair = { span: snap.dead_since, at: now.toISOString(), result: "asking", source: door.source };
+      writeSnap(file, snap);
+      const r = await (deps.launch || spawnOnce)(door.launcher, door.args);
+      snap.repair = { ...snap.repair, result: r && r.ok ? "asked" : "failed", why: (r && r.why) || "no answer" };
+    }
+  }
+  writeSnap(file, snap);
+  return snap;
+}
+
 async function sense(deps = {}) {
   const now = deps.now || new Date();
   const tone = deps.tone || currentTone();
   const events = deps.events !== undefined ? deps.events : await fetchWindowEvents(deps);
-  if (events === null) return { ok: false, skipped: "ActivityWatch unreachable — no telemetry, no guess" };
+  // unit mpres: the snapshot follows the FETCH — an injected-events caller (the selftest) stays off the
+  // filesystem unless it names its own file; a live-fetched pass writes the organ's own snapshot.
+  const inputFile = deps.inputFile !== undefined ? deps.inputFile : (deps.events !== undefined ? null : PINPUT);
+  if (events === null) {
+    const skipped = "ActivityWatch unreachable — no telemetry, no guess";
+    if (!inputFile) return { ok: false, dead: true, skipped };
+    const input = await recordDeadInput(deps, now, inputFile);
+    return { ok: false, dead: true, skipped, input };
+  }
+  if (inputFile) writeSnap(inputFile, inputSnapshot(readSnap(inputFile), { alive: true, now }));
   const t = thrashTelemetry(events, now);
   const edge = isLeadingEdge(t, deps.signature || loadSignature(deps));
   const post = deps.post || (async (evt) => {
@@ -1126,6 +1216,45 @@ async function selftest() {
     } finally { try { rmSync(dir, { recursive: true, force: true }); } catch {} }
   }
 
+  // unit mpres (forks rows 1177 (2) / 1191) — THE DEAD INPUT, NAMED. Every input is injected: a dead
+  // fetchFn (it throws ECONNREFUSED, nothing is dialled), a temp snapshot file, a launch seam that starts
+  // NO process. The bound is the claim: one ask per dead span, recorded with its result.
+  {
+    const dir = mkdtempSync(join(tmpdir(), "presence-mpres-"));
+    try {
+      const f = join(dir, "presence_input.json");
+      const tone = { arousal: "open", effects: {} };
+      const dead = async () => { throw Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }); };
+      const asks = [];
+      const launch = async () => { asks.push(1); return { ok: false, why: "ENOENT" }; };
+      const env = { ARSENAL_AW_LAUNCHER: join(dir, "no-such-launcher") };
+      const at = (m) => new Date(Date.UTC(2026, 10, 17, 5, m, 0));
+      const d1 = await sense({ now: at(28), tone, fetchFn: dead, inputFile: f, env, launch });
+      const s1 = readSnap(f);
+      assert("mpres W1 — a dead input WRITES its snapshot: alive:false, input activitywatch, and the pass says dead",
+        d1.ok === false && d1.dead === true && s1 && s1.alive === false && s1.input === "activitywatch");
+      await sense({ now: at(29), tone, fetchFn: dead, inputFile: f, env, launch });
+      const s2 = readSnap(f);
+      assert("mpres W2 — dead_since is the FIRST dead pass, never reset by a repeat", s2.dead_since === at(28).toISOString() && s2.at === at(29).toISOString());
+      assert("mpres F9 — the launcher is asked ONCE per dead span, and a failed ask is recorded failed by name",
+        asks.length === 1 && s2.repair && s2.repair.result === "failed" && s2.repair.why === "ENOENT" && s2.repair.span === s2.dead_since);
+      await sense({ now: at(30), events: mkEvents(5, 8), inputFile: f, tone, signature: SIGNATURE, matcher: bucketsMatcher(FIXTURE_BUCKETS),
+        afk: null, roll: null, registry: EMPTY_REG, sprint: null, prevEdge: null, prevFocus: null, post: async () => true, append: () => {} });
+      const s3 = readSnap(f);
+      assert("mpres W2 — a live pass reads alive:true with last_live_at, and drops the old span's repair",
+        s3.alive === true && s3.dead_since === null && s3.last_live_at === at(30).toISOString() && !s3.repair);
+      await sense({ now: at(31), tone, fetchFn: dead, inputFile: f, env, launch });
+      assert("mpres F9 — a NEW dead span may ask once more (the bound is per span, not per life)", asks.length === 2 && readSnap(f).dead_since === at(31).toISOString());
+      const f2 = join(dir, "no_door.json");
+      await sense({ now: at(32), tone, fetchFn: dead, inputFile: f2, env: {}, repairRow: null, launch });
+      assert("mpres F9 — no declared launcher ⇒ NO ask, and the record says why", asks.length === 2 && readSnap(f2).repair.result === "none" && /no self_repair row/.test(readSnap(f2).repair.why));
+      const notEligible = await launcherDoor({ env: {}, repairRow: { subject: "activitywatch", launcher: "x", reversible: false, report_anchor: "the line" } });
+      assert("mpres F9 — a self_repair row without reversible:true is NOT eligible (registry spec §13)", notEligible.launcher === null);
+      const r0 = await sense({ now: at(33), events: null, tone, append: () => { throw new Error("no log without telemetry"); } });
+      assert("mpres — an injected-events caller with no file named stays OFF the filesystem", r0.dead === true && !r0.input);
+    } finally { try { rmSync(dir, { recursive: true, force: true }); } catch { /* a temp dir the OS reaps */ } }
+  }
+
   const passed = checks.every(c => c[1]);
   console.log(passed ? "\nALL CHECKS PASSED" : "\nSELFTEST FAILED");
   return passed;
@@ -1182,6 +1311,12 @@ async function main() {
     const t0 = Date.now();                          // hoisted once — a mid-build clock tick shaved the rate under the bar (scar)
     const r = await sense(demo ? { events: Array.from({ length: 48 }, (_, i) => ({ timestamp: new Date(t0 - 8 * 60000 + i * 10000).toISOString(), data: { app: i % 2 ? "chrome.exe" : "Code.exe", title: i % 2 ? "attention scaling doubt - search" : "drill.py - editor" } })) } : {});
     console.log(r.ok ? `presence: ${r.edge ? (r.posted ? "LEADING EDGE — afferent posted" : r.muted ? "leading edge, MUTED (conserve)" : "leading edge, thalamus asleep") : "calm"} (${r.telemetry.switches} switches / ${Math.round(r.telemetry.span_min)}min)` : `presence: ${r.skipped}`);
+    // unit mpres F2 B: a dead input never exits 0 with a zero — the scheduler's LastTaskResult reads it too.
+    if (r.dead) {
+      const i = r.input;
+      if (i) console.log(`presence: input DEAD since ${i.dead_since}${i.repair ? ` · repair ${i.repair.result}${i.repair.why ? ` (${i.repair.why})` : ""}` : ""} → ${PINPUT}`);
+      process.exitCode = 1;
+    }
     return;
   }
   console.log("presence.mjs — sense [--demo] | status | calibrate | roll | selftest");
@@ -1192,6 +1327,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 export { thrashTelemetry, isLeadingEdge, sense, calibrate, calibrateLegacy, calmWindow, factoryEdge, CALIBRATE,
          loadSignature, SIGNATURE, focusRead, focusReadLegacy, awayIntervals, bucketsMatcher, sensePassRows,
          fetchAwEvents, fetchWindowEvents, fetchAfkEvents, FOCUS,
+         // unit mpres — the dead-input snapshot and its one bounded ask
+         inputSnapshot, launcherDoor, PINPUT,
          // unit mguard (row 1176 G2 A / G7 A) — the recorded away spans and their read-only reader
          backAt, awayFields, awaySpans, closedOf,
          // #51 — the shared, archive-tolerant readers the other four call sites can import

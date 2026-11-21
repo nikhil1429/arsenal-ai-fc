@@ -133,6 +133,14 @@ export const OWNERS = {
   // a way back, all four, or it is not a hold. `--until` is validated below, never here.
   hold:     { organ: "brain.mjs",             argv: (a) => (holdIsClear(a) ? ["hold", "clear"] : ["hold", "--until", String(a.until), "--why", a.text]),
               reverse: () => ({ argv: ["hold", "clear"] }) },
+  // unit mprk (forks rows 1173 (3) / 1190, F4 a — the act tail is the ONE write door): a park the teacher names
+  // mid-concept is kept by its owner, verbatim, and returns as ONE Captain's Call card at his next anchor. The reverse
+  // is real: undo closes the park through the same owner (`close --by undo`), and its card retires at source.
+  // F4 a, mechanically: a park from any door but the tail ("code") is refused at the door — the ball's schema enum and the
+  // `do` CLI derive from this table too, so without the guard every door would write parks.
+  park:     { organ: "parked.mjs",            argv: (a, id) => ["add", "--door", "act", "--act", id], stdin: (a) => a.text,
+              guard: (a, deps, door) => (door === "code" ? null : `park rides ONE door — the reply's <<ACT {…}>> tail (door code), not door ${door} (row 1190 F4 a)`),
+              reverse: (a, r) => { const id = r && /"id":"([^"]+)"/.exec(r); return id ? { argv: ["close", id[1], "--by", "undo"] } : { argv: null, why: "the park carried no id in its receipt" }; } },
 };
 /** a `hold` act that ENDS the hold rather than arming one — `{clear:true}` or `until:"clear"` */
 export const holdIsClear = (a) => !!(a && (a.clear === true || String(a.until == null ? "" : a.until).trim().toLowerCase() === "clear"));
@@ -191,7 +199,7 @@ export function dispatch(act, deps = {}) {
   const id = newId(now);
   if (!v.ok) { const row = { id, ts: now.toISOString(), door, verb: act && act.verb || null, args: act && act.args || null, owner: null, argv: null, ok: false, error: v.why, ms: 0 }; appendRow(row, deps); return row; }
   const o = OWNERS[v.verb];
-  const guardWhy = o.guard ? o.guard(v.args, deps) : null;
+  const guardWhy = o.guard ? o.guard(v.args, deps, door) : null;   // unit mprk: the door rides along (park is tail-only, row 1190 F4 a)
   if (guardWhy) { const row = { id, ts: now.toISOString(), door, verb: v.verb, args: v.args, owner: o.organ, argv: null, ok: false, error: guardWhy, ms: 0 }; appendRow(row, deps); return row; }
   const argv = o.argv(v.args, id, door, o.posts ? deps.post : undefined).map((x) => String(x));   // BLOCK 1: the door rides along — a task records which mouth asked
   const t0 = Date.now();
@@ -343,7 +351,7 @@ export function findings(s = stats(7), now = Date.now()) {
 // ── DOOR 4 — a ball → acts, by a `lite` model under a strict schema; unparseable = note verbatim ──
 export const BALL_SCHEMA = { type: "OBJECT", properties: { acts: { type: "ARRAY", items: { type: "OBJECT", properties: { verb: { type: "STRING", enum: VERBS }, args: { type: "OBJECT", properties: { text: { type: "STRING" }, kind: { type: "STRING" }, axis: { type: "STRING" }, job: { type: "STRING" }, id: { type: "STRING" } }, required: ["text"] } }, required: ["verb", "args"] } } }, required: ["acts"] };
 export function ballPrompt(text) {
-  return `You route ONE message the captain sent himself (an ntfy "ball") into acts the organism executes. VERBS: note (a thought/doubt/win to keep verbatim — the DEFAULT), fact (a durable fact ABOUT HIM to stage for his confirmation), pref (a standing preference for how the coach speaks/behaves), rule (a teaching rule to add), agenda (something the NEXT sitting must do first), card (a decision only he can make later), reminder (a timed nudge), mission (research to run), rep (a spoken answer of his to grade), job (ONLY when he names an existing brain job id), design (a ruling about HOW THE ORGANISM SHOULD WORK — build/architecture word, goes to the registry rulings lane), hold (ONLY when he explicitly says to STOP the system's own AI spending for a while — set args.until to the ISO instant he named and args.why to his reason; if he names no end time, this is a note, not a hold). Keep his words VERBATIM in args.text (never paraphrase, never translate). Split ONLY when the message clearly carries two different asks. When unsure: ONE note. Reply with JSON only.\n\nBALL:\n${text}`;
+  return `You route ONE message the captain sent himself (an ntfy "ball") into acts the organism executes. VERBS: note (a thought/doubt/win to keep verbatim — the DEFAULT), fact (a durable fact ABOUT HIM to stage for his confirmation), pref (a standing preference for how the coach speaks/behaves), rule (a teaching rule to add), agenda (something the NEXT sitting must do first), card (a decision only he can make later), reminder (a timed nudge), mission (research to run), rep (a spoken answer of his to grade), job (ONLY when he names an existing brain job id), design (a ruling about HOW THE ORGANISM SHOULD WORK — build/architecture word, goes to the registry rulings lane), hold (ONLY when he explicitly says to STOP the system's own AI spending for a while — set args.until to the ISO instant he named and args.why to his reason; if he names no end time, this is a note, not a hold), park (NEVER for a ball — only a teacher reply's tail parks; a ball that says "later" is a note). Keep his words VERBATIM in args.text (never paraphrase, never translate). Split ONLY when the message clearly carries two different asks. When unsure: ONE note. Reply with JSON only.\n\nBALL:\n${text}`;
 }
 export function parseBallText(raw, fallbackText) {
   let parsed = null;
