@@ -337,3 +337,54 @@ The reader's line `const why = …` (mdtl) and the selftest's mdtl plants merged
   run used a `git clone --no-local -c core.autocrlf=false` instead.
 
 **Q5** · Should ONEBOUND judge only the leg's jobs (this build), or every job of suite.yml, which would ask main's `hermetic-twice` for a bound of its own?
+
+## 11 · THE MERGE OF NEW MAIN 7bf008b (mdet dfe26a1 · mdtl2 4d582d5 · mclk 7bf008b), forks rows 1226 / 1228
+
+**The legs of the previous tip first** (read 21 Nov 2026 by curl, no token, `GET /commits/40419e0/check-runs` and each leg's
+annotations). Every check run of 40419e0 is completed/success. `npm test · node 22` 136765183532 reads GREEN (base 5301f15 · 0 new red ·
+0 base red · 3 shards). `npm test · node 24` 136765183520 reads GREEN (base 5301f15 · 0 new red · 0 base red · 3 shards). The other
+check runs are `suite · node {22,24}` 136754284455 / 136754284586, the six `witnesses · node {22,24} · shard {1,2,3}` jobs, and
+`hermetic twice · node {22,24}` 136754284170 / 136754284480.
+
+`git fetch origin main` (FETCH_HEAD 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f), then `git merge FETCH_HEAD`, giving merge commit **a9e2f03** (parents
+40419e0 · 7bf008b). It is a merge commit, with no rebase and no force push. **Conflicted files: `scripts/ci_verdict.mjs` (three hunks) and
+`scripts/organism_test.mjs` (one hunk)**. `package.json`, `ci/`, `ci/witness/mmeter/plant_day.mjs`, `scripts/red_cause.mjs` and the units'
+own dirs auto-merged. Measured line by line against the merge base 5301f15 (21 Nov 2026): in organism_test.mjs, suite.yml and package.json,
+NO line that main or mshard added is absent from the merge. In ci_verdict.mjs the only absent added lines are the both-changed lines below,
+plus mshard's own `digest` signature, CLI line and doc line, which C6 rewrote.
+
+| # | file · lines now (a9e2f03) | main 7bf008b held | mshard 40419e0 held | the merge carries both by |
+|---|---|---|---|---|
+| L1 | ci_verdict.mjs 26–39 | mdtl2's paragraph (red_cause verify, F7 A `cause["(head)"]`/`["(base)"]`, F6 A one more call) and `// MODES: compare · selftest · <sha>` | mshard's THE FOLD paragraph and `// MODES: compare · digest · times · selftest · <sha>` | mdtl2's paragraph verbatim, then mshard's. MODES is the union |
+| L2 | ci_verdict.mjs 276–286 | `compareLines(…, readSrc = () => "", io = {})` with mdtl2's io destructuring and `judge(…, text, …)` | `compareLines(…, readSrc = () => "", shards = null)` | main's signature and body verbatim. **io stays the 9th positional argument (main's API as landed) and `shards` rides 10th**, with an `[io]` and a `[shards]` JSDoc line. The payload line `...(shards ? { shards } : {})` merged clean beside mdtl's `cause` |
+| L3 | ci_verdict.mjs CLI compare | `… baseline, workspaceSrc,` / `{ readFile: workspaceFile, tracked: workspaceTracked, text: {…} });` | `… baseline, workspaceSrc, folded.shards);` | main's two lines, ending `text: {…} }, folded.shards);` |
+| L4 | organism_test.mjs main() | mdet's `if (mode === "census") { … }` (a read, never a mode of `all`) | mshard's `if (mode === "witness-plan") { … }` | both blocks, side by side (mshard's, then mdet's). Each exits on its own mode |
+
+**Beyond the markers. C6 · the digest and mdtl2's F7 A (`sectionCause`).** mdtl2 names the last section a run reached when it died before its
+machine line, read off the run's WHOLE output. Under the fold, `--head`/`--base` are DIGESTS, and the digest drops every `── ` line, so on
+the neutral machine F7 A would always have read `no section reached`. Now `digest(raw, osSrc)` carries ONE section line, and only for a run
+with NO verdict line: the last section as `sectionCause` rebuilds it from the workspace's organism_test.mjs, in its public spelling and never
+the raw line. A section that is not public bytes becomes `── (withheld) ──`, and no section gives no line. Compare's own `sectionCause` then
+reads the same answer the whole output would have given. Measured on the merged tree with node_modules: real, skeleton (`… — LIVE`) and
+forged sections round-trip. A new fold law proves it (real · forged · none, and a run WITH a verdict line carries no section line). The CLI
+passes `workspaceFile("scripts/organism_test.mjs")`. A run with a verdict line digests byte for byte as before (W-S13 PRIVACY unchanged).
+
+**mclk's clock note.** mshard's witness derives NO day from the clock. Its one `Date.now()` builds a unique canary string (W-S13), and the
+`times` header date is printed by a seat and never judged by a clause (W-S19 judges the table's grammar). So no midnight plant of mshard's exists.
+
+**Measured on the merged tree** (21 Nov 2026, this container, Linux; LF `git archive` exports and `--no-local` clones under the temp dir):
+- witness `--org a9e2f03 --base-org 5759cce --parent-org 7bf008b`: `GREEN MSHARD the witnesses member split across jobs, folded by name · 23 clause(s)`
+  (exit 0; BOUND · 9 file(s) differ from the parent, every one named · LAST · 0 node process(es) naming the temp dir survive)
+- witness `--org 5759cce --base-org 5759cce`: `RED MSHARD · W-S1 PLAN, … W-S21 KREAD` (every clause but the guard W-S14; exit 1)
+- witness on a9e2f03 without `--parent-org`: `RED MSHARD · BOUND` (the bound class of row 1200 (2); no BASE file is rewritten)
+- mutants `--org a9e2f03 --base-org 5759cce`: `run_mutants: 21 of 21 mutant(s) RED by the clause that names them · control GREEN`
+- `node scripts/ci_verdict.mjs selftest`, 21 Nov 2026, node_modules linked: 7bf008b `ci_verdict selftest: 38 passed, 0 failed` · a9e2f03 `53 passed, 0 failed`.
+  Without node_modules (this checkout, 21 Nov 2026), both read their two mdtl2 plants red (7bf008b `36 passed, 2 failed`, a9e2f03 `51 passed, 2 failed`), the
+  same two by name: red_cause needs acorn. That is main's own, named and not touched.
+- `node scripts/models.mjs check`, 21 Nov 2026: exit 0 on both
+- hermetic suite (`ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`, clones run one after the other), 21 Nov 2026: a9e2f03
+  `organism_test: 166 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125` = parent 7bf008b `166 passed, 0 failed`. The law pack line is
+  byte-equal (md5 4a295a6b…). Member line touched, both: `ok   SUITE MEMBER · ci_verdict selftest exits 0`.
+- law pack gate, 21 Nov 2026, equal on both: `jugad-literal-subject-list 90 · bare-catch 37 · receipt-testimony-read 5 · import-time-registry-read 2 ·
+  depcruise_errors 7`, every other law 0 (BASE 5759cce: jugad 93, §10). `node scripts/gates.mjs`, equal on both: TYPE COUNT 298 · no-empty 272 ·
+  no-unused-vars 85. **No count rose.**
