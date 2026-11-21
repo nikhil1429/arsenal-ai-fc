@@ -29,11 +29,15 @@
 //            green — the signed-out read is a fact of his laptop (spec N4; row 1162 (5)).
 //   Every child is bounded by the job's own timeout-minutes, READ from --org's .github/workflows/suite.yml (never typed);
 //   unreadable → 2.
+// USAGE — `plants` (unit mmeter's suite member, row 1162 (2)): node ci/witness/mmach/witness_machine.mjs plants [--org <dir>]
+//   the same plants on this tree, the base side being this tree's reader with the record removed; BOUND is not run (no
+//   --base-org). Prints `CLAUSE <id> GREEN|RED · k/n plant(s)` per clause and ends `PLANTS mmach · k of n plant(s) as expected`.
 // USAGE — THE PLANTS (each clause both ways):
 //   node ci/witness/mmach/witness_machine.mjs --org <dir> --base-org <dir> [--only <clause>[,<clause>…]]
 //     --org       the build tree (GREEN); --base-org the BASE tree (main at the cut, ci/mmach/BASE): RED on each clause
 //     --only      run only these clause ids (the mutant runner's door); BOUND and LAST always run
-// CONTRACT — every plant runs on a MINIMAL COPY under one os.tmpdir() root: the tree's scripts/ci_verdict.mjs, its
+// CONTRACT — every plant runs on a MINIMAL COPY under one os.tmpdir() root: the tree's scripts/ci_verdict.mjs and every
+//   sibling module it imports (derived from its source, transitively), its
 //   .github/workflows/suite.yml and (when the plant keeps it) its ci/witness/mmach/machine.json — nothing of
 //   dressing-room/ is copied, read or printed. The network is PLANTED: the child is `node --import <preload> ci_verdict.mjs`,
 //   the preload (written under the temp root, refused unless its plan and log paths lie under os.tmpdir()) replaces
@@ -178,12 +182,23 @@ export function parseLine(line, sha) {
       const lm = /^(npm test · node \d+): (GREEN|RED) \((.*)\) \[run \d+\]$/.exec(part);
       if (!lm || !LEG_NAME.test(lm[1])) return null;
       const nm = /(\d+) new red(?:: (.*))? · \d+ base red · /.exec(lm[3]);
-      const fresh = nm && Number(nm[1]) > 0 && nm[2] !== undefined ? nm[2].split(" ; ") : [];
-      if (nm && Number(nm[1]) !== fresh.length) return null;   // a count that disagrees with its names is not read
-      legs.push({ name: lm[1], v: lm[2], fresh, noAnn: !nm });
+      // since unit mdtl a new red may carry ` — cause: a ; b` (joined by the same " ; " as the names), so the names are
+      // never re-split: `newText` is kept whole and an assert is found in it by its own boundaries (namesAmong)
+      legs.push({ name: lm[1], v: lm[2], nNew: nm ? Number(nm[1]) : null, newText: nm && nm[2] !== undefined ? nm[2] : "", noAnn: !nm });
     }
   }
   return { v: m[2], legs };
+}
+
+/** is <name> one of the new reds in <text> (`n1 ; n2 — cause: c ; n3`)? Bounded on both sides by the start, " ; ", the
+ *  cause marker or the end — never a substring of a longer name. @param {string} text @param {string} name */
+export function namesAmong(text, name) {
+  const t = String(text), n = String(name);
+  for (let i = t.indexOf(n); i >= 0; i = t.indexOf(n, i + 1)) {
+    const before = t.slice(0, i), after = t.slice(i + n.length);
+    if ((before === "" || before.endsWith(" ; ")) && (after === "" || after.startsWith(" ; ") || after.startsWith(" — cause: "))) return true;
+  }
+  return false;
 }
 
 // ── THE THREE CLAUSE READS ───────────────────────────────────────────────────────────────────────────────────────────
@@ -213,17 +228,17 @@ export function readClause(mode, org, root, o = {}) {
   if (mode === "nologin") return (r.status === 0 || r.status === 1) ? say(0, `read signed-out (${p.v})`) : say(2, "an exit outside 0/1");
   if (mode === "broken") {
     if (r.status !== 1 || p.v !== "RED") return say(1, `the broken branch reads ${p.v}, not RED`);
-    const named = p.legs.length > 0 && p.legs.every((l) => l.v === "RED" && l.fresh.includes(broken.planted_assert));
+    const named = p.legs.length > 0 && p.legs.every((l) => l.v === "RED" && namesAmong(l.newText, broken.planted_assert));
     return named ? say(0, `RED by name on every leg: ${broken.planted_assert}`) : say(1, `RED, but not every leg names the planted assert (${broken.planted_assert}) among its new reds`);
   }
   if (r.status !== 0 || p.v !== "GREEN") return say(1, `the clean sibling reads ${p.v}, not GREEN`);
-  return p.legs.length > 0 && p.legs.every((l) => l.v === "GREEN" && l.fresh.length === 0) ? say(0, "GREEN on every leg") : say(1, "a leg is not GREEN with 0 new red");
+  return p.legs.length > 0 && p.legs.every((l) => l.v === "GREEN" && l.nNew === 0) ? say(0, "GREEN on every leg") : say(1, "a leg is not GREEN with 0 new red");
 }
 
 // ── the planted API's answers ────────────────────────────────────────────────────────────────────────────────────────
 const RUNS = (st = "completed") => ({ check_runs: [{ id: 902, name: "npm test · node 24", status: st, conclusion: "success" }, { id: 901, name: "npm test · node 22", status: st, conclusion: "success" }, { id: 909, name: "another job", status: "completed" }] });
-const ANN = (v, fresh, base) => [{ title: "BASE RED · suite 1/1", message: "x" }, { title: "B1 VERDICT · suite", message: `B1_VERDICT ${JSON.stringify({ v, base, new: fresh, base_red: 1, live: 1 })}` }];
-const PLAN = (base, l22, l24, st) => ({ map: [["/check-runs?", RUNS(st)], ["/check-runs/901/", ANN(l22[0], l22[1], base)], ["/check-runs/902/", ANN(l24[0], l24[1], base)]] });
+const ANN = (v, fresh, base, cause) => [{ title: "BASE RED · suite 1/1", message: "x" }, { title: "B1 VERDICT · suite", message: `B1_VERDICT ${JSON.stringify({ v, base, new: fresh, base_red: 1, live: 1, ...(cause ? { cause } : {}) })}` }];
+const PLAN = (base, l22, l24, st) => ({ map: [["/check-runs?", RUNS(st)], ["/check-runs/901/", ANN(l22[0], l22[1], base, l22[2])], ["/check-runs/902/", ANN(l24[0], l24[1], base, l24[2])]] });
 
 // ── the tree walk (BOUND) and the process sweep (LAST) ───────────────────────────────────────────────────────────────
 function walk(root) {
@@ -255,8 +270,21 @@ function namingProcs(dir) {
 
 // ── a minimal plant tree ─────────────────────────────────────────────────────────────────────────────────────────────
 /** copy of <src>'s reader, bound and (optionally) record, under <into> @param {string} src @param {string} into @param {{ record?: boolean, recordOverride?: any, verdictSrc?: string }} o */
+/** the reader and every sibling module it imports statically (`from "./x.mjs"`), followed transitively — derived from the
+ *  reader's own source, never a typed list (since unit mdtl ci_verdict.mjs imports witness_cause.mjs and red_cause.mjs)
+ *  @param {string} src @returns {string[][]} */
+function readerFiles(src) {
+  const seen = new Set([VERDICT_REL[1]]), todo = [VERDICT_REL[1]];
+  while (todo.length) {
+    const f = /** @type {string} */ (todo.pop());
+    let t = "";
+    try { t = readFileSync(join(src, "scripts", f), "utf8"); } catch { continue; }
+    for (const m of t.matchAll(/^\s*import\s[^;]*?from\s+["']\.\/([A-Za-z0-9_.-]+\.mjs)["']/gm)) if (!seen.has(m[1])) { seen.add(m[1]); todo.push(m[1]); }
+  }
+  return [...seen].sort().map((f) => ["scripts", f]);
+}
 function plantTree(src, into, o = {}) {
-  for (const rel of [VERDICT_REL, SUITE_REL]) {
+  for (const rel of [...readerFiles(src), SUITE_REL]) {
     const from = join(src, ...rel);
     if (!existsSync(from)) continue;
     mkdirSync(join(into, ...rel.slice(0, -1)), { recursive: true });
@@ -273,10 +301,11 @@ function plantTree(src, into, o = {}) {
 }
 
 // ── THE PLANTS ───────────────────────────────────────────────────────────────────────────────────────────────────────
-async function plants(ORG, BASE, only) {
+async function plants(ORG, BASE, only, plantsMode = false) {
   const T = mkdtempSync(join(tmpdir(), "mmach-"));
   const reds = [], greens = [];
-  const clause = (id, ok, why) => { (ok ? greens : reds).push(id); console.log(`${ok ? "✓" : "✗"} ${id}${why ? ` — ${why}` : ""}`); };
+  let K = 0, N = 0;
+  const clause = (id, ok, why, k = ok ? 1 : 0, n = 1) => { (ok ? greens : reds).push(id); K += k; N += n; console.log(`${ok ? "✓" : "✗"} ${id}${why ? ` — ${why}` : ""}`); console.log(`CLAUSE ${id} ${ok ? "GREEN" : "RED"} · ${k}/${n} plant(s)`); };
   let n = 0;
   const tree = (src, o) => plantTree(src, join(T, `t${++n}`), o);
   try {
@@ -288,13 +317,15 @@ async function plants(ORG, BASE, only) {
       const cases = [];
       const check = (name, got, exp, extra = true) => { const ok = got.code === exp && extra; cases.push(ok); console.log(`  ${ok ? "✓" : "✗"} ${id} · ${name} · exit ${got.code} (want ${exp}) — ${got.why}`); };
       // RED on the BASE: the base's own reader and record (none at the cut), the API planted as the build would want it
-      const baseT = tree(BASE, {});
+      // `plants` mode (unit mmeter's member, row 1162 (2)) has no --base-org: the base side is THIS tree's reader with the
+      // record removed — the one fact the cut lacked (the base reader is the same file, and BOUND is not run there)
+      const baseT = BASE ? tree(BASE, {}) : tree(ORG, { record: false });
       const anySha = rec ? (mode === "broken" ? rec.broken.sha : rec.clean.sha) : "0".repeat(40);
       const baseGot = readClause(mode, baseT, T, { plan: PLAN(anySha, ["RED", rec ? [rec.broken.planted_assert] : []], ["RED", rec ? [rec.broken.planted_assert] : []]), tag: "base" });
       const baseRed = baseGot.code !== 0;
       cases.push(baseRed);
       console.log(`  ${baseRed ? "✓" : "✗"} ${id} · BASE (its own reader and record) · exit ${baseGot.code} (want not 0) — ${baseGot.why}`);
-      if (!rec) { clause(id, false, `the build carries no readable record (${rr.ok ? "" : rr.why})`); continue; }
+      if (!rec) { clause(id, false, `the build carries no readable record (${rr.ok ? "" : rr.why})`, 0, 1); continue; }
       const bs = rec.broken.base, A = rec.broken.planted_assert;
       const build = tree(ORG, {});
       const noRec = tree(ORG, { record: false });
@@ -302,6 +333,9 @@ async function plants(ORG, BASE, only) {
         check("both legs RED naming the planted assert", readClause(mode, build, T, { plan: PLAN(bs, ["RED", [A]], ["RED", [A]]) }), 0);
         check("RED naming another assert", readClause(mode, build, T, { plan: PLAN(bs, ["RED", ["another assert · x"]], ["RED", ["another assert · x"]]) }), 1);
         check("RED naming it plus its aggregate (the shape the neutral machine printed on the broken branch)", readClause(mode, build, T, { plan: PLAN(bs, ["RED", [A, "all 53 hermetic suite members pass (every one RUN, not chained)"]], ["RED", [A, "all 53 hermetic suite members pass (every one RUN, not chained)"]]) }), 0);
+        const cz = { [A]: ["a planted cause ; its second half"] };
+        check("RED naming it with a cause (the shape ci_verdict prints since unit mdtl: ` — cause: a ; b`)", readClause(mode, build, T, { plan: PLAN(bs, ["RED", [A, "another assert · x"], cz], ["RED", [A], cz]) }), 0);
+        check("RED naming only a LONGER name that contains it (never a substring)", readClause(mode, build, T, { plan: PLAN(bs, ["RED", [`${A} and more`]], ["RED", [`${A} and more`]]) }), 1);
         check("one leg RED by name, one GREEN", readClause(mode, build, T, { plan: PLAN(bs, ["RED", [A]], ["GREEN", []]) }), 1);
         check("GREEN", readClause(mode, build, T, { plan: PLAN(bs, ["GREEN", []], ["GREEN", []]) }), 1);
         check("a leg in_progress (PENDING)", readClause(mode, build, T, { plan: PLAN(bs, ["RED", [A]], ["RED", [A]], "in_progress") }), 2);
@@ -328,10 +362,11 @@ async function plants(ORG, BASE, only) {
         const authT = tree(ORG, { verdictSrc: withAuth });
         check("a ci_verdict.mjs that sends an Authorization header (static half)", readClause(mode, authT, T, { plan: PLAN(bs, ["GREEN", []], ["GREEN", []]) }), 1, withAuth !== src);
       }
-      clause(id, cases.every(Boolean), "");
+      clause(id, cases.every(Boolean), "", cases.filter(Boolean).length, cases.length);
     }
     // BOUND
-    if (!BASE || !existsSync(BASE)) clause("BOUND", false, "--base-org absent");
+    if (plantsMode) console.log("  BOUND not run in plants mode (no --base-org: a seat-time clause, judged by the seat's own run)");
+    else if (!BASE || !existsSync(BASE)) clause("BOUND", false, "--base-org absent");
     else {
       const a = walk(BASE), b = walk(ORG), diff = [];
       for (const k of new Set([...a.keys(), ...b.keys()])) if (a.get(k) !== b.get(k)) diff.push(k);
@@ -344,6 +379,7 @@ async function plants(ORG, BASE, only) {
     clause("LAST", live.length === 0, live.length ? `${live.length} node process(es) named the temp root (killed)` : "no node process names the temp root");
     try { rmSync(T, { recursive: true, force: true }); } catch {}
   }
+  if (plantsMode) { console.log(`PLANTS mmach · ${K} of ${N} plant(s) as expected`); return reds.length || !N ? 1 : 0; }
   if (reds.length) { console.log(`RED MMACH · ${reds.join(", ")}`); return 1; }
   console.log(`GREEN MMACH the machine reads the broken branch RED by name, its clean sibling GREEN, both with no login (planted both ways) · ${greens.length} clause(s)`);
   return 0;
@@ -360,6 +396,7 @@ async function main() {
     console.log(`MMACH ${mode} · ${["HOLDS", "RED", "UNREAD"][r.code]} — ${r.why}`);
     return r.code;
   }
+  if (mode === "plants") return plants(resolve(arg("--org") || join(HERE, "..", "..", "..")), "", null, true);
   if (!arg("--org")) { console.log("RED MMACH · usage: broken|clean|nologin [--org <dir>] · or --org <dir> --base-org <dir> [--only <clauses>]"); return 1; }
   const only = arg("--only") ? String(arg("--only")).split(",").map((s) => s.trim()).filter(Boolean) : null;
   return plants(resolve(arg("--org")), arg("--base-org") ? resolve(arg("--base-org")) : "", only);
