@@ -2546,7 +2546,8 @@ function path() {
       // the audit's owner, as on his machine. Before each code-door bank (a call carrying --said) the lane plants his message
       // (his gut-word, then his words) under the lane's OWN session id; the bank keeps the bytes of that record, never a typed
       // copy. The record lands in the sandbox's state only (the owner's own env door, pointed at SD).
-      const LANE_ENV = (() => { const e = { ...process.env, CLAUDE_CODE_SESSION_ID: "sess-e2e-zero-tax-lane", ARSENAL_AUDIT_STATE_DIR: SD, ARSENAL_AUDIT_NO_SPAWN: "1", TMPDIR: RUN_TMP, TEMP: RUN_TMP, TMP: RUN_TMP }; delete e.ARSENAL_ORGAN; return e; })();
+      const LANE_ENV = Object.fromEntries(Object.entries({ ...process.env, CLAUDE_CODE_SESSION_ID: "sess-e2e-zero-tax-lane", ARSENAL_AUDIT_STATE_DIR: SD, ARSENAL_AUDIT_NO_SPAWN: "1", TMPDIR: RUN_TMP, TEMP: RUN_TMP, TMP: RUN_TMP })
+        .filter(([k]) => k !== "ARSENAL_ORGAN"));   // the lane's own env, ARSENAL_ORGAN left out (built, not deleted: checkJs types the literal)
       const hisTurn = (a) => { const i = a.indexOf("--said"), g = a.indexOf("--gut"); if (i < 0) return;
         spawnSync(NODE, [S("teaching_audit.mjs"), "hook"], { cwd: sb, env: LANE_ENV, encoding: "utf8", windowsHide: true,
           input: JSON.stringify({ hook_event_name: "UserPromptSubmit", session_id: LANE_ENV.CLAUDE_CODE_SESSION_ID, prompt: `${g >= 0 ? a[g + 1] : ""} - ${a[i + 1]}` }) }); };
