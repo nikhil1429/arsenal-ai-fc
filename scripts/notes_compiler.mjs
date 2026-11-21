@@ -404,8 +404,9 @@ export function buildNote({ concept, axis, ex = [], bank = [], capsule = null, c
   // SETTLED to (axis_settled, handed in by compileDay — the stored row is never rewritten)
   for (const r of [...(cracks || [])].filter((c) => c && c.concept === concept && (c.axis === axis || (c.axis_settled && c.axis_settled.axis === axis)) && typeof c.at === "string")
     .sort((a, b) => a.at.localeCompare(b.at))) {
-    const stamp = { moment: r.moment, words: r.words, crack_id: r.id, turn_id: typeof r.turn_id === "string" ? r.turn_id : null, words_at: r.prompt_at,   // turn_id: unit mbank (row 1230 mbank-8 a)
-      ...(typeof r.gap === "string" && r.gap ? { gap: r.gap } : {}), ...(r.axis_settled ? { axis_settled: { axis: r.axis_settled.axis, by: r.axis_settled.by } } : {}) };
+    const stamp = { moment: r.moment, words: r.words, crack_id: r.id, turn_id: typeof r.turn_id === "string" ? r.turn_id : null, words_at: r.prompt_at };   // turn_id: unit mbank (row 1230 mbank-8 a)
+    if (typeof r.gap === "string" && r.gap) stamp.gap = r.gap;   // unit mcrk2: the named gap and how its axis was settled
+    if (r.axis_settled) stamp.axis_settled = { axis: r.axis_settled.axis, by: r.axis_settled.by };
     if (stamp.gap) gaps.push(`crack row ${r.id}: ${r.gap} — the teacher's miss, not his`);
     let at = -1;
     for (let i = 0; i < ex.length; i++) {

@@ -669,12 +669,9 @@ export { hisPrompt, readHisPrompt } from "./study_scope.mjs";
 // passes `auditLast` and the same door is applied here.
 export const CRACK_UNDECLARED = "undeclared";
 export const CRACK_AXIS_NONE = "none";
-const CRACK_NOT_ON_DISK = "his words are not on disk (the UserPromptSubmit record is absent) — no crack row is written from memory";
 const crackRefusal = (p) => (p && p.reason === "consumed"
   ? "his words of this turn are not on disk (the prompt record is an earlier turn's, already consumed by its Stop) — no crack row is written from an earlier turn's text"
-  : p && p.reason === "other-session"
-    ? "his words of this turn are not on disk (the prompt record was written by another Claude session) — no crack row is written from another session's text"
-    : CRACK_NOT_ON_DISK);
+  : "his words of this turn are not on disk (the prompt record was written by another Claude session) — no crack row is written from another session's text");
 /** crackRow — PURE. The row `crack` would append, or why it refuses.
  *  @param {{session:any, auditLast?:any, prompt?:any, sessionId?:string|null, bank?:any[]|null, now?:Date}} p @returns {{ok:true,row:any}|{ok:false,why:string}} */
 export function crackRow({ session, auditLast = null, prompt = undefined, sessionId = null, bank = [], now = new Date() } = /** @type {any} */ ({})) {
@@ -684,11 +681,12 @@ export function crackRow({ session, auditLast = null, prompt = undefined, sessio
   // branch 4, ahead of the axis (spec §2.1 step 3): his words through the one door, or no row
   const p = prompt !== undefined ? (prompt && typeof prompt === "object" ? prompt : { ok: false, reason: "absent" })
     : hisPrompt(auditLast, { since: String(s.started_at || ""), sessionId: sessionId || null, fresh: true });
-  if (!p.ok) return { ok: false, why: crackRefusal(p) };
+  if (!p.ok && (p.reason === "consumed" || p.reason === "other-session")) return { ok: false, why: crackRefusal(p) };
+  if (!p.ok) return { ok: false, why: "his words are not on disk (the UserPromptSubmit record is absent) — no crack row is written from memory" };
   const pAt = Date.parse(p.at);
-  // branch 3: no axis ON is named, never refused
-  const axisOn = s.current_axis && AXES.includes(s.current_axis) ? s.current_axis : null;
-  const axis = axisOn || CRACK_AXIS_NONE;
+  // branch 3: no axis ON is named, never refused (the row's axis is the string "none")
+  const axis = s.current_axis && AXES.includes(s.current_axis) ? s.current_axis : null;
+  const axisOn = axis;
   // the moment his answer answered: the LAST non-refused moment declared on this axis (or, axis none, logged with no
   // axis: F4-m) before his prompt; none → the string "undeclared" (branch 2)
   const log = (Array.isArray(s.moments_log) ? s.moments_log : [])
@@ -702,7 +700,7 @@ export function crackRow({ session, auditLast = null, prompt = undefined, sessio
     : null;
   return { ok: true, row: {
     v: 1, kind: "crack", id: `ck-${now.getTime().toString(36)}-${randomBytes(2).toString("hex")}`, at, day: istDayOf(at),
-    concept: s.concept, axis, moment: m ? m.kind : CRACK_UNDECLARED, moment_at: m ? m.at : null,
+    concept: s.concept, axis: axisOn || CRACK_AXIS_NONE, moment: m ? m.kind : CRACK_UNDECLARED, moment_at: m ? m.at : null,
     words: p.text, words_src: "teaching_audit_last.prompt", prompt_at: p.at, prompt_session_id: p.session_id, turn_id: p.turn_id,
     step: s.step, session_started_at: s.started_at, bank_of: bankRow && typeof bankRow.id === "string" ? bankRow.id : null,
     gap, gap_owner: gap ? "teacher" : null,

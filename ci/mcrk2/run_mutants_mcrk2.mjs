@@ -28,7 +28,7 @@ const ROOT = mkdtempSync(join(os.tmpdir(), "mutants-mcrk2-"));
 const MUTANTS = [
   ["G2", "M1 gap set on every row (the guard leg)", FS, 'const gap = axisOn ? (m ? null : "moment-undeclared")', 'const gap = axisOn ? (m ? "moment-undeclared" : "moment-undeclared")'],
   ["G2", "M2 the no-moment refusal restored", FS, '  const gap = axisOn ? (m ? null', '  if (axisOn && !m) return { ok: false, why: `no moment declared on axis ${axisOn} before his answer` };\n  const gap = axisOn ? (m ? null'],
-  ["G3", "M3 the no-axis refusal restored", FS, "  const axis = axisOn || CRACK_AXIS_NONE;", '  if (!axisOn) return { ok: false, why: "no axis is ON — declare it with `axis <x> now` first" };\n  const axis = axisOn || CRACK_AXIS_NONE;'],
+  ["G3", "M3 the no-axis refusal restored", FS, "  const axisOn = axis;", '  if (!axis) return { ok: false, why: "no axis is ON — declare it with `axis <x> now` first" };\n  const axisOn = axis;'],
   ["G3b", "M3b the axis check back ahead of the prompt check", FS, "  // branch 4, ahead of the axis (spec §2.1 step 3)", '  if (!(s.current_axis && AXES.includes(s.current_axis))) return { ok: false, why: "no axis is ON — declare it with `axis <x> now` first" };\n  // branch 4, ahead of the axis (spec §2.1 step 3)'],
   ["G4", "M4d fresh dropped (a consumed record is written)", FS, "sessionId: process.env.CLAUDE_CODE_SESSION_ID || null, fresh: true }, AUDIT_LAST);", "sessionId: process.env.CLAUDE_CODE_SESSION_ID || null, fresh: false }, AUDIT_LAST);"],
   ["G4", "M4e the calling session id dropped (another session's slot is written)", FS, "sessionId: process.env.CLAUDE_CODE_SESSION_ID || null, fresh: true }, AUDIT_LAST);", "sessionId: null, fresh: true }, AUDIT_LAST);"],
