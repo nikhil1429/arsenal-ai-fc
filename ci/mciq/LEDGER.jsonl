@@ -5,3 +5,4 @@
 {"ts":"2026-11-21T11:04:00Z","act":"law pack, LF clones","cmd":"node scripts/lawpack.mjs gate (clone 7bf008b, clone 6e61181)","last_line":"lawpack: GREEN — no law's finding count rose, and every rule is on disk (both)"}
 {"ts":"2026-11-21T11:04:00Z","act":"ci_verdict selftest (reads suite.yml matrix)","cmd":"node scripts/ci_verdict.mjs selftest (LF tree 7bf008b, LF tree 6e61181)","last_line":"ALL CHECKS PASSED (both)"}
 {"ts":"2026-11-21T11:04:00Z","act":"LAW M","cmd":"node scripts/models.mjs check","last_line":"exit 0"}
+{"ts":"2026-11-21T11:06:49Z","act":"suite both ways + canon replay","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (clones 7bf008b, 6e61181); canon_replay b2cc4b6beeb2e4fa0963cb660d110c71a74977ab","last_line":"base 165 passed 1 failed (mcap plants, flake) · build 166 passed 0 failed · canon-count replay: undeclared 0 · declared 1"}
