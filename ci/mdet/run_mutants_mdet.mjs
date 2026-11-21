@@ -3,7 +3,8 @@
 // USAGE: node ci/mdet/run_mutants_mdet.mjs --org <build checkout>
 //   Plants the build org under os.tmpdir() (the witness's plantTree: a core.autocrlf=false clone of a checkout, or a copy of
 //   a plain tree), judges the UNMUTATED tree (the control: every clause GREEN), then for each mutant plants a fresh tree,
-//   applies ONE exact text edit to scripts/organism_test.mjs (it refuses if the anchor is not found exactly once: a mutant
+//   applies ONE exact text edit to scripts/organism_test.mjs — or, for a mutant marked target "witness" (row 1224 (3)), to a
+//   COPY of the witness under the temp root, whose judgeAll then judges the tree — (it refuses if the anchor is not found exactly once: a mutant
 //   that does not apply is not a mutant) and judges it with the witness's own judgeAll(); the mutant counts only if the
 //   clause that names it reads RED.
 //   No port, no service, no live state; the temp root is removed and no process naming it may survive.
@@ -11,7 +12,9 @@
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { plantTree, judgeAll, CLAUSES, survivors } from "./witness_mdet.mjs";
+const WITNESS = fileURLToPath(new URL("./witness_mdet.mjs", import.meta.url));
 
 const F = "scripts/organism_test.mjs";
 const MUTANTS = [
@@ -25,6 +28,9 @@ const MUTANTS = [
     from: "for (const r of censusRows()) console.log(r);", to: "for (const r of censusRows().slice(0, -1)) console.log(r);" },
   { clause: "C5 SELF-RUN", why: "a script run bare is no longer read as its own selftest (claudegen would leave the law)",
     from: 'return { form: "self-run", at: lineOf(k) };', to: "continue;" },
+  // forks row 1224 (3): the one mutant of the C4 re-cut edits a COPY of the witness itself, never the suite file
+  { clause: "C4 CENSUS", target: "witness", why: "a moved organ is judged (the blob key ignored): the head-line plant must red",
+    from: "    if (cur === t.blob) { judgedRows.push(t);", to: "    if (true) { judgedRows.push(t);" },
 ];
 
 const argv = process.argv.slice(2);
@@ -38,11 +44,13 @@ try {
   console.log(`control · ${CLAUSES.map((x) => `${x} ${v0[x].green ? "GREEN" : "RED"}`).join(" · ")}`);
   for (const m of MUTANTS) {
     const dir = plantTree(org, mkdtempSync(join(root, "m-")));
-    const p = join(dir, F), src = readFileSync(p, "utf8");
+    const p = m.target === "witness" ? join(root, `witness_mutant_${k}_${MUTANTS.indexOf(m)}.mjs`) : join(dir, F);
+    const src = readFileSync(m.target === "witness" ? WITNESS : p, "utf8");
     const hits = src.split(m.from).length - 1;
     if (hits !== 1) { console.log(`mutant ${m.clause} · NOT APPLIED (anchor found ${hits} time(s)) — ${m.why}`); continue; }
     writeFileSync(p, src.replace(m.from, m.to));
-    const v = judgeAll(dir), red = !v[m.clause].green;
+    const judge = m.target === "witness" ? (await import(pathToFileURL(p).href)).judgeAll : judgeAll;
+    const v = judge(dir), red = !v[m.clause].green;
     if (red) k++;
     console.log(`mutant ${m.clause} · ${red ? "RED" : "SURVIVED"} by its clause (${v[m.clause].why.slice(0, 160)}) — ${m.why}`);
   }

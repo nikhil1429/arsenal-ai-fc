@@ -23,8 +23,13 @@
 //   C2 STRING   · mdet_string reads NO selftest, the same two ways (census row `| mdet_string.mjs | has | … | none | … MOVES has → none |`).
 //   C3 DISPATCH · mdet_dispatch and mdet_case read HAS a selftest: each census row is `has … | dispatch | <the planted line> |`,
 //                 and cov names each an orphan (the law consumes the detector).
-//   C4 CENSUS   · the planted tree's census, every row but the mdet_ plants, equals the table between `<!-- census:begin -->`
-//                 and `<!-- census:end -->` in that tree's ci/mdet/PROOF.md, row for row.
+//   C4 CENSUS   · (re-cut by forks row 1224 (2)) the frozen table between `<!-- census:begin -->` and `<!-- census:end -->`
+//                 in ci/mdet/PROOF.md carries each organ's blob; a row is JUDGED (the tree's census row must equal it) only
+//                 when that organ's bytes in the tree are the bytes the table was written on. A moved organ is NAMED and
+//                 COUNTED, never judged; an organ absent from the table is NAMED, never red; at least one row is judged.
+//                 PLANT: the same tree with one line added at the head of a judged dispatch organ reads C4 GREEN, that
+//                 organ named moved (the line is then taken back out). Before the re-cut C4 compared every row, line numbers
+//                 and all, so it red whenever another unit moved a line of a listed organ (land/mdet 72c9add).
 //   C5 SELF-RUN · mdet_selfrun reads HAS (`self-run` at its call line, an orphan in cov) and mdet_decl reads NONE (no orphan,
 //                 census `none`): a gate as strict as before for a bare-run script, and a declaration is not a run.
 // BOUND (not a both-ways clause): every path whose content differs between the two orgs is a named file —
@@ -35,7 +40,7 @@
 //   runs (coverage, census) read files only and spawn nothing; every child it spawns is bounded by the suite file's own
 //   long bound, read from the planted tree (`const HEAVY_BOUND_MS = <n>;`), never typed here.
 // EXIT / LAST LINE: `GREEN MDET <what> · <n> clause(s)` (exit 0) or `RED MDET · <clauses>` (exit 1).
-// EXPORTS (for ci/mdet/run_mutants_mdet.mjs): plantTree(org, into, modules) · judgeAll(dir) · CLAUSES · survivors(root).
+// EXPORTS (for ci/mdet/run_mutants_mdet.mjs): plantTree(org, into, modules) · judgeAll(dir) · judgeCensus(dir, rows, table) · CLAUSES · survivors(root).
 // ----------------------------------------------------------------------------------------------------------------------
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, realpathSync, writeFileSync, cpSync, statSync } from "node:fs";
@@ -121,6 +126,29 @@ const node = (dir, args, timeout) => { const r = spawnSync(process.execPath, arg
 /** the table rows of a census text (markdown rows naming a .mjs), CRLF-proof @param {string} t @returns {string[]} */
 const rowsOf = (t) => t.split(NL).map((l) => l.trimEnd()).filter((l) => /^\| [A-Za-z0-9_\-]+\.mjs \|/.test(l));
 
+/** the git blob id of a file's bytes — sha1 of "blob <len>\0" + bytes, what `git hash-object` prints; null when absent */
+const blobOf = (p) => { try { const b = readFileSync(p); return createHash("sha1").update(`blob ${b.length}\0`).update(b).digest("hex"); } catch { return null; } };
+/** C4, re-cut by forks row 1224 (2): a row of the frozen table (`| <script> | … | <blob> |`) is JUDGED — the tree's census row
+ *  must equal it, blob cell aside — only when the organ's bytes in <dir> are the bytes the table was written on (its blob);
+ *  an organ whose blob moved (or that is gone) is NAMED and COUNTED, never judged; a census row absent from the table is
+ *  NAMED, never red. Green iff at least one row is judged and every judged row equals its census row.
+ *  @param {string} dir @param {string[]} census the tree's census rows @param {string} table the PROOF block */
+export function judgeCensus(dir, census, table) {
+  const got = new Map(census.filter((r) => !/^\| mdet_/.test(r)).map((r) => [r.split(" | ")[0].slice(2), r]));
+  const entries = rowsOf(table).map((r) => { const m = /^(.*\|) ([0-9a-f]{40}) \|$/.exec(r); return { file: r.split(" | ")[0].slice(2), stem: m ? m[1] : null, blob: m ? m[2] : null }; });
+  const unkeyed = entries.filter((t) => !t.blob).map((t) => t.file);
+  const judgedRows = [], moved = [], wrong = [];
+  for (const t of entries.filter((x) => x.blob)) {
+    const cur = blobOf(join(dir, "scripts", t.file));
+    if (cur === t.blob) { judgedRows.push(t); if (got.get(t.file) !== t.stem) wrong.push(`${t.file}: table ${t.stem} · census ${got.get(t.file) || "(no row)"}`); }
+    else moved.push(t.file);
+  }
+  const listed = new Set(entries.map((t) => t.file)), absent = [...got.keys()].filter((f) => !listed.has(f));
+  const green = judgedRows.length > 0 && wrong.length === 0 && unkeyed.length === 0;
+  const why = `judged ${judgedRows.length}${wrong.length ? ` · WRONG ${wrong.slice(0, 2).join(" ; ")}` : ""}${unkeyed.length ? ` · UNKEYED rows ${unkeyed.slice(0, 3).join(", ")}` : ""} · moved ${moved.length}${moved.length ? ` (${moved.join(", ")})` : ""} · absent ${absent.length}${absent.length ? ` (${absent.join(", ")})` : ""}`;
+  return { green, why, judgedRows, moved, absent };
+}
+
 /** judge EVERY clause on one planted tree (it is changed: the plants are written into it first)
  *  @param {string} dir @returns {Record<string, {green: boolean, why: string}>} */
 export function judgeAll(dir) {
@@ -155,10 +183,21 @@ export function judgeAll(dir) {
   if (!blk) v["C4 CENSUS"] = { green: false, why: proof === null ? "ci/mdet/PROOF.md is absent" : "no census block in ci/mdet/PROOF.md" };
   else if (cen.code !== 0) v["C4 CENSUS"] = { green: false, why: cenWhy };
   else {
-    const want = rowsOf(blk[1]), got = rows.filter((r) => !/^\| mdet_/.test(r));
-    const miss = want.filter((r) => !got.includes(r)), extra = got.filter((r) => !want.includes(r));
-    const same = want.length > 0 && miss.length === 0 && extra.length === 0 && want.length === got.length;
-    v["C4 CENSUS"] = { green: same, why: same ? `${got.length} rows equal the PROOF table` : `PROOF-only: ${miss.slice(0, 3).join(" ")} · census-only: ${extra.slice(0, 3).join(" ")}`.slice(0, 300) };
+    // row 1224 (2): the frozen table judged by blob, and the head-line plant on the same tree
+    const j = judgeCensus(dir, rows, blk[1]);
+    const pick = j.green ? j.judgedRows.find((r) => /\| dispatch \| \d+ \| — \|$/.test(r.stem)) : null;
+    let p = { green: false, why: "no judged dispatch row to plant on" };
+    if (pick) {
+      const f = join(dir, "scripts", pick.file), bytes = readFileSync(f);
+      try {
+        writeFileSync(f, Buffer.concat([Buffer.from("// planted by ci/mdet/witness_mdet.mjs: one line at the head (forks row 1224 (2))\n"), bytes]));
+        const c2 = node(dir, [join("scripts", "organism_test.mjs"), "census"], bound);
+        const j2 = c2.code === 0 ? judgeCensus(dir, rowsOf(c2.out), blk[1]) : { green: false, why: `census exit ${c2.code}`, moved: [] };
+        const named = j2.moved.includes(pick.file);
+        p = { green: j2.green && named, why: `head-line plant on ${pick.file}: ${j2.green ? "GREEN" : "RED"}, ${named ? "named moved" : "NOT named moved"} (${j2.why})` };
+      } finally { writeFileSync(f, bytes); }
+    }
+    v["C4 CENSUS"] = { green: j.green && p.green, why: `${j.why} · ${p.why}`.slice(0, 600) };
   }
   const s1 = has("mdet_selfrun", "self-run");
   const dr = row("mdet_decl"), declNone = !!dr && /\| none \| — \| — \| MOVES has → none \|$/.test(dr) && !orphans.has("mdet_decl");
