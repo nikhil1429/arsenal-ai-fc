@@ -23,6 +23,10 @@
 // a NEW witness red also carries its CAUSE inside its own NEW RED message and the verdict payload (`cause`), and only a
 // cause that verifyCause (scripts/witness_cause.mjs) rebuilds byte for byte from the witness's own tracked source or a
 // member literal; anything else is WITHHELD. No annotation is added; a GREEN head's output is byte-identical to before.
+// UNIT mdtl2 (forks row 1220): every OTHER new red's cause is kept only if red_cause.mjs verify() rebuilds it from the kind's own
+// tracked source in this workspace (one `git ls-files` read, only when such a cause exists); a run with no machine line names
+// its last section (payload `cause["(head)"]` / `cause["(base)"]`, F7 A); a leg with no verdict annotation costs ONE more call,
+// for its failed step's name (F6 A). Still no annotation added, and a GREEN head's output byte-identical.
 // THE FOLD (unit mshard, forks rows 1171 (3) / 1188, spec ci/mshard/MSHARD_SPEC.md on claude/mshard-spec c82a0e6): the
 // witnesses member runs as K shard jobs per node (F-SHAPE B, F-K b), beside the suite job, and a small fold job keeps the
 // leg's name `npm test · node N` (F-JOB J2), so this reader still reads ONE verdict per leg. Jobs carry DIGESTS, never raw
@@ -39,8 +43,10 @@
 //      node scripts/ci_verdict.mjs times <sha> [--repo owner/name] | times --from-log <job log>…
 // ============================================================================
 import { readFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 import { verifyCause, sourcePaths } from "./witness_cause.mjs";
+import { verify, kindOf, sectionCause, stepCause } from "./red_cause.mjs";
 
 const DEFAULT_REPO = "nikhil1429/arsenal-ai-fc";
 const VERDICT_TITLE = "B1 VERDICT";
@@ -114,10 +120,18 @@ const num = (x) => (typeof x === "number" && Number.isFinite(x) ? x : null);
 const nums = (o) => Object.fromEntries(Object.entries(o && typeof o === "object" ? o : {}).filter(([, v]) => num(v) !== null));
 /** F-CARRY a: a raw organism_test output → its digest, the only bytes that leave a job. Every key is picked by name and every
  *  value checked for its type (a string, a number, or a list of them): `unruled[].detail` and every printed line are dropped,
- *  and a key this list does not name never travels. @param {string} raw @returns {string[]} */
-export function digest(raw) {
+ *  and a key this list does not name never travels. × unit mdtl2 (F7 A): a run with NO verdict line carries ONE section line, the
+ *  last section it reached as sectionCause rebuilds it from <osSrc> (the workspace's organism_test.mjs) — the public spelling,
+ *  never the raw line; `── (withheld)` when it is not public bytes; nothing when no section was reached — so the fold's judge
+ *  names the same last section a whole raw output would have. @param {string} raw @param {string} [osSrc] @returns {string[]} */
+export function digest(raw, osSrc = "") {
   const out = [];
   const v = machineLine(raw, TAGS.verdict);
+  if (!(v && Array.isArray(v.reds))) {
+    const c = sectionCause(raw, osSrc), LAST = "last section · ";
+    if (c.startsWith(LAST)) out.push(`── ${c.slice(LAST.length)} ──`);
+    else if (c !== "no section reached") out.push("── (withheld) ──");
+  }
   if (v && Array.isArray(v.reds)) {
     const d = { modes: strs(v.modes), pass: num(v.pass), fail: num(v.fail), exit: num(v.exit),
       ruled: (Array.isArray(v.ruled) ? v.ruled : []).map((r) => ({ assert: String(r && r.assert), row: num(r && r.row), owner: String(r && r.owner) })),
@@ -205,15 +219,17 @@ export function newInInstrument(name, baseSrc) {
 
 /** @param {ReturnType<typeof parseSuite>} head @param {ReturnType<typeof parseSuite>} base @param {string} [baseSrc]
  *  @param {Record<string, number> | null} [baseline] lawpack.mjs's frozen BASELINE, for a base with no law pack line */
-export function judge(head, base, baseSrc = "", baseline = null) {
-  if (!head) return { v: "RED", why: "the head run produced no headline line", fresh: [], old: [], fixed: [] };
-  if (!base) return { v: "RED", why: "the merge-base run produced no headline line (no base to compare against)", fresh: [...head.reds], old: [], fixed: [] };
+/** @param {{ head: string, base: string } | null} [text] the two raw outputs (unit mdtl2, K14 / K15: a side with no machine line
+ *  names its last section, rebuilt from <osSrc>, the workspace's organism_test.mjs) @param {string} [osSrc] */
+export function judge(head, base, baseSrc = "", baseline = null, text = null, osSrc = "") {
+  if (!head) return { v: "RED", why: "the head run produced no headline line", fresh: [], old: [], fixed: [], lost: text ? { "(head)": [sectionCause(text.head, osSrc)] } : {} };
+  if (!base) return { v: "RED", why: "the merge-base run produced no headline line (no base to compare against)", fresh: [...head.reds], old: [], fixed: [], lost: text ? { "(base)": [sectionCause(text.base, osSrc)] } : {} };
   const baseKeys = new Set(base.reds.map(keyOf)), headKeys = new Set(head.reds.map(keyOf));
   const fresh = head.reds.filter((n) => !baseKeys.has(keyOf(n)) || newInInstrument(n, baseSrc));
   fresh.push(...lawpackRises(head.lawpack, base.lawpack, baseline));
   const old = head.reds.filter((n) => !fresh.includes(n));
   const fixed = base.reds.filter((n) => !headKeys.has(keyOf(n)));
-  return { v: fresh.length ? "RED" : "GREEN", why: fresh.length ? `${fresh.length} member(s) red that are not red at the merge base` : "no member red that is not red at the merge base", fresh, old, fixed };
+  return { v: fresh.length ? "RED" : "GREEN", why: fresh.length ? `${fresh.length} member(s) red that are not red at the merge base` : "no member red that is not red at the merge base", fresh, old, fixed, lost: {} };
 }
 
 /** a workflow-command value, escaped per the spec (%, CR, LF) @param {string} s */
@@ -233,13 +249,18 @@ export function annotate(level, title, names, cap = 10) {
   return out;
 }
 
-/** unit mdtl: the verified causes of every NEW red that owns one, { "<red name>": ["<ID> · <text>", …] } (empty when none)
- *  @param {string[]} fresh @param {string[]} causes @param {(unit: string) => string} readSrc */
-export function causesFor(fresh, causes, readSrc) {
+/** unit mdtl: the verified causes of every NEW red that owns one, { "<red name>": ["<ID> · <text>", …] } (empty when none).
+ *  unit mdtl2: a `WITNESS ‹u› · GREEN at head …` red goes to mdtl's verifyCause, unchanged; every other red to red_cause.mjs
+ *  verify, through the workspace doors (default: none, so every such cause is WITHHELD; main passes the workspace's)
+ *  @param {string[]} fresh @param {string[]} causes @param {(unit: string) => string} readSrc
+ *  @param {(path: string) => string} [readFile] @param {() => Set<string>} [tracked] */
+export function causesFor(fresh, causes, readSrc, readFile = () => "", tracked = () => new Set()) {
   /** @type {Record<string, string[]>} */
   const out = {};
+  const byLength = [...fresh].sort((a, b) => b.length - a.length);
   for (const l of causes) {
-    const v = verifyCause(l, fresh, readSrc);
+    const red = byLength.find((r) => String(l).startsWith(`${r} · `));
+    const v = !red ? null : kindOf(red).kind === "witness" ? verifyCause(l, fresh, readSrc) : verify(l, fresh, readFile, tracked());
     if (v && !(out[v.member] || []).includes(v.cause)) (out[v.member] = out[v.member] || []).push(v.cause);
   }
   return out;
@@ -251,17 +272,25 @@ export const workspaceSrc = (unit) => {
   for (const p of sourcePaths(unit)) { try { return readFileSync(new URL(`../${p}`, import.meta.url), "utf8"); } catch { /* the other spelling, then "" (unreadable = WITHHELD) */ } }
   return "";
 };
+/** unit mdtl2: the workspace's tracked files (ONE `git ls-files`, read only when a non-witness cause is verified) and a file door
+ *  (a tracked path only — verify never asks for another); "" when unreadable (unreadable = WITHHELD) */
+let trackedHere = null;
+export const workspaceTracked = () => (trackedHere ??= new Set(String(spawnSync("git", ["-C", fileURLToPath(new URL("../", import.meta.url)), "ls-files", "-z"], { encoding: "utf8", windowsHide: true }).stdout || "").split("\0").filter(Boolean)));
+export const workspaceFile = (p) => { try { return readFileSync(new URL(`../${p}`, import.meta.url), "utf8"); } catch (e) { void e; return ""; } };
 
 /** every line `compare` prints, in order: the reds, then the ONE verdict annotation, then the plain verdict line.
  *  readSrc is the witness-source door (default: none, so every witness cause is WITHHELD; main passes workspaceSrc)
  *  @param {ReturnType<typeof parseSuite>} head @param {ReturnType<typeof parseSuite>} base @param {string} label
  *  @param {string} [headSha] @param {string} [baseSha] @param {string} [baseSrc] @param {Record<string, number> | null} [baseline]
  *  @param {(unit: string) => string} [readSrc]
+ *  @param {{ readFile?: (p: string) => string, tracked?: () => Set<string>, text?: { head: string, base: string } | null }} [io] unit mdtl2's workspace doors
  *  @param {{ k: number, units: string[], secs: Record<string, number> }[] | null} [shards] unit mshard: the fold's per-shard seconds (absent when unsharded) */
-export function compareLines(head, base, label, headSha = "", baseSha = "", baseSrc = "", baseline = null, readSrc = () => "", shards = null) {
-  const j = judge(head, base, baseSrc, baseline);
+export function compareLines(head, base, label, headSha = "", baseSha = "", baseSrc = "", baseline = null, readSrc = () => "", io = {}, shards = null) {
+  /** unit mdtl2: io = { readFile, tracked, text } — the workspace doors and the two raw outputs (absent: the pure default) */
+  const { readFile = () => "", tracked = () => new Set(), text = null } = /** @type {{ readFile?: (p: string) => string, tracked?: () => Set<string>, text?: { head: string, base: string } | null }} */ (io);
+  const j = judge(head, base, baseSrc, baseline, text, text ? readFile("scripts/organism_test.mjs") : "");
   const lines = [];
-  const cause = causesFor(j.fresh, head ? head.causes : [], readSrc);
+  const cause = { ...causesFor(j.fresh, head ? head.causes : [], readSrc, readFile, tracked), ...j.lost };
   const shown = j.fresh.map((n) => (cause[n] ? [n, ...cause[n].map((c) => `cause · ${c}`)].join("\n") : n));
   lines.push(...annotate("error", `NEW RED · ${label}`, shown, j.v === "RED" ? 9 : 10));
   lines.push(...annotate("warning", `BASE RED · ${label}`, j.old));
@@ -335,10 +364,19 @@ export async function readVerdict(sha, repo, get) {
     const vAnn = (Array.isArray(anns) ? anns : []).find((a) => String(a.title || "").startsWith(VERDICT_TITLE) && String(a.message || "").startsWith("B1_VERDICT "));
     let p = null;
     try { p = vAnn ? JSON.parse(String(vAnn.message).slice("B1_VERDICT ".length)) : null; } catch { p = null; }
-    if (!p) { red = true; parts.push(`${leg.name}: RED (${leg.conclusion}; no verdict annotation — the run never reached its verdict) [run ${leg.id}]`); continue; }
+    if (!p) {
+      // unit mdtl2 (K17, F6 A): ONE more call, the leg's job, for its first failed step — named only when the workflow names it
+      let job = null;
+      try { job = await call(`/repos/${repo}/actions/jobs/${leg.id}`); } catch (e) { job = null; void e; }   // an unreadable job is said, never guessed
+      const st = (job && Array.isArray(job.steps) ? job.steps : []).find((x) => x && x.conclusion && x.conclusion !== "success" && x.conclusion !== "skipped");
+      const yml = st ? (() => { try { return readFileSync(SUITE_YML, "utf8"); } catch (e) { void e; return ""; } })() : "";
+      const step = st ? ` · ${stepCause(String(st.name), String(st.conclusion), yml)}` : job ? "" : " · step (unreadable)";
+      red = true; parts.push(`${leg.name}: RED (${leg.conclusion}; no verdict annotation — the run never reached its verdict${step}) [run ${leg.id}]`); continue;
+    }
     if (p.v !== "GREEN") red = true;
     const why = (n) => (p.cause && Array.isArray(p.cause[n]) && p.cause[n].length ? `${n} — cause: ${p.cause[n].join(" ; ")}` : n);   // unit mdtl
-    parts.push(`${leg.name}: ${p.v} (base ${String(p.base).slice(0, 7)} · ${p.new.length} new red${p.new.length ? `: ${p.new.map(why).join(" ; ")}` : ""} · ${p.base_red} base red · ${p.live} live) [run ${leg.id}]`);
+    const lost = ["(head)", "(base)"].filter((k) => p.cause && Array.isArray(p.cause[k]) && p.cause[k].length).map((k) => ` · ${why(k)}`).join("");   // unit mdtl2 (K14 / K15)
+    parts.push(`${leg.name}: ${p.v} (base ${String(p.base).slice(0, 7)} · ${p.new.length} new red${p.new.length ? `: ${p.new.map(why).join(" ; ")}` : ""} · ${p.base_red} base red · ${p.live} live${lost}) [run ${leg.id}]`);
   }
   return { line: `ci_verdict ${short} ${red ? "RED" : "GREEN"} — ${parts.join(" | ")} (${calls} calls)`, calls, v: red ? "RED" : "GREEN" };
 }
@@ -436,6 +474,8 @@ function foldLaws() {
     ["fold: parts with no plan line is a red by name", has(mergeParts(plain, [part(1, ["a"])]), "WITNESS PLAN · ")],
     ["fold: unit mdtl's causes ride through (the suite job's and every part's, in order)", (() => { const c = mergeParts(`${v([], { causes: ["c0"] })}\n${plan}`, [part(1, ["a", "d"]).replace('"live":[]', '"live":[],"causes":["c1"]'), part(2, ["b"]), part(3, ["c"])]); return !!c.suite && JSON.stringify(c.suite.causes) === JSON.stringify(["c0", "c1"]); })()],
     ["fold × mlaw: the digest carries the law pack line and the folded suite keeps its counts, so a rise is still a NEW red after the fold", (() => { const lpl = `${LAWPACK_LINE} ${JSON.stringify({ "jugad-literal-subject-list": 92 })}`; const d = digest(`${top}\n${lpl}`).join("\n"); const f = mergeParts(d, [part(1, ["a", "d"]), part(2, ["b"]), part(3, ["c"])]); const b = parseSuite(`${v(["S"])}\n${LAWPACK_LINE} ${JSON.stringify({ "jugad-literal-subject-list": 91 })}`); return d.includes(lpl) && !!f.suite && JSON.stringify(f.suite.lawpack) === JSON.stringify({ "jugad-literal-subject-list": 92 }) && judge(f.suite, b).fresh.some((r) => r.startsWith("LAW PACK ROSE · jugad-literal-subject-list 91 → 92")); })()],
+    ["fold × mdtl2 (F7 A): a run with no verdict line digests to the section sectionCause names on the whole raw output (real, forged, none), and a run with one carries no section line",
+      (() => { const os = 'section("SUITES — every member run");'; const L = (x) => `noise\n── ${x} ────\nmore`; return ["SUITES — every member run", "FORGED-SECTION"].every((x) => sectionCause(digest(L(x), os).join("\n"), os) === sectionCause(L(x), os)) && !digest(L("FORGED-SECTION"), os).join("\n").includes("FORGED") && digest("died", os).length === 0 && !digest(`${L("SUITES — every member run")}\n${v([])}`, os).some((l) => l.startsWith("── ")); })()],
     ["digest: the machine lines only, no detail key, no detail line; every leaf a name or a number", dg.length === 2 && !dg.join("\n").includes("SECRET-DETAIL") && !dg.join("\n").includes("detail") && dg.every((l) => namesAndNumbers(JSON.parse(l.slice(l.indexOf(" ") + 1))))],
   ];
 }
@@ -495,6 +535,23 @@ function selftest() {
   ok("mdtl · with no source door (the pure default) every witness cause is WITHHELD", cd.lines.some((l) => l.includes("%0Acause · WITHHELD · ")) && !cd.lines.some((l) => l.includes("claims one thing")));
   const g0 = compareLines(parseSuite(suite(["B"])), parseSuite(suite(["B"])), "node 22", "a", "b"), g1 = compareLines(parseSuite(suite(["B"], { causes: [`${W} · P1 · x`] })), parseSuite(suite(["B"])), "node 22", "a", "b", "", null, wsrc);
   ok("mdtl · a GREEN head's compare output is byte-identical with or without causes (no new red owns them)", JSON.stringify(g0.lines) === JSON.stringify(g1.lines));
+  // unit mdtl2 (forks row 1220): every other red's cause, verified by red_cause.mjs through the doors; a run with no machine line
+  const SM = "SUITE MEMBER · toy selftest exits 0", tsrc = 'ok("the toy check fails on purpose", false);';
+  const doors = { readFile: (p) => (p === "scripts/toy.mjs" ? tsrc : p === "scripts/organism_test.mjs" ? 'section("SUITES — every member");' : ""), tracked: () => new Set(["scripts/toy.mjs", "scripts/organism_test.mjs"]) };
+  const mc = [`${SM} · exit 1 · FAIL the toy check fails on purpose · and 2 more`, `${SM} · exit 1 · FAIL FORGED-TEXT-IN-NO-SOURCE`, `${W} · P1 · the planted clause claims one thing`];
+  const m2 = compareLines(parseSuite(suite(["B", SM, W], { causes: mc })), parseSuite(suite(["B"])), "node 22", "", "", "", null, wsrc, doors);
+  const m2Pay = JSON.parse((/B1_VERDICT (\{.*\})$/.exec(m2.lines.find((l) => l.includes(VERDICT_TITLE)) || "") || ["", "{}"])[1].replace(/%0A/g, "\n").replace(/%25/g, "%"));
+  ok("mdtl2 · a NEW member red keeps the cause red_cause rebuilds from its own source, a forged one is WITHHELD, a witness red is still mdtl's",
+    JSON.stringify(m2Pay.cause[SM]) === JSON.stringify(["exit 1 · FAIL the toy check fails on purpose · and 2 more", "WITHHELD · a cause that is not public bytes of its own tracked source was withheld"])
+    && JSON.stringify(m2Pay.cause[W]) === JSON.stringify(["P1 · the planted clause claims one thing"]) && !m2.lines.some((l) => l.includes("FORGED-TEXT-IN-NO-SOURCE")));
+  const m3 = compareLines(parseSuite(suite(["B", SM], { causes: [mc[0]] })), parseSuite(suite(["B"])), "node 22");
+  ok("mdtl2 · with no doors (the pure default) a member red's cause is WITHHELD", m3.lines.some((l) => l.includes("%0Acause · WITHHELD · a cause that is not public bytes")) && !m3.lines.some((l) => l.includes("the toy check fails")));
+  const hl = (t) => compareLines(null, parseSuite(suite(["B"])), "node 22", "", "", "", null, () => "", { ...doors, text: { head: t, base: "" } });
+  const hp = (c) => JSON.parse((/B1_VERDICT (\{.*\})$/.exec(c.lines.find((l) => l.includes(VERDICT_TITLE)) || "") || ["", "{}"])[1].replace(/%0A/g, "\n").replace(/%25/g, "%")).cause;
+  ok("mdtl2 · F7 A: a head with no machine line names its last section (a literal of organism_test.mjs); a forged one is WITHHELD; none reached is said",
+    JSON.stringify(hp(hl("── SUITES — every member ────\nnoise"))) === JSON.stringify({ "(head)": ["last section · SUITES — every member"] })
+    && hp(hl("── SUITES — every member ──\n── FORGED-SECTION ──"))["(head)"][0].startsWith("WITHHELD · ") && !hl("── FORGED-SECTION ──").lines.some((l) => l.includes("FORGED-SECTION"))
+    && hp(hl("died"))["(head)"][0] === "no section reached" && hl("x").verdict === "RED" && compareLines(null, parseSuite(suite([])), "n").lines.every((l) => !l.includes('"cause"')));
   const runs = (st = "completed") => ({ check_runs: [{ id: 2, name: "npm test · node 24", status: st, conclusion: "success" }, { id: 1, name: "npm test · node 22", status: st, conclusion: "success" }, { id: 9, name: "public-safe-chores", status: "completed" }] });
   const ann = (v, nw) => [{ title: "BASE RED · node 22 1/1", message: "B" }, { title: `${VERDICT_TITLE} · node 22`, message: `B1_VERDICT ${JSON.stringify({ v, base: "c".repeat(40), new: nw, base_red: 1, live: 3 })}` }];
   const fake = (map) => async (p) => { for (const [k, v] of map) if (p.includes(k)) return v; throw new Error(`unplanted ${p}`); };
@@ -512,6 +569,12 @@ function selftest() {
     ok("reader: no leg is NONE after ONE call", N.v === "NONE" && N.calls === 1);
     const D = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", runs()], ["/check-runs/1/", []], ["/check-runs/2/", ann("GREEN", [])]]));
     ok("reader: a leg with no verdict annotation is RED, never GREEN by absence", D.v === "RED");
+    const job = (name) => ({ steps: [{ name: "Set up job", conclusion: "success" }, { name, conclusion: "failure" }, { name: "Complete job", conclusion: "success" }] });
+    const DJ = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", runs()], ["/check-runs/1/", []], ["/check-runs/2/", ann("GREEN", [])], ["/actions/jobs/1", job("npm test · hermetic · head")]]));
+    const DX = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", runs()], ["/check-runs/1/", []], ["/check-runs/2/", ann("GREEN", [])], ["/actions/jobs/1", job("FORGED-STEP-NAME")]]));
+    const DU = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", runs()], ["/check-runs/1/", []], ["/check-runs/2/", ann("GREEN", [])]]));
+    ok("mdtl2 · F6 A: a leg with no verdict annotation reads its failed step in ONE more call — a workflow step by name, any other `(unnamed)`, an unreadable job said",
+      DJ.v === "RED" && DJ.calls === 4 && DJ.line.includes("step npm test · hermetic · head · failure") && DX.line.includes("step (unnamed) · failure") && !DX.line.includes("FORGED-STEP-NAME") && DU.line.includes("step (unreadable)") && DU.v === "RED");
     // unit mrdr (row 1022 (1)): TWO CHECK SUITES on one sha (the 2bed314 shape: node 22 ×2, node 24 ×2, the older suite first)
     const two = { check_runs: [{ id: 11, name: "npm test · node 22", status: "completed" }, { id: 12, name: "npm test · node 24", status: "completed" }, { id: 21, name: "npm test · node 22", status: "completed" }, { id: 22, name: "npm test · node 24", status: "completed" }] };
     const DR = await readVerdict("d".repeat(40), DEFAULT_REPO, fake([["/check-runs?", two], ["/check-runs/21/", ann("GREEN", [])], ["/check-runs/22/", ann("RED", ["PLANTED"])], ["/check-runs/11/", ann("GREEN", [])], ["/check-runs/12/", ann("GREEN", [])]]));
@@ -564,7 +627,8 @@ async function main() {
     const head = folded.suite, base = parseSuite(read(flag("base")));
     // unit mlaw (F3 A): only a base with no law pack line needs the frozen baseline, read from lawpack.mjs itself (never typed here)
     const baseline = head && head.lawpack && base && !base.lawpack ? await frozenBaseline() : null;
-    const { lines, verdict } = compareLines(head, base, flag("label") || "suite", flag("head-sha") || "", flag("base-sha") || "", read(flag("base-instrument")), baseline, workspaceSrc, folded.shards);
+    const { lines, verdict } = compareLines(head, base, flag("label") || "suite", flag("head-sha") || "", flag("base-sha") || "", read(flag("base-instrument")), baseline, workspaceSrc,
+      { readFile: workspaceFile, tracked: workspaceTracked, text: { head: read(flag("head")), base: read(flag("base")) } }, folded.shards);   // unit mdtl2: the workspace doors
     for (const l of lines) console.log(l);
     process.exitCode = verdict === "GREEN" ? 0 : 1;
     return;
@@ -572,7 +636,7 @@ async function main() {
   if (mode === "digest") {
     let raw = "";
     try { raw = readFileSync(String(process.argv[3] || ""), "utf8"); } catch { raw = ""; }   // an unreadable run digests to nothing: the fold reds it by name
-    for (const l of digest(raw)) console.log(l);
+    for (const l of digest(raw, workspaceFile("scripts/organism_test.mjs"))) console.log(l);   // × mdtl2 F7 A: the section is rebuilt from the workspace
     return;
   }
   if (mode === "times") {

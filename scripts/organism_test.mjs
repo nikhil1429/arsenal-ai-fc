@@ -52,10 +52,20 @@ process.on("exit", () => { try { rmSync(RUN_TMP, { recursive: true, force: true 
 let pass = 0, fail = 0;
 // unit mdtl: `causes` holds one entry per failing witness clause, `<red name> · <ID> · <text>` (witness_cause.mjs causeText)
 const fails = [], passed = [], causes = [];
+// unit mdtl2 (forks row 1220): every OTHER red's cause, rebuilt from public bytes by red_cause.mjs. The import is guarded by the
+// module's presence (a base tree measured by this instrument has none). Its ONE generic hook below only pushes into `causes`:
+// every judged name and detail stays byte-identical, so every KNOWN_RED entry keeps its match.
+const rc = existsSync(join(HERE, "red_cause.mjs")) ? await import("./red_cause.mjs") : null;
+let trackedAtHead = null;
+const rcIO = { root: ROOT, read: (p) => { try { return readFileSync(join(ROOT, p), "utf8"); } catch (e) { void e; return ""; } },   // unreadable = WITHHELD
+  tracked: () => (trackedAtHead ??= new Set(String(spawnSync("git", ["-C", ROOT, "ls-files", "-z"], { encoding: "utf8", windowsHide: true }).stdout || "").split("\0").filter(Boolean))) };
 const assert = (name, cond, detail) => {
   if (liveAssert(name)) return;   // B1 (b): a LIVE member under the hermetic profile is named, never judged
   if (cond) { pass++; passed.push(name); console.log(`  ok   ${name}`); }
-  else { fail++; fails.push({ name, detail }); console.log(`  FAIL ${name}${detail ? `\n         ${detail}` : ""}`); }
+  else {
+    fail++; fails.push({ name, detail }); console.log(`  FAIL ${name}${detail ? `\n         ${detail}` : ""}`);
+    if (rc && detail) for (const c of rc.causesOfDetail(name, String(detail), rcIO)) causes.push(rc.causeLine(name, c));   // unit mdtl2: the one generic hook
+  }
 };
 const section = (t) => console.log(`\n── ${t} ${"─".repeat(Math.max(0, 66 - t.length))}`);
 
@@ -312,7 +322,91 @@ function relockSandboxCapsule(root, id) {
     return true;
   } catch { return false; }
 }
-const hasSelftest = (f) => { const src = readOrgan(f); return /['"`]selftest['"`]/.test(src) || /function selftest\(/.test(src); };
+// unit mdet (forks row 1151 (3) F3 B) — THE COVERAGE DETECTOR READS CODE, NEVER A COMMENT OR A STRING. Until this unit a
+// script "had a selftest" when the quoted word appeared ANYWHERE in its bytes, so a backticked word in a header comment
+// counted a selftest that did not exist (study_scope, measured by unit mcov: ci/mcov/PROOF.md F3). The old reading is
+// FROZEN below as hasSelftestLegacy (L9: frozen, never deleted) so the census can print both columns. The new one lexes the
+// source (comments blanked, every string and template body blanked and kept as a literal) and accepts exactly two forms:
+//   dispatch · a whole literal `selftest` that is an operand of === / == / !== / != or a `case` label: the mode the script
+//              actually branches on;
+//   self-run · a CALL of its own selftest() in code (not its declaration, not a method of another object): a script run
+//              bare IS its selftest (claudegen, the class package.json:_selftest_coverage_law names), so the gate stays
+//              as strict as before for it (a gate only gets stricter).
+// Dependency-free on purpose: the coverage law must measure in a bare checkout with no node_modules.
+const hasSelftestLegacy = (f) => { const src = readOrgan(f); return /['"`]selftest['"`]/.test(src) || /function selftest\(/.test(src); };
+/** codeOf — comments blanked, string/template/regex bodies blanked (newlines kept, so offsets and lines hold). PURE.
+ *  @param {string} src @returns {{ code: string, lits: { v: string, s: number, e: number, whole: boolean }[] }} */
+function codeOf(src) {
+  const n = src.length, lits = [], tpl = [];   // tpl: brace depth of each open ${ … } inside a template
+  let out = "", i = 0, prev = "";
+  const blank = (c) => (c === "\n" ? "\n" : " ");
+  const regexMayStart = () => prev === "" || /[(,=:[!&|?{};+\-*%<>~^]$/.test(prev)
+    || /^(return|typeof|case|do|else|in|of|new|delete|void|throw|yield|await)$/.test(prev);
+  const templateBody = (s, opened) => {          // i sits just past a backtick or past the } closing a ${ … }
+    let v = "";
+    while (i < n) {
+      const c = src[i];
+      if (c === "\\") { v += src.slice(i, i + 2); out += blank(src[i]) + blank(src[i + 1] || ""); i += 2; continue; }
+      if (c === "`") { out += "`"; i++; lits.push({ v, s, e: i, whole: opened }); return; }
+      if (c === "$" && src[i + 1] === "{") { out += "${"; i += 2; lits.push({ v, s, e: i, whole: false }); tpl.push(0); return; }
+      v += c; out += blank(c); i++;
+    }
+  };
+  while (i < n) {
+    const c = src[i], d = src[i + 1];
+    if (c === "/" && d === "/") { while (i < n && src[i] !== "\n") { out += " "; i++; } continue; }
+    if (c === "/" && d === "*") { const end = src.indexOf("*/", i + 2), stop = end < 0 ? n : end + 2; for (; i < stop; i++) out += blank(src[i]); continue; }
+    if (c === "'" || c === '"') {
+      const s = i; let v = ""; out += c; i++;
+      while (i < n && src[i] !== c && src[i] !== "\n") { if (src[i] === "\\") { v += src.slice(i, i + 2); out += "  "; i += 2; continue; } v += src[i]; out += " "; i++; }
+      out += src[i] === c ? c : ""; if (src[i] === c) i++;
+      lits.push({ v, s, e: i, whole: true }); prev = "x"; continue;
+    }
+    if (c === "`") { const s = i; out += "`"; i++; templateBody(s, true); prev = "x"; continue; }
+    if (c === "}" && tpl.length && tpl[tpl.length - 1] === 0) { tpl.pop(); const s = i; out += "}"; i++; templateBody(s, false); prev = "x"; continue; }
+    if (tpl.length && c === "{") tpl[tpl.length - 1]++;
+    if (tpl.length && c === "}") tpl[tpl.length - 1]--;
+    if (c === "/" && regexMayStart()) {
+      let cls = false; out += "/"; i++;
+      while (i < n && src[i] !== "\n") { const t = src[i]; if (t === "\\") { out += "  "; i += 2; continue; } if (t === "[") cls = true; else if (t === "]") cls = false; else if (t === "/" && !cls) break; out += " "; i++; }
+      if (src[i] === "/") { out += "/"; i++; } prev = "x"; continue;
+    }
+    out += c; i++;
+    if (!/\s/.test(c)) prev = /[A-Za-z0-9_$]/.test(c) ? (/[A-Za-z0-9_$]$/.test(prev) ? prev : "") + c : c;
+  }
+  return { code: out, lits };
+}
+/** selftestForm — how a source answers the word, or null. PURE.
+ *  @param {string} src @returns {{ form: "dispatch"|"self-run", at: number } | null}  at = 1-based line */
+function selftestForm(src) {
+  const { code, lits } = codeOf(src);
+  const lineOf = (k) => src.slice(0, k).split("\n").length;
+  for (const l of lits) {
+    if (!l.whole || l.v !== "selftest") continue;
+    if (/(?:[!=]==?|\bcase)\s*$/.test(code.slice(Math.max(0, l.s - 16), l.s)) || /^\s*[!=]==?/.test(code.slice(l.e, l.e + 8))) return { form: "dispatch", at: lineOf(l.s) };
+  }
+  for (const m of code.matchAll(/(^|[^.\w$])selftest\s*\(/g)) {
+    const k = m.index + m[1].length;
+    if (/\bfunction\s*\*?\s*$/.test(code.slice(Math.max(0, k - 16), k))) continue;          // its declaration
+    let j = code.indexOf("(", k), depth = 0;
+    for (; j < code.length; j++) { if (code[j] === "(") depth++; else if (code[j] === ")" && --depth === 0) break; }
+    if (/^\s*\{/.test(code.slice(j + 1, j + 8))) continue;                                   // a method definition
+    return { form: "self-run", at: lineOf(k) };
+  }
+  return null;
+}
+const hasSelftest = (f) => selftestForm(readOrgan(f)) !== null;
+/** censusRows — every scripts/*.mjs (this file excepted, as scripts() does): the legacy reading, the new one, the form and
+ *  where it sits, and whether it MOVES. The table ci/mdet/PROOF.md carries is exactly these rows (unit mdet's witness C4). */
+function censusRows() {
+  return scripts().sort().map((f) => {
+    const src = readOrgan(f), old = hasSelftestLegacy(f), nf = selftestForm(src);
+    const om = /['"`]selftest['"`]/.exec(src) || /function selftest\(/.exec(src);
+    const oldAt = om ? `${src.slice(0, om.index).split("\n").length}` : "—";
+    const moves = old === !!nf ? "—" : (old ? "MOVES has → none" : "MOVES none → has");
+    return `| ${f} | ${old ? "has" : "none"} | ${oldAt} | ${nf ? "has" : "none"} | ${nf ? nf.form : "—"} | ${nf ? nf.at : "—"} | ${moves} |`;
+  });
+}
 
 // ── 1. COVERAGE LAW ──────────────────────────────────────────────────────────
 // The meta-test package.json's own prose asks for and never got.
@@ -413,6 +507,8 @@ function suites() {
     // B1 (c): every member is its OWN assert, so a red member is a NAME the neutral verdict can compare across trees
     assert(`SUITE MEMBER · ${m} selftest exits 0`, r.code === 0);
     if (r.code !== 0) console.log(`         ${redWhy(r)}`);   // (a): the member's red names the kill, on the line under its FAIL
+    // unit mdtl2 (K1 / K4): the exit SLOT, the FIRST failing check as a literal or skeleton of the member's own source, and a count
+    if (r.code !== 0 && rc) causes.push(rc.causeLine(`SUITE MEMBER · ${m} selftest exits 0`, rc.memberCause({ code: r.code, killed: r.killed, out: r.out, src: rcIO.read(`scripts/${m}.mjs`) })));
   }
   console.log(`  suites: reused ${reused} of ${members.length} member result(s) from hermetic (identical command), ran ${members.length - reused}`);
   assert(`all ${PROFILE === "hermetic" ? `${ran} hermetic` : members.length} suite members pass (every one RUN, not chained)`, red.length === 0,
@@ -2269,6 +2365,8 @@ function hermetic() {
     const tap = hermeticRuns.get(runKey([join(ROOT, "scripts", "usage_tap.mjs"), "selftest"]));
     assert("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", !!tap && tap.code === 0,
       tap ? String(tap.out).trim().split("\n").filter((l) => /FAIL|selftest/.test(l)).slice(-4).join(" | ") : "usage_tap.mjs selftest never ran");
+    // unit mdtl2 (K3): the member's cause, from the loop's own kept result
+    if (tap && tap.code !== 0 && rc) causes.push(rc.causeLine("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", rc.memberCause({ ...tap, src: rcIO.read("scripts/usage_tap.mjs") })));
   }
   if (!tripLive) {
   const after = snap(), afterH = hashes();
@@ -2882,8 +2980,11 @@ function clauseWitnesses() {
     const r = run([join(ROOT, f), "plants"]);
     const last = (r.out.split(/\r?\n/).filter((l) => /^PLANTS \S+ · \d+ of \d+ plant\(s\) as expected$/.test(l)).pop()) || "";
     const m = /· (\d+) of (\d+) plant/.exec(last);
-    assert(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, r.code === 0 && !!m && Number(m[2]) > 0 && m[1] === m[2],
+    const green = r.code === 0 && !!m && Number(m[2]) > 0 && m[1] === m[2];
+    assert(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, green,
       last || `exit ${r.code} · no PLANTS line (a witness with no plants reads red) · ${r.out.split(/\r?\n/).filter((l) => /FAIL|RED/.test(l)).slice(0, 2).join(" | ").slice(0, 240)}`);
+    // unit mdtl2 (K11): each `CLAUSE <ID> RED · k/n plant(s)` line's id (a literal of the witness's own source) and its claim
+    if (!green && rc) for (const c of rc.clauseCause({ out: r.out, src: rcIO.read(f) })) causes.push(rc.causeLine(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, c));
   }
 }
 
@@ -3239,6 +3340,8 @@ async function main() {
     console.log(`WITNESS_PLAN ${JSON.stringify({ n, units, shards: p.shards, unknown: p.unknown, stale: p.stale })}`);
     process.exit(0);
   }
+  // unit mdet: the coverage detector's census, a READ (never a mode of `all`, so the suite's verdict is unmoved by it)
+  if (mode === "census") { console.log("| script | legacy | legacy at | detector | form | at | moves |\n|---|---|---|---|---|---|---|"); for (const r of censusRows()) console.log(r); process.exit(0); }
   const chosen = mode === "all" ? Object.keys(MODES) : [mode];
   if (chosen.some((c) => !MODES[c])) { console.log(`organism_test: ${Object.keys(MODES).join(" | ")} | all`); process.exit(1); }
   console.log("=== ARSENAL AI FC — CROSS-ORGAN TEST SUITE ===");
