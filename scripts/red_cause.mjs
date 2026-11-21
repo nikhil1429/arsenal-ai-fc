@@ -26,7 +26,7 @@
 // MODES: selftest
 // CLI: node scripts/red_cause.mjs selftest
 // ============================================================================
-import { pathToFileURL, fileURLToPath } from "node:url";
+import { pathToFileURL } from "node:url";
 import { idsInSource, claimOf, NO_CLAIM } from "./witness_cause.mjs";
 
 /** acorn is the repo's own pinned parser (package.json devDependencies); absent ⇒ null ⇒ every alphabet is empty */
@@ -68,7 +68,7 @@ export function alphabetOf(src) {
             stack.pop();
             const segs = /** @type {string[]} */ (top.segs);
             if (segs.length === 1) { if (one(segs[0])) A.lits.add(segs[0]); }
-            else if (segs.some((s) => s.trim() !== "") && !segs.some((s) => /[\r\n]/.test(s))) A.skels.set(segs.join("…"), segs);
+            else if (segs.some((s) => /[A-Za-z0-9]/.test(s)) && !segs.some((s) => /[\r\n]/.test(s))) A.skels.set(segs.join("…"), segs);   // punctuation alone names nothing
           } else stack.push({ t: "tpl", segs: [] });
         } else if (l === "template" || l === "invalidTemplate") { if (top && top.segs) top.segs.push(typeof tok.value === "string" ? tok.value : ""); }
         else if (l === "${" || l === "{") stack.push({ t: l });
@@ -90,8 +90,9 @@ function skelMatch(t, segs) {
   return t.length - last.length >= at && t.endsWith(last);
 }
 const word = (c) => /[A-Za-z0-9_]/.test(c || "");
-/** the public spelling of one printed text: the literal itself; else the skeleton that covers it (the most static bytes);
- *  else the longest literal that opens it at a word boundary, followed by ` …`; else null (WITHHELD)
+/** the public spelling of one printed text: the literal itself; else whichever carries more public bytes — the skeleton that
+ *  covers it (the most static bytes) or the longest literal that opens it at a word boundary, followed by ` …` (a tie goes
+ *  to the skeleton); else null (WITHHELD). A skeleton needs a word character in its static bytes: `…/…` names nothing.
  *  @param {string} text @param {Alphabet} A @returns {string | null} */
 export function repOf(text, A) {
   const t = String(text);
@@ -99,9 +100,9 @@ export function repOf(text, A) {
   if (A.lits.has(t)) return t;
   let best = null, n = -1;
   for (const [k, segs] of A.skels) if (skelMatch(t, segs)) { const s = segs.join("").length; if (s > n) { best = k; n = s; } }
-  if (best !== null) return best;
   let lp = null;
   for (const l of A.lits) if (l.length < t.length && t.startsWith(l) && (!word(l[l.length - 1]) || !word(t[l.length])) && (lp === null || l.length > lp.length)) lp = l;
+  if (best !== null && (lp === null || n >= lp.length)) return best;   // the spelling with the most public bytes wins
   return lp === null ? null : `${lp} …`;
 }
 /** <rep> is in <A>: a literal, a skeleton, or a literal followed by ` …` @param {string} rep @param {Alphabet} A */
@@ -176,9 +177,10 @@ export function throwCause(detail, root, tracked, readFile) {
     const m = /((?:file:\/\/)?[^\s()]+?):(\d+):\d+\)?\s*$/.exec(p);
     if (!m) continue;
     let f = m[1];
-    if (f.startsWith("file://")) { try { f = fileURLToPath(f); } catch (err) { void err; continue; } }   // a malformed URL frame is no frame
-    f = norm(f);
-    const win = /^[A-Za-z]:\//.test(R);
+    // a file URL is read by text, never by fileURLToPath: that answers by the HOST's platform (a drive-less URL throws on Windows)
+    if (f.startsWith("file://")) { try { f = decodeURIComponent(f.slice("file://".length)); } catch (err) { void err; continue; } }   // a malformed escape is no frame
+    f = norm(f).replace(/^\/(?=[A-Za-z]:\/)/, "");
+    const win = /^[A-Za-z]:\//.test(R) || /^[A-Za-z]:\//.test(f);
     const under = win ? f.toLowerCase().startsWith(`${R.toLowerCase()}/`) : f.startsWith(`${R}/`);
     const tok = under ? `${f.slice(R.length + 1)}:${m[2]}` : "";
     if (tok && pathTok(tok, tracked, readFile)) { out.push(tok); break; }
@@ -341,8 +343,8 @@ function selftest() {
   const A = alphabetOf(org);
   ok("alphabetOf: whole literals (\" ' `) and skeletons, a regex literal holding quotes does not derail it, CRLF-proof",
     A.ok && A.lits.has("the toy member planted check fails on purpose") && A.lits.has("a check · with a dot") && A.skels.has("the toy check read …") && A.skels.has("a…e … tail") && A.skels.has("b…d"));
-  ok("alphabetOf: a multi-line template and a fill-only template are no skeleton; an unparsable source has no alphabet",
-    ![...A.skels.keys()].some((k) => k.includes("line one")) && !A.skels.has("…") && alphabetOf("const s = \"never closed;").ok === false);
+  ok("alphabetOf: a multi-line template, a fill-only and a punctuation-only template (`…/…`) are no skeleton; an unparsable source has no alphabet",
+    ![...A.skels.keys()].some((k) => k.includes("line one")) && !A.skels.has("…") && !alphabetOf("const p = `${a}/${b}`;").skels.has("…/…") && alphabetOf("const s = \"never closed;").ok === false);
   ok("repOf: a literal is itself, a fill is `…`, a literal opening at a word boundary is `<lit> …`, anything else null",
     repOf("the toy member planted check fails on purpose", A) === "the toy member planted check fails on purpose" && repOf(`the toy check read ${CAN} salad words`, A) === "the toy check read …"
     && repOf("a check · with a dot and more", A) === "a check · with a dot …" && repOf(CAN, A) === null && repOf(`a check · with a dotX`, A) === null);
@@ -372,6 +374,11 @@ function selftest() {
     JSON.stringify(lawpackCause(`RED  bare-catch ROSE — 9, baseline 8\n         RED  bare-catch ${CAN}`, files["scripts/lawpack.mjs"])) === JSON.stringify(["bare-catch · … ROSE — …, baseline …", "bare-catch · bare-catch …"]));
   ok("clauseCause: a literal id with its claim and its k/n SLOT; an id not in the source is ONE WITHHELD",
     JSON.stringify(clauseCause({ out: `CLAUSE P1 RED · 0/1 plant(s)\nCLAUSE Q${CAN} RED · 0/1 plant(s)\nCLAUSE P1 GREEN · 1/1 plant(s)`, src: files["ci/witness/toy/witness_toy.mjs"] })) === JSON.stringify(["P1 RED · 0/1 plant(s) · the planted clause claims one thing", WITHHELD]));
+  const W2 = alphabetOf("const a = \"the longer literal opens the check\"; const b = `the ${x} check`;");
+  ok("repOf: the spelling with more public bytes wins — a long literal opening beats a thin skeleton; a tie goes to the skeleton",
+    repOf("the longer literal opens the check 3", W2) === "the longer literal opens the check …" && repOf("the 9 check", W2) === "the … check");
+  ok("throwCause reads a Windows frame by text on any host (drive letter, case folded)",
+    JSON.stringify(throwCause(`TypeError: x | at f (file:///d:/a/r/r/scripts/organism_test.mjs:2:3)`, "D:\\a\\r\\r", tracked, read)) === JSON.stringify(["TypeError · scripts/organism_test.mjs:2"]));
   const os = files["scripts/organism_test.mjs"];
   ok("sectionCause (F7 A): the last section as LIT or SKEL (a long title has no dashes, only its space); a forged title is WITHHELD; no section is said",
     sectionCause("── SUITES — x ────\nnoise", os) === "last section · SUITES — x" && sectionCause("── SUITES — x \nnoise", os) === "last section · SUITES — x" && sectionCause("── GATES — LIVE ──", os) === "last section · … — LIVE" && sectionCause(`── SUITES — x ──\n── ${CAN} ──`, os) === WITHHELD && sectionCause("died", os) === "no section reached");
