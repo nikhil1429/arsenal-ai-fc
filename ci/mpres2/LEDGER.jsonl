@@ -1,0 +1,11 @@
+{"ts":"2026-11-21T07:40:00Z","act":"base","cmd":"git fetch origin main && git rev-parse FETCH_HEAD","last_line":"7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f"}
+{"ts":"2026-11-21T07:42:00Z","act":"plant case base","cmd":"node plant_mpres2.mjs --org .","last_line":"RED PLANT · no later pass in the span asked (asks=0, repair none)"}
+{"ts":"2026-11-21T07:42:30Z","act":"plant case option A","cmd":"node plant_mpres2.mjs --org . --patch","last_line":"GREEN PLANT · the seeded row is asked ONCE in the same span (asks=1)"}
+{"ts":"2026-11-21T07:44:00Z","act":"selftest option A","cmd":"node <A>/scripts/presence.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-21T07:44:10Z","act":"selftest base","cmd":"node scripts/presence.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-21T07:45:00Z","act":"mpres witness over A","cmd":"node ci/mpres/witness_mpres.mjs --org <A> --only F9-ONCE,F9-RED,W1,W2,W12","last_line":"GREEN MPRES a sensor whose input is dead reads red by name on the one state line, exits non-zero, and asks its launcher once per dead span · 6 clause(s)"}
+{"ts":"2026-11-21T07:46:30Z","act":"plant case option B","cmd":"node plant_mpres2.mjs --org <B>","last_line":"GREEN PLANT · the seeded row is asked ONCE in the same span (asks=1)"}
+{"ts":"2026-11-21T07:46:40Z","act":"selftest option B","cmd":"node <B>/scripts/presence.mjs selftest","last_line":"ALL CHECKS PASSED"}
+{"ts":"2026-11-21T07:47:30Z","act":"suite base hermetic","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all","last_line":"organism_test: 150 passed, 8 failed · ruled 0 · UNRULED 8 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T07:50:00Z","act":"mpres mutants over B","cmd":"node ci/mpres/run_mutants_mpres.mjs --org <B> --base-org <base>","last_line":"run_mutants: 16 of 16 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T07:52:00Z","act":"mpres mutants over A","cmd":"node ci/mpres/run_mutants_mpres.mjs --org <A> --base-org <base>","last_line":"run_mutants: 15 of 16 mutant(s) RED by the clause that names them · control GREEN"}
