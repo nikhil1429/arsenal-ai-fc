@@ -1,0 +1,19 @@
+{
+  "_what": "unit mlaw2 (forks rows 1137 (4) / 1205 (1)) - the INPUTS of the planted tree, read by ci/mlaw2/plant.mjs. No state file content, no person name, no number typed: every port is OS-picked at plant time, every wait is the suite's own member bound read off scripts/organism_test.mjs.",
+  "tree": "git archive <sha> with core.autocrlf=false (an LF tree), extracted under os.tmpdir(), then git init + one commit inside (the law pack's NUL scan lists the tree with git ls-files)",
+  "state_dir": "dressing-room/state",
+  "state_plant": "EMPTY",
+  "state_plant_why": "the census question is NO FIXTURE: the state dir exists (an organ may mkdir under it) and holds zero files; none of his bytes enter the tree",
+  "fixtures": [],
+  "node_modules": "symlinked from the checkout that runs the planter (npm ci there first)",
+  "home_doors": ["HOME", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "TMPDIR", "TMP", "TEMP"],
+  "env_removed": ["ANTHROPIC_API_KEY", "GITHUB_ACTIONS", "ARSENAL_ORGAN", "NODE_OPTIONS"],
+  "env_set": { "ORGANISM_TEST_PROFILE": "hermetic" },
+  "model_shims": ["claude", "gemini"],
+  "model_shim_exit": "non-zero, with the line REFUSED: no live model call (planted shim)",
+  "port_door_pattern": "(?:process\\.env\\.|plantedPort\\(\")(ARSENAL_[A-Z_]*PORT)\\b",
+  "port_door_source": "every scripts/*.mjs of the planted tree itself",
+  "port_rule": "each door gets a port the OS picked (listen 0 on 127.0.0.1, read, close); no fixed port is ever bound or typed",
+  "member_command": "the suite's own: node scripts/<organ>.mjs selftest, test_coach_v2 bare (organism_test.mjs suites())",
+  "member_bound": "MEMBER_BOUND_MS as organism_test.mjs resolves it (HEAVY_BOUND_MS, read off its source; never typed here)"
+}

@@ -1,0 +1,9 @@
+{"ts":"2026-11-21T05:57:46.179Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mplant-spec FETCH_HEAD","last_line":"base 5301f1582f7a1dbc9ec9605434c9db5d8bd19107 (origin/main at the cut)"}
+{"ts":"2026-11-21T05:57:46.201Z","act":"read","cmd":"git show 90b6ba7:ci/mlaw2/MLAW2_SPEC.md","last_line":"the mlaw2 census spec, whole (§3 §4 §8 §9 the ground)"}
+{"ts":"2026-11-21T05:57:46.224Z","act":"copy","cmd":"git show 90b6ba7:ci/mlaw2/{plant.mjs,plant_inputs.json,tools/statejournal.mjs,tools/census_selftests.mjs} > ci/mplant/…","last_line":"verbatim copies; plant.mjs blob b8af93f equal on both"}
+{"ts":"2026-11-21T05:57:46.250Z","act":"npm","cmd":"npm ci --no-audit --no-fund","last_line":"node_modules 163 entries"}
+{"ts":"2026-11-21T05:57:46.271Z","act":"measure","cmd":"node ci/mplant/tools/sets.mjs","last_line":"mplant sets: targets 131 · LIVE selftests 71 · suite members 132 · suite non-LIVE 61 · loop-only non-LIVE 0 · hermetic spawns 61 distinct organs"}
+{"ts":"2026-11-21T05:57:46.294Z","act":"measure","cmd":"node /tmp/…/two.mjs 5301f15 (sandbox selftest on the empty plant, node_modules copied, NO preload)","last_line":"sandbox: 15 passed, 0 failed"}
+{"ts":"2026-11-21T05:57:46.315Z","act":"measure","cmd":"node /tmp/…/two.mjs 6a6bdff (same, the mlaw2 base)","last_line":"sandbox: 15 passed, 0 failed"}
+{"ts":"2026-11-21T05:57:46.339Z","act":"measure","cmd":"node /tmp/…/two.mjs 5301f15 ci/mplant/tools/statejournal.mjs (the mlaw2 journal preloaded)","last_line":"sandbox: 12 passed, 3 failed"}
+{"ts":"2026-11-21T05:57:46.363Z","act":"measure","cmd":"node /tmp/…/two.mjs 5301f15 <a one-line preload: import \"node:fs\";>","last_line":"sandbox: 12 passed, 3 failed"}
