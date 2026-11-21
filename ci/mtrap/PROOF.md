@@ -223,4 +223,4 @@ hermetic suite at f9c4002                       organism_test: 167 passed, 0 fai
 CI 5839264 (pre-merge tip)                      136754495430 hermetic twice · node 22 success · 136754495422 hermetic twice · node 24 success · npm test legs in progress at the read
 ```
 
-CHECKPOINT · merge f9c4002 (main 7bf008b) · legs: read after this push, in the ledger
+CHECKPOINT · merge f9c4002 (main 7bf008b) · tip da3e30f legs: hermetic node 22 success (136766437058) · hermetic node 24 success (136766436857) · npm test node 24 success (136766437017) · npm test node 22 cancelled (136766437110) · resume from the next ruling
