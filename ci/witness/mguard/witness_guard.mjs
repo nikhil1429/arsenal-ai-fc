@@ -31,8 +31,23 @@
 //           missing or different ⇒ 1
 //
 // LAST LINE   MGUARD-JUDGE <D> · exit <n> · <clause>=<HOLDS|UNREAD|RED> …     exit 0 / 1 / 2 (3 = usage)
+//
+// PLANTS (the suite's CLAUSE WITNESSES member, unit mmeter, landed after this unit's cut — met at the merge of main 7bf008b):
+//   node ci/witness/mguard/witness_guard.mjs plants [--org <dir>]
+// It plants every clause both ways under ONE os.tmpdir() dir and runs THIS judge on each plant as a child, with the root and
+// presence doors pointed at the plant (the doors in its own env are dropped first). The day D comes from ONE read of the
+// clock (unit mclk): D is that instant's IST day, and every planted stamp is an offset from D's IST noon, so each stays inside D
+// on either side of midnight. Each plant expects an exit and a clause word. The HOLD plant (a span read and shown as read)
+// expects exit 0 with every clause HOLDS. Each other plant breaks exactly one clause and expects that clause's word.
+// The READER and G3 plants judge a copy of <dir>/scripts/*.mjs. The planted age bound is the ruled one (row 1062 F4), as in
+// ci/mguard/witness_mguard.mjs. Each child is capped at the job's own timeout-minutes, read from <dir>'s suite.yml.
+// It writes only under its temp dir and removes it; no node process naming it survives.
+// OUTPUT: one `CLAUSE <ID> GREEN|RED · k/n plant(s)` line per clause, then `PLANTS mguard · k of n plant(s) as expected`.
+// The exit is 0 iff k = n.
 
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync, mkdtempSync, mkdirSync, writeFileSync, copyFileSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -40,6 +55,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const argOf = (n) => { const i = process.argv.indexOf(n); return i >= 0 ? process.argv[i + 1] : undefined; };
 const DAY = argOf("--day");
 const ORG = resolve(argOf("--org") || join(HERE, "..", "..", ".."));
+if (process.argv[2] === "plants") plants();   // the suite's CLAUSE WITNESSES member (unit mmeter) runs this mode; see PLANTS above
 if (!DAY || !/^\d{4}-\d{2}-\d{2}$/.test(DAY)) { console.error("usage: node ci/witness/mguard/witness_guard.mjs --day <YYYY-MM-DD> [--org <dir>]"); console.log("MGUARD-JUDGE ? · exit 3 · usage"); process.exit(3); }
 
 const HOLDS = 0, RED = 1, UNREAD = 2;
@@ -121,3 +137,84 @@ for (const { sp, r } of read) {
 if (bad.length) say("G4", RED, bad.join("; "));
 else say("G4", HOLDS, `${read.length} read span(s), each shown as read`);
 end();
+
+// ═══ PLANTS — every clause both ways (see PLANTS in the header) ═══
+function plants() {
+  const MIN = 60 * 1000;
+  const RULED_F4_BOUND_MIN = 5 * 60;   // row 1062 F4: "bound five hours until a row moves it" — planted in the law home
+  const NOW = Date.now();                                                            // the ONE clock read (unit mclk)
+  const D = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(NOW));
+  const A = Date.parse(`${D}T12:00:00+05:30`);                                       // D's IST noon: every stamp is an offset from it
+  const at = (m) => new Date(A + m * MIN).toISOString();
+  const CAP_MS = (() => { try { const m = /timeout-minutes:\s*(\d+)/.exec(readFileSync(join(ORG, ".github", "workflows", "suite.yml"), "utf8")); return m ? Number(m[1]) * MIN : undefined; } catch { return undefined; } })();
+  const TMP = mkdtempSync(join(tmpdir(), "mguard-plants-"));
+  const SELF = fileURLToPath(import.meta.url);
+  const env0 = { ...process.env }; delete env0.ARSENAL_CAMPAIGN_ROOT; delete env0.ARSENAL_PRESENCE_LOG;
+  const span = [at(-60), at(-30)];
+  const reading = (m, five, week) => ({ read_at: at(m), source: "statusline", five: { pct: five, resets_at: at(200) }, week: { pct: week, resets_at: at(3000) } });
+  const focus = (m, away, back_at) => ({ ts: at(m), day: D, kind: "focus", away, back_at });
+  const closedRow = focus(-29, [span], at(-30));
+  const tapChild = (rows, root) => {
+    const code = `const t = await import(${JSON.stringify(pathToFileURL(join(ORG, "scripts", "usage_tap.mjs")).href)});` +
+      `process.stdout.write(JSON.stringify({ s: t.spanSpend(${JSON.stringify(rows)}, ${JSON.stringify({ start: span[0], end: span[1] })}, { maxAgeMin: ${RULED_F4_BOUND_MIN} }), path: t.historyPath(${JSON.stringify(root)}) }))`;
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8", env: env0, timeout: CAP_MS, windowsHide: true });
+    try { return JSON.parse(r.stdout); } catch { return null; }
+  };
+  let n = 0;
+  const plant = ({ root = true, presence = [closedRow], history = null, shownDelta = 0, org = ORG }) => {
+    const dir = join(TMP, `p${n++}`); mkdirSync(dir, { recursive: true });
+    const env = { ...env0 };
+    if (root) {
+      const r = join(dir, "root"); mkdirSync(join(r, "tools"), { recursive: true });
+      writeFileSync(join(r, "tools", "model_law.mjs"), `// the campaign's law home (planted)\nexport const POOL_READING_MAX_AGE_MIN = ${RULED_F4_BOUND_MIN};\n`);
+      env.ARSENAL_CAMPAIGN_ROOT = r;
+      if (history) {
+        const rows = history.rows.map((x) => ({ ...x }));
+        const t = tapChild(rows, r);                       // the org's own tap: its spanSpend figures and its historyPath
+        if (!t) throw new Error("the org's tap could not be read for the HOLD history");
+        const s = t.s, last = rows[rows.length - 1];
+        const five = s.five && s.five.read ? { ...s.five, spent: s.five.spent + shownDelta } : s.five;
+        last.shown = [{ span, read: s.read, why: s.why, bracket: s.bracket, five, week: s.week }];
+        writeFileSync(t.path, rows.map((x) => JSON.stringify(x)).join("\n") + "\n");
+      }
+    }
+    const log = join(dir, "presence_log.jsonl");
+    writeFileSync(log, presence.map((x) => JSON.stringify(x)).join("\n") + (presence.length ? "\n" : ""));
+    env.ARSENAL_PRESENCE_LOG = log;
+    const r = spawnSync(process.execPath, [SELF, "--day", D, "--org", org], { encoding: "utf8", env, timeout: CAP_MS, windowsHide: true });
+    return { code: r.status, out: String(r.stdout || "") };
+  };
+  const copyScripts = (name, edit) => {
+    const o = join(TMP, name); mkdirSync(join(o, "scripts"), { recursive: true });
+    for (const f of readdirSync(join(ORG, "scripts"))) if (f.endsWith(".mjs")) copyFileSync(join(ORG, "scripts", f), join(o, "scripts", f));
+    edit(join(o, "scripts")); return o;
+  };
+  const word = (out, id) => { const m = new RegExp(`^\\s*${id} · (HOLDS|UNREAD|RED) · `, "m").exec(out); return m ? m[1] : null; };
+  const results = [];
+  try {
+    const withHist = (shownDelta) => ({ history: { rows: [reading(-70, 40, 60), reading(-20, 45, 61)] }, shownDelta });
+    const hold = plant(withHist(0));
+    const holdOk = (id) => hold.code === 0 && word(hold.out, id) === "HOLDS";
+    const one = (id, p, code, w, why) => results.push({ id, ok: p.code === code && word(p.out, id) === w, why });
+    for (const id of ["READER", "ROOT", "U1177", "G1", "G2", "G3", "G4"]) results.push({ id, ok: holdOk(id), why: "the HOLD plant: a span read and shown as read" });
+    one("READER", plant({ ...withHist(0), org: copyScripts("noreader", (d) => writeFileSync(join(d, "usage_tap.mjs"), "export const campaignRoot = () => null;\n")) }), 2, "UNREAD", "a tree with no span reader");
+    one("ROOT", plant({ root: false }), 2, "UNREAD", "no campaign root");
+    one("U1177", plant({ ...withHist(0), presence: [focus(-29, [], null)] }), 2, "UNREAD", "a day with focus rows and no away-span row");
+    one("U1177", plant({ ...withHist(0), presence: [] }), 2, "UNREAD", "a day with no presence row at all");
+    one("G1", plant({ ...withHist(0), presence: [focus(-29, [span], null)] }), 2, "UNREAD", "an away span he has not come back from");
+    one("G2", plant({ presence: [closedRow] }), 2, "UNREAD", "a closed span with no history bracketing it");
+    one("G3", plant({ ...withHist(0), org: copyScripts("rogue", (d) => writeFileSync(join(d, "rogue_writer.mjs"), 'import { appendFileSync } from "node:fs";\nexport const w = (p) => appendFileSync(p + "/usage_readings.jsonl", "{}\\n");\n')) }), 1, "RED", "a second writer of the reading history");
+    one("G4", plant(withHist(1)), 1, "RED", "a shown entry that differs from the read");
+  } finally {
+    rmSync(TMP, { recursive: true, force: true });
+  }
+  const ids = [...new Set(results.map((r) => r.id))];
+  for (const id of ids) {
+    const mine = results.filter((r) => r.id === id), k = mine.filter((r) => r.ok).length;
+    console.log(`CLAUSE ${id} ${k === mine.length ? "GREEN" : "RED"} · ${k}/${mine.length} plant(s)`);
+    for (const r of mine) if (!r.ok) console.log(`  FAIL ${id} · ${r.why}`);
+  }
+  const k = results.filter((r) => r.ok).length;
+  console.log(`PLANTS mguard · ${k} of ${results.length} plant(s) as expected`);
+  process.exit(k === results.length ? 0 : 1);
+}

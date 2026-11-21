@@ -160,12 +160,49 @@ No count rises, and F8's 93 → 90 was cleared on main by unit mlaw.
 The mpool witness on the merged tree (`--base-org <LF b1fc984>`) still reads `RED MPOOL · W3.1`: F1, unchanged. Main
 `7bf008b` reads `GREEN MPOOL the usage tap · 33 clause(s)`.
 
-The neutral legs on `1917b8d`, read by curl at push time, are all queued: 136775817334 (npm test · node 22), 136775817524
-(npm test · node 24), 136775817554 (hermetic twice · node 22) and 136775817582 (hermetic twice · node 24). The verdict follows in
-the next commit, as read, with no retry.
+The four legs on `1917b8d` were **cancelled, never run** ("Canceling since a higher priority waiting request for
+suite-refs/heads/claude/mguard-build exists"), because the push of `7819b97` replaced them. `7819b97` carries the same
+merged code plus the proof and ledger rows. Its legs, read by curl:
 
-CHECKPOINT · 21 Nov 2026 · merge `1917b8d` (main 7bf008b merged in) · witness GREEN at build and RED at base · mutants 7 of 7 · legs
-136775817334 / 136775817524 / 136775817554 / 136775817582 queued
+- 136776521308 (hermetic twice · node 22) · **success**
+- 136776521620 (hermetic twice · node 24) · **success**
+- 136776521557 (npm test · node 22) · **failure**. B1_VERDICT RED, base `7bf008b`, "3 member(s) red that are not red at the
+  merge base".
+- 136776521470 (npm test · node 24) · **failure**. B1_VERDICT RED, base `7bf008b`, "2 member(s) red that are not red at the
+  merge base", base_red 0, pass 270.
+
+The new reds, each with its cause:
+
+1. **`CLAUSE WITNESS · ci/witness/mguard/witness_guard.mjs plants — exit 0, every plant as expected (n > 0)`, both legs.
+   A real red of the merge, in this unit's file.** Main gained unit mmeter's CLAUSE WITNESSES member after this unit's cut
+   (`scripts/organism_test.mjs` `clauseWitnesses()`). It runs every `ci/witness/<unit>/witness_*.mjs` in a `plants` mode
+   and needs `PLANTS <unit> · k of n plant(s) as expected` with k = n > 0. The judge had no such mode: it answered
+   `plants` with its usage line and exit 3.
+   **Fixed in this unit's own file:** the judge now has a `plants` mode (header PLANTS). It plants every clause both ways
+   under one temp dir and runs the judge itself on each plant. The day comes from one clock read, as unit mclk requires:
+   its IST day, with every stamp an offset from that day's IST noon. The tap's history path and figures are asked of the
+   org's own tap, never typed.
+   Read here: `PLANTS mguard · 15 of 15 plant(s) as expected` (exit 0). Two judge mutants put through the plants mode read
+   red by name:
+   - U1177 → HOLDS: `CLAUSE U1177 RED · 1/3 plant(s)` · `13 of 15`
+   - G4 → never red: `CLAUSE G4 RED · 1/2 plant(s)` · `14 of 15`
+2. **`WITNESS ‹mpool› · GREEN at head against its BASE`, both legs: F1, as predicted.** mpool's W3.1 allows two writes and
+   G4 A rules three. Its file is not this unit's to edit, so it stays open for the architect.
+3. **`WITNESS ‹mlv3› · GREEN at head against its BASE`, node 22 only.** The node 24 leg of the same commit reads it green,
+   and this unit touches no file of mlv3. Its causes name mlv3's own worker clause ("T1 · IDLE … a closure write RETIRES
+   the worker") and its planted listeners ("LIVE-SAFE · the real :4112 and :4113 are held by planted counting listeners").
+   It is named, not retried, and not fixed here: a red on one leg of two for unchanged bytes is mlv3's to read.
+
+After the fix, on the merged tree:
+- the witness reads `GREEN MGUARD the spend guard · 7 clause(s)` at the build and `RED MGUARD · JUDGE` at the base
+- `run_mutants: 7 of 7 mutant(s) RED by the clause that names them · control GREEN`
+
+The neutral legs of the push carrying the fix are recorded in the next commit, as read, with no retry.
+
+CHECKPOINT · 21 Nov 2026 · merge `1917b8d` (main 7bf008b merged in); its legs were cancelled by the next push · `7819b97`: hermetic
+136776521308 / 136776521620 GREEN, npm test 136776521557 / 136776521470 RED. The reds: (1) CLAUSE WITNESS mguard plants, fixed
+in the judge; (2) mpool F1, open; (3) mlv3 on node 22 only, not this unit's. Witness GREEN at build and RED at base, mutants
+7 of 7, plants 15 of 15.
 
 ## FORKS
 
