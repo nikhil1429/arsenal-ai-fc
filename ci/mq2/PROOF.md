@@ -257,3 +257,5 @@ run_mutants: 8 of 8 mutant(s) RED by the clause that names them · control RED (
   every other count as §4, none raised. The one open RED is still A9, which is fork F9 (§6).
 
 CHECKPOINT · MERGED main 7bf008b at a0b39c6 · witness RED MQ2 · A9 (F9) · mutants 8 of 8, control RED (A9) · legs of a0b39c6: run 44879636984 (npm test node 22 + node 24, hermetic twice node 22 + node 24) queued at 2026-11-21 · resume from: read those legs, then await the F9 ruling
+
+CHECKPOINT · 2026-11-21 · MERGED main 7bf008b at a0b39c6 (pushed tip 159e430) · legs of 159e430, run 44879917708: npm test node 22 136772774840 success · npm test node 24 136772775069 success · hermetic twice node 22 136772775068 success · hermetic twice node 24 136772775061 success (a0b39c6 run 44879636984 cancelled, superseded) · witness RED MQ2 · A9 (F9) · mutants 8 of 8, control RED (A9) · resume from: the F9 ruling
