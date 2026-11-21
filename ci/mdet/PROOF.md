@@ -324,3 +324,19 @@ RED MDET · BOUND, C4 CENSUS…`: the architect's reading, reproduced.
   `ci/mdtl/witness_mdtl.mjs:114` · `ci/mdtl2/witness_mdtl2.mjs:142` · `ci/mtail/sides.mjs:21` · `ci/mrung/witness_mrung.mjs:110` ·
   `ci/mlaw/witness_mlaw.mjs:111` · `ci/mjud/sides.mjs:37` · `ci/witness/mmeter/plant_day.mjs:100,101`.
   (`ci/mday/witness_mday.mjs:150` is `archivist.mjs init`, not a git init.)
+
+**Neutral legs of `ac1eb1c` (windows-latest, read 21 Nov 2026 through the public API, no token):**
+- `npm test · node 24` 136761542533 — **success** (41 min). This leg's WITNESSES member ran this witness on its plain LF trees at
+  head against ci/mdet/BASE; a green there needs C4 green, and a green C4 needs judged above 0 — on windows-latest.
+- `npm test · node 22` 136761542496 — **cancelled at the job bound** (annotation: "The job has exceeded the maximum execution time
+  of 1h0m0s"), started 06:48:09Z, ended 07:48:21Z. Not a red verdict and not this edit's: the change is one clone flag, this
+  witness runs in seconds, and main 7bf008b's own npm test legs ran 39–52 min against the same 60 min bound (check runs
+  136760736638, 136760736371, 136738438725, 136738438497). Named as FORK F7 below.
+- `hermetic twice · node 24` 136761542526 — success · `hermetic twice · node 22` 136761542273 — success.
+
+- **F7 · the npm test job sits near its own bound.** On main, and here, the leg takes 39–60+ min against `timeout-minutes: 60`
+  (`.github/workflows/suite.yml:62`), so a leg can be cancelled by runner speed alone. Not this unit's to change (a bound is
+  never typed by a seat); named for the architect. Also on record: the landed tip 08f980f read `npm test · node 22`
+  136702648867 failure (41 min) beside node 24 136702649126 success; the land went through the runner's own land branch.
+
+CHECKPOINT · row 1226 eol fix pushed 21 Nov 2026 07:55Z · witness GREEN under a CRLF-native git (C4 judged 136), mutants 6 of 6 · resume from: the architect's Windows re-run; npm test node 22 of ac1eb1c ended at the job bound (F7)
