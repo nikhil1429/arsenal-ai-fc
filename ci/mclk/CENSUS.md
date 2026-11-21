@@ -42,3 +42,8 @@ keeper daemons those witnesses boot stayed real, and Date-only time travel split
 - **S1 (mmeter plants):** A · this branch's fix (the planter stamps inside its planted day, the meter read at its one instant), witnessed by `ci/mclk/witness_mclk.mjs` · B · refuse it and keep row 1214 (2)'s interim NO VERDICT rule.
 - **S2–S7 (red at both instants alike):** A · re-run each under a planted clock on the SAME real day at the real hour's offset (a door control) to separate the door's skew from a real date defect, then fork per site · B · rule them door artifacts (the Date preload does not move mtimes or daemons) and close the census at S1 · C · cut a census unit per site owner, each its own witness under a clock door that also plants mtimes.
 - **S2 / S4 (never ended):** A · treat a hang under a planted clock as a defect of the witness's own wait (it trusts Date for a bound) · B · out of mclk's scope; name it in each owner's next unit.
+
+## CLOSED BY THE CONTROL RUN (21 Nov 2026, forks row 1227 (4)/(5) — ci/mclk/CONTROL.md)
+S2–S7 each read RED under the same door at offset ZERO (main 7bf008b): every one is an **artifact of the door, closed**.
+No clock-sensitive site remains. S2 (mday) and S4 (mlv1) hang under the door at any offset: named a defect of that
+witness's wait, to be fixed by its owner, never by mclk. S1 (mmeter plants) stands as the one midnight defect, fixed by mclk.
