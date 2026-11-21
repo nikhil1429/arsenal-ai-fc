@@ -173,3 +173,58 @@ run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN
 ```
 
 CHECKPOINT · STOPPED at 2026-11-20 (row 1172 step 5) · merged tip = the commit carrying this line, child of 8bd691b (merge d980977 of main 5759cce) · base 5759cce · resolution hunks none · witness GREEN MLEFT … 19 plant(s) both ways · 4 clause(s) + BOUND + LAST / base RED MLEFT · B-left:one-command, C:census-510, C:capability-c29, C:finish-zero · mutants run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN · resume from the architect's word on FK9
+
+## Rows 1233 (2) / 1236 · the merge of main 7bf008b (21 Nov 2026)
+
+`git merge --no-ff FETCH_HEAD` (main `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f`) into `0d1a0fa` → merge commit
+**`916eb94`**, **no conflict** — no file of `scripts/organism_test.mjs`, `package.json` or `ci/` conflicted (this branch edits none
+outside `ci/witness/mleft/` and `ci/mleft/`, and main carries no path under either); every landed line of every other unit is
+main's bytes. Resolution hunks: **none**. No land/* branch merged.
+
+**BASE → `7bf008b`** (commit `e342492`): row 1172 keyed BASE to the main merged ("BASE = 5759cce"), so it follows the main merged.
+
+**What main's landings changed under this witness, measured on the merged tree** (first run: `RED MLEFT · B-left:one-command,
+C:capability-c29`, plants `one-command.green`, `c29.green`, `c29.static-only` read 2 instead of 0/0/1):
+
+- unit mlaw (`3f22388`) made done.mjs's reach read the registry mechanisms row `his_surfaces` (`scripts/done.mjs` `surfacesOrRed`),
+  and with no live row reach is the NAMED RED `{ red }` in `done.mjs json`. The planted registry carried no such row, so
+  reach read `{ red }` and this witness read it as UNREAD. Fix (`956c586`): the planted world carries the row, and a named reach
+  RED now reads **RED (1)** in `answers` and `reach` (read, and it does not hold — not an absent fact). Two new plants hold it:
+  `c29.no-surfaces-row` → 1 and `one-command.no-surfaces-row` → 1. (Main's tracked `registry.json` carries no `his_surfaces`
+  row, so in this cloud c29 would read that RED beside a campaign — measured by `node -e` over the tracked file, keys only.)
+- unit mmeter's member (`scripts/organism_test.mjs` clauseWitnesses) walks `ci/witness/<unit>/witness_*.mjs` in `plants` mode and
+  is GREEN iff exit 0 AND a line `PLANTS <unit> · k of n plant(s) as expected` with n > 0, k = n. The witness now prints
+  `PLANTS mleft · k of n plant(s) as expected`, and `CLAUSE <id> RED · k/n plant(s)` per clause with a failed plant (unit mdtl2 K11).
+  **FK9 is answered by (b)**: this member runs the witness; no shim at `ci/mleft/witness_mleft.mjs` is needed or added.
+- unit mclk: this witness derives no day from the clock; its one clock read is the planted consumption row's `ts` = now (the
+  window fresh by construction); no plant sits at a midnight.
+
+Re-run on LF worktrees (`core.autocrlf=false`) of 7bf008b and of `956c586`:
+
+```
+node ci/witness/mleft/witness_left.mjs --org <worktree 7bf008b> --base-org <worktree 7bf008b>
+RED MLEFT · B-left:one-command, C:census-510, C:capability-c29, C:finish-zero                         (exit 1)
+node ci/witness/mleft/witness_left.mjs --org <worktree 956c586> --base-org <worktree 7bf008b>
+PLANTS mleft · 21 of 21 plant(s) as expected
+GREEN MLEFT what is left, read by one command — 21 plant(s) both ways · 4 clause(s) + BOUND + LAST    (exit 0)
+node ci/mleft/run_mutants_mleft.mjs --org <worktree 956c586>
+run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN                       (exit 0)
+ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all      (worktree of 956c586)
+  ok   CLAUSE WITNESS · ci/witness/mleft/witness_left.mjs plants — exit 0, every plant as expected (n > 0)
+organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)       (exit 0)
+```
+
+CI of `956c586a9b5b4ca1fd25ade51741f86f283f7217` (the code tip), read by curl through the public API with no token and by
+`ci_verdict.mjs <FULL sha>`, three reads across ~55 min, last at 2026-11-21T08:11Z: **PENDING — every leg still queued, none ran**:
+
+```
+136775644702 npm test · node 22 queued · 136775644729 npm test · node 24 queued
+136775644453 hermetic twice · node 22 queued · 136775644661 hermetic twice · node 24 queued
+ci_verdict 956c586 PENDING — npm test · node 22: queued · npm test · node 24: queued
+```
+
+No leg is red; none has a verdict. The neutral machine has not judged this tip. This push (the CHECKPOINT, proof and ledger only)
+supersedes it, so its runs may be cancelled by the branch concurrency and the CHECKPOINT tip queues its own; the runner reads
+those legs. No retry was pushed for green.
+
+CHECKPOINT · STOPPED at 2026-11-21T08:11Z · rows 1233 (2) / 1236 · merge `916eb94` of main 7bf008b (no conflict, no hunks) · BASE 7bf008b · code tip `956c586` · legs npm test node 22 run 136775644702 / node 24 run 136775644729: QUEUED, no verdict (also hermetic twice 136775644453 / 136775644661 queued) · witness GREEN MLEFT … 21 plant(s) both ways · 4 clause(s) + BOUND + LAST / base RED MLEFT · B-left:one-command, C:census-510, C:capability-c29, C:finish-zero · mutants run_mutants: 4 of 4 mutant(s) RED by the clause that names them · control GREEN · suite 167 passed, 0 failed · resume from reading the legs of this tip
