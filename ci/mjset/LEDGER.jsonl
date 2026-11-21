@@ -9,3 +9,4 @@
 {"ts":"2026-11-21T08:20Z","act":"write-spec","cmd":"write ci/mjset/MJSET_SPEC.md","last_line":"File created"}
 {"ts":"2026-11-21T08:40Z","act":"ruling-1237-1","cmd":"grep -n bank_answer|outstandingBank|gradeCapture scripts/*.mjs → §13 B1-B10 (no fix designed)","last_line":"scripts/postmatch.mjs:800:  const queue = studySeen ? null : queueEvidenceOf(day, outstandingBank());"}
 {"ts":"2026-11-21T09:00Z","act":"context-1239-1240","cmd":"grep -n cracks.jsonl scripts/gaffer_brain.mjs scripts/sitting.mjs scripts/postmatch.mjs","last_line":"(no match) — §14 M1-M5 named, no fix designed"}
+{"ts":"2026-11-21T08:10Z","act":"drain-row-1244","cmd":"node scratch/p4.mjs scripts/gaffer_brain.mjs (planted corrected estimator + guard, planted rates; days-to-empty arithmetic)","last_line":"rounds/day 8 x 1 capture, inflow 5/day: 19 days"}

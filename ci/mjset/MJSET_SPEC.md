@@ -360,6 +360,97 @@ designed. Here is every line at base 7bf008b where mjset's path rests on such a 
 The consequence matches §13's: mjset settles captures that exist. On a day with no banked moment (M1-M3) there is no
 capture, and the build is idle by design. Whether the pacer should reach the banked moments is outside this unit.
 
+## 15 · THE DRAIN (amendment owed by forks row 1244, 21 Nov 2026; his 14 Aug effort ruling is NOT moved)
+
+**The ruling of row 1244, recorded:** F1 C (the guard AND the corrected estimator) · F2 B · F3 A now · F4 A · F5 A ·
+F6 A (built on mbank; the build launches when mbank is on main) · F7 is NOT closed and is answered by this section. The
+build of F1-F6 does not wait for it. Every figure below is a PLANT over the runner's counts or the base's code. No live
+model call was made.
+
+### 15.1 Outflow: captures settled per round at the corrected estimator (planted, P7)
+
+The planted corrected estimator (floors raise `slow` only, the margin comes from ok rates only, the guard of §2.3) is run
+over the runner's floors and 57 captures. The judge call itself is planted at the rate named in each row:
+
+```
+ok rate 172766 voice_rep     settled per round 1 in 1 call(s)
+ok rate 172766 hidden_test   settled per round 1 in 1 call(s)
+ok rate 100000 voice_rep     settled per round 2 in 2 call(s)
+ok rate 60000 voice_rep      settled per round 3 in 3 call(s)
+ok rate 40000 voice_rep      settled per round 4 in 4 call(s)
+```
+
+At the one measured rate (172766 ms per capture) a round settles **ONE capture**. Once the first call has run, the round
+has ~127 s left, while the next capture needs its 60 s tail plus a 172.8 s call. Every round is therefore one call of
+about 3 min of Opus at effort max.
+
+**The carriers that exist and fire a round:**
+- **Every sitting close while the queue holds rows** (`sitting.mjs:1036-1039`): 2 / 1 / 2 / 1 closes on 18-21 Nov
+  (runner, row 1235 (2)), every one an idle close.
+- **The day close, once a day** (`postmatch.mjs:853-860`). The morning step re-fires only an UNSETTLED day, and it found
+  every day already closed.
+
+That is **about 2.5 rounds a day, so about 2.5 captures settled a day**. The declared `pacer` trigger
+(`gaffer_brain.mjs:1883`) is a door no organ spawns: `grep -n '"pacer"' scripts/*.mjs` finds it only in the selftest
+(`:3688-3689`).
+
+### 15.2 Inflow: captures per study day the design now expects (no figure on this line is measured inflow)
+
+- **Row 1242: two day-close answers a day** (counted only from the row's wording; the build is not on this base).
+- **Banked moments per closed axis:** `sharp_check` (`forge_session.mjs:143-148`, bank-due) · the Hinglish line plus the
+  cold INTERVIEW-register line the close gate demands per axis (`:810`, "he can say it twice") · the jirah grill per axis,
+  counted at the lock (`:873`). That is up to three captures per axis.
+- **Axes closed per teaching day:** marks on 15, 17 and 21 Nov (two today) over 13-21 Nov (runner, rows 1239 / 1240), so
+  roughly 0 to 2.
+- **Expected inflow therefore: 2 to 8 captures a study day.** The MEASURED inflow since 17 Nov is 0 (§13 / §14, upstream).
+
+### 15.3 Days to empty (planted arithmetic, backlog 57, one capture per round; last lines of P7)
+
+```
+rounds/day 2.5 x 1 capture, inflow 0/day: 23 days
+rounds/day 2.5 x 1 capture, inflow 2/day: 114 days
+rounds/day 2.5 x 1 capture, inflow 5/day: NEVER (net -2.5/day)
+rounds/day 4 x 1 capture, inflow 0/day: 15 days
+rounds/day 4 x 1 capture, inflow 2/day: 29 days
+rounds/day 4 x 1 capture, inflow 5/day: NEVER (net -1/day)
+rounds/day 8 x 1 capture, inflow 0/day: 8 days
+rounds/day 8 x 1 capture, inflow 2/day: 10 days
+rounds/day 8 x 1 capture, inflow 5/day: 19 days
+```
+
+With the carriers that exist, **the queue empties only while he does not study** (about 23 days at zero inflow). At the two
+day-close answers alone it takes about 114 days. At any day with one closed axis on top, it never empties, and a new
+capture waits behind the backlog: oldest first (`judgeOrder`) puts today's answers last, F3 A notwithstanding.
+
+### 15.4 Options to drain, every one inside the effort ruling (Opus, effort max, unchanged), none asserted
+
+- **D1 · fire the declared `pacer` door from a schedule.** `judge-due --trigger pacer` already exists, with the idle rule
+  and the code stamp. A scheduled task on his machine would fire it R times a day: 8 rounds a day empties the backlog in
+  ~10-19 days at inflow 2-5 (15.3). Each firing is one Opus call of ~3 min, run only when the queue is idle. Cost: R × one
+  call a day; this is L6's transport question for the architect. Witness: planted `judgeDue` (pacer) plus planted rounds,
+  with no scheduler launched by the witness.
+- **D2 · measure whether a capture costs the same inside a batch.** 172766 ms is ONE point. The base's own A/B
+  (`gaffer_brain.mjs:1463-1477`) measures ~25,000 cache-creation tokens per call regardless of content, which suggests a
+  large fixed per-call share. If the time is F + c·n, batching n is cheaper per capture. The corrected estimator never
+  starts a batch of 2 (it reads the rate as linear), so this point can never be measured on its own. Options: (a) a
+  one-off typed 2-capture round with the guard's bound, by his hand, with the cost named · (b) leave it linear. The
+  decision needs a second ok row of a different `items`.
+- **D3 · reserve the settle tail at its MEASURED dispatch time instead of the worst case** (2·JUDGE_DISPATCH_MS per
+  capture, `:2024`). This looser guard would let more of the budget reach the call. It is the architect's call: a guard may
+  only get stricter unless ruled.
+- **D4 · take the settle tail out of the call's budget.** The call would get the full JUDGE_BUDGET_MS and the tail would
+  ride after it. The callers' waits (`sitting.mjs:220`, `postmatch.mjs:409`) would then have to sum the tail, which moves
+  two other files. Fork.
+- **D5 · the newest captures first while the backlog drains** (the order flipped for post-floor captures), so a study day's
+  answers are judged that day and the backlog drains behind them. This trades mjdg's oldest-first rule (row 999) for
+  freshness. Fork.
+- **Refused by the brief, named:** several rounds per carrier (a loop) · a typed batch size or window · any change of
+  model or effort.
+
+**Recommendation (planted, the architect decides):** D1 and D5 together. D1 is the only option that raises outflow with no
+change to any guard. D5 keeps today's answers from waiting behind the backlog. D2 is worth one measurement before anyone
+reads the rate as linear.
+
 ## 12 · THE NEUTRAL MACHINE
 
 The check runs of this branch's pushed sha, read through the public API with no token (`curl -s
