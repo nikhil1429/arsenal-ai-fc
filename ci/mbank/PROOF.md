@@ -372,3 +372,60 @@ The mutants list now holds M1-M19. M15 moved to `study_scope.mjs` with the door;
 `ownRecordOf` read. B3 (d) still reads `absent`. BOUND now names `scripts/intent.mjs`.
 
 CHECKPOINT · DONE: row 1250 built at 6c3a096 and pushed once with this PROOF (the branch tip); the hermetic profile is GREEN with no red · NEXT: the architect's one re-run on this tip, and its two neutral legs (`npm test · node 22` / `node 24`) read through the public API on the tip sha
+
+## 12 · THE mf2 F4 RED (forks row 1263 (1), 21 Nov 2026): DIAGNOSED, NOT REPAIRED — THE REPAIR IS A FORK
+
+**The run, whole, in the cloud** (tip 6e5dca6 clone vs main 7bf008b clone, both with `core.autocrlf=false`):
+```
+$ node ci/mf2/witness_mf2.mjs --org <tip 6e5dca6> --base-org <main 7bf008b>
+GREEN F1 · planted 49 LIVE call site(s) (base 49) · hermetic markers: build 0 (must be 0), base 0 · full markers: build 49, base 49 …
+GREEN F2 · base hermetic judged 166, build 167 · vanished none · ok→FAIL none · added (named, never red) 1: ok CLAUSE WITNESS · ci/witness/mbank/witness_bank.mjs plants …
+GREEN F3 · hermetic headline LIVE: build 125 · base 125 + 0 admitted by door 2 …
+RED   F4 · full profile: base 329 member(s), build 330 · vanished none · ok→FAIL 9: …
+RED   BOUND · differs: <this unit's named files>      # mf2's own unit bound (only organism_test.mjs may differ), true of every later unit
+GREEN LAST · 0 node process(es) naming /tmp/mf2-…
+RED MF2 · F4 BOUND
+```
+The suite's member runs mf2 against mf2's own BASE (15edfec), not 7bf008b. This run used 7bf008b, as ordered, so the F4
+delta is this unit's diff alone.
+
+**The members that went ok → FAIL under F4.** There are nine, all in one lane: `scripts/organism_test.mjs` mode `path`
+(LIVE in the hermetic profile, run in the full one), block "A3 (4 Sep 2026) · THE ZERO-TAX LOOP, DRIVEN END TO END" (from
+`:2531` at 7bf008b). At 7bf008b each reads `ok`; at the tip each reads `FAIL`:
+1. `A3 · ONE command banks an answer from a Code session — surface, probe and the measured latency all land on the row`
+2. ``A3 · a `--surface code` bank with NO axis is refused AT THE BANK DOOR, not silently dropped hours later at judge-dispatch``
+3. `A3 · the axis closes on his Bolo row + the interview line, with NO jirah moment ever declared for it`
+4. `A3 · STEP 10 is STILL refused while the axes he closed were never GRILLED …`
+5. `A3 · a jirah row nobody JUDGED is a question asked, not a grade …`
+6. `A3 · STEP 10 opens once every done axis carries a JUDGED jirah row …`
+7. ``A3 · `close` refuses while banked answers carry no verdict …``
+8. `A3 · once every banked answer has a verdict the close goes through …`
+9. `A3 · a bypassed gate costs the session its method_clean …`
+
+**Why this unit's edit moved them** (reproduced: `env -u CLAUDE_CODE_SESSION_ID node scripts/organism_test.mjs path` on
+each clone). The lane banks with `gaffer_brain.mjs capture voice_rep … --said "<words>" --surface code` and plants NO
+prompt record. That is the teacher-copy door this unit removes. On the tip the first bank reads `gaffer_brain: his words
+are not on disk (absent: the UserPromptSubmit record is absent) — … nothing banked`; on 7bf008b the same assert reads
+`ok`. Assert 2 expects a refusal naming `--axis`, but the door refuses earlier, for the absent record. Asserts 3-9 depend
+on banks that no longer land. The lane's `--gut` words are also not in its `--said` text (e.g. `--gut shaky` beside
+`token matlab shabd ka tukda …`), so even with a record the door would refuse `gut-invented` (row 270 at the door).
+
+**No repair inside this unit's named files keeps the clauses.** Every route that makes those banks land without a prompt
+record re-opens the typed-copy door: it reverses B1 / B3 (`absent ⇒ refused`) and mbank-2 a / mbank-6 a. That is a
+loosened clause, which is refused. Moving the axis check ahead of the door would turn assert 2 alone, leaving F4 RED. It is
+not a repair, so it is not built.
+
+**FORK mbank-10 · the `path` lane plants his prompt record** (`scripts/organism_test.mjs`, not this unit's file):
+- **(a) Recommended.** Before each code-door `bank(…)` in that lane, the lane runs the REAL owner hook,
+  `run([S("teaching_audit.mjs"), "hook"], …)`, with `{hook_event_name:"UserPromptSubmit", session_id:<the lane's planted
+  id>, prompt:"<his gut-word> - <the --said text>"}` on stdin and `CLAUDE_CODE_SESSION_ID` set to that id in the lane's
+  env. Each bank then takes his bytes from the record, exactly as on his machine. The asserts' text and meaning stay
+  unchanged: it is the same lane, now driving the real door. Granting `scripts/organism_test.mjs` to this unit for that one
+  block keeps both intents (every other unit's lines in the file unchanged).
+- **(b)** The lane's banks move to the stdin door (no `--said`, no `--surface code`). This changes what the lane measures
+  (the code surface), so it is not recommended.
+- *Decides it:* the architect's word, and the grant of the one file.
+
+No file was edited for this section. ci/mf2 is untouched and no clause is loosened. The tip's code is still 6c3a096's.
+
+CHECKPOINT · RED mf2 F4 diagnosed at tip 6e5dca6 · members: the nine A3 asserts of the organism_test `path` lane (ok at 7bf008b, FAIL at the tip) · cause: the lane banks a typed `--said` with no prompt record, which this unit's door refuses by design · repair: FORK mbank-10 (needs scripts/organism_test.mjs), not built · last lines: `RED MF2 · F4 BOUND` (vs 7bf008b) · own witness and mutants unchanged since §11 (`GREEN MBANK … · 21 clause(s)`, `run_mutants: 19 of 19 …`) · NEXT: the architect's ruling on FORK mbank-10
