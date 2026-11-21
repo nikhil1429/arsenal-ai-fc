@@ -91,7 +91,7 @@ check `keys !== "argv,live,suite"` is `:232`.
   2. The state dir made, EMPTY (`mkdirSync(join(P, "dressing-room", "state"), { recursive: true })`): no fixture, none of his
      bytes (the mlaw2 plant's rule, `plant_inputs.json` `state_plant: "EMPTY"`, `fixtures: []`).
   3. `git init -q`, `git add -A`, one commit (`-c user.email=… -c user.name=…`, `--no-verify`) — the measured recipe of
-     `ci/mlaw2/plant.mjs:41-42`; some members list their tree with `git ls-files` (lawpack's NUL scan, `sandbox.mjs:69`).
+     `ci/mlaw2/plant.mjs:35`; some members list their tree with `git ls-files` (lawpack's NUL scan, `sandbox.mjs:69`).
   4. node_modules LINKED (a junction on win32) **after** step 3 — the door of question 3 (§4): the link is then outside the
      index, so a member that copies its tree by `git ls-files` never meets it.
   5. FAIL CLOSED (FORK F8): if any step fails, the plant is `null`, every non-LIVE member is a named red
@@ -171,7 +171,7 @@ recorded EXACTLY four attempts`, `…and the live state file the canary aimed at
 ## 4. QUESTION 3 — the node_modules door (mlaw2 §3 (c))
 
 - **The cause, measured** (21 Nov 2026): `git -C <plant> ls-files -s node_modules` on a `plant.mjs` tree prints
-  `120000 … 0	node_modules` — the planter links node_modules (`plant.mjs:39-40`) BEFORE its `git add -A` (`:42`), and `.gitignore:26`
+  `120000 … 0	node_modules` — the planter links node_modules (`plant.mjs:32-33`) BEFORE its `git add -A` (`:35`), and `.gitignore:26`
   `node_modules/` matches a DIRECTORY, which a symlink is not to git. So the LINK IS COMMITTED, `git ls-files` lists it, and a
   member that copies its tree path by path with a non-recursive `cpSync` (`sandbox.mjs:71-77`, `cpSync(src, dst)` at `:77`) follows it into a directory:
   `Error: Recursive option not enabled, cannot copy a directory: <plant>/node_modules/`. Linking is not the defect; committing
@@ -339,7 +339,7 @@ writes under the plant's state dir — then no member can become the next one's 
 `plant.mjs` as is). **Recommend A**: LA = CP on all four tree-copying members (§4), it copies nothing, and the plant's index
 equals ROOT's minus the state dir. C is forbidden by measurement (`sandbox` reds). Decides: N3 (a junction on win32 under `git add`).
 
-**F5 · the plant's git history.** (A) one commit (the measured recipe: `plant.mjs:41-42`, every census row of §5 ran on it) ·
+**F5 · the plant's git history.** (A) one commit (the measured recipe: `plant.mjs:35`, every census row of §5 ran on it) ·
 (B) `git init` + `git add` only, no commit (`sandbox.mjs:84-85`'s way). **Recommend A**: it is what was measured. Decides: the
 census again on B, if B is wanted (no member was measured without a HEAD).
 
@@ -378,7 +378,7 @@ the whole roll is already the suite's own run on the neutral machine. Decides: t
   · `node ci/mplant/tools/probes/two.mjs <sha> <a one-line import "node:fs" preload>` and `three.mjs … patch`. Counts only.
 - **N2 · the CRLF bytes** — the Windows runner checks out CRLF (`suite.yml:30`); F2 A plants those bytes. Every census tree
   here is LF. Measured by the build's own neutral run (the W1 leg on `windows-latest`).
-- **N3 · a junction under `git add -A` on win32** — `plant.mjs` makes a junction on win32 (`:40`); whether git for Windows
+- **N3 · a junction under `git add -A` on win32** — `plant.mjs` makes a junction on win32 (`:33`); whether git for Windows
   records a junction as a 120000 link (as linux records the symlink) or walks it as a directory (then `.gitignore:26` hides it,
   and LB would not red there) is not measured. Measured by: `node ci/mplant/tools/doors.mjs <sha> sandbox` on his laptop (its
   `tracked` field per door).
