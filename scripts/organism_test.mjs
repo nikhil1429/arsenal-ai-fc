@@ -44,10 +44,20 @@ const NODE = process.execPath;
 let pass = 0, fail = 0;
 // unit mdtl: `causes` holds one entry per failing witness clause, `<red name> · <ID> · <text>` (witness_cause.mjs causeText)
 const fails = [], passed = [], causes = [];
+// unit mdtl2 (forks row 1220): every OTHER red's cause, rebuilt from public bytes by red_cause.mjs. The import is guarded by the
+// module's presence (a base tree measured by this instrument has none). Its ONE generic hook below only pushes into `causes`:
+// every judged name and detail stays byte-identical, so every KNOWN_RED entry keeps its match.
+const rc = existsSync(join(HERE, "red_cause.mjs")) ? await import("./red_cause.mjs") : null;
+let trackedAtHead = null;
+const rcIO = { root: ROOT, read: (p) => { try { return readFileSync(join(ROOT, p), "utf8"); } catch (e) { void e; return ""; } },   // unreadable = WITHHELD
+  tracked: () => (trackedAtHead ??= new Set(String(spawnSync("git", ["-C", ROOT, "ls-files", "-z"], { encoding: "utf8", windowsHide: true }).stdout || "").split("\0").filter(Boolean))) };
 const assert = (name, cond, detail) => {
   if (liveAssert(name)) return;   // B1 (b): a LIVE member under the hermetic profile is named, never judged
   if (cond) { pass++; passed.push(name); console.log(`  ok   ${name}`); }
-  else { fail++; fails.push({ name, detail }); console.log(`  FAIL ${name}${detail ? `\n         ${detail}` : ""}`); }
+  else {
+    fail++; fails.push({ name, detail }); console.log(`  FAIL ${name}${detail ? `\n         ${detail}` : ""}`);
+    if (rc && detail) for (const c of rc.causesOfDetail(name, String(detail), rcIO)) causes.push(rc.causeLine(name, c));   // unit mdtl2: the one generic hook
+  }
 };
 const section = (t) => console.log(`\n── ${t} ${"─".repeat(Math.max(0, 66 - t.length))}`);
 
@@ -405,6 +415,8 @@ function suites() {
     // B1 (c): every member is its OWN assert, so a red member is a NAME the neutral verdict can compare across trees
     assert(`SUITE MEMBER · ${m} selftest exits 0`, r.code === 0);
     if (r.code !== 0) console.log(`         ${redWhy(r)}`);   // (a): the member's red names the kill, on the line under its FAIL
+    // unit mdtl2 (K1 / K4): the exit SLOT, the FIRST failing check as a literal or skeleton of the member's own source, and a count
+    if (r.code !== 0 && rc) causes.push(rc.causeLine(`SUITE MEMBER · ${m} selftest exits 0`, rc.memberCause({ code: r.code, killed: r.killed, out: r.out, src: rcIO.read(`scripts/${m}.mjs`) })));
   }
   console.log(`  suites: reused ${reused} of ${members.length} member result(s) from hermetic (identical command), ran ${members.length - reused}`);
   assert(`all ${PROFILE === "hermetic" ? `${ran} hermetic` : members.length} suite members pass (every one RUN, not chained)`, red.length === 0,
@@ -2256,6 +2268,8 @@ function hermetic() {
     const tap = hermeticRuns.get(runKey([join(ROOT, "scripts", "usage_tap.mjs"), "selftest"]));
     assert("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", !!tap && tap.code === 0,
       tap ? String(tap.out).trim().split("\n").filter((l) => /FAIL|selftest/.test(l)).slice(-4).join(" | ") : "usage_tap.mjs selftest never ran");
+    // unit mdtl2 (K3): the member's cause, from the loop's own kept result
+    if (tap && tap.code !== 0 && rc) causes.push(rc.causeLine("MPOOL · usage_tap selftest runs in the hermetic chain and exits 0 (forks row 1062)", rc.memberCause({ ...tap, src: rcIO.read("scripts/usage_tap.mjs") })));
   }
   if (!tripLive) {
   const after = snap(), afterH = hashes();
@@ -2821,8 +2835,11 @@ function clauseWitnesses() {
     const r = run([join(ROOT, f), "plants"]);
     const last = (r.out.split(/\r?\n/).filter((l) => /^PLANTS \S+ · \d+ of \d+ plant\(s\) as expected$/.test(l)).pop()) || "";
     const m = /· (\d+) of (\d+) plant/.exec(last);
-    assert(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, r.code === 0 && !!m && Number(m[2]) > 0 && m[1] === m[2],
+    const green = r.code === 0 && !!m && Number(m[2]) > 0 && m[1] === m[2];
+    assert(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, green,
       last || `exit ${r.code} · no PLANTS line (a witness with no plants reads red) · ${r.out.split(/\r?\n/).filter((l) => /FAIL|RED/.test(l)).slice(0, 2).join(" | ").slice(0, 240)}`);
+    // unit mdtl2 (K11): each `CLAUSE <ID> RED · k/n plant(s)` line's id (a literal of the witness's own source) and its claim
+    if (!green && rc) for (const c of rc.clauseCause({ out: r.out, src: rcIO.read(f) })) causes.push(rc.causeLine(`CLAUSE WITNESS · ${f} plants — exit 0, every plant as expected (n > 0)`, c));
   }
 }
 
