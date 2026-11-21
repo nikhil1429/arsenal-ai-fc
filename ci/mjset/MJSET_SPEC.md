@@ -447,6 +447,34 @@ capture waits behind the backlog: oldest first (`judgeOrder`) puts today's answe
 - **Refused by the brief, named:** several rounds per carrier (a loop) · a typed batch size or window · any change of
   model or effort.
 
+### 15.5 N1-N6 as the runner measured them (forks row 1244, 21 Nov 2026, his laptop, counts only; folded here, never re-derived)
+
+- **N1 · the carrier of the ok round** (19 Nov 18:10:12Z: items 1, 172766 ms, head_chars 15474, arg_profile lean) was the
+  evening code close (postmatch autoclose). **Its judge line is NOT on disk.** The morning step re-ran the UNSETTLED judge
+  on 20 Nov (09:15 IST) and replaced that day's JUDGE line with the next try ("NOT BANKED · exit 1 · NO BATCH FITS THE
+  BUDGET"). The rewrite is `scripts/postmatch.mjs:864-868` (`text.replace(dec.prev.judge_line, …)`), which keeps no copy of
+  the line it replaces. **A finding, named and not repaired here: a re-run overwrites the earlier receipt of the same
+  day.** The deck holds 0 cards dated 19 Nov, which excludes H5 (💎 and key_doubt both file a card). H2 / H3 / H4 / H6
+  cannot be told apart from disk, and H1 is excluded (the carrier was code, not a typed `--dry`). The join stays named
+  (§3); F3 A (ruled) covers H3 / H4 at the head either way.
+- **N2 · the 300 s kill rows:** batches of 57-59 captures killed at ~300 s (SIGTERM, `spawnSync claude ETIMEDOUT`) on 15-18
+  Nov, on gaffer_brain.mjs trees 10e2f7f5 / 69575677 / 9ff901aa. Those trees are not in this shallow clone. This seat's
+  history shows unit mcr2 (judgeFloors) and unit mjd3 (the tail reserve) as land-branch commits on 18 Nov ~11:00Z
+  (`git log --format='%h %cI' -1 e819c0d` → `2026-11-18T10:58:09+00:00`; `3a73782` → `2026-11-18T11:02:14+00:00`). The
+  300 s rows are therefore consistent with a tree before the tail reserve: one batch holding the whole queue, killed at the
+  undivided budget. The 4 / 3 / 2-capture kills that followed fit §1.2's 300 − 60·n exactly. Is N2 closed? That holds only
+  if those land commits reached main before the 18 Nov 12:4x and 19 Nov rounds; the runner's tree sha per row says it.
+- **N3 · the 10 floors:** seven big batches at ~5.1-5.3 s per capture, then 15017, 39995 and 90086 ms per capture. **Every
+  floor is under 105532 ms per capture, so at base every one of them alone blocks the round (P2).** Under the ruled F1 C
+  none of them can be the fast end, and the round opens at one capture.
+- **N4 · the 19 Aug captures:** 2 rows, both `voice_rep` (a member of VERDICT_TYPES). Their type does not make H3 certain.
+  F5 A sets them aside regardless.
+- **N5 · the 57:** queue 71 rows = 65 captures + 6 settled; 59 unsettled; 2 of them before the floor. 59 − 2 = 57, the same
+  set (§4 stands).
+- **N6 · the login:** the newest judge row (19 Nov 18:10Z) is ok. The only refusals are 16 Nov 03:45Z and 11:05Z (OAuth
+  expired). Today's login state is unread by the judge lane, because no row has been written since 19 Nov. The first
+  round after the F1 C build is the next proof, and K3's card fires if it refuses.
+
 **Recommendation (planted, the architect decides):** D1 and D5 together. D1 is the only option that raises outflow with no
 change to any guard. D5 keeps today's answers from waiting behind the backlog. D2 is worth one measurement before anyone
 reads the rate as linear.
