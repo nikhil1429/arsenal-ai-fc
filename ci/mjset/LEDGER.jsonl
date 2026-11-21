@@ -8,3 +8,4 @@
 {"ts":"2026-11-21T08:05Z","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (bare cloud checkout, no npm ci)","last_line":"exit 2 (FAIL members: lawpack ci_verdict red_cause done probe fsrs mutagen; ERR_MODULE_NOT_FOUND on fsrs mutagen done)"}
 {"ts":"2026-11-21T08:20Z","act":"write-spec","cmd":"write ci/mjset/MJSET_SPEC.md","last_line":"File created"}
 {"ts":"2026-11-21T08:40Z","act":"ruling-1237-1","cmd":"grep -n bank_answer|outstandingBank|gradeCapture scripts/*.mjs → §13 B1-B10 (no fix designed)","last_line":"scripts/postmatch.mjs:800:  const queue = studySeen ? null : queueEvidenceOf(day, outstandingBank());"}
+{"ts":"2026-11-21T09:00Z","act":"context-1239-1240","cmd":"grep -n cracks.jsonl scripts/gaffer_brain.mjs scripts/sitting.mjs scripts/postmatch.mjs","last_line":"(no match) — §14 M1-M5 named, no fix designed"}

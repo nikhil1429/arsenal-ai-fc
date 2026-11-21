@@ -342,6 +342,24 @@ build changes nothing, because B5 finds no outstanding rows and no round is due.
 build would do until the bank question is ruled. B10 cannot tell "no capture" from "no settle", which is a fork for the
 architect (F9), not a fix: (A) leave it · (B) the rung names which of the two it is.
 
+## 14 · WHERE THIS UNIT ASSUMES A BANKED MOMENT OR A CRACK ROW (runner context, forks rows 1239 (3) / 1240, 21 Nov 2026)
+
+The ground, counted on his laptop and never re-derived here: the pacer ran on every teaching day from 13 to 21 Nov. The
+moments that make a bank due (the sharp check, the jirah) were almost never reached, and the crack file was never born.
+Row 1240 branch B puts this upstream of the bank (§13) and of the judge. This unit's scope does not change and no fix is
+designed. Here is every line at base 7bf008b where mjset's path rests on such a moment or row:
+
+| # | file:line | what it assumes |
+|---|---|---|
+| M1 | `scripts/forge_session.mjs:148` MOMENTS (`sharp_check` "BANK-DUE", `:143-146`) | a banked moment is declared before his answer |
+| M2 | `scripts/study_scope.mjs:266-267` BANKED_MOMENTS / bankDueAt (`jirah`, `sharp_check`) | the ONE predicate for "this reply must be banked": with no such moment declared, nothing is due, and so nothing reaches §13's B1 |
+| M3 | `scripts/teaching_gate.mjs:637-650` (bankDueAt over the previous moments) | the gate asks for a bank only after a banked moment. It never asks on a day with none, which matches no gate red naming a missing bank (row 1237 (1)) |
+| M4 | `scripts/forge_session.mjs:810` (no INTERVIEW-register line) · `:873` (axis never grilled: jirah) · `:882` closeGate · `:888` (unjudged banked answers) | the forge close's gates assume jirah / interview captures exist, and their `judge-round` text is the typed door |
+| M5 | the crack row: `scripts/forge_session.mjs:28-29` (SOLE WRITER of `cracks.jsonl`, unit mcrk) | **this unit reads NO crack row.** `grep -n "cracks.jsonl" scripts/gaffer_brain.mjs scripts/sitting.mjs scripts/postmatch.mjs` → nothing. The judge's ground is the capture row plus the capsule (`:1291`), so the crack file's absence does not touch the settle path |
+
+The consequence matches §13's: mjset settles captures that exist. On a day with no banked moment (M1-M3) there is no
+capture, and the build is idle by design. Whether the pacer should reach the banked moments is outside this unit.
+
 ## 12 · THE NEUTRAL MACHINE
 
 The check runs of this branch's pushed sha, read through the public API with no token (`curl -s
