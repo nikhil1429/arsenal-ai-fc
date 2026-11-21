@@ -17,3 +17,6 @@
 {"ts":"2026-11-20T01:28:27Z","act":"merge","cmd":"git fetch origin main && git merge --no-edit origin/main (5759cce)","last_line":"clean merge, no conflict · BASE = 5759cce"}
 {"ts":"2026-11-20T01:28:27Z","act":"witness","cmd":"witness --org <merged> --base-org <5759cce> (LF and CRLF) · run_mutants","last_line":"GREEN MMACH … · 5 clause(s) (exit 0) · RED on base (exit 1) · run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN"}
 {"ts":"2026-11-20T01:28:27Z","act":"checkpoint","cmd":"row 1172: push once and stop","last_line":"CHECKPOINT · STOPPED at 2026-11-20T01:28:27Z · merged on 5759cce"}
+{"ts":"2026-11-21T07:32:52Z","act":"merge","cmd":"git fetch origin main && git merge --no-edit origin/main (7bf008b)","last_line":"a02bd8a · clean merge, no conflict · BASE = 7bf008b"}
+{"ts":"2026-11-21T07:32:52Z","act":"fix","cmd":"witness: reader sibling imports derived · cause-suffixed new reds · plants mode","last_line":"3acce06 · PLANTS mmach · 25 of 25 plant(s) as expected"}
+{"ts":"2026-11-21T07:32:52Z","act":"witness","cmd":"witness --org <merged> --base-org <7bf008b> (LF, CRLF) · run_mutants","last_line":"GREEN MMACH … · 5 clause(s) · RED on base · run_mutants: 5 of 5 mutant(s) RED by the clause that names them · control GREEN"}
