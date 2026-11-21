@@ -4,8 +4,9 @@
 // ----------------------------------------------------------------------------
 // USE:   node ci/mpinr/witness_mpinr.mjs --org <dir> --base-org <dir>
 //   --org       the tree judged (the build, or the base to see it RED). Read only: its scripts/ and package.json are
-//               COPIED under os.tmpdir() and every run happens on the copy; git is read with --no-optional-locks.
-//   --base-org  the base tree (main at the cut, ci/mpinr/BASE). Its HEAD sha is the base of ONLY-NAMED, and its
+//               COPIED under os.tmpdir() and every run happens on the copy. Neither tree needs to be a git repository.
+//   --base-org  the base tree (main at the cut, ci/mpinr/BASE). ONLY-NAMED compares it to --org as DIRECTORIES (the
+//               neutral machine's member hands over plain LF work trees, not repositories), and its
 //               scripts/conductor.mjs declaration of STEP_TIMEOUT_MS is read HERE, by this file's own regex (not by
 //               the module under test), as the bound of every probe child and the value KILLED compares against.
 // CLAUSES (each RED on the base, GREEN on the build; one mutant each in ci/mpinr/run_mutants_mpinr.mjs):
@@ -33,7 +34,7 @@
 //   Get-CimInstance on win32.
 // LAST LINE: GREEN MPINR own_source module · <n> clause(s)   (exit 0)   ·   RED MPINR · <clauses>   (exit 1)
 // ============================================================================
-import { readFileSync, writeFileSync, existsSync, mkdtempSync, mkdirSync, cpSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdtempSync, mkdirSync, cpSync, rmSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
@@ -43,7 +44,6 @@ const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.a
 const ORG = arg("--org") && resolve(arg("--org")), BASE_ORG = arg("--base-org") && resolve(arg("--base-org"));
 if (!ORG || !BASE_ORG || !existsSync(ORG) || !existsSync(BASE_ORG)) { console.error("usage: node ci/mpinr/witness_mpinr.mjs --org <dir> --base-org <dir>"); console.log("RED MPINR · USAGE"); process.exit(1); }
 const fold = (s) => String(s).replace(/\r\n/g, "\n");
-const git = (dir, args) => fold(execFileSync("git", ["--no-optional-locks", "-C", dir, ...args], { encoding: "utf8", windowsHide: true }));
 
 // The bound, read HERE from the base owner by this file's own regex.
 const ownerLine = fold(readFileSync(join(BASE_ORG, "scripts", "conductor.mjs"), "utf8")).split("\n").find((l) => /^const STEP_TIMEOUT_MS = /.test(l)) || "";
@@ -207,12 +207,31 @@ probe("COPY");
 // ONLY-NAMED
 {
   try {
-    const base = git(BASE_ORG, ["rev-parse", "HEAD"]).trim();
-    const changed = [...new Set([...git(ORG, ["diff", "--name-only", base]).split("\n"), ...git(ORG, ["ls-files", "--others", "--exclude-standard"]).split("\n")].filter(Boolean))];
+    // THE TWO TREES ARE COMPARED AS DIRECTORIES, never through git: the neutral machine's member (unit ms1) hands this witness
+    // two LF trees built by `git --work-tree=<dir> checkout`, which are NOT repositories (first red: CI run 44880854795,
+    // 21 Nov 2026). .git and node_modules are not the tree's content and are skipped; every other file is compared CRLF-folded.
+    const SKIP = new Set([".git", "node_modules"]);
+    const files = (root) => {
+      const out = new Map();
+      const walk = (rel) => {
+        for (const d of readdirSync(join(root, rel), { withFileTypes: true })) {
+          if (SKIP.has(d.name)) continue;
+          const r = rel ? rel + "/" + d.name : d.name;
+          if (d.isDirectory()) walk(r);
+          else if (d.isFile()) out.set(r, fold(readFileSync(join(root, r), "latin1")));
+        }
+      };
+      walk("");
+      return out;
+    };
+    const A = files(BASE_ORG), B = files(ORG);
+    const changed = [...new Set([...A.keys(), ...B.keys()])].filter((f) => A.get(f) !== B.get(f)).sort();
+    const baseFile = join(ORG, "ci", "mpinr", "BASE");
+    const base = existsSync(baseFile) ? fold(readFileSync(baseFile, "utf8")).trim() : "(no ci/mpinr/BASE)";
     const named = (f) => f === "scripts/own_source.mjs" || f === "package.json" || f.startsWith("ci/mpinr/") || f === "campaign-2026-09/receipts_effort/mpinr_00.json";
     const beyond = changed.filter((f) => !named(f));
-    const added = changed.includes("scripts/own_source.mjs") && !git(ORG, ["ls-tree", "--name-only", base, "scripts/own_source.mjs"]).trim();
-    const was = fold(git(ORG, ["show", `${base}:package.json`])).split("\n"), now = existsSync(join(ORG, "package.json")) ? fold(readFileSync(join(ORG, "package.json"), "utf8")).split("\n") : [];
+    const added = B.has("scripts/own_source.mjs") && !A.has("scripts/own_source.mjs");
+    const was = (A.get("package.json") || "").split("\n"), now = (B.get("package.json") || "").split("\n");
     const diffAt = was.length === now.length ? was.map((l, i) => (l === now[i] ? -1 : i)).filter((i) => i >= 0) : null;
     const oneLine = !!diffAt && diffAt.length === 1 && (() => {
       const a = was[diffAt[0]], b = now[diffAt[0]], tail = " && node scripts/own_source.mjs selftest";
@@ -220,7 +239,7 @@ probe("COPY");
     })();
     clause("ONLY-NAMED", added && oneLine && beyond.length === 0,
       `base ${base.slice(0, 7)} · own_source.mjs added ${added} · package.json one suite line ${oneLine} · ${changed.length} path(s) differ${beyond.length ? ` — BEYOND THE NAMED: ${beyond.join(", ")}` : ""}`);
-  } catch (e) { clause("ONLY-NAMED", false, "git did not read: " + String(e.message).split("\n")[0]); }
+  } catch (e) { clause("ONLY-NAMED", false, "the trees did not read: " + String(e.message).split("\n")[0]); }
 }
 // LAST
 {
