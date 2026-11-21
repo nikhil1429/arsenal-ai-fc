@@ -13,7 +13,8 @@
 //     dressing-room/state written by THIS file's node code (writeFileSync) — the repository's own state dir is never
 //     opened. Every organ runs as a CHILD on that copy (spawnSync; each organ's STATE_DIR is its own copy's), or is
 //     imported from the copy and handed planted rows.
-//   · No ARSENAL_* variable reaches a child (each is deleted from the env); CLAUDE_CODE_SESSION_ID is PLANTED (the plant's
+//   · No ARSENAL_* variable reaches a child (each is deleted from the env) but ONE, ARSENAL_AUDIT_NO_SPAWN=1, teaching_audit's
+//     own test seam, so a planted Stop spawns nothing; CLAUDE_CODE_SESSION_ID is PLANTED (the plant's
 //     own id, or a different one for B3 (d)); the PATH carries a shim for `claude` and `gemini` that refuses: no live
 //     model call can happen here (the capture door is model-free by law anyway).
 //   · THE PORT CLASS (row 1053): no port is bound, no service is named, nothing is POSTed, nothing restarts; no network.
@@ -43,6 +44,9 @@
 //   B15 PARALLEL  (row 1246) the real UserPromptSubmit hook records HIS prompt (session S), then ANOTHER session's prompt
 //                 lands in the shared slot before his bank call: the capture (CLAUDE_CODE_SESSION_ID = S) banks HIS bytes and
 //                 HIS turn id from his own session's record
+//   B16 AUDIT     (row 1248) a planted study day: an open forge session, then two of his turns, each with ANOTHER session's
+//                 UserPromptSubmit landing between his prompt and his Stop: the teaching audit's own Stop rows read
+//                 user_text_source "fresh" on both (session-mismatch ZERO), each naming HIS turn id
 //   B14 MINT      the REAL UserPromptSubmit hook (teaching_audit.mjs hook, his prompt on stdin, the plant's session id) mints
 //                 a UUID turn_id on the prompt record, and the code-door capture that follows carries that same id
 // OUTPUT: one `CLAUSE <id> GREEN|RED · <why>` line per clause, then `PLANTS mbank · k of n plant(s) as expected` (exit 0
@@ -74,6 +78,7 @@ const envOf = (sid = SID) => {
   const e = { ...process.env }; const pk = Object.keys(e).find((k) => k.toUpperCase() === "PATH") || "PATH";
   e[pk] = `${SHIM}${delimiter}${e[pk] || ""}`;
   if (sid) e.CLAUDE_CODE_SESSION_ID = sid; else delete e.CLAUDE_CODE_SESSION_ID;
+  e.ARSENAL_AUDIT_NO_SPAWN = "1";   // teaching_audit's own seam: its Stop auto-count spawns nothing from a plant
   return e;
 };
 const NM = [TREE, join(HERE, "..", "..", "..")].map((t) => join(t, "node_modules")).find((p) => existsSync(p)) || null;
@@ -267,6 +272,24 @@ await clause("B15", () => {
   const r = p.cap(["--surface", "code"]), row = (p.queue() || [])[0] || {};
   return { ok: h1.code === 0 && h2.code === 0 && slot === other && r.code === 0 && row.spoken === his && !!mine && row.turn_id === mine,
     why: `shared slot now the other session's: ${slot === other} · capture ${brief(r)} · his bytes ${row.spoken === his} · his turn ${!!mine && row.turn_id === mine}` };
+});
+
+await clause("B16", () => {
+  const p = plant("b16");
+  for (const s of [["start", "tokenization"], ["step", "3"]]) { const r = p.node("forge_session.mjs", s); if (r.code !== 0) return { ok: false, why: `${s.join(" ")} → ${brief(r)}` }; }
+  const ev = (o, sid) => p.node("teaching_audit.mjs", ["hook"], { input: JSON.stringify({ session_id: sid, ...o }), sid });
+  const OTHER = "sess-parallel-runner";
+  const codes = [];
+  for (const [k, his] of [["1", "pakka - his first answer of the day"], ["2", "shayad - his second answer of the day"]]) {
+    codes.push(ev({ hook_event_name: "UserPromptSubmit", prompt: his }, SID).code);
+    codes.push(ev({ hook_event_name: "UserPromptSubmit", prompt: `runner turn ${k} in a parallel session` }, OTHER).code);
+    codes.push(ev({ hook_event_name: "Stop", last_assistant_message: "Theek. Ab agla sawaal — tumhare hisaab se kya hoga?" }, SID).code);
+  }
+  const t = text(p.at("teaching_audit.jsonl"));
+  const rows = t === null ? [] : lines(t).filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return {}; } }).filter((r) => r.session_id === SID);
+  const mism = rows.filter((r) => /session-mismatch/.test(String(r.user_text_source || ""))).length;
+  return { ok: codes.every((c) => c === 0) && rows.length === 2 && mism === 0 && rows.every((r) => r.user_text_source === "fresh" && typeof r.turn_id === "string"),
+    why: `hook exits ${codes.join(",")} · his Stop rows ${rows.length} · session-mismatch ${mism} · sources ${rows.map((r) => String(r.user_text_source).split(" ")[0]).join(",")}` };
 });
 
 if (OWN_TMP) { try { rmSync(TMP, { recursive: true, force: true }); } catch { /* the caller's LAST names a survivor */ } }

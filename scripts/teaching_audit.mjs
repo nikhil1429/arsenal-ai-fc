@@ -1684,8 +1684,15 @@ export function stopHook(hook, io) {
   // Pair this Stop with ITS OWN prompt — same Claude Code session, not yet
   // consumed. A different session's prompt (parallel-session interleave) is
   // discarded, never silently reused; the row says which happened.
-  const p = last.prompt || null;
+  // unit mbank (forks rows 1246 / 1248): THIS session's own record first (prompts_by_session[sid]), so a parallel
+  // session's prompt in the shared slot can no longer cost his turn its audit; the shared slot is the fallback only for a
+  // session that has no own entry (a record written before this unit). The shared slot is still consumed exactly as before.
+  const shared = last.prompt || null;
+  const ownRec = sid && last.prompts_by_session && typeof last.prompts_by_session === "object" && last.prompts_by_session[sid]
+    && typeof last.prompts_by_session[sid] === "object" ? last.prompts_by_session[sid] : null;
+  const p = ownRec || shared;
   const paired = !!(p && sid && p.session_id === sid && !p.consumed_at);
+  const sharedPaired = !!(shared && sid && shared.session_id === sid && !shared.consumed_at);
   const userText = paired ? String(p.text || "") : "";
   const userTextSource = paired ? "fresh" : (p ? "session-mismatch (parallel session's prompt discarded)" : "missing (no prompt recorded)");
   const prevStep = paired && Number.isFinite(p.step) ? p.step
@@ -1792,7 +1799,7 @@ export function stopHook(hook, io) {
   // audited/why on disk is what separates "correctly quiet" from "dead" — the
   // two states whose indistinguishability let the first death survive.
   io.writeLast({
-    prompt: p ? { ...p, consumed_at: paired ? now : (p.consumed_at || null) } : null,
+    prompt: shared ? { ...shared, consumed_at: sharedPaired ? now : (shared.consumed_at || null) } : null,
     prompts_by_session: consumeOwn(last.prompts_by_session, sid, now),   // unit mbank (row 1246): this session's own turn ends
     stop: {
       at: now,
