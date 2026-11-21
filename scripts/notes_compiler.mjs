@@ -63,7 +63,10 @@
 //             block (- galat / + sahi, the crack marker, NOTES_DESIGN P4) with the answer that cracked and the
 //             [unit mcrk: the crack ROW of that turn — cracks.jsonl, read through forge_session.mjs readCracks — stamps
 //             its moment, the text he typed (verbatim) and its id on the turn's crack item; the teacher's diff is kept exactly; a
-//             row whose turn has no diff is an item with an EMPTY diff and a named gap, never a diff built from what he typed]
+//             row whose turn has no diff is an item with an EMPTY diff and a named gap, never a diff built from what he typed;
+//             unit mcrk2 (forks rows 1243 (3) / 1258 F4 B): a row with a named gap ("undeclared" moment, axis "none") is a
+//             crack like any other — the gap is a GAPS line, the teacher's miss; an axis-none row is placed by the pacer's
+//             ledger of its turn (settleCrackAxis), never guessed, and an unsettled one is NAMED on the compile result]
 //             stuck-story after it · his hand-trace (an answer carrying two or more numbers he typed) · his Bolo
 //             (the answer after the teacher asks for it) · the teacher's [T] layers by the skeleton markers
 //             ([DUKAAN] [ASLI NAAM] [TECHNICAL LINE], teaching_bar.mjs:339-342) · each check (the LAST question
@@ -269,6 +272,54 @@ export function axisWindows({ stateDir = STATE_DIR } = {}) {
   const seen = new Set();   // the same session can sit in both files: one window per (concept, axis, from)
   return out.filter((w) => { const k = `${w.concept}|${w.axis}|${w.from}`; if (seen.has(k)) return false; seen.add(k); return true; });
 }
+/** pacerSessions — the pacer's own ledger: the open session and the closed ones, as written (read only). */
+export function pacerSessions({ stateDir = STATE_DIR } = {}) {
+  const live = readJson(join(stateDir, "forge_session.json"));
+  return [...(live ? [{ s: live, endedAt: live.ended_at || live.closed_at || null }] : []),
+    ...readJsonl(join(stateDir, "forge_sessions.jsonl")).map((r) => ({ s: r, endedAt: r.ended_at || r.updated_at || null }))]
+    .filter((x) => x.s && typeof x.s === "object" && x.s.concept);
+}
+/** settleCrackAxis — PURE (unit mcrk2, forks row 1258 F4 B). The axis a crack row joins at compile, from the pacer's
+ *  ledger of ITS turn only: (i) a real axis is the row's own; (ii) axis "none" → the ONE axis window of its session that
+ *  contains its prompt_at; else (iii) exactly ONE distinct axis declared in its session's axes_now_history inside the
+ *  turn [prompt_at, turnEnd) (turnEnd = his next record, else the row's own at, inclusive); else (iv) none, with why. Never
+ *  the last moment's axis, the last marked axis or a text match — those would be guesses; two axes is an ambiguity, refused.
+ *  @returns {{axis:string, by:string, at:string}|{axis:null, why:string}} */
+export function settleCrackAxis(row, sessions = [], { turnEnd = null } = {}) {
+  const r = row && typeof row === "object" ? row : {};
+  const ax = String(r.axis || "").toLowerCase();
+  if (AXES.includes(ax)) return { axis: ax, by: "the row", at: r.at };
+  const t = (x) => Date.parse(String(x || ""));
+  const own = (sessions || []).filter((x) => x && x.s && x.s.started_at === r.session_started_at && String(x.s.concept || "").trim().toLowerCase() === String(r.concept || "").trim().toLowerCase());
+  if (!own.length) return { axis: null, why: "its session is not in the pacer ledger" };
+  const pAt = t(r.prompt_at);
+  if (!Number.isFinite(pAt)) return { axis: null, why: "its prompt_at is not a time" };
+  // (ii) the containing window — the same window shape axisWindows builds, for this one session
+  const wins = new Map();
+  for (const { s, endedAt } of own) {
+    const decl = declarationsOf(s), opens = decl.filter((d, i) => i === 0 || decl[i - 1][0] !== d[0]);
+    opens.forEach(([axis, from], i) => {
+      const next = opens[i + 1] ? opens[i + 1][1] : null;
+      const m = s.axes_marked_at && s.axes_marked_at[axis] && Number.isFinite(t(s.axes_marked_at[axis].at)) ? s.axes_marked_at[axis].at : null;
+      const mark = m && t(m) >= t(from) && (!next || t(m) <= t(next)) ? m : null;
+      const to = [mark, next, endedAt].filter((x) => x && Number.isFinite(t(x))).sort((p, q) => t(p) - t(q))[0] || null;
+      if (t(from) <= pAt && (to === null || pAt <= t(to))) wins.set(`${axis}|${from}`, { axis, from, to });
+    });
+  }
+  const hit = [...wins.values()];
+  if (hit.length === 1) return { axis: hit[0].axis, by: `axis window ${hit[0].from}…${hit[0].to || "open"}`, at: r.prompt_at };
+  if (hit.length > 1) return { axis: null, why: `two axis windows contain its turn (${hit.map((w) => w.axis).join(", ")})` };
+  // (iii) exactly one distinct axis declared inside the turn
+  const endT = Number.isFinite(t(turnEnd)) ? t(turnEnd) : t(r.at);
+  const closedEnd = !Number.isFinite(t(turnEnd));   // the row's own at is inside the turn; his next record is not
+  const inTurn = [...new Set(own.flatMap(({ s }) => declarationsOf(s)).filter(([, at]) => t(at) >= pAt && (closedEnd ? t(at) <= endT : t(at) < endT)).map(([a]) => a))];
+  if (inTurn.length === 1) {
+    const at = own.flatMap(({ s }) => declarationsOf(s)).find(([a, x]) => a === inTurn[0] && t(x) >= pAt)[1];
+    return { axis: inTurn[0], by: `axis declared in the turn at ${at}`, at };
+  }
+  if (inTurn.length > 1) return { axis: null, why: `two axes declared in its turn (${inTurn.join(", ")})` };
+  return { axis: null, why: "no axis in the pacer ledger of its turn" };
+}
 /** studyScope — G0's host (the open sitting) ∪ the sessions the axis's previous note used ∪ named extras. */
 export function studyScope({ stateDir = STATE_DIR, prev = null, extra = [] } = {}) {
   const out = new Set();
@@ -349,9 +400,13 @@ export function buildNote({ concept, axis, ex = [], bank = [], capsule = null, c
   // at or after it that comes before his next record (the turn the teacher wrote the ```diff in): its first unstamped crack
   // item gains the moment, his words and the row id; galat/sahi stay EXACTLY the teacher's diff. A row whose turn holds no
   // diff is an item with an EMPTY diff and a named gap — the diff is never built from his words.
-  for (const r of [...(cracks || [])].filter((c) => c && c.concept === concept && c.axis === axis && typeof c.at === "string")
+  // unit mcrk2 (row 1243 (3)): a row with a named gap is a crack like any other; an axis-none row joins the axis it was
+  // SETTLED to (axis_settled, handed in by compileDay — the stored row is never rewritten)
+  for (const r of [...(cracks || [])].filter((c) => c && c.concept === concept && (c.axis === axis || (c.axis_settled && c.axis_settled.axis === axis)) && typeof c.at === "string")
     .sort((a, b) => a.at.localeCompare(b.at))) {
-    const stamp = { moment: r.moment, words: r.words, crack_id: r.id, turn_id: typeof r.turn_id === "string" ? r.turn_id : null, words_at: r.prompt_at };   // turn_id: unit mbank (row 1230 mbank-8 a)
+    const stamp = { moment: r.moment, words: r.words, crack_id: r.id, turn_id: typeof r.turn_id === "string" ? r.turn_id : null, words_at: r.prompt_at,   // turn_id: unit mbank (row 1230 mbank-8 a)
+      ...(typeof r.gap === "string" && r.gap ? { gap: r.gap } : {}), ...(r.axis_settled ? { axis_settled: { axis: r.axis_settled.axis, by: r.axis_settled.by } } : {}) };
+    if (stamp.gap) gaps.push(`crack row ${r.id}: ${r.gap} — the teacher's miss, not his`);
     let at = -1;
     for (let i = 0; i < ex.length; i++) {
       if (ex[i].at < r.at) continue;
@@ -424,7 +479,7 @@ export function renderNote(note) {
       L.push(`[N ${istStampOf(it.at) || "????-??-?? ??:??:?? IST"} · ${String(it.rid || "").slice(-8)}] ${LABEL[it.kind] || it.kind}${it.cracked ? " (it cracked)" : ""}${it.gut ? ` · gut ${it.gut}` : ""}: ${corrMark(it, note)}${one(it.text)}`);
     } else {
       // unit mcrk (G-B): his words of a crack row ride their OWN [N] line, above the teacher's [T] diff line
-      if (it.kind === "crack" && typeof it.words === "string") L.push(`[N ${istStampOf(it.words_at) || "????-??-?? ??:??:?? IST"} · crack ${it.crack_id}] HIS WORDS (the answer that broke${it.moment ? `, at ${it.moment}` : ""}): ${one(it.words)}`);
+      if (it.kind === "crack" && typeof it.words === "string") L.push(`[N ${istStampOf(it.words_at) || "????-??-?? ??:??:?? IST"} · crack ${it.crack_id}] HIS WORDS (the answer that broke${it.moment ? `, at ${it.moment}` : ""}${it.moment === "undeclared" ? " · moment undeclared" : ""}${it.axis_settled && it.axis_settled.by !== "the row" ? ` · axis settled ${it.axis_settled.axis} (${it.axis_settled.by})` : ""}): ${one(it.words)}`);
       const body = it.kind === "crack" ? `galat: ${one(it.galat.join(" / ")) || "—"} | sahi: ${one(it.sahi.join(" / ")) || "—"}` : one(it.text);
       L.push(`[T ${istStampOf(it.at) || "?"} · ${String(it.rid || "").slice(-8)}] ${LABEL[it.kind] || it.kind}: ${corrMark(it, note)}${body}`);
     }
@@ -468,7 +523,24 @@ export function compileDay({ date = todayIst(), stateDir = STATE_DIR, path = nul
   // unit mcrk — THE CRACK ROWS, read once through their owner's reader. Absent = no cracks (said on the result); an
   // unreadable file is NAMED on the result and is never fatal: the teacher's diffs still compile, unstamped.
   const ck = readCracks(join(stateDir, "cracks.jsonl"));
-  const cracksNote = ck.rows === null ? `cracks.jsonl unreadable (${ck.error}) — crack items compiled without their rows` : ck.absent ? "no cracks.jsonl (no crack row written)" : `${ck.rows.length} crack row(s) read`;
+  // unit mcrk2 (F4 B): every axis-none row is settled from the pacer's ledger of its turn; one that cannot be is NAMED
+  const pacer = pacerSessions({ stateDir });
+  const settledRows = (ck.rows || []).map((r) => {
+    if (String(r.axis || "").toLowerCase() !== "none") return r;
+    let turnEnd = null;
+    if (typeof r.prompt_at === "string" && typeof r.at === "string") {
+      const later = new Date(Date.parse(r.at) + 86400000).toISOString();
+      const recs = readLaneDays(WORD_LANE, istDaysBetween(r.prompt_at, later), { root }).records;
+      const scopeR = typeof r.prompt_session_id === "string" && r.prompt_session_id ? { sessions: [r.prompt_session_id] } : { concept: String(r.concept || "").toLowerCase() };
+      const nxt = exchanges(recs, { from: r.prompt_at, to: later, ...scopeR }).find((x) => x.role === "him" && Date.parse(x.at) > Date.parse(r.prompt_at));
+      turnEnd = nxt ? nxt.at : null;
+    }
+    const st = settleCrackAxis(r, pacer, { turnEnd });
+    return st.axis ? { ...r, axis_settled: st } : { ...r, axis_unsettled: st.why };
+  });
+  const unplaced = settledRows.filter((r) => r.axis_unsettled && typeof r.at === "string" && istDay(r.at) === date).map((r) => ({ id: r.id, why: r.axis_unsettled }));
+  const cracksNote = (ck.rows === null ? `cracks.jsonl unreadable (${ck.error}) — crack items compiled without their rows` : ck.absent ? "no cracks.jsonl (no crack row written)" : `${ck.rows.length} crack row(s) read`)
+    + (unplaced.length ? ` · ${unplaced.length} crack row(s) unplaced: ${unplaced.map((u) => `${u.id} (${u.why})`).join(", ")}` : "");
   const results = [];
   let ok = true, lastGuard = null;
   for (const [k, wins] of groups) {
@@ -491,7 +563,8 @@ export function compileDay({ date = todayIst(), stateDir = STATE_DIR, path = nul
       .map((r) => { const p = r.payload, s = settled.get(p.id); return { rid: r.rid, at: r.ts_utc || p.ts, type: p.type, gut: p.gut, asked: p.asked, said: p.spoken, latency_ms: p.latency_ms, probe: p.probe, register: p.register, verdict: s ? (s.verdict || s.pass || "settled") : null }; });
     const capsule = capsules.find((x) => String(x.id || "").toLowerCase() === c || String(x.title || "").toLowerCase() === c) || null;
     const window = { windows: wins.map((w) => ({ from: w.from, to: w.to, origin: w.origin, how: w.how })), sessions: scope, scope: scope.length ? "G0 host" : "concept stamp (no host bound — a weaker scope)", records: ex.length };
-    const cracks = (ck.rows || []).filter((r) => String(r.concept || "").toLowerCase() === c && String(r.axis || "").toLowerCase() === a && typeof r.at === "string" && inWin(r.at));
+    const cracks = settledRows.filter((r) => String(r.concept || "").toLowerCase() === c && typeof r.at === "string"
+      && ((String(r.axis || "").toLowerCase() === a && inWin(r.at)) || (r.axis_settled && r.axis_settled.axis === a && r.axis_settled.by !== "the row" && inWin(r.axis_settled.at))));
     const note = buildNote({ concept: c, axis: a, ex, bank, capsule, corrections: liveCorrections(corrRows, { concept: c, axis: a }), window, cracks });
     const sources = [...new Set([...ex.map((x) => x.rid), ...bank.map((b) => b.rid)].filter((x) => typeof x === "string" && x))];
     if (!sources.length) { results.push({ concept: c, axis: a, op: "skipped", why: "no archive record id to cite — a note without sources is never written" }); continue; }
@@ -505,7 +578,7 @@ export function compileDay({ date = todayIst(), stateDir = STATE_DIR, path = nul
     rows.push(row);
     results.push({ concept: c, axis: a, op: prev ? "recompiled" : "compiled", id: row.id, supersedes: prev ? prev.id : null, sources: sources.length, traps: note.traps.length, gaps: note.gaps.length });
   }
-  return { ok, date, results, guard: lastGuard, cracks: cracksNote };
+  return { ok, date, results, guard: lastGuard, cracks: cracksNote, unplaced };
 }
 
 // ---------------------------------------------------------------------------
@@ -825,6 +898,28 @@ async function selftest() {
       assert("CRACK ROW (unit mcrk) — a row of another axis stamps nothing, and no row leaves the note byte-equal to the base build",
         !buildNote({ concept: "x", axis: "a", ex: exK, cracks: [{ ...row, axis: "b" }] }).items.some((i) => "crack_id" in i)
         && JSON.stringify(buildNote({ concept: "x", axis: "a", ex: exK, cracks: [] })) === JSON.stringify(plain));
+      // unit mcrk2 (forks rows 1243 (3) / 1258 F4 B): a gap row is a crack; an axis-none row is settled from the pacer's
+      // ledger of its turn, never guessed
+      const gapRow = { ...row, id: "ck-selftest-gap", moment: "undeclared", moment_at: null, gap: "moment-undeclared", gap_owner: "teacher" };
+      const gn = buildNote({ concept: "x", axis: "a", ex: exK, cracks: [gapRow] }), gi = gn.items.find((i) => i.crack_id === gapRow.id) || {};
+      assert("CRACK GAP (unit mcrk2) — a row with moment \"undeclared\" is a crack item with his words and the teacher's diff; its gap is a GAPS line naming the teacher's miss",
+        gi.words === gapRow.words && gi.moment === "undeclared" && gi.gap === "moment-undeclared" && gi.galat.length > 0
+        && gn.gaps.some((g) => g === `crack row ${gapRow.id}: moment-undeclared — the teacher's miss, not his`) && /moment undeclared/.test(renderNote(gn)));
+      const S0 = "2026-11-21T05:00:00.000Z", sAt = (m) => new Date(Date.parse(S0) + m * 60000).toISOString();
+      const ses = (o) => [{ s: { concept: "x", started_at: S0, ...o }, endedAt: null }];
+      const none = { id: "ck-n", concept: "x", axis: "none", session_started_at: S0, prompt_at: sAt(10), at: sAt(11) };
+      const s1 = settleCrackAxis(none, ses({ axes_now_history: [{ axis: "b", at: sAt(5) }] }));
+      const s2 = settleCrackAxis(none, ses({ axes_now_history: [{ axis: "c", at: sAt(10.5) }] }), { turnEnd: sAt(12) });
+      const s3 = settleCrackAxis(none, ses({ axes_now_history: [{ axis: "c", at: sAt(10.5) }, { axis: "d", at: sAt(11.5) }] }), { turnEnd: sAt(12) });
+      const s4 = settleCrackAxis(none, ses({ moments_log: [{ kind: "check_q", axis: "e", at: sAt(9) }], axes_marked_at: { e: { at: sAt(8) } } }));
+      const s5 = settleCrackAxis({ ...none, session_started_at: sAt(-60) }, ses({ axes_now_history: [{ axis: "b", at: sAt(5) }] }));
+      assert("SETTLE (unit mcrk2, F4 B) — a containing window; else exactly one axis declared in the turn; two axes refused; no axis in the ledger refused (never the last moment's or marked axis); an unknown session refused",
+        s1.axis === "b" && /^axis window /.test(s1.by) && s2.axis === "c" && /declared in the turn/.test(s2.by)
+        && s3.axis === null && /two axes/.test(s3.why) && s4.axis === null && /no axis in the pacer ledger/.test(s4.why)
+        && s5.axis === null && /not in the pacer ledger/.test(s5.why) && settleCrackAxis(row, []).axis === "a", JSON.stringify([s1, s2, s3, s4, s5]));
+      const sn = buildNote({ concept: "x", axis: "b", ex: exK, cracks: [{ ...gapRow, id: "ck-n2", axis: "none", gap: "axis-none", axis_settled: s1 }] });
+      assert("SETTLE (unit mcrk2) — an axis-none row joins the note of its settled axis; the stored axis stays \"none\"; the HIS WORDS line names how it was settled",
+        sn.items.some((i) => i.crack_id === "ck-n2" && i.axis_settled && i.axis_settled.axis === "b") && /axis settled b \(axis window /.test(renderNote(sn)));
     }
     assert("EXTRACTION — the teacher's [T] layers by the skeleton markers (DUKAAN · ASLI NAAM · TECHNICAL LINE)",
       kinds("dukaan").length === 1 && kinds("asli_naam").length === 1 && kinds("technical_line").length === 2);
