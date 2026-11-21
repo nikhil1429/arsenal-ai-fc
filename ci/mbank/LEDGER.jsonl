@@ -36,3 +36,9 @@
 {"ts":"2026-11-21T06:07Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/9bedbb3/check-runs","last_line":"136753260896 npm test · node 24 cancelled | 136753260678 npm test · node 22 cancelled (superseded by the next push)"}
 {"ts":"2026-11-21T06:56Z","act":"merge-main","cmd":"git fetch origin main && git merge --no-edit FETCH_HEAD (7bf008b)","last_line":"merge 6a1d800484f422c5e82bbe03e6e207cbba5bb78d · no conflicted file"}
 {"ts":"2026-11-21T07:28Z","act":"ci","cmd":"curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/5db4a07/check-runs","last_line":"136766571358 hermetic twice · node 22 success | 136766571254 hermetic twice · node 24 success | 136766571130 npm test · node 24 in_progress | 136766571421 npm test · node 22 queued"}
+{"ts":"2026-11-21T08:46Z","act":"ruling-1250","cmd":"build mbank-1 d · mbank-9 stub · intent.mjs (commit 6c3a096)","last_line":"PLANTS mbank · 19 of 19 plant(s) as expected"}
+{"ts":"2026-11-21T08:46Z","act":"witness-head","cmd":"node ci/mbank/witness_mbank.mjs --org <tip> --base-org <main 7bf008b>","last_line":"GREEN MBANK … · 21 clause(s)"}
+{"ts":"2026-11-21T08:46Z","act":"witness-base","cmd":"node ci/mbank/witness_mbank.mjs --org <main 7bf008b> --base-org <main 7bf008b>","last_line":"RED MBANK · B1 … B19"}
+{"ts":"2026-11-21T08:46Z","act":"mutants","cmd":"node ci/mbank/run_mutants_mbank.mjs --org <tip> --base-org <main 7bf008b>","last_line":"run_mutants: 19 of 19 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T08:46Z","act":"suite-tip","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (clone @ 6c3a096)","last_line":"organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)"}
+{"ts":"2026-11-21T08:46Z","act":"lawpack-tip","cmd":"node scripts/lawpack.mjs report","last_line":"lawpack: GREEN — no law's finding count rose, and every rule is on disk"}

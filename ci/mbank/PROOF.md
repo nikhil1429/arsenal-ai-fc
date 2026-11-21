@@ -150,10 +150,10 @@ two lines above. `scripts/organism_test.mjs` and `package.json` are untouched.
 
 ## 6 · CHECKPOINT
 
-CHECKPOINT · STOPPED at 2026-11-21T06:40Z · resume from: the architect's ruling on FORK mbank-1. On (d): move
-`hisPrompt`/`readHisPrompt` into `scripts/study_scope.mjs` (forge_session re-exports, gaffer_brain imports statically),
-re-cut B9 to pin the door in study_scope, then re-run the witness both ways, the mutants and the hermetic profile, push once.
-On (A) kept: the LAW PACK red needs a ruling of its own.
+~~CHECKPOINT · STOPPED at 2026-11-21T06:40Z · resume from: the architect's ruling on FORK mbank-1.~~ **RULED, forks row 1250 (21 Nov
+2026): mbank-1 = (d), built at §11.** The door (`hisPrompt` / `readHisPrompt`) is DEFINED in `scripts/study_scope.mjs`;
+`scripts/forge_session.mjs` re-exports it; `scripts/gaffer_brain.mjs` imports it statically. B9 is re-cut to pin that home.
+lawpack reads GREEN again (the forge_session → gaffer_brain cycle is gone, 7 `no-circular` lines as at the cut).
 
 ## 7 · NEW MAIN 7bf008b (mdet dfe26a1 · mdtl2 4d582d5 · mclk 7bf008b landed; the architect's order by the runner, forks rows 1226 / 1228, 21 Nov 2026)
 
@@ -269,19 +269,18 @@ the bank door would have refused `other-session` on about four turns in ten.
 | `scripts/gaffer_brain.mjs` (the code door) | via `readHisPrompt` | **MOVED**: its own session's record |
 | `scripts/forge_session.mjs` `crack` verb | `prompt` | **MOVED**: its own session's record (B17) |
 | `scripts/teaching_audit.mjs` stopHook | `prompt` | **MOVED**: its own session's record (B16) |
-| `scripts/forge_session.mjs` `stopToPromptMs` (the latency clock in `contract`) | `stop.at` | **NOT SAFE, NOT MOVED (FORK mbank-9 below).** A parallel session's Stop makes the clock measure from the wrong Stop. Its own Stop time is its own entry's `consumed_at`, but that entry is dropped when another session's prompt is recorded, so the move needs a retention rule |
-| `scripts/teaching_bar.mjs:287` `prevMomentKinds` (feeds `bankDue`, the `[BANK]` line) | `prompt.moments_by_kind` + `stop.moments_by_kind`, both required to be THIS session's | **NOT SAFE, NOT MOVED (FORK mbank-9).** With a parallel session between his Stop and his next prompt it returns `[]`, so the `[BANK]` carrier is not shown that turn: one more way a banked moment can pass unbanked (§9). The move needs the same retention plus a `stop_moments_by_kind` on the own entry |
+| `scripts/forge_session.mjs` `stopToPromptMs` (the latency clock in `contract`) | `stop.at` | **MOVED (row 1250, mbank-9)**: his own session's last Stop through `study_scope.mjs` ownStopOf (his stub or record); the shared Stop only for a session with no record (B18) |
+| `scripts/teaching_bar.mjs` `prevMomentKinds` (feeds `bankDue`, the `[BANK]` line) | `prompt.moments_by_kind` + `stop.moments_by_kind` | **MOVED (row 1250, mbank-9)**: the kinds his own last Stop declared (`stop_kinds` on his stub or record, via ownStopOf), so a parallel turn no longer hides the `[BANK]` line (B19) |
 | `scripts/forge_session.mjs:1126` auditLaneLines (the close coverage line) | `checked_rules` only | safe: one constant for every session |
-| `scripts/intent.mjs:85` `promptFromAuditLast(sessionId)` | `prompt` if its session matches | safe: a mismatch falls to the transcript tail (`intent.mjs:85` promptFromTranscript) and the row says `prompt_source`. Moving it is one read of `prompts_by_session[sessionId]`, but intent.mjs is not this build's file |
+| `scripts/intent.mjs` `promptFromAuditLast(sessionId)` | `prompt` if its session matches | **MOVED (row 1250 (3), the one file granted)**: its own session's record via `study_scope.mjs` ownRecordOf first; the shared slot (session-matched, as before) and then the transcript tail only when it has none |
 | `scripts/teaching_bar.mjs:374` `unopenedNames` | `terms_by_concept` | safe: per concept, not per prompt |
 | `scripts/watchman.mjs:125` / `:211` (`stop.at`: is the audit alive today) · `:2183` (`checked_rules`) | `stop.at`, `checked_rules` | safe: any session's Stop proves the organ lives, which is its question; `checked_rules` is one constant |
 | `scripts/claims.mjs:55`, `scripts/archivist.mjs:3350`, `hooks/afferent-post.mjs:70`, `scripts/turn_hook.mjs:41` / `:57` | comments only (a measurement note, a file list, the owners list) | safe: no read |
 
-**FORK mbank-9 · retention of a consumed own entry.** Moving the latency clock and `prevMomentKinds` needs his session's
-consumed entry to survive until his next prompt, even when another session prompts in between. Options: (a) keep every
-session's last entry, which grows by one small record per session ever (no number typed) · (b) drop an entry when its
-session's transcript is gone (a lifecycle event, read off the transcript path) · (c) as built, where those two readers stay
-on the shared slot. Built: (c). *Decides it:* the architect's word, as no rule could be typed here without a number.
+~~**FORK mbank-9 · retention of a consumed own entry.**~~ **RULED, forks row 1250 (2): neither option as written; built at
+§11.** When a consumed entry would be dropped (a new prompt of any session is recorded), its TEXT is dropped and a STUB
+is kept for that session: the instant of its Stop and that Stop's moment kinds, none of his words. A stub is dropped
+only when its session's transcript is gone (no count, no age).
 
 ### Where his prompt still lies when the door refuses (row 1246 (3)); no recovery is built
 
@@ -322,3 +321,54 @@ B3 (d) now reads `absent`: another session's id finds no own entry, so the door 
 stays first in the landing order** (row 1248 (4)); its merge with mtrap-build is named in §5.
 
 CHECKPOINT · rows 1246 / 1248 built at 02b5e6d · resume from: the architect's rulings on FORK mbank-1 (§6) and FORK mbank-9 (retention, §10), and on whether the 43 lost turns are rebuilt
+
+## 11 · RULING forks row 1250 BUILT (21 Nov 2026)
+
+Built exactly as ruled, at `6c3a096` (base leg: main 7bf008b):
+- **(1) mbank-1 = (d).** `scripts/study_scope.mjs` DEFINES `hisPrompt` / `readHisPrompt`, plus `ownRecordOf` and
+  `ownStopOf` (his own session's record; his own last Stop: instant and kinds, no words). `scripts/forge_session.mjs`
+  re-exports the door and imports it for crackRow. `scripts/gaffer_brain.mjs` imports `readHisPrompt` statically; its
+  dynamic import of forge_session is gone. **B9** is re-cut to pin the door's home in study_scope.mjs, the re-export being
+  the same functions, and gaffer_brain's static import with no record path.
+- **(2) mbank-9, the STUB.** In `scripts/teaching_audit.mjs` (sole writer), when a new prompt is recorded, a consumed entry
+  becomes `{stub, session_id, stop_at, stop_kinds, transcript_path}`: none of his words. A stub is dropped only when its
+  transcript is gone (`transcript_path` from the hook payload, else `study_scope.mjs` transcriptPathFor). There is no count
+  and no age. The Stop stamps `stop_at` and `stop_kinds` (the kinds whose count rose between that turn's prompt and its
+  Stop) on its own entry. A session's new prompt carries its previous Stop forward (`prev_stop_at` / `prev_stop_kinds`).
+  `stopToPromptMs` (latency) and teaching_bar `prevMomentKinds` read `ownStopOf`. The shared slot is used only for a
+  session with no record.
+  - **B18 CLOCK** (a): his Stop, then a parallel prompt and Stop. His entry is a stub with no text, and the clock measures
+    from HIS Stop. M18 (the clock back on the shared Stop) reads RED.
+  - **B19 BANKLINE** (b): axis ON, his prompt, `moment sharp_check`, his Stop, then a parallel prompt and Stop. `bankDue`
+    on his next answer is still BANK-DUE, so the `[BANK]` line is shown. M19 (prevMomentKinds ignoring his own Stop) reads
+    RED.
+- **(3) `scripts/intent.mjs`** (the one file granted) reads its own session's record first.
+- **(4) The 43 lost turns:** not this build. A separate small unit after mbank lands rebuilds them (appended rows marked
+  rebuilt from the transcript, never replacing a row).
+
+```
+$ node ci/mbank/witness_mbank.mjs --org <tip 6c3a096 clone> --base-org <main 7bf008b clone>
+GREEN MBANK … · 21 clause(s)                                   # B1-B19, BOUND, LAST
+$ node ci/mbank/witness_mbank.mjs --org <main 7bf008b clone> --base-org <main 7bf008b clone>
+RED MBANK · B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19
+$ node ci/witness/mbank/witness_bank.mjs plants
+PLANTS mbank · 19 of 19 plant(s) as expected
+$ node ci/mbank/run_mutants_mbank.mjs --org <tip clone> --base-org <main 7bf008b clone>
+run_mutants: 19 of 19 mutant(s) RED by the clause that names them · control GREEN
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all
+organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)
+$ node scripts/lawpack.mjs report | grep "^lawpack:"                 # 7 no-circular lines, as at the cut
+lawpack: GREEN — no law's finding count rose, and every rule is on disk
+$ node scripts/models.mjs check ; echo "exit $?"
+exit 0
+$ node scripts/xray.mjs report | grep "Q2\|Q5"
+── Q2 LAW BREACH — more than one writer (allowlist honoured) (0)
+── Q5 UNDECLARED WRITER — header says sole writer, IR disagrees (0)
+forge_session selftest: 244 passed, 0 failed · ALL CHECKS PASSED (153 passed, 0 failed) [teaching_audit] · gaffer_brain selftest: 198 passed, 0 failed
+study_scope selftest: 61 passed, 0 failed · teaching_gate selftest: 130 passed, 0 failed · learn_digest selftest 16/16 — all clauses hold
+notes_compiler selftest: 48 passed, 0 failed · turn_hook: 168 passed, 0 failed · intent: 16 passed, 0 failed
+```
+The mutants list now holds M1-M19. M15 moved to `study_scope.mjs` with the door; M17's anchor follows the crack verb's
+`ownRecordOf` read. B3 (d) still reads `absent`. BOUND now names `scripts/intent.mjs`.
+
+CHECKPOINT · DONE: row 1250 built at 6c3a096 and pushed once with this PROOF (the branch tip); the hermetic profile is GREEN with no red · NEXT: the architect's one re-run on this tip, and its two neutral legs (`npm test · node 22` / `node 24`) read through the public API on the tip sha
