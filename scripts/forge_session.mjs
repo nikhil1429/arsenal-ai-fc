@@ -670,8 +670,16 @@ export function hisPrompt(auditLast, { since = null, sessionId = null, fresh = f
   if (needTurn && !turn) return { ok: false, reason: "no-turn-id", why: "the prompt record carries no turn_id (written before unit mbank) — ask again, one turn" };
   return { ok: true, text: p.text, at: p.at, session_id: typeof p.session_id === "string" ? p.session_id : null, turn_id: turn };
 }
-/** readHisPrompt — the door's one file read (gaffer_brain reaches it by a dynamic import, never a second reader). */
-export const readHisPrompt = (opts = {}) => hisPrompt(loadAuditLast(), opts);
+/** readHisPrompt — the door's one file read (gaffer_brain reaches it by a dynamic import, never a second reader).
+ *  Unit mbank (row 1246): with a sessionId it reads THAT session's own record (`prompts_by_session[sessionId]`, written by
+ *  teaching_audit.mjs), never the shared `prompt` slot every session overwrites; without one it reads the shared slot and
+ *  the caller says so (`session_checked:false`). */
+export const readHisPrompt = (opts = {}) => {
+  const last = loadAuditLast();
+  if (!opts.sessionId) return hisPrompt(last, opts);
+  const m = last && last.prompts_by_session && typeof last.prompts_by_session === "object" ? last.prompts_by_session : null;
+  return hisPrompt({ prompt: m && m[opts.sessionId] && typeof m[opts.sessionId] === "object" ? m[opts.sessionId] : null }, opts);
+};
 /** crackRow — PURE. The row `crack` would append, or why it refuses.
  *  @param {{session:any, auditLast:any, bank?:any[]|null, now?:Date}} p @returns {{ok:true,row:any}|{ok:false,why:string}} */
 export function crackRow({ session, auditLast, bank = [], now = new Date() } = /** @type {any} */ ({})) {

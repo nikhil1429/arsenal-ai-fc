@@ -40,6 +40,9 @@
 //   B12 MCRK      crackRow through the re-pointed door: mcrk's refusal line for absent / before-session / blank, his words
 //                 byte-equal on a good plant, and the prompt's turn_id on the row
 //   B13 STAMP     (mbank-8 a) buildNote with a crack row carrying turn T → the compiled crack item carries turn_id T
+//   B15 PARALLEL  (row 1246) the real UserPromptSubmit hook records HIS prompt (session S), then ANOTHER session's prompt
+//                 lands in the shared slot before his bank call: the capture (CLAUDE_CODE_SESSION_ID = S) banks HIS bytes and
+//                 HIS turn id from his own session's record
 //   B14 MINT      the REAL UserPromptSubmit hook (teaching_audit.mjs hook, his prompt on stdin, the plant's session id) mints
 //                 a UUID turn_id on the prompt record, and the code-door capture that follows carries that same id
 // OUTPUT: one `CLAUSE <id> GREEN|RED · <why>` line per clause, then `PLANTS mbank · k of n plant(s) as expected` (exit 0
@@ -103,7 +106,9 @@ function plant(name) {
   const cap = (a, o) => node("gaffer_brain.mjs", ["capture", "voice_rep", "tokenization:a", "--axis", "a", ...ASK, ...a], o);
   const queue = () => { const t = text(at("gaffer_grade_queue.jsonl")); return t === null ? null : lines(t).filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return { torn: l }; } }).filter((r) => r.kind === "capture" || r.torn); };
   const cracks = () => { const t = text(at("cracks.jsonl")); return t === null ? null : lines(t).filter((l) => l.trim()).map((l) => { try { return JSON.parse(l); } catch { return { torn: l }; } }); };
-  const prompt = (txt, extra = {}) => writeFileSync(at("teaching_audit_last.json"), JSON.stringify({ prompt: { text: txt, step: 3, moments: 1, reps: 0, session_id: SID, at: new Date().toISOString(), turn_id: T, ...extra }, checked_rules: [] }, null, 2) + "\n");
+  // the record as its owner writes it (row 1246): the shared slot AND this session's own entry in prompts_by_session
+  const prompt = (txt, extra = {}) => { const rec = { text: txt, step: 3, moments: 1, reps: 0, session_id: SID, at: new Date().toISOString(), turn_id: T, ...extra };
+    writeFileSync(at("teaching_audit_last.json"), JSON.stringify({ prompt: rec, prompts_by_session: { [SID]: rec }, checked_rules: [] }, null, 2) + "\n"); };
   return { dir, state, at, node, cap, queue, cracks, prompt };
 }
 const results = [];
@@ -137,7 +142,7 @@ await clause("B2", () => {
     why: `drifted ${brief(r)} · queue ${p.queue() === null ? "absent" : "WRITTEN"} · inside-control exit ${g.code}` };
 });
 await clause("B3", () => {
-  const cases = [["a", null, "absent"], ["b", { text: "   " }, "absent"], ["c", { consumed_at: new Date().toISOString() }, "consumed"], ["d", {}, "other-session", "sess-other"], ["e", { turn_id: undefined }, "no-turn-id"]];
+  const cases = [["a", null, "absent"], ["b", { text: "   " }, "absent"], ["c", { consumed_at: new Date().toISOString() }, "consumed"], ["d", {}, "absent", "sess-other"], ["e", { turn_id: undefined }, "no-turn-id"]];
   const bad = [];
   for (const [k, extra, reason, sid] of cases) {
     const p = plant(`b3${k}`);
@@ -249,6 +254,19 @@ await clause("B14", () => {
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(String(minted || ""));
   return { ok: h.code === 0 && uuid && r.code === 0 && row.turn_id === minted && row.spoken === "pakka - plant answer typed into the hook",
     why: `hook exit ${h.code} · minted ${uuid ? "a UUID" : JSON.stringify(minted)} · capture ${brief(r)} · same turn ${row.turn_id === minted}` };
+});
+
+await clause("B15", () => {
+  const p = plant("b15");
+  const hook = (sid, prompt) => p.node("teaching_audit.mjs", ["hook"], { input: JSON.stringify({ hook_event_name: "UserPromptSubmit", session_id: sid, prompt }), sid });
+  const his = "pakka - his own answer in his own session", other = "runner: please read the ledger of the other unit";
+  const h1 = hook(SID, his);
+  let mine = null; try { mine = JSON.parse(text(p.at("teaching_audit_last.json"))).prompt.turn_id; } catch { mine = null; }
+  const h2 = hook("sess-parallel-architect", other);
+  let slot = null; try { slot = JSON.parse(text(p.at("teaching_audit_last.json"))).prompt.text; } catch { slot = null; }
+  const r = p.cap(["--surface", "code"]), row = (p.queue() || [])[0] || {};
+  return { ok: h1.code === 0 && h2.code === 0 && slot === other && r.code === 0 && row.spoken === his && !!mine && row.turn_id === mine,
+    why: `shared slot now the other session's: ${slot === other} · capture ${brief(r)} · his bytes ${row.spoken === his} · his turn ${!!mine && row.turn_id === mine}` };
 });
 
 if (OWN_TMP) { try { rmSync(TMP, { recursive: true, force: true }); } catch { /* the caller's LAST names a survivor */ } }

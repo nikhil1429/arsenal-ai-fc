@@ -80,7 +80,10 @@
 // that can break his session is a worse defect than the drift it catches.
 //
 // WRITES: teaching_audit.jsonl + teaching_audit_last.json (this organ is their
-// single writer). It never touches the contract file itself
+// single writer). Unit mbank (forks row 1246): teaching_audit_last.json also carries
+// `prompts_by_session` — the prompt record kept PER Claude session (the shared `prompt`
+// slot is overwritten by every session's UserPromptSubmit), so the bank door reads its
+// OWN session's prompt; the `prompt` slot stays exactly as before for its readers. It never touches the contract file itself
 // (teaching_contract.json belongs to teaching_contract.mjs) — auto-counting
 // and the checked_at heartbeat both go through teaching_contract.mjs's own CLI
 // (`autohit` / `checked`), exactly as the owners-only law requires.
@@ -1633,12 +1636,21 @@ const momentsTotal = (session) => (session && session.question_moments && typeof
 const momentsByKind = (session) => (session && session.question_moments && typeof session.question_moments === "object"
   ? { ...session.question_moments } : null);
 
+// unit mbank (row 1246) — the per-session map: an entry whose turn's Stop already consumed it is dropped when a new
+// prompt is recorded (no count, no age: only the open turns of the live sessions remain), the writing session's own
+// entry is replaced; the Stop stamps consumed_at on its OWN session's entry only.
+const openPrompts = (m) => Object.fromEntries(Object.entries(m && typeof m === "object" && !Array.isArray(m) ? m : {})
+  .filter(([, v]) => v && typeof v === "object" && !v.consumed_at));
+const consumeOwn = (m, sid, now) => {
+  const o = m && typeof m === "object" && !Array.isArray(m) ? { ...m } : {};
+  if (sid && o[sid] && typeof o[sid] === "object" && !o[sid].consumed_at) o[sid] = { ...o[sid], consumed_at: now };
+  return o;
+};
 function promptHook(hook) {
   const { session } = readForgeSession();
   const last = readLast() || {};
-  writeLastReal({
-    ...last,
-    prompt: {
+  const sidP = typeof hook.session_id === "string" ? hook.session_id : null;
+  const rec = {
       text: String(hook.prompt || ""),
       step: session && Number.isFinite(Number(session.step)) ? Number(session.step) : null,
       // LR-04 — the OPENING end of this turn's window, captured for the same reason
@@ -1652,7 +1664,11 @@ function promptHook(hook) {
       // unit mbank (forks row 1230): ONE turn identity both records carry — the bank row and the crack row copy it off
       // this prompt through forge_session.mjs hisPrompt (the one door); nothing joins his words by time or by text.
       turn_id: randomUUID(),
-    },
+  };
+  writeLastReal({
+    ...last,
+    prompt: rec,
+    prompts_by_session: { ...openPrompts(last.prompts_by_session), ...(sidP ? { [sidP]: rec } : {}) },
     checked_rules: CHECKED_RULES,
   });
 }
@@ -1777,6 +1793,7 @@ export function stopHook(hook, io) {
   // two states whose indistinguishability let the first death survive.
   io.writeLast({
     prompt: p ? { ...p, consumed_at: paired ? now : (p.consumed_at || null) } : null,
+    prompts_by_session: consumeOwn(last.prompts_by_session, sid, now),   // unit mbank (row 1246): this session's own turn ends
     stop: {
       at: now,
       session_id: sid,
@@ -2525,6 +2542,11 @@ function selftest() {
       assert("END-TO-END — unit mbank: the prompt record carries a minted turn_id (a UUID), the Stop keeps it on the consumed prompt, and the paired Stop row names the same turn",
         !!(lastJ2 && lastJ2.prompt && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(String(lastJ2.prompt.turn_id || "")))
         && rows2.length === 2 && rows2[1].turn_id === lastJ2.prompt.turn_id && rows2[0].turn_id === null);
+      assert("END-TO-END — unit mbank (row 1246): the prompt is also kept PER SESSION, and that session's own Stop consumes its own entry (same bytes, same turn)",
+        !!(lastJ2 && lastJ2.prompts_by_session && lastJ2.prompts_by_session["selftest-e2e"])
+        && lastJ2.prompts_by_session["selftest-e2e"].text === "yaar samajh nahi aa raha"
+        && lastJ2.prompts_by_session["selftest-e2e"].turn_id === lastJ2.prompt.turn_id
+        && typeof lastJ2.prompts_by_session["selftest-e2e"].consumed_at === "string");
     } finally {
       try { rmSync(tmp, { recursive: true, force: true }); } catch { /* a temp dir that outlives the test is litter, not a failure */ }
     }
