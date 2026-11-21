@@ -1,0 +1,9 @@
+{"ts":"2026-11-21T07:20Z","act":"cut","cmd":"git fetch origin main && git checkout -b claude/mjset-spec FETCH_HEAD","last_line":"Switched to a new branch 'claude/mjset-spec'"}
+{"ts":"2026-11-21T07:20Z","act":"measure-base","cmd":"git rev-parse HEAD","last_line":"7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f"}
+{"ts":"2026-11-21T07:30Z","act":"measure-head","cmd":"node -e judgeCartridge({who:''}) byteLength","last_line":"head chars 14635 bytes 14891"}
+{"ts":"2026-11-21T07:35Z","act":"plant-sizing","cmd":"node scratch/p1.mjs scripts/gaffer_brain.mjs (pure exports, planted ledger rows, no state, no model)","last_line":"P6 ok false reason judge-batch-cannot-fit gens 0 writes 0"}
+{"ts":"2026-11-21T07:40Z","act":"plant-join","cmd":"node scratch/p2.mjs scripts/gaffer_brain.mjs (every reply, write, owner and card planted)","last_line":"J6 write-ahead row refused ok true reason - gens 1 queue rows [] refused 1"}
+{"ts":"2026-11-21T07:42Z","act":"plant-head-of-line","cmd":"node scratch/p3.mjs scripts/gaffer_brain.mjs","last_line":"judged per round: id c1 | id c1 | id c1"}
+{"ts":"2026-11-21T07:45Z","act":"mbank-overlap","cmd":"git fetch origin claude/mbank-build && git diff -U0 7bf008b FETCH_HEAD -- scripts/gaffer_brain.mjs | grep '^@@'","last_line":"@@ -3466,0 +3540,23 @@ function selftest2(stub, S) {"}
+{"ts":"2026-11-21T08:05Z","act":"suite-base","cmd":"ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all (bare cloud checkout, no npm ci)","last_line":"exit 2 (FAIL members: lawpack ci_verdict red_cause done probe fsrs mutagen; ERR_MODULE_NOT_FOUND on fsrs mutagen done)"}
+{"ts":"2026-11-21T08:20Z","act":"write-spec","cmd":"write ci/mjset/MJSET_SPEC.md","last_line":"File created"}
