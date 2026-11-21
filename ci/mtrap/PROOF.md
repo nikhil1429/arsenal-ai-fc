@@ -201,4 +201,26 @@ At my cut the branch did not exist (`fatal: couldn't find remote ref`). Read bef
 
 The check runs of each push are read through the public API with no token, and recorded in the ledger as `ci` rows.
 
-CHECKPOINT · proof pushed · resume from the CI verdict of the last push and the effort receipt
+
+## 11 · NEW MAIN 7bf008b (mdet dfe26a1 · mdtl2 4d582d5 · mclk 7bf008b), merged 21 Nov 2026
+
+- **The merge:** `git fetch origin main` → `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f`, then `git merge --no-edit FETCH_HEAD` →
+  merge commit **f9c4002**. It is a merge commit, never a rebase or a force push.
+- **No file conflicted.** Main changed none of the named files since 5301f15, so every landed line of mdet, mdtl2 and mclk
+  is kept as is (`scripts/organism_test.mjs`, `package.json` and `ci/` included).
+- **`ci/mtrap/BASE` stays 5301f15.** It is written once and never rewritten after a merge.
+- **BOUND, measured against 5301f15:** RED. Its "beyond the named" list is the three landed units' own files, which the
+  suite member tolerates as red beyond BOUND.
+- **BOUND, measured against 7bf008b:** GREEN, with only the named files differing.
+- **mclk:** no clause of this witness derives a day from the clock. Every plant passes a fixed instant, `now` /
+  `--date 2026-10-06`, or C22's `2026-11-21T00:00:00.000Z`.
+
+```
+witness  --org <f9c4002> --base-org <7bf008b>   GREEN MTRAP … · 12 clause(s)        (BOUND · 11 file(s) differ)
+witness  --org <7bf008b> --base-org <7bf008b>   RED MTRAP · W1, W2, W3, W4, W5, W6, W7, W8, W9, SKILL
+mutants  --org <f9c4002> --base-org <7bf008b>   run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN
+hermetic suite at f9c4002                       organism_test: 167 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125 (hermetic: named, not run)
+CI 5839264 (pre-merge tip)                      136754495430 hermetic twice · node 22 success · 136754495422 hermetic twice · node 24 success · npm test legs in progress at the read
+```
+
+CHECKPOINT · merge f9c4002 (main 7bf008b) · legs: read after this push, in the ledger
