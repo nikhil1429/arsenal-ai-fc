@@ -10,6 +10,10 @@
 //   pushed ✓/✗ (git ahead N · dirty M) · daemons k/N (as of the watchdog's last pass)
 //   · suite ✓/✗ (last nightly sweep) · sitting: <open?> · next: <kickoff's first task>
 //   · needs you: <n> card(s), first: <id line>
+//   [ · registry: <wound> ]  [ · senses ✗ <sensor>: <input> dead since <IST time> ]   (tails: ONLY while hurt)
+// THE SENSES TAIL (unit mpres, forks rows 1177 (2) / 1191): a sensor whose input is dead reads red BY NAME
+//   here, read through senses.mjs (each sensor's own snapshot, the table a registry row); a stated unknown
+//   reads `senses ?`; a healthy body costs zero characters (L7).
 // WHERE IT RIDES (§7.1): the first line of `learnstate.mjs brief` (SessionStart +
 //   PreCompact) · /matchday · organism-doctor step 0 · the morning sheet push. The
 //   Gaffer's opening joins in Block 3 (the sitting brain).
@@ -155,7 +159,7 @@ export function loadNumber({ cards = null, hippoPending = HIPPO_PENDING, capsule
   out.his = (Number.isFinite(out.cards) ? out.cards : 0) + (Number.isFinite(out.facts) ? out.facts : 0) + (Number.isFinite(out.rejirah) ? out.rejirah : 0);
   return out;
 }
-export function stateFrom({ git, daemons, suite, sitting, next, cards, load, registry } = {}, now = new Date()) {
+export function stateFrom({ git, daemons, suite, sitting, next, cards, load, registry, senses } = {}, now = new Date()) {
   const g = git || { known: false }, d = daemons || { known: false }, s = suite || { known: false }, si = sitting || { open: false }, n = next || { known: false }, c = cards || { known: false };
   const pushed = !g.known ? "pushed ? (git unreadable)"
     : (g.ahead === 0 && g.dirty === 0) ? "pushed ✓"
@@ -180,8 +184,18 @@ export function stateFrom({ git, daemons, suite, sitting, next, cards, load, reg
   // characters (L7). One wound named, the rest counted.
   const r = registry || { known: false };
   const rg = r.known && r.wounds && r.wounds.length ? ` · registry: ${clip(r.wounds[0], 60)}${r.wounds.length > 1 ? ` (+${r.wounds.length - 1})` : ""}` : "";
-  const line = `STATE · ${pushed} · ${dm} · ${su} · ${st} · ${nx} · ${cd}${ld}${rg}`;
-  return { line, json: { at: now.toISOString(), git: g, daemons: d, suite: s, sitting: si, next: n, cards: c, load: l, registry: r } };
+  // unit mpres — THE SENSES TAIL, after the registry's, for the same reason (the field order never moves).
+  // A wound is RED by name: the first named with its since, the rest counted. Not modelled (undefined) ⇒
+  // nothing; unknown ⇒ a stated `?` with its why; healthy ⇒ zero characters.
+  const se = senses || null;
+  const sw = se && se.known && Array.isArray(se.wounds) ? se.wounds : [];
+  const sn = !se ? ""
+    : se.known === false ? (se.why ? ` · senses ? (${clip(se.why, 48)})` : "")
+    : sw.length ? ` · senses ✗ ${sw[0].sensor}: ${sw[0].input} dead ${sw[0].since_kind || "since"} ${sw[0].since_ist || "?"}${sw[0].evidence ? ` · ${clip(sw[0].evidence, 40)}` : ""}${sw.length > 1 ? ` (+${sw.length - 1})` : ""}`
+    : Array.isArray(se.unknown) && se.unknown.length ? ` · senses ? ${se.unknown.slice(0, 3).join(",")}${se.unknown.length > 3 ? ` (+${se.unknown.length - 3})` : ""}`
+    : "";
+  const line = `STATE · ${pushed} · ${dm} · ${su} · ${st} · ${nx} · ${cd}${ld}${rg}${sn}`;
+  return { line, json: { at: now.toISOString(), git: g, daemons: d, suite: s, sitting: si, next: n, cards: c, load: l, registry: r, senses: se || { known: false } } };
 }
 export async function liveState({ stateDir = STATE_DIR, now = new Date(), cwd = ROOT } = {}) {
   const cards = cardFacts({ stateDir, now });
@@ -200,9 +214,14 @@ export async function liveState({ stateDir = STATE_DIR, now = new Date(), cwd = 
     const rg = await import("./registry.mjs");
     registry = { known: true, wounds: [...rg.emitWounds({}), ...rg.neverFedLines({ now }), ...rg.redRows().map((x) => `${x.table}/${x.subject} born-red (create-or-fix)`)] };
   } catch { registry = { known: false } }
+  // unit mpres — the senses, read through senses.mjs (lazy, like the registry: an unreadable reader blanks
+  // this component and says so, it never blanks the line).
+  let senses;
+  try { senses = (await import("./senses.mjs")).senseFacts({ stateDir }); }
+  catch (e) { senses = { known: false, why: `senses.mjs unreadable (${clip((e && e.message) || e, 30)})` }; }
   return stateFrom({
     git: gitFacts({ cwd }), daemons: daemonFacts({ stateDir, now }), suite: suiteFacts({ stateDir, now }),
-    sitting: sittingFacts({ stateDir }), next: await nextFacts({ stateDir, now }), cards, load, registry,
+    sitting: sittingFacts({ stateDir }), next: await nextFacts({ stateDir, now }), cards, load, registry, senses,
   }, now);
 }
 
@@ -444,6 +463,19 @@ function selftest() {
       weekLines(weekBoard({ now: N, tasks: { line: "tasks 3 - done 1 - running 1 - queued 1 - failed 0 - replayed 2 (runs saved)" } })).some((l) => /replayed 2 \(runs saved\)/.test(l))
       && weekLines(weekBoard({ now: N, tasks: null })).some((l) => /tasks: none yet/.test(l))
       && !weekLines(weekBoard({ now: N })).some((l) => /tasks/.test(l)));
+  }
+  // unit mpres (forks rows 1177 (2) / 1191) — THE SENSES TAIL: red by name while hurt, zero characters while healthy
+  {
+    const W = { sensor: "presence", input: "activitywatch", since: "2026-11-17T05:28:00.000Z", since_ist: "17 Nov 10:58 IST", since_kind: "since", evidence: "repair FAILED (ENOENT)" };
+    const hurt = stateFrom({ cards: { known: true, live: 0 }, senses: { known: true, wounds: [W, { ...W, sensor: "dmn", evidence: null }], unknown: [] } }, NOW).line;
+    assert("mpres W4 — a wound reads `senses ✗ presence: activitywatch dead since 17 Nov 10:58 IST`, its failed repair by name, the rest counted, LAST on the line",
+      / · senses ✗ presence: activitywatch dead since 17 Nov 10:58 IST · repair FAILED \(ENOENT\) \(\+1\)$/.test(hurt) && /^STATE · /.test(hurt));
+    const well = stateFrom({ cards: { known: true, live: 0 }, senses: { known: true, wounds: [], unknown: [] } }, NOW).line;
+    assert("mpres W5 — every sensor healthy ⇒ the line carries NO senses characters (L7)", !/senses/.test(well) && well === stateFrom({ cards: { known: true, live: 0 } }, NOW).line);
+    assert("mpres W13 — an unknown sensor is a STATED `?`, never a red and never silent",
+      / · senses \? presence,dmn$/.test(stateFrom({ cards: { known: true, live: 0 }, senses: { known: true, wounds: [], unknown: ["presence", "dmn"] } }, NOW).line));
+    assert("mpres — no table row ⇒ `senses ? (<why>)`, never a pass",
+      / · senses \? \(no mechanisms\/senses row/.test(stateFrom({ cards: { known: true, live: 0 }, senses: { known: false, why: "no mechanisms/senses row (the lander seeds it)" } }, NOW).line));
   }
   assert("READ-ONLY — this file has no write call and no model call (grep-held: the line is a fact, never a product)",
     !/writeFileSync|appendFileSync|renameSync|claude -p|claudeGen/.test(readFileSync(new URL(import.meta.url), "utf8").replace(/^\/\/.*$/gm, "").replace(/assert\("READ-ONLY[^\n]*\n[^\n]*/m, "")));
