@@ -259,3 +259,81 @@ Measured on 20 Nov 2026 on LF exports under os.tmpdir() (merged d43cff7, base 57
   law pack line is byte-equal. No count rose.
 - the plan: three shards of 9 / 16 / 17 units. `unknown` = mcov, mlaw, mmeter, mshard (no TIMES row yet, so each is weighed at
   the mean, never dropped). Q3 asks who refreshes TIMES after landing.
+
+## 10 · THE MERGE OF NEW MAIN 5301f15 (units since 6a6bdff, mdtl's cause channel and mherm's hermetic-twice among them), forks rows 1232 (1) · 1200 (2) · 1215 (1)
+
+A fresh seat checked out `claude/mshard-build` at 011c21d (`git checkout -b claude/mshard-build origin/claude/mshard-build`) and ran
+`git merge origin/main`, giving merge commit **1f97532** (parents 011c21d · 5301f1582f7a1dbc9ec9605434c9db5d8bd19107). It is a merge commit, with no
+rebase and no force push. Git conflicted in ONE file, `scripts/ci_verdict.mjs`, in six hunks. `suite.yml`, `organism_test.mjs` and
+`package.json` auto-merged. Measured line by line (21 Nov 2026, this seat): every line that main or mshard ADDED since the merge base
+6a6bdff and that is absent from the merge is one of the both-changed lines in the table below. For organism_test.mjs, suite.yml and
+package.json that count is 0 on both sides. `ci/mshard/BASE` stays 5759cce (row 1200 (2)), and no BASE file is rewritten.
+
+**The six hunks, each with main's text and mshard's** (line numbers are those of the resolved file at ed0cbed):
+
+| # | lines now | main 5301f15 held | mshard 011c21d held | the merge carries both by |
+|---|---|---|---|---|
+| K1 | 22–35 | the header line `Annotations carry NAMES only …` extended with mdtl's paragraph (the cause rides its own NEW RED message and the payload, verifyCause, WITHHELD), and `// MODES: compare · selftest · <sha>` | the bare `Annotations carry NAMES only …` line, mshard's THE FOLD paragraph, and `// MODES: compare · digest · times · selftest · <sha>` | main's mdtl paragraph verbatim, then mshard's fold paragraph verbatim. MODES is the union `compare · digest · times · selftest · <sha>` |
+| K2 | 60 | parseSuite's type `… profile: string, lawpack: Record<string, number> \| null, causes: string[] }` | `… profile: string, causes: string[], lawpack: Record<string, number> \| null }` | the same key set on both sides, so main's line is kept verbatim |
+| K3 | 67–68 | parseSuite returns `…, lawpack: parseLawpack(text),` / `causes: Array.isArray(j.causes) ? … : [] };` | `…,` / `causes: …, lawpack: parseLawpack(text) };` | the same keys and values, so main's two lines are kept verbatim (the fold's `mergeParts` names both keys itself) |
+| K4 | 236–261 | new `causesFor`, `workspaceSrc`, and `compareLines(…, baseline = null, readSrc = () => "")` with its JSDoc | `compareLines(…, baseline = null, shards = null)` | main's two functions and doc verbatim. **readSrc stays the 8th positional argument (main's API as landed) and `shards` rides 9th** (`readSrc = () => "", shards = null`), with one JSDoc line `@param … [shards]` added |
+| K5 | 270–271 | the payload's `instrument: …, ...(Object.keys(cause).length ? { cause } : {}) };` | `instrument: …,` / `...(shards ? { shards } : {}) };` | main's line ends `{ cause } : {}),` and mshard's `...(shards ? { shards } : {}) };` follows, so the payload carries `cause` AND `shards` |
+| K6 | 567 | CLI compare `… baseline, workspaceSrc);` | `… baseline, folded.shards);` | `… baseline, workspaceSrc, folded.shards);`. The fold runs first, then mdtl's verified causes are read off the FOLDED head (`head.causes`, which mergeParts sums over the suite job and every part) |
+
+The reader's line `const why = …` (mdtl) and the selftest's mdtl plants merged without a conflict, and they read the folded payload unchanged.
+
+**Beyond the markers.** Three textually clean pieces would each have broken one intent, so each now carries both:
+
+- **C3 · ONEBOUND × mherm's `hermetic-twice` job** (ci_verdict.mjs 391–410, witness W-S10). Main landed a fourth job, `hermetic twice ·
+  node N` (unit mherm), with NO `timeout-minutes`: it runs the whole hermetic suite twice, each run bounded by the leg's own bound
+  read from suite.yml. mshard's `workflowLaws` and W-S10 read "every job of suite.yml carries ONE timeout-minutes, all equal", and
+  went red on it (selftest `47 passed, 1 failed`, measured 21 Nov 2026). Adding a bound to main's job would cut its double run, and the
+  brief forbids typing a timeout, so main's job is untouched. The law now judges **the jobs that make the leg**: `legJobs(wf)` returns the
+  job named like a leg (the fold) plus every job its `needs:` names. Each must carry exactly one timeout-minutes, all equal, and (W-S10)
+  none above the base's. A selftest plant holds it both ways: a job outside the leg with no bound holds, and a needed job's second or
+  raised bound is refused. W-S10 reads the leg's jobs with its own parse, never through the tree's `legJobs`. This is a fork (§10 F-vi). C3's ci_verdict.mjs half was staged with the hunk resolution, so it rides in the merge commit 1f97532 itself; its witness half is 4f7442d.
+- **C4 · the fold plants and the mutants copy ci_verdict.mjs alone.** Main's ci_verdict.mjs now imports `./witness_cause.mjs` (mdtl).
+  The witness's `cvCopy` and the mutant runner's `copyTree` copied only the named files, so eleven fold clauses read RED by
+  `ERR_MODULE_NOT_FOUND`, not by the law. Both now read the copied file's relative imports off its source and follow them
+  transitively. Nothing is typed.
+- **C5 · W-S11's refusal was masked by C3.** Under the leg-scoped ONEBOUND, the W-S11 plant (a shard job renamed `npm test · node N`)
+  is also refused by the bound law, so the leg-name mutant survived (`20 of 21`). W-S11 now asks the leg-name law ITSELF, read by its
+  own text (`named like a leg`), to refuse the plant and to hold on the tree.
+
+**Measured on the merged tree** (21 Nov 2026, this container, Linux, LF `git archive` exports under the temp dir: build ed0cbed, base
+5759cce, parent 5301f15):
+- witness `--org ed0cbed --base-org 5759cce --parent-org 5301f15`: `GREEN MSHARD the witnesses member split across jobs, folded by name · 23 clause(s)`
+  (exit 0; BOUND · 9 file(s) differ from the parent, every one named · LAST · 0 node process(es) naming the temp dir survive)
+- witness `--org 5759cce --base-org 5759cce`: `RED MSHARD · W-S1 PLAN, W-S2 COVER, W-S3 UNJUDGED, W-S4 DOUBLE, W-S5 EQUIV, W-S6 SHA,
+  W-S7 FAILCLOSED, W-S8 SHARDRUN, W-S9 BADDOOR, W-S10 ONEBOUND, W-S11 LEGNAME, W-S12 HEADALL, W-S13 PRIVACY, W-S15 LPT, W-S16 DOORLESS,
+  W-S17 PLANRUN, W-S18 CAUSE, W-S19 TIMES, W-S20 WIRING, W-S21 KREAD` (exit 1; the guard W-S14 GREEN on both)
+- witness on ed0cbed without `--parent-org` (BOUND against BASE): `RED MSHARD · BOUND`, the bound class of row 1200 (2)
+- mutants `--org ed0cbed --base-org 5759cce`: `run_mutants: 21 of 21 mutant(s) RED by the clause that names them · control GREEN`
+- `node scripts/ci_verdict.mjs selftest`, 21 Nov 2026: 011c21d `ci_verdict selftest: 42 passed, 0 failed` · main 5301f15 `34 passed, 0 failed`
+  · the merge before C3 `47 passed, 1 failed` · ed0cbed `48 passed, 0 failed` (ALL CHECKS PASSED)
+- `node scripts/models.mjs check`, 21 Nov 2026: exit 0 on 011c21d, 5301f15, ed0cbed and this checkout (`config scan: 19 file(s) · hits 0`)
+- law pack gate, 21 Nov 2026 (`node scripts/lawpack.mjs gate`, LF exports, node_modules from `npm ci` of this lockfile linked):
+  BASE 5759cce `jugad-literal-subject-list 93 · bare-catch 37 · receipt-testimony-read 5 · import-time-registry-read 2 · depcruise_errors 7`,
+  every other law 0 · parent 5301f15 and the build: `jugad-literal-subject-list 90 · bare-catch 37 · receipt-testimony-read 5 ·
+  import-time-registry-read 2 · depcruise_errors 7`, every other law 0. **No count rose** (against BASE jugad falls 93 → 90, by main's own
+  units). `node scripts/gates.mjs`, 21 Nov 2026, equal on all three: TYPE COUNT 298 checkJs diagnostics · LINT no-empty 272 · no-unused-vars 85
+  (the base's own ratchet reds, unchanged).
+- hermetic suite, 21 Nov 2026 (`ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all`, git checkouts with node_modules linked):
+  ed0cbed, run alone in a `--no-local` clone: `organism_test: 165 passed, 0 failed · ruled 0 · UNRULED 0 · LIVE 125` = parent 5301f15
+  `165 passed, 0 failed`. The `ORGANISM_TEST_LAWPACK` line is byte-equal (md5 4a295a6b…). An earlier run of 23e2e48 ran BESIDE the
+  parent's run (two suites at once) and read one red, `CLAUSE WITNESS · ci/witness/mcap/witness_capability.mjs plants`. Its detail
+  still read `86 of 86 plant(s) as expected`, so the exit was not 0 under the doubled load. Run alone it reads `exit 0 · 86 of 86`, and
+  `organism_test.mjs clauses` reads `8 passed, 0 failed` (21 Nov 2026). This is a load reading, not a merge red; it is named here and not hidden.
+- member lines touched (the merge and the parent, identical): `ok   SUITE MEMBER · ci_verdict selftest exits 0`.
+
+**FORKS added by this merge** (measured and named, not edited):
+- **F-vi · hermetic-twice has no bound of its own.** It is main's job and outside mshard's named intent. It inherits GitHub's job default
+  and reads its per-run bound from the FIRST `timeout-minutes` in suite.yml. Under mshard that first one is the `suite` job's, which the
+  leg-scoped ONEBOUND holds equal to the fold's, so mherm's read is unchanged in value. Whether ONEBOUND should cover jobs outside the leg is Q5.
+- **F-vii · ten jobs per push before the folds** (2 suite + 6 shard + 2 hermetic-twice), then 2 folds, on the account whose concurrent-job
+  limit read 20 (§1 F-K b). K stays three. This adds to Q1.
+- **F-viii · the rail refused `git worktree add`.** This seat made two bare worktrees under the temp dir before the rail fired on a
+  third. Both were removed (`git worktree remove --force` + `prune`; `git worktree list` shows the checkout alone). The last hermetic
+  run used a `git clone --no-local -c core.autocrlf=false` instead.
+
+**Q5** · Should ONEBOUND judge only the leg's jobs (this build), or every job of suite.yml, which would ask main's `hermetic-twice` for a bound of its own?
