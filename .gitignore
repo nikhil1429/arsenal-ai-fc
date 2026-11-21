@@ -114,6 +114,9 @@ dressing-room/state/reps_log.jsonl.quarantine.jsonl
 dressing-room/state/forge_session.json
 dressing-room/state/forge_session.json.tmp
 dressing-room/state/forge_sessions.jsonl
+# the crack rows (unit mcrk, row 1189 (2) mcrk-2 a) — his verbatim words at each broken answer; the compiled note (tracked,
+# names-guarded) stays the ONE public copy. The private default of his 14 Aug ruling; reopens only on his word.
+dressing-room/state/cracks.jsonl
 # teaching-contract runtime (his personal drift ledger + a turn counter that changes on
 # EVERY prompt — same class as forge_session.json. The rules are seeded by
 # scripts/teaching_contract.mjs, so a fresh clone rebuilds this file on first run.)
