@@ -12,11 +12,11 @@ by signal, no exit).
 | site | exit at offset 0 | last line at offset 0 | REAL (no door) | class |
 |---|---|---|---|---|
 | S2 `ci/mday/witness_mday.mjs` | none (killed) | `(killed at the bound)` | `RED MDAY · BOUND` (GREEN, BOUND dropped) | RED at offset 0 → ARTIFACT OF THE DOOR, closed · its hang: a defect of that witness's wait, to its owner |
-| S3 `ci/mfac/witness_mfac.mjs` | 1 | `RED MFAC · W1.3 BOUND` | `RED MFAC · BOUND` | RED at offset 0 → ARTIFACT OF THE DOOR, closed |
+| S3 `ci/mfac/witness_mfac.mjs` | 1 by grammar (not recorded) | `RED MFAC · W1.3 BOUND` | `RED MFAC · BOUND` | RED at offset 0 → ARTIFACT OF THE DOOR, closed |
 | S4 `ci/mlv1/witness_mlv1.mjs` | none (killed) | `(killed at the bound)` | `RED MLV1 · BOUND` | RED at offset 0 → ARTIFACT OF THE DOOR, closed · its hang: a defect of that witness's wait, to its owner |
-| S5 `ci/mlv2/witness_mlv2.mjs` | 1 | `RED MLV2 · C1 IDLE, C2 LANE, C3 JUDGE, K5 DOOR, LIVE-SAFE, BOUND` | `RED MLV2 · BOUND` | RED at offset 0 → ARTIFACT OF THE DOOR, closed |
-| S6 `ci/mlv3/witness_mlv3.mjs` | 1 | `RED MLV3 · T1 IDLE, T2 ONCE, T3 INFLIGHT, T4 JUDGE, LIVE-SAFE, BOUND` | `RED MLV3 · BOUND` | RED at offset 0 → ARTIFACT OF THE DOOR, closed |
-| S7 `ci/mpool/witness_mpool.mjs` | 1 | `RED MPOOL · W4.3, W4.5, J` | `GREEN MPOOL the usage tap · 33 clause(s)` | RED at offset 0 → ARTIFACT OF THE DOOR, closed |
+| S5 `ci/mlv2/witness_mlv2.mjs` | 1 by grammar (not recorded) | `RED MLV2 · C1 IDLE, C2 LANE, C3 JUDGE, K5 DOOR, LIVE-SAFE, BOUND` | `RED MLV2 · BOUND` | RED at offset 0 → ARTIFACT OF THE DOOR, closed |
+| S6 `ci/mlv3/witness_mlv3.mjs` | 1 by grammar (not recorded) | `RED MLV3 · T1 IDLE, T2 ONCE, T3 INFLIGHT, T4 JUDGE, LIVE-SAFE, BOUND` | `RED MLV3 · BOUND` | RED at offset 0 → ARTIFACT OF THE DOOR, closed |
+| S7 `ci/mpool/witness_mpool.mjs` | 1 by grammar (not recorded) | `RED MPOOL · W4.3, W4.5, J` | `GREEN MPOOL the usage tap · 33 clause(s)` | RED at offset 0 → ARTIFACT OF THE DOOR, closed |
 
 ## Counts (21 Nov 2026)
 - Run: 6 sites, once each at offset 0. RED at offset 0: **6** → door artifacts, closed. GREEN at offset 0: **0** → no
@@ -29,3 +29,6 @@ by signal, no exit).
   offset 0. The unit witness of mclk uses the FIXED form of the door and is not affected.
 
 ## CI (the neutral machine, read through the public API) — see ci/mclk/LEDGER.jsonl
+- Run 44877162432 on `6c0987699cf65c9e7cde3ecf6a0cd3cf58990f8b` (21 Nov 2026, read by `curl -s https://api.github.com/repos/nikhil1429/arsenal-ai-fc/commits/6c09876…/check-runs`, no token): `npm test · node 22` job 136764290872 success · `npm test · node 24` job 136764290860 success (also `hermetic twice` node 22 job 136764290667 success · node 24 job 136764290912 success).
+
+CHECKPOINT · control run complete at 2026-11-21T07:53:45.580Z · S2-S7 RED at offset 0, all door artifacts, closed · S2/S4 hangs named to their owners · both neutral legs GREEN on 6c09876
