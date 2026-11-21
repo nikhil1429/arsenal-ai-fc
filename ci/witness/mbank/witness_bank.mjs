@@ -40,6 +40,8 @@
 //   B12 MCRK      crackRow through the re-pointed door: mcrk's refusal line for absent / before-session / blank, his words
 //                 byte-equal on a good plant, and the prompt's turn_id on the row
 //   B13 STAMP     (mbank-8 a) buildNote with a crack row carrying turn T → the compiled crack item carries turn_id T
+//   B14 MINT      the REAL UserPromptSubmit hook (teaching_audit.mjs hook, his prompt on stdin, the plant's session id) mints
+//                 a UUID turn_id on the prompt record, and the code-door capture that follows carries that same id
 // OUTPUT: one `CLAUSE <id> GREEN|RED · <why>` line per clause, then `PLANTS mbank · k of n plant(s) as expected` (exit 0
 //   iff k === n and n > 0).
 // ============================================================================
@@ -236,6 +238,17 @@ await clause("B13", async () => {
   const row = { v: 1, kind: "crack", id: "ck-mbank-0001", at: at(2.5), concept: "x", axis: "a", moment: "check_q", words: "shaky — ek word ek token", prompt_at: at(2), turn_id: T };
   const it = nc.buildNote({ concept: "x", axis: "a", ex, cracks: [row] }).items.find((i) => i.kind === "crack") || {};
   return { ok: it.crack_id === row.id && it.turn_id === T, why: `crack item crack_id ${it.crack_id} · turn_id ${it.turn_id === T ? "T" : it.turn_id}` };
+});
+
+await clause("B14", () => {
+  const p = plant("b14");
+  const h = p.node("teaching_audit.mjs", ["hook"], { input: JSON.stringify({ hook_event_name: "UserPromptSubmit", session_id: SID, prompt: "pakka - plant answer typed into the hook" }) });
+  let rec = null; try { rec = JSON.parse(text(p.at("teaching_audit_last.json"))); } catch { rec = null; }
+  const minted = rec && rec.prompt ? rec.prompt.turn_id : undefined;
+  const r = p.cap(["--surface", "code"]), row = (p.queue() || [])[0] || {};
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(String(minted || ""));
+  return { ok: h.code === 0 && uuid && r.code === 0 && row.turn_id === minted && row.spoken === "pakka - plant answer typed into the hook",
+    why: `hook exit ${h.code} · minted ${uuid ? "a UUID" : JSON.stringify(minted)} · capture ${brief(r)} · same turn ${row.turn_id === minted}` };
 });
 
 if (OWN_TMP) { try { rmSync(TMP, { recursive: true, force: true }); } catch { /* the caller's LAST names a survivor */ } }
