@@ -38,6 +38,7 @@ import { isStale as forgeIsStale, STEPS as FORGE_STEPS } from "./forge_session.m
 import { latest as latestPointer, istDay, readRows as pointerRows } from "./resume_pointer.mjs";   // L3 (15 Oct 2026) — the pointer ledger, READ-ONLY here (`latest`, never `consume`) · the ONE IST day key · L6 — readRows: its stamps key "the day before" (the witness's CLASS D), read through the owner
 import { preCyborg, gameOnEpoch } from "./registry.mjs";   // L6 · fate 18 — THE GAME-ON EPOCH: the ONE predicate (a date, never a list of names) gates every Re-Jirah name this brief serves
 import { derivedFloor } from "./sprintsync.mjs";   // A4 (4 Sep 2026) — the SYLLABUS FLOOR belongs to sprint.json's owner; this file reads it, it does not re-derive it
+import { gateableOf, TRAP_BAR } from "./notes_compiler.mjs";   // unit mtrap (mtrap-9 b) — C22 counts a thin note by the compiler's ONE predicate, never a second count
 import { starvedNightFor, recordConsumption, consumptionRows } from "./brain.mjs";   // 11 Aug 2026 dead-wire sweep — WHY the diary page is blank, in the brain's own words (see diaryLine) · recordConsumption: THE GATE's "briefed" stamp (18 Aug 2026), owner-held
 
 // audit #11 — read capsule_map.json (capsule_bridge's own output, read-only) and say
@@ -717,13 +718,23 @@ export function askedFirst(dir, nowMs, prefer = null) {
   const superseded = new Set(compiled.map((x) => x.supersedes).filter((s) => typeof s === "string" && s !== ""));
   const t = (/** @type {*} */ x) => Date.parse(x && x.ts);
   const cands = [];
+  // unit mtrap (mtrap-9 b): the absence line COUNTS what it saw over every compiled note gated at or before now (superseded
+  // ones too — row 1198 (4) names the five); a note under the compiler's bar (gateableOf) reads "not gateable" beside its
+  // kept row, never "fail", and never serves a strike. Ungated = a live note with no pass/fail gate yet.
+  const seen = { pass: 0, fail: 0, thin: 0, ungated: 0 };
   for (const n of compiled) {
-    if (superseded.has(n.id) || !(t(n) <= nowMs)) continue;
+    if (!(t(n) <= nowMs)) continue;
+    const verdictRows = rows.filter((g) => g.kind === "cold_gate" && g.of === n.id && t(g) <= nowMs && (g.verdict === "pass" || g.verdict === "fail"));
+    const gateable = gateableOf(n.note).gateable;
+    if (!verdictRows.length) { if (!superseded.has(n.id)) seen.ungated++; }
+    else if (!gateable) seen.thin++;
+    else seen[verdictRows.at(-1).verdict === "pass" ? "pass" : "fail"]++;
+    if (superseded.has(n.id) || !gateable) continue;
     const last = rows.filter((g) => g.kind === "cold_gate" && g.of === n.id && t(g) <= nowMs).at(-1);
     const traps = last && Array.isArray(last.traps_named) ? last.traps_named.filter((/** @type {*} */ s) => typeof s === "string" && s.trim() !== "") : [];
     if (last && last.verdict === "pass" && traps.length) cands.push({ n, last, traps });
   }
-  if (!cands.length) return { absent: `no compiled note's latest cold gate has PASSED with its traps named by ${new Date(nowMs).toISOString()} — nothing is asked from a failed or ungated note` };
+  if (!cands.length) return { absent: `no compiled note's latest cold gate has PASSED with its traps named by ${new Date(nowMs).toISOString()} — nothing is asked from a failed or ungated note — pass ${seen.pass} · fail ${seen.fail} · not gateable ${seen.thin} (fewer than ${TRAP_BAR} traps, kept fail rows beside them) · ungated ${seen.ungated}` };
   cands.sort((a, b) => (Number(!!prefer && b.n.concept === prefer) - Number(!!prefer && a.n.concept === prefer)) || (t(b.last) - t(a.last)));
   const { n, traps } = cands[0];
   return { note_id: n.id, strike: `${n.concept}${n.axis ? ` · axis ${n.axis}` : ""} — "${clip(traps[0], 160)}" — yeh kahan tootta hai, aur kyun? pehle khud jawab` };
@@ -2077,7 +2088,9 @@ function selftest() {
     // ASKED-FIRST (C22), on L1's two row kinds
     const nFail = { v: 1, kind: "compiled", id: "n-fail", ts: "2026-10-04T13:00:00.000Z", concept: "embeddings", axis: "g", compiler: "notes_compiler@1", sources: ["arc:1"] };
     const gFail = { v: 1, kind: "cold_gate", id: "g-fail", of: "n-fail", ts: "2026-10-04T14:00:00.000Z", verdict: "fail", traps_named: ["t-fail"], reader: "role:cold_reader" };
-    const nPass = { v: 1, kind: "compiled", id: "n-pass", ts: "2026-10-05T09:00:00.000Z", concept: "fresh", axis: "c", compiler: "notes_compiler@1", sources: ["arc:2"] };
+    // unit mtrap: a compiled row carries its note; the passing one stands at the bar of three counted traps (gateableOf)
+    const trapsOf = (k, from = "crack") => Array.from({ length: k }, (_, i) => ({ from, bait: `bait ${i + 1}`, truth: "t", id: `T${i + 1}` }));
+    const nPass = { v: 1, kind: "compiled", id: "n-pass", ts: "2026-10-05T09:00:00.000Z", concept: "fresh", axis: "c", compiler: "notes_compiler@1", sources: ["arc:2"], note: { traps: trapsOf(3) } };
     const gPass = { v: 1, kind: "cold_gate", id: "g-pass", of: "n-pass", ts: "2026-10-05T10:00:00.000Z", verdict: "pass", traps_named: ["cosine ko distance samajh liya"], reader: "role:cold_reader" };
     assert("L6 · C22 — no compiled note at all: ONE named absence, printed once",
       typeof (/** @type {*} */ (askedFirst(d, NOW6))).absent === "string" && lines6.filter((l) => l.includes("ASKED-FIRST (C22) — koi strike nahi:")).length === 1);
@@ -2099,6 +2112,23 @@ function selftest() {
     WL("compiled_notes.jsonl", [nFail, gFail, nPass, gPass, { ...nPass, id: "n-new", ts: "2026-10-05T11:00:00.000Z", supersedes: "n-pass" }]);
     assert("L6 · C22 — a SUPERSEDED note leaves the set (a recompile appended its successor), and the ungated successor never serves",
       !(/** @type {*} */ (askedFirst(d, NOW6))).note_id);
+    // unit mtrap (mtrap-9 b) — the absence line COUNTS: five thin notes with kept FAIL rows (superseded ones included) read not gateable 5
+    {
+      const thin = (i, extra = {}) => ({ ...nFail, id: `n-thin-${i}`, ts: `2026-10-0${i}T09:00:00.000Z`, concept: "tokenization", axis: i < 4 ? "a" : "b", note: { traps: trapsOf(2) }, ...extra });
+      const fails = [1, 2, 3, 4, 5].map((i) => ({ ...gFail, id: `g-thin-${i}`, of: `n-thin-${i}`, ts: `2026-10-0${i}T10:00:00.000Z` }));
+      const five = [thin(1), thin(2, { supersedes: "n-thin-1" }), thin(3, { supersedes: "n-thin-2" }), thin(4), thin(5)];
+      WL("compiled_notes.jsonl", [...five, ...fails]);
+      const a5 = /** @type {*} */ (askedFirst(d, NOW6)), o5 = brief(d, NOW6);
+      assert("L6 · C22 · MTRAP — five 2-trap notes with kept FAIL rows (two of them superseded) serve nothing and are COUNTED not gateable 5, fail 0, beside their kept rows",
+        !a5.note_id && /pass 0 · fail 0 · not gateable 5 \(fewer than 3 traps, kept fail rows beside them\) · ungated 0/.test(a5.absent) && o5.split("\n").filter((l) => l.includes("not gateable 5")).length === 1, a5.absent);
+      const fat = [6, 7, 8].map((i) => ({ ...nFail, id: `n-fat-${i}`, ts: `2026-10-0${i - 3}T11:00:00.000Z`, concept: "embeddings", axis: "c", note: { traps: trapsOf(5) } }));
+      WL("compiled_notes.jsonl", [...fat, ...fat.map((n, i) => ({ ...gFail, id: `g-fat-${i}`, of: n.id, ts: `2026-10-0${i + 3}T12:00:00.000Z` }))]);
+      assert("L6 · C22 · MTRAP — TRUE fails stand: three five-trap notes with kept FAIL rows count fail 3, not gateable 0",
+        /pass 0 · fail 3 · not gateable 0 .* · ungated 0/.test((/** @type {*} */ (askedFirst(d, NOW6))).absent || ""));
+      WL("compiled_notes.jsonl", [{ ...nPass, note: { traps: [...trapsOf(2), { from: "capsule", bait: "capsule bait", truth: "t", id: "T3" }] } }, gPass]);
+      assert("L6 · C22 · MTRAP — a pass on a note whose third trap is a CAPSULE trap (mtrap-3 b) serves no strike and counts not gateable 1",
+        (() => { const a = /** @type {*} */ (askedFirst(d, NOW6)); return !a.note_id && /not gateable 1 /.test(a.absent || ""); })());
+    }
     WL("compiled_notes.jsonl", [nFail, gFail, nPass, gPass]);
 
     // THE RECORDED BRIEF
