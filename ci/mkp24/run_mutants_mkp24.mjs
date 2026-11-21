@@ -59,6 +59,8 @@ const MUTANTS = [
     ["scripts/witness_cause.mjs", "      return !!c && codesOf(src).get(c[1]) === c[2];", "      return !!c;"]] },
   { id: "K7-m", clause: "K7 REPLAY", why: "causesOf matches one word at a time (no multi-word id)", edits: [
     ["scripts/witness_cause.mjs", "  const wide = Math.max(1, ...[...ids].map((i) => i.split(\" \").length));", "  const wide = 1;"]] },
+  { id: "K7b-m", clause: "K7 REPLAY", why: "a multi-word claim is read only at BOUND's indent (the C4 CENSUS replay)", edits: [
+    ["scripts/witness_cause.mjs", "if (w && !out.has(w[1]) && (at || lit.has(w[1]))) out.set(w[1], w[2]);", "if (w && !out.has(w[1]) && at) out.set(w[1], w[2]);"]] },
   { id: "K8-m", clause: "K8 MRV", why: "mrv drops the inner code (every inner red reads INNER-RED)", edits: [
     ["ci/mrv/witness_mrv.mjs", "Object.hasOwn(CAUSES, (r.causes || {})[bad[0]] || \"\") ? r.causes[bad[0]] : \"INNER-RED\" };", "\"INNER-RED\" };"]] },
   { id: "BOUND-m", clause: "BOUND", why: "a third file outside ci/ is touched (scripts/keeper.mjs)", edits: [

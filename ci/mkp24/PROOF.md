@@ -49,14 +49,16 @@ The clause lines at the build (2026-11-20, abridged):
 - K5: the CAUSES literal is byte-identical in the four, and mlv1 unplanted is GREEN with no CAUSE line.
 - K6: no leaving line carries the canary or the forged text. The known code's source text, the toy's multi-word claim and
   WITHHELD are all readable.
-- K7: `T1 IDLE LIVE-SAFE` gives the two clauses' own claims and no WITHHELD. `M1 PORTHELD` gives its own claim.
+- K7: `T1 IDLE LIVE-SAFE` gives the two clauses' own claims and no WITHHELD. `M1 PORTHELD` gives its own claim. `C4 CENSUS`
+  (section 10) gives its own claim and no WITHHELD.
 - K8: mrv's M3 BOOT carries RETIRE-LATE.
 - BOUND: no file beyond the named ones differs.
 
 ## 4 · THE MUTANTS (2026-11-20)
 
 `node <head>/ci/mkp24/run_mutants_mkp24.mjs --org <head> --base-org <cut>` exits 0 in 132 s:
-`run_mutants: 10 of 10 mutant(s) RED by the clause that names them · control GREEN`
+`run_mutants: 10 of 10 mutant(s) RED by the clause that names them · control GREEN`. After section 10 (2026-11-21, 169 s):
+`run_mutants: 11 of 11 mutant(s) RED by the clause that names them · control GREEN`, the new one K7b-m.
 
 The mutants are K1-m (T1 prints no CAUSE line), K2-m (NO-GAP maps to LOST), K3-m (the port branch maps to NOT-UP-KEEPER),
 K4-m (LOST and TWICE share a code), K5-m (a CAUSE line on GREEN), K6-m (the code rule trusts the witness, in both checks),
@@ -172,3 +174,35 @@ The first LAST red after this unit lands prints the code. **No wait is changed h
   this witness joins the witnesses member. The mutants are not run by the member.
 - **FK6 · `.claude/settings.json`** is not carried on this branch (the brief): the build was cut from land/mdtl, not from
   claude/mkp24b-queue.
+
+## 10 · THE SECOND REPLAY CASE: C4 CENSUS (the architect's message, 21 Nov 2026, under row 1216 K-F10)
+
+**The ruling.** land/mdet 72c9add (runs 136698084278 / 136698084564) read
+`cause: C4 · (no header claim for this id in its source) ; WITHHELD · …`. The clause id is the two-word `C4 CENSUS`
+(`ci/mdet/witness_mdet.mjs` at claude/mdet-build ee23f4a). The ruling: a red at `C4 CENSUS` must print C4 CENSUS's own header
+claim and no WITHHELD.
+
+**Measured on ee23f4a's bytes (2026-11-21).**
+- With step 1's edit, `C4 CENSUS` was already matched whole: no WITHHELD, since `"C4 CENSUS"` is a quoted literal (`CLAUSES`, `:47`).
+- But it still read NO_CLAIM, for a second reason. mdet's header opens its BOUND section at ONE space
+  (`// BOUND (not a both-ways clause)…`, `:30`), and the claim rule takes BOUND's indent. So every clause claim at three spaces
+  (`//   C4 CENSUS   · …`, `:26`) was skipped.
+
+**The fix, still the ONE edit of `scripts/witness_cause.mjs`.** A multi-word header id at another indent than BOUND's is a
+claim when that id is a quoted clause literal of the source (`quotedIds`, factored out of `idsInSource`). Nothing else
+moves: mlv1, mlv2, mlv3, mrv and mdtl read `LAST` exactly as before.
+
+**The replay in K7.** The fixture is mdet ee23f4a's header lines 1-39, its first import and its `CLAUSES` line, verbatim; the
+member never fetches, and `ci/mdet` is not on this branch.
+- At the cut it reproduces the neutral leg: `C4 · (no header claim …)` plus WITHHELD (K7 RED).
+- At the build it gives `C4 CENSUS · the planted tree's census, every row but the mdet_ plants, equals the table between …`,
+  no WITHHELD, and the claim rebuilds through `verifyCause`.
+
+**Measured 2026-11-21.**
+- The witness both ways: build `GREEN MKP24 … · 10 clause(s)`, cut `RED MKP24 · K1 RETIRE-LATE, K2 NO-GAP, K3 PORT, K4 LOST, K5 UNPLANTED, K6 NO-LEAK, K7 REPLAY, K8 MRV, BOUND`.
+- New mutant K7b-m (the claim read only at BOUND's indent) is RED by K7.
+- `witness_cause selftest: 17 passed, 0 failed` and `ci_verdict selftest: 34 passed, 0 failed`, unchanged (2026-11-21).
+- mdtl's chain stays `GREEN MDTL … · 8 clause(s)`.
+- The hermetic profile reads `organism_test: 149 passed, 6 failed · … LIVE 124`, with the same assert set as the cut (2026-11-21).
+- `node scripts/models.mjs check` exits 0.
+

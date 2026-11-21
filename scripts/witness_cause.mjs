@@ -60,6 +60,7 @@ export function claimLines(src) {
   const H = headerLines(src);
   const b = H.map((l) => /^\/\/(\s+)(?:[A-Z][A-Z0-9-]*\s+·\s+)*BOUND\b/.exec(l)).find(Boolean);
   const indent = b ? b[1] : null;
+  const lit = quotedIds(src);   // unit mkp24 (K-F10 A, the C4 CENSUS replay): a multi-word id that is a quoted literal
   /** @type {Map<string, string>} */
   const out = new Map();
   let struck = false;
@@ -67,11 +68,14 @@ export function claimLines(src) {
     const marks = (l.match(/~~/g) || []).length;
     if (marks || struck) { if (marks % 2) struck = !struck; continue; }
     const m = /^\/\/(\s+)([A-Z][A-Z0-9-]*)(?:\s+·\s+|\s+)(\S.*?)\s*$/.exec(l);
-    if (!m || (indent !== null && m[1] !== indent)) continue;
-    if (!out.has(m[2])) out.set(m[2], m[3]);
-    // unit mkp24 (K-F10 A): the multi-word id runs up to its column gap; its first word keeps the claim it had above
+    if (!m) continue;
+    const at = indent === null || m[1] === indent;
+    if (at && !out.has(m[2])) out.set(m[2], m[3]);
+    // unit mkp24 (K-F10 A): the multi-word id runs up to its column gap; its first word keeps the claim it had above. At
+    // another indent than BOUND's it is a claim only when the id is a quoted clause literal of the source (ci/mdet's
+    // header heads its BOUND section at one indent and claims its clauses at another)
     const w = /^\/\/\s+([A-Z][A-Z0-9-]*(?: [A-Z][A-Z0-9-]*)+)(?:\s+·\s+|\s{2,})(\S.*?)\s*$/.exec(l);
-    if (w && !out.has(w[1])) out.set(w[1], w[2]);
+    if (w && !out.has(w[1]) && (at || lit.has(w[1]))) out.set(w[1], w[2]);
   }
   return out;
 }
@@ -79,12 +83,20 @@ export function claimLines(src) {
 /** the one-line claim of <id> in <src>, or null @param {string} src @param {string} id */
 export const claimOf = (src, id) => claimLines(src).get(id) ?? null;
 
+/** the quoted ids of <src>: a quoted string that IS the id or opens with it (one word, or several: unit mkp24 K-F10 A)
+ *  @param {string} src @returns {Set<string>} */
+function quotedIds(src) {
+  const ids = new Set();
+  for (const m of String(src).matchAll(/(["'`])([A-Z][A-Z0-9-]*)(?=\1|[\s·,:])/g)) ids.add(m[2]);
+  for (const m of String(src).matchAll(/(["'`])([A-Z][A-Z0-9-]*(?: [A-Z][A-Z0-9-]*)+)(?=\1| · )/g)) ids.add(m[2]);
+  return ids;
+}
+
 /** every id that is a literal of <src>: a quoted string that IS the id or opens with it, and every header claim id
  *  @param {string} src @returns {Set<string>} */
 export function idsInSource(src) {
   const ids = new Set(claimLines(src).keys());
-  for (const m of String(src).matchAll(/(["'`])([A-Z][A-Z0-9-]*)(?=\1|[\s·,:])/g)) ids.add(m[2]);
-  for (const m of String(src).matchAll(/(["'`])([A-Z][A-Z0-9-]*(?: [A-Z][A-Z0-9-]*)+)(?=\1| · )/g)) ids.add(m[2]);   // unit mkp24 (K-F10 A)
+  for (const i of quotedIds(src)) ids.add(i);
   return ids;
 }
 
