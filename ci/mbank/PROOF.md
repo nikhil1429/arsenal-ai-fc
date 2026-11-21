@@ -232,3 +232,93 @@ moment and no crack happen.** Each line below is at the branch tip and needs one
 | `ci/witness/mbank/witness_bank.mjs:175` B7, `:220` B12, `:233` B13 | B7 plants `start · step 3 · axis a now · moment check_q` itself, and B12 / B13 plant the session or the crack row directly. The witness proves what happens once a moment and a crack exist; it cannot see whether a teaching turn reaches them |
 
 CHECKPOINT · §9 written 2026-11-21 (UTC) · resume from: the architect's ruling on FORK mbank-1 (§6); the zero-call and the moment-reach causes are the architect's to place (rows 1237 (1), 1240)
+
+## 10 · THE PER-SESSION PROMPT RECORD (forks rows 1246 / 1248, 21 Nov 2026)
+
+The runner's laptop counts are quoted, not re-derived. promptHook wrote the ONE shared `prompt` slot on every
+UserPromptSubmit of every session. Over 17-21 Nov 2026, 43 of 101 audited Stop rows read `session-mismatch`. As first built,
+the bank door would have refused `other-session` on about four turns in ten.
+
+**What the build does now** (teaching_audit.mjs stays the sole writer; no new file, and no session setting is changed):
+- **The record per session.** `promptHook` writes the same `rec` to the shared `prompt` slot (unchanged for its readers) AND
+  to `prompts_by_session[session_id]`, inside the same gitignored `teaching_audit_last.json`. A new filename would have
+  needed a `.gitignore` line, and `.gitignore` is not this build's file. When a new prompt is recorded, an entry its own
+  Stop already consumed is dropped. There is no count and no age: only the live sessions' open turns remain.
+- **The Stop consumes only its own session's entry** (`consumeOwn`). The shared slot is consumed exactly as before.
+- **The audit's own Stop pairs with its own session's record** (row 1248 (1)). `p = ownRec || shared`; the shared slot is
+  only the fallback for a session with no own entry (a record from before this unit).
+- **The bank door** (`readHisPrompt`) reads `prompts_by_session[CLAUDE_CODE_SESSION_ID]`, never the shared slot. With no
+  session id it reads the shared slot and the row says `session_checked:false`.
+- **The crack verb** reads its own session's record when one exists (else the shared slot, as before). crackRow's refusals
+  are unchanged; `node ci/witness/mcrk/witness_crack.mjs plants` reads `PLANTS mcrk · 11 of 11 plant(s) as expected`.
+
+**The clauses and mutants added** (each RED on main 7bf008b, GREEN on the build):
+- **B15 PARALLEL.** The real hook records HIS prompt, then another session's prompt lands in the shared slot. The capture
+  banks HIS bytes and HIS turn id. M15 (the door reads the shared slot again) reads RED.
+- **B16 AUDIT.** A planted study day: two of his turns, each with another session's UserPromptSubmit between his prompt and
+  his Stop. On the build the audit's Stop rows read `session-mismatch 0 · sources fresh,fresh`; on main they read
+  `session-mismatch 2`. M16 (the Stop back on the shared slot) reads RED.
+- **B17 CRACK.** The same interleave. On the build `crack` writes HIS words and turn id. **On main 7bf008b today, it writes
+  the parallel session's text as his words** (`CLAUSE B17 RED · … his words 41 char(s)`: the other session's prompt). That
+  is a defect on main that the record now closes. M17 (the crack verb back on the shared slot) reads RED.
+
+### Every other reader of the shared slot, and its fate (`git grep -n teaching_audit_last 7bf008b -- scripts hooks .claude`)
+
+| Reader | What it reads | Fate |
+|---|---|---|
+| `scripts/gaffer_brain.mjs` (the code door) | via `readHisPrompt` | **MOVED**: its own session's record |
+| `scripts/forge_session.mjs` `crack` verb | `prompt` | **MOVED**: its own session's record (B17) |
+| `scripts/teaching_audit.mjs` stopHook | `prompt` | **MOVED**: its own session's record (B16) |
+| `scripts/forge_session.mjs` `stopToPromptMs` (the latency clock in `contract`) | `stop.at` | **NOT SAFE, NOT MOVED (FORK mbank-9 below).** A parallel session's Stop makes the clock measure from the wrong Stop. Its own Stop time is its own entry's `consumed_at`, but that entry is dropped when another session's prompt is recorded, so the move needs a retention rule |
+| `scripts/teaching_bar.mjs:287` `prevMomentKinds` (feeds `bankDue`, the `[BANK]` line) | `prompt.moments_by_kind` + `stop.moments_by_kind`, both required to be THIS session's | **NOT SAFE, NOT MOVED (FORK mbank-9).** With a parallel session between his Stop and his next prompt it returns `[]`, so the `[BANK]` carrier is not shown that turn: one more way a banked moment can pass unbanked (§9). The move needs the same retention plus a `stop_moments_by_kind` on the own entry |
+| `scripts/forge_session.mjs:1126` auditLaneLines (the close coverage line) | `checked_rules` only | safe: one constant for every session |
+| `scripts/intent.mjs:85` `promptFromAuditLast(sessionId)` | `prompt` if its session matches | safe: a mismatch falls to the transcript tail (`intent.mjs:85` promptFromTranscript) and the row says `prompt_source`. Moving it is one read of `prompts_by_session[sessionId]`, but intent.mjs is not this build's file |
+| `scripts/teaching_bar.mjs:374` `unopenedNames` | `terms_by_concept` | safe: per concept, not per prompt |
+| `scripts/watchman.mjs:125` / `:211` (`stop.at`: is the audit alive today) · `:2183` (`checked_rules`) | `stop.at`, `checked_rules` | safe: any session's Stop proves the organ lives, which is its question; `checked_rules` is one constant |
+| `scripts/claims.mjs:55`, `scripts/archivist.mjs:3350`, `hooks/afferent-post.mjs:70`, `scripts/turn_hook.mjs:41` / `:57` | comments only (a measurement note, a file list, the owners list) | safe: no read |
+
+**FORK mbank-9 · retention of a consumed own entry.** Moving the latency clock and `prevMomentKinds` needs his session's
+consumed entry to survive until his next prompt, even when another session prompts in between. Options: (a) keep every
+session's last entry, which grows by one small record per session ever (no number typed) · (b) drop an entry when its
+session's transcript is gone (a lifecycle event, read off the transcript path) · (c) as built, where those two readers stay
+on the shared slot. Built: (c). *Decides it:* the architect's word, as no rule could be typed here without a number.
+
+### Where his prompt still lies when the door refuses (row 1246 (3)); no recovery is built
+
+| Refusal | His prompt of that turn is still in |
+|---|---|
+| `absent` (no own entry: the hook did not fire, or `ARSENAL_ORGAN=1`) | **the transcript**: Claude Code's session JSONL, path by `scripts/study_scope.mjs:100` transcriptPathFor, read by `scripts/intent.mjs:85` promptFromTranscript (from the end) and `scripts/study_scope.mjs:149` firstHumanPrompt (from the head) · **the afferent**: `hooks/afferent-post.mjs:216` posts the UserPromptSubmit prompt (trimmed, secret-scrubbed, slash commands dropped `:227`, so not byte for byte) to the thalamus, whose sole-written `afferent.jsonl` is `scripts/thalamus.mjs:137` |
+| `empty` (blank text) | nowhere better: the transcript holds the same blank turn (the hook copies `hook.prompt`, `teaching_audit.mjs` promptHook) |
+| `consumed` (its Stop already ran) | **the prompt record itself**: the consumed entry keeps its `text` until its session's next prompt (`teaching_audit_last.json`, `scripts/teaching_audit.mjs:164`; its own entry in `prompts_by_session`, written at promptHook `:1671`) · the transcript and the afferent as above |
+| `other-session` | now reachable only without an own entry; same as `absent` |
+
+### The 43 lost turns (row 1248 (2)); nothing is rebuilt without a ruling
+
+Their Stop rows were written (`teaching_audit.jsonl`, `:163`) with `user_text_source "session-mismatch"`. What was lost is
+every prompt-dependent check of those turns (the confusion-is-literal check and the window ends from his prompt), not the
+row. **They can be rebuilt from the session transcripts by one read:** join each mismatch row's `session_id` + `ts` to that
+session's transcript (`study_scope.mjs:100`), take the last `user` line before the row's `ts` that is his text and not a
+tool result (the shape `intent.mjs:85` already reads), and run the same `stopHook` over that prompt with a collecting io (the
+probe's shape, `teaching_audit.mjs` probe). The existing `teaching_audit.mjs replay <transcript.jsonl>` (`:2880`) replays the
+samajh read only and writes nothing, so it is not that rebuild. Whether rebuilt rows would be appended (and marked
+`rebuilt_from:"transcript"`) or only counted is a ruling. Nothing was rebuilt.
+
+### Re-measured at 02b5e6d (the tip of the rows 1246 / 1248 steps), 21 Nov 2026, base leg on main 7bf008b
+
+```
+$ node ci/mbank/witness_mbank.mjs --org <tip clone> --base-org <main 7bf008b clone>
+GREEN MBANK … · 19 clause(s)
+$ node ci/mbank/witness_mbank.mjs --org <main 7bf008b clone> --base-org <main 7bf008b clone>
+RED MBANK · B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, B13, B14, B15, B16, B17
+$ node ci/mbank/run_mutants_mbank.mjs --org <tip clone> --base-org <main 7bf008b clone>
+run_mutants: 17 of 17 mutant(s) RED by the clause that names them · control GREEN
+$ ORGANISM_TEST_PROFILE=hermetic node scripts/organism_test.mjs all
+organism_test: 166 passed, 1 failed · ruled 0 · UNRULED 1 · LIVE 125 (hermetic: named, not run)   # the one red: LAW PACK (FORK mbank-1)
+forge_session selftest: 244 passed, 0 failed · ALL CHECKS PASSED (153 passed, 0 failed) [teaching_audit]
+gaffer_brain selftest: 198 passed, 0 failed · study_scope selftest: 61 passed, 0 failed · teaching_gate selftest: 130 passed, 0 failed
+learn_digest selftest 16/16 — all clauses hold · notes_compiler selftest: 48 passed, 0 failed · turn_hook: 168 passed, 0 failed
+```
+B3 (d) now reads `absent`: another session's id finds no own entry, so the door never reaches the shared slot. **mbank
+stays first in the landing order** (row 1248 (4)); its merge with mtrap-build is named in §5.
+
+CHECKPOINT · rows 1246 / 1248 built at 02b5e6d · resume from: the architect's rulings on FORK mbank-1 (§6) and FORK mbank-9 (retention, §10), and on whether the 43 lost turns are rebuilt
