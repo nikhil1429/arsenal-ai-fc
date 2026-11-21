@@ -7,3 +7,7 @@
 {"ts":"2026-11-21T05:57:46.315Z","act":"measure","cmd":"node /tmp/…/two.mjs 6a6bdff (same, the mlaw2 base)","last_line":"sandbox: 15 passed, 0 failed"}
 {"ts":"2026-11-21T05:57:46.339Z","act":"measure","cmd":"node /tmp/…/two.mjs 5301f15 ci/mplant/tools/statejournal.mjs (the mlaw2 journal preloaded)","last_line":"sandbox: 12 passed, 3 failed"}
 {"ts":"2026-11-21T05:57:46.363Z","act":"measure","cmd":"node /tmp/…/two.mjs 5301f15 <a one-line preload: import \"node:fs\";>","last_line":"sandbox: 12 passed, 3 failed"}
+{"ts":"2026-11-21T06:01:27.961Z","act":"measure","cmd":"git -C <plant> ls-files -s node_modules (plant.mjs default door)","last_line":"120000 … 0\tnode_modules — the link is COMMITTED (.gitignore:26 node_modules/ matches a directory, not a symlink)"}
+{"ts":"2026-11-21T06:01:27.984Z","act":"measure","cmd":"node ci/mplant/tools/doors.mjs 5301f15 sandbox probe mutagen blackbox","last_line":"mplant doors 5301f15: 4 member(s) · LB link-before-commit · LA link-after-commit · CP copied · bound read off organism_test.mjs (sandbox LB 1 LA 0 CP 0 · probe 0 0 0 · mutagen 0 0 0 · blackbox LB 1 LA 1 CP 1)"}
+{"ts":"2026-11-21T06:01:28.006Z","act":"measure","cmd":"node /tmp/…/three.mjs 5301f15 <bare import node:fs preload> patch (audit_preload.mjs + one syncBuiltinESMExports line, in a PLANT copy only)","last_line":"sandbox: 15 passed, 0 failed"}
+{"ts":"2026-11-21T06:01:28.027Z","act":"measure","cmd":"node /tmp/…/three.mjs 5301f15 ci/mplant/tools/journal2.mjs patch","last_line":"sandbox: 15 passed, 0 failed"}
