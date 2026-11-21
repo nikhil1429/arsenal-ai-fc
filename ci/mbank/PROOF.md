@@ -210,3 +210,25 @@ success · 136766571254 `hermetic twice · node 24` completed success · 1367665
 136766571421 `npm test · node 22` queued. This push may supersede those two npm legs.
 
 CHECKPOINT · §8 written at 2026-11-21 (UTC) · resume from: the architect's ruling on FORK mbank-1 (§6), and on where the zero-call cause sits
+
+## 9 · THE PACER COUNTS (forks rows 1239 (3) / 1240 branch B, 21 Nov 2026): EVERY LINE WHERE THIS UNIT ASSUMES A BANKED MOMENT OR A CRACK ROW HAPPENS
+
+The runner's counts are context only and are quoted, not re-derived. Over 13-21 Nov 2026 the pacer ran every teaching day,
+but the banked moments (sharp check, Bolo, interview line) were almost never reached. The crack file was never born, and
+today's two `crack` calls were refused by crackRow's own gate (first "no axis is ON", then "no moment declared on the axis
+before his answer"). Those two refusals are mcrk's lines, which this unit keeps byte for byte (B12). **This unit makes no
+moment and no crack happen.** Each line below is at the branch tip and needs one upstream of it. No fix is designed here.
+
+| Where | What it assumes upstream |
+|---|---|
+| `scripts/gaffer_brain.mjs:2745` / `:2750` (the code door) | that the teacher reached a banked moment (sharp check, jirah, Bolo, interview line) and called `capture` there. The door holds no moment rule of its own: WHEN to bank is the pacer's and the gate's (`study_scope.mjs` `bankDueAt` / BANKED_MOMENTS, `teaching_gate.mjs` `B.bank`), and neither is changed here |
+| `scripts/forge_session.mjs:682` (`no axis is ON`), `:690` (`no moment declared on axis … before his answer`) | crackRow's own gate (mcrk's, unchanged). A crack row exists only after `axis <x> now` AND a declared moment before his prompt: today's two refusals |
+| `scripts/forge_session.mjs:683` (`hisPrompt(auditLast, { since })`) | a crack call in the turn whose prompt was his broken answer; it adds `turn_id` to the row and changes no refusal |
+| `scripts/forge_session.mjs:3319` / `:3325` (the `crack` verb) | the teacher runs `crack` in the ```diff turn. With no row, cracks.jsonl stays unborn, as measured |
+| `scripts/notes_compiler.mjs:354` (the `turn_id` stamp beside `crack_id`) | a crack row of the concept/axis. With none, no crack item carries `turn_id` (or `crack_id`); the stamp is inert |
+| `scripts/forge_session.mjs:820` (no banked answer for axis), `:896` (never GRILLED) | an `axis <x> done` / LOCK attempt. Axis marks happened on 15, 17 and 21 Nov only, so these carriers spoke on at most those days |
+| the carriers (`.claude/skills/forge/SKILL.md:49`, `.claude/skills/forge/REFERENCE.md:141`, `.claude/skills/learn/REFERENCE.md:468`, `scripts/learn_digest.mjs:160`, `scripts/teaching_gate.mjs:141`, `:143`) | a teacher at a banked moment reading them. They name the bank's shape, not when to reach the moment |
+| `scripts/teaching_audit.mjs:1654` (the `turn_id` mint) | nothing: it mints on every prompt. It is the one line here that runs on the measured days with no moment, and with no bank or crack it joins nothing |
+| `ci/witness/mbank/witness_bank.mjs:175` B7, `:220` B12, `:233` B13 | B7 plants `start · step 3 · axis a now · moment check_q` itself, and B12 / B13 plant the session or the crack row directly. The witness proves what happens once a moment and a crack exist; it cannot see whether a teaching turn reaches them |
+
+CHECKPOINT · §9 written 2026-11-21 (UTC) · resume from: the architect's ruling on FORK mbank-1 (§6); the zero-call and the moment-reach causes are the architect's to place (rows 1237 (1), 1240)
