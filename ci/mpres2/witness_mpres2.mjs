@@ -203,8 +203,15 @@ const lineOver = (snap) => {
 };
 const r = (s) => (s && s.repair ? `${s.repair.result}${s.repair.why ? ` (${s.repair.why})` : ""}` : "no record");
 
+// a group's sequence runs once for its clauses; a throw inside it reads RED for each of them, never a crash of the witness
+const grp = async (ids, fn) => {
+  if (!want(...ids)) return;
+  try { await fn(); }
+  catch (e) { for (const id of ids) if (want(id) && !results.some((x) => x.id === id)) clause(id, false, `threw: ${String((e && e.message) || e).slice(0, 200)}`); }
+};
+
 // ── CLASS ONE ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
-if (want("M1", "M2")) {
+await grp(["M1", "M2"], async () => {
   const a = seq();
   const s1 = await a.dead(0, REFUSED, null);
   const after = [];
@@ -226,14 +233,14 @@ if (want("M1", "M2")) {
       ok: after.map((x) => x.asks).join(",") === "1,1,1,1" && !!(s5 && s5.repair && s5.repair.at === iso(2)) && k.asks.length === 0 && !!(k1 && k1.repair && k1.repair.result === "asking"),
       why: `asks after passes 2..5 [${after.map((x) => x.asks).join(",")}] (want 1,1,1,1) · pass 5's record at ${s5 && s5.repair ? s5.repair.at : "?"} (want pass 2 ${iso(2)}) · an \`asking\` record: ${k.asks.length} ask(s), carried ${r(k1)}` }));
   }
-}
-if (want("M4")) {
+});
+await grp(["M4"], async () => {
   const a = seq();
   const s1 = await a.dead(0, REFUSED, { ...ROW, reversible: false });
   const s2 = await a.dead(1);
   await guard("M4", () => ({ ok: !!(s1 && s1.repair && s1.repair.result === "none" && a.asks.length === 1 && s2 && s2.repair && s2.repair.span === s2.dead_since && s2.dead_since === iso(0)),
     why: `pass 1 (row not eligible) ${r(s1)} · pass 2 (eligible, same span) ${r(s2)} · ${a.asks.length} ask(s) (want 1)` }));
-}
+});
 if (want("M6")) await guard("M6", async () => {
   const p = plant("m6");
   const seedRow = (row) => runNode(p, ["scripts/registry.mjs", "set", "--table", "self_repair", "--json", JSON.stringify(row)]);
@@ -265,7 +272,7 @@ if (want("M6")) await guard("M6", async () => {
 });
 
 // ── CLASS TWO ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
-if (want("R1", "R2")) {
+await grp(["R1", "R2"], async () => {
   const a = seq({ onAsk: (s) => { s.running = true; } });   // the launcher the first ask started is running from then on
   await a.dead(0); await a.dead(1); await a.live(2); const s2 = await a.dead(3); await a.live(4); const s3 = await a.dead(5);
   const g = seq();
@@ -278,13 +285,13 @@ if (want("R1", "R2")) {
     return { ok: !!(w && w.evidence === "dead beside a running launcher") && / · senses ✗ presence: activitywatch dead since .* · dead beside a running launcher/.test(line),
       why: `evidence ${w ? w.evidence : "(no wound)"} · line tail …${line.slice(-90)}` };
   });
-}
-if (want("R4")) {
+});
+await grp(["R4"], async () => {
   const out = {};
   for (const [k, fn] of [["abort", ABORT], ["refused", REFUSED], ["no-window-bucket", NO_WINDOW], ["bad-json", BAD_JSON]]) { const s = seq(); out[k] = await s.dead(0, fn); }
   await guard("R4", () => ({ ok: Object.entries(out).every(([k, s]) => s && s.alive === false && s.dead_reason === k),
     why: Object.entries(out).map(([k, s]) => `${k} → ${s ? (s.dead_reason === undefined ? "(no dead_reason)" : s.dead_reason) : "(no snapshot)"}`).join(" · ") }));
-}
+});
 if (want("R5")) await guard("R5", async () => {
   const p = plant("r5");
   const pr = await mod(p, "scripts/registry.mjs");
@@ -304,7 +311,7 @@ if (want("R5")) await guard("R5", async () => {
       && !!(live && live.retired === false) && d2.launcher === LEAF && a.asks.length === 0 && !!(s && s.repair && s.repair.result === "beside-running"),
     why: `CLI exits ${[c1, c2, c3, c4].join("/")} · a set without retired keeps retired:${merged ? merged.retired : "?"} ⇒ door ${d1.launcher || d1.why} · retired:false ⇒ door ${d2.launcher || d2.why} · beside a running launcher: ${a.asks.length} ask(s), ${r(s)}` };
 });
-if (want("F8")) {
+await grp(["F8"], async () => {
   const a = seq({ running: true });
   const s1 = await a.dead(0); const s2 = await a.dead(1);
   const listed = a.lists.length;
@@ -313,8 +320,8 @@ if (want("F8")) {
   await guard("F8", () => ({ ok: !!(s1 && s1.repair && s1.repair.result === "beside-running" && s2 && s2.repair && s2.repair.result === "beside-running") && listed === 2 && a.lists[0] === LEAF
       && a.asks.length === 1 && !!(s3 && s3.repair && s3.repair.result === "failed" && s4 && s4.repair && s4.repair.at === iso(2) && s4.dead_since === iso(0)),
     why: `running: ${r(s1)}, ${r(s2)} (${listed} listing(s), leaf ${a.lists[0] || "-"}) · died: ${r(s3)} · next pass ${r(s4)} · ${a.asks.length} ask(s) (want 1)` }));
-}
-if (want("F10")) {
+});
+await grp(["F10"], async () => {
   const a = seq({ launchOk: true, launchPid: 424242 });
   const s1 = await a.dead(0);
   const asks1 = a.asks.length, lists1 = a.lists.length;
@@ -328,10 +335,10 @@ if (want("F10")) {
   await guard("F10", () => ({ ok: asks1 === 1 && !!(s1 && s1.launched && s1.launched.pid === 424242 && s1.launched.leaf === LEAF) && lists2 === lists1 && a.pidChecks.includes(424242)
       && !!(s2 && s2.repair && s2.repair.result === "beside-running") && a.asks.length === 2 && a.lists.length === lists1 + 1 && a.lists[a.lists.length - 1] === LEAF && !!(s3 && s3.repair && s3.repair.result === "asked"),
     why: `the door's spawn recorded pid ${s1 && s1.launched ? s1.launched.pid : "(none)"} · new span, pid alive: ${r(s2)}, listings ${lists1}→${lists2} (want no new one) · pid gone: listings → ${a.lists.length} (want +1, by leaf), ${r(s3)} · ${a.asks.length} ask(s)` }));
-}
+});
 
 // ── CLASS THREE ───────────────────────────────────────────────────────────────────────────────────────────────────────────
-if (want("S1")) {
+await grp(["S1"], async () => {
   const a = seq({ running: true });
   const b = [await a.dead(0, ABORT), await a.dead(1, ABORT), await a.dead(2, ABORT)];
   const d = seq();
@@ -339,8 +346,8 @@ if (want("S1")) {
   await guard("S1", () => ({ ok: b.every((s) => s && s.busy === true && s.dead_since === null && s.busy_since === iso(0)) && a.asks.length === 0
       && !!(d2 && d2.alive === false && !d2.busy && d2.dead_since === iso(0)) && d.asks.length === 1,
     why: `abort ×3 beside a running launcher: ${b.map((s) => (s && s.busy ? "busy" : s && s.alive === false ? `dead(${s.dead_since === iso(0) ? "span" : "?"})` : "?")).join(",")}, ${a.asks.length} ask(s) · refused ×2, none running: ${d2 && d2.alive === false ? "dead" : "?"}, ${d.asks.length} ask(s) (${r(d1)})` }));
-}
-if (want("S3")) {
+});
+await grp(["S3"], async () => {
   const a = seq({ running: true });
   const s1 = await a.dead(0, NO_WINDOW); const s2 = await a.dead(1, NO_WINDOW);
   const b = seq({ running: true });
@@ -350,13 +357,13 @@ if (want("S3")) {
   await guard("S3", () => ({ ok: !!(s2 && s2.alive === false && s2.dead_reason === "no-window-bucket" && !s2.repair) && a.asks.length === 0 && a.lists.length === 0 && !!(w && w.evidence === "watcher absent")
       && !!(j && j.dead_reason === "bad-json") && b.asks.length === 0 && b.lists.length === 0,
     why: `no window bucket: ${s2 ? `dead_reason ${s2.dead_reason}` : "?"}, ${a.asks.length} ask(s), ${a.lists.length} listing(s), senses ${w ? w.evidence : "(no wound)"} · bad-json: ${j ? j.dead_reason : "?"}, ${b.asks.length} ask(s), ${b.lists.length} listing(s) (${r(s1)})` }));
-}
-if (want("S4")) {
+});
+await grp(["S4"], async () => {
   const a = seq({ running: true });
   const s1 = await a.dead(0, ABORT); const s2 = await a.dead(1, ABORT); const s3 = await a.live(2);
   await guard("S4", () => ({ ok: [s1, s2].every((s) => s && s.busy === true && s.dead_since === null) && !!(s3 && s3.alive === true && s3.dead_since === null && !s3.busy && !s3.busy_since) && a.asks.length === 0,
     why: `abort, abort: dead_since ${s1 ? s1.dead_since : "?"}, ${s2 ? s2.dead_since : "?"} (want null, null) · then events: alive:${s3 ? s3.alive : "?"} busy_since ${s3 ? s3.busy_since : "?"} · ${a.asks.length} ask(s)` }));
-}
+});
 if (want("S6")) await guard("S6", async () => {
   const a = seq({ running: true });
   await a.dead(0, ABORT); const s = await a.dead(5, ABORT);
@@ -364,21 +371,21 @@ if (want("S6")) await guard("S6", async () => {
   return { ok: / · senses \? presence busy since 20 Nov 21:50 IST$/.test(line) && !/senses ✗/.test(line),
     why: `line tail …${line.slice(-80)}` };
 });
-if (want("S7")) {
+await grp(["S7"], async () => {
   const a = seq({ running: true });
   const snaps = [];
   for (let h = 0; h < 72; h++) snaps.push(await a.dead(h * 60, ABORT));
   await guard("S7", () => ({ ok: snaps.every((s) => s && s.busy === true && s.dead_since === null && s.busy_since === iso(0)) && a.asks.length === 0,
     why: `${snaps.filter((s) => s && s.busy === true).length}/${snaps.length} hourly abort passes over three days read busy · last ${snaps[71] ? (snaps[71].busy ? `busy since ${snaps[71].busy_since}` : `dead since ${snaps[71].dead_since}`) : "?"} · ${a.asks.length} ask(s)` }));
-}
-if (want("S8")) {
+});
+await grp(["S8"], async () => {
   const a = seq({ launchOk: true, onAsk: (s) => { s.running = true; } });
   const s1 = await a.dead(0); const s2 = await a.dead(1, ABORT);
   a.running = false;
   const s3 = await a.dead(2);
   await guard("S8", () => ({ ok: !!(s1 && s1.repair && s1.repair.result === "asked" && s2 && s2.busy === true && s2.dead_since === iso(0) && s3 && s3.dead_since === iso(0) && s3.repair && s3.repair.at === iso(0)) && a.asks.length === 1,
     why: `dead ${r(s1)} · busy pass holds dead_since ${s2 ? s2.dead_since : "?"} (busy:${s2 ? !!s2.busy : "?"}) · dead again: span ${s3 ? s3.dead_since : "?"}, ${r(s3)} · ${a.asks.length} ask(s) (want 1)` }));
-}
+});
 
 // ── SEAT-TIME: NO-REAL-LIST · NO-TRACK · BOUND · LAST ────────────────────────────────────────────────────────────────────
 if (!ONLY) await guard("NO-REAL-LIST", () => ({ ok: refusedCalls.length === 0 && childCalls().every((c) => !/^(execFileSync|exec|execSync) /.test(c)),
