@@ -1,0 +1,4 @@
+{"ts":"2026-11-21T00:22:14.544Z","act":"fetch","cmd":"git fetch origin main; git rev-parse origin/main","last_line":"25f13f270cc513cfa18ac6cf7bee35fc38001013 (main has not moved past the cut)"}
+{"ts":"2026-11-21T00:22:14.544Z","act":"cut","cmd":"git checkout -b claude/mdtl2-build 25f13f2","last_line":"Switched to a new branch claude/mdtl2-build"}
+{"ts":"2026-11-21T00:22:14.544Z","act":"spec","cmd":"git show d39e060:ci/mdtl2/MDTL2_SPEC.md","last_line":"read whole (sections 0-10) with its ledger"}
+{"ts":"2026-11-21T00:22:14.544Z","act":"parallel","cmd":"git diff 25f13f2 origin/claude/mkp24-build -- scripts/organism_test.mjs | grep ^@@","last_line":"@@ -3010,7 +3010,10 @@ async function witnesses() (mkp24 tip 3898668)"}
