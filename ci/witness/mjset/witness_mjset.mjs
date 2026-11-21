@@ -8,7 +8,9 @@
 //   node ci/witness/mjset/witness_mjset.mjs plants [--tree <dir>] [--only <id,…>] [--tmp <dir>]
 //   --tree   the tree under test (default: this file's repository). Its scripts/ + package.json are COPIED under --tmp.
 //   --tmp    an existing dir to plant under (the unit witness ci/mjset/witness_mjset.mjs hands its own, for LAST).
-// OUTPUT: one `CLAUSE <id> GREEN|RED · <why>` line per clause, then `plants: <n> clause(s) · <k> GREEN`.
+// OUTPUT: one `CLAUSE <id> GREEN|RED · <why>` line per clause, `plants: <n> clause(s) · <k> GREEN`, and LAST
+//   `PLANTS mjset · k of n plant(s) as expected` (exit 0 iff k === n > 0: the suite member CLAUSE WITNESSES reads it; a clause is
+//   "as expected" when it is GREEN on the tree judged — the build — and the base leg is the unit witness's).
 // CONTRACT
 //   · Every plant is a COPY under os.tmpdir(): <tree>/scripts + package.json, node_modules linked, an EMPTY planted
 //     dressing-room/state made by THIS file's node code (mkdirSync) — the repository's own state dir is never opened. The clauses
@@ -110,7 +112,10 @@ if (MODE === "plants") {
   process.stdout.write(out);
   if (!/^plants: /m.test(out)) console.log(`plants: the inner child ended without its verdict (exit ${r.status}) · ${String(r.stderr || "").split(/\r?\n/).filter(Boolean).slice(-3).join(" | ").slice(0, 400)}`);
   if (!arg("--tmp")) rmSync(TMP, { recursive: true, force: true });
-  process.exit(0);
+  // the suite member CLAUSE WITNESSES (organism_test.mjs clauseWitnesses) reads this line: k of n clauses GREEN on the tree judged
+  const lines = out.split(/\r?\n/).filter((l) => /^CLAUSE \S+ (GREEN|RED)/.test(l)), k = lines.filter((l) => / GREEN/.test(l.split(" · ")[0])).length;
+  console.log(`PLANTS mjset · ${k} of ${lines.length} plant(s) as expected`);
+  process.exit(lines.length > 0 && k === lines.length ? 0 : 1);
 }
 
 if (MODE !== "inner") { console.log("usage: witness_mjset.mjs plants [--tree <dir>] [--only <id,…>] [--tmp <dir>]"); process.exit(2); }
