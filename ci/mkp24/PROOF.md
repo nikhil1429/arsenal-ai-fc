@@ -114,6 +114,22 @@ survivor).
   neutral machine until mdtl is on main and BASE is written.
 - Every other keeper-family member runs as before. The member runs the C0-carrying mlv1, mlv2, mlv3 and mrv against their own
   BASEs, and their BOUND ids are dropped by `judgeLast`.
+- **3898668, read 2026-11-21 by curl (run of check runs 136641868209 node 24 and 136641867873 node 22): both legs RED.**
+  - node 24 RED, one NEW RED: `WITNESS ‹mkp24› · carries a BASE file (B6)`, the expected one (FK1). The payload read
+    `"pass":255,"fail":1`.
+  - node 22 RED, two NEW REDs: the same B6 red, and **`WITNESS ‹mlv3› · GREEN at head against its BASE`**. The payload read
+    `"pass":255,"fail":2`. **The first CODED keeper-family red on the neutral machine.** Its cause lines, as the annotation
+    printed them:
+    `cause · T1 IDLE · spool drained, nothing in flight: …` ·
+    `cause · T1 IDLE · RESPAWN-LATE · the worker logged RETIRING but no new boot answered by the bound: the respawn came late` ·
+    `cause · LIVE-SAFE · the real :4112 …` · `cause · LIVE-SAFE · BEHAVIOUR-RED · a behaviour clause above is red`.
+  - **What it reads (for K-F11, ruled by the architect, not here):**
+    - T1's retire DECISION came within the bound: the RETIRING line was there. The respawned worker's boot did not answer
+      inside T1's single bound. That is the process / clock link of the chain, not the filesystem event.
+    - LIVE-SAFE is a cascade of T1 (BEHAVIOUR-RED), not a held port.
+    - No WITHHELD: the multi-word ids were read whole (K-F10).
+    - mlv3 is untouched in its waits by this unit, and the same tree's node 24 leg read mlv3 GREEN. **No re-run is made for
+      green** (row 1213 (3)).
 - A tip's own verdict cannot be in its own file. The verdict of the last push is read after it, and named in the seat's final
   message and the ledger.
 
