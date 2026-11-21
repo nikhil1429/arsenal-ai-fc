@@ -38,10 +38,11 @@
 //   `unbound` line, CALL shape) · teaching_audit.mjs (stamps scope on its rows through the
 //   dispatcher's global) · teaching_contract.mjs (R8's windowed rank reads the row stamp and,
 //   for unstamped rows, the transcript entrypoint) · P2's teaching_gate.mjs and rails G3.
-// CASES: exported as scopeSelfCheck(), run by `node scripts/turn_hook.mjs selftest` (the
-//   teaching_bar precedent — this leaf has no `selftest` verb of its own, so the suite's coverage
-//   law is met by the entry that is already in organism:selftest). Its two CLI verbs, `scope` and
-//   `unbound`, are read-only hand checks (the architect's adoption re-run uses them).
+// CASES: exported as scopeSelfCheck(), run by `node scripts/turn_hook.mjs selftest` AND, since
+//   unit mcov (forks row 1137 (5)), by this leaf's own `selftest` verb, which the suite runs under
+//   this leaf's name (the coverage law read this header's word and found no suite naming the leaf).
+//   Its other two CLI verbs, `scope` and `unbound`, are read-only hand checks (the architect's
+//   adoption re-run uses them).
 // ============================================================================
 import { readFileSync, openSync, readSync, closeSync, statSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
@@ -742,7 +743,16 @@ function cli() {
   const env = opt("--entrypoint") ? { ...process.env, CLAUDE_CODE_ENTRYPOINT: opt("--entrypoint") } : process.env;
   if (mode === "scope") { console.log(JSON.stringify(studyScope({ payload, sitting: readSitting(), env }))); return; }
   if (mode === "unbound") { const v = unboundVerdict({ payload, env }); console.log(JSON.stringify({ study: v.scope.study, scope_why: v.scope.why, printed: v.line, why: v.why })); return; }
-  console.log("study_scope: scope --session <id> | unbound --session <id> [--transcript p] [--prompt \"…\"] [--entrypoint e]   (read-only; the hook path is turn_hook's CALL shape)");
+  // unit mcov (forks row 1137 (5)): the leaf's OWN selftest verb — the same scopeSelfCheck() cases turn_hook runs, so the
+  // suite judges them under this leaf's name in every profile (turn_hook's selftest is LIVE in the hermetic one).
+  if (mode === "selftest") {
+    const r = scopeSelfCheck();
+    for (const c of r.cases) console.log(`  ${c.ok ? "ok  " : "FAIL"} ${c.name}${c.ok || !c.detail ? "" : `\n         ${c.detail}`}`);
+    console.log(`study_scope selftest: ${r.pass} passed, ${r.fail} failed`);
+    process.exitCode = r.fail ? 1 : 0;
+    return;
+  }
+  console.log("study_scope: scope --session <id> | unbound --session <id> [--transcript p] [--prompt \"…\"] [--entrypoint e] | selftest   (read-only; the hook path is turn_hook's CALL shape)");
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) cli();
 

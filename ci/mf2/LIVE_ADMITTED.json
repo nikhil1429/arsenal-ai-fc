@@ -1,0 +1,22 @@
+{
+  "_law": "ci/mf2/witness_mf2.mjs F3 (forks row 1204, option (a) narrowed): a LIVE name the base did not print is admitted ONLY when it stands here with its ruling row AND the witness measures, on its own copies, that the base hermetic run judged NONE of the asserts listed under it. The LIVE count may rise by exactly the admitted names the build prints, no more. An entry the build no longer prints as LIVE reads RED: the unit that retires the name deletes its entry in the same landing (unit mherm2, when its ledger fixture lands).",
+  "admitted": [
+    {
+      "live": "LOAD ZERO · the brain-ledger lane block (every ledger lane declared · S7 RATCHET · RUNG A ledger-side)",
+      "row": "1204",
+      "unit": "mherm (T3, forks row 1157 (1)/(4), F3 A)",
+      "asserts": [
+        "LOAD ZERO · every lane in the brain ledger is either a declared brain_config job or a DECLARED non-road lane",
+        "LOAD ZERO · ...and every off-road declaration NAMES the organ it feeds",
+        "S7 RATCHET · every gated lane has a DECLARED RIGHT CONSUMER",
+        "S7 RATCHET · ...and the gate's table is the ONE copy",
+        "RUNG A · the alias map is READ FROM SOURCE",
+        "RUNG A · LEDGER-SIDE COMPLETENESS (a)",
+        "RUNG A · LEDGER-SIDE COMPLETENESS (b)",
+        "RUNG A · the *_JOBS scan still finds its arrays",
+        "RUNG A · STATIC COMPLETENESS (a)",
+        "RUNG A · STATIC COMPLETENESS (b)"
+      ]
+    }
+  ]
+}
