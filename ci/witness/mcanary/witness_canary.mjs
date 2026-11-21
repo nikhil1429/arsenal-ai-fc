@@ -218,6 +218,7 @@ function plants() {
   const only = arg("--only") ? String(arg("--only")).split(",") : null;
   const ids = IDS.filter((id) => !only || only.includes(id));
   const results = [];
+  const tally = { k: 0, n: 0 };
   const clause = (id, ok, detail) => { results.push({ id, ok }); console.log(`${ok ? "  GREEN" : "  RED  "} ${id} · ${detail}`); };
   const P = plantRoot(ORG), B = BASE_ORG ? plantRoot(BASE_ORG) : null;
   for (const id of ids) {
@@ -227,6 +228,8 @@ function plants() {
     if (B) { const got = scenario(B, id, CASES[id][0][2]); lines.push([`base: the ok plant is not green (no canary organ at the base)`, got !== 0, `read ${got}`]); }
     for (const [what, ok, d] of lines) console.log(`    ${ok ? "ok  " : "FAIL"} ${what} — ${d}`);
     const bad = lines.filter((l) => !l[1]);
+    tally.k += lines.length - bad.length; tally.n += lines.length;
+    if (bad.length) console.log(`CLAUSE ${id} RED · ${lines.length - bad.length}/${lines.length} plant(s)`);
     clause(id, bad.length === 0, `${lines.length - bad.length} of ${lines.length} case(s)${B ? "" : " (base half NOT JUDGED: no --base-org)"}`);
   }
   // the live read: the tracked file at this tree — PRINTED, never judged (on the cloud it reads UNREAD until a real run lands)
@@ -257,6 +260,8 @@ function plants() {
   clause("LAST", ps.status === 0 && left.length === 0, ps.status === 0 ? `${left.length} node process(es) naming a temp root survive` : "the process table is unreadable");
   const red = results.filter((r) => !r.ok).map((r) => r.id);
   const n = results.filter((r) => IDS.includes(r.id)).length;
+  // the suite member's contract (unit mmeter, scripts/organism_test.mjs clauseWitnesses): every plant, BOUND and LAST counted
+  console.log(`PLANTS mcanary · ${tally.k + results.filter((r) => !IDS.includes(r.id) && r.ok).length} of ${tally.n + results.filter((r) => !IDS.includes(r.id)).length} plant(s) as expected`);
   if (red.length) { console.log(`RED MCANARY · ${red.join(", ")}`); process.exit(1); }
   console.log(`GREEN MCANARY ${B ? "plants both ways, BOUND held" : "build plants (no --base-org: base half and BOUND NOT JUDGED)"} · ${n} clause(s)`);
   process.exit(0);

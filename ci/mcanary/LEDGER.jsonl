@@ -21,3 +21,7 @@
 {"ts":"2026-11-20T01:28:40Z","act":"merge","cmd":"git merge 5759cce4ba040299eb53ea5e0a3a8f5a7fbb6a90 (row 1172)","last_line":"531c9a2 clean merge, no conflict hunks"}
 {"ts":"2026-11-20T01:28:40Z","act":"witness","cmd":"node ci/witness/mcanary/witness_canary.mjs plants --org . --base-org <git archive 5759cce>","last_line":"GREEN MCANARY plants both ways, BOUND held · 3 clause(s)"}
 {"ts":"2026-11-20T01:28:40Z","act":"mutants","cmd":"node ci/mcanary/run_mutants_mcanary.mjs --org .","last_line":"run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN"}
+{"ts":"2026-11-21T07:33:42Z","act":"merge","cmd":"git merge 7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f (forks rows 1233 (2) / 1236)","last_line":"a4e48c2 clean merge, no conflict hunks"}
+{"ts":"2026-11-21T07:33:42Z","act":"witness","cmd":"node ci/witness/mcanary/witness_canary.mjs plants --org . --base-org <git archive 7bf008b>","last_line":"PLANTS mcanary · 30 of 30 plant(s) as expected · GREEN MCANARY plants both ways, BOUND held · 3 clause(s)"}
+{"ts":"2026-11-21T07:33:42Z","act":"witness","cmd":"node ci/witness/mcanary/witness_canary.mjs plants (the suite member's form)","last_line":"PLANTS mcanary · 26 of 26 plant(s) as expected · GREEN MCANARY build plants (no --base-org: base half and BOUND NOT JUDGED) · 3 clause(s)"}
+{"ts":"2026-11-21T07:33:42Z","act":"mutants","cmd":"node ci/mcanary/run_mutants_mcanary.mjs --org .","last_line":"run_mutants: 3 of 3 mutant(s) RED by the clause that names them · control GREEN"}
