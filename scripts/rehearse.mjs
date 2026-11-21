@@ -12,7 +12,7 @@
 //   3. snapshots the state dir into a fresh os.tmpdir() root and writes that commit's scripts/ + package.json beside it,
 //      read out of git (ls-tree + cat-file), so the replay runs exactly the committed code (ruling F3 A: the planter's
 //      proven method; daily_green.mjs's own ROOT is then the temp root and the live ledger is never opened);
-//   4. runs the REAL `daily_green.mjs --json --date D` there and keeps each clause's STATUS only (no reason text: a reason
+//   4. runs the REAL `daily_green.mjs --json --date D` there (its exit judged by the meter's own exitOf) and keeps each clause's STATUS only (no reason text: a reason
 //      may carry a session prefix — nothing of his reaches this log);
 //   5. ruling F4 A: clauses 9-11 read the machine NOW (daily_green.mjs header, "clauses 9-11 read the machine NOW"), so
 //      they are CARRIED from the recorded day's meter row (the latest row for D — the meter's own rule, "the last row for
@@ -35,6 +35,7 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { nightOf, LOG_NAME as NIGHT_LOG } from "./night.mjs";
+import { exitOf } from "./daily_green.mjs";   // the meter's OWN exit law (F1 A strict exit: 0 at 11/11 on a study day, 3 below)
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -105,7 +106,9 @@ function replay(sha, day) {
     const r = spawnSync(process.execPath, [join(root, "scripts", "daily_green.mjs"), "--json", "--date", day], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 1 << 26, env: { ...process.env, ARSENAL_ORGAN: "1" } });
     let out = null;
     try { out = JSON.parse(String(r.stdout || "")); } catch { out = null; }
-    if (r.status !== 0 || !out || !Array.isArray(out.clauses) || out.date !== day) return { clauses: null, recorded, why: `meter exit ${r.status}${out ? "" : " · no json"}` };
+    // a reading is the meter's JSON for D whose exit is the one the meter's own law gives that row (3 below 11/11 is a
+    // READING, not a failure: a replay is below 11/11 by construction while 9-11 read the snapshot's empty machine)
+    if (!out || !Array.isArray(out.clauses) || out.date !== day || r.status !== exitOf(out)) return { clauses: null, recorded, why: `meter exit ${r.status}${out ? "" : " · no json"}` };
     return { clauses: out.clauses, recorded, why: "ok" };
   } finally { rmSync(root, { recursive: true, force: true }); }
 }

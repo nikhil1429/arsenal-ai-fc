@@ -151,3 +151,23 @@ CHECKPOINT · MERGED at 2026-11-20T01:28Z · merged tip = merge commit `96ac1f5`
 node scripts/night.mjs selftest      (merged tree, 20 Nov 2026)
 night selftest: 23 passed, 0 failed
 ```
+
+## Merge of main 7bf008b (forks rows 1233 (2) / 1236, 21 Nov 2026)
+
+Merge commit `c955adc` (main `7bf008b4ced9dc1e23e8bce92cc5bdc77e8dc99f` into `393584c`): clean, no conflicted file. `BASE` set to
+`7bf008b`, because row 1172 keyed BASE to the main merged in. **A real break came in with the merge, caused by unit mmeter's strict exit (F1 A):**
+`daily_green.mjs` now exits 3 below 11/11, and a replay is always below 11/11 because 9-11 read the snapshot's empty
+machine. So `rehearse.mjs` read every replay as failed: W1, W3, W4 and W6 went RED (`replay meter exit 3 · would_be_11 null`). Fixed
+at its cause in `scripts/rehearse.mjs`: a replay is a reading iff its exit equals the meter's OWN `exitOf(row)` (imported
+from `daily_green.mjs`, its one owner; no exit list typed).
+
+```
+node ci/witness/mrehearse/witness_rehearse.mjs plants --org . --base-org <git archive 7bf008b>    (21 Nov 2026)
+GREEN MREHEARSE night-replay · 8 clause(s)                     exit 0
+node ci/witness/mrehearse/witness_rehearse.mjs plants --org <base 7bf008b> --base-org <base 7bf008b>
+RED MREHEARSE · W1,W2,W3,W4,W5,W6                              exit 1
+node ci/mrehearse/run_mutants_mrehearse.mjs --org . --base-org <base 7bf008b>
+run_mutants: 6 of 6 mutant(s) RED by the clause that names them · control GREEN
+node scripts/night.mjs selftest
+night selftest: 23 passed, 0 failed
+```
